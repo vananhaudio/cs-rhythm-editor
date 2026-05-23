@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
-import logoSrc from './assets/logo.png';
+import logoSrc from './assets/logo.png'
+import { supabase } from './supabase';
 import { PlayerView } from './PlayerView';
 import type { RhythmSong, LyricEvent, ChordEvent, PickedItem, SnapMode } from './types';
 import {
@@ -886,6 +887,8 @@ export default function App() {
           <button className="btn primary" onClick={handleExport}>💾 Lưu</button>
           <button className="btn danger" onClick={handleClear} title="Xoá lyrics & chords">🗑</button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileImport} />
+          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
+          <button className="btn" onClick={() => supabase.auth.signOut()} title="Đăng xuất">⎋ Thoát</button>
         </div>
       </header>
 
