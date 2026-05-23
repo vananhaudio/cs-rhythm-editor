@@ -832,7 +832,7 @@ function lsLoadSong(): RhythmSong | null {
         </div>
       {showSongList && (
         <SongList
-          onSelect={s => { if (onImportSong) onImportSong(s); }}
+          onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); }}
           onClose={() => setShowSongList(false)}
         />
       )}
