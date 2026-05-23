@@ -628,6 +628,23 @@ function lsLoadSong(): RhythmSong | null {
               {fullscreen ? '⛶ Thoát' : '⛶ Chiếu'}
             </button>
             <button className="btn" onClick={onClose} title="Đóng (Esc)">✕ Đóng</button>
+            {/* Import bài hát */}
+            <label className="btn" style={{ cursor: 'pointer' }} title="Mở file bài hát">
+              📂 Bài hát
+              <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = ev => {
+                  try {
+                    const s = JSON.parse(ev.target?.result as string)
+                    if (onImportSong) onImportSong(s)
+                  } catch {}
+                }
+                reader.readAsText(file)
+              }} />
+            </label>
+            {extraActions}
           </div>
         </div>
 
