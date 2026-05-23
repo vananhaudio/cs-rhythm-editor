@@ -298,6 +298,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [calib, setCalib] = useState<Calib | null>(null);
   const [muteMetronome, setMuteMetronome] = useState(false);
+  const muteMetronomeRef = useRef(false);
   const [showSongList, setShowSongList] = useState(false);
   const calibRef = useRef<Calib | null>(null);
   const [showSync, setShowSync] = useState(false);
@@ -320,9 +321,11 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const audioCtxStartRef = useRef<number>(0); // audioCtx.currentTime khi startSongRef=0
   const songStartTimeRef = useRef<number>(0); // song time khi bắt đầu play
 
+  useEffect(() => { muteMetronomeRef.current = muteMetronome; }, [muteMetronome]);
+
   function scheduleClick(audioTime: number, isBeat1: boolean) {
     try {
-      if (!audioCtxRef.current || muteMetronome) return;
+      if (!audioCtxRef.current || muteMetronomeRef.current) return;
       const ctx = audioCtxRef.current;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
