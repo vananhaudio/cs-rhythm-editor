@@ -16,6 +16,7 @@ export default function AppRouter() {
   const [user, setUser] = useState<User | null>(null)
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [guestMode, setGuestMode] = useState(false)
 
   useEffect(() => {
     // Check session hiện tại
@@ -51,7 +52,10 @@ export default function AppRouter() {
     </div>
   )
 
-  if (!user) return <Auth />
+  if (!user && !guestMode) return <Auth onGuest={() => setGuestMode(true)} />
+
+  // Chế độ khách
+  if (guestMode) return <App />
 
   // Phân quyền theo role
   const role = appUser?.role ?? 'student'

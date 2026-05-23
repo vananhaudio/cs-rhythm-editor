@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from './supabase'
 import './Auth.css'
 
-export default function Auth() {
+export default function Auth({ onGuest }: { onGuest: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -45,6 +45,14 @@ export default function Auth() {
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
+        <div style={{ width: '100%', textAlign: 'center', marginTop: 8 }}>
+          <button
+            onClick={onGuest}
+            style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}
+          >
+            Dùng thử không cần đăng nhập
+          </button>
+        </div>
       </div>
     </div>
   )
