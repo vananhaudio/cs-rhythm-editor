@@ -1,5 +1,4 @@
 import { SongList } from './SongList';
-import { SongList } from './SongList';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RhythmSong } from './types';
 import './PlayerView.css';
