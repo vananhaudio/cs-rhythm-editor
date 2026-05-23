@@ -280,6 +280,12 @@ function WaveformSync({ audioBuffer, duration, calib, onCalibChange, currentTime
         <span style={{ color: '#F97316' }}>M2 = Phách 1 Nhịp 2 (tính barDur)</span>
         <span style={{ color: '#10B981' }}>M3 = Phách 1 Nhịp 3 (tăng độ chính xác)</span>
         <span style={{ color: '#6B7280' }}>Kéo M1 để set điểm bắt đầu · M2 tính barDur · M3 tinh chỉnh</span>
+      {showSongList && (
+        <SongList
+          onSelect={s => { if (onImportSong) onImportSong(s); }}
+          onClose={() => setShowSongList(false)}
+        />
+      )}
       </div>
     </div>
   );
@@ -297,6 +303,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [calib, setCalib] = useState<Calib | null>(null);
   const [muteMetronome, setMuteMetronome] = useState(false);
+  const [showSongList, setShowSongList] = useState(false);
   const calibRef = useRef<Calib | null>(null);
   const [showSync, setShowSync] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -628,6 +635,9 @@ function lsLoadSong(): RhythmSong | null {
               {fullscreen ? '⛶ Thoát' : '⛶ Chiếu'}
             </button>
             <button className="btn" onClick={onClose} title="Đóng (Esc)">✕ Đóng</button>
+            <button className="btn" onClick={() => setShowSongList(true)} title="Danh sách bài">
+              🎵 Chọn bài
+            </button>
             {/* Import bài hát */}
             <label className="btn" style={{ cursor: 'pointer' }} title="Mở file bài hát">
               📂 Bài hát
