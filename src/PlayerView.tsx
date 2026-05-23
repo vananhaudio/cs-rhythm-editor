@@ -280,12 +280,6 @@ function WaveformSync({ audioBuffer, duration, calib, onCalibChange, currentTime
         <span style={{ color: '#F97316' }}>M2 = Phách 1 Nhịp 2 (tính barDur)</span>
         <span style={{ color: '#10B981' }}>M3 = Phách 1 Nhịp 3 (tăng độ chính xác)</span>
         <span style={{ color: '#6B7280' }}>Kéo M1 để set điểm bắt đầu · M2 tính barDur · M3 tinh chỉnh</span>
-      {showSongList && (
-        <SongList
-          onSelect={s => { if (onImportSong) onImportSong(s); }}
-          onClose={() => setShowSongList(false)}
-        />
-      )}
       </div>
     </div>
   );
@@ -836,6 +830,12 @@ function lsLoadSong(): RhythmSong | null {
               : `${mp3FileName} · Nhấn "Căn nhịp" để đồng bộ lời với nhạc`
           }
         </div>
+      {showSongList && (
+        <SongList
+          onSelect={s => { if (onImportSong) onImportSong(s); }}
+          onClose={() => setShowSongList(false)}
+        />
+      )}
       </div>
     </div>
   );
