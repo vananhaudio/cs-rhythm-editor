@@ -814,7 +814,7 @@ function lsLoadSong(): RhythmSong | null {
               const isOnBeat = Math.abs(beatIndex - Math.round(beatIndex)) < 0.05;
               return (
                 <div key={l.id} className="tl-lyric-wrap" style={{ left: lx, position: 'absolute', top: '35%', transform: 'translateX(-50%)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
-                  <div className={`tl-lyric ${isActive ? 'active' : ''} ${isOnBeat ? '' : 'tl-lyric--offbeat'}`} style={{ color: isActive ? '#10B981' : '#93C5FD' }}>
+                  <div className={`tl-lyric ${isActive ? 'active' : ''} ${isOnBeat ? '' : 'tl-lyric--offbeat'}`} style={{ color: isActive ? '#10B981' : '#E2E8F0' }}>
                     {l.text}
                   </div>
                 </div>
