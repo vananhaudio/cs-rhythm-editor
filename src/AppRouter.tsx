@@ -49,7 +49,7 @@ export default function AppRouter() {
 
   // Teacher bấm vào Editor
   if (showEditor && isTeacher) {
-    return <App onBackToPlayer={() => setShowEditor(false)} />
+    return <App />
   }
 
   // Tất cả đều thấy Player (trang chủ)
