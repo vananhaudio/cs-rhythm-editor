@@ -388,7 +388,7 @@
   transform: translateX(-50%) translateY(-50%);
   font-size: 20px;
   font-weight: 600;
-  color: #E5E7EB;
+  color: #FFFFFF;
   white-space: nowrap;
   line-height: 1;
   transition: color 0.08s, font-weight 0.08s, font-size 0.08s;
