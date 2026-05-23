@@ -386,9 +386,10 @@
   top: 35%;
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
-  font-size: 20px;
-  font-weight: 700;
-  color: #FFFFFF;
+  font-size: 22px;
+  font-weight: 800;
+  color: #F3F4F6;
+  -webkit-font-smoothing: antialiased;
   white-space: nowrap;
   line-height: 1;
   transition: color 0.08s, font-weight 0.08s, font-size 0.08s;
