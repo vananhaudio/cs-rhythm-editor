@@ -375,7 +375,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong }: { son
       const ctx = audioCtxRef.current;
       if (!ctx) return;
       while (nextBeatTimeRef.current < ctx.currentTime + scheduleAheadTime) {
-        const beatInBar = nextBeatIdx % song.timeSignature;
+        const beatInBar = nextBeatIdx % song!.timeSignature;
         scheduleClick(nextBeatTimeRef.current + clickOffset, beatInBar === 0);
         nextBeatTimeRef.current += beatDurScaled;
         nextBeatIdx++;
