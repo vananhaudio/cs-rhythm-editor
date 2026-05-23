@@ -799,6 +799,35 @@ export default function App() {
     setIsDirty(false);
   }, [song]);
 
+  const handleUpload = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { alert('Vui lòng đăng nhập để upload bài!'); return; }
+    if (!song.title) { alert('Vui lòng đặt tên bài trước khi upload!'); return; }
+
+    const origTempo = song.originalTempo ?? song.tempo
+    const ratio = origTempo / song.tempo
+    const exportSong = {
+      ...song,
+      originalTempo: song.tempo,
+      lyrics: song.lyrics.map(l => ({ ...l, time: +(l.time * ratio).toFixed(10) })),
+      chords: song.chords.map(c => ({ ...c, time: +(c.time * ratio).toFixed(10) })),
+    }
+
+    const { error } = await supabase.from('timming_songs').upsert({
+      title: song.title,
+      artist: song.artist || '',
+      tone: song.tone || '',
+      tempo: song.tempo,
+      time_signature: song.timeSignature,
+      created_by: user.id,
+      song_data: exportSong,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'title,created_by' })
+
+    if (error) { alert('Upload thất bại: ' + error.message); return; }
+    alert('✅ Upload thành công: ' + song.title)
+  }, [song])
+
   const handleFileImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
@@ -885,6 +914,7 @@ export default function App() {
           <button className="btn" onClick={() => setShowImport(true)}>⬆ Import</button>
           <button className="btn" onClick={() => fileInputRef.current?.click()}>📂 Mở</button>
           <button className="btn primary" onClick={handleExport}>💾 Lưu</button>
+          <button className="btn" onClick={handleUpload} title="Upload lên Cloud">☁️ Upload</button>
           <button className="btn danger" onClick={handleClear} title="Xoá lyrics & chords">🗑</button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileImport} />
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
