@@ -387,12 +387,11 @@
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   color: #FFFFFF;
   white-space: nowrap;
   line-height: 1;
   transition: color 0.08s, font-weight 0.08s, font-size 0.08s;
-  text-shadow: 0 0 8px rgba(255,255,255,0.5);
 }
 .tl-lyric.active {
   color: #10B981;
@@ -522,7 +521,6 @@
 .tl-lyric--offbeat {
   font-size: 16px;
   color: #FFFFFF;
-  text-shadow: 0 0 8px rgba(255,255,255,0.5);
 }
 .tl-lyric--offbeat.active {
   font-size: 16px;
