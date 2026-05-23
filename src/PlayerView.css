@@ -519,10 +519,7 @@
 /* Từ không nằm đúng phách — nhỏ hơn 20% */
 .tl-lyric--offbeat {
   font-size: 16px;
-  opacity: 0.75;
 }
 .tl-lyric--offbeat.active {
   font-size: 16px;
-  opacity: 1;
-  color: #10B981;
 }
