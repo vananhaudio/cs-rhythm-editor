@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js'
 import { PlayerView } from './PlayerView'
 import App from './App'
 import type { RhythmSong } from './types'
+import { createEmptySong } from './utils'
 
 type AppUser = {
   id: string
@@ -17,7 +18,7 @@ export default function AppRouter() {
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [showEditor, setShowEditor] = useState(false)
-  const [playerSong, setPlayerSong] = useState<RhythmSong | null>(null)
+  const [playerSong, setPlayerSong] = useState<RhythmSong>(createEmptySong())
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -89,7 +90,7 @@ export default function AppRouter() {
   // Tất cả đều thấy Player (trang chủ)
   return <PlayerView
     song={playerSong}
-    onClose={() => setPlayerSong(null)}
+    onClose={() => setPlayerSong(createEmptySong())}
     onImportSong={s => setPlayerSong(s)}
     extraActions={extraActions}
   />

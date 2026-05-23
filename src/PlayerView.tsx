@@ -286,9 +286,10 @@ function WaveformSync({ audioBuffer, duration, calib, onCalibChange, currentTime
 }
 
 // ── Main PlayerView ──
-export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraActions }: { song: RhythmSong | null; onClose: () => void; onUpdateTitle?: (title: string) => void; onImportSong?: (song: RhythmSong) => void; extraActions?: React.ReactNode }) {
-  // Nếu chưa có bài → hiện màn hình chọn bài
-  if (!song) return (
+export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraActions }: { song: RhythmSong; onClose: () => void; onUpdateTitle?: (title: string) => void; onImportSong?: (song: RhythmSong) => void; extraActions?: React.ReactNode }) {
+  // Nếu bài trống → hiện màn hình chọn bài
+  const isEmpty = song.lyrics.length === 0 && song.chords.length === 0 && !song.title
+  if (isEmpty) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F1117', color: '#fff', flexDirection: 'column', gap: 20 }}>
       <div style={{ fontSize: 56 }}>🎵</div>
       <div style={{ fontSize: 22, fontWeight: 800 }}>Timming Player</div>
@@ -376,7 +377,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
       const ctx = audioCtxRef.current;
       if (!ctx) return;
       while (nextBeatTimeRef.current < ctx.currentTime + scheduleAheadTime) {
-        const beatInBar = nextBeatIdx % song!.timeSignature;
+        const beatInBar = nextBeatIdx % song.timeSignature;
         scheduleClick(nextBeatTimeRef.current + clickOffset, beatInBar === 0);
         nextBeatTimeRef.current += beatDurScaled;
         nextBeatIdx++;
