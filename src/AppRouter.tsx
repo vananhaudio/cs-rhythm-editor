@@ -52,10 +52,45 @@ export default function AppRouter() {
     return <App />
   }
 
+  // Actions hiện trong màn hình chờ
+  const extraActions = (
+    <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+      {!loading && !user && (
+        <button
+          onClick={async () => {
+            const email = prompt('Email:')
+            const password = prompt('Mật khẩu:')
+            if (email && password) await supabase.auth.signInWithPassword({ email, password })
+          }}
+          style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}
+        >
+          Đăng nhập
+        </button>
+      )}
+      {user && isTeacher && (
+        <button
+          onClick={() => setShowEditor(true)}
+          style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}
+        >
+          ✏️ Editor
+        </button>
+      )}
+      {user && (
+        <button
+          onClick={() => supabase.auth.signOut()}
+          style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 13 }}
+        >
+          Đăng xuất ({appUser?.name ?? user.email})
+        </button>
+      )}
+    </div>
+  )
+
   // Tất cả đều thấy Player (trang chủ)
   return <PlayerView
     song={playerSong}
     onClose={() => setPlayerSong(null)}
     onImportSong={s => setPlayerSong(s)}
+    extraActions={extraActions}
   />
 }

@@ -286,7 +286,7 @@ function WaveformSync({ audioBuffer, duration, calib, onCalibChange, currentTime
 }
 
 // ── Main PlayerView ──
-export function PlayerView({ song, onClose, onUpdateTitle, onImportSong }: { song: RhythmSong | null; onClose: () => void; onUpdateTitle?: (title: string) => void; onImportSong?: (song: RhythmSong) => void }) {
+export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraActions }: { song: RhythmSong | null; onClose: () => void; onUpdateTitle?: (title: string) => void; onImportSong?: (song: RhythmSong) => void; extraActions?: React.ReactNode }) {
   // Nếu chưa có bài → hiện màn hình chọn bài
   if (!song) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F1117', color: '#fff', flexDirection: 'column', gap: 20 }}>
@@ -308,6 +308,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong }: { son
           reader.readAsText(file)
         }} />
       </label>
+      {extraActions}
     </div>
   );
   const [isPlaying, setIsPlaying] = useState(false);
