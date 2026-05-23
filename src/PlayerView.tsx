@@ -286,7 +286,30 @@ function WaveformSync({ audioBuffer, duration, calib, onCalibChange, currentTime
 }
 
 // ── Main PlayerView ──
-export function PlayerView({ song, onClose, onUpdateTitle }: { song: RhythmSong; onClose: () => void; onUpdateTitle?: (title: string) => void }) {
+export function PlayerView({ song, onClose, onUpdateTitle, onImportSong }: { song: RhythmSong | null; onClose: () => void; onUpdateTitle?: (title: string) => void; onImportSong?: (song: RhythmSong) => void }) {
+  // Nếu chưa có bài → hiện màn hình chọn bài
+  if (!song) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F1117', color: '#fff', flexDirection: 'column', gap: 20 }}>
+      <div style={{ fontSize: 56 }}>🎵</div>
+      <div style={{ fontSize: 22, fontWeight: 800 }}>Timming Player</div>
+      <div style={{ color: '#6B7280', fontSize: 14 }}>Chọn bài hát để bắt đầu</div>
+      <label style={{ padding: '12px 28px', background: '#10B981', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 15 }}>
+        📂 Mở file bài hát (.json)
+        <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => {
+          const file = e.target.files?.[0]
+          if (!file) return
+          const reader = new FileReader()
+          reader.onload = ev => {
+            try {
+              const s = JSON.parse(ev.target?.result as string)
+              if (onImportSong) onImportSong(s)
+            } catch {}
+          }
+          reader.readAsText(file)
+        }} />
+      </label>
+    </div>
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(song.title || '');
