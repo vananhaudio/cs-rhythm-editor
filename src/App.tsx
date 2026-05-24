@@ -821,6 +821,7 @@ export default function App() {
       time_signature: song.timeSignature,
       created_by: user.id,
       song_data: exportSong,
+      youtube_url: (song as any).youtubeUrl || null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'title,created_by' })
 
@@ -927,6 +928,11 @@ export default function App() {
         <div className="tb2-group">
           <label className="tb2-label">GIỌNG</label>
           <input className="tb2-input" value={song.tone} onChange={e => updateField('tone', e.target.value)} style={{ width: 40 }} />
+        </div>
+        <div className="tb2-sep" />
+        <div className="tb2-group">
+          <label className="tb2-label">YOUTUBE</label>
+          <input className="tb2-input" value={(song as any).youtubeUrl || ''} onChange={e => updateField('youtubeUrl' as any, e.target.value)} style={{ width: 220 }} placeholder="https://youtu.be/..." />
         </div>
         <div className="tb2-sep" />
         <div className="tb2-group">
