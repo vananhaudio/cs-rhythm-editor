@@ -427,21 +427,20 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               )
             })}
 
-            {/* Nhiệm vụ + minh hoạ phách */}
-            {levelConfig && (
-              <div style={{ marginLeft:8, display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0 }}>
-                <div style={{ width:1, height:28, background:'#1E2533', flexShrink:0 }} />
-                <div style={{ display:'flex', flexDirection:'column', gap:2, minWidth:0 }}>
-                  <div style={{ color:'#10B981', fontWeight:700, fontSize:11, whiteSpace:'nowrap' }}>
-                    🎯 Nhiệm vụ: {levelConfig.shortDesc}
-                  </div>
-                  <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />
-                </div>
-              </div>
-            )}
-
             <div style={{ marginLeft:'auto', fontSize:9, color:'#374151', flexShrink:0 }}>Cần {UNLOCK_SCORE}đ</div>
           </div>
+
+          {/* Nhiệm vụ — to, rõ */}
+          {levelConfig && (
+            <div style={{ padding:'8px 16px', background:'#0D1117', borderBottom:'1px solid #1E2533', flexShrink:0, display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ color:'#10B981', fontWeight:800, fontSize:14 }}>
+                  🎯 {levelConfig.desc}
+                </div>
+              </div>
+              <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />
+            </div>
+          )}
 
           {/* Progress bar */}
           <div style={{ padding:'5px 16px', display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
