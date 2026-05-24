@@ -194,7 +194,7 @@ export function TapMode({ song, onClose }: Props) {
       {/* TAP button */}
       {!finished && !countdown && (
         <button
-          onPointerDown={handleTap}
+          onPointerDown={e => { handleTap(); (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'; }}
           style={{
             width: 180, height: 180, borderRadius: '50%',
             background: isPlaying ? '#10B981' : '#1F2937',
@@ -205,7 +205,6 @@ export function TapMode({ song, onClose }: Props) {
             boxShadow: isPlaying ? '0 0 40px rgba(16,185,129,0.3)' : 'none'
           }}
           onPointerUp={e => (e.currentTarget.style.transform = 'scale(1)')}
-          onPointerDown2={e => { handleTap(); (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)' } as any}
         >
           {isPlaying ? 'TAP' : countdown !== null ? '...' : 'Chờ...'}
         </button>
