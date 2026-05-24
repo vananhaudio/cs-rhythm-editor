@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { PlayerView } from './PlayerView'
-import { TapMode } from './TapMode'
+import { TapWithSong } from './TapWithSong'
 import App from './App'
 import type { RhythmSong } from './types'
 import { createEmptySong } from './utils'
@@ -54,8 +54,7 @@ export default function AppRouter() {
   // ── Route /tap — trang độc lập ──
   if (path === '/tap' || path.startsWith('/tap')) {
     return (
-      <TapMode
-        song={playerSong}
+      <TapWithSong
         onClose={() => { window.location.href = '/' }}
         userRole={appUser?.role}
       />
