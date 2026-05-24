@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RhythmSong } from './types';
 import './PlayerView.css';
+import { SongList } from './SongList';
+import { TapMode } from './TapMode';
 
 // ── Helpers ──
 function fmtTime(t: number) {
