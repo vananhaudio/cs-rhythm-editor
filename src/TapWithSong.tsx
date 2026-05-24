@@ -316,7 +316,7 @@ export function TapWithSong({ onClose, userRole }: {
 
           {saveMsg && <div style={{ textAlign:'center', color:saveMsg.startsWith('✅')?'#10B981':'#EF4444', fontSize:12, paddingBottom:6 }}>{saveMsg}</div>}
           <div style={{ textAlign:'center', color:'#374151', fontSize:11, paddingBottom:8 }}>
-            {isPlaying?'Space = Pause · TAP hoặc chạm khi đến phách mạnh':'Space = Play · ⏮ về đầu'}
+            {isPlaying?'Space = TAP · P = Pause · chạm nút TAP':'P hoặc Enter = Play · ⏮ về đầu'}
           </div>
         </div>
       )}
