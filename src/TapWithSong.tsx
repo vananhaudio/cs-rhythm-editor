@@ -35,14 +35,6 @@ export function TapWithSong({ onClose, userRole }: {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
   }, [])
-  const [history, setHistory] = useState<any[]>([])
-  const [showHistory, setShowHistory] = useState(false)
-  const [viewingDots, setViewingDots] = useState<Dot[] | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
-  }, [])
   const scrollRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState(800)
 
