@@ -35,6 +35,14 @@ export function TapWithSong({ onClose, userRole }: {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
   }, [])
+  const [history, setHistory] = useState<any[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [viewingDots, setViewingDots] = useState<Dot[] | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
+  }, [])
   const scrollRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState(800)
 
@@ -58,6 +66,17 @@ export function TapWithSong({ onClose, userRole }: {
       .eq('title', s.title)
       .maybeSingle()
     if (data?.teacher_taps) setTeacherDots(data.teacher_taps)
+    // Load lịch sử tap của user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: hist } = await supabase.from('student_taps')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('song_title', s.title)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setHistory(hist ?? [])
+    }
     // Load lịch sử tap của user
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -298,6 +317,11 @@ export function TapWithSong({ onClose, userRole }: {
                   width:10, height:10, borderRadius:'50%', background:'#A78BFA',
                   boxShadow:'0 0 6px rgba(167,139,250,0.7)', top:14, opacity:0.7 }} />
               ))}
+              {viewingDots && viewingDots.map((d,i) => (
+                <div key={'v'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
+                  width:10, height:10, borderRadius:'50%', background:'#A78BFA',
+                  boxShadow:'0 0 6px rgba(167,139,250,0.7)', top:14, opacity:0.7 }} />
+              ))}
               {scoredDots.map((d,i) => (
                 <div key={i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                   width:12, height:12, borderRadius:'50%',
@@ -370,6 +394,40 @@ export function TapWithSong({ onClose, userRole }: {
           {saveMsg && <div style={{ textAlign:'center', color:saveMsg.startsWith('✅')?'#10B981':'#EF4444', fontSize:12, paddingBottom:6 }}>{saveMsg}</div>}
           <div style={{ textAlign:'center', color:'#374151', fontSize:11, paddingBottom:8 }}>
             {isPlaying?'Space = TAP · P = Pause · chạm nút TAP':'P hoặc Enter = Play · ⏮ về đầu'}
+          </div>
+        </div>
+      )}
+
+      {showHistory && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setShowHistory(false)}>
+          <div style={{ background:'#16213E', borderRadius:16, padding:24, width:'90%', maxWidth:500, maxHeight:'70vh', display:'flex', flexDirection:'column', gap:12 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h3 style={{ margin:0, color:'#fff', fontSize:16 }}>📋 Lịch sử tap — {song?.title}</h3>
+              <button onClick={() => setShowHistory(false)} style={{ background:'none', border:'none', color:'#6B7280', cursor:'pointer', fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ overflowY:'auto', display:'flex', flexDirection:'column', gap:8 }}>
+              {history.map((h, i) => (
+                <button key={h.id} onClick={() => { setViewingDots(h.dots); setShowHistory(false) }}
+                  style={{ background:'rgba(255,255,255,0.03)', border:'1px solid #1E2533', borderRadius:8, padding:'12px 16px', cursor:'pointer', textAlign:'left', color:'#fff' }}
+                  onMouseEnter={e => e.currentTarget.style.background='rgba(99,102,241,0.15)'}
+                  onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.03)'}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontWeight:700 }}>Lần {history.length - i}</span>
+                    <span style={{ fontSize:18, fontWeight:900, color: h.score >= 60 ? '#10B981' : '#EF4444' }}>{h.score}/100</span>
+                  </div>
+                  <div style={{ fontSize:11, color:'#6B7280', marginTop:4 }}>
+                    {new Date(h.created_at).toLocaleString('vi-VN')} · {h.dots.length} nốt
+                  </div>
+                </button>
+              ))}
+            </div>
+            {viewingDots && (
+              <button onClick={() => setViewingDots(null)} style={{ padding:'8px', background:'#1E2533', border:'1px solid #374151', borderRadius:6, color:'#EF4444', cursor:'pointer', fontSize:12 }}>
+                ✕ Xoá xem lại
+              </button>
+            )}
           </div>
         </div>
       )}
