@@ -129,7 +129,7 @@ export function TapWithSong({ onClose, userRole }: {
     const h = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      if (e.code === 'Space') { e.preventDefault(); if (song) setIsPlaying(p => !p) }
+      if (e.code === 'Space') { e.preventDefault(); if ((e.target as HTMLElement).tagName === 'BUTTON') return; if (song) setIsPlaying(p => !p) }
       if (e.code === 'Escape') onClose()
     }
     window.addEventListener('keydown', h)
@@ -287,7 +287,7 @@ export function TapWithSong({ onClose, userRole }: {
               {isPlaying?'⏸':'▶'}
             </button>
 
-            <button onPointerDown={e => { e.stopPropagation(); handleTap(); }} style={{ width:120, height:120, borderRadius:'50%',
+            <button onMouseDown={e => { e.preventDefault(); e.stopPropagation(); handleTap(); }} onTouchStart={e => { e.preventDefault(); e.stopPropagation(); handleTap(); }} style={{ width:120, height:120, borderRadius:'50%',
               background: isPlaying?'#10B981':'#1F2937', border:'none', color:'#fff',
               fontSize: isPlaying?24:16, fontWeight:900, cursor:'pointer', userSelect:'none',
               transition:'background 0.2s', boxShadow: isPlaying?'0 0 30px rgba(16,185,129,0.35)':'none' }}>
