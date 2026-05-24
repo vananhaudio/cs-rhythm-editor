@@ -441,19 +441,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />
             </div>
           )}
-
-          {/* Nhiệm vụ — to, rõ */}
-          {levelConfig && (
-            <div style={{ padding:'8px 16px', background:'#0D1117', borderBottom:'1px solid #1E2533', flexShrink:0, display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ flex:1 }}>
-                <div style={{ color:'#10B981', fontWeight:800, fontSize:14 }}>
-                  🎯 {levelConfig.desc}
-                </div>
-              </div>
-              <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />
-            </div>
-          )}
-
           {/* Progress bar */}
           <div style={{ padding:'5px 16px', display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
             <span style={{ color:'#4B5563', fontSize:10, width:32 }}>{fmtTime(songTime)}</span>
