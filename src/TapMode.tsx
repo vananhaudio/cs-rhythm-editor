@@ -23,14 +23,13 @@ export function TapMode({ song, onClose, userRole }: Props) {
 
   const [ytUrl, setYtUrl] = useState((song as any).youtubeUrl || '')
   const [ytId, setYtId] = useState<string | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
 
-  // 2 tracks
   const [teacherDots, setTeacherDots] = useState<Dot[]>([])
   const [studentDots, setStudentDots] = useState<Dot[]>([])
-  const [phase, setPhase] = useState<'setup' | 'playing' | 'result'>('setup')
+  const [phase, setPhase] = useState<'idle' | 'countdown' | 'playing' | 'result'>('idle')
+  const [countdown, setCountdown] = useState(3)
   const [tapMode, setTapMode] = useState<'teacher' | 'student'>('student')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
@@ -40,7 +39,7 @@ export function TapMode({ song, onClose, userRole }: Props) {
   const tapBtnRef = useRef<HTMLButtonElement>(null)
   const rafRef = useRef<number>(0)
 
-  // Load teacher_taps từ Supabase khi mở
+  // Load teacher_taps từ Supabase
   useEffect(() => {
     if (!song.title) return
     supabase.from('timming_songs')
@@ -70,19 +69,14 @@ export function TapMode({ song, onClose, userRole }: Props) {
       playerVars: { controls: 1, rel: 0 },
       events: {
         onStateChange: (e: any) => {
-          if (e.data === 1) {
-            setIsPlaying(true); setPhase('playing')
-            setStudentDots([])
-            if (tapMode === 'teacher') setTeacherDots([])
-          } else if (e.data === 2 || e.data === 0) {
-            setIsPlaying(false)
+          if (e.data === 2 || e.data === 0) {
             if (e.data === 0) setPhase('result')
           }
         },
         onReady: (e: any) => setDuration(e.target.getDuration())
       }
     })
-  }, [tapMode])
+  }, [])
 
   useEffect(() => {
     const tick = () => {
@@ -100,9 +94,32 @@ export function TapMode({ song, onClose, userRole }: Props) {
   const handleLoadYT = () => {
     const id = extractYouTubeId(ytUrl)
     if (!id) { alert('Link YouTube không hợp lệ!'); return }
-    setYtId(id); setStudentDots([]); setPhase('setup')
+    setYtId(id)
+    setStudentDots([])
+    setPhase('idle')
     setTimeout(() => initPlayer(id), 300)
   }
+
+  // Countdown → play
+  const handleStartTap = useCallback(() => {
+    if (phase !== 'idle') return
+    setStudentDots([])
+    if (tapMode === 'teacher') setTeacherDots([])
+    setPhase('countdown')
+    setCountdown(3)
+
+    let c = 3
+    const iv = setInterval(() => {
+      c--
+      setCountdown(c)
+      if (c === 0) {
+        clearInterval(iv)
+        setPhase('playing')
+        playerRef.current?.seekTo(0)
+        playerRef.current?.playVideo()
+      }
+    }, 1000)
+  }, [phase, tapMode])
 
   const handleTap = useCallback(() => {
     if (phase !== 'playing' || !playerRef.current) return
@@ -120,14 +137,17 @@ export function TapMode({ song, onClose, userRole }: Props) {
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.code === 'Space') { e.preventDefault(); handleTap() }
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (phase === 'idle') handleStartTap()
+        else if (phase === 'playing') handleTap()
+      }
       if (e.code === 'Escape') onClose()
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [handleTap, onClose])
+  }, [handleTap, handleStartTap, onClose, phase])
 
-  // Lưu teacher_taps lên Supabase
   const handleSaveTeacher = async () => {
     if (!song.title) { alert('Bài chưa có tên!'); return }
     setSaving(true)
@@ -141,8 +161,7 @@ export function TapMode({ song, onClose, userRole }: Props) {
 
   const pct = (t: number) => duration > 0 ? (t / duration) * 100 : 0
 
-  // Score: so sánh studentDots với teacherDots
-  const refDots = teacherDots.length > 0 ? teacherDots : []
+  const refDots = teacherDots
   const scoredStudent: ScoredDot[] = studentDots.map(d => {
     if (refDots.length === 0) return { ...d, hit: false, offset: 999 }
     const nearest = refDots.reduce((a, b) =>
@@ -203,7 +222,7 @@ export function TapMode({ song, onClose, userRole }: Props) {
             {teacherDots.map((d, i) => (
               <div key={i} style={{ position: 'absolute', left: `${pct(d.time)}%`, top: '50%', transform: 'translate(-50%,-50%)', width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
             ))}
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(currentTime)}%`, width: 2, background: '#F59E0B', opacity: 0.5 }} />
+            {duration > 0 && <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(currentTime)}%`, width: 2, background: '#F59E0B', opacity: 0.4 }} />}
           </div>
           {teacherDots.length > 0 && <span style={{ color: '#F59E0B', fontSize: 11, width: 28 }}>{teacherDots.length}</span>}
         </div>
@@ -221,12 +240,11 @@ export function TapMode({ song, onClose, userRole }: Props) {
                 boxShadow: phase !== 'result' ? '0 0 6px #60A5FA' : 'none'
               }} />
             ))}
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(currentTime)}%`, width: 2, background: '#60A5FA', opacity: 0.5 }} />
+            {duration > 0 && <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(currentTime)}%`, width: 2, background: '#60A5FA', opacity: 0.4 }} />}
           </div>
           {studentDots.length > 0 && <span style={{ color: '#60A5FA', fontSize: 11, width: 28 }}>{studentDots.length}</span>}
         </div>
 
-        {/* Legend */}
         {phase === 'result' && (
           <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#6B7280' }}>
             <span><span style={{ color: '#10B981' }}>●</span> Đúng (≤0.25s)</span>
@@ -250,8 +268,8 @@ export function TapMode({ song, onClose, userRole }: Props) {
       {/* Controls */}
       <div style={{ padding: '8px 20px 16px', display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
 
-        {/* Teacher mode toggle */}
-        {isTeacher && phase !== 'setup' && (
+        {/* Teacher toggle */}
+        {isTeacher && phase === 'playing' && (
           <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid #374151' }}>
             <button onClick={() => setTapMode('student')} style={{ padding: '8px 14px', background: tapMode === 'student' ? '#60A5FA' : '#1F2937', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>
               🎓 Tap học sinh
@@ -262,41 +280,68 @@ export function TapMode({ song, onClose, userRole }: Props) {
           </div>
         )}
 
+        {/* Countdown overlay */}
+        {phase === 'countdown' && (
+          <div style={{
+            width: 140, height: 140, borderRadius: '50%',
+            background: '#1F2937', border: '3px solid #10B981',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: countdown === 0 ? 32 : 64, fontWeight: 900,
+            color: '#10B981', userSelect: 'none',
+            animation: 'pulse 0.9s ease-in-out infinite'
+          }}>
+            {countdown === 0 ? 'GO!' : countdown}
+          </div>
+        )}
+
+        {/* Nút Bắt đầu */}
+        {phase === 'idle' && ytId && (
+          <button onClick={handleStartTap} style={{
+            width: 160, height: 56, borderRadius: 28,
+            background: '#10B981', border: 'none', color: '#fff',
+            fontSize: 18, fontWeight: 800, cursor: 'pointer',
+            boxShadow: '0 0 24px rgba(16,185,129,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}>
+            ▶ Bắt đầu Tap
+          </button>
+        )}
+
         {/* TAP button */}
-        {phase !== 'setup' && (
+        {phase === 'playing' && (
           <button ref={tapBtnRef} onPointerDown={handleTap} style={{
-            width: 120, height: 120, borderRadius: '50%',
-            background: phase === 'playing'
-              ? (tapMode === 'teacher' ? '#F59E0B' : '#10B981')
-              : '#1F2937',
-            border: 'none', color: '#fff',
-            fontSize: phase === 'playing' ? 24 : 14,
+            width: 140, height: 140, borderRadius: '50%',
+            background: tapMode === 'teacher' ? '#F59E0B' : '#10B981',
+            border: 'none', color: '#fff', fontSize: 26,
             fontWeight: 900, cursor: 'pointer',
             transition: 'transform 0.08s',
-            boxShadow: phase === 'playing' ? `0 0 30px ${tapMode === 'teacher' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}` : 'none',
+            boxShadow: `0 0 30px ${tapMode === 'teacher' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`,
             userSelect: 'none'
           }}>
-            {phase === 'playing' ? 'TAP' : '🎵'}
+            TAP
           </button>
         )}
 
         {/* Result buttons */}
         {phase === 'result' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button onClick={() => { playerRef.current?.seekTo(0); playerRef.current?.playVideo(); setStudentDots([]); setPhase('playing') }}
-              style={{ padding: '10px 20px', background: '#10B981', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+            <button onClick={() => {
+              playerRef.current?.seekTo(0)
+              setStudentDots([])
+              setPhase('idle')
+            }} style={{ padding: '10px 28px', background: '#10B981', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
               🔄 Thử lại
             </button>
             {isTeacher && (
               <button onClick={handleSaveTeacher} disabled={saving}
-                style={{ padding: '10px 20px', background: '#F59E0B', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+                style={{ padding: '10px 28px', background: '#F59E0B', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
                 {saving ? '⏳ Đang lưu...' : '💾 Lưu đáp án thầy'}
               </button>
             )}
           </div>
         )}
 
-        {/* Save trong khi playing (teacher) */}
+        {/* Lưu ngay khi đang tap đáp án */}
         {phase === 'playing' && isTeacher && tapMode === 'teacher' && teacherDots.length > 0 && (
           <button onClick={handleSaveTeacher} disabled={saving}
             style={{ padding: '8px 16px', background: '#F59E0B', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>
@@ -306,16 +351,26 @@ export function TapMode({ song, onClose, userRole }: Props) {
       </div>
 
       {saveMsg && (
-        <div style={{ textAlign: 'center', color: saveMsg.startsWith('✅') ? '#10B981' : '#EF4444', fontSize: 13, paddingBottom: 8 }}>
+        <div style={{ textAlign: 'center', color: saveMsg.startsWith('✅') ? '#10B981' : '#EF4444', fontSize: 13, paddingBottom: 4 }}>
           {saveMsg}
         </div>
       )}
 
-      {phase === 'playing' && (
-        <div style={{ textAlign: 'center', color: '#4B5563', fontSize: 11, paddingBottom: 8 }}>
-          Space hoặc chạm vào TAP khi phách mạnh (nhịp 1)
-        </div>
-      )}
+      {/* Hint */}
+      <div style={{ textAlign: 'center', color: '#374151', fontSize: 11, paddingBottom: 10 }}>
+        {phase === 'idle' && ytId && 'Nhấn ▶ Bắt đầu Tap hoặc Space · video sẽ tự play'}
+        {phase === 'idle' && !ytId && 'Dán link YouTube → Tải → Bắt đầu Tap'}
+        {phase === 'countdown' && 'Chuẩn bị...'}
+        {phase === 'playing' && 'Nhấn TAP hoặc Space khi đến phách mạnh (nhịp 1)'}
+        {phase === 'result' && 'Xong! Xem kết quả bên trên'}
+      </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.08); }
+        }
+      `}</style>
     </div>
   )
 }
