@@ -118,10 +118,12 @@ export function TapWithSong({ onClose, userRole }: {
     return () => { cancelAnimationFrame(rafRef.current); stopMetronome() }
   }, [isPlaying, song, speed])
 
+  const isPlayingRef = useRef(false)
+  useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
   const handleTap = useCallback(() => {
-    if (!isPlaying) return
+    if (!isPlayingRef.current) return
     setStudentDots(prev => [...prev, { time: songTimeRef.current }])
-  }, [isPlaying])
+  }, [])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -285,7 +287,7 @@ export function TapWithSong({ onClose, userRole }: {
               {isPlaying?'⏸':'▶'}
             </button>
 
-            <button onPointerDown={handleTap} style={{ width:120, height:120, borderRadius:'50%',
+            <button onPointerDown={e => { e.stopPropagation(); handleTap(); }} style={{ width:120, height:120, borderRadius:'50%',
               background: isPlaying?'#10B981':'#1F2937', border:'none', color:'#fff',
               fontSize: isPlaying?24:16, fontWeight:900, cursor:'pointer', userSelect:'none',
               transition:'background 0.2s', boxShadow: isPlaying?'0 0 30px rgba(16,185,129,0.35)':'none' }}>
