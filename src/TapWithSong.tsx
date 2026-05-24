@@ -69,15 +69,6 @@ export function TapWithSong({ onClose, userRole }: {
         .limit(20)
       setHistory(hist ?? [])
     }
-    // Load lịch sử tap của user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const { data: hist } = await supabase.from('student_taps')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('song_title', s.title)
-        .order('created_at', { ascending: false })
-        .limit(20)
       setHistory(hist ?? [])
     }
   }
