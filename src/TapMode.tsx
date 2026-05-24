@@ -1,135 +1,117 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { RhythmSong } from './types'
 
-type TapResult = { time: number; offset: number; hit: boolean }
-
 type Props = {
   song: RhythmSong
   onClose: () => void
+}
+
+type Dot = { time: number } // thời điểm tap (giây)
+
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+  ]
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m) return m[1]
+  }
+  return null
 }
 
 export function TapMode({ song, onClose }: Props) {
   const beatDur = 60 / song.tempo
   const barDur = beatDur * song.timeSignature
 
+  const [ytUrl, setYtUrl] = useState('')
+  const [ytId, setYtId] = useState<string | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [currentBeat, setCurrentBeat] = useState(-1)
-  const [results, setResults] = useState<TapResult[]>([])
-  const [finished, setFinished] = useState(false)
-  const [countdown, setCountdown] = useState<number | null>(null)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [dots, setDots] = useState<Dot[]>([])
+  const [phase, setPhase] = useState<'setup' | 'playing' | 'result'>('setup')
 
-  const startTimeRef = useRef<number>(0)
-  const animRef = useRef<number>(0)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const nextBeatTimeRef = useRef<number>(0)
-  const nextBeatIdxRef = useRef<number>(0)
-  const totalBeats = song.totalBars * song.timeSignature
-  const beat1Times = useRef<number[]>([]) // mp3 times của các phách 1
+  const playerRef = useRef<any>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const rafRef = useRef<number>(0)
+  const timelineRef = useRef<HTMLDivElement>(null)
+  const tapBtnRef = useRef<HTMLButtonElement>(null)
 
-  // Tính tất cả thời điểm phách 1
+  // Load YouTube IFrame API
   useEffect(() => {
-    const times = []
-    for (let i = 0; i < song.totalBars; i++) {
-      times.push(i * barDur)
+    if ((window as any).YT) return
+    const script = document.createElement('script')
+    script.src = 'https://www.youtube.com/iframe_api'
+    document.head.appendChild(script)
+  }, [])
+
+  const initPlayer = useCallback((id: string) => {
+    const YT = (window as any).YT
+    if (!YT) {
+      // Chờ API load xong
+      (window as any).onYouTubeIframeAPIReady = () => initPlayer(id)
+      return
     }
-    beat1Times.current = times
-  }, [song, barDur])
-
-  const scheduleClick = useCallback((audioTime: number, strong: boolean) => {
-    if (!audioCtxRef.current) return
-    const ctx = audioCtxRef.current
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.frequency.value = strong ? 880 : 440
-    gain.gain.setValueAtTime(strong ? 0.5 : 0.2, audioTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, audioTime + (strong ? 0.08 : 0.05))
-    osc.start(audioTime)
-    osc.stop(audioTime + 0.1)
-  }, [])
-
-  const startGame = useCallback(() => {
-    setCountdown(3)
-    let c = 3
-    const timer = setInterval(() => {
-      c--
-      if (c > 0) {
-        setCountdown(c)
-      } else {
-        clearInterval(timer)
-        setCountdown(null)
-        // Bắt đầu chơi
-        audioCtxRef.current = new AudioContext()
-        const ctx = audioCtxRef.current
-        startTimeRef.current = ctx.currentTime
-        nextBeatTimeRef.current = ctx.currentTime
-        nextBeatIdxRef.current = 0
-        setResults([])
-        setFinished(false)
-        setIsPlaying(true)
-      }
-    }, 1000)
-  }, [])
-
-  // Scheduler
-  useEffect(() => {
-    if (!isPlaying) return
-    const scheduleAhead = 0.1
-
-    const tick = () => {
-      const ctx = audioCtxRef.current
-      if (!ctx) return
-
-      while (nextBeatTimeRef.current < ctx.currentTime + scheduleAhead) {
-        const idx = nextBeatIdxRef.current
-        if (idx >= totalBeats) {
-          setIsPlaying(false)
-          setFinished(true)
-          return
+    if (playerRef.current) {
+      playerRef.current.destroy()
+    }
+    playerRef.current = new YT.Player('yt-player', {
+      videoId: id,
+      playerVars: { controls: 1, rel: 0 },
+      events: {
+        onStateChange: (e: any) => {
+          if (e.data === 1) { // playing
+            setIsPlaying(true)
+            setPhase('playing')
+            setDots([])
+          } else if (e.data === 2 || e.data === 0) { // paused or ended
+            setIsPlaying(false)
+            if (e.data === 0) setPhase('result')
+          }
+        },
+        onReady: (e: any) => {
+          setDuration(e.target.getDuration())
         }
-        const beatInBar = idx % song.timeSignature
-        scheduleClick(nextBeatTimeRef.current, beatInBar === 0)
-        nextBeatTimeRef.current += beatDur
-        nextBeatIdxRef.current++
-      }
-
-      // Update current beat for UI
-      const ctx2 = audioCtxRef.current
-      if (ctx2) {
-        const elapsed = ctx2.currentTime - startTimeRef.current
-        const beat = Math.floor(elapsed / beatDur)
-        setCurrentBeat(beat)
-      }
-
-      animRef.current = requestAnimationFrame(tick)
-    }
-
-    animRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(animRef.current)
-  }, [isPlaying, beatDur, totalBeats, song.timeSignature, scheduleClick])
-
-  const handleTap = useCallback(() => {
-    if (!isPlaying || !audioCtxRef.current) return
-    const ctx = audioCtxRef.current
-    const tapTime = ctx.currentTime - startTimeRef.current
-
-    // Tìm phách 1 gần nhất
-    let minOffset = Infinity
-    let nearestBeat1 = 0
-    beat1Times.current.forEach(t => {
-      const offset = Math.abs(tapTime - t)
-      if (offset < minOffset) {
-        minOffset = offset
-        nearestBeat1 = t
       }
     })
+  }, [])
 
-    const hit = minOffset <= 0.15 // 150ms
-    setResults(prev => [...prev, { time: nearestBeat1, offset: minOffset, hit }])
-  }, [isPlaying])
+  // Poll currentTime từ YouTube player
+  useEffect(() => {
+    const tick = () => {
+      if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+        const t = playerRef.current.getCurrentTime()
+        setCurrentTime(t)
+        const d = playerRef.current.getDuration()
+        if (d > 0) setDuration(d)
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [])
 
-  // Keyboard support
+  const handleLoadYT = () => {
+    const id = extractYouTubeId(ytUrl)
+    if (!id) { alert('Link YouTube không hợp lệ!'); return }
+    setYtId(id)
+    setDots([])
+    setPhase('setup')
+    setTimeout(() => initPlayer(id), 300)
+  }
+
+  const handleTap = useCallback(() => {
+    if (phase !== 'playing' || !playerRef.current) return
+    const t = playerRef.current.getCurrentTime()
+    setDots(prev => [...prev, { time: t }])
+    // Flash tap button
+    if (tapBtnRef.current) {
+      tapBtnRef.current.style.transform = 'scale(0.92)'
+      setTimeout(() => { if (tapBtnRef.current) tapBtnRef.current.style.transform = 'scale(1)' }, 80)
+    }
+  }, [phase])
+
+  // Keyboard
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.code === 'Space') { e.preventDefault(); handleTap() }
@@ -139,141 +121,174 @@ export function TapMode({ song, onClose }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [handleTap, onClose])
 
-  const score = results.length > 0
-    ? Math.round((results.filter(r => r.hit).length / song.totalBars) * 100)
+  // Tính phách chuẩn
+  const beat1Times: number[] = []
+  if (duration > 0) {
+    for (let t = 0; t < duration; t += barDur) beat1Times.push(t)
+  }
+
+  const timelineW = timelineRef.current?.offsetWidth || 600
+  const pct = (t: number) => duration > 0 ? (t / duration) * 100 : 0
+
+  // Tính điểm
+  const scoreDots = dots.map(d => {
+    const nearest = beat1Times.reduce((a, b) =>
+      Math.abs(a - d.time) < Math.abs(b - d.time) ? a : b, beat1Times[0] ?? 0)
+    const offset = Math.abs(d.time - nearest)
+    return { ...d, hit: offset <= 0.2 }
+  })
+  const score = beat1Times.length > 0
+    ? Math.round((scoreDots.filter(d => d.hit).length / beat1Times.length) * 100)
     : 0
-
   const stars = score >= 90 ? 5 : score >= 75 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1
-
-  // Screenshot result
-  const resultRef = useRef<HTMLDivElement>(null)
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: '#0F1117',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', zIndex: 200, gap: 24
+      position: 'fixed', inset: 0, background: '#0A0E1A',
+      display: 'flex', flexDirection: 'column', zIndex: 200,
+      fontFamily: 'Inter, sans-serif'
     }}>
       {/* Header */}
-      <div style={{ position: 'absolute', top: 16, left: 16, right: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ color: '#fff', fontWeight: 800, fontSize: 18 }}>🥁 Tap nhịp — Level 1</div>
-        <button onClick={onClose} style={{ background: 'none', border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '6px 14px' }}>✕ Đóng</button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #1E2533' }}>
+        <div style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>🥁 Tap nhịp — {song.title || 'Chọn bài'}</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#6B7280', fontSize: 13 }}>
+          <span>{song.tempo} BPM · {song.timeSignature}/4</span>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid #374151', borderRadius: 6, color: '#9CA3AF', cursor: 'pointer', padding: '4px 12px', fontSize: 13 }}>✕</button>
+        </div>
       </div>
 
-      {/* Song info */}
-      <div style={{ textAlign: 'center', color: '#6B7280', fontSize: 14 }}>
-        {song.title} · {song.tempo} BPM · {song.timeSignature}/4
+      {/* YouTube input */}
+      <div style={{ padding: '12px 20px', display: 'flex', gap: 8, borderBottom: '1px solid #1E2533' }}>
+        <input
+          value={ytUrl}
+          onChange={e => setYtUrl(e.target.value)}
+          placeholder="Dán link YouTube vào đây..."
+          style={{ flex: 1, padding: '8px 12px', background: '#1E2533', border: '1px solid #374151', borderRadius: 8, color: '#fff', fontSize: 14, outline: 'none' }}
+          onKeyDown={e => e.key === 'Enter' && handleLoadYT()}
+        />
+        <button onClick={handleLoadYT} style={{ padding: '8px 18px', background: '#10B981', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
+          Tải
+        </button>
       </div>
 
-      {/* Countdown */}
-      {countdown !== null && (
-        <div style={{ fontSize: 80, fontWeight: 900, color: '#10B981' }}>{countdown}</div>
-      )}
+      {/* YouTube player */}
+      <div style={{ padding: '0 20px', paddingTop: 12 }}>
+        <div id="yt-player" style={{ width: '100%', aspectRatio: '16/6', borderRadius: 10, overflow: 'hidden', background: '#000', display: ytId ? 'block' : 'none' }} />
+        {!ytId && (
+          <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#374151', fontSize: 14, border: '1px dashed #1E2533', borderRadius: 10 }}>
+            Dán link YouTube để bắt đầu
+          </div>
+        )}
+      </div>
 
-      {/* Beat indicator */}
-      {(isPlaying || finished) && !countdown && (
-        <div style={{ display: 'flex', gap: 12 }}>
-          {Array.from({ length: song.timeSignature }).map((_, i) => {
-            const beatInBar = currentBeat % song.timeSignature
-            const isActive = beatInBar === i
-            const isStrong = i === 0
-            return (
-              <div key={i} style={{
-                width: isStrong ? 32 : 24,
-                height: isStrong ? 32 : 24,
-                borderRadius: '50%',
-                background: isActive ? (isStrong ? '#10B981' : '#6B7280') : 'transparent',
-                border: `2px solid ${isStrong ? '#10B981' : '#374151'}`,
-                transition: 'background 0.05s'
-              }} />
-            )
-          })}
+      {/* Timeline */}
+      <div style={{ padding: '16px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Time labels */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#374151', fontSize: 11 }}>
+          <span>{Math.floor(currentTime / 60)}:{String(Math.floor(currentTime % 60)).padStart(2, '0')}</span>
+          <span>{Math.floor(duration / 60)}:{String(Math.floor(duration % 60)).padStart(2, '0')}</span>
+        </div>
+
+        {/* Timeline track */}
+        <div ref={timelineRef} style={{ position: 'relative', height: 80, background: '#0F1117', borderRadius: 8, border: '1px solid #1E2533', overflow: 'hidden' }}>
+          {/* Progress bar */}
+          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${pct(currentTime)}%`, background: 'rgba(16,185,129,0.08)', transition: 'width 0.1s' }} />
+
+          {/* Phách chuẩn (gạch nhỏ dưới) */}
+          {beat1Times.map((t, i) => (
+            <div key={i} style={{
+              position: 'absolute', bottom: 4, left: `${pct(t)}%`,
+              width: 2, height: 12, background: '#1E2D3D', borderRadius: 1
+            }} />
+          ))}
+
+          {/* Dots tap */}
+          {(phase === 'result' ? scoreDots : dots.map(d => ({ ...d, hit: true }))).map((d, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              left: `${pct(d.time)}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 10, height: 10, borderRadius: '50%',
+              background: phase === 'result' ? ((d as any).hit ? '#10B981' : '#EF4444') : '#60A5FA',
+              boxShadow: phase === 'result' ? 'none' : '0 0 6px #60A5FA'
+            }} />
+          ))}
+
+          {/* Now line */}
+          {duration > 0 && (
+            <div style={{
+              position: 'absolute', top: 0, bottom: 0,
+              left: `${pct(currentTime)}%`,
+              width: 2, background: '#10B981', opacity: 0.6
+            }} />
+          )}
+        </div>
+
+        {/* Legend */}
+        {phase === 'result' && (
+          <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#6B7280' }}>
+            <span><span style={{ color: '#10B981' }}>●</span> Đúng nhịp</span>
+            <span><span style={{ color: '#EF4444' }}>●</span> Lệch nhịp</span>
+            <span><span style={{ color: '#374151' }}>|</span> Phách chuẩn</span>
+          </div>
+        )}
+      </div>
+
+      {/* Result */}
+      {phase === 'result' && (
+        <div style={{ padding: '0 20px 12px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+          <div style={{ fontSize: 48, fontWeight: 900, color: score >= 60 ? '#10B981' : '#EF4444' }}>
+            {score}<span style={{ fontSize: 18 }}>/100</span>
+          </div>
+          <div style={{ fontSize: 24 }}>{'⭐'.repeat(stars)}{'☆'.repeat(5 - stars)}</div>
+          <div style={{ fontSize: 12, color: '#6B7280' }}>
+            {scoreDots.filter(d => d.hit).length}/{beat1Times.length} phách đúng
+          </div>
         </div>
       )}
 
       {/* TAP button */}
-      {!finished && !countdown && (
-        <button
-          onPointerDown={e => { handleTap(); (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'; }}
-          style={{
-            width: 180, height: 180, borderRadius: '50%',
-            background: isPlaying ? '#10B981' : '#1F2937',
-            border: 'none', color: '#fff',
-            fontSize: isPlaying ? 28 : 16,
-            fontWeight: 900, cursor: 'pointer',
-            transition: 'transform 0.05s, background 0.1s',
-            boxShadow: isPlaying ? '0 0 40px rgba(16,185,129,0.3)' : 'none'
-          }}
-          onPointerUp={e => (e.currentTarget.style.transform = 'scale(1)')}
-        >
-          {isPlaying ? 'TAP' : countdown !== null ? '...' : 'Chờ...'}
-        </button>
-      )}
-
-      {/* Start button */}
-      {!isPlaying && !finished && countdown === null && (
-        <button onClick={startGame} style={{
-          padding: '14px 40px', background: '#10B981', border: 'none',
-          borderRadius: 12, color: '#fff', fontSize: 18, fontWeight: 800,
-          cursor: 'pointer'
-        }}>
-          ▶ Bắt đầu
-        </button>
-      )}
-
-      {/* Results dots */}
-      {results.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: 400, justifyContent: 'center' }}>
-          {results.map((r, i) => (
-            <div key={i} style={{
-              width: 14, height: 14, borderRadius: '50%',
-              background: r.hit ? '#10B981' : '#EF4444'
-            }} title={`${r.hit ? '✅' : '❌'} ${Math.round(r.offset * 1000)}ms`} />
-          ))}
-        </div>
-      )}
-
-      {/* Finished screen */}
-      {finished && (
-        <div ref={resultRef} style={{
-          background: '#16213E', borderRadius: 20, padding: 32,
-          textAlign: 'center', display: 'flex', flexDirection: 'column',
-          gap: 16, minWidth: 300
-        }}>
-          <div style={{ fontSize: 14, color: '#6B7280' }}>🎵 {song.title}</div>
-          <div style={{ fontSize: 64, fontWeight: 900, color: score >= 60 ? '#10B981' : '#EF4444' }}>
-            {score}<span style={{ fontSize: 24 }}>/100</span>
-          </div>
-          <div style={{ fontSize: 28 }}>{'⭐'.repeat(stars)}{'☆'.repeat(5 - stars)}</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
-            {results.map((r, i) => (
-              <div key={i} style={{
-                width: 12, height: 12, borderRadius: '50%',
-                background: r.hit ? '#10B981' : '#EF4444'
-              }} />
-            ))}
-          </div>
-          <div style={{ fontSize: 12, color: '#6B7280' }}>timming.vananhaudio.com</div>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <button onClick={startGame} style={{
-              padding: '10px 24px', background: '#10B981', border: 'none',
-              borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer'
-            }}>🔄 Thử lại</button>
+      <div style={{ padding: '0 20px 20px', display: 'flex', gap: 12, justifyContent: 'center' }}>
+        {phase !== 'setup' && (
+          <button
+            ref={tapBtnRef}
+            onPointerDown={handleTap}
+            style={{
+              width: 140, height: 140, borderRadius: '50%',
+              background: phase === 'playing' ? '#10B981' : '#1F2937',
+              border: 'none', color: '#fff',
+              fontSize: phase === 'playing' ? 26 : 16,
+              fontWeight: 900, cursor: 'pointer',
+              transition: 'transform 0.08s',
+              boxShadow: phase === 'playing' ? '0 0 30px rgba(16,185,129,0.25)' : 'none',
+              userSelect: 'none'
+            }}
+          >
+            {phase === 'playing' ? 'TAP' : '🎵'}
+          </button>
+        )}
+        {phase === 'result' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
             <button onClick={() => {
-              // Screenshot using html2canvas or manual share
-              alert('Chụp màn hình để chia sẻ lên nhóm lớp!')
-            }} style={{
-              padding: '10px 24px', background: '#1F2937', border: '1px solid #374151',
-              borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer'
-            }}>📸 Chia sẻ</button>
+              playerRef.current?.seekTo(0)
+              playerRef.current?.playVideo()
+              setDots([])
+              setPhase('playing')
+            }} style={{ padding: '10px 20px', background: '#10B981', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+              🔄 Thử lại
+            </button>
+            <button onClick={() => alert('Chụp màn hình để chia sẻ!')} style={{ padding: '10px 20px', background: '#1F2937', border: '1px solid #374151', borderRadius: 8, color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+              📸 Chia sẻ
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Hint */}
-      {isPlaying && (
-        <div style={{ color: '#6B7280', fontSize: 13 }}>
-          Tap vào nút hoặc nhấn Space khi phách 1 (mạnh)
+      {phase === 'playing' && (
+        <div style={{ textAlign: 'center', color: '#4B5563', fontSize: 12, paddingBottom: 8 }}>
+          Tap vào nút hoặc nhấn Space khi phách mạnh (nhịp 1)
         </div>
       )}
     </div>
