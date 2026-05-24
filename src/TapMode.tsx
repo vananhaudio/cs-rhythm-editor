@@ -308,7 +308,7 @@ export function TapMode({ song, onClose, userRole }: Props) {
         )}
 
         {/* TAP button */}
-        {phase === 'playing' && (
+        {(phase === 'playing' || phase === 'countdown') && (
           <button ref={tapBtnRef} onPointerDown={handleTap} style={{
             width: 140, height: 140, borderRadius: '50%',
             background: tapMode === 'teacher' ? '#F59E0B' : '#10B981',
