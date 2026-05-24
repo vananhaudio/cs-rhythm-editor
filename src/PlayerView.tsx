@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RhythmSong } from './types';
 import './PlayerView.css';
 import { SongList } from './SongList';
-import { TapMode } from './TapMode';
 
 // ── Helpers ──
 function fmtTime(t: number) {
@@ -301,7 +300,6 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [muteMetronome, setMuteMetronome] = useState(false);
   const muteMetronomeRef = useRef(false);
   const [showSongList, setShowSongList] = useState(false);
-  const [showTap, setShowTap] = useState(false);
   const calibRef = useRef<Calib | null>(null);
   const [showSync, setShowSync] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -638,9 +636,6 @@ function lsLoadSong(): RhythmSong | null {
             <button className="btn" onClick={() => setShowSongList(true)} title="Danh sách bài">
               🎵 Chọn bài
             </button>
-            <button className="btn" onClick={() => setShowTap(true)} title="Tap nhịp">
-              🥁 Tap
-            </button>
             {/* Import bài hát */}
             <label className="btn" style={{ cursor: 'pointer' }} title="Mở file bài hát">
               📂 Bài hát
@@ -844,9 +839,6 @@ function lsLoadSong(): RhythmSong | null {
           onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); }}
           onClose={() => setShowSongList(false)}
         />
-      )}
-      {showTap && (
-        <TapMode song={song} onClose={() => setShowTap(false)} />
       )}
       </div>
     </div>

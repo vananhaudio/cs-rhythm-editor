@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { PlayerView } from './PlayerView'
+import { TapMode } from './TapMode'
 import App from './App'
 import type { RhythmSong } from './types'
 import { createEmptySong } from './utils'
@@ -19,6 +20,8 @@ export default function AppRouter() {
   const [loading, setLoading] = useState(true)
   const [showEditor, setShowEditor] = useState(false)
   const [playerSong, setPlayerSong] = useState<RhythmSong>(createEmptySong())
+
+  const path = window.location.pathname
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -48,12 +51,23 @@ export default function AppRouter() {
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
-  // Teacher bấm vào Editor
-  if (showEditor && isTeacher) {
+  // ── Route /tap — trang độc lập ──
+  if (path === '/tap' || path.startsWith('/tap')) {
+    return (
+      <TapMode
+        song={playerSong}
+        onClose={() => { window.location.href = '/' }}
+        userRole={appUser?.role}
+      />
+    )
+  }
+
+  // ── Route /editor — chỉ teacher ──
+  if ((path === '/editor' || showEditor) && isTeacher) {
     return <App />
   }
 
-  // Actions hiện trong màn hình chờ
+  // ── Route / — Player (trang chủ) ──
   const extraActions = (
     <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
       {!loading && !user && (
@@ -76,6 +90,12 @@ export default function AppRouter() {
           ✏️ Editor
         </button>
       )}
+      <button
+        onClick={() => { window.location.href = '/tap' }}
+        style={{ border: '1px solid #374151', borderRadius: 8, color: '#10B981', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}
+      >
+        🥁 Tap nhịp
+      </button>
       {user && (
         <button
           onClick={() => supabase.auth.signOut()}
@@ -87,7 +107,6 @@ export default function AppRouter() {
     </div>
   )
 
-  // Tất cả đều thấy Player (trang chủ)
   return <PlayerView
     song={playerSong}
     onClose={() => setPlayerSong(createEmptySong())}
