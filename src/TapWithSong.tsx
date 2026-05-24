@@ -14,28 +14,28 @@ const UNLOCK_SCORE = 80
 
 function getLevels(timeSig: number): { label: string; beats: number[]; desc: string; shortDesc: string }[] {
   if (timeSig === 4) return [
-    { label: 'Level 1', beats: [1],     desc: 'Tap đúng PHÁCH 1 — tiếng click TO nhất',     shortDesc: 'Phách 1' },
-    { label: 'Level 2', beats: [1,2,3,4], desc: 'Tap đủ 4 phách 1-2-3-4 theo nhịp',         shortDesc: 'Phách 1-2-3-4' },
-    { label: 'Level 3', beats: [1,3],   desc: 'Tap đúng PHÁCH 1 và PHÁCH 3',                shortDesc: 'Phách 1 và 3' },
-    { label: 'Level 4', beats: [2,4],   desc: 'Tap đúng PHÁCH 2 và PHÁCH 4 — thử thách!',  shortDesc: 'Phách 2 và 4' },
+    { label: 'Level 1', beats: [1],       desc: 'Nghe bài hát và tap vào phách mạnh — thử cảm nhận xem nhịp nào được nhấn rõ nhất nhé!', shortDesc: 'Phách mạnh (phách 1)' },
+    { label: 'Level 2', beats: [1,2,3,4], desc: 'Tap đều theo nhịp — giữ nhịp ổn định theo: 1 - 2 - 3 - 4', shortDesc: 'Đủ 4 phách' },
+    { label: 'Level 3', beats: [1,3],     desc: 'Chỉ tap vào phách 1 và phách 3 — bỏ qua phách 2 và 4', shortDesc: 'Phách 1 và 3' },
+    { label: 'Level 4', beats: [2,4],     desc: 'Tap vào phách 2 và phách 4 — những phách nhẹ nên sẽ khó cảm nhận hơn đấy!', shortDesc: 'Phách 2 và 4' },
   ]
   if (timeSig === 3) return [
-    { label: 'Level 1', beats: [1],     desc: 'Tap đúng PHÁCH 1 — phách mạnh nhất',         shortDesc: 'Phách 1' },
-    { label: 'Level 2', beats: [1,2,3], desc: 'Tap đủ 3 phách 1-2-3',                       shortDesc: 'Phách 1-2-3' },
-    { label: 'Level 3', beats: [1,3],   desc: 'Tap đúng PHÁCH 1 và PHÁCH 3',                shortDesc: 'Phách 1 và 3' },
-    { label: 'Level 4', beats: [2],     desc: 'Chỉ tap PHÁCH 2 — khó nhất!',                shortDesc: 'Phách 2' },
+    { label: 'Level 1', beats: [1],     desc: 'Nghe bài hát và tap vào phách mạnh — thử cảm nhận xem nhịp nào được nhấn rõ nhất nhé!', shortDesc: 'Phách mạnh (phách 1)' },
+    { label: 'Level 2', beats: [1,2,3], desc: 'Tap đều theo nhịp — giữ nhịp ổn định theo: 1 - 2 - 3', shortDesc: 'Đủ 3 phách' },
+    { label: 'Level 3', beats: [1,3],   desc: 'Chỉ tap vào phách 1 và phách 3 — bỏ qua phách 2', shortDesc: 'Phách 1 và 3' },
+    { label: 'Level 4', beats: [2],     desc: 'Tap vào phách 2 — phách nhẹ nên sẽ khó cảm nhận hơn đấy!', shortDesc: 'Phách 2' },
   ]
   if (timeSig === 6) return [
-    { label: 'Level 1', beats: [1],       desc: 'Tap đúng PHÁCH 1 — phách mạnh nhất',       shortDesc: 'Phách 1' },
-    { label: 'Level 2', beats: [1,2,3,4,5,6], desc: 'Tap đủ 6 phách',                       shortDesc: 'Phách 1-6' },
-    { label: 'Level 3', beats: [1,4],     desc: 'Tap đúng PHÁCH 1 và PHÁCH 4',              shortDesc: 'Phách 1 và 4' },
-    { label: 'Level 4', beats: [2,3,5,6], desc: 'Tap phách 2-3 và 5-6 — thử thách!',       shortDesc: 'Phách 2,3,5,6' },
+    { label: 'Level 1', beats: [1],         desc: 'Nghe bài hát và tap vào phách mạnh — thử cảm nhận xem nhịp nào được nhấn rõ nhất nhé!', shortDesc: 'Phách mạnh (phách 1)' },
+    { label: 'Level 2', beats: [1,2,3,4,5,6], desc: 'Tap đều theo nhịp — giữ nhịp ổn định theo: 1-2-3-4-5-6', shortDesc: 'Đủ 6 phách' },
+    { label: 'Level 3', beats: [1,4],       desc: 'Chỉ tap vào phách 1 và phách 4 — bỏ qua các phách còn lại', shortDesc: 'Phách 1 và 4' },
+    { label: 'Level 4', beats: [2,3,5,6],   desc: 'Tap vào phách 2-3 và 5-6 — những phách nhẹ nên sẽ khó cảm nhận hơn đấy!', shortDesc: 'Phách 2,3,5,6' },
   ]
   return [
-    { label: 'Level 1', beats: [1],     desc: 'Tap đúng PHÁCH 1',                           shortDesc: 'Phách 1' },
-    { label: 'Level 2', beats: Array.from({length:timeSig},(_,i)=>i+1), desc: `Tap đủ ${timeSig} phách`, shortDesc: `1-${timeSig}` },
-    { label: 'Level 3', beats: [1,3],   desc: 'Tap PHÁCH 1 và 3',                           shortDesc: 'Phách 1,3' },
-    { label: 'Level 4', beats: [2,4],   desc: 'Tap PHÁCH 2 và 4',                           shortDesc: 'Phách 2,4' },
+    { label: 'Level 1', beats: [1],     desc: 'Nghe bài hát và tap vào phách mạnh — thử cảm nhận xem nhịp nào được nhấn rõ nhất nhé!', shortDesc: 'Phách mạnh (phách 1)' },
+    { label: 'Level 2', beats: Array.from({length:timeSig},(_,i)=>i+1), desc: `Tap đều theo nhịp — giữ nhịp ổn định theo 1 đến ${timeSig}`, shortDesc: `Đủ ${timeSig} phách` },
+    { label: 'Level 3', beats: [1,3],   desc: 'Chỉ tap vào phách 1 và phách 3 — bỏ qua phách 2 và 4', shortDesc: 'Phách 1 và 3' },
+    { label: 'Level 4', beats: [2,4],   desc: 'Tap vào phách 2 và phách 4 — những phách nhẹ nên sẽ khó cảm nhận hơn đấy!', shortDesc: 'Phách 2 và 4' },
   ]
 }
 
@@ -80,12 +80,12 @@ function stars(score: number) {
   return 1
 }
 
-function getResultMsg(score: number, levelDesc: string): { emoji: string; title: string; body: string } {
-  if (score >= 95) return { emoji:'🏆', title:'XUẤT SẮC!', body:`Bạn tap đúng như Thầy rồi! ${levelDesc}` }
-  if (score >= 80) return { emoji:'🎉', title:'RẤT TỐT!', body:`Bạn gần tap đúng như Thầy! ${levelDesc}` }
-  if (score >= 65) return { emoji:'💪', title:'KHÁ TỐT!', body:`Bạn gần tap đúng rồi! Cố lên! ${levelDesc}` }
-  if (score >= 50) return { emoji:'🎯', title:'TIẾP TỤC!', body:`Hãy tap đúng vào ${levelDesc} — tiếng click TO nhất` }
-  return { emoji:'🥁', title:'LUYỆN THÊM NHÉ!', body:`Tập trung nghe và tap đúng ${levelDesc}` }
+function getResultMsg(score: number, levelDesc: string): { emoji: string; title: string; body: string; hint?: string } {
+  if (score >= 95) return { emoji:'🏆', title:'XUẤT SẮC!', body:`Bạn cảm nhận nhịp rất tốt! Gần như hoàn hảo rồi!` }
+  if (score >= 80) return { emoji:'🎉', title:'RẤT TỐT!', body:`Tai nghe nhịp của bạn đang rất tốt! Tiếp tục phát huy nhé!` }
+  if (score >= 65) return { emoji:'💪', title:'KHÁ TỐT!', body:`Bạn đang cảm nhận được nhịp rồi! Luyện thêm một chút nữa thôi!` }
+  if (score >= 50) return { emoji:'🎯', title:'TIẾP TỤC!', body:`Bạn đang đi đúng hướng! Thử nghe lại bài và cảm nhận chỗ nhấn nhé!`, hint:'💡 Gợi ý: Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn — hãy thử nghe lại và cảm nhận nhé!' }
+  return { emoji:'🥁', title:'LUYỆN THÊM NHÉ!', body:`Đừng nản! Hãy nghe lại bài hát thật kỹ và cảm nhận chỗ nhịp được nhấn mạnh hơn.`, hint:'💡 Gợi ý: Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn — hãy thử nghe lại và cảm nhận nhé!' }
 }
 
 function Confetti({ show }: { show: boolean }) {
@@ -640,7 +640,12 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             )}
 
             {/* Body message */}
-            <div style={{ color:'#9CA3AF', fontSize:13, marginBottom:16, lineHeight:1.5 }}>{resultMsg.body}</div>
+            <div style={{ color:'#9CA3AF', fontSize:13, marginBottom: resultMsg.hint ? 8 : 16, lineHeight:1.5 }}>{resultMsg.body}</div>
+            {resultMsg.hint && (
+              <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(96,165,250,0.08)', borderRadius:10, border:'1px solid rgba(96,165,250,0.2)', fontSize:12, color:'#60A5FA', lineHeight:1.5 }}>
+                {resultMsg.hint}
+              </div>
+            )}
 
             {/* Progress tới level tiếp */}
             {lastScore < UNLOCK_SCORE && activeLevel < levels.length && (
