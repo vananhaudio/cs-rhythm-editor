@@ -1,4 +1,3 @@
-import { SongList } from './SongList';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RhythmSong } from './types';
 import './PlayerView.css';
@@ -300,6 +299,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [muteMetronome, setMuteMetronome] = useState(false);
   const muteMetronomeRef = useRef(false);
   const [showSongList, setShowSongList] = useState(false);
+  const [showTap, setShowTap] = useState(false);
   const calibRef = useRef<Calib | null>(null);
   const [showSync, setShowSync] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -636,6 +636,9 @@ function lsLoadSong(): RhythmSong | null {
             <button className="btn" onClick={() => setShowSongList(true)} title="Danh sách bài">
               🎵 Chọn bài
             </button>
+            <button className="btn" onClick={() => setShowTap(true)} title="Tap nhịp">
+              🥁 Tap
+            </button>
             {/* Import bài hát */}
             <label className="btn" style={{ cursor: 'pointer' }} title="Mở file bài hát">
               📂 Bài hát
@@ -814,7 +817,7 @@ function lsLoadSong(): RhythmSong | null {
               const isOnBeat = Math.abs(beatIndex - Math.round(beatIndex)) < 0.05;
               return (
                 <div key={l.id} className="tl-lyric-wrap" style={{ left: lx, position: 'absolute', top: '35%', transform: 'translateX(-50%)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
-                  <div className={`tl-lyric ${isActive ? 'active' : ''} ${isOnBeat ? '' : 'tl-lyric--offbeat'}`} style={{ color: isActive ? '#10B981' : '#E2E8F0', fontSize: isActive ? '22px' : '20px', fontWeight: isActive ? 800 : 700 }}>
+                  <div className={`tl-lyric ${isActive ? 'active' : ''} ${isOnBeat ? '' : 'tl-lyric--offbeat'}`}>
                     {l.text}
                   </div>
                 </div>
@@ -839,6 +842,9 @@ function lsLoadSong(): RhythmSong | null {
           onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); }}
           onClose={() => setShowSongList(false)}
         />
+      )}
+      {showTap && (
+        <TapMode song={song} onClose={() => setShowTap(false)} />
       )}
       </div>
     </div>
