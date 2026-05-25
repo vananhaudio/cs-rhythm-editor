@@ -19,7 +19,7 @@ export default function AppRouter() {
   const [user, setUser] = useState<User | null>(null)
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showEditor, setShowEditor] = useState(false)
+  const [showEditor, setShowEditor] = useState(() => { const f = localStorage.getItem('csre-open-editor'); if (f) { localStorage.removeItem('csre-open-editor'); return true; } return false; })
   const [playerSong, setPlayerSong] = useState<RhythmSong>(createEmptySong())
 
   const path = window.location.pathname

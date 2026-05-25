@@ -447,8 +447,8 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
                 🎸 Import bài khác
               </button>
               <button onClick={() => {
-                try { localStorage.setItem('csre-player-song', JSON.stringify(song)) } catch {}
-                window.location.href = '/editor'
+                try { localStorage.setItem('csre-player-song', JSON.stringify(song)); localStorage.setItem('csre-open-editor', '1') } catch {}
+                window.location.href = '/'
               }} style={{ padding:'12px 24px', background:'#3B82F6', border:'none', borderRadius:10, color:'#fff', fontWeight:700, cursor:'pointer' }}>
                 ✏️ Mở trong Editor
               </button>
