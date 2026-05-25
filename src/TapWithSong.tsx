@@ -204,7 +204,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     const beatDur = 60 / song.tempo / speed
     const beatsElapsed = Math.floor(fromTime / beatDur)
     beatIdxRef.current = beatsElapsed
-    nextBeatRef.current = ctx.currentTime + ((beatsElapsed + 1) * beatDur - fromTime)
+    nextBeatRef.current = ctx.currentTime + (beatsElapsed * beatDur - fromTime)
     stopMetronome()
     schedulerRef.current = setInterval(() => {
       const c = audioCtxRef.current!
