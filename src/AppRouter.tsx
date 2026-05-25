@@ -130,7 +130,7 @@ export default function AppRouter() {
 
   // ── Route /gp-editor ──
   if (path === '/gp-editor') {
-    return <GpEditor onClose={() => { window.location.href = '/' }} />
+    return <GpEditor onClose={() => { window.location.href = '/tap' }} />
   }
 
   // ── Route /tap ──
@@ -145,7 +145,7 @@ export default function AppRouter() {
     // Đã đăng nhập hoặc chọn guest → vào TapWithSong
     return (
       <TapWithSong
-        onClose={() => { window.location.href = '/' }}
+        onClose={() => { window.location.href = '/tap' }}
         userRole={user ? (appUser?.role ?? 'student') : 'guest'}
       />
     )
