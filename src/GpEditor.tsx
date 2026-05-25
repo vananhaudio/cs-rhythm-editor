@@ -446,6 +446,12 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
                 style={{ padding:'12px 24px', background:'#1E2533', border:'1px solid #374151', borderRadius:10, color:'#fff', fontWeight:700, cursor:'pointer' }}>
                 🎸 Import bài khác
               </button>
+              <button onClick={() => {
+                try { localStorage.setItem('csre-player-song', JSON.stringify(song)) } catch {}
+                window.location.href = '/editor'
+              }} style={{ padding:'12px 24px', background:'#3B82F6', border:'none', borderRadius:10, color:'#fff', fontWeight:700, cursor:'pointer' }}>
+                ✏️ Mở trong Editor
+              </button>
               <button onClick={onClose}
                 style={{ padding:'12px 24px', background:'#10B981', border:'none', borderRadius:10, color:'#fff', fontWeight:700, cursor:'pointer' }}>
                 ✓ Xong
