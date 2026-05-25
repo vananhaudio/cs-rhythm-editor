@@ -24,18 +24,8 @@ function parseGpFile(score: any): ParseResult {
   const beatDurSec = 60 / BPM
   const timeSigNum = score.masterBars[0].timeSignatureNumerator
 
-  // Tìm track có nhiều notes nhất (melody track)
-  let bestTrack = score.tracks[0]
-  let bestCount = 0
-  score.tracks.forEach((t: any) => {
-    let count = 0
-    t.staves[0].bars.forEach((b: any) => {
-      b.voices[0].beats.forEach((beat: any) => { if (beat.notes.length > 0) count++ })
-    })
-    if (count > bestCount) { bestCount = count; bestTrack = t }
-  })
-
-  const staff = bestTrack.staves[0]
+  // Luôn dùng Track 1 (Melody)
+  const staff = score.tracks[0].staves[0]
   const noteEvents: NoteEvent[] = []
   const chordsPerBar: Record<number, string> = {}
   let globalTick = 0
@@ -229,6 +219,7 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
 
   const wordCount = parsed ? parseHopAmViet(hopAmText).words.length : 0
   const noteCount = parsed?.noteEvents.length ?? 0
+  const filteredNoteCount = parsed ? parsed.noteEvents.filter(n => n.bar >= lyricsStartBar).length : 0
   const match = wordCount <= noteCount
   const extra = noteCount - wordCount
 
@@ -327,12 +318,21 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
               </div>
             </div>
 
+            {/* Bar bắt đầu lời */}
+            <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'rgba(245,158,11,0.08)', borderRadius:8, border:'1px solid rgba(245,158,11,0.2)' }}>
+              <span style={{ color:'#F59E0B', fontSize:13 }}>🎵 Lời bắt đầu từ ô nhịp:</span>
+              <input type="number" min={1} max={parsed.totalBars} value={lyricsStartBar}
+                onChange={e => setLyricsStartBar(parseInt(e.target.value)||1)}
+                style={{ width:60, padding:'4px 8px', background:'#0F1117', border:'1px solid #F59E0B', borderRadius:6, color:'#F59E0B', fontSize:14, fontWeight:700, outline:'none', textAlign:'center' }} />
+              <span style={{ color:'#6B7280', fontSize:12 }}>/ {parsed.totalBars} bars · {filteredNoteCount} nốt sẽ có lời</span>
+            </div>
+
             {/* Nhập lời */}
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
                 <div style={{ color:'#fff', fontWeight:700, fontSize:14 }}>📝 Nhập lời bài hát (dạng HợpÂmViệt)</div>
-                <div style={{ fontSize:12, color: match ? '#10B981' : '#EF4444', fontWeight:600 }}>
-                  {wordCount}/{noteCount} từ {match ? '✓' : `(còn ${noteCount - wordCount} slot trống)`}
+                <div style={{ fontSize:12, color: wordCount <= filteredNoteCount ? '#10B981' : '#EF4444', fontWeight:600 }}>
+                  {wordCount}/{filteredNoteCount} từ {wordCount <= filteredNoteCount ? '✓' : `(còn ${filteredNoteCount - wordCount} slot trống)`}
                 </div>
               </div>
               <div style={{ color:'#6B7280', fontSize:12, marginBottom:8 }}>
