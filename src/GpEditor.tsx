@@ -17,7 +17,7 @@ type ParseResult = {
   chordsPerBar: Record<number, string>  // bar → chord name
 }
 
-const TICKS_PER_BEAT = 480
+const TICKS_PER_BEAT = 960
 
 function parseGpFile(score: any): ParseResult {
   const BPM = score.tempo
