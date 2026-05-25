@@ -52,7 +52,7 @@ type TapRecord = { id: string; dots: Dot[]; score: number; level: number; create
 type Progress = { current_level: number; best_scores: Record<string, number>; unlocked_levels: number[] }
 
 const PX_PER_SEC = 120
-const NOW_X_FRAC = 0.38
+const NOW_X_FRAC = 0.55
 const UNLOCK_SCORE = 80
 const GUEST_MAX_SONGS = 3
 
