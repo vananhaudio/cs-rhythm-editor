@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 import logoSrc from './assets/logo.png'
 import { supabase } from './supabase';
+import { SongList } from './SongList';
 import { PlayerView } from './PlayerView';
 import type { RhythmSong, LyricEvent, ChordEvent, PickedItem, SnapMode } from './types';
 import {
@@ -640,6 +641,7 @@ export default function App() {
   const [barsPerRow, setBarsPerRow] = useState(4);
   const [isDirty, setIsDirty] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showSongList, setShowSongList] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false);
   const [addTarget, setAddTarget] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -916,6 +918,7 @@ export default function App() {
           <button className="btn" onClick={() => fileInputRef.current?.click()}>📂 Mở</button>
           <button className="btn primary" onClick={handleExport}>💾 Lưu</button>
           <button className="btn" onClick={handleUpload} title="Upload lên Cloud">☁️ Upload</button>
+          <button className="btn" onClick={() => setShowSongList(true)} title="Chọn bài từ Cloud">☁️ Chọn bài</button>
           <button className="btn danger" onClick={handleClear} title="Xoá lyrics & chords">🗑</button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileImport} />
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
@@ -1016,6 +1019,20 @@ export default function App() {
 
       {showImport && <ImportModal key={Date.now()} onImport={handleImport} onClose={() => setShowImport(false)} />}
       {addTarget !== null && <AddEventModal time={addTarget} onConfirm={confirmAdd} onClose={() => setAddTarget(null)} />}
+      {showSongList && (
+        <SongList
+          onSelect={s => {
+            pushHistory(song)
+            setSong(() => {
+              try { localStorage.setItem('csre-player-song', JSON.stringify(s)) } catch {}
+              return s
+            })
+            setIsDirty(false)
+            setShowSongList(false)
+          }}
+          onClose={() => setShowSongList(false)}
+        />
+      )}
       {showPlayer && <PlayerView song={song} onClose={() => setShowPlayer(false)} onUpdateTitle={(t) => { updateField('title', t); try { const s = {...song, title: t}; localStorage.setItem('csre-player-song', JSON.stringify(s)); } catch {} }} />}
     </div>
   );
