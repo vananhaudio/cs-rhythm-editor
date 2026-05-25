@@ -144,6 +144,7 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<'upload' | 'lyrics' | 'preview' | 'done'>('upload')
   const [parsed, setParsed] = useState<ParseResult | null>(null)
   const [hopAmText, setHopAmText] = useState('')
+  const [lyricsStartBar, setLyricsStartBar] = useState(1)
   const [song, setSong] = useState<RhythmSong | null>(null)
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [uploading, setUploading] = useState(false)
