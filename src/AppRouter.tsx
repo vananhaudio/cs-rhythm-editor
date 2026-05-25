@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { PlayerView } from './PlayerView'
 import { TapWithSong } from './TapWithSong'
+import { GpEditor } from './GpEditor'
 import App from './App'
 import type { RhythmSong } from './types'
 import { createEmptySong } from './utils'
@@ -52,6 +53,10 @@ export default function AppRouter() {
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
   // ── Route /tap — trang độc lập ──
+  if ((path === '/gp-editor') && isTeacher) {
+    return <GpEditor onClose={() => { window.location.href = '/' }} />
+  }
+
   if (path === '/tap' || path.startsWith('/tap')) {
     return (
       <TapWithSong
@@ -87,6 +92,14 @@ export default function AppRouter() {
           style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}
         >
           ✏️ Editor
+        </button>
+      )}
+      {user && isTeacher && (
+        <button
+          onClick={() => { window.location.href = '/gp-editor' }}
+          style={{ border: '1px solid #374151', borderRadius: 8, color: '#10B981', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}
+        >
+          🎸 GP Import
         </button>
       )}
       <button
