@@ -4,40 +4,43 @@ import { supabase } from './supabase'
 import { SongList } from './SongList'
 
 // ── DESIGN TOKENS ──────────────────────────────────────────
+// Moss forest palette — matte, desaturated, organic
 const C = {
-  // Backgrounds — forest gradient dark to light
-  bgHeader:   '#14532D',   // header primary forest
-  bgDark:     '#1A3828',   // main workspace
-  bgMid:      '#1F3D2C',   // level bar / secondary
-  bgCard:     '#244A38',   // card surface
-  bgDeep:     '#162E20',   // timeline deep focus
-  bgControls: '#F0EDE3',   // controls area — warm organic light
+  // Backgrounds — earth tones, không LED xanh
+  bgHeader:   '#14532D',   // header — giữ nguyên brand
+  bgDark:     '#1C3324',   // workspace — tối nhưng ấm, ngả nâu rêu
+  bgMid:      '#213B2A',   // level bar — moss sẫm
+  bgCard:     '#243D2C',   // card — rêu trung tính, không LED
+  bgDeep:     '#192C21',   // timeline — tối nhất, focus zone
+  bgControls: '#ECEFE6',   // controls — warm grey-green, không trắng
 
-  // Borders
-  borderDark:  'rgba(244,241,232,0.10)',
-  borderMid:   'rgba(244,241,232,0.14)',
-  borderLight: '#C9DDB8',
-  borderGold:  'rgba(201,151,0,0.35)',
+  // Borders — matte, không glow
+  borderDark:  'rgba(220,230,210,0.09)',
+  borderMid:   'rgba(220,230,210,0.13)',
+  borderLight: '#B8CCAA',   // bớt tươi hơn C9DDB8
+  borderGold:  'rgba(185,138,50,0.30)',
 
-  // Accent
-  green:      '#3F7D3A',   // active/primary action
-  greenLight: '#A7D88A',   // highlight, active lyric
-  greenMid:   '#7FBF63',   // progress, dots hit
-  gold:       '#C99700',   // logo, teacher dots, special
-  goldPale:   'rgba(201,151,0,0.12)',
-  red:        '#8B3A35',   // miss dots
+  // Accent — desaturated organic
+  green:      '#3A6B35',   // active — moss green, bớt sáng
+  greenLight: '#8DC470',   // highlight — sage green, không neon
+  greenMid:   '#6A9E54',   // progress, hit dots — rêu trung
+  gold:       '#B89040',   // dusty gold — ấm hơn C99700
+  goldPale:   'rgba(184,144,64,0.10)',
+  red:        '#7A3530',   // miss — đỏ trầm rêu
 
-  // Text
-  textLight:  '#F4F1E8',   // text on dark
-  textMuted:  '#C8D6C0',   // secondary text on dark
-  textDim:    '#6A8A72',   // tertiary / hints on dark
-  textDark:   '#1F2A1F',   // text on light
-  textDarkMuted: '#5F7A5F', // secondary on light
+  // Text on dark
+  textLight:  '#EAE8DC',   // trắng kem ấm, không trắng tinh
+  textMuted:  '#A8BBA0',   // xanh xám muted
+  textDim:    '#5A7260',   // dim — rêu tối
 
-  // Controls area (light)
-  ctrlBg:     '#FFFFFF',
-  ctrlBorder: '#D8E8C8',
-  ctrlText:   '#2D5A2D',
+  // Text on light (controls)
+  textDark:      '#1E2A1E',
+  textDarkMuted: '#4A6050',
+
+  // Controls area
+  ctrlBg:     '#F4F7EE',   // trắng ngà xanh nhạt
+  ctrlBorder: '#C4D4B0',   // border organic
+  ctrlText:   '#2A4E2A',
 }
 
 type Dot = { time: number }
@@ -514,20 +517,20 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                 const best = progress.best_scores[String(lvNum)] ?? 0
                 return (
                   <button key={lvNum} onClick={() => unlocked && setActiveLevel(lvNum)} style={{
-                    display:'flex', alignItems:'center', gap:8,
-                    padding:'8px 16px', borderRadius:10,
-                    background: isActive ? C.green : unlocked ? C.bgCard : 'rgba(36,74,56,0.5)',
-                    border: isActive ? `1px solid ${C.greenMid}` : `1px solid ${C.borderDark}`,
-                    color: isActive ? '#fff' : unlocked ? C.textMuted : C.textDim,
+                    display:'flex', alignItems:'center', gap:10,
+                    padding:'6px 14px', borderRadius:7,
+                    background: isActive ? 'rgba(58,107,53,0.55)' : unlocked ? 'rgba(36,61,44,0.6)' : 'rgba(25,44,33,0.4)',
+                    border: isActive ? `1px solid rgba(141,196,112,0.45)` : `1px solid ${C.borderDark}`,
+                    borderLeft: isActive ? `3px solid ${C.greenLight}` : unlocked ? `3px solid ${C.borderMid}` : `3px solid transparent`,
+                    color: isActive ? C.textLight : unlocked ? C.textMuted : C.textDim,
                     cursor: unlocked ? 'pointer' : 'not-allowed',
-                    opacity: unlocked ? 1 : 0.45, minWidth:120,
+                    opacity: unlocked ? 1 : 0.4, minWidth:110,
                   }}>
-                    <div style={{ width:8, height:8, borderRadius:'50%', background: isActive ? C.gold : unlocked ? C.greenMid : C.textDim, flexShrink:0 }} />
                     <div style={{ textAlign:'left' }}>
-                      <div style={{ fontSize:12, fontWeight:600 }}>
-                        {unlocked ? lv.label : `🔒 Level ${lvNum}`}
+                      <div style={{ fontSize:11, fontWeight: isActive ? 700 : 500, letterSpacing:'0.01em' }}>
+                        {unlocked ? lv.label : `🔒 L${lvNum}`}
                       </div>
-                      {unlocked && <div style={{ fontSize:10, opacity:0.75, marginTop:1 }}>Tốt nhất: {best}</div>}
+                      {unlocked && <div style={{ fontSize:9, opacity:0.65, marginTop:1, color: isActive ? C.greenLight : C.textDim }}>Best: {best}đ</div>}
                     </div>
                   </button>
                 )
@@ -569,7 +572,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                 return (
                   <div key={l.id} style={{ position:'absolute', left:lx/speed, transform:'translateX(-50%)',
                     fontSize: isActive?24:16, fontWeight: isActive?800:400,
-                    color: isActive ? C.gold : C.textMuted,
+                    color: isActive ? '#D4A84B' : C.textMuted,
                     transition:'all 0.08s', whiteSpace:'nowrap', userSelect:'none',
                     letterSpacing: isActive ? '0.02em' : 0 }}>
                     {l.text}
@@ -665,14 +668,14 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   onTouchStart={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
                   style={{
                     width:116, height:116, borderRadius:'50%',
-                    background: isPlaying ? C.bgHeader : '#E8E4D8',
-                    border: `2.5px solid ${isPlaying ? C.greenMid : C.ctrlBorder}`,
-                    color: isPlaying ? C.textLight : '#9AAE9A',
-                    fontSize:18, fontWeight:800, letterSpacing:'0.1em',
+                    background: isPlaying ? '#1A3D22' : '#D4D8CC',
+                    border: `2px solid ${isPlaying ? 'rgba(141,196,112,0.45)' : '#B0C0A0'}`,
+                    color: isPlaying ? C.greenLight : '#7A8C72',
+                    fontSize:18, fontWeight:800, letterSpacing:'0.12em',
                     cursor:'pointer', userSelect:'none', transition:'all 0.2s',
                     boxShadow: isPlaying
-                      ? `0 4px 16px rgba(20,83,45,0.35), inset 0 1px 0 rgba(167,216,138,0.2), inset 0 -3px 6px rgba(0,0,0,0.2)`
-                      : `0 2px 8px rgba(20,83,45,0.12), inset 0 1px 0 rgba(255,255,255,0.9)`,
+                      ? `0 4px 18px rgba(15,40,20,0.5), inset 0 -3px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(141,196,112,0.1)`
+                      : `0 3px 10px rgba(15,40,20,0.18), inset 0 2px 5px rgba(255,255,255,0.55), inset 0 -2px 4px rgba(0,0,0,0.1)`,
                   }}>
                   TAP
                 </button>
