@@ -142,6 +142,8 @@ function buildSong(parsed: ParseResult, hopAmText: string): RhythmSong {
     totalBars,
     lyrics,
     chords: chordEntries,
+    beats: [],
+    version: '2.0' as const,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
