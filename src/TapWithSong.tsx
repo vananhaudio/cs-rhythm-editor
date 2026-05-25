@@ -201,6 +201,9 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const [saveMsg, setSaveMsg] = useState('')
   const [pendingSave, setPendingSave] = useState(false)
   const [guestSongsPlayed, setGuestSongsPlayed] = useState<string[]>([])
+  const [otherStudentsCount, setOtherStudentsCount] = useState(0)
+  const [showOtherResults, setShowOtherResults] = useState(false)
+  const [otherResults, setOtherResults] = useState<{name:string; score:number; level:number}[]>([])
   const [showGuestLimit, setShowGuestLimit] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -259,6 +262,28 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     setShowTeacher(false); setLastScore(null); setPendingSave(false)
     setSongTime(0); songTimeRef.current = 0; setIsPlaying(false)
     await loadProgress(s.title)
+    // Load số học sinh khác đang tập cùng bài
+    const { data: { user } } = await supabase.auth.getUser()
+    const query = supabase.from('student_taps')
+      .select('user_id, score, level, app_users(name)')
+      .eq('song_title', s.title)
+      .order('created_at', { ascending: false })
+    if (user) query.neq('user_id', user.id)
+    const { data: others } = await query.limit(20)
+    if (others && others.length > 0) {
+      const seen = new Set<string>()
+      const unique: {name:string; score:number; level:number}[] = []
+      others.forEach((r: any) => {
+        if (!seen.has(r.user_id)) {
+          seen.add(r.user_id)
+          unique.push({ name: r.app_users?.name ?? 'Học sinh', score: r.score, level: r.level })
+        }
+      })
+      setOtherStudentsCount(unique.length)
+      setOtherResults(unique)
+    } else {
+      setOtherStudentsCount(0); setOtherResults([])
+    }
   }
 
   useEffect(() => { if (song) loadHistory(song.title, activeLevel) }, [activeLevel, song?.title])
@@ -655,41 +680,73 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               })}
             </div>
 
-            {/* Legend — cố định bên phải */}
-            <div style={{ width:130, flexShrink:0, padding:'10px 12px', display:'flex', flexDirection:'column', justifyContent:'flex-start', gap:0, borderLeft:`1px solid rgba(220,230,210,0.08)` }}>
+            {/* Legend — cố định bên phải, gióng thẳng hàng */}
+            <div style={{ width:160, flexShrink:0, padding:'8px 10px', display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.08)` }}>
+
+              {/* Row height khớp với dot rows: 26px mỗi hàng */}
               {/* Đáp án Thầy */}
-              <div style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, fontWeight:600, color:C.dotGold }}>
-                  <div style={{ width:12, height:2, borderRadius:1, background:C.dotGold }} />
-                  Đáp án Thầy
+              <div style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between', paddingRight:2 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10, fontWeight:600, color:C.dotGold, minWidth:0 }}>
+                  <div style={{ width:14, height:2, borderRadius:1, background:C.dotGold, flexShrink:0 }} />
+                  <span>Đáp án Thầy</span>
                 </div>
                 <button onClick={() => setShowTeacher(t=>!t)}
-                  style={{ padding:'2px 6px', borderRadius:4, border:`1px solid rgba(220,230,210,0.15)`, background:'rgba(220,230,210,0.06)', fontSize:9, color:C.textLegend, cursor:'pointer' }}>
+                  style={{ padding:'1px 6px', borderRadius:4, border:`1px solid rgba(220,230,210,0.15)`, background:'rgba(220,230,210,0.06)', fontSize:9, color:C.textLegend, cursor:'pointer', flexShrink:0, marginLeft:4 }}>
                   {showTeacher ? 'Ẩn' : 'Xem'}
                 </button>
               </div>
 
               {/* Lần này */}
-              <div style={{ height: showTeacher ? 26 : 26, display:'flex', alignItems:'center', marginTop: showTeacher ? 28 : 0 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, fontWeight:600, color:C.dotBlue }}>
-                  <div style={{ width:12, height:2, borderRadius:1, background:C.dotBlue }} />
-                  Lần này
+              <div style={{ height:26, display:'flex', alignItems:'center' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10, fontWeight:600, color:C.dotBlue }}>
+                  <div style={{ width:14, height:2, borderRadius:1, background:C.dotBlue, flexShrink:0 }} />
+                  <span>Lần này</span>
                 </div>
               </div>
 
-              {/* History labels */}
+              {/* History — gióng thẳng với dot rows */}
               {tapHistory.map((h, hi) => (
-                <div key={h.id} style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between', opacity:histOpacity[hi], marginTop:4 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, fontWeight:600, color:C.dotPurple }}>
-                    <div style={{ width:12, height:2, borderRadius:1, background:C.dotPurple }} />
-                    Lần {tapHistory.length - hi} · {h.score}đ
+                <div key={h.id} style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between', opacity:histOpacity[hi] }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10, fontWeight:600, color:C.dotPurple, minWidth:0 }}>
+                    <div style={{ width:14, height:2, borderRadius:1, background:C.dotPurple, flexShrink:0 }} />
+                    <span style={{ whiteSpace:'nowrap' }}>Lần {tapHistory.length - hi} · {h.score}đ</span>
                   </div>
                   <button onClick={() => handleDeleteHistory(h.id)}
-                    style={{ width:18, height:18, borderRadius:4, border:`1px solid rgba(220,230,210,0.15)`, background:'rgba(220,230,210,0.06)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#A88080', fontSize:10 }}>
+                    style={{ width:16, height:16, borderRadius:3, border:`1px solid rgba(220,230,210,0.15)`, background:'rgba(220,230,210,0.06)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#A88080', fontSize:9, flexShrink:0, marginLeft:4 }}>
                     ✕
                   </button>
                 </div>
               ))}
+
+              {/* Divider */}
+              <div style={{ height:1, background:'rgba(220,230,210,0.1)', margin:'8px 0' }} />
+
+              {/* Học sinh khác */}
+              {otherStudentsCount > 0 ? (
+                <div style={{ fontSize:10, color:C.textLegend, lineHeight:1.5 }}>
+                  <div style={{ marginBottom:5, color:'#A8BBA0' }}>
+                    <span style={{ color:C.greenPale, fontWeight:600 }}>{otherStudentsCount}</span> bạn khác<br/>đang tập bài này
+                  </div>
+                  <button onClick={() => setShowOtherResults(t=>!t)}
+                    style={{ width:'100%', padding:'4px 6px', borderRadius:6, border:`1px solid rgba(141,196,112,0.25)`, background:'rgba(141,196,112,0.08)', color:C.greenPale, fontSize:9, fontWeight:600, cursor:'pointer', textAlign:'center' }}>
+                    {showOtherResults ? 'Ẩn' : '👥 Xem kết quả'}
+                  </button>
+                  {showOtherResults && (
+                    <div style={{ marginTop:5, display:'flex', flexDirection:'column', gap:3 }}>
+                      {otherResults.slice(0,5).map((r,i) => (
+                        <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:9, color:C.textLegend }}>
+                          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:80 }}>{r.name}</span>
+                          <span style={{ color:C.greenPale, fontWeight:600, flexShrink:0 }}>{r.score}đ</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize:9, color:'rgba(168,187,160,0.4)', lineHeight:1.5, textAlign:'center' }}>
+                  Chưa có bạn nào<br/>tập bài này
+                </div>
+              )}
             </div>
           </div>
 
