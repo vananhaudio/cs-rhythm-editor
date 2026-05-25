@@ -204,6 +204,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const [showGuestLimit, setShowGuestLimit] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const autoShowResultRef = useRef(false)
   const [containerW, setContainerW] = useState(800)
   const [userName, setUserName] = useState('')
 
@@ -262,6 +263,20 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
   useEffect(() => { if (song) loadHistory(song.title, activeLevel) }, [activeLevel, song?.title])
 
+  // Auto hiện kết quả khi bài kết thúc
+  useEffect(() => {
+    if (!isPlaying && autoShowResultRef.current) {
+      autoShowResultRef.current = false
+      setTimeout(() => {
+        if (currentDots.length > 0) {
+          setLastScore(currentScore ?? 0)
+          setPrevBest(progress.best_scores[String(activeLevel)] ?? 0)
+          setShowResultPopup(true)
+        }
+      }, 600)
+    }
+  }, [isPlaying])
+
   const audioCtxRef = useRef<AudioContext | null>(null)
   const schedulerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const nextBeatRef = useRef(0)
@@ -304,7 +319,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       startMetronome(songTimeRef.current)
       const tick = () => {
         const t = (performance.now() - wallRef.current) / 1000
-        if (t >= totalDur) { songTimeRef.current = totalDur; setSongTime(totalDur); setIsPlaying(false); stopMetronome(); return }
+        if (t >= totalDur) { songTimeRef.current = totalDur; setSongTime(totalDur); setIsPlaying(false); stopMetronome(); autoShowResultRef.current = true; return }
         songTimeRef.current = t; setSongTime(t); rafRef.current = requestAnimationFrame(tick)
       }
       rafRef.current = requestAnimationFrame(tick)
@@ -354,7 +369,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     : null
   const bestThisLevel = progress.best_scores[String(activeLevel)] ?? 0
 
-  const handleReset = () => { setCurrentDots([]); setLastScore(null); seekTo(0); setIsPlaying(false) }
+  const handleReset = () => { setCurrentDots([]); setLastScore(null); seekTo(0); setIsPlaying(false); autoShowResultRef.current = false }
 
   const handleShowResult = () => {
     if (currentDots.length === 0) return
@@ -687,7 +702,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             <span style={{ fontSize:13, color:C.greenPale, fontWeight:600 }}>
               {scoredCurrent.filter(d=>d.hit).length} <span style={{ color:C.textMuted, fontWeight:400 }}>/ {targetDotsScaled.length} phách đúng</span>
             </span>
-            {currentDots.length > 0 && (
+            {currentDots.length > 0 && isPlaying && (
               <button onClick={handleShowResult} style={{ padding:'7px 16px', borderRadius:8, background:'#243D2C', border:`1px solid rgba(141,196,112,0.3)`, color:C.greenPale, fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, cursor:'pointer' }}>
                 📊 Xem kết quả
               </button>
