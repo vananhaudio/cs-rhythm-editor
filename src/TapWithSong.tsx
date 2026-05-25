@@ -615,24 +615,23 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             {/* Dot tracks */}
             <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
 
-              {/* Playhead arrow — đầu mũi tên trên cùng */}
+              {/* Playhead arrow */}
               <div style={{ position:'absolute', left:nowX, top:0, zIndex:11, transform:'translateX(-50%)', pointerEvents:'none' }}>
                 <div style={{ width:0, height:0, borderLeft:'7px solid transparent', borderRight:'7px solid transparent', borderTop:`10px solid ${C.greenPale}` }} />
               </div>
 
-              {/* Playhead line — bắt đầu dưới vùng lyrics, không cắt qua chữ */}
-              <div style={{ position:'absolute', left:nowX, top:58, bottom:0, width:2, background:C.greenPale, opacity:0.45, zIndex:10, pointerEvents:'none' }} />
+              {/* Playhead line — bắt đầu dưới lyrics */}
+              <div style={{ position:'absolute', left:nowX, top:54, bottom:0, width:2, background:C.greenPale, opacity:0.45, zIndex:10, pointerEvents:'none' }} />
 
               {/* Lyrics */}
-              <div style={{ position:'absolute', top:14, left:0, right:0, height:40, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', top:10, left:0, right:0, height:40, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {song.lyrics.map((l,i) => {
                   const lx = l.time * PX_PER_SEC
                   const nextTime = song.lyrics[i+1]?.time ?? l.time + beatDur*2
                   const isActive = songTime*speed >= l.time && songTime*speed < nextTime
                   return (
                     <div key={l.id} style={{ position:'absolute', left:lx/speed, transform:'translateX(-50%)',
-                      fontSize: 18,
-                      fontWeight: 500,
+                      fontSize: 18, fontWeight: 500,
                       color: isActive ? C.gold : '#D0CFCA',
                       transition:'color 0.08s', whiteSpace:'nowrap', userSelect:'none',
                       letterSpacing: '0.02em' }}>
@@ -643,23 +642,23 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               </div>
 
               {/* Separator */}
-              <div style={{ position:'absolute', top:62, left:0, right:0, height:1, background:'rgba(220,230,210,0.08)' }} />
+              <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:'rgba(220,230,210,0.08)' }} />
 
-              {/* Teacher dots */}
+              {/* Teacher dots — top:54, height:28 */}
               {showTeacher && (
-                <div style={{ position:'absolute', top:65, left:0, right:0, height:26, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+                <div style={{ position:'absolute', top:54, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                   {targetDotsScaled.map((d,i) => (
                     <div key={'td'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                      width:10, height:10, borderRadius:'50%', background:C.dotGold, top:8, opacity:0.9 }} />
+                      width:10, height:10, borderRadius:'50%', background:C.dotGold, top:9, opacity:0.9 }} />
                   ))}
                 </div>
               )}
 
               {/* Current dots */}
-              <div style={{ position:'absolute', top: showTeacher ? 93 : 67, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', top: showTeacher ? 82 : 54, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {scoredCurrent.map((d,i) => (
                   <div key={'cd'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                    width:11, height:11, borderRadius:'50%', top:8,
+                    width:11, height:11, borderRadius:'50%', top:9,
                     background: targetDotsScaled.length>0 ? (d.hit ? C.dotBlue : 'transparent') : C.dotBlue,
                     border: targetDotsScaled.length>0 && !d.hit ? `2px solid ${C.dotBlue}` : 'none' }} />
                 ))}
@@ -667,12 +666,12 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
               {/* History rows */}
               {tapHistory.map((h, hi) => {
-                const topBase = (showTeacher ? 93 : 67) + 30 + hi * 26
+                const topBase = (showTeacher ? 82 : 54) + 28 + hi * 28
                 return (
-                  <div key={h.id} style={{ position:'absolute', top:topBase, left:0, right:0, height:24, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
+                  <div key={h.id} style={{ position:'absolute', top:topBase, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
                     {h.dots.map((d,di) => (
                       <div key={di} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                        width:9, height:9, borderRadius:'50%', top:7,
+                        width:9, height:9, borderRadius:'50%', top:10,
                         background:histColors[hi] }} />
                     ))}
                   </div>
@@ -680,14 +679,13 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               })}
             </div>
 
-            {/* Legend — cố định bên phải, gióng thẳng hàng */}
-            <div style={{ width:160, flexShrink:0, padding:'8px 10px', display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.08)` }}>
+            {/* Legend — 232px, gióng thẳng với dot rows */}
+            <div style={{ width:232, flexShrink:0, paddingTop:54, paddingLeft:12, paddingRight:10, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.1)` }}>
 
-              {/* Row height khớp với dot rows: 26px mỗi hàng */}
-              {/* Đáp án Thầy */}
-              <div style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between', paddingRight:2 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10, fontWeight:600, color:C.dotGold, minWidth:0 }}>
-                  <div style={{ width:14, height:2, borderRadius:1, background:C.dotGold, flexShrink:0 }} />
+              {/* Đáp án Thầy — height:28px khớp với teacher dot row */}
+              <div style={{ height:28, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:C.dotGold, minWidth:0 }}>
+                  <div style={{ width:16, height:2, borderRadius:1, background:C.dotGold, flexShrink:0 }} />
                   <span>Đáp án Thầy</span>
                 </div>
                 <button onClick={() => setShowTeacher(t=>!t)}
@@ -697,18 +695,18 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               </div>
 
               {/* Lần này */}
-              <div style={{ height:26, display:'flex', alignItems:'center' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10, fontWeight:600, color:C.dotBlue }}>
-                  <div style={{ width:14, height:2, borderRadius:1, background:C.dotBlue, flexShrink:0 }} />
+              <div style={{ height:28, display:'flex', alignItems:'center' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:C.dotBlue }}>
+                  <div style={{ width:16, height:2, borderRadius:1, background:C.dotBlue, flexShrink:0 }} />
                   <span>Lần này</span>
                 </div>
               </div>
 
               {/* History — gióng thẳng với dot rows */}
               {tapHistory.map((h, hi) => (
-                <div key={h.id} style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between', opacity:histOpacity[hi] }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10, fontWeight:600, color:C.dotPurple, minWidth:0 }}>
-                    <div style={{ width:14, height:2, borderRadius:1, background:C.dotPurple, flexShrink:0 }} />
+                <div key={h.id} style={{ height:28, display:'flex', alignItems:'center', justifyContent:'space-between', opacity:histOpacity[hi] }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:C.dotPurple, minWidth:0 }}>
+                    <div style={{ width:16, height:2, borderRadius:1, background:C.dotPurple, flexShrink:0 }} />
                     <span style={{ whiteSpace:'nowrap' }}>Lần {tapHistory.length - hi} · {h.score}đ</span>
                   </div>
                   <button onClick={() => handleDeleteHistory(h.id)}
@@ -723,7 +721,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
               {/* Học sinh khác */}
               {otherStudentsCount > 0 ? (
-                <div style={{ fontSize:10, color:C.textLegend, lineHeight:1.5 }}>
+                <div style={{ fontSize:12, color:C.textLegend, lineHeight:1.5 }}>
                   <div style={{ marginBottom:5, color:'#A8BBA0' }}>
                     <span style={{ color:C.greenPale, fontWeight:600 }}>{otherStudentsCount}</span> bạn khác<br/>đang tập bài này
                   </div>
