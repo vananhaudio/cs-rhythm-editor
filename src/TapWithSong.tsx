@@ -52,7 +52,7 @@ type TapRecord = { id: string; dots: Dot[]; score: number; level: number; create
 type Progress = { current_level: number; best_scores: Record<string, number>; unlocked_levels: number[] }
 
 const PX_PER_SEC = 120
-const NOW_X_FRAC = 0.47
+const NOW_X_FRAC = 0.38
 const UNLOCK_SCORE = 80
 const GUEST_MAX_SONGS = 3
 
@@ -575,13 +575,13 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             {/* Dot tracks */}
             <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
 
-              {/* Playhead line */}
-              <div style={{ position:'absolute', left:nowX, top:0, bottom:0, width:2, background:C.greenPale, opacity:0.5, zIndex:10, pointerEvents:'none' }} />
-
-              {/* Playhead arrow */}
+              {/* Playhead arrow — đầu mũi tên trên cùng */}
               <div style={{ position:'absolute', left:nowX, top:0, zIndex:11, transform:'translateX(-50%)', pointerEvents:'none' }}>
                 <div style={{ width:0, height:0, borderLeft:'7px solid transparent', borderRight:'7px solid transparent', borderTop:`10px solid ${C.greenPale}` }} />
               </div>
+
+              {/* Playhead line — bắt đầu dưới vùng lyrics, không cắt qua chữ */}
+              <div style={{ position:'absolute', left:nowX, top:58, bottom:0, width:2, background:C.greenPale, opacity:0.45, zIndex:10, pointerEvents:'none' }} />
 
               {/* Lyrics */}
               <div style={{ position:'absolute', top:14, left:0, right:0, height:40, transform:`translateX(${-scrollOffset+nowX}px)` }}>
@@ -591,12 +591,12 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   const isActive = songTime*speed >= l.time && songTime*speed < nextTime
                   return (
                     <div key={l.id} style={{ position:'absolute', left:lx/speed, transform:'translateX(-50%)',
-                      fontSize: isActive ? 22 : 15,
-                      fontWeight: isActive ? 800 : 400,
-                      color: isActive ? C.gold : C.textMuted,
-                      transition:'all 0.08s', whiteSpace:'nowrap', userSelect:'none',
-                      letterSpacing: isActive ? '0.03em' : 0 }}>
-                      {isActive ? l.text.toUpperCase() : l.text}
+                      fontSize: 18,
+                      fontWeight: 500,
+                      color: isActive ? C.gold : '#D0CFCA',
+                      transition:'color 0.08s', whiteSpace:'nowrap', userSelect:'none',
+                      letterSpacing: '0.02em' }}>
+                      {l.text}
                     </div>
                   )
                 })}
