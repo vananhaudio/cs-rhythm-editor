@@ -3,28 +3,41 @@ import type { RhythmSong } from './types'
 import { supabase } from './supabase'
 import { SongList } from './SongList'
 
-// ── THEME: Xanh rừng tối ──
-const T = {
-  bg:           '#0D1A12',  // nền chính — xanh rừng sâu
-  bgAlt:        '#0A1510',  // nền phụ tối hơn
-  bgCard:       '#112018',  // card/panel
-  bgCardHover:  '#162A1E',
-  border:       '#1E3328',  // border mặc định
-  borderLight:  '#2A4A38',  // border sáng hơn
-  green:        '#3F7D3A',  // xanh mầm non — accent chính
-  greenLight:   '#A8D18D',  // xanh lá nhạt — highlight
-  greenPale:    'rgba(168,209,141,0.12)', // nền xanh nhạt
-  greenGlow:    'rgba(63,125,58,0.35)',
-  gold:         '#C99700',  // gold điểm nhấn
-  goldPale:     'rgba(201,151,0,0.12)',
-  goldBorder:   'rgba(201,151,0,0.35)',
-  red:          '#C0392B',  // đỏ lỗi — bớt gay gắt
-  redPale:      'rgba(192,57,43,0.15)',
-  text:         '#E8F0E0',  // text chính — trắng ấm ngả xanh
-  textMuted:    '#7A9A7A',  // text phụ
-  textDim:      '#3D6B4A',  // text rất mờ
-  purple:       '#7C6FAF',  // history dots
-  blue:         '#3B82F6',  // nút xem kết quả
+// ── DESIGN TOKENS ──────────────────────────────────────────
+const C = {
+  // Backgrounds — forest gradient dark to light
+  bgHeader:   '#14532D',   // header primary forest
+  bgDark:     '#1A3828',   // main workspace
+  bgMid:      '#1F3D2C',   // level bar / secondary
+  bgCard:     '#244A38',   // card surface
+  bgDeep:     '#162E20',   // timeline deep focus
+  bgControls: '#F0EDE3',   // controls area — warm organic light
+
+  // Borders
+  borderDark:  'rgba(244,241,232,0.10)',
+  borderMid:   'rgba(244,241,232,0.14)',
+  borderLight: '#C9DDB8',
+  borderGold:  'rgba(201,151,0,0.35)',
+
+  // Accent
+  green:      '#3F7D3A',   // active/primary action
+  greenLight: '#A7D88A',   // highlight, active lyric
+  greenMid:   '#7FBF63',   // progress, dots hit
+  gold:       '#C99700',   // logo, teacher dots, special
+  goldPale:   'rgba(201,151,0,0.12)',
+  red:        '#8B3A35',   // miss dots
+
+  // Text
+  textLight:  '#F4F1E8',   // text on dark
+  textMuted:  '#C8D6C0',   // secondary text on dark
+  textDim:    '#6A8A72',   // tertiary / hints on dark
+  textDark:   '#1F2A1F',   // text on light
+  textDarkMuted: '#5F7A5F', // secondary on light
+
+  // Controls area (light)
+  ctrlBg:     '#FFFFFF',
+  ctrlBorder: '#D8E8C8',
+  ctrlText:   '#2D5A2D',
 }
 
 type Dot = { time: number }
@@ -78,17 +91,17 @@ function generateTargetDots(song: RhythmSong, beats: number[]): Dot[] {
 
 function BeatViz({ beats, timeSig }: { beats: number[]; timeSig: number }) {
   return (
-    <div style={{ display:'flex', gap:3, alignItems:'center' }}>
+    <div style={{ display:'flex', gap:4, alignItems:'center' }}>
       {Array.from({length: timeSig}, (_, i) => {
         const beat = i + 1
         const active = beats.includes(beat)
         return (
           <div key={i} style={{
-            width: beat === 1 ? 12 : 9,
-            height: beat === 1 ? 12 : 9,
+            width: beat === 1 ? 13 : 10,
+            height: beat === 1 ? 13 : 10,
             borderRadius: '50%',
-            background: active ? T.greenLight : 'transparent',
-            border: `2px solid ${active ? T.greenLight : T.borderLight}`,
+            background: active ? C.greenLight : 'transparent',
+            border: `1.5px solid ${active ? C.greenLight : C.borderMid}`,
             flexShrink: 0,
           }} />
         )
@@ -105,17 +118,17 @@ function stars(score: number) {
   return 1
 }
 
-function getResultMsg(score: number, levelDesc: string): { emoji: string; title: string; body: string; hint?: string } {
+function getResultMsg(score: number): { emoji: string; title: string; body: string; hint?: string } {
   if (score >= 95) return { emoji:'🏆', title:'XUẤT SẮC!', body:'Bạn cảm nhận nhịp rất tốt! Gần như hoàn hảo rồi!' }
   if (score >= 80) return { emoji:'🎉', title:'RẤT TỐT!', body:'Tai nghe nhịp của bạn đang rất tốt! Tiếp tục phát huy nhé!' }
   if (score >= 65) return { emoji:'💪', title:'KHÁ TỐT!', body:'Bạn đang cảm nhận được nhịp rồi! Luyện thêm một chút nữa thôi!' }
-  if (score >= 50) return { emoji:'🎯', title:'TIẾP TỤC!', body:'Bạn đang đi đúng hướng! Thử nghe lại bài và cảm nhận chỗ nhấn nhé!', hint:'💡 Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn — hãy thử nghe lại và cảm nhận nhé!' }
-  return { emoji:'🥁', title:'LUYỆN THÊM NHÉ!', body:'Đừng nản! Hãy nghe lại bài hát thật kỹ và cảm nhận chỗ nhịp được nhấn mạnh hơn.', hint:'💡 Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn — hãy thử nghe lại và cảm nhận nhé!' }
+  if (score >= 50) return { emoji:'🎯', title:'TIẾP TỤC!', body:'Bạn đang đi đúng hướng! Thử nghe lại bài và cảm nhận chỗ nhấn nhé!', hint:'Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn — hãy thử nghe lại và cảm nhận nhé!' }
+  return { emoji:'🥁', title:'LUYỆN THÊM NHÉ!', body:'Đừng nản! Hãy nghe lại bài hát thật kỹ và cảm nhận chỗ nhịp được nhấn mạnh hơn.', hint:'Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn — hãy thử nghe lại và cảm nhận nhé!' }
 }
 
 function Confetti({ show }: { show: boolean }) {
   if (!show) return null
-  const colors = [T.greenLight, T.gold, '#60A5FA', '#F472B6', T.purple, '#34D399']
+  const colors = [C.greenLight, C.gold, '#60A5FA', '#F472B6', '#A78BFA', C.greenMid]
   return (
     <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:999, overflow:'hidden' }}>
       {Array.from({length:36},(_,i) => (
@@ -211,10 +224,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const loadSong = async (s: RhythmSong) => {
     if (isGuest) {
       const alreadyPlayed = guestSongsPlayed.includes(s.title)
-      if (!alreadyPlayed && guestSongsPlayed.length >= GUEST_MAX_SONGS) {
-        setShowGuestLimit(true)
-        return
-      }
+      if (!alreadyPlayed && guestSongsPlayed.length >= GUEST_MAX_SONGS) { setShowGuestLimit(true); return }
       if (!alreadyPlayed) setGuestSongsPlayed(prev => [...prev, s.title])
     }
     setSong(s); setCurrentDots([]); setTapHistory([])
@@ -302,7 +312,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const beatDur = song ? 60 / song.tempo / speed : 0.5
   const levels = song ? getLevels(song.timeSignature) : []
   const levelConfig = levels[activeLevel - 1]
-
   const targetDots = song && levelConfig ? generateTargetDots(song, levelConfig.beats) : []
   const targetDotsScaled = targetDots.map(d => ({ time: d.time / speed }))
 
@@ -319,9 +328,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
   const handleShowResult = () => {
     if (currentDots.length === 0) return
-    setLastScore(currentScore ?? 0)
-    setPrevBest(bestThisLevel)
-    setShowResultPopup(true)
+    setLastScore(currentScore ?? 0); setPrevBest(bestThisLevel); setShowResultPopup(true)
   }
 
   const handleSave = async () => {
@@ -329,12 +336,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     const score = currentScore ?? 0
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaveMsg('Chưa đăng nhập!'); return }
-
-    await supabase.from('student_taps').insert({
-      user_id: user.id, song_title: song.title,
-      dots: currentDots, score, level: activeLevel,
-    })
-
+    await supabase.from('student_taps').insert({ user_id: user.id, song_title: song.title, dots: currentDots, score, level: activeLevel })
     const newBestScores = { ...progress.best_scores, [String(activeLevel)]: Math.max(score, bestThisLevel) }
     const newUnlocked = [...progress.unlocked_levels]
     let leveledUp = false
@@ -347,19 +349,11 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       best_scores: newBestScores, unlocked_levels: newUnlocked,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,song_title' })
-
     setProgress(p => ({ ...p, best_scores: newBestScores, unlocked_levels: newUnlocked }))
     setTapHistory(prev => [{ id: Date.now().toString(), dots: currentDots, score, level: activeLevel, created_at: new Date().toISOString() }, ...prev.slice(0,4)])
-    setCurrentDots([])
-    setShowResultPopup(false)
-    setPendingSave(false)
-
-    if (leveledUp) {
-      setShowConfetti(true); setShowLevelUp(true)
-      setTimeout(() => { setShowConfetti(false); setShowLevelUp(false) }, 4000)
-    } else if (score >= 80) {
-      setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000)
-    }
+    setCurrentDots([]); setShowResultPopup(false); setPendingSave(false)
+    if (leveledUp) { setShowConfetti(true); setShowLevelUp(true); setTimeout(() => { setShowConfetti(false); setShowLevelUp(false) }, 4000) }
+    else if (score >= 80) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000) }
     setSaveMsg('Đã lưu!'); setTimeout(() => setSaveMsg(''), 2000)
   }
 
@@ -368,208 +362,260 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     setTapHistory(prev => prev.filter(h => h.id !== id))
   }
 
-  const nowX = containerW * NOW_X_FRAC
-  const scrollOffset = songTime * PX_PER_SEC
-  const fmtTime = (t: number) => `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`
-
-  const resultMsg = lastScore !== null ? getResultMsg(lastScore, levelConfig?.shortDesc ?? '') : null
-  const starCount = lastScore !== null ? stars(lastScore) : 0
-
   const handleLogin = async () => {
     const email = prompt('Email:')
     const password = prompt('Mật khẩu:')
     if (email && password) await supabase.auth.signInWithPassword({ email, password })
   }
 
+  const nowX = containerW * NOW_X_FRAC
+  const scrollOffset = songTime * PX_PER_SEC
+  const fmtTime = (t: number) => `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`
+  const resultMsg = lastScore !== null ? getResultMsg(lastScore) : null
+  const starCount = lastScore !== null ? stars(lastScore) : 0
+
+  // ── SHARED BUTTON STYLES ────────────────────────────────
+  const btnKeyStyle = {
+    width: 52, height: 52, borderRadius: 10,
+    background: C.ctrlBg,
+    border: `1.5px solid ${C.ctrlBorder}`,
+    color: C.ctrlText, fontSize: 13, fontWeight: 700,
+    cursor: 'pointer', display: 'flex', flexDirection: 'column' as const,
+    alignItems: 'center', justifyContent: 'center', gap: 2,
+    boxShadow: '0 2px 6px rgba(20,83,45,0.12), inset 0 1px 0 rgba(255,255,255,0.8)',
+  }
+
+  const btnActionStyle = {
+    padding: '9px 16px', borderRadius: 10,
+    border: `1px solid ${C.ctrlBorder}`,
+    background: C.ctrlBg,
+    color: C.ctrlText, fontSize: 12, fontWeight: 500,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+    whiteSpace: 'nowrap' as const,
+    boxShadow: '0 1px 4px rgba(20,83,45,0.08)',
+  }
+
   return (
-    <div style={{ position:'fixed', inset:0, background:T.bg, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'Inter, sans-serif' }}>
+    <div style={{ position:'fixed', inset:0, background:C.bgDark, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'Inter, sans-serif' }}>
       <Confetti show={showConfetti} />
 
-      {/* Banner khách */}
+      {/* ── GUEST BANNER ── */}
       {isGuest && (
-        <div style={{ background:T.greenPale, borderBottom:`1px solid rgba(168,209,141,0.25)`, padding:'6px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-          <span style={{ color:T.greenLight, fontSize:12 }}>
+        <div style={{ background:'rgba(167,216,138,0.1)', borderBottom:`1px solid rgba(167,216,138,0.2)`, padding:'6px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <span style={{ color:C.greenLight, fontSize:12 }}>
             🎵 Chế độ khách — đã thử <strong>{guestSongsPlayed.length}/{GUEST_MAX_SONGS}</strong> bài · Điểm không được lưu
           </span>
-          <button onClick={handleLogin} style={{ background:T.green, border:'none', borderRadius:6, color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', padding:'4px 12px' }}>
-            🔑 Đăng nhập để lưu điểm
+          <button onClick={handleLogin} style={{ background:C.green, border:'none', borderRadius:6, color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer', padding:'4px 14px' }}>
+            Đăng nhập để lưu điểm
           </button>
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', borderBottom:`1px solid ${T.border}`, flexShrink:0, background:T.bgAlt }}>
-        <span style={{ color:T.greenLight, fontWeight:800, fontSize:15 }}>🥁 Tap nhịp</span>
-        <button onClick={() => setShowSongList(true)} style={{ padding:'4px 12px', background:T.bgCard, border:`1px solid ${T.borderLight}`, borderRadius:6, color:T.greenLight, fontWeight:700, cursor:'pointer', fontSize:12 }}>
-          🎵 Chọn bài
+      {/* ── HEADER ── */}
+      <div style={{ background:C.bgHeader, borderBottom:`1px solid rgba(167,216,138,0.12)`, padding:'0 20px', height:52, display:'flex', alignItems:'center', gap:16, flexShrink:0 }}>
+        {/* Logo */}
+        <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+          <img src="https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/assets/Logo.svg"
+            alt="Logo" style={{ width:32, height:32, filter:'brightness(0) saturate(100%) invert(72%) sepia(60%) saturate(800%) hue-rotate(5deg) brightness(105%)' }} />
+          <div style={{ lineHeight:1.2 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:C.gold, letterSpacing:'0.01em' }}>Thầy Văn Anh Guitar</div>
+            <div style={{ fontSize:9, color:C.textMuted, letterSpacing:'0.04em' }}>Học · Tập và Sống cùng Âm nhạc</div>
+          </div>
+        </div>
+
+        {/* Tab active */}
+        <div style={{ display:'flex', alignItems:'center', gap:6, borderBottom:`2px solid ${C.gold}`, paddingBottom:2, marginBottom:-2 }}>
+          <span style={{ fontSize:13, fontWeight:600, color:C.gold }}>🎵 Tập nhịp</span>
+        </div>
+
+        {/* Chọn bài */}
+        <button onClick={() => setShowSongList(true)} style={{ padding:'5px 14px', borderRadius:7, border:`1px solid rgba(167,216,138,0.3)`, background:'rgba(167,216,138,0.1)', color:C.greenLight, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+          Chọn bài
         </button>
-        {song && <>
-          <span style={{ color:T.text, fontWeight:700, fontSize:14 }}>{song.title}</span>
-          {song.artist && <span style={{ color:T.textMuted, fontSize:11 }}>— {song.artist}</span>}
-          <span style={{ color:T.textDim, fontSize:10 }}>{song.tempo} BPM · {song.timeSignature}/4</span>
-        </>}
+
+        {/* Song info */}
         {song && (
-          <div style={{ display:'flex', gap:2, marginLeft:'auto' }}>
-            {[0.5,0.75,1,1.25].map(s => (
-              <button key={s} onClick={() => { setSpeed(s); if(isPlaying){setIsPlaying(false); setTimeout(()=>setIsPlaying(true),50)} }}
-                style={{ padding:'2px 7px', borderRadius:4, border:'none', background: speed===s?T.green:T.bgCard, color: speed===s?'#fff':T.textMuted, fontSize:10, cursor:'pointer', fontWeight: speed===s?700:400 }}>
-                {s===0.5?'50%':s===0.75?'75%':s===1?'100%':'125%'}
-              </button>
-            ))}
+          <div style={{ display:'flex', alignItems:'baseline', gap:8 }}>
+            <span style={{ fontSize:14, fontWeight:700, color:C.textLight }}>{song.title}</span>
+            {song.artist && <span style={{ fontSize:11, color:C.textMuted }}>— {song.artist}</span>}
+            <span style={{ fontSize:10, color:C.textDim }}>{song.tempo} BPM · {song.timeSignature}/4</span>
           </div>
         )}
-        {userName && <span style={{ color:T.textMuted, fontSize:11 }}>👤 {userName}</span>}
-        <button onClick={onClose} style={{ background:'none', border:`1px solid ${T.borderLight}`, borderRadius:6, color:T.textMuted, cursor:'pointer', padding:'3px 10px', fontSize:12, marginLeft: song?0:'auto' }}>✕</button>
+
+        {/* Speed + User */}
+        <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:8 }}>
+          {song && (
+            <div style={{ display:'flex', gap:3 }}>
+              {[0.5,0.75,1,1.25].map(s => (
+                <button key={s} onClick={() => { setSpeed(s); if(isPlaying){setIsPlaying(false); setTimeout(()=>setIsPlaying(true),50)} }}
+                  style={{ padding:'3px 9px', borderRadius:5, border:'none', fontSize:10, cursor:'pointer', fontWeight: speed===s?700:400,
+                    background: speed===s ? C.greenLight : 'rgba(244,241,232,0.1)',
+                    color: speed===s ? C.bgHeader : C.textMuted }}>
+                  {s===0.5?'50%':s===0.75?'75%':s===1?'100%':'125%'}
+                </button>
+              ))}
+            </div>
+          )}
+          {userName && (
+            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 10px', borderRadius:20, background:'rgba(244,241,232,0.1)', border:`1px solid rgba(244,241,232,0.12)` }}>
+              <div style={{ width:20, height:20, borderRadius:'50%', background:C.green, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#fff' }}>
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <span style={{ fontSize:11, color:C.textMuted }}>{userName}</span>
+            </div>
+          )}
+          <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:`1px solid rgba(244,241,232,0.15)`, background:'none', color:C.textMuted, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+        </div>
       </div>
 
-      {/* Chưa chọn bài */}
+      {/* ── CHƯA CHỌN BÀI ── */}
       {!song && (
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:20, padding:32 }}>
-          <div style={{ fontSize:52 }}>🥁</div>
-          <div style={{ color:T.text, fontWeight:800, fontSize:22, textAlign:'center' }}>Luyện nhịp cùng Thầy Văn Anh</div>
-          <div style={{ background:T.bgCard, border:`1px solid ${T.border}`, borderRadius:12, padding:'20px 28px', maxWidth:400, width:'100%' }}>
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:24, padding:40 }}>
+          <div style={{ fontSize:56 }}>🥁</div>
+          <div style={{ color:C.textLight, fontWeight:700, fontSize:24, textAlign:'center' }}>Luyện nhịp cùng Thầy Văn Anh</div>
+          <div style={{ background:C.bgCard, border:`1px solid ${C.borderDark}`, borderRadius:16, padding:'24px 32px', maxWidth:420, width:'100%' }}>
             {[
               ['1️⃣', 'Chọn bài hát muốn luyện'],
-              ['2️⃣', 'Bấm ▶ hoặc phím P để bắt đầu nhạc'],
+              ['2️⃣', 'Bấm Bắt đầu hoặc phím P để phát nhạc'],
               ['3️⃣', 'Nghe metronome — tiếng CLICK TO là phách mạnh'],
               ['4️⃣', 'Bấm nút TAP hoặc phím Space đúng phách'],
               ['5️⃣', 'Bấm Xem kết quả → Lưu điểm để lên level'],
             ].map(([num, text]) => (
-              <div key={num} style={{ display:'flex', gap:12, alignItems:'flex-start', marginBottom:12 }}>
+              <div key={num} style={{ display:'flex', gap:14, alignItems:'flex-start', marginBottom:14 }}>
                 <span style={{ fontSize:18, flexShrink:0 }}>{num}</span>
-                <span style={{ color:T.textMuted, fontSize:14, lineHeight:1.5 }}>{text}</span>
+                <span style={{ color:C.textMuted, fontSize:14, lineHeight:1.6 }}>{text}</span>
               </div>
             ))}
-            <div style={{ marginTop:8, padding:'10px 14px', background:T.greenPale, borderRadius:8, border:`1px solid rgba(168,209,141,0.25)`, display:'flex', gap:8, alignItems:'center' }}>
-              <span style={{ fontSize:16 }}>💡</span>
-              <span style={{ color:T.greenLight, fontSize:13 }}>Đạt <strong>80 điểm</strong> để mở khoá level tiếp theo!</span>
+            <div style={{ marginTop:12, padding:'12px 16px', background:'rgba(167,216,138,0.08)', borderRadius:10, border:`1px solid rgba(167,216,138,0.2)`, display:'flex', gap:10, alignItems:'center' }}>
+              <span>💡</span>
+              <span style={{ color:C.greenLight, fontSize:13 }}>Đạt <strong>80 điểm</strong> để mở khoá level tiếp theo!</span>
             </div>
           </div>
-          <button onClick={() => setShowSongList(true)} style={{ padding:'14px 40px', background:T.green, border:'none', borderRadius:12, color:'#fff', fontWeight:800, fontSize:18, cursor:'pointer', boxShadow:`0 0 24px ${T.greenGlow}` }}>
+          <button onClick={() => setShowSongList(true)} style={{ padding:'14px 44px', background:C.green, border:'none', borderRadius:12, color:'#fff', fontWeight:700, fontSize:17, cursor:'pointer' }}>
             🎵 Chọn bài hát
           </button>
         </div>
       )}
 
-      {/* Main */}
+      {/* ── MAIN ── */}
       {song && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-          {/* Level bar */}
-          <div style={{ padding:'6px 16px', background:T.bgAlt, borderBottom:`1px solid ${T.border}`, display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
-            {levels.map((lv, i) => {
-              const lvNum = i + 1
-              const unlocked = progress.unlocked_levels.includes(lvNum)
-              const isActive = activeLevel === lvNum
-              const best = progress.best_scores[String(lvNum)] ?? 0
-              return (
-                <button key={lvNum} onClick={() => unlocked && setActiveLevel(lvNum)} style={{
-                  display:'flex', flexDirection:'column', alignItems:'center', gap:2,
-                  padding:'4px 10px', borderRadius:8,
-                  background: isActive ? T.green : unlocked ? T.bgCard : T.bgAlt,
-                  border: isActive ? 'none' : `1px solid ${unlocked ? T.borderLight : T.border}`,
-                  color: isActive ? '#fff' : unlocked ? T.textMuted : T.textDim,
-                  cursor: unlocked ? 'pointer' : 'not-allowed', fontSize:11,
-                  fontWeight: isActive ? 700 : 400, opacity: unlocked ? 1 : 0.45, minWidth:58,
-                }}>
-                  <span>{unlocked ? lv.label : `🔒 L${lvNum}`}</span>
-                  {unlocked && <span style={{ fontSize:9, color: isActive ? 'rgba(255,255,255,0.7)' : T.textMuted }}>Tốt nhất: {best}</span>}
-                </button>
-              )
-            })}
-            <div style={{ marginLeft:'auto', fontSize:9, color:T.textDim, flexShrink:0 }}>Cần {UNLOCK_SCORE}đ</div>
+          {/* LỘ TRÌNH LUYỆN TẬP */}
+          <div style={{ background:C.bgMid, borderBottom:`1px solid ${C.borderDark}`, padding:'10px 20px', flexShrink:0 }}>
+            <div style={{ fontSize:10, color:C.textDim, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:8 }}>
+              🌱 Lộ trình luyện tập
+            </div>
+            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+              {levels.map((lv, i) => {
+                const lvNum = i + 1
+                const unlocked = progress.unlocked_levels.includes(lvNum)
+                const isActive = activeLevel === lvNum
+                const best = progress.best_scores[String(lvNum)] ?? 0
+                return (
+                  <button key={lvNum} onClick={() => unlocked && setActiveLevel(lvNum)} style={{
+                    display:'flex', alignItems:'center', gap:8,
+                    padding:'8px 16px', borderRadius:10,
+                    background: isActive ? C.green : unlocked ? C.bgCard : 'rgba(36,74,56,0.5)',
+                    border: isActive ? `1px solid ${C.greenMid}` : `1px solid ${C.borderDark}`,
+                    color: isActive ? '#fff' : unlocked ? C.textMuted : C.textDim,
+                    cursor: unlocked ? 'pointer' : 'not-allowed',
+                    opacity: unlocked ? 1 : 0.45, minWidth:120,
+                  }}>
+                    <div style={{ width:8, height:8, borderRadius:'50%', background: isActive ? C.gold : unlocked ? C.greenMid : C.textDim, flexShrink:0 }} />
+                    <div style={{ textAlign:'left' }}>
+                      <div style={{ fontSize:12, fontWeight:600 }}>
+                        {unlocked ? lv.label : `🔒 Level ${lvNum}`}
+                      </div>
+                      {unlocked && <div style={{ fontSize:10, opacity:0.75, marginTop:1 }}>Tốt nhất: {best}</div>}
+                    </div>
+                  </button>
+                )
+              })}
+              <div style={{ marginLeft:'auto', fontSize:10, color:C.textDim }}>Cần {UNLOCK_SCORE}đ để mở khoá</div>
+            </div>
           </div>
 
-          {/* Nhiệm vụ */}
-          {levelConfig && (
-            <div style={{ padding:'8px 16px', background:T.bgCard, borderBottom:`1px solid ${T.border}`, flexShrink:0, display:'flex', alignItems:'center', gap:12 }}>
-              <div style={{ flex:1 }}>
-                <div style={{ color:T.greenLight, fontWeight:700, fontSize:14 }}>
-                  🎯 {levelConfig.desc}
-                </div>
+          {/* NHIỆM VỤ + PROGRESS */}
+          <div style={{ background:C.bgCard, borderBottom:`1px solid ${C.borderDark}`, padding:'10px 20px', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:8 }}>
+              <span style={{ fontSize:13, color:C.greenLight, fontWeight:500, flex:1, lineHeight:1.5 }}>
+                🎯 {levelConfig?.desc}
+              </span>
+              {levelConfig && <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />}
+            </div>
+            {/* Progress bar */}
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:10, color:C.textDim, width:32 }}>{fmtTime(songTime)}</span>
+              <div style={{ flex:1, height:4, background:'rgba(244,241,232,0.1)', borderRadius:2, cursor:'pointer', position:'relative' }}
+                onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur) }}>
+                <div style={{ position:'absolute', left:0, top:0, bottom:0, width:`${totalDur>0?songTime/totalDur*100:0}%`, background:C.greenMid, borderRadius:2 }} />
               </div>
-              <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />
+              <span style={{ fontSize:10, color:C.textDim, width:32, textAlign:'right' }}>{fmtTime(totalDur)}</span>
             </div>
-          )}
-
-          {/* Progress bar */}
-          <div style={{ padding:'5px 16px', display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
-            <span style={{ color:T.textDim, fontSize:10, width:32 }}>{fmtTime(songTime)}</span>
-            <div style={{ flex:1, height:3, background:T.border, borderRadius:2, cursor:'pointer', position:'relative' }}
-              onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur) }}>
-              <div style={{ position:'absolute', left:0, top:0, bottom:0, width:`${totalDur>0?songTime/totalDur*100:0}%`, background:T.green, borderRadius:2 }} />
-            </div>
-            <span style={{ color:T.textDim, fontSize:10, width:32, textAlign:'right' }}>{fmtTime(totalDur)}</span>
           </div>
 
-          {/* Scroll area */}
-          <div ref={scrollRef} style={{ flex:1, position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', left:nowX, top:0, bottom:0, width:2, background:T.green, opacity:0.5, zIndex:10, pointerEvents:'none' }} />
+          {/* TIMELINE / SCROLL AREA */}
+          <div ref={scrollRef} style={{ flex:1, position:'relative', overflow:'hidden', background:C.bgDeep }}>
+            {/* Now line */}
+            <div style={{ position:'absolute', left:nowX, top:0, bottom:0, width:2, background:C.greenMid, opacity:0.45, zIndex:10, pointerEvents:'none' }} />
 
-            {/* Lời */}
-            <div style={{ position:'absolute', top:'10%', left:0, right:0, height:44, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+            {/* Lyrics */}
+            <div style={{ position:'absolute', top:'12%', left:0, right:0, height:52, transform:`translateX(${-scrollOffset+nowX}px)` }}>
               {song.lyrics.map((l,i) => {
                 const lx = l.time * PX_PER_SEC
                 const nextTime = song.lyrics[i+1]?.time ?? l.time + beatDur*2
                 const isActive = songTime*speed >= l.time && songTime*speed < nextTime
                 return (
                   <div key={l.id} style={{ position:'absolute', left:lx/speed, transform:'translateX(-50%)',
-                    fontSize: isActive?21:16, fontWeight: isActive?800:500,
-                    color: isActive ? T.greenLight : T.text,
-                    transition:'all 0.08s', whiteSpace:'nowrap', userSelect:'none' }}>
+                    fontSize: isActive?24:16, fontWeight: isActive?800:400,
+                    color: isActive ? C.gold : C.textMuted,
+                    transition:'all 0.08s', whiteSpace:'nowrap', userSelect:'none',
+                    letterSpacing: isActive ? '0.02em' : 0 }}>
                     {l.text}
                   </div>
                 )
               })}
             </div>
 
-            <div style={{ position:'absolute', top:'calc(10% + 48px)', left:0, right:0, height:1, background:T.border }} />
+            {/* Separator */}
+            <div style={{ position:'absolute', top:'calc(12% + 60px)', left:0, right:0, height:1, background:C.borderDark }} />
 
-            {/* Đáp án Thầy */}
+            {/* Teacher dots */}
             {showTeacher && (
-              <div style={{ position:'absolute', top:'calc(10% + 50px)', left:0, right:0, height:20, transform:`translateX(${-scrollOffset+nowX}px)` }}>
-                <div style={{ position:'absolute', left:-nowX, top:0, height:16, display:'flex', alignItems:'center', paddingLeft:4 }}>
-                  <span style={{ fontSize:8, color:T.gold, fontWeight:700 }}>Đáp án Thầy</span>
-                </div>
+              <div style={{ position:'absolute', top:'calc(12% + 62px)', left:0, right:0, height:24, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+                <div style={{ position:'absolute', left:-nowX+8, top:4, fontSize:9, color:C.gold, fontWeight:600 }}>Đáp án Thầy</div>
                 {targetDotsScaled.map((d,i) => (
                   <div key={'td'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                    width:8, height:8, borderRadius:'50%', background:T.gold, top:6,
-                    boxShadow:`0 0 4px ${T.goldPale}` }} />
+                    width:9, height:9, borderRadius:'50%', background:C.gold, top:7, opacity:0.9 }} />
                 ))}
               </div>
             )}
 
-            {/* Current dots */}
-            <div style={{ position:'absolute', top:'calc(10% + 74px)', left:0, right:0, transform:`translateX(${-scrollOffset+nowX}px)` }}>
-              <div style={{ position:'absolute', left:-nowX, top:0, height:16, display:'flex', alignItems:'center', paddingLeft:4 }}>
-                <span style={{ fontSize:8, color:T.greenLight, fontWeight:700 }}>{userName||'Bạn'} — Lần này</span>
-              </div>
+            {/* Player dots */}
+            <div style={{ position:'absolute', top:'calc(12% + 90px)', left:0, right:0, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', left:-nowX+8, top:4, fontSize:9, color:C.greenLight, fontWeight:600 }}>{userName||'Bạn'} — Lần này</div>
               {scoredCurrent.map((d,i) => (
                 <div key={'cd'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                   width:12, height:12, borderRadius:'50%', top:18,
-                  background: targetDotsScaled.length>0 ? (d.hit ? T.greenLight : T.red) : '#60A5FA',
-                  boxShadow: targetDotsScaled.length===0 ? '0 0 8px rgba(96,165,250,0.7)' : 'none' }} />
+                  background: targetDotsScaled.length>0 ? (d.hit ? C.greenMid : C.red) : '#60A5FA' }} />
               ))}
             </div>
 
-            {/* History rows */}
+            {/* History */}
             {tapHistory.map((h, hi) => {
-              const opacity = Math.max(0.2, 0.65 - hi*0.12)
-              const topPos = `calc(10% + ${74+38+hi*30}px)`
+              const opacity = Math.max(0.18, 0.55 - hi*0.1)
               return (
-                <div key={h.id} style={{ position:'absolute', top:topPos, left:0, right:0, transform:`translateX(${-scrollOffset+nowX}px)` }}>
-                  <div style={{ position:'absolute', left:-nowX, top:0, height:14, display:'flex', alignItems:'center', gap:5, paddingLeft:4 }}>
-                    <span style={{ fontSize:8, color:T.purple, opacity, whiteSpace:'nowrap' }}>
-                      Lần {tapHistory.length-hi} · {h.score}đ · {'⭐'.repeat(stars(h.score))}
+                <div key={h.id} style={{ position:'absolute', top:`calc(12% + ${120+hi*28}px)`, left:0, right:0, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+                  <div style={{ position:'absolute', left:-nowX+8, top:0, height:14, display:'flex', alignItems:'center', gap:5 }}>
+                    <span style={{ fontSize:8, color:'#A78BFA', opacity, whiteSpace:'nowrap' }}>
+                      Lần {tapHistory.length-hi} · {h.score}đ
                     </span>
-                    <button onClick={() => handleDeleteHistory(h.id)} title="Xoá lần này"
-                      style={{ fontSize:9, background:'none', border:'none', color:T.red, cursor:'pointer', opacity:0.5, padding:0, lineHeight:1 }}>
-                      ✕
-                    </button>
+                    <button onClick={() => handleDeleteHistory(h.id)} style={{ fontSize:9, background:'none', border:'none', color:C.red, cursor:'pointer', opacity:0.4, padding:0 }}>✕</button>
                   </div>
                   {h.dots.map((d,di) => (
                     <div key={di} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                      width:8, height:8, borderRadius:'50%', top:15, background:T.purple, opacity }} />
+                      width:7, height:7, borderRadius:'50%', top:12, background:'#A78BFA', opacity }} />
                   ))}
                 </div>
               )
@@ -582,143 +628,162 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                 const beatInBar = i%song.timeSignature+1
                 const isTarget = levelConfig?.beats.includes(beatInBar)
                 return <div key={i} style={{ position:'absolute', left:t*PX_PER_SEC,
-                  width:isBar?2:1, height:isBar?14:isTarget?10:6,
-                  background: isTarget ? `rgba(168,209,141,0.45)` : isBar ? T.borderLight : T.border,
+                  width:isBar?2:1, height:isBar?14:isTarget?10:5,
+                  background: isTarget ? 'rgba(167,216,138,0.4)' : isBar ? 'rgba(244,241,232,0.18)' : 'rgba(244,241,232,0.08)',
                   transform:'translateX(-50%)', bottom:0 }} />
               })}
             </div>
           </div>
 
-          {/* Live score */}
+          {/* LIVE SCORE */}
           {currentDots.length > 0 && currentScore !== null && (
-            <div style={{ flexShrink:0, textAlign:'center', padding:'3px 0', borderTop:`1px solid ${T.border}`, background:'rgba(0,0,0,0.2)' }}>
-              <span style={{ fontSize:12, color: currentScore>=80 ? T.greenLight : currentScore>=60 ? T.gold : T.red, fontWeight:700 }}>
+            <div style={{ flexShrink:0, textAlign:'center', padding:'5px 0', borderTop:`1px solid ${C.borderDark}`, background:C.bgDeep }}>
+              <span style={{ fontSize:13, fontWeight:700,
+                color: currentScore>=80 ? C.greenLight : currentScore>=60 ? C.gold : C.red }}>
                 {currentScore}/100 · {scoredCurrent.filter(d=>d.hit).length}/{targetDotsScaled.length} phách đúng
               </span>
             </div>
           )}
 
-          {/* Controls */}
-          <div style={{ padding:'8px 16px', display:'flex', gap:10, justifyContent:'center', alignItems:'center', flexShrink:0, flexWrap:'wrap', background:T.bgAlt, borderTop:`1px solid ${T.border}` }}>
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-              <button onClick={() => setIsPlaying(p=>!p)} style={{ width:48, height:48, borderRadius:'50%', background:T.bgCard, border:`2px solid ${T.borderLight}`, color:T.text, fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                {isPlaying?'⏸':'▶'}
-              </button>
-              <span style={{ fontSize:9, color:T.textDim }}>Phím P</span>
-            </div>
+          {/* ── CONTROLS AREA ── */}
+          <div style={{ background:C.bgControls, borderTop:`2px solid rgba(20,83,45,0.12)`, padding:'16px 24px 12px', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:20, flexWrap:'wrap' }}>
 
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-              <button
-                onMouseDown={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
-                onTouchStart={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
-                style={{ width:110, height:110, borderRadius:'50%',
-                  background: isPlaying ? T.green : T.bgCard,
-                  border: isPlaying ? 'none' : `2px solid ${T.borderLight}`,
-                  color:'#fff', fontSize: isPlaying?22:14, fontWeight:900,
-                  cursor:'pointer', userSelect:'none', transition:'background 0.2s',
-                  boxShadow: isPlaying ? `0 0 28px ${T.greenGlow}` : 'none' }}>
-                {isPlaying?'TAP':'🎵'}
-              </button>
-              <span style={{ fontSize:9, color:T.textDim }}>Phím Space</span>
-            </div>
-
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-              <button onClick={() => { seekTo(0); setIsPlaying(false) }} style={{ width:48, height:48, borderRadius:'50%', background:T.bgCard, border:`2px solid ${T.borderLight}`, color:T.text, fontSize:20, cursor:'pointer' }}>⏮</button>
-              <span style={{ fontSize:9, color:T.textDim }}>Về đầu</span>
-            </div>
-
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <button onClick={() => setShowTeacher(t=>!t)} style={{ padding:'6px 12px', borderRadius:6,
-                background: showTeacher ? T.goldPale : T.bgCard,
-                border: `1px solid ${showTeacher ? T.gold : T.borderLight}`,
-                color: showTeacher ? T.gold : T.textMuted, fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                {showTeacher?'🙈 Ẩn đáp án Thầy':'👁 Xem đáp án Thầy'}
-              </button>
-              <div style={{ display:'flex', gap:6 }}>
-                <button onClick={() => { setCurrentDots([]); setLastScore(null) }}
-                  style={{ padding:'6px 12px', borderRadius:6, background:T.bgCard, border:`1px solid ${T.borderLight}`, color:T.red, fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                  🗑 Xoá lần này
+              {/* Bắt đầu / Dừng */}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5 }}>
+                <button onClick={() => setIsPlaying(p=>!p)} style={{ ...btnKeyStyle, width:60, height:60 }}>
+                  <span style={{ fontSize:20 }}>{isPlaying ? '⏸' : '▶'}</span>
+                  <span style={{ fontSize:8, color:C.textDarkMuted, fontWeight:400 }}>{isPlaying ? 'Dừng' : 'Bắt đầu'}</span>
                 </button>
-                {currentDots.length > 0 && (
-                  <button onClick={handleShowResult}
-                    style={{ padding:'6px 12px', borderRadius:6, background:T.green, border:'none', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer', boxShadow:`0 0 10px ${T.greenGlow}` }}>
-                    📊 Xem kết quả
+                <span style={{ fontSize:9, color:C.textDarkMuted }}>Phím P</span>
+              </div>
+
+              {/* TAP */}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                <button
+                  onMouseDown={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
+                  onTouchStart={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
+                  style={{
+                    width:116, height:116, borderRadius:'50%',
+                    background: isPlaying ? C.bgHeader : '#E8E4D8',
+                    border: `2.5px solid ${isPlaying ? C.greenMid : C.ctrlBorder}`,
+                    color: isPlaying ? C.textLight : '#9AAE9A',
+                    fontSize:18, fontWeight:800, letterSpacing:'0.1em',
+                    cursor:'pointer', userSelect:'none', transition:'all 0.2s',
+                    boxShadow: isPlaying
+                      ? `0 4px 16px rgba(20,83,45,0.35), inset 0 1px 0 rgba(167,216,138,0.2), inset 0 -3px 6px rgba(0,0,0,0.2)`
+                      : `0 2px 8px rgba(20,83,45,0.12), inset 0 1px 0 rgba(255,255,255,0.9)`,
+                  }}>
+                  TAP
+                </button>
+                <span style={{ fontSize:9, color:C.textDarkMuted }}>Phím Space</span>
+              </div>
+
+              {/* Về đầu */}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:5 }}>
+                <button onClick={() => { seekTo(0); setIsPlaying(false) }} style={{ ...btnKeyStyle, width:60, height:60 }}>
+                  <span style={{ fontSize:20 }}>⏮</span>
+                  <span style={{ fontSize:8, color:C.textDarkMuted, fontWeight:400 }}>Về đầu</span>
+                </button>
+                <span style={{ fontSize:9, color:C.textDarkMuted }}>&nbsp;</span>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display:'flex', flexDirection:'column', gap:8, marginLeft:8 }}>
+                <button onClick={() => setShowTeacher(t=>!t)} style={{ ...btnActionStyle,
+                  background: showTeacher ? 'rgba(201,151,0,0.1)' : C.ctrlBg,
+                  borderColor: showTeacher ? C.borderGold : C.ctrlBorder,
+                  color: showTeacher ? C.gold : C.ctrlText }}>
+                  <span style={{ fontSize:15 }}>👁</span>
+                  {showTeacher ? 'Ẩn đáp án Thầy' : 'Xem đáp án Thầy'}
+                </button>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={() => { setCurrentDots([]); setLastScore(null) }}
+                    style={{ ...btnActionStyle, color:'#7A3530', borderColor:'rgba(139,58,53,0.2)', background:'rgba(255,240,238,0.7)' }}>
+                    <span style={{ fontSize:14 }}>🗑</span> Xoá lần này
                   </button>
-                )}
+                  {currentDots.length > 0 && (
+                    <button onClick={handleShowResult}
+                      style={{ ...btnActionStyle, background:C.bgHeader, border:'none', color:C.textLight, fontWeight:600, boxShadow:'0 2px 8px rgba(20,83,45,0.25)' }}>
+                      <span style={{ fontSize:14 }}>📊</span> Xem kết quả
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {saveMsg && <div style={{ textAlign:'center', color:T.greenLight, fontSize:11, padding:'4px 0', fontWeight:700, background:T.bgAlt }}>✓ {saveMsg}</div>}
-          <div style={{ textAlign:'center', color:T.textDim, fontSize:9, padding:'4px 0 6px', background:T.bgAlt }}>
-            Space = TAP · P hoặc Enter = Phát/Dừng · ⏮ = Về đầu · Esc = Đóng
+            {/* Bottom hints */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:10 }}>
+              {saveMsg
+                ? <span style={{ fontSize:11, color:C.green, fontWeight:600 }}>✓ {saveMsg}</span>
+                : <span style={{ fontSize:9, color:C.textDarkMuted }}>Space = TAP · P = Bắt đầu/Dừng · ⏮ = Về đầu · Esc = Đóng</span>
+              }
+            </div>
           </div>
         </div>
       )}
 
-      {/* Popup kết quả */}
+      {/* ── POPUP KẾT QUẢ ── */}
       {showResultPopup && lastScore !== null && resultMsg && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(10,20,14,0.85)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
           onClick={() => setShowResultPopup(false)}>
-          <div style={{ background:T.bgCard, borderRadius:20, padding:'32px 28px', textAlign:'center', border:`1px solid ${T.borderLight}`, maxWidth:340, width:'100%', boxShadow:`0 20px 60px rgba(0,0,0,0.5)` }}
+          <div style={{ background:C.bgCard, borderRadius:20, padding:'32px 28px', textAlign:'center', border:`1px solid ${C.borderMid}`, maxWidth:360, width:'100%' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:48, marginBottom:8 }}>{resultMsg.emoji}</div>
-            <div style={{ color:T.text, fontWeight:900, fontSize:24, marginBottom:4 }}>{resultMsg.title}</div>
-            <div style={{ fontSize:52, fontWeight:900, lineHeight:1, marginBottom:4,
-              color: lastScore>=80 ? T.greenLight : lastScore>=60 ? T.gold : T.red }}>
-              {lastScore}<span style={{ fontSize:20, color:T.textMuted }}>/100</span>
+            <div style={{ color:C.textLight, fontWeight:800, fontSize:22, marginBottom:8 }}>{resultMsg.title}</div>
+            <div style={{ fontSize:56, fontWeight:900, lineHeight:1, marginBottom:6,
+              color: lastScore>=80 ? C.greenLight : lastScore>=60 ? C.gold : '#E57373' }}>
+              {lastScore}<span style={{ fontSize:22, color:C.textMuted }}>/100</span>
             </div>
-            <div style={{ fontSize:22, marginBottom:8 }}>{'⭐'.repeat(starCount)}{'☆'.repeat(5-starCount)}</div>
+            <div style={{ fontSize:22, marginBottom:10 }}>{'⭐'.repeat(starCount)}{'☆'.repeat(5-starCount)}</div>
             {prevBest > 0 && (
-              <div style={{ fontSize:13, marginBottom:8, fontWeight:600,
-                color: lastScore>prevBest ? T.greenLight : T.textMuted }}>
-                {lastScore>prevBest ? `📈 +${lastScore-prevBest} so với kỷ lục!` : lastScore===prevBest ? '🎯 Bằng kỷ lục của bạn!' : `📉 Kỷ lục của bạn: ${prevBest}`}
+              <div style={{ fontSize:13, marginBottom:10, fontWeight:600, color: lastScore>prevBest ? C.greenLight : C.textMuted }}>
+                {lastScore>prevBest ? `📈 +${lastScore-prevBest} so với kỷ lục!` : lastScore===prevBest ? '🎯 Bằng kỷ lục của bạn!' : `📉 Kỷ lục: ${prevBest}`}
               </div>
             )}
-            <div style={{ color:T.textMuted, fontSize:13, marginBottom: resultMsg.hint ? 8 : 16, lineHeight:1.5 }}>{resultMsg.body}</div>
+            <div style={{ color:C.textMuted, fontSize:13, marginBottom: resultMsg.hint?8:16, lineHeight:1.6 }}>{resultMsg.body}</div>
             {resultMsg.hint && (
-              <div style={{ marginBottom:16, padding:'10px 14px', background:T.greenPale, borderRadius:10, border:`1px solid rgba(168,209,141,0.2)`, fontSize:12, color:T.greenLight, lineHeight:1.5 }}>
-                {resultMsg.hint}
+              <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(167,216,138,0.08)', borderRadius:10, border:`1px solid rgba(167,216,138,0.18)`, fontSize:12, color:C.greenLight, lineHeight:1.5 }}>
+                💡 {resultMsg.hint}
               </div>
             )}
             {lastScore < UNLOCK_SCORE && activeLevel < levels.length && (
-              <div style={{ marginBottom:16, padding:'10px 14px', background:T.goldPale, borderRadius:10, border:`1px solid ${T.goldBorder}` }}>
-                <div style={{ fontSize:12, color:T.gold, marginBottom:6 }}>Cần thêm <strong>{UNLOCK_SCORE-lastScore} điểm</strong> để mở Level {activeLevel+1}</div>
-                <div style={{ height:6, background:T.border, borderRadius:3, overflow:'hidden' }}>
-                  <div style={{ width:`${Math.min(lastScore/UNLOCK_SCORE*100,100)}%`, height:'100%', background:`linear-gradient(90deg,${T.gold},#E6C040)`, borderRadius:3, transition:'width 0.5s' }} />
+              <div style={{ marginBottom:16, padding:'10px 14px', background:C.goldPale, borderRadius:10, border:`1px solid ${C.borderGold}` }}>
+                <div style={{ fontSize:12, color:C.gold, marginBottom:6 }}>Cần thêm <strong>{UNLOCK_SCORE-lastScore} điểm</strong> để mở Level {activeLevel+1}</div>
+                <div style={{ height:5, background:C.borderDark, borderRadius:3, overflow:'hidden' }}>
+                  <div style={{ width:`${Math.min(lastScore/UNLOCK_SCORE*100,100)}%`, height:'100%', background:C.gold, borderRadius:3, transition:'width 0.5s' }} />
                 </div>
-                <div style={{ fontSize:10, color:T.textMuted, marginTop:4 }}>{lastScore}/{UNLOCK_SCORE}</div>
               </div>
             )}
             {lastScore >= UNLOCK_SCORE && activeLevel < levels.length && (
-              <div style={{ marginBottom:16, padding:'10px 14px', background:T.greenPale, borderRadius:10, border:`1px solid rgba(168,209,141,0.3)` }}>
-                <div style={{ fontSize:13, color:T.greenLight, fontWeight:700 }}>🔓 Đủ điểm mở Level {activeLevel+1}! Lưu để nhận thưởng</div>
+              <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(167,216,138,0.08)', borderRadius:10, border:`1px solid rgba(167,216,138,0.25)` }}>
+                <div style={{ fontSize:13, color:C.greenLight, fontWeight:700 }}>🔓 Đủ điểm mở Level {activeLevel+1}! Lưu để nhận thưởng</div>
               </div>
             )}
             {isGuest ? (
               <div>
-                <div style={{ marginBottom:12, padding:'10px 14px', background:T.greenPale, borderRadius:10, border:`1px solid rgba(168,209,141,0.2)`, fontSize:13, color:T.greenLight }}>
+                <div style={{ marginBottom:12, padding:'10px 14px', background:'rgba(167,216,138,0.08)', borderRadius:10, border:`1px solid rgba(167,216,138,0.18)`, fontSize:13, color:C.greenLight }}>
                   💡 Đăng nhập để lưu điểm và xem lại lịch sử luyện tập!
                 </div>
                 <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-                  <button onClick={() => { setShowResultPopup(false); setCurrentDots([]); seekTo(0) }}
-                    style={{ padding:'10px 20px', background:T.bgCard, border:`1px solid ${T.borderLight}`, borderRadius:10, color:T.text, fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                  <button onClick={() => { setShowResultPopup(false); setCurrentDots([]) }}
+                    style={{ padding:'10px 20px', background:C.bgMid, border:`1px solid ${C.borderMid}`, borderRadius:10, color:C.textLight, fontWeight:600, fontSize:13, cursor:'pointer' }}>
                     🔄 Thử lại
                   </button>
                   <button onClick={handleLogin}
-                    style={{ padding:'10px 20px', background:T.green, border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:13, cursor:'pointer' }}>
-                    🔑 Đăng nhập
+                    style={{ padding:'10px 20px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                    Đăng nhập
                   </button>
                 </div>
               </div>
             ) : (
               <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-                <button onClick={() => { setShowResultPopup(false); setCurrentDots([]); seekTo(0) }}
-                  style={{ padding:'10px 20px', background:T.bgCard, border:`1px solid ${T.borderLight}`, borderRadius:10, color:T.text, fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                <button onClick={() => { setShowResultPopup(false); setCurrentDots([]) }}
+                  style={{ padding:'10px 20px', background:C.bgMid, border:`1px solid ${C.borderMid}`, borderRadius:10, color:C.textLight, fontWeight:600, fontSize:13, cursor:'pointer' }}>
                   🔄 Thử lại
                 </button>
                 <button onClick={handleSave}
-                  style={{ padding:'10px 20px', background:T.green, border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:13, cursor:'pointer', boxShadow:`0 0 16px ${T.greenGlow}` }}>
+                  style={{ padding:'10px 24px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
                   💾 Lưu điểm
                 </button>
               </div>
@@ -727,42 +792,42 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
         </div>
       )}
 
-      {/* Level Up Modal */}
+      {/* ── LEVEL UP ── */}
       {showLevelUp && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ background:T.bgCard, borderRadius:20, padding:40, textAlign:'center', border:`2px solid ${T.green}`, maxWidth:320 }}>
+        <div style={{ position:'fixed', inset:0, background:'rgba(10,20,14,0.9)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:C.bgCard, borderRadius:20, padding:40, textAlign:'center', border:`2px solid ${C.greenMid}`, maxWidth:340 }}>
             <div style={{ fontSize:56, marginBottom:8 }}>✨</div>
-            <div style={{ color:T.greenLight, fontWeight:900, fontSize:30, marginBottom:4 }}>LEVEL UP!</div>
-            <div style={{ color:T.text, fontWeight:700, fontSize:18, marginBottom:8 }}>🔓 Level {activeLevel+1} đã mở khoá!</div>
-            <div style={{ color:T.textMuted, fontSize:14, marginBottom:8 }}>Thử thách mới:</div>
-            <div style={{ color:T.greenLight, fontSize:15, fontWeight:700, marginBottom:8 }}>{levels[activeLevel]?.desc}</div>
+            <div style={{ color:C.greenLight, fontWeight:900, fontSize:28, marginBottom:4 }}>LEVEL UP!</div>
+            <div style={{ color:C.textLight, fontWeight:700, fontSize:18, marginBottom:8 }}>🔓 Level {activeLevel+1} đã mở khoá!</div>
+            <div style={{ color:C.textMuted, fontSize:13, marginBottom:6 }}>Thử thách mới:</div>
+            <div style={{ color:C.greenLight, fontSize:14, fontWeight:600, marginBottom:8 }}>{levels[activeLevel]?.desc}</div>
             <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
               {song && levels[activeLevel] && <BeatViz beats={levels[activeLevel].beats} timeSig={song.timeSignature} />}
             </div>
             <button onClick={() => { setShowLevelUp(false); setActiveLevel(activeLevel+1) }}
-              style={{ padding:'12px 32px', background:T.green, border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:16, cursor:'pointer' }}>
-              Thử ngay! →
+              style={{ padding:'12px 32px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:15, cursor:'pointer' }}>
+              Thử ngay →
             </button>
           </div>
         </div>
       )}
 
-      {/* Popup giới hạn khách */}
+      {/* ── GUEST LIMIT ── */}
       {showGuestLimit && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:700, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-          <div style={{ background:T.bgCard, borderRadius:20, padding:'32px 28px', textAlign:'center', border:`1px solid ${T.borderLight}`, maxWidth:340, width:'100%' }}>
+        <div style={{ position:'fixed', inset:0, background:'rgba(10,20,14,0.9)', zIndex:700, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:C.bgCard, borderRadius:20, padding:'32px 28px', textAlign:'center', border:`1px solid ${C.borderMid}`, maxWidth:340, width:'100%' }}>
             <div style={{ fontSize:48, marginBottom:12 }}>🎵</div>
-            <div style={{ color:T.text, fontWeight:900, fontSize:22, marginBottom:8 }}>Bạn đã thử {GUEST_MAX_SONGS} bài!</div>
-            <div style={{ color:T.textMuted, fontSize:14, lineHeight:1.6, marginBottom:20 }}>
-              Đăng nhập để tiếp tục luyện tập với tất cả bài hát, lưu điểm và theo dõi tiến độ của bạn.
+            <div style={{ color:C.textLight, fontWeight:800, fontSize:20, marginBottom:8 }}>Bạn đã thử {GUEST_MAX_SONGS} bài!</div>
+            <div style={{ color:C.textMuted, fontSize:14, lineHeight:1.65, marginBottom:20 }}>
+              Đăng nhập để tiếp tục luyện tập với tất cả bài hát, lưu điểm và theo dõi tiến độ.
             </div>
             <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
               <button onClick={() => setShowGuestLimit(false)}
-                style={{ padding:'10px 20px', background:T.bgCard, border:`1px solid ${T.borderLight}`, borderRadius:10, color:T.textMuted, fontWeight:600, fontSize:13, cursor:'pointer' }}>
+                style={{ padding:'10px 20px', background:C.bgMid, border:`1px solid ${C.borderMid}`, borderRadius:10, color:C.textMuted, fontWeight:500, fontSize:13, cursor:'pointer' }}>
                 Đóng
               </button>
               <button onClick={handleLogin}
-                style={{ padding:'10px 24px', background:T.green, border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer', boxShadow:`0 0 16px ${T.greenGlow}` }}>
+                style={{ padding:'10px 24px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
                 🔑 Đăng nhập ngay
               </button>
             </div>
