@@ -53,7 +53,7 @@ export default function AppRouter() {
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
   // ── Route /tap — trang độc lập ──
-  if ((path === '/gp-editor') && isTeacher) {
+  if (path === '/gp-editor') {
     return <GpEditor onClose={() => { window.location.href = '/' }} />
   }
 
