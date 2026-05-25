@@ -455,8 +455,12 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       {/* ── HEADER — kem sáng ── */}
       <div style={{ background:C.bgPage, borderBottom:`1px solid ${C.bgPageBorder}`, padding:'0 20px', height:52, display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
         {/* Logo */}
-        <img src="https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/assets/Logo.svg"
-          alt="Logo" style={{ width:28, height:28, flexShrink:0 }} />
+        {/* Logo C# inline SVG — không nền trắng */}
+        <svg width="36" height="36" viewBox="0 0 965 932" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }} aria-label="Logo Thầy Văn Anh Guitar">
+          <path fill="#14532D" d="M485.5,5.14C230.7,5.14,24.14,211.7,24.14,466.5s206.56,461.37,461.36,461.37,461.36-206.56,461.36-461.37S740.3,5.14,485.5,5.14ZM485.5,883.81c-230.47,0-417.3-186.84-417.3-417.31S255.03,49.2,485.5,49.2s417.3,186.83,417.3,417.3-186.83,417.31-417.3,417.31Z"/>
+          <path fill="#14532D" d="M871.98,503h-284.98s-.01-62.01-.01-62.01h234.96s.05-26.12.05-26.12l.94-6.87h-235.94s0-126.99,0-126.99h-31.01l.02,127h-70.02l.02-159h-32.02l.02,159-158-.02v33.02l158-.02v62.02l-158-.02v33.02l158-.02-.02,164h32.02l-.02-164h70.02v194.99s30.98,0,30.98,0l.04-194.98h284.96v-33ZM556,503h-70v-62h70v62Z"/>
+          <path fill="#14532D" d="M437.1,352.53c-32.96-49.63-86.33-79.48-145.64-75.14-45,3.29-85.41,26.85-113.24,61.9-22.85,28.79-36.56,63.15-40.93,99.78l-1.09,13.87c-2.13,26.81,2.05,52.76,10.82,78.07,25.52,73.59,90.73,125.65,170.74,118.53,33.32-2.96,63.64-17.38,88.57-39.1l15.13-14.97,16.56-21.02v81.88c-32.45,23.82-70.48,39.73-110.86,43.64l-8.18.79-32.78-.18c-49.9-3.88-96.27-23.99-133.71-57.03l-19.99-20.07c-94.04-106-76.94-272.39,38.35-355.71,80.22-57.97,186.6-57.06,267.12,1.73l.06,81.08c1.61,1.44.72,3.12-.93,1.95Z"/>
+        </svg>
         <span style={{ fontSize:13, fontWeight:700, color:C.textDark, flexShrink:0 }}>Thầy Văn Anh Guitar</span>
 
         {/* Chọn bài */}
