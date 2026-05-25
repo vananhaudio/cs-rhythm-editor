@@ -12,7 +12,7 @@ const C = {
   bgMid:      '#213B2A',   // level bar — moss sẫm
   bgCard:     '#243D2C',   // card — rêu trung tính, không LED
   bgDeep:     '#192C21',   // timeline — tối nhất, focus zone
-  bgControls: '#ECEFE6',   // controls — warm grey-green, không trắng
+  bgControls: '#2C1810',   // controls — vân gỗ tối ấm
 
   // Borders — matte, không glow
   borderDark:  'rgba(220,230,210,0.09)',
@@ -34,13 +34,13 @@ const C = {
   textDim:    '#5A7260',   // dim — rêu tối
 
   // Text on light (controls)
-  textDark:      '#1E2A1E',
-  textDarkMuted: '#4A6050',
+  textDark:      '#E8E0D0',
+  textDarkMuted: '#A89880',
 
-  // Controls area
-  ctrlBg:     '#F4F7EE',   // trắng ngà xanh nhạt
-  ctrlBorder: '#C4D4B0',   // border organic
-  ctrlText:   '#2A4E2A',
+  // Controls area — wood dark
+  ctrlBg:     '#3A2415',   // gỗ tối
+  ctrlBorder: '#5A3D25',   // border gỗ
+  ctrlText:   '#E8E0D0',
 }
 
 type Dot = { time: number }
@@ -49,7 +49,7 @@ type TapRecord = { id: string; dots: Dot[]; score: number; level: number; create
 type Progress = { current_level: number; best_scores: Record<string, number>; unlocked_levels: number[] }
 
 const PX_PER_SEC = 120
-const NOW_X_FRAC = 0.3
+const NOW_X_FRAC = 0.35
 const UNLOCK_SCORE = 80
 const GUEST_MAX_SONGS = 3
 
@@ -380,22 +380,22 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   // ── SHARED BUTTON STYLES ────────────────────────────────
   const btnKeyStyle = {
     width: 52, height: 52, borderRadius: 10,
-    background: C.ctrlBg,
-    border: `1.5px solid ${C.ctrlBorder}`,
-    color: C.ctrlText, fontSize: 13, fontWeight: 700,
+    background: 'rgba(255,220,160,0.1)',
+    border: `1.5px solid rgba(180,130,70,0.35)`,
+    color: '#D4B896', fontSize: 13, fontWeight: 700,
     cursor: 'pointer', display: 'flex', flexDirection: 'column' as const,
     alignItems: 'center', justifyContent: 'center', gap: 2,
-    boxShadow: '0 2px 6px rgba(20,83,45,0.12), inset 0 1px 0 rgba(255,255,255,0.8)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,200,120,0.1)',
   }
 
   const btnActionStyle = {
     padding: '9px 16px', borderRadius: 10,
-    border: `1px solid ${C.ctrlBorder}`,
-    background: C.ctrlBg,
-    color: C.ctrlText, fontSize: 12, fontWeight: 500,
+    border: `1px solid rgba(180,130,70,0.25)`,
+    background: 'rgba(255,220,160,0.08)',
+    color: '#C8A878', fontSize: 12, fontWeight: 500,
     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
     whiteSpace: 'nowrap' as const,
-    boxShadow: '0 1px 4px rgba(20,83,45,0.08)',
+    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
   }
 
   return (
@@ -632,7 +632,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                 const isTarget = levelConfig?.beats.includes(beatInBar)
                 return <div key={i} style={{ position:'absolute', left:t*PX_PER_SEC,
                   width:isBar?2:1, height:isBar?14:isTarget?10:5,
-                  background: isTarget ? 'rgba(167,216,138,0.4)' : isBar ? 'rgba(244,241,232,0.18)' : 'rgba(244,241,232,0.08)',
+                  background: isTarget ? 'rgba(141,196,112,0.25)' : isBar ? 'rgba(220,210,190,0.1)' : 'rgba(220,210,190,0.04)',
                   transform:'translateX(-50%)', bottom:0 }} />
               })}
             </div>
@@ -649,7 +649,12 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           )}
 
           {/* ── CONTROLS AREA ── */}
-          <div style={{ background:C.bgControls, borderTop:`2px solid rgba(20,83,45,0.12)`, padding:'16px 24px 12px', flexShrink:0 }}>
+          <div style={{
+            background: `linear-gradient(180deg, #3D2515 0%, #2C1A0E 40%, #241508 100%)`,
+            borderTop:`2px solid rgba(90,60,30,0.6)`,
+            padding:'16px 24px 12px', flexShrink:0,
+            boxShadow:'inset 0 1px 0 rgba(180,130,70,0.15)',
+          }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:20, flexWrap:'wrap' }}>
 
               {/* Bắt đầu / Dừng */}
@@ -658,11 +663,11 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   <span style={{ fontSize:20 }}>{isPlaying ? '⏸' : '▶'}</span>
                   <span style={{ fontSize:8, color:C.textDarkMuted, fontWeight:400 }}>{isPlaying ? 'Dừng' : 'Bắt đầu'}</span>
                 </button>
-                <span style={{ fontSize:9, color:C.textDarkMuted }}>Phím P</span>
+                <span style={{ fontSize:9, color:'rgba(180,150,100,0.6)' }}>Phím P</span>
               </div>
 
               {/* TAP */}
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, flexShrink:0 }}>
                 <button
                   onMouseDown={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
                   onTouchStart={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
@@ -679,7 +684,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   }}>
                   TAP
                 </button>
-                <span style={{ fontSize:9, color:C.textDarkMuted }}>Phím Space</span>
+                <span style={{ fontSize:9, color:'rgba(180,150,100,0.6)' }}>Phím Space</span>
               </div>
 
               {/* Về đầu */}
@@ -688,7 +693,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   <span style={{ fontSize:20 }}>⏮</span>
                   <span style={{ fontSize:8, color:C.textDarkMuted, fontWeight:400 }}>Về đầu</span>
                 </button>
-                <span style={{ fontSize:9, color:C.textDarkMuted }}>&nbsp;</span>
+                <span style={{ fontSize:9, color:'rgba(180,150,100,0.6)' }}>&nbsp;</span>
               </div>
 
               {/* Action buttons */}
@@ -702,12 +707,12 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                 </button>
                 <div style={{ display:'flex', gap:8 }}>
                   <button onClick={() => { setCurrentDots([]); setLastScore(null) }}
-                    style={{ ...btnActionStyle, color:'#7A3530', borderColor:'rgba(139,58,53,0.2)', background:'rgba(255,240,238,0.7)' }}>
+                    style={{ ...btnActionStyle, color:'#C07060', borderColor:'rgba(180,80,60,0.3)', background:'rgba(180,60,40,0.12)' }}>
                     <span style={{ fontSize:14 }}>🗑</span> Xoá lần này
                   </button>
                   {currentDots.length > 0 && (
                     <button onClick={handleShowResult}
-                      style={{ ...btnActionStyle, background:C.bgHeader, border:'none', color:C.textLight, fontWeight:600, boxShadow:'0 2px 8px rgba(20,83,45,0.25)' }}>
+                      style={{ ...btnActionStyle, background:'#1A4025', border:'1px solid rgba(100,180,80,0.3)', color:'#A8D080', fontWeight:600, boxShadow:'0 2px 8px rgba(0,0,0,0.3)' }}>
                       <span style={{ fontSize:14 }}>📊</span> Xem kết quả
                     </button>
                   )}
@@ -719,7 +724,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:10 }}>
               {saveMsg
                 ? <span style={{ fontSize:11, color:C.green, fontWeight:600 }}>✓ {saveMsg}</span>
-                : <span style={{ fontSize:9, color:C.textDarkMuted }}>Space = TAP · P = Bắt đầu/Dừng · ⏮ = Về đầu · Esc = Đóng</span>
+                : <span style={{ fontSize:9, color:'rgba(180,150,100,0.5)', letterSpacing:'0.02em' }}>Space = TAP · P = Bắt đầu/Dừng · ⏮ = Về đầu · Esc = Đóng</span>
               }
             </div>
           </div>
