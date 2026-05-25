@@ -134,7 +134,6 @@ function buildSong(parsed: ParseResult, hopAmText: string): RhythmSong {
   })).sort((a, b) => a.time - b.time)
 
   return {
-    id: genId(),
     title,
     artist,
     tone: '',
