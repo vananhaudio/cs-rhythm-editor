@@ -18,7 +18,7 @@ import {
 const PADDING = 16;        // px padding trái — display only
 const BAR_HEIGHT = 108;    // chiều cao mỗi bar row
 const BEAT_NUM_Y = 6;      // y số phách
-const CHORD_Y = 42;        // y chord
+const CHORD_Y = 50;        // y chord
 const LYRIC_Y = 66;        // y lyric — lyric là trung tâm
 
 // ── Time zone ──
