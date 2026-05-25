@@ -655,7 +655,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               )}
 
               {/* Current dots */}
-              <div style={{ position:'absolute', top: showTeacher ? 82 : 54, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', top:82, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {scoredCurrent.map((d,i) => (
                   <div key={'cd'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                     width:11, height:11, borderRadius:'50%', top:9,
@@ -666,7 +666,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
               {/* History rows */}
               {tapHistory.map((h, hi) => {
-                const topBase = (showTeacher ? 82 : 54) + 28 + hi * 28
+                const topBase = 82 + 28 + hi * 28
                 return (
                   <div key={h.id} style={{ position:'absolute', top:topBase, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
                     {h.dots.map((d,di) => (
