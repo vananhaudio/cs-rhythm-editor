@@ -27,7 +27,7 @@ function parseGpFile(score: any): ParseResult {
   // Luôn dùng Track 1 (Melody)
   const staff = score.tracks[0].staves[0]
   const noteEvents: NoteEvent[] = []
-  const chordsPerBar: Record<number, string> = {}
+  const chordEvents: ChordEvent2[] = []
   let globalTick = 0
 
   score.masterBars.forEach((mb: any, bi: number) => {
@@ -44,9 +44,10 @@ function parseGpFile(score: any): ParseResult {
       const isTied = hasNotes && beat.notes[0].isTieDestination
       const timeSec = (beatTick / TICKS_PER_BEAT) * beatDurSec
 
-      // Lấy chord
-      if (beat.chord?.name && !chordsPerBar[bi + 1]) {
-        chordsPerBar[bi + 1] = beat.chord.name
+      // Lấy chord — lấy tất cả
+      if (beat.chord?.name) {
+        const chordTime = (beatTick / TICKS_PER_BEAT) * beatDurSec
+        chordEvents.push({ time: +chordTime.toFixed(3), name: beat.chord.name })
       }
 
       // Chỉ lấy nốt không luyến
@@ -98,7 +99,7 @@ function parseHopAmViet(text: string): { words: string[]; chords: { text: string
 // ── Build RhythmSong từ GP + lời ──
 function buildSong(parsed: ParseResult, hopAmText: string): RhythmSong {
   const { words, chords: hopAmChords } = parseHopAmViet(hopAmText)
-  const { noteEvents, chordsPerBar, tempo, timeSignature, totalBars, title, artist } = parsed
+  const { noteEvents, chordEvents, tempo, timeSignature, totalBars, title, artist } = parsed
 
   // Ghép lời vào note events (1-1, bỏ qua note luyến)
   const lyrics: LyricEvent[] = words.map((text, i) => ({
@@ -107,21 +108,21 @@ function buildSong(parsed: ParseResult, hopAmText: string): RhythmSong {
     time: noteEvents[i]?.time ?? (i * 60 / tempo),
   }))
 
-  // Chords: ưu tiên HợpÂmViệt, fallback GP
-  const chordMap: Record<number, string> = { ...chordsPerBar }
-  hopAmChords.forEach(c => {
-    const noteEvent = noteEvents[c.wordIndex]
-    if (noteEvent) chordMap[noteEvent.bar] = c.text
+  // Chords: ưu tiên HợpÂmViệt, fallback GP chordEvents
+  const beatDur = 60 / tempo
+
+  // Build chord map từ HợpÂmViệt (theo word index → time)
+  const hopAmChordEntries: ChordEvent[] = hopAmChords.map(c => {
+    const noteEvent = filteredNotes[c.wordIndex]
+    return { id: genId(), name: c.text, time: noteEvent?.time ?? 0 }
   })
 
-  const beatDur = 60 / tempo
-  const barDur = beatDur * timeSignature
+  // Merge: nếu có HợpÂmViệt dùng HợpÂmViệt, không thì dùng GP
+  const chordEntries: ChordEvent[] = hopAmChordEntries.length > 0
+    ? hopAmChordEntries
+    : chordEvents.map(c => ({ id: genId(), name: c.name, time: c.time }))
 
-  const chordEntries: ChordEvent[] = Object.entries(chordMap).map(([bar, name]) => ({
-    id: genId(),
-    name,
-    time: (parseInt(bar) - 1) * barDur,
-  })).sort((a, b) => a.time - b.time)
+  chordEntries.sort((a, b) => a.time - b.time)
 
   return {
     title,
