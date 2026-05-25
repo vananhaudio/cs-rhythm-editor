@@ -11,7 +11,6 @@ type Progress = { current_level: number; best_scores: Record<string, number>; un
 const PX_PER_SEC = 120
 const NOW_X_FRAC = 0.3
 const UNLOCK_SCORE = 80
-const GUEST_MAX_SONGS = 3  // ← THÊM MỚI: giới hạn khách
 
 function getLevels(timeSig: number): { label: string; beats: number[]; desc: string; shortDesc: string }[] {
   if (timeSig === 4) return [
@@ -111,7 +110,6 @@ function Confetti({ show }: { show: boolean }) {
 
 export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRole?: string }) {
   const isTeacher = userRole === 'teacher' || userRole === 'admin'
-  const isGuest = userRole === 'guest'  // ← THÊM MỚI
 
   const [song, setSong] = useState<RhythmSong | null>(null)
   const [showSongList, setShowSongList] = useState(false)
@@ -136,8 +134,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const [currentDots, setCurrentDots] = useState<Dot[]>([])
   const [saveMsg, setSaveMsg] = useState('')
   const [pendingSave, setPendingSave] = useState(false)
-  const [guestSongsPlayed, setGuestSongsPlayed] = useState<string[]>([])  // ← THÊM MỚI
-  const [showGuestLimit, setShowGuestLimit] = useState(false)  // ← THÊM MỚI
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState(800)
@@ -185,17 +181,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   }
 
   const loadSong = async (s: RhythmSong) => {
-    // ← THÊM MỚI: kiểm tra giới hạn khách
-    if (isGuest) {
-      const alreadyPlayed = guestSongsPlayed.includes(s.title)
-      if (!alreadyPlayed && guestSongsPlayed.length >= GUEST_MAX_SONGS) {
-        setShowGuestLimit(true)
-        return
-      }
-      if (!alreadyPlayed) {
-        setGuestSongsPlayed(prev => [...prev, s.title])
-      }
-    }
     setSong(s); setCurrentDots([]); setTapHistory([])
     setShowTeacher(false); setLastScore(null); setPendingSave(false)
     setSongTime(0); songTimeRef.current = 0; setIsPlaying(false)
@@ -282,6 +267,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const levels = song ? getLevels(song.timeSignature) : []
   const levelConfig = levels[activeLevel - 1]
 
+  // Dùng JSON để tính đáp án thay vì teacher_taps
   const targetDots = song && levelConfig
     ? generateTargetDots(song, levelConfig.beats)
     : []
@@ -356,27 +342,9 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const resultMsg = lastScore !== null ? getResultMsg(lastScore, levelConfig?.shortDesc ?? '') : null
   const starCount = lastScore !== null ? stars(lastScore) : 0
 
-  const handleLogin = async () => {
-    const email = prompt('Email:')
-    const password = prompt('Mật khẩu:')
-    if (email && password) await supabase.auth.signInWithPassword({ email, password })
-  }
-
   return (
     <div style={{ position:'fixed', inset:0, background:'#0A0E1A', display:'flex', flexDirection:'column', zIndex:200, fontFamily:'Inter, sans-serif' }}>
       <Confetti show={showConfetti} />
-
-      {/* ── THÊM MỚI: Banner nhắc đăng nhập cho khách ── */}
-      {isGuest && (
-        <div style={{ background:'rgba(16,185,129,0.1)', borderBottom:'1px solid rgba(16,185,129,0.3)', padding:'6px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-          <span style={{ color:'#10B981', fontSize:12 }}>
-            🎵 Chế độ khách — đã thử <strong>{guestSongsPlayed.length}/{GUEST_MAX_SONGS}</strong> bài · Điểm không được lưu
-          </span>
-          <button onClick={handleLogin} style={{ background:'#10B981', border:'none', borderRadius:6, color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', padding:'4px 12px' }}>
-            🔑 Đăng nhập để lưu điểm
-          </button>
-        </div>
-      )}
 
       {/* ── Header ── */}
       <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', borderBottom:'1px solid #1E2533', flexShrink:0 }}>
@@ -436,7 +404,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       {song && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-          {/* Level bar */}
+          {/* Level bar + nhiệm vụ */}
           <div style={{ padding:'6px 16px', background:'#080C14', borderBottom:'1px solid #1E2533', display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
             {levels.map((lv, i) => {
               const lvNum = i + 1
@@ -458,10 +426,11 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                 </button>
               )
             })}
+
             <div style={{ marginLeft:'auto', fontSize:9, color:'#374151', flexShrink:0 }}>Cần {UNLOCK_SCORE}đ</div>
           </div>
 
-          {/* Nhiệm vụ */}
+          {/* Nhiệm vụ — to, rõ */}
           {levelConfig && (
             <div style={{ padding:'8px 16px', background:'#0D1117', borderBottom:'1px solid #1E2533', flexShrink:0, display:'flex', alignItems:'center', gap:12 }}>
               <div style={{ flex:1 }}>
@@ -472,7 +441,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />
             </div>
           )}
-
           {/* Progress bar */}
           <div style={{ padding:'5px 16px', display:'flex', gap:8, alignItems:'center', flexShrink:0 }}>
             <span style={{ color:'#4B5563', fontSize:10, width:32 }}>{fmtTime(songTime)}</span>
@@ -505,7 +473,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
             <div style={{ position:'absolute', top:'calc(10% + 48px)', left:0, right:0, height:1, background:'#1E2533' }} />
 
-            {/* Đáp án Thầy */}
+            {/* Đáp án Thầy (từ JSON) */}
             {showTeacher && (
               <div style={{ position:'absolute', top:'calc(10% + 50px)', left:0, right:0, height:20, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 <div style={{ position:'absolute', left:-nowX, top:0, height:16, display:'flex', alignItems:'center', paddingLeft:4 }}>
@@ -581,6 +549,8 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
           {/* Controls */}
           <div style={{ padding:'8px 16px 8px', display:'flex', gap:10, justifyContent:'center', alignItems:'center', flexShrink:0, flexWrap:'wrap' }}>
+
+            {/* Play/Pause */}
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
               <button onClick={() => setIsPlaying(p=>!p)} style={{ width:48, height:48, borderRadius:'50%', background:'#1E2533', border:'2px solid #374151', color:'#fff', fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 {isPlaying?'⏸':'▶'}
@@ -588,6 +558,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               <span style={{ fontSize:9, color:'#374151' }}>Phím P</span>
             </div>
 
+            {/* TAP */}
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
               <button
                 onMouseDown={e => { e.preventDefault(); e.stopPropagation(); handleTap() }}
@@ -601,12 +572,15 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               <span style={{ fontSize:9, color:'#374151' }}>Phím Space</span>
             </div>
 
+            {/* Về đầu */}
             <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
               <button onClick={() => { seekTo(0); setIsPlaying(false) }} style={{ width:48, height:48, borderRadius:'50%', background:'#1E2533', border:'2px solid #374151', color:'#fff', fontSize:20, cursor:'pointer' }}>⏮</button>
               <span style={{ fontSize:9, color:'#374151' }}>Về đầu</span>
             </div>
 
+            {/* Action buttons */}
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              {/* Xem đáp án */}
               <button onClick={() => setShowTeacher(t=>!t)} style={{ padding:'6px 12px', borderRadius:6,
                 background: showTeacher?'rgba(245,158,11,0.15)':'#1E2533',
                 border:`1px solid ${showTeacher?'#F59E0B':'#374151'}`,
@@ -615,10 +589,13 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               </button>
 
               <div style={{ display:'flex', gap:6 }}>
+                {/* Xoá lần này */}
                 <button onClick={() => { setCurrentDots([]); setLastScore(null) }}
                   style={{ padding:'6px 12px', borderRadius:6, background:'#1E2533', border:'1px solid #374151', color:'#EF4444', fontSize:11, fontWeight:700, cursor:'pointer' }}>
                   🗑 Xoá lần này
                 </button>
+
+                {/* Xem kết quả */}
                 {currentDots.length > 0 && (
                   <button onClick={handleShowResult}
                     style={{ padding:'6px 12px', borderRadius:6, background:'#3B82F6', border:'none', color:'#fff', fontSize:11, fontWeight:700, cursor:'pointer', boxShadow:'0 0 10px rgba(59,130,246,0.3)' }}>
@@ -642,67 +619,62 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           onClick={() => setShowResultPopup(false)}>
           <div style={{ background:'#16213E', borderRadius:20, padding:'32px 28px', textAlign:'center', border:'1px solid #1E2533', maxWidth:340, width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,0.5)' }}
             onClick={e => e.stopPropagation()}>
+
             <div style={{ fontSize:48, marginBottom:8 }}>{resultMsg.emoji}</div>
             <div style={{ color:'#fff', fontWeight:900, fontSize:24, marginBottom:4 }}>{resultMsg.title}</div>
+
+            {/* Score */}
             <div style={{ fontSize:52, fontWeight:900, color: lastScore>=80?'#10B981':lastScore>=60?'#F59E0B':'#EF4444', lineHeight:1, marginBottom:4 }}>
-              {lastScore}<span style={{ fontSize:20, color:'#6B7280' }}>/100</span>
+              {lastScore}
+              <span style={{ fontSize:20, color:'#6B7280' }}>/100</span>
             </div>
             <div style={{ fontSize:22, marginBottom:8 }}>{'⭐'.repeat(starCount)}{'☆'.repeat(5-starCount)}</div>
+
+            {/* So sánh kỷ lục */}
             {prevBest > 0 && (
               <div style={{ fontSize:13, color: lastScore>prevBest?'#10B981':'#6B7280', marginBottom:8, fontWeight:600 }}>
                 {lastScore>prevBest ? `📈 +${lastScore-prevBest} so với kỷ lục!` : lastScore===prevBest ? '🎯 Bằng kỷ lục của bạn!' : `📉 Kỷ lục của bạn: ${prevBest}`}
               </div>
             )}
+
+            {/* Body message */}
             <div style={{ color:'#9CA3AF', fontSize:13, marginBottom: resultMsg.hint ? 8 : 16, lineHeight:1.5 }}>{resultMsg.body}</div>
             {resultMsg.hint && (
               <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(96,165,250,0.08)', borderRadius:10, border:'1px solid rgba(96,165,250,0.2)', fontSize:12, color:'#60A5FA', lineHeight:1.5 }}>
                 {resultMsg.hint}
               </div>
             )}
+
+            {/* Progress tới level tiếp */}
             {lastScore < UNLOCK_SCORE && activeLevel < levels.length && (
               <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(245,158,11,0.08)', borderRadius:10, border:'1px solid rgba(245,158,11,0.2)' }}>
-                <div style={{ fontSize:12, color:'#F59E0B', marginBottom:6 }}>Cần thêm <strong>{UNLOCK_SCORE-lastScore} điểm</strong> để mở Level {activeLevel+1}</div>
+                <div style={{ fontSize:12, color:'#F59E0B', marginBottom:6 }}>
+                  Cần thêm <strong>{UNLOCK_SCORE-lastScore} điểm</strong> để mở Level {activeLevel+1}
+                </div>
                 <div style={{ height:6, background:'#1E2533', borderRadius:3, overflow:'hidden' }}>
                   <div style={{ width:`${Math.min(lastScore/UNLOCK_SCORE*100,100)}%`, height:'100%', background:'linear-gradient(90deg,#F59E0B,#FBBF24)', borderRadius:3, transition:'width 0.5s' }} />
                 </div>
                 <div style={{ fontSize:10, color:'#6B7280', marginTop:4 }}>{lastScore}/{UNLOCK_SCORE}</div>
               </div>
             )}
+
             {lastScore >= UNLOCK_SCORE && activeLevel < levels.length && (
               <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(16,185,129,0.1)', borderRadius:10, border:'1px solid rgba(16,185,129,0.3)' }}>
                 <div style={{ fontSize:13, color:'#10B981', fontWeight:700 }}>🔓 Đủ điểm mở Level {activeLevel+1}! Lưu để nhận thưởng</div>
               </div>
             )}
 
-            {/* ── THÊM MỚI: khách không lưu được, hiện nút đăng nhập ── */}
-            {isGuest ? (
-              <div>
-                <div style={{ marginBottom:12, padding:'10px 14px', background:'rgba(16,185,129,0.08)', borderRadius:10, border:'1px solid rgba(16,185,129,0.2)', fontSize:13, color:'#10B981' }}>
-                  💡 Đăng nhập để lưu điểm và xem lại lịch sử luyện tập!
-                </div>
-                <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-                  <button onClick={() => { setShowResultPopup(false); setCurrentDots([]); seekTo(0) }}
-                    style={{ padding:'10px 20px', background:'#1E2533', border:'1px solid #374151', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                    🔄 Thử lại
-                  </button>
-                  <button onClick={handleLogin}
-                    style={{ padding:'10px 20px', background:'#10B981', border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:13, cursor:'pointer' }}>
-                    🔑 Đăng nhập
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-                <button onClick={() => { setShowResultPopup(false); setCurrentDots([]); seekTo(0) }}
-                  style={{ padding:'10px 20px', background:'#1E2533', border:'1px solid #374151', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                  🔄 Thử lại
-                </button>
-                <button onClick={handleSave}
-                  style={{ padding:'10px 20px', background:'#10B981', border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:13, cursor:'pointer', boxShadow:'0 0 16px rgba(16,185,129,0.4)' }}>
-                  💾 Lưu điểm
-                </button>
-              </div>
-            )}
+            {/* Buttons */}
+            <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+              <button onClick={() => { setShowResultPopup(false); setCurrentDots([]); seekTo(0) }}
+                style={{ padding:'10px 20px', background:'#1E2533', border:'1px solid #374151', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                🔄 Thử lại
+              </button>
+              <button onClick={handleSave}
+                style={{ padding:'10px 20px', background:'#10B981', border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:13, cursor:'pointer', boxShadow:'0 0 16px rgba(16,185,129,0.4)' }}>
+                💾 Lưu điểm
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -723,29 +695,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               style={{ padding:'12px 32px', background:'#10B981', border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:16, cursor:'pointer' }}>
               Thử ngay! →
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── THÊM MỚI: Popup giới hạn khách ── */}
-      {showGuestLimit && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', zIndex:700, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-          <div style={{ background:'#16213E', borderRadius:20, padding:'32px 28px', textAlign:'center', border:'1px solid #374151', maxWidth:340, width:'100%' }}>
-            <div style={{ fontSize:48, marginBottom:12 }}>🎵</div>
-            <div style={{ color:'#fff', fontWeight:900, fontSize:22, marginBottom:8 }}>Bạn đã thử {GUEST_MAX_SONGS} bài!</div>
-            <div style={{ color:'#9CA3AF', fontSize:14, lineHeight:1.6, marginBottom:20 }}>
-              Đăng nhập để tiếp tục luyện tập với tất cả bài hát, lưu điểm và theo dõi tiến độ của bạn.
-            </div>
-            <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-              <button onClick={() => setShowGuestLimit(false)}
-                style={{ padding:'10px 20px', background:'#1E2533', border:'1px solid #374151', borderRadius:10, color:'#9CA3AF', fontWeight:600, fontSize:13, cursor:'pointer' }}>
-                Đóng
-              </button>
-              <button onClick={handleLogin}
-                style={{ padding:'10px 24px', background:'#10B981', border:'none', borderRadius:10, color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer', boxShadow:'0 0 16px rgba(16,185,129,0.4)' }}>
-                🔑 Đăng nhập ngay
-              </button>
-            </div>
           </div>
         </div>
       )}
