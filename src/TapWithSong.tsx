@@ -3,6 +3,17 @@ import type { RhythmSong } from './types'
 import { supabase } from './supabase'
 import { SongList } from './SongList'
 
+// ── MOBILE DETECTION ──────────────────────────────────────
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 640)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isMobile
+}
+
 // ── DESIGN TOKENS ──────────────────────────────────────────
 const C = {
   // Header + Controls — kem sáng
@@ -176,6 +187,7 @@ function TapLandingPage({ onGuest }: { onGuest: () => void }) {
 export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRole?: string }) {
   const isTeacher = userRole === 'teacher' || userRole === 'admin'
   const isGuest = userRole === 'guest'
+  const isMobile = useIsMobile()
 
   const [song, setSong] = useState<RhythmSong | null>(null)
   const [showSongList, setShowSongList] = useState(false)
@@ -452,49 +464,48 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     <div style={{ position:'fixed', inset:0, background:C.bgPage, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'Inter, sans-serif' }}>
       <Confetti show={showConfetti} />
 
-      {/* ── HEADER — kem sáng ── */}
-      <div style={{ background:C.bgPage, borderBottom:`1px solid ${C.bgPageBorder}`, padding:'0 20px', height:52, display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
-        {/* Logo */}
-        {/* Logo C# inline SVG — không nền trắng */}
-        <svg width="36" height="36" viewBox="0 0 965 932" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }} aria-label="Logo Thầy Văn Anh Guitar">
+      {/* ── HEADER ── */}
+      <div style={{ background:C.bgPage, borderBottom:`1px solid ${C.bgPageBorder}`, padding: isMobile ? '0 12px' : '0 20px', height: isMobile ? 48 : 52, display:'flex', alignItems:'center', gap: isMobile ? 8 : 14, flexShrink:0 }}>
+        <svg width={isMobile?28:36} height={isMobile?28:36} viewBox="0 0 965 932" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }} aria-label="Logo">
           <path fill="#14532D" d="M485.5,5.14C230.7,5.14,24.14,211.7,24.14,466.5s206.56,461.37,461.36,461.37,461.36-206.56,461.36-461.37S740.3,5.14,485.5,5.14ZM485.5,883.81c-230.47,0-417.3-186.84-417.3-417.31S255.03,49.2,485.5,49.2s417.3,186.83,417.3,417.3-186.83,417.31-417.3,417.31Z"/>
           <path fill="#14532D" d="M871.98,503h-284.98s-.01-62.01-.01-62.01h234.96s.05-26.12.05-26.12l.94-6.87h-235.94s0-126.99,0-126.99h-31.01l.02,127h-70.02l.02-159h-32.02l.02,159-158-.02v33.02l158-.02v62.02l-158-.02v33.02l158-.02-.02,164h32.02l-.02-164h70.02v194.99s30.98,0,30.98,0l.04-194.98h284.96v-33ZM556,503h-70v-62h70v62Z"/>
           <path fill="#14532D" d="M437.1,352.53c-32.96-49.63-86.33-79.48-145.64-75.14-45,3.29-85.41,26.85-113.24,61.9-22.85,28.79-36.56,63.15-40.93,99.78l-1.09,13.87c-2.13,26.81,2.05,52.76,10.82,78.07,25.52,73.59,90.73,125.65,170.74,118.53,33.32-2.96,63.64-17.38,88.57-39.1l15.13-14.97,16.56-21.02v81.88c-32.45,23.82-70.48,39.73-110.86,43.64l-8.18.79-32.78-.18c-49.9-3.88-96.27-23.99-133.71-57.03l-19.99-20.07c-94.04-106-76.94-272.39,38.35-355.71,80.22-57.97,186.6-57.06,267.12,1.73l.06,81.08c1.61,1.44.72,3.12-.93,1.95Z"/>
         </svg>
-        <span style={{ fontSize:13, fontWeight:700, color:C.textDark, flexShrink:0 }}>Thầy Văn Anh Guitar</span>
 
-        {/* Chọn bài */}
-        <button onClick={() => setShowSongList(true)} style={{ padding:'5px 13px', borderRadius:8, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
-          🎵 Chọn bài ▾
+        {!isMobile && <span style={{ fontSize:13, fontWeight:700, color:C.textDark, flexShrink:0 }}>Thầy Văn Anh Guitar</span>}
+
+        <button onClick={() => setShowSongList(true)} style={{ padding: isMobile?'5px 10px':'5px 13px', borderRadius:8, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize: isMobile?11:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
+          🎵 {isMobile ? 'Chọn bài' : 'Chọn bài ▾'}
         </button>
 
         {/* Tên bài — trung tâm */}
-        <div style={{ flex:1, textAlign:'center' }}>
+        <div style={{ flex:1, textAlign:'center', overflow:'hidden' }}>
           {song ? (
-            <span style={{ fontSize:17, fontWeight:800, color:C.textDark, letterSpacing:'0.02em' }}>
+            <span style={{ fontSize: isMobile?13:17, fontWeight:800, color:C.textDark, letterSpacing:'0.01em', display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
               {song.title.toUpperCase()}
             </span>
           ) : (
             <span style={{ fontSize:13, color:'#B0A898' }}>Chưa chọn bài</span>
           )}
-          {song && <span style={{ fontSize:10, color:'#8A8070', marginLeft:8 }}>{song.tempo} BPM · {song.timeSignature}/4</span>}
+          {song && !isMobile && <span style={{ fontSize:10, color:'#8A8070', marginLeft:8 }}>{song.tempo} BPM · {song.timeSignature}/4</span>}
         </div>
 
-        {/* Speed + User */}
-        <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-          {song && (
-            <div style={{ display:'flex', gap:3 }}>
-              {[0.5,0.75,1,1.25].map(s => (
-                <button key={s} onClick={() => { setSpeed(s); if(isPlaying){setIsPlaying(false); setTimeout(()=>setIsPlaying(true),50)} }}
-                  style={{ padding:'3px 8px', borderRadius:5, border:`1px solid ${C.ctrlBorder}`, fontSize:10, cursor:'pointer', fontWeight: speed===s?700:400,
-                    background: speed===s ? C.green : C.bgWoodCard,
-                    color: speed===s ? '#fff' : '#8A8070' }}>
-                  {s===0.5?'50%':s===0.75?'75%':s===1?'100%':'125%'}
-                </button>
-              ))}
-            </div>
-          )}
-          {userName ? (
+        {/* Speed — chỉ desktop */}
+        {!isMobile && song && (
+          <div style={{ display:'flex', gap:3, flexShrink:0 }}>
+            {[0.5,0.75,1,1.25].map(s => (
+              <button key={s} onClick={() => { setSpeed(s); if(isPlaying){setIsPlaying(false); setTimeout(()=>setIsPlaying(true),50)} }}
+                style={{ padding:'3px 8px', borderRadius:5, border:`1px solid ${C.ctrlBorder}`, fontSize:10, cursor:'pointer', fontWeight: speed===s?700:400,
+                  background: speed===s ? C.green : C.bgWoodCard, color: speed===s ? '#fff' : '#8A8070' }}>
+                {s===0.5?'50%':s===0.75?'75%':s===1?'100%':'125%'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* User + Close */}
+        <div style={{ display:'flex', alignItems:'center', gap: isMobile?6:8, flexShrink:0 }}>
+          {!isMobile && (userName ? (
             <div style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 10px', borderRadius:20, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard }}>
               <div style={{ width:20, height:20, borderRadius:'50%', background:C.green, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff' }}>
                 {userName.charAt(0).toUpperCase()}
@@ -505,8 +516,13 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             <button onClick={handleLogin} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 12px', borderRadius:20, border:`1px solid ${C.ctrlBorder}`, background:'none', color:'#8A8070', fontSize:12, cursor:'pointer' }}>
               👤 Đăng nhập
             </button>
+          ))}
+          {isMobile && userName && (
+            <div style={{ width:28, height:28, borderRadius:'50%', background:C.green, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#fff', flexShrink:0 }}>
+              {userName.charAt(0).toUpperCase()}
+            </div>
           )}
-          <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:`1px solid ${C.ctrlBorder}`, background:'none', color:'#8A8070', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+          <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:`1px solid ${C.ctrlBorder}`, background:'none', color:'#8A8070', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
         </div>
       </div>
 
@@ -546,7 +562,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
           {/* LEVEL BAR — nâu gỗ */}
-          <div style={{ background:C.bgWood, borderBottom:`1px solid ${C.bgWoodBorder}`, padding:'9px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+          <div style={{ background:C.bgWood, borderBottom:`1px solid ${C.bgWoodBorder}`, padding: isMobile?'7px 12px':'9px 20px', display:'flex', alignItems:'center', gap: isMobile?6:10, flexShrink:0, overflowX: isMobile?'auto':'visible' }}>
             {levels.map((lv, i) => {
               const lvNum = i + 1
               const unlocked = progress.unlocked_levels.includes(lvNum)
@@ -568,17 +584,17 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                 </button>
               )
             })}
-            <div style={{ flex:1, textAlign:'center', fontSize:12, color:'#8A7A5A' }}>
+            {!isMobile && <div style={{ flex:1, textAlign:'center', fontSize:12, color:'#8A7A5A' }}>
               Cần <strong style={{ color:C.gold, fontSize:13 }}>{UNLOCK_SCORE}</strong> điểm để mở khoá
-            </div>
-            <div style={{ fontSize:12, color:'#8A7A5A', flexShrink:0 }}>
-              Điểm hiện tại: <strong style={{ color:C.green }}>{bestThisLevel}</strong> / 100
+            </div>}
+            <div style={{ fontSize: isMobile?11:12, color:'#8A7A5A', flexShrink:0, marginLeft: isMobile?'auto':0 }}>
+              {isMobile ? <><strong style={{ color:C.green }}>{bestThisLevel}</strong>/100</> : <>Điểm hiện tại: <strong style={{ color:C.green }}>{bestThisLevel}</strong> / 100</>}
             </div>
           </div>
 
           {/* MISSION — căn giữa, chữ sáng */}
-          <div style={{ background:C.bgMission, borderBottom:`1px solid ${C.bgMissionBorder}`, padding:'10px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:7, flexShrink:0 }}>
-            <div style={{ fontSize:13, color:C.textLight, fontWeight:500, textAlign:'center', lineHeight:1.5 }}>
+          <div style={{ background:C.bgMission, borderBottom:`1px solid ${C.bgMissionBorder}`, padding: isMobile?'7px 12px':'10px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap: isMobile?5:7, flexShrink:0 }}>
+            <div style={{ fontSize: isMobile?12:13, color:C.textLight, fontWeight:500, textAlign:'center', lineHeight:1.4 }}>
               🎯 {levelConfig?.desc}
             </div>
             {levelConfig && <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />}
@@ -683,8 +699,8 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               })}
             </div>
 
-            {/* Legend — 232px, gióng thẳng với dot rows */}
-            <div style={{ width:232, flexShrink:0, paddingTop:54, paddingLeft:12, paddingRight:10, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.1)` }}>
+            {/* Legend — 232px desktop, ẩn mobile */}
+            {!isMobile && <div style={{ width:232, flexShrink:0, paddingTop:54, paddingLeft:12, paddingRight:10, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.1)` }}>}
 
               {/* Đáp án Thầy — height:28px khớp với teacher dot row */}
               <div style={{ height:28, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -752,8 +768,30 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             </div>
           </div>
 
+          {/* MOBILE LEGEND — chỉ hiện trên mobile */}
+          {isMobile && (
+            <div style={{ background:C.bgMain, borderTop:`1px solid rgba(220,230,210,0.08)`, padding:'5px 12px', display:'flex', alignItems:'center', gap:12, flexShrink:0, flexWrap:'wrap' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:C.dotGold }}>
+                <div style={{ width:12, height:2, background:C.dotGold, borderRadius:1 }} /> Đáp án Thầy
+                <button onClick={() => setShowTeacher(t=>!t)} style={{ marginLeft:3, padding:'1px 5px', borderRadius:3, border:`1px solid rgba(220,230,210,0.2)`, background:'transparent', fontSize:9, color:C.textLegend, cursor:'pointer' }}>
+                  {showTeacher ? 'Ẩn' : 'Xem'}
+                </button>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:C.dotBlue }}>
+                <div style={{ width:12, height:2, background:C.dotBlue, borderRadius:1 }} /> Lần này
+              </div>
+              {tapHistory.map((h,hi) => (
+                <div key={h.id} style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:C.dotPurple, opacity:histOpacity[hi] }}>
+                  <div style={{ width:12, height:2, background:C.dotPurple, borderRadius:1 }} />
+                  Lần {tapHistory.length-hi} · {h.score}đ
+                  <button onClick={() => handleDeleteHistory(h.id)} style={{ background:'none', border:'none', color:'#A88080', fontSize:10, cursor:'pointer', padding:0 }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* SCORE ROW */}
-          <div style={{ background:C.bgMain, borderTop:`1px solid rgba(220,230,210,0.08)`, padding:'8px 20px', display:'flex', alignItems:'center', justifyContent:'center', gap:14, flexShrink:0 }}>
+          <div style={{ background:C.bgMain, borderTop:`1px solid rgba(220,230,210,0.08)`, padding: isMobile?'6px 12px':'8px 20px', display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?10:14, flexShrink:0 }}>
             <div style={{ width:28, height:28, borderRadius:'50%', border:`2px solid ${C.gold}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13 }}>⭐</div>
             <span style={{ fontSize:22, fontWeight:800, color:C.greenPale }}>{currentScore ?? 0}</span>
             <span style={{ fontSize:13, color:C.textMuted }}>/ 100</span>
@@ -770,12 +808,12 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           </div>
 
           {/* ── CONTROLS — kem sáng ── */}
-          <div style={{ background:C.bgPage, borderTop:`1px solid ${C.bgPageBorder}`, padding:'14px 20px 10px', flexShrink:0 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12 }}>
+          <div style={{ background:C.bgPage, borderTop:`1px solid ${C.bgPageBorder}`, padding: isMobile?'10px 8px 6px':'14px 20px 10px', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?6:12 }}>
 
               {/* Làm lại */}
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:130 }}>
-                <button onClick={handleReset} style={{ width:'100%', padding:'12px 10px', borderRadius:12, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: isMobile?3:4, flex:1, maxWidth: isMobile?90:130 }}>
+                <button onClick={handleReset} style={{ width:'100%', padding: isMobile?'10px 6px':'12px 10px', borderRadius:12, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize: isMobile?11:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?4:6 }}>
                   🔄 Làm lại
                 </button>
                 <span style={{ fontSize:10, color:'#8A8070' }}>Phím R</span>
@@ -783,7 +821,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
               {/* Bắt đầu / Dừng */}
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:130 }}>
-                <button onClick={() => setIsPlaying(p=>!p)} style={{ width:'100%', padding:'12px 10px', borderRadius:12, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                <button onClick={() => setIsPlaying(p=>!p)} style={{ width:'100%', padding: isMobile?'10px 6px':'12px 10px', borderRadius:12, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize: isMobile?11:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?4:6 }}>
                   {isPlaying ? '⏸ Dừng' : '▶ Bắt đầu'}
                 </button>
                 <span style={{ fontSize:10, color:'#8A8070' }}>Phím P</span>
@@ -791,7 +829,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
               {/* TAP — SVG tròn xanh lá, chính tâm, không nhảy */}
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flexShrink:0 }}>
-                <svg width="104" height="104" viewBox="0 0 104 104"
+                <svg width={isMobile?88:104} height={isMobile?88:104} viewBox="0 0 104 104"
                   style={{ cursor:'pointer', display:'block', flexShrink:0 }}
                   onMouseDown={e => { e.preventDefault(); handleTap() }}
                   onTouchStart={e => { e.preventDefault(); handleTap() }}
@@ -821,9 +859,9 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
             </div>
 
-            <div style={{ textAlign:'center', fontSize:9, color:'#B0A898', marginTop:8, letterSpacing:'0.03em' }}>
+            {!isMobile && <div style={{ textAlign:'center', fontSize:9, color:'#B0A898', marginTop:8, letterSpacing:'0.03em' }}>
               Space = TAP &nbsp;·&nbsp; P = Bắt đầu/Dừng &nbsp;·&nbsp; R = Làm lại &nbsp;·&nbsp; T = Đáp án &nbsp;·&nbsp; Esc = Đóng
-            </div>
+            </div>}
           </div>
 
         </div>
