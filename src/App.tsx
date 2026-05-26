@@ -960,6 +960,18 @@ export default function App() {
         </div>
         <div className="tb2-sep" />
         <div className="tb2-group">
+          <label className="tb2-label">YT OFFSET (s)</label>
+          <input className="tb2-input" type="number" step={0.1} min={0}
+            value={(song as any).youtubeOffset ?? 0}
+            onChange={e => updateField('youtubeOffset' as any, parseFloat(e.target.value) || 0)}
+            style={{ width: 70 }}
+            title="Giây trong video YouTube = beat 1 nhịp 1"
+          />
+          <button className="btn sm" onClick={() => updateField('youtubeOffset' as any, Math.max(0, ((song as any).youtubeOffset ?? 0) - (60/song.tempo)))} title="Lùi 1 beat">◀</button>
+          <button className="btn sm" onClick={() => updateField('youtubeOffset' as any, ((song as any).youtubeOffset ?? 0) + (60/song.tempo))} title="Tiến 1 beat">▶</button>
+        </div>
+        <div className="tb2-sep" />
+        <div className="tb2-group">
           <label className="tb2-label">BPM</label>
           <input className="tb2-input" type="number" min={40} max={240} value={song.tempo} onChange={e => updateField('tempo', Number(e.target.value))} style={{ width: 52 }} />
         </div>

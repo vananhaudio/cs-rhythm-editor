@@ -49,6 +49,10 @@ export interface RhythmSong {
   lyrics: LyricEvent[];    // Lyric Layer
   chords: ChordEvent[];    // Chord Layer
 
+  // YouTube sync
+  youtubeUrl?: string;      // link YouTube
+  youtubeOffset?: number;   // giây trong video = beat 1 bar 1
+
   createdAt: string;
   updatedAt: string;
   version: '2.0';

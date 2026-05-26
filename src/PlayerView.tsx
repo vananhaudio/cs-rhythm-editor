@@ -300,6 +300,10 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [muteMetronome, setMuteMetronome] = useState(false);
   const muteMetronomeRef = useRef(false);
   const [showSongList, setShowSongList] = useState(false);
+  const [showYoutube, setShowYoutube] = useState(false);
+  const ytPlayerRef = useRef<any>(null);
+  const ytReadyRef = useRef(false);
+  const ytSyncRef = useRef(false);
   const calibRef = useRef<Calib | null>(null);
   const [showSync, setShowSync] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -408,6 +412,27 @@ function lsLoadSong(): RhythmSong | null {
     return t * calib.tempoScale + calib.offset;
   }, [calib]);
 
+  // ── YouTube helpers ──
+  const getYoutubeId = (url: string) => {
+    const m = url.match(/(?:youtu\.be\/|v=|\/embed\/)([\w-]{11})/)
+    return m ? m[1] : null
+  }
+
+  const ytSeek = (songTime: number) => {
+    const offset = (song as any).youtubeOffset ?? 0
+    if (ytPlayerRef.current && ytReadyRef.current) {
+      ytPlayerRef.current.seekTo(offset + songTime, true)
+    }
+  }
+
+  const ytPlay = () => {
+    if (ytPlayerRef.current && ytReadyRef.current) ytPlayerRef.current.playVideo()
+  }
+
+  const ytPause = () => {
+    if (ytPlayerRef.current && ytReadyRef.current) ytPlayerRef.current.pauseVideo()
+  }
+
   const effectivePps = calib ? PX_PER_SEC / calib.tempoScale : PX_PER_SEC;
   const [containerW, setContainerW] = useState(900);
   useEffect(() => {
@@ -453,6 +478,47 @@ function lsLoadSong(): RhythmSong | null {
   }, [mp3FileName, song.title]);
 
   useEffect(() => { calibRef.current = calib; }, [calib]);
+
+  // ── Init YouTube IFrame API ──
+  useEffect(() => {
+    if (!showYoutube || !(song as any).youtubeUrl) return
+    const ytId = getYoutubeId((song as any).youtubeUrl)
+    if (!ytId) return
+
+    const initPlayer = () => {
+      if (ytPlayerRef.current) { ytPlayerRef.current.destroy(); ytPlayerRef.current = null }
+      ytReadyRef.current = false
+      ytPlayerRef.current = new (window as any).YT.Player('yt-player-frame', {
+        videoId: ytId,
+        playerVars: { autoplay: 0, controls: 1, modestbranding: 1, rel: 0 },
+        events: {
+          onReady: () => {
+            ytReadyRef.current = true
+            const offset = (song as any).youtubeOffset ?? 0
+            ytPlayerRef.current.seekTo(offset, true)
+            ytPlayerRef.current.pauseVideo()
+          }
+        }
+      })
+    }
+
+    if ((window as any).YT && (window as any).YT.Player) {
+      initPlayer()
+    } else {
+      if (!document.getElementById('yt-api-script')) {
+        const tag = document.createElement('script')
+        tag.id = 'yt-api-script'
+        tag.src = 'https://www.youtube.com/iframe_api'
+        document.head.appendChild(tag)
+      }
+      ;(window as any).onYouTubeIframeAPIReady = initPlayer
+    }
+
+    return () => {
+      if (ytPlayerRef.current) { ytPlayerRef.current.destroy(); ytPlayerRef.current = null }
+      ytReadyRef.current = false
+    }
+  }, [showYoutube, (song as any).youtubeUrl, (song as any).youtubeOffset])
 
   const saveCalib = (c: Calib) => {
     if (!mp3FileName || !song.title) return; // Cần có tên bài mới lưu calib
@@ -565,6 +631,17 @@ function lsLoadSong(): RhythmSong | null {
     return () => window.removeEventListener('keydown', onKey);
   }, [currentTime, seekTo, onClose]);
 
+  // Sync YouTube khi play/pause/seek
+  useEffect(() => {
+    if (!showYoutube || !ytReadyRef.current) return
+    if (isPlaying) {
+      ytSeek(currentTime)
+      ytPlay()
+    } else {
+      ytPause()
+    }
+  }, [isPlaying])
+
   const handleCalibChange = (c: Calib) => {
     setCalib(c);
     saveCalib(c);
@@ -624,6 +701,15 @@ function lsLoadSong(): RhythmSong | null {
               <span className="calib-info-badge">
                 Offset {calib.offset.toFixed(2)}s
               </span>
+            )}
+            {(song as any).youtubeUrl && (
+              <button
+                className={`btn ${showYoutube ? 'primary' : ''}`}
+                onClick={() => setShowYoutube(v => !v)}
+                title="Xem/ẩn video YouTube"
+              >
+                ▶ {showYoutube ? 'Ẩn YouTube' : 'YouTube'}
+              </button>
             )}
             <button
               className={`btn ${fullscreen ? 'primary' : ''}`}
@@ -825,7 +911,23 @@ function lsLoadSong(): RhythmSong | null {
           <div className="now-arrow--up" style={{ left: '30%', position: 'absolute', top: 'calc(50% + 18px)', transform: 'translateX(-50%)', zIndex: 20 }} />
         </div>
 
-{/* Hint */}
+      {/* YouTube player */}
+      {showYoutube && (song as any).youtubeUrl && (
+        <div style={{ padding:'8px 16px', background:'#0A0E1A', borderTop:'1px solid #1E2533' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+            <span style={{ fontSize:11, color:'#6B7280' }}>
+              ▶ YouTube · Offset: {((song as any).youtubeOffset ?? 0).toFixed(1)}s
+            </span>
+            <button
+              style={{ fontSize:10, padding:'2px 8px', borderRadius:4, border:'1px solid #374151', background:'none', color:'#9CA3AF', cursor:'pointer' }}
+              onClick={() => ytSeek(currentTime)}
+            >Sync ngay</button>
+          </div>
+          <div id="yt-player-frame" style={{ width:'100%', aspectRatio:'16/9', maxHeight:240, borderRadius:8, overflow:'hidden' }} />
+        </div>
+      )}
+
+        {/* Hint */}
         <div className="player-hint">
           {!hasMp3
             ? 'Tải MP3 để phát nhạc thật · Space = Play/Pause · ← → = ±5s · Esc = Đóng'
