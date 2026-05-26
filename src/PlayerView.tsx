@@ -785,7 +785,7 @@ function lsLoadSong(): RhythmSong | null {
           >
             {/* Chord — vẽ độc lập tại đúng vị trí time của chord */}
             {(() => {
-              const sortedChords = [...song.chords].sort((a, b) => a.time - b.time);
+              const sortedChords = [...(song.chords ?? [])].sort((a, b) => a.time - b.time);
               return sortedChords.map((c, ci) => {
               const cx = nowLineX + effTime(c.time) * effectivePps;
               const nextChordTime = ci + 1 < sortedChords.length
@@ -804,7 +804,7 @@ function lsLoadSong(): RhythmSong | null {
             })()}
 
             {/* Lyric — vẽ độc lập tại đúng vị trí time của lyric */}
-            {song.lyrics.map((l, i) => {
+            (song.lyrics ?? []).map((l, i) => {
               const lx = nowLineX + effTime(l.time) * effectivePps;
               const nextTime = song.lyrics[i + 1]
                 ? effTime(song.lyrics[i + 1].time)
