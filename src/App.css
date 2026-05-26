@@ -34,6 +34,8 @@
   --transition: 120ms ease;
 
   --font:      'Inter', system-ui, sans-serif;
+  --lyric-size: 17px;     /* điều chỉnh được từ toolbar */
+  --chord-size: 17px;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
@@ -180,7 +182,7 @@ select.tb2-input { cursor: pointer; appearance: none; padding-right: 18px; backg
 
 /* Chord — amber ấm */
 .tl-chord {
-  font-size: 17px;
+  font-size: var(--chord-size);
   font-weight: 800;
   color: #8B5E0A;
   background: transparent;
@@ -193,7 +195,7 @@ select.tb2-input { cursor: pointer; appearance: none; padding-right: 18px; backg
 
 /* Lyric */
 .tl-lyric {
-  font-size: 17px;
+  font-size: var(--lyric-size);
   font-weight: 600;
   color: var(--text-2);
   background: transparent;

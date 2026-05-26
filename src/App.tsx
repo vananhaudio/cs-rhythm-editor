@@ -642,7 +642,8 @@ export default function App() {
   const [isDirty, setIsDirty] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showSongList, setShowSongList] = useState(false);
-  const [showPlayer, setShowPlayer] = useState(false);
+  const [showPlayer, setShowPlayer] = useState(false)
+  const [lyricSize, setLyricSize] = useState(17);
   const [addTarget, setAddTarget] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -920,6 +921,13 @@ export default function App() {
           <button className="btn" onClick={handleUpload} title="Upload lên Cloud">☁️ Upload</button>
           <button className="btn" onClick={() => setShowSongList(true)} title="Chọn bài từ Cloud">☁️ Chọn bài</button>
           <button className="btn" onClick={() => { window.location.href = "/gp-editor" }} title="Import từ Guitar Pro">🎸 GP Import</button>
+          <div style={{ display:"flex", alignItems:"center", gap:4, padding:"0 6px", borderLeft:"1px solid rgba(255,255,255,0.15)", marginLeft:2 }}>
+            <span style={{ fontSize:10, color:"rgba(255,255,255,0.5)" }}>Aa</span>
+            <button className="btn sm" onClick={() => setLyricSize(s => Math.max(11, s - 1))} title="Chữ nhỏ lại">-</button>
+            <span style={{ fontSize:11, color:"rgba(255,255,255,0.8)", fontFamily:"monospace", minWidth:22, textAlign:"center" }}>{lyricSize}</span>
+            <button className="btn sm" onClick={() => setLyricSize(s => Math.min(28, s + 1))} title="Chữ to lên">+</button>
+            <button className="btn sm" onClick={() => setLyricSize(17)} title="Mặc định" style={{ fontSize:10, opacity:0.7 }}>↺</button>
+          </div>
           <button className="btn danger" onClick={handleClear} title="Xoá lyrics & chords">🗑</button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileImport} />
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
