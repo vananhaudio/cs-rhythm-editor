@@ -1073,7 +1073,12 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div id="yt-editor-frame" style={{ width:320, height:180, borderRadius:8, overflow:'hidden', background:'#000' }} />
+              <iframe
+                src={`https://www.youtube.com/embed/${ytId}?start=${Math.floor((song as any).youtubeOffset ?? 0)}&enablejsapi=1`}
+                style={{ width:320, height:180, borderRadius:8, border:'none' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             )}
             </div>
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
