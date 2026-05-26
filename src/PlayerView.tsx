@@ -806,7 +806,7 @@ function lsLoadSong(): RhythmSong | null {
             {/* Lyric — vẽ độc lập tại đúng vị trí time của lyric */}
             {(song.lyrics ?? []).map((l, i) => {
               const lx = nowLineX + effTime(l.time) * effectivePps;
-              const nextTime = song.lyrics[i + 1]
+              const nextTime = (song.lyrics ?? [])[i + 1]
                 ? effTime(song.lyrics[i + 1].time)
                 : effTime(l.time) + beatDur * 2;
               const isActive = currentTimeRef.current >= effTime(l.time) && currentTimeRef.current < nextTime;
