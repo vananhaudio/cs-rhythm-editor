@@ -645,6 +645,9 @@ export default function App() {
   const [showPlayer, setShowPlayer] = useState(false)
   const [lyricSize, setLyricSize] = useState(17);
   const [transposeSteps, setTransposeSteps] = useState(0);
+  const [ytEditorTime, setYtEditorTime] = useState<number>(0);
+  const ytEditorRef = useRef<any>(null);
+  const ytEditorReadyRef = useRef(false);
 
   const [addTarget, setAddTarget] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -832,6 +835,7 @@ export default function App() {
       created_by: user.id,
       song_data: exportSong,
       youtube_url: (song as any).youtubeUrl || null,
+      youtube_offset: (song as any).youtubeOffset ?? 0,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'title,created_by' })
 
@@ -1052,6 +1056,61 @@ export default function App() {
 
       {showImport && <ImportModal key={Date.now()} onImport={handleImport} onClose={() => setShowImport(false)} />}
       {addTarget !== null && <AddEventModal time={addTarget} onConfirm={confirmAdd} onClose={() => setAddTarget(null)} />}
+      {/* YouTube Editor Panel */}
+      {(song as any).youtubeUrl && (() => {
+        const ytId = ((song as any).youtubeUrl as string).match(/(?:youtu\.be\/|v=|\/embed\/)([\w-]{11})/)?.[1]
+        if (!ytId) return null
+        return (
+          <div style={{ padding:'12px 16px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8', display:'flex', gap:16, alignItems:'flex-start' }}>
+            <div style={{ flex:'0 0 320px' }}>
+              <div id="yt-editor-frame" style={{ width:320, height:180, borderRadius:8, overflow:'hidden', background:'#000' }} />
+            </div>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:'#2A2018' }}>🎬 Canh YouTube Offset</div>
+              <div style={{ fontSize:11, color:'#8A7A5A', lineHeight:1.6 }}>
+                Phát video đến đúng <strong>beat 1 nhịp 1</strong> của bài, rồi bấm "Đánh dấu".
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                <button className="btn sm" onClick={() => {
+                  if (ytEditorRef.current && ytEditorReadyRef.current) {
+                    const t = ytEditorRef.current.getCurrentTime()
+                    setYtEditorTime(t)
+                    updateField('youtubeOffset' as any, parseFloat(t.toFixed(2)))
+                  }
+                }}>📍 Đánh dấu điểm này</button>
+                <button className="btn sm" onClick={() => {
+                  const cur = (song as any).youtubeOffset ?? 0
+                  const newVal = Math.max(0, cur - 60/song.tempo)
+                  updateField('youtubeOffset' as any, parseFloat(newVal.toFixed(3)))
+                  if (ytEditorRef.current && ytEditorReadyRef.current) ytEditorRef.current.seekTo(newVal, true)
+                }}>◀ 1 beat</button>
+                <button className="btn sm" onClick={() => {
+                  const cur = (song as any).youtubeOffset ?? 0
+                  const newVal = cur + 60/song.tempo
+                  updateField('youtubeOffset' as any, parseFloat(newVal.toFixed(3)))
+                  if (ytEditorRef.current && ytEditorReadyRef.current) ytEditorRef.current.seekTo(newVal, true)
+                }}>▶ 1 beat</button>
+                <button className="btn sm" onClick={() => {
+                  const cur = (song as any).youtubeOffset ?? 0
+                  const newVal = Math.max(0, cur - 0.1)
+                  updateField('youtubeOffset' as any, parseFloat(newVal.toFixed(3)))
+                  if (ytEditorRef.current && ytEditorReadyRef.current) ytEditorRef.current.seekTo(newVal, true)
+                }}>◀ 0.1s</button>
+                <button className="btn sm" onClick={() => {
+                  const cur = (song as any).youtubeOffset ?? 0
+                  const newVal = cur + 0.1
+                  updateField('youtubeOffset' as any, parseFloat(newVal.toFixed(3)))
+                  if (ytEditorRef.current && ytEditorReadyRef.current) ytEditorRef.current.seekTo(newVal, true)
+                }}>▶ 0.1s</button>
+              </div>
+              <div style={{ fontSize:12, color:'#14532D', fontWeight:600 }}>
+                Offset hiện tại: <strong>{((song as any).youtubeOffset ?? 0).toFixed(2)}s</strong>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {showSongList && (
         <SongList
           onSelect={s => {
