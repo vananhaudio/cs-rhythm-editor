@@ -1100,8 +1100,10 @@ export default function App() {
                     onChange={e => setYtMark1Bar(parseInt(e.target.value)||1)}
                     style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
                   <button className="btn sm" onClick={() => {
-                    const t = parseFloat(prompt('Giây hiện tại trong video:', '0') || '0')
-                    setYtMark1({ t, bar: ytMark1Bar })
+                    const video = document.querySelector('iframe[src*="youtube"]')?.closest('div')?.querySelector('video')
+                      || document.querySelector('video')
+                    const t = video ? video.currentTime : parseFloat(prompt('Giây trong video:', '0') || '0')
+                    setYtMark1({ t: parseFloat(t.toFixed(3)), bar: ytMark1Bar })
                   }}>⏸ Đánh dấu</button>
                   {ytMark1 && <>
                     <span style={{ fontSize:11, color:'#14532D', fontWeight:600 }}>{ytMark1.t.toFixed(2)}s · nhịp {ytMark1.bar}</span>
@@ -1122,8 +1124,10 @@ export default function App() {
                     onChange={e => setYtMark2Bar(parseInt(e.target.value)||1)}
                     style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
                   <button className="btn sm" onClick={() => {
-                    const t = parseFloat(prompt('Giây hiện tại trong video:', '0') || '0')
-                    setYtMark2({ t, bar: ytMark2Bar })
+                    const video = document.querySelector('iframe[src*="youtube"]')?.closest('div')?.querySelector('video')
+                      || document.querySelector('video')
+                    const t = video ? video.currentTime : parseFloat(prompt('Giây trong video:', '0') || '0')
+                    setYtMark2({ t: parseFloat(t.toFixed(3)), bar: ytMark2Bar })
                   }}>⏸ Đánh dấu</button>
                   {ytMark2 && <>
                     <span style={{ fontSize:11, color:'#2A6A9A', fontWeight:600 }}>{ytMark2.t.toFixed(2)}s · nhịp {ytMark2.bar}</span>
