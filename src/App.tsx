@@ -644,6 +644,11 @@ export default function App() {
   const [showSongList, setShowSongList] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false)
   const [lyricSize, setLyricSize] = useState(17);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--lyric-size", lyricSize + "px")
+    document.documentElement.style.setProperty("--chord-size", lyricSize + "px")
+  }, [lyricSize])
   const [addTarget, setAddTarget] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
