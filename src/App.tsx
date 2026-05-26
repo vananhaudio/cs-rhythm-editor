@@ -648,6 +648,10 @@ export default function App() {
   const [ytEditorTime, setYtEditorTime] = useState<number>(0);
   const [showYtEditor, setShowYtEditor] = useState(false);
   const [ytCurrentTime, setYtCurrentTime] = useState<number>(0);
+  const [ytTimerRunning, setYtTimerRunning] = useState(false);
+  const [ytTimerStart, setYtTimerStart] = useState(0);
+  const [ytTimerBase, setYtTimerBase] = useState(0);
+  const ytTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [ytMark1, setYtMark1] = useState<{t: number; bar: number} | null>(null);
   const [ytMark2, setYtMark2] = useState<{t: number; bar: number} | null>(null);
   const [ytMark1Bar, setYtMark1Bar] = useState(1);
@@ -1095,11 +1099,27 @@ export default function App() {
             )}
             </div>
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:'#2A2018', display:'flex', alignItems:'center', gap:12 }}>
-                🎬 Canh YouTube Offset
-                <span style={{ fontSize:11, color:'#14532D', fontWeight:700, background:'#EEF5E6', padding:'2px 8px', borderRadius:6 }}>
-                  ⏱ {ytCurrentTime.toFixed(3)}s
-                </span>
+              <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                <span style={{ fontSize:12, fontWeight:600, color:'#2A2018' }}>🎬 Canh YouTube Offset</span>
+                <div style={{ display:'flex', alignItems:'center', gap:6, background:'#1C2E22', borderRadius:8, padding:'4px 10px' }}>
+                  <span style={{ fontSize:16, fontWeight:800, color:'#8DC470', fontFamily:'monospace', minWidth:80 }}>
+                    ⏱ {ytCurrentTime.toFixed(3)}s
+                  </span>
+                  <button className="btn sm" style={{ background: ytTimerRunning ? '#C0392B' : '#14532D', color:'#fff', border:'none' }}
+                    onClick={() => {
+                      if (ytTimerRunning) {
+                        setYtTimerRunning(false)
+                        setYtTimerBase(ytCurrentTime)
+                      } else {
+                        setYtTimerStart(Date.now())
+                        setYtTimerRunning(true)
+                      }
+                    }}>
+                    {ytTimerRunning ? '⏸ Dừng' : '▶ Chạy'}
+                  </button>
+                  <button className="btn sm" onClick={() => { setYtTimerRunning(false); setYtCurrentTime(0); setYtTimerBase(0); }}>↺</button>
+                </div>
+                <span style={{ fontSize:10, color:'#8A7A5A' }}>Bấm ▶ Chạy cùng lúc với YouTube</span>
               </div>
               <div style={{ fontSize:11, color:'#8A7A5A', lineHeight:1.6 }}>
                 Tạm dừng video tại beat 1 của nhịp bất kỳ → đánh dấu 2 điểm → app tự tính tempo + offset.
