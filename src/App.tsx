@@ -9,7 +9,7 @@ import {
   createEmptySong, rebuildSong, importFromHopAmViet, parseHopAmViet, parseHopAmVietWithBeatsPerChord,
   importFromJson, downloadJson, formatTime,
   snapTime, beatDuration, barDuration,
-  genId, CHORD_SUGGESTIONS,
+  genId, CHORD_SUGGESTIONS, transposeSong, getTransposeLabel,
 } from './utils';
 
 // ────────────────────────────────────────────────────────────
@@ -644,6 +644,7 @@ export default function App() {
   const [showSongList, setShowSongList] = useState(false);
   const [showPlayer, setShowPlayer] = useState(false)
   const [lyricSize, setLyricSize] = useState(17);
+  const [transposeSteps, setTransposeSteps] = useState(0);
 
   const [addTarget, setAddTarget] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -345,3 +345,60 @@ export const CHORD_SUGGESTIONS = [
   'Dm','D','D7','Em','E','E7','F','Fmaj7','G','G7',
 ];
 
+
+// ── TRANSPOSE HỢP ÂM ──────────────────────────────────────────
+const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+const ENHARMONIC: Record<string,string> = {
+  'Db':'C#','Eb':'D#','Fb':'E','Gb':'F#','Ab':'G#','Bb':'A#','Cb':'B'
+}
+
+function transposeChordName(chord: string, steps: number): string {
+  if (!chord || steps === 0) return chord
+
+  // Tách root + phần còn lại (m, maj7, sus4, /bass...)
+  const match = chord.match(/^([A-G][#b]?)(.*)$/)
+  if (!match) return chord
+
+  let [, root, suffix] = match
+
+  // Chuẩn hoá enharmonic
+  const normalRoot = ENHARMONIC[root] ?? root
+  const idx = CHROMATIC.indexOf(normalRoot)
+  if (idx === -1) return chord
+
+  // Tính index mới
+  const newIdx = ((idx + steps) % 12 + 12) % 12
+  const newRoot = CHROMATIC[newIdx]
+
+  // Xử lý bass note nếu có (VD: Am/E)
+  const bassMatch = suffix.match(/^(.*)(\/[A-G][#b]?)$/)
+  if (bassMatch) {
+    const [, pre, bass] = bassMatch
+    const bassNote = bass.slice(1)
+    const normalBass = ENHARMONIC[bassNote] ?? bassNote
+    const bassIdx = CHROMATIC.indexOf(normalBass)
+    if (bassIdx !== -1) {
+      const newBassIdx = ((bassIdx + steps) % 12 + 12) % 12
+      return newRoot + pre + '/' + CHROMATIC[newBassIdx]
+    }
+  }
+
+  return newRoot + suffix
+}
+
+export function transposeSong(song: any, steps: number): any {
+  if (steps === 0) return song
+  return {
+    ...song,
+    chords: (song.chords ?? []).map((c: any) => ({
+      ...c,
+      name: transposeChordName(c.name, steps)
+    })),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+export function getTransposeLabel(steps: number): string {
+  if (steps === 0) return 'Gốc'
+  return steps > 0 ? `+${steps}` : `${steps}`
+}
