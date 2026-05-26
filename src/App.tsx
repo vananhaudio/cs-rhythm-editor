@@ -649,9 +649,9 @@ export default function App() {
   const [showYtEditor, setShowYtEditor] = useState(false);
   const [ytCurrentTime, setYtCurrentTime] = useState<number>(0);
   const [ytTimerRunning, setYtTimerRunning] = useState(false);
-  const [ytTimerStart, setYtTimerStart] = useState(0);
-  const [ytTimerBase, setYtTimerBase] = useState(0);
   const ytTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ytTimerStartRef = useRef<number>(0);
+  const ytTimerBaseRef = useRef<number>(0);
   const [ytMark1, setYtMark1] = useState<{t: number; bar: number} | null>(null);
   const [ytMark2, setYtMark2] = useState<{t: number; bar: number} | null>(null);
   const [ytMark1Bar, setYtMark1Bar] = useState(1);
@@ -1108,16 +1108,16 @@ export default function App() {
                   <button className="btn sm" style={{ background: ytTimerRunning ? '#C0392B' : '#14532D', color:'#fff', border:'none' }}
                     onClick={() => {
                       if (ytTimerRunning) {
+                        ytTimerBaseRef.current = ytCurrentTime
                         setYtTimerRunning(false)
-                        setYtTimerBase(ytCurrentTime)
                       } else {
-                        setYtTimerStart(Date.now())
+                        ytTimerStartRef.current = Date.now()
                         setYtTimerRunning(true)
                       }
                     }}>
                     {ytTimerRunning ? '⏸ Dừng' : '▶ Chạy'}
                   </button>
-                  <button className="btn sm" onClick={() => { setYtTimerRunning(false); setYtCurrentTime(0); setYtTimerBase(0); }}>↺</button>
+                  <button className="btn sm" onClick={() => { ytTimerBaseRef.current = 0; ytTimerStartRef.current = 0; setYtTimerRunning(false); setYtCurrentTime(0); }}>↺</button>
                 </div>
                 <span style={{ fontSize:10, color:'#8A7A5A' }}>Bấm ▶ Chạy cùng lúc với YouTube</span>
               </div>
