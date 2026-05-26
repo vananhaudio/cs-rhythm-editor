@@ -937,7 +937,7 @@ export default function App() {
           <button className="btn" onClick={handleUndo} title="Undo (Cmd+Z)" disabled={historyRef.current.length === 0} style={{ fontSize: 14 }}>↩</button>
           <button className="btn" onClick={handleRedo} title="Redo (Cmd+Y)" disabled={futureRef.current.length === 0} style={{ fontSize: 14 }}>↪</button>
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
-          <button className="btn primary" onClick={() => setShowPlayer(true)}>▶ Player</button>
+          <button className="btn primary" onClick={() => { window.location.href = "/player" }}>▶ Player</button>
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
           <button className="btn" onClick={() => setShowImport(true)}>⬆ Import</button>
           <button className="btn" onClick={() => fileInputRef.current?.click()}>📂 Mở</button>
