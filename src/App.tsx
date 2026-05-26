@@ -645,6 +645,7 @@ export default function App() {
   const [showPlayer, setShowPlayer] = useState(false)
   const [lyricSize, setLyricSize] = useState(17);
 
+  const [addTarget, setAddTarget] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
