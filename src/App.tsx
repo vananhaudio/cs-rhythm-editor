@@ -1134,7 +1134,7 @@ export default function App() {
                     onChange={e => setYtMark1Bar(parseInt(e.target.value)||1)}
                     style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
                   <button className="btn sm" onClick={() => {
-                    const t = ytCurrentTime > 0 ? ytCurrentTime : parseFloat(prompt('Giây trong video (xem thanh YT):', '0') || '0')
+                    const t = !ytTimerRunning && ytCurrentTime === 0 ? parseFloat(prompt('Giây trong video (xem thanh YT):', '0') || '0') : ytCurrentTime
                     setYtMark1({ t: parseFloat(t.toFixed(3)), bar: ytMark1Bar })
                   }}>⏸ Đánh dấu</button>
                   {ytMark1 && <>
@@ -1156,7 +1156,7 @@ export default function App() {
                     onChange={e => setYtMark2Bar(parseInt(e.target.value)||1)}
                     style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
                   <button className="btn sm" onClick={() => {
-                    const t = ytCurrentTime > 0 ? ytCurrentTime : parseFloat(prompt('Giây trong video (xem thanh YT):', '0') || '0')
+                    const t = !ytTimerRunning && ytCurrentTime === 0 ? parseFloat(prompt('Giây trong video (xem thanh YT):', '0') || '0') : ytCurrentTime
                     setYtMark2({ t: parseFloat(t.toFixed(3)), bar: ytMark2Bar })
                   }}>⏸ Đánh dấu</button>
                   {ytMark2 && <>
