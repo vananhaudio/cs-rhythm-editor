@@ -647,6 +647,10 @@ export default function App() {
   const [transposeSteps, setTransposeSteps] = useState(0);
   const [ytEditorTime, setYtEditorTime] = useState<number>(0);
   const [showYtEditor, setShowYtEditor] = useState(false);
+  const [ytMark1, setYtMark1] = useState<{t: number; bar: number} | null>(null);
+  const [ytMark2, setYtMark2] = useState<{t: number; bar: number} | null>(null);
+  const [ytMark1Bar, setYtMark1Bar] = useState(1);
+  const [ytMark2Bar, setYtMark2Bar] = useState(2);
   const ytEditorRef = useRef<any>(null);
   const ytEditorReadyRef = useRef(false);
 
