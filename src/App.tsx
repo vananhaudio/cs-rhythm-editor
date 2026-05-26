@@ -646,6 +646,7 @@ export default function App() {
   const [lyricSize, setLyricSize] = useState(17);
   const [transposeSteps, setTransposeSteps] = useState(0);
   const [ytEditorTime, setYtEditorTime] = useState<number>(0);
+  const [showYtEditor, setShowYtEditor] = useState(false);
   const ytEditorRef = useRef<any>(null);
   const ytEditorReadyRef = useRef(false);
 
@@ -1063,7 +1064,17 @@ export default function App() {
         return (
           <div style={{ padding:'12px 16px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8', display:'flex', gap:16, alignItems:'flex-start' }}>
             <div style={{ flex:'0 0 320px' }}>
+              {!showYtEditor ? (
+              <div style={{ width:320, height:180, borderRadius:8, background:'#111', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}
+                onClick={() => setShowYtEditor(true)}>
+                <div style={{ textAlign:'center', color:'#fff' }}>
+                  <div style={{ fontSize:36 }}>▶</div>
+                  <div style={{ fontSize:12, marginTop:4, opacity:0.7 }}>Click để load video</div>
+                </div>
+              </div>
+            ) : (
               <div id="yt-editor-frame" style={{ width:320, height:180, borderRadius:8, overflow:'hidden', background:'#000' }} />
+            )}
             </div>
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
               <div style={{ fontSize:12, fontWeight:600, color:'#2A2018' }}>🎬 Canh YouTube Offset</div>
