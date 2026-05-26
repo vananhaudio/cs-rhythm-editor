@@ -648,9 +648,8 @@ export default function App() {
   const [ytEditorTime, setYtEditorTime] = useState<number>(0);
   const [showYtEditor, setShowYtEditor] = useState(false);
   const [ytCurrentTime, setYtCurrentTime] = useState<number>(0);
-  const [ytTimerRunning, setYtTimerRunning] = useState(false);
-  const ytTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const ytTimerStartRef = useRef<number>(0);
+  const [ytInput1, setYtInput1] = useState('');
+  const [ytInput2, setYtInput2] = useState('');
   const ytTimerBaseRef = useRef<number>(0);
   const [ytMark1, setYtMark1] = useState<{t: number; bar: number} | null>(null);
   const [ytMark2, setYtMark2] = useState<{t: number; bar: number} | null>(null);
@@ -1099,28 +1098,7 @@ export default function App() {
             )}
             </div>
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-                <span style={{ fontSize:12, fontWeight:600, color:'#2A2018' }}>🎬 Canh YouTube Offset</span>
-                <div style={{ display:'flex', alignItems:'center', gap:6, background:'#1C2E22', borderRadius:8, padding:'4px 10px' }}>
-                  <span style={{ fontSize:16, fontWeight:800, color:'#8DC470', fontFamily:'monospace', minWidth:80 }}>
-                    ⏱ {ytCurrentTime.toFixed(3)}s
-                  </span>
-                  <button className="btn sm" style={{ background: ytTimerRunning ? '#C0392B' : '#14532D', color:'#fff', border:'none' }}
-                    onClick={() => {
-                      if (ytTimerRunning) {
-                        ytTimerBaseRef.current = ytCurrentTime
-                        setYtTimerRunning(false)
-                      } else {
-                        ytTimerStartRef.current = Date.now()
-                        setYtTimerRunning(true)
-                      }
-                    }}>
-                    {ytTimerRunning ? '⏸ Dừng' : '▶ Chạy'}
-                  </button>
-                  <button className="btn sm" onClick={() => { ytTimerBaseRef.current = 0; ytTimerStartRef.current = 0; setYtTimerRunning(false); setYtCurrentTime(0); }}>↺</button>
-                </div>
-                <span style={{ fontSize:10, color:'#8A7A5A' }}>Bấm ▶ Chạy cùng lúc với YouTube</span>
-              </div>
+              <div style={{ fontSize:12, fontWeight:600, color:'#2A2018' }}>🎬 Canh YouTube Offset</div>
               <div style={{ fontSize:11, color:'#8A7A5A', lineHeight:1.6 }}>
                 Tạm dừng video tại beat 1 của nhịp bất kỳ → đánh dấu 2 điểm → app tự tính tempo + offset.
               </div>
@@ -1133,10 +1111,13 @@ export default function App() {
                   <input type="number" min={1} max={song.totalBars} value={ytMark1Bar}
                     onChange={e => setYtMark1Bar(parseInt(e.target.value)||1)}
                     style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
-                  <button className="btn sm" onClick={() => {
-                    const t = !ytTimerRunning && ytCurrentTime === 0 ? parseFloat(prompt('Giây trong video (xem thanh YT):', '0') || '0') : ytCurrentTime
-                    setYtMark1({ t: parseFloat(t.toFixed(3)), bar: ytMark1Bar })
-                  }}>⏸ Đánh dấu</button>
+                  <input type="number" step={0.01} min={0} placeholder="giây" value={ytInput1}
+                    onChange={e => setYtInput1(e.target.value)}
+                    style={{ width:72, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
+                  <button className="btn sm primary" onClick={() => {
+                    const t = parseFloat(ytInput1) || 0
+                    setYtMark1({ t, bar: ytMark1Bar })
+                  }}>✓ Xác nhận</button>
                   {ytMark1 && <>
                     <span style={{ fontSize:11, color:'#14532D', fontWeight:600 }}>{ytMark1.t.toFixed(2)}s · nhịp {ytMark1.bar}</span>
                     <button className="btn sm" onClick={() => setYtMark1(m => m ? {...m, t: parseFloat((m.t-0.1).toFixed(3))} : m)}>◀0.1s</button>
@@ -1155,10 +1136,13 @@ export default function App() {
                   <input type="number" min={1} max={song.totalBars} value={ytMark2Bar}
                     onChange={e => setYtMark2Bar(parseInt(e.target.value)||1)}
                     style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
-                  <button className="btn sm" onClick={() => {
-                    const t = !ytTimerRunning && ytCurrentTime === 0 ? parseFloat(prompt('Giây trong video (xem thanh YT):', '0') || '0') : ytCurrentTime
-                    setYtMark2({ t: parseFloat(t.toFixed(3)), bar: ytMark2Bar })
-                  }}>⏸ Đánh dấu</button>
+                  <input type="number" step={0.01} min={0} placeholder="giây" value={ytInput2}
+                    onChange={e => setYtInput2(e.target.value)}
+                    style={{ width:72, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
+                  <button className="btn sm primary" onClick={() => {
+                    const t = parseFloat(ytInput2) || 0
+                    setYtMark2({ t, bar: ytMark2Bar })
+                  }}>✓ Xác nhận</button>
                   {ytMark2 && <>
                     <span style={{ fontSize:11, color:'#2A6A9A', fontWeight:600 }}>{ytMark2.t.toFixed(2)}s · nhịp {ytMark2.bar}</span>
                     <button className="btn sm" onClick={() => setYtMark2(m => m ? {...m, t: parseFloat((m.t-0.1).toFixed(3))} : m)}>◀0.1s</button>
