@@ -919,6 +919,7 @@ export default function App() {
           <button className="btn primary" onClick={handleExport}>💾 Lưu</button>
           <button className="btn" onClick={handleUpload} title="Upload lên Cloud">☁️ Upload</button>
           <button className="btn" onClick={() => setShowSongList(true)} title="Chọn bài từ Cloud">☁️ Chọn bài</button>
+          <button className="btn" onClick={() => { window.location.href = "/gp-editor" }} title="Import từ Guitar Pro">🎸 GP Import</button>
           <button className="btn danger" onClick={handleClear} title="Xoá lyrics & chords">🗑</button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileImport} />
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />

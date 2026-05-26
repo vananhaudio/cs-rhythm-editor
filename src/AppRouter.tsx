@@ -156,12 +156,6 @@ export default function AppRouter() {
           ✏️ Editor
         </button>
       )}
-      {user && isTeacher && (
-        <button onClick={() => { window.location.href = '/gp-editor' }}
-          style={{ border: '1px solid #374151', borderRadius: 8, color: '#10B981', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
-          🎸 GP Import
-        </button>
-      )}
       <button onClick={() => { window.location.href = '/tap' }}
         style={{ border: '1px solid #374151', borderRadius: 8, color: '#10B981', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
         🥁 Tap nhịp
