@@ -1175,8 +1175,10 @@ export default function App() {
                     </div>
                     <button className="btn sm primary" onClick={() => {
                       updateField('youtubeOffset' as any, newOffset)
-                      updateField('tempo' as any, newTempo)
-                    }}>✅ Áp dụng tempo + offset</button>
+                    }}>✅ Áp dụng offset</button>
+                    <span style={{ fontSize:10, color:'#8A7A5A' }}>
+                      Tempo video: <strong>{newTempo} BPM</strong> (tempo bài: {song.tempo} BPM)
+                    </span>
                   </div>
                 )
               })()}
