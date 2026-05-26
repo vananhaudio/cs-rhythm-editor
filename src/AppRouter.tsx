@@ -107,6 +107,13 @@ export default function AppRouter() {
     return <GpEditor onClose={() => { window.location.href = '/tap' }} />
   }
 
+  // ── Route /player — chỉ teacher ──
+  if (path === '/player' || path.startsWith('/player')) {
+    if (loading) return null
+    if (!user || !isTeacher) { window.location.href = '/tap'; return null }
+    // fall through → render PlayerView
+  }
+
   // ── Route /tap ──
   if (path === '/tap' || path.startsWith('/tap')) {
     if (loading) return null
@@ -143,7 +150,7 @@ export default function AppRouter() {
     return <App />
   }
 
-  // ── Route / — Player (trang chủ) ──
+  // ── Route / và /player — Player (trang chủ, chỉ teacher) ──
   const extraActions = (
     <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
       {!loading && !user && (
