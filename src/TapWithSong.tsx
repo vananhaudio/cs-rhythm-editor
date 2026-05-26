@@ -700,7 +700,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             </div>
 
             {/* Legend — 232px desktop, ẩn mobile */}
-            {!isMobile && <div style={{ width:232, flexShrink:0, paddingTop:54, paddingLeft:12, paddingRight:10, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.1)` }}>}
+            {!isMobile && <div style={{ width:232, flexShrink:0, paddingTop:54, paddingLeft:12, paddingRight:10, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.1)` }}>
 
               {/* Đáp án Thầy — height:28px khớp với teacher dot row */}
               <div style={{ height:28, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -765,7 +765,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   Chưa có bạn nào<br/>tập bài này
                 </div>
               )}
-            </div>
+            </div>}
           </div>
 
           {/* MOBILE LEGEND — chỉ hiện trên mobile */}
