@@ -746,7 +746,18 @@ export default function App() {
   const updateField = useCallback(<K extends keyof RhythmSong>(key: K, value: RhythmSong[K]) => {
     setSongH(prev => {
       const next = { ...prev, [key]: value, updatedAt: new Date().toISOString() };
-      if (['tempo', 'timeSignature', 'totalBars'].includes(key as string)) return rebuildSong(next);
+      if (key === 'tempo') {
+        // Rescale toàn bộ timing lyrics/chords theo tỷ lệ tempo mới/cũ
+        const oldTempo = prev.tempo;
+        const newTempo = value as number;
+        if (oldTempo > 0 && newTempo > 0 && oldTempo !== newTempo) {
+          const ratio = oldTempo / newTempo;
+          next.lyrics = prev.lyrics.map(l => ({ ...l, time: parseFloat((l.time * ratio).toFixed(6)) }));
+          next.chords = prev.chords.map(c => ({ ...c, time: parseFloat((c.time * ratio).toFixed(6)) }));
+        }
+        return rebuildSong(next);
+      }
+      if (['timeSignature', 'totalBars'].includes(key as string)) return rebuildSong(next);
       return next;
     });
     setIsDirty(true);
