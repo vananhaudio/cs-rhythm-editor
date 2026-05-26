@@ -982,6 +982,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
         <SongList
           onSelect={(s: RhythmSong) => { loadSong(s); setShowSongList(false) }}
           onClose={() => setShowSongList(false)}
+          isTeacher={isTeacher}
         />
       )}
     </div>
