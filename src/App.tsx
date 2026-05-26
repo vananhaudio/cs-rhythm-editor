@@ -1045,6 +1045,7 @@ export default function App() {
             setShowSongList(false)
           }}
           onClose={() => setShowSongList(false)}
+          isTeacher={true}
         />
       )}
       {showPlayer && <PlayerView song={song} onClose={() => setShowPlayer(false)} onUpdateTitle={(t) => { updateField('title', t); try { const s = {...song, title: t}; localStorage.setItem('csre-player-song', JSON.stringify(s)); } catch {} }} />}
