@@ -645,12 +645,12 @@ export default function App() {
   const [showPlayer, setShowPlayer] = useState(false)
   const [lyricSize, setLyricSize] = useState(17);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     document.documentElement.style.setProperty("--lyric-size", lyricSize + "px")
     document.documentElement.style.setProperty("--chord-size", lyricSize + "px")
   }, [lyricSize])
-  const [addTarget, setAddTarget] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Undo / Redo ──
   const MAX_HISTORY = 50;
