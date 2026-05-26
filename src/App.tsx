@@ -1162,8 +1162,8 @@ export default function App() {
               <div style={{ fontSize:12, color:'#14532D', fontWeight:600 }}>
                 Offset: <strong>{((song as any).youtubeOffset ?? 0).toFixed(2)}s</strong>
                 <span style={{ marginLeft:12, color:'#8A7A5A' }}>Tempo: <strong>{song.tempo} BPM</strong></span>
-                <span style={{ marginLeft:12, color:'#8A7A5A' }}>Tempo: <strong>{song.tempo} BPM</strong></span>
               </div>
+            </div>
           </div>
         )
       })()}
