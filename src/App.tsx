@@ -928,12 +928,7 @@ export default function App() {
           <button className="btn" onClick={handleUpload} title="Upload lên Cloud">☁️ Upload</button>
           <button className="btn" onClick={() => setShowSongList(true)} title="Chọn bài từ Cloud">☁️ Chọn bài</button>
           <button className="btn" onClick={() => { window.location.href = "/gp-editor" }} title="Import từ Guitar Pro">🎸 GP Import</button>
-          <div style={{ display:"flex", alignItems:"center", gap:4, padding:"0 6px", borderLeft:"1px solid rgba(255,255,255,0.15)" }}>
-            <button className="btn sm" onClick={() => { setSong(transposeSong(song, -1)); setTransposeSteps(s => s - 1); }} title="Giảm 1 semitone">b</button>
-            <span style={{ fontSize:11, color:"rgba(255,255,255,0.8)", fontFamily:"monospace", minWidth:28, textAlign:"center" }}>{getTransposeLabel(transposeSteps)}</span>
-            <button className="btn sm" onClick={() => { setSong(transposeSong(song, 1)); setTransposeSteps(s => s + 1); }} title="Tang 1 semitone">#</button>
-            <button className="btn sm" onClick={() => { setSong(transposeSong(song, -transposeSteps)); setTransposeSteps(0); }} style={{ fontSize:10 }}>Goc</button>
-          </div>
+
           <div style={{ display:"flex", alignItems:"center", gap:4, padding:"0 6px", borderLeft:"1px solid rgba(255,255,255,0.15)", marginLeft:2 }}>
             <span style={{ fontSize:10, color:"rgba(255,255,255,0.5)" }}>Aa</span>
             <button className="btn sm" onClick={() => setLyricSize(s => Math.max(11, s - 1))} title="Chữ nhỏ lại">-</button>
@@ -953,6 +948,10 @@ export default function App() {
         <div className="tb2-group">
           <label className="tb2-label">GIỌNG</label>
           <input className="tb2-input" value={song.tone} onChange={e => updateField('tone', e.target.value)} style={{ width: 40 }} />
+          <button className="btn sm" onClick={() => { setSong(transposeSong(song, -1)); setTransposeSteps(s => s - 1); }} title="Giảm 1 semitone" style={{ marginLeft:4 }}>b</button>
+          <span style={{ fontSize:11, color:"var(--text-3)", fontFamily:"monospace", minWidth:28, textAlign:"center" }}>{getTransposeLabel(transposeSteps)}</span>
+          <button className="btn sm" onClick={() => { setSong(transposeSong(song, 1)); setTransposeSteps(s => s + 1); }} title="Tăng 1 semitone">#</button>
+          <button className="btn sm" onClick={() => { setSong(transposeSong(song, -transposeSteps)); setTransposeSteps(0); }} title="Về gốc" style={{ fontSize:10, opacity:0.7 }}>↺</button>
         </div>
         <div className="tb2-sep" />
         <div className="tb2-group">
