@@ -134,7 +134,12 @@ export default function AppRouter() {
   }
 
   // ── Route /editor — chỉ teacher ──
-  if ((path === '/editor' || showEditor) && isTeacher) {
+  if (path === '/editor' || path.startsWith('/editor')) {
+    if (loading) return null
+    if (!user || !isTeacher) {
+      window.location.href = '/tap'
+      return null
+    }
     return <App />
   }
 
@@ -151,7 +156,7 @@ export default function AppRouter() {
         </button>
       )}
       {user && isTeacher && (
-        <button onClick={() => setShowEditor(true)}
+        <button onClick={() => { window.location.href = '/editor' }}
           style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
           ✏️ Editor
         </button>
