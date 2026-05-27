@@ -122,6 +122,7 @@ export default function YouTubeSyncPage() {
 
   // Khi chọn bài từ SongList
   const onSelectSong = useCallback((song: RhythmSong) => {
+    const sd = song as unknown as Record<string, unknown>;
     setJsonData({
       title: song.title,
       artist: song.artist,
@@ -129,7 +130,7 @@ export default function YouTubeSyncPage() {
       tempo: song.tempo,
       timeSignature: song.timeSignature,
       totalBars: song.totalBars,
-      duration: (song as unknown as Record<string,unknown>).duration as number|undefined,
+      duration: sd.duration as number|undefined,
       lyrics: song.lyrics as LyricEvent[],
       chords: song.chords as ChordEvent[],
     });
@@ -137,7 +138,21 @@ export default function YouTubeSyncPage() {
     setJsonFileName(song.title + '.json');
     setShowSongList(false);
     setJt(0); stopTimer(); setIsPlaying(false); isPlayRef.current=false;
-  },[]);
+
+    // Tự load video + offset nếu đã lưu sẵn
+    const savedUrl = sd.youtubeUrl as string|undefined;
+    const savedOffset = (sd.youtubeOffset ?? sd.youtube_offset) as number|undefined;
+    if (savedOffset != null) offsetRef.current = savedOffset;
+    if (savedUrl) {
+      const id = extractVideoId(savedUrl);
+      if (id) {
+        setYoutubeUrl(savedUrl);
+        setVideoId(id);
+        setPlayerReady(false);
+        setTimeout(()=>iframeRef.current?.contentWindow?.postMessage(JSON.stringify({event:'listening'}),'*'),1500);
+      }
+    }
+  },[stopTimer]);
 
   const startTimer = useCallback((from: number) => {
     if(timerRef.current) clearInterval(timerRef.current);
@@ -287,7 +302,8 @@ export default function YouTubeSyncPage() {
       tempo:jsonData.tempo,timeSignature:jsonData.timeSignature,
       totalBars:jsonData.totalBars,duration:jsonData.duration,
       lyrics:jsonData.lyrics,chords:jsonData.chords,
-      youtubeUrl:youtubeUrl||undefined,
+      youtubeUrl: youtubeUrl||undefined,
+      youtubeOffset: offsetRef.current||undefined,
     };
     const{error}=await supabase.from('timming_songs').update({
       title:jsonData.title,artist:jsonData.artist??null,
@@ -320,10 +336,11 @@ export default function YouTubeSyncPage() {
   return (
     <div style={{minHeight:'100vh',background:C.pageBg,color:C.text,fontFamily:"'Inter','Segoe UI',sans-serif"}}>
 
-      {/* Hidden YT iframe */}
+      {/* YT iframe — off-screen nhưng đủ kích thước để API hoạt động */}
       {videoId&&(
-        <div style={{position:'fixed',bottom:0,right:0,width:1,height:1,overflow:'hidden',opacity:0,pointerEvents:'none'}}>
-          <iframe ref={iframeRef} src={buildEmbedUrl(videoId)} width="1" height="1" allow="accelerometer; autoplay" title="yt"
+        <div style={{position:'fixed',left:'-9999px',top:0,width:320,height:180,pointerEvents:'none'}}>
+          <iframe ref={iframeRef} src={buildEmbedUrl(videoId)} width="320" height="180"
+            allow="accelerometer; autoplay" title="yt"
             onLoad={()=>setTimeout(()=>iframeRef.current?.contentWindow?.postMessage(JSON.stringify({event:'listening'}),'*'),1000)}/>
         </div>
       )}
@@ -355,7 +372,7 @@ export default function YouTubeSyncPage() {
         </div>
       </header>
 
-      <div style={{maxWidth:1100,margin:'0 auto',padding:'28px 24px 60px'}}>
+      <div style={{maxWidth:1100,margin:'0 auto',padding:'28px 24px 80px'}}>
 
         {/* ① Chọn bài */}
         <div style={card}>
@@ -385,7 +402,15 @@ export default function YouTubeSyncPage() {
                   onChange={e=>{setYoutubeUrl(e.target.value);setUrlError('');}}
                   onKeyDown={e=>e.key==='Enter'&&loadVideo()}
                   placeholder="https://www.youtube.com/watch?v=..."/>
-                <button style={{...btnSolid(C.green),padding:'9px 18px',flexShrink:0}} onClick={loadVideo}>Load</button>
+                {!playerReady&&(
+                  <button style={{...btnSolid(C.green),padding:'9px 18px',flexShrink:0}} onClick={loadVideo}>Load</button>
+                )}
+                {playerReady&&(
+                  <div style={{display:'flex',alignItems:'center',gap:6,padding:'0 12px',background:C.greenTint,borderRadius:8,border:`1px solid ${C.green}22`,flexShrink:0}}>
+                    <span style={{width:7,height:7,borderRadius:'50%',background:C.green,display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
+                    <span style={{fontSize:12,color:C.green,fontWeight:600}}>Sẵn sàng</span>
+                  </div>
+                )}
               </div>
               {urlError&&<div style={{fontSize:11,color:C.red}}>⚠ {urlError}</div>}
             </div>
@@ -510,19 +535,14 @@ export default function YouTubeSyncPage() {
               </div>
             </div>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:16}}>
-            <button onClick={isPlaying?pause:play} disabled={!playerReady||!jsonData}
-              style={{width:40,height:40,borderRadius:'50%',background:isPlaying?C.wood:C.green,border:'none',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:(!playerReady||!jsonData)?0.45:1,boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`}}>
-              {isPlaying?'⏸':'▶'}
-            </button>
-            <span style={{fontFamily:'monospace',fontSize:14,fontWeight:600,color:C.green,minWidth:80}}>{fmt(jt)}</span>
-            <span style={{fontSize:12,color:C.textDim}}>/</span>
-            <span style={{fontFamily:'monospace',fontSize:12,color:C.textDim}}>{fmt(dur)}</span>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <span style={{fontFamily:'monospace',fontSize:13,fontWeight:600,color:C.green,minWidth:72}}>{fmt(jt)}</span>
             <div style={{flex:1,position:'relative',height:6,background:C.surface2,borderRadius:3,border:`1px solid ${C.border}`,overflow:'visible',cursor:'pointer'}}>
               <div style={{height:'100%',width:`${pct}%`,background:C.green,borderRadius:3,transition:'width 0.05s linear'}}/>
               <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:14,height:14,borderRadius:'50%',background:C.green,border:`2px solid ${C.surface}`,boxShadow:`0 0 0 2px ${C.green}`,pointerEvents:'none',transition:'left 0.05s linear'}}/>
               <input type="range" min={0} max={dur} step={0.1} value={jt} onChange={e=>seekTo(parseFloat(e.target.value))} style={{position:'absolute',inset:'-4px 0',width:'100%',opacity:0,cursor:'pointer'}}/>
             </div>
+            <span style={{fontFamily:'monospace',fontSize:12,color:C.textDim,minWidth:72,textAlign:'right'}}>{fmt(dur)}</span>
           </div>
         </div>
 
@@ -644,7 +664,77 @@ export default function YouTubeSyncPage() {
           </div>
         </div>
 
-      </div>
+      </div>{/* end body */}
+
+      {/* ── Sticky Play Bar ── */}
+      {jsonData&&(
+        <div style={{
+          position:'fixed',bottom:0,left:0,right:0,zIndex:100,
+          background:C.header,
+          borderTop:`1px solid rgba(255,255,255,0.08)`,
+          boxShadow:'0 -4px 20px rgba(0,0,0,0.2)',
+          padding:'0 24px',
+          height:60,
+          display:'flex',alignItems:'center',gap:16,
+        }}>
+          {/* Play/Pause button */}
+          <button onClick={isPlaying?pause:play} disabled={!playerReady}
+            style={{
+              width:40,height:40,borderRadius:'50%',border:'none',
+              background:isPlaying?'rgba(255,255,255,0.15)':C.goldStrong,
+              color:'#fff',fontSize:18,cursor:'pointer',flexShrink:0,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              opacity:!playerReady?0.4:1,
+              boxShadow:isPlaying?'none':`0 2px 10px ${C.goldStrong}88`,
+              transition:'all 0.15s',
+            }}>
+            {isPlaying?'⏸':'▶'}
+          </button>
+
+          {/* Song title + status */}
+          <div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0,minWidth:0,maxWidth:200}}>
+            <span style={{fontSize:13,fontWeight:600,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+              {selectedTitle||jsonData.title}
+            </span>
+            <span style={{fontSize:10,color:'rgba(255,255,255,0.45)'}}>
+              {!playerReady?'Đang kết nối...':isPlaying?'Đang phát':'Tạm dừng'}
+            </span>
+          </div>
+
+          {/* Time */}
+          <span style={{fontFamily:'monospace',fontSize:13,fontWeight:600,color:C.goldStrong,flexShrink:0}}>
+            {fmt(jt)}
+          </span>
+
+          {/* Progress bar */}
+          <div style={{flex:1,position:'relative',height:4,background:'rgba(255,255,255,0.12)',borderRadius:2,cursor:'pointer'}}>
+            <div style={{height:'100%',width:`${pct}%`,background:C.goldStrong,borderRadius:2,transition:'width 0.05s linear'}}/>
+            <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:12,height:12,borderRadius:'50%',background:C.goldStrong,border:'2px solid #fff',pointerEvents:'none',transition:'left 0.05s linear'}}/>
+            <input type="range" min={0} max={dur} step={0.1} value={jt}
+              onChange={e=>seekTo(parseFloat(e.target.value))}
+              style={{position:'absolute',inset:'-8px 0',width:'100%',opacity:0,cursor:'pointer'}}/>
+          </div>
+
+          {/* Total time */}
+          <span style={{fontFamily:'monospace',fontSize:12,color:'rgba(255,255,255,0.4)',flexShrink:0}}>
+            {fmt(dur)}
+          </span>
+
+          {/* Seek -5s */}
+          <button onClick={()=>seekTo(Math.max(0,jt-5))}
+            style={{...btnOutline,border:'1px solid rgba(255,255,255,0.15)',color:'rgba(255,255,255,0.6)',fontSize:11,padding:'5px 10px',flexShrink:0}}>
+            ↩ 5s
+          </button>
+
+          {/* playerReady indicator */}
+          {playerReady&&(
+            <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
+              <span style={{width:6,height:6,borderRadius:'50%',background:'#4CAF50',display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
+              <span style={{fontSize:10,color:'rgba(255,255,255,0.45)'}}>YT {fmtShort(ytTime)}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
