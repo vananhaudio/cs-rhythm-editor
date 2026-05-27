@@ -159,7 +159,9 @@ export default function YouTubeSyncPage() {
 
     // Tự load video + offset nếu đã lưu sẵn
     const savedUrl = sd.youtubeUrl as string|undefined;
-    const savedOffset = (sd.youtubeOffset ?? sd.youtube_offset) as number|undefined;
+    const savedOffset = (sd.youtubeOffset
+      ?? (sd.sync as Record<string,unknown>|undefined)?.youtubeOffsetSeconds
+      ?? sd.youtube_offset) as number|undefined;
     if (savedOffset != null) offsetRef.current = savedOffset;
     if (savedUrl) {
       const id = extractVideoId(savedUrl);
@@ -316,6 +318,12 @@ export default function YouTubeSyncPage() {
       lyrics:jsonData.lyrics,chords:jsonData.chords,
       youtubeUrl: youtubeUrl||undefined,
       youtubeOffset: offsetRef.current||undefined,
+      // Ghi đè sync object cũ cho nhất quán
+      sync: youtubeUrl ? {
+        source:'youtube',
+        youtubeUrl: youtubeUrl,
+        youtubeOffsetSeconds: offsetRef.current,
+      } : undefined,
     };
     const{error}=await supabase.from('timming_songs').update({
       title:jsonData.title,artist:jsonData.artist??null,
