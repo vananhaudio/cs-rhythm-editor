@@ -599,7 +599,74 @@ export default function YouTubeSyncPage() {
           </div>
         )}
 
-        {/* ══ ④ SYNC CONTROLS ══ */}
+        {/* ══ ④ TIMELINE ══ */}
+        <div style={card}>
+          <SectionHeader n="④" title="Timeline — Dòng chảy hợp âm"/>
+
+          {/* Timeline scroll area */}
+          <div ref={timelineRef} style={{overflowX:'auto',position:'relative',cursor:'pointer',marginBottom:12}}
+            onClick={e=>{
+              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+              const scrollLeft = (e.currentTarget as HTMLDivElement).scrollLeft;
+              const x = e.clientX - rect.left + scrollLeft;
+              seekTo(Math.max(0,Math.min(dur, x/PPS)));
+            }}
+          >
+            <div style={{position:'relative',width:tlW,height:100}}>
+              {ticks.map(t=>(
+                <div key={t} style={{position:'absolute',left:t*PPS,top:0,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:0,pointerEvents:'none'}}>
+                  <span style={{fontSize:9,color:C.textDim,fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtShort(t)}</span>
+                  <div style={{width:1,height:6,background:C.borderMid}}/>
+                </div>
+              ))}
+              {jsonData?.chords.map(c=>{
+                const isAct=activeChord?.id===c.id;
+                return (
+                  <div key={c.id} style={{
+                    position:'absolute',left:c.time*PPS,top:14,transform:'translateX(-50%)',
+                    padding:'3px 8px',borderRadius:5,
+                    background:isAct?C.goldStrong:C.surface2,
+                    border:`1px solid ${isAct?C.goldStrong:C.border}`,
+                    color:isAct?'#fff':C.textSub,
+                    fontSize:11,fontWeight:isAct?700:500,fontFamily:'monospace',
+                    whiteSpace:'nowrap',pointerEvents:'none',
+                    boxShadow:isAct?`0 2px 8px ${C.goldStrong}44`:'none',
+                  }}>{c.name}</div>
+                );
+              })}
+              <div style={{position:'absolute',left:0,top:44,width:'100%',pointerEvents:'none'}}>
+                <Waveform width={tlW} dur={dur} jt={jt}/>
+              </div>
+              <div style={{position:'absolute',left:jt*PPS,top:0,bottom:0,width:2,background:C.green,borderRadius:1,pointerEvents:'none',boxShadow:`0 0 6px ${C.green}66`}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:C.green,position:'absolute',top:0,left:'50%',transform:'translateX(-50%)'}}/>
+              </div>
+            </div>
+          </div>
+
+          {/* Controls row */}
+          <div style={{display:'flex',alignItems:'center',gap:16}}>
+            <button onClick={isPlaying?pause:play} disabled={!playerReady||!jsonData}
+              style={{width:40,height:40,borderRadius:'50%',background:isPlaying?C.wood:C.green,border:'none',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:(!playerReady||!jsonData)?0.45:1,boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`}}>
+              {isPlaying?'⏸':'▶'}
+            </button>
+            <span style={{fontFamily:'monospace',fontSize:14,fontWeight:600,color:C.green,minWidth:80}}>{fmt(jt)}</span>
+            <span style={{fontSize:12,color:C.textDim}}>/</span>
+            <span style={{fontFamily:'monospace',fontSize:12,color:C.textDim}}>{fmt(dur)}</span>
+            <div style={{flex:1,position:'relative',height:6,background:C.surface2,borderRadius:3,border:`1px solid ${C.border}`,overflow:'visible',cursor:'pointer'}}>
+              <div style={{height:'100%',width:`${pct}%`,background:C.green,borderRadius:3,transition:'width 0.05s linear'}}/>
+              <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:14,height:14,borderRadius:'50%',background:C.green,border:`2px solid ${C.surface}`,boxShadow:`0 0 0 2px ${C.green}`,pointerEvents:'none',transition:'left 0.05s linear'}}/>
+              <input type="range" min={0} max={dur} step={0.1} value={jt} onChange={e=>seekTo(parseFloat(e.target.value))} style={{position:'absolute',inset:'-4px 0',width:'100%',opacity:0,cursor:'pointer'}}/>
+            </div>
+            <div style={{display:'flex',gap:6}}>
+              <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>−</button>
+              <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>+</button>
+              <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>⤢</button>
+            </div>
+          </div>
+        </div>
+
+        {/* ══ ⑤ SYNC CONTROLS ══ */}
+
         <div style={card}>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:0}}>
 
@@ -705,109 +772,10 @@ export default function YouTubeSyncPage() {
           </div>
         </div>
 
-        {/* ══ ⑤ TIMELINE ══ */}
-        <div style={card}>
-          <SectionHeader n="⑤" title="Timeline — Dòng chảy hợp âm"/>
-
-          {/* Timeline scroll area */}
-          <div ref={timelineRef} style={{overflowX:'auto',position:'relative',cursor:'pointer',marginBottom:12}}
-            onClick={e=>{
-              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-              const scrollLeft = (e.currentTarget as HTMLDivElement).scrollLeft;
-              const x = e.clientX - rect.left + scrollLeft;
-              seekTo(Math.max(0,Math.min(dur, x/PPS)));
-            }}
-          >
-            <div style={{position:'relative',width:tlW,height:100}}>
-              {/* Time ruler */}
-              {ticks.map(t=>(
-                <div key={t} style={{position:'absolute',left:t*PPS,top:0,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:0,pointerEvents:'none'}}>
-                  <span style={{fontSize:9,color:C.textDim,fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtShort(t)}</span>
-                  <div style={{width:1,height:6,background:C.borderMid}}/>
-                </div>
-              ))}
-
-              {/* Chord chips track */}
-              {jsonData?.chords.map(c=>{
-                const isAct=activeChord?.id===c.id;
-                return (
-                  <div key={c.id} style={{
-                    position:'absolute',
-                    left:c.time*PPS,
-                    top:14,
-                    transform:'translateX(-50%)',
-                    padding:'3px 8px',
-                    borderRadius:5,
-                    background:isAct?C.goldStrong:C.surface2,
-                    border:`1px solid ${isAct?C.goldStrong:C.border}`,
-                    color:isAct?'#fff':C.textSub,
-                    fontSize:11,fontWeight:isAct?700:500,fontFamily:'monospace',
-                    whiteSpace:'nowrap',pointerEvents:'none',
-                    boxShadow:isAct?`0 2px 8px ${C.goldStrong}44`:'none',
-                  }}>
-                    {c.name}
-                  </div>
-                );
-              })}
-
-              {/* Waveform */}
-              <div style={{position:'absolute',left:0,top:44,width:'100%',pointerEvents:'none'}}>
-                <Waveform width={tlW} dur={dur} jt={jt}/>
-              </div>
-
-              {/* Playhead */}
-              <div style={{
-                position:'absolute',
-                left:jt*PPS,
-                top:0,bottom:0,
-                width:2,
-                background:C.green,
-                borderRadius:1,
-                pointerEvents:'none',
-                boxShadow:`0 0 6px ${C.green}66`,
-              }}>
-                <div style={{width:8,height:8,borderRadius:'50%',background:C.green,position:'absolute',top:0,left:'50%',transform:'translateX(-50%)'}}/>
-              </div>
-            </div>
-          </div>
-
-          {/* Controls row */}
-          <div style={{display:'flex',alignItems:'center',gap:16}}>
-            <button onClick={isPlaying?pause:play} disabled={!playerReady||!jsonData}
-              style={{
-                width:40,height:40,borderRadius:'50%',
-                background:isPlaying?C.wood:C.green,
-                border:'none',color:'#fff',fontSize:16,cursor:'pointer',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                opacity:(!playerReady||!jsonData)?0.45:1,
-                boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`,
-              }}>
-              {isPlaying?'⏸':'▶'}
-            </button>
-            <span style={{fontFamily:'monospace',fontSize:14,fontWeight:600,color:C.green,minWidth:80}}>{fmt(jt)}</span>
-            <span style={{fontSize:12,color:C.textDim}}>/</span>
-            <span style={{fontFamily:'monospace',fontSize:12,color:C.textDim}}>{fmt(dur)}</span>
-
-            {/* Seek bar */}
-            <div style={{flex:1,position:'relative',height:6,background:C.surface2,borderRadius:3,border:`1px solid ${C.border}`,overflow:'visible',cursor:'pointer'}}>
-              <div style={{height:'100%',width:`${pct}%`,background:C.green,borderRadius:3,transition:'width 0.05s linear'}}/>
-              <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:14,height:14,borderRadius:'50%',background:C.green,border:`2px solid ${C.surface}`,boxShadow:`0 0 0 2px ${C.green}`,pointerEvents:'none',transition:'left 0.05s linear'}}/>
-              <input type="range" min={0} max={dur} step={0.1} value={jt}
-                onChange={e=>seekTo(parseFloat(e.target.value))}
-                style={{position:'absolute',inset:'-4px 0',width:'100%',opacity:0,cursor:'pointer'}}/>
-            </div>
-
-            <div style={{display:'flex',gap:6}}>
-              <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>−</button>
-              <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>+</button>
-              <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>⤢</button>
-            </div>
-          </div>
-        </div>
-
         {/* ══ ⑥ EXPORT ══ */}
         <div style={{...card,padding:'20px 28px'}}>
           <SectionHeader n="⑥" title="Export"/>
+
           <div style={{display:'flex',alignItems:'center',gap:20}}>
             <button onClick={exportJson} disabled={!jsonData}
               style={{
