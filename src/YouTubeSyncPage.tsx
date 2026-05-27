@@ -17,6 +17,7 @@ interface SongRecord {
   tempo?: number; time_signature?: number;
   song_data?: Record<string, unknown>;   // full RhythmSong blob
   youtube_offset?: number;
+  duration?: number;
 }
 
 // ─────────────────────────────────────────────
