@@ -207,11 +207,22 @@ export default function YouTubeSyncPage() {
     el.scrollLeft=Math.max(0,jt*PPS-el.clientWidth/2);
   },[jt,isPlaying]);
 
+  const barGridRef = useRef<HTMLDivElement|null>(null);
+
   useEffect(()=>{
     if(!activeBarRef.current||!isPlaying) return;
     const el=activeBarRef.current;
-    el.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+    // Chỉ flash animation, KHÔNG scroll page
     el.classList.remove('ba');void el.offsetWidth;el.classList.add('ba');
+    // Scroll trong container lyrics grid (không ảnh hưởng page)
+    const container=barGridRef.current;
+    if(container){
+      const elRect=el.getBoundingClientRect();
+      const cRect=container.getBoundingClientRect();
+      if(elRect.left<cRect.left||elRect.right>cRect.right){
+        el.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+      }
+    }
   },[isPlaying,Math.floor(jt*2)]);
 
   const barGrid = useMemo(()=>{
@@ -477,7 +488,7 @@ export default function YouTubeSyncPage() {
               <div>
                 <div style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:10}}>Lyrics Preview</div>
                 {barGrid?(
-                  <div style={{overflowY:'auto',maxHeight:200}}>
+                  <div ref={barGridRef} style={{overflowY:'auto',maxHeight:200}}>
                     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(52px,1fr))',gap:4}}>
                       {barGrid.map(({idx,t1,lyric})=>{
                         const isAct=jt>=t1&&(idx===barGrid.length||jt<barGrid[idx].t1);
