@@ -97,7 +97,8 @@ export default function ScoreTabViewer({
 
       apiRef.current = api;
       api.scoreLoaded.on(() => setAtReady(true));
-      renderScore(at, api, notes);
+      // Render ngay sau khi API sẵn sàng
+      setTimeout(() => renderScore(at, api, notes), 100);
     });
 
     return () => {
@@ -359,15 +360,10 @@ export default function ScoreTabViewer({
       {/* ── AlphaTab render area ── */}
       <div style={{ background: '#faf9f5', overflowX: 'auto', minHeight: 160, position: 'relative' }}
         onClick={() => containerRef.current?.focus()}>
-        {!atReady && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: muted, fontSize: 12 }}>
-            Đang tải...
-          </div>
-        )}
-        <div ref={atRef} style={{ padding: '8px 0' }} />
+        <div ref={atRef} style={{ padding: '8px 0', minHeight: 140 }} />
       </div>
 
-      {notes.length === 0 && atReady && (
+      {notes.length === 0 && (
         <div style={{ padding: '10px 16px', textAlign: 'center', color: muted, fontSize: 12, borderTop: `1px solid ${border}` }}>
           Click vào khuông nhạc rồi gõ số fret hoặc bấm nốt trên cần đàn
         </div>
