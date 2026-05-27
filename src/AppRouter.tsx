@@ -6,6 +6,7 @@ import { TapWithSong } from './TapWithSong'
 import { GpEditor } from './GpEditor'
 import App from './App'
 import GuitarBoard from './GuitarBoard'
+import YouTubeSyncPage from './YouTubeSyncPage'   // ← THÊM
 import type { RhythmSong } from './types'
 import { createEmptySong } from './utils'
 
@@ -113,6 +114,16 @@ export default function AppRouter() {
     return <GpEditor onClose={() => { window.location.href = '/tap' }} />
   }
 
+  // ── Route /youtube-sync — chỉ teacher ──          ← THÊM BLOCK NÀY
+  if (path === '/youtube-sync' || path.startsWith('/youtube-sync')) {
+    if (loading) return null
+    if (!user || !isTeacher) {
+      window.location.href = '/tap'
+      return null
+    }
+    return <YouTubeSyncPage />
+  }
+
   // ── Route /player — chỉ teacher ──
   if (path === '/player' || path.startsWith('/player')) {
     if (loading) return null
@@ -124,17 +135,15 @@ export default function AppRouter() {
   if (path === '/tap' || path.startsWith('/tap')) {
     if (loading) return null
 
-    // Chưa đăng nhập + chưa chọn guest → hiện trang chào
     if (!user && !guestMode) {
       return <TapLandingPage onGuest={() => setGuestMode(true)} />
     }
 
-    // ✕ thoát: nếu guest → về landing, nếu đăng nhập → về trang chủ /
     const handleClose = () => {
       if (!user && guestMode) {
-        setGuestMode(false)   // về landing page /tap
+        setGuestMode(false)
       } else {
-        window.location.href = '/'  // về trang chủ
+        window.location.href = '/'
       }
     }
 
@@ -169,10 +178,16 @@ export default function AppRouter() {
         </button>
       )}
       {user && isTeacher && (
-        <button onClick={() => { window.location.href = '/editor' }}
-          style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
-          ✏️ Editor
-        </button>
+        <>
+          <button onClick={() => { window.location.href = '/editor' }}
+            style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
+            ✏️ Editor
+          </button>
+          <button onClick={() => { window.location.href = '/youtube-sync' }}
+            style={{ border: '1px solid #374151', borderRadius: 8, color: '#C99700', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
+            🎵 YouTube Sync
+          </button>
+        </>
       )}
       <button onClick={() => { window.location.href = '/tap' }}
         style={{ border: '1px solid #374151', borderRadius: 8, color: '#10B981', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
