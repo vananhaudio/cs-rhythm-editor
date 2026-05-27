@@ -172,24 +172,6 @@ export default function YouTubeSyncPage() {
     }
   },[]);  // stopTimer is stable, no deps needed
 
-  const startTimer = useCallback((from: number) => {
-    if(timerRef.current) clearInterval(timerRef.current);
-    const t0 = performance.now();
-    timerRef.current = setInterval(()=>{
-      const cur = from+(performance.now()-t0)/1000;
-      if(cur>=durRef.current){
-        setJt(durRef.current);setIsPlaying(false);isPlayRef.current=false;
-        post(iframeRef.current,'pauseVideo');
-        clearInterval(timerRef.current!);timerRef.current=null;return;
-      }
-      setJt(cur);
-    },50);
-  },[]);
-
-  const stopTimer = useCallback(()=>{
-    if(timerRef.current){clearInterval(timerRef.current);timerRef.current=null;}
-  },[]);
-
   useEffect(()=>{
     const h=(ev:MessageEvent)=>{
       if(!ev.origin.includes('youtube')) return;
