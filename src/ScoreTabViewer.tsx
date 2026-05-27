@@ -380,9 +380,9 @@ export default function ScoreTabViewer({
     // Treble clef
     ctx.save();
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = `${STAFF_H + 36}px "Times New Roman", Georgia, serif`;
+    ctx.font = `${STAFF_H + 52}px "Times New Roman", Georgia, serif`;
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText('𝄞', 2, STAFF_TOP + STAFF_H + 10);
+    ctx.fillText('𝄞', 4, STAFF_BOT + 18);
     ctx.restore();
 
     // Time signature
@@ -416,10 +416,12 @@ export default function ScoreTabViewer({
 
     // TAB label
     ctx.save();
-    ctx.fillStyle = '#666'; ctx.font = 'bold 11px "Times New Roman", serif';
+    const tabSpan = TAB_BOT - TAB_TOP;
+    const tabFontSize = Math.floor(tabSpan / 3.2);
+    ctx.fillStyle = '#555'; ctx.font = `bold ${tabFontSize}px "Times New Roman", serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const tabMid = (TAB_TOP + TAB_BOT) / 2;
-    ['T','A','B'].forEach((ch, i) => ctx.fillText(ch, CLEF_W / 2, tabMid - 11 + i * 11));
+    ['T','A','B'].forEach((ch, i) => ctx.fillText(ch, CLEF_W / 2, tabMid - tabFontSize + i * tabFontSize));
     ctx.restore();
 
     // String labels (left of TAB)
