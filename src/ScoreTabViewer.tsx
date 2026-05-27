@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import '@coderline/alphatab/dist/alphaTab.css';
 import { getNoteForFret } from './guitarNotes';
 import type { Theme } from './GuitarBoard';
 import type { ScoreNote } from './scoreData';
