@@ -682,86 +682,18 @@ export default function ScoreTabViewer({
         <span style={{ fontSize: 10, color: muted }}>{notes.length} nốt</span>
       </div>
 
-      {/* ── Note input toolbar (Guitar Pro style) ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: '4px 10px', borderBottom: `1px solid ${border}`, background: focused ? (isDark ? 'rgba(30,100,220,0.07)' : 'rgba(30,100,220,0.04)') : (isDark ? 'rgba(255,255,255,0.015)' : 'rgba(0,0,0,0.015)'), flexWrap: 'wrap', transition: 'background 0.15s' }}>
-
-        {/* Focus indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginRight: 8 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: focused ? '#1e64dc' : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'), transition: 'background 0.15s' }} />
-          <span style={{ fontSize: 10, color: focused ? '#1e64dc' : muted, fontWeight: 600, transition: 'color 0.15s', whiteSpace: 'nowrap' }}>
-            {focused ? 'Đang nhập' : 'Click để nhập'}
-          </span>
-        </div>
-
-        {/* Duration buttons — Guitar Pro style */}
-        <div style={{ display: 'flex', gap: 1, marginRight: 6 }}>
-          {DURATIONS.map(d => (
-            <button key={d.key} onClick={() => { setDurBeats(d.beats); setDotted(false); }}
-              title={`${d.label} (${d.key})`}
-              style={{
-                width: 28, height: 26, borderRadius: 4, cursor: 'pointer',
-                border: `1px solid ${d.beats === durBeats && !dotted ? 'rgba(30,100,220,0.6)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-                background: d.beats === durBeats && !dotted ? 'rgba(30,100,220,0.15)' : 'transparent',
-                color: d.beats === durBeats && !dotted ? '#1e64dc' : muted,
-                fontSize: 14, fontWeight: 600, lineHeight: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-              {d.symbol}
-            </button>
-          ))}
-        </div>
-
-        {/* Dotted */}
-        <button onClick={() => setDotted(v => !v)} title="Chấm dôi (.)">
-          <span style={{ fontSize: 12, fontWeight: 700 }}>·</span>
-        </button>
-
-        <div style={{ width: 1, height: 18, background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 4px' }} />
-
-        {/* Triplet */}
-        <button onClick={() => setTriplet(v => !v)} title="Liên 3 (/)"
-          style={{ padding: '2px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 10, fontWeight: 700,
-            border: `1px solid ${triplet ? 'rgba(30,100,220,0.6)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-            background: triplet ? 'rgba(30,100,220,0.15)' : 'transparent',
-            color: triplet ? '#1e64dc' : muted }}>
-          3
-        </button>
-
-        <div style={{ width: 1, height: 18, background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', margin: '0 4px' }} />
-
-        {/* Active string selector */}
-        <div style={{ display: 'flex', gap: 1 }}>
-          {[5,4,3,2,1,0].map(s => (
-            <button key={s} onClick={() => setPendingStr(s)}
-              title={STRING_LABELS[s]}
-              style={{
-                width: 22, height: 22, borderRadius: 3, cursor: 'pointer', fontSize: 9, fontWeight: 700,
-                border: `1px solid ${s === pendingStr ? 'rgba(30,100,220,0.6)' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-                background: s === pendingStr ? 'rgba(30,100,220,0.15)' : 'transparent',
-                color: s === pendingStr ? '#1e64dc' : muted,
-              }}>
-              {STRING_SHORT[s]}
-            </button>
-          ))}
-        </div>
-
-        {/* Fret buffer display */}
+      {/* ── Status bar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 12px', borderBottom: `1px solid ${border}`, background: focused ? (isDark ? 'rgba(30,100,220,0.06)' : 'rgba(30,100,220,0.03)') : (isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)'), transition: 'background 0.15s' }}>
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: focused ? '#1e64dc' : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'), flexShrink: 0, transition: 'background 0.15s' }} />
+        <span style={{ fontSize: 10, color: focused ? '#1e64dc' : muted, fontWeight: 600 }}>
+          {focused ? `Đang nhập · Dây ${STRING_SHORT[pendingStr]} · ${DURATIONS.find(d=>d.beats===durBeats)?.label ?? ''}${dotted?'.':''}${triplet?' (3)':''}` : 'Click để nhập'}
+        </span>
         {fretBuf && (
-          <span style={{ marginLeft: 8, fontSize: 12, color: '#1e64dc', fontWeight: 800, fontFamily: 'monospace', background: 'rgba(30,100,220,0.12)', padding: '1px 8px', borderRadius: 4 }}>
-            {fretBuf}
-            <span style={{ opacity: 0.5, animation: 'blink 1s step-end infinite' }}>_</span>
+          <span style={{ fontSize: 13, color: '#1e64dc', fontWeight: 800, fontFamily: 'monospace', background: 'rgba(30,100,220,0.12)', padding: '1px 10px', borderRadius: 4 }}>
+            {fretBuf}_
           </span>
         )}
-
-        {/* Key hints */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center' }}>
-          {[['3–7','Trường độ'],['.','.'],['/', '3:3'],['↑↓','Dây'],['←→','Di chuyển'],['⌫','Xóa']].map(([k,v])=>(
-            <span key={k} style={{ fontSize: 9, color: muted, display:'flex', alignItems:'center', gap:2, whiteSpace:'nowrap' }}>
-              <kbd style={{ fontSize: 8, padding: '1px 3px', borderRadius: 2, border: `1px solid ${isDark?'rgba(255,255,255,0.12)':'rgba(0,0,0,0.12)'}`, background: isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)', fontFamily:'monospace' }}>{k}</kbd>
-              {v}
-            </span>
-          ))}
-        </div>
+        <span style={{ marginLeft: 'auto', fontSize: 9, color: muted }}>↑↓ đổi dây · ←→ di chuyển · +- trường độ · 0-24 fret</span>
       </div>
 
       {/* ── Canvas ── */}
