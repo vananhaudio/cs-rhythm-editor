@@ -173,6 +173,18 @@ export default function YouTubeSyncPage() {
   },[]);  // stopTimer is stable, no deps needed
 
   useEffect(()=>{
+    const h=(e:KeyboardEvent)=>{
+      if(e.code==='Space'&&e.target===document.body){
+        e.preventDefault();
+        if(!playerReady||!jsonData) return;
+        isPlayRef.current ? pause() : play();
+      }
+    };
+    window.addEventListener('keydown',h);
+    return()=>window.removeEventListener('keydown',h);
+  },[playerReady,jsonData,isPlaying]);
+
+  useEffect(()=>{
     const h=(ev:MessageEvent)=>{
       if(!ev.origin.includes('youtube')) return;
       let d:Record<string,unknown>;
@@ -548,6 +560,10 @@ export default function YouTubeSyncPage() {
             </div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <button onClick={isPlaying?pause:play} disabled={!playerReady||!jsonData}
+              style={{width:40,height:40,borderRadius:'50%',background:isPlaying?C.wood:C.green,border:'none',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:(!playerReady||!jsonData)?0.45:1,boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`,flexShrink:0}}>
+              {isPlaying?'⏸':'▶'}
+            </button>
             <span style={{fontFamily:'monospace',fontSize:13,fontWeight:600,color:C.green,minWidth:72}}>{fmt(jt)}</span>
             <div style={{flex:1,position:'relative',height:6,background:C.surface2,borderRadius:3,border:`1px solid ${C.border}`,overflow:'visible',cursor:'pointer'}}>
               <div style={{height:'100%',width:`${pct}%`,background:C.green,borderRadius:3,transition:'width 0.05s linear'}}/>
