@@ -755,19 +755,7 @@ export default function ScoreTabViewer({
         <span style={{ fontSize: 10, color: muted }}>{notes.length} nốt</span>
       </div>
 
-      {/* ── Status bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 12px', borderBottom: `1px solid ${border}`, background: focused ? (isDark ? 'rgba(30,100,220,0.06)' : 'rgba(30,100,220,0.03)') : (isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)'), transition: 'background 0.15s' }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: focused ? '#1e64dc' : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'), flexShrink: 0, transition: 'background 0.15s' }} />
-        <span style={{ fontSize: 10, color: focused ? '#1e64dc' : muted, fontWeight: 600 }}>
-          {focused ? `Đang nhập · Dây ${STRING_SHORT[pendingStr]} · ${DURATIONS.find(d=>d.beats===durBeats)?.label ?? ''}${dotted?'.':''}${triplet?' (3)':''}` : 'Click để nhập'}
-        </span>
-        {fretBuf && (
-          <span style={{ fontSize: 13, color: '#1e64dc', fontWeight: 800, fontFamily: 'monospace', background: 'rgba(30,100,220,0.12)', padding: '1px 10px', borderRadius: 4 }}>
-            {fretBuf}_
-          </span>
-        )}
-        <span style={{ marginLeft: 'auto', fontSize: 9, color: muted }}>↑↓ đổi dây · ←→ di chuyển · +- trường độ · 0-24 fret</span>
-      </div>
+
 
       {/* ── Canvas ── */}
       <div ref={scrollRef} style={{ overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', position: 'relative' }}>
