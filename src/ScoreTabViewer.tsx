@@ -1,5 +1,6 @@
 import { getNoteForFret } from './guitarNotes';
 import { useRef, useEffect, useState, useCallback } from 'react';
+import '@coderline/alphatab/dist/alphaTab.css';
 import type { Theme } from './GuitarBoard';
 import type { ScoreNote } from './scoreData';
 import { SCORE_BPM, SCORE_BEATS_PER_MEASURE } from './scoreData';
@@ -83,15 +84,15 @@ export default function ScoreTabViewer({
       if (destroyed || !atRef.current) return;
 
       const api = new at.AlphaTabApi(atRef.current, {
-        core: { engine: 'html5', logLevel: at.LogLevel.None },
+        core: {
+          engine: 'html5',
+          logLevel: at.LogLevel.None,
+          workerFile: '/node_modules/@coderline/alphatab/dist/alphaTab.worker.js',
+        },
         display: {
           layoutMode: at.LayoutMode.Horizontal,
           staveProfile: at.StaveProfile.TabMixed,
           scale: 0.95,
-        },
-        notation: {
-          smallGraceTabNotes: false,
-          fingeringMode: at.FingeringMode.SingleNoteEffectBand,
         },
       });
 
