@@ -428,8 +428,8 @@ export default function ScoreTabViewer({
       }
 
       // ── Staff note ───────────────────────────────────────────────────────────
-      const y    = noteY(note.pitch, note.octave);
-      const step = staffStep(note.pitch, note.octave);
+      const y    = noteY(note.pitch, note.octave + 1);  // guitar: written 8va higher
+      const step = staffStep(note.pitch, note.octave + 1);
       const fill = isAct ? '#c8991a' : isSel ? '#1e64dc' : '#1a1a1a';
       const acc  = accChar(note.pitch);
 
