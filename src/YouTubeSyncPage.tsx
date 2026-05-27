@@ -406,9 +406,21 @@ export default function YouTubeSyncPage() {
                   <button style={{...btnSolid(C.green),padding:'9px 18px',flexShrink:0}} onClick={loadVideo}>Load</button>
                 )}
                 {playerReady&&(
-                  <div style={{display:'flex',alignItems:'center',gap:6,padding:'0 12px',background:C.greenTint,borderRadius:8,border:`1px solid ${C.green}22`,flexShrink:0}}>
-                    <span style={{width:7,height:7,borderRadius:'50%',background:C.green,display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
-                    <span style={{fontSize:12,color:C.green,fontWeight:600}}>Sẵn sàng</span>
+                  <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+                    <button onClick={isPlaying?pause:play}
+                      style={{
+                        width:38,height:38,borderRadius:'50%',border:'none',
+                        background:isPlaying?C.wood:C.green,color:'#fff',
+                        fontSize:16,cursor:'pointer',display:'flex',
+                        alignItems:'center',justifyContent:'center',
+                        boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`,
+                      }}>
+                      {isPlaying?'⏸':'▶'}
+                    </button>
+                    <div style={{display:'flex',alignItems:'center',gap:6,padding:'0 12px',background:C.greenTint,borderRadius:8,border:`1px solid ${C.green}22`,height:38}}>
+                      <span style={{width:7,height:7,borderRadius:'50%',background:C.green,display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
+                      <span style={{fontSize:12,color:C.green,fontWeight:600}}>Sẵn sàng</span>
+                    </div>
                   </div>
                 )}
               </div>
