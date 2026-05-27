@@ -3,11 +3,4 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    exclude: ['@coderline/alphatab'],
-  },
-  worker: {
-    format: 'es',
-  },
-  assetsInclude: ['**/*.mjs'],
 })
