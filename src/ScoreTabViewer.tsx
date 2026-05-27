@@ -171,17 +171,29 @@ export default function ScoreTabViewer({
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const k = e.key;
 
-    // Duration: phím + tăng trường độ, - giảm (như Guitar Pro)
+    // +/- đổi trường độ nốt đang chọn; nếu không có nốt chọn thì đổi durBeats
     if (k === '+' || k === '=') {
       e.preventDefault();
-      const idx = DURATIONS.findIndex(d => d.beats === durBeats);
-      if (idx > 0) setDurBeats(DURATIONS[idx - 1].beats);
+      if (selIdx !== null && selIdx < notes.length) {
+        const curBeats = notes[selIdx].duration / spb();
+        const idx = DURATIONS.findIndex(d => Math.abs(d.beats - curBeats) < 0.01);
+        if (idx > 0) onNotesChange(notes.map((n, i) => i === selIdx ? { ...n, duration: beatsToSec(DURATIONS[idx - 1].beats) } : n));
+      } else {
+        const idx = DURATIONS.findIndex(d => d.beats === durBeats);
+        if (idx > 0) setDurBeats(DURATIONS[idx - 1].beats);
+      }
       return;
     }
     if (k === '-') {
       e.preventDefault();
-      const idx = DURATIONS.findIndex(d => d.beats === durBeats);
-      if (idx < DURATIONS.length - 1) setDurBeats(DURATIONS[idx + 1].beats);
+      if (selIdx !== null && selIdx < notes.length) {
+        const curBeats = notes[selIdx].duration / spb();
+        const idx = DURATIONS.findIndex(d => Math.abs(d.beats - curBeats) < 0.01);
+        if (idx < DURATIONS.length - 1) onNotesChange(notes.map((n, i) => i === selIdx ? { ...n, duration: beatsToSec(DURATIONS[idx + 1].beats) } : n));
+      } else {
+        const idx = DURATIONS.findIndex(d => d.beats === durBeats);
+        if (idx < DURATIONS.length - 1) setDurBeats(DURATIONS[idx + 1].beats);
+      }
       return;
     }
 
