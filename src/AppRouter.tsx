@@ -5,6 +5,7 @@ import { PlayerView } from './PlayerView'
 import { TapWithSong } from './TapWithSong'
 import { GpEditor } from './GpEditor'
 import App from './App'
+import GuitarBoard from './GuitarBoard'
 import type { RhythmSong } from './types'
 import { createEmptySong } from './utils'
 
@@ -101,6 +102,11 @@ export default function AppRouter() {
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+
+  // ── Route /guitarboard ──
+  if (path === '/guitarboard' || path.startsWith('/guitarboard')) {
+    return <GuitarBoard />
+  }
 
   // ── Route /gp-editor ──
   if (path === '/gp-editor') {
