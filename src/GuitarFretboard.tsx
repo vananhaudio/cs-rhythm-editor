@@ -329,7 +329,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
   return (
     <div className="w-full">
       {/* Toolbar */}
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" as const }}>
         {/* Input mode badge */}
         {inputMode && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: 'rgba(200,153,26,0.18)', border: '1px solid rgba(200,153,26,0.45)', color: '#c8991a', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
@@ -338,11 +338,11 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
           </div>
         )}
         {/* Mode toggle */}
-        <div className={`flex items-center rounded-full border ${t.toolbarBorder} overflow-hidden`} style={{ background: t.toolbarBg }}>
+        <div style={{ display:"flex", alignItems:"center", borderRadius:20, border:`1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)"}`, overflow:"hidden", background:t.toolbarBg }}>
           {(['auto', 'persist', 'scale'] as const).map((m) => {
             const labels = { auto: 'Tự tắt', persist: 'Giữ nốt', scale: 'Tạo Scale' };
-            const activeColor = m === 'scale' ? 'bg-emerald-600' : 'bg-[#3a8cff]';
             const isCurrent = playMode === m || (m === 'scale' && playMode === 'playScale');
+            const activeBg = m === 'scale' ? '#16a34a' : '#3a8cff';
             return (
               <button
                 key={m}
@@ -351,9 +351,10 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                   setActiveNotes(new Map());
                   if (m !== 'scale') { setScalePattern(new Map()); setActiveScaleId(null); }
                 }}
-                className={`px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                  isCurrent ? `${activeColor} text-white shadow-md` : `${t.textMuted} hover:opacity-80`
-                }`}
+                style={{ padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer", border:"none", transition:"all 0.2s",
+                  background: isCurrent ? activeBg : "transparent",
+                  color: isCurrent ? "#fff" : t.textMuted2,
+                  borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}
               >
                 {labels[m]}
               </button>
@@ -362,14 +363,15 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
         </div>
 
         {/* Sharp / Flat toggle */}
-        <div className={`flex items-center rounded-full border ${t.toolbarBorder} overflow-hidden`} style={{ background: t.toolbarBg }}>
+        <div style={{ display:"flex", alignItems:"center", borderRadius:20, border:`1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)"}`, overflow:"hidden", background:t.toolbarBg }}>
           {(['sharp', 'flat'] as const).map(mode => (
             <button
               key={mode}
               onClick={() => setAccidental(mode)}
-              className={`px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
-                accidental === mode ? 'bg-[#3a8cff] text-white shadow-md' : `${t.textMuted} hover:opacity-80`
-              }`}
+              style={{ padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer", border:"none", transition:"all 0.2s",
+                background: accidental === mode ? "#3a8cff" : "transparent",
+                color: accidental === mode ? "#fff" : t.textMuted2,
+                borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}
             >
               {mode === 'sharp' ? '# Thăng' : 'b Giáng'}
             </button>
@@ -378,17 +380,19 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
 
         <button
           onClick={() => setShowNotes(v => !v)}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
-            showNotes
-              ? 'bg-[#c8a84b] border-[#c8a84b] text-[#1a1208] shadow-lg shadow-amber-900/30'
-              : 'bg-transparent border-[#c8a84b]/60 text-[#c8a84b] hover:bg-[#c8a84b]/10'
-          }`}
+          style={{ padding:"6px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", transition:"all 0.2s",
+            background: showNotes ? "#c8a84b" : "transparent",
+            border: `1px solid ${showNotes ? "#c8a84b" : "rgba(200,168,75,0.6)"}`,
+            color: showNotes ? "#1a1208" : "#c8a84b" }}
         >
           {showNotes ? 'Ẩn tên nốt' : 'Hiện tên nốt'}
         </button>
         <button
           onClick={() => { setActiveNotes(new Map()); if (playMode !== 'playScale') setScalePattern(new Map()); }}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${t.clearBtn}`}
+          style={{ padding:"6px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", transition:"all 0.2s",
+            background:"transparent",
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)"}`,
+            color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)" }}
         >
           Xóa tất cả
         </button>
