@@ -105,7 +105,7 @@ export default function ScoreTabViewer({
     import('@coderline/alphatab').then((at) => {
       if (destroyed || !atRef.current) return;
       const api = new at.AlphaTabApi(atRef.current, {
-        core: { engine: 'html5', logLevel: at.LogLevel.None },
+        core: { engine: "html5", logLevel: at.LogLevel.None, file: "/alphaTab.worker.js" } as any,
         display: {
           layoutMode: at.LayoutMode.Horizontal,
           staveProfile: at.StaveProfile.TabMixed,
