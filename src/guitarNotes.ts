@@ -48,7 +48,7 @@ export function getNoteForFret(stringIndex: number, fret: number, accidental: Ac
     noteName: viNames[semitone],
     noteNameEn: enNames[semitone],
     frequency: freq,
-    octave: 2 + octaveOffset,
+    octave: 2 + octaveOffset + (semitone >= 8 ? 1 : 0),
     isSharp,
   };
 }
