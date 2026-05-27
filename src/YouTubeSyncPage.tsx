@@ -14,9 +14,9 @@ interface TimingJSON {
 }
 interface SongRecord {
   id: string; title: string; artist?: string; tone?: string;
-  tempo?: number; time_signature?: number; total_bars?: number;
-  duration?: number; lyrics?: LyricEvent[]; chords?: ChordEvent[];
-  youtube_url?: string; youtube_offset?: number;
+  tempo?: number; time_signature?: number;
+  song_data?: Record<string, unknown>;   // full RhythmSong blob
+  youtube_offset?: number;
 }
 
 // ─────────────────────────────────────────────
@@ -210,24 +210,39 @@ export default function YouTubeSyncPage() {
     });
     setSongsLoading(true);
     supabase.from('timming_songs')
-      .select('id,title,artist,tempo,time_signature,total_bars,duration,youtube_url,youtube_offset')
+      .select('id, title, artist, tone, tempo, time_signature, youtube_offset')
       .order('title')
-      .then(({ data }) => { if (data) setSongs(data as SongRecord[]); setSongsLoading(false); });
+      .then(({ data, error }) => {
+        if (error) console.error('Load songs error:', error);
+        if (data) setSongs(data as SongRecord[]);
+        setSongsLoading(false);
+      });
   }, []);
 
   const loadSong = async (songId: string) => {
-    const { data } = await supabase.from('timming_songs').select('*').eq('id', songId).single();
-    if (!data) return;
+    const { data, error } = await supabase
+      .from('timming_songs')
+      .select('id, title, artist, tone, tempo, time_signature, song_data, youtube_offset')
+      .eq('id', songId).single();
+    if (error || !data) { console.error('Load song error:', error); return; }
+    const sd = (data.song_data ?? {}) as Record<string, unknown>;
     setSelectedSong(data as SongRecord);
     setShowSongList(false);
     setJsonData({
-      title: data.title, artist: data.artist, tone: data.tone,
-      tempo: data.tempo, timeSignature: data.time_signature,
-      totalBars: data.total_bars, duration: data.duration,
-      lyrics: data.lyrics || [], chords: data.chords || [],
+      title: data.title,
+      artist: data.artist ?? undefined,
+      tone: data.tone ?? undefined,
+      tempo: data.tempo,
+      timeSignature: data.time_signature,
+      totalBars: (sd.totalBars as number) ?? undefined,
+      duration: (sd.duration as number) ?? undefined,
+      lyrics: (sd.lyrics as LyricEvent[]) || [],
+      chords: (sd.chords as ChordEvent[]) || [],
     });
     setJsonFileName(data.title + '.json');
-    if (data.youtube_url) setYoutubeUrl(data.youtube_url);
+    // Tự điền YouTube URL nếu có trong song_data
+    const storedUrl = (sd.youtubeUrl ?? sd.youtube_url) as string | undefined;
+    if (storedUrl) setYoutubeUrl(storedUrl);
     if (data.youtube_offset != null) offsetRef.current = data.youtube_offset;
     setJt(0); stopTimer(); setIsPlaying(false); isPlayRef.current = false;
   };
@@ -239,18 +254,38 @@ export default function YouTubeSyncPage() {
     );
     if (!ok) return;
     setSaveStatus('saving');
+    // Fetch song_data gốc để merge (giữ các field khác như mp3, calib...)
+    const { data: existing } = await supabase
+      .from('timming_songs').select('song_data').eq('id', selectedSong.id).single();
+    const existingSd = (existing?.song_data ?? {}) as Record<string, unknown>;
+    const updatedSd = {
+      ...existingSd,
+      title: jsonData.title,
+      artist: jsonData.artist ?? existingSd.artist,
+      tone: jsonData.tone ?? existingSd.tone,
+      tempo: jsonData.tempo ?? existingSd.tempo,
+      timeSignature: jsonData.timeSignature ?? existingSd.timeSignature,
+      totalBars: jsonData.totalBars ?? existingSd.totalBars,
+      duration: jsonData.duration ?? existingSd.duration,
+      lyrics: jsonData.lyrics,
+      chords: jsonData.chords,
+      youtubeUrl: youtubeUrl || existingSd.youtubeUrl || null,
+    };
     const { error } = await supabase.from('timming_songs').update({
-      title: jsonData.title, artist: jsonData.artist ?? null,
-      tone: jsonData.tone ?? null, tempo: jsonData.tempo ?? null,
+      title: jsonData.title,
+      artist: jsonData.artist ?? null,
+      tone: jsonData.tone ?? null,
+      tempo: jsonData.tempo ?? null,
       time_signature: jsonData.timeSignature ?? null,
-      total_bars: jsonData.totalBars ?? null, duration: jsonData.duration ?? null,
-      lyrics: jsonData.lyrics, chords: jsonData.chords,
-      youtube_url: youtubeUrl || null,
+      song_data: updatedSd,
       youtube_offset: offsetRef.current,
-      updated_at: new Date().toISOString(),
     }).eq('id', selectedSong.id);
-    if (error) { setSaveStatus('error'); setTimeout(() => setSaveStatus('idle'), 3000); }
-    else { setSaveStatus('saved'); setTimeout(() => setSaveStatus('idle'), 4000); }
+    if (error) {
+      console.error('Save error:', error);
+      setSaveStatus('error'); setTimeout(() => setSaveStatus('idle'), 3000);
+    } else {
+      setSaveStatus('saved'); setTimeout(() => setSaveStatus('idle'), 4000);
+    }
   };
 
   const isTeacher = userRole === 'teacher' || userRole === 'admin';
@@ -517,7 +552,7 @@ export default function YouTubeSyncPage() {
                   <div style={{display:'flex',gap:6,flexShrink:0}}>
                     {s.tempo&&<span style={tagStyle}>{s.tempo} BPM</span>}
                     {s.duration&&<span style={tagStyle}>{fmt(s.duration)}</span>}
-                    {s.youtube_url&&<span style={{...tagStyle,color:C.red,borderColor:C.red+'44'}}>▶ YT</span>}
+                    {(s.youtube_offset!=null&&s.youtube_offset!==0)&&<span style={{...tagStyle,color:C.red,borderColor:C.red+'44'}}>▶ YT</span>}
                   </div>
                 </button>
               ))}
@@ -533,7 +568,7 @@ export default function YouTubeSyncPage() {
               {[
                 selectedSong.tempo?`${selectedSong.tempo} BPM`:null,
                 selectedSong.time_signature?`${selectedSong.time_signature}/4`:null,
-                selectedSong.total_bars?`${selectedSong.total_bars} bars`:null,
+                selectedSong.song_data?.totalBars?`${selectedSong.song_data.totalBars} bars`:null,
                 selectedSong.duration?fmt(selectedSong.duration):null,
               ].filter(Boolean).map((t,i)=>(<span key={i} style={tagStyle}>{t}</span>))}
             </div>
