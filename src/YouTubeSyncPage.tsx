@@ -141,16 +141,34 @@ export default function YouTubeSyncPage() {
   // Khi chọn bài từ SongList
   const onSelectSong = useCallback((song: RhythmSong) => {
     const sd = song as unknown as Record<string, unknown>;
+
+    // Chords và lyrics có thể nằm trực tiếp trong song hoặc trong song_data
+    const rawChords = (song.chords || sd.chords || []) as Array<Record<string,unknown>>;
+    const rawLyrics = (song.lyrics || sd.lyrics || []) as Array<Record<string,unknown>>;
+
+    // Normalize — đảm bảo đúng field name
+    const chords: ChordEvent[] = rawChords.map(c => ({
+      id: (c.id as string) || String(Math.random()),
+      time: (c.time as number) || 0,
+      name: (c.name as string) || (c.chord as string) || '',
+    })).filter(c => c.name);
+
+    const lyrics: LyricEvent[] = rawLyrics.map(l => ({
+      id: (l.id as string) || String(Math.random()),
+      time: (l.time as number) || 0,
+      text: (l.text as string) || (l.word as string) || '',
+    })).filter(l => l.text);
+
     setJsonData({
-      title: song.title,
+      title: song.title || 'Untitled',
       artist: song.artist,
       tone: song.tone,
       tempo: song.tempo,
       timeSignature: song.timeSignature,
       totalBars: song.totalBars,
-      duration: sd.duration as number|undefined,
-      lyrics: song.lyrics as LyricEvent[],
-      chords: song.chords as ChordEvent[],
+      duration: (sd.duration as number) || undefined,
+      lyrics,
+      chords,
     });
     setSelectedTitle(song.title);
     setJsonFileName(song.title + '.json');
