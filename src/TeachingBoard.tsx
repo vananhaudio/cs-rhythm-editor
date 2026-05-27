@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
-import type { Theme } from '../App';
+import type { Theme } from './GuitarBoard';
 
 type Tool = 'pen' | 'eraser' | 'text' | 'line' | 'rect' | 'circle';
 

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { getNoteForFret, NOTE_COLOR_MAP, stringLabels, fretMarkers, doubleDotFrets, type AccidentalMode } from '../guitarNotes';
-import { playGuitarNote } from '../audioEngine';
-import type { Theme } from '../App';
+import { getNoteForFret, NOTE_COLOR_MAP, stringLabels, fretMarkers, doubleDotFrets, type AccidentalMode } from './guitarNotes';
+import { playGuitarNote } from './audioEngine';
+import type { Theme } from './GuitarBoard';
 
 const NUM_FRETS = 15;
 const DISPLAY_STRINGS = [5, 4, 3, 2, 1, 0]; // high E at top

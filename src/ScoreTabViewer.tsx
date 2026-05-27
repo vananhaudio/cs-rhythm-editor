@@ -1,8 +1,8 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import type { Theme } from '../App';
-import { SCORE_BPM, SCORE_BEATS_PER_MEASURE, staffStep } from '../scoreData';
-import type { ScoreNote } from '../scoreData';
-import { getNoteForFret } from '../guitarNotes';
+import type { Theme } from './GuitarBoard';
+import { SCORE_BPM, SCORE_BEATS_PER_MEASURE, staffStep } from './scoreData';
+import type { ScoreNote } from './scoreData';
+import { getNoteForFret } from './guitarNotes';
 
 // ─── Layout (single unified canvas) ──────────────────────────────────────────
 const SLG        = 11;          // staff line gap
