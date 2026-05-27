@@ -858,8 +858,6 @@ export default function App() {
       time_signature: song.timeSignature,
       created_by: user.id,
       song_data: exportSong,
-      youtube_url: (song as any).youtubeUrl || null,
-      youtube_offset: (song as any).youtubeOffset ?? 0,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'title,created_by' })
 
@@ -964,6 +962,7 @@ export default function App() {
             <button className="btn sm" onClick={() => setLyricSize(s => Math.min(28, s + 1))} title="Chữ to lên">+</button>
             <button className="btn sm" onClick={() => setLyricSize(17)} title="Mặc định" style={{ fontSize:10, opacity:0.7 }}>↺</button>
           </div>
+          <button className="btn" onClick={() => { window.location.href = '/youtube-sync'; }}>🎵 Sync</button>
           <button className="btn danger" onClick={handleClear} title="Xoá lyrics & chords">🗑</button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleFileImport} />
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
@@ -980,23 +979,6 @@ export default function App() {
           <span style={{ fontSize:11, color:"var(--text-3)", fontFamily:"monospace", minWidth:28, textAlign:"center" }}>{getTransposeLabel(transposeSteps)}</span>
           <button className="btn sm" onClick={() => { setSong(transposeSong(song, 1)); setTransposeSteps(s => s + 1); }} title="Tăng 1 semitone">#</button>
           <button className="btn sm" onClick={() => { setSong(transposeSong(song, -transposeSteps)); setTransposeSteps(0); }} title="Về gốc" style={{ fontSize:10, opacity:0.7 }}>↺</button>
-        </div>
-        <div className="tb2-sep" />
-        <div className="tb2-group">
-          <label className="tb2-label">YOUTUBE</label>
-          <input className="tb2-input" value={(song as any).youtubeUrl || ''} onChange={e => updateField('youtubeUrl' as any, e.target.value)} style={{ width: 220 }} placeholder="https://youtu.be/..." />
-        </div>
-        <div className="tb2-sep" />
-        <div className="tb2-group">
-          <label className="tb2-label">YT OFFSET (s)</label>
-          <input className="tb2-input" type="number" step={0.1} min={0}
-            value={(song as any).youtubeOffset ?? 0}
-            onChange={e => updateField('youtubeOffset' as any, parseFloat(e.target.value) || 0)}
-            style={{ width: 70 }}
-            title="Giây trong video YouTube = beat 1 nhịp 1"
-          />
-          <button className="btn sm" onClick={() => updateField('youtubeOffset' as any, Math.max(0, ((song as any).youtubeOffset ?? 0) - (60/song.tempo)))} title="Lùi 1 beat">◀</button>
-          <button className="btn sm" onClick={() => updateField('youtubeOffset' as any, ((song as any).youtubeOffset ?? 0) + (60/song.tempo))} title="Tiến 1 beat">▶</button>
         </div>
         <div className="tb2-sep" />
         <div className="tb2-group">
@@ -1080,119 +1062,6 @@ export default function App() {
 
       {showImport && <ImportModal key={Date.now()} onImport={handleImport} onClose={() => setShowImport(false)} />}
       {addTarget !== null && <AddEventModal time={addTarget} onConfirm={confirmAdd} onClose={() => setAddTarget(null)} />}
-      {/* YouTube Editor Panel */}
-      {(song as any).youtubeUrl && (() => {
-        const ytId = ((song as any).youtubeUrl as string).match(/(?:youtu\.be\/|v=|\/embed\/)([\w-]{11})/)?.[1]
-        if (!ytId) return null
-        return (
-          <div style={{ padding:'12px 16px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8', display:'flex', gap:16, alignItems:'flex-start' }}>
-            <div style={{ flex:'0 0 320px' }}>
-              {!showYtEditor ? (
-              <div style={{ width:320, height:180, borderRadius:8, background:'#111', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}
-                onClick={() => setShowYtEditor(true)}>
-                <div style={{ textAlign:'center', color:'#fff' }}>
-                  <div style={{ fontSize:36 }}>▶</div>
-                  <div style={{ fontSize:12, marginTop:4, opacity:0.7 }}>Click để load video</div>
-                </div>
-              </div>
-            ) : (
-              <iframe
-                src={`https://www.youtube.com/embed/${ytId}?start=${Math.floor((song as any).youtubeOffset ?? 0)}&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
-                style={{ width:320, height:180, borderRadius:8, border:'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                onLoad={e => {
-                  const iframe = e.currentTarget
-                  // Subscribe currentTime updates
-                  setInterval(() => {
-                    iframe.contentWindow?.postMessage(JSON.stringify({event:'listening'}), '*')
-                    iframe.contentWindow?.postMessage(JSON.stringify({event:'command',func:'getPlayerState',args:''}), '*')
-                  }, 500)
-                }}
-              />
-            )}
-            </div>
-            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:'#2A2018' }}>🎬 Canh YouTube Offset</div>
-              <div style={{ fontSize:11, color:'#8A7A5A', lineHeight:1.6 }}>
-                Tạm dừng video tại beat 1 của nhịp bất kỳ → đánh dấu 2 điểm → app tự tính tempo + offset.
-              </div>
-
-              {/* ĐIỂM 1 */}
-              <div style={{ background:'rgba(20,83,45,0.08)', borderRadius:8, padding:'8px 12px', border:'1px solid rgba(20,83,45,0.2)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:'#14532D' }}>📍 Điểm 1</span>
-                  <span style={{ fontSize:10, color:'#8A7A5A' }}>Nhịp:</span>
-                  <input type="number" min={1} max={song.totalBars} value={ytMark1Bar}
-                    onChange={e => setYtMark1Bar(parseInt(e.target.value)||1)}
-                    style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
-                  <input type="number" step={0.01} min={0} placeholder="giây" value={ytInput1}
-                    onChange={e => setYtInput1(e.target.value)}
-                    style={{ width:72, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
-                  <button className="btn sm primary" onClick={() => {
-                    const t = parseFloat(ytInput1) || 0
-                    setYtMark1({ t, bar: ytMark1Bar })
-                  }}>✓ Xác nhận</button>
-                  {ytMark1 && <>
-                    <span style={{ fontSize:11, color:'#14532D', fontWeight:600 }}>{ytMark1.t.toFixed(2)}s · nhịp {ytMark1.bar}</span>
-                    <button className="btn sm" onClick={() => setYtMark1(m => m ? {...m, t: parseFloat((m.t-0.1).toFixed(3))} : m)}>◀0.1s</button>
-                    <button className="btn sm" onClick={() => setYtMark1(m => m ? {...m, t: parseFloat((m.t+0.1).toFixed(3))} : m)}>▶0.1s</button>
-                    <button className="btn sm" onClick={() => setYtMark1(m => m ? {...m, t: parseFloat((m.t-60/song.tempo).toFixed(3))} : m)}>◀beat</button>
-                    <button className="btn sm" onClick={() => setYtMark1(m => m ? {...m, t: parseFloat((m.t+60/song.tempo).toFixed(3))} : m)}>▶beat</button>
-                  </>}
-                </div>
-              </div>
-
-              {/* ĐIỂM 2 */}
-              <div style={{ background:'rgba(91,168,208,0.08)', borderRadius:8, padding:'8px 12px', border:'1px solid rgba(91,168,208,0.2)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:'#2A6A9A' }}>📍 Điểm 2</span>
-                  <span style={{ fontSize:10, color:'#8A7A5A' }}>Nhịp:</span>
-                  <input type="number" min={1} max={song.totalBars} value={ytMark2Bar}
-                    onChange={e => setYtMark2Bar(parseInt(e.target.value)||1)}
-                    style={{ width:48, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
-                  <input type="number" step={0.01} min={0} placeholder="giây" value={ytInput2}
-                    onChange={e => setYtInput2(e.target.value)}
-                    style={{ width:72, padding:'2px 6px', borderRadius:4, border:'1px solid #C8B898', fontSize:12, textAlign:'center' }} />
-                  <button className="btn sm primary" onClick={() => {
-                    const t = parseFloat(ytInput2) || 0
-                    setYtMark2({ t, bar: ytMark2Bar })
-                  }}>✓ Xác nhận</button>
-                  {ytMark2 && <>
-                    <span style={{ fontSize:11, color:'#2A6A9A', fontWeight:600 }}>{ytMark2.t.toFixed(2)}s · nhịp {ytMark2.bar}</span>
-                    <button className="btn sm" onClick={() => setYtMark2(m => m ? {...m, t: parseFloat((m.t-0.1).toFixed(3))} : m)}>◀0.1s</button>
-                    <button className="btn sm" onClick={() => setYtMark2(m => m ? {...m, t: parseFloat((m.t+0.1).toFixed(3))} : m)}>▶0.1s</button>
-                    <button className="btn sm" onClick={() => setYtMark2(m => m ? {...m, t: parseFloat((m.t-60/song.tempo).toFixed(3))} : m)}>◀beat</button>
-                    <button className="btn sm" onClick={() => setYtMark2(m => m ? {...m, t: parseFloat((m.t+60/song.tempo).toFixed(3))} : m)}>▶beat</button>
-                  </>}
-                </div>
-              </div>
-
-              {/* KẾT QUẢ TÍNH TOÁN */}
-              {ytMark1 && ytMark2 && ytMark1.bar !== ytMark2.bar && (() => {
-                const barDiff = Math.abs(ytMark2.bar - ytMark1.bar)
-                const timeDiff = Math.abs(ytMark2.t - ytMark1.t)
-                const barDur = timeDiff / barDiff
-                const newTempo = parseFloat((60 / barDur * song.timeSignature).toFixed(2))
-                const earlierMark = ytMark1.bar < ytMark2.bar ? ytMark1 : ytMark2
-                const newOffset = parseFloat((earlierMark.t - (earlierMark.bar - 1) * barDur).toFixed(3))
-                return (
-                  <div style={{ background:'#EEF5E6', borderRadius:8, padding:'10px 14px', border:'1px solid #A8C880' }}>
-                    <div style={{ fontSize:12, color:'#14532D', fontWeight:700, marginBottom:6 }}>✅ Kết quả</div>
-                    <div style={{ display:'flex', gap:16, fontSize:12, color:'#2A2018', marginBottom:8, flexWrap:'wrap' }}>
-                      <span>Tempo: <strong>{newTempo} BPM</strong></span>
-                      <span>Offset: <strong>{newOffset}s</strong></span>
-                      <span>Bar dur: <strong>{barDur.toFixed(3)}s</strong></span>
-                    </div>
-                    <button className="btn sm primary" onClick={() => {
-                      updateField('youtubeOffset' as any, newOffset)
-                    }}>✅ Áp dụng offset</button>
-                    <span style={{ fontSize:10, color:'#8A7A5A' }}>
-                      Tempo video: <strong>{newTempo} BPM</strong> (tempo bài: {song.tempo} BPM)
-                    </span>
-                  </div>
-                )
-              })()}
 
               <div style={{ fontSize:12, color:'#14532D', fontWeight:600 }}>
               {/* CHẠY THỬ */}
