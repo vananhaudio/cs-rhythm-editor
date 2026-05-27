@@ -260,7 +260,7 @@ export default function ScoreTabViewer({
   const draw = useCallback(() => {
     const c = canvasRef.current; if (!c) return;
     const ctx = c.getContext('2d'); if (!ctx) return;
-    const w = c.offsetWidth || c.width;
+    const w = c.width;
 
     // Background
     ctx.fillStyle = '#faf9f5';
@@ -536,9 +536,15 @@ export default function ScoreTabViewer({
 
   // ── Click handling ───────────────────────────────────────────────────────────
   function canvasXY(e: React.MouseEvent<HTMLCanvasElement>) {
-    const r = e.currentTarget.getBoundingClientRect();
-    // Dùng CSS size thay vì pixel size để tránh lỗi Retina/devicePixelRatio
-    return { cx: e.clientX - r.left, cy: e.clientY - r.top };
+    const canvas = e.currentTarget;
+    const r = canvas.getBoundingClientRect();
+    // Scale CSS coords → canvas pixel coords (quan trọng cho Retina/zoom)
+    const scaleX = canvas.width / r.width;
+    const scaleY = canvas.height / r.height;
+    return {
+      cx: (e.clientX - r.left) * scaleX,
+      cy: (e.clientY - r.top) * scaleY,
+    };
   }
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
