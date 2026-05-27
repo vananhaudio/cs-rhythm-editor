@@ -7,15 +7,15 @@ import { getNoteForFret } from './guitarNotes';
 // ─── Layout (single unified canvas) ──────────────────────────────────────────
 const SLG        = 14;          // staff line gap
 const STAFF_H    = SLG * 4;    // 48px (5 lines)
-const STAFF_TOP  = 50;          // from canvas top to first staff line
+const STAFF_TOP  = 72;          // đủ chỗ cho nốt cao (dây 1 fret 17)
 const STAFF_BOT  = STAFF_TOP + STAFF_H;
 
 const TSG        = 18;          // TAB string gap
 const TAB_STRINGS = 6;
-const TAB_TOP    = STAFF_BOT + 42;   // khoảng cách staff-TAB
+const TAB_TOP    = STAFF_BOT + 52;   // khoảng cách staff-TAB (chỗ ledger lines)
 const TAB_BOT    = TAB_TOP + (TAB_STRINGS - 1) * TSG;
 
-const CANVAS_H   = TAB_BOT + 28;    // total canvas height
+const CANVAS_H   = TAB_BOT + 32;    // total canvas height
 
 const RULER_H    = 22;
 const CLEF_W     = 42;
@@ -725,35 +725,7 @@ export default function ScoreTabViewer({
       onBlur={() => { setFocused(false); setFretBuf(''); }}
       style={{ outline: 'none', border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: panelBg }}
     >
-      {/* ── Transport bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: `1px solid ${border}`, background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)', flexWrap: 'wrap' }}>
 
-        {/* Stop / Play */}
-        <div style={{ display: 'flex', gap: 3 }}>
-          <button onClick={onStop} title="Dừng"
-            style={btnStyle(false, isDark)}>
-            <svg width="9" height="9" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" fill="currentColor" rx="1"/></svg>
-          </button>
-          <button onClick={isPlaying ? onPause : onPlay} title={isPlaying ? 'Tạm dừng (Space)' : 'Phát (Space)'}
-            style={btnStyle(isPlaying, isDark, accent)}>
-            {isPlaying
-              ? <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="3" height="8" fill="currentColor" rx="0.5"/><rect x="6" y="1" width="3" height="8" fill="currentColor" rx="0.5"/></svg>
-              : <svg width="10" height="10" viewBox="0 0 10 10"><polygon points="2,1 9,5 2,9" fill="currentColor"/></svg>
-            }
-          </button>
-        </div>
-
-        <span style={{ fontSize: 10, color: muted, fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-          {SCORE_BPM} BPM · 4/4 · {fmtTime(currentTime)}/{fmtTime(totalDuration)}
-        </span>
-
-        {/* Progress */}
-        <div style={{ flex: 1, minWidth: 60, height: 3, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${totalDuration > 0 ? Math.min(100, currentTime / totalDuration * 100) : 0}%`, background: accent, borderRadius: 2, transition: 'width 0.08s linear' }} />
-        </div>
-
-        <span style={{ fontSize: 10, color: muted }}>{notes.length} nốt</span>
-      </div>
 
 
 
