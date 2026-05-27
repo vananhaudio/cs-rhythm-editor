@@ -185,15 +185,6 @@ export default function ScoreTabViewer({
       return;
     }
 
-    // Duration keys 1-7 (Guitar Pro: 1=whole...7=64th)
-    if (/^[1-7]$/.test(k) && !e.shiftKey && fretBuf === '') {
-      e.preventDefault();
-      const gpMap: Record<string, number> = { '1':4, '2':2, '3':1, '4':0.5, '5':0.25, '6':0.125, '7':0.0625 };
-      const beats = gpMap[k];
-      if (beats !== undefined) { setDurBeats(beats); setDotted(false); }
-      return;
-    }
-
     // . → dotted
     if (k === '.') { e.preventDefault(); setDotted(v => !v); return; }
     // / → triplet
