@@ -87,7 +87,6 @@ export default function ScoreTabViewer({
         core: {
           engine: 'html5',
           logLevel: at.LogLevel.None,
-          workerFile: '/node_modules/@coderline/alphatab/dist/alphaTab.worker.js',
         },
         display: {
           layoutMode: at.LayoutMode.Horizontal,
@@ -116,65 +115,41 @@ export default function ScoreTabViewer({
     });
   }, [notes]);
 
-  // ── Build AlphaTab score từ ScoreNote[] ──────────────────────────────────
-  function renderScore(at: any, api: any, notes: ScoreNote[]) {
-    const score = new at.model.Score();
-    score.tempo = SCORE_BPM;
-
-    const track = new at.model.Track();
-    track.shortName = 'Gtr';
-    score.tracks.push(track);
-
-    const staff = new at.model.Staff();
-    // Standard tuning MIDI: low E(40) A(45) D(50) G(55) B(59) high E(64)
-    staff.tuning = [64, 59, 55, 50, 45, 40];
-    track.staves.push(staff);
-
+  // ── Build AlphaTex string từ ScoreNote[] ────────────────────────────────
+  function renderScore(_at: any, api: any, notes: ScoreNote[]) {
+    // AlphaTex format: \tempo BPM . fret.string:duration |
+    // string: 1=high E ... 6=low E | duration: 1=whole 2=half 4=quarter 8=eighth 16=sixteenth
     const barDur = SCORE_BEATS_PER_MEASURE * spb();
     const numBars = Math.max(1, Math.ceil((totalDuration || barDur) / barDur));
 
+    function secToDur(sec: number): number {
+      const b = sec / spb();
+      if (b >= 3.5) return 1;
+      if (b >= 1.5) return 2;
+      if (b >= 0.75) return 4;
+      if (b >= 0.375) return 8;
+      return 16;
+    }
+
+    let tex = `\\title ""\n\\tempo ${SCORE_BPM}\n.\n`;
+
     for (let m = 0; m < numBars; m++) {
-      const bar = new at.model.Bar();
-      bar.timeSignatureNumerator   = 4;
-      bar.timeSignatureDenominator = 4;
-      staff.bars.push(bar);
-
-      const voice = new at.model.Voice();
-      bar.voices.push(voice);
-
       const barStart = m * barDur;
       const barNotes = notes.filter(n => n.time >= barStart && n.time < barStart + barDur);
 
       if (barNotes.length === 0) {
-        const beat = new at.model.Beat();
-        beat.duration = at.model.Duration.Whole;
-        beat.isEmpty  = true;
-        voice.beats.push(beat);
+        tex += 'r:1 ';
       } else {
         for (const n of barNotes) {
-          const beat = new at.model.Beat();
-          beat.duration = secToDuration(at, n.duration);
-          voice.beats.push(beat);
-
-          const note = new at.model.Note();
-          // AlphaTab: string 1=high E … 6=low E  |  ScoreNote: 0=low E … 5=high E
-          note.string = 6 - n.string;
-          note.fret   = n.fret;
-          beat.notes.push(note);
+          const str = 6 - n.string; // AlphaTab: 1=high E, 6=low E
+          const dur = secToDur(n.duration);
+          tex += \`\${n.fret}.\${str}:\${dur} \`;
         }
       }
+      tex += '| ';
     }
 
-    api.renderScore(score);
-  }
-
-  function secToDuration(at: any, sec: number) {
-    const b = sec / spb();
-    if (b >= 3.5)   return at.model.Duration.Whole;
-    if (b >= 1.5)   return at.model.Duration.Half;
-    if (b >= 0.75)  return at.model.Duration.Quarter;
-    if (b >= 0.375) return at.model.Duration.Eighth;
-    return at.model.Duration.Sixteenth;
+    api.tex(tex);
   }
 
   // ── Commit note ──────────────────────────────────────────────────────────
