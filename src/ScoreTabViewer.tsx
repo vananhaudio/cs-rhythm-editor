@@ -47,11 +47,15 @@ function semY(step: number) {
   return STAFF_TOP + STAFF_H - ((step - TREBLE_BOT) * SLG) / 2;
 }
 function noteY(pitch: string, oct: number) { return semY(staffStep(pitch, oct)); }
+function barlineX(m: number) {
+  return HEADER_W + m * (BAR_PAD + SCORE_BEATS_PER_MEASURE * BEAT_W);
+}
 function noteX(time: number) {
-  // Tính vị trí x, thêm BAR_PAD cho mỗi vạch nhịp đã qua (nốt đầu nhịp lùi thêm)
-  const beatPos = time / spb();
-  const bar = Math.floor(beatPos / SCORE_BEATS_PER_MEASURE);
-  return HEADER_W + BAR_PAD + beatPos * BEAT_W + bar * BAR_PAD;
+  const beatPos    = time / spb();
+  const bar        = Math.floor(beatPos / SCORE_BEATS_PER_MEASURE);
+  const beatInBar  = beatPos % SCORE_BEATS_PER_MEASURE;
+  // Nốt = vạch nhịp trước + khoảng hở + vị trí trong nhịp
+  return barlineX(bar) + BAR_PAD + beatInBar * BEAT_W;
 }
 function tabStrY(str: number) {
   // str: 0=low E … 5=high E  →  display row 0=high E at top
@@ -119,7 +123,7 @@ export default function ScoreTabViewer({
   const barlineXs = useMemo(() => {
     const xs: number[] = [];
     const bars = Math.ceil(totalDuration / (spb() * SCORE_BEATS_PER_MEASURE));
-    for (let m = 0; m <= bars; m++) xs.push(HEADER_W + BAR_PAD + m * SCORE_BEATS_PER_MEASURE * BEAT_W + m * BAR_PAD);
+    for (let m = 0; m <= bars; m++) xs.push(barlineX(m));
     return xs;
   }, [totalDuration]);
 
