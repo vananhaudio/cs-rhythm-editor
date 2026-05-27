@@ -499,76 +499,102 @@ export default function YouTubeSyncPage() {
         </div>
 
         {/* ② Preview — Unified Chord+Lyric Grid */}
-        {jsonData&&(
-          <div style={card}>
-            <SectionHeader n="②" title="Hợp âm & Lời"/>
-            {barGrid?(
-              <div ref={barGridRef} style={{overflowY:'auto',maxHeight:240}}>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(52px,1fr))',gap:4}}>
-                  {barGrid.map(({idx,t1,lyric})=>{
-                    const isAct = jt>=t1&&(idx===barGrid.length||jt<barGrid[idx].t1);
-                    const isPast = jt>=t1&&!isAct;
-                    // Tìm hợp âm tại beat 1 của nhịp này
-                    const chordAtBar = jsonData.chords.filter(c=>c.time<=t1).at(-1);
-                    const nextBarT = barGrid[idx]?.t1 ?? dur;
-                    const chordInBar = jsonData.chords.find(c=>c.time>=t1&&c.time<nextBarT) ?? chordAtBar;
-                    return(
-                      <button key={idx} ref={isAct?activeBarRef:null} onClick={()=>seekTo(t1)}
-                        style={{
-                          display:'flex',flexDirection:'column',alignItems:'center',
-                          padding:'5px 4px 4px',borderRadius:8,cursor:'pointer',
-                          border:isAct?`1.5px solid ${C.goldStrong}`:`1px solid ${C.border}`,
-                          background:isAct?C.goldSoft:isPast?'rgba(0,0,0,0.02)':C.surface,
-                          color:isAct?C.text:isPast?C.borderMid:C.textSub,
-                          transform:isAct?'scale(1.06)':'scale(1)',
-                          boxShadow:isAct?`0 0 0 2px ${C.goldStrong}22`:'none',
-                          transition:'all 0.12s',gap:1,
-                        }}>
-                        {/* Chord */}
-                        <span style={{
-                          fontFamily:'monospace',fontSize:10,fontWeight:700,lineHeight:1.1,
-                          color: isAct?C.green:isPast?C.borderMid:C.gold,
-                          minHeight:13,
-                        }}>
-                          {chordInBar?.name ?? ''}
-                        </span>
-                        {/* Lyric */}
-                        <span style={{fontSize:12,lineHeight:1.3,textAlign:'center',wordBreak:'break-all',fontWeight:isAct?600:400}}>
-                          {lyric?lyric.text:<span style={{opacity:0.2}}>—</span>}
-                        </span>
-                        {/* Bar number */}
-                        <span style={{fontSize:9,marginTop:1,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>
-                          {idx}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+        {jsonData&&(()=>{
+          const spb = jsonData.tempo ? 60/jsonData.tempo : 0.75;
+          const bpb = jsonData.timeSignature ?? 4;
+          const barDur = spb * bpb;
+
+          // Group chords theo bar (0-indexed)
+          const barMap = new Map<number, typeof jsonData.chords>();
+          jsonData.chords.forEach(c => {
+            const bi = barDur > 0 ? Math.floor(c.time / barDur) : 0;
+            if (!barMap.has(bi)) barMap.set(bi, []);
+            barMap.get(bi)!.push(c);
+          });
+
+          const totalBars = jsonData.totalBars ?? (barDur > 0 ? Math.ceil(dur / barDur) : jsonData.chords.length);
+          const barsArr = Array.from({length: totalBars}, (_, i) => ({
+            barIdx: i + 1,
+            t1: i * barDur,
+            chords: barMap.get(i) ?? [],
+          }));
+
+          // Rows of 16
+          const COLS = 16;
+          const rows: typeof barsArr[] = [];
+          for (let i = 0; i < barsArr.length; i += COLS) rows.push(barsArr.slice(i, i + COLS));
+
+          return (
+            <div style={card}>
+              <SectionHeader n="②" title="Hợp âm & Lời"/>
+              <div ref={barGridRef} style={{overflowY:'auto',maxHeight:280}}>
+                {rows.map((row, ri) => (
+                  <div key={ri} style={{display:'grid',gridTemplateColumns:`repeat(${COLS},1fr)`,gap:3,marginBottom:3}}>
+                    {/* Pad to COLS */}
+                    {[...row, ...Array(COLS - row.length).fill(null)].map((bar, ci) => {
+                      if (!bar) return <div key={`pad-${ci}`}/>;
+                      const {barIdx, t1, chords} = bar;
+                      const barEnd = t1 + barDur;
+
+                      if (chords.length === 0) {
+                        // Nhịp không có hợp âm
+                        const lyric = jsonData.lyrics.filter(l=>l.time>=t1&&l.time<barEnd)[0];
+                        const isAct = jt>=t1 && jt<barEnd;
+                        return (
+                          <button key={barIdx} ref={isAct?activeBarRef:undefined}
+                            onClick={()=>seekTo(t1)}
+                            style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'5px 3px 4px',borderRadius:7,cursor:'pointer',border:`1px solid ${isAct?C.goldStrong:C.border}`,background:isAct?C.goldSoft:'rgba(0,0,0,0.01)',transition:'all 0.1s',gap:1}}>
+                            <span style={{fontSize:10,fontFamily:'monospace',color:C.borderMid,minHeight:14}}>—</span>
+                            <span style={{fontSize:13,color:isAct?C.text:C.borderMid}}>{lyric?.text??'—'}</span>
+                            <span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>
+                          </button>
+                        );
+                      }
+
+                      // 1 hoặc nhiều hợp âm trong nhịp → chia ô
+                      return (
+                        <div key={barIdx} style={{display:'flex',gap:1,minWidth:0}}>
+                          {chords.map((c, ci) => {
+                            const nextT = chords[ci+1]?.time ?? barEnd;
+                            const chordDur = nextT - c.time;
+                            const flexVal = barDur > 0 ? chordDur / barDur : 1;
+                            const words = jsonData.lyrics.filter(l=>l.time>=c.time&&l.time<nextT);
+                            const isAct = activeChord?.id === c.id;
+                            const isPast = jt > nextT;
+                            return (
+                              <button key={c.id} ref={isAct?activeBarRef:undefined}
+                                onClick={()=>seekTo(c.time)}
+                                style={{
+                                  flex: flexVal, minWidth:0,
+                                  display:'flex',flexDirection:'column',alignItems:'center',
+                                  padding:'5px 2px 4px',borderRadius:7,cursor:'pointer',
+                                  border:`1px solid ${isAct?C.goldStrong:C.border}`,
+                                  background:isAct?C.goldSoft:isPast?'rgba(0,0,0,0.02)':C.surface,
+                                  boxShadow:isAct?`0 0 0 2px ${C.goldStrong}22`:'none',
+                                  transition:'all 0.12s',gap:1,overflow:'hidden',
+                                }}>
+                                {/* Chord */}
+                                <span style={{fontFamily:'monospace',fontSize:11,fontWeight:700,lineHeight:1.1,color:isAct?C.green:isPast?C.borderMid:C.gold,whiteSpace:'nowrap'}}>
+                                  {c.name}
+                                </span>
+                                {/* Lyric */}
+                                <span style={{fontSize:13,lineHeight:1.3,fontWeight:isAct?700:400,color:isAct?C.text:isPast?C.borderMid:C.textSub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'100%'}}>
+                                  {words.length>0?words.map(l=>l.text).join(' '):<span style={{opacity:0.2}}>—</span>}
+                                </span>
+                                {/* Bar number — chỉ hiện ở chord đầu tiên */}
+                                {ci===0&&<span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
-            ):(
-              <div style={{display:'flex',flexWrap:'wrap',gap:5,maxHeight:180,overflowY:'auto'}}>
-                {jsonData.chords.map(c=>{
-                  const isAct=activeChord?.id===c.id;
-                  const words=jsonData.lyrics.filter(l=>l.time>=c.time&&l.time<(jsonData.chords[jsonData.chords.indexOf(c)+1]?.time??dur));
-                  return(
-                    <button key={c.id} onClick={()=>seekTo(c.time)} style={{
-                      border:isAct?`1.5px solid ${C.goldStrong}`:`1px solid ${C.border}`,
-                      borderRadius:7,padding:'4px 8px',cursor:'pointer',
-                      background:isAct?C.goldSoft:C.surface,
-                      display:'flex',flexDirection:'column',alignItems:'center',gap:1,
-                      transition:'all 0.1s',minWidth:44,
-                    }}>
-                      <span style={{fontFamily:'monospace',fontSize:11,fontWeight:700,color:isAct?C.green:C.gold}}>{c.name}</span>
-                      <span style={{fontSize:11,color:isAct?C.text:C.textSub,fontWeight:isAct?600:400}}>
-                        {words.length>0?words.map(l=>l.text).join(' '):<span style={{opacity:0.3}}>—</span>}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {/* ③ Đang hát */}
         {jsonData&&(
