@@ -24,8 +24,8 @@ const HEADER_W   = CLEF_W + TSIG_W;
 const BEAT_W     = 80;          // px per beat
 const BAR_PAD    = 18;
 
-// Treble clef bottom line = E4
-const TREBLE_BOT = 4;
+// Treble clef bottom line = E4 = diatonic step 2 from C4
+const TREBLE_BOT = 2;
 const NHX = 6, NHY = 4.2;      // notehead radii
 const STEM_LEN   = SLG * 3.5;
 
@@ -506,10 +506,7 @@ export default function ScoreTabViewer({
         ctx.fillText('3', x, STAFF_TOP - 14);
       }
 
-      // Pitch name below staff
-      ctx.fillStyle = isAct ? '#c8991a' : '#b0aa9a';
-      ctx.font = '7.5px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText(note.pitch, x, STAFF_BOT + 6);
+
 
       // ── TAB number ───────────────────────────────────────────────────────────
       const ty  = tabStrY(note.string);

@@ -78,17 +78,18 @@ export function calcTotalDuration(notes: ScoreNote[]): number {
 // Pitch → staff line/space relative to middle C (C4 = 0)
 // Positive = above middle C, negative = below
 // We'll use semitone distance from C4 for vertical positioning
-const SEMITONES_FROM_C4: Record<string, number> = {
-  'Đô': 0, 'Đô#': 1, 'Rêb': 1,
-  'Rê': 2, 'Rê#': 3, 'Mib': 3,
-  'Mi': 4,
-  'Fa': 5, 'Fa#': 6, 'Solb': 6,
-  'Sol': 7, 'Sol#': 8, 'Lab': 8,
-  'La': 9, 'La#': 10, 'Sib': 10,
-  'Si': 11,
+// Diatonic step: C=0 D=1 E=2 F=3 G=4 A=5 B=6 (7 per octave)
+const DIATONIC_FROM_C4: Record<string, number> = {
+  'Đô': 0, 'Đô#': 0,
+  'Rê': 1, 'Rê#': 1, 'Rêb': 1,
+  'Mi': 2, 'Mib': 2,
+  'Fa': 3, 'Fa#': 3,
+  'Sol': 4, 'Sol#': 4, 'Solb': 4,
+  'La': 5, 'La#': 5, 'Lab': 5,
+  'Si': 6, 'Sib': 6,
 };
 
 export function staffStep(pitch: string, octave: number): number {
-  const base = SEMITONES_FROM_C4[pitch] ?? 0;
-  return base + (octave - 4) * 12;
+  const base = DIATONIC_FROM_C4[pitch] ?? 0;
+  return base + (octave - 4) * 7;
 }
