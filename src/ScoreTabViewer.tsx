@@ -251,41 +251,31 @@ export default function ScoreTabViewer({
       return;
     }
 
-    // Digit input — Guitar Pro style: số đơn tự commit sau 400ms, số đôi commit ngay
+    // Digit input: 1-9 commit ngay; 0+XX = fret 2 chữ số (vd 010=fret10)
     if (/^[0-9]$/.test(k)) {
       e.preventDefault();
       const buf = fretBuf + k;
-      const fret = parseInt(buf, 10);
 
-      if (digitTimerRef.current) clearTimeout(digitTimerRef.current);
-
-      if (buf.length === 1) {
-        if (fret === 0) {
-          // Phím 0 = dây buông → commit ngay
-          commitNoteRef.current(pendingStrRef.current, 0);
+      if (fretBuf === '') {
+        // Chưa có buffer
+        if (k === '0') {
+          // 0 = bắt đầu nhập fret 2 chữ số
+          setFretBuf('0');
+        } else {
+          // 1-9 commit ngay
+          commitNoteRef.current(pendingStrRef.current, parseInt(k, 10));
           setFretBuf('');
-          return;
         }
+      } else if (fretBuf === '0') {
+        // Buffer đang là '0', chờ 2 chữ số tiếp → buf = '0X'
         setFretBuf(buf);
-        // Tự commit sau 400ms nếu không có số thứ 2
-        digitTimerRef.current = setTimeout(() => {
-          commitNoteRef.current(pendingStrRef.current, parseInt(buf, 10));
-          setFretBuf('');
-        }, 400);
-      } else {
-        // 2 chữ số
+      } else if (fretBuf.length === 2 && fretBuf[0] === '0') {
+        // buf = '0XY' → commit fret XY
+        const fret = parseInt(fretBuf[1] + k, 10);
         if (fret <= 24) {
           commitNoteRef.current(pendingStrRef.current, fret);
-          setFretBuf('');
-        } else {
-          // Không hợp lệ: commit chữ số đầu, bắt đầu buffer mới
-          commitNoteRef.current(pendingStrRef.current, parseInt(fretBuf, 10));
-          setFretBuf(k);
-          digitTimerRef.current = setTimeout(() => {
-            commitNoteRef.current(pendingStrRef.current, parseInt(k, 10));
-            setFretBuf('');
-          }, 400);
         }
+        setFretBuf('');
       }
       return;
     }
