@@ -519,78 +519,53 @@ export default function YouTubeSyncPage() {
             chords: barMap.get(i) ?? [],
           }));
 
-          // Rows of 16
-          const COLS = 16;
-          const rows: typeof barsArr[] = [];
-          for (let i = 0; i < barsArr.length; i += COLS) rows.push(barsArr.slice(i, i + COLS));
-
           return (
             <div style={card}>
               <SectionHeader n="②" title="Hợp âm & Lời"/>
               <div ref={barGridRef} style={{overflowY:'auto',maxHeight:280}}>
-                {rows.map((row, ri) => (
-                  <div key={ri} style={{display:'grid',gridTemplateColumns:`repeat(${COLS},1fr)`,gap:3,marginBottom:3}}>
-                    {/* Pad to COLS */}
-                    {[...row, ...Array(COLS - row.length).fill(null)].map((bar, ci) => {
-                      if (!bar) return <div key={`pad-${ci}`}/>;
-                      const {barIdx, t1, chords} = bar;
-                      const barEnd = t1 + barDur;
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(56px,1fr))',gap:3}}>
+                  {barsArr.map(({barIdx,t1,chords})=>{
+                    const barEnd = t1+barDur;
+                    const span = Math.max(1,chords.length);
 
-                      if (chords.length === 0) {
-                        // Nhịp không có hợp âm
-                        const lyric = jsonData.lyrics.find(l=>l.time===t1);
-                        const isAct = jt>=t1 && jt<barEnd;
-                        return (
-                          <button key={barIdx} ref={isAct?activeBarRef:undefined}
-                            onClick={()=>seekTo(t1)}
-                            style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'5px 3px 4px',borderRadius:7,cursor:'pointer',border:`1px solid ${isAct?C.goldStrong:C.border}`,background:isAct?C.goldSoft:'rgba(0,0,0,0.01)',transition:'all 0.1s',gap:1}}>
-                            <span style={{fontSize:10,fontFamily:'monospace',color:C.borderMid,minHeight:14}}>—</span>
-                            <span style={{fontSize:13,color:isAct?C.text:C.borderMid}}>{lyric?.text??'—'}</span>
-                            <span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>
-                          </button>
-                        );
-                      }
-
-                      // 1 hoặc nhiều hợp âm trong nhịp → chia ô
+                    if (chords.length===0) {
+                      const lyric = jsonData.lyrics.find(l=>l.time===t1);
+                      const isAct = jt>=t1&&jt<barEnd;
                       return (
-                        <div key={barIdx} style={{display:'flex',gap:1,minWidth:0}}>
-                          {chords.map((c: typeof jsonData.chords[0], ci: number) => {
-                            const nextT = chords[ci+1]?.time ?? barEnd;
-                            const chordDur = nextT - c.time;
-                            const flexVal = barDur > 0 ? chordDur / barDur : 1;
-                            const firstWord = jsonData.lyrics.find(l=>l.time===c.time);
-                            const isAct = activeChord?.id === c.id;
-                            const isPast = jt > nextT;
-                            return (
-                              <button key={c.id} ref={isAct?activeBarRef:undefined}
-                                onClick={()=>seekTo(c.time)}
-                                style={{
-                                  flex: flexVal, minWidth:0,
-                                  display:'flex',flexDirection:'column',alignItems:'center',
-                                  padding:'5px 2px 4px',borderRadius:7,cursor:'pointer',
-                                  border:`1px solid ${isAct?C.goldStrong:C.border}`,
-                                  background:isAct?C.goldSoft:isPast?'rgba(0,0,0,0.02)':C.surface,
-                                  boxShadow:isAct?`0 0 0 2px ${C.goldStrong}22`:'none',
-                                  transition:'all 0.12s',gap:1,overflow:'hidden',
-                                }}>
-                                {/* Chord */}
-                                <span style={{fontFamily:'monospace',fontSize:11,fontWeight:700,lineHeight:1.1,color:isAct?C.green:isPast?C.borderMid:C.gold,whiteSpace:'nowrap'}}>
-                                  {c.name}
-                                </span>
-                                {/* Lyric */}
-                                <span style={{fontSize:13,lineHeight:1.3,fontWeight:isAct?700:400,color:isAct?C.text:isPast?C.borderMid:C.textSub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'100%'}}>
-                                  {firstWord?firstWord.text:<span style={{opacity:0.2}}>—</span>}
-                                </span>
-                                {/* Bar number — chỉ hiện ở chord đầu tiên */}
-                                {ci===0&&<span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <button key={barIdx} ref={isAct?activeBarRef:undefined}
+                          onClick={()=>seekTo(t1)}
+                          style={{gridColumn:`span ${span}`,display:'flex',flexDirection:'column',alignItems:'center',padding:'5px 3px 4px',borderRadius:7,cursor:'pointer',border:`1px solid ${isAct?C.goldStrong:C.border}`,background:isAct?C.goldSoft:'rgba(0,0,0,0.01)',transition:'all 0.1s',gap:1}}>
+                          <span style={{fontSize:11,fontFamily:'monospace',color:C.borderMid,minHeight:14}}>—</span>
+                          <span style={{fontSize:13,color:isAct?C.text:C.borderMid}}>{lyric?.text??'—'}</span>
+                          <span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>
+                        </button>
                       );
-                    })}
-                  </div>
-                ))}
+                    }
+
+                    return (
+                      <div key={barIdx} style={{gridColumn:`span ${span}`,display:'flex',gap:1}}>
+                        {chords.map((c: typeof jsonData.chords[0], ci: number)=>{
+                          const nextT = chords[ci+1]?.time??barEnd;
+                          const flexVal = barDur>0?(nextT-c.time)/barDur:1;
+                          const firstWord = jsonData.lyrics.find(l=>l.time===c.time);
+                          const isAct = activeChord?.id===c.id;
+                          const isPast = jt>nextT;
+                          return (
+                            <button key={c.id} ref={isAct?activeBarRef:undefined}
+                              onClick={()=>seekTo(c.time)}
+                              style={{flex:flexVal,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',padding:'5px 2px 4px',borderRadius:7,cursor:'pointer',border:`1px solid ${isAct?C.goldStrong:C.border}`,background:isAct?C.goldSoft:isPast?'rgba(0,0,0,0.02)':C.surface,boxShadow:isAct?`0 0 0 2px ${C.goldStrong}22`:'none',transition:'all 0.12s',gap:1,overflow:'hidden'}}>
+                              <span style={{fontFamily:'monospace',fontSize:11,fontWeight:700,lineHeight:1.1,color:isAct?C.green:isPast?C.borderMid:C.gold,whiteSpace:'nowrap'}}>{c.name}</span>
+                              <span style={{fontSize:13,lineHeight:1.3,fontWeight:isAct?700:400,color:isAct?C.text:isPast?C.borderMid:C.textSub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'100%'}}>
+                                {firstWord?firstWord.text:<span style={{opacity:0.2}}>—</span>}
+                              </span>
+                              {ci===0&&<span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );
