@@ -1074,29 +1074,6 @@ export default function App() {
                         ytTestRef.current = setInterval(() => {
                           setYtTestTime((Date.now() - ytTestStartRef.current) / 1000)
                         }, 50)
-                        const iframe = document.querySelector('iframe[src*="youtube"]') as HTMLIFrameElement
-                        const offset = (song as any).youtubeOffset ?? 0
-                        if (iframe?.contentWindow) {
-                          iframe.contentWindow.postMessage(JSON.stringify({event:'command',func:'seekTo',args:[offset,true]}), '*')
-                          setTimeout(() => iframe.contentWindow?.postMessage(JSON.stringify({event:'command',func:'playVideo',args:[]}), '*'), 300)
-                        }
-                      } else {
-                        if (ytTestRef.current) clearInterval(ytTestRef.current)
-                        setYtTestTime(0)
-                        const iframe = document.querySelector('iframe[src*="youtube"]') as HTMLIFrameElement
-                        iframe?.contentWindow?.postMessage(JSON.stringify({event:'command',func:'pauseVideo',args:[]}), '*')
-                      }
-                      setYtTesting(t => !t)
-                    }}>
-                    {ytTesting ? '⏹ Dừng thử' : '▶ Chạy thử'}
-                  </button>
-                  {ytTesting && <>
-                    <span style={{ fontSize:13, fontWeight:800, color:'#2A6A9A', fontFamily:'monospace' }}>{ytTestTime.toFixed(1)}s</span>
-                    <span style={{ fontSize:12, color:'#14532D', fontWeight:600 }}>{(() => {
-                      const bd = 60/song.tempo
-                      const barD = bd * song.timeSignature
-                      return `Nhịp ${Math.floor(ytTestTime/barD)+1} · Phách ${Math.floor((ytTestTime%barD)/bd)+1}`
-                    })()}</span>
                     <button className="btn sm" onClick={() => { setYtTesting(false); if(ytTestRef.current) clearInterval(ytTestRef.current); updateField('youtubeOffset' as any, parseFloat(((song as any).youtubeOffset-0.1).toFixed(3))) }}>◀0.1s</button>
                     <button className="btn sm" onClick={() => { setYtTesting(false); if(ytTestRef.current) clearInterval(ytTestRef.current); updateField('youtubeOffset' as any, parseFloat(((song as any).youtubeOffset+0.1).toFixed(3))) }}>▶0.1s</button>
                     <button className="btn sm" onClick={() => { setYtTesting(false); if(ytTestRef.current) clearInterval(ytTestRef.current); updateField('youtubeOffset' as any, parseFloat(((song as any).youtubeOffset-60/song.tempo).toFixed(3))) }}>◀beat</button>
