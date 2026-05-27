@@ -382,7 +382,7 @@ export default function ScoreTabViewer({
     ctx.fillStyle = '#1a1a1a';
     ctx.font = `${STAFF_H + 52}px "Times New Roman", Georgia, serif`;
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText('𝄞', 4, STAFF_BOT + 14);
+    ctx.fillText('𝄞', 4, STAFF_BOT);
     ctx.restore();
 
     // Time signature
