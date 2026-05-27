@@ -604,17 +604,20 @@ export default function ScoreTabViewer({
   const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { cx, cy } = canvasXY(e);
 
-    // Detect TAB area click → set pendingStr
-    if (cy >= TAB_TOP - TSG / 2) {
-      let best = 0; let bestD = Infinity;
-      for (let s = 0; s < 6; s++) {
-        const d = Math.abs(cy - tabStrY(s));
-        if (d < bestD) { bestD = d; best = s; }
-      }
-      setPendingStr(best);
-    }
+    // CHỈ xử lý click trong vùng TAB — staff là vùng chỉ đọc
+    const inTabArea = cy >= TAB_TOP - TSG;
+    if (!inTabArea) return;
 
-    // Find closest note by X
+    // Xác định dây được click
+    let bestStr = 0; let bestStrD = Infinity;
+    for (let s = 0; s < 6; s++) {
+      const d = Math.abs(cy - tabStrY(s));
+      if (d < bestStrD) { bestStrD = d; bestStr = s; }
+    }
+    setPendingStr(bestStr);
+    pendingStrRef.current = bestStr;
+
+    // Tìm nốt gần nhất theo X
     let bestNi: number | null = null; let bestD = Infinity;
     notes.forEach((note, i) => {
       const d = Math.abs(cx - noteX(note.time));
@@ -623,13 +626,12 @@ export default function ScoreTabViewer({
 
     if (bestNi !== null && bestD < BEAT_W * 0.6) {
       setSelIdx(bestNi);
-      setCursorIdx(bestNi as number);  // cursor TẠI nốt, nhập liệu sẽ chèn trước
+      setCursorIdx(bestNi as number);
     } else {
-      // Click on empty space — position cursor at nearest beat
+      // Click vào chỗ trống — snap đến beat gần nhất
       const rawBeat = (cx - HEADER_W - BAR_PAD) / BEAT_W;
       const snapBeat = Math.max(0, Math.round(rawBeat * 2) / 2);
       const snapTime = beatsToSec(snapBeat);
-      // Find insert index
       let insertAt = notes.length;
       for (let i = 0; i < notes.length; i++) {
         if (notes[i].time >= snapTime) { insertAt = i; break; }
@@ -707,8 +709,7 @@ export default function ScoreTabViewer({
       </div>
 
       {/* ── Canvas ── */}
-      <div ref={scrollRef} style={{ overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', position: 'relative' }}
-        onClick={() => containerRef.current?.focus()}>
+      <div ref={scrollRef} style={{ overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', position: 'relative' }}>
         <div style={{ width: W, height: totalH, position: 'relative' }}>
 
           {/* Ruler */}
@@ -717,8 +718,22 @@ export default function ScoreTabViewer({
 
           {/* Main canvas (staff + TAB) */}
           <canvas ref={canvasRef} width={W} height={CANVAS_H}
-            style={{ position: 'absolute', top: RULER_H, left: 0, display: 'block', cursor: 'text' }}
+            style={{ position: 'absolute', top: RULER_H, left: 0, display: 'block', cursor: 'default' }}
             onClick={handleCanvasClick} />
+
+          {/* Overlay TAB vùng tương tác — cursor text, hover highlight */}
+          <div
+            onClick={handleCanvasClick as any}
+            style={{
+              position: 'absolute',
+              top: RULER_H + TAB_TOP - TSG,
+              left: 0,
+              width: W,
+              height: TAB_BOT - TAB_TOP + TSG * 2,
+              cursor: 'text',
+              zIndex: 5,
+            }}
+          />
 
           {/* Playhead */}
           <div style={{
