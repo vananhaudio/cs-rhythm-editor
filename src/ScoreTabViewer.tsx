@@ -88,7 +88,6 @@ export default function ScoreTabViewer({
           layoutMode: at.LayoutMode.Horizontal,
           staveProfile: at.StaveProfile.TabMixed,
           scale: 0.95,
-          barCountPerRow: 8,
         },
         notation: {
           smallGraceTabNotes: false,
