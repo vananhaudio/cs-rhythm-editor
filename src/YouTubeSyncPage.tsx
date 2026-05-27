@@ -538,7 +538,7 @@ export default function YouTubeSyncPage() {
 
                       if (chords.length === 0) {
                         // Nhịp không có hợp âm
-                        const lyric = jsonData.lyrics.filter(l=>l.time>=t1&&l.time<barEnd)[0];
+                        const lyric = jsonData.lyrics.find(l=>l.time===t1);
                         const isAct = jt>=t1 && jt<barEnd;
                         return (
                           <button key={barIdx} ref={isAct?activeBarRef:undefined}
@@ -558,7 +558,7 @@ export default function YouTubeSyncPage() {
                             const nextT = chords[ci+1]?.time ?? barEnd;
                             const chordDur = nextT - c.time;
                             const flexVal = barDur > 0 ? chordDur / barDur : 1;
-                            const words = jsonData.lyrics.filter(l=>l.time>=c.time&&l.time<nextT);
+                            const firstWord = jsonData.lyrics.find(l=>l.time===c.time);
                             const isAct = activeChord?.id === c.id;
                             const isPast = jt > nextT;
                             return (
@@ -579,7 +579,7 @@ export default function YouTubeSyncPage() {
                                 </span>
                                 {/* Lyric */}
                                 <span style={{fontSize:13,lineHeight:1.3,fontWeight:isAct?700:400,color:isAct?C.text:isPast?C.borderMid:C.textSub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'100%'}}>
-                                  {words.length>0?words.map(l=>l.text).join(' '):<span style={{opacity:0.2}}>—</span>}
+                                  {firstWord?firstWord.text:<span style={{opacity:0.2}}>—</span>}
                                 </span>
                                 {/* Bar number — chỉ hiện ở chord đầu tiên */}
                                 {ci===0&&<span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>}
