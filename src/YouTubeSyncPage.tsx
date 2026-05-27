@@ -554,7 +554,7 @@ export default function YouTubeSyncPage() {
                       // 1 hoặc nhiều hợp âm trong nhịp → chia ô
                       return (
                         <div key={barIdx} style={{display:'flex',gap:1,minWidth:0}}>
-                          {chords.map((c, ci) => {
+                          {chords.map((c: typeof jsonData.chords[0], ci: number) => {
                             const nextT = chords[ci+1]?.time ?? barEnd;
                             const chordDur = nextT - c.time;
                             const flexVal = barDur > 0 ? chordDur / barDur : 1;
