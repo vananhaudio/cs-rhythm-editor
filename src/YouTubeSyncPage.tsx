@@ -143,8 +143,8 @@ export default function YouTubeSyncPage() {
     const sd = song as unknown as Record<string, unknown>;
 
     // Chords và lyrics có thể nằm trực tiếp trong song hoặc trong song_data
-    const rawChords = (song.chords || sd.chords || []) as Array<Record<string,unknown>>;
-    const rawLyrics = (song.lyrics || sd.lyrics || []) as Array<Record<string,unknown>>;
+    const rawChords = (song.chords || sd.chords || []) as unknown as Array<Record<string,unknown>>;
+    const rawLyrics = (song.lyrics || sd.lyrics || []) as unknown as Array<Record<string,unknown>>;
 
     // Normalize — đảm bảo đúng field name
     const chords: ChordEvent[] = rawChords.map(c => ({
