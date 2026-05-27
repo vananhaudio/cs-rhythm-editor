@@ -338,10 +338,7 @@ export default function YouTubeSyncPage() {
         {/* ══ A. DATA INPUT ZONE ══ */}
         <section style={{marginBottom:36}}>
           <div style={zoneLabel()}>① Nạp dữ liệu</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:24,alignItems:'start'}}>
-
-            {/* Left: controls */}
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
               {/* URL row */}
               <div style={{display:'flex',gap:8}}>
                 <input style={input} value={youtubeUrl}
@@ -377,46 +374,6 @@ export default function YouTubeSyncPage() {
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Right: small video reference */}
-            <div>
-              <div style={{fontSize:10,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:C.textDim,marginBottom:8}}>Tham chiếu video</div>
-              <div style={{borderRadius:10,overflow:'hidden',background:'#111',border:`1px solid ${C.border}`}}>
-                <div style={{paddingTop:'56.25%',position:'relative'}}>
-                  {!videoId?(
-                    <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:6,color:'#555'}}>
-                      <div style={{fontSize:24,opacity:0.4}}>▶</div>
-                      <span style={{fontSize:11}}>Load URL</span>
-                    </div>
-                  ):(
-                    <iframe ref={iframeRef} src={buildEmbedUrl(videoId)}
-                      style={{position:'absolute',inset:0,width:'100%',height:'100%',border:'none'}}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen title="YouTube"
-                      onLoad={()=>setTimeout(()=>iframeRef.current?.contentWindow?.postMessage(JSON.stringify({event:'listening'}),'*'),1000)}
-                    />
-                  )}
-                  {videoId&&!playerReady&&(
-                    <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-                      <div style={{background:'rgba(0,0,0,0.7)',borderRadius:16,padding:'5px 12px',fontSize:11,color:'#ccc',display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{width:10,height:10,borderRadius:'50%',border:'2px solid #555',borderTopColor:'#fff',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>
-                        Kết nối...
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {videoId&&playerReady&&(
-                  <div style={{padding:'5px 10px',background:C.surface,display:'flex',justifyContent:'space-between',fontSize:10,color:C.textDim,borderTop:`1px solid ${C.border}`}}>
-                    <span style={{display:'flex',alignItems:'center',gap:5}}>
-                      <span style={{width:5,height:5,borderRadius:'50%',background:'#3A7D44',display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
-                      Đã kết nối
-                    </span>
-                    <span style={{fontFamily:'monospace'}}>YT {fmt(ytTime)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </section>
 
@@ -569,10 +526,113 @@ export default function YouTubeSyncPage() {
         {/* ══ C. SYNC WORKSPACE ══ */}
         <section style={{marginBottom:36}}>
           <div style={zoneLabel()}>④ Đồng bộ</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden',background:C.surface,boxShadow:'0 1px 4px rgba(31,41,51,0.05)'}}>
+          <div style={{display:'grid',gridTemplateColumns:'3fr 4fr 4fr',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden',background:C.surface,boxShadow:'0 1px 4px rgba(31,41,51,0.05)'}}>
 
-            {/* Bar Sync */}
+            {/* Video reference */}
+            <div style={{padding:'20px',borderRight:`1px solid ${C.border}`,display:'flex',flexDirection:'column',gap:10}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:C.textDim}}>Tham chiếu video</div>
+              <div style={{borderRadius:10,overflow:'hidden',background:'#111',border:`1px solid ${C.border}`}}>
+                <div style={{paddingTop:'56.25%',position:'relative'}}>
+                  {!videoId?(
+                    <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:6,color:'#555'}}>
+                      <div style={{fontSize:28,opacity:0.35}}>▶</div>
+                      <span style={{fontSize:11,color:'#777'}}>Load URL ở trên</span>
+                    </div>
+                  ):(
+                    <iframe ref={iframeRef} src={buildEmbedUrl(videoId)}
+                      style={{position:'absolute',inset:0,width:'100%',height:'100%',border:'none'}}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen title="YouTube"
+                      onLoad={()=>setTimeout(()=>iframeRef.current?.contentWindow?.postMessage(JSON.stringify({event:'listening'}),'*'),1000)}
+                    />
+                  )}
+                  {videoId&&!playerReady&&(
+                    <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+                      <div style={{background:'rgba(0,0,0,0.7)',borderRadius:16,padding:'5px 12px',fontSize:11,color:'#ccc',display:'flex',alignItems:'center',gap:6}}>
+                        <span style={{width:10,height:10,borderRadius:'50%',border:'2px solid #555',borderTopColor:'#fff',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>
+                        Kết nối...
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {videoId&&playerReady&&(
+                  <div style={{padding:'5px 10px',display:'flex',justifyContent:'space-between',fontSize:10,color:C.textDim,borderTop:`1px solid ${C.border}`}}>
+                    <span style={{display:'flex',alignItems:'center',gap:5}}>
+                      <span style={{width:5,height:5,borderRadius:'50%',background:'#3A7D44',display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
+                      Đã kết nối
+                    </span>
+                    <span style={{fontFamily:'monospace'}}>YT {fmt(ytTime)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tap Tempo */}
             <div style={{padding:'24px',borderRight:`1px solid ${C.border}`}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.wood,marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:16}}>🥁</span> Tap Tempo Calibration
+              </div>
+              <p style={{fontSize:12,color:C.textSub,lineHeight:1.7,margin:'0 0 16px'}}>
+                Tap theo nhịp video để phát hiện nếu BPM lệch, sau đó apply scale.
+              </p>
+              <div style={{display:'flex',gap:8,marginBottom:14}}>
+                <input type="number" min={20} max={300} step={0.1}
+                  placeholder="Nhập BPM YouTube..."
+                  style={{...input,fontFamily:'monospace'}}
+                  onChange={e=>{
+                    const v=parseFloat(e.target.value);
+                    if(!isNaN(v)&&v>0){setTapBpm(Math.round(v));if(jsonData?.tempo)setTapScale(Math.round((jsonData.tempo/v)*10000)/10000);}
+                    else{setTapBpm(null);setTapScale(null);}
+                  }}/>
+                <span style={{fontSize:12,color:C.textDim,alignSelf:'center',whiteSpace:'nowrap'}}>BPM</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                <div style={{flex:1,height:1,background:C.border}}/><span style={{fontSize:11,color:C.textDim}}>hoặc</span><div style={{flex:1,height:1,background:C.border}}/>
+              </div>
+              <div style={{display:'flex',gap:12,marginBottom:14}}>
+                <button onPointerDown={tap} style={{
+                  flex:1,border:`2px dashed ${tapCount>0?C.wood:C.border}`,
+                  borderRadius:12,background:tapCount>0?'#FAF0E4':C.surface2,
+                  cursor:'pointer',padding:'16px 0',display:'flex',flexDirection:'column',
+                  alignItems:'center',gap:4,userSelect:'none',transition:'all 0.1s',
+                }}>
+                  <span style={{fontSize:24}}>🥁</span>
+                  <span style={{fontSize:12,color:C.textSub,fontWeight:600}}>TAP</span>
+                  {tapCount>0&&<span style={{fontSize:10,color:C.wood}}>{tapCount} taps</span>}
+                </button>
+                <div style={{flex:1,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:12,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,padding:'12px 8px'}}>
+                  <div style={{fontSize:34,fontWeight:700,fontFamily:'monospace',color:tapBpm?C.wood:C.border,lineHeight:1}}>{tapBpm??'--'}</div>
+                  <div style={{fontSize:11,color:C.textDim}}>BPM detected</div>
+                  {jsonData?.tempo&&<div style={{fontSize:10,color:C.textDim}}>JSON: <span style={{fontFamily:'monospace',color:C.text,fontWeight:600}}>{jsonData.tempo}</span></div>}
+                </div>
+              </div>
+              {tapBpm&&jsonData?.tempo&&tapScale!==null&&(
+                <div style={{background:C.surface2,border:`1px solid ${C.border}`,borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:11,fontFamily:'monospace',display:'flex',flexDirection:'column',gap:5}}>
+                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>JSON tempo</span><span style={{color:C.text,fontWeight:600}}>{jsonData.tempo} BPM</span></div>
+                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>Tap BPM</span><span style={{color:C.wood,fontWeight:600}}>{tapBpm} BPM</span></div>
+                  <div style={divLine}/>
+                  <div style={{display:'flex',justifyContent:'space-between'}}>
+                    <span style={{color:C.textSub}}>Scale ratio</span>
+                    <span style={{color:tapScale>1?'#C47A22':tapScale<1?C.teal:C.green,fontWeight:700}}>×{tapScale.toFixed(4)}</span>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between'}}>
+                    <span style={{color:C.textSub}}>Sai lệch</span>
+                    <span style={{color:C.goldStrong,fontWeight:600}}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span>
+                  </div>
+                </div>
+              )}
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={applyScale} disabled={!tapScale||!jsonData?.tempo}
+                  style={{...btn(C.wood),flex:1,opacity:(!tapScale||!jsonData?.tempo)?0.4:1}}>
+                  Apply Scale to JSON
+                </button>
+                <button onClick={()=>{tapTimesRef.current=[];setTapCount(0);setTapBpm(null);setTapScale(null);if(tapTORef.current)clearTimeout(tapTORef.current);}}
+                  disabled={tapCount===0} style={{...ghost,opacity:tapCount===0?0.4:1}}>↺</button>
+              </div>
+            </div>
+
+            {/* Mark Beat Sync */}
+            <div style={{padding:'24px'}}>
               <div style={{fontSize:12,fontWeight:600,color:C.green,marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
                 <span style={{fontSize:16}}>♩</span> Mark Beat Sync
               </div>
@@ -633,76 +693,6 @@ export default function YouTubeSyncPage() {
               )}
             </div>
 
-            {/* Tap Tempo */}
-            <div style={{padding:'24px'}}>
-              <div style={{fontSize:12,fontWeight:600,color:C.wood,marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
-                <span style={{fontSize:16}}>🥁</span> Tap Tempo Calibration
-              </div>
-              <p style={{fontSize:12,color:C.textSub,lineHeight:1.7,margin:'0 0 16px'}}>
-                Tap theo nhịp video để phát hiện nếu BPM lệch, sau đó apply scale.
-              </p>
-
-              {/* Manual BPM input */}
-              <div style={{display:'flex',gap:8,marginBottom:14}}>
-                <input type="number" min={20} max={300} step={0.1}
-                  placeholder="Nhập BPM YouTube..."
-                  style={{...input,fontFamily:'monospace'}}
-                  onChange={e=>{
-                    const v=parseFloat(e.target.value);
-                    if(!isNaN(v)&&v>0){setTapBpm(Math.round(v));if(jsonData?.tempo)setTapScale(Math.round((jsonData.tempo/v)*10000)/10000);}
-                    else{setTapBpm(null);setTapScale(null);}
-                  }}/>
-                <span style={{fontSize:12,color:C.textDim,alignSelf:'center',whiteSpace:'nowrap'}}>BPM</span>
-              </div>
-
-              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
-                <div style={{flex:1,height:1,background:C.border}}/><span style={{fontSize:11,color:C.textDim}}>hoặc</span><div style={{flex:1,height:1,background:C.border}}/>
-              </div>
-
-              {/* Tap area */}
-              <div style={{display:'flex',gap:12,marginBottom:14}}>
-                <button onPointerDown={tap} style={{
-                  flex:1,border:`2px dashed ${tapCount>0?C.wood:C.border}`,
-                  borderRadius:12,background:tapCount>0?'#FAF0E4':C.surface2,
-                  cursor:'pointer',padding:'16px 0',display:'flex',flexDirection:'column',
-                  alignItems:'center',gap:4,userSelect:'none',transition:'all 0.1s',
-                }}>
-                  <span style={{fontSize:24}}>🥁</span>
-                  <span style={{fontSize:12,color:C.textSub,fontWeight:600}}>TAP</span>
-                  {tapCount>0&&<span style={{fontSize:10,color:C.wood}}>{tapCount} taps</span>}
-                </button>
-                <div style={{flex:1,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:12,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,padding:'12px 8px'}}>
-                  <div style={{fontSize:34,fontWeight:700,fontFamily:'monospace',color:tapBpm?C.wood:C.border,lineHeight:1}}>{tapBpm??'--'}</div>
-                  <div style={{fontSize:11,color:C.textDim}}>BPM detected</div>
-                  {jsonData?.tempo&&<div style={{fontSize:10,color:C.textDim}}>JSON: <span style={{fontFamily:'monospace',color:C.text,fontWeight:600}}>{jsonData.tempo}</span></div>}
-                </div>
-              </div>
-
-              {tapBpm&&jsonData?.tempo&&tapScale!==null&&(
-                <div style={{background:C.surface2,border:`1px solid ${C.border}`,borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:11,fontFamily:'monospace',display:'flex',flexDirection:'column',gap:5}}>
-                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>JSON tempo</span><span style={{color:C.text,fontWeight:600}}>{jsonData.tempo} BPM</span></div>
-                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>Tap BPM</span><span style={{color:C.wood,fontWeight:600}}>{tapBpm} BPM</span></div>
-                  <div style={divLine}/>
-                  <div style={{display:'flex',justifyContent:'space-between'}}>
-                    <span style={{color:C.textSub}}>Scale ratio</span>
-                    <span style={{color:tapScale>1?'#C47A22':tapScale<1?C.teal:C.green,fontWeight:700}}>×{tapScale.toFixed(4)}</span>
-                  </div>
-                  <div style={{display:'flex',justifyContent:'space-between'}}>
-                    <span style={{color:C.textSub}}>Sai lệch</span>
-                    <span style={{color:C.goldStrong,fontWeight:600}}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span>
-                  </div>
-                </div>
-              )}
-
-              <div style={{display:'flex',gap:8}}>
-                <button onClick={applyScale} disabled={!tapScale||!jsonData?.tempo}
-                  style={{...btn(C.wood),flex:1,opacity:(!tapScale||!jsonData?.tempo)?0.4:1}}>
-                  Apply Scale to JSON
-                </button>
-                <button onClick={()=>{tapTimesRef.current=[];setTapCount(0);setTapBpm(null);setTapScale(null);if(tapTORef.current)clearTimeout(tapTORef.current);}}
-                  disabled={tapCount===0} style={{...ghost,opacity:tapCount===0?0.4:1}}>↺</button>
-              </div>
-            </div>
           </div>
         </section>
 
