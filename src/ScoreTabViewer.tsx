@@ -106,6 +106,9 @@ export default function ScoreTabViewer({
   const rulerRef    = useRef<HTMLCanvasElement>(null);
   const scrollRef   = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const digitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const commitNoteRef = useRef<(str: number, fret: number) => void>(() => {});
+  const pendingStrRef = useRef(3);
 
   const W = totalCanvasW(totalDuration);
 
@@ -155,6 +158,10 @@ export default function ScoreTabViewer({
     setFretBuf('');
   }, [notes, cursorIdx, cursorTime, effectiveDur, onNotesChange]);
 
+  // Sync refs để dùng trong setTimeout
+  useEffect(() => { commitNoteRef.current = commitNote; }, [commitNote]);
+  useEffect(() => { pendingStrRef.current = pendingStr; }, [pendingStr]);
+
   // Expose to parent for fretboard input
   useEffect(() => {
     onRequestNoteInput?.((str, fret) => commitNote(str, fret));
@@ -164,20 +171,7 @@ export default function ScoreTabViewer({
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const k = e.key;
 
-    // Duration keys 3-7 (Guitar Pro style)
-    if (/^[3-7]$/.test(k) && !e.shiftKey) {
-      e.preventDefault();
-      const d = DURATIONS.find(d => d.key === k);
-      if (d) setDurBeats(d.beats);
-      return;
-    }
-
-    // . → dotted
-    if (k === '.') { e.preventDefault(); setDotted(v => !v); return; }
-    // / → triplet
-    if (k === '/') { e.preventDefault(); setTriplet(v => !v); return; }
-
-    // + shorter, - longer (legacy)
+    // Duration: phím + tăng trường độ, - giảm (như Guitar Pro)
     if (k === '+' || k === '=') {
       e.preventDefault();
       const idx = DURATIONS.findIndex(d => d.beats === durBeats);
@@ -191,22 +185,43 @@ export default function ScoreTabViewer({
       return;
     }
 
-    // Navigation
+    // Duration keys 1-7 (Guitar Pro: 1=whole...7=64th)
+    if (/^[1-7]$/.test(k) && !e.shiftKey && fretBuf === '') {
+      e.preventDefault();
+      const gpMap: Record<string, number> = { '1':4, '2':2, '3':1, '4':0.5, '5':0.25, '6':0.125, '7':0.0625 };
+      const beats = gpMap[k];
+      if (beats !== undefined) { setDurBeats(beats); setDotted(false); }
+      return;
+    }
+
+    // . → dotted
+    if (k === '.') { e.preventDefault(); setDotted(v => !v); return; }
+    // / → triplet
+    if (k === '/') { e.preventDefault(); setTriplet(v => !v); return; }
+
+    // Navigation — mũi tên trái/phải: di chuyển cursor
     if (k === 'ArrowLeft') {
       e.preventDefault();
+      if (digitTimerRef.current) { clearTimeout(digitTimerRef.current); setFretBuf(''); }
       const ni = Math.max(0, cursorIdx - 1);
       setCursorIdx(ni); setSelIdx(ni > 0 ? ni - 1 : null); setFretBuf(''); return;
     }
     if (k === 'ArrowRight') {
       e.preventDefault();
+      if (digitTimerRef.current) { clearTimeout(digitTimerRef.current); setFretBuf(''); }
       const ni = Math.min(notes.length, cursorIdx + 1);
       setCursorIdx(ni); setSelIdx(ni > 0 ? ni - 1 : null); setFretBuf(''); return;
     }
+    // Mũi tên lên/xuống: đổi dây đàn
     if (k === 'ArrowUp') {
-      e.preventDefault(); setPendingStr(s => Math.min(5, s + 1)); return;
+      e.preventDefault();
+      setPendingStr(s => { const ns = Math.min(5, s + 1); pendingStrRef.current = ns; return ns; });
+      return;
     }
     if (k === 'ArrowDown') {
-      e.preventDefault(); setPendingStr(s => Math.max(0, s - 1)); return;
+      e.preventDefault();
+      setPendingStr(s => { const ns = Math.max(0, s - 1); pendingStrRef.current = ns; return ns; });
+      return;
     }
 
     // Delete / Backspace
@@ -222,38 +237,65 @@ export default function ScoreTabViewer({
       return;
     }
 
-    // Digit input for fret
+    // Digit input — Guitar Pro style: số đơn tự commit sau 400ms, số đôi commit ngay
     if (/^[0-9]$/.test(k)) {
       e.preventDefault();
       const buf = fretBuf + k;
       const fret = parseInt(buf, 10);
+
+      if (digitTimerRef.current) clearTimeout(digitTimerRef.current);
+
       if (buf.length === 1) {
-        setFretBuf(buf); // wait; Enter confirms, or second digit auto-commits
+        if (fret === 0) {
+          // Phím 0 = dây buông → commit ngay
+          commitNoteRef.current(pendingStrRef.current, 0);
+          setFretBuf('');
+          return;
+        }
+        setFretBuf(buf);
+        // Tự commit sau 400ms nếu không có số thứ 2
+        digitTimerRef.current = setTimeout(() => {
+          commitNoteRef.current(pendingStrRef.current, parseInt(buf, 10));
+          setFretBuf('');
+        }, 400);
       } else {
-        // Two digits — commit
-        if (fret <= 24) { commitNote(pendingStr, fret); } else {
-          // first digit alone
-          commitNote(pendingStr, parseInt(fretBuf, 10));
-          setFretBuf(k); // start new buffer with this digit
+        // 2 chữ số
+        if (fret <= 24) {
+          commitNoteRef.current(pendingStrRef.current, fret);
+          setFretBuf('');
+        } else {
+          // Không hợp lệ: commit chữ số đầu, bắt đầu buffer mới
+          commitNoteRef.current(pendingStrRef.current, parseInt(fretBuf, 10));
+          setFretBuf(k);
+          digitTimerRef.current = setTimeout(() => {
+            commitNoteRef.current(pendingStrRef.current, parseInt(k, 10));
+            setFretBuf('');
+          }, 400);
         }
       }
       return;
     }
 
-    // Enter → confirm pending buffer
+    // Enter → confirm pending buffer ngay
     if (k === 'Enter') {
       e.preventDefault();
-      if (fretBuf !== '') { commitNote(pendingStr, parseInt(fretBuf, 10)); }
+      if (digitTimerRef.current) clearTimeout(digitTimerRef.current);
+      if (fretBuf !== '') {
+        commitNoteRef.current(pendingStrRef.current, parseInt(fretBuf, 10));
+        setFretBuf('');
+      }
       return;
     }
 
     // Space → play/pause
     if (k === ' ') { e.preventDefault(); isPlaying ? onPause() : onPlay(); return; }
 
-    // Shift+1-6 → string select
+    // Shift+1-6 → chọn dây nhanh
     if (e.shiftKey && /^[1-6]$/.test(k)) {
       e.preventDefault();
-      setPendingStr(6 - parseInt(k, 10));
+      const ns = 6 - parseInt(k, 10);
+      setPendingStr(ns);
+      pendingStrRef.current = ns;
       return;
     }
   }, [notes, cursorIdx, durBeats, fretBuf, selIdx, pendingStr, isPlaying, onPlay, onPause, onNotesChange, commitNote]);
