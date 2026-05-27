@@ -650,9 +650,6 @@ export default function App() {
   const [ytCurrentTime, setYtCurrentTime] = useState<number>(0);
   const [ytInput1, setYtInput1] = useState('');
   const [ytInput2, setYtInput2] = useState('');
-  const [ytTesting, setYtTesting] = useState(false);
-  const [ytTestTime, setYtTestTime] = useState(0);
-  const ytTestRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ytTestStartRef = useRef<number>(0);
   const ytTimerBaseRef = useRef<number>(0);
   const [ytMark1, setYtMark1] = useState<{t: number; bar: number} | null>(null);
