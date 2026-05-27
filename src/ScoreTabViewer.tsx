@@ -12,7 +12,7 @@ const STAFF_BOT  = STAFF_TOP + STAFF_H;
 
 const TSG        = 18;          // TAB string gap
 const TAB_STRINGS = 6;
-const TAB_TOP    = STAFF_BOT + 52;   // khoảng cách staff-TAB (chỗ ledger lines)
+const TAB_TOP    = STAFF_BOT + 54;   // khoảng cách staff-TAB (chỗ ledger lines)
 const TAB_BOT    = TAB_TOP + (TAB_STRINGS - 1) * TSG;
 
 const CANVAS_H   = TAB_BOT + 32;    // total canvas height
