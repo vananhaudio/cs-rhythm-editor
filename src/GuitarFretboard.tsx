@@ -467,9 +467,9 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                 style={{ display:"flex", alignItems:"center", gap:6, borderRadius:20, paddingLeft:6, paddingRight:10, paddingTop:4, paddingBottom:4, border: isLoaded ? "1px solid rgba(14,165,233,0.6)" : `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, background: isLoaded ? (isDark ? "rgba(14,165,233,0.12)" : "rgba(14,165,233,0.08)") : (isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), cursor:"default", transition:"all 0.2s" }}
               >
                 {/* Color swatches */}
-                <div className="flex items-center gap-0.5 ml-0.5">
+                <div style={{ display:"flex", flexDirection:"row", alignItems:"center", gap:2, marginLeft:2 }}>
                   {colors.map((c, i) => (
-                    <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c, boxShadow: `0 0 4px ${c}88` }} />
+                    <div key={i} style={{ width:8, height:8, borderRadius:"50%", background:c, boxShadow:`0 0 4px ${c}88`, flexShrink:0 }} />
                   ))}
                 </div>
                 <button
@@ -479,14 +479,16 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                   {scale.name}
                 </button>
                 {isLoaded && (
-                  <span className="text-[10px] font-bold text-sky-400/80 tracking-wide uppercase">
+                  <span style={{ fontSize:9, fontWeight:700, color:"rgba(56,189,248,0.8)", letterSpacing:"0.08em", textTransform:"uppercase" as const }}>
                     {playMode === 'playScale' ? 'Đang chơi' : 'Đang sửa'}
                   </span>
                 )}
                 <button
                   onClick={() => deleteScale(scale.id)}
-                  className="w-4 h-4 flex items-center justify-center rounded-full text-white/20 hover:text-red-400 hover:bg-red-400/15 transition-all opacity-0 group-hover:opacity-100 ml-0.5"
                   title="Xóa scale"
+                  style={{ width:18, height:18, borderRadius:"50%", border:"none", background:"rgba(239,68,68,0.12)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"rgba(239,68,68,0.6)", flexShrink:0, transition:"all 0.15s", marginLeft:2 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background="rgba(239,68,68,0.25)"; (e.currentTarget as HTMLElement).style.color="#ef4444" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background="rgba(239,68,68,0.12)"; (e.currentTarget as HTMLElement).style.color="rgba(239,68,68,0.6)" }}
                 >
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
