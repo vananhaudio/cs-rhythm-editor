@@ -349,7 +349,7 @@ export default function ScoreTabViewer({
 
     // ── Guitar Pro-style cursor block ──────────────────────────────────────────
     if (focused) {
-      const cx = noteX(cursorTime);
+      const cx = noteX(isPlaying ? currentTime : cursorTime);
       const cw = BEAT_W * (dotted ? durBeats * 1.5 : durBeats) - 2;
 
       // Cursor column chỉ ở TAB area
@@ -756,16 +756,6 @@ export default function ScoreTabViewer({
             }}
           />
 
-          {/* Playhead */}
-          <div style={{
-            position: 'absolute', top: 0, left: px, width: 2, height: totalH,
-            background: '#e05000', opacity: 0.85, pointerEvents: 'none',
-            boxShadow: '0 0 5px rgba(224,80,0,0.5)',
-            transition: isPlaying ? 'left 0.08s linear' : 'none',
-            zIndex: 10,
-          }}>
-            <div style={{ position: 'absolute', top: 0, left: -4, width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '8px solid #e05000' }} />
-          </div>
         </div>
       </div>
 
