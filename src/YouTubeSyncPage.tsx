@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 // ─────────────────────────────────────────────
@@ -10,6 +11,12 @@ interface TimingJSON {
   title: string; artist?: string; tone?: string; tempo?: number;
   timeSignature?: number; totalBars?: number; duration?: number;
   lyrics: LyricEvent[]; chords: ChordEvent[]; sync?: SyncMeta;
+}
+interface SongRecord {
+  id: string; title: string; artist?: string; tone?: string;
+  tempo?: number; time_signature?: number; total_bars?: number;
+  duration?: number; lyrics?: LyricEvent[]; chords?: ChordEvent[];
+  youtube_url?: string; youtube_offset?: number;
 }
 
 // ─────────────────────────────────────────────
@@ -168,6 +175,13 @@ export default function YouTubeSyncPage() {
   const [tapCount, setTapCount]     = useState(0);
   const [tapScale, setTapScale]     = useState<number|null>(null);
 
+  // ── Song selector + auth ──
+  const [songs, setSongs]           = useState<SongRecord[]>([]);
+  const [selectedSong, setSelectedSong] = useState<SongRecord|null>(null);
+  const [songsLoading, setSongsLoading] = useState(false);
+  const [userRole, setUserRole]     = useState<string|null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle'|'saving'|'saved'|'error'>('idle');
+
   const iframeRef    = useRef<HTMLIFrameElement|null>(null);
   const timerRef     = useRef<ReturnType<typeof setInterval>|null>(null);
   const isPlayRef    = useRef(false);
@@ -184,6 +198,59 @@ export default function YouTubeSyncPage() {
     return all.length>0 ? Math.max(...all)+5 : 60;
   };
   useEffect(() => { if(jsonData) durRef.current = jsonData.duration ?? getDur(jsonData); },[jsonData]);
+
+  // ── Fetch user role + song list on mount ──
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return;
+      supabase.from('app_users').select('role').eq('id', session.user.id).single()
+        .then(({ data }) => { if (data?.role) setUserRole(data.role); });
+    });
+    setSongsLoading(true);
+    supabase.from('timming_songs')
+      .select('id,title,artist,tempo,time_signature,total_bars,duration,youtube_url,youtube_offset')
+      .order('title')
+      .then(({ data }) => { if (data) setSongs(data as SongRecord[]); setSongsLoading(false); });
+  }, []);
+
+  const loadSong = async (songId: string) => {
+    const { data } = await supabase.from('timming_songs').select('*').eq('id', songId).single();
+    if (!data) return;
+    setSelectedSong(data as SongRecord);
+    setJsonData({
+      title: data.title, artist: data.artist, tone: data.tone,
+      tempo: data.tempo, timeSignature: data.time_signature,
+      totalBars: data.total_bars, duration: data.duration,
+      lyrics: data.lyrics || [], chords: data.chords || [],
+    });
+    setJsonFileName(data.title + '.json');
+    if (data.youtube_url) setYoutubeUrl(data.youtube_url);
+    if (data.youtube_offset != null) offsetRef.current = data.youtube_offset;
+    setJt(0); stopTimer(); setIsPlaying(false); isPlayRef.current = false;
+  };
+
+  const saveToSystem = async () => {
+    if (!jsonData || !selectedSong) return;
+    const ok = window.confirm(
+      `Ghi đè "${jsonData.title}" lên hệ thống?\n\nDữ liệu cũ sẽ bị thay thế hoàn toàn.`
+    );
+    if (!ok) return;
+    setSaveStatus('saving');
+    const { error } = await supabase.from('timming_songs').update({
+      title: jsonData.title, artist: jsonData.artist ?? null,
+      tone: jsonData.tone ?? null, tempo: jsonData.tempo ?? null,
+      time_signature: jsonData.timeSignature ?? null,
+      total_bars: jsonData.totalBars ?? null, duration: jsonData.duration ?? null,
+      lyrics: jsonData.lyrics, chords: jsonData.chords,
+      youtube_url: youtubeUrl || null,
+      youtube_offset: offsetRef.current,
+      updated_at: new Date().toISOString(),
+    }).eq('id', selectedSong.id);
+    if (error) { setSaveStatus('error'); setTimeout(() => setSaveStatus('idle'), 3000); }
+    else { setSaveStatus('saved'); setTimeout(() => setSaveStatus('idle'), 4000); }
+  };
+
+  const isTeacher = userRole === 'teacher' || userRole === 'admin';
 
   const startTimer = useCallback((from: number) => {
     if(timerRef.current) clearInterval(timerRef.current);
@@ -388,9 +455,60 @@ export default function YouTubeSyncPage() {
 
       <div style={{maxWidth:1100,margin:'0 auto',padding:'28px 24px 60px'}}>
 
-        {/* ══ ① NAP DU LIEU ══ */}
+        {/* ══ ① CHON BAI HAT ══ */}
         <div style={card}>
-          <SectionHeader n="①" title="Nạp dữ liệu"/>
+          <SectionHeader n="①" title="Chọn bài hát"/>
+          {/* Song picker from system */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:12,alignItems:'end'}}>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>
+                Từ hệ thống {songsLoading&&<span style={{color:C.textDim,fontWeight:400}}>— đang tải...</span>}
+              </label>
+              <select
+                value={selectedSong?.id??''}
+                onChange={e=>{ if(e.target.value) loadSong(e.target.value); }}
+                style={{...inp,cursor:'pointer',color:selectedSong?C.text:C.textDim}}
+              >
+                <option value="">-- Chọn bài từ hệ thống --</option>
+                {songs.map(s=>(
+                  <option key={s.id} value={s.id}>
+                    {s.title}{s.artist?` — ${s.artist}`:''}{s.tempo?` (${s.tempo} BPM)`:''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedSong&&(
+              <button style={{...btnOutline,color:C.red,borderColor:C.red+'44'}}
+                onClick={()=>{setSelectedSong(null);setJsonData(null);setJsonFileName('');setYoutubeUrl('');offsetRef.current=0;}}>
+                ✕ Bỏ chọn
+              </button>
+            )}
+          </div>
+
+          {/* Selected song info */}
+          {selectedSong&&(
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,padding:'10px 14px',background:C.greenTint,borderRadius:8,border:`1px solid ${C.green}22`}}>
+              <span style={{fontSize:13,fontWeight:700,color:C.green}}>♪ {selectedSong.title}</span>
+              {selectedSong.artist&&<span style={{fontSize:12,color:C.textSub}}>— {selectedSong.artist}</span>}
+              <span style={{flex:1}}/>
+              {[
+                selectedSong.tempo?`${selectedSong.tempo} BPM`:null,
+                selectedSong.time_signature?`${selectedSong.time_signature}/4`:null,
+                selectedSong.total_bars?`${selectedSong.total_bars} bars`:null,
+                selectedSong.duration?fmt(selectedSong.duration):null,
+                selectedSong.youtube_offset!=null&&selectedSong.youtube_offset!==0?`offset ${selectedSong.youtube_offset}s`:null,
+              ].filter(Boolean).map((t,i)=>(<span key={i} style={tagStyle}>{t}</span>))}
+            </div>
+          )}
+
+          {/* Divider */}
+          <div style={{display:'flex',alignItems:'center',gap:12,margin:'4px 0'}}>
+            <div style={{flex:1,height:1,background:C.border}}/>
+            <span style={{fontSize:11,color:C.textDim}}>hoặc nạp thủ công</span>
+            <div style={{flex:1,height:1,background:C.border}}/>
+          </div>
+
+          {/* Manual load */}
           <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr auto auto',gap:10,alignItems:'start'}}>
             {/* URL */}
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -404,11 +522,8 @@ export default function YouTubeSyncPage() {
               </div>
               {urlError&&<div style={{fontSize:11,color:C.red}}>⚠ {urlError}</div>}
             </div>
-
-            {/* Divider */}
             <div style={{display:'flex',alignItems:'center',paddingTop:22,color:C.textDim,fontSize:11}}>hoặc</div>
-
-            {/* JSON */}
+            {/* JSON upload */}
             <div style={{display:'flex',flexDirection:'column',gap:6}}>
               <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>JSON File</label>
               <label style={{cursor:'pointer'}}>
@@ -423,7 +538,6 @@ export default function YouTubeSyncPage() {
               </label>
               {jsonParseError&&<div style={{fontSize:11,color:C.red}}>⚠ {jsonParseError}</div>}
             </div>
-
             {/* BPM display */}
             {jsonData?.tempo&&(
               <div style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -434,15 +548,13 @@ export default function YouTubeSyncPage() {
                 </div>
               </div>
             )}
-
-            {/* Demo */}
             <div style={{paddingTop:22}}>
-              <button style={btnOutline} onClick={()=>{setJsonData(MOCK);setJsonFileName('demo_song.json');setJsonParseError('');}}>Demo</button>
+              <button style={btnOutline} onClick={()=>{setJsonData(MOCK);setJsonFileName('demo_song.json');setJsonParseError('');setSelectedSong(null);}}>Demo</button>
             </div>
           </div>
 
           {/* Tags */}
-          {jsonData&&(
+          {jsonData&&!selectedSong&&(
             <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:4}}>
               <span style={{...tagStyle,color:C.text,fontWeight:600}}>♪ {jsonData.title||'Untitled'}</span>
               {[`${jsonData.lyrics.length} lyrics`,`${jsonData.chords.length} chords`,fmt(dur)].map((t,i)=>(
@@ -801,21 +913,73 @@ export default function YouTubeSyncPage() {
         <div style={{...card,padding:'20px 28px'}}>
           <SectionHeader n="⑥" title="Export"/>
 
-          <div style={{display:'flex',alignItems:'center',gap:20}}>
-            <button onClick={exportJson} disabled={!jsonData}
-              style={{
-                ...btnSolid(exportOk?'#2A6B3A':C.goldStrong),
-                flex:1,padding:'14px',fontSize:15,fontWeight:700,
-                opacity:!jsonData?0.45:1,
-                boxShadow:jsonData&&!exportOk?`0 3px 14px ${C.goldStrong}44`:'none',
-              }}>
-              {exportOk?'✓ Đã xuất thành công!':'⬇ Export JSON (Chuẩn hóa)'}
-            </button>
-            <p style={{fontSize:12,color:C.textSub,margin:0,lineHeight:1.7,maxWidth:300}}>
-              {jsonData
-                ? `Xuất file JSON để sử dụng cho các mục đích khác.`
-                : 'Upload JSON ở bước ① để bắt đầu.'}
-            </p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+
+            {/* Export JSON */}
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div style={{fontSize:11,fontWeight:600,color:C.textSub}}>Xuất file</div>
+              <button onClick={exportJson} disabled={!jsonData}
+                style={{
+                  ...btnSolid(exportOk?'#2A6B3A':C.goldStrong),
+                  padding:'13px',fontSize:14,fontWeight:700,
+                  opacity:!jsonData?0.45:1,
+                  boxShadow:jsonData&&!exportOk?`0 3px 14px ${C.goldStrong}44`:'none',
+                }}>
+                {exportOk?'✓ Đã xuất!':'⬇ Export JSON'}
+              </button>
+              <p style={{fontSize:11,color:C.textSub,margin:0,lineHeight:1.6}}>
+                Tải file JSON về máy để dùng nơi khác.
+              </p>
+            </div>
+
+            {/* Save to system */}
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div style={{fontSize:11,fontWeight:600,color:C.textSub}}>
+                Lưu lên hệ thống
+                {isTeacher&&<span style={{marginLeft:6,fontSize:10,color:C.green,background:C.greenTint,borderRadius:4,padding:'1px 7px'}}>Giáo viên</span>}
+              </div>
+
+              {isTeacher ? (
+                <>
+                  <button onClick={saveToSystem}
+                    disabled={!jsonData||!selectedSong||saveStatus==='saving'}
+                    style={{
+                      ...btnSolid(
+                        saveStatus==='saved'?'#2A6B3A':
+                        saveStatus==='error'?C.red:
+                        '#8A5A32'
+                      ),
+                      padding:'13px',fontSize:14,fontWeight:700,
+                      opacity:(!jsonData||!selectedSong)?0.45:1,
+                      boxShadow:(jsonData&&selectedSong&&saveStatus==='idle')?`0 3px 14px rgba(138,90,50,0.35)`:'none',
+                    }}>
+                    {saveStatus==='saving'?'⏳ Đang lưu...'
+                      :saveStatus==='saved'?'✓ Đã lưu lên hệ thống!'
+                      :saveStatus==='error'?'✗ Lỗi — thử lại'
+                      :'☁ Ghi đè lên hệ thống'}
+                  </button>
+                  <p style={{fontSize:11,color:C.textSub,margin:0,lineHeight:1.6}}>
+                    {!selectedSong
+                      ? '⚠ Chọn bài từ hệ thống ở bước ① trước.'
+                      : `Sẽ ghi đè bài "${selectedSong.title}" — có cảnh báo xác nhận.`}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button disabled style={{
+                    ...btnSolid('#9BA89C'),
+                    padding:'13px',fontSize:14,opacity:0.5,cursor:'not-allowed',
+                    position:'relative',overflow:'hidden',
+                  }}>
+                    🔒 Chỉ dành cho giáo viên
+                  </button>
+                  <p style={{fontSize:11,color:C.textSub,margin:0,lineHeight:1.6}}>
+                    Tính năng lưu lên hệ thống hiện chỉ dành cho giáo viên.
+                    {!userRole&&' Vui lòng đăng nhập.'}
+                  </p>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
