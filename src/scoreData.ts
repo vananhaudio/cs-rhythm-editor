@@ -38,30 +38,7 @@ function n(
   return { id, time, duration: dur, string: str, fret, pitch, octave, measure, beat };
 }
 
-export const MOCK_SCORE: ScoreNote[] = [
-  // Measure 1 — ascending G major
-  n('n1',  0 * BEAT, BEAT, 3, 0,  'Sol',  3, 1, 1),
-  n('n2',  1 * BEAT, BEAT, 3, 2,  'La',   3, 1, 2),
-  n('n3',  2 * BEAT, BEAT, 4, 0,  'Si',   3, 1, 3),
-  n('n4',  3 * BEAT, BEAT, 4, 1,  'Đô',   4, 1, 4),
-
-  // Measure 2 — continuing up then turn
-  n('n5',  4 * BEAT, BEAT, 4, 3,  'Rê',   4, 2, 1),
-  n('n6',  5 * BEAT, BEAT, 5, 0,  'Mi',   4, 2, 2),
-  n('n7',  6 * BEAT, BEAT, 5, 2,  'Fa#',  4, 2, 3),
-  n('n8',  7 * BEAT, BEAT, 5, 3,  'Sol',  4, 2, 4),
-
-  // Measure 3 — descending
-  n('n9',  8 * BEAT, BEAT, 5, 2,  'Fa#',  4, 3, 1),
-  n('n10', 9 * BEAT, BEAT, 5, 0,  'Mi',   4, 3, 2),
-  n('n11',10 * BEAT, BEAT, 4, 3,  'Rê',   4, 3, 3),
-  n('n12',11 * BEAT, BEAT, 4, 1,  'Đô',   4, 3, 4),
-
-  // Measure 4 — return
-  n('n13',12 * BEAT, BEAT, 4, 0,  'Si',   3, 4, 1),
-  n('n14',13 * BEAT, BEAT, 3, 2,  'La',   3, 4, 2),
-  n('n15',14 * BEAT, BEAT * 2, 3, 0, 'Sol', 3, 4, 3),
-];
+export const MOCK_SCORE: ScoreNote[] = [];
 
 export const SCORE_TOTAL_DURATION = 16 * BEAT;
 export const SCORE_BPM = BPM;
