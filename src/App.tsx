@@ -1063,32 +1063,6 @@ export default function App() {
       {showImport && <ImportModal key={Date.now()} onImport={handleImport} onClose={() => setShowImport(false)} />}
       {addTarget !== null && <AddEventModal time={addTarget} onConfirm={confirmAdd} onClose={() => setAddTarget(null)} />}
 
-              <div style={{ fontSize:12, color:'#14532D', fontWeight:600 }}>
-              {/* CHẠY THỬ */}
-              <div style={{ background:'rgba(91,168,208,0.08)', borderRadius:8, padding:'10px 14px', border:'1px solid rgba(91,168,208,0.2)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                  <button className="btn sm" style={{ background: ytTesting ? '#C0392B':'#2A6A9A', color:'#fff', border:'none', fontWeight:700 }}
-                    onClick={() => {
-                      if (!ytTesting) {
-                        ytTestStartRef.current = Date.now()
-                        ytTestRef.current = setInterval(() => {
-                          setYtTestTime((Date.now() - ytTestStartRef.current) / 1000)
-                        }, 50)
-                    <button className="btn sm" onClick={() => { setYtTesting(false); if(ytTestRef.current) clearInterval(ytTestRef.current); updateField('youtubeOffset' as any, parseFloat(((song as any).youtubeOffset-0.1).toFixed(3))) }}>◀0.1s</button>
-                    <button className="btn sm" onClick={() => { setYtTesting(false); if(ytTestRef.current) clearInterval(ytTestRef.current); updateField('youtubeOffset' as any, parseFloat(((song as any).youtubeOffset+0.1).toFixed(3))) }}>▶0.1s</button>
-                    <button className="btn sm" onClick={() => { setYtTesting(false); if(ytTestRef.current) clearInterval(ytTestRef.current); updateField('youtubeOffset' as any, parseFloat(((song as any).youtubeOffset-60/song.tempo).toFixed(3))) }}>◀beat</button>
-                    <button className="btn sm" onClick={() => { setYtTesting(false); if(ytTestRef.current) clearInterval(ytTestRef.current); updateField('youtubeOffset' as any, parseFloat(((song as any).youtubeOffset+60/song.tempo).toFixed(3))) }}>▶beat</button>
-                  </>}
-                </div>
-                {ytTesting && <div style={{ fontSize:10, color:'#6A8A9A', marginTop:4 }}>Nghe metronome có khớp với beat trong video không — nếu lệch thì tinh chỉnh</div>}
-              </div>
-                Offset: <strong>{((song as any).youtubeOffset ?? 0).toFixed(2)}s</strong>
-                <span style={{ marginLeft:12, color:'#8A7A5A' }}>Tempo: <strong>{song.tempo} BPM</strong></span>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
 
       {showSongList && (
         <SongList
