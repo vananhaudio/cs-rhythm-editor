@@ -5,28 +5,28 @@ import type { ScoreNote } from './scoreData';
 import { getNoteForFret } from './guitarNotes';
 
 // ─── Layout (single unified canvas) ──────────────────────────────────────────
-const SLG        = 12;          // staff line gap (tăng từ 11)
+const SLG        = 14;          // staff line gap
 const STAFF_H    = SLG * 4;    // 48px (5 lines)
-const STAFF_TOP  = 44;          // from canvas top to first staff line
+const STAFF_TOP  = 50;          // from canvas top to first staff line
 const STAFF_BOT  = STAFF_TOP + STAFF_H;
 
-const TSG        = 16;          // TAB string gap (tăng từ 14)
+const TSG        = 18;          // TAB string gap
 const TAB_STRINGS = 6;
-const TAB_TOP    = STAFF_BOT + 36;   // khoảng cách rộng hơn (tăng từ 26)
+const TAB_TOP    = STAFF_BOT + 42;   // khoảng cách staff-TAB
 const TAB_BOT    = TAB_TOP + (TAB_STRINGS - 1) * TSG;
 
-const CANVAS_H   = TAB_BOT + 24;    // total canvas height
+const CANVAS_H   = TAB_BOT + 28;    // total canvas height
 
 const RULER_H    = 22;
 const CLEF_W     = 42;
 const TSIG_W     = 22;
 const HEADER_W   = CLEF_W + TSIG_W;
-const BEAT_W     = 80;          // px per beat
-const BAR_PAD    = 18;
+const BEAT_W     = 96;          // px per beat
+const BAR_PAD    = 28;          // khoảng hở sau vạch nhịp
 
 // Treble clef bottom line = E4 = diatonic step 2 from C4
 const TREBLE_BOT = 2;
-const NHX = 6, NHY = 4.2;      // notehead radii
+const NHX = 7, NHY = 5;        // notehead radii
 const STEM_LEN   = SLG * 3.5;
 
 // Duration palette (beats at BPM)
@@ -48,13 +48,16 @@ function semY(step: number) {
 }
 function noteY(pitch: string, oct: number) { return semY(staffStep(pitch, oct)); }
 function noteX(time: number) {
-  return HEADER_W + BAR_PAD + (time / spb()) * BEAT_W;
+  // Tính vị trí x, thêm BAR_PAD cho mỗi vạch nhịp đã qua (nốt đầu nhịp lùi thêm)
+  const beatPos = time / spb();
+  const bar = Math.floor(beatPos / SCORE_BEATS_PER_MEASURE);
+  return HEADER_W + BAR_PAD + beatPos * BEAT_W + bar * BAR_PAD;
 }
 function tabStrY(str: number) {
   // str: 0=low E … 5=high E  →  display row 0=high E at top
   return TAB_TOP + (5 - str) * TSG;
 }
-function totalCanvasW(dur: number) { return noteX(dur) + 100; }
+function totalCanvasW(dur: number) { return noteX(dur) + 140; }
 function fmtTime(s: number) {
   return `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 }
@@ -116,7 +119,7 @@ export default function ScoreTabViewer({
   const barlineXs = useMemo(() => {
     const xs: number[] = [];
     const bars = Math.ceil(totalDuration / (spb() * SCORE_BEATS_PER_MEASURE));
-    for (let m = 0; m <= bars; m++) xs.push(HEADER_W + BAR_PAD + m * SCORE_BEATS_PER_MEASURE * BEAT_W);
+    for (let m = 0; m <= bars; m++) xs.push(HEADER_W + BAR_PAD + m * SCORE_BEATS_PER_MEASURE * BEAT_W + m * BAR_PAD);
     return xs;
   }, [totalDuration]);
 
@@ -294,6 +297,29 @@ export default function ScoreTabViewer({
       return;
     }
 
+    // R → dấu lặng (rest): chèn nốt lặng vào vị trí con trỏ
+    if (k === 'r' || k === 'R') {
+      e.preventDefault();
+      const t   = cursorTime;
+      const sec = spb();
+      const rest: ScoreNote = {
+        id: `r${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        time: t,
+        duration: effectiveDur,
+        string: -1,      // -1 = rest
+        fret: -1,
+        pitch: 'R',
+        octave: 0,
+        measure: Math.floor(t / (sec * SCORE_BEATS_PER_MEASURE)) + 1,
+        beat: ((t / sec) % SCORE_BEATS_PER_MEASURE) + 1,
+      };
+      const next = [...notes.slice(0, cursorIdx), rest, ...notes.slice(cursorIdx)];
+      onNotesChange(next);
+      setCursorIdx(cursorIdx + 1);
+      setSelIdx(cursorIdx);
+      return;
+    }
+
     // Space → play/pause
     if (k === ' ') { e.preventDefault(); isPlaying ? onPause() : onPlay(); return; }
 
@@ -352,8 +378,8 @@ export default function ScoreTabViewer({
     // ── Staff lines ────────────────────────────────────────────────────────────
     for (let i = 0; i < 5; i++) {
       const y = STAFF_TOP + i * SLG;
-      ctx.strokeStyle = '#b0aaa0';
-      ctx.lineWidth = i === 0 || i === 4 ? 1.1 : 0.75;
+      ctx.strokeStyle = '#7a7268';
+      ctx.lineWidth = i === 0 || i === 4 ? 1.8 : 1.2;
       ctx.beginPath(); ctx.moveTo(CLEF_W - 4, y); ctx.lineTo(w, y); ctx.stroke();
     }
 
@@ -389,8 +415,8 @@ export default function ScoreTabViewer({
     for (let s = 0; s < TAB_STRINGS; s++) {
       const y = TAB_TOP + s * TSG;
       const isActive = s === (5 - pendingStr);
-      ctx.strokeStyle = focused && isActive ? 'rgba(30,100,220,0.5)' : '#c0bab0';
-      ctx.lineWidth   = focused && isActive ? 1.1 : 0.7;
+      ctx.strokeStyle = focused && isActive ? 'rgba(30,100,220,0.7)' : '#8a847a';
+      ctx.lineWidth   = focused && isActive ? 1.6 : 1.1;
       ctx.beginPath(); ctx.moveTo(CLEF_W, y); ctx.lineTo(w, y); ctx.stroke();
     }
 
@@ -411,7 +437,7 @@ export default function ScoreTabViewer({
 
     // ── Barlines ───────────────────────────────────────────────────────────────
     barlineXs.forEach(x => {
-      ctx.strokeStyle = '#888'; ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 2.0;
       ctx.beginPath(); ctx.moveTo(x, STAFF_TOP); ctx.lineTo(x, STAFF_BOT); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x, TAB_TOP - 2); ctx.lineTo(x, TAB_BOT + 2); ctx.stroke();
     });
@@ -439,6 +465,28 @@ export default function ScoreTabViewer({
         ctx.fillRect(x - 14, STAFF_TOP - 4, 28, TAB_BOT - STAFF_TOP + 8);
       }
 
+      // ── Dấu lặng (rest) ──────────────────────────────────────────────────────
+      if (note.string === -1) {
+        const rx = x;
+        const ry = STAFF_TOP + SLG * 1.5;
+        const rf = isAct ? '#c8991a' : isSel ? '#1e64dc' : '#555';
+        ctx.fillStyle = rf;
+        ctx.font = `bold ${SLG * 2 + 4}px "Times New Roman", serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        // Ký hiệu lặng theo trường độ
+        const restSym =
+          note.duration >= beatsToSec(4)   ? '𝄻' :
+          note.duration >= beatsToSec(2)   ? '𝄼' :
+          note.duration >= beatsToSec(1)   ? '𝄽' :
+          note.duration >= beatsToSec(0.5) ? '𝄾' : '𝄿';
+        ctx.fillText(restSym, rx, ry);
+        // TAB: dấu gạch ngang
+        const ty2 = tabStrY(3);
+        ctx.strokeStyle = rf; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(rx - 8, ty2); ctx.lineTo(rx + 8, ty2); ctx.stroke();
+        continue;
+      }
+
       // ── Staff note ───────────────────────────────────────────────────────────
       const y    = noteY(note.pitch, note.octave + 1);  // guitar: written 8va higher
       const step = staffStep(note.pitch, note.octave + 1);
@@ -446,7 +494,7 @@ export default function ScoreTabViewer({
       const acc  = accChar(note.pitch);
 
       // Ledger lines
-      ctx.strokeStyle = '#999'; ctx.lineWidth = 0.9;
+      ctx.strokeStyle = '#666'; ctx.lineWidth = 1.3;
       for (let ly = STAFF_BOT + SLG; ly <= y + 2; ly += SLG) {
         ctx.beginPath(); ctx.moveTo(x - NHX - 4, ly); ctx.lineTo(x + NHX + 4, ly); ctx.stroke();
       }
