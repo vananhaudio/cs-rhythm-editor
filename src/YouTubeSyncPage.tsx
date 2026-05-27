@@ -151,13 +151,13 @@ export default function YouTubeSyncPage() {
       id: (c.id as string) || String(Math.random()),
       time: (c.time as number) || 0,
       name: (c.name as string) || (c.chord as string) || '',
-    })).filter(c => c.name);
+    })).filter(c => c.name).sort((a,b) => a.time - b.time);
 
     const lyrics: LyricEvent[] = rawLyrics.map(l => ({
       id: (l.id as string) || String(Math.random()),
       time: (l.time as number) || 0,
       text: (l.text as string) || (l.word as string) || '',
-    })).filter(l => l.text);
+    })).filter(l => l.text).sort((a,b) => a.time - b.time);
 
     setJsonData({
       title: song.title || 'Untitled',
