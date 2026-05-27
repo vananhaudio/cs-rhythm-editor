@@ -705,7 +705,7 @@ export default function ScoreTabViewer({
   // Duration selector
   const activeDur = DURATIONS.find(d => d.beats === durBeats) ?? DURATIONS[2];
 
-  const totalH = RULER_H + CANVAS_H;
+  const totalH = CANVAS_H;
   const px     = noteX(currentTime);
 
   return (
@@ -727,11 +727,11 @@ export default function ScoreTabViewer({
 
           {/* Ruler */}
           <canvas ref={rulerRef} width={W} height={RULER_H}
-            style={{ position: 'absolute', top: 0, left: 0, display: 'block' }} />
+            style={{ position: 'absolute', top: 0, left: 0, display: 'none' }} />
 
           {/* Main canvas (staff + TAB) */}
           <canvas ref={canvasRef} width={W} height={CANVAS_H}
-            style={{ position: 'absolute', top: RULER_H, left: 0, display: 'block', cursor: 'default' }}
+            style={{ position: 'absolute', top: 0, left: 0, display: 'block', cursor: 'default' }}
             onClick={handleCanvasClick} />
 
           {/* Overlay TAB vùng tương tác — cursor text, hover highlight */}
