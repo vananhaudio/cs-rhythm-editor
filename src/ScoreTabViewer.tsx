@@ -194,14 +194,18 @@ export default function ScoreTabViewer({
     if (k === 'ArrowLeft') {
       e.preventDefault();
       if (digitTimerRef.current) { clearTimeout(digitTimerRef.current); setFretBuf(''); }
-      const ni = Math.max(0, cursorIdx - 1);
-      setCursorIdx(ni); setSelIdx(ni > 0 ? ni - 1 : null); setFretBuf(''); return;
+      setCursorIdx(c => Math.max(0, c - 1));
+      setSelIdx(null);
+      setFretBuf('');
+      return;
     }
     if (k === 'ArrowRight') {
       e.preventDefault();
       if (digitTimerRef.current) { clearTimeout(digitTimerRef.current); setFretBuf(''); }
-      const ni = Math.min(notes.length, cursorIdx + 1);
-      setCursorIdx(ni); setSelIdx(ni > 0 ? ni - 1 : null); setFretBuf(''); return;
+      setCursorIdx(c => Math.min(notes.length, c + 1));
+      setSelIdx(null);
+      setFretBuf('');
+      return;
     }
     // Mũi tên lên/xuống: đổi dây đàn
     if (k === 'ArrowUp') {
@@ -302,7 +306,7 @@ export default function ScoreTabViewer({
     ctx.fillRect(0, 0, w, CANVAS_H);
 
     // ── Guitar Pro-style cursor block ──────────────────────────────────────────
-    if (focused && selIdx === null) {
+    if (focused) {
       const cx = noteX(cursorTime);
       const cw = BEAT_W * (dotted ? durBeats * 1.5 : durBeats) - 2;
 
