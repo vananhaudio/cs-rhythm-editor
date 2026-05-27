@@ -599,115 +599,9 @@ export default function YouTubeSyncPage() {
           </div>
         )}
 
-        {/* ══ ④ SYNC CONTROLS ══ */}
+        {/* ══ ④ TIMELINE ══ */}
         <div style={card}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:0}}>
-
-            {/* Mark Beat */}
-            <div style={{paddingRight:24,borderRight:`1px solid ${C.border}`}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:4}}>ĐÁNH DẤU PHÁCH</div>
-              <div style={{fontSize:11,color:C.textSub,marginBottom:14}}>Chọn phách bạn muốn đánh dấu</div>
-              {!jsonData?.tempo?(
-                <div style={{fontSize:11,color:'#92722A',background:'#FDF5E0',border:'1px solid #EED88A',borderRadius:7,padding:'8px 10px'}}>
-                  ⚠ Cần JSON có <code>tempo</code>
-                </div>
-              ):(
-                <>
-                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-                    <button style={{...btnOutline,padding:'5px 12px',fontSize:16}} onClick={()=>setBarNum(b=>Math.max(1,b-1))}>−</button>
-                    <div style={{flex:1,textAlign:'center'}}>
-                      <span style={{fontSize:28,fontWeight:700,fontFamily:'monospace',color:C.green}}>{barNum}</span>
-                      <span style={{fontSize:11,color:C.textDim,marginLeft:4}}>/ {jsonData.timeSignature??4}</span>
-                    </div>
-                    <button style={{...btnOutline,padding:'5px 12px',fontSize:16}} onClick={()=>setBarNum(b=>b+1)}>+</button>
-                  </div>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:12}}>
-                    {[1,2,3,4,5,8,9,13,17].map(n=>(
-                      <button key={n} onClick={()=>setBarNum(n)} style={{
-                        ...btnOutline,padding:'3px 8px',fontSize:11,fontFamily:'monospace',
-                        color:barNum===n?C.green:C.textDim,borderColor:barNum===n?C.green:C.border,
-                        background:barNum===n?C.greenTint:'transparent',
-                      }}>{n}</button>
-                    ))}
-                  </div>
-                  <button onPointerDown={markBar} disabled={!playerReady}
-                    style={{...btnSolid(C.green),width:'100%',padding:'11px',opacity:playerReady?1:0.45,userSelect:'none'}}>
-                    ♩ Đánh dấu (Mark)
-                  </button>
-                  {barResult&&(
-                    <div style={{marginTop:10,background:C.pageBg,borderRadius:7,padding:'8px 10px',fontSize:10,fontFamily:'monospace',display:'flex',flexDirection:'column',gap:3}}>
-                      <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textDim}}>Nhịp</span><span style={{color:C.text,fontWeight:600}}>#{barResult.bar}</span></div>
-                      <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textDim}}>YT mark</span><span style={{color:C.red,fontWeight:600}}>{barResult.yt.toFixed(3)}s</span></div>
-                      <div style={{height:1,background:C.border,margin:'2px 0'}}/>
-                      <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textDim}}>Đã sync</span><span style={{color:C.goldStrong,fontWeight:700}}>✓</span></div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Tap Tempo */}
-            <div style={{padding:'0 24px',borderRight:`1px solid ${C.border}`}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:4}}>TAP TEMPO</div>
-              <div style={{fontSize:11,color:C.textSub,marginBottom:14}}>Bấm theo nhịp để đo BPM</div>
-              <div style={{display:'flex',gap:12,marginBottom:12}}>
-                <button onPointerDown={tap} style={{
-                  flex:1,border:`2px dashed ${tapCount>0?C.wood:C.border}`,
-                  borderRadius:10,background:tapCount>0?'#FAF0E4':C.pageBg,
-                  cursor:'pointer',padding:'14px 0',display:'flex',flexDirection:'column',
-                  alignItems:'center',gap:3,userSelect:'none',transition:'all 0.1s',
-                }}>
-                  <span style={{fontSize:20}}>🥁</span>
-                  <span style={{fontSize:11,color:C.textSub,fontWeight:600}}>TAP</span>
-                </button>
-                <div style={{flex:1,background:C.pageBg,border:`1px solid ${C.border}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,padding:'10px'}}>
-                  <div style={{fontSize:28,fontWeight:700,fontFamily:'monospace',color:tapBpm?C.wood:C.border,lineHeight:1}}>{tapBpm??'--'}</div>
-                  <div style={{fontSize:9,color:C.textDim,textTransform:'uppercase',letterSpacing:'0.08em'}}>BPM hiện tại</div>
-                  {jsonData?.tempo&&<div style={{fontSize:9,color:C.textDim}}>{jsonData.tempo} JSON</div>}
-                </div>
-              </div>
-              {tapBpm&&jsonData?.tempo&&tapScale!==null&&(
-                <div style={{background:C.pageBg,borderRadius:7,padding:'8px 10px',marginBottom:10,fontSize:10,fontFamily:'monospace',display:'flex',flexDirection:'column',gap:3}}>
-                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textDim}}>Scale ratio</span><span style={{color:C.green,fontWeight:700}}>×{tapScale.toFixed(4)}</span></div>
-                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textDim}}>Sai lệch</span><span style={{color:C.goldStrong}}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span></div>
-                </div>
-              )}
-              <div style={{display:'flex',gap:6}}>
-                <button onClick={applyScale} disabled={!tapScale||!jsonData?.tempo}
-                  style={{...btnSolid(C.wood),flex:1,padding:'8px',opacity:(!tapScale||!jsonData?.tempo)?0.4:1}}>
-                  Apply Scale
-                </button>
-                <button onClick={()=>{tapTimesRef.current=[];setTapCount(0);setTapBpm(null);setTapScale(null);}}
-                  disabled={tapCount===0} style={{...btnOutline,opacity:tapCount===0?0.4:1}}>↺</button>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div style={{paddingLeft:24}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:4}}>THAO TÁC</div>
-              <div style={{fontSize:11,color:C.textSub,marginBottom:14}}>Điều hướng nhanh</div>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                <button onClick={()=>seekTo(Math.max(0,jt-5))} style={{...btnOutline,justifyContent:'center'}}>
-                  ↩ Quay lại 5s
-                </button>
-                <button onClick={()=>seekTo(0)} style={{...btnOutline,justifyContent:'center'}}>
-                  ⟳ Chơi từ đầu
-                </button>
-                <button onClick={isPlaying?pause:play} disabled={!playerReady||!jsonData}
-                  style={{...btnSolid(isPlaying?C.wood:C.green),opacity:(!playerReady||!jsonData)?0.45:1}}>
-                  {isPlaying?'⏸ Dừng':'▶ Phát'}
-                </button>
-                {playerReady&&(
-                  <div style={{fontSize:10,color:C.textDim,textAlign:'center',fontFamily:'monospace'}}>YT: {fmt(ytTime)}</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ══ ⑤ TIMELINE ══ */}
-        <div style={card}>
-          <SectionHeader n="⑤" title="Timeline — Dòng chảy hợp âm"/>
+          <SectionHeader n="④" title="Timeline — Dòng chảy hợp âm"/>
 
           {/* Timeline scroll area */}
           <div ref={timelineRef} style={{overflowX:'auto',position:'relative',cursor:'pointer',marginBottom:12}}
@@ -719,53 +613,31 @@ export default function YouTubeSyncPage() {
             }}
           >
             <div style={{position:'relative',width:tlW,height:100}}>
-              {/* Time ruler */}
               {ticks.map(t=>(
                 <div key={t} style={{position:'absolute',left:t*PPS,top:0,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:0,pointerEvents:'none'}}>
                   <span style={{fontSize:9,color:C.textDim,fontFamily:'monospace',whiteSpace:'nowrap'}}>{fmtShort(t)}</span>
                   <div style={{width:1,height:6,background:C.borderMid}}/>
                 </div>
               ))}
-
-              {/* Chord chips track */}
               {jsonData?.chords.map(c=>{
                 const isAct=activeChord?.id===c.id;
                 return (
                   <div key={c.id} style={{
-                    position:'absolute',
-                    left:c.time*PPS,
-                    top:14,
-                    transform:'translateX(-50%)',
-                    padding:'3px 8px',
-                    borderRadius:5,
+                    position:'absolute',left:c.time*PPS,top:14,transform:'translateX(-50%)',
+                    padding:'3px 8px',borderRadius:5,
                     background:isAct?C.goldStrong:C.surface2,
                     border:`1px solid ${isAct?C.goldStrong:C.border}`,
                     color:isAct?'#fff':C.textSub,
                     fontSize:11,fontWeight:isAct?700:500,fontFamily:'monospace',
                     whiteSpace:'nowrap',pointerEvents:'none',
                     boxShadow:isAct?`0 2px 8px ${C.goldStrong}44`:'none',
-                  }}>
-                    {c.name}
-                  </div>
+                  }}>{c.name}</div>
                 );
               })}
-
-              {/* Waveform */}
               <div style={{position:'absolute',left:0,top:44,width:'100%',pointerEvents:'none'}}>
                 <Waveform width={tlW} dur={dur} jt={jt}/>
               </div>
-
-              {/* Playhead */}
-              <div style={{
-                position:'absolute',
-                left:jt*PPS,
-                top:0,bottom:0,
-                width:2,
-                background:C.green,
-                borderRadius:1,
-                pointerEvents:'none',
-                boxShadow:`0 0 6px ${C.green}66`,
-              }}>
+              <div style={{position:'absolute',left:jt*PPS,top:0,bottom:0,width:2,background:C.green,borderRadius:1,pointerEvents:'none',boxShadow:`0 0 6px ${C.green}66`}}>
                 <div style={{width:8,height:8,borderRadius:'50%',background:C.green,position:'absolute',top:0,left:'50%',transform:'translateX(-50%)'}}/>
               </div>
             </div>
@@ -774,29 +646,17 @@ export default function YouTubeSyncPage() {
           {/* Controls row */}
           <div style={{display:'flex',alignItems:'center',gap:16}}>
             <button onClick={isPlaying?pause:play} disabled={!playerReady||!jsonData}
-              style={{
-                width:40,height:40,borderRadius:'50%',
-                background:isPlaying?C.wood:C.green,
-                border:'none',color:'#fff',fontSize:16,cursor:'pointer',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                opacity:(!playerReady||!jsonData)?0.45:1,
-                boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`,
-              }}>
+              style={{width:40,height:40,borderRadius:'50%',background:isPlaying?C.wood:C.green,border:'none',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:(!playerReady||!jsonData)?0.45:1,boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`}}>
               {isPlaying?'⏸':'▶'}
             </button>
             <span style={{fontFamily:'monospace',fontSize:14,fontWeight:600,color:C.green,minWidth:80}}>{fmt(jt)}</span>
             <span style={{fontSize:12,color:C.textDim}}>/</span>
             <span style={{fontFamily:'monospace',fontSize:12,color:C.textDim}}>{fmt(dur)}</span>
-
-            {/* Seek bar */}
             <div style={{flex:1,position:'relative',height:6,background:C.surface2,borderRadius:3,border:`1px solid ${C.border}`,overflow:'visible',cursor:'pointer'}}>
               <div style={{height:'100%',width:`${pct}%`,background:C.green,borderRadius:3,transition:'width 0.05s linear'}}/>
               <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:14,height:14,borderRadius:'50%',background:C.green,border:`2px solid ${C.surface}`,boxShadow:`0 0 0 2px ${C.green}`,pointerEvents:'none',transition:'left 0.05s linear'}}/>
-              <input type="range" min={0} max={dur} step={0.1} value={jt}
-                onChange={e=>seekTo(parseFloat(e.target.value))}
-                style={{position:'absolute',inset:'-4px 0',width:'100%',opacity:0,cursor:'pointer'}}/>
+              <input type="range" min={0} max={dur} step={0.1} value={jt} onChange={e=>seekTo(parseFloat(e.target.value))} style={{position:'absolute',inset:'-4px 0',width:'100%',opacity:0,cursor:'pointer'}}/>
             </div>
-
             <div style={{display:'flex',gap:6}}>
               <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>−</button>
               <button style={{...btnOutline,padding:'5px 10px',fontSize:11}}>+</button>
@@ -805,9 +665,142 @@ export default function YouTubeSyncPage() {
           </div>
         </div>
 
+        {/* ══ ⑤ SYNC CONTROLS ══ */}
+        <div style={card}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:0}}>
+
+            {/* ── Tap Tempo ── */}
+            <div style={{paddingRight:24,borderRight:`1px solid ${C.border}`}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:2}}>TAP TEMPO</div>
+              <div style={{fontSize:11,color:C.textSub,marginBottom:14}}>Nhập hoặc tap để đo BPM thực tế</div>
+
+              {/* Direct BPM input */}
+              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+                <input
+                  type="number" min={20} max={300} step={0.5}
+                  placeholder="Nhập BPM..."
+                  value={tapBpm??''}
+                  onChange={e=>{
+                    const v=parseFloat(e.target.value);
+                    if(!isNaN(v)&&v>0){
+                      setTapBpm(Math.round(v));
+                      if(jsonData?.tempo) setTapScale(Math.round((jsonData.tempo/v)*10000)/10000);
+                    } else { setTapBpm(null); setTapScale(null); }
+                  }}
+                  style={{...inp,flex:1,fontFamily:'monospace',fontSize:18,fontWeight:700,color:C.wood,textAlign:'center'}}
+                />
+                <span style={{fontSize:12,color:C.textDim,flexShrink:0}}>BPM</span>
+              </div>
+
+              {/* Tap button row */}
+              <div style={{display:'flex',gap:10,marginBottom:12}}>
+                <button onPointerDown={tap} style={{
+                  flex:1,border:`2px dashed ${tapCount>0?C.wood:C.border}`,
+                  borderRadius:10,background:tapCount>0?'#FAF0E4':C.pageBg,
+                  cursor:'pointer',padding:'12px 0',display:'flex',flexDirection:'column',
+                  alignItems:'center',gap:3,userSelect:'none',transition:'all 0.1s',
+                }}>
+                  <span style={{fontSize:18}}>🥁</span>
+                  <span style={{fontSize:10,color:tapCount>0?C.wood:C.textSub,fontWeight:600}}>
+                    {tapCount>0?`${tapCount} taps`:'TAP'}
+                  </span>
+                </button>
+                <div style={{flex:1,background:C.pageBg,border:`1px solid ${C.border}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:1,padding:'8px'}}>
+                  <div style={{fontSize:26,fontWeight:700,fontFamily:'monospace',color:tapBpm?C.wood:C.border,lineHeight:1}}>{tapBpm??'--'}</div>
+                  <div style={{fontSize:9,color:C.textDim,letterSpacing:'0.06em'}}>BPM detected</div>
+                  {jsonData?.tempo&&<div style={{fontSize:9,color:C.textDim}}>JSON: <span style={{fontFamily:'monospace',color:C.text}}>{jsonData.tempo}</span></div>}
+                </div>
+              </div>
+
+              {/* Scale preview */}
+              {tapBpm&&jsonData?.tempo&&tapScale!==null&&(
+                <div style={{background:C.pageBg,borderRadius:7,padding:'8px 12px',marginBottom:10,fontSize:11,fontFamily:'monospace',display:'flex',gap:16}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                    <span style={{color:C.textDim,fontSize:10}}>Scale ratio</span>
+                    <span style={{color:C.green,fontWeight:700,fontSize:14}}>×{tapScale.toFixed(4)}</span>
+                  </div>
+                  <div style={{width:1,background:C.border}}/>
+                  <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                    <span style={{color:C.textDim,fontSize:10}}>Sai lệch</span>
+                    <span style={{color:C.goldStrong,fontWeight:600,fontSize:14}}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span>
+                  </div>
+                </div>
+              )}
+
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={applyScale} disabled={!tapScale||!jsonData?.tempo}
+                  style={{...btnSolid(C.wood),flex:1,padding:'9px',opacity:(!tapScale||!jsonData?.tempo)?0.4:1}}>
+                  Apply Scale to JSON
+                </button>
+                <button onClick={()=>{tapTimesRef.current=[];setTapCount(0);setTapBpm(null);setTapScale(null);}}
+                  disabled={tapCount===0} style={{...btnOutline,opacity:tapCount===0?0.4:1}}>↺</button>
+              </div>
+            </div>
+
+            {/* ── Mark Beat ── */}
+            <div style={{paddingLeft:24}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:2}}>ĐÁNH DẤU PHÁCH</div>
+              <div style={{fontSize:11,color:C.textSub,marginBottom:14}}>Tạm dừng video tại phách 1, chọn nhịp → Mark</div>
+
+              {!jsonData?.tempo?(
+                <div style={{fontSize:11,color:'#92722A',background:'#FDF5E0',border:'1px solid #EED88A',borderRadius:7,padding:'8px 10px'}}>
+                  ⚠ Cần JSON có <code>tempo</code>
+                </div>
+              ):(
+                <>
+                  {/* Bar number */}
+                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                    <button style={{...btnOutline,padding:'5px 14px',fontSize:18}} onClick={()=>setBarNum(b=>Math.max(1,b-1))}>−</button>
+                    <div style={{flex:1,textAlign:'center'}}>
+                      <span style={{fontSize:32,fontWeight:700,fontFamily:'monospace',color:C.green}}>{barNum}</span>
+                      <span style={{fontSize:11,color:C.textDim,marginLeft:6}}>/ {jsonData.timeSignature??4}</span>
+                    </div>
+                    <button style={{...btnOutline,padding:'5px 14px',fontSize:18}} onClick={()=>setBarNum(b=>b+1)}>+</button>
+                  </div>
+
+                  {/* Quick pick */}
+                  <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:10}}>
+                    {[1,2,3,4,5,8,9,13,17].map(n=>(
+                      <button key={n} onClick={()=>setBarNum(n)} style={{
+                        ...btnOutline,padding:'3px 9px',fontSize:11,fontFamily:'monospace',
+                        color:barNum===n?C.green:C.textDim,
+                        borderColor:barNum===n?C.green:C.border,
+                        background:barNum===n?C.greenTint:'transparent',
+                      }}>{n}</button>
+                    ))}
+                  </div>
+
+                  <div style={{fontSize:10,color:C.textDim,fontFamily:'monospace',textAlign:'right',marginBottom:10}}>
+                    beat 1 = {getBarT(barNum)?.toFixed(3)}s
+                  </div>
+
+                  <button onPointerDown={markBar} disabled={!playerReady}
+                    style={{...btnSolid(C.green),width:'100%',padding:'13px',fontSize:14,opacity:playerReady?1:0.45,userSelect:'none'}}>
+                    ♩ Đánh dấu (Mark)
+                  </button>
+
+                  {barResult&&(
+                    <div style={{marginTop:10,background:C.pageBg,borderRadius:7,padding:'8px 12px',fontSize:11,fontFamily:'monospace',display:'flex',gap:16,alignItems:'center'}}>
+                      <div><span style={{color:C.textDim,fontSize:10}}>Nhịp</span><br/><span style={{color:C.text,fontWeight:700}}>#{barResult.bar}</span></div>
+                      <div style={{width:1,background:C.border,alignSelf:'stretch'}}/>
+                      <div><span style={{color:C.textDim,fontSize:10}}>YT mark</span><br/><span style={{color:C.red,fontWeight:600}}>{barResult.yt.toFixed(2)}s</span></div>
+                      <div style={{width:1,background:C.border,alignSelf:'stretch'}}/>
+                      <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:5}}>
+                        <span style={{fontSize:16,color:C.goldStrong}}>✓</span>
+                        <span style={{color:C.goldStrong,fontWeight:600,fontSize:11}}>Đã sync</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* ══ ⑥ EXPORT ══ */}
         <div style={{...card,padding:'20px 28px'}}>
           <SectionHeader n="⑥" title="Export"/>
+
           <div style={{display:'flex',alignItems:'center',gap:20}}>
             <button onClick={exportJson} disabled={!jsonData}
               style={{
