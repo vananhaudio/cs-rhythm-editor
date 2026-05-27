@@ -327,9 +327,9 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
   // Headstock: satin natural maple — Taylor modern style
 
   return (
-    <div className="w-full">
-      {/* Toolbar */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8, flexWrap:"wrap" as const }}>
+    <div className="w-full" style={{ borderRadius:16, overflow:"hidden", boxShadow: isDark ? "0 24px 80px rgba(0,0,0,0.6)" : "0 4px 24px rgba(0,0,0,0.1)", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.08)" }}>
+      {/* Toolbar — gắn liền với board */}
+      <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", flexWrap:"wrap" as const, background: isDark ? "#1a1a2a" : "#F0E8D8", borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #D8C8A8" }}>
         {/* Input mode badge */}
         {inputMode && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: 'rgba(200,153,26,0.18)', border: '1px solid rgba(200,153,26,0.45)', color: '#c8991a', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
@@ -408,22 +408,21 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                   onChange={e => setSaveNameInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') saveScale(); if (e.key === 'Escape') setShowSaveInput(false); }}
                   placeholder="Tên scale..."
-                  className={`px-3 py-1.5 rounded-full text-sm ${t.inputBg} border border-emerald-500/50 outline-none focus:border-emerald-400 w-36 transition-colors`}
-                  style={{ color: t.textMain }}
+                  style={{ padding:"5px 12px", borderRadius:20, fontSize:12, border:"1px solid rgba(22,163,74,0.5)", outline:"none", width:140, color:t.textMain, background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
                 />
-                <button onClick={saveScale} className="px-4 py-1.5 rounded-full text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-500 transition-colors">
+                <button onClick={saveScale} style={{ padding:"5px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", border:"none", background:"#16a34a", color:"#fff" }}>
                   Lưu
                 </button>
-                <button onClick={() => setShowSaveInput(false)} className={`px-3 py-1.5 rounded-full text-sm transition-colors ${t.textMuted}`}>
+                <button onClick={() => setShowSaveInput(false)} style={{ padding:"5px 12px", borderRadius:20, fontSize:12, cursor:"pointer", border:"none", background:"transparent", color:t.textMuted2 }}>
                   Hủy
                 </button>
               </>
             ) : (
               <button
                 onClick={() => setShowSaveInput(true)}
-                className="px-4 py-2 rounded-full text-sm font-semibold border border-emerald-500/60 text-emerald-500 hover:bg-emerald-500/15 transition-all duration-200 flex items-center gap-1.5"
+                style={{ padding:"6px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", border:"1px solid rgba(22,163,74,0.6)", color:"#16a34a", background:"rgba(22,163,74,0.08)", display:"flex", alignItems:"center", gap:5, transition:"all 0.2s" }}
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Lưu Scale
               </button>
             )}
@@ -457,17 +456,15 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
 
       {/* Saved Scales Panel */}
       {savedScales.length > 0 && (
-        <div className="mb-5 flex flex-wrap gap-2 items-center">
-          <span className={`text-xs font-medium tracking-wider uppercase mr-1 ${t.savedLabel}`}>Scales đã lưu</span>
+        <div style={{ display:"flex", flexWrap:"wrap" as const, gap:8, alignItems:"center", padding:"8px 14px", background: isDark ? "#141422" : "#FAF7F0", borderBottom: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid #E8E0D0" }}>
+          <span style={{ fontSize:10, fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase" as const, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.35)", marginRight:4, flexShrink:0 }}>Scales đã lưu</span>
           {savedScales.map(scale => {
             const isLoaded = activeScaleId === scale.id;
             const colors = [...new Set(Object.values(scale.pattern))].slice(0, 8);
             return (
               <div
                 key={scale.id}
-                className={`flex items-center gap-1.5 rounded-full pl-1 pr-2 py-1 border transition-all duration-200 group ${
-                  isLoaded ? t.scalePanelLoaded : t.scalePanelBorder
-                }`}
+                style={{ display:"flex", alignItems:"center", gap:6, borderRadius:20, paddingLeft:6, paddingRight:10, paddingTop:4, paddingBottom:4, border: isLoaded ? "1px solid rgba(14,165,233,0.6)" : `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`, background: isLoaded ? (isDark ? "rgba(14,165,233,0.12)" : "rgba(14,165,233,0.08)") : (isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"), cursor:"default", transition:"all 0.2s" }}
               >
                 {/* Color swatches */}
                 <div className="flex items-center gap-0.5 ml-0.5">
@@ -477,7 +474,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                 </div>
                 <button
                   onClick={() => isLoaded && playMode === 'playScale' ? (setPlayMode('scale'), setActiveScaleId(null)) : loadScale(scale)}
-                  className={`text-sm font-semibold transition-colors px-1 ${isLoaded ? 'text-sky-500' : t.scaleText}`}
+                  style={{ fontSize:12, fontWeight:600, cursor:"pointer", border:"none", background:"none", padding:"0 2px", color: isLoaded ? "#0ea5e9" : (isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.6)"), transition:"color 0.15s" }}
                 >
                   {scale.name}
                 </button>
@@ -500,7 +497,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
       )}
 
       {/* Fretboard scroll wrapper */}
-      <div className="overflow-x-auto" style={{ borderRadius: 16, boxShadow: isDark ? '0 24px 80px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)' : '0 8px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)' }}>
+      <div className="overflow-x-auto" style={{ borderRadius:0 }}>
         <div style={{ minWidth: 860, display: 'flex', flexDirection: 'column', position: 'relative', borderRadius: 16, overflow: 'hidden' }}>
 
           {/* Watermark */}
