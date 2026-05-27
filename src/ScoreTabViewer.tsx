@@ -119,10 +119,12 @@ export default function ScoreTabViewer({
 
   // X position of the cursor (= start time of next note to insert)
   const cursorTime = useMemo(() => {
+    // Nếu đang select nốt → cursor tại đầu nốt đó
+    if (selIdx !== null && selIdx < notes.length) return notes[selIdx].time;
     if (cursorIdx <= 0 || notes.length === 0) return 0;
     const i = Math.min(cursorIdx - 1, notes.length - 1);
     return notes[i].time + notes[i].duration;
-  }, [notes, cursorIdx]);
+  }, [notes, cursorIdx, selIdx]);
 
   // Effective duration of next note
   const effectiveDur = useMemo(() => {
@@ -267,7 +269,7 @@ export default function ScoreTabViewer({
     ctx.fillRect(0, 0, w, CANVAS_H);
 
     // ── Guitar Pro-style cursor block ──────────────────────────────────────────
-    if (focused) {
+    if (focused && selIdx === null) {
       const cx = noteX(cursorTime);
       const cw = BEAT_W * (dotted ? durBeats * 1.5 : durBeats) - 2;
 
@@ -569,7 +571,7 @@ export default function ScoreTabViewer({
 
     if (bestNi !== null && bestD < BEAT_W * 0.6) {
       setSelIdx(bestNi);
-      setCursorIdx((bestNi as number) + 1);
+      setCursorIdx(bestNi as number);  // cursor TẠI nốt, nhập liệu sẽ chèn trước
     } else {
       // Click on empty space — position cursor at nearest beat
       const rawBeat = (cx - HEADER_W - BAR_PAD) / BEAT_W;
