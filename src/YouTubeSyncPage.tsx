@@ -54,6 +54,7 @@ const C = {
   header:    '#123524',
   green:     '#1B4332',
   greenTint: '#EEF5F0',
+  greenSoft:  '#2D5A45',
   wood:      '#8A5A32',
   gold:      '#C6A15B',
   goldStrong:'#D89B22',
@@ -181,6 +182,7 @@ export default function YouTubeSyncPage() {
   const [songsLoading, setSongsLoading] = useState(false);
   const [userRole, setUserRole]     = useState<string|null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle'|'saving'|'saved'|'error'>('idle');
+  const [showSongList, setShowSongList] = useState(false);
 
   const iframeRef    = useRef<HTMLIFrameElement|null>(null);
   const timerRef     = useRef<ReturnType<typeof setInterval>|null>(null);
@@ -217,6 +219,7 @@ export default function YouTubeSyncPage() {
     const { data } = await supabase.from('timming_songs').select('*').eq('id', songId).single();
     if (!data) return;
     setSelectedSong(data as SongRecord);
+    setShowSongList(false);
     setJsonData({
       title: data.title, artist: data.artist, tone: data.tone,
       tempo: data.tempo, timeSignature: data.time_signature,
@@ -457,38 +460,74 @@ export default function YouTubeSyncPage() {
 
         {/* ══ ① CHON BAI HAT ══ */}
         <div style={card}>
-          <SectionHeader n="①" title="Chọn bài hát"/>
-          {/* Song picker from system */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:12,alignItems:'end'}}>
-            <div style={{display:'flex',flexDirection:'column',gap:6}}>
-              <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>
-                Từ hệ thống {songsLoading&&<span style={{color:C.textDim,fontWeight:400}}>— đang tải...</span>}
-              </label>
-              <select
-                value={selectedSong?.id??''}
-                onChange={e=>{ if(e.target.value) loadSong(e.target.value); }}
-                style={{...inp,cursor:'pointer',color:selectedSong?C.text:C.textDim}}
-              >
-                <option value="">-- Chọn bài từ hệ thống --</option>
-                {songs.map(s=>(
-                  <option key={s.id} value={s.id}>
-                    {s.title}{s.artist?` — ${s.artist}`:''}{s.tempo?` (${s.tempo} BPM)`:''}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:selectedSong||showSongList?16:0}}>
+            <SectionHeader n="①" title="Chọn bài hát"/>
+            <span style={{flex:1}}/>
+            {/* Nút chọn bài chính */}
+            {!selectedSong&&(
+              <button
+                onClick={()=>setShowSongList(v=>!v)}
+                style={{
+                  ...btnSolid(showSongList?C.greenSoft:C.green),
+                  padding:'9px 20px',fontSize:13,
+                  boxShadow:showSongList?'none':`0 2px 8px ${C.green}44`,
+                }}>
+                {songsLoading?'⏳ Đang tải...'
+                  :showSongList?'✕ Đóng danh sách'
+                  :`📚 Chọn bài (${songs.length})`}
+              </button>
+            )}
             {selectedSong&&(
-              <button style={{...btnOutline,color:C.red,borderColor:C.red+'44'}}
-                onClick={()=>{setSelectedSong(null);setJsonData(null);setJsonFileName('');setYoutubeUrl('');offsetRef.current=0;}}>
-                ✕ Bỏ chọn
+              <button
+                onClick={()=>{setSelectedSong(null);setJsonData(null);setJsonFileName('');offsetRef.current=0;}}
+                style={{...btnOutline,color:C.red,borderColor:C.red+'55',fontSize:12}}>
+                ✕ Đổi bài
               </button>
             )}
           </div>
 
-          {/* Selected song info */}
+          {/* Song list — inline, hiện khi bấm nút */}
+          {showSongList&&!selectedSong&&(
+            <div style={{
+              border:`1px solid ${C.border}`,borderRadius:10,
+              overflow:'hidden',marginBottom:16,
+              maxHeight:280,overflowY:'auto',
+            }}>
+              {songs.length===0&&!songsLoading&&(
+                <div style={{padding:'20px',textAlign:'center',color:C.textDim,fontSize:13}}>
+                  Chưa có bài nào trong hệ thống.
+                </div>
+              )}
+              {songs.map((s,i)=>(
+                <button key={s.id} onClick={()=>loadSong(s.id)} style={{
+                  width:'100%',display:'flex',alignItems:'center',gap:12,
+                  padding:'12px 16px',background:'transparent',border:'none',
+                  borderBottom:i<songs.length-1?`1px solid ${C.border}`:'none',
+                  cursor:'pointer',textAlign:'left',transition:'background 0.1s',
+                }}
+                onMouseEnter={e=>(e.currentTarget.style.background=C.greenTint)}
+                onMouseLeave={e=>(e.currentTarget.style.background='transparent')}
+                >
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:600,color:C.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {s.title}
+                    </div>
+                    {s.artist&&<div style={{fontSize:11,color:C.textSub,marginTop:1}}>{s.artist}</div>}
+                  </div>
+                  <div style={{display:'flex',gap:6,flexShrink:0}}>
+                    {s.tempo&&<span style={tagStyle}>{s.tempo} BPM</span>}
+                    {s.duration&&<span style={tagStyle}>{fmt(s.duration)}</span>}
+                    {s.youtube_url&&<span style={{...tagStyle,color:C.red,borderColor:C.red+'44'}}>▶ YT</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Selected song info bar */}
           {selectedSong&&(
-            <div style={{display:'flex',flexWrap:'wrap',gap:6,padding:'10px 14px',background:C.greenTint,borderRadius:8,border:`1px solid ${C.green}22`}}>
-              <span style={{fontSize:13,fontWeight:700,color:C.green}}>♪ {selectedSong.title}</span>
+            <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:8,padding:'10px 14px',background:C.greenTint,borderRadius:8,border:`1px solid ${C.green}22`,marginBottom:16}}>
+              <span style={{fontSize:14,fontWeight:700,color:C.green}}>♪ {selectedSong.title}</span>
               {selectedSong.artist&&<span style={{fontSize:12,color:C.textSub}}>— {selectedSong.artist}</span>}
               <span style={{flex:1}}/>
               {[
@@ -496,22 +535,14 @@ export default function YouTubeSyncPage() {
                 selectedSong.time_signature?`${selectedSong.time_signature}/4`:null,
                 selectedSong.total_bars?`${selectedSong.total_bars} bars`:null,
                 selectedSong.duration?fmt(selectedSong.duration):null,
-                selectedSong.youtube_offset!=null&&selectedSong.youtube_offset!==0?`offset ${selectedSong.youtube_offset}s`:null,
               ].filter(Boolean).map((t,i)=>(<span key={i} style={tagStyle}>{t}</span>))}
             </div>
           )}
 
-          {/* Divider */}
-          <div style={{display:'flex',alignItems:'center',gap:12,margin:'4px 0'}}>
-            <div style={{flex:1,height:1,background:C.border}}/>
-            <span style={{fontSize:11,color:C.textDim}}>hoặc nạp thủ công</span>
-            <div style={{flex:1,height:1,background:C.border}}/>
-          </div>
-
-          {/* Manual load */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr auto 1fr auto auto',gap:10,alignItems:'start'}}>
+          {/* YouTube URL + JSON upload */}
+          <div style={{display:'flex',gap:10,alignItems:'flex-end',flexWrap:'wrap'}}>
             {/* URL */}
-            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{flex:2,minWidth:280,display:'flex',flexDirection:'column',gap:6}}>
               <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>YouTube URL</label>
               <div style={{display:'flex',gap:6}}>
                 <input style={{...inp,flex:1}} value={youtubeUrl}
@@ -522,46 +553,31 @@ export default function YouTubeSyncPage() {
               </div>
               {urlError&&<div style={{fontSize:11,color:C.red}}>⚠ {urlError}</div>}
             </div>
-            <div style={{display:'flex',alignItems:'center',paddingTop:22,color:C.textDim,fontSize:11}}>hoặc</div>
-            {/* JSON upload */}
-            <div style={{display:'flex',flexDirection:'column',gap:6}}>
-              <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>JSON File</label>
-              <label style={{cursor:'pointer'}}>
-                <div style={{...inp,display:'flex',alignItems:'center',gap:8,color:jsonFileName?C.text:C.textDim,cursor:'pointer',minWidth:200}}>
-                  <span style={{fontSize:14}}>📄</span>
-                  <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    {jsonFileName||'Upload timing JSON...'}
-                  </span>
-                  {jsonFileName&&<span onClick={e=>{e.preventDefault();setJsonData(null);setJsonFileName('');}} style={{cursor:'pointer',color:C.textDim,fontSize:14,padding:'0 2px'}}>×</span>}
-                </div>
-                <input type="file" accept=".json" onChange={uploadJson} style={{display:'none'}}/>
-              </label>
-              {jsonParseError&&<div style={{fontSize:11,color:C.red}}>⚠ {jsonParseError}</div>}
-            </div>
-            {/* BPM display */}
-            {jsonData?.tempo&&(
-              <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>BPM</label>
-                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                  <div style={{...inp,fontFamily:'monospace',fontSize:20,fontWeight:700,color:C.green,width:72,textAlign:'center'}}>{jsonData.tempo}</div>
-                  <span style={{fontSize:11,color:C.textDim}}>BPM</span>
-                </div>
+            {/* JSON upload (nếu không chọn từ hệ thống) */}
+            {!selectedSong&&(
+              <div style={{flex:1,minWidth:180,display:'flex',flexDirection:'column',gap:6}}>
+                <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>Hoặc upload JSON</label>
+                <label style={{cursor:'pointer'}}>
+                  <div style={{...inp,display:'flex',alignItems:'center',gap:8,color:jsonFileName?C.text:C.textDim,cursor:'pointer'}}>
+                    <span>📄</span>
+                    <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {jsonFileName||'Upload timing JSON...'}
+                    </span>
+                    {jsonFileName&&<span onClick={e=>{e.preventDefault();setJsonData(null);setJsonFileName('');}} style={{cursor:'pointer',color:C.textDim}}>×</span>}
+                  </div>
+                  <input type="file" accept=".json" onChange={uploadJson} style={{display:'none'}}/>
+                </label>
+                {jsonParseError&&<div style={{fontSize:11,color:C.red}}>⚠ {jsonParseError}</div>}
               </div>
             )}
-            <div style={{paddingTop:22}}>
-              <button style={btnOutline} onClick={()=>{setJsonData(MOCK);setJsonFileName('demo_song.json');setJsonParseError('');setSelectedSong(null);}}>Demo</button>
-            </div>
+            {/* BPM badge */}
+            {jsonData?.tempo&&(
+              <div style={{display:'flex',alignItems:'center',gap:6,paddingBottom:1}}>
+                <div style={{...inp,fontFamily:'monospace',fontSize:18,fontWeight:700,color:C.green,width:64,textAlign:'center',padding:'8px'}}>{jsonData.tempo}</div>
+                <span style={{fontSize:11,color:C.textDim}}>BPM</span>
+              </div>
+            )}
           </div>
-
-          {/* Tags */}
-          {jsonData&&!selectedSong&&(
-            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:4}}>
-              <span style={{...tagStyle,color:C.text,fontWeight:600}}>♪ {jsonData.title||'Untitled'}</span>
-              {[`${jsonData.lyrics.length} lyrics`,`${jsonData.chords.length} chords`,fmt(dur)].map((t,i)=>(
-                <span key={i} style={tagStyle}>{t}</span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* ══ ② PREVIEW — LYRICS & CHORDS ══ */}
