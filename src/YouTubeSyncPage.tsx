@@ -3,9 +3,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 // ─────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────
-interface LyricEvent  { id: string; time: number; text: string }
-interface ChordEvent  { id: string; time: number; name: string }
-interface SyncMeta    { source: 'youtube'; youtubeUrl: string; youtubeOffsetSeconds: number }
+interface LyricEvent { id: string; time: number; text: string }
+interface ChordEvent { id: string; time: number; name: string }
+interface SyncMeta   { source: 'youtube'; youtubeUrl: string; youtubeOffsetSeconds: number }
 interface TimingJSON {
   title: string; artist?: string; tone?: string; tempo?: number;
   timeSignature?: number; totalBars?: number; duration?: number;
@@ -27,757 +27,605 @@ function buildEmbedUrl(id: string): string {
   const p = new URLSearchParams({ enablejsapi:'1', controls:'1', rel:'0', modestbranding:'1' });
   return `https://www.youtube.com/embed/${id}?${p}`;
 }
-function formatTime(s: number): string {
+function fmt(s: number): string {
   return `${Math.floor(s/60)}:${(s%60).toFixed(1).padStart(4,'0')}`;
 }
-function postToPlayer(iframe: HTMLIFrameElement | null, func: string, args: unknown[] = []) {
+function postCmd(iframe: HTMLIFrameElement | null, func: string, args: unknown[] = []) {
   iframe?.contentWindow?.postMessage(JSON.stringify({ event:'command', func, args }), '*');
 }
 
 // ─────────────────────────────────────────────
-// Theme — Calm Music Learning Workspace
+// Design tokens — Calm Music Learning Workspace
 // ─────────────────────────────────────────────
-const T = {
-  // Backgrounds
-  bg:          '#F5F1E8',   // paper — 60%
-  bgCard:      '#FBF8F2',   // card surface
-  bgInput:     '#F0E7D8',   // input / chip
-  bgGoldSoft:  '#F3E3B5',   // active highlight
-
-  // Deep green — 20%
-  headerBg:    '#123524',
-  green:       '#1B4332',   // primary button
-  greenSoft:   '#2D5A45',   // hover
-
-  // Wood — 10%
-  wood:        '#8A5A32',
-  woodLight:   '#B07A45',
-
-  // Gold — 5%
-  gold:        '#C6A15B',
-  goldStrong:  '#D89B22',
-
-  // Text & border — 5%
-  text:        '#1F2933',
-  textSub:     '#5F6B62',
-  border:      '#E5DED2',
-  borderMid:   '#D4C9B8',
-
+const C = {
+  // Paper
+  pageBg:     '#F5F1E8',
+  surface:    '#FBF8F2',
+  surface2:   '#F0E7D8',
+  goldSoft:   '#F3E3B5',
+  // Green
+  header:     '#123524',
+  green:      '#1B4332',
+  greenSoft:  '#2D5A45',
+  greenTint:  '#EEF5F0',
+  // Wood
+  wood:       '#8A5A32',
+  woodLight:  '#B07A45',
+  // Gold
+  gold:       '#C6A15B',
+  goldStrong: '#D89B22',
+  // Text
+  text:       '#1F2933',
+  textSub:    '#5F6B62',
+  textDim:    '#9BA89C',
+  border:     '#E5DED2',
+  borderMid:  '#D4C9B8',
   // Status
-  red:         '#C0392B',
-  cyan:        '#1B7A6E',
+  red:        '#B83A2F',
+  teal:       '#1B7A6E',
 };
 
 // ─────────────────────────────────────────────
-// Shared style primitives
+// Tiny reusable styles
 // ─────────────────────────────────────────────
-const card: React.CSSProperties = {
-  background: T.bgCard,
-  border: `1px solid ${T.border}`,
-  borderRadius: 14,
-  padding: 20,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 14,
-  boxShadow: '0 1px 4px rgba(31,41,51,0.06)',
-};
-
-const sectionLabel: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 700,
-  color: T.textSub,
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase',
-};
-
-const inputBase: React.CSSProperties = {
-  flex: 1,
-  background: T.bgInput,
-  border: `1px solid ${T.border}`,
-  borderRadius: 8,
-  padding: '9px 13px',
-  fontSize: 13,
-  color: T.text,
-  fontFamily: 'inherit',
-  outline: 'none',
-};
-
-const btnPrimary = (bg = T.green): React.CSSProperties => ({
-  background: bg,
-  border: 'none',
-  borderRadius: 8,
-  color: '#fff',
-  fontSize: 13,
-  fontWeight: 600,
-  padding: '10px 18px',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 6,
-  whiteSpace: 'nowrap',
-  transition: 'background 0.15s',
+const zoneLabel = (color = C.textDim): React.CSSProperties => ({
+  fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
+  textTransform: 'uppercase', color, marginBottom: 12,
 });
-
-const btnOutline: React.CSSProperties = {
-  background: 'transparent',
-  border: `1px solid ${T.borderMid}`,
-  borderRadius: 8,
-  color: T.textSub,
-  fontSize: 13,
-  fontWeight: 500,
-  padding: '8px 14px',
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
+const pill = (active: boolean): React.CSSProperties => ({
+  border: active ? `1.5px solid ${C.goldStrong}` : `1px solid ${C.border}`,
+  borderLeft: active ? `3px solid ${C.goldStrong}` : undefined,
+  borderRadius: 7, padding: '4px 11px', cursor: 'pointer', fontSize: 12,
+  fontWeight: active ? 600 : 400, background: active ? C.goldSoft : C.surface2,
+  color: active ? C.text : C.textSub, transition: 'all 0.1s',
   whiteSpace: 'nowrap',
-  transition: 'border-color 0.15s, color 0.15s',
+});
+const input: React.CSSProperties = {
+  flex: 1, background: C.surface2, border: `1px solid ${C.border}`,
+  borderRadius: 8, padding: '9px 13px', fontSize: 13, color: C.text,
+  fontFamily: 'inherit', outline: 'none',
 };
-
-const divider: React.CSSProperties = {
-  height: 1,
-  background: T.border,
-  margin: '2px 0',
+const btn = (bg: string, fg = '#fff'): React.CSSProperties => ({
+  background: bg, border: 'none', borderRadius: 8, color: fg,
+  fontSize: 13, fontWeight: 600, padding: '10px 20px', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  gap: 6, transition: 'opacity 0.15s, transform 0.1s', whiteSpace: 'nowrap',
+});
+const ghost: React.CSSProperties = {
+  background: 'transparent', border: `1px solid ${C.borderMid}`,
+  borderRadius: 8, color: C.textSub, fontSize: 12, fontWeight: 500,
+  padding: '7px 13px', cursor: 'pointer', display: 'flex',
+  alignItems: 'center', gap: 5,
 };
-
-const infoRow = (val_color = T.green): React.CSSProperties => ({ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.textSub, fontFamily: 'monospace' });
+const divLine: React.CSSProperties = { height: 1, background: C.border, margin: '4px 0' };
 
 // ─────────────────────────────────────────────
-// Mock data
+// Mock
 // ─────────────────────────────────────────────
-const MOCK_JSON: TimingJSON = {
+const MOCK: TimingJSON = {
   title: 'Demo Song', tempo: 80, duration: 60,
   lyrics: [
-    { id:'l1', time:0, text:'Thành' }, { id:'l2', time:0.5, text:'phố' },
-    { id:'l3', time:1.0, text:'nào' }, { id:'l4', time:2.0, text:'đó' },
-    { id:'l5', time:3.0, text:'rất' }, { id:'l6', time:3.5, text:'xa' },
+    {id:'l1',time:0,text:'Thành'},{id:'l2',time:0.5,text:'phố'},
+    {id:'l3',time:1.0,text:'nào'}, {id:'l4',time:2.0,text:'đó'},
+    {id:'l5',time:3.0,text:'rất'}, {id:'l6',time:3.5,text:'xa'},
   ],
-  chords: [{ id:'c1', time:0, name:'Am' }, { id:'c2', time:2, name:'C' }, { id:'c3', time:4, name:'G' }],
+  chords: [{id:'c1',time:0,name:'Am'},{id:'c2',time:2,name:'C'},{id:'c3',time:4,name:'G'}],
 };
 
 // ─────────────────────────────────────────────
-// Main Page
+// Page
 // ─────────────────────────────────────────────
 export default function YouTubeSyncPage() {
-  const [youtubeUrl, setYoutubeUrl]       = useState('');
-  const [videoId, setVideoId]             = useState<string | null>(null);
-  const [urlError, setUrlError]           = useState('');
-  const [jsonData, setJsonData]           = useState<TimingJSON | null>(null);
-  const [jsonFileName, setJsonFileName]   = useState('');
+  const [youtubeUrl, setYoutubeUrl]   = useState('');
+  const [videoId, setVideoId]         = useState<string|null>(null);
+  const [urlError, setUrlError]       = useState('');
+  const [jsonData, setJsonData]       = useState<TimingJSON|null>(null);
+  const [jsonFileName, setJsonFileName] = useState('');
   const [jsonParseError, setJsonParseError] = useState('');
-  const [jsonCurrentTime, setJsonCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying]         = useState(false);
-  const [playerReady, setPlayerReady]     = useState(false);
-  const [ytCurrentTime, setYtCurrentTime] = useState(0);
-  const [exportSuccess, setExportSuccess] = useState(false);
+  const [jt, setJt]                   = useState(0);   // jsonCurrentTime
+  const [isPlaying, setIsPlaying]     = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
+  const [ytTime, setYtTime]           = useState(0);
+  const [exportOk, setExportOk]       = useState(false);
+  const [barNum, setBarNum]           = useState(1);
+  const [barResult, setBarResult]     = useState<{bar:number;yt:number;jt:number}|null>(null);
+  const [tapBpm, setTapBpm]           = useState<number|null>(null);
+  const [tapCount, setTapCount]       = useState(0);
+  const [tapScale, setTapScale]       = useState<number|null>(null);
 
-  // Offset: state cho UI + ref cho callbacks
-  const [offset, setOffsetState] = useState(0);
-  const offsetRef = useRef(0);
-  const setOffset = (v: number) => { offsetRef.current = v; setOffsetState(v); };
+  const iframeRef   = useRef<HTMLIFrameElement|null>(null);
+  const timerRef    = useRef<ReturnType<typeof setInterval>|null>(null);
+  const isPlayRef   = useRef(false);
+  const offsetRef   = useRef(0);   // set by BarSync only — not exposed in UI
+  const durRef      = useRef(60);
+  const ytRef       = useRef(0);
+  const activeBarRef= useRef<HTMLButtonElement|null>(null);
+  const tapTimesRef = useRef<number[]>([]);
+  const tapTORef    = useRef<ReturnType<typeof setTimeout>|null>(null);
 
-  // Bar sync
-  const [barSyncBar, setBarSyncBar] = useState(1);
-  const [barSyncResult, setBarSyncResult] = useState<{bar:number;ytTime:number;jsonTime:number;offset:number}|null>(null);
-
-  // Tap tempo
-  const [tapBpm, setTapBpm]             = useState<number|null>(null);
-  const [tapCount, setTapCount]         = useState(0);
-  const [tapScalePreview, setTapScalePreview] = useState<number|null>(null);
-  const tapTimesRef   = useRef<number[]>([]);
-  const tapTimeoutRef = useRef<ReturnType<typeof setTimeout>|null>(null);
-
-  const iframeRef    = useRef<HTMLIFrameElement|null>(null);
-  const timerRef     = useRef<ReturnType<typeof setInterval>|null>(null);
-  const isPlayingRef = useRef(false);
-  const jsonDurationRef = useRef(60);
-  const ytTimeRef    = useRef(0);
-  const activeBarRef = useRef<HTMLButtonElement|null>(null);
-
-  const getJsonDuration = (d: TimingJSON) => {
+  const getDur = (d: TimingJSON) => {
     const all = [...d.lyrics.map(l=>l.time), ...d.chords.map(c=>c.time)];
-    return all.length > 0 ? Math.max(...all) + 5 : 60;
+    return all.length>0 ? Math.max(...all)+5 : 60;
   };
 
-  useEffect(() => {
-    if (jsonData) jsonDurationRef.current = jsonData.duration ?? getJsonDuration(jsonData);
-  }, [jsonData]);
+  useEffect(() => { if (jsonData) durRef.current = jsonData.duration ?? getDur(jsonData); }, [jsonData]);
 
-  const startLocalTimer = useCallback((startFrom: number) => {
+  const startTimer = useCallback((from: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
-    const startWall = performance.now();
+    const t0 = performance.now();
     timerRef.current = setInterval(() => {
-      const jt = startFrom + (performance.now() - startWall) / 1000;
-      const dur = jsonDurationRef.current;
-      if (jt >= dur) {
-        setJsonCurrentTime(dur); setIsPlaying(false); isPlayingRef.current = false;
-        postToPlayer(iframeRef.current, 'pauseVideo');
-        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-        return;
+      const cur = from + (performance.now()-t0)/1000;
+      if (cur >= durRef.current) {
+        setJt(durRef.current); setIsPlaying(false); isPlayRef.current = false;
+        postCmd(iframeRef.current,'pauseVideo');
+        clearInterval(timerRef.current!); timerRef.current = null; return;
       }
-      setJsonCurrentTime(jt);
+      setJt(cur);
     }, 50);
   }, []);
 
-  const stopLocalTimer = useCallback(() => {
+  const stopTimer = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
 
+  // YT postMessage
   useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (!event.origin.includes('youtube')) return;
-      let data: Record<string,unknown>;
-      try { data = typeof event.data==='string' ? JSON.parse(event.data) : event.data; } catch { return; }
-      if (data.event === 'onReady') setPlayerReady(true);
-      if (data.event === 'infoDelivery') {
-        const info = data.info as Record<string,unknown>;
-        if (typeof info?.currentTime === 'number') { ytTimeRef.current = info.currentTime; setYtCurrentTime(info.currentTime); }
+    const h = (ev: MessageEvent) => {
+      if (!ev.origin.includes('youtube')) return;
+      let d: Record<string,unknown>;
+      try { d = typeof ev.data==='string' ? JSON.parse(ev.data) : ev.data; } catch { return; }
+      if (d.event==='onReady') setPlayerReady(true);
+      if (d.event==='infoDelivery') {
+        const info = d.info as Record<string,unknown>;
+        if (typeof info?.currentTime==='number') { ytRef.current=info.currentTime; setYtTime(info.currentTime); }
       }
     };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, []);
+    window.addEventListener('message',h);
+    return () => window.removeEventListener('message',h);
+  },[]);
 
+  // Auto scroll active bar
   useEffect(() => {
     if (!activeBarRef.current || !isPlaying) return;
     const el = activeBarRef.current;
-    el.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'nearest' });
-    el.classList.remove('beat-active');
-    void el.offsetWidth;
-    el.classList.add('beat-active');
-  }, [isPlaying, Math.floor(jsonCurrentTime * 2)]);
+    el.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+    el.classList.remove('ba'); void el.offsetWidth; el.classList.add('ba');
+  }, [isPlaying, Math.floor(jt*2)]);
 
-  const barLyricGrid = useMemo(() => {
+  // Bar lyric grid
+  const barGrid = useMemo(() => {
     if (!jsonData?.tempo) return null;
-    const bpb = jsonData.timeSignature ?? 4;
-    const spb = 60 / jsonData.tempo;
-    const totalDur = jsonData.duration ?? getJsonDuration(jsonData);
-    const totalBars = jsonData.totalBars ?? Math.ceil(totalDur / (bpb * spb));
-    const tolerance = spb * 0.5;
-    return Array.from({ length: totalBars }, (_, i) => {
-      const barIndex = i + 1;
-      const beat1Time = i * bpb * spb;
-      const match = jsonData.lyrics.find(l => Math.abs(l.time - beat1Time) <= tolerance);
-      return { barIndex, beat1Time, lyric: match ?? null };
+    const bpb = jsonData.timeSignature??4;
+    const spb = 60/jsonData.tempo;
+    const dur = jsonData.duration ?? getDur(jsonData);
+    const total = jsonData.totalBars ?? Math.ceil(dur/(bpb*spb));
+    const tol = spb*0.5;
+    return Array.from({length:total},(_,i)=>{
+      const idx = i+1;
+      const t1 = i*bpb*spb;
+      const match = jsonData.lyrics.find(l=>Math.abs(l.time-t1)<=tol);
+      return {idx, t1, lyric: match??null};
     });
-  }, [jsonData]);
+  },[jsonData]);
 
-  // ── Handlers ──
-  const handleLoadVideo = () => {
+  // Handlers
+  const loadVideo = () => {
     setUrlError('');
     const id = extractVideoId(youtubeUrl.trim());
     if (!id) { setUrlError('URL YouTube không hợp lệ'); return; }
     setVideoId(id); setPlayerReady(false); setIsPlaying(false);
-    isPlayingRef.current = false; setJsonCurrentTime(0); ytTimeRef.current = 0; stopLocalTimer();
+    isPlayRef.current=false; setJt(0); ytRef.current=0; stopTimer();
   };
 
-  const handleJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setJsonParseError('');
-    const reader = new FileReader();
-    reader.onload = ev => {
+    const r = new FileReader();
+    r.onload = ev => {
       try {
-        const data = JSON.parse(ev.target?.result as string);
-        setJsonData(data); setJsonFileName(file.name);
-        if (data.sync?.youtubeOffsetSeconds !== undefined) setOffset(data.sync.youtubeOffsetSeconds);
+        const d = JSON.parse(ev.target?.result as string);
+        setJsonData(d); setJsonFileName(file.name);
+        if (d.sync?.youtubeOffsetSeconds!=null) offsetRef.current = d.sync.youtubeOffsetSeconds;
       } catch { setJsonParseError('File JSON không hợp lệ'); }
     };
-    reader.readAsText(file); e.target.value = '';
+    r.readAsText(file); e.target.value='';
   };
 
-  const handlePlay = () => {
-    if (!playerReady || !jsonData) return;
-    postToPlayer(iframeRef.current, 'seekTo', [jsonCurrentTime + offsetRef.current, true]);
-    postToPlayer(iframeRef.current, 'playVideo');
-    setIsPlaying(true); isPlayingRef.current = true; startLocalTimer(jsonCurrentTime);
+  const play = () => {
+    if (!playerReady||!jsonData) return;
+    postCmd(iframeRef.current,'seekTo',[jt+offsetRef.current,true]);
+    postCmd(iframeRef.current,'playVideo');
+    setIsPlaying(true); isPlayRef.current=true; startTimer(jt);
   };
 
-  const handlePause = () => {
-    postToPlayer(iframeRef.current, 'pauseVideo');
-    setIsPlaying(false); isPlayingRef.current = false; stopLocalTimer();
+  const pause = () => {
+    postCmd(iframeRef.current,'pauseVideo');
+    setIsPlaying(false); isPlayRef.current=false; stopTimer();
   };
 
-  const handleSeekTimeline = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const jt = parseFloat(e.target.value);
-    setJsonCurrentTime(jt);
-    postToPlayer(iframeRef.current, 'seekTo', [jt + offsetRef.current, true]);
-    if (isPlayingRef.current) startLocalTimer(jt);
+  const seek = (v: number) => {
+    setJt(v);
+    postCmd(iframeRef.current,'seekTo',[v+offsetRef.current,true]);
+    if (isPlayRef.current) startTimer(v);
   };
 
-  const getBar1JsonTime = useCallback((n: number) => {
+  const seekClick = (t: number) => {
+    setJt(t); postCmd(iframeRef.current,'seekTo',[t+offsetRef.current,true]);
+    if (isPlayRef.current) startTimer(t);
+  };
+
+  const getBarT = useCallback((n:number) => {
     if (!jsonData?.tempo) return null;
-    return (n-1) * (jsonData.timeSignature ?? 4) * (60/jsonData.tempo);
-  }, [jsonData]);
+    return (n-1)*(jsonData.timeSignature??4)*(60/jsonData.tempo);
+  },[jsonData]);
 
-  const handleBarSyncMark = useCallback(() => {
+  const markBar = useCallback(() => {
     if (!playerReady) return;
-    const ytTime = ytTimeRef.current;
-    const jsonTime = getBar1JsonTime(barSyncBar);
-    if (jsonTime === null) return;
-    const newOffset = Math.round((ytTime - jsonTime) * 1000) / 1000;
-    setOffset(newOffset);
-    setBarSyncResult({ bar: barSyncBar, ytTime, jsonTime, offset: newOffset });
-  }, [playerReady, barSyncBar, getBar1JsonTime]);
+    const yt = ytRef.current;
+    const bt = getBarT(barNum);
+    if (bt===null) return;
+    offsetRef.current = Math.round((yt-bt)*1000)/1000;
+    setBarResult({bar:barNum, yt, jt:bt});
+  },[playerReady,barNum,getBarT]);
 
-  const handleTap = useCallback(() => {
+  const tap = useCallback(() => {
     const now = performance.now();
-    if (tapTimesRef.current.length > 0 && now - tapTimesRef.current.at(-1)! > 3000) tapTimesRef.current = [];
+    if (tapTimesRef.current.length>0 && now-tapTimesRef.current.at(-1)!>3000) tapTimesRef.current=[];
     tapTimesRef.current.push(now);
     const t = tapTimesRef.current;
     setTapCount(t.length);
-    if (t.length >= 2) {
-      const avg = t.slice(1).map((v,i)=>v-t[i]).reduce((a,b)=>a+b,0) / (t.length-1);
+    if (t.length>=2) {
+      const avg = t.slice(1).map((v,i)=>v-t[i]).reduce((a,b)=>a+b,0)/(t.length-1);
       const bpm = Math.round(60000/avg);
       setTapBpm(bpm);
-      if (jsonData?.tempo) setTapScalePreview(Math.round((jsonData.tempo/bpm)*10000)/10000);
-      else setTapScalePreview(null);
+      if (jsonData?.tempo) setTapScale(Math.round((jsonData.tempo/bpm)*10000)/10000);
     }
-    if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
-    tapTimeoutRef.current = setTimeout(() => {
-      tapTimesRef.current=[]; setTapCount(0); setTapBpm(null); setTapScalePreview(null);
-    }, 3000);
-  }, [jsonData]);
+    if (tapTORef.current) clearTimeout(tapTORef.current);
+    tapTORef.current = setTimeout(()=>{tapTimesRef.current=[];setTapCount(0);setTapBpm(null);setTapScale(null);},3000);
+  },[jsonData]);
 
-  const handleApplyTempoScale = () => {
-    if (!jsonData || tapScalePreview===null || tapBpm===null) return;
-    const r = tapScalePreview;
-    setJsonData({ ...jsonData, tempo: tapBpm,
-      lyrics: jsonData.lyrics.map(l=>({...l, time:+(l.time*r).toFixed(4)})),
-      chords: jsonData.chords.map(c=>({...c, time:+(c.time*r).toFixed(4)})),
-      duration: jsonData.duration ? +(jsonData.duration*r).toFixed(4) : undefined,
+  const applyScale = () => {
+    if (!jsonData||tapScale===null||tapBpm===null) return;
+    const r=tapScale;
+    setJsonData({...jsonData,tempo:tapBpm,
+      lyrics:jsonData.lyrics.map(l=>({...l,time:+(l.time*r).toFixed(4)})),
+      chords:jsonData.chords.map(c=>({...c,time:+(c.time*r).toFixed(4)})),
+      duration:jsonData.duration?+(jsonData.duration*r).toFixed(4):undefined,
     });
-    setJsonCurrentTime(p => +(p*r).toFixed(4));
-    tapTimesRef.current=[]; setTapCount(0); setTapBpm(null); setTapScalePreview(null);
+    setJt(p=>+(p*r).toFixed(4));
+    tapTimesRef.current=[];setTapCount(0);setTapBpm(null);setTapScale(null);
   };
 
-  const handleResetTap = () => {
-    tapTimesRef.current=[]; setTapCount(0); setTapBpm(null); setTapScalePreview(null);
-    if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
-  };
-
-  const handleExport = () => {
+  const exportJson = () => {
     if (!jsonData) return;
-    const out = { ...jsonData, sync:{ source:'youtube' as const, youtubeUrl, youtubeOffsetSeconds: offsetRef.current } };
-    const url = URL.createObjectURL(new Blob([JSON.stringify(out,null,2)], {type:'application/json'}));
-    Object.assign(document.createElement('a'), { href:url, download:`${jsonFileName.replace('.json','')||'timing'}_synced.json` }).click();
+    const out = {...jsonData};
+    const blob = new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    Object.assign(document.createElement('a'),{href:url,download:`${jsonFileName.replace('.json','')||'timing'}_synced.json`}).click();
     URL.revokeObjectURL(url);
-    setExportSuccess(true); setTimeout(()=>setExportSuccess(false), 2500);
+    setExportOk(true); setTimeout(()=>setExportOk(false),2500);
   };
 
-  const duration     = jsonData ? (jsonData.duration ?? getJsonDuration(jsonData)) : 60;
-  const activeChord  = jsonData?.chords.filter(c=>c.time<=jsonCurrentTime).at(-1);
-  const currentLyric = jsonData?.lyrics.filter(l=>l.time<=jsonCurrentTime).at(-1);
-  const activeLyrics = jsonData?.lyrics.filter(l=>l.time<=jsonCurrentTime && l.time>jsonCurrentTime-2) ?? [];
-  const progressPct  = duration > 0 ? (jsonCurrentTime / duration) * 100 : 0;
+  const dur        = jsonData ? (jsonData.duration ?? getDur(jsonData)) : 60;
+  const pct        = dur>0 ? (jt/dur)*100 : 0;
+  const activeChord= jsonData?.chords.filter(c=>c.time<=jt).at(-1);
+  const curLyric   = jsonData?.lyrics.filter(l=>l.time<=jt).at(-1);
+  const activeLyrics=jsonData?.lyrics.filter(l=>l.time<=jt&&l.time>jt-2)??[];
 
-  // ─────────────────────────────────────────────
-  // Render
   // ─────────────────────────────────────────────
   return (
-    <div style={{ minHeight:'100vh', background:T.bg, color:T.text, fontFamily:"'Inter', 'Segoe UI', sans-serif" }}>
+    <div style={{minHeight:'100vh',background:C.pageBg,color:C.text,fontFamily:"'Inter','Segoe UI',sans-serif"}}>
 
-      {/* ── Header ── */}
-      <header style={{ background:T.headerBg, padding:'0 24px', display:'flex', alignItems:'center', height:52, gap:16, boxShadow:'0 2px 8px rgba(0,0,0,0.25)' }}>
-        {/* Logo */}
-        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:28, height:28, background:T.goldStrong, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:13, color:'#fff', letterSpacing:'-0.5px' }}>C#</div>
-          <div style={{ width:1, height:20, background:'rgba(255,255,255,0.15)' }} />
-          <span style={{ fontSize:13, color:'rgba(255,255,255,0.8)', fontWeight:400 }}>Thầy Văn Anh</span>
+      {/* ══ HEADER ══ */}
+      <header style={{background:C.header,height:50,display:'flex',alignItems:'center',padding:'0 24px',gap:16,boxShadow:'0 2px 8px rgba(0,0,0,0.22)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:26,height:26,background:C.goldStrong,borderRadius:5,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,color:'#fff'}}>C#</div>
+          <div style={{width:1,height:18,background:'rgba(255,255,255,0.12)'}}/>
+          <span style={{fontSize:12,color:'rgba(255,255,255,0.65)'}}>Thầy Văn Anh</span>
         </div>
-
-        {/* Title */}
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-          <span style={{ fontSize:14, fontWeight:600, color:'#fff' }}>YouTube Sync</span>
-          <span style={{ fontSize:11, color:'rgba(255,255,255,0.45)', background:'rgba(255,255,255,0.08)', borderRadius:4, padding:'2px 8px' }}>Căn chỉnh timing</span>
+        <div style={{flex:1,textAlign:'center'}}>
+          <span style={{fontSize:13,fontWeight:600,color:'#fff'}}>YouTube Sync</span>
+          <span style={{marginLeft:10,fontSize:11,color:'rgba(255,255,255,0.4)'}}>music synchronization workspace</span>
         </div>
-
-        {/* Nav */}
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={()=>{ window.location.href='/editor'; }} style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:7, color:'rgba(255,255,255,0.75)', fontSize:12, padding:'5px 12px', cursor:'pointer' }}>
-            ← Editor
-          </button>
-          <button onClick={()=>{ window.location.href='/player'; }} style={{ background:T.goldStrong, border:'none', borderRadius:7, color:'#fff', fontSize:12, fontWeight:600, padding:'5px 12px', cursor:'pointer' }}>
-            Player →
-          </button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>{window.location.href='/editor';}} style={{...ghost,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.7)',fontSize:12}}>← Editor</button>
+          <button onClick={()=>{window.location.href='/player';}} style={{background:C.goldStrong,border:'none',borderRadius:7,color:'#fff',fontSize:12,fontWeight:600,padding:'5px 14px',cursor:'pointer'}}>Player →</button>
         </div>
       </header>
 
-      {/* ── Body ── */}
-      <div style={{ maxWidth:1120, margin:'0 auto', padding:'24px 20px 40px', display:'flex', flexDirection:'column', gap:20 }}>
+      <div style={{maxWidth:1100,margin:'0 auto',padding:'28px 24px 60px'}}>
 
-        {/* ── Preview Row (hiện khi có JSON) ── */}
-        {jsonData && (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+        {/* ══ A. DATA INPUT ZONE ══ */}
+        <section style={{marginBottom:36}}>
+          <div style={zoneLabel()}>① Nạp dữ liệu</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:24,alignItems:'start'}}>
 
-            {/* Lyrics */}
-            <div style={card}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={sectionLabel}>Lyrics Preview</span>
-                <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                  {jsonData.tempo && <span style={{ fontSize:10, color:T.textSub, fontFamily:'monospace' }}>{jsonData.tempo} BPM</span>}
-                  {isPlaying && (
-                    <span style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:T.green, fontWeight:500 }}>
-                      <span style={{ width:6, height:6, borderRadius:'50%', background:T.green, display:'inline-block', animation:'pulse 1s ease-in-out infinite' }} />
-                      Đang phát
-                    </span>
-                  )}
-                </div>
+            {/* Left: controls */}
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              {/* URL row */}
+              <div style={{display:'flex',gap:8}}>
+                <input style={input} value={youtubeUrl}
+                  onChange={e=>{setYoutubeUrl(e.target.value);setUrlError('');}}
+                  onKeyDown={e=>e.key==='Enter'&&loadVideo()}
+                  placeholder="YouTube URL — https://www.youtube.com/watch?v=..." />
+                <button style={{...btn(C.red),padding:'9px 18px'}} onClick={loadVideo}>Load</button>
               </div>
+              {urlError && <div style={{fontSize:12,color:C.red}}>⚠ {urlError}</div>}
 
-              {barLyricGrid ? (
-                <>
-                  <div style={{ overflowY:'auto', maxHeight:180 }}>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(46px,1fr))', gap:4 }}>
-                      {barLyricGrid.map(({ barIndex, beat1Time, lyric }) => {
-                        const isActive = jsonCurrentTime >= beat1Time &&
-                          (barIndex === barLyricGrid.length || jsonCurrentTime < barLyricGrid[barIndex].beat1Time);
-                        const isPast = jsonCurrentTime >= beat1Time && !isActive;
-                        return (
-                          <button key={barIndex} ref={isActive ? activeBarRef : null}
-                            title={`Nhịp ${barIndex} — ${beat1Time.toFixed(2)}s`}
-                            onClick={() => {
-                              setJsonCurrentTime(beat1Time);
-                              postToPlayer(iframeRef.current,'seekTo',[beat1Time+offsetRef.current,true]);
-                              if (isPlayingRef.current) startLocalTimer(beat1Time);
-                            }}
-                            style={{
-                              display:'flex', flexDirection:'column', alignItems:'center',
-                              padding:'6px 3px', borderRadius:7, cursor:'pointer', fontSize:12,
-                              border: isActive ? `1.5px solid ${T.goldStrong}` : `1px solid ${T.border}`,
-                              background: isActive ? T.bgGoldSoft : isPast ? 'rgba(0,0,0,0.03)' : T.bgInput,
-                              color: isActive ? T.text : isPast ? T.borderMid : T.textSub,
-                              fontWeight: isActive ? 700 : 400,
-                              transform: isActive ? 'scale(1.06)' : 'scale(1)',
-                              transition: 'all 0.12s',
-                              boxShadow: isActive ? `0 0 0 2px ${T.goldStrong}22` : 'none',
-                            }}
-                          >
-                            <span style={{ lineHeight:1.3, textAlign:'center', wordBreak:'break-all' }}>
-                              {lyric ? lyric.text : <span style={{ opacity:0.3 }}>—</span>}
-                            </span>
-                            <span style={{ fontSize:9, marginTop:2, color: isActive ? T.goldStrong : T.borderMid }}>{barIndex}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div style={{ ...divider }} />
-                  <div style={{ textAlign:'center', fontSize:22, fontWeight:700, color:T.text, minHeight:32, letterSpacing:2 }}>
-                    {currentLyric?.text ?? <span style={{ color:T.border }}>—</span>}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:6, maxHeight:150, overflowY:'auto' }}>
-                    {jsonData.lyrics.map(l => {
-                      const isActive = currentLyric?.id === l.id;
-                      const isPast = l.time < jsonCurrentTime - 2;
-                      return (
-                        <button key={l.id} onClick={() => {
-                          setJsonCurrentTime(l.time);
-                          postToPlayer(iframeRef.current,'seekTo',[l.time+offsetRef.current,true]);
-                          if (isPlayingRef.current) startLocalTimer(l.time);
-                        }} style={{
-                          border: isActive ? `1.5px solid ${T.goldStrong}` : `1px solid ${T.border}`,
-                          borderLeft: isActive ? `3px solid ${T.goldStrong}` : `1px solid ${T.border}`,
-                          borderRadius:7, padding:'4px 10px', cursor:'pointer', fontSize:13, fontWeight: isActive ? 600 : 400,
-                          background: isActive ? T.bgGoldSoft : isPast ? 'rgba(0,0,0,0.03)' : T.bgInput,
-                          color: isActive ? T.text : isPast ? T.borderMid : T.textSub,
-                          transition:'all 0.1s',
-                        }}>
-                          {l.text}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {currentLyric && <div style={{ textAlign:'center', fontSize:20, fontWeight:700, color:T.text, borderTop:`1px solid ${T.border}`, paddingTop:10, letterSpacing:2 }}>
-                    {activeLyrics.map(l=>l.text).join(' ')}
-                  </div>}
-                </>
-              )}
-            </div>
-
-            {/* Chords */}
-            <div style={card}>
-              <span style={sectionLabel}>Chord Preview</span>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:6, maxHeight:160, overflowY:'auto' }}>
-                {jsonData.chords.map(c => {
-                  const isActive = activeChord?.id === c.id;
-                  const isPast = activeChord && jsonData.chords.indexOf(c) < jsonData.chords.indexOf(activeChord);
-                  return (
-                    <button key={c.id} onClick={() => {
-                      setJsonCurrentTime(c.time);
-                      postToPlayer(iframeRef.current,'seekTo',[c.time+offsetRef.current,true]);
-                      if (isPlayingRef.current) startLocalTimer(c.time);
-                    }} style={{
-                      borderRadius:8, padding:'6px 14px', cursor:'pointer',
-                      fontFamily:'monospace', fontSize:15, fontWeight:700,
-                      border: isActive ? `1.5px solid ${T.goldStrong}` : `1px solid ${T.border}`,
-                      borderLeft: isActive ? `3px solid ${T.goldStrong}` : `1px solid ${T.border}`,
-                      background: isActive ? T.bgGoldSoft : isPast ? 'rgba(0,0,0,0.03)' : T.bgInput,
-                      color: isActive ? T.text : isPast ? T.borderMid : T.textSub,
-                      transition:'all 0.12s',
-                    }}>
-                      {c.name}
-                      <span style={{ fontSize:9, fontWeight:400, marginLeft:5, color:T.borderMid }}>{formatTime(c.time)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {activeChord && (
-                <div style={{ ...divider }} />
-              )}
-              {activeChord && (
-                <div style={{ textAlign:'center', padding:'8px 0' }}>
-                  <span style={{ fontSize:42, fontWeight:800, fontFamily:'monospace', color:T.green, letterSpacing:2 }}>
-                    {activeChord.name}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Main 2-col ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-
-          {/* ── LEFT ── */}
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-
-            {/* YouTube Player */}
-            <div style={card}>
-              <span style={sectionLabel}>Video YouTube</span>
-              <div style={{ display:'flex', gap:8 }}>
-                <input style={inputBase} value={youtubeUrl}
-                  onChange={e => { setYoutubeUrl(e.target.value); setUrlError(''); }}
-                  onKeyDown={e => e.key==='Enter' && handleLoadVideo()}
-                  placeholder="https://www.youtube.com/watch?v=..." />
-                <button style={{ ...btnPrimary(T.red), padding:'9px 16px' }} onClick={handleLoadVideo}>Load</button>
-              </div>
-              {urlError && <div style={{ color:T.red, fontSize:12, display:'flex', alignItems:'center', gap:5 }}>⚠ {urlError}</div>}
-
-              <div style={{ borderRadius:10, overflow:'hidden', background:'#111', border:`1px solid ${T.border}` }}>
-                <div style={{ paddingTop:'56.25%', position:'relative' }}>
-                  {!videoId ? (
-                    <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, color:'#666' }}>
-                      <div style={{ fontSize:36, opacity:0.4 }}>▶</div>
-                      <span style={{ fontSize:13 }}>Nhập URL và bấm Load</span>
-                    </div>
-                  ) : (
-                    <iframe ref={iframeRef} src={buildEmbedUrl(videoId)}
-                      style={{ position:'absolute', inset:0, width:'100%', height:'100%', border:'none' }}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen title="YouTube player"
-                      onLoad={() => setTimeout(()=>{ iframeRef.current?.contentWindow?.postMessage(JSON.stringify({event:'listening'}),'*'); },1000)}
-                    />
-                  )}
-                  {videoId && !playerReady && (
-                    <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none' }}>
-                      <div style={{ background:'rgba(0,0,0,0.7)', borderRadius:20, padding:'6px 16px', fontSize:12, color:'#ccc', display:'flex', alignItems:'center', gap:8 }}>
-                        <span style={{ width:12, height:12, borderRadius:'50%', border:'2px solid #555', borderTopColor:'#fff', display:'inline-block', animation:'spin 0.8s linear infinite' }} />
-                        Đang kết nối...
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {videoId && playerReady && (
-                  <div style={{ display:'flex', justifyContent:'space-between', padding:'7px 12px', background:T.bgCard, fontSize:11, color:T.textSub, borderTop:`1px solid ${T.border}` }}>
-                    <span style={{ display:'flex', alignItems:'center', gap:6 }}>
-                      <span style={{ width:6, height:6, borderRadius:'50%', background:'#3A7D44', display:'inline-block', animation:'pulse 1s ease-in-out infinite' }} />
-                      Đã kết nối
-                    </span>
-                    <span style={{ fontFamily:'monospace', color:T.textSub }}>YT: {formatTime(ytCurrentTime)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* JSON Import */}
-            <div style={card}>
-              <span style={sectionLabel}>Timing JSON</span>
-              <div style={{ display:'flex', gap:8 }}>
-                <label style={{ flex:1, cursor:'pointer' }}>
-                  <div style={{ ...inputBase, display:'flex', alignItems:'center', gap:8, color: jsonFileName ? T.text : T.textSub, cursor:'pointer' }}>
-                    <span style={{ fontSize:14 }}>⬆</span>
-                    <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {jsonFileName || 'Upload file JSON...'}
+              {/* JSON row */}
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <label style={{flex:1,cursor:'pointer'}}>
+                  <div style={{...input,display:'flex',alignItems:'center',gap:8,color:jsonFileName?C.text:C.textDim,cursor:'pointer'}}>
+                    <span>⬆</span>
+                    <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                      {jsonFileName||'Upload timing JSON...'}
                     </span>
                   </div>
-                  <input type="file" accept=".json" onChange={handleJsonUpload} style={{ display:'none' }} />
+                  <input type="file" accept=".json" onChange={uploadJson} style={{display:'none'}}/>
                 </label>
-                <button style={btnOutline} onClick={() => { setJsonData(MOCK_JSON); setJsonFileName('demo_song.json'); setJsonParseError(''); }}>
-                  Demo
-                </button>
+                <button style={ghost} onClick={()=>{setJsonData(MOCK);setJsonFileName('demo_song.json');setJsonParseError('');}}>Demo</button>
               </div>
-              {jsonParseError && <div style={{ color:T.red, fontSize:12 }}>⚠ {jsonParseError}</div>}
+              {jsonParseError && <div style={{fontSize:12,color:C.red}}>⚠ {jsonParseError}</div>}
+
+              {/* Metadata tags */}
               {jsonData && (
-                <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
-                  {[jsonData.title||'Untitled', `${jsonData.lyrics.length} lyrics`, `${jsonData.chords.length} chords`, formatTime(duration), jsonData.tempo?`${jsonData.tempo} BPM`:null].filter(Boolean).map((tag,i)=>(
-                    <span key={i} style={{ background:T.bgInput, border:`1px solid ${T.border}`, borderRadius:5, padding:'3px 9px', fontSize:11, color: i===0 ? T.text : T.textSub, fontWeight: i===0?600:400 }}>
-                      {tag}
-                    </span>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
+                  <span style={{fontSize:13,fontWeight:600,color:C.text,marginRight:4}}>{jsonData.title||'Untitled'}</span>
+                  {[`${jsonData.lyrics.length} lyrics`,`${jsonData.chords.length} chords`,fmt(dur),jsonData.tempo?`${jsonData.tempo} BPM`:null]
+                    .filter(Boolean).map((t,i)=>(
+                    <span key={i} style={{background:C.surface2,border:`1px solid ${C.border}`,borderRadius:5,padding:'3px 9px',fontSize:11,color:C.textSub}}>{t}</span>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Timeline + Playback */}
-            <div style={card}>
-              <span style={sectionLabel}>Timeline</span>
-
-              {/* Time display */}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
-                <span style={{ fontFamily:'monospace', fontSize:26, fontWeight:700, color:T.green, lineHeight:1 }}>{formatTime(jsonCurrentTime)}</span>
-                <span style={{ fontFamily:'monospace', fontSize:12, color:T.textSub }}>{formatTime(duration)}</span>
-              </div>
-
-              {/* Progress bar with playhead */}
-              <div style={{ position:'relative' }}>
-                <div style={{ height:6, background:T.bgInput, borderRadius:3, border:`1px solid ${T.border}`, overflow:'hidden' }}>
-                  <div style={{ height:'100%', width:`${progressPct}%`, background:T.green, borderRadius:3, transition:'width 0.05s linear' }} />
+            {/* Right: small video reference */}
+            <div>
+              <div style={{fontSize:10,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:C.textDim,marginBottom:8}}>Tham chiếu video</div>
+              <div style={{borderRadius:10,overflow:'hidden',background:'#111',border:`1px solid ${C.border}`}}>
+                <div style={{paddingTop:'56.25%',position:'relative'}}>
+                  {!videoId?(
+                    <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:6,color:'#555'}}>
+                      <div style={{fontSize:24,opacity:0.4}}>▶</div>
+                      <span style={{fontSize:11}}>Load URL</span>
+                    </div>
+                  ):(
+                    <iframe ref={iframeRef} src={buildEmbedUrl(videoId)}
+                      style={{position:'absolute',inset:0,width:'100%',height:'100%',border:'none'}}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen title="YouTube"
+                      onLoad={()=>setTimeout(()=>iframeRef.current?.contentWindow?.postMessage(JSON.stringify({event:'listening'}),'*'),1000)}
+                    />
+                  )}
+                  {videoId&&!playerReady&&(
+                    <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+                      <div style={{background:'rgba(0,0,0,0.7)',borderRadius:16,padding:'5px 12px',fontSize:11,color:'#ccc',display:'flex',alignItems:'center',gap:6}}>
+                        <span style={{width:10,height:10,borderRadius:'50%',border:'2px solid #555',borderTopColor:'#fff',display:'inline-block',animation:'spin 0.8s linear infinite'}}/>
+                        Kết nối...
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <input type="range" min={0} max={duration} step={0.1} value={jsonCurrentTime}
-                  onChange={handleSeekTimeline}
-                  style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:0, cursor:'pointer' }} />
-              </div>
-
-              <button onClick={isPlaying ? handlePause : handlePlay}
-                disabled={!playerReady || !jsonData}
-                style={{ ...btnPrimary(isPlaying ? T.woodLight : T.green), padding:'12px', fontSize:14,
-                  opacity:(!playerReady||!jsonData)?0.45:1 }}>
-                {isPlaying ? '⏸  Pause' : '▶  Play'}
-              </button>
-
-              {/* Debug info box */}
-              <div style={{ background:T.bgInput, border:`1px solid ${T.border}`, borderRadius:8, padding:'10px 14px', display:'flex', flexDirection:'column', gap:5 }}>
-                {[['JSON time', `${jsonCurrentTime.toFixed(2)}s`, T.green],
-                  ['Offset', `${offset>=0?'+':''}${offset.toFixed(3)}s`, T.goldStrong],
-                  ['YouTube time', `${(jsonCurrentTime+offset).toFixed(2)}s`, T.textSub]
-                ].map(([k,v,c])=>(
-                  <div key={k as string} style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontFamily:'monospace' }}>
-                    <span style={{ color:T.textSub }}>{k}</span>
-                    <span style={{ color:c as string, fontWeight:600 }}>{v}</span>
+                {videoId&&playerReady&&(
+                  <div style={{padding:'5px 10px',background:C.surface,display:'flex',justifyContent:'space-between',fontSize:10,color:C.textDim,borderTop:`1px solid ${C.border}`}}>
+                    <span style={{display:'flex',alignItems:'center',gap:5}}>
+                      <span style={{width:5,height:5,borderRadius:'50%',background:'#3A7D44',display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
+                      Đã kết nối
+                    </span>
+                    <span style={{fontFamily:'monospace'}}>YT {fmt(ytTime)}</span>
                   </div>
-                ))}
+                )}
               </div>
-
-              {/* Export */}
-              <button onClick={handleExport} disabled={!jsonData}
-                style={{ ...btnPrimary(exportSuccess ? '#2A6B3A' : T.goldStrong), opacity:!jsonData?0.45:1 }}>
-                {exportSuccess ? '✓ Đã xuất thành công!' : '💾  Export JSON với offset'}
-              </button>
             </div>
           </div>
+        </section>
 
-          {/* ── RIGHT ── */}
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        {/* ══ B. PREVIEW ZONE — HERO ══ */}
+        {jsonData && (
+          <section style={{marginBottom:40}}>
+            <div style={zoneLabel()}>② Nội dung bài</div>
 
-            {/* Offset Panel */}
-            <div style={card}>
-              <span style={sectionLabel}>Offset Căn Chỉnh</span>
-
-              <div style={{ textAlign:'center', padding:'8px 0' }}>
-                <div style={{ fontSize:38, fontWeight:700, fontFamily:'monospace', color:T.green, letterSpacing:1 }}>
-                  {offset>=0?'+':''}{offset.toFixed(3)}<span style={{ fontSize:20, fontWeight:400, color:T.textSub }}>s</span>
+            {/* Bar lyric grid — full width */}
+            {barGrid ? (
+              <div style={{marginBottom:28}}>
+                <div style={{overflowX:'auto',paddingBottom:8}}>
+                  <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.min(barGrid.length,16)},1fr)`,gap:5,minWidth:600}}>
+                    {barGrid.map(({idx,t1,lyric})=>{
+                      const isAct = jt>=t1 && (idx===barGrid.length || jt<barGrid[idx].t1);
+                      const isPast= jt>=t1 && !isAct;
+                      return (
+                        <button key={idx} ref={isAct?activeBarRef:null}
+                          title={`Nhịp ${idx} — ${t1.toFixed(2)}s`}
+                          onClick={()=>seekClick(t1)}
+                          style={{
+                            display:'flex',flexDirection:'column',alignItems:'center',
+                            padding:'8px 4px',borderRadius:8,cursor:'pointer',
+                            border: isAct?`1.5px solid ${C.goldStrong}`:`1px solid ${C.border}`,
+                            background: isAct?C.goldSoft : isPast?'rgba(0,0,0,0.02)':C.surface,
+                            color: isAct?C.text : isPast?C.borderMid:C.textSub,
+                            fontWeight: isAct?700:400,
+                            boxShadow: isAct?`0 0 0 3px ${C.goldStrong}20`:'none',
+                            transform: isAct?'scale(1.05)':'scale(1)',
+                            transition:'all 0.12s',
+                          }}
+                        >
+                          <span style={{fontSize:13,lineHeight:1.3,textAlign:'center',wordBreak:'break-all'}}>
+                            {lyric?lyric.text:<span style={{opacity:0.2}}>·</span>}
+                          </span>
+                          <span style={{fontSize:9,marginTop:3,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{idx}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div style={{ fontSize:11, color:T.textSub, marginTop:4 }}>youtubeTime = jsonTime + offset</div>
               </div>
-
-              {/* Quick adjust */}
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:6 }}>
-                {([-1,-0.1,0.1,1] as const).map(d=>(
-                  <button key={d} onClick={()=>setOffset(Math.round((offset+d)*1000)/1000)} style={{
-                    background: d<0 ? '#FFF0EE' : '#EEF5F0',
-                    border: `1px solid ${d<0 ? '#F0C0B8' : T.border}`,
-                    borderRadius:7, padding:'8px 0', cursor:'pointer', fontSize:12,
-                    color: d<0 ? T.red : T.green, fontFamily:'monospace', fontWeight:700,
-                    transition:'all 0.12s',
-                  }}>
-                    {d>0?'+':''}{d}s
-                  </button>
-                ))}
+            ) : (
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:24}}>
+                {jsonData.lyrics.map(l=>{
+                  const isAct=curLyric?.id===l.id;
+                  return (
+                    <button key={l.id} onClick={()=>seekClick(l.time)} style={pill(isAct)}>{l.text}</button>
+                  );
+                })}
               </div>
+            )}
 
-              {/* Manual input */}
-              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <span style={{ fontSize:11, color:T.textSub, whiteSpace:'nowrap' }}>Nhập trực tiếp:</span>
-                <input type="number" step="0.1" value={offset}
-                  onChange={e=>setOffset(parseFloat(e.target.value)||0)}
-                  style={{ ...inputBase, fontFamily:'monospace', color:T.green, textAlign:'center' }} />
-                <button style={btnOutline} onClick={()=>setOffset(0)} title="Reset">↺</button>
-              </div>
-
-              {/* Set from YT */}
-              <button onClick={()=>setOffset(Math.round(ytTimeRef.current*1000)/1000)}
-                disabled={!playerReady}
-                style={{ ...btnPrimary(), opacity:playerReady?1:0.45, fontSize:12 }}>
-                Set vị trí YouTube hiện tại làm mốc 0
-              </button>
-              {playerReady && (
-                <div style={{ textAlign:'center', fontSize:11, color:T.textSub, fontFamily:'monospace' }}>
-                  YT hiện tại: {formatTime(ytCurrentTime)}
+            {/* Current state — large display */}
+            <div style={{
+              display:'grid',gridTemplateColumns:'1fr auto',gap:24,
+              alignItems:'center',padding:'24px 28px',
+              background:C.surface,borderRadius:14,
+              border:`1px solid ${C.border}`,
+            }}>
+              {/* Current word */}
+              <div>
+                <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:C.textDim,marginBottom:8}}>Đang hát</div>
+                <div style={{fontSize:36,fontWeight:700,color:C.text,letterSpacing:3,minHeight:48,lineHeight:1.1}}>
+                  {curLyric ? activeLyrics.map(l=>l.text).join(' ') : <span style={{color:C.border,fontWeight:300}}>—</span>}
                 </div>
-              )}
+              </div>
+              {/* Current chord */}
+              <div style={{textAlign:'center',padding:'12px 24px',background:activeChord?C.goldSoft:'transparent',borderRadius:10,border:activeChord?`1.5px solid ${C.goldStrong}`:`1px solid ${C.border}`,minWidth:100}}>
+                <div style={{fontSize:11,fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',color:C.textDim,marginBottom:4}}>Hợp âm</div>
+                <div style={{fontSize:40,fontWeight:800,fontFamily:'monospace',color:activeChord?C.green:C.border,letterSpacing:2,lineHeight:1}}>
+                  {activeChord?.name??'—'}
+                </div>
+              </div>
             </div>
 
+            {/* Chord strip */}
+            <div style={{display:'flex',flexWrap:'wrap',gap:5,marginTop:14}}>
+              {jsonData.chords.map(c=>{
+                const isAct=activeChord?.id===c.id;
+                const isPast=activeChord&&jsonData.chords.indexOf(c)<jsonData.chords.indexOf(activeChord);
+                return (
+                  <button key={c.id} onClick={()=>seekClick(c.time)} style={{
+                    ...pill(isAct),
+                    fontFamily:'monospace',fontSize:14,fontWeight:700,
+                    color: isAct?C.text : isPast?C.borderMid:C.textSub,
+                  }}>
+                    {c.name}
+                    <span style={{fontSize:9,fontWeight:400,marginLeft:4,opacity:0.5}}>{fmt(c.time)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ══ D. TIMELINE ZONE ══ */}
+        <section style={{
+          background:C.surface,border:`1px solid ${C.border}`,
+          borderRadius:16,padding:'24px 28px',marginBottom:32,
+          boxShadow:'0 2px 8px rgba(31,41,51,0.06)',
+        }}>
+          <div style={zoneLabel()}>③ Timeline</div>
+
+          {/* Time counter */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:12}}>
+            <span style={{fontFamily:'monospace',fontSize:32,fontWeight:700,color:C.green,lineHeight:1}}>{fmt(jt)}</span>
+            <span style={{fontFamily:'monospace',fontSize:13,color:C.textDim}}>{fmt(dur)}</span>
+          </div>
+
+          {/* Progress track — DAW style */}
+          <div style={{position:'relative',marginBottom:20}}>
+            <div style={{height:12,background:C.surface2,borderRadius:6,border:`1px solid ${C.border}`,overflow:'visible',position:'relative'}}>
+              {/* Fill */}
+              <div style={{position:'absolute',top:0,left:0,height:'100%',width:`${pct}%`,background:C.green,borderRadius:6,transition:'width 0.05s linear'}}/>
+              {/* Playhead */}
+              <div style={{
+                position:'absolute',top:'50%',left:`${pct}%`,
+                transform:'translate(-50%,-50%)',
+                width:16,height:16,borderRadius:'50%',
+                background:C.green,border:`2.5px solid ${C.surface}`,
+                boxShadow:`0 0 0 2px ${C.green}`,
+                transition:'left 0.05s linear',
+                pointerEvents:'none',
+              }}/>
+            </div>
+            <input type="range" min={0} max={dur} step={0.1} value={jt}
+              onChange={e=>seek(parseFloat(e.target.value))}
+              style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0,cursor:'pointer'}}/>
+          </div>
+
+          {/* Controls */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:12}}>
+            <button onClick={()=>seek(Math.max(0,jt-10))} style={{...ghost,padding:'8px 14px',fontSize:12}}>◀ 10s</button>
+            <button
+              onClick={isPlaying?pause:play}
+              disabled={!playerReady||!jsonData}
+              style={{
+                ...btn(isPlaying?C.woodLight:C.green),
+                padding:'12px 36px',fontSize:15,fontWeight:700,
+                opacity:(!playerReady||!jsonData)?0.4:1,
+                boxShadow: isPlaying?'none':`0 2px 10px ${C.green}44`,
+              }}>
+              {isPlaying?'⏸  Pause':'▶  Play'}
+            </button>
+            <button onClick={()=>seek(Math.min(dur,jt+10))} style={{...ghost,padding:'8px 14px',fontSize:12}}>10s ▶</button>
+          </div>
+        </section>
+
+        {/* ══ C. SYNC WORKSPACE ══ */}
+        <section style={{marginBottom:36}}>
+          <div style={zoneLabel()}>④ Đồng bộ</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden',background:C.surface,boxShadow:'0 1px 4px rgba(31,41,51,0.05)'}}>
+
             {/* Bar Sync */}
-            <div style={card}>
-              <span style={sectionLabel}>Đồng bộ phách mạnh</span>
+            <div style={{padding:'24px',borderRight:`1px solid ${C.border}`}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.green,marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:16}}>♩</span> Mark Beat Sync
+              </div>
+              <p style={{fontSize:12,color:C.textSub,lineHeight:1.7,margin:'0 0 16px'}}>
+                Play video đến đúng phách 1 của nhịp muốn sync → bấm Mark.
+              </p>
+
               {!jsonData?.tempo ? (
-                <div style={{ fontSize:12, color:'#92722A', background:'#FDF5E0', border:'1px solid #EED88A', borderRadius:7, padding:'8px 12px', display:'flex', alignItems:'center', gap:6 }}>
-                  ⚠ Cần JSON có trường <code style={{ background:'#FBF8F2', padding:'1px 5px', borderRadius:4, fontSize:11 }}>tempo</code>
+                <div style={{fontSize:12,color:'#92722A',background:'#FDF5E0',border:'1px solid #EED88A',borderRadius:7,padding:'8px 12px'}}>
+                  ⚠ Cần JSON có trường <code style={{fontSize:11}}>tempo</code>
                 </div>
               ) : (
                 <>
-                  <p style={{ fontSize:12, color:T.textSub, lineHeight:1.7, margin:0 }}>
-                    Play video đến đúng phách 1 của nhịp muốn đồng bộ → bấm <strong style={{ color:T.text }}>Mark</strong>.
-                  </p>
-
-                  {/* Bar selector */}
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <button style={btnOutline} onClick={()=>setBarSyncBar(b=>Math.max(1,b-1))}>−</button>
-                    <div style={{ flex:1, textAlign:'center' }}>
-                      <div style={{ fontSize:34, fontWeight:700, fontFamily:'monospace', color:T.green }}>{barSyncBar}</div>
-                      <div style={{ fontSize:10, color:T.textSub }}>nhịp</div>
+                  {/* Bar number */}
+                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+                    <button style={{...ghost,padding:'6px 12px'}} onClick={()=>setBarNum(b=>Math.max(1,b-1))}>−</button>
+                    <div style={{flex:1,textAlign:'center'}}>
+                      <div style={{fontSize:42,fontWeight:700,fontFamily:'monospace',color:C.green,lineHeight:1}}>{barNum}</div>
+                      <div style={{fontSize:10,color:C.textDim}}>nhịp</div>
                     </div>
-                    <button style={btnOutline} onClick={()=>setBarSyncBar(b=>b+1)}>+</button>
+                    <button style={{...ghost,padding:'6px 12px'}} onClick={()=>setBarNum(b=>b+1)}>+</button>
                   </div>
 
                   {/* Quick pick */}
-                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:12}}>
                     {[1,2,3,4,5,8,9,13,17].map(n=>(
-                      <button key={n} onClick={()=>setBarSyncBar(n)} style={{
-                        ...btnOutline,
-                        padding:'4px 10px', fontSize:12, fontFamily:'monospace',
-                        color: barSyncBar===n ? T.green : T.textSub,
-                        borderColor: barSyncBar===n ? T.green : T.border,
-                        background: barSyncBar===n ? '#EEF5F0' : 'transparent',
+                      <button key={n} onClick={()=>setBarNum(n)} style={{
+                        ...ghost,padding:'4px 10px',fontSize:12,fontFamily:'monospace',
+                        color:barNum===n?C.green:C.textSub,
+                        borderColor:barNum===n?C.green:C.border,
+                        background:barNum===n?C.greenTint:'transparent',
                       }}>{n}</button>
                     ))}
                   </div>
-                  <div style={{ fontSize:11, color:T.textSub, textAlign:'right', fontFamily:'monospace' }}>
-                    JSON beat 1 = {getBar1JsonTime(barSyncBar)?.toFixed(3)}s
+
+                  <div style={{fontSize:10,color:C.textDim,fontFamily:'monospace',marginBottom:12,textAlign:'right'}}>
+                    beat 1 = {getBarT(barNum)?.toFixed(3)}s
                   </div>
 
-                  <button onPointerDown={handleBarSyncMark} disabled={!playerReady}
-                    style={{ ...btnPrimary(T.cyan), padding:'13px', fontSize:14, opacity:playerReady?1:0.45, userSelect:'none' }}>
-                    ♩ Mark — Phách 1, Nhịp {barSyncBar}
+                  <button onPointerDown={markBar} disabled={!playerReady}
+                    style={{...btn(C.teal),width:'100%',padding:'13px',fontSize:14,opacity:playerReady?1:0.4,userSelect:'none'}}>
+                    ♩ Mark — Phách 1, Nhịp {barNum}
                   </button>
 
-                  {barSyncResult && (
-                    <div style={{ background:T.bgInput, border:`1px solid ${T.border}`, borderRadius:8, padding:'10px 14px', display:'flex', flexDirection:'column', gap:5 }}>
-                      {[['Nhịp đã mark',`#${barSyncResult.bar}`,T.text],
-                        ['YT lúc mark',`${barSyncResult.ytTime.toFixed(3)}s`,T.red],
-                        ['JSON beat 1',`${barSyncResult.jsonTime.toFixed(3)}s`,T.green]].map(([k,v,c])=>(
-                        <div key={k as string} style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontFamily:'monospace' }}>
-                          <span style={{ color:T.textSub }}>{k}</span><span style={{ color:c as string, fontWeight:600 }}>{v}</span>
-                        </div>
-                      ))}
-                      <div style={{ ...divider }} />
-                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontFamily:'monospace' }}>
-                        <span style={{ color:T.textSub }}>Offset đã set</span>
-                        <span style={{ color:T.goldStrong, fontWeight:700 }}>{barSyncResult.offset>=0?'+':''}{barSyncResult.offset.toFixed(3)}s</span>
+                  {barResult && (
+                    <div style={{marginTop:14,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:8,padding:'10px 14px',fontSize:11,fontFamily:'monospace',display:'flex',flexDirection:'column',gap:5}}>
+                      <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>Nhịp đã mark</span><span style={{color:C.text,fontWeight:600}}>#{barResult.bar}</span></div>
+                      <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>YT lúc mark</span><span style={{color:C.red,fontWeight:600}}>{barResult.yt.toFixed(3)}s</span></div>
+                      <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>JSON beat 1</span><span style={{color:C.green,fontWeight:600}}>{barResult.jt.toFixed(3)}s</span></div>
+                      <div style={divLine}/>
+                      <div style={{display:'flex',justifyContent:'space-between'}}>
+                        <span style={{color:C.textSub}}>Đã đồng bộ</span>
+                        <span style={{color:C.goldStrong,fontWeight:700}}>✓</span>
                       </div>
                     </div>
                   )}
@@ -786,103 +634,110 @@ export default function YouTubeSyncPage() {
             </div>
 
             {/* Tap Tempo */}
-            <div style={card}>
-              <span style={sectionLabel}>Tap Tempo Calibration</span>
+            <div style={{padding:'24px'}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.wood,marginBottom:4,display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:16}}>🥁</span> Tap Tempo Calibration
+              </div>
+              <p style={{fontSize:12,color:C.textSub,lineHeight:1.7,margin:'0 0 16px'}}>
+                Tap theo nhịp video để phát hiện nếu BPM lệch, sau đó apply scale.
+              </p>
 
-              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <input type="number" min={20} max={300} step={0.1} placeholder="Nhập BPM YouTube..."
-                  style={{ ...inputBase, fontFamily:'monospace' }}
+              {/* Manual BPM input */}
+              <div style={{display:'flex',gap:8,marginBottom:14}}>
+                <input type="number" min={20} max={300} step={0.1}
+                  placeholder="Nhập BPM YouTube..."
+                  style={{...input,fontFamily:'monospace'}}
                   onChange={e=>{
                     const v=parseFloat(e.target.value);
-                    if(!isNaN(v)&&v>0){ setTapBpm(Math.round(v)); if(jsonData?.tempo) setTapScalePreview(Math.round((jsonData.tempo/v)*10000)/10000); }
-                    else { setTapBpm(null); setTapScalePreview(null); }
-                  }} />
-                <span style={{ fontSize:12, color:T.textSub }}>BPM</span>
+                    if(!isNaN(v)&&v>0){setTapBpm(Math.round(v));if(jsonData?.tempo)setTapScale(Math.round((jsonData.tempo/v)*10000)/10000);}
+                    else{setTapBpm(null);setTapScale(null);}
+                  }}/>
+                <span style={{fontSize:12,color:C.textDim,alignSelf:'center',whiteSpace:'nowrap'}}>BPM</span>
               </div>
 
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ flex:1, height:1, background:T.border }} />
-                <span style={{ fontSize:11, color:T.textSub }}>hoặc tap</span>
-                <div style={{ flex:1, height:1, background:T.border }} />
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                <div style={{flex:1,height:1,background:C.border}}/><span style={{fontSize:11,color:C.textDim}}>hoặc</span><div style={{flex:1,height:1,background:C.border}}/>
               </div>
 
-              <div style={{ display:'flex', gap:12 }}>
-                {/* Tap button */}
-                <button onPointerDown={handleTap} style={{
-                  flex:1, border:`2px dashed ${tapCount>0 ? T.wood : T.border}`,
-                  borderRadius:12, background: tapCount>0 ? '#FAF0E4' : T.bgInput,
-                  cursor:'pointer', padding:'18px 0',
-                  display:'flex', flexDirection:'column', alignItems:'center', gap:4,
-                  userSelect:'none', transition:'all 0.1s',
+              {/* Tap area */}
+              <div style={{display:'flex',gap:12,marginBottom:14}}>
+                <button onPointerDown={tap} style={{
+                  flex:1,border:`2px dashed ${tapCount>0?C.wood:C.border}`,
+                  borderRadius:12,background:tapCount>0?'#FAF0E4':C.surface2,
+                  cursor:'pointer',padding:'16px 0',display:'flex',flexDirection:'column',
+                  alignItems:'center',gap:4,userSelect:'none',transition:'all 0.1s',
                 }}>
-                  <span style={{ fontSize:26 }}>🥁</span>
-                  <span style={{ fontSize:12, color:T.textSub, fontWeight:600 }}>TAP</span>
-                  {tapCount>0 && <span style={{ fontSize:10, color:T.wood }}>{tapCount} taps</span>}
+                  <span style={{fontSize:24}}>🥁</span>
+                  <span style={{fontSize:12,color:C.textSub,fontWeight:600}}>TAP</span>
+                  {tapCount>0&&<span style={{fontSize:10,color:C.wood}}>{tapCount} taps</span>}
                 </button>
-                {/* BPM display */}
-                <div style={{ flex:1, background:T.bgInput, border:`1px solid ${T.border}`, borderRadius:12, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3, padding:'14px 8px' }}>
-                  <div style={{ fontSize:38, fontWeight:700, fontFamily:'monospace', color: tapBpm ? T.wood : T.border }}>{tapBpm??'--'}</div>
-                  <div style={{ fontSize:11, color:T.textSub }}>BPM YouTube</div>
-                  {jsonData?.tempo && <div style={{ fontSize:11, color:T.textSub }}>JSON: <span style={{ fontFamily:'monospace', color:T.text }}>{jsonData.tempo}</span></div>}
+                <div style={{flex:1,background:C.surface2,border:`1px solid ${C.border}`,borderRadius:12,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,padding:'12px 8px'}}>
+                  <div style={{fontSize:34,fontWeight:700,fontFamily:'monospace',color:tapBpm?C.wood:C.border,lineHeight:1}}>{tapBpm??'--'}</div>
+                  <div style={{fontSize:11,color:C.textDim}}>BPM detected</div>
+                  {jsonData?.tempo&&<div style={{fontSize:10,color:C.textDim}}>JSON: <span style={{fontFamily:'monospace',color:C.text,fontWeight:600}}>{jsonData.tempo}</span></div>}
                 </div>
               </div>
 
-              {tapBpm && jsonData?.tempo && tapScalePreview!==null && (
-                <div style={{ background:T.bgInput, border:`1px solid ${T.border}`, borderRadius:8, padding:'10px 14px', display:'flex', flexDirection:'column', gap:5 }}>
-                  {[['Tempo JSON gốc',`${jsonData.tempo} BPM`,T.text],['Tempo tap',`${tapBpm} BPM`,T.wood]].map(([k,v,c])=>(
-                    <div key={k as string} style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontFamily:'monospace' }}>
-                      <span style={{ color:T.textSub }}>{k}</span><span style={{ color:c as string, fontWeight:600 }}>{v}</span>
-                    </div>
-                  ))}
-                  <div style={{ ...divider }} />
-                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontFamily:'monospace' }}>
-                    <span style={{ color:T.textSub }}>Scale ratio</span>
-                    <span style={{ color: tapScalePreview>1?'#C47A22':tapScalePreview<1?T.cyan:T.green, fontWeight:700 }}>×{tapScalePreview.toFixed(4)}</span>
+              {tapBpm&&jsonData?.tempo&&tapScale!==null&&(
+                <div style={{background:C.surface2,border:`1px solid ${C.border}`,borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:11,fontFamily:'monospace',display:'flex',flexDirection:'column',gap:5}}>
+                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>JSON tempo</span><span style={{color:C.text,fontWeight:600}}>{jsonData.tempo} BPM</span></div>
+                  <div style={{display:'flex',justifyContent:'space-between'}}><span style={{color:C.textSub}}>Tap BPM</span><span style={{color:C.wood,fontWeight:600}}>{tapBpm} BPM</span></div>
+                  <div style={divLine}/>
+                  <div style={{display:'flex',justifyContent:'space-between'}}>
+                    <span style={{color:C.textSub}}>Scale ratio</span>
+                    <span style={{color:tapScale>1?'#C47A22':tapScale<1?C.teal:C.green,fontWeight:700}}>×{tapScale.toFixed(4)}</span>
                   </div>
-                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, fontFamily:'monospace' }}>
-                    <span style={{ color:T.textSub }}>Sai lệch</span>
-                    <span style={{ color:T.goldStrong }}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span>
+                  <div style={{display:'flex',justifyContent:'space-between'}}>
+                    <span style={{color:C.textSub}}>Sai lệch</span>
+                    <span style={{color:C.goldStrong,fontWeight:600}}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span>
                   </div>
                 </div>
               )}
 
-              <div style={{ display:'flex', gap:8 }}>
-                <button onClick={handleApplyTempoScale} disabled={!tapScalePreview||!jsonData?.tempo}
-                  style={{ ...btnPrimary(T.wood), flex:1, opacity:(!tapScalePreview||!jsonData?.tempo)?0.45:1 }}>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={applyScale} disabled={!tapScale||!jsonData?.tempo}
+                  style={{...btn(C.wood),flex:1,opacity:(!tapScale||!jsonData?.tempo)?0.4:1}}>
                   Apply Scale to JSON
                 </button>
-                <button onClick={handleResetTap} disabled={tapCount===0}
-                  style={{ ...btnOutline, opacity:tapCount===0?0.45:1 }}>↺</button>
+                <button onClick={()=>{tapTimesRef.current=[];setTapCount(0);setTapBpm(null);setTapScale(null);if(tapTORef.current)clearTimeout(tapTORef.current);}}
+                  disabled={tapCount===0} style={{...ghost,opacity:tapCount===0?0.4:1}}>↺</button>
               </div>
-              <p style={{ fontSize:11, color:T.textSub, margin:0, lineHeight:1.6 }}>
-                Nhấn TAP theo nhịp khi nghe video. Sau 3s không tap sẽ tự reset.
-              </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Hướng dẫn */}
-        <div style={{ ...card, background:'transparent', boxShadow:'none', border:`1px solid ${T.border}` }}>
-          <span style={sectionLabel}>Hướng dẫn sử dụng</span>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'8px 20px' }}>
-            {['Nhập URL YouTube → Load', 'Upload JSON hoặc dùng Demo', 'Dùng Tap Tempo nếu BPM lệch', 'Play video đến phách 1 → Mark', 'Bấm Play — ô nhịp sáng theo lyric', 'Export khi căn chỉnh xong'].map((s,i)=>(
-              <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12, color:T.textSub }}>
-                <span style={{ minWidth:18, height:18, borderRadius:'50%', background:T.bgInput, border:`1px solid ${T.border}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:T.textSub, fontWeight:700, flexShrink:0, marginTop:1 }}>{i+1}</span>
-                {s}
-              </div>
-            ))}
+        {/* ══ E. EXPORT ZONE ══ */}
+        <section style={{textAlign:'center',paddingTop:8}}>
+          <div style={zoneLabel()}>⑤ Xuất bản</div>
+          <div style={{maxWidth:440,margin:'0 auto',display:'flex',flexDirection:'column',gap:12,alignItems:'center'}}>
+            <p style={{fontSize:13,color:C.textSub,margin:0,lineHeight:1.7}}>
+              {jsonData
+                ? `Sẵn sàng xuất — ${jsonData.title||'Bài hát'} · ${jsonData.lyrics.length} lyrics · ${jsonData.chords.length} chords`
+                : 'Upload JSON để bắt đầu workflow'}
+            </p>
+            <button onClick={exportJson} disabled={!jsonData}
+              style={{
+                ...btn(exportOk?'#2A6B3A':C.goldStrong),
+                padding:'14px 48px',fontSize:15,fontWeight:700,
+                opacity:!jsonData?0.4:1,
+                boxShadow: jsonData&&!exportOk?`0 3px 12px ${C.goldStrong}44`:'none',
+              }}>
+              {exportOk?'✓ Đã xuất thành công!':'💾  Export JSON'}
+            </button>
+            {!jsonData && (
+              <p style={{fontSize:11,color:C.textDim,margin:0}}>← Upload file JSON ở bước ①</p>
+            )}
           </div>
-        </div>
-      </div>
+        </section>
+
+      </div>{/* /body */}
 
       <style>{`
-        @keyframes spin    { to { transform: rotate(360deg); } }
-        @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @keyframes beatFlash { 0%,100%{box-shadow:none} 30%{box-shadow:0 0 10px rgba(198,161,91,0.55)} }
-        .beat-active { animation: beatFlash 0.3s ease-out; }
-        input[type=range]::-webkit-slider-thumb { appearance:none; width:14px; height:14px; border-radius:50%; background:${T.green}; cursor:pointer; }
-        input[type=range]::-webkit-slider-runnable-track { height:6px; border-radius:3px; }
-        button:active { opacity:0.85; transform:scale(0.98); }
+        @keyframes spin  {to{transform:rotate(360deg)}}
+        @keyframes pulse {0%,100%{opacity:1}50%{opacity:0.45}}
+        @keyframes ba    {0%,100%{box-shadow:none}40%{box-shadow:0 0 12px rgba(198,161,91,0.6)}}
+        .ba { animation: ba 0.35s ease-out; }
+        button:active:not(:disabled){transform:scale(0.97)}
       `}</style>
     </div>
   );
