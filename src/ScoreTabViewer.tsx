@@ -5,17 +5,17 @@ import type { ScoreNote } from './scoreData';
 import { getNoteForFret } from './guitarNotes';
 
 // ─── Layout (single unified canvas) ──────────────────────────────────────────
-const SLG        = 11;          // staff line gap
-const STAFF_H    = SLG * 4;    // 44px (5 lines)
-const STAFF_TOP  = 38;          // from canvas top to first staff line
+const SLG        = 12;          // staff line gap (tăng từ 11)
+const STAFF_H    = SLG * 4;    // 48px (5 lines)
+const STAFF_TOP  = 44;          // from canvas top to first staff line
 const STAFF_BOT  = STAFF_TOP + STAFF_H;
 
-const TSG        = 14;          // TAB string gap
+const TSG        = 16;          // TAB string gap (tăng từ 14)
 const TAB_STRINGS = 6;
-const TAB_TOP    = STAFF_BOT + 26;   // gap between staff bottom and first TAB line
+const TAB_TOP    = STAFF_BOT + 36;   // khoảng cách rộng hơn (tăng từ 26)
 const TAB_BOT    = TAB_TOP + (TAB_STRINGS - 1) * TSG;
 
-const CANVAS_H   = TAB_BOT + 18;    // total canvas height
+const CANVAS_H   = TAB_BOT + 24;    // total canvas height
 
 const RULER_H    = 22;
 const CLEF_W     = 42;
@@ -310,13 +310,13 @@ export default function ScoreTabViewer({
       const cx = noteX(cursorTime);
       const cw = BEAT_W * (dotted ? durBeats * 1.5 : durBeats) - 2;
 
-      // Full-height cursor column (staff + TAB)
+      // Cursor column chỉ ở TAB area
       ctx.fillStyle = 'rgba(30,100,220,0.08)';
-      ctx.fillRect(cx - 2, STAFF_TOP - 6, Math.max(cw, 16), TAB_BOT - STAFF_TOP + 12);
+      ctx.fillRect(cx - 2, TAB_TOP - 4, Math.max(cw, 16), TAB_BOT - TAB_TOP + 8);
 
-      // Left edge — solid blue line (Guitar Pro style)
-      ctx.fillStyle = 'rgba(30,100,220,0.85)';
-      ctx.fillRect(cx - 1, STAFF_TOP - 8, 2, TAB_BOT - STAFF_TOP + 16);
+      // Đường kẻ dọc mỏng xuyên suốt staff+TAB
+      ctx.fillStyle = 'rgba(30,100,220,0.4)';
+      ctx.fillRect(cx - 1, STAFF_TOP - 6, 2, TAB_BOT - STAFF_TOP + 12);
 
       // Cursor cell on active TAB string
       const strY = tabStrY(pendingStr);
@@ -363,6 +363,16 @@ export default function ScoreTabViewer({
     ctx.fillText('4', tx, STAFF_TOP + SLG * 4 + 2);
     ctx.restore();
 
+    // ── Đường phân cách staff / TAB ─────────────────────────────────────────────
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(CLEF_W, TAB_TOP - 14);
+    ctx.lineTo(w, TAB_TOP - 14);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     // ── TAB lines ──────────────────────────────────────────────────────────────
     for (let s = 0; s < TAB_STRINGS; s++) {
       const y = TAB_TOP + s * TSG;
@@ -403,12 +413,17 @@ export default function ScoreTabViewer({
 
       // Selection / active highlight
       if (isSel) {
-        ctx.fillStyle = 'rgba(30,100,220,0.12)';
-        ctx.fillRect(x - 14, STAFF_TOP - 4, 28, TAB_BOT - STAFF_TOP + 8);
-        ctx.fillStyle = 'rgba(30,100,220,0.5)';
-        ctx.fillRect(x - 1, STAFF_TOP - 6, 2, TAB_BOT - STAFF_TOP + 12);
+        // Highlight nhạc nhẹ
+        ctx.fillStyle = 'rgba(30,100,220,0.07)';
+        ctx.fillRect(x - 14, STAFF_TOP - 4, 28, STAFF_H + 8);
+        // Highlight TAB đậm hơn
+        ctx.fillStyle = 'rgba(30,100,220,0.14)';
+        ctx.fillRect(x - 14, TAB_TOP - 4, 28, TAB_BOT - TAB_TOP + 8);
+        // Đường dọc xanh
+        ctx.fillStyle = 'rgba(30,100,220,0.6)';
+        ctx.fillRect(x - 1, STAFF_TOP - 4, 2, TAB_BOT - STAFF_TOP + 8);
       } else if (isAct) {
-        ctx.fillStyle = 'rgba(200,153,26,0.13)';
+        ctx.fillStyle = 'rgba(200,153,26,0.1)';
         ctx.fillRect(x - 14, STAFF_TOP - 4, 28, TAB_BOT - STAFF_TOP + 8);
       }
 
