@@ -276,28 +276,31 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           <div style={{ width:1, height:24, background:P.paperDark }}/>
 
           {/* Chế độ luyện tập */}
-          <span style={{ fontSize:11, color:P.textMuted, flexShrink:0 }}>Chế độ:</span>
-          <div style={{ display:'flex', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
-            {(['metro','yt'] as const).map(m => (
-              <button key={m} onClick={() => { setPlayMode(m); if(m==='yt'&&ytMode==='focus') setYtMode('mini'); }}
-                disabled={m==='yt'&&!hasYT}
-                style={{ ...btn(playMode===m), borderRadius:0, border:'none', borderRight: m==='metro' ? P.greenBorder : 'none', opacity: m==='yt'&&!hasYT ? 0.4 : 1 }}>
-                {m==='metro' ? '🎵 Máy đập nhịp' : '▶ YouTube'}
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+            <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:P.textDim }}>Chế độ luyện tập</span>
+            <div style={{ display:'flex', border:`1px solid rgba(20,83,45,0.15)`, borderRadius:10, overflow:'hidden', background:'rgba(20,83,45,0.02)' }}>
+              <button onClick={() => setPlayMode('metro')} style={{ ...btn(playMode==='metro'), borderRadius:0, border:'none', borderRight:`1px solid rgba(20,83,45,0.1)` }}>
+                🎵 Tập với máy đập nhịp
               </button>
-            ))}
-          </div>
-
-          {/* YT size — chỉ khi YT mode */}
-          {playMode==='yt' && (
-            <div style={{ display:'flex', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
-              {([['focus','● Ẩn'],['mini','▣ Mini'],['full','⛶ To']] as [YtMode,string][]).map(([m,lbl]) => (
-                <button key={m} onClick={() => setYtMode(m)}
-                  style={{ ...btn(ytMode===m), borderRadius:0, border:'none', borderRight: m!=='full' ? P.greenBorder : 'none' }}>
-                  {lbl}
-                </button>
-              ))}
+              <button onClick={() => { if(hasYT){ setPlayMode('yt'); if(ytMode==='focus') setYtMode('mini'); } }}
+                disabled={!hasYT}
+                style={{ ...btn(playMode==='yt'), borderRadius:0, border:'none', borderRight:`1px solid rgba(20,83,45,0.1)`, opacity:!hasYT?0.4:1 }}
+                title={!hasYT?'Vào YouTube Sync để đồng bộ trước':''}>
+                ▶ YouTube
+              </button>
+              <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn(false), borderRadius:0, border:'none' }}>
+                🥁 Học Tap nhịp
+              </button>
             </div>
-          )}
+            {/* YT size sub-options */}
+            {playMode==='yt' && (
+              <div style={{ display:'flex', gap:3 }}>
+                {([['focus','● Ẩn'],['mini','▣ Mini'],['full','⛶ To']] as [YtMode,string][]).map(([m,lbl]) => (
+                  <button key={m} onClick={() => setYtMode(m)} style={{ ...btn(ytMode===m), padding:'3px 10px', fontSize:10 }}>{lbl}</button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div style={{ flex:1 }}/>
 
@@ -332,8 +335,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             transition:'all 0.2s',
           }}>{isPlaying?'⏸':'▶'}</button>
 
-          {/* Tap nhịp */}
-          <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn() }} title="Tap nhịp">🥁 Tap</button>
+          {/* Tap nhịp đã chuyển vào Chế độ luyện tập */}
         </div>
 
         {/* ── PRACTICE AREA ── */}
