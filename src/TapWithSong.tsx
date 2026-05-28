@@ -27,8 +27,8 @@ const C = {
   bgWoodActive:'#3F7D3A',
 
   // Main area — dark forest
-  bgMain:     '#071A13',
-  bgMission:  '#0A2018',
+  bgMain:     '#050F0A',
+  bgMission:  '#070E0C',
   bgMissionBorder:'rgba(220,230,210,0.09)',
 
   // Dots
