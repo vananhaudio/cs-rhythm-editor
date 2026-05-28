@@ -437,26 +437,10 @@
    DEPTH & FEEL — "nhạc cụ, không phải phần mềm"
 ══════════════════════════════════════════ */
 
-.scroll-now-line {
-  display: block !important;
-  position: absolute; top: 0; bottom: 0; width: 2px;
-  background: linear-gradient(to bottom, transparent 0%, rgba(201,151,0,0.15) 15%, rgba(141,196,112,0.55) 40%, rgba(141,196,112,0.8) 50%, rgba(141,196,112,0.55) 60%, rgba(201,151,0,0.15) 85%, transparent 100%);
-  box-shadow: 0 0 8px 2px rgba(141,196,112,0.25), 0 0 24px 4px rgba(141,196,112,0.08);
-  pointer-events: none; z-index: 10;
-}
-.scroll-now-line--beat {
-  display: block !important;
-  background: linear-gradient(to bottom, transparent 0%, rgba(141,196,112,0.4) 30%, rgba(141,196,112,0.7) 50%, rgba(141,196,112,0.4) 70%, transparent 100%);
-  box-shadow: 0 0 6px 2px rgba(141,196,112,0.2); width: 2px;
-}
-.player-scroll-area--lyric::after {
-  content: ''; position: absolute; top: 0; bottom: 0;
-  left: calc(30% - 80px); width: 160px;
-  background: radial-gradient(ellipse at center, rgba(141,196,112,0.05) 0%, transparent 70%);
-  pointer-events: none; z-index: 5;
-  animation: breathe 10s ease-in-out infinite;
-}
-@keyframes breathe { 0%,100%{opacity:.6} 50%{opacity:1} }
+.scroll-now-line { display: none; }
+.scroll-now-line--beat { display: none; }
+
+ 50%{opacity:1} }
 .player-scroll-area--lyric::before {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(to right, rgba(28,46,34,0.65) 0%, transparent 18%, transparent 82%, rgba(28,46,34,0.65) 100%);
