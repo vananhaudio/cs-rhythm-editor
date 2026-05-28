@@ -3,1091 +3,443 @@ import type { RhythmSong } from './types';
 import './PlayerView.css';
 import { SongList } from './SongList';
 
-// ── Helpers ──
 function fmtTime(t: number) {
   const s = Math.max(0, t);
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 }
 
-function calibKey(title: string, filename: string) {
-  return `csre-calib::${title}::${filename}`;
-}
+type Step = 'pick-song' | 'pick-mode' | 'playing';
+type PlayMode = 'metro' | 'yt';
 
-interface Calib { offset: number; tempoScale: number; }
-
-const PADDING_SECS = 4; // 4 giây trắng trước mp3
-
-// ── Waveform + 2 markers + zoom ──
-function WaveformSync({ audioBuffer, duration, calib, onCalibChange, currentTime, song }: {
-  audioBuffer: AudioBuffer | null;
-  duration: number;
-  calib: Calib | null;
-  onCalibChange: (c: Calib) => void;
-  currentTime: number;
-  song: RhythmSong;
+export function PlayerView({ song, onClose, onImportSong, extraActions }: {
+  song: RhythmSong; onClose: () => void;
+  onImportSong?: (song: RhythmSong) => void;
+  extraActions?: React.ReactNode;
+  onUpdateTitle?: (title: string) => void;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const beatDur = 60 / song.tempo;
-  const barDur = beatDur * song.timeSignature;
-  const totalDur = duration + PADDING_SECS;
-
-  // markers[i] = mp3 time của phách 1 nhịp (i+1), tính từ đầu file (không có padding)
-  // Hiển thị trên canvas: time + PADDING_SECS
-  const [markers, setMarkers] = useState<number[]>(() => {
-    if (calib) {
-      const m0 = calib.offset; // phách 1 nhịp 1 trong mp3 time
-      const measuredBarDur = barDur * calib.tempoScale;
-      return [m0, m0 + measuredBarDur, m0 + 2 * measuredBarDur];
-    }
-    // Mặc định: nhịp 1 ở 1s trước nhạc, nhịp 2-3 dàn theo tempo JSON
-    const m0 = -PADDING_SECS + 1;
-    return [m0, m0 + barDur, m0 + 2 * barDur];
-  });
-
-  const [zoom, setZoom] = useState(Math.min(totalDur, 20));
-  const [viewStart, setViewStart] = useState(0);
-  const [canvasWidth, setCanvasWidth] = useState(800);
-  const dragging = useRef<number | null>(null);
-
-  const viewEnd = Math.min(viewStart + zoom, totalDur);
-  const viewDur = viewEnd - viewStart;
-
-  // canvas time → mp3 time (canvas 0 = mp3 -PADDING_SECS)
-  const canvasToMp3 = (canvasTime: number) => canvasTime - PADDING_SECS;
-  const mp3ToCanvas = (mp3Time: number) => mp3Time + PADDING_SECS;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ro = new ResizeObserver(entries => {
-      const w = Math.round(entries[0].contentRect.width);
-      if (w > 0) { canvas.width = w; setCanvasWidth(w); }
-    });
-    ro.observe(canvas);
-    if (canvas.clientWidth > 0) { canvas.width = canvas.clientWidth; setCanvasWidth(canvas.clientWidth); }
-    return () => ro.disconnect();
-  }, []);
-
-  // Vẽ waveform
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || canvasWidth < 10) return;
-    const ctx = canvas.getContext('2d')!;
-    const W = canvasWidth; const H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#0F1117';
-    ctx.fillRect(0, 0, W, H);
-
-    // Vùng padding trắng (4s đầu)
-    const paddingEndX = ((PADDING_SECS - viewStart) / viewDur) * W;
-    if (paddingEndX > 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.03)';
-      ctx.fillRect(0, 0, Math.min(paddingEndX, W), H);
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(Math.min(paddingEndX, W), 0);
-      ctx.lineTo(Math.min(paddingEndX, W), H);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // Waveform (chỉ vẽ phần mp3 thật)
-    if (audioBuffer) {
-      const sampleRate = audioBuffer.sampleRate;
-      const data = audioBuffer.getChannelData(0);
-      ctx.beginPath();
-      ctx.strokeStyle = '#10B981';
-      ctx.lineWidth = 1;
-      for (let x = 0; x < W; x++) {
-        const canvasT = viewStart + (x / W) * viewDur;
-        if (canvasT < PADDING_SECS) continue;
-        const mp3T = canvasT - PADDING_SECS;
-        const sampleIdx = Math.floor(mp3T * sampleRate);
-        const step = Math.max(1, Math.floor((viewDur / W) * sampleRate));
-        let max = 0;
-        for (let j = 0; j < step; j++) {
-          const v = Math.abs(data[sampleIdx + j] || 0);
-          if (v > max) max = v;
-        }
-        const h = max * H * 0.85;
-        ctx.moveTo(x + 0.5, H/2 - h/2);
-        ctx.lineTo(x + 0.5, H/2 + h/2);
-      }
-      ctx.stroke();
-    }
-
-    // Đường giữa
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke();
-
-    // Playhead
-    const playCanvasTime = mp3ToCanvas(currentTime);
-    if (playCanvasTime >= viewStart && playCanvasTime <= viewEnd) {
-      const px = ((playCanvasTime - viewStart) / viewDur) * W;
-      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-      ctx.setLineDash([3,3]); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    // Markers
-    const colors = ['#F59E0B', '#F97316', '#10B981', '#60A5FA', '#A78BFA', '#F472B6', '#34D399'];
-    markers.forEach((m, i) => {
-      const canvasT = mp3ToCanvas(m);
-      if (canvasT < viewStart || canvasT > viewEnd) return;
-      const px = Math.round(((canvasT - viewStart) / viewDur) * W);
-      const color = colors[i % colors.length];
-      ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
-      ctx.fillStyle = color;
-      ctx.beginPath(); ctx.moveTo(px-7,0); ctx.lineTo(px+7,0); ctx.lineTo(px,10); ctx.closePath(); ctx.fill();
-      const label = `M${i+1}`;
-      ctx.font = 'bold 11px Inter, sans-serif';
-      ctx.fillStyle = 'rgba(0,0,0,0.7)';
-      ctx.fillRect(px+4, 12, 22, 16);
-      ctx.fillStyle = color;
-      ctx.fillText(label, px+6, 24);
-    });
-
-  }, [audioBuffer, markers, viewStart, viewEnd, viewDur, currentTime, canvasWidth]);
-
-  const timeFromX = (clientX: number) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    return viewStart + frac * viewDur; // canvas time
-  };
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const canvasT = timeFromX(e.clientX);
-    const mp3T = canvasToMp3(canvasT);
-    // Tìm marker gần nhất
-    let closest = 0;
-    let minDist = Infinity;
-    markers.forEach((m, i) => {
-      const d = Math.abs(mp3T - m);
-      if (d < minDist) { minDist = d; closest = i; }
-    });
-    dragging.current = closest;
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (dragging.current === null) return;
-    const canvasT = timeFromX(e.clientX);
-    const mp3T = canvasToMp3(Math.max(0, Math.min(totalDur, canvasT)));
-    const idx = dragging.current;
-    setMarkers(prev => {
-      const next = [...prev];
-      next[idx] = mp3T;
-      // Tính barDur thực từ marker 0 và 1
-      if (next.length >= 2) {
-        const measuredBarDur = next[1] - next[0];
-        if (measuredBarDur > 0.1) {
-          // Tự động dàn các marker sau marker bị kéo
-          for (let j = idx + 1; j < next.length; j++) {
-            next[j] = next[0] + j * measuredBarDur;
-          }
-        }
-      }
-      return next;
-    });
-  };
-
-  const handlePointerUp = () => {
-    if (dragging.current === null) return;
-    dragging.current = null;
-    applyCalib();
-  };
-
-  const applyCalib = () => {
-    if (markers.length < 2) return;
-    const m0 = markers[0]; // mp3 time của phách 1 nhịp 1
-    // Dùng M1+M3 nếu có (trung bình 2 nhịp = chính xác hơn)
-    // Dùng M1+M2 nếu chỉ có 2 marker
-    const measuredBarDur = markers.length >= 3
-      ? (markers[2] - markers[0]) / 2
-      : markers[1] - markers[0];
-    if (measuredBarDur < 0.1) return;
-    const tempoScale = measuredBarDur / barDur;
-    const offset = m0;
-    onCalibChange({ offset, tempoScale });
-  };
-
-  const addMarker = () => {
-    setMarkers(prev => {
-      if (prev.length >= 3) return prev; // Tối đa 3 marker
-      const measuredBarDur = prev.length >= 2 ? prev[1] - prev[0] : barDur;
-      const next = [...prev, prev[0] + prev.length * measuredBarDur];
-      return next;
-    });
-  };
-
-  const measuredBpm = markers.length >= 2 && (markers[1] - markers[0]) > 0.1
-    ? (60 / (markers[1] - markers[0])) * song.timeSignature
-    : null;
-
-  const zoomLevels = [totalDur, totalDur/2, 20, 10, 5, 2];
-  const zoomLabels = ['Toàn bài', '1/2', '20s', '10s', '5s', '2s'];
-
-  return (
-    <div className="waveform-wrap">
-      <div className="waveform-header">
-        <span className="waveform-title">🎛 Căn nhịp</span>
-        <div className="waveform-zoom-group">
-          {zoomLevels.map((z, i) => (
-            <button key={z} className={`waveform-zoom-btn ${zoom === z ? 'active' : ''}`}
-              onClick={() => { setZoom(z); setViewStart(Math.max(0, Math.min(viewStart, totalDur - z))); }}>
-              {zoomLabels[i]}
-            </button>
-          ))}
-        </div>
-        {measuredBpm && (
-          <span className="waveform-bpm">
-            <strong>{measuredBpm.toFixed(1)} BPM thực</strong>
-          </span>
-        )}
-
-      </div>
-
-      {zoom < totalDur && (
-        <div className="waveform-pan">
-          <span style={{ fontSize: 10, color: '#4B5563' }}>◀</span>
-          <input type="range" min={0} max={Math.max(0, totalDur - zoom)} step={0.01}
-            value={viewStart} onChange={e => setViewStart(parseFloat(e.target.value))}
-            className="waveform-pan-slider" />
-          <span style={{ fontSize: 10, color: '#4B5563' }}>▶</span>
-          <span className="waveform-pan-time">{fmtTime(viewStart)} — {fmtTime(viewEnd)}</span>
-        </div>
-      )}
-
-      <div style={{ position: 'relative' }}>
-        <canvas ref={canvasRef} className="waveform-canvas" height={90}
-          onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onWheel={e => {
-            e.preventDefault();
-            const delta = (e.deltaY / 300) * zoom;
-            setViewStart(prev => Math.max(0, Math.min(prev + delta, totalDur - zoom)));
-          }} />
-      </div>
-
-      <div className="waveform-legend">
-        <span style={{ color: '#F59E0B' }}>M1 = Phách 1 Nhịp 1</span>
-        <span style={{ color: '#F97316' }}>M2 = Phách 1 Nhịp 2 (tính barDur)</span>
-        <span style={{ color: '#10B981' }}>M3 = Phách 1 Nhịp 3 (tăng độ chính xác)</span>
-        <span style={{ color: '#6B7280' }}>Kéo M1 để set điểm bắt đầu · M2 tính barDur · M3 tinh chỉnh</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Main PlayerView ──
-export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraActions }: { song: RhythmSong; onClose: () => void; onUpdateTitle?: (title: string) => void; onImportSong?: (song: RhythmSong) => void; extraActions?: React.ReactNode }) {
-
+  const [step, setStep] = useState<Step>(song.title ? 'pick-mode' : 'pick-song');
+  const [playMode, setPlayMode] = useState<PlayMode>('metro');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [localTitle, setLocalTitle] = useState(song.title || '');
   const [currentTime, setCurrentTime] = useState(0);
-  const [mp3FileName, setMp3FileName] = useState<string | null>(null);
-  const [mp3Duration, setMp3Duration] = useState(0);
-  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  const [calib, setCalib] = useState<Calib | null>(null);
+  const [speed, setSpeed] = useState(1);
   const [muteMetronome, setMuteMetronome] = useState(false);
-  const muteMetronomeRef = useRef(false);
   const [showSongList, setShowSongList] = useState(false);
-  const [showYoutube, setShowYoutube] = useState(false);
-  const [playMode, setPlayMode] = useState<'metro'|'yt'>('metro');
+  const [ytReady, setYtReady] = useState(false);
+  const [activeBeatIdx, setActiveBeatIdx] = useState(-1);
+  const [containerW, setContainerW] = useState(900);
+  const [beatContainerW, setBeatContainerW] = useState(900);
+  const [fullscreen, setFullscreen] = useState(false);
+
   const ytPlayerRef = useRef<any>(null);
   const ytReadyRef = useRef(false);
-  const ytSyncRef = useRef(false);
-  const calibRef = useRef<Calib | null>(null);
-
-  // Sync playMode → showYoutube
-  useEffect(() => { setShowYoutube(playMode === 'yt'); }, [playMode]);
-  const [showSync, setShowSync] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
-  const [volume, setVolume] = useState(0.8);
-  const [speed, setSpeed] = useState(1);
-
-  const mp3Ref = useRef<HTMLAudioElement | null>(null);
+  const ytSyncedRef = useRef(false);
+  const isPlayingRef = useRef(false);
+  const currentTimeRef = useRef(0);
+  const muteRef = useRef(false);
   const rafRef = useRef<number>(0);
-  const currentTimeRef = useRef<number>(0);
-  const [activeBeatIdx, setActiveBeatIdx] = useState(-1);
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const lastBeatRef = useRef<number>(-1);
-
-  // ── Metronome scheduler (dùng AudioContext time, không phụ thuộc RAF) ──
-  const scheduleAheadTime = 0.05; // schedule trước 50ms
-  const clickOffset = 0.016; // delay click 1 frame (16ms) để khớp visual RAF
-  const nextBeatTimeRef = useRef<number>(0);
-  const schedulerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioCtxStartRef = useRef<number>(0); // audioCtx.currentTime khi startSongRef=0
-  const songStartTimeRef = useRef<number>(0); // song time khi bắt đầu play
-
-  useEffect(() => { muteMetronomeRef.current = muteMetronome; }, [muteMetronome]);
-
-  function scheduleClick(audioTime: number, isBeat1: boolean) {
-    try {
-      if (!audioCtxRef.current || muteMetronomeRef.current) return;
-      const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = isBeat1 ? 880 : 440;
-      gain.gain.setValueAtTime(0.5, audioTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioTime + (isBeat1 ? 0.08 : 0.06));
-      osc.start(audioTime);
-      osc.stop(audioTime + 0.1);
-    } catch { /* ignore */ }
-  }
-
-  function startMetronomeScheduler(startSongTime: number) {
-    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-    const ctx = audioCtxRef.current;
-    if (ctx.state === 'suspended') ctx.resume();
-    songStartTimeRef.current = startSongTime;
-    audioCtxStartRef.current = ctx.currentTime;
-
-    // nextBeatTimeRef = audioCtx time của phách tiếp theo
-    const beatDurScaled = beatDur / speed;
-    const beatsElapsed = Math.floor(startSongTime / beatDur);
-    const timeToNextBeat = (beatsElapsed + 1) * beatDur - startSongTime;
-    nextBeatTimeRef.current = ctx.currentTime + timeToNextBeat / speed;
-    let nextBeatIdx = beatsElapsed + 1;
-
-    if (schedulerTimerRef.current) clearInterval(schedulerTimerRef.current);
-    schedulerTimerRef.current = setInterval(() => {
-      const ctx = audioCtxRef.current;
-      if (!ctx) return;
-      while (nextBeatTimeRef.current < ctx.currentTime + scheduleAheadTime) {
-        const beatInBar = nextBeatIdx % song.timeSignature;
-        scheduleClick(nextBeatTimeRef.current + clickOffset, beatInBar === 0);
-        nextBeatTimeRef.current += beatDurScaled;
-        nextBeatIdx++;
-      }
-    }, 25); // check mỗi 25ms
-  }
-
-  function stopMetronomeScheduler() {
-    if (schedulerTimerRef.current) {
-      clearInterval(schedulerTimerRef.current);
-      schedulerTimerRef.current = null;
-    }
-  }
-
+  const schedulerRef = useRef<ReturnType<typeof setInterval>|null>(null);
+  const nextBeatRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const beatScrollRef = useRef<HTMLDivElement>(null);
-  const [beatContainerW, setBeatContainerW] = useState(900);
-  const mp3InputRef = useRef<HTMLInputElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const [isSeeking, setIsSeeking] = useState(false);
-  const startWallRef = useRef(0);
-  const startSongRef = useRef(0);
+  const speedRef = useRef(1);
 
   const beatDur = 60 / song.tempo;
   const barDur = beatDur * song.timeSignature;
-  const totalDuration = song.totalBars * barDur;
-  const displayDuration = mp3Duration > 0 ? mp3Duration : totalDuration;
+  const totalDur = song.totalBars * barDur;
+  const PPS = 120;
 
-  // PX_PER_SEC cho scroll
-  const PX_PER_SEC = 120;
-const LS_SONG_KEY = 'csre-player-song';
-const LS_MP3_OFFSET_KEY = (title: string, filename: string) => `csre-calib::${title}::${filename}`;
+  useEffect(() => { muteRef.current = muteMetronome; }, [muteMetronome]);
+  useEffect(() => { speedRef.current = speed; }, [speed]);
 
-function lsSaveSong(song: RhythmSong) {
-  try { localStorage.setItem(LS_SONG_KEY, JSON.stringify(song)); } catch { /* ignore */ }
-}
-function lsLoadSong(): RhythmSong | null {
-  try {
-    const raw = localStorage.getItem(LS_SONG_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
+  // Reset on song change
+  useEffect(() => {
+    setStep(song.title ? 'pick-mode' : 'pick-song');
+    setIsPlaying(false); isPlayingRef.current = false;
+    setCurrentTime(0); currentTimeRef.current = 0;
+    setActiveBeatIdx(-1);
+    stopMetronome();
+    ytPlayerRef.current?.pauseVideo?.();
+  }, [song.title]);
 
-  // effTime: json time → mp3 time (để vẽ đúng vị trí trên timeline)
-  const effTime = useCallback((t: number) => {
-    if (!calib) return t;
-    return t * calib.tempoScale + calib.offset;
-  }, [calib]);
-
-  // ── YouTube helpers ──
-  const getYoutubeId = (url: string) => {
-    const m = url.match(/(?:youtu\.be\/|v=|\/embed\/)([\w-]{11})/)
-    return m ? m[1] : null
-  }
-
-  const ytSeek = (songTime: number) => {
-    const offset = (song as any).youtubeOffset ?? 0
-    if (ytPlayerRef.current && ytReadyRef.current) {
-      ytPlayerRef.current.seekTo(offset + songTime, true)
-    }
-  }
-
-  const ytPlay = () => {
-    if (ytPlayerRef.current && ytReadyRef.current) ytPlayerRef.current.playVideo()
-  }
-
-  const ytPause = () => {
-    if (ytPlayerRef.current && ytReadyRef.current) ytPlayerRef.current.pauseVideo()
-  }
-
-  const effectivePps = calib ? PX_PER_SEC / calib.tempoScale : PX_PER_SEC;
-  const [containerW, setContainerW] = useState(900);
+  // Resize
   useEffect(() => {
     if (!scrollRef.current) return;
-    const ro = new ResizeObserver(entries => {
-      setContainerW(entries[0].contentRect.width);
-    });
+    const ro = new ResizeObserver(e => setContainerW(e[0].contentRect.width));
     ro.observe(scrollRef.current);
     if (scrollRef.current.clientWidth > 0) setContainerW(scrollRef.current.clientWidth);
     return () => ro.disconnect();
-  }, []);
+  }, [step]);
+
   useEffect(() => {
     if (!beatScrollRef.current) return;
-    const ro = new ResizeObserver(entries => {
-      setBeatContainerW(entries[0].contentRect.width);
-    });
+    const ro = new ResizeObserver(e => setBeatContainerW(e[0].contentRect.width));
     ro.observe(beatScrollRef.current);
     if (beatScrollRef.current.clientWidth > 0) setBeatContainerW(beatScrollRef.current.clientWidth);
     return () => ro.disconnect();
-  }, []);
+  }, [step]);
 
-  const nowLineX = containerW * 0.3;
-  const beatNowLineX = nowLineX; // dùng cùng nowLineX để beat và lyric thẳng hàng
-  const trackWidth = displayDuration * effectivePps + containerW;
-  // scrollOffset: currentTime là mp3 time (hoặc wall clock khi không có mp3)
-  // Tất cả event được vẽ tại: nowLineX + effTime(jsonTime) * effectivePps
-  // effTime(jsonTime) = jsonTime * tempoScale + offset → ra mp3 time
-  // effectivePps = PX_PER_SEC / tempoScale
-  // → event px = nowLineX + mp3Time * PX_PER_SEC
-  // now-line ở nowLineX → cần track dịch: currentMp3Time * PX_PER_SEC
-  // Khi không có calib: effTime(t)=t, effectivePps=PX_PER_SEC → scrollOffset = currentTime * PX_PER_SEC
-  const scrollOffset = currentTime * effectivePps;
-
-  // ── Load calib từ localStorage ──
+  // YouTube setup
   useEffect(() => {
-    if (!mp3FileName || !song.title) { setCalib(null); return; }
-    const key = LS_MP3_OFFSET_KEY(song.title, mp3FileName);
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) setCalib(JSON.parse(raw));
-      else setCalib(null);
-    } catch { setCalib(null); }
-  }, [mp3FileName, song.title]);
+    if (step !== 'playing' || playMode !== 'yt' || !(song as any).youtubeUrl) return;
+    const ytId = ((song as any).youtubeUrl as string).match(/(?:youtu\.be\/|v=|\/embed\/)([\w-]{11})/)?.[1];
+    if (!ytId) return;
+    setYtReady(false); ytReadyRef.current = false;
 
-  useEffect(() => { calibRef.current = calib; }, [calib]);
-
-  // ── Init YouTube IFrame API ──
-  useEffect(() => {
-    if (!showYoutube || !(song as any).youtubeUrl) return
-    const ytId = getYoutubeId((song as any).youtubeUrl)
-    if (!ytId) return
-
-    const initPlayer = () => {
-      if (ytPlayerRef.current) { ytPlayerRef.current.destroy(); ytPlayerRef.current = null }
-      ytReadyRef.current = false
+    const setup = () => {
+      if (ytPlayerRef.current) { ytPlayerRef.current.destroy?.(); ytPlayerRef.current = null; }
       ytPlayerRef.current = new (window as any).YT.Player('yt-player-frame', {
         videoId: ytId,
-        playerVars: { autoplay: 0, controls: 1, modestbranding: 1, rel: 0 },
+        playerVars: { autoplay: 0, controls: 1, rel: 0 },
         events: {
-          onReady: () => {
-            ytReadyRef.current = true
-            const offset = (song as any).youtubeOffset ?? 0
-            ytPlayerRef.current.seekTo(offset, true)
-            ytPlayerRef.current.pauseVideo()
-          }
+          onReady: () => { ytReadyRef.current = true; setYtReady(true); },
         }
-      })
-    }
+      });
+    };
 
-    if ((window as any).YT && (window as any).YT.Player) {
-      initPlayer()
-    } else {
-      if (!document.getElementById('yt-api-script')) {
-        const tag = document.createElement('script')
-        tag.id = 'yt-api-script'
-        tag.src = 'https://www.youtube.com/iframe_api'
-        document.head.appendChild(tag)
+    if ((window as any).YT?.Player) { setup(); return; }
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    (window as any).onYouTubeIframeAPIReady = setup;
+    document.head.appendChild(tag);
+    return () => { ytPlayerRef.current?.destroy?.(); ytPlayerRef.current = null; ytReadyRef.current = false; };
+  }, [step, playMode, (song as any).youtubeUrl]);
+
+  // Metronome
+  function scheduleClick(t: number, beat1: boolean) {
+    try {
+      if (!audioCtxRef.current || muteRef.current) return;
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.frequency.value = beat1 ? 880 : 440;
+      g.gain.setValueAtTime(0.5, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + (beat1 ? 0.08 : 0.06));
+      osc.start(t); osc.stop(t + 0.1);
+    } catch {}
+  }
+
+  function startMetronome(from: number) {
+    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+    const ctx = audioCtxRef.current;
+    if (ctx.state === 'suspended') ctx.resume();
+    const bd = beatDur / speedRef.current;
+    const beats = Math.floor(from / beatDur);
+    nextBeatRef.current = ctx.currentTime + ((beats + 1) * beatDur - from) / speedRef.current;
+    let idx = beats + 1;
+    stopMetronome();
+    schedulerRef.current = setInterval(() => {
+      const c = audioCtxRef.current; if (!c) return;
+      while (nextBeatRef.current < c.currentTime + 0.05) {
+        scheduleClick(nextBeatRef.current + 0.016, (idx % song.timeSignature) === 0);
+        nextBeatRef.current += bd; idx++;
       }
-      ;(window as any).onYouTubeIframeAPIReady = initPlayer
-    }
+    }, 25);
+  }
 
-    return () => {
-      if (ytPlayerRef.current) { ytPlayerRef.current.destroy(); ytPlayerRef.current = null }
-      ytReadyRef.current = false
-    }
-  }, [showYoutube, (song as any).youtubeUrl, (song as any).youtubeOffset])
+  function stopMetronome() {
+    if (schedulerRef.current) { clearInterval(schedulerRef.current); schedulerRef.current = null; }
+  }
 
-  const saveCalib = (c: Calib) => {
-    if (!mp3FileName || !song.title) return; // Cần có tên bài mới lưu calib
-    try { localStorage.setItem(LS_MP3_OFFSET_KEY(song.title, mp3FileName), JSON.stringify(c)); } catch { /* ignore */ }
-  };
-
-  // ── RAF loop ──
-  const tick = useCallback(() => {
-    let t: number;
-    if (mp3Ref.current) {
-      t = mp3Ref.current.currentTime;
-    } else if (audioCtxRef.current) {
-      // Dùng AudioContext clock — đồng bộ với scheduler
-      t = songStartTimeRef.current + (audioCtxRef.current.currentTime - audioCtxStartRef.current) * speed;
-      if (t >= totalDuration) { t = t % totalDuration; songStartTimeRef.current = t; audioCtxStartRef.current = audioCtxRef.current.currentTime; }
-    } else {
-      t = startSongRef.current + (performance.now() - startWallRef.current) / 1000 * speed;
-      if (t >= totalDuration) { t = t % totalDuration; startWallRef.current = performance.now(); startSongRef.current = t; }
-    }
-    currentTimeRef.current = t;
-    setCurrentTime(t);
-    // Khi có calib: beat i hiển thị tại mp3 time = i*beatDur*tempoScale + offset
-    // → beat active khi t >= i*beatDur*tempoScale + offset
-    // → i = (t - offset) / (beatDur * tempoScale)
-    const calibOffset = calibRef.current?.offset ?? 0;
-    const calibScale = calibRef.current?.tempoScale ?? 1;
-    const newBeatIdx = Math.floor((t - calibOffset) / (beatDur * calibScale));
-    setActiveBeatIdx(newBeatIdx);
-    rafRef.current = requestAnimationFrame(tick);
-  }, [speed, totalDuration, song.tempo, song.timeSignature]);
-
+  // RAF
   useEffect(() => {
-    if (isPlaying) {
-      startWallRef.current = performance.now();
-      startSongRef.current = currentTime;
-      if (mp3Ref.current) {
-        mp3Ref.current.currentTime = currentTime;
-        mp3Ref.current.playbackRate = speed;
-        mp3Ref.current.volume = volume;
-        mp3Ref.current.play();
+    let wall = performance.now(), songT = currentTimeRef.current;
+    if (isPlaying) { wall = performance.now(); songT = currentTimeRef.current; }
+    const tick = () => {
+      if (isPlayingRef.current) {
+        const t = Math.min(songT + (performance.now() - wall) / 1000 * speedRef.current, totalDur);
+        currentTimeRef.current = t;
+        setCurrentTime(t);
+        setActiveBeatIdx(Math.floor(t / beatDur));
+        if (playMode === 'yt' && ytReadyRef.current && !ytSyncedRef.current) {
+          ytSyncedRef.current = true;
+          const off = (song as any).youtubeOffset ?? 0;
+          ytPlayerRef.current?.seekTo(off + t, true);
+          ytPlayerRef.current?.playVideo();
+        }
+        if (t >= totalDur) {
+          isPlayingRef.current = false; setIsPlaying(false);
+          stopMetronome(); ytPlayerRef.current?.pauseVideo?.();
+        }
       }
-      startMetronomeScheduler(currentTime);
       rafRef.current = requestAnimationFrame(tick);
-    } else {
-      cancelAnimationFrame(rafRef.current);
-      stopMetronomeScheduler();
-      mp3Ref.current?.pause();
-    }
+    };
+    rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, speed]);
+  }, [isPlaying, speed, playMode, totalDur, beatDur]);
 
+  // Keyboard
   useEffect(() => {
-    if (mp3Ref.current) { mp3Ref.current.volume = volume; mp3Ref.current.playbackRate = speed; }
-  }, [volume, speed]);
-
-  const seekTo = useCallback((t: number) => {
-    const c = Math.max(0, Math.min(t, displayDuration));
-    setCurrentTime(c);
-    startSongRef.current = c;
-    startWallRef.current = performance.now();
-    if (mp3Ref.current) mp3Ref.current.currentTime = c;
-  }, [displayDuration]);
-
-  // ── Load mp3 ──
-  const handleMp3Load = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsPlaying(false);
-    const url = URL.createObjectURL(file);
-    if (mp3Ref.current) { mp3Ref.current.pause(); URL.revokeObjectURL(mp3Ref.current.src); }
-    const audio = new Audio(url);
-    audio.volume = volume;
-    audio.addEventListener('loadedmetadata', () => setMp3Duration(audio.duration));
-    mp3Ref.current = audio;
-    setMp3FileName(file.name);
-    setCurrentTime(0);
-
-    // Decode cho waveform
-    const arrBuf = await file.arrayBuffer();
-    const audioCtx = new AudioContext();
-    const decoded = await audioCtx.decodeAudioData(arrBuf);
-    setAudioBuffer(decoded);
-    e.target.value = '';
-  };
-
-  // ── Progress bar ──
-  const handleProgressPtr = (e: React.PointerEvent<HTMLDivElement>, isDown: boolean) => {
-    if (isDown) { e.currentTarget.setPointerCapture(e.pointerId); setIsSeeking(true); }
-    if (!isSeeking && !isDown) return;
-    const rect = progressRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    seekTo(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * displayDuration);
-  };
-
-  const progressFrac = displayDuration > 0 ? Math.min(1, currentTime / displayDuration) : 0;
-
-  // ── Keyboard ──
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
-      if (e.code === 'Space') { e.preventDefault(); setIsPlaying(p => !p); }
-      if (e.code === 'ArrowLeft') { e.preventDefault(); seekTo(currentTime - 5); }
-      if (e.code === 'ArrowRight') { e.preventDefault(); seekTo(currentTime + 5); }
-      if (e.code === 'Escape') { if (fullscreen) setFullscreen(false); else onClose(); }
-      if (e.code === 'KeyF') setFullscreen(f => !f);
+      if (e.key === 'Escape') onClose();
+      if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+      if (e.key === 'ArrowLeft') seekTo(Math.max(0, currentTimeRef.current - 5));
+      if (e.key === 'ArrowRight') seekTo(Math.min(totalDur, currentTimeRef.current + 5));
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [currentTime, seekTo, onClose]);
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [step, playMode]);
 
-  // Sync YouTube khi play/pause/seek
-  useEffect(() => {
-    if (!showYoutube || !ytReadyRef.current) return
-    if (isPlaying) {
-      ytSeek(currentTime)
-      ytPlay()
+  const togglePlay = useCallback(() => {
+    if (step !== 'playing') return;
+    if (isPlayingRef.current) {
+      isPlayingRef.current = false; setIsPlaying(false); stopMetronome();
+      ytSyncedRef.current = false; ytPlayerRef.current?.pauseVideo?.();
     } else {
-      ytPause()
+      isPlayingRef.current = true; setIsPlaying(true);
+      if (playMode === 'metro') startMetronome(currentTimeRef.current);
+      else { ytSyncedRef.current = false; }
     }
-  }, [isPlaying])
+  }, [step, playMode, speed]);
 
-  const handleCalibChange = (c: Calib) => {
-    setCalib(c);
-    saveCalib(c);
+  const seekTo = useCallback((t: number) => {
+    currentTimeRef.current = t; setCurrentTime(t);
+    if (playMode === 'yt' && ytReadyRef.current) {
+      const off = (song as any).youtubeOffset ?? 0;
+      ytPlayerRef.current?.seekTo(off + t, true);
+      ytSyncedRef.current = true;
+    }
+  }, [playMode, song]);
+
+  const startPlaying = (mode: PlayMode) => {
+    setPlayMode(mode); setStep('playing');
+    setCurrentTime(0); currentTimeRef.current = 0;
+    setIsPlaying(true); isPlayingRef.current = true;
+    ytSyncedRef.current = false;
+    if (mode === 'metro') setTimeout(() => startMetronome(0), 50);
   };
 
-  const speeds = [0.5, 0.75, 1, 1.25];
-  const hasMp3 = !!mp3FileName;
+  const hasYT = !!(song as any).youtubeUrl;
+  const nowX = containerW * 0.3;
+  const beatNowX = beatContainerW * 0.3;
+  const scrollOff = currentTime * PPS;
+  const trackW = totalDur * PPS + containerW;
+  const pct = totalDur > 0 ? currentTime / totalDur * 100 : 0;
 
-
-  if (selecting) {
-    const hasYT = !!(song as any).youtubeUrl;
-    return (
-      <div className="player-overlay">
-        <div style={{width:'100%',height:'100%',background:'#F5F1E8',display:'flex',flexDirection:'column',overflow:'auto'}}>
-          <div style={{background:'#123524',height:50,display:'flex',alignItems:'center',padding:'0 20px',gap:14,flexShrink:0}}>
-            <div style={{width:28,height:28,background:'#D89B22',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,color:'#fff',flexShrink:0}}>C#</div>
-            <span style={{flex:1,textAlign:'center',fontSize:14,fontWeight:700,color:'#fff'}}>Player — Thầy Văn Anh Guitar</span>
-            <button onClick={onClose} style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:7,color:'rgba(255,255,255,0.7)',fontSize:12,padding:'5px 14px',cursor:'pointer'}}>← Đóng</button>
-          </div>
-          <div style={{flex:1,padding:'28px 20px',maxWidth:720,margin:'0 auto',width:'100%',display:'flex',flexDirection:'column',gap:20}}>
-            <div style={{background:'#FBF8F2',border:'1px solid #E5DED2',borderRadius:14,padding:'16px 20px',display:'flex',alignItems:'center',gap:14,boxShadow:'0 1px 4px rgba(31,41,51,0.06)'}}>
-              <div style={{width:44,height:44,background:'#EEF5F0',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>🎸</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:16,fontWeight:700,color:'#1F2933',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{song.title||'Chưa chọn bài'}</div>
-                <div style={{fontSize:12,color:'#5F6B62',marginTop:2}}>{[song.artist,song.tempo&&`${song.tempo} BPM`,song.timeSignature&&`${song.timeSignature}/4`,song.totalBars&&`${song.totalBars} nhịp`].filter(Boolean).join(' · ')}</div>
-              </div>
-              <button onClick={()=>setShowSongList(true)} style={{background:'transparent',border:'1px solid #D4C9B8',borderRadius:8,color:'#5F6B62',fontSize:13,padding:'7px 16px',cursor:'pointer',whiteSpace:'nowrap'}}>Đổi bài</button>
-            </div>
-            <div>
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#9BA89C',marginBottom:12}}>Chọn chế độ luyện tập</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                <div onClick={()=>setPlayMode('metro')} style={{background:'#FBF8F2',border:playMode==='metro'?'2px solid #1B4332':'1px solid #E5DED2',borderRadius:14,padding:'20px',cursor:'pointer',position:'relative',transition:'all 0.15s'}}>
-                  {playMode==='metro'&&<div style={{position:'absolute',top:12,right:12,background:'#1B4332',color:'#fff',fontSize:10,padding:'3px 10px',borderRadius:20}}>Mặc định ✓</div>}
-                  <div style={{width:48,height:48,background:'#1B4332',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,marginBottom:12}}>🎵</div>
-                  <div style={{fontSize:15,fontWeight:700,color:'#1F2933',marginBottom:6}}>Máy đập nhịp</div>
-                  <div style={{fontSize:12,color:'#5F6B62',lineHeight:1.6}}>Luyện với metronome. Tự kiểm soát tốc độ, tập trung vào kỹ thuật.</div>
-                </div>
-                <div onClick={()=>setPlayMode('yt')} style={{background:'#FBF8F2',border:playMode==='yt'?'2px solid #D89B22':'1px solid #E5DED2',borderRadius:14,padding:'20px',cursor:'pointer',position:'relative',transition:'all 0.15s',opacity:!hasYT?0.65:1}}>
-                  {playMode==='yt'&&<div style={{position:'absolute',top:12,right:12,background:'#D89B22',color:'#fff',fontSize:10,padding:'3px 10px',borderRadius:20}}>✓</div>}
-                  <div style={{width:48,height:48,background:'#D89B22',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,marginBottom:12}}>▶</div>
-                  <div style={{fontSize:15,fontWeight:700,color:'#1F2933',marginBottom:6}}>Theo video YouTube</div>
-                  <div style={{fontSize:12,color:'#5F6B62',lineHeight:1.6}}>{hasYT?'Chơi theo nhạc thật. Đã có sync timing.':'Chơi theo nhạc thật. Cần đồng bộ timing từ trang Sync.'}</div>
-                  {!hasYT&&<div style={{marginTop:8,fontSize:11,color:'#92722A',background:'#FDF5E0',borderRadius:6,padding:'5px 10px'}}>⚠ Chưa sync — vào YouTube Sync trước</div>}
-                </div>
-              </div>
-            </div>
-            <div style={{display:'flex',gap:10}}>
-              <button onClick={()=>{setSelecting(false);setShowYoutube(playMode==='yt');}} disabled={playMode==='yt'&&!hasYT} style={{flex:1,background:playMode==='yt'?'#D89B22':'#1B4332',border:'none',borderRadius:12,color:'#fff',fontSize:15,fontWeight:700,padding:'14px',cursor:'pointer',opacity:(playMode==='yt'&&!hasYT)?0.45:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                {playMode==='metro'?'▶ Bắt đầu luyện tập':'▶ Phát theo YouTube'}
-              </button>
-              <button onClick={()=>{window.location.href='/tap';}} style={{background:'transparent',border:'1px solid #D4C9B8',borderRadius:12,color:'#5F6B62',fontSize:14,padding:'14px 20px',cursor:'pointer',display:'flex',alignItems:'center',gap:7,whiteSpace:'nowrap'}}>🥁 Tap nhịp</button>
-            </div>
-          </div>
-        </div>
-        {showSongList&&(<SongList onSelect={(s:RhythmSong)=>{if(onImportSong)onImportSong(s);setShowSongList(false);}} onClose={()=>setShowSongList(false)} isTeacher={false}/>)}
-      </div>
-    );
-  }
+  // ── Header shared ──
+  const HeaderBar = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ background:'#123524', height:50, display:'flex', alignItems:'center', padding:'0 18px', gap:12, flexShrink:0, boxShadow:'0 2px 6px rgba(0,0,0,0.2)' }}>
+      <div style={{ width:26,height:26,background:'#D89B22',borderRadius:5,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,color:'#fff',flexShrink:0 }}>C#</div>
+      {children}
+    </div>
+  );
 
   return (
     <div className="player-overlay">
-      <div className={`player-panel ${fullscreen ? "player-panel--fullscreen" : ""}`}>
+      <div className={`player-panel ${fullscreen ? 'player-panel--fullscreen' : ''}`}>
 
-        {/* Header */}
-        <div className="player-header">
-          <div className="player-song-info">
-            {editingTitle ? (
-              <input
-                className="player-title-input"
-                value={localTitle}
-                onChange={e => setLocalTitle(e.target.value)}
-                onBlur={() => { setEditingTitle(false); onUpdateTitle?.(localTitle); }}
-                onKeyDown={e => { if (e.key === 'Enter') { setEditingTitle(false); onUpdateTitle?.(localTitle); } }}
-                autoFocus
-              />
-            ) : (
-              <span className="player-title" onClick={() => setEditingTitle(true)} title="Click để đổi tên">
-                {localTitle || song.artist || 'Nhập tên bài...'}
-              </span>
-            )}
-            {song.artist && <span className="player-artist">— {song.artist}</span>}
-            <span className="player-meta-chip">{song.tone}</span>
-            <span className="player-meta-chip">{song.tempo} BPM</span>
-            <span className="player-meta-chip">{song.timeSignature}/4</span>
-          </div>
-          <div className="player-header-actions">
-            <button
-              className={`btn ${muteMetronome ? "" : "primary"}`}
-              onClick={() => setMuteMetronome(m => !m)}
-              title={muteMetronome ? "Bật metronome" : "Tắt metronome"}
-            >
-              {muteMetronome ? "🔇" : "🥁"}
-            </button>
-            <input ref={mp3InputRef} type="file" accept="audio/*,video/mp4,audio/mp4,audio/x-m4a,.mp4,.m4a,.mp3,.wav,.aac" style={{ display: 'none' }} onChange={handleMp3Load} />
-            <button className="btn" onClick={() => mp3InputRef.current?.click()}>
-              🎵 {mp3FileName ? mp3FileName.slice(0, 18) + (mp3FileName.length > 18 ? '…' : '') : 'Tải MP3'}
-            </button>
-            {hasMp3 && (
-              <button
-                className={`btn ${showSync ? 'primary' : ''}`}
-                onClick={() => setShowSync(s => !s)}
-              >
-                🎛 {showSync ? 'Ẩn căn nhịp' : 'Căn nhịp'}
-                {calib && !showSync && <span className="calib-ok-dot">✓</span>}
-              </button>
-            )}
-            {calib && (
-              <span className="calib-info-badge">
-                Offset {calib.offset.toFixed(2)}s
-              </span>
-            )}
-            {(song as any).youtubeUrl && (
-              <button
-                className={`btn ${showYoutube ? 'primary' : ''}`}
-                onClick={() => setShowYoutube(v => !v)}
-                title="Xem/ẩn video YouTube"
-              >
-                ▶ {showYoutube ? 'Ẩn YouTube' : 'YouTube'}
-              </button>
-            )}
-            <button
-              className={`btn ${fullscreen ? 'primary' : ''}`}
-              onClick={() => setFullscreen(f => !f)}
-              title="Fullscreen (F)"
-            >
-              {fullscreen ? '⛶ Thoát' : '⛶ Chiếu'}
-            </button>
-            <button className="btn" onClick={onClose} title="Đóng (Esc)">✕ Đóng</button>
-            <button className="btn" onClick={() => setShowSongList(true)} title="Danh sách bài">
-              🎵 Chọn bài
-            </button>
-            {/* Import bài hát */}
-            <label className="btn" style={{ cursor: 'pointer' }} title="Mở file bài hát">
-              📂 Bài hát
-              <input type="file" accept=".json" style={{ display: 'none' }} onChange={e => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                const reader = new FileReader()
-                reader.onload = ev => {
-                  try {
-                    const s = JSON.parse(ev.target?.result as string)
-                    if (onImportSong) onImportSong(s)
-                  } catch {}
-                }
-                reader.readAsText(file)
-              }} />
-            </label>
+        {/* ══ STEP: PICK SONG ══ */}
+        {step === 'pick-song' && (<>
+          <HeaderBar>
+            <span style={{ flex:1, textAlign:'center', fontSize:14, fontWeight:700, color:'#fff' }}>Player — Thầy Văn Anh Guitar</span>
             {extraActions}
-          {/* ── Mode selector ── */}
-          <div style={{ display:'flex', gap:8, alignItems:'center', padding:'8px 0 0' }}>
-            <button
-              onClick={() => setPlayMode('metro')}
-              style={{
-                flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 12px',
-                borderRadius:10, cursor:'pointer',
-                border: playMode==='metro' ? '1.5px solid #1B4332' : '1px solid rgba(255,255,255,0.12)',
-                background: playMode==='metro' ? '#1B4332' : 'rgba(255,255,255,0.06)',
-                color: playMode==='metro' ? '#fff' : 'rgba(255,255,255,0.6)',
-                transition:'all 0.15s',
-              }}>
-              🎵
-              <div style={{ textAlign:'left' }}>
-                <div style={{ fontSize:12, fontWeight:600 }}>Máy đập nhịp</div>
-                <div style={{ fontSize:10, opacity:0.7 }}>Mặc định</div>
+            <button onClick={onClose} style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.14)', borderRadius:7, color:'rgba(255,255,255,0.6)', fontSize:13, padding:'5px 10px', cursor:'pointer' }}>✕</button>
+          </HeaderBar>
+          <div style={{ flex:1, background:'#1C2E22', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:24, padding:'40px 24px', position:'relative', overflow:'hidden' }}>
+            {/* Demo mờ */}
+            <div style={{ position:'absolute', inset:0, pointerEvents:'none', padding:'40px', overflow:'hidden' }}>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', opacity:0.08 }}>
+                {(song.chords||[]).slice(0,20).map((c,i)=>(
+                  <div key={i} style={{ padding:'8px 12px', borderRadius:8, background:'rgba(201,151,0,0.3)', color:'#C99700', fontFamily:'monospace', fontWeight:700, fontSize:14 }}>{c.name}</div>
+                ))}
               </div>
-              {playMode==='metro' && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(255,255,255,0.2)', padding:'2px 8px', borderRadius:20 }}>✓</span>}
-            </button>
-            <button
-              onClick={() => setPlayMode('yt')}
-              style={{
-                flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 12px',
-                borderRadius:10, cursor:'pointer',
-                border: playMode==='yt' ? '1.5px solid #D89B22' : '1px solid rgba(255,255,255,0.12)',
-                background: playMode==='yt' ? 'rgba(216,155,34,0.2)' : 'rgba(255,255,255,0.06)',
-                color: playMode==='yt' ? '#F5C842' : 'rgba(255,255,255,0.6)',
-                transition:'all 0.15s',
-              }}>
-              ▶
-              <div style={{ textAlign:'left' }}>
-                <div style={{ fontSize:12, fontWeight:600 }}>Theo YouTube</div>
-                <div style={{ fontSize:10, opacity:0.7 }}>Nhạc thật</div>
+              <div style={{ marginTop:20, display:'flex', flexWrap:'wrap', gap:8, opacity:0.9 }}>
+                {(song.lyrics||[]).slice(0,12).map((l,i)=>(
+                  <span key={i} style={{ fontSize:22, color:'#8DC470', fontWeight:700 }}>{l.text}</span>
+                ))}
               </div>
-              {playMode==='yt' && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(216,155,34,0.3)', padding:'2px 8px', borderRadius:20 }}>✓</span>}
-            </button>
-          </div>
-          {playMode==='yt' && !(song as any).youtubeUrl && (
-            <div style={{ margin:'6px 0 0', background:'rgba(237,184,52,0.1)', border:'1px solid rgba(237,184,52,0.3)', borderRadius:8, padding:'7px 12px', fontSize:11, color:'#F5C842', display:'flex', alignItems:'center', gap:6 }}>
-              ⚠ Bài này chưa có YouTube sync — vào trang <strong>Sync</strong> để đồng bộ trước.
             </div>
-          )}
-          </div>
-        </div>
-
-        {/* Waveform sync — ẩn/hiện */}
-        {showSync && hasMp3 && (
-          <WaveformSync
-            audioBuffer={audioBuffer}
-            duration={mp3Duration || totalDuration}
-            calib={calib}
-            onCalibChange={handleCalibChange}
-            currentTime={currentTime}
-            song={song}
-          />
-        )}
-
-        {/* Playback controls */}
-        <div className="player-controls">
-          <div className="player-transport">
-            <button className="pb-btn" onClick={() => { seekTo(0); setIsPlaying(false); }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="19,20 9,12 19,4" /><line x1="5" y1="4" x2="5" y2="20" />
-              </svg>
-            </button>
-            <button className="pb-btn" onClick={() => seekTo(currentTime - 5)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="11,17 6,12 11,7" /><polyline points="18,17 13,12 18,7" />
-              </svg>
-              <span className="pb-btn-label">5s</span>
-            </button>
-            <button className="pb-btn pb-btn--play" onClick={() => setIsPlaying(p => !p)}>
-              {isPlaying
-                ? <svg viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
-                : <svg viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21" /></svg>
-              }
-            </button>
-            <button className="pb-btn" onClick={() => seekTo(currentTime + 5)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="13,17 18,12 13,7" /><polyline points="6,17 11,12 6,7" />
-              </svg>
-              <span className="pb-btn-label">5s</span>
-            </button>
-          </div>
-
-          <div className="player-progress-group">
-            <span className="pb-time">{fmtTime(currentTime)}</span>
-            <div
-              className="pb-progress-bar"
-              ref={progressRef}
-              onPointerDown={e => handleProgressPtr(e, true)}
-              onPointerMove={e => handleProgressPtr(e, false)}
-              onPointerUp={() => setIsSeeking(false)}
-            >
-              <div className="pb-progress-fill" style={{ width: `${progressFrac * 100}%` }} />
-              <div className="pb-progress-thumb" style={{ left: `${progressFrac * 100}%` }} />
+            <div style={{ position:'relative', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:14 }}>
+              <div style={{ fontSize:15, color:'rgba(255,255,255,0.45)', letterSpacing:0.3 }}>Chọn bài để bắt đầu luyện tập</div>
+              <button onClick={() => setShowSongList(true)} style={{ background:'#D89B22', border:'none', borderRadius:16, color:'#fff', fontSize:18, fontWeight:700, padding:'18px 52px', cursor:'pointer', boxShadow:'0 4px 24px rgba(216,155,34,0.45)', letterSpacing:0.5 }}>
+                📚 Chọn bài
+              </button>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,0.25)' }}>Hoặc chọn từ danh sách bài có sẵn</div>
             </div>
-            <span className="pb-time">{fmtTime(displayDuration)}</span>
+          </div>
+        </>)}
+
+        {/* ══ STEP: PICK MODE ══ */}
+        {step === 'pick-mode' && (<>
+          <HeaderBar>
+            <div style={{ flex:1, minWidth:0, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:14, fontWeight:700, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title}</span>
+              <span className="player-meta-chip">{song.tempo} BPM</span>
+              <span className="player-meta-chip">{song.timeSignature}/4</span>
+            </div>
+            <button onClick={() => setShowSongList(true)} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:7, color:'rgba(255,255,255,0.7)', fontSize:12, padding:'5px 12px', cursor:'pointer', whiteSpace:'nowrap' }}>Đổi bài</button>
+            {extraActions}
+            <button onClick={onClose} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, color:'rgba(255,255,255,0.4)', fontSize:13, padding:'5px 9px', cursor:'pointer' }}>✕</button>
+          </HeaderBar>
+          <div style={{ flex:1, background:'#F5F1E8', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'32px 24px', gap:24 }}>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:'#9BA89C' }}>Chọn chế độ luyện tập</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, width:'100%', maxWidth:560 }}>
+              {/* Metro card */}
+              <div onClick={() => setPlayMode('metro')} style={{ background:'#FBF8F2', border:playMode==='metro'?'2px solid #1B4332':'1px solid #E5DED2', borderRadius:14, padding:'22px 18px', cursor:'pointer', position:'relative', transition:'all 0.15s', boxShadow:playMode==='metro'?'0 0 0 3px rgba(27,67,50,0.1)':'none' }}>
+                {playMode==='metro' && <div style={{ position:'absolute', top:10, right:10, background:'#1B4332', color:'#fff', fontSize:9, padding:'3px 9px', borderRadius:20 }}>Mặc định ✓</div>}
+                <div style={{ width:46, height:46, background:'#1B4332', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, marginBottom:12 }}>🎵</div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#1F2933', marginBottom:6 }}>Máy đập nhịp</div>
+                <div style={{ fontSize:12, color:'#5F6B62', lineHeight:1.6 }}>Luyện với metronome. Tự kiểm soát tốc độ, tập trung vào kỹ thuật.</div>
+              </div>
+              {/* YouTube card */}
+              <div onClick={() => { if (hasYT) setPlayMode('yt'); }} style={{ background:'#FBF8F2', border:playMode==='yt'?'2px solid #D89B22':'1px solid #E5DED2', borderRadius:14, padding:'22px 18px', cursor:hasYT?'pointer':'not-allowed', position:'relative', transition:'all 0.15s', opacity:!hasYT?0.6:1, boxShadow:playMode==='yt'?'0 0 0 3px rgba(216,155,34,0.15)':'none' }}>
+                {playMode==='yt' && <div style={{ position:'absolute', top:10, right:10, background:'#D89B22', color:'#fff', fontSize:9, padding:'3px 9px', borderRadius:20 }}>✓</div>}
+                <div style={{ width:46, height:46, background:'#D89B22', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, marginBottom:12 }}>▶</div>
+                <div style={{ fontSize:15, fontWeight:700, color:'#1F2933', marginBottom:6 }}>Theo video YouTube</div>
+                <div style={{ fontSize:12, color:'#5F6B62', lineHeight:1.6 }}>{hasYT ? 'Chơi theo nhạc thật. Đã có YouTube sync.' : 'Chơi theo nhạc thật. Cần sync timing trước.'}</div>
+                {!hasYT && <div style={{ marginTop:8, fontSize:11, color:'#92722A', background:'#FDF5E0', borderRadius:6, padding:'5px 10px' }}>⚠ Vào YouTube Sync để đồng bộ</div>}
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:10, width:'100%', maxWidth:560 }}>
+              <button onClick={() => startPlaying(playMode)} disabled={playMode==='yt'&&!hasYT}
+                style={{ flex:1, background:playMode==='yt'?'#D89B22':'#1B4332', border:'none', borderRadius:12, color:'#fff', fontSize:15, fontWeight:700, padding:'15px', cursor:'pointer', opacity:playMode==='yt'&&!hasYT?0.45:1, boxShadow:playMode==='metro'?'0 3px 12px rgba(27,67,50,0.35)':'0 3px 12px rgba(216,155,34,0.35)' }}>
+                {playMode==='metro' ? '▶ Bắt đầu luyện tập' : '▶ Phát theo YouTube'}
+              </button>
+              <button onClick={() => { window.location.href = '/tap'; }} style={{ background:'transparent', border:'1px solid #D4C9B8', borderRadius:12, color:'#5F6B62', fontSize:14, padding:'15px 20px', cursor:'pointer', whiteSpace:'nowrap' }}>
+                🥁 Tap nhịp
+              </button>
+            </div>
+          </div>
+        </>)}
+
+        {/* ══ STEP: PLAYING ══ */}
+        {step === 'playing' && (<>
+          {/* Compact header with controls */}
+          <div style={{ background:'#14532D', height:52, display:'flex', alignItems:'center', padding:'0 14px', gap:8, flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ width:24,height:24,background:'#D89B22',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:11,color:'#fff',flexShrink:0 }}>C#</div>
+            {/* Song */}
+            <span style={{ fontSize:13, fontWeight:700, color:'#F4F1E8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:160, flex:'0 1 160px' }}>{song.title}</span>
+            <span className="player-meta-chip" style={{ flexShrink:0 }}>{song.tempo}</span>
+            {/* Play controls */}
+            <button onClick={() => seekTo(Math.max(0, currentTimeRef.current - 5))} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:5, color:'rgba(255,255,255,0.7)', fontSize:11, padding:'4px 7px', cursor:'pointer', flexShrink:0 }}>◀5s</button>
+            <button onClick={togglePlay} style={{ width:34,height:34,borderRadius:'50%',background:isPlaying?'rgba(255,255,255,0.15)':'#A7D88A',border:'none',color:isPlaying?'#fff':'#14532D',fontSize:15,cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center' }}>
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+            <button onClick={() => seekTo(Math.min(totalDur, currentTimeRef.current + 5))} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:5, color:'rgba(255,255,255,0.7)', fontSize:11, padding:'4px 7px', cursor:'pointer', flexShrink:0 }}>5s▶</button>
+            {/* Progress */}
+            <div style={{ flex:1, position:'relative', height:4, background:'rgba(255,255,255,0.15)', borderRadius:2, cursor:'pointer', minWidth:40 }}
+              onClick={e => { const r = e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
+              <div style={{ height:'100%', width:`${pct}%`, background:'#A7D88A', borderRadius:2, transition:'width 0.05s linear' }}/>
+            </div>
+            <span style={{ fontSize:10, color:'rgba(255,255,255,0.45)', fontFamily:'monospace', flexShrink:0, whiteSpace:'nowrap' }}>{fmtTime(currentTime)}/{fmtTime(totalDur)}</span>
+            {/* Speed */}
+            <div style={{ display:'flex', border:'1px solid rgba(255,255,255,0.12)', borderRadius:5, overflow:'hidden', flexShrink:0 }}>
+              {[0.75,1,1.25].map(s => (
+                <button key={s} onClick={() => setSpeed(s)} style={{ background:speed===s?'rgba(255,255,255,0.18)':'transparent', border:'none', color:speed===s?'#fff':'rgba(255,255,255,0.45)', fontSize:10, padding:'3px 7px', cursor:'pointer', fontFamily:'monospace' }}>
+                  {s===0.75?'75%':s===1?'100%':'125%'}
+                </button>
+              ))}
+            </div>
+            {/* Metro mute */}
+            {playMode === 'metro' && (
+              <button onClick={() => setMuteMetronome(v=>!v)} style={{ background:muteMetronome?'rgba(255,80,80,0.2)':'rgba(255,255,255,0.08)', border:'none', borderRadius:5, color:muteMetronome?'#ff8080':'rgba(255,255,255,0.55)', fontSize:12, padding:'4px 7px', cursor:'pointer', flexShrink:0 }}>🎵</button>
+            )}
+            {/* Nav */}
+            <button onClick={() => { setStep('pick-mode'); setIsPlaying(false); isPlayingRef.current=false; stopMetronome(); ytPlayerRef.current?.pauseVideo?.(); }} style={{ background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:5, color:'rgba(255,255,255,0.55)', fontSize:10, padding:'4px 8px', cursor:'pointer', flexShrink:0, whiteSpace:'nowrap' }}>Đổi</button>
+            {extraActions}
+            <button onClick={onClose} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:5, color:'rgba(255,255,255,0.4)', fontSize:13, padding:'4px 7px', cursor:'pointer', flexShrink:0 }}>✕</button>
           </div>
 
-          <div className="player-right-controls">
-            {hasMp3 && (
-              <div className="pb-volume">
-                <span style={{ fontSize: 12 }}>🔈</span>
-                <input type="range" className="pb-vol-slider" min={0} max={1} step={0.01}
-                  value={volume} onChange={e => setVolume(parseFloat(e.target.value))} />
-                <span style={{ fontSize: 12 }}>🔊</span>
+          {/* Beat row */}
+          <div className="now-arrow-wrap"><div className="now-arrow" style={{ left:'30%' }}/></div>
+          <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
+            <div className="scroll-now-line scroll-now-line--beat" style={{ left:beatNowX }}/>
+            <div className="player-scroll-track" style={{ width:totalDur*PPS+beatContainerW, transform:`translateX(${-scrollOff}px)` }}>
+              {Array.from({length:song.totalBars*song.timeSignature},(_,i) => {
+                const bib = i % song.timeSignature;
+                const bt = i*beatDur, nb=(i+1)*beatDur;
+                const w=(nb-bt)*PPS;
+                const xBeat=beatNowX+bt*PPS;
+                return(
+                  <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
+                    style={{ left:xBeat, width:w-2, transform:'translateX(-50%)' }}>
+                    {bib===0 && <span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
+                    <span className="tl-beat-num">{bib+1}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Lyric + YT split */}
+          <div style={{ display:'flex', flex:1, overflow:'hidden', minHeight:0 }}>
+            <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{ flex:1 }}>
+              <div className="scroll-now-line" style={{ left:'30%' }}/>
+              <div className="player-scroll-track" style={{ width:trackW, transform:`translateX(${-scrollOff}px)` }}>
+                {(()=>{
+                  const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
+                  return sc.map((c,ci)=>{
+                    const cx=nowX+c.time*PPS;
+                    const nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
+                    const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
+                    return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}><div className={`tl-chord${active?' active':''}`}>{c.name}</div></div>);
+                  });
+                })()}
+                {(song.lyrics??[]).map((l,i)=>{
+                  const lx=nowX+l.time*PPS;
+                  const nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
+                  const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
+                  const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
+                  return(
+                    <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
+                      <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`} style={{color:active?'#10B981':'#E2E8F0',fontSize:active?'22px':'20px',fontWeight:active?800:700}}>{l.text}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
+            </div>
+            {/* YouTube panel */}
+            {playMode==='yt' && hasYT && (
+              <div style={{ width:'34%', flexShrink:0, background:'#0A0E1A', borderLeft:'1px solid #1E2533', display:'flex', flexDirection:'column' }}>
+                <div style={{ padding:'5px 10px', background:'#0D1117', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                  <span style={{ fontSize:9, color:'#6B7280', flex:1 }}>▶ YT · offset {((song as any).youtubeOffset??0).toFixed(1)}s</span>
+                  {!ytReady && <span style={{ fontSize:9, color:'#4B5563' }}>Đang kết nối...</span>}
+                  {ytReady && <button style={{ fontSize:9, padding:'2px 6px', borderRadius:3, border:'1px solid #374151', background:'none', color:'#9CA3AF', cursor:'pointer' }}
+                    onClick={() => { const o=(song as any).youtubeOffset??0; ytPlayerRef.current?.seekTo(o+currentTimeRef.current,true); }}>Sync</button>}
+                </div>
+                <div id="yt-player-frame" style={{ flex:1, minHeight:0 }}/>
               </div>
             )}
-            <div className="pb-speeds">
-              {speeds.map(s => (
-                <button key={s} className={`pb-speed-btn ${speed === s ? 'active' : ''}`}
-                  onClick={() => { const wp = isPlaying; setIsPlaying(false); setSpeed(s); if (wp) setTimeout(() => setIsPlaying(true), 30); }}>
-                  {s === 1 ? '100%' : s === 0.5 ? '50%' : s === 0.75 ? '75%' : '125%'}
+          </div>
+
+          {/* Recording */}
+          <div style={{ padding:'9px 16px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:7 }}>
+              <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#8A7A5A' }}>Ghi lại buổi tập</span>
+              <span style={{ fontSize:9, background:'#E8DFD0', color:'#8A7A5A', padding:'2px 7px', borderRadius:20 }}>🔒 Lớp Hành Trình</span>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+              {[['🎙','Ghi âm','Thu buổi chơi'],['📹','Quay video','Quay lại để xem'],['📤','Nộp bài','Gửi thầy chấm']].map(([ic,tt,sub])=>(
+                <button key={tt} disabled style={{ background:'#FAF7F0', border:'1px solid #C8B898', borderRadius:8, padding:'7px 6px', display:'flex', flexDirection:'column', alignItems:'center', gap:3, cursor:'not-allowed', opacity:0.55 }}>
+                  <span style={{fontSize:15}}>{ic}</span>
+                  <span style={{fontSize:10,color:'#5A4A30',fontWeight:500}}>{tt}</span>
+                  <span style={{fontSize:9,color:'#8A7A5A'}}>{sub}</span>
                 </button>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Spacer đẩy nội dung xuống 25vh */}
+          <div className="player-hint">Space = Play/Pause · ← → = ±5s · Esc = Đóng</div>
+        </>)}
 
+      </div>
 
-        {/* ── Mode selector — cream bar ── */}
-        <div style={{
-          display:'flex', alignItems:'center', gap:8,
-          padding:'8px 16px',
-          background:'#F0E8D8',
-          borderBottom:'1px solid #D8C8A8',
-          flexShrink:0,
-        }}>
-          <span style={{fontSize:10,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',color:'#8A7A5A',whiteSpace:'nowrap'}}>Chế độ</span>
-          <button onClick={()=>setPlayMode('metro')} style={{
-            display:'flex',alignItems:'center',gap:6,padding:'6px 14px',
-            borderRadius:8,cursor:'pointer',transition:'all 0.15s',
-            border: playMode==='metro'?'1.5px solid #14532D':'1px solid #C8B898',
-            background: playMode==='metro'?'#14532D':'#FAF7F0',
-            color: playMode==='metro'?'#fff':'#5A4A30',
-            fontSize:12,fontWeight:600,
-          }}>🎵 Máy đập nhịp {playMode==='metro'&&<span style={{fontSize:9,opacity:0.7}}>✓</span>}</button>
-          <button onClick={()=>setPlayMode('yt')} style={{
-            display:'flex',alignItems:'center',gap:6,padding:'6px 14px',
-            borderRadius:8,cursor:'pointer',transition:'all 0.15s',
-            border: playMode==='yt'?'1.5px solid #D89B22':'1px solid #C8B898',
-            background: playMode==='yt'?'rgba(216,155,34,0.12)':'#FAF7F0',
-            color: playMode==='yt'?'#8B5E0A':'#5A4A30',
-            fontSize:12,fontWeight:600,
-          }}>▶ Theo YouTube {playMode==='yt'&&<span style={{fontSize:9,opacity:0.7}}>✓</span>}</button>
-          {playMode==='yt' && !(song as any).youtubeUrl && (
-            <span style={{fontSize:11,color:'#8B5E0A',background:'rgba(237,184,52,0.15)',border:'1px solid rgba(237,184,52,0.35)',borderRadius:6,padding:'3px 10px',display:'flex',alignItems:'center',gap:5}}>
-              ⚠ Chưa sync — vào <strong>YouTube Sync</strong> trước
-            </span>
-          )}
-        </div>
-        <div className="player-scroll-spacer" />
-
-        {/* Mũi tên chỉ vị trí hiện tại */}
-        <div className="now-arrow-wrap">
-          <div className="now-arrow" style={{ left: "30%" }} />
-        </div>
-
-        {/* ── BEAT SCROLL AREA (hàng trên — nhịp + phách) ── */}
-        <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
-          <div className="scroll-now-line scroll-now-line--beat" style={{ left: beatNowLineX }} />
-          <div
-            className="player-scroll-track"
-            style={{ width: displayDuration * effectivePps + beatContainerW, transform: `translateX(${-scrollOffset}px)` }}
-          >
-            {/* Mỗi phách = 1 ô */}
-            {Array.from({ length: song.totalBars * song.timeSignature }, (_, i) => {
-              const beatInBar = i % song.timeSignature;
-              const mp3BeatTime = effTime(i * beatDur);
-              const mp3NextBeat = effTime((i + 1) * beatDur);
-              const w = (mp3NextBeat - mp3BeatTime) * effectivePps;
-              // tâm số phách = đúng vị trí thời điểm phách
-              const xBeat = beatNowLineX + mp3BeatTime * effectivePps;
-              const isCurrentBeat = activeBeatIdx === i;
-              const isPast = activeBeatIdx > i;
-              const isBar1 = beatInBar === 0;
-              const barNum = Math.floor(i / song.timeSignature) + 1;
-
-              return (
-                <div
-                  key={`beat-${i}`}
-                  className={`tl-beat-cell
-                    ${isBar1 ? 'tl-beat-cell--bar1' : ''}
-                    ${isCurrentBeat ? 'tl-beat-cell--active' : ''}
-                    ${isPast ? 'tl-beat-cell--past' : ''}
-                  `}
-                  style={{ left: xBeat, width: w - 2, transform: 'translateX(-50%)' }}
-                >
-                  {isBar1 && <span className="tl-bar-num">M{barNum}</span>}
-                  <span className="tl-beat-num">{beatInBar + 1}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
-        {/* ── LYRIC SCROLL AREA ── */}
-        <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{flex:1}}>
-          <div className="scroll-now-line" style={{ left: "30%" }} />
-          <div
-            className="player-scroll-track"
-            style={{ width: trackWidth, transform: `translateX(${-scrollOffset}px)` }}
-          >
-            {/* Chord — vẽ độc lập tại đúng vị trí time của chord */}
-            {(() => {
-              const sortedChords = [...(song.chords ?? [])].sort((a, b) => a.time - b.time);
-              return sortedChords.map((c, ci) => {
-              const cx = nowLineX + effTime(c.time) * effectivePps;
-              const nextChordTime = ci + 1 < sortedChords.length
-                ? effTime(sortedChords[ci + 1].time)
-                : effTime(c.time) + barDur * 4;
-              const chordActive = currentTimeRef.current >= effTime(c.time) &&
-                currentTimeRef.current < nextChordTime;
-              return (
-                <div key={c.id} className="scroll-lyric-group" style={{ left: cx }}>
-                  <div className={`tl-chord ${chordActive ? 'active' : ''}`}>
-                    {c.name}
-                  </div>
-                </div>
-              );
-              });
-            })()}
-
-            {/* Lyric — vẽ độc lập tại đúng vị trí time của lyric */}
-            {(song.lyrics ?? []).map((l, i) => {
-              const lx = nowLineX + effTime(l.time) * effectivePps;
-              const nextTime = (song.lyrics ?? [])[i + 1]
-                ? effTime(song.lyrics[i + 1].time)
-                : effTime(l.time) + beatDur * 2;
-              const isActive = currentTimeRef.current >= effTime(l.time) && currentTimeRef.current < nextTime;
-              const beatIndex = l.time / beatDur;
-              const isOnBeat = Math.abs(beatIndex - Math.round(beatIndex)) < 0.05;
-              return (
-                <div key={l.id} className="tl-lyric-wrap" style={{ left: lx, position: 'absolute', top: '35%', transform: 'translateX(-50%)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
-                  <div className={`tl-lyric ${isActive ? 'active' : ''} ${isOnBeat ? '' : 'tl-lyric--offbeat'}`} style={{ color: isActive ? '#10B981' : '#E2E8F0', fontSize: isActive ? '22px' : '20px', fontWeight: isActive ? 800 : 700 }}>
-                    {l.text}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {/* Mũi tên ▲ sát chân lời */}
-          <div className="now-arrow--up" style={{ left: '30%', position: 'absolute', top: 'calc(50% + 18px)', transform: 'translateX(-50%)', zIndex: 20 }} />
-        </div>
-        {showYoutube&&(song as any).youtubeUrl&&(
-          <div style={{width:'34%',flexShrink:0,background:'#111',borderLeft:'1px solid #1E2533',display:'flex',flexDirection:'column'}}>
-            <div style={{padding:'6px 10px',background:'#0A0E1A',display:'flex',alignItems:'center',gap:8}}>
-              <span style={{fontSize:10,color:'#6B7280',flex:1}}>▶ YT · {((song as any).youtubeOffset??0).toFixed(1)}s</span>
-              <button style={{fontSize:9,padding:'2px 7px',borderRadius:4,border:'1px solid #374151',background:'none',color:'#9CA3AF',cursor:'pointer'}} onClick={()=>ytSeek(currentTime)}>Sync</button>
-            </div>
-            <div id="yt-player-frame" style={{flex:1,minHeight:0}} />
-          </div>
-        )}
-        </div>
-
-        {/* Hint */}
-
-        {/* ── Ghi lại buổi tập ── */}
-        <div style={{ padding:'12px 16px 4px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-            <span style={{ fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'#8A7A5A' }}>Ghi lại buổi tập</span>
-            <span style={{ fontSize:9, background:'#E8DFD0', color:'#8A7A5A', padding:'2px 8px', borderRadius:20, display:'flex', alignItems:'center', gap:4 }}>
-              🔒 Lớp Hành Trình
-            </span>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
-            {[['🎙', 'Ghi âm', 'Thu buổi chơi'], ['📹', 'Quay video', 'Quay lại để xem'], ['📤', 'Nộp bài', 'Gửi thầy chấm']].map(([icon, title, sub]) => (
-              <button key={title} disabled style={{ background:'#FAF7F0', border:'1px solid #C8B898', borderRadius:10, padding:'10px 8px', display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:'not-allowed', opacity:0.55 }}>
-                <span style={{ fontSize:18 }}>{icon}</span>
-                <span style={{ fontSize:11, color:'#5A4A30', fontWeight:500 }}>{title}</span>
-                <span style={{ fontSize:9, color:'#8A7A5A' }}>{sub}</span>
-              </button>
-            ))}
-          </div>
-          <div style={{ fontSize:10, color:'#8A7A5A', textAlign:'center', padding:'8px 0 4px' }}>Mở khoá khi hoàn thành Lớp Hành Trình</div>
-        </div>
-        <div className="player-hint">
-          {!hasMp3
-            ? 'Tải MP3 để phát nhạc thật · Space = Play/Pause · ← → = ±5s · Esc = Đóng'
-            : calib
-              ? `${mp3FileName} · Đã căn · Space = Play/Pause · ← → = ±5s`
-              : `${mp3FileName} · Nhấn "Căn nhịp" để đồng bộ lời với nhạc`
-          }
-        </div>
       {showSongList && (
         <SongList
-          onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); }}
+          onSelect={(s: RhythmSong) => {
+            if (onImportSong) onImportSong(s);
+            setShowSongList(false);
+            setStep('pick-mode');
+            setIsPlaying(false); isPlayingRef.current = false;
+            setCurrentTime(0); currentTimeRef.current = 0;
+          }}
           onClose={() => setShowSongList(false)}
+          isTeacher={false}
         />
       )}
-      </div>
     </div>
   );
 }
