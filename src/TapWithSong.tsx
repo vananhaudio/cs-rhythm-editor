@@ -27,8 +27,8 @@ const C = {
   bgWoodActive:'#3F7D3A',
 
   // Main area — dark forest
-  bgMain:     '#1C2E22',
-  bgMission:  '#243D2C',
+  bgMain:     '#071A13',
+  bgMission:  '#0A2018',
   bgMissionBorder:'rgba(220,230,210,0.09)',
 
   // Dots
@@ -601,7 +601,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           </div>
 
           {/* PROGRESS + BEAT gộp */}
-          <div style={{ background:'#192C21', borderBottom:`1px solid rgba(220,230,210,0.07)`, padding:'7px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+          <div style={{ background:'#061510', borderBottom:`1px solid rgba(220,230,210,0.07)`, padding:'7px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
             <span style={{ fontSize:10, color:C.textDim, width:30, flexShrink:0 }}>{fmtTime(songTime)}</span>
             <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
               {/* Progress bar */}
