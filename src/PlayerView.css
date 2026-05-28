@@ -439,8 +439,6 @@
 
 .scroll-now-line { display: none; }
 .scroll-now-line--beat { display: none; }
-
- 50%{opacity:1} }
 .player-scroll-area--lyric::before {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(to right, rgba(28,46,34,0.65) 0%, transparent 18%, transparent 82%, rgba(28,46,34,0.65) 100%);
