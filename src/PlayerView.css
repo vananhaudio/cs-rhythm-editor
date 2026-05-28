@@ -465,3 +465,10 @@
 .player-hint { opacity: 0.45; font-size: 9px !important; letter-spacing: 0.06em; }
 .now-arrow { filter: drop-shadow(0 0 4px rgba(141,196,112,0.6)); }
 .now-arrow--up { filter: drop-shadow(0 0 4px rgba(141,196,112,0.6)); }
+
+/* ── Tonal refinement ── */
+.tl-beat-cell--active { border-color: rgba(194,139,26,0.65) !important; box-shadow: 0 0 10px rgba(194,139,26,0.12) !important; }
+.tl-beat-cell--active .tl-beat-num { color: #C28B1A !important; }
+.tl-bar-num { color: #C28B1A !important; }
+.tl-lyric.active { color: #F3F0E8 !important; text-shadow: 0 0 4px rgba(20,83,45,0.10) !important; }
+.player-scroll-area--lyric::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 70% 100% at 30% 50%, transparent 40%, rgba(6,23,19,0.18) 100%); pointer-events:none; z-index:8; }

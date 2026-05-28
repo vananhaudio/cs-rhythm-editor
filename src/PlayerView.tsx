@@ -257,9 +257,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           </div>
           {/* Progress */}
           <div style={{ flex:1, display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ flex:1, height:3, background:'rgba(20,83,45,0.08)', borderRadius:999, cursor:'pointer', position:'relative' }}
+            <div style={{ flex:1, height:4, background:'rgba(20,83,45,0.08)', borderRadius:999, cursor:'pointer', position:'relative' }}
               onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
-              <div style={{ height:'100%', width:`${pct}%`, background:P.green, borderRadius:999, transition:'width 0.05s linear' }}/>
+              <div style={{ height:'100%', width:`${pct}%`, background:'#14532D', borderRadius:999, transition:'width 0.05s linear' }}/>
             </div>
             <span style={{ fontSize:11, color:P.textMuted, fontFamily:'monospace', flexShrink:0, whiteSpace:'nowrap' }}>{fmtTime(currentTime)} / {fmtTime(totalDur)}</span>
           </div>
@@ -342,7 +342,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         <div style={{ flex:1, padding:'12px 20px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
           <div style={{
             flex:1, borderRadius:24, overflow:'hidden',
-            background:P.dark,
+            background:'linear-gradient(to bottom, #071A16 0%, #081E19 35%, #061713 100%)',
             border:'1px solid rgba(255,255,255,0.06)',
             boxShadow:'0 4px 18px rgba(0,0,0,0.08), inset 0 1px rgba(255,255,255,0.03)',
             display:'flex', flexDirection:'column', position:'relative',
@@ -403,20 +403,23 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             </div>
 
 
-            {/* YouTube floating */}
             {playMode==='yt' && hasYT && ytMode!=='focus' && (
               <div onMouseEnter={() => setYtHovered(true)} onMouseLeave={() => setYtHovered(false)}
                 style={{ position:'absolute', right:16, bottom:16, ...ytDims[ytMode],
                   borderRadius:12, overflow:'hidden',
                   opacity:ytOpacity, transition:'opacity 0.3s ease',
-                  zIndex:15, boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
-                  border:'1px solid rgba(255,255,255,0.08)',
+                  zIndex:15,
+                  boxShadow:'0 4px 20px rgba(0,0,0,0.5)',
+                  border:'1px solid rgba(255,255,255,0.06)',
+                  filter:'saturate(0.72) contrast(0.92) brightness(0.92)',
                 }}>
                 <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:2,background:'rgba(0,0,0,0.55)',padding:'4px 8px',display:'flex',alignItems:'center',gap:6 }}>
-                  <span style={{fontSize:9,color:'rgba(255,255,255,0.5)',flex:1}}>YT · {getYtOffset().toFixed(1)}s{!ytReady?' · kết nối...':''}</span>
-                  <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:10,cursor:'pointer'}}>{ytMode==='mini'?'⛶':'▣'}</button>
-                  <button onClick={() => setYtMode('focus')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:12,cursor:'pointer'}}>✕</button>
+                  <span style={{fontSize:9,color:'rgba(255,255,255,0.4)',flex:1}}>YT · {getYtOffset().toFixed(1)}s{!ytReady?' · kết nối...':''}</span>
+                  <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:10,cursor:'pointer'}}>{ytMode==='mini'?'⛶':'▣'}</button>
+                  <button onClick={() => setYtMode('focus')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:12,cursor:'pointer'}}>✕</button>
                 </div>
+                {/* Glass overlay */}
+                <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,0.08)',pointerEvents:'none',zIndex:1 }}/>
                 <div id="yt-player-frame" style={{width:'100%',height:'100%'}}/>
               </div>
             )}
