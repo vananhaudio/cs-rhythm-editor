@@ -281,16 +281,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             ))}
           </div>
 
-          {/* Seek */}
-          <button onClick={() => seekTo(Math.max(0,currentTimeRef.current-5))} style={{ background:'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:'rgba(255,255,255,0.6)',fontSize:11,padding:'5px 8px',cursor:'pointer',flexShrink:0 }}>◀5s</button>
+          <button onClick={() => { seekTo(0); }} style={{ background:'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:'rgba(255,255,255,0.6)',fontSize:13,padding:'5px 10px',cursor:'pointer',flexShrink:0 }} title="Về đầu bài">⏮</button>
 
           {/* Play */}
           <button onClick={togglePlay} disabled={!song.title}
             style={{ width:40,height:40,borderRadius:'50%',background:isPlaying?'rgba(255,255,255,0.15)':(playMode==='yt'?'#D89B22':'#A7D88A'),border:'none',color:isPlaying?'#fff':(playMode==='yt'?'#fff':'#14532D'),fontSize:18,cursor:!song.title?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:!song.title?0.4:1,flexShrink:0,boxShadow:isPlaying?'none':'0 2px 10px rgba(0,0,0,0.3)' }}>
             {isPlaying?'⏸':'▶'}
           </button>
-
-          <button onClick={() => seekTo(Math.min(totalDur,currentTimeRef.current+5))} style={{ background:'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:'rgba(255,255,255,0.6)',fontSize:11,padding:'5px 8px',cursor:'pointer',flexShrink:0 }}>5s▶</button>
 
           {/* Metro mute */}
           {playMode === 'metro' && (
