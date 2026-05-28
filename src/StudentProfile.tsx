@@ -32,20 +32,22 @@ interface TeacherNote {
 }
 
 const T = {
-  bg: '#1C2E22', bgCard: '#243B2A', header: '#14532D',
-  gold: '#C99700', green: '#8DC470', greenDim: '#4A7C59',
-  text: '#E8DFC8', textMuted: '#8A9E88', border: '#2E4A35',
-  danger: '#E07070', warn: '#D4A040',
+  bg: '#EAD7B8', bgCard: '#F5EDD8', bgCardHover: '#FBF5EA',
+  header: '#1B6B3A', gold: '#A07820', goldLight: '#C8A84B',
+  green: '#1B6B3A', greenLight: '#E8F2EC',
+  text: '#2C1F0E', textMuted: '#7A6548', textDim: '#A08B6A',
+  border: '#C8B090', borderLight: '#DDD0B0',
+  danger: '#8B3A1E', warn: '#A07820',
 }
 const LEVEL_LABEL: Record<string, string> = { beginner: 'Mới bắt đầu', elementary: 'Cơ bản', intermediate: 'Trung cấp', advanced: 'Nâng cao' }
-const LEVEL_COLOR: Record<string, string> = { beginner: '#5B8A5F', elementary: '#7DA85A', intermediate: T.gold, advanced: '#D47A30' }
+const LEVEL_COLOR: Record<string, string> = { beginner: '#2E6B40', elementary: '#5A8A2A', intermediate: '#A07820', advanced: '#8B3A1E' }
 const CATEGORY_LABEL: Record<string, string> = { rhythm: '🥁 Nhịp', chords: '🎸 Hợp âm', technique: '🖐 Kỹ thuật', theory: '📖 Lý thuyết', ear_training: '👂 Thẩm âm' }
 const MOOD_EMOJI = ['', '😟', '😕', '😐', '🙂', '😄']
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  pending:   { bg: '#2A3A28', color: T.textMuted, label: 'Chưa nộp' },
-  submitted: { bg: '#1E3A4A', color: '#7EC8E8',   label: 'Đã nộp' },
-  done:      { bg: '#1E3A28', color: T.green,      label: 'Hoàn thành' },
-  skipped:   { bg: '#3A2828', color: T.danger,     label: 'Bỏ qua' },
+  pending:   { bg: '#F0E4C8', color: '#7A6548', label: 'Chưa nộp' },
+  submitted: { bg: '#D8EAF0', color: '#1A5A7A', label: 'Đã nộp' },
+  done:      { bg: '#D8EDD8', color: '#1B6B3A', label: 'Hoàn thành' },
+  skipped:   { bg: '#F0D8D0', color: '#8B3A1E', label: 'Bỏ qua' },
 }
 function fmtDate(s: string | null) {
   if (!s) return '—'
@@ -245,7 +247,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                     {asgn.due_date && <div style={{ fontSize: 12, color: T.textMuted }}>📅 Hạn nộp: {fmtDate(asgn.due_date)}</div>}
                     {asgn.submission_url && <a href={asgn.submission_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#7EC8E8', display: 'inline-block', marginTop: 4 }}>🎥 Xem bài nộp</a>}
                     {asgn.teacher_feedback && <div style={{ fontSize: 13, color: T.text, background: T.bg, borderRadius: 6, padding: '6px 10px', marginTop: 6, borderLeft: `3px solid ${T.green}` }}><span style={{ color: T.textMuted, fontSize: 11 }}>Nhận xét giáo viên: </span>{asgn.teacher_feedback}</div>}
-                    {asgn.ai_feedback && <div style={{ fontSize: 13, color: T.text, background: '#1A2E3A', borderRadius: 6, padding: '6px 10px', marginTop: 6, borderLeft: '3px solid #7EC8E8' }}><span style={{ color: '#7EC8E8', fontSize: 11 }}>🤖 AI nhận xét: </span>{asgn.ai_feedback}</div>}
+                    {asgn.ai_feedback && <div style={{ fontSize: 13, color: T.text, background: '#D8EAF0', borderRadius: 6, padding: '6px 10px', marginTop: 6, borderLeft: '3px solid #1A5A7A' }}><span style={{ color: '#1A5A7A', fontSize: 11 }}>🤖 AI nhận xét: </span>{asgn.ai_feedback}</div>}
                   </div>
                 )
               })}
@@ -268,7 +270,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                     <div style={{ fontSize: 13, color: T.text, lineHeight: 1.6 }}>{ev.summary}</div>
                     {ev.tags && ev.tags.length > 0 && (
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
-                        {ev.tags.map(tag => <span key={tag} style={{ fontSize: 11, background: '#1E3A28', color: T.green, borderRadius: 4, padding: '2px 7px' }}>#{tag}</span>)}
+                        {ev.tags.map(tag => <span key={tag} style={{ fontSize: 11, background: '#D8EDD8', color: '#1B6B3A', borderRadius: 4, padding: '2px 7px' }}>#{tag}</span>)}
                       </div>
                     )}
                   </div>

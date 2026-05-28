@@ -12,13 +12,16 @@ interface Student {
 }
 
 const T = {
-  bg: '#1C2E22', bgCard: '#243B2A', header: '#14532D',
-  gold: '#C99700', green: '#8DC470', text: '#E8DFC8',
-  textMuted: '#8A9E88', border: '#2E4A35', danger: '#E07070',
+  bg: '#EAD7B8', bgCard: '#F5EDD8', bgCardHover: '#FBF5EA',
+  header: '#1B6B3A', gold: '#A07820', goldLight: '#C8A84B',
+  green: '#1B6B3A', greenLight: '#E8F2EC',
+  text: '#2C1F0E', textMuted: '#7A6548', textDim: '#A08B6A',
+  border: '#C8B090', borderLight: '#DDD0B0',
+  danger: '#8B3A1E', warn: '#A07820',
 }
 const LEVEL_COLOR: Record<string, string> = {
-  beginner: '#5B8A5F', elementary: '#7DA85A',
-  intermediate: '#C99700', advanced: '#D47A30',
+  beginner: '#2E6B40', elementary: '#5A8A2A',
+  intermediate: '#A07820', advanced: '#8B3A1E',
 }
 const LEVEL_LABEL: Record<string, string> = {
   beginner: 'Mới bắt đầu', elementary: 'Cơ bản',
@@ -84,12 +87,12 @@ export default function StudentList({ onSelect }: Props) {
             onChange={e => setSearch(e.target.value)}
             placeholder="🔍 Tìm tên, email, số điện thoại..."
             style={{
-              flex: 1, minWidth: 200, background: '#243B2A', border: `1px solid ${T.border}`,
+              flex: 1, minWidth: 200, background: T.bgCard, border: `1px solid ${T.border}`,
               borderRadius: 8, color: T.text, padding: '9px 14px', fontSize: 14, outline: 'none',
             }}
           />
           <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)} style={{
-            background: '#243B2A', border: `1px solid ${T.border}`, borderRadius: 8,
+            background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 8,
             color: T.text, padding: '9px 14px', fontSize: 13, cursor: 'pointer',
           }}>
             <option value="all">Tất cả trình độ</option>
@@ -99,7 +102,7 @@ export default function StudentList({ onSelect }: Props) {
             <option value="advanced">Nâng cao</option>
           </select>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{
-            background: '#243B2A', border: `1px solid ${T.border}`, borderRadius: 8,
+            background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 8,
             color: T.text, padding: '9px 14px', fontSize: 13, cursor: 'pointer',
           }}>
             <option value="all">Tất cả trạng thái</option>
@@ -122,7 +125,7 @@ export default function StudentList({ onSelect }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
             {filtered.map(s => (
               <div key={s.id} onClick={() => onSelect(s.id)} style={{
-                background: '#243B2A', border: `1px solid ${T.border}`, borderRadius: 12,
+                background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12,
                 padding: '14px 16px', cursor: 'pointer', transition: 'all 0.15s',
               }}
                 onMouseEnter={e => (e.currentTarget.style.borderColor = T.gold)}
