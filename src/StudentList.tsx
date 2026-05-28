@@ -134,7 +134,7 @@ export default function StudentList({ onSelect }: Props) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
                     width: 42, height: 42, borderRadius: '50%', background: T.header,
-                    border: `2px solid ${s.level ? LEVEL_COLOR[s.level] : T.border}`,
+                    border: `1.5px solid ${s.level ? LEVEL_COLOR[s.level] : T.border}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 18, flexShrink: 0,
                   }}>🎸</div>
