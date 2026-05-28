@@ -19,8 +19,8 @@ const P = {
   greenHover: 'rgba(20,83,45,0.10)',
   greenBtn: 'rgba(20,83,45,0.05)',
   greenBorder: '1px solid rgba(20,83,45,0.10)',
-  dark:    '#10261F',
-  darkDeep:'#0F221C',
+  dark:    '#091812',
+  darkDeep:'#071410',
   gold:    '#C99700',
   text:    '#2A2A1E',
   textMuted: '#7A7060',
@@ -55,8 +55,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const [activeBeatIdx, setActiveBeatIdx] = useState(-1);
   const [containerW, setContainerW]       = useState(900);
   const [beatContainerW, setBeatContainerW] = useState(900);
-  const [ytOffsetAdj, setYtOffsetAdj]     = useState(0);
-  const [recentSongs, setRecentSongs]     = useState<{title:string;artist?:string}[]>([]);
+  const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
 
   const ytPlayerRef  = useRef<any>(null);
   const ytReadyRef   = useRef(false);
@@ -80,15 +79,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
   useEffect(() => { muteRef.current = muteMetronome; }, [muteMetronome]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
-
-  // Track recent songs
-  useEffect(() => {
-    if (!song.title) return;
-    setRecentSongs(prev => {
-      const filtered = prev.filter(s => s.title !== song.title);
-      return [{ title: song.title, artist: song.artist }, ...filtered].slice(0, 6);
-    });
-  }, [song.title]);
 
   useEffect(() => {
     setIsPlaying(false); isPlayingRef.current = false;
@@ -252,66 +242,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   return (
     <div style={{ display:'flex', height:'100vh', background:P.paper, fontFamily:"'Inter','Segoe UI',sans-serif", overflow:'hidden' }}>
 
-      {/* ══ SIDEBAR ══ */}
-      <aside style={{ width:220, flexShrink:0, background:P.paper, borderRight:`1px solid ${P.paperDark}`, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {/* Logo */}
-        <div style={{ padding:'20px 20px 16px', borderBottom:`1px solid rgba(42,42,30,0.08)` }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ width:36, height:36, background:P.green, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:800, fontSize:14, letterSpacing:-0.5 }}>C#</div>
-            <div>
-              <div style={{ fontSize:13, fontWeight:700, color:P.text, lineHeight:1.2 }}>Văn Anh</div>
-              <div style={{ fontSize:10, color:P.textMuted }}>Guitar Studio</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div style={{ padding:'12px 14px 8px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, background:P.paperSurface, border:`1px solid rgba(42,42,30,0.1)`, borderRadius:8, padding:'7px 10px' }}>
-            <span style={{ fontSize:12, color:P.textMuted }}>🔍</span>
-            <input placeholder="Tìm bài hát..." onClick={() => setShowSongList(true)} readOnly
-              style={{ background:'none', border:'none', outline:'none', fontSize:12, color:P.text, width:'100%', cursor:'pointer' }}/>
-          </div>
-        </div>
-
-        {/* Recent */}
-        <div style={{ flex:1, overflow:'auto', padding:'8px 0' }}>
-          <div style={{ padding:'6px 16px 4px', fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:P.textDim }}>Gần đây</div>
-          {recentSongs.length === 0 && (
-            <div style={{ padding:'10px 16px', fontSize:11, color:P.textDim }}>Chưa có bài nào</div>
-          )}
-          {recentSongs.map((s, i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 16px', background: song.title===s.title ? 'rgba(20,83,45,0.08)' : 'transparent', cursor:'pointer', transition:'background 0.1s' }}
-              onMouseEnter={e => { if (song.title!==s.title) (e.currentTarget as HTMLElement).style.background='rgba(20,83,45,0.04)'; }}
-              onMouseLeave={e => { if (song.title!==s.title) (e.currentTarget as HTMLElement).style.background='transparent'; }}>
-              <div style={{ minWidth:0 }}>
-                <div style={{ fontSize:12, fontWeight:500, color:P.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.title}</div>
-                {s.artist && <div style={{ fontSize:10, color:P.textMuted }}>{s.artist}</div>}
-              </div>
-              {song.title===s.title && <div style={{ width:6, height:6, borderRadius:'50%', background:P.green, flexShrink:0, marginLeft:6 }}/>}
-            </div>
-          ))}
-
-          {/* Kho bài */}
-          <div style={{ padding:'16px 16px 4px', fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:P.textDim }}>Kho bài hát</div>
-          <div style={{ padding:'7px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
-            onClick={() => setShowSongList(true)}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background='rgba(20,83,45,0.04)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background='transparent'; }}>
-            <span style={{ fontSize:13 }}>🎸</span>
-            <span style={{ fontSize:12, color:P.text }}>Chọn bài...</span>
-          </div>
-        </div>
-
-        {/* Profile */}
-        <div style={{ padding:'12px 16px', borderTop:`1px solid rgba(42,42,30,0.08)`, display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(20,83,45,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}>👤</div>
-          <div style={{ fontSize:11, color:P.textMuted }}>Thầy Văn Anh</div>
-          <button onClick={onClose} style={{ marginLeft:'auto', background:'none', border:'none', color:P.textDim, fontSize:16, cursor:'pointer', lineHeight:1 }} title="Đóng">✕</button>
-        </div>
-      </aside>
-
-      {/* ══ MAIN COLUMN ══ */}
+      {/* ══ MAIN COLUMN — no sidebar ══ */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
         {/* ── TOP BAR ── */}
@@ -406,7 +337,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ── PRACTICE AREA ── */}
-        <div style={{ flex:1, padding:'16px 20px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        <div style={{ flex:1, padding:'12px 20px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
           <div style={{
             flex:1, borderRadius:24, overflow:'hidden',
             background:P.dark,
@@ -416,8 +347,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           }}>
 
             {/* Beat row */}
-            <div className="now-arrow-wrap" style={{ background:'#0F221C' }}><div className="now-arrow" style={{left:'30%'}}/></div>
-            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef} style={{ background:'#0F221C' }}>
+            <div className="now-arrow-wrap" style={{ background:'#071410' }}><div className="now-arrow" style={{left:'30%'}}/></div>
+            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef} style={{ background:'#071410' }}>
               <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
               <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
                 {Array.from({length:song.totalBars*song.timeSignature},(_,i)=>{
