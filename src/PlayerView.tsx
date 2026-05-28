@@ -292,6 +292,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [isPlaying, setIsPlaying] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(song.title || '');
+  useEffect(() => { setSelecting(true); setPlayMode('metro'); }, [song.title]);
   const [currentTime, setCurrentTime] = useState(0);
   const [mp3FileName, setMp3FileName] = useState<string | null>(null);
   const [mp3Duration, setMp3Duration] = useState(0);
@@ -302,6 +303,7 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [showSongList, setShowSongList] = useState(false);
   const [showYoutube, setShowYoutube] = useState(false);
   const [playMode, setPlayMode] = useState<'metro'|'yt'>('metro');
+  const [selecting, setSelecting] = useState(true);
   const ytPlayerRef = useRef<any>(null);
   const ytReadyRef = useRef(false);
   const ytSyncRef = useRef(false);
@@ -654,6 +656,57 @@ function lsLoadSong(): RhythmSong | null {
   const speeds = [0.5, 0.75, 1, 1.25];
   const hasMp3 = !!mp3FileName;
 
+
+  if (selecting) {
+    const hasYT = !!(song as any).youtubeUrl;
+    return (
+      <div className="player-overlay">
+        <div style={{width:'100%',height:'100%',background:'#F5F1E8',display:'flex',flexDirection:'column',overflow:'auto'}}>
+          <div style={{background:'#123524',height:50,display:'flex',alignItems:'center',padding:'0 20px',gap:14,flexShrink:0}}>
+            <div style={{width:28,height:28,background:'#D89B22',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,color:'#fff',flexShrink:0}}>C#</div>
+            <span style={{flex:1,textAlign:'center',fontSize:14,fontWeight:700,color:'#fff'}}>Player — Thầy Văn Anh Guitar</span>
+            <button onClick={onClose} style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:7,color:'rgba(255,255,255,0.7)',fontSize:12,padding:'5px 14px',cursor:'pointer'}}>← Đóng</button>
+          </div>
+          <div style={{flex:1,padding:'28px 20px',maxWidth:720,margin:'0 auto',width:'100%',display:'flex',flexDirection:'column',gap:20}}>
+            <div style={{background:'#FBF8F2',border:'1px solid #E5DED2',borderRadius:14,padding:'16px 20px',display:'flex',alignItems:'center',gap:14,boxShadow:'0 1px 4px rgba(31,41,51,0.06)'}}>
+              <div style={{width:44,height:44,background:'#EEF5F0',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>🎸</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:16,fontWeight:700,color:'#1F2933',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{song.title||'Chưa chọn bài'}</div>
+                <div style={{fontSize:12,color:'#5F6B62',marginTop:2}}>{[song.artist,song.tempo&&`${song.tempo} BPM`,song.timeSignature&&`${song.timeSignature}/4`,song.totalBars&&`${song.totalBars} nhịp`].filter(Boolean).join(' · ')}</div>
+              </div>
+              <button onClick={()=>setShowSongList(true)} style={{background:'transparent',border:'1px solid #D4C9B8',borderRadius:8,color:'#5F6B62',fontSize:13,padding:'7px 16px',cursor:'pointer',whiteSpace:'nowrap'}}>Đổi bài</button>
+            </div>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#9BA89C',marginBottom:12}}>Chọn chế độ luyện tập</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div onClick={()=>setPlayMode('metro')} style={{background:'#FBF8F2',border:playMode==='metro'?'2px solid #1B4332':'1px solid #E5DED2',borderRadius:14,padding:'20px',cursor:'pointer',position:'relative',transition:'all 0.15s'}}>
+                  {playMode==='metro'&&<div style={{position:'absolute',top:12,right:12,background:'#1B4332',color:'#fff',fontSize:10,padding:'3px 10px',borderRadius:20}}>Mặc định ✓</div>}
+                  <div style={{width:48,height:48,background:'#1B4332',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,marginBottom:12}}>🎵</div>
+                  <div style={{fontSize:15,fontWeight:700,color:'#1F2933',marginBottom:6}}>Máy đập nhịp</div>
+                  <div style={{fontSize:12,color:'#5F6B62',lineHeight:1.6}}>Luyện với metronome. Tự kiểm soát tốc độ, tập trung vào kỹ thuật.</div>
+                </div>
+                <div onClick={()=>setPlayMode('yt')} style={{background:'#FBF8F2',border:playMode==='yt'?'2px solid #D89B22':'1px solid #E5DED2',borderRadius:14,padding:'20px',cursor:'pointer',position:'relative',transition:'all 0.15s',opacity:!hasYT?0.65:1}}>
+                  {playMode==='yt'&&<div style={{position:'absolute',top:12,right:12,background:'#D89B22',color:'#fff',fontSize:10,padding:'3px 10px',borderRadius:20}}>✓</div>}
+                  <div style={{width:48,height:48,background:'#D89B22',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,marginBottom:12}}>▶</div>
+                  <div style={{fontSize:15,fontWeight:700,color:'#1F2933',marginBottom:6}}>Theo video YouTube</div>
+                  <div style={{fontSize:12,color:'#5F6B62',lineHeight:1.6}}>{hasYT?'Chơi theo nhạc thật. Đã có sync timing.':'Chơi theo nhạc thật. Cần đồng bộ timing từ trang Sync.'}</div>
+                  {!hasYT&&<div style={{marginTop:8,fontSize:11,color:'#92722A',background:'#FDF5E0',borderRadius:6,padding:'5px 10px'}}>⚠ Chưa sync — vào YouTube Sync trước</div>}
+                </div>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={()=>{setSelecting(false);setShowYoutube(playMode==='yt');}} disabled={playMode==='yt'&&!hasYT} style={{flex:1,background:playMode==='yt'?'#D89B22':'#1B4332',border:'none',borderRadius:12,color:'#fff',fontSize:15,fontWeight:700,padding:'14px',cursor:'pointer',opacity:(playMode==='yt'&&!hasYT)?0.45:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                {playMode==='metro'?'▶ Bắt đầu luyện tập':'▶ Phát theo YouTube'}
+              </button>
+              <button onClick={()=>{window.location.href='/tap';}} style={{background:'transparent',border:'1px solid #D4C9B8',borderRadius:12,color:'#5F6B62',fontSize:14,padding:'14px 20px',cursor:'pointer',display:'flex',alignItems:'center',gap:7,whiteSpace:'nowrap'}}>🥁 Tap nhịp</button>
+            </div>
+          </div>
+        </div>
+        {showSongList&&(<SongList onSelect={(s:RhythmSong)=>{if(onImportSong)onImportSong(s);setShowSongList(false);}} onClose={()=>setShowSongList(false)} isTeacher={false}/>)}
+      </div>
+    );
+  }
+
   return (
     <div className="player-overlay">
       <div className={`player-panel ${fullscreen ? "player-panel--fullscreen" : ""}`}>
@@ -941,8 +994,9 @@ function lsLoadSong(): RhythmSong | null {
             })}
           </div>
         </div>
-        {/* ── LYRIC SCROLL AREA (hàng dưới — lời + chord) ── */}
-        <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef}>
+        <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
+        {/* ── LYRIC SCROLL AREA ── */}
+        <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{flex:1}}>
           <div className="scroll-now-line" style={{ left: "30%" }} />
           <div
             className="player-scroll-track"
@@ -990,21 +1044,7 @@ function lsLoadSong(): RhythmSong | null {
           <div className="now-arrow--up" style={{ left: '30%', position: 'absolute', top: 'calc(50% + 18px)', transform: 'translateX(-50%)', zIndex: 20 }} />
         </div>
 
-      {/* YouTube player */}
-      {showYoutube && (song as any).youtubeUrl && (
-        <div style={{ padding:'8px 16px', background:'#0A0E1A', borderTop:'1px solid #1E2533' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-            <span style={{ fontSize:11, color:'#6B7280' }}>
-              ▶ YouTube · Offset: {((song as any).youtubeOffset ?? 0).toFixed(1)}s
-            </span>
-            <button
-              style={{ fontSize:10, padding:'2px 8px', borderRadius:4, border:'1px solid #374151', background:'none', color:'#9CA3AF', cursor:'pointer' }}
-              onClick={() => ytSeek(currentTime)}
-            >Sync ngay</button>
-          </div>
-          <div id="yt-player-frame" style={{ width:'100%', aspectRatio:'16/9', maxHeight:240, borderRadius:8, overflow:'hidden' }} />
-        </div>
-      )}
+
 
         {/* Hint */}
 
