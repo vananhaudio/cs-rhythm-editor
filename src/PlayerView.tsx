@@ -864,6 +864,39 @@ function lsLoadSong(): RhythmSong | null {
         </div>
 
         {/* Spacer đẩy nội dung xuống 25vh */}
+
+
+        {/* ── Mode selector — cream bar ── */}
+        <div style={{
+          display:'flex', alignItems:'center', gap:8,
+          padding:'8px 16px',
+          background:'#F0E8D8',
+          borderBottom:'1px solid #D8C8A8',
+          flexShrink:0,
+        }}>
+          <span style={{fontSize:10,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',color:'#8A7A5A',whiteSpace:'nowrap'}}>Chế độ</span>
+          <button onClick={()=>setPlayMode('metro')} style={{
+            display:'flex',alignItems:'center',gap:6,padding:'6px 14px',
+            borderRadius:8,cursor:'pointer',transition:'all 0.15s',
+            border: playMode==='metro'?'1.5px solid #14532D':'1px solid #C8B898',
+            background: playMode==='metro'?'#14532D':'#FAF7F0',
+            color: playMode==='metro'?'#fff':'#5A4A30',
+            fontSize:12,fontWeight:600,
+          }}>🎵 Máy đập nhịp {playMode==='metro'&&<span style={{fontSize:9,opacity:0.7}}>✓</span>}</button>
+          <button onClick={()=>setPlayMode('yt')} style={{
+            display:'flex',alignItems:'center',gap:6,padding:'6px 14px',
+            borderRadius:8,cursor:'pointer',transition:'all 0.15s',
+            border: playMode==='yt'?'1.5px solid #D89B22':'1px solid #C8B898',
+            background: playMode==='yt'?'rgba(216,155,34,0.12)':'#FAF7F0',
+            color: playMode==='yt'?'#8B5E0A':'#5A4A30',
+            fontSize:12,fontWeight:600,
+          }}>▶ Theo YouTube {playMode==='yt'&&<span style={{fontSize:9,opacity:0.7}}>✓</span>}</button>
+          {playMode==='yt' && !(song as any).youtubeUrl && (
+            <span style={{fontSize:11,color:'#8B5E0A',background:'rgba(237,184,52,0.15)',border:'1px solid rgba(237,184,52,0.35)',borderRadius:6,padding:'3px 10px',display:'flex',alignItems:'center',gap:5}}>
+              ⚠ Chưa sync — vào <strong>YouTube Sync</strong> trước
+            </span>
+          )}
+        </div>
         <div className="player-scroll-spacer" />
 
         {/* Mũi tên chỉ vị trí hiện tại */}
@@ -976,23 +1009,23 @@ function lsLoadSong(): RhythmSong | null {
         {/* Hint */}
 
         {/* ── Ghi lại buổi tập ── */}
-        <div style={{ padding:'12px 16px 4px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding:'12px 16px 4px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8' }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-            <span style={{ fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)' }}>Ghi lại buổi tập</span>
-            <span style={{ fontSize:9, background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.4)', padding:'2px 8px', borderRadius:20, display:'flex', alignItems:'center', gap:4 }}>
+            <span style={{ fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'#8A7A5A' }}>Ghi lại buổi tập</span>
+            <span style={{ fontSize:9, background:'#E8DFD0', color:'#8A7A5A', padding:'2px 8px', borderRadius:20, display:'flex', alignItems:'center', gap:4 }}>
               🔒 Lớp Hành Trình
             </span>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
             {[['🎙', 'Ghi âm', 'Thu buổi chơi'], ['📹', 'Quay video', 'Quay lại để xem'], ['📤', 'Nộp bài', 'Gửi thầy chấm']].map(([icon, title, sub]) => (
-              <button key={title} disabled style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, padding:'10px 8px', display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:'not-allowed', opacity:0.5 }}>
+              <button key={title} disabled style={{ background:'#FAF7F0', border:'1px solid #C8B898', borderRadius:10, padding:'10px 8px', display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:'not-allowed', opacity:0.55 }}>
                 <span style={{ fontSize:18 }}>{icon}</span>
-                <span style={{ fontSize:11, color:'rgba(255,255,255,0.6)', fontWeight:500 }}>{title}</span>
-                <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>{sub}</span>
+                <span style={{ fontSize:11, color:'#5A4A30', fontWeight:500 }}>{title}</span>
+                <span style={{ fontSize:9, color:'#8A7A5A' }}>{sub}</span>
               </button>
             ))}
           </div>
-          <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', textAlign:'center', padding:'8px 0 4px' }}>Mở khoá khi hoàn thành Lớp Hành Trình</div>
+          <div style={{ fontSize:10, color:'#8A7A5A', textAlign:'center', padding:'8px 0 4px' }}>Mở khoá khi hoàn thành Lớp Hành Trình</div>
         </div>
         <div className="player-hint">
           {!hasMp3
