@@ -246,17 +246,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
         {/* ── TOP BAR ── */}
-        <div style={{ background:P.paper, borderBottom:`1px solid rgba(20,83,45,0.08)`, boxShadow:'0 8px 24px rgba(0,0,0,0.025)', padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:14, flexShrink:0, position:'relative', zIndex:2 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, flex:'0 1 320px', minWidth:0 }}>
-            <div style={{ width:26, height:26, background:P.green, borderRadius:5, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:11, color:'#fff', flexShrink:0 }}>C#</div>
-            <div style={{ minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:600, color:P.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || '—'}</div>
-            </div>
-            {song.tempo>0 && <div style={{ fontSize:11, color:P.textMuted, flexShrink:0 }}><span style={{ fontWeight:600, color:P.text }}>{song.tempo}</span> BPM</div>}
-            {song.timeSignature>0 && <div style={{ fontSize:11, color:P.textMuted, flexShrink:0 }}>{song.timeSignature}/4</div>}
+        <div style={{ background:P.paper, borderBottom:`1px solid rgba(20,83,45,0.08)`, boxShadow:'0 8px 24px rgba(0,0,0,0.025)', padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:16, flexShrink:0, position:'relative', zIndex:2 }}>
+          {/* Logo + Brand */}
+          <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+            <img src="/logo.png" alt="Văn Anh" style={{ height:32, width:'auto', objectFit:'contain' }}/>
+            <span style={{ fontSize:13, fontWeight:600, color:P.text, whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>Thầy Văn Anh Guitar</span>
           </div>
-          {/* Progress */}
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:1, height:20, background:P.paperDark, flexShrink:0 }}/>
+          {/* Progress — visual spine */}
+          <div style={{ flex:1, display:'flex', alignItems:'center', gap:12 }}>
             <div style={{ flex:1, height:4, background:'rgba(20,83,45,0.08)', borderRadius:999, cursor:'pointer', position:'relative' }}
               onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
               <div style={{ height:'100%', width:`${pct}%`, background:'#14532D', borderRadius:999, transition:'width 0.05s linear' }}/>
@@ -268,30 +266,32 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
         {/* ── CONTROL BAR ── */}
         <div style={{ background:P.paperSurface, borderBottom:`1px solid rgba(20,83,45,0.07)`, padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
-          {/* Chọn bài */}
-          <button onClick={() => setShowSongList(true)} style={{ ...btn(), display:'flex', alignItems:'center', gap:6 }}>
-            🎸 <span style={{ maxWidth:110, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</span>
+          {/* Chọn bài — hiện info sau khi chọn */}
+          <button onClick={() => setShowSongList(true)} style={{ ...btn(), display:'flex', alignItems:'center', gap:8, padding:'6px 14px', flexShrink:0 }}>
+            🎸
+            {song.title ? (
+              <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:600, color:P.text }}>{song.title}</span>
+                {song.tempo>0 && <span style={{ fontSize:11, color:P.textMuted, fontWeight:400 }}>{song.tempo} BPM</span>}
+                {song.timeSignature>0 && <span style={{ fontSize:11, color:P.textMuted, fontWeight:400 }}>{song.timeSignature}/4</span>}
+              </span>
+            ) : (
+              <span style={{ color:P.textMuted }}>Chọn bài</span>
+            )}
           </button>
 
-          <div style={{ width:1, height:24, background:P.paperDark }}/>
+          <div style={{ width:1, height:24, background:P.paperDark, flexShrink:0 }}/>
 
-          {/* Chế độ luyện tập */}
-          <div style={{ display:'flex', alignItems:'center', gap:10, border:`1.5px solid rgba(7,26,22,0.35)`, borderRadius:10, padding:'6px 14px', background:'rgba(7,26,22,0.04)' }}>
+          {/* Chế độ luyện tập — đẩy sang phải */}
+          <div style={{ flex:1 }}/>
+          <div style={{ display:'flex', alignItems:'center', gap:10, border:`1.5px solid rgba(7,26,22,0.35)`, borderRadius:10, padding:'6px 14px', background:'rgba(7,26,22,0.04)', flexShrink:0 }}>
             <span style={{ fontSize:13, fontWeight:700, color:P.text, whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>CHẾ ĐỘ TẬP LUYỆN</span>
             <div style={{ width:1, height:20, background:'rgba(7,26,22,0.15)' }}/>
-            <button onClick={() => setPlayMode('metro')} style={{ ...btn(playMode==='metro'), borderRadius:7 }}>
-              🎵 Tập với máy đập nhịp
-            </button>
+            <button onClick={() => setPlayMode('metro')} style={{ ...btn(playMode==='metro'), borderRadius:7 }}>🎵 Tập với máy đập nhịp</button>
             <button onClick={() => { if(hasYT){ setPlayMode('yt'); if(ytMode==='focus') setYtMode('mini'); } }}
-              disabled={!hasYT}
-              style={{ ...btn(playMode==='yt'), borderRadius:7, opacity:!hasYT?0.4:1 }}
-              title={!hasYT?'Vào YouTube Sync để đồng bộ trước':''}>
-              ▶ YouTube
-            </button>
-            <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn(false), borderRadius:7 }}>
-              🥁 Học Tap Nhịp
-            </button>
-            {/* YT size sub-options */}
+              disabled={!hasYT} title={!hasYT?'Vào YouTube Sync để đồng bộ trước':''}
+              style={{ ...btn(playMode==='yt'), borderRadius:7, opacity:!hasYT?0.4:1 }}>▶ YouTube</button>
+            <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn(false), borderRadius:7 }}>🥁 Học Tap Nhịp</button>
             {playMode==='yt' && (<>
               <div style={{ width:1, height:20, background:'rgba(7,26,22,0.15)' }}/>
               {([['focus','● Ẩn'],['mini','▣ Mini'],['full','⛶ To']] as [YtMode,string][]).map(([m,lbl]) => (
@@ -299,8 +299,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
               ))}
             </>)}
           </div>
-
-          <div style={{ flex:1 }}/>
 
           {/* Speed */}
           <div style={{ display:'flex', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
