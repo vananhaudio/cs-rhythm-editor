@@ -240,13 +240,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   };
 
   return (
-    <div style={{ display:'flex', height:'100vh', background:P.paper, fontFamily:"'Inter','Segoe UI',sans-serif", overflow:'hidden' }}>
+    <div style={{ display:'flex', height:'100vh', background:'linear-gradient(to bottom, rgba(20,83,45,0.045) 0px, rgba(20,83,45,0.018) 80px, transparent 140px) #ECE6D9', fontFamily:"'Inter','Segoe UI',sans-serif", overflow:'hidden' }}>
 
       {/* ══ MAIN COLUMN — no sidebar ══ */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
         {/* ── TOP BAR ── */}
-        <div style={{ background:P.paper, borderBottom:`1px solid ${P.paperDark}`, padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
+        <div style={{ background:P.paper, borderBottom:`1px solid rgba(20,83,45,0.08)`, boxShadow:'0 8px 24px rgba(0,0,0,0.025)', padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:14, flexShrink:0, position:'relative', zIndex:2 }}>
           <div style={{ display:'flex', alignItems:'center', gap:10, flex:'0 1 320px', minWidth:0 }}>
             <div style={{ width:26, height:26, background:P.green, borderRadius:5, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:11, color:'#fff', flexShrink:0 }}>C#</div>
             <div style={{ minWidth:0 }}>
@@ -257,9 +257,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           </div>
           {/* Progress */}
           <div style={{ flex:1, display:'flex', alignItems:'center', gap:10 }}>
-            <div style={{ flex:1, height:3, background:P.paperDark, borderRadius:2, cursor:'pointer', position:'relative' }}
+            <div style={{ flex:1, height:3, background:'rgba(20,83,45,0.08)', borderRadius:999, cursor:'pointer', position:'relative' }}
               onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
-              <div style={{ height:'100%', width:`${pct}%`, background:P.green, borderRadius:2, transition:'width 0.05s linear' }}/>
+              <div style={{ height:'100%', width:`${pct}%`, background:P.green, borderRadius:999, transition:'width 0.05s linear' }}/>
             </div>
             <span style={{ fontSize:11, color:P.textMuted, fontFamily:'monospace', flexShrink:0, whiteSpace:'nowrap' }}>{fmtTime(currentTime)} / {fmtTime(totalDur)}</span>
           </div>
@@ -267,7 +267,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ── CONTROL BAR ── */}
-        <div style={{ background:P.paperSurface, borderBottom:`1px solid ${P.paperDark}`, padding:'0 24px', height:52, display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+        <div style={{ background:P.paperSurface, borderBottom:`1px solid rgba(20,83,45,0.07)`, padding:'0 24px', height:52, display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
           {/* Chọn bài */}
           <button onClick={() => setShowSongList(true)} style={{ ...btn(), display:'flex', alignItems:'center', gap:6 }}>
             🎸 <span style={{ maxWidth:110, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</span>
@@ -423,7 +423,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ── FOOTER ── */}
-        <div style={{ padding:'12px 20px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, flexShrink:0, background:P.paper }}>
+        <div style={{ padding:'12px 20px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, flexShrink:0, background:P.paper, borderTop:`1px solid rgba(20,83,45,0.06)` }}>
           {[['🎙','Ghi âm','Thu buổi chơi'],['📹','Quay video','Quay lại để xem'],['📤','Nộp bài','Gửi thầy chấm']].map(([ic,tt,sub])=>(
             <button key={tt} disabled style={{
               background:P.paperSurface, border:`1px solid ${P.paperDark}`,
