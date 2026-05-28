@@ -8,7 +8,7 @@ function fmtTime(t: number) {
   return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 }
 
-type PlayMode = 'metro' | 'yt';
+type YtMode = 'focus' | 'mini' | 'full';
 
 export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   song: RhythmSong; onClose: () => void;
@@ -16,7 +16,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   extraActions?: React.ReactNode;
   onUpdateTitle?: (title: string) => void;
 }) {
-  const [playMode, setPlayMode] = useState<PlayMode>('metro');
+  const [playMode, setPlayMode] = useState<'metro'|'yt'>('metro');
+  const [ytMode, setYtMode] = useState<YtMode>('focus');
+  const [ytHovered, setYtHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState(1);
@@ -26,7 +28,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const [activeBeatIdx, setActiveBeatIdx] = useState(-1);
   const [containerW, setContainerW] = useState(900);
   const [beatContainerW, setBeatContainerW] = useState(900);
-  const [fullscreen, setFullscreen] = useState(false);
+  const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
 
   const ytPlayerRef = useRef<any>(null);
   const ytReadyRef = useRef(false);
@@ -41,6 +43,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const scrollRef = useRef<HTMLDivElement>(null);
   const beatScrollRef = useRef<HTMLDivElement>(null);
   const speedRef = useRef(1);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const beatDur = 60 / song.tempo;
   const barDur = beatDur * song.timeSignature;
@@ -50,14 +53,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
   useEffect(() => { muteRef.current = muteMetronome; }, [muteMetronome]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
-
   useEffect(() => {
     setIsPlaying(false); isPlayingRef.current = false;
     setCurrentTime(0); currentTimeRef.current = 0;
     setActiveBeatIdx(-1); stopMetronome();
     ytPlayerRef.current?.pauseVideo?.();
+    setYtOffsetAdj(0);
   }, [song.title]);
 
+  // Resize observers
   useEffect(() => {
     if (!scrollRef.current) return;
     const ro = new ResizeObserver(e => setContainerW(e[0].contentRect.width));
@@ -65,7 +69,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (scrollRef.current.clientWidth > 0) setContainerW(scrollRef.current.clientWidth);
     return () => ro.disconnect();
   }, []);
-
   useEffect(() => {
     if (!beatScrollRef.current) return;
     const ro = new ResizeObserver(e => setBeatContainerW(e[0].contentRect.width));
@@ -74,16 +77,17 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return () => ro.disconnect();
   }, []);
 
-  // YouTube
+  // YouTube setup
   useEffect(() => {
-    if (playMode !== 'yt' || !hasYT) return;
+    if (playMode !== 'yt' || !hasYT || ytMode === 'focus') return;
     const ytId = ((song as any).youtubeUrl as string).match(/(?:youtu\.be\/|v=|\/embed\/)([\w-]{11})/)?.[1];
     if (!ytId) return;
     setYtReady(false); ytReadyRef.current = false;
     const setup = () => {
       ytPlayerRef.current?.destroy?.();
       ytPlayerRef.current = new (window as any).YT.Player('yt-player-frame', {
-        videoId: ytId, playerVars: { autoplay:0, controls:1, rel:0 },
+        videoId: ytId,
+        playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
         events: { onReady: () => { ytReadyRef.current = true; setYtReady(true); } }
       });
     };
@@ -93,8 +97,17 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     (window as any).onYouTubeIframeAPIReady = setup;
     document.head.appendChild(tag);
     return () => { ytPlayerRef.current?.destroy?.(); ytPlayerRef.current = null; ytReadyRef.current = false; };
-  }, [playMode, hasYT, (song as any).youtubeUrl]);
+  }, [playMode, ytMode, hasYT, (song as any).youtubeUrl]);
 
+  const getYtOffset = useCallback(() => {
+    const base = (song as any).youtubeOffset
+      ?? (song as any).sync?.youtubeOffsetSeconds
+      ?? (song as any).youtubeOffsetSeconds
+      ?? 0;
+    return base + ytOffsetAdj;
+  }, [song, ytOffsetAdj]);
+
+  // Metronome
   function scheduleClick(t: number, beat1: boolean) {
     try {
       if (!audioCtxRef.current || muteRef.current) return;
@@ -107,7 +120,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
       osc.start(t); osc.stop(t + 0.1);
     } catch {}
   }
-
   function startMetronome(from: number) {
     if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
     const ctx = audioCtxRef.current;
@@ -125,11 +137,11 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
       }
     }, 25);
   }
-
   function stopMetronome() {
     if (schedulerRef.current) { clearInterval(schedulerRef.current); schedulerRef.current = null; }
   }
 
+  // RAF
   useEffect(() => {
     let wall = performance.now(), songT = currentTimeRef.current;
     if (isPlaying) { wall = performance.now(); songT = currentTimeRef.current; }
@@ -147,8 +159,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [isPlaying, speed, playMode, totalDur, beatDur]);
+  }, [isPlaying, speed, totalDur, beatDur]);
 
+  // Keyboard
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
@@ -162,16 +175,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return () => window.removeEventListener('keydown', h);
   }, [playMode]);
 
-  const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
-
-  const getYtOffset = useCallback(() => {
-    const base = (song as any).youtubeOffset
-      ?? (song as any).youtubeOffsetSeconds
-      ?? (song as any).sync?.youtubeOffsetSeconds
-      ?? 0;
-    return base + ytOffsetAdj;
-  }, [song, ytOffsetAdj]);
-
   const togglePlay = useCallback(() => {
     if (isPlayingRef.current) {
       isPlayingRef.current = false; setIsPlaying(false); stopMetronome();
@@ -180,10 +183,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
       isPlayingRef.current = true; setIsPlaying(true);
       if (playMode === 'metro') {
         startMetronome(currentTimeRef.current);
-      } else if (playMode === 'yt' && ytReadyRef.current) {
-        // Seek ngay lập tức — trước khi RAF advance
+      } else if (ytReadyRef.current) {
         ytPlayerRef.current?.seekTo(getYtOffset() + currentTimeRef.current, true);
-        setTimeout(() => ytPlayerRef.current?.playVideo(), 150);
+        setTimeout(() => ytPlayerRef.current?.playVideo(), 100);
         ytSyncedRef.current = true;
       }
     }
@@ -193,9 +195,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     currentTimeRef.current = t; setCurrentTime(t);
     if (playMode === 'yt' && ytReadyRef.current) {
       ytPlayerRef.current?.seekTo(getYtOffset() + t, true);
-      ytSyncedRef.current = true;
     }
-  }, [playMode, song, getYtOffset]);
+  }, [playMode, getYtOffset]);
 
   const nowX = containerW * 0.3;
   const beatNowX = beatContainerW * 0.3;
@@ -203,186 +204,196 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const trackW = totalDur * PPS + containerW;
   const pct = totalDur > 0 ? currentTime / totalDur * 100 : 0;
 
-  // Mode button style
-  const modeBtnStyle = (active: boolean, color: string): React.CSSProperties => ({
-    display: 'flex', alignItems: 'center', gap: 7,
-    padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-    border: active ? `2px solid ${color}` : '1px solid rgba(255,255,255,0.12)',
-    background: active ? `${color}22` : 'rgba(255,255,255,0.06)',
-    color: active ? '#fff' : 'rgba(255,255,255,0.55)',
-    fontWeight: active ? 700 : 400, fontSize: 13,
-    transition: 'all 0.15s', whiteSpace: 'nowrap',
-  });
+  // YouTube opacity: focus=không hiện, mini/full=dim khi play, hover=full
+  const ytOpacity = ytHovered ? 1 : isPlaying ? 0.4 : 1;
+
+  // YT dimensions
+  const ytDims: Record<YtMode, React.CSSProperties> = {
+    focus: { display:'none' },
+    mini:  { width:280, aspectRatio:'16/9' },
+    full:  { width:'min(50vw, 560px)', aspectRatio:'16/9' },
+  };
+
+  // Mode button
+  const modeBtn = (mode: YtMode, label: string, active: boolean) => (
+    <button onClick={() => setYtMode(mode)} style={{
+      background: active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)',
+      border: active ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.1)',
+      borderRadius: 7, color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+      fontSize: 11, fontWeight: active ? 700 : 400, padding: '4px 10px', cursor: 'pointer',
+      transition: 'all 0.15s', whiteSpace: 'nowrap',
+    }}>{label}</button>
+  );
 
   return (
     <div className="player-overlay">
-      <div className={`player-panel ${fullscreen ? 'player-panel--fullscreen' : ''}`}>
+      <div className="player-panel" style={{ display:'flex', flexDirection:'column' }}>
 
-        {/* ══ HEADER 1 — song info + progress ══ */}
-        <div style={{ background:'#123524', height:50, display:'flex', alignItems:'center', padding:'0 16px', gap:10, flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ width:26,height:26,background:'#D89B22',borderRadius:5,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,color:'#fff',flexShrink:0 }}>C#</div>
-          {/* Song name + meta */}
-          <span style={{ fontSize:13,fontWeight:700,color:'#F4F1E8',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:180,flex:'0 1 180px' }}>
-            {song.title || 'Chọn bài để bắt đầu'}
+        {/* ══ H1 — thông tin + progress ══ */}
+        <div style={{ background:'#123524', height:44, display:'flex', alignItems:'center', padding:'0 14px', gap:8, flexShrink:0 }}>
+          <div style={{ width:22,height:22,background:'#D89B22',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:10,color:'#fff',flexShrink:0 }}>C#</div>
+          <span style={{ fontSize:13,fontWeight:700,color:'#F4F1E8',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:160,flex:'0 1 160px' }}>
+            {song.title || '—'}
           </span>
           {song.tempo > 0 && <span className="player-meta-chip" style={{flexShrink:0}}>{song.tempo}</span>}
           {song.timeSignature > 0 && <span className="player-meta-chip" style={{flexShrink:0}}>{song.timeSignature}/4</span>}
-          {/* Progress bar */}
-          <div style={{ flex:1, position:'relative', height:4, background:'rgba(255,255,255,0.12)', borderRadius:2, cursor:'pointer', minWidth:40 }}
+          <div style={{ flex:1, position:'relative', height:3, background:'rgba(255,255,255,0.1)', borderRadius:2, cursor:'pointer', minWidth:40 }}
             onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
             <div style={{ height:'100%', width:`${pct}%`, background:'#A7D88A', borderRadius:2, transition:'width 0.05s linear' }}/>
           </div>
           <span style={{ fontSize:10,color:'rgba(255,255,255,0.4)',fontFamily:'monospace',flexShrink:0,whiteSpace:'nowrap' }}>{fmtTime(currentTime)}/{fmtTime(totalDur)}</span>
+          {extraActions}
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:5,color:'rgba(255,255,255,0.4)',fontSize:13,padding:'3px 8px',cursor:'pointer',flexShrink:0 }}>✕</button>
+        </div>
+
+        {/* ══ H2 — thanh luyện tập ══ */}
+        <div style={{ background:'#1B4332', height:52, display:'flex', alignItems:'center', padding:'0 16px', gap:10, flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
+          {/* Chọn bài */}
+          <button onClick={() => setShowSongList(true)} style={{ display:'flex',alignItems:'center',gap:6,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'6px 12px',cursor:'pointer',color:'#fff',fontSize:12,fontWeight:600,whiteSpace:'nowrap',flexShrink:0 }}>
+            🎸 {song.title ? <span style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'inline-block'}}>{song.title}</span> : 'Chọn bài'}
+          </button>
+
+          <div style={{ width:1,height:30,background:'rgba(255,255,255,0.1)',flexShrink:0 }}/>
+
+          {/* Mode */}
+          <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+            {modeBtn('focus', '● Tập trung', ytMode==='focus')}
+            {modeBtn('mini', '▣ Mini', ytMode==='mini' && playMode==='yt')}
+            {modeBtn('full', '⛶ Full', ytMode==='full' && playMode==='yt')}
+          </div>
+
+          {/* YT toggle */}
+          <button onClick={() => setPlayMode(v => v==='yt' ? 'metro' : 'yt')}
+            style={{ background:playMode==='yt'?'rgba(216,155,34,0.2)':'rgba(255,255,255,0.06)', border:playMode==='yt'?'1px solid #D89B22':'1px solid rgba(255,255,255,0.1)', borderRadius:7, color:playMode==='yt'?'#F5C842':'rgba(255,255,255,0.45)', fontSize:11, padding:'4px 10px', cursor:'pointer', flexShrink:0, transition:'all 0.15s' }}
+            title={hasYT ? '' : 'Vào YouTube Sync để đồng bộ trước'}>
+            {playMode==='yt' ? '▶ YT ✓' : '▶ YT'}
+          </button>
+          {!hasYT && <span style={{ fontSize:10, color:'rgba(216,155,34,0.6)' }}>⚠</span>}
+
+          <div style={{ flex:1 }}/>
+
           {/* Speed */}
-          <div style={{ display:'flex', border:'1px solid rgba(255,255,255,0.1)', borderRadius:5, overflow:'hidden', flexShrink:0 }}>
+          <div style={{ display:'flex',border:'1px solid rgba(255,255,255,0.1)',borderRadius:6,overflow:'hidden',flexShrink:0 }}>
             {[0.75,1,1.25].map(s=>(
-              <button key={s} onClick={()=>setSpeed(s)} style={{ background:speed===s?'rgba(255,255,255,0.15)':'transparent', border:'none', color:speed===s?'#fff':'rgba(255,255,255,0.4)', fontSize:10, padding:'3px 7px', cursor:'pointer', fontFamily:'monospace' }}>
+              <button key={s} onClick={() => setSpeed(s)} style={{ background:speed===s?'rgba(255,255,255,0.18)':'transparent',border:'none',color:speed===s?'#fff':'rgba(255,255,255,0.4)',fontSize:10,padding:'4px 8px',cursor:'pointer',fontFamily:'monospace' }}>
                 {s===0.75?'75%':s===1?'100%':'125%'}
               </button>
             ))}
           </div>
-          {extraActions}
-          <button onClick={()=>setFullscreen(v=>!v)} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:5, color:'rgba(255,255,255,0.4)', fontSize:13, padding:'4px 7px', cursor:'pointer', flexShrink:0 }}>⛶</button>
-          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:5, color:'rgba(255,255,255,0.4)', fontSize:14, padding:'4px 8px', cursor:'pointer', flexShrink:0 }}>✕</button>
+
+          {/* Seek */}
+          <button onClick={() => seekTo(Math.max(0,currentTimeRef.current-5))} style={{ background:'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:'rgba(255,255,255,0.6)',fontSize:11,padding:'5px 8px',cursor:'pointer',flexShrink:0 }}>◀5s</button>
+
+          {/* Play */}
+          <button onClick={togglePlay} disabled={!song.title}
+            style={{ width:40,height:40,borderRadius:'50%',background:isPlaying?'rgba(255,255,255,0.15)':(playMode==='yt'?'#D89B22':'#A7D88A'),border:'none',color:isPlaying?'#fff':(playMode==='yt'?'#fff':'#14532D'),fontSize:18,cursor:!song.title?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:!song.title?0.4:1,flexShrink:0,boxShadow:isPlaying?'none':'0 2px 10px rgba(0,0,0,0.3)' }}>
+            {isPlaying?'⏸':'▶'}
+          </button>
+
+          <button onClick={() => seekTo(Math.min(totalDur,currentTimeRef.current+5))} style={{ background:'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:'rgba(255,255,255,0.6)',fontSize:11,padding:'5px 8px',cursor:'pointer',flexShrink:0 }}>5s▶</button>
+
+          {/* Metro mute */}
+          {playMode === 'metro' && (
+            <button onClick={() => setMuteMetronome(v=>!v)} style={{ background:muteMetronome?'rgba(255,80,80,0.2)':'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:muteMetronome?'#ff8080':'rgba(255,255,255,0.5)',fontSize:12,padding:'5px 8px',cursor:'pointer',flexShrink:0 }}>🎵</button>
+          )}
+
+          {/* Tap */}
+          <button onClick={() => { window.location.href = '/tap'; }}
+            style={{ background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:6,color:'rgba(255,255,255,0.5)',fontSize:12,padding:'5px 8px',cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' }}>🥁</button>
         </div>
 
-        {/* ══ HEADER 2 — chọn bài + chế độ + play ══ */}
-        <div style={{ background:'#1B4332', padding:'0 20px', height:96, display:'flex', alignItems:'center', gap:20, flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+        {/* ══ MAIN CONTENT — lyric full width, YT floating ══ */}
+        <div ref={contentRef} style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
 
-          {/* Vùng 1: Chọn bài */}
-          <div style={{ display:'flex', flexDirection:'column', gap:6, flexShrink:0 }}>
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.35)' }}>Bài hát</span>
-            <button onClick={()=>setShowSongList(true)} style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.18)', borderRadius:10, padding:'8px 14px', cursor:'pointer', color:'#fff', fontSize:13, fontWeight:600, whiteSpace:'nowrap' }}>
-              🎸 {song.title ? <span style={{maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{song.title}</span> : 'Chọn bài'}
-              <span style={{fontSize:11,opacity:0.5,marginLeft:2}}>▾</span>
-            </button>
-          </div>
-
-          <div style={{ width:1, height:48, background:'rgba(255,255,255,0.08)', flexShrink:0 }}/>
-
-          {/* Vùng 2: Chế độ */}
-          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.35)' }}>Chế độ tập</span>
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={()=>setPlayMode('metro')} style={modeBtnStyle(playMode==='metro','#8DC470')}>
-                🎵 Máy đập nhịp
-                {playMode==='metro' && <span style={{fontSize:10,opacity:0.7}}>✓</span>}
-              </button>
-              <button onClick={()=>{ if(hasYT) setPlayMode('yt'); }}
-                style={{...modeBtnStyle(playMode==='yt','#D89B22'), opacity:!hasYT?0.45:1, cursor:!hasYT?'not-allowed':'pointer'}}
-                title={!hasYT?'Vào YouTube Sync để đồng bộ trước':''}>
-                ▶ YouTube
-                {playMode==='yt' && <span style={{fontSize:10,opacity:0.7}}>✓</span>}
-                {!hasYT && <span style={{fontSize:9,opacity:0.5}}>🔗</span>}
-              </button>
-            </div>
-            {playMode==='metro' && (
-              <button onClick={()=>setMuteMetronome(v=>!v)} style={{ fontSize:10, color:muteMetronome?'#ff8080':'rgba(255,255,255,0.35)', background:'none', border:'none', cursor:'pointer', textAlign:'left', padding:0 }}>
-                {muteMetronome ? '🔇 Metronome tắt' : '🔊 Metronome bật'}
-              </button>
-            )}
-          </div>
-
-          <div style={{ width:1, height:48, background:'rgba(255,255,255,0.08)', flexShrink:0 }}/>
-
-          {/* Vùng 3: Play */}
-          <div style={{ display:'flex', flexDirection:'column', gap:6, flexShrink:0 }}>
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.35)' }}>Phát nhạc</span>
-            <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-              <button onClick={()=>seekTo(Math.max(0,currentTimeRef.current-5))} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:7, color:'rgba(255,255,255,0.6)', fontSize:11, padding:'7px 10px', cursor:'pointer' }}>◀5s</button>
-              <button onClick={togglePlay} disabled={!song.title}
-                style={{ width:46, height:46, borderRadius:'50%', background:isPlaying?'rgba(255,255,255,0.15)':(playMode==='yt'?'#D89B22':'#A7D88A'), border:'none', color:isPlaying?'#fff':(playMode==='yt'?'#fff':'#14532D'), fontSize:20, cursor:!song.title?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', opacity:!song.title?0.4:1, boxShadow:isPlaying?'none':'0 2px 12px rgba(0,0,0,0.3)', flexShrink:0 }}>
-                {isPlaying ? '⏸' : '▶'}
-              </button>
-              <button onClick={()=>seekTo(Math.min(totalDur,currentTimeRef.current+5))} style={{ background:'rgba(255,255,255,0.08)', border:'none', borderRadius:7, color:'rgba(255,255,255,0.6)', fontSize:11, padding:'7px 10px', cursor:'pointer' }}>5s▶</button>
-              <button onClick={()=>{window.location.href='/tap';}} style={{ background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, color:'rgba(255,255,255,0.5)', fontSize:12, padding:'7px 10px', cursor:'pointer', whiteSpace:'nowrap' }}>🥁 Tap</button>
+          {/* Beat row — full width */}
+          <div className="now-arrow-wrap"><div className="now-arrow" style={{left:'30%'}}/></div>
+          <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
+            <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
+            <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
+              {Array.from({length:song.totalBars*song.timeSignature},(_,i) => {
+                const bib=i%song.timeSignature, bt=i*beatDur, nb=(i+1)*beatDur;
+                const w=(nb-bt)*PPS, xBeat=beatNowX+bt*PPS;
+                return(
+                  <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
+                    style={{left:xBeat,width:w-2,transform:'translateX(-50%)'}}>
+                    {bib===0&&<span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
+                    <span className="tl-beat-num">{bib+1}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-        </div>
-
-        {/* ══ BEAT + LYRIC + YT SPLIT ══ */}
-        <div style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
-
-          {/* Left: beat + lyric stacked */}
-          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
-
-            {/* Beat row */}
-            <div className="now-arrow-wrap"><div className="now-arrow" style={{left:'30%'}}/></div>
-            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
-              <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
-              <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
-                {Array.from({length:song.totalBars*song.timeSignature},(_,i)=>{
-                  const bib=i%song.timeSignature, bt=i*beatDur, nb=(i+1)*beatDur;
-                  const w=(nb-bt)*PPS, xBeat=beatNowX+bt*PPS;
-                  return(
-                    <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
-                      style={{left:xBeat,width:w-2,transform:'translateX(-50%)'}}>
-                      {bib===0&&<span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
-                      <span className="tl-beat-num">{bib+1}</span>
-                    </div>
-                  );
-                })}
-              </div>
+          {/* Lyric row — full width luôn */}
+          <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{flex:1}}>
+            <div className="scroll-now-line" style={{left:'30%'}}/>
+            <div className="player-scroll-track" style={{width:trackW,transform:`translateX(${-scrollOff}px)`}}>
+              {(()=>{
+                const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
+                return sc.map((c,ci)=>{
+                  const cx=nowX+c.time*PPS, nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
+                  const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
+                  return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}><div className={`tl-chord${active?' active':''}`}>{c.name}</div></div>);
+                });
+              })()}
+              {(song.lyrics??[]).map((l,i)=>{
+                const lx=nowX+l.time*PPS, nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
+                const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
+                const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
+                return(
+                  <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
+                    <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`} style={{color:active?'#10B981':'#E2E8F0',fontSize:active?'22px':'20px',fontWeight:active?800:700}}>{l.text}</div>
+                  </div>
+                );
+              })}
             </div>
+            <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
+          </div>
 
-            {/* Lyric row */}
-            <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef}>
-              <div className="scroll-now-line" style={{left:'30%'}}/>
-              <div className="player-scroll-track" style={{width:trackW,transform:`translateX(${-scrollOff}px)`}}>
-                {(()=>{
-                  const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
-                  return sc.map((c,ci)=>{
-                    const cx=nowX+c.time*PPS, nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
-                    const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
-                    return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}><div className={`tl-chord${active?' active':''}`}>{c.name}</div></div>);
-                  });
-                })()}
-                {(song.lyrics??[]).map((l,i)=>{
-                  const lx=nowX+l.time*PPS, nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
-                  const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
-                  const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
-                  return(
-                    <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
-                      <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`} style={{color:active?'#10B981':'#E2E8F0',fontSize:active?'22px':'20px',fontWeight:active?800:700}}>{l.text}</div>
-                    </div>
-                  );
-                })}
+          {/* ── YouTube FLOATING mini/full ── */}
+          {playMode==='yt' && hasYT && ytMode !== 'focus' && (
+            <div
+              onMouseEnter={() => setYtHovered(true)}
+              onMouseLeave={() => setYtHovered(false)}
+              style={{
+                position: 'absolute',
+                right: 16,
+                bottom: 16,
+                ...ytDims[ytMode],
+                borderRadius: 12,
+                overflow: 'hidden',
+                opacity: ytOpacity,
+                transition: 'opacity 0.3s ease, width 0.3s ease',
+                zIndex: 15,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}>
+              {/* Header bar */}
+              <div style={{ position:'absolute', top:0, left:0, right:0, zIndex:2, background:'rgba(0,0,0,0.6)', padding:'4px 8px', display:'flex', alignItems:'center', gap:6, backdropFilter:'blur(4px)' }}>
+                <span style={{ fontSize:9, color:'rgba(255,255,255,0.5)', flex:1 }}>
+                  YT · {getYtOffset().toFixed(1)}s
+                  {!ytReady && ' · kết nối...'}
+                </span>
+                <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{ background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:10,cursor:'pointer',padding:'0 2px' }}>
+                  {ytMode==='mini'?'⛶':'▣'}
+                </button>
+                <button onClick={() => setYtMode('focus')} style={{ background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:12,cursor:'pointer',padding:'0 2px' }}>✕</button>
               </div>
-              <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
-            </div>
-
-          </div>{/* end left column */}
-
-          {/* Right: YouTube panel — cạnh cả beat + lyric */}
-          {playMode==='yt'&&hasYT&&(
-            <div style={{width:'34%',flexShrink:0,background:'#0A0E1A',borderLeft:'1px solid #1E2533',display:'flex',flexDirection:'column'}}>
-              <div style={{padding:'5px 8px',background:'#0D1117',display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
-                <span style={{fontSize:9,color:'#6B7280'}}>offset:</span>
-                <strong style={{fontSize:10,color:'#9CA3AF',fontFamily:'monospace'}}>{getYtOffset().toFixed(2)}s</strong>
-                <button style={{fontSize:10,padding:'1px 6px',borderRadius:3,border:'1px solid #374151',background:'#1f2937',color:'#9CA3AF',cursor:'pointer'}}
-                  onClick={()=>{const bd=60/song.tempo;setYtOffsetAdj(v=>+(v-bd).toFixed(3));}}>−♩</button>
-                <button style={{fontSize:10,padding:'1px 6px',borderRadius:3,border:'1px solid #374151',background:'#1f2937',color:'#9CA3AF',cursor:'pointer'}}
-                  onClick={()=>{const bd=60/song.tempo;setYtOffsetAdj(v=>+(v+bd).toFixed(3));}}>+♩</button>
-                {ytReady&&<button style={{fontSize:9,padding:'1px 6px',borderRadius:3,border:'1px solid #374151',background:'none',color:'#6B7280',cursor:'pointer',marginLeft:'auto'}}
-                  onClick={()=>ytPlayerRef.current?.seekTo(getYtOffset()+currentTimeRef.current,true)}>sync</button>}
-                {!ytReady&&<span style={{fontSize:9,color:'#4B5563',marginLeft:'auto'}}>...</span>}
-              </div>
-              <div id="yt-player-frame" style={{flex:1,minHeight:0}}/>
+              <div id="yt-player-frame" style={{ width:'100%', height:'100%' }}/>
             </div>
           )}
 
-        </div>{/* end beat+lyric+yt split */}
+        </div>{/* end main content */}
 
         {/* ══ RECORDING ══ */}
-        <div style={{padding:'9px 16px',background:'#F0E8D8',borderTop:'1px solid #D8C8A8',flexShrink:0}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:7}}>
-            <span style={{fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#8A7A5A'}}>Ghi lại buổi tập</span>
-            <span style={{fontSize:9,background:'#E8DFD0',color:'#8A7A5A',padding:'2px 7px',borderRadius:20}}>🔒 Lớp Hành Trình</span>
+        <div style={{ padding:'8px 16px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8', flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+            <span style={{ fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#8A7A5A' }}>Ghi lại buổi tập</span>
+            <span style={{ fontSize:9,background:'#E8DFD0',color:'#8A7A5A',padding:'2px 7px',borderRadius:20 }}>🔒 Lớp Hành Trình</span>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
             {[['🎙','Ghi âm','Thu buổi chơi'],['📹','Quay video','Quay lại để xem'],['📤','Nộp bài','Gửi thầy chấm']].map(([ic,tt,sub])=>(
-              <button key={tt} disabled style={{background:'#FAF7F0',border:'1px solid #C8B898',borderRadius:8,padding:'7px 6px',display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'not-allowed',opacity:0.55}}>
+              <button key={tt} disabled style={{ background:'#FAF7F0',border:'1px solid #C8B898',borderRadius:8,padding:'7px 6px',display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'not-allowed',opacity:0.55 }}>
                 <span style={{fontSize:15}}>{ic}</span>
                 <span style={{fontSize:10,color:'#5A4A30',fontWeight:500}}>{tt}</span>
                 <span style={{fontSize:9,color:'#8A7A5A'}}>{sub}</span>
@@ -395,15 +406,16 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
       </div>
 
-      {showSongList&&(
+      {showSongList && (
         <SongList
-          onSelect={(s:RhythmSong)=>{
-            if(onImportSong) onImportSong(s);
+          onSelect={(s: RhythmSong) => {
+            if (onImportSong) onImportSong(s);
             setShowSongList(false);
-            setIsPlaying(false); isPlayingRef.current=false;
-            setCurrentTime(0); currentTimeRef.current=0;
+            setIsPlaying(false); isPlayingRef.current = false;
+            setCurrentTime(0); currentTimeRef.current = 0;
+            setYtOffsetAdj(0);
           }}
-          onClose={()=>setShowSongList(false)}
+          onClose={() => setShowSongList(false)}
           isTeacher={false}
         />
       )}
