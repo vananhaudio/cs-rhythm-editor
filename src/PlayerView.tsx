@@ -261,7 +261,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             </div>
             <span style={{ fontSize:11, color:P.textMuted, fontFamily:'monospace', flexShrink:0, whiteSpace:'nowrap' }}>{fmtTime(currentTime)} / {fmtTime(totalDur)}</span>
           </div>
-          {extraActions}
+          {extraActions && false /* Tạm ẩn — sẽ thay bằng nút Trang chủ */}
         </div>
 
         {/* ── CONTROL BAR ── */}
@@ -423,23 +423,40 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           </div>
         </div>
 
-        {/* ── FOOTER ── */}
-        <div style={{ padding:'12px 20px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, flexShrink:0, background:P.paper, borderTop:`1px solid rgba(20,83,45,0.06)` }}>
-          {[['🎙','Ghi âm','Thu buổi chơi'],['📹','Quay video','Quay lại để xem'],['📤','Nộp bài','Gửi thầy chấm']].map(([ic,tt,sub])=>(
-            <button key={tt} disabled style={{
-              background:P.paperSurface, border:`1px solid ${P.paperDark}`,
-              borderRadius:12, padding:'12px 16px',
-              display:'flex', alignItems:'center', gap:12,
-              cursor:'not-allowed', opacity:0.6, textAlign:'left',
-            }}>
-              <span style={{fontSize:20,flexShrink:0}}>{ic}</span>
-              <div>
-                <div style={{fontSize:13,fontWeight:600,color:P.text}}>{tt}</div>
-                <div style={{fontSize:11,color:P.textMuted}}>{sub}</div>
+        {/* ── LỚP HÀNH TRÌNH — upsell section ── */}
+        <div style={{ padding:'14px 20px', background:P.paper, borderTop:`1px solid rgba(20,83,45,0.06)`, flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:P.text, letterSpacing:'-0.01em' }}>Ghi lại buổi tập</div>
+              <div style={{ fontSize:11, color:P.textMuted, marginTop:1 }}>Dành cho học sinh <strong style={{ color:P.green }}>Lớp Hành Trình</strong></div>
+            </div>
+            <div style={{ background:'rgba(20,83,45,0.08)', border:`1px solid rgba(20,83,45,0.15)`, borderRadius:20, padding:'4px 12px', fontSize:11, fontWeight:600, color:P.green, whiteSpace:'nowrap' }}>
+              🌿 Lớp Hành Trình
+            </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+            {[
+              ['🎙','Ghi âm','Thu lại buổi chơi để nghe lại'],
+              ['📹','Quay video','Xem lại kỹ thuật của mình'],
+              ['📤','Nộp bài','Gửi thầy chấm và nhận phản hồi'],
+            ].map(([ic,tt,sub])=>(
+              <div key={tt} style={{
+                background: P.paperSurface,
+                border: `1px solid rgba(20,83,45,0.1)`,
+                borderRadius:12, padding:'14px 16px',
+                display:'flex', alignItems:'flex-start', gap:12,
+                opacity:0.7, position:'relative', overflow:'hidden',
+              }}>
+                {/* Lock overlay */}
+                <div style={{ position:'absolute', top:10, right:12, fontSize:12 }}>🔒</div>
+                <span style={{ fontSize:22, flexShrink:0, lineHeight:1 }}>{ic}</span>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:P.text }}>{tt}</div>
+                  <div style={{ fontSize:11, color:P.textMuted, marginTop:2, lineHeight:1.5 }}>{sub}</div>
+                </div>
               </div>
-              <div style={{marginLeft:'auto',fontSize:9,background:'rgba(20,83,45,0.08)',color:P.green,padding:'2px 8px',borderRadius:20,whiteSpace:'nowrap'}}>🔒 Hành Trình</div>
-            </button>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Hint */}
