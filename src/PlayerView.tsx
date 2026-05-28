@@ -1043,8 +1043,16 @@ function lsLoadSong(): RhythmSong | null {
           {/* Mũi tên ▲ sát chân lời */}
           <div className="now-arrow--up" style={{ left: '30%', position: 'absolute', top: 'calc(50% + 18px)', transform: 'translateX(-50%)', zIndex: 20 }} />
         </div>
-
-
+        {showYoutube&&(song as any).youtubeUrl&&(
+          <div style={{width:'34%',flexShrink:0,background:'#111',borderLeft:'1px solid #1E2533',display:'flex',flexDirection:'column'}}>
+            <div style={{padding:'6px 10px',background:'#0A0E1A',display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:10,color:'#6B7280',flex:1}}>▶ YT · {((song as any).youtubeOffset??0).toFixed(1)}s</span>
+              <button style={{fontSize:9,padding:'2px 7px',borderRadius:4,border:'1px solid #374151',background:'none',color:'#9CA3AF',cursor:'pointer'}} onClick={()=>ytSeek(currentTime)}>Sync</button>
+            </div>
+            <div id="yt-player-frame" style={{flex:1,minHeight:0}} />
+          </div>
+        )}
+        </div>
 
         {/* Hint */}
 
