@@ -162,12 +162,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return () => window.removeEventListener('keydown', h);
   }, [playMode]);
 
+  const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
+
   const getYtOffset = useCallback(() => {
-    return (song as any).youtubeOffset
+    const base = (song as any).youtubeOffset
       ?? (song as any).youtubeOffsetSeconds
       ?? (song as any).sync?.youtubeOffsetSeconds
       ?? 0;
-  }, [song]);
+    return base + ytOffsetAdj;
+  }, [song, ytOffsetAdj]);
 
   const togglePlay = useCallback(() => {
     if (isPlayingRef.current) {
@@ -298,64 +301,78 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
         </div>
 
-        {/* ══ BEAT ROW ══ */}
-        <div className="now-arrow-wrap"><div className="now-arrow" style={{left:'30%'}}/></div>
-        <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
-          <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
-          <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
-            {Array.from({length:song.totalBars*song.timeSignature},(_,i)=>{
-              const bib=i%song.timeSignature, bt=i*beatDur, nb=(i+1)*beatDur;
-              const w=(nb-bt)*PPS, xBeat=beatNowX+bt*PPS;
-              return(
-                <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
-                  style={{left:xBeat,width:w-2,transform:'translateX(-50%)'}}>
-                  {bib===0&&<span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
-                  <span className="tl-beat-num">{bib+1}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ══ LYRIC + YT SPLIT ══ */}
+        {/* ══ BEAT + LYRIC + YT SPLIT ══ */}
         <div style={{display:'flex',flex:1,overflow:'hidden',minHeight:0}}>
-          <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{flex:1}}>
-            <div className="scroll-now-line" style={{left:'30%'}}/>
-            <div className="player-scroll-track" style={{width:trackW,transform:`translateX(${-scrollOff}px)`}}>
-              {(()=>{
-                const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
-                return sc.map((c,ci)=>{
-                  const cx=nowX+c.time*PPS, nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
-                  const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
-                  return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}><div className={`tl-chord${active?' active':''}`}>{c.name}</div></div>);
-                });
-              })()}
-              {(song.lyrics??[]).map((l,i)=>{
-                const lx=nowX+l.time*PPS, nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
-                const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
-                const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
-                return(
-                  <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
-                    <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`} style={{color:active?'#10B981':'#E2E8F0',fontSize:active?'22px':'20px',fontWeight:active?800:700}}>{l.text}</div>
-                  </div>
-                );
-              })}
+
+          {/* Left: beat + lyric stacked */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',minWidth:0}}>
+
+            {/* Beat row */}
+            <div className="now-arrow-wrap"><div className="now-arrow" style={{left:'30%'}}/></div>
+            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
+              <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
+              <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
+                {Array.from({length:song.totalBars*song.timeSignature},(_,i)=>{
+                  const bib=i%song.timeSignature, bt=i*beatDur, nb=(i+1)*beatDur;
+                  const w=(nb-bt)*PPS, xBeat=beatNowX+bt*PPS;
+                  return(
+                    <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
+                      style={{left:xBeat,width:w-2,transform:'translateX(-50%)'}}>
+                      {bib===0&&<span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
+                      <span className="tl-beat-num">{bib+1}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
-          </div>
-          {/* YouTube panel */}
+
+            {/* Lyric row */}
+            <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef}>
+              <div className="scroll-now-line" style={{left:'30%'}}/>
+              <div className="player-scroll-track" style={{width:trackW,transform:`translateX(${-scrollOff}px)`}}>
+                {(()=>{
+                  const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
+                  return sc.map((c,ci)=>{
+                    const cx=nowX+c.time*PPS, nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
+                    const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
+                    return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}><div className={`tl-chord${active?' active':''}`}>{c.name}</div></div>);
+                  });
+                })()}
+                {(song.lyrics??[]).map((l,i)=>{
+                  const lx=nowX+l.time*PPS, nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
+                  const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
+                  const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
+                  return(
+                    <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
+                      <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`} style={{color:active?'#10B981':'#E2E8F0',fontSize:active?'22px':'20px',fontWeight:active?800:700}}>{l.text}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
+            </div>
+
+          </div>{/* end left column */}
+
+          {/* Right: YouTube panel — cạnh cả beat + lyric */}
           {playMode==='yt'&&hasYT&&(
             <div style={{width:'34%',flexShrink:0,background:'#0A0E1A',borderLeft:'1px solid #1E2533',display:'flex',flexDirection:'column'}}>
-              <div style={{padding:'5px 10px',background:'#0D1117',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-                <span style={{fontSize:9,color:'#6B7280',flex:1}}>▶ YT · offset {getYtOffset().toFixed(2)}s</span>
-                {!ytReady&&<span style={{fontSize:9,color:'#4B5563'}}>Kết nối...</span>}
-                {ytReady&&<button style={{fontSize:9,padding:'2px 6px',borderRadius:3,border:'1px solid #374151',background:'none',color:'#9CA3AF',cursor:'pointer'}}
-                  onClick={()=>ytPlayerRef.current?.seekTo(getYtOffset()+currentTimeRef.current,true)}>Sync</button>}
+              <div style={{padding:'5px 8px',background:'#0D1117',display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
+                <span style={{fontSize:9,color:'#6B7280'}}>offset:</span>
+                <strong style={{fontSize:10,color:'#9CA3AF',fontFamily:'monospace'}}>{getYtOffset().toFixed(2)}s</strong>
+                <button style={{fontSize:10,padding:'1px 6px',borderRadius:3,border:'1px solid #374151',background:'#1f2937',color:'#9CA3AF',cursor:'pointer'}}
+                  onClick={()=>{const bd=60/song.tempo;setYtOffsetAdj(v=>+(v-bd).toFixed(3));}}>−♩</button>
+                <button style={{fontSize:10,padding:'1px 6px',borderRadius:3,border:'1px solid #374151',background:'#1f2937',color:'#9CA3AF',cursor:'pointer'}}
+                  onClick={()=>{const bd=60/song.tempo;setYtOffsetAdj(v=>+(v+bd).toFixed(3));}}>+♩</button>
+                {ytReady&&<button style={{fontSize:9,padding:'1px 6px',borderRadius:3,border:'1px solid #374151',background:'none',color:'#6B7280',cursor:'pointer',marginLeft:'auto'}}
+                  onClick={()=>ytPlayerRef.current?.seekTo(getYtOffset()+currentTimeRef.current,true)}>sync</button>}
+                {!ytReady&&<span style={{fontSize:9,color:'#4B5563',marginLeft:'auto'}}>...</span>}
               </div>
               <div id="yt-player-frame" style={{flex:1,minHeight:0}}/>
             </div>
           )}
-        </div>
+
+        </div>{/* end beat+lyric+yt split */}
 
         {/* ══ RECORDING ══ */}
         <div style={{padding:'9px 16px',background:'#F0E8D8',borderTop:'1px solid #D8C8A8',flexShrink:0}}>
