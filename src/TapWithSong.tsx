@@ -600,34 +600,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
             {levelConfig && <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />}
           </div>
 
-          {/* PROGRESS + BEAT gộp */}
-          <div style={{ background:'#061510', borderBottom:`1px solid rgba(220,230,210,0.07)`, padding:'7px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
-            <span style={{ fontSize:10, color:C.textDim, width:30, flexShrink:0 }}>{fmtTime(songTime)}</span>
-            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
-              {/* Progress bar */}
-              <div style={{ height:3, background:'rgba(220,230,210,0.1)', borderRadius:2, cursor:'pointer', position:'relative' }}
-                onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur) }}>
-                <div style={{ position:'absolute', left:0, top:0, bottom:0, width:`${totalDur>0?songTime/totalDur*100:0}%`, background:C.greenMid, borderRadius:2 }} />
-              </div>
-              {/* Beat marks */}
-              <div style={{ height:8, position:'relative' }}>
-                {Array.from({length: song.totalBars*song.timeSignature}, (_,i) => {
-                  const t = i * beatDur
-                  const pct = totalDur > 0 ? (t/speed/totalDur*100) : 0
-                  const isBar = i % song.timeSignature === 0
-                  const isTarget = levelConfig?.beats.includes(i%song.timeSignature+1)
-                  return (
-                    <div key={i} style={{ position:'absolute', bottom:0, left:`${pct}%`,
-                      width: isBar ? 2 : 1,
-                      height: isBar ? 8 : isTarget ? 6 : 4,
-                      background: isTarget ? 'rgba(141,196,112,0.3)' : isBar ? 'rgba(220,210,190,0.12)' : 'rgba(220,210,190,0.05)',
-                    }} />
-                  )
-                })}
-              </div>
-            </div>
-            <span style={{ fontSize:10, color:C.textDim, width:30, textAlign:'right', flexShrink:0 }}>{fmtTime(totalDur)}</span>
-          </div>
 
           {/* MAIN SCROLL AREA */}
           <div ref={scrollRef} style={{ flex:1, background:C.bgMain, position:'relative', overflow:'hidden', display:'flex' }}>
