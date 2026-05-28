@@ -267,7 +267,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ── CONTROL BAR ── */}
-        <div style={{ background:P.paperSurface, borderBottom:`1px solid rgba(20,83,45,0.07)`, padding:'0 24px', height:52, display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+        <div style={{ background:P.paperSurface, borderBottom:`1px solid rgba(20,83,45,0.07)`, padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
           {/* Chọn bài */}
           <button onClick={() => setShowSongList(true)} style={{ ...btn(), display:'flex', alignItems:'center', gap:6 }}>
             🎸 <span style={{ maxWidth:110, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</span>
@@ -276,30 +276,28 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           <div style={{ width:1, height:24, background:P.paperDark }}/>
 
           {/* Chế độ luyện tập */}
-          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:P.textDim }}>Chế độ luyện tập</span>
-            <div style={{ display:'flex', border:`1px solid rgba(20,83,45,0.15)`, borderRadius:10, overflow:'hidden', background:'rgba(20,83,45,0.02)' }}>
-              <button onClick={() => setPlayMode('metro')} style={{ ...btn(playMode==='metro'), borderRadius:0, border:'none', borderRight:`1px solid rgba(20,83,45,0.1)` }}>
-                🎵 Tập với máy đập nhịp
-              </button>
-              <button onClick={() => { if(hasYT){ setPlayMode('yt'); if(ytMode==='focus') setYtMode('mini'); } }}
-                disabled={!hasYT}
-                style={{ ...btn(playMode==='yt'), borderRadius:0, border:'none', borderRight:`1px solid rgba(20,83,45,0.1)`, opacity:!hasYT?0.4:1 }}
-                title={!hasYT?'Vào YouTube Sync để đồng bộ trước':''}>
-                ▶ YouTube
-              </button>
-              <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn(false), borderRadius:0, border:'none' }}>
-                🥁 Học Tap nhịp
-              </button>
-            </div>
+          <div style={{ display:'flex', alignItems:'center', gap:10, border:`1.5px solid rgba(7,26,22,0.35)`, borderRadius:10, padding:'6px 14px', background:'rgba(7,26,22,0.04)' }}>
+            <span style={{ fontSize:13, fontWeight:700, color:P.text, whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>CHẾ ĐỘ TẬP LUYỆN</span>
+            <div style={{ width:1, height:20, background:'rgba(7,26,22,0.15)' }}/>
+            <button onClick={() => setPlayMode('metro')} style={{ ...btn(playMode==='metro'), borderRadius:7 }}>
+              🎵 Tập với máy đập nhịp
+            </button>
+            <button onClick={() => { if(hasYT){ setPlayMode('yt'); if(ytMode==='focus') setYtMode('mini'); } }}
+              disabled={!hasYT}
+              style={{ ...btn(playMode==='yt'), borderRadius:7, opacity:!hasYT?0.4:1 }}
+              title={!hasYT?'Vào YouTube Sync để đồng bộ trước':''}>
+              ▶ YouTube
+            </button>
+            <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn(false), borderRadius:7 }}>
+              🥁 Học Tap Nhịp
+            </button>
             {/* YT size sub-options */}
-            {playMode==='yt' && (
-              <div style={{ display:'flex', gap:3 }}>
-                {([['focus','● Ẩn'],['mini','▣ Mini'],['full','⛶ To']] as [YtMode,string][]).map(([m,lbl]) => (
-                  <button key={m} onClick={() => setYtMode(m)} style={{ ...btn(ytMode===m), padding:'3px 10px', fontSize:10 }}>{lbl}</button>
-                ))}
-              </div>
-            )}
+            {playMode==='yt' && (<>
+              <div style={{ width:1, height:20, background:'rgba(7,26,22,0.15)' }}/>
+              {([['focus','● Ẩn'],['mini','▣ Mini'],['full','⛶ To']] as [YtMode,string][]).map(([m,lbl]) => (
+                <button key={m} onClick={() => setYtMode(m)} style={{ ...btn(ytMode===m), padding:'4px 10px', fontSize:11, borderRadius:7 }}>{lbl}</button>
+              ))}
+            </>)}
           </div>
 
           <div style={{ flex:1 }}/>
