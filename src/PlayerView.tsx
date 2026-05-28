@@ -138,12 +138,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         const t = Math.min(songT + (performance.now() - wall) / 1000 * speedRef.current, totalDur);
         currentTimeRef.current = t; setCurrentTime(t);
         setActiveBeatIdx(Math.floor(t / beatDur));
-        if (playMode === 'yt' && ytReadyRef.current && !ytSyncedRef.current) {
-          ytSyncedRef.current = true;
-          const off = (song as any).youtubeOffset ?? 0;
-          ytPlayerRef.current?.seekTo(off + t, true);
-          ytPlayerRef.current?.playVideo();
-        }
         if (t >= totalDur) {
           isPlayingRef.current = false; setIsPlaying(false);
           stopMetronome(); ytPlayerRef.current?.pauseVideo?.();
@@ -168,24 +162,37 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return () => window.removeEventListener('keydown', h);
   }, [playMode]);
 
+  const getYtOffset = useCallback(() => {
+    return (song as any).youtubeOffset
+      ?? (song as any).youtubeOffsetSeconds
+      ?? (song as any).sync?.youtubeOffsetSeconds
+      ?? 0;
+  }, [song]);
+
   const togglePlay = useCallback(() => {
     if (isPlayingRef.current) {
       isPlayingRef.current = false; setIsPlaying(false); stopMetronome();
       ytSyncedRef.current = false; ytPlayerRef.current?.pauseVideo?.();
     } else {
       isPlayingRef.current = true; setIsPlaying(true);
-      if (playMode === 'metro') startMetronome(currentTimeRef.current);
-      else ytSyncedRef.current = false;
+      if (playMode === 'metro') {
+        startMetronome(currentTimeRef.current);
+      } else if (playMode === 'yt' && ytReadyRef.current) {
+        // Seek ngay lập tức — trước khi RAF advance
+        ytPlayerRef.current?.seekTo(getYtOffset() + currentTimeRef.current, true);
+        setTimeout(() => ytPlayerRef.current?.playVideo(), 150);
+        ytSyncedRef.current = true;
+      }
     }
-  }, [playMode, speed]);
+  }, [playMode, speed, getYtOffset]);
 
   const seekTo = useCallback((t: number) => {
     currentTimeRef.current = t; setCurrentTime(t);
     if (playMode === 'yt' && ytReadyRef.current) {
-      ytPlayerRef.current?.seekTo(((song as any).youtubeOffset ?? 0) + t, true);
+      ytPlayerRef.current?.seekTo(getYtOffset() + t, true);
       ytSyncedRef.current = true;
     }
-  }, [playMode, song]);
+  }, [playMode, song, getYtOffset]);
 
   const nowX = containerW * 0.3;
   const beatNowX = beatContainerW * 0.3;
@@ -340,10 +347,10 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           {playMode==='yt'&&hasYT&&(
             <div style={{width:'34%',flexShrink:0,background:'#0A0E1A',borderLeft:'1px solid #1E2533',display:'flex',flexDirection:'column'}}>
               <div style={{padding:'5px 10px',background:'#0D1117',display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-                <span style={{fontSize:9,color:'#6B7280',flex:1}}>▶ YT · offset {((song as any).youtubeOffset??0).toFixed(1)}s</span>
+                <span style={{fontSize:9,color:'#6B7280',flex:1}}>▶ YT · offset {getYtOffset().toFixed(2)}s</span>
                 {!ytReady&&<span style={{fontSize:9,color:'#4B5563'}}>Kết nối...</span>}
                 {ytReady&&<button style={{fontSize:9,padding:'2px 6px',borderRadius:3,border:'1px solid #374151',background:'none',color:'#9CA3AF',cursor:'pointer'}}
-                  onClick={()=>ytPlayerRef.current?.seekTo(((song as any).youtubeOffset??0)+currentTimeRef.current,true)}>Sync</button>}
+                  onClick={()=>ytPlayerRef.current?.seekTo(getYtOffset()+currentTimeRef.current,true)}>Sync</button>}
               </div>
               <div id="yt-player-frame" style={{flex:1,minHeight:0}}/>
             </div>
