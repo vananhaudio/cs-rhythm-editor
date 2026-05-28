@@ -94,6 +94,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const [containerW, setContainerW]       = useState(900);
   const [beatContainerW, setBeatContainerW] = useState(900);
   const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
+  const [zoom, setZoom] = useState(1);
 
   const ytPlayerRef  = useRef<any>(null);
   const ytReadyRef   = useRef(false);
@@ -112,7 +113,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const beatDur  = 60 / song.tempo;
   const barDur   = beatDur * song.timeSignature;
   const totalDur = song.totalBars * barDur;
-  const PPS      = 120;
+  const PPS      = 120 * zoom;
   const hasYT    = !!(song as any).youtubeUrl;
 
   useEffect(() => { muteRef.current = muteMetronome; }, [muteMetronome]);
@@ -336,6 +337,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                 <button key={m} onClick={() => setYtMode(m)} style={{ ...btn(ytMode===m), padding:'4px 10px', fontSize:11, borderRadius:7 }}>{lbl}</button>
               ))}
             </>)}
+          </div>
+
+          {/* Zoom nhịp */}
+          <div style={{ display:'flex', alignItems:'center', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
+            <button onClick={() => setZoom(z => Math.max(0.5, +(z-0.25).toFixed(2)))} style={{ ...btn(), borderRadius:0, border:'none', borderRight:P.greenBorder, padding:'4px 10px', fontSize:15 }} title="Thu hẹp nhịp">−</button>
+            <span style={{ fontSize:10, fontFamily:'monospace', color:P.textMuted, padding:'0 8px', whiteSpace:'nowrap' }}>{Math.round(zoom*100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(3, +(z+0.25).toFixed(2)))} style={{ ...btn(), borderRadius:0, border:'none', borderLeft:P.greenBorder, padding:'4px 10px', fontSize:15 }} title="Mở rộng nhịp">+</button>
           </div>
 
           {/* Speed */}
