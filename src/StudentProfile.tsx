@@ -135,7 +135,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     <div style={{ minHeight: '100vh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
       <div style={{ background: T.header, borderBottom: `1px solid ${T.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: `1px solid ${T.greenDim}`, borderRadius: 8, color: T.green, cursor: 'pointer', padding: '6px 14px', fontSize: 13, fontWeight: 600 }}>← Quay lại</button>
+          <button onClick={onBack} style={{ background: 'none', border: `1px solid ${'#4A8A60'}`, borderRadius: 8, color: T.green, cursor: 'pointer', padding: '6px 14px', fontSize: 13, fontWeight: 600 }}>← Quay lại</button>
           <span style={{ color: T.textMuted, fontSize: 13 }}>Hồ sơ học sinh</span>
         </div>
       </div>
