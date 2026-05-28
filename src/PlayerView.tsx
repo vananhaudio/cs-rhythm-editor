@@ -292,7 +292,6 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [isPlaying, setIsPlaying] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [localTitle, setLocalTitle] = useState(song.title || '');
-  useEffect(() => { setSelecting(true); setPlayMode('metro'); }, [song.title]);
   const [currentTime, setCurrentTime] = useState(0);
   const [mp3FileName, setMp3FileName] = useState<string | null>(null);
   const [mp3Duration, setMp3Duration] = useState(0);
@@ -303,7 +302,6 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const [showSongList, setShowSongList] = useState(false);
   const [showYoutube, setShowYoutube] = useState(false);
   const [playMode, setPlayMode] = useState<'metro'|'yt'>('metro');
-  const [selecting, setSelecting] = useState(true);
   const ytPlayerRef = useRef<any>(null);
   const ytReadyRef = useRef(false);
   const ytSyncRef = useRef(false);
