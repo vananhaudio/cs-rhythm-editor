@@ -10,6 +10,33 @@ function fmtTime(t: number) {
 
 type YtMode = 'focus' | 'mini' | 'full';
 
+// ── Design tokens ──
+const P = {
+  paper:   '#ECE6D9',
+  paperSurface: '#E4DDCF',
+  paperDark: '#D9D1C1',
+  green:   '#14532D',
+  greenHover: 'rgba(20,83,45,0.10)',
+  greenBtn: 'rgba(20,83,45,0.05)',
+  greenBorder: '1px solid rgba(20,83,45,0.10)',
+  dark:    '#10261F',
+  darkDeep:'#0F221C',
+  gold:    '#C99700',
+  text:    '#2A2A1E',
+  textMuted: '#7A7060',
+  textDim: '#A09880',
+};
+
+const btn = (active = false): React.CSSProperties => ({
+  background: active ? P.green : P.greenBtn,
+  border: active ? 'none' : P.greenBorder,
+  borderRadius: 8,
+  color: active ? '#fff' : P.text,
+  fontSize: 12, fontWeight: active ? 600 : 400,
+  padding: '6px 14px', cursor: 'pointer',
+  transition: 'all 0.15s', whiteSpace: 'nowrap',
+});
+
 export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   song: RhythmSong; onClose: () => void;
   onImportSong?: (song: RhythmSong) => void;
@@ -17,51 +44,61 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   onUpdateTitle?: (title: string) => void;
 }) {
   const [playMode, setPlayMode] = useState<'metro'|'yt'>('metro');
-  const [ytMode, setYtMode] = useState<YtMode>('focus');
+  const [ytMode, setYtMode]     = useState<YtMode>('focus');
   const [ytHovered, setYtHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed]       = useState(1);
   const [muteMetronome, setMuteMetronome] = useState(false);
-  const [showSongList, setShowSongList] = useState(false);
-  const [ytReady, setYtReady] = useState(false);
+  const [showSongList, setShowSongList]   = useState(false);
+  const [ytReady, setYtReady]   = useState(false);
   const [activeBeatIdx, setActiveBeatIdx] = useState(-1);
-  const [containerW, setContainerW] = useState(900);
+  const [containerW, setContainerW]       = useState(900);
   const [beatContainerW, setBeatContainerW] = useState(900);
-  const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
+  const [ytOffsetAdj, setYtOffsetAdj]     = useState(0);
+  const [recentSongs, setRecentSongs]     = useState<{title:string;artist?:string}[]>([]);
 
-  const ytPlayerRef = useRef<any>(null);
-  const ytReadyRef = useRef(false);
-  const ytSyncedRef = useRef(false);
+  const ytPlayerRef  = useRef<any>(null);
+  const ytReadyRef   = useRef(false);
+  const ytSyncedRef  = useRef(false);
   const isPlayingRef = useRef(false);
   const currentTimeRef = useRef(0);
-  const muteRef = useRef(false);
-  const rafRef = useRef<number>(0);
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const muteRef      = useRef(false);
+  const rafRef       = useRef<number>(0);
+  const audioCtxRef  = useRef<AudioContext|null>(null);
   const schedulerRef = useRef<ReturnType<typeof setInterval>|null>(null);
-  const nextBeatRef = useRef(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const nextBeatRef  = useRef(0);
+  const scrollRef    = useRef<HTMLDivElement>(null);
   const beatScrollRef = useRef<HTMLDivElement>(null);
-  const speedRef = useRef(1);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const speedRef     = useRef(1);
 
-  const beatDur = 60 / song.tempo;
-  const barDur = beatDur * song.timeSignature;
+  const beatDur  = 60 / song.tempo;
+  const barDur   = beatDur * song.timeSignature;
   const totalDur = song.totalBars * barDur;
-  const PPS = 120;
-  const hasYT = !!(song as any).youtubeUrl;
+  const PPS      = 120;
+  const hasYT    = !!(song as any).youtubeUrl;
 
   useEffect(() => { muteRef.current = muteMetronome; }, [muteMetronome]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
+
+  // Track recent songs
+  useEffect(() => {
+    if (!song.title) return;
+    setRecentSongs(prev => {
+      const filtered = prev.filter(s => s.title !== song.title);
+      return [{ title: song.title, artist: song.artist }, ...filtered].slice(0, 6);
+    });
+  }, [song.title]);
+
   useEffect(() => {
     setIsPlaying(false); isPlayingRef.current = false;
-    setCurrentTime(0); currentTimeRef.current = 0;
+    setCurrentTime(0);  currentTimeRef.current = 0;
     setActiveBeatIdx(-1); stopMetronome();
     ytPlayerRef.current?.pauseVideo?.();
     setYtOffsetAdj(0);
   }, [song.title]);
 
-  // Resize observers
+  // Resize
   useEffect(() => {
     if (!scrollRef.current) return;
     const ro = new ResizeObserver(e => setContainerW(e[0].contentRect.width));
@@ -77,7 +114,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return () => ro.disconnect();
   }, []);
 
-  // YouTube setup
+  // YouTube
   useEffect(() => {
     if (playMode !== 'yt' || !hasYT || ytMode === 'focus') return;
     const ytId = ((song as any).youtubeUrl as string).match(/(?:youtu\.be\/|v=|\/embed\/)([\w-]{11})/)?.[1];
@@ -87,8 +124,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
       ytPlayerRef.current?.destroy?.();
       ytPlayerRef.current = new (window as any).YT.Player('yt-player-frame', {
         videoId: ytId,
-        playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
-        events: { onReady: () => { ytReadyRef.current = true; setYtReady(true); } }
+        playerVars: { autoplay:0, controls:1, rel:0, modestbranding:1 },
+        events: {
+          onReady: () => { ytReadyRef.current = true; setYtReady(true); },
+          onStateChange: (e: any) => {
+            if (e.data === 1 && !isPlayingRef.current) ytPlayerRef.current?.pauseVideo();
+          }
+        }
       });
     };
     if ((window as any).YT?.Player) { setup(); return; }
@@ -102,8 +144,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const getYtOffset = useCallback(() => {
     const base = (song as any).youtubeOffset
       ?? (song as any).sync?.youtubeOffsetSeconds
-      ?? (song as any).youtubeOffsetSeconds
-      ?? 0;
+      ?? (song as any).youtubeOffsetSeconds ?? 0;
     return base + ytOffsetAdj;
   }, [song, ytOffsetAdj]);
 
@@ -126,7 +167,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (ctx.state === 'suspended') ctx.resume();
     const bd = beatDur / speedRef.current;
     const beats = Math.floor(from / beatDur);
-    nextBeatRef.current = ctx.currentTime + ((beats + 1) * beatDur - from) / speedRef.current;
+    nextBeatRef.current = ctx.currentTime + ((beats+1)*beatDur - from) / speedRef.current;
     let idx = beats + 1;
     stopMetronome();
     schedulerRef.current = setInterval(() => {
@@ -147,7 +188,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (isPlaying) { wall = performance.now(); songT = currentTimeRef.current; }
     const tick = () => {
       if (isPlayingRef.current) {
-        const t = Math.min(songT + (performance.now() - wall) / 1000 * speedRef.current, totalDur);
+        const t = Math.min(songT + (performance.now()-wall)/1000*speedRef.current, totalDur);
         currentTimeRef.current = t; setCurrentTime(t);
         setActiveBeatIdx(Math.floor(t / beatDur));
         if (t >= totalDur) {
@@ -165,11 +206,11 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
-      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
-      if (e.key === 'Escape') onClose();
-      if (e.key === ' ') { e.preventDefault(); togglePlay(); }
-      if (e.key === 'ArrowLeft') seekTo(Math.max(0, currentTimeRef.current - 5));
-      if (e.key === 'ArrowRight') seekTo(Math.min(totalDur, currentTimeRef.current + 5));
+      if (t.tagName==='INPUT' || t.tagName==='TEXTAREA') return;
+      if (e.key==='Escape') onClose();
+      if (e.key===' ') { e.preventDefault(); togglePlay(); }
+      if (e.key==='ArrowLeft') seekTo(Math.max(0, currentTimeRef.current-5));
+      if (e.key==='ArrowRight') seekTo(Math.min(totalDur, currentTimeRef.current+5));
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
@@ -181,10 +222,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
       ytSyncedRef.current = false; ytPlayerRef.current?.pauseVideo?.();
     } else {
       isPlayingRef.current = true; setIsPlaying(true);
-      if (playMode === 'metro') {
-        startMetronome(currentTimeRef.current);
-      } else if (ytReadyRef.current) {
-        ytPlayerRef.current?.seekTo(getYtOffset() + currentTimeRef.current, true);
+      if (playMode==='metro') startMetronome(currentTimeRef.current);
+      else if (ytReadyRef.current) {
+        ytPlayerRef.current?.seekTo(getYtOffset()+currentTimeRef.current, true);
         setTimeout(() => ytPlayerRef.current?.playVideo(), 100);
         ytSyncedRef.current = true;
       }
@@ -193,223 +233,307 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
   const seekTo = useCallback((t: number) => {
     currentTimeRef.current = t; setCurrentTime(t);
-    if (playMode === 'yt' && ytReadyRef.current) {
-      ytPlayerRef.current?.seekTo(getYtOffset() + t, true);
-    }
+    if (playMode==='yt' && ytReadyRef.current)
+      ytPlayerRef.current?.seekTo(getYtOffset()+t, true);
   }, [playMode, getYtOffset]);
 
-  const nowX = containerW * 0.3;
-  const beatNowX = beatContainerW * 0.3;
+  const nowX      = containerW * 0.3;
+  const beatNowX  = beatContainerW * 0.3;
   const scrollOff = currentTime * PPS;
-  const trackW = totalDur * PPS + containerW;
-  const pct = totalDur > 0 ? currentTime / totalDur * 100 : 0;
-
-  // YouTube opacity: focus=không hiện, mini/full=dim khi play, hover=full
-  const ytOpacity = ytHovered ? 1 : isPlaying ? 0.4 : 1;
-
-  // YT dimensions
+  const trackW    = totalDur * PPS + containerW;
+  const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
+  const ytOpacity = ytHovered ? 1 : isPlaying ? 0.45 : 1;
   const ytDims: Record<YtMode, React.CSSProperties> = {
     focus: { display:'none' },
-    mini:  { width:280, aspectRatio:'16/9' },
-    full:  { width:'min(50vw, 560px)', aspectRatio:'16/9' },
+    mini:  { width: 300, aspectRatio:'16/9' },
+    full:  { width: 'min(50vw,540px)', aspectRatio:'16/9' },
   };
 
-  // Mode button
-  const modeBtn = (mode: YtMode, label: string, active: boolean) => (
-    <button onClick={() => setYtMode(mode)} style={{
-      background: active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)',
-      border: active ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.1)',
-      borderRadius: 7, color: active ? '#fff' : 'rgba(255,255,255,0.5)',
-      fontSize: 11, fontWeight: active ? 700 : 400, padding: '4px 10px', cursor: 'pointer',
-      transition: 'all 0.15s', whiteSpace: 'nowrap',
-    }}>{label}</button>
-  );
-
   return (
-    <div className="player-overlay">
-      <div className="player-panel" style={{ display:'flex', flexDirection:'column' }}>
+    <div style={{ display:'flex', height:'100vh', background:P.paper, fontFamily:"'Inter','Segoe UI',sans-serif", overflow:'hidden' }}>
 
-        {/* ══ H1 — thông tin + progress ══ */}
-        <div style={{ background:'#123524', height:44, display:'flex', alignItems:'center', padding:'0 14px', gap:8, flexShrink:0 }}>
-          <div style={{ width:22,height:22,background:'#D89B22',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:10,color:'#fff',flexShrink:0 }}>C#</div>
-          <span style={{ fontSize:13,fontWeight:700,color:'#F4F1E8',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:160,flex:'0 1 160px' }}>
-            {song.title || '—'}
-          </span>
-          {song.tempo > 0 && <span className="player-meta-chip" style={{flexShrink:0}}>{song.tempo}</span>}
-          {song.timeSignature > 0 && <span className="player-meta-chip" style={{flexShrink:0}}>{song.timeSignature}/4</span>}
-          <div style={{ flex:1, position:'relative', height:3, background:'rgba(255,255,255,0.1)', borderRadius:2, cursor:'pointer', minWidth:40 }}
-            onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
-            <div style={{ height:'100%', width:`${pct}%`, background:'#A7D88A', borderRadius:2, transition:'width 0.05s linear' }}/>
+      {/* ══ SIDEBAR ══ */}
+      <aside style={{ width:220, flexShrink:0, background:P.paper, borderRight:`1px solid ${P.paperDark}`, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        {/* Logo */}
+        <div style={{ padding:'20px 20px 16px', borderBottom:`1px solid rgba(42,42,30,0.08)` }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:36, height:36, background:P.green, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:800, fontSize:14, letterSpacing:-0.5 }}>C#</div>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:P.text, lineHeight:1.2 }}>Văn Anh</div>
+              <div style={{ fontSize:10, color:P.textMuted }}>Guitar Studio</div>
+            </div>
           </div>
-          <span style={{ fontSize:10,color:'rgba(255,255,255,0.4)',fontFamily:'monospace',flexShrink:0,whiteSpace:'nowrap' }}>{fmtTime(currentTime)}/{fmtTime(totalDur)}</span>
-          {extraActions}
-          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:5,color:'rgba(255,255,255,0.4)',fontSize:13,padding:'3px 8px',cursor:'pointer',flexShrink:0 }}>✕</button>
         </div>
 
-        {/* ══ H2 — thanh luyện tập ══ */}
-        <div style={{ background:'#1B4332', height:52, display:'flex', alignItems:'center', padding:'0 16px', gap:10, flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
+        {/* Search */}
+        <div style={{ padding:'12px 14px 8px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, background:P.paperSurface, border:`1px solid rgba(42,42,30,0.1)`, borderRadius:8, padding:'7px 10px' }}>
+            <span style={{ fontSize:12, color:P.textMuted }}>🔍</span>
+            <input placeholder="Tìm bài hát..." onClick={() => setShowSongList(true)} readOnly
+              style={{ background:'none', border:'none', outline:'none', fontSize:12, color:P.text, width:'100%', cursor:'pointer' }}/>
+          </div>
+        </div>
+
+        {/* Recent */}
+        <div style={{ flex:1, overflow:'auto', padding:'8px 0' }}>
+          <div style={{ padding:'6px 16px 4px', fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:P.textDim }}>Gần đây</div>
+          {recentSongs.length === 0 && (
+            <div style={{ padding:'10px 16px', fontSize:11, color:P.textDim }}>Chưa có bài nào</div>
+          )}
+          {recentSongs.map((s, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'7px 16px', background: song.title===s.title ? 'rgba(20,83,45,0.08)' : 'transparent', cursor:'pointer', transition:'background 0.1s' }}
+              onMouseEnter={e => { if (song.title!==s.title) (e.currentTarget as HTMLElement).style.background='rgba(20,83,45,0.04)'; }}
+              onMouseLeave={e => { if (song.title!==s.title) (e.currentTarget as HTMLElement).style.background='transparent'; }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:500, color:P.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{s.title}</div>
+                {s.artist && <div style={{ fontSize:10, color:P.textMuted }}>{s.artist}</div>}
+              </div>
+              {song.title===s.title && <div style={{ width:6, height:6, borderRadius:'50%', background:P.green, flexShrink:0, marginLeft:6 }}/>}
+            </div>
+          ))}
+
+          {/* Kho bài */}
+          <div style={{ padding:'16px 16px 4px', fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:P.textDim }}>Kho bài hát</div>
+          <div style={{ padding:'7px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:8 }}
+            onClick={() => setShowSongList(true)}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background='rgba(20,83,45,0.04)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background='transparent'; }}>
+            <span style={{ fontSize:13 }}>🎸</span>
+            <span style={{ fontSize:12, color:P.text }}>Chọn bài...</span>
+          </div>
+        </div>
+
+        {/* Profile */}
+        <div style={{ padding:'12px 16px', borderTop:`1px solid rgba(42,42,30,0.08)`, display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:28, height:28, borderRadius:'50%', background:'rgba(20,83,45,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}>👤</div>
+          <div style={{ fontSize:11, color:P.textMuted }}>Thầy Văn Anh</div>
+          <button onClick={onClose} style={{ marginLeft:'auto', background:'none', border:'none', color:P.textDim, fontSize:16, cursor:'pointer', lineHeight:1 }} title="Đóng">✕</button>
+        </div>
+      </aside>
+
+      {/* ══ MAIN COLUMN ══ */}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+
+        {/* ── TOP BAR ── */}
+        <div style={{ background:P.paper, borderBottom:`1px solid ${P.paperDark}`, padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, flex:'0 1 320px', minWidth:0 }}>
+            <div style={{ width:26, height:26, background:P.green, borderRadius:5, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:11, color:'#fff', flexShrink:0 }}>C#</div>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontSize:14, fontWeight:600, color:P.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || '—'}</div>
+            </div>
+            {song.tempo>0 && <div style={{ fontSize:11, color:P.textMuted, flexShrink:0 }}><span style={{ fontWeight:600, color:P.text }}>{song.tempo}</span> BPM</div>}
+            {song.timeSignature>0 && <div style={{ fontSize:11, color:P.textMuted, flexShrink:0 }}>{song.timeSignature}/4</div>}
+          </div>
+          {/* Progress */}
+          <div style={{ flex:1, display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ flex:1, height:3, background:P.paperDark, borderRadius:2, cursor:'pointer', position:'relative' }}
+              onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
+              <div style={{ height:'100%', width:`${pct}%`, background:P.green, borderRadius:2, transition:'width 0.05s linear' }}/>
+            </div>
+            <span style={{ fontSize:11, color:P.textMuted, fontFamily:'monospace', flexShrink:0, whiteSpace:'nowrap' }}>{fmtTime(currentTime)} / {fmtTime(totalDur)}</span>
+          </div>
+          {extraActions}
+        </div>
+
+        {/* ── CONTROL BAR ── */}
+        <div style={{ background:P.paperSurface, borderBottom:`1px solid ${P.paperDark}`, padding:'0 24px', height:52, display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
           {/* Chọn bài */}
-          <button onClick={() => setShowSongList(true)} style={{ display:'flex',alignItems:'center',gap:6,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'6px 12px',cursor:'pointer',color:'#fff',fontSize:12,fontWeight:600,whiteSpace:'nowrap',flexShrink:0 }}>
-            🎸 {song.title ? <span style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'inline-block'}}>{song.title}</span> : 'Chọn bài'}
+          <button onClick={() => setShowSongList(true)} style={{ ...btn(), display:'flex', alignItems:'center', gap:6 }}>
+            🎸 <span style={{ maxWidth:110, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</span>
           </button>
 
-          <div style={{ width:1,height:30,background:'rgba(255,255,255,0.1)',flexShrink:0 }}/>
+          <div style={{ width:1, height:24, background:P.paperDark }}/>
 
-          {/* Mode */}
-          <div style={{ display:'flex', gap:4, alignItems:'center' }}>
-            {modeBtn('focus', '● Tập trung', ytMode==='focus')}
-            {modeBtn('mini', '▣ Mini', ytMode==='mini' && playMode==='yt')}
-            {modeBtn('full', '⛶ Full', ytMode==='full' && playMode==='yt')}
+          {/* Chế độ luyện tập */}
+          <span style={{ fontSize:11, color:P.textMuted, flexShrink:0 }}>Chế độ:</span>
+          <div style={{ display:'flex', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
+            {(['metro','yt'] as const).map(m => (
+              <button key={m} onClick={() => { setPlayMode(m); if(m==='yt'&&ytMode==='focus') setYtMode('mini'); }}
+                disabled={m==='yt'&&!hasYT}
+                style={{ ...btn(playMode===m), borderRadius:0, border:'none', borderRight: m==='metro' ? P.greenBorder : 'none', opacity: m==='yt'&&!hasYT ? 0.4 : 1 }}>
+                {m==='metro' ? '🎵 Máy đập nhịp' : '▶ YouTube'}
+              </button>
+            ))}
           </div>
 
-          {/* YT toggle */}
-          <button onClick={() => setPlayMode(v => v==='yt' ? 'metro' : 'yt')}
-            style={{ background:playMode==='yt'?'rgba(216,155,34,0.2)':'rgba(255,255,255,0.06)', border:playMode==='yt'?'1px solid #D89B22':'1px solid rgba(255,255,255,0.1)', borderRadius:7, color:playMode==='yt'?'#F5C842':'rgba(255,255,255,0.45)', fontSize:11, padding:'4px 10px', cursor:'pointer', flexShrink:0, transition:'all 0.15s' }}
-            title={hasYT ? '' : 'Vào YouTube Sync để đồng bộ trước'}>
-            {playMode==='yt' ? '▶ YT ✓' : '▶ YT'}
-          </button>
-          {!hasYT && <span style={{ fontSize:10, color:'rgba(216,155,34,0.6)' }}>⚠</span>}
+          {/* YT size — chỉ khi YT mode */}
+          {playMode==='yt' && (
+            <div style={{ display:'flex', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
+              {([['focus','● Ẩn'],['mini','▣ Mini'],['full','⛶ To']] as [YtMode,string][]).map(([m,lbl]) => (
+                <button key={m} onClick={() => setYtMode(m)}
+                  style={{ ...btn(ytMode===m), borderRadius:0, border:'none', borderRight: m!=='full' ? P.greenBorder : 'none' }}>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div style={{ flex:1 }}/>
 
           {/* Speed */}
-          <div style={{ display:'flex',border:'1px solid rgba(255,255,255,0.1)',borderRadius:6,overflow:'hidden',flexShrink:0 }}>
-            {[0.75,1,1.25].map(s=>(
-              <button key={s} onClick={() => setSpeed(s)} style={{ background:speed===s?'rgba(255,255,255,0.18)':'transparent',border:'none',color:speed===s?'#fff':'rgba(255,255,255,0.4)',fontSize:10,padding:'4px 8px',cursor:'pointer',fontFamily:'monospace' }}>
+          <div style={{ display:'flex', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
+            {[0.75,1,1.25].map(s => (
+              <button key={s} onClick={() => setSpeed(s)} style={{ ...btn(speed===s), borderRadius:0, border:'none', borderRight: s!==1.25 ? P.greenBorder : 'none', fontSize:11, fontFamily:'monospace' }}>
                 {s===0.75?'75%':s===1?'100%':'125%'}
               </button>
             ))}
           </div>
 
-          <button onClick={() => { seekTo(0); }} style={{ background:'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:'rgba(255,255,255,0.6)',fontSize:13,padding:'5px 10px',cursor:'pointer',flexShrink:0 }} title="Về đầu bài">⏮</button>
-
-          {/* Play */}
-          <button onClick={togglePlay} disabled={!song.title}
-            style={{ width:40,height:40,borderRadius:'50%',background:isPlaying?'rgba(255,255,255,0.15)':(playMode==='yt'?'#D89B22':'#A7D88A'),border:'none',color:isPlaying?'#fff':(playMode==='yt'?'#fff':'#14532D'),fontSize:18,cursor:!song.title?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:!song.title?0.4:1,flexShrink:0,boxShadow:isPlaying?'none':'0 2px 10px rgba(0,0,0,0.3)' }}>
-            {isPlaying?'⏸':'▶'}
-          </button>
-
           {/* Metro mute */}
-          {playMode === 'metro' && (
-            <button onClick={() => setMuteMetronome(v=>!v)} style={{ background:muteMetronome?'rgba(255,80,80,0.2)':'rgba(255,255,255,0.08)',border:'none',borderRadius:6,color:muteMetronome?'#ff8080':'rgba(255,255,255,0.5)',fontSize:12,padding:'5px 8px',cursor:'pointer',flexShrink:0 }}>🎵</button>
+          {playMode==='metro' && (
+            <button onClick={() => setMuteMetronome(v=>!v)} style={{ ...btn(muteMetronome), width:34, height:34, padding:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, borderRadius:'50%' }}
+              title={muteMetronome?'Bật metronome':'Tắt metronome'}>🎵</button>
           )}
 
-          {/* Tap */}
-          <button onClick={() => { window.location.href = '/tap'; }}
-            style={{ background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:6,color:'rgba(255,255,255,0.5)',fontSize:12,padding:'5px 8px',cursor:'pointer',flexShrink:0,whiteSpace:'nowrap' }}>🥁</button>
+          {/* ⏮ */}
+          <button onClick={() => seekTo(0)} style={{ ...btn(), width:34, height:34, padding:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15 }} title="Về đầu">⏮</button>
+
+          {/* ▶ PLAY — heart of the brand */}
+          <button onClick={togglePlay} disabled={!song.title} style={{
+            width:44, height:44, borderRadius:'50%',
+            background: isPlaying ? 'rgba(20,83,45,0.15)' : P.green,
+            border: isPlaying ? `1px solid rgba(20,83,45,0.3)` : 'none',
+            color: isPlaying ? P.green : '#fff',
+            fontSize:18, cursor: !song.title?'not-allowed':'pointer',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            opacity: !song.title ? 0.4 : 1, flexShrink:0,
+            boxShadow: isPlaying ? 'none' : `0 0 20px rgba(20,83,45,0.15), 0 2px 8px rgba(0,0,0,0.15)`,
+            transition:'all 0.2s',
+          }}>{isPlaying?'⏸':'▶'}</button>
+
+          {/* Tap nhịp */}
+          <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn() }} title="Tap nhịp">🥁 Tap</button>
         </div>
 
-        {/* ══ MAIN CONTENT — lyric full width, YT floating ══ */}
-        <div ref={contentRef} style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position:'relative' }}>
+        {/* ── PRACTICE AREA ── */}
+        <div style={{ flex:1, padding:'16px 20px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+          <div style={{
+            flex:1, borderRadius:24, overflow:'hidden',
+            background:P.dark,
+            border:'1px solid rgba(255,255,255,0.06)',
+            boxShadow:'0 4px 18px rgba(0,0,0,0.08), inset 0 1px rgba(255,255,255,0.03)',
+            display:'flex', flexDirection:'column', position:'relative',
+          }}>
 
-          {/* Beat row — full width */}
-          <div className="now-arrow-wrap"><div className="now-arrow" style={{left:'30%'}}/></div>
-          <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
-            <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
-            <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
-              {Array.from({length:song.totalBars*song.timeSignature},(_,i) => {
-                const bib=i%song.timeSignature, bt=i*beatDur, nb=(i+1)*beatDur;
-                const w=(nb-bt)*PPS, xBeat=beatNowX+bt*PPS;
-                return(
-                  <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
-                    style={{left:xBeat,width:w-2,transform:'translateX(-50%)'}}>
-                    {bib===0&&<span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
-                    <span className="tl-beat-num">{bib+1}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Lyric row — full width luôn */}
-          <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{flex:1}}>
-            <div className="scroll-now-line" style={{left:'30%'}}/>
-            <div className="player-scroll-track" style={{width:trackW,transform:`translateX(${-scrollOff}px)`}}>
-              {(()=>{
-                const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
-                return sc.map((c,ci)=>{
-                  const cx=nowX+c.time*PPS, nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
-                  const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
-                  return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}><div className={`tl-chord${active?' active':''}`}>{c.name}</div></div>);
-                });
-              })()}
-              {(song.lyrics??[]).map((l,i)=>{
-                const lx=nowX+l.time*PPS, nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
-                const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
-                const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
-                return(
-                  <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
-                    <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`} style={{color:active?'#10B981':'#E2E8F0',fontSize:active?'22px':'20px',fontWeight:active?800:700}}>{l.text}</div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
-          </div>
-
-          {/* ── YouTube FLOATING mini/full ── */}
-          {playMode==='yt' && hasYT && ytMode !== 'focus' && (
-            <div
-              onMouseEnter={() => setYtHovered(true)}
-              onMouseLeave={() => setYtHovered(false)}
-              style={{
-                position: 'absolute',
-                right: 16,
-                bottom: 16,
-                ...ytDims[ytMode],
-                borderRadius: 12,
-                overflow: 'hidden',
-                opacity: ytOpacity,
-                transition: 'opacity 0.3s ease, width 0.3s ease',
-                zIndex: 15,
-                boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}>
-              {/* Header bar */}
-              <div style={{ position:'absolute', top:0, left:0, right:0, zIndex:2, background:'rgba(0,0,0,0.6)', padding:'4px 8px', display:'flex', alignItems:'center', gap:6, backdropFilter:'blur(4px)' }}>
-                <span style={{ fontSize:9, color:'rgba(255,255,255,0.5)', flex:1 }}>
-                  YT · {getYtOffset().toFixed(1)}s
-                  {!ytReady && ' · kết nối...'}
-                </span>
-                <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{ background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:10,cursor:'pointer',padding:'0 2px' }}>
-                  {ytMode==='mini'?'⛶':'▣'}
-                </button>
-                <button onClick={() => setYtMode('focus')} style={{ background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:12,cursor:'pointer',padding:'0 2px' }}>✕</button>
+            {/* Beat row */}
+            <div className="now-arrow-wrap" style={{ background:'#0F221C' }}><div className="now-arrow" style={{left:'30%'}}/></div>
+            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef} style={{ background:'#0F221C' }}>
+              <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
+              <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
+                {Array.from({length:song.totalBars*song.timeSignature},(_,i)=>{
+                  const bib=i%song.timeSignature, bt=i*beatDur, nb=(i+1)*beatDur;
+                  const w=(nb-bt)*PPS, xBeat=beatNowX+bt*PPS;
+                  return(
+                    <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
+                      style={{left:xBeat,width:w-2,transform:'translateX(-50%)'}}>
+                      {bib===0&&<span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
+                      <span className="tl-beat-num">{bib+1}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <div id="yt-player-frame" style={{ width:'100%', height:'100%' }}/>
             </div>
-          )}
 
-        </div>{/* end main content */}
+            {/* Lyric row — full width, flex:1 */}
+            <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{ flex:1, background:P.dark }}>
+              <div className="scroll-now-line" style={{left:'30%'}}/>
+              <div className="player-scroll-track" style={{width:trackW,transform:`translateX(${-scrollOff}px)`}}>
+                {(()=>{
+                  const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
+                  return sc.map((c,ci)=>{
+                    const cx=nowX+c.time*PPS, nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
+                    const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
+                    return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}>
+                      <div className={`tl-chord${active?' active':''}`} style={{ opacity:active?0.9:0.55, fontSize:active?15:13, color:P.gold }}>{c.name}</div>
+                    </div>);
+                  });
+                })()}
+                {(song.lyrics??[]).map((l,i)=>{
+                  const lx=nowX+l.time*PPS, nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
+                  const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
+                  const past=currentTimeRef.current>=nt;
+                  const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
+                  const lyricColor = active ? '#EAFBF2' : past ? 'rgba(234,251,242,0.25)' : 'rgba(234,251,242,0.55)';
+                  const lyricShadow = active ? '0 0 6px rgba(20,83,45,0.16)' : 'none';
+                  return(
+                    <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
+                      <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`}
+                        style={{color:lyricColor,fontSize:active?'22px':'20px',fontWeight:active?700:500,
+                          textShadow:lyricShadow,letterSpacing:'0.03em',transition:'color 0.12s,text-shadow 0.15s'}}>
+                        {l.text}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
+            </div>
 
-        {/* ══ RECORDING ══ */}
-        <div style={{ padding:'8px 16px', background:'#F0E8D8', borderTop:'1px solid #D8C8A8', flexShrink:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-            <span style={{ fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'#8A7A5A' }}>Ghi lại buổi tập</span>
-            <span style={{ fontSize:9,background:'#E8DFD0',color:'#8A7A5A',padding:'2px 7px',borderRadius:20 }}>🔒 Lớp Hành Trình</span>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
-            {[['🎙','Ghi âm','Thu buổi chơi'],['📹','Quay video','Quay lại để xem'],['📤','Nộp bài','Gửi thầy chấm']].map(([ic,tt,sub])=>(
-              <button key={tt} disabled style={{ background:'#FAF7F0',border:'1px solid #C8B898',borderRadius:8,padding:'7px 6px',display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'not-allowed',opacity:0.55 }}>
-                <span style={{fontSize:15}}>{ic}</span>
-                <span style={{fontSize:10,color:'#5A4A30',fontWeight:500}}>{tt}</span>
-                <span style={{fontSize:9,color:'#8A7A5A'}}>{sub}</span>
-              </button>
-            ))}
+            {/* Playhead line — mảnh, vàng trầm */}
+            <div style={{
+              position:'absolute', top:0, bottom:0,
+              left:'30%', width:'1px',
+              background:'rgba(201,151,0,0.65)',
+              boxShadow:'0 0 12px rgba(201,151,0,0.08)',
+              pointerEvents:'none', zIndex:12,
+            }}/>
+
+            {/* YouTube floating */}
+            {playMode==='yt' && hasYT && ytMode!=='focus' && (
+              <div onMouseEnter={() => setYtHovered(true)} onMouseLeave={() => setYtHovered(false)}
+                style={{ position:'absolute', right:16, bottom:16, ...ytDims[ytMode],
+                  borderRadius:12, overflow:'hidden',
+                  opacity:ytOpacity, transition:'opacity 0.3s ease',
+                  zIndex:15, boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+                  border:'1px solid rgba(255,255,255,0.08)',
+                }}>
+                <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:2,background:'rgba(0,0,0,0.55)',padding:'4px 8px',display:'flex',alignItems:'center',gap:6 }}>
+                  <span style={{fontSize:9,color:'rgba(255,255,255,0.5)',flex:1}}>YT · {getYtOffset().toFixed(1)}s{!ytReady?' · kết nối...':''}</span>
+                  <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:10,cursor:'pointer'}}>{ytMode==='mini'?'⛶':'▣'}</button>
+                  <button onClick={() => setYtMode('focus')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.5)',fontSize:12,cursor:'pointer'}}>✕</button>
+                </div>
+                <div id="yt-player-frame" style={{width:'100%',height:'100%'}}/>
+              </div>
+            )}
+
           </div>
         </div>
 
-        <div className="player-hint">Space = Play/Pause · ← → = ±5s · Esc = Đóng</div>
+        {/* ── FOOTER ── */}
+        <div style={{ padding:'12px 20px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10, flexShrink:0, background:P.paper }}>
+          {[['🎙','Ghi âm','Thu buổi chơi'],['📹','Quay video','Quay lại để xem'],['📤','Nộp bài','Gửi thầy chấm']].map(([ic,tt,sub])=>(
+            <button key={tt} disabled style={{
+              background:P.paperSurface, border:`1px solid ${P.paperDark}`,
+              borderRadius:12, padding:'12px 16px',
+              display:'flex', alignItems:'center', gap:12,
+              cursor:'not-allowed', opacity:0.6, textAlign:'left',
+            }}>
+              <span style={{fontSize:20,flexShrink:0}}>{ic}</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:P.text}}>{tt}</div>
+                <div style={{fontSize:11,color:P.textMuted}}>{sub}</div>
+              </div>
+              <div style={{marginLeft:'auto',fontSize:9,background:'rgba(20,83,45,0.08)',color:P.green,padding:'2px 8px',borderRadius:20,whiteSpace:'nowrap'}}>🔒 Hành Trình</div>
+            </button>
+          ))}
+        </div>
 
-      </div>
+        {/* Hint */}
+        <div style={{ padding:'6px 24px 8px', background:P.paper, borderTop:`1px solid ${P.paperDark}`, fontSize:10, color:P.textDim, letterSpacing:'0.04em', display:'flex', gap:16 }}>
+          <span>Space = Play/Pause</span><span>·</span>
+          <span>← → = ±5s</span><span>·</span>
+          <span>Esc = Dừng</span>
+        </div>
+
+      </div>{/* end main column */}
 
       {showSongList && (
         <SongList
           onSelect={(s: RhythmSong) => {
             if (onImportSong) onImportSong(s);
             setShowSongList(false);
-            setIsPlaying(false); isPlayingRef.current = false;
-            setCurrentTime(0); currentTimeRef.current = 0;
+            setIsPlaying(false); isPlayingRef.current=false;
+            setCurrentTime(0); currentTimeRef.current=0;
             setYtOffsetAdj(0);
           }}
           onClose={() => setShowSongList(false)}
