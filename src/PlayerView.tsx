@@ -400,14 +400,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
               <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
             </div>
 
-            {/* Playhead line — mảnh, vàng trầm */}
-            <div style={{
-              position:'absolute', top:0, bottom:0,
-              left:'30%', width:'1px',
-              background:'rgba(201,151,0,0.65)',
-              boxShadow:'0 0 12px rgba(201,151,0,0.08)',
-              pointerEvents:'none', zIndex:12,
-            }}/>
 
             {/* YouTube floating */}
             {playMode==='yt' && hasYT && ytMode!=='focus' && (
