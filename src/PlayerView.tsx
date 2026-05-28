@@ -37,6 +37,44 @@ const btn = (active = false): React.CSSProperties => ({
   transition: 'all 0.15s', whiteSpace: 'nowrap',
 });
 
+// ── Locked feature card — lock lights up on click ──
+function LockedFeatureCard({ icon, title, sub, paperSurface, text, textMuted, green }: {
+  icon:string; title:string; sub:string;
+  paperSurface:string; text:string; textMuted:string; green:string;
+}) {
+  const [locked, setLocked] = useState(false);
+  return (
+    <button
+      onClick={() => { setLocked(true); setTimeout(() => setLocked(false), 1800); }}
+      style={{
+        background: paperSurface,
+        border: `1px solid ${locked ? 'rgba(20,83,45,0.3)' : 'rgba(20,83,45,0.1)'}`,
+        borderRadius:12, padding:'13px 16px',
+        display:'flex', alignItems:'center', gap:12,
+        cursor:'pointer', textAlign:'left', width:'100%',
+        transition:'all 0.2s', position:'relative',
+      }}>
+      <span style={{ fontSize:20, flexShrink:0, lineHeight:1 }}>{icon}</span>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:text }}>{title}</div>
+        <div style={{ fontSize:11, color:textMuted, marginTop:1 }}>{sub}</div>
+      </div>
+      {/* Lock icon — lights up on click */}
+      <div style={{
+        fontSize:14, flexShrink:0,
+        color: locked ? green : 'rgba(42,42,30,0.25)',
+        background: locked ? 'rgba(20,83,45,0.1)' : 'transparent',
+        borderRadius:6, padding:'3px 6px',
+        transition:'all 0.25s',
+        display:'flex', alignItems:'center', gap:4,
+      }}>
+        🔒
+        {locked && <span style={{ fontSize:10, fontWeight:600, color:green, whiteSpace:'nowrap' }}>Lớp Hành Trình</span>}
+      </div>
+    </button>
+  );
+}
+
 export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   song: RhythmSong; onClose: () => void;
   onImportSong?: (song: RhythmSong) => void;
@@ -423,38 +461,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           </div>
         </div>
 
-        {/* ── LỚP HÀNH TRÌNH — upsell section ── */}
-        <div style={{ padding:'14px 20px', background:P.paper, borderTop:`1px solid rgba(20,83,45,0.06)`, flexShrink:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:P.text, letterSpacing:'-0.01em' }}>Ghi lại buổi tập</div>
-              <div style={{ fontSize:11, color:P.textMuted, marginTop:1 }}>Dành cho học sinh <strong style={{ color:P.green }}>Lớp Hành Trình</strong></div>
-            </div>
-            <div style={{ background:'rgba(20,83,45,0.08)', border:`1px solid rgba(20,83,45,0.15)`, borderRadius:20, padding:'4px 12px', fontSize:11, fontWeight:600, color:P.green, whiteSpace:'nowrap' }}>
-              🌿 Lớp Hành Trình
-            </div>
-          </div>
+        {/* ── GHI LẠI BUỔI TẬP ── */}
+        <div style={{ padding:'12px 20px', background:P.paper, borderTop:`1px solid rgba(20,83,45,0.06)`, flexShrink:0 }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
             {[
-              ['🎙','Ghi âm','Thu lại buổi chơi để nghe lại'],
-              ['📹','Quay video','Xem lại kỹ thuật của mình'],
-              ['📤','Nộp bài','Gửi thầy chấm và nhận phản hồi'],
+              ['🎙','Ghi âm','Thu lại buổi chơi'],
+              ['📹','Quay video','Xem lại kỹ thuật'],
+              ['📤','Nộp bài','Gửi thầy chấm'],
             ].map(([ic,tt,sub])=>(
-              <div key={tt} style={{
-                background: P.paperSurface,
-                border: `1px solid rgba(20,83,45,0.1)`,
-                borderRadius:12, padding:'14px 16px',
-                display:'flex', alignItems:'flex-start', gap:12,
-                opacity:0.7, position:'relative', overflow:'hidden',
-              }}>
-                {/* Lock overlay */}
-                <div style={{ position:'absolute', top:10, right:12, fontSize:12 }}>🔒</div>
-                <span style={{ fontSize:22, flexShrink:0, lineHeight:1 }}>{ic}</span>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:600, color:P.text }}>{tt}</div>
-                  <div style={{ fontSize:11, color:P.textMuted, marginTop:2, lineHeight:1.5 }}>{sub}</div>
-                </div>
-              </div>
+              <LockedFeatureCard key={tt} icon={ic} title={tt} sub={sub} paperSurface={P.paperSurface} text={P.text} textMuted={P.textMuted} green={P.green} />
             ))}
           </div>
         </div>
