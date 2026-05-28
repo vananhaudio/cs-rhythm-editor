@@ -9,7 +9,8 @@ import GuitarBoard from './GuitarBoard'
 import YouTubeSyncPage from './YouTubeSyncPage'   // ← THÊM
 import type { RhythmSong } from './types'
 import { createEmptySong } from './utils'
-
+import StudentList from './StudentList'
+import StudentProfile from './StudentProfile'
 type AppUser = {
   id: string
   role: string
@@ -124,6 +125,20 @@ export default function AppRouter() {
     return <YouTubeSyncPage />
   }
 
+// ── Route /student ──
+if (path.startsWith('/student') && !path.startsWith('/students')) {
+  if (loading) return null
+  if (!user || !isTeacher) { window.location.href = '/tap'; return null }
+  const id = new URLSearchParams(window.location.search).get('id')
+  if (!id) { window.location.href = '/students'; return null }
+  return <StudentProfile studentId={id} onBack={() => { window.location.href = '/students' }} />
+}
+
+// ── Route /students ──
+if (path === '/students') {
+  if (loading) return null
+  return <StudentList onSelect={id => { window.location.href = `/student?id=${id}` }} />
+}
   // ── Route /player — chỉ teacher ──
   if (path === '/player' || path.startsWith('/player')) {
     if (loading) return null
