@@ -301,10 +301,14 @@ export function PlayerView({ song, onClose, onUpdateTitle, onImportSong, extraAc
   const muteMetronomeRef = useRef(false);
   const [showSongList, setShowSongList] = useState(false);
   const [showYoutube, setShowYoutube] = useState(false);
+  const [playMode, setPlayMode] = useState<'metro'|'yt'>('metro');
   const ytPlayerRef = useRef<any>(null);
   const ytReadyRef = useRef(false);
   const ytSyncRef = useRef(false);
   const calibRef = useRef<Calib | null>(null);
+
+  // Sync playMode → showYoutube
+  useEffect(() => { setShowYoutube(playMode === 'yt'); }, [playMode]);
   const [showSync, setShowSync] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [volume, setVolume] = useState(0.8);
@@ -739,6 +743,48 @@ function lsLoadSong(): RhythmSong | null {
               }} />
             </label>
             {extraActions}
+          {/* ── Mode selector ── */}
+          <div style={{ display:'flex', gap:8, alignItems:'center', padding:'8px 0 0' }}>
+            <button
+              onClick={() => setPlayMode('metro')}
+              style={{
+                flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 12px',
+                borderRadius:10, cursor:'pointer',
+                border: playMode==='metro' ? '1.5px solid #1B4332' : '1px solid rgba(255,255,255,0.12)',
+                background: playMode==='metro' ? '#1B4332' : 'rgba(255,255,255,0.06)',
+                color: playMode==='metro' ? '#fff' : 'rgba(255,255,255,0.6)',
+                transition:'all 0.15s',
+              }}>
+              🎵
+              <div style={{ textAlign:'left' }}>
+                <div style={{ fontSize:12, fontWeight:600 }}>Máy đập nhịp</div>
+                <div style={{ fontSize:10, opacity:0.7 }}>Mặc định</div>
+              </div>
+              {playMode==='metro' && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(255,255,255,0.2)', padding:'2px 8px', borderRadius:20 }}>✓</span>}
+            </button>
+            <button
+              onClick={() => setPlayMode('yt')}
+              style={{
+                flex:1, display:'flex', alignItems:'center', gap:8, padding:'8px 12px',
+                borderRadius:10, cursor:'pointer',
+                border: playMode==='yt' ? '1.5px solid #D89B22' : '1px solid rgba(255,255,255,0.12)',
+                background: playMode==='yt' ? 'rgba(216,155,34,0.2)' : 'rgba(255,255,255,0.06)',
+                color: playMode==='yt' ? '#F5C842' : 'rgba(255,255,255,0.6)',
+                transition:'all 0.15s',
+              }}>
+              ▶
+              <div style={{ textAlign:'left' }}>
+                <div style={{ fontSize:12, fontWeight:600 }}>Theo YouTube</div>
+                <div style={{ fontSize:10, opacity:0.7 }}>Nhạc thật</div>
+              </div>
+              {playMode==='yt' && <span style={{ marginLeft:'auto', fontSize:10, background:'rgba(216,155,34,0.3)', padding:'2px 8px', borderRadius:20 }}>✓</span>}
+            </button>
+          </div>
+          {playMode==='yt' && !(song as any).youtubeUrl && (
+            <div style={{ margin:'6px 0 0', background:'rgba(237,184,52,0.1)', border:'1px solid rgba(237,184,52,0.3)', borderRadius:8, padding:'7px 12px', fontSize:11, color:'#F5C842', display:'flex', alignItems:'center', gap:6 }}>
+              ⚠ Bài này chưa có YouTube sync — vào trang <strong>Sync</strong> để đồng bộ trước.
+            </div>
+          )}
           </div>
         </div>
 
@@ -928,6 +974,26 @@ function lsLoadSong(): RhythmSong | null {
       )}
 
         {/* Hint */}
+
+        {/* ── Ghi lại buổi tập ── */}
+        <div style={{ padding:'12px 16px 4px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+            <span style={{ fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)' }}>Ghi lại buổi tập</span>
+            <span style={{ fontSize:9, background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.4)', padding:'2px 8px', borderRadius:20, display:'flex', alignItems:'center', gap:4 }}>
+              🔒 Lớp Hành Trình
+            </span>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+            {[['🎙', 'Ghi âm', 'Thu buổi chơi'], ['📹', 'Quay video', 'Quay lại để xem'], ['📤', 'Nộp bài', 'Gửi thầy chấm']].map(([icon, title, sub]) => (
+              <button key={title} disabled style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, padding:'10px 8px', display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:'not-allowed', opacity:0.5 }}>
+                <span style={{ fontSize:18 }}>{icon}</span>
+                <span style={{ fontSize:11, color:'rgba(255,255,255,0.6)', fontWeight:500 }}>{title}</span>
+                <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)' }}>{sub}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', textAlign:'center', padding:'8px 0 4px' }}>Mở khoá khi hoàn thành Lớp Hành Trình</div>
+        </div>
         <div className="player-hint">
           {!hasMp3
             ? 'Tải MP3 để phát nhạc thật · Space = Play/Pause · ← → = ±5s · Esc = Đóng'
