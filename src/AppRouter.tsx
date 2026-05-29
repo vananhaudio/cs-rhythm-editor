@@ -11,6 +11,7 @@ import type { RhythmSong } from './types'
 import { createEmptySong } from './utils'
 import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
+import StudentOnboarding from './StudentOnboarding'
 type AppUser = {
   id: string
   role: string
@@ -125,6 +126,11 @@ export default function AppRouter() {
     return <YouTubeSyncPage />
   }
 
+// ── Route /start — Student onboarding ──
+if (path === '/start' || path.startsWith('/start')) {
+  return <StudentOnboarding />
+}
+
 // ── Route /student ──
 if (path.startsWith('/student') && !path.startsWith('/students')) {
   if (loading) return null
@@ -137,6 +143,10 @@ if (path.startsWith('/student') && !path.startsWith('/students')) {
 // ── Route /students ──
 if (path === '/students') {
   if (loading) return null
+=======
+// ── Route /students ──
+if (path === '/students') {
+>>>>>>> ba6ab1b (feat: add student onboarding page at /start)
   return <StudentList onSelect={id => { window.location.href = `/student?id=${id}` }} />
 }
   // ── Route /player — chỉ teacher ──
