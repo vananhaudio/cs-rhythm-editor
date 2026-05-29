@@ -168,8 +168,9 @@ export default function StudentOnboarding() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: T.bg, fontFamily: '"Segoe UI", Inter, system-ui, sans-serif', color: T.text }}>
-      {/* Header */}
+    <div style={{ minHeight: step === 'portal' ? undefined : '100vh', background: step === 'portal' ? 'transparent' : T.bg, fontFamily: '"Segoe UI", Inter, system-ui, sans-serif', color: T.text }}>
+      {/* Header — ẩn khi đang ở portal (portal tự có header riêng) */}
+      {step !== 'portal' && (
       <header style={{
         background: T.header, padding: '14px 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -198,6 +199,7 @@ export default function StudentOnboarding() {
           </div>
         )}
       </header>
+      )}
 
       {/* WELCOME */}
       {step === 'welcome' && (
