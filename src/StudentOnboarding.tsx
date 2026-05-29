@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import StudentPortalV2 from './StudentPortalV2'
 import { supabase } from './supabase'
 
 const T = {
@@ -354,7 +355,7 @@ export default function StudentOnboarding() {
       )}
 
       {/* PORTAL */}
-      {step === 'portal' && student && <PortalView student={student} onLogout={handleLogout} />}
+      {step === 'portal' && student && <StudentPortalV2 student={student} onLogout={handleLogout} />}
     </div>
   )
 }
