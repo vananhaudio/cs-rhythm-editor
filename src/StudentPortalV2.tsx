@@ -120,7 +120,7 @@ function ColHeader({ icon, title, sub, badge, action }: { icon: string; title: s
 }
 
 interface Enrollment {
-  id: string; course_id: string; enrolled_at: string; is_active: boolean
+  id: string; course_id: string; enrolled_at: string
   course: { id: string; name: string; slug: string; type: string; track: string | null }
 }
 
@@ -138,13 +138,13 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
   }, [student.id])
 
-  const activeEnrollments = enrollments.filter(e => e.course?.type === 'hanh_trinh')
-  const realCourses = activeEnrollments.map(e => ({
+  const name = uname(student)
+  const realCourses = enrollments.map(e => ({
     name: e.course?.name ?? '',
-    done: 0, total: 10, active: true,
+    done: 0, total: 10,
+    active: e.course?.type === 'hanh_trinh' || e.course?.type === 'canh_cua',
   }))
   const displayCourses = realCourses.length > 0 ? realCourses : COURSES
-  const name = uname(student)
 
   const btnPrimary: React.CSSProperties = {
     background: D.accent, color: '#fff', border: 'none', borderRadius: 8,
