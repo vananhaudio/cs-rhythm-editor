@@ -141,6 +141,16 @@ export default function StudentOnboarding() {
       .single()
     if (data) { setStudent(data); setStep('portal') }
     else {
+      // Kiểm tra xem có phải tài khoản thầy không
+      const { data: appUser } = await supabase
+        .from('app_users')
+        .select('role')
+        .eq('id', authData.user.id)
+        .single()
+      if (appUser?.role === 'teacher' || appUser?.role === 'admin') {
+        window.location.href = '/students'
+        return
+      }
       setLoginError('Tài khoản chưa được liên kết với hồ sơ học sinh. Liên hệ thầy.')
     }
     setLoggingIn(false)
