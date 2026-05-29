@@ -261,6 +261,58 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           })()}
         </section>
 
+
+        {/* ══ BẢN ĐỒ HÀNH TRÌNH ══════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>🗺</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Bản Đồ Hành Trình</span>
+          </div>
+
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 16, padding: '20px 20px 12px' }}>
+            {[
+              { label: 'Nhập môn Guitar',                        status: 'done'    },
+              { label: 'Khởi đầu đam mê — Đệm hát trình độ 1', status: 'current' },
+              { label: 'Khởi đầu đam mê — Đệm hát trình độ 2', status: 'next'    },
+              { label: 'Bứt phá đam mê — Đệm hát trình độ 3',  status: 'locked'  },
+              { label: 'Đệm hát nâng cao',                       status: 'locked'  },
+              { label: 'Solo Guitar',                            status: 'locked'  },
+              { label: 'Nghệ sĩ Guitar',                        status: 'final'   },
+            ].map((item, i, arr) => {
+              const isLast = i === arr.length - 1
+              const dot: Record<string, React.ReactNode> = {
+                done:    <div style={{ width: 18, height: 18, borderRadius: '50%', background: T.header, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>✓</span></div>,
+                current: <div style={{ width: 18, height: 18, borderRadius: '50%', background: T.header, border: `3px solid ${T.goldLight}`, boxSizing: 'border-box' }} />,
+                next:    <div style={{ width: 18, height: 18, borderRadius: '50%', background: T.bgLight, border: `2px solid ${T.border}` }} />,
+                locked:  <div style={{ width: 18, height: 18, borderRadius: '50%', background: T.bg, border: `2px solid ${T.borderLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 9 }}>🔒</span></div>,
+                final:   <span style={{ fontSize: 18, lineHeight: 1 }}>🏆</span>,
+              }
+              const labelColor: Record<string, string> = {
+                done: T.greenMid, current: T.header, next: T.textMuted,
+                locked: T.textDim, final: T.gold,
+              }
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'stretch', gap: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 36, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 28, paddingTop: i === 0 ? 0 : 0 }}>
+                      {dot[item.status]}
+                    </div>
+                    {!isLast && <div style={{ width: 2, flex: 1, minHeight: 12, background: item.status === 'done' ? T.greenMid : T.borderLight, opacity: item.status === 'done' ? .5 : 1 }} />}
+                  </div>
+                  <div style={{ paddingLeft: 8, paddingBottom: isLast ? 0 : 14, paddingTop: 4 }}>
+                    <span style={{ fontSize: 14, fontWeight: item.status === 'current' ? 700 : 400, color: labelColor[item.status] }}>
+                      {item.label}
+                    </span>
+                    {item.status === 'current' && (
+                      <span style={{ marginLeft: 8, fontSize: 10, background: T.header, color: '#fff', borderRadius: 4, padding: '1px 7px', fontWeight: 600, verticalAlign: 'middle' }}>Đang học</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
         {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
