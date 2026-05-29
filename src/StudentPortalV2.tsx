@@ -222,40 +222,44 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             <span style={{ fontWeight: 700, fontSize: 16 }}>Hành Trình Của Tôi</span>
           </div>
 
-          {hanhTrinh.length === 0 ? (
-            <div style={{ background: T.bgCard, border: `1.5px dashed ${T.border}`, borderRadius: 14, padding: '28px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>🌱</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Bạn đang đứng ở điểm xuất phát.</div>
-              <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.7, maxWidth: 320, margin: '0 auto' }}>
-                Sau buổi học đầu tiên, Thầy sẽ đưa bạn vào hành trình phù hợp nhất.
-
-                  Mọi nghệ sĩ guitar đều bắt đầu từ đây.
+          {(() => {
+            const MOCK = [
+              { name: 'Khởi Đầu Đam Mê — Đệm Hát Trình Độ 1', pct: 40, since: 'tháng 3, 2026' },
+              { name: 'Chìa Khoá Nhạc Lý Cơ Bản', pct: 70, since: 'tháng 4, 2026' },
+            ]
+            const list = hanhTrinh.length > 0
+              ? hanhTrinh.map(e => ({ name: e.course?.name ?? '', pct: e.progress_pct, since: new Date(e.enrolled_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) }))
+              : MOCK
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {list.map((item, idx) => (
+                  <div key={idx} style={{ background: T.bgCard, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '16px 18px', cursor: 'pointer', transition: 'border-color .15s, transform .1s' }}
+                    onMouseEnter={el => { el.currentTarget.style.borderColor = T.header; el.currentTarget.style.transform = 'translateY(-1px)' }}
+                    onMouseLeave={el => { el.currentTarget.style.borderColor = T.border; el.currentTarget.style.transform = 'translateY(0)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{item.name}</div>
+                        <div style={{ fontSize: 12, color: T.textDim }}>Đang học · Bắt đầu {item.since}</div>
+                      </div>
+                      <div style={{ background: T.header, color: '#fff', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                        ▶ Tiếp tục
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.textMuted, marginBottom: 6 }}>
+                      <span>Tiến độ</span>
+                      <span style={{ fontWeight: 600, color: T.header }}>{item.pct}%</span>
+                    </div>
+                    <ProgressBar pct={item.pct} color={T.header} height={8} />
+                  </div>
+                ))}
+                {hanhTrinh.length === 0 && (
+                  <div style={{ fontSize: 11, color: T.textDim, textAlign: 'center', paddingTop: 4 }}>
+                    ✦ Đây là ví dụ minh hoạ — dữ liệu thật sẽ hiện sau khi Thầy thêm bạn vào khoá học
+                  </div>
+                )}
               </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {hanhTrinh.map(e => (
-                <div key={e.id} style={{ background: T.bgCard, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '16px 18px', cursor: 'pointer', transition: 'border-color .15s, transform .1s' }}
-                  onMouseEnter={el => { el.currentTarget.style.borderColor = T.header; el.currentTarget.style.transform = 'translateY(-1px)' }}
-                  onMouseLeave={el => { el.currentTarget.style.borderColor = T.border; el.currentTarget.style.transform = 'translateY(0)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{e.course?.name}</div>
-                      <div style={{ fontSize: 12, color: T.textDim }}>Đang học · Bắt đầu {new Date(e.enrolled_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</div>
-                    </div>
-                    <div style={{ background: T.header, color: '#fff', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                      ▶ Tiếp tục
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.textMuted, marginBottom: 6 }}>
-                    <span>Tiến độ</span>
-                    <span style={{ fontWeight: 600, color: T.header }}>{e.progress_pct}%</span>
-                  </div>
-                  <ProgressBar pct={e.progress_pct} color={T.header} height={8} />
-                </div>
-              ))}
-            </div>
-          )}
+            )
+          })()}
         </section>
 
         {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
