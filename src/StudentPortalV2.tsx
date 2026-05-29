@@ -262,93 +262,79 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
         </section>
 
 
-        {/* ══ BẢN ĐỒ HÀNH TRÌNH ══════════════════════════════════════════ */}
+        {/* ══ THẾ GIỚI GUITAR ════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 18 }}>🗺</span>
-            <span style={{ fontWeight: 700, fontSize: 16 }}>Bản Đồ Hành Trình</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 18 }}>🌍</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Thế Giới Guitar</span>
           </div>
-          <p style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.7, marginBottom: 14 }}>
-            Âm nhạc là một thế giới rộng lớn.<br />
-            Mỗi tuyến đường là một khả năng khác nhau mà bạn có thể khám phá.
+          <p style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.7, marginBottom: 16 }}>
+            Mỗi người đến với guitar theo một con đường khác nhau.<br />
+            Bạn đang ở một phần của thế giới này.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               {
-                icon: '🎤', label: 'Nghệ thuật đệm hát', active: true,
-                destination: 'Tự đệm hát mọi bài yêu thích.',
-                items: [
-                  { name: 'Nhập môn Guitar',    status: 'done'    },
-                  { name: 'Đệm hát 1',          status: 'current' },
-                  { name: 'Đệm hát 2',          status: 'next'    },
-                  { name: 'Đệm hát 3',          status: 'next'    },
-                  { name: 'Đệm hát nâng cao',   status: 'locked'  },
-                ],
+                icon: '🎤',
+                title: 'Nghệ Thuật Đệm Hát',
+                desc: 'Học cách tự đệm hát những bài mình yêu thích.',
+                active: true,
+                btnLabel: 'Bạn đang học tại đây',
               },
               {
-                icon: '🎸', label: 'Nghệ thuật tỉa nốt', active: false,
-                destination: 'Tự chơi giai điệu trên karaoke.',
-                items: [
-                  { name: 'Tỉa nốt 1',      status: 'locked' },
-                  { name: 'Tỉa nốt 2',      status: 'locked' },
-                  { name: 'Tỉa nốt nâng cao', status: 'locked' },
-                ],
+                icon: '🎸',
+                title: 'Nghệ Thuật Tỉa Nốt',
+                desc: 'Chơi giai điệu trên nền karaoke.',
+                active: false,
+                btnLabel: 'Chưa khám phá',
               },
               {
-                icon: '📚', label: 'Hiểu biết âm nhạc', active: false,
-                destination: 'Hiểu bản chất âm nhạc.',
-                items: [
-                  { name: 'Nhạc lý cơ bản',    status: 'locked' },
-                  { name: 'Nhạc lý nâng cao',  status: 'locked' },
-                  { name: 'Hoà âm – Cảm âm',  status: 'locked' },
-                ],
+                icon: '📚',
+                title: 'Hiểu Biết Âm Nhạc',
+                desc: 'Nhạc lý · Hòa âm · Cảm âm.',
+                active: false,
+                btnLabel: 'Chưa khám phá',
               },
               {
-                icon: '⭐', label: 'Con đường nghệ sĩ', active: false,
-                destination: 'Biểu diễn, sáng tạo và truyền cảm hứng.',
-                items: [
-                  { name: 'Solo Guitar',    status: 'locked' },
-                  { name: 'Nghệ sĩ Guitar', status: 'final'  },
-                ],
+                icon: '⭐',
+                title: 'Con Đường Nghệ Sĩ',
+                desc: 'Biểu diễn · Sáng tạo · Truyền cảm hứng.',
+                active: false,
+                btnLabel: 'Chưa mở',
+                locked: true,
               },
-            ].map((track: { icon: string; label: string; active: boolean; destination: string; items: { name: string; status: string }[] }, ti) => (
-              <div key={ti} style={{
-                background: track.active ? T.bgCard : T.bg,
-                border: `1.5px solid ${track.active ? T.border : T.borderLight}`,
-                borderRadius: 14, padding: '14px 16px',
-                opacity: track.active ? 1 : 0.65,
+            ].map((item, i) => (
+              <div key={i} style={{
+                background: item.active ? T.header : T.bgCard,
+                border: `1.5px solid ${item.active ? T.header : T.borderLight}`,
+                borderRadius: 16,
+                padding: '20px',
+                opacity: item.active ? 1 : item.locked ? 0.5 : 0.7,
+                transition: 'opacity .2s',
               }}>
-                {/* Track header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 16 }}>{track.icon}</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: track.active ? T.header : T.textMuted, textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                    {track.label}
-                  </span>
-                  {track.active && (
-                    <span style={{ fontSize: 10, background: T.header, color: '#fff', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>Đang học</span>
-                  )}
-                </div>
-                {/* Items */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {track.items.map((item, ii) => {
-                    const cfg: Record<string, { bg: string; color: string; prefix: string }> = {
-                      done:    { bg: T.greenLight, color: T.greenMid,  prefix: '✅ ' },
-                      current: { bg: T.header,     color: '#fff',       prefix: '🟢 ' },
-                      next:    { bg: T.bgLight,     color: T.textMuted, prefix: '⚪ ' },
-                      locked:  { bg: T.bg,          color: T.textDim,   prefix: '🔒 ' },
-                      final:   { bg: T.goldBg,      color: T.gold,      prefix: '🏆 ' },
-                    }
-                    const c = cfg[item.status]
-                    return (
-                      <span key={ii} style={{ fontSize: 12, fontWeight: item.status === 'current' ? 700 : 400, background: c.bg, color: c.color, borderRadius: 8, padding: '4px 10px', border: `1px solid ${item.status === 'current' ? T.header : T.borderLight}` }}>
-                        {c.prefix}{item.name}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 22 }}>{item.icon}</span>
+                      <span style={{ fontWeight: 700, fontSize: 16, color: item.active ? '#fff' : T.text }}>
+                        {item.title}
                       </span>
-                    )
-                  })}
-                </div>
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.borderLight}`, fontSize: 12, color: track.active ? T.textMuted : T.textDim }}>
-                  🏁 <span style={{ fontWeight: 600 }}>Đích đến:</span> {track.destination}
+                    </div>
+                    <div style={{ fontSize: 13, color: item.active ? 'rgba(255,255,255,.75)' : T.textMuted, lineHeight: 1.6 }}>
+                      {item.desc}
+                    </div>
+                  </div>
+                  <div style={{
+                    flexShrink: 0, borderRadius: 10,
+                    padding: '7px 14px', fontSize: 12, fontWeight: 600,
+                    background: item.active ? 'rgba(255,255,255,.15)' : T.bg,
+                    color: item.active ? '#fff' : item.locked ? T.textDim : T.textMuted,
+                    border: `1px solid ${item.active ? 'rgba(255,255,255,.25)' : T.borderLight}`,
+                    whiteSpace: 'nowrap' as const,
+                  }}>
+                    {item.locked ? '🔒 ' : item.active ? '▶ ' : ''}{item.btnLabel}
+                  </div>
                 </div>
               </div>
             ))}
