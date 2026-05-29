@@ -56,7 +56,6 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [streak, setStreak]             = useState(0)
   const [loading, setLoading]           = useState(true)
-  const [showMap, setShowMap]           = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -222,43 +221,6 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           )}
         </section>
 
-        {/* ══ 5. BẢN ĐỒ ═════════════════════════════════════════════ */}
-        <section>
-          <button onClick={() => setShowMap(!showMap)} style={{ width: '100%', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: '16px', fontSize: 14, fontWeight: 600, color: T.text, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            🗺 {showMap ? 'Ẩn Bản Đồ Hành Trình ↑' : 'Xem Bản Đồ Hành Trình ↓'}
-          </button>
-
-          {showMap && (
-            <div style={{ marginTop: 12, background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '20px 24px' }}>
-              <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 20 }}>
-                Mỗi người đến với guitar theo một con đường khác nhau. Bạn đang ở một phần của thế giới này.
-              </div>
-              {[
-                { icon: '🎤', title: 'Nghệ Thuật Đệm Hát', dest: 'Tự đệm hát mọi bài yêu thích', items: [{ l: 'Nhập môn Guitar', s: 'done' }, { l: 'Đệm hát 1', s: 'current' }, { l: 'Đệm hát 2', s: 'next' }, { l: 'Đệm hát 3', s: 'next' }, { l: 'Đệm hát nâng cao', s: 'locked' }] },
-                { icon: '🎸', title: 'Nghệ Thuật Tỉa Nốt', dest: 'Tự chơi giai điệu trên karaoke', items: [{ l: 'Tỉa nốt 1', s: 'locked' }, { l: 'Tỉa nốt 2', s: 'locked' }, { l: 'Tỉa nốt nâng cao', s: 'locked' }] },
-                { icon: '📚', title: 'Hiểu Biết Âm Nhạc', dest: 'Hiểu bản chất âm nhạc', items: [{ l: 'Nhạc lý cơ bản', s: 'current' }, { l: 'Nhạc lý nâng cao', s: 'next' }, { l: 'Hoà âm – Cảm âm', s: 'locked' }] },
-                { icon: '⭐', title: 'Con Đường Nghệ Sĩ', dest: 'Biểu diễn · Sáng tạo · Truyền cảm hứng', items: [{ l: 'Solo Guitar', s: 'locked' }, { l: 'Nghệ sĩ Guitar', s: 'locked' }] },
-              ].map((zone, zi, arr) => {
-                const prefix: Record<string, string> = { done: '✓', current: '●', next: '○', locked: '🔒' }
-                const col: Record<string, string>    = { done: T.greenMid, current: T.header, next: T.textMuted, locked: T.textDim }
-                return (
-                  <div key={zi} style={{ marginBottom: zi < arr.length - 1 ? 20 : 0, paddingBottom: zi < arr.length - 1 ? 20 : 0, borderBottom: zi < arr.length - 1 ? `1px solid ${T.borderLight}` : 'none' }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{zone.icon} {zone.title}</div>
-                    <div style={{ fontSize: 12, color: T.textDim, marginBottom: 8 }}>Đích đến: {zone.dest}</div>
-                    {zone.items.map((item, ii) => (
-                      <div key={ii} style={{ display: 'flex', gap: 8, fontSize: 13, marginBottom: 4 }}>
-                        <span style={{ color: col[item.s], width: 14, textAlign: 'center', flexShrink: 0 }}>{prefix[item.s]}</span>
-                        <span style={{ color: col[item.s], fontWeight: item.s === 'current' ? 700 : 400 }}>
-                          {item.l}{item.s === 'current' && <span style={{ fontSize: 11, color: T.gold, marginLeft: 6 }}>← đang học</span>}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
 
       </div>
     </div>
