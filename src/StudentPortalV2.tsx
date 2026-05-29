@@ -302,85 +302,101 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
         {/* col 2 row 1 */}
         {/* ══ THẾ GIỚI GUITAR ════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 18 }}>🌍</span>
-            <span style={{ fontWeight: 700, fontSize: 16 }}>Thế Giới Guitar</span>
-          </div>
-          <p style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.7, marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>🌍 Thế Giới Guitar</div>
+          <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 20 }}>
             Mỗi người đến với guitar theo một con đường khác nhau.<br />
             Bạn đang ở một phần của thế giới này.
-          </p>
+          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              {
-                icon: '🎤',
-                title: 'Nghệ Thuật Đệm Hát',
-                desc: 'Học cách tự đệm hát những bài mình yêu thích.',
-                active: true,
-                btnLabel: 'Bạn đang học tại đây',
-              },
-              {
-                icon: '🎸',
-                title: 'Nghệ Thuật Tỉa Nốt',
-                desc: 'Chơi giai điệu trên nền karaoke.',
-                active: false,
-                btnLabel: 'Chưa khám phá',
-              },
-              {
-                icon: '📚',
-                title: 'Hiểu Biết Âm Nhạc',
-                desc: 'Nhạc lý · Hòa âm · Cảm âm.',
-                active: false,
-                btnLabel: 'Chưa khám phá',
-              },
-              {
-                icon: '⭐',
-                title: 'Con Đường Nghệ Sĩ',
-                desc: 'Biểu diễn · Sáng tạo · Truyền cảm hứng.',
-                active: false,
-                btnLabel: 'Chưa mở',
-                locked: true,
-              },
-            ].map((item, i) => (
-              <div key={i} style={{
-                background: item.active ? T.header : T.bgCard,
-                border: `1.5px solid ${item.active ? T.header : T.borderLight}`,
-                borderRadius: 16,
-                padding: '20px',
-                opacity: item.active ? 1 : item.locked ? 0.5 : 0.7,
-                transition: 'opacity .2s',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: 22 }}>{item.icon}</span>
-                      <span style={{ fontWeight: 700, fontSize: 16, color: item.active ? '#fff' : T.text }}>
-                        {item.title}
+          {[
+            {
+              icon: '🎤', title: 'Nghệ Thuật Đệm Hát',
+              destination: 'Tự đệm hát mọi bài yêu thích',
+              items: [
+                { label: 'Nhập môn Guitar',        s: 'done'    },
+                { label: 'Đệm hát 1',              s: 'current' },
+                { label: 'Đệm hát 2',              s: 'next'    },
+                { label: 'Đệm hát 3',              s: 'next'    },
+                { label: 'Đệm hát nâng cao',       s: 'locked'  },
+              ],
+            },
+            {
+              icon: '🎸', title: 'Nghệ Thuật Tỉa Nốt',
+              destination: 'Tự chơi giai điệu trên karaoke',
+              items: [
+                { label: 'Tỉa nốt 1',          s: 'locked' },
+                { label: 'Tỉa nốt 2',          s: 'locked' },
+                { label: 'Tỉa nốt nâng cao',   s: 'locked' },
+              ],
+            },
+            {
+              icon: '📚', title: 'Hiểu Biết Âm Nhạc',
+              destination: 'Hiểu bản chất âm nhạc',
+              items: [
+                { label: 'Chìa khoá nhạc lý cơ bản',  s: 'current' },
+                { label: 'Nhạc lý nâng cao',           s: 'next'    },
+                { label: 'Hoà âm – Cảm âm',            s: 'locked'  },
+              ],
+            },
+            {
+              icon: '⭐', title: 'Con Đường Nghệ Sĩ',
+              destination: 'Biểu diễn · Sáng tạo · Truyền cảm hứng',
+              items: [
+                { label: 'Solo Guitar',    s: 'locked' },
+                { label: 'Nghệ sĩ Guitar', s: 'locked' },
+              ],
+            },
+          ].map((zone, zi, arr) => {
+            const isLast = zi === arr.length - 1
+            const hasActive = zone.items.some(i => i.s === 'current')
+            const prefix: Record<string, string> = {
+              done: '✓', current: '●', next: '○', locked: '🔒',
+            }
+            const itemColor: Record<string, string> = {
+              done: T.greenMid, current: T.header, next: T.textMuted, locked: T.textDim,
+            }
+            return (
+              <div key={zi}>
+                {/* Divider */}
+                <div style={{ height: 1, background: T.borderLight, marginBottom: 14 }} />
+
+                {/* Zone title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ fontSize: 14 }}>{zone.icon}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: hasActive ? T.header : T.textMuted }}>
+                    {zone.title}
+                  </span>
+                </div>
+
+                {/* Destination */}
+                <div style={{ fontSize: 12, color: T.textDim, marginBottom: 10, paddingLeft: 2 }}>
+                  Đích đến: {zone.destination}
+                </div>
+
+                {/* Items */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 4 }}>
+                  {zone.items.map((item, ii) => (
+                    <div key={ii} style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 13 }}>
+                      <span style={{ color: itemColor[item.s], fontWeight: item.s === 'current' ? 700 : 400, flexShrink: 0, width: 14, textAlign: 'center' as const }}>
+                        {prefix[item.s]}
+                      </span>
+                      <span style={{ color: itemColor[item.s], fontWeight: item.s === 'current' ? 700 : 400 }}>
+                        {item.label}
+                        {item.s === 'current' && (
+                          <span style={{ fontSize: 11, color: T.gold, fontWeight: 400, marginLeft: 6 }}>← đang học</span>
+                        )}
                       </span>
                     </div>
-                    <div style={{ fontSize: 13, color: item.active ? 'rgba(255,255,255,.75)' : T.textMuted, lineHeight: 1.6 }}>
-                      {item.desc}
-                    </div>
-                  </div>
-                  <div style={{
-                    flexShrink: 0, borderRadius: 10,
-                    padding: '7px 14px', fontSize: 12, fontWeight: 600,
-                    background: item.active ? 'rgba(255,255,255,.15)' : T.bg,
-                    color: item.active ? '#fff' : item.locked ? T.textDim : T.textMuted,
-                    border: `1px solid ${item.active ? 'rgba(255,255,255,.25)' : T.borderLight}`,
-                    whiteSpace: 'nowrap' as const,
-                  }}>
-                    {item.locked ? '🔒 ' : item.active ? '▶ ' : ''}{item.btnLabel}
-                  </div>
+                  ))}
                 </div>
+
+                {isLast && <div style={{ height: 1, background: T.borderLight, marginTop: 14 }} />}
               </div>
-            ))}
-          </div>
+            )
+          })}
         </section>
 
-                {/* col 2 end - row 2 start */}
-        {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
+                {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
