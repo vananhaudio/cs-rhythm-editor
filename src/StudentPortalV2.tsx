@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
-// ─── Theme ────────────────────────────────────────────────────────────────────
 const T = {
   bg: '#EAD7B8', bgCard: '#F5EDD8', bgLight: '#FBF5EA',
   header: '#1B6B3A', headerDark: '#134D2B',
@@ -9,10 +8,8 @@ const T = {
   text: '#2C1F0E', textMuted: '#7A6548', textDim: '#A08B6A',
   border: '#C8B090', borderLight: '#DDD0B0',
   green: '#1B6B3A', greenLight: '#E8F2EC', greenMid: '#2E6B40',
-  danger: '#8B3A1E',
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface Student {
   id: string; full_name: string; email: string | null
   level: string | null; is_active: boolean; enrolled_at: string | null
@@ -24,11 +21,10 @@ interface Course {
 }
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
-  course: Course
+  course: Course; progress_pct: number
 }
 interface DailyTask {
-  id: string; title: string; type: string | null
-  status: string; source: string; due_date: string
+  id: string; title: string; type: string | null; status: string; source: string
 }
 interface Achievement {
   id: string; type: string; title: string | null; achieved_at: string
@@ -36,80 +32,87 @@ interface Achievement {
 
 function displayName(s: Student) {
   const n = s.full_name ?? ''
-  return n.includes('@') ? n.split('@')[0] : n
+  if (n.includes('@')) return n.split('@')[0]
+  return n.split(' ').slice(-1)[0] // Lấy tên (từ cuối)
 }
 
-// ─── Progress bar ─────────────────────────────────────────────────────────────
-function ProgressBar({ pct, color = T.header }: { pct: number; color?: string }) {
+function ProgressBar({ pct, color = T.header, height = 8 }: { pct: number; color?: string; height?: number }) {
+  const real = Math.max(pct, pct > 0 ? pct : 0)
   return (
-    <div style={{ height: 6, background: T.borderLight, borderRadius: 3, overflow: 'hidden', marginTop: 8 }}>
-      <div style={{ height: '100%', width: `${Math.min(100, pct)}%`, background: color, borderRadius: 3, transition: 'width .5s ease' }} />
+    <div style={{ height, background: T.borderLight, borderRadius: height / 2, overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${Math.min(100, real)}%`, background: color, borderRadius: height / 2, transition: 'width .8s ease', minWidth: real > 0 ? 8 : 0 }} />
     </div>
   )
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
-function Empty({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '24px 16px', color: T.textDim, fontSize: 13 }}>
-      <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
-      {text}
-    </div>
-  )
+const LEVEL_LABEL: Record<string, string> = {
+  beginner: 'Người mới bắt đầu', elementary: 'Cơ bản',
+  intermediate: 'Trung cấp', advanced: 'Nâng cao',
 }
 
-// ─── Section header ───────────────────────────────────────────────────────────
-function SectionHeader({ icon, title, sub }: { icon: string; title: string; sub?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-      <span style={{ fontSize: 20 }}>{icon}</span>
-      <div>
-        <div style={{ fontWeight: 700, fontSize: 16, color: T.text }}>{title}</div>
-        {sub && <div style={{ fontSize: 12, color: T.textDim, marginTop: 1 }}>{sub}</div>}
-      </div>
-    </div>
-  )
+const TRACK_TOOLS: Record<string, { unlocked: string[]; next: string[] }> = {
+  'nhac-ly-co-ban':  { unlocked: ['Tap Tempo', 'Tap Beat'], next: ['Tap Beam'] },
+  'nhac-ly-nang-cao':{ unlocked: ['Tap Tempo', 'Tap Beat', 'Tap Beam'], next: ['Scroll Kara'] },
+  'hoa-am-cam-am':   { unlocked: ['Tap Tempo', 'Tap Beat', 'Scroll Kara'], next: ['Chord Seeing'] },
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-interface Props {
-  student: Student
-  onLogout: () => void
+const TRACK_ORDER = ['nhap_mon', 'dem_hat', 'tia_not', 'nhac_ly', 'solo']
+const TRACK_LABEL: Record<string, string> = {
+  nhap_mon: 'Nhập môn', dem_hat: 'Đệm Hát',
+  tia_not: 'Tỉa Nốt', nhac_ly: 'Cánh Cửa Nhạc Lý', solo: 'Solo & Nghệ Sĩ',
 }
+
+interface Props { student: Student; onLogout: () => void }
 
 export default function StudentPortalV2({ student, onLogout }: Props) {
-  const [enrollments, setEnrollments]   = useState<Enrollment[]>([])
-  const [allCourses, setAllCourses]     = useState<Course[]>([])
-  const [dailyTasks, setDailyTasks]     = useState<DailyTask[]>([])
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [allCourses, setAllCourses]   = useState<Course[]>([])
+  const [dailyTasks, setDailyTasks]   = useState<DailyTask[]>([])
   const [achievements, setAchievements] = useState<Achievement[]>([])
-  const [loading, setLoading]           = useState(true)
+  const [streak, setStreak]           = useState(0)
+  const [loading, setLoading]         = useState(true)
 
   useEffect(() => {
     const load = async () => {
       const today = new Date().toISOString().split('T')[0]
-
-      const [{ data: enr }, { data: courses }, { data: tasks }, { data: ach }] = await Promise.all([
+      const [{ data: enr }, { data: courses }, { data: tasks }, { data: ach }, { data: events }] = await Promise.all([
         supabase.from('edu_enrollments')
-          .select('id, course_id, enrolled_at, course:edu_courses(id,name,slug,type,track,level_order,is_free,pain_point,outcome)')
-          .eq('student_id', student.id)
-          .eq('is_active', true),
+          .select('id,course_id,enrolled_at,course:edu_courses(id,name,slug,type,track,level_order,is_free,pain_point,outcome)')
+          .eq('student_id', student.id).eq('is_active', true),
         supabase.from('edu_courses')
           .select('id,name,slug,type,track,level_order,is_free,pain_point,outcome')
-          .eq('is_published', true)
-          .order('track').order('level_order'),
+          .eq('is_published', true).order('track').order('level_order'),
         supabase.from('edu_daily_tasks')
-          .select('id,title,type,status,source,due_date')
-          .eq('student_id', student.id)
-          .eq('due_date', today)
-          .order('created_at'),
+          .select('id,title,type,status,source')
+          .eq('student_id', student.id).eq('due_date', today).order('created_at'),
         supabase.from('edu_achievements')
           .select('id,type,title,achieved_at')
-          .eq('student_id', student.id)
-          .order('achieved_at', { ascending: false })
-          .limit(20),
+          .eq('student_id', student.id).order('achieved_at', { ascending: false }).limit(50),
+        supabase.from('edu_learning_events')
+          .select('created_at').eq('student_id', student.id)
+          .order('created_at', { ascending: false }).limit(30),
       ])
 
-      setEnrollments((enr ?? []) as unknown as Enrollment[])
+      // Tính streak (ngày học liên tục)
+      if (events && events.length > 0) {
+        const days = [...new Set(events.map((e: { created_at: string }) =>
+          new Date(e.created_at).toISOString().split('T')[0]
+        ))].sort().reverse()
+        let s = 0
+        let prev = today
+        for (const d of days) {
+          const diff = (new Date(prev).getTime() - new Date(d).getTime()) / 86400000
+          if (diff <= 1) { s++; prev = d } else break
+        }
+        setStreak(s)
+      }
+
+      // Thêm progress_pct mặc định = 5% cho enrolled (cảm giác đã bắt đầu)
+      const enriched = ((enr ?? []) as unknown as Enrollment[]).map(e => ({
+        ...e, progress_pct: 5
+      }))
+
+      setEnrollments(enriched)
       setAllCourses(courses ?? [])
       setDailyTasks(tasks ?? [])
       setAchievements(ach ?? [])
@@ -121,21 +124,18 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   const hanhTrinh = enrollments.filter(e => e.course?.type === 'hanh_trinh')
   const canhCua   = enrollments.filter(e => e.course?.type === 'canh_cua')
   const doneTasks = dailyTasks.filter(t => t.status === 'done').length
-  const totalTasks = dailyTasks.length
+  const enrolledIds = new Set(enrollments.map(e => e.course_id))
 
-  // Achievement counts
+  // Thành quả
   const achSongs   = achievements.filter(a => a.type === 'song_completed').length
   const achVideos  = achievements.filter(a => a.type === 'video_submitted').length
   const achCourses = achievements.filter(a => a.type === 'course_completed').length
   const achDoors   = achievements.filter(a => a.type === 'door_unlocked').length
 
-  // Bản đồ — group by track
-  const trackOrder = ['nhap_mon', 'dem_hat', 'tia_not', 'nhac_ly', 'solo']
-  const trackLabel: Record<string, string> = {
-    nhap_mon: 'Nhập môn', dem_hat: 'Đệm Hát', tia_not: 'Tỉa Nốt',
-    nhac_ly: 'Cánh Cửa Nhạc Lý', solo: 'Solo & Nghệ Sĩ',
-  }
-  const enrolledIds = new Set(enrollments.map(e => e.course_id))
+  // Overall progress (trung bình các khoá đang học)
+  const overallPct = enrollments.length > 0
+    ? Math.round(enrollments.reduce((sum, e) => sum + e.progress_pct, 0) / enrollments.length)
+    : 0
 
   const toggleTask = async (task: DailyTask) => {
     const newStatus = task.status === 'done' ? 'pending' : 'done'
@@ -144,119 +144,202 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: T.textMuted, fontSize: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: T.textMuted, fontSize: 14, background: T.bg }}>
       Đang tải...
     </div>
   )
 
+  const name = displayName(student)
+
   return (
     <div style={{ background: T.bg, minHeight: '100vh', fontFamily: '"Segoe UI", Inter, system-ui, sans-serif', color: T.text }}>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header style={{ background: T.header, padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 22 }}>🎸</span>
-          <div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Thầy Văn Anh Guitar</div>
-            <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11 }}>Music Learning System</div>
-          </div>
+      {/* Header */}
+      <header style={{ background: T.header, padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 20 }}>🎸</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>Thầy Văn Anh Guitar</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{displayName(student)}</div>
-            <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11 }}>{student.level ?? 'Học sinh'}</div>
-          </div>
-          <button onClick={onLogout} style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 8, color: 'rgba(255,255,255,.7)', cursor: 'pointer', padding: '6px 12px', fontSize: 12, fontFamily: 'inherit' }}>
-            Đăng xuất
-          </button>
-        </div>
+        <button onClick={onLogout} style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 8, color: 'rgba(255,255,255,.7)', cursor: 'pointer', padding: '5px 12px', fontSize: 12, fontFamily: 'inherit' }}>
+          Đăng xuất
+        </button>
       </header>
 
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 16px 60px' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px 60px' }}>
 
-        {/* ── KHỐI 1: HÀNH TRÌNH ─────────────────────────────────────── */}
-        <section style={{ marginBottom: 28 }}>
-          <SectionHeader icon="🎸" title="Hành Trình Của Tôi" sub="Khoá học bạn đang theo học" />
+        {/* ══ HERO CARD ═══════════════════════════════════════════════════ */}
+        <div style={{ background: T.header, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 24, color: '#fff', position: 'relative', overflow: 'hidden' }}>
+          {/* Decorative circle */}
+          <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,.05)' }} />
+          <div style={{ position: 'absolute', bottom: -20, right: 40, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
+
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', marginBottom: 4 }}>🎸 Xin chào</div>
+          <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 16, lineHeight: 1.1 }}>
+            {name.toUpperCase()}
+          </div>
+
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+            <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginBottom: 4 }}>🌱 Cấp độ</div>
+              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.3 }}>
+                {student.level ? LEVEL_LABEL[student.level] : 'Đang bắt đầu'}
+              </div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginBottom: 4 }}>🔥 Chuỗi học</div>
+              <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{Math.max(streak, 1)}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}>ngày</div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,.1)', borderRadius: 12, padding: '12px 10px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginBottom: 4 }}>🎯 Hôm nay</div>
+              <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{doneTasks}/{dailyTasks.length || '–'}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.5)' }}>việc xong</div>
+            </div>
+          </div>
+
+          {/* Overall progress */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,.7)', marginBottom: 6 }}>
+              <span>Tiến độ hành trình tổng</span>
+              <span style={{ fontWeight: 700 }}>{overallPct > 0 ? `${overallPct}%` : enrollments.length > 0 ? '5%' : 'Chưa bắt đầu'}</span>
+            </div>
+            <div style={{ height: 10, background: 'rgba(255,255,255,.15)', borderRadius: 5, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.max(overallPct, enrollments.length > 0 ? 5 : 0)}%`, background: T.goldLight, borderRadius: 5, transition: 'width 1s ease', minWidth: enrollments.length > 0 ? 12 : 0 }} />
+            </div>
+            {enrollments.length > 0 && overallPct < 10 && (
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', marginTop: 6 }}>
+                Bạn đang ở những bước đầu tiên của hành trình âm nhạc 🌱
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ══ HÀNH TRÌNH ══════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>🎸</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Hành Trình Của Tôi</span>
+          </div>
 
           {hanhTrinh.length === 0 ? (
-            <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, padding: '24px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>🌱</div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Hành trình chưa bắt đầu</div>
-              <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>Thầy sẽ thêm bạn vào khoá học phù hợp sau buổi học đầu tiên.</div>
+            <div style={{ background: T.bgCard, border: `1.5px dashed ${T.border}`, borderRadius: 14, padding: '28px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>🌱</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Hành trình sắp bắt đầu</div>
+              <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.7, maxWidth: 320, margin: '0 auto' }}>
+                Sau buổi học đầu tiên với Thầy, bạn sẽ được thêm vào khoá học phù hợp và hành trình chính thức bắt đầu.
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {hanhTrinh.map(e => (
-                <div key={e.id} style={{ background: T.bgCard, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '16px 18px', cursor: 'pointer' }}
-                  onMouseEnter={el => (el.currentTarget.style.borderColor = T.header)}
-                  onMouseLeave={el => (el.currentTarget.style.borderColor = T.border)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div key={e.id} style={{ background: T.bgCard, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '16px 18px', cursor: 'pointer', transition: 'border-color .15s, transform .1s' }}
+                  onMouseEnter={el => { el.currentTarget.style.borderColor = T.header; el.currentTarget.style.transform = 'translateY(-1px)' }}
+                  onMouseLeave={el => { el.currentTarget.style.borderColor = T.border; el.currentTarget.style.transform = 'translateY(0)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{e.course?.name}</div>
-                      <div style={{ fontSize: 12, color: T.textDim }}>Đang học</div>
+                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{e.course?.name}</div>
+                      <div style={{ fontSize: 12, color: T.textDim }}>Đang học · Bắt đầu {new Date(e.enrolled_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</div>
                     </div>
-                    <div style={{ background: T.greenLight, color: T.greenMid, borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>▶ Tiếp tục</div>
+                    <div style={{ background: T.header, color: '#fff', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                      ▶ Tiếp tục
+                    </div>
                   </div>
-                  <ProgressBar pct={0} color={T.header} />
-                  <div style={{ fontSize: 11, color: T.textDim, marginTop: 4 }}>Chưa có dữ liệu tiến độ</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.textMuted, marginBottom: 6 }}>
+                    <span>Tiến độ</span>
+                    <span style={{ fontWeight: 600, color: T.header }}>{e.progress_pct}%</span>
+                  </div>
+                  <ProgressBar pct={e.progress_pct} color={T.header} height={8} />
                 </div>
               ))}
             </div>
           )}
         </section>
 
-        {/* ── KHỐI 2: CÁNH CỬA ───────────────────────────────────────── */}
-        <section style={{ marginBottom: 28 }}>
-          <SectionHeader icon="🚪" title="Cánh Cửa Đang Vượt Qua" sub="Chuyên đề giải quyết điểm yếu" />
+        {/* ══ CÁNH CỬA ════════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>🚪</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Cánh Cửa Đang Vượt Qua</span>
+          </div>
 
           {canhCua.length === 0 ? (
-            <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, padding: '20px', textAlign: 'center' }}>
-              <Empty icon="🔑" text="Thầy sẽ mở Cánh Cửa phù hợp khi bạn gặp khó khăn cụ thể." />
+            <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, padding: '20px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 28, flexShrink: 0 }}>🔑</span>
+              <div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>Chưa có Cánh Cửa nào mở</div>
+                <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>
+                  Khi gặp một điểm yếu cụ thể — lệch nhịp, không cảm âm — Thầy sẽ mở Cánh Cửa phù hợp để bạn vượt qua.
+                </div>
+              </div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-              {canhCua.map(e => (
-                <div key={e.id} style={{ background: T.bgCard, border: `1.5px solid ${T.borderLight}`, borderRadius: 12, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 11, color: T.gold, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.04em' }}>Cánh Cửa</div>
-                  <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>{e.course?.name}</div>
-                  {e.course?.pain_point && (
-                    <div style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.5, marginBottom: 8, fontStyle: 'italic' }}>"{e.course.pain_point}"</div>
-                  )}
-                  <ProgressBar pct={0} color={T.gold} />
-                </div>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              {canhCua.map(e => {
+                const tools = TRACK_TOOLS[e.course?.slug ?? '']
+                return (
+                  <div key={e.id} style={{ background: T.goldBg, border: `1.5px solid ${T.goldLight}`, borderRadius: 14, padding: '16px' }}>
+                    <div style={{ fontSize: 10, color: T.gold, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Cánh Cửa</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{e.course?.name}</div>
+                    {e.course?.pain_point && (
+                      <div style={{ fontSize: 11, color: T.textMuted, fontStyle: 'italic', marginBottom: 10, lineHeight: 1.5 }}>"{e.course.pain_point}"</div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.textMuted, marginBottom: 4 }}>
+                      <span>Tiến độ</span><span style={{ fontWeight: 600, color: T.gold }}>{e.progress_pct}%</span>
+                    </div>
+                    <ProgressBar pct={e.progress_pct} color={T.gold} height={6} />
+                    {tools && (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 11, color: T.textDim, marginBottom: 6 }}>Công cụ đã mở khoá</div>
+                        {tools.unlocked.map(t => (
+                          <div key={t} style={{ fontSize: 12, color: T.greenMid, marginBottom: 3 }}>✓ {t}</div>
+                        ))}
+                        {tools.next.map(t => (
+                          <div key={t} style={{ fontSize: 12, color: T.textDim, marginBottom: 3 }}>🔒 {t}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </section>
 
-        {/* ── KHỐI 3: VIỆC HÔM NAY ───────────────────────────────────── */}
-        <section style={{ marginBottom: 28 }}>
-          <SectionHeader
-            icon="🎯"
-            title="Việc Hôm Nay"
-            sub={totalTasks > 0 ? `${doneTasks}/${totalTasks} hoàn thành` : undefined}
-          />
+        {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🎯</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Việc Hôm Nay</span>
+            </div>
+            {dailyTasks.length > 0 && (
+              <span style={{ fontSize: 13, color: doneTasks === dailyTasks.length ? T.greenMid : T.textMuted, fontWeight: 600 }}>
+                {doneTasks}/{dailyTasks.length} ✓
+              </span>
+            )}
+          </div>
 
           <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, overflow: 'hidden' }}>
             {dailyTasks.length === 0 ? (
-              <Empty icon="☀️" text="Chưa có việc hôm nay. Hệ thống sẽ gợi ý sau khi bạn bắt đầu khoá học." />
+              <div style={{ padding: '24px 20px', textAlign: 'center', color: T.textDim, fontSize: 13 }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>☀️</div>
+                Bắt đầu khoá học để nhận việc hôm nay từ hệ thống
+              </div>
             ) : (
               dailyTasks.map((task, i) => (
-                <div key={task.id}
-                  onClick={() => toggleTask(task)}
+                <div key={task.id} onClick={() => toggleTask(task)}
                   style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer', borderTop: i > 0 ? `1px solid ${T.borderLight}` : 'none', transition: 'background .1s' }}
                   onMouseEnter={el => (el.currentTarget.style.background = T.bgLight)}
                   onMouseLeave={el => (el.currentTarget.style.background = 'transparent')}>
-                  <div style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${task.status === 'done' ? T.header : T.border}`, background: task.status === 'done' ? T.header : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .15s' }}>
-                    {task.status === 'done' && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', border: `2px solid ${task.status === 'done' ? T.header : T.border}`, background: task.status === 'done' ? T.header : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
+                    {task.status === 'done' && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, color: task.status === 'done' ? T.textDim : T.text, textDecoration: task.status === 'done' ? 'line-through' : 'none' }}>
                       {task.title}
                     </div>
-                    {task.source === 'teacher' && (
-                      <div style={{ fontSize: 11, color: T.gold, marginTop: 2 }}>👨‍🏫 Thầy giao</div>
-                    )}
+                    {task.source === 'teacher' && <div style={{ fontSize: 11, color: T.gold, marginTop: 2 }}>👨‍🏫 Thầy giao</div>}
                   </div>
                 </div>
               ))
@@ -264,90 +347,129 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           </div>
         </section>
 
-        {/* ── KHỐI 4: THÀNH QUẢ ──────────────────────────────────────── */}
-        <section style={{ marginBottom: 28 }}>
-          <SectionHeader icon="🏆" title="Thành Quả Của Tôi" sub="Những gì bạn đã đạt được" />
+        {/* ══ THÀNH QUẢ ═══════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>🏆</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Thành Quả Của Tôi</span>
+          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, padding: '20px' }}>
             {[
-              { icon: '🎵', value: achSongs,   label: 'Bài hát hoàn thành' },
-              { icon: '🎬', value: achVideos,  label: 'Video đã nộp' },
-              { icon: '📚', value: achCourses, label: 'Khoá học xong' },
-              { icon: '🚪', value: achDoors,   label: 'Cánh cửa đã vượt' },
-            ].map(a => (
-              <div key={a.label} style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
-                <div style={{ fontSize: 24, marginBottom: 6 }}>{a.icon}</div>
-                <div style={{ fontSize: 28, fontWeight: 800, color: a.value > 0 ? T.header : T.borderLight, lineHeight: 1 }}>{a.value}</div>
-                <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>{a.label}</div>
+              { icon: '🎵', value: achSongs,   label: 'Bài hát hoàn thành',    zero: 'Hoàn thành bài hát đầu tiên!' },
+              { icon: '🎬', value: achVideos,  label: 'Video đã nộp',           zero: 'Nộp video luyện tập đầu tiên!' },
+              { icon: '🔥', value: Math.max(streak, 1), label: 'Ngày học liên tục', zero: null },
+              { icon: '🚪', value: achDoors,   label: 'Cánh cửa đã vượt',       zero: 'Vượt qua Cánh Cửa đầu tiên!' },
+              { icon: '📚', value: achCourses, label: 'Khoá học hoàn thành',    zero: 'Hoàn thành khoá học đầu tiên!' },
+            ].map((a, i) => (
+              <div key={a.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: i > 0 ? `1px solid ${T.borderLight}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 22 }}>{a.icon}</span>
+                  <span style={{ fontSize: 14, color: T.textMuted }}>{a.label}</span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: 28, fontWeight: 800, color: a.value > 0 ? T.header : T.borderLight, lineHeight: 1 }}>{a.value}</span>
+                  {a.value === 0 && a.zero && (
+                    <div style={{ fontSize: 11, color: T.textDim, marginTop: 2 }}>→ {a.zero}</div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-
-          {achievements.length === 0 && (
-            <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13, color: T.textDim }}>
-              Thành quả sẽ xuất hiện khi bạn hoàn thành bài học đầu tiên 🌟
-            </div>
-          )}
         </section>
 
-        {/* ── KHỐI 5: BẢN ĐỒ ÂM NHẠC ────────────────────────────────── */}
-        <section style={{ marginBottom: 28 }}>
-          <SectionHeader icon="🗺" title="Bản Đồ Âm Nhạc" sub="Toàn bộ hành trình phía trước" />
+        {/* ══ BẢN ĐỒ ÂM NHẠC ═════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 18 }}>🗺</span>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Bản Đồ Âm Nhạc</span>
+            <span style={{ fontSize: 12, color: T.textDim }}>— Hành trình phía trước</span>
+          </div>
 
-          <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, padding: '20px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {trackOrder.map(track => {
-              const courses = allCourses.filter(c => c.track === track)
-              if (courses.length === 0) return null
-              return (
-                <div key={track}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 10 }}>
-                    {trackLabel[track]}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                    {courses.map((c, i) => {
-                      const enrolled = enrolledIds.has(c.id)
-                      const isLast = i === courses.length - 1
-                      return (
-                        <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{
-                            padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600,
-                            background: enrolled ? T.header : c.is_free ? T.greenLight : T.bg,
-                            color: enrolled ? '#fff' : c.is_free ? T.greenMid : T.textDim,
-                            border: `1.5px solid ${enrolled ? T.header : c.is_free ? T.greenMid : T.borderLight}`,
-                          }}>
-                            {enrolled ? '▶ ' : c.is_free ? '✓ ' : '🔒 '}{c.name}
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 16, padding: '20px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {allCourses.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '20px', color: T.textDim, fontSize: 13 }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>🗺</div>
+                Bản đồ đang được xây dựng...
+              </div>
+            ) : (
+              TRACK_ORDER.map(track => {
+                const courses = allCourses.filter(c => c.track === track)
+                if (courses.length === 0) return null
+                const isCanhCua = track === 'nhac_ly'
+                return (
+                  <div key={track}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: isCanhCua ? T.gold : T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>
+                      {isCanhCua ? '🔑 ' : ''}{TRACK_LABEL[track]}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {courses.map((c, i) => {
+                        const enrolled = enrolledIds.has(c.id)
+                        const isLast = i === courses.length - 1
+                        const status = enrolled ? 'current' : c.is_free ? 'free' : 'locked'
+                        return (
+                          <div key={c.id} style={{ display: 'flex', alignItems: 'stretch', gap: 0 }}>
+                            {/* Connector line */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
+                              <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2.5px solid ${enrolled ? T.header : c.is_free ? T.greenMid : T.borderLight}`, background: enrolled ? T.header : c.is_free ? T.greenLight : T.bgLight, flexShrink: 0, marginTop: 10 }} />
+                              {!isLast && <div style={{ width: 2, flex: 1, background: T.borderLight, marginTop: 2, marginBottom: 0 }} />}
+                            </div>
+                            {/* Card */}
+                            <div style={{ flex: 1, padding: '8px 0 12px 10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 13, fontWeight: enrolled ? 700 : 400, color: enrolled ? T.header : status === 'locked' ? T.textDim : T.text }}>
+                                  {enrolled ? '▶ ' : c.is_free ? '✓ ' : '🔒 '}{c.name}
+                                </span>
+                                {c.is_free && !enrolled && (
+                                  <span style={{ fontSize: 10, background: T.greenLight, color: T.greenMid, borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>Miễn phí</span>
+                                )}
+                                {enrolled && (
+                                  <span style={{ fontSize: 10, background: T.header, color: '#fff', borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>Đang học</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          {!isLast && <span style={{ color: T.borderLight, fontSize: 16 }}>→</span>}
+                        )
+                      })}
+                    </div>
+                    {/* Destination marker for dem_hat track */}
+                    {track === 'solo' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                        <div style={{ width: 32, display: 'flex', justifyContent: 'center' }}>
+                          <span style={{ fontSize: 18 }}>🏆</span>
                         </div>
-                      )
-                    })}
+                        <span style={{ fontWeight: 800, fontSize: 14, color: T.gold }}>Nghệ Sĩ Guitar</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )
-            })}
-
-            {allCourses.length === 0 && (
-              <Empty icon="🗺" text="Bản đồ đang được xây dựng..." />
+                )
+              })
             )}
           </div>
         </section>
 
-        {/* ── KHỐI 6: KHU VỰC TƯƠNG LAI (placeholder) ────────────────── */}
+        {/* ══ KHU VỰC ĐẶC BIỆT ════════════════════════════════════════════ */}
         <section>
-          <div style={{ background: T.bgCard, border: `1.5px dashed ${T.borderLight}`, borderRadius: 14, padding: '24px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: 28, marginBottom: 10 }}>🌟</div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: T.text }}>Khu Vực Đặc Biệt</div>
-            <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 12, lineHeight: 1.6 }}>
-              Dành riêng cho học viên <strong>Hành Trình Trở Thành Nghệ Sĩ Guitar</strong>
+          <div style={{ background: `linear-gradient(135deg, ${T.headerDark}, ${T.header})`, borderRadius: 16, padding: '24px 20px', color: '#fff' }}>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>🌟 Khu vực đặc biệt</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Dành cho học viên Hành Trình</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 20, lineHeight: 1.6 }}>
+              Hoàn thành <strong style={{ color: T.goldLight }}>Hành Trình Trở Thành Nghệ Sĩ Guitar 2027</strong> để mở khoá toàn bộ.
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-              {['🎤 Open Mic', '🤖 AI Coach', '👥 Cộng đồng', '🎓 Hồ sơ nghệ sĩ', '📡 Truyền nghề'].map(f => (
-                <span key={f} style={{ background: T.bg, border: `1px solid ${T.borderLight}`, borderRadius: 16, padding: '5px 12px', fontSize: 12, color: T.textDim }}>
-                  {f}
-                </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                { icon: '🎤', label: 'Open Mic — Biểu diễn trực tiếp' },
+                { icon: '🤖', label: 'AI Coach — Trợ lý âm nhạc cá nhân' },
+                { icon: '👥', label: 'Cộng đồng — Kết nối học viên' },
+                { icon: '🎓', label: 'Hồ sơ nghệ sĩ — Portfolio âm nhạc' },
+                { icon: '📡', label: 'Truyền nghề — Mentorship từ Thầy' },
+              ].map(f => (
+                <div key={f.label} style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: .7 }}>
+                  <span style={{ fontSize: 16 }}>{f.icon}</span>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,.7)' }}>🔒 {f.label}</span>
+                </div>
               ))}
             </div>
-            <div style={{ marginTop: 12, fontSize: 12, color: T.textDim }}>🚧 Đang phát triển</div>
           </div>
         </section>
 
