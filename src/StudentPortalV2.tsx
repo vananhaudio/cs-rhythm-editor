@@ -156,21 +156,19 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>🎸 Hành Trình Của Tôi</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {courses.map((c, i) => (
-              <div key={i} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: '18px 20px' }}
+              <div key={i} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: '20px', display: 'flex', flexDirection: 'column', gap: 10 }}
                 onMouseEnter={el => (el.currentTarget.style.borderColor = T.header)}
                 onMouseLeave={el => (el.currentTarget.style.borderColor = T.border)}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: T.header }}>{c.zone}</div>
-                  <div style={{ fontSize: 13, color: T.textMuted, flexShrink: 0 }}>Buổi {c.session} / {c.total}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 20, color: T.header, lineHeight: 1 }}>{c.zone}</div>
+                  <div style={{ fontSize: 16, color: T.textMuted, flexShrink: 0 }}>Buổi {c.session} / {c.total}</div>
                 </div>
-                <div style={{ fontSize: 12, color: T.textDim, marginBottom: 14 }}>▶ Học ngay:</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{c.next}</div>
-                  <button style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: T.text }}>Bài tiếp: {c.next}</div>
+                  <button style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 8, height: 42, padding: '0 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                     Học ngay →
                   </button>
                 </div>
-                <div style={{ fontSize: 11, color: T.textDim, marginBottom: 6 }}>Tiến độ</div>
                 <Bar pct={c.pct} />
               </div>
             ))}
@@ -184,32 +182,28 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
 
                 {/* ══ 3. THÀNH QUẢ ═══════════════════════════════════════════════ */}
         <section>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>🏆 Thành Quả</div>
-          <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>🏆 Thành Quả</div>
+          <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' as const }}>
             {[
-              { icon: '🎵', value: achSongs,              label: 'Bài hát xong'      },
-              { icon: '🎬', value: achVideos,             label: 'Video đã nộp'      },
-              { icon: '🔥', value: Math.max(streak, 1),  label: 'Ngày liên tục'     },
-              { icon: '🚪', value: achDoors,              label: 'Cánh cửa vượt'     },
-              { icon: '📚', value: achCourses,            label: 'Khoá hoàn thành'   },
+              { icon: '🎵', value: achSongs,             label: 'bài hát'      },
+              { icon: '🎬', value: achVideos,            label: 'video'        },
+              { icon: '🔥', value: Math.max(streak, 1), label: 'ngày'         },
+              { icon: '🚪', value: achDoors,             label: 'cánh cửa'    },
+              { icon: '📚', value: achCourses,           label: 'khoá xong'   },
             ].map((a, i, arr) => (
-              <div key={a.label} style={{ padding: '20px 16px', textAlign: 'center', borderRight: i < arr.length - 1 ? `1px solid ${T.borderLight}` : 'none' }}>
-                <div style={{ fontSize: 20, marginBottom: 6 }}>{a.icon}</div>
-                <div style={{ fontSize: 30, fontWeight: 800, color: a.value > 0 ? T.header : T.borderLight, lineHeight: 1 }}>{a.value}</div>
-                <div style={{ fontSize: 11, color: T.textDim, marginTop: 4 }}>{a.label}</div>
+              <div key={a.label} style={{ display: 'flex', alignItems: 'baseline', gap: 5, paddingRight: i < arr.length - 1 ? 28 : 0, borderRight: i < arr.length - 1 ? `1px solid ${T.borderLight}` : 'none' }}>
+                <span style={{ fontSize: 16 }}>{a.icon}</span>
+                <span style={{ fontSize: 22, fontWeight: 800, color: a.value > 0 ? T.header : T.textDim }}>{a.value}</span>
+                <span style={{ fontSize: 13, color: T.textDim }}>{a.label}</span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ══ 4. CÁNH CỬA ════════════════════════════════════════════════ */}
-        <section>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>🚪 Cánh Cửa Đang Vượt</div>
-          {canhCua.length === 0 ? (
-            <div style={{ fontSize: 13, color: T.textDim, padding: '4px 0' }}>
-              Thầy sẽ mở Cánh Cửa khi bạn gặp một điểm yếu cụ thể cần vượt qua.
-            </div>
-          ) : (
+                {/* ══ 4. CÁNH CỬA ════════════════════════════════════════════════ */}
+        {canhCua.length > 0 && (
+          <section>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>🚪 Cánh Cửa Đang Vượt</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {canhCua.map(e => (
                 <div key={e.id} style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '14px 18px' }}>
@@ -218,8 +212,8 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                 </div>
               ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
 
       </div>
