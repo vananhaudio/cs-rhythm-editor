@@ -264,47 +264,55 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
 
         {/* ══ BẢN ĐỒ HÀNH TRÌNH ══════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 18 }}>🗺</span>
             <span style={{ fontWeight: 700, fontSize: 16 }}>Bản Đồ Hành Trình</span>
           </div>
+          <p style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.7, marginBottom: 14 }}>
+            Âm nhạc là một thế giới rộng lớn.<br />
+            Mỗi tuyến đường là một khả năng khác nhau mà bạn có thể khám phá.
+          </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
               {
-                icon: '🎤', label: 'Tuyến Đệm Hát', active: true,
+                icon: '🎤', label: 'Nghệ thuật đệm hát', active: true,
+                destination: 'Tự đệm hát mọi bài yêu thích.',
                 items: [
-                  { name: 'Nhập môn Guitar',          status: 'done'    },
-                  { name: 'Đệm hát trình độ 1',       status: 'current' },
-                  { name: 'Đệm hát trình độ 2',       status: 'next'    },
-                  { name: 'Đệm hát trình độ 3',       status: 'next'    },
-                  { name: 'Đệm hát nâng cao',         status: 'locked'  },
+                  { name: 'Nhập môn Guitar',    status: 'done'    },
+                  { name: 'Đệm hát 1',          status: 'current' },
+                  { name: 'Đệm hát 2',          status: 'next'    },
+                  { name: 'Đệm hát 3',          status: 'next'    },
+                  { name: 'Đệm hát nâng cao',   status: 'locked'  },
                 ],
               },
               {
-                icon: '🎸', label: 'Tuyến Tỉa Nốt', active: false,
+                icon: '🎸', label: 'Nghệ thuật tỉa nốt', active: false,
+                destination: 'Tự chơi giai điệu trên karaoke.',
                 items: [
-                  { name: 'Tỉa nốt trình độ 1',   status: 'locked' },
-                  { name: 'Tỉa nốt trình độ 2',   status: 'locked' },
-                  { name: 'Tỉa nốt nâng cao',     status: 'locked' },
+                  { name: 'Tỉa nốt 1',      status: 'locked' },
+                  { name: 'Tỉa nốt 2',      status: 'locked' },
+                  { name: 'Tỉa nốt nâng cao', status: 'locked' },
                 ],
               },
               {
-                icon: '📚', label: 'Tuyến Nhạc Lý', active: false,
+                icon: '📚', label: 'Hiểu biết âm nhạc', active: false,
+                destination: 'Hiểu bản chất âm nhạc.',
                 items: [
-                  { name: 'Chìa khoá nhạc lý cơ bản',  status: 'locked' },
-                  { name: 'Chìa khoá nhạc lý nâng cao', status: 'locked' },
-                  { name: 'Hoà âm – Cảm âm',            status: 'locked' },
+                  { name: 'Nhạc lý cơ bản',    status: 'locked' },
+                  { name: 'Nhạc lý nâng cao',  status: 'locked' },
+                  { name: 'Hoà âm – Cảm âm',  status: 'locked' },
                 ],
               },
               {
-                icon: '⭐', label: 'Tuyến Nghệ Sĩ', active: false,
+                icon: '⭐', label: 'Con đường nghệ sĩ', active: false,
+                destination: 'Biểu diễn, sáng tạo và truyền cảm hứng.',
                 items: [
                   { name: 'Solo Guitar',    status: 'locked' },
                   { name: 'Nghệ sĩ Guitar', status: 'final'  },
                 ],
               },
-            ].map((track, ti) => (
+            ].map((track: { icon: string; label: string; active: boolean; destination: string; items: { name: string; status: string }[] }, ti) => (
               <div key={ti} style={{
                 background: track.active ? T.bgCard : T.bg,
                 border: `1.5px solid ${track.active ? T.border : T.borderLight}`,
@@ -338,6 +346,9 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                       </span>
                     )
                   })}
+                </div>
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.borderLight}`, fontSize: 12, color: track.active ? T.textMuted : T.textDim }}>
+                  🏁 <span style={{ fontWeight: 600 }}>Đích đến:</span> {track.destination}
                 </div>
               </div>
             ))}
