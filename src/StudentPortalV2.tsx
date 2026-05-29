@@ -232,11 +232,26 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
 
           {(() => {
             const MOCK = [
-              { name: 'Khởi Đầu Đam Mê — Đệm Hát Trình Độ 1', pct: 40, since: 'tháng 3, 2026', nextLesson: 'Kỹ thuật gảy dây liên tục' },
-              { name: 'Chìa Khoá Nhạc Lý Cơ Bản', pct: 70, since: 'tháng 4, 2026', nextLesson: 'Hợp âm 7 và ứng dụng' },
+              {
+                zone: 'Nghệ Thuật Đệm Hát', zoneIcon: '🎤',
+                name: 'Khởi Đầu Đam Mê — Đệm Hát Trình Độ 1',
+                session: '3', totalSessions: '10',
+                pct: 40, nextLesson: 'Kỹ thuật gảy dây liên tục',
+              },
+              {
+                zone: 'Hiểu Biết Âm Nhạc', zoneIcon: '📚',
+                name: 'Chìa Khoá Nhạc Lý Cơ Bản',
+                session: '5', totalSessions: '8',
+                pct: 70, nextLesson: 'Hợp âm 7 và ứng dụng',
+              },
             ]
             const list = hanhTrinh.length > 0
-              ? hanhTrinh.map(e => ({ name: e.course?.name ?? '', pct: e.progress_pct, since: new Date(e.enrolled_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }), nextLesson: null as string | null }))
+              ? hanhTrinh.map(e => ({
+                  zone: e.course?.name ?? '', zoneIcon: '🎸',
+                  name: e.course?.name ?? '',
+                  session: '1', totalSessions: '?',
+                  pct: e.progress_pct, nextLesson: null as string | null,
+                }))
               : MOCK
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -244,17 +259,31 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                   <div key={idx} style={{ background: T.bgCard, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '18px', cursor: 'pointer', transition: 'border-color .15s, transform .1s' }}
                     onMouseEnter={el => { el.currentTarget.style.borderColor = T.header; el.currentTarget.style.transform = 'translateY(-1px)' }}
                     onMouseLeave={el => { el.currentTarget.style.borderColor = T.border; el.currentTarget.style.transform = 'translateY(0)' }}>
-                    {/* Tên hành trình */}
-                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>{item.name}</div>
-                    {/* Buổi hiện tại */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, background: T.greenLight, color: T.greenMid, borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>Đang học</span>
-                      <span style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>Buổi {Math.ceil(item.pct / 14) || 1}</span>
+
+                    {/* Vùng học - lớn nhất */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontSize: 20 }}>{item.zoneIcon}</span>
+                      <span style={{ fontWeight: 800, fontSize: 16, color: T.header }}>{item.zone}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 10, background: T.greenLight, color: T.greenMid, borderRadius: 4, padding: '2px 8px', fontWeight: 700 }}>Đang học</span>
                     </div>
-                    {/* Bài học tiếp theo */}
-                    <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 14 }}>
-                      ▸ Bài tiếp theo: <span style={{ color: T.text, fontWeight: 500 }}>{item.nextLesson ?? 'Đang cập nhật...'}</span>
+
+                    {/* Tên khoá nhỏ hơn */}
+                    <div style={{ fontSize: 12, color: T.textDim, marginBottom: 10 }}>
+                      Khoá: <span style={{ color: T.textMuted, fontWeight: 500 }}>{item.name}</span>
                     </div>
+
+                    {/* Buổi học */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 10 }}>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: T.text, lineHeight: 1 }}>{item.session}</span>
+                      <span style={{ fontSize: 13, color: T.textDim }}>/ {item.totalSessions} buổi</span>
+                    </div>
+
+                    {/* Bài tiếp theo - nổi bật */}
+                    <div style={{ background: T.bgLight, border: `1px solid ${T.borderLight}`, borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, color: T.textDim, marginBottom: 2, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '.04em' }}>Bài tiếp theo</div>
+                      <div style={{ fontSize: 13, color: T.text, fontWeight: 600 }}>{item.nextLesson ?? 'Đang cập nhật...'}</div>
+                    </div>
+
                     {/* Thanh tiến độ */}
                     <ProgressBar pct={item.pct} color={T.header} height={6} />
                   </div>
