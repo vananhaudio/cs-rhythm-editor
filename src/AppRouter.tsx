@@ -143,10 +143,7 @@ if (path.startsWith('/student') && !path.startsWith('/students')) {
 // ── Route /students ──
 if (path === '/students') {
   if (loading) return null
-=======
-// ── Route /students ──
-if (path === '/students') {
->>>>>>> ba6ab1b (feat: add student onboarding page at /start)
+
   return <StudentList onSelect={id => { window.location.href = `/student?id=${id}` }} />
 }
   // ── Route /player — chỉ teacher ──
