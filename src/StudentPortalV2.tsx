@@ -157,16 +157,21 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>🎸 Hành Trình Của Tôi</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {courses.map((c, i) => (
-              <div key={i} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: '18px 20px', cursor: 'pointer' }}
+              <div key={i} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: '18px 20px' }}
                 onMouseEnter={el => (el.currentTarget.style.borderColor = T.header)}
                 onMouseLeave={el => (el.currentTarget.style.borderColor = T.border)}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
                   <div style={{ fontWeight: 700, fontSize: 16, color: T.header }}>{c.zone}</div>
                   <div style={{ fontSize: 13, color: T.textMuted, flexShrink: 0 }}>Buổi {c.session} / {c.total}</div>
                 </div>
-                <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 12 }}>
-                  Bài tiếp: <span style={{ color: T.text, fontWeight: 600 }}>{c.next}</span>
+                <div style={{ fontSize: 12, color: T.textDim, marginBottom: 14 }}>▶ Học ngay:</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>{c.next}</div>
+                  <button style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                    Học ngay →
+                  </button>
                 </div>
+                <div style={{ fontSize: 11, color: T.textDim, marginBottom: 6 }}>Tiến độ</div>
                 <Bar pct={c.pct} />
               </div>
             ))}
@@ -178,48 +183,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           </div>
         </section>
 
-        {/* ══ 3. VIỆC HÔM NAY ════════════════════════════════════════════ */}
-        <section>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em' }}>🎯 Việc Hôm Nay</div>
-            {dailyTasks.length > 0 && (
-              <div style={{ fontSize: 12, color: doneTasks === dailyTasks.length ? T.greenMid : T.textMuted, fontWeight: 600 }}>
-                {doneTasks} / {dailyTasks.length} xong
-              </div>
-            )}
-          </div>
-
-          {dailyTasks.length === 0 ? (
-            <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '24px', textAlign: 'center', color: T.textDim, fontSize: 13 }}>
-              Chưa có nhiệm vụ hôm nay. Bắt đầu khoá học để nhận nhiệm vụ.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {dailyTasks.map(task => {
-                const done = task.status === 'done'
-                const btnLabel: Record<string, string> = { watch_lesson: 'Học ngay', tap_exercise: 'Bắt đầu', submit_video: 'Nộp bài', practice: 'Luyện tập' }
-                return (
-                  <div key={task.id} style={{ background: done ? T.bg : T.bgCard, border: `1px solid ${done ? T.borderLight : T.border}`, borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, opacity: done ? .6 : 1 }}>
-                    <div onClick={() => toggleTask(task)} style={{ width: 24, height: 24, borderRadius: '50%', border: `2px solid ${done ? T.header : T.border}`, background: done ? T.header : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'all .15s' }}>
-                      {done && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: done ? T.textDim : T.text, textDecoration: done ? 'line-through' : 'none' }}>{task.title}</div>
-                      {task.source === 'teacher' && <div style={{ fontSize: 11, color: T.gold, marginTop: 2 }}>👨‍🏫 Thầy giao</div>}
-                    </div>
-                    {!done && (
-                      <button onClick={() => toggleTask(task)} style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                        {btnLabel[task.type ?? ''] ?? 'Bắt đầu'} →
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* ══ 4. THÀNH QUẢ ═══════════════════════════════════════════════ */}
+                {/* ══ 3. THÀNH QUẢ ═══════════════════════════════════════════════ */}
         <section>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>🏆 Thành Quả</div>
           <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
@@ -239,7 +203,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           </div>
         </section>
 
-        {/* ══ 5. CÁNH CỬA ════════════════════════════════════════════════ */}
+        {/* ══ 4. CÁNH CỬA ════════════════════════════════════════════════ */}
         <section>
           <div style={{ fontSize: 13, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>🚪 Cánh Cửa Đang Vượt</div>
           {canhCua.length === 0 ? (
@@ -258,7 +222,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           )}
         </section>
 
-        {/* ══ 6. NÚT BẢN ĐỒ ═════════════════════════════════════════════ */}
+        {/* ══ 5. BẢN ĐỒ ═════════════════════════════════════════════ */}
         <section>
           <button onClick={() => setShowMap(!showMap)} style={{ width: '100%', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12, padding: '16px', fontSize: 14, fontWeight: 600, color: T.text, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             🗺 {showMap ? 'Ẩn Bản Đồ Hành Trình ↑' : 'Xem Bản Đồ Hành Trình ↓'}
