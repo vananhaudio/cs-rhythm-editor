@@ -205,7 +205,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.bgCard, borderRadius: 10, padding: 4, border: `1px solid ${T.border}` }}>
           {(['overview', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
-            const labels = { overview: '📊 Tổng quan', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI' }
+            const labels: Record<'overview'|'lessons'|'assignments'|'timeline'|'courses', string> = { overview: '📊 Tổng quan', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI', courses: '📚 Khoá học' }
             return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 12, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? T.text : T.textMuted }}>{labels[tab]}</button>
           })}
         </div>
