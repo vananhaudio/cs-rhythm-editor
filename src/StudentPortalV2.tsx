@@ -165,7 +165,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
         </button>
       </header>
 
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '20px 16px 60px' }}>
+      <div style={{ maxWidth: 1400, width: '92%', margin: '0 auto', padding: '20px 0 60px' }}>
 
         {/* ══ HERO CARD ═══════════════════════════════════════════════════ */}
         <div style={{ background: T.header, borderRadius: 20, padding: '24px 24px 20px', marginBottom: 24, color: '#fff', position: 'relative', overflow: 'hidden' }}>
@@ -215,6 +215,14 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           </div>
         </div>
 
+        {/* ══ GRID DASHBOARD ══════════════════════════════════════════════ */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 20,
+          alignItems: 'start',
+        }}>
+
         {/* ══ HÀNH TRÌNH ══════════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -262,6 +270,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
         </section>
 
 
+        {/* col 2 row 1 */}
         {/* ══ THẾ GIỚI GUITAR ════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -341,7 +350,8 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           </div>
         </section>
 
-                {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
+                {/* col 2 end - row 2 start */}
+        {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -416,8 +426,8 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           )}
         </section>
 
-        {/* ══ CÁNH CỬA ════════════════════════════════════════════════════ */}
-        <section style={{ marginBottom: 24 }}>
+        {/* ══ CÁNH CỬA (full width) ══════════════════════════════════════ */}
+        <section style={{ marginBottom: 24, gridColumn: '1 / -1' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 18 }}>🚪</span>
             <span style={{ fontWeight: 700, fontSize: 16 }}>Cánh Cửa Đang Vượt Qua</span>
@@ -466,6 +476,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           )}
         </section>
 
+        {/* col 2 row 2 */}
         {/* ══ THÀNH QUẢ ═══════════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -567,8 +578,8 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           </div>
         </section>
 
-        {/* ══ KHU VỰC ĐẶC BIỆT ════════════════════════════════════════════ */}
-        <section>
+        {/* ══ KHU VỰC ĐẶC BIỆT (full width) ════════════════════════════════ */}
+        <section style={{ gridColumn: '1 / -1' }}>
           <div style={{ background: `linear-gradient(135deg, ${T.headerDark}, ${T.header})`, borderRadius: 16, padding: '24px 20px', color: '#fff' }}>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>🌟 Khu vực đặc biệt</div>
             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Dành cho học viên Hành Trình</div>
@@ -592,6 +603,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           </div>
         </section>
 
+        </div>{/* end grid */}
       </div>
     </div>
   )
