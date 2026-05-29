@@ -224,32 +224,31 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
 
           {(() => {
             const MOCK = [
-              { name: 'Khởi Đầu Đam Mê — Đệm Hát Trình Độ 1', pct: 40, since: 'tháng 3, 2026' },
-              { name: 'Chìa Khoá Nhạc Lý Cơ Bản', pct: 70, since: 'tháng 4, 2026' },
+              { name: 'Khởi Đầu Đam Mê — Đệm Hát Trình Độ 1', pct: 40, since: 'tháng 3, 2026', nextLesson: 'Kỹ thuật gảy dây liên tục' },
+              { name: 'Chìa Khoá Nhạc Lý Cơ Bản', pct: 70, since: 'tháng 4, 2026', nextLesson: 'Hợp âm 7 và ứng dụng' },
             ]
             const list = hanhTrinh.length > 0
-              ? hanhTrinh.map(e => ({ name: e.course?.name ?? '', pct: e.progress_pct, since: new Date(e.enrolled_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }) }))
+              ? hanhTrinh.map(e => ({ name: e.course?.name ?? '', pct: e.progress_pct, since: new Date(e.enrolled_at).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }), nextLesson: null as string | null }))
               : MOCK
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {list.map((item, idx) => (
-                  <div key={idx} style={{ background: T.bgCard, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '16px 18px', cursor: 'pointer', transition: 'border-color .15s, transform .1s' }}
+                  <div key={idx} style={{ background: T.bgCard, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '18px', cursor: 'pointer', transition: 'border-color .15s, transform .1s' }}
                     onMouseEnter={el => { el.currentTarget.style.borderColor = T.header; el.currentTarget.style.transform = 'translateY(-1px)' }}
                     onMouseLeave={el => { el.currentTarget.style.borderColor = T.border; el.currentTarget.style.transform = 'translateY(0)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 3 }}>{item.name}</div>
-                        <div style={{ fontSize: 12, color: T.textDim }}>Đang học · Bắt đầu {item.since}</div>
-                      </div>
-                      <div style={{ background: T.header, color: '#fff', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                        ▶ Tiếp tục
-                      </div>
+                    {/* Tên hành trình */}
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>{item.name}</div>
+                    {/* Buổi hiện tại */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, background: T.greenLight, color: T.greenMid, borderRadius: 4, padding: '2px 8px', fontWeight: 600 }}>Đang học</span>
+                      <span style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>Buổi {Math.ceil(item.pct / 14) || 1}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: T.textMuted, marginBottom: 6 }}>
-                      <span>Tiến độ</span>
-                      <span style={{ fontWeight: 600, color: T.header }}>{item.pct}%</span>
+                    {/* Bài học tiếp theo */}
+                    <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 14 }}>
+                      ▸ Bài tiếp theo: <span style={{ color: T.text, fontWeight: 500 }}>{item.nextLesson ?? 'Đang cập nhật...'}</span>
                     </div>
-                    <ProgressBar pct={item.pct} color={T.header} height={8} />
+                    {/* Thanh tiến độ */}
+                    <ProgressBar pct={item.pct} color={T.header} height={6} />
                   </div>
                 ))}
                 {hanhTrinh.length === 0 && (
