@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -119,10 +119,31 @@ function ColHeader({ icon, title, sub, badge, action }: { icon: string; title: s
   )
 }
 
+interface Enrollment {
+  id: string; course_id: string; enrolled_at: string; is_active: boolean
+  course: { id: string; name: string; slug: string; type: string; track: string | null }
+}
+
 interface Props { student: Student; onLogout: () => void }
 
 export default function StudentPortalV2({ student, onLogout }: Props) {
   const [collapsed, setCollapsed] = useState(false)
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+
+  useEffect(() => {
+    supabase.from('edu_enrollments')
+      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track)')
+      .eq('student_id', student.id)
+      .eq('is_active', true)
+      .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
+  }, [student.id])
+
+  const activeEnrollments = enrollments.filter(e => e.course?.type === 'hanh_trinh')
+  const realCourses = activeEnrollments.map(e => ({
+    name: e.course?.name ?? '',
+    done: 0, total: 10, active: true,
+  }))
+  const displayCourses = realCourses.length > 0 ? realCourses : COURSES
   const name = uname(student)
 
   const btnPrimary: React.CSSProperties = {
@@ -276,7 +297,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
 
               <div style={{ padding: '16px 20px', borderBottom: `1px solid ${D.border}` }}>
                 <div style={{ fontSize: 10, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Các khóa đang học</div>
-                {COURSES.map((c, i) => (
+                {displayCourses.map((c, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i > 0 ? `1px solid ${D.borderLight}` : 'none' }}>
                     <div style={{ width: 30, height: 30, borderRadius: 7, background: c.active ? D.accentLight : D.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>🎸</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
