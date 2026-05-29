@@ -256,6 +256,81 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           )}
         </section>
 
+        {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🎯</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Việc Hôm Nay</span>
+            </div>
+            {dailyTasks.length > 0 && (
+              <span style={{ fontSize: 13, color: doneTasks === dailyTasks.length ? T.greenMid : T.textMuted, fontWeight: 600 }}>
+                {doneTasks}/{dailyTasks.length} hoàn thành
+              </span>
+            )}
+          </div>
+
+          {dailyTasks.length === 0 ? (
+            <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, padding: '28px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>☀️</div>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Chưa có nhiệm vụ mới</div>
+              <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>
+                Hãy tiếp tục hành trình đang học bên dưới.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {dailyTasks.map(task => {
+                const done = task.status === 'done'
+                const typeIcon: Record<string, string> = {
+                  watch_lesson: '🎬', tap_exercise: '🥁',
+                  submit_video: '📹', practice: '🎸', assignment: '📝',
+                }
+                const typeLabel: Record<string, string> = {
+                  watch_lesson: 'Học ngay', tap_exercise: 'Bắt đầu',
+                  submit_video: 'Nộp bài', practice: 'Luyện tập', assignment: 'Làm bài',
+                }
+                const btnLabel = typeLabel[task.type ?? ''] ?? 'Bắt đầu'
+                const icon = typeIcon[task.type ?? ''] ?? '🎯'
+                return (
+                  <div key={task.id} style={{
+                    background: done ? T.bg : T.bgCard,
+                    border: `1.5px solid ${done ? T.borderLight : T.border}`,
+                    borderRadius: 14, padding: '16px',
+                    opacity: done ? .6 : 1, transition: 'opacity .2s',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      {/* Check circle */}
+                      <div onClick={() => toggleTask(task)}
+                        style={{ width: 26, height: 26, borderRadius: '50%', border: `2px solid ${done ? T.header : T.border}`, background: done ? T.header : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', marginTop: 2, transition: 'all .2s' }}>
+                        {done && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: done ? T.textDim : T.text, textDecoration: done ? 'line-through' : 'none', marginBottom: 4 }}>
+                          {icon} {task.title}
+                        </div>
+                        {task.source === 'teacher' && (
+                          <div style={{ fontSize: 11, color: T.gold, marginBottom: 6 }}>👨‍🏫 Thầy giao</div>
+                        )}
+                        {!done && (
+                          <button onClick={() => toggleTask(task)} style={{
+                            background: T.header, color: '#fff', border: 'none',
+                            borderRadius: 8, padding: '7px 16px', fontSize: 13,
+                            fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                            marginTop: 4,
+                          }}>
+                            {btnLabel} →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
         {/* ══ CÁNH CỬA ════════════════════════════════════════════════════ */}
         <section style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -304,47 +379,6 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
               })}
             </div>
           )}
-        </section>
-
-        {/* ══ VIỆC HÔM NAY ════════════════════════════════════════════════ */}
-        <section style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>🎯</span>
-              <span style={{ fontWeight: 700, fontSize: 16 }}>Việc Hôm Nay</span>
-            </div>
-            {dailyTasks.length > 0 && (
-              <span style={{ fontSize: 13, color: doneTasks === dailyTasks.length ? T.greenMid : T.textMuted, fontWeight: 600 }}>
-                {doneTasks}/{dailyTasks.length} ✓
-              </span>
-            )}
-          </div>
-
-          <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 14, overflow: 'hidden' }}>
-            {dailyTasks.length === 0 ? (
-              <div style={{ padding: '24px 20px', textAlign: 'center', color: T.textDim, fontSize: 13 }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }}>☀️</div>
-                Bắt đầu khoá học để nhận việc hôm nay từ hệ thống
-              </div>
-            ) : (
-              dailyTasks.map((task, i) => (
-                <div key={task.id} onClick={() => toggleTask(task)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer', borderTop: i > 0 ? `1px solid ${T.borderLight}` : 'none', transition: 'background .1s' }}
-                  onMouseEnter={el => (el.currentTarget.style.background = T.bgLight)}
-                  onMouseLeave={el => (el.currentTarget.style.background = 'transparent')}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', border: `2px solid ${task.status === 'done' ? T.header : T.border}`, background: task.status === 'done' ? T.header : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
-                    {task.status === 'done' && <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>✓</span>}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, color: task.status === 'done' ? T.textDim : T.text, textDecoration: task.status === 'done' ? 'line-through' : 'none' }}>
-                      {task.title}
-                    </div>
-                    {task.source === 'teacher' && <div style={{ fontSize: 11, color: T.gold, marginTop: 2 }}>👨‍🏫 Thầy giao</div>}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
         </section>
 
         {/* ══ THÀNH QUẢ ═══════════════════════════════════════════════════ */}
