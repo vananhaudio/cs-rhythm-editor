@@ -109,7 +109,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           .limit(20),
       ])
 
-      setEnrollments((enr ?? []) as Enrollment[])
+      setEnrollments((enr ?? []) as unknown as Enrollment[])
       setAllCourses(courses ?? [])
       setDailyTasks(tasks ?? [])
       setAchievements(ach ?? [])
