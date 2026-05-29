@@ -49,10 +49,26 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }>
   done:      { bg: '#D8EDD8', color: '#1B6B3A', label: 'Hoàn thành' },
   skipped:   { bg: '#F0D8D0', color: '#8B3A1E', label: 'Bỏ qua' },
 }
+interface CourseItem {
+  id: string; name: string; slug: string; type: string; track: string | null; is_free: boolean
+}
+interface EnrollmentItem {
+  id: string; course_id: string; enrolled_at: string; is_active: boolean
+  course: CourseItem
+}
+
 function fmtDate(s: string | null) {
   if (!s) return '—'
   return new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
+interface CourseItem {
+  id: string; name: string; slug: string; type: string; track: string | null; is_free: boolean
+}
+interface EnrollmentItem {
+  id: string; course_id: string; enrolled_at: string; is_active: boolean
+  course: CourseItem
+}
+
 function fmtDateTime(s: string | null) {
   if (!s) return '—'
   return new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -101,7 +117,10 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const [events, setEvents] = useState<LearningEvent[]>([])
   const [notes, setNotes] = useState<TeacherNote[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'assignments' | 'timeline'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'assignments' | 'timeline' | 'courses'>('overview')
+  const [enrollments, setEnrollments] = useState<EnrollmentItem[]>([])
+  const [allCourses, setAllCourses] = useState<CourseItem[]>([])
+  const [enrolling, setEnrolling] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -120,6 +139,23 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     }
     load()
   }, [studentId])
+
+  const handleEnroll = async (courseId: string) => {
+    if (!student) return
+    setEnrolling(courseId)
+    const { data, error } = await supabase.from('edu_enrollments').insert({
+      student_id: student.id, course_id: courseId,
+      enrolled_by: (await supabase.auth.getUser()).data.user?.id,
+      is_active: true,
+    }).select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track,is_free)').single()
+    if (!error && data) setEnrollments(prev => [...prev, data as unknown as EnrollmentItem])
+    setEnrolling(null)
+  }
+
+  const handleUnenroll = async (enrollmentId: string) => {
+    await supabase.from('edu_enrollments').update({ is_active: false }).eq('id', enrollmentId)
+    setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, is_active: false } : e))
+  }
 
   if (loading) return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted }}>Đang tải hồ sơ...</div>
   if (!student) return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.danger }}>Không tìm thấy học sinh.</div>
@@ -168,7 +204,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
         </Card>
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.bgCard, borderRadius: 10, padding: 4, border: `1px solid ${T.border}` }}>
-          {(['overview', 'lessons', 'assignments', 'timeline'] as const).map(tab => {
+          {(['overview', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
             const labels = { overview: '📊 Tổng quan', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI' }
             return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 12, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? T.text : T.textMuted }}>{labels[tab]}</button>
           })}
@@ -252,6 +288,56 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                 )
               })}
             </Card>
+          </div>
+        )}
+
+        {activeTab === 'courses' && (
+          <div>
+            <SectionTitle>Khoá học đang học ({enrollments.filter(e => e.is_active).length})</SectionTitle>
+            {enrollments.filter(e => e.is_active).length === 0 ? (
+              <div style={{ color: T.textMuted, fontSize: 13, marginBottom: 20, padding: '12px 0' }}>
+                Chưa có khoá học nào. Thêm khoá từ danh sách bên dưới.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                {enrollments.filter(e => e.is_active).map(e => (
+                  <div key={e.id} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{e.course?.name}</div>
+                      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+                        {e.course?.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · Từ {fmtDate(e.enrolled_at)}
+                      </div>
+                    </div>
+                    <button onClick={() => handleUnenroll(e.id)} style={{ background: 'none', border: `1px solid ${T.border}`, borderRadius: 7, padding: '5px 12px', fontSize: 12, color: T.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Gỡ khoá
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <SectionTitle>Thêm vào khoá học</SectionTitle>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {allCourses.map(c => {
+                const already = enrollments.find(e => e.course_id === c.id && e.is_active)
+                const typeLabel = c.type === 'canh_cua' ? '🔑 Cánh Cửa' : c.type === 'final' ? '⭐ Cuối hành trình' : '🎸 Hành Trình'
+                return (
+                  <div key={c.id} style={{ background: already ? T.greenLight : T.bgCard, border: `1px solid ${already ? '#90C4A0' : T.borderLight}`, borderRadius: 10, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 500, fontSize: 13, color: already ? T.header : T.text }}>{c.name}</div>
+                      <div style={{ fontSize: 11, color: T.textDim, marginTop: 1 }}>{typeLabel}{c.is_free ? ' · Miễn phí' : ''}</div>
+                    </div>
+                    {already ? (
+                      <span style={{ fontSize: 12, color: T.header, fontWeight: 600 }}>✓ Đang học</span>
+                    ) : (
+                      <button onClick={() => handleEnroll(c.id)} disabled={enrolling === c.id} style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: enrolling === c.id ? .7 : 1 }}>
+                        {enrolling === c.id ? '...' : '+ Thêm vào'}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
