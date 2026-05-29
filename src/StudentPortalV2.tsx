@@ -225,9 +225,11 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
           {hanhTrinh.length === 0 ? (
             <div style={{ background: T.bgCard, border: `1.5px dashed ${T.border}`, borderRadius: 14, padding: '28px 20px', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>🌱</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Hành trình sắp bắt đầu</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Bạn đang đứng ở điểm xuất phát.</div>
               <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.7, maxWidth: 320, margin: '0 auto' }}>
-                Sau buổi học đầu tiên với Thầy, bạn sẽ được thêm vào khoá học phù hợp và hành trình chính thức bắt đầu.
+                Sau buổi học đầu tiên, Thầy sẽ đưa bạn vào hành trình phù hợp nhất.
+
+                  Mọi nghệ sĩ guitar đều bắt đầu từ đây.
               </div>
             </div>
           ) : (
