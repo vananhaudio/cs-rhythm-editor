@@ -266,6 +266,26 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.7 }}>Thầy sẽ thêm bạn vào khoá học sau buổi học đầu tiên.</div>
                 </div>
               )}
+
+              {/* Tất cả khoá học */}
+              {enrollments.length > 1 && (
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Tất cả khoá học</div>
+                  {enrollments.map(e => (
+                    <div key={e.id} onClick={() => openCourse(e.course_id)}
+                      style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, cursor: 'pointer' }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 12, background: e.course?.type === 'canh_cua' ? '#FFF7ED' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                        {e.course?.type === 'canh_cua' ? '🔑' : '🎸'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.course?.name}</div>
+                        <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>{e.course?.type === 'canh_cua' ? 'Cánh Cửa' : 'Hành Trình'}</div>
+                      </div>
+                      <span style={{ color: L.t3, fontSize: 18 }}>›</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
