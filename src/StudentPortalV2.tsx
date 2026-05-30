@@ -141,6 +141,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   const name = uname(student)
   const realCourses = enrollments.map(e => ({
     name: e.course?.name ?? '',
+    course_id: e.course_id,
     done: 0, total: 10,
     active: e.course?.type === 'hanh_trinh' || e.course?.type === 'canh_cua',
   }))
@@ -293,7 +294,10 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                   </div>
                 </div>
                 <button
-                  onClick={() => { const id = enrollments[0]?.course_id; if (id) window.location.href = '/course?id=' + id }}
+                  onClick={() => {
+                    const first = enrollments.find(e => e.course?.type === 'hanh_trinh') ?? enrollments[0]
+                    if (first?.course_id) window.location.href = '/course?id=' + first.course_id
+                  }}
                   style={{ ...btnPrimary, width: '100%', textAlign: 'center' }}>Học ngay →</button>
               </div>
 
