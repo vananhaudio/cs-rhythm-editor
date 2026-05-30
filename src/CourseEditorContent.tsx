@@ -466,6 +466,22 @@ export default function CourseEditorContent() {
                 </div>
               )}
 
+              {/* External link URL */}
+              {fType === 'link' && (
+                <div>
+                  <Label>URL nhúng (embed vào bài học)</Label>
+                  <Input value={fUrl} onChange={setFUrl} placeholder="https://timming.vananhaudio.com/chords" />
+                  <div style={{ fontSize: 11, color: C.text3, marginTop: 5 }}>
+                    Ví dụ: https://timming.vananhaudio.com/chords — học sinh sẽ thấy trực tiếp trong bài
+                  </div>
+                  {fUrl && (
+                    <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, height: 200 }}>
+                      <iframe src={fUrl} style={{ width: '100%', height: '100%', border: 'none' }} title="preview" />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Nội dung chi tiết */}
               <div>
                 <Label>Nội dung chi tiết (hiển thị sau video)</Label>

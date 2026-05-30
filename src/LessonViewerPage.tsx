@@ -175,6 +175,26 @@ export default function LessonViewerPage() {
               </div>
             )}
 
+            {/* External URL embed */}
+            {active.lesson_type === 'link' && active.content_url && (
+              <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24, border: `1px solid ${D.border}` }}>
+                <div style={{ background: D.surface, padding: '10px 16px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14 }}>🔗</span>
+                  <span style={{ fontSize: 12, color: D.text2 }}>{active.content_url}</span>
+                  <a href={active.content_url} target="_blank" rel="noreferrer"
+                    style={{ marginLeft: 'auto', fontSize: 11, color: D.accent, textDecoration: 'none' }}>
+                    Mở tab mới ↗
+                  </a>
+                </div>
+                <iframe
+                  src={active.content_url}
+                  style={{ width: '100%', height: '80vh', border: 'none', display: 'block' }}
+                  allow="microphone; camera"
+                  title={active.title}
+                />
+              </div>
+            )}
+
             {/* Content */}
             {active.content && (
               <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
