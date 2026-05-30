@@ -7,8 +7,8 @@ import {
   D_SEQUENCE, DM_SEQUENCE,
   G_SEQUENCE, C_SEQUENCE, F_SEQUENCE,
   B7_SEQUENCE, E7_SEQUENCE, A7_SEQUENCE, D7_SEQUENCE, G7_SEQUENCE,
-  ChordStep, StringStatus,
-  RATING_LABELS, RATING_COLORS, AccuracyRating,
+  type ChordStep, type StringStatus,
+  RATING_LABELS, RATING_COLORS, type AccuracyRating,
 } from './useStringDetector';
 import { useChordDetector } from './useChordDetector';
 
@@ -699,7 +699,7 @@ async function buildChordBuffer(chordName: string): Promise<AudioBuffer | null> 
     const ksData = buildKarplusBuffer(SR, freq, idx);
 
     const buf = offCtx.createBuffer(1, ksData.length, SR);
-    buf.copyToChannel(ksData, 0);
+    buf.copyToChannel(ksData as unknown as Float32Array<ArrayBuffer>, 0);
 
     const src = offCtx.createBufferSource();
     src.buffer = buf;
