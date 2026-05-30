@@ -15,7 +15,6 @@ import StudentOnboarding from './StudentOnboarding'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
-import ChordsPage from './ChordsPage'
 type AppUser = {
   id: string
   role: string
