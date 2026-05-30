@@ -12,6 +12,7 @@ import { createEmptySong } from './utils'
 import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
+import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
 type AppUser = {
@@ -138,6 +139,13 @@ if (path === '/course-editor' || path.startsWith('/course-editor')) {
   if (loading) return null
   if (!user || !isTeacher) { window.location.href = '/tap'; return null }
   return <CourseEditorPage />
+}
+
+// ── Route /admin — Teacher admin panel ──
+if (path === '/admin' || path.startsWith('/admin')) {
+  if (loading) return null
+  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  return <TeacherAdminPage />
 }
 
 // ── Route /start — Student onboarding ──
