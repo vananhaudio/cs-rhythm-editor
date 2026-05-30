@@ -87,6 +87,7 @@ export default function CourseEditorPage() {
   const [saved, setSaved]           = useState(false)
   const [newModuleName, setNewModuleName] = useState('')
   const [addingModule, setAddingModule]   = useState(false)
+  const [popupModuleId, setPopupModuleId]   = useState<string | null>(null)
 
   // Lesson form state
   const [fTitle,   setFTitle]   = useState('')
@@ -287,19 +288,11 @@ export default function CourseEditorPage() {
                       </div>
                     ))}
 
-                    {/* Add lesson buttons */}
-                    <div style={{ padding: '6px 4px' }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: C.text3, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>+ Thêm bài mới</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-                        {LESSON_TYPES.map(t => (
-                          <button key={t.id} onClick={() => addLesson(mod.id, t.id)}
-                            style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 4px', cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit' }}>
-                            <div style={{ fontSize: 14 }}>{t.icon}</div>
-                            <div style={{ fontSize: 9, color: C.text3, marginTop: 2, lineHeight: 1.2 }}>{t.label}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    {/* Add lesson button */}
+                    <button onClick={() => setPopupModuleId(mod.id)}
+                      style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 7, padding: '8px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, marginTop: 4 }}>
+                      + Thêm bài mới
+                    </button>
                   </div>
                 )
               })}
@@ -427,6 +420,35 @@ export default function CourseEditorPage() {
           </>
         )}
       </div>
+    {/* ── POPUP: chọn loại bài ──────────────────────────────────────── */}
+      {popupModuleId && (
+        <div
+          onClick={() => setPopupModuleId(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: C.surface, borderRadius: 14, padding: 24, width: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Thêm bài mới</div>
+            <div style={{ fontSize: 12, color: C.text3, marginBottom: 16 }}>Chọn loại bài học</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {LESSON_TYPES.map(t => (
+                <button key={t.id}
+                  onClick={() => { addLesson(popupModuleId, t.id); setPopupModuleId(null) }}
+                  style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 8px', cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', transition: 'background .1s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = C.accentLight)}
+                  onMouseLeave={e => (e.currentTarget.style.background = C.bg)}>
+                  <div style={{ fontSize: 22, marginBottom: 5 }}>{t.icon}</div>
+                  <div style={{ fontSize: 12, color: C.text2, fontWeight: 500 }}>{t.label}</div>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setPopupModuleId(null)}
+              style={{ marginTop: 16, width: '100%', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
+              Huỷ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
