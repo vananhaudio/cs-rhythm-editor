@@ -90,6 +90,8 @@ export default function CourseEditorContent() {
   const [popupModuleId, setPopupModuleId]   = useState<string | null>(null)
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null)
   const [editingModuleName, setEditingModuleName] = useState('')
+  const [editingCourseName, setEditingCourseName] = useState(false)
+  const [courseNameDraft, setCourseNameDraft] = useState('')
   const [showNewCourse, setShowNewCourse] = useState(false)
   const [ncName,  setNcName]  = useState('')
   const [ncType,  setNcType]  = useState('hanh_trinh')
@@ -155,6 +157,15 @@ export default function CourseEditorContent() {
     setSelectedLesson(prev => prev ? { ...prev, title: fTitle, lesson_type: fType, content_url: fUrl, description: fDesc, content: fContent, tools: fTools } : prev)
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const saveCourseName = async () => {
+    if (!selectedCourse || !courseNameDraft.trim()) return
+    await supabase.from('edu_courses').update({ name: courseNameDraft }).eq('id', selectedCourse.id)
+    const updated = { ...selectedCourse, name: courseNameDraft }
+    setSelectedCourse(updated)
+    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, name: courseNameDraft } : c))
+    setEditingCourseName(false)
   }
 
   const createCourse = async () => {
@@ -271,7 +282,7 @@ export default function CourseEditorContent() {
                   style={{ padding: '7px 10px', borderRadius: 7, cursor: 'pointer', background: selectedCourse?.id === c.id ? C.accentLight : 'transparent', color: selectedCourse?.id === c.id ? C.accent : C.text2, fontWeight: selectedCourse?.id === c.id ? 600 : 400, fontSize: 12, marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}
                   onMouseEnter={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = C.bg }}
                   onMouseLeave={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = 'transparent' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                  <span style={{ lineHeight: 1.4, wordBreak: 'break-word' }}>{c.name}</span>
                   {c.is_published && <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.success, flexShrink: 0 }} />}
                 </div>
               ))}
@@ -292,9 +303,20 @@ export default function CourseEditorContent() {
             {/* Course header */}
             <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: C.text1, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
-                  {selectedCourse.name}
-                </div>
+                {editingCourseName ? (
+                  <input autoFocus value={courseNameDraft}
+                    onChange={e => setCourseNameDraft(e.target.value)}
+                    onBlur={saveCourseName}
+                    onKeyDown={e => { if (e.key === 'Enter') saveCourseName(); if (e.key === 'Escape') setEditingCourseName(false) }}
+                    style={{ flex: 1, fontWeight: 700, fontSize: 15, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', outline: 'none', marginRight: 8, minWidth: 0 }} />
+                ) : (
+                  <div
+                    onDoubleClick={() => { setEditingCourseName(true); setCourseNameDraft(selectedCourse.name) }}
+                    title="Double-click để đổi tên"
+                    style={{ fontWeight: 700, fontSize: 15, color: C.text1, flex: 1, minWidth: 0, marginRight: 8, cursor: 'text', wordBreak: 'break-word', lineHeight: 1.4 }}>
+                    {selectedCourse.name}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <Btn variant="secondary" onClick={togglePublish} style={{ fontSize: 12, padding: '5px 10px' }}>
                     {selectedCourse.is_published
