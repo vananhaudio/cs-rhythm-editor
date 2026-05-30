@@ -210,7 +210,62 @@ export default function CourseEditorContent() {
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: C.bg, fontFamily: '"Inter", system-ui, sans-serif', fontSize: 14, color: C.text1 }}>
 
-            {/* ── MIDDLE: Course + lesson list ────────────────────────────────── */}
+            {/* ── LEFT: Course list ──────────────────────────────────────────── */}
+      <div style={{ width: 200, flexShrink: 0, background: C.surface, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '12px', borderBottom: `1px solid ${C.border}` }}>
+          <button onClick={() => setShowNewCourse(!showNewCourse)}
+            style={{ width: '100%', background: C.accent, border: 'none', borderRadius: 7, padding: '8px', color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            + Tạo khoá mới
+          </button>
+          {showNewCourse && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <input value={ncName} onChange={e => setNcName(e.target.value)} placeholder="Tên khoá học..."
+                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
+              <select value={ncType} onChange={e => setNcType(e.target.value)}
+                style={{ width: '100%', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none' }}>
+                <option value="hanh_trinh">🎸 Hành Trình</option>
+                <option value="canh_cua">🔑 Cánh Cửa</option>
+                <option value="final">⭐ Final</option>
+              </select>
+              <select value={ncTrack} onChange={e => setNcTrack(e.target.value)}
+                style={{ width: '100%', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none' }}>
+                <option value="dem_hat">Đệm Hát</option>
+                <option value="tia_not">Tỉa Nốt</option>
+                <option value="nhac_ly">Nhạc Lý</option>
+                <option value="nhap_mon">Nhập Môn</option>
+                <option value="solo">Solo</option>
+              </select>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button onClick={createCourse} style={{ flex: 1, background: C.accent, border: 'none', borderRadius: 6, padding: '6px', color: '#fff', fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Tạo</button>
+                <button onClick={() => { setShowNewCourse(false); setNcName('') }} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Huỷ</button>
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+          {[
+            { label: 'HÀNH TRÌNH', types: ['hanh_trinh', 'final'] },
+            { label: 'CÁNH CỬA',   types: ['canh_cua'] },
+          ].map(group => (
+            <div key={group.label} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', padding: '4px 8px 6px' }}>
+                {group.label}
+              </div>
+              {courses.filter(c => group.types.includes(c.type)).map(c => (
+                <div key={c.id} onClick={() => loadCourse(c)}
+                  style={{ padding: '7px 10px', borderRadius: 7, cursor: 'pointer', background: selectedCourse?.id === c.id ? C.accentLight : 'transparent', color: selectedCourse?.id === c.id ? C.accent : C.text2, fontWeight: selectedCourse?.id === c.id ? 600 : 400, fontSize: 12, marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}
+                  onMouseEnter={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = C.bg }}
+                  onMouseLeave={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = 'transparent' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                  {c.is_published && <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.success, flexShrink: 0 }} />}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── MIDDLE: Course + lesson list ────────────────────────────────── */}
       <div style={{ width: 340, flexShrink: 0, background: C.bg, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {!selectedCourse ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text3, fontSize: 13, flexDirection: 'column', gap: 8 }}>
