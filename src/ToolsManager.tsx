@@ -32,7 +32,7 @@ export default function ToolsManager() {
 
   useEffect(() => {
     supabase.from('edu_tools').select('*').order('order_index')
-      .then(({ data }) => { setTools(data ?? []); setLoading(false) })
+      .then(({ data, error }) => { console.log('tools:', data, error); setTools(data ?? []); setLoading(false) })
   }, [])
 
   const toggle = (id: string) => {
