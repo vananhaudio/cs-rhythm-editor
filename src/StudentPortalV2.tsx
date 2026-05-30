@@ -145,10 +145,6 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
   const isUnlocked = (tier: string) => TIER_ORDER.indexOf(tier) <= studentTierIdx
-  const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
-  const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
-  const studentTier = LEVEL_TIER[student.level ?? 'beginner'] ?? 'free'
-  const isUnlocked = (tier: string) => TIER_ORDER.indexOf(tier) <= TIER_ORDER.indexOf(studentTier)
   const realCourses = enrollments.map(e => ({
     name: e.course?.name ?? '',
     course_id: e.course_id,
