@@ -164,12 +164,13 @@ export default function CourseEditorPage() {
   // Add lesson to module
   const addLesson = async (moduleId: string, type: string) => {
     const modLessons = lessons.filter(l => l.module_id === moduleId)
-    const { data } = await supabase.from('edu_course_lessons').insert({
+    const { data, error } = await supabase.from('edu_course_lessons').insert({
       module_id: moduleId, title: `Bài ${modLessons.length + 1}: (Chưa đặt tên)`,
       lesson_type: type, order_index: modLessons.length, tools: [],
     }).select('*').single()
+    if (error) { alert('Lỗi tạo bài: ' + error.message); return }
     if (data) {
-      const newLesson = { ...data, tools: [] }
+      const newLesson = { ...data, tools: Array.isArray(data.tools) ? data.tools : [] }
       setLessons(prev => [...prev, newLesson])
       selectLesson(newLesson)
     }
