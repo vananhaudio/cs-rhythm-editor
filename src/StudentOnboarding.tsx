@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import StudentPortalV2 from './StudentPortalV2'
+import MobileStudentPortal from './MobileStudentPortal'
 import { supabase } from './supabase'
 
 const T = {
@@ -367,7 +368,7 @@ export default function StudentOnboarding() {
       )}
 
       {/* PORTAL */}
-      {step === 'portal' && student && <StudentPortalV2 student={student} onLogout={handleLogout} />}
+      {step === 'portal' && student && (window.innerWidth < 768 ? <MobileStudentPortal student={student} onLogout={handleLogout} /> : <StudentPortalV2 student={student} onLogout={handleLogout} />)}
     </div>
   )
 }
