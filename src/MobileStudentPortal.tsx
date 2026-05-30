@@ -353,15 +353,20 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             )}
 
-            {/* External link embed */}
+            {/* External link embed - fullscreen */}
             {activeLesson.lesson_type === 'link' && activeLesson.content_url && (
-              <div style={{ borderRadius: 12, overflow: 'hidden', margin: '0 -16px', border: 'none' }}>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#000' }}>
                 <iframe
                   src={activeLesson.content_url}
-                  style={{ width: '100%', height: '85vh', border: 'none', display: 'block' }}
+                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
                   allow="microphone; camera"
                   title={activeLesson.title}
                 />
+                <button
+                  onClick={goBack}
+                  style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>
+                  ← Quay lại
+                </button>
               </div>
             )}
 
