@@ -12,6 +12,7 @@ import { createEmptySong } from './utils'
 import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
+import CourseEditorPage from './CourseEditorPage'
 type AppUser = {
   id: string
   role: string
@@ -125,6 +126,13 @@ export default function AppRouter() {
     }
     return <YouTubeSyncPage />
   }
+
+// ── Route /course-editor ──
+if (path === '/course-editor' || path.startsWith('/course-editor')) {
+  if (loading) return null
+  if (!user || !isTeacher) { window.location.href = '/tap'; return null }
+  return <CourseEditorPage />
+}
 
 // ── Route /start — Student onboarding ──
 if (path === '/start' || path.startsWith('/start')) {
