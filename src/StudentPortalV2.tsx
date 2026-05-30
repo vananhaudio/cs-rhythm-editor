@@ -83,6 +83,8 @@ const COMMUNITY = [
 ]
 
 interface Student { id: string; full_name: string; email: string | null; level: string | null }
+interface DBTool { id: string; icon: string; name: string; category: string; route: string; tier: string; enabled: boolean }
+interface DBTool { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
 
 function uname(s: Student) {
   const n = s.full_name ?? ''
@@ -139,6 +141,14 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   }, [student.id])
 
   const name = uname(student)
+  const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
+  const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
+  const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
+  const isUnlocked = (tier: string) => TIER_ORDER.indexOf(tier) <= studentTierIdx
+  const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
+  const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
+  const studentTier = LEVEL_TIER[student.level ?? 'beginner'] ?? 'free'
+  const isUnlocked = (tier: string) => TIER_ORDER.indexOf(tier) <= TIER_ORDER.indexOf(studentTier)
   const realCourses = enrollments.map(e => ({
     name: e.course?.name ?? '',
     course_id: e.course_id,
@@ -344,12 +354,17 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
               <div style={{ padding: '16px 20px', borderBottom: `1px solid ${D.border}` }}>
                 <div style={{ fontSize: 10, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Công cụ luyện tập</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                  {TOOLS.map((t, i) => (
-                    <div key={i} style={{ background: t.locked ? D.bg : D.surface, border: `1px solid ${D.border}`, borderRadius: 8, padding: '10px 8px', textAlign: 'center', cursor: t.locked ? 'default' : 'pointer', position: 'relative', opacity: t.locked ? .5 : 1 }}>
-                      {t.locked && <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 8, color: D.text3 }}>🔒</span>}
-                      <div style={{ fontSize: 11, color: t.locked ? D.text3 : D.text2, fontWeight: 500, lineHeight: 1.3 }}>{t.name}</div>
-                    </div>
-                  ))}
+                  {(dbTools.length > 0 ? dbTools : TOOLS.map(t => ({ id: t.name, icon: '🎸', name: t.name, category: 'Công cụ', route: '/tap', tier: t.locked ? 'pro' : 'free', enabled: true } as DBTool))).map((t, i) => {
+                    const unlocked = isUnlocked(t.tier)
+                    return (
+                      <div key={i} onClick={() => { if (unlocked && t.route) window.location.href = t.route }}
+                        style={{ background: unlocked ? D.surface : D.bg, border: `1px solid ${D.border}`, borderRadius: 8, padding: '10px 8px', textAlign: 'center', cursor: unlocked ? 'pointer' : 'default', position: 'relative', opacity: unlocked ? 1 : .5 }}>
+                        {!unlocked && <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 8, color: D.text3 }}>🔒</span>}
+                        <div style={{ fontSize: 14, marginBottom: 2 }}>{t.icon}</div>
+                        <div style={{ fontSize: 11, color: unlocked ? D.text2 : D.text3, fontWeight: 500, lineHeight: 1.3 }}>{t.name}</div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 

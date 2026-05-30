@@ -38,6 +38,7 @@ type Tab    = 'hoc' | 'tap' | 'song'
 type Screen = 'home' | 'courses' | 'lesson'
 
 interface Student    { id: string; full_name: string; email: string | null; level: string | null }
+interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
   course: { id: string; name: string; type: string; track: string | null }
@@ -89,6 +90,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
+  const [dbTools, setDbTools]     = useState<DBTool[]>([])
   const [bpm, setBpm]             = useState(72)
   const [tapCount, setTapCount]   = useState(0)
   const tapTimes                  = useRef<number[]>([])
@@ -99,6 +101,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
+    supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
+      .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
   }, [student.id])
 
   const openCourse = async (courseId: string) => {
@@ -131,6 +135,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   const mainCourse = enrollments.find(e => e.course?.type === 'hanh_trinh')
   const name = uname(student)
+  const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
+  const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
+  const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
+  const isUnlocked = (tier: string) => TIER_ORDER.indexOf(tier) <= studentTierIdx
+  const displayTools = dbTools.length > 0 ? dbTools : PRACTICE_LIST.map(p => ({ id: p.id, icon: p.icon, name: p.label, description: p.sub, category: 'Luyện tập', route: '/tap', tier: 'free', enabled: true } as DBTool))
 
   // Pill component
   const Pill = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
@@ -404,14 +413,18 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {PRACTICE_LIST.map(t => (
-                <div key={t.id} onClick={() => window.location.href = '/tap'}
-                  style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: 'pointer' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: t.fg, marginBottom: 4 }}>{t.label}</div>
-                  <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.sub}</div>
-                </div>
-              ))}
+              {displayTools.map((t, i) => {
+                const unlocked = isUnlocked(t.tier)
+                return (
+                  <div key={t.id} onClick={() => unlocked && window.location.href === t.route}
+                    style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
+                    {!unlocked && <span style={{ position: 'absolute', top: 10, right: 10, fontSize: 12 }}>🔒</span>}
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
