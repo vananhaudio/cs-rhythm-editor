@@ -2,6 +2,7 @@ import { useState } from 'react'
 import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import CourseEditorContent from './CourseEditorContent'
+import ToolsManager from './ToolsManager'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -10,12 +11,13 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
+  { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'       },
 ]
 
 export default function TeacherAdminPage() {
@@ -95,6 +97,10 @@ export default function TeacherAdminPage() {
                 <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>📚 Soạn khoá học →</div>
                 <div style={{ fontSize: 13, color: S.text3 }}>Tạo chương, thêm bài, gắn YouTube</div>
               </div>
+              <div onClick={() => setSection('tools')} style={{ background: S.surface, borderRadius: 12, padding: '20px 24px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>🛠 Quản lý công cụ →</div>
+                <div style={{ fontSize: 13, color: S.text3 }}>Bật/tắt, phân cấp unlock cho học sinh</div>
+              </div>
             </div>
           </div>
         )}
@@ -118,6 +124,12 @@ export default function TeacherAdminPage() {
         {section === 'courses' && (
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <CourseEditorContent />
+          </div>
+        )}
+
+        {section === 'tools' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <ToolsManager />
           </div>
         )}
 
