@@ -129,7 +129,7 @@ export default function AppRouter() {
   }
 
 // ── Route /course ── Lesson viewer (students)
-if (path === '/course' || path.startsWith('/course')) {
+if (path === '/course' && !path.startsWith('/course-editor')) {
   return <LessonViewerPage />
 }
 
