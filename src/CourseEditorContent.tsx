@@ -90,6 +90,10 @@ export default function CourseEditorContent() {
   const [popupModuleId, setPopupModuleId]   = useState<string | null>(null)
   const [editingModuleId, setEditingModuleId] = useState<string | null>(null)
   const [editingModuleName, setEditingModuleName] = useState('')
+  const [showNewCourse, setShowNewCourse] = useState(false)
+  const [ncName,  setNcName]  = useState('')
+  const [ncType,  setNcType]  = useState('hanh_trinh')
+  const [ncTrack, setNcTrack] = useState('dem_hat')
 
   // Lesson form state
   const [fTitle,   setFTitle]   = useState('')
@@ -151,6 +155,17 @@ export default function CourseEditorContent() {
     setSelectedLesson(prev => prev ? { ...prev, title: fTitle, lesson_type: fType, content_url: fUrl, description: fDesc, content: fContent, tools: fTools } : prev)
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const createCourse = async () => {
+    if (!ncName.trim()) return
+    const slug = ncName.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now()
+    const { data, error } = await supabase.from("edu_courses").insert({
+      name: ncName.trim(), slug, type: ncType, track: ncTrack,
+      level_order: 99, is_free: false, is_published: false,
+    }).select("*").single()
+    if (error) { alert("Loi: " + error.message); return }
+    if (data) { setCourses(prev => [...prev, data]); setShowNewCourse(false); setNcName(""); loadCourse(data) }
   }
 
   // Rename module
