@@ -134,6 +134,17 @@ if (path === '/course' && !path.startsWith('/course-editor')) {
   return <LessonViewerPage />
 }
 if (path === '/chords' || path.startsWith('/chords')) {
+  const params = window.location.search
+  return (
+    <div style={{ width: '100%', height: '100vh', overflow: 'hidden' }}>
+      <iframe
+        src={'https://chords-vananhaudio.netlify.app' + params}
+        style={{ width: '100%', height: '100%', border: 'none' }}
+        allow='microphone'
+        title='Luyen hop am'
+      />
+    </div>
+  )
 }
 // ── Route /course-editor ──
 if (path === '/course-editor' || path.startsWith('/course-editor')) {
