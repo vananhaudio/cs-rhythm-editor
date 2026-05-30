@@ -134,7 +134,6 @@ if (path === '/course' && !path.startsWith('/course-editor')) {
   return <LessonViewerPage />
 }
 if (path === '/chords' || path.startsWith('/chords')) {
-  return <ChordsPage />
 }
 // ── Route /course-editor ──
 if (path === '/course-editor' || path.startsWith('/course-editor')) {
