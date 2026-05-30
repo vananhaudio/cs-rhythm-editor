@@ -353,6 +353,18 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             )}
 
+            {/* External link embed */}
+            {activeLesson.lesson_type === 'link' && activeLesson.content_url && (
+              <div style={{ borderRadius: 12, overflow: 'hidden', margin: '0 -16px', border: 'none' }}>
+                <iframe
+                  src={activeLesson.content_url}
+                  style={{ width: '100%', height: '85vh', border: 'none', display: 'block' }}
+                  allow="microphone; camera"
+                  title={activeLesson.title}
+                />
+              </div>
+            )}
+
             <div style={{ padding: '16px' }}>
               {lessonTab === 'content' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
