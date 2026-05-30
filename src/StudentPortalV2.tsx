@@ -131,7 +131,7 @@ interface Props { student: Student; onLogout: () => void }
 export default function StudentPortalV2({ student, onLogout }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-
+const [dbTools, setDbTools] = useState<DBTool[]>([])
   useEffect(() => {
     supabase.from('edu_enrollments')
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track)')
@@ -139,7 +139,8 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
       .eq('is_active', true)
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
   }, [student.id])
-
+supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
+      .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
   const name = uname(student)
   const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
   const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
