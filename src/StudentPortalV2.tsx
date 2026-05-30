@@ -292,7 +292,9 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                     <Bar pct={30} />
                   </div>
                 </div>
-                <button style={{ ...btnPrimary, width: '100%', textAlign: 'center' }}>Học ngay →</button>
+                <button
+                  onClick={() => { const id = enrollments[0]?.course_id; if (id) window.location.href = '/course?id=' + id }}
+                  style={{ ...btnPrimary, width: '100%', textAlign: 'center' }}>Học ngay →</button>
               </div>
 
               <div style={{ padding: '16px 20px', borderBottom: `1px solid ${D.border}` }}>

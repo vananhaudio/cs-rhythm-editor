@@ -13,6 +13,7 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import CourseEditorPage from './CourseEditorPage'
+import LessonViewerPage from './LessonViewerPage'
 type AppUser = {
   id: string
   role: string
@@ -126,6 +127,11 @@ export default function AppRouter() {
     }
     return <YouTubeSyncPage />
   }
+
+// ── Route /course ── Lesson viewer (students)
+if (path === '/course' || path.startsWith('/course')) {
+  return <LessonViewerPage />
+}
 
 // ── Route /course-editor ──
 if (path === '/course-editor' || path.startsWith('/course-editor')) {
