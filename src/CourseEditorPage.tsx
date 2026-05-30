@@ -88,6 +88,8 @@ export default function CourseEditorPage() {
   const [newModuleName, setNewModuleName] = useState('')
   const [addingModule, setAddingModule]   = useState(false)
   const [popupModuleId, setPopupModuleId]   = useState<string | null>(null)
+  const [editingModuleId, setEditingModuleId] = useState<string | null>(null)
+  const [editingModuleName, setEditingModuleName] = useState('')
 
   // Lesson form state
   const [fTitle,   setFTitle]   = useState('')
@@ -146,8 +148,17 @@ export default function CourseEditorPage() {
     setLessons(prev => prev.map(l => l.id === selectedLesson.id
       ? { ...l, title: fTitle, lesson_type: fType, content_url: fUrl, description: fDesc, content: fContent, tools: fTools }
       : l))
+    setSelectedLesson(prev => prev ? { ...prev, title: fTitle, lesson_type: fType, content_url: fUrl, description: fDesc, content: fContent, tools: fTools } : prev)
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  // Rename module
+  const saveModuleName = async (moduleId: string) => {
+    if (!editingModuleName.trim()) return
+    await supabase.from('edu_modules').update({ name: editingModuleName }).eq('id', moduleId)
+    setModules(prev => prev.map(m => m.id === moduleId ? { ...m, name: editingModuleName } : m))
+    setEditingModuleId(null)
   }
 
   // Add lesson to module
@@ -264,9 +275,21 @@ export default function CourseEditorPage() {
                 const modLessons = lessons.filter(l => l.module_id === mod.id)
                 return (
                   <div key={mod.id} style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.text2, padding: '6px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mod.name}</span>
-                      <span style={{ color: C.text3, fontWeight: 400, flexShrink: 0, marginLeft: 6 }}>{modLessons.length} bài</span>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.text2, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      {editingModuleId === mod.id ? (
+                        <input autoFocus value={editingModuleName} onChange={e => setEditingModuleName(e.target.value)}
+                          onBlur={() => saveModuleName(mod.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveModuleName(mod.id); if (e.key === 'Escape') setEditingModuleId(null) }}
+                          style={{ flex: 1, border: `1px solid ${C.accent}`, borderRadius: 5, padding: '3px 6px', fontSize: 11, fontFamily: 'inherit', outline: 'none', color: C.text1 }} />
+                      ) : (
+                        <span
+                          onDoubleClick={() => { setEditingModuleId(mod.id); setEditingModuleName(mod.name) }}
+                          title="Double-click để đổi tên"
+                          style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text', flex: 1 }}>
+                          {mod.name}
+                        </span>
+                      )}
+                      <span style={{ color: C.text3, fontWeight: 400, flexShrink: 0 }}>{modLessons.length} bài</span>
                     </div>
                     {modLessons.map((l, li) => (
                       <div key={l.id}
