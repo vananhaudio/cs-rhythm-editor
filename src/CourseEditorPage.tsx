@@ -115,7 +115,7 @@ export default function CourseEditorPage() {
     setModules(mods ?? [])
     if (mods && mods.length > 0) {
       const ids = mods.map((m: Module) => m.id)
-      const { data: lsns } = await supabase.from('edu_lessons')
+      const { data: lsns } = await supabase.from('edu_course_lessons')
         .select('*').in('module_id', ids).order('order_index')
       setLessons((lsns ?? []).map((l: Lesson & { tools?: unknown }) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] })))
     } else {
@@ -138,7 +138,7 @@ export default function CourseEditorPage() {
   const saveLesson = async () => {
     if (!selectedLesson) return
     setSaving(true)
-    await supabase.from('edu_lessons').update({
+    await supabase.from('edu_course_lessons').update({
       title: fTitle, lesson_type: fType,
       content_url: fUrl || null,
       description: fDesc || null,
@@ -164,7 +164,7 @@ export default function CourseEditorPage() {
   // Add lesson to module
   const addLesson = async (moduleId: string, type: string) => {
     const modLessons = lessons.filter(l => l.module_id === moduleId)
-    const { data } = await supabase.from('edu_lessons').insert({
+    const { data } = await supabase.from('edu_course_lessons').insert({
       module_id: moduleId, title: `Bài ${modLessons.length + 1}: (Chưa đặt tên)`,
       lesson_type: type, order_index: modLessons.length, tools: [],
     }).select('*').single()
@@ -188,7 +188,7 @@ export default function CourseEditorPage() {
   // Delete lesson
   const deleteLesson = async (id: string) => {
     if (!confirm('Xoá bài học này?')) return
-    await supabase.from('edu_lessons').delete().eq('id', id)
+    await supabase.from('edu_course_lessons').delete().eq('id', id)
     setLessons(prev => prev.filter(l => l.id !== id))
     if (selectedLesson?.id === id) setSelectedLesson(null)
   }
