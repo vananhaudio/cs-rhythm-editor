@@ -74,7 +74,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
   const [tapCount, setTapCount] = useState(0)
   const [bpm, setBpm]           = useState(72)
-  const tapRef = useRef<NodeJS.Timeout | null>(null)
+  const tapRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     supabase.from('edu_enrollments')
