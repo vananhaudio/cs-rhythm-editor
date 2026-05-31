@@ -175,6 +175,27 @@ export default function LessonViewerPage() {
               </div>
             )}
 
+            {/* Slide Canva embed */}
+            {active.lesson_type === 'slide' && active.content_url && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden', background: '#1a1a2e', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+                  <iframe
+                    src={active.content_url}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                    allowFullScreen
+                    allow="fullscreen"
+                    title={active.title}
+                  />
+                </div>
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+                  <a href={active.content_url} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 12, color: D.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    🔗 Mở toàn màn hình ↗
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* External URL embed */}
             {active.lesson_type === 'link' && active.content_url && (
               <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24, border: `1px solid ${D.border}` }}>

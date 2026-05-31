@@ -79,6 +79,25 @@ function LessonPreview({ lesson }: { lesson: Lesson }) {
             <iframe src={`https://www.youtube.com/embed/${ytId}?rel=0`} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
           </div>
         )}
+        {lesson.lesson_type === 'slide' && lesson.content_url && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden', background: '#1a1a2e', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+              <iframe
+                src={lesson.content_url}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                allowFullScreen
+                allow="fullscreen"
+                title={lesson.title}
+              />
+            </div>
+            <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+              <a href={lesson.content_url} target="_blank" rel="noreferrer"
+                style={{ fontSize: 12, color: C.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                🔗 Mở toàn màn hình ↗
+              </a>
+            </div>
+          </div>
+        )}
         {lesson.lesson_type === 'link' && lesson.content_url && (
           <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24, border: `1px solid ${C.border}` }}>
             <div style={{ background: C.surface, padding: '10px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -572,6 +591,61 @@ export default function CourseEditorContent() {
                     {fUrl && getYouTubeId(fUrl) && (
                       <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', background: '#000', aspectRatio: '16/9' }}>
                         <iframe src={`https://www.youtube.com/embed/${getYouTubeId(fUrl)}?rel=0`} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {fType === 'slide' && (
+                  <div>
+                    {/* Hướng dẫn Canva */}
+                    <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: '#92400E', lineHeight: 1.7 }}>
+                      <div style={{ fontWeight: 700, marginBottom: 4 }}>📐 Cách lấy link nhúng từ Canva:</div>
+                      <ol style={{ margin: 0, paddingLeft: 16 }}>
+                        <li>Mở thiết kế trên <a href="https://canva.com" target="_blank" rel="noreferrer" style={{ color: '#7C3AED' }}>canva.com</a></li>
+                        <li>Nhấn <b>Share</b> → <b>Embed</b></li>
+                        <li>Chọn <b>Responsive</b> → nhấn <b>Copy embed code</b></li>
+                        <li>Dán vào đây, mình sẽ tự tách URL</li>
+                      </ol>
+                      <div style={{ marginTop: 6, color: '#6B7280', fontSize: 11 }}>
+                        Hoặc lấy thẳng URL dạng: <code style={{ background: '#F3F4F6', padding: '1px 4px', borderRadius: 3 }}>https://www.canva.com/design/DAF.../view?embed</code>
+                      </div>
+                    </div>
+
+                    <Label>Link Canva (URL hoặc embed code)</Label>
+                    <div style={{ position: 'relative' }}>
+                      <textarea
+                        value={fUrl}
+                        onChange={e => {
+                          const val = e.target.value
+                          // Auto-extract src from <iframe ...src="..." ...>
+                          const match = val.match(/src="([^"]+canva[^"]+)"/)
+                          setFUrl(match ? match[1] : val)
+                        }}
+                        placeholder={'Dán link hoặc embed code Canva vào đây...\n\nVí dụ:\nhttps://www.canva.com/design/DAFxxx/view?embed\n\nHoặc paste cả thẻ <iframe> từ Canva'}
+                        rows={4}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.text1, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, background: C.surface }}
+                        onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                        onBlur={e => (e.currentTarget.style.borderColor = C.border)}
+                      />
+                      {fUrl && fUrl.includes('<iframe') && (
+                        <div style={{ fontSize: 11, color: C.success, marginTop: 4 }}>✓ Đã tách URL từ embed code</div>
+                      )}
+                    </div>
+
+                    {/* Preview slide */}
+                    {fUrl && !fUrl.includes('<') && (
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 11, color: C.text3, marginBottom: 6 }}>Xem trước slide:</div>
+                        <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, background: '#F8F8F8' }}>
+                          <iframe
+                            src={fUrl}
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                            allowFullScreen
+                            allow="fullscreen"
+                            title="Canva slide preview"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
