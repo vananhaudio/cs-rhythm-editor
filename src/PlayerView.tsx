@@ -425,7 +425,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
           ] as const).map(({ tScrollOff, isActive }, ti) => (
             <div key={ti} ref={isActive ? scrollRef : undefined} style={{
-              height: 93, flexShrink:0, overflow:'hidden',
+              height: 110, flexShrink:0, overflow:'hidden',
               borderTop: `1px solid ${D.border}`,
               borderBottom: ti === 1 ? `1px solid ${D.border}` : 'none',
               display:'flex', flexDirection:'column', position:'relative',
