@@ -425,7 +425,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
           ] as const).map(({ tScrollOff, isActive }, ti) => (
             <div key={ti} ref={isActive ? scrollRef : undefined} style={{
-              height: 100, flexShrink:0, overflow:'hidden',
+              height: 93, flexShrink:0, overflow:'hidden',
               borderTop: `1px solid ${D.border}`,
               borderBottom: ti === 1 ? `1px solid ${D.border}` : 'none',
               display:'flex', flexDirection:'column', position:'relative',
@@ -456,7 +456,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                       const chord = chordAtBeat[i]
                       const isBar1 = bib === 0
                       return (
-                        <div key={'b'+ti+i} style={{ position:'absolute', left:cellX, top:0, height:44, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
+                        <div key={'b'+ti+i} style={{ position:'absolute', left:cellX, top:0, height:37, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
                           {isBar1 && (
                             <span style={{ position:'absolute', top:4, left:4, fontSize:8, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', fontWeight:500 }}>
                               M{Math.floor(i/song.timeSignature)+1}
