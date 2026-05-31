@@ -433,7 +433,12 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                       const beatIdx = Math.round(c.time / beatDur)
                       chordAtBeat[beatIdx] = c.name
                     })
-                    return Array.from({ length: song.totalBars * song.timeSignature }, (_, i) => {
+                    // Chỉ render beats trong chunk này
+                    const tChunk = ti === 0 ? t1Chunk : t2Chunk
+                    const beatStart = tChunk * beatsPerTrack
+                    const beatEnd   = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
+                    return Array.from({ length: beatEnd - beatStart }, (_, bi) => {
+                      const i = beatStart + bi
                       const bib = i % song.timeSignature
                       const bt = i * beatDur
                       const cellX = nowX + bt * PPS
@@ -468,9 +473,14 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   {/* Divider */}
                   <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:D.border }} />
                   {/* Lyrics */}
-                  {(song.lyrics??[]).map((l,i) => {
+                  {(song.lyrics??[]).filter(l => {
+                    const tChunk2 = ti === 0 ? t1Chunk : t2Chunk
+                    const chunkStart = tChunk2 * beatsPerTrack * beatDur
+                    const chunkEnd   = chunkStart + beatsPerTrack * beatDur
+                    return l.time >= chunkStart - beatDur && l.time < chunkEnd + beatDur
+                  }).map((l,i,arr) => {
                     const lx = nowX + l.time*PPS;
-                    const nt = (song.lyrics??[])[i+1] ? song.lyrics[i+1].time : l.time+beatDur*2;
+                    const nt = arr[i+1] ? arr[i+1].time : l.time+beatDur*2;
                     const active = isActive && currentTime>=l.time && currentTime<nt;
                     const past   = isActive && currentTime>=nt;
                     return (
