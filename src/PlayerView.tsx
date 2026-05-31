@@ -405,16 +405,16 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                       <div style={{
                         position:'absolute', top:16,
                         color: D.gold,
-                        fontSize: active ? 28 : 22,
-                        fontWeight: 800,
-                        letterSpacing: '-0.03em',
-                        opacity: active ? 1 : 0.45,
-                        filter: active ? `drop-shadow(0 0 14px ${D.gold}) drop-shadow(0 0 28px ${D.goldGlow})` : 'none',
-                        transition: 'all 0.12s',
+                        fontSize: 24,
+                        fontWeight: 700,
+                        letterSpacing: '-0.01em',
+                        opacity: active ? 1 : 0.4,
+                        filter: active ? `drop-shadow(0 0 8px ${D.goldGlow})` : 'none',
+                        transition: 'opacity 0.12s, filter 0.12s',
                         whiteSpace: 'nowrap',
                         transform: 'translateX(-50%)',
                         pointerEvents: 'none',
-                        fontFamily: 'inherit',
+                        fontFamily: '"Helvetica Neue", Arial, sans-serif',
                       }}>
                         {c.name}
                       </div>
@@ -431,7 +431,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   return (
                     <div key={l.id} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                       <div className={`tl-lyric${active?' active':''}`}
-                        style={{ color: active ? '#FFFFFF' : past ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.7)', fontSize: 23, fontWeight: active ? 600 : 400, letterSpacing: '-0.02em', fontStyle: onBeat ? 'normal' : 'italic', transition: 'color 0.12s' }}>
+                        style={{ color: active ? '#FFFFFF' : past ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.7)', fontSize: 23, fontWeight: active ? 600 : 400, letterSpacing: '0em', fontStyle: 'normal', fontFamily: '"Helvetica Neue", Arial, sans-serif', transition: 'color 0.12s' }}>
                         {l.text}
                       </div>
                     </div>
