@@ -414,7 +414,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ══ PRACTICE AREA — 2 track đứng yên ══ */}
-        <div style={{ flex:1, padding:'8px 12px', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'center', gap:0 }}>
+        <div style={{ flex:1, padding:'8px 12px', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', gap:0 }}>
           {([
             { tScrollOff: t1ScrollOff, isActive: activeTrackNum === 1 },
             { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
@@ -479,10 +479,11 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:D.border }} />
                   {/* Lyrics */}
                   {(song.lyrics??[]).filter(l => {
-                    const tChunk2 = ti === 0 ? t1Chunk : t2Chunk
+                    const tChunk2    = ti === 0 ? t1Chunk : t2Chunk
                     const chunkStart = tChunk2 * beatsPerTrack * beatDur
                     const chunkEnd   = chunkStart + beatsPerTrack * beatDur
-                    return l.time >= chunkStart - beatDur && l.time < chunkEnd + beatDur
+                    // Từ thuộc track này nếu time nằm trong beat range của track
+                    return l.time >= chunkStart && l.time < chunkEnd
                   }).map((l,i,arr) => {
                     const lx = nowX + l.time*PPS;
                     const nt = arr[i+1] ? arr[i+1].time : l.time+beatDur*2;
