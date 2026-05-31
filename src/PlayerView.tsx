@@ -268,7 +268,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
   // ── Chunk logic cho 2-track đứng yên ──
   // Số beats vừa hiển thị trên 1 track
-  const beatsPerTrack = Math.max(4, Math.floor((containerW - 240) / (PPS * beatDur)))
+  // Làm tròn xuống bội số của timeSignature (4/4→4,8,12; 3/4→3,6,9...)
+  const rawBeats = Math.max(song.timeSignature, Math.floor((containerW - 240) / (PPS * beatDur)))
+  const beatsPerTrack = Math.floor(rawBeats / song.timeSignature) * song.timeSignature
   // Dùng currentTime để tính chunk — đảm bảo re-render ngay khi đổi chunk
   const currentChunk   = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
   // Track 1 = chunk chẵn hiện tại hoặc chunk chẵn tiếp theo (khi track 2 đang active)
