@@ -412,18 +412,19 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ══ PRACTICE AREA — 2 track đứng yên ══ */}
-        <div style={{ flex:1, padding:'10px 12px', overflow:'hidden', display:'flex', flexDirection:'column', gap:2 }}>
+        <div style={{ flex:1, padding:'8px 12px 8px', overflow:'hidden', display:'flex', flexDirection:'column', gap:0 }}>
           {([
             { tScrollOff: t1ScrollOff, isActive: activeTrackNum === 1 },
             { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
           ] as const).map(({ tScrollOff, isActive }, ti) => (
             <div key={ti} ref={isActive ? scrollRef : undefined} style={{
-              flex:1, borderRadius:16, overflow:'hidden',
-              border: `1px solid ${isActive ? 'rgba(45,212,191,0.15)' : D.border}`,
+              flex:1, overflow:'hidden',
+              borderTop: ti === 0 ? `1px solid ${D.border}` : 'none',
+              borderBottom: `1px solid ${isActive ? 'rgba(45,212,191,0.2)' : D.border}`,
               display:'flex', flexDirection:'column', position:'relative',
-              background: D.bg,
+              background: isActive ? '#141720' : D.bg,
               opacity: isActive ? 1 : 0.45,
-              transition: 'opacity 0.3s',
+              transition: 'opacity 0.3s, background 0.3s',
             }}>
               {/* Track content — y hệt gốc, chỉ dùng tScrollOff thay scrollOff */}
               <div style={{ flex:1, position:'relative', overflow:'hidden', background:D.bg }}>
