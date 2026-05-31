@@ -392,7 +392,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
             {/* Lyric + chord row */}
             <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{ flex:1 }}>
-              <div className="scroll-now-line" style={{ left:'30%' }} />
               <div className="player-scroll-track" style={{ width:trackW, transform:`translateX(${-scrollOff}px)` }}>
                 {/* Chords */}
                 {[...(song.chords??[])].sort((a,b)=>a.time-b.time).map((c,ci) => {
