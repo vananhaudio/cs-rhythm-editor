@@ -446,7 +446,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   return (
                     <div key={l.id} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                       <div className={`tl-lyric${active?' active':''}`}
-                        style={{ color: active ? '#FFFFFF' : past ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.7)', fontSize: 23, fontWeight: active ? 600 : 400, letterSpacing: '0em', fontStyle: 'normal', fontFamily: '"Helvetica Neue", Arial, sans-serif', transition: 'color 0.12s' }}>
+                        style={{ color: '#FFFFFF', fontSize: 23, fontWeight: 400, letterSpacing: '0em', fontStyle: 'normal', fontFamily: '"Helvetica Neue", Arial, sans-serif' }}>
                         {l.text}
                       </div>
                     </div>
