@@ -218,7 +218,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         }
         t = Math.min(t, totalDur);
         currentTimeRef.current = t; setCurrentTime(t);
-        setActiveBeatIdx(Math.floor(t / beatDur));
+        // Dùng nextBeatRef để biết beat nào đang vang — khớp chính xác với tiếng click
+        if (audioCtxRef.current && audioStartRef.current && playMode !== 'yt') {
+          const audioNow = audioCtxRef.current.currentTime + 0.016; // look-ahead giống scheduler
+          const beatsSinceStart = (audioNow - audioStartRef.current.audioT) * speedRef.current / beatDur
+          const absoluteBeat = Math.floor(audioStartRef.current.songT / beatDur) + Math.floor(beatsSinceStart)
+          setActiveBeatIdx(Math.max(0, absoluteBeat))
+        } else {
+          setActiveBeatIdx(Math.floor(t / beatDur))
+        }
         if (t >= totalDur) {
           isPlayingRef.current = false; setIsPlaying(false);
           audioStartRef.current = null;
