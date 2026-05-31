@@ -263,6 +263,25 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
   const nowX      = containerW * 0.3;
 
+  // Số beats vừa hiển thị trên 1 track (dựa theo chiều rộng container)
+  const CELL_W       = PPS * beatDur
+  const beatsPerTrack = Math.max(4, Math.floor(containerW / CELL_W))
+
+  // Chunk index hiện tại (mỗi chunk = beatsPerTrack beats)
+  const chunkIdx     = activeBeatIdx >= 0 ? Math.floor(activeBeatIdx / beatsPerTrack) : 0
+  // Track 1 = chunk chẵn, Track 2 = chunk lẻ kế tiếp
+  const t1ChunkIdx   = chunkIdx % 2 === 0 ? chunkIdx     : chunkIdx - 1
+  const t2ChunkIdx   = t1ChunkIdx + 1
+  const t1BeatStart  = t1ChunkIdx * beatsPerTrack
+  const t2BeatStart  = t2ChunkIdx * beatsPerTrack
+  const totalBeats   = song.totalBars * song.timeSignature
+
+  // Chord map toàn bài
+  const chordMap: Record<number, string> = {}
+  ;(song.chords ?? []).forEach(c => {
+    chordMap[Math.round(c.time / beatDur)] = c.name
+  })
+
   // Chia lời thành câu (gap > 1.5s)
   const lyricLines = useMemo(() => {
     const lyrics = song.lyrics ?? []
@@ -425,151 +444,76 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           </button>
         </div>
 
-        {/* ══ PRACTICE AREA ══ */}
-        <div style={{ flex:1, padding:'12px 16px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          <div style={{ flex:1, borderRadius:16, overflow:'hidden', border:`1px solid ${D.border}`, display:'flex', flexDirection:'column', position:'relative', background:D.bg }}>
+        {/* ══ PRACTICE AREA — 2 track đứng yên, tô màu karaoke ══ */}
+        <div style={{ flex:1, padding:'10px 12px', overflow:'hidden', display:'flex', flexDirection:'column', gap:8 }}>
+          {([t1BeatStart, t2BeatStart] as const).map((beatStart, ti) => {
+            const isActiveTrack = (ti === 0 && chunkIdx % 2 === 0) || (ti === 1 && chunkIdx % 2 !== 0)
+            const beats = Array.from({ length: beatsPerTrack }, (_, bi) => beatStart + bi).filter(i => i < totalBeats)
+            if (beats.length === 0) return null
 
-            {/* ── UNIFIED SCROLL TRACK: beat + chord + lyric cùng 1 track ── */}
-            {(() => {
-              // Map chord → beat index
-              const chordAtBeat: Record<number, string> = {}
-              ;(song.chords ?? []).forEach(c => {
-                const beatIdx = Math.round(c.time / beatDur)
-                chordAtBeat[beatIdx] = c.name
-              })
-              const totalBeats = song.totalBars * song.timeSignature
-              return null // chỉ để tính chordAtBeat, render dưới
-            })()}
-            <div ref={scrollRef} style={{ flex:1, position:'relative', overflow:'hidden', background:D.bg }}>
-              {/* Single track — cả beat/chord/lyric dịch chuyển cùng 1 transform */}
-              <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-scrollOff}px)`, willChange:'transform' }}>
-                {/* ── Beat + Chord row (top 52px) ── */}
-                {(() => {
-                  const chordAtBeat: Record<number, string> = {}
-                  ;(song.chords ?? []).forEach(c => {
-                    const beatIdx = Math.round(c.time / beatDur)
-                    chordAtBeat[beatIdx] = c.name
-                  })
-                  return Array.from({ length: song.totalBars * song.timeSignature }, (_, i) => {
-                    const bib = i % song.timeSignature
-                    const bt = i * beatDur
-                    const cellX = nowX + bt * PPS
-                    const isActive = activeBeatIdx === i
-                    const isPast = activeBeatIdx > i
-                    const chord = chordAtBeat[i]
+            // Lời nằm trong range này
+            const rangeStart = beats[0] * beatDur
+            const rangeEnd   = (beats[beats.length-1] + 1) * beatDur
+            const rangeLyrics = (song.lyrics ?? []).filter(l => l.time >= rangeStart - 0.1 && l.time < rangeEnd + 0.1)
+
+            return (
+              <div key={ti} style={{
+                flex:1, borderRadius:12, overflow:'hidden',
+                border: `1px solid ${isActiveTrack ? 'rgba(45,212,191,0.2)' : 'rgba(255,255,255,0.05)'}`,
+                background: isActiveTrack ? '#141720' : '#0f1117',
+                opacity: isActiveTrack ? 1 : 0.55,
+                transition: 'opacity 0.3s, border-color 0.3s',
+                display:'flex', flexDirection:'column',
+              }}>
+
+                {/* Beat + Chord row — đứng yên */}
+                <div style={{ height:44, background:D.bgBeat, borderBottom:`1px solid ${D.border}`, display:'flex', alignItems:'center', flexShrink:0, overflow:'hidden' }}>
+                  {beats.map(i => {
+                    const bib    = i % song.timeSignature
                     const isBar1 = bib === 0
+                    const isActiveB = activeBeatIdx === i
+                    const chord  = chordMap[i]
                     return (
-                      <div key={'b'+i} style={{ position:'absolute', left:cellX, top:0, height:52, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
-                        {isBar1 && (
-                          <span style={{ position:'absolute', top:4, left:4, fontSize:8, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', fontWeight:500 }}>
-                            M{Math.floor(i/song.timeSignature)+1}
-                          </span>
-                        )}
+                      <div key={i} style={{ flex:1, height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.2)` : `1px solid rgba(255,255,255,0.03)`, minWidth:0 }}>
+                        {isBar1 && <span style={{ position:'absolute', top:3, left:3, fontSize:8, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', whiteSpace:'nowrap' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
                         {chord ? (
-                          <span style={{ fontSize:18, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', lineHeight:1,
-                            color: 'rgba(245,158,11,0.65)',
+                          <span style={{ fontSize:17, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', lineHeight:1, transition:'color 0.06s', textAlign:'center',
+                            color: isActiveB ? D.gold : 'rgba(245,158,11,0.55)',
+                            textShadow: isActiveB ? `0 0 10px ${D.goldGlow}` : 'none',
                           }}>{chord}</span>
                         ) : (
-                          <span style={{ fontSize:13, fontWeight:400, fontFamily:'"DM Mono",monospace', lineHeight:1,
-                            color: isBar1 ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+                          <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', lineHeight:1, transition:'color 0.06s',
+                            fontWeight: isActiveB ? 800 : 400,
+                            color: isActiveB ? (isBar1 ? '#fff' : D.accentLight) : (isBar1 ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.13)'),
+                            textShadow: isActiveB ? (isBar1 ? `0 0 10px #fff,0 0 20px ${D.accent}` : `0 0 8px ${D.accent}`) : 'none',
                           }}>{bib+1}</span>
                         )}
                       </div>
                     )
-                  })
-                })()}
-
-                {/* Divider line */}
-                <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:D.border }} />
-
-                {/* ── Lyrics (below 52px) ── */}
-                {(song.lyrics??[]).map((l,i) => {
-                  const lx = nowX + l.time*PPS;
-                  const nt = (song.lyrics??[])[i+1] ? song.lyrics[i+1].time : l.time+beatDur*2;
-                  const active = currentTimeRef.current>=l.time && currentTimeRef.current<nt;
-                  const past   = currentTimeRef.current>=nt;
-                  const onBeat = Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
-                  return (
-                    <div key={l.id} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                      <div className={`tl-lyric${active?' active':''}`}
-                        style={{ color: active ? '#2DD4BF' : past ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.75)', fontSize: 23, fontWeight: active ? 600 : 400, letterSpacing: '0em', fontStyle: 'normal', fontFamily: '"Helvetica Neue", Arial, sans-serif', transition: 'color 0.08s' }}>
-                        {l.text}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* YouTube overlay */}
-            {playMode==='yt' && hasYT && ytMode!=='focus' && (
-              <div onMouseEnter={() => setYtHovered(true)} onMouseLeave={() => setYtHovered(false)}
-                style={{ position:'absolute', right:12, bottom:12,
-                  ...(ytMode==='mini' ? { width:280, aspectRatio:'16/9' } : { width:'min(45vw,480px)', aspectRatio:'16/9' }),
-                  borderRadius:10, overflow:'hidden', zIndex:15,
-                  opacity: ytHovered ? 1 : isPlaying ? 0.5 : 1, transition:'opacity 0.3s',
-                  boxShadow:'0 8px 32px rgba(0,0,0,0.6)',
-                  border:`1px solid ${D.border}`,
-                }}>
-                <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:2,background:'rgba(0,0,0,0.6)',padding:'4px 8px',display:'flex',alignItems:'center',gap:6 }}>
-                  <span style={{ fontSize:9,color:D.text3,flex:1,fontFamily:'"DM Mono",monospace' }}>YT · offset {getYtOffset().toFixed(1)}s{!ytReady?' · connecting...':''}</span>
-                  <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{ background:'none',border:'none',color:D.text3,fontSize:10,cursor:'pointer' }}>{ytMode==='mini'?'⛶':'▣'}</button>
-                  <button onClick={() => setYtMode('focus')} style={{ background:'none',border:'none',color:D.text3,fontSize:12,cursor:'pointer' }}>✕</button>
-                </div>
-                <div id="yt-player-frame" style={{ width:'100%',height:'100%' }} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Track 2 — câu tiếp theo, mờ hơn ── */}
-        {track2Line.length > 0 && (
-          <div style={{ flex:1, padding:'0 12px 8px', overflow:'hidden', display:'flex', flexDirection:'column' }}>
-            <div style={{ flex:1, borderRadius:16, overflow:'hidden', border:`1px solid rgba(255,255,255,0.05)`, display:'flex', flexDirection:'column', position:'relative', background:'#0f1117', opacity:0.5 }}>
-              {/* Scroll track — y chang track 1, chỉ khác scrollOff */}
-              <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-                <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-(track2Start * PPS - nowX)}px)`, willChange:'transform' }}>
-                  {/* Beat + Chord */}
-                  {(() => {
-                    const chordAtBeat: Record<number, string> = {}
-                    ;(song.chords ?? []).forEach(c => {
-                      const bi = Math.round(c.time / beatDur)
-                      chordAtBeat[bi] = c.name
-                    })
-                    const bStart2 = Math.max(0, Math.floor(track2Start / beatDur) - 1)
-                    const bEnd2   = Math.ceil(track2End / beatDur) + 1
-                    return Array.from({ length: bEnd2 - bStart2 }, (_, bi) => {
-                      const i = bStart2 + bi
-                      const bib = i % song.timeSignature
-                      const isBar1 = bib === 0
-                      const chord = chordAtBeat[i]
-                      return (
-                        <div key={'t2b'+i} style={{ position:'absolute', left: nowX + i * beatDur * PPS, top:0, height:52, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
-                          {isBar1 && <span style={{ position:'absolute', top:4, left:4, fontSize:8, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
-                          {chord
-                            ? <span style={{ fontSize:18, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', color:'rgba(245,158,11,0.55)' }}>{chord}</span>
-                            : <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', color: isBar1 ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.13)' }}>{bib+1}</span>
-                          }
-                        </div>
-                      )
-                    })
-                  })()}
-                  {/* Divider */}
-                  <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:'rgba(255,255,255,0.05)' }} />
-                  {/* Lyrics track 2 */}
-                  {track2Line.map((l, li) => {
-                    const lx = nowX + l.time * PPS
-                    return (
-                      <div key={'t2l'+l.id} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                        <span style={{ fontSize:22, fontWeight:400, fontFamily:'"Helvetica Neue",Arial,sans-serif', color:'rgba(255,255,255,0.8)' }}>{l.text}</span>
-                      </div>
-                    )
                   })}
                 </div>
+
+                {/* Lyric row — đứng yên, tô màu karaoke */}
+                <div style={{ flex:1, display:'flex', alignItems:'center', padding:'0 12px', flexWrap:'wrap', gap:'4px 10px', overflow:'hidden' }}>
+                  {rangeLyrics.map((l, li) => {
+                    const nt     = rangeLyrics[li+1]?.time ?? rangeEnd
+                    const active = currentTimeRef.current >= l.time && currentTimeRef.current < nt
+                    const past   = currentTimeRef.current >= nt
+                    return (
+                      <span key={l.id} style={{ fontSize:22, fontWeight: active ? 600 : 400, fontFamily:'"Helvetica Neue",Arial,sans-serif',
+                        color: active ? '#2DD4BF' : past ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.8)',
+                        transition:'color 0.08s', whiteSpace:'nowrap',
+                      }}>{l.text}</span>
+                    )
+                  })}
+                  {rangeLyrics.length === 0 && (
+                    <span style={{ color:'rgba(255,255,255,0.1)', fontSize:13, fontStyle:'italic' }}>—</span>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )
+          })}
+        </div>
 
         {/* ══ BOTTOM STRIP — locked features ══ */}
         <div style={{ padding:'8px 16px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
