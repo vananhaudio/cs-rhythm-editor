@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { RhythmSong } from './types';
 import './PlayerView.css';
 import { SongList } from './SongList';
@@ -262,6 +262,37 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   }, [playMode, getYtOffset]);
 
   const nowX      = containerW * 0.3;
+
+  // Chia lời thành câu (gap > 1.5s)
+  const lyricLines = useMemo(() => {
+    const lyrics = song.lyrics ?? []
+    if (!lyrics.length) return [] as (typeof lyrics)[]
+    const lines: (typeof lyrics)[] = []
+    let cur: typeof lyrics = [lyrics[0]]
+    for (let i = 1; i < lyrics.length; i++) {
+      if (lyrics[i].time - lyrics[i-1].time > 1.5) { lines.push(cur); cur = [] }
+      cur.push(lyrics[i])
+    }
+    if (cur.length) lines.push(cur)
+    return lines
+  }, [song.lyrics])
+
+  // Tìm line đang active
+  const activeLineIdx = useMemo(() => {
+    const t = currentTime
+    for (let i = 0; i < lyricLines.length; i++) {
+      const start = lyricLines[i][0]?.time ?? 0
+      const end   = lyricLines[i+1]?.[0]?.time ?? 99999
+      if (t >= start - 0.5 && t < end) return i
+    }
+    return 0
+  }, [Math.floor(currentTime * 2), lyricLines])
+
+  // Line cho track 2 = line tiếp theo
+  const track2LineIdx = activeLineIdx + 1
+  const track2Line    = lyricLines[track2LineIdx] ?? []
+  const track2Start   = track2Line[0]?.time ?? 0
+  const track2End     = lyricLines[track2LineIdx + 1]?.[0]?.time ?? track2Start + barDur * 12
   const beatNowX  = beatContainerW * 0.3;
   const scrollOff = currentTime * PPS;
   const trackW    = totalDur * PPS + containerW;
@@ -490,6 +521,55 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             )}
           </div>
         </div>
+
+        {/* ── Track 2 — câu tiếp theo, mờ hơn ── */}
+        {track2Line.length > 0 && (
+          <div style={{ flex:1, padding:'0 12px 8px', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+            <div style={{ flex:1, borderRadius:16, overflow:'hidden', border:`1px solid rgba(255,255,255,0.05)`, display:'flex', flexDirection:'column', position:'relative', background:'#0f1117', opacity:0.5 }}>
+              {/* Scroll track — y chang track 1, chỉ khác scrollOff */}
+              <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
+                <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-(track2Start * PPS - nowX)}px)`, willChange:'transform' }}>
+                  {/* Beat + Chord */}
+                  {(() => {
+                    const chordAtBeat: Record<number, string> = {}
+                    ;(song.chords ?? []).forEach(c => {
+                      const bi = Math.round(c.time / beatDur)
+                      chordAtBeat[bi] = c.name
+                    })
+                    const bStart2 = Math.max(0, Math.floor(track2Start / beatDur) - 1)
+                    const bEnd2   = Math.ceil(track2End / beatDur) + 1
+                    return Array.from({ length: bEnd2 - bStart2 }, (_, bi) => {
+                      const i = bStart2 + bi
+                      const bib = i % song.timeSignature
+                      const isBar1 = bib === 0
+                      const chord = chordAtBeat[i]
+                      return (
+                        <div key={'t2b'+i} style={{ position:'absolute', left: nowX + i * beatDur * PPS, top:0, height:52, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
+                          {isBar1 && <span style={{ position:'absolute', top:4, left:4, fontSize:8, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
+                          {chord
+                            ? <span style={{ fontSize:18, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', color:'rgba(245,158,11,0.55)' }}>{chord}</span>
+                            : <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', color: isBar1 ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.13)' }}>{bib+1}</span>
+                          }
+                        </div>
+                      )
+                    })
+                  })()}
+                  {/* Divider */}
+                  <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:'rgba(255,255,255,0.05)' }} />
+                  {/* Lyrics track 2 */}
+                  {track2Line.map((l, li) => {
+                    const lx = nowX + l.time * PPS
+                    return (
+                      <div key={'t2l'+l.id} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                        <span style={{ fontSize:22, fontWeight:400, fontFamily:'"Helvetica Neue",Arial,sans-serif', color:'rgba(255,255,255,0.8)' }}>{l.text}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ══ BOTTOM STRIP — locked features ══ */}
         <div style={{ padding:'8px 16px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
