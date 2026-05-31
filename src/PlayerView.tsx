@@ -271,9 +271,11 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const beatsPerTrack = Math.max(4, Math.floor(containerW / (PPS * beatDur)))
   // Dùng currentTime để tính chunk — đảm bảo re-render ngay khi đổi chunk
   const currentChunk   = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
-  const t1Chunk        = currentChunk % 2 === 0 ? currentChunk : currentChunk - 1
-  const t2Chunk        = t1Chunk + 1
+  // Track 1 = chunk chẵn hiện tại hoặc chunk chẵn tiếp theo (khi track 2 đang active)
+  // Track 2 = chunk lẻ tiếp theo
   const activeTrackNum = currentChunk % 2 === 0 ? 1 : 2
+  const t1Chunk = activeTrackNum === 1 ? currentChunk : currentChunk + 1
+  const t2Chunk = activeTrackNum === 2 ? currentChunk : currentChunk + 1
   // Cả 2 track đứng yên — chữ đầu chunk bắt đầu từ mép trái + 20px
   // Chữ đầu chunk nằm tại 20px từ mép trái
   // vị trí thực = nowX + chunkStart*PPS - scrollOff = 20
