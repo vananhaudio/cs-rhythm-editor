@@ -458,7 +458,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                       return (
                         <div key={'b'+ti+i} style={{ position:'absolute', left:cellX, top:0, height:31, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
                           {isBar1 && (
-                            <span style={{ position:'absolute', top:4, left:4, fontSize:8, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', fontWeight:500 }}>
+                            <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', fontWeight:500 }}>
                               M{Math.floor(i/song.timeSignature)+1}
                             </span>
                           )}
@@ -495,7 +495,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                     const active = isActive && currentTime>=l.time && currentTime<nt;
                     const past   = isActive && currentTime>=nt;
                     return (
-                      <div key={l.id+ti} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                      <div key={l.id+ti} style={{ left:lx, position:'absolute', top:`calc(31px + 50%)`, transform:'translate(-50%, -50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                         <span style={{
                           fontSize:22, fontWeight: 400,
                           fontFamily:'"Helvetica Neue",Arial,sans-serif',
