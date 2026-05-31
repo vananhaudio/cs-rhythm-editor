@@ -176,10 +176,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (ctx.state === 'suspended') ctx.resume();
     const bd = beatDur / speedRef.current;
     const beats = Math.floor(from / beatDur);
-    nextBeatRef.current = ctx.currentTime + ((beats+1)*beatDur - from) / speedRef.current;
+    // Nếu đang đứng đầu beat (sai số < 10ms) thì schedule beat đó luôn
+    const offsetToNextBeat = (beats + 1) * beatDur - from;
+    const scheduleCurrentBeat = offsetToNextBeat > beatDur - 0.01;
+    nextBeatRef.current = scheduleCurrentBeat
+      ? ctx.currentTime + 0.01  // beat hiện tại, phát ngay
+      : ctx.currentTime + offsetToNextBeat / speedRef.current;
     // Lưu anchor để RAF sync theo AudioContext
     audioStartRef.current = { audioT: ctx.currentTime, songT: from };
-    let idx = beats + 1;
+    let idx = scheduleCurrentBeat ? beats : beats + 1;
     stopMetronome();
     schedulerRef.current = setInterval(() => {
       const c = audioCtxRef.current; if (!c) return;
