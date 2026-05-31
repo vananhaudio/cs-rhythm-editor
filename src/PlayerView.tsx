@@ -495,7 +495,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                     const active = isActive && currentTime>=l.time && currentTime<nt;
                     const past   = isActive && currentTime>=nt;
                     return (
-                      <div key={l.id+ti} style={{ left:lx, position:'absolute', top:48, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                      <div key={l.id+ti} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                         <span style={{
                           fontSize:22, fontWeight: 400,
                           fontFamily:'"Helvetica Neue",Arial,sans-serif',
