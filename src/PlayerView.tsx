@@ -487,9 +487,21 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                     const past   = isActive && currentTime>=nt;
                     return (
                       <div key={l.id+ti} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                        <span style={{ fontSize:22, fontWeight: active ? 600 : 400, fontFamily:'"Helvetica Neue",Arial,sans-serif',
-                          color: active ? '#2DD4BF' : past ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.8)',
-                          transition:'color 0.08s',
+                        <span style={{
+                          fontSize:22, fontWeight: active ? 600 : 400,
+                          fontFamily:'"Helvetica Neue",Arial,sans-serif',
+                          // Karaoke gradient: quét teal từ trái sang phải
+                          ...(active ? (() => {
+                            const pct = Math.min(100, Math.max(0, (currentTime - l.time) / Math.max(0.05, nt - l.time) * 100))
+                            return {
+                              backgroundImage: `linear-gradient(to right, #2DD4BF ${pct}%, rgba(255,255,255,0.9) ${pct}%)`,
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text',
+                            }
+                          })() : {
+                            color: past ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.8)',
+                          }),
                         }}>{l.text}</span>
                       </div>
                     );
