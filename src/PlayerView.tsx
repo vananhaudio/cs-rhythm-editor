@@ -412,7 +412,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ══ PRACTICE AREA — 2 track đứng yên ══ */}
-        <div style={{ flex:1, padding:'10px 12px', overflow:'hidden', display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ flex:1, padding:'10px 12px', overflow:'hidden', display:'flex', flexDirection:'column', gap:2 }}>
           {([
             { tScrollOff: t1ScrollOff, isActive: activeTrackNum === 1 },
             { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
