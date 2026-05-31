@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
+import RichEditor from './RichEditor'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -54,157 +55,6 @@ function getYouTubeId(url: string) {
 }
 
 // ─── Markdown → HTML (lightweight) ───────────────────────────────────────────
-function mdToHtml(md: string): string {
-  const lines = md.split('\n')
-  const out: string[] = []
-  let inUl = false
-
-  for (const raw of lines) {
-    const line = raw
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>')
-
-    if (/^## /.test(raw)) {
-      if (inUl) { out.push('</ul>'); inUl = false }
-      out.push(`<h2>${line.replace(/^## /, '')}</h2>`)
-    } else if (/^### /.test(raw)) {
-      if (inUl) { out.push('</ul>'); inUl = false }
-      out.push(`<h3>${line.replace(/^### /, '')}</h3>`)
-    } else if (/^- /.test(raw)) {
-      if (!inUl) { out.push('<ul>'); inUl = true }
-      out.push(`<li>${line.replace(/^- /, '')}</li>`)
-    } else if (/^> /.test(raw)) {
-      if (inUl) { out.push('</ul>'); inUl = false }
-      out.push(`<blockquote>${line.replace(/^&gt; /, '')}</blockquote>`)
-    } else if (/^---$/.test(raw)) {
-      if (inUl) { out.push('</ul>'); inUl = false }
-      out.push('<hr/>')
-    } else if (raw.trim() === '') {
-      if (inUl) { out.push('</ul>'); inUl = false }
-    } else {
-      if (inUl) { out.push('</ul>'); inUl = false }
-      out.push(`<p>${line}</p>`)
-    }
-  }
-  if (inUl) out.push('</ul>')
-  return out.join('\n')
-}
-
-// ─── Rich Editor (textarea + markdown toolbar) ────────────────────────────────
-function insertMd(ta: HTMLTextAreaElement, before: string, after = '', placeholder = 'nội dung'): string {
-  const s = ta.selectionStart, e = ta.selectionEnd
-  const sel = ta.value.substring(s, e) || placeholder
-  return ta.value.substring(0, s) + before + sel + after + ta.value.substring(e)
-}
-
-function RichEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const taRef = useRef<HTMLTextAreaElement>(null)
-  const [tab, setTab] = useState<'write' | 'preview'>('write')
-
-  const wrap = (before: string, after = '', placeholder = 'nội dung') => {
-    const ta = taRef.current
-    if (!ta) return
-    const newVal = insertMd(ta, before, after, placeholder)
-    onChange(newVal)
-    // Restore focus after React re-render
-    requestAnimationFrame(() => { ta.focus() })
-  }
-
-  const TBtn = ({ label, title, action }: { label: string; title: string; action: () => void }) => (
-    <button
-      type="button"
-      onMouseDown={e => { e.preventDefault(); action() }}
-      title={title}
-      style={{
-        border: 'none', background: 'transparent', color: C.text2,
-        borderRadius: 5, padding: '3px 7px', cursor: 'pointer',
-        fontSize: 12, fontFamily: 'inherit', fontWeight: 600,
-      }}
-      onMouseEnter={e => (e.currentTarget.style.background = C.accentLight)}
-      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-    >{label}</button>
-  )
-
-  const SEP = <div style={{ width: 1, background: C.border, margin: '2px 3px', alignSelf: 'stretch' }} />
-
-  return (
-    <div style={{ border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', background: C.surface }}>
-      {/* ── Toolbar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: '4px 6px', borderBottom: `1px solid ${C.borderLight}`, background: C.bg, flexWrap: 'wrap' }}>
-        <TBtn label="H2" title="Tiêu đề lớn (##)" action={() => wrap('\n## ', '', 'Tiêu đề')} />
-        <TBtn label="H3" title="Tiêu đề nhỏ (###)" action={() => wrap('\n### ', '', 'Tiêu đề')} />
-        {SEP}
-        <TBtn label="B" title="In đậm **text**" action={() => wrap('**', '**')} />
-        <TBtn label="I" title="In nghiêng *text*" action={() => wrap('*', '*')} />
-        {SEP}
-        <TBtn label="• List" title="Danh sách (- item)" action={() => wrap('\n- ', '', 'mục')} />
-        <TBtn label="❝" title="Trích dẫn (> text)" action={() => wrap('\n> ', '', 'trích dẫn')} />
-        <TBtn label="—" title="Đường kẻ (---)" action={() => wrap('\n---\n')} />
-        <TBtn label="🔗" title="Link [text](url)" action={() => wrap('[', '](https://)', 'tên link')} />
-        <div style={{ flex: 1 }} />
-        {/* Write / Preview mini toggle */}
-        {(['write', 'preview'] as const).map(t => (
-          <button key={t} type="button"
-            onMouseDown={e => { e.preventDefault(); setTab(t) }}
-            style={{
-              border: 'none', borderRadius: 5, padding: '3px 10px', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: 11, fontWeight: 600,
-              background: tab === t ? C.surface : 'transparent',
-              color: tab === t ? C.accent : C.text3,
-              boxShadow: tab === t ? C.shadow : 'none',
-            }}>
-            {t === 'write' ? '✏ Viết' : '👁 Xem'}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Write area ── */}
-      {tab === 'write' && (
-        <textarea
-          ref={taRef}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={'Nhập nội dung bài học...\n\nHỗ trợ Markdown:\n## Tiêu đề lớn\n### Tiêu đề nhỏ\n**in đậm**, *in nghiêng*\n- danh sách\n> trích dẫn\n---'}
-          rows={10}
-          style={{
-            width: '100%', boxSizing: 'border-box',
-            padding: '12px 14px', border: 'none', outline: 'none',
-            resize: 'vertical', fontSize: 13.5, color: C.text1,
-            lineHeight: 1.8, fontFamily: '"Cascadia Code", "Fira Code", ui-monospace, monospace',
-            background: C.surface,
-          }}
-        />
-      )}
-
-      {/* ── Preview area ── */}
-      {tab === 'preview' && (
-        <div style={{ minHeight: 120, padding: '14px 16px' }}>
-          {value
-            ? <div className="rich-preview" style={{ fontSize: 14, color: C.text2, lineHeight: 1.8 }} dangerouslySetInnerHTML={{ __html: mdToHtml(value) }} />
-            : <span style={{ color: C.text3, fontSize: 13 }}>Chưa có nội dung...</span>}
-        </div>
-      )}
-
-      <div style={{ padding: '3px 10px 5px', fontSize: 10, color: C.text3, borderTop: `1px solid ${C.borderLight}`, background: C.bg }}>
-        Markdown: **đậm** · *nghiêng* · ## tiêu đề · - danh sách · {'>'} trích dẫn · [text](url)
-      </div>
-
-      {/* Scoped styles for preview */}
-      <style>{`
-        .rich-preview h2{font-size:18px;font-weight:700;margin:14px 0 6px;color:${C.text1}}
-        .rich-preview h3{font-size:15px;font-weight:600;margin:10px 0 4px;color:${C.text1}}
-        .rich-preview blockquote{border-left:3px solid ${C.accent};margin:10px 0;padding:6px 12px;color:${C.text2};background:${C.accentLight};border-radius:0 6px 6px 0}
-        .rich-preview ul{padding-left:20px;margin:8px 0}
-        .rich-preview li{margin-bottom:4px}
-        .rich-preview a{color:${C.accent}}
-        .rich-preview hr{border:none;border-top:1px solid ${C.border};margin:16px 0}
-        .rich-preview p{margin:6px 0}
-      `}</style>
-    </div>
-  )
-}
 
 // ─── Lesson Preview (student view) ───────────────────────────────────────────
 function LessonPreview({ lesson }: { lesson: Lesson }) {
@@ -241,7 +91,7 @@ function LessonPreview({ lesson }: { lesson: Lesson }) {
         {lesson.content && (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>📝 Nội dung bài học</div>
-            <div className="rich-preview" style={{ fontSize: 14, color: C.text2, lineHeight: 1.8 }} dangerouslySetInnerHTML={{ __html: mdToHtml(lesson.content) }} />
+            <div className="rich-preview" style={{ fontSize: 14, color: C.text2, lineHeight: 1.8 }} dangerouslySetInnerHTML={{ __html: lesson.content }} />
           </div>
         )}
         {lesson.tools.length > 0 && (
