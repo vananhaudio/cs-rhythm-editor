@@ -176,9 +176,14 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (ctx.state === 'suspended') ctx.resume();
     const bd = beatDur / speedRef.current;
     const beats = Math.floor(from / beatDur);
-    nextBeatRef.current = ctx.currentTime + ((beats+1)*beatDur - from) / speedRef.current;
+    const timeIntoCurrentBeat = from - beats * beatDur;
+    // Nếu đang đứng ở đầu beat (< 30ms) → phát beat đó ngay
+    const atBeatStart = timeIntoCurrentBeat < 0.03;
+    nextBeatRef.current = atBeatStart
+      ? ctx.currentTime + 0.02
+      : ctx.currentTime + (beatDur - timeIntoCurrentBeat) / speedRef.current;
     audioStartRef.current = { audioT: ctx.currentTime, songT: from };
-    let idx = beats + 1;
+    let idx = atBeatStart ? beats : beats + 1;
     stopMetronome();
     schedulerRef.current = setInterval(() => {
       const c = audioCtxRef.current; if (!c) return;
