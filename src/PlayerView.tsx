@@ -273,9 +273,11 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const currentChunk   = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
   const t1Chunk        = currentChunk % 2 === 0 ? currentChunk : currentChunk - 1
   const t2Chunk        = t1Chunk + 1
-  const t1ScrollOff    = t1Chunk * beatsPerTrack * beatDur * PPS
-  const t2ScrollOff    = t2Chunk * beatsPerTrack * beatDur * PPS
   const activeTrackNum = currentChunk % 2 === 0 ? 1 : 2
+  // Track active → scroll liên tục theo currentTime (giữ nguyên như cũ, không giật)
+  // Track không active → đứng yên ở đầu chunk tiếp theo (preview câu sắp đến)
+  const t1ScrollOff    = activeTrackNum === 1 ? currentTime * PPS : t1Chunk * beatsPerTrack * beatDur * PPS
+  const t2ScrollOff    = activeTrackNum === 2 ? currentTime * PPS : t2Chunk * beatsPerTrack * beatDur * PPS
   const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
 
   return (
