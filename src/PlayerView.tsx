@@ -275,9 +275,11 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const t2Chunk        = t1Chunk + 1
   const activeTrackNum = currentChunk % 2 === 0 ? 1 : 2
   // Cả 2 track đứng yên — chữ đầu chunk bắt đầu từ mép trái + 20px
-  const trackLeftPad = 20
-  const t1ScrollOff  = t1Chunk * beatsPerTrack * beatDur * PPS - nowX + trackLeftPad
-  const t2ScrollOff  = t2Chunk * beatsPerTrack * beatDur * PPS - nowX + trackLeftPad
+  // Chữ đầu chunk nằm tại 20px từ mép trái
+  // vị trí thực = nowX + chunkStart*PPS - scrollOff = 20
+  // => scrollOff = nowX + chunkStart*PPS - 20
+  const t1ScrollOff  = nowX + t1Chunk * beatsPerTrack * beatDur * PPS - 20
+  const t2ScrollOff  = nowX + t2Chunk * beatsPerTrack * beatDur * PPS - 20
   const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
 
   return (
