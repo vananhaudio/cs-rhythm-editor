@@ -495,13 +495,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                           ...(active ? (() => {
                             const pct = Math.min(100, Math.max(0, (currentTime - l.time) / Math.max(0.05, nt - l.time) * 100))
                             return {
-                              backgroundImage: `linear-gradient(to right, #2DD4BF ${pct}%, rgba(255,255,255,0.9) ${pct}%)`,
+                              backgroundImage: `linear-gradient(to right, #2DD4BF ${pct}%, rgba(255,255,255,1) ${pct}%)`,
                               WebkitBackgroundClip: 'text',
                               WebkitTextFillColor: 'transparent',
                               backgroundClip: 'text',
                             }
                           })() : {
-                            color: past ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.8)',
+                            color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)',
                           }),
                         }}>{l.text}</span>
                       </div>
