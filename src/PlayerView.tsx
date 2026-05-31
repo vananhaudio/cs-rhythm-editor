@@ -412,15 +412,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ══ PRACTICE AREA — 2 track đứng yên ══ */}
-        <div style={{ flex:1, padding:'8px 12px 8px', overflow:'hidden', display:'flex', flexDirection:'column', gap:0 }}>
+        <div style={{ flex:1, padding:'8px 12px', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'center', gap:0 }}>
           {([
             { tScrollOff: t1ScrollOff, isActive: activeTrackNum === 1 },
             { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
           ] as const).map(({ tScrollOff, isActive }, ti) => (
             <div key={ti} ref={isActive ? scrollRef : undefined} style={{
-              flex:1, overflow:'hidden',
-              borderTop: ti === 0 ? `1px solid ${D.border}` : 'none',
-              borderBottom: `1px solid ${isActive ? 'rgba(45,212,191,0.2)' : D.border}`,
+              height: 110, flexShrink:0, overflow:'hidden',
+              borderTop: `1px solid ${D.border}`,
+              borderBottom: ti === 1 ? `1px solid ${D.border}` : 'none',
               display:'flex', flexDirection:'column', position:'relative',
               background: isActive ? '#141720' : D.bg,
               opacity: isActive ? 1 : 0.45,
