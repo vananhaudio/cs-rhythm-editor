@@ -10,66 +10,40 @@ function fmtTime(t: number) {
 
 type YtMode = 'focus' | 'mini' | 'full';
 
-// ── Design tokens ──
-const P = {
-  paper:   '#ECE6D9',
-  paperSurface: '#E4DDCF',
-  paperDark: '#D9D1C1',
-  green:   '#14532D',
-  greenHover: 'rgba(20,83,45,0.10)',
-  greenBtn: 'rgba(20,83,45,0.05)',
-  greenBorder: '1px solid rgba(20,83,45,0.10)',
-  dark:    '#091812',
-  darkDeep:'#071410',
-  gold:    '#C99700',
-  text:    '#2A2A1E',
-  textMuted: '#7A7060',
-  textDim: '#A09880',
+// ── Design tokens — Dark Studio ──
+const D = {
+  bg:          '#0D0F14',
+  bgSurface:   '#141720',
+  bgCard:      '#1C2030',
+  bgCardHover: '#222638',
+  bgBeat:      '#0A0C10',
+  border:      'rgba(255,255,255,0.06)',
+  borderMid:   'rgba(255,255,255,0.10)',
+  accent:      '#6C63FF',
+  accentGlow:  'rgba(108,99,255,0.25)',
+  accentLight: '#8B84FF',
+  gold:        '#F59E0B',
+  goldGlow:    'rgba(245,158,11,0.3)',
+  green:       '#22C55E',
+  text1:       '#F1F5F9',
+  text2:       '#94A3B8',
+  text3:       '#475569',
+  danger:      '#EF4444',
 };
 
-const btn = (active = false): React.CSSProperties => ({
-  background: active ? P.green : P.greenBtn,
-  border: active ? 'none' : P.greenBorder,
-  borderRadius: 8,
-  color: active ? '#fff' : P.text,
-  fontSize: 12, fontWeight: active ? 600 : 400,
-  padding: '6px 14px', cursor: 'pointer',
-  transition: 'all 0.15s', whiteSpace: 'nowrap',
-});
-
-// ── Locked feature card — lock lights up on click ──
-function LockedFeatureCard({ icon, title, sub, paperSurface, text, textMuted, green }: {
-  icon:string; title:string; sub:string;
-  paperSurface:string; text:string; textMuted:string; green:string;
-}) {
-  const [locked, setLocked] = useState(false);
+// ── Locked feature card ──
+function LockedCard({ icon, title, sub }: { icon: string; title: string; sub: string }) {
+  const [flash, setFlash] = useState(false);
   return (
-    <button
-      onClick={() => { setLocked(true); setTimeout(() => setLocked(false), 1800); }}
-      style={{
-        background: paperSurface,
-        border: `1px solid ${locked ? 'rgba(20,83,45,0.3)' : 'rgba(20,83,45,0.1)'}`,
-        borderRadius:12, padding:'13px 16px',
-        display:'flex', alignItems:'center', gap:12,
-        cursor:'pointer', textAlign:'left', width:'100%',
-        transition:'all 0.2s', position:'relative',
-      }}>
-      <span style={{ fontSize:20, flexShrink:0, lineHeight:1 }}>{icon}</span>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:text }}>{title}</div>
-        <div style={{ fontSize:11, color:textMuted, marginTop:1 }}>{sub}</div>
+    <button onClick={() => { setFlash(true); setTimeout(() => setFlash(false), 1400); }}
+      style={{ background: D.bgCard, border: `1px solid ${flash ? D.accent+'44' : D.border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s', fontFamily: 'inherit' }}>
+      <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: D.text1 }}>{title}</div>
+        <div style={{ fontSize: 11, color: D.text3, marginTop: 1 }}>{sub}</div>
       </div>
-      {/* Lock icon — lights up on click */}
-      <div style={{
-        fontSize:14, flexShrink:0,
-        color: locked ? green : 'rgba(42,42,30,0.25)',
-        background: locked ? 'rgba(20,83,45,0.1)' : 'transparent',
-        borderRadius:6, padding:'3px 6px',
-        transition:'all 0.25s',
-        display:'flex', alignItems:'center', gap:4,
-      }}>
-        🔒
-        {locked && <span style={{ fontSize:10, fontWeight:600, color:green, whiteSpace:'nowrap' }}>Lớp Hành Trình</span>}
+      <div style={{ fontSize: 12, flexShrink: 0, color: flash ? D.accent : D.text3, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }}>
+        🔒{flash && <span style={{ fontSize: 10, fontWeight: 600, color: D.accent }}>Hành Trình</span>}
       </div>
     </button>
   );
@@ -81,20 +55,20 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   extraActions?: React.ReactNode;
   onUpdateTitle?: (title: string) => void;
 }) {
-  const [playMode, setPlayMode] = useState<'metro'|'yt'>('metro');
-  const [ytMode, setYtMode]     = useState<YtMode>('focus');
+  const [playMode, setPlayMode]   = useState<'metro'|'yt'>('metro');
+  const [ytMode, setYtMode]       = useState<YtMode>('focus');
   const [ytHovered, setYtHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [speed, setSpeed]       = useState(1);
+  const [speed, setSpeed]         = useState(1);
   const [muteMetronome, setMuteMetronome] = useState(false);
   const [showSongList, setShowSongList]   = useState(false);
-  const [ytReady, setYtReady]   = useState(false);
+  const [ytReady, setYtReady]     = useState(false);
   const [activeBeatIdx, setActiveBeatIdx] = useState(-1);
   const [containerW, setContainerW]       = useState(900);
   const [beatContainerW, setBeatContainerW] = useState(900);
   const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom]           = useState(1);
 
   const ytPlayerRef  = useRef<any>(null);
   const ytReadyRef   = useRef(false);
@@ -127,7 +101,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     setYtOffsetAdj(0);
   }, [song.title]);
 
-  // Resize
   useEffect(() => {
     if (!scrollRef.current) return;
     const ro = new ResizeObserver(e => setContainerW(e[0].contentRect.width));
@@ -171,21 +144,18 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   }, [playMode, ytMode, hasYT, (song as any).youtubeUrl]);
 
   const getYtOffset = useCallback(() => {
-    const base = (song as any).youtubeOffset
-      ?? (song as any).sync?.youtubeOffsetSeconds
-      ?? (song as any).youtubeOffsetSeconds ?? 0;
+    const base = (song as any).youtubeOffset ?? (song as any).sync?.youtubeOffsetSeconds ?? (song as any).youtubeOffsetSeconds ?? 0;
     return base + ytOffsetAdj;
   }, [song, ytOffsetAdj]);
 
-  // Metronome
   function scheduleClick(t: number, beat1: boolean) {
     try {
       if (!audioCtxRef.current || muteRef.current) return;
       const ctx = audioCtxRef.current;
       const osc = ctx.createOscillator(), g = ctx.createGain();
       osc.connect(g); g.connect(ctx.destination);
-      osc.frequency.value = beat1 ? 880 : 440;
-      g.gain.setValueAtTime(0.5, t);
+      osc.frequency.value = beat1 ? 1000 : 500;
+      g.gain.setValueAtTime(0.4, t);
       g.gain.exponentialRampToValueAtTime(0.001, t + (beat1 ? 0.08 : 0.06));
       osc.start(t); osc.stop(t + 0.1);
     } catch {}
@@ -211,7 +181,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (schedulerRef.current) { clearInterval(schedulerRef.current); schedulerRef.current = null; }
   }
 
-  // RAF
   useEffect(() => {
     let wall = performance.now(), songT = currentTimeRef.current;
     if (isPlaying) { wall = performance.now(); songT = currentTimeRef.current; }
@@ -231,14 +200,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return () => cancelAnimationFrame(rafRef.current);
   }, [isPlaying, speed, totalDur, beatDur]);
 
-  // Keyboard
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t.tagName==='INPUT' || t.tagName==='TEXTAREA') return;
       if (e.key==='Escape') onClose();
       if (e.key===' ') { e.preventDefault(); togglePlay(); }
-      if (e.key==='ArrowLeft') seekTo(Math.max(0, currentTimeRef.current-5));
+      if (e.key==='ArrowLeft')  seekTo(Math.max(0, currentTimeRef.current-5));
       if (e.key==='ArrowRight') seekTo(Math.min(totalDur, currentTimeRef.current+5));
     };
     window.addEventListener('keydown', h);
@@ -271,137 +239,168 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const scrollOff = currentTime * PPS;
   const trackW    = totalDur * PPS + containerW;
   const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
-  const ytOpacity = ytHovered ? 1 : isPlaying ? 0.45 : 1;
-  const ytDims: Record<YtMode, React.CSSProperties> = {
-    focus: { display:'none' },
-    mini:  { width: 300, aspectRatio:'16/9' },
-    full:  { width: 'min(50vw,540px)', aspectRatio:'16/9' },
-  };
 
   return (
-    <div style={{ display:'flex', height:'100vh', background:'linear-gradient(to bottom, rgba(20,83,45,0.045) 0px, rgba(20,83,45,0.018) 80px, transparent 140px) #ECE6D9', fontFamily:"'Inter','Segoe UI',sans-serif", overflow:'hidden' }}>
+    <div style={{ display:'flex', height:'100vh', background:D.bg, fontFamily:'"DM Sans", system-ui, sans-serif', color:D.text1, overflow:'hidden' }}>
 
-      {/* ══ MAIN COLUMN — no sidebar ══ */}
+      <style>{`
+        .pv-btn { transition: all 0.15s; font-family: inherit; }
+        .pv-btn:hover { background: ${D.bgCardHover} !important; border-color: ${D.borderMid} !important; }
+        .pv-mode-btn:hover { background: ${D.bgCard} !important; }
+        input[type=range].pv-seek { -webkit-appearance:none; appearance:none; width:100%; height:4px; border-radius:2px; background:${D.border}; cursor:pointer; outline:none; }
+        input[type=range].pv-seek::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:${D.accent}; cursor:pointer; box-shadow:0 0 8px ${D.accentGlow}; }
+        input[type=range].pv-seek::-webkit-slider-runnable-track { height:4px; border-radius:2px; }
+      `}</style>
+
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
-        {/* ── TOP BAR ── */}
-        <div style={{ background:P.paper, borderBottom:`1px solid rgba(20,83,45,0.08)`, boxShadow:'0 8px 24px rgba(0,0,0,0.025)', padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:16, flexShrink:0, position:'relative', zIndex:2 }}>
-          {/* Logo + Brand */}
-          <div style={{ display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
-            <img src="/logo.png" alt="Văn Anh" style={{ height:32, width:'auto', objectFit:'contain' }}/>
-            <span style={{ fontSize:13, fontWeight:600, color:P.text, whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>Thầy Văn Anh Guitar</span>
-          </div>
-          <div style={{ width:1, height:20, background:P.paperDark, flexShrink:0 }}/>
-          {/* Progress — visual spine */}
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:12 }}>
-            <div style={{ flex:1, height:4, background:'rgba(20,83,45,0.08)', borderRadius:999, cursor:'pointer', position:'relative' }}
-              onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
-              <div style={{ height:'100%', width:`${pct}%`, background:'#14532D', borderRadius:999, transition:'width 0.05s linear' }}/>
-            </div>
-            <span style={{ fontSize:11, color:P.textMuted, fontFamily:'monospace', flexShrink:0, whiteSpace:'nowrap' }}>{fmtTime(currentTime)} / {fmtTime(totalDur)}</span>
-          </div>
-          {extraActions && false /* Tạm ẩn — sẽ thay bằng nút Trang chủ */}
-        </div>
-
-        {/* ── CONTROL BAR ── */}
-        <div style={{ background:P.paperSurface, borderBottom:`1px solid rgba(20,83,45,0.07)`, padding:'0 24px', height:56, display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
-          {/* Chọn bài — hiện info sau khi chọn */}
-          <button onClick={() => setShowSongList(true)} style={{ ...btn(), display:'flex', alignItems:'center', gap:8, padding:'6px 14px', flexShrink:0 }}>
+        {/* ══ TOP BAR ══ */}
+        <div style={{ background:D.bgSurface, borderBottom:`1px solid ${D.border}`, padding:'0 20px', height:56, display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
+          {/* Logo */}
+          <div style={{ width:32, height:32, borderRadius:8, background:`linear-gradient(135deg,${D.accent},${D.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0, boxShadow:`0 2px 8px ${D.accentGlow}` }}>
             🎸
-            {song.title ? (
-              <span style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <span style={{ maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:600, color:P.text }}>{song.title}</span>
-                {song.tempo>0 && <span style={{ fontSize:11, color:P.textMuted, fontWeight:400 }}>{song.tempo} BPM</span>}
-                {song.timeSignature>0 && <span style={{ fontSize:11, color:P.textMuted, fontWeight:400 }}>{song.timeSignature}/4</span>}
-              </span>
-            ) : (
-              <span style={{ color:P.textMuted }}>Chọn bài</span>
-            )}
+          </div>
+          <span style={{ fontSize:13, fontWeight:700, color:D.text1, flexShrink:0, letterSpacing:'-0.02em' }}>Player</span>
+
+          <div style={{ width:1, height:20, background:D.border, flexShrink:0 }} />
+
+          {/* Song chip */}
+          <button onClick={() => setShowSongList(true)} className="pv-btn"
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:8, border:`1px solid ${D.borderMid}`, background:D.bgCard, cursor:'pointer', flexShrink:0, minWidth:0, maxWidth:280 }}>
+            <span style={{ fontSize:14 }}>🎵</span>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:D.text1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</div>
+              {song.tempo > 0 && (
+                <div style={{ fontSize:10, color:D.text3, fontFamily:'"DM Mono", monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtTime(totalDur)}</div>
+              )}
+            </div>
+            <span style={{ color:D.text3, fontSize:11, flexShrink:0 }}>▾</span>
           </button>
 
-          <div style={{ width:1, height:24, background:P.paperDark, flexShrink:0 }}/>
-
-          {/* Chế độ luyện tập — đẩy sang phải */}
-          <div style={{ flex:1 }}/>
-          <div style={{ display:'flex', alignItems:'center', gap:10, border:`1.5px solid rgba(7,26,22,0.35)`, borderRadius:10, padding:'6px 14px', background:'rgba(7,26,22,0.04)', flexShrink:0 }}>
-            <span style={{ fontSize:13, fontWeight:700, color:P.text, whiteSpace:'nowrap', letterSpacing:'-0.01em' }}>CHẾ ĐỘ TẬP LUYỆN</span>
-            <div style={{ width:1, height:20, background:'rgba(7,26,22,0.15)' }}/>
-            <button onClick={() => setPlayMode('metro')} style={{ ...btn(playMode==='metro'), borderRadius:7 }}>🎵 Tập với máy đập nhịp</button>
-            <button onClick={() => { if(hasYT){ setPlayMode('yt'); if(ytMode==='focus') setYtMode('mini'); } }}
-              disabled={!hasYT} title={!hasYT?'Vào YouTube Sync để đồng bộ trước':''}
-              style={{ ...btn(playMode==='yt'), borderRadius:7, opacity:!hasYT?0.4:1 }}>▶ YouTube</button>
-            <button onClick={() => { window.location.href='/tap'; }} style={{ ...btn(false), borderRadius:7 }}>🥁 Học Tap Nhịp</button>
-            {playMode==='yt' && (<>
-              <div style={{ width:1, height:20, background:'rgba(7,26,22,0.15)' }}/>
-              {([['focus','● Ẩn'],['mini','▣ Mini'],['full','⛶ To']] as [YtMode,string][]).map(([m,lbl]) => (
-                <button key={m} onClick={() => setYtMode(m)} style={{ ...btn(ytMode===m), padding:'4px 10px', fontSize:11, borderRadius:7 }}>{lbl}</button>
-              ))}
-            </>)}
+          {/* Seek bar */}
+          <div style={{ flex:1, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0 }}>{fmtTime(currentTime)}</span>
+            <div style={{ flex:1, position:'relative', cursor:'pointer' }}
+              onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
+              {/* Track */}
+              <div style={{ height:4, background:D.border, borderRadius:2 }}>
+                <div style={{ height:'100%', width:`${pct}%`, background:`linear-gradient(90deg,${D.accent},${D.accentLight})`, borderRadius:2, transition:'width 0.05s linear', boxShadow:`0 0 8px ${D.accentGlow}` }} />
+              </div>
+            </div>
+            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0 }}>{fmtTime(totalDur)}</span>
           </div>
 
-          {/* Zoom nhịp */}
-          <div style={{ display:'flex', alignItems:'center', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
-            <button onClick={() => setZoom(z => Math.max(0.5, +(z-0.25).toFixed(2)))} style={{ ...btn(), borderRadius:0, border:'none', borderRight:P.greenBorder, padding:'4px 10px', fontSize:15 }} title="Thu hẹp nhịp">−</button>
-            <span style={{ fontSize:10, fontFamily:'monospace', color:P.textMuted, padding:'0 8px', whiteSpace:'nowrap' }}>{Math.round(zoom*100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(3, +(z+0.25).toFixed(2)))} style={{ ...btn(), borderRadius:0, border:'none', borderLeft:P.greenBorder, padding:'4px 10px', fontSize:15 }} title="Mở rộng nhịp">+</button>
+          {/* Close */}
+          <button onClick={onClose} className="pv-btn"
+            style={{ width:32, height:32, borderRadius:8, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            ✕
+          </button>
+        </div>
+
+        {/* ══ CONTROL BAR ══ */}
+        <div style={{ background:D.bgSurface, borderBottom:`1px solid ${D.border}`, padding:'0 20px', height:52, display:'flex', alignItems:'center', gap:8, flexShrink:0, overflowX:'auto' }}>
+
+          {/* Transport */}
+          <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+            <button className="pv-btn" onClick={() => seekTo(0)}
+              style={{ width:32, height:32, borderRadius:8, border:`1px solid ${D.border}`, background:'none', color:D.text2, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}
+              title="Về đầu">⏮</button>
+
+            <button onClick={togglePlay}
+              style={{ width:40, height:40, borderRadius:'50%', border:'none', background: isPlaying ? D.bgCard : `linear-gradient(135deg,${D.accent},${D.accentLight})`, color: isPlaying ? D.accentLight : '#fff', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.2s', boxShadow: isPlaying ? 'none' : `0 4px 16px ${D.accentGlow}` }}>
+              {isPlaying ? '⏸' : '▶'}
+            </button>
           </div>
 
-          {/* Speed */}
-          <div style={{ display:'flex', border:P.greenBorder, borderRadius:8, overflow:'hidden' }}>
-            {[0.75,1,1.25].map(s => (
-              <button key={s} onClick={() => setSpeed(s)} style={{ ...btn(speed===s), borderRadius:0, border:'none', borderRight: s!==1.25 ? P.greenBorder : 'none', fontSize:11, fontFamily:'monospace' }}>
-                {s===0.75?'75%':s===1?'100%':'125%'}
+          <div style={{ width:1, height:24, background:D.border, flexShrink:0 }} />
+
+          {/* Mode tabs */}
+          <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
+            {([
+              ['metro', '🎵', 'Máy đập nhịp'],
+              ['yt',    '▶',  'YouTube'],
+            ] as [string, string, string][]).map(([mode, icon, label]) => (
+              <button key={mode} className="pv-mode-btn"
+                onClick={() => { setPlayMode(mode as 'metro'|'yt'); if(mode==='yt' && ytMode==='focus') setYtMode('mini'); }}
+                disabled={mode==='yt' && !hasYT}
+                style={{ padding:'5px 12px', borderRadius:6, border:'none', cursor: mode==='yt'&&!hasYT ? 'not-allowed':'pointer', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all 0.15s', display:'flex', alignItems:'center', gap:5, opacity: mode==='yt'&&!hasYT?0.35:1,
+                  background: playMode===mode ? D.bgSurface : 'transparent',
+                  color: playMode===mode ? D.accentLight : D.text3,
+                  boxShadow: playMode===mode ? `0 1px 4px rgba(0,0,0,0.3)` : 'none',
+                }}>
+                <span>{icon}</span><span>{label}</span>
               </button>
             ))}
           </div>
 
-          {/* Metro mute */}
-          {playMode==='metro' && (
-            <button onClick={() => setMuteMetronome(v=>!v)} style={{ ...btn(muteMetronome), width:34, height:34, padding:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, borderRadius:'50%' }}
-              title={muteMetronome?'Bật metronome':'Tắt metronome'}>🎵</button>
+          {/* YT size controls */}
+          {playMode==='yt' && hasYT && (
+            <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
+              {([['focus','Ẩn'],['mini','Mini'],['full','To']] as [YtMode,string][]).map(([m,lbl]) => (
+                <button key={m} className="pv-mode-btn" onClick={() => setYtMode(m)}
+                  style={{ padding:'4px 10px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:11, fontWeight:600, transition:'all 0.15s',
+                    background: ytMode===m ? D.bgSurface : 'transparent',
+                    color: ytMode===m ? D.text1 : D.text3,
+                  }}>{lbl}</button>
+              ))}
+            </div>
           )}
 
-          {/* ⏮ */}
-          <button onClick={() => seekTo(0)} style={{ ...btn(), width:34, height:34, padding:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15 }} title="Về đầu">⏮</button>
+          <div style={{ flex:1 }} />
 
-          {/* ▶ PLAY — heart of the brand */}
-          <button onClick={togglePlay} disabled={!song.title} style={{
-            width:44, height:44, borderRadius:'50%',
-            background: isPlaying ? 'rgba(20,83,45,0.15)' : P.green,
-            border: isPlaying ? `1px solid rgba(20,83,45,0.3)` : 'none',
-            color: isPlaying ? P.green : '#fff',
-            fontSize:18, cursor: !song.title?'not-allowed':'pointer',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            opacity: !song.title ? 0.4 : 1, flexShrink:0,
-            boxShadow: isPlaying ? 'none' : `0 0 20px rgba(20,83,45,0.15), 0 2px 8px rgba(0,0,0,0.15)`,
-            transition:'all 0.2s',
-          }}>{isPlaying?'⏸':'▶'}</button>
+          {/* Speed */}
+          <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
+            {[0.75,1,1.25].map(s => (
+              <button key={s} className="pv-mode-btn" onClick={() => setSpeed(s)}
+                style={{ padding:'4px 10px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'"DM Mono",monospace', fontSize:11, fontWeight:600, transition:'all 0.15s',
+                  background: speed===s ? D.accent : 'transparent',
+                  color: speed===s ? '#fff' : D.text3,
+                }}>
+                {s===1?'1×':s+'×'}
+              </button>
+            ))}
+          </div>
 
-          {/* Tap nhịp đã chuyển vào Chế độ luyện tập */}
+          {/* Metronome mute */}
+          {playMode==='metro' && (
+            <button className="pv-btn" onClick={() => setMuteMetronome(v=>!v)}
+              style={{ height:32, padding:'0 10px', borderRadius:8, border:`1px solid ${muteMetronome ? D.accent+'44' : D.border}`, background: muteMetronome ? `${D.accent}22` : 'none', color: muteMetronome ? D.accentLight : D.text3, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, flexShrink:0, fontFamily:'inherit' }}>
+              {muteMetronome ? '🔇' : '🔊'} Metro
+            </button>
+          )}
+
+          {/* Zoom */}
+          <div style={{ display:'flex', alignItems:'center', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
+            <button className="pv-btn" onClick={() => setZoom(z => Math.max(0.5, +(z-0.25).toFixed(2)))}
+              style={{ width:28, height:32, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+            <span style={{ fontSize:10, fontFamily:'"DM Mono",monospace', color:D.text3, padding:'0 6px', minWidth:32, textAlign:'center' }}>{Math.round(zoom*100)}%</span>
+            <button className="pv-btn" onClick={() => setZoom(z => Math.min(3, +(z+0.25).toFixed(2)))}
+              style={{ width:28, height:32, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+          </div>
+
+          {/* Tap link */}
+          <button className="pv-btn" onClick={() => { window.location.href='/tap'; }}
+            style={{ height:32, padding:'0 12px', borderRadius:8, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, flexShrink:0, fontFamily:'inherit' }}>
+            🥁 Tap Nhịp
+          </button>
         </div>
 
-        {/* ── PRACTICE AREA ── */}
-        <div style={{ flex:1, padding:'12px 20px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          <div style={{
-            flex:1, borderRadius:24, overflow:'hidden',
-            background:'linear-gradient(to bottom, #071A16 0%, #081E19 35%, #061713 100%)',
-            border:'1px solid rgba(255,255,255,0.06)',
-            boxShadow:'0 4px 18px rgba(0,0,0,0.08), inset 0 1px rgba(255,255,255,0.03)',
-            display:'flex', flexDirection:'column', position:'relative',
-          }}>
+        {/* ══ PRACTICE AREA ══ */}
+        <div style={{ flex:1, padding:'12px 16px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+          <div style={{ flex:1, borderRadius:16, overflow:'hidden', border:`1px solid ${D.border}`, display:'flex', flexDirection:'column', position:'relative', background:D.bg }}>
 
             {/* Beat row */}
-            <div className="now-arrow-wrap" style={{ background:'#071410' }}><div className="now-arrow" style={{left:'30%'}}/></div>
-            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef} style={{ background:'#071410' }}>
-              <div className="scroll-now-line scroll-now-line--beat" style={{left:beatNowX}}/>
-              <div className="player-scroll-track" style={{width:totalDur*PPS+beatContainerW,transform:`translateX(${-scrollOff}px)`}}>
-                {Array.from({length:song.totalBars*song.timeSignature},(_,i)=>{
-                  const bib=i%song.timeSignature, bt=i*beatDur, nb=(i+1)*beatDur;
-                  const w=(nb-bt)*PPS, xBeat=beatNowX+bt*PPS;
-                  return(
+            <div className="now-arrow-wrap"><div className="now-arrow" style={{ left: beatNowX }} /></div>
+            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
+              <div className="scroll-now-line scroll-now-line--beat" style={{ left: beatNowX }} />
+              <div className="player-scroll-track" style={{ width: totalDur*PPS+beatContainerW, transform:`translateX(${-scrollOff}px)` }}>
+                {Array.from({ length: song.totalBars*song.timeSignature }, (_, i) => {
+                  const bib = i % song.timeSignature, bt = i*beatDur, nb = (i+1)*beatDur;
+                  const w = (nb-bt)*PPS, xBeat = beatNowX + bt*PPS;
+                  return (
                     <div key={i} className={`tl-beat-cell${bib===0?' tl-beat-cell--bar1':''}${activeBeatIdx===i?' tl-beat-cell--active':''}${activeBeatIdx>i?' tl-beat-cell--past':''}`}
-                      style={{left:xBeat,width:w-2,transform:'translateX(-50%)'}}>
-                      {bib===0&&<span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
+                      style={{ left:xBeat, width:w-2, transform:'translateX(-50%)' }}>
+                      {bib===0 && <span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
                       <span className="tl-beat-num">{bib+1}</span>
                     </div>
                   );
@@ -409,95 +408,90 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
               </div>
             </div>
 
-            {/* Lyric row — full width, flex:1 */}
-            <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{ flex:1, background:P.dark }}>
-              <div className="scroll-now-line" style={{left:'30%'}}/>
-              <div className="player-scroll-track" style={{width:trackW,transform:`translateX(${-scrollOff}px)`}}>
-                {(()=>{
-                  const sc=[...(song.chords??[])].sort((a,b)=>a.time-b.time);
-                  return sc.map((c,ci)=>{
-                    const cx=nowX+c.time*PPS, nct=ci+1<sc.length?sc[ci+1].time:c.time+barDur*4;
-                    const active=currentTimeRef.current>=c.time&&currentTimeRef.current<nct;
-                    return(<div key={c.id} className="scroll-lyric-group" style={{left:cx}}>
-                      <div className={`tl-chord${active?' active':''}`} style={{ opacity:active?0.9:0.55, fontSize:active?15:13, color:P.gold }}>{c.name}</div>
-                    </div>);
-                  });
-                })()}
-                {(song.lyrics??[]).map((l,i)=>{
-                  const lx=nowX+l.time*PPS, nt=(song.lyrics??[])[i+1]?song.lyrics[i+1].time:l.time+beatDur*2;
-                  const active=currentTimeRef.current>=l.time&&currentTimeRef.current<nt;
-                  const past=currentTimeRef.current>=nt;
-                  const onBeat=Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
-                  const lyricColor = active ? '#EAFBF2' : past ? 'rgba(234,251,242,0.25)' : 'rgba(234,251,242,0.55)';
-                  const lyricShadow = active ? '0 0 6px rgba(20,83,45,0.16)' : 'none';
-                  return(
-                    <div key={l.id} style={{left:lx,position:'absolute',top:'35%',transform:'translateX(-50%)',pointerEvents:'none',whiteSpace:'nowrap'}}>
+            {/* Lyric + chord row */}
+            <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{ flex:1 }}>
+              <div className="scroll-now-line" style={{ left:'30%' }} />
+              <div className="player-scroll-track" style={{ width:trackW, transform:`translateX(${-scrollOff}px)` }}>
+                {/* Chords */}
+                {[...(song.chords??[])].sort((a,b)=>a.time-b.time).map((c,ci) => {
+                  const cx = nowX + c.time*PPS;
+                  const sc = song.chords ?? [];
+                  const nct = ci+1<sc.length ? sc[ci+1].time : c.time+barDur*4;
+                  const active = currentTimeRef.current>=c.time && currentTimeRef.current<nct;
+                  return (
+                    <div key={c.id} className="scroll-lyric-group" style={{ left:cx, position:'absolute', top:0, height:'100%' }}>
+                      <div className={`tl-chord${active?' active':''}`}
+                        style={{ color: D.gold, opacity: active ? 1 : 0.5, fontSize: active?16:13, top:'12%' }}>
+                        {c.name}
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Lyrics */}
+                {(song.lyrics??[]).map((l,i) => {
+                  const lx = nowX + l.time*PPS;
+                  const nt = (song.lyrics??[])[i+1] ? song.lyrics[i+1].time : l.time+beatDur*2;
+                  const active = currentTimeRef.current>=l.time && currentTimeRef.current<nt;
+                  const past   = currentTimeRef.current>=nt;
+                  const onBeat = Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
+                  return (
+                    <div key={l.id} style={{ left:lx, position:'absolute', top:'38%', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                       <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`}
-                        style={{color:lyricColor,fontSize:active?'22px':'20px',fontWeight:active?700:500,
-                          textShadow:lyricShadow,letterSpacing:'0.03em',transition:'color 0.12s,text-shadow 0.15s'}}>
+                        style={{ color: active ? D.text1 : past ? D.text3 : D.text2, fontSize: active?22:19, fontWeight: active?800:500, letterSpacing:'-0.02em', transition:'all 0.1s' }}>
                         {l.text}
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <div className="now-arrow--up" style={{left:'30%',position:'absolute',top:'calc(50% + 18px)',transform:'translateX(-50%)',zIndex:20}}/>
+              <div className="now-arrow--up" style={{ left:'30%', position:'absolute', bottom:12, transform:'translateX(-50%)', zIndex:20 }} />
             </div>
 
-
+            {/* YouTube overlay */}
             {playMode==='yt' && hasYT && ytMode!=='focus' && (
               <div onMouseEnter={() => setYtHovered(true)} onMouseLeave={() => setYtHovered(false)}
-                style={{ position:'absolute', right:16, bottom:16, ...ytDims[ytMode],
-                  borderRadius:12, overflow:'hidden',
-                  opacity:ytOpacity, transition:'opacity 0.3s ease',
-                  zIndex:15,
-                  boxShadow:'0 4px 20px rgba(0,0,0,0.5)',
-                  border:'1px solid rgba(255,255,255,0.06)',
-                  filter:'saturate(0.72) contrast(0.92) brightness(0.92)',
+                style={{ position:'absolute', right:12, bottom:12,
+                  ...(ytMode==='mini' ? { width:280, aspectRatio:'16/9' } : { width:'min(45vw,480px)', aspectRatio:'16/9' }),
+                  borderRadius:10, overflow:'hidden', zIndex:15,
+                  opacity: ytHovered ? 1 : isPlaying ? 0.5 : 1, transition:'opacity 0.3s',
+                  boxShadow:'0 8px 32px rgba(0,0,0,0.6)',
+                  border:`1px solid ${D.border}`,
                 }}>
-                <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:2,background:'rgba(0,0,0,0.55)',padding:'4px 8px',display:'flex',alignItems:'center',gap:6 }}>
-                  <span style={{fontSize:9,color:'rgba(255,255,255,0.4)',flex:1}}>YT · {getYtOffset().toFixed(1)}s{!ytReady?' · kết nối...':''}</span>
-                  <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:10,cursor:'pointer'}}>{ytMode==='mini'?'⛶':'▣'}</button>
-                  <button onClick={() => setYtMode('focus')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:12,cursor:'pointer'}}>✕</button>
+                <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:2,background:'rgba(0,0,0,0.6)',padding:'4px 8px',display:'flex',alignItems:'center',gap:6 }}>
+                  <span style={{ fontSize:9,color:D.text3,flex:1,fontFamily:'"DM Mono",monospace' }}>YT · offset {getYtOffset().toFixed(1)}s{!ytReady?' · connecting...':''}</span>
+                  <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{ background:'none',border:'none',color:D.text3,fontSize:10,cursor:'pointer' }}>{ytMode==='mini'?'⛶':'▣'}</button>
+                  <button onClick={() => setYtMode('focus')} style={{ background:'none',border:'none',color:D.text3,fontSize:12,cursor:'pointer' }}>✕</button>
                 </div>
-                {/* Glass overlay */}
-                <div style={{ position:'absolute',inset:0,background:'rgba(0,0,0,0.08)',pointerEvents:'none',zIndex:1 }}/>
-                <div id="yt-player-frame" style={{width:'100%',height:'100%'}}/>
+                <div id="yt-player-frame" style={{ width:'100%',height:'100%' }} />
               </div>
             )}
-
           </div>
         </div>
 
-        {/* ── GHI LẠI BUỔI TẬP ── */}
-        <div style={{ padding:'12px 20px', background:P.paper, borderTop:`1px solid rgba(20,83,45,0.06)`, flexShrink:0 }}>
+        {/* ══ BOTTOM ACTIONS ══ */}
+        <div style={{ padding:'10px 16px 14px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, flexShrink:0 }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
-            {[
-              ['🎙','Ghi âm','Thu lại buổi chơi'],
-              ['📹','Quay video','Xem lại kỹ thuật'],
-              ['📤','Nộp bài','Gửi thầy chấm'],
-            ].map(([ic,tt,sub])=>(
-              <LockedFeatureCard key={tt} icon={ic} title={tt} sub={sub} paperSurface={P.paperSurface} text={P.text} textMuted={P.textMuted} green={P.green} />
-            ))}
+            <LockedCard icon="🎙" title="Ghi âm" sub="Thu lại buổi chơi" />
+            <LockedCard icon="📹" title="Quay video" sub="Xem lại kỹ thuật" />
+            <LockedCard icon="📤" title="Nộp bài" sub="Gửi thầy chấm" />
           </div>
         </div>
 
-        {/* Hint */}
-        <div style={{ padding:'6px 24px 8px', background:P.paper, borderTop:`1px solid ${P.paperDark}`, fontSize:10, color:P.textDim, letterSpacing:'0.04em', display:'flex', gap:16 }}>
-          <span>Space = Play/Pause</span><span>·</span>
-          <span>← → = ±5s</span><span>·</span>
-          <span>Esc = Dừng</span>
+        {/* Keyboard hint */}
+        <div style={{ padding:'5px 20px 7px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, fontSize:10, color:D.text3, letterSpacing:'0.05em', display:'flex', gap:16 }}>
+          <span>SPACE = Play/Pause</span>
+          <span>·</span><span>← → = ±5s</span>
+          <span>·</span><span>ESC = Đóng</span>
         </div>
-
-      </div>{/* end main column */}
+      </div>
 
       {showSongList && (
         <SongList
           onSelect={(s: RhythmSong) => {
             if (onImportSong) onImportSong(s);
             setShowSongList(false);
-            setIsPlaying(false); isPlayingRef.current=false;
-            setCurrentTime(0); currentTimeRef.current=0;
+            setIsPlaying(false); isPlayingRef.current = false;
+            setCurrentTime(0); currentTimeRef.current = 0;
             setYtOffsetAdj(0);
           }}
           onClose={() => setShowSongList(false)}
