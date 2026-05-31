@@ -254,76 +254,62 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
 
-        {/* ══ TOP BAR ══ */}
-        <div style={{ background:D.bgSurface, borderBottom:`1px solid ${D.border}`, padding:'0 20px', height:56, display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
+        {/* ══ MERGED NAV + CONTROL BAR ══ */}
+        {/* Row 1: Song info + seek + close */}
+        <div style={{ background:D.bgSurface, borderBottom:`1px solid ${D.border}`, padding:'0 16px', height:52, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
           {/* Logo */}
-          <div style={{ width:32, height:32, borderRadius:8, background:`linear-gradient(135deg,${D.accent},${D.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0, boxShadow:`0 2px 8px ${D.accentGlow}` }}>
-            🎸
-          </div>
-          <span style={{ fontSize:13, fontWeight:700, color:D.text1, flexShrink:0, letterSpacing:'-0.02em' }}>Player</span>
+          <div style={{ width:30, height:30, borderRadius:8, background:`linear-gradient(135deg,${D.accent},${D.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, flexShrink:0, boxShadow:`0 2px 8px ${D.accentGlow}` }}>🎸</div>
 
-          <div style={{ width:1, height:20, background:D.border, flexShrink:0 }} />
+          {/* Transport */}
+          <button className="pv-btn" onClick={() => seekTo(0)}
+            style={{ width:30, height:30, borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}
+            title="Về đầu">⏮</button>
+          <button onClick={togglePlay}
+            style={{ width:38, height:38, borderRadius:'50%', border:'none', background: isPlaying ? D.bgCard : `linear-gradient(135deg,${D.accent},${D.accentLight})`, color: isPlaying ? D.accentLight : '#fff', fontSize:15, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.2s', boxShadow: isPlaying ? 'none' : `0 4px 14px ${D.accentGlow}` }}>
+            {isPlaying ? '⏸' : '▶'}
+          </button>
 
           {/* Song chip */}
           <button onClick={() => setShowSongList(true)} className="pv-btn"
-            style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:8, border:`1px solid ${D.borderMid}`, background:D.bgCard, cursor:'pointer', flexShrink:0, minWidth:0, maxWidth:280 }}>
-            <span style={{ fontSize:14 }}>🎵</span>
+            style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 10px', borderRadius:8, border:`1px solid ${D.borderMid}`, background:D.bgCard, cursor:'pointer', flexShrink:0, minWidth:0, maxWidth:240 }}>
+            <span style={{ fontSize:13 }}>🎵</span>
             <div style={{ minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:700, color:D.text1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</div>
-              {song.tempo > 0 && (
-                <div style={{ fontSize:10, color:D.text3, fontFamily:'"DM Mono", monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtTime(totalDur)}</div>
-              )}
+              {song.tempo > 0 && <div style={{ fontSize:9, color:D.text3, fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4</div>}
             </div>
-            <span style={{ color:D.text3, fontSize:11, flexShrink:0 }}>▾</span>
+            <span style={{ color:D.text3, fontSize:10, flexShrink:0 }}>▾</span>
           </button>
 
-          {/* Seek bar */}
-          <div style={{ flex:1, display:'flex', alignItems:'center', gap:10 }}>
-            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0 }}>{fmtTime(currentTime)}</span>
-            <div style={{ flex:1, position:'relative', cursor:'pointer' }}
+          {/* Seek bar — fat, easy to hit */}
+          <div style={{ flex:1, display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0, minWidth:36 }}>{fmtTime(currentTime)}</span>
+            <div style={{ flex:1, position:'relative', height:20, cursor:'pointer', display:'flex', alignItems:'center' }}
               onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
-              {/* Track */}
-              <div style={{ height:4, background:D.border, borderRadius:2 }}>
-                <div style={{ height:'100%', width:`${pct}%`, background:`linear-gradient(90deg,${D.accent},${D.accentLight})`, borderRadius:2, transition:'width 0.05s linear', boxShadow:`0 0 8px ${D.accentGlow}` }} />
+              <div style={{ position:'absolute', inset:'0 0', display:'flex', alignItems:'center' }}>
+                <div style={{ width:'100%', height:6, background:D.bgCard, borderRadius:3, overflow:'hidden', border:`1px solid ${D.border}` }}>
+                  <div style={{ height:'100%', width:`${pct}%`, background:`linear-gradient(90deg,${D.accent},${D.accentLight})`, borderRadius:3, transition:'width 0.05s linear', boxShadow:`0 0 10px ${D.accentGlow}` }} />
+                </div>
               </div>
+              {/* Thumb */}
+              <div style={{ position:'absolute', left:`${pct}%`, transform:'translateX(-50%)', width:14, height:14, borderRadius:'50%', background:D.accent, boxShadow:`0 0 8px ${D.accentGlow}`, border:`2px solid ${D.accentLight}`, pointerEvents:'none', transition:'left 0.05s linear' }} />
             </div>
-            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0 }}>{fmtTime(totalDur)}</span>
+            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0, minWidth:36, textAlign:'right' }}>{fmtTime(totalDur)}</span>
           </div>
 
           {/* Close */}
           <button onClick={onClose} className="pv-btn"
-            style={{ width:32, height:32, borderRadius:8, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            ✕
-          </button>
+            style={{ width:30, height:30, borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
         </div>
 
-        {/* ══ CONTROL BAR ══ */}
-        <div style={{ background:D.bgSurface, borderBottom:`1px solid ${D.border}`, padding:'0 20px', height:52, display:'flex', alignItems:'center', gap:8, flexShrink:0, overflowX:'auto' }}>
-
-          {/* Transport */}
-          <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
-            <button className="pv-btn" onClick={() => seekTo(0)}
-              style={{ width:32, height:32, borderRadius:8, border:`1px solid ${D.border}`, background:'none', color:D.text2, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}
-              title="Về đầu">⏮</button>
-
-            <button onClick={togglePlay}
-              style={{ width:40, height:40, borderRadius:'50%', border:'none', background: isPlaying ? D.bgCard : `linear-gradient(135deg,${D.accent},${D.accentLight})`, color: isPlaying ? D.accentLight : '#fff', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.2s', boxShadow: isPlaying ? 'none' : `0 4px 16px ${D.accentGlow}` }}>
-              {isPlaying ? '⏸' : '▶'}
-            </button>
-          </div>
-
-          <div style={{ width:1, height:24, background:D.border, flexShrink:0 }} />
-
+        {/* Row 2: Options bar */}
+        <div style={{ background:D.bgSurface, borderBottom:`1px solid ${D.border}`, padding:'0 16px', height:44, display:'flex', alignItems:'center', gap:8, flexShrink:0, overflowX:'auto' }}>
           {/* Mode tabs */}
           <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
-            {([
-              ['metro', '🎵', 'Máy đập nhịp'],
-              ['yt',    '▶',  'YouTube'],
-            ] as [string, string, string][]).map(([mode, icon, label]) => (
+            {([['metro','🎵','Máy đập nhịp'],['yt','▶','YouTube']] as [string,string,string][]).map(([mode,icon,label]) => (
               <button key={mode} className="pv-mode-btn"
-                onClick={() => { setPlayMode(mode as 'metro'|'yt'); if(mode==='yt' && ytMode==='focus') setYtMode('mini'); }}
-                disabled={mode==='yt' && !hasYT}
-                style={{ padding:'5px 12px', borderRadius:6, border:'none', cursor: mode==='yt'&&!hasYT ? 'not-allowed':'pointer', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all 0.15s', display:'flex', alignItems:'center', gap:5, opacity: mode==='yt'&&!hasYT?0.35:1,
+                onClick={() => { setPlayMode(mode as 'metro'|'yt'); if(mode==='yt'&&ytMode==='focus') setYtMode('mini'); }}
+                disabled={mode==='yt'&&!hasYT}
+                style={{ padding:'4px 10px', borderRadius:6, border:'none', cursor: mode==='yt'&&!hasYT?'not-allowed':'pointer', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all 0.15s', display:'flex', alignItems:'center', gap:4, opacity: mode==='yt'&&!hasYT?0.35:1,
                   background: playMode===mode ? D.bgSurface : 'transparent',
                   color: playMode===mode ? D.accentLight : D.text3,
                   boxShadow: playMode===mode ? `0 1px 4px rgba(0,0,0,0.3)` : 'none',
@@ -333,15 +319,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             ))}
           </div>
 
-          {/* YT size controls */}
           {playMode==='yt' && hasYT && (
             <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
               {([['focus','Ẩn'],['mini','Mini'],['full','To']] as [YtMode,string][]).map(([m,lbl]) => (
                 <button key={m} className="pv-mode-btn" onClick={() => setYtMode(m)}
-                  style={{ padding:'4px 10px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:11, fontWeight:600, transition:'all 0.15s',
+                  style={{ padding:'3px 8px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:11, fontWeight:600, transition:'all 0.15s',
                     background: ytMode===m ? D.bgSurface : 'transparent',
-                    color: ytMode===m ? D.text1 : D.text3,
-                  }}>{lbl}</button>
+                    color: ytMode===m ? D.text1 : D.text3 }}>{lbl}</button>
               ))}
             </div>
           )}
@@ -352,36 +336,34 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
             {[0.75,1,1.25].map(s => (
               <button key={s} className="pv-mode-btn" onClick={() => setSpeed(s)}
-                style={{ padding:'4px 10px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'"DM Mono",monospace', fontSize:11, fontWeight:600, transition:'all 0.15s',
-                  background: speed===s ? D.accent : 'transparent',
-                  color: speed===s ? '#fff' : D.text3,
-                }}>
+                style={{ padding:'3px 9px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'"DM Mono",monospace', fontSize:11, fontWeight:600, transition:'all 0.15s',
+                  background: speed===s ? D.accent : 'transparent', color: speed===s ? '#fff' : D.text3 }}>
                 {s===1?'1×':s+'×'}
               </button>
             ))}
           </div>
 
-          {/* Metronome mute */}
+          {/* Metro mute */}
           {playMode==='metro' && (
             <button className="pv-btn" onClick={() => setMuteMetronome(v=>!v)}
-              style={{ height:32, padding:'0 10px', borderRadius:8, border:`1px solid ${muteMetronome ? D.accent+'44' : D.border}`, background: muteMetronome ? `${D.accent}22` : 'none', color: muteMetronome ? D.accentLight : D.text3, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, flexShrink:0, fontFamily:'inherit' }}>
-              {muteMetronome ? '🔇' : '🔊'} Metro
+              style={{ height:30, padding:'0 10px', borderRadius:7, border:`1px solid ${muteMetronome?D.accent+'44':D.border}`, background: muteMetronome?`${D.accent}22`:'none', color: muteMetronome?D.accentLight:D.text3, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:4, flexShrink:0, fontFamily:'inherit' }}>
+              {muteMetronome?'🔇':'🔊'} Metro
             </button>
           )}
 
           {/* Zoom */}
           <div style={{ display:'flex', alignItems:'center', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
-            <button className="pv-btn" onClick={() => setZoom(z => Math.max(0.5, +(z-0.25).toFixed(2)))}
-              style={{ width:28, height:32, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
-            <span style={{ fontSize:10, fontFamily:'"DM Mono",monospace', color:D.text3, padding:'0 6px', minWidth:32, textAlign:'center' }}>{Math.round(zoom*100)}%</span>
-            <button className="pv-btn" onClick={() => setZoom(z => Math.min(3, +(z+0.25).toFixed(2)))}
-              style={{ width:28, height:32, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+            <button className="pv-btn" onClick={() => setZoom(z => Math.max(0.5,+(z-0.25).toFixed(2)))}
+              style={{ width:26, height:30, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+            <span style={{ fontSize:10, fontFamily:'"DM Mono",monospace', color:D.text3, padding:'0 4px', minWidth:30, textAlign:'center' }}>{Math.round(zoom*100)}%</span>
+            <button className="pv-btn" onClick={() => setZoom(z => Math.min(3,+(z+0.25).toFixed(2)))}
+              style={{ width:26, height:30, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
           </div>
 
           {/* Tap link */}
           <button className="pv-btn" onClick={() => { window.location.href='/tap'; }}
-            style={{ height:32, padding:'0 12px', borderRadius:8, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, flexShrink:0, fontFamily:'inherit' }}>
-            🥁 Tap Nhịp
+            style={{ height:30, padding:'0 10px', borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:11, fontWeight:600, display:'flex', alignItems:'center', gap:4, flexShrink:0, fontFamily:'inherit' }}>
+            🥁 Tap
           </button>
         </div>
 
@@ -419,9 +401,21 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   const nct = ci+1<sc.length ? sc[ci+1].time : c.time+barDur*4;
                   const active = currentTimeRef.current>=c.time && currentTimeRef.current<nct;
                   return (
-                    <div key={c.id} className="scroll-lyric-group" style={{ left:cx, position:'absolute', top:0, height:'100%' }}>
-                      <div className={`tl-chord${active?' active':''}`}
-                        style={{ color: D.gold, opacity: active ? 1 : 0.5, fontSize: active?16:13, top:'12%' }}>
+                    <div key={c.id} style={{ left:cx, position:'absolute', top:0, height:'100%' }}>
+                      <div style={{
+                        position:'absolute', top:'8%',
+                        color: D.gold,
+                        fontSize: active ? 28 : 22,
+                        fontWeight: 800,
+                        letterSpacing: '-0.03em',
+                        opacity: active ? 1 : 0.45,
+                        filter: active ? `drop-shadow(0 0 14px ${D.gold}) drop-shadow(0 0 28px ${D.goldGlow})` : 'none',
+                        transition: 'all 0.12s',
+                        whiteSpace: 'nowrap',
+                        transform: 'translateX(-50%)',
+                        pointerEvents: 'none',
+                        fontFamily: 'inherit',
+                      }}>
                         {c.name}
                       </div>
                     </div>
@@ -435,9 +429,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   const past   = currentTimeRef.current>=nt;
                   const onBeat = Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
                   return (
-                    <div key={l.id} style={{ left:lx, position:'absolute', top:'38%', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                      <div className={`tl-lyric${active?' active':''}${onBeat?'':' tl-lyric--offbeat'}`}
-                        style={{ color: active ? D.text1 : past ? D.text3 : D.text2, fontSize: active?22:19, fontWeight: active?800:500, letterSpacing:'-0.02em', transition:'all 0.1s' }}>
+                    <div key={l.id} style={{ left:lx, position:'absolute', top:'50%', transform:'translate(-50%,-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                      <div className={`tl-lyric${active?' active':''}`}
+                        style={{ color: active ? '#FFFFFF' : past ? D.text3 : D.text2, fontSize: active?26:20, fontWeight: active?800:500, letterSpacing:'-0.025em', fontStyle: onBeat?'normal':'italic', transition:'all 0.1s', filter: active?'drop-shadow(0 0 12px rgba(255,255,255,0.35))':'none' }}>
                         {l.text}
                       </div>
                     </div>
@@ -468,13 +462,16 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           </div>
         </div>
 
-        {/* ══ BOTTOM ACTIONS ══ */}
-        <div style={{ padding:'10px 16px 14px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, flexShrink:0 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
-            <LockedCard icon="🎙" title="Ghi âm" sub="Thu lại buổi chơi" />
-            <LockedCard icon="📹" title="Quay video" sub="Xem lại kỹ thuật" />
-            <LockedCard icon="📤" title="Nộp bài" sub="Gửi thầy chấm" />
-          </div>
+        {/* ══ BOTTOM STRIP — locked features ══ */}
+        <div style={{ padding:'8px 16px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:11, color:D.text3, fontWeight:600, marginRight:4 }}>Sắp ra mắt:</span>
+          {[['🎙','Ghi âm'],['📹','Quay video'],['📤','Nộp bài']].map(([icon,label]) => (
+            <div key={label} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:7, border:`1px solid ${D.border}`, background:D.bgCard, opacity:0.55 }}>
+              <span style={{ fontSize:14 }}>{icon}</span>
+              <span style={{ fontSize:12, color:D.text2, fontWeight:500 }}>{label}</span>
+              <span style={{ fontSize:10 }}>🔒</span>
+            </div>
+          ))}
         </div>
 
         {/* Keyboard hint */}
