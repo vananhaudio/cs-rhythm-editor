@@ -278,8 +278,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   // Chữ đầu chunk nằm tại 20px từ mép trái
   // vị trí thực = nowX + chunkStart*PPS - scrollOff = 20
   // => scrollOff = nowX + chunkStart*PPS - 20
-  const t1ScrollOff  = nowX + t1Chunk * beatsPerTrack * beatDur * PPS - 20
-  const t2ScrollOff  = nowX + t2Chunk * beatsPerTrack * beatDur * PPS - 20
+  const t1ScrollOff  = nowX + t1Chunk * beatsPerTrack * beatDur * PPS - 60
+  const t2ScrollOff  = nowX + t2Chunk * beatsPerTrack * beatDur * PPS - 60
   const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
 
   return (
