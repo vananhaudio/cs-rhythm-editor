@@ -382,9 +382,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           <div style={{ flex:1, borderRadius:16, overflow:'hidden', border:`1px solid ${D.border}`, display:'flex', flexDirection:'column', position:'relative', background:D.bg }}>
 
             {/* Beat row — scroll, chỉ số chớp sáng */}
-            <div className="now-arrow-wrap"><div className="now-arrow" style={{ left: beatNowX }} /></div>
             <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
-              <div className="scroll-now-line scroll-now-line--beat" style={{ left: beatNowX }} />
               <div className="player-scroll-track" style={{ width: totalDur*PPS+beatContainerW, transform:`translateX(${-scrollOff}px)` }}>
                 {Array.from({ length: song.totalBars*song.timeSignature }, (_, i) => {
                   const bib = i % song.timeSignature, bt = i*beatDur, nb = (i+1)*beatDur;
