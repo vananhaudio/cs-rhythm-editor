@@ -80,6 +80,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const audioCtxRef  = useRef<AudioContext|null>(null);
   const schedulerRef = useRef<ReturnType<typeof setInterval>|null>(null);
   const nextBeatRef  = useRef(0);
+  const audioStartRef = useRef<{audioT: number; songT: number} | null>(null);
   const scrollRef    = useRef<HTMLDivElement>(null);
   const beatScrollRef = useRef<HTMLDivElement>(null);
   const speedRef     = useRef(1);
@@ -176,6 +177,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     const bd = beatDur / speedRef.current;
     const beats = Math.floor(from / beatDur);
     nextBeatRef.current = ctx.currentTime + ((beats+1)*beatDur - from) / speedRef.current;
+    // Lưu anchor để RAF sync theo AudioContext
+    audioStartRef.current = { audioT: ctx.currentTime, songT: from };
     let idx = beats + 1;
     stopMetronome();
     schedulerRef.current = setInterval(() => {
@@ -196,11 +199,24 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (isPlaying) { wall = performance.now(); songT = currentTimeRef.current; }
     const tick = () => {
       if (isPlayingRef.current) {
-        const t = Math.min(songT + (performance.now()-wall)/1000*speedRef.current, totalDur);
+        let t: number;
+        if (playMode === 'yt' && ytReadyRef.current && ytPlayerRef.current) {
+          // YouTube mode: lấy thẳng từ ytPlayer để không bao giờ drift
+          const ytT = ytPlayerRef.current.getCurrentTime?.() ?? 0;
+          t = Math.max(0, ytT - getYtOffset());
+        } else if (audioCtxRef.current && audioStartRef.current) {
+          // Metro mode: sync theo AudioContext
+          const anchor = audioStartRef.current;
+          t = anchor.songT + (audioCtxRef.current.currentTime - anchor.audioT) * speedRef.current;
+        } else {
+          t = songT + (performance.now()-wall)/1000*speedRef.current;
+        }
+        t = Math.min(t, totalDur);
         currentTimeRef.current = t; setCurrentTime(t);
         setActiveBeatIdx(Math.floor(t / beatDur));
         if (t >= totalDur) {
           isPlayingRef.current = false; setIsPlaying(false);
+          audioStartRef.current = null;
           stopMetronome(); ytPlayerRef.current?.pauseVideo?.();
         }
       }
@@ -226,6 +242,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const togglePlay = useCallback(() => {
     if (isPlayingRef.current) {
       isPlayingRef.current = false; setIsPlaying(false); stopMetronome();
+      audioStartRef.current = null;
       ytSyncedRef.current = false; ytPlayerRef.current?.pauseVideo?.();
     } else {
       isPlayingRef.current = true; setIsPlaying(true);
