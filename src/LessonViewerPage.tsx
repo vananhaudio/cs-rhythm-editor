@@ -28,11 +28,19 @@ const TOOL_LABELS: Record<string, { label: string; icon: string; route: string }
 }
 
 function normalizeCanvaUrl(raw: string): string {
-  const iframeSrc = raw.match(/src="([^"]*canva[^"]*)"/)
-  const url = (iframeSrc ? iframeSrc[1] : raw).trim()
-  if (!url.includes('canva.com')) return url
-  const base = url.split('?')[0].replace(/\/$/, '')
-  const viewBase = base.includes('/view') ? base.split('/view')[0] + '/view' : base + '/view'
+  // Tách src từ HTML block nếu paste cả <iframe> hoặc <div>
+  const iframeSrc = raw.match(/src="([^"]*canva\.com[^"]*)"/)
+  const s = (iframeSrc?.[1] ?? (raw.trim().startsWith('<') ? '' : raw)).trim()
+  if (!s || !s.includes('canva.com')) return raw.trim()
+  // Xoá query và fragment
+  let base = s.split('?')[0].split('#')[0].replace(/\/+$/, '')
+  // Bỏ /watch (gây 403 khi embed)
+  base = base.replace(/\/watch(\/.*)?$/, '')
+  base = base.replace(/\/+$/, '')
+  // Đảm bảo kết thúc /view
+  const viewBase = base.endsWith('/view') ? base
+    : base.includes('/view') ? base.substring(0, base.lastIndexOf('/view') + 5)
+    : base + '/view'
   return viewBase + '?embed'
 }
 

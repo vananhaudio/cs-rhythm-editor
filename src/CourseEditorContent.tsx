@@ -56,15 +56,19 @@ function getYouTubeId(url: string) {
 
 // Canva: tách src từ <iframe> nếu có, rồi đảm bảo URL dạng .../view?embed
 function normalizeCanvaUrl(raw: string): string {
-  const s = raw.trim()
-  // Trường hợp 1: paste cả HTML block của Canva — tìm data-design-id hoặc src chứa canva
-  const iframeSrc = s.match(/src="([^"]*canva\.com[^"]*)"/)
-  const designHref = s.match(/href="([^"]*canva\.com\/design[^"]*)"/)
-  const url = (iframeSrc?.[1] ?? designHref?.[1] ?? (s.startsWith('<') ? '' : s))
-  if (!url || !url.includes('canva.com')) return s
-  // Đảm bảo dạng .../view?embed
-  const base = url.split('?')[0].replace(/\/+$/, '')
-  const viewBase = base.includes('/view') ? base.split('/view')[0] + '/view' : base + '/view'
+  // Tách src từ HTML block nếu paste cả <iframe> hoặc <div>
+  const iframeSrc = raw.match(/src="([^"]*canva\.com[^"]*)"/)
+  const s = (iframeSrc?.[1] ?? (raw.trim().startsWith('<') ? '' : raw)).trim()
+  if (!s || !s.includes('canva.com')) return raw.trim()
+  // Xoá query và fragment
+  let base = s.split('?')[0].split('#')[0].replace(/\/+$/, '')
+  // Bỏ /watch (gây 403 khi embed)
+  base = base.replace(/\/watch(\/.*)?$/, '')
+  base = base.replace(/\/+$/, '')
+  // Đảm bảo kết thúc /view
+  const viewBase = base.endsWith('/view') ? base
+    : base.includes('/view') ? base.substring(0, base.lastIndexOf('/view') + 5)
+    : base + '/view'
   return viewBase + '?embed'
 }
 
