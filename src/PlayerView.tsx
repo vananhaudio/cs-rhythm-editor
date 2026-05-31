@@ -515,6 +515,29 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             </div>
           ))}
         </div>
+        {/* YouTube overlay — mini/full */}
+        {playMode==='yt' && hasYT && ytMode!=='focus' && (
+          <div onMouseEnter={() => setYtHovered(true)} onMouseLeave={() => setYtHovered(false)}
+            style={{ position:'absolute', right:12, bottom:60,
+              ...(ytMode==='mini' ? { width:240, aspectRatio:'16/9' } : { width:'min(40vw,420px)', aspectRatio:'16/9' }),
+              borderRadius:10, overflow:'hidden', zIndex:15,
+              opacity: ytHovered ? 1 : isPlaying ? 0.4 : 1, transition:'opacity 0.3s',
+              boxShadow:'0 8px 32px rgba(0,0,0,0.6)', border:`1px solid ${D.border}`,
+            }}>
+            <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:2,background:'rgba(0,0,0,0.6)',padding:'3px 8px',display:'flex',alignItems:'center',gap:6 }}>
+              <span style={{ fontSize:9,color:D.text3,flex:1,fontFamily:'"DM Mono",monospace' }}>YT · offset {getYtOffset().toFixed(1)}s{!ytReady?' · connecting...':''}</span>
+              <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{ background:'none',border:'none',color:D.text3,fontSize:10,cursor:'pointer' }}>{ytMode==='mini'?'⛶':'▣'}</button>
+              <button onClick={() => setYtMode('focus')} style={{ background:'none',border:'none',color:D.text3,fontSize:12,cursor:'pointer' }}>✕</button>
+            </div>
+            <div id="yt-player-frame" style={{ width:'100%',height:'100%' }} />
+          </div>
+        )}
+
+        {/* Placeholder để YouTube API mount khi focus mode */}
+        {playMode==='yt' && hasYT && ytMode==='focus' && (
+          <div id="yt-player-frame" style={{ display:'none' }} />
+        )}
+
         {/* ══ BOTTOM STRIP — locked features ══ */}
         <div style={{ padding:'8px 16px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:11, color:D.text3, fontWeight:600, marginRight:4 }}>Sắp ra mắt:</span>
