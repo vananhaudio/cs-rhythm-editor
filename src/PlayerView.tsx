@@ -164,10 +164,10 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     } catch {}
   }
   function getAccent(beatInBar: number, timeSig: number): 0|1|2 {
-    if (beatInBar === 0) return 0; // phách 1 luôn mạnh nhất
-    if (timeSig === 6 && beatInBar === 3) return 1; // 6/8: phách 4 (idx 3) mạnh phụ
-    if (timeSig === 9 && (beatInBar === 3 || beatInBar === 6)) return 1; // 9/8
-    if (timeSig === 12 && (beatInBar === 3 || beatInBar === 6 || beatInBar === 9)) return 1; // 12/8
+    if (beatInBar === 0) return 0;
+    if (timeSig === 6 && beatInBar === 3) return 1;
+    if (timeSig === 9 && (beatInBar === 3 || beatInBar === 6)) return 1;
+    if (timeSig === 12 && (beatInBar === 3 || beatInBar === 6 || beatInBar === 9)) return 1;
     return 2;
   }
   function startMetronome(from: number) {
@@ -176,15 +176,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     if (ctx.state === 'suspended') ctx.resume();
     const bd = beatDur / speedRef.current;
     const beats = Math.floor(from / beatDur);
-    // Nếu đang đứng đầu beat (sai số < 10ms) thì schedule beat đó luôn
-    const offsetToNextBeat = (beats + 1) * beatDur - from;
-    const scheduleCurrentBeat = offsetToNextBeat > beatDur - 0.01;
-    nextBeatRef.current = scheduleCurrentBeat
-      ? ctx.currentTime + 0.01  // beat hiện tại, phát ngay
-      : ctx.currentTime + offsetToNextBeat / speedRef.current;
-    // Lưu anchor để RAF sync theo AudioContext
+    nextBeatRef.current = ctx.currentTime + ((beats+1)*beatDur - from) / speedRef.current;
     audioStartRef.current = { audioT: ctx.currentTime, songT: from };
-    let idx = scheduleCurrentBeat ? beats : beats + 1;
+    let idx = beats + 1;
     stopMetronome();
     schedulerRef.current = setInterval(() => {
       const c = audioCtxRef.current; if (!c) return;
@@ -198,7 +192,6 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   function stopMetronome() {
     if (schedulerRef.current) { clearInterval(schedulerRef.current); schedulerRef.current = null; }
   }
-
   useEffect(() => {
     let wall = performance.now(), songT = currentTimeRef.current;
     if (isPlaying) { wall = performance.now(); songT = currentTimeRef.current; }
@@ -218,15 +211,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         }
         t = Math.min(t, totalDur);
         currentTimeRef.current = t; setCurrentTime(t);
-        // Dùng nextBeatRef để biết beat nào đang vang — khớp chính xác với tiếng click
-        if (audioCtxRef.current && audioStartRef.current && playMode !== 'yt') {
-          const audioNow = audioCtxRef.current.currentTime + 0.016; // look-ahead giống scheduler
-          const beatsSinceStart = (audioNow - audioStartRef.current.audioT) * speedRef.current / beatDur
-          const absoluteBeat = Math.floor(audioStartRef.current.songT / beatDur) + Math.floor(beatsSinceStart)
-          setActiveBeatIdx(Math.max(0, absoluteBeat))
-        } else {
-          setActiveBeatIdx(Math.floor(t / beatDur))
-        }
+        setActiveBeatIdx(Math.floor(t / beatDur));
         if (t >= totalDur) {
           isPlayingRef.current = false; setIsPlaying(false);
           audioStartRef.current = null;
