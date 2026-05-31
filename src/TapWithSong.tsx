@@ -3,7 +3,6 @@ import type { RhythmSong } from './types'
 import { supabase } from './supabase'
 import { SongList } from './SongList'
 
-// ── MOBILE DETECTION ──────────────────────────────────────
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
   useEffect(() => {
@@ -14,47 +13,39 @@ function useIsMobile() {
   return isMobile
 }
 
-// ── DESIGN TOKENS ──────────────────────────────────────────
+// ── DESIGN TOKENS ── Dark Studio theme
 const C = {
-  // Header + Controls — kem sáng
-  bgPage:     '#F5F2EA',
-  bgPageBorder:'#E0D9C8',
+  // Backgrounds
+  bg:          '#0D0F14',
+  bgSurface:   '#141720',
+  bgCard:      '#1C2030',
+  bgCardHover: '#222638',
+  bgInput:     '#252840',
 
-  // Level bar — nâu gỗ
-  bgWood:     '#F0E8D8',
-  bgWoodBorder:'#D8C8A8',
-  bgWoodCard: '#fff',
-  bgWoodActive:'#3F7D3A',
-
-  // Main area — dark forest
-  bgMain:     '#031B15',
-  bgMission:  '#031B15',
-  bgMissionBorder:'rgba(220,230,210,0.09)',
+  // Brand
+  accent:      '#6C63FF',
+  accentGlow:  'rgba(108,99,255,0.25)',
+  accentLight: '#8B84FF',
+  green:       '#22C55E',
+  greenDim:    'rgba(34,197,94,0.15)',
+  gold:        '#F59E0B',
+  goldDim:     'rgba(245,158,11,0.15)',
+  red:         '#EF4444',
 
   // Dots
-  dotGold:    '#C99700',
-  dotBlue:    '#5BA8D0',
-  dotPurple:  '#8B6FC0',
-  dotRed:     '#8B3A35',
-
-  // Accents
-  green:      '#3F7D3A',
-  greenLight: '#6AAD62',
-  greenMid:   '#6A9E54',
-  greenPale:  '#8DC470',
-  gold:       '#C99700',
+  dotCurrent:  '#38BDF8',
+  dotTarget:   '#F59E0B',
+  dotHistory:  '#A78BFA',
 
   // Text
-  textDark:   '#1F2A1F',
-  textWood:   '#2A2018',
-  textMuted:  '#7A9A7A',
-  textDim:    '#5A7260',
-  textLight:  '#EAE8DC',
-  textLegend: '#A8BBA0',
+  text1:       '#F1F5F9',
+  text2:       '#94A3B8',
+  text3:       '#475569',
 
-  // Controls
-  ctrlBorder: '#D8C8A8',
-  ctrlText:   '#2A2018',
+  // Borders
+  border:      'rgba(255,255,255,0.06)',
+  borderMid:   'rgba(255,255,255,0.10)',
+  borderAccent:'rgba(108,99,255,0.3)',
 }
 
 type Dot = { time: number }
@@ -69,53 +60,47 @@ const GUEST_MAX_SONGS = 3
 
 function getLevels(timeSig: number): { label: string; beats: number[]; desc: string; shortDesc: string }[] {
   if (timeSig === 4) return [
-    { label: 'Level 1', beats: [1],       desc: 'Nghe bài hát và tap vào phách mạnh — thử cảm nhận xem nhịp nào được nhấn rõ nhất nhé!', shortDesc: 'Phách mạnh' },
-    { label: 'Level 2', beats: [1,2,3,4], desc: 'Tap đều theo nhịp — giữ nhịp ổn định theo: 1 - 2 - 3 - 4', shortDesc: 'Đủ 4 phách' },
-    { label: 'Level 3', beats: [1,3],     desc: 'Chỉ tap vào phách 1 và phách 3 — bỏ qua phách 2 và 4', shortDesc: 'Phách 1 và 3' },
-    { label: 'Level 4', beats: [2,4],     desc: 'Tap vào phách 2 và phách 4 — những phách nhẹ nên sẽ khó cảm nhận hơn đấy!', shortDesc: 'Phách 2 và 4' },
+    { label: 'Level 1', beats: [1],       desc: 'Tap vào phách mạnh — cảm nhận chỗ nhấn rõ nhất', shortDesc: 'Phách 1' },
+    { label: 'Level 2', beats: [1,2,3,4], desc: 'Tap đều 4 phách — giữ nhịp ổn định 1-2-3-4',     shortDesc: '4 phách' },
+    { label: 'Level 3', beats: [1,3],     desc: 'Chỉ tap phách 1 và 3',                            shortDesc: 'Phách 1·3' },
+    { label: 'Level 4', beats: [2,4],     desc: 'Chỉ tap phách 2 và 4 — phách nhẹ',               shortDesc: 'Phách 2·4' },
   ]
   if (timeSig === 3) return [
-    { label: 'Level 1', beats: [1],     desc: 'Nghe bài hát và tap vào phách mạnh — thử cảm nhận xem nhịp nào được nhấn rõ nhất nhé!', shortDesc: 'Phách mạnh' },
-    { label: 'Level 2', beats: [1,2,3], desc: 'Tap đều theo nhịp — giữ nhịp ổn định theo: 1 - 2 - 3', shortDesc: 'Đủ 3 phách' },
-    { label: 'Level 3', beats: [1,3],   desc: 'Chỉ tap vào phách 1 và phách 3 — bỏ qua phách 2', shortDesc: 'Phách 1 và 3' },
-    { label: 'Level 4', beats: [2],     desc: 'Tap vào phách 2 — phách nhẹ nên sẽ khó cảm nhận hơn đấy!', shortDesc: 'Phách 2' },
-  ]
-  if (timeSig === 6) return [
-    { label: 'Level 1', beats: [1],           desc: 'Nghe bài hát và tap vào phách mạnh — thử cảm nhận xem nhịp nào được nhấn rõ nhất nhé!', shortDesc: 'Phách mạnh' },
-    { label: 'Level 2', beats: [1,2,3,4,5,6], desc: 'Tap đều theo nhịp — giữ nhịp ổn định theo: 1-2-3-4-5-6', shortDesc: 'Đủ 6 phách' },
-    { label: 'Level 3', beats: [1,4],         desc: 'Chỉ tap vào phách 1 và phách 4 — bỏ qua các phách còn lại', shortDesc: 'Phách 1 và 4' },
-    { label: 'Level 4', beats: [2,3,5,6],     desc: 'Tap vào phách 2-3 và 5-6 — những phách nhẹ nên sẽ khó cảm nhận hơn đấy!', shortDesc: 'Phách 2,3,5,6' },
+    { label: 'Level 1', beats: [1],     desc: 'Tap vào phách mạnh',     shortDesc: 'Phách 1' },
+    { label: 'Level 2', beats: [1,2,3], desc: 'Tap đủ 3 phách 1-2-3',   shortDesc: '3 phách' },
+    { label: 'Level 3', beats: [1,3],   desc: 'Tap phách 1 và 3',       shortDesc: 'Phách 1·3' },
+    { label: 'Level 4', beats: [2],     desc: 'Chỉ tap phách 2',        shortDesc: 'Phách 2' },
   ]
   return [
-    { label: 'Level 1', beats: [1],     desc: 'Tap vào phách mạnh', shortDesc: 'Phách mạnh' },
-    { label: 'Level 2', beats: Array.from({length:timeSig},(_,i)=>i+1), desc: `Tap đủ ${timeSig} phách`, shortDesc: `Đủ ${timeSig} phách` },
-    { label: 'Level 3', beats: [1,3],   desc: 'Tap phách 1 và 3', shortDesc: 'Phách 1 và 3' },
-    { label: 'Level 4', beats: [2,4],   desc: 'Tap phách 2 và 4', shortDesc: 'Phách 2 và 4' },
+    { label: 'Level 1', beats: [1], desc: 'Tap vào phách mạnh', shortDesc: 'Phách mạnh' },
+    { label: 'Level 2', beats: Array.from({length:timeSig},(_,i)=>i+1), desc: `Tap đủ ${timeSig} phách`, shortDesc: `${timeSig} phách` },
+    { label: 'Level 3', beats: [1,3], desc: 'Tap phách 1 và 3', shortDesc: 'Phách 1·3' },
+    { label: 'Level 4', beats: [2,4], desc: 'Tap phách 2 và 4', shortDesc: 'Phách 2·4' },
   ]
 }
 
 function generateTargetDots(song: RhythmSong, beats: number[]): Dot[] {
   const beatDur = 60 / song.tempo
   const dots: Dot[] = []
-  for (let bar = 0; bar < song.totalBars; bar++) {
-    for (const beat of beats) {
+  for (let bar = 0; bar < song.totalBars; bar++)
+    for (const beat of beats)
       dots.push({ time: bar * song.timeSignature * beatDur + (beat - 1) * beatDur })
-    }
-  }
   return dots
 }
 
 function BeatViz({ beats, timeSig }: { beats: number[]; timeSig: number }) {
   return (
-    <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+    <div style={{ display:'flex', gap:5, alignItems:'center' }}>
       {Array.from({length: timeSig}, (_, i) => {
         const active = beats.includes(i + 1)
         return (
           <div key={i} style={{
-            width: i === 0 ? 11 : 8, height: i === 0 ? 11 : 8,
+            width: i === 0 ? 12 : 9, height: i === 0 ? 12 : 9,
             borderRadius: '50%',
-            background: active ? C.greenPale : 'transparent',
-            border: `1.5px solid ${active ? C.greenPale : 'rgba(220,230,210,0.2)'}`,
+            background: active ? C.accent : 'transparent',
+            border: `2px solid ${active ? C.accent : C.border}`,
+            boxShadow: active ? `0 0 8px ${C.accentGlow}` : 'none',
+            transition: 'all 0.2s',
           }} />
         )
       })}
@@ -132,19 +117,19 @@ function stars(score: number) {
 }
 
 function getResultMsg(score: number): { emoji: string; title: string; body: string; hint?: string } {
-  if (score >= 95) return { emoji:'🏆', title:'XUẤT SẮC!', body:'Bạn cảm nhận nhịp rất tốt! Gần như hoàn hảo rồi!' }
-  if (score >= 80) return { emoji:'🎉', title:'RẤT TỐT!', body:'Tai nghe nhịp của bạn đang rất tốt! Tiếp tục phát huy nhé!' }
-  if (score >= 65) return { emoji:'💪', title:'KHÁ TỐT!', body:'Bạn đang cảm nhận được nhịp rồi! Luyện thêm một chút nữa thôi!' }
-  if (score >= 50) return { emoji:'🎯', title:'TIẾP TỤC!', body:'Bạn đang đi đúng hướng! Thử nghe lại bài và cảm nhận chỗ nhấn nhé!', hint:'Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn.' }
-  return { emoji:'🥁', title:'LUYỆN THÊM NHÉ!', body:'Đừng nản! Hãy nghe lại bài hát thật kỹ.', hint:'Phách mạnh thường là nơi bài hát tạo cảm giác "nhấn" rõ hơn.' }
+  if (score >= 95) return { emoji:'🏆', title:'XUẤT SẮC!',      body:'Cảm nhận nhịp hoàn hảo!' }
+  if (score >= 80) return { emoji:'🎉', title:'RẤT TỐT!',       body:'Tai nghe nhịp đang rất tốt! Tiếp tục phát huy!' }
+  if (score >= 65) return { emoji:'💪', title:'KHÁ TỐT!',       body:'Bạn đang cảm nhận được nhịp! Luyện thêm một chút!' }
+  if (score >= 50) return { emoji:'🎯', title:'TIẾP TỤC!',      body:'Đi đúng hướng rồi! Nghe lại và cảm nhận chỗ nhấn.', hint:'Phách mạnh là nơi bài tạo cảm giác "nhấn" rõ nhất.' }
+  return           { emoji:'🥁', title:'LUYỆN THÊM NHÉ!', body:'Đừng nản! Nghe thật kỹ trước khi tap.', hint:'Phách mạnh là nơi bài tạo cảm giác "nhấn" rõ nhất.' }
 }
 
 function Confetti({ show }: { show: boolean }) {
   if (!show) return null
-  const colors = [C.greenPale, C.gold, '#60A5FA', '#F472B6', C.dotPurple]
+  const colors = [C.accent, C.green, C.gold, '#F472B6', C.dotHistory]
   return (
     <div style={{ position:'fixed', inset:0, pointerEvents:'none', zIndex:999, overflow:'hidden' }}>
-      {Array.from({length:36},(_,i) => (
+      {Array.from({length:40},(_,i) => (
         <div key={i} style={{
           position:'absolute', left:`${Math.random()*100}%`, top:'-10px',
           width: 6+Math.random()*6, height: 6+Math.random()*6,
@@ -159,69 +144,65 @@ function Confetti({ show }: { show: boolean }) {
   )
 }
 
-// ── TapLandingPage — trang chào cho khách ──
-function TapLandingPage({ onGuest }: { onGuest: () => void }) {
-  const handleLogin = async () => {
-    const email = prompt('Email:')
-    const password = prompt('Mật khẩu:')
-    if (email && password) await supabase.auth.signInWithPassword({ email, password })
-  }
+// Score ring component
+function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
+  const r = (size - 8) / 2
+  const circ = 2 * Math.PI * r
+  const offset = circ * (1 - score / 100)
+  const color = score >= 80 ? C.green : score >= 60 ? C.gold : C.red
   return (
-    <div style={{ minHeight:'100vh', background:C.bgPage, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:24, padding:32, fontFamily:'Inter, sans-serif' }}>
-      <div style={{ fontSize:52 }}>🥁</div>
-      <h1 style={{ fontSize:26, fontWeight:800, color:C.textDark, textAlign:'center', margin:0 }}>Luyện nhịp cùng Thầy Văn Anh</h1>
-      <p style={{ color:'#8A8070', maxWidth:400, textAlign:'center', lineHeight:1.7, margin:0, fontSize:15 }}>
-        Nếu bạn là <strong style={{ color:C.green }}>học sinh của Thầy Văn Anh</strong>, hãy đăng nhập để lưu điểm và theo dõi tiến độ học tập.
-      </p>
-      <button onClick={handleLogin} style={{ background:C.green, border:'none', borderRadius:12, color:'#fff', cursor:'pointer', padding:'13px 36px', fontSize:15, fontWeight:700 }}>
-        Đăng nhập
-      </button>
-      <div style={{ color:'#B0A898', fontSize:13 }}>hoặc</div>
-      <button onClick={onGuest} style={{ background:'none', border:`1px solid ${C.ctrlBorder}`, borderRadius:12, color:'#8A8070', cursor:'pointer', padding:'11px 28px', fontSize:13, lineHeight:1.5 }}>
-        Xem thử 3 bài<br/><span style={{ fontSize:11, color:'#B0A898' }}>(không cần đăng nhập)</span>
-      </button>
-    </div>
+    <svg width={size} height={size} style={{ transform:'rotate(-90deg)', flexShrink:0 }}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.border} strokeWidth={5} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={5}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{ transition:'stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1)', filter:`drop-shadow(0 0 6px ${color}80)` }} />
+      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="central"
+        fill={color} fontSize={size * 0.22} fontWeight="800" fontFamily="system-ui"
+        style={{ transform:'rotate(90deg)', transformOrigin:`${size/2}px ${size/2}px` }}>
+        {score}
+      </text>
+    </svg>
   )
 }
 
 export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRole?: string }) {
   const isTeacher = userRole === 'teacher' || userRole === 'admin'
-  const isGuest = userRole === 'guest'
-  const isMobile = useIsMobile()
+  const isGuest   = userRole === 'guest'
+  const isMobile  = useIsMobile()
 
-  const [song, setSong] = useState<RhythmSong | null>(null)
+  const [song, setSong]           = useState<RhythmSong | null>(null)
   const [showSongList, setShowSongList] = useState(false)
-  const [showTeacher, setShowTeacher] = useState(false)
-  const [speed, setSpeed] = useState(1)
+  const [showTeacher, setShowTeacher]   = useState(false)
+  const [speed, setSpeed]         = useState(1)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [songTime, setSongTime] = useState(0)
-  const songTimeRef = useRef(0)
-  const wallRef = useRef(0)
-  const rafRef = useRef<number>(0)
+  const [songTime, setSongTime]   = useState(0)
+  const songTimeRef  = useRef(0)
+  const wallRef      = useRef(0)
+  const rafRef       = useRef<number>(0)
   const isPlayingRef = useRef(false)
 
-  const [progress, setProgress] = useState<Progress>({ current_level:1, best_scores:{'1':0,'2':0,'3':0,'4':0}, unlocked_levels:[1] })
+  const [progress, setProgress]   = useState<Progress>({ current_level:1, best_scores:{'1':0,'2':0,'3':0,'4':0}, unlocked_levels:[1] })
   const [activeLevel, setActiveLevel] = useState(1)
   const [showLevelUp, setShowLevelUp] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [showResultPopup, setShowResultPopup] = useState(false)
   const [lastScore, setLastScore] = useState<number | null>(null)
-  const [prevBest, setPrevBest] = useState(0)
-
-  const [tapHistory, setTapHistory] = useState<TapRecord[]>([])
+  const [prevBest, setPrevBest]   = useState(0)
+  const [tapHistory, setTapHistory]   = useState<TapRecord[]>([])
   const [currentDots, setCurrentDots] = useState<Dot[]>([])
-  const [saveMsg, setSaveMsg] = useState('')
-  const [pendingSave, setPendingSave] = useState(false)
+  const [saveMsg, setSaveMsg]     = useState('')
   const [guestSongsPlayed, setGuestSongsPlayed] = useState<string[]>([])
   const [otherStudentsCount, setOtherStudentsCount] = useState(0)
-  const [showOtherResults, setShowOtherResults] = useState(false)
   const [otherResults, setOtherResults] = useState<{name:string; score:number; level:number}[]>([])
+  const [showOtherResults, setShowOtherResults] = useState(false)
   const [showGuestLimit, setShowGuestLimit] = useState(false)
+  const [tapPulse, setTapPulse]   = useState(false)
 
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef       = useRef<HTMLDivElement>(null)
   const autoShowResultRef = useRef(false)
   const [containerW, setContainerW] = useState(800)
-  const [userName, setUserName] = useState('')
+  const [userName, setUserName]   = useState('')
 
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
 
@@ -234,10 +215,9 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
+      if (data.user)
         supabase.from('app_users').select('name').eq('id', data.user.id).single()
           .then(({ data: u }) => { if (u?.name) setUserName(u.name) })
-      }
     })
   }, [])
 
@@ -271,36 +251,27 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       if (!alreadyPlayed) setGuestSongsPlayed(prev => [...prev, s.title])
     }
     setSong(s); setCurrentDots([]); setTapHistory([])
-    setShowTeacher(false); setLastScore(null); setPendingSave(false)
-    setSongTime(0); songTimeRef.current = 0; setIsPlaying(false)
+    setShowTeacher(false); setLastScore(null); setSongTime(0)
+    songTimeRef.current = 0; setIsPlaying(false)
     await loadProgress(s.title)
-    // Load số học sinh khác đang tập cùng bài
     const { data: { user } } = await supabase.auth.getUser()
     const query = supabase.from('student_taps')
       .select('user_id, score, level, app_users(name)')
-      .eq('song_title', s.title)
-      .order('created_at', { ascending: false })
+      .eq('song_title', s.title).order('created_at', { ascending: false })
     if (user) query.neq('user_id', user.id)
     const { data: others } = await query.limit(20)
     if (others && others.length > 0) {
       const seen = new Set<string>()
       const unique: {name:string; score:number; level:number}[] = []
       others.forEach((r: any) => {
-        if (!seen.has(r.user_id)) {
-          seen.add(r.user_id)
-          unique.push({ name: r.app_users?.name ?? 'Học sinh', score: r.score, level: r.level })
-        }
+        if (!seen.has(r.user_id)) { seen.add(r.user_id); unique.push({ name: r.app_users?.name ?? 'Học sinh', score: r.score, level: r.level }) }
       })
-      setOtherStudentsCount(unique.length)
-      setOtherResults(unique)
-    } else {
-      setOtherStudentsCount(0); setOtherResults([])
-    }
+      setOtherStudentsCount(unique.length); setOtherResults(unique)
+    } else { setOtherStudentsCount(0); setOtherResults([]) }
   }
 
   useEffect(() => { if (song) loadHistory(song.title, activeLevel) }, [activeLevel, song?.title])
 
-  // Auto hiện kết quả khi bài kết thúc
   useEffect(() => {
     if (!isPlaying && autoShowResultRef.current) {
       autoShowResultRef.current = false
@@ -314,10 +285,10 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     }
   }, [isPlaying])
 
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const schedulerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const nextBeatRef = useRef(0)
-  const beatIdxRef = useRef(0)
+  const audioCtxRef    = useRef<AudioContext | null>(null)
+  const schedulerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
+  const nextBeatRef    = useRef(0)
+  const beatIdxRef     = useRef(0)
 
   const stopMetronome = () => { if (schedulerRef.current) { clearInterval(schedulerRef.current); schedulerRef.current = null } }
 
@@ -338,9 +309,9 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
         const osc = c.createOscillator(); const gain = c.createGain()
         osc.connect(gain); gain.connect(c.destination)
         const isBar1 = beatIdxRef.current % song.timeSignature === 0
-        osc.frequency.value = isBar1 ? 880 : 440
-        gain.gain.setValueAtTime(0.45, nextBeatRef.current)
-        gain.gain.exponentialRampToValueAtTime(0.001, nextBeatRef.current + 0.07)
+        osc.frequency.value = isBar1 ? 1000 : 500
+        gain.gain.setValueAtTime(0.4, nextBeatRef.current)
+        gain.gain.exponentialRampToValueAtTime(0.001, nextBeatRef.current + 0.06)
         osc.start(nextBeatRef.current); osc.stop(nextBeatRef.current + 0.1)
         nextBeatRef.current += bd; beatIdxRef.current++
       }
@@ -367,6 +338,8 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   const handleTap = useCallback(() => {
     if (!isPlayingRef.current) return
     setCurrentDots(prev => [...prev, { time: songTimeRef.current }])
+    setTapPulse(true)
+    setTimeout(() => setTapPulse(false), 100)
   }, [])
 
   useEffect(() => {
@@ -375,7 +348,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       if (e.code === 'Space') { e.preventDefault(); handleTap() }
       if (e.code === 'KeyP' || e.code === 'Enter') { e.preventDefault(); if (song) setIsPlaying(p => !p) }
-      if (e.code === 'KeyR') { e.preventDefault(); setCurrentDots([]); setLastScore(null); seekTo(0); setIsPlaying(false) }
+      if (e.code === 'KeyR') { e.preventDefault(); handleReset() }
       if (e.code === 'KeyT') { e.preventDefault(); setShowTeacher(t => !t) }
       if (e.code === 'Escape') { if (showResultPopup) setShowResultPopup(false); else onClose() }
     }
@@ -390,11 +363,11 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     if (isPlaying) startMetronome(c)
   }
 
-  const beatDur = song ? 60 / song.tempo / speed : 0.5
-  const levels = song ? getLevels(song.timeSignature) : []
-  const levelConfig = levels[activeLevel - 1]
-  const targetDots = song && levelConfig ? generateTargetDots(song, levelConfig.beats) : []
-  const targetDotsScaled = targetDots.map(d => ({ time: d.time / speed }))
+  const beatDur           = song ? 60 / song.tempo / speed : 0.5
+  const levels            = song ? getLevels(song.timeSignature) : []
+  const levelConfig       = levels[activeLevel - 1]
+  const targetDots        = song && levelConfig ? generateTargetDots(song, levelConfig.beats) : []
+  const targetDotsScaled  = targetDots.map(d => ({ time: d.time / speed }))
 
   const scoredCurrent: ScoredDot[] = currentDots.map(d => {
     if (targetDotsScaled.length === 0) return { ...d, hit: false }
@@ -420,7 +393,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     if (!user) { setSaveMsg('Chưa đăng nhập!'); return }
     await supabase.from('student_taps').insert({ user_id: user.id, song_title: song.title, dots: currentDots, score, level: activeLevel })
     const newBestScores = { ...progress.best_scores, [String(activeLevel)]: Math.max(score, bestThisLevel) }
-    const newUnlocked = [...progress.unlocked_levels]
+    const newUnlocked   = [...progress.unlocked_levels]
     let leveledUp = false
     if (score >= UNLOCK_SCORE && activeLevel < levels.length && !newUnlocked.includes(activeLevel + 1)) {
       newUnlocked.push(activeLevel + 1); leveledUp = true
@@ -433,7 +406,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
     }, { onConflict: 'user_id,song_title' })
     setProgress(p => ({ ...p, best_scores: newBestScores, unlocked_levels: newUnlocked }))
     setTapHistory(prev => [{ id: Date.now().toString(), dots: currentDots, score, level: activeLevel, created_at: new Date().toISOString() }, ...prev.slice(0,2)])
-    setCurrentDots([]); setShowResultPopup(false); setPendingSave(false)
+    setCurrentDots([]); setShowResultPopup(false)
     if (leveledUp) { setShowConfetti(true); setShowLevelUp(true); setTimeout(() => { setShowConfetti(false); setShowLevelUp(false) }, 4000) }
     else if (score >= 80) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000) }
     setSaveMsg('Đã lưu!'); setTimeout(() => setSaveMsg(''), 2000)
@@ -445,188 +418,229 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
   }
 
   const handleLogin = async () => {
-    const email = prompt('Email:')
+    const email    = prompt('Email:')
     const password = prompt('Mật khẩu:')
     if (email && password) await supabase.auth.signInWithPassword({ email, password })
   }
 
-  const nowX = containerW * NOW_X_FRAC
+  const nowX         = containerW * NOW_X_FRAC
   const scrollOffset = songTime * PX_PER_SEC
-  const fmtTime = (t: number) => `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`
-  const resultMsg = lastScore !== null ? getResultMsg(lastScore) : null
-  const starCount = lastScore !== null ? stars(lastScore) : 0
-
-  // History colors — mờ dần
-  const histColors = [C.dotPurple, C.dotPurple, C.dotPurple]
-  const histOpacity = [1, 0.65, 0.38]
+  const fmtTime      = (t: number) => `${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`
+  const resultMsg    = lastScore !== null ? getResultMsg(lastScore) : null
+  const starCount    = lastScore !== null ? stars(lastScore) : 0
+  const histOpacity  = [1, 0.55, 0.3]
+  const progress_pct = totalDur > 0 ? (songTime / totalDur) * 100 : 0
 
   return (
-    <div style={{ position:'fixed', inset:0, background:C.bgPage, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'Inter, sans-serif' }}>
+    <div style={{ position:'fixed', inset:0, background:C.bg, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'"DM Sans", system-ui, sans-serif', color:C.text1 }}>
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        .tap-btn-glow { box-shadow: 0 0 32px ${C.accentGlow}, 0 0 64px ${C.accentGlow}; }
+        .tap-btn-idle { box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        .tap-pulse { animation: tapRipple 0.12s ease-out; }
+        @keyframes tapRipple { 0%{transform:scale(1)} 50%{transform:scale(0.94)} 100%{transform:scale(1)} }
+        .ctrl-btn:hover { background: ${C.bgCardHover} !important; border-color: ${C.borderMid} !important; }
+        .speed-btn:hover { background: ${C.bgCard} !important; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 2px; }
+      `}</style>
+
       <Confetti show={showConfetti} />
 
-      {/* ── HEADER ── */}
-      <div style={{ background:C.bgPage, borderBottom:`1px solid ${C.bgPageBorder}`, padding: isMobile ? '0 12px' : '0 20px', height: isMobile ? 48 : 52, display:'flex', alignItems:'center', gap: isMobile ? 8 : 14, flexShrink:0 }}>
-        <svg width={isMobile?28:36} height={isMobile?28:36} viewBox="0 0 965 932" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink:0 }} aria-label="Logo">
-          <path fill="#14532D" d="M485.5,5.14C230.7,5.14,24.14,211.7,24.14,466.5s206.56,461.37,461.36,461.37,461.36-206.56,461.36-461.37S740.3,5.14,485.5,5.14ZM485.5,883.81c-230.47,0-417.3-186.84-417.3-417.31S255.03,49.2,485.5,49.2s417.3,186.83,417.3,417.3-186.83,417.31-417.3,417.31Z"/>
-          <path fill="#14532D" d="M871.98,503h-284.98s-.01-62.01-.01-62.01h234.96s.05-26.12.05-26.12l.94-6.87h-235.94s0-126.99,0-126.99h-31.01l.02,127h-70.02l.02-159h-32.02l.02,159-158-.02v33.02l158-.02v62.02l-158-.02v33.02l158-.02-.02,164h32.02l-.02-164h70.02v194.99s30.98,0,30.98,0l.04-194.98h284.96v-33ZM556,503h-70v-62h70v62Z"/>
-          <path fill="#14532D" d="M437.1,352.53c-32.96-49.63-86.33-79.48-145.64-75.14-45,3.29-85.41,26.85-113.24,61.9-22.85,28.79-36.56,63.15-40.93,99.78l-1.09,13.87c-2.13,26.81,2.05,52.76,10.82,78.07,25.52,73.59,90.73,125.65,170.74,118.53,33.32-2.96,63.64-17.38,88.57-39.1l15.13-14.97,16.56-21.02v81.88c-32.45,23.82-70.48,39.73-110.86,43.64l-8.18.79-32.78-.18c-49.9-3.88-96.27-23.99-133.71-57.03l-19.99-20.07c-94.04-106-76.94-272.39,38.35-355.71,80.22-57.97,186.6-57.06,267.12,1.73l.06,81.08c1.61,1.44.72,3.12-.93,1.95Z"/>
-        </svg>
-
-        {!isMobile && <span style={{ fontSize:13, fontWeight:700, color:C.textDark, flexShrink:0 }}>Thầy Văn Anh Guitar</span>}
-
-        <button onClick={() => setShowSongList(true)} style={{ padding: isMobile?'5px 10px':'5px 13px', borderRadius:8, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize: isMobile?11:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
-          🎵 {isMobile ? 'Chọn bài' : 'Chọn bài ▾'}
-        </button>
-
-        {/* Tên bài — trung tâm */}
-        <div style={{ flex:1, textAlign:'center', overflow:'hidden' }}>
-          {song ? (
-            <span style={{ fontSize: isMobile?13:17, fontWeight:800, color:C.textDark, letterSpacing:'0.01em', display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-              {song.title.toUpperCase()}
-            </span>
-          ) : (
-            <span style={{ fontSize:13, color:'#B0A898' }}>Chưa chọn bài</span>
-          )}
-          {song && !isMobile && <span style={{ fontSize:10, color:'#8A8070', marginLeft:8 }}>{song.tempo} BPM · {song.timeSignature}/4</span>}
+      {/* ══ HEADER ══ */}
+      <div style={{ background:C.bgSurface, borderBottom:`1px solid ${C.border}`, padding: isMobile ? '0 12px' : '0 20px', height: isMobile ? 52 : 56, display:'flex', alignItems:'center', gap: 12, flexShrink:0 }}>
+        {/* Logo mark */}
+        <div style={{ width:32, height:32, borderRadius:8, background:`linear-gradient(135deg, ${C.accent}, ${C.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0, boxShadow:`0 2px 8px ${C.accentGlow}` }}>
+          🥁
         </div>
 
-        {/* Speed — chỉ desktop */}
+        {!isMobile && <span style={{ fontSize:13, fontWeight:700, color:C.text1, flexShrink:0, letterSpacing:'-0.02em' }}>Tap Nhịp</span>}
+
+        {/* Song picker */}
+        <button onClick={() => setShowSongList(true)}
+          style={{ padding:'6px 12px', borderRadius:8, border:`1px solid ${C.borderMid}`, background:C.bgCard, color:C.text2, fontSize:12, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+          <span>🎵</span>
+          <span>{isMobile ? 'Chọn bài' : 'Chọn bài hát'}</span>
+          <span style={{ color:C.text3 }}>▾</span>
+        </button>
+
+        {/* Song title center */}
+        <div style={{ flex:1, textAlign:'center', overflow:'hidden' }}>
+          {song ? (
+            <div>
+              <div style={{ fontSize: isMobile?14:16, fontWeight:800, letterSpacing:'-0.03em', color:C.text1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {song.title}
+              </div>
+              {!isMobile && <div style={{ fontSize:11, color:C.text3, marginTop:1 }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtTime(totalDur)}</div>}
+            </div>
+          ) : (
+            <span style={{ fontSize:13, color:C.text3 }}>Chưa chọn bài</span>
+          )}
+        </div>
+
+        {/* Speed — desktop only */}
         {!isMobile && song && (
-          <div style={{ display:'flex', gap:3, flexShrink:0 }}>
+          <div style={{ display:'flex', gap:2, background:C.bgCard, borderRadius:8, padding:2, border:`1px solid ${C.border}`, flexShrink:0 }}>
             {[0.5,0.75,1,1.25].map(s => (
-              <button key={s} onClick={() => { setSpeed(s); if(isPlaying){setIsPlaying(false); setTimeout(()=>setIsPlaying(true),50)} }}
-                style={{ padding:'3px 8px', borderRadius:5, border:`1px solid ${C.ctrlBorder}`, fontSize:10, cursor:'pointer', fontWeight: speed===s?700:400,
-                  background: speed===s ? C.green : C.bgWoodCard, color: speed===s ? '#fff' : '#8A8070' }}>
-                {s===0.5?'50%':s===0.75?'75%':s===1?'100%':'125%'}
+              <button key={s} className="speed-btn"
+                onClick={() => { setSpeed(s); if(isPlaying){setIsPlaying(false); setTimeout(()=>setIsPlaying(true),50)} }}
+                style={{ padding:'4px 10px', borderRadius:6, border:'none', fontSize:11, cursor:'pointer', fontFamily:'inherit', fontWeight:600, transition:'all 0.15s',
+                  background: speed===s ? C.accent : 'transparent',
+                  color: speed===s ? '#fff' : C.text3 }}>
+                {s===1?'1×':s+'×'}
               </button>
             ))}
           </div>
         )}
 
-        {/* User + Close */}
-        <div style={{ display:'flex', alignItems:'center', gap: isMobile?6:8, flexShrink:0 }}>
-          {!isMobile && (userName ? (
-            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'4px 10px', borderRadius:20, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard }}>
-              <div style={{ width:20, height:20, borderRadius:'50%', background:C.green, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff' }}>
-                {userName.charAt(0).toUpperCase()}
-              </div>
-              <span style={{ fontSize:11, color:'#5A4A30' }}>{userName}</span>
-            </div>
-          ) : (
-            <button onClick={handleLogin} style={{ display:'flex', alignItems:'center', gap:5, padding:'4px 12px', borderRadius:20, border:`1px solid ${C.ctrlBorder}`, background:'none', color:'#8A8070', fontSize:12, cursor:'pointer' }}>
-              👤 Đăng nhập
-            </button>
-          ))}
-          {isMobile && userName && (
-            <div style={{ width:28, height:28, borderRadius:'50%', background:C.green, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#fff', flexShrink:0 }}>
+        {/* User chip */}
+        {!isMobile && (userName ? (
+          <div style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 10px', borderRadius:20, border:`1px solid ${C.border}`, background:C.bgCard, flexShrink:0 }}>
+            <div style={{ width:22, height:22, borderRadius:'50%', background:`linear-gradient(135deg,${C.accent},${C.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#fff' }}>
               {userName.charAt(0).toUpperCase()}
             </div>
-          )}
-          <button onClick={onClose} style={{ width:28, height:28, borderRadius:6, border:`1px solid ${C.ctrlBorder}`, background:'none', color:'#8A8070', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
-        </div>
+            <span style={{ fontSize:12, color:C.text2 }}>{userName}</span>
+          </div>
+        ) : (
+          <button onClick={handleLogin} style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:20, border:`1px solid ${C.border}`, background:'none', color:C.text3, fontSize:12, cursor:'pointer', flexShrink:0 }}>
+            👤 Đăng nhập
+          </button>
+        ))}
+
+        {isMobile && userName && (
+          <div style={{ width:30, height:30, borderRadius:'50%', background:`linear-gradient(135deg,${C.accent},${C.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'#fff', flexShrink:0 }}>
+            {userName.charAt(0).toUpperCase()}
+          </div>
+        )}
+
+        <button onClick={onClose}
+          style={{ width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:'none', color:C.text3, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}
+          onMouseEnter={e=>(e.currentTarget.style.background=C.bgCard)}
+          onMouseLeave={e=>(e.currentTarget.style.background='none')}>
+          ✕
+        </button>
       </div>
 
-      {/* ── GUEST BANNER ── */}
+      {/* Guest banner */}
       {isGuest && (
-        <div style={{ background:'rgba(63,125,58,0.08)', borderBottom:`1px solid rgba(63,125,58,0.15)`, padding:'5px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
-          <span style={{ color:C.green, fontSize:12 }}>🎵 Chế độ khách — đã thử <strong>{guestSongsPlayed.length}/{GUEST_MAX_SONGS}</strong> bài · Điểm không được lưu</span>
-          <button onClick={handleLogin} style={{ background:C.green, border:'none', borderRadius:6, color:'#fff', fontSize:11, fontWeight:600, cursor:'pointer', padding:'3px 12px' }}>Đăng nhập để lưu điểm</button>
+        <div style={{ background:'rgba(108,99,255,0.08)', borderBottom:`1px solid rgba(108,99,255,0.15)`, padding:'6px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <span style={{ color:C.accentLight, fontSize:12 }}>✦ Chế độ khách — đã thử <strong>{guestSongsPlayed.length}/{GUEST_MAX_SONGS}</strong> bài</span>
+          <button onClick={handleLogin} style={{ background:C.accent, border:'none', borderRadius:6, color:'#fff', fontSize:11, fontWeight:600, cursor:'pointer', padding:'4px 12px' }}>Đăng nhập</button>
         </div>
       )}
 
-      {/* ── CHƯA CHỌN BÀI ── */}
+      {/* ══ EMPTY STATE ══ */}
       {!song && (
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:20, padding:40 }}>
-          <div style={{ fontSize:52 }}>🥁</div>
-          <div style={{ color:C.textDark, fontWeight:800, fontSize:22, textAlign:'center' }}>Luyện nhịp cùng Thầy Văn Anh</div>
-          <div style={{ background:C.bgWoodCard, border:`1px solid ${C.ctrlBorder}`, borderRadius:16, padding:'24px 32px', maxWidth:420, width:'100%' }}>
-            {[['1️⃣','Chọn bài hát muốn luyện'],['2️⃣','Bấm Bắt đầu hoặc phím P để phát nhạc'],['3️⃣','Nghe metronome — tiếng CLICK TO là phách mạnh'],['4️⃣','Bấm nút TAP hoặc phím Space đúng phách'],['5️⃣','Bấm Xem kết quả → Lưu điểm để lên level']].map(([n,t]) => (
-              <div key={n} style={{ display:'flex', gap:12, alignItems:'flex-start', marginBottom:12 }}>
-                <span style={{ fontSize:17, flexShrink:0 }}>{n}</span>
-                <span style={{ color:'#8A8070', fontSize:14, lineHeight:1.6 }}>{t}</span>
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:24, padding:40 }}>
+          <div style={{ position:'relative' }}>
+            <div style={{ width:80, height:80, borderRadius:'50%', background:`linear-gradient(135deg,${C.accent}22,${C.accent}44)`, border:`2px solid ${C.accent}44`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:36 }}>
+              🥁
+            </div>
+            <div style={{ position:'absolute', inset:-8, borderRadius:'50%', border:`1px solid ${C.accent}22`, animation:'ping 2s cubic-bezier(0,0,0.2,1) infinite' }} />
+            <style>{`@keyframes ping{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:0;transform:scale(1.3)}}`}</style>
+          </div>
+
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize: isMobile?20:26, fontWeight:800, letterSpacing:'-0.03em', marginBottom:8 }}>Luyện cảm nhận nhịp</div>
+            <div style={{ fontSize:14, color:C.text3, maxWidth:360, lineHeight:1.6 }}>Nghe nhạc, tap theo phách — rèn tai nghe nhịp điệu chuẩn như nhạc sĩ chuyên nghiệp.</div>
+          </div>
+
+          <div style={{ background:C.bgSurface, border:`1px solid ${C.border}`, borderRadius:16, padding:'20px 24px', maxWidth:380, width:'100%', display:'flex', flexDirection:'column', gap:12 }}>
+            {[
+              ['🎵', 'Chọn bài hát', 'Hàng chục bài đa thể loại'],
+              ['▶',  'Phát nhạc',   'Nhấn P hoặc nút Bắt đầu'],
+              ['👂', 'Nghe metronome', 'Click TO là phách mạnh'],
+              ['✋', 'Tap theo nhịp', 'Space hoặc nút TAP lớn'],
+              ['🏆', 'Xem điểm & lên level', 'Đạt 80 điểm để mở level mới'],
+            ].map(([icon, title, sub]) => (
+              <div key={title} style={{ display:'flex', gap:12, alignItems:'center' }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:C.bgCard, border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>{icon}</div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.text1 }}>{title}</div>
+                  <div style={{ fontSize:11, color:C.text3 }}>{sub}</div>
+                </div>
               </div>
             ))}
-            <div style={{ marginTop:10, padding:'10px 14px', background:'rgba(63,125,58,0.06)', borderRadius:10, border:`1px solid rgba(63,125,58,0.15)`, display:'flex', gap:8, alignItems:'center' }}>
-              <span>💡</span>
-              <span style={{ color:C.green, fontSize:13 }}>Đạt <strong>80 điểm</strong> để mở khoá level tiếp theo!</span>
-            </div>
           </div>
-          <button onClick={() => setShowSongList(true)} style={{ padding:'14px 44px', background:C.green, border:'none', borderRadius:12, color:'#fff', fontWeight:700, fontSize:17, cursor:'pointer' }}>
+
+          <button onClick={() => setShowSongList(true)}
+            style={{ padding:'14px 48px', background:`linear-gradient(135deg,${C.accent},${C.accentLight})`, border:'none', borderRadius:12, color:'#fff', fontWeight:700, fontSize:16, cursor:'pointer', boxShadow:`0 8px 24px ${C.accentGlow}`, letterSpacing:'-0.02em' }}>
             🎵 Chọn bài hát
           </button>
         </div>
       )}
 
-      {/* ── MAIN ── */}
+      {/* ══ MAIN ══ */}
       {song && (
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-          {/* LEVEL BAR — nâu gỗ */}
-          <div style={{ background:C.bgWood, borderBottom:`1px solid ${C.bgWoodBorder}`, padding: isMobile?'7px 12px':'9px 20px', display:'flex', alignItems:'center', gap: isMobile?6:10, flexShrink:0, overflowX: isMobile?'auto':'visible' }}>
+          {/* LEVEL BAR */}
+          <div style={{ background:C.bgSurface, borderBottom:`1px solid ${C.border}`, padding: isMobile?'8px 12px':'10px 20px', display:'flex', alignItems:'center', gap: isMobile?6:8, flexShrink:0, overflowX:'auto' }}>
             {levels.map((lv, i) => {
-              const lvNum = i + 1
+              const lvNum    = i + 1
               const unlocked = progress.unlocked_levels.includes(lvNum)
               const isActive = activeLevel === lvNum
-              const best = progress.best_scores[String(lvNum)] ?? 0
+              const best     = progress.best_scores[String(lvNum)] ?? 0
               return (
-                <button key={lvNum} onClick={() => unlocked && setActiveLevel(lvNum)} style={{
-                  padding:'7px 18px', borderRadius:8,
-                  border: `1px solid ${isActive ? C.green : C.bgWoodBorder}`,
-                  background: isActive ? C.green : C.bgWoodCard,
-                  color: isActive ? '#fff' : unlocked ? C.textWood : '#ACA090',
-                  fontSize:12, fontWeight:600, cursor: unlocked ? 'pointer' : 'not-allowed',
-                  opacity: unlocked ? 1 : 0.5,
-                  display:'flex', alignItems:'center', gap:5,
-                }}>
-                  {!unlocked && <span style={{ fontSize:11 }}>🔒</span>}
+                <button key={lvNum} onClick={() => unlocked && setActiveLevel(lvNum)}
+                  style={{ padding: isMobile?'6px 12px':'7px 16px', borderRadius:8, cursor: unlocked?'pointer':'not-allowed', fontFamily:'inherit', fontSize:12, fontWeight:600, flexShrink:0, transition:'all 0.15s',
+                    background: isActive ? C.accent : C.bgCard,
+                    color: isActive ? '#fff' : unlocked ? C.text2 : C.text3,
+                    border: `1px solid ${isActive ? C.accent : C.border}`,
+                    opacity: unlocked ? 1 : 0.4,
+                    boxShadow: isActive ? `0 2px 12px ${C.accentGlow}` : 'none',
+                  }}>
+                  {!unlocked && <span style={{ marginRight:4 }}>🔒</span>}
                   {lv.label}
-                  {unlocked && best > 0 && <span style={{ fontSize:9, opacity:0.7 }}>· {best}đ</span>}
+                  {unlocked && best > 0 && <span style={{ marginLeft:6, fontSize:10, opacity:0.7, fontWeight:400 }}>{best}đ</span>}
                 </button>
               )
             })}
-            {!isMobile && <div style={{ flex:1, textAlign:'center', fontSize:12, color:'#8A7A5A' }}>
-              Cần <strong style={{ color:C.gold, fontSize:13 }}>{UNLOCK_SCORE}</strong> điểm để mở khoá
-            </div>}
-            <div style={{ fontSize: isMobile?11:12, color:'#8A7A5A', flexShrink:0, marginLeft: isMobile?'auto':0 }}>
-              {isMobile ? <><strong style={{ color:C.green }}>{bestThisLevel}</strong>/100</> : <>Điểm hiện tại: <strong style={{ color:C.green }}>{bestThisLevel}</strong> / 100</>}
+            <div style={{ flex:1 }} />
+            <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+              <div style={{ fontSize:11, color:C.text3 }}>{isMobile?'Best:':'Kỷ lục:'}</div>
+              <div style={{ fontSize:13, fontWeight:700, color: bestThisLevel >= 80 ? C.green : bestThisLevel >= 60 ? C.gold : C.text2 }}>
+                {bestThisLevel}<span style={{ fontSize:10, color:C.text3, fontWeight:400 }}>/100</span>
+              </div>
             </div>
           </div>
 
-          {/* MISSION — căn giữa, chữ sáng */}
-          <div style={{ background:C.bgMission, borderBottom:`1px solid ${C.bgMissionBorder}`, padding: isMobile?'7px 12px':'10px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap: isMobile?5:7, flexShrink:0 }}>
-            <div style={{ fontSize: isMobile?12:13, color:C.textLight, fontWeight:500, textAlign:'center', lineHeight:1.4 }}>
-              🎯 {levelConfig?.desc}
+          {/* MISSION BAR */}
+          <div style={{ background:C.bg, borderBottom:`1px solid ${C.border}`, padding: isMobile?'8px 12px':'10px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:28, height:28, borderRadius:7, background:C.accentGlow, border:`1px solid ${C.borderAccent}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0 }}>🎯</div>
+              <span style={{ fontSize: isMobile?12:13, color:C.text2, lineHeight:1.4 }}>{levelConfig?.desc}</span>
             </div>
             {levelConfig && <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />}
           </div>
 
-
-          {/* MAIN SCROLL AREA */}
-          <div ref={scrollRef} style={{ flex:1, background:C.bgMain, position:'relative', overflow:'hidden', display:'flex' }}>
-
-            {/* Dot tracks */}
+          {/* SCROLL AREA */}
+          <div ref={scrollRef} style={{ flex:1, background:C.bg, position:'relative', overflow:'hidden', display:'flex' }}>
             <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
 
               {/* Playhead arrow */}
               <div style={{ position:'absolute', left:nowX, top:0, zIndex:11, transform:'translateX(-50%)', pointerEvents:'none' }}>
-                <div style={{ width:0, height:0, borderLeft:'7px solid transparent', borderRight:'7px solid transparent', borderTop:`10px solid ${C.greenPale}` }} />
+                <div style={{ width:0, height:0, borderLeft:'6px solid transparent', borderRight:'6px solid transparent', borderTop:`8px solid ${C.accent}`, filter:`drop-shadow(0 0 6px ${C.accent})` }} />
               </div>
 
-              {/* Playhead line — bắt đầu dưới lyrics */}
-              <div style={{ position:'absolute', left:nowX, top:54, bottom:0, width:2, background:C.greenPale, opacity:0.45, zIndex:10, pointerEvents:'none' }} />
+              {/* Playhead line */}
+              <div style={{ position:'absolute', left:nowX, top:14, bottom:0, width:1, background:C.accent, opacity:0.3, zIndex:10, pointerEvents:'none' }} />
 
               {/* Lyrics */}
-              <div style={{ position:'absolute', top:10, left:0, right:0, height:40, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', top:16, left:0, right:0, height:32, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {song.lyrics.map((l,i) => {
                   const lx = l.time * PX_PER_SEC
                   const nextTime = song.lyrics[i+1]?.time ?? l.time + beatDur*2
                   const isActive = songTime*speed >= l.time && songTime*speed < nextTime
                   return (
                     <div key={l.id} style={{ position:'absolute', left:lx/speed, transform:'translateX(-50%)',
-                      fontSize: 18, fontWeight: 500,
-                      color: isActive ? C.gold : '#D0CFCA',
-                      transition:'color 0.08s', whiteSpace:'nowrap', userSelect:'none',
-                      letterSpacing: '0.02em' }}>
+                      fontSize:16, fontWeight:700,
+                      color: isActive ? C.gold : C.text3,
+                      filter: isActive ? `drop-shadow(0 0 8px ${C.gold}88)` : 'none',
+                      transition:'color 0.1s, filter 0.1s',
+                      whiteSpace:'nowrap', userSelect:'none', letterSpacing:'-0.02em' }}>
                       {l.text}
                     </div>
                   )
@@ -634,315 +648,338 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
               </div>
 
               {/* Separator */}
-              <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:'rgba(220,230,210,0.08)' }} />
+              <div style={{ position:'absolute', top:50, left:0, right:0, height:1, background:C.border }} />
 
-              {/* Teacher dots — top:54, height:28 */}
+              {/* Target dots (teacher) */}
               {showTeacher && (
-                <div style={{ position:'absolute', top:54, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+                <div style={{ position:'absolute', top:50, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                   {targetDotsScaled.map((d,i) => (
                     <div key={'td'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                      width:10, height:10, borderRadius:'50%', background:C.dotGold, top:9, opacity:0.9 }} />
+                      width:10, height:10, borderRadius:'50%', background:C.dotTarget, top:10,
+                      boxShadow:`0 0 8px ${C.dotTarget}88` }} />
                   ))}
                 </div>
               )}
 
               {/* Current dots */}
-              <div style={{ position:'absolute', top:82, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', top:80, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {scoredCurrent.map((d,i) => (
                   <div key={'cd'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                     width:11, height:11, borderRadius:'50%', top:9,
-                    background: targetDotsScaled.length>0 ? (d.hit ? C.dotBlue : 'transparent') : C.dotBlue,
-                    border: targetDotsScaled.length>0 && !d.hit ? `2px solid ${C.dotBlue}` : 'none' }} />
+                    background: targetDotsScaled.length>0 ? (d.hit ? C.dotCurrent : 'transparent') : C.dotCurrent,
+                    border: targetDotsScaled.length>0 && !d.hit ? `2px solid ${C.dotCurrent}` : 'none',
+                    boxShadow: d.hit ? `0 0 6px ${C.dotCurrent}88` : 'none' }} />
                 ))}
               </div>
 
               {/* History rows */}
-              {tapHistory.map((h, hi) => {
-                const topBase = 82 + 28 + hi * 28
-                return (
-                  <div key={h.id} style={{ position:'absolute', top:topBase, left:0, right:0, height:28, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
-                    {h.dots.map((d,di) => (
-                      <div key={di} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                        width:9, height:9, borderRadius:'50%', top:10,
-                        background:histColors[hi] }} />
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Legend — 232px desktop, ẩn mobile */}
-            {!isMobile && <div style={{ width:232, flexShrink:0, paddingTop:54, paddingLeft:12, paddingRight:10, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid rgba(220,230,210,0.1)` }}>
-
-              {/* Đáp án Thầy — height:28px khớp với teacher dot row */}
-              <div style={{ height:28, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:C.dotGold, minWidth:0 }}>
-                  <div style={{ width:16, height:2, borderRadius:1, background:C.dotGold, flexShrink:0 }} />
-                  <span>Đáp án Thầy</span>
-                </div>
-                <button onClick={() => setShowTeacher(t=>!t)}
-                  style={{ padding:'1px 6px', borderRadius:4, border:`1px solid rgba(220,230,210,0.15)`, background:'rgba(220,230,210,0.06)', fontSize:9, color:C.textLegend, cursor:'pointer', flexShrink:0, marginLeft:4 }}>
-                  {showTeacher ? 'Ẩn' : 'Xem'}
-                </button>
-              </div>
-
-              {/* Lần này */}
-              <div style={{ height:28, display:'flex', alignItems:'center' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:C.dotBlue }}>
-                  <div style={{ width:16, height:2, borderRadius:1, background:C.dotBlue, flexShrink:0 }} />
-                  <span>Lần này</span>
-                </div>
-              </div>
-
-              {/* History — gióng thẳng với dot rows */}
               {tapHistory.map((h, hi) => (
-                <div key={h.id} style={{ height:28, display:'flex', alignItems:'center', justifyContent:'space-between', opacity:histOpacity[hi] }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:C.dotPurple, minWidth:0 }}>
-                    <div style={{ width:16, height:2, borderRadius:1, background:C.dotPurple, flexShrink:0 }} />
-                    <span style={{ whiteSpace:'nowrap' }}>Lần {tapHistory.length - hi} · {h.score}đ</span>
-                  </div>
-                  <button onClick={() => handleDeleteHistory(h.id)}
-                    style={{ width:16, height:16, borderRadius:3, border:`1px solid rgba(220,230,210,0.15)`, background:'rgba(220,230,210,0.06)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#A88080', fontSize:9, flexShrink:0, marginLeft:4 }}>
-                    ✕
-                  </button>
+                <div key={h.id} style={{ position:'absolute', top:80+30+hi*26, left:0, right:0, height:26, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
+                  {h.dots.map((d,di) => (
+                    <div key={di} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
+                      width:8, height:8, borderRadius:'50%', top:9, background:C.dotHistory }} />
+                  ))}
                 </div>
               ))}
+            </div>
 
-              {/* Divider */}
-              <div style={{ height:1, background:'rgba(220,230,210,0.1)', margin:'8px 0' }} />
-
-              {/* Học sinh khác */}
-              {otherStudentsCount > 0 ? (
-                <div style={{ fontSize:12, color:C.textLegend, lineHeight:1.5 }}>
-                  <div style={{ marginBottom:5, color:'#A8BBA0' }}>
-                    <span style={{ color:C.greenPale, fontWeight:600 }}>{otherStudentsCount}</span> bạn khác<br/>đang tập bài này
+            {/* Legend panel — desktop */}
+            {!isMobile && (
+              <div style={{ width:200, flexShrink:0, paddingTop:50, paddingLeft:12, paddingRight:12, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid ${C.border}` }}>
+                {/* Teacher dots */}
+                <div style={{ height:30, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:C.dotTarget }}>
+                    <div style={{ width:10, height:10, borderRadius:'50%', background:C.dotTarget, boxShadow:`0 0 6px ${C.dotTarget}` }} />
+                    <span>Đáp án Thầy</span>
                   </div>
-                  <button onClick={() => setShowOtherResults(t=>!t)}
-                    style={{ width:'100%', padding:'4px 6px', borderRadius:6, border:`1px solid rgba(141,196,112,0.25)`, background:'rgba(141,196,112,0.08)', color:C.greenPale, fontSize:9, fontWeight:600, cursor:'pointer', textAlign:'center' }}>
-                    {showOtherResults ? 'Ẩn' : '👥 Xem kết quả'}
+                  <button onClick={() => setShowTeacher(t=>!t)}
+                    style={{ padding:'2px 8px', borderRadius:4, border:`1px solid ${C.border}`, background:showTeacher?C.bgCard:'none', fontSize:10, color:C.text3, cursor:'pointer', fontFamily:'inherit' }}>
+                    {showTeacher ? 'Ẩn' : 'Xem'}
                   </button>
-                  {showOtherResults && (
-                    <div style={{ marginTop:5, display:'flex', flexDirection:'column', gap:3 }}>
-                      {otherResults.slice(0,5).map((r,i) => (
-                        <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:9, color:C.textLegend }}>
-                          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:80 }}>{r.name}</span>
-                          <span style={{ color:C.greenPale, fontWeight:600, flexShrink:0 }}>{r.score}đ</span>
-                        </div>
-                      ))}
+                </div>
+
+                {/* Current */}
+                <div style={{ height:30, display:'flex', alignItems:'center' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:C.dotCurrent }}>
+                    <div style={{ width:10, height:10, borderRadius:'50%', background:C.dotCurrent, boxShadow:`0 0 6px ${C.dotCurrent}` }} />
+                    <span>Lần này</span>
+                  </div>
+                </div>
+
+                {/* History */}
+                {tapHistory.map((h, hi) => (
+                  <div key={h.id} style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between', opacity:histOpacity[hi] }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:C.dotHistory }}>
+                      <div style={{ width:8, height:8, borderRadius:'50%', background:C.dotHistory }} />
+                      <span>Lần {tapHistory.length-hi} · {h.score}đ</span>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ fontSize:9, color:'rgba(168,187,160,0.4)', lineHeight:1.5, textAlign:'center' }}>
-                  Chưa có bạn nào<br/>tập bài này
-                </div>
-              )}
-            </div>}
+                    <button onClick={() => handleDeleteHistory(h.id)}
+                      style={{ width:16, height:16, borderRadius:3, border:`1px solid ${C.border}`, background:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:C.text3, fontSize:9, fontFamily:'inherit' }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                <div style={{ height:1, background:C.border, margin:'10px 0' }} />
+
+                {otherStudentsCount > 0 && (
+                  <div style={{ fontSize:11, color:C.text3 }}>
+                    <div style={{ marginBottom:6, color:C.text2 }}>
+                      <span style={{ color:C.green, fontWeight:700 }}>{otherStudentsCount}</span> bạn đang tập bài này
+                    </div>
+                    <button onClick={() => setShowOtherResults(t=>!t)}
+                      style={{ width:'100%', padding:'5px 8px', borderRadius:6, border:`1px solid ${C.green}33`, background:`${C.green}11`, color:C.green, fontSize:10, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+                      {showOtherResults ? 'Ẩn' : '👥 Xem kết quả bạn bè'}
+                    </button>
+                    {showOtherResults && (
+                      <div style={{ marginTop:6, display:'flex', flexDirection:'column', gap:4 }}>
+                        {otherResults.slice(0,5).map((r,i) => (
+                          <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:10 }}>
+                            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:100, color:C.text2 }}>{r.name}</span>
+                            <span style={{ color:C.green, fontWeight:700 }}>{r.score}đ</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* MOBILE LEGEND — chỉ hiện trên mobile */}
+          {/* Mobile legend */}
           {isMobile && (
-            <div style={{ background:C.bgMain, borderTop:`1px solid rgba(220,230,210,0.08)`, padding:'5px 12px', display:'flex', alignItems:'center', gap:12, flexShrink:0, flexWrap:'wrap' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:C.dotGold }}>
-                <div style={{ width:12, height:2, background:C.dotGold, borderRadius:1 }} /> Đáp án Thầy
-                <button onClick={() => setShowTeacher(t=>!t)} style={{ marginLeft:3, padding:'1px 5px', borderRadius:3, border:`1px solid rgba(220,230,210,0.2)`, background:'transparent', fontSize:9, color:C.textLegend, cursor:'pointer' }}>
-                  {showTeacher ? 'Ẩn' : 'Xem'}
+            <div style={{ background:C.bgSurface, borderTop:`1px solid ${C.border}`, padding:'6px 12px', display:'flex', alignItems:'center', gap:12, flexShrink:0, overflowX:'auto' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, color:C.dotTarget, flexShrink:0 }}>
+                <div style={{ width:8,height:8,borderRadius:'50%',background:C.dotTarget }} />Đáp án
+                <button onClick={()=>setShowTeacher(t=>!t)} style={{ padding:'1px 6px',borderRadius:3,border:`1px solid ${C.border}`,background:'none',fontSize:9,color:C.text3,cursor:'pointer',fontFamily:'inherit' }}>
+                  {showTeacher?'Ẩn':'Xem'}
                 </button>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:C.dotBlue }}>
-                <div style={{ width:12, height:2, background:C.dotBlue, borderRadius:1 }} /> Lần này
+              <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, color:C.dotCurrent, flexShrink:0 }}>
+                <div style={{ width:8,height:8,borderRadius:'50%',background:C.dotCurrent }} />Lần này
               </div>
-              {tapHistory.map((h,hi) => (
-                <div key={h.id} style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:C.dotPurple, opacity:histOpacity[hi] }}>
-                  <div style={{ width:12, height:2, background:C.dotPurple, borderRadius:1 }} />
-                  Lần {tapHistory.length-hi} · {h.score}đ
-                  <button onClick={() => handleDeleteHistory(h.id)} style={{ background:'none', border:'none', color:'#A88080', fontSize:10, cursor:'pointer', padding:0 }}>✕</button>
+              {tapHistory.map((h,hi)=>(
+                <div key={h.id} style={{ display:'flex', alignItems:'center', gap:5, fontSize:10, color:C.dotHistory, flexShrink:0, opacity:histOpacity[hi] }}>
+                  <div style={{ width:7,height:7,borderRadius:'50%',background:C.dotHistory }} />
+                  Lần {tapHistory.length-hi}·{h.score}đ
+                  <button onClick={()=>handleDeleteHistory(h.id)} style={{background:'none',border:'none',color:C.text3,fontSize:10,cursor:'pointer',padding:0}}>✕</button>
                 </div>
               ))}
             </div>
           )}
 
           {/* SCORE ROW */}
-          <div style={{ background:C.bgMain, borderTop:`1px solid rgba(220,230,210,0.08)`, padding: isMobile?'6px 12px':'8px 20px', display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?10:14, flexShrink:0 }}>
-            <div style={{ width:28, height:28, borderRadius:'50%', border:`2px solid ${C.gold}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13 }}>⭐</div>
-            <span style={{ fontSize:22, fontWeight:800, color:C.greenPale }}>{currentScore ?? 0}</span>
-            <span style={{ fontSize:13, color:C.textMuted }}>/ 100</span>
-            <div style={{ width:4, height:4, borderRadius:'50%', background:'#5A7260' }} />
-            <span style={{ fontSize:13, color:C.greenPale, fontWeight:600 }}>
-              {scoredCurrent.filter(d=>d.hit).length} <span style={{ color:C.textMuted, fontWeight:400 }}>/ {targetDotsScaled.length} phách đúng</span>
-            </span>
-            {currentDots.length > 0 && isPlaying && (
-              <button onClick={handleShowResult} style={{ padding:'7px 16px', borderRadius:8, background:'#243D2C', border:`1px solid rgba(141,196,112,0.3)`, color:C.greenPale, fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, cursor:'pointer' }}>
-                📊 Xem kết quả
+          <div style={{ background:C.bgSurface, borderTop:`1px solid ${C.border}`, padding: isMobile?'8px 12px':'10px 20px', display:'flex', alignItems:'center', justifyContent:'center', gap:16, flexShrink:0 }}>
+            <ScoreRing score={currentScore ?? 0} size={isMobile?52:60} />
+            <div>
+              <div style={{ fontSize: isMobile?18:22, fontWeight:800, color:C.text1, lineHeight:1, letterSpacing:'-0.03em' }}>
+                {scoredCurrent.filter(d=>d.hit).length}
+                <span style={{ fontSize:13, color:C.text3, fontWeight:400 }}> / {targetDotsScaled.length} phách</span>
+              </div>
+              <div style={{ fontSize:11, color:C.text3, marginTop:2 }}>
+                {currentScore !== null ? `Chính xác ${currentScore}%` : 'Chưa có dữ liệu'}
+              </div>
+            </div>
+            <div style={{ flex:1 }} />
+            {saveMsg && <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>✓ {saveMsg}</span>}
+            {currentDots.length > 0 && (
+              <button onClick={handleShowResult}
+                style={{ padding:'8px 16px', borderRadius:8, background:C.accent, border:'none', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', boxShadow:`0 2px 12px ${C.accentGlow}`, fontFamily:'inherit' }}>
+                Xem kết quả →
               </button>
             )}
-            {saveMsg && <span style={{ fontSize:11, color:C.greenPale, fontWeight:600 }}>✓ {saveMsg}</span>}
           </div>
 
-          {/* ── CONTROLS — kem sáng ── */}
-          <div style={{ background:C.bgPage, borderTop:`1px solid ${C.bgPageBorder}`, padding: isMobile?'10px 8px 6px':'14px 20px 10px', flexShrink:0 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?6:12 }}>
+          {/* Progress bar */}
+          <div style={{ height:2, background:C.bgCard, flexShrink:0 }}>
+            <div style={{ height:'100%', width:`${progress_pct}%`, background:`linear-gradient(90deg,${C.accent},${C.accentLight})`, transition:'width 0.1s linear' }} />
+          </div>
 
-              {/* Làm lại */}
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: isMobile?3:4, flex:1, maxWidth: isMobile?90:130 }}>
-                <button onClick={handleReset} style={{ width:'100%', padding: isMobile?'10px 6px':'12px 10px', borderRadius:12, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize: isMobile?11:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?4:6 }}>
-                  🔄 Làm lại
+          {/* ══ CONTROLS ══ */}
+          <div style={{ background:C.bgSurface, borderTop:`1px solid ${C.border}`, padding: isMobile?'12px 10px 16px':'16px 20px 18px', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?8:16 }}>
+
+              {/* Reset */}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:isMobile?80:110 }}>
+                <button className="ctrl-btn" onClick={handleReset}
+                  style={{ width:'100%', padding: isMobile?'11px 0':'13px 0', borderRadius:12, border:`1px solid ${C.border}`, background:C.bgCard, color:C.text2, fontSize:isMobile?11:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
+                  <span>↺</span>
+                  <span>Làm lại</span>
                 </button>
-                <span style={{ fontSize:10, color:'#8A8070' }}>Phím R</span>
+                <span style={{ fontSize:10, color:C.text3 }}>Phím R</span>
               </div>
 
-              {/* Bắt đầu / Dừng */}
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:130 }}>
-                <button onClick={() => setIsPlaying(p=>!p)} style={{ width:'100%', padding: isMobile?'10px 6px':'12px 10px', borderRadius:12, border:`1px solid ${C.ctrlBorder}`, background:C.bgWoodCard, color:C.textWood, fontSize: isMobile?11:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?4:6 }}>
-                  {isPlaying ? '⏸ Dừng' : '▶ Bắt đầu'}
+              {/* Play/Pause */}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:isMobile?80:110 }}>
+                <button className="ctrl-btn" onClick={() => setIsPlaying(p=>!p)}
+                  style={{ width:'100%', padding: isMobile?'11px 0':'13px 0', borderRadius:12, border:`1px solid ${isPlaying ? C.accent+'44' : C.border}`, background: isPlaying ? `${C.accent}22` : C.bgCard, color: isPlaying ? C.accentLight : C.text2, fontSize:isMobile?11:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
+                  <span>{isPlaying ? '⏸' : '▶'}</span>
+                  <span>{isPlaying ? 'Dừng' : 'Bắt đầu'}</span>
                 </button>
-                <span style={{ fontSize:10, color:'#8A8070' }}>Phím P</span>
+                <span style={{ fontSize:10, color:C.text3 }}>Phím P</span>
               </div>
 
-              {/* TAP — SVG tròn xanh lá, chính tâm, không nhảy */}
+              {/* TAP BUTTON — central hero */}
               <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flexShrink:0 }}>
-                <svg width={isMobile?88:104} height={isMobile?88:104} viewBox="0 0 104 104"
-                  style={{ cursor:'pointer', display:'block', flexShrink:0 }}
+                <button
+                  className={tapPulse ? 'tap-pulse' : (isPlaying ? 'tap-btn-glow' : 'tap-btn-idle')}
                   onMouseDown={e => { e.preventDefault(); handleTap() }}
                   onTouchStart={e => { e.preventDefault(); handleTap() }}
-                  aria-label="TAP" role="button">
-                  <circle cx="52" cy="52" r="48" fill={isPlaying ? C.green : '#D8D4C8'} stroke={isPlaying ? C.greenLight : '#B8B4A8'} strokeWidth="2.5"/>
-                  <circle cx="52" cy="52" r="44" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
-                  <text x="52" y="52" textAnchor="middle" dominantBaseline="central"
-                    fill={isPlaying ? '#ffffff' : '#8A8070'}
-                    fontFamily="Inter, sans-serif" fontSize="19" fontWeight="800" letterSpacing="3">
-                    TAP
-                  </text>
-                </svg>
-                <span style={{ fontSize:10, color:'#8A8070' }}>Phím Space</span>
-              </div>
-
-              {/* Đáp án */}
-              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:130 }}>
-                <button onClick={() => setShowTeacher(t=>!t)} style={{ width:'100%', padding:'12px 10px', borderRadius:12,
-                  border:`1px solid ${showTeacher ? 'rgba(201,151,0,0.4)' : C.ctrlBorder}`,
-                  background: showTeacher ? 'rgba(201,151,0,0.08)' : C.bgWoodCard,
-                  color: showTeacher ? C.gold : '#8A6A00',
-                  fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
-                  👁 Đáp án
+                  style={{
+                    width: isMobile?86:100, height: isMobile?86:100,
+                    borderRadius:'50%',
+                    border: `2px solid ${isPlaying ? C.accent : C.border}`,
+                    background: isPlaying
+                      ? `radial-gradient(circle at 40% 35%, ${C.accentLight}, ${C.accent})`
+                      : C.bgCard,
+                    color: isPlaying ? '#fff' : C.text3,
+                    cursor:'pointer', outline:'none',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    flexDirection:'column', gap:4,
+                    transition:'all 0.2s',
+                    userSelect:'none', WebkitUserSelect:'none',
+                  }}>
+                  <span style={{ fontSize:isMobile?22:26 }}>✋</span>
+                  <span style={{ fontSize:isMobile?11:12, fontWeight:800, letterSpacing:'0.08em', lineHeight:1 }}>TAP</span>
                 </button>
-                <span style={{ fontSize:10, color:'#8A8070' }}>Phím T</span>
+                <span style={{ fontSize:10, color:C.text3 }}>Space</span>
               </div>
 
+              {/* Answer */}
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:isMobile?80:110 }}>
+                <button className="ctrl-btn" onClick={() => setShowTeacher(t=>!t)}
+                  style={{ width:'100%', padding: isMobile?'11px 0':'13px 0', borderRadius:12, border:`1px solid ${showTeacher ? C.gold+'44' : C.border}`, background: showTeacher ? `${C.gold}11` : C.bgCard, color: showTeacher ? C.gold : C.text2, fontSize:isMobile?11:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
+                  <span>👁</span>
+                  <span>Đáp án</span>
+                </button>
+                <span style={{ fontSize:10, color:C.text3 }}>Phím T</span>
+              </div>
+
+              {/* Speed — mobile only */}
+              {isMobile && (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:80 }}>
+                  <select value={speed} onChange={e => setSpeed(Number(e.target.value))}
+                    style={{ width:'100%', padding:'11px 4px', borderRadius:12, border:`1px solid ${C.border}`, background:C.bgCard, color:C.text2, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', outline:'none', textAlign:'center' }}>
+                    {[0.5,0.75,1,1.25].map(s=><option key={s} value={s}>{s===1?'1×':s+'×'}</option>)}
+                  </select>
+                  <span style={{ fontSize:10, color:C.text3 }}>Tốc độ</span>
+                </div>
+              )}
             </div>
 
-            {!isMobile && <div style={{ textAlign:'center', fontSize:9, color:'#B0A898', marginTop:8, letterSpacing:'0.03em' }}>
-              Space = TAP &nbsp;·&nbsp; P = Bắt đầu/Dừng &nbsp;·&nbsp; R = Làm lại &nbsp;·&nbsp; T = Đáp án &nbsp;·&nbsp; Esc = Đóng
-            </div>}
+            {!isMobile && (
+              <div style={{ textAlign:'center', fontSize:10, color:C.text3, marginTop:10, letterSpacing:'0.05em' }}>
+                SPACE = TAP &nbsp;·&nbsp; P = Phát/Dừng &nbsp;·&nbsp; R = Làm lại &nbsp;·&nbsp; T = Đáp án &nbsp;·&nbsp; ESC = Đóng
+              </div>
+            )}
           </div>
-
         </div>
       )}
 
-      {/* ── POPUP KẾT QUẢ ── */}
+      {/* ══ POPUP KẾT QUẢ ══ */}
       {showResultPopup && lastScore !== null && resultMsg && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(20,30,20,0.8)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', backdropFilter:'blur(8px)', zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
           onClick={() => setShowResultPopup(false)}>
-          <div style={{ background:C.bgWoodCard, borderRadius:20, padding:'32px 28px', textAlign:'center', border:`1px solid ${C.ctrlBorder}`, maxWidth:360, width:'100%' }}
+          <div style={{ background:C.bgSurface, border:`1px solid ${C.border}`, borderRadius:20, padding: isMobile?'28px 20px':'32px 28px', textAlign:'center', maxWidth:380, width:'100%', boxShadow:`0 24px 64px rgba(0,0,0,0.6)` }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize:48, marginBottom:8 }}>{resultMsg.emoji}</div>
-            <div style={{ color:C.textDark, fontWeight:800, fontSize:22, marginBottom:8 }}>{resultMsg.title}</div>
-            <div style={{ fontSize:54, fontWeight:900, lineHeight:1, marginBottom:6, color: lastScore>=80?C.green:lastScore>=60?C.gold:'#C0392B' }}>
-              {lastScore}<span style={{ fontSize:22, color:'#8A8070' }}>/100</span>
+
+            <div style={{ fontSize:44, marginBottom:12 }}>{resultMsg.emoji}</div>
+            <div style={{ fontWeight:800, fontSize:20, letterSpacing:'-0.03em', marginBottom:16 }}>{resultMsg.title}</div>
+
+            {/* Score ring big */}
+            <div style={{ display:'flex', justifyContent:'center', marginBottom:16 }}>
+              <ScoreRing score={lastScore} size={100} />
             </div>
-            <div style={{ fontSize:22, marginBottom:10 }}>{'⭐'.repeat(starCount)}{'☆'.repeat(5-starCount)}</div>
+
+            {/* Stars */}
+            <div style={{ fontSize:22, marginBottom:12, letterSpacing:2 }}>
+              {'⭐'.repeat(starCount)}{'☆'.repeat(5-starCount)}
+            </div>
+
             {prevBest > 0 && (
-              <div style={{ fontSize:13, marginBottom:10, fontWeight:600, color: lastScore>prevBest?C.green:'#8A8070' }}>
-                {lastScore>prevBest?`📈 +${lastScore-prevBest} so với kỷ lục!`:lastScore===prevBest?'🎯 Bằng kỷ lục!':` Kỷ lục: ${prevBest}`}
+              <div style={{ fontSize:13, marginBottom:12, fontWeight:600, color: lastScore>prevBest ? C.green : C.text3 }}>
+                {lastScore>prevBest ? `📈 +${lastScore-prevBest} so với kỷ lục!` : lastScore===prevBest ? '🎯 Bằng kỷ lục!' : `Kỷ lục: ${prevBest}đ`}
               </div>
             )}
-            <div style={{ color:'#6A6A6A', fontSize:13, marginBottom:resultMsg.hint?8:16, lineHeight:1.6 }}>{resultMsg.body}</div>
+
+            <div style={{ color:C.text2, fontSize:13, marginBottom:resultMsg.hint?12:20, lineHeight:1.6 }}>{resultMsg.body}</div>
+
             {resultMsg.hint && (
-              <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(63,125,58,0.06)', borderRadius:10, border:`1px solid rgba(63,125,58,0.15)`, fontSize:12, color:C.green, lineHeight:1.5 }}>
+              <div style={{ marginBottom:20, padding:'10px 14px', background:`${C.accent}11`, borderRadius:10, border:`1px solid ${C.accent}22`, fontSize:12, color:C.accentLight, lineHeight:1.5 }}>
                 💡 {resultMsg.hint}
               </div>
             )}
+
             {lastScore < UNLOCK_SCORE && activeLevel < levels.length && (
-              <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(201,151,0,0.06)', borderRadius:10, border:`1px solid rgba(201,151,0,0.2)` }}>
+              <div style={{ marginBottom:16, padding:'10px 14px', background:C.goldDim, borderRadius:10, border:`1px solid ${C.gold}33` }}>
                 <div style={{ fontSize:12, color:C.gold, marginBottom:6 }}>Cần thêm <strong>{UNLOCK_SCORE-lastScore} điểm</strong> để mở Level {activeLevel+1}</div>
-                <div style={{ height:5, background:'#E8E4D8', borderRadius:3, overflow:'hidden' }}>
-                  <div style={{ width:`${Math.min(lastScore/UNLOCK_SCORE*100,100)}%`, height:'100%', background:C.gold, borderRadius:3, transition:'width 0.5s' }} />
+                <div style={{ height:4, background:C.bgCard, borderRadius:2, overflow:'hidden' }}>
+                  <div style={{ width:`${Math.min(lastScore/UNLOCK_SCORE*100,100)}%`, height:'100%', background:C.gold, borderRadius:2, transition:'width 0.5s' }} />
                 </div>
               </div>
             )}
+
             {lastScore >= UNLOCK_SCORE && activeLevel < levels.length && (
-              <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(63,125,58,0.06)', borderRadius:10, border:`1px solid rgba(63,125,58,0.2)` }}>
-                <div style={{ fontSize:13, color:C.green, fontWeight:700 }}>🔓 Đủ điểm mở Level {activeLevel+1}! Lưu để nhận thưởng</div>
+              <div style={{ marginBottom:16, padding:'10px 14px', background:C.greenDim, borderRadius:10, border:`1px solid ${C.green}33`, fontSize:13, color:C.green, fontWeight:700 }}>
+                🔓 Đủ điểm mở Level {activeLevel+1}! Lưu để nhận thưởng
               </div>
             )}
-            {isGuest ? (
-              <div>
-                <div style={{ marginBottom:12, padding:'10px 14px', background:'rgba(63,125,58,0.06)', borderRadius:10, border:`1px solid rgba(63,125,58,0.15)`, fontSize:13, color:C.green }}>
-                  💡 Đăng nhập để lưu điểm và xem lại lịch sử!
-                </div>
-                <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-                  <button onClick={() => { setShowResultPopup(false); setCurrentDots([]) }}
-                    style={{ padding:'10px 20px', background:C.bgWoodCard, border:`1px solid ${C.ctrlBorder}`, borderRadius:10, color:C.textDark, fontWeight:600, fontSize:13, cursor:'pointer' }}>
-                    🔄 Thử lại
-                  </button>
-                  <button onClick={handleLogin}
-                    style={{ padding:'10px 20px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                    Đăng nhập
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
-                <button onClick={() => { setShowResultPopup(false); setCurrentDots([]) }}
-                  style={{ padding:'10px 20px', background:C.bgWoodCard, border:`1px solid ${C.ctrlBorder}`, borderRadius:10, color:C.textDark, fontWeight:600, fontSize:13, cursor:'pointer' }}>
-                  🔄 Thử lại
-                </button>
+
+            <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+              <button onClick={() => { setShowResultPopup(false); setCurrentDots([]) }}
+                style={{ padding:'10px 20px', background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:10, color:C.text2, fontWeight:600, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                ↺ Thử lại
+              </button>
+              {!isGuest ? (
                 <button onClick={handleSave}
-                  style={{ padding:'10px 24px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                  style={{ padding:'10px 24px', background:`linear-gradient(135deg,${C.accent},${C.accentLight})`, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', boxShadow:`0 4px 14px ${C.accentGlow}` }}>
                   💾 Lưu điểm
                 </button>
-              </div>
-            )}
+              ) : (
+                <button onClick={handleLogin}
+                  style={{ padding:'10px 24px', background:`linear-gradient(135deg,${C.accent},${C.accentLight})`, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                  Đăng nhập để lưu
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── LEVEL UP ── */}
+      {/* ══ LEVEL UP ══ */}
       {showLevelUp && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(20,30,20,0.88)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ background:C.bgWoodCard, borderRadius:20, padding:40, textAlign:'center', border:`2px solid ${C.green}`, maxWidth:340 }}>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(12px)', zIndex:600, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:C.bgSurface, border:`2px solid ${C.accent}`, borderRadius:20, padding:40, textAlign:'center', maxWidth:340, boxShadow:`0 0 60px ${C.accentGlow}` }}>
             <div style={{ fontSize:54, marginBottom:8 }}>✨</div>
-            <div style={{ color:C.green, fontWeight:900, fontSize:28, marginBottom:4 }}>LEVEL UP!</div>
-            <div style={{ color:C.textDark, fontWeight:700, fontSize:18, marginBottom:8 }}>🔓 Level {activeLevel+1} đã mở khoá!</div>
-            <div style={{ color:'#6A6A6A', fontSize:13, marginBottom:6 }}>Thử thách mới:</div>
-            <div style={{ color:C.green, fontSize:14, fontWeight:600, marginBottom:8 }}>{levels[activeLevel]?.desc}</div>
+            <div style={{ color:C.accent, fontWeight:900, fontSize:28, letterSpacing:'-0.04em', marginBottom:4 }}>LEVEL UP!</div>
+            <div style={{ fontWeight:700, fontSize:18, marginBottom:8 }}>🔓 Level {activeLevel+1} đã mở khoá!</div>
+            <div style={{ color:C.text2, fontSize:14, marginBottom:16 }}>{levels[activeLevel]?.desc}</div>
             <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
               {song && levels[activeLevel] && <BeatViz beats={levels[activeLevel].beats} timeSig={song.timeSignature} />}
             </div>
             <button onClick={() => { setShowLevelUp(false); setActiveLevel(activeLevel+1) }}
-              style={{ padding:'12px 32px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:15, cursor:'pointer' }}>
+              style={{ padding:'12px 32px', background:`linear-gradient(135deg,${C.accent},${C.accentLight})`, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:15, cursor:'pointer', fontFamily:'inherit', boxShadow:`0 4px 20px ${C.accentGlow}` }}>
               Thử ngay →
             </button>
           </div>
         </div>
       )}
 
-      {/* ── GUEST LIMIT ── */}
+      {/* ══ GUEST LIMIT ══ */}
       {showGuestLimit && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(20,30,20,0.85)', zIndex:700, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-          <div style={{ background:C.bgWoodCard, borderRadius:20, padding:'32px 28px', textAlign:'center', border:`1px solid ${C.ctrlBorder}`, maxWidth:340, width:'100%' }}>
-            <div style={{ fontSize:48, marginBottom:12 }}>🎵</div>
-            <div style={{ color:C.textDark, fontWeight:800, fontSize:20, marginBottom:8 }}>Bạn đã thử {GUEST_MAX_SONGS} bài!</div>
-            <div style={{ color:'#6A6A6A', fontSize:14, lineHeight:1.65, marginBottom:20 }}>
-              Đăng nhập để tiếp tục luyện tập với tất cả bài hát và lưu điểm.
-            </div>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', backdropFilter:'blur(8px)', zIndex:700, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:C.bgSurface, border:`1px solid ${C.border}`, borderRadius:20, padding:'32px 28px', textAlign:'center', maxWidth:340, width:'100%' }}>
+            <div style={{ fontSize:44, marginBottom:12 }}>🎵</div>
+            <div style={{ fontWeight:800, fontSize:18, marginBottom:8, letterSpacing:'-0.03em' }}>Bạn đã thử {GUEST_MAX_SONGS} bài!</div>
+            <div style={{ color:C.text2, fontSize:13, lineHeight:1.65, marginBottom:20 }}>Đăng nhập để luyện tập không giới hạn và lưu điểm.</div>
             <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
               <button onClick={() => setShowGuestLimit(false)}
-                style={{ padding:'10px 20px', background:C.bgWoodCard, border:`1px solid ${C.ctrlBorder}`, borderRadius:10, color:'#8A8070', fontWeight:500, fontSize:13, cursor:'pointer' }}>
+                style={{ padding:'10px 20px', background:C.bgCard, border:`1px solid ${C.border}`, borderRadius:10, color:C.text2, fontWeight:500, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                 Đóng
               </button>
               <button onClick={handleLogin}
-                style={{ padding:'10px 24px', background:C.green, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                style={{ padding:'10px 24px', background:`linear-gradient(135deg,${C.accent},${C.accentLight})`, border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                 Đăng nhập ngay
               </button>
             </div>
