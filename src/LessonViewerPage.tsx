@@ -27,6 +27,16 @@ const TOOL_LABELS: Record<string, { label: string; icon: string; route: string }
   ear:           { label: 'Luyện tai',     icon: '👂', route: '/tap'         },
 }
 
+function normalizeCanvaUrl(raw: string): string {
+  const iframeSrc = raw.match(/src="([^"]*canva[^"]*)"/)
+  const url = (iframeSrc ? iframeSrc[1] : raw).trim()
+  if (!url.includes('canva.com')) return url
+  const base = url.split('?')[0].replace(/\/$/, '')
+  const viewBase = base.includes('/view') ? base.split('/view')[0] + '/view' : base + '/view'
+  return viewBase + '?embed'
+}
+
+
 function getYouTubeId(url: string) {
   return url.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
 }
@@ -180,7 +190,7 @@ export default function LessonViewerPage() {
               <div style={{ marginBottom: 24 }}>
                 <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden', background: '#1a1a2e', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
                   <iframe
-                    src={active.content_url}
+                    src={normalizeCanvaUrl(active.content_url)}
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
                     allowFullScreen
                     allow="fullscreen"

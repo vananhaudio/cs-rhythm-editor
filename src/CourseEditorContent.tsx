@@ -54,6 +54,20 @@ function getYouTubeId(url: string) {
   return url.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
 }
 
+// Canva: tách src từ <iframe> nếu có, rồi đảm bảo URL dạng .../view?embed
+function normalizeCanvaUrl(raw: string): string {
+  const s = raw.trim()
+  // Trường hợp 1: paste cả HTML block của Canva — tìm data-design-id hoặc src chứa canva
+  const iframeSrc = s.match(/src="([^"]*canva\.com[^"]*)"/)
+  const designHref = s.match(/href="([^"]*canva\.com\/design[^"]*)"/)
+  const url = (iframeSrc?.[1] ?? designHref?.[1] ?? (s.startsWith('<') ? '' : s))
+  if (!url || !url.includes('canva.com')) return s
+  // Đảm bảo dạng .../view?embed
+  const base = url.split('?')[0].replace(/\/+$/, '')
+  const viewBase = base.includes('/view') ? base.split('/view')[0] + '/view' : base + '/view'
+  return viewBase + '?embed'
+}
+
 // ─── Markdown → HTML (lightweight) ───────────────────────────────────────────
 
 // ─── Lesson Preview (student view) ───────────────────────────────────────────
@@ -234,8 +248,9 @@ export default function CourseEditorContent() {
   const saveLesson = async () => {
     if (!selectedLesson) return
     setSaving(true)
-    await supabase.from('edu_course_lessons').update({ title: fTitle, lesson_type: fType, content_url: fUrl || null, description: fDesc || null, content: fContent || null, tools: fTools }).eq('id', selectedLesson.id)
-    const patch = { title: fTitle, lesson_type: fType, content_url: fUrl, description: fDesc, content: fContent, tools: fTools }
+    const saveUrl = fType === 'slide' && fUrl ? normalizeCanvaUrl(fUrl) : (fUrl || null)
+    await supabase.from('edu_course_lessons').update({ title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc || null, content: fContent || null, tools: fTools }).eq('id', selectedLesson.id)
+    const patch = { title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc, content: fContent, tools: fTools }
     setLessons(prev => prev.map(l => l.id === selectedLesson.id ? { ...l, ...patch } : l))
     setSelectedLesson(prev => prev ? { ...prev, ...patch } : prev)
     setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000)
@@ -616,17 +631,15 @@ export default function CourseEditorContent() {
                     <div style={{ position: 'relative' }}>
                       <textarea
                         value={fUrl}
-                        onChange={e => {
-                          const val = e.target.value
-                          // Auto-extract src from <iframe ...src="..." ...>
-                          const match = val.match(/src="([^"]+canva[^"]+)"/)
-                          setFUrl(match ? match[1] : val)
+                        onChange={e => setFUrl(e.target.value)}
+                        onBlur={e => {
+                          if (e.target.value.trim()) setFUrl(normalizeCanvaUrl(e.target.value))
+                          e.currentTarget.style.borderColor = C.border
                         }}
-                        placeholder={'Dán link hoặc embed code Canva vào đây...\n\nVí dụ:\nhttps://www.canva.com/design/DAFxxx/view?embed\n\nHoặc paste cả thẻ <iframe> từ Canva'}
+                        onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
+                        placeholder={'Dán link Canva hoặc cả mã HTML nhúng vào đây...\n\nVí dụ:\nhttps://www.canva.com/design/DAFxxx/view?embed'}
                         rows={4}
                         style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.text1, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, background: C.surface }}
-                        onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
-                        onBlur={e => (e.currentTarget.style.borderColor = C.border)}
                       />
                       {fUrl && fUrl.includes('<iframe') && (
                         <div style={{ fontSize: 11, color: C.success, marginTop: 4 }}>✓ Đã tách URL từ embed code</div>
@@ -634,20 +647,29 @@ export default function CourseEditorContent() {
                     </div>
 
                     {/* Preview slide */}
-                    {fUrl && !fUrl.includes('<') && (
-                      <div style={{ marginTop: 12 }}>
-                        <div style={{ fontSize: 11, color: C.text3, marginBottom: 6 }}>Xem trước slide:</div>
-                        <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, background: '#F8F8F8' }}>
-                          <iframe
-                            src={fUrl}
-                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                            allowFullScreen
-                            allow="fullscreen"
-                            title="Canva slide preview"
-                          />
+                    {fUrl && (fUrl.includes('canva.com') || fUrl.startsWith('http')) && !fUrl.includes('<') && (() => {
+                      const embedUrl = normalizeCanvaUrl(fUrl)
+                      return (
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Xem trước slide:</span>
+                            {embedUrl !== fUrl && <span style={{ color: C.success, fontSize: 11 }}>✓ Đã chuyển sang link embed</span>}
+                          </div>
+                          <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, background: '#1a1a2e' }}>
+                            <iframe
+                              src={embedUrl}
+                              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                              allowFullScreen
+                              allow="fullscreen"
+                              title="Canva slide preview"
+                            />
+                          </div>
+                          <div style={{ marginTop: 6, fontSize: 11, color: C.text3, wordBreak: 'break-all' }}>
+                            URL embed: <code style={{ color: C.accent }}>{embedUrl}</code>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
                   </div>
                 )}
 

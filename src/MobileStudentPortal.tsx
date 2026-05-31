@@ -353,6 +353,24 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             )}
 
+            {/* Slide Canva - fullscreen như link */}
+            {activeLesson.lesson_type === 'slide' && activeLesson.content_url && (
+              <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#1a1a2e' }}>
+                <iframe
+                  src={activeLesson.content_url}
+                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                  allowFullScreen
+                  allow="fullscreen"
+                  title={activeLesson.title}
+                />
+                <button
+                  onClick={goBack}
+                  style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>
+                  ← Quay lại
+                </button>
+              </div>
+            )}
+
             {/* External link embed - fullscreen */}
             {activeLesson.lesson_type === 'link' && activeLesson.content_url && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#000' }}>
