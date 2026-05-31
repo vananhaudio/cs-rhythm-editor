@@ -497,7 +497,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                     return (
                       <div key={l.id+ti} style={{ left:lx, position:'absolute', top:48, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                         <span style={{
-                          fontSize:22, fontWeight: active ? 600 : 400,
+                          fontSize:22, fontWeight: 400,
                           fontFamily:'"Helvetica Neue",Arial,sans-serif',
                           // Karaoke gradient: quét teal từ trái sang phải
                           ...(active ? (() => {
