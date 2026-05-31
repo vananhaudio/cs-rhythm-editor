@@ -381,52 +381,32 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         <div style={{ flex:1, padding:'12px 16px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
           <div style={{ flex:1, borderRadius:16, overflow:'hidden', border:`1px solid ${D.border}`, display:'flex', flexDirection:'column', position:'relative', background:D.bg }}>
 
-            {/* Beat indicator — cố định, chớp sáng theo nhịp */}
-            {(() => {
-              const currentBeatInBar = activeBeatIdx >= 0 ? activeBeatIdx % song.timeSignature : -1
-              const currentBar = activeBeatIdx >= 0 ? Math.floor(activeBeatIdx / song.timeSignature) + 1 : 0
-              return (
-                <div style={{ height:52, background:D.bgBeat, borderBottom:`1px solid ${D.border}`, display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexShrink:0, padding:'0 20px' }}>
-                  {/* Bar number */}
-                  <div style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, minWidth:40 }}>
-                    {currentBar > 0 ? `M${currentBar}` : '--'}
-                  </div>
-                  {/* Beat cells */}
-                  <div style={{ display:'flex', gap:8 }}>
-                    {Array.from({ length: song.timeSignature }, (_, i) => {
-                      const isActive = currentBeatInBar === i && isPlaying
-                      const isBar1Beat = i === 0
-                      return (
-                        <div key={i} style={{
-                          width: isBar1Beat ? 44 : 38,
-                          height: isBar1Beat ? 44 : 38,
-                          borderRadius: isBar1Beat ? 10 : 8,
-                          display:'flex', alignItems:'center', justifyContent:'center',
-                          fontSize: isBar1Beat ? 18 : 16,
-                          fontWeight: 800,
-                          fontFamily:'"DM Mono",monospace',
-                          transition: 'background 0.05s, color 0.05s, box-shadow 0.05s',
-                          background: isActive
-                            ? (isBar1Beat ? D.accent : 'rgba(108,99,255,0.35)')
-                            : 'rgba(255,255,255,0.04)',
-                          color: isActive ? '#fff' : 'rgba(255,255,255,0.2)',
-                          boxShadow: isActive
-                            ? (isBar1Beat ? `0 0 20px ${D.accentGlow}, 0 0 40px ${D.accentGlow}` : `0 0 12px ${D.accentGlow}`)
-                            : 'none',
-                          border: `1px solid ${isActive ? D.accent+'66' : 'rgba(255,255,255,0.06)'}`,
-                        }}>
-                          {i + 1}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {/* BPM */}
-                  <div style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, minWidth:60, textAlign:'right' }}>
-                    {song.tempo} BPM
-                  </div>
-                </div>
-              )
-            })()}
+            {/* Beat row — scroll, chỉ số chớp sáng */}
+            <div className="now-arrow-wrap"><div className="now-arrow" style={{ left: beatNowX }} /></div>
+            <div className="player-scroll-area player-scroll-area--beat" ref={beatScrollRef}>
+              <div className="scroll-now-line scroll-now-line--beat" style={{ left: beatNowX }} />
+              <div className="player-scroll-track" style={{ width: totalDur*PPS+beatContainerW, transform:`translateX(${-scrollOff}px)` }}>
+                {Array.from({ length: song.totalBars*song.timeSignature }, (_, i) => {
+                  const bib = i % song.timeSignature, bt = i*beatDur, nb = (i+1)*beatDur;
+                  const w = (nb-bt)*PPS, xBeat = beatNowX + bt*PPS;
+                  const isActive = activeBeatIdx === i;
+                  const isBar1 = bib === 0;
+                  return (
+                    <div key={i} className={`tl-beat-cell${isBar1 ? ' tl-beat-cell--bar1' : ''}${activeBeatIdx > i ? ' tl-beat-cell--past' : ''}`}
+                      style={{ left:xBeat, width:w-2, transform:'translateX(-50%)' }}>
+                      {isBar1 && <span className="tl-bar-num">M{Math.floor(i/song.timeSignature)+1}</span>}
+                      <span className="tl-beat-num" style={{
+                        color: isActive ? (isBar1 ? '#fff' : D.accentLight) : undefined,
+                        textShadow: isActive ? (isBar1 ? `0 0 12px #fff, 0 0 24px ${D.accent}` : `0 0 10px ${D.accent}`) : 'none',
+                        fontSize: isActive ? 14 : undefined,
+                        fontWeight: isActive ? 800 : undefined,
+                        transition: 'color 0.05s, text-shadow 0.05s',
+                      }}>{bib+1}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Lyric + chord row */}
             <div className="player-scroll-area player-scroll-area--lyric" ref={scrollRef} style={{ flex:1 }}>
