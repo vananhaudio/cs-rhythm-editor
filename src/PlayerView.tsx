@@ -418,14 +418,12 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                           </span>
                         )}
                         {chord ? (
-                          <span style={{ fontSize:18, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', lineHeight:1, transition:'color 0.06s',
-                            color: isActive ? D.gold : isPast ? 'rgba(245,158,11,0.2)' : 'rgba(245,158,11,0.5)',
-                            textShadow: isActive ? `0 0 10px ${D.goldGlow}` : 'none',
+                          <span style={{ fontSize:18, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', lineHeight:1,
+                            color: 'rgba(245,158,11,0.65)',
                           }}>{chord}</span>
                         ) : (
-                          <span style={{ fontSize:14, fontWeight: isActive ? 800 : 500, fontFamily:'"DM Mono",monospace', lineHeight:1, transition:'color 0.06s',
-                            color: isActive ? (isBar1 ? '#fff' : D.accentLight) : isPast ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.18)',
-                            textShadow: isActive ? (isBar1 ? `0 0 12px #fff, 0 0 22px ${D.accent}` : `0 0 8px ${D.accent}`) : 'none',
+                          <span style={{ fontSize:13, fontWeight:400, fontFamily:'"DM Mono",monospace', lineHeight:1,
+                            color: isBar1 ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
                           }}>{bib+1}</span>
                         )}
                       </div>
@@ -446,7 +444,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   return (
                     <div key={l.id} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                       <div className={`tl-lyric${active?' active':''}`}
-                        style={{ color: '#FFFFFF', fontSize: 23, fontWeight: 400, letterSpacing: '0em', fontStyle: 'normal', fontFamily: '"Helvetica Neue", Arial, sans-serif' }}>
+                        style={{ color: active ? '#2DD4BF' : past ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.75)', fontSize: 23, fontWeight: active ? 600 : 400, letterSpacing: '0em', fontStyle: 'normal', fontFamily: '"Helvetica Neue", Arial, sans-serif', transition: 'color 0.08s' }}>
                         {l.text}
                       </div>
                     </div>
