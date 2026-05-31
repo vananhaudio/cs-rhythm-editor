@@ -467,8 +467,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   {(song.lyrics??[]).map((l,i) => {
                     const lx = nowX + l.time*PPS;
                     const nt = (song.lyrics??[])[i+1] ? song.lyrics[i+1].time : l.time+beatDur*2;
-                    const active = isActive && currentTimeRef.current>=l.time && currentTimeRef.current<nt;
-                    const past   = isActive && currentTimeRef.current>=nt;
+                    const active = isActive && currentTime>=l.time && currentTime<nt;
+                    const past   = isActive && currentTime>=nt;
                     return (
                       <div key={l.id+ti} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                         <span style={{ fontSize:22, fontWeight: active ? 600 : 400, fontFamily:'"Helvetica Neue",Arial,sans-serif',
