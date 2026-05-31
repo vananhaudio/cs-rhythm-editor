@@ -148,17 +148,26 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return base + ytOffsetAdj;
   }, [song, ytOffsetAdj]);
 
-  function scheduleClick(t: number, beat1: boolean) {
+  // accent: 0=phách 1 (mạnh nhất), 1=phách phụ mạnh (6/8 phách 4), 2=nhẹ
+  function scheduleClick(t: number, accent: 0|1|2) {
     try {
       if (!audioCtxRef.current || muteRef.current) return;
       const ctx = audioCtxRef.current;
       const osc = ctx.createOscillator(), g = ctx.createGain();
       osc.connect(g); g.connect(ctx.destination);
-      osc.frequency.value = beat1 ? 1000 : 500;
-      g.gain.setValueAtTime(0.4, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + (beat1 ? 0.08 : 0.06));
-      osc.start(t); osc.stop(t + 0.1);
+      osc.frequency.value = accent === 0 ? 1100 : accent === 1 ? 700 : 440;
+      const vol = accent === 0 ? 0.5 : accent === 1 ? 0.32 : 0.22;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + (accent === 0 ? 0.09 : 0.06));
+      osc.start(t); osc.stop(t + 0.12);
     } catch {}
+  }
+  function getAccent(beatInBar: number, timeSig: number): 0|1|2 {
+    if (beatInBar === 0) return 0; // phách 1 luôn mạnh nhất
+    if (timeSig === 6 && beatInBar === 3) return 1; // 6/8: phách 4 (idx 3) mạnh phụ
+    if (timeSig === 9 && (beatInBar === 3 || beatInBar === 6)) return 1; // 9/8
+    if (timeSig === 12 && (beatInBar === 3 || beatInBar === 6 || beatInBar === 9)) return 1; // 12/8
+    return 2;
   }
   function startMetronome(from: number) {
     if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
@@ -172,7 +181,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     schedulerRef.current = setInterval(() => {
       const c = audioCtxRef.current; if (!c) return;
       while (nextBeatRef.current < c.currentTime + 0.05) {
-        scheduleClick(nextBeatRef.current + 0.016, (idx % song.timeSignature) === 0);
+        const beatInBar = idx % song.timeSignature;
+        scheduleClick(nextBeatRef.current + 0.016, getAccent(beatInBar, song.timeSignature));
         nextBeatRef.current += bd; idx++;
       }
     }, 25);
@@ -275,7 +285,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             <span style={{ fontSize:13 }}>🎵</span>
             <div style={{ minWidth:0 }}>
               <div style={{ fontSize:13, fontWeight:700, color:D.text1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</div>
-              {song.tempo > 0 && <div style={{ fontSize:9, color:D.text3, fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4</div>}
+              {song.tempo > 0 && <div style={{ fontSize:9, color:D.text3, fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtTime(totalDur)}</div>}
             </div>
             <span style={{ color:D.text3, fontSize:10, flexShrink:0 }}>▾</span>
           </button>
