@@ -431,7 +431,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   return (
                     <div key={l.id} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                       <div className={`tl-lyric${active?' active':''}`}
-                        style={{ color: active ? '#FFFFFF' : past ? D.text3 : D.text2, fontSize: active?26:20, fontWeight: active?800:500, letterSpacing:'-0.025em', fontStyle: onBeat?'normal':'italic', transition:'all 0.1s', filter: active?'drop-shadow(0 0 12px rgba(255,255,255,0.35))':'none' }}>
+                        style={{ color: active ? '#FFFFFF' : past ? D.text3 : D.text2, fontSize: active?30:23, fontWeight: active?800:500, letterSpacing:'-0.025em', fontStyle: onBeat?'normal':'italic', transition:'all 0.1s', filter: active?'drop-shadow(0 0 12px rgba(255,255,255,0.35))':'none' }}>
                         {l.text}
                       </div>
                     </div>
