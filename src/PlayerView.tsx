@@ -414,13 +414,13 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
 
         {/* ══ PRACTICE AREA — 2 track đứng yên ══ */}
-        <div style={{ flex:1, padding:'8px 12px', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', gap:0 }}>
+        <div style={{ flex:1, padding:'0 12px', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', gap:0 }}>
           {([
             { tScrollOff: t1ScrollOff, isActive: activeTrackNum === 1 },
             { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
           ] as const).map(({ tScrollOff, isActive }, ti) => (
             <div key={ti} ref={isActive ? scrollRef : undefined} style={{
-              height: 110, flexShrink:0, overflow:'hidden',
+              height: 100, flexShrink:0, overflow:'hidden',
               borderTop: `1px solid ${D.border}`,
               borderBottom: ti === 1 ? `1px solid ${D.border}` : 'none',
               display:'flex', flexDirection:'column', position:'relative',
@@ -451,7 +451,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                       const chord = chordAtBeat[i]
                       const isBar1 = bib === 0
                       return (
-                        <div key={'b'+ti+i} style={{ position:'absolute', left:cellX, top:0, height:52, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
+                        <div key={'b'+ti+i} style={{ position:'absolute', left:cellX, top:0, height:44, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
                           {isBar1 && (
                             <span style={{ position:'absolute', top:4, left:4, fontSize:8, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', fontWeight:500 }}>
                               M{Math.floor(i/song.timeSignature)+1}
@@ -490,7 +490,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                     const active = isActive && currentTime>=l.time && currentTime<nt;
                     const past   = isActive && currentTime>=nt;
                     return (
-                      <div key={l.id+ti} style={{ left:lx, position:'absolute', top:56, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                      <div key={l.id+ti} style={{ left:lx, position:'absolute', top:48, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                         <span style={{
                           fontSize:22, fontWeight: active ? 600 : 400,
                           fontFamily:'"Helvetica Neue",Arial,sans-serif',
