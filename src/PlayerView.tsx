@@ -403,7 +403,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   return (
                     <div key={c.id} style={{ left:cx, position:'absolute', top:0, height:'100%' }}>
                       <div style={{
-                        position:'absolute', top:120,
+                        position:'absolute', top:80,
                         color: D.gold,
                         fontSize: active ? 28 : 22,
                         fontWeight: 800,
@@ -429,7 +429,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   const past   = currentTimeRef.current>=nt;
                   const onBeat = Math.abs(l.time/beatDur-Math.round(l.time/beatDur))<0.05;
                   return (
-                    <div key={l.id} style={{ left:lx, position:'absolute', top:174, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                    <div key={l.id} style={{ left:lx, position:'absolute', top:134, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                       <div className={`tl-lyric${active?' active':''}`}
                         style={{ color: active ? '#FFFFFF' : past ? D.text3 : D.text2, fontSize: active?26:20, fontWeight: active?800:500, letterSpacing:'-0.025em', fontStyle: onBeat?'normal':'italic', transition:'all 0.1s', filter: active?'drop-shadow(0 0 12px rgba(255,255,255,0.35))':'none' }}>
                         {l.text}
