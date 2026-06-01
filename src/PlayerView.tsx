@@ -545,12 +545,14 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                               transition:'color 0.06s',
                             }}>{chord}</span>
                           ) : (
-                            <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', lineHeight:1,
-                              fontWeight: isActiveB ? 800 : 400,
-                              color: isActiveB ? (isBar1 ? '#fff' : D.accentLight) : (isBar1 ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.13)'),
-                              textShadow: isActiveB ? (isBar1 ? `0 0 10px #fff,0 0 20px ${D.accent}` : `0 0 8px ${D.accent}`) : 'none',
-                              transition:'color 0.06s',
-                            }}>{bib+1}</span>
+                            <div style={{
+                              width: isBar1 ? 12 : 10, height: isBar1 ? 12 : 10, borderRadius:'50%',
+                              background: isBar1 ? '#F59E0B' : '#2DD4BF',
+                              opacity: isActiveB ? 1 : 0.4,
+                              transform: isActiveB ? 'scale(1.4)' : 'scale(1)',
+                              boxShadow: isActiveB ? (isBar1 ? '0 0 12px rgba(245,158,11,0.8)' : '0 0 12px rgba(45,212,191,0.8)') : 'none',
+                              transition: 'all 0.08s',
+                            }} />
                           )}
                         </div>
                       )
