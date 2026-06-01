@@ -632,7 +632,8 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   const barDur  = beatDur * song.timeSignature
   // PPS: 1 ô nhịp vừa đúng màn hình (trừ 40px padding)
   const PPS = (mW - 40) / (song.timeSignature * beatDur)
-  const nowX = 20
+  const cellWMobile = PPS * beatDur
+  const nowX = cellWMobile / 2  // phách 1 căn giữa ô đầu tiên
   const trackW = totalDur * PPS + mW
 
   // Mobile: 1 ô nhịp = đúng timeSignature beats (4/4 = 4, 3/4 = 3)
