@@ -666,7 +666,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         const tInChunk = t - chunk * chunkDur
         const done = tInChunk >= chunkDur - beatDur
         const prog = done ? (tInChunk - (chunkDur - beatDur)) / beatDur : 0
-        const y = -((chunk + Math.min(prog, 1) - 1) * TRACK_H)  // -1: câu đang hát ở track giữa
+        const y = -((chunk + Math.min(prog, 1)) * TRACK_H)  // ô đệm ở đầu đã đẩy xuống 1 track → câu đang hát ở giữa
         scrollContainerRef.current.style.transform = `translateY(${y}px)`
       }
       raf = requestAnimationFrame(tick)
@@ -806,6 +806,19 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
           top: showControls ? 0 : 16,
           willChange: 'transform',
         }}>
+          {/* Ô đệm đếm nhịp khởi động — lấp khoảng hụt đầu bài */}
+          <div style={{ height:100, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background:'#0D0F14', opacity:0.5, display:'flex', flexDirection:'column' }}>
+            <div style={{ display:'flex', height:24, flexShrink:0 }}>
+              {Array.from({ length: song.timeSignature }, (_, bi) => (
+                <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', borderLeft: bi===0 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+                  <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: bi===0 ? 800 : 400, color: bi===0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)' }}>{bi+1}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ fontSize:13, color:'rgba(255,255,255,0.35)', fontFamily:'"DM Sans",sans-serif' }}>Đếm nhịp vào…</span>
+            </div>
+          </div>
           {Array.from({ length: totalChunks }, (_, ci) => {
             const isActive = ci === currentChunk
             const scrollOff = nowX + ci * beatsPerTrack * beatDur * PPS - 20
