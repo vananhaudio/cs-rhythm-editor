@@ -699,17 +699,13 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     const tChunk = ci
     const beatStart = tChunk * beatsPerTrack
     const beatEnd = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
-    const chunkStart = beatStart * beatDur
-    const chunkEnd = chunkStart + beatsPerTrack * beatDur
+    const chunkStart = Math.round(beatStart * beatDur * 1000) / 1000
+    const chunkEnd = Math.round(beatEnd * beatDur * 1000) / 1000
 
     // scrollOff: đưa chunkStart về nowX — y hệt desktop
     const chunkScrollOff = nowX + chunkStart * PPS
 
-    // Filter theo beat index — chính xác như editor
-    const trackLyrics = (song.lyrics??[]).filter((l: any) => {
-      const beatIdx = Math.floor(l.time / beatDur)
-      return beatIdx >= beatStart && beatIdx < beatEnd
-    })
+    const trackLyrics = (song.lyrics??[])
     const TRACK_H = 100
 
     return (
@@ -723,9 +719,9 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
             const isActiveB = activeBeatIdx === i && isActive
             const chord = chordMap[i]
             const cellW = PPS * beatDur
-            const cellX = nowX + i * beatDur * PPS - chunkScrollOff - cellW/2
+            const cellX = nowX + i * beatDur * PPS - chunkScrollOff
             return (
-              <div key={i} style={{ position:'absolute', left:cellX, top:0, height:24, width:cellW, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+              <div key={i} style={{ position:'absolute', left:cellX, top:0, height:24, width:cellW, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
                 {isBar1 && <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
                 {chord ? (
                   <span style={{ fontSize:14, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
@@ -740,7 +736,6 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
           {trackLyrics.map((l: any, li: number) => {
             const lx = nowX + l.time * PPS - chunkScrollOff
-            if (lx < 0 || lx > mW) return null  // chỉ render chữ trong ô nhịp này
             const nt = trackLyrics[li+1]?.time ?? chunkEnd
             const active = isActive && currentTime >= l.time && currentTime < nt
             const past   = isActive && currentTime >= nt
