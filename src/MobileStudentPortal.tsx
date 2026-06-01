@@ -175,67 +175,36 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,.06)' }} />
               <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>Xin chào 👋</div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: L.tinv, letterSpacing: '-.02em' }}>{name}</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.15)', borderRadius: 20, padding: '6px 12px 6px 8px' }}>
-                  <span style={{ fontSize: 18 }}>🔥</span>
-                  <span style={{ fontWeight: 800, fontSize: 16, color: '#FCD34D' }}>12</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,.65)' }}>ngày</span>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,.65)' }}>Tiến độ hôm nay</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: '#A5F3FC' }}>60%</span>
-                </div>
-                <div style={{ height: 6, background: 'rgba(255,255,255,.15)', borderRadius: 99 }}>
-                  <div style={{ height: '100%', width: '60%', background: 'linear-gradient(90deg, #6EE7B7, #3B82F6)', borderRadius: 99 }} />
-                </div>
+                <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎸</div>
               </div>
             </div>
 
             <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
               {/* Việc hôm nay */}
+              {mainCourse && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700 }}>Hôm nay</span>
-                  <span style={{ fontSize: 12, color: L.p1, fontWeight: 600 }}>2/3 xong</span>
+                  <span style={{ fontSize: 16, fontWeight: 700 }}>Tiếp tục học</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {mainCourse && (
-                    <div onClick={() => openCourse(mainCourse.course_id)}
-                      style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>▶️</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Xem bài học</div>
-                        <div style={{ fontSize: 12, color: L.t2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mainCourse.course?.name}</div>
-                      </div>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: L.green, flexShrink: 0 }} />
+                  <div onClick={() => openCourse(mainCourse.course_id)}
+                    style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>▶️</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Xem bài học</div>
+                      <div style={{ fontSize: 12, color: L.t2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mainCourse.course?.name}</div>
                     </div>
-                  )}
-                  {[
-                    { icon: '🥁', label: 'Tap nhịp', sub: 'Thành phố buồn', done: true  },
-                    { icon: '📹', label: 'Nộp video', sub: 'Đệm hát 1 - Buổi 3', done: false },
-                  ].map(t => (
-                    <div key={t.label} style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, opacity: t.done ? .6 : 1 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{t.icon}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2, textDecoration: t.done ? 'line-through' : 'none', color: t.done ? L.t3 : L.t1 }}>{t.label}</div>
-                        <div style={{ fontSize: 12, color: L.t2 }}>{t.sub}</div>
-                      </div>
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: t.done ? L.green : L.border, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {t.done && <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>✓</span>}
-                      </div>
-                    </div>
-                  ))}
+                    <span style={{ color: L.t3, fontSize: 18, flexShrink: 0 }}>›</span>
+                  </div>
                 </div>
               </div>
+              )}
 
               {/* Hành trình */}
               {mainCourse ? (
@@ -243,19 +212,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   <span style={{ fontSize: 16, fontWeight: 700 }}>Hành trình hiện tại</span>
                   <div style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadowLg, marginTop: 12, position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: L.p2, borderRadius: '0 20px 0 100%', opacity: .5 }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
                       <div style={{ width: 48, height: 48, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎸</div>
                       <div>
                         <div style={{ fontSize: 12, color: L.t3, marginBottom: 3 }}>Đang theo học</div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: L.p1, lineHeight: 1.3 }}>{mainCourse.course?.name}</div>
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: L.t2, marginBottom: 6 }}>
-                      <span>Đệm hát 1 · Buổi 3</span>
-                      <span style={{ fontWeight: 700, color: L.p1 }}>30%</span>
-                    </div>
-                    <div style={{ height: 6, background: L.border, borderRadius: 99, marginBottom: 18 }}>
-                      <div style={{ height: '100%', width: '30%', background: `linear-gradient(90deg, ${L.p1}, #818CF8)`, borderRadius: 99 }} />
                     </div>
                     <button onClick={() => openCourse(mainCourse.course_id)}
                       style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: L.tinv, border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.02em', boxShadow: '0 4px 16px rgba(67,56,202,.35)' }}>
