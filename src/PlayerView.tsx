@@ -309,7 +309,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   if (isMobile) {
     return (
       <MobileLayout
-        song={song} onClose={onClose}
+        song={song} onClose={onClose} onImportSong={onImportSong}
         isPlaying={isPlaying} currentTime={currentTime}
         togglePlay={togglePlay} seekTo={seekTo}
         speed={speed} setSpeed={setSpeed}
@@ -611,8 +611,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 }
 
 // ── Mobile Layout Component ──────────────────────────────────────────────────
-function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekTo, speed, setSpeed, muteMetronome, setMuteMetronome, activeBeatIdx, totalDur, currentTimeRef }: {
-  song: any; onClose: () => void; isPlaying: boolean; currentTime: number
+function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, togglePlay, seekTo, speed, setSpeed, muteMetronome, setMuteMetronome, activeBeatIdx, totalDur, currentTimeRef }: {
+  song: any; onClose: () => void; onImportSong?: (s: RhythmSong) => void; isPlaying: boolean; currentTime: number
   togglePlay: () => void; seekTo: (t: number) => void
   speed: number; setSpeed: (s: number) => void
   muteMetronome: boolean; setMuteMetronome: (v: boolean | ((p: boolean) => boolean)) => void
@@ -649,6 +649,7 @@ function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekT
     return m
   }, [song.chords, beatDur])
 
+  const [showSongList, setShowSongList] = React.useState(false)
   const fmtT = (t: number) => `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`
   const pct = totalDur > 0 ? currentTime/totalDur*100 : 0
 
@@ -707,10 +708,14 @@ function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekT
       {/* Header */}
       <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 12px', height:52, display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
         <button onClick={onClose} style={{ width:36,height:36,borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
-        <div style={{ flex:1,minWidth:0 }}>
-          <div style={{ fontSize:14,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#F1F5F9' }}>{song.title||'Nhịp điệu'}</div>
-          <div style={{ fontSize:10,color:'#475569',fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtT(totalDur)}</div>
-        </div>
+        <button onClick={() => setShowSongList(true)} style={{ flex:1,minWidth:0,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'6px 10px',cursor:'pointer',textAlign:'left',display:'flex',alignItems:'center',gap:8 }}>
+          <span style={{ fontSize:14 }}>🎵</span>
+          <div style={{ minWidth:0,flex:1 }}>
+            <div style={{ fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#F1F5F9' }}>{song.title||'Chọn bài'}</div>
+            <div style={{ fontSize:10,color:'#475569',fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtT(totalDur)}</div>
+          </div>
+          <span style={{ color:'#475569',fontSize:12,flexShrink:0 }}>▾</span>
+        </button>
         <button onClick={() => setMuteMetronome(v=>!v)} style={{ width:36,height:36,borderRadius:8,border:`1px solid ${muteMetronome?'rgba(108,99,255,0.4)':'rgba(255,255,255,0.08)'}`,background:muteMetronome?'rgba(108,99,255,0.15)':'none',color:muteMetronome?'#8B84FF':'#94A3B8',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{muteMetronome?'🔇':'🔊'}</button>
       </div>
 
@@ -755,6 +760,13 @@ function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekT
           <button onClick={() => seekTo(Math.min(totalDur, currentTime+5))} style={{ width:48,height:48,borderRadius:14,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit' }}>+5s</button>
         </div>
       </div>
+    {showSongList && (
+        <SongList
+          onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); setShowSongList(false); }}
+          onClose={() => setShowSongList(false)}
+          isTeacher={false}
+        />
+      )}
     </div>
   )
 }
