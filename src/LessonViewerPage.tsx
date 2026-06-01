@@ -240,9 +240,9 @@ export default function LessonViewerPage() {
                 <div style={{ fontSize: 12, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
                   📝 Nội dung bài học
                 </div>
-                <div style={{ fontSize: 14, color: D.text2, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                  {active.content}
-                </div>
+                <div style={{ fontSize: 14, color: D.text2, lineHeight: 1.8 }}
+                  className="rich-content"
+                  dangerouslySetInnerHTML={{ __html: active.content }} />
               </div>
             )}
 

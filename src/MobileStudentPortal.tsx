@@ -142,11 +142,13 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // ── Tool overlay — mở tool ngay trong app, không navigate ra ngoài ──
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
+  // ── Track tool đã dùng trong bài hiện tại ──
+  const [usedToolIds, setUsedToolIds] = useState<Set<string>>(new Set())
 
-  const openTool = (route: string, name: string) => {
-    // URL ngoài (https://...) dùng thẳng, route nội bộ thêm origin
+  const openTool = (route: string, name: string, toolId?: string) => {
     const url = route.startsWith('http') ? route : window.location.origin + route
     setActiveTool({ name, url })
+    if (toolId) setUsedToolIds(prev => new Set([...prev, toolId]))
   }
 
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
@@ -195,6 +197,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     if (!isUnlocked(l)) return // khoá, không mở
     setActiveLesson(l)
     setLessonTab('content')
+    setUsedToolIds(new Set()) // reset khi chuyển bài
     setScreen('lesson')
   }
 
@@ -523,21 +526,37 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                     <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.8 }}>{activeLesson.description}</div>
                   )}
                   {activeLesson.content && (
-                    <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap', color: L.t1 }}>
-                      {activeLesson.content}
-                    </div>
+                    <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, fontSize: 14, lineHeight: 1.8, color: L.t1 }}
+                      className="rich-content"
+                      dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
                   )}
                   {activeLesson.tools?.length > 0 && (
-                    <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>Công cụ luyện tập</div>
-                      {activeLesson.tools.map((tid, i) => {
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', paddingLeft: 4 }}>
+                        🎯 Thực hành — hoàn thành để tiếp tục
+                      </div>
+                      {activeLesson.tools.map((tid) => {
                         const t = TOOLS_MAP[tid]; if (!t) return null
+                        const done = usedToolIds.has(tid)
                         return (
-                          <div key={tid} onClick={() => openTool(t.route, t.label)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: i > 0 ? `1px solid ${L.border}` : 'none', cursor: 'pointer' }}>
-                            <div style={{ width: 36, height: 36, borderRadius: 10, background: t.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{t.icon}</div>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: t.color, flex: 1 }}>{t.label}</span>
-                            <span style={{ color: L.t3 }}>›</span>
+                          <div key={tid} onClick={() => openTool(t.route, t.label, tid)}
+                            style={{ background: done ? L.greenBg : L.surface, border: `2px solid ${done ? L.green : t.color}`, borderRadius: 18, padding: '18px 16px', cursor: 'pointer', boxShadow: done ? 'none' : `0 4px 20px ${t.color}22`, transition: 'all .2s' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                              <div style={{ width: 52, height: 52, borderRadius: 14, background: done ? L.green + '18' : t.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
+                                {done ? '✅' : t.icon}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: done ? L.green : L.t1, marginBottom: 3 }}>{t.label}</div>
+                                <div style={{ fontSize: 12, color: done ? L.green : L.t2 }}>
+                                  {done ? 'Đã hoàn thành ✓' : 'Bấm để bắt đầu thực hành'}
+                                </div>
+                              </div>
+                              {!done && (
+                                <div style={{ background: t.color, color: '#fff', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                                  Bắt đầu →
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )
                       })}
@@ -554,13 +573,23 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* Nav buttons + Đánh dấu hoàn thành */}
             <div style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* Nút hoàn thành */}
-              {!completedIds.has(activeLesson.id) && (
-                <button onClick={() => markComplete(activeLesson.id)} disabled={markingDone}
-                  style={{ width: '100%', background: L.greenBg, border: `1.5px solid ${L.green}`, borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', color: L.green, opacity: markingDone ? 0.6 : 1 }}>
-                  {markingDone ? 'Đang lưu…' : '✓ Đánh dấu đã học'}
-                </button>
-              )}
+              {/* Nút hoàn thành — block nếu chưa dùng hết tool */}
+              {!completedIds.has(activeLesson.id) && (() => {
+                const requiredTools = activeLesson.tools ?? []
+                const allToolsDone = requiredTools.length === 0 || requiredTools.every(tid => usedToolIds.has(tid))
+                return allToolsDone ? (
+                  <button onClick={() => markComplete(activeLesson.id)} disabled={markingDone}
+                    style={{ width: '100%', background: L.greenBg, border: `1.5px solid ${L.green}`, borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', color: L.green, opacity: markingDone ? 0.6 : 1 }}>
+                    {markingDone ? 'Đang lưu…' : '✓ Đánh dấu đã học'}
+                  </button>
+                ) : (
+                  <div style={{ background: L.surface2, border: `1.5px solid ${L.border}`, borderRadius: 14, padding: '13px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, color: L.t3, fontWeight: 600 }}>
+                      🔒 Hoàn thành {requiredTools.filter(tid => !usedToolIds.has(tid)).length} bài tập thực hành để tiếp tục
+                    </div>
+                  </div>
+                )
+              })()}
               {completedIds.has(activeLesson.id) && (
                 <div style={{ textAlign: 'center', fontSize: 13, color: L.green, fontWeight: 600, padding: '8px 0' }}>✅ Bài này đã hoàn thành</div>
               )}

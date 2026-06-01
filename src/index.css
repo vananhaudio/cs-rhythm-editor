@@ -122,3 +122,20 @@ code {
   .pb-safe-6 { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem); }
   .mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
 }
+
+/* Rich content render cho học sinh */
+.rich-content h1 { font-size: 20px; font-weight: 700; margin: 16px 0 8px; }
+.rich-content h2 { font-size: 17px; font-weight: 700; margin: 14px 0 6px; }
+.rich-content h3 { font-size: 15px; font-weight: 600; margin: 12px 0 5px; }
+.rich-content p  { margin: 0 0 8px; }
+.rich-content ul, .rich-content ol { padding-left: 20px; margin: 8px 0; }
+.rich-content li { margin-bottom: 4px; }
+.rich-content strong { font-weight: 700; }
+.rich-content em { font-style: italic; }
+.rich-content u  { text-decoration: underline; }
+.rich-content a  { color: #4338CA; text-decoration: underline; }
+.rich-content blockquote { border-left: 3px solid #4338CA; padding: 8px 14px; margin: 10px 0; background: #EEF2FF; border-radius: 0 6px 6px 0; }
+.rich-content img { max-width: 100%; border-radius: 8px; display: block; margin: 10px auto; }
+.rich-content table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+.rich-content th { background: #F4F4F5; font-weight: 600; padding: 8px 12px; border: 1px solid #E4E4E7; text-align: left; }
+.rich-content td { padding: 7px 12px; border: 1px solid #E4E4E7; vertical-align: top; }
