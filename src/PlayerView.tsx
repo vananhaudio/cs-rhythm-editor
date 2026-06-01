@@ -859,28 +859,31 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
           top: showControls ? 0 : 16,
           willChange: 'transform',
         }}>
-          {/* Track đếm nhịp vào — ở vị trí track trên, lấp khoảng hổng đầu bài */}
-          <div style={{ height:100, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: countInBeat >= 0 ? '#141720' : '#0D0F14', opacity: countInBeat >= 0 ? 1 : 0.4, transition:'opacity 0.2s', display:'flex', flexDirection:'column' }}>
-            <div style={{ display:'flex', height:24, flexShrink:0 }}>
-              {Array.from({ length: song.timeSignature }, (_, bi) => {
-                const lit = countInBeat === bi
-                const isBar1 = bi === 0
-                return (
-                  <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
-                    <div style={{
-                      width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9, borderRadius:'50%',
-                      background: isBar1 ? '#F59E0B' : '#2DD4BF',
-                      opacity: lit ? 1 : 0.45,
-                      transform: lit ? 'scale(1.4)' : 'scale(1)',
-                      boxShadow: lit ? (isBar1 ? '0 0 10px rgba(245,158,11,0.8)' : '0 0 10px rgba(45,212,191,0.8)') : 'none',
-                      transition: 'all 0.08s',
-                    }} />
-                  </div>
-                )
-              })}
-            </div>
-            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <span style={{ fontSize:15, color: countInBeat >= 0 ? 'rgba(45,212,191,0.8)' : 'rgba(255,255,255,0.3)', fontFamily:'"DM Sans",sans-serif', transition:'color 0.2s' }}>Chuẩn bị…</span>
+          {/* Track đếm nhịp vào — dùng cùng công thức vị trí với track thật để thẳng hàng */}
+          <div style={{ height:100, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: countInBeat >= 0 ? '#141720' : '#0D0F14', opacity: countInBeat >= 0 ? 1 : 0.4, transition:'opacity 0.2s', position:'relative', overflow:'hidden' }}>
+            <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW }}>
+              <div style={{ height:24, position:'relative' }}>
+                {Array.from({ length: song.timeSignature }, (_, bi) => {
+                  const lit = countInBeat === bi
+                  const isBar1 = bi === 0
+                  const cellX = nowX + bi * beatDur * PPS
+                  return (
+                    <div key={bi} style={{ position:'absolute', left:cellX, top:0, height:24, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+                      <div style={{
+                        width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9, borderRadius:'50%',
+                        background: isBar1 ? '#F59E0B' : '#2DD4BF',
+                        opacity: lit ? 1 : 0.45,
+                        transform: lit ? 'scale(1.4)' : 'scale(1)',
+                        boxShadow: lit ? (isBar1 ? '0 0 10px rgba(245,158,11,0.8)' : '0 0 10px rgba(45,212,191,0.8)') : 'none',
+                        transition: 'all 0.08s',
+                      }} />
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ position:'absolute', left: nowX + (song.timeSignature/2) * beatDur * PPS, top:'calc(24px + 24px)', transform:'translateX(-50%)', whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:18, color: countInBeat >= 0 ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.3)', fontFamily:'"DM Sans",sans-serif', transition:'color 0.2s' }}>Chuẩn bị…</span>
+              </div>
             </div>
           </div>
           {Array.from({ length: totalChunks }, (_, ci) => {
