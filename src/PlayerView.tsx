@@ -336,19 +336,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   // Làm tròn xuống bội số của timeSignature (4/4→4,8,12; 3/4→3,6,9...)
   const rawBeats = Math.max(song.timeSignature, Math.floor((containerW - 240) / (PPS * beatDur)))
   const beatsPerTrack = Math.floor(rawBeats / song.timeSignature) * song.timeSignature
-  // Dùng currentTime để tính chunk — đảm bảo re-render ngay khi đổi chunk
   const currentChunk   = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
-  // Track 1 = chunk chẵn hiện tại hoặc chunk chẵn tiếp theo (khi track 2 đang active)
-  // Track 2 = chunk lẻ tiếp theo
-  const activeTrackNum = currentChunk % 2 === 0 ? 1 : 2
-  const t1Chunk = activeTrackNum === 1 ? currentChunk : currentChunk + 1
-  const t2Chunk = activeTrackNum === 2 ? currentChunk : currentChunk + 1
-  // Cả 2 track đứng yên — chữ đầu chunk bắt đầu từ mép trái + 20px
-  // Chữ đầu chunk nằm tại 20px từ mép trái
-  // vị trí thực = nowX + chunkStart*PPS - scrollOff = 20
-  // => scrollOff = nowX + chunkStart*PPS - 20
+  // 3 track liên tiếp: trên = câu vừa hát, giữa = câu đang hát, dưới = câu sắp tới
+  const t1Chunk = currentChunk - 1  // câu vừa hát (trên)
+  const t2Chunk = currentChunk      // câu đang hát (giữa)
+  const t3Chunk = currentChunk + 1  // câu sắp tới (dưới)
+  const activeTrackNum = 2          // câu đang hát luôn ở track giữa
   const t1ScrollOff  = nowX + t1Chunk * beatsPerTrack * beatDur * PPS - 120
   const t2ScrollOff  = nowX + t2Chunk * beatsPerTrack * beatDur * PPS - 120
+  const t3ScrollOff  = nowX + t3Chunk * beatsPerTrack * beatDur * PPS - 120
   const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
 
   // Mobile: dùng MobilePlayerView layout
@@ -497,13 +493,14 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         {/* ══ PRACTICE AREA — 2 track đứng yên ══ */}
         <div style={{ flex:1, padding:'0 12px', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', gap:0 }}>
           {([
-            { tScrollOff: t1ScrollOff, isActive: activeTrackNum === 1 },
-            { tScrollOff: t2ScrollOff, isActive: activeTrackNum === 2 },
-          ] as const).map(({ tScrollOff, isActive }, ti) => (
+            { tScrollOff: t1ScrollOff, isActive: false, chunk: t1Chunk },
+            { tScrollOff: t2ScrollOff, isActive: true,  chunk: t2Chunk },
+            { tScrollOff: t3ScrollOff, isActive: false, chunk: t3Chunk },
+          ] as const).map(({ tScrollOff, isActive, chunk }, ti) => (
             <div key={ti} ref={isActive ? scrollRef : undefined} style={{
               height: 110, flexShrink:0, overflow:'hidden',
               borderTop: `1px solid ${D.border}`,
-              borderBottom: ti === 1 ? `1px solid ${D.border}` : 'none',
+              borderBottom: ti === 2 ? `1px solid ${D.border}` : 'none',
               display:'flex', flexDirection:'column', position:'relative',
               background: isActive ? '#141720' : D.bg,
               opacity: isActive ? 1 : 0.45,
@@ -520,7 +517,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                       chordAtBeat[beatIdx] = c.name
                     })
                     // Chỉ render beats trong chunk này
-                    const tChunk = ti === 0 ? t1Chunk : t2Chunk
+                    const tChunk = chunk
                     const beatStart = tChunk * beatsPerTrack
                     const beatEnd   = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
                     return Array.from({ length: beatEnd - beatStart }, (_, bi) => {
@@ -562,7 +559,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
                   <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:D.border }} />
                   {/* Lyrics */}
                   {(song.lyrics??[]).filter(l => {
-                    const tChunk2    = ti === 0 ? t1Chunk : t2Chunk
+                    const tChunk2    = chunk
                     const chunkStart = tChunk2 * beatsPerTrack * beatDur
                     const chunkEnd   = chunkStart + beatsPerTrack * beatDur
                     // Từ thuộc track này nếu time nằm trong beat range của track
