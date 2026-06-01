@@ -125,7 +125,18 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [markingDone, setMarkingDone]   = useState(false)
 
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
-  const isUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
+  const isTierUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
+
+  // Bài chỉ mở khi bài trước đã hoàn thành (theo thứ tự toàn bộ lessons)
+  const isSequentiallyUnlocked = (lessonId: string) => {
+    const idx = lessons.findIndex(l => l.id === lessonId)
+    if (idx <= 0) return true                          // bài đầu luôn mở
+    const prev = lessons[idx - 1]
+    return completedIds.has(prev.id)                   // mở nếu bài trước đã ✅
+  }
+
+  const isUnlocked = (l: Lesson) =>
+    isTierUnlocked(l.tier) && isSequentiallyUnlocked(l.id)
 
   useEffect(() => {
     supabase.from('edu_enrollments')
@@ -156,7 +167,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   const openLesson = (l: Lesson) => {
-    if (!isUnlocked(l.tier)) return // khoá, không mở
+    if (!isUnlocked(l)) return // khoá, không mở
     setActiveLesson(l)
     setLessonTab('content')
     setScreen('lesson')
@@ -371,22 +382,30 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   <div style={{ fontSize: 11, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.08em', padding: '0 4px 10px' }}>{mod.name}</div>
                   {lessons.filter(l => l.module_id === mod.id).map((l) => {
                     const icons: Record<string, string> = { video: '▶️', text: '📄', slide: '🖼', quiz: '❓', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹' }
-                    const done    = completedIds.has(l.id)
-                    const locked  = !isUnlocked(l.tier)
+                    const done       = completedIds.has(l.id)
+                    const tierLocked = !isTierUnlocked(l.tier)
+                    const seqLocked  = !isSequentiallyUnlocked(l.id)
+                    const locked     = tierLocked || seqLocked
+                    const isCurrent  = !done && !locked
                     return (
                       <div key={l.id} onClick={() => openLesson(l)}
-                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: locked ? 'default' : 'pointer', marginBottom: 8, border: `2px solid ${activeLesson?.id === l.id ? L.p1 : 'transparent'}`, opacity: locked ? .55 : 1, position: 'relative' }}>
-                        {/* Icon */}
-                        <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: locked ? 'default' : 'pointer', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : isCurrent ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: done ? L.green : L.t1 }}>{l.title}</div>
-                          {locked && l.tier && (
+                          <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: done ? L.green : locked ? L.t3 : L.t1 }}>{l.title}</div>
+                          {seqLocked && !tierLocked && (
+                            <div style={{ fontSize: 10, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
+                          )}
+                          {tierLocked && l.tier && (
                             <div style={{ fontSize: 10, color: L.gold, fontWeight: 600, marginTop: 2 }}>Yêu cầu gói {TIER_VI[l.tier] ?? l.tier}</div>
                           )}
+                          {isCurrent && (
+                            <div style={{ fontSize: 10, color: L.p1, fontWeight: 600, marginTop: 2 }}>▶ Học tiếp theo</div>
+                          )}
                         </div>
-                        {!locked && !done && <span style={{ color: L.t3, fontSize: 18 }}>›</span>}
+                        {!locked && !done && <span style={{ color: L.p1, fontSize: 18 }}>›</span>}
                       </div>
                     )
                   })}
@@ -552,7 +571,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {displayTools.map((t) => {
-                const unlocked = isUnlocked(t.tier)
+                const unlocked = isTierUnlocked(t.tier)
                 const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
                 return (
                   <div key={t.id} onClick={() => { if (unlocked) window.location.href = route }}
