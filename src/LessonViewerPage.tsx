@@ -27,9 +27,6 @@ const TOOL_LABELS: Record<string, { label: string; icon: string; route: string }
   ear:           { label: 'Luyện tai',     icon: '👂', route: '/tap'         },
 }
 
-// Tool map sẽ được load từ DB
-let DYNAMIC_TOOL_MAP: Record<string, { label: string; icon: string; route: string }> = { ...TOOL_LABELS }
-
 function normalizeCanvaUrl(raw: string): string {
   // Tách src từ HTML block nếu paste cả <iframe> hoặc <div>
   const iframeSrc = raw.match(/src="([^"]*canva\.com[^"]*)"/)
@@ -59,6 +56,7 @@ export default function LessonViewerPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [active, setActive]   = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
+  const [toolMap, setToolMap] = useState<Record<string, { label: string; icon: string; route: string }>>(TOOL_LABELS)
 
   useEffect(() => {
     if (!courseId) return
@@ -77,6 +75,13 @@ export default function LessonViewerPage() {
         }))
         setLessons(parsed)
         if (parsed.length > 0) setActive(parsed[0])
+      }
+      // Load tool map từ DB
+      const { data: toolsData } = await supabase.from('edu_tools').select('id,name,icon,route').eq('enabled', true)
+      if (toolsData?.length) {
+        const map: Record<string, { label: string; icon: string; route: string }> = { ...TOOL_LABELS }
+        toolsData.forEach((t: any) => { map[t.id] = { label: t.name, icon: t.icon, route: t.route } })
+        setToolMap(map)
       }
       setLoading(false)
     }
@@ -257,7 +262,7 @@ export default function LessonViewerPage() {
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {tools.map(toolId => {
-                    const t = DYNAMIC_TOOL_MAP[toolId]
+                    const t = toolMap[toolId]
                     if (!t) return null
                     return (
                       <a key={toolId} href={t.route}
