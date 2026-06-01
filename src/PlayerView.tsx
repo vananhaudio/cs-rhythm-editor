@@ -659,7 +659,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     const beatEnd = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
     const chunkStart = beatStart * beatDur
     const chunkEnd = beatEnd * beatDur
-    const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart && l.time < chunkEnd)
+    const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart - beatDur * 0.5 && l.time < chunkEnd + beatDur * 0.5)
     const TRACK_H = 120
 
     return (
