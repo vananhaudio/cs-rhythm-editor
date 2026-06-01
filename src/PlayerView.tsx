@@ -666,7 +666,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         const tInChunk = t - chunk * chunkDur
         const done = tInChunk >= chunkDur - beatDur
         const prog = done ? (tInChunk - (chunkDur - beatDur)) / beatDur : 0
-        const y = -((chunk + Math.min(prog, 1)) * TRACK_H)
+        const y = -((chunk + Math.min(prog, 1) - 1) * TRACK_H)  // -1: câu đang hát ở track giữa
         scrollContainerRef.current.style.transform = `translateY(${y}px)`
       }
       raf = requestAnimationFrame(tick)
