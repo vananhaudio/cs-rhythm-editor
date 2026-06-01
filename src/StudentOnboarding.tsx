@@ -55,7 +55,7 @@ const TIER_LABEL: Record<string, string> = {
 interface Student {
   id: string; full_name: string; phone: string | null
   email: string | null; level: string | null; is_active: boolean
-  enrolled_at: string | null
+  enrolled_at: string | null; display_name?: string | null; avatar_url?: string | null
 }
 
 // Hiện tên đẹp: nếu full_name là email thì dùng phần trước @
@@ -88,7 +88,7 @@ export default function StudentOnboarding() {
       if (session?.user?.id) {
         const { data } = await supabase
           .from('edu_students')
-          .select('id,full_name,phone,email,level,is_active,enrolled_at')
+          .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
           .eq('user_id', session.user.id)
           .single()
         if (data) { setStudent(data); setStep('portal') }
@@ -103,7 +103,7 @@ export default function StudentOnboarding() {
       setSearching(true)
       const q = query.trim()
       supabase.from('edu_students')
-        .select('id,full_name,phone,email,level,is_active,enrolled_at')
+        .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
         .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
         .eq('is_active', true)
         .limit(6)
@@ -137,7 +137,7 @@ export default function StudentOnboarding() {
     }
     const { data } = await supabase
       .from('edu_students')
-      .select('id,full_name,phone,email,level,is_active,enrolled_at')
+      .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
       .eq('user_id', authData.user.id)
       .single()
     if (data) { setStudent(data); setStep('portal') }

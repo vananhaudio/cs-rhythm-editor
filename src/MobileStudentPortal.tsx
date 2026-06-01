@@ -38,7 +38,7 @@ const L = {
 type Tab    = 'hoc' | 'tap' | 'song'
 type Screen = 'home' | 'courses' | 'lesson'
 
-interface Student    { id: string; full_name: string; email: string | null; level: string | null }
+interface Student    { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null }
 interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
@@ -52,6 +52,7 @@ interface Lesson {
 }
 
 function uname(s: Student) {
+  if (s.display_name?.trim()) return s.display_name.trim()
   const n = s.full_name ?? ''
   return (n.includes('@') ? n.split('@')[0] : n.split(' ').pop() ?? n)
 }
@@ -98,6 +99,11 @@ interface Props { student: Student; onLogout: () => void }
 
 export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [tab, setTab]             = useState<Tab>('hoc')
+  const [me, setMe]               = useState<Student>(student)
+  const [showSettings, setShowSettings] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
+  const avatarFileRef = useRef<HTMLInputElement>(null)
   const [screen, setScreen]       = useState<Screen>('home')
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [modules, setModules]     = useState<Module[]>([])
@@ -150,8 +156,34 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     tapTimer.current = setTimeout(() => { tapTimes.current = []; setTapCount(0) }, 3000)
   }
 
+  // ── Hồ sơ cá nhân ──
+  const openSettings = () => { setNameDraft(uname(me)); setShowSettings(true) }
+  const saveDisplayName = async () => {
+    const v = nameDraft.trim()
+    if (!v) return
+    setSavingProfile(true)
+    await supabase.from('edu_students').update({ display_name: v }).eq('id', me.id)
+    setMe(prev => ({ ...prev, display_name: v }))
+    setSavingProfile(false)
+  }
+  const uploadAvatar = async (file: File) => {
+    setSavingProfile(true)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `${me.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+      if (upErr) { alert('Lỗi tải ảnh: ' + upErr.message); setSavingProfile(false); return }
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
+      await supabase.from('edu_students').update({ avatar_url: pub.publicUrl }).eq('id', me.id)
+      setMe(prev => ({ ...prev, avatar_url: pub.publicUrl }))
+    } catch (e: any) {
+      alert('Lỗi: ' + (e?.message ?? e))
+    }
+    setSavingProfile(false)
+  }
+
   const mainCourse = enrollments.find(e => e.course?.type === 'hanh_trinh')
-  const name = uname(student)
+  const name = uname(me)
   const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
   const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
@@ -496,17 +528,21 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* Profile card */}
             <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: L.p1, fontWeight: 800 }}>
-                {name.charAt(0).toUpperCase()}
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
+                {me.avatar_url
+                  ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : name.charAt(0).toUpperCase()}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
-                <div style={{ fontSize: 12, color: L.t2 }}>{LEVEL_VI[student.level ?? ''] ?? 'Học viên'}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                <div style={{ fontSize: 12, color: L.t2 }}>{LEVEL_VI[me.level ?? ''] ?? 'Học viên'}</div>
               </div>
-              <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 14px', color: L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 38, height: 38, fontSize: 17, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
+              <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 14px', color: L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                 Đăng xuất
               </button>
             </div>
+            <div style={{ fontSize: 11, color: L.t3, textAlign: 'center', marginTop: 10 }}>Bấm ⚙️ để đổi tên và ảnh đại diện</div>
           </div>
         )}
       </div>
@@ -541,6 +577,54 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       </div>
     </div>
     {showPlayer && <MobilePlayerView song={playerSong as any} onClose={() => setShowPlayer(false)} />}
+
+    {/* ── Modal Cài đặt hồ sơ ── */}
+    {showSettings && (
+      <div onClick={() => setShowSettings(false)}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div onClick={e => e.stopPropagation()}
+          style={{ background: L.surface, borderRadius: '24px 24px 0 0', padding: '20px 20px max(20px, env(safe-area-inset-bottom))', width: '100%', maxWidth: 430, boxShadow: '0 -8px 32px rgba(0,0,0,0.2)' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: L.border, margin: '0 auto 18px' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <span style={{ fontWeight: 800, fontSize: 18 }}>Hồ sơ của tôi</span>
+            <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 20, color: L.t3, cursor: 'pointer' }}>✕</button>
+          </div>
+
+          {/* Avatar */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 22 }}>
+            <div onClick={() => avatarFileRef.current?.click()}
+              style={{ width: 92, height: 92, borderRadius: '50%', background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, color: L.p1, fontWeight: 800, overflow: 'hidden', cursor: 'pointer', position: 'relative', border: `3px solid ${L.surface}`, boxShadow: L.shadow }}>
+              {me.avatar_url
+                ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : name.charAt(0).toUpperCase()}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 16, padding: '3px 0', textAlign: 'center' }}>📷</div>
+            </div>
+            <input ref={avatarFileRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.currentTarget.value = '' }} />
+            <div style={{ fontSize: 12, color: L.t3, marginTop: 10 }}>{savingProfile ? 'Đang lưu…' : 'Bấm vào ảnh để đổi ảnh đại diện'}</div>
+          </div>
+
+          {/* Tên hiển thị */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: L.t2, marginBottom: 8 }}>Tên hiển thị</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={nameDraft} onChange={e => setNameDraft(e.target.value)}
+                placeholder="Nhập tên của bạn"
+                style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, fontSize: 15, fontFamily: 'inherit', outline: 'none', background: L.surface2 }} />
+              <button onClick={saveDisplayName} disabled={savingProfile || !nameDraft.trim()}
+                style={{ background: L.p1, color: L.tinv, border: 'none', borderRadius: 12, padding: '0 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (savingProfile || !nameDraft.trim()) ? 0.5 : 1 }}>
+                Lưu
+              </button>
+            </div>
+          </div>
+
+          <button onClick={() => setShowSettings(false)}
+            style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Xong
+          </button>
+        </div>
+      </div>
+    )}
     </>
   )
 }
