@@ -126,9 +126,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
 
   const openTool = (route: string, name: string) => {
-    // Các route nội bộ dùng iframe với full URL
-    const base = window.location.origin
-    setActiveTool({ name, url: base + route })
+    // URL ngoài (https://...) dùng thẳng, route nội bộ thêm origin
+    const url = route.startsWith('http') ? route : window.location.origin + route
+    setActiveTool({ name, url })
   }
 
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
