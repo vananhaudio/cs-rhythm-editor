@@ -652,23 +652,25 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   const [showSongList, setShowSongList] = React.useState(false)
   const [showControls, setShowControls] = React.useState(true)
   const hideTimer = React.useRef<ReturnType<typeof setTimeout>|null>(null)
+  const isPlayingRef2 = React.useRef(isPlaying)
+  React.useEffect(() => { isPlayingRef2.current = isPlaying }, [isPlaying])
 
   const revealControls = React.useCallback(() => {
     setShowControls(true)
     if (hideTimer.current) clearTimeout(hideTimer.current)
-    if (isPlaying) {
+    if (isPlayingRef2.current) {
       hideTimer.current = setTimeout(() => setShowControls(false), 3000)
     }
-  }, [isPlaying])
+  }, [])
 
-  // Khi bắt đầu phát → bắt đầu đếm ẩn
+  // Khi bắt đầu phát → tự ẩn; khi dừng → hiện lại
   React.useEffect(() => {
     if (isPlaying) {
       if (hideTimer.current) clearTimeout(hideTimer.current)
       hideTimer.current = setTimeout(() => setShowControls(false), 3000)
     } else {
-      setShowControls(true)
       if (hideTimer.current) clearTimeout(hideTimer.current)
+      setShowControls(true)
     }
     return () => { if (hideTimer.current) clearTimeout(hideTimer.current) }
   }, [isPlaying])
