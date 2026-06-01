@@ -686,7 +686,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
                 {chord ? (
                   <span style={{ fontSize:15, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
                 ) : (
-                  <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)'), transition:'color 0.06s' }}>{bi+1}</span>
+                  <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bi+1}</span>
                 )}
               </div>
             )
@@ -706,7 +706,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
                   return (
                     <span key={l.id} style={{ fontSize:15, fontWeight:400, fontFamily:'"Helvetica Neue",Arial', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth: cellW - 4,
                       ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
-                                 : { color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)' })
+                                 : { color: past ? 'rgba(45,212,191,0.9)' : '#ffffff' })
                     }}>{l.text}</span>
                   )
                 })}
