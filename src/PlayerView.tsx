@@ -638,23 +638,40 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   // Mobile: 1 ô nhịp = đúng timeSignature beats (4/4 = 4, 3/4 = 3)
   const beatsPerTrack = song.timeSignature
   const totalChunks = Math.ceil((song.totalBars * song.timeSignature) / beatsPerTrack)
-
-  // Chunk đang phát thật
-  const currentChunk = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
-
-  // Scroll position: delay 1 phách
-  // Sau 1 phách của chunk mới → bắt đầu trượt lên
-  const beatInChunk = Math.floor(currentTime / beatDur) % beatsPerTrack
-  const scrollChunk = beatInChunk >= 1 ? currentChunk : Math.max(0, currentChunk - 1)
-
-  // Track height — dùng để tính translateY
+  const chunkDur = beatsPerTrack * beatDur
   const TRACK_H = 120
-  // translateY: cuộn lên liên tục dựa theo scrollChunk + phần lẻ trong chunk
-  // Khi beatInChunk >= 1: bắt đầu trượt dần theo từng beat
-  const chunkProgress = beatInChunk >= 1
-    ? (beatInChunk - 1) / (beatsPerTrack - 1)  // 0→1 trong chunk
+
+  // Chunk đang phát
+  const currentChunk = Math.floor(currentTime / chunkDur)
+  const timeInChunk = currentTime - currentChunk * chunkDur
+  const chunkDone = timeInChunk >= chunkDur - beatDur  // còn 1 phách cuối
+
+  // translateY: đứng yên trong câu, cuộn trong 1 phách cuối giữa 2 câu
+  // Khi còn 1 phách cuối → cuộn từ chunkIndex*H đến (chunkIndex+1)*H
+  const scrollProgress = chunkDone
+    ? (timeInChunk - (chunkDur - beatDur)) / beatDur  // 0→1 trong 1 phách
     : 0
-  const translateY = -(scrollChunk * TRACK_H + chunkProgress * TRACK_H)
+  const translateY = -((currentChunk + scrollProgress) * TRACK_H)
+
+  // Ref để RAF set transform trực tiếp, không qua React
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    let raf: number
+    const tick = () => {
+      if (scrollContainerRef.current) {
+        const t = currentTimeRef.current ?? 0
+        const chunk = Math.floor(t / chunkDur)
+        const tInChunk = t - chunk * chunkDur
+        const done = tInChunk >= chunkDur - beatDur
+        const prog = done ? (tInChunk - (chunkDur - beatDur)) / beatDur : 0
+        const y = -((chunk + Math.min(prog, 1)) * TRACK_H)
+        scrollContainerRef.current.style.transform = `translateY(${y}px)`
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [chunkDur, beatDur, TRACK_H])
 
   const chordMap = React.useMemo(() => {
     const m: Record<number,string> = {}
@@ -808,12 +825,10 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         </div>
       )}
 
-      {/* Virtual scroll — tất cả câu render sẵn, trượt lên mượt */}
+      {/* Virtual scroll — RAF drives transform, no React re-render */}
       <div style={{ flex:1, overflow:'hidden', position:'relative', background:'#0D0F14' }}>
-        <div style={{
+        <div ref={scrollContainerRef} style={{
           position:'absolute', top:0, left:0, right:0,
-          transform: `translateY(${translateY}px)`,
-          transition: isPlaying ? 'transform 0.4s linear' : 'none',
           willChange: 'transform',
         }}>
           {Array.from({ length: totalChunks }, (_, ci) => {
