@@ -819,15 +819,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
       </div>{/* end header+seek wrapper */}
 
       {/* Nút play/pause nhỏ góc trái — hiện khi controls ẩn */}
-      {!showControls && (
-        <div style={{ position:'absolute', top:12, left:12, zIndex:20 }}>
-          <button onTouchStart={e => { e.stopPropagation(); togglePlay(); revealControls() }}
-            onClick={e => { e.stopPropagation(); togglePlay() }}
-            style={{ width:40, height:40, borderRadius:12, background:'rgba(108,99,255,0.85)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>
-            {isPlaying ? '⏸' : '▶'}
-          </button>
-        </div>
-      )}
+
 
       {/* Virtual scroll — RAF drives transform, no React re-render */}
       <div style={{ flex:1, overflow:'hidden', position:'relative', background:'#0D0F14' }}>
@@ -843,30 +835,32 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         </div>
       </div>
 
-      {/* Controls — ẩn khi đang phát */}
-      <div style={{ overflow:'hidden', maxHeight: showControls ? 200 : 0, opacity: showControls ? 1 : 0, transition:'max-height 0.3s ease, opacity 0.25s ease', flexShrink:0 }}>
-      <div style={{ background:'#141720', borderTop:'1px solid rgba(255,255,255,0.06)', padding:'14px 14px 36px' }}>
-        <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:14 }}>
-          {[0.75,1,1.25].map(s => (
-            <button key={s} onClick={() => setSpeed(s)}
-              style={{ padding:'6px 20px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'"DM Mono",monospace',fontSize:13,fontWeight:600,
-                background: speed===s ? '#6C63FF' : 'rgba(255,255,255,0.06)',
-                color: speed===s ? '#fff' : '#475569',
-              }}>{s===1?'1×':s+'×'}</button>
-          ))}
-        </div>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:20 }}>
-          <button onClick={() => seekTo(0)} style={{ width:48,height:48,borderRadius:14,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:20,display:'flex',alignItems:'center',justifyContent:'center' }}>⏮</button>
-          <button onClick={togglePlay}
-            style={{ width:64,height:64,borderRadius:'50%',border:'none',cursor:'pointer',fontSize:24,display:'flex',alignItems:'center',justifyContent:'center',
-              background: isPlaying ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#6C63FF,#8B84FF)',
-              color: isPlaying ? '#8B84FF' : '#fff',
-              boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(108,99,255,0.4)',
-            }}>{isPlaying?'⏸':'▶'}</button>
-          <button onClick={() => seekTo(Math.min(totalDur, currentTime+5))} style={{ width:48,height:48,borderRadius:14,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit' }}>+5s</button>
-        </div>
+      {/* Controls — nút play/pause + back ở góc phải dưới */}
+      <div style={{ height:72, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'flex-end', padding:'0 20px', gap:12, background:'#0D0F14' }}>
+        {/* Khi dừng: hiện nút ⏮ + speed pills */}
+        {!isPlaying && (
+          <>
+            <div style={{ display:'flex', gap:6, marginRight:'auto' }}>
+              {[0.75,1,1.25].map(s => (
+                <button key={s} onClick={() => setSpeed(s)}
+                  style={{ padding:'5px 14px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'"DM Mono",monospace',fontSize:12,fontWeight:600,
+                    background: speed===s ? '#6C63FF' : 'rgba(255,255,255,0.08)',
+                    color: speed===s ? '#fff' : '#475569',
+                  }}>{s===1?'1×':s+'×'}</button>
+              ))}
+            </div>
+            <button onClick={() => seekTo(0)}
+              style={{ width:44,height:44,borderRadius:12,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center' }}>⏮</button>
+          </>
+        )}
+        {/* Nút play/pause luôn hiện góc phải */}
+        <button onClick={togglePlay}
+          style={{ width: isPlaying ? 44 : 56, height: isPlaying ? 44 : 56, borderRadius:'50%', border:'none', cursor:'pointer', fontSize: isPlaying ? 18 : 22, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s',
+            background: isPlaying ? 'rgba(108,99,255,0.25)' : '#6C63FF',
+            color: isPlaying ? '#8B84FF' : '#fff',
+            boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(108,99,255,0.4)',
+          }}>{isPlaying ? '⏸' : '▶'}</button>
       </div>
-      </div>{/* end controls wrapper */}
 
     {showSongList && (
         <SongList
