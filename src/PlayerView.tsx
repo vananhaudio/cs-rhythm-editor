@@ -746,25 +746,27 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
             )
           })}
         </div>
-        {/* Lyric row — flexbox tĩnh, mỗi ô 1 phách */}
-        <div style={{ display:'flex', flex:1, alignItems:'center' }}>
-          {beatSlots.map((slot, bi) => {
-            const slotLyrics = slot.lyrics
+        {/* Lyric row — position theo time chính xác */}
+        <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
+          {trackLyrics.map((l: any, li: number) => {
+            const nt = trackLyrics[li+1]?.time ?? chunkEnd
+            const active = isActive && currentTime >= l.time && currentTime < nt
+            const past   = isActive && currentTime >= nt
+            const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
+            // Vị trí chính xác: tính từ đầu chunk
+            const posInChunk = (l.time - chunkStart) / (chunkDur) // 0→1 trong chunk
+            const leftPct = posInChunk * 100
             return (
-              <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', padding:'0 4px', gap:6 }}>
-                {slotLyrics.map((l: any, li: number) => {
-                  const nt = slotLyrics[li+1]?.time ?? (trackLyrics[trackLyrics.indexOf(l)+1]?.time ?? chunkEnd)
-                  const active = isActive && currentTime >= l.time && currentTime < nt
-                  const past   = isActive && currentTime >= nt
-                  const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
-                  return (
-                    <span key={l.id} style={{ fontSize:15, fontWeight:400, fontFamily:'"Helvetica Neue",Arial', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth: cellW - 4,
-                      ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
-                                 : { color: past ? 'rgba(45,212,191,0.9)' : '#ffffff' })
-                    }}>{l.text}</span>
-                  )
-                })}
-              </div>
+              <span key={l.id} style={{
+                position:'absolute',
+                left: `${leftPct}%`,
+                top:'50%', transform:'translateY(-50%)',
+                fontSize:15, fontWeight:400,
+                fontFamily:'"Helvetica Neue",Arial',
+                whiteSpace:'nowrap',
+                ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
+                           : { color: past ? 'rgba(45,212,191,0.9)' : '#ffffff' })
+              }}>{l.text}</span>
             )
           })}
         </div>
