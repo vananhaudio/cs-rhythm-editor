@@ -131,7 +131,7 @@ select.tb2-input { cursor: pointer; appearance: none; padding-right: 18px; backg
 .editor-grid-wrapper { flex: 1; overflow-y: auto; overflow-x: hidden; width: 100%; }
 
 /* ══ TIMELINE ══ */
-.timeline-container { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; width: 100%; }
+.timeline-container { display: flex; flex-direction: column; gap: 12px; padding: 20px 24px; width: 100%; }
 
 .bar-grid-row {
   display: grid;
