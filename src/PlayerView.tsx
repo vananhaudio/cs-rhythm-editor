@@ -811,6 +811,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
       <div style={{ flex:1, overflow:'hidden', position:'relative', background:'#0D0F14' }}>
         <div ref={scrollContainerRef} style={{
           position:'absolute', top:0, left:0, right:0,
+          paddingTop: showControls ? 0 : 'env(safe-area-inset-top, 12px)',
           willChange: 'transform',
         }}>
           {Array.from({ length: totalChunks }, (_, ci) => {
