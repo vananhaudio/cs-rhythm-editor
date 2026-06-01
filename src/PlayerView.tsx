@@ -639,7 +639,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   const beatsPerTrack = song.timeSignature
   const totalChunks = Math.ceil((song.totalBars * song.timeSignature) / beatsPerTrack)
   const chunkDur = beatsPerTrack * beatDur
-  const TRACK_H = 120
+  const TRACK_H = 100
 
   // Chunk đang phát
   const currentChunk = Math.floor(currentTime / chunkDur)
@@ -714,7 +714,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     const chunkStart = beatStart * beatDur
     const chunkEnd = chunkStart + beatsPerTrack * beatDur
     const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart - beatDur * 0.5 && l.time < chunkEnd + beatDur * 0.5)
-    const TRACK_H = 120
+    const TRACK_H = 100
     const cellW = mW / song.timeSignature
 
     // Chia lyrics vào từng ô phách
@@ -728,7 +728,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     return (
       <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column' }}>
         {/* Beat row — flexbox tĩnh, mỗi ô 1 phách */}
-        <div style={{ display:'flex', height:32, flexShrink:0 }}>
+        <div style={{ display:'flex', height:24, flexShrink:0 }}>
           {beatSlots.map((slot, bi) => {
             const i = beatStart + bi
             const isBar1 = bi === 0
