@@ -712,7 +712,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
         const tInChunk = t - chunk * chunkDur
         const done = tInChunk >= chunkDur - beatDur
         const prog = done ? (tInChunk - (chunkDur - beatDur)) / beatDur : 0
-        const y = -((chunk + Math.min(prog, 1) - 1) * TRACK_H)  // -1: câu đang hát ở track giữa
+        const y = -((chunk + Math.min(prog, 1)) * TRACK_H)  // ô đếm vào ở đầu đẩy xuống 1 track → câu đang hát ở giữa
         scrollContainerRef.current.style.transform = `translateY(${y}px)`
       }
       raf = requestAnimationFrame(tick)
@@ -845,27 +845,6 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
       {/* Nút play/pause nhỏ góc trái — hiện khi controls ẩn */}
 
 
-      {/* Overlay đếm nhịp vào — hiện khi countInBeat >= 0 */}
-      {countInBeat >= 0 && (
-        <div style={{ position:'absolute', inset:0, top:52, zIndex:30, background:'rgba(13,15,20,0.97)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}>
-          <div style={{ fontSize:15, color:'rgba(255,255,255,0.5)', fontFamily:'"DM Sans",sans-serif', letterSpacing:1 }}>Chuẩn bị…</div>
-          <div style={{ display:'flex', gap:16 }}>
-            {Array.from({ length: song.timeSignature }, (_, i) => (
-              <div key={i} style={{
-                width:56, height:56, borderRadius:'50%',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:24, fontWeight:800, fontFamily:'"DM Mono",monospace',
-                background: i === countInBeat ? '#6C63FF' : (i < countInBeat ? 'rgba(108,99,255,0.25)' : 'rgba(255,255,255,0.05)'),
-                color: i === countInBeat ? '#fff' : (i < countInBeat ? '#8B84FF' : 'rgba(255,255,255,0.3)'),
-                transform: i === countInBeat ? 'scale(1.15)' : 'scale(1)',
-                transition: 'all 0.1s',
-                boxShadow: i === countInBeat ? '0 0 20px rgba(108,99,255,0.5)' : 'none',
-              }}>{i+1}</div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Virtual scroll — RAF drives transform, no React re-render */}
       <div style={{ flex:1, overflow:'hidden', position:'relative', background:'#0D0F14' }}>
         <div ref={scrollContainerRef} style={{
@@ -873,6 +852,22 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
           top: showControls ? 0 : 16,
           willChange: 'transform',
         }}>
+          {/* Track đếm nhịp vào — ở vị trí track trên, lấp khoảng hổng đầu bài */}
+          <div style={{ height:100, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: countInBeat >= 0 ? '#141720' : '#0D0F14', opacity: countInBeat >= 0 ? 1 : 0.4, transition:'opacity 0.2s', display:'flex', flexDirection:'column' }}>
+            <div style={{ display:'flex', height:24, flexShrink:0 }}>
+              {Array.from({ length: song.timeSignature }, (_, bi) => {
+                const lit = countInBeat === bi
+                return (
+                  <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', borderLeft: bi===0 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+                    <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: lit ? 800 : 400, color: lit ? (bi===0 ? '#fff' : '#8B84FF') : (bi===0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), textShadow: lit ? '0 0 8px rgba(108,99,255,0.6)' : 'none', transition:'all 0.08s' }}>{bi+1}</span>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ fontSize:15, color: countInBeat >= 0 ? 'rgba(45,212,191,0.8)' : 'rgba(255,255,255,0.3)', fontFamily:'"DM Sans",sans-serif', transition:'color 0.2s' }}>Chuẩn bị…</span>
+            </div>
+          </div>
           {Array.from({ length: totalChunks }, (_, ci) => {
             const isActive = ci === currentChunk
             const scrollOff = nowX + ci * beatsPerTrack * beatDur * PPS - 20
