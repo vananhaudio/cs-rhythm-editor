@@ -653,68 +653,66 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   const fmtT = (t: number) => `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`
   const pct = totalDur > 0 ? currentTime/totalDur*100 : 0
 
-  const renderTrack = (tScrollOff: number, isActive: boolean, ti: number) => {
+  const renderTrack = (_tScrollOff: number, isActive: boolean, ti: number) => {
     const tChunk = ti===0 ? t1Chunk : t2Chunk
     const beatStart = tChunk * beatsPerTrack
     const beatEnd = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
     const chunkStart = beatStart * beatDur
-    const chunkEnd = beatEnd * beatDur
+    const chunkEnd = chunkStart + beatsPerTrack * beatDur
     const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart - beatDur * 0.5 && l.time < chunkEnd + beatDur * 0.5)
     const TRACK_H = 120
+    const cellW = mW / song.timeSignature
+
+    // Chia lyrics vào từng ô phách
+    const beatSlots: {beat: number, lyrics: any[]}[] = Array.from({length: song.timeSignature}, (_, bi) => ({beat: beatStart + bi, lyrics: []}))
+    trackLyrics.forEach((l: any) => {
+      const beatIdx = Math.round(l.time / beatDur)
+      const slotIdx = beatIdx - beatStart
+      if (slotIdx >= 0 && slotIdx < beatSlots.length) beatSlots[slotIdx].lyrics.push(l)
+    })
 
     return (
-      <div key={ti} style={{ height:TRACK_H, flexShrink:0, overflow:'hidden', borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', position:'relative' }}>
-        <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-tScrollOff}px)`, willChange:'transform' }}>
-          {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
+      <div key={ti} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column' }}>
+        {/* Beat row — flexbox tĩnh, mỗi ô 1 phách */}
+        <div style={{ display:'flex', height:32, flexShrink:0 }}>
+          {beatSlots.map((slot, bi) => {
             const i = beatStart + bi
-            const bib = i % song.timeSignature
-            const isBar1 = bib === 0
+            const isBar1 = bi === 0
             const isActiveB = activeBeatIdx === i && isActive
             const chord = chordMap[i]
-            const cellX = nowX + i * beatDur * PPS
-            const cellW = PPS * beatDur
             return (
-              <div key={'b'+i} style={{ position:'absolute', left:cellX, top:'50%', height:26, width:cellW, transform:'translate(-50%,-100%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.2)` : `1px solid rgba(255,255,255,0.03)` }}>
-                {isBar1 && <span style={{ position:'absolute', top:2, left:2, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
+              <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+                {isBar1 && <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
                 {chord ? (
-                  <span style={{ fontSize:13, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', lineHeight:1, color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.55)', textShadow: isActiveB ? '0 0 8px rgba(245,158,11,0.4)' : 'none', transition:'color 0.06s' }}>{chord}</span>
+                  <span style={{ fontSize:15, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
                 ) : (
-                  <span style={{ fontSize:10, fontFamily:'"DM Mono",monospace', lineHeight:1, fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.13)'), transition:'color 0.06s' }}>{bib+1}</span>
+                  <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)'), transition:'color 0.06s' }}>{bi+1}</span>
                 )}
               </div>
             )
           })}
-          {(() => {
-            // Chia lyrics vào từng ô phách — mỗi phách 1 slot, centered
-            const beatSlots: {beat: number, lyrics: any[]}[] = Array.from({length: beatEnd - beatStart}, (_, bi) => ({beat: beatStart + bi, lyrics: []}))
-            trackLyrics.forEach((l: any) => {
-              const beatIdx = Math.round(l.time / beatDur)
-              const slotIdx = beatIdx - beatStart
-              if (slotIdx >= 0 && slotIdx < beatSlots.length) beatSlots[slotIdx].lyrics.push(l)
-            })
-            const cellW = (mW - 40) / beatsPerTrack
-            return beatSlots.map((slot, si) => {
-              const slotX = 20 + si * cellW
-              const slotLyrics = slot.lyrics
-              if (slotLyrics.length === 0) return null
-              // Gộp nhiều chữ trong cùng phách lại
-              return slotLyrics.map((l: any, li: number) => {
-                const nt = slotLyrics[li+1]?.time ?? (trackLyrics[trackLyrics.indexOf(l)+1]?.time ?? chunkEnd)
-                const active = isActive && currentTime >= l.time && currentTime < nt
-                const past   = isActive && currentTime >= nt
-                const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
-                const xPos = slotX + (li + 0.5) * (cellW / Math.max(slotLyrics.length, 1))
-                return (
-                  <div key={l.id} style={{ position:'absolute', left: xPos, top:'calc(50% + 4px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap', maxWidth: cellW - 4, overflow:'hidden', textOverflow:'ellipsis' }}>
-                    <span style={{ fontSize:16, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
+        </div>
+        {/* Lyric row — flexbox tĩnh, mỗi ô 1 phách */}
+        <div style={{ display:'flex', flex:1, alignItems:'center' }}>
+          {beatSlots.map((slot, bi) => {
+            const slotLyrics = slot.lyrics
+            return (
+              <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', padding:'0 2px' }}>
+                {slotLyrics.map((l: any, li: number) => {
+                  const nt = slotLyrics[li+1]?.time ?? (trackLyrics[trackLyrics.indexOf(l)+1]?.time ?? chunkEnd)
+                  const active = isActive && currentTime >= l.time && currentTime < nt
+                  const past   = isActive && currentTime >= nt
+                  const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
+                  return (
+                    <span key={l.id} style={{ fontSize:15, fontWeight:400, fontFamily:'"Helvetica Neue",Arial', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth: cellW - 4,
                       ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
                                  : { color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)' })
                     }}>{l.text}</span>
-                  </div>
-                )
-              })
-            })
-          })()}
+                  )
+                })}
+              </div>
+            )
+          })}
         </div>
       </div>
     )
