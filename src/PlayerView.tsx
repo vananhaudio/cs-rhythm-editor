@@ -338,13 +338,31 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const beatsPerTrack = Math.floor(rawBeats / song.timeSignature) * song.timeSignature
   const currentChunk   = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
   // 3 track liên tiếp: trên = câu vừa hát, giữa = câu đang hát, dưới = câu sắp tới
-  const t1Chunk = currentChunk - 1  // câu vừa hát (trên)
-  const t2Chunk = currentChunk      // câu đang hát (giữa)
-  const t3Chunk = currentChunk + 1  // câu sắp tới (dưới)
-  const activeTrackNum = 2          // câu đang hát luôn ở track giữa
-  const t1ScrollOff  = nowX + t1Chunk * beatsPerTrack * beatDur * PPS - 120
-  const t2ScrollOff  = nowX + t2Chunk * beatsPerTrack * beatDur * PPS - 120
-  const t3ScrollOff  = nowX + t3Chunk * beatsPerTrack * beatDur * PPS - 120
+  // (vị trí scroll do desktopScrollRef RAF tính trực tiếp bên dưới)
+
+  // ── Desktop virtual scroll RAF — mượt như mobile ──
+  const DTRACK_H = 110
+  const dChunkDur = beatsPerTrack * beatDur
+  const dTotalChunks = Math.ceil((song.totalBars * song.timeSignature) / beatsPerTrack)
+  const desktopScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let raf: number
+    const tick = () => {
+      if (desktopScrollRef.current) {
+        const t = currentTimeRef.current ?? 0
+        const chunk = Math.floor(t / dChunkDur)
+        const tInChunk = t - chunk * dChunkDur
+        const done = tInChunk >= dChunkDur - beatDur
+        const prog = done ? (tInChunk - (dChunkDur - beatDur)) / beatDur : 0
+        // -1: câu đang hát ở track giữa (track 1 phía trên là câu vừa hát)
+        const y = -((chunk + Math.min(prog, 1) - 1) * DTRACK_H)
+        desktopScrollRef.current.style.transform = `translateY(${y}px)`
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [dChunkDur, beatDur])
   const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
 
   // Mobile: dùng MobilePlayerView layout
@@ -490,110 +508,102 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           </button>
         </div>
 
-        {/* ══ PRACTICE AREA — 2 track đứng yên ══ */}
-        <div style={{ flex:1, padding:'0 12px', overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', gap:0 }}>
-          {([
-            { tScrollOff: t1ScrollOff, isActive: false, chunk: t1Chunk },
-            { tScrollOff: t2ScrollOff, isActive: true,  chunk: t2Chunk },
-            { tScrollOff: t3ScrollOff, isActive: false, chunk: t3Chunk },
-          ] as const).map(({ tScrollOff, isActive, chunk }, ti) => (
-            <div key={ti} ref={isActive ? scrollRef : undefined} style={{
-              height: 110, flexShrink:0, overflow:'hidden',
-              borderTop: `1px solid ${D.border}`,
-              borderBottom: ti === 2 ? `1px solid ${D.border}` : 'none',
-              display:'flex', flexDirection:'column', position:'relative',
-              background: isActive ? '#141720' : D.bg,
-              opacity: isActive ? 1 : 0.45,
-              transition: 'opacity 0.3s, background 0.3s',
-            }}>
-              {/* Track content — y hệt gốc, chỉ dùng tScrollOff thay scrollOff */}
-              <div style={{ flex:1, position:'relative', overflow:'hidden', background:D.bg }}>
-                <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-tScrollOff}px)`, willChange:'transform' }}>
-                  {/* Beat + Chord row */}
-                  {(() => {
-                    const chordAtBeat: Record<number, string> = {}
-                    ;(song.chords ?? []).forEach(c => {
-                      const beatIdx = Math.round(c.time / beatDur)
-                      chordAtBeat[beatIdx] = c.name
-                    })
-                    // Chỉ render beats trong chunk này
-                    const tChunk = chunk
-                    const beatStart = tChunk * beatsPerTrack
-                    const beatEnd   = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
-                    return Array.from({ length: beatEnd - beatStart }, (_, bi) => {
-                      const i = beatStart + bi
-                      const bib = i % song.timeSignature
-                      const bt = i * beatDur
-                      const cellX = nowX + bt * PPS
-                      const isActiveB = activeBeatIdx === i && isActive
-                      const chord = chordAtBeat[i]
-                      const isBar1 = bib === 0
-                      return (
-                        <div key={'b'+ti+i} style={{ position:'absolute', left:cellX, top:'50%', height:31, width:PPS*beatDur, transform:'translate(-50%, -100%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
-                          {isBar1 && (
-                            <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', fontWeight:500 }}>
-                              M{Math.floor(i/song.timeSignature)+1}
-                            </span>
-                          )}
-                          {chord ? (
-                            <span style={{ fontSize:18, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', lineHeight:1,
-                              color: isActiveB ? D.gold : 'rgba(245,158,11,0.55)',
-                              textShadow: isActiveB ? `0 0 10px ${D.goldGlow}` : 'none',
-                              transition:'color 0.06s',
-                            }}>{chord}</span>
-                          ) : (
-                            <div style={{
-                              width: isBar1 ? 12 : 10, height: isBar1 ? 12 : 10, borderRadius:'50%',
-                              background: isBar1 ? '#F59E0B' : '#2DD4BF',
-                              opacity: isActiveB ? 1 : 0.4,
-                              transform: isActiveB ? 'scale(1.4)' : 'scale(1)',
-                              boxShadow: isActiveB ? (isBar1 ? '0 0 12px rgba(245,158,11,0.8)' : '0 0 12px rgba(45,212,191,0.8)') : 'none',
-                              transition: 'all 0.08s',
-                            }} />
-                          )}
-                        </div>
-                      )
-                    })
-                  })()}
-                  {/* Divider */}
-                  <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:D.border }} />
-                  {/* Lyrics */}
-                  {(song.lyrics??[]).filter(l => {
-                    const tChunk2    = chunk
-                    const chunkStart = tChunk2 * beatsPerTrack * beatDur
-                    const chunkEnd   = chunkStart + beatsPerTrack * beatDur
-                    // Từ thuộc track này nếu time nằm trong beat range của track
-                    return l.time >= chunkStart && l.time < chunkEnd
-                  }).map((l,i,arr) => {
-                    const lx = nowX + l.time*PPS;
-                    const nt = arr[i+1] ? arr[i+1].time : l.time+beatDur*2;
-                    const active = isActive && currentTime>=l.time && currentTime<nt;
-                    const past   = isActive && currentTime>=nt;
-                    return (
-                      <div key={l.id+ti} style={{ left:lx, position:'absolute', top:`calc(31px + 50%)`, transform:'translate(-50%, -50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                        <span style={{
-                          fontSize:22, fontWeight: 400,
-                          fontFamily:'"Helvetica Neue",Arial,sans-serif',
-                          // Karaoke gradient: quét teal từ trái sang phải
-                          ...(active ? (() => {
-                            const pct = Math.min(100, Math.max(0, (currentTime - l.time) / Math.max(0.05, nt - l.time) * 100))
-                            return {
-                              backgroundImage: `linear-gradient(to right, #2DD4BF ${pct}%, rgba(255,255,255,1) ${pct}%)`,
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              backgroundClip: 'text',
-                            }
-                          })() : {
-                            color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)',
-                          }),
-                        }}>{l.text}</span>
-                      </div>
-                    );
-                  })}
+        {/* ══ PRACTICE AREA — virtual scroll dọc ══ */}
+        <div style={{ flex:1, overflow:'hidden', position:'relative' }}>
+          {/* Virtual scroll — render tất cả chunk dọc, RAF set translateY (mượt như mobile) */}
+          <div ref={desktopScrollRef} style={{ position:'absolute', left:12, right:12, top:0, willChange:'transform' }}>
+            {Array.from({ length: dTotalChunks }, (_, ci) => {
+              const isActive = ci === currentChunk
+              const dScrollOff = nowX + ci * beatsPerTrack * beatDur * PPS - 120
+              const chordAtBeat: Record<number, string> = {}
+              ;(song.chords ?? []).forEach(c => {
+                const beatIdx = Math.round(c.time / beatDur)
+                chordAtBeat[beatIdx] = c.name
+              })
+              const beatStart = ci * beatsPerTrack
+              const beatEnd   = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
+              const chunkStart = ci * beatsPerTrack * beatDur
+              const chunkEnd   = chunkStart + beatsPerTrack * beatDur
+              return (
+                <div key={ci} ref={isActive ? scrollRef : undefined} style={{
+                  height: DTRACK_H, flexShrink:0, overflow:'hidden',
+                  borderTop: `1px solid ${D.border}`,
+                  display:'flex', flexDirection:'column', position:'relative',
+                  background: isActive ? '#141720' : D.bg,
+                  opacity: isActive ? 1 : 0.45,
+                  transition: 'opacity 0.3s, background 0.3s',
+                }}>
+                  <div style={{ flex:1, position:'relative', overflow:'hidden', background:D.bg }}>
+                    <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-dScrollOff}px)` }}>
+                      {/* Beat + Chord row */}
+                      {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
+                        const i = beatStart + bi
+                        const bib = i % song.timeSignature
+                        const bt = i * beatDur
+                        const cellX = nowX + bt * PPS
+                        const isActiveB = activeBeatIdx === i && isActive
+                        const chord = chordAtBeat[i]
+                        const isBar1 = bib === 0
+                        return (
+                          <div key={'b'+ci+i} style={{ position:'absolute', left:cellX, top:'50%', height:31, width:PPS*beatDur, transform:'translate(-50%, -100%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
+                            {isBar1 && (
+                              <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)', fontWeight:500 }}>
+                                M{Math.floor(i/song.timeSignature)+1}
+                              </span>
+                            )}
+                            {chord ? (
+                              <span style={{ fontSize:18, fontWeight:700, fontFamily:'"Helvetica Neue",Arial,sans-serif', lineHeight:1,
+                                color: isActiveB ? D.gold : 'rgba(245,158,11,0.55)',
+                                textShadow: isActiveB ? `0 0 10px ${D.goldGlow}` : 'none',
+                                transition:'color 0.06s',
+                              }}>{chord}</span>
+                            ) : (
+                              <div style={{
+                                width: isBar1 ? 12 : 10, height: isBar1 ? 12 : 10, borderRadius:'50%',
+                                background: isBar1 ? '#F59E0B' : '#2DD4BF',
+                                opacity: isActiveB ? 1 : 0.4,
+                                transform: isActiveB ? 'scale(1.4)' : 'scale(1)',
+                                boxShadow: isActiveB ? (isBar1 ? '0 0 12px rgba(245,158,11,0.8)' : '0 0 12px rgba(45,212,191,0.8)') : 'none',
+                                transition: 'all 0.08s',
+                              }} />
+                            )}
+                          </div>
+                        )
+                      })}
+                      {/* Divider */}
+                      <div style={{ position:'absolute', top:52, left:0, right:0, height:1, background:D.border }} />
+                      {/* Lyrics */}
+                      {(song.lyrics??[]).filter(l => l.time >= chunkStart && l.time < chunkEnd).map((l,i,arr) => {
+                        const lx = nowX + l.time*PPS;
+                        const nt = arr[i+1] ? arr[i+1].time : l.time+beatDur*2;
+                        const active = isActive && currentTime>=l.time && currentTime<nt;
+                        const past   = isActive && currentTime>=nt;
+                        return (
+                          <div key={l.id+ci} style={{ left:lx, position:'absolute', top:`calc(31px + 50%)`, transform:'translate(-50%, -50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                            <span style={{
+                              fontSize:22, fontWeight: 400,
+                              fontFamily:'"Helvetica Neue",Arial,sans-serif',
+                              ...(active ? (() => {
+                                const pct = Math.min(100, Math.max(0, (currentTime - l.time) / Math.max(0.05, nt - l.time) * 100))
+                                return {
+                                  backgroundImage: `linear-gradient(to right, #2DD4BF ${pct}%, rgba(255,255,255,1) ${pct}%)`,
+                                  WebkitBackgroundClip: 'text',
+                                  WebkitTextFillColor: 'transparent',
+                                  backgroundClip: 'text',
+                                }
+                              })() : {
+                                color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)',
+                              }),
+                            }}>{l.text}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              )
+            })}
+          </div>
         </div>
         {/* YouTube overlay — mini/full */}
         {playMode==='yt' && hasYT && ytMode!=='focus' && (
