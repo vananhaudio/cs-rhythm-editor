@@ -754,13 +754,15 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
             const past   = isActive && currentTime >= nt
             const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
             // Vị trí chính xác: tính từ đầu chunk
-            const posInChunk = (l.time - chunkStart) / (chunkDur) // 0→1 trong chunk
-            const leftPct = posInChunk * 100
+            // Mỗi phách rộng cellW px, chữ căn giữa ô phách của nó
+            const beatIdx = Math.round(l.time / beatDur) - beatStart
+            const beatFrac = (l.time - (beatStart + beatIdx) * beatDur) / beatDur
+            const leftPx = (beatIdx + beatFrac + 0.5) * cellW  // +0.5 để căn giữa ô
             return (
               <span key={l.id} style={{
                 position:'absolute',
-                left: `${leftPct}%`,
-                top:'50%', transform:'translateY(-50%)',
+                left: leftPx,
+                top:'50%', transform:'translate(-50%, -50%)',
                 fontSize:15, fontWeight:400,
                 fontFamily:'"Helvetica Neue",Arial',
                 whiteSpace:'nowrap',
