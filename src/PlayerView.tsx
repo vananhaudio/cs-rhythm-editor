@@ -699,57 +699,52 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     const tChunk = ci
     const beatStart = tChunk * beatsPerTrack
     const beatEnd = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
-    const chunkStart = Math.round(beatStart * beatDur * 1000) / 1000
-    const chunkEnd = Math.round(beatEnd * beatDur * 1000) / 1000
-
-    // scrollOff: đưa chunkStart về nowX — y hệt desktop
-    const chunkScrollOff = nowX + chunkStart * PPS
-
-    const trackLyrics = (song.lyrics??[])
+    const chunkStart = beatStart * beatDur
+    const chunkEnd = beatEnd * beatDur
     const TRACK_H = 100
 
+    // tScrollOff: đẩy cả track sao cho đầu chunk về vị trí nowX — y hệt desktop
+    const tScrollOff = chunkStart * PPS
+
+    const chordAtBeat: Record<number, string> = {}
+    ;(song.chords ?? []).forEach((c: any) => { chordAtBeat[Math.round(c.time / beatDur)] = c.name })
+
     return (
-      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden' }}>
-        {/* Beat + Chord row — dùng left = nowX + beat*beatDur*PPS - chunkScrollOff */}
-        <div style={{ height:24, flexShrink:0, position:'relative' }}>
+      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', position:'relative', overflow:'hidden' }}>
+        {/* Container dịch ngang — y hệt desktop, bên trong chỉ dùng nowX + time*PPS */}
+        <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-tScrollOff}px)` }}>
+          {/* Beat + Chord row */}
           {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
             const i = beatStart + bi
             const bib = i % song.timeSignature
             const isBar1 = bib === 0
             const isActiveB = activeBeatIdx === i && isActive
-            const chord = chordMap[i]
-            // Vị trí TÂM của phách = i * beatDur (giống lyric)
-            const centerX = nowX + i * beatDur * PPS - chunkScrollOff
+            const chord = chordAtBeat[i]
+            const cellX = nowX + i * beatDur * PPS
             return (
-              <div key={i}>
-                {/* Vạch chia phách ở ĐẦU phách */}
-                <div style={{ position:'absolute', left: centerX - (PPS*beatDur)/2, top:0, height:24, borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }} />
-                {/* Số phách / hợp âm ở TÂM phách */}
-                <div style={{ position:'absolute', left: centerX, top:0, height:24, transform:'translateX(-50%)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {isBar1 && <span style={{ position:'absolute', top:2, left:-((PPS*beatDur)/2)+3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)', whiteSpace:'nowrap' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
-                  {chord ? (
-                    <span style={{ fontSize:14, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
-                  ) : (
-                    <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bib+1}</span>
-                  )}
-                </div>
+              <div key={'b'+i} style={{ position:'absolute', left:cellX, top:0, height:24, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+                {isBar1 && <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
+                {chord ? (
+                  <span style={{ fontSize:14, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
+                ) : (
+                  <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bib+1}</span>
+                )}
               </div>
             )
           })}
-        </div>
-        {/* Lyric row — dùng left = nowX + l.time*PPS - chunkScrollOff, y hệt desktop */}
-        <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
-          {trackLyrics.map((l: any, li: number) => {
-            const lx = nowX + l.time * PPS - chunkScrollOff
-            const nt = trackLyrics[li+1]?.time ?? chunkEnd
+          {/* Lyrics — filter theo chunk, left = nowX + l.time*PPS (y hệt desktop) */}
+          {(song.lyrics??[]).filter((l: any) => l.time >= chunkStart && l.time < chunkEnd).map((l: any, i: number, arr: any[]) => {
+            const lx = nowX + l.time * PPS
+            const nt = arr[i+1] ? arr[i+1].time : l.time + beatDur*2
             const active = isActive && currentTime >= l.time && currentTime < nt
             const past   = isActive && currentTime >= nt
-            const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
             return (
-              <div key={l.id} style={{ position:'absolute', left:lx, top:4, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+              <div key={l.id} style={{ position:'absolute', left:lx, top:'calc(24px + 18px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                 <span style={{ fontSize:15, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
-                  ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
-                             : { color: past ? 'rgba(45,212,191,0.9)' : '#ffffff' })
+                  ...(active ? (() => {
+                    const pct = Math.min(100, Math.max(0, (currentTime - l.time) / Math.max(0.05, nt - l.time) * 100))
+                    return { backgroundImage:`linear-gradient(to right,#2DD4BF ${pct}%,rgba(255,255,255,1) ${pct}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
+                  })() : { color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)' })
                 }}>{l.text}</span>
               </div>
             )
@@ -758,7 +753,6 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
       </div>
     )
   }
-
 
   const isPortrait = mW < mH * 0.9
 
