@@ -12,6 +12,7 @@ import { createEmptySong } from './utils'
 import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
+import GuitarTuner from './GuitarTuner'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
@@ -187,7 +188,16 @@ if (path === '/students') {
     // fall through → render PlayerView
   }
 
-  // ── Route /tap ──
+  // ── Route /tuner ──
+  if (path === "/tuner" || path.startsWith("/tuner")) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#0d0d0d", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "16px 16px 40px" }}>
+        <GuitarTuner />
+      </div>
+    )
+  }
+
+    // ── Route /tap ──
   if (path === '/tap' || path.startsWith('/tap')) {
     if (loading) return null
 

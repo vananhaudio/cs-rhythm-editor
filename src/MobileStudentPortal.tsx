@@ -78,7 +78,7 @@ const TOOL_ROUTES: Record<string, string> = {
   metronome:     '/tap',
   backing_track: '/tap',
   chord:         '/chords',
-  tuner:         '/tap',
+  tuner:         '/tuner',
   submit_video:  '/tap',
   ear:           '/tap',
 }
@@ -95,6 +95,7 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
   submit_video:  { label: 'Nộp video',    icon: '📹', color: L.a1,      route: '/tap'    },
   chord:         { label: 'Luyện hợp âm', icon: '🎸', color: '#7C3AED', route: '/chords' },
   ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2', route: '/tap'    },
+  tuner:         { label: 'Chỉnh dây',     icon: '🎸', color: '#7C3AED', route: '/tuner'  },
 }
 
 interface Props { student: Student; onLogout: () => void }
