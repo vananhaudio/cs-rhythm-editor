@@ -218,6 +218,7 @@ export default function CourseEditorContent() {
   const [fDesc,    setFDesc]    = useState('')
   const [fContent, setFContent] = useState('')
   const [fTools,   setFTools]   = useState<string[]>([])
+  const [dbTools,  setDbTools]  = useState<{ id: string; name: string; icon: string }[]>([])
 
   const previewLesson: Lesson | null = selectedLesson
     ? { ...selectedLesson, title: fTitle, lesson_type: fType, content_url: fUrl || null, description: fDesc || null, content: fContent || null, tools: fTools }
@@ -228,6 +229,8 @@ export default function CourseEditorContent() {
     supabase.from('edu_courses').select('id,name,slug,type,track,is_published,icon,image_url')
       .order('track').order('level_order')
       .then(({ data }) => setCourses(data ?? []))
+    supabase.from('edu_tools').select('id,name,icon').eq('enabled', true).order('order_index')
+      .then(({ data }) => { if (data?.length) setDbTools(data.map((t: any) => ({ id: t.id, name: t.name, icon: t.icon }))) })
   }, [])
 
   const loadCourse = useCallback(async (course: Course) => {
@@ -786,7 +789,7 @@ export default function CourseEditorContent() {
                 <div>
                   <Label>Công cụ luyện tập</Label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {TOOLS.map(t => (
+                    {(dbTools.length > 0 ? dbTools.map(t => ({ id: t.id, label: t.name, icon: t.icon })) : TOOLS).map(t => (
                       <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '8px 10px', borderRadius: 7, border: `1px solid ${fTools.includes(t.id) ? C.accent : C.border}`, background: fTools.includes(t.id) ? C.accentLight : C.surface }}>
                         <input type="checkbox" checked={fTools.includes(t.id)} onChange={() => toggleTool(t.id)} style={{ accentColor: C.accent, cursor: 'pointer' }} />
                         <span style={{ fontSize: 14 }}>{t.icon}</span>
