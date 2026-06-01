@@ -751,7 +751,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
           {beatSlots.map((slot, bi) => {
             const slotLyrics = slot.lyrics
             return (
-              <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', padding:'0 2px' }}>
+              <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', padding:'0 4px', gap:6 }}>
                 {slotLyrics.map((l: any, li: number) => {
                   const nt = slotLyrics[li+1]?.time ?? (trackLyrics[trackLyrics.indexOf(l)+1]?.time ?? chunkEnd)
                   const active = isActive && currentTime >= l.time && currentTime < nt
