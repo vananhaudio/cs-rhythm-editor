@@ -45,7 +45,7 @@
 .tl-beat-cell--past {
   background: rgba(255,255,255,0.01);
 }
-.tl-bar-num {
+.pv-scroll .tl-bar-num {
   position: absolute;
   top: 5px; left: 4px;
   font-size: 9px; font-family: 'DM Mono', monospace;
@@ -62,7 +62,7 @@
 .tl-beat-cell--active .tl-beat-num { color: rgba(108,99,255,0.9) !important; }
 
 /* ── Chord labels ── */
-.tl-chord {
+.pv-scroll .tl-chord {
   position: absolute;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px; font-weight: 700;
@@ -78,7 +78,7 @@
 }
 
 /* ── Lyrics ── */
-.tl-lyric {
+.pv-scroll .tl-lyric {
   font-family: 'DM Sans', sans-serif;
   transition: all 0.12s;
   pointer-events: none;
