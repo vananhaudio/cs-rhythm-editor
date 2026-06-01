@@ -718,16 +718,21 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
             const isBar1 = bib === 0
             const isActiveB = activeBeatIdx === i && isActive
             const chord = chordMap[i]
-            const cellW = PPS * beatDur
-            const cellX = nowX + i * beatDur * PPS - chunkScrollOff
+            // Vị trí TÂM của phách = i * beatDur (giống lyric)
+            const centerX = nowX + i * beatDur * PPS - chunkScrollOff
             return (
-              <div key={i} style={{ position:'absolute', left:cellX, top:0, height:24, width:cellW, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
-                {isBar1 && <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
-                {chord ? (
-                  <span style={{ fontSize:14, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
-                ) : (
-                  <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bib+1}</span>
-                )}
+              <div key={i}>
+                {/* Vạch chia phách ở ĐẦU phách */}
+                <div style={{ position:'absolute', left: centerX - (PPS*beatDur)/2, top:0, height:24, borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }} />
+                {/* Số phách / hợp âm ở TÂM phách */}
+                <div style={{ position:'absolute', left: centerX, top:0, height:24, transform:'translateX(-50%)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {isBar1 && <span style={{ position:'absolute', top:2, left:-((PPS*beatDur)/2)+3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)', whiteSpace:'nowrap' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
+                  {chord ? (
+                    <span style={{ fontSize:14, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
+                  ) : (
+                    <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bib+1}</span>
+                  )}
+                </div>
               </div>
             )
           })}
