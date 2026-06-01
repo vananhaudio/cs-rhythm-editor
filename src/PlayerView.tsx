@@ -709,7 +709,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     const TRACK_H = 100
 
     return (
-      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden' }}>
+      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden', paddingLeft: cellWMobile / 2 }}>
         {/* Beat + Chord row — dùng left = nowX + beat*beatDur*PPS - chunkScrollOff */}
         <div style={{ height:24, flexShrink:0, position:'relative' }}>
           {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
