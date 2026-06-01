@@ -42,7 +42,7 @@ interface Student    { id: string; full_name: string; email: string | null; leve
 interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
-  course: { id: string; name: string; type: string; track: string | null }
+  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null }
 }
 interface Module { id: string; name: string; order_index: number }
 interface Lesson {
@@ -57,6 +57,17 @@ function uname(s: Student) {
 }
 function getYtId(url: string | null) {
   return url?.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
+}
+// Logo khoá: ảnh tải lên > emoji custom > emoji mặc định theo type
+function CourseLogo({ course, size = 44, radius = 12, bg }: { course: { type: string; icon?: string | null; image_url?: string | null }; size?: number; radius?: number; bg?: string }) {
+  const fallback = course.icon || (course.type === 'canh_cua' ? '🔑' : '🎸')
+  return (
+    <div style={{ width: size, height: size, borderRadius: radius, background: bg ?? (course.type === 'canh_cua' ? '#FFF7ED' : '#EEF2FF'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.45, flexShrink: 0, overflow: 'hidden' }}>
+      {course.image_url
+        ? <img src={course.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : fallback}
+    </div>
+  )
 }
 
 const TABS = [
@@ -101,7 +112,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   useEffect(() => {
     supabase.from('edu_enrollments')
-      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track)')
+      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
@@ -213,7 +224,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   <div style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadowLg, marginTop: 12, position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: L.p2, borderRadius: '0 20px 0 100%', opacity: .5 }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎸</div>
+                      <CourseLogo course={mainCourse.course} size={48} radius={14} bg={L.p2} />
                       <div>
                         <div style={{ fontSize: 12, color: L.t3, marginBottom: 3 }}>Đang theo học</div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: L.p1, lineHeight: 1.3 }}>{mainCourse.course?.name}</div>
@@ -240,9 +251,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   {enrollments.map(e => (
                     <div key={e.id} onClick={() => openCourse(e.course_id)}
                       style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, cursor: 'pointer' }}>
-                      <div style={{ width: 42, height: 42, borderRadius: 12, background: e.course?.type === 'canh_cua' ? '#FFF7ED' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                        {e.course?.type === 'canh_cua' ? '🔑' : '🎸'}
-                      </div>
+                      <CourseLogo course={e.course} size={42} radius={12} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.course?.name}</div>
                         <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>{e.course?.type === 'canh_cua' ? 'Cánh Cửa' : 'Hành Trình'}</div>

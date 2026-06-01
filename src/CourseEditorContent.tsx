@@ -14,7 +14,7 @@ const C = {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Course { id: string; name: string; slug: string; type: string; track: string | null; is_published: boolean }
+interface Course { id: string; name: string; slug: string; type: string; track: string | null; is_published: boolean; icon?: string | null; image_url?: string | null }
 interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null }
 interface Lesson  {
   id: string; module_id: string; title: string; lesson_type: string
@@ -197,6 +197,9 @@ export default function CourseEditorContent() {
   const [editingModuleName, setEditingModuleName] = useState('')
   const [editingCourseName, setEditingCourseName] = useState(false)
   const [courseNameDraft, setCourseNameDraft]     = useState('')
+  const [showLogoPicker, setShowLogoPicker] = useState(false)
+  const [uploadingLogo, setUploadingLogo]   = useState(false)
+  const logoFileRef = useRef<HTMLInputElement>(null)
   const [showNewCourse, setShowNewCourse] = useState(false)
   const [ncName,  setNcName]  = useState('')
   const [ncType,  setNcType]  = useState('hanh_trinh')
@@ -222,7 +225,7 @@ export default function CourseEditorContent() {
 
   // ── Load ──
   useEffect(() => {
-    supabase.from('edu_courses').select('id,name,slug,type,track,is_published')
+    supabase.from('edu_courses').select('id,name,slug,type,track,is_published,icon,image_url')
       .order('track').order('level_order')
       .then(({ data }) => setCourses(data ?? []))
   }, [])
@@ -268,6 +271,36 @@ export default function CourseEditorContent() {
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, name: courseNameDraft } : c))
     setEditingCourseName(false)
   }
+
+  // ── Logo khoá học ──
+  const setCourseLogo = async (patch: { icon?: string | null; image_url?: string | null }) => {
+    if (!selectedCourse) return
+    await supabase.from('edu_courses').update(patch).eq('id', selectedCourse.id)
+    const updated = { ...selectedCourse, ...patch }
+    setSelectedCourse(updated)
+    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, ...patch } : c))
+  }
+  const pickEmoji = async (emoji: string) => {
+    await setCourseLogo({ icon: emoji, image_url: null })
+    setShowLogoPicker(false)
+  }
+  const uploadLogo = async (file: File) => {
+    if (!selectedCourse) return
+    setUploadingLogo(true)
+    try {
+      const ext = file.name.split('.').pop() || 'png'
+      const path = `${selectedCourse.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('course-logos').upload(path, file, { upsert: true })
+      if (upErr) { alert('Lỗi tải ảnh: ' + upErr.message); setUploadingLogo(false); return }
+      const { data: pub } = supabase.storage.from('course-logos').getPublicUrl(path)
+      await setCourseLogo({ image_url: pub.publicUrl, icon: null })
+      setShowLogoPicker(false)
+    } catch (e: any) {
+      alert('Lỗi: ' + (e?.message ?? e))
+    }
+    setUploadingLogo(false)
+  }
+  const courseLogoEmoji = (c: { type: string; icon?: string | null }) => c.icon || (c.type === 'canh_cua' ? '🔑' : '🎸')
 
   const createCourse = async () => {
     if (!ncName.trim()) return
@@ -419,7 +452,12 @@ export default function CourseEditorContent() {
                   style={{ padding: '7px 10px', borderRadius: 7, cursor: 'pointer', background: selectedCourse?.id === c.id ? C.accentLight : 'transparent', color: selectedCourse?.id === c.id ? C.accent : C.text2, fontWeight: selectedCourse?.id === c.id ? 600 : 400, fontSize: 12, marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}
                   onMouseEnter={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = C.bg }}
                   onMouseLeave={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = 'transparent' }}>
-                  <span style={{ lineHeight: 1.4, wordBreak: 'break-word' }}>{c.name}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1.4, wordBreak: 'break-word', minWidth: 0 }}>
+                    <span style={{ width: 18, height: 18, borderRadius: 4, overflow: 'hidden', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+                      {c.image_url ? <img src={c.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : courseLogoEmoji(c)}
+                    </span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                  </span>
                   {c.is_published && <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.success, flexShrink: 0 }} />}
                 </div>
               ))}
@@ -437,7 +475,14 @@ export default function CourseEditorContent() {
         ) : (
           <>
             <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 10 }}>
+                {/* Logo khoá học */}
+                <button onClick={() => setShowLogoPicker(true)} title="Đổi logo khoá học"
+                  style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', flexShrink: 0, padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
+                  {selectedCourse.image_url
+                    ? <img src={selectedCourse.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : courseLogoEmoji(selectedCourse)}
+                </button>
                 {editingCourseName ? (
                   <input autoFocus value={courseNameDraft} onChange={e => setCourseNameDraft(e.target.value)}
                     onBlur={saveCourseName}
@@ -460,6 +505,49 @@ export default function CourseEditorContent() {
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học
               </div>
             </div>
+
+            {/* ── Modal chọn logo khoá học ── */}
+            {showLogoPicker && (
+              <div onClick={() => setShowLogoPicker(false)}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                <div onClick={e => e.stopPropagation()}
+                  style={{ background: C.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 360, boxShadow: '0 12px 48px rgba(0,0,0,0.25)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: C.text1 }}>Logo khoá học</span>
+                    <button onClick={() => setShowLogoPicker(false)} style={{ background: 'none', border: 'none', fontSize: 18, color: C.text3, cursor: 'pointer' }}>✕</button>
+                  </div>
+
+                  {/* Preview hiện tại */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 14, border: `1px solid ${C.border}`, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, overflow: 'hidden', flexShrink: 0 }}>
+                      {selectedCourse.image_url
+                        ? <img src={selectedCourse.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : courseLogoEmoji(selectedCourse)}
+                    </div>
+                    <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5 }}>Logo hiện tại. Chọn emoji bên dưới hoặc tải ảnh lên.</div>
+                  </div>
+
+                  {/* Tải ảnh */}
+                  <input ref={logoFileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.currentTarget.value = '' }} />
+                  <button onClick={() => logoFileRef.current?.click()} disabled={uploadingLogo}
+                    style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px dashed ${C.accent}`, background: C.bg, color: C.accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}>
+                    {uploadingLogo ? '⏳ Đang tải...' : '📤 Tải ảnh logo lên'}
+                  </button>
+
+                  {/* Emoji có sẵn */}
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Hoặc chọn emoji</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 6 }}>
+                    {['🎸','🎵','🎶','🎼','🎤','🥁','🎹','🎺','🔑','🌱','⭐','🔥','💎','🏆','🎯','📘','🚀','❤️','🎧','🪕','🎻','✨','🌟','🎀'].map(em => (
+                      <button key={em} onClick={() => pickEmoji(em)}
+                        style={{ aspectRatio: '1', borderRadius: 8, border: `1px solid ${selectedCourse.icon === em ? C.accent : C.border}`, background: selectedCourse.icon === em ? C.bg : C.surface, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {em}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
               {modules.map(mod => {
