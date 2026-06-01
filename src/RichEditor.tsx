@@ -197,6 +197,31 @@ export default function RichEditor({ value, onChange }: { value: string; onChang
       onChange(editor.getHTML())
       setWordCount(editor.getText().trim().split(/\s+/).filter(Boolean).length)
     },
+    editorProps: {
+      transformPastedHTML(html) {
+        // Xoá markup rác từ Word / Google Docs
+        return html
+          // Xoá class Word/GDocs
+          .replace(/class="[^"]*Mso[^"]*"/gi, '')
+          .replace(/class="[^"]*Apple-[^"]*"/gi, '')
+          // Xoá inline style rác (font-family, mso-*, color trắng...)
+          .replace(/\s*style="[^"]*mso-[^"]*"/gi, '')
+          // Giữ lại style font-weight/italic cơ bản, xoá phần còn lại
+          .replace(/\s*style="(?!font-weight|font-style)[^"]*"/gi, '')
+          // Xoá thẻ span rỗng
+          .replace(/<span([^>]*)>\s*<\/span>/gi, '')
+          // Xoá comment XML của Word
+          .replace(/<!--[\s\S]*?-->/g, '')
+          // Xoá thẻ meta, xml, o:p của Word
+          .replace(/<\/?(?:meta|xml|o:[^>]*)[^>]*>/gi, '')
+          // Chuẩn hoá thẻ b/i/u từ Word
+          .replace(/<b\s+style="font-weight:\s*normal[^"]*">/gi, '<span>')
+          .replace(/<\/b>/gi, (match, offset, str) => str.slice(0, offset).includes('<b') ? '</b>' : '</span>')
+      },
+      transformPastedText(text) {
+        return text
+      },
+    },
   })
 
   useEffect(() => {
