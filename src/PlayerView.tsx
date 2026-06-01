@@ -739,15 +739,13 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
             const active = isActive && currentTime >= l.time && currentTime < nt
             const past   = isActive && currentTime >= nt
             const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
-            // Vị trí chính xác: tính từ đầu chunk
-            // Mỗi phách rộng cellW px, chữ căn giữa ô phách của nó
-            const beatIdx = Math.round(l.time / beatDur) - beatStart
-            const beatFrac = (l.time - (beatStart + beatIdx) * beatDur) / beatDur
-            const leftPx = (beatIdx + beatFrac + 0.5) * cellW  // +0.5 để căn giữa ô
+            // Vị trí chính xác: tỉ lệ thời gian trong chunk → % chiều rộng track
+            const posInChunk = (l.time - chunkStart) / (chunkDur)
+            const leftPct = `${Math.max(0, Math.min(100, posInChunk * 100))}%`
             return (
               <span key={l.id} style={{
                 position:'absolute',
-                left: leftPx,
+                left: leftPct,
                 top:'50%', transform:'translate(-50%, -50%)',
                 fontSize:15, fontWeight:400,
                 fontFamily:'"Helvetica Neue",Arial',
