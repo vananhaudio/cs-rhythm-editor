@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 function useIsMobile() {
   const [m, setM] = useState(window.innerWidth < 768)
@@ -315,12 +315,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         speed={speed} setSpeed={setSpeed}
         muteMetronome={muteMetronome} setMuteMetronome={setMuteMetronome}
         activeBeatIdx={activeBeatIdx}
-        containerW={containerW} scrollRef={scrollRef}
-        t1ScrollOff={t1ScrollOff} t2ScrollOff={t2ScrollOff}
-        t1Chunk={t1Chunk} t2Chunk={t2Chunk}
-        activeTrackNum={activeTrackNum} beatsPerTrack={beatsPerTrack}
-        beatDur={beatDur} PPS={PPS} nowX={nowX} trackW={trackW}
-        chordMap={chordMap} totalDur={totalDur}
+        totalDur={totalDur}
         currentTimeRef={currentTimeRef}
       />
     )
@@ -616,17 +611,44 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 }
 
 // ── Mobile Layout Component ──────────────────────────────────────────────────
-function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekTo, speed, setSpeed, muteMetronome, setMuteMetronome, activeBeatIdx, containerW, scrollRef, t1ScrollOff, t2ScrollOff, t1Chunk, t2Chunk, activeTrackNum, beatsPerTrack, beatDur, PPS, nowX, trackW, chordMap, totalDur, currentTimeRef }: {
+function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekTo, speed, setSpeed, muteMetronome, setMuteMetronome, activeBeatIdx, totalDur, currentTimeRef }: {
   song: any; onClose: () => void; isPlaying: boolean; currentTime: number
   togglePlay: () => void; seekTo: (t: number) => void
   speed: number; setSpeed: (s: number) => void
   muteMetronome: boolean; setMuteMetronome: (v: boolean | ((p: boolean) => boolean)) => void
-  activeBeatIdx: number; containerW: number; scrollRef: React.RefObject<HTMLDivElement | null>
-  t1ScrollOff: number; t2ScrollOff: number; t1Chunk: number; t2Chunk: number
-  activeTrackNum: number; beatsPerTrack: number; beatDur: number; PPS: number
-  nowX: number; trackW: number; chordMap: Record<number,string>; totalDur: number
+  activeBeatIdx: number; totalDur: number
   currentTimeRef: React.RefObject<number | null>
 }) {
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const [mW, setMW] = React.useState(window.innerWidth)
+  React.useEffect(() => {
+    const ro = new ResizeObserver(e => setMW(e[0].contentRect.width))
+    if (containerRef.current) ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  const beatDur = 60 / song.tempo
+  const barDur  = beatDur * song.timeSignature
+  // PPS nhỏ hơn desktop để vừa màn hình
+  const PPS = Math.max(40, Math.min(80, (mW * 0.85) / (song.timeSignature * 4 * beatDur)))
+  const nowX = mW * 0.15
+  const trackW = totalDur * PPS + mW
+
+  const rawBeats = Math.max(song.timeSignature, Math.floor((mW - 30) / (PPS * beatDur)))
+  const beatsPerTrack = Math.floor(rawBeats / song.timeSignature) * song.timeSignature
+  const currentChunk  = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
+  const activeTrackNum = currentChunk % 2 === 0 ? 1 : 2
+  const t1Chunk = activeTrackNum === 1 ? currentChunk : currentChunk + 1
+  const t2Chunk = activeTrackNum === 2 ? currentChunk : currentChunk + 1
+  const t1ScrollOff = nowX + t1Chunk * beatsPerTrack * beatDur * PPS - 20
+  const t2ScrollOff = nowX + t2Chunk * beatsPerTrack * beatDur * PPS - 20
+
+  const chordMap = React.useMemo(() => {
+    const m: Record<number,string> = {}
+    ;(song.chords??[]).forEach((c: any) => { m[Math.round(c.time/beatDur)] = c.name })
+    return m
+  }, [song.chords, beatDur])
+
   const fmtT = (t: number) => `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`
   const pct = totalDur > 0 ? currentTime/totalDur*100 : 0
 
@@ -637,9 +659,10 @@ function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekT
     const chunkStart = beatStart * beatDur
     const chunkEnd = beatEnd * beatDur
     const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart && l.time < chunkEnd)
+    const TRACK_H = 140
 
     return (
-      <div key={ti} style={{ height:90, flexShrink:0, overflow:'hidden', borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.45, transition:'opacity 0.3s', position:'relative' }}>
+      <div key={ti} style={{ height:TRACK_H, flexShrink:0, overflow:'hidden', borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.45, transition:'opacity 0.3s', position:'relative' }}>
         <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-tScrollOff}px)`, willChange:'transform' }}>
           {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
             const i = beatStart + bi
@@ -648,8 +671,9 @@ function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekT
             const isActiveB = activeBeatIdx === i && isActive
             const chord = chordMap[i]
             const cellX = nowX + i * beatDur * PPS
+            const cellW = PPS * beatDur
             return (
-              <div key={'b'+i} style={{ position:'absolute', left:cellX, top:'50%', height:26, width:PPS*beatDur, transform:'translate(-50%,-100%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.2)` : `1px solid rgba(255,255,255,0.03)` }}>
+              <div key={'b'+i} style={{ position:'absolute', left:cellX, top:'50%', height:26, width:cellW, transform:'translate(-50%,-100%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.2)` : `1px solid rgba(255,255,255,0.03)` }}>
                 {isBar1 && <span style={{ position:'absolute', top:2, left:2, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.45)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
                 {chord ? (
                   <span style={{ fontSize:13, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', lineHeight:1, color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.55)', textShadow: isActiveB ? '0 0 8px rgba(245,158,11,0.4)' : 'none', transition:'color 0.06s' }}>{chord}</span>
@@ -665,8 +689,8 @@ function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekT
             const past   = isActive && currentTime >= nt
             const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
             return (
-              <div key={l.id} style={{ position:'absolute', left: nowX + l.time * PPS, top:'calc(50% + 2px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                <span style={{ fontSize:17, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
+              <div key={l.id} style={{ position:'absolute', left: nowX + l.time * PPS, top:'calc(50% + 4px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:16, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
                   ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
                              : { color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)' })
                 }}>{l.text}</span>
@@ -679,57 +703,56 @@ function MobileLayout({ song, onClose, isPlaying, currentTime, togglePlay, seekT
   }
 
   return (
-    <div style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9' }}>
+    <div ref={containerRef} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
       {/* Header */}
-      <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 14px', height:50, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
-        <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,border:'1px solid rgba(255,255,255,0.06)',background:'none',color:'#475569',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center' }}>←</button>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{song.title}</div>
+      <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 12px', height:52, display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <button onClick={onClose} style={{ width:36,height:36,borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
+        <div style={{ flex:1,minWidth:0 }}>
+          <div style={{ fontSize:14,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#F1F5F9' }}>{song.title||'Nhịp điệu'}</div>
           <div style={{ fontSize:10,color:'#475569',fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtT(totalDur)}</div>
         </div>
-        <button onClick={() => setMuteMetronome(v=>!v)} style={{ width:32,height:32,borderRadius:8,border:`1px solid ${muteMetronome?'rgba(108,99,255,0.3)':'rgba(255,255,255,0.06)'}`,background:muteMetronome?'rgba(108,99,255,0.15)':'none',color:muteMetronome?'#8B84FF':'#475569',cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center' }}>{muteMetronome?'🔇':'🔊'}</button>
+        <button onClick={() => setMuteMetronome(v=>!v)} style={{ width:36,height:36,borderRadius:8,border:`1px solid ${muteMetronome?'rgba(108,99,255,0.4)':'rgba(255,255,255,0.08)'}`,background:muteMetronome?'rgba(108,99,255,0.15)':'none',color:muteMetronome?'#8B84FF':'#94A3B8',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{muteMetronome?'🔇':'🔊'}</button>
       </div>
 
       {/* Seek */}
       <div style={{ background:'#141720', padding:'6px 14px 8px', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-        <span style={{ fontSize:10,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:30 }}>{fmtT(currentTime)}</span>
-        <div style={{ flex:1,position:'relative',height:18,cursor:'pointer',display:'flex',alignItems:'center' }}
+        <span style={{ fontSize:10,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:32 }}>{fmtT(currentTime)}</span>
+        <div style={{ flex:1,position:'relative',height:20,cursor:'pointer',display:'flex',alignItems:'center' }}
           onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur) }}>
           <div style={{ width:'100%',height:3,background:'rgba(255,255,255,0.06)',borderRadius:2 }}>
-            <div style={{ height:'100%',width:`${pct}%`,background:'linear-gradient(90deg,#6C63FF,#8B84FF)',borderRadius:2 }} />
+            <div style={{ height:'100%',width:`${pct}%`,background:'linear-gradient(90deg,#6C63FF,#8B84FF)',borderRadius:2,transition:'width 0.1s linear' }} />
           </div>
-          <div style={{ position:'absolute',left:`${pct}%`,transform:'translateX(-50%)',width:10,height:10,borderRadius:'50%',background:'#6C63FF',border:'2px solid #8B84FF',pointerEvents:'none' }} />
+          <div style={{ position:'absolute',left:`${pct}%`,transform:'translateX(-50%)',width:12,height:12,borderRadius:'50%',background:'#6C63FF',border:'2px solid #8B84FF',pointerEvents:'none' }} />
         </div>
-        <span style={{ fontSize:10,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:30,textAlign:'right' }}>{fmtT(totalDur)}</span>
+        <span style={{ fontSize:10,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:32,textAlign:'right' }}>{fmtT(totalDur)}</span>
       </div>
 
       {/* 2 Tracks */}
-      <div ref={scrollRef} style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start' }}>
+      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', background:'#0D0F14' }}>
         {renderTrack(t1ScrollOff, activeTrackNum===1, 0)}
         {renderTrack(t2ScrollOff, activeTrackNum===2, 1)}
       </div>
 
       {/* Controls */}
-      <div style={{ background:'#141720', borderTop:'1px solid rgba(255,255,255,0.06)', padding:'12px 14px 28px', flexShrink:0 }}>
-        <div style={{ display:'flex', justifyContent:'center', gap:6, marginBottom:14 }}>
+      <div style={{ background:'#141720', borderTop:'1px solid rgba(255,255,255,0.06)', padding:'14px 14px 36px', flexShrink:0 }}>
+        <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:14 }}>
           {[0.75,1,1.25].map(s => (
             <button key={s} onClick={() => setSpeed(s)}
-              style={{ padding:'5px 18px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'"DM Mono",monospace',fontSize:12,fontWeight:600,
-                background: speed===s ? '#6C63FF' : '#1C2030',
+              style={{ padding:'6px 20px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'"DM Mono",monospace',fontSize:13,fontWeight:600,
+                background: speed===s ? '#6C63FF' : 'rgba(255,255,255,0.06)',
                 color: speed===s ? '#fff' : '#475569',
-                boxShadow: speed===s ? '0 2px 10px rgba(108,99,255,0.3)' : 'none',
               }}>{s===1?'1×':s+'×'}</button>
           ))}
         </div>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:16 }}>
-          <button onClick={() => seekTo(0)} style={{ width:44,height:44,borderRadius:12,border:'1px solid rgba(255,255,255,0.06)',background:'#1C2030',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center' }}>⏮</button>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:20 }}>
+          <button onClick={() => seekTo(0)} style={{ width:48,height:48,borderRadius:14,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:20,display:'flex',alignItems:'center',justifyContent:'center' }}>⏮</button>
           <button onClick={togglePlay}
-            style={{ width:60,height:60,borderRadius:'50%',border:'none',cursor:'pointer',fontSize:22,display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.2s',
-              background: isPlaying ? '#1C2030' : 'linear-gradient(135deg,#6C63FF,#8B84FF)',
+            style={{ width:64,height:64,borderRadius:'50%',border:'none',cursor:'pointer',fontSize:24,display:'flex',alignItems:'center',justifyContent:'center',
+              background: isPlaying ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#6C63FF,#8B84FF)',
               color: isPlaying ? '#8B84FF' : '#fff',
-              boxShadow: isPlaying ? 'none' : '0 6px 20px rgba(108,99,255,0.35)',
+              boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(108,99,255,0.4)',
             }}>{isPlaying?'⏸':'▶'}</button>
-          <button onClick={() => seekTo(Math.min(totalDur, currentTime+5))} style={{ width:44,height:44,borderRadius:12,border:'1px solid rgba(255,255,255,0.06)',background:'#1C2030',color:'#94A3B8',cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit' }}>+5s</button>
+          <button onClick={() => seekTo(Math.min(totalDur, currentTime+5))} style={{ width:48,height:48,borderRadius:14,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit' }}>+5s</button>
         </div>
       </div>
     </div>
