@@ -808,8 +808,8 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
       {/* Virtual scroll — RAF drives transform, no React re-render */}
       <div style={{ flex:1, overflow:'hidden', position:'relative', background:'#0D0F14' }}>
         <div ref={scrollContainerRef} style={{
-          position:'absolute', top:0, left:0, right:0,
-          paddingTop: showControls ? 0 : 'env(safe-area-inset-top, 12px)',
+          position:'absolute', left:0, right:0,
+          top: showControls ? 0 : 16,
           willChange: 'transform',
         }}>
           {Array.from({ length: totalChunks }, (_, ci) => {
