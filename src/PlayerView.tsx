@@ -629,13 +629,13 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
 
   const beatDur = 60 / song.tempo
   const barDur  = beatDur * song.timeSignature
-  // PPS nhỏ hơn desktop để vừa màn hình
-  const PPS = Math.max(40, Math.min(80, (mW * 0.85) / (song.timeSignature * 4 * beatDur)))
-  const nowX = mW * 0.15
+  // PPS: 1 ô nhịp vừa đúng màn hình (trừ 40px padding)
+  const PPS = (mW - 40) / (song.timeSignature * beatDur)
+  const nowX = 20
   const trackW = totalDur * PPS + mW
 
-  const rawBeats = Math.max(song.timeSignature, Math.floor((mW - 30) / (PPS * beatDur)))
-  const beatsPerTrack = Math.floor(rawBeats / song.timeSignature) * song.timeSignature
+  // Mobile: 1 ô nhịp = đúng timeSignature beats (4/4 = 4, 3/4 = 3)
+  const beatsPerTrack = song.timeSignature
   const currentChunk  = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
   const activeTrackNum = currentChunk % 2 === 0 ? 1 : 2
   const t1Chunk = activeTrackNum === 1 ? currentChunk : currentChunk + 1
