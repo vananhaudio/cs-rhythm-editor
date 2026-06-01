@@ -27,6 +27,9 @@ const TOOL_LABELS: Record<string, { label: string; icon: string; route: string }
   ear:           { label: 'Luyện tai',     icon: '👂', route: '/tap'         },
 }
 
+// Tool map sẽ được load từ DB
+let DYNAMIC_TOOL_MAP: Record<string, { label: string; icon: string; route: string }> = { ...TOOL_LABELS }
+
 function normalizeCanvaUrl(raw: string): string {
   // Tách src từ HTML block nếu paste cả <iframe> hoặc <div>
   const iframeSrc = raw.match(/src="([^"]*canva\.com[^"]*)"/)
@@ -254,7 +257,7 @@ export default function LessonViewerPage() {
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {tools.map(toolId => {
-                    const t = TOOL_LABELS[toolId]
+                    const t = DYNAMIC_TOOL_MAP[toolId]
                     if (!t) return null
                     return (
                       <a key={toolId} href={t.route}
