@@ -133,6 +133,11 @@ export default function ToolsManager() {
                         <div style={{ fontWeight: 600, fontSize: 14, color: tool.enabled ? S.text1 : S.text3, marginBottom: 2 }}>{tool.name}</div>
                         <div style={{ fontSize: 12, color: S.text3 }}>{tool.description}</div>
                       </div>
+                      <a href={tool.route} target="_blank" rel="noopener noreferrer"
+                        title={tool.route}
+                        style={{ background: S.accentLight, color: S.accent, border: `1px solid ${S.accent}30`, borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        Mở →
+                      </a>
                       <select value={tool.tier} onChange={e => setTier(tool.id, e.target.value)}
                         style={{ background: tier.bg, color: tier.color, border: `1px solid ${tier.color}40`, borderRadius: 8, padding: '4px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none', flexShrink: 0 }}>
                         {TIERS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
