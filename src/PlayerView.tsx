@@ -705,11 +705,15 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     // scrollOff: đưa chunkStart về nowX — y hệt desktop
     const chunkScrollOff = nowX + chunkStart * PPS
 
-    const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart && l.time < chunkEnd)
+    // Filter theo beat index — chính xác như editor
+    const trackLyrics = (song.lyrics??[]).filter((l: any) => {
+      const beatIdx = Math.floor(l.time / beatDur)
+      return beatIdx >= beatStart && beatIdx < beatEnd
+    })
     const TRACK_H = 100
 
     return (
-      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden', paddingLeft: cellWMobile / 2 }}>
+      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden' }}>
         {/* Beat + Chord row — dùng left = nowX + beat*beatDur*PPS - chunkScrollOff */}
         <div style={{ height:24, flexShrink:0, position:'relative' }}>
           {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
@@ -733,9 +737,10 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
           })}
         </div>
         {/* Lyric row — dùng left = nowX + l.time*PPS - chunkScrollOff, y hệt desktop */}
-        <div style={{ flex:1, position:'relative' }}>
+        <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
           {trackLyrics.map((l: any, li: number) => {
             const lx = nowX + l.time * PPS - chunkScrollOff
+            if (lx < 0 || lx > mW) return null  // chỉ render chữ trong ô nhịp này
             const nt = trackLyrics[li+1]?.time ?? chunkEnd
             const active = isActive && currentTime >= l.time && currentTime < nt
             const past   = isActive && currentTime >= nt
