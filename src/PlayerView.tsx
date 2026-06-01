@@ -829,19 +829,19 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
           <>
             <div style={{ display:'flex', gap:6, marginRight:'auto' }}>
               {[0.75,1,1.25].map(s => (
-                <button key={s} onClick={() => setSpeed(s)}
+                <button key={s} onClick={e => { e.stopPropagation(); setSpeed(s) }}
                   style={{ padding:'5px 14px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'"DM Mono",monospace',fontSize:12,fontWeight:600,
                     background: speed===s ? '#6C63FF' : 'rgba(255,255,255,0.08)',
                     color: speed===s ? '#fff' : '#475569',
                   }}>{s===1?'1×':s+'×'}</button>
               ))}
             </div>
-            <button onClick={() => seekTo(0)}
+            <button onClick={e => { e.stopPropagation(); seekTo(0) }}
               style={{ width:44,height:44,borderRadius:12,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center' }}>⏮</button>
           </>
         )}
         {/* Nút play/pause luôn hiện góc phải */}
-        <button onClick={togglePlay}
+        <button onClick={e => { e.stopPropagation(); togglePlay() }}
           style={{ width: isPlaying ? 44 : 56, height: isPlaying ? 44 : 56, borderRadius:'50%', border:'none', cursor:'pointer', fontSize: isPlaying ? 18 : 22, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s',
             background: isPlaying ? 'rgba(108,99,255,0.25)' : '#6C63FF',
             color: isPlaying ? '#8B84FF' : '#fff',
