@@ -681,29 +681,15 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
 
   const [showSongList, setShowSongList] = React.useState(false)
   const [showControls, setShowControls] = React.useState(true)
-  const hideTimer = React.useRef<ReturnType<typeof setTimeout>|null>(null)
   const isPlayingRef2 = React.useRef(isPlaying)
   React.useEffect(() => { isPlayingRef2.current = isPlaying }, [isPlaying])
 
-  const revealControls = React.useCallback(() => {
-    setShowControls(true)
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-    if (isPlayingRef2.current) {
-      hideTimer.current = setTimeout(() => setShowControls(false), 3000)
-    }
+  const toggleControls = React.useCallback(() => {
+    setShowControls(v => !v)
   }, [])
 
   // Khi bắt đầu phát → tự ẩn; khi dừng → hiện lại
-  React.useEffect(() => {
-    if (isPlaying) {
-      if (hideTimer.current) clearTimeout(hideTimer.current)
-      hideTimer.current = setTimeout(() => setShowControls(false), 3000)
-    } else {
-      if (hideTimer.current) clearTimeout(hideTimer.current)
-      setShowControls(true)
-    }
-    return () => { if (hideTimer.current) clearTimeout(hideTimer.current) }
-  }, [isPlaying])
+  // Không auto-hide theo isPlaying nữa — người dùng tự toggle
   const fmtT = (t: number) => `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`
   const pct = totalDur > 0 ? currentTime/totalDur*100 : 0
 
@@ -779,7 +765,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   const isPortrait = mW < mH * 0.9
 
   return (
-    <div ref={containerRef} onTouchStart={revealControls} onClick={revealControls} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
+    <div ref={containerRef} onClick={toggleControls} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
       {isPortrait && (
         <div style={{ position:'absolute', inset:0, background:'rgba(13,15,20,0.96)', zIndex:10, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
           <div style={{ fontSize:48 }}>📱</div>
