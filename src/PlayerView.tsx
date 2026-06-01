@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 function useIsMobile() {
-  const [m, setM] = useState(window.innerWidth < 768)
+  const [m, setM] = useState(window.innerWidth < 1024)
   useEffect(() => {
-    const h = () => setM(window.innerWidth < 768)
+    const h = () => setM(window.innerWidth < 1024)
     window.addEventListener('resize', h)
     return () => window.removeEventListener('resize', h)
   }, [])
@@ -621,8 +621,9 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const [mW, setMW] = React.useState(window.innerWidth)
+  const [mH, setMH] = React.useState(window.innerHeight)
   React.useEffect(() => {
-    const ro = new ResizeObserver(e => setMW(e[0].contentRect.width))
+    const ro = new ResizeObserver(e => { setMW(e[0].contentRect.width); setMH(e[0].contentRect.height) })
     if (containerRef.current) ro.observe(containerRef.current)
     return () => ro.disconnect()
   }, [])
@@ -742,7 +743,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     )
   }
 
-  const isPortrait = mW < 500
+  const isPortrait = mW < mH * 0.9
 
   return (
     <div ref={containerRef} onTouchStart={revealControls} onClick={revealControls} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
