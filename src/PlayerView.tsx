@@ -718,8 +718,18 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     )
   }
 
+  const isPortrait = mW < 500
+
   return (
     <div ref={containerRef} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
+      {isPortrait && (
+        <div style={{ position:'absolute', inset:0, background:'rgba(13,15,20,0.96)', zIndex:10, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
+          <div style={{ fontSize:48 }}>📱</div>
+          <div style={{ fontSize:18, fontWeight:700, color:'#F1F5F9', textAlign:'center' }}>Xoay ngang để chơi nhạc</div>
+          <div style={{ fontSize:13, color:'#475569', textAlign:'center', maxWidth:260, lineHeight:1.5 }}>Player tối ưu cho màn hình ngang</div>
+          <button onClick={onClose} style={{ marginTop:8, padding:'8px 20px', borderRadius:10, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#94A3B8', cursor:'pointer', fontSize:13, fontFamily:'inherit' }}>← Quay lại</button>
+        </div>
+      )}
       {/* Header */}
       <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 12px', height:52, display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
         <button onClick={onClose} style={{ width:36,height:36,borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
