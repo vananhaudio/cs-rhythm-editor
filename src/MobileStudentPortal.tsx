@@ -8,29 +8,20 @@ const L = {
   surface:    '#FFFFFF',
   surface2:   '#F7F8FA',
   border:     '#E8EAF0',
-  
-  // Primary — warm indigo
-  p1:         '#4338CA',   // deep indigo
-  p2:         '#EEF2FF',   // indigo tint
-  p3:         '#C7D2FE',   // indigo mid
-
-  // Accent — vibrant orange for CTAs
+  p1:         '#4338CA',
+  p2:         '#EEF2FF',
+  p3:         '#C7D2FE',
   a1:         '#EA580C',
   a2:         '#FFF7ED',
   a3:         '#FED7AA',
-
-  // Text
   t1:         '#111827',
   t2:         '#6B7280',
   t3:         '#9CA3AF',
   tinv:       '#FFFFFF',
-
-  // Status
   green:      '#16A34A',
   greenBg:    '#F0FDF4',
   gold:       '#D97706',
   goldBg:     '#FFFBEB',
-
   shadow:     '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)',
   shadowLg:   '0 8px 24px rgba(0,0,0,0.10)',
 }
@@ -48,7 +39,7 @@ interface Module { id: string; name: string; order_index: number }
 interface Lesson {
   id: string; module_id: string; title: string; lesson_type: string
   content_url: string | null; description: string | null; content: string | null
-  tools: string[]; order_index: number
+  tools: string[]; order_index: number; tier?: string
 }
 
 function uname(s: Student) {
@@ -62,7 +53,14 @@ function getYtId(url: string | null) {
 const LEVEL_VI: Record<string, string> = {
   beginner: 'Sơ cấp', elementary: 'Cơ bản', intermediate: 'Trung cấp', advanced: 'Nâng cao',
 }
-// Logo khoá: ảnh tải lên > emoji custom > emoji mặc định theo type
+const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
+const LEVEL_TIER: Record<string, string> = {
+  beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro'
+}
+const TIER_VI: Record<string, string> = {
+  free: 'Miễn phí', basic: 'Cơ bản', standard: 'Nâng cao', pro: 'Pro'
+}
+
 function CourseLogo({ course, size = 44, radius = 12, bg }: { course: { type: string; icon?: string | null; image_url?: string | null }; size?: number; radius?: number; bg?: string }) {
   const fallback = course.icon || (course.type === 'canh_cua' ? '🔑' : '🎸')
   return (
@@ -74,26 +72,30 @@ function CourseLogo({ course, size = 44, radius = 12, bg }: { course: { type: st
   )
 }
 
+// ── Tool route map — dẫn đến đúng route theo id ──
+const TOOL_ROUTES: Record<string, string> = {
+  tap:           '/tap',
+  metronome:     '/tap',
+  backing_track: '/tap',
+  chord:         '/chords',
+  tuner:         '/tap',
+  submit_video:  '/tap',
+  ear:           '/tap',
+}
+
 const TABS = [
   { id: 'hoc'  as Tab, icon: '📖', label: 'Học'  },
   { id: 'tap'  as Tab, icon: '🎯', label: 'Tập'  },
   { id: 'song' as Tab, icon: '✨', label: 'Sống' },
 ]
-const TOOLS_MAP: Record<string, { label: string; icon: string; color: string }> = {
-  tap:           { label: 'Tap nhịp',     icon: '🥁', color: L.p1     },
-  metronome:     { label: 'Metronome',    icon: '🎵', color: L.green  },
-  backing_track: { label: 'Backing Track',icon: '🎧', color: L.gold   },
-  submit_video:  { label: 'Nộp video',    icon: '📹', color: L.a1     },
-  chord:         { label: 'Luyện hợp âm', icon: '🎸', color: '#7C3AED'},
-  ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2'},
+const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; route: string }> = {
+  tap:           { label: 'Tap nhịp',     icon: '🥁', color: L.p1,      route: '/tap'    },
+  metronome:     { label: 'Metronome',    icon: '🎵', color: L.green,   route: '/tap'    },
+  backing_track: { label: 'Backing Track',icon: '🎧', color: L.gold,    route: '/tap'    },
+  submit_video:  { label: 'Nộp video',    icon: '📹', color: L.a1,      route: '/tap'    },
+  chord:         { label: 'Luyện hợp âm', icon: '🎸', color: '#7C3AED', route: '/chords' },
+  ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2', route: '/tap'    },
 }
-const PRACTICE_LIST = [
-  { id:'tap',     icon:'🥁', label:'Tap nhịp',     sub:'Luyện cảm nhịp điệu',    bg:'#EEF2FF', fg:L.p1      },
-  { id:'metro',   icon:'🎵', label:'Metronome',     sub:'Đếm nhịp chính xác',     bg:'#F0FDF4', fg:L.green   },
-  { id:'backing', icon:'🎧', label:'Backing Track', sub:'Đệm nhạc luyện tập',     bg:'#FFFBEB', fg:L.gold    },
-  { id:'chord',   icon:'🎸', label:'Luyện hợp âm', sub:'Xem hợp âm trực quan',   bg:'#F5F3FF', fg:'#7C3AED' },
-  { id:'submit',  icon:'📹', label:'Nộp video',     sub:'Quay và gửi bài tập',    bg:'#FFF7ED', fg:L.a1      },
-]
 
 interface Props { student: Student; onLogout: () => void }
 
@@ -115,9 +117,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [bpm, setBpm]             = useState(72)
   const [tapCount, setTapCount]   = useState(0)
   const [showPlayer, setShowPlayer] = useState(false)
-  const [playerSong, setPlayerSong] = useState<any>(null)
   const tapTimes                  = useRef<number[]>([])
   const tapTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── Progress tracking ──
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
+  const [markingDone, setMarkingDone]   = useState(false)
+
+  const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
+  const isUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
 
   useEffect(() => {
     supabase.from('edu_enrollments')
@@ -126,6 +134,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
       .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
+    // Load progress
+    supabase.from('edu_lesson_progress')
+      .select('lesson_id').eq('student_id', student.id)
+      .then(({ data }) => {
+        if (data) setCompletedIds(new Set(data.map((r: any) => r.lesson_id)))
+      })
   }, [student.id])
 
   const openCourse = async (courseId: string) => {
@@ -140,8 +154,38 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       setLessons((lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] })))
     }
   }
-  const openLesson = (l: Lesson) => { setActiveLesson(l); setLessonTab('content'); setScreen('lesson') }
+
+  const openLesson = (l: Lesson) => {
+    if (!isUnlocked(l.tier)) return // khoá, không mở
+    setActiveLesson(l)
+    setLessonTab('content')
+    setScreen('lesson')
+  }
+
+  const markComplete = async (lessonId: string) => {
+    if (completedIds.has(lessonId) || markingDone) return
+    setMarkingDone(true)
+    await supabase.from('edu_lesson_progress').upsert({
+      student_id: student.id,
+      lesson_id: lessonId,
+      course_id: activeCourseId,
+    }, { onConflict: 'student_id,lesson_id' })
+    setCompletedIds(prev => new Set([...prev, lessonId]))
+    setMarkingDone(false)
+  }
+
   const goBack = () => screen === 'lesson' ? setScreen('courses') : (setScreen('home'), setActiveCourseId(null))
+
+  // % hoàn thành của 1 khoá
+  const courseProgress = (courseId: string) => {
+    const courseLessons = lessons.filter(l => {
+      const mod = modules.find(m => m.id === l.module_id)
+      return !!mod
+    })
+    if (!courseLessons.length) return 0
+    const done = courseLessons.filter(l => completedIds.has(l.id)).length
+    return Math.round((done / courseLessons.length) * 100)
+  }
 
   const handleTap = () => {
     const now = Date.now()
@@ -156,7 +200,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     tapTimer.current = setTimeout(() => { tapTimes.current = []; setTapCount(0) }, 3000)
   }
 
-  // ── Hồ sơ cá nhân ──
   const openSettings = () => { setNameDraft(uname(me)); setShowSettings(true) }
   const saveDisplayName = async () => {
     const v = nameDraft.trim()
@@ -184,13 +227,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   const mainCourse = enrollments.find(e => e.course?.type === 'hanh_trinh')
   const name = uname(me)
-  const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
-  const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
-  const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
-  const isUnlocked = (tier: string) => TIER_ORDER.indexOf(tier) <= studentTierIdx
-  const displayTools = dbTools.length > 0 ? dbTools : PRACTICE_LIST.map(p => ({ id: p.id, icon: p.icon, name: p.label, description: p.sub, category: 'Luyện tập', route: '/tap', tier: 'free', enabled: true } as DBTool))
 
-  // Pill component
+  const displayTools = dbTools.length > 0 ? dbTools : [
+    { id:'tap',     icon:'🥁', name:'Tap nhịp',     description:'Luyện cảm nhịp điệu',  category:'Luyện tập', route:'/tap',    tier:'free', enabled:true },
+    { id:'metro',   icon:'🎵', name:'Metronome',     description:'Đếm nhịp chính xác',   category:'Luyện tập', route:'/tap',    tier:'free', enabled:true },
+    { id:'chord',   icon:'🎸', name:'Luyện hợp âm', description:'Xem hợp âm trực quan', category:'Luyện tập', route:'/chords', tier:'free', enabled:true },
+    { id:'submit',  icon:'📹', name:'Nộp video',     description:'Quay và gửi bài tập',  category:'Luyện tập', route:'/tap',    tier:'basic', enabled:true },
+  ] as DBTool[]
+
   const Pill = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
     <button onClick={onClick} style={{
       background: active ? L.p1 : L.surface2, color: active ? L.tinv : L.t2,
@@ -200,6 +244,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     }}>{label}</button>
   )
 
+  // % hiển thị ở home cho mainCourse
+  const mainProgress = mainCourse && lessons.length > 0 ? courseProgress(mainCourse.course_id) : null
+
   return (
     <>
     <div style={{
@@ -208,19 +255,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       background: L.bg, fontFamily: '"SF Pro Display", "DM Sans", system-ui, sans-serif',
       color: L.t1, position: 'relative', overflow: 'hidden',
     }}>
-
-      {/* ══ SCROLLABLE CONTENT ══════════════════════════════════════════════ */}
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 84 }}>
 
-        {/* ── HOME ──────────────────────────────────────────────────────── */}
+        {/* ── HOME ────────────────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'home' && (
           <>
-            {/* Hero header */}
             <div style={{ background: L.p1, padding: '52px 20px 28px', position: 'relative', overflow: 'hidden' }}>
-              {/* Decorative circles */}
               <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,.06)' }} />
               <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
-
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>Xin chào 👋</div>
@@ -237,46 +279,41 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Việc hôm nay */}
+              {/* Tiếp tục học */}
               {mainCourse && (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700 }}>Tiếp tục học</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div onClick={() => openCourse(mainCourse.course_id)}
-                    style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>▶️</div>
+                <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Tiếp tục học</div>
+                <div onClick={() => openCourse(mainCourse.course_id)}
+                  style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadowLg, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
+                  <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: L.p2, borderRadius: '0 20px 0 100%', opacity: .5 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <CourseLogo course={mainCourse.course} size={48} radius={14} bg={L.p2} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Xem bài học</div>
-                      <div style={{ fontSize: 12, color: L.t2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mainCourse.course?.name}</div>
+                      <div style={{ fontSize: 12, color: L.t3, marginBottom: 3 }}>Đang theo học</div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: L.p1, lineHeight: 1.3 }}>{mainCourse.course?.name}</div>
                     </div>
-                    <span style={{ color: L.t3, fontSize: 18, flexShrink: 0 }}>›</span>
                   </div>
+                  {/* Progress bar */}
+                  {mainProgress !== null && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: L.t2 }}>Tiến độ</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: L.p1 }}>{mainProgress}%</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 99, background: L.p2, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${L.p1}, #6366F1)`, width: `${mainProgress}%`, transition: 'width .4s' }} />
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: L.tinv, border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.02em', boxShadow: '0 4px 16px rgba(67,56,202,.35)' }}>
+                    HỌC NGAY →
+                  </button>
                 </div>
               </div>
               )}
 
-              {/* Hành trình */}
-              {mainCourse ? (
-                <div>
-                  <span style={{ fontSize: 16, fontWeight: 700 }}>Hành trình hiện tại</span>
-                  <div style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadowLg, marginTop: 12, position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: L.p2, borderRadius: '0 20px 0 100%', opacity: .5 }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-                      <CourseLogo course={mainCourse.course} size={48} radius={14} bg={L.p2} />
-                      <div>
-                        <div style={{ fontSize: 12, color: L.t3, marginBottom: 3 }}>Đang theo học</div>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: L.p1, lineHeight: 1.3 }}>{mainCourse.course?.name}</div>
-                      </div>
-                    </div>
-                    <button onClick={() => openCourse(mainCourse.course_id)}
-                      style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: L.tinv, border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.02em', boxShadow: '0 4px 16px rgba(67,56,202,.35)' }}>
-                      HỌC NGAY →
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              {!mainCourse && (
                 <div style={{ background: L.surface, borderRadius: 20, padding: '32px 20px', textAlign: 'center', boxShadow: L.shadow }}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>🌱</div>
                   <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Hành trình chưa bắt đầu</div>
@@ -305,27 +342,51 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           </>
         )}
 
-        {/* ── COURSES ───────────────────────────────────────────────────── */}
+        {/* ── COURSES (danh sách bài học) ──────────────────────────────── */}
         {tab === 'hoc' && screen === 'courses' && (
           <>
             <div style={{ background: L.surface, padding: '52px 16px 16px', boxShadow: '0 1px 0 ' + L.border }}>
               <button onClick={goBack} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, marginBottom: 12 }}>‹</button>
               <div style={{ fontWeight: 800, fontSize: 20 }}>Danh sách bài học</div>
+              {/* Progress summary */}
+              {activeCourseId && lessons.length > 0 && (() => {
+                const done = lessons.filter(l => completedIds.has(l.id)).length
+                const pct  = Math.round((done / lessons.length) * 100)
+                return (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: L.t2, marginBottom: 5 }}>
+                      <span>{done}/{lessons.length} bài đã học</span>
+                      <span style={{ fontWeight: 700, color: L.p1 }}>{pct}%</span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 99, background: L.p2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${L.p1}, #6366F1)`, width: `${pct}%`, transition: 'width .3s' }} />
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
             <div style={{ padding: '16px' }}>
               {modules.map(mod => (
                 <div key={mod.id} style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.08em', padding: '0 4px 10px' }}>{mod.name}</div>
-                  {lessons.filter(l => l.module_id === mod.id).map((l, i) => {
+                  {lessons.filter(l => l.module_id === mod.id).map((l) => {
                     const icons: Record<string, string> = { video: '▶️', text: '📄', slide: '🖼', quiz: '❓', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹' }
+                    const done    = completedIds.has(l.id)
+                    const locked  = !isUnlocked(l.tier)
                     return (
                       <div key={l.id} onClick={() => openLesson(l)}
-                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 8, border: `2px solid ${activeLesson?.id === l.id ? L.p1 : 'transparent'}` }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 10, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{icons[l.lesson_type] ?? '📄'}</div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.title}</div>
+                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: locked ? 'default' : 'pointer', marginBottom: 8, border: `2px solid ${activeLesson?.id === l.id ? L.p1 : 'transparent'}`, opacity: locked ? .55 : 1, position: 'relative' }}>
+                        {/* Icon */}
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                          {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
-                        <span style={{ color: L.t3, fontSize: 18 }}>›</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: done ? L.green : L.t1 }}>{l.title}</div>
+                          {locked && l.tier && (
+                            <div style={{ fontSize: 10, color: L.gold, fontWeight: 600, marginTop: 2 }}>Yêu cầu gói {TIER_VI[l.tier] ?? l.tier}</div>
+                          )}
+                        </div>
+                        {!locked && !done && <span style={{ color: L.t3, fontSize: 18 }}>›</span>}
                       </div>
                     )
                   })}
@@ -341,22 +402,24 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           </>
         )}
 
-        {/* ── LESSON ────────────────────────────────────────────────────── */}
+        {/* ── LESSON ──────────────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'lesson' && activeLesson && (
           <>
-            {/* Header */}
             <div style={{ background: L.surface, padding: '52px 16px 0', boxShadow: '0 1px 0 ' + L.border }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <button onClick={goBack} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeLesson.title}</div>
                 </div>
-                <span style={{ fontSize: 20, cursor: 'pointer', color: L.t3 }}>♡</span>
+                {/* Trạng thái hoàn thành */}
+                {completedIds.has(activeLesson.id)
+                  ? <span style={{ fontSize: 20 }}>✅</span>
+                  : <span style={{ fontSize: 13, color: L.t3 }}>Chưa học</span>
+                }
               </div>
-              {/* Tab pills */}
               <div style={{ display: 'flex', gap: 8, paddingBottom: 14 }}>
                 <Pill label="Nội dung" active={lessonTab === 'content'} onClick={() => setLessonTab('content')} />
-                <Pill label="Ghi chú" active={lessonTab === 'note'}    onClick={() => setLessonTab('note')}    />
+                <Pill label="Ghi chú"  active={lessonTab === 'note'}    onClick={() => setLessonTab('note')}    />
               </div>
             </div>
 
@@ -368,38 +431,19 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             )}
 
-            {/* Slide Canva - fullscreen như link */}
+            {/* Slide Canva */}
             {activeLesson.lesson_type === 'slide' && activeLesson.content_url && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#1a1a2e' }}>
-                <iframe
-                  src={activeLesson.content_url}
-                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                  allowFullScreen
-                  allow="fullscreen"
-                  title={activeLesson.title}
-                />
-                <button
-                  onClick={goBack}
-                  style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>
-                  ← Quay lại
-                </button>
+                <iframe src={activeLesson.content_url} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allowFullScreen allow="fullscreen" title={activeLesson.title} />
+                <button onClick={goBack} style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
               </div>
             )}
 
-            {/* External link embed - fullscreen */}
+            {/* Link embed */}
             {activeLesson.lesson_type === 'link' && activeLesson.content_url && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#000' }}>
-                <iframe
-                  src={activeLesson.content_url}
-                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                  allow="microphone; camera"
-                  title={activeLesson.title}
-                />
-                <button
-                  onClick={goBack}
-                  style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>
-                  ← Quay lại
-                </button>
+                <iframe src={activeLesson.content_url} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="microphone; camera" title={activeLesson.title} />
+                <button onClick={goBack} style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
               </div>
             )}
 
@@ -420,7 +464,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       {activeLesson.tools.map((tid, i) => {
                         const t = TOOLS_MAP[tid]; if (!t) return null
                         return (
-                          <div key={tid} onClick={() => window.location.href = '/tap'}
+                          <div key={tid} onClick={() => window.location.href = t.route}
                             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: i > 0 ? `1px solid ${L.border}` : 'none', cursor: 'pointer' }}>
                             <div style={{ width: 36, height: 36, borderRadius: 10, background: t.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{t.icon}</div>
                             <span style={{ fontSize: 13, fontWeight: 600, color: t.color, flex: 1 }}>{t.label}</span>
@@ -430,7 +474,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       })}
                     </div>
                   )}
-                  {!activeLesson.description && !activeLesson.content && (
+                  {!activeLesson.description && !activeLesson.content && activeLesson.lesson_type !== 'video' && (
                     <div style={{ textAlign: 'center', padding: '28px', color: L.t3, fontSize: 14 }}>Chưa có nội dung</div>
                   )}
                 </div>
@@ -439,37 +483,50 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               )}
             </div>
 
-            {/* Nav buttons */}
-            <div style={{ padding: '8px 16px 16px', display: 'flex', gap: 10 }}>
-              {(() => {
-                const idx = lessons.findIndex(l => l.id === activeLesson.id)
-                const prev = idx > 0 ? lessons[idx - 1] : null
-                const next = idx < lessons.length - 1 ? lessons[idx + 1] : null
-                return (
-                  <>
-                    {prev && (
-                      <button onClick={() => openLesson(prev)} style={{ flex: 1, background: L.surface, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: L.t1, boxShadow: L.shadow }}>
-                        ‹ Trước
+            {/* Nav buttons + Đánh dấu hoàn thành */}
+            <div style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Nút hoàn thành */}
+              {!completedIds.has(activeLesson.id) && (
+                <button onClick={() => markComplete(activeLesson.id)} disabled={markingDone}
+                  style={{ width: '100%', background: L.greenBg, border: `1.5px solid ${L.green}`, borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', color: L.green, opacity: markingDone ? 0.6 : 1 }}>
+                  {markingDone ? 'Đang lưu…' : '✓ Đánh dấu đã học'}
+                </button>
+              )}
+              {completedIds.has(activeLesson.id) && (
+                <div style={{ textAlign: 'center', fontSize: 13, color: L.green, fontWeight: 600, padding: '8px 0' }}>✅ Bài này đã hoàn thành</div>
+              )}
+              {/* Prev / Next */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                {(() => {
+                  const idx  = lessons.findIndex(l => l.id === activeLesson.id)
+                  const prev = idx > 0 ? lessons[idx - 1] : null
+                  const next = idx < lessons.length - 1 ? lessons[idx + 1] : null
+                  return (
+                    <>
+                      {prev && (
+                        <button onClick={() => openLesson(prev)} style={{ flex: 1, background: L.surface, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: L.t1, boxShadow: L.shadow }}>
+                          ‹ Trước
+                        </button>
+                      )}
+                      <button onClick={() => { if (next) openLesson(next); else goBack() }}
+                        style={{ flex: 2, background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: L.tinv, border: 'none', borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(67,56,202,.3)' }}>
+                        {next ? 'TIẾP THEO ›' : '✓ HOÀN THÀNH'}
                       </button>
-                    )}
-                    <button onClick={() => next ? openLesson(next) : goBack()}
-                      style={{ flex: 2, background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: L.tinv, border: 'none', borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(67,56,202,.3)' }}>
-                      {next ? 'TIẾP THEO ›' : '✓ HOÀN THÀNH'}
-                    </button>
-                  </>
-                )
-              })()}
+                    </>
+                  )
+                })()}
+              </div>
             </div>
           </>
         )}
 
-        {/* ── TẬP ───────────────────────────────────────────────────────── */}
+        {/* ── TẬP ─────────────────────────────────────────────────────── */}
         {tab === 'tap' && (
           <div style={{ padding: '52px 16px 16px' }}>
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>
             <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>Chọn công cụ để bắt đầu</div>
 
-            {/* Tap BPM widget */}
+            {/* Tap BPM */}
             <div style={{ background: `linear-gradient(135deg, ${L.p1} 0%, #6366F1 100%)`, borderRadius: 24, padding: '24px 20px', marginBottom: 16, textAlign: 'center', boxShadow: '0 8px 24px rgba(67,56,202,.35)', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,.08)' }} />
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.7)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>🥁 Tap BPM</div>
@@ -481,7 +538,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </button>
             </div>
 
-            {/* Player button */}
+            {/* Player */}
             <button onClick={() => setShowPlayer(true)}
               style={{ width:'100%', background:'linear-gradient(135deg,#0D0F14,#141720)', border:'1px solid rgba(108,99,255,0.3)', borderRadius:18, padding:'16px 20px', marginBottom:16, display:'flex', alignItems:'center', gap:14, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
               <div style={{ width:44,height:44,borderRadius:12,background:'linear-gradient(135deg,#6C63FF,#8B84FF)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,boxShadow:'0 4px 12px rgba(108,99,255,0.35)' }}>🎸</div>
@@ -494,12 +551,17 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {displayTools.map((t, i) => {
+              {displayTools.map((t) => {
                 const unlocked = isUnlocked(t.tier)
+                const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
                 return (
-                  <div key={t.id} onClick={() => { if (unlocked) window.location.href = t.route }}
+                  <div key={t.id} onClick={() => { if (unlocked) window.location.href = route }}
                     style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
-                    {!unlocked && <span style={{ position: 'absolute', top: 10, right: 10, fontSize: 12 }}>🔒</span>}
+                    {!unlocked && (
+                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                        <span style={{ fontSize: 10, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
+                      </div>
+                    )}
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
                     <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
@@ -510,13 +572,25 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           </div>
         )}
 
-        {/* ── SỐNG ──────────────────────────────────────────────────────── */}
+        {/* ── SỐNG ────────────────────────────────────────────────────── */}
         {tab === 'song' && (
           <div style={{ padding: '52px 16px 16px' }}>
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Sống cùng âm nhạc</div>
             <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>Kết nối · Trải nghiệm · Truyền cảm hứng</div>
 
-            {/* Sự kiện — sắp ra mắt */}
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: L.p1 }}>{completedIds.size}</div>
+                <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Bài đã học</div>
+              </div>
+              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: L.a1 }}>{enrollments.length}</div>
+                <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Khoá học</div>
+              </div>
+            </div>
+
+            {/* Sự kiện */}
             <div style={{ background: L.surface, borderRadius: 18, padding: '28px 20px', boxShadow: L.shadow, textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: 40, marginBottom: 10 }}>🎪</div>
               <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Sự kiện & giao lưu</div>
@@ -524,7 +598,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             </div>
 
             {/* Quote */}
-            <div style={{ background: L.p1, borderRadius: 20, padding: '20px 20px 24px', marginTop: 8, marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ background: L.p1, borderRadius: 20, padding: '20px 20px 24px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: -20, right: -20, fontSize: 80, opacity: .08, lineHeight: 1 }}>"</div>
               <div style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', lineHeight: 1.8, fontStyle: 'italic' }}>
                 Bạn không cần phải giỏi ngay từ đầu. Nhưng bạn phải bắt đầu để trở nên giỏi.
@@ -552,7 +626,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         )}
       </div>
 
-      {/* ══ BOTTOM NAV ══════════════════════════════════════════════════════ */}
+      {/* ══ BOTTOM NAV ════════════════════════════════════════════════════ */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         background: 'rgba(255,255,255,0.92)',
@@ -581,7 +655,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         })}
       </div>
     </div>
-    {showPlayer && <MobilePlayerView song={playerSong as any} onClose={() => setShowPlayer(false)} />}
+
+    {showPlayer && <MobilePlayerView song={null as any} onClose={() => setShowPlayer(false)} />}
 
     {/* ── Modal Cài đặt hồ sơ ── */}
     {showSettings && (
@@ -594,8 +669,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             <span style={{ fontWeight: 800, fontSize: 18 }}>Hồ sơ của tôi</span>
             <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 20, color: L.t3, cursor: 'pointer' }}>✕</button>
           </div>
-
-          {/* Avatar */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 22 }}>
             <div onClick={() => avatarFileRef.current?.click()}
               style={{ width: 92, height: 92, borderRadius: '50%', background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, color: L.p1, fontWeight: 800, overflow: 'hidden', cursor: 'pointer', position: 'relative', border: `3px solid ${L.surface}`, boxShadow: L.shadow }}>
@@ -608,8 +681,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.currentTarget.value = '' }} />
             <div style={{ fontSize: 12, color: L.t3, marginTop: 10 }}>{savingProfile ? 'Đang lưu…' : 'Bấm vào ảnh để đổi ảnh đại diện'}</div>
           </div>
-
-          {/* Tên hiển thị */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: L.t2, marginBottom: 8 }}>Tên hiển thị</div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -622,7 +693,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </button>
             </div>
           </div>
-
           <button onClick={() => setShowSettings(false)}
             style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>
             Xong
@@ -631,17 +701,5 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       </div>
     )}
     </>
-  )
-}
-
-// Inline Pill component
-function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} style={{
-      background: active ? L.p1 : L.surface2, color: active ? L.tinv : L.t2,
-      border: `1px solid ${active ? L.p1 : L.border}`, borderRadius: 20,
-      padding: '7px 18px', fontSize: 13, fontWeight: active ? 600 : 400,
-      cursor: 'pointer', fontFamily: 'inherit',
-    }}>{label}</button>
   )
 }
