@@ -593,7 +593,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         </div>
       </div>
 
-      {showSongList && (
+    {showSongList && (
         <SongList
           onSelect={(s: RhythmSong) => {
             if (onImportSong) onImportSong(s);
@@ -650,6 +650,28 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   }, [song.chords, beatDur])
 
   const [showSongList, setShowSongList] = React.useState(false)
+  const [showControls, setShowControls] = React.useState(true)
+  const hideTimer = React.useRef<ReturnType<typeof setTimeout>|null>(null)
+
+  const revealControls = React.useCallback(() => {
+    setShowControls(true)
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+    if (isPlaying) {
+      hideTimer.current = setTimeout(() => setShowControls(false), 3000)
+    }
+  }, [isPlaying])
+
+  // Khi bắt đầu phát → bắt đầu đếm ẩn
+  React.useEffect(() => {
+    if (isPlaying) {
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+      hideTimer.current = setTimeout(() => setShowControls(false), 3000)
+    } else {
+      setShowControls(true)
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+    return () => { if (hideTimer.current) clearTimeout(hideTimer.current) }
+  }, [isPlaying])
   const fmtT = (t: number) => `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`
   const pct = totalDur > 0 ? currentTime/totalDur*100 : 0
 
@@ -721,7 +743,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
   const isPortrait = mW < 500
 
   return (
-    <div ref={containerRef} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
+    <div ref={containerRef} onTouchStart={revealControls} onClick={revealControls} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
       {isPortrait && (
         <div style={{ position:'absolute', inset:0, background:'rgba(13,15,20,0.96)', zIndex:10, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
           <div style={{ fontSize:48 }}>📱</div>
@@ -730,8 +752,9 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
           <button onClick={onClose} style={{ marginTop:8, padding:'8px 20px', borderRadius:10, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#94A3B8', cursor:'pointer', fontSize:13, fontFamily:'inherit' }}>← Quay lại</button>
         </div>
       )}
-      {/* Header */}
-      <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 12px', height:52, display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+      {/* Header + Seek — ẩn khi đang phát */}
+      <div style={{ overflow:'hidden', maxHeight: showControls ? 200 : 0, opacity: showControls ? 1 : 0, transition:'max-height 0.3s ease, opacity 0.25s ease', flexShrink:0 }}>
+      <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 12px', height:52, display:'flex', alignItems:'center', gap:8 }}>
         <button onClick={onClose} style={{ width:36,height:36,borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
         <button onClick={() => setShowSongList(true)} style={{ flex:1,minWidth:0,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'6px 10px',cursor:'pointer',textAlign:'left',display:'flex',alignItems:'center',gap:8 }}>
           <span style={{ fontSize:14 }}>🎵</span>
@@ -757,14 +780,28 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         <span style={{ fontSize:10,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:32,textAlign:'right' }}>{fmtT(totalDur)}</span>
       </div>
 
+      </div>{/* end header+seek wrapper */}
+
+      {/* Nút play/pause nhỏ góc trái — hiện khi controls ẩn */}
+      {!showControls && (
+        <div style={{ position:'absolute', top:12, left:12, zIndex:20 }}>
+          <button onTouchStart={e => { e.stopPropagation(); togglePlay(); revealControls() }}
+            onClick={e => { e.stopPropagation(); togglePlay() }}
+            style={{ width:40, height:40, borderRadius:12, background:'rgba(108,99,255,0.85)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>
+            {isPlaying ? '⏸' : '▶'}
+          </button>
+        </div>
+      )}
+
       {/* 2 Tracks */}
       <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', background:'#0D0F14' }}>
         {renderTrack(t1ScrollOff, activeTrackNum===1, 0)}
         {renderTrack(t2ScrollOff, activeTrackNum===2, 1)}
       </div>
 
-      {/* Controls */}
-      <div style={{ background:'#141720', borderTop:'1px solid rgba(255,255,255,0.06)', padding:'14px 14px 36px', flexShrink:0 }}>
+      {/* Controls — ẩn khi đang phát */}
+      <div style={{ overflow:'hidden', maxHeight: showControls ? 200 : 0, opacity: showControls ? 1 : 0, transition:'max-height 0.3s ease, opacity 0.25s ease', flexShrink:0 }}>
+      <div style={{ background:'#141720', borderTop:'1px solid rgba(255,255,255,0.06)', padding:'14px 14px 36px' }}>
         <div style={{ display:'flex', justifyContent:'center', gap:8, marginBottom:14 }}>
           {[0.75,1,1.25].map(s => (
             <button key={s} onClick={() => setSpeed(s)}
@@ -785,6 +822,8 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
           <button onClick={() => seekTo(Math.min(totalDur, currentTime+5))} style={{ width:48,height:48,borderRadius:14,border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.04)',color:'#94A3B8',cursor:'pointer',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit' }}>+5s</button>
         </div>
       </div>
+      </div>{/* end controls wrapper */}
+
     {showSongList && (
         <SongList
           onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); setShowSongList(false); }}
