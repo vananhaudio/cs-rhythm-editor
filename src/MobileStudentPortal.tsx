@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import { MobilePlayerView } from './MobilePlayerView'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -78,7 +77,7 @@ const TOOL_ROUTES: Record<string, string> = {
   metronome:     '/tap',
   backing_track: '/tap',
   chord:         '/chords',
-  tuner:         '/tuner',
+  tuner:         '/tap',
   submit_video:  '/tap',
   ear:           '/tap',
 }
@@ -95,7 +94,6 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
   submit_video:  { label: 'Nộp video',    icon: '📹', color: L.a1,      route: '/tap'    },
   chord:         { label: 'Luyện hợp âm', icon: '🎸', color: '#7C3AED', route: '/chords' },
   ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2', route: '/tap'    },
-  tuner:         { label: 'Chỉnh dây',     icon: '🎸', color: '#7C3AED', route: '/tuner'  },
 }
 
 interface Props { student: Student; onLogout: () => void }
@@ -117,13 +115,21 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [dbTools, setDbTools]     = useState<DBTool[]>([])
   const [bpm, setBpm]             = useState(72)
   const [tapCount, setTapCount]   = useState(0)
-  const [showPlayer, setShowPlayer] = useState(false)
   const tapTimes                  = useRef<number[]>([])
   const tapTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Progress tracking ──
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [markingDone, setMarkingDone]   = useState(false)
+
+  // ── Tool overlay — mở tool ngay trong app, không navigate ra ngoài ──
+  const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
+
+  const openTool = (route: string, name: string) => {
+    // Các route nội bộ dùng iframe với full URL
+    const base = window.location.origin
+    setActiveTool({ name, url: base + route })
+  }
 
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
   const isTierUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
@@ -484,7 +490,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       {activeLesson.tools.map((tid, i) => {
                         const t = TOOLS_MAP[tid]; if (!t) return null
                         return (
-                          <div key={tid} onClick={() => window.location.href = t.route}
+                          <div key={tid} onClick={() => openTool(t.route, t.label)}
                             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderTop: i > 0 ? `1px solid ${L.border}` : 'none', cursor: 'pointer' }}>
                             <div style={{ width: 36, height: 36, borderRadius: 10, background: t.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{t.icon}</div>
                             <span style={{ fontSize: 13, fontWeight: 600, color: t.color, flex: 1 }}>{t.label}</span>
@@ -559,7 +565,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             </div>
 
             {/* Player */}
-            <button onClick={() => setShowPlayer(true)}
+            <button onClick={() => openTool('/tap', 'Player nhịp điệu')}
               style={{ width:'100%', background:'linear-gradient(135deg,#0D0F14,#141720)', border:'1px solid rgba(108,99,255,0.3)', borderRadius:18, padding:'16px 20px', marginBottom:16, display:'flex', alignItems:'center', gap:14, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
               <div style={{ width:44,height:44,borderRadius:12,background:'linear-gradient(135deg,#6C63FF,#8B84FF)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,boxShadow:'0 4px 12px rgba(108,99,255,0.35)' }}>🎸</div>
               <div>
@@ -575,7 +581,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 const unlocked = isTierUnlocked(t.tier)
                 const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
                 return (
-                  <div key={t.id} onClick={() => { if (unlocked) window.location.href = route }}
+                  <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name) }}
                     style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
                     {!unlocked && (
                       <div style={{ position: 'absolute', top: 8, right: 8 }}>
@@ -676,8 +682,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       </div>
     </div>
 
-    {showPlayer && <MobilePlayerView song={null as any} onClose={() => setShowPlayer(false)} />}
-
     {/* ── Modal Cài đặt hồ sơ ── */}
     {showSettings && (
       <div onClick={() => setShowSettings(false)}
@@ -718,6 +722,27 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             Xong
           </button>
         </div>
+      </div>
+    )}
+
+    {/* ── Tool Overlay — fullscreen iframe, không rời app ── */}
+    {activeTool && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', flexDirection: 'column' }}>
+        {/* Thanh tiêu đề */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: L.p1, flexShrink: 0 }}>
+          <button onClick={() => setActiveTool(null)}
+            style={{ background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
+            ✕
+          </button>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeTool.name}</span>
+        </div>
+        {/* Tool chạy trong iframe — session Supabase được chia sẻ qua localStorage */}
+        <iframe
+          src={activeTool.url}
+          style={{ flex: 1, border: 'none', width: '100%' }}
+          allow="microphone; camera"
+          title={activeTool.name}
+        />
       </div>
     )}
     </>
