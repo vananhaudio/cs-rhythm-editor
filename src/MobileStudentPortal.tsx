@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
+import { MobilePlayerView } from './MobilePlayerView'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -93,6 +94,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [dbTools, setDbTools]     = useState<DBTool[]>([])
   const [bpm, setBpm]             = useState(72)
   const [tapCount, setTapCount]   = useState(0)
+  const [showPlayer, setShowPlayer] = useState(false)
+  const [playerSong, setPlayerSong] = useState<any>(null)
   const tapTimes                  = useRef<number[]>([])
   const tapTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -152,6 +155,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   )
 
   return (
+    <>
     <div style={{
       maxWidth: 430, margin: '0 auto', height: '100dvh',
       display: 'flex', flexDirection: 'column',
@@ -466,6 +470,17 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </button>
             </div>
 
+            {/* Player button */}
+            <button onClick={() => setShowPlayer(true)}
+              style={{ width:'100%', background:'linear-gradient(135deg,#0D0F14,#141720)', border:'1px solid rgba(108,99,255,0.3)', borderRadius:18, padding:'16px 20px', marginBottom:16, display:'flex', alignItems:'center', gap:14, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
+              <div style={{ width:44,height:44,borderRadius:12,background:'linear-gradient(135deg,#6C63FF,#8B84FF)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,boxShadow:'0 4px 12px rgba(108,99,255,0.35)' }}>🎸</div>
+              <div>
+                <div style={{ fontSize:15,fontWeight:700,color:'#F1F5F9',marginBottom:2 }}>Player nhịp điệu</div>
+                <div style={{ fontSize:11,color:'rgba(255,255,255,0.4)' }}>Luyện hát theo lời & hợp âm</div>
+              </div>
+              <div style={{ marginLeft:'auto',color:'rgba(108,99,255,0.7)',fontSize:18 }}>›</div>
+            </button>
+
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {displayTools.map((t, i) => {
@@ -562,6 +577,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         })}
       </div>
     </div>
+    {showPlayer && <MobilePlayerView song={playerSong as any} onClose={() => setShowPlayer(false)} />}
+    </>
   )
 }
 
