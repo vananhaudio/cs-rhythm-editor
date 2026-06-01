@@ -80,6 +80,9 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   const [beatContainerW, setBeatContainerW] = useState(900);
   const [ytOffsetAdj, setYtOffsetAdj] = useState(0);
   const [zoom, setZoom]           = useState(1);
+  const [countInBeat, setCountInBeat] = useState(-1); // -1 = không đếm, 0..n = đang đếm phách
+  const countInTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null);
+  const countInActiveRef = useRef(false);
 
   const ytPlayerRef  = useRef<any>(null);
   const ytReadyRef   = useRef(false);
@@ -253,21 +256,64 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return () => window.removeEventListener('keydown', h);
   }, [playMode]);
 
+  const cancelCountIn = useCallback(() => {
+    countInActiveRef.current = false;
+    setCountInBeat(-1);
+    if (countInTimerRef.current) { clearTimeout(countInTimerRef.current); countInTimerRef.current = null; }
+    stopMetronome();
+  }, []);
+
+  const startPlayback = useCallback(() => {
+    isPlayingRef.current = true; setIsPlaying(true);
+    if (playMode==='metro') startMetronome(currentTimeRef.current);
+    else if (ytReadyRef.current) {
+      ytPlayerRef.current?.seekTo(getYtOffset()+currentTimeRef.current, true);
+      setTimeout(() => ytPlayerRef.current?.playVideo(), 100);
+      ytSyncedRef.current = true;
+    }
+  }, [playMode, getYtOffset]);
+
   const togglePlay = useCallback(() => {
+    // Đang đếm vào → hủy
+    if (countInActiveRef.current) { cancelCountIn(); return; }
     if (isPlayingRef.current) {
       isPlayingRef.current = false; setIsPlaying(false); stopMetronome();
       audioStartRef.current = null;
       ytSyncedRef.current = false; ytPlayerRef.current?.pauseVideo?.();
     } else {
-      isPlayingRef.current = true; setIsPlaying(true);
-      if (playMode==='metro') startMetronome(currentTimeRef.current);
-      else if (ytReadyRef.current) {
-        ytPlayerRef.current?.seekTo(getYtOffset()+currentTimeRef.current, true);
-        setTimeout(() => ytPlayerRef.current?.playVideo(), 100);
-        ytSyncedRef.current = true;
+      // Chỉ đếm vào khi bắt đầu từ đầu hoặc gần đầu bài
+      const bd = beatDur / speedRef.current;
+      // Bắt đầu đếm vào
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      countInActiveRef.current = true;
+      const TS = song.timeSignature;
+      // Gõ metronome cho từng phách đếm vào
+      let startAudio = ctx.currentTime + 0.1;
+      for (let i = 0; i < TS; i++) {
+        scheduleClick(startAudio + i * bd, getAccent(i % TS, TS));
       }
+      // Cập nhật số phách sáng dần
+      setCountInBeat(0);
+      let beat = 0;
+      const stepMs = bd * 1000;
+      const stepFn = () => {
+        beat++;
+        if (!countInActiveRef.current) return;
+        if (beat < TS) {
+          setCountInBeat(beat);
+          countInTimerRef.current = setTimeout(stepFn, stepMs);
+        } else {
+          // Đếm xong → phát thật
+          countInActiveRef.current = false;
+          setCountInBeat(-1);
+          startPlayback();
+        }
+      };
+      countInTimerRef.current = setTimeout(stepFn, stepMs);
     }
-  }, [playMode, speed, getYtOffset]);
+  }, [playMode, speed, getYtOffset, beatDur, cancelCountIn, startPlayback]);
 
   const seekTo = useCallback((t: number) => {
     currentTimeRef.current = t; setCurrentTime(t);
@@ -310,7 +356,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
     return (
       <MobileLayout
         song={song} onClose={onClose} onImportSong={onImportSong}
-        isPlaying={isPlaying} currentTime={currentTime}
+        isPlaying={isPlaying} currentTime={currentTime} countInBeat={countInBeat}
         togglePlay={togglePlay} seekTo={seekTo}
         speed={speed} setSpeed={setSpeed}
         muteMetronome={muteMetronome} setMuteMetronome={setMuteMetronome}
@@ -611,8 +657,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 }
 
 // ── Mobile Layout Component ──────────────────────────────────────────────────
-function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, togglePlay, seekTo, speed, setSpeed, muteMetronome, setMuteMetronome, activeBeatIdx, totalDur, currentTimeRef }: {
-  song: any; onClose: () => void; onImportSong?: (s: RhythmSong) => void; isPlaying: boolean; currentTime: number
+function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, countInBeat, togglePlay, seekTo, speed, setSpeed, muteMetronome, setMuteMetronome, activeBeatIdx, totalDur, currentTimeRef }: {
+  song: any; onClose: () => void; onImportSong?: (s: RhythmSong) => void; isPlaying: boolean; currentTime: number; countInBeat: number
   togglePlay: () => void; seekTo: (t: number) => void
   speed: number; setSpeed: (s: number) => void
   muteMetronome: boolean; setMuteMetronome: (v: boolean | ((p: boolean) => boolean)) => void
@@ -666,7 +712,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         const tInChunk = t - chunk * chunkDur
         const done = tInChunk >= chunkDur - beatDur
         const prog = done ? (tInChunk - (chunkDur - beatDur)) / beatDur : 0
-        const y = -((chunk + Math.min(prog, 1)) * TRACK_H)  // ô đệm ở đầu đã đẩy xuống 1 track → câu đang hát ở giữa
+        const y = -((chunk + Math.min(prog, 1) - 1) * TRACK_H)  // -1: câu đang hát ở track giữa
         scrollContainerRef.current.style.transform = `translateY(${y}px)`
       }
       raf = requestAnimationFrame(tick)
@@ -799,6 +845,27 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
       {/* Nút play/pause nhỏ góc trái — hiện khi controls ẩn */}
 
 
+      {/* Overlay đếm nhịp vào — hiện khi countInBeat >= 0 */}
+      {countInBeat >= 0 && (
+        <div style={{ position:'absolute', inset:0, top:52, zIndex:30, background:'rgba(13,15,20,0.97)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:20 }}>
+          <div style={{ fontSize:15, color:'rgba(255,255,255,0.5)', fontFamily:'"DM Sans",sans-serif', letterSpacing:1 }}>Chuẩn bị…</div>
+          <div style={{ display:'flex', gap:16 }}>
+            {Array.from({ length: song.timeSignature }, (_, i) => (
+              <div key={i} style={{
+                width:56, height:56, borderRadius:'50%',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:24, fontWeight:800, fontFamily:'"DM Mono",monospace',
+                background: i === countInBeat ? '#6C63FF' : (i < countInBeat ? 'rgba(108,99,255,0.25)' : 'rgba(255,255,255,0.05)'),
+                color: i === countInBeat ? '#fff' : (i < countInBeat ? '#8B84FF' : 'rgba(255,255,255,0.3)'),
+                transform: i === countInBeat ? 'scale(1.15)' : 'scale(1)',
+                transition: 'all 0.1s',
+                boxShadow: i === countInBeat ? '0 0 20px rgba(108,99,255,0.5)' : 'none',
+              }}>{i+1}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Virtual scroll — RAF drives transform, no React re-render */}
       <div style={{ flex:1, overflow:'hidden', position:'relative', background:'#0D0F14' }}>
         <div ref={scrollContainerRef} style={{
@@ -806,19 +873,6 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
           top: showControls ? 0 : 16,
           willChange: 'transform',
         }}>
-          {/* Ô đệm đếm nhịp khởi động — lấp khoảng hụt đầu bài */}
-          <div style={{ height:100, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background:'#0D0F14', opacity:0.5, display:'flex', flexDirection:'column' }}>
-            <div style={{ display:'flex', height:24, flexShrink:0 }}>
-              {Array.from({ length: song.timeSignature }, (_, bi) => (
-                <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', borderLeft: bi===0 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
-                  <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: bi===0 ? 800 : 400, color: bi===0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)' }}>{bi+1}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <span style={{ fontSize:13, color:'rgba(255,255,255,0.35)', fontFamily:'"DM Sans",sans-serif' }}>Đếm nhịp vào…</span>
-            </div>
-          </div>
           {Array.from({ length: totalChunks }, (_, ci) => {
             const isActive = ci === currentChunk
             const scrollOff = nowX + ci * beatsPerTrack * beatDur * PPS - 20
