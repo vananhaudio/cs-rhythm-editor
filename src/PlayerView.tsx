@@ -699,66 +699,59 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     const beatEnd = Math.min(beatStart + beatsPerTrack, song.totalBars * song.timeSignature)
     const chunkStart = beatStart * beatDur
     const chunkEnd = chunkStart + beatsPerTrack * beatDur
-    const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart - beatDur * 0.5 && l.time < chunkEnd + beatDur * 0.5)
-    const TRACK_H = 100
-    const cellW = mW / song.timeSignature
 
-    // Chia lyrics vào từng ô phách
-    const beatSlots: {beat: number, lyrics: any[]}[] = Array.from({length: song.timeSignature}, (_, bi) => ({beat: beatStart + bi, lyrics: []}))
-    trackLyrics.forEach((l: any) => {
-      const beatIdx = Math.round(l.time / beatDur)
-      const slotIdx = beatIdx - beatStart
-      if (slotIdx >= 0 && slotIdx < beatSlots.length) beatSlots[slotIdx].lyrics.push(l)
-    })
+    // scrollOff: đưa chunkStart về nowX — y hệt desktop
+    const chunkScrollOff = nowX + chunkStart * PPS
+
+    const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart && l.time < chunkEnd)
+    const TRACK_H = 100
 
     return (
-      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column' }}>
-        {/* Beat row — flexbox tĩnh, mỗi ô 1 phách */}
-        <div style={{ display:'flex', height:24, flexShrink:0 }}>
-          {beatSlots.map((slot, bi) => {
+      <div key={ci} style={{ height:TRACK_H, flexShrink:0, borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', display:'flex', flexDirection:'column', position:'relative', overflow:'hidden' }}>
+        {/* Beat + Chord row — dùng left = nowX + beat*beatDur*PPS - chunkScrollOff */}
+        <div style={{ height:24, flexShrink:0, position:'relative' }}>
+          {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
             const i = beatStart + bi
-            const isBar1 = bi === 0
+            const bib = i % song.timeSignature
+            const isBar1 = bib === 0
             const isActiveB = activeBeatIdx === i && isActive
             const chord = chordMap[i]
+            const cellX = nowX + i * beatDur * PPS - chunkScrollOff
+            const cellW = PPS * beatDur
             return (
-              <div key={i} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+              <div key={i} style={{ position:'absolute', left:cellX, top:0, height:24, width:cellW, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
                 {isBar1 && <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
                 {chord ? (
-                  <span style={{ fontSize:15, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
+                  <span style={{ fontSize:14, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
                 ) : (
-                  <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bi+1}</span>
+                  <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bib+1}</span>
                 )}
               </div>
             )
           })}
         </div>
-        {/* Lyric row — position theo time chính xác */}
-        <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
+        {/* Lyric row — dùng left = nowX + l.time*PPS - chunkScrollOff, y hệt desktop */}
+        <div style={{ flex:1, position:'relative' }}>
           {trackLyrics.map((l: any, li: number) => {
+            const lx = nowX + l.time * PPS - chunkScrollOff
             const nt = trackLyrics[li+1]?.time ?? chunkEnd
             const active = isActive && currentTime >= l.time && currentTime < nt
             const past   = isActive && currentTime >= nt
             const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
-            // Vị trí chính xác: tỉ lệ thời gian trong chunk → % chiều rộng track
-            const posInChunk = (l.time - chunkStart) / (chunkDur)
-            const leftPct = `${Math.max(0, Math.min(100, posInChunk * 100))}%`
             return (
-              <span key={l.id} style={{
-                position:'absolute',
-                left: leftPct,
-                top:'50%', transform:'translate(-50%, -50%)',
-                fontSize:15, fontWeight:400,
-                fontFamily:'"Helvetica Neue",Arial',
-                whiteSpace:'nowrap',
-                ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
-                           : { color: past ? 'rgba(45,212,191,0.9)' : '#ffffff' })
-              }}>{l.text}</span>
+              <div key={l.id} style={{ position:'absolute', left:lx, top:'50%', transform:'translate(-50%,-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:15, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
+                  ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
+                             : { color: past ? 'rgba(45,212,191,0.9)' : '#ffffff' })
+                }}>{l.text}</span>
+              </div>
             )
           })}
         </div>
       </div>
     )
   }
+
 
   const isPortrait = mW < mH * 0.9
 
