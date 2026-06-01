@@ -58,6 +58,9 @@ function uname(s: Student) {
 function getYtId(url: string | null) {
   return url?.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
 }
+const LEVEL_VI: Record<string, string> = {
+  beginner: 'Sơ cấp', elementary: 'Cơ bản', intermediate: 'Trung cấp', advanced: 'Nâng cao',
+}
 // Logo khoá: ảnh tải lên > emoji custom > emoji mặc định theo type
 function CourseLogo({ course, size = 44, radius = 12, bg }: { course: { type: string; icon?: string | null; image_url?: string | null }; size?: number; radius?: number; bg?: string }) {
   const fallback = course.icon || (course.type === 'canh_cua' ? '🔑' : '🎸')
@@ -457,7 +460,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               {displayTools.map((t, i) => {
                 const unlocked = isUnlocked(t.tier)
                 return (
-                  <div key={t.id} onClick={() => unlocked && window.location.href === t.route}
+                  <div key={t.id} onClick={() => { if (unlocked) window.location.href = t.route }}
                     style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
                     {!unlocked && <span style={{ position: 'absolute', top: 10, right: 10, fontSize: 12 }}>🔒</span>}
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
@@ -476,23 +479,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Sống cùng âm nhạc</div>
             <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>Kết nối · Trải nghiệm · Truyền cảm hứng</div>
 
-            {/* Events */}
-            {[
-              { icon: '🎪', label: 'Workshop cuối tuần', date: 'Chủ nhật, 09/06/2025', color: L.p1, bg: L.p2 },
-              { icon: '🎤', label: 'Open Mic tháng 6',   date: 'Thứ bảy, 15/06/2025',  color: '#7C3AED', bg: '#F5F3FF' },
-              { icon: '☕', label: 'Giao lưu học viên',  date: 'Chủ nhật, 23/06/2025', color: L.gold, bg: L.goldBg },
-            ].map(e => (
-              <div key={e.label} style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: e.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{e.icon}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{e.label}</div>
-                  <div style={{ fontSize: 12, color: L.t2, marginTop: 2 }}>{e.date}</div>
-                </div>
-                <button style={{ background: e.bg, border: 'none', borderRadius: 10, padding: '8px 14px', color: e.color, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                  Tham gia
-                </button>
-              </div>
-            ))}
+            {/* Sự kiện — sắp ra mắt */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: '28px 20px', boxShadow: L.shadow, textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🎪</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Sự kiện & giao lưu</div>
+              <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.6 }}>Workshop, Open Mic và các buổi giao lưu học viên sẽ sớm xuất hiện ở đây.</div>
+            </div>
 
             {/* Quote */}
             <div style={{ background: L.p1, borderRadius: 20, padding: '20px 20px 24px', marginTop: 8, marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
@@ -509,7 +501,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
-                <div style={{ fontSize: 12, color: L.t2 }}>{student.level ?? 'Học viên'}</div>
+                <div style={{ fontSize: 12, color: L.t2 }}>{LEVEL_VI[student.level ?? ''] ?? 'Học viên'}</div>
               </div>
               <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 14px', color: L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Đăng xuất
