@@ -660,10 +660,10 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
     const chunkStart = beatStart * beatDur
     const chunkEnd = beatEnd * beatDur
     const trackLyrics = (song.lyrics??[]).filter((l: any) => l.time >= chunkStart && l.time < chunkEnd)
-    const TRACK_H = 140
+    const TRACK_H = 120
 
     return (
-      <div key={ti} style={{ height:TRACK_H, flexShrink:0, overflow:'hidden', borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.45, transition:'opacity 0.3s', position:'relative' }}>
+      <div key={ti} style={{ height:TRACK_H, flexShrink:0, overflow:'hidden', borderTop:`1px solid rgba(255,255,255,0.06)`, background: isActive ? '#141720' : '#0D0F14', opacity: isActive ? 1 : 0.65, transition:'opacity 0.3s', position:'relative' }}>
         <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW, transform:`translateX(${-tScrollOff}px)`, willChange:'transform' }}>
           {Array.from({ length: beatEnd - beatStart }, (_, bi) => {
             const i = beatStart + bi
@@ -684,20 +684,37 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
               </div>
             )
           })}
-          {trackLyrics.map((l: any, li: number) => {
-            const nt = trackLyrics[li+1]?.time ?? chunkEnd
-            const active = isActive && currentTime >= l.time && currentTime < nt
-            const past   = isActive && currentTime >= nt
-            const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
-            return (
-              <div key={l.id} style={{ position:'absolute', left: nowX + l.time * PPS, top:'calc(50% + 4px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                <span style={{ fontSize:16, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
-                  ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
-                             : { color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)' })
-                }}>{l.text}</span>
-              </div>
-            )
-          })}
+          {(() => {
+            // Chia lyrics vào từng ô phách — mỗi phách 1 slot, centered
+            const beatSlots: {beat: number, lyrics: any[]}[] = Array.from({length: beatEnd - beatStart}, (_, bi) => ({beat: beatStart + bi, lyrics: []}))
+            trackLyrics.forEach((l: any) => {
+              const beatIdx = Math.round(l.time / beatDur)
+              const slotIdx = beatIdx - beatStart
+              if (slotIdx >= 0 && slotIdx < beatSlots.length) beatSlots[slotIdx].lyrics.push(l)
+            })
+            const cellW = (mW - 40) / beatsPerTrack
+            return beatSlots.map((slot, si) => {
+              const slotX = 20 + si * cellW
+              const slotLyrics = slot.lyrics
+              if (slotLyrics.length === 0) return null
+              // Gộp nhiều chữ trong cùng phách lại
+              return slotLyrics.map((l: any, li: number) => {
+                const nt = slotLyrics[li+1]?.time ?? (trackLyrics[trackLyrics.indexOf(l)+1]?.time ?? chunkEnd)
+                const active = isActive && currentTime >= l.time && currentTime < nt
+                const past   = isActive && currentTime >= nt
+                const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
+                const xPos = slotX + (li + 0.5) * (cellW / Math.max(slotLyrics.length, 1))
+                return (
+                  <div key={l.id} style={{ position:'absolute', left: xPos, top:'calc(50% + 4px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap', maxWidth: cellW - 4, overflow:'hidden', textOverflow:'ellipsis' }}>
+                    <span style={{ fontSize:16, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
+                      ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
+                                 : { color: past ? 'rgba(45,212,191,0.7)' : 'rgba(255,255,255,1)' })
+                    }}>{l.text}</span>
+                  </div>
+                )
+              })
+            })
+          })()}
         </div>
       </div>
     )
