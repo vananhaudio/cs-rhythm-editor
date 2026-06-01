@@ -354,8 +354,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         const tInChunk = t - chunk * dChunkDur
         const done = tInChunk >= dChunkDur - beatDur
         const prog = done ? (tInChunk - (dChunkDur - beatDur)) / beatDur : 0
-        // -1: câu đang hát ở track giữa (track 1 phía trên là câu vừa hát)
-        const y = -((chunk + Math.min(prog, 1) - 1) * DTRACK_H)
+        // ô đếm vào ở đầu đã đẩy xuống 1 track → câu đang hát ở giữa
+        const y = -((chunk + Math.min(prog, 1)) * DTRACK_H)
         desktopScrollRef.current.style.transform = `translateY(${y}px)`
       }
       raf = requestAnimationFrame(tick)
@@ -512,6 +512,33 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         <div style={{ flex:1, overflow:'hidden', position:'relative' }}>
           {/* Virtual scroll — render tất cả chunk dọc, RAF set translateY (mượt như mobile) */}
           <div ref={desktopScrollRef} style={{ position:'absolute', left:12, right:12, top:0, willChange:'transform' }}>
+            {/* Track đếm nhịp vào — thẳng hàng với track thật */}
+            <div style={{ height: DTRACK_H, flexShrink:0, borderTop:`1px solid ${D.border}`, background: countInBeat >= 0 ? '#141720' : D.bg, opacity: countInBeat >= 0 ? 1 : 0.4, transition:'opacity 0.2s', position:'relative', overflow:'hidden' }}>
+              <div style={{ position:'absolute', top:0, left:0, height:'100%', width:trackW }}>
+                <div style={{ position:'relative', height:31, top:'50%', transform:'translateY(-100%)' }}>
+                  {Array.from({ length: song.timeSignature }, (_, bi) => {
+                    const lit = countInBeat === bi
+                    const isBar1 = bi === 0
+                    const cellX = nowX + bi * beatDur * PPS
+                    return (
+                      <div key={bi} style={{ position:'absolute', left:cellX, top:0, height:31, width:PPS*beatDur, transform:'translate(-50%, 0)', display:'flex', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `1px solid rgba(108,99,255,0.18)` : `1px solid rgba(255,255,255,0.03)` }}>
+                        <div style={{
+                          width: isBar1 ? 12 : 10, height: isBar1 ? 12 : 10, borderRadius:'50%',
+                          background: isBar1 ? '#F59E0B' : '#2DD4BF',
+                          opacity: lit ? 1 : 0.45,
+                          transform: lit ? 'scale(1.4)' : 'scale(1)',
+                          boxShadow: lit ? (isBar1 ? '0 0 12px rgba(245,158,11,0.8)' : '0 0 12px rgba(45,212,191,0.8)') : 'none',
+                          transition: 'all 0.08s',
+                        }} />
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ position:'absolute', left: nowX + (song.timeSignature/2) * beatDur * PPS, top:`calc(31px + 50%)`, transform:'translate(-50%, -50%)', whiteSpace:'nowrap' }}>
+                  <span style={{ fontSize:22, color: countInBeat >= 0 ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.3)', fontFamily:'"Helvetica Neue",Arial,sans-serif', transition:'color 0.2s' }}>Chuẩn bị…</span>
+                </div>
+              </div>
+            </div>
             {Array.from({ length: dTotalChunks }, (_, ci) => {
               const isActive = ci === currentChunk
               const dScrollOff = nowX + ci * beatsPerTrack * beatDur * PPS - 120
