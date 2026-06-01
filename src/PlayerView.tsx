@@ -637,10 +637,34 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
 
   // Mobile: 1 ô nhịp = đúng timeSignature beats (4/4 = 4, 3/4 = 3)
   const beatsPerTrack = song.timeSignature
-  const currentChunk  = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
-  const activeTrackNum = currentChunk % 2 === 0 ? 1 : 2
-  const t1Chunk = activeTrackNum === 1 ? currentChunk : currentChunk + 1
-  const t2Chunk = activeTrackNum === 2 ? currentChunk : currentChunk + 1
+
+  // currentChunk: chunk đang phát theo thời gian thật
+  const currentChunk = Math.floor((currentTime / beatDur) / Math.max(1, beatsPerTrack))
+
+  // displayChunk: delay 1 phách — chỉ scroll lên sau khi câu mới đã bắt đầu 1 phách
+  const beatInChunk = Math.floor(currentTime / beatDur) % beatsPerTrack
+  const displayChunk = beatInChunk >= 1 ? currentChunk : Math.max(0, currentChunk - 1)
+
+  // Slide animation state
+  const [slideY, setSlideY] = React.useState(0)
+  const [isSliding, setIsSliding] = React.useState(false)
+  const lastDisplayChunk = React.useRef(displayChunk)
+
+  React.useEffect(() => {
+    if (displayChunk !== lastDisplayChunk.current) {
+      // Trigger slide up
+      setIsSliding(true)
+      setTimeout(() => {
+        lastDisplayChunk.current = displayChunk
+        setIsSliding(false)
+        setSlideY(0)
+      }, 400)
+    }
+  }, [displayChunk])
+
+  const activeTrackNum = displayChunk % 2 === 0 ? 1 : 2
+  const t1Chunk = displayChunk % 2 === 0 ? displayChunk : displayChunk + 1
+  const t2Chunk = t1Chunk + 1
   const t1ScrollOff = nowX + t1Chunk * beatsPerTrack * beatDur * PPS - 20
   const t2ScrollOff = nowX + t2Chunk * beatsPerTrack * beatDur * PPS - 20
 
@@ -796,10 +820,20 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
         </div>
       )}
 
-      {/* 2 Tracks */}
-      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column', justifyContent:'flex-start', background:'#0D0F14' }}>
-        {renderTrack(t1ScrollOff, activeTrackNum===1, 0)}
-        {renderTrack(t2ScrollOff, activeTrackNum===2, 1)}
+      {/* 2 Tracks — slide up khi đổi câu */}
+      <div style={{ flex:1, overflow:'hidden', position:'relative', background:'#0D0F14' }}>
+        <div style={{
+          position:'absolute', top:0, left:0, right:0,
+          transform: isSliding ? 'translateY(-50%)' : 'translateY(0)',
+          transition: isSliding ? 'transform 0.4s cubic-bezier(0.4,0,0.2,1)' : 'none',
+          display:'flex', flexDirection:'column',
+          height:'200%',
+        }}>
+          {renderTrack(t1ScrollOff, activeTrackNum===1, 0)}
+          {renderTrack(t2ScrollOff, activeTrackNum===2, 1)}
+          {/* Clone track 1 phía dưới để fill khi slide */}
+          {renderTrack(t2ScrollOff, false, 2)}
+        </div>
       </div>
 
       {/* Controls — ẩn khi đang phát */}
