@@ -771,9 +771,16 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
               <div key={'b'+i} style={{ position:'absolute', left:cellX, top:0, height:24, width:PPS*beatDur, transform:'translateX(-50%)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
                 {isBar1 && <span style={{ position:'absolute', top:2, left:3, fontSize:7, fontFamily:'"DM Mono",monospace', color:'rgba(108,99,255,0.5)' }}>M{Math.floor(i/song.timeSignature)+1}</span>}
                 {chord ? (
-                  <span style={{ fontSize:14, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.6)', transition:'color 0.06s' }}>{chord}</span>
+                  <span style={{ fontSize:20, fontWeight:700, fontFamily:'"Helvetica Neue",Arial', color: isActiveB ? '#F59E0B' : 'rgba(245,158,11,0.7)', textShadow: isActiveB ? '0 0 10px rgba(245,158,11,0.5)' : 'none', transition:'all 0.06s' }}>{chord}</span>
                 ) : (
-                  <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', fontWeight: isActiveB ? 800 : 400, color: isActiveB ? (isBar1 ? '#fff' : '#8B84FF') : (isBar1 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), transition:'color 0.06s' }}>{bib+1}</span>
+                  <span style={{
+                    width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9, borderRadius:'50%',
+                    background: isBar1 ? '#F59E0B' : '#2DD4BF',
+                    opacity: isActiveB ? 1 : 0.45,
+                    transform: isActiveB ? 'scale(1.4)' : 'scale(1)',
+                    boxShadow: isActiveB ? (isBar1 ? '0 0 10px rgba(245,158,11,0.8)' : '0 0 10px rgba(45,212,191,0.8)') : 'none',
+                    transition: 'all 0.08s',
+                  }} />
                 )}
               </div>
             )
@@ -785,8 +792,8 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
             const active = isActive && currentTime >= l.time && currentTime < nt
             const past   = isActive && currentTime >= nt
             return (
-              <div key={l.id} style={{ position:'absolute', left:lx, top:'calc(24px + 18px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
-                <span style={{ fontSize:15, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
+              <div key={l.id} style={{ position:'absolute', left:lx, top:'calc(24px + 24px)', transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+                <span style={{ fontSize:22, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
                   ...(active ? (() => {
                     const pct = Math.min(100, Math.max(0, (currentTime - l.time) / Math.max(0.05, nt - l.time) * 100))
                     return { backgroundImage:`linear-gradient(to right,#2DD4BF ${pct}%,rgba(255,255,255,1) ${pct}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
