@@ -741,7 +741,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, tog
             const past   = isActive && currentTime >= nt
             const pctG = active ? Math.min(100, Math.max(0, (currentTime-l.time)/Math.max(0.05,nt-l.time)*100)) : 0
             return (
-              <div key={l.id} style={{ position:'absolute', left:lx, top:'50%', transform:'translate(-50%,-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
+              <div key={l.id} style={{ position:'absolute', left:lx, top:4, transform:'translateX(-50%)', pointerEvents:'none', whiteSpace:'nowrap' }}>
                 <span style={{ fontSize:15, fontWeight:400, fontFamily:'"Helvetica Neue",Arial',
                   ...(active ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pctG}%,rgba(255,255,255,1) ${pctG}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
                              : { color: past ? 'rgba(45,212,191,0.9)' : '#ffffff' })
