@@ -28,7 +28,7 @@ const L = {
 type Tab    = 'hoc' | 'tap' | 'song'
 type Screen = 'home' | 'courses' | 'lesson'
 
-interface Student    { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null }
+interface Student    { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null; honor?: string | null; enrolled_at?: string | null }
 interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
@@ -58,6 +58,24 @@ const LEVEL_TIER: Record<string, string> = {
 }
 const TIER_VI: Record<string, string> = {
   free: 'Miễn phí', basic: 'Cơ bản', standard: 'Nâng cao', pro: 'Pro'
+}
+
+// ── Hệ thống danh hiệu ──────────────────────────────────────────────────────
+const HONOR_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
+  none:     { label: '',               icon: '',   color: '#4338CA', bg: '#4338CA' },
+  bronze:   { label: 'Bronze Member',  icon: '🥉', color: '#92400E', bg: '#B45309' },
+  silver:   { label: 'Silver Member',  icon: '🥈', color: '#374151', bg: '#4B5563' },
+  gold:     { label: 'Gold Member',    icon: '🥇', color: '#92400E', bg: '#D97706' },
+  platinum: { label: 'Platinum',       icon: '💎', color: '#4C1D95', bg: '#7C3AED' },
+  diamond:  { label: 'Diamond',        icon: '👑', color: '#0C4A6E', bg: '#0891B2' },
+}
+
+// Tính Year Member từ enrolled_at
+function getYearBadge(enrolledAt?: string | null): string | null {
+  if (!enrolledAt) return null
+  const years = Math.floor((Date.now() - new Date(enrolledAt).getTime()) / (365.25 * 24 * 3600 * 1000))
+  if (years < 1) return null
+  return years === 1 ? '1-Year Member' : `${years}-Year Member`
 }
 
 function CourseLogo({ course, size = 44, radius = 12, bg }: { course: { type: string; icon?: string | null; image_url?: string | null }; size?: number; radius?: number; bg?: string }) {
@@ -278,22 +296,47 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         {/* ── HOME ────────────────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'home' && (
           <>
-            <div style={{ background: L.p1, padding: '52px 20px 28px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,.06)' }} />
-              <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>Xin chào 👋</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: L.tinv, letterSpacing: '-.02em' }}>{name}</div>
+            {(() => {
+              const honor = HONOR_CONFIG[me.honor ?? 'none'] ?? HONOR_CONFIG.none
+              const yearBadge = getYearBadge(me.enrolled_at)
+              const headerBg = honor.bg
+              return (
+                <div style={{ background: headerBg, padding: '52px 20px 24px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,.06)' }} />
+                  <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>Xin chào 👋</div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: L.tinv, letterSpacing: '-.02em' }}>{name}</div>
+                      {/* 2 badge song song */}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                        {yearBadge && (
+                          <span style={{ background: 'rgba(255,255,255,.2)', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, backdropFilter: 'blur(4px)' }}>
+                            📅 {yearBadge}
+                          </span>
+                        )}
+                        {(me.honor && me.honor !== 'none') && (
+                          <span style={{ background: 'rgba(255,255,255,.25)', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, backdropFilter: 'blur(4px)' }}>
+                            {honor.icon} {honor.label}
+                          </span>
+                        )}
+                        {!yearBadge && (!me.honor || me.honor === 'none') && (
+                          <span style={{ background: 'rgba(255,255,255,.15)', color: 'rgba(255,255,255,.8)', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600 }}>
+                            🎸 Member
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div onClick={() => { setTab('song'); setTimeout(openSettings, 50) }}
+                      style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', overflow: 'hidden', cursor: 'pointer', border: '2px solid rgba(255,255,255,.35)' }}>
+                      {me.avatar_url
+                        ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
                 </div>
-                <div onClick={() => { setTab('song'); setTimeout(openSettings, 50) }}
-                  style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', overflow: 'hidden', cursor: 'pointer', border: '2px solid rgba(255,255,255,.35)' }}>
-                  {me.avatar_url
-                    ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : name.charAt(0).toUpperCase()}
-                </div>
-              </div>
-            </div>
+              )
+            })()}
 
             <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 

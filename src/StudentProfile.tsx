@@ -5,7 +5,7 @@ interface Student {
   id: string; full_name: string; phone: string | null; age: number | null
   level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null
   goals: string | null; learning_style: string | null; instruments: string | null
-  enrolled_at: string | null; is_active: boolean
+  enrolled_at: string | null; is_active: boolean; honor?: string | null
 }
 interface Skill {
   id: string; category: string; skill_name: string; level_0_10: number
@@ -43,6 +43,22 @@ const LEVEL_LABEL: Record<string, string> = { beginner: 'Mới bắt đầu', el
 const LEVEL_COLOR: Record<string, string> = { beginner: '#2E6B40', elementary: '#5A8A2A', intermediate: '#A07820', advanced: '#8B3A1E' }
 const CATEGORY_LABEL: Record<string, string> = { rhythm: '🥁 Nhịp', chords: '🎸 Hợp âm', technique: '🖐 Kỹ thuật', theory: '📖 Lý thuyết', ear_training: '👂 Thẩm âm' }
 const MOOD_EMOJI = ['', '😟', '😕', '😐', '🙂', '😄']
+
+const HONOR_OPTIONS = [
+  { value: 'none',     label: '— Chưa phong',      icon: '' },
+  { value: 'bronze',   label: '🥉 Bronze Member',   icon: '🥉' },
+  { value: 'silver',   label: '🥈 Silver Member',   icon: '🥈' },
+  { value: 'gold',     label: '🥇 Gold Member',     icon: '🥇' },
+  { value: 'platinum', label: '💎 Platinum',         icon: '💎' },
+  { value: 'diamond',  label: '👑 Diamond',          icon: '👑' },
+]
+
+function getYearBadge(enrolledAt?: string | null): string | null {
+  if (!enrolledAt) return null
+  const years = Math.floor((Date.now() - new Date(enrolledAt).getTime()) / (365.25 * 24 * 3600 * 1000))
+  if (years < 1) return null
+  return years === 1 ? '1-Year Member' : `${years}-Year Member`
+}
 const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
   pending:   { bg: '#F0E4C8', color: '#7A6548', label: 'Chưa nộp' },
   submitted: { bg: '#D8EAF0', color: '#1A5A7A', label: 'Đã nộp' },
@@ -117,6 +133,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const [events, setEvents] = useState<LearningEvent[]>([])
   const [notes, setNotes] = useState<TeacherNote[]>([])
   const [loading, setLoading] = useState(true)
+  const [savingHonor, setSavingHonor] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'assignments' | 'timeline' | 'courses'>('overview')
   const [enrollments, setEnrollments] = useState<EnrollmentItem[]>([])
   const [allCourses, setAllCourses] = useState<CourseItem[]>([])
@@ -169,6 +186,14 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const skillsByCategory = skills.reduce<Record<string, Skill[]>>((acc, sk) => {
     const cat = sk.category ?? 'other'; if (!acc[cat]) acc[cat] = []; acc[cat].push(sk); return acc
   }, {})
+  const updateHonor = async (honor: string) => {
+    if (!student) return
+    setSavingHonor(true)
+    await supabase.from('edu_students').update({ honor }).eq('id', student.id)
+    setStudent(prev => prev ? { ...prev, honor } : prev)
+    setSavingHonor(false)
+  }
+
   const avgSkill = skills.length > 0 ? Math.round(skills.reduce((s, k) => s + k.level_0_10, 0) / skills.length * 10) / 10 : null
   const pendingCount = assignments.filter(a => a.status === 'pending').length
   const doneCount = assignments.filter(a => a.status === 'done').length
@@ -191,10 +216,33 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                 {student.level && <span style={{ background: LEVEL_COLOR[student.level] + '22', border: `1px solid ${LEVEL_COLOR[student.level]}`, color: LEVEL_COLOR[student.level], borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>{LEVEL_LABEL[student.level]}</span>}
                 <span style={{ background: student.is_active ? '#1E3A28' : '#3A2828', color: student.is_active ? T.green : T.danger, borderRadius: 20, padding: '2px 10px', fontSize: 11 }}>{student.is_active ? '● Đang học' : '● Ngừng học'}</span>
               </div>
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 8 }}>
                 {student.phone && <span style={{ fontSize: 13, color: T.textMuted }}>📞 {student.phone}</span>}
                 {student.age && <span style={{ fontSize: 13, color: T.textMuted }}>🎂 {student.age} tuổi</span>}
                 {student.enrolled_at && <span style={{ fontSize: 13, color: T.textMuted }}>📅 Từ {fmtDate(student.enrolled_at)}</span>}
+              </div>
+              {/* Badge 2 hệ thống */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+                {getYearBadge(student.enrolled_at) && (
+                  <span style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700 }}>
+                    📅 {getYearBadge(student.enrolled_at)}
+                  </span>
+                )}
+                {student.honor && student.honor !== 'none' && (
+                  <span style={{ background: '#FEF3C7', border: '1px solid #FCD34D', color: '#92400E', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700 }}>
+                    {HONOR_OPTIONS.find(h => h.value === student.honor)?.label}
+                  </span>
+                )}
+              </div>
+              {/* Thầy phong danh hiệu */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: T.textMuted, fontWeight: 600 }}>Phong danh hiệu:</span>
+                <select value={student.honor ?? 'none'} onChange={e => updateHonor(e.target.value)}
+                  disabled={savingHonor}
+                  style={{ background: '#FEF9EE', border: `1px solid ${T.gold}`, borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, color: T.gold, cursor: 'pointer', fontFamily: 'inherit', outline: 'none', opacity: savingHonor ? 0.6 : 1 }}>
+                  {HONOR_OPTIONS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                </select>
+                {savingHonor && <span style={{ fontSize: 11, color: T.textMuted }}>Đang lưu…</span>}
               </div>
               {student.goals && <div style={{ marginTop: 8, fontSize: 13, color: T.text, background: T.bg, borderRadius: 8, padding: '8px 12px', borderLeft: `3px solid ${T.gold}` }}><span style={{ color: T.textMuted }}>Mục tiêu: </span>{student.goals}</div>}
             </div>
