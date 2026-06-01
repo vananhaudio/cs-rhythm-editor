@@ -864,9 +864,17 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
             <div style={{ display:'flex', height:24, flexShrink:0 }}>
               {Array.from({ length: song.timeSignature }, (_, bi) => {
                 const lit = countInBeat === bi
+                const isBar1 = bi === 0
                 return (
-                  <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', borderLeft: bi===0 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
-                    <span style={{ fontSize:13, fontFamily:'"DM Mono",monospace', fontWeight: lit ? 800 : 400, color: lit ? (bi===0 ? '#fff' : '#8B84FF') : (bi===0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.6)'), textShadow: lit ? '0 0 8px rgba(108,99,255,0.6)' : 'none', transition:'all 0.08s' }}>{bi+1}</span>
+                  <div key={bi} style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', borderLeft: isBar1 ? `2px solid rgba(108,99,255,0.3)` : `1px solid rgba(255,255,255,0.05)` }}>
+                    <div style={{
+                      width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9, borderRadius:'50%',
+                      background: isBar1 ? '#F59E0B' : '#2DD4BF',
+                      opacity: lit ? 1 : 0.45,
+                      transform: lit ? 'scale(1.4)' : 'scale(1)',
+                      boxShadow: lit ? (isBar1 ? '0 0 10px rgba(245,158,11,0.8)' : '0 0 10px rgba(45,212,191,0.8)') : 'none',
+                      transition: 'all 0.08s',
+                    }} />
                   </div>
                 )
               })}
