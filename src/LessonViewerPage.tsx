@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from './supabase'
+import { supabase } from '../supabase'
 import { QuizViewer } from './components/QuizViewer'
 
 const D = {
