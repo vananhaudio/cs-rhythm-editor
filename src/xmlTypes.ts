@@ -1,18 +1,25 @@
-// ── Tick system ──
-export const TICKS_PER_BEAT = 480 as const
+/** Ticks per quarter note (PPQ). All timing values in this project use this unit. */
+export const PPQ = 480;
 
-export function posToTick(bar: number, beat: number, timeSig: number, subTick = 0): number {
-  return ((bar - 1) * timeSig + (beat - 1)) * TICKS_PER_BEAT + subTick
+/** Convert ticks → seconds given tempo (BPM). */
+export function ticksToSeconds(ticks: number, tempo: number): number {
+  return (ticks / PPQ) * (60 / tempo);
+}
+
+/** Convert seconds → ticks given tempo (BPM). */
+export function secondsToTicks(seconds: number, tempo: number): number {
+  return Math.round((seconds * tempo * PPQ) / 60);
 }
 
 export interface NoteData {
   id: string;
   bar: number;
+  /** 1-based fractional beat within bar (e.g. 1.0, 1.5, 2.25) */
   beat: number;
-  tick: number;       // MIDI tick — nguồn sự thật
-  startTime: number;  // giây — chỉ dùng cho playback legacy
-  duration: number;   // giây
-  durationTicks: number; // tick
+  /** Absolute start position in ticks (PPQ = 480) */
+  startTime: number;
+  /** Duration in ticks */
+  duration: number;
   pitch: string;
   velocity: number;
   tieToNext: boolean;
@@ -23,12 +30,13 @@ export interface NoteData {
 export interface WordData {
   id: string;
   text: string;
-  tick: number;       // MIDI tick — nguồn sự thật
-  time: number;       // giây — legacy
+  /** Absolute start position in ticks (PPQ = 480) */
+  time: number;
   bar: number;
+  /** 1-based fractional beat within bar */
   beat: number;
+  /** Duration in ticks */
   duration: number;
-  durationTicks: number;
   linkedNotes: string[];
   isSlurGroup: boolean;
   confidence: number;
@@ -38,9 +46,10 @@ export interface WordData {
 export interface ChordData {
   id: string;
   name: string;
-  tick: number;       // MIDI tick — nguồn sự thật
-  time: number;       // giây — legacy
+  /** Absolute start position in ticks (PPQ = 480) */
+  time: number;
   bar: number;
+  /** 1-based fractional beat within bar */
   beat: number;
 }
 

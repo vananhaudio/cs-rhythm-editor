@@ -1,5 +1,4 @@
 import type { WordData, ChordData } from '../xmlTypes';
-import { posToTick } from '../xmlTypes';
 
 interface LyricParseResult {
   words: WordData[];
@@ -78,7 +77,6 @@ export function parseLyrics(text: string): LyricParseResult {
       chords.push({
         id: cid,
         name: lc.name,
-        tick: 0,
         time: 0,
         bar: 0,
         beat: 0,
@@ -98,12 +96,10 @@ export function parseLyrics(text: string): LyricParseResult {
       words.push({
         id: wordId,
         text: clean,
-        tick: 0,
         time: 0,
         bar: 0,
         beat: 0,
         duration: 0,
-        durationTicks: 0,
         linkedNotes: [],
         isSlurGroup: false,
         confidence: 0,
@@ -125,8 +121,9 @@ export function resolveChordTimings(
   return chords.map(chord => {
     const idx = chordWordIndex.get(chord.id);
     if (idx === undefined) return chord;
+    // Clamp to last word if index is beyond bounds
     const word = words[Math.min(idx, words.length - 1)];
     if (!word || (word.bar === 0 && word.beat === 0 && word.time === 0 && word.linkedNotes.length === 0)) return chord;
-    return { ...chord, tick: word.tick, time: word.time, bar: word.bar, beat: word.beat };
+    return { ...chord, time: word.time, bar: word.bar, beat: word.beat };
   });
 }

@@ -1,43 +1,44 @@
+import { PPQ } from '../xmlTypes';
 import type { Project } from '../xmlTypes';
 
-const TICKS_PER_BEAT = 480
-
-function positionToTick(bar: number, beat: number, timeSig: number, subTick = 0): number {
-  return ((bar - 1) * timeSig + (beat - 1)) * TICKS_PER_BEAT + subTick
-}
-
-// Export JSON v2 chuẩn — dùng tick thay time
+// Export JSON v2.1 — tick-based (time field = ticks, PPQ = 480)
 export function exportV2(project: Project): string {
   const { metadata, words, chords } = project
 
   const lyrics = words.map(w => ({
     id: w.id,
     text: w.text,
-    tick: positionToTick(w.bar, w.beat, metadata.timeSignature),
+    tick: w.time,        // time đã là ticks (PPQ=480)
     bar: w.bar,
     beat: w.beat,
+    duration: w.duration,
   }))
 
   const chordList = chords.map(c => ({
     id: c.id,
     name: c.name,
-    tick: positionToTick(c.bar, c.beat, metadata.timeSignature),
+    tick: c.time,        // time đã là ticks
     bar: c.bar,
     beat: c.beat,
   }))
 
   return JSON.stringify({
     version: '2.1',
+    ppq: PPQ,
     title: metadata.title,
     artist: metadata.artist,
     tone: metadata.tone,
     tempo: metadata.tempo,
     timeSignature: metadata.timeSignature,
     totalBars: metadata.totalBars,
-    ticksPerBeat: TICKS_PER_BEAT,
     lyrics,
     chords: chordList,
   }, null, 2)
+}
+
+// Export đầy đủ v3 (internal use)
+export function exportV3(project: Project): string {
+  return JSON.stringify({ version: 3, ppq: PPQ, ...project }, null, 2)
 }
 
 export function downloadJson(content: string, filename: string) {

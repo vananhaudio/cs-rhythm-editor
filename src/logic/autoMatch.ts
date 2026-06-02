@@ -1,5 +1,4 @@
 import type { NoteData, WordData, MappingData } from '../xmlTypes';
-import { posToTick, TICKS_PER_BEAT } from '../xmlTypes';
 
 /**
  * Build note "slots" for matching — one slot per word needed.
@@ -11,12 +10,10 @@ import { posToTick, TICKS_PER_BEAT } from '../xmlTypes';
  * - Individual notes: one slot each.
  */
 interface NoteSlot {
-  noteIds: string[];
+  noteIds: string[];   // first note id (+ slur tail ids for reference)
   anchorNoteId: string;
-  tick: number;
   startTime: number;
   duration: number;
-  durationTicks: number;
   bar: number;
   beat: number;
   isSlurGroup: boolean;
@@ -42,7 +39,6 @@ function buildNoteSlots(notes: NoteData[]): NoteSlot[] {
         anchorNoteId: first.id,
         startTime: first.startTime,
         duration: slurNotes.reduce((s, n) => s + n.duration, 0),
-        tick: first.tick ?? posToTick(first.bar, first.beat, 4),
         bar: first.bar,
         beat: first.beat,
         isSlurGroup: true,
@@ -52,10 +48,8 @@ function buildNoteSlots(notes: NoteData[]): NoteSlot[] {
       slots.push({
         noteIds: [note.id],
         anchorNoteId: note.id,
-        tick: note.tick ?? posToTick(note.bar, note.beat, 4),
         startTime: note.startTime,
         duration: note.duration,
-        durationTicks: note.durationTicks ?? Math.round(note.duration * TICKS_PER_BEAT),
         bar: note.bar,
         beat: note.beat,
         isSlurGroup: false,
@@ -108,12 +102,10 @@ export function autoMatch(notes: NoteData[], words: WordData[]): AutoMatchResult
       // Fix timing to use anchor note (first note of slur group)
       const anchorNote = notes.find(n => n.id === slot.anchorNoteId);
       if (anchorNote) {
-        word.tick = slot.tick;
         word.time = anchorNote.startTime;
         word.bar = anchorNote.bar;
         word.beat = anchorNote.beat;
         word.duration = slot.duration;
-        word.durationTicks = slot.durationTicks ?? 0;
         word.isSlurGroup = slot.isSlurGroup;
         // Only link the anchor note (not entire slur tail) for timing purposes
         word.linkedNotes = [slot.anchorNoteId];
@@ -139,16 +131,14 @@ export function autoMatch(notes: NoteData[], words: WordData[]): AutoMatchResult
       const word = unmatchedWords[i];
       const anchorNote = notes.find(n => n.id === slot.anchorNoteId)!;
 
-      word.tick = slot.tick;
-      word.time = anchorNote.startTime;
-      word.bar = anchorNote.bar;
-      word.beat = anchorNote.beat;
-      word.duration = slot.duration;
-      word.durationTicks = slot.durationTicks ?? 0;
-      word.linkedNotes = [slot.anchorNoteId];
-      word.isSlurGroup = slot.isSlurGroup;
-      word.confidence = 0.70;
-      word.source = 'auto';
+    word.time = anchorNote.startTime;
+    word.bar = anchorNote.bar;
+    word.beat = anchorNote.beat;
+    word.duration = slot.duration;
+    word.linkedNotes = [slot.anchorNoteId];
+    word.isSlurGroup = slot.isSlurGroup;
+    word.confidence = 0.70;
+    word.source = 'auto';
 
       mappings.push({
         wordId: word.id,
@@ -176,10 +166,10 @@ export function autoMatch(notes: NoteData[], words: WordData[]): AutoMatchResult
     const word = updatedWords[i];
     const anchorNote = notes.find(n => n.id === slot.anchorNoteId)!;
 
-    word.time = parseFloat(anchorNote.startTime.toFixed(4));
+    word.time = anchorNote.startTime;
     word.bar = anchorNote.bar;
     word.beat = anchorNote.beat;
-    word.duration = parseFloat(slot.duration.toFixed(4));
+    word.duration = slot.duration;
     word.linkedNotes = [slot.anchorNoteId];
     word.isSlurGroup = slot.isSlurGroup;
     word.confidence = slot.isSlurGroup ? 0.85 : confidence;

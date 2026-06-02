@@ -1,5 +1,5 @@
 import type { NoteData, ChordData, WordData, ProjectMetadata } from '../xmlTypes';
-import { posToTick, TICKS_PER_BEAT } from '../xmlTypes';
+import { PPQ } from '../xmlTypes';
 
 interface ParseResult {
   notes: NoteData[];
@@ -16,10 +16,13 @@ function midiToPitch(midi: number): string {
   return `${name}${octave}`;
 }
 
-// Convert ticks to seconds given tempo (BPM), at 960 ticks per quarter note
-function ticksToSeconds(ticks: number, tempo: number): number {
-  return (ticks / 960) * (60 / tempo);
+// Convert alphaTab internal ticks (960 PPQ) to our PPQ (480)
+function atTicksToTicks(atTicks: number): number {
+  return Math.round((atTicks / 960) * PPQ);
 }
+
+// Suppress unused import warning
+void (0 as unknown as typeof PPQType);
 
 export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> {
   const at = await import('@coderline/alphatab');
@@ -46,23 +49,21 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
   const title = score.title ?? '';
   const artist = score.artist ?? '';
 
-  // Build bar → absolute start time (seconds) map
-  // Each masterBar has tempoAutomations and calculateDuration() in ticks
-  const barStartTimes: number[] = [];
+  // Build bar → absolute start tick (480 PPQ) map
+  const barStartTicks: number[] = [];
   const barTempos: number[] = [];
   let globalTempo = score.tempo ?? 80;
-  let absoluteTime = 0;
+  let absoluteTick = 0;
 
   for (const mb of score.masterBars) {
-    // Tempo at this bar
     const tempoAuto = mb.tempoAutomation;
     if (tempoAuto) globalTempo = tempoAuto.value ?? globalTempo;
 
-    barStartTimes.push(absoluteTime);
+    barStartTicks.push(absoluteTick);
     barTempos.push(globalTempo);
 
-    const barTicks = mb.calculateDuration();
-    absoluteTime += ticksToSeconds(barTicks, globalTempo);
+    // calculateDuration() returns alphaTab's internal ticks (960 PPQ)
+    absoluteTick += atTicksToTicks(mb.calculateDuration());
   }
 
   const timeSignature = score.masterBars[0]?.timeSignatureNumerator ?? 4;
@@ -83,8 +84,7 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
   for (let barIdx = 0; barIdx < staff.bars.length; barIdx++) {
     const bar = staff.bars[barIdx];
     const barNum = barIdx + 1;
-    const barStart = barStartTimes[barIdx] ?? 0;
-    const barTempo = barTempos[barIdx] ?? finalTempo;
+    const barStartTick = barStartTicks[barIdx] ?? 0;
 
     // Primary voice (voice 0)
     const voice = bar.voices[0];
@@ -93,29 +93,25 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
     for (const beat of voice.beats) {
       if (beat.isEmpty) continue;
 
-      // Absolute start time of this beat
-      const beatStartSec = barStart + ticksToSeconds(beat.playbackStart, barTempo);
-      const beatDurSec = ticksToSeconds(beat.playbackDuration, barTempo);
+      // Absolute start tick of this beat (converted from alphaTab 960 PPQ to our 480 PPQ)
+      const beatStartTick = barStartTick + atTicksToTicks(beat.playbackStart);
+      const beatDurTicks = atTicksToTicks(beat.playbackDuration);
 
       // Beat position (1-based)
       const timeSigNum = score.masterBars[barIdx]?.timeSignatureNumerator ?? 4;
-      const barDurTicks = score.masterBars[barIdx]?.calculateDuration() ?? 3840;
-      const beatNum = parseFloat(((beat.playbackStart / barDurTicks) * timeSigNum + 1).toFixed(2));
+      const barDurAtTicks = score.masterBars[barIdx]?.calculateDuration() ?? 3840;
+      const beatNum = parseFloat(((beat.playbackStart / barDurAtTicks) * timeSigNum + 1).toFixed(2));
 
-      // Lyrics on this beat (array of strings, one per lyric line)
       const lyricText = (beat.lyrics as string[] | null)?.[0]?.trim() ?? '';
 
-      // Slur / legato detection
       const isLegato = beat.isLegatoOrigin === true;
       const slurGroupId = isLegato ? `slur_${barNum}_${Math.floor(beatNum)}` : null;
 
-      // Chord name
       if (beat.chord?.name) {
         chords.push({
           id: `chord_${String(++chordCounter).padStart(3, '0')}`,
           name: beat.chord.name,
-          tick: posToTick(barNum, beatNum, beatsPerBar),
-          time: parseFloat(beatStartSec.toFixed(4)),
+          time: beatStartTick,
           bar: barNum,
           beat: beatNum,
         });
@@ -134,10 +130,8 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
           id: noteId,
           bar: barNum,
           beat: beatNum,
-          tick: posToTick(barNum, beatNum, beatsPerBar),
-          startTime: parseFloat(beatStartSec.toFixed(4)),
-          duration: parseFloat(beatDurSec.toFixed(4)),
-          durationTicks: Math.round(beatDurSec * TICKS_PER_BEAT),
+          startTime: beatStartTick,
+          duration: beatDurTicks,
           pitch,
           velocity: 80,
           tieToNext,
@@ -146,19 +140,16 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
         });
       }
 
-      // Attach embedded lyric word to this beat
       if (lyricText && beatNoteIds.length > 0) {
-        const cleanText = lyricText.replace(/-$/, ''); // strip trailing hyphen (syllable continuation)
+        const cleanText = lyricText.replace(/-$/, '');
         if (cleanText) {
           embeddedWords.push({
             id: `word_${String(++wordCounter).padStart(3, '0')}`,
             text: cleanText,
-            tick: posToTick(barNum, beatNum, beatsPerBar),
-            time: parseFloat(beatStartSec.toFixed(4)),
+            time: beatStartTick,
             bar: barNum,
             beat: beatNum,
-            duration: parseFloat(beatDurSec.toFixed(4)),
-            durationTicks: Math.round(beatDurSec * TICKS_PER_BEAT),
+            duration: beatDurTicks,
             linkedNotes: beatNoteIds,
             isSlurGroup: !!slurGroupId,
             confidence: 1.0,
@@ -169,7 +160,6 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
     }
   }
 
-  // Merge tied notes (same pitch, adjacent, tieToNext=true)
   const merged = mergeTiedNotes(notes);
 
   return {
@@ -187,7 +177,7 @@ function mergeTiedNotes(notes: NoteData[]): NoteData[] {
     const note = { ...notes[i] };
     while (note.tieToNext && i + 1 < notes.length && notes[i + 1].pitch === note.pitch) {
       i++;
-      note.duration = parseFloat((note.duration + notes[i].duration).toFixed(4));
+      note.duration = note.duration + notes[i].duration;
       note.tieToNext = notes[i].tieToNext;
     }
     note.tieToNext = false;

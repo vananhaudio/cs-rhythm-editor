@@ -1,5 +1,5 @@
 import type { NoteData, ChordData, WordData, ProjectMetadata } from '../xmlTypes';
-import { TICKS_PER_BEAT, posToTick } from '../xmlTypes';
+import { PPQ } from '../xmlTypes';
 
 interface ParseResult {
   notes: NoteData[];
@@ -190,10 +190,9 @@ export function parseMusicXML(xmlText: string): ParseResult {
   }
 
   // ── Pass 1: detect pickup measure using measure[0] attribs
-  let pickupOffsetSec = 0;
+  let pickupOffsetTicks = 0;
   {
-    const { divisions: d0, beatsPerBar: bpb0, tempo: tempo0 } = measureAttribs[0];
-    const quarterSec0 = 60 / tempo0;
+    const { divisions: d0, beatsPerBar: bpb0 } = measureAttribs[0];
     const fullBarTicks0 = bpb0 * d0;
     let actualTicks = 0;
     for (let ci = 0; ci < measures[0].children.length; ci++) {
@@ -203,7 +202,8 @@ export function parseMusicXML(xmlText: string): ParseResult {
       actualTicks += parseInt(getText(child, 'duration') || '0');
     }
     if (actualTicks > 0 && actualTicks < fullBarTicks0) {
-      pickupOffsetSec = ((fullBarTicks0 - actualTicks) / d0) * quarterSec0;
+      // offset in source divisions; convert to PPQ ticks
+      pickupOffsetTicks = Math.round(((fullBarTicks0 - actualTicks) / d0) * PPQ);
     }
   }
 
@@ -217,38 +217,37 @@ export function parseMusicXML(xmlText: string): ParseResult {
   const playOrder = buildPlayOrder(barlineInfos);
 
   // ── Pass 4: emit notes/chords/words following play order
-  // Compute per-measure duration (seconds) for time accumulation
-  function measureDurSec(mi: number): number {
-    const { beatsPerBar: bpb, tempo: t } = measureAttribs[mi];
-    return bpb * (60 / t);
+  // Compute per-measure duration in ticks (PPQ-normalized) for accumulation.
+  // All durations are stored in PPQ=480 ticks regardless of source divisions.
+  function measureDurTicks(mi: number): number {
+    const { beatsPerBar: bpb } = measureAttribs[mi];
+    return bpb * PPQ;
   }
 
-  // For the pickup bar, the measure only contributes its actual note ticks in duration
-  function pickupMeasureDurSec(): number {
-    const { divisions: d0, beatsPerBar: bpb0, tempo: t0 } = measureAttribs[0];
-    const quarterSec0 = 60 / t0;
-    const fullBarSec = bpb0 * quarterSec0;
-    // The measure "starts" at pickupOffsetSec, and ends at fullBarSec
-    return fullBarSec - pickupOffsetSec;
+  // For the pickup bar, the measure contributes only its actual note ticks
+  function pickupMeasureDurTicks(): number {
+    const { divisions: d0, beatsPerBar: bpb0 } = measureAttribs[0];
+    const fullBarTicks = bpb0 * PPQ;
+    return fullBarTicks - pickupOffsetTicks;
   }
 
-  // Build cumulative start time for each step in playOrder
-  let globalTime = pickupOffsetSec;
-  // We need startTime per playOrder step, so precompute them
-  const stepStartTimes: number[] = [];
+  // Build cumulative start tick for each step in playOrder
+  let globalTick = pickupOffsetTicks;
+  const stepStartTicks: number[] = [];
   {
-    let t = pickupOffsetSec;
+    let t = pickupOffsetTicks;
     for (let pi = 0; pi < playOrder.length; pi++) {
-      stepStartTimes.push(t);
+      stepStartTicks.push(t);
       const { mi } = playOrder[pi];
-      if (mi === 0 && pickupOffsetSec > 0) {
-        t += pickupMeasureDurSec();
+      if (mi === 0 && pickupOffsetTicks > 0) {
+        t += pickupMeasureDurTicks();
       } else {
-        t += measureDurSec(mi);
+        t += measureDurTicks(mi);
       }
     }
-    globalTime = t;
+    globalTick = t;
   }
+  void globalTick;
 
   // Track volta pass: on first pass emit volta-1, skip volta-2.
   // On second pass emit volta-2, skip volta-1.
@@ -261,13 +260,12 @@ export function parseMusicXML(xmlText: string): ParseResult {
     const { mi, pass } = playOrder[pi];
     const measure = measures[mi];
     const measureNum = parseInt(getAttr(measure, 'number') || String(mi + 1));
-    const measureStartTime = stepStartTimes[pi];
+    const measureStartTick = stepStartTicks[pi];
 
-    const { divisions: divs, tempo: tmp } = measureAttribs[mi];
+    const { divisions: divs } = measureAttribs[mi];
     divisions = divs;
-    tempo = tmp;
+    tempo = measureAttribs[mi].tempo;
     beatsPerBar = measureAttribs[mi].beatsPerBar;
-    const quarterSec = 60 / tempo;
 
     let timeInMeasureTicks = 0;
     let lastNonChordTickStart = 0;
@@ -302,12 +300,12 @@ export function parseMusicXML(xmlText: string): ParseResult {
           const offsetTicks = parseInt(getText(child, 'offset') || '0');
           const tickStart = timeInMeasureTicks + offsetTicks;
           const beatPos = parseFloat(((tickStart / divisions) + 1).toFixed(2));
-          const startTimeSec = measureStartTime + (tickStart / divisions) * quarterSec;
+          // Convert source ticks to PPQ ticks
+          const startTick = measureStartTick + Math.round((tickStart / divisions) * PPQ);
           chords.push({
             id: `chord_${String(++chordCounter).padStart(3, '0')}`,
             name: chordName,
-            tick: posToTick(measureNum, beatPos, beatsPerBar),
-            time: parseFloat(startTimeSec.toFixed(4)),
+            time: startTick,
             bar: measureNum,
             beat: beatPos,
           });
@@ -321,11 +319,12 @@ export function parseMusicXML(xmlText: string): ParseResult {
       const isRest = noteEl.getElementsByTagName('rest').length > 0;
       const isChordNote = noteEl.getElementsByTagName('chord').length > 0;
       const durationTicks = parseInt(getText(noteEl, 'duration') || '0');
-      const durSec = (durationTicks / divisions) * quarterSec;
+      // Convert source divisions to PPQ ticks
+      const durTicks = Math.round((durationTicks / divisions) * PPQ);
 
       const tickStart = isChordNote ? lastNonChordTickStart : timeInMeasureTicks;
       const beatPos = parseFloat(((tickStart / divisions) + 1).toFixed(2));
-      const startTimeSec = measureStartTime + (tickStart / divisions) * quarterSec;
+      const startTick = measureStartTick + Math.round((tickStart / divisions) * PPQ);
 
       if (!isChordNote) {
         lastNonChordTickStart = timeInMeasureTicks;
@@ -379,15 +378,12 @@ export function parseMusicXML(xmlText: string): ParseResult {
       // On second pass, skip notes that have no lyric at all (instrumental fills)
       // but still emit the note so timing stays correct.
       const noteId = `note_${String(++noteCounter).padStart(3, '0')}`;
-      const _timeSig = beatsPerBar
       notes.push({
         id: noteId,
         bar: measureNum,
         beat: beatPos,
-        tick: posToTick(measureNum, beatPos, _timeSig),
-        startTime: parseFloat(startTimeSec.toFixed(4)),
-        duration: parseFloat(durSec.toFixed(4)),
-        durationTicks: Math.round(durSec / quarterSec * TICKS_PER_BEAT),
+        startTime: startTick,
+        duration: durTicks,
         pitch: pitchFromNote(noteEl),
         velocity: 80,
         tieToNext,
@@ -402,12 +398,10 @@ export function parseMusicXML(xmlText: string): ParseResult {
           embeddedWords.push({
             id: `word_${String(++wordCounter).padStart(3, '0')}`,
             text: cleanText,
-            tick: posToTick(measureNum, beatPos, beatsPerBar),
-            time: parseFloat(startTimeSec.toFixed(4)),
+            time: startTick,
             bar: measureNum,
             beat: beatPos,
-            duration: parseFloat(durSec.toFixed(4)),
-            durationTicks: Math.round(durSec / quarterSec * TICKS_PER_BEAT),
+            duration: durTicks,
             linkedNotes: [noteId],
             isSlurGroup: !!slurGroupId,
             confidence: 1.0,
@@ -444,7 +438,7 @@ function mergeTiedNotes(notes: NoteData[]): NoteData[] {
     const note = { ...notes[i] };
     while (note.tieToNext && i + 1 < notes.length && notes[i + 1].pitch === note.pitch) {
       i++;
-      note.duration = parseFloat((note.duration + notes[i].duration).toFixed(4));
+      note.duration = note.duration + notes[i].duration;
       note.tieToNext = notes[i].tieToNext;
     }
     note.tieToNext = false;
