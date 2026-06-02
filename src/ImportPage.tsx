@@ -32,6 +32,9 @@ export default function ImportPage({ onClose }: Props) {
   const [mappings, setMappings] = useState<MappingData[]>([])
   const [meta, setMeta]         = useState<ProjectMetadata>(defaultMeta)
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null)
+  const [pendingLyrics, setPendingLyrics] = useState<string | null>(null)
+  const [showChordConflict, setShowChordConflict] = useState(false)
+  const [pendingChordCount, setPendingChordCount] = useState(0)
   const [lyricsText, setLyricsText] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [loading, setLoading]   = useState(false)
@@ -76,14 +79,13 @@ export default function ImportPage({ onClose }: Props) {
     setLoading(false)
   }
 
-  const handleLyrics = () => {
-    if (!lyricsText.trim()) return
-    setError('')
+  const applyLyrics = (text: string, chordMode: 'overwrite' | 'merge') => {
     try {
-      const r = parseLyrics(lyricsText)
+      const r = parseLyrics(text)
       chordWordIndexRef.current = r.chordWordIndex
       const matched = autoMatch(notes, r.words)
-      const resolvedChords = resolveChordTimings([...chords, ...r.chords], matched.updatedWords ?? r.words, r.chordWordIndex)
+      const baseChords = chordMode === 'overwrite' ? [] : chords
+      const resolvedChords = resolveChordTimings([...baseChords, ...r.chords], matched.updatedWords ?? r.words, r.chordWordIndex)
       setWords(matched.updatedWords ?? r.words)
       setChords(resolvedChords)
       setMappings(matched.mappings)
@@ -92,6 +94,20 @@ export default function ImportPage({ onClose }: Props) {
     } catch (err: any) {
       setError('Lỗi parse lời: ' + err.message)
     }
+  }
+
+  const handleLyrics = () => {
+    if (!lyricsText.trim()) return
+    setError('')
+    // Kiểm tra xem sheet đã có hợp âm chưa
+    const newChordCount = (lyricsText.match(/\[[^\]]+\]/g) ?? []).length
+    if (chords.length > 0 && newChordCount > 0) {
+      setPendingLyrics(lyricsText)
+      setPendingChordCount(newChordCount)
+      setShowChordConflict(true)
+      return
+    }
+    applyLyrics(lyricsText, 'merge')
   }
 
   const buildPreview = useCallback((project: Project) => {
@@ -250,6 +266,34 @@ export default function ImportPage({ onClose }: Props) {
               <button onClick={handleSave} disabled={saving} style={{ ...S.btn, background: C.green, color: '#fff', flex: 1, opacity: saving ? 0.6 : 1 }}>
                 {saving ? '⏳ Đang lưu...' : '☁️ Lưu lên thư viện'}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal chord conflict */}
+        {showChordConflict && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: C.surface, borderRadius: 16, padding: 28, width: 380, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>⚠️ Xung đột hợp âm</div>
+              <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 20, lineHeight: 1.6 }}>
+                Sheet nhạc đã có <span style={{ color: '#F59E0B', fontWeight: 700 }}>{chords.length} hợp âm</span>.
+                Lời vừa paste có thêm <span style={{ color: '#60A5FA', fontWeight: 700 }}>{pendingChordCount} hợp âm</span> mới.
+                <br />Bạn muốn làm gì?
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button onClick={() => { setShowChordConflict(false); applyLyrics(pendingLyrics!, 'overwrite') }}
+                  style={{ ...S.btn, background: '#EF4444', color: '#fff', textAlign: 'left' }}>
+                  🗑 Ghi đè — xoá {chords.length} hợp âm cũ, dùng {pendingChordCount} hợp âm mới
+                </button>
+                <button onClick={() => { setShowChordConflict(false); applyLyrics(pendingLyrics!, 'merge') }}
+                  style={{ ...S.btn, background: C.green, color: '#fff', textAlign: 'left' }}>
+                  🔀 Gộp lại — giữ cả {chords.length + pendingChordCount} hợp âm
+                </button>
+                <button onClick={() => { setShowChordConflict(false); setPendingLyrics(null) }}
+                  style={{ ...S.btn, background: C.surface2, color: '#94A3B8', textAlign: 'center' }}>
+                  Huỷ
+                </button>
+              </div>
             </div>
           </div>
         )}
