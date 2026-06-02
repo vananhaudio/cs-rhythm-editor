@@ -13,6 +13,7 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
+import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
@@ -225,6 +226,12 @@ if (path === '/students') {
         userRole={user ? (appUser?.role ?? 'student') : 'guest'}
       />
     )
+  }
+
+  // ── Route /import — chỉ teacher ──
+  if (path === '/import') {
+    if (!loading && (!user || !isTeacher)) { window.location.href = '/tap'; return null }
+    return <ImportPage onClose={() => window.location.href = '/editor'} />
   }
 
   // ── Route /editor — chỉ teacher ──
