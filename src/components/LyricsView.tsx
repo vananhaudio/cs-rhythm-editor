@@ -48,11 +48,17 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
   const wordChordMap = useMemo(() => {
     const sorted = [...chords].sort((a, b) => a.time - b.time)
     const map: Record<string, string> = {}
+    // Track chord đã dùng để không lặp
+    let lastChordTime = -1
+    let lastChordName = ''
     words.forEach(w => {
-      // Tìm chord có cùng bar+beat hoặc trước word gần nhất
-      const match = sorted.find(c => c.bar === w.bar && c.beat === w.beat)
-        || sorted.findLast(c => c.time <= w.time)
-      if (match && match.bar === w.bar) map[w.id] = match.name
+      // Chord nằm đúng tại vị trí này (cùng bar, beat gần nhất)
+      const exact = sorted.find(c => c.bar === w.bar && Math.abs(c.beat - w.beat) < 0.5)
+      if (exact) {
+        map[w.id] = exact.name
+        lastChordTime = exact.time
+        lastChordName = exact.name
+      }
     })
     return map
   }, [words, chords])
@@ -139,14 +145,7 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
                       )
                     })}
 
-                    {/* Phách trống (không có từ) */}
-                    {Array.from({ length: Math.max(0, timeSignature - barWords.length) }, (_, i) => (
-                      <div key={`empty-${i}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 20, paddingRight: 4 }}>
-                        <div style={{ width: 9, height: 9, borderRadius: '50%', marginBottom: 4, background: 'transparent', border: `1.5px solid ${C.border}` }} />
-                        <div style={{ height: 14 }} />
-                        <div style={{ width: 18, height: 22 }} />
-                      </div>
-                    ))}
+
                   </div>
                 </div>
               )
