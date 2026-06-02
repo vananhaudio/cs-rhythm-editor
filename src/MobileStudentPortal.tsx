@@ -143,6 +143,21 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const tapTimes                  = useRef<number[]>([])
   const tapTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── Practice tracker ──
+  const EXERCISES = [
+    { id: 'finger',    name: 'Luyện ngón',  icon: '🖐', color: '#7C3AED' },
+    { id: 'scale',     name: 'Âm giai',     icon: '🎼', color: '#0891B2' },
+    { id: 'arpeggio',  name: 'Arpeggio',    icon: '🎸', color: '#4338CA' },
+    { id: 'metronome', name: 'Metronome',   icon: '🥁', color: '#16A34A' },
+    { id: 'ear',       name: 'Cảm âm',      icon: '👂', color: '#D97706' },
+  ]
+  const [practiceTotals, setPracticeTotals] = useState<Record<string, number>>({})
+  const [practiceToday, setPracticeToday]   = useState<Record<string, number>>({})
+  const [activeTimer, setActiveTimer]       = useState<string | null>(null)
+  const [timerStart, setTimerStart]         = useState<number | null>(null)
+  const [timerSeconds, setTimerSeconds]     = useState(0)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // ── My Songs ──
   const [mySongs, setMySongs] = useState<{ id: string; title: string; artist: string | null; tempo: number | null; status: string; created_at: string }[]>([])
 
@@ -154,6 +169,22 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
   // ── Track tool đã dùng trong bài hiện tại ──
   const [usedToolIds, setUsedToolIds] = useState<Set<string>>(new Set())
+
+  const startTimer = (exerciseId: string) => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    setActiveTimer(exerciseId); setTimerStart(Date.now()); setTimerSeconds(0)
+    timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000)
+  }
+  const stopTimer = async () => {
+    if (!activeTimer || !timerStart) return
+    if (timerRef.current) clearInterval(timerRef.current)
+    const minutes = Math.max(1, Math.round((Date.now() - timerStart) / 60000))
+    await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: activeTimer, minutes })
+    setPracticeTotals(prev => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
+    setPracticeToday(prev  => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
+    setActiveTimer(null); setTimerStart(null); setTimerSeconds(0)
+  }
+  const fmtTimer = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   const openTool = (route: string, name: string, toolId?: string) => {
     const url = route.startsWith('http') ? route : window.location.origin + route
@@ -183,6 +214,25 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
       .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
     // Load progress
+    // Load practice data
+    const now2 = new Date()
+    const todayStart = new Date(now2.getFullYear(), now2.getMonth(), now2.getDate()).toISOString()
+    supabase.from('student_practice_log')
+      .select('exercise_id, minutes, practiced_at')
+      .eq('student_id', student.id)
+      .then(({ data }) => {
+        if (!data) return
+        const totals: Record<string, number> = {}
+        const today: Record<string, number>  = {}
+        data.forEach((r: any) => {
+          totals[r.exercise_id] = (totals[r.exercise_id] ?? 0) + r.minutes
+          if (r.practiced_at >= todayStart)
+            today[r.exercise_id] = (today[r.exercise_id] ?? 0) + r.minutes
+        })
+        setPracticeTotals(totals)
+        setPracticeToday(today)
+      })
+
     supabase.from('student_songs')
       .select('id,title,artist,tempo,status,created_at')
       .eq('student_id', student.id)
@@ -637,6 +687,54 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         {tab === 'tap' && (
           <div style={{ padding: '52px 16px 16px' }}>
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>
+
+            {/* ══ HÔM NAY LUYỆN GÌ ══ */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>🔥 Hôm nay luyện gì?</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {EXERCISES.map(ex => {
+                  const totalMin = practiceTotals[ex.id] ?? 0
+                  const totalHrs = (totalMin / 60).toFixed(1)
+                  const todayMin = practiceToday[ex.id] ?? 0
+                  const isActive = activeTimer === ex.id
+                  return (
+                    <div key={ex.id} style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, border: `1.5px solid ${isActive ? ex.color : 'transparent'}`, transition: 'border .2s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: ex.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                          {ex.icon}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>{ex.name}</div>
+                          <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>
+                            Tích lũy: <span style={{ color: ex.color, fontWeight: 700 }}>{totalHrs}h</span>
+                            {todayMin > 0 && <span style={{ color: L.green }}> · Hôm nay: {todayMin}ph</span>}
+                          </div>
+                        </div>
+                        {isActive ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ fontSize: 16, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</div>
+                            <button onClick={stopTimer}
+                              style={{ background: '#EF4444', border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Dừng
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => startTimer(ex.id)} disabled={!!activeTimer}
+                            style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                            ▶ Bắt đầu
+                          </button>
+                        )}
+                      </div>
+                      {totalMin > 0 && (
+                        <div style={{ marginTop: 10, height: 3, borderRadius: 99, background: L.surface2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', borderRadius: 99, background: ex.color, width: `${Math.min(100, totalMin / (1000*60) * 100)}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
             {/* ══ MY SONGS — Luôn ở đầu ══ */}
             <div style={{ marginBottom: 20 }}>
