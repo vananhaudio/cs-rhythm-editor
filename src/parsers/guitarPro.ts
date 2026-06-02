@@ -1,4 +1,5 @@
 import type { NoteData, ChordData, WordData, ProjectMetadata } from '../xmlTypes';
+import { posToTick, TICKS_PER_BEAT } from '../xmlTypes';
 
 interface ParseResult {
   notes: NoteData[];
@@ -71,12 +72,12 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
   // Use first track (melody / vocal lead)
   const track = score.tracks[0];
   if (!track) {
-    return { notes: [], chords: [], embeddedWords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
+    return { notes: [], chords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
   }
 
   const staff = track.staves[0];
   if (!staff) {
-    return { notes: [], chords: [], embeddedWords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
+    return { notes: [], chords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
   }
 
   for (let barIdx = 0; barIdx < staff.bars.length; barIdx++) {
@@ -113,6 +114,7 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
         chords.push({
           id: `chord_${String(++chordCounter).padStart(3, '0')}`,
           name: beat.chord.name,
+          tick: posToTick(barNum, beatNum, beatsPerBar),
           time: parseFloat(beatStartSec.toFixed(4)),
           bar: barNum,
           beat: beatNum,
@@ -132,8 +134,10 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
           id: noteId,
           bar: barNum,
           beat: beatNum,
+          tick: posToTick(barNum, beatNum, beatsPerBar),
           startTime: parseFloat(beatStartSec.toFixed(4)),
           duration: parseFloat(beatDurSec.toFixed(4)),
+          durationTicks: Math.round(beatDurSec * TICKS_PER_BEAT),
           pitch,
           velocity: 80,
           tieToNext,
@@ -149,10 +153,12 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
           embeddedWords.push({
             id: `word_${String(++wordCounter).padStart(3, '0')}`,
             text: cleanText,
+            tick: posToTick(barNum, beatNum, beatsPerBar),
             time: parseFloat(beatStartSec.toFixed(4)),
             bar: barNum,
             beat: beatNum,
             duration: parseFloat(beatDurSec.toFixed(4)),
+            durationTicks: Math.round(beatDurSec * TICKS_PER_BEAT),
             linkedNotes: beatNoteIds,
             isSlurGroup: !!slurGroupId,
             confidence: 1.0,

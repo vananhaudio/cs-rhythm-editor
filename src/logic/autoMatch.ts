@@ -11,10 +11,12 @@ import { posToTick, TICKS_PER_BEAT } from '../xmlTypes';
  * - Individual notes: one slot each.
  */
 interface NoteSlot {
-  noteIds: string[];   // first note id (+ slur tail ids for reference)
+  noteIds: string[];
   anchorNoteId: string;
+  tick: number;
   startTime: number;
   duration: number;
+  durationTicks: number;
   bar: number;
   beat: number;
   isSlurGroup: boolean;
