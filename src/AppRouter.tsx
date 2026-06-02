@@ -13,6 +13,7 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
+import TapTempoTool from './TapTempoTool'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
@@ -186,6 +187,11 @@ if (path === '/students') {
     if (loading) return null
     if (!user || !isTeacher) { window.location.href = '/tap'; return null }
     // fall through → render PlayerView
+  }
+
+  // ── Route /tempo — Tap Tempo Tool ──
+  if (path === '/tempo' || path.startsWith('/tempo')) {
+    return <TapTempoTool onClose={() => { window.history.back() }} />
   }
 
   // ── Route /tuner ──
