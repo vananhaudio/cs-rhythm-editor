@@ -167,11 +167,11 @@ export default function ImportPage({ onClose }: Props) {
         {onClose && <button onClick={onClose} style={{ ...S.btn, background: C.surface2, color: C.text2, padding: '6px 12px', marginLeft: 8 }}>✕</button>}
       </div>
 
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
+      <div style={{ padding: '16px 24px', height: 'calc(100dvh - 56px)', display: 'flex', flexDirection: 'column' }}>
 
         {/* STEP 1 — Upload */}
         {step === 'upload' && (
-          <div>
+          <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
             <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Bước 1 — Nạp sheet nhạc</div>
             <div style={{ fontSize: 13, color: C.text3, marginBottom: 28 }}>Hỗ trợ MusicXML (.xml, .musicxml) và Guitar Pro (.gp, .gp3–.gp7, .gpx)</div>
             <div onClick={() => fileRef.current?.click()}
@@ -190,7 +190,7 @@ export default function ImportPage({ onClose }: Props) {
 
         {/* STEP 2 — Lyrics */}
         {step === 'lyrics' && (
-          <div>
+          <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
             <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Bước 2 — Dán lời & hợp âm</div>
             <div style={{ fontSize: 13, color: C.text3, marginBottom: 20 }}>
               Đã nạp <span style={{ color: C.green, fontWeight: 700 }}>{notes.length} nốt</span> · {meta.tempo} BPM · {meta.timeSignature}/4 · {meta.totalBars} bars
@@ -220,7 +220,7 @@ export default function ImportPage({ onClose }: Props) {
 
         {/* STEP 3 — Preview 2 cột */}
         {step === 'preview' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: 'calc(100dvh - 200px)', minHeight: 500 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0 }}>
             {/* Meta bar */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
               {[['Tên bài', meta.title||'—'],['Nghệ sĩ', meta.artist||'—'],['Tempo', meta.tempo+' BPM'],['Giọng', meta.tone]].map(([k,v]) => (
@@ -235,7 +235,7 @@ export default function ImportPage({ onClose }: Props) {
             </div>
 
             {/* 2-column layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, flex: 1, background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, flex: 1, minHeight: 0, background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
               {/* Trái — Sheet nhạc */}
               <div style={{ borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8, background: C.surface2, flexShrink: 0 }}>
