@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { supabase } from './supabase'
+import SheetMusic from './components/SheetMusic'
+import LyricsPreview from './components/LyricsPreview'
 import { parseMusicXML } from './parsers/musicxml'
 import { parseGuitarPro } from './parsers/guitarPro'
 import { parseLyrics, resolveChordTimings } from './parsers/lyrics'
@@ -30,6 +32,8 @@ export default function ImportPage({ onClose }: Props) {
   const [chords, setChords]     = useState<ChordData[]>([])
   const [mappings, setMappings] = useState<MappingData[]>([])
   const [meta, setMeta]         = useState<ProjectMetadata>(defaultMeta)
+  const [sheetSource, setSheetSource] = useState<{ type: 'gp'; buffer: ArrayBuffer } | { type: 'xml'; text: string } | null>(null)
+  const [selectedWordId, setSelectedWordId] = useState<string | null>(null)
   const [lyricsText, setLyricsText] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [loading, setLoading]   = useState(false)
@@ -50,9 +54,11 @@ export default function ImportPage({ onClose }: Props) {
       if (isGP) {
         const buf = await file.arrayBuffer()
         result = await parseGuitarPro(buf)
+        setSheetSource({ type: 'gp', buffer: buf })
       } else {
         const text = await file.text()
         result = parseMusicXML(text)
+        setSheetSource({ type: 'xml', text })
       }
       setNotes(result.notes)
       setChords(result.chords)
@@ -212,36 +218,68 @@ export default function ImportPage({ onClose }: Props) {
           </div>
         )}
 
-        {/* STEP 3 — Preview */}
+        {/* STEP 3 — Preview 2 cột */}
         {step === 'preview' && (
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Bước 3 — Xem trước & Lưu</div>
-            <div style={{ fontSize: 13, color: C.text3, marginBottom: 20 }}>
-              <span style={{ color: C.green, fontWeight: 700 }}>{words.length}</span> từ · <span style={{ color: C.amber, fontWeight: 700 }}>{chords.length}</span> hợp âm · <span style={{ color: C.blue, fontWeight: 700 }}>{mappings.length}</span> đã khớp
-            </div>
-            {/* Meta summary */}
-            <div style={{ background: C.surface, borderRadius: 12, padding: '16px 20px', marginBottom: 20, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-              {[['Tên bài', meta.title || '—'], ['Nghệ sĩ', meta.artist || '—'], ['Tempo', meta.tempo + ' BPM'], ['Giọng', meta.tone]].map(([k, v]) => (
-                <div key={k}>
-                  <div style={{ fontSize: 10, color: C.text3, marginBottom: 4, fontWeight: 600 }}>{k}</div>
-                  <div style={{ fontWeight: 700, fontSize: 13 }}>{v}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: 'calc(100dvh - 200px)', minHeight: 500 }}>
+            {/* Meta bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              {[['Tên bài', meta.title||'—'],['Nghệ sĩ', meta.artist||'—'],['Tempo', meta.tempo+' BPM'],['Giọng', meta.tone]].map(([k,v]) => (
+                <div key={k} style={{ background: C.surface, borderRadius: 8, padding: '6px 12px', border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 9, color: C.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{k}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginTop: 1 }}>{v}</div>
                 </div>
               ))}
+              <input value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
+                placeholder="Link YouTube (tuỳ chọn)..."
+                style={{ ...S.inp, flex: 1, minWidth: 200, height: 36 }} />
             </div>
-            {/* YouTube URL */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, fontWeight: 600 }}>Link YouTube (tuỳ chọn)</div>
-              <input value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)} style={S.inp} placeholder="https://youtube.com/watch?v=..." />
+
+            {/* 2-column layout */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, flex: 1, background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+              {/* Trái — Sheet nhạc */}
+              <div style={{ borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8, background: C.surface2, flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: C.text2, textTransform: 'uppercase', letterSpacing: '.06em' }}>🎼 Sheet nhạc</span>
+                  <span style={{ fontSize: 10, background: '#0D2A1F', color: C.green, borderRadius: 6, padding: '2px 8px', marginLeft: 'auto' }}>{notes.length} nốt</span>
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <SheetMusic
+                    source={sheetSource}
+                    notes={notes}
+                    words={words}
+                    chords={chords}
+                    mappings={mappings}
+                    selectedWordId={selectedWordId}
+                    isVisible={step === 'preview'}
+                  />
+                </div>
+              </div>
+
+              {/* Phải — Lời theo nhịp */}
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8, background: C.surface2, flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: C.text2, textTransform: 'uppercase', letterSpacing: '.06em' }}>📝 Lời theo nhịp</span>
+                  <span style={{ fontSize: 10, background: '#0D2A1F', color: C.green, borderRadius: 6, padding: '2px 8px', marginLeft: 'auto' }}>
+                    {mappings.length}/{words.length} từ
+                  </span>
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <LyricsPreview
+                    metadata={meta}
+                    notes={notes}
+                    words={words}
+                    chords={chords}
+                    mappings={mappings}
+                    selectedWordId={selectedWordId}
+                    onSelectWord={setSelectedWordId}
+                  />
+                </div>
+              </div>
             </div>
-            {/* JSON preview */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, fontWeight: 600 }}>JSON Output (v2.1 — tick-based)</div>
-              <pre style={{ background: C.surface2, borderRadius: 10, padding: '14px', fontSize: 11, color: C.text2, maxHeight: 200, overflowY: 'auto', margin: 0, border: `1px solid ${C.border}` }}>
-                {jsonPreview.slice(0, 1000)}{jsonPreview.length > 1000 ? '\n... (còn nữa)' : ''}
-              </pre>
-            </div>
-            {error && <div style={{ marginBottom: 16, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '12px 16px', color: C.red, fontSize: 13 }}>{error}</div>}
-            <div style={{ display: 'flex', gap: 10 }}>
+
+            {error && <div style={{ marginTop: 10, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '10px 14px', color: C.red, fontSize: 12 }}>{error}</div>}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
               <button onClick={() => setStep('lyrics')} style={{ ...S.btn, background: C.surface2, color: C.text2 }}>← Sửa lời</button>
               <button onClick={handleDownload} style={{ ...S.btn, background: C.surface2, color: C.text2 }}>⬇ Download JSON</button>
               <button onClick={handleSave} disabled={saving} style={{ ...S.btn, background: C.green, color: '#fff', flex: 1, opacity: saving ? 0.6 : 1 }}>
