@@ -1,4 +1,5 @@
 import type { NoteData, ChordData, WordData, ProjectMetadata } from '../xmlTypes';
+import { TICKS_PER_BEAT, posToTick } from '../xmlTypes';
 
 interface ParseResult {
   notes: NoteData[];
@@ -305,6 +306,7 @@ export function parseMusicXML(xmlText: string): ParseResult {
           chords.push({
             id: `chord_${String(++chordCounter).padStart(3, '0')}`,
             name: chordName,
+            tick: posToTick(measureNum, beatPos, beatsPerBar),
             time: parseFloat(startTimeSec.toFixed(4)),
             bar: measureNum,
             beat: beatPos,
@@ -377,12 +379,15 @@ export function parseMusicXML(xmlText: string): ParseResult {
       // On second pass, skip notes that have no lyric at all (instrumental fills)
       // but still emit the note so timing stays correct.
       const noteId = `note_${String(++noteCounter).padStart(3, '0')}`;
+      const _timeSig = beatsPerBar
       notes.push({
         id: noteId,
         bar: measureNum,
         beat: beatPos,
+        tick: posToTick(measureNum, beatPos, _timeSig),
         startTime: parseFloat(startTimeSec.toFixed(4)),
         duration: parseFloat(durSec.toFixed(4)),
+        durationTicks: Math.round(durSec / quarterSec * TICKS_PER_BEAT),
         pitch: pitchFromNote(noteEl),
         velocity: 80,
         tieToNext,
@@ -397,10 +402,12 @@ export function parseMusicXML(xmlText: string): ParseResult {
           embeddedWords.push({
             id: `word_${String(++wordCounter).padStart(3, '0')}`,
             text: cleanText,
+            tick: posToTick(measureNum, beatPos, beatsPerBar),
             time: parseFloat(startTimeSec.toFixed(4)),
             bar: measureNum,
             beat: beatPos,
             duration: parseFloat(durSec.toFixed(4)),
+            durationTicks: Math.round(durSec / quarterSec * TICKS_PER_BEAT),
             linkedNotes: [noteId],
             isSlurGroup: !!slurGroupId,
             confidence: 1.0,

@@ -1,9 +1,18 @@
+// ── Tick system ──
+export const TICKS_PER_BEAT = 480 as const
+
+export function posToTick(bar: number, beat: number, timeSig: number, subTick = 0): number {
+  return ((bar - 1) * timeSig + (beat - 1)) * TICKS_PER_BEAT + subTick
+}
+
 export interface NoteData {
   id: string;
   bar: number;
   beat: number;
-  startTime: number;
-  duration: number;
+  tick: number;       // MIDI tick — nguồn sự thật
+  startTime: number;  // giây — chỉ dùng cho playback legacy
+  duration: number;   // giây
+  durationTicks: number; // tick
   pitch: string;
   velocity: number;
   tieToNext: boolean;
@@ -14,10 +23,12 @@ export interface NoteData {
 export interface WordData {
   id: string;
   text: string;
-  time: number;
+  tick: number;       // MIDI tick — nguồn sự thật
+  time: number;       // giây — legacy
   bar: number;
   beat: number;
   duration: number;
+  durationTicks: number;
   linkedNotes: string[];
   isSlurGroup: boolean;
   confidence: number;
@@ -27,7 +38,8 @@ export interface WordData {
 export interface ChordData {
   id: string;
   name: string;
-  time: number;
+  tick: number;       // MIDI tick — nguồn sự thật
+  time: number;       // giây — legacy
   bar: number;
   beat: number;
 }
