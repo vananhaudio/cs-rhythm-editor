@@ -121,17 +121,33 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
                       }} />
                     ))}
 
-                    {/* Mỗi từ = 1 cột: dot + chord + word thẳng hàng */}
+                    {/* 4 chấm cố định — đặc nếu phách đó có từ matched */}
+                    {Array.from({ length: timeSignature }, (_, b) => {
+                      const beat = b + 1
+                      const pct  = (b / timeSignature) * 100
+                      const wordAtBeat = barWords.find(w => Math.abs(w.beat - beat) < 0.5)
+                      const isMatched  = wordAtBeat ? matchedIds.has(wordAtBeat.id) : false
+                      const isStrong   = b === 0
+                      return (
+                        <div key={`dot-${b}`} style={{ position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)', top: 0 }}>
+                          <div style={{
+                            width: 9, height: 9, borderRadius: '50%',
+                            background: isMatched ? (isStrong ? C.amber : C.indigo) : 'transparent',
+                            border: `1.5px solid ${isStrong ? C.amber : C.indigo}`,
+                            opacity: isMatched ? 1 : 0.35,
+                          }} />
+                        </div>
+                      )
+                    })}
+
+                    {/* Chord + Từ theo vị trí tick */}
                     {barWords.map(w => {
-                      const pct = ((w.beat - 1) / timeSignature) * 100
-                      const isStrong   = Math.abs(w.beat - 1) < 0.1
+                      const pct        = ((w.beat - 1) / timeSignature) * 100
                       const isMatched  = matchedIds.has(w.id)
                       const isSelected = w.id === selectedWordId
-                      // Chord tại đúng vị trí này
                       const chord = (barChordMap[barNum] ?? [])
                         .filter(ch => Math.abs(ch.beat - w.beat) < 0.5)
                         .sort((a, b) => Math.abs(a.beat - w.beat) - Math.abs(b.beat - w.beat))[0]
-
                       return (
                         <div key={w.id}
                           onClick={() => onSelectWord?.(w.id)}
@@ -139,22 +155,14 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
                             position: 'absolute',
                             left: `${Math.min(pct, 94)}%`,
                             transform: 'translateX(-50%)',
-                            top: 0, cursor: 'pointer',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                            top: 14, cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                           }}>
-                          {/* Dot — căn giữa theo từ */}
-                          <div style={{
-                            width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-                            background: isStrong ? C.amber : C.indigo,
-                          }} />
-                          {/* Chord */}
                           <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, height: 13, lineHeight: '13px', whiteSpace: 'nowrap' }}>
                             {chord?.name ?? ''}
                           </div>
-                          {/* Từ */}
                           <div style={{
-                            padding: '2px 6px', borderRadius: 5, fontSize: 12,
-                            whiteSpace: 'nowrap',
+                            padding: '2px 6px', borderRadius: 5, fontSize: 12, whiteSpace: 'nowrap',
                             background: isSelected ? C.indigo : isMatched ? C.surface2 : '#2A1212',
                             color: isSelected ? '#fff' : isMatched ? C.text : C.red,
                             border: `1px solid ${isSelected ? C.indigo : isMatched ? C.border : C.red + '44'}`,
@@ -165,18 +173,7 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
                       )
                     })}
 
-                    {/* Phách trống không có từ — chỉ hiện dot */}
-                    {Array.from({ length: timeSignature }, (_, b) => {
-                      const beat = b + 1
-                      const hasWord = barWords.some(w => Math.abs(w.beat - beat) < 0.5)
-                      if (hasWord) return null
-                      const pct = (b / timeSignature) * 100
-                      return (
-                        <div key={`empty-${b}`} style={{ position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)', top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <div style={{ width: 9, height: 9, borderRadius: '50%', background: 'transparent', border: `1.5px solid ${b === 0 ? C.amber + '60' : C.indigo + '40'}` }} />
-                        </div>
-                      )
-                    })}
+
                   </div>
                 </div>
               )
