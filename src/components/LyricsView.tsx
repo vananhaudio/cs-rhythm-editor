@@ -86,7 +86,7 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
       <div style={{ padding: '8px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0, background: C.surface }}>
         <span style={{ fontSize: 11, color: C.text2 }}><span style={{ color: C.green, fontWeight: 600 }}>{mappings.length}</span>/{words.length} từ</span>
         <span style={{ fontSize: 11, color: C.text2 }}><span style={{ color: C.blue, fontWeight: 600 }}>{chords.length}</span> hợp âm</span>
-        <span style={{ fontSize: 11, color: C.text2 }}><span style={{ color: C.amber, fontWeight: 600 }}>{bars.length}</span> bars · {tempo} BPM · {timeSignature}/4</span>
+        <span style={{ fontSize: 11, color: C.text2 }}><span style={{ color: C.amber, fontWeight: 600 }}>{bars.length}</span> bars · {Math.round(tempo)} BPM · {timeSignature}/4</span>
         {unmatchedCount > 0 && <span style={{ marginLeft: 'auto', fontSize: 11, color: C.red, fontWeight: 600 }}>⚠ {unmatchedCount} từ chưa khớp</span>}
       </div>
 

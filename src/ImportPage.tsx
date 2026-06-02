@@ -61,7 +61,7 @@ export default function ImportPage({ onClose }: Props) {
       }
       setNotes(result.notes)
       setChords(result.chords)
-      setMeta(prev => ({ ...prev, ...result.metadata, title: result.metadata.title || file.name.replace(/\.[^.]+$/, '') }))
+      setMeta(prev => ({ ...prev, ...result.metadata, tempo: Math.round(result.metadata.tempo ?? prev.tempo), title: result.metadata.title || file.name.replace(/\.[^.]+$/, '') }))
 
       if ((result.embeddedWords ?? []).length > 0) {
         // Có lời embedded — match luôn
