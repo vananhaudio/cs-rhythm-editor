@@ -22,7 +22,6 @@ function atTicksToTicks(atTicks: number): number {
 }
 
 // Suppress unused import warning
-void (0 as unknown as typeof PPQType);
 
 export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> {
   const at = await import('@coderline/alphatab');
@@ -73,12 +72,12 @@ export async function parseGuitarPro(buffer: ArrayBuffer): Promise<ParseResult> 
   // Use first track (melody / vocal lead)
   const track = score.tracks[0];
   if (!track) {
-    return { notes: [], chords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
+    return { notes: [], chords: [], embeddedWords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
   }
 
   const staff = track.staves[0];
   if (!staff) {
-    return { notes: [], chords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
+    return { notes: [], chords: [], embeddedWords: [], metadata: { title, artist, tempo: finalTempo, timeSignature, totalBars } };
   }
 
   for (let barIdx = 0; barIdx < staff.bars.length; barIdx++) {

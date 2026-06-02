@@ -1,5 +1,5 @@
-import type { useEffect, useRef, useState, useCallback } from 'react';
-import type { Music, Loader2, MousePointer, AlertCircle } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Music, Loader2, MousePointer, AlertCircle } from 'lucide-react';
 import type { NoteData, WordData, ChordData, MappingData } from '../xmlTypes';
 
 interface SheetMusicProps {

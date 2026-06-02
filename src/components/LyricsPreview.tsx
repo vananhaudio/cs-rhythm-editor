@@ -1,6 +1,7 @@
-import type { useMemo } from 'react';
-import type { NoteData, WordData, MappingData, ProjectMetadata, ChordData, PPQ, ticksToSeconds } from '../xmlTypes';
-import type { Music, Clock, BarChart2, AlertCircle } from 'lucide-react';
+import { useMemo } from 'react';
+import type { NoteData, WordData, MappingData, ProjectMetadata, ChordData } from '../xmlTypes';
+import { PPQ, ticksToSeconds } from '../xmlTypes';
+import { Music, Clock, BarChart2, AlertCircle } from 'lucide-react';
 
 interface LyricsPreviewProps {
   metadata: ProjectMetadata;
