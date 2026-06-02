@@ -136,6 +136,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const tapTimes                  = useRef<number[]>([])
   const tapTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── My Songs ──
+  const [mySongs, setMySongs] = useState<{ id: string; title: string; artist: string | null; tempo: number | null; status: string; created_at: string }[]>([])
+
   // ── Progress tracking ──
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [markingDone, setMarkingDone]   = useState(false)
@@ -173,6 +176,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
       .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
     // Load progress
+    supabase.from('student_songs')
+      .select('id,title,artist,tempo,status,created_at')
+      .eq('student_id', student.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setMySongs(data ?? []))
     supabase.from('edu_lesson_progress')
       .select('lesson_id').eq('student_id', student.id)
       .then(({ data }) => {
@@ -622,54 +630,117 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         {tab === 'tap' && (
           <div style={{ padding: '52px 16px 16px' }}>
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>
-            <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>Chọn công cụ để bắt đầu</div>
 
-            {/* Tap BPM */}
-            <div style={{ background: `linear-gradient(135deg, ${L.p1} 0%, #6366F1 100%)`, borderRadius: 24, padding: '24px 20px', marginBottom: 16, textAlign: 'center', boxShadow: '0 8px 24px rgba(67,56,202,.35)', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,.08)' }} />
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.7)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>🥁 Tap BPM</div>
-              <div style={{ fontSize: 64, fontWeight: 900, color: '#FCD34D', lineHeight: 1, marginBottom: 4 }}>{bpm}</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', marginBottom: 20 }}>BPM {tapCount > 0 && `· đã tap ${tapCount} lần`}</div>
-              <button onClick={handleTap}
-                style={{ width: '100%', background: L.tinv, color: L.p1, border: 'none', borderRadius: 16, padding: '18px', fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.06em', userSelect: 'none', boxShadow: '0 4px 12px rgba(0,0,0,.15)' }}>
-                TAP
-              </button>
+            {/* ══ MY SONGS — Luôn ở đầu ══ */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>🎵 My Songs</div>
+                {mySongs.length > 0 && (
+                  <span style={{ fontSize: 11, color: L.t3 }}>{mySongs.length} bài</span>
+                )}
+              </div>
+
+              {/* Empty state */}
+              {mySongs.length === 0 && (
+                <div style={{ background: L.surface, borderRadius: 20, padding: '24px 20px', boxShadow: L.shadow, border: `1.5px dashed ${L.border}` }}>
+                  <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 12 }}>🎸</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, textAlign: 'center', marginBottom: 8 }}>Bạn chưa có bài hát nào</div>
+                  <div style={{ fontSize: 13, color: L.t2, textAlign: 'center', lineHeight: 1.7, marginBottom: 20 }}>
+                    Hãy chinh phục bài hát đầu tiên của bạn theo hành trình:
+                  </div>
+                  {/* Hành trình gợi ý */}
+                  {[
+                    { icon: '🥁', label: 'Tap tempo', desc: 'Tìm nhịp bài hát', done: false, current: true },
+                    { icon: '🎼', label: 'Timing',    desc: 'Căn lời & hợp âm', done: false, current: false },
+                    { icon: '🎵', label: 'Luyện nhịp', desc: 'Tap theo bài',    done: false, current: false },
+                    { icon: '🎤', label: 'Luyện hát', desc: 'Hát theo player', done: false, current: false },
+                    { icon: '🏆', label: 'Thuần thục', desc: 'Làm chủ bài hát', done: false, current: false },
+                  ].map((step, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: i > 0 ? `1px solid ${L.border}` : 'none' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: step.current ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
+                        {step.icon}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: step.current ? 700 : 500, color: step.current ? L.p1 : L.t2 }}>{step.label}</div>
+                        <div style={{ fontSize: 11, color: L.t3 }}>{step.desc}</div>
+                      </div>
+                      {step.current && <span style={{ fontSize: 11, background: L.p2, color: L.p1, borderRadius: 8, padding: '3px 8px', fontWeight: 700 }}>Bắt đầu</span>}
+                    </div>
+                  ))}
+                  <button onClick={() => openTool('/tap', 'Tap nhịp', 'tap')}
+                    style={{ width: '100%', marginTop: 16, background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(67,56,202,.3)' }}>
+                    🥁 Bắt đầu Tap tempo →
+                  </button>
+                </div>
+              )}
+
+              {/* Danh sách bài */}
+              {mySongs.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {mySongs.map(s => {
+                    const SONG_STATUS: Record<string, { icon: string; label: string; color: string }> = {
+                      tempo:    { icon: '🥁', label: 'Tap Tempo',  color: L.p1 },
+                      timing:   { icon: '🎼', label: 'Timing',     color: '#7C3AED' },
+                      review:   { icon: '🔍', label: 'Kiểm định',  color: L.gold },
+                      approved: { icon: '✅', label: 'Đã duyệt',   color: L.green },
+                      rhythm:   { icon: '🎵', label: 'Luyện nhịp', color: '#0891B2' },
+                      mastered: { icon: '🏆', label: 'Thuần thục', color: '#D97706' },
+                    }
+                    const st = SONG_STATUS[s.status] ?? SONG_STATUS.tempo
+                    // Ticks hành trình
+                    const STEPS = ['tempo','timing','approved','rhythm','mastered']
+                    const doneIdx = STEPS.indexOf(s.status)
+                    return (
+                      <div key={s.id} style={{ background: L.surface, borderRadius: 18, padding: '14px 16px', boxShadow: L.shadow, border: `1.5px solid ${L.border}` }}>
+                        {/* Header bài */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 12, background: st.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                            {st.icon}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
+                            <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>
+                              {s.artist && <span>{s.artist} · </span>}
+                              {s.tempo && <span style={{ color: st.color, fontWeight: 700 }}>{s.tempo} BPM</span>}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 10, background: st.color + '15', color: st.color, borderRadius: 8, padding: '3px 8px', fontWeight: 700, flexShrink: 0 }}>{st.label}</span>
+                        </div>
+                        {/* Progress ticks */}
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {[
+                            { key: 'tempo',    icon: '🥁', label: 'Tempo' },
+                            { key: 'timing',   icon: '🎼', label: 'Timing' },
+                            { key: 'approved', icon: '✅', label: 'Duyệt' },
+                            { key: 'rhythm',   icon: '🎵', label: 'Nhịp' },
+                            { key: 'mastered', icon: '🏆', label: 'Xong' },
+                          ].map((step, i) => {
+                            const done = STEPS.indexOf(s.status) >= i
+                            return (
+                              <div key={step.key} style={{ flex: 1, textAlign: 'center' }}>
+                                <div style={{ width: '100%', height: 4, borderRadius: 99, background: done ? st.color : L.border, marginBottom: 4, transition: 'background .3s' }} />
+                                <div style={{ fontSize: 9, color: done ? st.color : L.t3, fontWeight: done ? 700 : 400 }}>{step.label}</div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {/* Thêm bài mới */}
+                  <button onClick={() => openTool('/tap', 'Tap nhịp', 'tap')}
+                    style={{ width: '100%', background: L.surface2, border: `1.5px dashed ${L.border}`, borderRadius: 14, padding: '13px', fontSize: 13, fontWeight: 600, color: L.t2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    + Thêm bài hát mới
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Player */}
-            <button onClick={() => openTool('/tap', 'Player nhịp điệu')}
-              style={{ width:'100%', background:'linear-gradient(135deg,#0D0F14,#141720)', border:'1px solid rgba(108,99,255,0.3)', borderRadius:18, padding:'16px 20px', marginBottom:16, display:'flex', alignItems:'center', gap:14, cursor:'pointer', fontFamily:'inherit', textAlign:'left' }}>
-              <div style={{ width:44,height:44,borderRadius:12,background:'linear-gradient(135deg,#6C63FF,#8B84FF)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,boxShadow:'0 4px 12px rgba(108,99,255,0.35)' }}>🎸</div>
-              <div>
-                <div style={{ fontSize:15,fontWeight:700,color:'#F1F5F9',marginBottom:2 }}>Player nhịp điệu</div>
-                <div style={{ fontSize:11,color:'rgba(255,255,255,0.4)' }}>Luyện hát theo lời & hợp âm</div>
-              </div>
-              <div style={{ marginLeft:'auto',color:'rgba(108,99,255,0.7)',fontSize:18 }}>›</div>
-            </button>
+            {/* ── Công cụ ── */}
+            <div style={{ fontSize: 14, fontWeight: 700, color: L.t2, marginBottom: 12 }}>🎯 Công cụ luyện tập</div>
 
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {displayTools.map((t) => {
-                const unlocked = isTierUnlocked(t.tier)
-                const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
-                return (
-                  <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name) }}
-                    style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
-                    {!unlocked && (
-                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                        <span style={{ fontSize: 10, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
-                      </div>
-                    )}
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
         {/* ── SỐNG ────────────────────────────────────────────────────── */}
         {tab === 'song' && (
           <div style={{ padding: '52px 16px 16px' }}>
