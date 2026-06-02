@@ -109,75 +109,74 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
                   </div>
 
                   {/* Timeline grid — position relative */}
-                  <div style={{ position: 'relative', height: 64 }}>
+                  <div style={{ position: 'relative', height: 72 }}>
 
-                    {/* Hàng phách dots — 4 phách cố định */}
-                    <div style={{ display: 'flex', position: 'absolute', top: 0, left: 0, right: 0, height: 12 }}>
-                      {Array.from({ length: timeSignature }, (_, b) => (
-                        <div key={b} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 2 }}>
-                          <div style={{
-                            width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
-                            background: b === 0 ? C.amber : C.indigo,
-                          }} />
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Hàng chord — hiện tại đúng beat */}
-                    <div style={{ position: 'absolute', top: 16, left: 0, right: 0, height: 14 }}>
-                      {(barChordMap[barNum] ?? []).map(chord => {
-                        const pct = ((chord.beat - 1) / timeSignature) * 100
-                        return (
-                          <div key={chord.id} style={{
-                            position: 'absolute', left: `${pct}%`,
-                            fontSize: 10, fontWeight: 700, color: C.blue,
-                            whiteSpace: 'nowrap', lineHeight: '14px',
-                          }}>
-                            {chord.name}
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Hàng từ — position theo beat */}
-                    <div style={{ position: 'absolute', top: 34, left: 0, right: 0, height: 26 }}>
-                      {barWords.map(w => {
-                        // beat là 1-based fractional → convert sang %
-                        const pct = ((w.beat - 1) / timeSignature) * 100
-                        const isMatched  = matchedIds.has(w.id)
-                        const isSelected = w.id === selectedWordId
-                        return (
-                          <div key={w.id}
-                            onClick={() => onSelectWord?.(w.id)}
-                            style={{
-                              position: 'absolute',
-                              left: `${Math.min(pct, 95)}%`,
-                              transform: 'none',
-                              cursor: 'pointer',
-                            }}>
-                            <div style={{
-                              padding: '2px 6px', borderRadius: 5, fontSize: 12, fontWeight: 400,
-                              whiteSpace: 'nowrap',
-                              background: isSelected ? C.indigo : isMatched ? C.surface2 : '#2A1212',
-                              color: isSelected ? '#fff' : isMatched ? C.text : C.red,
-                              border: `1px solid ${isSelected ? C.indigo : isMatched ? C.border : C.red + '44'}`,
-                            }}>
-                              {w.text}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {/* Grid lines phách */}
+                      {/* Grid lines phách */}
                     {Array.from({ length: timeSignature }, (_, b) => (
                       <div key={b} style={{
                         position: 'absolute', left: `${(b / timeSignature) * 100}%`,
                         top: 0, bottom: 0, width: 1,
-                        background: b === 0 ? C.border : C.border + '80',
+                        background: b === 0 ? C.border : C.border + '60',
                         pointerEvents: 'none',
                       }} />
                     ))}
+
+                    {/* Mỗi từ = 1 cột: dot + chord + word thẳng hàng */}
+                    {barWords.map(w => {
+                      const pct = ((w.beat - 1) / timeSignature) * 100
+                      const isStrong   = Math.abs(w.beat - 1) < 0.1
+                      const isMatched  = matchedIds.has(w.id)
+                      const isSelected = w.id === selectedWordId
+                      // Chord tại đúng vị trí này
+                      const chord = (barChordMap[barNum] ?? [])
+                        .filter(ch => Math.abs(ch.beat - w.beat) < 0.5)
+                        .sort((a, b) => Math.abs(a.beat - w.beat) - Math.abs(b.beat - w.beat))[0]
+
+                      return (
+                        <div key={w.id}
+                          onClick={() => onSelectWord?.(w.id)}
+                          style={{
+                            position: 'absolute',
+                            left: `${Math.min(pct, 94)}%`,
+                            transform: 'translateX(-50%)',
+                            top: 0, cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                          }}>
+                          {/* Dot — căn giữa theo từ */}
+                          <div style={{
+                            width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                            background: isStrong ? C.amber : C.indigo,
+                          }} />
+                          {/* Chord */}
+                          <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, height: 13, lineHeight: '13px', whiteSpace: 'nowrap' }}>
+                            {chord?.name ?? ''}
+                          </div>
+                          {/* Từ */}
+                          <div style={{
+                            padding: '2px 6px', borderRadius: 5, fontSize: 12,
+                            whiteSpace: 'nowrap',
+                            background: isSelected ? C.indigo : isMatched ? C.surface2 : '#2A1212',
+                            color: isSelected ? '#fff' : isMatched ? C.text : C.red,
+                            border: `1px solid ${isSelected ? C.indigo : isMatched ? C.border : C.red + '44'}`,
+                          }}>
+                            {w.text}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* Phách trống không có từ — chỉ hiện dot */}
+                    {Array.from({ length: timeSignature }, (_, b) => {
+                      const beat = b + 1
+                      const hasWord = barWords.some(w => Math.abs(w.beat - beat) < 0.5)
+                      if (hasWord) return null
+                      const pct = (b / timeSignature) * 100
+                      return (
+                        <div key={`empty-${b}`} style={{ position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)', top: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div style={{ width: 9, height: 9, borderRadius: '50%', background: 'transparent', border: `1.5px solid ${b === 0 ? C.amber + '60' : C.indigo + '40'}` }} />
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
