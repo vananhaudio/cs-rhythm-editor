@@ -780,11 +780,24 @@ export default function CourseEditorContent() {
                   </div>
                 )}
 
+
+                {fType === 'quiz' && (
+                  <div>
+                    <Label>JSON Quiz</Label>
+                    <textarea
+                      value={fContent}
+                      onChange={e => setFContent(e.target.value)}
+                      placeholder={'Dán JSON quiz vào đây...\n{\n  "quiz_title": "...",\n  "questions": [...]\n}'}
+                      rows={12}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.text1, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, background: C.surface }}
+                    />
+                    {fContent && (() => { try { JSON.parse(fContent); return <div style={{ fontSize: 11, color: '#16a34a', marginTop: 4 }}>✓ JSON hợp lệ</div> } catch { return <div style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>✗ JSON không hợp lệ</div> } })()}
+                  </div>
+                )}
+
                 <div>
-                  <Label>Nội dung chi tiết</Label>
-                  <RichEditor value={fContent} onChange={setFContent} />
-                  <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>Hiển thị sau video cho học viên.</div>
-                </div>
+  <Label>Nội dung chi tiết</Label>
+  {fType !== 'quiz' && <RichEditor value={fContent} onChange={setFContent} />}
 
                 <div>
                   <Label>Công cụ luyện tập</Label>
@@ -805,7 +818,6 @@ export default function CourseEditorContent() {
                   </Btn>
                 </div>
               </div>
-            )}
 
             {/* Preview panel */}
             {rightMode === 'preview' && previewLesson && (
