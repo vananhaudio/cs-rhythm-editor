@@ -512,6 +512,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
   const [alreadyDone, setAlreadyDone] = useState(false)
   const [prevResult, setPrevResult] = useState<QuizResult | null>(null)
 
+  if (!quizData || !quizData.questions) return <div style={{padding:24,color:"#dc2626"}}>JSON quiz không hợp lệ hoặc chưa có dữ liệu.</div>
   const qs = quizData.questions
   const q = qs[current]
   const passingScore = quizData.passing_score ?? 70
