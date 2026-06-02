@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
+import { QuizViewer } from './components/QuizViewer'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -241,7 +242,13 @@ export default function LessonViewerPage() {
                 />
               </div>
             )}
-
+{active.lesson_type === 'quiz' && (
+              <QuizViewer
+                lessonId={active.id}
+                studentId={""}
+                quizData={(() => { try { return typeof active.content === 'string' ? JSON.parse(active.content) : active.content } catch { return null } })()}
+              />
+            )}
             {/* Content */}
             {active.content && (
               <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
