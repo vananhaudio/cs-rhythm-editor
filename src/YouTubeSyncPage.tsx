@@ -142,20 +142,27 @@ export default function YouTubeSyncPage() {
   const onSelectSong = useCallback((song: RhythmSong) => {
     const sd = song as unknown as Record<string, unknown>;
 
-    // Chords và lyrics có thể nằm trực tiếp trong song hoặc trong song_data
-    const rawChords = (song.chords || sd.chords || []) as unknown as Array<Record<string,unknown>>;
-    const rawLyrics = (song.lyrics || sd.lyrics || []) as unknown as Array<Record<string,unknown>>;
+    // song_data có thể là JSON v2.1 (tick) hoặc cũ (time float)
+    // Ưu tiên: song_data fields > song fields
+    const rawSong = sd as Record<string,unknown>;
+    const rawChords = (rawSong.chords || song.chords || []) as unknown as Array<Record<string,unknown>>;
+    const rawLyrics = (rawSong.lyrics || song.lyrics || []) as unknown as Array<Record<string,unknown>>;
 
-    // Normalize — đảm bảo đúng field name
+    // Lấy tempo + ppq từ song_data trước (JSON v2.1 lưu ở đây)
+    const tempo  = (rawSong.tempo  || song.tempo  || 120) as number;
+    const ppq    = (rawSong.ppq    || 480) as number;
+    const tickToSec = (tick: number) => tick * 60 / (tempo * ppq);
+
+    // Normalize — nếu có tick thì convert, không thì dùng time
     const chords: ChordEvent[] = rawChords.map(c => ({
       id: (c.id as string) || String(Math.random()),
-      time: (c.time as number) || 0,
+      time: c.tick != null ? tickToSec(c.tick as number) : (c.time as number) || 0,
       name: (c.name as string) || (c.chord as string) || '',
     })).filter(c => c.name).sort((a,b) => a.time - b.time);
 
     const lyrics: LyricEvent[] = rawLyrics.map(l => ({
       id: (l.id as string) || String(Math.random()),
-      time: (l.time as number) || 0,
+      time: l.tick != null ? tickToSec(l.tick as number) : (l.time as number) || 0,
       text: (l.text as string) || (l.word as string) || '',
     })).filter(l => l.text).sort((a,b) => a.time - b.time);
 
@@ -163,7 +170,7 @@ export default function YouTubeSyncPage() {
       title: song.title || 'Untitled',
       artist: song.artist,
       tone: song.tone,
-      tempo: song.tempo,
+      tempo: (rawSong.tempo || song.tempo) as number | undefined,
       timeSignature: song.timeSignature,
       totalBars: song.totalBars,
       duration: (sd.duration as number) || undefined,

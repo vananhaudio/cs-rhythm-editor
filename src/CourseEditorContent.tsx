@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
+import { QuizViewer } from './components/QuizViewer'
 import RichEditor from './RichEditor'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -125,7 +126,13 @@ function LessonPreview({ lesson }: { lesson: Lesson }) {
             <iframe src={lesson.content_url} style={{ width: '100%', height: 400, border: 'none', display: 'block' }} />
           </div>
         )}
-        {lesson.content && (
+        {lesson.lesson_type === 'quiz' && lesson.content && (() => {
+          try {
+            const qd = typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content
+            return <QuizViewer lessonId={lesson.id} studentId={""} quizData={qd} />
+          } catch { return <div style={{color:'#dc2626',padding:16}}>JSON quiz không hợp lệ</div> }
+        })()}
+        {lesson.lesson_type !== 'quiz' && lesson.content && (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>📝 Nội dung bài học</div>
             <div className="rich-preview" style={{ fontSize: 14, color: C.text2, lineHeight: 1.8 }} dangerouslySetInnerHTML={{ __html: lesson.content }} />
