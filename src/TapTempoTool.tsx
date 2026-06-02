@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
 
+const YT_API_KEY = 'AIzaSyA6kg3G2CVZ7b_x8IAlkZJCOa4AJHyWHms'
+
+interface YTResult {
+  id: string
+  title: string
+  channel: string
+  thumbnail: string
+}
+
 const L = {
   bg:      '#0D0F14',
   surface: '#141720',
@@ -42,9 +51,42 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
   const [artist, setArtist]       = useState('')
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
+  const [query, setQuery]         = useState('')
+  const [results, setResults]     = useState<YTResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
 
   const tapTimesRef = useRef<number[]>([])
   const tapTORef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const searchYouTube = async (q: string) => {
+    if (!q.trim()) return
+    setSearching(true)
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&q=${encodeURIComponent(q)}&key=${YT_API_KEY}`
+      )
+      const data = await res.json()
+      setResults((data.items ?? []).map((item: any) => ({
+        id:        item.id.videoId,
+        title:     item.snippet.title,
+        channel:   item.snippet.channelTitle,
+        thumbnail: item.snippet.thumbnails.medium?.url ?? item.snippet.thumbnails.default?.url,
+      })))
+    } catch (e) {
+      console.error(e)
+    }
+    setSearching(false)
+  }
+
+  const selectVideo = (r: YTResult) => {
+    setVideoId(r.id)
+    setUrl(`https://youtube.com/watch?v=${r.id}`)
+    setTitle(r.title)
+    setResults([])
+    setQuery('')
+    setShowSearch(false)
+  }
 
   useEffect(() => {
     const id = extractVideoId(url.trim())
@@ -117,17 +159,55 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
 
-        {/* URL input */}
+        {/* Search / URL input */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: L.t2, marginBottom: 8 }}>Link YouTube</div>
-          <input
-            value={url}
-            onChange={e => setUrl(e.target.value)}
-            placeholder="https://youtube.com/watch?v=..."
-            style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${videoId ? L.p1 : L.border}`, background: L.surface, color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none' }}
-          />
-          {url && !videoId && (
-            <div style={{ fontSize: 11, color: '#F87171', marginTop: 4 }}>⚠ Link không hợp lệ</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <button onClick={() => setShowSearch(false)}
+              style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${!showSearch ? L.p1 : L.border}`, background: !showSearch ? L.p2 : 'none', color: !showSearch ? L.p1 : L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              🔗 Dán link
+            </button>
+            <button onClick={() => setShowSearch(true)}
+              style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${showSearch ? L.p1 : L.border}`, background: showSearch ? L.p2 : 'none', color: showSearch ? L.p1 : L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              🔍 Tìm kiếm
+            </button>
+          </div>
+
+          {!showSearch ? (
+            <>
+              <input value={url} onChange={e => setUrl(e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${videoId ? L.p1 : L.border}`, background: L.surface, color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+              {url && !videoId && <div style={{ fontSize: 11, color: '#F87171', marginTop: 4 }}>⚠ Link không hợp lệ</div>}
+            </>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={query} onChange={e => setQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') searchYouTube(query) }}
+                  placeholder="Tên bài hát, nghệ sĩ..."
+                  autoFocus
+                  style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, background: L.surface, color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+                <button onClick={() => searchYouTube(query)} disabled={searching || !query.trim()}
+                  style={{ padding: '12px 16px', borderRadius: 12, border: 'none', background: L.p1, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: searching ? 0.6 : 1, flexShrink: 0 }}>
+                  {searching ? '...' : '🔍'}
+                </button>
+              </div>
+              {/* Kết quả search */}
+              {results.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+                  {results.map(r => (
+                    <div key={r.id} onClick={() => selectVideo(r)}
+                      style={{ display: 'flex', gap: 10, padding: '10px', borderRadius: 12, background: L.surface, border: `1px solid ${L.border}`, cursor: 'pointer', alignItems: 'center' }}>
+                      <img src={r.thumbnail} alt="" style={{ width: 80, height: 45, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: L.t1, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{r.title}</div>
+                        <div style={{ fontSize: 11, color: L.t3, marginTop: 3 }}>{r.channel}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
