@@ -779,10 +779,20 @@ export default function CourseEditorContent() {
                     )}
                   </div>
                 )}
-
+{fType === 'quiz' && (
+                  <div>
+                    <Label>JSON Quiz</Label>
+                    <textarea
+                      value={fContent}
+                      onChange={e => setFContent(e.target.value)}
+                      rows={12}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.text1, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical', background: C.surface }}
+                    />
+                  </div>
+                )}
                 <div>
                   <Label>Nội dung chi tiết</Label>
-                  <RichEditor value={fContent} onChange={setFContent} />
+                  {fType !== 'quiz' && <RichEditor value={fContent} onChange={setFContent} />}
                   <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>Hiển thị sau video cho học viên.</div>
                 </div>
 
