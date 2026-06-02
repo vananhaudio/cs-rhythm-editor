@@ -246,8 +246,8 @@ export default function ImportPage({ onClose }: Props) {
                 style={{ ...S.inp, flex: 1, minWidth: 200, height: 36 }} />
             </div>
 
-            {/* LyricsView full width */}
-            <div style={{ flex: 1, minHeight: 0, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            {/* LyricsView — 90% width, căn giữa */}
+            <div style={{ flex: 1, minHeight: 0, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden', margin: '0 5%' }}>
               <LyricsView
                 metadata={meta}
                 words={words}
