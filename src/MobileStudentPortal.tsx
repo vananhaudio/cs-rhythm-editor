@@ -741,6 +741,27 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {displayTools.map((t) => {
+                const unlocked = isTierUnlocked(t.tier)
+                const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
+                return (
+                  <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name, t.id) }}
+                    style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
+                    {!unlocked && (
+                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                        <span style={{ fontSize: 10, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
+                      </div>
+                    )}
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ── SỐNG ────────────────────────────────────────────────────── */}
         {tab === 'song' && (
           <div style={{ padding: '52px 16px 16px' }}>
