@@ -91,7 +91,13 @@ function CourseLogo({ course, size = 44, radius = 12, bg }: { course: { type: st
 
 // ── Tool route map — dẫn đến đúng route theo id ──
 const TOOL_ROUTES: Record<string, string> = {
-  tap:           '/tap',
+  tap:           '/tempo',
+  'tap-tempo':   '/tempo',
+  'tap-beat':    '/tap',
+  'tap-beam':    '/tap',
+  'tap-sing':    '/tap',
+  'tap-strum':   '/tap',
+  'scroll-kara': '/tap',
   metronome:     '/tap',
   backing_track: '/tap',
   chord:         '/chords',
@@ -106,7 +112,8 @@ const TABS = [
   { id: 'song' as Tab, icon: '✨', label: 'Sống' },
 ]
 const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; route: string }> = {
-  tap:           { label: 'Tap nhịp',     icon: '🥁', color: L.p1,      route: '/tap'    },
+  tap:           { label: 'Tap nhịp',     icon: '🥁', color: L.p1,      route: '/tempo'  },
+  'tap-tempo':   { label: 'Tap Tempo',    icon: '🥁', color: L.p1,      route: '/tempo'  },
   metronome:     { label: 'Metronome',    icon: '🎵', color: L.green,   route: '/tap'    },
   backing_track: { label: 'Backing Track',icon: '🎧', color: L.gold,    route: '/tap'    },
   submit_video:  { label: 'Nộp video',    icon: '📹', color: L.a1,      route: '/tap'    },
@@ -276,7 +283,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const name = uname(me)
 
   const displayTools = dbTools.length > 0 ? dbTools : [
-    { id:'tap',     icon:'🥁', name:'Tap nhịp',     description:'Luyện cảm nhịp điệu',  category:'Luyện tập', route:'/tap',    tier:'free', enabled:true },
+    { id:'tap-tempo', icon:'🥁', name:'Tap Tempo',   description:'Tìm nhịp bài hát yêu thích', category:'Luyện tập', route:'/tempo', tier:'free', enabled:true },
     { id:'metro',   icon:'🎵', name:'Metronome',     description:'Đếm nhịp chính xác',   category:'Luyện tập', route:'/tap',    tier:'free', enabled:true },
     { id:'chord',   icon:'🎸', name:'Luyện hợp âm', description:'Xem hợp âm trực quan', category:'Luyện tập', route:'/chords', tier:'free', enabled:true },
     { id:'submit',  icon:'📹', name:'Nộp video',     description:'Quay và gửi bài tập',  category:'Luyện tập', route:'/tap',    tier:'basic', enabled:true },
@@ -667,7 +674,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       {step.current && <span style={{ fontSize: 11, background: L.p2, color: L.p1, borderRadius: 8, padding: '3px 8px', fontWeight: 700 }}>Bắt đầu</span>}
                     </div>
                   ))}
-                  <button onClick={() => openTool('/tap', 'Tap nhịp', 'tap')}
+                  <button onClick={() => openTool('/tempo', 'Tap Tempo', 'tap-tempo')}
                     style={{ width: '100%', marginTop: 16, background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(67,56,202,.3)' }}>
                     🥁 Bắt đầu Tap tempo →
                   </button>
@@ -728,7 +735,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                     )
                   })}
                   {/* Thêm bài mới */}
-                  <button onClick={() => openTool('/tap', 'Tap nhịp', 'tap')}
+                  <button onClick={() => openTool('/tempo', 'Tap Tempo', 'tap-tempo')}
                     style={{ width: '100%', background: L.surface2, border: `1.5px dashed ${L.border}`, borderRadius: 14, padding: '13px', fontSize: 13, fontWeight: 600, color: L.t2, cursor: 'pointer', fontFamily: 'inherit' }}>
                     + Thêm bài hát mới
                   </button>
