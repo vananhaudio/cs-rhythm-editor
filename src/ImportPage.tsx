@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { supabase } from './supabase'
-import SheetMusic from './components/SheetMusic'
-import LyricsPreview from './components/LyricsPreview'
+import LyricsView from './components/LyricsView'
 import { parseMusicXML } from './parsers/musicxml'
 import { parseGuitarPro } from './parsers/guitarPro'
 import { parseLyrics, resolveChordTimings } from './parsers/lyrics'
@@ -32,7 +31,6 @@ export default function ImportPage({ onClose }: Props) {
   const [chords, setChords]     = useState<ChordData[]>([])
   const [mappings, setMappings] = useState<MappingData[]>([])
   const [meta, setMeta]         = useState<ProjectMetadata>(defaultMeta)
-  const [sheetSource, setSheetSource] = useState<{ type: 'gp'; buffer: ArrayBuffer } | { type: 'xml'; text: string } | null>(null)
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null)
   const [lyricsText, setLyricsText] = useState('')
   const [youtubeUrl, setYoutubeUrl] = useState('')
@@ -54,11 +52,9 @@ export default function ImportPage({ onClose }: Props) {
       if (isGP) {
         const buf = await file.arrayBuffer()
         result = await parseGuitarPro(buf)
-        setSheetSource({ type: 'gp', buffer: buf })
       } else {
         const text = await file.text()
         result = parseMusicXML(text)
-        setSheetSource({ type: 'xml', text })
       }
       setNotes(result.notes)
       setChords(result.chords)
@@ -234,47 +230,16 @@ export default function ImportPage({ onClose }: Props) {
                 style={{ ...S.inp, flex: 1, minWidth: 200, height: 36 }} />
             </div>
 
-            {/* 2-column layout */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, flex: 1, minHeight: 0, background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-              {/* Trái — Sheet nhạc */}
-              <div style={{ borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8, background: C.surface2, flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: C.text2, textTransform: 'uppercase', letterSpacing: '.06em' }}>🎼 Sheet nhạc</span>
-                  <span style={{ fontSize: 10, background: '#0D2A1F', color: C.green, borderRadius: 6, padding: '2px 8px', marginLeft: 'auto' }}>{notes.length} nốt</span>
-                </div>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <SheetMusic
-                    source={sheetSource}
-                    notes={notes}
-                    words={words}
-                    chords={chords}
-                    mappings={mappings}
-                    selectedWordId={selectedWordId}
-                    isVisible={step === 'preview'}
-                  />
-                </div>
-              </div>
-
-              {/* Phải — Lời theo nhịp */}
-              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8, background: C.surface2, flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: C.text2, textTransform: 'uppercase', letterSpacing: '.06em' }}>📝 Lời theo nhịp</span>
-                  <span style={{ fontSize: 10, background: '#0D2A1F', color: C.green, borderRadius: 6, padding: '2px 8px', marginLeft: 'auto' }}>
-                    {mappings.length}/{words.length} từ
-                  </span>
-                </div>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <LyricsPreview
-                    metadata={meta}
-                    notes={notes}
-                    words={words}
-                    chords={chords}
-                    mappings={mappings}
-                    selectedWordId={selectedWordId}
-                    onSelectWord={setSelectedWordId}
-                  />
-                </div>
-              </div>
+            {/* LyricsView full width */}
+            <div style={{ flex: 1, minHeight: 0, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+              <LyricsView
+                metadata={meta}
+                words={words}
+                chords={chords}
+                mappings={mappings}
+                selectedWordId={selectedWordId}
+                onSelectWord={setSelectedWordId}
+              />
             </div>
 
             {error && <div style={{ marginTop: 10, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '10px 14px', color: C.red, fontSize: 12 }}>{error}</div>}
