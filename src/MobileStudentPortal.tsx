@@ -143,6 +143,28 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const tapTimes                  = useRef<number[]>([])
   const tapTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // ── XP & Artist Level ──
+  const ARTIST_LEVELS = [
+    { label: '🌱 Mầm non',    min: 0,      max: 1000,  color: '#16A34A' },
+    { label: '📚 Học việc',   min: 1000,   max: 5000,  color: '#0891B2' },
+    { label: '🎤 Biểu diễn',  min: 5000,   max: 15000, color: '#7C3AED' },
+    { label: '🎸 Nghệ sĩ',    min: 15000,  max: 40000, color: '#D97706' },
+    { label: '👑 Bậc thầy',   min: 40000,  max: 999999,color: '#DC2626' },
+  ]
+  const XP_SOURCE: Record<string, number> = {
+    practice:      1,    // per minute
+    lesson:        50,
+    song_tempo:    100,
+    song_timing:   200,
+    song_approved: 300,
+    song_mastered: 500,
+    streak:        200,
+  }
+  const [totalXP, setTotalXP]     = useState(0)
+  const [weekXP, setWeekXP]       = useState(0)
+  const [lastWeekXP, setLastWeekXP] = useState(0)
+  const [classRank, setClassRank] = useState<{ rank: number; total: number } | null>(null)
+
   // ── Practice tracker ──
   const EXERCISES = [
     { id: 'finger',    name: 'Luyện ngón',  icon: '🖐', color: '#7C3AED' },
@@ -180,6 +202,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     if (timerRef.current) clearInterval(timerRef.current)
     const minutes = Math.max(1, Math.round((Date.now() - timerStart) / 60000))
     await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: activeTimer, minutes })
+    // Ghi XP — 1 XP/phút
+    await supabase.from('student_xp_log').insert({ student_id: student.id, xp: minutes, source: 'practice', ref_id: activeTimer })
+    setTotalXP(prev => prev + minutes)
+    setWeekXP(prev  => prev + minutes)
     setPracticeTotals(prev => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
     setPracticeToday(prev  => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
     setActiveTimer(null); setTimerStart(null); setTimerSeconds(0)
@@ -214,6 +240,28 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
       .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
     // Load progress
+    // Load XP
+    const weekAgo     = new Date(Date.now() - 7  * 24 * 3600 * 1000).toISOString()
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString()
+    supabase.from('student_xp_log').select('xp, source, created_at').eq('student_id', student.id)
+      .then(({ data }) => {
+        if (!data) return
+        const total   = data.reduce((a, r) => a + r.xp, 0)
+        const week    = data.filter(r => r.created_at >= weekAgo).reduce((a, r) => a + r.xp, 0)
+        const lweek   = data.filter(r => r.created_at >= twoWeeksAgo && r.created_at < weekAgo).reduce((a, r) => a + r.xp, 0)
+        setTotalXP(total); setWeekXP(week); setLastWeekXP(lweek)
+      })
+    // Class rank
+    supabase.from('student_xp_log').select('student_id, xp')
+      .then(({ data: all }) => {
+        if (!all) return
+        const byStudent: Record<string, number> = {}
+        all.forEach((r: any) => { byStudent[r.student_id] = (byStudent[r.student_id] ?? 0) + r.xp })
+        const myXP   = byStudent[student.id] ?? 0
+        const better = Object.values(byStudent).filter(x => x > myXP).length
+        setClassRank({ rank: better + 1, total: Math.max(Object.keys(byStudent).length, 1) })
+      })
+
     // Load practice data
     const now2 = new Date()
     const todayStart = new Date(now2.getFullYear(), now2.getMonth(), now2.getDate()).toISOString()
@@ -408,7 +456,62 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Tiếp tục học */}
+              {/* Artist Level Card */}
+            {(() => {
+              const level    = ARTIST_LEVELS.find(l => totalXP >= l.min && totalXP < l.max) ?? ARTIST_LEVELS[0]
+              const nextLevel= ARTIST_LEVELS[ARTIST_LEVELS.indexOf(level) + 1]
+              const pct      = nextLevel ? Math.round(((totalXP - level.min) / (nextLevel.min - level.min)) * 100) : 100
+              const weekDiff = lastWeekXP > 0 ? Math.round(((weekXP - lastWeekXP) / lastWeekXP) * 100) : null
+              const rankPct  = classRank ? Math.round((1 - classRank.rank / classRank.total) * 100) : null
+              return (
+                <div style={{ background: L.surface, borderRadius: 20, padding: '18px', boxShadow: L.shadowLg, border: `1.5px solid ${level.color}22` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: L.t3, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.06em' }}>Cấp độ nghệ sĩ</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: level.color }}>{level.label}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: level.color }}>{totalXP.toLocaleString()}</div>
+                      <div style={{ fontSize: 10, color: L.t3 }}>XP tổng</div>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ height: 8, borderRadius: 99, background: L.surface2, overflow: 'hidden', marginBottom: 5 }}>
+                      <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${level.color}, ${level.color}99)`, width: `${pct}%`, transition: 'width .5s' }} />
+                    </div>
+                    {nextLevel && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: L.t3 }}>
+                        <span>{level.min.toLocaleString()} XP</span>
+                        <span style={{ color: level.color, fontWeight: 600 }}>{pct}% → {nextLevel.label}</span>
+                        <span>{nextLevel.min.toLocaleString()} XP</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Stats row */}
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: '10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: L.t1 }}>{weekXP.toLocaleString()}</div>
+                      <div style={{ fontSize: 10, color: L.t3 }}>XP tuần này</div>
+                      {weekDiff !== null && (
+                        <div style={{ fontSize: 10, fontWeight: 700, color: weekDiff >= 0 ? L.green : '#EF4444', marginTop: 2 }}>
+                          {weekDiff >= 0 ? '↑' : '↓'}{Math.abs(weekDiff)}% vs tuần trước
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: '10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: L.t1 }}>
+                        {rankPct !== null ? `Top ${100 - rankPct}%` : '—'}
+                      </div>
+                      <div style={{ fontSize: 10, color: L.t3 }}>Xếp hạng lớp</div>
+                      {classRank && <div style={{ fontSize: 10, color: L.t2, marginTop: 2 }}>#{classRank.rank}/{classRank.total}</div>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Tiếp tục học */}
               {mainCourse && (
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Tiếp tục học</div>
