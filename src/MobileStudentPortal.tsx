@@ -239,19 +239,29 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const handleAddSong = async () => {
     if (!newSongTitle.trim()) return
     setAddingSong(true)
-    await supabase.from('student_songs').insert({
+    console.log('[AddSong] student.id:', student.id, 'title:', newSongTitle)
+    const steps = [
+      { id: 'tempo',  done: false },
+      { id: 'timing', done: false },
+      { id: 'nhip',   done: false },
+      { id: 'hat',    done: false },
+      { id: 'dan',    done: false },
+    ]
+    const { error: insertError } = await supabase.from('student_songs').insert({
       student_id: student.id,
       title: newSongTitle.trim(),
       youtube_url: newSongYoutube.trim() || null,
       status: 'tempo',
-      journey: JOURNEY_STEPS.map(s => ({ id: s.id, done: false })),
+      journey: steps,
     })
-    const { data } = await supabase.from('student_songs')
+    console.log('[AddSong] insert error:', insertError)
+    const { data, error: fetchError } = await supabase.from('student_songs')
       .select('id,title,artist,tempo,status,created_at,journey')
       .eq('student_id', student.id).order('created_at', { ascending: false })
+    console.log('[AddSong] fetched:', data?.length, 'error:', fetchError)
     setMySongs((data ?? []).map((s: any) => ({
       ...s,
-      journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map(step => ({ id: step.id, done: false }))
+      journey: s.journey?.length ? s.journey : steps
     })))
     // Reset form TRƯỚC — để carousel hiện ngay sau khi mySongs được update
     setShowConfirmSave(false)
