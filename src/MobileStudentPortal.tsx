@@ -271,7 +271,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   // ── My Songs ──
-  const [mySongs, setMySongs] = useState<{ id: string; title: string; artist: string | null; tempo: number | null; status: string; created_at: string; journey: { id: string; done: boolean }[] }[]>([])
+  const [mySongs, setMySongs] = useState<{ id: string; title: string; artist: string | null; tempo: number | null; status: string; created_at: string; journey: { id: string; done: boolean }[]; youtube_url?: string | null }[]>([])
 
   // ── Progress tracking ──
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
@@ -372,7 +372,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       })
 
     supabase.from('student_songs')
-      .select('id,title,artist,tempo,status,created_at,journey')
+      .select('id,title,artist,tempo,status,created_at,journey,youtube_url')
       .eq('student_id', student.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => setMySongs((data ?? []).map((s: any) => ({
@@ -1057,7 +1057,20 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       {/* Buttons */}
                       <div style={{ display: 'flex', gap: 8 }}>
                         {curStep.route ? (
-                          <button onClick={() => openTool(curStep.route!, curStep.label, curStep.id)}
+                          <button onClick={() => {
+                            let route = curStep.route!
+                            if (curStep.id === 'tempo' && song.title) {
+                              const params = new URLSearchParams({ title: song.title })
+                              if (song.youtube_url) params.set('youtube', song.youtube_url)
+                              route = route + '?' + params.toString()
+                            }
+                            if (curStep.id === 'nhip' && song.title) {
+                              const params = new URLSearchParams({ title: song.title })
+                              if (song.youtube_url) params.set('youtube', song.youtube_url)
+                              route = route + '?' + params.toString()
+                            }
+                            openTool(route, curStep.label, curStep.id)
+                          }}
                             style={{ flex: 2, background: `linear-gradient(135deg, ${curStep.color}, ${curStep.color}99)`, color: '#fff', border: 'none', borderRadius: 12, padding: '11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                             {curStep.icon} Tiếp tục {curStep.label}
                           </button>
