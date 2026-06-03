@@ -199,6 +199,10 @@ export default function CourseEditorContent() {
   const [courseNameDraft, setCourseNameDraft]     = useState('')
   const [showLogoPicker, setShowLogoPicker] = useState(false)
   const [uploadingLogo, setUploadingLogo]   = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [importing, setImporting]   = useState(false)
+  const [importMsg, setImportMsg]   = useState('')
   const logoFileRef = useRef<HTMLInputElement>(null)
   const [showNewCourse, setShowNewCourse] = useState(false)
   const [ncName,  setNcName]  = useState('')
@@ -331,6 +335,66 @@ export default function CourseEditorContent() {
     if (!selectedCourse || !newModuleName.trim()) return
     const { data } = await supabase.from('edu_modules').insert({ course_id: selectedCourse.id, name: newModuleName.trim(), order_index: modules.length }).select('*').single()
     if (data) { setModules(prev => [...prev, data]); setNewModuleName(''); setAddingModule(false) }
+  }
+
+  // Phân tích dàn bài: dòng "#" = chương; dòng khác = bài ("Tên | url" tuỳ chọn)
+  const parseOutline = (text: string) => {
+    const mods: { name: string; lessons: { title: string; lesson_type: string; content_url: string | null }[] }[] = []
+    let cur: typeof mods[0] | null = null
+    for (const raw of text.split('\n')) {
+      const line = raw.trim()
+      if (!line) continue
+      if (line.startsWith('#')) {
+        cur = { name: line.replace(/^#+\s*/, '').trim() || `Chương ${mods.length + 1}`, lessons: [] }
+        mods.push(cur); continue
+      }
+      if (!cur) { cur = { name: 'Chương 1', lessons: [] }; mods.push(cur) }
+      const parts = line.replace(/^[-*•]\s*/, '').split('|').map(p => p.trim())
+      const title = parts[0] || '(Chưa đặt tên)'
+      const url = parts.slice(1).find(p => /^https?:\/\//i.test(p)) ?? null
+      const explicitType = parts.slice(1).find(p => LESSON_TYPES.some(t => t.id === p))
+      let lesson_type = explicitType ?? 'text'
+      if (!explicitType && url) lesson_type = getYouTubeId(url) ? 'video' : 'link'
+      cur.lessons.push({ title, lesson_type, content_url: url })
+    }
+    return mods
+  }
+
+  const bulkImport = async () => {
+    if (!selectedCourse || !importText.trim()) return
+    const parsed = parseOutline(importText)
+    if (parsed.length === 0) { setImportMsg('Không nhận diện được nội dung.'); return }
+    const totalLessons = parsed.reduce((a, m) => a + m.lessons.length, 0)
+    setImporting(true); setImportMsg('')
+    try {
+      let modOrder = modules.length
+      const newMods: Module[] = []
+      const newLsns: Lesson[] = []
+      for (const m of parsed) {
+        const { data: mod, error: me } = await supabase.from('edu_modules')
+          .insert({ course_id: selectedCourse.id, name: m.name, order_index: modOrder++ })
+          .select('*').single()
+        if (me || !mod) throw new Error(me?.message ?? 'Lỗi tạo chương')
+        newMods.push(mod)
+        if (m.lessons.length) {
+          const rows = m.lessons.map((l, i) => ({
+            module_id: mod.id, title: l.title, lesson_type: l.lesson_type,
+            content_url: l.content_url, order_index: i, tools: [],
+          }))
+          const { data: lsns, error: le } = await supabase.from('edu_course_lessons').insert(rows).select('*')
+          if (le) throw new Error(le.message)
+          newLsns.push(...(lsns ?? []).map((l: Lesson & { tools?: unknown }) => ({ ...l, tools: [] })))
+        }
+      }
+      setModules(prev => [...prev, ...newMods])
+      setLessons(prev => [...prev, ...newLsns])
+      setImportMsg(`✓ Đã tạo ${newMods.length} chương, ${totalLessons} bài.`)
+      setImportText('')
+      setTimeout(() => { setShowImport(false); setImportMsg('') }, 1400)
+    } catch (e: any) {
+      setImportMsg('Lỗi: ' + (e?.message ?? e))
+    }
+    setImporting(false)
   }
 
   const deleteLesson = async (id: string) => {
@@ -636,6 +700,10 @@ export default function CourseEditorContent() {
                   + Thêm tuần / chương
                 </button>
               )}
+              <button onClick={() => setShowImport(true)}
+                style={{ width: '100%', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                📥 Nhập hàng loạt
+              </button>
             </div>
           </>
         )}
@@ -843,6 +911,45 @@ export default function CourseEditorContent() {
               style={{ marginTop: 16, width: '100%', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: 8, color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
               Huỷ
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk import modal ── */}
+      {showImport && (
+        <div onClick={() => !importing && setShowImport(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: C.surface, borderRadius: 12, padding: 22, width: '100%', maxWidth: 560, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 12px 48px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.text1, marginBottom: 4 }}>📥 Nhập bài giảng hàng loạt</div>
+            <div style={{ fontSize: 12, color: C.text3, marginBottom: 14, lineHeight: 1.6 }}>
+              Dán dàn bài vào ô dưới. Dòng bắt đầu bằng <b>#</b> là chương, các dòng còn lại là bài học.
+              Mỗi bài có thể kèm link: <b>Tên bài | link YouTube</b>. Tự nhận diện video / link.
+            </div>
+            <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 11.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+{`# Chương 1: Nhập môn
+Giới thiệu khoá học | https://youtu.be/abc123
+Cầm đàn đúng tư thế | https://youtu.be/def456
+# Chương 2: Hợp âm cơ bản
+Hợp âm Em
+Hợp âm Am | https://youtu.be/ghi789`}
+            </div>
+            <textarea value={importText} onChange={e => setImportText(e.target.value)}
+              placeholder="Dán dàn bài của bạn vào đây..."
+              style={{ width: '100%', minHeight: 200, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 13, color: C.text1, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }} />
+            {importMsg && (
+              <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600, color: importMsg.startsWith('✓') ? '#16A34A' : '#DC2626' }}>{importMsg}</div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={bulkImport} disabled={importing || !importText.trim()}
+                style={{ flex: 1, background: importing || !importText.trim() ? C.border : '#4F46E5', color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 700, cursor: importing || !importText.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                {importing ? 'Đang nhập...' : 'Nhập vào khoá học'}
+              </button>
+              <button onClick={() => setShowImport(false)} disabled={importing}
+                style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}
