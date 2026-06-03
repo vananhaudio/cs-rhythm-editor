@@ -251,9 +251,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       ...s,
       journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map(step => ({ id: step.id, done: false }))
     })))
+    // Reset form TRƯỚC — để carousel hiện ngay sau khi mySongs được update
     setShowAddSong(false); setAddStep('input')
     setNewSongTitle(''); setNewSongYoutube('')
     setYtSelected(null); setYtQuery(''); setYtResults([])
+    setCarouselIdx(0)
     setAddingSong(false)
   }
 
