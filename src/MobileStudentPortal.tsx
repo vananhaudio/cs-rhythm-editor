@@ -335,9 +335,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // Bài chỉ mở khi bài trước đã hoàn thành (theo thứ tự toàn bộ lessons)
   const isSequentiallyUnlocked = (lessonId: string) => {
-    const idx = lessons.findIndex(l => l.id === lessonId)
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (!lesson) return true
+    const modLessons = lessons.filter(l => l.module_id === lesson.module_id).sort((a, b) => a.order_index - b.order_index)
+    const idx = modLessons.findIndex(l => l.id === lessonId)
     if (idx <= 0) return true                          // bài đầu luôn mở
-    const prev = lessons[idx - 1]
+    const prev = modLessons[idx - 1]
     return completedIds.has(prev.id)                   // mở nếu bài trước đã ✅
   }
 
@@ -729,7 +732,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               {modules.map(mod => (
                 <div key={mod.id} style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.08em', padding: '0 4px 10px' }}>{mod.name}</div>
-                  {lessons.filter(l => l.module_id === mod.id).map((l) => {
+                  {lessons.filter(l => l.module_id === mod.id).sort((a, b) => a.order_index - b.order_index).map((l) => {
                     const icons: Record<string, string> = { video: '▶️', text: '📄', slide: '🖼', quiz: '❓', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹' }
                     const done       = completedIds.has(l.id)
                     const tierLocked = !isTierUnlocked(l.tier)
