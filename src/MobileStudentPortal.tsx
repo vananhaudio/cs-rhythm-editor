@@ -239,7 +239,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const handleAddSong = async () => {
     if (!newSongTitle.trim()) return
     setAddingSong(true)
-    console.log('[AddSong] student.id:', student.id, 'title:', newSongTitle)
     const steps = [
       { id: 'tempo',  done: false },
       { id: 'timing', done: false },
@@ -247,18 +246,16 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       { id: 'hat',    done: false },
       { id: 'dan',    done: false },
     ]
-    const { error: insertError } = await supabase.from('student_songs').insert({
+    await supabase.from('student_songs').insert({
       student_id: student.id,
       title: newSongTitle.trim(),
       youtube_url: newSongYoutube.trim() || null,
       status: 'tempo',
       journey: steps,
     })
-    console.log('[AddSong] insert error:', insertError)
-    const { data, error: fetchError } = await supabase.from('student_songs')
+    const { data } = await supabase.from('student_songs')
       .select('id,title,artist,tempo,status,created_at,journey')
       .eq('student_id', student.id).order('created_at', { ascending: false })
-    console.log('[AddSong] fetched:', data?.length, 'error:', fetchError)
     setMySongs((data ?? []).map((s: any) => ({
       ...s,
       journey: s.journey?.length ? s.journey : steps
@@ -326,7 +323,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     isTierUnlocked(l.tier) && isSequentiallyUnlocked(l.id)
 
   useEffect(() => {
-    alert('MobilePortal loaded! id=' + student.id)
     supabase.from('edu_enrollments')
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url)')
       .eq('student_id', student.id).eq('is_active', true)
@@ -379,14 +375,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       .select('id,title,artist,tempo,status,created_at,journey')
       .eq('student_id', student.id)
       .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        console.log('[MySongs] data:', data, 'error:', error, 'student_id:', student.id)
-        alert('[MySongs] found: ' + (data?.length ?? 0) + ' songs, error: ' + JSON.stringify(error))
-        setMySongs((data ?? []).map((s: any) => ({
-          ...s,
-          journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map((step: any) => ({ id: step.id, done: false }))
-        })))
-      })
+      .then(({ data }) => setMySongs((data ?? []).map((s: any) => ({
+        ...s,
+        journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map((step: any) => ({ id: step.id, done: false }))
+      }))))
     supabase.from('edu_lesson_progress')
       .select('lesson_id').eq('student_id', student.id)
       .then(({ data }) => {
