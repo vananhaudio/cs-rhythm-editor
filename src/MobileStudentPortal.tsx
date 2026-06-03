@@ -449,7 +449,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           .insert({ student_id: student.id, lesson_id: lessonId, status: 'completed', completed_at: new Date().toISOString() })
     if (error) {
       console.error('Lỗi lưu tiến độ:', error)
-      alert('Không lưu được tiến độ: ' + error.message)
+      alert('Lỗi: ' + JSON.stringify(error))
       setMarkingDone(false)
       return
     }
