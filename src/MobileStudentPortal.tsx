@@ -180,6 +180,39 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [timerSeconds, setTimerSeconds]     = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // ── YouTube Search ──
+  const YT_API_KEY = 'AIzaSyA6kg3G2CVZ7b_x8IAlkZJCOa4AJHyWHms'
+  const [ytQuery, setYtQuery]       = useState('')
+  const [ytResults, setYtResults]   = useState<{ id: string; title: string; channel: string; thumbnail: string }[]>([])
+  const [ytSearching, setYtSearching] = useState(false)
+  const [ytSelected, setYtSelected] = useState<{ id: string; title: string; thumbnail: string } | null>(null)
+
+  const searchYouTube = async (q: string) => {
+    if (!q.trim()) return
+    setYtSearching(true); setYtResults([])
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=6&q=${encodeURIComponent(q)}&key=${YT_API_KEY}`
+      )
+      const data = await res.json()
+      setYtResults((data.items ?? []).map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle,
+        thumbnail: item.snippet.thumbnails.default?.url,
+      })))
+    } catch(e) { console.error(e) }
+    setYtSearching(false)
+  }
+
+  const selectYtVideo = (r: { id: string; title: string; thumbnail: string }) => {
+    setYtSelected(r)
+    setNewSongTitle(r.title)
+    setNewSongYoutube(`https://youtube.com/watch?v=${r.id}`)
+    setYtResults([])
+    setAddStep('preview')
+  }
+
   // ── Journey config — thay đổi ở đây để update toàn app ──
   const JOURNEY_STEPS = [
     { id: 'tempo',  label: 'Tempo',  icon: '🥁', route: '/tempo',        color: '#7C3AED' },
@@ -227,6 +260,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     setAddStep('input')
     setNewSongTitle('')
     setNewSongYoutube('')
+    setYtSelected(null)
+    setYtQuery('')
+    setYtResults([])
     setAddingSong(false)
   }
 
@@ -917,36 +953,45 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               {showAddSong && addStep === 'input' && (
                 <div style={{ background: L.surface, borderRadius: 20, padding: '24px 20px', boxShadow: L.shadow }}>
                   <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 20 }}>➕ Thêm bài hát mới</div>
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, color: L.t2, marginBottom: 6, fontWeight: 600 }}>Tên bài hát</div>
-                    <input
-                      value={newSongTitle}
-                      onChange={e => setNewSongTitle(e.target.value)}
-                      placeholder="Ví dụ: Cỏ Dại, Thành Phố Buồn..."
-                      autoFocus
-                      style={{ width: '100%', boxSizing: 'border-box', background: L.surface2, border: `1.5px solid ${L.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14, color: L.t1, fontFamily: 'inherit', outline: 'none' }}
-                    />
+                  {/* Search box */}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, color: L.t2, marginBottom: 6, fontWeight: 600 }}>Tìm bài hát trên YouTube</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        value={ytQuery}
+                        onChange={e => setYtQuery(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && searchYouTube(ytQuery)}
+                        placeholder="Nhập tên bài hát..."
+                        autoFocus
+                        style={{ flex: 1, background: L.surface2, border: `1.5px solid ${L.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14, color: L.t1, fontFamily: 'inherit', outline: 'none' }}
+                      />
+                      <button onClick={() => searchYouTube(ytQuery)} disabled={ytSearching || !ytQuery.trim()}
+                        style={{ background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 16, cursor: 'pointer', fontFamily: 'inherit', opacity: ytSearching ? 0.6 : 1, flexShrink: 0 }}>
+                        {ytSearching ? '⏳' : '🔍'}
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 12, color: L.t2, marginBottom: 6, fontWeight: 600 }}>Link YouTube (tuỳ chọn)</div>
-                    <input
-                      value={newSongYoutube}
-                      onChange={e => setNewSongYoutube(e.target.value)}
-                      placeholder="https://youtube.com/watch?v=..."
-                      style={{ width: '100%', boxSizing: 'border-box', background: L.surface2, border: `1.5px solid ${L.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14, color: L.t1, fontFamily: 'inherit', outline: 'none' }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={() => setShowAddSong(false)}
-                      style={{ flex: 1, background: L.surface2, color: L.t2, border: 'none', borderRadius: 12, padding: '13px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Huỷ
-                    </button>
-                    <button onClick={() => { if (newSongTitle.trim()) setAddStep('preview') }}
-                      disabled={!newSongTitle.trim()}
-                      style={{ flex: 2, background: newSongTitle.trim() ? `linear-gradient(135deg, ${L.p1}, #6366F1)` : L.surface2, color: newSongTitle.trim() ? '#fff' : L.t3, border: 'none', borderRadius: 12, padding: '13px', fontSize: 14, fontWeight: 700, cursor: newSongTitle.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
-                      Tiếp tục →
-                    </button>
-                  </div>
+
+                  {/* Kết quả */}
+                  {ytResults.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto', marginBottom: 12 }}>
+                      {ytResults.map(r => (
+                        <div key={r.id} onClick={() => selectYtVideo(r)}
+                          style={{ display: 'flex', gap: 10, background: L.surface2, borderRadius: 12, padding: '10px', cursor: 'pointer', border: `1px solid ${L.border}` }}>
+                          {r.thumbnail && <img src={r.thumbnail} alt="" style={{ width: 60, height: 45, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: L.t1, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{r.title}</div>
+                            <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>{r.channel}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button onClick={() => { setShowAddSong(false); setYtResults([]); setYtQuery('') }}
+                    style={{ width: '100%', background: L.surface2, color: L.t2, border: 'none', borderRadius: 12, padding: '12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Huỷ
+                  </button>
                 </div>
               )}
 
@@ -954,10 +999,13 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               {showAddSong && addStep === 'preview' && (
                 <div style={{ background: L.surface, borderRadius: 20, padding: '24px 20px', boxShadow: L.shadow }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                    <div style={{ width: 52, height: 52, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎸</div>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: 16 }}>{newSongTitle}</div>
-                      {newSongYoutube && <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>🔗 YouTube đã thêm</div>}
+                    {ytSelected?.thumbnail
+                      ? <img src={ytSelected.thumbnail} alt="" style={{ width: 64, height: 48, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: 52, height: 52, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎸</div>
+                    }
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.4 }}>{newSongTitle}</div>
+                      {newSongYoutube && <div style={{ fontSize: 11, color: L.green, marginTop: 2 }}>✓ YouTube đã liên kết</div>}
                     </div>
                   </div>
                   <div style={{ fontSize: 12, color: L.t2, marginBottom: 12, fontWeight: 600 }}>Hành trình chinh phục:</div>
@@ -978,7 +1026,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                     </div>
                   ))}
                   <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                    <button onClick={() => setAddStep('input')}
+                    <button onClick={() => { setAddStep('input'); setYtResults([]); setYtSelected(null) }}
                       style={{ flex: 1, background: L.surface2, color: L.t2, border: 'none', borderRadius: 12, padding: '13px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                       ← Sửa
                     </button>
