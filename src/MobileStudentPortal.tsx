@@ -842,7 +842,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             {/* ══ MY SONGS — Luôn ở đầu ══ */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div style={{ fontSize: 16, fontWeight: 700 }}>🎵 My Songs</div>
+                <div style={{ fontSize: 16, fontWeight: 700 }}>🎸 Bài hát đang chinh phục</div>
                 {mySongs.length > 0 && (
                   <span style={{ fontSize: 11, color: L.t3 }}>{mySongs.length} bài</span>
                 )}
