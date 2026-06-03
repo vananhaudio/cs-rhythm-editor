@@ -335,13 +335,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // Bài chỉ mở khi bài trước đã hoàn thành (theo thứ tự toàn bộ lessons)
   const isSequentiallyUnlocked = (lessonId: string) => {
-    const lesson = lessons.find(l => l.id === lessonId)
-    if (!lesson) return true
-    const modLessons = lessons.filter(l => l.module_id === lesson.module_id).sort((a, b) => a.order_index - b.order_index)
-    const idx = modLessons.findIndex(l => l.id === lessonId)
-    if (idx <= 0) return true                          // bài đầu luôn mở
-    const prev = modLessons[idx - 1]
-    return completedIds.has(prev.id)                   // mở nếu bài trước đã ✅
+    // Sắp xếp tất cả bài theo module order_index, rồi order_index trong module
+    const sorted = [...lessons].sort((a, b) => {
+      const ma = modules.find(m => m.id === a.module_id)?.order_index ?? 0
+      const mb = modules.find(m => m.id === b.module_id)?.order_index ?? 0
+      return ma !== mb ? ma - mb : a.order_index - b.order_index
+    })
+    const idx = sorted.findIndex(l => l.id === lessonId)
+    if (idx <= 0) return true
+    return completedIds.has(sorted[idx - 1].id)
   }
 
   const isUnlocked = (l: Lesson) =>
