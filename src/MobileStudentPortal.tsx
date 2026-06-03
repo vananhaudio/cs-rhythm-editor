@@ -333,17 +333,17 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
   const isTierUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
 
-  // Bài chỉ mở khi bài trước đã hoàn thành (theo thứ tự toàn bộ lessons)
+  // Tất cả bài đã sắp xếp đúng thứ tự: module order_index → lesson order_index
+  const sortedLessons = [...lessons].sort((a, b) => {
+    const ma = modules.find(m => m.id === a.module_id)?.order_index ?? 0
+    const mb = modules.find(m => m.id === b.module_id)?.order_index ?? 0
+    return ma !== mb ? ma - mb : a.order_index - b.order_index
+  })
+
   const isSequentiallyUnlocked = (lessonId: string) => {
-    // Sắp xếp tất cả bài theo module order_index, rồi order_index trong module
-    const sorted = [...lessons].sort((a, b) => {
-      const ma = modules.find(m => m.id === a.module_id)?.order_index ?? 0
-      const mb = modules.find(m => m.id === b.module_id)?.order_index ?? 0
-      return ma !== mb ? ma - mb : a.order_index - b.order_index
-    })
-    const idx = sorted.findIndex(l => l.id === lessonId)
+    const idx = sortedLessons.findIndex(l => l.id === lessonId)
     if (idx <= 0) return true
-    return completedIds.has(sorted[idx - 1].id)
+    return completedIds.has(sortedLessons[idx - 1].id)
   }
 
   const isUnlocked = (l: Lesson) =>
@@ -897,9 +897,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               {/* Prev / Next */}
               <div style={{ display: 'flex', gap: 10 }}>
                 {(() => {
-                  const idx  = lessons.findIndex(l => l.id === activeLesson.id)
-                  const prev = idx > 0 ? lessons[idx - 1] : null
-                  const next = idx < lessons.length - 1 ? lessons[idx + 1] : null
+                  const idx  = sortedLessons.findIndex(l => l.id === activeLesson.id)
+                  const prev = idx > 0 ? sortedLessons[idx - 1] : null
+                  const next = idx < sortedLessons.length - 1 ? sortedLessons[idx + 1] : null
                   return (
                     <>
                       {prev && (
