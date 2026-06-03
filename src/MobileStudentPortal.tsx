@@ -180,6 +180,34 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [timerSeconds, setTimerSeconds]     = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // ── Add Song Flow ──
+  const [showAddSong, setShowAddSong]     = useState(false)
+  const [addStep, setAddStep]             = useState<'input'|'preview'>('input')
+  const [newSongTitle, setNewSongTitle]   = useState('')
+  const [newSongYoutube, setNewSongYoutube] = useState('')
+  const [addingSong, setAddingSong]       = useState(false)
+
+  const handleAddSong = async () => {
+    if (!newSongTitle.trim()) return
+    setAddingSong(true)
+    await supabase.from('student_songs').insert({
+      student_id: student.id,
+      title: newSongTitle.trim(),
+      youtube_url: newSongYoutube.trim() || null,
+      status: 'tempo',
+    })
+    // Reload
+    const { data } = await supabase.from('student_songs')
+      .select('id,title,artist,tempo,status,created_at')
+      .eq('student_id', student.id).order('created_at', { ascending: false })
+    setMySongs(data ?? [])
+    setShowAddSong(false)
+    setAddStep('input')
+    setNewSongTitle('')
+    setNewSongYoutube('')
+    setAddingSong(false)
+  }
+
   // ── My Songs ──
   const [mySongs, setMySongs] = useState<{ id: string; title: string; artist: string | null; tempo: number | null; status: string; created_at: string }[]>([])
 
@@ -849,37 +877,103 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
 
               {/* Empty state */}
-              {mySongs.length === 0 && (
-                <div style={{ background: L.surface, borderRadius: 20, padding: '24px 20px', boxShadow: L.shadow, border: `1.5px dashed ${L.border}` }}>
-                  <div style={{ fontSize: 32, textAlign: 'center', marginBottom: 12 }}>🎸</div>
-                  <div style={{ fontWeight: 700, fontSize: 15, textAlign: 'center', marginBottom: 8 }}>Bạn chưa có bài hát nào</div>
-                  <div style={{ fontSize: 13, color: L.t2, textAlign: 'center', lineHeight: 1.7, marginBottom: 20 }}>
-                    Hãy chinh phục bài hát đầu tiên của bạn theo hành trình:
+              {mySongs.length === 0 && !showAddSong && (
+                <div style={{ background: L.surface, borderRadius: 20, padding: '32px 20px', boxShadow: L.shadow, textAlign: 'center' }}>
+                  <div style={{ fontSize: 40, marginBottom: 14 }}>🎸</div>
+                  <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>Bạn chưa có bài hát nào</div>
+                  <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.7, marginBottom: 24 }}>
+                    Mỗi nghệ sĩ đều bắt đầu từ bài hát đầu tiên.
                   </div>
-                  {/* Hành trình gợi ý */}
+                  <button onClick={() => { setShowAddSong(true); setAddStep('input') }}
+                    style={{ background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '14px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    ➕ Chọn bài hát đầu tiên
+                  </button>
+                </div>
+              )}
+
+              {/* Add song flow */}
+              {showAddSong && addStep === 'input' && (
+                <div style={{ background: L.surface, borderRadius: 20, padding: '24px 20px', boxShadow: L.shadow }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 20 }}>➕ Thêm bài hát mới</div>
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, color: L.t2, marginBottom: 6, fontWeight: 600 }}>Tên bài hát</div>
+                    <input
+                      value={newSongTitle}
+                      onChange={e => setNewSongTitle(e.target.value)}
+                      placeholder="Ví dụ: Cỏ Dại, Thành Phố Buồn..."
+                      autoFocus
+                      style={{ width: '100%', boxSizing: 'border-box', background: L.surface2, border: `1.5px solid ${L.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14, color: L.t1, fontFamily: 'inherit', outline: 'none' }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 12, color: L.t2, marginBottom: 6, fontWeight: 600 }}>Link YouTube (tuỳ chọn)</div>
+                    <input
+                      value={newSongYoutube}
+                      onChange={e => setNewSongYoutube(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                      style={{ width: '100%', boxSizing: 'border-box', background: L.surface2, border: `1.5px solid ${L.border}`, borderRadius: 12, padding: '12px 14px', fontSize: 14, color: L.t1, fontFamily: 'inherit', outline: 'none' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => setShowAddSong(false)}
+                      style={{ flex: 1, background: L.surface2, color: L.t2, border: 'none', borderRadius: 12, padding: '13px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Huỷ
+                    </button>
+                    <button onClick={() => { if (newSongTitle.trim()) setAddStep('preview') }}
+                      disabled={!newSongTitle.trim()}
+                      style={{ flex: 2, background: newSongTitle.trim() ? `linear-gradient(135deg, ${L.p1}, #6366F1)` : L.surface2, color: newSongTitle.trim() ? '#fff' : L.t3, border: 'none', borderRadius: 12, padding: '13px', fontSize: 14, fontWeight: 700, cursor: newSongTitle.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                      Tiếp tục →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview bài hát mới */}
+              {showAddSong && addStep === 'preview' && (
+                <div style={{ background: L.surface, borderRadius: 20, padding: '24px 20px', boxShadow: L.shadow }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                    <div style={{ width: 52, height: 52, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎸</div>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 16 }}>{newSongTitle}</div>
+                      {newSongYoutube && <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>🔗 YouTube đã thêm</div>}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: L.t2, marginBottom: 12, fontWeight: 600 }}>Hành trình chinh phục:</div>
                   {[
-                    { icon: '🥁', label: 'Tap tempo', desc: 'Tìm nhịp bài hát', done: false, current: true },
-                    { icon: '🎼', label: 'Timing',    desc: 'Căn lời & hợp âm', done: false, current: false },
-                    { icon: '🎵', label: 'Luyện nhịp', desc: 'Tap theo bài',    done: false, current: false },
-                    { icon: '🎤', label: 'Luyện hát', desc: 'Hát theo player', done: false, current: false },
-                    { icon: '🏆', label: 'Thuần thục', desc: 'Làm chủ bài hát', done: false, current: false },
+                    { icon: '🥁', label: 'Tap Tempo',  desc: 'Tìm BPM bài hát', current: true },
+                    { icon: '🎼', label: 'Timing',      desc: 'Căn lời & hợp âm', current: false },
+                    { icon: '🎵', label: 'Luyện nhịp',  desc: 'Tap theo bài', current: false },
+                    { icon: '🎤', label: 'Luyện hát',   desc: 'Hát theo player', current: false },
+                    { icon: '🏆', label: 'Thuần thục',  desc: 'Làm chủ bài hát', current: false },
                   ].map((step, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: i > 0 ? `1px solid ${L.border}` : 'none' }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 10, background: step.current ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
-                        {step.icon}
-                      </div>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i > 0 ? `1px solid ${L.border}` : 'none' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 10, background: step.current ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{step.icon}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: step.current ? 700 : 500, color: step.current ? L.p1 : L.t2 }}>{step.label}</div>
                         <div style={{ fontSize: 11, color: L.t3 }}>{step.desc}</div>
                       </div>
-                      {step.current && <span style={{ fontSize: 11, background: L.p2, color: L.p1, borderRadius: 8, padding: '3px 8px', fontWeight: 700 }}>Bắt đầu</span>}
+                      {step.current && <span style={{ fontSize: 10, background: L.p2, color: L.p1, borderRadius: 6, padding: '2px 7px', fontWeight: 700 }}>Bắt đầu</span>}
                     </div>
                   ))}
-                  <button onClick={() => openTool('/tempo', 'Tap Tempo', 'tap-tempo')}
-                    style={{ width: '100%', marginTop: 16, background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(67,56,202,.3)' }}>
-                    🥁 Bắt đầu Tap tempo →
-                  </button>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                    <button onClick={() => setAddStep('input')}
+                      style={{ flex: 1, background: L.surface2, color: L.t2, border: 'none', borderRadius: 12, padding: '13px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ← Sửa
+                    </button>
+                    <button onClick={handleAddSong} disabled={addingSong}
+                      style={{ flex: 2, background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 12, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: addingSong ? 0.7 : 1 }}>
+                      {addingSong ? '⏳ Đang lưu...' : '🥁 Bắt đầu Tap Tempo'}
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              {/* Nút thêm bài khi đã có bài */}
+              {mySongs.length > 0 && !showAddSong && (
+                <button onClick={() => { setShowAddSong(true); setAddStep('input') }}
+                  style={{ width: '100%', background: L.surface, border: `1.5px dashed ${L.border}`, borderRadius: 14, padding: '12px', fontSize: 13, fontWeight: 600, color: L.t2, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
+                  ➕ Thêm bài hát mới
+                </button>
               )}
 
               {/* Danh sách bài */}
