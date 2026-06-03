@@ -228,12 +228,34 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [showConfirmSave, setShowConfirmSave] = useState(false)
   const [showAllSongs, setShowAllSongs]     = useState(false)
 
+  // XP thưởng cho từng bước journey
+  const STEP_XP: Record<string, number> = {
+    tempo: XP_SOURCE.song_tempo, timing: XP_SOURCE.song_timing,
+    nhip: 150, hat: 250, dan: 300,
+  }
+  const [celebrate, setCelebrate] = useState<{ title: string; mastered: boolean; xp: number } | null>(null)
+
   const markStepDone = async (songId: string, stepId: string) => {
     const song = mySongs.find(s => s.id === songId)
     if (!song) return
     const newJourney = song.journey.map(j => j.id === stepId ? { ...j, done: true } : j)
-    await supabase.from('student_songs').update({ journey: newJourney }).eq('id', songId)
+    const mastered = newJourney.every(j => j.done)
+    // Cập nhật DB
+    await supabase.from('student_songs')
+      .update({ journey: newJourney, status: mastered ? 'mastered' : stepId })
+      .eq('id', songId)
     setMySongs(prev => prev.map(s => s.id === songId ? { ...s, journey: newJourney } : s))
+    // Thưởng XP — bước + bonus nếu chinh phục cả bài
+    const gained = (STEP_XP[stepId] ?? 100) + (mastered ? XP_SOURCE.song_mastered : 0)
+    await supabase.from('student_xp_log').insert({
+      student_id: student.id, xp: gained,
+      source: mastered ? 'song_mastered' : 'song_step', ref_id: songId,
+    })
+    setTotalXP(prev => prev + gained)
+    setWeekXP(prev  => prev + gained)
+    // Chúc mừng
+    setCelebrate({ title: song.title, mastered, xp: gained })
+    setTimeout(() => setCelebrate(null), mastered ? 3500 : 2200)
   }
 
   const handleAddSong = async () => {
@@ -494,6 +516,19 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   return (
     <>
+    {celebrate && (
+      <div onClick={() => setCelebrate(null)} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)', animation: 'fadeIn .2s ease' }}>
+        <div style={{ background: L.surface, borderRadius: 24, padding: '28px 32px', textAlign: 'center', boxShadow: '0 12px 48px rgba(0,0,0,0.25)', maxWidth: 320, margin: 16, animation: 'popIn .35s cubic-bezier(.18,.89,.32,1.28)' }}>
+          <div style={{ fontSize: 56, marginBottom: 8 }}>{celebrate.mastered ? '👑' : '🎉'}</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: celebrate.mastered ? L.green : L.p1, marginBottom: 4 }}>
+            {celebrate.mastered ? 'Chinh phục thành công!' : 'Hoàn thành bước!'}
+          </div>
+          <div style={{ fontSize: 13, color: L.t2, marginBottom: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{celebrate.title}</div>
+          <div style={{ display: 'inline-block', background: '#D9770618', color: '#D97706', fontWeight: 800, fontSize: 15, padding: '6px 16px', borderRadius: 99 }}>+{celebrate.xp} XP</div>
+        </div>
+        <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}`}</style>
+      </div>
+    )}
     <div style={{
       maxWidth: 430, margin: '0 auto', height: '100dvh',
       display: 'flex', flexDirection: 'column',
@@ -1055,16 +1090,17 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                         </div>
                       </div>
                       {/* Buttons */}
+                      {curIdx < 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #16A34A18, #D9770618)', borderRadius: 12, padding: '13px', border: '1.5px solid #16A34A40' }}>
+                          <span style={{ fontSize: 18 }}>👑</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: L.green }}>Đã chinh phục bài này!</span>
+                        </div>
+                      ) : (
                       <div style={{ display: 'flex', gap: 8 }}>
                         {curStep.route ? (
                           <button onClick={() => {
                             let route = curStep.route!
-                            if (curStep.id === 'tempo' && song.title) {
-                              const params = new URLSearchParams({ title: song.title })
-                              if (song.youtube_url) params.set('youtube', song.youtube_url)
-                              route = route + '?' + params.toString()
-                            }
-                            if (curStep.id === 'nhip' && song.title) {
+                            if (song.title) {
                               const params = new URLSearchParams({ title: song.title })
                               if (song.youtube_url) params.set('youtube', song.youtube_url)
                               route = route + '?' + params.toString()
@@ -1077,13 +1113,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                         ) : (
                           <div style={{ flex: 2, background: L.surface2, borderRadius: 12, padding: '11px', fontSize: 12, color: L.t3, textAlign: 'center' }}>🔒 {curStep.label} — Sắp ra mắt</div>
                         )}
-                        {curIdx >= 0 && (
-                          <button onClick={() => markStepDone(song.id, curStep.id)}
-                            style={{ flex: 1, background: L.surface2, color: L.green, border: `1.5px solid ${L.green}40`, borderRadius: 12, padding: '11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                            ✓ Xong
-                          </button>
-                        )}
+                        <button onClick={() => markStepDone(song.id, curStep.id)}
+                          style={{ flex: 1, background: L.surface2, color: L.green, border: `1.5px solid ${L.green}40`, borderRadius: 12, padding: '11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          ✓ Xong
+                        </button>
                       </div>
+                      )}
                     </div>
                     {/* Dots */}
                     {recent.length > 1 && (

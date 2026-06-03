@@ -120,6 +120,14 @@ export default function YouTubeSyncPage() {
     });
   },[]);
 
+  // Tự điền + load YouTube khi đến từ journey (bước Timing của bài hát)
+  useEffect(()=>{
+    const yt = new URLSearchParams(window.location.search).get('youtube');
+    if(!yt) return;
+    const id = extractVideoId(yt);
+    if(id){ setYoutubeUrl(yt); setVideoId(id); setPlayerReady(false); setIsPlaying(false); }
+  },[]);
+
   const startTimer = useCallback((from: number) => {
     if(timerRef.current) clearInterval(timerRef.current);
     const t0 = performance.now();
