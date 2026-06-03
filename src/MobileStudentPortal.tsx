@@ -1182,3 +1182,154 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   </div>
                 )
               })()}
+
+        {/* ── SỐNG ────────────────────────────────────────────────────── */}
+        {tab === 'song' && (
+          <div style={{ padding: '52px 16px 16px' }}>
+            <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Sống cùng âm nhạc</div>
+            <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>Kết nối · Trải nghiệm · Truyền cảm hứng</div>
+
+            {/* Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: L.p1 }}>{completedIds.size}</div>
+                <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Bài đã học</div>
+              </div>
+              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: L.a1 }}>{enrollments.length}</div>
+                <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Khoá học</div>
+              </div>
+            </div>
+
+            {/* Sự kiện */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: '28px 20px', boxShadow: L.shadow, textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🎪</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Sự kiện & giao lưu</div>
+              <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.6 }}>Workshop, Open Mic và các buổi giao lưu học viên sẽ sớm xuất hiện ở đây.</div>
+            </div>
+
+            {/* Quote */}
+            <div style={{ background: L.p1, borderRadius: 20, padding: '20px 20px 24px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: -20, right: -20, fontSize: 80, opacity: .08, lineHeight: 1 }}>"</div>
+              <div style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', lineHeight: 1.8, fontStyle: 'italic' }}>
+                Bạn không cần phải giỏi ngay từ đầu. Nhưng bạn phải bắt đầu để trở nên giỏi.
+              </div>
+            </div>
+
+            {/* Profile card */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
+                {me.avatar_url
+                  ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : name.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                <div style={{ fontSize: 12, color: L.t2 }}>{LEVEL_VI[me.level ?? ''] ?? 'Học viên'}</div>
+              </div>
+              <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 38, height: 38, fontSize: 17, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
+              <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 14px', color: L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                Đăng xuất
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: L.t3, textAlign: 'center', marginTop: 10 }}>Bấm ⚙️ để đổi tên và ảnh đại diện</div>
+          </div>
+        )}
+      </div>
+
+      {/* ══ BOTTOM NAV ════════════════════════════════════════════════════ */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        borderTop: `1px solid ${L.border}`,
+        display: 'flex', padding: '10px 8px max(10px, env(safe-area-inset-bottom)) 8px',
+        zIndex: 20,
+      }}>
+        {TABS.map(t => {
+          const active = tab === t.id
+          return (
+            <button key={t.id}
+              onClick={() => { setTab(t.id); if (t.id === 'hoc') setScreen('home') }}
+              style={{
+                flex: 1, background: active ? L.p2 : 'transparent', border: 'none',
+                borderRadius: 14, cursor: 'pointer', padding: '8px 4px',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                fontFamily: 'inherit', transition: 'background .15s',
+              }}>
+              <span style={{ fontSize: 22 }}>{t.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, color: active ? L.p1 : L.t3, letterSpacing: '.04em' }}>
+                {t.label}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+
+    {/* ── Modal Cài đặt hồ sơ ── */}
+    {showSettings && (
+      <div onClick={() => setShowSettings(false)}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div onClick={e => e.stopPropagation()}
+          style={{ background: L.surface, borderRadius: '24px 24px 0 0', padding: '20px 20px max(20px, env(safe-area-inset-bottom))', width: '100%', maxWidth: 430, boxShadow: '0 -8px 32px rgba(0,0,0,0.2)' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: L.border, margin: '0 auto 18px' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <span style={{ fontWeight: 800, fontSize: 18 }}>Hồ sơ của tôi</span>
+            <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 20, color: L.t3, cursor: 'pointer' }}>✕</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 22 }}>
+            <div onClick={() => avatarFileRef.current?.click()}
+              style={{ width: 92, height: 92, borderRadius: '50%', background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, color: L.p1, fontWeight: 800, overflow: 'hidden', cursor: 'pointer', position: 'relative', border: `3px solid ${L.surface}`, boxShadow: L.shadow }}>
+              {me.avatar_url
+                ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : name.charAt(0).toUpperCase()}
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 16, padding: '3px 0', textAlign: 'center' }}>📷</div>
+            </div>
+            <input ref={avatarFileRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.currentTarget.value = '' }} />
+            <div style={{ fontSize: 12, color: L.t3, marginTop: 10 }}>{savingProfile ? 'Đang lưu…' : 'Bấm vào ảnh để đổi ảnh đại diện'}</div>
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: L.t2, marginBottom: 8 }}>Tên hiển thị</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={nameDraft} onChange={e => setNameDraft(e.target.value)}
+                placeholder="Nhập tên của bạn"
+                style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, fontSize: 15, fontFamily: 'inherit', outline: 'none', background: L.surface2 }} />
+              <button onClick={saveDisplayName} disabled={savingProfile || !nameDraft.trim()}
+                style={{ background: L.p1, color: L.tinv, border: 'none', borderRadius: 12, padding: '0 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (savingProfile || !nameDraft.trim()) ? 0.5 : 1 }}>
+                Lưu
+              </button>
+            </div>
+          </div>
+          <button onClick={() => setShowSettings(false)}
+            style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Xong
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* ── Tool Overlay — fullscreen iframe, không rời app ── */}
+    {activeTool && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', flexDirection: 'column' }}>
+        {/* Thanh tiêu đề */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: L.p1, flexShrink: 0 }}>
+          <button onClick={() => setActiveTool(null)}
+            style={{ background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
+            ✕
+          </button>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeTool.name}</span>
+        </div>
+        {/* Tool chạy trong iframe — session Supabase được chia sẻ qua localStorage */}
+        <iframe
+          src={activeTool.url}
+          style={{ flex: 1, border: 'none', width: '100%' }}
+          allow="microphone; camera"
+          title={activeTool.name}
+        />
+      </div>
+    )}
+    </>
+  )
+}
