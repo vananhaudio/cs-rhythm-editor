@@ -254,7 +254,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map(step => ({ id: step.id, done: false }))
     })))
     // Reset form TRƯỚC — để carousel hiện ngay sau khi mySongs được update
-    setShowAddSong(false); setAddStep('input'); setShowConfirmSave(false)
+    setShowConfirmSave(false)
+    setShowAddSong(false)
+    setAddStep('input')
     setNewSongTitle(''); setNewSongYoutube('')
     setYtSelected(null); setYtQuery(''); setYtResults([])
     setCarouselIdx(0)
@@ -991,7 +993,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                         <div style={{ fontSize: 11, color: L.green, marginTop: 4 }}>✓ YouTube đã liên kết</div>
                       </div>
                     </div>
-                    <button onClick={async () => { setShowConfirmSave(false); await handleAddSong() }}
+                    <button onClick={async () => { await handleAddSong() }}
                       disabled={addingSong}
                       style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10, opacity: addingSong ? 0.7 : 1 }}>
                       {addingSong ? '⏳ Đang lưu...' : '🎸 Lưu vào thư viện'}
