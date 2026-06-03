@@ -180,12 +180,31 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [timerSeconds, setTimerSeconds]     = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // ── Journey config — thay đổi ở đây để update toàn app ──
+  const JOURNEY_STEPS = [
+    { id: 'tempo',  label: 'Tempo',  icon: '🥁', route: '/tempo',        color: '#7C3AED' },
+    { id: 'timing', label: 'Timing', icon: '🎼', route: '/youtube-sync', color: '#0891B2' },
+    { id: 'nhip',   label: 'Nhịp',   icon: '🎵', route: '/tap',          color: '#4338CA' },
+    { id: 'hat',    label: 'Hát',    icon: '🎤', route: null,            color: '#16A34A' },
+    { id: 'dan',    label: 'Đàn',    icon: '🎸', route: null,            color: '#D97706' },
+  ]
+
   // ── Add Song Flow ──
   const [showAddSong, setShowAddSong]     = useState(false)
   const [addStep, setAddStep]             = useState<'input'|'preview'>('input')
   const [newSongTitle, setNewSongTitle]   = useState('')
   const [newSongYoutube, setNewSongYoutube] = useState('')
   const [addingSong, setAddingSong]       = useState(false)
+  const [carouselIdx, setCarouselIdx]     = useState(0)
+  const [showAllSongs, setShowAllSongs]   = useState(false)
+
+  const markStepDone = async (songId: string, stepId: string) => {
+    const song = mySongs.find(s => s.id === songId)
+    if (!song) return
+    const newJourney = song.journey.map(j => j.id === stepId ? { ...j, done: true } : j)
+    await supabase.from('student_songs').update({ journey: newJourney }).eq('id', songId)
+    setMySongs(prev => prev.map(s => s.id === songId ? { ...s, journey: newJourney } : s))
+  }
 
   const handleAddSong = async () => {
     if (!newSongTitle.trim()) return
@@ -198,9 +217,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     })
     // Reload
     const { data } = await supabase.from('student_songs')
-      .select('id,title,artist,tempo,status,created_at')
+      .select('id,title,artist,tempo,status,created_at,journey')
       .eq('student_id', student.id).order('created_at', { ascending: false })
-    setMySongs(data ?? [])
+    setMySongs((data ?? []).map((s: any) => ({
+      ...s,
+      journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map(step => ({ id: step.id, done: false }))
+    })))
     setShowAddSong(false)
     setAddStep('input')
     setNewSongTitle('')
@@ -209,7 +231,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   // ── My Songs ──
-  const [mySongs, setMySongs] = useState<{ id: string; title: string; artist: string | null; tempo: number | null; status: string; created_at: string }[]>([])
+  const [mySongs, setMySongs] = useState<{ id: string; title: string; artist: string | null; tempo: number | null; status: string; created_at: string; journey: { id: string; done: boolean }[] }[]>([])
 
   // ── Progress tracking ──
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
@@ -968,249 +990,147 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 </div>
               )}
 
-              {/* Nút thêm bài khi đã có bài */}
-              {mySongs.length > 0 && !showAddSong && (
-                <button onClick={() => { setShowAddSong(true); setAddStep('input') }}
-                  style={{ width: '100%', background: L.surface, border: `1.5px dashed ${L.border}`, borderRadius: 14, padding: '12px', fontSize: 13, fontWeight: 600, color: L.t2, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 4 }}>
-                  ➕ Thêm bài hát mới
-                </button>
-              )}
+              {/* Carousel + danh sách bài */}
+              {mySongs.length > 0 && !showAddSong && (() => {
+                const recentSongs = mySongs.slice(0, 5)
+                const song = recentSongs[carouselIdx] ?? recentSongs[0]
+                if (!song) return null
+                const journey = song.journey ?? JOURNEY_STEPS.map(s => ({ id: s.id, done: false }))
+                const currentIdx = journey.findIndex(j => !j.done)
+                const currentStep = currentIdx >= 0 ? JOURNEY_STEPS[currentIdx] : JOURNEY_STEPS[JOURNEY_STEPS.length - 1]
 
-              {/* Danh sách bài */}
-              {mySongs.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {mySongs.map(s => {
-                    const SONG_STATUS: Record<string, { icon: string; label: string; color: string }> = {
-                      tempo:    { icon: '🥁', label: 'Tap Tempo',  color: L.p1 },
-                      timing:   { icon: '🎼', label: 'Timing',     color: '#7C3AED' },
-                      review:   { icon: '🔍', label: 'Kiểm định',  color: L.gold },
-                      approved: { icon: '✅', label: 'Đã duyệt',   color: L.green },
-                      rhythm:   { icon: '🎵', label: 'Luyện nhịp', color: '#0891B2' },
-                      mastered: { icon: '🏆', label: 'Thuần thục', color: '#D97706' },
-                    }
-                    const st = SONG_STATUS[s.status] ?? SONG_STATUS.tempo
-                    // Ticks hành trình
-                    const STEPS = ['tempo','timing','approved','rhythm','mastered']
-                    const doneIdx = STEPS.indexOf(s.status)
-                    return (
-                      <div key={s.id} style={{ background: L.surface, borderRadius: 18, padding: '14px 16px', boxShadow: L.shadow, border: `1.5px solid ${L.border}` }}>
-                        {/* Header bài */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 12, background: st.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                            {st.icon}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
-                            <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>
-                              {s.artist && <span>{s.artist} · </span>}
-                              {s.tempo && <span style={{ color: st.color, fontWeight: 700 }}>{s.tempo} BPM</span>}
-                            </div>
-                          </div>
-                          <span style={{ fontSize: 10, background: st.color + '15', color: st.color, borderRadius: 8, padding: '3px 8px', fontWeight: 700, flexShrink: 0 }}>{st.label}</span>
+                return (
+                  <div style={{ marginBottom: 4 }}>
+                    {/* Card */}
+                    <div style={{ background: L.surface, borderRadius: 20, padding: '18px 18px 14px', boxShadow: L.shadowLg, border: `1.5px solid ${L.border}` }}>
+                      {/* Title */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: 12, background: (currentStep?.color ?? '#6366F1') + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                          {currentStep?.icon ?? '🎸'}
                         </div>
-                        {/* Progress ticks */}
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          {[
-                            { key: 'tempo',    icon: '🥁', label: 'Tempo' },
-                            { key: 'timing',   icon: '🎼', label: 'Timing' },
-                            { key: 'approved', icon: '✅', label: 'Duyệt' },
-                            { key: 'rhythm',   icon: '🎵', label: 'Nhịp' },
-                            { key: 'mastered', icon: '🏆', label: 'Xong' },
-                          ].map((step, i) => {
-                            const done = STEPS.indexOf(s.status) >= i
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+                          <div style={{ fontSize: 11, color: L.t2, marginTop: 1 }}>Đang luyện: <span style={{ color: currentStep?.color ?? L.p1, fontWeight: 700 }}>{currentStep?.label ?? 'Hoàn thành'}</span></div>
+                        </div>
+                      </div>
+
+                      {/* Progress dots + labels */}
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                          {JOURNEY_STEPS.map((step, i) => {
+                            const jStep = journey.find(j => j.id === step.id)
+                            const done = jStep?.done ?? false
+                            const isCurrent = i === currentIdx
                             return (
-                              <div key={step.key} style={{ flex: 1, textAlign: 'center' }}>
-                                <div style={{ width: '100%', height: 4, borderRadius: 99, background: done ? st.color : L.border, marginBottom: 4, transition: 'background .3s' }} />
-                                <div style={{ fontSize: 9, color: done ? st.color : L.t3, fontWeight: done ? 700 : 400 }}>{step.label}</div>
+                              <div key={step.id} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                                <div style={{ flex: 1, height: 3, background: done ? step.color : (isCurrent ? step.color + '60' : L.border), borderRadius: 99, transition: 'background .3s' }} />
+                                <div style={{
+                                  width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                                  background: done ? step.color : isCurrent ? step.color : 'transparent',
+                                  border: `2px solid ${done || isCurrent ? step.color : L.border}`,
+                                  transition: 'all .3s',
+                                }} />
+                                {i < JOURNEY_STEPS.length - 1 && (
+                                  <div style={{ flex: 1, height: 3, background: done ? JOURNEY_STEPS[i+1].color + '40' : L.border, borderRadius: 99 }} />
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          {JOURNEY_STEPS.map((step, i) => {
+                            const jStep = journey.find(j => j.id === step.id)
+                            const done = jStep?.done ?? false
+                            const isCurrent = i === currentIdx
+                            return (
+                              <div key={step.id} style={{ fontSize: 9, fontWeight: isCurrent ? 700 : 500, color: done ? step.color : isCurrent ? step.color : L.t3, textAlign: 'center', flex: 1 }}>
+                                {step.label}
                               </div>
                             )
                           })}
                         </div>
                       </div>
-                    )
-                  })}
-                  {/* Thêm bài mới */}
-                  <button onClick={() => openTool('/tempo', 'Tap Tempo', 'tap-tempo')}
-                    style={{ width: '100%', background: L.surface2, border: `1.5px dashed ${L.border}`, borderRadius: 14, padding: '13px', fontSize: 13, fontWeight: 600, color: L.t2, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    + Thêm bài hát mới
-                  </button>
-                </div>
-              )}
-            </div>
 
-            {/* ── Công cụ ── */}
-            <div style={{ fontSize: 14, fontWeight: 700, color: L.t2, marginBottom: 12 }}>🎯 Công cụ luyện tập</div>
+                      {/* Buttons */}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {currentStep?.route ? (
+                          <button onClick={() => openTool(currentStep.route!, currentStep.label, currentStep.id)}
+                            style={{ flex: 2, background: `linear-gradient(135deg, ${currentStep.color}, ${currentStep.color}99)`, color: '#fff', border: 'none', borderRadius: 12, padding: '11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            {currentStep.icon} Tiếp tục {currentStep.label}
+                          </button>
+                        ) : (
+                          <div style={{ flex: 2, background: L.surface2, borderRadius: 12, padding: '11px', fontSize: 13, color: L.t3, textAlign: 'center', fontWeight: 600 }}>
+                            🔒 {currentStep?.label} — Sắp ra mắt
+                          </div>
+                        )}
+                        {currentIdx >= 0 && (
+                          <button onClick={() => markStepDone(song.id, currentStep!.id)}
+                            style={{ flex: 1, background: L.surface2, color: L.green, border: `1.5px solid ${L.green}40`, borderRadius: 12, padding: '11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            ✓ Xong
+                          </button>
+                        )}
+                      </div>
+                    </div>
 
-            {/* Tools grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {displayTools.map((t) => {
-                const unlocked = isTierUnlocked(t.tier)
-                const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
-                return (
-                  <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name, t.id) }}
-                    style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
-                    {!unlocked && (
-                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                        <span style={{ fontSize: 10, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
+                    {/* Dots chỉ vị trí */}
+                    {recentSongs.length > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                        {recentSongs.map((_, i) => (
+                          <div key={i} onClick={() => setCarouselIdx(i)}
+                            style={{ width: i === carouselIdx ? 16 : 7, height: 7, borderRadius: 99, background: i === carouselIdx ? L.p1 : L.border, cursor: 'pointer', transition: 'all .2s' }} />
+                        ))}
                       </div>
                     )}
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
+
+                    {/* Prev/Next swipe buttons */}
+                    {recentSongs.length > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+                        <button onClick={() => setCarouselIdx(i => Math.max(0, i - 1))}
+                          disabled={carouselIdx === 0}
+                          style={{ background: 'none', border: 'none', color: carouselIdx === 0 ? L.border : L.t2, fontSize: 18, cursor: carouselIdx === 0 ? 'default' : 'pointer', padding: '4px 8px' }}>‹</button>
+                        <span style={{ fontSize: 11, color: L.t3, alignSelf: 'center' }}>{carouselIdx + 1} / {recentSongs.length}</span>
+                        <button onClick={() => setCarouselIdx(i => Math.min(recentSongs.length - 1, i + 1))}
+                          disabled={carouselIdx === recentSongs.length - 1}
+                          style={{ background: 'none', border: 'none', color: carouselIdx === recentSongs.length - 1 ? L.border : L.t2, fontSize: 18, cursor: carouselIdx === recentSongs.length - 1 ? 'default' : 'pointer', padding: '4px 8px' }}>›</button>
+                      </div>
+                    )}
+
+                    {/* Tất cả bài hát nếu > 5 */}
+                    {mySongs.length > 5 && (
+                      <div style={{ marginTop: 12 }}>
+                        <button onClick={() => setShowAllSongs(!showAllSongs)}
+                          style={{ width: '100%', background: 'none', border: 'none', color: L.t2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>📚 Tất cả bài hát ({mySongs.length})</span>
+                          <span>{showAllSongs ? '▲' : '▼'}</span>
+                        </button>
+                        {showAllSongs && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
+                            {mySongs.map(s => {
+                              const j = s.journey ?? []
+                              const curIdx = j.findIndex(jj => !jj.done)
+                              const curStep = JOURNEY_STEPS[curIdx] ?? JOURNEY_STEPS[JOURNEY_STEPS.length - 1]
+                              return (
+                                <div key={s.id} onClick={() => { setCarouselIdx(mySongs.slice(0,5).findIndex(ss => ss.id === s.id)); setShowAllSongs(false) }}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 10, background: L.surface, borderRadius: 12, padding: '10px 12px', cursor: 'pointer' }}>
+                                  <span style={{ fontSize: 16 }}>{curStep?.icon}</span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
+                                    <div style={{ fontSize: 10, color: curStep?.color ?? L.t3, fontWeight: 600 }}>{curStep?.label}</div>
+                                  </div>
+                                  <span style={{ fontSize: 12, color: L.t3 }}>›</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Nút thêm bài */}
+                    <button onClick={() => { setShowAddSong(true); setAddStep('input') }}
+                      style={{ width: '100%', marginTop: 10, background: 'none', border: `1.5px dashed ${L.border}`, borderRadius: 14, padding: '11px', fontSize: 13, fontWeight: 600, color: L.t2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      ➕ Thêm bài hát mới
+                    </button>
                   </div>
                 )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── SỐNG ────────────────────────────────────────────────────── */}
-        {tab === 'song' && (
-          <div style={{ padding: '52px 16px 16px' }}>
-            <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Sống cùng âm nhạc</div>
-            <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>Kết nối · Trải nghiệm · Truyền cảm hứng</div>
-
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: L.p1 }}>{completedIds.size}</div>
-                <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Bài đã học</div>
-              </div>
-              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: L.a1 }}>{enrollments.length}</div>
-                <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Khoá học</div>
-              </div>
-            </div>
-
-            {/* Sự kiện */}
-            <div style={{ background: L.surface, borderRadius: 18, padding: '28px 20px', boxShadow: L.shadow, textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: 40, marginBottom: 10 }}>🎪</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Sự kiện & giao lưu</div>
-              <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.6 }}>Workshop, Open Mic và các buổi giao lưu học viên sẽ sớm xuất hiện ở đây.</div>
-            </div>
-
-            {/* Quote */}
-            <div style={{ background: L.p1, borderRadius: 20, padding: '20px 20px 24px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -20, right: -20, fontSize: 80, opacity: .08, lineHeight: 1 }}>"</div>
-              <div style={{ fontSize: 14, color: 'rgba(255,255,255,.85)', lineHeight: 1.8, fontStyle: 'italic' }}>
-                Bạn không cần phải giỏi ngay từ đầu. Nhưng bạn phải bắt đầu để trở nên giỏi.
-              </div>
-            </div>
-
-            {/* Profile card */}
-            <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
-                {me.avatar_url
-                  ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : name.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                <div style={{ fontSize: 12, color: L.t2 }}>{LEVEL_VI[me.level ?? ''] ?? 'Học viên'}</div>
-              </div>
-              <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 38, height: 38, fontSize: 17, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
-              <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 14px', color: L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                Đăng xuất
-              </button>
-            </div>
-            <div style={{ fontSize: 11, color: L.t3, textAlign: 'center', marginTop: 10 }}>Bấm ⚙️ để đổi tên và ảnh đại diện</div>
-          </div>
-        )}
-      </div>
-
-      {/* ══ BOTTOM NAV ════════════════════════════════════════════════════ */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        background: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        borderTop: `1px solid ${L.border}`,
-        display: 'flex', padding: '10px 8px max(10px, env(safe-area-inset-bottom)) 8px',
-        zIndex: 20,
-      }}>
-        {TABS.map(t => {
-          const active = tab === t.id
-          return (
-            <button key={t.id}
-              onClick={() => { setTab(t.id); if (t.id === 'hoc') setScreen('home') }}
-              style={{
-                flex: 1, background: active ? L.p2 : 'transparent', border: 'none',
-                borderRadius: 14, cursor: 'pointer', padding: '8px 4px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                fontFamily: 'inherit', transition: 'background .15s',
-              }}>
-              <span style={{ fontSize: 22 }}>{t.icon}</span>
-              <span style={{ fontSize: 10, fontWeight: active ? 700 : 500, color: active ? L.p1 : L.t3, letterSpacing: '.04em' }}>
-                {t.label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-
-    {/* ── Modal Cài đặt hồ sơ ── */}
-    {showSettings && (
-      <div onClick={() => setShowSettings(false)}
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-        <div onClick={e => e.stopPropagation()}
-          style={{ background: L.surface, borderRadius: '24px 24px 0 0', padding: '20px 20px max(20px, env(safe-area-inset-bottom))', width: '100%', maxWidth: 430, boxShadow: '0 -8px 32px rgba(0,0,0,0.2)' }}>
-          <div style={{ width: 40, height: 4, borderRadius: 99, background: L.border, margin: '0 auto 18px' }} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <span style={{ fontWeight: 800, fontSize: 18 }}>Hồ sơ của tôi</span>
-            <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', fontSize: 20, color: L.t3, cursor: 'pointer' }}>✕</button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 22 }}>
-            <div onClick={() => avatarFileRef.current?.click()}
-              style={{ width: 92, height: 92, borderRadius: '50%', background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, color: L.p1, fontWeight: 800, overflow: 'hidden', cursor: 'pointer', position: 'relative', border: `3px solid ${L.surface}`, boxShadow: L.shadow }}>
-              {me.avatar_url
-                ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : name.charAt(0).toUpperCase()}
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: 16, padding: '3px 0', textAlign: 'center' }}>📷</div>
-            </div>
-            <input ref={avatarFileRef} type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f); e.currentTarget.value = '' }} />
-            <div style={{ fontSize: 12, color: L.t3, marginTop: 10 }}>{savingProfile ? 'Đang lưu…' : 'Bấm vào ảnh để đổi ảnh đại diện'}</div>
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: L.t2, marginBottom: 8 }}>Tên hiển thị</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={nameDraft} onChange={e => setNameDraft(e.target.value)}
-                placeholder="Nhập tên của bạn"
-                style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, fontSize: 15, fontFamily: 'inherit', outline: 'none', background: L.surface2 }} />
-              <button onClick={saveDisplayName} disabled={savingProfile || !nameDraft.trim()}
-                style={{ background: L.p1, color: L.tinv, border: 'none', borderRadius: 12, padding: '0 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (savingProfile || !nameDraft.trim()) ? 0.5 : 1 }}>
-                Lưu
-              </button>
-            </div>
-          </div>
-          <button onClick={() => setShowSettings(false)}
-            style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Xong
-          </button>
-        </div>
-      </div>
-    )}
-
-    {/* ── Tool Overlay — fullscreen iframe, không rời app ── */}
-    {activeTool && (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', flexDirection: 'column' }}>
-        {/* Thanh tiêu đề */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: L.p1, flexShrink: 0 }}>
-          <button onClick={() => setActiveTool(null)}
-            style={{ background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
-            ✕
-          </button>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeTool.name}</span>
-        </div>
-        {/* Tool chạy trong iframe — session Supabase được chia sẻ qua localStorage */}
-        <iframe
-          src={activeTool.url}
-          style={{ flex: 1, border: 'none', width: '100%' }}
-          allow="microphone; camera"
-          title={activeTool.name}
-        />
-      </div>
-    )}
-    </>
-  )
-}
+              })()}
