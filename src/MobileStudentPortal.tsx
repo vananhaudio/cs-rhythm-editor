@@ -438,10 +438,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const markComplete = async (lessonId: string) => {
     if (completedIds.has(lessonId) || markingDone) return
     setMarkingDone(true)
-    const { error } = await supabase.from('edu_lesson_progress').upsert({
-      student_id: student.id,
-      lesson_id: lessonId,
-    }, { onConflict: 'student_id,lesson_id' })
+    // Kiểm tra đã có record chưa trước khi insert
+    const { data: existing } = await supabase.from('edu_lesson_progress')
+      .select('id').eq('student_id', student.id).eq('lesson_id', lessonId).maybeSingle()
+    const { error } = existing
+      ? await supabase.from('edu_lesson_progress')
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .eq('id', existing.id)
+      : await supabase.from('edu_lesson_progress')
+          .insert({ student_id: student.id, lesson_id: lessonId, status: 'completed', completed_at: new Date().toISOString() })
     if (error) {
       console.error('Lỗi lưu tiến độ:', error)
       alert('Không lưu được tiến độ: ' + error.message)
