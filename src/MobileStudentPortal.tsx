@@ -212,9 +212,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   const selectYtVideo = (r: { id: string; title: string; thumbnail: string }) => {
-    setYtSelected(r); setNewSongTitle(r.title)
+    setYtSelected(r)
+    setNewSongTitle(r.title)
     setNewSongYoutube(`https://youtube.com/watch?v=${r.id}`)
-    setYtResults([]); setAddStep('preview')
+    setShowConfirmSave(true)
   }
 
   // ── Add Song Flow ──
@@ -224,6 +225,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [newSongYoutube, setNewSongYoutube] = useState('')
   const [addingSong, setAddingSong]         = useState(false)
   const [carouselIdx, setCarouselIdx]       = useState(0)
+  const [showConfirmSave, setShowConfirmSave] = useState(false)
   const [showAllSongs, setShowAllSongs]     = useState(false)
 
   const markStepDone = async (songId: string, stepId: string) => {
@@ -252,7 +254,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map(step => ({ id: step.id, done: false }))
     })))
     // Reset form TRƯỚC — để carousel hiện ngay sau khi mySongs được update
-    setShowAddSong(false); setAddStep('input')
+    setShowAddSong(false); setAddStep('input'); setShowConfirmSave(false)
     setNewSongTitle(''); setNewSongYoutube('')
     setYtSelected(null); setYtQuery(''); setYtResults([])
     setCarouselIdx(0)
@@ -976,34 +978,27 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 </div>
               )}
 
-              {/* Add song — step preview */}
-              {showAddSong && addStep === 'preview' && (
-                <div style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadow }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    {ytSelected?.thumbnail
-                      ? <img src={ytSelected.thumbnail} alt="" style={{ width: 60, height: 45, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
-                      : <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🎸</div>}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.4 }}>{newSongTitle}</div>
-                      {newSongYoutube && <div style={{ fontSize: 11, color: L.green, marginTop: 2 }}>✓ YouTube đã liên kết</div>}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 12, color: L.t2, marginBottom: 10, fontWeight: 600 }}>Hành trình chinh phục:</div>
-                  {JOURNEY_STEPS.map((step, i) => (
-                    <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i > 0 ? `1px solid ${L.border}` : 'none' }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 9, background: i === 0 ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{step.icon}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: i === 0 ? 700 : 500, color: i === 0 ? L.p1 : L.t2 }}>{step.label}</div>
+              {/* Confirm save popup */}
+              {showConfirmSave && ytSelected && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                  <div style={{ background: L.surface, borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 480 }}>
+                    <div style={{ width: 40, height: 4, background: L.border, borderRadius: 99, margin: '0 auto 20px' }} />
+                    <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16, textAlign: 'center' }}>Thêm vào thư viện?</div>
+                    <div style={{ display: 'flex', gap: 12, background: L.surface2, borderRadius: 16, padding: 14, marginBottom: 20 }}>
+                      <img src={ytSelected.thumbnail} alt="" style={{ width: 80, height: 60, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{ytSelected.title}</div>
+                        <div style={{ fontSize: 11, color: L.green, marginTop: 4 }}>✓ YouTube đã liên kết</div>
                       </div>
-                      {i === 0 && <span style={{ fontSize: 10, background: L.p2, color: L.p1, borderRadius: 6, padding: '2px 7px', fontWeight: 700 }}>Bắt đầu</span>}
                     </div>
-                  ))}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                    <button onClick={() => { setAddStep('input'); setYtSelected(null) }}
-                      style={{ flex: 1, background: L.surface2, color: L.t2, border: 'none', borderRadius: 12, padding: '12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>← Sửa</button>
-                    <button onClick={handleAddSong} disabled={addingSong}
-                      style={{ flex: 2, background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: addingSong ? 0.7 : 1 }}>
-                      {addingSong ? '⏳ Đang lưu...' : '🥁 Bắt đầu Tap Tempo'}
+                    <button onClick={async () => { setShowConfirmSave(false); await handleAddSong() }}
+                      disabled={addingSong}
+                      style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '15px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10, opacity: addingSong ? 0.7 : 1 }}>
+                      {addingSong ? '⏳ Đang lưu...' : '🎸 Lưu vào thư viện'}
+                    </button>
+                    <button onClick={() => { setShowConfirmSave(false); setYtSelected(null); setNewSongTitle(''); setNewSongYoutube('') }}
+                      style={{ width: '100%', background: 'none', border: 'none', color: L.t2, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '10px' }}>
+                      Huỷ
                     </button>
                   </div>
                 </div>
