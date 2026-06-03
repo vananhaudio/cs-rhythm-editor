@@ -359,10 +359,13 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       })
 
     supabase.from('student_songs')
-      .select('id,title,artist,tempo,status,created_at')
+      .select('id,title,artist,tempo,status,created_at,journey')
       .eq('student_id', student.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => setMySongs(data ?? []))
+      .then(({ data }) => setMySongs((data ?? []).map((s: any) => ({
+        ...s,
+        journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map((step: any) => ({ id: step.id, done: false }))
+      }))))
     supabase.from('edu_lesson_progress')
       .select('lesson_id').eq('student_id', student.id)
       .then(({ data }) => {
