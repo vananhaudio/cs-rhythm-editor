@@ -42,6 +42,11 @@ interface Props {
 }
 
 export default function TapTempoTool({ onClose, onSaved }: Props) {
+  // Đọc params từ URL (truyền từ carousel bài hát)
+  const urlParams  = new URLSearchParams(window.location.search)
+  const preTitle   = urlParams.get('title') ?? ''
+  const preYoutube = urlParams.get('youtube') ?? ''
+
   const [url, setUrl]             = useState(preYoutube)
   const [videoId, setVideoId]     = useState<string | null>(null)
   const [bpm, setBpm]             = useState<number | null>(null)
@@ -51,11 +56,6 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
   const [artist, setArtist]       = useState('')
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
-  // Đọc params từ URL (truyền từ carousel bài hát)
-  const urlParams = new URLSearchParams(window.location.search)
-  const preTitle   = urlParams.get('title') ?? ''
-  const preYoutube = urlParams.get('youtube') ?? ''
-
   const [query, setQuery]         = useState(preTitle)
   const [results, setResults]     = useState<YTResult[]>([])
   const [searching, setSearching] = useState(false)
