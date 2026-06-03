@@ -244,7 +244,12 @@ if (path === '/students') {
     return <App />
   }
 
-  // ── Route / và /player — Player (trang chủ, chỉ teacher) ──
+  // ── Route / — Trang chủ: mở thẳng cổng học viên (app vào đây) ──
+  if (path === '/') {
+    return <StudentOnboarding />
+  }
+
+  // ── Route /player — Player (chỉ teacher) ──
   const extraActions = (
     <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
       {!loading && !user && (

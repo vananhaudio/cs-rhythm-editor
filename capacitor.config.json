@@ -1,0 +1,9 @@
+{
+  "appId": "com.vananhaudio.guitar",
+  "appName": "TVA Guitar",
+  "webDir": "dist",
+  "server": {
+    "url": "https://timming.vananhaudio.com",
+    "cleartext": false
+  }
+}

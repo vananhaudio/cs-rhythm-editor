@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/cli": "^7.6.6",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
     "@coderline/alphatab": "^1.8.3",
     "@supabase/supabase-js": "^2.106.1",
     "@tiptap/extension-code-block": "^3.23.6",
