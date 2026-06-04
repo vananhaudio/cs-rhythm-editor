@@ -3,6 +3,11 @@ import { fitTempo, beatToTime, timeToBeat } from './logic/tempoFit'
 import type { TempoFit } from './logic/tempoFit'
 import { splitWords, computeMapping, makeAnchor } from './logic/songBuilder'
 import type { Word, Anchor, MappedWord } from './logic/songBuilder'
+import {
+  newDraftId, autosaveCurrentDraft, getLatestDraft, getCurrentId, loadDraft as loadDraftById,
+  listDrafts, deleteDraft, renameDraft, duplicateDraft, migrateLegacyDraft, hasContent, progressOf,
+} from './logic/songDraftStorage'
+import type { SongDraft, DraftSummary } from './logic/songDraftStorage'
 
 /* =========================================================================
    SONG BUILDER V1 — biến bài YouTube thành dữ liệu luyện nhịp.
@@ -20,10 +25,9 @@ const C = {
 }
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 const MONO = `'JetBrains Mono','Space Mono',monospace`
-const DRAFT_KEY = 'csre-song-builder-draft-v1'
 const YT_API_KEY = 'AIzaSyA6kg3G2CVZ7b_x8IAlkZJCOa4AJHyWHms'
 
-const STEPS = ['Chuẩn bị', 'Nhịp', 'Phách', 'Gắn mốc', 'Nghe thử', 'Xuất'] as const
+const STEPS = ['Chuẩn bị', 'Phách', 'Gắn mốc', 'Nhịp', 'Nghe thử', 'Xuất'] as const
 
 interface YTResult { id: string; title: string; channel: string; thumbnail: string }
 
@@ -41,15 +45,6 @@ const fmt = (s: number) => {
   if (!isFinite(s)) return '0:00'
   const m = Math.floor(Math.abs(s) / 60), sec = Math.floor(Math.abs(s) % 60)
   return `${s < 0 ? '-' : ''}${m}:${String(sec).padStart(2, '0')}`
-}
-
-/* ---------- draft ---------- */
-interface Draft {
-  youtubeUrl: string; lyricsText: string; fit: TempoFit | null
-  timeSignature: number; downbeatPosition: number; anchors: Anchor[]; step: number
-}
-function loadDraft(): Draft | null {
-  try { const r = localStorage.getItem(DRAFT_KEY); return r ? JSON.parse(r) as Draft : null } catch { return null }
 }
 
 /* ---------- atoms ---------- */
@@ -129,16 +124,19 @@ function LyricBlock({ words, mapping, activeIndex, onTap, picker }: {
 
 /* ============================ PAGE ============================ */
 export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
-  const draft = useMemo(() => loadDraft(), [])
+  const [draftId, setDraftId] = useState<string>(() => newDraftId())
+  const [songTitle, setSongTitle] = useState('')
+  const [videoThumb, setVideoThumb] = useState<string | null>(null)
 
-  const [step, setStep] = useState(draft?.step ?? 0)
-  const [youtubeUrl, setYoutubeUrl] = useState(draft?.youtubeUrl ?? '')
-  const [videoId, setVideoId] = useState<string | null>(draft?.youtubeUrl ? extractVideoId(draft.youtubeUrl) : null)
-  const [lyricsText, setLyricsText] = useState(draft?.lyricsText ?? '')
-  const [fit, setFit] = useState<TempoFit | null>(draft?.fit ?? null)
-  const [timeSignature, setTimeSignature] = useState(draft?.timeSignature ?? 4)
-  const [downbeatPosition, setDownbeatPosition] = useState(draft?.downbeatPosition ?? 1)
-  const [anchors, setAnchors] = useState<Anchor[]>(draft?.anchors ?? [])
+  const [step, setStep] = useState(0)
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [videoId, setVideoId] = useState<string | null>(null)
+  const [lyricsText, setLyricsText] = useState('')
+  const [fit, setFit] = useState<TempoFit | null>(null)
+  const [timeSignature, setTimeSignature] = useState(4)
+  const [downbeatPosition, setDownbeatPosition] = useState(0)
+  const [groupBeats, setGroupBeats] = useState<boolean | null>(null)
+  const [anchors, setAnchors] = useState<Anchor[]>([])
 
   const [tapTimes, setTapTimes] = useState<number[]>([])
   const [playerReady, setPlayerReady] = useState(false)
@@ -147,6 +145,47 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
   const [pendingBeat, setPendingBeat] = useState<{ beatIndex: number; time: number } | null>(null)
   const [metronomeOn, setMetronomeOn] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [showHelp, setShowHelp] = useState(false)
+  const [videoExpanded, setVideoExpanded] = useState(false)
+
+  /* ---- nháp: tiếp tục / danh sách / nhập JSON ---- */
+  const [resumeDraft, setResumeDraft] = useState<SongDraft | null>(null)
+  const [showDrafts, setShowDrafts] = useState(false)
+  const hydrated = useRef(false)   // chặn autosave ghi đè trước khi khôi phục xong
+
+  const applyDraft = useCallback((d: SongDraft) => {
+    setDraftId(d.id)
+    setSongTitle(d.title || '')
+    setYoutubeUrl(d.youtubeUrl)
+    setVideoId(d.videoId ?? (d.youtubeUrl ? extractVideoId(d.youtubeUrl) : null))
+    setVideoThumb(d.thumbnail ?? null)
+    setLyricsText(d.lyricsText)
+    setFit(d.fit)
+    setTimeSignature(d.timeSignature)
+    setDownbeatPosition(d.downbeatPosition)
+    setGroupBeats(d.groupBeats)
+    setAnchors(d.anchors)
+    setStep(d.step)
+    setTapTimes([]); setPlayerReady(false); setPlaying(false); setPendingBeat(null); setMetronomeOn(false)
+    hydrated.current = true
+  }, [])
+
+  const newDraft = useCallback(() => {
+    setDraftId(newDraftId())
+    setSongTitle(''); setYoutubeUrl(''); setVideoId(null); setVideoThumb(null); setLyricsText('')
+    setFit(null); setTimeSignature(4); setDownbeatPosition(0); setGroupBeats(null); setAnchors([])
+    setStep(0); setTapTimes([]); setPlayerReady(false); setPlaying(false); setPendingBeat(null); setMetronomeOn(false)
+    hydrated.current = true
+  }, [])
+
+  /* ---- mở app: hỏi tiếp tục bài đang làm dở ---- */
+  useEffect(() => {
+    migrateLegacyDraft()
+    const curId = getCurrentId()
+    const latest = (curId && loadDraftById(curId)) || getLatestDraft()
+    if (latest && hasContent(latest)) setResumeDraft(latest)
+    else hydrated.current = true
+  }, [])
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const playingRef = useRef(false)
@@ -174,7 +213,12 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
       if (typeof ev.origin === 'string' && !ev.origin.includes('youtube')) return
       let d: Record<string, unknown>
       try { d = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data } catch { return }
-      if (d.event === 'onReady') { setPlayerReady(true); return }
+      if (d.event === 'onReady') {
+        setPlayerReady(true)
+        // bỏ tắt tiếng — tránh video bị mute do chính sách autoplay của trình duyệt
+        post('unMute'); post('setVolume', [100])
+        return
+      }
       const applyState = (st: number) => {
         if (st === 1) setPlay(true)
         else if (st === 2 || st === 0) setPlay(false)
@@ -192,7 +236,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     }
     window.addEventListener('message', h)
     return () => window.removeEventListener('message', h)
-  }, [videoClock])
+  }, [videoClock, post])
 
   /* ---- đồng hồ UI ~60fps ---- */
   useEffect(() => {
@@ -203,7 +247,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
   }, [videoClock])
 
   /* ---- transport ---- */
-  const play = useCallback(() => post('playVideo'), [post])
+  const play = useCallback(() => { post('unMute'); post('playVideo') }, [post])
   const pause = useCallback(() => post('pauseVideo'), [post])
   const seekTo = useCallback((sec: number) => { post('seekTo', [sec, true]); setAnchorClock(sec) }, [post])
 
@@ -211,9 +255,11 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     const id = extractVideoId(youtubeUrl.trim())
     setVideoId(id); setPlayerReady(false); setPlay(false); setAnchorClock(0)
   }
-  const pickVideo = (id: string) => {
+  const pickVideo = (id: string, title?: string, thumb?: string) => {
     setYoutubeUrl(`https://youtube.com/watch?v=${id}`)
     setVideoId(id); setPlayerReady(false); setPlay(false); setAnchorClock(0)
+    if (title && !songTitle.trim()) setSongTitle(title)
+    if (thumb) setVideoThumb(thumb)
   }
 
   /* ---- tap nhịp (video-time) ---- */
@@ -250,7 +296,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     o.start(t0); o.stop(t0 + 0.09)
   }, [])
   useEffect(() => {
-    if (!metronomeOn || !fit || (step !== 2 && step !== 4)) return
+    if (!metronomeOn || !fit || step !== 4) return
     lastBeatRef.current = -1
     const N = timeSignature
     const id = setInterval(() => {
@@ -259,11 +305,11 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
       if (beat !== lastBeatRef.current) {
         lastBeatRef.current = beat
         const inBar = ((beat % N) + N) % N
-        click(inBar === downbeatPosition - 1)
+        click(groupBeats === true && inBar === downbeatPosition - 1)
       }
     }, 22)
     return () => clearInterval(id)
-  }, [metronomeOn, fit, timeSignature, downbeatPosition, videoClock, click, step])
+  }, [metronomeOn, fit, timeSignature, downbeatPosition, groupBeats, videoClock, click, step])
 
   /* ---- derived ---- */
   const words = useMemo(() => splitWords(lyricsText), [lyricsText])
@@ -320,17 +366,31 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 2200); return () => clearTimeout(id) }, [toast])
 
-  /* ---- lưu nháp ---- */
+  /* ---- autosave nháp: mỗi thay đổi quan trọng đều lưu ngay ---- */
   useEffect(() => {
-    const d: Draft = { youtubeUrl, lyricsText, fit, timeSignature, downbeatPosition, anchors, step }
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)) } catch { /* sandbox */ }
-  }, [youtubeUrl, lyricsText, fit, timeSignature, downbeatPosition, anchors, step])
+    if (!hydrated.current) return            // chưa khôi phục xong thì chưa ghi
+    const now = Date.now()
+    const fallbackTitle = videoId ? `Bài ${videoId}` : (lyricsText.trim().split(/\s+/).slice(0, 4).join(' ') || '')
+    const d: SongDraft = {
+      id: draftId, title: songTitle.trim() || fallbackTitle,
+      youtubeUrl, videoId, thumbnail: videoThumb,
+      lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, step,
+      createdAt: now, updatedAt: now,
+    }
+    if (!hasContent(d)) return               // bài rỗng thì không tạo nháp
+    autosaveCurrentDraft(d)
+  }, [draftId, songTitle, youtubeUrl, videoId, videoThumb, lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, step])
+
+  /* ---- thao tác nháp ---- */
+  const resumeLatest = () => { if (resumeDraft) applyDraft(resumeDraft); setResumeDraft(null) }
+  const startNew = () => { newDraft(); setResumeDraft(null); setShowDrafts(false) }
+  const openDraftById = (id: string) => { const d = loadDraftById(id); if (d) applyDraft(d); setShowDrafts(false) }
 
   /* ---- điều hướng bước ---- */
   const canNext = (): boolean => {
     if (step === 0) return !!videoId
     if (step === 1) return !!fit?.ok
-    if (step === 2) return !!fit?.ok
+    if (step === 2) return true
     if (step === 3) return true
     if (step === 4) return true
     return false
@@ -347,78 +407,102 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
         textarea,input{font-family:${FONT}}
         ::placeholder{color:${C.dim}}`}</style>
 
-      {/* Header + step dots */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '10px 14px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {onClose && <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 10, width: 34, height: 34, color: C.muted, cursor: 'pointer', fontSize: 17, flexShrink: 0 }}>✕</button>}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>🎼 Song Builder</div>
-            <div style={{ fontSize: 11, color: C.dim }}>Biến bài YouTube thành dữ liệu luyện nhịp</div>
+      {/* Header gọn + thanh bước dạng dot */}
+      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '8px 12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {onClose && <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>✕</button>}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flex: 1, minWidth: 0 }}>
+            <span style={{ fontWeight: 800, fontSize: 14, flexShrink: 0 }}>🎼</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ color: C.accent }}>{step + 1}.</span> {STEPS[step]} {step === 5 ? '🔒' : ''}
+            </span>
           </div>
+          <button onClick={() => setShowHelp(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>?</button>
         </div>
-        <div style={{ display: 'flex', gap: 5, marginTop: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 10 }}>
           {STEPS.map((s, i) => {
             const locked = i === 5
             const active = i === step
             const done = i < step
             return (
-              <button key={s} onClick={() => { if (!locked && (i <= step || canNext())) setStep(i) }}
+              <button key={s} aria-label={s} onClick={() => { if (!locked && (i <= step || canNext())) setStep(i) }}
                 style={{
-                  flex: 1, padding: '5px 2px', borderRadius: 8, border: 'none', cursor: locked ? 'default' : 'pointer',
-                  background: active ? C.accent : done ? C.accentSoft : 'rgba(255,255,255,0.04)',
-                  color: active ? '#fff' : locked ? C.dim : done ? C.accent : C.muted,
-                  fontSize: 10, fontWeight: 700, fontFamily: FONT, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none',
+                  cursor: locked ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 }}>
-                <span style={{ fontSize: 11 }}>{locked ? '🔒' : `${i + 1}`}</span>
-                <span style={{ fontSize: 9, whiteSpace: 'nowrap' }}>{s}</span>
+                <div style={{
+                  width: active ? 28 : 24, height: active ? 28 : 24, borderRadius: '50%',
+                  border: active ? `2px solid ${C.accent}` : `1.5px solid ${done ? C.accent : locked ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.28)'}`,
+                  background: active ? C.accent : done ? `${C.accent}33` : 'transparent',
+                  color: active ? '#fff' : done ? C.accent : locked ? C.dim : C.muted,
+                  fontFamily: MONO, fontSize: 12, fontWeight: 800, lineHeight: 1, transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  {locked ? '🔒' : done ? '✓' : i + 1}
+                </div>
+                <span style={{
+                  fontSize: 9.5, fontWeight: active ? 800 : 600, lineHeight: 1.1, textAlign: 'center',
+                  color: active ? C.accent : done ? C.muted : locked ? C.dim : C.muted,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+                }}>{s}</span>
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Player (giữ mount xuyên suốt để không reload video) */}
+      {/* Player nhỏ gọn (video phụ — giữ mount xuyên suốt để không reload) */}
       {videoId && (
-        <div style={{ flexShrink: 0, background: '#000' }}>
-          <div style={{ width: '100%', margin: '0 auto', aspectRatio: '16 / 9', maxHeight: '30vh' }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: C.surface, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ width: videoExpanded ? 200 : 132, aspectRatio: '16 / 9', flexShrink: 0, borderRadius: 8, overflow: 'hidden', background: '#000', transition: 'width 0.2s' }}>
             <iframe ref={iframeRef} src={buildEmbedUrl(videoId)} title="YouTube"
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen
               onLoad={() => { setTimeout(startListening, 400); setTimeout(startListening, 1200) }} />
           </div>
-          {/* transport mini */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-            <button onClick={playing ? pause : play} disabled={!playerReady}
-              style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: playing ? C.surface2 : C.accent, color: '#fff', fontSize: 15, cursor: 'pointer', flexShrink: 0, opacity: playerReady ? 1 : 0.4 }}>
-              {playing ? '⏸' : '▶'}
-            </button>
-            <span style={{ fontFamily: MONO, fontSize: 13, color: C.cyan, minWidth: 44 }}>{fmt(videoTime)}</span>
-            {fit?.ok && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                {Array.from({ length: timeSignature }, (_, i) => (
-                  <span key={i} style={{
-                    width: i === downbeatPosition - 1 ? 10 : 8, height: i === downbeatPosition - 1 ? 10 : 8, borderRadius: '50%',
-                    background: i === inBar ? (i === downbeatPosition - 1 ? C.amber : C.accent) : 'rgba(255,255,255,0.12)',
-                    border: i === downbeatPosition - 1 ? `1.5px solid ${C.amber}` : 'none', transition: 'background 0.05s',
-                  }} />
-                ))}
-                <span style={{ fontFamily: MONO, fontSize: 11, color: C.muted, marginLeft: 4 }}>beat {curBeat}</span>
-              </div>
-            )}
-            <span style={{ flex: 1 }} />
-            {playerReady
-              ? <span style={{ fontSize: 10, color: C.green, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.green, animation: 'pulse 1s infinite' }} />sẵn sàng</span>
-              : <span style={{ fontSize: 10, color: C.dim }}>đang kết nối…</span>}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => seekTo(0)} disabled={!playerReady}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, fontSize: 13, cursor: 'pointer', flexShrink: 0, opacity: playerReady ? 1 : 0.4 }}
+                title="Về đầu video">⏮</button>
+              <button onClick={playing ? pause : play} disabled={!playerReady}
+                style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: playing ? C.surface2 : C.accent, color: '#fff', fontSize: 15, cursor: 'pointer', flexShrink: 0, opacity: playerReady ? 1 : 0.4 }}>
+                {playing ? '⏸' : '▶'}
+              </button>
+              <span style={{ fontFamily: MONO, fontSize: 13, color: C.cyan, minWidth: 40 }}>{fmt(videoTime)}</span>
+              <span style={{ flex: 1 }} />
+              <button onClick={() => setVideoExpanded(v => !v)}
+                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 7, width: 28, height: 28, color: C.muted, cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>
+                {videoExpanded ? '⤢' : '⤡'}
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {fit?.ok && groupBeats === true ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {Array.from({ length: timeSignature }, (_, i) => (
+                    <span key={i} style={{
+                      width: i === downbeatPosition - 1 ? 10 : 8, height: i === downbeatPosition - 1 ? 10 : 8, borderRadius: '50%',
+                      background: i === inBar ? (i === downbeatPosition - 1 ? C.amber : C.accent) : 'rgba(255,255,255,0.12)',
+                      border: i === downbeatPosition - 1 ? `1.5px solid ${C.amber}` : 'none', transition: 'background 0.05s',
+                    }} />
+                  ))}
+                </div>
+              ) : <span style={{ flex: 1 }} />}
+              <span style={{ flex: 1 }} />
+              {playerReady
+                ? <span style={{ fontSize: 10, color: C.green, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.green, animation: 'pulse 1s infinite' }} />sẵn sàng</span>
+                : <span style={{ fontSize: 10, color: C.dim }}>đang kết nối…</span>}
+            </div>
           </div>
         </div>
       )}
 
       {/* Nội dung bước (cuộn) */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 14, paddingBottom: 90 }}>
-        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words }} />}
+        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words, songTitle, setSongTitle, onOpenDrafts: () => setShowDrafts(true) }} />}
         {step === 1 && <StepTempo {...{ fit, tapTimes, tap, resetTaps, playing, playerReady, play }} />}
-        {step === 2 && <StepDownbeat {...{ fit, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, inBar, curBeat }} />}
-        {step === 3 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }} />}
+        {step === 2 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }} />}
+        {step === 3 && <StepDownbeat {...{ words, mapping, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, groupBeats, setGroupBeats }} />}
         {step === 4 && <StepPreview {...{ fit, words, mapping, activeWordIndex, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, pause, mappedCount, pct }} />}
         {step === 5 && <StepExportLocked />}
       </div>
@@ -438,14 +522,66 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
           {toast}
         </div>
       )}
+
+      {showHelp && <HelpModal step={step} onClose={() => setShowHelp(false)} />}
+
+      {resumeDraft && (
+        <ResumeModal draft={resumeDraft} onResume={resumeLatest} onNew={startNew} />
+      )}
+      {showDrafts && (
+        <DraftsModal
+          currentId={draftId}
+          onClose={() => setShowDrafts(false)}
+          onOpen={openDraftById}
+          onNew={startNew}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ===================== Modal hướng dẫn ===================== */
+const HELP_TIPS = [
+  'Tìm bài trên YouTube (hoặc dán link), rồi dán lời bài hát. Mỗi từ sẽ là một mốc có thể gắn vào nhịp.',
+  'Phát video và tap đều theo nhịp — mỗi tap = 1 phách. Tap ≥ 4 lần để máy dựng lưới nhịp; tap sai có thể tap lại.',
+  'Bấm “Play để gắn mốc”, nghe tới từ cần đánh dấu thì bấm “Dừng” — video tự dừng, chọn từ là xong. Chỉ cần gắn ~30–50% số từ, phần còn lại máy tự nội suy.',
+  'Tuỳ chọn: nhóm beat thành ô nhịp. Nếu có, chọn số beat mỗi ô rồi chạm một từ rơi vào phách mạnh — app tô phách mạnh màu vàng. Không cần thì bỏ qua, beat vẫn chạy đều.',
+  'Phát thử: từ đã gắn và nội suy sẽ sáng đúng nhịp. Chỗ nào lệch thì quay lại bước Gắn mốc để thêm/sửa mốc.',
+  'Bước Xuất đang tạm khoá, sẽ mở khi chốt xong định dạng dữ liệu.',
+]
+function HelpModal({ step, onClose }: { step: number; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: 20, maxWidth: 380, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>🎼 Hướng dẫn</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
+        </div>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 16 }}>
+          Song Builder biến một bài YouTube thành dữ liệu luyện nhịp dựa trên <b style={{ color: C.text }}>lưới phách đều</b>. Làm lần lượt qua các bước bên dưới.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {STEPS.map((s, i) => (
+            <div key={s} style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 12, background: i === step ? C.accentSoft : 'rgba(255,255,255,0.03)', border: `1px solid ${i === step ? C.accent : C.border}` }}>
+              <span style={{ fontFamily: MONO, fontWeight: 800, fontSize: 13, color: i === step ? C.accent : C.muted, flexShrink: 0 }}>{i === 5 ? '🔒' : i + 1}</span>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{s}</div>
+                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{HELP_TIPS[i]}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
 
 /* ===================== STEP 0 — Chuẩn bị ===================== */
-function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words }: {
+function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words, songTitle, setSongTitle, onOpenDrafts }: {
   youtubeUrl: string; setYoutubeUrl: (s: string) => void; videoId: string | null; loadVideo: () => void
-  pickVideo: (id: string) => void; lyricsText: string; setLyricsText: (s: string) => void; words: Word[]
+  pickVideo: (id: string, title?: string, thumb?: string) => void; lyricsText: string; setLyricsText: (s: string) => void; words: Word[]
+  songTitle: string; setSongTitle: (s: string) => void
+  onOpenDrafts: () => void
 }) {
   const inp: React.CSSProperties = { width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface2, color: C.text, fontSize: 14, outline: 'none' }
   const [query, setQuery] = useState('')
@@ -453,6 +589,8 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
   const [searching, setSearching] = useState(false)
   const [searchErr, setSearchErr] = useState<string | null>(null)
   const [showLink, setShowLink] = useState(false)
+  const [changing, setChanging] = useState(false)
+  const showPicker = !videoId || changing
 
   const searchYouTube = async (q: string) => {
     if (!q.trim()) return
@@ -476,55 +614,76 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
     setSearching(false)
   }
 
-  const onSelect = (r: YTResult) => { pickVideo(r.id); setResults([]); setQuery('') }
+  const onSelect = (r: YTResult) => { pickVideo(r.id, r.title, r.thumbnail); setResults([]); setQuery(''); setChanging(false) }
 
   return (
     <>
-      <Card title="① Tìm bài hát trên YouTube">
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input style={{ ...inp, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && searchYouTube(query)} placeholder="Tên bài hát / ca sĩ…" />
-          <Btn onClick={() => searchYouTube(query)} disabled={!query.trim() || searching} style={{ flexShrink: 0 }}>
-            {searching ? '…' : '🔍 Tìm'}
-          </Btn>
+      {/* Thanh quản lý bài nháp */}
+      <div style={{ display: 'flex', marginBottom: 12 }}>
+        <button onClick={onOpenDrafts} style={{ flex: 1, padding: '10px 6px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>📂 Bài hát của tôi</button>
+      </div>
+
+      {showPicker ? (
+        <Card title="① Chọn bài hát">
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input style={{ ...inp, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && searchYouTube(query)} placeholder="Tìm tên bài / ca sĩ trên YouTube…" />
+            <Btn onClick={() => searchYouTube(query)} disabled={!query.trim() || searching} style={{ flexShrink: 0 }}>
+              {searching ? '…' : '🔍 Tìm'}
+            </Btn>
+          </div>
+          {searchErr && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ {searchErr}</div>}
+
+          {results.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10, maxHeight: 220, overflowY: 'auto' }}>
+              {results.map(r => {
+                const sel = videoId === r.id
+                return (
+                  <button key={r.id} onClick={() => onSelect(r)}
+                    style={{ display: 'flex', gap: 8, alignItems: 'center', textAlign: 'left', padding: 4, borderRadius: 8, cursor: 'pointer',
+                      background: sel ? C.accentSoft : 'rgba(255,255,255,0.03)', border: `1px solid ${sel ? C.accent : C.border}` }}>
+                    <img src={r.thumbnail} alt="" style={{ width: 52, height: 30, borderRadius: 5, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
+                      <div style={{ fontSize: 10, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>{r.channel}</div>
+                    </div>
+                    {sel && <span style={{ fontSize: 11, color: C.accent, fontWeight: 700, flexShrink: 0 }}>✓</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          <button onClick={() => setShowLink(v => !v)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', marginTop: 12, padding: 0, fontFamily: FONT }}>
+            {showLink ? '▾ Ẩn dán link' : '▸ Hoặc dán link YouTube trực tiếp'}
+          </button>
+          {showLink && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <input style={{ ...inp, flex: 1 }} value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && loadVideo()} placeholder="https://youtube.com/watch?v=..." />
+              <Btn onClick={() => { loadVideo(); setChanging(false) }} style={{ flexShrink: 0 }}>Load</Btn>
+            </div>
+          )}
+          {youtubeUrl && !videoId && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ Link YouTube không hợp lệ</div>}
+          {changing && videoId && (
+            <button onClick={() => setChanging(false)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', marginTop: 10, padding: 0, fontFamily: FONT }}>← Giữ bài hiện tại</button>
+          )}
+        </Card>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '12px 14px' }}>
+          <span style={{ fontSize: 16 }}>✓</span>
+          <span style={{ flex: 1, fontSize: 13, color: C.green, fontWeight: 600 }}>Đã chọn bài hát</span>
+          <button onClick={() => setChanging(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, color: C.text, fontSize: 12, cursor: 'pointer', padding: '7px 14px', fontFamily: FONT }}>🔄 Đổi bài</button>
         </div>
-        {searchErr && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ {searchErr}</div>}
+      )}
 
-        {results.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, maxHeight: 340, overflowY: 'auto' }}>
-            {results.map(r => {
-              const sel = videoId === r.id
-              return (
-                <button key={r.id} onClick={() => onSelect(r)}
-                  style={{ display: 'flex', gap: 10, alignItems: 'center', textAlign: 'left', padding: 6, borderRadius: 10, cursor: 'pointer',
-                    background: sel ? C.accentSoft : 'rgba(255,255,255,0.03)', border: `1px solid ${sel ? C.accent : C.border}` }}>
-                  <img src={r.thumbnail} alt="" style={{ width: 76, height: 43, borderRadius: 6, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{r.title}</div>
-                    <div style={{ fontSize: 11, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{r.channel}</div>
-                  </div>
-                  {sel && <span style={{ fontSize: 11, color: C.accent, fontWeight: 700, flexShrink: 0 }}>✓</span>}
-                </button>
-              )
-            })}
-          </div>
-        )}
+      {videoId && (
+        <Card title="Tên bài">
+          <input style={inp} value={songTitle} onChange={e => setSongTitle(e.target.value)} placeholder="Đặt tên cho bài đang làm…" />
+        </Card>
+      )}
 
-        <button onClick={() => setShowLink(v => !v)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', marginTop: 12, padding: 0, fontFamily: FONT }}>
-          {showLink ? '▾ Ẩn dán link' : '▸ Hoặc dán link YouTube trực tiếp'}
-        </button>
-        {showLink && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <input style={{ ...inp, flex: 1 }} value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && loadVideo()} placeholder="https://youtube.com/watch?v=..." />
-            <Btn onClick={loadVideo} style={{ flexShrink: 0 }}>Load</Btn>
-          </div>
-        )}
-        {youtubeUrl && !videoId && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ Link YouTube không hợp lệ</div>}
-        {videoId && <div style={{ fontSize: 11, color: C.green, marginTop: 8 }}>✓ Đã nạp video. Bấm ▶ để nghe thử.</div>}
-      </Card>
-
-      <Card title="② Lời bài hát">
+      <Card title="Lời bài hát">
         <textarea value={lyricsText} onChange={e => setLyricsText(e.target.value)} rows={8}
           placeholder={'Dán lời bài hát vào đây.\nMỗi từ sẽ là một mốc có thể gắn.\nXuống dòng để giữ bố cục câu.'}
           style={{ ...inp, resize: 'vertical', lineHeight: 1.7 }} />
@@ -532,10 +691,6 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
           {words.length > 0 ? <>Đã tách <b style={{ color: C.text }}>{words.length}</b> từ.</> : 'Chưa có lời — có thể nhập sau ở bước Gắn mốc.'}
         </div>
       </Card>
-
-      <div style={{ fontSize: 12, color: C.dim, lineHeight: 1.7, padding: '0 4px' }}>
-        Quy trình: <b style={{ color: C.muted }}>nghe & tap nhịp</b> → chọn phách mạnh → <b style={{ color: C.muted }}>gắn mốc</b> vài từ vào beat → app tự nội suy phần còn lại → nghe thử.
-      </div>
     </>
   )
 }
@@ -547,9 +702,9 @@ function StepTempo({ fit, tapTimes, tap, resetTaps, playing, playerReady, play }
 }) {
   return (
     <>
-      <Card title="Giai đoạn 1 — Lưới nhịp">
+      <Card title="Phách">
         <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
-          Bấm <b style={{ color: C.text }}>▶ phát video</b>, rồi <b style={{ color: C.text }}>tap đều theo nhịp</b> bài hát (mỗi tap = 1 phách). Tap ≥ 4 lần; có thể tap–nghỉ–tap, bỏ vài nhịp cũng được.
+          Hãy nghe bài hát và bấm ngón tay vào nút <b style={{ color: C.text }}>TAP</b> thật đều nhé. App sẽ tự ghi nhận lại tempo cho bạn.
         </div>
         {!playing && (
           <Btn kind="soft" onClick={play} disabled={!playerReady} style={{ width: '100%', marginBottom: 12 }}>▶ Phát video để tap</Btn>
@@ -569,92 +724,94 @@ function StepTempo({ fit, tapTimes, tap, resetTaps, playing, playerReady, play }
       </Card>
 
       {fit?.ok ? (
-        <Card title="Kết quả fit">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <Stat label="BPM" value={fit.bpm.toFixed(1)} color={C.cyan} />
-            <Stat label="beatDuration" value={`${fit.beatDuration.toFixed(3)}s`} />
-            <Stat label="gridOffset" value={`${fit.gridOffset.toFixed(2)}s`} sub="≈ youtubeOffset" color={C.amber} />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Stat label="Tap" value={String(fit.validTaps)} />
-            <Stat label="Bị loại" value={String(fit.rejected)} color={fit.rejected ? C.amber : C.green} />
-            <Stat label="Sai số TB" value={`${(fit.avgError * 1000).toFixed(0)}ms`} color={fit.avgError * 1000 < 35 ? C.green : C.amber} />
-            <Stat label="Chế độ" value={fit.fitted ? 'hồi quy' : 'fallback'} color={fit.fitted ? C.green : C.amber} />
-          </div>
-          {fit.fitted && fit.avgError * 1000 < 45 &&
-            <div style={{ marginTop: 12, background: 'rgba(34,197,94,0.08)', border: `1px solid ${C.green}55`, borderRadius: 10, padding: '10px 14px', fontSize: 12, color: C.green }}>
-              ✓ Lưới ổn định. Bấm “Tiếp tục” để chọn phách mạnh.
-            </div>}
-        </Card>
+        <div style={{ textAlign: 'center', background: 'rgba(34,197,94,0.08)', border: `1px solid ${C.green}55`, borderRadius: 16, padding: '18px 14px' }}>
+          <div style={{ fontFamily: MONO, fontSize: 40, fontWeight: 900, color: C.cyan, lineHeight: 1 }}>{fit.bpm.toFixed(0)}<span style={{ fontSize: 16, color: C.muted, fontWeight: 600, marginLeft: 6 }}>BPM</span></div>
+          <div style={{ fontSize: 13, color: C.green, marginTop: 10 }}>✓ Đã bắt được nhịp. Bấm “Tiếp tục”.</div>
+        </div>
       ) : (
         <div style={{ textAlign: 'center', color: C.dim, fontSize: 13, padding: 16 }}>
-          {tapTimes.length < 2 ? 'Tap ít nhất 2 lần để ước lượng, ≥ 4 lần để fit chính xác…' : 'Tap thêm…'}
+          {tapTimes.length < 2 ? 'Tap thêm vài lần nữa…' : 'Tap thêm…'}
         </div>
       )}
     </>
   )
 }
 
-/* ===================== STEP 2 — Phách mạnh ===================== */
-function StepDownbeat({ fit, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, metronomeOn, toggleMetro, playing, play, inBar, curBeat }: {
-  fit: TempoFit | null; timeSignature: number; setTimeSignature: (n: number) => void
+/* ===================== STEP — Nhịp (nhóm beat + phách mạnh) ===================== */
+function StepDownbeat({ words, mapping, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, groupBeats, setGroupBeats }: {
+  words: Word[]; mapping: MappedWord[]; timeSignature: number; setTimeSignature: (n: number) => void
   downbeatPosition: number; setDownbeatPosition: (n: number) => void
-  metronomeOn: boolean; toggleMetro: () => void; playing: boolean; play: () => void; inBar: number; curBeat: number
+  groupBeats: boolean | null; setGroupBeats: (v: boolean | null) => void
 }) {
-  if (!fit?.ok) return <div style={{ color: C.muted, fontSize: 13, padding: 16 }}>Cần lưới nhịp ở bước 1 trước.</div>
-  const labels = ['A', 'B', 'C', 'D', 'E', 'F']
+  const [pending, setPending] = useState<{ index: number; text: string; beatIndex: number } | null>(null)
+  const hasMapped = mapping.some(m => m.beatPosition != null)
+  const confirmed = groupBeats === true && downbeatPosition > 0
+  const beatOptions: { n: number; label: string }[] = [
+    { n: 2, label: '2/4' }, { n: 3, label: '3/4' }, { n: 4, label: '4/4' }, { n: 6, label: '6/8' },
+  ]
+
+  const pickWord = (w: Word, m: MappedWord) => {
+    if (m.beatPosition == null) return
+    setPending({ index: w.index, text: w.text, beatIndex: Math.round(m.beatPosition) })
+  }
+  const confirmStrong = () => {
+    if (!pending) return
+    setDownbeatPosition((pending.beatIndex % timeSignature) + 1)
+    setPending(null)
+  }
+  const chooseBeats = (n: number) => { setGroupBeats(true); setTimeSignature(n); setDownbeatPosition(0); setPending(null) }
+  const chooseEven = () => { setGroupBeats(false); setDownbeatPosition(0); setPending(null) }
+
   return (
     <>
-      <Card title="Giai đoạn 2 — Cảm nhận phách mạnh">
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 14 }}>
-          Bật <b style={{ color: C.text }}>metronome</b> và nghe. Chọn phiên bản mà phách 🟡 <b style={{ color: C.amber }}>rơi đúng vào phách mạnh</b> bạn cảm nhận. Không có đúng/sai.
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 12, color: C.muted }}>Số phách / nhịp:</span>
-          {[2, 3, 4, 6].map(n => (
-            <button key={n} onClick={() => { setTimeSignature(n); if (downbeatPosition > n) setDownbeatPosition(1) }}
-              style={{ width: 38, height: 34, borderRadius: 9, border: `1px solid ${timeSignature === n ? C.accent : C.border}`, background: timeSignature === n ? C.accentSoft : 'transparent', color: timeSignature === n ? C.accent : C.muted, fontFamily: MONO, fontWeight: 700, cursor: 'pointer' }}>{n}</button>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {Array.from({ length: timeSignature }, (_, p) => {
-            const sel = downbeatPosition === p + 1
+      <Card title="Chọn Nhịp">
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={chooseEven}
+            style={{ flex: 1, height: 42, borderRadius: 10, border: `1px solid ${groupBeats === false ? C.accent : C.border}`, background: groupBeats === false ? C.accentSoft : 'transparent', color: groupBeats === false ? C.accent : C.muted, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Đều</button>
+          {beatOptions.map(o => {
+            const sel = groupBeats === true && timeSignature === o.n
             return (
-              <button key={p} onClick={() => setDownbeatPosition(p + 1)}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, border: `1px solid ${sel ? C.accent : C.border}`, background: sel ? C.accentSoft : 'transparent', cursor: 'pointer' }}>
-                <span style={{ fontFamily: MONO, fontWeight: 800, fontSize: 15, color: sel ? C.accent : C.muted, width: 18 }}>{labels[p]}</span>
-                <div style={{ display: 'flex', gap: 6, flex: 1 }}>
-                  {Array.from({ length: timeSignature }, (_, i) => (
-                    <span key={i} style={{ width: 22, height: 22, borderRadius: '50%', background: i === p ? C.amber : 'rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: i === p ? '#1a1200' : C.dim }}>{i + 1}</span>
-                  ))}
-                </div>
-                {sel && <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>đang chọn</span>}
-              </button>
+              <button key={o.n} onClick={() => chooseBeats(o.n)}
+                style={{ flex: 1, height: 42, borderRadius: 10, border: `1px solid ${sel ? C.accent : C.border}`, background: sel ? C.accentSoft : 'transparent', color: sel ? C.accent : C.muted, fontFamily: MONO, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{o.label}</button>
             )
           })}
         </div>
+        <div style={{ fontSize: 11, color: C.dim, marginTop: 8 }}>
+          {groupBeats === false ? 'Beat chạy đều, cùng màu — bấm “Tiếp tục”.' : 'Chọn số phách/ô, hoặc “Đều” nếu không chia nhịp.'}
+        </div>
       </Card>
 
-      <Card>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Btn kind={metronomeOn ? 'solid' : 'soft'} onClick={toggleMetro} style={{ flex: 1 }}>
-            {metronomeOn ? '⏹ Tắt metronome' : '🔊 Bật metronome'}
-          </Btn>
-          {!playing && <Btn kind="ghost" onClick={play} style={{ flex: 1 }}>▶ Phát</Btn>}
-        </div>
-        <div style={{ display: 'flex', gap: 6, marginTop: 14, justifyContent: 'center' }}>
-          {Array.from({ length: timeSignature }, (_, i) => (
-            <span key={i} style={{
-              width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: 12, fontWeight: 700,
-              background: i === inBar ? (i === downbeatPosition - 1 ? C.amber : C.accent) : 'rgba(255,255,255,0.06)',
-              color: i === inBar ? '#0b0e14' : C.dim, transition: 'background 0.05s',
-            }}>{i + 1}</span>
-          ))}
-        </div>
-        <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 11, color: C.muted, marginTop: 8 }}>beat {curBeat} · phách mạnh ở vị trí {downbeatPosition}</div>
-      </Card>
+      {groupBeats === true && (
+        <Card title="Chọn một từ rơi vào phách mạnh">
+          {!hasMapped ? (
+            <div style={{ fontSize: 13, color: C.amber, lineHeight: 1.7 }}>
+              Chưa có từ nào được gắn mốc. Quay lại bước <b>Gắn mốc</b> để gắn vài từ trước, rồi mới chọn được phách mạnh.
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
+                Hãy chạm vào một từ mà bạn cảm thấy <b style={{ color: C.amber }}>rơi vào phách mạnh</b>. App sẽ tự lặp lại phách mạnh đó theo chu kỳ {timeSignature} beat.
+              </div>
+              <LyricBlock words={words} mapping={mapping} onTap={pickWord} picker />
+
+              {pending && (
+                <div style={{ marginTop: 14, padding: 14, borderRadius: 14, background: 'rgba(245,180,30,0.08)', border: `1px solid ${C.amber}55` }}>
+                  <div style={{ fontSize: 14, color: C.text, marginBottom: 12 }}>
+                    Từ <b style={{ color: C.amber }}>“{pending.text}”</b> ở beat {pending.beatIndex} → phách mạnh lặp mỗi <b>{timeSignature}</b> beat.
+                  </div>
+                  <Btn onClick={confirmStrong} style={{ width: '100%', background: C.amber, color: '#1a1200' }}>✓ Xác nhận phách mạnh</Btn>
+                </div>
+              )}
+
+              {confirmed && !pending && (
+                <div style={{ marginTop: 14, textAlign: 'center', fontSize: 13, color: C.green, fontWeight: 700 }}>
+                  ✓ Đã đặt phách mạnh — tô vàng theo chu kỳ {timeSignature} beat. Chạm từ khác nếu muốn đổi.
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+      )}
     </>
   )
 }
@@ -718,7 +875,6 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
               <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}` }}>
                 <span style={{ fontFamily: MONO, fontSize: 12, color: C.accent, minWidth: 70 }}>beat {a.beatIndex}</span>
                 <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.word}</span>
-                <span style={{ fontFamily: MONO, fontSize: 10, color: C.dim }}>tick {a.tick}</span>
                 <button onClick={() => removeAnchor(a.wordIndex)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 16, padding: 2 }}>✕</button>
               </div>
             ))}
@@ -805,3 +961,100 @@ function StepExportLocked() {
     </div>
   )
 }
+
+/* ===================== Nháp: thời gian tương đối ===================== */
+function relTime(ts: number): string {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000))
+  if (s < 60) return 'vừa xong'
+  const m = Math.floor(s / 60); if (m < 60) return `${m} phút trước`
+  const h = Math.floor(m / 60); if (h < 24) return `${h} giờ trước`
+  const d = Math.floor(h / 24); if (d < 30) return `${d} ngày trước`
+  return new Date(ts).toLocaleDateString('vi-VN')
+}
+
+/* ===================== Modal: tiếp tục bài đang làm dở ===================== */
+function ResumeModal({ draft, onResume, onNew }: { draft: SongDraft; onResume: () => void; onNew: () => void }) {
+  const pct = progressOf(draft)
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 22 }}>
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: 22, maxWidth: 360, width: '100%' }}>
+        <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Bạn có bài đang làm dở</div>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, margin: '14px 0' }}>
+          {draft.thumbnail
+            ? <img src={draft.thumbnail} alt="" style={{ width: 64, height: 38, borderRadius: 7, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
+            : <div style={{ width: 64, height: 38, borderRadius: 7, background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🎼</div>}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{draft.title || 'Bài chưa đặt tên'}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{relTime(draft.updatedAt)} · {pct}% hoàn thành</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Btn onClick={onResume} style={{ width: '100%' }}>▶ Tiếp tục</Btn>
+          <Btn kind="ghost" onClick={onNew} style={{ width: '100%' }}>+ Tạo bài mới</Btn>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ===================== Modal: danh sách bài đang làm ===================== */
+function DraftsModal({ currentId, onClose, onOpen, onNew }: {
+  currentId: string; onClose: () => void; onOpen: (id: string) => void; onNew: () => void
+}) {
+  const [items, setItems] = useState<DraftSummary[]>(() => listDrafts())
+  const refresh = () => setItems(listDrafts())
+
+  const doRename = (id: string, cur: string) => {
+    const name = prompt('Đổi tên bài:', cur)
+    if (name != null && name.trim()) { renameDraft(id, name.trim()); refresh() }
+  }
+  const doDelete = (id: string, name: string) => {
+    if (confirm(`Xoá bài “${name}”? Không thể hoàn tác.`)) { deleteDraft(id); refresh() }
+  }
+  const doDuplicate = (id: string) => { duplicateDraft(id); refresh() }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 450, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.surface, borderTop: `2px solid ${C.accent}`, borderRadius: '20px 20px 0 0', padding: 18, width: '100%', maxWidth: 480, maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ fontSize: 16, fontWeight: 800 }}>📂 Bài đang làm ({items.length})</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
+        </div>
+
+        {items.length === 0 ? (
+          <div style={{ textAlign: 'center', color: C.muted, fontSize: 13, padding: '24px 0' }}>Chưa có bài nào. Bấm “Tạo bài mới” để bắt đầu.</div>
+        ) : (
+          <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {items.map(d => (
+              <div key={d.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 10, borderRadius: 12, background: d.id === currentId ? C.accentSoft : 'rgba(255,255,255,0.03)', border: `1px solid ${d.id === currentId ? C.accent : C.border}` }}>
+                {d.thumbnail
+                  ? <img src={d.thumbnail} alt="" style={{ width: 56, height: 34, borderRadius: 6, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
+                  : <div style={{ width: 56, height: 34, borderRadius: 6, background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 17 }}>🎼</div>}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {d.title}{d.id === currentId && <span style={{ fontSize: 10, color: C.accent, marginLeft: 6 }}>• đang mở</span>}
+                  </div>
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{relTime(d.updatedAt)} · {d.progressPercent}%</div>
+                  <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', marginTop: 5, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${d.progressPercent}%`, background: C.accent }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
+                  <button onClick={() => onOpen(d.id)} style={{ border: 'none', borderRadius: 8, background: C.accent, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>Mở tiếp</button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button title="Đổi tên" onClick={() => doRename(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>✎</button>
+                    <button title="Nhân bản" onClick={() => doDuplicate(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>⧉</button>
+                    <button title="Xoá" onClick={() => doDelete(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.red, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>🗑</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Btn onClick={onNew} style={{ width: '100%', marginTop: 14 }}>+ Tạo bài mới</Btn>
+      </div>
+    </div>
+  )
+}
+
