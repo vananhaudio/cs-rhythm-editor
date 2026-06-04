@@ -15,6 +15,7 @@ import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
+import SongBuilderPage from './SongBuilderPage'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
@@ -193,6 +194,11 @@ if (path === '/students') {
   // ── Route /tempo — Tap Tempo Tool ──
   if (path === '/tempo' || path.startsWith('/tempo')) {
     return <TapTempoTool onClose={() => { window.history.back() }} />
+  }
+
+  // ── Route /song-builder — Song Builder V1 ──
+  if (path === '/song-builder' || path.startsWith('/song-builder')) {
+    return <SongBuilderPage onClose={() => { window.location.href = '/start' }} />
   }
 
   // ── Route /tuner ──
