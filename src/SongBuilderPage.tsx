@@ -25,6 +25,19 @@ const C = {
 }
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 const MONO = `'JetBrains Mono','Space Mono',monospace`
+
+// Logo Beat my Songs — ô vuông xanh + chữ BMS + chấm vàng (theo mẫu icon).
+function BmsMark({ size = 28 }: { size?: number }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.28, background: '#1B6B4C',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0,
+    }}>
+      <span style={{ fontSize: size * 0.36, fontWeight: 900, color: '#F2EFE3', letterSpacing: -0.5, fontFamily: FONT, lineHeight: 1 }}>BMS</span>
+      <span style={{ position: 'absolute', top: size * 0.2, right: size * 0.16, width: size * 0.16, height: size * 0.16, borderRadius: '50%', background: '#F5C518' }} />
+    </div>
+  )
+}
 const YT_API_KEY = 'AIzaSyA6kg3G2CVZ7b_x8IAlkZJCOa4AJHyWHms'
 
 const STEPS = ['Chuẩn bị', 'Phách', 'Gắn mốc', 'Nhịp', 'Nghe thử', 'Xuất'] as const
@@ -411,11 +424,9 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '8px 12px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {onClose && <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>✕</button>}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flex: 1, minWidth: 0 }}>
-            <span style={{ fontWeight: 800, fontSize: 14, flexShrink: 0 }}>🎼</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <span style={{ color: C.accent }}>{step + 1}.</span> {STEPS[step]} {step === 5 ? '🔒' : ''}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+            <BmsMark size={28} />
+            <span style={{ fontSize: 15, fontWeight: 800, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Beat my Songs</span>
           </div>
           <button onClick={() => setShowHelp(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>?</button>
         </div>
@@ -554,11 +565,11 @@ function HelpModal({ step, onClose }: { step: number; onClose: () => void }) {
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: 20, maxWidth: 380, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>🎼 Hướng dẫn</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 800 }}><BmsMark size={24} /> Hướng dẫn</div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
         </div>
         <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 16 }}>
-          Song Builder biến một bài YouTube thành dữ liệu luyện nhịp dựa trên <b style={{ color: C.text }}>lưới phách đều</b>. Làm lần lượt qua các bước bên dưới.
+          <b style={{ color: C.text }}>Beat my Songs</b> biến một bài YouTube thành dữ liệu luyện nhịp dựa trên <b style={{ color: C.text }}>lưới phách đều</b>. Làm lần lượt qua các bước bên dưới.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {STEPS.map((s, i) => (
