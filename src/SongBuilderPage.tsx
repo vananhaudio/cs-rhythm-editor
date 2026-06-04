@@ -21,8 +21,11 @@ const C = {
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 const MONO = `'JetBrains Mono','Space Mono',monospace`
 const DRAFT_KEY = 'csre-song-builder-draft-v1'
+const YT_API_KEY = 'AIzaSyA6kg3G2CVZ7b_x8IAlkZJCOa4AJHyWHms'
 
 const STEPS = ['Chuẩn bị', 'Nhịp', 'Phách', 'Gắn mốc', 'Nghe thử', 'Xuất'] as const
+
+interface YTResult { id: string; title: string; channel: string; thumbnail: string }
 
 function extractVideoId(url: string): string | null {
   const ps = [
@@ -206,6 +209,10 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
   const loadVideo = () => {
     const id = extractVideoId(youtubeUrl.trim())
+    setVideoId(id); setPlayerReady(false); setPlay(false); setAnchorClock(0)
+  }
+  const pickVideo = (id: string) => {
+    setYoutubeUrl(`https://youtube.com/watch?v=${id}`)
     setVideoId(id); setPlayerReady(false); setPlay(false); setAnchorClock(0)
   }
 
@@ -407,7 +414,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
       {/* Nội dung bước (cuộn) */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 14, paddingBottom: 90 }}>
-        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, lyricsText, setLyricsText, words }} />}
+        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words }} />}
         {step === 1 && <StepTempo {...{ fit, tapTimes, tap, resetTaps, playing, playerReady, play }} />}
         {step === 2 && <StepDownbeat {...{ fit, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, inBar, curBeat }} />}
         {step === 3 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, removeAnchor }} />}
@@ -435,21 +442,85 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 }
 
 /* ===================== STEP 0 — Chuẩn bị ===================== */
-function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, lyricsText, setLyricsText, words }: {
+function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words }: {
   youtubeUrl: string; setYoutubeUrl: (s: string) => void; videoId: string | null; loadVideo: () => void
-  lyricsText: string; setLyricsText: (s: string) => void; words: Word[]
+  pickVideo: (id: string) => void; lyricsText: string; setLyricsText: (s: string) => void; words: Word[]
 }) {
   const inp: React.CSSProperties = { width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface2, color: C.text, fontSize: 14, outline: 'none' }
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<YTResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searchErr, setSearchErr] = useState<string | null>(null)
+  const [showLink, setShowLink] = useState(false)
+
+  const searchYouTube = async (q: string) => {
+    if (!q.trim()) return
+    setSearching(true); setSearchErr(null)
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(q)}&key=${YT_API_KEY}`
+      )
+      const data = await res.json()
+      if (data.error) { setSearchErr('Lỗi tìm kiếm (quota?) — thử lại sau hoặc dán link.'); setResults([]); setSearching(false); return }
+      setResults((data.items ?? []).map((item: { id: { videoId: string }; snippet: { title: string; channelTitle: string; thumbnails: Record<string, { url: string }> } }) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle,
+        thumbnail: item.snippet.thumbnails.medium?.url ?? item.snippet.thumbnails.default?.url,
+      })))
+    } catch {
+      setSearchErr('Không kết nối được YouTube — kiểm tra mạng hoặc dán link.')
+      setResults([])
+    }
+    setSearching(false)
+  }
+
+  const onSelect = (r: YTResult) => { pickVideo(r.id); setResults([]); setQuery('') }
+
   return (
     <>
-      <Card title="① Bài hát YouTube">
+      <Card title="① Tìm bài hát trên YouTube">
         <div style={{ display: 'flex', gap: 8 }}>
-          <input style={{ ...inp, flex: 1 }} value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && loadVideo()} placeholder="https://youtube.com/watch?v=..." />
-          <Btn onClick={loadVideo} style={{ flexShrink: 0 }}>Load</Btn>
+          <input style={{ ...inp, flex: 1 }} value={query} onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && searchYouTube(query)} placeholder="Tên bài hát / ca sĩ…" />
+          <Btn onClick={() => searchYouTube(query)} disabled={!query.trim() || searching} style={{ flexShrink: 0 }}>
+            {searching ? '…' : '🔍 Tìm'}
+          </Btn>
         </div>
+        {searchErr && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ {searchErr}</div>}
+
+        {results.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12, maxHeight: 340, overflowY: 'auto' }}>
+            {results.map(r => {
+              const sel = videoId === r.id
+              return (
+                <button key={r.id} onClick={() => onSelect(r)}
+                  style={{ display: 'flex', gap: 10, alignItems: 'center', textAlign: 'left', padding: 6, borderRadius: 10, cursor: 'pointer',
+                    background: sel ? C.accentSoft : 'rgba(255,255,255,0.03)', border: `1px solid ${sel ? C.accent : C.border}` }}>
+                  <img src={r.thumbnail} alt="" style={{ width: 76, height: 43, borderRadius: 6, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{r.title}</div>
+                    <div style={{ fontSize: 11, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{r.channel}</div>
+                  </div>
+                  {sel && <span style={{ fontSize: 11, color: C.accent, fontWeight: 700, flexShrink: 0 }}>✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        <button onClick={() => setShowLink(v => !v)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', marginTop: 12, padding: 0, fontFamily: FONT }}>
+          {showLink ? '▾ Ẩn dán link' : '▸ Hoặc dán link YouTube trực tiếp'}
+        </button>
+        {showLink && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <input style={{ ...inp, flex: 1 }} value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && loadVideo()} placeholder="https://youtube.com/watch?v=..." />
+            <Btn onClick={loadVideo} style={{ flexShrink: 0 }}>Load</Btn>
+          </div>
+        )}
         {youtubeUrl && !videoId && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ Link YouTube không hợp lệ</div>}
-        {videoId && <div style={{ fontSize: 11, color: C.green, marginTop: 6 }}>✓ Đã nạp video. Bấm ▶ để nghe thử.</div>}
+        {videoId && <div style={{ fontSize: 11, color: C.green, marginTop: 8 }}>✓ Đã nạp video. Bấm ▶ để nghe thử.</div>}
       </Card>
 
       <Card title="② Lời bài hát">
