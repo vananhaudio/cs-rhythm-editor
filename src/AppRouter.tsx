@@ -198,7 +198,9 @@ if (path === '/students') {
 
   // ── Route /song-builder — Song Builder V1 ──
   if (path === '/song-builder' || path.startsWith('/song-builder')) {
-    return <SongBuilderPage onClose={() => { window.location.href = '/start' }} />
+    // App BMS riêng (vỏ Capacitor) mở với ?standalone=1 → không có nút ✕ thoát về LMS.
+    const standalone = new URLSearchParams(window.location.search).get('standalone') === '1'
+    return <SongBuilderPage onClose={standalone ? undefined : () => { window.location.href = '/start' }} />
   }
 
   // ── Route /tuner ──
