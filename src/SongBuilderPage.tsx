@@ -792,10 +792,8 @@ function StepDownbeat({ words, mapping, timeSignature, setTimeSignature, downbea
               <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
                 Hãy chạm vào một từ mà bạn cảm thấy <b style={{ color: C.amber }}>rơi vào phách mạnh</b>. App sẽ tự lặp lại phách mạnh đó theo chu kỳ {timeSignature} beat.
               </div>
-              <LyricBlock words={words} mapping={mapping} onTap={pickWord} picker />
-
               {pending && (
-                <div style={{ marginTop: 14, padding: 14, borderRadius: 14, background: 'rgba(245,180,30,0.08)', border: `1px solid ${C.amber}55` }}>
+                <div style={{ marginBottom: 14, padding: 14, borderRadius: 14, background: 'rgba(245,180,30,0.08)', border: `1px solid ${C.amber}55` }}>
                   <div style={{ fontSize: 14, color: C.text, marginBottom: 12 }}>
                     Từ <b style={{ color: C.amber }}>“{pending.text}”</b> ở beat {pending.beatIndex} → phách mạnh lặp mỗi <b>{timeSignature}</b> beat.
                   </div>
@@ -804,10 +802,12 @@ function StepDownbeat({ words, mapping, timeSignature, setTimeSignature, downbea
               )}
 
               {confirmed && !pending && (
-                <div style={{ marginTop: 14, textAlign: 'center', fontSize: 13, color: C.green, fontWeight: 700 }}>
+                <div style={{ marginBottom: 14, textAlign: 'center', fontSize: 13, color: C.green, fontWeight: 700 }}>
                   ✓ Đã đặt phách mạnh — tô vàng theo chu kỳ {timeSignature} beat. Chạm từ khác nếu muốn đổi.
                 </div>
               )}
+
+              <LyricBlock words={words} mapping={mapping} onTap={pickWord} picker />
             </>
           )}
         </Card>
