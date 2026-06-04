@@ -316,6 +316,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     if (pendingBeat) { assignWord(w); return }
     if (m.source === 'anchor') removeAnchor(w.index)
   }
+  const resetAnchors = () => { setAnchors([]); setPendingBeat(null); pause() }
 
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 2200); return () => clearTimeout(id) }, [toast])
 
@@ -417,7 +418,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
         {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words }} />}
         {step === 1 && <StepTempo {...{ fit, tapTimes, tap, resetTaps, playing, playerReady, play }} />}
         {step === 2 && <StepDownbeat {...{ fit, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, inBar, curBeat }} />}
-        {step === 3 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, removeAnchor }} />}
+        {step === 3 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }} />}
         {step === 4 && <StepPreview {...{ fit, words, mapping, activeWordIndex, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, pause, mappedCount, pct }} />}
         {step === 5 && <StepExportLocked />}
       </div>
@@ -659,13 +660,15 @@ function StepDownbeat({ fit, timeSignature, setTimeSignature, downbeatPosition, 
 }
 
 /* ===================== STEP 3 — Gắn mốc ===================== */
-function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, removeAnchor }: {
+function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }: {
   fit: TempoFit | null; words: Word[]; mapping: MappedWord[]; anchors: Anchor[]
   pendingBeat: { beatIndex: number; time: number } | null; setPendingBeat: (v: null) => void
   captureAnchor: () => void; onChipTap: (w: Word, m: MappedWord) => void
   mappedCount: number; pct: number; nonMonotonic: boolean
-  playerReady: boolean; playing: boolean; play: () => void; removeAnchor: (i: number) => void
+  playerReady: boolean; playing: boolean; play: () => void; pause: () => void
+  removeAnchor: (i: number) => void; resetAnchors: () => void
 }) {
+  const [armed, setArmed] = useState(false)
   if (!fit?.ok) return <div style={{ color: C.muted, fontSize: 13, padding: 16 }}>Cần lưới nhịp ở bước 1 trước.</div>
   if (words.length === 0) return <div style={{ color: C.muted, fontSize: 13, padding: 16 }}>Chưa có lời bài hát — quay lại bước Chuẩn bị để dán lời.</div>
 
@@ -683,29 +686,24 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
         {nonMonotonic && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ Có mốc ngược thứ tự (beat giảm khi từ tăng). Kiểm tra lại các mốc.</div>}
       </Card>
 
-      {/* GẮN MỐC / picker */}
-      {pendingBeat ? (
-        <div style={{ background: C.accentSoft, border: `1px solid ${C.accent}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Beat #{pendingBeat.beatIndex} khớp với từ nào?</div>
-          <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Chạm vào một từ bên dưới · {fmt(pendingBeat.time)} trong video</div>
-          <Btn kind="ghost" onClick={() => setPendingBeat(null)} style={{ width: '100%' }}>Huỷ chọn</Btn>
+      {/* Điều khiển: chỉ 2 nút */}
+      <Card>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 14 }}>
+          Bấm <b style={{ color: C.text }}>Play để gắn mốc</b>, nghe tới từ muốn đánh dấu thì bấm <b style={{ color: C.amber }}>Dừng để gắn mốc</b> — video tự dừng, chọn từ là xong. Lặp lại để gắn tiếp.
         </div>
-      ) : (
-        <Card>
-          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 12 }}>
-            Phát video, nghe tới beat thấy chắc rồi bấm nút lớn — video sẽ <b style={{ color: C.text }}>dừng & snap về lưới</b>, rồi chọn từ tương ứng.
-          </div>
-          {!playing && <Btn kind="ghost" onClick={play} disabled={!playerReady} style={{ width: '100%', marginBottom: 10 }}>▶ Phát video</Btn>}
-          <button onPointerDown={captureAnchor} disabled={!playerReady}
-            style={{ width: '100%', background: `linear-gradient(135deg, ${C.green}, #16a34a)`, color: '#04210f', border: 'none', borderRadius: 18, padding: '24px 0', fontSize: 20, fontWeight: 900, cursor: 'pointer', userSelect: 'none', boxShadow: `0 8px 24px ${C.green}33`, opacity: playerReady ? 1 : 0.4 }}>
-            📍 GẮN MỐC
-          </button>
-        </Card>
-      )}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Btn kind="ghost" onClick={() => { setArmed(false); resetAnchors() }} disabled={anchors.length === 0} style={{ flex: 1 }}>⏮ Làm lại từ đầu</Btn>
+          {armed ? (
+            <Btn onClick={() => { setArmed(false); captureAnchor() }} style={{ flex: 2, background: C.amber, color: '#1a1200' }}>⏸ Dừng để gắn mốc</Btn>
+          ) : (
+            <Btn onClick={() => { setArmed(true); play() }} disabled={!playerReady} style={{ flex: 2 }}>▶ Play để gắn mốc</Btn>
+          )}
+        </div>
+      </Card>
 
-      {/* Lời — word chips */}
-      <Card title={pendingBeat ? 'Chọn từ cho beat này' : 'Lời bài hát (chạm từ đã gắn để xoá)'}>
-        <LyricBlock words={words} mapping={mapping} onTap={onChipTap} picker={!!pendingBeat} />
+      {/* Lời — bảng tham khảo (chạm từ đã gắn để xoá) */}
+      <Card title="Lời bài hát (chạm từ đã gắn để xoá)">
+        <LyricBlock words={words} mapping={mapping} onTap={onChipTap} />
         <div style={{ display: 'flex', gap: 16, marginTop: 14, fontSize: 11, color: C.muted, flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: C.accent }} /> mốc thật</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: C.cyanSoft, border: `1px solid ${C.cyan}55` }} /> nội suy</span>
@@ -726,6 +724,25 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
             ))}
           </div>
         </Card>
+      )}
+
+      {/* Popup chọn từ — hiện khi vừa dừng để gắn mốc */}
+      {pendingBeat && (
+        <div onClick={() => setPendingBeat(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: C.surface, borderTop: `2px solid ${C.amber}`, borderRadius: '20px 20px 0 0', padding: 18, maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>Beat #{pendingBeat.beatIndex} là từ nào?</div>
+              <span style={{ fontFamily: MONO, fontSize: 12, color: C.amber }}>{fmt(pendingBeat.time)}</span>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Chạm từ đang hát ở thời điểm này</div>
+            <div style={{ overflowY: 'auto', flex: 1, marginBottom: 12 }}>
+              <LyricBlock words={words} mapping={mapping} onTap={onChipTap} picker />
+            </div>
+            <Btn kind="ghost" onClick={() => setPendingBeat(null)} style={{ width: '100%' }}>Huỷ</Btn>
+          </div>
+        </div>
       )}
     </>
   )
