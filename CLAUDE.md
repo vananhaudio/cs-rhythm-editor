@@ -16,7 +16,16 @@ LMS dạy guitar online của Trần Văn Anh ("Thầy Văn Anh Guitar"). Triế
 - **Mobile là giao diện học viên chính.** `<768px` → `MobileStudentPortal`.
 - **Toàn bộ dùng INLINE STYLES, KHÔNG dùng Tailwind** — TRỪ `ChordsPage` và `ChordAmGuide` (2 file này dùng Tailwind).
 - UI phức tạp thường prototype ở Bolt; tích hợp/fix/deploy ở đây.
-- **TUYỆT ĐỐI KHÔNG để người dùng phải scroll xuống trên mobile để xem nội dung chính.** Mọi màn hình học sinh trên điện thoại phải vừa khung nhìn (`height: 100dvh`, flex column, overflow ẩn hoặc scroll nội bộ có kiểm soát). Nội dung dài phải cuộn trong vùng riêng, KHÔNG đẩy nút bấm ra ngoài màn hình.
+- **Nguyên tắc vàng UX — Scroll có chủ đích:**
+
+| Màn hình | Scroll | Lý do |
+|---|---|---|
+| **Flow Player** | ❌ KHÔNG | Mỗi slide = 1 màn hình trọn vẹn, nút luôn hiển thị |
+| Tool (tap, tuner...) | ✅ Được | Công cụ tương tác |
+| Nhật ký / Ghi chú | ✅ Được | Bản chất là văn bản dài |
+| Admin | ✅ Được | Công cụ soạn thảo |
+
+**FlowPlayer bắt buộc:** `height: 100dvh`, `display: flex; flex-direction: column`, vùng nội dung `flex:1; overflow:hidden`, nút bấm luôn cố định ở cuối. Nội dung slide dài → cắt/ẩn, KHÔNG để tràn.
 
 ## Routing — `src/AppRouter.tsx`
 KHÔNG dùng react-router. Tự kiểm tra `window.location.pathname` bằng chuỗi `if`. Auth qua `supabase.auth`; vai trò lấy từ bảng `app_users`; `isTeacher = role === 'teacher' || role === 'admin'`.
