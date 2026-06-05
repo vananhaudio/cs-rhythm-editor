@@ -424,8 +424,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       }))))
     supabase.from('edu_lesson_progress')
       .select('lesson_id').eq('student_id', student.id)
-      .then(({ data, error }) => {
-        console.log('[progress load] student_id:', student.id, 'data:', data, 'error:', error)
+      .then(({ data }) => {
         if (data) setCompletedIds(new Set(data.map((r: any) => r.lesson_id)))
       })
   }, [student.id])
@@ -469,11 +468,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           .insert({ student_id: student.id, lesson_id: lessonId, status: 'completed', completed_at: new Date().toISOString() })
     if (error) {
       console.error('Lỗi lưu tiến độ:', error)
-      alert('Lỗi: ' + JSON.stringify(error))
+      alert('Không lưu được tiến độ: ' + error.message)
       setMarkingDone(false)
       return
     }
-    console.log('[progress save] OK — student_id:', student.id, 'lesson_id:', lessonId)
     setCompletedIds(prev => new Set([...prev, lessonId]))
     setMarkingDone(false)
   }
