@@ -211,9 +211,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
         </div>
       </div>
 
-      {/* Slide body — flex:1, overflow hidden = không cuộn toàn trang */}
-      {/* Ngoại lệ: input dùng overflow-y:auto để textarea dài không tràn */}
-      <div style={{ flex: 1, overflow: slide.type === 'input' ? 'auto' : 'hidden', padding: '24px 16px 12px' }}>
+      {/* Slide body — cuộn NỘI BỘ nếu nội dung dài, nút bấm luôn hiển thị */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px 16px 12px' }}>
 
         {slide.title && (
           <div style={{ fontSize: 18, fontWeight: 700, color: '#18181B', lineHeight: 1.45, marginBottom: 16 }}>
@@ -366,8 +365,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
         )}
       </div>
 
-      {/* Bottom actions */}
-      <div style={{ padding: '12px 16px 28px', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Bottom actions — flexShrink:0 đảm bảo nút LUÔN hiển thị dù nội dung dài */}
+      <div style={{ padding: '12px 16px 28px', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
         {(slide.type === 'quiz' || slide.type === 'true_false') && !checked && answer && (
           <button onClick={() => checkAnswer(slide)}
             style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
