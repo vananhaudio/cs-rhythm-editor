@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
+import ScaleExercise from './ScaleExercise'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -303,6 +304,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // ── Finger Exercise overlay ──
   const [showFingerExercise, setShowFingerExercise] = useState(false)
+  // ── Scale Exercise overlay ──
+  const [showScaleExercise, setShowScaleExercise] = useState(false)
 
   // ── Tool overlay — mở tool ngay trong app, không navigate ra ngoài ──
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
@@ -562,6 +565,16 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         onClose={async () => {
           await stopTimer()
           setShowFingerExercise(false)
+        }}
+      />
+    )}
+
+    {showScaleExercise && (
+      <ScaleExercise
+        totalMinutes={practiceTotals['scale'] ?? 0}
+        onClose={async () => {
+          await stopTimer()
+          setShowScaleExercise(false)
         }}
       />
     )}
@@ -1022,6 +1035,24 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                             <button
                               disabled={!!activeTimer}
                               onClick={() => { startTimer('finger'); setShowFingerExercise(true) }}
+                              style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                              ▶ Bắt đầu
+                            </button>
+                          )
+                        ) : ex.id === 'scale' ? (
+                          /* Card Âm giai: mở ScaleExercise overlay */
+                          isActive ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ fontSize: 15, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</div>
+                              <button onClick={() => setShowScaleExercise(true)}
+                                style={{ background: ex.color, border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Mở →
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              disabled={!!activeTimer}
+                              onClick={() => { startTimer('scale'); setShowScaleExercise(true) }}
                               style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                               ▶ Bắt đầu
                             </button>
