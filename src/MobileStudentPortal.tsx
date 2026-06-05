@@ -324,10 +324,25 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
   const fmtTimer = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
+  // Khoá lưu trạng thái tool đã thực hành theo từng học sinh + bài học
+  const usedToolsKey = (lessonId: string) => `usedTools:${student.id}:${lessonId}`
+
+  // Gộp tool bảng cứng (TOOLS_MAP) + tool tạo trong DB (edu_tools) → mọi tool hợp lệ đều có thẻ thực hành
+  const resolveTool = (tid: string): { label: string; icon: string; color: string; route: string } | null => {
+    if (TOOLS_MAP[tid]) return TOOLS_MAP[tid]
+    const db = dbTools.find(t => t.id === tid)
+    if (db) return { label: db.name, icon: db.icon, color: L.p1, route: db.route }
+    return null
+  }
+
   const openTool = (route: string, name: string, toolId?: string) => {
     const url = route.startsWith('http') ? route : window.location.origin + route
     setActiveTool({ name, url })
-    if (toolId) setUsedToolIds(prev => new Set([...prev, toolId]))
+    if (toolId) setUsedToolIds(prev => {
+      const next = new Set([...prev, toolId])
+      if (activeLesson) { try { localStorage.setItem(usedToolsKey(activeLesson.id), JSON.stringify([...next])) } catch { /* bỏ qua */ } }
+      return next
+    })
   }
 
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
@@ -431,7 +446,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     if (!isUnlocked(l)) return // khoá, không mở
     setActiveLesson(l)
     setLessonTab('content')
-    setUsedToolIds(new Set()) // reset khi chuyển bài
+    // Khôi phục tool đã thực hành của bài này (nếu có) → không bị "khoá lại" khi mở lại
+    try {
+      const saved = JSON.parse(localStorage.getItem(usedToolsKey(l.id)) || '[]')
+      setUsedToolIds(new Set(Array.isArray(saved) ? saved : []))
+    } catch { setUsedToolIds(new Set()) }
     setScreen('lesson')
   }
 
@@ -849,7 +868,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                         🎯 Thực hành — hoàn thành để tiếp tục
                       </div>
                       {activeLesson.tools.map((tid) => {
-                        const t = TOOLS_MAP[tid]; if (!t) return null
+                        const t = resolveTool(tid); if (!t) return null
                         const done = usedToolIds.has(tid)
                         return (
                           <div key={tid} onClick={() => openTool(t.route, t.label, tid)}
@@ -888,7 +907,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             <div style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {/* Nút hoàn thành — block nếu chưa dùng hết tool */}
               {!completedIds.has(activeLesson.id) && (() => {
-                const requiredTools = activeLesson.tools ?? []
+                // Chỉ tính tool còn hiển thị được thẻ (có trong TOOLS_MAP hoặc DB).
+                // Tool không xác định (đã xoá/đổi id) bị bỏ qua → KHÔNG khoá vĩnh viễn.
+                const requiredTools = (activeLesson.tools ?? []).filter(tid => !!resolveTool(tid))
                 const allToolsDone = requiredTools.length === 0 || requiredTools.every(tid => usedToolIds.has(tid))
                 return allToolsDone ? (
                   <button onClick={() => markComplete(activeLesson.id)} disabled={markingDone}
