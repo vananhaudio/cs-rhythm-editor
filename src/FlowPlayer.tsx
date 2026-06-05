@@ -147,14 +147,14 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 0, color: '#999' }}>
       Đang tải bài học...
     </div>
   )
 
   // ── No flow ──────────────────────────────────────────────────────────────
   if (!flow || flow.slides.length === 0) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32, textAlign: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 0, padding: 32, textAlign: 'center' }}>
       <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
       <div style={{ color: '#888', marginBottom: 16 }}>Bài học này chưa có nội dung Flow.</div>
       <button onClick={onBack}
@@ -166,7 +166,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
 
   // ── Done screen ──────────────────────────────────────────────────────────
   if (done) return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center', gap: 16 }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center', gap: 16 }}>
       <div style={{ fontSize: 64 }}>🎉</div>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#4338CA' }}>Hoàn thành!</div>
       <div style={{ fontSize: 15, color: '#555' }}>{flow.title}</div>
@@ -190,7 +190,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
   // Quy tắc vàng: FlowPlayer = trải nghiệm từng màn hình, KHÔNG cuộn dọc
   // Ngoại lệ duy nhất: slide type='input' cho phép scroll nội bộ textarea
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
       {/* Progress bar */}
       <div style={{ height: 4, background: '#E8EAF0', flexShrink: 0 }}>
@@ -212,7 +212,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
       </div>
 
       {/* Slide body — cuộn NỘI BỘ nếu nội dung dài, nút bấm luôn hiển thị */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px 16px 12px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '24px 16px 12px' }}>
 
         {slide.title && (
           <div style={{ fontSize: 18, fontWeight: 700, color: '#18181B', lineHeight: 1.45, marginBottom: 16 }}>
