@@ -205,6 +205,11 @@ export default function CourseEditorContent() {
   const [importText, setImportText] = useState('')
   const [importing, setImporting]   = useState(false)
   const [importMsg, setImportMsg]   = useState('')
+  const [importMode, setImportMode] = useState<'text' | 'flowJson'>('text')
+  const [flowJson, setFlowJson]     = useState('')
+  const [flowJsonMsg, setFlowJsonMsg] = useState('')
+  const [flowImporting, setFlowImporting] = useState(false)
+  const [flowJsonModuleId, setFlowJsonModuleId] = useState('')
   const logoFileRef = useRef<HTMLInputElement>(null)
   const [showNewCourse, setShowNewCourse] = useState(false)
   const [ncName,  setNcName]  = useState('')
@@ -397,6 +402,61 @@ export default function CourseEditorContent() {
       setImportMsg('Lỗi: ' + (e?.message ?? e))
     }
     setImporting(false)
+  }
+
+  // ── Nhập hàng loạt Flows từ JSON {slug:{title,slides}} ────────────────────────
+  const bulkImportFlows = async () => {
+    if (!selectedCourse) return
+    if (!flowJsonModuleId) { setFlowJsonMsg('Chọn chương để nhập bài vào'); return }
+    if (!flowJson.trim())  { setFlowJsonMsg('Dán nội dung JSON trước'); return }
+    setFlowImporting(true); setFlowJsonMsg('')
+    try {
+      const data = JSON.parse(flowJson) as Record<string, { title: string; slides: Record<string, unknown>[] }>
+      const entries = Object.values(data)
+      const existingInMod = lessons.filter(l => l.module_id === flowJsonModuleId)
+      let startOrder = existingInMod.length
+      const newLsns: Lesson[] = []
+      let created = 0, updated = 0
+
+      for (const { title, slides } of entries) {
+        // Tìm bài đã có theo title (bất kỳ module trong course)
+        const existing = lessons.find(l => l.title.trim().toLowerCase() === title.trim().toLowerCase())
+        let lessonId: string
+
+        if (existing) {
+          lessonId = existing.id
+          await supabase.from('edu_course_lessons').update({ lesson_type: 'flow' }).eq('id', lessonId)
+          setLessons(prev => prev.map(l => l.id === lessonId ? { ...l, lesson_type: 'flow' } : l))
+          updated++
+        } else {
+          const { data: nl, error } = await supabase.from('edu_course_lessons')
+            .insert({ module_id: flowJsonModuleId, title, lesson_type: 'flow', order_index: startOrder++, tools: [] })
+            .select('*').single()
+          if (error || !nl) throw error
+          lessonId = nl.id
+          newLsns.push(nl as Lesson)
+          created++
+        }
+
+        // Tạo / cập nhật flow record
+        const orderedSlides = (Array.isArray(slides) ? slides : []).map((s, i) => ({ ...s, order: i + 1 }))
+        const flowPayload = { lesson_id: lessonId, title, status: 'published', slides: orderedSlides, reward_xp: 30 }
+        const { data: ef } = await supabase.from('flows').select('id').eq('lesson_id', lessonId).maybeSingle()
+        if (ef) {
+          await supabase.from('flows').update(flowPayload).eq('id', ef.id)
+        } else {
+          await supabase.from('flows').insert(flowPayload)
+        }
+      }
+
+      if (newLsns.length) setLessons(prev => [...prev, ...newLsns])
+      setFlowJsonMsg(`✓ Xong! ${created} bài mới · ${updated} bài cập nhật flow`)
+      setFlowJson('')
+      setTimeout(() => { setShowImport(false); setFlowJsonMsg('') }, 1800)
+    } catch (e: unknown) {
+      setFlowJsonMsg('Lỗi: ' + (e instanceof Error ? e.message : String(e)))
+    }
+    setFlowImporting(false)
   }
 
   const deleteLesson = async (id: string) => {
@@ -954,36 +1014,87 @@ export default function CourseEditorContent() {
         <div onClick={() => !importing && setShowImport(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: C.surface, borderRadius: 12, padding: 22, width: '100%', maxWidth: 560, maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 12px 48px rgba(0,0,0,0.3)' }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.text1, marginBottom: 4 }}>📥 Nhập bài giảng hàng loạt</div>
-            <div style={{ fontSize: 12, color: C.text3, marginBottom: 14, lineHeight: 1.6 }}>
-              Dán dàn bài vào ô dưới. Dòng bắt đầu bằng <b>#</b> là chương, các dòng còn lại là bài học.
-              Mỗi bài có thể kèm link: <b>Tên bài | link YouTube</b>. Tự nhận diện video / link.
+            style={{ background: C.surface, borderRadius: 12, padding: 22, width: '100%', maxWidth: 580, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 12px 48px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.text1, marginBottom: 14 }}>📥 Nhập bài giảng hàng loạt</div>
+
+            {/* Tab toggle */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: C.bg, borderRadius: 8, padding: 3 }}>
+              {([['text', '📄 Dàn bài văn bản'], ['flowJson', '✨ Flows từ JSON']] as const).map(([mode, label]) => (
+                <button key={mode} onClick={() => { setImportMode(mode); setImportMsg(''); setFlowJsonMsg('') }}
+                  style={{ flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: importMode === mode ? C.surface : 'transparent', color: importMode === mode ? C.accent : C.text3, boxShadow: importMode === mode ? C.shadow : 'none', transition: 'all .15s' }}>
+                  {label}
+                </button>
+              ))}
             </div>
-            <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 11.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+
+            {/* ── Tab 1: Dàn bài text ── */}
+            {importMode === 'text' && (
+              <>
+                <div style={{ fontSize: 12, color: C.text3, marginBottom: 12, lineHeight: 1.6 }}>
+                  Dòng bắt đầu bằng <b>#</b> là chương, dòng còn lại là bài học.
+                  Kèm link: <b>Tên bài | link YouTube</b>. Tự nhận diện video / link.
+                </div>
+                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 11.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
 {`# Chương 1: Nhập môn
 Giới thiệu khoá học | https://youtu.be/abc123
 Cầm đàn đúng tư thế | https://youtu.be/def456
 # Chương 2: Hợp âm cơ bản
 Hợp âm Em
 Hợp âm Am | https://youtu.be/ghi789`}
-            </div>
-            <textarea value={importText} onChange={e => setImportText(e.target.value)}
-              placeholder="Dán dàn bài của bạn vào đây..."
-              style={{ width: '100%', minHeight: 200, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 13, color: C.text1, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }} />
-            {importMsg && (
-              <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600, color: importMsg.startsWith('✓') ? '#16A34A' : '#DC2626' }}>{importMsg}</div>
+                </div>
+                <textarea value={importText} onChange={e => setImportText(e.target.value)}
+                  placeholder="Dán dàn bài của bạn vào đây..."
+                  style={{ width: '100%', minHeight: 180, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 13, color: C.text1, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }} />
+                {importMsg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: importMsg.startsWith('✓') ? C.success : C.danger }}>{importMsg}</div>}
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button onClick={bulkImport} disabled={importing || !importText.trim()}
+                    style={{ flex: 1, background: importing || !importText.trim() ? C.border : C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 700, cursor: importing || !importText.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                    {importing ? 'Đang nhập...' : 'Nhập vào khoá học'}
+                  </button>
+                  <button onClick={() => setShowImport(false)} disabled={importing}
+                    style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+                    Đóng
+                  </button>
+                </div>
+              </>
             )}
-            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-              <button onClick={bulkImport} disabled={importing || !importText.trim()}
-                style={{ flex: 1, background: importing || !importText.trim() ? C.border : '#4F46E5', color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 700, cursor: importing || !importText.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-                {importing ? 'Đang nhập...' : 'Nhập vào khoá học'}
-              </button>
-              <button onClick={() => setShowImport(false)} disabled={importing}
-                style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
-                Đóng
-              </button>
-            </div>
+
+            {/* ── Tab 2: Flows từ JSON ── */}
+            {importMode === 'flowJson' && (
+              <>
+                <div style={{ fontSize: 12, color: C.text3, marginBottom: 12, lineHeight: 1.65 }}>
+                  Dán JSON dạng <code style={{ background: C.bg, padding: '1px 5px', borderRadius: 4 }}>{'{"slug":{"title":"...","slides":[...]}}'}</code>.
+                  Mỗi entry = 1 bài học Flow. Nếu bài đã tồn tại (theo tên) sẽ cập nhật slides, nếu chưa sẽ tạo mới trong chương chọn bên dưới.
+                </div>
+
+                {/* Chọn chương */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.text2, marginBottom: 5, textTransform: 'uppercase', letterSpacing: .4 }}>Chương nhận bài mới</div>
+                  <select value={flowJsonModuleId} onChange={e => setFlowJsonModuleId(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, background: C.surface, fontFamily: 'inherit', outline: 'none' }}>
+                    <option value="">— Chọn chương —</option>
+                    {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
+
+                <textarea value={flowJson} onChange={e => setFlowJson(e.target.value)}
+                  placeholder={'{\n  "01-guitar-la-gi": {\n    "title": "Guitar là gì?",\n    "slides": [...]\n  },\n  ...\n}'}
+                  style={{ width: '100%', minHeight: 220, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 12, color: C.text1, fontFamily: 'ui-monospace, monospace', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.55 }} />
+
+                {flowJsonMsg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: flowJsonMsg.startsWith('✓') ? C.success : C.danger }}>{flowJsonMsg}</div>}
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button onClick={bulkImportFlows} disabled={flowImporting || !flowJson.trim()}
+                    style={{ flex: 1, background: flowImporting || !flowJson.trim() ? C.border : C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 700, cursor: flowImporting || !flowJson.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                    {flowImporting ? '⏳ Đang tạo bài...' : '✨ Tạo hàng loạt bài Flow'}
+                  </button>
+                  <button onClick={() => setShowImport(false)} disabled={flowImporting}
+                    style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+                    Đóng
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
