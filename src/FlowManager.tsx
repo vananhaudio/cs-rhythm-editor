@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type CSSProperties } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 
@@ -467,10 +467,10 @@ export default function FlowManager() {
 }
 
 // ── Style helper ───────────────────────────────────────────────────────────
-function inputSt(): React.CSSProperties {
+function inputSt(): CSSProperties {
   return {
     padding: '8px 11px', borderRadius: 8, border: '1.5px solid #E4E4E7',
     fontSize: 13, fontFamily: 'inherit', outline: 'none', color: '#18181B',
-    background: '#FAFAFA', width: '100%', boxSizing: 'border-box' as const,
+    background: '#FAFAFA', width: '100%', boxSizing: 'border-box',
   }
 }
