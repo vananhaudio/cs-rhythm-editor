@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
+import FlowPlayer from './FlowPlayer'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -827,8 +828,18 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             </div>
 
+            {/* Flow Player — thay toàn bộ nội dung khi lesson_type='flow' */}
+            {activeLesson.lesson_type === 'flow' && (
+              <FlowPlayer
+                lessonId={activeLesson.id}
+                studentId={student.id}
+                onComplete={() => markComplete(activeLesson.id)}
+                onBack={goBack}
+              />
+            )}
+
             {/* Video */}
-            {activeLesson.lesson_type === 'video' && getYtId(activeLesson.content_url) && (
+            {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'video' && getYtId(activeLesson.content_url) && (
               <div style={{ aspectRatio: '16/9', background: '#000' }}>
                 <iframe src={`https://www.youtube.com/embed/${getYtId(activeLesson.content_url)}?rel=0`}
                   style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
@@ -836,7 +847,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             )}
 
             {/* Slide Canva */}
-            {activeLesson.lesson_type === 'slide' && activeLesson.content_url && (
+            {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'slide' && activeLesson.content_url && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#1a1a2e' }}>
                 <iframe src={activeLesson.content_url} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allowFullScreen allow="fullscreen" title={activeLesson.title} />
                 <button onClick={goBack} style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
@@ -844,14 +855,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             )}
 
             {/* Link embed */}
-            {activeLesson.lesson_type === 'link' && activeLesson.content_url && (
+            {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#000' }}>
                 <iframe src={activeLesson.content_url} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="microphone; camera" title={activeLesson.title} />
                 <button onClick={goBack} style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
               </div>
             )}
 
-            <div style={{ padding: '16px' }}>
+            {activeLesson.lesson_type !== 'flow' && <div style={{ padding: '16px' }}>
               {lessonTab === 'content' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {activeLesson.description && (
@@ -901,9 +912,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               ) : (
                 <textarea placeholder="Ghi chú của bạn..." style={{ width: '100%', boxSizing: 'border-box', minHeight: 220, background: L.surface, border: `1px solid ${L.border}`, borderRadius: 16, padding: '16px', color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.8, boxShadow: L.shadow }} />
               )}
-            </div>
+            </div>}
 
-            {/* Nav buttons + Đánh dấu hoàn thành */}
+            {/* Nav buttons + Đánh dấu hoàn thành — ẩn khi flow (FlowPlayer tự quản lý) */}
+            {activeLesson.lesson_type === 'flow' ? null : <>{/* Nav buttons + Đánh dấu hoàn thành */}
             <div style={{ padding: '8px 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {/* Nút hoàn thành — block nếu chưa dùng hết tool */}
               {!completedIds.has(activeLesson.id) && (() => {
@@ -949,6 +961,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 })()}
               </div>
             </div>
+            </>}
           </>
         )}
 

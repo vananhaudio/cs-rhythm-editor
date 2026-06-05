@@ -1,0 +1,334 @@
+import { useState, useEffect } from 'react'
+import { supabase } from './supabase'
+
+// ── Logic labels & colors ──────────────────────────────────────────────────
+const LOGIC_META: Record<string, { label: string; bg: string; color: string }> = {
+  NHAN:   { label: 'NHẬN',   bg: '#EEF2FF', color: '#4338CA' },
+  NGHI:   { label: 'NGHĨ',   bg: '#FFF7ED', color: '#C2410C' },
+  LAM:    { label: 'LÀM',    bg: '#F0FDF4', color: '#16A34A' },
+  NGAM:   { label: 'NGẪM',   bg: '#FDF4FF', color: '#9333EA' },
+  THUONG: { label: 'THƯỞNG', bg: '#FFFBEB', color: '#D97706' },
+  DAN:    { label: 'DẪN',    bg: '#F0F9FF', color: '#0369A1' },
+}
+
+// ── Types ──────────────────────────────────────────────────────────────────
+interface Slide {
+  id: string
+  order: number
+  logic: string
+  type: string
+  title?: string
+  content?: string
+  mediaUrl?: string
+  options?: string[]
+  correctAnswer?: string
+  buttonText?: string
+}
+
+interface Flow {
+  id: string
+  title: string
+  reward_xp: number
+  reward_badge?: string
+  slides: Slide[]
+}
+
+interface Props {
+  lessonId: string
+  studentId: string
+  onComplete: () => void
+  onBack: () => void
+}
+
+export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: Props) {
+  const [flow,     setFlow]     = useState<Flow | null>(null)
+  const [loading,  setLoading]  = useState(true)
+  const [current,  setCurrent]  = useState(0)
+  const [completed, setCompleted] = useState<string[]>([])
+  const [answer,   setAnswer]   = useState<string | null>(null)
+  const [inputVal, setInputVal] = useState('')
+  const [checked,  setChecked]  = useState<'correct' | 'wrong' | null>(null)
+  const [done,     setDone]     = useState(false)
+  const [startedAt] = useState(new Date().toISOString())
+
+  // Load flow by lessonId
+  useEffect(() => {
+    supabase.from('flows')
+      .select('*')
+      .eq('lesson_id', lessonId)
+      .eq('status', 'published')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          const slides = (Array.isArray(data.slides) ? data.slides : [])
+            .sort((a: Slide, b: Slide) => a.order - b.order)
+          setFlow({ ...data, slides })
+        }
+        setLoading(false)
+      })
+  }, [lessonId])
+
+  // Load existing progress
+  useEffect(() => {
+    if (!flow) return
+    supabase.from('flow_progress')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('flow_id', flow.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setCompleted(data.completed_slides ?? [])
+          const savedIdx = data.current_slide ?? 0
+          setCurrent(Math.min(savedIdx, flow.slides.length - 1))
+        }
+      })
+  }, [flow])
+
+  // Save progress to DB
+  const saveProgress = async (slideIdx: number, comp: string[], finished = false) => {
+    if (!flow) return
+    const { data: existing } = await supabase.from('flow_progress')
+      .select('id').eq('student_id', studentId).eq('flow_id', flow.id).maybeSingle()
+    const payload: Record<string, unknown> = {
+      student_id: studentId, flow_id: flow.id, lesson_id: lessonId,
+      current_slide: slideIdx, completed_slides: comp,
+    }
+    if (finished) payload.finished_at = new Date().toISOString()
+    if (existing) {
+      await supabase.from('flow_progress').update(payload).eq('id', existing.id)
+    } else {
+      await supabase.from('flow_progress').insert({ ...payload, started_at: startedAt })
+    }
+  }
+
+  const goNext = async () => {
+    if (!flow) return
+    const slide = flow.slides[current]
+    const newComp = completed.includes(slide.id) ? completed : [...completed, slide.id]
+    setCompleted(newComp)
+    setAnswer(null); setInputVal(''); setChecked(null)
+
+    if (current >= flow.slides.length - 1) {
+      await saveProgress(current, newComp, true)
+      setDone(true)
+      onComplete()
+    } else {
+      const next = current + 1
+      setCurrent(next)
+      await saveProgress(next, newComp)
+    }
+  }
+
+  const checkAnswer = (slide: Slide) => {
+    if (!answer) return
+    const correct = slide.type === 'true_false'
+      ? answer === slide.correctAnswer
+      : answer === slide.correctAnswer
+    setChecked(correct ? 'correct' : 'wrong')
+  }
+
+  const canProceed = (slide: Slide) => {
+    if (slide.type === 'quiz' || slide.type === 'true_false') return checked === 'correct'
+    if (slide.type === 'input') return inputVal.trim().length > 0
+    return true
+  }
+
+  // ── Loading ──────────────────────────────────────────────────────────────
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260, color: '#999' }}>
+      Đang tải bài học...
+    </div>
+  )
+
+  // ── No flow ──────────────────────────────────────────────────────────────
+  if (!flow || flow.slides.length === 0) return (
+    <div style={{ padding: 32, textAlign: 'center' }}>
+      <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+      <div style={{ color: '#888', marginBottom: 16 }}>Bài học này chưa có nội dung Flow.</div>
+      <button onClick={onBack}
+        style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: '#4338CA', color: '#fff', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        ← Quay lại
+      </button>
+    </div>
+  )
+
+  // ── Done screen ──────────────────────────────────────────────────────────
+  if (done) return (
+    <div style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <div style={{ fontSize: 64 }}>🎉</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: '#4338CA' }}>Hoàn thành!</div>
+      <div style={{ fontSize: 15, color: '#555' }}>{flow.title}</div>
+      {flow.reward_xp > 0 && (
+        <div style={{ background: '#FFF7ED', color: '#D97706', borderRadius: 99, padding: '8px 24px', fontWeight: 700, fontSize: 16 }}>
+          +{flow.reward_xp} XP 🔥
+        </div>
+      )}
+      <button onClick={onBack}
+        style={{ marginTop: 8, padding: '14px 36px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+        ← Quay lại danh sách bài
+      </button>
+    </div>
+  )
+
+  const slide = flow.slides[current]
+  const lm = LOGIC_META[slide.logic] ?? LOGIC_META.NHAN
+  const progress = (current / flow.slides.length) * 100
+
+  // ── Main player ──────────────────────────────────────────────────────────
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+
+      {/* Progress bar */}
+      <div style={{ height: 4, background: '#E8EAF0' }}>
+        <div style={{ height: '100%', background: '#4338CA', width: `${progress}%`, transition: 'width .35s ease', borderRadius: 2 }} />
+      </div>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #F0F0F2' }}>
+        <button onClick={onBack}
+          style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888', padding: '2px 8px 2px 0', lineHeight: 1 }}>
+          ←
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ background: lm.bg, color: lm.color, borderRadius: 99, padding: '3px 12px', fontSize: 11, fontWeight: 700 }}>
+            {lm.label}
+          </span>
+          <span style={{ fontSize: 12, color: '#AAA' }}>{current + 1} / {flow.slides.length}</span>
+        </div>
+      </div>
+
+      {/* Slide body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 16px 12px' }}>
+
+        {slide.title && (
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#18181B', lineHeight: 1.45, marginBottom: 16 }}>
+            {slide.title}
+          </div>
+        )}
+
+        {/* TEXT / NEXT */}
+        {(slide.type === 'text' || slide.type === 'next') && slide.content && (
+          <div style={{ fontSize: 15, color: '#333', lineHeight: 1.9 }}
+            dangerouslySetInnerHTML={{ __html: slide.content }} />
+        )}
+
+        {/* VIDEO */}
+        {slide.type === 'video' && slide.mediaUrl && (
+          <div style={{ borderRadius: 12, overflow: 'hidden', aspectRatio: '16/9', background: '#000', marginBottom: 8 }}>
+            <iframe src={slide.mediaUrl} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen title={slide.title} />
+          </div>
+        )}
+
+        {/* IMAGE */}
+        {slide.type === 'image' && slide.mediaUrl && (
+          <img src={slide.mediaUrl} alt={slide.title ?? ''} style={{ width: '100%', borderRadius: 12, marginBottom: 8 }} />
+        )}
+
+        {/* QUIZ */}
+        {slide.type === 'quiz' && (
+          <div>
+            {slide.content && (
+              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.8, marginBottom: 14 }}>{slide.content}</div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(slide.options ?? []).map((opt, i) => {
+                const sel = answer === opt
+                const isCorrect = opt === slide.correctAnswer
+                let bg = '#F8F8FA', border = '2px solid #E8EAF0', color = '#18181B'
+                if (checked && sel && isCorrect)  { bg = '#F0FDF4'; border = '2px solid #16A34A'; color = '#16A34A' }
+                if (checked && sel && !isCorrect) { bg = '#FEF2F2'; border = '2px solid #EF4444'; color = '#EF4444' }
+                if (!checked && sel)              { bg = '#EEF2FF'; border = '2px solid #4338CA'; color = '#4338CA' }
+                return (
+                  <div key={i} onClick={() => { if (!checked) setAnswer(opt) }}
+                    style={{ padding: '13px 16px', borderRadius: 14, background: bg, border, color, fontSize: 14, fontWeight: 500, cursor: checked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s' }}>
+                    <span style={{ width: 24, height: 24, borderRadius: '50%', background: sel ? (checked ? (isCorrect ? '#16A34A' : '#EF4444') : '#4338CA') : '#DDD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    {opt}
+                  </div>
+                )
+              })}
+              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng. Thử lại nhé!</div>}
+              {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 13 }}>✅ Chính xác!</div>}
+            </div>
+          </div>
+        )}
+
+        {/* TRUE / FALSE */}
+        {slide.type === 'true_false' && (
+          <div>
+            {slide.content && (
+              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.8, marginBottom: 14 }}>{slide.content}</div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {['Đúng', 'Sai'].map(opt => {
+                const sel = answer === opt
+                const isCorrect = opt === slide.correctAnswer
+                let bg = '#F8F8FA', border = '2px solid #E8EAF0', color = '#18181B'
+                if (checked && sel && isCorrect)  { bg = '#F0FDF4'; border = '2px solid #16A34A'; color = '#16A34A' }
+                if (checked && sel && !isCorrect) { bg = '#FEF2F2'; border = '2px solid #EF4444'; color = '#EF4444' }
+                if (!checked && sel)              { bg = '#EEF2FF'; border = '2px solid #4338CA'; color = '#4338CA' }
+                return (
+                  <div key={opt} onClick={() => { if (!checked) setAnswer(opt) }}
+                    style={{ padding: '16px', borderRadius: 14, background: bg, border, color, fontSize: 16, fontWeight: 700, cursor: checked ? 'default' : 'pointer', textAlign: 'center' }}>
+                    {opt === 'Đúng' ? '✓ Đúng' : '✗ Sai'}
+                  </div>
+                )
+              })}
+              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng. Thử lại!</div>}
+              {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 13 }}>✅ Chính xác!</div>}
+            </div>
+          </div>
+        )}
+
+        {/* INPUT */}
+        {slide.type === 'input' && (
+          <div>
+            {slide.content && (
+              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.8, marginBottom: 12 }}>{slide.content}</div>
+            )}
+            <textarea value={inputVal} onChange={e => setInputVal(e.target.value)}
+              placeholder="Nhập câu trả lời của bạn..."
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 130, borderRadius: 14, border: '2px solid #E8EAF0', padding: '12px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.7, color: '#18181B' }} />
+          </div>
+        )}
+
+        {/* ACTION */}
+        {slide.type === 'action' && slide.content && (
+          <div style={{ fontSize: 15, color: '#333', lineHeight: 1.9 }}>
+            {slide.content}
+          </div>
+        )}
+
+        {/* REWARD */}
+        {slide.type === 'reward' && (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: 60, marginBottom: 12 }}>🎉</div>
+            {slide.content && (
+              <div style={{ fontSize: 16, color: '#4338CA', fontWeight: 600, lineHeight: 1.7 }}>{slide.content}</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bottom actions */}
+      <div style={{ padding: '12px 16px 28px', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {(slide.type === 'quiz' || slide.type === 'true_false') && !checked && answer && (
+          <button onClick={() => checkAnswer(slide)}
+            style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Kiểm tra đáp án
+          </button>
+        )}
+        <button onClick={goNext} disabled={!canProceed(slide)}
+          style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', background: canProceed(slide) ? '#4338CA' : '#E8EAF0', color: canProceed(slide) ? '#fff' : '#AAA', fontSize: 15, fontWeight: 700, cursor: canProceed(slide) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all .2s' }}>
+          {current >= flow.slides.length - 1
+            ? '✓ Hoàn thành bài học'
+            : slide.type === 'action'
+              ? (slide.buttonText || '✓ Tôi đã làm xong')
+              : (slide.buttonText || 'Tiếp tục →')}
+        </button>
+      </div>
+    </div>
+  )
+}

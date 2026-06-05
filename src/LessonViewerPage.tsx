@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import { QuizViewer } from './components/QuizViewer'
+import FlowPlayer from './FlowPlayer'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -166,6 +167,15 @@ export default function LessonViewerPage() {
           <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: D.text3, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 40 }}>👈</span>
             <div>Chọn bài học từ danh sách</div>
+          </div>
+        ) : active.lesson_type === 'flow' ? (
+          <div style={{ maxWidth: 480, margin: '0 auto', padding: '0' }}>
+            <FlowPlayer
+              lessonId={active.id}
+              studentId=""
+              onComplete={() => {}}
+              onBack={() => window.history.back()}
+            />
           </div>
         ) : (
           <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 32px 60px' }}>
