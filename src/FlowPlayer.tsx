@@ -232,8 +232,36 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
         )}
 
         {/* IMAGE */}
-        {slide.type === 'image' && slide.mediaUrl && (
-          <img src={slide.mediaUrl} alt={slide.title ?? ''} style={{ width: '100%', borderRadius: 12, marginBottom: 8 }} />
+        {slide.type === 'image' && (
+          <div style={{ marginBottom: 8 }}>
+            {slide.content && (
+              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.85, marginBottom: 14 }}>{slide.content}</div>
+            )}
+            {slide.mediaUrl ? (
+              <img
+                src={slide.mediaUrl}
+                alt={slide.title ?? ''}
+                style={{ width: '100%', borderRadius: 14, display: 'block', objectFit: 'cover', maxHeight: 320 }}
+                onError={e => {
+                  const el = e.currentTarget
+                  el.style.display = 'none'
+                  const ph = el.nextElementSibling as HTMLElement | null
+                  if (ph) ph.style.display = 'flex'
+                }}
+              />
+            ) : null}
+            {/* Placeholder — hiện khi không có URL hoặc ảnh lỗi */}
+            <div style={{
+              display: slide.mediaUrl ? 'none' : 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              height: 160, borderRadius: 14, background: '#F4F4F5',
+              border: '2px dashed #D4D4D8', color: '#A1A1AA',
+              flexDirection: 'column', gap: 8, fontSize: 13
+            }}>
+              <span style={{ fontSize: 32 }}>🖼</span>
+              Chưa có hình ảnh
+            </div>
+          </div>
         )}
 
         {/* QUIZ */}

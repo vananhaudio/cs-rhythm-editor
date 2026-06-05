@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react'
+import { useState, useEffect, useRef, type CSSProperties } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 
@@ -78,9 +78,12 @@ export default function FlowManager() {
   const [saving,      setSaving]      = useState(false)
   const [preview,     setPreview]     = useState(false)
   const [msg,         setMsg]         = useState('')
-  const [showImport,  setShowImport]  = useState(false)
-  const [importText,  setImportText]  = useState('')
-  const [importError, setImportError] = useState('')
+  const [showImport,     setShowImport]     = useState(false)
+  const [importText,     setImportText]     = useState('')
+  const [importError,    setImportError]    = useState('')
+  const [uploadingSlide, setUploadingSlide] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadTargetSlide = useRef<string | null>(null)
 
   // Load list
   useEffect(() => {
@@ -190,6 +193,34 @@ export default function FlowManager() {
     setTimeout(() => setMsg(''), 3000)
   }
 
+  const triggerUpload = (slideId: string) => {
+    uploadTargetSlide.current = slideId
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const slideId = uploadTargetSlide.current
+    if (!file || !slideId) return
+    e.target.value = '' // reset để upload cùng file lần sau vẫn trigger
+
+    const ext  = file.name.split('.').pop() ?? 'jpg'
+    const path = `flows/slide_${slideId}_${Date.now()}.${ext}`
+
+    setUploadingSlide(slideId)
+    const { error } = await supabase.storage.from('flow-media').upload(path, file, { upsert: true })
+    if (error) {
+      alert('Upload lỗi: ' + error.message)
+      setUploadingSlide(null)
+      return
+    }
+    const { data } = supabase.storage.from('flow-media').getPublicUrl(path)
+    updateSlide(slideId, { mediaUrl: data.publicUrl })
+    setUploadingSlide(null)
+    setMsg('🖼 Ảnh đã upload!')
+    setTimeout(() => setMsg(''), 2500)
+  }
+
   const save = async (publish = false) => {
     if (!form.title.trim()) { setMsg('Vui lòng nhập tiêu đề Flow'); return }
     setSaving(true); setMsg('')
@@ -281,6 +312,10 @@ export default function FlowManager() {
           })}
         </div>
       </div>
+
+      {/* Hidden file input cho upload ảnh */}
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+        style={{ display: 'none' }} onChange={handleFileChange} />
 
       {/* ── RIGHT: Editor ────────────────────────────────────────────────── */}
       {(selected || creating) ? (
@@ -498,14 +533,44 @@ export default function FlowManager() {
                               style={{ ...inputSt(), resize: 'vertical' as const }} />
                           </label>
 
-                          {/* mediaUrl for video/image */}
-                          {(slide.type === 'video' || slide.type === 'image') && (
+                          {/* mediaUrl — VIDEO */}
+                          {slide.type === 'video' && (
                             <label style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: '1/-1' }}>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: S.t2 }}>{slide.type === 'video' ? 'URL Video (YouTube embed)' : 'URL Hình ảnh'}</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: S.t2 }}>URL Video (YouTube embed)</span>
                               <input value={slide.mediaUrl} onChange={e => updateSlide(slide.id, { mediaUrl: e.target.value })}
-                                placeholder={slide.type === 'video' ? 'https://www.youtube.com/embed/...' : 'https://...'}
+                                placeholder="https://www.youtube.com/embed/..."
                                 style={inputSt()} />
                             </label>
+                          )}
+
+                          {/* mediaUrl — IMAGE + Upload */}
+                          {slide.type === 'image' && (
+                            <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: S.t2 }}>Hình ảnh</span>
+
+                              {/* Input URL + nút Upload */}
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <input value={slide.mediaUrl} onChange={e => updateSlide(slide.id, { mediaUrl: e.target.value })}
+                                  placeholder="URL ảnh hoặc dùng nút Upload →"
+                                  style={{ ...inputSt(), flex: 1 }} />
+                                <button
+                                  onClick={() => triggerUpload(slide.id)}
+                                  disabled={uploadingSlide === slide.id}
+                                  style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: uploadingSlide === slide.id ? '#E5E7EB' : '#4338CA', color: uploadingSlide === slide.id ? '#9CA3AF' : '#fff', fontSize: 12, fontWeight: 600, cursor: uploadingSlide === slide.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  {uploadingSlide === slide.id ? '⏳ Đang upload...' : '⬆️ Upload ảnh'}
+                                </button>
+                              </div>
+
+                              {/* Thumbnail preview */}
+                              {slide.mediaUrl && (
+                                <div style={{ position: 'relative', display: 'inline-block' }}>
+                                  <img src={slide.mediaUrl} alt="preview"
+                                    style={{ height: 120, maxWidth: '100%', borderRadius: 8, border: `1px solid ${S.border}`, objectFit: 'cover', display: 'block' }}
+                                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                </div>
+                              )}
+                              <div style={{ fontSize: 11, color: S.t3 }}>Hỗ trợ: JPG, PNG, WebP, GIF — tối đa 5MB</div>
+                            </div>
                           )}
 
                           {/* Quiz options */}
