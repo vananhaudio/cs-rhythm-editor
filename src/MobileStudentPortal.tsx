@@ -35,7 +35,7 @@ interface Student    { id: string; full_name: string; email: string | null; leve
 interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
-  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null }
+  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; published?: boolean }
 }
 interface Module { id: string; name: string; order_index: number }
 interface Lesson {
@@ -374,7 +374,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   useEffect(() => {
     supabase.from('edu_enrollments')
-      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url)')
+      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,published)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
@@ -534,7 +534,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     setSavingProfile(false)
   }
 
-  const mainCourse = enrollments.find(e => e.course?.type === 'hanh_trinh')
+  // Ưu tiên khoá hành trình đã published; nếu không có thì fallback khoá đầu tiên published
+  const mainCourse = enrollments.find(e => e.course?.type === 'hanh_trinh' && e.course?.published !== false)
+    ?? enrollments.find(e => e.course?.published !== false)
+    ?? enrollments.find(e => e.course?.type === 'hanh_trinh')
+  // Sắp xếp: published trước, unpublished sau (giữ thứ tự gốc trong mỗi nhóm)
+  const sortedEnrollments = [
+    ...enrollments.filter(e => e.course?.published !== false),
+    ...enrollments.filter(e => e.course?.published === false),
+  ]
   const name = uname(me)
 
   const displayTools = dbTools.length > 0 ? dbTools : [
@@ -745,20 +753,39 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               )}
 
               {/* Tất cả khoá học */}
-              {enrollments.length > 1 && (
+              {sortedEnrollments.length > 0 && (
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Tất cả khoá học</div>
-                  {enrollments.map(e => (
-                    <div key={e.id} onClick={() => openCourse(e.course_id)}
-                      style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, cursor: 'pointer' }}>
-                      <CourseLogo course={e.course} size={42} radius={12} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.course?.name}</div>
-                        <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>{e.course?.type === 'canh_cua' ? 'Cánh Cửa' : 'Hành Trình'}</div>
+                  {sortedEnrollments.map(e => {
+                    const isPublished = e.course?.published !== false
+                    return (
+                      <div key={e.id}
+                        onClick={() => isPublished ? openCourse(e.course_id) : undefined}
+                        style={{
+                          background: L.surface, borderRadius: 16, padding: '14px 16px',
+                          boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12,
+                          marginBottom: 8,
+                          cursor: isPublished ? 'pointer' : 'default',
+                          opacity: isPublished ? 1 : 0.45,
+                        }}>
+                        <CourseLogo course={e.course} size={42} radius={12} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isPublished ? L.t1 : L.t2 }}>
+                            {e.course?.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>
+                            {isPublished
+                              ? (e.course?.type === 'canh_cua' ? 'Cánh Cửa' : 'Hành Trình')
+                              : '🔜 Sắp ra mắt'}
+                          </div>
+                        </div>
+                        {isPublished
+                          ? <span style={{ color: L.t3, fontSize: 18 }}>›</span>
+                          : <span style={{ fontSize: 10, color: L.t3, background: L.surface2, borderRadius: 8, padding: '3px 8px', fontWeight: 600, flexShrink: 0 }}>Sắp ra mắt</span>
+                        }
                       </div>
-                      <span style={{ color: L.t3, fontSize: 18 }}>›</span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
