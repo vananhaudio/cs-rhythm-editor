@@ -808,16 +808,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         {/* ── LESSON ──────────────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'lesson' && activeLesson && (
           <>
-            {/* Flow Player — chiếm toàn màn hình, KHÔNG có header portal bên ngoài */}
+            {/* Flow Player — fullScreen=true → FlowPlayer tự dùng position:fixed, tránh bug iOS WebKit */}
             {activeLesson.lesson_type === 'flow' ? (
-              <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#fff', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', display: 'flex', flexDirection: 'column' }}>
-                <FlowPlayer
-                  lessonId={activeLesson.id}
-                  studentId={student.id}
-                  onComplete={() => markComplete(activeLesson.id)}
-                  onBack={goBack}
-                />
-              </div>
+              <FlowPlayer
+                lessonId={activeLesson.id}
+                studentId={student.id}
+                onComplete={() => markComplete(activeLesson.id)}
+                onBack={goBack}
+                fullScreen
+              />
             ) : (
             <>
             <div style={{ background: L.surface, padding: '52px 16px 0', boxShadow: '0 1px 0 ' + L.border }}>

@@ -38,9 +38,10 @@ interface Props {
   studentId: string
   onComplete: () => void
   onBack: () => void
+  fullScreen?: boolean   // true → tự dùng position:fixed, không cần wrapper ngoài
 }
 
-export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: Props) {
+export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fullScreen }: Props) {
   const [flow,     setFlow]     = useState<Flow | null>(null)
   const [loading,  setLoading]  = useState(true)
   const [current,  setCurrent]  = useState(0)
@@ -145,16 +146,33 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
     return true
   }
 
+  // ── Container style — fullScreen tự dùng position:fixed để tránh bug iOS WebKit ──────
+  const containerStyle = fullScreen
+    ? {
+        position: 'fixed' as const,
+        top: 0 as number | string, left: 0 as number | string,
+        right: 0 as number | string, bottom: 0 as number | string,
+        background: '#fff', zIndex: 100,
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        boxSizing: 'border-box' as const,
+        display: 'flex' as const, flexDirection: 'column' as const, overflow: 'hidden' as const,
+      }
+    : {
+        display: 'flex' as const, flexDirection: 'column' as const,
+        flex: 1, minHeight: 0, overflow: 'hidden' as const,
+      }
+
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 0, color: '#999' }}>
+    <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', color: '#999' }}>
       Đang tải bài học...
     </div>
   )
 
   // ── No flow ──────────────────────────────────────────────────────────────
   if (!flow || flow.slides.length === 0) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 0, padding: 32, textAlign: 'center' }}>
+    <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
       <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
       <div style={{ color: '#888', marginBottom: 16 }}>Bài học này chưa có nội dung Flow.</div>
       <button onClick={onBack}
@@ -166,7 +184,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
 
   // ── Done screen ──────────────────────────────────────────────────────────
   if (done) return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center', gap: 16 }}>
+    <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center', gap: 16 }}>
       <div style={{ fontSize: 64 }}>🎉</div>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#4338CA' }}>Hoàn thành!</div>
       <div style={{ fontSize: 15, color: '#555' }}>{flow.title}</div>
@@ -190,7 +208,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
   // Quy tắc vàng: FlowPlayer = trải nghiệm từng màn hình, KHÔNG cuộn dọc
   // Ngoại lệ duy nhất: slide type='input' cho phép scroll nội bộ textarea
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+    <div style={containerStyle}>
 
       {/* Progress bar */}
       <div style={{ height: 4, background: '#E8EAF0', flexShrink: 0 }}>
