@@ -80,8 +80,13 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       .then(({ data }) => {
         if (data) {
           setCompleted(data.completed_slides ?? [])
-          const savedIdx = data.current_slide ?? 0
-          setCurrent(Math.min(savedIdx, flow.slides.length - 1))
+          // Nếu đã hoàn thành trước đó → bắt đầu lại từ slide 1
+          if (data.finished_at) {
+            setCurrent(0)
+          } else {
+            const savedIdx = data.current_slide ?? 0
+            setCurrent(Math.min(savedIdx, flow.slides.length - 1))
+          }
         }
       })
   }, [flow])
@@ -101,6 +106,12 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
     } else {
       await supabase.from('flow_progress').insert({ ...payload, started_at: startedAt })
     }
+  }
+
+  const goPrev = () => {
+    if (current <= 0) return
+    setCurrent(current - 1)
+    setAnswer(null); setInputVal(''); setChecked(null)
   }
 
   const goNext = async () => {
@@ -391,14 +402,23 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
             Kiểm tra đáp án
           </button>
         )}
-        <button onClick={goNext} disabled={!canProceed(slide)}
-          style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', background: canProceed(slide) ? '#4338CA' : '#E8EAF0', color: canProceed(slide) ? '#fff' : '#AAA', fontSize: 15, fontWeight: 700, cursor: canProceed(slide) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all .2s' }}>
-          {current >= flow.slides.length - 1
-            ? '✓ Hoàn thành bài học'
-            : slide.type === 'action'
-              ? (slide.buttonText || '✓ Tôi đã làm xong')
-              : (slide.buttonText || 'Tiếp tục →')}
-        </button>
+        {/* Hàng nút điều hướng: Trước + Tiếp tục */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {current > 0 && (
+            <button onClick={goPrev}
+              style={{ padding: '15px 18px', borderRadius: 14, border: '2px solid #E8EAF0', background: '#fff', color: '#4338CA', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              ← Trước
+            </button>
+          )}
+          <button onClick={goNext} disabled={!canProceed(slide)}
+            style={{ flex: 1, padding: '15px', borderRadius: 14, border: 'none', background: canProceed(slide) ? '#4338CA' : '#E8EAF0', color: canProceed(slide) ? '#fff' : '#AAA', fontSize: 15, fontWeight: 700, cursor: canProceed(slide) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all .2s' }}>
+            {current >= flow.slides.length - 1
+              ? '✓ Hoàn thành bài học'
+              : slide.type === 'action'
+                ? (slide.buttonText || '✓ Tôi đã làm xong')
+                : (slide.buttonText || 'Tiếp tục →')}
+          </button>
+        </div>
       </div>
     </div>
   )
