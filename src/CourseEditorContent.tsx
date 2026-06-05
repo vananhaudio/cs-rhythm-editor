@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 import RichEditor from './RichEditor'
+import FlowInlineEditor from './FlowInlineEditor'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -34,6 +35,7 @@ const LESSON_TYPES = [
   { id: 'submit_video',  icon: '📹', label: 'Nộp video'    },
   { id: 'discussion',    icon: '💬', label: 'Thảo luận'    },
   { id: 'link',          icon: '🔗', label: 'Link ngoài'   },
+  { id: 'flow',          icon: '✨', label: 'Flow Bài Học' },
 ]
 
 const TOOLS = [
@@ -870,11 +872,21 @@ export default function CourseEditorContent() {
                   </div>
                 )}
 
-                <div>
-                  <Label>Nội dung chi tiết</Label>
-                  <RichEditor value={fContent} onChange={setFContent} />
-                  <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>Hiển thị sau video cho học viên.</div>
-                </div>
+                {fType === 'flow' ? (
+                  /* ── Khi loại bài = Flow: nhúng trình soạn slides ngay đây ── */
+                  <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, background: C.bg }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.accent, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>✨</span> Soạn nội dung Flow
+                    </div>
+                    <FlowInlineEditor lessonId={selectedLesson!.id} />
+                  </div>
+                ) : (
+                  <div>
+                    <Label>Nội dung chi tiết</Label>
+                    <RichEditor value={fContent} onChange={setFContent} />
+                    <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>Hiển thị sau video cho học viên.</div>
+                  </div>
+                )}
 
                 <div>
                   <Label>Công cụ luyện tập</Label>
