@@ -810,6 +810,18 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         {/* ── LESSON ──────────────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'lesson' && activeLesson && (
           <>
+            {/* Flow Player — chiếm toàn màn hình, KHÔNG có header portal bên ngoài */}
+            {activeLesson.lesson_type === 'flow' ? (
+              <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#fff' }}>
+                <FlowPlayer
+                  lessonId={activeLesson.id}
+                  studentId={student.id}
+                  onComplete={() => markComplete(activeLesson.id)}
+                  onBack={goBack}
+                />
+              </div>
+            ) : (
+            <>
             <div style={{ background: L.surface, padding: '52px 16px 0', boxShadow: '0 1px 0 ' + L.border }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <button onClick={goBack} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
@@ -827,16 +839,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 <Pill label="Ghi chú"  active={lessonTab === 'note'}    onClick={() => setLessonTab('note')}    />
               </div>
             </div>
-
-            {/* Flow Player — thay toàn bộ nội dung khi lesson_type='flow' */}
-            {activeLesson.lesson_type === 'flow' && (
-              <FlowPlayer
-                lessonId={activeLesson.id}
-                studentId={student.id}
-                onComplete={() => markComplete(activeLesson.id)}
-                onBack={goBack}
-              />
-            )}
 
             {/* Video */}
             {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'video' && getYtId(activeLesson.content_url) && (
@@ -962,6 +964,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             </div>
             </>}
+            </> /* đóng nhánh else (không phải flow) */
+            )}
           </>
         )}
 
