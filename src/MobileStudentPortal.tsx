@@ -812,7 +812,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           <>
             {/* Flow Player — chiếm toàn màn hình, KHÔNG có header portal bên ngoài */}
             {activeLesson.lesson_type === 'flow' ? (
-              <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#fff', paddingTop: 'env(safe-area-inset-top)' }}>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#fff', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', display: 'flex', flexDirection: 'column' }}>
                 <FlowPlayer
                   lessonId={activeLesson.id}
                   studentId={student.id}
