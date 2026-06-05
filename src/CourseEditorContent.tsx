@@ -404,6 +404,21 @@ export default function CourseEditorContent() {
     if (selectedLesson?.id === id) setSelectedLesson(null)
   }
 
+  const deleteModule = async (moduleId: string, moduleName: string) => {
+    const modLessons = lessons.filter(l => l.module_id === moduleId)
+    const msg = modLessons.length > 0
+      ? `Xoá chương "${moduleName}" và ${modLessons.length} bài bên trong?`
+      : `Xoá chương "${moduleName}"?`
+    if (!confirm(msg)) return
+    if (modLessons.length > 0) {
+      await supabase.from('edu_course_lessons').delete().eq('module_id', moduleId)
+    }
+    await supabase.from('edu_modules').delete().eq('id', moduleId)
+    setLessons(prev => prev.filter(l => l.module_id !== moduleId))
+    setModules(prev => prev.filter(m => m.id !== moduleId))
+    if (selectedLesson && modLessons.some(l => l.id === selectedLesson.id)) setSelectedLesson(null)
+  }
+
   const toggleTool = (id: string) =>
     setFTools(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id])
 
@@ -638,6 +653,13 @@ export default function CourseEditorContent() {
                         </span>
                       )}
                       <span style={{ color: C.text3, fontWeight: 400, flexShrink: 0 }}>{modLessons.length} bài</span>
+                      <button onClick={e => { e.stopPropagation(); deleteModule(mod.id, mod.name) }}
+                        title="Xoá chương này"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 15, padding: '2px 4px', borderRadius: 4, flexShrink: 0, lineHeight: 1, opacity: 0 }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = C.danger }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = C.text3 }}>
+                        ×
+                      </button>
                     </div>
 
                     {modLessons.map((l, li) => {
