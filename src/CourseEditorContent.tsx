@@ -209,7 +209,7 @@ export default function CourseEditorContent() {
   const [flowJson, setFlowJson]     = useState('')
   const [flowJsonMsg, setFlowJsonMsg] = useState('')
   const [flowImporting, setFlowImporting] = useState(false)
-  const [flowJsonModuleId, setFlowJsonModuleId] = useState('')
+  const [flowJsonFlatModule, setFlowJsonFlatModule] = useState('Bài học')
   const logoFileRef = useRef<HTMLInputElement>(null)
   const [showNewCourse, setShowNewCourse] = useState(false)
   const [ncName,  setNcName]  = useState('')
@@ -404,55 +404,88 @@ export default function CourseEditorContent() {
     setImporting(false)
   }
 
-  // ── Nhập hàng loạt Flows từ JSON {slug:{title,slides}} ────────────────────────
+  // ── Nhập hàng loạt Flows từ JSON ─────────────────────────────────────────────
+  // Hỗ trợ 2 format:
+  //  A. Array có chương: [{module:"Chương 1", lessons:[{title,slides},...]}]
+  //  B. Object phẳng:    {"slug":{title,slides},...}  → gom vào 1 chương tên flowJsonFlatModule
   const bulkImportFlows = async () => {
     if (!selectedCourse) return
-    if (!flowJsonModuleId) { setFlowJsonMsg('Chọn chương để nhập bài vào'); return }
-    if (!flowJson.trim())  { setFlowJsonMsg('Dán nội dung JSON trước'); return }
+    if (!flowJson.trim()) { setFlowJsonMsg('Dán nội dung JSON trước'); return }
     setFlowImporting(true); setFlowJsonMsg('')
     try {
-      const data = JSON.parse(flowJson) as Record<string, { title: string; slides: Record<string, unknown>[] }>
-      const entries = Object.values(data)
-      const existingInMod = lessons.filter(l => l.module_id === flowJsonModuleId)
-      let startOrder = existingInMod.length
+      const raw = JSON.parse(flowJson)
+
+      // Chuẩn hoá thành [{module, lessons}]
+      type LessonEntry = { title: string; slides: Record<string, unknown>[] }
+      type ModuleGroup = { module: string; lessons: LessonEntry[] }
+      let groups: ModuleGroup[]
+
+      if (Array.isArray(raw)) {
+        // Format A
+        groups = raw as ModuleGroup[]
+      } else if (raw && typeof raw === 'object') {
+        // Format B — gom vào 1 chương
+        const flatName = flowJsonFlatModule.trim() || 'Bài học'
+        groups = [{ module: flatName, lessons: Object.values(raw) as LessonEntry[] }]
+      } else {
+        throw new Error('JSON phải là array hoặc object')
+      }
+
+      const allMods = [...modules]
+      const allLsns = [...lessons]
+      const newMods: Module[] = []
       const newLsns: Lesson[] = []
       let created = 0, updated = 0
 
-      for (const { title, slides } of entries) {
-        // Tìm bài đã có theo title (bất kỳ module trong course)
-        const existing = lessons.find(l => l.title.trim().toLowerCase() === title.trim().toLowerCase())
-        let lessonId: string
-
-        if (existing) {
-          lessonId = existing.id
-          await supabase.from('edu_course_lessons').update({ lesson_type: 'flow' }).eq('id', lessonId)
-          setLessons(prev => prev.map(l => l.id === lessonId ? { ...l, lesson_type: 'flow' } : l))
-          updated++
-        } else {
-          const { data: nl, error } = await supabase.from('edu_course_lessons')
-            .insert({ module_id: flowJsonModuleId, title, lesson_type: 'flow', order_index: startOrder++, tools: [] })
+      for (const { module: modName, lessons: modLessons } of groups) {
+        // Tìm hoặc tạo chương
+        let mod = allMods.find(m => m.name.trim().toLowerCase() === modName.trim().toLowerCase())
+        if (!mod) {
+          const { data: nm, error: me } = await supabase.from('edu_modules')
+            .insert({ course_id: selectedCourse.id, name: modName, order_index: allMods.length })
             .select('*').single()
-          if (error || !nl) throw error
-          lessonId = nl.id
-          newLsns.push(nl as Lesson)
-          created++
+          if (me || !nm) throw me ?? new Error('Lỗi tạo chương')
+          mod = nm as Module
+          allMods.push(mod)
+          newMods.push(mod)
         }
 
-        // Tạo / cập nhật flow record
-        const orderedSlides = (Array.isArray(slides) ? slides : []).map((s, i) => ({ ...s, order: i + 1 }))
-        const flowPayload = { lesson_id: lessonId, title, status: 'published', slides: orderedSlides, reward_xp: 30 }
-        const { data: ef } = await supabase.from('flows').select('id').eq('lesson_id', lessonId).maybeSingle()
-        if (ef) {
-          await supabase.from('flows').update(flowPayload).eq('id', ef.id)
-        } else {
-          await supabase.from('flows').insert(flowPayload)
+        let orderIdx = allLsns.filter(l => l.module_id === mod!.id).length
+
+        for (const { title, slides } of modLessons) {
+          const existing = allLsns.find(l => l.title.trim().toLowerCase() === title.trim().toLowerCase())
+          let lessonId: string
+
+          if (existing) {
+            lessonId = existing.id
+            await supabase.from('edu_course_lessons').update({ lesson_type: 'flow' }).eq('id', lessonId)
+            updated++
+          } else {
+            const { data: nl, error: le } = await supabase.from('edu_course_lessons')
+              .insert({ module_id: mod!.id, title, lesson_type: 'flow', order_index: orderIdx++, tools: [] })
+              .select('*').single()
+            if (le || !nl) throw le ?? new Error('Lỗi tạo bài')
+            lessonId = nl.id
+            allLsns.push(nl as Lesson)
+            newLsns.push(nl as Lesson)
+            created++
+          }
+
+          // Tạo / cập nhật flow
+          const orderedSlides = (Array.isArray(slides) ? slides : []).map((s, i) => ({ ...s, order: i + 1 }))
+          const fp = { lesson_id: lessonId, title, status: 'published', slides: orderedSlides, reward_xp: 30 }
+          const { data: ef } = await supabase.from('flows').select('id').eq('lesson_id', lessonId).maybeSingle()
+          if (ef) { await supabase.from('flows').update(fp).eq('id', ef.id) }
+          else    { await supabase.from('flows').insert(fp) }
         }
       }
 
+      if (newMods.length) setModules(prev => [...prev, ...newMods])
       if (newLsns.length) setLessons(prev => [...prev, ...newLsns])
-      setFlowJsonMsg(`✓ Xong! ${created} bài mới · ${updated} bài cập nhật flow`)
+      const sum = [newMods.length && `${newMods.length} chương mới`, created && `${created} bài mới`, updated && `${updated} cập nhật`].filter(Boolean).join(' · ')
+      setFlowJsonMsg(`✓ Xong! ${sum}`)
       setFlowJson('')
-      setTimeout(() => { setShowImport(false); setFlowJsonMsg('') }, 1800)
+      setTimeout(() => { setShowImport(false); setFlowJsonMsg('') }, 2000)
     } catch (e: unknown) {
       setFlowJsonMsg('Lỗi: ' + (e instanceof Error ? e.message : String(e)))
     }
@@ -1062,23 +1095,34 @@ Hợp âm Am | https://youtu.be/ghi789`}
             {/* ── Tab 2: Flows từ JSON ── */}
             {importMode === 'flowJson' && (
               <>
-                <div style={{ fontSize: 12, color: C.text3, marginBottom: 12, lineHeight: 1.65 }}>
-                  Dán JSON dạng <code style={{ background: C.bg, padding: '1px 5px', borderRadius: 4 }}>{'{"slug":{"title":"...","slides":[...]}}'}</code>.
-                  Mỗi entry = 1 bài học Flow. Nếu bài đã tồn tại (theo tên) sẽ cập nhật slides, nếu chưa sẽ tạo mới trong chương chọn bên dưới.
+                {/* Hướng dẫn format */}
+                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 11.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
+{`// Format có chương (khuyến nghị):
+[
+  { "module": "Tổng quan về Guitar",
+    "lessons": [
+      { "title": "Guitar là gì?", "slides": [...] }
+    ]
+  },
+  { "module": "Làm quen với cây đàn",
+    "lessons": [ ... ]
+  }
+]
+
+// Hoặc format phẳng (tự tạo 1 chương):
+{ "slug-1": { "title": "...", "slides": [...] } }`}
                 </div>
 
-                {/* Chọn chương */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.text2, marginBottom: 5, textTransform: 'uppercase', letterSpacing: .4 }}>Chương nhận bài mới</div>
-                  <select value={flowJsonModuleId} onChange={e => setFlowJsonModuleId(e.target.value)}
-                    style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, background: C.surface, fontFamily: 'inherit', outline: 'none' }}>
-                    <option value="">— Chọn chương —</option>
-                    {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
+                {/* Tên chương mặc định — chỉ dùng khi format phẳng */}
+                <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ fontSize: 12, color: C.text2, flexShrink: 0 }}>Tên chương (format phẳng):</div>
+                  <input value={flowJsonFlatModule} onChange={e => setFlowJsonFlatModule(e.target.value)}
+                    placeholder="Bài học"
+                    style={{ flex: 1, padding: '6px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none' }} />
                 </div>
 
                 <textarea value={flowJson} onChange={e => setFlowJson(e.target.value)}
-                  placeholder={'{\n  "01-guitar-la-gi": {\n    "title": "Guitar là gì?",\n    "slides": [...]\n  },\n  ...\n}'}
+                  placeholder="Dán JSON vào đây..."
                   style={{ width: '100%', minHeight: 220, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 12, color: C.text1, fontFamily: 'ui-monospace, monospace', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.55 }} />
 
                 {flowJsonMsg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: flowJsonMsg.startsWith('✓') ? C.success : C.danger }}>{flowJsonMsg}</div>}
@@ -1086,7 +1130,7 @@ Hợp âm Am | https://youtu.be/ghi789`}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button onClick={bulkImportFlows} disabled={flowImporting || !flowJson.trim()}
                     style={{ flex: 1, background: flowImporting || !flowJson.trim() ? C.border : C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 700, cursor: flowImporting || !flowJson.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-                    {flowImporting ? '⏳ Đang tạo bài...' : '✨ Tạo hàng loạt bài Flow'}
+                    {flowImporting ? '⏳ Đang tạo...' : '✨ Tạo hàng loạt bài Flow'}
                   </button>
                   <button onClick={() => setShowImport(false)} disabled={flowImporting}
                     style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
