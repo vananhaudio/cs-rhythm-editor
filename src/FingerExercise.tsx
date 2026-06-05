@@ -277,6 +277,9 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
   // Dots nhịp
   const [beatDotIdx,   setBeatDotIdx]   = useState(0)
   const [fingerDotIdx, setFingerDotIdx] = useState(0)
+  // Âm thanh
+  const [guitarOn,  setGuitarOn]  = useState(true)   // tiếng đàn
+  const [muted,     setMuted]     = useState(false)  // tắt hết
 
   const autoLevel  = useMemo(() => calcLevel(totalMinutes), [totalMinutes])
   const curLevel   = useMemo(() => shiftLevel(autoLevel, levelDelta), [autoLevel, levelDelta])
@@ -289,29 +292,38 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
   const steps = useMemo(() => buildSteps(patternIdx), [patternIdx])
 
   // ── Refs (tránh stale closure trong setInterval) ──────────────────────────
-  const playingRef  = useRef(false)
-  const stepIdxRef  = useRef(0)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const stepsRef    = useRef(steps)
-  const bpmRef      = useRef(curLevel.bpm)
-  const npbRef      = useRef(NOTES_PER_BEAT[curLevel.sub])
+  const playingRef   = useRef(false)
+  const stepIdxRef   = useRef(0)
+  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const stepsRef     = useRef(steps)
+  const bpmRef       = useRef(curLevel.bpm)
+  const npbRef       = useRef(NOTES_PER_BEAT[curLevel.sub])
+  const guitarOnRef  = useRef(true)
+  const mutedRef     = useRef(false)
 
-  stepsRef.current = steps
-  bpmRef.current   = curLevel.bpm
-  npbRef.current   = NOTES_PER_BEAT[curLevel.sub]
+  stepsRef.current    = steps
+  bpmRef.current      = curLevel.bpm
+  npbRef.current      = NOTES_PER_BEAT[curLevel.sub]
+  guitarOnRef.current = guitarOn
+  mutedRef.current    = muted
 
   // ── Phát một nốt ─────────────────────────────────────────────────────────
   const playStep = () => {
     const si   = stepIdxRef.current % stepsRef.current.length
     const step = stepsRef.current[si]
-    const freq = OPEN_FREQ[step.stringIdx] * Math.pow(2, step.fret / 12)
-    try { playGuitarNote(freq, step.stringIdx) } catch { /* ignore */ }
 
-    const npb = npbRef.current
-    if (stepIdxRef.current % npb === 0) {
-      playClick(Math.floor(stepIdxRef.current / npb) % 4 === 0)
+    if (!mutedRef.current) {
+      if (guitarOnRef.current) {
+        const freq = OPEN_FREQ[step.stringIdx] * Math.pow(2, step.fret / 12)
+        try { playGuitarNote(freq, step.stringIdx) } catch { /* ignore */ }
+      }
+      const npb = npbRef.current
+      if (stepIdxRef.current % npb === 0) {
+        playClick(Math.floor(stepIdxRef.current / npb) % 4 === 0)
+      }
     }
 
+    const npb = npbRef.current
     setActiveStrIdx(step.stringIdx)
     setActiveFinger(step.finger)
     setBeatDotIdx(Math.floor(stepIdxRef.current / npb) % 4)
@@ -493,6 +505,36 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
         }}>
           {playing ? '⏸ Tạm dừng' : '▶ Bắt đầu'}
         </button>
+
+        {/* ── Điều khiển âm thanh ── */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* Toggle tiếng đàn */}
+          <button
+            onClick={() => setGuitarOn(v => !v)}
+            style={{
+              flex: 1, border: 'none', borderRadius: 12, padding: '11px 6px',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              background: guitarOn && !muted ? '#EEF2FF' : '#F3F4F6',
+              color:      guitarOn && !muted ? P1 : '#9CA3AF',
+              opacity: muted ? 0.45 : 1,
+              transition: 'background .15s, color .15s, opacity .15s',
+            }}>
+            {guitarOn ? '🎸 Đàn' : '🔕 Đàn'}
+          </button>
+
+          {/* Mute tất cả */}
+          <button
+            onClick={() => setMuted(v => !v)}
+            style={{
+              flex: 1, border: 'none', borderRadius: 12, padding: '11px 6px',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              background: muted ? '#FEE2E2' : '#F3F4F6',
+              color:      muted ? '#DC2626' : '#9CA3AF',
+              transition: 'background .15s, color .15s',
+            }}>
+            {muted ? '🔇 Đang tắt' : '🔊 Âm thanh'}
+          </button>
+        </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button
