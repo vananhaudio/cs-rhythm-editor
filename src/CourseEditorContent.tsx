@@ -211,6 +211,8 @@ export default function CourseEditorContent() {
   const [flowImporting, setFlowImporting] = useState(false)
   const [flowJsonFlatModule, setFlowJsonFlatModule] = useState('Bài học')
   const logoFileRef = useRef<HTMLInputElement>(null)
+  const flowJsonFileRef = useRef<HTMLInputElement>(null)
+  const [flowJsonFileName, setFlowJsonFileName] = useState('')
   const [showNewCourse, setShowNewCourse] = useState(false)
   const [ncName,  setNcName]  = useState('')
   const [ncType,  setNcType]  = useState('hanh_trinh')
@@ -1121,9 +1123,39 @@ Hợp âm Am | https://youtu.be/ghi789`}
                     style={{ flex: 1, padding: '6px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none' }} />
                 </div>
 
-                <textarea value={flowJson} onChange={e => setFlowJson(e.target.value)}
+                {/* File picker ẩn */}
+                <input ref={flowJsonFileRef} type="file" accept=".json,application/json" style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    setFlowJsonFileName(file.name)
+                    const reader = new FileReader()
+                    reader.onload = ev => setFlowJson((ev.target?.result as string) ?? '')
+                    reader.readAsText(file, 'UTF-8')
+                    e.currentTarget.value = ''
+                  }} />
+
+                {/* Thanh chọn file / xoá */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <button onClick={() => flowJsonFileRef.current?.click()}
+                    style={{ padding: '7px 14px', border: `1px solid ${C.accent}`, borderRadius: 7, background: C.accentLight, color: C.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    📁 Chọn file .json
+                  </button>
+                  {flowJsonFileName
+                    ? <span style={{ fontSize: 12, color: C.success, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✓ {flowJsonFileName}</span>
+                    : <span style={{ fontSize: 12, color: C.text3, flex: 1 }}>hoặc dán JSON bên dưới</span>
+                  }
+                  {flowJson && (
+                    <button onClick={() => { setFlowJson(''); setFlowJsonFileName('') }}
+                      style={{ padding: '5px 10px', border: `1px solid ${C.border}`, borderRadius: 7, background: 'none', color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                      Xoá
+                    </button>
+                  )}
+                </div>
+
+                <textarea value={flowJson} onChange={e => { setFlowJson(e.target.value); setFlowJsonFileName('') }}
                   placeholder="Dán JSON vào đây..."
-                  style={{ width: '100%', minHeight: 220, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 12, color: C.text1, fontFamily: 'ui-monospace, monospace', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.55 }} />
+                  style={{ width: '100%', minHeight: 160, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 12, color: C.text1, fontFamily: 'ui-monospace, monospace', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.55 }} />
 
                 {flowJsonMsg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: flowJsonMsg.startsWith('✓') ? C.success : C.danger }}>{flowJsonMsg}</div>}
 
