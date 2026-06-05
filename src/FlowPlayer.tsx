@@ -120,12 +120,23 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
     }
   }
 
+  // Normalize true/false từ mọi dạng: true, false, "true", "false", "Đúng", "Sai"
+  const normalizeTF = (v: unknown): boolean | null => {
+    if (v === true  || v === 'true'  || v === 'Đúng' || v === 'Dung') return true
+    if (v === false || v === 'false' || v === 'Sai')                   return false
+    return null
+  }
+
   const checkAnswer = (slide: Slide) => {
     if (!answer) return
-    const correct = slide.type === 'true_false'
-      ? answer === slide.correctAnswer
-      : answer === slide.correctAnswer
-    setChecked(correct ? 'correct' : 'wrong')
+    if (slide.type === 'true_false') {
+      const selected  = normalizeTF(answer)           // "Đúng" → true / "Sai" → false
+      const correct   = normalizeTF(slide.correctAnswer)
+      if (selected === null || correct === null) { setChecked('wrong'); return }
+      setChecked(selected === correct ? 'correct' : 'wrong')
+    } else {
+      setChecked(answer === slide.correctAnswer ? 'correct' : 'wrong')
+    }
   }
 
   const canProceed = (slide: Slide) => {
@@ -240,8 +251,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
                 if (checked && sel && !isCorrect) { bg = '#FEF2F2'; border = '2px solid #EF4444'; color = '#EF4444' }
                 if (!checked && sel)              { bg = '#EEF2FF'; border = '2px solid #4338CA'; color = '#4338CA' }
                 return (
-                  <div key={i} onClick={() => { if (!checked) setAnswer(opt) }}
-                    style={{ padding: '13px 16px', borderRadius: 14, background: bg, border, color, fontSize: 14, fontWeight: 500, cursor: checked ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s' }}>
+                  <div key={i} onClick={() => {
+                      if (checked === 'correct') return
+                      setChecked(null); setAnswer(opt)
+                    }}
+                    style={{ padding: '13px 16px', borderRadius: 14, background: bg, border, color, fontSize: 14, fontWeight: 500, cursor: checked === 'correct' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s' }}>
                     <span style={{ width: 24, height: 24, borderRadius: '50%', background: sel ? (checked ? (isCorrect ? '#16A34A' : '#EF4444') : '#4338CA') : '#DDD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
                       {String.fromCharCode(65 + i)}
                     </span>
@@ -249,7 +263,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
                   </div>
                 )
               })}
-              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng. Thử lại nhé!</div>}
+              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng — chọn lại nhé!</div>}
               {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 13 }}>✅ Chính xác!</div>}
             </div>
           </div>
@@ -264,19 +278,28 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack }: 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {['Đúng', 'Sai'].map(opt => {
                 const sel = answer === opt
-                const isCorrect = opt === slide.correctAnswer
+                // Normalize cả 2 phía trước khi so sánh
+                const optNorm     = normalizeTF(opt)
+                const correctNorm = normalizeTF(slide.correctAnswer)
+                const isCorrect   = optNorm !== null && optNorm === correctNorm
                 let bg = '#F8F8FA', border = '2px solid #E8EAF0', color = '#18181B'
                 if (checked && sel && isCorrect)  { bg = '#F0FDF4'; border = '2px solid #16A34A'; color = '#16A34A' }
                 if (checked && sel && !isCorrect) { bg = '#FEF2F2'; border = '2px solid #EF4444'; color = '#EF4444' }
                 if (!checked && sel)              { bg = '#EEF2FF'; border = '2px solid #4338CA'; color = '#4338CA' }
                 return (
-                  <div key={opt} onClick={() => { if (!checked) setAnswer(opt) }}
-                    style={{ padding: '16px', borderRadius: 14, background: bg, border, color, fontSize: 16, fontWeight: 700, cursor: checked ? 'default' : 'pointer', textAlign: 'center' }}>
+                  <div key={opt}
+                    onClick={() => {
+                      // Cho chọn lại khi sai — reset checked rồi set answer mới
+                      if (checked === 'correct') return
+                      setChecked(null)
+                      setAnswer(opt)
+                    }}
+                    style={{ padding: '16px', borderRadius: 14, background: bg, border, color, fontSize: 16, fontWeight: 700, cursor: checked === 'correct' ? 'default' : 'pointer', textAlign: 'center', transition: 'all .15s' }}>
                     {opt === 'Đúng' ? '✓ Đúng' : '✗ Sai'}
                   </div>
                 )
               })}
-              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng. Thử lại!</div>}
+              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng — chọn lại nhé!</div>}
               {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 13 }}>✅ Chính xác!</div>}
             </div>
           </div>
