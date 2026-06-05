@@ -312,7 +312,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
                 return (
                   <div key={i} onClick={() => {
                       if (checked === 'correct') return
-                      setChecked(null); setAnswer(opt)
+                      setAnswer(opt)
+                      setChecked(opt === slide.correctAnswer ? 'correct' : 'wrong')
                     }}
                     style={{ padding: '13px 16px', borderRadius: 14, background: bg, border, color, fontSize: 14, fontWeight: 500, cursor: checked === 'correct' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s' }}>
                     <span style={{ width: 24, height: 24, borderRadius: '50%', background: sel ? (checked ? (isCorrect ? '#16A34A' : '#EF4444') : '#4338CA') : '#DDD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
@@ -348,10 +349,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
                 return (
                   <div key={opt}
                     onClick={() => {
-                      // Cho chọn lại khi sai — reset checked rồi set answer mới
                       if (checked === 'correct') return
-                      setChecked(null)
                       setAnswer(opt)
+                      const sel = normalizeTF(opt)
+                      const cor = normalizeTF(slide.correctAnswer)
+                      setChecked(sel !== null && cor !== null && sel === cor ? 'correct' : 'wrong')
                     }}
                     style={{ padding: '16px', borderRadius: 14, background: bg, border, color, fontSize: 16, fontWeight: 700, cursor: checked === 'correct' ? 'default' : 'pointer', textAlign: 'center', transition: 'all .15s' }}>
                     {opt === 'Đúng' ? '✓ Đúng' : '✗ Sai'}
@@ -396,12 +398,6 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
       {/* Bottom actions — flexShrink:0 đảm bảo nút LUÔN hiển thị dù nội dung dài */}
       <div style={{ padding: '12px 16px 28px', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-        {(slide.type === 'quiz' || slide.type === 'true_false') && !checked && answer && (
-          <button onClick={() => checkAnswer(slide)}
-            style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Kiểm tra đáp án
-          </button>
-        )}
         {/* Hàng nút điều hướng: Trước + Tiếp tục */}
         <div style={{ display: 'flex', gap: 8 }}>
           {current > 0 && (
