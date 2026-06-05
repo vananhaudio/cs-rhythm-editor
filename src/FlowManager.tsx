@@ -74,10 +74,13 @@ export default function FlowManager() {
   const [form,     setForm]     = useState(emptyFlow())
   const [slides,   setSlides]   = useState<Slide[]>([])
   const [editSlideId, setEditSlideId] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
-  const [saving,   setSaving]   = useState(false)
-  const [preview,  setPreview]  = useState(false)
-  const [msg,      setMsg]      = useState('')
+  const [creating,    setCreating]    = useState(false)
+  const [saving,      setSaving]      = useState(false)
+  const [preview,     setPreview]     = useState(false)
+  const [msg,         setMsg]         = useState('')
+  const [showImport,  setShowImport]  = useState(false)
+  const [importText,  setImportText]  = useState('')
+  const [importError, setImportError] = useState('')
 
   // Load list
   useEffect(() => {
@@ -135,6 +138,56 @@ export default function FlowManager() {
 
   const updateSlide = (id: string, patch: Partial<Slide>) => {
     setSlides(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
+  }
+
+  const VALID_LOGIC = ['NHAN','NGHI','LAM','NGAM','THUONG','DAN']
+  const VALID_TYPE  = ['text','image','video','audio','quiz','true_false','input','action','reward','next']
+
+  const validateAndImport = () => {
+    setImportError('')
+    let parsed: unknown
+    try { parsed = JSON.parse(importText.trim()) }
+    catch { setImportError('❌ JSON không hợp lệ. Kiểm tra lại dấu ngoặc, dấu phẩy.'); return }
+
+    if (!Array.isArray(parsed)) { setImportError('❌ JSON phải là một mảng (array) các slide.'); return }
+    if (parsed.length === 0)    { setImportError('❌ Mảng slides không được rỗng.'); return }
+
+    const errors: string[] = []
+    parsed.forEach((s: unknown, i: number) => {
+      const slide = s as Record<string, unknown>
+      if (!slide.id)    errors.push(`Slide ${i+1}: thiếu trường "id"`)
+      if (slide.order === undefined) errors.push(`Slide ${i+1}: thiếu trường "order"`)
+      if (!slide.logic) errors.push(`Slide ${i+1}: thiếu trường "logic"`)
+      else if (!VALID_LOGIC.includes(slide.logic as string))
+        errors.push(`Slide ${i+1}: logic "${slide.logic}" không hợp lệ. Chỉ nhận: ${VALID_LOGIC.join(', ')}`)
+      if (!slide.type)  errors.push(`Slide ${i+1}: thiếu trường "type"`)
+      else if (!VALID_TYPE.includes(slide.type as string))
+        errors.push(`Slide ${i+1}: type "${slide.type}" không hợp lệ. Chỉ nhận: ${VALID_TYPE.join(', ')}`)
+      if (!slide.title && !slide.content)
+        errors.push(`Slide ${i+1}: phải có ít nhất "title" hoặc "content"`)
+    })
+
+    if (errors.length > 0) { setImportError(errors.join('\n')); return }
+
+    // Merge với slides hiện có, sắp xếp lại order
+    const normalized: Slide[] = (parsed as Record<string, unknown>[]).map((s, i) => ({
+      id:            String(s.id ?? crypto.randomUUID()),
+      order:         i,
+      logic:         String(s.logic),
+      type:          String(s.type),
+      title:         String(s.title ?? ''),
+      content:       String(s.content ?? ''),
+      mediaUrl:      String(s.mediaUrl ?? ''),
+      options:       Array.isArray(s.options) ? (s.options as unknown[]).map(String) : ['', ''],
+      correctAnswer: String(s.correctAnswer ?? ''),
+      buttonText:    String(s.buttonText ?? ''),
+    }))
+
+    setSlides(normalized)
+    setShowImport(false)
+    setImportText('')
+    setMsg(`✅ Đã import ${normalized.length} slides!`)
+    setTimeout(() => setMsg(''), 3000)
   }
 
   const save = async (publish = false) => {
@@ -315,15 +368,71 @@ export default function FlowManager() {
                 <div style={{ fontWeight: 700, fontSize: 13, color: S.t2, textTransform: 'uppercase', letterSpacing: '.05em' }}>
                   Slides ({slides.length})
                 </div>
-                <button onClick={addSlide}
-                  style={{ background: S.accentLight, color: S.accent, border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  + Thêm slide
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setShowImport(true); setImportError(''); setImportText('') }}
+                    style={{ background: '#FFF7ED', color: '#D97706', border: '1px solid #FED7AA', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    📥 Import JSON
+                  </button>
+                  <button onClick={addSlide}
+                    style={{ background: S.accentLight, color: S.accent, border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    + Thêm slide
+                  </button>
+                </div>
               </div>
+
+              {/* ── Modal Import JSON ──────────────────────────────────── */}
+              {showImport && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ background: S.surface, borderRadius: 16, width: 600, maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}>
+
+                    {/* Header */}
+                    <div style={{ padding: '18px 20px', borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15, color: S.t1 }}>📥 Import JSON Slides</div>
+                        <div style={{ fontSize: 12, color: S.t3, marginTop: 3 }}>Dán JSON từ ChatGPT vào đây</div>
+                      </div>
+                      <button onClick={() => setShowImport(false)}
+                        style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: S.t3, padding: '4px 8px' }}>✕</button>
+                    </div>
+
+                    {/* Schema hint */}
+                    <div style={{ padding: '12px 20px', background: '#F8F9FF', borderBottom: `1px solid ${S.border}`, fontSize: 11, color: S.t3, fontFamily: 'monospace', lineHeight: 1.7 }}>
+                      Cấu trúc mỗi slide: {'{'} "id", "order", "logic" (NHAN/NGHI/LAM/NGAM/THUONG/DAN), "type" (text/quiz/true_false/input/action/reward/...), "title", "content", "options": [], "correctAnswer", "buttonText" {'}'}
+                    </div>
+
+                    {/* Textarea */}
+                    <div style={{ flex: 1, padding: '16px 20px', overflowY: 'auto' }}>
+                      <textarea
+                        value={importText}
+                        onChange={e => { setImportText(e.target.value); setImportError('') }}
+                        placeholder={'[\n  {\n    "id": "s1",\n    "order": 0,\n    "logic": "NHAN",\n    "type": "text",\n    "title": "Chào mừng!",\n    "content": "Nội dung bài học..."\n  }\n]'}
+                        style={{ width: '100%', boxSizing: 'border-box', height: 260, borderRadius: 10, border: `1.5px solid ${importError ? '#EF4444' : S.border}`, padding: '12px 14px', fontSize: 13, fontFamily: 'monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, color: S.t1, background: '#FAFAFA' }}
+                      />
+                      {importError && (
+                        <div style={{ marginTop: 10, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#DC2626', whiteSpace: 'pre-line', lineHeight: 1.7 }}>
+                          {importError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{ padding: '14px 20px', borderTop: `1px solid ${S.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                      <button onClick={() => setShowImport(false)}
+                        style={{ padding: '9px 20px', borderRadius: 9, border: `1px solid ${S.border}`, background: S.surface, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: S.t2 }}>
+                        Huỷ
+                      </button>
+                      <button onClick={validateAndImport} disabled={!importText.trim()}
+                        style={{ padding: '9px 22px', borderRadius: 9, border: 'none', background: importText.trim() ? '#D97706' : '#E5E7EB', color: importText.trim() ? '#fff' : '#9CA3AF', fontSize: 13, fontWeight: 700, cursor: importText.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+                        ✓ Import vào Flow
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {slides.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '28px', color: S.t3, fontSize: 13 }}>
-                  Chưa có slide nào. Bấm "+ Thêm slide" để bắt đầu.
+                  Chưa có slide nào. Bấm "+ Thêm slide" hoặc "📥 Import JSON".
                 </div>
               )}
 
