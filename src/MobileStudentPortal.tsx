@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
+import FingerExercise from './FingerExercise'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -300,6 +301,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [markingDone, setMarkingDone]   = useState(false)
 
+  // ── Finger Exercise overlay ──
+  const [showFingerExercise, setShowFingerExercise] = useState(false)
+
   // ── Tool overlay — mở tool ngay trong app, không navigate ra ngoài ──
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
   // ── Track tool đã dùng trong bài hiện tại ──
@@ -551,6 +555,17 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   return (
     <>
+    {/* ── Finger Exercise overlay (fullscreen, position:fixed) ── */}
+    {showFingerExercise && (
+      <FingerExercise
+        totalMinutes={practiceTotals['finger'] ?? 0}
+        onClose={async () => {
+          await stopTimer()
+          setShowFingerExercise(false)
+        }}
+      />
+    )}
+
     {celebrate && (
       <div onClick={() => setCelebrate(null)} style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(2px)', animation: 'fadeIn .2s ease' }}>
         <div style={{ background: L.surface, borderRadius: 24, padding: '28px 32px', textAlign: 'center', boxShadow: '0 12px 48px rgba(0,0,0,0.25)', maxWidth: 320, margin: 16, animation: 'popIn .35s cubic-bezier(.18,.89,.32,1.28)' }}>
@@ -993,7 +1008,25 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                             {todayMin > 0 && <span style={{ color: L.green }}> · Hôm nay: {todayMin}ph</span>}
                           </div>
                         </div>
-                        {isActive ? (
+                        {ex.id === 'finger' ? (
+                          /* Card Luyện ngón: mở FingerExercise overlay thay vì chỉ chạy timer */
+                          isActive ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ fontSize: 15, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</div>
+                              <button onClick={() => setShowFingerExercise(true)}
+                                style={{ background: ex.color, border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Mở →
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              disabled={!!activeTimer}
+                              onClick={() => { startTimer('finger'); setShowFingerExercise(true) }}
+                              style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                              ▶ Bắt đầu
+                            </button>
+                          )
+                        ) : isActive ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ fontSize: 16, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</div>
                             <button onClick={stopTimer}
