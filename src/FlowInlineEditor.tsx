@@ -93,7 +93,14 @@ export default function FlowInlineEditor({ lessonId }: Props) {
       setFlowId(data.id)
       setFlowTitle(data.title ?? '')
       setRewardXp(data.reward_xp ?? 10)
-      setSlides((Array.isArray(data.slides) ? data.slides : []).sort((a: Slide, b: Slide) => a.order - b.order))
+      // Backfill id cho slide cũ import từ JSON mà không có id
+      const rawSlides = (Array.isArray(data.slides) ? data.slides : [])
+        .sort((a: Slide, b: Slide) => a.order - b.order)
+        .map((s: Slide, i: number) => ({
+          ...s,
+          id: s.id || `${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+        }))
+      setSlides(rawSlides)
     } else {
       setFlowId(null); setFlowTitle(''); setRewardXp(10); setSlides([])
     }

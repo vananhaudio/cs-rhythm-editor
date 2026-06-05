@@ -473,8 +473,12 @@ export default function CourseEditorContent() {
             created++
           }
 
-          // Tạo / cập nhật flow
-          const orderedSlides = (Array.isArray(slides) ? slides : []).map((s, i) => ({ ...s, order: i + 1 }))
+          // Tạo / cập nhật flow — đảm bảo mỗi slide có id duy nhất
+          const orderedSlides = (Array.isArray(slides) ? slides : []).map((s: Record<string, unknown>, i: number) => ({
+            ...s,
+            id: (s.id as string) || `${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            order: i + 1,
+          }))
           const fp = { lesson_id: lessonId, title, status: 'published', slides: orderedSlides, reward_xp: 30 }
           const { data: ef } = await supabase.from('flows').select('id').eq('lesson_id', lessonId).maybeSingle()
           if (ef) { await supabase.from('flows').update(fp).eq('id', ef.id) }

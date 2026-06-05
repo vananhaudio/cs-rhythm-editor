@@ -374,7 +374,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
             )}
             <textarea value={inputVal} onChange={e => setInputVal(e.target.value)}
               placeholder="Nhập câu trả lời của bạn..."
-              style={{ width: '100%', boxSizing: 'border-box', minHeight: 130, borderRadius: 14, border: '2px solid #E8EAF0', padding: '12px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.7, color: '#18181B' }} />
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 130, borderRadius: 14, border: '2px solid #E8EAF0', padding: '12px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.7, color: '#18181B', background: '#fff' }} />
           </div>
         )}
 
