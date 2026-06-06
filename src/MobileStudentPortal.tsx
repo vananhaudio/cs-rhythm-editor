@@ -1238,85 +1238,34 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 const recent = mySongs.slice(0, 5)
                 const song = recent[Math.min(carouselIdx, recent.length - 1)]
                 if (!song) return null
-                const journey = song.journey ?? JOURNEY_STEPS.map(s => ({ id: s.id, done: false }))
-                const curIdx = journey.findIndex(j => !j.done)
-                const curStep = JOURNEY_STEPS[curIdx >= 0 ? curIdx : JOURNEY_STEPS.length - 1]
+                const openBMS = () => {
+                  const params = new URLSearchParams({ title: song.title })
+                  if (song.youtube_url) params.set('youtube', song.youtube_url)
+                  params.set('songId', song.id)
+                  if (song.tempo) params.set('tempo', String(song.tempo))
+                  openTool('/song-builder?' + params.toString(), 'BMS', 'song-builder')
+                }
                 return (
                   <div>
+                    {/* Card bài hát */}
                     <div style={{ background: L.surface, borderRadius: 20, padding: '18px', boxShadow: L.shadowLg, border: `1.5px solid ${L.border}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 12, background: curStep.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{curStep.icon}</div>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #4338CA20, #EA580C20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🎸</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 800, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
-                          <div style={{ fontSize: 11, color: L.t2, marginTop: 1 }}>Đang luyện: <span style={{ color: curStep.color, fontWeight: 700 }}>{curStep.label}</span></div>
+                          <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>
+                            {song.tempo
+                              ? <span>🥁 <span style={{ color: L.p1, fontWeight: 700 }}>{song.tempo} BPM</span></span>
+                              : <span style={{ color: L.t3 }}>Chưa đo tempo</span>}
+                          </div>
                         </div>
                       </div>
-                      {/* Progress — mỗi mốc bấm được để luyện lại */}
-                      <div style={{ marginBottom: 14 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-                          {JOURNEY_STEPS.map((step, i) => {
-                            const done = journey.find(j => j.id === step.id)?.done ?? false
-                            const isCur = i === curIdx
-                            const tappable = !!step.route
-                            const handleStepTap = () => {
-                              if (!tappable) return
-                              let route = step.route!
-                              const params = new URLSearchParams({ title: song.title })
-                              if (song.youtube_url) params.set('youtube', song.youtube_url)
-                              params.set('songId', song.id)
-                              if (song.tempo) params.set('tempo', String(song.tempo))
-                              route = route + '?' + params.toString()
-                              openTool(route, step.label, step.id)
-                            }
-                            return (
-                              <Fragment key={step.id}>
-                                {i > 0 && (
-                                  <div style={{ flex: 1, height: 3, marginTop: 10, background: done ? step.color : L.border, borderRadius: 99 }} />
-                                )}
-                                <div onClick={handleStepTap}
-                                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, padding: '2px 4px', borderRadius: 10, cursor: tappable ? 'pointer' : 'default', background: isCur ? step.color + '18' : 'transparent', minWidth: 34 }}>
-                                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: done ? step.color : isCur ? step.color : 'transparent', border: `2px solid ${done || isCur ? step.color : L.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .3s', flexShrink: 0 }}>
-                                    {done && <span style={{ fontSize: 8, color: '#fff', fontWeight: 700, lineHeight: 1 }}>✓</span>}
-                                  </div>
-                                  <div style={{ fontSize: 9, fontWeight: isCur ? 700 : 400, color: done ? step.color : isCur ? step.color : L.t3, textAlign: 'center', whiteSpace: 'nowrap' }}>{step.label}</div>
-                                </div>
-                              </Fragment>
-                            )
-                          })}
-                        </div>
-                      </div>
-                      {/* Buttons */}
-                      {curIdx < 0 ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #16A34A18, #D9770618)', borderRadius: 12, padding: '13px', border: '1.5px solid #16A34A40' }}>
-                          <span style={{ fontSize: 18 }}>👑</span>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: L.green }}>Đã chinh phục bài này!</span>
-                        </div>
-                      ) : (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {curStep.route ? (
-                          <button onClick={() => {
-                            let route = curStep.route!
-                            const params = new URLSearchParams({ title: song.title })
-                            if (song.youtube_url) params.set('youtube', song.youtube_url)
-                            params.set('songId', song.id)
-                            if (song.tempo) params.set('tempo', String(song.tempo))
-                            route = route + '?' + params.toString()
-                            openTool(route, curStep.label, curStep.id)
-                          }}
-                            style={{ flex: 2, background: `linear-gradient(135deg, ${curStep.color}, ${curStep.color}99)`, color: '#fff', border: 'none', borderRadius: 12, padding: '11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                            {curStep.icon} Tiếp tục {curStep.label}
-                          </button>
-                        ) : (
-                          <div style={{ flex: 2, background: L.surface2, borderRadius: 12, padding: '11px', fontSize: 12, color: L.t3, textAlign: 'center' }}>🔒 {curStep.label} — Sắp ra mắt</div>
-                        )}
-                        <button onClick={() => markStepDone(song.id, curStep.id)}
-                          style={{ flex: 1, background: L.surface2, color: L.green, border: `1.5px solid ${L.green}40`, borderRadius: 12, padding: '11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          ✓ Xong
-                        </button>
-                      </div>
-                      )}
+                      <button onClick={openBMS}
+                        style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        🎼 Luyện với BMS
+                      </button>
                     </div>
-                    {/* Dots */}
+                    {/* Dots carousel */}
                     {recent.length > 1 && (
                       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 10 }}>
                         <button onClick={() => setCarouselIdx(i => Math.max(0, i - 1))} disabled={carouselIdx === 0}
@@ -1336,21 +1285,16 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                           style={{ width: '100%', background: 'none', border: 'none', color: L.t2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span>📚 Tất cả bài hát ({mySongs.length})</span><span>{showAllSongs ? '▲' : '▼'}</span>
                         </button>
-                        {showAllSongs && mySongs.map(s => {
-                          const j = s.journey ?? []
-                          const ci = j.findIndex(jj => !jj.done)
-                          const cs = JOURNEY_STEPS[ci >= 0 ? ci : JOURNEY_STEPS.length - 1]
-                          return (
-                            <div key={s.id} onClick={() => { const idx = mySongs.slice(0,5).findIndex(ss => ss.id === s.id); if (idx >= 0) setCarouselIdx(idx); setShowAllSongs(false) }}
-                              style={{ display: 'flex', alignItems: 'center', gap: 10, background: L.surface, borderRadius: 12, padding: '10px 12px', cursor: 'pointer', marginTop: 6 }}>
-                              <span style={{ fontSize: 15 }}>{cs.icon}</span>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
-                                <div style={{ fontSize: 10, color: cs.color, fontWeight: 600 }}>{cs.label}</div>
-                              </div>
+                        {showAllSongs && mySongs.map(s => (
+                          <div key={s.id} onClick={() => { const idx = mySongs.slice(0,5).findIndex(ss => ss.id === s.id); if (idx >= 0) setCarouselIdx(idx); setShowAllSongs(false) }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, background: L.surface, borderRadius: 12, padding: '10px 12px', cursor: 'pointer', marginTop: 6 }}>
+                            <span style={{ fontSize: 15 }}>🎸</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
+                              <div style={{ fontSize: 10, color: L.t3 }}>{s.tempo ? `🥁 ${s.tempo} BPM` : 'Chưa đo tempo'}</div>
                             </div>
-                          )
-                        })}
+                          </div>
+                        ))}
                       </div>
                     )}
                     <button onClick={() => { setShowAddSong(true); setAddStep('input') }}
