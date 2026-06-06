@@ -719,7 +719,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Tiếp tục học</div>
                 <div onClick={() => openCourse(mainCourse.course_id)}
                   style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadowLg, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-                  <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: L.p2, borderRadius: '0 20px 0 100%', opacity: .5 }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                     <CourseLogo course={mainCourse.course} size={48} radius={14} bg={L.p2} />
                     <div style={{ flex: 1, minWidth: 0 }}>
