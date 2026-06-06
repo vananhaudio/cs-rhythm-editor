@@ -274,6 +274,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const handleAddSong = async () => {
     if (!newSongTitle.trim()) return
     setAddingSong(true)
+    // Chụp lại trước khi reset state
+    const savedTitle   = newSongTitle.trim()
+    const savedYoutube = newSongYoutube.trim()
     const steps = [
       { id: 'tempo',  done: false },
       { id: 'timing', done: false },
@@ -283,8 +286,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     ]
     await supabase.from('student_songs').insert({
       student_id: student.id,
-      title: newSongTitle.trim(),
-      youtube_url: newSongYoutube.trim() || null,
+      title: savedTitle,
+      youtube_url: savedYoutube || null,
       status: 'tempo',
       journey: steps,
     })
@@ -295,7 +298,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       ...s,
       journey: s.journey?.length ? s.journey : steps
     })))
-    // Reset form TRƯỚC — để carousel hiện ngay sau khi mySongs được update
+    // Reset form
     setShowConfirmSave(false)
     setShowAddSong(false)
     setAddStep('input')
@@ -303,6 +306,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     setYtSelected(null); setYtQuery(''); setYtResults([])
     setCarouselIdx(0)
     setAddingSong(false)
+    // Tự động mở Tap Tempo — nạp sẵn tên bài + YouTube, không cần tìm lại
+    const params = new URLSearchParams({ title: savedTitle })
+    if (savedYoutube) params.set('youtube', savedYoutube)
+    openTool('/tempo?' + params.toString(), 'Tempo', 'tempo')
   }
 
   // ── My Songs ──
