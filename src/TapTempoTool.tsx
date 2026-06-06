@@ -46,6 +46,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
   const urlParams  = new URLSearchParams(window.location.search)
   const preTitle   = urlParams.get('title') ?? ''
   const preYoutube = urlParams.get('youtube') ?? ''
+  const preSongId  = urlParams.get('songId') ?? ''   // có → journey mode: UPDATE thay vì INSERT
 
   const [url, setUrl]             = useState(preYoutube)
   const [videoId, setVideoId]     = useState<string | null>(null)
@@ -124,26 +125,33 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
   }
 
   const handleSave = async () => {
-    if (!title.trim() || !bpm) return
+    if (!bpm) return
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
-    const { data: student } = await supabase.from('edu_students')
-      .select('id').eq('user_id', user.id).single()
-    if (!student) { setSaving(false); return }
-    const { data, error } = await supabase.from('student_songs').insert({
-      student_id:    student.id,
-      title:         title.trim(),
-      artist:        artist.trim() || null,
-      youtube_url:   url.trim() || null,
-      tempo:         bpm,
-      time_signature:'4/4',
-      status:        'tempo',
-    }).select('id').single()
-    if (!error && data) {
-      setSaved(true)
-      setShowSave(false)
-      onSaved?.(data.id)
+
+    if (preSongId) {
+      // Journey mode: cập nhật bài đã có, không tạo mới
+      const { error } = await supabase.from('student_songs')
+        .update({ tempo: bpm, youtube_url: url.trim() || null })
+        .eq('id', preSongId)
+      if (!error) { setSaved(true); setShowSave(false); onSaved?.(preSongId) }
+    } else {
+      // Standalone mode: tạo bài mới
+      if (!title.trim()) { setSaving(false); return }
+      const { data: student } = await supabase.from('edu_students')
+        .select('id').eq('user_id', user.id).single()
+      if (!student) { setSaving(false); return }
+      const { data, error } = await supabase.from('student_songs').insert({
+        student_id:    student.id,
+        title:         title.trim(),
+        artist:        artist.trim() || null,
+        youtube_url:   url.trim() || null,
+        tempo:         bpm,
+        time_signature:'4/4',
+        status:        'tempo',
+      }).select('id').single()
+      if (!error && data) { setSaved(true); setShowSave(false); onSaved?.(data.id) }
     }
     setSaving(false)
   }

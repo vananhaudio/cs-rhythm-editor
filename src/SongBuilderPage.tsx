@@ -205,6 +205,14 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
         const vid = extractVideoId(urlYoutube)
         if (vid) setVideoId(vid)
       }
+      // Pre-fill BPM từ Tap Tempo — tạo tapTimes giả để fitTempo tính ra đúng BPM
+      const urlTempo = parseFloat(urlParams.get('tempo') ?? '')
+      if (urlTempo > 0) {
+        const beatDur = 60 / urlTempo
+        const synth = Array.from({ length: 8 }, (_, i) => i * beatDur)
+        setTapTimes(synth)
+        setFit(fitTempo(synth))
+      }
       hydrated.current = true
       return
     }

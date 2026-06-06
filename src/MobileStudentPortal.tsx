@@ -1261,11 +1261,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                             const handleStepTap = () => {
                               if (!tappable) return
                               let route = step.route!
-                              if (song.title) {
-                                const params = new URLSearchParams({ title: song.title })
-                                if (song.youtube_url) params.set('youtube', song.youtube_url)
-                                route = route + '?' + params.toString()
-                              }
+                              const params = new URLSearchParams({ title: song.title })
+                              if (song.youtube_url) params.set('youtube', song.youtube_url)
+                              params.set('songId', song.id)
+                              if (song.tempo) params.set('tempo', String(song.tempo))
+                              route = route + '?' + params.toString()
                               openTool(route, step.label, step.id)
                             }
                             return (
@@ -1296,11 +1296,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                         {curStep.route ? (
                           <button onClick={() => {
                             let route = curStep.route!
-                            if (song.title) {
-                              const params = new URLSearchParams({ title: song.title })
-                              if (song.youtube_url) params.set('youtube', song.youtube_url)
-                              route = route + '?' + params.toString()
-                            }
+                            const params = new URLSearchParams({ title: song.title })
+                            if (song.youtube_url) params.set('youtube', song.youtube_url)
+                            params.set('songId', song.id)
+                            if (song.tempo) params.set('tempo', String(song.tempo))
+                            route = route + '?' + params.toString()
                             openTool(route, curStep.label, curStep.id)
                           }}
                             style={{ flex: 2, background: `linear-gradient(135deg, ${curStep.color}, ${curStep.color}99)`, color: '#fff', border: 'none', borderRadius: 12, padding: '11px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
