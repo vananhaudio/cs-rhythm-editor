@@ -173,6 +173,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
 
   const [song, setSong]           = useState<RhythmSong | null>(null)
   const [showSongList, setShowSongList] = useState(false)
+  const [songListDefaultSearch, setSongListDefaultSearch] = useState('')
   const [showTeacher, setShowTeacher]   = useState(false)
   const [speed, setSpeed]         = useState(1)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -220,6 +221,31 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           .then(({ data: u }) => { if (u?.name) setUserName(u.name) })
     })
   }, [])
+
+  // ── Auto-load bài từ URL param ?title= (từ journey "Nhịp") ──
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const titleParam = params.get('title')
+    if (!titleParam) return
+    supabase.from('timming_songs')
+      .select('id, title, artist, tone, tempo, time_signature, song_data')
+      .order('title', { ascending: true })
+      .then(({ data }) => {
+        if (!data?.length) { setSongListDefaultSearch(titleParam); setShowSongList(true); return }
+        const lower = titleParam.toLowerCase()
+        // Tìm khớp chính xác trước, rồi partial
+        const exact   = data.find(s => s.title.toLowerCase() === lower)
+        const partial = data.find(s => s.title.toLowerCase().includes(lower) || lower.includes(s.title.toLowerCase()))
+        const match   = exact ?? partial
+        if (match?.song_data) {
+          loadSong(match.song_data)
+        } else {
+          // Không có bài khớp → mở SongList với search sẵn tên bài
+          setSongListDefaultSearch(titleParam)
+          setShowSongList(true)
+        }
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProgress = async (title: string) => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -1000,6 +1026,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           onSelect={(s: RhythmSong) => { loadSong(s); setShowSongList(false) }}
           onClose={() => setShowSongList(false)}
           isTeacher={isTeacher}
+          defaultSearch={songListDefaultSearch}
         />
       )}
     </div>

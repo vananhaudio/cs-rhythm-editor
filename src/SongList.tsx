@@ -12,14 +12,15 @@ type SongRow = {
   song_data: RhythmSong
 }
 
-export function SongList({ onSelect, onClose, isTeacher }: {
+export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
   onSelect: (song: RhythmSong) => void
   onClose: () => void
   isTeacher?: boolean
+  defaultSearch?: string
 }) {
   const [songs, setSongs] = useState<SongRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(defaultSearch ?? '')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingSong, setEditingSong] = useState<SongRow | null>(null)
   const [editForm, setEditForm] = useState({ title: '', artist: '', tone: '', tempo: 0, time_signature: 4 })
