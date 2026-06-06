@@ -198,16 +198,18 @@ if (path === '/students') {
     // fall through → render PlayerView
   }
 
+  // embedded=1 → tool mở trong iframe overlay của MobileStudentPortal → ẩn nút ✕ bên trong tool
+  const embedded = new URLSearchParams(window.location.search).get('embedded') === '1'
+
   // ── Route /tempo — Tap Tempo Tool ──
   if (path === '/tempo' || path.startsWith('/tempo')) {
-    return <TapTempoTool onClose={() => { window.history.back() }} />
+    return <TapTempoTool onClose={embedded ? undefined : () => { window.history.back() }} />
   }
 
   // ── Route /song-builder — Song Builder V1 ──
   if (path === '/song-builder' || path.startsWith('/song-builder')) {
-    // App BMS riêng (vỏ Capacitor) mở với ?standalone=1 → không có nút ✕ thoát về LMS.
     const standalone = new URLSearchParams(window.location.search).get('standalone') === '1'
-    return <SongBuilderPage onClose={standalone ? undefined : () => { window.location.href = '/start' }} />
+    return <SongBuilderPage onClose={standalone || embedded ? undefined : () => { window.location.href = '/start' }} />
   }
 
   // ── Route /tuner ──
@@ -237,7 +239,7 @@ if (path === '/students') {
 
     return (
       <TapWithSong
-        onClose={handleClose}
+        onClose={embedded ? undefined : handleClose}
         userRole={user ? (appUser?.role ?? 'student') : 'guest'}
       />
     )

@@ -363,7 +363,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   const openTool = (route: string, name: string, toolId?: string) => {
-    const url = route.startsWith('http') ? route : window.location.origin + route
+    // Thêm embedded=1 để tool bên trong ẩn nút ✕ của mình (tránh 2 nút đóng)
+    const sep = route.includes('?') ? '&' : '?'
+    const embeddedRoute = route.startsWith('http') ? route : route + sep + 'embedded=1'
+    const url = embeddedRoute.startsWith('http') ? embeddedRoute : window.location.origin + embeddedRoute
     setActiveTool({ name, url })
     if (toolId) setUsedToolIds(prev => {
       const next = new Set([...prev, toolId])
