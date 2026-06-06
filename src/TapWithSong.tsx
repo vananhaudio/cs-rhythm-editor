@@ -663,19 +663,24 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
               {/* Playhead line */}
               <div style={{ position:'absolute', left:nowX, top:14, bottom:0, width:1, background:C.accent, opacity:0.3, zIndex:10, pointerEvents:'none' }} />
 
-              {/* Lyrics */}
-              <div style={{ position:'absolute', top:16, left:0, right:0, height:32, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              {/* Lyrics — style theo PlayerView: 22px, gradient active, past teal, future trắng */}
+              <div style={{ position:'absolute', top:10, left:0, right:0, height:40, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {song.lyrics.map((l,i) => {
                   const lx = l.time * PX_PER_SEC
                   const nextTime = song.lyrics[i+1]?.time ?? l.time + beatDur*2
-                  const isActive = songTime*speed >= l.time && songTime*speed < nextTime
+                  const ct = songTime * speed
+                  const isActive = ct >= l.time && ct < nextTime
+                  const isPast   = ct >= nextTime
+                  const pct = isActive ? Math.min(100, Math.max(0, (ct - l.time) / Math.max(0.05, nextTime - l.time) * 100)) : 0
                   return (
                     <div key={l.id} style={{ position:'absolute', left:lx/speed, transform:'translateX(-50%)',
-                      fontSize:16, fontWeight:700,
-                      color: isActive ? C.gold : C.text3,
-                      filter: isActive ? `drop-shadow(0 0 8px ${C.gold}88)` : 'none',
-                      transition:'color 0.1s, filter 0.1s',
-                      whiteSpace:'nowrap', userSelect:'none', letterSpacing:'-0.02em' }}>
+                      whiteSpace:'nowrap', userSelect:'none', pointerEvents:'none',
+                      ...(isActive
+                        ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pct}%,rgba(255,255,255,1) ${pct}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
+                        : { color: isPast ? 'rgba(45,212,191,0.65)' : 'rgba(255,255,255,0.85)' }
+                      ),
+                      fontSize:22, fontWeight:400, fontFamily:'"Helvetica Neue",Arial,sans-serif',
+                    }}>
                       {l.text}
                     </div>
                   )
@@ -683,11 +688,11 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
               </div>
 
               {/* Separator */}
-              <div style={{ position:'absolute', top:50, left:0, right:0, height:1, background:C.border }} />
+              <div style={{ position:'absolute', top:56, left:0, right:0, height:1, background:C.border }} />
 
               {/* Target dots (teacher) */}
               {showTeacher && (
-                <div style={{ position:'absolute', top:50, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+                <div style={{ position:'absolute', top:56, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                   {targetDotsScaled.map((d,i) => (
                     <div key={'td'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                       width:10, height:10, borderRadius:'50%', background:C.dotTarget, top:10,
@@ -697,7 +702,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
               )}
 
               {/* Current dots */}
-              <div style={{ position:'absolute', top:80, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', top:86, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {scoredCurrent.map((d,i) => (
                   <div key={'cd'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                     width:11, height:11, borderRadius:'50%', top:9,
@@ -709,7 +714,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
               {/* History rows */}
               {tapHistory.map((h, hi) => (
-                <div key={h.id} style={{ position:'absolute', top:80+30+hi*26, left:0, right:0, height:26, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
+                <div key={h.id} style={{ position:'absolute', top:86+30+hi*26, left:0, right:0, height:26, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
                   {h.dots.map((d,di) => (
                     <div key={di} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                       width:8, height:8, borderRadius:'50%', top:9, background:C.dotHistory }} />
@@ -720,7 +725,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
             {/* Legend panel — desktop */}
             {!isMobile && (
-              <div style={{ width:200, flexShrink:0, paddingTop:50, paddingLeft:12, paddingRight:12, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid ${C.border}` }}>
+              <div style={{ width:200, flexShrink:0, paddingTop:56, paddingLeft:12, paddingRight:12, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid ${C.border}` }}>
                 {/* Teacher dots */}
                 <div style={{ height:30, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:C.dotTarget }}>
