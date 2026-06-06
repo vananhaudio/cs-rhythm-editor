@@ -40,7 +40,7 @@ function BmsMark({ size = 28 }: { size?: number }) {
 }
 const YT_API_KEY = 'AIzaSyA6kg3G2CVZ7b_x8IAlkZJCOa4AJHyWHms'
 
-const STEPS = ['Chuẩn bị', 'Phách', 'Gắn mốc', 'Nhịp', 'Nghe thử', 'Xuất'] as const
+const STEPS = ['Chuẩn bị', 'Phách', 'Gắn mốc', 'Nhịp', 'Nghe thử'] as const
 
 interface YTResult { id: string; title: string; channel: string; thumbnail: string }
 
@@ -455,28 +455,27 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 10 }}>
           {STEPS.map((s, i) => {
-            const locked = i === 5
             const active = i === step
             const done = i < step
             return (
-              <button key={s} aria-label={s} onClick={() => { if (!locked && (i <= step || canNext())) setStep(i) }}
+              <button key={s} aria-label={s} onClick={() => { if (i <= step || canNext()) setStep(i) }}
                 style={{
                   flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none',
-                  cursor: locked ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 }}>
                 <div style={{
                   width: active ? 28 : 24, height: active ? 28 : 24, borderRadius: '50%',
-                  border: active ? `2px solid ${C.accent}` : `1.5px solid ${done ? C.accent : locked ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.28)'}`,
+                  border: active ? `2px solid ${C.accent}` : `1.5px solid ${done ? C.accent : 'rgba(255,255,255,0.28)'}`,
                   background: active ? C.accent : done ? `${C.accent}33` : 'transparent',
-                  color: active ? '#fff' : done ? C.accent : locked ? C.dim : C.muted,
+                  color: active ? '#fff' : done ? C.accent : C.muted,
                   fontFamily: MONO, fontSize: 12, fontWeight: 800, lineHeight: 1, transition: 'all 0.2s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
-                  {locked ? '🔒' : done ? '✓' : i + 1}
+                  {done ? '✓' : i + 1}
                 </div>
                 <span style={{
                   fontSize: 9.5, fontWeight: active ? 800 : 600, lineHeight: 1.1, textAlign: 'center',
-                  color: active ? C.accent : done ? C.muted : locked ? C.dim : C.muted,
+                  color: active ? C.accent : done ? C.muted : C.muted,
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
                 }}>{s}</span>
               </button>
@@ -538,16 +537,13 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
         {step === 2 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }} />}
         {step === 3 && <StepDownbeat {...{ words, mapping, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, groupBeats, setGroupBeats }} />}
         {step === 4 && <StepPreview {...{ fit, words, mapping, activeWordIndex, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, pause, mappedCount, pct }} />}
-        {step === 5 && <StepExportLocked />}
       </div>
 
-      {/* Footer điều hướng */}
-      {step < 5 && (
+      {/* Footer điều hướng — ẩn ở bước cuối (Nghe thử) */}
+      {step < STEPS.length - 1 && (
         <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 14px max(10px, env(safe-area-inset-bottom))', borderTop: `1px solid ${C.border}`, background: C.surface }}>
           {step > 0 && <Btn kind="ghost" onClick={goBack} style={{ flex: 1 }}>← Quay lại</Btn>}
-          <Btn onClick={goNext} disabled={!canNext()} style={{ flex: 2 }}>
-            {step === 4 ? 'Tới bước Xuất →' : 'Tiếp tục →'}
-          </Btn>
+          <Btn onClick={goNext} disabled={!canNext()} style={{ flex: 2 }}>Tiếp tục →</Btn>
         </div>
       )}
 
