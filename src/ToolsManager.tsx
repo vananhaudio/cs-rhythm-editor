@@ -29,6 +29,15 @@ interface Tool {
   category: string; route: string; tier: string; enabled: boolean; status: ToolStatus; order_index: number
 }
 
+// 5 bài luyện mặc định — tự upsert vào edu_tools nếu chưa có
+const EXERCISE_DEFAULTS: Omit<Tool, 'enabled'>[] = [
+  { id: 'bai-luyen-ngon',      name: 'Luyện ngón',  icon: '🖐', description: 'Tập ngón tay từng bước',  category: 'Bài luyện', route: '#', tier: 'free',  status: 'on',  order_index: 100 },
+  { id: 'bai-luyen-am-giai',   name: 'Âm giai',     icon: '🎼', description: 'Âm giai trưởng và thứ',  category: 'Bài luyện', route: '#', tier: 'free',  status: 'on',  order_index: 101 },
+  { id: 'bai-luyen-arpeggio',  name: 'Arpeggio',    icon: '🎸', description: 'Bài luyện arpeggio',      category: 'Bài luyện', route: '#', tier: 'free',  status: 'on',  order_index: 102 },
+  { id: 'bai-luyen-metronome', name: 'Metronome',   icon: '🥁', description: 'Luyện nhịp metronome',    category: 'Bài luyện', route: '#', tier: 'free',  status: 'on',  order_index: 103 },
+  { id: 'bai-luyen-cam-am',    name: 'Cảm âm',      icon: '👂', description: 'Luyện tai nghe',          category: 'Bài luyện', route: '#', tier: 'basic', status: 'off', order_index: 104 },
+]
+
 export default function ToolsManager() {
   const [tools, setTools]     = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,11 +47,22 @@ export default function ToolsManager() {
   const [changed, setChanged] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    supabase.from('edu_tools').select('*').order('order_index')
-      .then(({ data }) => {
-        setTools((data ?? []).map((t: any) => ({ ...t, status: t.status ?? (t.enabled ? 'on' : 'off') })))
-        setLoading(false)
-      })
+    const load = async () => {
+      const { data } = await supabase.from('edu_tools').select('*').order('order_index')
+      const existing = (data ?? []) as any[]
+      // Tự upsert các bài luyện nếu chưa có trong DB
+      const missing = EXERCISE_DEFAULTS.filter(ex => !existing.some(t => t.id === ex.id))
+      if (missing.length) {
+        const rows = missing.map(ex => ({ ...ex, enabled: ex.status === 'on' }))
+        await supabase.from('edu_tools').upsert(rows, { onConflict: 'id' })
+        const { data: refreshed } = await supabase.from('edu_tools').select('*').order('order_index')
+        setTools((refreshed ?? []).map((t: any) => ({ ...t, status: t.status ?? (t.enabled ? 'on' : 'off') })))
+      } else {
+        setTools(existing.map((t: any) => ({ ...t, status: t.status ?? (t.enabled ? 'on' : 'off') })))
+      }
+      setLoading(false)
+    }
+    load()
   }, [])
 
   const setStatus = (id: string, status: ToolStatus) => {
