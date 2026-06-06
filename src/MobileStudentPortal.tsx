@@ -35,7 +35,7 @@ interface Student    { id: string; full_name: string; email: string | null; leve
 interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
-  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; published?: boolean; sort_order?: number }
+  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; is_published?: boolean; sort_order?: number }
 }
 interface Module { id: string; name: string; order_index: number }
 interface Lesson {
@@ -374,7 +374,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   useEffect(() => {
     supabase.from('edu_enrollments')
-      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,published,sort_order)')
+      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,is_published,sort_order)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
@@ -536,13 +536,13 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // Sắp xếp theo sort_order, published trước unpublished
   const sortedEnrollments = [...enrollments].sort((a, b) => {
-    const ap = a.course?.published !== false ? 0 : 1
-    const bp = b.course?.published !== false ? 0 : 1
+    const ap = a.course?.is_published !== false ? 0 : 1
+    const bp = b.course?.is_published !== false ? 0 : 1
     if (ap !== bp) return ap - bp
     return (a.course?.sort_order ?? 99) - (b.course?.sort_order ?? 99)
   })
   // Khoá "Học ngay": ưu tiên sort_order thấp nhất trong published
-  const mainCourse = sortedEnrollments.find(e => e.course?.published !== false)
+  const mainCourse = sortedEnrollments.find(e => e.course?.is_published !== false)
     ?? sortedEnrollments[0]
   const name = uname(me)
 
@@ -758,7 +758,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Tất cả khoá học</div>
                   {sortedEnrollments.map(e => {
-                    const isPublished = e.course?.published !== false
+                    const isPublished = e.course?.is_published !== false
                     return (
                       <div key={e.id}
                         onClick={() => isPublished ? openCourse(e.course_id) : undefined}

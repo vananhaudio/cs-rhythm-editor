@@ -531,6 +531,13 @@ export default function CourseEditorContent() {
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, is_published: newVal } : c))
   }
 
+  const publishAll = async () => {
+    if (!confirm(`Xuất bản TẤT CẢ ${courses.length} khoá học? Học sinh sẽ nhìn thấy ngay.`)) return
+    await supabase.from('edu_courses').update({ is_published: true }).neq('id', '00000000-0000-0000-0000-000000000000')
+    setCourses(prev => prev.map(c => ({ ...c, is_published: true })))
+    if (selectedCourse) setSelectedCourse(prev => prev ? { ...prev, is_published: true } : prev)
+  }
+
   // ── Drag & Drop (HTML5, fixed) ─────────────────────────────────────────────
   const onDragStart = (e: React.DragEvent, lessonId: string, moduleId: string) => {
     dragSrcRef.current = { id: lessonId, moduleId }
@@ -596,6 +603,12 @@ export default function CourseEditorContent() {
             style={{ width: '100%', background: C.accent, border: 'none', borderRadius: 7, padding: 8, color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
             + Tạo khoá mới
           </button>
+          {courses.some(c => !c.is_published) && (
+            <button onClick={publishAll}
+              style={{ width: '100%', marginTop: 6, background: 'none', border: `1px solid ${C.success}`, borderRadius: 7, padding: '6px 8px', color: C.success, fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+              ✓ Xuất bản tất cả ({courses.filter(c => !c.is_published).length} chưa publish)
+            </button>
+          )}
           {showNewCourse && (
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <input value={ncName} onChange={e => setNcName(e.target.value)} placeholder="Tên khoá học..."
