@@ -457,6 +457,19 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const histOpacity  = [1, 0.55, 0.3]
   const progress_pct = totalDur > 0 ? (songTime / totalDur) * 100 : 0
 
+  // ── Tìm vị trí lời hiện tại (dùng cho Lyrics Panel) ──
+  const currentLyricIdx = song
+    ? (() => {
+        const ct = songTime * speed
+        let idx = -1
+        for (let i = 0; i < song.lyrics.length; i++) {
+          const nextTime = song.lyrics[i + 1]?.time ?? song.lyrics[i].time + 99
+          if (ct >= song.lyrics[i].time && ct < nextTime) { idx = i; break }
+        }
+        return idx
+      })()
+    : -1
+
   return (
     <div style={{ position:'fixed', inset:0, background:C.bg, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'"DM Sans", system-ui, sans-serif', color:C.text1 }}>
 
@@ -651,6 +664,48 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
             {levelConfig && <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />}
           </div>
 
+          {/* ── LYRICS PANEL (karaoke dọc) ── */}
+          {song.lyrics.length > 0 && (
+            <div style={{
+              background: 'rgba(0,0,0,0.25)',
+              borderBottom: `1px solid ${C.border}`,
+              height: isMobile ? 68 : 80,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 20px',
+              overflow: 'hidden',
+              flexShrink: 0,
+              gap: isMobile ? 10 : 14,
+            }}>
+              {[-2, -1, 0, 1, 2].map(offset => {
+                const idx = currentLyricIdx + offset
+                const noWord = currentLyricIdx === -1 || idx < 0 || idx >= song.lyrics.length
+                if (noWord) return <div key={offset} style={{ width: isMobile ? 24 : 32, flexShrink: 0 }} />
+                const word = song.lyrics[idx]
+                const isCur = offset === 0
+                const dist  = Math.abs(offset)
+                const opacity = isCur ? 1 : dist === 1 ? 0.45 : 0.18
+                const fontSize = isCur ? (isMobile ? 24 : 28) : dist === 1 ? (isMobile ? 15 : 17) : (isMobile ? 12 : 13)
+                const color = isCur ? '#2DD4BF' : `rgba(255,255,255,${opacity})`
+                return (
+                  <div key={idx} style={{
+                    fontSize,
+                    fontWeight: isCur ? 700 : 400,
+                    color,
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+                    letterSpacing: isCur ? '-0.01em' : '0',
+                  }}>
+                    {word.text}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {/* SCROLL AREA */}
           <div ref={scrollRef} style={{ flex:1, background:C.bg, position:'relative', overflow:'hidden', display:'flex' }}>
             <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
@@ -663,36 +718,12 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
               {/* Playhead line */}
               <div style={{ position:'absolute', left:nowX, top:14, bottom:0, width:1, background:C.accent, opacity:0.3, zIndex:10, pointerEvents:'none' }} />
 
-              {/* Lyrics — style theo PlayerView: 22px, gradient active, past teal, future trắng */}
-              <div style={{ position:'absolute', top:10, left:0, right:0, height:40, transform:`translateX(${-scrollOffset+nowX}px)` }}>
-                {song.lyrics.map((l,i) => {
-                  const lx = l.time * PX_PER_SEC
-                  const nextTime = song.lyrics[i+1]?.time ?? l.time + beatDur*2
-                  const ct = songTime * speed
-                  const isActive = ct >= l.time && ct < nextTime
-                  const isPast   = ct >= nextTime
-                  const pct = isActive ? Math.min(100, Math.max(0, (ct - l.time) / Math.max(0.05, nextTime - l.time) * 100)) : 0
-                  return (
-                    <div key={l.id} style={{ position:'absolute', left:lx/speed, transform:'translateX(-50%)',
-                      whiteSpace:'nowrap', userSelect:'none', pointerEvents:'none',
-                      ...(isActive
-                        ? { backgroundImage:`linear-gradient(to right,#2DD4BF ${pct}%,rgba(255,255,255,1) ${pct}%)`, WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }
-                        : { color: isPast ? 'rgba(45,212,191,0.65)' : 'rgba(255,255,255,0.85)' }
-                      ),
-                      fontSize:22, fontWeight:400, fontFamily:'"Helvetica Neue",Arial,sans-serif',
-                    }}>
-                      {l.text}
-                    </div>
-                  )
-                })}
-              </div>
-
               {/* Separator */}
-              <div style={{ position:'absolute', top:56, left:0, right:0, height:1, background:C.border }} />
+              <div style={{ position:'absolute', top:20, left:0, right:0, height:1, background:C.border }} />
 
               {/* Target dots (teacher) */}
               {showTeacher && (
-                <div style={{ position:'absolute', top:56, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+                <div style={{ position:'absolute', top:20, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                   {targetDotsScaled.map((d,i) => (
                     <div key={'td'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                       width:10, height:10, borderRadius:'50%', background:C.dotTarget, top:10,
@@ -702,7 +733,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
               )}
 
               {/* Current dots */}
-              <div style={{ position:'absolute', top:86, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
+              <div style={{ position:'absolute', top:50, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
                 {scoredCurrent.map((d,i) => (
                   <div key={'cd'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                     width:11, height:11, borderRadius:'50%', top:9,
@@ -714,7 +745,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
               {/* History rows */}
               {tapHistory.map((h, hi) => (
-                <div key={h.id} style={{ position:'absolute', top:86+30+hi*26, left:0, right:0, height:26, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
+                <div key={h.id} style={{ position:'absolute', top:50+30+hi*26, left:0, right:0, height:26, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
                   {h.dots.map((d,di) => (
                     <div key={di} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
                       width:8, height:8, borderRadius:'50%', top:9, background:C.dotHistory }} />
@@ -725,7 +756,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
             {/* Legend panel — desktop */}
             {!isMobile && (
-              <div style={{ width:200, flexShrink:0, paddingTop:56, paddingLeft:12, paddingRight:12, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid ${C.border}` }}>
+              <div style={{ width:200, flexShrink:0, paddingTop:20, paddingLeft:12, paddingRight:12, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid ${C.border}` }}>
                 {/* Teacher dots */}
                 <div style={{ height:30, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:C.dotTarget }}>
