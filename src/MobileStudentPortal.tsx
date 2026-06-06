@@ -195,11 +195,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // ── Journey config ──
   const JOURNEY_STEPS = [
-    { id: 'tempo',  label: 'Tempo',  icon: '🥁', route: '/tempo',        color: '#7C3AED' },
-    { id: 'timing', label: 'Timing', icon: '🎼', route: '/youtube-sync', color: '#0891B2' },
-    { id: 'nhip',   label: 'Nhịp',   icon: '🎵', route: '/tap',          color: '#4338CA' },
-    { id: 'hat',    label: 'Hát',    icon: '🎤', route: null,            color: '#16A34A' },
-    { id: 'dan',    label: 'Đàn',    icon: '🎸', route: null,            color: '#D97706' },
+    { id: 'tempo',  label: 'Tempo',  icon: '🥁', route: '/tempo', color: '#7C3AED' },
+    { id: 'timing', label: 'Timing', icon: '🎼', route: null,     color: '#0891B2' },
+    { id: 'nhip',   label: 'Nhịp',   icon: '🎵', route: null,     color: '#4338CA' },
+    { id: 'hat',    label: 'Hát',    icon: '🎤', route: null,     color: '#16A34A' },
+    { id: 'dan',    label: 'Đàn',    icon: '🎸', route: null,     color: '#D97706' },
   ]
 
   // ── YouTube Search ──
