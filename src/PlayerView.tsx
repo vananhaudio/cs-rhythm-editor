@@ -843,31 +843,22 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
     )
   }
 
-  const isPortrait = mW < mH * 0.9
-
   return (
-    <div ref={containerRef} onClick={toggleControls} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden' }}>
-      {isPortrait && (
-        <div style={{ position:'absolute', inset:0, background:'rgba(13,15,20,0.96)', zIndex:10, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
-          <div style={{ fontSize:48 }}>📱</div>
-          <div style={{ fontSize:18, fontWeight:700, color:'#F1F5F9', textAlign:'center' }}>Xoay ngang để chơi nhạc</div>
-          <div style={{ fontSize:13, color:'#475569', textAlign:'center', maxWidth:260, lineHeight:1.5 }}>Player tối ưu cho màn hình ngang</div>
-          <button onClick={onClose} style={{ marginTop:8, padding:'8px 20px', borderRadius:10, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.06)', color:'#94A3B8', cursor:'pointer', fontSize:13, fontFamily:'inherit' }}>← Quay lại</button>
-        </div>
-      )}
+    <div ref={containerRef} onClick={toggleControls} style={{ position:'fixed', inset:0, background:'#0D0F14', display:'flex', flexDirection:'column', zIndex:300, fontFamily:'"DM Sans",system-ui,sans-serif', color:'#F1F5F9', overflowY:'hidden', paddingTop:'env(safe-area-inset-top, 0px)', paddingBottom:'env(safe-area-inset-bottom, 0px)', boxSizing:'border-box' as const }}>
       {/* Header + Seek — ẩn khi đang phát */}
       <div style={{ overflow:'hidden', maxHeight: showControls ? 200 : 0, opacity: showControls ? 1 : 0, transition:'max-height 0.3s ease, opacity 0.25s ease', flexShrink:0 }}>
       <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 12px', height:52, display:'flex', alignItems:'center', gap:8 }}>
-        <button onClick={onClose} style={{ width:36,height:36,borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
-        <button onClick={() => setShowSongList(true)} style={{ flex:1,minWidth:0,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'6px 10px',cursor:'pointer',textAlign:'left',display:'flex',alignItems:'center',gap:8 }}>
+        <button onClick={e => { e.stopPropagation(); onClose() }} style={{ width:36,height:36,borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
+        <button onClick={e => { e.stopPropagation(); setShowSongList(true) }} style={{ flex:1,minWidth:0, background: song.title ? 'rgba(255,255,255,0.06)' : 'rgba(108,99,255,0.18)', border: `1.5px solid ${song.title ? 'rgba(255,255,255,0.14)' : 'rgba(108,99,255,0.65)'}`, borderRadius:10,padding:'6px 10px',cursor:'pointer',textAlign:'left',display:'flex',alignItems:'center',gap:8, transition:'all 0.15s' }}>
           <span style={{ fontSize:14 }}>🎵</span>
           <div style={{ minWidth:0,flex:1 }}>
-            <div style={{ fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#F1F5F9' }}>{song.title||'Chọn bài'}</div>
-            <div style={{ fontSize:10,color:'#475569',fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtT(totalDur)}</div>
+            <div style={{ fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap', color: song.title ? '#F1F5F9' : '#A5B4FC' }}>{song.title || '✦ Chọn bài hát'}</div>
+            {song.title ? <div style={{ fontSize:10,color:'#475569',fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtT(totalDur)}</div>
+            : <div style={{ fontSize:10,color:'rgba(165,180,252,0.6)' }}>Nhấn để chọn bài</div>}
           </div>
-          <span style={{ color:'#475569',fontSize:12,flexShrink:0 }}>▾</span>
+          <span style={{ color: song.title ? '#475569' : '#818CF8', fontSize:12,flexShrink:0 }}>▾</span>
         </button>
-        <button onClick={() => setMuteMetronome(v=>!v)} style={{ width:36,height:36,borderRadius:8,border:`1px solid ${muteMetronome?'rgba(108,99,255,0.4)':'rgba(255,255,255,0.08)'}`,background:muteMetronome?'rgba(108,99,255,0.15)':'none',color:muteMetronome?'#8B84FF':'#94A3B8',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{muteMetronome?'🔇':'🔊'}</button>
+        <button onClick={e => { e.stopPropagation(); setMuteMetronome(v=>!v) }} style={{ width:36,height:36,borderRadius:8,border:`1px solid ${muteMetronome?'rgba(108,99,255,0.4)':'rgba(255,255,255,0.08)'}`,background:muteMetronome?'rgba(108,99,255,0.15)':'none',color:muteMetronome?'#8B84FF':'#94A3B8',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{muteMetronome?'🔇':'🔊'}</button>
       </div>
 
       {/* Seek */}
@@ -959,8 +950,8 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
 
     {showSongList && (
         <SongList
-          onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); setShowSongList(false); }}
-          onClose={() => setShowSongList(false)}
+          onSelect={(s: RhythmSong) => { if (onImportSong) onImportSong(s); setShowSongList(false); setShowControls(true); }}
+          onClose={() => { setShowSongList(false); setShowControls(true); }}
           isTeacher={false}
         />
       )}

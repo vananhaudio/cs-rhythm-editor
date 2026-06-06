@@ -10,14 +10,12 @@
     <!-- PWA / Home Screen -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TVA Guitar" />
     <meta name="theme-color" content="#4338CA" />
 
-    <!-- No cache khi mở từ Home Screen -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
+    <!-- Cache: để service worker tự quản lý, không block hoàn toàn -->
+    <meta http-equiv="Cache-Control" content="no-cache" />
 
     <title>Thầy Văn Anh Guitar</title>
   </head>

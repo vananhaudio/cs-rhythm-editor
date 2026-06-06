@@ -225,7 +225,7 @@ export default function LessonViewerPage() {
                   />
                 </div>
                 <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-                  <a href={active.content_url} target="_blank" rel="noreferrer"
+                  <a href={active.content_url} onClick={(e) => { e.preventDefault(); window.open((e.currentTarget as HTMLAnchorElement).href, '_system') }} rel="noreferrer"
                     style={{ fontSize: 12, color: D.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                     🔗 Mở toàn màn hình ↗
                   </a>
@@ -239,7 +239,7 @@ export default function LessonViewerPage() {
                 <div style={{ background: D.surface, padding: '10px 16px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 14 }}>🔗</span>
                   <span style={{ fontSize: 12, color: D.text2 }}>{active.content_url}</span>
-                  <a href={active.content_url} target="_blank" rel="noreferrer"
+                  <a href={active.content_url} onClick={(e) => { e.preventDefault(); window.open((e.currentTarget as HTMLAnchorElement).href, '_system') }} rel="noreferrer"
                     style={{ marginLeft: 'auto', fontSize: 11, color: D.accent, textDecoration: 'none' }}>
                     Mở tab mới ↗
                   </a>
