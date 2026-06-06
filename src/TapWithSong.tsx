@@ -450,7 +450,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       <Confetti show={showConfetti} />
 
       {/* ══ HEADER ══ */}
-      <div style={{ background:C.bgSurface, borderBottom:`1px solid ${C.border}`, padding: isMobile ? '0 12px' : '0 20px', height: isMobile ? 52 : 56, display:'flex', alignItems:'center', gap: 12, flexShrink:0 }}>
+      <div style={{ background:C.bgSurface, borderBottom:`1px solid ${C.border}`, paddingLeft: isMobile ? 12 : 20, paddingRight: isMobile ? 12 : 20, paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : 0, paddingBottom: 0, minHeight: isMobile ? 52 : 56, display:'flex', alignItems:'center', gap: 12, flexShrink:0 }}>
         {/* Logo mark */}
         <div style={{ width:32, height:32, borderRadius:8, background:`linear-gradient(135deg, ${C.accent}, ${C.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0, boxShadow:`0 2px 8px ${C.accentGlow}` }}>
           🥁
@@ -797,7 +797,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           </div>
 
           {/* ══ CONTROLS ══ */}
-          <div style={{ background:C.bgSurface, borderTop:`1px solid ${C.border}`, padding: isMobile?'12px 10px 16px':'16px 20px 18px', flexShrink:0 }}>
+          <div style={{ background:C.bgSurface, borderTop:`1px solid ${C.border}`, paddingTop: isMobile ? 12 : 16, paddingLeft: isMobile ? 10 : 20, paddingRight: isMobile ? 10 : 20, paddingBottom: isMobile ? 'max(20px, env(safe-area-inset-bottom, 20px))' : 18, flexShrink:0 }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap: isMobile?8:16 }}>
 
               {/* Reset */}
@@ -807,7 +807,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   <span>↺</span>
                   <span>Làm lại</span>
                 </button>
-                <span style={{ fontSize:10, color:C.text3 }}>Phím R</span>
+                {!isMobile && <span style={{ fontSize:10, color:C.text3 }}>Phím R</span>}
               </div>
 
               {/* Play/Pause */}
@@ -817,7 +817,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   <span>{isPlaying ? '⏸' : '▶'}</span>
                   <span>{isPlaying ? 'Dừng' : 'Bắt đầu'}</span>
                 </button>
-                <span style={{ fontSize:10, color:C.text3 }}>Phím P</span>
+                {!isMobile && <span style={{ fontSize:10, color:C.text3 }}>Phím P</span>}
               </div>
 
               {/* TAP BUTTON — central hero */}
@@ -843,7 +843,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   <span style={{ fontSize:isMobile?22:26 }}>✋</span>
                   <span style={{ fontSize:isMobile?11:12, fontWeight:800, letterSpacing:'0.08em', lineHeight:1 }}>TAP</span>
                 </button>
-                <span style={{ fontSize:10, color:C.text3 }}>Space</span>
+                {!isMobile && <span style={{ fontSize:10, color:C.text3 }}>Space</span>}
               </div>
 
               {/* Answer */}
@@ -853,7 +853,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                   <span>👁</span>
                   <span>Đáp án</span>
                 </button>
-                <span style={{ fontSize:10, color:C.text3 }}>Phím T</span>
+                {!isMobile && <span style={{ fontSize:10, color:C.text3 }}>Phím T</span>}
               </div>
 
               {/* Speed — mobile only */}
@@ -863,7 +863,6 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
                     style={{ width:'100%', padding:'11px 4px', borderRadius:12, border:`1px solid ${C.border}`, background:C.bgCard, color:C.text2, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'inherit', outline:'none', textAlign:'center' }}>
                     {[0.5,0.75,1,1.25].map(s=><option key={s} value={s}>{s===1?'1×':s+'×'}</option>)}
                   </select>
-                  <span style={{ fontSize:10, color:C.text3 }}>Tốc độ</span>
                 </div>
               )}
             </div>
