@@ -106,9 +106,16 @@ export default function AppRouter() {
   }, [])
 
   const loadAppUser = async (userId: string) => {
-    const { data } = await supabase.from('app_users').select('*').eq('id', userId).single()
-    setAppUser(data)
-    setLoading(false)
+    try {
+      const { data, error } = await supabase.from('app_users').select('*').eq('id', userId).single()
+      if (!error && data) setAppUser(data)
+      // Nếu query lỗi (network, RLS...) → KHÔNG set appUser = null
+      // Giữ nguyên trạng thái cũ, tránh bị redirect sai sang /tap
+    } catch (_) {
+      // Silently ignore — user vẫn logged in, chỉ không load được role
+    } finally {
+      setLoading(false)
+    }
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
@@ -254,6 +261,12 @@ if (path === '/students') {
 
   // ── Route / — Trang chủ: mở thẳng cổng học viên (app vào đây) ──
   if (path === '/') {
+    // Teacher vào trang chủ → đưa thẳng về player (tránh mở sai màn hình)
+    if (!loading && user && isTeacher) {
+      window.location.href = '/player'
+      return null
+    }
+    if (loading) return null   // chờ xác thực xong mới render
     return <StudentOnboarding />
   }
 

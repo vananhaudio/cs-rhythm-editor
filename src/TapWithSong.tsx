@@ -515,6 +515,15 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
           </div>
         )}
 
+        {/* Teacher shortcut — về player */}
+        {isTeacher && (
+          <button onClick={() => { window.location.href = '/player' }}
+            style={{ padding:'5px 10px', borderRadius:8, border:`1px solid rgba(108,99,255,0.4)`, background:'rgba(108,99,255,0.12)', color:'#A5B4FC', cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:5, flexShrink:0, transition:'all 0.15s' }}
+            title="Về Player">
+            🎸 <span style={{ display: isMobile ? 'none' : 'inline' }}>Player</span>
+          </button>
+        )}
+
         <button onClick={onClose}
           style={{ width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:'none', color:C.text3, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}
           onMouseEnter={e=>(e.currentTarget.style.background=C.bgCard)}
