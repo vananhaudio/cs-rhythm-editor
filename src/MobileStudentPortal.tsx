@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
@@ -1244,26 +1244,37 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                           <div style={{ fontSize: 11, color: L.t2, marginTop: 1 }}>Đang luyện: <span style={{ color: curStep.color, fontWeight: 700 }}>{curStep.label}</span></div>
                         </div>
                       </div>
-                      {/* Progress */}
+                      {/* Progress — mỗi mốc bấm được để luyện lại */}
                       <div style={{ marginBottom: 14 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 5 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
                           {JOURNEY_STEPS.map((step, i) => {
                             const done = journey.find(j => j.id === step.id)?.done ?? false
                             const isCur = i === curIdx
+                            const tappable = !!step.route
+                            const handleStepTap = () => {
+                              if (!tappable) return
+                              let route = step.route!
+                              if (song.title) {
+                                const params = new URLSearchParams({ title: song.title })
+                                if (song.youtube_url) params.set('youtube', song.youtube_url)
+                                route = route + '?' + params.toString()
+                              }
+                              openTool(route, step.label, step.id)
+                            }
                             return (
-                              <div key={step.id} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                                {i > 0 && <div style={{ flex: 1, height: 3, background: done ? step.color : L.border, borderRadius: 99 }} />}
-                                <div style={{ width: 14, height: 14, borderRadius: '50%', flexShrink: 0, background: done ? step.color : isCur ? step.color : 'transparent', border: `2px solid ${done || isCur ? step.color : L.border}`, transition: 'all .3s' }} />
-                                {i < JOURNEY_STEPS.length - 1 && <div style={{ flex: 1, height: 3, background: done ? JOURNEY_STEPS[i+1].color + '40' : L.border, borderRadius: 99 }} />}
-                              </div>
+                              <Fragment key={step.id}>
+                                {i > 0 && (
+                                  <div style={{ flex: 1, height: 3, marginTop: 10, background: done ? step.color : L.border, borderRadius: 99 }} />
+                                )}
+                                <div onClick={handleStepTap}
+                                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, padding: '2px 4px', borderRadius: 10, cursor: tappable ? 'pointer' : 'default', background: isCur ? step.color + '18' : 'transparent', minWidth: 34 }}>
+                                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: done ? step.color : isCur ? step.color : 'transparent', border: `2px solid ${done || isCur ? step.color : L.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .3s', flexShrink: 0 }}>
+                                    {done && <span style={{ fontSize: 8, color: '#fff', fontWeight: 700, lineHeight: 1 }}>✓</span>}
+                                  </div>
+                                  <div style={{ fontSize: 9, fontWeight: isCur ? 700 : 400, color: done ? step.color : isCur ? step.color : L.t3, textAlign: 'center', whiteSpace: 'nowrap' }}>{step.label}</div>
+                                </div>
+                              </Fragment>
                             )
-                          })}
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          {JOURNEY_STEPS.map((step, i) => {
-                            const done = journey.find(j => j.id === step.id)?.done ?? false
-                            const isCur = i === curIdx
-                            return <div key={step.id} style={{ fontSize: 9, fontWeight: isCur ? 700 : 400, color: done ? step.color : isCur ? step.color : L.t3, textAlign: 'center', flex: 1 }}>{step.label}</div>
                           })}
                         </div>
                       </div>
