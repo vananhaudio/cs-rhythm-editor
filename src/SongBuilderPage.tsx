@@ -191,9 +191,24 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     hydrated.current = true
   }, [])
 
-  /* ---- mở app: hỏi tiếp tục bài đang làm dở ---- */
+  /* ---- mở app: hỏi tiếp tục bài đang làm dở (hoặc nạp từ URL param) ---- */
   useEffect(() => {
     migrateLegacyDraft()
+    // Nếu mở từ journey ?title= → nạp thẳng, bỏ qua hỏi nháp cũ
+    const urlParams = new URLSearchParams(window.location.search)
+    const urlTitle   = urlParams.get('title')
+    const urlYoutube = urlParams.get('youtube')
+    if (urlTitle) {
+      setSongTitle(urlTitle)
+      if (urlYoutube) {
+        setYoutubeUrl(urlYoutube)
+        const vid = extractVideoId(urlYoutube)
+        if (vid) setVideoId(vid)
+      }
+      hydrated.current = true
+      return
+    }
+    // Luồng bình thường: kiểm tra nháp đang làm dở
     const curId = getCurrentId()
     const latest = (curId && loadDraftById(curId)) || getLatestDraft()
     if (latest && hasContent(latest)) setResumeDraft(latest)
