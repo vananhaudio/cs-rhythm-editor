@@ -32,7 +32,16 @@ type Tab    = 'hoc' | 'tap' | 'song'
 type Screen = 'home' | 'courses' | 'lesson'
 
 interface Student    { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null; honor?: string | null; enrolled_at?: string | null }
-interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
+interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean; status?: string; order_index?: number }
+
+// Mapping: exercise timer id → edu_tools id (category 'Bài luyện')
+const EX_TOOL_ID: Record<string, string> = {
+  finger:    'bai-luyen-ngon',
+  scale:     'bai-luyen-am-giai',
+  arpeggio:  'bai-luyen-arpeggio',
+  metronome: 'bai-luyen-metronome',
+  ear:       'bai-luyen-cam-am',
+}
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
   course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; status?: string; sort_order?: number }
@@ -141,6 +150,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
   const [dbTools, setDbTools]     = useState<DBTool[]>([])
+  const [exerciseStatuses, setExerciseStatuses] = useState<Record<string, string>>({}) // exId → 'on'|'off'|'coming_soon'
   const [bpm, setBpm]             = useState(72)
   const [tapCount, setTapCount]   = useState(0)
   const tapTimes                  = useRef<number[]>([])
@@ -377,8 +387,22 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
-    supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
-      .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
+    supabase.from('edu_tools').select('*').order('order_index')
+      .then(({ data }) => {
+        const all = (data ?? []).map((t: any) => ({
+          ...t, status: t.status ?? (t.enabled ? 'on' : 'off'),
+        }))
+        // Công cụ thông thường: không phải 'off', không phải bài luyện
+        const regularTools = all.filter((t: any) => t.status !== 'off' && t.category !== 'Bài luyện')
+        if (regularTools.length) setDbTools(regularTools as DBTool[])
+        // Trạng thái bài luyện
+        const exMap: Record<string, string> = {}
+        Object.entries(EX_TOOL_ID).forEach(([exId, toolId]) => {
+          const tool = all.find((t: any) => t.id === toolId)
+          exMap[exId] = tool?.status ?? 'on'
+        })
+        setExerciseStatuses(exMap)
+      })
     // Load progress
     // Load XP
     const weekAgo     = new Date(Date.now() - 7  * 24 * 3600 * 1000).toISOString()
@@ -1032,13 +1056,18 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>🔥 Hôm nay luyện gì?</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {EXERCISES.map(ex => {
+                {EXERCISES.filter(ex => (exerciseStatuses[ex.id] ?? 'on') !== 'off').map(ex => {
+                  const exStatus = exerciseStatuses[ex.id] ?? 'on'
+                  const isComingSoon = exStatus === 'coming_soon'
                   const totalMin = practiceTotals[ex.id] ?? 0
                   const totalHrs = (totalMin / 60).toFixed(1)
                   const todayMin = practiceToday[ex.id] ?? 0
                   const isActive = activeTimer === ex.id
                   return (
-                    <div key={ex.id} style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, border: `1.5px solid ${isActive ? ex.color : 'transparent'}`, transition: 'border .2s' }}>
+                    <div key={ex.id} style={{ background: L.surface, borderRadius: 16, padding: '14px 16px', boxShadow: L.shadow, border: `1.5px solid ${isActive ? ex.color : 'transparent'}`, transition: 'border .2s', opacity: isComingSoon ? 0.55 : 1, position: 'relative' }}>
+                      {isComingSoon && (
+                        <div style={{ position: 'absolute', top: 10, right: 12, background: '#FFFBEB', color: '#D97706', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>🔜 Sắp ra mắt</div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ width: 40, height: 40, borderRadius: 12, background: ex.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                           {ex.icon}
@@ -1050,7 +1079,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                             {todayMin > 0 && <span style={{ color: L.green }}> · Hôm nay: {todayMin}ph</span>}
                           </div>
                         </div>
-                        {ex.id === 'finger' ? (
+                        {isComingSoon ? (
+                          <span style={{ fontSize: 10, color: '#D97706', fontWeight: 700 }}>Sắp mở</span>
+                        ) : ex.id === 'finger' ? (
                           /* Card Luyện ngón: mở FingerExercise overlay thay vì chỉ chạy timer */
                           isActive ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1317,19 +1348,24 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {displayTools.map((t) => {
-                const unlocked = isTierUnlocked(t.tier)
+                const isComingSoon = t.status === 'coming_soon'
+                const unlocked = isTierUnlocked(t.tier) && !isComingSoon
                 const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
                 return (
                   <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name, t.id) }}
-                    style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
-                    {!unlocked && (
+                    style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: (unlocked || isComingSoon) ? 1 : .5, position: 'relative' }}>
+                    {isComingSoon ? (
+                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                        <span style={{ fontSize: 10, background: '#FFFBEB', color: '#D97706', borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>🔜 Sắp ra</span>
+                      </div>
+                    ) : !unlocked ? (
                       <div style={{ position: 'absolute', top: 8, right: 8 }}>
                         <span style={{ fontSize: 10, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
                       </div>
-                    )}
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
+                    ) : null}
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: isComingSoon ? '#FFF7ED' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10, opacity: isComingSoon ? 0.6 : 1 }}>{t.icon}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isComingSoon ? L.t3 : unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{isComingSoon ? 'Sắp ra mắt' : t.description}</div>
                   </div>
                 )
               })}
