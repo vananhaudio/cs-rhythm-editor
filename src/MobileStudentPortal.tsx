@@ -403,7 +403,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         }))
         // Công cụ thông thường: không phải 'off', không phải bài luyện
         const regularTools = all.filter((t: any) => t.status !== 'off' && t.category !== 'Bài luyện')
-        if (regularTools.length) setDbTools(regularTools as DBTool[])
+        setDbTools(regularTools as DBTool[])   // luôn gọi — kể cả khi rỗng (không dùng fallback)
         // Trạng thái bài luyện
         const exMap: Record<string, string> = {}
         Object.entries(EX_TOOL_ID).forEach(([exId, toolId]) => {
@@ -581,12 +581,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     ?? sortedEnrollments[0]
   const name = uname(me)
 
-  const displayTools = dbTools.length > 0 ? dbTools : [
-    { id:'tap-tempo', icon:'🥁', name:'Tap Tempo',   description:'Tìm nhịp bài hát yêu thích', category:'Luyện tập', route:'/tempo', tier:'free', enabled:true },
-    { id:'metro',   icon:'🎵', name:'Metronome',     description:'Đếm nhịp chính xác',   category:'Luyện tập', route:'/tap',    tier:'free', enabled:true },
-    { id:'chord',   icon:'🎸', name:'Luyện hợp âm', description:'Xem hợp âm trực quan', category:'Luyện tập', route:'/chords', tier:'free', enabled:true },
-    { id:'submit',  icon:'📹', name:'Nộp video',     description:'Quay và gửi bài tập',  category:'Luyện tập', route:'/tap',    tier:'basic', enabled:true },
-  ] as DBTool[]
+  // Dùng thẳng dbTools — admin tắt công cụ nào thì ẩn luôn, không fallback hardcode
+  const displayTools = dbTools
 
   const Pill = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
     <button onClick={onClick} style={{
