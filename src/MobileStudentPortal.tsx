@@ -316,6 +316,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [showFingerExercise, setShowFingerExercise] = useState(false)
   // ── Scale Exercise overlay ──
   const [showScaleExercise, setShowScaleExercise] = useState(false)
+  // ── Coming-soon tools accordion ──
+  const [showComingTools, setShowComingTools] = useState(false)
 
   // ── Tool overlay — mở tool ngay trong app, không navigate ra ngoài ──
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
@@ -1343,33 +1345,66 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             </div>
 
             {/* ── Công cụ ── */}
-            <div style={{ fontSize: 14, fontWeight: 700, color: L.t2, marginBottom: 12 }}>🎯 Công cụ luyện tập</div>
+            {(() => {
+              const activeTools  = displayTools.filter(t => t.status !== 'coming_soon')
+              const comingTools  = displayTools.filter(t => t.status === 'coming_soon')
+              return (
+                <>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: L.t2, marginBottom: 12 }}>🎯 Công cụ luyện tập</div>
 
-            {/* Tools grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {displayTools.map((t) => {
-                const isComingSoon = t.status === 'coming_soon'
-                const unlocked = isTierUnlocked(t.tier) && !isComingSoon
-                const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
-                return (
-                  <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name, t.id) }}
-                    style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: (unlocked || isComingSoon) ? 1 : .5, position: 'relative' }}>
-                    {isComingSoon ? (
-                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                        <span style={{ fontSize: 10, background: '#FFFBEB', color: '#D97706', borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>🔜 Sắp ra</span>
-                      </div>
-                    ) : !unlocked ? (
-                      <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                        <span style={{ fontSize: 10, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
-                      </div>
-                    ) : null}
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: isComingSoon ? '#FFF7ED' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10, opacity: isComingSoon ? 0.6 : 1 }}>{t.icon}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: isComingSoon ? L.t3 : unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{isComingSoon ? 'Sắp ra mắt' : t.description}</div>
+                  {/* Tools grid — chỉ active */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: comingTools.length ? 10 : 0 }}>
+                    {activeTools.map((t) => {
+                      const unlocked = isTierUnlocked(t.tier)
+                      const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
+                      return (
+                        <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name, t.id) }}
+                          style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
+                          {!unlocked && (
+                            <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                              <span style={{ fontSize: 10, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
+                            </div>
+                          )}
+                          <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
+                          <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
+                        </div>
+                      )
+                    })}
                   </div>
-                )
-              })}
-            </div>
+
+                  {/* Nhóm sắp ra mắt — accordion */}
+                  {comingTools.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <button onClick={() => setShowComingTools(v => !v)}
+                        style={{ width: '100%', background: '#FFFBEB', border: '1.5px dashed #FCD34D', borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <span style={{ fontSize: 16 }}>🔜</span>
+                        <span style={{ flex: 1, textAlign: 'left', fontSize: 13, fontWeight: 700, color: '#D97706' }}>
+                          {comingTools.length} công cụ sắp ra mắt
+                        </span>
+                        <span style={{ fontSize: 13, color: '#D97706', transition: 'transform .2s', display: 'inline-block', transform: showComingTools ? 'rotate(90deg)' : 'rotate(0deg)' }}>▸</span>
+                      </button>
+
+                      {showComingTools && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                          {comingTools.map(t => (
+                            <div key={t.id}
+                              style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, opacity: 0.6, position: 'relative' }}>
+                              <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                                <span style={{ fontSize: 10, background: '#FFFBEB', color: '#D97706', borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>🔜 Sắp ra</span>
+                              </div>
+                              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF7ED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: L.t3, marginBottom: 4 }}>{t.name}</div>
+                              <div style={{ fontSize: 11, color: L.t3, lineHeight: 1.4 }}>Sắp ra mắt</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </div>
         )}
 
