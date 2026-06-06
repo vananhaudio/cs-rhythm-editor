@@ -166,7 +166,7 @@ function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
   )
 }
 
-export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRole?: string }) {
+export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userRole?: string }) {
   const isTeacher = userRole === 'teacher' || userRole === 'admin'
   const isGuest   = userRole === 'guest'
   const isMobile  = useIsMobile()
@@ -376,7 +376,7 @@ export function TapWithSong({ onClose, userRole }: { onClose: () => void; userRo
       if (e.code === 'KeyP' || e.code === 'Enter') { e.preventDefault(); if (song) setIsPlaying(p => !p) }
       if (e.code === 'KeyR') { e.preventDefault(); handleReset() }
       if (e.code === 'KeyT') { e.preventDefault(); setShowTeacher(t => !t) }
-      if (e.code === 'Escape') { if (showResultPopup) setShowResultPopup(false); else onClose() }
+      if (e.code === 'Escape') { if (showResultPopup) setShowResultPopup(false); else onClose?.() }
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
