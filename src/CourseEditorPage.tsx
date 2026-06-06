@@ -13,7 +13,13 @@ const C = {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Course { id: string; name: string; slug: string; type: string; track: string | null; is_published: boolean }
+type CourseStatus = 'on' | 'off' | 'coming_soon'
+interface Course { id: string; name: string; slug: string; type: string; track: string | null; status: CourseStatus }
+const STATUS_CFG: Record<CourseStatus, { label: string; dot: string; color: string; bg: string; border: string }> = {
+  on:          { label: '● Bật',         dot: '#16A34A', color: '#16A34A', bg: '#F0FDF4', border: '#86EFAC' },
+  coming_soon: { label: '🔜 Sắp ra mắt', dot: '#D97706', color: '#D97706', bg: '#FFFBEB', border: '#FCD34D' },
+  off:         { label: '✕ Tắt',         dot: '#A1A1AA', color: '#71717A', bg: '#F4F4F5', border: '#D4D4D8' },
+}
 interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null }
 interface Lesson  {
   id: string; module_id: string; title: string; lesson_type: string
@@ -101,9 +107,9 @@ export default function CourseEditorPage() {
 
   // Load courses
   useEffect(() => {
-    supabase.from('edu_courses').select('id,name,slug,type,track,is_published')
+    supabase.from('edu_courses').select('id,name,slug,type,track,status')
       .order('track').order('level_order')
-      .then(({ data }) => setCourses(data ?? []))
+      .then(({ data }) => setCourses((data ?? []).map((c: any) => ({ ...c, status: c.status ?? 'on' }))))
   }, [])
 
   // Load modules + lessons when course changes
@@ -198,13 +204,12 @@ export default function CourseEditorPage() {
   const toggleTool = (id: string) =>
     setFTools(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id])
 
-  // Toggle publish
-  const togglePublish = async () => {
+  // Set course status (3 trạng thái)
+  const setCourseStatus = async (val: CourseStatus) => {
     if (!selectedCourse) return
-    const newVal = !selectedCourse.is_published
-    await supabase.from('edu_courses').update({ is_published: newVal }).eq('id', selectedCourse.id)
-    setSelectedCourse(prev => prev ? { ...prev, is_published: newVal } : prev)
-    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, is_published: newVal } : c))
+    await supabase.from('edu_courses').update({ status: val }).eq('id', selectedCourse.id)
+    setSelectedCourse(prev => prev ? { ...prev, status: val } : prev)
+    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, status: val } : c))
   }
 
   return (
@@ -234,7 +239,7 @@ export default function CourseEditorPage() {
                   onMouseEnter={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = C.bg }}
                   onMouseLeave={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = 'transparent' }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
-                  {c.is_published && <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.success, flexShrink: 0 }} />}
+                  {c.status && <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_CFG[c.status]?.dot ?? '#A1A1AA', flexShrink: 0 }} />}
                 </div>
               ))}
             </div>
@@ -257,12 +262,17 @@ export default function CourseEditorPage() {
                 <div style={{ fontWeight: 700, fontSize: 15, color: C.text1, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
                   {selectedCourse.name}
                 </div>
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <Btn variant="secondary" onClick={togglePublish} style={{ fontSize: 12, padding: '5px 10px' }}>
-                    {selectedCourse.is_published
-                      ? <><span style={{ color: C.success }}>●</span> Đã xuất bản</>
-                      : <><span style={{ color: C.text3 }}>○</span> Nháp</>}
-                  </Btn>
+                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+                  {(['on','coming_soon','off'] as CourseStatus[]).map(s => {
+                    const cfg = STATUS_CFG[s]
+                    const active = selectedCourse.status === s
+                    return (
+                      <button key={s} onClick={() => setCourseStatus(s)}
+                        style={{ padding: '4px 8px', fontSize: 11, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${C.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : C.surface, color: active ? cfg.color : C.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
+                        {cfg.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
               <div style={{ fontSize: 11, color: C.text3 }}>

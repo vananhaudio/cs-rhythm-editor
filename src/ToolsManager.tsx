@@ -17,9 +17,16 @@ const TIERS = [
   { id: 'pro',      label: 'Hành trình', color: '#7C3AED', bg: '#F5F3FF' },
 ]
 
+type ToolStatus = 'on' | 'off' | 'coming_soon'
+const TOOL_STATUS_CFG: Record<ToolStatus, { label: string; color: string; bg: string }> = {
+  on:          { label: '● Bật',         color: '#16A34A', bg: '#F0FDF4' },
+  coming_soon: { label: '🔜 Sắp ra mắt', color: '#D97706', bg: '#FFFBEB' },
+  off:         { label: '✕ Tắt',         color: '#71717A', bg: '#F4F4F5' },
+}
+
 interface Tool {
   id: string; icon: string; name: string; description: string | null
-  category: string; route: string; tier: string; enabled: boolean; order_index: number
+  category: string; route: string; tier: string; enabled: boolean; status: ToolStatus; order_index: number
 }
 
 export default function ToolsManager() {
@@ -32,11 +39,14 @@ export default function ToolsManager() {
 
   useEffect(() => {
     supabase.from('edu_tools').select('*').order('order_index')
-      .then(({ data, error }) => { console.log('tools:', data, error); setTools(data ?? []); setLoading(false) })
+      .then(({ data }) => {
+        setTools((data ?? []).map((t: any) => ({ ...t, status: t.status ?? (t.enabled ? 'on' : 'off') })))
+        setLoading(false)
+      })
   }, [])
 
-  const toggle = (id: string) => {
-    setTools(prev => prev.map(t => t.id === id ? { ...t, enabled: !t.enabled } : t))
+  const setStatus = (id: string, status: ToolStatus) => {
+    setTools(prev => prev.map(t => t.id === id ? { ...t, status, enabled: status === 'on' } : t))
     setChanged(prev => new Set([...prev, id]))
   }
 
@@ -49,16 +59,17 @@ export default function ToolsManager() {
     setSaving(true)
     const toUpdate = tools.filter(t => changed.has(t.id))
     await Promise.all(toUpdate.map(t =>
-      supabase.from('edu_tools').update({ enabled: t.enabled, tier: t.tier }).eq('id', t.id)
+      supabase.from('edu_tools').update({ status: t.status, enabled: t.status === 'on', tier: t.tier }).eq('id', t.id)
     ))
     setChanged(new Set())
     setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const categories = ['all', ...Array.from(new Set(tools.map(t => t.category)))]
-  const filtered   = filter === 'all' ? tools : tools.filter(t => t.category === filter)
-  const enabledCount = tools.filter(t => t.enabled).length
+  const categories  = ['all', ...Array.from(new Set(tools.map(t => t.category)))]
+  const filtered    = filter === 'all' ? tools : tools.filter(t => t.category === filter)
+  const enabledCount = tools.filter(t => t.status === 'on').length
+  const comingCount  = tools.filter(t => t.status === 'coming_soon').length
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: S.text3 }}>
@@ -74,7 +85,8 @@ export default function ToolsManager() {
         <div>
           <div style={{ fontWeight: 700, fontSize: 18 }}>🛠 Quản lý công cụ</div>
           <div style={{ fontSize: 12, color: S.text3, marginTop: 2 }}>
-            {enabledCount}/{tools.length} đang bật · {changed.size > 0 ? <span style={{ color: '#D97706' }}>{changed.size} thay đổi chưa lưu</span> : 'Đã đồng bộ'}
+            {enabledCount} bật · {comingCount} sắp ra mắt · {tools.length - enabledCount - comingCount} tắt
+            {changed.size > 0 && <span style={{ color: '#D97706', marginLeft: 8 }}>· {changed.size} thay đổi chưa lưu</span>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -125,12 +137,12 @@ export default function ToolsManager() {
                   const tier = TIERS.find(t => t.id === tool.tier) ?? TIERS[0]
                   const isChanged = changed.has(tool.id)
                   return (
-                    <div key={tool.id} style={{ background: S.surface, border: `1px solid ${isChanged ? '#FCD34D' : tool.enabled ? S.border : S.borderLight}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, opacity: tool.enabled ? 1 : .55, boxShadow: S.shadow }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: tool.enabled ? S.accentLight : S.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                    <div key={tool.id} style={{ background: S.surface, border: `1px solid ${isChanged ? '#FCD34D' : S.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, opacity: tool.status === 'off' ? .5 : 1, boxShadow: S.shadow }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: tool.status === 'on' ? S.accentLight : S.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                         {tool.icon}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: tool.enabled ? S.text1 : S.text3, marginBottom: 2 }}>{tool.name}</div>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: tool.status !== 'off' ? S.text1 : S.text3, marginBottom: 2 }}>{tool.name}</div>
                         <div style={{ fontSize: 12, color: S.text3 }}>{tool.description}</div>
                       </div>
                       <a href={tool.route} target="_blank" rel="noopener noreferrer"
@@ -142,9 +154,18 @@ export default function ToolsManager() {
                         style={{ background: tier.bg, color: tier.color, border: `1px solid ${tier.color}40`, borderRadius: 8, padding: '4px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none', flexShrink: 0 }}>
                         {TIERS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                       </select>
-                      <div onClick={() => toggle(tool.id)}
-                        style={{ width: 44, height: 24, borderRadius: 99, background: tool.enabled ? S.accent : S.border, cursor: 'pointer', position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
-                        <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: tool.enabled ? 23 : 3, transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                      {/* 3-state toggle */}
+                      <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${S.border}`, flexShrink: 0 }}>
+                        {(['on','coming_soon','off'] as ToolStatus[]).map(s => {
+                          const cfg = TOOL_STATUS_CFG[s]
+                          const active = tool.status === s
+                          return (
+                            <button key={s} onClick={() => setStatus(tool.id, s)}
+                              style={{ padding: '4px 7px', fontSize: 10, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${S.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : S.surface, color: active ? cfg.color : S.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
+                              {cfg.label}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )

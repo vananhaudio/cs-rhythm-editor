@@ -15,7 +15,13 @@ const C = {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Course { id: string; name: string; slug: string; type: string; track: string | null; is_published: boolean; icon?: string | null; image_url?: string | null }
+type CourseStatus = 'on' | 'off' | 'coming_soon'
+interface Course { id: string; name: string; slug: string; type: string; track: string | null; status: CourseStatus; icon?: string | null; image_url?: string | null }
+const STATUS_CFG: Record<CourseStatus, { label: string; dot: string; color: string; bg: string; border: string }> = {
+  on:          { label: '● Bật',         dot: '#16A34A', color: '#16A34A', bg: '#F0FDF4', border: '#86EFAC' },
+  coming_soon: { label: '🔜 Sắp ra mắt', dot: '#D97706', color: '#D97706', bg: '#FFFBEB', border: '#FCD34D' },
+  off:         { label: '✕ Tắt',         dot: '#A1A1AA', color: '#71717A', bg: '#F4F4F5', border: '#D4D4D8' },
+}
 interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null }
 interface Lesson  {
   id: string; module_id: string; title: string; lesson_type: string
@@ -239,9 +245,9 @@ export default function CourseEditorContent() {
 
   // ── Load ──
   useEffect(() => {
-    supabase.from('edu_courses').select('id,name,slug,type,track,is_published,icon,image_url')
+    supabase.from('edu_courses').select('id,name,slug,type,track,status,icon,image_url')
       .order('track').order('level_order')
-      .then(({ data }) => setCourses(data ?? []))
+      .then(({ data }) => setCourses((data ?? []).map((c: any) => ({ ...c, status: c.status ?? 'on' }))))
     supabase.from('edu_tools').select('id,name,icon').eq('enabled', true).order('order_index')
       .then(({ data }) => { if (data?.length) setDbTools(data.map((t: any) => ({ id: t.id, name: t.name, icon: t.icon }))) })
   }, [])
@@ -321,7 +327,7 @@ export default function CourseEditorContent() {
   const createCourse = async () => {
     if (!ncName.trim()) return
     const slug = ncName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now()
-    const { data, error } = await supabase.from('edu_courses').insert({ name: ncName.trim(), slug, type: ncType, track: ncTrack, level_order: 99, is_free: false, is_published: false }).select('*').single()
+    const { data, error } = await supabase.from('edu_courses').insert({ name: ncName.trim(), slug, type: ncType, track: ncTrack, level_order: 99, is_free: false, status: 'off' }).select('*').single()
     if (error) { alert('Lỗi: ' + error.message); return }
     if (data) { setCourses(prev => [...prev, data]); setShowNewCourse(false); setNcName(''); loadCourse(data) }
   }
@@ -523,19 +529,19 @@ export default function CourseEditorContent() {
   const toggleTool = (id: string) =>
     setFTools(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id])
 
-  const togglePublish = async () => {
+  const setCourseStatus = async (val: CourseStatus) => {
     if (!selectedCourse) return
-    const newVal = !selectedCourse.is_published
-    await supabase.from('edu_courses').update({ is_published: newVal }).eq('id', selectedCourse.id)
-    setSelectedCourse(prev => prev ? { ...prev, is_published: newVal } : prev)
-    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, is_published: newVal } : c))
+    await supabase.from('edu_courses').update({ status: val }).eq('id', selectedCourse.id)
+    setSelectedCourse(prev => prev ? { ...prev, status: val } : prev)
+    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, status: val } : c))
   }
 
   const publishAll = async () => {
-    if (!confirm(`Xuất bản TẤT CẢ ${courses.length} khoá học? Học sinh sẽ nhìn thấy ngay.`)) return
-    await supabase.from('edu_courses').update({ is_published: true }).neq('id', '00000000-0000-0000-0000-000000000000')
-    setCourses(prev => prev.map(c => ({ ...c, is_published: true })))
-    if (selectedCourse) setSelectedCourse(prev => prev ? { ...prev, is_published: true } : prev)
+    const offCount = courses.filter(c => c.status !== 'on').length
+    if (!confirm(`Bật TẤT CẢ ${offCount} khoá chưa hiển thị? Học sinh sẽ nhìn thấy ngay.`)) return
+    await supabase.from('edu_courses').update({ status: 'on' }).neq('id', '00000000-0000-0000-0000-000000000000')
+    setCourses(prev => prev.map(c => ({ ...c, status: 'on' as CourseStatus })))
+    if (selectedCourse) setSelectedCourse(prev => prev ? { ...prev, status: 'on' } : prev)
   }
 
   // ── Drag & Drop (HTML5, fixed) ─────────────────────────────────────────────
@@ -603,10 +609,10 @@ export default function CourseEditorContent() {
             style={{ width: '100%', background: C.accent, border: 'none', borderRadius: 7, padding: 8, color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
             + Tạo khoá mới
           </button>
-          {courses.some(c => !c.is_published) && (
+          {courses.some(c => c.status !== 'on') && (
             <button onClick={publishAll}
               style={{ width: '100%', marginTop: 6, background: 'none', border: `1px solid ${C.success}`, borderRadius: 7, padding: '6px 8px', color: C.success, fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-              ✓ Xuất bản tất cả ({courses.filter(c => !c.is_published).length} chưa publish)
+              ✓ Bật tất cả ({courses.filter(c => c.status !== 'on').length} đang tắt)
             </button>
           )}
           {showNewCourse && (
@@ -654,7 +660,7 @@ export default function CourseEditorContent() {
                     </span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
                   </span>
-                  {c.is_published && <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.success, flexShrink: 0 }} />}
+                  {c.status && <span style={{ width: 5, height: 5, borderRadius: '50%', background: STATUS_CFG[c.status]?.dot ?? '#A1A1AA', flexShrink: 0 }} />}
                 </div>
               ))}
             </div>
@@ -691,11 +697,18 @@ export default function CourseEditorContent() {
                     {selectedCourse.name}
                   </div>
                 )}
-                <Btn variant="secondary" onClick={togglePublish} style={{ fontSize: 12, padding: '5px 10px' }}>
-                  {selectedCourse.is_published
-                    ? <><span style={{ color: C.success }}>●</span> Đã xuất bản</>
-                    : <><span style={{ color: C.text3 }}>○</span> Nháp</>}
-                </Btn>
+                <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+                  {(['on','coming_soon','off'] as CourseStatus[]).map(s => {
+                    const cfg = STATUS_CFG[s]
+                    const active = selectedCourse.status === s
+                    return (
+                      <button key={s} onClick={() => setCourseStatus(s)}
+                        style={{ padding: '4px 8px', fontSize: 11, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${C.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : C.surface, color: active ? cfg.color : C.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
+                        {cfg.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
               <div style={{ fontSize: 11, color: C.text3 }}>
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học

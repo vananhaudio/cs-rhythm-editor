@@ -154,7 +154,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
       setAssignments(as ?? []); setEvents(ev ?? []); setNotes(nt ?? [])
       const [{ data: enr }, { data: courses }] = await Promise.all([
         supabase.from("edu_enrollments").select("id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track,is_free)").eq("student_id", studentId),
-        supabase.from("edu_courses").select("id,name,slug,type,track,is_free").eq("is_published", true).order("level_order"),
+        supabase.from("edu_courses").select("id,name,slug,type,track,is_free").eq("status", "on").order("level_order"),
       ])
       setEnrollments((enr ?? []) as unknown as EnrollmentItem[])
       setAllCourses(courses ?? [])
