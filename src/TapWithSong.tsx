@@ -725,38 +725,44 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                   height: TRACK_H,
                   flexShrink: 0,
                   borderTop: `1px solid ${C.border}`,
-                  background: C.bg,
-                  opacity: 0.35,
+                  background: isPlaying ? C.bgSurface : C.bg,
+                  opacity: isPlaying ? 1 : 0.4,
+                  transition: 'opacity 0.2s, background 0.2s',
                   position: 'relative',
                   overflow: 'hidden',
                 }}>
-                  {/* Beat markers mờ */}
+                  {/* Beat markers + animated dots theo currentBeatInMeasure */}
                   {Array.from({ length: beatsPerTrack }, (_, bi) => {
                     const isBar1 = bi === 0
                     const cellX  = nowX_track + bi * beatDur * PPS_track
+                    const lit    = isPlaying && bi === currentBeatInMeasure
                     return (
                       <div key={bi} style={{
                         position: 'absolute', left: cellX, top: 0, height: 44,
                         width: PPS_track * beatDur,
                         transform: 'translateX(-50%)',
                         borderLeft: isBar1
-                          ? `1.5px solid rgba(108,99,255,0.15)`
-                          : `1px solid rgba(255,255,255,0.03)`,
+                          ? `1.5px solid rgba(108,99,255,0.18)`
+                          : `1px solid rgba(255,255,255,0.04)`,
                       }}>
                         <div style={{
                           position: 'absolute', left: '50%', top: 10,
-                          transform: 'translateX(-50%)',
+                          transform: `translateX(-50%) scale(${lit ? 1.45 : 1})`,
                           width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9,
                           borderRadius: '50%',
                           background: isBar1 ? C.dotTarget : '#2DD4BF',
-                          opacity: 0.25,
+                          opacity: lit ? 1 : 0.25,
+                          boxShadow: lit
+                            ? (isBar1 ? '0 0 10px rgba(245,158,11,0.8)' : '0 0 10px rgba(45,212,191,0.8)')
+                            : 'none',
+                          transition: 'all 0.08s',
                         }} />
                       </div>
                     )
                   })}
                   {/* Separator */}
                   <div style={{ position:'absolute', top:44, left:0, right:0, height:1, background:C.border }} />
-                  {/* "Chuẩn bị…" text — căn giữa measure */}
+                  {/* "Chuẩn bị…" text — căn giữa measure, sáng lên khi đang phát */}
                   <div style={{
                     position: 'absolute',
                     left: nowX_track + (beatsPerTrack / 2) * beatDur * PPS_track,
@@ -767,9 +773,10 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                   }}>
                     <span style={{
                       fontSize: isMobile ? 14 : 16,
-                      color: 'rgba(255,255,255,0.3)',
+                      color: isPlaying ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.3)',
                       fontFamily: '"Helvetica Neue",Arial,sans-serif',
                       letterSpacing: '0.05em',
+                      transition: 'color 0.2s',
                     }}>Chuẩn bị…</span>
                   </div>
                 </div>
