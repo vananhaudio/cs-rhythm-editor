@@ -200,11 +200,6 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const [showGuestLimit, setShowGuestLimit] = useState(false)
   const [tapPulse, setTapPulse]   = useState(false)
 
-  const [countIn, setCountIn]         = useState(false)
-  const [countInBeat, setCountInBeat] = useState(-1)
-  const countInRafRef  = useRef<number>(0)
-  const countInWallRef = useRef(0)
-
   const scrollRef       = useRef<HTMLDivElement>(null)
   const autoShowResultRef = useRef(false)
   const [containerW, setContainerW] = useState(window.innerWidth) // khởi tạo bằng width thật
@@ -477,10 +472,9 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const scrollProgress = chunkDone
     ? Math.min(1, (timeInChunk - (chunkDur - beatDur)) / beatDur)
     : 0
-  // Count-in: chunk 0 ở dưới (translateY=+TRACK_H*2), song play: chunk hiện tại luôn ở giữa (+TRACK_H offset)
-  const trackTranslateY = countIn
-    ? TRACK_H * 2
-    : -((currentChunk + scrollProgress) * TRACK_H) + TRACK_H
+  // Khi songTime < 0: currentChunk = -1 → translateY = +TRACK_H (prep ở giữa)
+  // Khi chunk 0 active: translateY = 0 → prep ở trên, chunk 0 giữa
+  const trackTranslateY = -((currentChunk + scrollProgress) * TRACK_H)
 
   // PPS: 1 measure vừa khít chiều rộng track viewport
   // Desktop: trừ 180px legend panel; Mobile: full width
@@ -491,38 +485,21 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const nowX_track = PPS_track * beatDur * 0.5   // nửa ô nhịp từ trái — vị trí playhead
   const currentBeatInMeasure = beatDur > 0 ? Math.floor(songTime / beatDur) % beatsPerTrack : 0
 
-  // ── Count-in: 1 nhịp chuẩn bị trước khi bài bắt đầu ──
-  const startCountIn = () => {
-    if (!song || chunkDur <= 0) { setIsPlaying(true); return }
-    cancelAnimationFrame(countInRafRef.current)
-    countInWallRef.current = performance.now()
-    setCountIn(true)
-    setCountInBeat(0)
-    const beatDurMs = beatDur * 1000
-    const totalMs   = chunkDur * 1000          // 1 nhịp đầy đủ
-    const tick = () => {
-      const elapsed = performance.now() - countInWallRef.current
-      setCountInBeat(Math.floor(elapsed / beatDurMs) % beatsPerTrack)
-      if (elapsed >= totalMs) {
-        setCountIn(false); setCountInBeat(-1); setIsPlaying(true)
-        return
-      }
-      countInRafRef.current = requestAnimationFrame(tick)
-    }
-    countInRafRef.current = requestAnimationFrame(tick)
-  }
+  // ── Count-in: bắt đầu từ -chunkDur (1 nhịp âm) — metronome & scroll tự xử lý ──
+  // Khi songTime < 0: đang chuẩn bị; currentChunk = -1 → prep track ở giữa
+  // Khi songTime = 0: nhịp 1 bắt đầu, prep track lên trên, chunk 0 vào giữa
+  const prepBeat = songTime < 0 && beatDur > 0
+    ? Math.floor((songTime + chunkDur) / beatDur)
+    : -1   // -1 = không hiển thị dot sáng trên prep track
 
   const handlePlayToggle = () => {
-    if (countIn) {
-      // Huỷ count-in nếu bấm lại
-      cancelAnimationFrame(countInRafRef.current)
-      setCountIn(false); setCountInBeat(-1)
-      return
-    }
     if (isPlaying) { setIsPlaying(false); return }
-    // Chỉ count-in khi bắt đầu từ đầu (songTime ≈ 0)
-    if (songTimeRef.current < 0.05) startCountIn()
-    else setIsPlaying(true)
+    // Chỉ thêm nhịp chuẩn bị khi bắt đầu từ đầu (songTime === 0)
+    if (songTimeRef.current === 0 && chunkDur > 0) {
+      songTimeRef.current = -chunkDur
+      setSongTime(-chunkDur)
+    }
+    setIsPlaying(true)
   }
 
   return (
@@ -759,48 +736,49 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                 <div style={{ width:0, height:0, borderLeft:'5px solid transparent', borderRight:'5px solid transparent', borderTop:`7px solid ${C.accent}`, filter:`drop-shadow(0 0 4px ${C.accent})` }} />
               </div>
 
-              {/* ── Count-in overlay — hiển thị cố định ở row giữa (top: TRACK_H) khi đang đếm ── */}
-              {countIn && (
+              {/* Scrolling tracks container — translateY theo thời gian */}
+              <div style={{ position:'absolute', top:0, left:0, right:0, transform:`translateY(${trackTranslateY}px)`, willChange:'transform' }}>
+
+                {/* ── Prep track — nhịp chuẩn bị, nằm trước chunk 0 trong scroll ── */}
+                {/* songTime < 0: ở giữa viewport (đang đếm), songTime ≥ 0: ở trên (đã qua) */}
                 <div style={{
-                  position: 'absolute', top: TRACK_H, left: 0, right: 0, height: TRACK_H,
-                  background: C.bgSurface, borderTop: `1px solid ${C.border}`,
-                  zIndex: 30, overflow: 'hidden', pointerEvents: 'none',
+                  height: TRACK_H, flexShrink: 0,
+                  borderTop: `1px solid ${C.border}`,
+                  background: prepBeat >= 0 ? C.bgSurface : C.bg,
+                  opacity: prepBeat >= 0 ? 1 : 0.35,
+                  transition: 'opacity 0.2s, background 0.2s',
+                  position: 'relative', overflow: 'hidden',
                 }}>
-                  {/* Beat dots đếm nhịp */}
                   {Array.from({ length: beatsPerTrack }, (_, bi) => {
                     const isBar1 = bi === 0
                     const cellX  = nowX_track + bi * beatDur * PPS_track
-                    const lit    = bi === countInBeat
+                    const lit    = bi === prepBeat
                     return (
                       <div key={bi} style={{
                         position: 'absolute', left: cellX, top: 0, height: 44,
                         width: PPS_track * beatDur, transform: 'translateX(-50%)',
-                        borderLeft: isBar1 ? `1.5px solid rgba(108,99,255,0.25)` : `1px solid rgba(255,255,255,0.05)`,
+                        borderLeft: isBar1 ? `1.5px solid rgba(108,99,255,0.2)` : `1px solid rgba(255,255,255,0.04)`,
                       }}>
                         <div style={{
                           position: 'absolute', left: '50%', top: 10,
-                          transform: `translateX(-50%) scale(${lit ? 1.5 : 1})`,
-                          width: isBar1 ? 12 : 10, height: isBar1 ? 12 : 10,
+                          transform: `translateX(-50%) scale(${lit ? 1.45 : 1})`,
+                          width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9,
                           borderRadius: '50%',
                           background: isBar1 ? C.dotTarget : '#2DD4BF',
-                          opacity: lit ? 1 : 0.3,
-                          boxShadow: lit ? (isBar1 ? '0 0 12px rgba(245,158,11,0.9)' : '0 0 12px rgba(45,212,191,0.9)') : 'none',
-                          transition: 'all 0.07s',
+                          opacity: lit ? 1 : 0.25,
+                          boxShadow: lit ? (isBar1 ? '0 0 10px rgba(245,158,11,0.85)' : '0 0 10px rgba(45,212,191,0.85)') : 'none',
+                          transition: 'all 0.08s',
                         }} />
                       </div>
                     )
                   })}
-                  {/* Separator */}
                   <div style={{ position:'absolute', top:44, left:0, right:0, height:1, background:C.border }} />
-                  {/* "Chuẩn bị…" */}
-                  <div style={{ position:'absolute', left: nowX_track + (beatsPerTrack / 2) * beatDur * PPS_track, top: 44 + (TRACK_H - 44) / 2, transform:'translate(-50%,-50%)', whiteSpace:'nowrap' }}>
-                    <span style={{ fontSize: isMobile ? 15 : 17, color:'rgba(45,212,191,0.9)', fontFamily:'"Helvetica Neue",Arial,sans-serif', letterSpacing:'0.06em', fontWeight:500 }}>Chuẩn bị…</span>
-                  </div>
+                  {prepBeat >= 0 && (
+                    <div style={{ position:'absolute', left: nowX_track + (beatsPerTrack / 2) * beatDur * PPS_track, top: 44 + (TRACK_H - 44) / 2, transform:'translate(-50%,-50%)', whiteSpace:'nowrap', pointerEvents:'none' }}>
+                      <span style={{ fontSize: isMobile ? 14 : 16, color:'rgba(45,212,191,0.9)', fontFamily:'"Helvetica Neue",Arial,sans-serif', letterSpacing:'0.05em' }}>Chuẩn bị…</span>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {/* Scrolling tracks container — translateY theo thời gian */}
-              <div style={{ position:'absolute', top:0, left:0, right:0, transform:`translateY(${trackTranslateY}px)`, willChange:'transform' }}>
 
                 {Array.from({ length: totalChunks }, (_, ci) => {
                   const isActive  = ci === currentChunk
@@ -1050,8 +1028,8 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                     <span style={{ fontSize:16 }}>↺</span> Lại
                   </button>
                   <button className="ctrl-btn" onClick={handlePlayToggle}
-                    style={{ flex:2, height:44, borderRadius:12, border:`1px solid ${(isPlaying||countIn)?C.accent+'55':C.border}`, background:(isPlaying||countIn)?`${C.accent}1A`:C.bgCard, color:(isPlaying||countIn)?C.accentLight:C.text2, fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
-                    {isPlaying ? '⏸ Dừng' : countIn ? '⏳ Chờ…' : '▶ Bắt đầu'}
+                    style={{ flex:2, height:44, borderRadius:12, border:`1px solid ${isPlaying?C.accent+'55':C.border}`, background:isPlaying?`${C.accent}1A`:C.bgCard, color:isPlaying?C.accentLight:C.text2, fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
+                    {isPlaying ? '⏸ Dừng' : '▶ Bắt đầu'}
                   </button>
                   <button className="ctrl-btn" onClick={() => setShowTeacher(t=>!t)}
                     style={{ flex:1, height:44, borderRadius:12, border:`1px solid ${showTeacher?C.gold+'55':C.border}`, background:showTeacher?`${C.gold}15`:C.bgCard, color:showTeacher?C.gold:C.text2, fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit', transition:'all 0.15s' }}>
@@ -1121,8 +1099,8 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                     <span style={{ fontSize:10, color:C.text3 }}>Phím R</span>
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:110 }}>
-                    <button className="ctrl-btn" onClick={handlePlayToggle} style={{ width:'100%', padding:'13px 0', borderRadius:12, border:`1px solid ${(isPlaying||countIn)?C.accent+'44':C.border}`, background:(isPlaying||countIn)?`${C.accent}22`:C.bgCard, color:(isPlaying||countIn)?C.accentLight:C.text2, fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
-                      <span>{isPlaying?'⏸':countIn?'⏳':'▶'}</span><span>{isPlaying?'Dừng':countIn?'Chờ…':'Bắt đầu'}</span>
+                    <button className="ctrl-btn" onClick={handlePlayToggle} style={{ width:'100%', padding:'13px 0', borderRadius:12, border:`1px solid ${isPlaying?C.accent+'44':C.border}`, background:isPlaying?`${C.accent}22`:C.bgCard, color:isPlaying?C.accentLight:C.text2, fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
+                      <span>{isPlaying?'⏸':'▶'}</span><span>{isPlaying?'Dừng':'Bắt đầu'}</span>
                     </button>
                     <span style={{ fontSize:10, color:C.text3 }}>Phím P</span>
                   </div>
