@@ -472,11 +472,13 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
     : 0
   const trackTranslateY = -((currentChunk + scrollProgress) * TRACK_H)
 
-  // PPS: 1 ô nhịp = đúng 1 measure vừa màn hình
-  const PPS_track = containerW > 40 && beatsPerTrack > 0 && beatDur > 0
-    ? (containerW - 40) / ((beatsPerTrack + 1) * beatDur)
+  // PPS: 1 measure vừa khít chiều rộng track viewport
+  // Desktop: trừ 180px legend panel; Mobile: full width
+  const trackViewportW = containerW > 0 ? (isMobile ? containerW : Math.max(containerW - 180, 200)) : 300
+  const PPS_track = trackViewportW > 0 && beatsPerTrack > 0 && beatDur > 0
+    ? trackViewportW / ((beatsPerTrack + 1) * beatDur)
     : 60
-  const nowX_track = PPS_track * beatDur * 0.5   // nửa ô nhịp từ trái
+  const nowX_track = PPS_track * beatDur * 0.5   // nửa ô nhịp từ trái — vị trí playhead
   const currentBeatInMeasure = beatDur > 0 ? Math.floor(songTime / beatDur) % beatsPerTrack : 0
 
   return (
