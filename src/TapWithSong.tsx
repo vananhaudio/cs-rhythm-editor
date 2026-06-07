@@ -719,6 +719,61 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
               {/* Scrolling tracks container — translateY theo thời gian */}
               <div style={{ position:'absolute', top:0, left:0, right:0, transform:`translateY(${trackTranslateY}px)`, willChange:'transform' }}>
+
+                {/* ── Track chuẩn bị — đẩy chunk 0 xuống giữa viewport (track 2) ── */}
+                <div style={{
+                  height: TRACK_H,
+                  flexShrink: 0,
+                  borderTop: `1px solid ${C.border}`,
+                  background: C.bg,
+                  opacity: 0.35,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  {/* Beat markers mờ */}
+                  {Array.from({ length: beatsPerTrack }, (_, bi) => {
+                    const isBar1 = bi === 0
+                    const cellX  = nowX_track + bi * beatDur * PPS_track
+                    return (
+                      <div key={bi} style={{
+                        position: 'absolute', left: cellX, top: 0, height: 44,
+                        width: PPS_track * beatDur,
+                        transform: 'translateX(-50%)',
+                        borderLeft: isBar1
+                          ? `1.5px solid rgba(108,99,255,0.15)`
+                          : `1px solid rgba(255,255,255,0.03)`,
+                      }}>
+                        <div style={{
+                          position: 'absolute', left: '50%', top: 10,
+                          transform: 'translateX(-50%)',
+                          width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9,
+                          borderRadius: '50%',
+                          background: isBar1 ? C.dotTarget : '#2DD4BF',
+                          opacity: 0.25,
+                        }} />
+                      </div>
+                    )
+                  })}
+                  {/* Separator */}
+                  <div style={{ position:'absolute', top:44, left:0, right:0, height:1, background:C.border }} />
+                  {/* "Chuẩn bị…" text — căn giữa measure */}
+                  <div style={{
+                    position: 'absolute',
+                    left: nowX_track + (beatsPerTrack / 2) * beatDur * PPS_track,
+                    top: 44 + (TRACK_H - 44) / 2,
+                    transform: 'translate(-50%, -50%)',
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                  }}>
+                    <span style={{
+                      fontSize: isMobile ? 14 : 16,
+                      color: 'rgba(255,255,255,0.3)',
+                      fontFamily: '"Helvetica Neue",Arial,sans-serif',
+                      letterSpacing: '0.05em',
+                    }}>Chuẩn bị…</span>
+                  </div>
+                </div>
+
                 {Array.from({ length: totalChunks }, (_, ci) => {
                   const isActive  = ci === currentChunk
                   const chunkStart = ci * chunkDur
