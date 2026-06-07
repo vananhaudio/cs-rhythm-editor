@@ -28,10 +28,6 @@ const ARTIST_LEVELS = [
   { label: '👑 Bậc thầy',  min: 40000, max: 999999,color: '#DC2626' },
 ]
 
-const EVENTS = [
-  { name: 'Workshop cuối tuần', date: 'CN, 09/06/2025' },
-  { name: 'Open Mic tháng 6',   date: 'T7, 15/06/2025' },
-]
 
 const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
 const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
@@ -406,15 +402,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
               </div>
               <div style={{ padding: '12px 14px' }}>
                 <div style={{ fontSize: 10, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Sự kiện sắp tới</div>
-                {EVENTS.map((e, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: i > 0 ? `1px solid ${D.borderLight}` : 'none' }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 7, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 }}>📅</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
-                      <div style={{ fontSize: 10, color: D.text3 }}>{e.date}</div>
-                    </div>
-                  </div>
-                ))}
+                <div style={{ fontSize: 11, color: D.text3, textAlign: 'center', padding: '12px 0' }}>Chưa có sự kiện nào</div>
               </div>
             </div>
           </div>
