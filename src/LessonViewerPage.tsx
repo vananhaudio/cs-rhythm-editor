@@ -59,6 +59,16 @@ export default function LessonViewerPage() {
   const [active, setActive]   = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
   const [toolMap, setToolMap] = useState<Record<string, { label: string; icon: string; route: string }>>(TOOL_LABELS)
+  const [studentId, setStudentId] = useState('')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        const { data: st } = await supabase.from('edu_students').select('id').eq('user_id', data.user.id).single()
+        if (st?.id) setStudentId(st.id)
+      }
+    })
+  }, [])
 
   useEffect(() => {
     if (!courseId) return
@@ -172,7 +182,7 @@ export default function LessonViewerPage() {
           <div style={{ maxWidth: 480, margin: '0 auto', padding: '0' }}>
             <FlowPlayer
               lessonId={active.id}
-              studentId=""
+              studentId={studentId}
               onComplete={() => {}}
               onBack={() => window.history.back()}
             />
@@ -255,7 +265,7 @@ export default function LessonViewerPage() {
 {active.lesson_type === 'quiz' && (
               <QuizViewer
                 lessonId={active.id}
-                studentId={""}
+                studentId={studentId}
                 quizData={(() => { try { return typeof active.content === 'string' ? JSON.parse(active.content) : active.content } catch { return null } })()}
               />
             )}
