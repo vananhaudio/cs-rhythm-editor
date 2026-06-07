@@ -200,6 +200,11 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const [showGuestLimit, setShowGuestLimit] = useState(false)
   const [tapPulse, setTapPulse]   = useState(false)
 
+  const [countIn, setCountIn]         = useState(false)
+  const [countInBeat, setCountInBeat] = useState(-1)
+  const countInRafRef  = useRef<number>(0)
+  const countInWallRef = useRef(0)
+
   const scrollRef       = useRef<HTMLDivElement>(null)
   const autoShowResultRef = useRef(false)
   const [containerW, setContainerW] = useState(window.innerWidth) // khởi tạo bằng width thật
@@ -375,7 +380,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       if (e.code === 'Space') { e.preventDefault(); handleTap() }
-      if (e.code === 'KeyP' || e.code === 'Enter') { e.preventDefault(); if (song) setIsPlaying(p => !p) }
+      if (e.code === 'KeyP' || e.code === 'Enter') { e.preventDefault(); if (song) handlePlayToggle() }
       if (e.code === 'KeyR') { e.preventDefault(); handleReset() }
       if (e.code === 'KeyT') { e.preventDefault(); setShowTeacher(t => !t) }
       if (e.code === 'Escape') { if (showResultPopup) setShowResultPopup(false); else onClose?.() }
@@ -472,7 +477,10 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const scrollProgress = chunkDone
     ? Math.min(1, (timeInChunk - (chunkDur - beatDur)) / beatDur)
     : 0
-  const trackTranslateY = -((currentChunk + scrollProgress) * TRACK_H)
+  // Count-in: prep track ở giữa (translateY=+TRACK_H); song play: scroll bình thường
+  const trackTranslateY = countIn
+    ? TRACK_H
+    : -((currentChunk + scrollProgress) * TRACK_H)
 
   // PPS: 1 measure vừa khít chiều rộng track viewport
   // Desktop: trừ 180px legend panel; Mobile: full width
@@ -482,6 +490,40 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
     : 60
   const nowX_track = PPS_track * beatDur * 0.5   // nửa ô nhịp từ trái — vị trí playhead
   const currentBeatInMeasure = beatDur > 0 ? Math.floor(songTime / beatDur) % beatsPerTrack : 0
+
+  // ── Count-in: 1 nhịp chuẩn bị trước khi bài bắt đầu ──
+  const startCountIn = () => {
+    if (!song || chunkDur <= 0) { setIsPlaying(true); return }
+    cancelAnimationFrame(countInRafRef.current)
+    countInWallRef.current = performance.now()
+    setCountIn(true)
+    setCountInBeat(0)
+    const beatDurMs = beatDur * 1000
+    const totalMs   = chunkDur * 1000          // 1 nhịp đầy đủ
+    const tick = () => {
+      const elapsed = performance.now() - countInWallRef.current
+      setCountInBeat(Math.floor(elapsed / beatDurMs) % beatsPerTrack)
+      if (elapsed >= totalMs) {
+        setCountIn(false); setCountInBeat(-1); setIsPlaying(true)
+        return
+      }
+      countInRafRef.current = requestAnimationFrame(tick)
+    }
+    countInRafRef.current = requestAnimationFrame(tick)
+  }
+
+  const handlePlayToggle = () => {
+    if (countIn) {
+      // Huỷ count-in nếu bấm lại
+      cancelAnimationFrame(countInRafRef.current)
+      setCountIn(false); setCountInBeat(-1)
+      return
+    }
+    if (isPlaying) { setIsPlaying(false); return }
+    // Chỉ count-in khi bắt đầu từ đầu (songTime ≈ 0)
+    if (songTimeRef.current < 0.05) startCountIn()
+    else setIsPlaying(true)
+  }
 
   return (
     <div style={{ position:'fixed', inset:0, background:C.bg, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'"DM Sans", system-ui, sans-serif', color:C.text1 }}>
@@ -725,17 +767,17 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                   height: TRACK_H,
                   flexShrink: 0,
                   borderTop: `1px solid ${C.border}`,
-                  background: isPlaying ? C.bgSurface : C.bg,
-                  opacity: isPlaying ? 1 : 0.4,
+                  background: (isPlaying || countIn) ? C.bgSurface : C.bg,
+                  opacity: (isPlaying || countIn) ? 1 : 0.4,
                   transition: 'opacity 0.2s, background 0.2s',
                   position: 'relative',
                   overflow: 'hidden',
                 }}>
-                  {/* Beat markers + animated dots theo currentBeatInMeasure */}
+                  {/* Beat markers + animated dots: countInBeat khi count-in, currentBeatInMeasure khi đang play */}
                   {Array.from({ length: beatsPerTrack }, (_, bi) => {
                     const isBar1 = bi === 0
                     const cellX  = nowX_track + bi * beatDur * PPS_track
-                    const lit    = isPlaying && bi === currentBeatInMeasure
+                    const lit    = countIn ? bi === countInBeat : (isPlaying && bi === currentBeatInMeasure)
                     return (
                       <div key={bi} style={{
                         position: 'absolute', left: cellX, top: 0, height: 44,
@@ -773,7 +815,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                   }}>
                     <span style={{
                       fontSize: isMobile ? 14 : 16,
-                      color: isPlaying ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.3)',
+                      color: (isPlaying || countIn) ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.3)',
                       fontFamily: '"Helvetica Neue",Arial,sans-serif',
                       letterSpacing: '0.05em',
                       transition: 'color 0.2s',
@@ -1028,9 +1070,9 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                     style={{ flex:1, height:44, borderRadius:12, border:`1px solid ${C.border}`, background:C.bgCard, color:C.text2, fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5, fontFamily:'inherit', transition:'all 0.15s' }}>
                     <span style={{ fontSize:16 }}>↺</span> Lại
                   </button>
-                  <button className="ctrl-btn" onClick={() => setIsPlaying(p=>!p)}
-                    style={{ flex:2, height:44, borderRadius:12, border:`1px solid ${isPlaying?C.accent+'55':C.border}`, background:isPlaying?`${C.accent}1A`:C.bgCard, color:isPlaying?C.accentLight:C.text2, fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
-                    {isPlaying ? '⏸ Dừng' : '▶ Bắt đầu'}
+                  <button className="ctrl-btn" onClick={handlePlayToggle}
+                    style={{ flex:2, height:44, borderRadius:12, border:`1px solid ${(isPlaying||countIn)?C.accent+'55':C.border}`, background:(isPlaying||countIn)?`${C.accent}1A`:C.bgCard, color:(isPlaying||countIn)?C.accentLight:C.text2, fontSize:14, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
+                    {isPlaying ? '⏸ Dừng' : countIn ? '⏳ Chờ…' : '▶ Bắt đầu'}
                   </button>
                   <button className="ctrl-btn" onClick={() => setShowTeacher(t=>!t)}
                     style={{ flex:1, height:44, borderRadius:12, border:`1px solid ${showTeacher?C.gold+'55':C.border}`, background:showTeacher?`${C.gold}15`:C.bgCard, color:showTeacher?C.gold:C.text2, fontSize:20, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit', transition:'all 0.15s' }}>
@@ -1100,8 +1142,8 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                     <span style={{ fontSize:10, color:C.text3 }}>Phím R</span>
                   </div>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, flex:1, maxWidth:110 }}>
-                    <button className="ctrl-btn" onClick={() => setIsPlaying(p=>!p)} style={{ width:'100%', padding:'13px 0', borderRadius:12, border:`1px solid ${isPlaying?C.accent+'44':C.border}`, background:isPlaying?`${C.accent}22`:C.bgCard, color:isPlaying?C.accentLight:C.text2, fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
-                      <span>{isPlaying?'⏸':'▶'}</span><span>{isPlaying?'Dừng':'Bắt đầu'}</span>
+                    <button className="ctrl-btn" onClick={handlePlayToggle} style={{ width:'100%', padding:'13px 0', borderRadius:12, border:`1px solid ${(isPlaying||countIn)?C.accent+'44':C.border}`, background:(isPlaying||countIn)?`${C.accent}22`:C.bgCard, color:(isPlaying||countIn)?C.accentLight:C.text2, fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, fontFamily:'inherit', transition:'all 0.15s' }}>
+                      <span>{isPlaying?'⏸':countIn?'⏳':'▶'}</span><span>{isPlaying?'Dừng':countIn?'Chờ…':'Bắt đầu'}</span>
                     </button>
                     <span style={{ fontSize:10, color:C.text3 }}>Phím P</span>
                   </div>
