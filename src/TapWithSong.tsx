@@ -457,18 +457,27 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const histOpacity  = [1, 0.55, 0.3]
   const progress_pct = totalDur > 0 ? (songTime / totalDur) * 100 : 0
 
-  // ── Tìm vị trí lời hiện tại (dùng cho Lyrics Panel) ──
-  const currentLyricIdx = song
-    ? (() => {
-        const ct = songTime * speed
-        let idx = -1
-        for (let i = 0; i < song.lyrics.length; i++) {
-          const nextTime = song.lyrics[i + 1]?.time ?? song.lyrics[i].time + 99
-          if (ct >= song.lyrics[i].time && ct < nextTime) { idx = i; break }
-        }
-        return idx
-      })()
-    : -1
+  // ── Track (multi-measure vertical scroll — theo PlayerView) ──
+  const TRACK_H      = 100
+  const beatsPerTrack = song ? song.timeSignature : 4
+  const chunkDur      = beatsPerTrack * beatDur           // clock time / chunk (đã nhân speed)
+  const totalChunks   = song ? song.totalBars : 0
+  const currentChunk  = chunkDur > 0
+    ? Math.min(Math.floor(songTime / chunkDur), Math.max(0, totalChunks - 1))
+    : 0
+  const timeInChunk   = songTime - currentChunk * chunkDur
+  const chunkDone     = currentChunk < totalChunks - 1 && timeInChunk >= chunkDur - beatDur && beatDur > 0
+  const scrollProgress = chunkDone
+    ? Math.min(1, (timeInChunk - (chunkDur - beatDur)) / beatDur)
+    : 0
+  const trackTranslateY = -((currentChunk + scrollProgress) * TRACK_H)
+
+  // PPS: 1 ô nhịp = đúng 1 measure vừa màn hình
+  const PPS_track = containerW > 40 && beatsPerTrack > 0 && beatDur > 0
+    ? (containerW - 40) / ((beatsPerTrack + 1) * beatDur)
+    : 60
+  const nowX_track = PPS_track * beatDur * 0.5   // nửa ô nhịp từ trái
+  const currentBeatInMeasure = beatDur > 0 ? Math.floor(songTime / beatDur) % beatsPerTrack : 0
 
   return (
     <div style={{ position:'fixed', inset:0, background:C.bg, display:'flex', flexDirection:'column', zIndex:200, fontFamily:'"DM Sans", system-ui, sans-serif', color:C.text1 }}>
@@ -664,99 +673,177 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
             {levelConfig && <BeatViz beats={levelConfig.beats} timeSig={song.timeSignature} />}
           </div>
 
-          {/* ── LYRICS PANEL (karaoke dọc) ── */}
-          {song.lyrics.length > 0 && (
-            <div style={{
-              background: 'rgba(0,0,0,0.25)',
-              borderBottom: `1px solid ${C.border}`,
-              height: isMobile ? 68 : 80,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 20px',
-              overflow: 'hidden',
-              flexShrink: 0,
-              gap: isMobile ? 10 : 14,
-            }}>
-              {[-2, -1, 0, 1, 2].map(offset => {
-                const idx = currentLyricIdx + offset
-                const noWord = currentLyricIdx === -1 || idx < 0 || idx >= song.lyrics.length
-                if (noWord) return <div key={offset} style={{ width: isMobile ? 24 : 32, flexShrink: 0 }} />
-                const word = song.lyrics[idx]
-                const isCur = offset === 0
-                const dist  = Math.abs(offset)
-                const opacity = isCur ? 1 : dist === 1 ? 0.45 : 0.18
-                const fontSize = isCur ? (isMobile ? 24 : 28) : dist === 1 ? (isMobile ? 15 : 17) : (isMobile ? 12 : 13)
-                const color = isCur ? '#2DD4BF' : `rgba(255,255,255,${opacity})`
-                return (
-                  <div key={idx} style={{
-                    fontSize,
-                    fontWeight: isCur ? 700 : 400,
-                    color,
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0,
-                    fontFamily: '"Helvetica Neue", Arial, sans-serif',
-                    letterSpacing: isCur ? '-0.01em' : '0',
-                  }}>
-                    {word.text}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* SCROLL AREA */}
+          {/* ══ TRACK AREA — multi-measure vertical scroll (theo PlayerView) ══ */}
           <div ref={scrollRef} style={{ flex:1, background:C.bg, position:'relative', overflow:'hidden', display:'flex' }}>
+
+            {/* Track viewport */}
             <div style={{ flex:1, position:'relative', overflow:'hidden' }}>
 
+              {/* Playhead line (cố định) */}
+              <div style={{ position:'absolute', left:nowX_track, top:0, bottom:0, width:1, background:C.accent, opacity:0.35, zIndex:20, pointerEvents:'none' }} />
               {/* Playhead arrow */}
-              <div style={{ position:'absolute', left:nowX, top:0, zIndex:11, transform:'translateX(-50%)', pointerEvents:'none' }}>
-                <div style={{ width:0, height:0, borderLeft:'6px solid transparent', borderRight:'6px solid transparent', borderTop:`8px solid ${C.accent}`, filter:`drop-shadow(0 0 6px ${C.accent})` }} />
+              <div style={{ position:'absolute', left:nowX_track, top:0, zIndex:21, transform:'translateX(-50%)', pointerEvents:'none' }}>
+                <div style={{ width:0, height:0, borderLeft:'5px solid transparent', borderRight:'5px solid transparent', borderTop:`7px solid ${C.accent}`, filter:`drop-shadow(0 0 4px ${C.accent})` }} />
               </div>
 
-              {/* Playhead line */}
-              <div style={{ position:'absolute', left:nowX, top:14, bottom:0, width:1, background:C.accent, opacity:0.3, zIndex:10, pointerEvents:'none' }} />
+              {/* Scrolling tracks container — translateY theo thời gian */}
+              <div style={{ position:'absolute', top:0, left:0, right:0, transform:`translateY(${trackTranslateY}px)`, willChange:'transform' }}>
+                {Array.from({ length: totalChunks }, (_, ci) => {
+                  const isActive  = ci === currentChunk
+                  const chunkStart = ci * chunkDur
+                  const chunkEnd   = (ci + 1) * chunkDur
 
-              {/* Separator */}
-              <div style={{ position:'absolute', top:20, left:0, right:0, height:1, background:C.border }} />
+                  // Filter dữ liệu cho chunk này
+                  const chunkTargets = showTeacher
+                    ? targetDotsScaled.filter(d => d.time >= chunkStart && d.time < chunkEnd)
+                    : []
+                  const chunkCurrent = scoredCurrent.filter(d => d.time >= chunkStart && d.time < chunkEnd)
+                  const chunkLyrics  = (song.lyrics ?? []).filter(l => {
+                    const ct = l.time / speed
+                    return ct >= chunkStart && ct < chunkEnd
+                  })
 
-              {/* Target dots (teacher) */}
-              {showTeacher && (
-                <div style={{ position:'absolute', top:20, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
-                  {targetDotsScaled.map((d,i) => (
-                    <div key={'td'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                      width:10, height:10, borderRadius:'50%', background:C.dotTarget, top:10,
-                      boxShadow:`0 0 8px ${C.dotTarget}88` }} />
-                  ))}
-                </div>
-              )}
+                  return (
+                    <div key={ci} style={{
+                      height: TRACK_H,
+                      flexShrink: 0,
+                      borderTop: `1px solid ${C.border}`,
+                      background: isActive ? C.bgSurface : C.bg,
+                      opacity: isActive ? 1 : 0.5,
+                      transition: 'opacity 0.3s, background 0.3s',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}>
+                      {/* Số nhịp */}
+                      <div style={{ position:'absolute', top:3, left:6, fontSize:8, fontFamily:'monospace', color:'rgba(108,99,255,0.5)', zIndex:5, pointerEvents:'none' }}>
+                        M{ci + 1}
+                      </div>
 
-              {/* Current dots */}
-              <div style={{ position:'absolute', top:50, left:0, right:0, height:30, transform:`translateX(${-scrollOffset+nowX}px)` }}>
-                {scoredCurrent.map((d,i) => (
-                  <div key={'cd'+i} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                    width:11, height:11, borderRadius:'50%', top:9,
-                    background: targetDotsScaled.length>0 ? (d.hit ? C.dotCurrent : 'transparent') : C.dotCurrent,
-                    border: targetDotsScaled.length>0 && !d.hit ? `2px solid ${C.dotCurrent}` : 'none',
-                    boxShadow: d.hit ? `0 0 6px ${C.dotCurrent}88` : 'none' }} />
-                ))}
+                      {/* Beat markers (cột dọc) + dots */}
+                      {Array.from({ length: beatsPerTrack }, (_, bi) => {
+                        const beatIdx   = ci * beatsPerTrack + bi
+                        const beatTime  = beatIdx * beatDur          // clock time
+                        const cellX     = nowX_track + bi * beatDur * PPS_track
+                        const isBar1    = bi === 0
+                        const isBeatNow = isActive && bi === currentBeatInMeasure && isPlaying
+                        return (
+                          <div key={bi} style={{
+                            position: 'absolute', left: cellX, top: 0, height: 44,
+                            width: PPS_track * beatDur,
+                            transform: 'translateX(-50%)',
+                            borderLeft: isBar1
+                              ? `1.5px solid rgba(108,99,255,0.3)`
+                              : `1px solid rgba(255,255,255,0.05)`,
+                          }}>
+                            {/* Target dot */}
+                            {chunkTargets.some(d => Math.abs(d.time - beatTime) < beatDur * 0.3) && (
+                              <div style={{
+                                position:'absolute', left:'50%', top:10,
+                                transform:'translateX(-50%)',
+                                width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9,
+                                borderRadius:'50%', background: C.dotTarget,
+                                opacity: isBeatNow ? 1 : 0.55,
+                                transform: `translateX(-50%) scale(${isBeatNow ? 1.4 : 1})`,
+                                boxShadow: isBeatNow ? `0 0 10px ${C.dotTarget}` : 'none',
+                                transition: 'all 0.08s',
+                              }} />
+                            )}
+                            {/* Beat ghost (khi không có target dot) */}
+                            {!chunkTargets.some(d => Math.abs(d.time - beatTime) < beatDur * 0.3) && showTeacher && (
+                              <div style={{
+                                position:'absolute', left:'50%', top:12,
+                                transform:'translateX(-50%)',
+                                width: isBar1 ? 9 : 7, height: isBar1 ? 9 : 7,
+                                borderRadius:'50%',
+                                background: isBar1 ? 'rgba(245,158,11,0.15)' : 'rgba(45,212,191,0.1)',
+                                border: `1px solid ${isBar1 ? 'rgba(245,158,11,0.25)' : 'rgba(45,212,191,0.18)'}`,
+                              }} />
+                            )}
+                          </div>
+                        )
+                      })}
+
+                      {/* User's current tap dots */}
+                      {chunkCurrent.map((d, di) => (
+                        <div key={'cd'+di} style={{
+                          position:'absolute',
+                          left: nowX_track + (d.time - chunkStart) * PPS_track,
+                          top: 26,
+                          transform:'translateX(-50%)',
+                          width:11, height:11, borderRadius:'50%',
+                          background: targetDotsScaled.length > 0 ? (d.hit ? C.dotCurrent : 'transparent') : C.dotCurrent,
+                          border: targetDotsScaled.length > 0 && !d.hit ? `2px solid ${C.dotCurrent}` : 'none',
+                          boxShadow: d.hit ? `0 0 6px ${C.dotCurrent}88` : 'none',
+                        }} />
+                      ))}
+
+                      {/* History dots */}
+                      {tapHistory.slice(0, 3).map((h, hi) =>
+                        h.dots
+                          .filter(d => d.time >= chunkStart && d.time < chunkEnd)
+                          .map((d, di) => (
+                            <div key={'hd'+hi+'_'+di} style={{
+                              position:'absolute',
+                              left: nowX_track + (d.time - chunkStart) * PPS_track,
+                              top: 26,
+                              transform:'translateX(-50%)',
+                              width:8, height:8, borderRadius:'50%',
+                              background: C.dotHistory,
+                              opacity: histOpacity[hi] * 0.7,
+                            }} />
+                          ))
+                      )}
+
+                      {/* Separator */}
+                      <div style={{ position:'absolute', top:44, left:0, right:0, height:1, background:C.border }} />
+
+                      {/* Lyrics */}
+                      {chunkLyrics.map((l, li) => {
+                        const lct  = l.time / speed   // clock time
+                        const nextL = chunkLyrics[li + 1]
+                        const nt   = nextL ? nextL.time / speed : lct + beatDur * 2
+                        const active = isActive && songTime >= lct && songTime < nt
+                        const past   = isActive && songTime >= nt
+                        const pct    = active
+                          ? Math.min(100, Math.max(0, (songTime - lct) / Math.max(0.05, nt - lct) * 100))
+                          : 0
+                        return (
+                          <div key={l.id} style={{
+                            position:'absolute',
+                            left: nowX_track + (lct - chunkStart) * PPS_track,
+                            top: 46,
+                            height: TRACK_H - 46,
+                            transform:'translateX(-50%)',
+                            display:'flex', alignItems:'center',
+                            pointerEvents:'none', whiteSpace:'nowrap',
+                          }}>
+                            <span style={{
+                              fontSize: isMobile ? 20 : 22,
+                              fontWeight: 400,
+                              fontFamily: '"Helvetica Neue",Arial,sans-serif',
+                              ...(active ? {
+                                backgroundImage: `linear-gradient(to right,#2DD4BF ${pct}%,rgba(255,255,255,1) ${pct}%)`,
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                                backgroundClip: 'text',
+                              } : {
+                                color: past ? 'rgba(45,212,191,0.65)' : 'rgba(255,255,255,0.85)',
+                              }),
+                            }}>
+                              {l.text}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
               </div>
-
-              {/* History rows */}
-              {tapHistory.map((h, hi) => (
-                <div key={h.id} style={{ position:'absolute', top:50+30+hi*26, left:0, right:0, height:26, transform:`translateX(${-scrollOffset+nowX}px)`, opacity:histOpacity[hi] }}>
-                  {h.dots.map((d,di) => (
-                    <div key={di} style={{ position:'absolute', left:d.time*PX_PER_SEC, transform:'translateX(-50%)',
-                      width:8, height:8, borderRadius:'50%', top:9, background:C.dotHistory }} />
-                  ))}
-                </div>
-              ))}
             </div>
 
             {/* Legend panel — desktop */}
             {!isMobile && (
-              <div style={{ width:200, flexShrink:0, paddingTop:20, paddingLeft:12, paddingRight:12, paddingBottom:8, display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid ${C.border}` }}>
+              <div style={{ width:180, flexShrink:0, padding:'12px 12px', display:'flex', flexDirection:'column', gap:0, borderLeft:`1px solid ${C.border}`, overflowY:'auto' }}>
                 {/* Teacher dots */}
                 <div style={{ height:30, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:C.dotTarget }}>
@@ -768,16 +855,12 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                     {showTeacher ? 'Ẩn' : 'Xem'}
                   </button>
                 </div>
-
-                {/* Current */}
                 <div style={{ height:30, display:'flex', alignItems:'center' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:C.dotCurrent }}>
                     <div style={{ width:10, height:10, borderRadius:'50%', background:C.dotCurrent, boxShadow:`0 0 6px ${C.dotCurrent}` }} />
                     <span>Lần này</span>
                   </div>
                 </div>
-
-                {/* History */}
                 {tapHistory.map((h, hi) => (
                   <div key={h.id} style={{ height:26, display:'flex', alignItems:'center', justifyContent:'space-between', opacity:histOpacity[hi] }}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:C.dotHistory }}>
@@ -785,14 +868,10 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                       <span>Lần {tapHistory.length-hi} · {h.score}đ</span>
                     </div>
                     <button onClick={() => handleDeleteHistory(h.id)}
-                      style={{ width:16, height:16, borderRadius:3, border:`1px solid ${C.border}`, background:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:C.text3, fontSize:9, fontFamily:'inherit' }}>
-                      ✕
-                    </button>
+                      style={{ width:16, height:16, borderRadius:3, border:`1px solid ${C.border}`, background:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:C.text3, fontSize:9, fontFamily:'inherit' }}>✕</button>
                   </div>
                 ))}
-
                 <div style={{ height:1, background:C.border, margin:'10px 0' }} />
-
                 {otherStudentsCount > 0 && (
                   <div style={{ fontSize:11, color:C.text3 }}>
                     <div style={{ marginBottom:6, color:C.text2 }}>
@@ -806,7 +885,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                       <div style={{ marginTop:6, display:'flex', flexDirection:'column', gap:4 }}>
                         {otherResults.slice(0,5).map((r,i) => (
                           <div key={i} style={{ display:'flex', justifyContent:'space-between', fontSize:10 }}>
-                            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:100, color:C.text2 }}>{r.name}</span>
+                            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:90, color:C.text2 }}>{r.name}</span>
                             <span style={{ color:C.green, fontWeight:700 }}>{r.score}đ</span>
                           </div>
                         ))}
