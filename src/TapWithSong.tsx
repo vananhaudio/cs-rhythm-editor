@@ -801,28 +801,35 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
                       {/* Lyrics */}
                       {chunkLyrics.map((l, li) => {
-                        const lct  = l.time / speed   // clock time
+                        const lct   = l.time / speed
                         const nextL = chunkLyrics[li + 1]
-                        const nt   = nextL ? nextL.time / speed : lct + beatDur * 2
+                        const nt    = nextL ? nextL.time / speed : lct + beatDur * 2
                         const active = isActive && songTime >= lct && songTime < nt
                         const past   = isActive && songTime >= nt
                         const pct    = active
                           ? Math.min(100, Math.max(0, (songTime - lct) / Math.max(0.05, nt - lct) * 100))
                           : 0
+                        const cellW  = PPS_track * beatDur
+                        // Font scale theo bề rộng ô nhịp, tối đa 18px mobile / 20px desktop
+                        const lyricFs = Math.min(isMobile ? 18 : 20, cellW / 4.2)
                         return (
                           <div key={l.id} style={{
-                            position:'absolute',
+                            position: 'absolute',
                             left: nowX_track + (lct - chunkStart) * PPS_track,
                             top: 46,
                             height: TRACK_H - 46,
-                            transform:'translateX(-50%)',
-                            display:'flex', alignItems:'center',
-                            pointerEvents:'none', whiteSpace:'nowrap',
+                            width: cellW,                   // khớp đúng bề rộng ô nhịp
+                            transform: 'translateX(-50%)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            pointerEvents: 'none',
+                            overflow: 'hidden',             // cắt nếu vẫn tràn
                           }}>
                             <span style={{
-                              fontSize: isMobile ? 20 : 22,
+                              fontSize: lyricFs,
                               fontWeight: 400,
                               fontFamily: '"Helvetica Neue",Arial,sans-serif',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '100%',
                               ...(active ? {
                                 backgroundImage: `linear-gradient(to right,#2DD4BF ${pct}%,rgba(255,255,255,1) ${pct}%)`,
                                 WebkitBackgroundClip: 'text',
