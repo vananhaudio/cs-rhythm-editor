@@ -318,6 +318,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   // ── Progress tracking ──
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [markingDone, setMarkingDone]   = useState(false)
+  const [noteText, setNoteText]         = useState('')
 
   // ── Finger Exercise overlay ──
   const [showFingerExercise, setShowFingerExercise] = useState(false)
@@ -485,6 +486,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     }
   }
 
+  const noteKey = (lessonId: string) => `note:${student.id}:${lessonId}`
+
   const openLesson = (l: Lesson) => {
     if (!isUnlocked(l)) return // khoá, không mở
     setActiveLesson(l)
@@ -494,6 +497,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       const saved = JSON.parse(localStorage.getItem(usedToolsKey(l.id)) || '[]')
       setUsedToolIds(new Set(Array.isArray(saved) ? saved : []))
     } catch { setUsedToolIds(new Set()) }
+    // Khôi phục ghi chú
+    setNoteText(localStorage.getItem(noteKey(l.id)) ?? '')
     setScreen('lesson')
   }
 
@@ -998,7 +1003,17 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   )}
                 </div>
               ) : (
-                <textarea placeholder="Ghi chú của bạn..." style={{ width: '100%', boxSizing: 'border-box', minHeight: 220, background: L.surface, border: `1px solid ${L.border}`, borderRadius: 16, padding: '16px', color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.8, boxShadow: L.shadow }} />
+                <textarea
+                  placeholder="Ghi chú của bạn..."
+                  value={noteText}
+                  onChange={e => {
+                    setNoteText(e.target.value)
+                    if (activeLesson) {
+                      try { localStorage.setItem(noteKey(activeLesson.id), e.target.value) } catch { /* bỏ qua */ }
+                    }
+                  }}
+                  style={{ width: '100%', boxSizing: 'border-box', minHeight: 220, background: L.surface, border: `1px solid ${L.border}`, borderRadius: 16, padding: '16px', color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.8, boxShadow: L.shadow }}
+                />
               )}
             </div>}
 
