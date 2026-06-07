@@ -741,11 +741,10 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                             {chunkTargets.some(d => Math.abs(d.time - beatTime) < beatDur * 0.3) && (
                               <div style={{
                                 position:'absolute', left:'50%', top:10,
-                                transform:'translateX(-50%)',
+                                transform: `translateX(-50%) scale(${isBeatNow ? 1.4 : 1})`,
                                 width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9,
                                 borderRadius:'50%', background: C.dotTarget,
                                 opacity: isBeatNow ? 1 : 0.55,
-                                transform: `translateX(-50%) scale(${isBeatNow ? 1.4 : 1})`,
                                 boxShadow: isBeatNow ? `0 0 10px ${C.dotTarget}` : 'none',
                                 transition: 'all 0.08s',
                               }} />
