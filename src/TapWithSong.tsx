@@ -477,10 +477,10 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   const scrollProgress = chunkDone
     ? Math.min(1, (timeInChunk - (chunkDur - beatDur)) / beatDur)
     : 0
-  // Count-in: prep track ở giữa (translateY=+TRACK_H); song play: scroll bình thường
+  // Count-in: chunk 0 ở dưới (translateY=+TRACK_H*2), song play: chunk hiện tại luôn ở giữa (+TRACK_H offset)
   const trackTranslateY = countIn
-    ? TRACK_H
-    : -((currentChunk + scrollProgress) * TRACK_H)
+    ? TRACK_H * 2
+    : -((currentChunk + scrollProgress) * TRACK_H) + TRACK_H
 
   // PPS: 1 measure vừa khít chiều rộng track viewport
   // Desktop: trừ 180px legend panel; Mobile: full width
@@ -759,69 +759,48 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                 <div style={{ width:0, height:0, borderLeft:'5px solid transparent', borderRight:'5px solid transparent', borderTop:`7px solid ${C.accent}`, filter:`drop-shadow(0 0 4px ${C.accent})` }} />
               </div>
 
-              {/* Scrolling tracks container — translateY theo thời gian */}
-              <div style={{ position:'absolute', top:0, left:0, right:0, transform:`translateY(${trackTranslateY}px)`, willChange:'transform' }}>
-
-                {/* ── Track chuẩn bị — đẩy chunk 0 xuống giữa viewport (track 2) ── */}
+              {/* ── Count-in overlay — hiển thị cố định ở row giữa (top: TRACK_H) khi đang đếm ── */}
+              {countIn && (
                 <div style={{
-                  height: TRACK_H,
-                  flexShrink: 0,
-                  borderTop: `1px solid ${C.border}`,
-                  background: (isPlaying || countIn) ? C.bgSurface : C.bg,
-                  opacity: (isPlaying || countIn) ? 1 : 0.4,
-                  transition: 'opacity 0.2s, background 0.2s',
-                  position: 'relative',
-                  overflow: 'hidden',
+                  position: 'absolute', top: TRACK_H, left: 0, right: 0, height: TRACK_H,
+                  background: C.bgSurface, borderTop: `1px solid ${C.border}`,
+                  zIndex: 30, overflow: 'hidden', pointerEvents: 'none',
                 }}>
-                  {/* Beat markers + animated dots: countInBeat khi count-in, currentBeatInMeasure khi đang play */}
+                  {/* Beat dots đếm nhịp */}
                   {Array.from({ length: beatsPerTrack }, (_, bi) => {
                     const isBar1 = bi === 0
                     const cellX  = nowX_track + bi * beatDur * PPS_track
-                    const lit    = countIn ? bi === countInBeat : (isPlaying && bi === currentBeatInMeasure)
+                    const lit    = bi === countInBeat
                     return (
                       <div key={bi} style={{
                         position: 'absolute', left: cellX, top: 0, height: 44,
-                        width: PPS_track * beatDur,
-                        transform: 'translateX(-50%)',
-                        borderLeft: isBar1
-                          ? `1.5px solid rgba(108,99,255,0.18)`
-                          : `1px solid rgba(255,255,255,0.04)`,
+                        width: PPS_track * beatDur, transform: 'translateX(-50%)',
+                        borderLeft: isBar1 ? `1.5px solid rgba(108,99,255,0.25)` : `1px solid rgba(255,255,255,0.05)`,
                       }}>
                         <div style={{
                           position: 'absolute', left: '50%', top: 10,
-                          transform: `translateX(-50%) scale(${lit ? 1.45 : 1})`,
-                          width: isBar1 ? 11 : 9, height: isBar1 ? 11 : 9,
+                          transform: `translateX(-50%) scale(${lit ? 1.5 : 1})`,
+                          width: isBar1 ? 12 : 10, height: isBar1 ? 12 : 10,
                           borderRadius: '50%',
                           background: isBar1 ? C.dotTarget : '#2DD4BF',
-                          opacity: lit ? 1 : 0.25,
-                          boxShadow: lit
-                            ? (isBar1 ? '0 0 10px rgba(245,158,11,0.8)' : '0 0 10px rgba(45,212,191,0.8)')
-                            : 'none',
-                          transition: 'all 0.08s',
+                          opacity: lit ? 1 : 0.3,
+                          boxShadow: lit ? (isBar1 ? '0 0 12px rgba(245,158,11,0.9)' : '0 0 12px rgba(45,212,191,0.9)') : 'none',
+                          transition: 'all 0.07s',
                         }} />
                       </div>
                     )
                   })}
                   {/* Separator */}
                   <div style={{ position:'absolute', top:44, left:0, right:0, height:1, background:C.border }} />
-                  {/* "Chuẩn bị…" text — căn giữa measure, sáng lên khi đang phát */}
-                  <div style={{
-                    position: 'absolute',
-                    left: nowX_track + (beatsPerTrack / 2) * beatDur * PPS_track,
-                    top: 44 + (TRACK_H - 44) / 2,
-                    transform: 'translate(-50%, -50%)',
-                    whiteSpace: 'nowrap',
-                    pointerEvents: 'none',
-                  }}>
-                    <span style={{
-                      fontSize: isMobile ? 14 : 16,
-                      color: (isPlaying || countIn) ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.3)',
-                      fontFamily: '"Helvetica Neue",Arial,sans-serif',
-                      letterSpacing: '0.05em',
-                      transition: 'color 0.2s',
-                    }}>Chuẩn bị…</span>
+                  {/* "Chuẩn bị…" */}
+                  <div style={{ position:'absolute', left: nowX_track + (beatsPerTrack / 2) * beatDur * PPS_track, top: 44 + (TRACK_H - 44) / 2, transform:'translate(-50%,-50%)', whiteSpace:'nowrap' }}>
+                    <span style={{ fontSize: isMobile ? 15 : 17, color:'rgba(45,212,191,0.9)', fontFamily:'"Helvetica Neue",Arial,sans-serif', letterSpacing:'0.06em', fontWeight:500 }}>Chuẩn bị…</span>
                   </div>
                 </div>
+              )}
+
+              {/* Scrolling tracks container — translateY theo thời gian */}
+              <div style={{ position:'absolute', top:0, left:0, right:0, transform:`translateY(${trackTranslateY}px)`, willChange:'transform' }}>
 
                 {Array.from({ length: totalChunks }, (_, ci) => {
                   const isActive  = ci === currentChunk
