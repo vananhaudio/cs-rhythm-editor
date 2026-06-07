@@ -202,17 +202,19 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
   const scrollRef       = useRef<HTMLDivElement>(null)
   const autoShowResultRef = useRef(false)
-  const [containerW, setContainerW] = useState(800)
+  const [containerW, setContainerW] = useState(window.innerWidth) // khởi tạo bằng width thật
   const [userName, setUserName]   = useState('')
 
   useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
 
+  // Re-attach khi song load xong (scrollRef div xuất hiện trong DOM)
   useEffect(() => {
     if (!scrollRef.current) return
     const ro = new ResizeObserver(e => setContainerW(e[0].contentRect.width))
     ro.observe(scrollRef.current)
+    setContainerW(scrollRef.current.clientWidth || window.innerWidth)
     return () => ro.disconnect()
-  }, [])
+  }, [song])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
