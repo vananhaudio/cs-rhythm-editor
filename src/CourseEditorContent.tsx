@@ -253,7 +253,7 @@ export default function CourseEditorContent() {
   const [fDesc,    setFDesc]    = useState('')
   const [fContent, setFContent] = useState('')
   const [fTools,   setFTools]   = useState<string[]>([])
-  const [dbTools,  setDbTools]  = useState<{ id: string; name: string; icon: string; status?: string }[]>([])
+  const [dbTools,  setDbTools]  = useState<{ id: string; name: string; icon: string; status?: string; category?: string }[]>([])
 
   const previewLesson: Lesson | null = selectedLesson
     ? { ...selectedLesson, title: fTitle, lesson_type: fType, content_url: fUrl || null, description: fDesc || null, content: fContent || null, tools: fTools }
@@ -268,8 +268,7 @@ export default function CourseEditorContent() {
     supabase.from('edu_tools').select('id,name,icon,status,enabled').order('order_index')
       .then(({ data }) => {
         if (data?.length) setDbTools(data
-          .filter((t: any) => t.category !== 'Bài luyện')   // bỏ bài luyện nội bộ
-          .map((t: any) => ({ id: t.id, name: t.name, icon: t.icon, status: t.status ?? (t.enabled ? 'on' : 'off') }))
+          .map((t: any) => ({ id: t.id, name: t.name, icon: t.icon, status: t.status ?? (t.enabled ? 'on' : 'off'), category: t.category ?? '' }))
         )
       })
   }, [])
@@ -1050,6 +1049,7 @@ export default function CourseEditorContent() {
                           <span style={{ fontSize: 14 }}>{t.icon}</span>
                           <span style={{ fontSize: 11, color: checked ? C.accent : C.text2, fontWeight: checked ? 600 : 400, lineHeight: 1.2 }}>
                             {(t as { name?: string; label?: string }).name ?? (t as { label?: string }).label}
+                            {(t as { category?: string }).category === 'Bài luyện' && <span style={{ display: 'block', fontSize: 10, color: '#0891B2' }}>⏱ Bài luyện</span>}
                             {isComing && !checked && <span style={{ display: 'block', fontSize: 10, color: C.text3 }}>Sắp ra mắt</span>}
                             {isOff && checked && <span style={{ display: 'block', fontSize: 10, color: '#DC2626' }}>⚠ Đang tắt</span>}
                           </span>

@@ -42,6 +42,10 @@ const EX_TOOL_ID: Record<string, string> = {
   metronome: 'bai-luyen-metronome',
   ear:       'bai-luyen-cam-am',
 }
+// Reverse: edu_tools id → exercise short id (để lesson tool nhận ra bài luyện)
+const TOOL_TO_EX: Record<string, string> = Object.fromEntries(
+  Object.entries(EX_TOOL_ID).map(([exId, toolId]) => [toolId, exId])
+)
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
   course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; status?: string; sort_order?: number }
@@ -337,27 +341,42 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     setActiveTimer(exerciseId); setTimerStart(Date.now()); setTimerSeconds(0)
     timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000)
   }
-  const stopTimer = async () => {
+  const stopTimer = async (lessonToolId?: string) => {
     if (!activeTimer || !timerStart) return
     if (timerRef.current) clearInterval(timerRef.current)
     const minutes = Math.max(1, Math.round((Date.now() - timerStart) / 60000))
-    await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: activeTimer, minutes })
+    const exId = activeTimer
+    await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: exId, minutes })
     // Ghi XP — 1 XP/phút
-    await supabase.from('student_xp_log').insert({ student_id: student.id, xp: minutes, source: 'practice', ref_id: activeTimer })
+    await supabase.from('student_xp_log').insert({ student_id: student.id, xp: minutes, source: 'practice', ref_id: exId })
     setTotalXP(prev => prev + minutes)
     setWeekXP(prev  => prev + minutes)
-    setPracticeTotals(prev => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
-    setPracticeToday(prev  => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
+    setPracticeTotals(prev => ({ ...prev, [exId]: (prev[exId] ?? 0) + minutes }))
+    setPracticeToday(prev  => ({ ...prev, [exId]: (prev[exId] ?? 0) + minutes }))
     setActiveTimer(null); setTimerStart(null); setTimerSeconds(0)
+    // Mark lesson tool done nếu gọi từ bài học
+    if (lessonToolId && activeLesson) {
+      setUsedToolIds(prev => {
+        const next = new Set([...prev, lessonToolId])
+        try { localStorage.setItem(usedToolsKey(activeLesson.id), JSON.stringify([...next])) } catch { /* bỏ qua */ }
+        return next
+      })
+    }
   }
   const fmtTimer = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   // Khoá lưu trạng thái tool đã thực hành theo từng học sinh + bài học
   const usedToolsKey = (lessonId: string) => `usedTools:${student.id}:${lessonId}`
 
-  // Gộp tool bảng cứng (TOOLS_MAP) + tool tạo trong DB (edu_tools) → mọi tool hợp lệ đều có thẻ thực hành
+  // Gộp tool bảng cứng (TOOLS_MAP) + bài luyện nội bộ + tool DB → mọi tool hợp lệ đều có thẻ thực hành
   const resolveTool = (tid: string): { label: string; icon: string; color: string; route: string } | null => {
     if (TOOLS_MAP[tid]) return TOOLS_MAP[tid]
+    // Bài luyện nội bộ (timer) — route dạng '#exercise:<exId>'
+    const exId = TOOL_TO_EX[tid]
+    if (exId) {
+      const ex = EXERCISES.find(e => e.id === exId)
+      if (ex) return { label: ex.name, icon: ex.icon, color: ex.color, route: '#exercise:' + exId }
+    }
     const db = dbTools.find(t => t.id === tid)
     if (db) return { label: db.name, icon: db.icon, color: L.p1, route: db.route }
     return null
@@ -974,6 +993,41 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       {activeLesson.tools.map((tid) => {
                         const t = resolveTool(tid); if (!t) return null
                         const done = usedToolIds.has(tid)
+                        // ── Bài luyện nội bộ (timer) ──
+                        if (t.route.startsWith('#exercise:')) {
+                          const exId = t.route.replace('#exercise:', '')
+                          const running = activeTimer === exId
+                          return (
+                            <div key={tid}
+                              style={{ background: done ? L.greenBg : running ? t.color + '10' : L.surface, border: `2px solid ${done ? L.green : running ? t.color : t.color + '60'}`, borderRadius: 18, padding: '18px 16px', transition: 'all .2s' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                <div style={{ width: 52, height: 52, borderRadius: 14, background: done ? L.green + '18' : t.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
+                                  {done ? '✅' : running ? '⏱' : t.icon}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 15, fontWeight: 700, color: done ? L.green : running ? t.color : L.t1, marginBottom: 3 }}>{t.label}</div>
+                                  <div style={{ fontSize: 12, color: done ? L.green : running ? t.color : L.t2 }}>
+                                    {done ? 'Đã hoàn thành ✓' : running ? fmtTimer(timerSeconds) : 'Bấm để bắt đầu luyện tập'}
+                                  </div>
+                                </div>
+                                {!done && (
+                                  running ? (
+                                    <button onClick={() => stopTimer(tid)}
+                                      style={{ background: L.green, color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                                      Dừng ✓
+                                    </button>
+                                  ) : (
+                                    <button onClick={() => startTimer(exId)}
+                                      style={{ background: t.color, color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                                      Bắt đầu →
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )
+                        }
+                        // ── Tool thông thường (mở URL overlay) ──
                         return (
                           <div key={tid} onClick={() => openTool(t.route, t.label, tid)}
                             style={{ background: done ? L.greenBg : L.surface, border: `2px solid ${done ? L.green : t.color}`, borderRadius: 18, padding: '18px 16px', cursor: 'pointer', boxShadow: done ? 'none' : `0 4px 20px ${t.color}22`, transition: 'all .2s' }}>
@@ -1143,7 +1197,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                         ) : isActive ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ fontSize: 16, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</div>
-                            <button onClick={stopTimer}
+                            <button onClick={() => stopTimer()}
                               style={{ background: '#EF4444', border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
                               Dừng
                             </button>
