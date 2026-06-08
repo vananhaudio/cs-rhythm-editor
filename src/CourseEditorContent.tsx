@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 import RichEditor from './RichEditor'
 import FlowInlineEditor from './FlowInlineEditor'
+import FlowPlayer from './FlowPlayer'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -155,6 +156,21 @@ function LessonPreview({ lesson }: { lesson: Lesson }) {
           </div>
         )}
       </div>
+
+      {/* Flow preview — nhúng FlowPlayer trực tiếp trong khung điện thoại */}
+      {lesson.lesson_type === 'flow' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 20px 32px' }}>
+          <div style={{ width: '100%', maxWidth: 390, borderRadius: 24, overflow: 'hidden', border: '2px solid #E4E4E7', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', background: '#fff', minHeight: 480, display: 'flex', flexDirection: 'column' }}>
+            <FlowPlayer
+              lessonId={lesson.id}
+              studentId="__preview__"
+              onComplete={() => {}}
+              onBack={() => {}}
+            />
+          </div>
+          <div style={{ marginTop: 10, fontSize: 11, color: C.text3 }}>📱 Preview giao diện học viên</div>
+        </div>
+      )}
     </div>
   )
 }
