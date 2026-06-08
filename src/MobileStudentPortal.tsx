@@ -328,6 +328,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [showFingerExercise, setShowFingerExercise] = useState(false)
   // ── Scale Exercise overlay ──
   const [showScaleExercise, setShowScaleExercise] = useState(false)
+  // Tool ID của bài học đang mở exercise (để mark done khi đóng)
+  const [currentLessonToolId, setCurrentLessonToolId] = useState<string | null>(null)
   // ── Coming-soon tools accordion ──
   const [showComingTools, setShowComingTools] = useState(false)
 
@@ -630,8 +632,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       <FingerExercise
         totalMinutes={practiceTotals['finger'] ?? 0}
         onClose={async () => {
-          await stopTimer()
+          await stopTimer(currentLessonToolId ?? undefined)
           setShowFingerExercise(false)
+          setCurrentLessonToolId(null)
         }}
       />
     )}
@@ -640,8 +643,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       <ScaleExercise
         totalMinutes={practiceTotals['scale'] ?? 0}
         onClose={async () => {
-          await stopTimer()
+          await stopTimer(currentLessonToolId ?? undefined)
           setShowScaleExercise(false)
+          setCurrentLessonToolId(null)
         }}
       />
     )}
@@ -993,10 +997,16 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       {activeLesson.tools.map((tid) => {
                         const t = resolveTool(tid); if (!t) return null
                         const done = usedToolIds.has(tid)
-                        // ── Bài luyện nội bộ (timer) ──
+                        // ── Bài luyện nội bộ — mở đúng component đã nâng cấp ──
                         if (t.route.startsWith('#exercise:')) {
                           const exId = t.route.replace('#exercise:', '')
                           const running = activeTimer === exId
+                          const openExercise = () => {
+                            setCurrentLessonToolId(tid)
+                            if (exId === 'finger') { startTimer('finger'); setShowFingerExercise(true) }
+                            else if (exId === 'scale') { startTimer('scale'); setShowScaleExercise(true) }
+                            else { startTimer(exId) } // arpeggio/metronome/ear: chỉ timer
+                          }
                           return (
                             <div key={tid}
                               style={{ background: done ? L.greenBg : running ? t.color + '10' : L.surface, border: `2px solid ${done ? L.green : running ? t.color : t.color + '60'}`, borderRadius: 18, padding: '18px 16px', transition: 'all .2s' }}>
@@ -1011,13 +1021,20 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                                   </div>
                                 </div>
                                 {!done && (
-                                  running ? (
+                                  running && (exId === 'finger' || exId === 'scale') ? (
+                                    // Đang chạy overlay-based exercise → nút mở lại overlay
+                                    <button onClick={openExercise}
+                                      style={{ background: t.color, color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                                      Mở lại →
+                                    </button>
+                                  ) : running ? (
+                                    // Timer-only exercise đang chạy → nút Dừng
                                     <button onClick={() => stopTimer(tid)}
                                       style={{ background: L.green, color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                                       Dừng ✓
                                     </button>
                                   ) : (
-                                    <button onClick={() => startTimer(exId)}
+                                    <button onClick={openExercise}
                                       style={{ background: t.color, color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                                       Bắt đầu →
                                     </button>
