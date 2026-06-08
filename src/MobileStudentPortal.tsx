@@ -975,64 +975,20 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             )}
 
-            {/* Slide Canva — fullscreen overlay với top/bottom nav */}
-            {activeLesson.lesson_type === 'slide' && activeLesson.content_url && (() => {
-              const sIdx   = sortedLessons.findIndex(l => l.id === activeLesson.id)
-              const prevL  = sIdx > 0 ? sortedLessons[sIdx - 1] : null
-              const nextL  = sIdx < sortedLessons.length - 1 ? sortedLessons[sIdx + 1] : null
-              const isDone = completedIds.has(activeLesson.id)
-              const embedUrl = normalizeCanvaUrl(activeLesson.content_url)
-              const barStyle: React.CSSProperties = {
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 12px', background: 'rgba(10,10,20,0.85)',
-                flexShrink: 0, backdropFilter: 'blur(8px)',
-              }
-              const navBtn = (accent?: boolean): React.CSSProperties => ({
-                padding: '9px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
-                background: accent ? '#4338CA' : 'rgba(255,255,255,0.13)',
-                color: '#fff',
-              })
-              return (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#111', display: 'flex', flexDirection: 'column' }}>
-                  {/* Top bar */}
-                  <div style={barStyle}>
-                    <button onClick={goBack} style={navBtn()}>← Về</button>
-                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#e8e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
-                      {activeLesson.title}
-                    </div>
-                    <span style={{ fontSize: 11, color: '#888', flexShrink: 0 }}>{sIdx + 1}/{sortedLessons.length}</span>
-                  </div>
-                  {/* Iframe */}
-                  <iframe
-                    key={embedUrl}
-                    src={embedUrl}
-                    style={{ flex: 1, border: 'none', display: 'block', width: '100%', minHeight: 0 }}
-                    allowFullScreen allow="fullscreen"
-                    title={activeLesson.title}
-                  />
-                  {/* Bottom nav bar */}
-                  <div style={barStyle}>
-                    <button onClick={() => prevL && openLesson(prevL)} disabled={!prevL}
-                      style={{ ...navBtn(), opacity: prevL ? 1 : 0.3 }}>
-                      ← Trước
-                    </button>
-                    {!isDone ? (
-                      <button onClick={() => markComplete(activeLesson.id)} disabled={markingDone}
-                        style={{ flex: 1, padding: '9px', borderRadius: 10, border: 'none', background: '#16A34A', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: markingDone ? 0.6 : 1 }}>
-                        ✓ Đánh dấu đã học
-                      </button>
-                    ) : (
-                      <div style={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#4ade80' }}>✓ Đã học rồi</div>
-                    )}
-                    <button onClick={() => nextL && openLesson(nextL)} disabled={!nextL}
-                      style={{ ...navBtn(true), opacity: nextL ? 1 : 0.3 }}>
-                      Tiếp →
-                    </button>
-                  </div>
-                </div>
-              )
-            })()}
+            {/* Slide Canva — nút mở trình duyệt ngoài (không dùng iframe vì cross-origin) */}
+            {activeLesson.lesson_type === 'slide' && activeLesson.content_url && (
+              <div style={{ margin: '0 16px 4px', background: 'linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)', borderRadius: 18, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                <div style={{ fontSize: 36 }}>🖼</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: 1.4 }}>{activeLesson.title}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>Slide Canva — mở toàn màn hình để xem</div>
+                <button
+                  onClick={() => window.open(normalizeCanvaUrl(activeLesson.content_url!), '_system')}
+                  style={{ background: '#4338CA', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  📱 Mở slide Canva ↗
+                </button>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Xem xong bấm nút quay lại để tiếp tục</div>
+              </div>
+            )}
 
             {/* Link embed */}
             {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (
