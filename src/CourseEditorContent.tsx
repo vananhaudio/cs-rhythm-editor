@@ -60,7 +60,7 @@ const TOOL_META: Record<string, { label: string; icon: string }> = Object.fromEn
 const TYPE_ICON: Record<string, string> = Object.fromEntries(LESSON_TYPES.map(t => [t.id, t.icon]))
 
 function getYouTubeId(url: string) {
-  return url.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
+  return url.match(/(?:v=|youtu\.be\/|shorts\/)([^&?\s]+)/)?.[1] ?? null
 }
 
 // Canva: tách src từ <iframe> nếu có, rồi đảm bảo URL dạng .../view?embed
