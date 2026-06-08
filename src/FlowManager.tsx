@@ -149,47 +149,53 @@ export default function FlowManager() {
   const validateAndImport = () => {
     setImportError('')
     let parsed: unknown
+
+    // ── Bước 1: parse JSON ──────────────────────────────────────────────────
     try { parsed = JSON.parse(importText.trim()) }
     catch { setImportError('❌ JSON không hợp lệ. Kiểm tra lại dấu ngoặc, dấu phẩy.'); return }
 
     if (!Array.isArray(parsed)) { setImportError('❌ JSON phải là một mảng (array) các slide.'); return }
     if (parsed.length === 0)    { setImportError('❌ Mảng slides không được rỗng.'); return }
 
+    // ── Bước 2: validate lỏng — chỉ báo lỗi khi thiếu nội dung hẳn ──────────
+    // id, order, logic, type → tự điền nếu thiếu hoặc sai
     const errors: string[] = []
     parsed.forEach((s: unknown, i: number) => {
       const slide = s as Record<string, unknown>
-      if (!slide.id)    errors.push(`Slide ${i+1}: thiếu trường "id"`)
-      if (slide.order === undefined) errors.push(`Slide ${i+1}: thiếu trường "order"`)
-      if (!slide.logic) errors.push(`Slide ${i+1}: thiếu trường "logic"`)
-      else if (!VALID_LOGIC.includes(slide.logic as string))
-        errors.push(`Slide ${i+1}: logic "${slide.logic}" không hợp lệ. Chỉ nhận: ${VALID_LOGIC.join(', ')}`)
-      if (!slide.type)  errors.push(`Slide ${i+1}: thiếu trường "type"`)
-      else if (!VALID_TYPE.includes(slide.type as string))
-        errors.push(`Slide ${i+1}: type "${slide.type}" không hợp lệ. Chỉ nhận: ${VALID_TYPE.join(', ')}`)
       if (!slide.title && !slide.content)
         errors.push(`Slide ${i+1}: phải có ít nhất "title" hoặc "content"`)
     })
-
     if (errors.length > 0) { setImportError(errors.join('\n')); return }
 
-    // Merge với slides hiện có, sắp xếp lại order
-    const normalized: Slide[] = (parsed as Record<string, unknown>[]).map((s, i) => ({
-      id:            String(s.id ?? crypto.randomUUID()),
-      order:         i,
-      logic:         String(s.logic),
-      type:          String(s.type),
-      title:         String(s.title ?? ''),
-      content:       String(s.content ?? ''),
-      mediaUrl:      String(s.mediaUrl ?? ''),
-      options:       Array.isArray(s.options) ? (s.options as unknown[]).map(String) : ['', ''],
-      correctAnswer: String(s.correctAnswer ?? ''),
-      buttonText:    String(s.buttonText ?? ''),
-    }))
+    // ── Bước 3: normalize + auto-fix ──────────────────────────────────────
+    const normalized: Slide[] = (parsed as Record<string, unknown>[]).map((s, i) => {
+      // Auto-fix logic: nếu thiếu hoặc sai → default NHAN
+      const logic = VALID_LOGIC.includes(String(s.logic ?? '')) ? String(s.logic) : 'NHAN'
+      // Auto-fix type: nếu thiếu hoặc sai → default text
+      const type  = VALID_TYPE.includes(String(s.type ?? ''))  ? String(s.type)  : 'text'
+      return {
+        id:            s.id ? String(s.id) : crypto.randomUUID(),
+        order:         i,
+        logic,
+        type,
+        title:         String(s.title   ?? ''),
+        content:       String(s.content ?? ''),
+        mediaUrl:      String(s.mediaUrl ?? ''),
+        options:       Array.isArray(s.options) ? (s.options as unknown[]).map(String) : ['', ''],
+        correctAnswer: String(s.correctAnswer ?? ''),
+        buttonText:    String(s.buttonText ?? ''),
+      }
+    })
+
+    const autoFixed = normalized.filter((s, i) => {
+      const raw = (parsed as Record<string, unknown>[])[i]
+      return !VALID_LOGIC.includes(String(raw.logic ?? '')) || !VALID_TYPE.includes(String(raw.type ?? '')) || !raw.id
+    }).length
 
     setSlides(normalized)
     setShowImport(false)
     setImportText('')
-    setMsg(`✅ Đã import ${normalized.length} slides!`)
+    setMsg(`✅ Đã import ${normalized.length} slides!${autoFixed > 0 ? ` (tự sửa ${autoFixed} slide)` : ''}`)
     setTimeout(() => setMsg(''), 3000)
   }
 
