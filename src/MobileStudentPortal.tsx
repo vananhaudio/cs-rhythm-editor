@@ -63,7 +63,7 @@ function uname(s: Student) {
   return (n.includes('@') ? n.split('@')[0] : n.split(' ').pop() ?? n)
 }
 function getYtId(url: string | null) {
-  return url?.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
+  return url?.match(/(?:v=|youtu\.be\/|shorts\/)([^&?\s]+)/)?.[1] ?? null
 }
 
 // Chuẩn hóa URL Canva → dạng .../view?embed (dùng cho iframe)

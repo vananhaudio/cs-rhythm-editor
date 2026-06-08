@@ -48,7 +48,7 @@ function normalizeCanvaUrl(raw: string): string {
 
 
 function getYouTubeId(url: string) {
-  return url.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
+  return url.match(/(?:v=|youtu\.be\/|shorts\/)([^&?\s]+)/)?.[1] ?? null
 }
 
 export default function LessonViewerPage() {
