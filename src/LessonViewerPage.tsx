@@ -223,25 +223,42 @@ export default function LessonViewerPage() {
             )}
 
             {/* Slide Canva embed */}
-            {active.lesson_type === 'slide' && active.content_url && (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 12, overflow: 'hidden', background: '#1a1a2e', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
-                  <iframe
-                    src={normalizeCanvaUrl(active.content_url)}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-                    allowFullScreen
-                    allow="fullscreen"
-                    title={active.title}
-                  />
+            {active.lesson_type === 'slide' && active.content_url && (() => {
+              const sIdx  = lessons.findIndex(l => l.id === active.id)
+              const prevL = sIdx > 0 ? lessons[sIdx - 1] : null
+              const nextL = sIdx < lessons.length - 1 ? lessons[sIdx + 1] : null
+              const embedUrl = normalizeCanvaUrl(active.content_url)
+              return (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ position: 'relative', paddingBottom: '62.5%', borderRadius: 12, overflow: 'hidden', background: '#1a1a2e', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }}>
+                    <iframe
+                      key={embedUrl}
+                      src={embedUrl}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                      allowFullScreen allow="fullscreen"
+                      title={active.title}
+                    />
+                  </div>
+                  {/* Nav + fullscreen row */}
+                  <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button onClick={() => prevL && setActive(prevL)} disabled={!prevL}
+                      style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${D.border}`, background: D.surface, color: D.text2, fontSize: 13, fontWeight: 600, cursor: prevL ? 'pointer' : 'default', fontFamily: 'inherit', opacity: prevL ? 1 : 0.35 }}>
+                      ← Bài trước
+                    </button>
+                    <div style={{ flex: 1 }} />
+                    <a href={active.content_url} onClick={(e) => { e.preventDefault(); window.open(embedUrl, '_blank') }} rel="noreferrer"
+                      style={{ fontSize: 12, color: D.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      🔗 Toàn màn hình ↗
+                    </a>
+                    <div style={{ flex: 1 }} />
+                    <button onClick={() => nextL && setActive(nextL)} disabled={!nextL}
+                      style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: nextL ? D.accent : D.border, color: '#fff', fontSize: 13, fontWeight: 700, cursor: nextL ? 'pointer' : 'default', fontFamily: 'inherit', opacity: nextL ? 1 : 0.35 }}>
+                      Bài tiếp →
+                    </button>
+                  </div>
                 </div>
-                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-                  <a href={active.content_url} onClick={(e) => { e.preventDefault(); window.open((e.currentTarget as HTMLAnchorElement).href, '_system') }} rel="noreferrer"
-                    style={{ fontSize: 12, color: D.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    🔗 Mở toàn màn hình ↗
-                  </a>
-                </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* External URL embed */}
             {active.lesson_type === 'link' && active.content_url && (

@@ -65,6 +65,19 @@ function uname(s: Student) {
 function getYtId(url: string | null) {
   return url?.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1] ?? null
 }
+
+// Chuẩn hóa URL Canva → dạng .../view?embed (dùng cho iframe)
+function normalizeCanvaUrl(raw: string): string {
+  const iframeSrc = raw.match(/src="([^"]*canva\.com[^"]*)"/)
+  const s = (iframeSrc?.[1] ?? (raw.trim().startsWith('<') ? '' : raw)).trim()
+  if (!s || !s.includes('canva.com')) return raw.trim()
+  let base = s.split('?')[0].split('#')[0].replace(/\/+$/, '')
+  base = base.replace(/\/watch(\/.*)?$/, '').replace(/\/+$/, '')
+  const viewBase = base.endsWith('/view') ? base
+    : base.includes('/view') ? base.substring(0, base.lastIndexOf('/view') + 5)
+    : base + '/view'
+  return viewBase + '?embed'
+}
 const LEVEL_VI: Record<string, string> = {
   beginner: 'Sơ cấp', elementary: 'Cơ bản', intermediate: 'Trung cấp', advanced: 'Nâng cao',
 }
@@ -962,13 +975,64 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             )}
 
-            {/* Slide Canva */}
-            {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'slide' && activeLesson.content_url && (
-              <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#1a1a2e' }}>
-                <iframe src={activeLesson.content_url} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allowFullScreen allow="fullscreen" title={activeLesson.title} />
-                <button onClick={goBack} style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.65)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
-              </div>
-            )}
+            {/* Slide Canva — fullscreen overlay với top/bottom nav */}
+            {activeLesson.lesson_type === 'slide' && activeLesson.content_url && (() => {
+              const sIdx   = sortedLessons.findIndex(l => l.id === activeLesson.id)
+              const prevL  = sIdx > 0 ? sortedLessons[sIdx - 1] : null
+              const nextL  = sIdx < sortedLessons.length - 1 ? sortedLessons[sIdx + 1] : null
+              const isDone = completedIds.has(activeLesson.id)
+              const embedUrl = normalizeCanvaUrl(activeLesson.content_url)
+              const barStyle: React.CSSProperties = {
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 12px', background: 'rgba(10,10,20,0.85)',
+                flexShrink: 0, backdropFilter: 'blur(8px)',
+              }
+              const navBtn = (accent?: boolean): React.CSSProperties => ({
+                padding: '9px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+                background: accent ? '#4338CA' : 'rgba(255,255,255,0.13)',
+                color: '#fff',
+              })
+              return (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#111', display: 'flex', flexDirection: 'column' }}>
+                  {/* Top bar */}
+                  <div style={barStyle}>
+                    <button onClick={goBack} style={navBtn()}>← Về</button>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#e8e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      {activeLesson.title}
+                    </div>
+                    <span style={{ fontSize: 11, color: '#888', flexShrink: 0 }}>{sIdx + 1}/{sortedLessons.length}</span>
+                  </div>
+                  {/* Iframe */}
+                  <iframe
+                    key={embedUrl}
+                    src={embedUrl}
+                    style={{ flex: 1, border: 'none', display: 'block', width: '100%', minHeight: 0 }}
+                    allowFullScreen allow="fullscreen"
+                    title={activeLesson.title}
+                  />
+                  {/* Bottom nav bar */}
+                  <div style={barStyle}>
+                    <button onClick={() => prevL && openLesson(prevL)} disabled={!prevL}
+                      style={{ ...navBtn(), opacity: prevL ? 1 : 0.3 }}>
+                      ← Trước
+                    </button>
+                    {!isDone ? (
+                      <button onClick={() => markComplete(activeLesson.id)} disabled={markingDone}
+                        style={{ flex: 1, padding: '9px', borderRadius: 10, border: 'none', background: '#16A34A', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: markingDone ? 0.6 : 1 }}>
+                        ✓ Đánh dấu đã học
+                      </button>
+                    ) : (
+                      <div style={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#4ade80' }}>✓ Đã học rồi</div>
+                    )}
+                    <button onClick={() => nextL && openLesson(nextL)} disabled={!nextL}
+                      style={{ ...navBtn(true), opacity: nextL ? 1 : 0.3 }}>
+                      Tiếp →
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Link embed */}
             {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (
