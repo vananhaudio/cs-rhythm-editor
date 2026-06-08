@@ -45,5 +45,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TVA Guitar dùng microphone để nhận diện cao độ trong công cụ Lên dây đàn (Guitar Tuner).</string>
+	<key>NSCameraUsageDescription</key>
+	<string>TVA Guitar có thể dùng camera để quay video luyện tập và nộp bài.</string>
 </dict>
 </plist>
