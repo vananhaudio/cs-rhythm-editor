@@ -131,6 +131,16 @@ export default function FlowInlineEditor({ lessonId }: Props) {
     setEditSlide(s)
   }
 
+  const duplicateSlide = (id: string) => {
+    const idx = slides.findIndex(s => s.id === id)
+    if (idx < 0) return
+    const orig = slides[idx]
+    const dup: Slide = { ...orig, id: Date.now().toString() + '_dup', title: orig.title ? orig.title + ' (bản sao)' : '' }
+    const arr = [...slides]
+    arr.splice(idx + 1, 0, dup)
+    setSlides(arr.map((s, i) => ({ ...s, order: i + 1 })))
+  }
+
   const removeSlide = (id: string) => {
     if (!confirm('Xoá slide này?')) return
     setSlides(prev => prev.filter(s => s.id !== id))
@@ -259,6 +269,11 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                   <button onClick={e => { e.stopPropagation(); moveSlide(s.id, 1) }}
                     disabled={i === slides.length - 1}
                     style={{ background: 'none', border: 'none', cursor: i === slides.length - 1 ? 'default' : 'pointer', color: C.text3, fontSize: 13, padding: '0 2px', opacity: i === slides.length - 1 ? 0.3 : 1 }}>↓</button>
+                  <button onClick={e => { e.stopPropagation(); duplicateSlide(s.id) }}
+                    title="Nhân đôi slide"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 12, padding: '0 3px', lineHeight: 1 }}
+                    onMouseEnter={e => (e.currentTarget.style.color = C.accent)}
+                    onMouseLeave={e => (e.currentTarget.style.color = C.text3)}>⊕</button>
                   <button onClick={e => { e.stopPropagation(); removeSlide(s.id) }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 15, padding: '0 3px', lineHeight: 1 }}
                     onMouseEnter={e => (e.currentTarget.style.color = C.danger)}

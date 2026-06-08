@@ -124,6 +124,18 @@ export default function FlowManager() {
     setEditSlideId(s.id)
   }
 
+  const duplicateSlide = (id: string) => {
+    setSlides(prev => {
+      const idx = prev.findIndex(s => s.id === id)
+      if (idx < 0) return prev
+      const orig = prev[idx]
+      const dup: Slide = { ...orig, id: crypto.randomUUID(), title: orig.title ? orig.title + ' (bản sao)' : '' }
+      const arr = [...prev]
+      arr.splice(idx + 1, 0, dup)
+      return arr.map((s, i) => ({ ...s, order: i }))
+    })
+  }
+
   const removeSlide = (id: string) => {
     setSlides(prev => prev.filter(s => s.id !== id).map((s, i) => ({ ...s, order: i })))
     if (editSlideId === id) setEditSlideId(null)
@@ -513,6 +525,11 @@ export default function FlowManager() {
                         style={{ background: 'none', border: 'none', cursor: idx === 0 ? 'default' : 'pointer', color: idx === 0 ? '#DDD' : S.t2, fontSize: 14, padding: '2px 4px' }}>↑</button>
                       <button onClick={e => { e.stopPropagation(); moveSlide(slide.id, 1) }} disabled={idx === slides.length - 1}
                         style={{ background: 'none', border: 'none', cursor: idx === slides.length - 1 ? 'default' : 'pointer', color: idx === slides.length - 1 ? '#DDD' : S.t2, fontSize: 14, padding: '2px 4px' }}>↓</button>
+                      <button onClick={e => { e.stopPropagation(); duplicateSlide(slide.id) }}
+                        title="Nhân đôi slide"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.t3, fontSize: 13, padding: '2px 4px' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = S.accent)}
+                        onMouseLeave={e => (e.currentTarget.style.color = S.t3)}>⊕</button>
                       <button onClick={e => { e.stopPropagation(); removeSlide(slide.id) }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 14, padding: '2px 4px' }}>✕</button>
                     </div>

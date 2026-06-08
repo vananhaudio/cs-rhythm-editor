@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 
 // ── Logic labels & colors ──────────────────────────────────────────────────
@@ -52,6 +52,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   const [checked,  setChecked]  = useState<'correct' | 'wrong' | null>(null)
   const [done,     setDone]     = useState(false)
   const [startedAt] = useState(new Date().toISOString())
+  // Animation & swipe
+  const slideDir    = useRef<'next' | 'prev'>('next')
+  const touchStartX = useRef<number | null>(null)
 
   // Load flow by lessonId — bỏ qua nếu đang ở preview mode
   useEffect(() => {
@@ -112,12 +115,14 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
   const goPrev = () => {
     if (current <= 0) return
+    slideDir.current = 'prev'
     setCurrent(current - 1)
     setAnswer(null); setInputVal(''); setChecked(null)
   }
 
   const goNext = async () => {
     if (!flow) return
+    slideDir.current = 'next'
     const slide = flow.slides[current]
     const newComp = completed.includes(slide.id) ? completed : [...completed, slide.id]
     setCompleted(newComp)
@@ -217,11 +222,32 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   const lm = LOGIC_META[slide.logic] ?? LOGIC_META.NHAN
   const progress = (current / flow.slides.length) * 100
 
+  // ── Swipe handlers ───────────────────────────────────────────────────────
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || !flow) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    touchStartX.current = null
+    const THRESHOLD = 50
+    if (dx < -THRESHOLD && canProceed(slide)) { goNext() }
+    else if (dx > THRESHOLD && current > 0)   { goPrev() }
+  }
+
   // ── Main player ──────────────────────────────────────────────────────────
   // Quy tắc vàng: FlowPlayer = trải nghiệm từng màn hình, KHÔNG cuộn dọc
   // Ngoại lệ duy nhất: slide type='input' cho phép scroll nội bộ textarea
   return (
     <div style={containerStyle}>
+
+      {/* Slide transition keyframes */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes _fsNext { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+        @keyframes _fsPrev { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+        ._fsNext { animation: _fsNext .22s ease; }
+        ._fsPrev { animation: _fsPrev .22s ease; }
+      ` }} />
 
       {/* Progress bar */}
       <div style={{ height: 4, background: '#E8EAF0', flexShrink: 0 }}>
@@ -243,7 +269,12 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       </div>
 
       {/* Slide body — cuộn NỘI BỘ nếu nội dung dài, nút bấm luôn hiển thị */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '24px 16px 12px' }}>
+      <div
+        key={current}
+        className={slideDir.current === 'next' ? '_fsNext' : '_fsPrev'}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '24px 16px 12px' }}>
 
         {slide.title && (
           <div style={{ fontSize: 18, fontWeight: 700, color: '#18181B', lineHeight: 1.45, marginBottom: 16 }}>
