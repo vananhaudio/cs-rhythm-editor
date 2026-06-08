@@ -83,6 +83,7 @@ export default function FlowInlineEditor({ lessonId }: Props) {
   const [uploadingId,setUploadingId]= useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const uploadTarget = useRef<string | null>(null)
+  const jsonFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { load() }, [lessonId])
 
@@ -390,12 +391,34 @@ export default function FlowInlineEditor({ lessonId }: Props) {
           <div onClick={e => e.stopPropagation()}
             style={{ background: C.surface, borderRadius: 14, padding: 24, width: 520, maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>📋 Import slides từ JSON</div>
-            <div style={{ fontSize: 12, color: C.text3, marginBottom: 12 }}>
-              Dán mảng JSON — mỗi phần tử có: <code>logic, type, title, content</code> (và thêm trường tuỳ loại).
+            <div style={{ fontSize: 12, color: C.text3, marginBottom: 10 }}>
+              Dán JSON từ ChatGPT hoặc chọn file <code>.json</code> từ máy tính.
             </div>
-            <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={10}
+
+            {/* Nút chọn file */}
+            <input ref={jsonFileRef} type="file" accept=".json,application/json" style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = ev => {
+                  setImportText(String(ev.target?.result ?? ''))
+                  setImportError('')
+                }
+                reader.readAsText(file)
+                e.target.value = ''
+              }} />
+            <button onClick={() => jsonFileRef.current?.click()}
+              style={{ width: '100%', padding: '9px 0', marginBottom: 10, border: `1.5px dashed ${C.border}`, borderRadius: 8, background: '#FAFBFF', color: C.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              📁 Chọn file .json từ máy tính
+            </button>
+
+            <textarea value={importText} onChange={e => { setImportText(e.target.value); setImportError('') }} rows={9}
               placeholder={'[\n  { "logic": "NHAN", "type": "text", "title": "...", "content": "..." },\n  ...\n]'}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical' }} />
+              style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${importError ? C.danger : C.border}`, borderRadius: 8, fontSize: 12, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical', color: C.text1 }} />
+            {importText && !importError && (
+              <div style={{ fontSize: 11, color: C.success, marginTop: 4 }}>✓ Đã có nội dung — bấm "Nhập slides" để import</div>
+            )}
             {importError && <div style={{ color: C.danger, fontSize: 12, marginTop: 6 }}>{importError}</div>}
             <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
               <Btn onClick={() => { setShowImport(false); setImportText(''); setImportError('') }}>Huỷ</Btn>

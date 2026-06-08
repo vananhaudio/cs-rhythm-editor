@@ -84,6 +84,7 @@ export default function FlowManager() {
   const [uploadingSlide, setUploadingSlide] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadTargetSlide = useRef<string | null>(null)
+  const jsonFileRef = useRef<HTMLInputElement>(null)
 
   // Load list
   useEffect(() => {
@@ -430,7 +431,7 @@ export default function FlowManager() {
                     <div style={{ padding: '18px 20px', borderBottom: `1px solid ${S.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: S.t1 }}>📥 Import JSON Slides</div>
-                        <div style={{ fontSize: 12, color: S.t3, marginTop: 3 }}>Dán JSON từ ChatGPT vào đây</div>
+                        <div style={{ fontSize: 12, color: S.t3, marginTop: 3 }}>Dán JSON từ ChatGPT hoặc chọn file .json</div>
                       </div>
                       <button onClick={() => setShowImport(false)}
                         style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: S.t3, padding: '4px 8px' }}>✕</button>
@@ -438,16 +439,30 @@ export default function FlowManager() {
 
                     {/* Schema hint */}
                     <div style={{ padding: '12px 20px', background: '#F8F9FF', borderBottom: `1px solid ${S.border}`, fontSize: 11, color: S.t3, fontFamily: 'monospace', lineHeight: 1.7 }}>
-                      Cấu trúc mỗi slide: {'{'} "id", "order", "logic" (NHAN/NGHI/LAM/NGAM/THUONG/DAN), "type" (text/quiz/true_false/input/action/reward/...), "title", "content", "options": [], "correctAnswer", "buttonText" {'}'}
+                      Tối thiểu mỗi slide cần: <b>"title"</b> hoặc <b>"content"</b>. Các trường khác (id, order, logic, type) tự động điền nếu thiếu.
                     </div>
 
-                    {/* Textarea */}
+                    {/* Textarea + file button */}
                     <div style={{ flex: 1, padding: '16px 20px', overflowY: 'auto' }}>
+                      {/* Nút chọn file */}
+                      <input ref={jsonFileRef} type="file" accept=".json,application/json" style={{ display: 'none' }}
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onload = ev => { setImportText(String(ev.target?.result ?? '')); setImportError('') }
+                          reader.readAsText(file)
+                          e.target.value = ''
+                        }} />
+                      <button onClick={() => jsonFileRef.current?.click()}
+                        style={{ width: '100%', padding: '10px', marginBottom: 12, border: `1.5px dashed ${S.border}`, borderRadius: 10, background: '#FAFBFF', color: S.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        📁 Chọn file .json từ máy tính
+                      </button>
                       <textarea
                         value={importText}
                         onChange={e => { setImportText(e.target.value); setImportError('') }}
-                        placeholder={'[\n  {\n    "id": "s1",\n    "order": 0,\n    "logic": "NHAN",\n    "type": "text",\n    "title": "Chào mừng!",\n    "content": "Nội dung bài học..."\n  }\n]'}
-                        style={{ width: '100%', boxSizing: 'border-box', height: 260, borderRadius: 10, border: `1.5px solid ${importError ? '#EF4444' : S.border}`, padding: '12px 14px', fontSize: 13, fontFamily: 'monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, color: S.t1, background: '#FAFAFA' }}
+                        placeholder={'[\n  {\n    "logic": "NHAN",\n    "type": "text",\n    "title": "Chào mừng!",\n    "content": "Nội dung bài học..."\n  }\n]'}
+                        style={{ width: '100%', boxSizing: 'border-box', height: 220, borderRadius: 10, border: `1.5px solid ${importError ? '#EF4444' : S.border}`, padding: '12px 14px', fontSize: 13, fontFamily: 'monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, color: S.t1, background: '#FAFAFA' }}
                       />
                       {importError && (
                         <div style={{ marginTop: 10, background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#DC2626', whiteSpace: 'pre-line', lineHeight: 1.7 }}>
