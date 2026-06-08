@@ -39,11 +39,12 @@ interface Props {
   onComplete: () => void
   onBack: () => void
   fullScreen?: boolean   // true → tự dùng position:fixed, không cần wrapper ngoài
+  previewFlow?: Flow     // preview mode: truyền thẳng data, không fetch DB
 }
 
-export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fullScreen }: Props) {
-  const [flow,     setFlow]     = useState<Flow | null>(null)
-  const [loading,  setLoading]  = useState(true)
+export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fullScreen, previewFlow }: Props) {
+  const [flow,     setFlow]     = useState<Flow | null>(previewFlow ?? null)
+  const [loading,  setLoading]  = useState(!previewFlow)
   const [current,  setCurrent]  = useState(0)
   const [completed, setCompleted] = useState<string[]>([])
   const [answer,   setAnswer]   = useState<string | null>(null)
@@ -52,8 +53,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   const [done,     setDone]     = useState(false)
   const [startedAt] = useState(new Date().toISOString())
 
-  // Load flow by lessonId
+  // Load flow by lessonId — bỏ qua nếu đang ở preview mode
   useEffect(() => {
+    if (previewFlow) return
     supabase.from('flows')
       .select('*')
       .eq('lesson_id', lessonId)
@@ -69,9 +71,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       })
   }, [lessonId])
 
-  // Load existing progress
+  // Load existing progress — bỏ qua nếu preview
   useEffect(() => {
-    if (!flow) return
+    if (!flow || previewFlow) return
     supabase.from('flow_progress')
       .select('*')
       .eq('student_id', studentId)
@@ -91,9 +93,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       })
   }, [flow])
 
-  // Save progress to DB
+  // Save progress to DB — bỏ qua nếu preview
   const saveProgress = async (slideIdx: number, comp: string[], finished = false) => {
-    if (!flow) return
+    if (!flow || previewFlow) return
     const { data: existing } = await supabase.from('flow_progress')
       .select('id').eq('student_id', studentId).eq('flow_id', flow.id).maybeSingle()
     const payload: Record<string, unknown> = {

@@ -278,6 +278,7 @@ export default function FlowManager() {
               studentId="__preview__"
               onComplete={() => setPreview(false)}
               onBack={() => setPreview(false)}
+              previewFlow={previewFlow}
             />
           </div>
         </div>
