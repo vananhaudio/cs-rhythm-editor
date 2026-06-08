@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
+import FlowPlayer from './FlowPlayer'
 
 // ── Tokens (khớp CourseEditorContent) ─────────────────────────────────────────
 const C = {
@@ -80,6 +81,7 @@ export default function FlowInlineEditor({ lessonId }: Props) {
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState('')
   const [importError,setImportError]= useState('')
+  const [showPreview,setShowPreview]= useState(false)
   const [uploadingId,setUploadingId]= useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const uploadTarget = useRef<string | null>(null)
@@ -391,13 +393,44 @@ export default function FlowInlineEditor({ lessonId }: Props) {
         </div>
       </div>
 
-      {/* ── Save ── */}
+      {/* ── Save + Preview ── */}
       <div style={{ paddingTop: 4, borderTop: `1px solid ${C.border}` }}>
-        <Btn variant="primary" onClick={save} style={{ width: '100%', justifyContent: 'center', padding: 10 }}>
-          {saving ? '⏳ Đang lưu...' : '💾 Lưu Flow'}
-        </Btn>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {slides.length > 0 && (
+            <Btn onClick={() => setShowPreview(true)} style={{ flexShrink: 0 }}>👁 Xem thử</Btn>
+          )}
+          <Btn variant="primary" onClick={save} style={{ flex: 1, justifyContent: 'center', padding: 10 }}>
+            {saving ? '⏳ Đang lưu...' : '💾 Lưu Flow'}
+          </Btn>
+        </div>
         {flowId && <div style={{ textAlign: 'center', fontSize: 11, color: C.success, marginTop: 6 }}>✓ Flow đã tồn tại · {slides.length} slides</div>}
       </div>
+
+      {/* ── Preview modal ── */}
+      {showPreview && (
+        <div onClick={() => setShowPreview(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: 390, maxHeight: '90vh', background: '#fff', borderRadius: 24, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #EEE', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ fontWeight: 700, fontSize: 14, color: C.text1 }}>📱 Xem thử — {flowTitle || 'Flow chưa lưu'}</span>
+              <button onClick={() => setShowPreview(false)}
+                style={{ background: '#F4F4F5', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: C.text2 }}>
+                Đóng ✕
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <FlowPlayer
+                lessonId={lessonId}
+                studentId="__preview__"
+                onComplete={() => setShowPreview(false)}
+                onBack={() => setShowPreview(false)}
+                previewFlow={{ id: '__preview__', title: flowTitle, reward_xp: rewardXp, slides: slides.map((s, i) => ({ ...s, order: i + 1 })) }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Import JSON modal ── */}
       {showImport && (
