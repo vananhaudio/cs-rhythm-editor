@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import StudentPortalV2 from './StudentPortalV2'
 import MobileStudentPortal from './MobileStudentPortal'
 import { supabase } from './supabase'
+import { isNativeIOS, purchaseMonthly, restorePurchases } from './iap'
 
 const T = {
   bg: '#EAD7B8', bgCard: '#F5EDD8', bgLight: '#FBF5EA',
@@ -79,6 +80,8 @@ export default function StudentOnboarding() {
   const [loginError, setLoginError] = useState('')
   const [loggingIn, setLoggingIn] = useState(false)
   const [showPass, setShowPass]   = useState(false)
+  const [iapLoading, setIapLoading]   = useState(false)
+  const [iapMsg, setIapMsg]           = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const passRef  = useRef<HTMLInputElement>(null)
 
@@ -165,6 +168,37 @@ export default function StudentOnboarding() {
     setStep('welcome')
   }
 
+  const handleIAPPurchase = async () => {
+    setIapMsg(null)
+    setIapLoading(true)
+    try {
+      await purchaseMonthly()
+      setIapMsg({ type: 'ok', text: 'Đăng ký thành công! Liên hệ Thầy Văn Anh qua Zalo để kích hoạt tài khoản học ngay.' })
+    } catch (e: any) {
+      const msg: string = e?.message ?? ''
+      if (msg.toLowerCase().includes('cancel') || msg.includes('SKErrorDomain error 2')) {
+        setIapMsg(null) // user tự cancel — không hiện lỗi
+      } else {
+        setIapMsg({ type: 'err', text: msg || 'Không thể hoàn tất. Thử lại sau.' })
+      }
+    } finally {
+      setIapLoading(false)
+    }
+  }
+
+  const handleIAPRestore = async () => {
+    setIapMsg(null)
+    setIapLoading(true)
+    try {
+      await restorePurchases()
+      setIapMsg({ type: 'ok', text: 'Đã khôi phục giao dịch. Liên hệ Thầy Văn Anh để kích hoạt tài khoản.' })
+    } catch {
+      setIapMsg({ type: 'err', text: 'Không tìm thấy giao dịch cần khôi phục.' })
+    } finally {
+      setIapLoading(false)
+    }
+  }
+
   const Btn = ({ style, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button
       {...p}
@@ -233,6 +267,52 @@ export default function StudentOnboarding() {
             boxShadow: `0 4px 16px rgba(27,107,58,.3)`,
           }}>Bắt đầu hành trình →</Btn>
           <p style={{ color: T.textDim, fontSize: 12, marginTop: 16 }}>Đã là học sinh? Tìm tên và đăng nhập bên dưới.</p>
+
+          {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
+          {isNativeIOS && (
+            <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360 }}>
+              <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 14 }}>
+                Chưa có tài khoản? Đăng ký trực tiếp qua App Store:
+              </div>
+              <Btn
+                onClick={handleIAPPurchase}
+                disabled={iapLoading}
+                style={{
+                  background: '#1B4332', color: '#fff', border: 'none', borderRadius: 12,
+                  padding: '12px 28px', fontSize: 15, fontWeight: 700, width: '100%',
+                  opacity: iapLoading ? 0.6 : 1,
+                }}
+              >
+                {iapLoading ? 'Đang xử lý...' : '🍎 Đăng ký học — $49.99 / tháng'}
+              </Btn>
+
+              {iapMsg && (
+                <div style={{
+                  marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 13,
+                  background: iapMsg.type === 'ok' ? '#E8F2EC' : '#F0D8D0',
+                  color:      iapMsg.type === 'ok' ? '#1B4332'  : '#8B3A1E',
+                  border: `1px solid ${iapMsg.type === 'ok' ? '#B0D4BC' : '#E4B8A8'}`,
+                }}>
+                  {iapMsg.type === 'ok' ? '✅ ' : '⚠️ '}{iapMsg.text}
+                </div>
+              )}
+
+              <Btn
+                onClick={handleIAPRestore}
+                disabled={iapLoading}
+                style={{
+                  marginTop: 10, background: 'none', border: 'none',
+                  color: T.textDim, fontSize: 12, cursor: 'pointer',
+                  textDecoration: 'underline', padding: '4px 0',
+                }}
+              >Khôi phục giao dịch đã mua</Btn>
+
+              <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.5 }}>
+                Sau khi thanh toán, liên hệ Thầy Văn Anh qua Zalo để kích hoạt.{'\n'}
+                Đăng ký tự động gia hạn mỗi tháng. Huỷ bất kỳ lúc nào trong Cài đặt iOS.
+              </div>
+            </div>
+          )}
         </div>
       )}
 
