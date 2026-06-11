@@ -232,12 +232,22 @@ export default function StudentOnboarding() {
         .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
         .eq('user_id', userId)
         .single()
-      if (studentData) {
-        setStudent(studentData)
-        setStep('portal')
-      } else {
-        throw new Error('Không tải được hồ sơ. Thử đăng nhập lại.')
+      if (!studentData) throw new Error('Không tải được hồ sơ. Thử đăng nhập lại.')
+
+      // Auto-enroll vào tất cả khoá học đang có
+      const { data: courses } = await supabase.from('edu_courses').select('id')
+      if (courses && courses.length > 0) {
+        const enrollments = courses.map((c: { id: string }) => ({
+          student_id: studentData.id,
+          course_id: c.id,
+          enrolled_by: userId,
+          is_active: true,
+        }))
+        await supabase.from('edu_enrollments').upsert(enrollments, { onConflict: 'student_id,course_id', ignoreDuplicates: true })
       }
+
+      setStudent(studentData)
+      setStep('portal')
     } catch (e: any) {
       setIapRegError(e.message || 'Không thể tạo tài khoản. Thử lại sau.')
     } finally {
