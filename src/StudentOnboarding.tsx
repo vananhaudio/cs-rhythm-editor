@@ -80,6 +80,8 @@ export default function StudentOnboarding() {
   const [loginError, setLoginError] = useState('')
   const [loggingIn, setLoggingIn] = useState(false)
   const [showPass, setShowPass]   = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const [iapLoading, setIapLoading]   = useState(false)
   const [iapMsg, setIapMsg]           = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [iapPurchased, setIapPurchased] = useState(false)
@@ -163,6 +165,15 @@ export default function StudentOnboarding() {
       setLoginError('Tài khoản chưa được liên kết với hồ sơ học sinh. Liên hệ thầy.')
     }
     setLoggingIn(false)
+  }
+
+  const handleForgotPassword = async () => {
+    if (!email) { setLoginError('Nhập email trước rồi bấm quên mật khẩu.'); return }
+    setResetLoading(true)
+    setLoginError('')
+    await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'https://timming.vananhaudio.com' })
+    setResetSent(true)
+    setResetLoading(false)
   }
 
   const handleLogout = async () => {
@@ -554,6 +565,19 @@ export default function StudentOnboarding() {
           }}>
             {loggingIn ? 'Đang đăng nhập...' : 'Đăng nhập →'}
           </Btn>
+
+          {resetSent ? (
+            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: '#E8F2EC', border: '1px solid #B0D4BC', fontSize: 13, color: '#1B4332', textAlign: 'center' }}>
+              ✅ Đã gửi email đặt lại mật khẩu. Kiểm tra hộp thư.
+            </div>
+          ) : (
+            <Btn onClick={handleForgotPassword} disabled={resetLoading} style={{
+              marginTop: 12, width: '100%', background: 'none', border: 'none',
+              color: T.textDim, fontSize: 13, textDecoration: 'underline', cursor: 'pointer',
+            }}>
+              {resetLoading ? 'Đang gửi...' : 'Quên mật khẩu?'}
+            </Btn>
+          )}
         </div>
       )}
 
