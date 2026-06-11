@@ -307,9 +307,17 @@ export default function StudentOnboarding() {
                 }}
               >Khôi phục giao dịch đã mua</Btn>
 
-              <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.5 }}>
-                Sau khi thanh toán, liên hệ Thầy Văn Anh qua Zalo để kích hoạt.{'\n'}
-                Đăng ký tự động gia hạn mỗi tháng. Huỷ bất kỳ lúc nào trong Cài đặt iOS.
+              <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
+                Đăng ký tự động gia hạn mỗi tháng · $49.99/tháng.<br />
+                Sau khi thanh toán, liên hệ Thầy Văn Anh qua Zalo để kích hoạt.<br />
+                Huỷ bất kỳ lúc nào trong Cài đặt &gt; Apple ID &gt; Đăng ký.<br />
+                <a href="https://timming.vananhaudio.com/tvaprivacy"
+                   target="_blank" rel="noreferrer"
+                   style={{ color: T.textDim }}>Chính sách bảo mật</a>
+                {' · '}
+                <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                   target="_blank" rel="noreferrer"
+                   style={{ color: T.textDim }}>Điều khoản sử dụng (EULA)</a>
               </div>
             </div>
           )}
