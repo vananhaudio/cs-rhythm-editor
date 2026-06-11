@@ -207,24 +207,37 @@ export default function StudentOnboarding() {
     setIapRegLoading(true)
     setIapRegError('')
     try {
-      const { data: authData, error: signUpErr } = await supabase.auth.signUp({ email: iapRegEmail, password: iapRegPass })
-      if (signUpErr) throw signUpErr
-      const userId = authData.user?.id
-      if (!userId) throw new Error('Không lấy được user ID.')
-      await supabase.from('edu_students').insert({
+      // Thử sign up (nếu đã có tài khoản thì bỏ qua lỗi duplicate)
+      await supabase.auth.signUp({ email: iapRegEmail, password: iapRegPass })
+
+      // Sign in để lấy session (quan trọng: đảm bảo có session dù Supabase có bật email confirm hay không)
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email: iapRegEmail, password: iapRegPass })
+      if (signInErr) throw new Error('Đăng nhập thất bại: ' + signInErr.message)
+
+      const userId = signInData.user.id
+
+      // Tạo hoặc cập nhật hồ sơ học sinh
+      const { error: upsertErr } = await supabase.from('edu_students').upsert({
         user_id: userId,
         full_name: iapRegEmail.split('@')[0],
         email: iapRegEmail,
         is_active: true,
         level: 'beginner',
         enrolled_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'user_id' })
+      if (upsertErr) throw new Error('Tạo hồ sơ thất bại: ' + upsertErr.message)
+
       const { data: studentData } = await supabase
         .from('edu_students')
         .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
         .eq('user_id', userId)
         .single()
-      if (studentData) { setStudent(studentData); setStep('portal') }
+      if (studentData) {
+        setStudent(studentData)
+        setStep('portal')
+      } else {
+        throw new Error('Không tải được hồ sơ. Thử đăng nhập lại.')
+      }
     } catch (e: any) {
       setIapRegError(e.message || 'Không thể tạo tài khoản. Thử lại sau.')
     } finally {
