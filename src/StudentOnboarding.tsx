@@ -82,6 +82,11 @@ export default function StudentOnboarding() {
   const [showPass, setShowPass]   = useState(false)
   const [iapLoading, setIapLoading]   = useState(false)
   const [iapMsg, setIapMsg]           = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [iapPurchased, setIapPurchased] = useState(false)
+  const [iapRegEmail, setIapRegEmail]   = useState('')
+  const [iapRegPass, setIapRegPass]     = useState('')
+  const [iapRegLoading, setIapRegLoading] = useState(false)
+  const [iapRegError, setIapRegError]   = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const passRef  = useRef<HTMLInputElement>(null)
 
@@ -173,12 +178,10 @@ export default function StudentOnboarding() {
     setIapLoading(true)
     try {
       await purchaseMonthly()
-      setIapMsg({ type: 'ok', text: 'Đăng ký thành công! Tài khoản của bạn sẽ được kích hoạt trong vòng 24 giờ.' })
+      setIapPurchased(true)
     } catch (e: any) {
       const msg: string = e?.message ?? ''
-      if (msg.toLowerCase().includes('cancel') || msg.includes('SKErrorDomain error 2')) {
-        setIapMsg(null) // user tự cancel — không hiện lỗi
-      } else {
+      if (!msg.toLowerCase().includes('cancel') && !msg.includes('SKErrorDomain error 2')) {
         setIapMsg({ type: 'err', text: msg || 'Không thể hoàn tất. Thử lại sau.' })
       }
     } finally {
@@ -191,11 +194,41 @@ export default function StudentOnboarding() {
     setIapLoading(true)
     try {
       await restorePurchases()
-      setIapMsg({ type: 'ok', text: 'Đã khôi phục giao dịch thành công! Tài khoản của bạn sẽ được kích hoạt sớm nhất.' })
+      setIapPurchased(true)
     } catch {
       setIapMsg({ type: 'err', text: 'Không tìm thấy giao dịch cần khôi phục.' })
     } finally {
       setIapLoading(false)
+    }
+  }
+
+  const handleIAPRegister = async () => {
+    if (!iapRegEmail || !iapRegPass) return
+    setIapRegLoading(true)
+    setIapRegError('')
+    try {
+      const { data: authData, error: signUpErr } = await supabase.auth.signUp({ email: iapRegEmail, password: iapRegPass })
+      if (signUpErr) throw signUpErr
+      const userId = authData.user?.id
+      if (!userId) throw new Error('Không lấy được user ID.')
+      await supabase.from('edu_students').insert({
+        user_id: userId,
+        full_name: iapRegEmail.split('@')[0],
+        email: iapRegEmail,
+        is_active: true,
+        level: 'beginner',
+        enrolled_at: new Date().toISOString(),
+      })
+      const { data: studentData } = await supabase
+        .from('edu_students')
+        .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
+        .eq('user_id', userId)
+        .single()
+      if (studentData) { setStudent(studentData); setStep('portal') }
+    } catch (e: any) {
+      setIapRegError(e.message || 'Không thể tạo tài khoản. Thử lại sau.')
+    } finally {
+      setIapRegLoading(false)
     }
   }
 
@@ -270,54 +303,101 @@ export default function StudentOnboarding() {
 
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIOS && (
-            <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360 }}>
-              <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 14 }}>
-                Chưa có tài khoản? Đăng ký trực tiếp qua App Store:
-              </div>
-              <Btn
-                onClick={handleIAPPurchase}
-                disabled={iapLoading}
-                style={{
-                  background: '#1B4332', color: '#fff', border: 'none', borderRadius: 12,
-                  padding: '12px 28px', fontSize: 15, fontWeight: 700, width: '100%',
-                  opacity: iapLoading ? 0.6 : 1,
-                }}
-              >
-                {iapLoading ? 'Đang xử lý...' : '🍎 Đăng ký học — $49.99 / tháng'}
-              </Btn>
+            <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360, width: '100%' }}>
+              {!iapPurchased ? (
+                <>
+                  <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 14 }}>
+                    Chưa có tài khoản? Đăng ký trực tiếp qua App Store:
+                  </div>
+                  <Btn
+                    onClick={handleIAPPurchase}
+                    disabled={iapLoading}
+                    style={{
+                      background: '#1B4332', color: '#fff', border: 'none', borderRadius: 12,
+                      padding: '12px 28px', fontSize: 15, fontWeight: 700, width: '100%',
+                      opacity: iapLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {iapLoading ? 'Đang xử lý...' : '🍎 Đăng ký học — $49.99 / tháng'}
+                  </Btn>
 
-              {iapMsg && (
-                <div style={{
-                  marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 13,
-                  background: iapMsg.type === 'ok' ? '#E8F2EC' : '#F0D8D0',
-                  color:      iapMsg.type === 'ok' ? '#1B4332'  : '#8B3A1E',
-                  border: `1px solid ${iapMsg.type === 'ok' ? '#B0D4BC' : '#E4B8A8'}`,
-                }}>
-                  {iapMsg.type === 'ok' ? '✅ ' : '⚠️ '}{iapMsg.text}
+                  {iapMsg && (
+                    <div style={{
+                      marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 13,
+                      background: '#F0D8D0', color: '#8B3A1E', border: '1px solid #E4B8A8',
+                    }}>⚠️ {iapMsg.text}</div>
+                  )}
+
+                  <Btn
+                    onClick={handleIAPRestore}
+                    disabled={iapLoading}
+                    style={{
+                      marginTop: 10, background: 'none', border: 'none',
+                      color: T.textDim, fontSize: 12, cursor: 'pointer',
+                      textDecoration: 'underline', padding: '4px 0',
+                    }}
+                  >Khôi phục giao dịch đã mua</Btn>
+
+                  <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
+                    Đăng ký tự động gia hạn mỗi tháng · $49.99/tháng.<br />
+                    Huỷ bất kỳ lúc nào trong Cài đặt &gt; Apple ID &gt; Đăng ký.<br />
+                    <a href="https://timming.vananhaudio.com/tvaprivacy"
+                       target="_blank" rel="noreferrer"
+                       style={{ color: T.textDim }}>Chính sách bảo mật</a>
+                    {' · '}
+                    <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                       target="_blank" rel="noreferrer"
+                       style={{ color: T.textDim }}>Điều khoản sử dụng (EULA)</a>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 22, textAlign: 'center', marginBottom: 8 }}>🎉</div>
+                  <div style={{ fontWeight: 700, fontSize: 17, textAlign: 'center', marginBottom: 4 }}>Thanh toán thành công!</div>
+                  <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', marginBottom: 20 }}>Tạo tài khoản để bắt đầu học ngay.</div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 13, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Email</label>
+                    <input
+                      value={iapRegEmail}
+                      onChange={e => setIapRegEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      type="email"
+                      autoFocus
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 15, color: T.text, outline: 'none', fontFamily: 'inherit' }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 13, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Mật khẩu</label>
+                    <input
+                      value={iapRegPass}
+                      onChange={e => setIapRegPass(e.target.value)}
+                      placeholder="Tối thiểu 6 ký tự"
+                      type="password"
+                      onKeyDown={e => e.key === 'Enter' && handleIAPRegister()}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 15, color: T.text, outline: 'none', fontFamily: 'inherit' }}
+                    />
+                  </div>
+
+                  {iapRegError && (
+                    <div style={{ background: '#F0D8D0', border: '1px solid #E4B8A8', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#8B3A1E', marginBottom: 12 }}>
+                      ⚠️ {iapRegError}
+                    </div>
+                  )}
+
+                  <Btn
+                    onClick={handleIAPRegister}
+                    disabled={iapRegLoading || !iapRegEmail || !iapRegPass}
+                    style={{
+                      width: '100%', background: T.header, color: '#fff', border: 'none',
+                      borderRadius: 12, padding: '13px', fontSize: 15, fontWeight: 700,
+                      opacity: (!iapRegEmail || !iapRegPass) ? 0.6 : 1,
+                    }}
+                  >
+                    {iapRegLoading ? 'Đang tạo tài khoản...' : 'Bắt đầu học ngay →'}
+                  </Btn>
                 </div>
               )}
-
-              <Btn
-                onClick={handleIAPRestore}
-                disabled={iapLoading}
-                style={{
-                  marginTop: 10, background: 'none', border: 'none',
-                  color: T.textDim, fontSize: 12, cursor: 'pointer',
-                  textDecoration: 'underline', padding: '4px 0',
-                }}
-              >Khôi phục giao dịch đã mua</Btn>
-
-              <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
-                Đăng ký tự động gia hạn mỗi tháng · $49.99/tháng.<br />
-                Huỷ bất kỳ lúc nào trong Cài đặt &gt; Apple ID &gt; Đăng ký.<br />
-                <a href="https://timming.vananhaudio.com/tvaprivacy"
-                   target="_blank" rel="noreferrer"
-                   style={{ color: T.textDim }}>Chính sách bảo mật</a>
-                {' · '}
-                <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
-                   target="_blank" rel="noreferrer"
-                   style={{ color: T.textDim }}>Điều khoản sử dụng (EULA)</a>
-              </div>
             </div>
           )}
         </div>
