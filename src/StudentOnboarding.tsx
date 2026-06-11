@@ -309,7 +309,7 @@ export default function StudentOnboarding() {
 
               <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
                 Đăng ký tự động gia hạn mỗi tháng · $49.99/tháng.<br />
-                Sau khi thanh toán, liên hệ Thầy Văn Anh qua Zalo để kích hoạt.<br />
+                Sau khi thanh toán, liên hệ Thầy Văn Anh để kích hoạt.<br />
                 Huỷ bất kỳ lúc nào trong Cài đặt &gt; Apple ID &gt; Đăng ký.<br />
                 <a href="https://timming.vananhaudio.com/tvaprivacy"
                    target="_blank" rel="noreferrer"
