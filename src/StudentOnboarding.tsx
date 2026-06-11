@@ -173,7 +173,7 @@ export default function StudentOnboarding() {
     setIapLoading(true)
     try {
       await purchaseMonthly()
-      setIapMsg({ type: 'ok', text: 'Đăng ký thành công! Liên hệ Thầy Văn Anh qua Zalo để kích hoạt tài khoản học ngay.' })
+      setIapMsg({ type: 'ok', text: 'Đăng ký thành công! Tài khoản của bạn sẽ được kích hoạt trong vòng 24 giờ.' })
     } catch (e: any) {
       const msg: string = e?.message ?? ''
       if (msg.toLowerCase().includes('cancel') || msg.includes('SKErrorDomain error 2')) {
@@ -191,7 +191,7 @@ export default function StudentOnboarding() {
     setIapLoading(true)
     try {
       await restorePurchases()
-      setIapMsg({ type: 'ok', text: 'Đã khôi phục giao dịch. Liên hệ Thầy Văn Anh để kích hoạt tài khoản.' })
+      setIapMsg({ type: 'ok', text: 'Đã khôi phục giao dịch thành công! Tài khoản của bạn sẽ được kích hoạt sớm nhất.' })
     } catch {
       setIapMsg({ type: 'err', text: 'Không tìm thấy giao dịch cần khôi phục.' })
     } finally {
