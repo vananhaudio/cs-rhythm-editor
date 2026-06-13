@@ -158,6 +158,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [showSettings, setShowSettings] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const avatarFileRef = useRef<HTMLInputElement>(null)
   const [screen, setScreen]       = useState<Screen>('home')
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
@@ -1597,6 +1598,24 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           <button onClick={() => setShowSettings(false)}
             style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 15, fontWeight: 700, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>
             Xong
+          </button>
+          <button
+            onClick={async () => {
+              if (!window.confirm('Bạn chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.')) return
+              if (!window.confirm('Xác nhận lần cuối: toàn bộ dữ liệu học tập sẽ bị xóa vĩnh viễn.')) return
+              setDeletingAccount(true)
+              try {
+                await supabase.rpc('delete_my_account')
+                await supabase.auth.signOut()
+                onLogout()
+              } catch {
+                alert('Xóa tài khoản thất bại. Thử lại sau.')
+                setDeletingAccount(false)
+              }
+            }}
+            disabled={deletingAccount}
+            style={{ width: '100%', background: 'none', border: 'none', marginTop: 12, padding: '10px', fontSize: 13, color: '#E53E3E', cursor: 'pointer', fontFamily: 'inherit', opacity: deletingAccount ? 0.5 : 1 }}>
+            {deletingAccount ? 'Đang xóa tài khoản...' : 'Xóa tài khoản'}
           </button>
         </div>
       </div>
