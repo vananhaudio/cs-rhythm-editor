@@ -130,7 +130,7 @@ const TOOL_ROUTES: Record<string, string> = {
   metronome:     '/tap',
   backing_track: '/tap',
   chord:         '/chords',
-  tuner:         '/tap',
+  tuner:         '/tuner',
   submit_video:  '/tap',
   ear:           '/tap',
 }
