@@ -373,7 +373,7 @@ export default function StudentOnboarding() {
                   >Khôi phục giao dịch đã mua</Btn>
 
                   <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
-                    Đăng ký tự động gia hạn mỗi tháng · $49.99/tháng.<br />
+                    Đăng ký tự động gia hạn mỗi tháng với giá $49.99/tháng. Tài khoản Apple ID của bạn sẽ bị tính phí khi xác nhận mua hàng. Đăng ký tự động gia hạn trừ khi tắt ít nhất 24 giờ trước khi hết kỳ thanh toán hiện tại.<br />
                     Huỷ bất kỳ lúc nào trong Cài đặt &gt; Apple ID &gt; Đăng ký.<br />
                     <a href="https://timming.vananhaudio.com/tvaprivacy"
                        target="_blank" rel="noreferrer"

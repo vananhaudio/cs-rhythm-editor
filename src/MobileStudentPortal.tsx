@@ -1617,6 +1617,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             style={{ width: '100%', background: 'none', border: 'none', marginTop: 12, padding: '10px', fontSize: 13, color: '#E53E3E', cursor: 'pointer', fontFamily: 'inherit', opacity: deletingAccount ? 0.5 : 1 }}>
             {deletingAccount ? 'Đang xóa tài khoản...' : 'Xóa tài khoản'}
           </button>
+          <div style={{ textAlign: 'center', marginTop: 16, paddingBottom: 4 }}>
+            <a href="https://timming.vananhaudio.com/tvaprivacy" target="_blank" rel="noreferrer"
+              style={{ fontSize: 12, color: '#6B7280', textDecoration: 'underline' }}>
+              Chính sách bảo mật
+            </a>
+          </div>
         </div>
       </div>
     )}
