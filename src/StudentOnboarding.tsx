@@ -582,7 +582,7 @@ export default function StudentOnboarding() {
       )}
 
       {/* PORTAL */}
-      {step === 'portal' && student && (window.innerWidth < 768 ? <MobileStudentPortal student={student} onLogout={handleLogout} /> : <StudentPortalV2 student={student} onLogout={handleLogout} />)}
+      {step === 'portal' && student && (window.innerWidth < 1024 ? <MobileStudentPortal student={student} onLogout={handleLogout} /> : <StudentPortalV2 student={student} onLogout={handleLogout} />)}
     </div>
   )
 }
