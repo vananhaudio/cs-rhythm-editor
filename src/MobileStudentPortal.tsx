@@ -159,6 +159,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [nameDraft, setNameDraft] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const avatarFileRef = useRef<HTMLInputElement>(null)
   const [screen, setScreen]       = useState<Screen>('home')
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
@@ -1600,19 +1601,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             Xong
           </button>
           <button
-            onClick={async () => {
-              if (!window.confirm('Bạn chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.')) return
-              if (!window.confirm('Xác nhận lần cuối: toàn bộ dữ liệu học tập sẽ bị xóa vĩnh viễn.')) return
-              setDeletingAccount(true)
-              try {
-                await supabase.rpc('delete_my_account')
-                await supabase.auth.signOut()
-                onLogout()
-              } catch {
-                alert('Xóa tài khoản thất bại. Thử lại sau.')
-                setDeletingAccount(false)
-              }
-            }}
+            onClick={() => setShowDeleteConfirm(true)}
             disabled={deletingAccount}
             style={{ width: '100%', background: 'none', border: 'none', marginTop: 12, padding: '10px', fontSize: 13, color: '#E53E3E', cursor: 'pointer', fontFamily: 'inherit', opacity: deletingAccount ? 0.5 : 1 }}>
             {deletingAccount ? 'Đang xóa tài khoản...' : 'Xóa tài khoản'}
@@ -1623,6 +1612,39 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               Chính sách bảo mật
             </a>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Modal xác nhận xóa tài khoản ── */}
+    {showDeleteConfirm && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}>
+        <div style={{ background: L.surface, borderRadius: 20, padding: 28, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>⚠️</div>
+          <h3 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 800, color: L.t1, textAlign: 'center' }}>Xóa tài khoản?</h3>
+          <p style={{ margin: '0 0 24px', fontSize: 14, color: L.t2, textAlign: 'center', lineHeight: 1.6 }}>
+            Toàn bộ dữ liệu học tập, tiến độ và lịch sử luyện tập của bạn sẽ bị <strong>xóa vĩnh viễn</strong> và không thể khôi phục.
+          </p>
+          <button
+            onClick={async () => {
+              setShowDeleteConfirm(false)
+              setDeletingAccount(true)
+              try {
+                await supabase.rpc('delete_my_account')
+                await supabase.auth.signOut()
+                onLogout()
+              } catch {
+                setDeletingAccount(false)
+              }
+            }}
+            style={{ width: '100%', background: '#E53E3E', border: 'none', borderRadius: 14, padding: '15px', fontSize: 16, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>
+            Xóa tài khoản vĩnh viễn
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '15px', fontSize: 16, fontWeight: 600, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Hủy bỏ
+          </button>
         </div>
       </div>
     )}
