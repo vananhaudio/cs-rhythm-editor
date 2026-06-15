@@ -244,6 +244,7 @@ export default function ScoreTabViewerAlpha({
       settings.core.logLevel = LogLevel.None;
       settings.core.useWorkers = false;
       settings.core.fontDirectory = '/font/';
+      settings.core.includeNoteBounds = true;   // cần để có noteHeadBounds (box quanh đầu nốt/số)
       settings.display.layoutMode = LayoutMode.Horizontal;
       settings.display.staveProfile = StaveProfile.ScoreTab;
       settings.display.scale = 1.0;
@@ -285,57 +286,71 @@ export default function ScoreTabViewerAlpha({
   useEffect(() => { if (apiRef.current) { try { apiRef.current.tex(tex); } catch { /* */ } } }, [tex]);
 
   // ── Overlay: con trỏ + highlight ──────────────────────────────────────────────
-  const [selBox, setSelBox]   = useState<Box | null>(null);
-  const [caret, setCaret]     = useState<{ x: number; h: number; y: number } | null>(null);
+  const [selHeads, setSelHeads] = useState<Box[]>([]);
+  const [caret, setCaret]       = useState<{ x: number; h: number; y: number } | null>(null);
   const [activeBoxes, setActiveBoxes] = useState<Box[]>([]);
 
-  // Gom box mỗi beat (gộp staff khuông + TAB → 1 box cao toàn phần), thứ tự = notes[]
-  const beatBoxes = useCallback((): Box[] => {
+  // Gom bounds mỗi beat: col = cột cao toàn phần (khuông+TAB); heads = box từng đầu nốt/số fret.
+  // Thứ tự khớp notes[].
+  const collectBeats = useCallback((): { col: Box; heads: Box[] }[] => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bl = (apiRef.current as any)?.renderer?.boundsLookup;
     if (!bl) return [];
-    const boxes: Box[] = [];
+    const out: { col: Box; heads: Box[] }[] = [];
     for (const sys of bl.staffSystems) {
       for (const mb of sys.bars) {                 // mỗi master bar
         const staves = mb.bars;                    // [khuông, TAB]
         const n = staves[0]?.beats?.length ?? 0;
         for (let j = 0; j < n; j++) {
           let x = Infinity, y = Infinity, r = -Infinity, b = -Infinity;
+          const heads: Box[] = [];
           for (const st of staves) {
             const bb = st.beats[j]; if (!bb) continue;
             const rb = bb.realBounds;
             x = Math.min(x, rb.x); y = Math.min(y, rb.y);
             r = Math.max(r, rb.x + rb.w); b = Math.max(b, rb.y + rb.h);
+            if (bb.notes) for (const nb of bb.notes) {
+              const hb = nb.noteHeadBounds;
+              if (hb && hb.w > 0) heads.push({ x: hb.x, y: hb.y, w: hb.w, h: hb.h });
+            }
           }
-          if (x !== Infinity) boxes.push({ x, y, w: r - x, h: b - y });
+          if (x !== Infinity) out.push({ col: { x, y, w: r - x, h: b - y }, heads });
         }
       }
     }
-    return boxes;
+    return out;
   }, []);
 
   const recomputeOverlays = useCallback(() => {
-    const boxes = beatBoxes();
+    const beats = collectBeats();
 
-    // Selection box
-    setSelBox(selIdx !== null && selIdx < boxes.length ? boxes[selIdx] : null);
+    // Ô vuông quanh đầu nốt + số fret của nốt đang chọn (kiểu Guitar Pro)
+    if (selIdx !== null && selIdx < beats.length) {
+      const { col, heads } = beats[selIdx];
+      setSelHeads(heads.length ? heads : [col]);   // rest → dùng cột
+    } else setSelHeads([]);
 
     // Caret tại vị trí chèn (cursorIdx)
-    if (selIdx === null && focused && boxes.length > 0) {
-      if (cursorIdx >= boxes.length) {
-        const b = boxes[boxes.length - 1];
+    if (selIdx === null && focused && beats.length > 0) {
+      if (cursorIdx >= beats.length) {
+        const b = beats[beats.length - 1].col;
         setCaret({ x: b.x + b.w + 3, y: b.y, h: b.h });
       } else {
-        const b = boxes[cursorIdx];
+        const b = beats[cursorIdx].col;
         setCaret({ x: b.x - 4, y: b.y, h: b.h });
       }
     } else setCaret(null);
 
-    // Playback highlight
+    // Playback highlight (ô vuông quanh đầu nốt đang vang)
     const ab: Box[] = [];
-    notes.forEach((n, i) => { if (activeNoteIds.has(n.id) && i < boxes.length) ab.push(boxes[i]); });
+    notes.forEach((n, i) => {
+      if (activeNoteIds.has(n.id) && i < beats.length) {
+        const { col, heads } = beats[i];
+        if (heads.length) ab.push(...heads); else ab.push(col);
+      }
+    });
     setActiveBoxes(ab);
-  }, [notes, selIdx, cursorIdx, focused, activeNoteIds, beatBoxes]);
+  }, [notes, selIdx, cursorIdx, focused, activeNoteIds, collectBeats]);
 
   useEffect(() => {
     if (!ready) return;
@@ -357,16 +372,16 @@ export default function ScoreTabViewerAlpha({
     focusRef.current?.focus();
     setFocused(true);
     const wrap = wrapRef.current; if (!wrap) return;
-    const boxes = beatBoxes();
-    if (boxes.length === 0) return;
+    const beats = collectBeats();
+    if (beats.length === 0) return;
     const wr = wrap.getBoundingClientRect();
     const px = e.clientX - wr.left + wrap.scrollLeft;   // toạ độ nội dung
     let best = -1, bd = Infinity;
-    boxes.forEach((b, i) => { const cx = b.x + b.w / 2; const d = Math.abs(px - cx); if (d < bd) { bd = d; best = i; } });
+    beats.forEach((bi, i) => { const b = bi.col; const cx = b.x + b.w / 2; const d = Math.abs(px - cx); if (d < bd) { bd = d; best = i; } });
     if (best >= 0 && bd < 70 && notes[best] && notes[best].string >= 0) {
       setSelIdx(best); setCursorIdx(best);
     }
-  }, [notes, beatBoxes]);
+  }, [notes, collectBeats]);
 
   // ── Styles ───────────────────────────────────────────────────────────────────
   const border = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.1)';
@@ -397,17 +412,17 @@ export default function ScoreTabViewerAlpha({
         style={{ position: 'relative', overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', cursor: 'pointer', minHeight: 200 }}>
         <div ref={alphaRef} />
 
-        {/* Playback highlight */}
+        {/* Playback highlight — ô vuông quanh đầu nốt đang vang */}
         {activeBoxes.map((b, i) => (
-          <div key={i} style={{ position: 'absolute', left: b.x - 4, top: b.y - 6, width: b.w + 8, height: b.h + 12, background: 'rgba(200,153,26,0.28)', borderRadius: 4, pointerEvents: 'none', zIndex: 4 }} />
+          <div key={i} style={{ position: 'absolute', left: b.x - 4, top: b.y - 4, width: b.w + 8, height: b.h + 8, background: 'rgba(200,153,26,0.30)', borderRadius: 3, pointerEvents: 'none', zIndex: 4 }} />
         ))}
 
-        {/* Selection box */}
-        {selBox && (
-          <div style={{ position: 'absolute', left: selBox.x - 4, top: selBox.y - 7, width: selBox.w + 8, height: selBox.h + 14, border: '2px solid rgba(30,100,220,0.7)', background: 'rgba(30,100,220,0.12)', borderRadius: 4, pointerEvents: 'none', zIndex: 5 }} />
-        )}
+        {/* Con trỏ chọn — ô vuông quanh đầu nốt + số fret (kiểu Guitar Pro) */}
+        {selHeads.map((b, i) => (
+          <div key={i} style={{ position: 'absolute', left: b.x - 4, top: b.y - 4, width: b.w + 8, height: b.h + 8, border: '1.5px solid rgba(30,100,220,0.85)', background: 'rgba(30,100,220,0.14)', borderRadius: 3, pointerEvents: 'none', zIndex: 5 }} />
+        ))}
 
-        {/* Caret chèn */}
+        {/* Caret chèn (khi chưa chọn nốt nào) */}
         {caret && (
           <div style={{ position: 'absolute', left: caret.x, top: caret.y, width: 2, height: caret.h, background: 'rgba(30,100,220,0.8)', pointerEvents: 'none', zIndex: 5, animation: 'atbBlink 1s step-end infinite' }} />
         )}
