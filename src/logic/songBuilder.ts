@@ -22,6 +22,12 @@ export interface Anchor {
   source: "anchor";
 }
 
+/** Hợp âm gán vào 1 từ (có hiệu lực từ từ đó tới hợp âm kế tiếp). */
+export interface SongChord {
+  wordIndex: number;
+  name: string; // vd "Em", "C", "G", "Am"
+}
+
 export type WordSource = "anchor" | "interpolated" | "unmapped";
 
 export interface MappedWord {

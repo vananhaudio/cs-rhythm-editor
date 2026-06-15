@@ -4,7 +4,7 @@
 // IndexedDB / server mà không phải sửa UI.
 // ============================================================
 import type { TempoFit } from './tempoFit'
-import type { Anchor } from './songBuilder'
+import type { Anchor, SongChord } from './songBuilder'
 
 export interface SongDraft {
   id: string
@@ -18,6 +18,7 @@ export interface SongDraft {
   downbeatPosition: number      // strongBeatRemainder = downbeatPosition - 1
   groupBeats: boolean | null
   anchors: Anchor[]
+  chords?: SongChord[]          // hợp âm gán theo từ (tùy chọn — tương thích bài cũ)
   step: number                  // currentStep
   createdAt: number
   updatedAt: number

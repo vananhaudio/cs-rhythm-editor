@@ -2,7 +2,10 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { fitTempo, beatToTime, timeToBeat } from './logic/tempoFit'
 import type { TempoFit } from './logic/tempoFit'
 import { splitWords, computeMapping, makeAnchor } from './logic/songBuilder'
-import type { Word, Anchor, MappedWord } from './logic/songBuilder'
+import type { Word, Anchor, MappedWord, SongChord } from './logic/songBuilder'
+import { parseLyricsWithChords, hasChordMarkup } from './logic/lyricsChordParser'
+import { CHORD_LIBRARY, chordShape } from './logic/chordLibrary'
+import ChordDiagram from './ChordDiagram'
 import {
   newDraftId, autosaveCurrentDraft, getLatestDraft, getCurrentId, loadDraft as loadDraftById,
   listDrafts, deleteDraft, renameDraft, duplicateDraft, migrateLegacyDraft, hasContent, progressOf,
@@ -40,7 +43,7 @@ function BmsMark({ size = 28 }: { size?: number }) {
 }
 const YT_API_KEY = 'AIzaSyA6kg3G2CVZ7b_x8IAlkZJCOa4AJHyWHms'
 
-const STEPS = ['Chuẩn bị', 'Phách', 'Gắn mốc', 'Nhịp', 'Nghe thử'] as const
+const STEPS = ['Chuẩn bị', 'Phách', 'Gắn mốc', 'Nhịp', 'Hợp âm', 'Nghe thử'] as const
 
 interface YTResult { id: string; title: string; channel: string; thumbnail: string }
 
@@ -97,36 +100,41 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
 }
 
 /* lời bài hát theo từng dòng, tô màu theo source */
-function LyricBlock({ words, mapping, activeIndex, onTap, picker }: {
+function LyricBlock({ words, mapping, activeIndex, onTap, picker, chords }: {
   words: Word[]; mapping: MappedWord[]; activeIndex?: number
-  onTap?: (w: Word, m: MappedWord) => void; picker?: boolean
+  onTap?: (w: Word, m: MappedWord) => void; picker?: boolean; chords?: SongChord[]
 }) {
   const byIndex = new Map(mapping.map(m => [m.index, m]))
+  const chordByWord = new Map((chords ?? []).map(c => [c.wordIndex, c.name]))
   const lines: Word[][] = []
   for (const w of words) { (lines[w.line] ??= []).push(w) }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {lines.map((lw, li) => (
-        <div key={li} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div key={li} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'flex-end' }}>
           {lw.map(w => {
             const m = byIndex.get(w.index)!
             const isActive = activeIndex === w.index
+            const chord = chordByWord.get(w.index)
             let bg = 'transparent', col = C.dim, bd = C.border, weight = 500
             if (m.source === 'anchor') { bg = C.accent; col = '#fff'; bd = C.accent; weight = 700 }
             else if (m.source === 'interpolated') { col = C.cyan; bd = `${C.cyan}55`; bg = C.cyanSoft }
             if (isActive) { bg = C.amber; col = '#1a1200'; bd = C.amber; weight = 800 }
             return (
-              <button key={w.index} onClick={onTap ? () => onTap(w, m) : undefined}
-                style={{
-                  fontFamily: FONT, fontSize: 15, fontWeight: weight, padding: '6px 11px', borderRadius: 9,
-                  border: `1px solid ${bd}`, background: bg, color: col, cursor: onTap ? 'pointer' : 'default',
-                  transition: 'all 0.12s', position: 'relative',
-                  boxShadow: isActive ? `0 0 14px ${C.amber}66` : (picker && m.source === 'anchor' ? `0 0 0 2px ${C.accent}55` : 'none'),
-                }}>
-                {w.text}
-                {m.source === 'anchor' && m.beatPosition != null &&
-                  <span style={{ fontFamily: MONO, fontSize: 9, opacity: 0.8, marginLeft: 5 }}>·{m.beatPosition}</span>}
-              </button>
+              <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                {chord && <span style={{ fontSize: 12, fontWeight: 800, color: C.accent, paddingLeft: 2 }}>{chord}</span>}
+                <button onClick={onTap ? () => onTap(w, m) : undefined}
+                  style={{
+                    fontFamily: FONT, fontSize: 15, fontWeight: weight, padding: '6px 11px', borderRadius: 9,
+                    border: `1px solid ${bd}`, background: bg, color: col, cursor: onTap ? 'pointer' : 'default',
+                    transition: 'all 0.12s', position: 'relative',
+                    boxShadow: isActive ? `0 0 14px ${C.amber}66` : (picker && m.source === 'anchor' ? `0 0 0 2px ${C.accent}55` : 'none'),
+                  }}>
+                  {w.text}
+                  {m.source === 'anchor' && m.beatPosition != null &&
+                    <span style={{ fontFamily: MONO, fontSize: 9, opacity: 0.8, marginLeft: 5 }}>·{m.beatPosition}</span>}
+                </button>
+              </div>
             )
           })}
         </div>
@@ -150,6 +158,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
   const [downbeatPosition, setDownbeatPosition] = useState(0)
   const [groupBeats, setGroupBeats] = useState<boolean | null>(null)
   const [anchors, setAnchors] = useState<Anchor[]>([])
+  const [chords, setChords] = useState<SongChord[]>([])
 
   const [tapTimes, setTapTimes] = useState<number[]>([])
   const [playerReady, setPlayerReady] = useState(false)
@@ -178,6 +187,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     setDownbeatPosition(d.downbeatPosition)
     setGroupBeats(d.groupBeats)
     setAnchors(d.anchors)
+    setChords(d.chords ?? [])
     setStep(d.step)
     setTapTimes([]); setPlayerReady(false); setPlaying(false); setPendingBeat(null); setMetronomeOn(false)
     hydrated.current = true
@@ -186,7 +196,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
   const newDraft = useCallback(() => {
     setDraftId(newDraftId())
     setSongTitle(''); setYoutubeUrl(''); setVideoId(null); setVideoThumb(null); setLyricsText('')
-    setFit(null); setTimeSignature(4); setDownbeatPosition(0); setGroupBeats(null); setAnchors([])
+    setFit(null); setTimeSignature(4); setDownbeatPosition(0); setGroupBeats(null); setAnchors([]); setChords([])
     setStep(0); setTapTimes([]); setPlayerReady(false); setPlaying(false); setPendingBeat(null); setMetronomeOn(false)
     hydrated.current = true
   }, [])
@@ -410,12 +420,12 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     const d: SongDraft = {
       id: draftId, title: songTitle.trim() || fallbackTitle,
       youtubeUrl, videoId, thumbnail: videoThumb,
-      lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, step,
+      lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, chords, step,
       createdAt: now, updatedAt: now,
     }
     if (!hasContent(d)) return               // bài rỗng thì không tạo nháp
     autosaveCurrentDraft(d)
-  }, [draftId, songTitle, youtubeUrl, videoId, videoThumb, lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, step])
+  }, [draftId, songTitle, youtubeUrl, videoId, videoThumb, lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, chords, step])
 
   /* ---- thao tác nháp ---- */
   const resumeLatest = () => { if (resumeDraft) applyDraft(resumeDraft); setResumeDraft(null) }
@@ -429,7 +439,24 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     if (step === 2) return true
     if (step === 3) return true
     if (step === 4) return true
+    if (step === 5) return true
     return false
+  }
+
+  /* ---- hợp âm ---- */
+  const setChord = (wordIndex: number, name: string) =>
+    setChords(cs => [...cs.filter(c => c.wordIndex !== wordIndex), { wordIndex, name }].sort((a, b) => a.wordIndex - b.wordIndex))
+  const clearChord = (wordIndex: number) => setChords(cs => cs.filter(c => c.wordIndex !== wordIndex))
+  const resetChords = () => setChords([])
+  /* dán lời có hợp âm → tự tách */
+  const handleLyrics = (raw: string) => {
+    if (hasChordMarkup(raw)) {
+      const { lyrics, chords: parsed } = parseLyricsWithChords(raw)
+      setLyricsText(lyrics)
+      if (parsed.length) setChords(parsed)
+    } else {
+      setLyricsText(raw)
+    }
   }
   const goNext = () => setStep(s => Math.min(STEPS.length - 1, s + 1))
   const goBack = () => setStep(s => Math.max(0, s - 1))
@@ -532,11 +559,12 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
       {/* Nội dung bước (cuộn) */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 14, paddingBottom: 90 }}>
-        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words, songTitle, setSongTitle, onOpenDrafts: () => setShowDrafts(true) }} />}
+        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText: handleLyrics, chordCount: chords.length, words, songTitle, setSongTitle, onOpenDrafts: () => setShowDrafts(true) }} />}
         {step === 1 && <StepTempo {...{ fit, tapTimes, tap, resetTaps, playing, playerReady, play }} />}
         {step === 2 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }} />}
         {step === 3 && <StepDownbeat {...{ words, mapping, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, groupBeats, setGroupBeats }} />}
-        {step === 4 && <StepPreview {...{ fit, words, mapping, activeWordIndex, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, pause, mappedCount, pct }} />}
+        {step === 4 && <StepChord {...{ words, chords, setChord, clearChord, resetChords }} />}
+        {step === 5 && <StepPreview {...{ fit, words, mapping, activeWordIndex, chords, metronomeOn, toggleMetro: () => { ensureAudio(); setMetronomeOn(v => !v) }, playing, play, pause, mappedCount, pct }} />}
       </div>
 
       {/* Footer điều hướng — ẩn ở bước cuối (Nghe thử) */}
@@ -607,9 +635,9 @@ function HelpModal({ step, onClose }: { step: number; onClose: () => void }) {
 }
 
 /* ===================== STEP 0 — Chuẩn bị ===================== */
-function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, words, songTitle, setSongTitle, onOpenDrafts }: {
+function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, chordCount, words, songTitle, setSongTitle, onOpenDrafts }: {
   youtubeUrl: string; setYoutubeUrl: (s: string) => void; videoId: string | null; loadVideo: () => void
-  pickVideo: (id: string, title?: string, thumb?: string) => void; lyricsText: string; setLyricsText: (s: string) => void; words: Word[]
+  pickVideo: (id: string, title?: string, thumb?: string) => void; lyricsText: string; setLyricsText: (s: string) => void; chordCount: number; words: Word[]
   songTitle: string; setSongTitle: (s: string) => void
   onOpenDrafts: () => void
 }) {
@@ -715,11 +743,17 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
 
       <Card title="Lời bài hát">
         <textarea value={lyricsText} onChange={e => setLyricsText(e.target.value)} rows={8}
-          placeholder={'Dán lời bài hát vào đây.\nMỗi từ sẽ là một mốc có thể gắn.\nXuống dòng để giữ bố cục câu.'}
+          placeholder={'Dán lời bài hát vào đây.\nMẹo: dán lời CÓ hợp âm ([Em] hoặc hợp âm trên dòng) sẽ tự gắn hợp âm.\nXuống dòng để giữ bố cục câu.'}
           style={{ ...inp, resize: 'vertical', lineHeight: 1.7 }} />
-        <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>
-          {words.length > 0 ? <>Đã tách <b style={{ color: C.text }}>{words.length}</b> từ.</> : 'Chưa có lời — có thể nhập sau ở bước Gắn mốc.'}
-        </div>
+        {chordCount > 0 ? (
+          <div style={{ fontSize: 12, color: C.amber, fontWeight: 700, marginTop: 8 }}>
+            🎸 Đã tự nhận <b>{chordCount}</b> hợp âm từ lời — xem/sửa ở bước Hợp âm.
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>
+            {words.length > 0 ? <>Đã tách <b style={{ color: C.text }}>{words.length}</b> từ. Dán lời kèm hợp âm sẽ tự tách hợp âm.</> : 'Chưa có lời — có thể nhập sau. Dán lời kèm hợp âm sẽ tự tách.'}
+          </div>
+        )}
       </Card>
     </>
   )
@@ -934,14 +968,106 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
   )
 }
 
-/* ===================== STEP 4 — Nghe thử ===================== */
-function StepPreview({ fit, words, mapping, activeWordIndex, metronomeOn, toggleMetro, playing, play, pause, mappedCount, pct }: {
-  fit: TempoFit | null; words: Word[]; mapping: MappedWord[]; activeWordIndex?: number
+/* ===================== STEP 4 — Hợp âm ===================== */
+function StepChord({ words, chords, setChord, clearChord, resetChords }: {
+  words: Word[]; chords: SongChord[]
+  setChord: (wordIndex: number, name: string) => void
+  clearChord: (wordIndex: number) => void
+  resetChords: () => void
+}) {
+  const [picking, setPicking] = useState<Word | null>(null)
+  const chordByWord = new Map(chords.map(c => [c.wordIndex, c.name]))
+  const lines: Word[][] = []
+  for (const w of words) { (lines[w.line] ??= []).push(w) }
+  const current = picking ? chordByWord.get(picking.index) : undefined
+  return (
+    <>
+      <Card title="Gắn hợp âm">
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
+          Chạm vào từ bạn muốn đổi hợp âm rồi chọn. Hợp âm có hiệu lực từ từ đó tới hợp âm kế tiếp.
+        </div>
+        {words.length === 0 ? (
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 10 }}>Chưa có lời. Quay lại bước Chuẩn bị để nhập lời.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 10 }}>
+            {lines.map((lw, li) => (
+              <div key={li} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
+                {lw.map(w => {
+                  const chord = chordByWord.get(w.index)
+                  return (
+                    <button key={w.index} onClick={() => setPicking(w)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: chord ? C.amber : 'transparent', minHeight: 16, fontFamily: FONT }}>{chord ?? '·'}</span>
+                      <span style={{
+                        fontFamily: FONT, fontSize: 15, padding: '5px 9px', borderRadius: 8,
+                        border: `1px solid ${chord ? `${C.amber}88` : C.border}`,
+                        background: chord ? `${C.amber}22` : 'rgba(255,255,255,0.05)', color: C.text,
+                      }}>{w.text}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+        {chords.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+            <span style={{ fontSize: 12, color: C.muted }}>{chords.length} hợp âm đã gắn</span>
+            <button onClick={resetChords} style={{ background: 'none', border: 'none', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>Xoá tất cả</button>
+          </div>
+        )}
+      </Card>
+
+      {picking && (
+        <ChordPickerModal current={current}
+          onPick={(name) => { if (name) setChord(picking.index, name); else clearChord(picking.index); setPicking(null) }}
+          onClose={() => setPicking(null)} />
+      )}
+    </>
+  )
+}
+
+function ChordPickerModal({ current, onPick, onClose }: {
+  current?: string; onPick: (name: string | null) => void; onClose: () => void
+}) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 300, padding: 12 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: 18, width: '100%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Chọn hợp âm</span>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 10 }}>
+          {CHORD_LIBRARY.map(sh => {
+            const sel = current === sh.name
+            return (
+              <button key={sh.name} onClick={() => onPick(sh.name)}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 8, borderRadius: 12,
+                  background: sel ? `${C.amber}1f` : C.surface2, border: `1px solid ${sel ? C.amber : C.border}`, cursor: 'pointer' }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: sel ? C.amber : C.text, fontFamily: FONT }}>{sh.name}</span>
+                <ChordDiagram shape={sh} width={72} />
+              </button>
+            )
+          })}
+        </div>
+        {current && <Btn kind="ghost" onClick={() => onPick(null)} style={{ width: '100%', marginTop: 14 }}>Xoá hợp âm khỏi từ này</Btn>}
+      </div>
+    </div>
+  )
+}
+
+/* ===================== STEP 5 — Nghe thử ===================== */
+function StepPreview({ fit, words, mapping, activeWordIndex, chords, metronomeOn, toggleMetro, playing, play, pause, mappedCount, pct }: {
+  fit: TempoFit | null; words: Word[]; mapping: MappedWord[]; activeWordIndex?: number; chords: SongChord[]
   metronomeOn: boolean; toggleMetro: () => void; playing: boolean; play: () => void; pause: () => void
   mappedCount: number; pct: number
 }) {
   if (!fit?.ok) return <div style={{ color: C.muted, fontSize: 13, padding: 16 }}>Cần lưới nhịp ở bước 1 trước.</div>
   const activeWord = activeWordIndex != null ? words.find(w => w.index === activeWordIndex) : undefined
+  const sortedChords = [...chords].sort((a, b) => a.wordIndex - b.wordIndex)
+  const currentChord = activeWordIndex != null
+    ? (sortedChords.filter(c => c.wordIndex <= activeWordIndex).pop()?.name ?? sortedChords[0]?.name)
+    : sortedChords[0]?.name
   return (
     <>
       <Card title="Giai đoạn 5 — Nghe thử">
@@ -955,12 +1081,17 @@ function StepPreview({ fit, words, mapping, activeWordIndex, metronomeOn, toggle
       </Card>
 
       <Card>
+        {currentChord && (
+          <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 800, color: C.accent, marginBottom: 6 }}>
+            Hợp âm: {currentChord}
+          </div>
+        )}
         <div style={{ textAlign: 'center', minHeight: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: 30, fontWeight: 800, color: activeWord ? C.amber : C.dim, transition: 'color 0.1s' }}>
             {activeWord ? activeWord.text : '♪'}
           </span>
         </div>
-        <LyricBlock words={words} mapping={mapping} activeIndex={activeWordIndex} />
+        <LyricBlock words={words} mapping={mapping} activeIndex={activeWordIndex} chords={chords} />
       </Card>
 
       <div style={{ display: 'flex', gap: 8 }}>
