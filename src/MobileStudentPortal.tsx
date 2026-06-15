@@ -1630,11 +1630,20 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               setShowDeleteConfirm(false)
               setDeletingAccount(true)
               try {
-                await supabase.rpc('delete_my_account')
-                await supabase.auth.signOut()
+                const { error } = await supabase.rpc('delete_my_account')
+                if (error) {
+                  // Lỗi Postgres (FK chặn / chưa đăng nhập) trả về ở đây, KHÔNG vào catch.
+                  // Phải dừng lại — KHÔNG được signOut/logout giả vờ như đã xóa.
+                  setDeletingAccount(false)
+                  alert('Không xóa được tài khoản. Vui lòng thử lại hoặc liên hệ vananhaudio@gmail.com.')
+                  return
+                }
+                // Đã xóa thành công ở server -> đăng xuất. Token mồ côi 401 là vô hại.
+                try { await supabase.auth.signOut() } catch { /* token đã mồ côi sau khi xóa */ }
                 onLogout()
               } catch {
                 setDeletingAccount(false)
+                alert('Không xóa được tài khoản. Vui lòng kiểm tra mạng và thử lại.')
               }
             }}
             style={{ width: '100%', background: '#E53E3E', border: 'none', borderRadius: 14, padding: '15px', fontSize: 16, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>
