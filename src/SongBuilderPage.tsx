@@ -483,6 +483,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
             <BmsMark size={28} />
             <span style={{ fontSize: 15, fontWeight: 800, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Beat my Songs</span>
           </div>
+          <button onClick={() => setShowDrafts(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, height: 32, padding: '0 12px', color: C.text, cursor: 'pointer', fontSize: 12, fontWeight: 700, flexShrink: 0, fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>📂 Bài của tôi</button>
           <button onClick={() => setShowHelp(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>?</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 10, ...center }}>
@@ -564,7 +565,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
       {/* Nội dung bước (cuộn) */}
       <div style={{ flex: 1, overflowY: 'auto', padding: 14, paddingBottom: 90, ...center }}>
-        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText: handleLyrics, chordCount: chords.length, words, songTitle, setSongTitle, onOpenDrafts: () => setShowDrafts(true) }} />}
+        {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText: handleLyrics, chordCount: chords.length, words, songTitle, setSongTitle }} />}
         {step === 1 && <StepTempo {...{ fit, tapTimes, tap, resetTaps, playing, playerReady, play }} />}
         {step === 2 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }} />}
         {step === 3 && <StepDownbeat {...{ words, mapping, timeSignature, setTimeSignature, downbeatPosition, setDownbeatPosition, groupBeats, setGroupBeats }} />}
@@ -644,11 +645,10 @@ function HelpModal({ step, onClose }: { step: number; onClose: () => void }) {
 }
 
 /* ===================== STEP 0 — Chuẩn bị ===================== */
-function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, chordCount, words, songTitle, setSongTitle, onOpenDrafts }: {
+function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText, chordCount, words, songTitle, setSongTitle }: {
   youtubeUrl: string; setYoutubeUrl: (s: string) => void; videoId: string | null; loadVideo: () => void
   pickVideo: (id: string, title?: string, thumb?: string) => void; lyricsText: string; setLyricsText: (s: string) => void; chordCount: number; words: Word[]
   songTitle: string; setSongTitle: (s: string) => void
-  onOpenDrafts: () => void
 }) {
   const inp: React.CSSProperties = { width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface2, color: C.text, fontSize: 14, outline: 'none' }
   const [query, setQuery] = useState('')
@@ -685,11 +685,6 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
 
   return (
     <>
-      {/* Thanh quản lý bài nháp */}
-      <div style={{ display: 'flex', marginBottom: 12 }}>
-        <button onClick={onOpenDrafts} style={{ flex: 1, padding: '10px 6px', borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>📂 Bài hát của tôi</button>
-      </div>
-
       {showPicker ? (
         <Card title="① Chọn bài hát">
           <div style={{ display: 'flex', gap: 8 }}>
