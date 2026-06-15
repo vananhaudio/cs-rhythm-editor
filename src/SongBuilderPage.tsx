@@ -6,9 +6,11 @@ import type { Word, Anchor, MappedWord, SongChord } from './logic/songBuilder'
 import { parseLyricsWithChords, hasChordMarkup } from './logic/lyricsChordParser'
 import { CHORD_LIBRARY, chordShape } from './logic/chordLibrary'
 import ChordDiagram from './ChordDiagram'
+import PracticePlayer from './PracticePlayer'
 import {
   newDraftId, autosaveCurrentDraft, getLatestDraft, getCurrentId, loadDraft as loadDraftById,
   listDrafts, deleteDraft, renameDraft, duplicateDraft, migrateLegacyDraft, hasContent, progressOf,
+  serializeDraft, importDraftJSON,
 } from './logic/songDraftStorage'
 import type { SongDraft, DraftSummary } from './logic/songDraftStorage'
 
@@ -28,6 +30,8 @@ const C = {
 }
 const FONT = `'Be Vietnam Pro',system-ui,sans-serif`
 const MONO = `'JetBrains Mono','Space Mono',monospace`
+const MAXW = 760   // bề ngang tối đa cột nội dung (đẹp trên desktop)
+const center: React.CSSProperties = { maxWidth: MAXW, width: '100%', margin: '0 auto' }
 
 // Logo Beat my Songs — ô vuông xanh + chữ BMS + chấm vàng (theo mẫu icon).
 function BmsMark({ size = 28 }: { size?: number }) {
@@ -173,6 +177,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
   /* ---- nháp: tiếp tục / danh sách / nhập JSON ---- */
   const [resumeDraft, setResumeDraft] = useState<SongDraft | null>(null)
   const [showDrafts, setShowDrafts] = useState(false)
+  const [practiceDraft, setPracticeDraft] = useState<SongDraft | null>(null)
   const hydrated = useRef(false)   // chặn autosave ghi đè trước khi khôi phục xong
 
   const applyDraft = useCallback((d: SongDraft) => {
@@ -472,7 +477,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
       {/* Header gọn + thanh bước dạng dot */}
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '8px 12px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...center }}>
           {onClose && <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>✕</button>}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
             <BmsMark size={28} />
@@ -480,7 +485,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
           </div>
           <button onClick={() => setShowHelp(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>?</button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 10, ...center }}>
           {STEPS.map((s, i) => {
             const active = i === step
             const done = i < step
@@ -513,7 +518,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
       {/* Player nhỏ gọn (video phụ — giữ mount xuyên suốt để không reload) */}
       {videoId && (
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: C.surface, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: C.surface, borderBottom: `1px solid ${C.border}`, ...center }}>
           <div style={{ width: videoExpanded ? 200 : 132, aspectRatio: '16 / 9', flexShrink: 0, borderRadius: 8, overflow: 'hidden', background: '#000', transition: 'width 0.2s' }}>
             <iframe ref={iframeRef} src={buildEmbedUrl(videoId)} title="YouTube"
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
@@ -558,7 +563,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
       )}
 
       {/* Nội dung bước (cuộn) */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 14, paddingBottom: 90 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: 14, paddingBottom: 90, ...center }}>
         {step === 0 && <StepSetup {...{ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, lyricsText, setLyricsText: handleLyrics, chordCount: chords.length, words, songTitle, setSongTitle, onOpenDrafts: () => setShowDrafts(true) }} />}
         {step === 1 && <StepTempo {...{ fit, tapTimes, tap, resetTaps, playing, playerReady, play }} />}
         {step === 2 && <StepAnchor {...{ fit, words, mapping, anchors, pendingBeat, setPendingBeat, captureAnchor, onChipTap, mappedCount, pct, nonMonotonic, playerReady, playing, play, pause, removeAnchor, resetAnchors }} />}
@@ -569,7 +574,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
       {/* Footer điều hướng — ẩn ở bước cuối (Nghe thử) */}
       {step < STEPS.length - 1 && (
-        <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 14px max(10px, env(safe-area-inset-bottom))', borderTop: `1px solid ${C.border}`, background: C.surface }}>
+        <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 14px max(10px, env(safe-area-inset-bottom))', borderTop: `1px solid ${C.border}`, background: C.surface, ...center }}>
           {step > 0 && <Btn kind="ghost" onClick={goBack} style={{ flex: 1 }}>← Quay lại</Btn>}
           <Btn onClick={goNext} disabled={!canNext()} style={{ flex: 2 }}>Tiếp tục →</Btn>
         </div>
@@ -591,8 +596,12 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
           currentId={draftId}
           onClose={() => setShowDrafts(false)}
           onOpen={openDraftById}
+          onPractice={(id) => { const d = loadDraftById(id); if (d) { setPracticeDraft(d); setShowDrafts(false) } }}
           onNew={startNew}
         />
+      )}
+      {practiceDraft && (
+        <PracticePlayer draft={practiceDraft} onClose={() => setPracticeDraft(null)} />
       )}
     </div>
   )
@@ -1159,8 +1168,8 @@ function ResumeModal({ draft, onResume, onNew }: { draft: SongDraft; onResume: (
 }
 
 /* ===================== Modal: danh sách bài đang làm ===================== */
-function DraftsModal({ currentId, onClose, onOpen, onNew }: {
-  currentId: string; onClose: () => void; onOpen: (id: string) => void; onNew: () => void
+function DraftsModal({ currentId, onClose, onOpen, onPractice, onNew }: {
+  currentId: string; onClose: () => void; onOpen: (id: string) => void; onPractice: (id: string) => void; onNew: () => void
 }) {
   const [items, setItems] = useState<DraftSummary[]>(() => listDrafts())
   const refresh = () => setItems(listDrafts())
@@ -1173,6 +1182,20 @@ function DraftsModal({ currentId, onClose, onOpen, onNew }: {
     if (confirm(`Xoá bài “${name}”? Không thể hoàn tác.`)) { deleteDraft(id); refresh() }
   }
   const doDuplicate = (id: string) => { duplicateDraft(id); refresh() }
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const doShare = (id: string) => {
+    const d = loadDraftById(id); if (!d) return
+    const safe = (d.title || 'bai-hat').replace(/[/\\:?%*|"<>]/g, '-')
+    const blob = new Blob([serializeDraft(d)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `${safe}.bms`; a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  const doImport = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = () => { const r = importDraftJSON(String(reader.result || '')); if (r) refresh(); else alert('File .bms không hợp lệ hoặc đã hỏng.') }
+    reader.readAsText(file)
+  }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 450, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -1180,6 +1203,13 @@ function DraftsModal({ currentId, onClose, onOpen, onNew }: {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ fontSize: 16, fontWeight: 800 }}>📂 Bài đang làm ({items.length})</div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <Btn onClick={onNew} style={{ flex: 1 }}>+ Bài mới</Btn>
+          <Btn kind="soft" onClick={() => fileRef.current?.click()} style={{ flex: 1 }}>⤵ Nhập bài (.bms)</Btn>
+          <input ref={fileRef} type="file" accept=".bms,application/json" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) doImport(f); e.target.value = '' }} />
         </div>
 
         {items.length === 0 ? (
@@ -1201,8 +1231,10 @@ function DraftsModal({ currentId, onClose, onOpen, onNew }: {
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-                  <button onClick={() => onOpen(d.id)} style={{ border: 'none', borderRadius: 8, background: C.accent, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>Mở tiếp</button>
+                  <button onClick={() => onPractice(d.id)} style={{ border: 'none', borderRadius: 8, background: C.amber, color: '#1a1200', fontSize: 11, fontWeight: 800, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>▶ Luyện tập</button>
+                  <button onClick={() => onOpen(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: 'transparent', color: C.text, fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>✎ Sửa bài</button>
                   <div style={{ display: 'flex', gap: 4 }}>
+                    <button title="Chia sẻ (.bms)" onClick={() => doShare(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>⤴</button>
                     <button title="Đổi tên" onClick={() => doRename(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>✎</button>
                     <button title="Nhân bản" onClick={() => doDuplicate(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>⧉</button>
                     <button title="Xoá" onClick={() => doDelete(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.red, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>🗑</button>
@@ -1213,7 +1245,9 @@ function DraftsModal({ currentId, onClose, onOpen, onNew }: {
           </div>
         )}
 
-        <Btn onClick={onNew} style={{ width: '100%', marginTop: 14 }}>+ Tạo bài mới</Btn>
+        <div style={{ fontSize: 11, color: C.dim, textAlign: 'center', marginTop: 12, lineHeight: 1.5 }}>
+          ▶ Luyện tập · ✎ Sửa · ⤴ Chia sẻ (.bms) gửi Thầy · ⧉ Nhân bản · 🗑 Xoá
+        </div>
       </div>
     </div>
   )

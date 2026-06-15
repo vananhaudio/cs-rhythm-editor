@@ -155,6 +155,39 @@ export function clearCurrentId() {
   try { localStorage.removeItem(CURRENT_KEY) } catch { /* sandbox */ }
 }
 
+// ── Xuất / Nhập file .bms (chia sẻ bài, local-first) ──
+export function serializeDraft(d: SongDraft): string {
+  return JSON.stringify(d, null, 2)
+}
+
+/** Nhập 1 file .bms (JSON) → lưu thành bài MỚI (id mới, không đè bài cũ). */
+export function importDraftJSON(text: string): SongDraft | null {
+  try {
+    const o = JSON.parse(text) as Partial<SongDraft>
+    if (typeof o.lyricsText !== 'string' && !o.videoId && !Array.isArray(o.anchors)) return null
+    const now = Date.now()
+    const d: SongDraft = {
+      id: newDraftId(),
+      title: o.title || 'Bài nhập',
+      youtubeUrl: o.youtubeUrl ?? '',
+      videoId: o.videoId ?? null,
+      thumbnail: o.thumbnail ?? null,
+      lyricsText: o.lyricsText ?? '',
+      fit: o.fit ?? null,
+      timeSignature: o.timeSignature ?? 4,
+      downbeatPosition: o.downbeatPosition ?? 0,
+      groupBeats: o.groupBeats ?? null,
+      anchors: o.anchors ?? [],
+      chords: o.chords ?? [],
+      step: o.step ?? 0,
+      createdAt: now,
+      updatedAt: now,
+    }
+    if (!hasContent(d)) return null
+    return saveDraft(d)
+  } catch { return null }
+}
+
 // Chuyển draft đơn cũ (1 bài) sang kho nhiều bài — chạy 1 lần.
 export function migrateLegacyDraft(): void {
   try {
