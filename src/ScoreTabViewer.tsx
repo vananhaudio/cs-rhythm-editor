@@ -3,6 +3,7 @@ import type { Theme } from './GuitarBoard';
 import { SCORE_BPM, SCORE_BEATS_PER_MEASURE, staffStep } from './scoreData';
 import type { ScoreNote } from './scoreData';
 import { getNoteForFret } from './guitarNotes';
+import { playGuitarNote } from './audioEngine';
 
 // ─── Layout (single unified canvas) ──────────────────────────────────────────
 const SLG        = 14;          // staff line gap
@@ -71,6 +72,47 @@ function accChar(p: string) {
   if (p.includes('#')) return '♯';
   if (p !== 'Si' && p.endsWith('b')) return '♭';
   return null;
+}
+
+// ─── Phân loại / ghép trường độ ────────────────────────────────────────────────
+// Trường độ cơ bản (beats), giảm dần: Tròn → Móc đôi
+const BASE_BEATS = [4, 2, 1, 0.5, 0.25];
+
+interface DurClass { base: number; dotted: boolean; triplet: boolean }
+
+function classifyBeats(beats: number): DurClass {
+  for (const base of BASE_BEATS) {
+    if (Math.abs(beats - base)        < 0.01) return { base, dotted: false, triplet: false };
+    if (Math.abs(beats - base * 1.5)  < 0.01) return { base, dotted: true,  triplet: false };
+    if (Math.abs(beats - base * 2 / 3) < 0.02) return { base, dotted: false, triplet: true };
+  }
+  // fallback: base gần nhất
+  let best = 1, bd = Infinity;
+  for (const base of BASE_BEATS) { const d = Math.abs(beats - base); if (d < bd) { bd = d; best = base; } }
+  return { base: best, dotted: false, triplet: false };
+}
+
+function composeBeats(c: DurClass): number {
+  let b = c.base;
+  if (c.dotted) b *= 1.5;
+  else if (c.triplet) b *= 2 / 3;
+  return b;
+}
+
+// Dồn lại time/measure/beat tuần tự (model đơn âm) — neo ở nốt đầu
+function reflowTimes(notes: ScoreNote[]): ScoreNote[] {
+  const sec = spb();
+  let t = notes.length ? notes[0].time : 0;
+  return notes.map(n => {
+    const out: ScoreNote = {
+      ...n,
+      time: t,
+      measure: Math.floor(t / (sec * SCORE_BEATS_PER_MEASURE)) + 1,
+      beat: ((t / sec) % SCORE_BEATS_PER_MEASURE) + 1,
+    };
+    t += n.duration;
+    return out;
+  });
 }
 
 const STRING_SHORT = ['E', 'A', 'D', 'G', 'B', 'e'];
@@ -145,6 +187,7 @@ export default function ScoreTabViewer({
   // ── Commit note ─────────────────────────────────────────────────────────────
   const commitNote = useCallback((str: number, fret: number) => {
     const nf  = getNoteForFret(str, fret, 'sharp');
+    playGuitarNote(nf.frequency, str);   // nghe ngay khi nhập nốt
     const t   = cursorTime;
     const sec = spb();
     const newNote: ScoreNote = {
@@ -158,7 +201,7 @@ export default function ScoreTabViewer({
       measure: Math.floor(t / (sec * SCORE_BEATS_PER_MEASURE)) + 1,
       beat: ((t / sec) % SCORE_BEATS_PER_MEASURE) + 1,
     };
-    const next = [...notes.slice(0, cursorIdx), newNote, ...notes.slice(cursorIdx)];
+    const next = reflowTimes([...notes.slice(0, cursorIdx), newNote, ...notes.slice(cursorIdx)]);
     onNotesChange(next);
     setCursorIdx(cursorIdx + 1);
     setSelIdx(cursorIdx);
@@ -169,45 +212,100 @@ export default function ScoreTabViewer({
   useEffect(() => { commitNoteRef.current = commitNote; }, [commitNote]);
   useEffect(() => { pendingStrRef.current = pendingStr; }, [pendingStr]);
 
+  // Carry-forward: bút lấy trường độ nốt đang chọn (khi navigate hoặc sau khi chỉnh)
+  useEffect(() => {
+    if (selIdx !== null && selIdx < notes.length) {
+      const cls = classifyBeats(notes[selIdx].duration / spb());
+      setDurBeats(cls.base);
+      setDotted(cls.dotted);
+      setTriplet(cls.triplet);
+    }
+  }, [selIdx, notes]);
+
   // Expose to parent for fretboard input
   useEffect(() => {
     onRequestNoteInput?.((str, fret) => commitNote(str, fret));
   }, [onRequestNoteInput, commitNote]);
 
+  // ── Hành động dùng chung (bàn phím + nút bấm) ─────────────────────────────────
+  const insertRest = useCallback(() => {
+    const t   = cursorTime;
+    const sec = spb();
+    const rest: ScoreNote = {
+      id: `r${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      time: t,
+      duration: effectiveDur,
+      string: -1, fret: -1, pitch: 'R', octave: 0,
+      measure: Math.floor(t / (sec * SCORE_BEATS_PER_MEASURE)) + 1,
+      beat: ((t / sec) % SCORE_BEATS_PER_MEASURE) + 1,
+    };
+    onNotesChange(reflowTimes([...notes.slice(0, cursorIdx), rest, ...notes.slice(cursorIdx)]));
+    setCursorIdx(cursorIdx + 1);
+    setSelIdx(cursorIdx);
+  }, [cursorTime, effectiveDur, notes, cursorIdx, onNotesChange]);
+
+  const deleteAtCursor = useCallback(() => {
+    const di = selIdx ?? cursorIdx - 1;
+    if (di < 0 || di >= notes.length) return;
+    onNotesChange(reflowTimes(notes.filter((_, i) => i !== di)));
+    setCursorIdx(Math.max(0, di));
+    setSelIdx(null);
+  }, [selIdx, cursorIdx, notes, onNotesChange]);
+
+  // Cập nhật trường độ nốt đang chọn (kèm reflow)
+  const setSelDuration = useCallback((beats: number) => {
+    onNotesChange(reflowTimes(notes.map((n, i) => i === selIdx ? { ...n, duration: beatsToSec(beats) } : n)));
+  }, [selIdx, notes, onNotesChange]);
+
+  // Chọn trường độ: đổi "bút" (nốt kế tiếp) và áp luôn cho nốt đang chọn
+  const pickDuration = useCallback((beats: number) => {
+    setDurBeats(beats);
+    if (selIdx !== null && selIdx < notes.length) {
+      setSelDuration(composeBeats({ base: beats, dotted, triplet }));
+    }
+  }, [selIdx, notes, dotted, triplet, setSelDuration]);
+
+  // + / - đổi trường độ. shorter=true → ngắn hơn (phím +); false → dài hơn (phím -)
+  const stepDuration = useCallback((shorter: boolean) => {
+    const delta = shorter ? 1 : -1;  // BASE_BEATS giảm dần ⇒ +1 = ngắn hơn
+    if (selIdx !== null && selIdx < notes.length) {
+      const cls = classifyBeats(notes[selIdx].duration / spb());
+      const idx = BASE_BEATS.indexOf(cls.base);
+      const ni  = Math.min(BASE_BEATS.length - 1, Math.max(0, idx + delta));
+      setSelDuration(composeBeats({ ...cls, base: BASE_BEATS[ni] }));
+    } else {
+      const idx = BASE_BEATS.indexOf(durBeats);
+      const ni  = Math.min(BASE_BEATS.length - 1, Math.max(0, idx + delta));
+      setDurBeats(BASE_BEATS[ni]);
+    }
+  }, [selIdx, notes, durBeats, setSelDuration]);
+
+  // Chấm dôi: nốt đang chọn → bật/tắt chấm; không chọn → đổi "bút"
+  const toggleDot = useCallback(() => {
+    if (selIdx !== null && selIdx < notes.length) {
+      const cls = classifyBeats(notes[selIdx].duration / spb());
+      setSelDuration(composeBeats({ ...cls, dotted: !cls.dotted, triplet: false }));
+    } else { setDotted(v => !v); setTriplet(false); }
+  }, [selIdx, notes, setSelDuration]);
+
+  // Liên 3
+  const toggleTrip = useCallback(() => {
+    if (selIdx !== null && selIdx < notes.length) {
+      const cls = classifyBeats(notes[selIdx].duration / spb());
+      setSelDuration(composeBeats({ ...cls, triplet: !cls.triplet, dotted: false }));
+    } else { setTriplet(v => !v); setDotted(false); }
+  }, [selIdx, notes, setSelDuration]);
+
   // ── Keyboard ─────────────────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const k = e.key;
 
-    // +/- đổi trường độ nốt đang chọn; nếu không có nốt chọn thì đổi durBeats
-    if (k === '+' || k === '=') {
-      e.preventDefault();
-      if (selIdx !== null && selIdx < notes.length) {
-        const curBeats = notes[selIdx].duration / spb();
-        const idx = DURATIONS.findIndex(d => Math.abs(d.beats - curBeats) < 0.01);
-        if (idx > 0) onNotesChange(notes.map((n, i) => i === selIdx ? { ...n, duration: beatsToSec(DURATIONS[idx - 1].beats) } : n));
-      } else {
-        const idx = DURATIONS.findIndex(d => d.beats === durBeats);
-        if (idx > 0) setDurBeats(DURATIONS[idx - 1].beats);
-      }
-      return;
-    }
-    if (k === '-') {
-      e.preventDefault();
-      if (selIdx !== null && selIdx < notes.length) {
-        const curBeats = notes[selIdx].duration / spb();
-        const idx = DURATIONS.findIndex(d => Math.abs(d.beats - curBeats) < 0.01);
-        if (idx < DURATIONS.length - 1) onNotesChange(notes.map((n, i) => i === selIdx ? { ...n, duration: beatsToSec(DURATIONS[idx + 1].beats) } : n));
-      } else {
-        const idx = DURATIONS.findIndex(d => d.beats === durBeats);
-        if (idx < DURATIONS.length - 1) setDurBeats(DURATIONS[idx + 1].beats);
-      }
-      return;
-    }
-
-    // . → dotted
-    if (k === '.') { e.preventDefault(); setDotted(v => !v); return; }
-    // / → triplet
-    if (k === '/') { e.preventDefault(); setTriplet(v => !v); return; }
+    // + = giảm trường độ (ngắn hơn) · - = tăng trường độ (dài hơn)
+    if (k === '+' || k === '=') { e.preventDefault(); stepDuration(true);  return; }
+    if (k === '-' || k === '_') { e.preventDefault(); stepDuration(false); return; }
+    // . = chấm dôi · / = liên 3 (áp cho nốt đang chọn nếu có)
+    if (k === '.') { e.preventDefault(); toggleDot();  return; }
+    if (k === '/') { e.preventDefault(); toggleTrip(); return; }
 
     // Navigation — mũi tên trái/phải: di chuyển cursor
     if (k === 'ArrowLeft') {
@@ -294,23 +392,7 @@ export default function ScoreTabViewer({
     // R → dấu lặng (rest): chèn nốt lặng vào vị trí con trỏ
     if (k === 'r' || k === 'R') {
       e.preventDefault();
-      const t   = cursorTime;
-      const sec = spb();
-      const rest: ScoreNote = {
-        id: `r${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        time: t,
-        duration: effectiveDur,
-        string: -1,      // -1 = rest
-        fret: -1,
-        pitch: 'R',
-        octave: 0,
-        measure: Math.floor(t / (sec * SCORE_BEATS_PER_MEASURE)) + 1,
-        beat: ((t / sec) % SCORE_BEATS_PER_MEASURE) + 1,
-      };
-      const next = [...notes.slice(0, cursorIdx), rest, ...notes.slice(cursorIdx)];
-      onNotesChange(next);
-      setCursorIdx(cursorIdx + 1);
-      setSelIdx(cursorIdx);
+      insertRest();
       return;
     }
 
@@ -325,7 +407,7 @@ export default function ScoreTabViewer({
       pendingStrRef.current = ns;
       return;
     }
-  }, [notes, cursorIdx, durBeats, fretBuf, selIdx, pendingStr, isPlaying, onPlay, onPause, onNotesChange, commitNote]);
+  }, [notes, cursorIdx, durBeats, fretBuf, selIdx, pendingStr, isPlaying, onPlay, onPause, onNotesChange, commitNote, insertRest, stepDuration, toggleDot, toggleTrip]);
 
   // ── Draw unified canvas ───────────────────────────────────────────────────────
   const draw = useCallback(() => {
@@ -377,12 +459,20 @@ export default function ScoreTabViewer({
       ctx.beginPath(); ctx.moveTo(CLEF_W - 4, y); ctx.lineTo(w, y); ctx.stroke();
     }
 
-    // Treble clef
+    // Treble clef — căn G-curl (vòng tròn) vào dòng kẻ 2 từ dưới (G4)
     ctx.save();
     ctx.fillStyle = '#1a1a1a';
-    ctx.font = `${STAFF_H + 52}px "Times New Roman", Georgia, serif`;
+    ctx.font = `${STAFF_H + 52}px "Noto Music", "Segoe UI Symbol", "Apple Symbols", serif`;
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText('𝄞', 4, STAFF_BOT);
+    {
+      const m   = ctx.measureText('𝄞');
+      const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+      const gLine = STAFF_BOT - SLG;          // dòng 2 từ dưới = G4
+      // G-curl nằm khoảng 63% từ đỉnh ink (đo từ pixel data, Apple Symbols macOS)
+      const clefY = gLine - inkH * 0.63 + m.actualBoundingBoxAscent;
+      ctx.fillText('𝄞', 2, clefY);
+    }
     ctx.restore();
 
     // Time signature
@@ -498,52 +588,51 @@ export default function ScoreTabViewer({
         ctx.beginPath(); ctx.moveTo(x - NHX - 4, ly); ctx.lineTo(x + NHX + 4, ly); ctx.stroke();
       }
 
+      // Phân loại trường độ để vẽ đúng đầu nốt / đuôi / móc / chấm / liên 3
+      const cls     = classifyBeats(note.duration / spb());
+      const open    = cls.base >= 2;     // trắng / tròn = đầu nốt rỗng
+      const hasStem = cls.base < 4;      // nốt tròn không có đuôi
+      const flags   = cls.base <= 0.25 ? 2 : cls.base <= 0.5 ? 1 : 0;
+
       // Notehead
       ctx.save();
       if (isAct) { ctx.shadowColor = 'rgba(200,153,26,0.5)'; ctx.shadowBlur = 7; }
       ctx.fillStyle = fill;
       ctx.beginPath(); ctx.ellipse(x, y, NHX, NHY, -0.3, 0, Math.PI * 2); ctx.fill();
-      // Open notehead (half / whole)
-      if (note.duration >= beatsToSec(2)) {
+      if (open) {
         ctx.fillStyle = '#faf9f5';
         ctx.beginPath(); ctx.ellipse(x, y, NHX - 1.8, NHY - 1.4, -0.3, 0, Math.PI * 2); ctx.fill();
       }
       ctx.restore();
 
-      // Stem
       const stemUp = step < 11;
       const sx = stemUp ? x + NHX - 1.2 : x - NHX + 1.2;
-      ctx.strokeStyle = fill; ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      ctx.moveTo(sx, y);
-      ctx.lineTo(sx, stemUp ? y - STEM_LEN : y + STEM_LEN);
-      ctx.stroke();
-
-      // Flags for 8th and shorter
       const sy = stemUp ? y - STEM_LEN : y + STEM_LEN;
-      const flags = note.duration < beatsToSec(0.5) ? 2 : note.duration < beatsToSec(1) ? 1 : 0;
-      for (let f = 0; f < flags; f++) {
-        const fy = stemUp ? sy + f * 6 : sy - f * 6;
-        ctx.save(); ctx.strokeStyle = fill; ctx.lineWidth = 1.4;
-        ctx.beginPath();
-        if (stemUp) {
-          ctx.moveTo(sx, fy);
-          ctx.bezierCurveTo(sx + 12, fy + 4, sx + 12, fy + 11, sx, fy + 14);
-        } else {
-          ctx.moveTo(sx, fy);
-          ctx.bezierCurveTo(sx + 12, fy - 4, sx + 12, fy - 11, sx, fy - 14);
+
+      // Đuôi nốt (trừ nốt tròn) + móc đơn/đôi
+      if (hasStem) {
+        ctx.strokeStyle = fill; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, sy); ctx.stroke();
+
+        for (let f = 0; f < flags; f++) {
+          const fy = stemUp ? sy + f * 6 : sy - f * 6;
+          ctx.save(); ctx.strokeStyle = fill; ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          if (stemUp) {
+            ctx.moveTo(sx, fy);
+            ctx.bezierCurveTo(sx + 12, fy + 4, sx + 12, fy + 11, sx, fy + 14);
+          } else {
+            ctx.moveTo(sx, fy);
+            ctx.bezierCurveTo(sx + 12, fy - 4, sx + 12, fy - 11, sx, fy - 14);
+          }
+          ctx.stroke(); ctx.restore();
         }
-        ctx.stroke(); ctx.restore();
       }
 
-      // Dot
-      if (note.duration === beatsToSec(note.duration) && Math.abs(note.duration / spb() % 0.5) < 0.01) {
-        const baseDur = note.duration / spb();
-        const isDot = [1.5, 0.75, 3, 6].includes(baseDur);
-        if (isDot) {
-          ctx.fillStyle = fill;
-          ctx.beginPath(); ctx.arc(x + NHX + 5, y - 2, 2.2, 0, Math.PI * 2); ctx.fill();
-        }
+      // Dấu chấm dôi
+      if (cls.dotted) {
+        ctx.fillStyle = fill;
+        ctx.beginPath(); ctx.arc(x + NHX + 5, y - 2, 2.2, 0, Math.PI * 2); ctx.fill();
       }
 
       // Accidental
@@ -554,10 +643,8 @@ export default function ScoreTabViewer({
         ctx.fillText(acc, x - NHX - 8, y);
       }
 
-      // Triplet "3"
-      const isTriplet = Math.abs(note.duration - tripletDur(durBeats)) < 0.005 ||
-                        Math.abs(note.duration - tripletDur(1)) < 0.005;
-      if (isTriplet) {
+      // Liên 3
+      if (cls.triplet) {
         ctx.fillStyle = '#888'; ctx.font = '8px system-ui'; ctx.textAlign = 'center';
         ctx.fillText('3', x, STAFF_TOP - 14);
       }
@@ -623,8 +710,16 @@ export default function ScoreTabViewer({
     }
   }, [isDark, totalDuration]);
 
+  const drawRef = useRef<() => void>(() => {});
+  useEffect(() => { drawRef.current = draw; }, [draw]);
+
   useEffect(() => { draw(); },      [draw]);
   useEffect(() => { drawRuler(); }, [drawRuler]);
+
+  // Redraw sau khi font load xong (tránh khoá Sol nhảy do fallback font metric)
+  useEffect(() => {
+    document.fonts.ready.then(() => drawRef.current());
+  }, []);
 
   // Auto-scroll to cursor when editing
   useEffect(() => {
@@ -702,11 +797,34 @@ export default function ScoreTabViewer({
   const muted   = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
   const accent  = isDark ? '#c8a84b' : '#8a6500';
 
-  // Duration selector
-  const activeDur = DURATIONS.find(d => d.beats === durBeats) ?? DURATIONS[2];
-
   const totalH = CANVAS_H;
-  const px     = noteX(currentTime);
+
+  // Trạng thái trường độ hiển thị trên toolbar: ưu tiên nốt đang chọn
+  const selCls        = (selIdx !== null && selIdx < notes.length) ? classifyBeats(notes[selIdx].duration / spb()) : null;
+  const durActive     = selCls ? selCls.base : durBeats;
+  const dottedActive  = selCls ? selCls.dotted : dotted;
+  const tripletActive = selCls ? selCls.triplet : triplet;
+
+  // ── Style nút thanh công cụ ───────────────────────────────────────────────────
+  const tbtn = (active: boolean, danger = false): React.CSSProperties => ({
+    minWidth: 36, height: 36, padding: '0 10px', borderRadius: 9,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+    border: `1px solid ${active ? '#c8a84b' : danger ? (isDark ? 'rgba(220,80,80,0.4)' : 'rgba(200,60,60,0.35)') : border}`,
+    background: active ? 'rgba(200,168,75,0.18)' : (isDark ? 'rgba(255,255,255,0.05)' : '#fff'),
+    color: active ? (isDark ? '#e3c878' : '#8a6500') : danger ? (isDark ? '#e98a8a' : '#c0392b') : (isDark ? 'rgba(255,255,255,0.72)' : '#333'),
+    fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none', flexShrink: 0,
+    WebkitTapHighlightColor: 'transparent', userSelect: 'none',
+  });
+  const sep = <div style={{ width: 1, height: 24, background: border, flexShrink: 0, margin: '0 3px' }} />;
+  const refocus = () => containerRef.current?.focus();
+  const clearAll = () => {
+    if (notes.length === 0) return;
+    if (window.confirm('Xoá toàn bộ nốt trên khuông nhạc?')) {
+      onNotesChange([]);
+      setCursorIdx(0);
+      setSelIdx(null);
+    }
+  };
 
   return (
     <div
@@ -717,9 +835,6 @@ export default function ScoreTabViewer({
       onBlur={() => { setFocused(false); setFretBuf(''); }}
       style={{ outline: 'none', border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: panelBg }}
     >
-
-
-
 
       {/* ── Canvas ── */}
       <div ref={scrollRef} style={{ overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', position: 'relative' }}>

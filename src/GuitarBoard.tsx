@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GuitarFretboard from './GuitarFretboard';
 import TeachingBoard from './TeachingBoard';
-import ScoreTabViewer from './ScoreTabViewer';
+import ScoreTabViewer from './components/ScoreTabViewerAlpha';
 import { MOCK_SCORE, calcTotalDuration } from './scoreData';
 import type { ScoreNote } from './scoreData';
+import { getNoteForFret } from './guitarNotes';
+import { playGuitarNote } from './audioEngine';
 
 export type Theme = 'dark' | 'light';
 
@@ -39,6 +41,7 @@ function App() {
   const rafRef       = useRef<number>(0);
   const startWallRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
+  const playedRef    = useRef<Set<string>>(new Set());   // nốt đã phát tiếng trong lượt play này
 
   const tickPlayback = useCallback(() => {
     const elapsed = (performance.now() - startWallRef.current) / 1000;
@@ -57,6 +60,14 @@ function App() {
       if (t >= note.time && t < note.time + note.duration) {
         nowActive.set(`${note.string}-${note.fret}`, { noteName: note.pitch, frequency: 0 });
         nowIds.add(note.id);
+        // Phát tiếng đúng lúc nốt bắt đầu (bỏ qua dấu lặng string === -1)
+        if (note.string >= 0 && !playedRef.current.has(note.id)) {
+          playGuitarNote(getNoteForFret(note.string, note.fret).frequency, note.string);
+          playedRef.current.add(note.id);
+        }
+      } else {
+        // Nốt đã trôi qua → cho phép phát lại nếu tua/lặp
+        playedRef.current.delete(note.id);
       }
     }
     setScoreActiveNotes(nowActive);
@@ -68,6 +79,7 @@ function App() {
     if (currentTime >= totalDuration) { startTimeRef.current = 0; setCurrentTime(0); }
     else startTimeRef.current = currentTime;
     startWallRef.current = performance.now();
+    playedRef.current.clear();
     setIsPlaying(true);
   }, [currentTime, totalDuration]);
 
@@ -76,6 +88,7 @@ function App() {
   const handleStop = useCallback(() => {
     setIsPlaying(false); cancelAnimationFrame(rafRef.current);
     setCurrentTime(0); setScoreActiveNotes(new Map()); setActiveNoteIds(new Set());
+    playedRef.current.clear();
   }, []);
 
   useEffect(() => {
