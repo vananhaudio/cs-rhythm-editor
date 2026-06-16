@@ -135,7 +135,8 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
       const { error } = await supabase.from('student_songs')
         .update({ tempo: bpm, youtube_url: url.trim() || null })
         .eq('id', preSongId)
-      if (!error) { setSaved(true); setShowSave(false); onSaved?.(preSongId) }
+      if (error) { alert('Lưu tempo thất bại: ' + error.message) }
+      else { setSaved(true); setShowSave(false); onSaved?.(preSongId) }
     } else {
       // Standalone mode: tạo bài mới
       if (!title.trim()) { setSaving(false); return }
@@ -151,7 +152,8 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
         time_signature:'4/4',
         status:        'tempo',
       }).select('id').single()
-      if (!error && data) { setSaved(true); setShowSave(false); onSaved?.(data.id) }
+      if (error) { alert('Lưu bài thất bại: ' + error.message) }
+      else if (data) { setSaved(true); setShowSave(false); onSaved?.(data.id) }
     }
     setSaving(false)
   }

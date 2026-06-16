@@ -254,7 +254,8 @@ export default function StudentOnboarding() {
           enrolled_by: userId,
           is_active: true,
         }))
-        await supabase.from('edu_enrollments').upsert(enrollments, { onConflict: 'student_id,course_id', ignoreDuplicates: true })
+        const { error: enrollError } = await supabase.from('edu_enrollments').upsert(enrollments, { onConflict: 'student_id,course_id', ignoreDuplicates: true })
+        if (enrollError) console.error('Auto-enroll thất bại:', enrollError.message)
       }
 
       setStudent(studentData)

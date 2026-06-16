@@ -171,12 +171,14 @@ export default function StudentProfile({ studentId, onBack }: Props) {
       enrolled_by: (await supabase.auth.getUser()).data.user?.id,
       is_active: true,
     }).select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track,is_free)').single()
-    if (!error && data) setEnrollments(prev => [...prev, data as unknown as EnrollmentItem])
+    if (error) { alert('Đăng ký khoá học thất bại: ' + error.message) }
+    else if (data) setEnrollments(prev => [...prev, data as unknown as EnrollmentItem])
     setEnrolling(null)
   }
 
   const handleUnenroll = async (enrollmentId: string) => {
-    await supabase.from('edu_enrollments').update({ is_active: false }).eq('id', enrollmentId)
+    const { error } = await supabase.from('edu_enrollments').update({ is_active: false }).eq('id', enrollmentId)
+    if (error) { alert('Huỷ đăng ký thất bại: ' + error.message); return }
     setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, is_active: false } : e))
   }
 

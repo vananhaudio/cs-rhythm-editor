@@ -299,16 +299,19 @@ export default function CourseEditorContent() {
     if (!selectedLesson) return
     setSaving(true)
     const saveUrl = fType === 'slide' && fUrl ? normalizeCanvaUrl(fUrl) : (fUrl || null)
-    await supabase.from('edu_course_lessons').update({ title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc || null, content: fContent || null, tools: fTools }).eq('id', selectedLesson.id)
+    const { error } = await supabase.from('edu_course_lessons').update({ title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc || null, content: fContent || null, tools: fTools }).eq('id', selectedLesson.id)
+    setSaving(false)
+    if (error) { alert('Lưu bài học thất bại: ' + error.message); return }
     const patch = { title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc, content: fContent, tools: fTools }
     setLessons(prev => prev.map(l => l.id === selectedLesson.id ? { ...l, ...patch } : l))
     setSelectedLesson(prev => prev ? { ...prev, ...patch } : prev)
-    setSaving(false); setSaved(true); setTimeout(() => setSaved(false), 2000)
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
   const saveCourseName = async () => {
     if (!selectedCourse || !courseNameDraft.trim()) return
-    await supabase.from('edu_courses').update({ name: courseNameDraft }).eq('id', selectedCourse.id)
+    const { error } = await supabase.from('edu_courses').update({ name: courseNameDraft }).eq('id', selectedCourse.id)
+    if (error) { alert('Lưu tên khoá học thất bại: ' + error.message); return }
     const updated = { ...selectedCourse, name: courseNameDraft }
     setSelectedCourse(updated)
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, name: courseNameDraft } : c))
@@ -318,7 +321,8 @@ export default function CourseEditorContent() {
   // ── Logo khoá học ──
   const setCourseLogo = async (patch: { icon?: string | null; image_url?: string | null }) => {
     if (!selectedCourse) return
-    await supabase.from('edu_courses').update(patch).eq('id', selectedCourse.id)
+    const { error } = await supabase.from('edu_courses').update(patch).eq('id', selectedCourse.id)
+    if (error) { alert('Cập nhật logo thất bại: ' + error.message); return }
     const updated = { ...selectedCourse, ...patch }
     setSelectedCourse(updated)
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, ...patch } : c))
