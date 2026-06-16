@@ -51,7 +51,8 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
     )
     if (!confirmed) return
     setDeletingId(song.id)
-    await supabase.from('timming_songs').delete().eq('id', song.id)
+    const { error } = await supabase.from('timming_songs').delete().eq('id', song.id)
+    if (error) { alert('Xoá bài hát thất bại: ' + error.message); setDeletingId(null); return }
     setSongs(prev => prev.filter(s => s.id !== song.id))
     setDeletingId(null)
   }

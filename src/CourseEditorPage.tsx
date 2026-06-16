@@ -195,7 +195,8 @@ export default function CourseEditorPage() {
   // Delete lesson
   const deleteLesson = async (id: string) => {
     if (!confirm('Xoá bài học này?')) return
-    await supabase.from('edu_course_lessons').delete().eq('id', id)
+    const { error } = await supabase.from('edu_course_lessons').delete().eq('id', id)
+    if (error) { alert('Xoá bài thất bại: ' + error.message); return }
     setLessons(prev => prev.filter(l => l.id !== id))
     if (selectedLesson?.id === id) setSelectedLesson(null)
   }

@@ -527,7 +527,8 @@ export default function CourseEditorContent() {
 
   const deleteLesson = async (id: string) => {
     if (!confirm('Xoá bài học này?')) return
-    await supabase.from('edu_course_lessons').delete().eq('id', id)
+    const { error } = await supabase.from('edu_course_lessons').delete().eq('id', id)
+    if (error) { alert('Xoá bài thất bại: ' + error.message); return }
     setLessons(prev => prev.filter(l => l.id !== id))
     if (selectedLesson?.id === id) setSelectedLesson(null)
   }
@@ -539,9 +540,11 @@ export default function CourseEditorContent() {
       : `Xoá chương "${moduleName}"?`
     if (!confirm(msg)) return
     if (modLessons.length > 0) {
-      await supabase.from('edu_course_lessons').delete().eq('module_id', moduleId)
+      const { error: e1 } = await supabase.from('edu_course_lessons').delete().eq('module_id', moduleId)
+      if (e1) { alert('Xoá bài trong chương thất bại: ' + e1.message); return }
     }
-    await supabase.from('edu_modules').delete().eq('id', moduleId)
+    const { error: e2 } = await supabase.from('edu_modules').delete().eq('id', moduleId)
+    if (e2) { alert('Xoá chương thất bại: ' + e2.message); return }
     setLessons(prev => prev.filter(l => l.module_id !== moduleId))
     setModules(prev => prev.filter(m => m.id !== moduleId))
     if (selectedLesson && modLessons.some(l => l.id === selectedLesson.id)) setSelectedLesson(null)
