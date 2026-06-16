@@ -272,17 +272,19 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     if (!song) return
     const newJourney = song.journey.map(j => j.id === stepId ? { ...j, done: true } : j)
     const mastered = newJourney.every(j => j.done)
-    // Cập nhật DB
-    await supabase.from('student_songs')
+    // Cập nhật DB — nếu lỗi thì KHÔNG cập nhật UI (tránh hiện tiến độ giả)
+    const { error: songErr } = await supabase.from('student_songs')
       .update({ journey: newJourney, status: mastered ? 'mastered' : stepId })
       .eq('id', songId)
+    if (songErr) { console.error('Lưu tiến độ bài hát lỗi:', songErr); return }
     setMySongs(prev => prev.map(s => s.id === songId ? { ...s, journey: newJourney } : s))
     // Thưởng XP — bước + bonus nếu chinh phục cả bài
     const gained = (STEP_XP[stepId] ?? 100) + (mastered ? XP_SOURCE.song_mastered : 0)
-    await supabase.from('student_xp_log').insert({
+    const { error: xpErr } = await supabase.from('student_xp_log').insert({
       student_id: student.id, xp: gained,
       source: mastered ? 'song_mastered' : 'song_step', ref_id: songId,
     })
+    if (xpErr) console.error('Ghi XP lỗi:', xpErr)
     setTotalXP(prev => prev + gained)
     setWeekXP(prev  => prev + gained)
     // Chúc mừng
@@ -363,9 +365,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     if (timerRef.current) clearInterval(timerRef.current)
     const minutes = Math.max(1, Math.round((Date.now() - timerStart) / 60000))
     const exId = activeTimer
-    await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: exId, minutes })
+    const { error: plErr } = await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: exId, minutes })
+    if (plErr) console.error('Ghi nhật ký luyện tập lỗi:', plErr)
     // Ghi XP — 1 XP/phút
-    await supabase.from('student_xp_log').insert({ student_id: student.id, xp: minutes, source: 'practice', ref_id: exId })
+    const { error: xpErr } = await supabase.from('student_xp_log').insert({ student_id: student.id, xp: minutes, source: 'practice', ref_id: exId })
+    if (xpErr) console.error('Ghi XP lỗi:', xpErr)
     setTotalXP(prev => prev + minutes)
     setWeekXP(prev  => prev + minutes)
     setPracticeTotals(prev => ({ ...prev, [exId]: (prev[exId] ?? 0) + minutes }))

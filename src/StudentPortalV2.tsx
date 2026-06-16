@@ -128,8 +128,10 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
     if (!activeTimer || !timerStart) return
     if (timerRef.current) clearInterval(timerRef.current)
     const minutes = Math.max(1, Math.round((Date.now() - timerStart) / 60000))
-    await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: activeTimer, minutes })
-    await supabase.from('student_xp_log').insert({ student_id: student.id, xp: minutes, source: 'practice', ref_id: activeTimer })
+    const { error: plErr } = await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: activeTimer, minutes })
+    if (plErr) console.error('Ghi nhật ký luyện tập lỗi:', plErr)
+    const { error: xpErr } = await supabase.from('student_xp_log').insert({ student_id: student.id, xp: minutes, source: 'practice', ref_id: activeTimer })
+    if (xpErr) console.error('Ghi XP lỗi:', xpErr)
     setPracticeTotals(prev => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
     setPracticeToday(prev  => ({ ...prev, [activeTimer]: (prev[activeTimer] ?? 0) + minutes }))
     setTotalXP(prev => prev + minutes); setWeekXP(prev => prev + minutes)

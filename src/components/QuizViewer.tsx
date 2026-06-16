@@ -575,7 +575,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
     setSaving(true)
     const result = calculateResult()
 
-    await supabase.from('edu_quiz_results').insert({
+    const { error } = await supabase.from('edu_quiz_results').insert({
       lesson_id: lessonId,
       student_id: studentId,
       score: result.score,
@@ -586,6 +586,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
       skill_stats: result.skillStats,
       completed_at: result.completedAt,
     })
+    if (error) console.error('Lưu kết quả quiz lỗi:', error)
 
     setSaving(false)
     setSubmitted(true)
