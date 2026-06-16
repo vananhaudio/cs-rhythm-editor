@@ -365,7 +365,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
   }, [dChunkDur, beatDur])
   const pct       = totalDur > 0 ? currentTime/totalDur*100 : 0;
 
-  // Mobile: dùng MobilePlayerView layout
+  // Mobile: dùng MobileLayout
   if (isMobile) {
     return (
       <MobileLayout
