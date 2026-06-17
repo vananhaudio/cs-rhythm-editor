@@ -71,7 +71,7 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
   const handleEditSave = async () => {
     if (!editingSong) return
     setSaving(true)
-    await supabase.from('timming_songs').update({
+    const { error } = await supabase.from('timming_songs').update({
       title: editForm.title.trim(),
       artist: editForm.artist.trim(),
       tone: editForm.tone.trim(),
@@ -79,6 +79,7 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
       time_signature: Number(editForm.time_signature),
     }).eq('id', editingSong.id)
     setSaving(false)
+    if (error) { alert('Lưu thất bại: ' + error.message); return }
     setEditingSong(null)
     loadSongs()
   }

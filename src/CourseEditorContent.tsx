@@ -359,7 +359,8 @@ export default function CourseEditorContent() {
 
   const saveModuleName = async (moduleId: string) => {
     if (!editingModuleName.trim()) return
-    await supabase.from('edu_modules').update({ name: editingModuleName }).eq('id', moduleId)
+    const { error } = await supabase.from('edu_modules').update({ name: editingModuleName }).eq('id', moduleId)
+    if (error) { alert('Đổi tên chương thất bại: ' + error.message); return }
     setModules(prev => prev.map(m => m.id === moduleId ? { ...m, name: editingModuleName } : m))
     setEditingModuleId(null)
   }
@@ -559,7 +560,8 @@ export default function CourseEditorContent() {
 
   const setCourseStatus = async (val: CourseStatus) => {
     if (!selectedCourse) return
-    await supabase.from('edu_courses').update({ status: val }).eq('id', selectedCourse.id)
+    const { error } = await supabase.from('edu_courses').update({ status: val }).eq('id', selectedCourse.id)
+    if (error) { alert('Cập nhật trạng thái thất bại: ' + error.message); return }
     setSelectedCourse(prev => prev ? { ...prev, status: val } : prev)
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, status: val } : c))
   }
@@ -567,7 +569,8 @@ export default function CourseEditorContent() {
   const publishAll = async () => {
     const offCount = courses.filter(c => c.status !== 'on').length
     if (!confirm(`Bật TẤT CẢ ${offCount} khoá chưa hiển thị? Học sinh sẽ nhìn thấy ngay.`)) return
-    await supabase.from('edu_courses').update({ status: 'on' }).neq('id', '00000000-0000-0000-0000-000000000000')
+    const { error } = await supabase.from('edu_courses').update({ status: 'on' }).neq('id', '00000000-0000-0000-0000-000000000000')
+    if (error) { alert('Bật khoá học thất bại: ' + error.message); return }
     setCourses(prev => prev.map(c => ({ ...c, status: 'on' as CourseStatus })))
     if (selectedCourse) setSelectedCourse(prev => prev ? { ...prev, status: 'on' } : prev)
   }
@@ -597,7 +600,8 @@ export default function CourseEditorContent() {
     let working = lessons.map(l => l.id === src.id ? { ...l, module_id: targetModuleId } : l)
 
     if (src.moduleId !== targetModuleId) {
-      await supabase.from('edu_course_lessons').update({ module_id: targetModuleId }).eq('id', src.id)
+      const { error } = await supabase.from('edu_course_lessons').update({ module_id: targetModuleId }).eq('id', src.id)
+      if (error) { console.error('Di chuyển bài thất bại:', error.message); return }
     }
 
     if (overId && overId !== src.id) {

@@ -144,25 +144,28 @@ export default function CourseEditorPage() {
   const saveLesson = async () => {
     if (!selectedLesson) return
     setSaving(true)
-    await supabase.from('edu_course_lessons').update({
+    const { error } = await supabase.from('edu_course_lessons').update({
       title: fTitle, lesson_type: fType,
       content_url: fUrl || null,
       description: fDesc || null,
       content: fContent || null,
       tools: fTools,
     }).eq('id', selectedLesson.id)
+    setSaving(false)
+    if (error) { alert('Lưu bài học thất bại: ' + error.message); return }
     setLessons(prev => prev.map(l => l.id === selectedLesson.id
       ? { ...l, title: fTitle, lesson_type: fType, content_url: fUrl, description: fDesc, content: fContent, tools: fTools }
       : l))
     setSelectedLesson(prev => prev ? { ...prev, title: fTitle, lesson_type: fType, content_url: fUrl, description: fDesc, content: fContent, tools: fTools } : prev)
-    setSaving(false); setSaved(true)
+    setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   // Rename module
   const saveModuleName = async (moduleId: string) => {
     if (!editingModuleName.trim()) return
-    await supabase.from('edu_modules').update({ name: editingModuleName }).eq('id', moduleId)
+    const { error } = await supabase.from('edu_modules').update({ name: editingModuleName }).eq('id', moduleId)
+    if (error) { alert('Đổi tên chương thất bại: ' + error.message); return }
     setModules(prev => prev.map(m => m.id === moduleId ? { ...m, name: editingModuleName } : m))
     setEditingModuleId(null)
   }

@@ -305,13 +305,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       { id: 'hat',    done: false },
       { id: 'dan',    done: false },
     ]
-    await supabase.from('student_songs').insert({
+    const { error: insertErr } = await supabase.from('student_songs').insert({
       student_id: student.id,
       title: savedTitle,
       youtube_url: savedYoutube || null,
       status: 'tempo',
       journey: steps,
     })
+    if (insertErr) { alert('Thêm bài thất bại: ' + insertErr.message); setAddingSong(false); return }
     const { data } = await supabase.from('student_songs')
       .select('id,title,artist,tempo,status,created_at,journey')
       .eq('student_id', student.id).order('created_at', { ascending: false })
@@ -595,9 +596,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     const v = nameDraft.trim()
     if (!v) return
     setSavingProfile(true)
-    await supabase.from('edu_students').update({ display_name: v }).eq('id', me.id)
-    setMe(prev => ({ ...prev, display_name: v }))
+    const { error } = await supabase.from('edu_students').update({ display_name: v }).eq('id', me.id)
     setSavingProfile(false)
+    if (error) { alert('Lưu tên thất bại: ' + error.message); return }
+    setMe(prev => ({ ...prev, display_name: v }))
   }
   const uploadAvatar = async (file: File) => {
     setSavingProfile(true)
@@ -607,7 +609,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
       if (upErr) { alert('Lỗi tải ảnh: ' + upErr.message); setSavingProfile(false); return }
       const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
-      await supabase.from('edu_students').update({ avatar_url: pub.publicUrl }).eq('id', me.id)
+      const { error: avatarErr } = await supabase.from('edu_students').update({ avatar_url: pub.publicUrl }).eq('id', me.id)
+      if (avatarErr) { alert('Cập nhật ảnh đại diện thất bại: ' + avatarErr.message); setSavingProfile(false); return }
       setMe(prev => ({ ...prev, avatar_url: pub.publicUrl }))
     } catch (e: any) {
       alert('Lỗi: ' + (e?.message ?? e))

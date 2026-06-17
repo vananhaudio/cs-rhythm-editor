@@ -191,9 +191,10 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const updateHonor = async (honor: string) => {
     if (!student) return
     setSavingHonor(true)
-    await supabase.from('edu_students').update({ honor }).eq('id', student.id)
-    setStudent(prev => prev ? { ...prev, honor } : prev)
+    const { error } = await supabase.from('edu_students').update({ honor }).eq('id', student.id)
     setSavingHonor(false)
+    if (error) { alert('Lưu danh hiệu thất bại: ' + error.message); return }
+    setStudent(prev => prev ? { ...prev, honor } : prev)
   }
 
   const avgSkill = skills.length > 0 ? Math.round(skills.reduce((s, k) => s + k.level_0_10, 0) / skills.length * 10) / 10 : null
