@@ -305,14 +305,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       { id: 'hat',    done: false },
       { id: 'dan',    done: false },
     ]
-    const { error: insertErr } = await supabase.from('student_songs').insert({
+    const { data: newSong, error: insertErr } = await supabase.from('student_songs').insert({
       student_id: student.id,
       title: savedTitle,
       youtube_url: savedYoutube || null,
       status: 'tempo',
       journey: steps,
-    })
-    if (insertErr) { alert('Thêm bài thất bại: ' + insertErr.message); setAddingSong(false); return }
+    }).select('id').single()
+    if (insertErr || !newSong) { alert('Thêm bài thất bại: ' + (insertErr?.message ?? '')); setAddingSong(false); return }
     const { data } = await supabase.from('student_songs')
       .select('id,title,artist,tempo,status,created_at,journey')
       .eq('student_id', student.id).order('created_at', { ascending: false })
@@ -328,9 +328,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     setYtSelected(null); setYtQuery(''); setYtResults([])
     setCarouselIdx(0)
     setAddingSong(false)
-    // Tự động mở Tap Tempo — nạp sẵn tên bài + YouTube, không cần tìm lại
+    // Tự động mở Tap Tempo — nạp sẵn tên bài + YouTube + songId để CẬP NHẬT đúng bài (không tạo trùng)
     const params = new URLSearchParams({ title: savedTitle })
     if (savedYoutube) params.set('youtube', savedYoutube)
+    params.set('songId', newSong.id)
+    setPendingJourney({ songId: newSong.id, stepId: 'tempo' })
     openTool('/tempo?' + params.toString(), 'Tempo', 'tempo')
   }
 
@@ -353,6 +355,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // ── Tool overlay — mở tool ngay trong app, không navigate ra ngoài ──
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
+  // Bước journey đang chờ xác nhận khi đóng tool (vd mở Tempo cho 1 bài → đóng xong đánh dấu bước 'tempo')
+  const [pendingJourney, setPendingJourney] = useState<{ songId: string; stepId: string } | null>(null)
   // ── Track tool đã dùng trong bài hiện tại ──
   const [usedToolIds, setUsedToolIds] = useState<Set<string>>(new Set())
 
@@ -415,6 +419,24 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       if (activeLesson) { try { localStorage.setItem(usedToolsKey(activeLesson.id), JSON.stringify([...next])) } catch { /* bỏ qua */ } }
       return next
     })
+  }
+
+  // Đóng tool — nếu có bước journey đang chờ, đọc lại bài & đánh dấu bước nếu DỮ LIỆU xác nhận
+  const closeTool = async () => {
+    setActiveTool(null)
+    const pj = pendingJourney
+    setPendingJourney(null)
+    if (!pj) return
+    const { data } = await supabase.from('student_songs')
+      .select('id,tempo,journey').eq('id', pj.songId).maybeSingle()
+    if (!data) return
+    const alreadyDone = (data.journey ?? []).find((j: { id: string; done: boolean }) => j.id === pj.stepId)?.done
+    // Bước 'tempo' chỉ tính xong khi bài đã có tempo thật (tránh đánh dấu giả khi học viên thoát giữa chừng)
+    const dataConfirms = pj.stepId === 'tempo' ? !!data.tempo : false
+    if (!alreadyDone && dataConfirms) {
+      setMySongs(prev => prev.map(s => s.id === pj.songId ? { ...s, tempo: data.tempo } : s))
+      markStepDone(pj.songId, pj.stepId)
+    }
   }
 
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
@@ -1710,7 +1732,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000', display: 'flex', flexDirection: 'column' }}>
         {/* Thanh tiêu đề */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top))', background: L.p1, flexShrink: 0 }}>
-          <button onClick={() => setActiveTool(null)}
+          <button onClick={closeTool}
             style={{ background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 12, minWidth: 72, height: 38, padding: '0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 15, color: '#fff', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', fontWeight: 600 }}>
             ✕ <span style={{ fontSize: 13 }}>Đóng</span>
           </button>
