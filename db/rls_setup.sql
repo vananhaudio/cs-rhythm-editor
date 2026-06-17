@@ -4,10 +4,14 @@
 --
 -- Chiến lược (mức nền — siết theo từng-hàng là bước SAU, tách riêng):
 --   1. Bật RLS trên MỌI bảng public.
---   2. MỌI bảng -> role 'authenticated' TOÀN QUYỀN (thầy + học viên đã đăng
---      nhập dùng y như cũ).
+--   2. Hầu hết bảng -> role 'authenticated' TOÀN QUYỀN (thầy + học viên dùng như cũ).
+--      NGOẠI LỆ app_users -> authenticated CHỈ ĐƯỢC ĐỌC (không cho học viên tự
+--      UPDATE role='admin' để leo quyền; đổi role chỉ qua SQL/service_role).
 --   3. CHỈ 6 bảng nội dung (không PII) -> role 'anon' ĐƯỢC SELECT.
 --      anon KHÔNG được ghi/xóa bất cứ đâu, KHÔNG đọc bảng PII.
+--   * Bảng tự-quản-RLS (edu_groups/edu_group_members/edu_group_claim_tokens của
+--     tính năng "Cộng đồng") có policy HẸP riêng do migration của nó đặt —
+--     vòng lặp dưới BỎ QUA, không áp policy rộng lên chúng.
 --
 -- edu_students / student_taps / flow_progress KHÔNG cho anon đọc — app đã
 -- được sửa (deploy) để không còn đọc chúng khi chưa đăng nhập.
@@ -44,9 +48,18 @@ DECLARE
     'edu_courses', 'edu_modules', 'edu_course_lessons',
     'edu_tools', 'flows', 'timming_songs'
   ];
+  -- Bảng tự quản RLS riêng (policy hẹp do migration "Cộng đồng" đặt) — BỎ QUA:
+  self_managed text[] := ARRAY[
+    'edu_groups', 'edu_group_members', 'edu_group_claim_tokens'
+  ];
+  -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
+  read_only_auth text[] := ARRAY['app_users'];
 BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
+    -- Bỏ qua bảng tự-quản-RLS: giữ nguyên policy hẹp của chúng
+    IF t.tablename = ANY (self_managed) THEN CONTINUE; END IF;
+
     -- (1) xóa MỌI policy hiện có trên bảng này
     FOR p IN SELECT policyname FROM pg_policies
              WHERE schemaname = 'public' AND tablename = t.tablename
@@ -54,9 +67,14 @@ BEGIN
       EXECUTE format('DROP POLICY %I ON public.%I;', p.policyname, t.tablename);
     END LOOP;
 
-    -- (2) authenticated toàn quyền trên MỌI bảng
-    EXECUTE format('CREATE POLICY rls_authenticated_all ON public.%I FOR ALL TO authenticated USING (true) WITH CHECK (true);',
-      t.tablename);
+    -- (2) authenticated: read-only cho app_users, toàn quyền cho phần còn lại
+    IF t.tablename = ANY (read_only_auth) THEN
+      EXECUTE format('CREATE POLICY rls_authenticated_read ON public.%I FOR SELECT TO authenticated USING (true);',
+        t.tablename);
+    ELSE
+      EXECUTE format('CREATE POLICY rls_authenticated_all ON public.%I FOR ALL TO authenticated USING (true) WITH CHECK (true);',
+        t.tablename);
+    END IF;
 
     -- (3) anon CHỈ SELECT, và chỉ trên bảng nội dung
     IF t.tablename = ANY (content_tables) THEN

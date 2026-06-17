@@ -42,6 +42,8 @@ KHÔNG dùng react-router. Tự kiểm tra `window.location.pathname` bằng chu
 ## Database (Supabase) — RLS đang BẬT trên mọi bảng `public`
 Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 - **RLS (từ 2026-06):** mọi bảng `public` có policy `authenticated` TOÀN QUYỀN (`FOR ALL USING(true)`) — thầy + học viên đã đăng nhập dùng như cũ. `anon` CHỈ được SELECT 6 bảng nội dung không-PII: `edu_courses`, `edu_modules`, `edu_course_lessons`, `edu_tools`, `flows`, `timming_songs`. `anon` KHÔNG ghi/xóa bất cứ đâu, KHÔNG đọc bảng PII. Script: `db/rls_setup.sql` (idempotent). KHÔNG đọc `edu_students`/`student_taps`/`flow_progress` khi chưa đăng nhập (app đã sửa). `delete_my_account` là SECURITY DEFINER nên RLS không chặn.
+- **Ngoại lệ app_users:** authenticated CHỈ ĐƯỢC ĐỌC (policy `rls_authenticated_read`), KHÔNG ghi — chặn học viên tự `UPDATE role='admin'` để leo quyền (app chỉ đọc app_users, đổi role làm qua SQL). ĐỪNG cấp lại FOR ALL cho app_users.
+- **Tính năng "Cộng đồng" (`db/community_setup.sql`):** 3 bảng `edu_groups`/`edu_group_members`/`edu_group_claim_tokens` TỰ QUẢN RLS hẹp (teacher-only + self-read) + RPC `is_teacher()`/`claim_group(token)`/`my_groups()` (SECURITY DEFINER). `rls_setup.sql` đã được sửa để **BỎ QUA** 3 bảng này (mảng `self_managed`) — đừng để vòng lặp áp policy rộng lên chúng.
 - Stage 3 chưa làm: siết policy theo-hàng (mỗi học viên chỉ sửa dữ liệu của mình) — hiện authenticated vẫn có quyền rộng lên dữ liệu của nhau.
 - `edu_course_lessons` ← **DÙNG BẢNG NÀY** (KHÔNG dùng `edu_lessons` cũ). Cột: `title`, `lesson_type`, `content_url`, `description`, `content`, `tools` (jsonb).
 - `edu_courses`, `edu_modules`, `edu_students`, `edu_enrollments`.
