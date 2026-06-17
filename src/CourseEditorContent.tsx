@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase } from './supabase'
 import RichEditor from './RichEditor'
 import FlowInlineEditor from './FlowInlineEditor'
@@ -84,7 +84,7 @@ function normalizeCanvaUrl(raw: string): string {
 // ─── Markdown → HTML (lightweight) ───────────────────────────────────────────
 
 // ─── Lesson Preview (student view) ───────────────────────────────────────────
-function LessonPreview({ lesson }: { lesson: Lesson }) {
+function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolMeta?: Record<string, { label: string; icon: string }> }) {
   const ytId = lesson.content_url ? getYouTubeId(lesson.content_url) : null
   return (
     <div style={{ background: C.bg, height: '100%', overflowY: 'auto' }}>
@@ -145,7 +145,7 @@ function LessonPreview({ lesson }: { lesson: Lesson }) {
             <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>🛠 Công cụ luyện tập</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {lesson.tools.map(tid => {
-                const t = TOOL_META[tid]; if (!t) return null
+                const t = toolMeta[tid]; if (!t) return null
                 return (
                   <div key={tid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: C.accentLight, border: `1px solid ${C.accent}30`, borderRadius: 10, color: C.accent, fontWeight: 600, fontSize: 13 }}>
                     <span style={{ fontSize: 18 }}>{t.icon}</span>{t.label}
@@ -254,6 +254,13 @@ export default function CourseEditorContent() {
   const [fContent, setFContent] = useState('')
   const [fTools,   setFTools]   = useState<string[]>([])
   const [dbTools,  setDbTools]  = useState<{ id: string; name: string; icon: string; status?: string; category?: string }[]>([])
+
+  // Nhãn/icon công cụ: ưu tiên edu_tools (DB), fallback TOOLS cứng cho tool cũ
+  const toolMeta = useMemo(() => {
+    const m: Record<string, { label: string; icon: string }> = { ...TOOL_META }
+    for (const t of dbTools) m[t.id] = { label: t.name, icon: t.icon }
+    return m
+  }, [dbTools])
 
   const previewLesson: Lesson | null = selectedLesson
     ? { ...selectedLesson, title: fTitle, lesson_type: fType, content_url: fUrl || null, description: fDesc || null, content: fContent || null, tools: fTools }
@@ -1084,7 +1091,7 @@ export default function CourseEditorContent() {
                 <div style={{ background: '#FFF9EC', borderBottom: '1px solid #F5E9C8', padding: '7px 20px', fontSize: 12, color: '#92742A', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>👁</span> Giao diện học sinh sẽ thấy — nội dung hiện tại (chưa lưu cũng hiện đúng).
                 </div>
-                <LessonPreview lesson={previewLesson} />
+                <LessonPreview lesson={previewLesson} toolMeta={toolMeta} />
               </div>
             )}
           </>

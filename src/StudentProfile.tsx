@@ -145,6 +145,8 @@ export default function StudentProfile({ studentId, onBack }: Props) {
       const [{ data: s }, { data: sk }, { data: ls }, { data: as }, { data: ev }, { data: nt }] = await Promise.all([
         supabase.from('edu_students').select('*').eq('id', studentId).single(),
         supabase.from('edu_skills').select('*').eq('student_id', studentId).order('category'),
+        // edu_lessons = nhật ký BUỔI HỌC theo học viên (student_id, started_at, mood_score...),
+        // KHÔNG phải bảng nội dung edu_course_lessons. Giữ nguyên — đừng đổi sang edu_course_lessons.
         supabase.from('edu_lessons').select('*').eq('student_id', studentId).order('started_at', { ascending: false }).limit(10),
         supabase.from('edu_assignments').select('*').eq('student_id', studentId).order('due_date', { ascending: false }).limit(20),
         supabase.from('edu_learning_events').select('*').eq('student_id', studentId).order('created_at', { ascending: false }).limit(15),
