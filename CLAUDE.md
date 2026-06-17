@@ -39,8 +39,10 @@ KHÔNG dùng react-router. Tự kiểm tra `window.location.pathname` bằng chu
 - `/editor` → `App` (rhythm editor, chỉ teacher) · `/youtube-sync` → `YouTubeSyncPage` (teacher) · `/import` → `ImportPage` (teacher)
 - fall-through → `PlayerView` (trang chủ cũ của teacher; vào bằng `/player`)
 
-## Database (Supabase) — RLS đang TẮT trên các bảng `edu_`
+## Database (Supabase) — RLS đang BẬT trên mọi bảng `public`
 Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
+- **RLS (từ 2026-06):** mọi bảng `public` có policy `authenticated` TOÀN QUYỀN (`FOR ALL USING(true)`) — thầy + học viên đã đăng nhập dùng như cũ. `anon` CHỈ được SELECT 6 bảng nội dung không-PII: `edu_courses`, `edu_modules`, `edu_course_lessons`, `edu_tools`, `flows`, `timming_songs`. `anon` KHÔNG ghi/xóa bất cứ đâu, KHÔNG đọc bảng PII. Script: `db/rls_setup.sql` (idempotent). KHÔNG đọc `edu_students`/`student_taps`/`flow_progress` khi chưa đăng nhập (app đã sửa). `delete_my_account` là SECURITY DEFINER nên RLS không chặn.
+- Stage 3 chưa làm: siết policy theo-hàng (mỗi học viên chỉ sửa dữ liệu của mình) — hiện authenticated vẫn có quyền rộng lên dữ liệu của nhau.
 - `edu_course_lessons` ← **DÙNG BẢNG NÀY** (KHÔNG dùng `edu_lessons` cũ). Cột: `title`, `lesson_type`, `content_url`, `description`, `content`, `tools` (jsonb).
 - `edu_courses`, `edu_modules`, `edu_students`, `edu_enrollments`.
 - `edu_tools`: `id` text PK, `enabled` (bool — false = ẩn công cụ), `route`.
