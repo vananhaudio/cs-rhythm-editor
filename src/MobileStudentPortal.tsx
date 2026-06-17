@@ -199,6 +199,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [classRank, setClassRank] = useState<{ rank: number; total: number } | null>(null)
   const [leaderboard, setLeaderboard] = useState<{ id: string; name: string; avatar: string | null; xp: number }[]>([])
   const [communityGroups, setCommunityGroups] = useState<{ id: string; name: string; group_type: string; zalo_url: string | null; facebook_url: string | null }[]>([])
+  const [practiceStats, setPracticeStats] = useState<{ streak: number; daysWeek: number; weekMin: number; weekDays: boolean[] }>({ streak: 0, daysWeek: 0, weekMin: 0, weekDays: [] })
 
   // ── Practice tracker ──
   const EXERCISES = [
@@ -530,13 +531,28 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         if (!data) return
         const totals: Record<string, number> = {}
         const today: Record<string, number>  = {}
+        const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+        const days = new Set<string>()
+        const weekAgoMs = Date.now() - 7 * 24 * 3600 * 1000
+        let weekMin = 0
         data.forEach((r: any) => {
           totals[r.exercise_id] = (totals[r.exercise_id] ?? 0) + r.minutes
           if (r.practiced_at >= todayStart)
             today[r.exercise_id] = (today[r.exercise_id] ?? 0) + r.minutes
+          const d = new Date(r.practiced_at)
+          days.add(dayKey(d))
+          if (d.getTime() >= weekAgoMs) weekMin += r.minutes
         })
         setPracticeTotals(totals)
         setPracticeToday(today)
+        // Nhịp tuần + streak (chuỗi ngày luyện liên tiếp)
+        const weekDays: boolean[] = []   // index 0 = 6 ngày trước ... index 6 = hôm nay
+        for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); weekDays.push(days.has(dayKey(d))) }
+        const daysWeek = weekDays.filter(Boolean).length
+        let streak = 0; const cur = new Date()
+        if (!days.has(dayKey(cur))) cur.setDate(cur.getDate() - 1) // chưa tập hôm nay → đếm từ hôm qua
+        while (days.has(dayKey(cur))) { streak++; cur.setDate(cur.getDate() - 1) }
+        setPracticeStats({ streak, daysWeek, weekMin, weekDays })
       })
 
     supabase.from('student_songs')
@@ -842,6 +858,40 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 </div>
               )
             })()}
+
+            {/* Nhịp luyện tập tuần này */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: 16, boxShadow: L.shadow, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>📅 Nhịp luyện tập tuần này</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: practiceStats.streak > 0 ? L.a1 : L.t3 }}>🔥 {practiceStats.streak} ngày</span>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: L.p1 }}>{practiceStats.daysWeek}<span style={{ fontSize: 12, color: L.t3, fontWeight: 600 }}>/7</span></div>
+                  <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>Ngày đồng hành</div>
+                </div>
+                <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: L.green }}>{practiceStats.weekMin}<span style={{ fontSize: 12, color: L.t3, fontWeight: 600 }}> phút</span></div>
+                  <div style={{ fontSize: 11, color: L.t2, marginTop: 2 }}>Luyện trong tuần</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {practiceStats.weekDays.map((on, i) => {
+                  const d = new Date(); d.setDate(d.getDate() - (6 - i))
+                  const wd = ['CN','T2','T3','T4','T5','T6','T7'][d.getDay()]
+                  const isToday = i === 6
+                  return (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
+                        background: on ? L.green : L.surface2, color: on ? '#fff' : L.t3, border: isToday && !on ? `2px solid ${L.a1}` : `1px solid ${L.border}` }}>
+                        {on ? '✓' : ''}
+                      </div>
+                      <span style={{ fontSize: 9, color: isToday ? L.a1 : L.t3, fontWeight: isToday ? 700 : 400 }}>{wd}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
             {/* Tiếp tục học */}
               {mainCourse && (
