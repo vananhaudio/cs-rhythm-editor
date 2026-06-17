@@ -890,62 +890,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Artist Level Card */}
-            {(() => {
-              const level    = ARTIST_LEVELS.find(l => totalXP >= l.min && totalXP < l.max) ?? ARTIST_LEVELS[0]
-              const nextLevel= ARTIST_LEVELS[ARTIST_LEVELS.indexOf(level) + 1]
-              const pct      = nextLevel ? Math.round(((totalXP - level.min) / (nextLevel.min - level.min)) * 100) : 100
-              const weekDiff = lastWeekXP > 0 ? Math.round(((weekXP - lastWeekXP) / lastWeekXP) * 100) : null
-              const rankPct  = classRank ? Math.round((1 - classRank.rank / classRank.total) * 100) : null
-              return (
-                <div style={{ background: L.surface, borderRadius: 20, padding: '18px', boxShadow: L.shadowLg, border: `1.5px solid ${level.color}22` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: L.t3, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.06em' }}>Cấp độ nghệ sĩ</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: level.color }}>{level.label}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: level.color }}>{totalXP.toLocaleString()}</div>
-                      <div style={{ fontSize: 10, color: L.t3 }}>XP tổng</div>
-                    </div>
-                  </div>
-                  {/* Progress bar */}
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ height: 8, borderRadius: 99, background: L.surface2, overflow: 'hidden', marginBottom: 5 }}>
-                      <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${level.color}, ${level.color}99)`, width: `${pct}%`, transition: 'width .5s' }} />
-                    </div>
-                    {nextLevel && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: L.t3 }}>
-                        <span>{level.min.toLocaleString()} XP</span>
-                        <span style={{ color: level.color, fontWeight: 600 }}>{pct}% → {nextLevel.label}</span>
-                        <span>{nextLevel.min.toLocaleString()} XP</span>
-                      </div>
-                    )}
-                  </div>
-                  {/* Stats row */}
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: '10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: L.t1 }}>{weekXP.toLocaleString()}</div>
-                      <div style={{ fontSize: 10, color: L.t3 }}>XP tuần này</div>
-                      {weekDiff !== null && (
-                        <div style={{ fontSize: 10, fontWeight: 700, color: weekDiff >= 0 ? L.green : '#EF4444', marginTop: 2 }}>
-                          {weekDiff >= 0 ? '↑' : '↓'}{Math.abs(weekDiff)}% vs tuần trước
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: '10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: L.t1 }}>
-                        {rankPct !== null ? `Top ${100 - rankPct}%` : '—'}
-                      </div>
-                      <div style={{ fontSize: 10, color: L.t3 }}>Xếp hạng lớp</div>
-                      {classRank && <div style={{ fontSize: 10, color: L.t2, marginTop: 2 }}>#{classRank.rank}/{classRank.total}</div>}
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* 🗺️ Hành trình của bạn — xuyên suốt toàn giáo trình */}
+            {/* 🗺️ Hành trình của bạn — con đường xuyên suốt giáo trình */}
             {masterPath.length > 0 && (() => {
               const total = masterPath.length
               const doneCount = masterPath.filter(m => completedIds.has(m.id)).length
@@ -953,37 +898,69 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               if (curIdx < 0) curIdx = total - 1
               const cur = masterPath[curIdx]
               const posLabel = Math.min(doneCount + 1, total)
-              const pct = Math.round((doneCount / total) * 100)
-              const W = 11
-              let start = Math.max(0, curIdx - Math.floor(W / 2))
-              const end = Math.min(total, start + W)
-              start = Math.max(0, end - W)
-              const win = masterPath.slice(start, end)
+              const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0
               const nextItem = masterPath.find(m => !completedIds.has(m.id))
+              // điểm chất lượng trung bình mỗi chặng (khóa) → màu cờ
+              const cSum: Record<string, number> = {}; const cCnt: Record<string, number> = {}
+              masterPath.forEach(m => { if (completedIds.has(m.id)) { cSum[m.courseId] = (cSum[m.courseId] ?? 0) + scoreById(m.id); cCnt[m.courseId] = (cCnt[m.courseId] ?? 0) + 1 } })
+              // hình học con đường (sóng sin — tính được mọi điểm)
+              const Wd = 320, midY = 46, amp = 19, N = 60
+              const wave = (x: number) => midY + amp * Math.sin((x / Wd) * Math.PI * 2.2)
+              const pts: [number, number][] = []
+              for (let i = 0; i <= N; i++) { const x = (i / N) * Wd; pts.push([x, wave(x)]) }
+              const dPath = 'M ' + pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ')
+              const progress = total > 0 ? doneCount / total : 0
+              const [mx, my] = pts[Math.min(N, Math.round(progress * N))]
+              const seen = new Set<string>()
+              const flags: { x: number; y: number; id: string; cur: boolean; col: string }[] = []
+              masterPath.forEach((m, idx) => {
+                if (!seen.has(m.courseId)) {
+                  seen.add(m.courseId)
+                  const [fx, fy] = pts[Math.min(N, Math.round((idx / total) * N))]
+                  const col = cCnt[m.courseId] ? scoreColor(cSum[m.courseId] / cCnt[m.courseId]) : '#D1D5DB'
+                  flags.push({ x: fx, y: fy, id: m.courseId, cur: m.courseId === cur?.courseId, col })
+                }
+              })
               return (
-                <div style={{ background: L.surface, borderRadius: 18, padding: 16, boxShadow: L.shadow, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <span style={{ fontWeight: 800, fontSize: 15 }}>🗺️ Hành trình của bạn</span>
+                <div style={{ background: L.surface, borderRadius: 20, padding: 18, boxShadow: L.shadowLg }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                    <span style={{ fontWeight: 800, fontSize: 16 }}>🗺️ Hành trình của bạn</span>
                     <span style={{ fontSize: 12, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total} · {pct}%</span>
                   </div>
-                  <div style={{ fontSize: 12, color: L.t2, marginBottom: 12 }}>Chặng: <b style={{ color: L.t1 }}>{cur?.courseName}</b></div>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 2px' }}>
-                    <div style={{ position: 'absolute', left: 8, right: 8, top: '50%', height: 4, borderRadius: 99, background: 'linear-gradient(90deg,#EF4444,#F59E0B,#22C55E)', opacity: .25, transform: 'translateY(-50%)' }} />
-                    {win.map((m, i) => {
-                      const gi = start + i
-                      const col = scoreColor(scoreById(m.id))
-                      const isCur = gi === curIdx
-                      const newChang = i > 0 && win[i - 1].courseId !== m.courseId
-                      return (
-                        <div key={m.id} onClick={() => openCourse(m.courseId)} style={{ position: 'relative', zIndex: 1, cursor: 'pointer' }}>
-                          {newChang && <div style={{ position: 'absolute', left: -6, top: '50%', transform: 'translateY(-50%)', width: 2, height: 18, background: L.border }} />}
-                          <div style={{ width: isCur ? 20 : 14, height: isCur ? 20 : 14, borderRadius: '50%', background: col, border: isCur ? `3px solid ${L.p1}` : '2px solid #fff', boxShadow: isCur ? `0 0 0 3px ${col}55` : '0 1px 3px rgba(0,0,0,.18)' }} />
-                        </div>
-                      )
-                    })}
+                  <div style={{ fontSize: 12, color: L.t2, marginBottom: 6 }}>Chặng: <b style={{ color: L.t1 }}>{cur?.courseName}</b></div>
+                  {/* CON ĐƯỜNG */}
+                  <svg viewBox={`0 0 ${Wd} 92`} style={{ width: '100%', display: 'block', overflow: 'visible' }}>
+                    <defs>
+                      <linearGradient id="tvaRoad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#EF4444" />
+                        <stop offset="50%" stopColor="#F59E0B" />
+                        <stop offset="100%" stopColor="#22C55E" />
+                      </linearGradient>
+                    </defs>
+                    <path d={dPath} fill="none" stroke="#E5E7EB" strokeWidth={11} strokeLinecap="round" />
+                    <path d={dPath} fill="none" stroke="url(#tvaRoad)" strokeWidth={11} strokeLinecap="round" pathLength={100} strokeDasharray={`${Math.max(progress * 100, 0.6)} 100`} />
+                    <path d={dPath} fill="none" stroke="#fff" strokeWidth={1.6} strokeDasharray="2 7" strokeLinecap="round" opacity={0.65} />
+                    {flags.map(f => (
+                      <circle key={f.id} cx={f.x} cy={f.y} r={f.cur ? 4.8 : 3.4} fill={f.col} stroke="#fff" strokeWidth={f.cur ? 2.4 : 1.6} />
+                    ))}
+                    <circle cx={mx} cy={my} r={13} fill={L.p1} opacity={0.18} />
+                    <circle cx={mx} cy={my} r={9} fill="#fff" stroke={L.p1} strokeWidth={3} />
+                    <text x={mx} y={my + 0.5} textAnchor="middle" dominantBaseline="central" fontSize="9">🎸</text>
+                  </svg>
+                  {/* điểm hành trình + hạng lớp */}
+                  <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 10, textAlign: 'center' }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: L.p1 }}>{totalXP.toLocaleString()}</div>
+                      <div style={{ fontSize: 10, color: L.t3 }}>Điểm hành trình</div>
+                    </div>
+                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 10, textAlign: 'center' }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: L.t1 }}>{classRank ? `#${classRank.rank}` : '—'}<span style={{ fontSize: 11, color: L.t3, fontWeight: 600 }}>{classRank ? `/${classRank.total}` : ''}</span></div>
+                      <div style={{ fontSize: 10, color: L.t3 }}>Hạng trong lớp</div>
+                    </div>
                   </div>
+                  {/* việc tiếp theo */}
                   {nextItem ? (
-                    <button onClick={() => openCourse(nextItem.courseId)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                    <button onClick={() => openCourse(nextItem.courseId)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                       <span style={{ fontSize: 18 }}>👉</span>
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ display: 'block', fontSize: 10, color: L.t3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nextItem.courseName}</span>
@@ -992,7 +969,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       <span style={{ color: L.p1 }}>›</span>
                     </button>
                   ) : (
-                    <div style={{ fontSize: 14, fontWeight: 700, color: L.green, marginTop: 12, textAlign: 'center' }}>🎉 Bạn đã hoàn thành toàn bộ giáo trình!</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: L.green, marginTop: 10, textAlign: 'center' }}>🎉 Bạn đã hoàn thành toàn bộ giáo trình!</div>
                   )}
                 </div>
               )
