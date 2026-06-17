@@ -166,6 +166,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [modules, setModules]     = useState<Module[]>([])
   const [lessons, setLessons]     = useState<Lesson[]>([])
+  const [lessonActionMap, setLessonActionMap] = useState<Record<string, Set<string>>>({})  // lessonId → set action_type (cho màu mốc)
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
@@ -464,6 +465,31 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const isUnlocked = (l: Lesson) =>
     isTierUnlocked(l.tier) && isSequentiallyUnlocked(l.id)
 
+  // ── Màu mốc (gradient) — điểm "độ chắc" ẩn từ event THẬT, nội suy ra màu ──
+  // 0 = chưa học (xám) · 40 = đã học (đỏ) · +30 đã thực hành · +30 đã gửi bài → 100 (xanh)
+  const lessonScore = (l: Lesson) => {
+    if (!completedIds.has(l.id)) return 0
+    let s = 40
+    const acts = lessonActionMap[l.id]
+    if (acts?.has('practiced_lesson')) s += 30
+    if (acts?.has('submitted_video_self_report')) s += 30
+    return s
+  }
+  const scoreColor = (score: number) => {
+    if (score <= 0) return '#D1D5DB'
+    const stops: [number, [number, number, number]][] = [[40, [239, 68, 68]], [70, [245, 158, 11]], [100, [34, 197, 94]]]
+    if (score <= stops[0][0]) return `rgb(${stops[0][1].join(',')})`
+    for (let i = 0; i < stops.length - 1; i++) {
+      const [s1, c1] = stops[i]; const [s2, c2] = stops[i + 1]
+      if (score >= s1 && score <= s2) {
+        const t = (score - s1) / (s2 - s1)
+        const c = c1.map((v, j) => Math.round(v + (c2[j] - v) * t))
+        return `rgb(${c[0]},${c[1]},${c[2]})`
+      }
+    }
+    return `rgb(${stops[stops.length - 1][1].join(',')})`
+  }
+
   useEffect(() => {
     supabase.from('edu_enrollments')
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order)')
@@ -583,6 +609,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
       setLessons((lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] })))
     }
+    // Nạp hành động (cho màu mốc) — RLS tự lọc theo user hiện tại
+    supabase.from('student_action_logs').select('lesson_id, action_type').then(({ data }) => {
+      const m: Record<string, Set<string>> = {}
+      ;(data ?? []).forEach((r: any) => { if (r.lesson_id) { if (!m[r.lesson_id]) m[r.lesson_id] = new Set(); m[r.lesson_id].add(r.action_type) } })
+      setLessonActionMap(m)
+    })
   }
 
   const noteKey = (lessonId: string) => `note:${student.id}:${lessonId}`
@@ -622,6 +654,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       if (!xpErr) { setTotalXP(p => p + xp); setWeekXP(p => p + xp) }
     }
     setLessonActions(prev => new Set([...prev, actionType]))
+    setLessonActionMap(prev => {
+      const next = { ...prev }; const s = new Set(next[activeLesson.id] ?? []); s.add(actionType); next[activeLesson.id] = s; return next
+    })
     setActionBusy(null)
   }
 
@@ -1023,6 +1058,78 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 )
               })()}
             </div>
+
+            {/* ── Bản đồ hành trình ── */}
+            {activeCourseId && sortedLessons.length > 0 && (() => {
+              const total = sortedLessons.length
+              const completedCount = sortedLessons.filter(l => completedIds.has(l.id)).length
+              let curIdx = sortedLessons.findIndex(l => !completedIds.has(l.id))
+              if (curIdx < 0) curIdx = total - 1
+              const posLabel = Math.min(completedCount + 1, total)
+              const W = 9
+              let start = Math.max(0, curIdx - Math.floor(W / 2))
+              const end = Math.min(total, start + W)
+              start = Math.max(0, end - W)
+              const win = sortedLessons.slice(start, end)
+              const nextLesson = sortedLessons.find(l => !completedIds.has(l.id) && isUnlocked(l))
+              const redLesson  = sortedLessons.find(l => completedIds.has(l.id) && lessonScore(l) <= 40)
+              return (
+                <div style={{ background: L.surface, margin: '0 16px 8px', borderRadius: 18, padding: 16, boxShadow: L.shadow }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                    <span style={{ fontWeight: 800, fontSize: 15 }}>🗺️ Hành trình của bạn</span>
+                    <span style={{ fontSize: 12, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total}</span>
+                  </div>
+                  {/* dải mốc + path gradient */}
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 2px' }}>
+                    <div style={{ position: 'absolute', left: 10, right: 10, top: '50%', height: 4, borderRadius: 99, background: 'linear-gradient(90deg,#EF4444,#F59E0B,#22C55E)', opacity: .25, transform: 'translateY(-50%)' }} />
+                    {win.map((l) => {
+                      const col = scoreColor(lessonScore(l))
+                      const isCur = l.id === sortedLessons[curIdx].id
+                      const locked = !isUnlocked(l) && !completedIds.has(l.id)
+                      return (
+                        <div key={l.id} onClick={() => { if (!locked) openLesson(l) }}
+                          style={{ position: 'relative', zIndex: 1, cursor: locked ? 'default' : 'pointer' }}>
+                          <div style={{
+                            width: isCur ? 22 : 16, height: isCur ? 22 : 16, borderRadius: '50%',
+                            background: locked ? '#E5E7EB' : col,
+                            border: isCur ? `3px solid ${L.p1}` : '2px solid #fff',
+                            boxShadow: isCur ? `0 0 0 3px ${col}55` : '0 1px 3px rgba(0,0,0,.18)',
+                          }} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* chú thích màu */}
+                  <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 10, fontSize: 10, color: L.t3 }}>
+                    <span><span style={{ color: '#EF4444' }}>●</span> Mới học</span>
+                    <span><span style={{ color: '#F59E0B' }}>●</span> Đã luyện</span>
+                    <span><span style={{ color: '#22C55E' }}>●</span> Chắc</span>
+                  </div>
+                  {/* việc tiếp theo */}
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${L.border}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: L.t3, marginBottom: 8, letterSpacing: '.04em' }}>VIỆC TIẾP THEO</div>
+                    {nextLesson ? (
+                      <button onClick={() => openLesson(nextLesson)}
+                        style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 18 }}>👉</span>
+                        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {nextLesson.title}</span>
+                        <span style={{ color: L.p1 }}>›</span>
+                      </button>
+                    ) : (
+                      <div style={{ fontSize: 14, fontWeight: 700, color: L.green }}>🎉 Bạn đã hoàn thành tất cả bài trong khóa!</div>
+                    )}
+                    {redLesson && (
+                      <button onClick={() => openLesson(redLesson)}
+                        style={{ width: '100%', textAlign: 'left', background: 'transparent', border: '1px dashed #EF444466', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 16 }}>💪</span>
+                        <span style={{ flex: 1, fontSize: 13, color: L.t2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Củng cố cho chắc: <b style={{ color: L.t1 }}>{redLesson.title}</b></span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+
             <div style={{ padding: '16px' }}>
               {modules.map(mod => (
                 <div key={mod.id} style={{ marginBottom: 20 }}>
