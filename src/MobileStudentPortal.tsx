@@ -363,6 +363,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [pendingJourney, setPendingJourney] = useState<{ songId: string; stepId: string } | null>(null)
   // ── Track tool đã dùng trong bài hiện tại ──
   const [usedToolIds, setUsedToolIds] = useState<Set<string>>(new Set())
+  const [lessonActions, setLessonActions] = useState<Set<string>>(new Set())
+  const [actionBusy, setActionBusy] = useState<string | null>(null)
 
   const startTimer = (exerciseId: string) => {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -596,7 +598,31 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     } catch { setUsedToolIds(new Set()) }
     // Khôi phục ghi chú
     setNoteText(localStorage.getItem(noteKey(l.id)) ?? '')
+    // Nạp hành động đã ghi nhận của bài này (RLS tự lọc theo user hiện tại)
+    setLessonActions(new Set())
+    supabase.from('student_action_logs').select('action_type').eq('lesson_id', l.id)
+      .then(({ data }) => setLessonActions(new Set((data ?? []).map((r: any) => r.action_type))))
     setScreen('lesson')
+  }
+
+  // Ghi nhận "hành động thật" (đã thực hành / gửi bài) → event + XP (1 lần/bài/loại)
+  const XP_ACTION: Record<string, number> = { practiced_lesson: 10, submitted_video_self_report: 50, reviewed_old_lesson: 5 }
+  const logAction = async (actionType: string) => {
+    if (!activeLesson || lessonActions.has(actionType) || actionBusy) return
+    setActionBusy(actionType)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setActionBusy(null); return }
+    const { error } = await supabase.from('student_action_logs')
+      .insert({ user_id: user.id, action_type: actionType, lesson_id: activeLesson.id })
+    if (error) { alert('Ghi nhận thất bại: ' + error.message); setActionBusy(null); return }
+    const xp = XP_ACTION[actionType] ?? 0
+    if (xp > 0) {
+      const { error: xpErr } = await supabase.from('student_xp_log')
+        .insert({ student_id: student.id, xp, source: actionType, ref_id: activeLesson.id })
+      if (!xpErr) { setTotalXP(p => p + xp); setWeekXP(p => p + xp) }
+    }
+    setLessonActions(prev => new Set([...prev, actionType]))
+    setActionBusy(null)
   }
 
   const markComplete = async (lessonId: string) => {
@@ -1204,6 +1230,24 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       })}
                     </div>
                   )}
+                  {/* Ghi nhận hành động thật — nền cho màu mốc + Điểm hành trình */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', paddingLeft: 4 }}>✋ Ghi nhận thực hành</div>
+                    {[
+                      { type: 'practiced_lesson', label: 'Tôi đã thực hành bài này', xp: 10, icon: '🎸' },
+                      { type: 'submitted_video_self_report', label: 'Tôi đã gửi bài cho thầy', xp: 50, icon: '📹' },
+                    ].map(a => {
+                      const done = lessonActions.has(a.type)
+                      return (
+                        <button key={a.type} onClick={() => logAction(a.type)} disabled={done || actionBusy === a.type}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, background: done ? L.greenBg : L.surface, border: `1.5px solid ${done ? L.green : L.border}`, borderRadius: 14, padding: '13px 14px', cursor: done ? 'default' : 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: actionBusy === a.type ? 0.6 : 1 }}>
+                          <span style={{ fontSize: 20 }}>{done ? '✅' : a.icon}</span>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: done ? L.green : L.t1 }}>{done ? `${a.label} — đã ghi nhận` : a.label}</span>
+                          {!done && <span style={{ fontSize: 11, fontWeight: 700, color: L.a1 }}>+{a.xp} XP</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
                   {!activeLesson.description && !activeLesson.content && activeLesson.lesson_type !== 'video' && (
                     <div style={{ textAlign: 'center', padding: '28px', color: L.t3, fontSize: 14 }}>Chưa có nội dung</div>
                   )}
