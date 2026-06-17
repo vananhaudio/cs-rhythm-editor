@@ -40,9 +40,12 @@ interface Props {
   onBack: () => void
   fullScreen?: boolean   // true → tự dùng position:fixed, không cần wrapper ngoài
   previewFlow?: Flow     // preview mode: truyền thẳng data, không fetch DB
+  onLogAction?: (type: string) => void   // ghi nhận "đã thực hành / gửi bài" ở màn hoàn thành
+  doneActions?: Set<string>              // action_type đã ghi nhận của bài này
+  actionBusy?: string | null
 }
 
-export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fullScreen, previewFlow }: Props) {
+export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fullScreen, previewFlow, onLogAction, doneActions, actionBusy }: Props) {
   const [flow,     setFlow]     = useState<Flow | null>(previewFlow ?? null)
   const [loading,  setLoading]  = useState(!previewFlow)
   const [current,  setCurrent]  = useState(0)
@@ -88,9 +91,10 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         if (data) {
           setCompleted(data.completed_slides ?? [])
           wasFinishedRef.current = !!data.finished_at
-          // Nếu đã hoàn thành trước đó → bắt đầu lại từ slide 1
+          // Đã hoàn thành trước đó → hiện thẳng màn "Hoàn thành" (có nút thực hành/gửi bài)
           if (data.finished_at) {
             setCurrent(0)
+            setDone(true)
           } else {
             const savedIdx = data.current_slide ?? 0
             setCurrent(Math.min(savedIdx, flow.slides.length - 1))
@@ -213,19 +217,43 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
   // ── Done screen ──────────────────────────────────────────────────────────
   if (done) return (
-    <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center', gap: 16 }}>
-      <div style={{ fontSize: 64 }}>🎉</div>
+    <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 28, textAlign: 'center', gap: 14, overflowY: 'auto' }}>
+      <div style={{ fontSize: 52 }}>🎉</div>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#4338CA' }}>Hoàn thành!</div>
       <div style={{ fontSize: 15, color: '#555' }}>{flow.title}</div>
-      {flow.reward_xp > 0 && (
+      {flow.reward_xp > 0 && !wasFinishedRef.current && (
         <div style={{ background: '#FFF7ED', color: '#D97706', borderRadius: 99, padding: '8px 24px', fontWeight: 700, fontSize: 16 }}>
           +{flow.reward_xp} XP 🔥
         </div>
       )}
-      <button onClick={onBack}
-        style={{ marginTop: 8, padding: '14px 36px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-        ← Quay lại danh sách bài
-      </button>
+      {onLogAction && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 340 }}>
+          {[
+            { type: 'practiced_lesson', label: 'Tôi đã thực hành bài này', xp: 10, icon: '🎸' },
+            { type: 'submitted_video_self_report', label: 'Tôi đã gửi bài cho thầy', xp: 50, icon: '📹' },
+          ].map(a => {
+            const dn = doneActions?.has(a.type)
+            return (
+              <button key={a.type} onClick={() => { if (!dn) onLogAction(a.type) }} disabled={dn || actionBusy === a.type}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, background: dn ? '#F0FDF4' : '#fff', border: `1.5px solid ${dn ? '#16A34A' : '#E4E4E7'}`, borderRadius: 12, padding: '12px 14px', cursor: dn ? 'default' : 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: actionBusy === a.type ? 0.6 : 1 }}>
+                <span style={{ fontSize: 18 }}>{dn ? '✅' : a.icon}</span>
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: dn ? '#16A34A' : '#18181B' }}>{dn ? `${a.label} — đã ghi nhận` : a.label}</span>
+                {!dn && <span style={{ fontSize: 11, fontWeight: 700, color: '#EA580C' }}>+{a.xp} XP</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+        <button onClick={() => { setDone(false); setCurrent(0); setAnswer(null); setChecked(null) }}
+          style={{ padding: '12px 20px', borderRadius: 14, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          ↺ Xem lại
+        </button>
+        <button onClick={onBack}
+          style={{ padding: '12px 26px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          ← Quay lại
+        </button>
+      </div>
     </div>
   )
 

@@ -1241,6 +1241,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 onComplete={() => markComplete(activeLesson.id)}
                 onBack={goBack}
                 fullScreen
+                onLogAction={logAction}
+                doneActions={lessonActions}
+                actionBusy={actionBusy}
               />
             ) : (
             <>
