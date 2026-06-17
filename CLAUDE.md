@@ -13,7 +13,7 @@ LMS dạy guitar online của Trần Văn Anh ("Thầy Văn Anh Guitar"). Triế
 
 ## Quy ước BẮT BUỘC tuân thủ
 - **All-database, KHÔNG hardcode nội dung.** Mọi khoá/bài/công cụ nằm trong Supabase.
-- **Mobile là giao diện học viên chính.** `<768px` → `MobileStudentPortal`.
+- **Mobile là giao diện học viên chính.** `<1024px` → `MobileStudentPortal` (breakpoint 1024 để iPad cũng vào giao diện cảm ứng — fix Apple 2.1; desktop ≥1024 → `StudentPortalV2`).
 - **Toàn bộ dùng INLINE STYLES, KHÔNG dùng Tailwind** — TRỪ `ChordsPage` và `ChordAmGuide` (2 file này dùng Tailwind).
 - UI phức tạp thường prototype ở Bolt; tích hợp/fix/deploy ở đây.
 - **Nguyên tắc vàng UX — Scroll có chủ đích:**
