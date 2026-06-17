@@ -197,6 +197,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [weekXP, setWeekXP]       = useState(0)
   const [lastWeekXP, setLastWeekXP] = useState(0)
   const [classRank, setClassRank] = useState<{ rank: number; total: number } | null>(null)
+  const [leaderboard, setLeaderboard] = useState<{ id: string; name: string; avatar: string | null; xp: number }[]>([])
 
   // ── Practice tracker ──
   const EXERCISES = [
@@ -492,15 +493,27 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         const lweek   = data.filter(r => r.created_at >= twoWeeksAgo && r.created_at < weekAgo).reduce((a, r) => a + r.xp, 0)
         setTotalXP(total); setWeekXP(week); setLastWeekXP(lweek)
       })
-    // Class rank
+    // Class rank + bảng xếp hạng lớp
     supabase.from('student_xp_log').select('student_id, xp')
-      .then(({ data: all }) => {
+      .then(async ({ data: all }) => {
         if (!all) return
         const byStudent: Record<string, number> = {}
         all.forEach((r: any) => { byStudent[r.student_id] = (byStudent[r.student_id] ?? 0) + r.xp })
         const myXP   = byStudent[student.id] ?? 0
         const better = Object.values(byStudent).filter(x => x > myXP).length
         setClassRank({ rank: better + 1, total: Math.max(Object.keys(byStudent).length, 1) })
+        // Bảng xếp hạng: ghép tên + avatar cho các học viên có XP
+        const ids = Object.keys(byStudent)
+        if (ids.length === 0) { setLeaderboard([]); return }
+        const { data: studs } = await supabase.from('edu_students')
+          .select('id, display_name, full_name, avatar_url').in('id', ids)
+        const clean = (n?: string | null) => { const s = (n ?? '').trim(); return s.includes('@') ? s.split('@')[0] : (s || 'Học viên') }
+        const info: Record<string, { name: string; avatar: string | null }> = {}
+        ;(studs ?? []).forEach((s: any) => { info[s.id] = { name: clean(s.display_name || s.full_name), avatar: s.avatar_url ?? null } })
+        setLeaderboard(
+          ids.map(id => ({ id, xp: byStudent[id], name: info[id]?.name ?? 'Học viên', avatar: info[id]?.avatar ?? null }))
+             .sort((a, b) => b.xp - a.xp)
+        )
       })
 
     // Load practice data
@@ -1572,6 +1585,48 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 <div style={{ fontSize: 28, fontWeight: 900, color: L.a1 }}>{enrollments.length}</div>
                 <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Khoá học</div>
               </div>
+            </div>
+
+            {/* Bảng xếp hạng lớp */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ fontWeight: 800, fontSize: 15 }}>🏆 Bảng xếp hạng lớp</div>
+                {classRank && <div style={{ fontSize: 12, color: L.t2 }}>Hạng bạn <b style={{ color: L.p1 }}>#{classRank.rank}</b>/{classRank.total}</div>}
+              </div>
+              {leaderboard.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '16px 0', color: L.t3, fontSize: 13 }}>Chưa có dữ liệu — học và luyện tập để ghi điểm nhé!</div>
+              ) : (() => {
+                const medal = (rank: number) => rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`
+                const Row = (r: { id: string; name: string; avatar: string | null; xp: number; rank: number }) => {
+                  const isMe = r.id === student.id
+                  return (
+                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 12, background: isMe ? L.p2 : 'transparent' }}>
+                      <div style={{ width: 30, textAlign: 'center', fontSize: r.rank <= 3 ? 18 : 13, fontWeight: 700, color: isMe ? L.p1 : L.t2, flexShrink: 0 }}>{medal(r.rank)}</div>
+                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
+                        {r.avatar ? <img src={r.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : r.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, fontWeight: isMe ? 700 : 500, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.name}{isMe && <span style={{ color: L.p1, fontWeight: 600 }}> (bạn)</span>}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: L.a1, flexShrink: 0 }}>{r.xp.toLocaleString()} XP</div>
+                    </div>
+                  )
+                }
+                const top = leaderboard.slice(0, 10).map((r, i) => ({ ...r, rank: i + 1 }))
+                const meInTop = top.some(r => r.id === student.id)
+                const myIdx = leaderboard.findIndex(r => r.id === student.id)
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {top.map(Row)}
+                    {!meInTop && myIdx >= 0 && (
+                      <Fragment>
+                        <div style={{ textAlign: 'center', color: L.t3, fontSize: 14, lineHeight: 1, padding: '2px 0' }}>···</div>
+                        {Row({ ...leaderboard[myIdx], rank: myIdx + 1 })}
+                      </Fragment>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Sự kiện */}
