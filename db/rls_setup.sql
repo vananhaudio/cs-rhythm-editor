@@ -48,9 +48,10 @@ DECLARE
     'edu_courses', 'edu_modules', 'edu_course_lessons',
     'edu_tools', 'flows', 'timming_songs'
   ];
-  -- Bảng tự quản RLS riêng (policy hẹp do migration "Cộng đồng" đặt) — BỎ QUA:
+  -- Bảng tự quản RLS riêng (policy hẹp do migration tính năng đặt) — BỎ QUA:
   self_managed text[] := ARRAY[
-    'edu_groups', 'edu_group_members', 'edu_group_claim_tokens'
+    'edu_groups', 'edu_group_members', 'edu_group_claim_tokens',
+    'student_action_logs'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];
