@@ -64,9 +64,14 @@ public class IAPPlugin: CAPPlugin, CAPBridgedPlugin, SKProductsRequestDelegate, 
         }
         guard let product = products.first(where: { $0.productIdentifier == PRODUCT_ID })
               ?? products.first else {
-            // Fetch lại rồi thử
             pendingCall = call
             fetchProducts()
+            // Timeout 10 giây nếu không tìm được sản phẩm
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) { [weak self] in
+                guard let self = self, let pending = self.pendingCall else { return }
+                self.pendingCall = nil
+                pending.reject("Không tìm thấy sản phẩm. Kiểm tra kết nối mạng và thử lại.")
+            }
             return
         }
         pendingCall = call

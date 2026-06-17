@@ -20,6 +20,7 @@ import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
 import JoinGroupPage from './JoinGroupPage'
+import DeleteAccountPage from './DeleteAccountPage'
 type AppUser = {
   id: string
   role: string
@@ -120,6 +121,11 @@ export default function AppRouter() {
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+
+  // ── Route /delete-account — xóa tài khoản ──
+  if (path === '/delete-account' || path.startsWith('/delete-account')) {
+    return <DeleteAccountPage />
+  }
 
   // ── Route /join-group/<token> — học viên tự xác nhận nhóm (tự xử lý auth) ──
   if (path.startsWith('/join-group/')) {

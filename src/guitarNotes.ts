@@ -35,6 +35,8 @@ const chromaticFlatEn  = ['E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B', 'C', 'Db', 
 export type AccidentalMode = 'sharp' | 'flat';
 
 export function getNoteForFret(stringIndex: number, fret: number, accidental: AccidentalMode = 'sharp'): GuitarNote {
+  // Kẹp dây vào vùng hợp lệ 0..5 để tránh undefined khi nhập từ file
+  if (stringIndex < 0 || stringIndex > 5) stringIndex = Math.max(0, Math.min(5, stringIndex || 0));
   const semitone = (openStringSemitones[stringIndex] + fret) % 12;
   const freq = openStringFrequencies[stringIndex] * Math.pow(2, fret / 12);
   const octaveOffset = Math.floor((openStringSemitones[stringIndex] + fret) / 12);

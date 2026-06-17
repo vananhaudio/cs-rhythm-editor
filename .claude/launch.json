@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "rhythm-web",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/vananhaudio/App/project && npx expo start --web --port 8081"],
+      "port": 8081
+    },
+    {
+      "name": "bms-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4599", "--directory", "/tmp/bms-preview"],
+      "port": 4599
+    },
+    {
+      "name": "pitch-lab",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/vananhaudio/Desktop/pitch-lab && npm run dev -- --port 5174"],
+      "port": 5174
+    },
+    {
+      "name": "note-sheet",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd '/Users/vananhaudio/App/Game nhớ nốt nhạc/app' && npm run dev -- --port 5175"],
+      "port": 5175
+    }
+  ]
+}
