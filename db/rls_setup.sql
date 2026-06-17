@@ -31,10 +31,14 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── STEP 2+3: policy theo loop ──
+-- ── STEP 2+3: XÓA SẠCH policy cũ + tạo lại policy sạch ──
+-- (xóa MỌI policy hiện có trên từng bảng — gồm policy rác cũ cho anon/public
+--  tên lạ — rồi tạo lại đúng những policy cần. Đây là điểm khác bản đầu:
+--  bản đầu chỉ xóa policy do nó đặt tên nên policy rác cũ vẫn sót, vẫn lộ.)
 DO $$
 DECLARE
   t record;
+  p record;
   -- 6 bảng nội dung (KHÔNG PII) được anon đọc:
   content_tables text[] := ARRAY[
     'edu_courses', 'edu_modules', 'edu_course_lessons',
@@ -43,18 +47,21 @@ DECLARE
 BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
+    -- (1) xóa MỌI policy hiện có trên bảng này
+    FOR p IN SELECT policyname FROM pg_policies
+             WHERE schemaname = 'public' AND tablename = t.tablename
+    LOOP
+      EXECUTE format('DROP POLICY %I ON public.%I;', p.policyname, t.tablename);
+    END LOOP;
+
     -- (2) authenticated toàn quyền trên MỌI bảng
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I;',
-      'rls_authenticated_all_' || t.tablename, t.tablename);
-    EXECUTE format('CREATE POLICY %I ON public.%I FOR ALL TO authenticated USING (true) WITH CHECK (true);',
-      'rls_authenticated_all_' || t.tablename, t.tablename);
+    EXECUTE format('CREATE POLICY rls_authenticated_all ON public.%I FOR ALL TO authenticated USING (true) WITH CHECK (true);',
+      t.tablename);
 
     -- (3) anon CHỈ SELECT, và chỉ trên bảng nội dung
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I;',
-      'rls_anon_select_' || t.tablename, t.tablename);
     IF t.tablename = ANY (content_tables) THEN
-      EXECUTE format('CREATE POLICY %I ON public.%I FOR SELECT TO anon USING (true);',
-        'rls_anon_select_' || t.tablename, t.tablename);
+      EXECUTE format('CREATE POLICY rls_anon_select ON public.%I FOR SELECT TO anon USING (true);',
+        t.tablename);
     END IF;
   END LOOP;
 END $$;
