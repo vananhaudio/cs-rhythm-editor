@@ -1382,6 +1382,38 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                           </div>
                         </div>
                       </div>
+                      {/* Tiến trình chinh phục bài hát — 5 bước journey */}
+                      {(() => {
+                        const stepDone = (stepId: string) => {
+                          if (song.journey?.find(x => x.id === stepId)?.done) return true
+                          if (stepId === 'tempo' && song.tempo) return true  // có tempo = đã xong bước Tempo
+                          return false
+                        }
+                        const doneCount = JOURNEY_STEPS.filter(s => stepDone(s.id)).length
+                        return (
+                          <div style={{ marginBottom: 14 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: L.t2 }}>🏆 Chinh phục bài hát</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: doneCount === 5 ? L.green : L.p1 }}>{doneCount}/5 bước</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                              {JOURNEY_STEPS.map(step => {
+                                const done = stepDone(step.id)
+                                return (
+                                  <div key={step.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+                                    <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
+                                      background: done ? step.color : L.p2, color: done ? '#fff' : L.t3,
+                                      border: done ? 'none' : `1.5px solid ${L.border}`, transition: 'all .2s' }}>
+                                      {done ? '✓' : step.icon}
+                                    </div>
+                                    <span style={{ fontSize: 9.5, fontWeight: 600, color: done ? step.color : L.t3 }}>{step.label}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })()}
                       <button onClick={openBMS}
                         style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: '#fff', border: 'none', borderRadius: 14, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                         🎼 Luyện với BMS
