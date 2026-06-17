@@ -286,8 +286,8 @@ export default function LessonViewerPage() {
                 quizData={(() => { try { return typeof active.content === 'string' ? JSON.parse(active.content) : active.content } catch { return null } })()}
               />
             )}
-            {/* Content */}
-            {active.content && (
+            {/* Content — KHÔNG đổ với quiz (content là JSON, đã render qua QuizViewer ở trên) */}
+            {active.lesson_type !== 'quiz' && active.content && (
               <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
                   📝 Nội dung bài học

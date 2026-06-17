@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
+import { QuizViewer } from './components/QuizViewer'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -1039,6 +1040,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {activeLesson.lesson_type !== 'flow' && <div style={{ padding: '16px' }}>
               {lessonTab === 'content' ? (
+                activeLesson.lesson_type === 'quiz' ? (
+                  <QuizViewer
+                    lessonId={activeLesson.id}
+                    studentId={student.id}
+                    quizData={(() => { try { return typeof activeLesson.content === 'string' ? JSON.parse(activeLesson.content) : activeLesson.content } catch { return null } })()}
+                    onComplete={() => markComplete(activeLesson.id)}
+                  />
+                ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {activeLesson.description && (
                     <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.8 }}>{activeLesson.description}</div>
@@ -1132,6 +1141,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                     <div style={{ textAlign: 'center', padding: '28px', color: L.t3, fontSize: 14 }}>Chưa có nội dung</div>
                   )}
                 </div>
+                )
               ) : (
                 <textarea
                   placeholder="Ghi chú của bạn..."
