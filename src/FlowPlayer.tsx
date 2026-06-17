@@ -55,6 +55,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   // Animation & swipe
   const slideDir    = useRef<'next' | 'prev'>('next')
   const touchStartX = useRef<number | null>(null)
+  // Đã hoàn thành flow trước đó chưa (để KHÔNG thưởng XP lại khi xem lại)
+  const wasFinishedRef = useRef(false)
 
   // Load flow by lessonId — bỏ qua nếu đang ở preview mode
   useEffect(() => {
@@ -85,6 +87,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       .then(({ data }) => {
         if (data) {
           setCompleted(data.completed_slides ?? [])
+          wasFinishedRef.current = !!data.finished_at
           // Nếu đã hoàn thành trước đó → bắt đầu lại từ slide 1
           if (data.finished_at) {
             setCurrent(0)
@@ -130,6 +133,14 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
     if (current >= flow.slides.length - 1) {
       await saveProgress(current, newComp, true)
+      // Thưởng XP THẬT lần đầu hoàn thành flow (không thưởng lại khi xem lại / preview / khách)
+      if (studentId && !previewFlow && !wasFinishedRef.current && flow.reward_xp > 0) {
+        wasFinishedRef.current = true
+        const { error: xpErr } = await supabase.from('student_xp_log').insert({
+          student_id: studentId, xp: flow.reward_xp, source: 'flow', ref_id: flow.id,
+        })
+        if (xpErr) console.error('Ghi XP flow lỗi:', xpErr)
+      }
       setDone(true)
       onComplete()
     } else {

@@ -548,7 +548,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     setMarkingDone(true)
     // Kiểm tra đã có record chưa trước khi insert
     const { data: existing } = await supabase.from('edu_lesson_progress')
-      .select('id').eq('student_id', student.id).eq('lesson_id', lessonId).maybeSingle()
+      .select('id,status').eq('student_id', student.id).eq('lesson_id', lessonId).maybeSingle()
     const { error } = existing
       ? await supabase.from('edu_lesson_progress')
           .update({ status: 'completed', completed_at: new Date().toISOString() })
@@ -560,6 +560,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       alert('Không lưu được tiến độ: ' + error.message)
       setMarkingDone(false)
       return
+    }
+    // Thưởng XP lần ĐẦU hoàn thành bài (không thưởng lại nếu trước đó đã 'completed')
+    if (existing?.status !== 'completed') {
+      const { error: xpErr } = await supabase.from('student_xp_log').insert({
+        student_id: student.id, xp: XP_SOURCE.lesson, source: 'lesson', ref_id: lessonId,
+      })
+      if (xpErr) console.error('Ghi XP bài học lỗi:', xpErr)
+      else { setTotalXP(prev => prev + XP_SOURCE.lesson); setWeekXP(prev => prev + XP_SOURCE.lesson) }
     }
     setCompletedIds(prev => new Set([...prev, lessonId]))
     setMarkingDone(false)
