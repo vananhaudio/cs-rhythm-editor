@@ -167,6 +167,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [modules, setModules]     = useState<Module[]>([])
   const [lessons, setLessons]     = useState<Lesson[]>([])
   const [lessonActionMap, setLessonActionMap] = useState<Record<string, Set<string>>>({})  // lessonId → set action_type (cho màu mốc)
+  const [masterPath, setMasterPath] = useState<{ id: string; title: string; courseId: string; courseName: string }[]>([])  // đường mốc xuyên suốt mọi khóa
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
@@ -467,14 +468,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // ── Màu mốc (gradient) — điểm "độ chắc" ẩn từ event THẬT, nội suy ra màu ──
   // 0 = chưa học (xám) · 40 = đã học (đỏ) · +30 đã thực hành · +30 đã gửi bài → 100 (xanh)
-  const lessonScore = (l: Lesson) => {
-    if (!completedIds.has(l.id)) return 0
+  const scoreById = (id: string) => {
+    if (!completedIds.has(id)) return 0
     let s = 40
-    const acts = lessonActionMap[l.id]
+    const acts = lessonActionMap[id]
     if (acts?.has('practiced_lesson')) s += 30
     if (acts?.has('submitted_video_self_report')) s += 30
     return s
   }
+  const lessonScore = (l: Lesson) => scoreById(l.id)
   const scoreColor = (score: number) => {
     if (score <= 0) return '#D1D5DB'
     const stops: [number, [number, number, number]][] = [[40, [239, 68, 68]], [70, [245, 158, 11]], [100, [34, 197, 94]]]
@@ -494,7 +496,30 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     supabase.from('edu_enrollments')
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order)')
       .eq('student_id', student.id).eq('is_active', true)
-      .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
+      .then(async ({ data }) => {
+        const enr = (data ?? []) as unknown as Enrollment[]
+        setEnrollments(enr)
+        // ── Dựng đường mốc XUYÊN SUỐT mọi khóa (master journey) ──
+        const courses = enr.filter(e => (e.course?.status ?? 'on') !== 'off')
+        const courseIds = courses.map(e => e.course_id)
+        if (courseIds.length === 0) { setMasterPath([]); return }
+        const order: Record<string, number> = {}
+        const cname: Record<string, string> = {}
+        ;[...courses].sort((a, b) => (a.course?.sort_order ?? 99) - (b.course?.sort_order ?? 99))
+          .forEach((e, i) => { order[e.course_id] = i; cname[e.course_id] = e.course?.name ?? 'Khóa học' })
+        const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index').in('course_id', courseIds)
+        const modMap: Record<string, { course_id: string; order_index: number }> = {}
+        ;(mods ?? []).forEach((m: any) => { modMap[m.id] = m })
+        const modIds = (mods ?? []).map((m: any) => m.id)
+        if (modIds.length === 0) { setMasterPath([]); return }
+        const { data: lsns } = await supabase.from('edu_course_lessons').select('id,module_id,title,order_index').in('module_id', modIds)
+        const path = (lsns ?? []).map((l: any) => {
+          const m = modMap[l.module_id]; const cid = m?.course_id ?? ''
+          return { id: l.id, title: l.title, courseId: cid, courseName: cname[cid] ?? '', cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
+        }).sort((a: any, b: any) => a.cs - b.cs || a.mo - b.mo || a.lo - b.lo)
+          .map((p: any) => ({ id: p.id, title: p.title, courseId: p.courseId, courseName: p.courseName }))
+        setMasterPath(path)
+      })
     supabase.from('edu_tools').select('*').order('order_index')
       .then(({ data }) => {
         const all = (data ?? []).map((t: any) => ({
@@ -920,6 +945,59 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               )
             })()}
 
+            {/* 🗺️ Hành trình của bạn — xuyên suốt toàn giáo trình */}
+            {masterPath.length > 0 && (() => {
+              const total = masterPath.length
+              const doneCount = masterPath.filter(m => completedIds.has(m.id)).length
+              let curIdx = masterPath.findIndex(m => !completedIds.has(m.id))
+              if (curIdx < 0) curIdx = total - 1
+              const cur = masterPath[curIdx]
+              const posLabel = Math.min(doneCount + 1, total)
+              const pct = Math.round((doneCount / total) * 100)
+              const W = 11
+              let start = Math.max(0, curIdx - Math.floor(W / 2))
+              const end = Math.min(total, start + W)
+              start = Math.max(0, end - W)
+              const win = masterPath.slice(start, end)
+              const nextItem = masterPath.find(m => !completedIds.has(m.id))
+              return (
+                <div style={{ background: L.surface, borderRadius: 18, padding: 16, boxShadow: L.shadow, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 800, fontSize: 15 }}>🗺️ Hành trình của bạn</span>
+                    <span style={{ fontSize: 12, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total} · {pct}%</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: L.t2, marginBottom: 12 }}>Chặng: <b style={{ color: L.t1 }}>{cur?.courseName}</b></div>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 2px' }}>
+                    <div style={{ position: 'absolute', left: 8, right: 8, top: '50%', height: 4, borderRadius: 99, background: 'linear-gradient(90deg,#EF4444,#F59E0B,#22C55E)', opacity: .25, transform: 'translateY(-50%)' }} />
+                    {win.map((m, i) => {
+                      const gi = start + i
+                      const col = scoreColor(scoreById(m.id))
+                      const isCur = gi === curIdx
+                      const newChang = i > 0 && win[i - 1].courseId !== m.courseId
+                      return (
+                        <div key={m.id} onClick={() => openCourse(m.courseId)} style={{ position: 'relative', zIndex: 1, cursor: 'pointer' }}>
+                          {newChang && <div style={{ position: 'absolute', left: -6, top: '50%', transform: 'translateY(-50%)', width: 2, height: 18, background: L.border }} />}
+                          <div style={{ width: isCur ? 20 : 14, height: isCur ? 20 : 14, borderRadius: '50%', background: col, border: isCur ? `3px solid ${L.p1}` : '2px solid #fff', boxShadow: isCur ? `0 0 0 3px ${col}55` : '0 1px 3px rgba(0,0,0,.18)' }} />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {nextItem ? (
+                    <button onClick={() => openCourse(nextItem.courseId)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                      <span style={{ fontSize: 18 }}>👉</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 10, color: L.t3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nextItem.courseName}</span>
+                        <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {nextItem.title}</span>
+                      </span>
+                      <span style={{ color: L.p1 }}>›</span>
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: 14, fontWeight: 700, color: L.green, marginTop: 12, textAlign: 'center' }}>🎉 Bạn đã hoàn thành toàn bộ giáo trình!</div>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* Nhịp luyện tập tuần này */}
             <div style={{ background: L.surface, borderRadius: 18, padding: 16, boxShadow: L.shadow, marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -1076,7 +1154,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               return (
                 <div style={{ background: L.surface, margin: '0 16px 8px', borderRadius: 18, padding: 16, boxShadow: L.shadow }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <span style={{ fontWeight: 800, fontSize: 15 }}>🗺️ Hành trình của bạn</span>
+                    <span style={{ fontWeight: 800, fontSize: 15 }}>🧭 Tiến độ khóa này</span>
                     <span style={{ fontSize: 12, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total}</span>
                   </div>
                   {/* dải mốc + path gradient */}
