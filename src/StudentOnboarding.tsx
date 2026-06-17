@@ -66,14 +66,10 @@ function displayName(s: Student) {
   return name
 }
 
-type Step = 'welcome' | 'search' | 'login' | 'portal'
+type Step = 'welcome' | 'login' | 'portal'
 
 export default function StudentOnboarding() {
   const [step, setStep]           = useState<Step>('welcome')
-  const [query, setQuery]         = useState('')
-  const [results, setResults]     = useState<Student[]>([])
-  const [searching, setSearching] = useState(false)
-  const [selected, setSelected]   = useState<Student | null>(null)
   const [student, setStudent]     = useState<Student | null>(null)
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
@@ -89,7 +85,6 @@ export default function StudentOnboarding() {
   const [iapRegPass, setIapRegPass]     = useState('')
   const [iapRegLoading, setIapRegLoading] = useState(false)
   const [iapRegError, setIapRegError]   = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
   const passRef  = useRef<HTMLInputElement>(null)
 
   // Auto-login nếu đã có session
@@ -106,34 +101,9 @@ export default function StudentOnboarding() {
     })
   }, [])
 
-  // Debounce search
   useEffect(() => {
-    if (query.length < 2) { setResults([]); return }
-    const t = setTimeout(() => {
-      setSearching(true)
-      const q = query.trim()
-      supabase.from('edu_students')
-        .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
-        .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
-        .eq('is_active', true)
-        .limit(6)
-        .then(({ data }) => { setResults(data ?? []); setSearching(false) })
-    }, 350)
-    return () => clearTimeout(t)
-  }, [query])
-
-  useEffect(() => {
-    if (step === 'search') setTimeout(() => inputRef.current?.focus(), 100)
     if (step === 'login')  setTimeout(() => passRef.current?.focus(), 100)
   }, [step])
-
-  const handleSelectStudent = (s: Student) => {
-    setSelected(s)
-    setEmail(s.email ?? '')
-    setLoginError('')
-    setPassword('')
-    setStep('login')
-  }
 
   const handleLogin = async () => {
     if (!email || !password) return
@@ -178,8 +148,7 @@ export default function StudentOnboarding() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    setStudent(null); setSelected(null)
-    setQuery(''); setResults([])
+    setStudent(null)
     setEmail(''); setPassword('')
     setStep('welcome')
   }
@@ -329,12 +298,12 @@ export default function StudentOnboarding() {
               <span key={f} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 20, padding: '5px 14px', fontSize: 13, color: T.textMuted }}>{f}</span>
             ))}
           </div>
-          <Btn onClick={() => setStep('search')} style={{
+          <Btn onClick={() => setStep('login')} style={{
             background: T.header, color: '#fff', border: 'none', borderRadius: 12,
             padding: '14px 40px', fontSize: 16, fontWeight: 700,
             boxShadow: `0 4px 16px rgba(27,107,58,.3)`,
           }}>Bắt đầu hành trình →</Btn>
-          <p style={{ color: T.textDim, fontSize: 12, marginTop: 16 }}>Đã là học sinh? Tìm tên và đăng nhập bên dưới.</p>
+          <p style={{ color: T.textDim, fontSize: 12, marginTop: 16 }}>Đã là học sinh? Đăng nhập bên dưới.</p>
 
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIOS && (
@@ -438,90 +407,10 @@ export default function StudentOnboarding() {
         </div>
       )}
 
-      {/* SEARCH */}
-      {step === 'search' && (
-        <div style={{ maxWidth: 480, margin: '0 auto', padding: '40px 24px', minHeight: 'calc(100vh - 56px)' }}>
-          <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 13, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px' }}>Tìm tài khoản của bạn</h2>
-          <p style={{ color: T.textMuted, fontSize: 14, margin: '0 0 24px', lineHeight: 1.6 }}>Nhập tên hoặc số điện thoại để tìm, sau đó đăng nhập.</p>
-
-          <div style={{ position: 'relative', marginBottom: 20 }}>
-            <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16 }}>🔍</span>
-            <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Nhập tên hoặc số điện thoại..."
-              style={{ width: '100%', boxSizing: 'border-box', padding: '13px 16px 13px 42px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 12, fontSize: 15, color: T.text, outline: 'none', fontFamily: 'inherit' }}
-              onFocus={e => (e.currentTarget.style.borderColor = T.header)}
-              onBlur={e => (e.currentTarget.style.borderColor = T.border)}
-            />
-            {searching && <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: T.textDim, fontSize: 13 }}>⏳</span>}
-          </div>
-
-          {results.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {results.map(s => (
-                <Btn key={s.id} onClick={() => handleSelectStudent(s)} style={{
-                  background: T.bgCard, border: `1.5px solid ${T.borderLight}`, borderRadius: 12,
-                  padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14,
-                  textAlign: 'left', width: '100%',
-                }}>
-                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: T.greenLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: T.header, flexShrink: 0, border: `1px solid ${T.borderLight}` }}>
-                    {displayName(s).charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: T.text }}>{displayName(s)}</div>
-                    <div style={{ fontSize: 12, color: T.textDim, marginTop: 2 }}>
-                      {s.phone ? `📱 ${s.phone}` : s.email ?? ''}
-                      {s.level ? <span style={{ color: LEVEL_COLOR[s.level], marginLeft: 8 }}>{LEVEL_LABEL[s.level]}</span> : ''}
-                    </div>
-                  </div>
-                  <span style={{ color: T.textDim, fontSize: 18 }}>›</span>
-                </Btn>
-              ))}
-            </div>
-          )}
-
-          {query.length >= 2 && !searching && results.length === 0 && (
-            <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '24px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>🤔</div>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Không tìm thấy "{query}"</div>
-              <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>Liên hệ Thầy Văn Anh để được thêm vào hệ thống.</div>
-            </div>
-          )}
-
-          {query.length === 0 && (
-            <div style={{ textAlign: 'center', paddingTop: 20 }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>👆</div>
-              <div style={{ color: T.textMuted, fontSize: 14 }}>Gõ ít nhất 2 ký tự để tìm kiếm</div>
-            </div>
-          )}
-
-          {/* Đăng nhập thẳng bằng email */}
-          <div style={{ marginTop: 32, paddingTop: 20, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center' }}>
-            <div style={{ color: T.textDim, fontSize: 13, marginBottom: 10 }}>Biết email? Đăng nhập thẳng</div>
-            <Btn onClick={() => { setSelected(null); setEmail(''); setStep('login') }} style={{
-              background: 'none', border: `1px solid ${T.border}`, borderRadius: 10,
-              color: T.textMuted, padding: '9px 24px', fontSize: 13,
-            }}>Đăng nhập bằng email →</Btn>
-          </div>
-        </div>
-      )}
-
       {/* LOGIN */}
       {step === 'login' && (
         <div style={{ maxWidth: 420, margin: '0 auto', padding: '40px 24px', minHeight: 'calc(100vh - 56px)' }}>
-          <Btn onClick={() => setStep('search')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 13, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại tìm kiếm</Btn>
-
-          {selected && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: T.greenLight, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '12px 16px', marginBottom: 24 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: T.header, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
-                {displayName(selected).charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 15 }}>{displayName(selected)}</div>
-                {selected.level && <div style={{ fontSize: 12, color: LEVEL_COLOR[selected.level] }}>{LEVEL_LABEL[selected.level]}</div>}
-              </div>
-            </div>
-          )}
+          <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 13, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>
 
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px' }}>Đăng nhập</h2>
 

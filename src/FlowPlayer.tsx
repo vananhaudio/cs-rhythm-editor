@@ -74,9 +74,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       })
   }, [lessonId])
 
-  // Load existing progress — bỏ qua nếu preview
+  // Load existing progress — bỏ qua nếu preview hoặc chưa có học viên (khách)
   useEffect(() => {
-    if (!flow || previewFlow) return
+    if (!flow || previewFlow || !studentId) return
     supabase.from('flow_progress')
       .select('*')
       .eq('student_id', studentId)
@@ -98,7 +98,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
   // Save progress to DB — bỏ qua nếu preview
   const saveProgress = async (slideIdx: number, comp: string[], finished = false) => {
-    if (!flow || previewFlow) return
+    if (!flow || previewFlow || !studentId) return
     const { data: existing } = await supabase.from('flow_progress')
       .select('id').eq('student_id', studentId).eq('flow_id', flow.id).maybeSingle()
     const payload: Record<string, unknown> = {

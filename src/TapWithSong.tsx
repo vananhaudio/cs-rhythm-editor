@@ -283,11 +283,12 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
     songTimeRef.current = 0; setIsPlaying(false)
     await loadProgress(s.title)
     const { data: { user } } = await supabase.auth.getUser()
-    const query = supabase.from('student_taps')
+    // Khách chưa đăng nhập: không đọc bảng student_taps (bảng riêng tư của học viên)
+    if (!user) { setOtherStudentsCount(0); setOtherResults([]); return }
+    const { data: others } = await supabase.from('student_taps')
       .select('user_id, score, level, app_users(name)')
       .eq('song_title', s.title).order('created_at', { ascending: false })
-    if (user) query.neq('user_id', user.id)
-    const { data: others } = await query.limit(20)
+      .neq('user_id', user.id).limit(20)
     if (others && others.length > 0) {
       const seen = new Set<string>()
       const unique: {name:string; score:number; level:number}[] = []
