@@ -198,6 +198,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [lastWeekXP, setLastWeekXP] = useState(0)
   const [classRank, setClassRank] = useState<{ rank: number; total: number } | null>(null)
   const [leaderboard, setLeaderboard] = useState<{ id: string; name: string; avatar: string | null; xp: number }[]>([])
+  const [communityGroups, setCommunityGroups] = useState<{ id: string; name: string; group_type: string; zalo_url: string | null; facebook_url: string | null }[]>([])
 
   // ── Practice tracker ──
   const EXERCISES = [
@@ -515,6 +516,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
              .sort((a, b) => b.xp - a.xp)
         )
       })
+
+    // Cộng đồng của bạn (Facebook chung + nhóm Zalo đã gán) — qua RPC my_groups
+    supabase.rpc('my_groups').then(({ data }) => setCommunityGroups((data ?? []) as any))
 
     // Load practice data
     const now2 = new Date()
@@ -1625,6 +1629,41 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       </Fragment>
                     )}
                   </div>
+                )
+              })()}
+            </div>
+
+            {/* Cộng đồng của bạn */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, marginBottom: 16 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>🌱 Cộng đồng của bạn</div>
+              {(() => {
+                const fb = communityGroups.filter(g => g.group_type === 'facebook' && g.facebook_url)
+                const zl = communityGroups.filter(g => g.group_type !== 'facebook' && g.zalo_url)
+                const openUrl = (u: string) => { try { window.open(u, '_system') } catch { window.open(u, '_blank') } }
+                return (
+                  <>
+                    {fb.map(g => (
+                      <button key={g.id} onClick={() => openUrl(g.facebook_url!)}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: '#1877F2', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8 }}>
+                        <span style={{ fontSize: 18 }}>📘</span> Tham gia cộng đồng Facebook
+                      </button>
+                    ))}
+                    {zl.length > 0 ? (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: L.t3, margin: '8px 0', letterSpacing: '.04em' }}>NHÓM ZALO CỦA BẠN</div>
+                        {zl.map(g => (
+                          <button key={g.id} onClick={() => openUrl(g.zalo_url!)}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: '#E8F0FE', color: '#0068FF', border: '1px solid #C5DBFF', borderRadius: 12, padding: '12px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, textAlign: 'left' }}>
+                            <span style={{ fontSize: 18 }}>💬</span><span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span><span>›</span>
+                          </button>
+                        ))}
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.6, marginTop: fb.length ? 6 : 0 }}>
+                        Bạn chưa có nhóm Zalo riêng trên app. Nếu đang học lớp Zoom/Zalo với thầy, bấm link xác nhận thầy gửi trong nhóm Zalo của mình.
+                      </div>
+                    )}
+                  </>
                 )
               })()}
             </div>

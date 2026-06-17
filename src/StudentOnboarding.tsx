@@ -87,6 +87,16 @@ export default function StudentOnboarding() {
   const [iapRegError, setIapRegError]   = useState('')
   const passRef  = useRef<HTMLInputElement>(null)
 
+  // Xác nhận nhóm đang chờ (học viên bấm link /join-group/<token> rồi mới đăng nhập)
+  const claimPendingGroup = async () => {
+    let tok = ''
+    try { tok = localStorage.getItem('pendingClaimToken') || '' } catch { /* bỏ qua */ }
+    if (!tok) return
+    try { localStorage.removeItem('pendingClaimToken') } catch { /* bỏ qua */ }
+    const { error } = await supabase.rpc('claim_group', { p_token: tok })
+    if (error) console.error('Xác nhận nhóm lỗi:', error.message)
+  }
+
   // Auto-login nếu đã có session
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -96,7 +106,7 @@ export default function StudentOnboarding() {
           .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
           .eq('user_id', session.user.id)
           .single()
-        if (data) { setStudent(data); setStep('portal') }
+        if (data) { setStudent(data); setStep('portal'); claimPendingGroup() }
       }
     })
   }, [])
@@ -120,7 +130,7 @@ export default function StudentOnboarding() {
       .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
       .eq('user_id', authData.user.id)
       .single()
-    if (data) { setStudent(data); setStep('portal') }
+    if (data) { setStudent(data); setStep('portal'); claimPendingGroup() }
     else {
       // Kiểm tra xem có phải tài khoản thầy không
       const { data: appUser } = await supabase

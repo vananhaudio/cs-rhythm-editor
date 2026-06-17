@@ -19,6 +19,7 @@ import SongBuilderPage from './SongBuilderPage'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
+import JoinGroupPage from './JoinGroupPage'
 type AppUser = {
   id: string
   role: string
@@ -119,6 +120,11 @@ export default function AppRouter() {
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+
+  // ── Route /join-group/<token> — học viên tự xác nhận nhóm (tự xử lý auth) ──
+  if (path.startsWith('/join-group/')) {
+    return <JoinGroupPage />
+  }
 
   // ── Route /guitarboard ──
   if (path === '/guitarboard' || path.startsWith('/guitarboard')) {
