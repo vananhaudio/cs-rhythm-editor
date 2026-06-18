@@ -623,25 +623,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       })
   }, [student.id])
 
-  // PostMessage bridge: nhận sự kiện từ elearn iframe
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (!e.data || e.data.source !== 'TVA_LESSON') return
-      if (e.data.type === 'LESSON_COMPLETE' && activeLesson) {
-        markComplete(activeLesson.id)
-      }
-      if (e.data.type === 'GO_BACK') {
-        goBack()
-      }
-      if (e.data.type === 'OPEN_TOOL') {
-        const route = e.data.tool === 'tuner' ? '/tuner' : '/tempo'
-        window.open(route + '?embedded=1', '_blank')
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [activeLesson, goBack])
-
   const openCourse = async (courseId: string) => {
     setActiveCourseId(courseId)
     setScreen('courses')
@@ -735,6 +716,19 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   const goBack = () => screen === 'lesson' ? setScreen('courses') : (setScreen('home'), setActiveCourseId(null))
+
+  // PostMessage bridge: nhận sự kiện từ elearn iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (!e.data || e.data.source !== 'TVA_LESSON') return
+      if (e.data.type === 'LESSON_COMPLETE' && activeLesson) markComplete(activeLesson.id)
+      if (e.data.type === 'GO_BACK') goBack()
+      if (e.data.type === 'OPEN_TOOL') window.open((e.data.tool === 'tuner' ? '/tuner' : '/tempo') + '?embedded=1', '_blank')
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLesson])
 
   // % hoàn thành của 1 khoá
   const courseProgress = (courseId: string) => {

@@ -72,7 +72,7 @@ export default function TeacherAdminPage() {
       </aside>
 
       {/* ── CONTENT ─────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 
         {/* Dashboard */}
         {section === 'dashboard' && (
