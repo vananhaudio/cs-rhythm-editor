@@ -625,7 +625,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   const openCourse = async (courseId: string) => {
     setActiveCourseId(courseId)
-    setScreen('courses')
     const { data: mods } = await supabase.from('edu_modules')
       .select('*').eq('course_id', courseId).order('order_index')
     setModules(mods ?? [])
@@ -634,13 +633,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
       const parsed = (lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] }))
       setLessons(parsed)
-      // Khoá elearn 1 bài → mở thẳng, bỏ bước xem danh sách
+      // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách
       if (parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')) {
         setActiveLesson(parsed[0])
         setScreen('lesson')
         return
       }
     }
+    setScreen('courses')
     // Nạp hành động (cho màu mốc) — RLS tự lọc theo user hiện tại
     supabase.from('student_action_logs').select('lesson_id, action_type').then(({ data }) => {
       const m: Record<string, Set<string>> = {}
