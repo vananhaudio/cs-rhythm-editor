@@ -32,14 +32,17 @@ const Bridge = {
   lessonId: null,
 
   init() {
-    // Nhận thông tin học viên từ parent app
+    // Nhận thông tin từ parent app
     window.addEventListener('message', (e) => {
       if (!e.data || e.data.source !== 'TVA_APP') return;
       if (e.data.type === 'STUDENT_INFO') {
         Bridge.studentName = e.data.name;
         Bridge.studentId = e.data.studentId;
         Bridge.lessonId = e.data.lessonId;
-        // Trigger re-render nếu cần
+        if (window.__tvaBridgeCallback) window.__tvaBridgeCallback(e.data);
+      }
+      // Nhận dữ liệu bài học từ app (chế độ single-lesson)
+      if (e.data.type === 'LESSON_DATA') {
         if (window.__tvaBridgeCallback) window.__tvaBridgeCallback(e.data);
       }
     });
@@ -232,6 +235,8 @@ class KhoiDauDamMe extends React.Component {
       studentName: null,
       // Media từ Supabase
       mediaMap: {},
+      // Chế độ single-lesson: app gửi LESSON_DATA → hiện thẳng bài đó, không qua home
+      singleMode: false,
     };
     this._tt = null;
   }
@@ -241,9 +246,24 @@ class KhoiDauDamMe extends React.Component {
     try { ps = localStorage.getItem('guitarPlayStyle') || 'fingers'; } catch {}
     this.setState({ playStyle: ps, exTarget: Math.floor(Math.random() * 6) });
 
-    // Nhận thông tin học viên từ TVA app
+    // Nhận thông tin từ TVA app
     window.__tvaBridgeCallback = (data) => {
-      this.setState({ studentName: data.name });
+      if (data.type === 'STUDENT_INFO') {
+        this.setState({ studentName: data.name });
+      }
+      if (data.type === 'LESSON_DATA' && data.num) {
+        this.setState({
+          singleMode: true,
+          screen: 'lesson',
+          lid: data.num,
+          studentName: data.name || this.state.studentName,
+          // reset widget state
+          pick: null, checks: {}, videoOpen: false,
+          l8mode: 'play', playStep: 0, playWrong: null, playDone: false,
+          exTarget: Math.floor(Math.random() * 6), exPicked: null,
+          exRound: 1, exScore: 0, exDone: false,
+        });
+      }
     };
 
     // Fetch media từ Supabase
@@ -288,7 +308,10 @@ class KhoiDauDamMe extends React.Component {
     });
   }
 
-  goHome = () => { this.setState({ screen: 'home' }); }
+  goHome = () => {
+    if (this.state.singleMode) { Bridge.goBack(); return; }
+    this.setState({ screen: 'home' });
+  }
 
   openTool = () => {
     // Gửi postMessage tới TVA app để mở Tuner thật
@@ -299,8 +322,12 @@ class KhoiDauDamMe extends React.Component {
     const id = this.state.lid;
     const done = { ...this.state.done, [id]: true };
     saveDone(done);
-    const totalDone = Object.keys(done).length;
-    Bridge.completeLesson(id, totalDone);
+    Bridge.completeLesson(id, Object.keys(done).length);
+    // Single-lesson mode: app quản lý điều hướng, chỉ cần báo xong rồi quay lại
+    if (this.state.singleMode) {
+      Bridge.goBack();
+      return;
+    }
     if (id >= 11) {
       this.setState({ done, screen: 'home' });
     } else {
@@ -749,7 +776,9 @@ class KhoiDauDamMe extends React.Component {
   renderLesson() {
     const st = this.state;
     const L = this.getLesson(st.lid);
-    const ctaLabel = st.lid >= 11 ? 'Hoàn thành phần chuẩn bị 🎉' : (st.done[st.lid] ? 'Sang bài tiếp theo' : 'Mình làm được rồi ✓');
+    const ctaLabel = st.singleMode
+      ? (st.done[st.lid] ? 'Hoàn thành bài này ✓' : 'Mình làm được rồi ✓')
+      : (st.lid >= 11 ? 'Hoàn thành phần chuẩn bị 🎉' : (st.done[st.lid] ? 'Sang bài tiếp theo' : 'Mình làm được rồi ✓'));
 
     return R('div', { style: { minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: '#F6F2EA' } },
       // Header sticky

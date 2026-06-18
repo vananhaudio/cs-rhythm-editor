@@ -162,6 +162,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const avatarFileRef = useRef<HTMLInputElement>(null)
+  const iframeElearnRef = useRef<HTMLIFrameElement | null>(null)
   const [screen, setScreen]       = useState<Screen>('home')
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [modules, setModules]     = useState<Module[]>([])
@@ -735,11 +736,25 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         const name  = e.data.tool === 'tuner' ? 'Tuner — Lên dây' : 'Metronome'
         openTool(route, name)
       }
+      // Elearn iframe báo đã load → gửi dữ liệu bài học
+      if (e.data.type === 'LESSON_LOADED' && activeLesson) {
+        try {
+          const c = typeof activeLesson.content === 'string'
+            ? JSON.parse(activeLesson.content)
+            : activeLesson.content
+          if (c?.elearn) {
+            iframeElearnRef.current?.contentWindow?.postMessage({
+              source: 'TVA_APP', type: 'LESSON_DATA',
+              num: c.num, name: me.name, studentId: student.id,
+            }, '*')
+          }
+        } catch { /* ignore */ }
+      }
     }
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLesson])
+  }, [activeLesson, me.name])
 
   // % hoàn thành của 1 khoá
   const courseProgress = (courseId: string) => {
@@ -1315,7 +1330,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             {/* Link embed */}
             {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (
               <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#F6F2EA' }}>
-                <iframe src={activeLesson.content_url} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="microphone; camera" title={activeLesson.title} />
+                <iframe
+                  ref={(() => { try { const c = typeof activeLesson.content === 'string' ? JSON.parse(activeLesson.content) : activeLesson.content; return c?.elearn ? iframeElearnRef : undefined } catch { return undefined } })()}
+                  src={activeLesson.content_url}
+                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                  allow="microphone; camera" title={activeLesson.title}
+                />
                 {/* Nút quay lại chỉ cho link thường — elearn tự có nút trong iframe */}
                 {!activeLesson.content_url.startsWith('/lessons/') && (
                   <button onClick={goBack} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 12px)', left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
