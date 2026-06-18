@@ -6,12 +6,12 @@
 <title>Khởi Đầu Đam Mê — Nhập Môn</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0;background:#F6F2EA;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1C1A17;-webkit-font-smoothing:antialiased;height:100%}
+  html,body{margin:0;padding:0;background:#F6F2EA;font-family:"DM Sans",system-ui,sans-serif;color:#1C1A17;-webkit-font-smoothing:antialiased;height:100%}
   .safe-top{padding-top:env(safe-area-inset-top,0px)}
   .safe-bottom{padding-bottom:env(safe-area-inset-bottom,0px)}
   #root{height:100%}
@@ -780,7 +780,7 @@ class KhoiDauDamMe extends React.Component {
   render() {
     const { screen } = this.state;
     return R('div', {
-      style: { minHeight: '100dvh', background: '#F6F2EA', fontFamily: "'Be Vietnam Pro',sans-serif", color: '#1C1A17', overflowY: screen === 'home' ? 'auto' : undefined }
+      style: { minHeight: '100dvh', background: '#F6F2EA', fontFamily: '"DM Sans",system-ui,sans-serif', color: '#1C1A17', overflowY: screen === 'home' ? 'auto' : undefined }
     },
       screen === 'home' && this.renderHome(),
       screen === 'lesson' && this.renderLesson(),
