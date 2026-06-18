@@ -222,7 +222,7 @@ export default function LessonViewerPage() {
       </aside>
 
       {/* ── ELEARN: fullscreen iframe overlay ────────────────────────── */}
-      {active?.lesson_type === 'elearn' && active.content_url && (
+      {active?.lesson_type === 'link' && active.content_url?.startsWith('/lessons/') && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#F6F2EA' }}>
           <iframe
             ref={iframeRef}
