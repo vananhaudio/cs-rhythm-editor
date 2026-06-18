@@ -1335,6 +1335,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                     <ElearnLessonView
                       key={activeLesson.id}
                       num={elearnNum}
+                      title={activeLesson.title}
                       studentName={me.display_name ?? me.full_name}
                       isDone={completedIds.has(activeLesson.id)}
                       onBack={goBack}

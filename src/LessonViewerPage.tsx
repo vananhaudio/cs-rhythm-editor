@@ -221,6 +221,7 @@ export default function LessonViewerPage() {
             <ElearnLessonView
               key={lesson.id}
               num={n}
+              title={lesson.title}
               studentName={studentName}
               isDone={completedIds.has(lesson.id)}
               onBack={() => setActive(null)}

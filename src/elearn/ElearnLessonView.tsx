@@ -3,13 +3,24 @@
 // Hoàn thành → gọi onComplete (app ghi tiến độ + quay lại danh sách).
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
-import { ACCENT, STR, PSEQ, FREQ, strColor, getLesson, type PlayStyle } from './data'
+import { ACCENT, STR, PSEQ, FREQ, strColor, getLesson, type PlayStyle, type ThaoType } from './data'
 import { playTone } from './audio'
 
-interface MediaRow { youtube_id?: string | null; video_url?: string | null }
+// 1 hàng cấu hình bài (nội dung + media) soạn trong admin (bảng elearn_lessons)
+interface ElearnCfg {
+  goal?: string | null
+  steps?: string[] | null
+  prompt?: string | null
+  thao_type?: string | null
+  items?: string[] | null
+  youtube_id?: string | null
+  video_url?: string | null
+}
 
 interface Props {
   num: number                              // 1..11
+  title?: string                           // tiêu đề bài (lấy từ course editor)
+  courseSlug?: string                      // mặc định 'khoi-dau-dam-me'
   studentName?: string | null
   isDone?: boolean                         // bài đã hoàn thành (đổi nhãn nút)
   onComplete: () => void                   // app: markComplete + quay lại
@@ -19,7 +30,7 @@ interface Props {
 
 const rnd6 = () => Math.floor(Math.random() * 6)
 
-export default function ElearnLessonView({ num, studentName, isDone, onComplete, onBack, onOpenTool }: Props) {
+export default function ElearnLessonView({ num, title, courseSlug = 'khoi-dau-dam-me', studentName, isDone, onComplete, onBack, onOpenTool }: Props) {
   const [playStyle, setPlayStyleState] = useState<PlayStyle>('fingers')
   const [checks, setChecks] = useState<Record<number, boolean>>({})
   const [pick, setPick] = useState<number | null>(null)
@@ -34,8 +45,8 @@ export default function ElearnLessonView({ num, studentName, isDone, onComplete,
   const [exRound, setExRound] = useState(1)
   const [exScore, setExScore] = useState(0)
   const [exDone, setExDone] = useState(false)
-  // Media (YouTube / video upload) từ admin
-  const [media, setMedia] = useState<MediaRow | null>(null)
+  // Cấu hình bài (nội dung + media) từ admin
+  const [cfg, setCfg] = useState<ElearnCfg | null>(null)
 
   // Đọc cách gảy đã chọn
   useEffect(() => {
@@ -49,23 +60,36 @@ export default function ElearnLessonView({ num, studentName, isDone, onComplete,
     setExTarget(rnd6()); setExPicked(null); setExRound(1); setExScore(0); setExDone(false)
   }, [num])
 
-  // Lấy media của bài này
+  // Lấy cấu hình bài (nội dung + media) đã soạn trong admin
   useEffect(() => {
     let alive = true
-    supabase.from('elearn_media')
-      .select('youtube_id,video_url')
-      .eq('course_slug', 'khoi-dau-dam-me').eq('lesson_num', num)
+    supabase.from('elearn_lessons')
+      .select('goal,steps,prompt,thao_type,items,youtube_id,video_url')
+      .eq('course_slug', courseSlug).eq('lesson_num', num)
       .maybeSingle()
-      .then(({ data }) => { if (alive) setMedia((data as MediaRow) ?? null) })
+      .then(({ data }) => { if (alive) setCfg((data as ElearnCfg) ?? null) })
     return () => { alive = false }
-  }, [num])
+  }, [num, courseSlug])
 
   const setPlayStyle = (v: PlayStyle) => {
     try { localStorage.setItem('guitarPlayStyle', v) } catch { /* */ }
     setPlayStyleState(v)
   }
 
-  const L = getLesson(num, playStyle)
+  // Bài học hiệu lực = mặc định trong code, đè bằng nội dung soạn ở admin (nếu có)
+  const base = getLesson(num, playStyle)
+  const arr = (v: string[] | null | undefined) => (Array.isArray(v) && v.length ? v : null)
+  const L = {
+    ...base,
+    title: title ?? base.title,
+    goal: cfg?.goal ?? base.goal,
+    steps: arr(cfg?.steps) ?? base.steps,
+    prompt: cfg?.prompt ?? base.prompt,
+    thao: {
+      type: (cfg?.thao_type as ThaoType) ?? base.thao.type,
+      items: arr(cfg?.items) ?? base.thao.items,
+    },
+  }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const toggleCheck = (i: number) => setChecks(c => ({ ...c, [i]: !c[i] }))
@@ -324,17 +348,17 @@ export default function ElearnLessonView({ num, studentName, isDone, onComplete,
 
   // ── Media: youtube / video upload, fallback bảng nốt cho bài 4 ───────────────
   const Media = () => {
-    if (media?.youtube_id) {
+    if (cfg?.youtube_id) {
       return (
         <div style={{ marginTop: 16, borderRadius: 16, overflow: 'hidden', background: '#000', position: 'relative', paddingBottom: '56.25%' }}>
-          <iframe src={`https://www.youtube.com/embed/${media.youtube_id}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowFullScreen title="Video bài học" />
+          <iframe src={`https://www.youtube.com/embed/${cfg.youtube_id}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowFullScreen title="Video bài học" />
         </div>
       )
     }
-    if (media?.video_url) {
+    if (cfg?.video_url) {
       return (
         <div style={{ marginTop: 16, borderRadius: 16, overflow: 'hidden' }}>
-          <video src={media.video_url} controls playsInline style={{ width: '100%', display: 'block', background: '#000', maxHeight: 260 }} />
+          <video src={cfg.video_url} controls playsInline style={{ width: '100%', display: 'block', background: '#000', maxHeight: 260 }} />
         </div>
       )
     }
