@@ -73,8 +73,9 @@ export default function LessonViewerPage() {
     } catch { return null }
   }
 
-  // Hoàn thành bài elearn → ghi tiến độ + XP vào Supabase
-  const completeElearn = (lesson: Lesson, lessonNum: number) => {
+  // Hoàn thành bài elearn → ghi tiến độ + XP + "đã thực hành" (điểm hành trình)
+  const completeElearn = async (lesson: Lesson, lessonNum: number) => {
+    if (completedIds.has(lesson.id)) return // đã xong rồi, không cộng lại
     setCompletedIds(prev => new Set(prev).add(lesson.id))
     if (!studentId) return
     supabase.from('edu_lesson_progress').upsert({
@@ -84,6 +85,12 @@ export default function LessonViewerPage() {
     supabase.from('student_xp_log').insert({
       student_id: studentId, xp: 10, reason: `elearn:bai${lessonNum}`,
     }).then(() => {})
+    // Widget tương tác = đã thực hành → cộng điểm hành trình
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('student_action_logs')
+        .insert({ user_id: user.id, action_type: 'practiced_lesson', lesson_id: lesson.id })
+    }
   }
 
   useEffect(() => {

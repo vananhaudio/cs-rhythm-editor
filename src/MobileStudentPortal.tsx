@@ -723,6 +723,30 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     setMarkingDone(false)
   }
 
+  // Hoàn thành bài elearn: đánh dấu xong + ghi nhận "đã thực hành" (widget tương tác = thực hành)
+  // → điểm hành trình lên 70 (cam), không chỉ 40 (đỏ "mới học")
+  const finishElearnLesson = async (lessonId: string) => {
+    await markComplete(lessonId)
+    const acts = lessonActionMap[lessonId]
+    if (!acts?.has('practiced_lesson')) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { error } = await supabase.from('student_action_logs')
+          .insert({ user_id: user.id, action_type: 'practiced_lesson', lesson_id: lessonId })
+        if (!error) {
+          await supabase.from('student_xp_log')
+            .insert({ student_id: student.id, xp: XP_ACTION.practiced_lesson, source: 'practiced_lesson', ref_id: lessonId })
+          setTotalXP(p => p + XP_ACTION.practiced_lesson)
+          setWeekXP(p => p + XP_ACTION.practiced_lesson)
+          setLessonActionMap(prev => {
+            const next = { ...prev }; const s = new Set(next[lessonId] ?? []); s.add('practiced_lesson'); next[lessonId] = s; return next
+          })
+        }
+      }
+    }
+    goBack()
+  }
+
   const goBack = () => screen === 'lesson' ? setScreen('courses') : (setScreen('home'), setActiveCourseId(null))
 
   // % hoàn thành của 1 khoá
@@ -1314,7 +1338,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       studentName={me.display_name ?? me.full_name}
                       isDone={completedIds.has(activeLesson.id)}
                       onBack={goBack}
-                      onComplete={() => { markComplete(activeLesson.id); goBack() }}
+                      onComplete={() => finishElearnLesson(activeLesson.id)}
                       onOpenTool={(tool) => openTool(tool === 'tuner' ? '/tuner' : '/tempo', tool === 'tuner' ? 'Tuner — Lên dây' : 'Metronome')}
                     />
                   </div>
