@@ -116,7 +116,7 @@ export default function TeacherAdminPage() {
           </div>
         )}
         {section === 'students' && studentId && (
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
             <StudentProfile
               studentId={studentId}
               onBack={() => setStudentId(null)}
