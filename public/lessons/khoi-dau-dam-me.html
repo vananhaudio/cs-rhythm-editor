@@ -149,6 +149,24 @@ const PLAY9 = {
     items:['Pick không rơi khi gảy','Gảy xuống được từng dây rõ','Tiếng sáng và đều'] },
 };
 
+// ── Supabase media fetch ──────────────────────────────────────────────────────
+const SB_URL = 'https://wojmdilyflffvdtpovmq.supabase.co'
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvam1kaWx5ZmxmZnZkdHBvdm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjk0OTYsImV4cCI6MjA5NDg0NTQ5Nn0.JxlY5iqBTK3q5BYnF1MgY8A5zS3R5okrD8uddsEFavY'
+
+async function fetchMedia() {
+  try {
+    const res = await fetch(
+      `${SB_URL}/rest/v1/elearn_media?course_slug=eq.khoi-dau-dam-me&select=lesson_num,youtube_id,video_url`,
+      { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
+    );
+    if (!res.ok) return {};
+    const rows = await res.json();
+    const map = {};
+    rows.forEach(r => { map[r.lesson_num] = r; });
+    return map;
+  } catch { return {}; }
+}
+
 // ── Khởi tạo done từ localStorage ────────────────────────────────────────────
 function loadDone() {
   try {
@@ -212,6 +230,8 @@ class KhoiDauDamMe extends React.Component {
       exDone: false,
       // Student info từ TVA app
       studentName: null,
+      // Media từ Supabase
+      mediaMap: {},
     };
     this._tt = null;
   }
@@ -225,6 +245,9 @@ class KhoiDauDamMe extends React.Component {
     window.__tvaBridgeCallback = (data) => {
       this.setState({ studentName: data.name });
     };
+
+    // Fetch media từ Supabase
+    fetchMedia().then(map => this.setState({ mediaMap: map }));
 
     // Expose GuitarBai8 API cho mic integration
     window.GuitarBai8 = {
@@ -394,10 +417,32 @@ class KhoiDauDamMe extends React.Component {
   }
 
   renderMedia(lid) {
+    const m = this.state.mediaMap[lid];
+
+    // Media từ admin (youtube hoặc video upload) — ưu tiên hiển thị trước
+    if (m && m.youtube_id) {
+      return R('div', { style: { marginTop: 16, borderRadius: 16, overflow: 'hidden', background: '#000', position: 'relative', paddingBottom: '56.25%' } },
+        R('iframe', {
+          src: `https://www.youtube.com/embed/${m.youtube_id}`,
+          style: { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' },
+          allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture',
+          allowFullScreen: true,
+        })
+      );
+    }
+    if (m && m.video_url) {
+      return R('div', { style: { marginTop: 16, borderRadius: 16, overflow: 'hidden' } },
+        R('video', {
+          src: m.video_url,
+          controls: true,
+          playsInline: true,
+          style: { width: '100%', display: 'block', background: '#000', maxHeight: 260 },
+        })
+      );
+    }
+
+    // Fallback tĩnh cho bài 4 (bảng nốt)
     if (lid === 4) return this.renderNoteChart();
-    if (lid === 3) return R('div', { style: { marginTop: 16, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 16, padding: '12px 10px 8px', textAlign: 'center', color: '#A8A294', fontSize: 13 } },
-      '🎸 Sơ đồ đàn guitar'
-    );
     return null;
   }
 

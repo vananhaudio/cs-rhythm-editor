@@ -5,6 +5,7 @@ import CourseEditorContent from './CourseEditorContent'
 import ToolsManager from './ToolsManager'
 import FlowManager from './FlowManager'
 import GroupManager from './GroupManager'
+import ElearnMediaManager from './ElearnMediaManager'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -13,7 +14,7 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'flows' | 'community'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'flows' | 'community' | 'elearn'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
@@ -22,6 +23,7 @@ const NAV = [
   { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
   { id: 'flows'     as Section, icon: '✨', label: 'Flow Bài Học'   },
   { id: 'community' as Section, icon: '🌱', label: 'Cộng đồng'      },
+  { id: 'elearn'    as Section, icon: '🎬', label: 'Elearn Media'   },
 ]
 
 export default function TeacherAdminPage() {
@@ -146,6 +148,12 @@ export default function TeacherAdminPage() {
         {section === 'community' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <GroupManager />
+          </div>
+        )}
+
+        {section === 'elearn' && (
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <ElearnMediaManager />
           </div>
         )}
 
