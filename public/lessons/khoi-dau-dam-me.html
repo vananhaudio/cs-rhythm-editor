@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Khởi Đầu Đam Mê — Nhập Môn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:#F6F2EA;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1C1A17;-webkit-font-smoothing:antialiased;height:100%}
+  #root{height:100%}
+  @keyframes vib{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px)}60%{transform:translateX(2px)}}
+  ::-webkit-scrollbar{width:0}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const R = React.createElement;
+
+// ── PostMessage Bridge ────────────────────────────────────────────────────────
+// Giao tiếp với TVA app (LessonViewerPage wrapper)
+const Bridge = {
+  studentName: null,
+  studentId: null,
+  lessonId: null,
+
+  init() {
+    // Nhận thông tin học viên từ parent app
+    window.addEventListener('message', (e) => {
+      if (!e.data || e.data.source !== 'TVA_APP') return;
+      if (e.data.type === 'STUDENT_INFO') {
+        Bridge.studentName = e.data.name;
+        Bridge.studentId = e.data.studentId;
+        Bridge.lessonId = e.data.lessonId;
+        // Trigger re-render nếu cần
+        if (window.__tvaBridgeCallback) window.__tvaBridgeCallback(e.data);
+      }
+    });
+    // Báo đã load xong
+    window.parent.postMessage({ source: 'TVA_LESSON', type: 'LESSON_LOADED', courseId: 'khoi-dau-dam-me' }, '*');
+  },
+
+  completeLesson(lessonNum, totalDone) {
+    window.parent.postMessage({
+      source: 'TVA_LESSON',
+      type: 'LESSON_COMPLETE',
+      lessonNum,
+      totalDone,
+      courseId: 'khoi-dau-dam-me',
+      xp: 10,
+    }, '*');
+  },
+
+  openTool(tool) {
+    // Yêu cầu parent app mở tool thật (tuner / tempo)
+    window.parent.postMessage({
+      source: 'TVA_LESSON',
+      type: 'OPEN_TOOL',
+      tool, // 'tuner' | 'tempo'
+    }, '*');
+  },
+
+  goBack() {
+    window.parent.postMessage({ source: 'TVA_LESSON', type: 'GO_BACK' }, '*');
+  },
+};
+Bridge.init();
+
+// ── Màu sắc ──────────────────────────────────────────────────────────────────
+const ACCENT = { a: '#3F6B4E', s: '#E3EDE6', d: '#2E5239', c1: '#C2622E' };
+
+// ── Dữ liệu bài học ──────────────────────────────────────────────────────────
+const STR = [
+  {n:6,note:'E',vn:'Mi'},{n:5,note:'A',vn:'La'},
+  {n:4,note:'D',vn:'Rê'},{n:3,note:'G',vn:'Sol'},
+  {n:2,note:'B',vn:'Si'},{n:1,note:'E',vn:'Mí'},
+];
+const PSEQ = [5,4,3,2,1,0]; // dây 1 → dây 6
+const FREQ = [82.41,110.0,146.83,196.0,246.94,329.63];
+const strColor = (i) => i===0 ? ACCENT.a : i===5 ? ACCENT.c1 : '#C2BAA9';
+
+const PARTS = [
+  {kicker:'PHẦN 1',title:'Chuẩn bị cây đàn',ids:[1,2,3]},
+  {kicker:'PHẦN 2',title:'Làm quen với đàn',ids:[4,5,6]},
+  {kicker:'PHẦN 3',title:'Chuẩn bị hai tay',ids:[7,8,9]},
+  {kicker:'PHẦN 4',title:'Sẵn sàng vào khoá chính',ids:[10,11]},
+];
+
+const LESSONS = {
+  1:{crumb:'Phần 1 · Bài 1',title:'Chọn cây đàn phù hợp',result:'Biết nên mua loại đàn nào',dur:'5 phút',
+     goal:'Biết nên chuẩn bị guitar classic, acoustic hay điện theo nhu cầu của bạn.',
+     steps:['Classic (dây nilon): cần to, dây mềm — hợp người mới, ngón đỡ đau.','Acoustic (dây sắt): tiếng sáng, đệm hát hay — dây hơi cứng hơn.','Đàn điện: cần loa & nguồn — để sau cũng được.'],
+     prompt:'Tự đánh dấu khi đã rõ:',thao:{type:'check',items:['Mình hiểu khác biệt classic / acoustic / điện','Mình chọn được loại phù hợp với mình']}},
+  2:{crumb:'Phần 1 · Bài 2',title:'Kiểm tra đàn trước khi học',result:'Biết đàn có học được không',dur:'5 phút',
+     goal:'Biết cây đàn hiện có còn dùng để học được không — tránh tập trên đàn quá khó bấm.',
+     steps:['Nhìn dọc cần đàn: cần thẳng, không cong võng.','Bấm thử: dây không quá cao so với phím (đỡ đau tay).','Gảy từng dây: không rè, không tịt tiếng.'],
+     prompt:'Kiểm tra cây đàn của bạn:',thao:{type:'check',items:['Cần đàn thẳng','Dây không quá cao','Không bị rè tiếng']}},
+  3:{crumb:'Phần 1 · Bài 3',title:'Các bộ phận của đàn',result:'Gọi đúng tên các phần đàn',dur:'4 phút',
+     goal:'Nhận biết và gọi đúng tên các phần chính của cây đàn guitar.',
+     steps:['Đầu đàn & khoá đàn: nơi chỉnh dây.','Cần đàn & phím đàn: nơi tay trái bấm.','Thùng đàn & ngựa đàn: nơi khuếch đại và giữ dây.'],
+     prompt:'Tự kiểm tra:',thao:{type:'check',items:['Mình chỉ đúng đầu đàn, cần, phím','Mình chỉ đúng thùng, ngựa, khoá đàn']}},
+  4:{crumb:'Phần 2 · Bài 4',title:'Tên 6 dây đàn',result:'Nhận diện đúng 6 dây',dur:'6 phút',
+     goal:'Nhớ tên 6 dây theo cả chữ cái và Đô-Rê-Mi: từ dây 6 đến dây 1 là Mi La Rê Sol Si Mí.',
+     steps:['Tên nốt viết bằng CHỮ CÁI: C D E F G A B = Đô Rê Mi Fa Sol La Si.','Dây 6 dày nhất = Mi trầm (E). Dây 1 mỏng nhất = Mí cao (E).','Mẹo nhớ thứ tự 6→1: "Em Ăn Dứa Giòn Bên Em" (E A D G B E).','Quy ước app: dây 1 ở trên cùng, dây 6 ở dưới cùng — và luôn khác màu.'],
+     prompt:'Bấm đúng dây Mi số 1 (mỏng nhất):',thao:{type:'neck'}},
+  5:{crumb:'Phần 2 · Bài 5',title:'Chỉnh dây bằng tuner',result:'Tự chỉnh được 6 dây',dur:'6 phút',
+     goal:'Biết dùng tuner để chỉnh từng dây về đúng cao độ.',
+     steps:['Mở tuner, gảy một dây — tuner hiện tên nốt.','Vặn khoá đàn: kim lệch trái = non, vặn căng dần lên.','Kim về giữa, đèn xanh = chuẩn.'],
+     prompt:'Mở Tuner và lên dây Mi số 1:',thao:{type:'tool'}},
+  6:{crumb:'Phần 2 · Bài 6',title:'Tư thế ngồi & đặt đàn',result:'Tư thế học ổn định',dur:'5 phút',
+     goal:'Ngồi sao cho đàn vững, tay không gồng, lưng không mỏi.',
+     steps:['Ghế cao vừa, hai chân chạm đất.','Eo đàn đặt lên đùi phải (cổ điển: đùi trái + kê chân).','Cần đàn hơi chếch lên, lưng thẳng tự nhiên.'],
+     prompt:'Tự kiểm tra tư thế:',thao:{type:'check',items:['Hai vai thả lỏng, không nhô','Cổ tay phải không gồng','Đàn không trượt khi buông tay phải']}},
+  7:{crumb:'Phần 3 · Bài 7',title:'Đặt tay trái lên cần đàn',result:'Tay trái đúng tư thế',dur:'5 phút',
+     goal:'Biết vị trí ngón cái, cổ tay và đầu ngón khi bấm.',
+     steps:['Ngón cái tựa sau cần đàn, khoảng chính giữa.','Bấm bằng đầu ngón; móng tay trái cắt ngắn.','Cổ tay cong tự nhiên, không gập gắt.'],
+     prompt:'Tự kiểm tra tay trái:',thao:{type:'check',items:['Ngón cái nằm sau cần đàn','Bấm bằng đầu ngón','Móng tay trái đã cắt ngắn']}},
+  8:{crumb:'Phần 3 · Bài 8',title:'Gảy dây cho đàn kêu rõ',result:'Gảy 6 dây nghe rõ',dur:'5 phút',
+     goal:'Gảy từng dây nghe rõ, không bị tịt tiếng.',
+     steps:['Tay phải thả lỏng, cổ tay mềm.','Gảy dứt khoát qua dây, không ấn quá sâu.','Nghe: tiếng tròn và vang, không bị cụt.'],
+     prompt:'Gảy đúng dây & luyện tai nghe:',thao:{type:'listen8'}},
+  9:{crumb:'Phần 3 · Bài 9',title:'Cầm pick / dùng ngón phải',result:'Tay phải gảy gọn gàng',dur:'5 phút',
+     goal:'',steps:[],prompt:'Tự kiểm tra tay phải:',thao:{type:'check',items:[]}},
+  10:{crumb:'Phần 4 · Bài 10',title:'Góc học & thói quen tập',result:'Có bộ chuẩn bị tối thiểu',dur:'4 phút',
+      goal:'Có bộ chuẩn bị tối thiểu và lịch tập ngắn mỗi ngày.',
+      steps:['Góc cố định: ghế, giá đàn, tuner, capo.','Để đàn ở nơi dễ thấy — cầm lên là tập.','Lịch ngắn 10–15 phút/ngày, đều hơn là nhiều.'],
+      prompt:'Chuẩn bị góc học của bạn:',thao:{type:'check',items:['Mình có góc tập cố định','Mình có tuner và giá đàn','Mình đặt lịch tập ngắn mỗi ngày']}},
+  11:{crumb:'Phần 4 · Bài 11',title:'Đặt tinh thần cho khoá học',result:'Vào khoá với tâm thế đúng',dur:'4 phút',
+      goal:'Bước vào khoá chính với tâm thế đường dài, không nóng vội.',
+      steps:['Học đàn có "cao nguyên": có lúc tập mãi chưa thấy tiến — đó là bình thường.','Mục tiêu không phải "học xong", mà là sống cùng âm nhạc.','Vấp ở đâu, quay lại hỏi thầy ở đó.'],
+      prompt:'Sẵn sàng chưa?',thao:{type:'check',items:['Mình chấp nhận sẽ có đoạn khó','Mình tập vì thích, không vì điểm số','Mình biết tìm thầy khi vấp']}},
+};
+
+const PLAY9 = {
+  fingers:{ result:'Gảy bằng ngón rõ tiếng',
+    goal:'Dùng các ngón tay phải để gảy — tiếng ấm, hợp đệm hát và fingerstyle.',
+    steps:['Ngón cái (p) lo 3 dây trầm: dây 6, 5, 4.','Ngón trỏ–giữa–áp út (i, m, a) lo dây 3, 2, 1.','Gảy bằng đầu ngón, thả lỏng cổ tay — tiếng tròn, không tịt.'],
+    items:['Ngón cái gảy được dây trầm','i-m-a gảy được dây cao','Tiếng tròn, không bị tịt'] },
+  pick:{ result:'Cầm pick không rơi',
+    goal:'Cầm pick chắc tay, gảy xuống dứt khoát — tiếng sáng, hợp đệm mạnh.',
+    steps:['Pick kẹp giữa ngón cái và cạnh ngón trỏ, ló ra một chút.','Gảy bằng cổ tay (không cả cánh tay), thả lỏng.','Gảy xuống dứt khoát, giữ pick không xoay hay rơi.'],
+    items:['Pick không rơi khi gảy','Gảy xuống được từng dây rõ','Tiếng sáng và đều'] },
+};
+
+// ── Khởi tạo done từ localStorage ────────────────────────────────────────────
+function loadDone() {
+  try {
+    const s = localStorage.getItem('kdm_done');
+    return s ? JSON.parse(s) : {};
+  } catch { return {}; }
+}
+function saveDone(done) {
+  try { localStorage.setItem('kdm_done', JSON.stringify(done)); } catch {}
+}
+
+// ── Audio engine ──────────────────────────────────────────────────────────────
+let _ac = null;
+function playTone(freq) {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!_ac) _ac = new C();
+    if (_ac.state === 'suspended') _ac.resume();
+    const t = _ac.currentTime;
+    const lp = _ac.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3600, t);
+    lp.frequency.exponentialRampToValueAtTime(700, t + 1.3);
+    const g = _ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + 1.7);
+    lp.connect(g); g.connect(_ac.destination);
+    [[1,'sawtooth',0.6],[2,'sine',0.22],[3,'sine',0.1]].forEach(([h,ty,amp]) => {
+      const o = _ac.createOscillator(); o.type = ty; o.frequency.value = freq * h;
+      const og = _ac.createGain(); og.gain.value = amp;
+      o.connect(og); og.connect(lp); o.start(t); o.stop(t + 1.75);
+    });
+  } catch {}
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+class KhoiDauDamMe extends React.Component {
+  constructor(props) {
+    super(props);
+    const done = loadDone();
+    // activeId = bài đang học (bài chưa done đầu tiên)
+    const activeId = [1,2,3,4,5,6,7,8,9,10,11].find(i => !done[i]) || 11;
+    this.state = {
+      screen: 'home',
+      lid: activeId,
+      done,
+      playStyle: 'fingers',
+      checks: {},
+      videoOpen: false,
+      pick: null,
+      // Bài 8 - gảy dây
+      l8mode: 'play',
+      playStep: 0,
+      playWrong: null,
+      playDone: false,
+      // Bài 8 - tai nghe
+      exTarget: 0,
+      exPicked: null,
+      exRound: 1,
+      exScore: 0,
+      exDone: false,
+      // Student info từ TVA app
+      studentName: null,
+    };
+    this._tt = null;
+  }
+
+  componentDidMount() {
+    let ps = 'fingers';
+    try { ps = localStorage.getItem('guitarPlayStyle') || 'fingers'; } catch {}
+    this.setState({ playStyle: ps, exTarget: Math.floor(Math.random() * 6) });
+
+    // Nhận thông tin học viên từ TVA app
+    window.__tvaBridgeCallback = (data) => {
+      this.setState({ studentName: data.name });
+    };
+
+    // Expose GuitarBai8 API cho mic integration
+    window.GuitarBai8 = {
+      target: () => PSEQ[this.state.playStep],
+      submit: (i) => this.l8strum(i),
+      answer: (i) => this.exPick(i),
+      targetFreq: () => FREQ[this.state.exTarget],
+      strings: STR.map((s, i) => ({ index: i, num: s.n, note: s.note, freq: FREQ[i] })),
+    };
+  }
+
+  componentWillUnmount() {
+    if (this._tt) clearInterval(this._tt);
+    delete window.__tvaBridgeCallback;
+  }
+
+  getLesson(id) {
+    const L = LESSONS[id];
+    if (id === 9) {
+      const v = PLAY9[this.state.playStyle] || PLAY9.fingers;
+      return { ...L, goal: v.goal, steps: v.steps, result: v.result, thao: { type: 'check', items: v.items } };
+    }
+    return L;
+  }
+
+  setPlayStyle = (v) => {
+    try { localStorage.setItem('guitarPlayStyle', v); } catch {}
+    this.setState({ playStyle: v });
+  }
+
+  openLesson(id) {
+    this.setState({
+      screen: 'lesson', lid: id,
+      pick: null, checks: {}, videoOpen: false,
+      l8mode: 'play', playStep: 0, playWrong: null, playDone: false,
+      exTarget: Math.floor(Math.random() * 6), exPicked: null,
+      exRound: 1, exScore: 0, exDone: false,
+    });
+  }
+
+  goHome = () => { this.setState({ screen: 'home' }); }
+
+  openTool = () => {
+    // Gửi postMessage tới TVA app để mở Tuner thật
+    Bridge.openTool('tuner');
+  }
+
+  completeLesson = () => {
+    const id = this.state.lid;
+    const done = { ...this.state.done, [id]: true };
+    saveDone(done);
+    const totalDone = Object.keys(done).length;
+    Bridge.completeLesson(id, totalDone);
+    if (id >= 11) {
+      this.setState({ done, screen: 'home' });
+    } else {
+      this.setState({ done });
+      this.openLesson(id + 1);
+    }
+  }
+
+  toggleCheck(i) {
+    this.setState(s => ({ checks: { ...s.checks, [i]: !s.checks[i] } }));
+  }
+
+  // ── Bài 8: Gảy đúng dây ──
+  l8setMode(m) { this.setState({ l8mode: m, playWrong: null }); }
+  l8strum(i) {
+    playTone(FREQ[i]);
+    this.setState(s => {
+      if (s.l8mode !== 'play') return {};
+      const target = PSEQ[s.playStep];
+      if (i === target) {
+        const ns = s.playStep + 1;
+        return { playStep: ns, playWrong: null, playDone: ns >= 6 };
+      }
+      return { playWrong: i };
+    });
+  }
+  l8replay = () => { this.setState({ playStep: 0, playWrong: null, playDone: false }); }
+
+  // ── Bài 8: Tai nghe ──
+  exPlay = () => { playTone(FREQ[this.state.exTarget]); }
+  exPick(i) {
+    if (this.state.exPicked !== null) return;
+    this.setState(s => ({ exPicked: i, exScore: i === s.exTarget ? s.exScore + 1 : s.exScore }));
+  }
+  exNext = () => {
+    this.setState(s => s.exRound >= 5
+      ? { exDone: true }
+      : { exRound: s.exRound + 1, exTarget: Math.floor(Math.random() * 6), exPicked: null }
+    );
+  }
+  exRestart = () => {
+    this.setState({ exDone: false, exRound: 1, exScore: 0, exTarget: Math.floor(Math.random() * 6), exPicked: null });
+  }
+
+  // ── Renderers ────────────────────────────────────────────────────────────────
+
+  renderStyleChips() {
+    const cur = this.state.playStyle;
+    const chip = (id, emoji, label, sub) => R('button', {
+      key: id, onClick: () => this.setPlayStyle(id),
+      style: { flex: 1, display: 'flex', alignItems: 'center', gap: 9, padding: '11px 12px',
+        border: `1.5px solid ${cur === id ? ACCENT.a : '#E6E0D4'}`,
+        borderRadius: 13, background: cur === id ? ACCENT.s : '#fff',
+        cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+    },
+      R('div', { style: { fontSize: 19 } }, emoji),
+      R('div', { style: { flex: 1, minWidth: 0 } },
+        R('div', { style: { fontSize: 13.5, fontWeight: 700, color: '#1C1A17' } }, label),
+        R('div', { style: { fontSize: 10.5, color: '#8A8478', marginTop: 1 } }, sub)
+      ),
+      cur === id ? R('div', { style: { color: ACCENT.a, fontWeight: 800, fontSize: 14 } }, '✓') : null
+    );
+    return R(React.Fragment, null,
+      chip('fingers', '🖐️', 'Ngón tay', 'Ấm, linh hoạt'),
+      chip('pick', '🔻', 'Pick', 'Sáng, dứt khoát')
+    );
+  }
+
+  renderToolCards() {
+    const tuner = R('button', {
+      key: 'tn', onClick: this.openTool,
+      style: { flex: 'none', width: 156, textAlign: 'left', padding: 15, border: 'none',
+        borderRadius: 16, background: '#1C1A17', cursor: 'pointer', fontFamily: 'inherit' }
+    },
+      R('div', { style: { width: 40, height: 40, borderRadius: 11, background: ACCENT.a, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 10 } }, '🎚️'),
+      R('div', { style: { fontSize: 14.5, fontWeight: 700, color: '#F4E9D8' } }, 'Tuner'),
+      R('div', { style: { fontSize: 11.5, color: '#9A9082', marginTop: 2, lineHeight: 1.35 } }, 'Lên dây chuẩn mỗi lần chơi'),
+      R('div', { style: { marginTop: 11, fontSize: 11.5, fontWeight: 700, color: ACCENT.a } }, 'Mở →')
+    );
+    const locked = (emoji, name, when) => R('div', {
+      key: name, style: { flex: 'none', width: 156, padding: 15, borderRadius: 16,
+        background: '#F1ECE2', border: '1px solid #E6E0D4' }
+    },
+      R('div', { style: { width: 40, height: 40, borderRadius: 11, background: '#E2DAC9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 10, filter: 'grayscale(1)', opacity: 0.7 } }, emoji),
+      R('div', { style: { fontSize: 14.5, fontWeight: 700, color: '#6B655A' } }, name),
+      R('div', { style: { fontSize: 11.5, color: '#A8A294', marginTop: 2, lineHeight: 1.35 } }, when),
+      R('div', { style: { marginTop: 11, fontSize: 11, fontWeight: 700, color: '#B0AA9C' } }, '🔒 Mở ở khoá chính')
+    );
+    return R(React.Fragment, null,
+      tuner,
+      locked('🥁', 'Metronome', 'Giữ nhịp khi tập'),
+      locked('🎵', 'Thư viện hợp âm', 'Tra & nghe hợp âm')
+    );
+  }
+
+  renderNoteChart() {
+    const N = [['C','Đô'],['D','Rê'],['E','Mi'],['F','Fa'],['G','Sol'],['A','La'],['B','Si']];
+    const used = { E:1, A:1, D:1, G:1, B:1 };
+    return R('div', { style: { marginTop: 16, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 16, padding: '14px 14px 12px' } },
+      R('div', { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 2 } }, 'Ký hiệu tên nốt'),
+      R('div', { style: { fontSize: 11.5, color: '#8A8478', lineHeight: 1.45, marginBottom: 12 } }, 'Guitar dùng 7 chữ cái quốc tế. Đây là bảng "phiên dịch" sang Đô-Rê-Mi quen thuộc:'),
+      R('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 } },
+        N.map(([letter, vn]) => R('div', { key: letter,
+          style: { textAlign: 'center', padding: '8px 2px', borderRadius: 10,
+            background: used[letter] ? ACCENT.s : '#F6F2EA',
+            border: used[letter] ? `1.5px solid ${ACCENT.a}` : '1px solid #EAE4D8' }
+        },
+          R('div', { style: { fontFamily: 'JetBrains Mono', fontSize: 16, fontWeight: 800, color: used[letter] ? ACCENT.a : '#1C1A17' } }, letter),
+          R('div', { style: { fontSize: 10, fontWeight: 700, color: '#6B655A', marginTop: 2 } }, vn)
+        ))
+      ),
+      R('div', { style: { marginTop: 10, fontSize: 11, color: '#A8A294', lineHeight: 1.4 } }, 'Ô tô màu = 5 chữ cái xuất hiện trên 6 dây đàn (E, A, D, G, B).')
+    );
+  }
+
+  renderMedia(lid) {
+    if (lid === 4) return this.renderNoteChart();
+    if (lid === 3) return R('div', { style: { marginTop: 16, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 16, padding: '12px 10px 8px', textAlign: 'center', color: '#A8A294', fontSize: 13 } },
+      '🎸 Sơ đồ đàn guitar'
+    );
+    return null;
+  }
+
+  renderHStrings({ onTap, disabled, reveal, target, doneSet, wrong }) {
+    return R('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } },
+      PSEQ.map(i => {
+        const s = STR[i], c = strColor(i), w = 3 + (5 - i) * 1.7;
+        const isTarget = target === i, done = doneSet && doneSet[i], isWrong = wrong === i;
+        let bg = '#fff', bd = '1px solid #EDE7DA';
+        if (done) { bg = ACCENT.s; bd = `1.5px solid ${ACCENT.a}`; }
+        else if (isTarget) { bg = ACCENT.s; bd = `1.5px solid ${ACCENT.a}`; }
+        if (isWrong) { bg = '#FBEDE9'; bd = '1.5px solid #D98A6E'; }
+        return R('button', {
+          key: i,
+          onClick: disabled || !onTap ? undefined : () => onTap(i),
+          style: { display: 'flex', alignItems: 'center', gap: 12, padding: '9px 13px',
+            border: bd, borderRadius: 11, background: bg,
+            cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit', width: '100%' }
+        },
+          R('div', { style: { width: 22, flexShrink: 0, textAlign: 'center', fontFamily: 'JetBrains Mono', fontSize: 12.5, fontWeight: 800, color: reveal ? c : '#C9C0AF' } },
+            reveal ? s.n : '?'
+          ),
+          R('div', { style: { flex: 1, height: w, borderRadius: 99, background: c } }),
+          R('div', { style: { width: 48, flexShrink: 0, textAlign: 'right', fontFamily: 'JetBrains Mono', fontSize: 11, fontWeight: 700, color: c } },
+            reveal ? `${s.vn}·${s.note}` : (done ? '✓' : '')
+          )
+        );
+      })
+    );
+  }
+
+  renderNeckPick() {
+    const st = this.state;
+    const answered = st.pick !== null;
+    const ok = st.pick === 5;
+    return R('div', null,
+      this.renderHStrings({ onTap: (i) => this.setState({ pick: i }), disabled: answered, reveal: answered, target: answered ? 5 : undefined, wrong: answered && !ok ? st.pick : undefined }),
+      answered
+        ? R('div', { style: { marginTop: 14 } },
+            R('div', { style: { padding: '12px 14px', borderRadius: 12, fontSize: 13.5, fontWeight: 600, lineHeight: 1.5, background: ok ? ACCENT.s : '#FBEDE9', color: ok ? ACCENT.d : '#A03B1C' } },
+              ok ? 'Chính xác! Dây 1 là dây mỏng nhất, luôn nằm trên cùng.' : 'Chưa đúng — dây 1 là dây mỏng nhất, nằm trên cùng. Thử lại nhé.'
+            ),
+            R('button', { onClick: () => this.setState({ pick: null }), style: { marginTop: 10, padding: '9px 16px', border: 'none', borderRadius: 10, background: '#1C1A17', color: '#fff', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' } }, 'Thử lại')
+          )
+        : R('div', { style: { marginTop: 12, fontSize: 12.5, color: '#8A8478', textAlign: 'center' } }, 'Chạm dây bạn nghĩ là dây số 1 (mỏng nhất, trên cùng)')
+    );
+  }
+
+  renderToolLaunch() {
+    return R('button', {
+      onClick: this.openTool,
+      style: { width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: 'none', borderRadius: 15, background: '#1C1A17', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }
+    },
+      R('div', { style: { width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: ACCENT.a, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 } }, '🎚️'),
+      R('div', { style: { flex: 1 } },
+        R('div', { style: { fontSize: 15, fontWeight: 700, color: '#F4E9D8' } }, 'Mở Tuner'),
+        R('div', { style: { fontSize: 12, color: '#9A9082', marginTop: 2, lineHeight: 1.35 } }, 'Đồ nghề bạn giữ mãi — lên dây mỗi lần chơi')
+      ),
+      R('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: '#F4E9D8', strokeWidth: 2.4 },
+        R('path', { d: 'M9 5l7 7-7 7', strokeLinecap: 'round', strokeLinejoin: 'round' })
+      )
+    );
+  }
+
+  renderL8Widget() {
+    const st = this.state;
+    const seg = (id, label) => R('button', {
+      key: id, onClick: () => this.l8setMode(id),
+      style: { flex: 1, padding: 9, border: 'none', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700,
+        background: st.l8mode === id ? '#fff' : 'transparent',
+        color: st.l8mode === id ? '#1C1A17' : '#8A8478',
+        boxShadow: st.l8mode === id ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }
+    }, label);
+    const tabs = R('div', { style: { display: 'flex', gap: 4, padding: 4, background: '#EFE9DD', borderRadius: 12, marginBottom: 16 } },
+      seg('play', '🎸 Gảy đúng dây'), seg('ear', '👂 Nhận diện')
+    );
+
+    if (st.l8mode === 'play') {
+      if (st.playDone) {
+        return R('div', null, tabs,
+          R('div', { style: { textAlign: 'center', padding: '14px 0' } },
+            R('div', { style: { fontSize: 40 } }, '🎸'),
+            R('div', { style: { fontSize: 18, fontWeight: 800, marginTop: 4 } }, 'Gảy đúng cả 6 dây!'),
+            R('div', { style: { fontSize: 14, color: '#6B655A', marginTop: 3, lineHeight: 1.5 } }, 'Tay phải của bạn đã gảy rõ và đúng từng dây buông.'),
+            R('button', { onClick: this.l8replay, style: { marginTop: 16, padding: '11px 22px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Gảy lại')
+          )
+        );
+      }
+      const target = PSEQ[st.playStep];
+      const tg = STR[target]; const tc = strColor(target);
+      const doneSet = {};
+      for (let k = 0; k < st.playStep; k++) doneSet[PSEQ[k]] = true;
+      const where = target === 0 ? 'dày nhất, dưới cùng' : target === 5 ? 'mỏng nhất, trên cùng' : 'ở giữa';
+      return R('div', null, tabs,
+        R('div', { style: { display: 'flex', alignItems: 'center', gap: 13, padding: 15, borderRadius: 14, background: '#1C1A17', marginBottom: 16 } },
+          R('div', { style: { width: 50, height: 50, flexShrink: 0, borderRadius: 13, background: tc, color: '#fff', fontSize: 21, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, tg.note),
+          R('div', { style: { flex: 1 } },
+            R('div', { style: { fontSize: 10.5, fontWeight: 700, letterSpacing: '.05em', color: '#9A9082' } }, `HÃY GẢY (bằng ${st.playStyle === 'pick' ? 'pick' : 'ngón tay'})`),
+            R('div', { style: { fontSize: 17, fontWeight: 800, color: '#F4E9D8', marginTop: 2 } }, `Dây buông số ${tg.n} · ${tg.vn} (${tg.note})`)
+          ),
+          R('div', { style: { fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: 700, color: '#9A9082' } }, `${st.playStep}/6`)
+        ),
+        this.renderHStrings({ onTap: (i) => this.l8strum(i), reveal: true, target, doneSet, wrong: st.playWrong }),
+        st.playWrong != null ? R('div', { style: { marginTop: 14, padding: '12px 14px', borderRadius: 12, background: '#FBEDE9', color: '#A03B1C', fontSize: 13, fontWeight: 600, lineHeight: 1.5 } },
+          `Bạn gảy dây ${STR[st.playWrong].n} (${STR[st.playWrong].note}). Hãy gảy dây ${tg.n} — ${where}.`
+        ) : null,
+        R('div', { style: { marginTop: 10, fontSize: 11.5, color: '#A8A294', textAlign: 'center' } }, `Chạm dây để thực hành — mic sẽ tự chấm khi nhúng.`)
+      );
+    }
+
+    // Tai nghe
+    if (st.exDone) {
+      return R('div', null, tabs,
+        R('div', { style: { textAlign: 'center', padding: '14px 0' } },
+          R('div', { style: { fontSize: 40 } }, '🎧'),
+          R('div', { style: { fontSize: 18, fontWeight: 800, marginTop: 4 } }, 'Xong 5 câu!'),
+          R('div', { style: { fontSize: 14, color: '#6B655A', marginTop: 3 } }, 'Đúng ', R('b', { style: { color: ACCENT.a } }, `${st.exScore}/5`), ' — tai bạn đang quen dần với từng dây.'),
+          R('button', { onClick: this.exRestart, style: { marginTop: 16, padding: '11px 22px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' } }, 'Luyện lại')
+        )
+      );
+    }
+
+    const answered = st.exPicked !== null, ok = st.exPicked === st.exTarget;
+    const tgE = STR[st.exTarget];
+    return R('div', null, tabs,
+      R('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 } },
+        R('div', { style: { fontSize: 12.5, fontWeight: 700, color: '#8A8478' } }, `Câu ${st.exRound}/5`),
+        R('div', { style: { fontFamily: 'JetBrains Mono', fontSize: 12.5, fontWeight: 700, color: ACCENT.a } }, `Đúng ${st.exScore}`)
+      ),
+      R('button', { onClick: this.exPlay, style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 18, border: 'none', borderRadius: 15, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer', marginBottom: 14 } }, '🔊 Nghe âm'),
+      R('div', { style: { fontSize: 13.5, fontWeight: 700, textAlign: 'center', marginBottom: 12, color: '#3A352C' } }, 'Âm vừa nghe là dây buông nào?'),
+      R('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 } },
+        STR.map((s, i) => {
+          const c = strColor(i);
+          let bg = '#fff', bd = '#E6E0D4';
+          if (answered && i === st.exTarget) { bg = ACCENT.s; bd = ACCENT.a; }
+          else if (answered && i === st.exPicked) { bg = '#FBEDE9'; bd = '#D98A6E'; }
+          return R('button', { key: i, onClick: () => this.exPick(i),
+            style: { display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', border: `1.5px solid ${bd}`, borderRadius: 12, background: bg, cursor: answered ? 'default' : 'pointer', fontFamily: 'inherit' }
+          },
+            R('div', { style: { width: 26, height: 26, flexShrink: 0, borderRadius: 8, background: c, color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, s.note),
+            R('div', { style: { fontSize: 12.5, fontWeight: 700, color: '#3A352C' } }, `Dây ${s.n} · ${s.vn}`)
+          );
+        })
+      ),
+      answered ? R('div', { style: { marginTop: 14 } },
+        R('div', { style: { padding: '12px 14px', borderRadius: 12, fontSize: 13, fontWeight: 600, lineHeight: 1.5, background: ok ? ACCENT.s : '#FBEDE9', color: ok ? ACCENT.d : '#A03B1C' } },
+          ok ? `Chính xác — đó là dây ${tgE.n} (${tgE.vn} · ${tgE.note}).` : `Là dây ${tgE.n} (${tgE.vn} · ${tgE.note}). Bấm 🔊 nghe lại để ghi nhớ.`
+        ),
+        R('button', { onClick: this.exNext, style: { marginTop: 10, width: '100%', padding: 13, border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' } },
+          st.exRound >= 5 ? 'Xem kết quả' : 'Câu tiếp →'
+        )
+      ) : null
+    );
+  }
+
+  renderCheckWidget(items) {
+    const st = this.state;
+    const all = items.length > 0 && items.every((_, i) => st.checks[i]);
+    return R('div', null,
+      R('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+        items.map((it, i) => {
+          const on = st.checks[i];
+          return R('button', { key: i, onClick: () => this.toggleCheck(i),
+            style: { display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px',
+              border: `1.5px solid ${on ? ACCENT.a : '#E6E0D4'}`, borderRadius: 13,
+              background: on ? ACCENT.s : '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%' }
+          },
+            R('div', { style: { width: 24, height: 24, flexShrink: 0, borderRadius: 7,
+              border: `2px solid ${on ? ACCENT.a : '#D8CFBE'}`,
+              background: on ? ACCENT.a : 'transparent', color: '#fff', fontSize: 13, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center' } }, on ? '✓' : ''),
+            R('div', { style: { flex: 1, fontSize: 13.5, fontWeight: 600, color: '#3A352C', lineHeight: 1.4 } }, it)
+          );
+        })
+      ),
+      all ? R('div', { style: { marginTop: 12, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' } },
+        'Xong rồi! Bạn đã sẵn sàng cho bước tiếp theo. 👍'
+      ) : null
+    );
+  }
+
+  renderThaoTac(thao) {
+    if (thao.type === 'neck') return this.renderNeckPick();
+    if (thao.type === 'tool') return this.renderToolLaunch();
+    if (thao.type === 'listen8') return this.renderL8Widget();
+    return this.renderCheckWidget(thao.items);
+  }
+
+  // ── HOME ─────────────────────────────────────────────────────────────────────
+  renderHome() {
+    const st = this.state;
+    const doneCount = Object.keys(st.done).length;
+    const activeId = [1,2,3,4,5,6,7,8,9,10,11].find(i => !st.done[i]) || 11;
+    const donePct = Math.round(doneCount / 11 * 100) + '%';
+
+    return R('div', { style: { paddingBottom: 44 } },
+      // Header
+      R('div', { style: { padding: '24px 22px 0' } },
+        // Nút back về TVA app
+        R('button', {
+          onClick: () => Bridge.goBack(),
+          style: { display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: '#8A8478', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, padding: '0 0 12px', marginLeft: -2 }
+        },
+          R('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: '#8A8478', strokeWidth: 2.4 }, R('path', { d: 'M15 19l-7-7 7-7', strokeLinecap: 'round', strokeLinejoin: 'round' })),
+          'Về trang chủ'
+        ),
+        R('div', { style: { fontSize: 11.5, fontWeight: 700, letterSpacing: '.08em', color: ACCENT.a } }, 'KHỞI ĐẦU ĐAM MÊ — NHẬP MÔN'),
+        R('h1', { style: { margin: '5px 0 0', fontSize: 27, fontWeight: 800, letterSpacing: '-.025em', lineHeight: 1.12 } },
+          'Làm quen với', R('br'), 'cây đàn Guitar'
+        ),
+        R('div', { style: { display: 'flex', alignItems: 'center', gap: 9, marginTop: 14 } },
+          R('div', { style: { width: 34, height: 34, borderRadius: 99, background: 'linear-gradient(135deg,#2C2823,#5A5043)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F4E9D8', fontWeight: 700, fontSize: 12.5 } }, 'VA'),
+          R('div', { style: { lineHeight: 1.2 } },
+            R('div', { style: { fontSize: 13, fontWeight: 700 } }, 'Thầy Văn Anh'),
+            R('div', { style: { fontSize: 11.5, color: '#8A8478', fontWeight: 500 } }, '11 bài · mỗi bài 3–7 phút')
+          )
+        ),
+        st.studentName && R('div', { style: { marginTop: 8, fontSize: 12, color: ACCENT.d, fontWeight: 600 } }, `👋 Xin chào, ${st.studentName}!`),
+        R('p', { style: { margin: '14px 0 0', fontSize: 14, color: '#6B655A', lineHeight: 1.55 } },
+          'Chuẩn bị đúng trước khi học đàn thật sự. Không vội, không ngợp — mỗi bài làm được ngay.'
+        )
+      ),
+
+      // Progress
+      R('div', { style: { margin: '20px 22px 0', display: 'flex', alignItems: 'center', gap: 11 } },
+        R('div', { style: { flex: 1, height: 6, borderRadius: 99, background: '#E4DDCF', overflow: 'hidden' } },
+          R('div', { style: { height: '100%', borderRadius: 99, background: ACCENT.a, width: donePct, transition: 'width .3s' } })
+        ),
+        R('div', { style: { fontSize: 12, fontWeight: 600, color: '#8A8478', whiteSpace: 'nowrap' } }, `${doneCount}/11 bài · cứ thong thả`)
+      ),
+
+      // Cách chơi
+      R('div', { style: { margin: '18px 16px 0', padding: '14px 16px', background: '#fff', border: '1px solid #EAE4D8', borderRadius: 16 } },
+        R('div', { style: { fontSize: 13, fontWeight: 700 } }, 'Bạn muốn tập gảy bằng?'),
+        R('div', { style: { fontSize: 11.5, color: '#8A8478', marginTop: 1, lineHeight: 1.4 } }, 'Chọn cách hợp với bạn — bài học sẽ chỉ theo cách đó. Đổi lúc nào cũng được.'),
+        R('div', { style: { display: 'flex', gap: 8, marginTop: 12 } }, this.renderStyleChips())
+      ),
+
+      // Đồ nghề
+      R('div', { style: { marginTop: 22 } },
+        R('div', { style: { padding: '0 22px', fontSize: 11.5, fontWeight: 800, color: '#8A8478', letterSpacing: '.05em', marginBottom: 11 } }, '🧰 ĐỒ NGHỀ CỦA BẠN'),
+        R('div', { style: { display: 'flex', gap: 12, overflowX: 'auto', padding: '0 16px 4px' } }, this.renderToolCards()),
+        R('div', { style: { padding: '10px 22px 0', fontSize: 11.5, color: '#A8A294', lineHeight: 1.45 } }, 'Đồ nghề đi theo bạn suốt hành trình — học xong vẫn dùng để chơi thật.')
+      ),
+
+      // Nút tiếp tục
+      R('button', {
+        onClick: () => this.openLesson(activeId),
+        style: { margin: '18px 16px 0', width: 'calc(100% - 32px)', display: 'flex', alignItems: 'center', gap: 14, padding: '15px 16px', border: 'none', borderRadius: 18, background: ACCENT.a, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', boxShadow: `0 12px 28px -12px ${ACCENT.a}` }
+      },
+        R('div', { style: { width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          R('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: '#fff' },
+            R('path', { d: 'M7 5.5v13a1 1 0 001.5.87l11-6.5a1 1 0 000-1.74l-11-6.5A1 1 0 007 5.5z' })
+          )
+        ),
+        R('div', { style: { flex: 1, minWidth: 0 } },
+          R('div', { style: { fontSize: 11, fontWeight: 700, letterSpacing: '.06em', color: 'rgba(255,255,255,.72)' } }, 'TIẾP TỤC'),
+          R('div', { style: { fontSize: 15.5, fontWeight: 700, color: '#fff', marginTop: 1 } }, `Bài ${activeId} · ${LESSONS[activeId].title}`)
+        ),
+        R('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 2.4 },
+          R('path', { d: 'M9 5l7 7-7 7', strokeLinecap: 'round', strokeLinejoin: 'round' })
+        )
+      ),
+
+      // Danh sách bài theo phần
+      PARTS.map(p => R('div', { key: p.kicker, style: { marginTop: 26, padding: '0 22px' } },
+        R('div', { style: { display: 'flex', alignItems: 'baseline', gap: 9 } },
+          R('span', { style: { fontSize: 11, fontWeight: 800, color: ACCENT.a, letterSpacing: '.04em' } }, p.kicker),
+          R('span', { style: { fontSize: 15, fontWeight: 800, letterSpacing: '-.01em' } }, p.title)
+        ),
+        R('div', { style: { marginTop: 10, background: '#fff', borderRadius: 18, overflow: 'hidden', boxShadow: '0 1px 2px rgba(28,23,18,.05)' } },
+          p.ids.map((id, idx) => {
+            const L = this.getLesson(id);
+            const done = !!st.done[id];
+            const isActive = id === activeId;
+            const badgeStyle = {
+              width: 30, height: 30, flexShrink: 0, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13.5, fontWeight: 800,
+              ...(done ? { background: ACCENT.a, color: '#fff' } : isActive ? { background: ACCENT.s, color: ACCENT.a, boxShadow: `inset 0 0 0 2px ${ACCENT.a}` } : { background: '#F1ECE2', color: '#A8A294' })
+            };
+            return R('button', {
+              key: id, onClick: () => this.openLesson(id),
+              style: { width: '100%', display: 'flex', alignItems: 'center', gap: 13, padding: '13px 15px', border: 'none', borderBottom: idx < p.ids.length - 1 ? '1px solid #F1ECE2' : 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }
+            },
+              R('div', { style: badgeStyle }, done ? '✓' : id),
+              R('span', { style: { flex: 1, minWidth: 0, textAlign: 'left' } },
+                R('span', { style: { display: 'block', fontSize: 14.5, fontWeight: 700, color: '#1C1A17', lineHeight: 1.25 } }, L.title),
+                R('span', { style: { display: 'block', fontSize: 12, color: '#8A8478', fontWeight: 500, marginTop: 2 } }, done ? 'Đã hoàn thành ✓' : L.result)
+              ),
+              R('span', { style: { fontFamily: 'JetBrains Mono', fontSize: 11, color: '#B0AA9C', fontWeight: 600, flexShrink: 0 } }, L.dur),
+              R('svg', { width: 7, height: 12, viewBox: '0 0 8 14', style: { flexShrink: 0 } },
+                R('path', { d: 'M1 1l6 6-6 6', stroke: '#CFC8B9', strokeWidth: 2, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' })
+              )
+            );
+          })
+        )
+      )),
+
+      R('div', { style: { margin: '28px 22px 0', fontSize: 12, color: '#A8A294', textAlign: 'center', lineHeight: 1.5 } }, 'Cây đàn sẽ đợi bạn. 🎸')
+    );
+  }
+
+  // ── LESSON ───────────────────────────────────────────────────────────────────
+  renderLesson() {
+    const st = this.state;
+    const L = this.getLesson(st.lid);
+    const ctaLabel = st.lid >= 11 ? 'Hoàn thành phần chuẩn bị 🎉' : (st.done[st.lid] ? 'Sang bài tiếp theo' : 'Mình làm được rồi ✓');
+
+    return R('div', { style: { minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: '#F6F2EA' } },
+      // Header sticky
+      R('div', { style: { position: 'sticky', top: 0, zIndex: 10, background: 'rgba(246,242,234,.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '16px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #E8E2D6' } },
+        R('button', {
+          onClick: this.goHome,
+          style: { width: 38, height: 38, flexShrink: 0, border: '1px solid #E2DBCD', background: '#fff', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
+        },
+          R('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: '#5A5448', strokeWidth: 2.4 },
+            R('path', { d: 'M15 19l-7-7 7-7', strokeLinecap: 'round', strokeLinejoin: 'round' })
+          )
+        ),
+        R('div', { style: { flex: 1, minWidth: 0 } },
+          R('div', { style: { fontSize: 11, fontWeight: 700, color: ACCENT.a, letterSpacing: '.03em' } }, L.crumb),
+          R('div', { style: { fontSize: 14.5, fontWeight: 800, letterSpacing: '-.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, L.title)
+        )
+      ),
+
+      // Content
+      R('div', { style: { flex: 1, padding: '18px 20px 0' } },
+        // Goal
+        R('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10, padding: '13px 15px', background: ACCENT.s, borderRadius: 14 } },
+          R('span', { style: { fontSize: 15, marginTop: 1 } }, '🎯'),
+          R('div', { style: { fontSize: 13.5, color: '#3E463F', lineHeight: 1.5, fontWeight: 600 } }, L.goal)
+        ),
+
+        // Media
+        this.renderMedia(st.lid),
+
+        // Steps
+        L.steps.length > 0 && R('div', { style: { marginTop: 18, display: 'flex', flexDirection: 'column', gap: 0 } },
+          L.steps.map((t, i) => R('div', { key: i, style: { display: 'flex', gap: 13, paddingBottom: 16 } },
+            R('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 } },
+              R('div', { style: { width: 26, height: 26, borderRadius: 99, background: '#1C1A17', color: '#F4E9D8', fontSize: 12.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, i + 1),
+              R('div', { style: { width: 2, flex: 1, background: i < L.steps.length - 1 ? '#E2DBCD' : 'transparent', marginTop: 3, minHeight: 8 } })
+            ),
+            R('div', { style: { fontSize: 14, color: '#3A352C', lineHeight: 1.55, paddingTop: 3 } }, t)
+          ))
+        ),
+
+        // Thao tác
+        R('div', { style: { marginTop: 24 } },
+          R('div', { style: { fontSize: 11.5, fontWeight: 800, color: '#8A8478', letterSpacing: '.05em' } }, 'THAO TÁC NGAY'),
+          R('div', { style: { fontSize: 14.5, fontWeight: 700, margin: '5px 0 14px', lineHeight: 1.35 } }, L.prompt),
+          R('div', { style: { background: '#fff', border: '1px solid #EAE4D8', borderRadius: 18, padding: '18px 16px' } },
+            this.renderThaoTac(L.thao)
+          )
+        ),
+
+        // Teacher note
+        R('div', { style: { margin: '18px 0 26px', display: 'flex', alignItems: 'center', gap: 11, padding: '13px 15px', background: '#F1ECE2', borderRadius: 14 } },
+          R('div', { style: { width: 32, height: 32, flexShrink: 0, borderRadius: 99, background: 'linear-gradient(135deg,#2C2823,#5A5043)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F4E9D8', fontWeight: 700, fontSize: 11.5 } }, 'VA'),
+          R('div', { style: { fontSize: 12.5, color: '#5A5448', lineHeight: 1.45 } }, 'Thấy khó ở đâu? ', R('b', null, 'Nhắn thầy Văn Anh'), ' — vấp là chuyện bình thường.')
+        )
+      ),
+
+      // CTA sticky bottom
+      R('div', { style: { position: 'sticky', bottom: 0, padding: '14px 20px 30px', background: 'linear-gradient(0deg,#F6F2EA 72%,rgba(246,242,234,0))' } },
+        R('button', {
+          onClick: this.completeLesson,
+          style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, padding: 15, border: 'none', borderRadius: 15, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: `0 12px 26px -12px ${ACCENT.a}` }
+        },
+          ctaLabel,
+          R('svg', { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: '#fff', strokeWidth: 2.4 },
+            R('path', { d: 'M9 5l7 7-7 7', strokeLinecap: 'round', strokeLinejoin: 'round' })
+          )
+        )
+      )
+    );
+  }
+
+  // ── RENDER ───────────────────────────────────────────────────────────────────
+  render() {
+    const { screen } = this.state;
+    return R('div', {
+      style: { minHeight: '100dvh', background: '#F6F2EA', fontFamily: "'Be Vietnam Pro',sans-serif", color: '#1C1A17', overflowY: screen === 'home' ? 'auto' : undefined }
+    },
+      screen === 'home' && this.renderHome(),
+      screen === 'lesson' && this.renderLesson(),
+    );
+  }
+}
+
+// ── Mount ─────────────────────────────────────────────────────────────────────
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(R(KhoiDauDamMe, { accent: 'Rừng' }));
+</script>
+</body>
+</html>

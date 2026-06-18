@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from './supabase'
 import { QuizViewer } from './components/QuizViewer'
 import FlowPlayer from './FlowPlayer'
@@ -60,12 +60,62 @@ export default function LessonViewerPage() {
   const [loading, setLoading] = useState(true)
   const [toolMap, setToolMap] = useState<Record<string, { label: string; icon: string; route: string }>>(TOOL_LABELS)
   const [studentId, setStudentId] = useState('')
+  const [studentName, setStudentName] = useState('')
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  // PostMessage bridge: nhận sự kiện từ iframe elearn
+  const handleBridgeMessage = useCallback((e: MessageEvent) => {
+    if (!e.data || e.data.source !== 'TVA_LESSON') return
+    const { type } = e.data
+
+    if (type === 'LESSON_LOADED') {
+      // Gửi thông tin học viên vào iframe
+      iframeRef.current?.contentWindow?.postMessage({
+        source: 'TVA_APP', type: 'STUDENT_INFO',
+        name: studentName, studentId,
+      }, '*')
+    }
+
+    if (type === 'LESSON_COMPLETE') {
+      const { lessonNum, xp } = e.data
+      // Ghi tiến độ vào Supabase (không block UI)
+      if (studentId && active) {
+        supabase.from('edu_lesson_progress').upsert({
+          student_id: studentId, lesson_id: active.id,
+          completed: true, completed_at: new Date().toISOString(),
+        }, { onConflict: 'student_id,lesson_id' }).then(() => {})
+        if (xp) {
+          supabase.from('student_xp_log').insert({
+            student_id: studentId, xp, reason: `elearn:bai${lessonNum}`,
+          }).then(() => {})
+        }
+      }
+    }
+
+    if (type === 'OPEN_TOOL') {
+      const route = e.data.tool === 'tuner' ? '/tuner' : '/tempo'
+      window.open(route + '?embedded=1', '_blank')
+    }
+
+    if (type === 'GO_BACK') {
+      window.history.back()
+    }
+  }, [studentId, studentName, active])
+
+  useEffect(() => {
+    window.addEventListener('message', handleBridgeMessage)
+    return () => window.removeEventListener('message', handleBridgeMessage)
+  }, [handleBridgeMessage])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (data.user) {
-        const { data: st } = await supabase.from('edu_students').select('id').eq('user_id', data.user.id).single()
+        const [{ data: st }, { data: au }] = await Promise.all([
+          supabase.from('edu_students').select('id').eq('user_id', data.user.id).single(),
+          supabase.from('app_users').select('name').eq('id', data.user.id).single(),
+        ])
         if (st?.id) setStudentId(st.id)
+        if (au?.name) setStudentName(au.name)
       }
     })
   }, [])
@@ -170,6 +220,19 @@ export default function LessonViewerPage() {
           )}
         </div>
       </aside>
+
+      {/* ── ELEARN: fullscreen iframe overlay ────────────────────────── */}
+      {active?.lesson_type === 'elearn' && active.content_url && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#F6F2EA' }}>
+          <iframe
+            ref={iframeRef}
+            src={active.content_url}
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            allow="microphone; autoplay"
+            title={active.title}
+          />
+        </div>
+      )}
 
       {/* ── MAIN: lesson content ─────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
