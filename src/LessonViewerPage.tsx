@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import { QuizViewer } from './components/QuizViewer'
 import FlowPlayer from './FlowPlayer'
+import ElearnLessonView from './elearn/ElearnLessonView'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -61,51 +62,29 @@ export default function LessonViewerPage() {
   const [toolMap, setToolMap] = useState<Record<string, { label: string; icon: string; route: string }>>(TOOL_LABELS)
   const [studentId, setStudentId] = useState('')
   const [studentName, setStudentName] = useState('')
-  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
 
-  // PostMessage bridge: nhận sự kiện từ iframe elearn
-  const handleBridgeMessage = useCallback((e: MessageEvent) => {
-    if (!e.data || e.data.source !== 'TVA_LESSON') return
-    const { type } = e.data
+  // Bài elearn? → trả về số bài (1..11), ngược lại null
+  const elearnNumOf = (l: Lesson | null): number | null => {
+    if (!l || l.lesson_type !== 'link' || !l.content_url?.startsWith('/lessons/')) return null
+    try {
+      const c = typeof l.content === 'string' ? JSON.parse(l.content) : l.content
+      return c?.elearn && c?.num ? c.num : null
+    } catch { return null }
+  }
 
-    if (type === 'LESSON_LOADED') {
-      // Gửi thông tin học viên vào iframe
-      iframeRef.current?.contentWindow?.postMessage({
-        source: 'TVA_APP', type: 'STUDENT_INFO',
-        name: studentName, studentId,
-      }, '*')
-    }
-
-    if (type === 'LESSON_COMPLETE') {
-      const { lessonNum, xp } = e.data
-      // Ghi tiến độ vào Supabase (không block UI)
-      if (studentId && active) {
-        supabase.from('edu_lesson_progress').upsert({
-          student_id: studentId, lesson_id: active.id,
-          completed: true, completed_at: new Date().toISOString(),
-        }, { onConflict: 'student_id,lesson_id' }).then(() => {})
-        if (xp) {
-          supabase.from('student_xp_log').insert({
-            student_id: studentId, xp, reason: `elearn:bai${lessonNum}`,
-          }).then(() => {})
-        }
-      }
-    }
-
-    if (type === 'OPEN_TOOL') {
-      const route = e.data.tool === 'tuner' ? '/tuner' : '/tempo'
-      window.open(route + '?embedded=1', '_blank')
-    }
-
-    if (type === 'GO_BACK') {
-      window.history.back()
-    }
-  }, [studentId, studentName, active])
-
-  useEffect(() => {
-    window.addEventListener('message', handleBridgeMessage)
-    return () => window.removeEventListener('message', handleBridgeMessage)
-  }, [handleBridgeMessage])
+  // Hoàn thành bài elearn → ghi tiến độ + XP vào Supabase
+  const completeElearn = (lesson: Lesson, lessonNum: number) => {
+    setCompletedIds(prev => new Set(prev).add(lesson.id))
+    if (!studentId) return
+    supabase.from('edu_lesson_progress').upsert({
+      student_id: studentId, lesson_id: lesson.id,
+      completed: true, completed_at: new Date().toISOString(),
+    }, { onConflict: 'student_id,lesson_id' }).then(() => {})
+    supabase.from('student_xp_log').insert({
+      student_id: studentId, xp: 10, reason: `elearn:bai${lessonNum}`,
+    }).then(() => {})
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -114,7 +93,12 @@ export default function LessonViewerPage() {
           supabase.from('edu_students').select('id').eq('user_id', data.user.id).single(),
           supabase.from('app_users').select('name').eq('id', data.user.id).single(),
         ])
-        if (st?.id) setStudentId(st.id)
+        if (st?.id) {
+          setStudentId(st.id)
+          const { data: prog } = await supabase.from('edu_lesson_progress')
+            .select('lesson_id').eq('student_id', st.id).eq('completed', true)
+          if (prog) setCompletedIds(new Set(prog.map((r: { lesson_id: string }) => r.lesson_id)))
+        }
         if (au?.name) setStudentName(au.name)
       }
     })
@@ -221,34 +205,28 @@ export default function LessonViewerPage() {
         </div>
       </aside>
 
-      {/* ── ELEARN: fullscreen iframe overlay ────────────────────────── */}
-      {active?.lesson_type === 'link' && active.content_url?.startsWith('/lessons/') && (() => {
-        // Bài elearn (content {"elearn":true,"num":X}) → nhúng kèm ?num=X để vào thẳng đúng bài
-        let elearnNum: number | null = null
-        try {
-          const c = typeof active.content === 'string' ? JSON.parse(active.content) : active.content
-          if (c?.elearn && c?.num) elearnNum = c.num
-        } catch { /* không phải elearn */ }
-        const src = elearnNum != null
-          ? `${active.content_url}${active.content_url!.includes('?') ? '&' : '?'}num=${elearnNum}`
-          : active.content_url!
+      {/* ── ELEARN: trình chiếu bài native (fullscreen overlay) ──────── */}
+      {active && elearnNumOf(active) != null && (() => {
+        const lesson = active
+        const n = elearnNumOf(active)!
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#F6F2EA' }}>
-            <iframe
-              key={src}
-              ref={iframeRef}
-              src={src}
-              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-              allow="microphone; autoplay"
-              title={active.title}
+            <ElearnLessonView
+              key={lesson.id}
+              num={n}
+              studentName={studentName}
+              isDone={completedIds.has(lesson.id)}
+              onBack={() => setActive(null)}
+              onComplete={() => { completeElearn(lesson, n); setActive(null) }}
+              onOpenTool={(tool) => window.open((tool === 'tuner' ? '/tuner' : '/tempo') + '?embedded=1', '_blank')}
             />
           </div>
         )
       })()}
 
-      {/* ── MAIN: lesson content ─────────────────────────────────────── */}
+      {/* ── MAIN: lesson content (ẩn khi bài elearn — overlay đã phủ kín) ─ */}
       <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
-        {!active ? (
+        {active && elearnNumOf(active) != null ? null : !active ? (
           <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: D.text3, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 40 }}>👈</span>
             <div>Chọn bài học từ danh sách</div>

@@ -4,6 +4,7 @@ import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import { QuizViewer } from './components/QuizViewer'
+import ElearnLessonView from './elearn/ElearnLessonView'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -162,7 +163,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const avatarFileRef = useRef<HTMLInputElement>(null)
-  const iframeElearnRef = useRef<HTMLIFrameElement | null>(null)
   const [screen, setScreen]       = useState<Screen>('home')
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [modules, setModules]     = useState<Module[]>([])
@@ -724,37 +724,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   const goBack = () => screen === 'lesson' ? setScreen('courses') : (setScreen('home'), setActiveCourseId(null))
-
-  // PostMessage bridge: nhận sự kiện từ elearn iframe
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (!e.data || e.data.source !== 'TVA_LESSON') return
-      if (e.data.type === 'LESSON_COMPLETE' && activeLesson) markComplete(activeLesson.id)
-      if (e.data.type === 'GO_BACK') goBack()
-      if (e.data.type === 'OPEN_TOOL') {
-        const route = e.data.tool === 'tuner' ? '/tuner' : '/tempo'
-        const name  = e.data.tool === 'tuner' ? 'Tuner — Lên dây' : 'Metronome'
-        openTool(route, name)
-      }
-      // Elearn iframe báo đã load → gửi dữ liệu bài học
-      if (e.data.type === 'LESSON_LOADED' && activeLesson) {
-        try {
-          const c = typeof activeLesson.content === 'string'
-            ? JSON.parse(activeLesson.content)
-            : activeLesson.content
-          if (c?.elearn) {
-            iframeElearnRef.current?.contentWindow?.postMessage({
-              source: 'TVA_APP', type: 'LESSON_DATA',
-              num: c.num, name: me.display_name ?? me.full_name, studentId: student.id,
-            }, '*')
-          }
-        } catch { /* ignore */ }
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLesson, me.display_name, me.full_name])
 
   // % hoàn thành của 1 khoá
   const courseProgress = (courseId: string) => {
@@ -1327,31 +1296,39 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               </div>
             )}
 
-            {/* Link embed */}
+            {/* Link / Elearn */}
             {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (() => {
-              // Bài elearn (content {"elearn":true,"num":X}) → nhúng kèm ?num=X để vào thẳng đúng bài
+              // Bài elearn (content {"elearn":true,"num":X}) → render component native
               let elearnNum: number | null = null
               try {
                 const c = typeof activeLesson.content === 'string' ? JSON.parse(activeLesson.content) : activeLesson.content
                 if (c?.elearn && c?.num) elearnNum = c.num
               } catch { /* không phải elearn */ }
-              const isElearn = elearnNum != null
-              const src = isElearn
-                ? `${activeLesson.content_url}${activeLesson.content_url!.includes('?') ? '&' : '?'}num=${elearnNum}`
-                : activeLesson.content_url!
+
+              if (elearnNum != null) {
+                return (
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#F6F2EA' }}>
+                    <ElearnLessonView
+                      key={activeLesson.id}
+                      num={elearnNum}
+                      studentName={me.display_name ?? me.full_name}
+                      isDone={completedIds.has(activeLesson.id)}
+                      onBack={goBack}
+                      onComplete={() => { markComplete(activeLesson.id); goBack() }}
+                      onOpenTool={(tool) => openTool(tool === 'tuner' ? '/tuner' : '/tempo', tool === 'tuner' ? 'Tuner — Lên dây' : 'Metronome')}
+                    />
+                  </div>
+                )
+              }
+              // Link thường → iframe
               return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#F6F2EA' }}>
                   <iframe
-                    key={src}
-                    ref={isElearn ? iframeElearnRef : undefined}
-                    src={src}
+                    src={activeLesson.content_url!}
                     style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
                     allow="microphone; camera" title={activeLesson.title}
                   />
-                  {/* Nút quay lại chỉ cho link thường — elearn tự có nút trong iframe */}
-                  {!isElearn && (
-                    <button onClick={goBack} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 12px)', left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
-                  )}
+                  <button onClick={goBack} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 12px)', left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
                 </div>
               )
             })()}
