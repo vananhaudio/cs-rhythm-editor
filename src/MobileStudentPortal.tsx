@@ -745,7 +745,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
           if (c?.elearn) {
             iframeElearnRef.current?.contentWindow?.postMessage({
               source: 'TVA_APP', type: 'LESSON_DATA',
-              num: c.num, name: me.name, studentId: student.id,
+              num: c.num, name: me.display_name ?? me.full_name, studentId: student.id,
             }, '*')
           }
         } catch { /* ignore */ }
@@ -754,7 +754,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeLesson, me.name])
+  }, [activeLesson, me.display_name, me.full_name])
 
   // % hoàn thành của 1 khoá
   const courseProgress = (courseId: string) => {
