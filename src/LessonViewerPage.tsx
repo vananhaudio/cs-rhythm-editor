@@ -222,17 +222,29 @@ export default function LessonViewerPage() {
       </aside>
 
       {/* ── ELEARN: fullscreen iframe overlay ────────────────────────── */}
-      {active?.lesson_type === 'link' && active.content_url?.startsWith('/lessons/') && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#F6F2EA' }}>
-          <iframe
-            ref={iframeRef}
-            src={active.content_url}
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-            allow="microphone; autoplay"
-            title={active.title}
-          />
-        </div>
-      )}
+      {active?.lesson_type === 'link' && active.content_url?.startsWith('/lessons/') && (() => {
+        // Bài elearn (content {"elearn":true,"num":X}) → nhúng kèm ?num=X để vào thẳng đúng bài
+        let elearnNum: number | null = null
+        try {
+          const c = typeof active.content === 'string' ? JSON.parse(active.content) : active.content
+          if (c?.elearn && c?.num) elearnNum = c.num
+        } catch { /* không phải elearn */ }
+        const src = elearnNum != null
+          ? `${active.content_url}${active.content_url!.includes('?') ? '&' : '?'}num=${elearnNum}`
+          : active.content_url!
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#F6F2EA' }}>
+            <iframe
+              key={src}
+              ref={iframeRef}
+              src={src}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              allow="microphone; autoplay"
+              title={active.title}
+            />
+          </div>
+        )
+      })()}
 
       {/* ── MAIN: lesson content ─────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>

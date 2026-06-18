@@ -212,9 +212,12 @@ class KhoiDauDamMe extends React.Component {
     const done = loadDone();
     // activeId = bài đang học (bài chưa done đầu tiên)
     const activeId = [1,2,3,4,5,6,7,8,9,10,11].find(i => !done[i]) || 11;
+    // Single-lesson mode: app nhúng với ?num=X → vào thẳng bài đó (không cần chờ PostMessage)
+    let urlNum = null;
+    try { const n = parseInt(new URLSearchParams(location.search).get('num'), 10); if (n >= 1 && n <= 11) urlNum = n; } catch {}
     this.state = {
-      screen: 'home',
-      lid: activeId,
+      screen: urlNum ? 'lesson' : 'home',
+      lid: urlNum || activeId,
       done,
       playStyle: 'fingers',
       checks: {},
@@ -235,8 +238,8 @@ class KhoiDauDamMe extends React.Component {
       studentName: null,
       // Media từ Supabase
       mediaMap: {},
-      // Chế độ single-lesson: app gửi LESSON_DATA → hiện thẳng bài đó, không qua home
-      singleMode: false,
+      // Chế độ single-lesson: app gửi LESSON_DATA (hoặc ?num= trên URL) → hiện thẳng bài đó, không qua home
+      singleMode: !!urlNum,
     };
     this._tt = null;
   }

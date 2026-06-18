@@ -1328,20 +1328,33 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             )}
 
             {/* Link embed */}
-            {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (
-              <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#F6F2EA' }}>
-                <iframe
-                  ref={(() => { try { const c = typeof activeLesson.content === 'string' ? JSON.parse(activeLesson.content) : activeLesson.content; return c?.elearn ? iframeElearnRef : undefined } catch { return undefined } })()}
-                  src={activeLesson.content_url}
-                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                  allow="microphone; camera" title={activeLesson.title}
-                />
-                {/* Nút quay lại chỉ cho link thường — elearn tự có nút trong iframe */}
-                {!activeLesson.content_url.startsWith('/lessons/') && (
-                  <button onClick={goBack} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 12px)', left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
-                )}
-              </div>
-            )}
+            {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (() => {
+              // Bài elearn (content {"elearn":true,"num":X}) → nhúng kèm ?num=X để vào thẳng đúng bài
+              let elearnNum: number | null = null
+              try {
+                const c = typeof activeLesson.content === 'string' ? JSON.parse(activeLesson.content) : activeLesson.content
+                if (c?.elearn && c?.num) elearnNum = c.num
+              } catch { /* không phải elearn */ }
+              const isElearn = elearnNum != null
+              const src = isElearn
+                ? `${activeLesson.content_url}${activeLesson.content_url!.includes('?') ? '&' : '?'}num=${elearnNum}`
+                : activeLesson.content_url!
+              return (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#F6F2EA' }}>
+                  <iframe
+                    key={src}
+                    ref={isElearn ? iframeElearnRef : undefined}
+                    src={src}
+                    style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                    allow="microphone; camera" title={activeLesson.title}
+                  />
+                  {/* Nút quay lại chỉ cho link thường — elearn tự có nút trong iframe */}
+                  {!isElearn && (
+                    <button onClick={goBack} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 12px)', left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
+                  )}
+                </div>
+              )
+            })()}
 
             {activeLesson.lesson_type !== 'flow' && <div style={{ padding: '16px' }}>
               {lessonTab === 'content' ? (
