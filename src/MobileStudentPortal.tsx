@@ -1314,9 +1314,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* Link embed */}
             {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'link' && activeLesson.content_url && (
-              <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#000' }}>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#F6F2EA' }}>
                 <iframe src={activeLesson.content_url} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} allow="microphone; camera" title={activeLesson.title} />
-                <button onClick={goBack} style={{ position: 'absolute', top: 16, left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
+                {/* Nút quay lại chỉ cho link thường — elearn tự có nút trong iframe */}
+                {!activeLesson.content_url.startsWith('/lessons/') && (
+                  <button onClick={goBack} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top,0px) + 12px)', left: 16, zIndex: 51, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(8px)' }}>← Quay lại</button>
+                )}
               </div>
             )}
 
