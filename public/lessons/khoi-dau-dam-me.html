@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Khởi Đầu Đam Mê — Nhập Môn</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +12,8 @@
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:#F6F2EA;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#1C1A17;-webkit-font-smoothing:antialiased;height:100%}
+  .safe-top{padding-top:env(safe-area-inset-top,0px)}
+  .safe-bottom{padding-bottom:env(safe-area-inset-bottom,0px)}
   #root{height:100%}
   @keyframes vib{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px)}60%{transform:translateX(2px)}}
   ::-webkit-scrollbar{width:0}
@@ -594,7 +596,7 @@ class KhoiDauDamMe extends React.Component {
 
     return R('div', { style: { paddingBottom: 44 } },
       // Header
-      R('div', { style: { padding: '24px 22px 0' } },
+      R('div', { style: { padding: 'calc(env(safe-area-inset-top,0px) + 20px) 22px 0' } },
         // Nút back về TVA app
         R('button', {
           onClick: () => Bridge.goBack(),
@@ -706,7 +708,7 @@ class KhoiDauDamMe extends React.Component {
 
     return R('div', { style: { minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: '#F6F2EA' } },
       // Header sticky
-      R('div', { style: { position: 'sticky', top: 0, zIndex: 10, background: 'rgba(246,242,234,.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: '16px 16px 12px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #E8E2D6' } },
+      R('div', { style: { position: 'sticky', top: 0, zIndex: 10, background: 'rgba(246,242,234,.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: 'calc(env(safe-area-inset-top,0px) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid #E8E2D6' } },
         R('button', {
           onClick: this.goHome,
           style: { width: 38, height: 38, flexShrink: 0, border: '1px solid #E2DBCD', background: '#fff', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
@@ -760,7 +762,7 @@ class KhoiDauDamMe extends React.Component {
       ),
 
       // CTA sticky bottom
-      R('div', { style: { position: 'sticky', bottom: 0, padding: '14px 20px 30px', background: 'linear-gradient(0deg,#F6F2EA 72%,rgba(246,242,234,0))' } },
+      R('div', { style: { position: 'sticky', bottom: 0, padding: 'calc(env(safe-area-inset-bottom,0px) + 14px) 20px calc(env(safe-area-inset-bottom,0px) + 14px)', background: 'linear-gradient(0deg,#F6F2EA 72%,rgba(246,242,234,0))' } },
         R('button', {
           onClick: this.completeLesson,
           style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, padding: 15, border: 'none', borderRadius: 15, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: `0 12px 26px -12px ${ACCENT.a}` }

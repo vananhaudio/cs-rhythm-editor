@@ -723,7 +723,11 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
       if (!e.data || e.data.source !== 'TVA_LESSON') return
       if (e.data.type === 'LESSON_COMPLETE' && activeLesson) markComplete(activeLesson.id)
       if (e.data.type === 'GO_BACK') goBack()
-      if (e.data.type === 'OPEN_TOOL') window.open((e.data.tool === 'tuner' ? '/tuner' : '/tempo') + '?embedded=1', '_blank')
+      if (e.data.type === 'OPEN_TOOL') {
+        const route = e.data.tool === 'tuner' ? '/tuner' : '/tempo'
+        const name  = e.data.tool === 'tuner' ? 'Tuner — Lên dây' : 'Metronome'
+        openTool(route, name)
+      }
     }
     window.addEventListener('message', handler)
     return () => window.removeEventListener('message', handler)
