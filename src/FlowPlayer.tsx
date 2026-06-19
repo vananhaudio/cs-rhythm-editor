@@ -616,6 +616,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           lessonTitle={flow.title}
           studentId={previewFlow ? undefined : studentId}
           teacherUrl={slide.interactive?.teacherUrl as string | undefined}
+          oaUrl={slide.interactive?.oaUrl as string | undefined}
           onClose={() => setSupportOpen(false)}
         />
       )}

@@ -510,11 +510,15 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     {/* SUPPORT — Gỡ rối & Đào sâu */}
                     {editSlide.type === 'support' && (
                       <div>
-                        <Label>Link "Nhắn thầy" (Zalo / Messenger — tuỳ chọn)</Label>
+                        <Label>Link "Trợ lý thầy" — Zalo OA (hỏi nhanh, tuỳ chọn)</Label>
+                        <Inp value={(itv.oaUrl as string) ?? ''} onChange={v => patchItv('oaUrl', v)}
+                          placeholder="https://zalo.me/oa/... (Official Account)" />
+                        <div style={{ height: 10 }} />
+                        <Label>Link "Nhắn thầy" — Zalo cá nhân / Messenger (tuỳ chọn)</Label>
                         <Inp value={(itv.teacherUrl as string) ?? ''} onChange={v => patchItv('teacherUrl', v)}
                           placeholder="https://zalo.me/... hoặc https://m.me/..." />
                         <div style={{ fontSize: 11.5, color: C.text3, marginTop: 6, lineHeight: 1.5 }}>
-                          Học viên bấm "Gỡ rối & Đào sâu" → tự chọn nhu cầu → coaching → ghi câu hỏi (lưu kèm tên bài). Coaching dùng bộ mẫu chung. Ô "Nội dung" ở trên là lời mời mở đầu (để trống sẽ dùng mặc định).
+                          Học viên bấm "Gỡ rối & Đào sâu" → chọn nhu cầu → coaching → có thể <b>hỏi nhanh Trợ lý (OA)</b>, hoặc ghi câu hỏi cho thầy (lưu kèm tên bài) / nhắn thầy trực tiếp. Coaching dùng bộ mẫu chung. Ô "Nội dung" ở trên là lời mời mở đầu.
                         </div>
                       </div>
                     )}

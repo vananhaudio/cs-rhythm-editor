@@ -16,13 +16,14 @@ interface Props {
   lessonId: string
   lessonTitle: string
   studentId?: string
-  teacherUrl?: string        // link Nhắn thầy (Zalo/Messenger)
+  teacherUrl?: string        // link Nhắn thầy (Zalo cá nhân / Messenger)
+  oaUrl?: string             // link Trợ lý thầy (Zalo OA — hỏi nhanh, có thể tự động trả lời)
   onClose: () => void
 }
 
 type Step = 'need' | 'pick' | 'coach' | 'form' | 'sent' | 'resolved'
 
-export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherUrl, onClose }: Props) {
+export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherUrl, oaUrl, onClose }: Props) {
   const [step, setStep] = useState<Step>('need')
   const [need, setNeed] = useState<'stuck' | 'deepen'>('stuck')
   const [choiceId, setChoiceId] = useState<string>('')
@@ -121,6 +122,7 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
       </div>
       {need === 'stuck' && bigBtn('✅  Tôi đã gỡ được rồi', markResolved, { soft: true, sub: 'Quay lại học tiếp' })}
       {bigBtn('🔎  Tìm bài thầy đã giảng về điều này', () => {}, { disabled: true, sub: 'Kho Tri Thức — sắp có' })}
+      {oaUrl && bigBtn('🤖  Hỏi nhanh Trợ lý thầy', () => { logSupport({ coaching_shown: stuck?.id ?? null, resolved: false, question_for_teacher: '[mở Trợ lý OA]' }); window.open(oaUrl, '_blank') }, { sub: 'Trả lời ngay — Zalo OA' })}
       {bigBtn('✍️  Ghi câu hỏi để hỏi thầy', () => setStep('form'), { dark: true, sub: 'Lưu lại cho buổi Zoom hoặc nhắn riêng' })}
     </>,
     need === 'stuck' ? (stuck?.label ?? '') : (deepen?.label ?? '')
@@ -162,10 +164,16 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
       <div style={{ fontSize: 14.5, color: P.sub, lineHeight: 1.6, margin: '8px 0 22px' }}>
         Thầy sẽ xem và trả lời trong buổi Zoom tới. Bạn cũng có thể nhắn thẳng cho thầy nếu cần gấp.
       </div>
+      {oaUrl && (
+        <a href={oaUrl} target="_blank" rel="noreferrer"
+          style={{ display: 'block', textDecoration: 'none', width: '100%', boxSizing: 'border-box', padding: 15, borderRadius: 14, background: P.accent, color: '#fff', fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
+          🤖 Hỏi nhanh Trợ lý thầy (trả lời ngay)
+        </a>
+      )}
       {teacherUrl && (
         <a href={teacherUrl} target="_blank" rel="noreferrer"
-          style={{ display: 'block', textDecoration: 'none', width: '100%', boxSizing: 'border-box', padding: 15, borderRadius: 14, background: P.accent, color: '#fff', fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
-          💬 Nhắn thầy Văn Anh ngay
+          style={{ display: 'block', textDecoration: 'none', width: '100%', boxSizing: 'border-box', padding: 15, borderRadius: 14, background: oaUrl ? '#fff' : P.accent, color: oaUrl ? P.accentDeep : '#fff', border: oaUrl ? `1.5px solid ${P.accent}` : 'none', fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
+          💬 Nhắn thầy Văn Anh
         </a>
       )}
       <button onClick={onClose} style={{ width: '100%', padding: 14, border: `1px solid ${P.line}`, borderRadius: 14, background: '#fff', color: P.sub, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Quay lại bài học</button>

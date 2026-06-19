@@ -23,7 +23,7 @@ const SAMPLE_FLOW = {
     { id: 's6', order: 6, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra nhanh',
       interactive: { items: ['Mình nhớ dây 6 trầm nhất, dây 1 cao nhất', 'Mình chỉ đúng dây số 1 trên cần đàn'] } },
     { id: 's7', order: 7, logic: 'DAN', type: 'support', title: 'Cần hỗ trợ?',
-      interactive: { teacherUrl: 'https://zalo.me/' },
+      interactive: { oaUrl: 'https://zalo.me/', teacherUrl: 'https://zalo.me/' },
       content: 'Chưa hiểu, làm chưa được, hay muốn hiểu sâu hơn về tên dây? Bấm vào đây để cùng gỡ.' },
     { id: 's8', order: 8, logic: 'DAN', type: 'callout', title: 'Lời thầy',
       interactive: { variant: 'teacher' },
