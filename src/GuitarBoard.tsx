@@ -120,12 +120,12 @@ function App() {
             <path fill="rgba(255,255,255,0.9)" d="M871.98,503h-284.98s-.01-62.01-.01-62.01h234.96s.05-26.12.05-26.12l.94-6.87h-235.94s0-126.99,0-126.99h-31.01l.02,127h-70.02l.02-159h-32.02l.02,159-158-.02v33.02l158-.02v62.02l-158-.02v33.02l158-.02-.02,164h32.02l-.02-164h70.02v194.99s30.98,0,30.98,0l.04-194.98h284.96v-33ZM556,503h-70v-62h70v62Z"/>
             <path fill="rgba(255,255,255,0.9)" d="M437.1,352.53c-32.96-49.63-86.33-79.48-145.64-75.14-45,3.29-85.41,26.85-113.24,61.9-22.85,28.79-36.56,63.15-40.93,99.78l-1.09,13.87c-2.13,26.81,2.05,52.76,10.82,78.07,25.52,73.59,90.73,125.65,170.74,118.53,33.32-2.96,63.64-17.38,88.57-39.1l15.13-14.97,16.56-21.02v81.88c-32.45,23.82-70.48,39.73-110.86,43.64l-8.18.79-32.78-.18c-49.9-3.88-96.27-23.99-133.71-57.03l-19.99-20.07c-94.04-106-76.94-272.39,38.35-355.71,80.22-57.97,186.6-57.06,267.12,1.73l.06,81.08c1.61,1.44.72,3.12-.93,1.95Z"/>
           </svg>
-          <span style={{ fontSize: isMobile ? 13 : 14, fontWeight:700, color:'#F4F1E8' }}>Thầy Văn Anh Guitar</span>
+          <span style={{ fontSize: isMobile ? 14 : 15, fontWeight:700, color:'#F4F1E8' }}>Thầy Văn Anh Guitar</span>
           {!isMobile && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginLeft:8, letterSpacing:'0.05em' }}>Standard Tuning E A D G B E</span>}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            style={{ display:'flex', alignItems:'center', gap:4, padding: isMobile ? '4px 10px' : '5px 12px', borderRadius:16, border:'1px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.1)', cursor:'pointer', outline:'none', color:'rgba(255,255,255,0.8)', fontSize: isMobile ? 12 : 11, fontWeight:500 }}>
+            style={{ display:'flex', alignItems:'center', gap:4, padding: isMobile ? '4px 10px' : '5px 12px', borderRadius:16, border:'1px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.1)', cursor:'pointer', outline:'none', color:'rgba(255,255,255,0.8)', fontSize: isMobile ? 13 : 12, fontWeight:500 }}>
             {isDark ? '☀️' : '🌙'}
           </button>
         </div>

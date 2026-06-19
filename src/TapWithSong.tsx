@@ -776,7 +776,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
                   <div style={{ position:'absolute', top:44, left:0, right:0, height:1, background:C.border }} />
                   {prepBeat >= 0 && (
                     <div style={{ position:'absolute', left: nowX_track + (beatsPerTrack / 2) * beatDur * PPS_track, top: 44 + (TRACK_H - 44) / 2, transform:'translate(-50%,-50%)', whiteSpace:'nowrap', pointerEvents:'none' }}>
-                      <span style={{ fontSize: isMobile ? 14 : 16, color:'rgba(45,212,191,0.9)', fontFamily:'"Helvetica Neue",Arial,sans-serif', letterSpacing:'0.05em' }}>Chuẩn bị…</span>
+                      <span style={{ fontSize: isMobile ? 15 : 17, color:'rgba(45,212,191,0.9)', fontFamily:'"Helvetica Neue",Arial,sans-serif', letterSpacing:'0.05em' }}>Chuẩn bị…</span>
                     </div>
                   )}
                 </div>

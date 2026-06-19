@@ -1930,7 +1930,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   const isMe = r.id === student.id
                   return (
                     <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 12, background: isMe ? L.p2 : 'transparent' }}>
-                      <div style={{ width: 30, textAlign: 'center', fontSize: r.rank <= 3 ? 18 : 13, fontWeight: 700, color: isMe ? L.p1 : L.t2, flexShrink: 0 }}>{medal(r.rank)}</div>
+                      <div style={{ width: 30, textAlign: 'center', fontSize: r.rank <= 3 ? 18 : 14, fontWeight: 700, color: isMe ? L.p1 : L.t2, flexShrink: 0 }}>{medal(r.rank)}</div>
                       <div style={{ width: 34, height: 34, borderRadius: '50%', background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
                         {r.avatar ? <img src={r.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : r.name.charAt(0).toUpperCase()}
                       </div>

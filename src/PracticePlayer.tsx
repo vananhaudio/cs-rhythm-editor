@@ -227,7 +227,7 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
                         const size = isActive ? 27 : isActiveLine ? 23 : 19
                         return (
                           <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                            {chord && <span style={{ fontSize: isActiveLine ? 15 : 13, fontWeight: 800, color: C.accent }}>{chord}</span>}
+                            {chord && <span style={{ fontSize: isActiveLine ? 16 : 14, fontWeight: 800, color: C.accent }}>{chord}</span>}
                             <span style={{
                               fontSize: size, fontWeight: isActive ? 800 : isActiveLine ? 700 : 600,
                               color: isActive ? '#1A1200' : C.text,

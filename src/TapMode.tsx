@@ -163,7 +163,7 @@ function TapArea({ phase, tapMode, isTeacher, teacherDots, studentDots, scoredSt
             width:140, height:140, borderRadius:'50%',
             background: phase==='playing' ? (tapMode==='teacher' ? '#F59E0B' : '#10B981') : '#1F2937',
             border: phase==='countdown' ? '3px solid #374151' : 'none',
-            color:'#fff', fontSize: phase==='playing' ? 26 : 16,
+            color:'#fff', fontSize: phase==='playing' ? 26 : 17,
             fontWeight:900, cursor:'pointer', transition:'transform 0.08s',
             opacity: phase==='countdown' ? 0.4 : 1,
             userSelect:'none'
@@ -489,7 +489,7 @@ function TapWithSong({ initialSong, isTeacher, onPickSong }: {
               const beatDurBase = 60 / activeSong.tempo
               const isActive = songTime >= l.time && songTime < (activeSong.lyrics[i+1]?.time ?? l.time + beatDurBase*2)
               return (
-                <span key={l.id} style={{ fontSize: isActive ? 22 : 16, fontWeight: isActive ? 800 : 500,
+                <span key={l.id} style={{ fontSize: isActive ? 22 : 17, fontWeight: isActive ? 800 : 500,
                   color: isActive ? '#10B981' : '#4B5563', transition:'all 0.1s' }}>
                   {l.text}
                 </span>
