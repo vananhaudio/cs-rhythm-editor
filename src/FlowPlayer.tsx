@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
+import { NeckPick, NoteChart, Checklist } from './elearn/guitarRenderers'
+import type { NeckCfg, ChecklistCfg, NoteChartCfg } from './elearn/guitarRenderers'
+
+// Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
+const INTERACTIVE_TYPES = ['guitar_neck', 'checklist']
 
 // ── Logic labels & colors ──────────────────────────────────────────────────
 const LOGIC_META: Record<string, { label: string; bg: string; color: string }> = {
@@ -23,6 +28,9 @@ interface Slide {
   options?: string[]
   correctAnswer?: string
   buttonText?: string
+  // GĐ1 — engine gộp elearn
+  interactive?: Record<string, unknown>   // config riêng cho slide tương tác (guitar_*, checklist, callout…)
+  hintText?: string
 }
 
 interface Flow {
@@ -43,9 +51,10 @@ interface Props {
   onLogAction?: (type: string) => void   // ghi nhận "đã thực hành / gửi bài" ở màn hoàn thành
   doneActions?: Set<string>              // action_type đã ghi nhận của bài này
   actionBusy?: string | null
+  onOpenTool?: (tool: string) => void    // mở công cụ (tuner/tempo/board) overlay
 }
 
-export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fullScreen, previewFlow, onLogAction, doneActions, actionBusy }: Props) {
+export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fullScreen, previewFlow, onLogAction, doneActions, actionBusy, onOpenTool }: Props) {
   const [flow,     setFlow]     = useState<Flow | null>(previewFlow ?? null)
   const [loading,  setLoading]  = useState(!previewFlow)
   const [current,  setCurrent]  = useState(0)
@@ -60,6 +69,20 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   const touchStartX = useRef<number | null>(null)
   // Đã hoàn thành flow trước đó chưa (để KHÔNG thưởng XP lại khi xem lại)
   const wasFinishedRef = useRef(false)
+  // Cổng slide tương tác: slide đã "vượt" + số lần thử (cho lối thoát danh dự)
+  const [passed,   setPassed]   = useState<Set<string>>(new Set())
+  const [attempts, setAttempts] = useState<Record<string, number>>({})
+  // Có slide LÀM nào được vượt THẬT không → để tự ghi "đã thực hành" cuối bài
+  const practicedRef = useRef(false)
+
+  const buzz = (ok: boolean) => { try { navigator.vibrate?.(ok ? 26 : [0, 14, 40, 14]) } catch { /* */ } }
+  const markPassed = (id: string, isLam: boolean) => {
+    setPassed(p => p.has(id) ? p : new Set(p).add(id))
+    if (isLam) practicedRef.current = true
+    buzz(true)
+  }
+  const bumpAttempt = (id: string) => { setAttempts(a => ({ ...a, [id]: (a[id] ?? 0) + 1 })); buzz(false) }
+  const softPass = (id: string) => setPassed(p => new Set(p).add(id))
 
   // Load flow by lessonId — bỏ qua nếu đang ở preview mode
   useEffect(() => {
@@ -145,6 +168,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         })
         if (xpErr) console.error('Ghi XP flow lỗi:', xpErr)
       }
+      // Tự ghi "đã thực hành" (70đ/cam) khi bài có slide LÀM được vượt THẬT
+      // → đường ghi practiced_lesson DUY NHẤT ở FlowPlayer (tránh cộng đôi với portal)
+      if (practicedRef.current && !previewFlow && onLogAction && !doneActions?.has('practiced_lesson')) {
+        onLogAction('practiced_lesson')
+      }
       setDone(true)
       onComplete()
     } else {
@@ -176,6 +204,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   const canProceed = (slide: Slide) => {
     if (slide.type === 'quiz' || slide.type === 'true_false') return checked === 'correct'
     if (slide.type === 'input') return inputVal.trim().length > 0
+    if (INTERACTIVE_TYPES.includes(slide.type)) return passed.has(slide.id)
     return true
   }
 
@@ -466,6 +495,68 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
             )}
           </div>
         )}
+
+        {/* CALLOUT — lời thầy / mẹo (giữ "người thầy hiện diện") */}
+        {slide.type === 'callout' && (() => {
+          const v = (slide.interactive?.variant as string) ?? 'tip'
+          const teacher = v === 'teacher'
+          return (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '15px 16px', borderRadius: 16, background: teacher ? '#F1ECE2' : v === 'warn' ? '#FEF3C7' : '#EEF2FF', border: `1px solid ${teacher ? '#E2DBCD' : v === 'warn' ? '#FDE68A' : '#E0E7FF'}` }}>
+              <div style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 99, background: teacher ? 'linear-gradient(135deg,#2C2823,#5A5043)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F4E9D8', fontWeight: 700, fontSize: 13 }}>
+                {teacher ? 'VA' : v === 'warn' ? '⚠️' : '💡'}
+              </div>
+              <div style={{ flex: 1 }}>
+                {teacher && <div style={{ fontSize: 12.5, fontWeight: 700, color: '#5A5448', marginBottom: 3 }}>Thầy Văn Anh</div>}
+                <div style={{ fontSize: 14.5, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: slide.content ?? '' }} />
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* NOTE CHART — bảng nốt */}
+        {slide.type === 'note_chart' && (
+          <NoteChart cfg={(slide.interactive ?? {}) as NoteChartCfg} />
+        )}
+
+        {/* GUITAR_NECK — chạm đúng dây (LÀM) */}
+        {slide.type === 'guitar_neck' && (
+          <div>
+            <NeckPick
+              cfg={(slide.interactive ?? {}) as NeckCfg}
+              onPass={() => markPassed(slide.id, true)}
+              onWrong={() => bumpAttempt(slide.id)}
+            />
+            {!passed.has(slide.id) && (attempts[slide.id] ?? 0) >= 2 && (
+              <button onClick={() => softPass(slide.id)}
+                style={{ marginTop: 14, width: '100%', padding: '12px', border: '1.5px dashed #C9C0AF', borderRadius: 12, background: '#fff', color: '#8A8478', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+                Mình đã thử trên đàn rồi → tiếp tục
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* CHECKLIST — tự đánh giá (NGẪM) */}
+        {slide.type === 'checklist' && (
+          <Checklist cfg={(slide.interactive ?? {}) as ChecklistCfg} onPass={() => markPassed(slide.id, false)} />
+        )}
+
+        {/* GUITAR_TOOL — mở công cụ ngay trong bài (LÀM/DẪN) */}
+        {slide.type === 'guitar_tool' && (() => {
+          const tool = (slide.interactive?.tool as string) ?? 'tuner'
+          const label = (slide.interactive?.label as string) ?? 'Mở công cụ'
+          const sub = (slide.interactive?.sub as string) ?? ''
+          return (
+            <button onClick={() => { onOpenTool?.(tool); markPassed(slide.id, true) }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: 'none', borderRadius: 15, background: '#1C1A17', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+              <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: '#3F6B4E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎚️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#F4E9D8' }}>{label}</div>
+                {sub && <div style={{ fontSize: 12, color: '#9A9082', marginTop: 2 }}>{sub}</div>}
+              </div>
+              <span style={{ color: '#F4E9D8', fontSize: 18 }}>›</span>
+            </button>
+          )
+        })()}
       </div>
 
       {/* Bottom actions — flexShrink:0 đảm bảo nút LUÔN hiển thị dù nội dung dài */}

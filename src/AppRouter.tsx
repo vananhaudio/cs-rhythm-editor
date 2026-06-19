@@ -19,6 +19,7 @@ import SongBuilderPage from './SongBuilderPage'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
+import FlowLabPage from './FlowLabPage'
 import JoinGroupPage from './JoinGroupPage'
 import DeleteAccountPage from './DeleteAccountPage'
 type AppUser = {
@@ -181,6 +182,13 @@ if (path === '/admin' || path.startsWith('/admin')) {
   if (loading) return null
   if (!user || !isTeacher) { window.location.href = '/start'; return null }
   return <TeacherAdminPage />
+}
+
+// ── Route /flow-lab — Xem thử engine Flow mới (mọi người đã đăng nhập; chỉ dữ liệu mẫu) ──
+if (path === '/flow-lab' || path.startsWith('/flow-lab')) {
+  if (loading) return null
+  if (!user) { window.location.href = '/start'; return null }
+  return <FlowLabPage />
 }
 
 // ── Route /start — Student onboarding ──
