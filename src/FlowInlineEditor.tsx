@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
+import { STRINGS, colorOfNum } from './elearn/guitarConst'
 
 // ── Tokens (khớp CourseEditorContent) ─────────────────────────────────────────
 const C = {
@@ -20,15 +21,26 @@ const LOGIC_META: Record<string, { label: string; bg: string; color: string }> =
 }
 
 const SLIDE_TYPES = [
-  { id: 'text',       icon: '📝', label: 'Văn bản'     },
-  { id: 'video',      icon: '▶',  label: 'Video'        },
-  { id: 'image',      icon: '🖼', label: 'Ảnh'          },
-  { id: 'quiz',       icon: '❓', label: 'Trắc nghiệm' },
-  { id: 'true_false', icon: '✓✗', label: 'Đúng / Sai'  },
-  { id: 'input',      icon: '✏', label: 'Nhập câu'     },
-  { id: 'action',     icon: '⚡', label: 'Hành động'    },
-  { id: 'reward',     icon: '🎁', label: 'Phần thưởng' },
-  { id: 'next',       icon: '→',  label: 'Chuyển tiếp' },
+  // NHẬN / đọc xem
+  { id: 'text',        icon: '📝', label: 'Văn bản'        },
+  { id: 'callout',     icon: '💡', label: 'Lời thầy / Mẹo' },
+  { id: 'video',       icon: '▶',  label: 'Video'          },
+  { id: 'image',       icon: '🖼', label: 'Ảnh'            },
+  { id: 'note_chart',  icon: '🎵', label: 'Bảng nốt'       },
+  // NGHĨ
+  { id: 'quiz',        icon: '❓', label: 'Trắc nghiệm'    },
+  { id: 'true_false',  icon: '✓✗', label: 'Đúng / Sai'     },
+  { id: 'input',       icon: '✏', label: 'Nhập câu'        },
+  // LÀM (tương tác đàn)
+  { id: 'guitar_neck', icon: '🎸', label: 'Chọn dây'       },
+  { id: 'guitar_strum',icon: '🎶', label: 'Gảy dãy dây'    },
+  { id: 'guitar_ear',  icon: '👂', label: 'Luyện tai nghe' },
+  { id: 'guitar_tool', icon: '🎚️', label: 'Mở công cụ'     },
+  // NGẪM / THƯỞNG / DẪN
+  { id: 'checklist',   icon: '☑️', label: 'Tự đánh giá'    },
+  { id: 'action',      icon: '⚡', label: 'Hành động'       },
+  { id: 'reward',      icon: '🎁', label: 'Phần thưởng'    },
+  { id: 'next',        icon: '→',  label: 'Chuyển tiếp'    },
 ]
 const TYPE_ICON: Record<string, string> = Object.fromEntries(SLIDE_TYPES.map(t => [t.id, t.icon]))
 
@@ -36,6 +48,7 @@ interface Slide {
   id: string; order: number; logic: string; type: string
   title?: string; content?: string; mediaUrl?: string
   options?: string[]; correctAnswer?: string; buttonText?: string
+  interactive?: Record<string, unknown>; hintText?: string
 }
 
 interface Props { lessonId: string }
@@ -66,6 +79,27 @@ function Btn({ onClick, children, variant = 'secondary', style }: { onClick: () 
       style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${variant === 'secondary' ? C.border : bg}`, background: bg, color, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', ...style }}>
       {children}
     </button>
+  )
+}
+
+// Hàng 6 dây để bấm chọn (dây 1 trên cùng → 6). single = chọn 1 dây.
+function StringPicker({ selected, onTap }: { selected: number[]; onTap: (n: number) => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {STRINGS.map(s => {
+        const on = selected.includes(s.num)
+        const idx = selected.indexOf(s.num)
+        return (
+          <button key={s.num} onClick={() => onTap(s.num)}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 11px', borderRadius: 8, border: `1.5px solid ${on ? colorOfNum(s.num) : C.border}`, background: on ? '#F0FDF4' : C.surface, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
+            <span style={{ width: 16, fontFamily: 'ui-monospace, monospace', fontSize: 12, fontWeight: 800, color: colorOfNum(s.num) }}>{s.num}</span>
+            <span style={{ flex: 1, height: 3 + (s.num - 1) * 1.4, borderRadius: 99, background: colorOfNum(s.num) }} />
+            <span style={{ width: 52, textAlign: 'right', fontFamily: 'ui-monospace, monospace', fontSize: 11, fontWeight: 700, color: C.text2 }}>{s.vn}·{s.note}</span>
+            {on && <span style={{ width: 18, fontSize: 11, fontWeight: 800, color: C.success }}>{idx >= 0 && selected.length > 1 ? idx + 1 : '✓'}</span>}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -155,6 +189,12 @@ export default function FlowInlineEditor({ lessonId }: Props) {
     setEditSlide(updated)
     setSlides(prev => prev.map(s => s.id === updated.id ? updated : s))
   }
+  // Cập nhật 1 khoá trong interactive (config slide tương tác)
+  const patchItv = (key: string, value: unknown) => {
+    if (!editSlide) return
+    patch('interactive', { ...(editSlide.interactive ?? {}), [key]: value })
+  }
+  const itv = (editSlide?.interactive ?? {}) as Record<string, unknown>
 
   const moveSlide = (id: string, dir: -1 | 1) => {
     const idx = slides.findIndex(s => s.id === id)
@@ -204,6 +244,8 @@ export default function FlowInlineEditor({ lessonId }: Props) {
         options:       Array.isArray(s.options) ? s.options.map(String) : [],
         correctAnswer: String(s.correctAnswer ?? ''),
         buttonText:    String(s.buttonText ?? ''),
+        interactive:   (s.interactive && typeof s.interactive === 'object') ? s.interactive as Record<string, unknown> : undefined,
+        hintText:      s.hintText ? String(s.hintText) : undefined,
       }))
       setSlides(imported)
       setShowImport(false)
@@ -314,7 +356,7 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     </div>
 
                     {/* Content */}
-                    {['text', 'next', 'action', 'reward', 'quiz', 'true_false', 'input'].includes(editSlide.type) && (
+                    {['text', 'callout', 'next', 'action', 'reward', 'quiz', 'true_false', 'input'].includes(editSlide.type) && (
                       <div>
                         <Label>Nội dung / Câu hỏi</Label>
                         <textarea value={editSlide.content ?? ''} onChange={e => patch('content', e.target.value)}
@@ -359,8 +401,13 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                           rows={4} placeholder={'Đáp án A\nĐáp án B\nĐáp án C\nĐáp án D'}
                           style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical', color: C.text1 }} />
                         <div style={{ marginTop: 8 }}>
-                          <Label>Đáp án đúng (gõ chính xác như trên)</Label>
-                          <Inp value={editSlide.correctAnswer ?? ''} onChange={v => patch('correctAnswer', v)} placeholder="Đáp án A" />
+                          <Label>Đáp án đúng</Label>
+                          <Sel value={editSlide.correctAnswer ?? ''} onChange={v => patch('correctAnswer', v)}>
+                            <option value="">— Chọn đáp án đúng —</option>
+                            {(editSlide.options ?? []).filter(o => o.trim()).map((o, i) => (
+                              <option key={i} value={o}>{String.fromCharCode(65 + i)}. {o}</option>
+                            ))}
+                          </Sel>
                         </div>
                       </div>
                     )}
@@ -373,6 +420,104 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                           <option value="true">✓ Đúng</option>
                           <option value="false">✗ Sai</option>
                         </Sel>
+                      </div>
+                    )}
+
+                    {/* CALLOUT — kiểu lời thầy / mẹo */}
+                    {editSlide.type === 'callout' && (
+                      <div>
+                        <Label>Kiểu hộp</Label>
+                        <Sel value={(itv.variant as string) ?? 'tip'} onChange={v => patchItv('variant', v)}>
+                          <option value="tip">💡 Mẹo</option>
+                          <option value="warn">⚠️ Lưu ý</option>
+                          <option value="teacher">🧑‍🏫 Lời thầy Văn Anh</option>
+                        </Sel>
+                      </div>
+                    )}
+
+                    {/* NOTE CHART — không cần cấu hình */}
+                    {editSlide.type === 'note_chart' && (
+                      <div style={{ fontSize: 12, color: C.text3, background: '#FAFBFF', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px' }}>
+                        🎵 Bảng nốt C–B ↔ Đô–Si (cố định). Học viên chỉ xem — không cần cấu hình.
+                      </div>
+                    )}
+
+                    {/* GUITAR_NECK — chọn 1 dây mục tiêu */}
+                    {editSlide.type === 'guitar_neck' && (
+                      <div>
+                        <Label>Dây học viên phải chạm đúng</Label>
+                        <StringPicker selected={[(itv.target as number) ?? 1]} onTap={n => patchItv('target', n)} />
+                      </div>
+                    )}
+
+                    {/* GUITAR_STRUM — dãy dây cần gảy đúng thứ tự */}
+                    {editSlide.type === 'guitar_strum' && (() => {
+                      const seq = (itv.sequence as number[]) ?? []
+                      return (
+                        <div>
+                          <Label>Dãy dây cần gảy (bấm theo thứ tự)</Label>
+                          <div style={{ fontSize: 12, color: seq.length ? C.text1 : C.text3, marginBottom: 6 }}>
+                            {seq.length ? 'Thứ tự: ' + seq.map(n => 'dây ' + n).join(' → ') : 'Chưa chọn → mặc định gảy buông dây 1 → 6'}
+                          </div>
+                          <StringPicker selected={seq} onTap={n => patchItv('sequence', [...seq, n])} />
+                          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                            <Btn onClick={() => patchItv('sequence', [1, 2, 3, 4, 5, 6])}>Dây 1→6</Btn>
+                            <Btn onClick={() => patchItv('sequence', [6, 5, 4, 3, 2, 1])}>Dây 6→1</Btn>
+                            <Btn onClick={() => patchItv('sequence', [])}>Xoá</Btn>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* GUITAR_EAR — luyện tai nghe */}
+                    {editSlide.type === 'guitar_ear' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                        <div>
+                          <Label>Số câu</Label>
+                          <input type="number" min={1} max={20} value={(itv.rounds as number) ?? 5}
+                            onChange={e => patchItv('rounds', Number(e.target.value))}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none' }} />
+                        </div>
+                        <div style={{ alignSelf: 'end', fontSize: 11.5, color: C.text3, paddingBottom: 7 }}>Nghe âm → đoán dây (cả 6 dây)</div>
+                      </div>
+                    )}
+
+                    {/* GUITAR_TOOL — mở công cụ */}
+                    {editSlide.type === 'guitar_tool' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div>
+                          <Label>Công cụ</Label>
+                          <Sel value={(itv.tool as string) ?? 'tuner'} onChange={v => patchItv('tool', v)}>
+                            <option value="tuner">🎚️ Tuner (lên dây)</option>
+                            <option value="tempo">🥁 Metronome (nhịp)</option>
+                            <option value="guitarboard">🎸 Bảng phím / Tab</option>
+                          </Sel>
+                        </div>
+                        <div>
+                          <Label>Nhãn nút</Label>
+                          <Inp value={(itv.label as string) ?? ''} onChange={v => patchItv('label', v)} placeholder="VD: Mở Tuner lên dây" />
+                        </div>
+                        <div>
+                          <Label>Mô tả nhỏ (tuỳ chọn)</Label>
+                          <Inp value={(itv.sub as string) ?? ''} onChange={v => patchItv('sub', v)} placeholder="VD: Lên dây chuẩn trước khi tập" />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CHECKLIST — tự đánh giá */}
+                    {editSlide.type === 'checklist' && (
+                      <div>
+                        <Label>Mục tự đánh giá (mỗi dòng 1 mục)</Label>
+                        <textarea
+                          value={((itv.items as string[]) ?? []).join('\n')}
+                          onChange={e => patchItv('items', e.target.value.split('\n'))}
+                          rows={4} placeholder={'Tay phải thả lỏng\nTiếng đàn nghe rõ'}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, fontFamily: 'inherit', outline: 'none', resize: 'vertical', color: C.text1 }} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8, fontSize: 12.5, color: C.text2, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={(itv.requireAll as boolean) !== false}
+                            onChange={e => patchItv('requireAll', e.target.checked)} />
+                          Phải tick HẾT mới qua (bỏ chọn = chỉ cần tick 1 mục)
+                        </label>
                       </div>
                     )}
 
