@@ -477,9 +477,9 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     {/* NOTE_SHOW — xem nốt (khuông / cần đàn) */}
                     {editSlide.type === 'note_show' && (() => {
                       const OPEN = [
-                        { label: 'Mi', freq: 329.63, string: 1, staff: 0,         name: 'Dây 1 — Mi (cao)' },
-                        { label: 'Si', freq: 246.94, string: 2, staff: undefined, name: 'Dây 2 — Si' },
-                        { label: 'Sol', freq: 196.0, string: 3, staff: undefined, name: 'Dây 3 — Sol' },
+                        { label: 'Mi', freq: 329.63, string: 1, staff: 7,         name: 'Dây 1 — Mi (cao)' },
+                        { label: 'Si', freq: 246.94, string: 2, staff: 4,         name: 'Dây 2 — Si' },
+                        { label: 'Sol', freq: 196.0, string: 3, staff: 2,         name: 'Dây 3 — Sol' },
                         { label: 'Rê', freq: 146.83, string: 4, staff: undefined, name: 'Dây 4 — Rê' },
                         { label: 'La', freq: 110.0, string: 5, staff: undefined, name: 'Dây 5 — La' },
                         { label: 'Mi', freq: 82.41, string: 6, staff: undefined, name: 'Dây 6 — Mi (trầm)' },
@@ -509,9 +509,9 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     {/* NOTE_PRACTICE — đánh theo mẫu */}
                     {editSlide.type === 'note_practice' && (() => {
                       const OPEN_NOTES = [
-                        { label: 'Mi', freq: 329.63, string: 1, staff: 0,         name: 'Dây 1 — Mi (cao)' },
-                        { label: 'Si', freq: 246.94, string: 2, staff: undefined, name: 'Dây 2 — Si' },
-                        { label: 'Sol', freq: 196.0, string: 3, staff: undefined, name: 'Dây 3 — Sol' },
+                        { label: 'Mi', freq: 329.63, string: 1, staff: 7,         name: 'Dây 1 — Mi (cao)' },
+                        { label: 'Si', freq: 246.94, string: 2, staff: 4,         name: 'Dây 2 — Si' },
+                        { label: 'Sol', freq: 196.0, string: 3, staff: 2,         name: 'Dây 3 — Sol' },
                         { label: 'Rê', freq: 146.83, string: 4, staff: undefined, name: 'Dây 4 — Rê' },
                         { label: 'La', freq: 110.0, string: 5, staff: undefined, name: 'Dây 5 — La' },
                         { label: 'Mi', freq: 82.41, string: 6, staff: undefined, name: 'Dây 6 — Mi (trầm)' },

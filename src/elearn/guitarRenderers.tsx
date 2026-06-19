@@ -308,20 +308,24 @@ export function MiniFretboard({ string, fret, pulse }: { string?: number; fret?:
   )
 }
 
-// Khuông nhạc nhỏ — dạy thụ động vị trí nốt (staff: 0 = dòng kẻ dưới cùng = Mi/E4)
+// Khuông nhạc nhỏ — dạy thụ động vị trí nốt.
+// staff = số bậc (nửa-dòng) tính từ DÒNG KẺ DƯỚI CÙNG (=0). LƯU Ý: guitar viết CAO HƠN THỰC TẾ 1 QUÃNG 8,
+// nên Mi dây-1-buông (E4 thực) VIẾT là E5 = KHE 4 = staff 7 (gần đỉnh). Dây2(B4)=4, dây3(G4)=2.
 export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean; label: string; staff?: number; pulse?: number }) {
   const W = 240, H = 92, top = 22, gap = 11
   const lineY = (i: number) => top + i * gap            // i=0 dòng trên cùng … i=4 dòng dưới cùng
   const noteY = lineY(4) - staff * (gap / 2)            // mỗi bậc = nửa khoảng dòng
   const noteX = 158
   const col = active ? ACCENT.c1 : '#B0AA9C'
+  const stemUp = staff < 4                              // nốt từ dòng giữa (B4) trở lên → đuôi quay xuống
+  const stemX = noteX + (stemUp ? 8 : -8)
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: 270, display: 'block', margin: '0 auto' }}>
       {[0, 1, 2, 3, 4].map(i => <line key={i} x1={18} x2={W - 12} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
       <text x={22} y={lineY(4) + 7} fontSize={62} fill="#3F6B4E" fontFamily="serif">𝄞</text>
       <g key={pulse} style={{ animation: active ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${noteX}px ${noteY}px` }}>
         <ellipse cx={noteX} cy={noteY} rx={9} ry={6.6} fill={col} transform={`rotate(-18 ${noteX} ${noteY})`} />
-        <line x1={noteX + 8} x2={noteX + 8} y1={noteY - 2} y2={noteY - 38} stroke={col} strokeWidth={2.2} />
+        <line x1={stemX} x2={stemX} y1={noteY + (stemUp ? -2 : 2)} y2={noteY + (stemUp ? -38 : 38)} stroke={col} strokeWidth={2.2} />
       </g>
       <text x={noteX} y={H - 3} textAnchor="middle" fontSize={13} fontWeight="700" fill={col}>{label}</text>
     </svg>
@@ -329,7 +333,7 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
 }
 
 export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB, 'onPass'>) {
-  const notes: NoteItem[] = cfg.notes?.length ? cfg.notes : Array.from({ length: 4 }, () => ({ label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 0 }))
+  const notes: NoteItem[] = cfg.notes?.length ? cfg.notes : Array.from({ length: 4 }, () => ({ label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 7 }))
   const speeds = cfg.speeds?.length ? cfg.speeds : DEFAULT_SPEEDS
   const [speedIdx, setSpeedIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
