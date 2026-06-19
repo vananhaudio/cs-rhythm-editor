@@ -27,6 +27,7 @@ const SLIDE_TYPES = [
   { id: 'video',       icon: '▶',  label: 'Video'          },
   { id: 'image',       icon: '🖼', label: 'Ảnh'            },
   { id: 'note_chart',  icon: '🎵', label: 'Bảng nốt'       },
+  { id: 'note_show',   icon: '🎼', label: 'Xem nốt (khuông/cần)' },
   // NGHĨ
   { id: 'quiz',        icon: '❓', label: 'Trắc nghiệm'    },
   { id: 'true_false',  icon: '✓✗', label: 'Đúng / Sai'     },
@@ -469,6 +470,38 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                             <Btn onClick={() => patchItv('sequence', [6, 5, 4, 3, 2, 1])}>Dây 6→1</Btn>
                             <Btn onClick={() => patchItv('sequence', [])}>Xoá</Btn>
                           </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* NOTE_SHOW — xem nốt (khuông / cần đàn) */}
+                    {editSlide.type === 'note_show' && (() => {
+                      const OPEN = [
+                        { label: 'Mi', freq: 329.63, string: 1, staff: 0,         name: 'Dây 1 — Mi (cao)' },
+                        { label: 'Si', freq: 246.94, string: 2, staff: undefined, name: 'Dây 2 — Si' },
+                        { label: 'Sol', freq: 196.0, string: 3, staff: undefined, name: 'Dây 3 — Sol' },
+                        { label: 'Rê', freq: 146.83, string: 4, staff: undefined, name: 'Dây 4 — Rê' },
+                        { label: 'La', freq: 110.0, string: 5, staff: undefined, name: 'Dây 5 — La' },
+                        { label: 'Mi', freq: 82.41, string: 6, staff: undefined, name: 'Dây 6 — Mi (trầm)' },
+                      ]
+                      const curStr = (itv.string as number) ?? 1
+                      const o = OPEN.find(x => x.string === curStr) ?? OPEN[0]
+                      const setNote = (op: typeof OPEN[number]) => patch('interactive', { ...itv, label: op.label, freq: op.freq, string: op.string, fret: 0, staff: op.staff })
+                      const toggle = (k: 'showStaff' | 'showFretboard') => patchItv(k, !((itv[k] as boolean) ?? true))
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div>
+                            <Label>Nốt (dây buông)</Label>
+                            <Sel value={String(curStr)} onChange={v => setNote(OPEN.find(x => x.string === Number(v))!)}>
+                              {OPEN.map(op => <option key={op.string} value={op.string}>{op.name}</option>)}
+                            </Sel>
+                          </div>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: C.text2, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={(itv.showStaff as boolean) ?? true} onChange={() => toggle('showStaff')} /> Hiện khuông nhạc {o.staff == null && '(dây này chưa hỗ trợ khuông)'}
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: C.text2, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={(itv.showFretboard as boolean) ?? true} onChange={() => toggle('showFretboard')} /> Hiện cần đàn
+                          </label>
                         </div>
                       )
                     })()}

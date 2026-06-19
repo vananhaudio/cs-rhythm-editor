@@ -13,6 +13,11 @@ export interface StrumCfg { sequence?: number[] }                 // dãy số d
 export interface EarCfg { pool?: number[]; rounds?: number; passScore?: number }
 // "Đánh theo mẫu": máy chạy chuỗi nốt theo nhịp, học viên bắt chước
 export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number }
+// "Xem nốt": hình minh hoạ tĩnh (khuông nhạc và/hoặc cần đàn) + nút nghe thử
+export interface NoteShowCfg {
+  label?: string; freq?: number; string?: number; fret?: number; staff?: number
+  showStaff?: boolean; showFretboard?: boolean; caption?: string
+}
 export interface NotePracticeCfg {
   notes?: NoteItem[]                            // chuỗi nốt (vd 4× Mi). string/fret để vẽ cần đàn, staff = vị trí trên khuông (0 = dòng kẻ dưới cùng = Mi/E4)
   speeds?: { label: string; bpm: number }[]    // các tốc độ chọn
@@ -268,7 +273,7 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
 const DEFAULT_SPEEDS = [{ label: 'Chậm', bpm: 60 }, { label: 'Vừa', bpm: 80 }, { label: 'Nhanh', bpm: 100 }]
 
 // Cần đàn mini gỗ tối — hiện 1 nốt theo (dây 1..6 từ trên xuống, phím 0=buông sát nut)
-function MiniFretboard({ string, fret, pulse }: { string?: number; fret?: number; pulse?: number }) {
+export function MiniFretboard({ string, fret, pulse }: { string?: number; fret?: number; pulse?: number }) {
   const STRING_CNT = 6, FRET_COUNT = 4, H = 128
   const rowY = (num: number) => ((num - 1 + 0.5) / STRING_CNT) * 100   // dây 1 → trên cùng
   const strW = (num: number) => 1.2 + (num - 1) * (2.4 / 5)
@@ -304,7 +309,7 @@ function MiniFretboard({ string, fret, pulse }: { string?: number; fret?: number
 }
 
 // Khuông nhạc nhỏ — dạy thụ động vị trí nốt (staff: 0 = dòng kẻ dưới cùng = Mi/E4)
-function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean; label: string; staff?: number; pulse?: number }) {
+export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean; label: string; staff?: number; pulse?: number }) {
   const W = 240, H = 92, top = 22, gap = 11
   const lineY = (i: number) => top + i * gap            // i=0 dòng trên cùng … i=4 dòng dưới cùng
   const noteY = lineY(4) - staff * (gap / 2)            // mỗi bậc = nửa khoảng dòng
@@ -406,6 +411,35 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
           Tốt lắm! Bạn đã chơi theo được — có thể bấm Dừng và sang bước sau.
         </div>
       )}
+    </div>
+  )
+}
+
+// ── note_show: hình minh hoạ nốt (khuông + cần đàn) + nghe thử (NHẬN, không gate) ──
+export function NoteShow({ cfg }: { cfg: NoteShowCfg }) {
+  const label = cfg.label ?? 'Mi'
+  const freq = cfg.freq ?? 329.63
+  const showStaff = cfg.showStaff ?? true
+  const showFb = cfg.showFretboard ?? true
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {showStaff && (
+        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 8px 2px' }}>
+          <NoteStaff active label={label} staff={cfg.staff ?? 0} />
+        </div>
+      )}
+      {showFb && (
+        <div style={{ background: '#F1ECE2', borderRadius: 14, padding: '12px 12px 8px' }}>
+          <MiniFretboard string={cfg.string ?? 1} fret={cfg.fret ?? 0} />
+        </div>
+      )}
+      {cfg.caption && (
+        <div style={{ fontSize: 14, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />
+      )}
+      <button onClick={() => playTone(freq)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+        🔊 Nghe thử nốt {label}
+      </button>
     </div>
   )
 }

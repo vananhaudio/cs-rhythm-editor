@@ -159,7 +159,7 @@ export default function FlowManager() {
   const VALID_LOGIC = ['NHAN','NGHI','LAM','NGAM','THUONG','DAN']
   const VALID_TYPE  = ['text','image','video','audio','quiz','true_false','input','action','reward','next',
     // GĐ1 — engine gộp elearn (giữ để KHÔNG bị auto-fix về 'text')
-    'callout','note_chart','checklist','self_report','summary','support','guitar_neck','guitar_strum','guitar_ear','guitar_tool','note_practice']
+    'callout','note_chart','checklist','self_report','summary','support','guitar_neck','guitar_strum','guitar_ear','guitar_tool','note_practice','note_show']
 
   const validateAndImport = () => {
     setImportError('')
