@@ -1151,7 +1151,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
             {prevBest > 0 && (
               <div style={{ fontSize:13, marginBottom:12, fontWeight:600, color: lastScore>prevBest ? C.green : C.text3 }}>
-                {lastScore>prevBest ? `📈 +${lastScore-prevBest} so với kỷ lục!` : lastScore===prevBest ? '🎯 Bằng kỷ lục!' : `Kỷ lục: ${prevBest}đ`}
+                {lastScore>prevBest ? `+${lastScore-prevBest} so với kỷ lục!` : lastScore===prevBest ? 'Bằng kỷ lục!' : `Kỷ lục: ${prevBest}đ`}
               </div>
             )}
 
@@ -1159,7 +1159,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
             {resultMsg.hint && (
               <div style={{ marginBottom:20, padding:'10px 14px', background:`${C.accent}11`, borderRadius:10, border:`1px solid ${C.accent}22`, fontSize:12, color:C.accentLight, lineHeight:1.5 }}>
-                💡 {resultMsg.hint}
+                {resultMsg.hint}
               </div>
             )}
 
@@ -1174,7 +1174,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
             {lastScore >= UNLOCK_SCORE && activeLevel < levels.length && (
               <div style={{ marginBottom:16, padding:'10px 14px', background:C.greenDim, borderRadius:10, border:`1px solid ${C.green}33`, fontSize:13, color:C.green, fontWeight:700 }}>
-                🔓 Đủ điểm mở Level {activeLevel+1}! Lưu để nhận thưởng
+                Đủ điểm mở Level {activeLevel+1}! Lưu để nhận thưởng
               </div>
             )}
 
@@ -1205,7 +1205,7 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
           <div style={{ background:C.bgSurface, border:`2px solid ${C.accent}`, borderRadius:20, padding:40, textAlign:'center', maxWidth:340, boxShadow:`0 0 60px ${C.accentGlow}` }}>
             <div style={{ fontSize:54, marginBottom:8 }}>✨</div>
             <div style={{ color:C.accent, fontWeight:900, fontSize:28, letterSpacing:'-0.04em', marginBottom:4 }}>LEVEL UP!</div>
-            <div style={{ fontWeight:700, fontSize:18, marginBottom:8 }}>🔓 Level {activeLevel+1} đã mở khoá!</div>
+            <div style={{ fontWeight:700, fontSize:18, marginBottom:8 }}>Level {activeLevel+1} đã mở khoá!</div>
             <div style={{ color:C.text2, fontSize:14, marginBottom:16 }}>{levels[activeLevel]?.desc}</div>
             <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
               {song && levels[activeLevel] && <BeatViz beats={levels[activeLevel].beats} timeSig={song.timeSignature} />}

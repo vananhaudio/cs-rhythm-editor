@@ -296,7 +296,7 @@ export default function StudentOnboarding() {
       {/* WELCOME */}
       {step === 'welcome' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 32, textAlign: 'center' }}>
-          <div style={{ width: 96, height: 96, borderRadius: '50%', background: T.header, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, marginBottom: 24, boxShadow: `0 4px 24px rgba(27,107,58,.25)` }}>🎸</div>
+          <div style={{ width: 96, height: 96, borderRadius: '50%', background: T.header, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, marginBottom: 24, boxShadow: `0 4px 24px rgba(27,107,58,.25)` }}></div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.2 }}>
             Chào mừng đến với<br /><span style={{ color: T.header }}>Thầy Văn Anh Guitar</span>
           </h1>
@@ -304,7 +304,7 @@ export default function StudentOnboarding() {
             Nơi hành trình âm nhạc của bạn bắt đầu. Học nhịp, hòa âm, và guitar theo lộ trình được thiết kế riêng cho bạn.
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 36 }}>
-            {['🥁 Luyện nhịp', '🎸 Hợp âm', '📖 Nhạc lý', '🤖 AI trợ lý'].map(f => (
+            {['Luyện nhịp', 'Hợp âm', 'Nhạc lý', 'AI trợ lý'].map(f => (
               <span key={f} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 20, padding: '5px 14px', fontSize: 13, color: T.textMuted }}>{f}</span>
             ))}
           </div>
@@ -339,7 +339,7 @@ export default function StudentOnboarding() {
                     <div style={{
                       marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 13,
                       background: '#F0D8D0', color: '#8B3A1E', border: '1px solid #E4B8A8',
-                    }}>⚠️ {iapMsg.text}</div>
+                    }}>{iapMsg.text}</div>
                   )}
 
                   <Btn
@@ -366,7 +366,6 @@ export default function StudentOnboarding() {
                 </>
               ) : (
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontSize: 22, textAlign: 'center', marginBottom: 8 }}>🎉</div>
                   <div style={{ fontWeight: 700, fontSize: 17, textAlign: 'center', marginBottom: 4 }}>Thanh toán thành công!</div>
                   <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', marginBottom: 20 }}>Tạo tài khoản để bắt đầu học ngay.</div>
 
@@ -395,7 +394,7 @@ export default function StudentOnboarding() {
 
                   {iapRegError && (
                     <div style={{ background: '#F0D8D0', border: '1px solid #E4B8A8', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#8B3A1E', marginBottom: 12 }}>
-                      ⚠️ {iapRegError}
+                      {iapRegError}
                     </div>
                   )}
 
@@ -454,7 +453,7 @@ export default function StudentOnboarding() {
 
           {loginError && (
             <div style={{ background: T.dangerBg, border: `1px solid #F0C4B0`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: T.danger, marginBottom: 16 }}>
-              ⚠️ {loginError}
+              {loginError}
             </div>
           )}
 

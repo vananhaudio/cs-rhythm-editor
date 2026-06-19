@@ -133,7 +133,7 @@ export function Checklist({ cfg, onPass }: { cfg: ChecklistCfg } & Pick<CB, 'onP
         )
       })}
       {satisfied && (
-        <div style={{ marginTop: 4, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Xong rồi! Bạn đã sẵn sàng cho bước tiếp theo. 👍</div>
+        <div style={{ marginTop: 4, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Xong rồi! Bạn đã sẵn sàng cho bước tiếp theo.</div>
       )}
     </div>
   )
@@ -159,7 +159,6 @@ export function Strum({ cfg, onPass, onWrong }: { cfg: StrumCfg } & CB) {
   if (done) {
     return (
       <div style={{ textAlign: 'center', padding: '10px 0' }}>
-        <div style={{ fontSize: 38 }}>🎸</div>
         <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>Gảy đúng cả dãy!</div>
         <div style={{ fontSize: 13.5, color: '#6B655A', marginTop: 3, lineHeight: 1.5 }}>Giờ thử gảy lại dãy này trên cây đàn của bạn — tay phải đều, từng dây nghe rõ.</div>
         <div style={{ marginTop: 12 }}><ReplayStrings nums={seq} /></div>
@@ -215,7 +214,6 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
   if (done) {
     return (
       <div style={{ textAlign: 'center', padding: '10px 0' }}>
-        <div style={{ fontSize: 38 }}>🎧</div>
         <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>Xong {rounds} câu!</div>
         <div style={{ fontSize: 14, color: '#6B655A', marginTop: 3 }}>Đúng <b style={{ color: ACCENT.a }}>{score}/{rounds}</b> — tai bạn đang quen dần với từng dây.</div>
         <button onClick={restart} style={{ marginTop: 12, padding: '10px 20px', border: '1px solid #E2DBCD', borderRadius: 10, background: '#fff', color: '#5A5448', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Luyện lại</button>

@@ -265,12 +265,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   // ── Done screen ──────────────────────────────────────────────────────────
   if (done) return (
     <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 'calc(env(safe-area-inset-top,0px) + 28px) 28px calc(env(safe-area-inset-bottom,0px) + 28px)', textAlign: 'center', gap: 14, overflow: 'auto' }}>
-      <div style={{ fontSize: 52 }}>🎉</div>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#4338CA' }}>Hoàn thành!</div>
       <div style={{ fontSize: 15, color: '#555' }}>{flow.title}</div>
       {flow.reward_xp > 0 && !wasFinishedRef.current && (
         <div style={{ background: '#FFF7ED', color: '#D97706', borderRadius: 99, padding: '8px 24px', fontWeight: 700, fontSize: 16 }}>
-          +{flow.reward_xp} XP 🔥
+          +{flow.reward_xp} XP
         </div>
       )}
       {onLogAction && (
@@ -503,8 +502,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* REWARD */}
         {slide.type === 'reward' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontSize: 60, marginBottom: 12 }}>🎉</div>
-            {slide.content && (
+              {slide.content && (
               <div style={{ fontSize: 16, color: '#4338CA', fontWeight: 600, lineHeight: 1.7 }}>{slide.content}</div>
             )}
           </div>

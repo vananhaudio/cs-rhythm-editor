@@ -183,7 +183,6 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
   // ── B5': đã tự gỡ ────────────────────────────────────────────────────────
   return wrap(
     <div style={{ textAlign: 'center', padding: '24px 8px' }}>
-      <div style={{ fontSize: 46 }}>🎉</div>
       <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>Giỏi lắm!</div>
       <div style={{ fontSize: 14.5, color: P.sub, lineHeight: 1.6, margin: '8px 0 22px' }}>
         Tự gỡ được là bước tiến lớn — bạn đang học cách TỰ HỌC, không chỉ học đàn. Cứ thế nhé!

@@ -167,7 +167,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 10, width: 36, height: 36, color: L.t2, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
         )}
         <div>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>🥁 Tap Tempo</div>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>Tap Tempo</div>
           <div style={{ fontSize: 11, color: L.t3 }}>Tìm nhịp bài hát yêu thích</div>
         </div>
       </div>
@@ -242,7 +242,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
         {/* Hướng dẫn nếu chưa có video */}
         {!videoId && (
           <div style={{ background: L.surface, borderRadius: 16, padding: '20px', marginBottom: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 10 }}>🎵</div>
+            <div style={{ fontSize: 36, marginBottom: 10 }}></div>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Cách tìm tempo bài hát</div>
             <div style={{ fontSize: 12, color: L.t2, lineHeight: 1.8 }}>
               1. Paste link YouTube bài hát vào ô trên<br />
@@ -289,7 +289,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
         {bpm && !saved && (
           <button onClick={() => setShowSave(true)}
             style={{ width: '100%', background: L.green, border: 'none', borderRadius: 16, padding: '16px', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(16,185,129,0.35)' }}>
-            💾 Lưu {bpm} BPM vào My Songs
+            Lưu {bpm} BPM vào My Songs
           </button>
         )}
 
@@ -309,7 +309,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
           <div onClick={e => e.stopPropagation()}
             style={{ background: '#1A1E2A', borderRadius: '24px 24px 0 0', padding: '20px 20px max(20px, env(safe-area-inset-bottom))', width: '100%', maxWidth: 430, boxShadow: '0 -8px 32px rgba(0,0,0,0.5)' }}>
             <div style={{ width: 40, height: 4, borderRadius: 99, background: L.border, margin: '0 auto 18px' }} />
-            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>💾 Lưu vào My Songs</div>
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>Lưu vào My Songs</div>
             <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>
               Tempo: <strong style={{ color: L.gold }}>{bpm} BPM</strong>
             </div>

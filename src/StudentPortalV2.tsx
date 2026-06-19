@@ -21,11 +21,11 @@ const EXERCISES = [
 ]
 
 const ARTIST_LEVELS = [
-  { label: '🌱 Mầm non',   min: 0,     max: 1000,  color: '#16A34A' },
-  { label: '📚 Học việc',  min: 1000,  max: 5000,  color: '#0891B2' },
-  { label: '🎤 Biểu diễn', min: 5000,  max: 15000, color: '#7C3AED' },
-  { label: '🎸 Nghệ sĩ',   min: 15000, max: 40000, color: '#D97706' },
-  { label: '👑 Bậc thầy',  min: 40000, max: 999999,color: '#DC2626' },
+  { label: 'Mầm non',   min: 0,     max: 1000,  color: '#16A34A' },
+  { label: 'Học việc',  min: 1000,  max: 5000,  color: '#0891B2' },
+  { label: 'Biểu diễn', min: 5000,  max: 15000, color: '#7C3AED' },
+  { label: 'Nghệ sĩ',   min: 15000, max: 40000, color: '#D97706' },
+  { label: 'Bậc thầy',  min: 40000, max: 999999,color: '#DC2626' },
 ]
 
 
@@ -208,7 +208,6 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
               <span style={{ fontSize: 11, color: D.text3 }}>· {totalXP.toLocaleString()} XP</span>
             </div>
             <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🔥</span>
               <span style={{ fontWeight: 700, fontSize: 13, color: '#C2410C' }}>{weekXP.toLocaleString()}</span>
               <span style={{ fontSize: 11, color: '#92400E' }}>XP tuần này</span>
             </div>
@@ -261,7 +260,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             <div style={card}>
               <div style={{ padding: '14px 20px 12px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🎓</div>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}></div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 12 }}>HỌC KIẾN THỨC</div>
                     <div style={{ fontSize: 10, color: D.text3 }}>Hiểu · Biết · Nắm vững</div>
@@ -300,7 +299,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             {/* COL 2 — Luyện tập */}
             <div style={card}>
               <div style={{ padding: '14px 20px 12px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🎯</div>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}></div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 12 }}>HÔM NAY LUYỆN GÌ?</div>
                   <div style={{ fontSize: 10, color: D.text3 }}>Luyện · Thực hành · Tiến bộ</div>
@@ -357,7 +356,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             <div style={card}>
               <div style={{ padding: '14px 20px 12px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🎵</div>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}></div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 12 }}>MY SONGS</div>
                     <div style={{ fontSize: 10, color: D.text3 }}>Hành trình chinh phục</div>
@@ -414,11 +413,11 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginRight: 28, flexShrink: 0 }}>Thành Quả</div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
               {[
-                { icon: '🎵', v: mySongs.length,     label: 'bài hát' },
-                { icon: '📚', v: completedIds.size,   label: 'bài đã học' },
-                { icon: '⭐', v: totalXP.toLocaleString(), label: 'XP tổng' },
-                { icon: '🎸', v: enrollments.length,  label: 'khoá học' },
-                { icon: '🏆', v: mySongs.filter(s => s.status === 'mastered').length, label: 'bài thuần thục' },
+                { icon: '', v: mySongs.length,     label: 'bài hát' },
+                { icon: '', v: completedIds.size,   label: 'bài đã học' },
+                { icon: '', v: totalXP.toLocaleString(), label: 'XP tổng' },
+                { icon: '', v: enrollments.length,  label: 'khoá học' },
+                { icon: '', v: mySongs.filter(s => s.status === 'mastered').length, label: 'bài thuần thục' },
               ].map((a, i, arr) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, paddingRight: i < arr.length-1 ? 24 : 0, marginRight: i < arr.length-1 ? 24 : 0, borderRight: i < arr.length-1 ? `1px solid ${D.border}` : 'none' }}>
                   <span style={{ fontSize: 16 }}>{a.icon}</span>

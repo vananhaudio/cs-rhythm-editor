@@ -196,8 +196,7 @@ export default function ElearnLessonView({ num, title, courseSlug = 'khoi-dau-da
         return (
           <div>{tabs}
             <div style={{ textAlign: 'center', padding: '14px 0' }}>
-              <div style={{ fontSize: 40 }}>🎸</div>
-              <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>Gảy đúng cả 6 dây!</div>
+                <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>Gảy đúng cả 6 dây!</div>
               <div style={{ fontSize: 14, color: '#6B655A', marginTop: 3, lineHeight: 1.5 }}>Tay phải của bạn đã gảy rõ và đúng từng dây buông.</div>
               <button onClick={l8replay} style={{ marginTop: 16, padding: '11px 22px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Gảy lại</button>
             </div>
@@ -235,7 +234,6 @@ export default function ElearnLessonView({ num, title, courseSlug = 'khoi-dau-da
       return (
         <div>{tabs}
           <div style={{ textAlign: 'center', padding: '14px 0' }}>
-            <div style={{ fontSize: 40 }}>🎧</div>
             <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>Xong 5 câu!</div>
             <div style={{ fontSize: 14, color: '#6B655A', marginTop: 3 }}>Đúng <b style={{ color: ACCENT.a }}>{`${exScore}/5`}</b> — tai bạn đang quen dần với từng dây.</div>
             <button onClick={exRestart} style={{ marginTop: 16, padding: '11px 22px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>Luyện lại</button>
@@ -298,7 +296,7 @@ export default function ElearnLessonView({ num, title, courseSlug = 'khoi-dau-da
           })}
         </div>
         {all && (
-          <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Xong rồi! Bạn đã sẵn sàng cho bước tiếp theo. 👍</div>
+          <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Xong rồi! Bạn đã sẵn sàng cho bước tiếp theo.</div>
         )}
       </div>
     )
@@ -390,7 +388,7 @@ export default function ElearnLessonView({ num, title, courseSlug = 'khoi-dau-da
 
       {/* Nội dung (cuộn được) */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 0' }}>
-        {studentName && <div style={{ marginBottom: 12, fontSize: 12.5, color: ACCENT.d, fontWeight: 600 }}>{`👋 ${studentName}`}</div>}
+        {studentName && <div style={{ marginBottom: 12, fontSize: 12.5, color: ACCENT.d, fontWeight: 600 }}>{`${studentName}`}</div>}
         {/* Mục tiêu */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '13px 15px', background: ACCENT.s, borderRadius: 14 }}>
           <span style={{ fontSize: 15, marginTop: 1 }}>🎯</span>

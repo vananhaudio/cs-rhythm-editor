@@ -352,7 +352,7 @@ export default function LessonViewerPage() {
             {active.lesson_type !== 'quiz' && active.content && (
               <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
-                  📝 Nội dung bài học
+                  Nội dung bài học
                 </div>
                 <div style={{ fontSize: 14, color: D.text2, lineHeight: 1.8 }}
                   className="rich-content"
@@ -364,7 +364,7 @@ export default function LessonViewerPage() {
             {tools.length > 0 && (
               <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 14 }}>
-                  🛠 Công cụ luyện tập
+                  Công cụ luyện tập
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {tools.map(toolId => {

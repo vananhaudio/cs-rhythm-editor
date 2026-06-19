@@ -888,7 +888,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>Xin chào 👋</div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>Xin chào</div>
                       <div style={{ fontSize: 24, fontWeight: 800, color: L.tinv, letterSpacing: '-.02em' }}>{name}</div>
                       {/* 2 badge song song */}
                       <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
@@ -956,7 +956,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               return (
                 <div style={{ background: L.surface, borderRadius: 20, padding: 18, boxShadow: L.shadowLg }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 800, fontSize: 16 }}>🗺️ Hành trình của bạn</span>
+                    <span style={{ fontWeight: 800, fontSize: 16 }}>Hành trình của bạn</span>
                     <span style={{ fontSize: 12, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total} · {pct}%</span>
                   </div>
                   <div style={{ fontSize: 12, color: L.t2, marginBottom: 6 }}>Chặng: <b style={{ color: L.t1 }}>{cur?.courseName}</b></div>
@@ -993,7 +993,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   {/* việc tiếp theo */}
                   {nextItem ? (
                     <button onClick={() => openCourse(nextItem.courseId)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-                      <span style={{ fontSize: 18 }}>👉</span>
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ display: 'block', fontSize: 10, color: L.t3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nextItem.courseName}</span>
                         <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {nextItem.title}</span>
@@ -1001,7 +1000,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       <span style={{ color: L.p1 }}>›</span>
                     </button>
                   ) : (
-                    <div style={{ fontSize: 14, fontWeight: 700, color: L.green, marginTop: 10, textAlign: 'center' }}>🎉 Bạn đã hoàn thành toàn bộ giáo trình!</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: L.green, marginTop: 10, textAlign: 'center' }}>Bạn đã hoàn thành toàn bộ giáo trình!</div>
                   )}
                 </div>
               )
@@ -1010,8 +1009,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             {/* Nhịp luyện tập tuần này */}
             <div style={{ background: L.surface, borderRadius: 18, padding: 16, boxShadow: L.shadow, marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 15 }}>📅 Nhịp luyện tập tuần này</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: practiceStats.streak > 0 ? L.a1 : L.t3 }}>🔥 {practiceStats.streak} ngày</span>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>Nhịp luyện tập tuần này</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: practiceStats.streak > 0 ? L.a1 : L.t3 }}>{practiceStats.streak} ngày</span>
               </div>
               <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                 <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 12, textAlign: 'center' }}>
@@ -1163,7 +1162,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               return (
                 <div style={{ background: L.surface, margin: '0 16px 8px', borderRadius: 18, padding: 16, boxShadow: L.shadow }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <span style={{ fontWeight: 800, fontSize: 15 }}>🧭 Tiến độ khóa này</span>
+                    <span style={{ fontWeight: 800, fontSize: 15 }}>Tiến độ khóa này</span>
                     <span style={{ fontSize: 12, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total}</span>
                   </div>
                   {/* dải mốc + path gradient */}
@@ -1198,17 +1197,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                     {nextLesson ? (
                       <button onClick={() => openLesson(nextLesson)}
                         style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 18 }}>👉</span>
-                        <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {nextLesson.title}</span>
+                          <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {nextLesson.title}</span>
                         <span style={{ color: L.p1 }}>›</span>
                       </button>
                     ) : (
-                      <div style={{ fontSize: 14, fontWeight: 700, color: L.green }}>🎉 Bạn đã hoàn thành tất cả bài trong khóa!</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: L.green }}>Bạn đã hoàn thành tất cả bài trong khóa!</div>
                     )}
                     {redLesson && (
                       <button onClick={() => openLesson(redLesson)}
                         style={{ width: '100%', textAlign: 'left', background: 'transparent', border: '1px dashed #EF444466', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 16 }}>💪</span>
                         <span style={{ flex: 1, fontSize: 13, color: L.t2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Củng cố cho chắc: <b style={{ color: L.t1 }}>{redLesson.title}</b></span>
                       </button>
                     )}
@@ -1254,7 +1251,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               ))}
               {lessons.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '48px 20px', color: L.t3 }}>
-                  <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
                   Khoá học chưa có bài nào
                 </div>
               )}
@@ -1317,13 +1313,12 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             {/* Slide Canva — nút mở trình duyệt ngoài (không dùng iframe vì cross-origin) */}
             {activeLesson.lesson_type === 'slide' && activeLesson.content_url && (
               <div style={{ margin: '0 16px 4px', background: 'linear-gradient(135deg,#1a1a2e 0%,#16213e 100%)', borderRadius: 18, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                <div style={{ fontSize: 36 }}>🖼</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: 1.4 }}>{activeLesson.title}</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>Slide Canva — mở toàn màn hình để xem</div>
                 <button
                   onClick={() => window.open(normalizeCanvaUrl(activeLesson.content_url!), '_system')}
                   style={{ background: '#4338CA', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  📱 Mở slide Canva ↗
+                  Mở slide Canva ↗
                 </button>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Xem xong bấm nút quay lại để tiếp tục</div>
               </div>
@@ -1389,7 +1384,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   {activeLesson.tools?.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', paddingLeft: 4 }}>
-                        🎯 Thực hành — hoàn thành để tiếp tục
+                        Thực hành — hoàn thành để tiếp tục
                       </div>
                       {activeLesson.tools.map((tid) => {
                         const t = resolveTool(tid); if (!t) return null
@@ -1468,7 +1463,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   )}
                   {/* Ghi nhận hành động thật — nền cho màu mốc + Điểm hành trình */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', paddingLeft: 4 }}>✋ Ghi nhận thực hành</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', paddingLeft: 4 }}>Ghi nhận thực hành</div>
                     {[
                       { type: 'practiced_lesson', label: 'Tôi đã thực hành bài này', xp: 10, icon: '🎸' },
                       { type: 'submitted_video_self_report', label: 'Tôi đã gửi bài cho thầy', xp: 50, icon: '📹' },
@@ -1564,7 +1559,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* ══ HÔM NAY LUYỆN GÌ ══ */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>🔥 Hôm nay luyện gì?</div>
+              <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Hôm nay luyện gì?</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {EXERCISES.filter(ex => (exerciseStatuses[ex.id] ?? 'on') !== 'off').map(ex => {
                   const exStatus = exerciseStatuses[ex.id] ?? 'on'
@@ -1676,7 +1671,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               {/* Add song — step input: YouTube search */}
               {showAddSong && addStep === 'input' && (
                 <div style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadow }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>🔍 Tìm bài hát</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Tìm bài hát</div>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                     <input value={ytQuery} onChange={e => setYtQuery(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && searchYouTube(ytQuery)}
@@ -1816,7 +1811,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                       <div style={{ marginTop: 10 }}>
                         <button onClick={() => setShowAllSongs(!showAllSongs)}
                           style={{ width: '100%', background: 'none', border: 'none', color: L.t2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: '8px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>📚 Tất cả bài hát ({mySongs.length})</span><span>{showAllSongs ? '▲' : '▼'}</span>
+                          <span>Tất cả bài hát ({mySongs.length})</span><span>{showAllSongs ? '▲' : '▼'}</span>
                         </button>
                         {showAllSongs && mySongs.map(s => (
                           <div key={s.id} onClick={() => { const idx = mySongs.slice(0,5).findIndex(ss => ss.id === s.id); if (idx >= 0) setCarouselIdx(idx); setShowAllSongs(false) }}
@@ -1845,7 +1840,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
               const comingTools  = displayTools.filter(t => t.status === 'coming_soon')
               return (
                 <>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: L.t2, marginBottom: 12 }}>🎯 Công cụ luyện tập</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: L.t2, marginBottom: 12 }}>Công cụ luyện tập</div>
 
                   {/* Tools grid — chỉ active */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: comingTools.length ? 10 : 0 }}>
@@ -2000,7 +1995,6 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
             {/* Sự kiện */}
             <div style={{ background: L.surface, borderRadius: 18, padding: '28px 20px', boxShadow: L.shadow, textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: 40, marginBottom: 10 }}>🎪</div>
               <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Sự kiện & giao lưu</div>
               <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.6 }}>Workshop, Open Mic và các buổi giao lưu học viên sẽ sớm xuất hiện ở đây.</div>
             </div>
