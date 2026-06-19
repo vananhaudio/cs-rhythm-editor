@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import { NeckPick, NoteChart, Checklist, Strum, Ear } from './elearn/guitarRenderers'
 import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg } from './elearn/guitarRenderers'
+import SupportFlow from './SupportFlow'
 
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
 const INTERACTIVE_TYPES = ['guitar_neck', 'guitar_strum', 'guitar_ear', 'checklist']
@@ -90,6 +91,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   // Có slide LÀM nào được vượt THẬT không → để tự ghi "đã thực hành" cuối bài
   const practicedRef = useRef(false)
 
+  const [supportOpen, setSupportOpen] = useState(false)
   const buzz = (ok: boolean) => { try { navigator.vibrate?.(ok ? 26 : [0, 14, 40, 14]) } catch { /* */ } }
   const markPassed = (id: string, isLam: boolean) => {
     setPassed(p => p.has(id) ? p : new Set(p).add(id))
@@ -587,7 +589,36 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
             </button>
           )
         })()}
+
+        {/* SUPPORT — Gỡ rối & Đào sâu (opt-in, thầy tự gắn vào bài cần) */}
+        {slide.type === 'support' && (
+          <div>
+            <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.7, marginBottom: 16 }}>
+              {slide.content || 'Vấp là chuyện bình thường. Nếu bạn chưa hiểu, làm chưa được, hoặc muốn hiểu sâu hơn — bấm vào đây để cùng gỡ.'}
+            </div>
+            <button onClick={() => setSupportOpen(true)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: 'none', borderRadius: 15, background: '#3F6B4E', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+              <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🧭</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15.5, fontWeight: 700, color: '#fff' }}>Gỡ rối & Đào sâu</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 2 }}>Tự gỡ → tìm bài giảng → hỏi thầy</div>
+              </div>
+              <span style={{ color: '#fff', fontSize: 18 }}>›</span>
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Overlay Gỡ rối & Đào sâu */}
+      {supportOpen && (
+        <SupportFlow
+          lessonId={lessonId}
+          lessonTitle={flow.title}
+          studentId={previewFlow ? undefined : studentId}
+          teacherUrl={slide.interactive?.teacherUrl as string | undefined}
+          onClose={() => setSupportOpen(false)}
+        />
+      )}
 
       {/* Bottom actions — flexShrink:0 + chừa safe-area đáy → nút LUÔN hiển thị & bấm được */}
       <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
