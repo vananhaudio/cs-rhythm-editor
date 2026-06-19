@@ -2,7 +2,7 @@
 // Mỗi renderer EMIT onPass/onWrong/onOpenTool cho engine (KHÔNG tự kết thúc bài).
 // Khung "self-check trung thực": app phát tiếng mẫu → học viên bắt chước trên đàn THẬT → tự xác nhận.
 // (App chưa nghe được tay đàn — phần chấm bằng mic để Giai đoạn 3.)
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ACCENT, STRINGS, freqOfNum, colorOfNum, widthOfNum, stringByNum } from './guitarConst'
 import { playTone, playSequence } from './audio'
 
@@ -11,6 +11,11 @@ export interface ChecklistCfg { items?: string[]; requireAll?: boolean }
 export interface NoteChartCfg { highlight?: string[] }
 export interface StrumCfg { sequence?: number[] }                 // dãy số dây cần gảy đúng thứ tự
 export interface EarCfg { pool?: number[]; rounds?: number; passScore?: number }
+// "Đánh theo mẫu": máy chạy chuỗi nốt theo nhịp, học viên bắt chước
+export interface NotePracticeCfg {
+  notes?: { label: string; freq: number }[]   // chuỗi nốt (vd 4× Mi)
+  speeds?: { label: string; bpm: number }[]    // các tốc độ chọn
+}
 
 interface CB { onPass: () => void; onWrong: () => void }
 
@@ -251,6 +256,92 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
             {ok ? `Chính xác — dây ${tgE?.num} (${tgE?.vn}·${tgE?.note}).` : `Là dây ${tgE?.num} (${tgE?.vn}·${tgE?.note}). Bấm 🔊 nghe lại để nhớ.`}
           </div>
           <button onClick={next} style={{ marginTop: 10, width: '100%', padding: 13, border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>{round >= rounds ? 'Xem kết quả' : 'Câu tiếp →'}</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── note_practice: máy chạy chuỗi nốt theo nhịp → học viên ĐÁNH THEO (bắt chước) ──
+const DEFAULT_SPEEDS = [{ label: 'Chậm', bpm: 60 }, { label: 'Vừa', bpm: 80 }, { label: 'Nhanh', bpm: 100 }]
+export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB, 'onPass'>) {
+  const notes = cfg.notes?.length ? cfg.notes : Array.from({ length: 4 }, () => ({ label: 'Mi', freq: 329.63 }))
+  const speeds = cfg.speeds?.length ? cfg.speeds : DEFAULT_SPEEDS
+  const [speedIdx, setSpeedIdx] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [cursor, setCursor] = useState(-1)
+  const [done, setDone] = useState(false)
+  const timer = useRef<number | null>(null)
+  const beat = useRef(0)
+
+  const stop = () => {
+    if (timer.current) { clearInterval(timer.current); timer.current = null }
+    setPlaying(false); setCursor(-1)
+  }
+  useEffect(() => () => { if (timer.current) clearInterval(timer.current) }, [])
+
+  const start = () => {
+    if (timer.current) clearInterval(timer.current)
+    setPlaying(true); beat.current = 0
+    const ms = 60000 / speeds[speedIdx].bpm
+    const tick = () => {
+      const i = beat.current % notes.length
+      setCursor(i)
+      playTone(notes[i].freq)
+      beat.current++
+      // sau 2 vòng (đủ vài nhịp) → mở hoàn thành
+      if (beat.current >= notes.length * 2 && !done) { setDone(true); onPass() }
+    }
+    tick()
+    timer.current = window.setInterval(tick, ms)
+  }
+
+  return (
+    <div>
+      {/* Chọn tốc độ */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
+        <div style={{ display: 'flex', gap: 4, padding: 4, background: '#EFE9DD', borderRadius: 12 }}>
+          {speeds.map((s, i) => (
+            <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start() }}
+              style={{ padding: '7px 16px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700,
+                background: speedIdx === i ? '#fff' : 'transparent', color: speedIdx === i ? ACCENT.d : '#8A8478',
+                boxShadow: speedIdx === i ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>{s.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Dãy nốt chạy */}
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', margin: '18px 0' }}>
+        {notes.map((n, i) => {
+          const on = cursor === i
+          return (
+            <div key={i} style={{ width: 58, height: 58, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, transition: 'all .08s',
+              background: on ? ACCENT.a : '#fff', color: on ? '#fff' : '#C9C0AF',
+              border: `2px solid ${on ? ACCENT.a : '#E6E0D4'}`, transform: on ? 'scale(1.12)' : 'none',
+              boxShadow: on ? `0 6px 16px -6px ${ACCENT.a}` : 'none' }}>
+              {n.label}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Nút điều khiển */}
+      <button onClick={playing ? stop : start}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 16, border: 'none', borderRadius: 15, background: playing ? '#1C1A17' : ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
+        <span style={{ fontSize: 18 }}>{playing ? '⏹' : '▶'}</span>
+        <span>
+          <span style={{ display: 'block', fontSize: 15, fontWeight: 700 }}>{playing ? 'Dừng lại' : 'Bắt đầu chơi theo'}</span>
+          {!playing && <span style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 1 }}>Máy chạy nốt đều — bạn đánh theo trên đàn</span>}
+        </span>
+      </button>
+
+      <div style={{ marginTop: 12, fontSize: 12, color: '#A8A294', textAlign: 'center', lineHeight: 1.5 }}>
+        Nghe máy chạy rồi gảy theo. Không cần nhanh — đều và rõ là được.
+      </div>
+      {done && (
+        <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+          Tốt lắm! Bạn đã chơi theo được — có thể bấm Dừng và sang bước sau.
         </div>
       )}
     </div>

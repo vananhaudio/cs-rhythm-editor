@@ -35,6 +35,7 @@ const SLIDE_TYPES = [
   { id: 'guitar_neck', icon: '🎸', label: 'Chọn dây'       },
   { id: 'guitar_strum',icon: '🎶', label: 'Gảy dãy dây'    },
   { id: 'guitar_ear',  icon: '👂', label: 'Luyện tai nghe' },
+  { id: 'note_practice', icon: '🎼', label: 'Đánh theo mẫu' },
   { id: 'guitar_tool', icon: '🎚️', label: 'Mở công cụ'     },
   // NGẪM / THƯỞNG / DẪN
   { id: 'checklist',   icon: '☑️', label: 'Tự đánh giá'    },
@@ -467,6 +468,42 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                             <Btn onClick={() => patchItv('sequence', [1, 2, 3, 4, 5, 6])}>Dây 1→6</Btn>
                             <Btn onClick={() => patchItv('sequence', [6, 5, 4, 3, 2, 1])}>Dây 6→1</Btn>
                             <Btn onClick={() => patchItv('sequence', [])}>Xoá</Btn>
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* NOTE_PRACTICE — đánh theo mẫu */}
+                    {editSlide.type === 'note_practice' && (() => {
+                      const OPEN_NOTES = [
+                        { label: 'Mi', freq: 329.63, name: 'Dây 1 — Mi (cao)' },
+                        { label: 'Si', freq: 246.94, name: 'Dây 2 — Si' },
+                        { label: 'Sol', freq: 196.0, name: 'Dây 3 — Sol' },
+                        { label: 'Rê', freq: 146.83, name: 'Dây 4 — Rê' },
+                        { label: 'La', freq: 110.0, name: 'Dây 5 — La' },
+                        { label: 'Mi', freq: 82.41, name: 'Dây 6 — Mi (trầm)' },
+                      ]
+                      const notes = (itv.notes as { label: string; freq: number }[]) ?? []
+                      const cur = notes[0] ?? OPEN_NOTES[0]
+                      const count = notes.length || 4
+                      const rebuild = (label: string, freq: number, n: number) =>
+                        patchItv('notes', Array.from({ length: n }, () => ({ label, freq })))
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10 }}>
+                          <div>
+                            <Label>Nốt luyện (dây buông)</Label>
+                            <Sel value={`${cur.label}|${cur.freq}`} onChange={v => { const [l, f] = v.split('|'); rebuild(l, Number(f), count) }}>
+                              {OPEN_NOTES.map(o => <option key={o.name} value={`${o.label}|${o.freq}`}>{o.name}</option>)}
+                            </Sel>
+                          </div>
+                          <div>
+                            <Label>Số nốt (lặp)</Label>
+                            <input type="number" min={1} max={8} value={count}
+                              onChange={e => rebuild(cur.label, cur.freq, Number(e.target.value))}
+                              style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none' }} />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: C.text3, lineHeight: 1.5 }}>
+                            Máy chạy chuỗi nốt theo nhịp (Chậm/Vừa/Nhanh), học viên đánh theo trên đàn. VD bài Nốt Mi: chọn "Dây 1 — Mi", 4 nốt.
                           </div>
                         </div>
                       )

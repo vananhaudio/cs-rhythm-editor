@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import { NeckPick, NoteChart, Checklist, Strum, Ear } from './elearn/guitarRenderers'
-import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg } from './elearn/guitarRenderers'
+import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice } from './elearn/guitarRenderers'
+import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg } from './elearn/guitarRenderers'
 import SupportFlow from './SupportFlow'
 
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
-const INTERACTIVE_TYPES = ['guitar_neck', 'guitar_strum', 'guitar_ear', 'checklist']
+const INTERACTIVE_TYPES = ['guitar_neck', 'guitar_strum', 'guitar_ear', 'checklist', 'note_practice']
 
 // Nhận MỌI dạng link YouTube → URL embed cho iframe.
 // Bắt ID 11 ký tự bất kể thứ tự tham số (watch?v=, watch?app=desktop&v=, m.youtube, youtu.be, shorts, live, embed, hoặc ID trần).
@@ -568,6 +568,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* CHECKLIST — tự đánh giá (NGẪM) */}
         {slide.type === 'checklist' && (
           <Checklist cfg={(slide.interactive ?? {}) as ChecklistCfg} onPass={() => markPassed(slide.id, false)} />
+        )}
+
+        {/* NOTE_PRACTICE — đánh theo mẫu (máy chạy nốt, học viên bắt chước) */}
+        {slide.type === 'note_practice' && (
+          <NotePractice cfg={(slide.interactive ?? {}) as NotePracticeCfg} onPass={() => markPassed(slide.id, true)} />
         )}
 
         {/* GUITAR_TOOL — mở công cụ ngay trong bài (LÀM/DẪN) */}

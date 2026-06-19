@@ -54,7 +54,28 @@ const SAMPLE_FLOW_8 = {
   ],
 }
 
-const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8 }
+// Tỉa nốt căn bản — Bài 1 "Nốt Mi — dây 1 buông" (demo bài tập đánh-theo-mẫu)
+const SAMPLE_FLOW_MI = {
+  id: 'sample-mi',
+  title: 'Nốt Mi — dây 1 buông',
+  reward_xp: 10,
+  slides: [
+    { id: 'mi1', order: 1, logic: 'DAN', type: 'callout', title: 'Nốt Mi — dây 1 buông',
+      interactive: { variant: 'teacher' },
+      content: 'Hôm nay em làm quen nốt nhạc đầu tiên: <b>nốt Mi</b>. Cùng nhìn, nghe và đánh theo nhé!' },
+    { id: 'mi2', order: 2, logic: 'NHAN', type: 'text', title: 'Nốt Mi nằm ở đâu?',
+      content: 'Nốt <b>Mi</b> chính là <b>dây 1 buông</b> — dây mỏng nhất của đàn. "Buông" nghĩa là tay trái không bấm phím nào, tay phải gảy đúng dây đó.' },
+    { id: 'mi3', order: 3, logic: 'LAM', type: 'note_practice', title: 'Đánh theo: Mi – Mi – Mi – Mi',
+      interactive: { notes: [{ label: 'Mi', freq: 329.63 }, { label: 'Mi', freq: 329.63 }, { label: 'Mi', freq: 329.63 }, { label: 'Mi', freq: 329.63 }] } },
+    { id: 'mi4', order: 4, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+      interactive: { items: ['Mình gảy đúng dây 1 (mỏng nhất)', 'Tiếng đều theo nhịp, không vội'] } },
+    { id: 'mi5', order: 5, logic: 'DAN', type: 'callout', title: 'Lời thầy',
+      interactive: { variant: 'teacher' },
+      content: 'Tốt lắm! Mi là nốt đầu tiên — cứ gảy đều cho quen tay. Mai mình thêm nốt mới nhé. 🎸' },
+  ],
+}
+
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI }
 
 export default function FlowLabPage() {
   const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'
