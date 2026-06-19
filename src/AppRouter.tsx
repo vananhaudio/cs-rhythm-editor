@@ -20,6 +20,7 @@ import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
 import FlowLabPage from './FlowLabPage'
+import FlowMigratePage from './FlowMigratePage'
 import JoinGroupPage from './JoinGroupPage'
 import DeleteAccountPage from './DeleteAccountPage'
 type AppUser = {
@@ -189,6 +190,13 @@ if (path === '/flow-lab' || path.startsWith('/flow-lab')) {
   if (loading) return null
   if (!user) { window.location.href = '/start'; return null }
   return <FlowLabPage />
+}
+
+// ── Route /flow-migrate — Migrate 11 bài Nhập Môn → Flow (teacher) ──
+if (path === '/flow-migrate' || path.startsWith('/flow-migrate')) {
+  if (loading) return null
+  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  return <FlowMigratePage />
 }
 
 // ── Route /start — Student onboarding ──
