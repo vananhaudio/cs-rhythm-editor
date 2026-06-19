@@ -246,6 +246,7 @@ export default function LessonViewerPage() {
               studentId={studentId}
               onComplete={() => {}}
               onBack={() => window.history.back()}
+              onOpenTool={(tool) => window.open('/' + (tool === 'tempo' ? 'tempo' : tool === 'guitarboard' ? 'guitarboard' : 'tuner') + '?embedded=1', '_blank')}
             />
           </div>
         ) : (

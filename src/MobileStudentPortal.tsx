@@ -1276,6 +1276,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 onLogAction={logAction}
                 doneActions={lessonActions}
                 actionBusy={actionBusy}
+                onOpenTool={(tool) => {
+                  const map: Record<string, [string, string]> = {
+                    tuner:       ['/tuner', 'Tuner — Lên dây'],
+                    tempo:       ['/tempo', 'Metronome'],
+                    guitarboard: ['/guitarboard', 'Bảng phím / Tab'],
+                  }
+                  const [route, name] = map[tool] ?? map.tuner
+                  openTool(route, name)
+                }}
               />
             ) : (
             <>
