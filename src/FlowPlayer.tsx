@@ -347,9 +347,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           ←
         </button>
         <span title={lm.label}
-          style={{ background: lm.bg, width: 28, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
-          {lm.icon}
-        </span>
+          style={{ width: 9, height: 9, borderRadius: 99, background: lm.color, flexShrink: 0, boxShadow: `0 0 0 4px ${lm.bg}` }} />
         <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: '#18181B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {slide.title ?? ''}
         </span>
