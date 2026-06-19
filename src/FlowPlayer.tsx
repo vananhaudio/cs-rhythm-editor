@@ -6,16 +6,19 @@ import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg } from './el
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
 const INTERACTIVE_TYPES = ['guitar_neck', 'guitar_strum', 'guitar_ear', 'checklist']
 
-// Nhận MỌI dạng link YouTube → URL embed cho iframe (tránh màn đen khi dán link thường)
+// Nhận MỌI dạng link YouTube → URL embed cho iframe.
+// Bắt ID 11 ký tự bất kể thứ tự tham số (watch?v=, watch?app=desktop&v=, m.youtube, youtu.be, shorts, live, embed, hoặc ID trần).
 export function toYouTubeEmbed(url: string): string {
   if (!url) return url
   const u = url.trim()
-  if (/youtube\.com\/embed\//.test(u)) return u // đã là embed
-  const m = u.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/)
-  if (m) return `https://www.youtube.com/embed/${m[1]}?rel=0`
-  const bare = u.match(/^[\w-]{11}$/) // chỉ ID 11 ký tự
-  if (bare) return `https://www.youtube.com/embed/${u}?rel=0`
-  return u
+  if (/youtube\.com\/embed\/[\w-]{11}/.test(u)) return u // đã là embed hợp lệ
+  let id: string | null = null
+  let m: RegExpMatchArray | null
+  if ((m = u.match(/[?&]v=([\w-]{11})/)))               id = m[1] // …watch?…v=ID (mọi thứ tự tham số)
+  else if ((m = u.match(/youtu\.be\/([\w-]{11})/)))      id = m[1]
+  else if ((m = u.match(/\/(?:embed|shorts|live|v)\/([\w-]{11})/))) id = m[1]
+  else if (/^[\w-]{11}$/.test(u))                        id = u    // ID trần
+  return id ? `https://www.youtube.com/embed/${id}?rel=0` : u
 }
 
 // ── Logic labels & colors ──────────────────────────────────────────────────
