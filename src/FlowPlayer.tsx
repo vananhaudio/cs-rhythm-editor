@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import { NeckPick, NoteChart, Checklist } from './elearn/guitarRenderers'
-import type { NeckCfg, ChecklistCfg, NoteChartCfg } from './elearn/guitarRenderers'
+import { NeckPick, NoteChart, Checklist, Strum, Ear } from './elearn/guitarRenderers'
+import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg } from './elearn/guitarRenderers'
 
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
-const INTERACTIVE_TYPES = ['guitar_neck', 'checklist']
+const INTERACTIVE_TYPES = ['guitar_neck', 'guitar_strum', 'guitar_ear', 'checklist']
 
 // ── Logic labels & colors ──────────────────────────────────────────────────
 const LOGIC_META: Record<string, { label: string; bg: string; color: string }> = {
@@ -533,6 +533,24 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
               </button>
             )}
           </div>
+        )}
+
+        {/* GUITAR_STRUM — gảy đủ dãy đúng thứ tự (LÀM) */}
+        {slide.type === 'guitar_strum' && (
+          <div>
+            <Strum cfg={(slide.interactive ?? {}) as StrumCfg}
+              onPass={() => markPassed(slide.id, true)} onWrong={() => bumpAttempt(slide.id)} />
+            {!passed.has(slide.id) && (attempts[slide.id] ?? 0) >= 2 && (
+              <button onClick={() => softPass(slide.id)} style={{ marginTop: 14, width: '100%', padding: '12px', border: '1.5px dashed #C9C0AF', borderRadius: 12, background: '#fff', color: '#8A8478', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+                Mình đã thử trên đàn rồi → tiếp tục
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* GUITAR_EAR — nghe đoán dây (LÀM) */}
+        {slide.type === 'guitar_ear' && (
+          <Ear cfg={(slide.interactive ?? {}) as EarCfg} onPass={() => markPassed(slide.id, true)} />
         )}
 
         {/* CHECKLIST — tự đánh giá (NGẪM) */}

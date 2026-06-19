@@ -28,12 +28,40 @@ const SAMPLE_FLOW = {
   ],
 }
 
+// Bài 8 "Gảy dây cho đàn kêu rõ" — mẫu cho mô phỏng gảy dây + luyện tai nghe
+const SAMPLE_FLOW_8 = {
+  id: 'sample-bai8',
+  title: 'Gảy dây cho đàn kêu rõ',
+  reward_xp: 10,
+  slides: [
+    { id: 'a1', order: 1, logic: 'DAN', type: 'callout', title: 'Gảy cho đàn kêu rõ',
+      interactive: { variant: 'teacher' },
+      content: 'Mục tiêu đơn giản: gảy từng dây nghe <b>tròn và rõ</b>, không bị tịt. Cùng thử nhé.' },
+    { id: 'a2', order: 2, logic: 'NHAN', type: 'text', title: 'Tay phải thả lỏng',
+      content: '• Cổ tay mềm, không gồng.<br/>• Gảy dứt khoát qua dây, không ấn quá sâu.<br/>• Nghe: tiếng tròn, vang — không bị cụt.' },
+    { id: 'a3', order: 3, logic: 'LAM', type: 'guitar_strum', title: 'Gảy lần lượt 6 dây buông',
+      interactive: { sequence: [1, 2, 3, 4, 5, 6] } },
+    { id: 'a4', order: 4, logic: 'LAM', type: 'guitar_ear', title: 'Luyện tai: âm này là dây nào?',
+      interactive: { rounds: 5 } },
+    { id: 'a5', order: 5, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+      interactive: { items: ['Từng dây nghe rõ, không tịt', 'Cổ tay phải thả lỏng, không gồng'] } },
+    { id: 'a6', order: 6, logic: 'DAN', type: 'callout', title: '',
+      interactive: { variant: 'teacher' },
+      content: 'Tuyệt! Tiếng rõ là nền của mọi bài sau. Mỗi ngày gảy buông 6 dây vài lượt cho quen tay nhé. 🎸' },
+  ],
+}
+
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8 }
+
 export default function FlowLabPage() {
+  const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'
+  const flow = SAMPLES[bai] ?? SAMPLE_FLOW
   return (
     <FlowPlayer
+      key={flow.id}
       lessonId="sample"
       studentId=""
-      previewFlow={SAMPLE_FLOW}
+      previewFlow={flow}
       fullScreen
       onComplete={() => { /* preview — không ghi gì */ }}
       onBack={() => { window.location.href = '/admin' }}
