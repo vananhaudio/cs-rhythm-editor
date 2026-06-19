@@ -221,14 +221,14 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   }
 
   // ── Container style — fullScreen tự dùng position:fixed để tránh bug iOS WebKit ──────
+  // Safe-area KHÔNG đặt ở container (dễ bị màn Done/Loading dùng `padding` shorthand ghi đè)
+  // → đẩy thẳng vào header (nút back) & thanh nút đáy bên dưới.
   const containerStyle = fullScreen
     ? {
         position: 'fixed' as const,
         top: 0 as number | string, left: 0 as number | string,
         right: 0 as number | string, bottom: 0 as number | string,
         background: '#fff', zIndex: 100,
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
         boxSizing: 'border-box' as const,
         display: 'flex' as const, flexDirection: 'column' as const, overflow: 'hidden' as const,
       }
@@ -258,7 +258,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
   // ── Done screen ──────────────────────────────────────────────────────────
   if (done) return (
-    <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 28, textAlign: 'center', gap: 14, overflowY: 'auto' }}>
+    <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 'calc(env(safe-area-inset-top,0px) + 28px) 28px calc(env(safe-area-inset-bottom,0px) + 28px)', textAlign: 'center', gap: 14, overflow: 'auto' }}>
       <div style={{ fontSize: 52 }}>🎉</div>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#4338CA' }}>Hoàn thành!</div>
       <div style={{ fontSize: 15, color: '#555' }}>{flow.title}</div>
@@ -334,8 +334,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         <div style={{ height: '100%', background: '#4338CA', width: `${progress}%`, transition: 'width .35s ease', borderRadius: 2 }} />
       </div>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #F0F0F2', flexShrink: 0 }}>
+      {/* Header — chừa tai thỏ (safe-area top) để nút back luôn bấm được */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px', borderBottom: '1px solid #F0F0F2', flexShrink: 0 }}>
         <button onClick={onBack}
           style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888', padding: '2px 8px 2px 0', lineHeight: 1 }}>
           ←
@@ -591,8 +591,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         })()}
       </div>
 
-      {/* Bottom actions — flexShrink:0 đảm bảo nút LUÔN hiển thị dù nội dung dài */}
-      <div style={{ padding: '12px 16px 28px', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+      {/* Bottom actions — flexShrink:0 + chừa safe-area đáy → nút LUÔN hiển thị & bấm được */}
+      <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
         {/* Hàng nút điều hướng: Trước + Tiếp tục */}
         <div style={{ display: 'flex', gap: 8 }}>
           {current > 0 && (
