@@ -334,18 +334,19 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         <div style={{ height: '100%', background: '#4338CA', width: `${progress}%`, transition: 'width .35s ease', borderRadius: 2 }} />
       </div>
 
-      {/* Header — chừa tai thỏ (safe-area top) để nút back luôn bấm được */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px', borderBottom: '1px solid #F0F0F2', flexShrink: 0 }}>
+      {/* Header — badge + TIÊU ĐỀ cùng hàng (gọn, không đẩy nội dung xuống) + chừa tai thỏ */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: 'calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px', borderBottom: '1px solid #F0F0F2', flexShrink: 0 }}>
         <button onClick={onBack}
-          style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888', padding: '2px 8px 2px 0', lineHeight: 1 }}>
+          style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888', padding: '2px 4px 2px 0', lineHeight: 1, flexShrink: 0 }}>
           ←
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ background: lm.bg, color: lm.color, borderRadius: 99, padding: '3px 12px', fontSize: 11, fontWeight: 700 }}>
-            {lm.label}
-          </span>
-          <span style={{ fontSize: 12, color: '#AAA' }}>{current + 1} / {flow.slides.length}</span>
-        </div>
+        <span style={{ background: lm.bg, color: lm.color, borderRadius: 99, padding: '3px 11px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+          {lm.label}
+        </span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: '#18181B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {slide.title ?? ''}
+        </span>
+        <span style={{ fontSize: 12, color: '#AAA', flexShrink: 0 }}>{current + 1} / {flow.slides.length}</span>
       </div>
 
       {/* Slide body — cuộn NỘI BỘ nếu nội dung dài, nút bấm luôn hiển thị */}
@@ -354,13 +355,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         className={slideDir.current === 'next' ? '_fsNext' : '_fsPrev'}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '24px 16px 12px' }}>
-
-        {slide.title && (
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#18181B', lineHeight: 1.45, marginBottom: 16 }}>
-            {slide.title}
-          </div>
-        )}
+        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '18px 16px 12px' }}>
 
         {/* TEXT / NEXT */}
         {(slide.type === 'text' || slide.type === 'next') && slide.content && (
