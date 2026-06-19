@@ -3,7 +3,6 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import CourseEditorContent from './CourseEditorContent'
 import ToolsManager from './ToolsManager'
-import FlowManager from './FlowManager'
 import GroupManager from './GroupManager'
 
 const S = {
@@ -13,14 +12,13 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'flows' | 'community'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
   { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
-  { id: 'flows'     as Section, icon: '✨', label: 'Flow Bài Học'   },
   { id: 'community' as Section, icon: '🌱', label: 'Cộng đồng'      },
 ]
 
@@ -134,12 +132,6 @@ export default function TeacherAdminPage() {
         {section === 'tools' && (
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <ToolsManager />
-          </div>
-        )}
-
-        {section === 'flows' && (
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <FlowManager />
           </div>
         )}
 
