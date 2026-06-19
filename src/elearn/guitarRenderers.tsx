@@ -321,8 +321,9 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
   const stemX = noteX + (stemUp ? 8 : -8)
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: 270, display: 'block', margin: '0 auto' }}>
-      {[0, 1, 2, 3, 4].map(i => <line key={i} x1={18} x2={W - 12} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
-      <text x={22} y={lineY(4) + 7} fontSize={62} fill="#3F6B4E" fontFamily="serif">𝄞</text>
+      {[0, 1, 2, 3, 4].map(i => <line key={i} x1={40} x2={W - 12} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
+      {/* Khóa Sol — glyph to, baseline canh để xoắn ốc ôm dòng Sol (lineY(3)) */}
+      <text x={6} y={lineY(3) + 22} fontSize={84} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>
       <g key={pulse} style={{ animation: active ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${noteX}px ${noteY}px` }}>
         <ellipse cx={noteX} cy={noteY} rx={9} ry={6.6} fill={col} transform={`rotate(-18 ${noteX} ${noteY})`} />
         <line x1={stemX} x2={stemX} y1={noteY + (stemUp ? -2 : 2)} y2={noteY + (stemUp ? -38 : 38)} stroke={col} strokeWidth={2.2} />
