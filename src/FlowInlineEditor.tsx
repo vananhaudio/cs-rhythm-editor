@@ -476,34 +476,35 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     {/* NOTE_PRACTICE — đánh theo mẫu */}
                     {editSlide.type === 'note_practice' && (() => {
                       const OPEN_NOTES = [
-                        { label: 'Mi', freq: 329.63, name: 'Dây 1 — Mi (cao)' },
-                        { label: 'Si', freq: 246.94, name: 'Dây 2 — Si' },
-                        { label: 'Sol', freq: 196.0, name: 'Dây 3 — Sol' },
-                        { label: 'Rê', freq: 146.83, name: 'Dây 4 — Rê' },
-                        { label: 'La', freq: 110.0, name: 'Dây 5 — La' },
-                        { label: 'Mi', freq: 82.41, name: 'Dây 6 — Mi (trầm)' },
+                        { label: 'Mi', freq: 329.63, string: 1, staff: 0,         name: 'Dây 1 — Mi (cao)' },
+                        { label: 'Si', freq: 246.94, string: 2, staff: undefined, name: 'Dây 2 — Si' },
+                        { label: 'Sol', freq: 196.0, string: 3, staff: undefined, name: 'Dây 3 — Sol' },
+                        { label: 'Rê', freq: 146.83, string: 4, staff: undefined, name: 'Dây 4 — Rê' },
+                        { label: 'La', freq: 110.0, string: 5, staff: undefined, name: 'Dây 5 — La' },
+                        { label: 'Mi', freq: 82.41, string: 6, staff: undefined, name: 'Dây 6 — Mi (trầm)' },
                       ]
-                      const notes = (itv.notes as { label: string; freq: number }[]) ?? []
-                      const cur = notes[0] ?? OPEN_NOTES[0]
+                      const notes = (itv.notes as { string?: number; freq: number }[]) ?? []
+                      const curStr = notes[0]?.string ?? 1
                       const count = notes.length || 4
-                      const rebuild = (label: string, freq: number, n: number) =>
-                        patchItv('notes', Array.from({ length: n }, () => ({ label, freq })))
+                      const rebuild = (o: typeof OPEN_NOTES[number], n: number) =>
+                        patchItv('notes', Array.from({ length: n }, () => ({ label: o.label, freq: o.freq, string: o.string, fret: 0, staff: o.staff })))
+                      const curOpt = OPEN_NOTES.find(o => o.string === curStr) ?? OPEN_NOTES[0]
                       return (
                         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 10 }}>
                           <div>
                             <Label>Nốt luyện (dây buông)</Label>
-                            <Sel value={`${cur.label}|${cur.freq}`} onChange={v => { const [l, f] = v.split('|'); rebuild(l, Number(f), count) }}>
-                              {OPEN_NOTES.map(o => <option key={o.name} value={`${o.label}|${o.freq}`}>{o.name}</option>)}
+                            <Sel value={String(curStr)} onChange={v => { const o = OPEN_NOTES.find(x => x.string === Number(v))!; rebuild(o, count) }}>
+                              {OPEN_NOTES.map(o => <option key={o.string} value={o.string}>{o.name}</option>)}
                             </Sel>
                           </div>
                           <div>
                             <Label>Số nốt (lặp)</Label>
                             <input type="number" min={1} max={8} value={count}
-                              onChange={e => rebuild(cur.label, cur.freq, Number(e.target.value))}
+                              onChange={e => rebuild(curOpt, Number(e.target.value))}
                               style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none' }} />
                           </div>
                           <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: C.text3, lineHeight: 1.5 }}>
-                            Máy chạy chuỗi nốt theo nhịp (Chậm/Vừa/Nhanh), học viên đánh theo trên đàn. VD bài Nốt Mi: chọn "Dây 1 — Mi", 4 nốt.
+                            Máy chạy nốt theo nhịp trên CẦN ĐÀN (hiện vị trí dây/phím), học viên đánh theo. Dây 1 — Mi còn hiện thêm KHUÔNG NHẠC. VD bài Nốt Mi: "Dây 1 — Mi", 4 nốt.
                           </div>
                         </div>
                       )

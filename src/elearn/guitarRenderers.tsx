@@ -12,9 +12,11 @@ export interface NoteChartCfg { highlight?: string[] }
 export interface StrumCfg { sequence?: number[] }                 // dãy số dây cần gảy đúng thứ tự
 export interface EarCfg { pool?: number[]; rounds?: number; passScore?: number }
 // "Đánh theo mẫu": máy chạy chuỗi nốt theo nhịp, học viên bắt chước
+export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number }
 export interface NotePracticeCfg {
-  notes?: { label: string; freq: number }[]   // chuỗi nốt (vd 4× Mi)
+  notes?: NoteItem[]                            // chuỗi nốt (vd 4× Mi). string/fret để vẽ cần đàn, staff = vị trí trên khuông (0 = dòng kẻ dưới cùng = Mi/E4)
   speeds?: { label: string; bpm: number }[]    // các tốc độ chọn
+  showStaff?: boolean                           // hiện khuông nhạc (mặc định có nếu nốt có staff)
 }
 
 interface CB { onPass: () => void; onWrong: () => void }
@@ -264,8 +266,65 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
 
 // ── note_practice: máy chạy chuỗi nốt theo nhịp → học viên ĐÁNH THEO (bắt chước) ──
 const DEFAULT_SPEEDS = [{ label: 'Chậm', bpm: 60 }, { label: 'Vừa', bpm: 80 }, { label: 'Nhanh', bpm: 100 }]
+
+// Cần đàn mini gỗ tối — hiện 1 nốt theo (dây 1..6 từ trên xuống, phím 0=buông sát nut)
+function MiniFretboard({ string, fret, pulse }: { string?: number; fret?: number; pulse?: number }) {
+  const STRING_CNT = 6, FRET_COUNT = 4, H = 128
+  const rowY = (num: number) => ((num - 1 + 0.5) / STRING_CNT) * 100   // dây 1 → trên cùng
+  const strW = (num: number) => 1.2 + (num - 1) * (2.4 / 5)
+  const active = string != null && fret != null
+  const xPct = fret === 0 ? 2 : ((fret! - 0.5) / FRET_COUNT) * 100
+  return (
+    <div>
+      <div style={{ display: 'flex', height: H }}>
+        <div style={{ width: 22, flexShrink: 0, position: 'relative' }}>
+          {[1, 2, 3, 4, 5, 6].map(num => (
+            <div key={num} style={{ position: 'absolute', right: 3, top: `${rowY(num)}%`, transform: 'translateY(-50%)', fontSize: 9, fontWeight: 700, color: colorOfNum(num) }}>{num}</div>
+          ))}
+        </div>
+        <div style={{ flex: 1, position: 'relative', background: 'linear-gradient(180deg,#1e1008,#20140F 55%,#1a0d06)', border: '1.5px solid #3a2a1f', borderRadius: '0 8px 8px 0', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: 'linear-gradient(90deg,#b8ac90,#ede3cc,#b8ac90)', zIndex: 4 }} />
+          {[1, 2, 3].map(i => <div key={i} style={{ position: 'absolute', left: `${i * 25}%`, top: 0, bottom: 0, width: 2, background: 'linear-gradient(90deg,#888,#bbb,#888)', zIndex: 3 }} />)}
+          {[1, 2, 3, 4, 5, 6].map(num => { const t = strW(num); return (
+            <div key={num} style={{ position: 'absolute', left: 6, right: 0, top: `${rowY(num)}%`, height: t, marginTop: -(t / 2), background: `linear-gradient(90deg,${colorOfNum(num)}99,${colorOfNum(num)})`, zIndex: 3 }} />
+          )})}
+          {active && (
+            <div key={pulse} style={{ position: 'absolute', left: `${xPct}%`, top: `${rowY(string!)}%`, width: 26, height: 26, marginLeft: -13, marginTop: -13, borderRadius: '50%', background: ACCENT.a, border: '2px solid rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff', zIndex: 10, boxShadow: `0 0 14px ${ACCENT.a}, 0 2px 6px rgba(0,0,0,.5)`, animation: '_ntPing .25s ease-out' }}>
+              {fret === 0 ? '○' : fret}
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ display: 'flex', marginLeft: 22, marginTop: 4 }}>
+        {[1, 2, 3, 4].map(f => <div key={f} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#9CA3AF' }}>{f}</div>)}
+      </div>
+      <style dangerouslySetInnerHTML={{ __html: '@keyframes _ntPing{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}' }} />
+    </div>
+  )
+}
+
+// Khuông nhạc nhỏ — dạy thụ động vị trí nốt (staff: 0 = dòng kẻ dưới cùng = Mi/E4)
+function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean; label: string; staff?: number; pulse?: number }) {
+  const W = 240, H = 92, top = 22, gap = 11
+  const lineY = (i: number) => top + i * gap            // i=0 dòng trên cùng … i=4 dòng dưới cùng
+  const noteY = lineY(4) - staff * (gap / 2)            // mỗi bậc = nửa khoảng dòng
+  const noteX = 158
+  const col = active ? ACCENT.c1 : '#B0AA9C'
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: 270, display: 'block', margin: '0 auto' }}>
+      {[0, 1, 2, 3, 4].map(i => <line key={i} x1={18} x2={W - 12} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
+      <text x={22} y={lineY(4) + 7} fontSize={62} fill="#3F6B4E" fontFamily="serif">𝄞</text>
+      <g key={pulse} style={{ animation: active ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${noteX}px ${noteY}px` }}>
+        <ellipse cx={noteX} cy={noteY} rx={9} ry={6.6} fill={col} transform={`rotate(-18 ${noteX} ${noteY})`} />
+        <line x1={noteX + 8} x2={noteX + 8} y1={noteY - 2} y2={noteY - 38} stroke={col} strokeWidth={2.2} />
+      </g>
+      <text x={noteX} y={H - 3} textAnchor="middle" fontSize={13} fontWeight="700" fill={col}>{label}</text>
+    </svg>
+  )
+}
+
 export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB, 'onPass'>) {
-  const notes = cfg.notes?.length ? cfg.notes : Array.from({ length: 4 }, () => ({ label: 'Mi', freq: 329.63 }))
+  const notes: NoteItem[] = cfg.notes?.length ? cfg.notes : Array.from({ length: 4 }, () => ({ label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 0 }))
   const speeds = cfg.speeds?.length ? cfg.speeds : DEFAULT_SPEEDS
   const [speedIdx, setSpeedIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -296,6 +355,9 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
     timer.current = window.setInterval(tick, ms)
   }
 
+  const cur = notes[cursor >= 0 ? cursor % notes.length : 0]
+  const showStaff = cfg.showStaff ?? notes.some(n => n.staff != null)
+
   return (
     <div>
       {/* Chọn tốc độ */}
@@ -311,19 +373,19 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
         </div>
       </div>
 
-      {/* Dãy nốt chạy */}
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', margin: '18px 0' }}>
-        {notes.map((n, i) => {
-          const on = cursor === i
-          return (
-            <div key={i} style={{ width: 58, height: 58, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, transition: 'all .08s',
-              background: on ? ACCENT.a : '#fff', color: on ? '#fff' : '#C9C0AF',
-              border: `2px solid ${on ? ACCENT.a : '#E6E0D4'}`, transform: on ? 'scale(1.12)' : 'none',
-              boxShadow: on ? `0 6px 16px -6px ${ACCENT.a}` : 'none' }}>
-              {n.label}
-            </div>
-          )
-        })}
+      {/* Khuông nhạc — dạy thụ động vị trí nốt */}
+      {showStaff && (
+        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 8px 2px', marginBottom: 12 }}>
+          <NoteStaff active={playing && cursor >= 0} label={cur.label} staff={cur.staff ?? 0} pulse={cursor} />
+        </div>
+      )}
+
+      {/* Cần đàn — nốt chạy theo nhịp */}
+      <div style={{ background: '#F1ECE2', borderRadius: 14, padding: '12px 12px 8px', marginBottom: 14 }}>
+        <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} />
+        <div style={{ textAlign: 'center', marginTop: 6, fontSize: 12, color: '#8A8478' }}>
+          {playing ? <>Đang chạy: <b style={{ color: ACCENT.d }}>{cur.label}</b></> : 'Bấm bắt đầu để máy chạy nốt'}
+        </div>
       </div>
 
       {/* Nút điều khiển */}
