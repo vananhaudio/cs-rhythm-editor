@@ -158,15 +158,15 @@ export default function ElearnLessonsManager() {
       <div style={{ maxWidth: 760 }}>
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: S.text1, marginBottom: 4 }}>🎬 Bài Elearn — Khởi Đầu Đam Mê</div>
-          <div style={{ fontSize: 13.5, color: S.text2, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 14.5, color: S.text2, lineHeight: 1.5 }}>
             Soạn nội dung từng bài: mục tiêu, các bước, loại tương tác, mục tự đánh giá, và video. App học viên đọc trực tiếp từ đây.
           </div>
         </div>
 
         {/* SQL notice */}
-        <details style={{ marginBottom: 18, padding: '12px 16px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, fontSize: 12.5, color: '#92400E' }}>
+        <details style={{ marginBottom: 18, padding: '12px 16px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12, fontSize: 13.5, color: '#92400E' }}>
           <summary style={{ cursor: 'pointer', fontWeight: 700 }}>⚙️ Lần đầu: chạy SQL tạo bảng + tạo bucket video (bấm để xem)</summary>
-          <code style={{ display: 'block', marginTop: 8, padding: '10px 12px', background: '#FEF3C7', borderRadius: 8, fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#78350F' }}>{`create table if not exists elearn_lessons (
+          <code style={{ display: 'block', marginTop: 8, padding: '10px 12px', background: '#FEF3C7', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', whiteSpace: 'pre-wrap', color: '#78350F' }}>{`create table if not exists elearn_lessons (
   id serial primary key, course_slug text not null, lesson_num int not null,
   goal text, steps jsonb default '[]', prompt text, thao_type text,
   items jsonb default '[]', youtube_id text, video_url text,
@@ -190,14 +190,14 @@ NOTIFY pgrst, 'reload schema';`}</code>
             return (
               <div key={num} style={{ background: S.surface, border: `1px solid ${isOpen ? S.accent : S.border}`, borderRadius: 14, overflow: 'hidden' }}>
                 <button onClick={() => openLesson(num)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-                  <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, background: hasCfg ? S.accent : '#F1F1F5', color: hasCfg ? '#fff' : S.text3, fontSize: 12.5, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{num}</div>
+                  <div style={{ width: 30, height: 30, flexShrink: 0, borderRadius: 9, background: hasCfg ? S.accent : '#F1F1F5', color: hasCfg ? '#fff' : S.text3, fontSize: 13.5, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{num}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: S.text1, lineHeight: 1.3 }}>Bài {num} · {title}</div>
-                    <div style={{ fontSize: 11.5, color: S.text3, marginTop: 2 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: S.text1, lineHeight: 1.3 }}>Bài {num} · {title}</div>
+                    <div style={{ fontSize: 12.5, color: S.text3, marginTop: 2 }}>
                       {hasCfg ? 'Đã soạn riêng' : 'Đang dùng mặc định (code)'}{hasMedia ? ' · 🎬 có video' : ''}
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: isOpen ? S.accent : S.text3, fontWeight: 700 }}>{isOpen ? '▲' : '▼'}</div>
+                  <div style={{ fontSize: 13, color: isOpen ? S.accent : S.text3, fontWeight: 700 }}>{isOpen ? '▲' : '▼'}</div>
                 </button>
 
                 {isOpen && draft && (
@@ -219,8 +219,8 @@ NOTIFY pgrst, 'reload schema';`}</code>
                       {THAO_OPTS.map(o => (
                         <button key={o.id} onClick={() => patch({ thao_type: o.id })}
                           style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${draft.thao_type === o.id ? S.accent : S.border}`, background: draft.thao_type === o.id ? S.accentLight : S.surface, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: draft.thao_type === o.id ? S.accent : S.text1 }}>{o.label}</div>
-                          <div style={{ fontSize: 11, color: S.text3, marginTop: 2 }}>{o.desc}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: draft.thao_type === o.id ? S.accent : S.text1 }}>{o.label}</div>
+                          <div style={{ fontSize: 12, color: S.text3, marginTop: 2 }}>{o.desc}</div>
                         </button>
                       ))}
                     </div>
@@ -236,21 +236,21 @@ NOTIFY pgrst, 'reload schema';`}</code>
                     {fieldLabel('Video bài học (tùy chọn)')}
                     <div style={{ display: 'flex', gap: 6 }}>
                       {(['youtube', 'upload'] as const).map(t => (
-                        <button key={t} onClick={() => setMediaTab(t)} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid ${mediaTab === t ? S.accent : S.border}`, background: mediaTab === t ? S.accentLight : S.surface, color: mediaTab === t ? S.accent : S.text2, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                        <button key={t} onClick={() => setMediaTab(t)} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid ${mediaTab === t ? S.accent : S.border}`, background: mediaTab === t ? S.accentLight : S.surface, color: mediaTab === t ? S.accent : S.text2, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
                           {t === 'youtube' ? '▶ YouTube' : '📁 Tải lên'}
                         </button>
                       ))}
                       {(draft.youtube_id || draft.video_url) && (
-                        <button onClick={clearMedia} style={{ marginLeft: 'auto', padding: '6px 12px', border: '1px solid #FCA5A5', borderRadius: 8, background: S.redBg, color: S.red, fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Xoá video</button>
+                        <button onClick={clearMedia} style={{ marginLeft: 'auto', padding: '6px 12px', border: '1px solid #FCA5A5', borderRadius: 8, background: S.redBg, color: S.red, fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Xoá video</button>
                       )}
                     </div>
                     {mediaTab === 'youtube' ? (
                       <input value={ytInput} onChange={e => setYtInput(e.target.value)} placeholder="https://youtu.be/... hoặc ID 11 ký tự" style={inputStyle} />
                     ) : (
                       <div>
-                        {bucketError && <div style={{ padding: '9px 12px', background: S.redBg, border: '1px solid #FCA5A5', borderRadius: 9, fontSize: 12, color: S.red, marginBottom: 8 }}>Chưa tạo bucket <b>elearn-videos</b> (Public) trong Supabase → Storage.</div>}
+                        {bucketError && <div style={{ padding: '9px 12px', background: S.redBg, border: '1px solid #FCA5A5', borderRadius: 9, fontSize: 13, color: S.red, marginBottom: 8 }}>Chưa tạo bucket <b>elearn-videos</b> (Public) trong Supabase → Storage.</div>}
                         <input ref={fileRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(num, f); e.target.value = '' }} />
-                        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ width: '100%', padding: '11px 0', border: `2px dashed ${S.border}`, borderRadius: 10, background: '#FAFAFA', color: uploading ? S.accent : S.text2, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+                        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ width: '100%', padding: '11px 0', border: `2px dashed ${S.border}`, borderRadius: 10, background: '#FAFAFA', color: uploading ? S.accent : S.text2, fontFamily: 'inherit', fontSize: 14.5, fontWeight: 600, cursor: 'pointer' }}>
                           {uploading ? 'Đang tải...' : draft.video_url ? '✓ Đã có video — chọn file khác' : '+ Chọn file video (≤200MB)'}
                         </button>
                       </div>
@@ -258,10 +258,10 @@ NOTIFY pgrst, 'reload schema';`}</code>
 
                     {/* Save */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
-                      <button onClick={() => save(num)} disabled={saving} style={{ padding: '11px 22px', border: 'none', borderRadius: 10, background: saving ? '#C7D2FE' : S.accent, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
+                      <button onClick={() => save(num)} disabled={saving} style={{ padding: '11px 22px', border: 'none', borderRadius: 10, background: saving ? '#C7D2FE' : S.accent, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
                         {saving ? 'Đang lưu...' : '💾 Lưu bài'}
                       </button>
-                      {msg && <div style={{ fontSize: 13, fontWeight: 600, color: msg.ok ? S.green : S.red }}>{msg.text}</div>}
+                      {msg && <div style={{ fontSize: 14, fontWeight: 600, color: msg.ok ? S.green : S.red }}>{msg.text}</div>}
                     </div>
                   </div>
                 )}
@@ -275,7 +275,7 @@ NOTIFY pgrst, 'reload schema';`}</code>
 }
 
 function fieldLabel(t: string) {
-  return <div style={{ fontSize: 12, fontWeight: 700, color: S.text2, marginBottom: -6 }}>{t}</div>
+  return <div style={{ fontSize: 13, fontWeight: 700, color: S.text2, marginBottom: -6 }}>{t}</div>
 }
-const inputStyle: React.CSSProperties = { padding: '10px 13px', border: `1px solid ${S.border}`, borderRadius: 9, fontFamily: 'inherit', fontSize: 13.5, outline: 'none', color: S.text1, width: '100%' }
+const inputStyle: React.CSSProperties = { padding: '10px 13px', border: `1px solid ${S.border}`, borderRadius: 9, fontFamily: 'inherit', fontSize: 14.5, outline: 'none', color: S.text1, width: '100%' }
 const areaStyle: React.CSSProperties = { ...inputStyle, resize: 'vertical', lineHeight: 1.5 }

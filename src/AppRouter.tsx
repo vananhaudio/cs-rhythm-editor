@@ -54,7 +54,7 @@ function TapLandingPage({ onGuest }: { onGuest: () => void }) {
       <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, color: '#1F2A1F' }}>
         Luyện nhịp cùng Thầy Văn Anh
       </h1>
-      <p style={{ color: '#8A8070', maxWidth: 420, lineHeight: 1.7, margin: 0, fontSize: 15 }}>
+      <p style={{ color: '#8A8070', maxWidth: 420, lineHeight: 1.7, margin: 0, fontSize: 16 }}>
         Nếu bạn là{' '}
         <strong style={{ color: '#3F7D3A' }}>học sinh của Thầy Văn Anh</strong>,
         hãy đăng nhập để lưu điểm và theo dõi tiến độ học tập.
@@ -62,18 +62,18 @@ function TapLandingPage({ onGuest }: { onGuest: () => void }) {
       <button onClick={handleLogin} style={{
         background: '#3F7D3A', border: 'none', borderRadius: 12,
         color: 'white', cursor: 'pointer', padding: '13px 36px',
-        fontSize: 15, fontWeight: 700,
+        fontSize: 16, fontWeight: 700,
       }}>
         Đăng nhập
       </button>
-      <div style={{ color: '#B0A898', fontSize: 13 }}>hoặc</div>
+      <div style={{ color: '#B0A898', fontSize: 14 }}>hoặc</div>
       <button onClick={onGuest} style={{
         background: 'none', border: '1px solid #D8C8A8',
         borderRadius: 12, color: '#8A8070', cursor: 'pointer',
-        padding: '11px 28px', fontSize: 13, lineHeight: 1.5,
+        padding: '11px 28px', fontSize: 14, lineHeight: 1.5,
       }}>
         Xem thử 3 bài<br />
-        <span style={{ fontSize: 11, color: '#B0A898' }}>(không cần đăng nhập)</span>
+        <span style={{ fontSize: 12, color: '#B0A898' }}>(không cần đăng nhập)</span>
       </button>
     </div>
   )
@@ -308,29 +308,29 @@ if (path === '/students') {
           const email = prompt('Email:')
           const password = prompt('Mật khẩu:')
           if (email && password) await supabase.auth.signInWithPassword({ email, password })
-        }} style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
+        }} style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 14, background: 'none' }}>
           Đăng nhập
         </button>
       )}
       {user && isTeacher && (
         <>
           <button onClick={() => { window.location.href = '/editor' }}
-            style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
+            style={{ border: '1px solid #374151', borderRadius: 8, color: '#9CA3AF', cursor: 'pointer', padding: '8px 16px', fontSize: 14, background: 'none' }}>
             ✏️ Editor
           </button>
           <button onClick={() => { window.location.href = '/youtube-sync' }}
-            style={{ border: '1px solid #374151', borderRadius: 8, color: '#C99700', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
+            style={{ border: '1px solid #374151', borderRadius: 8, color: '#C99700', cursor: 'pointer', padding: '8px 16px', fontSize: 14, background: 'none' }}>
             🎵 YouTube Sync
           </button>
         </>
       )}
       <button onClick={() => { window.location.href = '/tap' }}
-        style={{ border: '1px solid #374151', borderRadius: 8, color: '#10B981', cursor: 'pointer', padding: '8px 16px', fontSize: 13, background: 'none' }}>
+        style={{ border: '1px solid #374151', borderRadius: 8, color: '#10B981', cursor: 'pointer', padding: '8px 16px', fontSize: 14, background: 'none' }}>
         🥁 Tap nhịp
       </button>
       {user && (
         <button onClick={() => supabase.auth.signOut()}
-          style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 13 }}>
+          style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 14 }}>
           Đăng xuất ({appUser?.name ?? user.email})
         </button>
       )}

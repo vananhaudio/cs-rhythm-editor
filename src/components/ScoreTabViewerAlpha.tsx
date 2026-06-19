@@ -609,7 +609,7 @@ export default function ScoreTabViewerAlpha({
       style={{ outline: 'none', border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', background: '#fff' }}
     >
       {/* Thanh trạng thái + nút import */}
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '6px 12px', fontSize: 12, color: muted, borderBottom: `1px solid ${border}`, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '6px 12px', fontSize: 13, color: muted, borderBottom: `1px solid ${border}`, flexWrap: 'wrap' }}>
         <span>Trường độ: <b style={{ color: '#8a6500' }}>{durLabel}</b></span>
         <span>Dây: <b style={{ color: '#14532D' }}>{strLabel}</b></span>
         <span>BPM: <b style={{ color: '#555' }}>{bpm}</b></span>
@@ -621,7 +621,7 @@ export default function ScoreTabViewerAlpha({
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            style={{ padding: '3px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'none', cursor: 'pointer', fontSize: 11, color: muted, opacity: importing ? 0.5 : 1 }}
+            style={{ padding: '3px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'none', cursor: 'pointer', fontSize: 12, color: muted, opacity: importing ? 0.5 : 1 }}
           >
             {importing ? '⏳ Đang nạp…' : '📂 Nạp file'}
           </button>
@@ -657,7 +657,7 @@ export default function ScoreTabViewerAlpha({
       </div>
 
       {notes.length === 0 && (
-        <div style={{ padding: '10px 16px', textAlign: 'center', color: muted, fontSize: 12, borderTop: `1px solid ${border}` }}>
+        <div style={{ padding: '10px 16px', textAlign: 'center', color: muted, fontSize: 13, borderTop: `1px solid ${border}` }}>
           Gõ số fret để nhập nốt · ↑↓ đổi dây · +/− trường độ · . chấm dôi · / liên 3 · R lặng · Space phát
         </div>
       )}

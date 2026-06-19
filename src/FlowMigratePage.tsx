@@ -110,15 +110,15 @@ export default function FlowMigratePage() {
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '"Inter", system-ui, sans-serif', color: C.t1, padding: '28px 20px' }}>
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-          <button onClick={() => window.location.href = '/admin'} style={{ border: `1px solid ${C.border}`, background: '#fff', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>← Admin</button>
+          <button onClick={() => window.location.href = '/admin'} style={{ border: `1px solid ${C.border}`, background: '#fff', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>← Admin</button>
           <div style={{ fontSize: 20, fontWeight: 800 }}>Migrate 11 bài Nhập Môn → Flow</div>
         </div>
-        <div style={{ fontSize: 13.5, color: C.t2, lineHeight: 1.6, marginBottom: 18 }}>
+        <div style={{ fontSize: 14.5, color: C.t2, lineHeight: 1.6, marginBottom: 18 }}>
           Duyệt bảng dưới trước. Bấm "Chạy migrate" sẽ tạo Flow cho từng bài (dựng từ nội dung hiện có) và chuyển loại bài sang <b>Flow</b>. Nội dung elearn cũ vẫn giữ làm dự phòng — có thể đảo lại bằng cách đổi loại bài về "Link".
         </div>
 
         {rows.some(r => r.hasFlow) && (
-          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', fontSize: 12.5, color: '#92400E', marginBottom: 14 }}>
+          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 14px', fontSize: 13.5, color: '#92400E', marginBottom: 14 }}>
             ⚠️ Một số bài ĐÃ có Flow — chạy lại sẽ <b>ghi đè</b> bằng bản dựng mới (cập nhật, không tạo trùng).
           </div>
         )}
@@ -126,22 +126,22 @@ export default function FlowMigratePage() {
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden', marginBottom: 18 }}>
           {rows.map((r, i) => (
             <div key={r.lessonId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: i ? `1px solid ${C.border}` : 'none' }}>
-              <div style={{ width: 28, height: 28, borderRadius: 8, background: C.accent, color: '#fff', fontSize: 12.5, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{r.num}</div>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: C.accent, color: '#fff', fontSize: 13.5, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{r.num}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</div>
-                <div style={{ fontSize: 11.5, color: C.t3 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</div>
+                <div style={{ fontSize: 12.5, color: C.t3 }}>
                   {r.slides.length} slide ({r.slides.map(s => s.type).join(', ')})
                   {r.note && <span style={{ color: C.amber }}> · {r.note}</span>}
                 </div>
               </div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: r.hasFlow ? C.amber : C.t3, flexShrink: 0 }}>{r.hasFlow ? 'đã có Flow' : 'mới'}</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: r.hasFlow ? C.amber : C.t3, flexShrink: 0 }}>{r.hasFlow ? 'đã có Flow' : 'mới'}</div>
             </div>
           ))}
         </div>
 
         {!done ? (
           <button onClick={runMigrate} disabled={running}
-            style={{ width: '100%', padding: 14, border: 'none', borderRadius: 12, background: running ? '#C7D2FE' : C.accent, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: running ? 'default' : 'pointer' }}>
+            style={{ width: '100%', padding: 14, border: 'none', borderRadius: 12, background: running ? '#C7D2FE' : C.accent, color: '#fff', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: running ? 'default' : 'pointer' }}>
             {running ? 'Đang chạy…' : `🚀 Chạy migrate ${rows.length} bài`}
           </button>
         ) : (
@@ -151,7 +151,7 @@ export default function FlowMigratePage() {
         )}
 
         {log.length > 0 && (
-          <div style={{ marginTop: 16, background: '#0B1020', borderRadius: 12, padding: 14, fontFamily: 'ui-monospace, monospace', fontSize: 12, color: '#C8D2E0', lineHeight: 1.7 }}>
+          <div style={{ marginTop: 16, background: '#0B1020', borderRadius: 12, padding: 14, fontFamily: 'ui-monospace, monospace', fontSize: 13, color: '#C8D2E0', lineHeight: 1.7 }}>
             {log.map((l, i) => <div key={i} style={{ color: l.startsWith('✗') ? '#FCA5A5' : '#86EFAC' }}>{l}</div>)}
           </div>
         )}

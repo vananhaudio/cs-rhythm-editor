@@ -227,7 +227,7 @@ function FretboardMini({
                 background: '#4338CA',
                 border: '2px solid rgba(255,255,255,0.75)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, fontWeight: 900, color: '#fff',
+                fontSize: 14, fontWeight: 900, color: '#fff',
                 zIndex: 10,
                 boxShadow: '0 0 14px rgba(67,56,202,0.95), 0 2px 6px rgba(0,0,0,0.5)',
                 // transition nhẹ để nốt không nhảy đột ngột
@@ -248,7 +248,7 @@ function FretboardMini({
           return (
             <div key={slot} style={{
               flex: 1, textAlign: 'center',
-              fontSize: 10, fontWeight: isMarked ? 700 : 400,
+              fontSize: 11, fontWeight: isMarked ? 700 : 400,
               color: isMarked ? '#C99700' : '#9CA3AF',
             }}>
               {fret}
@@ -389,22 +389,22 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <button
             onClick={() => { playingRef.current = false; stopScheduler(); onClose() }}
-            style={{ background: 'rgba(255,255,255,.18)', border: 'none', borderRadius: 10, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'rgba(255,255,255,.18)', border: 'none', borderRadius: 10, padding: '8px 14px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             ← Đóng
           </button>
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🖐 Luyện ngón</span>
+          <span style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>🖐 Luyện ngón</span>
           <div style={{ width: 64 }} />
         </div>
 
         {/* Badge trình */}
         <div style={{ background: 'rgba(255,255,255,.14)', borderRadius: 12, padding: '10px 14px' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span>Trình {curLevel.n} · {SUB_LABEL[curLevel.sub]} ♩={curLevel.bpm}</span>
-            {levelDelta < 0 && <span style={{ fontSize: 11, opacity: 0.7 }}>({-levelDelta} bậc dưới)</span>}
+            {levelDelta < 0 && <span style={{ fontSize: 12, opacity: 0.7 }}>({-levelDelta} bậc dưới)</span>}
           </div>
           {minsToNext > 0 && (
             <>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.75)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', marginTop: 4 }}>
                 Còn {minsToNext}′ để lên Trình {nextLv.n}
               </div>
               <div style={{ marginTop: 7, height: 4, borderRadius: 99, background: 'rgba(255,255,255,.2)' }}>
@@ -424,7 +424,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
           {/* Row: tên mẫu + beat dots */}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>Mẫu ngón</div>
+              <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>Mẫu ngón</div>
               <div style={{ fontSize: 19, fontWeight: 900, color: P1 }}>{PATTERN_NAMES[patternIdx]}</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
@@ -461,7 +461,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
 
         {/* Card: thứ tự ngón hiện tại */}
         <div style={{ background: '#fff', borderRadius: 14, padding: '12px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Thứ tự bấm — Mẫu {PATTERN_NAMES[patternIdx]}</div>
+          <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Thứ tự bấm — Mẫu {PATTERN_NAMES[patternIdx]}</div>
           <div style={{ display: 'flex', gap: 6 }}>
             {PATTERNS[patternIdx].map((f, i) => {
               const isActive = playing && fingerDotIdx === i
@@ -469,7 +469,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
                 <div key={i} style={{
                   flex: 1, height: 36, borderRadius: 10,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 15, fontWeight: 800,
+                  fontSize: 16, fontWeight: 800,
                   background: isActive ? P1 : '#F3F4F6',
                   color: isActive ? '#fff' : '#9CA3AF',
                   border: `2px solid ${isActive ? P1 : 'transparent'}`,
@@ -496,7 +496,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
       }}>
         <button onClick={togglePlay} style={{
           width: '100%', border: 'none', borderRadius: 16, padding: '16px',
-          fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+          fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
           background: playing
             ? 'linear-gradient(135deg,#EF4444,#DC2626)'
             : `linear-gradient(135deg,${P1},#6366F1)`,
@@ -513,7 +513,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
             onClick={() => setGuitarOn(v => !v)}
             style={{
               flex: 1, border: 'none', borderRadius: 12, padding: '11px 6px',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               background: guitarOn && !muted ? '#EEF2FF' : '#F3F4F6',
               color:      guitarOn && !muted ? P1 : '#9CA3AF',
               opacity: muted ? 0.45 : 1,
@@ -527,7 +527,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
             onClick={() => setMuted(v => !v)}
             style={{
               flex: 1, border: 'none', borderRadius: 12, padding: '11px 6px',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               background: muted ? '#FEE2E2' : '#F3F4F6',
               color:      muted ? '#DC2626' : '#9CA3AF',
               transition: 'background .15s, color .15s',
@@ -539,7 +539,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={() => setPatternIdx(i => (i + 1) % PATTERNS.length)}
-            style={{ flex: 1, background: '#EEF2FF', color: P1, border: 'none', borderRadius: 12, padding: '13px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ flex: 1, background: '#EEF2FF', color: P1, border: 'none', borderRadius: 12, padding: '13px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             Bài kế →
           </button>
           <button
@@ -547,7 +547,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
             onClick={() => canGoDown && setLevelDelta(d => d - 1)}
             style={{
               flex: 1, border: 'none', borderRadius: 12, padding: '13px',
-              fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+              fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
               cursor: canGoDown ? 'pointer' : 'default',
               background: canGoDown ? A1 + '1A' : '#F3F4F6',
               color: canGoDown ? A1 : '#D1D5DB',

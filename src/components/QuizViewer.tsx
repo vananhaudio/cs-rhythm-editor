@@ -121,7 +121,7 @@ function MultipleChoice({
               background: isCorrect ? '#EAF3DE' : isWrong ? '#FCEBEB' : selected ? '#EEEDFE' : '#fff',
               color: isCorrect ? '#27500A' : isWrong ? '#791F1F' : selected ? '#3730a3' : '#111',
               cursor: disabled ? 'default' : 'pointer',
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: selected ? 500 : 400,
             }}
           >
@@ -163,7 +163,7 @@ function TrueFalse({
               background: isCorrect ? '#EAF3DE' : isWrong ? '#FCEBEB' : selected ? '#EEEDFE' : '#fff',
               color: isCorrect ? '#27500A' : isWrong ? '#791F1F' : selected ? '#3730a3' : '#111',
               cursor: disabled ? 'default' : 'pointer',
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: 500,
             }}
           >
@@ -197,7 +197,7 @@ function FillBlank({
         padding: '8px 12px',
         border: '1px solid #d1d5db',
         borderRadius: 8,
-        fontSize: 14,
+        fontSize: 15,
         width: '100%',
         maxWidth: 320,
         color: '#111',
@@ -242,13 +242,13 @@ function MultiSelect({
               background: isCorrect ? '#EAF3DE' : isWrong ? '#FCEBEB' : selected ? '#EEEDFE' : '#fff',
               color: isCorrect ? '#27500A' : isWrong ? '#791F1F' : selected ? '#3730a3' : '#111',
               cursor: disabled ? 'default' : 'pointer',
-              fontSize: 14,
+              fontSize: 15,
               display: 'flex',
               alignItems: 'center',
               gap: 8,
             }}
           >
-            <span style={{ fontSize: 16 }}>{selected ? '☑' : '☐'}</span>
+            <span style={{ fontSize: 17 }}>{selected ? '☑' : '☐'}</span>
             {opt}
           </button>
         )
@@ -281,7 +281,7 @@ function Matching({
         const isCorrect = disabled && chosen === correct
         return (
           <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ minWidth: 64, fontSize: 13, color: '#374151' }}>{l}</span>
+            <span style={{ minWidth: 64, fontSize: 14, color: '#374151' }}>{l}</span>
             <select
               disabled={disabled}
               value={chosen ?? ''}
@@ -291,7 +291,7 @@ function Matching({
                 padding: '6px 8px',
                 border: `1px solid ${isCorrect ? '#27500A' : isWrong ? '#791F1F' : '#d1d5db'}`,
                 borderRadius: 6,
-                fontSize: 13,
+                fontSize: 14,
                 background: isCorrect ? '#EAF3DE' : isWrong ? '#FCEBEB' : '#fff',
                 color: '#111',
               }}
@@ -337,7 +337,7 @@ function Ordering({
               border: `1px solid ${isCorrect ? '#27500A' : isWrong ? '#791F1F' : '#e5e7eb'}`,
               borderRadius: 8,
               background: isCorrect ? '#EAF3DE' : isWrong ? '#FCEBEB' : '#fff',
-              fontSize: 13,
+              fontSize: 14,
             }}
           >
             <span style={{ color: '#9ca3af', minWidth: 20 }}>{i + 1}.</span>
@@ -408,9 +408,9 @@ function GuitarStringSelect({
               gap: 8,
             }}
           >
-            <span style={{ fontSize: 11, color: '#9ca3af', minWidth: 44 }}>Dây {s}</span>
+            <span style={{ fontSize: 12, color: '#9ca3af', minWidth: 44 }}>Dây {s}</span>
             <div style={{ flex: 1, height: thick, background: selected ? '#4338CA' : '#9ca3af', borderRadius: 1 }} />
-            <span style={{ fontSize: 11, color: '#9ca3af', minWidth: 40, textAlign: 'right' }}>{labels[s - 1]}</span>
+            <span style={{ fontSize: 12, color: '#9ca3af', minWidth: 40, textAlign: 'right' }}>{labels[s - 1]}</span>
           </div>
         )
       })}
@@ -451,13 +451,13 @@ function GuitarFretSelect({
       <div style={{ display: 'grid', gridTemplateColumns: `44px repeat(${numFrets}, 1fr)`, gap: 2, minWidth: numFrets * 36 + 50 }}>
         <div />
         {Array.from({ length: numFrets }, (_, i) => fMin + i).map((f) => (
-          <div key={f} style={{ fontSize: 10, textAlign: 'center', color: '#9ca3af', paddingBottom: 2 }}>
+          <div key={f} style={{ fontSize: 11, textAlign: 'center', color: '#9ca3af', paddingBottom: 2 }}>
             {f === 0 ? '○' : f}
           </div>
         ))}
         {Array.from({ length: sc }, (_, si) => si + 1).map((s) => (
           <>
-            <div key={`l${s}`} style={{ fontSize: 11, color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 4 }}>
+            <div key={`l${s}`} style={{ fontSize: 12, color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 4 }}>
               Dây {s}
             </div>
             {Array.from({ length: numFrets }, (_, i) => fMin + i).map((f) => {
@@ -483,7 +483,7 @@ function GuitarFretSelect({
                     borderRadius: 4,
                     background: isCorrect ? '#EAF3DE' : isWrong ? '#FCEBEB' : sel ? '#EEEDFE' : '#fff',
                     cursor: disabled ? 'default' : 'pointer',
-                    fontSize: 10,
+                    fontSize: 11,
                     color: isCorrect ? '#27500A' : isWrong ? '#791F1F' : sel ? '#3730a3' : '#9ca3af',
                     display: 'flex',
                     alignItems: 'center',
@@ -604,7 +604,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
     return (
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '16px 0' }}>
         {alreadyDone && !submitted && (
-          <div style={{ background: '#EEEDFE', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#3730a3', marginBottom: 16 }}>
+          <div style={{ background: '#EEEDFE', borderRadius: 8, padding: '8px 14px', fontSize: 14, color: '#3730a3', marginBottom: 16 }}>
             Bạn đã làm bài này rồi. Đây là kết quả lần gần nhất.
           </div>
         )}
@@ -616,7 +616,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
             { label: 'Tỉ lệ', value: `${result.scorePercent}%` },
           ].map(({ label, value }) => (
             <div key={label} style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px', textAlign: 'center' }}>
-              <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</p>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>{label}</p>
               <p style={{ fontSize: 24, fontWeight: 500 }}>{value}</p>
             </div>
           ))}
@@ -633,9 +633,9 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
 
         {/* Skill stats */}
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px', marginBottom: 20 }}>
-          <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Kỹ năng</p>
+          <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 10 }}>Kỹ năng</p>
           {Object.entries(result.skillStats).map(([sk, { total, correct }]) => (
-            <div key={sk} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+            <div key={sk} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 14 }}>
               <span>{skillLabels[sk] ?? sk}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 72, height: 5, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
@@ -651,7 +651,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
         {!alreadyDone && (
           <button
             onClick={() => { setSubmitted(false); setAnswers({}); setCurrent(0) }}
-            style={{ padding: '8px 18px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 14 }}
+            style={{ padding: '8px 18px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 15 }}
           >
             Làm lại
           </button>
@@ -667,7 +667,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '16px 0' }}>
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#6b7280', marginBottom: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#6b7280', marginBottom: 6 }}>
           <span>Câu {current + 1} / {qs.length}</span>
           <span>{q.points} điểm</span>
         </div>
@@ -678,16 +678,16 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
 
       {/* Skill badge */}
       <div style={{ marginBottom: 10 }}>
-        <span style={{ background: '#EEEDFE', color: '#3C3489', borderRadius: 6, padding: '2px 8px', fontSize: 12 }}>
+        <span style={{ background: '#EEEDFE', color: '#3C3489', borderRadius: 6, padding: '2px 8px', fontSize: 13 }}>
           {q.skill}
         </span>
-        <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: 6, padding: '2px 8px', fontSize: 12, marginLeft: 6 }}>
+        <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: 6, padding: '2px 8px', fontSize: 13, marginLeft: 6 }}>
           Độ khó {q.difficulty}
         </span>
       </div>
 
       {/* Question */}
-      <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 16, lineHeight: 1.6 }}>{q.question}</p>
+      <p style={{ fontSize: 17, fontWeight: 500, marginBottom: 16, lineHeight: 1.6 }}>{q.question}</p>
 
       {/* Question body */}
       {q.type === 'multiple_choice' && (
@@ -722,7 +722,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
 
       {/* Explanation (practice mode) */}
       {showExplanation && q.explanation && (
-        <div style={{ background: '#f8f9fa', borderLeft: '3px solid #4338CA', borderRadius: '0 8px 8px 0', padding: '10px 14px', fontSize: 13, color: '#374151', marginTop: 14 }}>
+        <div style={{ background: '#f8f9fa', borderLeft: '3px solid #4338CA', borderRadius: '0 8px 8px 0', padding: '10px 14px', fontSize: 14, color: '#374151', marginTop: 14 }}>
           {q.explanation}
         </div>
       )}
@@ -732,7 +732,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
         <button
           onClick={() => setCurrent((c) => Math.max(0, c - 1))}
           disabled={current === 0}
-          style={{ padding: '7px 16px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: current === 0 ? 'not-allowed' : 'pointer', opacity: current === 0 ? 0.4 : 1, fontSize: 14 }}
+          style={{ padding: '7px 16px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: current === 0 ? 'not-allowed' : 'pointer', opacity: current === 0 ? 0.4 : 1, fontSize: 15 }}
         >
           ← Trước
         </button>
@@ -741,7 +741,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
           {current < qs.length - 1 ? (
             <button
               onClick={() => setCurrent((c) => c + 1)}
-              style={{ padding: '7px 16px', border: '1px solid #4338CA', borderRadius: 8, background: '#4338CA', color: '#fff', cursor: 'pointer', fontSize: 14 }}
+              style={{ padding: '7px 16px', border: '1px solid #4338CA', borderRadius: 8, background: '#4338CA', color: '#fff', cursor: 'pointer', fontSize: 15 }}
             >
               Tiếp →
             </button>
@@ -749,7 +749,7 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
             <button
               onClick={handleSubmit}
               disabled={saving}
-              style={{ padding: '7px 16px', border: '1px solid #EA580C', borderRadius: 8, background: '#EA580C', color: '#fff', cursor: 'pointer', fontSize: 14 }}
+              style={{ padding: '7px 16px', border: '1px solid #EA580C', borderRadius: 8, background: '#EA580C', color: '#fff', cursor: 'pointer', fontSize: 15 }}
             >
               {saving ? 'Đang lưu...' : 'Nộp bài'}
             </button>

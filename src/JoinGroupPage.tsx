@@ -35,7 +35,7 @@ export default function JoinGroupPage() {
   }
   const primaryBtn: React.CSSProperties = {
     background: T.header, color: '#fff', border: 'none', borderRadius: 12,
-    padding: '14px 32px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+    padding: '14px 32px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
   }
 
   if (state === 'loading') return <div style={wrap}><div style={{ fontSize: 40 }}>⏳</div><div style={{ color: T.muted }}>Đang xác nhận nhóm...</div></div>
@@ -44,7 +44,7 @@ export default function JoinGroupPage() {
     <div style={wrap}>
       <div style={{ fontSize: 48 }}>🔐</div>
       <div style={{ fontSize: 20, fontWeight: 800 }}>Đăng nhập để xác nhận nhóm</div>
-      <div style={{ fontSize: 14, color: T.muted, maxWidth: 360, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 15, color: T.muted, maxWidth: 360, lineHeight: 1.6 }}>
         Bạn cần đăng nhập app TVA Guitar. Sau khi đăng nhập, app sẽ tự ghi nhớ nhóm của bạn.
       </div>
       <button style={primaryBtn} onClick={() => { window.location.href = '/' }}>Đăng nhập →</button>
@@ -55,7 +55,7 @@ export default function JoinGroupPage() {
     <div style={wrap}>
       <div style={{ fontSize: 48 }}>⚠️</div>
       <div style={{ fontSize: 20, fontWeight: 800 }}>Không xác nhận được</div>
-      <div style={{ fontSize: 14, color: '#B23A1E', maxWidth: 360, lineHeight: 1.6 }}>{msg}</div>
+      <div style={{ fontSize: 15, color: '#B23A1E', maxWidth: 360, lineHeight: 1.6 }}>{msg}</div>
       <button style={primaryBtn} onClick={() => { window.location.href = '/' }}>Về trang chủ</button>
     </div>
   )
@@ -64,8 +64,8 @@ export default function JoinGroupPage() {
     <div style={wrap}>
       <div style={{ fontSize: 56 }}>🎉</div>
       <div style={{ fontSize: 20, fontWeight: 800 }}>Đã vào nhóm!</div>
-      <div style={{ fontSize: 15, color: T.muted }}>Bạn đã được thêm vào <b style={{ color: T.header }}>{msg}</b>.</div>
-      <div style={{ fontSize: 13, color: T.muted, maxWidth: 360, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 16, color: T.muted }}>Bạn đã được thêm vào <b style={{ color: T.header }}>{msg}</b>.</div>
+      <div style={{ fontSize: 14, color: T.muted, maxWidth: 360, lineHeight: 1.6 }}>
         Mở app, vào tab <b>Sống</b> → mục <b>Cộng đồng của bạn</b> để bấm vào nhóm bất cứ lúc nào.
       </div>
       <button style={primaryBtn} onClick={() => { window.location.href = '/' }}>Vào học →</button>

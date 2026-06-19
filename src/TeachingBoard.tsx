@@ -331,7 +331,7 @@ export default function TeachingBoard({ theme }: { theme: Theme }) {
         borderBottom: `1px solid ${borderColor}`, background: panelBg,
         gap: 6, flexShrink: 0, overflowX: 'auto',
       }}>
-        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: labelColor, whiteSpace: 'nowrap', marginRight: 2 }}>Thầy Văn Anh Guitar</span>
+        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: labelColor, whiteSpace: 'nowrap', marginRight: 2 }}>Thầy Văn Anh Guitar</span>
 
         <div style={{ display: 'flex', gap: 2, background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)', borderRadius: 8, padding: 2, border: `1px solid ${btnBorder}`, flexShrink: 0 }}>
           {toolDefs.map(td => (
@@ -367,7 +367,7 @@ export default function TeachingBoard({ theme }: { theme: Theme }) {
         {tool === 'text' && (
           <select value={fontSize} onChange={e => setFontSize(Number(e.target.value))}
             style={{
-              height: 26, padding: '0 6px', borderRadius: 6, fontSize: 11,
+              height: 26, padding: '0 6px', borderRadius: 6, fontSize: 12,
               border: `1px solid ${btnBorder}`,
               background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
               color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)',
@@ -404,7 +404,7 @@ export default function TeachingBoard({ theme }: { theme: Theme }) {
             height: 26, padding: '0 8px', borderRadius: 6, border: `1px solid ${btnBorder}`,
             background: 'transparent', cursor: undoStack.length ? 'pointer' : 'default',
             color: undoStack.length ? btnText : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
-            fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+            fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
           }}
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
@@ -413,7 +413,7 @@ export default function TeachingBoard({ theme }: { theme: Theme }) {
         <button onClick={clearAll} title="Xóa bảng"
           style={{
             height: 26, padding: '0 8px', borderRadius: 6, border: '1px solid rgba(229,62,62,0.35)',
-            background: 'transparent', cursor: 'pointer', color: '#e53e3e', fontSize: 11, fontWeight: 500,
+            background: 'transparent', cursor: 'pointer', color: '#e53e3e', fontSize: 12, fontWeight: 500,
             display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
           }}
         >

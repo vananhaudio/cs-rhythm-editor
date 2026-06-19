@@ -109,24 +109,24 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
           { label: 'Tempo (BPM)', key: 'tempo', type: 'number' },
         ].map(({ label, key, type }) => (
           <div key={key} style={{ display:'flex', flexDirection:'column', gap:5 }}>
-            <label style={{ fontSize:12, fontWeight:600, color:'#5A4A30' }}>{label}</label>
+            <label style={{ fontSize:13, fontWeight:600, color:'#5A4A30' }}>{label}</label>
             <input
               type={type}
               value={(editForm as any)[key]}
               onChange={e => setEditForm(prev => ({ ...prev, [key]: e.target.value }))}
-              style={{ padding:'9px 12px', border:'1px solid #D8C8A8', borderRadius:8, fontSize:14, color:'#1F2A1F', outline:'none', background:'#fff' }}
+              style={{ padding:'9px 12px', border:'1px solid #D8C8A8', borderRadius:8, fontSize:15, color:'#1F2A1F', outline:'none', background:'#fff' }}
             />
           </div>
         ))}
 
         <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-          <label style={{ fontSize:12, fontWeight:600, color:'#5A4A30' }}>Nhịp</label>
+          <label style={{ fontSize:13, fontWeight:600, color:'#5A4A30' }}>Nhịp</label>
           <div style={{ display:'flex', gap:8 }}>
             {[2,3,4,6].map(n => (
               <button key={n} onClick={() => setEditForm(prev => ({ ...prev, time_signature: n }))}
                 style={{ flex:1, padding:'8px 0', borderRadius:8, border:`1px solid ${editForm.time_signature===n?'#3F7D3A':'#D8C8A8'}`,
                   background: editForm.time_signature===n?'#3F7D3A':'#fff',
-                  color: editForm.time_signature===n?'#fff':'#2A2018', fontWeight:600, cursor:'pointer', fontSize:13 }}>
+                  color: editForm.time_signature===n?'#fff':'#2A2018', fontWeight:600, cursor:'pointer', fontSize:14 }}>
                 {n}/4
               </button>
             ))}
@@ -135,11 +135,11 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
 
         <div style={{ display:'flex', gap:10, justifyContent:'flex-end', marginTop:4 }}>
           <button onClick={() => setEditingSong(null)}
-            style={{ padding:'9px 20px', borderRadius:9, border:'1px solid #D8C8A8', background:'#fff', color:'#5A4A30', fontWeight:600, cursor:'pointer', fontSize:13 }}>
+            style={{ padding:'9px 20px', borderRadius:9, border:'1px solid #D8C8A8', background:'#fff', color:'#5A4A30', fontWeight:600, cursor:'pointer', fontSize:14 }}>
             Huỷ
           </button>
           <button onClick={handleEditSave} disabled={saving || !editForm.title.trim()}
-            style={{ padding:'9px 24px', borderRadius:9, border:'none', background:'#3F7D3A', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:13, opacity: saving?0.7:1 }}>
+            style={{ padding:'9px 24px', borderRadius:9, border:'none', background:'#3F7D3A', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:14, opacity: saving?0.7:1 }}>
             {saving ? 'Đang lưu...' : '💾 Lưu'}
           </button>
         </div>
@@ -164,7 +164,7 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
           value={search}
           onChange={e => setSearch(e.target.value)}
           autoFocus
-          style={{ padding:'10px 14px', background:'#fff', border:'1px solid #D8C8A8', borderRadius:8, color:'#1F2A1F', fontSize:14, outline:'none' }}
+          style={{ padding:'10px 14px', background:'#fff', border:'1px solid #D8C8A8', borderRadius:8, color:'#1F2A1F', fontSize:15, outline:'none' }}
         />
 
         {/* List */}
@@ -181,8 +181,8 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
                   padding:'11px 14px', cursor:'pointer', textAlign:'left', transition:'all 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.background='#EEF5E6'; e.currentTarget.style.borderColor='#A8C880' }}
                 onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.borderColor='#D8C8A8' }}>
-                <div style={{ fontWeight:700, fontSize:14, color:'#1F2A1F' }}>{s.title}</div>
-                <div style={{ color:'#8A8070', fontSize:11, marginTop:2 }}>
+                <div style={{ fontWeight:700, fontSize:15, color:'#1F2A1F' }}>{s.title}</div>
+                <div style={{ color:'#8A8070', fontSize:12, marginTop:2 }}>
                   {s.artist && <span>{s.artist} · </span>}
                   <span>{s.tone && s.tone+' · '}{s.tempo} BPM · {s.time_signature}/4</span>
                 </div>
@@ -194,14 +194,14 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
                   <button onClick={() => handleEditOpen(s)}
                     title="Sửa thông tin"
                     style={{ width:32, height:32, borderRadius:8, border:'1px solid #D8C8A8', background:'#fff',
-                      color:'#5A7D3A', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      color:'#5A7D3A', cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center' }}>
                     ✏️
                   </button>
                   <button onClick={() => handleDelete(s)}
                     title="Xoá bài"
                     disabled={deletingId === s.id}
                     style={{ width:32, height:32, borderRadius:8, border:'1px solid #F0D0C8', background:'#FFF5F3',
-                      color:'#C0392B', cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center',
+                      color:'#C0392B', cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center',
                       opacity: deletingId===s.id ? 0.5 : 1 }}>
                     🗑
                   </button>
@@ -212,7 +212,7 @@ export function SongList({ onSelect, onClose, isTeacher, defaultSearch }: {
         </div>
 
         {isTeacher && (
-          <div style={{ fontSize:11, color:'#B0A898', textAlign:'center', paddingTop:4, borderTop:'1px solid #E8E0D0' }}>
+          <div style={{ fontSize:12, color:'#B0A898', textAlign:'center', paddingTop:4, borderTop:'1px solid #E8E0D0' }}>
             Thầy có thể sửa thông tin hoặc xoá bài
           </div>
         )}

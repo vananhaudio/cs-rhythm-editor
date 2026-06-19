@@ -84,10 +84,10 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
 
       {/* Stats */}
       <div style={{ padding: '8px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0, background: C.surface }}>
-        <span style={{ fontSize: 11, color: C.text2 }}><span style={{ color: C.green, fontWeight: 600 }}>{mappings.length}</span>/{words.length} từ</span>
-        <span style={{ fontSize: 11, color: C.text2 }}><span style={{ color: C.blue, fontWeight: 600 }}>{chords.length}</span> hợp âm</span>
-        <span style={{ fontSize: 11, color: C.text2 }}><span style={{ color: C.amber, fontWeight: 600 }}>{bars.length}</span> bars · {Math.round(tempo)} BPM · {timeSignature}/4</span>
-        {unmatchedCount > 0 && <span style={{ marginLeft: 'auto', fontSize: 11, color: C.red, fontWeight: 600 }}>⚠ {unmatchedCount} từ chưa khớp</span>}
+        <span style={{ fontSize: 12, color: C.text2 }}><span style={{ color: C.green, fontWeight: 600 }}>{mappings.length}</span>/{words.length} từ</span>
+        <span style={{ fontSize: 12, color: C.text2 }}><span style={{ color: C.blue, fontWeight: 600 }}>{chords.length}</span> hợp âm</span>
+        <span style={{ fontSize: 12, color: C.text2 }}><span style={{ color: C.amber, fontWeight: 600 }}>{bars.length}</span> bars · {Math.round(tempo)} BPM · {timeSignature}/4</span>
+        {unmatchedCount > 0 && <span style={{ marginLeft: 'auto', fontSize: 12, color: C.red, fontWeight: 600 }}>⚠ {unmatchedCount} từ chưa khớp</span>}
       </div>
 
       {/* Grid */}
@@ -158,11 +158,11 @@ export default function LyricsView({ metadata, words, chords, mappings, selected
                             top: 14, cursor: 'pointer',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                           }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: C.blue, height: 13, lineHeight: '13px', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: C.blue, height: 13, lineHeight: '13px', whiteSpace: 'nowrap' }}>
                             {chord?.name ?? ''}
                           </div>
                           <div style={{
-                            padding: '2px 6px', borderRadius: 5, fontSize: 12, whiteSpace: 'nowrap',
+                            padding: '2px 6px', borderRadius: 5, fontSize: 13, whiteSpace: 'nowrap',
                             background: isSelected ? C.indigo : isMatched ? C.surface2 : '#2A1212',
                             color: isSelected ? '#fff' : isMatched ? C.text : C.red,
                             border: `1px solid ${isSelected ? C.indigo : isMatched ? C.border : C.red + '44'}`,

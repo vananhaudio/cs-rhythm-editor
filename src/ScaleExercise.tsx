@@ -283,7 +283,7 @@ function ScaleFretboard({
           return (
             <div key={i} style={{
               flex: 1, textAlign: 'center',
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: marked ? 700 : 400,
               color: marked ? '#C99700' : '#9CA3AF',
             }}>
@@ -419,20 +419,20 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <button
             onClick={() => { playingRef.current = false; stopScheduler(); onClose() }}
-            style={{ background: 'rgba(255,255,255,.18)', border: 'none', borderRadius: 10, padding: '8px 14px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: 'rgba(255,255,255,.18)', border: 'none', borderRadius: 10, padding: '8px 14px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             ← Đóng
           </button>
-          <span style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>🎼 Âm giai</span>
+          <span style={{ fontSize: 17, fontWeight: 800, color: '#fff' }}>🎼 Âm giai</span>
           <div style={{ width: 64 }} />
         </div>
 
         {/* Tên bài + progress */}
         <div style={{ background: 'rgba(255,255,255,.14)', borderRadius: 12, padding: '10px 14px' }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{curLesson.name}</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 2 }}>{curLesson.subtitle}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{curLesson.name}</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', marginTop: 2 }}>{curLesson.subtitle}</div>
           {nextLocked && (
             <>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.65)', marginTop: 6 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', marginTop: 6 }}>
                 Còn {nextLocked.unlockMin - totalMinutes}′ để mở "{nextLocked.name} · {nextLocked.subtitle}"
               </div>
               <div style={{ marginTop: 6, height: 4, borderRadius: 99, background: 'rgba(255,255,255,.2)' }}>
@@ -441,7 +441,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
             </>
           )}
           {!nextLocked && (
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.8)', marginTop: 4 }}>✓ Đã mở tất cả bài</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 4 }}>✓ Đã mở tất cả bài</div>
           )}
         </div>
       </div>
@@ -455,7 +455,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
           {/* Row: beat dots + nốt đang chơi */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
-              <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Nốt hiện tại</div>
+              <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Nốt hiện tại</div>
               <div style={{ fontSize: 26, fontWeight: 900, color: P1, minHeight: 32 }}>
                 {activeNoteName ?? '—'}
               </div>
@@ -473,7 +473,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
                 ))}
               </div>
               {/* Step counter */}
-              <div style={{ fontSize: 10, color: '#9CA3AF' }}>
+              <div style={{ fontSize: 11, color: '#9CA3AF' }}>
                 {playing ? `Nốt ${(stepCount % steps.length) + 1}/${steps.length}` : '—'}
               </div>
             </div>
@@ -496,7 +496,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
                   border: item.border ?? `2px solid ${item.color}55`,
                   flexShrink: 0,
                 }} />
-                <span style={{ fontSize: 11, color: '#6B7280' }}>{item.label}</span>
+                <span style={{ fontSize: 12, color: '#6B7280' }}>{item.label}</span>
               </div>
             ))}
           </div>
@@ -504,7 +504,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
 
         {/* Chọn bài */}
         <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Chọn bài</div>
+          <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Chọn bài</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {LESSONS.map((l, i) => {
               const locked   = totalMinutes < l.unlockMin
@@ -529,15 +529,15 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
                     fontFamily: 'inherit', textAlign: 'left', opacity: locked ? 0.55 : 1,
                   }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: isActive ? P1 : '#374151' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: isActive ? P1 : '#374151' }}>
                       {locked ? '🔒 ' : ''}{l.name}
                     </div>
-                    <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
+                    <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
                   </div>
                   {locked
-                    ? <div style={{ fontSize: 11, color: '#9CA3AF', flexShrink: 0 }}>{l.unlockMin}′</div>
+                    ? <div style={{ fontSize: 12, color: '#9CA3AF', flexShrink: 0 }}>{l.unlockMin}′</div>
                     : isActive
-                      ? <div style={{ fontSize: 11, fontWeight: 700, color: P1, flexShrink: 0 }}>● Đang dùng</div>
+                      ? <div style={{ fontSize: 12, fontWeight: 700, color: P1, flexShrink: 0 }}>● Đang dùng</div>
                       : null
                   }
                 </button>
@@ -555,8 +555,8 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
                   cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: 0.45,
                 }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>🔒 Nâng cao · {l.name}</div>
-                  <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#374151' }}>🔒 Nâng cao · {l.name}</div>
+                  <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
                 </div>
               </button>
             ))}
@@ -578,7 +578,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
         {/* Nút chính */}
         <button onClick={togglePlay} style={{
           width: '100%', border: 'none', borderRadius: 16, padding: '15px',
-          fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+          fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
           background: playing
             ? 'linear-gradient(135deg,#EF4444,#DC2626)'
             : `linear-gradient(135deg,${P1},#6366F1)`,
@@ -597,15 +597,15 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
           }}>
             <button
               onClick={() => setBpm(v => Math.max(40, v - 5))}
-              style={{ padding: '10px 14px', border: 'none', background: 'transparent', fontSize: 16, fontWeight: 700, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ padding: '10px 14px', border: 'none', background: 'transparent', fontSize: 17, fontWeight: 700, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
               −
             </button>
-            <div style={{ minWidth: 52, textAlign: 'center', fontSize: 13, fontWeight: 800, color: P1 }}>
+            <div style={{ minWidth: 52, textAlign: 'center', fontSize: 14, fontWeight: 800, color: P1 }}>
               {bpm} BPM
             </div>
             <button
               onClick={() => setBpm(v => Math.min(160, v + 5))}
-              style={{ padding: '10px 14px', border: 'none', background: 'transparent', fontSize: 16, fontWeight: 700, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ padding: '10px 14px', border: 'none', background: 'transparent', fontSize: 17, fontWeight: 700, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>
               +
             </button>
           </div>
@@ -613,7 +613,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
           {/* Bài kế */}
           <button
             onClick={() => setLessonIdx(i => (i + 1) % availableLessons.length)}
-            style={{ flex: 1, background: '#EEF2FF', color: P1, border: 'none', borderRadius: 12, padding: '12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ flex: 1, background: '#EEF2FF', color: P1, border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             Bài kế →
           </button>
         </div>
@@ -624,7 +624,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
             onClick={() => setGuitarOn(v => !v)}
             style={{
               flex: 1, border: 'none', borderRadius: 12, padding: '11px 6px',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               background: guitarOn && !muted ? '#EEF2FF' : '#F3F4F6',
               color:      guitarOn && !muted ? P1 : '#9CA3AF',
               opacity: muted ? 0.45 : 1,
@@ -636,7 +636,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
             onClick={() => setMuted(v => !v)}
             style={{
               flex: 1, border: 'none', borderRadius: 12, padding: '11px 6px',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               background: muted ? '#FEE2E2' : '#F3F4F6',
               color:      muted ? '#DC2626' : '#9CA3AF',
               transition: 'background .15s, color .15s',

@@ -34,8 +34,8 @@ export default function TeacherAdminPage() {
       <aside style={{ width: collapsed ? 56 : 200, flexShrink: 0, background: S.sidebar, display: 'flex', flexDirection: 'column', transition: 'width .2s ease', overflow: 'hidden' }}>
         {/* Logo */}
         <div style={{ padding: collapsed ? '16px 0' : '16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #27272A', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: S.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>🎸</div>
-          {!collapsed && <div style={{ color: '#fff', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>Thầy Văn Anh</div>}
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: S.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>🎸</div>
+          {!collapsed && <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>Thầy Văn Anh</div>}
         </div>
 
         {/* Nav */}
@@ -47,8 +47,8 @@ export default function TeacherAdminPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px' : '9px 10px', borderRadius: 8, cursor: 'pointer', background: active ? S.accent : 'transparent', color: active ? '#fff' : '#A1A1AA', fontWeight: active ? 600 : 400, marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start', whiteSpace: 'nowrap', overflow: 'hidden', transition: 'background .1s' }}
                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = S.sidebarHover }}
                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
-                {!collapsed && <span style={{ fontSize: 13 }}>{item.label}</span>}
+                <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
+                {!collapsed && <span style={{ fontSize: 14 }}>{item.label}</span>}
               </div>
             )
           })}
@@ -58,13 +58,13 @@ export default function TeacherAdminPage() {
         <div style={{ padding: '8px', borderTop: '1px solid #27272A' }}>
           <div onClick={() => setCollapsed(!collapsed)}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px' : '9px 10px', borderRadius: 8, cursor: 'pointer', color: '#71717A', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-            <span style={{ fontSize: 14 }}>{collapsed ? '→' : '←'}</span>
-            {!collapsed && <span style={{ fontSize: 12 }}>Thu gọn</span>}
+            <span style={{ fontSize: 15 }}>{collapsed ? '→' : '←'}</span>
+            {!collapsed && <span style={{ fontSize: 13 }}>Thu gọn</span>}
           </div>
           <div onClick={() => window.location.href = '/start'}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px' : '9px 10px', borderRadius: 8, cursor: 'pointer', color: '#71717A', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-            <span style={{ fontSize: 14 }}>↗</span>
-            {!collapsed && <span style={{ fontSize: 12 }}>Trang học sinh</span>}
+            <span style={{ fontSize: 15 }}>↗</span>
+            {!collapsed && <span style={{ fontSize: 13 }}>Trang học sinh</span>}
           </div>
         </div>
       </aside>
@@ -85,23 +85,23 @@ export default function TeacherAdminPage() {
                 <div key={s.label} style={{ background: S.surface, borderRadius: 12, padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: S.text1 }}>{s.value}</div>
-                  <div style={{ fontSize: 13, color: S.text2, marginTop: 2 }}>{s.label}</div>
-                  <div style={{ fontSize: 11, color: S.text3 }}>{s.sub}</div>
+                  <div style={{ fontSize: 14, color: S.text2, marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 12, color: S.text3 }}>{s.sub}</div>
                 </div>
               ))}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div onClick={() => setSection('students')} style={{ background: S.surface, borderRadius: 12, padding: '20px 24px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>👥 Quản lý học viên →</div>
-                <div style={{ fontSize: 13, color: S.text3 }}>Xem danh sách, thêm khoá học, ghi chú</div>
+                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>👥 Quản lý học viên →</div>
+                <div style={{ fontSize: 14, color: S.text3 }}>Xem danh sách, thêm khoá học, ghi chú</div>
               </div>
               <div onClick={() => setSection('courses')} style={{ background: S.surface, borderRadius: 12, padding: '20px 24px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>📚 Soạn khoá học →</div>
-                <div style={{ fontSize: 13, color: S.text3 }}>Tạo chương, thêm bài, gắn YouTube</div>
+                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>📚 Soạn khoá học →</div>
+                <div style={{ fontSize: 14, color: S.text3 }}>Tạo chương, thêm bài, gắn YouTube</div>
               </div>
               <div onClick={() => setSection('tools')} style={{ background: S.surface, borderRadius: 12, padding: '20px 24px', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', border: `1px solid ${S.border}` }}>
-                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>🛠 Quản lý công cụ →</div>
-                <div style={{ fontSize: 13, color: S.text3 }}>Bật/tắt, phân cấp unlock cho học sinh</div>
+                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>🛠 Quản lý công cụ →</div>
+                <div style={{ fontSize: 14, color: S.text3 }}>Bật/tắt, phân cấp unlock cho học sinh</div>
               </div>
             </div>
           </div>

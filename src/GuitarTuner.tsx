@@ -324,20 +324,20 @@ export default function GuitarTuner() {
     }}>
       {/* Header */}
       <div style={{ padding: '20px 20px 0', textAlign: 'center', borderBottom: '1px solid #1a1a1a', paddingBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: '#555', marginBottom: 6, textTransform: 'uppercase' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: '#555', marginBottom: 6, textTransform: 'uppercase' }}>
           Guitar Tuner
         </div>
         <div style={{ fontSize: 22, fontWeight: 800, color: '#f0f0f0', letterSpacing: -0.5 }}>
           Chỉnh dây đàn
         </div>
-        <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>Chuẩn dây EADGBE tiêu chuẩn</div>
+        <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>Chuẩn dây EADGBE tiêu chuẩn</div>
       </div>
 
       <div style={{ padding: '16px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* String selector */}
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#444', marginBottom: 10, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#444', marginBottom: 10, textTransform: 'uppercase' }}>
             Chọn dây
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
@@ -357,7 +357,7 @@ export default function GuitarTuner() {
                     transition: 'all 0.15s',
                   }}
                 >
-                  <span style={{ fontSize: 16, fontWeight: 800, color: sel ? s.color : '#666' }}>{s.number}</span>
+                  <span style={{ fontSize: 17, fontWeight: 800, color: sel ? s.color : '#666' }}>{s.number}</span>
                   <span style={{ fontSize: 9, fontWeight: 700, color: sel ? s.color : '#444', letterSpacing: 0.5 }}>{s.note}</span>
                 </button>
               );
@@ -372,13 +372,13 @@ export default function GuitarTuner() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: selectedString.color, textTransform: 'uppercase', marginBottom: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: selectedString.color, textTransform: 'uppercase', marginBottom: 4 }}>
               Đang chỉnh
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#f0f0f0' }}>{selectedString.label}</div>
           </div>
           <div style={{
-            fontSize: 13, fontWeight: 700, color: '#555',
+            fontSize: 14, fontWeight: 700, color: '#555',
             backgroundColor: '#1a1a1a', borderRadius: 8, padding: '4px 10px',
           }}>
             {selectedString.freq} Hz
@@ -393,11 +393,11 @@ export default function GuitarTuner() {
           <TunerNeedle cents={isActive ? cents : null} isInTune={isInTune} />
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, padding: '0 8px' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: displayFreq && isActive ? '#ccc' : '#333' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: displayFreq && isActive ? '#ccc' : '#333' }}>
               {displayFreq && isActive ? `${displayFreq.toFixed(1)} Hz` : '— Hz'}
             </span>
             <span style={{
-              fontSize: 13, fontWeight: 700,
+              fontSize: 14, fontWeight: 700,
               color: isInTune ? '#4ade80' : cents !== null && isActive ? '#f97316' : '#333',
             }}>
               {cents !== null && isActive
@@ -417,11 +417,11 @@ export default function GuitarTuner() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 20 }}>{feedback.icon}</span>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: feedback.fg, letterSpacing: 0.2 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: feedback.fg, letterSpacing: 0.2 }}>
                 {feedback.text}
               </div>
               {feedback.sub && (
-                <div style={{ fontSize: 12, color: feedback.fg, opacity: 0.8, marginTop: 3, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 13, color: feedback.fg, opacity: 0.8, marginTop: 3, lineHeight: 1.5 }}>
                   {feedback.sub}
                 </div>
               )}
@@ -441,7 +441,7 @@ export default function GuitarTuner() {
           }}
         >
           <span style={{ fontSize: 22 }}>{isActive ? '⏹' : '🎙'}</span>
-          <span style={{ fontSize: 16, fontWeight: 700, color: isActive ? '#4ade80' : '#f0f0f0' }}>
+          <span style={{ fontSize: 17, fontWeight: 700, color: isActive ? '#4ade80' : '#f0f0f0' }}>
             {isActive ? 'Dừng nghe' : 'Bắt đầu nghe'}
           </span>
           {isActive && (
@@ -464,8 +464,8 @@ export default function GuitarTuner() {
               cursor: 'pointer',
             }}
           >
-            <span style={{ fontSize: 16 }}>🔊</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#ccc' }}>Nghe âm mẫu</span>
+            <span style={{ fontSize: 17 }}>🔊</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#ccc' }}>Nghe âm mẫu</span>
           </button>
           <button
             onClick={() => { stopListening(); setSelectedIndex(i => (i + 1) % STRINGS.length); }}
@@ -476,21 +476,21 @@ export default function GuitarTuner() {
               cursor: 'pointer',
             }}
           >
-            <span style={{ fontSize: 16 }}>➡</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#93c5fd' }}>Dây tiếp theo</span>
+            <span style={{ fontSize: 17 }}>➡</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#93c5fd' }}>Dây tiếp theo</span>
           </button>
         </div>
 
         {/* Error */}
         {error && (
           <div style={{ backgroundColor: '#1f0505', borderRadius: 10, padding: '12px 16px', border: '1px solid #7f1d1d' }}>
-            <span style={{ fontSize: 13, color: '#f87171', lineHeight: 1.5 }}>{error}</span>
+            <span style={{ fontSize: 14, color: '#f87171', lineHeight: 1.5 }}>{error}</span>
           </div>
         )}
 
         {/* Reference table */}
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: '#444', marginBottom: 10, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#444', marginBottom: 10, textTransform: 'uppercase' }}>
             Tần số chuẩn
           </div>
           <div style={{ backgroundColor: '#111', borderRadius: 12, overflow: 'hidden' }}>
@@ -508,10 +508,10 @@ export default function GuitarTuner() {
                 onClick={() => { stopListening(); setSelectedIndex(i); }}
               >
                 <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 13, color: '#888', flex: 1 }}>
+                <span style={{ fontSize: 14, color: '#888', flex: 1 }}>
                   {s.label}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#555' }}>{s.freq} Hz</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#555' }}>{s.freq} Hz</span>
               </div>
             ))}
           </div>

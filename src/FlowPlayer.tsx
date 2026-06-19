@@ -266,9 +266,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   if (done) return (
     <div style={{ ...containerStyle, alignItems: 'center', justifyContent: 'center', padding: 'calc(env(safe-area-inset-top,0px) + 28px) 28px calc(env(safe-area-inset-bottom,0px) + 28px)', textAlign: 'center', gap: 14, overflow: 'auto' }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: '#4338CA' }}>Hoàn thành!</div>
-      <div style={{ fontSize: 15, color: '#555' }}>{flow.title}</div>
+      <div style={{ fontSize: 16, color: '#555' }}>{flow.title}</div>
       {flow.reward_xp > 0 && !wasFinishedRef.current && (
-        <div style={{ background: '#FFF7ED', color: '#D97706', borderRadius: 99, padding: '8px 24px', fontWeight: 700, fontSize: 16 }}>
+        <div style={{ background: '#FFF7ED', color: '#D97706', borderRadius: 99, padding: '8px 24px', fontWeight: 700, fontSize: 17 }}>
           +{flow.reward_xp} XP
         </div>
       )}
@@ -283,8 +283,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
               <button key={a.type} onClick={() => { if (!dn) onLogAction(a.type) }} disabled={dn || actionBusy === a.type}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, background: dn ? '#F0FDF4' : '#fff', border: `1.5px solid ${dn ? '#16A34A' : '#E4E4E7'}`, borderRadius: 12, padding: '12px 14px', cursor: dn ? 'default' : 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: actionBusy === a.type ? 0.6 : 1 }}>
                 <span style={{ fontSize: 18 }}>{dn ? '✅' : a.icon}</span>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: dn ? '#16A34A' : '#18181B' }}>{dn ? `${a.label} — đã ghi nhận` : a.label}</span>
-                {!dn && <span style={{ fontSize: 11, fontWeight: 700, color: '#EA580C' }}>+{a.xp} XP</span>}
+                <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: dn ? '#16A34A' : '#18181B' }}>{dn ? `${a.label} — đã ghi nhận` : a.label}</span>
+                {!dn && <span style={{ fontSize: 12, fontWeight: 700, color: '#EA580C' }}>+{a.xp} XP</span>}
               </button>
             )
           })}
@@ -292,11 +292,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       )}
       <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
         <button onClick={() => { setDone(false); setCurrent(0); setAnswer(null); setChecked(null) }}
-          style={{ padding: '12px 20px', borderRadius: 14, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ padding: '12px 20px', borderRadius: 14, border: '1px solid #E4E4E7', background: '#fff', color: '#52525B', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           ↺ Xem lại
         </button>
         <button onClick={onBack}
-          style={{ padding: '12px 26px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          style={{ padding: '12px 26px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
           ← Quay lại
         </button>
       </div>
@@ -347,10 +347,10 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         </button>
         <span title={lm.label}
           style={{ width: 9, height: 9, borderRadius: 99, background: lm.color, flexShrink: 0, boxShadow: `0 0 0 4px ${lm.bg}` }} />
-        <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: '#18181B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, fontWeight: 700, color: '#18181B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {slide.title ?? ''}
         </span>
-        <span style={{ fontSize: 12, color: '#AAA', flexShrink: 0 }}>{current + 1} / {flow.slides.length}</span>
+        <span style={{ fontSize: 13, color: '#AAA', flexShrink: 0 }}>{current + 1} / {flow.slides.length}</span>
       </div>
 
       {/* Slide body — cuộn NỘI BỘ nếu nội dung dài, nút bấm luôn hiển thị */}
@@ -363,7 +363,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
         {/* TEXT / NEXT */}
         {(slide.type === 'text' || slide.type === 'next') && slide.content && (
-          <div style={{ fontSize: 15, color: '#333', lineHeight: 1.9 }}
+          <div style={{ fontSize: 16, color: '#333', lineHeight: 1.9 }}
             dangerouslySetInnerHTML={{ __html: slide.content }} />
         )}
 
@@ -380,7 +380,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {slide.type === 'image' && (
           <div style={{ marginBottom: 8 }}>
             {slide.content && (
-              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.85, marginBottom: 14 }}>{slide.content}</div>
+              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.85, marginBottom: 14 }}>{slide.content}</div>
             )}
             {slide.mediaUrl ? (
               <img
@@ -401,7 +401,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
               alignItems: 'center', justifyContent: 'center',
               height: 160, borderRadius: 14, background: '#F4F4F5',
               border: '2px dashed #D4D4D8', color: '#A1A1AA',
-              flexDirection: 'column', gap: 8, fontSize: 13
+              flexDirection: 'column', gap: 8, fontSize: 14
             }}>
               <span style={{ fontSize: 32 }}>🖼</span>
               Chưa có hình ảnh
@@ -413,7 +413,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {slide.type === 'quiz' && (
           <div>
             {slide.content && (
-              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.8, marginBottom: 14 }}>{slide.content}</div>
+              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.8, marginBottom: 14 }}>{slide.content}</div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {(slide.options ?? []).map((opt, i) => {
@@ -429,16 +429,16 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
                       setAnswer(opt)
                       setChecked(opt === slide.correctAnswer ? 'correct' : 'wrong')
                     }}
-                    style={{ padding: '13px 16px', borderRadius: 14, background: bg, border, color, fontSize: 14, fontWeight: 500, cursor: checked === 'correct' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s' }}>
-                    <span style={{ width: 24, height: 24, borderRadius: '50%', background: sel ? (checked ? (isCorrect ? '#16A34A' : '#EF4444') : '#4338CA') : '#DDD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                    style={{ padding: '13px 16px', borderRadius: 14, background: bg, border, color, fontSize: 15, fontWeight: 500, cursor: checked === 'correct' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s' }}>
+                    <span style={{ width: 24, height: 24, borderRadius: '50%', background: sel ? (checked ? (isCorrect ? '#16A34A' : '#EF4444') : '#4338CA') : '#DDD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                       {String.fromCharCode(65 + i)}
                     </span>
                     {opt}
                   </div>
                 )
               })}
-              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng — chọn lại nhé!</div>}
-              {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 13 }}>✅ Chính xác!</div>}
+              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 14 }}>❌ Chưa đúng — chọn lại nhé!</div>}
+              {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 14 }}>✅ Chính xác!</div>}
             </div>
           </div>
         )}
@@ -447,7 +447,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {slide.type === 'true_false' && (
           <div>
             {slide.content && (
-              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.8, marginBottom: 14 }}>{slide.content}</div>
+              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.8, marginBottom: 14 }}>{slide.content}</div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {['Đúng', 'Sai'].map(opt => {
@@ -469,13 +469,13 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
                       const cor = normalizeTF(slide.correctAnswer)
                       setChecked(sel !== null && cor !== null && sel === cor ? 'correct' : 'wrong')
                     }}
-                    style={{ padding: '16px', borderRadius: 14, background: bg, border, color, fontSize: 16, fontWeight: 700, cursor: checked === 'correct' ? 'default' : 'pointer', textAlign: 'center', transition: 'all .15s' }}>
+                    style={{ padding: '16px', borderRadius: 14, background: bg, border, color, fontSize: 17, fontWeight: 700, cursor: checked === 'correct' ? 'default' : 'pointer', textAlign: 'center', transition: 'all .15s' }}>
                     {opt === 'Đúng' ? '✓ Đúng' : '✗ Sai'}
                   </div>
                 )
               })}
-              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 13 }}>❌ Chưa đúng — chọn lại nhé!</div>}
-              {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 13 }}>✅ Chính xác!</div>}
+              {checked === 'wrong'   && <div style={{ background: '#FEF2F2', borderRadius: 10, padding: '10px 14px', color: '#DC2626', fontSize: 14 }}>❌ Chưa đúng — chọn lại nhé!</div>}
+              {checked === 'correct' && <div style={{ background: '#F0FDF4', borderRadius: 10, padding: '10px 14px', color: '#16A34A', fontSize: 14 }}>✅ Chính xác!</div>}
             </div>
           </div>
         )}
@@ -484,17 +484,17 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {slide.type === 'input' && (
           <div>
             {slide.content && (
-              <div style={{ fontSize: 15, color: '#333', lineHeight: 1.8, marginBottom: 12 }}>{slide.content}</div>
+              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.8, marginBottom: 12 }}>{slide.content}</div>
             )}
             <textarea value={inputVal} onChange={e => setInputVal(e.target.value)}
               placeholder="Nhập câu trả lời của bạn..."
-              style={{ width: '100%', boxSizing: 'border-box', minHeight: 130, borderRadius: 14, border: '2px solid #E8EAF0', padding: '12px 14px', fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.7, color: '#18181B', background: '#fff' }} />
+              style={{ width: '100%', boxSizing: 'border-box', minHeight: 130, borderRadius: 14, border: '2px solid #E8EAF0', padding: '12px 14px', fontSize: 15, fontFamily: 'inherit', outline: 'none', resize: 'none', lineHeight: 1.7, color: '#18181B', background: '#fff' }} />
           </div>
         )}
 
         {/* ACTION */}
         {slide.type === 'action' && slide.content && (
-          <div style={{ fontSize: 15, color: '#333', lineHeight: 1.9 }}>
+          <div style={{ fontSize: 16, color: '#333', lineHeight: 1.9 }}>
             {slide.content}
           </div>
         )}
@@ -503,7 +503,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {slide.type === 'reward' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
               {slide.content && (
-              <div style={{ fontSize: 16, color: '#4338CA', fontWeight: 600, lineHeight: 1.7 }}>{slide.content}</div>
+              <div style={{ fontSize: 17, color: '#4338CA', fontWeight: 600, lineHeight: 1.7 }}>{slide.content}</div>
             )}
           </div>
         )}
@@ -514,12 +514,12 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           const teacher = v === 'teacher'
           return (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '15px 16px', borderRadius: 16, background: teacher ? '#F1ECE2' : v === 'warn' ? '#FEF3C7' : '#EEF2FF', border: `1px solid ${teacher ? '#E2DBCD' : v === 'warn' ? '#FDE68A' : '#E0E7FF'}` }}>
-              <div style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 99, background: teacher ? 'linear-gradient(135deg,#2C2823,#5A5043)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F4E9D8', fontWeight: 700, fontSize: 13 }}>
+              <div style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 99, background: teacher ? 'linear-gradient(135deg,#2C2823,#5A5043)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F4E9D8', fontWeight: 700, fontSize: 14 }}>
                 {teacher ? 'VA' : v === 'warn' ? '⚠️' : '💡'}
               </div>
               <div style={{ flex: 1 }}>
-                {teacher && <div style={{ fontSize: 12.5, fontWeight: 700, color: '#5A5448', marginBottom: 3 }}>Thầy Văn Anh</div>}
-                <div style={{ fontSize: 14.5, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: slide.content ?? '' }} />
+                {teacher && <div style={{ fontSize: 13.5, fontWeight: 700, color: '#5A5448', marginBottom: 3 }}>Thầy Văn Anh</div>}
+                <div style={{ fontSize: 15.5, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: slide.content ?? '' }} />
               </div>
             </div>
           )
@@ -540,7 +540,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
             />
             {!passed.has(slide.id) && (attempts[slide.id] ?? 0) >= 2 && (
               <button onClick={() => softPass(slide.id)}
-                style={{ marginTop: 14, width: '100%', padding: '12px', border: '1.5px dashed #C9C0AF', borderRadius: 12, background: '#fff', color: '#8A8478', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+                style={{ marginTop: 14, width: '100%', padding: '12px', border: '1.5px dashed #C9C0AF', borderRadius: 12, background: '#fff', color: '#8A8478', fontFamily: 'inherit', fontSize: 14.5, fontWeight: 600, cursor: 'pointer' }}>
                 Mình đã thử trên đàn rồi → tiếp tục
               </button>
             )}
@@ -553,7 +553,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
             <Strum cfg={(slide.interactive ?? {}) as StrumCfg}
               onPass={() => markPassed(slide.id, true)} onWrong={() => bumpAttempt(slide.id)} />
             {!passed.has(slide.id) && (attempts[slide.id] ?? 0) >= 2 && (
-              <button onClick={() => softPass(slide.id)} style={{ marginTop: 14, width: '100%', padding: '12px', border: '1.5px dashed #C9C0AF', borderRadius: 12, background: '#fff', color: '#8A8478', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => softPass(slide.id)} style={{ marginTop: 14, width: '100%', padding: '12px', border: '1.5px dashed #C9C0AF', borderRadius: 12, background: '#fff', color: '#8A8478', fontFamily: 'inherit', fontSize: 14.5, fontWeight: 600, cursor: 'pointer' }}>
                 Mình đã thử trên đàn rồi → tiếp tục
               </button>
             )}
@@ -590,8 +590,8 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
               style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: 'none', borderRadius: 15, background: '#1C1A17', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
               <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: '#3F6B4E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎚️</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#F4E9D8' }}>{label}</div>
-                {sub && <div style={{ fontSize: 12, color: '#9A9082', marginTop: 2 }}>{sub}</div>}
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#F4E9D8' }}>{label}</div>
+                {sub && <div style={{ fontSize: 13, color: '#9A9082', marginTop: 2 }}>{sub}</div>}
               </div>
               <span style={{ color: '#F4E9D8', fontSize: 18 }}>›</span>
             </button>
@@ -601,15 +601,15 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* SUPPORT — Gỡ rối & Đào sâu (opt-in, thầy tự gắn vào bài cần) */}
         {slide.type === 'support' && (
           <div>
-            <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.7, marginBottom: 16 }}>
+            <div style={{ fontSize: 16, color: '#3A352C', lineHeight: 1.7, marginBottom: 16 }}>
               {slide.content || 'Vấp là chuyện bình thường. Nếu bạn chưa hiểu, làm chưa được, hoặc muốn hiểu sâu hơn — bấm vào đây để cùng gỡ.'}
             </div>
             <button onClick={() => setSupportOpen(true)}
               style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: 'none', borderRadius: 15, background: '#3F6B4E', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
               <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: 'rgba(255,255,255,.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🧭</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15.5, fontWeight: 700, color: '#fff' }}>Gỡ rối & Đào sâu</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 2 }}>Tự gỡ → tìm bài giảng → hỏi thầy</div>
+                <div style={{ fontSize: 16.5, fontWeight: 700, color: '#fff' }}>Gỡ rối & Đào sâu</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', marginTop: 2 }}>Tự gỡ → tìm bài giảng → hỏi thầy</div>
               </div>
               <span style={{ color: '#fff', fontSize: 18 }}>›</span>
             </button>
@@ -635,12 +635,12 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         <div style={{ display: 'flex', gap: 8 }}>
           {current > 0 && (
             <button onClick={goPrev}
-              style={{ padding: '15px 18px', borderRadius: 14, border: '2px solid #E8EAF0', background: '#fff', color: '#4338CA', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              style={{ padding: '15px 18px', borderRadius: 14, border: '2px solid #E8EAF0', background: '#fff', color: '#4338CA', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
               ← Trước
             </button>
           )}
           <button onClick={goNext} disabled={!canProceed(slide)}
-            style={{ flex: 1, padding: '15px', borderRadius: 14, border: 'none', background: canProceed(slide) ? '#4338CA' : '#E8EAF0', color: canProceed(slide) ? '#fff' : '#AAA', fontSize: 15, fontWeight: 700, cursor: canProceed(slide) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all .2s' }}>
+            style={{ flex: 1, padding: '15px', borderRadius: 14, border: 'none', background: canProceed(slide) ? '#4338CA' : '#E8EAF0', color: canProceed(slide) ? '#fff' : '#AAA', fontSize: 16, fontWeight: 700, cursor: canProceed(slide) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all .2s' }}>
             {current >= flow.slides.length - 1
               ? '✓ Hoàn thành bài học'
               : slide.type === 'action'

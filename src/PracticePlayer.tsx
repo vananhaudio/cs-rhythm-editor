@@ -163,15 +163,15 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
       : kind === 'soft' ? { background: C.accentSoft, color: C.accent, border: `1px solid ${C.accent}44` }
       : { background: 'transparent', color: C.muted, border: `1px solid ${C.border}` }
     return <button onClick={disabled ? undefined : onClick} disabled={disabled}
-      style={{ flex: 1, ...skin, borderRadius: 12, padding: '11px 8px', fontFamily: FONT, fontWeight: 700, fontSize: 13, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1 }}>{label}</button>
+      style={{ flex: 1, ...skin, borderRadius: 12, padding: '11px 8px', fontFamily: FONT, fontWeight: 700, fontSize: 14, cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1 }}>{label}</button>
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 10, flexShrink: 0 }}>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>‹ Đóng</button>
-        <span style={{ flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>‹ Đóng</button>
+        <span style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {draft.title || 'Luyện tập'}
         </span>
         <span style={{ width: 48 }} />
@@ -198,7 +198,7 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
         {hasChords && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '10px 14px', flexShrink: 0 }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: C.muted }}>HỢP ÂM</div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: C.muted }}>HỢP ÂM</div>
               <div style={{ fontSize: 30, fontWeight: 800, color: currentChord ? C.accent : C.dim, lineHeight: 1.1 }}>{currentChord ?? '—'}</div>
             </div>
             <div style={{ flex: 1 }} />
@@ -208,9 +208,9 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
 
         {/* Karaoke */}
         <div style={{ flex: 1, minHeight: 0, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: C.muted, marginBottom: 8 }}>LỜI BÀI HÁT</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: C.muted, marginBottom: 8 }}>LỜI BÀI HÁT</div>
           {words.length === 0 ? (
-            <div style={{ color: C.muted, fontSize: 13, flex: 1 }}>Bài này chưa có lời.</div>
+            <div style={{ color: C.muted, fontSize: 14, flex: 1 }}>Bài này chưa có lời.</div>
           ) : (
             <div style={{ flex: 1, overflowY: 'auto', padding: '8vh 0', maskImage: 'linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -243,7 +243,7 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
               </div>
             </div>
           )}
-          {!hasGrid && <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>Bài này chưa có lưới nhịp nên lời không tự cuộn / tô sáng.</div>}
+          {!hasGrid && <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>Bài này chưa có lưới nhịp nên lời không tự cuộn / tô sáng.</div>}
         </div>
 
         {/* Stats */}
@@ -260,7 +260,7 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
     return (
       <div style={{ flex: 1, textAlign: 'center', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 4px' }}>
         <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 700, color }}>{value}</div>
-        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{label}</div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{label}</div>
       </div>
     )
   }

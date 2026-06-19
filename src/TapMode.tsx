@@ -90,14 +90,14 @@ function TapArea({ phase, tapMode, isTeacher, teacherDots, studentDots, scoredSt
     <>
       {/* Timeline */}
       <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#374151', fontSize: 11 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#374151', fontSize: 12 }}>
           <span>{Math.floor(currentTime/60)}:{String(Math.floor(currentTime%60)).padStart(2,'0')}</span>
           <span>{Math.floor(duration/60)}:{String(Math.floor(duration%60)).padStart(2,'0')}</span>
         </div>
 
         {/* Track thầy */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#F59E0B', fontSize: 11, fontWeight: 700, width: 72, flexShrink: 0 }}>
+          <span style={{ color: '#F59E0B', fontSize: 12, fontWeight: 700, width: 72, flexShrink: 0 }}>
             {isTeacher ? '👨‍🏫 Thầy' : '🎯 Đáp án'}
           </span>
           <div style={{ position: 'relative', flex: 1, height: 36, background: '#0F1117', borderRadius: 6, border: `1px solid ${tapMode==='teacher' && isTeacher ? '#F59E0B' : '#1E2533'}`, overflow: 'hidden' }}>
@@ -107,12 +107,12 @@ function TapArea({ phase, tapMode, isTeacher, teacherDots, studentDots, scoredSt
             ))}
             {duration > 0 && <div style={{ position:'absolute', top:0, bottom:0, left:`${pct(currentTime)}%`, width:2, background:'#F59E0B', opacity:0.4 }} />}
           </div>
-          {teacherDots.length > 0 && <span style={{ color:'#F59E0B', fontSize:11, width:28 }}>{teacherDots.length}</span>}
+          {teacherDots.length > 0 && <span style={{ color:'#F59E0B', fontSize:12, width:28 }}>{teacherDots.length}</span>}
         </div>
 
         {/* Track học sinh */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color:'#60A5FA', fontSize:11, fontWeight:700, width:72, flexShrink:0 }}>🎓 Bạn</span>
+          <span style={{ color:'#60A5FA', fontSize:12, fontWeight:700, width:72, flexShrink:0 }}>🎓 Bạn</span>
           <div style={{ position:'relative', flex:1, height:36, background:'#0F1117', borderRadius:6, border:`1px solid ${tapMode==='student' ? '#60A5FA' : '#1E2533'}`, overflow:'hidden' }}>
             <div style={{ position:'absolute', top:0, left:0, bottom:0, width:`${pct(currentTime)}%`, background:'rgba(96,165,250,0.06)' }} />
             {(phase==='result' ? scoredStudent : studentDots.map((d: Dot) => ({...d, hit:true, offset:0}))).map((d: any, i: number) => (
@@ -122,10 +122,10 @@ function TapArea({ phase, tapMode, isTeacher, teacherDots, studentDots, scoredSt
             ))}
             {duration > 0 && <div style={{ position:'absolute', top:0, bottom:0, left:`${pct(currentTime)}%`, width:2, background:'#60A5FA', opacity:0.4 }} />}
           </div>
-          {studentDots.length > 0 && <span style={{ color:'#60A5FA', fontSize:11, width:28 }}>{studentDots.length}</span>}
+          {studentDots.length > 0 && <span style={{ color:'#60A5FA', fontSize:12, width:28 }}>{studentDots.length}</span>}
         </div>
 
-        {phase==='result' && <div style={{ display:'flex', gap:16, fontSize:11, color:'#6B7280' }}>
+        {phase==='result' && <div style={{ display:'flex', gap:16, fontSize:12, color:'#6B7280' }}>
           <span><span style={{color:'#10B981'}}>●</span> Đúng (≤0.25s)</span>
           <span><span style={{color:'#EF4444'}}>●</span> Lệch</span>
           <span><span style={{color:'#F59E0B'}}>●</span> Đáp án thầy</span>
@@ -135,9 +135,9 @@ function TapArea({ phase, tapMode, isTeacher, teacherDots, studentDots, scoredSt
       {/* Score */}
       {phase==='result' && teacherDots.length > 0 && (
         <div style={{ textAlign:'center', paddingBottom:8 }}>
-          <div style={{ fontSize:44, fontWeight:900, color: score>=60 ? '#10B981' : '#EF4444' }}>{score}<span style={{fontSize:16}}>/100</span></div>
+          <div style={{ fontSize:44, fontWeight:900, color: score>=60 ? '#10B981' : '#EF4444' }}>{score}<span style={{fontSize:17}}>/100</span></div>
           <div style={{ fontSize:20 }}>{'⭐'.repeat(stars)}{'☆'.repeat(5-stars)}</div>
-          <div style={{ fontSize:11, color:'#6B7280' }}>{scoredStudent.filter((d:any)=>d.hit).length}/{teacherDots.length} phách đúng</div>
+          <div style={{ fontSize:12, color:'#6B7280' }}>{scoredStudent.filter((d:any)=>d.hit).length}/{teacherDots.length} phách đúng</div>
         </div>
       )}
 
@@ -145,8 +145,8 @@ function TapArea({ phase, tapMode, isTeacher, teacherDots, studentDots, scoredSt
       <div style={{ padding:'8px 20px 12px', display:'flex', gap:12, justifyContent:'center', alignItems:'center', flexWrap:'wrap' }}>
         {isTeacher && phase==='playing' && (
           <div style={{ display:'flex', borderRadius:8, overflow:'hidden', border:'1px solid #374151' }}>
-            <button onClick={() => onToggleTapMode('student')} style={{ padding:'8px 14px', background: tapMode==='student' ? '#60A5FA' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:12 }}>🎓 Học sinh</button>
-            <button onClick={() => onToggleTapMode('teacher')} style={{ padding:'8px 14px', background: tapMode==='teacher' ? '#F59E0B' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:12 }}>👨‍🏫 Đáp án</button>
+            <button onClick={() => onToggleTapMode('student')} style={{ padding:'8px 14px', background: tapMode==='student' ? '#60A5FA' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:13 }}>🎓 Học sinh</button>
+            <button onClick={() => onToggleTapMode('teacher')} style={{ padding:'8px 14px', background: tapMode==='teacher' ? '#F59E0B' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:13 }}>👨‍🏫 Đáp án</button>
           </div>
         )}
 
@@ -186,13 +186,13 @@ function TapArea({ phase, tapMode, isTeacher, teacherDots, studentDots, scoredSt
         )}
 
         {phase==='playing' && isTeacher && tapMode==='teacher' && teacherDots.length > 0 && (
-          <button onClick={onSave} disabled={saving} style={{ padding:'8px 16px', background:'#F59E0B', border:'none', borderRadius:8, color:'#fff', fontWeight:700, cursor:'pointer', fontSize:12 }}>
+          <button onClick={onSave} disabled={saving} style={{ padding:'8px 16px', background:'#F59E0B', border:'none', borderRadius:8, color:'#fff', fontWeight:700, cursor:'pointer', fontSize:13 }}>
             {saving ? '⏳...' : '💾 Lưu ngay'}
           </button>
         )}
       </div>
 
-      <div style={{ textAlign:'center', color:'#374151', fontSize:11, paddingBottom:8 }}>
+      <div style={{ textAlign:'center', color:'#374151', fontSize:12, paddingBottom:8 }}>
         {phase==='idle' && 'Nhấn ▶ Bắt đầu hoặc Space'}
         {phase==='countdown' && 'Chuẩn bị tập trung...'}
         {phase==='playing' && 'Nhấn TAP hoặc Space khi đến phách mạnh'}
@@ -304,7 +304,7 @@ function TapYouTubeOnly({ isTeacher, onPickSong }: { isTeacher: boolean; onPickS
     <>
       <div style={{ padding:'12px 20px', display:'flex', gap:8, borderBottom:'1px solid #1E2533' }}>
         <input value={ytUrl} onChange={e => setYtUrl(e.target.value)} placeholder="Dán link YouTube..."
-          style={{ flex:1, padding:'8px 12px', background:'#1E2533', border:'1px solid #374151', borderRadius:8, color:'#fff', fontSize:14, outline:'none' }}
+          style={{ flex:1, padding:'8px 12px', background:'#1E2533', border:'1px solid #374151', borderRadius:8, color:'#fff', fontSize:15, outline:'none' }}
           onKeyDown={e => e.key==='Enter' && handleLoad()} />
         <button onClick={handleLoad} style={{ padding:'8px 18px', background:'#10B981', border:'none', borderRadius:8, color:'#fff', fontWeight:700, cursor:'pointer' }}>Tải</button>
         <button onClick={onPickSong} style={{ padding:'8px 14px', background:'#1E2533', border:'1px solid #374151', borderRadius:8, color:'#10B981', fontWeight:700, cursor:'pointer' }}>🎵 Chọn bài</button>
@@ -312,7 +312,7 @@ function TapYouTubeOnly({ isTeacher, onPickSong }: { isTeacher: boolean; onPickS
 
       <div style={{ padding:'12px 20px 0' }}>
         <div id="yt-player" style={{ width:'100%', aspectRatio:'16/6', borderRadius:10, overflow:'hidden', background:'#000', display: ytId ? 'block' : 'none' }} />
-        {!ytId && <div style={{ height:100, display:'flex', alignItems:'center', justifyContent:'center', color:'#374151', fontSize:14, border:'1px dashed #1E2533', borderRadius:10 }}>
+        {!ytId && <div style={{ height:100, display:'flex', alignItems:'center', justifyContent:'center', color:'#374151', fontSize:15, border:'1px dashed #1E2533', borderRadius:10 }}>
           Dán link YouTube để bắt đầu · hoặc Chọn bài có sẵn
         </div>}
       </div>
@@ -322,7 +322,7 @@ function TapYouTubeOnly({ isTeacher, onPickSong }: { isTeacher: boolean; onPickS
           onToggleTapMode={tap.setTapMode} onRetry={tap.handleRetry} onSave={tap.handleSave}
           onStart={tap.handleStart} onTap={tap.handleTap} />
       </div>
-      {tap.saveMsg && <div style={{ textAlign:'center', color: tap.saveMsg.startsWith('✅') ? '#10B981' : '#EF4444', fontSize:13, paddingBottom:4 }}>{tap.saveMsg}</div>}
+      {tap.saveMsg && <div style={{ textAlign:'center', color: tap.saveMsg.startsWith('✅') ? '#10B981' : '#EF4444', fontSize:14, paddingBottom:4 }}>{tap.saveMsg}</div>}
     </>
   )
 }
@@ -450,23 +450,23 @@ function TapWithSong({ initialSong, isTeacher, onPickSong }: {
       <div style={{ padding:'8px 20px', background:'#0F1117', borderBottom:'1px solid #1E2533', display:'flex', gap:12, alignItems:'center' }}>
         {activeSong ? (
           <>
-            <span style={{ color:'#fff', fontWeight:700, fontSize:14 }}>{activeSong.title}</span>
-            {activeSong.artist && <span style={{ color:'#6B7280', fontSize:12 }}>— {activeSong.artist}</span>}
-            <span style={{ color:'#374151', fontSize:11 }}>{activeSong.tone} · {activeSong.tempo} BPM · {activeSong.timeSignature}/4</span>
-            {hasYT && <span style={{ color:'#10B981', fontSize:11 }}>▶ YouTube</span>}
-            {!hasYT && <span style={{ color:'#F59E0B', fontSize:11 }}>🥁 Metronome</span>}
+            <span style={{ color:'#fff', fontWeight:700, fontSize:15 }}>{activeSong.title}</span>
+            {activeSong.artist && <span style={{ color:'#6B7280', fontSize:13 }}>— {activeSong.artist}</span>}
+            <span style={{ color:'#374151', fontSize:12 }}>{activeSong.tone} · {activeSong.tempo} BPM · {activeSong.timeSignature}/4</span>
+            {hasYT && <span style={{ color:'#10B981', fontSize:12 }}>▶ YouTube</span>}
+            {!hasYT && <span style={{ color:'#F59E0B', fontSize:12 }}>🥁 Metronome</span>}
           </>
         ) : (
-          <span style={{ color:'#6B7280', fontSize:13 }}>Chưa chọn bài</span>
+          <span style={{ color:'#6B7280', fontSize:14 }}>Chưa chọn bài</span>
         )}
-        <button onClick={onPickSong} style={{ marginLeft:'auto', padding:'4px 12px', background:'#1E2533', border:'1px solid #374151', borderRadius:6, color:'#10B981', fontWeight:700, cursor:'pointer', fontSize:12 }}>
+        <button onClick={onPickSong} style={{ marginLeft:'auto', padding:'4px 12px', background:'#1E2533', border:'1px solid #374151', borderRadius:6, color:'#10B981', fontWeight:700, cursor:'pointer', fontSize:13 }}>
           🎵 Chọn bài
         </button>
         {/* Speed (mode 1 — không có YT) */}
         {!hasYT && activeSong && (
           <div style={{ display:'flex', gap:4 }}>
             {[0.5,0.75,1,1.25].map(s => (
-              <button key={s} onClick={() => setSpeed(s)} style={{ padding:'3px 8px', borderRadius:4, border:'none', background: speed===s ? '#10B981' : '#1E2533', color:'#fff', fontSize:11, cursor:'pointer', fontWeight: speed===s ? 700 : 400 }}>
+              <button key={s} onClick={() => setSpeed(s)} style={{ padding:'3px 8px', borderRadius:4, border:'none', background: speed===s ? '#10B981' : '#1E2533', color:'#fff', fontSize:12, cursor:'pointer', fontWeight: speed===s ? 700 : 400 }}>
                 {s===1?'100%':s===0.5?'50%':s===0.75?'75%':'125%'}
               </button>
             ))}
@@ -504,7 +504,7 @@ function TapWithSong({ initialSong, isTeacher, onPickSong }: {
           onToggleTapMode={tap.setTapMode} onRetry={tap.handleRetry} onSave={tap.handleSave}
           onStart={tap.handleStart} onTap={tap.handleTap} />
       </div>
-      {tap.saveMsg && <div style={{ textAlign:'center', color: tap.saveMsg.startsWith('✅') ? '#10B981' : '#EF4444', fontSize:13, paddingBottom:4 }}>{tap.saveMsg}</div>}
+      {tap.saveMsg && <div style={{ textAlign:'center', color: tap.saveMsg.startsWith('✅') ? '#10B981' : '#EF4444', fontSize:14, paddingBottom:4 }}>{tap.saveMsg}</div>}
     </>
   )
 }
@@ -526,13 +526,13 @@ export function TapMode({ song, onClose, userRole }: Props) {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 20px', borderBottom:'1px solid #1E2533', flexShrink:0 }}>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <span style={{ color:'#fff', fontWeight:800, fontSize:16 }}>🥁 Tap nhịp</span>
+          <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>🥁 Tap nhịp</span>
           {/* Mode tabs */}
           <div style={{ display:'flex', borderRadius:8, overflow:'hidden', border:'1px solid #374151', marginLeft:12 }}>
-            <button onClick={() => setMode('song')} style={{ padding:'5px 14px', background: mode==='song' ? '#10B981' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:12 }}>
+            <button onClick={() => setMode('song')} style={{ padding:'5px 14px', background: mode==='song' ? '#10B981' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:13 }}>
               🎵 Theo bài
             </button>
-            <button onClick={() => setMode('youtube')} style={{ padding:'5px 14px', background: mode==='youtube' ? '#10B981' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:12 }}>
+            <button onClick={() => setMode('youtube')} style={{ padding:'5px 14px', background: mode==='youtube' ? '#10B981' : '#1F2937', border:'none', color:'#fff', fontWeight:700, cursor:'pointer', fontSize:13 }}>
               ▶ YouTube
             </button>
           </div>

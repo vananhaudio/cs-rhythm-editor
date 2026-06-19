@@ -151,11 +151,11 @@ export default function GroupManager() {
   // ── UI ──
   const btn = (bg: string, extra?: React.CSSProperties): React.CSSProperties => ({
     background: bg, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px',
-    fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', ...extra,
+    fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', ...extra,
   })
   const ghostBtn: React.CSSProperties = {
     background: S.surface, color: S.text2, border: `1px solid ${S.border}`, borderRadius: 8,
-    padding: '7px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+    padding: '7px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
   }
 
   return (
@@ -167,7 +167,7 @@ export default function GroupManager() {
           <button style={btn(S.accent)} onClick={() => setForm({ ...emptyForm })}>+ Thêm nhóm</button>
         </div>
       </div>
-      <div style={{ fontSize: 13, color: S.text2, marginBottom: 20, maxWidth: 720, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 14, color: S.text2, marginBottom: 20, maxWidth: 720, lineHeight: 1.6 }}>
         Nhóm <b>Facebook</b> hiện cho mọi học viên. Nhóm <b>Zalo</b> chỉ hiện với học viên đã được gán —
         gửi <b>link xác nhận</b> vào đúng nhóm Zalo để học viên cũ tự nhận nhóm (khỏi dò email).
       </div>
@@ -184,12 +184,12 @@ export default function GroupManager() {
             return (
               <div key={g.id} style={{ background: S.surface, borderRadius: 12, padding: 18, border: `1px solid ${S.border}`, opacity: g.is_active ? 1 : 0.55 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: isFb ? S.fb : S.zalo, borderRadius: 6, padding: '3px 8px' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: isFb ? S.fb : S.zalo, borderRadius: 6, padding: '3px 8px' }}>
                     {isFb ? 'Facebook' : 'Zalo'}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: S.text1 }}>{g.name}</div>
-                    <div style={{ fontSize: 12, color: S.text3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: S.text1 }}>{g.name}</div>
+                    <div style={{ fontSize: 13, color: S.text3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {(isFb ? g.facebook_url : g.zalo_url) || <span style={{ color: S.danger }}>⚠ chưa có link</span>}
                       {!isFb && <span style={{ marginLeft: 10, color: S.text2 }}>· {counts[g.id] ?? 0} thành viên</span>}
                     </div>
@@ -206,8 +206,8 @@ export default function GroupManager() {
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px dashed ${S.border}` }}>
                     {tok ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                        <code style={{ fontSize: 12, background: S.bg, padding: '4px 8px', borderRadius: 6, color: S.text2 }}>{claimLink(tok)}</code>
-                        <button style={btn(S.accent, { padding: '6px 10px', fontSize: 12 })} onClick={() => copy(claimLink(tok), 'link-' + g.id)}>
+                        <code style={{ fontSize: 13, background: S.bg, padding: '4px 8px', borderRadius: 6, color: S.text2 }}>{claimLink(tok)}</code>
+                        <button style={btn(S.accent, { padding: '6px 10px', fontSize: 13 })} onClick={() => copy(claimLink(tok), 'link-' + g.id)}>
                           {copied === 'link-' + g.id ? '✓ Đã copy' : '📋 Copy link'}
                         </button>
                         <button style={ghostBtn} onClick={() => copy(zaloMsg(g, tok), 'msg-' + g.id)}>
@@ -217,18 +217,18 @@ export default function GroupManager() {
                         <button style={ghostBtn} onClick={() => viewMembers(g)}>{membersOf === g.id ? 'Ẩn thành viên' : 'Xem thành viên'}</button>
                       </div>
                     ) : (
-                      <button style={btn(S.green, { padding: '6px 12px', fontSize: 12 })} onClick={() => genToken(g)} disabled={saving}>
+                      <button style={btn(S.green, { padding: '6px 12px', fontSize: 13 })} onClick={() => genToken(g)} disabled={saving}>
                         + Tạo link xác nhận
                       </button>
                     )}
 
                     {membersOf === g.id && (
                       <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {members.length === 0 ? <div style={{ fontSize: 12, color: S.text3 }}>Chưa có thành viên nào tự xác nhận.</div>
+                        {members.length === 0 ? <div style={{ fontSize: 13, color: S.text3 }}>Chưa có thành viên nào tự xác nhận.</div>
                           : members.map(m => (
-                            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: S.text2 }}>
+                            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: S.text2 }}>
                               <span style={{ flex: 1 }}>• {m.name}</span>
-                              <button onClick={() => removeMember(m)} style={{ background: 'none', border: 'none', color: S.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Gỡ</button>
+                              <button onClick={() => removeMember(m)} style={{ background: 'none', border: 'none', color: S.danger, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Gỡ</button>
                             </div>
                           ))}
                       </div>
@@ -252,7 +252,7 @@ export default function GroupManager() {
               <div style={{ display: 'flex', gap: 8 }}>
                 {['zalo', 'facebook'].map(t => (
                   <button key={t} onClick={() => setForm({ ...form, group_type: t })}
-                    style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${form.group_type === t ? S.accent : S.border}`, background: form.group_type === t ? S.accentLight : S.surface, color: form.group_type === t ? S.accent : S.text2, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
+                    style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${form.group_type === t ? S.accent : S.border}`, background: form.group_type === t ? S.accentLight : S.surface, color: form.group_type === t ? S.accent : S.text2, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
                     {t === 'zalo' ? 'Zalo (riêng)' : 'Facebook (chung)'}
                   </button>
                 ))}
@@ -261,7 +261,7 @@ export default function GroupManager() {
             {form.group_type === 'facebook'
               ? <Field label="Link Facebook" value={form.facebook_url} onChange={v => setForm({ ...form, facebook_url: v })} placeholder="https://facebook.com/groups/..." />
               : <Field label="Link Zalo" value={form.zalo_url} onChange={v => setForm({ ...form, zalo_url: v })} placeholder="https://zalo.me/g/..." />}
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: S.text2, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: S.text2, cursor: 'pointer' }}>
               <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} /> Đang hoạt động (hiện cho học viên)
             </label>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -277,10 +277,10 @@ export default function GroupManager() {
         <div onClick={() => setBulk(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: S.surface, borderRadius: 14, padding: 24, width: '90%', maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ fontWeight: 800, fontSize: 17 }}>Dán hàng loạt nhóm Zalo</div>
-            <div style={{ fontSize: 12, color: S.text2 }}>Mỗi dòng một nhóm, cú pháp: <code style={{ background: S.bg, padding: '2px 6px', borderRadius: 5 }}>Tên lớp | link Zalo</code></div>
+            <div style={{ fontSize: 13, color: S.text2 }}>Mỗi dòng một nhóm, cú pháp: <code style={{ background: S.bg, padding: '2px 6px', borderRadius: 5 }}>Tên lớp | link Zalo</code></div>
             <textarea value={bulk} onChange={e => setBulk(e.target.value)} rows={8}
               placeholder={'KD17 - Guitar Khởi Đầu | https://zalo.me/g/abc123\nGL8 - Guitar Tỉa Nốt | https://zalo.me/g/def456'}
-              style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${S.border}`, borderRadius: 8, padding: 12, fontSize: 13, fontFamily: 'monospace', resize: 'vertical', outline: 'none', color: S.text1 }} />
+              style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${S.border}`, borderRadius: 8, padding: 12, fontSize: 14, fontFamily: 'monospace', resize: 'vertical', outline: 'none', color: S.text1 }} />
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button style={ghostBtn} onClick={() => setBulk(null)}>Huỷ</button>
               <button style={btn(S.accent)} onClick={bulkCreate} disabled={saving}>{saving ? 'Đang tạo...' : 'Tạo nhóm'}</button>
@@ -292,13 +292,13 @@ export default function GroupManager() {
   )
 }
 
-const lbl: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#52525B', marginBottom: 5 }
+const lbl: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 600, color: '#52525B', marginBottom: 5 }
 function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div>
       <label style={lbl}>{label}</label>
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E4E4E7', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#18181B', fontFamily: 'inherit' }} />
+        style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E4E4E7', borderRadius: 8, padding: '9px 12px', fontSize: 15, outline: 'none', color: '#18181B', fontFamily: 'inherit' }} />
     </div>
   )
 }

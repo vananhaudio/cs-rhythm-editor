@@ -71,12 +71,12 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: P.bg, display: 'flex', flexDirection: 'column', fontFamily: '"DM Sans", system-ui, sans-serif', color: P.ink }}>
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12, padding: 'calc(env(safe-area-inset-top,0px) + 12px) 16px 12px', borderBottom: `1px solid ${P.line}` }}>
         <button onClick={step === 'need' ? onClose : () => setStep('need')}
-          style={{ width: 38, height: 38, flexShrink: 0, border: `1px solid ${P.line}`, background: '#fff', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: P.sub }}>←</button>
+          style={{ width: 38, height: 38, flexShrink: 0, border: `1px solid ${P.line}`, background: '#fff', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, color: P.sub }}>←</button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: P.accent, letterSpacing: '.04em' }}>GỠ RỐI & ĐÀO SÂU</div>
-          <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub ?? lessonTitle}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: P.accent, letterSpacing: '.04em' }}>GỠ RỐI & ĐÀO SÂU</div>
+          <div style={{ fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub ?? lessonTitle}</div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: P.faint, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Đóng</button>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: P.faint, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Đóng</button>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '18px 18px calc(env(safe-area-inset-bottom,0px) + 24px)' }}>{children}</div>
     </div>
@@ -88,15 +88,15 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
         border: opts.dark ? 'none' : `1.5px solid ${opts.soft ? P.accent : P.line}`,
         background: opts.disabled ? '#F1ECE2' : opts.dark ? P.accent : opts.soft ? P.accentSoft : '#fff',
         color: opts.disabled ? '#A8A294' : opts.dark ? '#fff' : P.ink, opacity: opts.disabled ? 0.8 : 1 }}>
-      <div style={{ fontSize: 15, fontWeight: 700 }}>{label}</div>
-      {opts.sub && <div style={{ fontSize: 12, marginTop: 3, color: opts.dark ? 'rgba(255,255,255,.8)' : P.faint, fontWeight: 500 }}>{opts.sub}</div>}
+      <div style={{ fontSize: 16, fontWeight: 700 }}>{label}</div>
+      {opts.sub && <div style={{ fontSize: 13, marginTop: 3, color: opts.dark ? 'rgba(255,255,255,.8)' : P.faint, fontWeight: 500 }}>{opts.sub}</div>}
     </button>
   )
 
   // ── B1: chọn nhu cầu ─────────────────────────────────────────────────────
   if (step === 'need') return wrap(
     <>
-      <p style={{ fontSize: 14.5, color: P.sub, lineHeight: 1.6, margin: '0 0 18px' }}>
+      <p style={{ fontSize: 15.5, color: P.sub, lineHeight: 1.6, margin: '0 0 18px' }}>
         Vấp là chuyện bình thường. Nếu bạn chưa hiểu, làm chưa được, hoặc muốn hiểu sâu hơn — mình cùng gỡ nhé.
       </p>
       {bigBtn('😣  Tôi đang gặp khó', () => { setNeed('stuck'); setStep('pick') }, { soft: true, sub: 'Chưa hiểu / tay chưa làm được / vào nhịp bị rối…' })}
@@ -107,7 +107,7 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
   // ── B2: chọn trạng thái cụ thể ───────────────────────────────────────────
   if (step === 'pick') return wrap(
     <>
-      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>{need === 'stuck' ? 'Bạn đang kẹt ở đâu?' : 'Bạn muốn hiểu thêm điều gì?'}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{need === 'stuck' ? 'Bạn đang kẹt ở đâu?' : 'Bạn muốn hiểu thêm điều gì?'}</div>
       {(need === 'stuck' ? STUCK_TYPES : DEEPEN_PROMPTS).map(o => bigBtn(o.label, () => goCoach(o.id), { keyId: o.id }))}
     </>,
     need === 'stuck' ? 'Tôi đang gặp khó' : 'Tôi muốn đào sâu'
@@ -117,8 +117,8 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
   if (step === 'coach') return wrap(
     <>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11, padding: '15px 16px', background: '#F1ECE2', borderRadius: 14, marginBottom: 18 }}>
-        <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 99, background: 'linear-gradient(135deg,#2C2823,#5A5043)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F4E9D8', fontWeight: 700, fontSize: 12 }}>VA</div>
-        <div style={{ fontSize: 14.5, color: '#3A352C', lineHeight: 1.6 }}>{need === 'stuck' ? (stuck?.coach ?? '') : DEEPEN_INTRO}</div>
+        <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 99, background: 'linear-gradient(135deg,#2C2823,#5A5043)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F4E9D8', fontWeight: 700, fontSize: 13 }}>VA</div>
+        <div style={{ fontSize: 15.5, color: '#3A352C', lineHeight: 1.6 }}>{need === 'stuck' ? (stuck?.coach ?? '') : DEEPEN_INTRO}</div>
       </div>
       {need === 'stuck' && bigBtn('✅  Tôi đã gỡ được rồi', markResolved, { soft: true, sub: 'Quay lại học tiếp' })}
       {bigBtn('🔎  Tìm bài thầy đã giảng về điều này', () => {}, { disabled: true, sub: 'Kho Tri Thức — sắp có' })}
@@ -131,8 +131,8 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
   // ── B4: form ghi câu hỏi ─────────────────────────────────────────────────
   if (step === 'form') return wrap(
     <>
-      <div style={{ fontSize: 13, color: P.faint, marginBottom: 4 }}>Bài đang học</div>
-      <div style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 16 }}>{lessonTitle}</div>
+      <div style={{ fontSize: 14, color: P.faint, marginBottom: 4 }}>Bài đang học</div>
+      <div style={{ fontSize: 15.5, fontWeight: 700, marginBottom: 16 }}>{lessonTitle}</div>
 
       <Field label="Bạn đã thử cách nào? (tuỳ chọn)">
         <textarea value={tried} onChange={e => setTried(e.target.value)} rows={2}
@@ -146,10 +146,10 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
       </Field>
 
       <button onClick={submitQuestion} disabled={saving || !question.trim()}
-        style={{ width: '100%', padding: 15, border: 'none', borderRadius: 14, background: question.trim() ? P.accent : '#D8CFBE', color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: question.trim() ? 'pointer' : 'default', marginTop: 4 }}>
+        style={{ width: '100%', padding: 15, border: 'none', borderRadius: 14, background: question.trim() ? P.accent : '#D8CFBE', color: '#fff', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: question.trim() ? 'pointer' : 'default', marginTop: 4 }}>
         {saving ? 'Đang lưu...' : 'Lưu câu hỏi & gửi thầy'}
       </button>
-      <div style={{ fontSize: 12, color: P.faint, textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 13, color: P.faint, textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
         Câu hỏi được lưu kèm tên bài để thầy trả lời đúng ngữ cảnh trong buổi Zoom tới.
       </div>
     </>,
@@ -161,22 +161,22 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
     <div style={{ textAlign: 'center', padding: '24px 8px' }}>
       <div style={{ fontSize: 46 }}>✍️</div>
       <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>Đã ghi câu hỏi!</div>
-      <div style={{ fontSize: 14.5, color: P.sub, lineHeight: 1.6, margin: '8px 0 22px' }}>
+      <div style={{ fontSize: 15.5, color: P.sub, lineHeight: 1.6, margin: '8px 0 22px' }}>
         Thầy sẽ xem và trả lời trong buổi Zoom tới. Bạn cũng có thể nhắn thẳng cho thầy nếu cần gấp.
       </div>
       {oaUrl && (
         <a href={oaUrl} target="_blank" rel="noreferrer"
-          style={{ display: 'block', textDecoration: 'none', width: '100%', boxSizing: 'border-box', padding: 15, borderRadius: 14, background: P.accent, color: '#fff', fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
+          style={{ display: 'block', textDecoration: 'none', width: '100%', boxSizing: 'border-box', padding: 15, borderRadius: 14, background: P.accent, color: '#fff', fontSize: 16, fontWeight: 700, marginBottom: 10 }}>
           🤖 Hỏi nhanh Trợ lý thầy (trả lời ngay)
         </a>
       )}
       {teacherUrl && (
         <a href={teacherUrl} target="_blank" rel="noreferrer"
-          style={{ display: 'block', textDecoration: 'none', width: '100%', boxSizing: 'border-box', padding: 15, borderRadius: 14, background: oaUrl ? '#fff' : P.accent, color: oaUrl ? P.accentDeep : '#fff', border: oaUrl ? `1.5px solid ${P.accent}` : 'none', fontSize: 15, fontWeight: 700, marginBottom: 10 }}>
+          style={{ display: 'block', textDecoration: 'none', width: '100%', boxSizing: 'border-box', padding: 15, borderRadius: 14, background: oaUrl ? '#fff' : P.accent, color: oaUrl ? P.accentDeep : '#fff', border: oaUrl ? `1.5px solid ${P.accent}` : 'none', fontSize: 16, fontWeight: 700, marginBottom: 10 }}>
           💬 Nhắn thầy Văn Anh
         </a>
       )}
-      <button onClick={onClose} style={{ width: '100%', padding: 14, border: `1px solid ${P.line}`, borderRadius: 14, background: '#fff', color: P.sub, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Quay lại bài học</button>
+      <button onClick={onClose} style={{ width: '100%', padding: 14, border: `1px solid ${P.line}`, borderRadius: 14, background: '#fff', color: P.sub, fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>Quay lại bài học</button>
     </div>
   )
 
@@ -184,10 +184,10 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
   return wrap(
     <div style={{ textAlign: 'center', padding: '24px 8px' }}>
       <div style={{ fontSize: 19, fontWeight: 800, marginTop: 6 }}>Giỏi lắm!</div>
-      <div style={{ fontSize: 14.5, color: P.sub, lineHeight: 1.6, margin: '8px 0 22px' }}>
+      <div style={{ fontSize: 15.5, color: P.sub, lineHeight: 1.6, margin: '8px 0 22px' }}>
         Tự gỡ được là bước tiến lớn — bạn đang học cách TỰ HỌC, không chỉ học đàn. Cứ thế nhé!
       </div>
-      <button onClick={onClose} style={{ width: '100%', padding: 15, border: 'none', borderRadius: 14, background: P.accent, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Quay lại học tiếp</button>
+      <button onClick={onClose} style={{ width: '100%', padding: 15, border: 'none', borderRadius: 14, background: P.accent, color: '#fff', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>Quay lại học tiếp</button>
     </div>
   )
 }
@@ -195,9 +195,9 @@ export default function SupportFlow({ lessonId, lessonTitle, studentId, teacherU
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700, color: P.sub, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: P.sub, marginBottom: 6 }}>{label}</div>
       {children}
     </div>
   )
 }
-const areaStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '11px 13px', border: `1px solid ${P.line}`, borderRadius: 11, fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.6, color: P.ink, background: '#fff' }
+const areaStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '11px 13px', border: `1px solid ${P.line}`, borderRadius: 11, fontSize: 15, fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.6, color: P.ink, background: '#fff' }

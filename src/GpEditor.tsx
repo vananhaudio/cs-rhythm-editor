@@ -220,20 +220,20 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 20px', borderBottom:'1px solid #1E2533', flexShrink:0 }}>
         <span style={{ fontSize:20 }}>🎸</span>
-        <span style={{ color:'#fff', fontWeight:800, fontSize:16 }}>GP Editor — Import từ Guitar Pro</span>
+        <span style={{ color:'#fff', fontWeight:800, fontSize:17 }}>GP Editor — Import từ Guitar Pro</span>
         <div style={{ display:'flex', gap:8, marginLeft:16 }}>
           {['upload','lyrics','preview','done'].map((s, i) => (
             <div key={s} style={{ display:'flex', alignItems:'center', gap:6 }}>
               <div style={{
                 width:24, height:24, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:11, fontWeight:700,
+                fontSize:12, fontWeight:700,
                 background: step===s ? '#10B981' : ['upload','lyrics','preview','done'].indexOf(step)>i ? '#065F46' : '#1E2533',
                 color: step===s ? '#fff' : ['upload','lyrics','preview','done'].indexOf(step)>i ? '#10B981' : '#6B7280',
               }}>{i+1}</div>
-              <span style={{ fontSize:11, color: step===s?'#10B981':'#6B7280' }}>
+              <span style={{ fontSize:12, color: step===s?'#10B981':'#6B7280' }}>
                 {['Upload GP','Nhập lời','Xem trước','Xong'][i]}
               </span>
-              {i < 3 && <span style={{ color:'#374151', fontSize:11 }}>→</span>}
+              {i < 3 && <span style={{ color:'#374151', fontSize:12 }}>→</span>}
             </div>
           ))}
         </div>
@@ -247,7 +247,7 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:20, paddingTop:40 }}>
             <div style={{ fontSize:56 }}>🎸</div>
             <div style={{ color:'#fff', fontWeight:800, fontSize:22 }}>Upload file Guitar Pro</div>
-            <div style={{ color:'#6B7280', fontSize:14, textAlign:'center' }}>
+            <div style={{ color:'#6B7280', fontSize:15, textAlign:'center' }}>
               Hỗ trợ: <span style={{ color:'#10B981' }}>.gpx · .gp · .gp3 · .gp4 · .gp5 · .gp7</span>
             </div>
             <input ref={fileInputRef} type="file" accept=".gp,.gp3,.gp4,.gp5,.gpx,.gp7" style={{ display:'none' }} onChange={handleFileChange} />
@@ -255,7 +255,7 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
               style={{ padding:'16px 48px', background: loading?'#1E2533':'#10B981', border:'none', borderRadius:12, color:'#fff', fontWeight:800, fontSize:18, cursor: loading?'default':'pointer', boxShadow: loading?'none':'0 0 24px rgba(16,185,129,0.4)' }}>
               {loading ? '⏳ Đang đọc file...' : '📂 Chọn file Guitar Pro'}
             </button>
-            {error && <div style={{ color:'#EF4444', fontSize:13, padding:'10px 16px', background:'rgba(239,68,68,0.1)', borderRadius:8 }}>{error}</div>}
+            {error && <div style={{ color:'#EF4444', fontSize:14, padding:'10px 16px', background:'rgba(239,68,68,0.1)', borderRadius:8 }}>{error}</div>}
             <div style={{ background:'#0F1117', border:'1px solid #1E2533', borderRadius:12, padding:'16px 20px', maxWidth:440, width:'100%' }}>
               {[
                 'Track 1 = giai điệu chính (melody)',
@@ -264,8 +264,8 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
                 'Hợp âm lấy từ HợpÂmViệt hoặc GP',
               ].map((t, i) => (
                 <div key={i} style={{ display:'flex', gap:8, marginBottom:8 }}>
-                  <span style={{ color:'#10B981', fontSize:12 }}>✓</span>
-                  <span style={{ color:'#9CA3AF', fontSize:13 }}>{t}</span>
+                  <span style={{ color:'#10B981', fontSize:13 }}>✓</span>
+                  <span style={{ color:'#9CA3AF', fontSize:14 }}>{t}</span>
                 </div>
               ))}
             </div>
@@ -277,50 +277,50 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
           <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
             {/* Info */}
             <div style={{ background:'#0F1117', border:'1px solid #1E2533', borderRadius:12, padding:'16px 20px', display:'flex', gap:20, flexWrap:'wrap' }}>
-              <div><div style={{ color:'#6B7280', fontSize:10, textTransform:'uppercase' }}>Bài hát</div><div style={{ color:'#fff', fontWeight:700 }}>{parsed.title||'(chưa có tên)'}</div></div>
-              <div><div style={{ color:'#6B7280', fontSize:10, textTransform:'uppercase' }}>Tempo</div><div style={{ color:'#10B981', fontWeight:700 }}>{parsed.tempo} BPM · {parsed.timeSignature}/4</div></div>
-              <div><div style={{ color:'#6B7280', fontSize:10, textTransform:'uppercase' }}>Tổng bars</div><div style={{ color:'#9CA3AF' }}>{parsed.totalBars} bars</div></div>
-              <div><div style={{ color:'#6B7280', fontSize:10, textTransform:'uppercase' }}>Hợp âm GP</div><div style={{ color:'#F59E0B', fontWeight:700 }}>{parsed.gpChords.length} chords</div></div>
+              <div><div style={{ color:'#6B7280', fontSize:11, textTransform:'uppercase' }}>Bài hát</div><div style={{ color:'#fff', fontWeight:700 }}>{parsed.title||'(chưa có tên)'}</div></div>
+              <div><div style={{ color:'#6B7280', fontSize:11, textTransform:'uppercase' }}>Tempo</div><div style={{ color:'#10B981', fontWeight:700 }}>{parsed.tempo} BPM · {parsed.timeSignature}/4</div></div>
+              <div><div style={{ color:'#6B7280', fontSize:11, textTransform:'uppercase' }}>Tổng bars</div><div style={{ color:'#9CA3AF' }}>{parsed.totalBars} bars</div></div>
+              <div><div style={{ color:'#6B7280', fontSize:11, textTransform:'uppercase' }}>Hợp âm GP</div><div style={{ color:'#F59E0B', fontWeight:700 }}>{parsed.gpChords.length} chords</div></div>
             </div>
 
             {/* Bar bắt đầu lời */}
             <div style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 16px', background:'rgba(245,158,11,0.08)', borderRadius:8, border:'1px solid rgba(245,158,11,0.2)' }}>
-              <span style={{ color:'#F59E0B', fontSize:13 }}>🎵 Lời bắt đầu từ ô nhịp:</span>
+              <span style={{ color:'#F59E0B', fontSize:14 }}>🎵 Lời bắt đầu từ ô nhịp:</span>
               <input type="number" min={1} max={parsed.totalBars} value={lyricsStartBar}
                 onChange={e => setLyricsStartBar(parseInt(e.target.value)||1)}
-                style={{ width:60, padding:'4px 8px', background:'#0F1117', border:'1px solid #F59E0B', borderRadius:6, color:'#F59E0B', fontSize:14, fontWeight:700, outline:'none', textAlign:'center' }} />
-              <span style={{ color:'#6B7280', fontSize:12 }}>/ {parsed.totalBars} bars · <strong style={{ color:'#fff' }}>{filteredNoteCount}</strong> nốt sẽ có lời</span>
+                style={{ width:60, padding:'4px 8px', background:'#0F1117', border:'1px solid #F59E0B', borderRadius:6, color:'#F59E0B', fontSize:15, fontWeight:700, outline:'none', textAlign:'center' }} />
+              <span style={{ color:'#6B7280', fontSize:13 }}>/ {parsed.totalBars} bars · <strong style={{ color:'#fff' }}>{filteredNoteCount}</strong> nốt sẽ có lời</span>
             </div>
 
             {/* Nhập lời */}
             <div>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                <div style={{ color:'#fff', fontWeight:700, fontSize:14 }}>📝 Nhập lời (dạng HợpÂmViệt)</div>
-                <div style={{ fontSize:12, color: wordCount<=filteredNoteCount?'#10B981':'#EF4444', fontWeight:600 }}>
+                <div style={{ color:'#fff', fontWeight:700, fontSize:15 }}>📝 Nhập lời (dạng HợpÂmViệt)</div>
+                <div style={{ fontSize:13, color: wordCount<=filteredNoteCount?'#10B981':'#EF4444', fontWeight:600 }}>
                   {wordCount}/{filteredNoteCount} từ {wordCount<=filteredNoteCount?'✓':`(thừa ${wordCount-filteredNoteCount})`}
                 </div>
               </div>
-              <div style={{ color:'#6B7280', fontSize:12, marginBottom:8 }}>
+              <div style={{ color:'#6B7280', fontSize:13, marginBottom:8 }}>
                 Dán lời dạng <code style={{ color:'#10B981', background:'rgba(16,185,129,0.1)', padding:'1px 6px', borderRadius:3 }}>[Am]Lời bài hát [F]tiếp theo...</code>
                 <br/>Nếu không có HợpÂmViệt, hợp âm sẽ lấy từ file GP.
               </div>
               <textarea value={hopAmText} onChange={e => setHopAmText(e.target.value)}
                 placeholder={'[Am]Cỏ dại [F]nở hoa [C]dành dành [G]trắng ngần\n[Am]Em ơi [F]có nghe...'}
-                style={{ width:'100%', minHeight:180, padding:'12px 16px', background:'#0F1117', border:'1px solid #374151', borderRadius:10, color:'#fff', fontSize:14, outline:'none', resize:'vertical', lineHeight:1.7, boxSizing:'border-box' }}
+                style={{ width:'100%', minHeight:180, padding:'12px 16px', background:'#0F1117', border:'1px solid #374151', borderRadius:10, color:'#fff', fontSize:15, outline:'none', resize:'vertical', lineHeight:1.7, boxSizing:'border-box' }}
                 autoFocus />
             </div>
 
             {/* YouTube */}
             <div>
-              <div style={{ color:'#fff', fontWeight:700, fontSize:14, marginBottom:6 }}>▶ Link YouTube (tuỳ chọn)</div>
+              <div style={{ color:'#fff', fontWeight:700, fontSize:15, marginBottom:6 }}>▶ Link YouTube (tuỳ chọn)</div>
               <input value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
                 placeholder="https://youtu.be/..."
-                style={{ width:'100%', padding:'10px 14px', background:'#0F1117', border:'1px solid #374151', borderRadius:8, color:'#fff', fontSize:14, outline:'none', boxSizing:'border-box' }} />
+                style={{ width:'100%', padding:'10px 14px', background:'#0F1117', border:'1px solid #374151', borderRadius:8, color:'#fff', fontSize:15, outline:'none', boxSizing:'border-box' }} />
             </div>
 
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => setStep('upload')} style={{ padding:'10px 20px', background:'#1E2533', border:'1px solid #374151', borderRadius:8, color:'#9CA3AF', cursor:'pointer', fontWeight:600 }}>← Quay lại</button>
-              <button onClick={handlePreview} style={{ flex:1, padding:'12px 20px', background:'#10B981', border:'none', borderRadius:8, color:'#fff', fontWeight:800, fontSize:15, cursor:'pointer' }}>
+              <button onClick={handlePreview} style={{ flex:1, padding:'12px 20px', background:'#10B981', border:'none', borderRadius:8, color:'#fff', fontWeight:800, fontSize:16, cursor:'pointer' }}>
                 Xem trước kết quả →
               </button>
             </div>
@@ -340,34 +340,34 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
                 { label:'Bars', value: song.totalBars+'', color:'#34D399' },
               ].map(s => (
                 <div key={s.label} style={{ background:'#0F1117', border:'1px solid #1E2533', borderRadius:8, padding:'10px 16px', textAlign:'center' }}>
-                  <div style={{ fontSize:10, color:'#6B7280', textTransform:'uppercase' }}>{s.label}</div>
-                  <div style={{ fontSize:16, fontWeight:700, color:s.color }}>{s.value}</div>
+                  <div style={{ fontSize:11, color:'#6B7280', textTransform:'uppercase' }}>{s.label}</div>
+                  <div style={{ fontSize:17, fontWeight:700, color:s.color }}>{s.value}</div>
                 </div>
               ))}
             </div>
 
             {/* Preview lời */}
             <div style={{ background:'#0F1117', border:'1px solid #1E2533', borderRadius:10, padding:16 }}>
-              <div style={{ color:'#6B7280', fontSize:11, marginBottom:10, fontWeight:600, textTransform:'uppercase' }}>Lời + thời gian</div>
+              <div style={{ color:'#6B7280', fontSize:12, marginBottom:10, fontWeight:600, textTransform:'uppercase' }}>Lời + thời gian</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {song.lyrics.slice(0,40).map((l,i) => (
-                  <div key={i} style={{ background:'rgba(96,165,250,0.1)', border:'1px solid rgba(96,165,250,0.2)', borderRadius:6, padding:'3px 8px', fontSize:12 }}>
+                  <div key={i} style={{ background:'rgba(96,165,250,0.1)', border:'1px solid rgba(96,165,250,0.2)', borderRadius:6, padding:'3px 8px', fontSize:13 }}>
                     <span style={{ color:'#60A5FA', fontWeight:600 }}>{l.text}</span>
-                    <span style={{ color:'#374151', fontSize:10, marginLeft:4 }}>{l.time.toFixed(1)}s</span>
+                    <span style={{ color:'#374151', fontSize:11, marginLeft:4 }}>{l.time.toFixed(1)}s</span>
                   </div>
                 ))}
-                {song.lyrics.length>40 && <span style={{ color:'#374151', fontSize:12 }}>...+{song.lyrics.length-40} từ</span>}
+                {song.lyrics.length>40 && <span style={{ color:'#374151', fontSize:13 }}>...+{song.lyrics.length-40} từ</span>}
               </div>
             </div>
 
             {/* Preview chord */}
             {song.chords.length > 0 && (
               <div style={{ background:'#0F1117', border:'1px solid #1E2533', borderRadius:10, padding:16 }}>
-                <div style={{ color:'#6B7280', fontSize:11, marginBottom:10, fontWeight:600, textTransform:'uppercase' }}>Hợp âm</div>
+                <div style={{ color:'#6B7280', fontSize:12, marginBottom:10, fontWeight:600, textTransform:'uppercase' }}>Hợp âm</div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                   {song.chords.map((c,i) => (
-                    <div key={i} style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:6, padding:'3px 10px', fontSize:13, color:'#F59E0B', fontWeight:700 }}>
-                      {c.name}<span style={{ color:'#374151', fontSize:10, marginLeft:4, fontWeight:400 }}>{c.time.toFixed(1)}s</span>
+                    <div key={i} style={{ background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:6, padding:'3px 10px', fontSize:14, color:'#F59E0B', fontWeight:700 }}>
+                      {c.name}<span style={{ color:'#374151', fontSize:11, marginLeft:4, fontWeight:400 }}>{c.time.toFixed(1)}s</span>
                     </div>
                   ))}
                 </div>
@@ -377,7 +377,7 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={() => setStep('lyrics')} style={{ padding:'10px 20px', background:'#1E2533', border:'1px solid #374151', borderRadius:8, color:'#9CA3AF', cursor:'pointer', fontWeight:600 }}>← Sửa lời</button>
               <button onClick={handleUpload} disabled={uploading}
-                style={{ flex:1, padding:'12px 20px', background: uploading?'#1E2533':'#10B981', border:'none', borderRadius:8, color:'#fff', fontWeight:800, fontSize:15, cursor: uploading?'default':'pointer' }}>
+                style={{ flex:1, padding:'12px 20px', background: uploading?'#1E2533':'#10B981', border:'none', borderRadius:8, color:'#fff', fontWeight:800, fontSize:16, cursor: uploading?'default':'pointer' }}>
                 {uploading ? '⏳ Đang upload...' : '☁️ Upload lên Supabase'}
               </button>
             </div>
@@ -390,7 +390,7 @@ export function GpEditor({ onClose }: { onClose: () => void }) {
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:20, paddingTop:40, textAlign:'center' }}>
             <div style={{ fontSize:56 }}>🎉</div>
             <div style={{ color:'#10B981', fontWeight:900, fontSize:26 }}>Upload thành công!</div>
-            <div style={{ color:'#9CA3AF', fontSize:15 }}>
+            <div style={{ color:'#9CA3AF', fontSize:16 }}>
               <strong style={{ color:'#fff' }}>{song.title}</strong> đã có trên Supabase
             </div>
             <div style={{ display:'flex', gap:10 }}>

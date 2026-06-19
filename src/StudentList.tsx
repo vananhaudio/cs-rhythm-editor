@@ -72,7 +72,7 @@ export default function StudentList({ onSelect }: Props) {
         <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700 }}>🎸 Danh sách học sinh</div>
-            <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
+            <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>
               {activeCount} đang học · {students.length} tổng
             </div>
           </div>
@@ -88,12 +88,12 @@ export default function StudentList({ onSelect }: Props) {
             placeholder="🔍 Tìm tên, email, số điện thoại..."
             style={{
               flex: 1, minWidth: 200, background: T.bgCard, border: `1px solid ${T.border}`,
-              borderRadius: 8, color: T.text, padding: '9px 14px', fontSize: 14, outline: 'none',
+              borderRadius: 8, color: T.text, padding: '9px 14px', fontSize: 15, outline: 'none',
             }}
           />
           <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)} style={{
             background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 8,
-            color: T.text, padding: '9px 14px', fontSize: 13, cursor: 'pointer',
+            color: T.text, padding: '9px 14px', fontSize: 14, cursor: 'pointer',
           }}>
             <option value="all">Tất cả trình độ</option>
             <option value="beginner">Mới bắt đầu</option>
@@ -103,7 +103,7 @@ export default function StudentList({ onSelect }: Props) {
           </select>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{
             background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 8,
-            color: T.text, padding: '9px 14px', fontSize: 13, cursor: 'pointer',
+            color: T.text, padding: '9px 14px', fontSize: 14, cursor: 'pointer',
           }}>
             <option value="all">Tất cả trạng thái</option>
             <option value="active">Đang học</option>
@@ -112,7 +112,7 @@ export default function StudentList({ onSelect }: Props) {
         </div>
 
         {/* Count */}
-        <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 12 }}>
+        <div style={{ fontSize: 14, color: T.textMuted, marginBottom: 12 }}>
           Hiển thị {filtered.length} / {students.length} học sinh
         </div>
 
@@ -139,23 +139,23 @@ export default function StudentList({ onSelect }: Props) {
                     fontSize: 18, flexShrink: 0,
                   }}>🎸</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.full_name}
                     </div>
-                    <div style={{ fontSize: 12, color: T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 13, color: T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.email ?? s.phone ?? '—'}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                     {s.level && (
                       <span style={{
-                        fontSize: 10, fontWeight: 600, borderRadius: 4, padding: '2px 6px',
+                        fontSize: 11, fontWeight: 600, borderRadius: 4, padding: '2px 6px',
                         background: LEVEL_COLOR[s.level] + '22', color: LEVEL_COLOR[s.level],
                         border: `1px solid ${LEVEL_COLOR[s.level]}44`,
                       }}>{LEVEL_LABEL[s.level]}</span>
                     )}
                     <span style={{
-                      fontSize: 10, borderRadius: 4, padding: '2px 6px',
+                      fontSize: 11, borderRadius: 4, padding: '2px 6px',
                       background: s.is_active ? '#1E3A28' : '#3A2828',
                       color: s.is_active ? T.green : T.danger,
                     }}>{s.is_active ? '● Đang học' : '● Ngừng'}</span>

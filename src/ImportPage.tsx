@@ -153,8 +153,8 @@ export default function ImportPage({ onClose }: Props) {
   const reset = () => { setStep('upload'); setNotes([]); setWords([]); setChords([]); setMappings([]); setMeta(defaultMeta); setLyricsText(''); setError(''); setSavedMsg(''); setJsonPreview('') }
 
   const S = {
-    btn: { border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' } as React.CSSProperties,
-    inp: { width: '100%', boxSizing: 'border-box' as const, background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', color: C.text, fontSize: 13, fontFamily: 'inherit', outline: 'none' },
+    btn: { border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' } as React.CSSProperties,
+    inp: { width: '100%', boxSizing: 'border-box' as const, background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', color: C.text, fontSize: 14, fontFamily: 'inherit', outline: 'none' },
   }
 
   return (
@@ -162,16 +162,16 @@ export default function ImportPage({ onClose }: Props) {
 
       {/* Header */}
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.greenDark, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🎼</div>
+        <div style={{ width: 32, height: 32, borderRadius: 8, background: C.greenDark, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>🎼</div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>Sheet Import</div>
-          <div style={{ fontSize: 11, color: C.text3 }}>Tạo file JSON chuẩn từ sheet nhạc</div>
+          <div style={{ fontWeight: 800, fontSize: 17 }}>Sheet Import</div>
+          <div style={{ fontSize: 12, color: C.text3 }}>Tạo file JSON chuẩn từ sheet nhạc</div>
         </div>
         {/* Steps */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
           {(['upload', 'lyrics', 'preview', 'done'] as Step[]).map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: step === s ? C.green : (['upload','lyrics','preview','done'] as Step[]).indexOf(step) > i ? C.greenDark : C.surface2, color: step === s ? '#fff' : C.text3 }}>{i+1}</div>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, background: step === s ? C.green : (['upload','lyrics','preview','done'] as Step[]).indexOf(step) > i ? C.greenDark : C.surface2, color: step === s ? '#fff' : C.text3 }}>{i+1}</div>
               {i < 3 && <div style={{ width: 20, height: 1, background: C.border }} />}
             </div>
           ))}
@@ -185,18 +185,18 @@ export default function ImportPage({ onClose }: Props) {
         {step === 'upload' && (
           <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
             <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Bước 1 — Nạp sheet nhạc</div>
-            <div style={{ fontSize: 13, color: C.text3, marginBottom: 28 }}>Hỗ trợ MusicXML (.xml, .musicxml) và Guitar Pro (.gp, .gp3–.gp7, .gpx)</div>
+            <div style={{ fontSize: 14, color: C.text3, marginBottom: 28 }}>Hỗ trợ MusicXML (.xml, .musicxml) và Guitar Pro (.gp, .gp3–.gp7, .gpx)</div>
             <div onClick={() => fileRef.current?.click()}
               style={{ border: `2px dashed ${C.border}`, borderRadius: 16, padding: '48px', textAlign: 'center', cursor: 'pointer', transition: 'border .2s' }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = C.green)}
               onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🎼</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Click để chọn file</div>
-              <div style={{ fontSize: 12, color: C.text3 }}>.xml · .musicxml · .gp · .gp3 · .gp4 · .gp5 · .gp7 · .gpx</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Click để chọn file</div>
+              <div style={{ fontSize: 13, color: C.text3 }}>.xml · .musicxml · .gp · .gp3 · .gp4 · .gp5 · .gp7 · .gpx</div>
             </div>
             <input ref={fileRef} type="file" accept=".xml,.musicxml,.gp,.gp3,.gp4,.gp5,.gp6,.gp7,.gp8,.gpx" style={{ display: 'none' }} onChange={handleFile} />
             {loading && <div style={{ textAlign: 'center', marginTop: 20, color: C.green }}>⏳ Đang phân tích file...</div>}
-            {error && <div style={{ marginTop: 16, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '12px 16px', color: C.red, fontSize: 13 }}>{error}</div>}
+            {error && <div style={{ marginTop: 16, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '12px 16px', color: C.red, fontSize: 14 }}>{error}</div>}
           </div>
         )}
 
@@ -204,25 +204,25 @@ export default function ImportPage({ onClose }: Props) {
         {step === 'lyrics' && (
           <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
             <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Bước 2 — Dán lời & hợp âm</div>
-            <div style={{ fontSize: 13, color: C.text3, marginBottom: 20 }}>
+            <div style={{ fontSize: 14, color: C.text3, marginBottom: 20 }}>
               Đã nạp <span style={{ color: C.green, fontWeight: 700 }}>{notes.length} nốt</span> · {meta.tempo} BPM · {meta.timeSignature}/4 · {meta.totalBars} bars
             </div>
             {/* Meta */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
               {([['title','Tên bài'],['artist','Nghệ sĩ'],['tone','Giọng']] as [keyof ProjectMetadata, string][]).map(([key, label]) => (
                 <div key={key}>
-                  <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, fontWeight: 600 }}>{label}</div>
+                  <div style={{ fontSize: 12, color: C.text3, marginBottom: 6, fontWeight: 600 }}>{label}</div>
                   <input value={String(meta[key] ?? '')} onChange={e => setMeta(prev => ({ ...prev, [key]: e.target.value }))} style={S.inp} placeholder={label} />
                 </div>
               ))}
             </div>
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, fontWeight: 600 }}>Lời & hợp âm (format HợpÂmViệt)</div>
+              <div style={{ fontSize: 12, color: C.text3, marginBottom: 6, fontWeight: 600 }}>Lời & hợp âm (format HợpÂmViệt)</div>
               <textarea value={lyricsText} onChange={e => setLyricsText(e.target.value)} rows={10} autoFocus
                 placeholder={`[Am] Về thăm thành phố náo nức mùa xuân\n[Dm] Ba lô trên lưng mang theo nhánh lan rừng\n[G] Những con đường quen thuộc ngày xưa`}
                 style={{ ...S.inp, resize: 'vertical', lineHeight: 1.8, fontFamily: 'monospace' }} />
             </div>
-            {error && <div style={{ marginBottom: 16, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '12px 16px', color: C.red, fontSize: 13 }}>{error}</div>}
+            {error && <div style={{ marginBottom: 16, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '12px 16px', color: C.red, fontSize: 14 }}>{error}</div>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setStep('upload')} style={{ ...S.btn, background: C.surface2, color: C.text2 }}>← Quay lại</button>
               <button onClick={handleLyrics} disabled={!lyricsText.trim()} style={{ ...S.btn, background: C.green, color: '#fff', flex: 1, opacity: lyricsText.trim() ? 1 : 0.5 }}>⚡ Auto Match →</button>
@@ -238,7 +238,7 @@ export default function ImportPage({ onClose }: Props) {
               {[['Tên bài', meta.title||'—'],['Nghệ sĩ', meta.artist||'—'],['Tempo', meta.tempo+' BPM'],['Giọng', meta.tone]].map(([k,v]) => (
                 <div key={k} style={{ background: C.surface, borderRadius: 8, padding: '6px 12px', border: `1px solid ${C.border}` }}>
                   <div style={{ fontSize: 9, color: C.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{k}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginTop: 1 }}>{v}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginTop: 1 }}>{v}</div>
                 </div>
               ))}
               <input value={youtubeUrl} onChange={e => setYoutubeUrl(e.target.value)}
@@ -258,7 +258,7 @@ export default function ImportPage({ onClose }: Props) {
               />
             </div>
 
-            {error && <div style={{ marginTop: 10, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '10px 14px', color: C.red, fontSize: 12 }}>{error}</div>}
+            {error && <div style={{ marginTop: 10, background: '#2A1A1A', border: `1px solid ${C.red}33`, borderRadius: 10, padding: '10px 14px', color: C.red, fontSize: 13 }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
               <button onClick={() => setStep('lyrics')} style={{ ...S.btn, background: C.surface2, color: C.text2 }}>← Sửa lời</button>
@@ -274,8 +274,8 @@ export default function ImportPage({ onClose }: Props) {
         {showChordConflict && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ background: C.surface, borderRadius: 16, padding: 28, width: 380, border: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>⚠️ Xung đột hợp âm</div>
-              <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 20, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>⚠️ Xung đột hợp âm</div>
+              <div style={{ fontSize: 14, color: '#94A3B8', marginBottom: 20, lineHeight: 1.6 }}>
                 Sheet nhạc đã có <span style={{ color: '#F59E0B', fontWeight: 700 }}>{chords.length} hợp âm</span>.
                 Lời vừa paste có thêm <span style={{ color: '#60A5FA', fontWeight: 700 }}>{pendingChordCount} hợp âm</span> mới.
                 <br />Bạn muốn làm gì?
@@ -303,7 +303,7 @@ export default function ImportPage({ onClose }: Props) {
           <div style={{ textAlign: 'center', padding: '48px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
             <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>{savedMsg}</div>
-            <div style={{ fontSize: 13, color: C.text3, marginBottom: 32 }}>JSON v2.1 với tick-based timing đã được lưu vào hệ thống</div>
+            <div style={{ fontSize: 14, color: C.text3, marginBottom: 32 }}>JSON v2.1 với tick-based timing đã được lưu vào hệ thống</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               <button onClick={handleDownload} style={{ ...S.btn, background: C.surface2, color: C.text2 }}>⬇ Download JSON</button>
               <button onClick={reset} style={{ ...S.btn, background: C.green, color: '#fff' }}>+ Import bài khác</button>

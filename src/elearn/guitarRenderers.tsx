@@ -48,11 +48,11 @@ function HStrings({ onTap, reveal, target, picked, blink }: {
         return (
           <button key={s.num} onClick={onTap ? () => onTap(s.num) : undefined}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 13px', border: bd, borderRadius: 11, background: bg, cursor: onTap ? 'pointer' : 'default', fontFamily: 'inherit', width: '100%', animation: isBlink ? '_strBlink 0.6s ease-in-out 2' : undefined }}>
-            <div style={{ width: 22, flexShrink: 0, textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: 12.5, fontWeight: 800, color: reveal || isBlink ? c : '#C9C0AF' }}>
+            <div style={{ width: 22, flexShrink: 0, textAlign: 'center', fontFamily: 'JetBrains Mono, monospace', fontSize: 13.5, fontWeight: 800, color: reveal || isBlink ? c : '#C9C0AF' }}>
               {reveal || isBlink ? s.num : '?'}
             </div>
             <div style={{ flex: 1, height: w, borderRadius: 99, background: c }} />
-            <div style={{ width: 50, flexShrink: 0, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700, color: c }}>
+            <div style={{ width: 50, flexShrink: 0, textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 700, color: c }}>
               {reveal || isBlink ? `${s.vn}·${s.note}` : ''}
             </div>
           </button>
@@ -83,7 +83,7 @@ export function NeckPick({ cfg, onPass, onWrong }: { cfg: NeckCfg } & CB) {
     <div>
       <HStrings onTap={tap} reveal={ok} target={target} picked={picked}
         blink={!ok && wrong >= 2 ? target : null} />
-      <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, fontSize: 13.5, fontWeight: 600, lineHeight: 1.5,
+      <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 12, fontSize: 14.5, fontWeight: 600, lineHeight: 1.5,
         background: ok ? ACCENT.s : picked != null ? '#FBEDE9' : '#F6F2EA',
         color: ok ? ACCENT.d : picked != null ? '#A03B1C' : '#8A8478' }}>
         {ok
@@ -104,17 +104,17 @@ export function NoteChart({ cfg }: { cfg?: NoteChartCfg }) {
   const isOn = (l: string) => (hl && hl.length ? hl.includes(l) : !!used[l])
   return (
     <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 16, padding: '14px 14px 12px' }}>
-      <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 2 }}>Ký hiệu tên nốt</div>
-      <div style={{ fontSize: 11.5, color: '#8A8478', lineHeight: 1.45, marginBottom: 12 }}>Guitar dùng 7 chữ cái quốc tế — đây là bảng "phiên dịch" sang Đô-Rê-Mi:</div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 2 }}>Ký hiệu tên nốt</div>
+      <div style={{ fontSize: 12.5, color: '#8A8478', lineHeight: 1.45, marginBottom: 12 }}>Guitar dùng 7 chữ cái quốc tế — đây là bảng "phiên dịch" sang Đô-Rê-Mi:</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 }}>
         {N.map(([letter, vn]) => (
           <div key={letter} style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: isOn(letter) ? ACCENT.s : '#F6F2EA', border: isOn(letter) ? `1.5px solid ${ACCENT.a}` : '1px solid #EAE4D8' }}>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, fontWeight: 800, color: isOn(letter) ? ACCENT.a : '#1C1A17' }}>{letter}</div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#6B655A', marginTop: 2 }}>{vn}</div>
+            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 17, fontWeight: 800, color: isOn(letter) ? ACCENT.a : '#1C1A17' }}>{letter}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B655A', marginTop: 2 }}>{vn}</div>
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 10, fontSize: 11, color: '#A8A294', lineHeight: 1.4 }}>Ô tô màu = 5 chữ cái xuất hiện trên 6 dây đàn (E, A, D, G, B).</div>
+      <div style={{ marginTop: 10, fontSize: 12, color: '#A8A294', lineHeight: 1.4 }}>Ô tô màu = 5 chữ cái xuất hiện trên 6 dây đàn (E, A, D, G, B).</div>
     </div>
   )
 }
@@ -139,13 +139,13 @@ export function Checklist({ cfg, onPass }: { cfg: ChecklistCfg } & Pick<CB, 'onP
         return (
           <button key={i} onClick={() => toggle(i)}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 14px', border: `1.5px solid ${on ? ACCENT.a : '#E6E0D4'}`, borderRadius: 13, background: on ? ACCENT.s : '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%' }}>
-            <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 7, border: `2px solid ${on ? ACCENT.a : '#D8CFBE'}`, background: on ? ACCENT.a : 'transparent', color: '#fff', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</div>
-            <div style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: '#3A352C', lineHeight: 1.4 }}>{it}</div>
+            <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 7, border: `2px solid ${on ? ACCENT.a : '#D8CFBE'}`, background: on ? ACCENT.a : 'transparent', color: '#fff', fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? '✓' : ''}</div>
+            <div style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: '#3A352C', lineHeight: 1.4 }}>{it}</div>
           </button>
         )
       })}
       {satisfied && (
-        <div style={{ marginTop: 4, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>Xong rồi! Bạn đã sẵn sàng cho bước tiếp theo.</div>
+        <div style={{ marginTop: 4, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 14, fontWeight: 600, textAlign: 'center' }}>Xong rồi! Bạn đã sẵn sàng cho bước tiếp theo.</div>
       )}
     </div>
   )
@@ -172,9 +172,9 @@ export function Strum({ cfg, onPass, onWrong }: { cfg: StrumCfg } & CB) {
     return (
       <div style={{ textAlign: 'center', padding: '10px 0' }}>
         <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>Gảy đúng cả dãy!</div>
-        <div style={{ fontSize: 13.5, color: '#6B655A', marginTop: 3, lineHeight: 1.5 }}>Giờ thử gảy lại dãy này trên cây đàn của bạn — tay phải đều, từng dây nghe rõ.</div>
+        <div style={{ fontSize: 14.5, color: '#6B655A', marginTop: 3, lineHeight: 1.5 }}>Giờ thử gảy lại dãy này trên cây đàn của bạn — tay phải đều, từng dây nghe rõ.</div>
         <div style={{ marginTop: 12 }}><ReplayStrings nums={seq} /></div>
-        <button onClick={() => { setStep(0); setWrong(null) }} style={{ marginTop: 10, padding: '9px 18px', border: '1px solid #E2DBCD', borderRadius: 10, background: '#fff', color: '#5A5448', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Gảy lại trong app</button>
+        <button onClick={() => { setStep(0); setWrong(null) }} style={{ marginTop: 10, padding: '9px 18px', border: '1px solid #E2DBCD', borderRadius: 10, background: '#fff', color: '#5A5448', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Gảy lại trong app</button>
       </div>
     )
   }
@@ -183,14 +183,14 @@ export function Strum({ cfg, onPass, onWrong }: { cfg: StrumCfg } & CB) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: 14, borderRadius: 14, background: '#1C1A17', marginBottom: 14 }}>
         <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 12, background: colorOfNum(target!), color: '#fff', fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tg?.note}</div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.05em', color: '#9A9082' }}>HÃY GẢY</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#F4E9D8', marginTop: 2 }}>Dây {tg?.num} · {tg?.vn} ({tg?.note})</div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '.05em', color: '#9A9082' }}>HÃY GẢY</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: '#F4E9D8', marginTop: 2 }}>Dây {tg?.num} · {tg?.vn} ({tg?.note})</div>
         </div>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 700, color: '#9A9082' }}>{step}/{seq.length}</div>
+        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 14, fontWeight: 700, color: '#9A9082' }}>{step}/{seq.length}</div>
       </div>
       <HStrings onTap={tap} reveal target={target ?? undefined} picked={wrong} />
       {wrong != null && (
-        <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: '#FBEDE9', color: '#A03B1C', fontSize: 13, fontWeight: 600, lineHeight: 1.5 }}>
+        <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: '#FBEDE9', color: '#A03B1C', fontSize: 14, fontWeight: 600, lineHeight: 1.5 }}>
           Bạn gảy dây {stringByNum(wrong)?.num}. Cần gảy dây {tg?.num} — {target === 1 ? 'mỏng nhất, trên cùng' : target === 6 ? 'dày nhất, dưới cùng' : 'ở giữa'}.
         </div>
       )}
@@ -227,8 +227,8 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
     return (
       <div style={{ textAlign: 'center', padding: '10px 0' }}>
         <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>Xong {rounds} câu!</div>
-        <div style={{ fontSize: 14, color: '#6B655A', marginTop: 3 }}>Đúng <b style={{ color: ACCENT.a }}>{score}/{rounds}</b> — tai bạn đang quen dần với từng dây.</div>
-        <button onClick={restart} style={{ marginTop: 12, padding: '10px 20px', border: '1px solid #E2DBCD', borderRadius: 10, background: '#fff', color: '#5A5448', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Luyện lại</button>
+        <div style={{ fontSize: 15, color: '#6B655A', marginTop: 3 }}>Đúng <b style={{ color: ACCENT.a }}>{score}/{rounds}</b> — tai bạn đang quen dần với từng dây.</div>
+        <button onClick={restart} style={{ marginTop: 12, padding: '10px 20px', border: '1px solid #E2DBCD', borderRadius: 10, background: '#fff', color: '#5A5448', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Luyện lại</button>
       </div>
     )
   }
@@ -237,11 +237,11 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#8A8478' }}>Câu {round}/{rounds}</div>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12.5, fontWeight: 700, color: ACCENT.a }}>Đúng {score}</div>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: '#8A8478' }}>Câu {round}/{rounds}</div>
+        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13.5, fontWeight: 700, color: ACCENT.a }}>Đúng {score}</div>
       </div>
-      <button onClick={play} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 18, border: 'none', borderRadius: 15, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>🔊 Nghe âm</button>
-      <div style={{ fontSize: 13.5, fontWeight: 700, textAlign: 'center', marginBottom: 12, color: '#3A352C' }}>Âm vừa nghe là dây nào?</div>
+      <button onClick={play} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 18, border: 'none', borderRadius: 15, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>🔊 Nghe âm</button>
+      <div style={{ fontSize: 14.5, fontWeight: 700, textAlign: 'center', marginBottom: 12, color: '#3A352C' }}>Âm vừa nghe là dây nào?</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
         {pool.map(num => {
           const s = stringByNum(num)!, c = colorOfNum(num)
@@ -251,18 +251,18 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
           return (
             <button key={num} onClick={() => choose(num)}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 13px', border: `1.5px solid ${bd}`, borderRadius: 12, background: bg, cursor: answered ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-              <div style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 8, background: c, color: '#fff', fontSize: 12, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.note}</div>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: '#3A352C' }}>Dây {s.num} · {s.vn}</div>
+              <div style={{ width: 26, height: 26, flexShrink: 0, borderRadius: 8, background: c, color: '#fff', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.note}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#3A352C' }}>Dây {s.num} · {s.vn}</div>
             </button>
           )
         })}
       </div>
       {answered && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ padding: '11px 14px', borderRadius: 12, fontSize: 13, fontWeight: 600, lineHeight: 1.5, background: ok ? ACCENT.s : '#FBEDE9', color: ok ? ACCENT.d : '#A03B1C' }}>
+          <div style={{ padding: '11px 14px', borderRadius: 12, fontSize: 14, fontWeight: 600, lineHeight: 1.5, background: ok ? ACCENT.s : '#FBEDE9', color: ok ? ACCENT.d : '#A03B1C' }}>
             {ok ? `Chính xác — dây ${tgE?.num} (${tgE?.vn}·${tgE?.note}).` : `Là dây ${tgE?.num} (${tgE?.vn}·${tgE?.note}). Bấm 🔊 nghe lại để nhớ.`}
           </div>
-          <button onClick={next} style={{ marginTop: 10, width: '100%', padding: 13, border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>{round >= rounds ? 'Xem kết quả' : 'Câu tiếp →'}</button>
+          <button onClick={next} style={{ marginTop: 10, width: '100%', padding: 13, border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>{round >= rounds ? 'Xem kết quả' : 'Câu tiếp →'}</button>
         </div>
       )}
     </div>
@@ -294,14 +294,14 @@ export function MiniFretboard({ string, fret, pulse }: { string?: number; fret?:
             <div key={num} style={{ position: 'absolute', left: 6, right: 0, top: `${rowY(num)}%`, height: t, marginTop: -(t / 2), background: `linear-gradient(90deg,${colorOfNum(num)}99,${colorOfNum(num)})`, zIndex: 3 }} />
           )})}
           {active && (
-            <div key={pulse} style={{ position: 'absolute', left: `${xPct}%`, top: `${rowY(string!)}%`, width: 26, height: 26, marginLeft: -13, marginTop: -13, borderRadius: '50%', background: ACCENT.a, border: '2px solid rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, color: '#fff', zIndex: 10, boxShadow: `0 0 14px ${ACCENT.a}, 0 2px 6px rgba(0,0,0,.5)`, animation: '_ntPing .25s ease-out' }}>
+            <div key={pulse} style={{ position: 'absolute', left: `${xPct}%`, top: `${rowY(string!)}%`, width: 26, height: 26, marginLeft: -13, marginTop: -13, borderRadius: '50%', background: ACCENT.a, border: '2px solid rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff', zIndex: 10, boxShadow: `0 0 14px ${ACCENT.a}, 0 2px 6px rgba(0,0,0,.5)`, animation: '_ntPing .25s ease-out' }}>
               {fret === 0 ? '○' : fret}
             </div>
           )}
         </div>
       </div>
       <div style={{ display: 'flex', marginLeft: 22, marginTop: 4 }}>
-        {[1, 2, 3, 4].map(f => <div key={f} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#9CA3AF' }}>{f}</div>)}
+        {[1, 2, 3, 4].map(f => <div key={f} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#9CA3AF' }}>{f}</div>)}
       </div>
       <style dangerouslySetInnerHTML={{ __html: '@keyframes _ntPing{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}' }} />
     </div>
@@ -372,11 +372,11 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
     <div>
       {/* Chọn tốc độ */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
+        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
         <div style={{ display: 'flex', gap: 4, padding: 4, background: '#EFE9DD', borderRadius: 12 }}>
           {speeds.map((s, i) => (
             <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start() }}
-              style={{ padding: '7px 16px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700,
+              style={{ padding: '7px 16px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700,
                 background: speedIdx === i ? '#fff' : 'transparent', color: speedIdx === i ? ACCENT.d : '#8A8478',
                 boxShadow: speedIdx === i ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>{s.label}</button>
           ))}
@@ -393,7 +393,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       {/* Cần đàn — nốt chạy theo nhịp */}
       <div style={{ background: '#F1ECE2', borderRadius: 14, padding: '12px 12px 8px', marginBottom: 14 }}>
         <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} />
-        <div style={{ textAlign: 'center', marginTop: 6, fontSize: 12, color: '#8A8478' }}>
+        <div style={{ textAlign: 'center', marginTop: 6, fontSize: 13, color: '#8A8478' }}>
           {playing ? <>Đang chạy: <b style={{ color: ACCENT.d }}>{cur.label}</b></> : 'Bấm bắt đầu để máy chạy nốt'}
         </div>
       </div>
@@ -403,16 +403,16 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 16, border: 'none', borderRadius: 15, background: playing ? '#1C1A17' : ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
         <span style={{ fontSize: 18 }}>{playing ? '⏹' : '▶'}</span>
         <span>
-          <span style={{ display: 'block', fontSize: 15, fontWeight: 700 }}>{playing ? 'Dừng lại' : 'Bắt đầu chơi theo'}</span>
-          {!playing && <span style={{ display: 'block', fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 1 }}>Máy chạy nốt đều — bạn đánh theo trên đàn</span>}
+          <span style={{ display: 'block', fontSize: 16, fontWeight: 700 }}>{playing ? 'Dừng lại' : 'Bắt đầu chơi theo'}</span>
+          {!playing && <span style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,.8)', marginTop: 1 }}>Máy chạy nốt đều — bạn đánh theo trên đàn</span>}
         </span>
       </button>
 
-      <div style={{ marginTop: 12, fontSize: 12, color: '#A8A294', textAlign: 'center', lineHeight: 1.5 }}>
+      <div style={{ marginTop: 12, fontSize: 13, color: '#A8A294', textAlign: 'center', lineHeight: 1.5 }}>
         Nghe máy chạy rồi gảy theo. Không cần nhanh — đều và rõ là được.
       </div>
       {done && (
-        <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+        <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 14, fontWeight: 600, textAlign: 'center' }}>
           Tốt lắm! Bạn đã chơi theo được — có thể bấm Dừng và sang bước sau.
         </div>
       )}
@@ -439,10 +439,10 @@ export function NoteShow({ cfg }: { cfg: NoteShowCfg }) {
         </div>
       )}
       {cfg.caption && (
-        <div style={{ fontSize: 14, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />
+        <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />
       )}
       <button onClick={() => playTone(freq)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
         🔊 Nghe thử nốt {label}
       </button>
     </div>
@@ -453,7 +453,7 @@ export function NoteShow({ cfg }: { cfg: NoteShowCfg }) {
 export function ReplayStrings({ nums }: { nums: number[] }) {
   return (
     <button onClick={() => playSequence(nums.map(freqOfNum))}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', border: 'none', borderRadius: 12, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', border: 'none', borderRadius: 12, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 14.5, fontWeight: 700, cursor: 'pointer' }}>
       🔊 Nghe lại chuỗi dây
     </button>
   )

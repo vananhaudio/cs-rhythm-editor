@@ -74,7 +74,7 @@ function Btn({ children, onClick, kind = 'solid', disabled, style, ...rest }: {
 } & React.HTMLAttributes<HTMLButtonElement>) {
   const base: React.CSSProperties = {
     border: 'none', borderRadius: 12, cursor: disabled ? 'default' : 'pointer', fontFamily: FONT,
-    fontWeight: 700, fontSize: 14, padding: '12px 18px', opacity: disabled ? 0.4 : 1,
+    fontWeight: 700, fontSize: 15, padding: '12px 18px', opacity: disabled ? 0.4 : 1,
     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, userSelect: 'none',
   }
   const skin: React.CSSProperties =
@@ -87,9 +87,9 @@ function Btn({ children, onClick, kind = 'solid', disabled, style, ...rest }: {
 function Stat({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 12px', flex: 1, minWidth: 0 }}>
-      <div style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>{label}</div>
+      <div style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>{label}</div>
       <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 18, color: color || C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
-      {sub && <div style={{ color: C.dim, fontSize: 10, marginTop: 2 }}>{sub}</div>}
+      {sub && <div style={{ color: C.dim, fontSize: 11, marginTop: 2 }}>{sub}</div>}
     </div>
   )
 }
@@ -97,7 +97,7 @@ function Stat({ label, value, sub, color }: { label: string; value: string; sub?
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16, marginBottom: 14 }}>
-      {title && <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}>{title}</div>}
+      {title && <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 12 }}>{title}</div>}
       {children}
     </div>
   )
@@ -126,10 +126,10 @@ function LyricBlock({ words, mapping, activeIndex, onTap, picker, chords }: {
             if (isActive) { bg = C.amber; col = '#1a1200'; bd = C.amber; weight = 800 }
             return (
               <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-                {chord && <span style={{ fontSize: 12, fontWeight: 800, color: C.accent, paddingLeft: 2 }}>{chord}</span>}
+                {chord && <span style={{ fontSize: 13, fontWeight: 800, color: C.accent, paddingLeft: 2 }}>{chord}</span>}
                 <button onClick={onTap ? () => onTap(w, m) : undefined}
                   style={{
-                    fontFamily: FONT, fontSize: 15, fontWeight: weight, padding: '6px 11px', borderRadius: 9,
+                    fontFamily: FONT, fontSize: 16, fontWeight: weight, padding: '6px 11px', borderRadius: 9,
                     border: `1px solid ${bd}`, background: bg, color: col, cursor: onTap ? 'pointer' : 'default',
                     transition: 'all 0.12s', position: 'relative',
                     boxShadow: isActive ? `0 0 14px ${C.amber}66` : (picker && m.source === 'anchor' ? `0 0 0 2px ${C.accent}55` : 'none'),
@@ -478,13 +478,13 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
       {/* Header gọn + thanh bước dạng dot */}
       <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '8px 12px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...center }}>
-          {onClose && <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>✕</button>}
+          {onClose && <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 17, flexShrink: 0 }}>✕</button>}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
             <BmsMark size={28} />
-            <span style={{ fontSize: 15, fontWeight: 800, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Beat my Songs</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Beat my Songs</span>
           </div>
-          <button onClick={() => setShowDrafts(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, height: 32, padding: '0 12px', color: C.text, cursor: 'pointer', fontSize: 12, fontWeight: 700, flexShrink: 0, fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>📂 Bài của tôi</button>
-          <button onClick={() => setShowHelp(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 15, fontWeight: 700, flexShrink: 0 }}>?</button>
+          <button onClick={() => setShowDrafts(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, height: 32, padding: '0 12px', color: C.text, cursor: 'pointer', fontSize: 13, fontWeight: 700, flexShrink: 0, fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>📂 Bài của tôi</button>
+          <button onClick={() => setShowHelp(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 16, fontWeight: 700, flexShrink: 0 }}>?</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 10, ...center }}>
           {STEPS.map((s, i) => {
@@ -501,7 +501,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
                   border: active ? `2px solid ${C.accent}` : `1.5px solid ${done ? C.accent : 'rgba(255,255,255,0.28)'}`,
                   background: active ? C.accent : done ? `${C.accent}33` : 'transparent',
                   color: active ? '#fff' : done ? C.accent : C.muted,
-                  fontFamily: MONO, fontSize: 12, fontWeight: 800, lineHeight: 1, transition: 'all 0.2s',
+                  fontFamily: MONO, fontSize: 13, fontWeight: 800, lineHeight: 1, transition: 'all 0.2s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
                   {done ? '✓' : i + 1}
@@ -529,16 +529,16 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button onClick={() => seekTo(0)} disabled={!playerReady}
-                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, fontSize: 13, cursor: 'pointer', flexShrink: 0, opacity: playerReady ? 1 : 0.4 }}
+                style={{ width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, fontSize: 14, cursor: 'pointer', flexShrink: 0, opacity: playerReady ? 1 : 0.4 }}
                 title="Về đầu video">⏮</button>
               <button onClick={playing ? pause : play} disabled={!playerReady}
-                style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: playing ? C.surface2 : C.accent, color: '#fff', fontSize: 15, cursor: 'pointer', flexShrink: 0, opacity: playerReady ? 1 : 0.4 }}>
+                style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: playing ? C.surface2 : C.accent, color: '#fff', fontSize: 16, cursor: 'pointer', flexShrink: 0, opacity: playerReady ? 1 : 0.4 }}>
                 {playing ? '⏸' : '▶'}
               </button>
-              <span style={{ fontFamily: MONO, fontSize: 13, color: C.cyan, minWidth: 40 }}>{fmt(videoTime)}</span>
+              <span style={{ fontFamily: MONO, fontSize: 14, color: C.cyan, minWidth: 40 }}>{fmt(videoTime)}</span>
               <span style={{ flex: 1 }} />
               <button onClick={() => setVideoExpanded(v => !v)}
-                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 7, width: 28, height: 28, color: C.muted, cursor: 'pointer', fontSize: 13, flexShrink: 0 }}>
+                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 7, width: 28, height: 28, color: C.muted, cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>
                 {videoExpanded ? '⤢' : '⤡'}
               </button>
             </div>
@@ -556,8 +556,8 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
               ) : <span style={{ flex: 1 }} />}
               <span style={{ flex: 1 }} />
               {playerReady
-                ? <span style={{ fontSize: 10, color: C.green, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.green, animation: 'pulse 1s infinite' }} />sẵn sàng</span>
-                : <span style={{ fontSize: 10, color: C.dim }}>đang kết nối…</span>}
+                ? <span style={{ fontSize: 11, color: C.green, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.green, animation: 'pulse 1s infinite' }} />sẵn sàng</span>
+                : <span style={{ fontSize: 11, color: C.dim }}>đang kết nối…</span>}
             </div>
           </div>
         </div>
@@ -582,7 +582,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
       )}
 
       {toast && (
-        <div style={{ position: 'fixed', bottom: 78, left: '50%', transform: 'translateX(-50%)', background: C.green, color: '#04210f', fontWeight: 700, fontSize: 13, padding: '10px 18px', borderRadius: 999, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 200, maxWidth: '90%' }}>
+        <div style={{ position: 'fixed', bottom: 78, left: '50%', transform: 'translateX(-50%)', background: C.green, color: '#04210f', fontWeight: 700, fontSize: 14, padding: '10px 18px', borderRadius: 999, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 200, maxWidth: '90%' }}>
           {toast}
         </div>
       )}
@@ -622,19 +622,19 @@ function HelpModal({ step, onClose }: { step: number; onClose: () => void }) {
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: 20, maxWidth: 380, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 800 }}><BmsMark size={24} /> Hướng dẫn</div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 17, fontWeight: 800 }}><BmsMark size={24} /> Hướng dẫn</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 16 }}>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 16 }}>
           <b style={{ color: C.text }}>Beat my Songs</b> biến một bài YouTube thành dữ liệu luyện nhịp dựa trên <b style={{ color: C.text }}>lưới phách đều</b>. Làm lần lượt qua các bước bên dưới.
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {STEPS.map((s, i) => (
             <div key={s} style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 12, background: i === step ? C.accentSoft : 'rgba(255,255,255,0.03)', border: `1px solid ${i === step ? C.accent : C.border}` }}>
-              <span style={{ fontFamily: MONO, fontWeight: 800, fontSize: 13, color: i === step ? C.accent : C.muted, flexShrink: 0 }}>{i === 5 ? '🔒' : i + 1}</span>
+              <span style={{ fontFamily: MONO, fontWeight: 800, fontSize: 14, color: i === step ? C.accent : C.muted, flexShrink: 0 }}>{i === 5 ? '🔒' : i + 1}</span>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 2 }}>{s}</div>
-                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{HELP_TIPS[i]}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 2 }}>{s}</div>
+                <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>{HELP_TIPS[i]}</div>
               </div>
             </div>
           ))}
@@ -650,7 +650,7 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
   pickVideo: (id: string, title?: string, thumb?: string) => void; lyricsText: string; setLyricsText: (s: string) => void; chordCount: number; words: Word[]
   songTitle: string; setSongTitle: (s: string) => void
 }) {
-  const inp: React.CSSProperties = { width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface2, color: C.text, fontSize: 14, outline: 'none' }
+  const inp: React.CSSProperties = { width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${C.border}`, background: C.surface2, color: C.text, fontSize: 15, outline: 'none' }
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<YTResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -694,7 +694,7 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
               {searching ? '…' : '🔍 Tìm'}
             </Btn>
           </div>
-          {searchErr && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ {searchErr}</div>}
+          {searchErr && <div style={{ fontSize: 12, color: C.red, marginTop: 6 }}>⚠ {searchErr}</div>}
 
           {results.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10, maxHeight: 220, overflowY: 'auto' }}>
@@ -706,17 +706,17 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
                       background: sel ? C.accentSoft : 'rgba(255,255,255,0.03)', border: `1px solid ${sel ? C.accent : C.border}` }}>
                     <img src={r.thumbnail} alt="" style={{ width: 52, height: 30, borderRadius: 5, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
-                      <div style={{ fontSize: 10, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>{r.channel}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
+                      <div style={{ fontSize: 11, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>{r.channel}</div>
                     </div>
-                    {sel && <span style={{ fontSize: 11, color: C.accent, fontWeight: 700, flexShrink: 0 }}>✓</span>}
+                    {sel && <span style={{ fontSize: 12, color: C.accent, fontWeight: 700, flexShrink: 0 }}>✓</span>}
                   </button>
                 )
               })}
             </div>
           )}
 
-          <button onClick={() => setShowLink(v => !v)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', marginTop: 12, padding: 0, fontFamily: FONT }}>
+          <button onClick={() => setShowLink(v => !v)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 13, cursor: 'pointer', marginTop: 12, padding: 0, fontFamily: FONT }}>
             {showLink ? '▾ Ẩn dán link' : '▸ Hoặc dán link YouTube trực tiếp'}
           </button>
           {showLink && (
@@ -726,16 +726,16 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
               <Btn onClick={() => { loadVideo(); setChanging(false) }} style={{ flexShrink: 0 }}>Load</Btn>
             </div>
           )}
-          {youtubeUrl && !videoId && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ Link YouTube không hợp lệ</div>}
+          {youtubeUrl && !videoId && <div style={{ fontSize: 12, color: C.red, marginTop: 6 }}>⚠ Link YouTube không hợp lệ</div>}
           {changing && videoId && (
-            <button onClick={() => setChanging(false)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 12, cursor: 'pointer', marginTop: 10, padding: 0, fontFamily: FONT }}>← Giữ bài hiện tại</button>
+            <button onClick={() => setChanging(false)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 13, cursor: 'pointer', marginTop: 10, padding: 0, fontFamily: FONT }}>← Giữ bài hiện tại</button>
           )}
         </Card>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: '12px 14px' }}>
-          <span style={{ fontSize: 16 }}>✓</span>
-          <span style={{ flex: 1, fontSize: 13, color: C.green, fontWeight: 600 }}>Đã chọn bài hát</span>
-          <button onClick={() => setChanging(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, color: C.text, fontSize: 12, cursor: 'pointer', padding: '7px 14px', fontFamily: FONT }}>🔄 Đổi bài</button>
+          <span style={{ fontSize: 17 }}>✓</span>
+          <span style={{ flex: 1, fontSize: 14, color: C.green, fontWeight: 600 }}>Đã chọn bài hát</span>
+          <button onClick={() => setChanging(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, color: C.text, fontSize: 13, cursor: 'pointer', padding: '7px 14px', fontFamily: FONT }}>🔄 Đổi bài</button>
         </div>
       )}
 
@@ -750,11 +750,11 @@ function StepSetup({ youtubeUrl, setYoutubeUrl, videoId, loadVideo, pickVideo, l
           placeholder={'Dán lời bài hát vào đây.\nMẹo: dán lời CÓ hợp âm ([Em] hoặc hợp âm trên dòng) sẽ tự gắn hợp âm.\nXuống dòng để giữ bố cục câu.'}
           style={{ ...inp, resize: 'vertical', lineHeight: 1.7 }} />
         {chordCount > 0 ? (
-          <div style={{ fontSize: 12, color: C.amber, fontWeight: 700, marginTop: 8 }}>
+          <div style={{ fontSize: 13, color: C.amber, fontWeight: 700, marginTop: 8 }}>
             🎸 Đã tự nhận <b>{chordCount}</b> hợp âm từ lời — xem/sửa ở bước Hợp âm.
           </div>
         ) : (
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>
             {words.length > 0 ? <>Đã tách <b style={{ color: C.text }}>{words.length}</b> từ. Dán lời kèm hợp âm sẽ tự tách hợp âm.</> : 'Chưa có lời — có thể nhập sau. Dán lời kèm hợp âm sẽ tự tách.'}
           </div>
         )}
@@ -771,7 +771,7 @@ function StepTempo({ fit, tapTimes, tap, resetTaps, playing, playerReady, play }
   return (
     <>
       <Card title="Phách">
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
           Hãy nghe bài hát và bấm ngón tay vào nút <b style={{ color: C.text }}>TAP</b> thật đều nhé. App sẽ tự ghi nhận lại tempo cho bạn.
         </div>
         {!playing && (
@@ -784,20 +784,20 @@ function StepTempo({ fit, tapTimes, tap, resetTaps, playing, playerReady, play }
             userSelect: 'none', boxShadow: `0 10px 30px ${C.accent}44`,
           }}>
           TAP
-          <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.8, marginTop: 6 }}>{tapTimes.length} lần</div>
+          <div style={{ fontSize: 13, fontWeight: 600, opacity: 0.8, marginTop: 6 }}>{tapTimes.length} lần</div>
         </button>
         {tapTimes.length > 0 && (
-          <button onClick={resetTaps} style={{ display: 'block', margin: '12px auto 0', background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, color: C.muted, fontSize: 12, padding: '7px 18px', cursor: 'pointer', fontFamily: FONT }}>↺ Tap lại từ đầu</button>
+          <button onClick={resetTaps} style={{ display: 'block', margin: '12px auto 0', background: 'none', border: `1px solid ${C.border}`, borderRadius: 10, color: C.muted, fontSize: 13, padding: '7px 18px', cursor: 'pointer', fontFamily: FONT }}>↺ Tap lại từ đầu</button>
         )}
       </Card>
 
       {fit?.ok ? (
         <div style={{ textAlign: 'center', background: 'rgba(34,197,94,0.08)', border: `1px solid ${C.green}55`, borderRadius: 16, padding: '18px 14px' }}>
-          <div style={{ fontFamily: MONO, fontSize: 40, fontWeight: 900, color: C.cyan, lineHeight: 1 }}>{fit.bpm.toFixed(0)}<span style={{ fontSize: 16, color: C.muted, fontWeight: 600, marginLeft: 6 }}>BPM</span></div>
-          <div style={{ fontSize: 13, color: C.green, marginTop: 10 }}>✓ Đã bắt được nhịp. Bấm “Tiếp tục”.</div>
+          <div style={{ fontFamily: MONO, fontSize: 40, fontWeight: 900, color: C.cyan, lineHeight: 1 }}>{fit.bpm.toFixed(0)}<span style={{ fontSize: 17, color: C.muted, fontWeight: 600, marginLeft: 6 }}>BPM</span></div>
+          <div style={{ fontSize: 14, color: C.green, marginTop: 10 }}>✓ Đã bắt được nhịp. Bấm “Tiếp tục”.</div>
         </div>
       ) : (
-        <div style={{ textAlign: 'center', color: C.dim, fontSize: 13, padding: 16 }}>
+        <div style={{ textAlign: 'center', color: C.dim, fontSize: 14, padding: 16 }}>
           {tapTimes.length < 2 ? 'Tap thêm vài lần nữa…' : 'Tap thêm…'}
         </div>
       )}
@@ -835,16 +835,16 @@ function StepDownbeat({ words, mapping, timeSignature, setTimeSignature, downbea
       <Card title="Chọn Nhịp">
         <div style={{ display: 'flex', gap: 6 }}>
           <button onClick={chooseEven}
-            style={{ flex: 1, height: 42, borderRadius: 10, border: `1px solid ${groupBeats === false ? C.accent : C.border}`, background: groupBeats === false ? C.accentSoft : 'transparent', color: groupBeats === false ? C.accent : C.muted, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Đều</button>
+            style={{ flex: 1, height: 42, borderRadius: 10, border: `1px solid ${groupBeats === false ? C.accent : C.border}`, background: groupBeats === false ? C.accentSoft : 'transparent', color: groupBeats === false ? C.accent : C.muted, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Đều</button>
           {beatOptions.map(o => {
             const sel = groupBeats === true && timeSignature === o.n
             return (
               <button key={o.n} onClick={() => chooseBeats(o.n)}
-                style={{ flex: 1, height: 42, borderRadius: 10, border: `1px solid ${sel ? C.accent : C.border}`, background: sel ? C.accentSoft : 'transparent', color: sel ? C.accent : C.muted, fontFamily: MONO, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>{o.label}</button>
+                style={{ flex: 1, height: 42, borderRadius: 10, border: `1px solid ${sel ? C.accent : C.border}`, background: sel ? C.accentSoft : 'transparent', color: sel ? C.accent : C.muted, fontFamily: MONO, fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>{o.label}</button>
             )
           })}
         </div>
-        <div style={{ fontSize: 11, color: C.dim, marginTop: 8 }}>
+        <div style={{ fontSize: 12, color: C.dim, marginTop: 8 }}>
           {groupBeats === false ? 'Beat chạy đều, cùng màu — bấm “Tiếp tục”.' : 'Chọn số phách/ô, hoặc “Đều” nếu không chia nhịp.'}
         </div>
       </Card>
@@ -852,17 +852,17 @@ function StepDownbeat({ words, mapping, timeSignature, setTimeSignature, downbea
       {groupBeats === true && (
         <Card title="Chọn một từ rơi vào phách mạnh">
           {!hasMapped ? (
-            <div style={{ fontSize: 13, color: C.amber, lineHeight: 1.7 }}>
+            <div style={{ fontSize: 14, color: C.amber, lineHeight: 1.7 }}>
               Chưa có từ nào được gắn mốc. Quay lại bước <b>Gắn mốc</b> để gắn vài từ trước, rồi mới chọn được phách mạnh.
             </div>
           ) : (
             <>
-              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
+              <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
                 Hãy chạm vào một từ mà bạn cảm thấy <b style={{ color: C.amber }}>rơi vào phách mạnh</b>. App sẽ tự lặp lại phách mạnh đó theo chu kỳ {timeSignature} beat.
               </div>
               {pending && (
                 <div style={{ marginBottom: 14, padding: 14, borderRadius: 14, background: 'rgba(245,180,30,0.08)', border: `1px solid ${C.amber}55` }}>
-                  <div style={{ fontSize: 14, color: C.text, marginBottom: 12 }}>
+                  <div style={{ fontSize: 15, color: C.text, marginBottom: 12 }}>
                     Từ <b style={{ color: C.amber }}>“{pending.text}”</b> ở beat {pending.beatIndex} → phách mạnh lặp mỗi <b>{timeSignature}</b> beat.
                   </div>
                   <Btn onClick={confirmStrong} style={{ width: '100%', background: C.amber, color: '#1a1200' }}>✓ Xác nhận phách mạnh</Btn>
@@ -870,7 +870,7 @@ function StepDownbeat({ words, mapping, timeSignature, setTimeSignature, downbea
               )}
 
               {confirmed && !pending && (
-                <div style={{ marginBottom: 14, textAlign: 'center', fontSize: 13, color: C.green, fontWeight: 700 }}>
+                <div style={{ marginBottom: 14, textAlign: 'center', fontSize: 14, color: C.green, fontWeight: 700 }}>
                   ✓ Đã đặt phách mạnh — tô vàng theo chu kỳ {timeSignature} beat. Chạm từ khác nếu muốn đổi.
                 </div>
               )}
@@ -894,26 +894,26 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
   removeAnchor: (i: number) => void; resetAnchors: () => void
 }) {
   const [armed, setArmed] = useState(false)
-  if (!fit?.ok) return <div style={{ color: C.muted, fontSize: 13, padding: 16 }}>Cần lưới nhịp ở bước 1 trước.</div>
-  if (words.length === 0) return <div style={{ color: C.muted, fontSize: 13, padding: 16 }}>Chưa có lời bài hát — quay lại bước Chuẩn bị để dán lời.</div>
+  if (!fit?.ok) return <div style={{ color: C.muted, fontSize: 14, padding: 16 }}>Cần lưới nhịp ở bước 1 trước.</div>
+  if (words.length === 0) return <div style={{ color: C.muted, fontSize: 14, padding: 16 }}>Chưa có lời bài hát — quay lại bước Chuẩn bị để dán lời.</div>
 
   return (
     <>
       <Card>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <span style={{ fontSize: 12, color: C.muted }}>Đã gắn <b style={{ color: C.text }}>{mappedCount}</b>/{words.length} từ</span>
-          <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 700, color: pct >= 30 ? C.green : C.amber }}>{pct}%</span>
+          <span style={{ fontSize: 13, color: C.muted }}>Đã gắn <b style={{ color: C.text }}>{mappedCount}</b>/{words.length} từ</span>
+          <span style={{ fontFamily: MONO, fontSize: 15, fontWeight: 700, color: pct >= 30 ? C.green : C.amber }}>{pct}%</span>
         </div>
         <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${pct}%`, background: pct >= 30 ? C.green : C.amber, transition: 'width 0.2s' }} />
         </div>
-        <div style={{ fontSize: 11, color: C.dim, marginTop: 6 }}>Chỉ cần gắn ~30–50% số từ — phần còn lại app tự nội suy.</div>
-        {nonMonotonic && <div style={{ fontSize: 11, color: C.red, marginTop: 6 }}>⚠ Có mốc ngược thứ tự (beat giảm khi từ tăng). Kiểm tra lại các mốc.</div>}
+        <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>Chỉ cần gắn ~30–50% số từ — phần còn lại app tự nội suy.</div>
+        {nonMonotonic && <div style={{ fontSize: 12, color: C.red, marginTop: 6 }}>⚠ Có mốc ngược thứ tự (beat giảm khi từ tăng). Kiểm tra lại các mốc.</div>}
       </Card>
 
       {/* Điều khiển: chỉ 2 nút */}
       <Card>
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 14 }}>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.6, marginBottom: 14 }}>
           Bấm <b style={{ color: C.text }}>Play để gắn mốc</b>, nghe tới từ muốn đánh dấu thì bấm <b style={{ color: C.amber }}>Dừng để gắn mốc</b> — video tự dừng, chọn từ là xong. Lặp lại để gắn tiếp.
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -929,7 +929,7 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
       {/* Lời — bảng tham khảo (chạm từ đã gắn để xoá) */}
       <Card title="Lời bài hát (chạm từ đã gắn để xoá)">
         <LyricBlock words={words} mapping={mapping} onTap={onChipTap} />
-        <div style={{ display: 'flex', gap: 16, marginTop: 14, fontSize: 11, color: C.muted, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 16, marginTop: 14, fontSize: 12, color: C.muted, flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: C.accent }} /> mốc thật</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: C.cyanSoft, border: `1px solid ${C.cyan}55` }} /> nội suy</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, border: `1px solid ${C.border}` }} /> chưa map</span>
@@ -941,9 +941,9 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {[...anchors].sort((a, b) => a.beatIndex - b.beatIndex).map(a => (
               <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}` }}>
-                <span style={{ fontFamily: MONO, fontSize: 12, color: C.accent, minWidth: 70 }}>beat {a.beatIndex}</span>
-                <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.word}</span>
-                <button onClick={() => removeAnchor(a.wordIndex)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 16, padding: 2 }}>✕</button>
+                <span style={{ fontFamily: MONO, fontSize: 13, color: C.accent, minWidth: 70 }}>beat {a.beatIndex}</span>
+                <span style={{ fontSize: 14, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.word}</span>
+                <button onClick={() => removeAnchor(a.wordIndex)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: 17, padding: 2 }}>✕</button>
               </div>
             ))}
           </div>
@@ -957,10 +957,10 @@ function StepAnchor({ fit, words, mapping, anchors, pendingBeat, setPendingBeat,
           <div onClick={e => e.stopPropagation()}
             style={{ background: C.surface, borderTop: `2px solid ${C.amber}`, borderRadius: '20px 20px 0 0', padding: 18, maxHeight: '70vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <div style={{ fontSize: 15, fontWeight: 800 }}>Beat #{pendingBeat.beatIndex} là từ nào?</div>
-              <span style={{ fontFamily: MONO, fontSize: 12, color: C.amber }}>{fmt(pendingBeat.time)}</span>
+              <div style={{ fontSize: 16, fontWeight: 800 }}>Beat #{pendingBeat.beatIndex} là từ nào?</div>
+              <span style={{ fontFamily: MONO, fontSize: 13, color: C.amber }}>{fmt(pendingBeat.time)}</span>
             </div>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Chạm từ đang hát ở thời điểm này</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Chạm từ đang hát ở thời điểm này</div>
             <div style={{ overflowY: 'auto', flex: 1, marginBottom: 12 }}>
               <LyricBlock words={words} mapping={mapping} onTap={onChipTap} picker />
             </div>
@@ -987,11 +987,11 @@ function StepChord({ words, chords, setChord, clearChord, resetChords }: {
   return (
     <>
       <Card title="Gắn hợp âm">
-        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>
           Chạm vào từ bạn muốn đổi hợp âm rồi chọn. Hợp âm có hiệu lực từ từ đó tới hợp âm kế tiếp.
         </div>
         {words.length === 0 ? (
-          <div style={{ fontSize: 13, color: C.muted, marginTop: 10 }}>Chưa có lời. Quay lại bước Chuẩn bị để nhập lời.</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 10 }}>Chưa có lời. Quay lại bước Chuẩn bị để nhập lời.</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 10 }}>
             {lines.map((lw, li) => (
@@ -1001,9 +1001,9 @@ function StepChord({ words, chords, setChord, clearChord, resetChords }: {
                   return (
                     <button key={w.index} onClick={() => setPicking(w)}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: chord ? C.amber : 'transparent', minHeight: 16, fontFamily: FONT }}>{chord ?? '·'}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: chord ? C.amber : 'transparent', minHeight: 16, fontFamily: FONT }}>{chord ?? '·'}</span>
                       <span style={{
-                        fontFamily: FONT, fontSize: 15, padding: '5px 9px', borderRadius: 8,
+                        fontFamily: FONT, fontSize: 16, padding: '5px 9px', borderRadius: 8,
                         border: `1px solid ${chord ? `${C.amber}88` : C.border}`,
                         background: chord ? `${C.amber}22` : 'rgba(255,255,255,0.05)', color: C.text,
                       }}>{w.text}</span>
@@ -1016,8 +1016,8 @@ function StepChord({ words, chords, setChord, clearChord, resetChords }: {
         )}
         {chords.length > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-            <span style={{ fontSize: 12, color: C.muted }}>{chords.length} hợp âm đã gắn</span>
-            <button onClick={resetChords} style={{ background: 'none', border: 'none', color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>Xoá tất cả</button>
+            <span style={{ fontSize: 13, color: C.muted }}>{chords.length} hợp âm đã gắn</span>
+            <button onClick={resetChords} style={{ background: 'none', border: 'none', color: C.red, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>Xoá tất cả</button>
           </div>
         )}
       </Card>
@@ -1039,7 +1039,7 @@ function ChordPickerModal({ current, onPick, onClose }: {
       <div onClick={e => e.stopPropagation()} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: 18, width: '100%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <span style={{ fontSize: 18, fontWeight: 800, color: C.text }}>Chọn hợp âm</span>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 10 }}>
           {CHORD_LIBRARY.map(sh => {
@@ -1048,7 +1048,7 @@ function ChordPickerModal({ current, onPick, onClose }: {
               <button key={sh.name} onClick={() => onPick(sh.name)}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 8, borderRadius: 12,
                   background: sel ? `${C.amber}1f` : C.surface2, border: `1px solid ${sel ? C.amber : C.border}`, cursor: 'pointer' }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: sel ? C.amber : C.text, fontFamily: FONT }}>{sh.name}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: sel ? C.amber : C.text, fontFamily: FONT }}>{sh.name}</span>
                 <ChordDiagram shape={sh} width={72} />
               </button>
             )
@@ -1066,7 +1066,7 @@ function StepPreview({ fit, words, mapping, activeWordIndex, chords, metronomeOn
   metronomeOn: boolean; toggleMetro: () => void; playing: boolean; play: () => void; pause: () => void
   mappedCount: number; pct: number
 }) {
-  if (!fit?.ok) return <div style={{ color: C.muted, fontSize: 13, padding: 16 }}>Cần lưới nhịp ở bước 1 trước.</div>
+  if (!fit?.ok) return <div style={{ color: C.muted, fontSize: 14, padding: 16 }}>Cần lưới nhịp ở bước 1 trước.</div>
   const activeWord = activeWordIndex != null ? words.find(w => w.index === activeWordIndex) : undefined
   const sortedChords = [...chords].sort((a, b) => a.wordIndex - b.wordIndex)
   const currentChord = activeWordIndex != null
@@ -1075,7 +1075,7 @@ function StepPreview({ fit, words, mapping, activeWordIndex, chords, metronomeOn
   return (
     <>
       <Card title="Giai đoạn 5 — Nghe thử">
-        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
+        <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 12 }}>
           Phát video — từ <b style={{ color: C.accent }}>đã gắn</b> và <b style={{ color: C.cyan }}>nội suy</b> sẽ sáng đúng nhịp. Lệch chỗ nào thì quay lại <b style={{ color: C.text }}>thêm/sửa mốc</b> (không sửa từng từ).
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -1086,7 +1086,7 @@ function StepPreview({ fit, words, mapping, activeWordIndex, chords, metronomeOn
 
       <Card>
         {currentChord && (
-          <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 800, color: C.accent, marginBottom: 6 }}>
+          <div style={{ textAlign: 'center', fontSize: 15, fontWeight: 800, color: C.accent, marginBottom: 6 }}>
             Hợp âm: {currentChord}
           </div>
         )}
@@ -1113,12 +1113,12 @@ function StepExportLocked() {
     <div style={{ textAlign: 'center', padding: '30px 16px' }}>
       <div style={{ fontSize: 46, marginBottom: 12 }}>🔒</div>
       <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>Bước Xuất đang chờ chốt</div>
-      <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, maxWidth: 360, margin: '0 auto' }}>
+      <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8, maxWidth: 360, margin: '0 auto' }}>
         Theo bàn giao, đợt này <b style={{ color: C.text }}>chỉ dựng UI + state + preview nội suy</b>. Phần xuất dữ liệu (schema v2.1 tick-based) sẽ làm sau khi Văn Anh chốt:
       </div>
       <div style={{ textAlign: 'left', maxWidth: 360, margin: '16px auto 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {['Schema v2.1 thật — file nào định nghĩa, tên field tick/phân số?', '“Phân số” biểu diễn vị trí hay trường độ nốt?', 'Player v2.1 render theo TỪ hay theo DÒNG?'].map((t, i) => (
-          <div key={i} style={{ display: 'flex', gap: 10, fontSize: 12, color: C.muted, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px' }}>
+          <div key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: C.muted, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 12px' }}>
             <span style={{ color: C.amber, fontWeight: 800 }}>{i + 1}</span><span>{t}</span>
           </div>
         ))}
@@ -1149,8 +1149,8 @@ function ResumeModal({ draft, onResume, onNew }: { draft: SongDraft; onResume: (
             ? <img src={draft.thumbnail} alt="" style={{ width: 64, height: 38, borderRadius: 7, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
             : <div style={{ width: 64, height: 38, borderRadius: 7, background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🎼</div>}
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{draft.title || 'Bài chưa đặt tên'}</div>
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{relTime(draft.updatedAt)} · {pct}% hoàn thành</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{draft.title || 'Bài chưa đặt tên'}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{relTime(draft.updatedAt)} · {pct}% hoàn thành</div>
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1196,8 +1196,8 @@ function DraftsModal({ currentId, onClose, onOpen, onPractice, onNew }: {
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 450, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: C.surface, borderTop: `2px solid ${C.accent}`, borderRadius: '20px 20px 0 0', padding: 18, width: '100%', maxWidth: 480, maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ fontSize: 16, fontWeight: 800 }}>📂 Bài đang làm ({items.length})</div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 15 }}>✕</button>
+          <div style={{ fontSize: 17, fontWeight: 800 }}>📂 Bài đang làm ({items.length})</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 30, height: 30, color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -1208,7 +1208,7 @@ function DraftsModal({ currentId, onClose, onOpen, onPractice, onNew }: {
         </div>
 
         {items.length === 0 ? (
-          <div style={{ textAlign: 'center', color: C.muted, fontSize: 13, padding: '24px 0' }}>Chưa có bài nào. Bấm “Tạo bài mới” để bắt đầu.</div>
+          <div style={{ textAlign: 'center', color: C.muted, fontSize: 14, padding: '24px 0' }}>Chưa có bài nào. Bấm “Tạo bài mới” để bắt đầu.</div>
         ) : (
           <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
             {items.map(d => (
@@ -1217,22 +1217,22 @@ function DraftsModal({ currentId, onClose, onOpen, onPractice, onNew }: {
                   ? <img src={d.thumbnail} alt="" style={{ width: 56, height: 34, borderRadius: 6, objectFit: 'cover', flexShrink: 0, background: C.surface2 }} />
                   : <div style={{ width: 56, height: 34, borderRadius: 6, background: C.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 17 }}>🎼</div>}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {d.title}{d.id === currentId && <span style={{ fontSize: 10, color: C.accent, marginLeft: 6 }}>• đang mở</span>}
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {d.title}{d.id === currentId && <span style={{ fontSize: 11, color: C.accent, marginLeft: 6 }}>• đang mở</span>}
                   </div>
-                  <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{relTime(d.updatedAt)} · {d.progressPercent}%</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{relTime(d.updatedAt)} · {d.progressPercent}%</div>
                   <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', marginTop: 5, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${d.progressPercent}%`, background: C.accent }} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-                  <button onClick={() => onPractice(d.id)} style={{ border: 'none', borderRadius: 8, background: C.amber, color: '#1a1200', fontSize: 11, fontWeight: 800, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>▶ Luyện tập</button>
-                  <button onClick={() => onOpen(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: 'transparent', color: C.text, fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>✎ Sửa bài</button>
+                  <button onClick={() => onPractice(d.id)} style={{ border: 'none', borderRadius: 8, background: C.amber, color: '#1a1200', fontSize: 12, fontWeight: 800, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>▶ Luyện tập</button>
+                  <button onClick={() => onOpen(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 8, background: 'transparent', color: C.text, fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '6px 10px', fontFamily: FONT }}>✎ Sửa bài</button>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <button title="Chia sẻ (.bms)" onClick={() => doShare(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>⤴</button>
-                    <button title="Đổi tên" onClick={() => doRename(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>✎</button>
-                    <button title="Nhân bản" onClick={() => doDuplicate(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>⧉</button>
-                    <button title="Xoá" onClick={() => doDelete(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.red, fontSize: 12, cursor: 'pointer', padding: '4px 7px' }}>🗑</button>
+                    <button title="Chia sẻ (.bms)" onClick={() => doShare(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 13, cursor: 'pointer', padding: '4px 7px' }}>⤴</button>
+                    <button title="Đổi tên" onClick={() => doRename(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 13, cursor: 'pointer', padding: '4px 7px' }}>✎</button>
+                    <button title="Nhân bản" onClick={() => doDuplicate(d.id)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.muted, fontSize: 13, cursor: 'pointer', padding: '4px 7px' }}>⧉</button>
+                    <button title="Xoá" onClick={() => doDelete(d.id, d.title)} style={{ border: `1px solid ${C.border}`, borderRadius: 7, background: 'transparent', color: C.red, fontSize: 13, cursor: 'pointer', padding: '4px 7px' }}>🗑</button>
                   </div>
                 </div>
               </div>
@@ -1240,7 +1240,7 @@ function DraftsModal({ currentId, onClose, onOpen, onPractice, onNew }: {
           </div>
         )}
 
-        <div style={{ fontSize: 11, color: C.dim, textAlign: 'center', marginTop: 12, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: C.dim, textAlign: 'center', marginTop: 12, lineHeight: 1.5 }}>
           ▶ Luyện tập · ✎ Sửa · ⤴ Chia sẻ (.bms) gửi Thầy · ⧉ Nhân bản · 🗑 Xoá
         </div>
       </div>

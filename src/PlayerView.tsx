@@ -49,11 +49,11 @@ function LockedCard({ icon, title, sub }: { icon: string; title: string; sub: st
       style={{ background: D.bgCard, border: `1px solid ${flash ? D.accent+'44' : D.border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'all 0.2s', fontFamily: 'inherit' }}>
       <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: D.text1 }}>{title}</div>
-        <div style={{ fontSize: 11, color: D.text3, marginTop: 1 }}>{sub}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: D.text1 }}>{title}</div>
+        <div style={{ fontSize: 12, color: D.text3, marginTop: 1 }}>{sub}</div>
       </div>
-      <div style={{ fontSize: 12, flexShrink: 0, color: flash ? D.accent : D.text3, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }}>
-        🔒{flash && <span style={{ fontSize: 10, fontWeight: 600, color: D.accent }}>Hành Trình</span>}
+      <div style={{ fontSize: 13, flexShrink: 0, color: flash ? D.accent : D.text3, transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 4 }}>
+        🔒{flash && <span style={{ fontSize: 11, fontWeight: 600, color: D.accent }}>Hành Trình</span>}
       </div>
     </button>
   );
@@ -399,31 +399,31 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
         {/* Row 1: Song info + seek + close */}
         <div style={{ background:D.bgSurface, borderBottom:`1px solid ${D.border}`, padding:'0 16px', height:52, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
           {/* Logo */}
-          <div style={{ width:30, height:30, borderRadius:8, background:`linear-gradient(135deg,${D.accent},${D.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, flexShrink:0, boxShadow:`0 2px 8px ${D.accentGlow}` }}>🎸</div>
+          <div style={{ width:30, height:30, borderRadius:8, background:`linear-gradient(135deg,${D.accent},${D.accentLight})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0, boxShadow:`0 2px 8px ${D.accentGlow}` }}>🎸</div>
 
           {/* Transport */}
           <button className="pv-btn" onClick={() => seekTo(0)}
-            style={{ width:30, height:30, borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}
+            style={{ width:30, height:30, borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}
             title="Về đầu">⏮</button>
           <button onClick={togglePlay}
-            style={{ width:38, height:38, borderRadius:'50%', border:'none', background: isPlaying ? D.bgCard : `linear-gradient(135deg,${D.accent},${D.accentLight})`, color: isPlaying ? D.accentLight : '#fff', fontSize:15, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.2s', boxShadow: isPlaying ? 'none' : `0 4px 14px ${D.accentGlow}` }}>
+            style={{ width:38, height:38, borderRadius:'50%', border:'none', background: isPlaying ? D.bgCard : `linear-gradient(135deg,${D.accent},${D.accentLight})`, color: isPlaying ? D.accentLight : '#fff', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.2s', boxShadow: isPlaying ? 'none' : `0 4px 14px ${D.accentGlow}` }}>
             {isPlaying ? '⏸' : '▶'}
           </button>
 
           {/* Song chip */}
           <button onClick={() => setShowSongList(true)} className="pv-btn"
             style={{ display:'flex', alignItems:'center', gap:7, padding:'5px 10px', borderRadius:8, border:`1px solid ${D.borderMid}`, background:D.bgCard, cursor:'pointer', flexShrink:0, minWidth:0, maxWidth:240 }}>
-            <span style={{ fontSize:13 }}>🎵</span>
+            <span style={{ fontSize:14 }}>🎵</span>
             <div style={{ minWidth:0 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:D.text1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</div>
+              <div style={{ fontSize:14, fontWeight:700, color:D.text1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{song.title || 'Chọn bài'}</div>
               {song.tempo > 0 && <div style={{ fontSize:9, color:D.text3, fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtTime(totalDur)}</div>}
             </div>
-            <span style={{ color:D.text3, fontSize:10, flexShrink:0 }}>▾</span>
+            <span style={{ color:D.text3, fontSize:11, flexShrink:0 }}>▾</span>
           </button>
 
           {/* Seek bar — fat, easy to hit */}
           <div style={{ flex:1, display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0, minWidth:36 }}>{fmtTime(currentTime)}</span>
+            <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0, minWidth:36 }}>{fmtTime(currentTime)}</span>
             <div style={{ flex:1, position:'relative', height:20, cursor:'pointer', display:'flex', alignItems:'center' }}
               onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur); }}>
               <div style={{ position:'absolute', inset:'0 0', display:'flex', alignItems:'center' }}>
@@ -434,12 +434,12 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
               {/* Thumb */}
               <div style={{ position:'absolute', left:`${pct}%`, transform:'translateX(-50%)', width:14, height:14, borderRadius:'50%', background:D.accent, boxShadow:`0 0 8px ${D.accentGlow}`, border:`2px solid ${D.accentLight}`, pointerEvents:'none', transition:'left 0.05s linear' }} />
             </div>
-            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0, minWidth:36, textAlign:'right' }}>{fmtTime(totalDur)}</span>
+            <span style={{ fontSize:12, fontFamily:'"DM Mono",monospace', color:D.text3, flexShrink:0, minWidth:36, textAlign:'right' }}>{fmtTime(totalDur)}</span>
           </div>
 
           {/* Close */}
           <button onClick={onClose} className="pv-btn"
-            style={{ width:30, height:30, borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
+            style={{ width:30, height:30, borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
         </div>
 
         {/* Row 2: Options bar */}
@@ -450,7 +450,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
               <button key={mode} className="pv-mode-btn"
                 onClick={() => { setPlayMode(mode as 'metro'|'yt'); if(mode==='yt'&&ytMode==='focus') setYtMode('mini'); }}
                 disabled={mode==='yt'&&!hasYT}
-                style={{ padding:'4px 10px', borderRadius:6, border:'none', cursor: mode==='yt'&&!hasYT?'not-allowed':'pointer', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all 0.15s', display:'flex', alignItems:'center', gap:4, opacity: mode==='yt'&&!hasYT?0.35:1,
+                style={{ padding:'4px 10px', borderRadius:6, border:'none', cursor: mode==='yt'&&!hasYT?'not-allowed':'pointer', fontFamily:'inherit', fontSize:13, fontWeight:600, transition:'all 0.15s', display:'flex', alignItems:'center', gap:4, opacity: mode==='yt'&&!hasYT?0.35:1,
                   background: playMode===mode ? D.bgSurface : 'transparent',
                   color: playMode===mode ? D.accentLight : D.text3,
                   boxShadow: playMode===mode ? `0 1px 4px rgba(0,0,0,0.3)` : 'none',
@@ -464,7 +464,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
               {([['focus','Ẩn'],['mini','Mini'],['full','To']] as [YtMode,string][]).map(([m,lbl]) => (
                 <button key={m} className="pv-mode-btn" onClick={() => setYtMode(m)}
-                  style={{ padding:'3px 8px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:11, fontWeight:600, transition:'all 0.15s',
+                  style={{ padding:'3px 8px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight:600, transition:'all 0.15s',
                     background: ytMode===m ? D.bgSurface : 'transparent',
                     color: ytMode===m ? D.text1 : D.text3 }}>{lbl}</button>
               ))}
@@ -477,7 +477,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           <div style={{ display:'flex', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, padding:2, gap:2, flexShrink:0 }}>
             {[0.75,1,1.25].map(s => (
               <button key={s} className="pv-mode-btn" onClick={() => setSpeed(s)}
-                style={{ padding:'3px 9px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'"DM Mono",monospace', fontSize:11, fontWeight:600, transition:'all 0.15s',
+                style={{ padding:'3px 9px', borderRadius:6, border:'none', cursor:'pointer', fontFamily:'"DM Mono",monospace', fontSize:12, fontWeight:600, transition:'all 0.15s',
                   background: speed===s ? D.accent : 'transparent', color: speed===s ? '#fff' : D.text3 }}>
                 {s===1?'1×':s+'×'}
               </button>
@@ -487,7 +487,7 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           {/* Metro mute */}
           {playMode==='metro' && (
             <button className="pv-btn" onClick={() => setMuteMetronome(v=>!v)}
-              style={{ height:30, padding:'0 10px', borderRadius:7, border:`1px solid ${muteMetronome?D.accent+'44':D.border}`, background: muteMetronome?`${D.accent}22`:'none', color: muteMetronome?D.accentLight:D.text3, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:4, flexShrink:0, fontFamily:'inherit' }}>
+              style={{ height:30, padding:'0 10px', borderRadius:7, border:`1px solid ${muteMetronome?D.accent+'44':D.border}`, background: muteMetronome?`${D.accent}22`:'none', color: muteMetronome?D.accentLight:D.text3, cursor:'pointer', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:4, flexShrink:0, fontFamily:'inherit' }}>
               {muteMetronome?'🔇':'🔊'} Metro
             </button>
           )}
@@ -495,15 +495,15 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
           {/* Zoom */}
           <div style={{ display:'flex', alignItems:'center', background:D.bgCard, border:`1px solid ${D.border}`, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
             <button className="pv-btn" onClick={() => setZoom(z => Math.max(0.5,+(z-0.25).toFixed(2)))}
-              style={{ width:26, height:30, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
-            <span style={{ fontSize:10, fontFamily:'"DM Mono",monospace', color:D.text3, padding:'0 4px', minWidth:30, textAlign:'center' }}>{Math.round(zoom*100)}%</span>
+              style={{ width:26, height:30, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>−</button>
+            <span style={{ fontSize:11, fontFamily:'"DM Mono",monospace', color:D.text3, padding:'0 4px', minWidth:30, textAlign:'center' }}>{Math.round(zoom*100)}%</span>
             <button className="pv-btn" onClick={() => setZoom(z => Math.min(3,+(z+0.25).toFixed(2)))}
-              style={{ width:26, height:30, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:15, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
+              style={{ width:26, height:30, border:'none', background:'none', color:D.text2, cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>+</button>
           </div>
 
           {/* Tap link */}
           <button className="pv-btn" onClick={() => { window.location.href='/tap'; }}
-            style={{ height:30, padding:'0 10px', borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:11, fontWeight:600, display:'flex', alignItems:'center', gap:4, flexShrink:0, fontFamily:'inherit' }}>
+            style={{ height:30, padding:'0 10px', borderRadius:7, border:`1px solid ${D.border}`, background:'none', color:D.text3, cursor:'pointer', fontSize:12, fontWeight:600, display:'flex', alignItems:'center', gap:4, flexShrink:0, fontFamily:'inherit' }}>
             🥁 Tap
           </button>
         </div>
@@ -643,8 +643,8 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
             }}>
             <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:2,background:'rgba(0,0,0,0.6)',padding:'3px 8px',display:'flex',alignItems:'center',gap:6 }}>
               <span style={{ fontSize:9,color:D.text3,flex:1,fontFamily:'"DM Mono",monospace' }}>YT · offset {getYtOffset().toFixed(1)}s{!ytReady?' · connecting...':''}</span>
-              <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{ background:'none',border:'none',color:D.text3,fontSize:10,cursor:'pointer' }}>{ytMode==='mini'?'⛶':'▣'}</button>
-              <button onClick={() => setYtMode('focus')} style={{ background:'none',border:'none',color:D.text3,fontSize:12,cursor:'pointer' }}>✕</button>
+              <button onClick={() => setYtMode(ytMode==='mini'?'full':'mini')} style={{ background:'none',border:'none',color:D.text3,fontSize:11,cursor:'pointer' }}>{ytMode==='mini'?'⛶':'▣'}</button>
+              <button onClick={() => setYtMode('focus')} style={{ background:'none',border:'none',color:D.text3,fontSize:13,cursor:'pointer' }}>✕</button>
             </div>
             <div id="yt-player-frame" style={{ width:'100%',height:'100%' }} />
           </div>
@@ -657,18 +657,18 @@ export function PlayerView({ song, onClose, onImportSong, extraActions }: {
 
         {/* ══ BOTTOM STRIP — locked features ══ */}
         <div style={{ padding:'8px 16px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
-          <span style={{ fontSize:11, color:D.text3, fontWeight:600, marginRight:4 }}>Sắp ra mắt:</span>
+          <span style={{ fontSize:12, color:D.text3, fontWeight:600, marginRight:4 }}>Sắp ra mắt:</span>
           {[['🎙','Ghi âm'],['📹','Quay video'],['📤','Nộp bài']].map(([icon,label]) => (
             <div key={label} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:7, border:`1px solid ${D.border}`, background:D.bgCard, opacity:0.55 }}>
-              <span style={{ fontSize:14 }}>{icon}</span>
-              <span style={{ fontSize:12, color:D.text2, fontWeight:500 }}>{label}</span>
-              <span style={{ fontSize:10 }}>🔒</span>
+              <span style={{ fontSize:15 }}>{icon}</span>
+              <span style={{ fontSize:13, color:D.text2, fontWeight:500 }}>{label}</span>
+              <span style={{ fontSize:11 }}>🔒</span>
             </div>
           ))}
         </div>
 
         {/* Keyboard hint */}
-        <div style={{ padding:'5px 20px 7px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, fontSize:10, color:D.text3, letterSpacing:'0.05em', display:'flex', gap:16 }}>
+        <div style={{ padding:'5px 20px 7px', background:D.bgSurface, borderTop:`1px solid ${D.border}`, fontSize:11, color:D.text3, letterSpacing:'0.05em', display:'flex', gap:16 }}>
           <span>SPACE = Play/Pause</span>
           <span>·</span><span>← → = ±5s</span>
           <span>·</span><span>ESC = Đóng</span>
@@ -850,20 +850,20 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
       <div style={{ background:'#141720', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 12px', height:52, display:'flex', alignItems:'center', gap:8 }}>
         <button onClick={e => { e.stopPropagation(); onClose() }} style={{ width:36,height:36,borderRadius:8,border:'1px solid rgba(255,255,255,0.08)',background:'none',color:'#94A3B8',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>←</button>
         <button onClick={e => { e.stopPropagation(); setShowSongList(true) }} style={{ flex:1,minWidth:0, background: song.title ? 'rgba(255,255,255,0.06)' : 'rgba(108,99,255,0.18)', border: `1.5px solid ${song.title ? 'rgba(255,255,255,0.14)' : 'rgba(108,99,255,0.65)'}`, borderRadius:10,padding:'6px 10px',cursor:'pointer',textAlign:'left',display:'flex',alignItems:'center',gap:8, transition:'all 0.15s' }}>
-          <span style={{ fontSize:14 }}>🎵</span>
+          <span style={{ fontSize:15 }}>🎵</span>
           <div style={{ minWidth:0,flex:1 }}>
-            <div style={{ fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap', color: song.title ? '#F1F5F9' : '#A5B4FC' }}>{song.title || '✦ Chọn bài hát'}</div>
-            {song.title ? <div style={{ fontSize:10,color:'#475569',fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtT(totalDur)}</div>
-            : <div style={{ fontSize:10,color:'rgba(165,180,252,0.6)' }}>Nhấn để chọn bài</div>}
+            <div style={{ fontSize:14,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap', color: song.title ? '#F1F5F9' : '#A5B4FC' }}>{song.title || '✦ Chọn bài hát'}</div>
+            {song.title ? <div style={{ fontSize:11,color:'#475569',fontFamily:'"DM Mono",monospace' }}>{song.tempo} BPM · {song.timeSignature}/4 · {fmtT(totalDur)}</div>
+            : <div style={{ fontSize:11,color:'rgba(165,180,252,0.6)' }}>Nhấn để chọn bài</div>}
           </div>
-          <span style={{ color: song.title ? '#475569' : '#818CF8', fontSize:12,flexShrink:0 }}>▾</span>
+          <span style={{ color: song.title ? '#475569' : '#818CF8', fontSize:13,flexShrink:0 }}>▾</span>
         </button>
-        <button onClick={e => { e.stopPropagation(); setMuteMetronome(v=>!v) }} style={{ width:36,height:36,borderRadius:8,border:`1px solid ${muteMetronome?'rgba(108,99,255,0.4)':'rgba(255,255,255,0.08)'}`,background:muteMetronome?'rgba(108,99,255,0.15)':'none',color:muteMetronome?'#8B84FF':'#94A3B8',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{muteMetronome?'🔇':'🔊'}</button>
+        <button onClick={e => { e.stopPropagation(); setMuteMetronome(v=>!v) }} style={{ width:36,height:36,borderRadius:8,border:`1px solid ${muteMetronome?'rgba(108,99,255,0.4)':'rgba(255,255,255,0.08)'}`,background:muteMetronome?'rgba(108,99,255,0.15)':'none',color:muteMetronome?'#8B84FF':'#94A3B8',cursor:'pointer',fontSize:17,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>{muteMetronome?'🔇':'🔊'}</button>
       </div>
 
       {/* Seek */}
       <div style={{ background:'#141720', padding:'6px 14px 8px', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-        <span style={{ fontSize:10,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:32 }}>{fmtT(currentTime)}</span>
+        <span style={{ fontSize:11,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:32 }}>{fmtT(currentTime)}</span>
         <div style={{ flex:1,position:'relative',height:20,cursor:'pointer',display:'flex',alignItems:'center' }}
           onClick={e => { const r=e.currentTarget.getBoundingClientRect(); seekTo((e.clientX-r.left)/r.width*totalDur) }}>
           <div style={{ width:'100%',height:3,background:'rgba(255,255,255,0.06)',borderRadius:2 }}>
@@ -871,7 +871,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
           </div>
           <div style={{ position:'absolute',left:`${pct}%`,transform:'translateX(-50%)',width:12,height:12,borderRadius:'50%',background:'#6C63FF',border:'2px solid #8B84FF',pointerEvents:'none' }} />
         </div>
-        <span style={{ fontSize:10,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:32,textAlign:'right' }}>{fmtT(totalDur)}</span>
+        <span style={{ fontSize:11,fontFamily:'"DM Mono",monospace',color:'#475569',minWidth:32,textAlign:'right' }}>{fmtT(totalDur)}</span>
       </div>
 
       </div>{/* end header+seek wrapper */}
@@ -929,7 +929,7 @@ function MobileLayout({ song, onClose, onImportSong, isPlaying, currentTime, cou
             <div style={{ display:'flex', gap:6, marginRight:'auto' }}>
               {[0.75,1,1.25].map(s => (
                 <button key={s} onClick={e => { e.stopPropagation(); setSpeed(s) }}
-                  style={{ padding:'5px 14px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'"DM Mono",monospace',fontSize:12,fontWeight:600,
+                  style={{ padding:'5px 14px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'"DM Mono",monospace',fontSize:13,fontWeight:600,
                     background: speed===s ? '#6C63FF' : 'rgba(255,255,255,0.08)',
                     color: speed===s ? '#fff' : '#475569',
                   }}>{s===1?'1×':s+'×'}</button>

@@ -157,19 +157,19 @@ export default function LessonViewerPage() {
   const tools = active?.tools ?? []
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: D.bg, fontFamily: '"Inter", system-ui, sans-serif', color: D.text1, fontSize: 14 }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: D.bg, fontFamily: '"Inter", system-ui, sans-serif', color: D.text1, fontSize: 15 }}>
 
       {/* ── SIDEBAR: lesson list ─────────────────────────────────────── */}
       <aside style={{ width: 280, flexShrink: 0, background: D.surface, borderRight: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ padding: '14px 16px', borderBottom: `1px solid ${D.border}` }}>
-          <a href="/start" style={{ fontSize: 12, color: D.text3, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 10 }}>
+          <a href="/start" style={{ fontSize: 13, color: D.text3, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 10 }}>
             ← Về trang chủ
           </a>
-          <div style={{ fontWeight: 700, fontSize: 15, color: D.text1, lineHeight: 1.3 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: D.text1, lineHeight: 1.3 }}>
             {course?.name ?? 'Khoá học'}
           </div>
-          <div style={{ fontSize: 12, color: D.text3, marginTop: 4 }}>
+          <div style={{ fontSize: 13, color: D.text3, marginTop: 4 }}>
             {lessons.length} bài học
           </div>
         </div>
@@ -181,7 +181,7 @@ export default function LessonViewerPage() {
             if (modLessons.length === 0) return null
             return (
               <div key={mod.id}>
-                <div style={{ padding: '10px 16px 6px', fontSize: 11, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.05em', background: D.bg }}>
+                <div style={{ padding: '10px 16px 6px', fontSize: 12, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.05em', background: D.bg }}>
                   {mod.name}
                 </div>
                 {modLessons.map((l, i) => {
@@ -192,8 +192,8 @@ export default function LessonViewerPage() {
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', background: isActive ? D.accentLight : 'transparent', borderLeft: `3px solid ${isActive ? D.accent : 'transparent'}`, transition: 'background .1s' }}
                       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = D.bg }}
                       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
-                      <span style={{ fontSize: 12, flexShrink: 0, width: 18, textAlign: 'center' }}>{typeIcon[l.lesson_type] ?? '📄'}</span>
-                      <span style={{ fontSize: 13, flex: 1, color: isActive ? D.accent : D.text1, fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
+                      <span style={{ fontSize: 13, flexShrink: 0, width: 18, textAlign: 'center' }}>{typeIcon[l.lesson_type] ?? '📄'}</span>
+                      <span style={{ fontSize: 14, flex: 1, color: isActive ? D.accent : D.text1, fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
                         {l.title}
                       </span>
                     </div>
@@ -204,7 +204,7 @@ export default function LessonViewerPage() {
           })}
 
           {lessons.length === 0 && (
-            <div style={{ padding: '32px 20px', textAlign: 'center', color: D.text3, fontSize: 13 }}>
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: D.text3, fontSize: 14 }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>📚</div>
               Khoá học chưa có bài nào.
             </div>
@@ -258,7 +258,7 @@ export default function LessonViewerPage() {
                 {active.title}
               </div>
               {active.description && (
-                <div style={{ fontSize: 14, color: D.text2, lineHeight: 1.7 }}>
+                <div style={{ fontSize: 15, color: D.text2, lineHeight: 1.7 }}>
                   {active.description}
                 </div>
               )}
@@ -304,17 +304,17 @@ export default function LessonViewerPage() {
                   {/* Nav + fullscreen row */}
                   <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <button onClick={() => prevL && setActive(prevL)} disabled={!prevL}
-                      style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${D.border}`, background: D.surface, color: D.text2, fontSize: 13, fontWeight: 600, cursor: prevL ? 'pointer' : 'default', fontFamily: 'inherit', opacity: prevL ? 1 : 0.35 }}>
+                      style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${D.border}`, background: D.surface, color: D.text2, fontSize: 14, fontWeight: 600, cursor: prevL ? 'pointer' : 'default', fontFamily: 'inherit', opacity: prevL ? 1 : 0.35 }}>
                       ← Bài trước
                     </button>
                     <div style={{ flex: 1 }} />
                     <a href={active.content_url} onClick={(e) => { e.preventDefault(); window.open(embedUrl, '_blank') }} rel="noreferrer"
-                      style={{ fontSize: 12, color: D.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      style={{ fontSize: 13, color: D.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                       🔗 Toàn màn hình ↗
                     </a>
                     <div style={{ flex: 1 }} />
                     <button onClick={() => nextL && setActive(nextL)} disabled={!nextL}
-                      style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: nextL ? D.accent : D.border, color: '#fff', fontSize: 13, fontWeight: 700, cursor: nextL ? 'pointer' : 'default', fontFamily: 'inherit', opacity: nextL ? 1 : 0.35 }}>
+                      style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: nextL ? D.accent : D.border, color: '#fff', fontSize: 14, fontWeight: 700, cursor: nextL ? 'pointer' : 'default', fontFamily: 'inherit', opacity: nextL ? 1 : 0.35 }}>
                       Bài tiếp →
                     </button>
                   </div>
@@ -326,10 +326,10 @@ export default function LessonViewerPage() {
             {active.lesson_type === 'link' && active.content_url && (
               <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24, border: `1px solid ${D.border}` }}>
                 <div style={{ background: D.surface, padding: '10px 16px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14 }}>🔗</span>
-                  <span style={{ fontSize: 12, color: D.text2 }}>{active.content_url}</span>
+                  <span style={{ fontSize: 15 }}>🔗</span>
+                  <span style={{ fontSize: 13, color: D.text2 }}>{active.content_url}</span>
                   <a href={active.content_url} onClick={(e) => { e.preventDefault(); window.open((e.currentTarget as HTMLAnchorElement).href, '_system') }} rel="noreferrer"
-                    style={{ marginLeft: 'auto', fontSize: 11, color: D.accent, textDecoration: 'none' }}>
+                    style={{ marginLeft: 'auto', fontSize: 12, color: D.accent, textDecoration: 'none' }}>
                     Mở tab mới ↗
                   </a>
                 </div>
@@ -351,10 +351,10 @@ export default function LessonViewerPage() {
             {/* Content — KHÔNG đổ với quiz (content là JSON, đã render qua QuizViewer ở trên) */}
             {active.lesson_type !== 'quiz' && active.content && (
               <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12 }}>
                   Nội dung bài học
                 </div>
-                <div style={{ fontSize: 14, color: D.text2, lineHeight: 1.8 }}
+                <div style={{ fontSize: 15, color: D.text2, lineHeight: 1.8 }}
                   className="rich-content"
                   dangerouslySetInnerHTML={{ __html: active.content }} />
               </div>
@@ -363,7 +363,7 @@ export default function LessonViewerPage() {
             {/* Tools */}
             {tools.length > 0 && (
               <div style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: D.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 14 }}>
                   Công cụ luyện tập
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -372,7 +372,7 @@ export default function LessonViewerPage() {
                     if (!t) return null
                     return (
                       <a key={toolId} href={t.route}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: D.accentLight, border: `1px solid ${D.accent}20`, borderRadius: 10, color: D.accent, fontWeight: 600, fontSize: 13, textDecoration: 'none', transition: 'background .1s' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: D.accentLight, border: `1px solid ${D.accent}20`, borderRadius: 10, color: D.accent, fontWeight: 600, fontSize: 14, textDecoration: 'none', transition: 'background .1s' }}
                         onMouseEnter={e => (e.currentTarget.style.background = '#E0E7FF')}
                         onMouseLeave={e => (e.currentTarget.style.background = D.accentLight)}>
                         <span style={{ fontSize: 18 }}>{t.icon}</span>
@@ -394,13 +394,13 @@ export default function LessonViewerPage() {
                   <>
                     {prev ? (
                       <button onClick={() => setActive(prev)}
-                        style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 10, padding: '10px 18px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: D.text2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        style={{ background: D.surface, border: `1px solid ${D.border}`, borderRadius: 10, padding: '10px 18px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: D.text2, display: 'flex', alignItems: 'center', gap: 6 }}>
                         ← {prev.title}
                       </button>
                     ) : <div />}
                     {next && (
                       <button onClick={() => setActive(next)}
-                        style={{ background: D.accent, border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        style={{ background: D.accent, border: 'none', borderRadius: 10, padding: '10px 20px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                         {next.title} →
                       </button>
                     )}

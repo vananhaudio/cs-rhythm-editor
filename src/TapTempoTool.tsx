@@ -167,8 +167,8 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 10, width: 36, height: 36, color: L.t2, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
         )}
         <div>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>Tap Tempo</div>
-          <div style={{ fontSize: 11, color: L.t3 }}>Tìm nhịp bài hát yêu thích</div>
+          <div style={{ fontWeight: 800, fontSize: 17 }}>Tap Tempo</div>
+          <div style={{ fontSize: 12, color: L.t3 }}>Tìm nhịp bài hát yêu thích</div>
         </div>
       </div>
 
@@ -178,11 +178,11 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <button onClick={() => setShowSearch(false)}
-              style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${!showSearch ? L.p1 : L.border}`, background: !showSearch ? L.p2 : 'none', color: !showSearch ? L.p1 : L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${!showSearch ? L.p1 : L.border}`, background: !showSearch ? L.p2 : 'none', color: !showSearch ? L.p1 : L.t2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               🔗 Dán link
             </button>
             <button onClick={() => setShowSearch(true)}
-              style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${showSearch ? L.p1 : L.border}`, background: showSearch ? L.p2 : 'none', color: showSearch ? L.p1 : L.t2, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ flex: 1, padding: '8px', borderRadius: 10, border: `1px solid ${showSearch ? L.p1 : L.border}`, background: showSearch ? L.p2 : 'none', color: showSearch ? L.p1 : L.t2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               🔍 Tìm kiếm
             </button>
           </div>
@@ -191,8 +191,8 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
             <>
               <input value={url} onChange={e => setUrl(e.target.value)}
                 placeholder="https://youtube.com/watch?v=..."
-                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${videoId ? L.p1 : L.border}`, background: L.surface, color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
-              {url && !videoId && <div style={{ fontSize: 11, color: '#F87171', marginTop: 4 }}>⚠ Link không hợp lệ</div>}
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${videoId ? L.p1 : L.border}`, background: L.surface, color: L.t1, fontSize: 15, fontFamily: 'inherit', outline: 'none' }} />
+              {url && !videoId && <div style={{ fontSize: 12, color: '#F87171', marginTop: 4 }}>⚠ Link không hợp lệ</div>}
             </>
           ) : (
             <div>
@@ -201,9 +201,9 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
                   onKeyDown={e => { if (e.key === 'Enter') searchYouTube(query) }}
                   placeholder="Tên bài hát, nghệ sĩ..."
                   autoFocus
-                  style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, background: L.surface, color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+                  style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, background: L.surface, color: L.t1, fontSize: 15, fontFamily: 'inherit', outline: 'none' }} />
                 <button onClick={() => searchYouTube(query)} disabled={searching || !query.trim()}
-                  style={{ padding: '12px 16px', borderRadius: 12, border: 'none', background: L.p1, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: searching ? 0.6 : 1, flexShrink: 0 }}>
+                  style={{ padding: '12px 16px', borderRadius: 12, border: 'none', background: L.p1, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: searching ? 0.6 : 1, flexShrink: 0 }}>
                   {searching ? '...' : '🔍'}
                 </button>
               </div>
@@ -215,8 +215,8 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
                       style={{ display: 'flex', gap: 10, padding: '10px', borderRadius: 12, background: L.surface, border: `1px solid ${L.border}`, cursor: 'pointer', alignItems: 'center' }}>
                       <img src={r.thumbnail} alt="" style={{ width: 80, height: 45, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: L.t1, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{r.title}</div>
-                        <div style={{ fontSize: 11, color: L.t3, marginTop: 3 }}>{r.channel}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: L.t1, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{r.title}</div>
+                        <div style={{ fontSize: 12, color: L.t3, marginTop: 3 }}>{r.channel}</div>
                       </div>
                     </div>
                   ))}
@@ -243,8 +243,8 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
         {!videoId && (
           <div style={{ background: L.surface, borderRadius: 16, padding: '20px', marginBottom: 16, textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 10 }}></div>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Cách tìm tempo bài hát</div>
-            <div style={{ fontSize: 12, color: L.t2, lineHeight: 1.8 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Cách tìm tempo bài hát</div>
+            <div style={{ fontSize: 13, color: L.t2, lineHeight: 1.8 }}>
               1. Paste link YouTube bài hát vào ô trên<br />
               2. Nghe bài hát<br />
               3. Tap đều theo nhịp bài<br />
@@ -258,14 +258,14 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
           <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
 
           {/* BPM Display */}
-          <div style={{ marginBottom: 4, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '.1em' }}>
+          <div style={{ marginBottom: 4, fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '.1em' }}>
             {tapCount < 2 ? 'Tap để bắt đầu' : 'BPM'}
           </div>
           <div style={{ fontSize: 72, fontWeight: 900, color: L.gold, lineHeight: 1, marginBottom: 4 }}>
             {bpm ?? '—'}
           </div>
           {tapCount > 0 && (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
               {tapCount} lần tap{tapCount < 4 ? ' · tap thêm để chính xác hơn' : ''}
             </div>
           )}
@@ -279,7 +279,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
           </button>
 
           {tapCount > 0 && (
-            <button onClick={reset} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '6px 16px', color: 'rgba(255,255,255,0.6)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={reset} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '6px 16px', color: 'rgba(255,255,255,0.6)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
               Làm lại
             </button>
           )}
@@ -288,7 +288,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
         {/* Nút lưu */}
         {bpm && !saved && (
           <button onClick={() => setShowSave(true)}
-            style={{ width: '100%', background: L.green, border: 'none', borderRadius: 16, padding: '16px', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(16,185,129,0.35)' }}>
+            style={{ width: '100%', background: L.green, border: 'none', borderRadius: 16, padding: '16px', fontSize: 16, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(16,185,129,0.35)' }}>
             Lưu {bpm} BPM vào My Songs
           </button>
         )}
@@ -296,8 +296,8 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
         {saved && (
           <div style={{ background: 'rgba(16,185,129,0.1)', border: '1.5px solid rgba(16,185,129,0.3)', borderRadius: 16, padding: '16px', textAlign: 'center' }}>
             <div style={{ fontSize: 20, marginBottom: 4 }}>✅</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: L.green }}>Đã lưu vào My Songs!</div>
-            <div style={{ fontSize: 12, color: L.t2, marginTop: 4 }}>Vào tab Tập để xem bài hát của bạn</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: L.green }}>Đã lưu vào My Songs!</div>
+            <div style={{ fontSize: 13, color: L.t2, marginTop: 4 }}>Vào tab Tập để xem bài hát của bạn</div>
           </div>
         )}
       </div>
@@ -310,28 +310,28 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
             style={{ background: '#1A1E2A', borderRadius: '24px 24px 0 0', padding: '20px 20px max(20px, env(safe-area-inset-bottom))', width: '100%', maxWidth: 430, boxShadow: '0 -8px 32px rgba(0,0,0,0.5)' }}>
             <div style={{ width: 40, height: 4, borderRadius: 99, background: L.border, margin: '0 auto 18px' }} />
             <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>Lưu vào My Songs</div>
-            <div style={{ fontSize: 13, color: L.t2, marginBottom: 20 }}>
+            <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>
               Tempo: <strong style={{ color: L.gold }}>{bpm} BPM</strong>
             </div>
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: L.t2, marginBottom: 6 }}>Tên bài hát *</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: L.t2, marginBottom: 6 }}>Tên bài hát *</div>
               <input value={title} onChange={e => setTitle(e.target.value)} autoFocus
                 placeholder="VD: Nối vòng tay lớn"
-                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, background: L.surface, color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, background: L.surface, color: L.t1, fontSize: 15, fontFamily: 'inherit', outline: 'none' }} />
             </div>
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: L.t2, marginBottom: 6 }}>Nghệ sĩ (tuỳ chọn)</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: L.t2, marginBottom: 6 }}>Nghệ sĩ (tuỳ chọn)</div>
               <input value={artist} onChange={e => setArtist(e.target.value)}
                 placeholder="VD: Trịnh Công Sơn"
-                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, background: L.surface, color: L.t1, fontSize: 14, fontFamily: 'inherit', outline: 'none' }} />
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, background: L.surface, color: L.t1, fontSize: 15, fontFamily: 'inherit', outline: 'none' }} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setShowSave(false)}
-                style={{ flex: 1, background: 'none', border: `1px solid ${L.border}`, borderRadius: 12, padding: '13px', fontSize: 14, color: L.t2, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ flex: 1, background: 'none', border: `1px solid ${L.border}`, borderRadius: 12, padding: '13px', fontSize: 15, color: L.t2, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Huỷ
               </button>
               <button onClick={handleSave} disabled={saving || !title.trim()}
-                style={{ flex: 2, background: L.green, border: 'none', borderRadius: 12, padding: '13px', fontSize: 14, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', opacity: (saving || !title.trim()) ? 0.6 : 1 }}>
+                style={{ flex: 2, background: L.green, border: 'none', borderRadius: 12, padding: '13px', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', opacity: (saving || !title.trim()) ? 0.6 : 1 }}>
                 {saving ? 'Đang lưu…' : '✅ Lưu bài hát'}
               </button>
             </div>

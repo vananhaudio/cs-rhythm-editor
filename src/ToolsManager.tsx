@@ -104,15 +104,15 @@ export default function ToolsManager() {
       <div style={{ background: S.surface, borderBottom: `1px solid ${S.border}`, padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 18 }}>🛠 Quản lý công cụ</div>
-          <div style={{ fontSize: 12, color: S.text3, marginTop: 2 }}>
+          <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>
             {enabledCount} bật · {comingCount} sắp ra mắt · {tools.length - enabledCount - comingCount} tắt
             {changed.size > 0 && <span style={{ color: '#D97706', marginLeft: 8 }}>· {changed.size} thay đổi chưa lưu</span>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {saved && <span style={{ fontSize: 12, color: S.success, fontWeight: 600 }}>✓ Đã lưu</span>}
+          {saved && <span style={{ fontSize: 13, color: S.success, fontWeight: 600 }}>✓ Đã lưu</span>}
           <button onClick={handleSave} disabled={saving || changed.size === 0}
-            style={{ background: changed.size > 0 ? S.accent : S.border, color: changed.size > 0 ? '#fff' : S.text3, border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: changed.size > 0 ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+            style={{ background: changed.size > 0 ? S.accent : S.border, color: changed.size > 0 ? '#fff' : S.text3, border: 'none', borderRadius: 8, padding: '8px 18px', fontSize: 14, fontWeight: 600, cursor: changed.size > 0 ? 'pointer' : 'default', fontFamily: 'inherit' }}>
             {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
           </button>
         </div>
@@ -122,7 +122,7 @@ export default function ToolsManager() {
       <div style={{ background: S.surface, borderBottom: `1px solid ${S.border}`, padding: '10px 24px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {categories.map(cat => (
           <button key={cat} onClick={() => setFilter(cat)}
-            style={{ background: filter === cat ? S.accent : S.surface2, color: filter === cat ? '#fff' : S.text2, border: `1px solid ${filter === cat ? S.accent : S.border}`, borderRadius: 20, padding: '5px 14px', fontSize: 12, fontWeight: filter === cat ? 600 : 400, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ background: filter === cat ? S.accent : S.surface2, color: filter === cat ? '#fff' : S.text2, border: `1px solid ${filter === cat ? S.accent : S.border}`, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: filter === cat ? 600 : 400, cursor: 'pointer', fontFamily: 'inherit' }}>
             {cat === 'all' ? `Tất cả (${tools.length})` : `${cat} (${tools.filter(t => t.category === cat).length})`}
           </button>
         ))}
@@ -130,9 +130,9 @@ export default function ToolsManager() {
 
       {/* Tier legend */}
       <div style={{ background: S.surface2, borderBottom: `1px solid ${S.border}`, padding: '8px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: S.text3, fontWeight: 600 }}>TIER:</span>
+        <span style={{ fontSize: 12, color: S.text3, fontWeight: 600 }}>TIER:</span>
         {TIERS.map(t => (
-          <span key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+          <span key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: t.color, display: 'inline-block' }} />
             <span style={{ color: t.color, fontWeight: 600 }}>{t.label}</span>
           </span>
@@ -149,7 +149,7 @@ export default function ToolsManager() {
           }, {})
           return Object.entries(grouped).map(([cat, catTools]) => (
             <div key={cat} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: S.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10, paddingLeft: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: S.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10, paddingLeft: 4 }}>
                 {cat} <span style={{ fontWeight: 400, color: S.text3 }}>({catTools.length})</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -162,16 +162,16 @@ export default function ToolsManager() {
                         {tool.icon}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, color: tool.status !== 'off' ? S.text1 : S.text3, marginBottom: 2 }}>{tool.name}</div>
-                        <div style={{ fontSize: 12, color: S.text3 }}>{tool.description}</div>
+                        <div style={{ fontWeight: 600, fontSize: 15, color: tool.status !== 'off' ? S.text1 : S.text3, marginBottom: 2 }}>{tool.name}</div>
+                        <div style={{ fontSize: 13, color: S.text3 }}>{tool.description}</div>
                       </div>
                       <a href={tool.route} target="_blank" rel="noopener noreferrer"
                         title={tool.route}
-                        style={{ background: S.accentLight, color: S.accent, border: `1px solid ${S.accent}30`, borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        style={{ background: S.accentLight, color: S.accent, border: `1px solid ${S.accent}30`, borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 600, textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap' }}>
                         Mở →
                       </a>
                       <select value={tool.tier} onChange={e => setTier(tool.id, e.target.value)}
-                        style={{ background: tier.bg, color: tier.color, border: `1px solid ${tier.color}40`, borderRadius: 8, padding: '4px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none', flexShrink: 0 }}>
+                        style={{ background: tier.bg, color: tier.color, border: `1px solid ${tier.color}40`, borderRadius: 8, padding: '4px 8px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', outline: 'none', flexShrink: 0 }}>
                         {TIERS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                       </select>
                       {/* 3-state toggle */}
@@ -181,7 +181,7 @@ export default function ToolsManager() {
                           const active = tool.status === s
                           return (
                             <button key={s} onClick={() => setStatus(tool.id, s)}
-                              style={{ padding: '4px 7px', fontSize: 10, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${S.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : S.surface, color: active ? cfg.color : S.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
+                              style={{ padding: '4px 7px', fontSize: 11, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${S.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : S.surface, color: active ? cfg.color : S.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
                               {cfg.label}
                             </button>
                           )

@@ -121,7 +121,7 @@ function App() {
             <path fill="rgba(255,255,255,0.9)" d="M437.1,352.53c-32.96-49.63-86.33-79.48-145.64-75.14-45,3.29-85.41,26.85-113.24,61.9-22.85,28.79-36.56,63.15-40.93,99.78l-1.09,13.87c-2.13,26.81,2.05,52.76,10.82,78.07,25.52,73.59,90.73,125.65,170.74,118.53,33.32-2.96,63.64-17.38,88.57-39.1l15.13-14.97,16.56-21.02v81.88c-32.45,23.82-70.48,39.73-110.86,43.64l-8.18.79-32.78-.18c-49.9-3.88-96.27-23.99-133.71-57.03l-19.99-20.07c-94.04-106-76.94-272.39,38.35-355.71,80.22-57.97,186.6-57.06,267.12,1.73l.06,81.08c1.61,1.44.72,3.12-.93,1.95Z"/>
           </svg>
           <span style={{ fontSize: isMobile ? 13 : 14, fontWeight:700, color:'#F4F1E8' }}>Thầy Văn Anh Guitar</span>
-          {!isMobile && <span style={{ fontSize:10, color:'rgba(255,255,255,0.35)', marginLeft:8, letterSpacing:'0.05em' }}>Standard Tuning E A D G B E</span>}
+          {!isMobile && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginLeft:8, letterSpacing:'0.05em' }}>Standard Tuning E A D G B E</span>}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
@@ -153,7 +153,7 @@ function App() {
                 border:`1px solid ${inputMode ? 'rgba(200,153,26,0.6)' : 'rgba(255,255,255,0.15)'}`,
                 background: inputMode ? 'rgba(200,153,26,0.15)' : 'rgba(255,255,255,0.06)',
                 color: inputMode ? '#c8a84b' : 'rgba(255,255,255,0.5)',
-                fontSize:11, fontWeight:600, cursor:'pointer', outline:'none' }}>
+                fontSize:12, fontWeight:600, cursor:'pointer', outline:'none' }}>
               {inputMode ? '● Tắt nhập nốt' : '+ Nhập nốt từ cần đàn'}
             </button>
           </div>
@@ -190,7 +190,7 @@ function App() {
                 border:`1px solid ${inputMode ? (isDark ? 'rgba(200,153,26,0.6)' : 'rgba(200,153,26,0.5)') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
                 background: inputMode ? (isDark ? 'rgba(200,153,26,0.15)' : 'rgba(200,153,26,0.1)') : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
                 color: inputMode ? (isDark ? '#c8a84b' : '#a07820') : (isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)'),
-                fontSize:11, fontWeight:600, cursor:'pointer', outline:'none', letterSpacing:'0.04em' }}>
+                fontSize:12, fontWeight:600, cursor:'pointer', outline:'none', letterSpacing:'0.04em' }}>
               {inputMode ? (
                 <><span style={{ width:7, height:7, borderRadius:'50%', background:'currentColor', display:'inline-block' }} />Tắt nhập nốt từ cần đàn</>
               ) : (

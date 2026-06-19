@@ -89,7 +89,7 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
   return (
     <div style={{ background: C.bg, height: '100%', overflowY: 'auto' }}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '24px 20px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: C.accentLight, border: `1px solid ${C.accent}20`, borderRadius: 20, padding: '4px 12px', marginBottom: 16, fontSize: 12, color: C.accent, fontWeight: 600 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: C.accentLight, border: `1px solid ${C.accent}20`, borderRadius: 20, padding: '4px 12px', marginBottom: 16, fontSize: 13, color: C.accent, fontWeight: 600 }}>
           <span>{TYPE_ICON[lesson.lesson_type] ?? '📄'}</span>
           {LESSON_TYPES.find(t => t.id === lesson.lesson_type)?.label ?? lesson.lesson_type}
         </div>
@@ -97,7 +97,7 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
           {lesson.title || 'Chưa có tiêu đề'}
         </div>
         {lesson.description && (
-          <div style={{ fontSize: 15, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}>
+          <div style={{ fontSize: 16, color: C.text2, lineHeight: 1.7, marginBottom: 20 }}>
             {lesson.description}
           </div>
         )}
@@ -119,7 +119,7 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
             </div>
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
               <a href={lesson.content_url} target="_blank" rel="noreferrer"
-                style={{ fontSize: 12, color: C.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                style={{ fontSize: 13, color: C.accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                 🔗 Mở toàn màn hình ↗
               </a>
             </div>
@@ -129,25 +129,25 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
           <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24, border: `1px solid ${C.border}` }}>
             <div style={{ background: C.surface, padding: '10px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>🔗</span>
-              <span style={{ fontSize: 12, color: C.text2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lesson.content_url}</span>
+              <span style={{ fontSize: 13, color: C.text2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lesson.content_url}</span>
             </div>
             <iframe src={lesson.content_url} style={{ width: '100%', height: 400, border: 'none', display: 'block' }} />
           </div>
         )}
         {lesson.content && (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>📝 Nội dung bài học</div>
-            <div className="rich-preview" style={{ fontSize: 14, color: C.text2, lineHeight: 1.8 }} dangerouslySetInnerHTML={{ __html: lesson.content }} />
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>📝 Nội dung bài học</div>
+            <div className="rich-preview" style={{ fontSize: 15, color: C.text2, lineHeight: 1.8 }} dangerouslySetInnerHTML={{ __html: lesson.content }} />
           </div>
         )}
         {lesson.tools.length > 0 && (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 24px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>🛠 Công cụ luyện tập</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>🛠 Công cụ luyện tập</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {lesson.tools.map(tid => {
                 const t = toolMeta[tid]; if (!t) return null
                 return (
-                  <div key={tid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: C.accentLight, border: `1px solid ${C.accent}30`, borderRadius: 10, color: C.accent, fontWeight: 600, fontSize: 13 }}>
+                  <div key={tid} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: C.accentLight, border: `1px solid ${C.accent}30`, borderRadius: 10, color: C.accent, fontWeight: 600, fontSize: 14 }}>
                     <span style={{ fontSize: 18 }}>{t.icon}</span>{t.label}
                   </div>
                 )
@@ -168,7 +168,7 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
               onBack={() => {}}
             />
           </div>
-          <div style={{ marginTop: 10, fontSize: 11, color: C.text3 }}>📱 Preview giao diện học viên</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: C.text3 }}>📱 Preview giao diện học viên</div>
         </div>
       )}
     </div>
@@ -178,24 +178,24 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 const Input = ({ value, onChange, placeholder, style }: { value: string; onChange: (v: string) => void; placeholder?: string; style?: React.CSSProperties }) => (
   <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none', ...style }}
+    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, fontFamily: 'inherit', outline: 'none', ...style }}
     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
     onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
 )
 
 const Textarea = ({ value, onChange, placeholder, rows = 3 }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) => (
   <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
-    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.6 }}
+    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.6 }}
     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
     onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
 )
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ fontSize: 12, fontWeight: 600, color: C.text2, marginBottom: 6 }}>{children}</div>
+  <div style={{ fontSize: 13, fontWeight: 600, color: C.text2, marginBottom: 6 }}>{children}</div>
 )
 
 const Btn = ({ children, onClick, variant = 'ghost', style }: { children: React.ReactNode; onClick?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; style?: React.CSSProperties }) => {
-  const base: React.CSSProperties = { border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }
+  const base: React.CSSProperties = { border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }
   const variants = {
     primary:   { background: C.accent, color: '#fff' },
     secondary: { background: C.surface, color: C.text2, border: `1px solid ${C.border}` },
@@ -639,33 +639,33 @@ export default function CourseEditorContent() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: C.bg, fontFamily: '"Inter", system-ui, sans-serif', fontSize: 14, color: C.text1 }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: C.bg, fontFamily: '"Inter", system-ui, sans-serif', fontSize: 15, color: C.text1 }}>
 
       {/* ── LEFT: Course list ─────────────────────────────────────────── */}
       <div style={{ width: 200, flexShrink: 0, background: C.surface, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: 12, borderBottom: `1px solid ${C.border}` }}>
           <button onClick={() => setShowNewCourse(!showNewCourse)}
-            style={{ width: '100%', background: C.accent, border: 'none', borderRadius: 7, padding: 8, color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ width: '100%', background: C.accent, border: 'none', borderRadius: 7, padding: 8, color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
             + Tạo khoá mới
           </button>
           {courses.some(c => c.status !== 'on') && (
             <button onClick={publishAll}
-              style={{ width: '100%', marginTop: 6, background: 'none', border: `1px solid ${C.success}`, borderRadius: 7, padding: '6px 8px', color: C.success, fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ width: '100%', marginTop: 6, background: 'none', border: `1px solid ${C.success}`, borderRadius: 7, padding: '6px 8px', color: C.success, fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
               ✓ Bật tất cả ({courses.filter(c => c.status !== 'on').length} đang tắt)
             </button>
           )}
           {showNewCourse && (
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <input value={ncName} onChange={e => setNcName(e.target.value)} placeholder="Tên khoá học..."
-                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none' }} />
+                style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, fontFamily: 'inherit', outline: 'none' }} />
               <select value={ncType} onChange={e => setNcType(e.target.value)}
-                style={{ width: '100%', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none' }}>
+                style={{ width: '100%', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, fontFamily: 'inherit', outline: 'none' }}>
                 <option value="hanh_trinh">🎸 Hành Trình</option>
                 <option value="canh_cua">🔑 Cánh Cửa</option>
                 <option value="final">⭐ Final</option>
               </select>
               <select value={ncTrack} onChange={e => setNcTrack(e.target.value)}
-                style={{ width: '100%', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12, fontFamily: 'inherit', outline: 'none' }}>
+                style={{ width: '100%', padding: '6px 8px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, fontFamily: 'inherit', outline: 'none' }}>
                 <option value="dem_hat">Đệm Hát</option>
                 <option value="tia_not">Tỉa Nốt</option>
                 <option value="nhac_ly">Nhạc Lý</option>
@@ -673,8 +673,8 @@ export default function CourseEditorContent() {
                 <option value="solo">Solo</option>
               </select>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={createCourse} style={{ flex: 1, background: C.accent, border: 'none', borderRadius: 6, padding: 6, color: '#fff', fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Tạo</button>
-                <button onClick={() => { setShowNewCourse(false); setNcName('') }} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Huỷ</button>
+                <button onClick={createCourse} style={{ flex: 1, background: C.accent, border: 'none', borderRadius: 6, padding: 6, color: '#fff', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Tạo</button>
+                <button onClick={() => { setShowNewCourse(false); setNcName('') }} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 6, padding: '6px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Huỷ</button>
               </div>
             </div>
           )}
@@ -685,16 +685,16 @@ export default function CourseEditorContent() {
             { label: 'CÁNH CỬA',   types: ['canh_cua'] },
           ].map(group => (
             <div key={group.label} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', padding: '4px 8px 6px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', padding: '4px 8px 6px' }}>
                 {group.label}
               </div>
               {courses.filter(c => group.types.includes(c.type)).map(c => (
                 <div key={c.id} onClick={() => loadCourse(c)}
-                  style={{ padding: '7px 10px', borderRadius: 7, cursor: 'pointer', background: selectedCourse?.id === c.id ? C.accentLight : 'transparent', color: selectedCourse?.id === c.id ? C.accent : C.text2, fontWeight: selectedCourse?.id === c.id ? 600 : 400, fontSize: 12, marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}
+                  style={{ padding: '7px 10px', borderRadius: 7, cursor: 'pointer', background: selectedCourse?.id === c.id ? C.accentLight : 'transparent', color: selectedCourse?.id === c.id ? C.accent : C.text2, fontWeight: selectedCourse?.id === c.id ? 600 : 400, fontSize: 13, marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}
                   onMouseEnter={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = C.bg }}
                   onMouseLeave={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = 'transparent' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1.4, wordBreak: 'break-word', minWidth: 0 }}>
-                    <span style={{ width: 18, height: 18, borderRadius: 4, overflow: 'hidden', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+                    <span style={{ width: 18, height: 18, borderRadius: 4, overflow: 'hidden', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
                       {c.image_url ? <img src={c.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : courseLogoEmoji(c)}
                     </span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
@@ -710,7 +710,7 @@ export default function CourseEditorContent() {
       {/* ── MIDDLE: Module + lesson list ──────────────────────────────── */}
       <div style={{ width: 340, flexShrink: 0, background: C.bg, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {!selectedCourse ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text3, fontSize: 13, flexDirection: 'column', gap: 8 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text3, fontSize: 14, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 32 }}>📚</span>Chọn khoá học để bắt đầu
           </div>
         ) : (
@@ -728,11 +728,11 @@ export default function CourseEditorContent() {
                   <input autoFocus value={courseNameDraft} onChange={e => setCourseNameDraft(e.target.value)}
                     onBlur={saveCourseName}
                     onKeyDown={e => { if (e.key === 'Enter') saveCourseName(); if (e.key === 'Escape') setEditingCourseName(false) }}
-                    style={{ flex: 1, fontWeight: 700, fontSize: 15, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', outline: 'none', marginRight: 8, minWidth: 0 }} />
+                    style={{ flex: 1, fontWeight: 700, fontSize: 16, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', outline: 'none', marginRight: 8, minWidth: 0 }} />
                 ) : (
                   <div onDoubleClick={() => { setEditingCourseName(true); setCourseNameDraft(selectedCourse.name) }}
                     title="Double-click để đổi tên"
-                    style={{ fontWeight: 700, fontSize: 15, color: C.text1, flex: 1, minWidth: 0, marginRight: 8, cursor: 'text', wordBreak: 'break-word', lineHeight: 1.4 }}>
+                    style={{ fontWeight: 700, fontSize: 16, color: C.text1, flex: 1, minWidth: 0, marginRight: 8, cursor: 'text', wordBreak: 'break-word', lineHeight: 1.4 }}>
                     {selectedCourse.name}
                   </div>
                 )}
@@ -742,14 +742,14 @@ export default function CourseEditorContent() {
                     const active = selectedCourse.status === s
                     return (
                       <button key={s} onClick={() => setCourseStatus(s)}
-                        style={{ padding: '4px 8px', fontSize: 11, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${C.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : C.surface, color: active ? cfg.color : C.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
+                        style={{ padding: '4px 8px', fontSize: 12, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${C.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : C.surface, color: active ? cfg.color : C.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
                         {cfg.label}
                       </button>
                     )
                   })}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: C.text3 }}>
+              <div style={{ fontSize: 12, color: C.text3 }}>
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học
               </div>
             </div>
@@ -761,7 +761,7 @@ export default function CourseEditorContent() {
                 <div onClick={e => e.stopPropagation()}
                   style={{ background: C.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 360, boxShadow: '0 12px 48px rgba(0,0,0,0.25)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: C.text1 }}>Logo khoá học</span>
+                    <span style={{ fontWeight: 700, fontSize: 16, color: C.text1 }}>Logo khoá học</span>
                     <button onClick={() => setShowLogoPicker(false)} style={{ background: 'none', border: 'none', fontSize: 18, color: C.text3, cursor: 'pointer' }}>✕</button>
                   </div>
 
@@ -772,19 +772,19 @@ export default function CourseEditorContent() {
                         ? <img src={selectedCourse.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : courseLogoEmoji(selectedCourse)}
                     </div>
-                    <div style={{ fontSize: 12, color: C.text3, lineHeight: 1.5 }}>Logo hiện tại. Chọn emoji bên dưới hoặc tải ảnh lên.</div>
+                    <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.5 }}>Logo hiện tại. Chọn emoji bên dưới hoặc tải ảnh lên.</div>
                   </div>
 
                   {/* Tải ảnh */}
                   <input ref={logoFileRef} type="file" accept="image/*" style={{ display: 'none' }}
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.currentTarget.value = '' }} />
                   <button onClick={() => logoFileRef.current?.click()} disabled={uploadingLogo}
-                    style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px dashed ${C.accent}`, background: C.bg, color: C.accent, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}>
+                    style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px dashed ${C.accent}`, background: C.bg, color: C.accent, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}>
                     {uploadingLogo ? '⏳ Đang tải...' : '📤 Tải ảnh logo lên'}
                   </button>
 
                   {/* Emoji có sẵn */}
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Hoặc chọn emoji</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Hoặc chọn emoji</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 6 }}>
                     {['🎸','🎵','🎶','🎼','🎤','🥁','🎹','🎺','🔑','🌱','⭐','🔥','💎','🏆','🎯','📘','🚀','❤️','🎧','🪕','🎻','✨','🌟','🎀'].map(em => (
                       <button key={em} onClick={() => pickEmoji(em)}
@@ -805,12 +805,12 @@ export default function CourseEditorContent() {
                     onDragOver={e => e.preventDefault()}
                     onDrop={e => onDropModule(e, mod.id)}>
 
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.text2, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text2, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                       {editingModuleId === mod.id ? (
                         <input autoFocus value={editingModuleName} onChange={e => setEditingModuleName(e.target.value)}
                           onBlur={() => saveModuleName(mod.id)}
                           onKeyDown={e => { if (e.key === 'Enter') saveModuleName(mod.id); if (e.key === 'Escape') setEditingModuleId(null) }}
-                          style={{ flex: 1, border: `1px solid ${C.accent}`, borderRadius: 5, padding: '3px 6px', fontSize: 11, fontFamily: 'inherit', outline: 'none', color: C.text1 }} />
+                          style={{ flex: 1, border: `1px solid ${C.accent}`, borderRadius: 5, padding: '3px 6px', fontSize: 12, fontFamily: 'inherit', outline: 'none', color: C.text1 }} />
                       ) : (
                         <span onDoubleClick={() => { setEditingModuleId(mod.id); setEditingModuleName(mod.name) }}
                           title="Double-click để đổi tên"
@@ -821,7 +821,7 @@ export default function CourseEditorContent() {
                       <span style={{ color: C.text3, fontWeight: 400, flexShrink: 0 }}>{modLessons.length} bài</span>
                       <button onClick={e => { e.stopPropagation(); deleteModule(mod.id, mod.name) }}
                         title="Xoá chương này"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 15, padding: '2px 4px', borderRadius: 4, flexShrink: 0, lineHeight: 1, opacity: 0 }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 16, padding: '2px 4px', borderRadius: 4, flexShrink: 0, lineHeight: 1, opacity: 0 }}
                         onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = C.danger }}
                         onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = C.text3 }}>
                         ×
@@ -850,14 +850,14 @@ export default function CourseEditorContent() {
                             opacity: isDragging ? 0.4 : 1,
                             transition: 'opacity 0.15s, background 0.1s',
                           }}>
-                          <span style={{ color: C.text3, fontSize: 12, cursor: 'grab', flexShrink: 0 }}>⠿</span>
-                          <span style={{ fontSize: 11, color: C.text3, width: 16, flexShrink: 0, textAlign: 'center' }}>{li + 1}</span>
-                          <span style={{ fontSize: 14, flexShrink: 0 }}>{TYPE_ICON[l.lesson_type] ?? '📄'}</span>
-                          <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isSelected ? C.accent : C.text1, fontWeight: isSelected ? 600 : 400 }}>
+                          <span style={{ color: C.text3, fontSize: 13, cursor: 'grab', flexShrink: 0 }}>⠿</span>
+                          <span style={{ fontSize: 12, color: C.text3, width: 16, flexShrink: 0, textAlign: 'center' }}>{li + 1}</span>
+                          <span style={{ fontSize: 15, flexShrink: 0 }}>{TYPE_ICON[l.lesson_type] ?? '📄'}</span>
+                          <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isSelected ? C.accent : C.text1, fontWeight: isSelected ? 600 : 400 }}>
                             {l.title}
                           </span>
                           <button onClick={e => { e.stopPropagation(); deleteLesson(l.id) }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 15, padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: 0 }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 16, padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: 0 }}
                             onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = C.danger }}
                             onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = C.text3 }}>
                             ×
@@ -867,7 +867,7 @@ export default function CourseEditorContent() {
                     })}
 
                     <button onClick={() => setPopupModuleId(mod.id)}
-                      style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 7, padding: 8, color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, marginTop: 4 }}>
+                      style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 7, padding: 8, color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, marginTop: 4 }}>
                       + Thêm bài mới
                     </button>
                   </div>
@@ -884,12 +884,12 @@ export default function CourseEditorContent() {
                 </div>
               ) : (
                 <button onClick={() => setAddingModule(true)}
-                  style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 8, padding: 10, color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, marginTop: 8 }}>
+                  style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 8, padding: 10, color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, marginTop: 8 }}>
                   + Thêm tuần / chương
                 </button>
               )}
               <button onClick={() => setShowImport(true)}
-                style={{ width: '100%', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                style={{ width: '100%', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 📥 Nhập hàng loạt
               </button>
             </div>
@@ -902,27 +902,27 @@ export default function CourseEditorContent() {
         {!selectedLesson ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text3, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 40 }}>✏️</span>
-            <div style={{ fontSize: 14 }}>Chọn bài học để chỉnh sửa</div>
-            <div style={{ fontSize: 12 }}>hoặc thêm bài mới từ danh sách bên trái</div>
+            <div style={{ fontSize: 15 }}>Chọn bài học để chỉnh sửa</div>
+            <div style={{ fontSize: 13 }}>hoặc thêm bài mới từ danh sách bên trái</div>
           </div>
         ) : (
           <>
             {/* Header */}
             <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: C.text1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 15, color: C.text1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                 {fTitle || 'Chỉnh sửa bài học'}
               </div>
               {/* Edit / Preview toggle */}
               <div style={{ display: 'flex', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 2, gap: 2, flexShrink: 0 }}>
                 {(['edit', 'preview'] as const).map(mode => (
                   <button key={mode} onClick={() => setRightMode(mode)}
-                    style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, background: rightMode === mode ? C.surface : 'transparent', color: rightMode === mode ? C.accent : C.text3, boxShadow: rightMode === mode ? C.shadow : 'none' }}>
+                    style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, background: rightMode === mode ? C.surface : 'transparent', color: rightMode === mode ? C.accent : C.text3, boxShadow: rightMode === mode ? C.shadow : 'none' }}>
                     {mode === 'edit' ? '✏️ Soạn' : '👁 Xem trước'}
                   </button>
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                {saved && <span style={{ fontSize: 12, color: C.success }}>✓ Đã lưu</span>}
+                {saved && <span style={{ fontSize: 13, color: C.success }}>✓ Đã lưu</span>}
                 <Btn variant="secondary" onClick={() => setSelectedLesson(null)}>Đóng</Btn>
                 <Btn variant="primary" onClick={saveLesson}>{saving ? 'Đang lưu...' : '💾 Lưu'}</Btn>
               </div>
@@ -935,7 +935,7 @@ export default function CourseEditorContent() {
                   <div>
                     <Label>Loại bài học</Label>
                     <select value={fType} onChange={e => setFType(e.target.value)}
-                      style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, background: C.surface, fontFamily: 'inherit', outline: 'none' }}>
+                      style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, background: C.surface, fontFamily: 'inherit', outline: 'none' }}>
                       {LESSON_TYPES.map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
                     </select>
                   </div>
@@ -965,7 +965,7 @@ export default function CourseEditorContent() {
                 {fType === 'slide' && (
                   <div>
                     {/* Hướng dẫn Canva */}
-                    <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 12, color: '#92400E', lineHeight: 1.7 }}>
+                    <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#92400E', lineHeight: 1.7 }}>
                       <div style={{ fontWeight: 700, marginBottom: 4 }}>📐 Cách lấy link nhúng từ Canva:</div>
                       <ol style={{ margin: 0, paddingLeft: 16 }}>
                         <li>Mở thiết kế trên <a href="https://canva.com" target="_blank" rel="noreferrer" style={{ color: '#7C3AED' }}>canva.com</a></li>
@@ -973,7 +973,7 @@ export default function CourseEditorContent() {
                         <li>Chọn <b>Responsive</b> → nhấn <b>Copy embed code</b></li>
                         <li>Dán vào đây, mình sẽ tự tách URL</li>
                       </ol>
-                      <div style={{ marginTop: 6, color: '#6B7280', fontSize: 11 }}>
+                      <div style={{ marginTop: 6, color: '#6B7280', fontSize: 12 }}>
                         Hoặc lấy thẳng URL dạng: <code style={{ background: '#F3F4F6', padding: '1px 4px', borderRadius: 3 }}>https://www.canva.com/design/DAF.../view?embed</code>
                       </div>
                     </div>
@@ -990,10 +990,10 @@ export default function CourseEditorContent() {
                         onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
                         placeholder={'Dán link Canva hoặc cả mã HTML nhúng vào đây...\n\nVí dụ:\nhttps://www.canva.com/design/DAFxxx/view?embed'}
                         rows={4}
-                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.text1, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, background: C.surface }}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text1, fontFamily: 'ui-monospace, monospace', outline: 'none', resize: 'vertical', lineHeight: 1.6, background: C.surface }}
                       />
                       {fUrl && fUrl.includes('<iframe') && (
-                        <div style={{ fontSize: 11, color: C.success, marginTop: 4 }}>✓ Đã tách URL từ embed code</div>
+                        <div style={{ fontSize: 12, color: C.success, marginTop: 4 }}>✓ Đã tách URL từ embed code</div>
                       )}
                     </div>
 
@@ -1002,9 +1002,9 @@ export default function CourseEditorContent() {
                       const embedUrl = normalizeCanvaUrl(fUrl)
                       return (
                         <div style={{ marginTop: 12 }}>
-                          <div style={{ fontSize: 11, color: C.text3, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 12, color: C.text3, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span>Xem trước slide:</span>
-                            {embedUrl !== fUrl && <span style={{ color: C.success, fontSize: 11 }}>✓ Đã chuyển sang link embed</span>}
+                            {embedUrl !== fUrl && <span style={{ color: C.success, fontSize: 12 }}>✓ Đã chuyển sang link embed</span>}
                           </div>
                           <div style={{ position: 'relative', paddingBottom: '56.25%', borderRadius: 10, overflow: 'hidden', border: `1px solid ${C.border}`, background: '#1a1a2e' }}>
                             <iframe
@@ -1015,7 +1015,7 @@ export default function CourseEditorContent() {
                               title="Canva slide preview"
                             />
                           </div>
-                          <div style={{ marginTop: 6, fontSize: 11, color: C.text3, wordBreak: 'break-all' }}>
+                          <div style={{ marginTop: 6, fontSize: 12, color: C.text3, wordBreak: 'break-all' }}>
                             URL embed: <code style={{ color: C.accent }}>{embedUrl}</code>
                           </div>
                         </div>
@@ -1039,7 +1039,7 @@ export default function CourseEditorContent() {
                 {fType === 'flow' ? (
                   /* ── Khi loại bài = Flow: nhúng trình soạn slides ngay đây ── */
                   <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, background: C.bg }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.accent, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.accent, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span>✨</span> Soạn nội dung Flow
                     </div>
                     <FlowInlineEditor lessonId={selectedLesson!.id} />
@@ -1048,7 +1048,7 @@ export default function CourseEditorContent() {
                   <div>
                     <Label>Nội dung chi tiết</Label>
                     <RichEditor value={fContent} onChange={setFContent} />
-                    <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>Hiển thị sau video cho học viên.</div>
+                    <div style={{ fontSize: 12, color: C.text3, marginTop: 4 }}>Hiển thị sau video cho học viên.</div>
                   </div>
                 )}
 
@@ -1064,12 +1064,12 @@ export default function CourseEditorContent() {
                         <label key={t.id} title={isComing ? 'Sắp ra mắt' : isOff ? 'Đang tắt' : ''}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '8px 10px', borderRadius: 7, border: `1px solid ${checked ? C.accent : C.border}`, background: checked ? C.accentLight : C.surface, opacity: dimmed && !checked ? 0.55 : 1 }}>
                           <input type="checkbox" checked={checked} onChange={() => toggleTool(t.id)} style={{ accentColor: C.accent, cursor: 'pointer' }} />
-                          <span style={{ fontSize: 14 }}>{t.icon}</span>
-                          <span style={{ fontSize: 11, color: checked ? C.accent : C.text2, fontWeight: checked ? 600 : 400, lineHeight: 1.2 }}>
+                          <span style={{ fontSize: 15 }}>{t.icon}</span>
+                          <span style={{ fontSize: 12, color: checked ? C.accent : C.text2, fontWeight: checked ? 600 : 400, lineHeight: 1.2 }}>
                             {(t as { name?: string; label?: string }).name ?? (t as { label?: string }).label}
-                            {(t as { category?: string }).category === 'Bài luyện' && <span style={{ display: 'block', fontSize: 10, color: '#0891B2' }}>⏱ Bài luyện</span>}
-                            {isComing && !checked && <span style={{ display: 'block', fontSize: 10, color: C.text3 }}>Sắp ra mắt</span>}
-                            {isOff && checked && <span style={{ display: 'block', fontSize: 10, color: '#DC2626' }}>⚠ Đang tắt</span>}
+                            {(t as { category?: string }).category === 'Bài luyện' && <span style={{ display: 'block', fontSize: 11, color: '#0891B2' }}>⏱ Bài luyện</span>}
+                            {isComing && !checked && <span style={{ display: 'block', fontSize: 11, color: C.text3 }}>Sắp ra mắt</span>}
+                            {isOff && checked && <span style={{ display: 'block', fontSize: 11, color: '#DC2626' }}>⚠ Đang tắt</span>}
                           </span>
                         </label>
                       )
@@ -1088,7 +1088,7 @@ export default function CourseEditorContent() {
             {/* Preview panel */}
             {rightMode === 'preview' && previewLesson && (
               <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ background: '#FFF9EC', borderBottom: '1px solid #F5E9C8', padding: '7px 20px', fontSize: 12, color: '#92742A', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ background: '#FFF9EC', borderBottom: '1px solid #F5E9C8', padding: '7px 20px', fontSize: 13, color: '#92742A', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>👁</span> Giao diện học sinh sẽ thấy — nội dung hiện tại (chưa lưu cũng hiện đúng).
                 </div>
                 <LessonPreview lesson={previewLesson} toolMeta={toolMeta} />
@@ -1104,8 +1104,8 @@ export default function CourseEditorContent() {
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()}
             style={{ background: C.surface, borderRadius: 14, padding: 24, width: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Thêm bài mới</div>
-            <div style={{ fontSize: 12, color: C.text3, marginBottom: 16 }}>Chọn loại bài học</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Thêm bài mới</div>
+            <div style={{ fontSize: 13, color: C.text3, marginBottom: 16 }}>Chọn loại bài học</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {LESSON_TYPES.map(t => (
                 <button key={t.id} onClick={() => { addLesson(popupModuleId, t.id); setPopupModuleId(null) }}
@@ -1113,12 +1113,12 @@ export default function CourseEditorContent() {
                   onMouseEnter={e => (e.currentTarget.style.background = C.accentLight)}
                   onMouseLeave={e => (e.currentTarget.style.background = C.bg)}>
                   <div style={{ fontSize: 22, marginBottom: 5 }}>{t.icon}</div>
-                  <div style={{ fontSize: 12, color: C.text2, fontWeight: 500 }}>{t.label}</div>
+                  <div style={{ fontSize: 13, color: C.text2, fontWeight: 500 }}>{t.label}</div>
                 </button>
               ))}
             </div>
             <button onClick={() => setPopupModuleId(null)}
-              style={{ marginTop: 16, width: '100%', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: 8, color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
+              style={{ marginTop: 16, width: '100%', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: 8, color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
               Huỷ
             </button>
           </div>
@@ -1137,7 +1137,7 @@ export default function CourseEditorContent() {
             <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: C.bg, borderRadius: 8, padding: 3 }}>
               {([['text', '📄 Dàn bài văn bản'], ['flowJson', '✨ Flows từ JSON']] as const).map(([mode, label]) => (
                 <button key={mode} onClick={() => { setImportMode(mode); setImportMsg(''); setFlowJsonMsg('') }}
-                  style={{ flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: importMode === mode ? C.surface : 'transparent', color: importMode === mode ? C.accent : C.text3, boxShadow: importMode === mode ? C.shadow : 'none', transition: 'all .15s' }}>
+                  style={{ flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: 'pointer', background: importMode === mode ? C.surface : 'transparent', color: importMode === mode ? C.accent : C.text3, boxShadow: importMode === mode ? C.shadow : 'none', transition: 'all .15s' }}>
                   {label}
                 </button>
               ))}
@@ -1146,11 +1146,11 @@ export default function CourseEditorContent() {
             {/* ── Tab 1: Dàn bài text ── */}
             {importMode === 'text' && (
               <>
-                <div style={{ fontSize: 12, color: C.text3, marginBottom: 12, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 13, color: C.text3, marginBottom: 12, lineHeight: 1.6 }}>
                   Dòng bắt đầu bằng <b>#</b> là chương, dòng còn lại là bài học.
                   Kèm link: <b>Tên bài | link YouTube</b>. Tự nhận diện video / link.
                 </div>
-                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 11.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
 {`# Chương 1: Nhập môn
 Giới thiệu khoá học | https://youtu.be/abc123
 Cầm đàn đúng tư thế | https://youtu.be/def456
@@ -1160,15 +1160,15 @@ Hợp âm Am | https://youtu.be/ghi789`}
                 </div>
                 <textarea value={importText} onChange={e => setImportText(e.target.value)}
                   placeholder="Dán dàn bài của bạn vào đây..."
-                  style={{ width: '100%', minHeight: 180, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 13, color: C.text1, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }} />
-                {importMsg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: importMsg.startsWith('✓') ? C.success : C.danger }}>{importMsg}</div>}
+                  style={{ width: '100%', minHeight: 180, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 14, color: C.text1, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6 }} />
+                {importMsg && <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600, color: importMsg.startsWith('✓') ? C.success : C.danger }}>{importMsg}</div>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button onClick={bulkImport} disabled={importing || !importText.trim()}
-                    style={{ flex: 1, background: importing || !importText.trim() ? C.border : C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 700, cursor: importing || !importText.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                    style={{ flex: 1, background: importing || !importText.trim() ? C.border : C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 15, fontWeight: 700, cursor: importing || !importText.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                     {importing ? 'Đang nhập...' : 'Nhập vào khoá học'}
                   </button>
                   <button onClick={() => setShowImport(false)} disabled={importing}
-                    style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+                    style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
                     Đóng
                   </button>
                 </div>
@@ -1179,7 +1179,7 @@ Hợp âm Am | https://youtu.be/ghi789`}
             {importMode === 'flowJson' && (
               <>
                 {/* Hướng dẫn format */}
-                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 11.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
+                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 12.5, color: C.text3, fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>
 {`// Format có chương (khuyến nghị):
 [
   { "module": "Tổng quan về Guitar",
@@ -1198,10 +1198,10 @@ Hợp âm Am | https://youtu.be/ghi789`}
 
                 {/* Tên chương mặc định — chỉ dùng khi format phẳng */}
                 <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ fontSize: 12, color: C.text2, flexShrink: 0 }}>Tên chương (format phẳng):</div>
+                  <div style={{ fontSize: 13, color: C.text2, flexShrink: 0 }}>Tên chương (format phẳng):</div>
                   <input value={flowJsonFlatModule} onChange={e => setFlowJsonFlatModule(e.target.value)}
                     placeholder="Bài học"
-                    style={{ flex: 1, padding: '6px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none' }} />
+                    style={{ flex: 1, padding: '6px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, fontFamily: 'inherit', outline: 'none' }} />
                 </div>
 
                 {/* File picker ẩn */}
@@ -1219,16 +1219,16 @@ Hợp âm Am | https://youtu.be/ghi789`}
                 {/* Thanh chọn file / xoá */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <button onClick={() => flowJsonFileRef.current?.click()}
-                    style={{ padding: '7px 14px', border: `1px solid ${C.accent}`, borderRadius: 7, background: C.accentLight, color: C.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    style={{ padding: '7px 14px', border: `1px solid ${C.accent}`, borderRadius: 7, background: C.accentLight, color: C.accent, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
                     📁 Chọn file .json
                   </button>
                   {flowJsonFileName
-                    ? <span style={{ fontSize: 12, color: C.success, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✓ {flowJsonFileName}</span>
-                    : <span style={{ fontSize: 12, color: C.text3, flex: 1 }}>hoặc dán JSON bên dưới</span>
+                    ? <span style={{ fontSize: 13, color: C.success, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✓ {flowJsonFileName}</span>
+                    : <span style={{ fontSize: 13, color: C.text3, flex: 1 }}>hoặc dán JSON bên dưới</span>
                   }
                   {flowJson && (
                     <button onClick={() => { setFlowJson(''); setFlowJsonFileName('') }}
-                      style={{ padding: '5px 10px', border: `1px solid ${C.border}`, borderRadius: 7, background: 'none', color: C.danger, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                      style={{ padding: '5px 10px', border: `1px solid ${C.border}`, borderRadius: 7, background: 'none', color: C.danger, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                       Xoá
                     </button>
                   )}
@@ -1236,17 +1236,17 @@ Hợp âm Am | https://youtu.be/ghi789`}
 
                 <textarea value={flowJson} onChange={e => { setFlowJson(e.target.value); setFlowJsonFileName('') }}
                   placeholder="Dán JSON vào đây..."
-                  style={{ width: '100%', minHeight: 160, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 12, color: C.text1, fontFamily: 'ui-monospace, monospace', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.55 }} />
+                  style={{ width: '100%', minHeight: 160, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, fontSize: 13, color: C.text1, fontFamily: 'ui-monospace, monospace', resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.55 }} />
 
-                {flowJsonMsg && <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: flowJsonMsg.startsWith('✓') ? C.success : C.danger }}>{flowJsonMsg}</div>}
+                {flowJsonMsg && <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600, color: flowJsonMsg.startsWith('✓') ? C.success : C.danger }}>{flowJsonMsg}</div>}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button onClick={bulkImportFlows} disabled={flowImporting || !flowJson.trim()}
-                    style={{ flex: 1, background: flowImporting || !flowJson.trim() ? C.border : C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 700, cursor: flowImporting || !flowJson.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                    style={{ flex: 1, background: flowImporting || !flowJson.trim() ? C.border : C.accent, color: '#fff', border: 'none', borderRadius: 8, padding: 11, fontSize: 15, fontWeight: 700, cursor: flowImporting || !flowJson.trim() ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                     {flowImporting ? '⏳ Đang tạo...' : '✨ Tạo hàng loạt bài Flow'}
                   </button>
                   <button onClick={() => setShowImport(false)} disabled={flowImporting}
-                    style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
+                    style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '11px 18px', color: C.text2, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15 }}>
                     Đóng
                   </button>
                 </div>

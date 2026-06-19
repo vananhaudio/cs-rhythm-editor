@@ -99,7 +99,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
       <div style={{ width: 3, height: 16, background: T.gold, borderRadius: 2 }} />
-      <span style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{children}</span>
+      <span style={{ color: T.gold, fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{children}</span>
     </div>
   )
 }
@@ -112,13 +112,13 @@ function SkillBar({ skill }: { skill: Skill }) {
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 13, color: T.text }}>{skill.skill_name}</span>
-        <span style={{ fontSize: 13, color, fontWeight: 700 }}>{skill.level_0_10}/10</span>
+        <span style={{ fontSize: 14, color: T.text }}>{skill.skill_name}</span>
+        <span style={{ fontSize: 14, color, fontWeight: 700 }}>{skill.level_0_10}/10</span>
       </div>
       <div style={{ height: 6, background: T.border, borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3, transition: 'width 0.6s ease' }} />
       </div>
-      {skill.note && <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>{skill.note}</div>}
+      {skill.note && <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>{skill.note}</div>}
     </div>
   )
 }
@@ -207,8 +207,8 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     <div style={{ minHeight: '100vh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
       <div style={{ background: T.header, borderBottom: `1px solid ${T.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onBack} style={{ background: 'none', border: `1px solid ${'#4A8A60'}`, borderRadius: 8, color: T.green, cursor: 'pointer', padding: '6px 14px', fontSize: 13, fontWeight: 600 }}>← Quay lại</button>
-          <span style={{ color: T.textMuted, fontSize: 13 }}>Hồ sơ học sinh</span>
+          <button onClick={onBack} style={{ background: 'none', border: `1px solid ${'#4A8A60'}`, borderRadius: 8, color: T.green, cursor: 'pointer', padding: '6px 14px', fontSize: 14, fontWeight: 600 }}>← Quay lại</button>
+          <span style={{ color: T.textMuted, fontSize: 14 }}>Hồ sơ học sinh</span>
         </div>
       </div>
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px' }}>
@@ -218,44 +218,44 @@ export default function StudentProfile({ studentId, onBack }: Props) {
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
                 <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: T.text }}>{student.full_name}</h1>
-                {student.level && <span style={{ background: LEVEL_COLOR[student.level] + '22', border: `1px solid ${LEVEL_COLOR[student.level]}`, color: LEVEL_COLOR[student.level], borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>{LEVEL_LABEL[student.level]}</span>}
-                <span style={{ background: student.is_active ? '#1E3A28' : '#3A2828', color: student.is_active ? T.green : T.danger, borderRadius: 20, padding: '2px 10px', fontSize: 11 }}>{student.is_active ? '● Đang học' : '● Ngừng học'}</span>
+                {student.level && <span style={{ background: LEVEL_COLOR[student.level] + '22', border: `1px solid ${LEVEL_COLOR[student.level]}`, color: LEVEL_COLOR[student.level], borderRadius: 20, padding: '2px 10px', fontSize: 13, fontWeight: 600 }}>{LEVEL_LABEL[student.level]}</span>}
+                <span style={{ background: student.is_active ? '#1E3A28' : '#3A2828', color: student.is_active ? T.green : T.danger, borderRadius: 20, padding: '2px 10px', fontSize: 12 }}>{student.is_active ? '● Đang học' : '● Ngừng học'}</span>
               </div>
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 8 }}>
-                {student.phone && <span style={{ fontSize: 13, color: T.textMuted }}>📞 {student.phone}</span>}
-                {student.age && <span style={{ fontSize: 13, color: T.textMuted }}>🎂 {student.age} tuổi</span>}
-                {student.enrolled_at && <span style={{ fontSize: 13, color: T.textMuted }}>📅 Từ {fmtDate(student.enrolled_at)}</span>}
+                {student.phone && <span style={{ fontSize: 14, color: T.textMuted }}>📞 {student.phone}</span>}
+                {student.age && <span style={{ fontSize: 14, color: T.textMuted }}>🎂 {student.age} tuổi</span>}
+                {student.enrolled_at && <span style={{ fontSize: 14, color: T.textMuted }}>📅 Từ {fmtDate(student.enrolled_at)}</span>}
               </div>
               {/* Badge 2 hệ thống */}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
                 {getYearBadge(student.enrolled_at) && (
-                  <span style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700 }}>
+                  <span style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', borderRadius: 20, padding: '3px 12px', fontSize: 13, fontWeight: 700 }}>
                     📅 {getYearBadge(student.enrolled_at)}
                   </span>
                 )}
                 {student.honor && student.honor !== 'none' && (
-                  <span style={{ background: '#FEF3C7', border: '1px solid #FCD34D', color: '#92400E', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700 }}>
+                  <span style={{ background: '#FEF3C7', border: '1px solid #FCD34D', color: '#92400E', borderRadius: 20, padding: '3px 12px', fontSize: 13, fontWeight: 700 }}>
                     {HONOR_OPTIONS.find(h => h.value === student.honor)?.label}
                   </span>
                 )}
               </div>
               {/* Thầy phong danh hiệu */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: T.textMuted, fontWeight: 600 }}>Phong danh hiệu:</span>
+                <span style={{ fontSize: 13, color: T.textMuted, fontWeight: 600 }}>Phong danh hiệu:</span>
                 <select value={student.honor ?? 'none'} onChange={e => updateHonor(e.target.value)}
                   disabled={savingHonor}
-                  style={{ background: '#FEF9EE', border: `1px solid ${T.gold}`, borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, color: T.gold, cursor: 'pointer', fontFamily: 'inherit', outline: 'none', opacity: savingHonor ? 0.6 : 1 }}>
+                  style={{ background: '#FEF9EE', border: `1px solid ${T.gold}`, borderRadius: 8, padding: '4px 10px', fontSize: 13, fontWeight: 600, color: T.gold, cursor: 'pointer', fontFamily: 'inherit', outline: 'none', opacity: savingHonor ? 0.6 : 1 }}>
                   {HONOR_OPTIONS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
-                {savingHonor && <span style={{ fontSize: 11, color: T.textMuted }}>Đang lưu…</span>}
+                {savingHonor && <span style={{ fontSize: 12, color: T.textMuted }}>Đang lưu…</span>}
               </div>
-              {student.goals && <div style={{ marginTop: 8, fontSize: 13, color: T.text, background: T.bg, borderRadius: 8, padding: '8px 12px', borderLeft: `3px solid ${T.gold}` }}><span style={{ color: T.textMuted }}>Mục tiêu: </span>{student.goals}</div>}
+              {student.goals && <div style={{ marginTop: 8, fontSize: 14, color: T.text, background: T.bg, borderRadius: 8, padding: '8px 12px', borderLeft: `3px solid ${T.gold}` }}><span style={{ color: T.textMuted }}>Mục tiêu: </span>{student.goals}</div>}
             </div>
             <div style={{ display: 'flex', gap: 12, flexShrink: 0 }}>
               {[{ v: lessons.length, label: 'Buổi học', color: T.gold }, { v: avgSkill ?? '—', label: 'Điểm TB', color: T.green }, { v: pendingCount, label: 'Chờ nộp', color: pendingCount > 0 ? T.warn : T.green }].map(s => (
                 <div key={s.label} style={{ textAlign: 'center', background: T.bg, borderRadius: 10, padding: '10px 16px', minWidth: 64 }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.v}</div>
-                  <div style={{ fontSize: 11, color: T.textMuted }}>{s.label}</div>
+                  <div style={{ fontSize: 12, color: T.textMuted }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -265,7 +265,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.bgCard, borderRadius: 10, padding: 4, border: `1px solid ${T.border}` }}>
           {(['overview', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
             const labels: Record<'overview'|'lessons'|'assignments'|'timeline'|'courses', string> = { overview: '📊 Tổng quan', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI', courses: '📚 Khoá học' }
-            return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 12, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? T.text : T.textMuted }}>{labels[tab]}</button>
+            return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 13, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? T.text : T.textMuted }}>{labels[tab]}</button>
           })}
         </div>
 
@@ -273,19 +273,19 @@ export default function StudentProfile({ studentId, onBack }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <Card style={{ gridColumn: '1 / -1' }}>
               <SectionTitle>Kỹ năng</SectionTitle>
-              {skills.length === 0 ? <div style={{ color: T.textMuted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Chưa có đánh giá kỹ năng nào.</div> : (
+              {skills.length === 0 ? <div style={{ color: T.textMuted, fontSize: 14, textAlign: 'center', padding: '20px 0' }}>Chưa có đánh giá kỹ năng nào.</div> : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
                   {Object.entries(skillsByCategory).map(([cat, catSkills]) => (
-                    <div key={cat}><div style={{ fontSize: 12, color: T.textMuted, marginBottom: 8 }}>{CATEGORY_LABEL[cat] ?? cat}</div>{catSkills.map(sk => <SkillBar key={sk.id} skill={sk} />)}</div>
+                    <div key={cat}><div style={{ fontSize: 13, color: T.textMuted, marginBottom: 8 }}>{CATEGORY_LABEL[cat] ?? cat}</div>{catSkills.map(sk => <SkillBar key={sk.id} skill={sk} />)}</div>
                   ))}
                 </div>
               )}
             </Card>
             <Card>
               <SectionTitle>Ghi chú ghim</SectionTitle>
-              {notes.filter(n => n.is_pinned).length === 0 ? <div style={{ color: T.textMuted, fontSize: 13 }}>Không có ghi chú ghim.</div> : notes.filter(n => n.is_pinned).map(note => (
-                <div key={note.id} style={{ borderLeft: `3px solid ${T.gold}`, paddingLeft: 10, marginBottom: 10, fontSize: 13, color: T.text, lineHeight: 1.5 }}>
-                  {note.note}<div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>{note.category} · {fmtDate(note.created_at)}</div>
+              {notes.filter(n => n.is_pinned).length === 0 ? <div style={{ color: T.textMuted, fontSize: 14 }}>Không có ghi chú ghim.</div> : notes.filter(n => n.is_pinned).map(note => (
+                <div key={note.id} style={{ borderLeft: `3px solid ${T.gold}`, paddingLeft: 10, marginBottom: 10, fontSize: 14, color: T.text, lineHeight: 1.5 }}>
+                  {note.note}<div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>{note.category} · {fmtDate(note.created_at)}</div>
                 </div>
               ))}
             </Card>
@@ -293,12 +293,12 @@ export default function StudentProfile({ studentId, onBack }: Props) {
               <SectionTitle>Buổi học gần nhất</SectionTitle>
               {lessons[0] ? (
                 <div>
-                  <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 6 }}>{fmtDateTime(lessons[0].started_at)}{lessons[0].duration_min && ` · ${lessons[0].duration_min} phút`}{lessons[0].mood_score && ` · ${MOOD_EMOJI[lessons[0].mood_score]}`}</div>
-                  {lessons[0].song_practiced && <div style={{ fontSize: 13, color: T.text, marginBottom: 4 }}>🎵 {lessons[0].song_practiced}</div>}
-                  {lessons[0].content_summary && <div style={{ fontSize: 13, color: T.text, lineHeight: 1.6, marginBottom: 6 }}>{lessons[0].content_summary}</div>}
-                  {lessons[0].next_focus && <div style={{ fontSize: 12, color: T.gold, background: T.bg, borderRadius: 6, padding: '6px 10px' }}>→ Lần tới: {lessons[0].next_focus}</div>}
+                  <div style={{ fontSize: 14, color: T.textMuted, marginBottom: 6 }}>{fmtDateTime(lessons[0].started_at)}{lessons[0].duration_min && ` · ${lessons[0].duration_min} phút`}{lessons[0].mood_score && ` · ${MOOD_EMOJI[lessons[0].mood_score]}`}</div>
+                  {lessons[0].song_practiced && <div style={{ fontSize: 14, color: T.text, marginBottom: 4 }}>🎵 {lessons[0].song_practiced}</div>}
+                  {lessons[0].content_summary && <div style={{ fontSize: 14, color: T.text, lineHeight: 1.6, marginBottom: 6 }}>{lessons[0].content_summary}</div>}
+                  {lessons[0].next_focus && <div style={{ fontSize: 13, color: T.gold, background: T.bg, borderRadius: 6, padding: '6px 10px' }}>→ Lần tới: {lessons[0].next_focus}</div>}
                 </div>
-              ) : <div style={{ color: T.textMuted, fontSize: 13 }}>Chưa có buổi học nào.</div>}
+              ) : <div style={{ color: T.textMuted, fontSize: 14 }}>Chưa có buổi học nào.</div>}
             </Card>
           </div>
         )}
@@ -306,17 +306,17 @@ export default function StudentProfile({ studentId, onBack }: Props) {
         {activeTab === 'lessons' && (
           <Card>
             <SectionTitle>Lịch sử buổi học ({lessons.length})</SectionTitle>
-            {lessons.length === 0 ? <div style={{ color: T.textMuted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Chưa có buổi học nào.</div> : lessons.map((lesson, i) => (
+            {lessons.length === 0 ? <div style={{ color: T.textMuted, fontSize: 14, textAlign: 'center', padding: '20px 0' }}>Chưa có buổi học nào.</div> : lessons.map((lesson, i) => (
               <div key={lesson.id} style={{ borderBottom: i < lessons.length - 1 ? `1px solid ${T.border}` : 'none', paddingBottom: 14, marginBottom: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{fmtDateTime(lesson.started_at)}</span>
-                  {lesson.duration_min && <span style={{ fontSize: 12, color: T.textMuted }}>{lesson.duration_min} phút</span>}
-                  {lesson.mood_score && <span style={{ fontSize: 14 }}>{MOOD_EMOJI[lesson.mood_score]}</span>}
-                  <span style={{ fontSize: 11, color: T.textMuted, marginLeft: 'auto' }}>{timeAgo(lesson.started_at)}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{fmtDateTime(lesson.started_at)}</span>
+                  {lesson.duration_min && <span style={{ fontSize: 13, color: T.textMuted }}>{lesson.duration_min} phút</span>}
+                  {lesson.mood_score && <span style={{ fontSize: 15 }}>{MOOD_EMOJI[lesson.mood_score]}</span>}
+                  <span style={{ fontSize: 12, color: T.textMuted, marginLeft: 'auto' }}>{timeAgo(lesson.started_at)}</span>
                 </div>
-                {lesson.song_practiced && <div style={{ fontSize: 13, color: T.green, marginBottom: 4 }}>🎵 {lesson.song_practiced}</div>}
-                {lesson.content_summary && <div style={{ fontSize: 13, color: T.text, lineHeight: 1.6, marginBottom: 6 }}>{lesson.content_summary}</div>}
-                {lesson.next_focus && <div style={{ fontSize: 12, color: T.gold }}>→ Lần tới: {lesson.next_focus}</div>}
+                {lesson.song_practiced && <div style={{ fontSize: 14, color: T.green, marginBottom: 4 }}>🎵 {lesson.song_practiced}</div>}
+                {lesson.content_summary && <div style={{ fontSize: 14, color: T.text, lineHeight: 1.6, marginBottom: 6 }}>{lesson.content_summary}</div>}
+                {lesson.next_focus && <div style={{ fontSize: 13, color: T.gold }}>→ Lần tới: {lesson.next_focus}</div>}
               </div>
             ))}
           </Card>
@@ -325,24 +325,24 @@ export default function StudentProfile({ studentId, onBack }: Props) {
         {activeTab === 'assignments' && (
           <div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: T.warn, background: T.bgCard, borderRadius: 6, padding: '4px 12px', border: `1px solid ${T.border}` }}>Chờ nộp ({pendingCount})</div>
-              <div style={{ fontSize: 12, color: T.green, background: T.bgCard, borderRadius: 6, padding: '4px 12px', border: `1px solid ${T.border}` }}>Hoàn thành ({doneCount})</div>
+              <div style={{ fontSize: 13, color: T.warn, background: T.bgCard, borderRadius: 6, padding: '4px 12px', border: `1px solid ${T.border}` }}>Chờ nộp ({pendingCount})</div>
+              <div style={{ fontSize: 13, color: T.green, background: T.bgCard, borderRadius: 6, padding: '4px 12px', border: `1px solid ${T.border}` }}>Hoàn thành ({doneCount})</div>
             </div>
             <Card>
               <SectionTitle>Tất cả bài tập ({assignments.length})</SectionTitle>
-              {assignments.length === 0 ? <div style={{ color: T.textMuted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Chưa có bài tập nào.</div> : assignments.map((asgn, i) => {
+              {assignments.length === 0 ? <div style={{ color: T.textMuted, fontSize: 14, textAlign: 'center', padding: '20px 0' }}>Chưa có bài tập nào.</div> : assignments.map((asgn, i) => {
                 const st = STATUS_STYLE[asgn.status] ?? STATUS_STYLE.pending
                 return (
                   <div key={asgn.id} style={{ borderBottom: i < assignments.length - 1 ? `1px solid ${T.border}` : 'none', paddingBottom: 14, marginBottom: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{asgn.title}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, borderRadius: 4, padding: '2px 8px', background: st.bg, color: st.color }}>{st.label}</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: T.text }}>{asgn.title}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, borderRadius: 4, padding: '2px 8px', background: st.bg, color: st.color }}>{st.label}</span>
                     </div>
-                    {asgn.description && <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 6 }}>{asgn.description}</div>}
-                    {asgn.due_date && <div style={{ fontSize: 12, color: T.textMuted }}>📅 Hạn nộp: {fmtDate(asgn.due_date)}</div>}
-                    {asgn.submission_url && <a href={asgn.submission_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#7EC8E8', display: 'inline-block', marginTop: 4 }}>🎥 Xem bài nộp</a>}
-                    {asgn.teacher_feedback && <div style={{ fontSize: 13, color: T.text, background: T.bg, borderRadius: 6, padding: '6px 10px', marginTop: 6, borderLeft: `3px solid ${T.green}` }}><span style={{ color: T.textMuted, fontSize: 11 }}>Nhận xét giáo viên: </span>{asgn.teacher_feedback}</div>}
-                    {asgn.ai_feedback && <div style={{ fontSize: 13, color: T.text, background: '#D8EAF0', borderRadius: 6, padding: '6px 10px', marginTop: 6, borderLeft: '3px solid #1A5A7A' }}><span style={{ color: '#1A5A7A', fontSize: 11 }}>🤖 AI nhận xét: </span>{asgn.ai_feedback}</div>}
+                    {asgn.description && <div style={{ fontSize: 14, color: T.textMuted, marginBottom: 6 }}>{asgn.description}</div>}
+                    {asgn.due_date && <div style={{ fontSize: 13, color: T.textMuted }}>📅 Hạn nộp: {fmtDate(asgn.due_date)}</div>}
+                    {asgn.submission_url && <a href={asgn.submission_url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#7EC8E8', display: 'inline-block', marginTop: 4 }}>🎥 Xem bài nộp</a>}
+                    {asgn.teacher_feedback && <div style={{ fontSize: 14, color: T.text, background: T.bg, borderRadius: 6, padding: '6px 10px', marginTop: 6, borderLeft: `3px solid ${T.green}` }}><span style={{ color: T.textMuted, fontSize: 12 }}>Nhận xét giáo viên: </span>{asgn.teacher_feedback}</div>}
+                    {asgn.ai_feedback && <div style={{ fontSize: 14, color: T.text, background: '#D8EAF0', borderRadius: 6, padding: '6px 10px', marginTop: 6, borderLeft: '3px solid #1A5A7A' }}><span style={{ color: '#1A5A7A', fontSize: 12 }}>🤖 AI nhận xét: </span>{asgn.ai_feedback}</div>}
                   </div>
                 )
               })}
@@ -354,7 +354,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
           <div>
             <SectionTitle>Khoá học đang học ({enrollments.filter(e => e.is_active).length})</SectionTitle>
             {enrollments.filter(e => e.is_active).length === 0 ? (
-              <div style={{ color: T.textMuted, fontSize: 13, marginBottom: 20, padding: '12px 0' }}>
+              <div style={{ color: T.textMuted, fontSize: 14, marginBottom: 20, padding: '12px 0' }}>
                 Chưa có khoá học nào. Thêm khoá từ danh sách bên dưới.
               </div>
             ) : (
@@ -362,12 +362,12 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                 {enrollments.filter(e => e.is_active).map(e => (
                   <div key={e.id} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{e.course?.name}</div>
-                      <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{e.course?.name}</div>
+                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
                         {e.course?.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · Từ {fmtDate(e.enrolled_at)}
                       </div>
                     </div>
-                    <button onClick={() => handleUnenroll(e.id)} style={{ background: 'none', border: `1px solid ${T.border}`, borderRadius: 7, padding: '5px 12px', fontSize: 12, color: T.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button onClick={() => handleUnenroll(e.id)} style={{ background: 'none', border: `1px solid ${T.border}`, borderRadius: 7, padding: '5px 12px', fontSize: 13, color: T.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Gỡ khoá
                     </button>
                   </div>
@@ -383,13 +383,13 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                 return (
                   <div key={c.id} style={{ background: already ? T.greenLight : T.bgCard, border: `1px solid ${already ? '#90C4A0' : T.borderLight}`, borderRadius: 10, padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 500, fontSize: 13, color: already ? T.header : T.text }}>{c.name}</div>
-                      <div style={{ fontSize: 11, color: T.textDim, marginTop: 1 }}>{typeLabel}{c.is_free ? ' · Miễn phí' : ''}</div>
+                      <div style={{ fontWeight: 500, fontSize: 14, color: already ? T.header : T.text }}>{c.name}</div>
+                      <div style={{ fontSize: 12, color: T.textDim, marginTop: 1 }}>{typeLabel}{c.is_free ? ' · Miễn phí' : ''}</div>
                     </div>
                     {already ? (
-                      <span style={{ fontSize: 12, color: T.header, fontWeight: 600 }}>✓ Đang học</span>
+                      <span style={{ fontSize: 13, color: T.header, fontWeight: 600 }}>✓ Đang học</span>
                     ) : (
-                      <button onClick={() => handleEnroll(c.id)} disabled={enrolling === c.id} style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: enrolling === c.id ? .7 : 1 }}>
+                      <button onClick={() => handleEnroll(c.id)} disabled={enrolling === c.id} style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: enrolling === c.id ? .7 : 1 }}>
                         {enrolling === c.id ? '...' : '+ Thêm vào'}
                       </button>
                     )}
@@ -404,18 +404,18 @@ export default function StudentProfile({ studentId, onBack }: Props) {
           <Card>
             <SectionTitle>Timeline AI đã xử lý ({events.length})</SectionTitle>
             {events.length === 0 ? (
-              <div style={{ color: T.textMuted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>AI chưa xử lý sự kiện nào. Sau khi học sinh chat và nộp bài, AI sẽ tóm tắt ở đây.</div>
+              <div style={{ color: T.textMuted, fontSize: 14, textAlign: 'center', padding: '20px 0' }}>AI chưa xử lý sự kiện nào. Sau khi học sinh chat và nộp bài, AI sẽ tóm tắt ở đây.</div>
             ) : (
               <div style={{ position: 'relative', paddingLeft: 20 }}>
                 <div style={{ position: 'absolute', left: 7, top: 0, bottom: 0, width: 2, background: T.border, borderRadius: 1 }} />
                 {events.map(ev => (
                   <div key={ev.id} style={{ position: 'relative', marginBottom: 16 }}>
                     <div style={{ position: 'absolute', left: -17, top: 4, width: 10, height: 10, borderRadius: '50%', background: T.gold, border: `2px solid ${T.bg}` }} />
-                    <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 3 }}>{ev.event_type && <span style={{ color: T.gold, marginRight: 6 }}>{ev.event_type}</span>}{fmtDateTime(ev.created_at)}</div>
-                    <div style={{ fontSize: 13, color: T.text, lineHeight: 1.6 }}>{ev.summary}</div>
+                    <div style={{ fontSize: 12, color: T.textMuted, marginBottom: 3 }}>{ev.event_type && <span style={{ color: T.gold, marginRight: 6 }}>{ev.event_type}</span>}{fmtDateTime(ev.created_at)}</div>
+                    <div style={{ fontSize: 14, color: T.text, lineHeight: 1.6 }}>{ev.summary}</div>
                     {ev.tags && ev.tags.length > 0 && (
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
-                        {ev.tags.map(tag => <span key={tag} style={{ fontSize: 11, background: '#D8EDD8', color: '#1B6B3A', borderRadius: 4, padding: '2px 7px' }}>#{tag}</span>)}
+                        {ev.tags.map(tag => <span key={tag} style={{ fontSize: 12, background: '#D8EDD8', color: '#1B6B3A', borderRadius: 4, padding: '2px 7px' }}>#{tag}</span>)}
                       </div>
                     )}
                   </div>

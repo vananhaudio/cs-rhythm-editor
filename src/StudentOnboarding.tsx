@@ -272,21 +272,21 @@ export default function StudentOnboarding() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 22 }}>🎸</span>
           <div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>Thầy Văn Anh Guitar</div>
-            <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11 }}>Music Learning System</div>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>Thầy Văn Anh Guitar</div>
+            <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 12 }}>Music Learning System</div>
           </div>
         </div>
         {student && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{displayName(student)}</div>
-              <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11 }}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{displayName(student)}</div>
+              <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 12 }}>
                 {student.level ? LEVEL_LABEL[student.level] : 'Học sinh'}
               </div>
             </div>
             <Btn onClick={handleLogout} style={{
               background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)',
-              borderRadius: 8, color: 'rgba(255,255,255,.7)', padding: '6px 12px', fontSize: 12,
+              borderRadius: 8, color: 'rgba(255,255,255,.7)', padding: '6px 12px', fontSize: 13,
             }}>Đăng xuất</Btn>
           </div>
         )}
@@ -300,27 +300,27 @@ export default function StudentOnboarding() {
           <h1 style={{ fontSize: 28, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.2 }}>
             Chào mừng đến với<br /><span style={{ color: T.header }}>Thầy Văn Anh Guitar</span>
           </h1>
-          <p style={{ color: T.textMuted, fontSize: 15, lineHeight: 1.7, maxWidth: 380, margin: '0 0 32px' }}>
+          <p style={{ color: T.textMuted, fontSize: 16, lineHeight: 1.7, maxWidth: 380, margin: '0 0 32px' }}>
             Nơi hành trình âm nhạc của bạn bắt đầu. Học nhịp, hòa âm, và guitar theo lộ trình được thiết kế riêng cho bạn.
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 36 }}>
             {['Luyện nhịp', 'Hợp âm', 'Nhạc lý', 'AI trợ lý'].map(f => (
-              <span key={f} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 20, padding: '5px 14px', fontSize: 13, color: T.textMuted }}>{f}</span>
+              <span key={f} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 20, padding: '5px 14px', fontSize: 14, color: T.textMuted }}>{f}</span>
             ))}
           </div>
           <Btn onClick={() => setStep('login')} style={{
             background: T.header, color: '#fff', border: 'none', borderRadius: 12,
-            padding: '14px 40px', fontSize: 16, fontWeight: 700,
+            padding: '14px 40px', fontSize: 17, fontWeight: 700,
             boxShadow: `0 4px 16px rgba(27,107,58,.3)`,
           }}>Bắt đầu hành trình →</Btn>
-          <p style={{ color: T.textDim, fontSize: 12, marginTop: 16 }}>Đã là học sinh? Đăng nhập bên dưới.</p>
+          <p style={{ color: T.textDim, fontSize: 13, marginTop: 16 }}>Đã là học sinh? Đăng nhập bên dưới.</p>
 
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIOS && (
             <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360, width: '100%' }}>
               {!iapPurchased ? (
                 <>
-                  <div style={{ fontSize: 13, color: T.textMuted, marginBottom: 14 }}>
+                  <div style={{ fontSize: 14, color: T.textMuted, marginBottom: 14 }}>
                     Chưa có tài khoản? Đăng ký trực tiếp qua App Store:
                   </div>
                   <Btn
@@ -328,7 +328,7 @@ export default function StudentOnboarding() {
                     disabled={iapLoading}
                     style={{
                       background: '#1B4332', color: '#fff', border: 'none', borderRadius: 12,
-                      padding: '12px 28px', fontSize: 15, fontWeight: 700, width: '100%',
+                      padding: '12px 28px', fontSize: 16, fontWeight: 700, width: '100%',
                       opacity: iapLoading ? 0.6 : 1,
                     }}
                   >
@@ -337,7 +337,7 @@ export default function StudentOnboarding() {
 
                   {iapMsg && (
                     <div style={{
-                      marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 13,
+                      marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 14,
                       background: '#F0D8D0', color: '#8B3A1E', border: '1px solid #E4B8A8',
                     }}>{iapMsg.text}</div>
                   )}
@@ -347,12 +347,12 @@ export default function StudentOnboarding() {
                     disabled={iapLoading}
                     style={{
                       marginTop: 10, background: 'none', border: 'none',
-                      color: T.textDim, fontSize: 12, cursor: 'pointer',
+                      color: T.textDim, fontSize: 13, cursor: 'pointer',
                       textDecoration: 'underline', padding: '4px 0',
                     }}
                   >Khôi phục giao dịch đã mua</Btn>
 
-                  <div style={{ fontSize: 11, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
+                  <div style={{ fontSize: 12, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
                     Đăng ký tự động gia hạn mỗi tháng với giá $49.99/tháng. Tài khoản Apple ID của bạn sẽ bị tính phí khi xác nhận mua hàng. Đăng ký tự động gia hạn trừ khi tắt ít nhất 24 giờ trước khi hết kỳ thanh toán hiện tại.<br />
                     Huỷ bất kỳ lúc nào trong Cài đặt &gt; Apple ID &gt; Đăng ký.<br />
                     <a href="https://timming.vananhaudio.com/tvaprivacy"
@@ -367,33 +367,33 @@ export default function StudentOnboarding() {
               ) : (
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ fontWeight: 700, fontSize: 17, textAlign: 'center', marginBottom: 4 }}>Thanh toán thành công!</div>
-                  <div style={{ fontSize: 13, color: T.textMuted, textAlign: 'center', marginBottom: 20 }}>Tạo tài khoản để bắt đầu học ngay.</div>
+                  <div style={{ fontSize: 14, color: T.textMuted, textAlign: 'center', marginBottom: 20 }}>Tạo tài khoản để bắt đầu học ngay.</div>
 
                   <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: 'block', fontSize: 13, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Email</label>
+                    <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Email</label>
                     <input
                       value={iapRegEmail}
                       onChange={e => setIapRegEmail(e.target.value)}
                       placeholder="email@example.com"
                       type="email"
                       autoFocus
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 15, color: T.text, outline: 'none', fontFamily: 'inherit' }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
                     />
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: 13, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Mật khẩu</label>
+                    <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Mật khẩu</label>
                     <input
                       value={iapRegPass}
                       onChange={e => setIapRegPass(e.target.value)}
                       placeholder="Tối thiểu 6 ký tự"
                       type="password"
                       onKeyDown={e => e.key === 'Enter' && handleIAPRegister()}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 15, color: T.text, outline: 'none', fontFamily: 'inherit' }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
                     />
                   </div>
 
                   {iapRegError && (
-                    <div style={{ background: '#F0D8D0', border: '1px solid #E4B8A8', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#8B3A1E', marginBottom: 12 }}>
+                    <div style={{ background: '#F0D8D0', border: '1px solid #E4B8A8', borderRadius: 8, padding: '10px 14px', fontSize: 14, color: '#8B3A1E', marginBottom: 12 }}>
                       {iapRegError}
                     </div>
                   )}
@@ -403,7 +403,7 @@ export default function StudentOnboarding() {
                     disabled={iapRegLoading || !iapRegEmail || !iapRegPass}
                     style={{
                       width: '100%', background: T.header, color: '#fff', border: 'none',
-                      borderRadius: 12, padding: '13px', fontSize: 15, fontWeight: 700,
+                      borderRadius: 12, padding: '13px', fontSize: 16, fontWeight: 700,
                       opacity: (!iapRegEmail || !iapRegPass) ? 0.6 : 1,
                     }}
                   >
@@ -419,16 +419,16 @@ export default function StudentOnboarding() {
       {/* LOGIN */}
       {step === 'login' && (
         <div style={{ maxWidth: 420, margin: '0 auto', padding: '40px 24px', minHeight: 'calc(100vh - 56px)' }}>
-          <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 13, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>
+          <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 14, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>
 
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px' }}>Đăng nhập</h2>
 
           {/* Email */}
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 13, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Email</label>
+            <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Email</label>
             <input value={email} onChange={e => setEmail(e.target.value)}
               placeholder="email@example.com" type="email"
-              style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 15, color: T.text, outline: 'none', fontFamily: 'inherit' }}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
               onFocus={e => (e.currentTarget.style.borderColor = T.header)}
               onBlur={e => (e.currentTarget.style.borderColor = T.border)}
             />
@@ -436,43 +436,43 @@ export default function StudentOnboarding() {
 
           {/* Password */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 13, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Mật khẩu</label>
+            <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Mật khẩu</label>
             <div style={{ position: 'relative' }}>
               <input ref={passRef} value={password} onChange={e => setPassword(e.target.value)}
                 type={showPass ? 'text' : 'password'} placeholder="••••••••"
                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 44px 12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 15, color: T.text, outline: 'none', fontFamily: 'inherit' }}
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 44px 12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
                 onFocus={e => (e.currentTarget.style.borderColor = T.header)}
                 onBlur={e => (e.currentTarget.style.borderColor = T.border)}
               />
-              <Btn onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: T.textDim, fontSize: 16, padding: 4 }}>
+              <Btn onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: T.textDim, fontSize: 17, padding: 4 }}>
                 {showPass ? '🙈' : '👁'}
               </Btn>
             </div>
           </div>
 
           {loginError && (
-            <div style={{ background: T.dangerBg, border: `1px solid #F0C4B0`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: T.danger, marginBottom: 16 }}>
+            <div style={{ background: T.dangerBg, border: `1px solid #F0C4B0`, borderRadius: 8, padding: '10px 14px', fontSize: 14, color: T.danger, marginBottom: 16 }}>
               {loginError}
             </div>
           )}
 
           <Btn onClick={handleLogin} disabled={loggingIn || !email || !password} style={{
             width: '100%', background: loggingIn ? T.textDim : T.header, color: '#fff',
-            border: 'none', borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700,
+            border: 'none', borderRadius: 12, padding: '14px', fontSize: 16, fontWeight: 700,
             opacity: (!email || !password) ? 0.6 : 1,
           }}>
             {loggingIn ? 'Đang đăng nhập...' : 'Đăng nhập →'}
           </Btn>
 
           {resetSent ? (
-            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: '#E8F2EC', border: '1px solid #B0D4BC', fontSize: 13, color: '#1B4332', textAlign: 'center' }}>
+            <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: '#E8F2EC', border: '1px solid #B0D4BC', fontSize: 14, color: '#1B4332', textAlign: 'center' }}>
               ✅ Đã gửi email đặt lại mật khẩu. Kiểm tra hộp thư.
             </div>
           ) : (
             <Btn onClick={handleForgotPassword} disabled={resetLoading} style={{
               marginTop: 12, width: '100%', background: 'none', border: 'none',
-              color: T.textDim, fontSize: 13, textDecoration: 'underline', cursor: 'pointer',
+              color: T.textDim, fontSize: 14, textDecoration: 'underline', cursor: 'pointer',
             }}>
               {resetLoading ? 'Đang gửi...' : 'Quên mật khẩu?'}
             </Btn>
@@ -507,25 +507,25 @@ function PortalView({ student, onLogout }: { student: Student; onLogout: () => v
       {/* Welcome banner */}
       <div style={{ background: T.header, borderRadius: 16, padding: '22px 24px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 12, marginBottom: 4 }}>Chào mừng trở lại 👋</div>
+          <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 13, marginBottom: 4 }}>Chào mừng trở lại 👋</div>
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 20, marginBottom: 6 }}>{displayName(student)}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {student.level && (
-              <span style={{ background: 'rgba(255,255,255,.15)', color: '#fff', borderRadius: 6, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
+              <span style={{ background: 'rgba(255,255,255,.15)', color: '#fff', borderRadius: 6, padding: '3px 10px', fontSize: 13, fontWeight: 600 }}>
                 {LEVEL_LABEL[student.level]}
               </span>
             )}
-            <span style={{ color: 'rgba(255,255,255,.6)', fontSize: 12 }}>{unlockedCount}/{TOOLS.length} công cụ mở khoá</span>
+            <span style={{ color: 'rgba(255,255,255,.6)', fontSize: 13 }}>{unlockedCount}/{TOOLS.length} công cụ mở khoá</span>
           </div>
         </div>
         <div style={{ minWidth: 160 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,.6)', fontSize: 11, marginBottom: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,.6)', fontSize: 12, marginBottom: 6 }}>
             <span>Tiến độ</span><span>{unlockedCount * 10} XP</span>
           </div>
           <div style={{ height: 6, background: 'rgba(255,255,255,.2)', borderRadius: 3, overflow: 'hidden' }}>
             <div style={{ height: '100%', borderRadius: 3, background: '#C8A84B', width: `${Math.min(100, (unlockedCount / TOOLS.length) * 100)}%` }} />
           </div>
-          <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 10, marginTop: 4 }}>{TOOLS.length - unlockedCount} công cụ chờ mở khoá</div>
+          <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 11, marginTop: 4 }}>{TOOLS.length - unlockedCount} công cụ chờ mở khoá</div>
         </div>
       </div>
 
@@ -539,7 +539,7 @@ function PortalView({ student, onLogout }: { student: Student; onLogout: () => v
           <button key={a.label} onClick={() => a.route !== '#' && (window.location.href = a.route)}
             style={{ background: a.hot ? T.header : T.bgCard, border: `1.5px solid ${a.hot ? T.header : T.borderLight}`, borderRadius: 12, padding: '14px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'inherit', transition: 'transform .1s' }}>
             <span style={{ fontSize: 22 }}>{a.icon}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: a.hot ? '#fff' : T.text }}>{a.label}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: a.hot ? '#fff' : T.text }}>{a.label}</span>
           </button>
         ))}
       </div>
@@ -550,8 +550,8 @@ function PortalView({ student, onLogout }: { student: Student; onLogout: () => v
         return (
           <div key={cat} style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${T.borderLight}` }}>
-              <span style={{ fontWeight: 600, fontSize: 14 }}>{cat}</span>
-              <span style={{ fontSize: 12, color: T.textDim }}>{catTools.filter(t => unlockedTiers.includes(t.tier)).length}/{catTools.length}</span>
+              <span style={{ fontWeight: 600, fontSize: 15 }}>{cat}</span>
+              <span style={{ fontSize: 13, color: T.textDim }}>{catTools.filter(t => unlockedTiers.includes(t.tier)).length}/{catTools.length}</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
               {catTools.map(tool => {
@@ -559,12 +559,12 @@ function PortalView({ student, onLogout }: { student: Student; onLogout: () => v
                 return (
                   <button key={tool.id} onClick={() => handleToolClick(tool)} disabled={!unlocked}
                     style={{ background: unlocked ? T.bgLight : T.bgCard, border: `1.5px solid ${unlocked ? T.border : T.borderLight}`, borderRadius: 10, padding: '12px', display: 'flex', flexDirection: 'column', gap: 5, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : 0.6, textAlign: 'left', fontFamily: 'inherit', position: 'relative', transition: 'transform .1s' }}>
-                    {!unlocked && <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 12, opacity: .5 }}>🔒</span>}
-                    {unlocked && <span style={{ position: 'absolute', top: 8, right: 8, background: T.greenLight, borderRadius: 4, padding: '1px 6px', fontSize: 10, color: T.greenMid, fontWeight: 600, border: `1px solid ${T.borderLight}` }}>Mở</span>}
+                    {!unlocked && <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 13, opacity: .5 }}>🔒</span>}
+                    {unlocked && <span style={{ position: 'absolute', top: 8, right: 8, background: T.greenLight, borderRadius: 4, padding: '1px 6px', fontSize: 11, color: T.greenMid, fontWeight: 600, border: `1px solid ${T.borderLight}` }}>Mở</span>}
                     <span style={{ fontSize: 22 }}>{tool.icon}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{tool.name}</span>
-                    <span style={{ fontSize: 11, color: T.textMuted, lineHeight: 1.4 }}>{tool.desc}</span>
-                    {!unlocked && <span style={{ fontSize: 10, color: '#A07820', fontWeight: 600, marginTop: 2 }}>Cần: {TIER_LABEL[tool.tier]}</span>}
+                    <span style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{tool.name}</span>
+                    <span style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.4 }}>{tool.desc}</span>
+                    {!unlocked && <span style={{ fontSize: 11, color: '#A07820', fontWeight: 600, marginTop: 2 }}>Cần: {TIER_LABEL[tool.tier]}</span>}
                   </button>
                 )
               })}
@@ -575,8 +575,8 @@ function PortalView({ student, onLogout }: { student: Student; onLogout: () => v
 
       <div style={{ background: T.bgCard, border: `1px solid ${T.borderLight}`, borderRadius: 12, padding: '16px 20px', textAlign: 'center', marginTop: 8 }}>
         <div style={{ fontSize: 20, marginBottom: 6 }}>💡</div>
-        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Muốn mở khoá thêm công cụ?</div>
-        <div style={{ fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>Hoàn thành bài tập và học chăm chỉ để lên cấp. Thầy sẽ cấp quyền thêm khi bạn tiến bộ!</div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>Muốn mở khoá thêm công cụ?</div>
+        <div style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6 }}>Hoàn thành bài tập và học chăm chỉ để lên cấp. Thầy sẽ cấp quyền thêm khi bạn tiến bộ!</div>
       </div>
     </div>
   )

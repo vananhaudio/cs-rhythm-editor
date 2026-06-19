@@ -157,11 +157,11 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   }
 
   const card: React.CSSProperties = { background: D.surface, borderRadius: 12, boxShadow: D.shadow, overflow: 'hidden' }
-  const btnPrimary: React.CSSProperties = { background: D.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
-  const btnSecondary: React.CSSProperties = { background: 'none', color: D.text2, border: `1px solid ${D.border}`, borderRadius: 8, padding: '8px 16px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }
+  const btnPrimary: React.CSSProperties = { background: D.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }
+  const btnSecondary: React.CSSProperties = { background: 'none', color: D.text2, border: `1px solid ${D.border}`, borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: D.bg, fontFamily: '"Inter", system-ui, sans-serif', color: D.text1, fontSize: 14 }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: D.bg, fontFamily: '"Inter", system-ui, sans-serif', color: D.text1, fontSize: 15 }}>
 
       {/* Sidebar */}
       <aside style={{ width: collapsed ? 52 : 200, flexShrink: 0, background: D.surface, borderRight: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', transition: 'width .2s', overflow: 'hidden' }}>
@@ -177,15 +177,15 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             { icon: '♫',  label: 'Sống cùng âm nhạc' },
           ].map(item => (
             <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? 10 : '9px 10px', borderRadius: 8, cursor: 'pointer', background: item.active ? D.accentLight : 'transparent', color: item.active ? D.accent : D.text2, fontWeight: item.active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', marginBottom: 1, justifyContent: collapsed ? 'center' : 'flex-start' }}>
-              <span style={{ fontSize: 15, flexShrink: 0 }}>{item.icon}</span>
-              {!collapsed && <span style={{ fontSize: 13 }}>{item.label}</span>}
+              <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+              {!collapsed && <span style={{ fontSize: 14 }}>{item.label}</span>}
             </div>
           ))}
         </nav>
         <div style={{ borderTop: `1px solid ${D.border}`, padding: 8 }}>
           <div onClick={onLogout} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? 10 : '9px 10px', borderRadius: 8, cursor: 'pointer', color: D.text3, justifyContent: collapsed ? 'center' : 'flex-start' }}>
             <span>⎋</span>
-            {!collapsed && <span style={{ fontSize: 13 }}>Đăng xuất</span>}
+            {!collapsed && <span style={{ fontSize: 14 }}>Đăng xuất</span>}
           </div>
         </div>
       </aside>
@@ -196,26 +196,26 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
         {/* Header */}
         <header style={{ background: D.surface, borderBottom: `1px solid ${D.border}`, padding: '0 24px', height: 54, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: D.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🎸</div>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: D.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>🎸</div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>Thầy Văn Anh Guitar</div>
-              <div style={{ fontSize: 10, color: D.text3 }}>Music Learning System</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>Thầy Văn Anh Guitar</div>
+              <div style={{ fontSize: 11, color: D.text3 }}>Music Learning System</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ background: artistLevel.color + '15', border: `1px solid ${artistLevel.color}33`, borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: artistLevel.color }}>{artistLevel.label}</span>
-              <span style={{ fontSize: 11, color: D.text3 }}>· {totalXP.toLocaleString()} XP</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: artistLevel.color }}>{artistLevel.label}</span>
+              <span style={{ fontSize: 12, color: D.text3 }}>· {totalXP.toLocaleString()} XP</span>
             </div>
             <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#C2410C' }}>{weekXP.toLocaleString()}</span>
-              <span style={{ fontSize: 11, color: '#92400E' }}>XP tuần này</span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#C2410C' }}>{weekXP.toLocaleString()}</span>
+              <span style={{ fontSize: 12, color: '#92400E' }}>XP tuần này</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 10px 4px 4px', borderRadius: 8, border: `1px solid ${D.border}`, cursor: 'pointer' }}>
-              <div style={{ width: 28, height: 28, borderRadius: 7, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: D.accent, fontWeight: 700, overflow: 'hidden' }}>
+              <div style={{ width: 28, height: 28, borderRadius: 7, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: D.accent, fontWeight: 700, overflow: 'hidden' }}>
                 {student.avatar_url ? <img src={student.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.charAt(0).toUpperCase()}
               </div>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>{name}</span>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{name}</span>
             </div>
           </div>
         </header>
@@ -230,26 +230,26 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                 {student.avatar_url ? <img src={student.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div style={{ fontSize: 10, color: D.text3, marginBottom: 2 }}>Xin chào</div>
-                <div style={{ fontWeight: 800, fontSize: 15 }}>{name}</div>
-                <div style={{ fontSize: 11, color: D.text3, marginTop: 2 }}>{enrollments.length} khoá · {completedIds.size} bài học</div>
+                <div style={{ fontSize: 11, color: D.text3, marginBottom: 2 }}>Xin chào</div>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>{name}</div>
+                <div style={{ fontSize: 12, color: D.text3, marginTop: 2 }}>{enrollments.length} khoá · {completedIds.size} bài học</div>
               </div>
             </div>
             <div style={{ padding: '16px 20px', borderRight: `1px solid ${D.border}` }}>
-              <div style={{ fontSize: 10, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Cấp độ nghệ sĩ</div>
-              <div style={{ fontWeight: 800, fontSize: 14, color: artistLevel.color, marginBottom: 6 }}>{artistLevel.label}</div>
+              <div style={{ fontSize: 11, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Cấp độ nghệ sĩ</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: artistLevel.color, marginBottom: 6 }}>{artistLevel.label}</div>
               <Bar pct={levelPct} color={artistLevel.color} />
-              {nextLevel && <div style={{ fontSize: 10, color: D.text3, marginTop: 4 }}>{totalXP.toLocaleString()} / {nextLevel.min.toLocaleString()} XP</div>}
+              {nextLevel && <div style={{ fontSize: 11, color: D.text3, marginTop: 4 }}>{totalXP.toLocaleString()} / {nextLevel.min.toLocaleString()} XP</div>}
             </div>
             <div style={{ padding: '16px 20px', borderRight: `1px solid ${D.border}` }}>
-              <div style={{ fontSize: 10, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Tuần này</div>
-              <div style={{ fontSize: 24, fontWeight: 900 }}>{weekXP.toLocaleString()}<span style={{ fontSize: 11, color: D.text3, fontWeight: 400 }}> XP</span></div>
-              {weekDiff !== null && <div style={{ fontSize: 11, fontWeight: 700, color: weekDiff >= 0 ? D.success : '#EF4444', marginTop: 4 }}>{weekDiff >= 0 ? '↑' : '↓'}{Math.abs(weekDiff)}% vs tuần trước</div>}
+              <div style={{ fontSize: 11, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Tuần này</div>
+              <div style={{ fontSize: 24, fontWeight: 900 }}>{weekXP.toLocaleString()}<span style={{ fontSize: 12, color: D.text3, fontWeight: 400 }}> XP</span></div>
+              {weekDiff !== null && <div style={{ fontSize: 12, fontWeight: 700, color: weekDiff >= 0 ? D.success : '#EF4444', marginTop: 4 }}>{weekDiff >= 0 ? '↑' : '↓'}{Math.abs(weekDiff)}% vs tuần trước</div>}
             </div>
             <div style={{ padding: '16px 20px' }}>
-              <div style={{ fontSize: 10, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Xếp hạng lớp</div>
+              <div style={{ fontSize: 11, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Xếp hạng lớp</div>
               <div style={{ fontSize: 24, fontWeight: 900 }}>{rankPct !== null ? `Top ${100 - rankPct}%` : '—'}</div>
-              {classRank && <div style={{ fontSize: 11, color: D.text3, marginTop: 4 }}>#{classRank.rank} / {classRank.total} học sinh</div>}
+              {classRank && <div style={{ fontSize: 12, color: D.text3, marginTop: 4 }}>#{classRank.rank} / {classRank.total} học sinh</div>}
             </div>
           </div>
 
@@ -260,37 +260,37 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             <div style={card}>
               <div style={{ padding: '14px 20px 12px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}></div>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}></div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 12 }}>HỌC KIẾN THỨC</div>
-                    <div style={{ fontSize: 10, color: D.text3 }}>Hiểu · Biết · Nắm vững</div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>HỌC KIẾN THỨC</div>
+                    <div style={{ fontSize: 11, color: D.text3 }}>Hiểu · Biết · Nắm vững</div>
                   </div>
                 </div>
-                <span style={{ fontSize: 11, color: D.accent }}>{enrollments.length} khoá</span>
+                <span style={{ fontSize: 12, color: D.accent }}>{enrollments.length} khoá</span>
               </div>
               <div style={{ padding: '14px 20px', borderBottom: `1px solid ${D.border}` }}>
                 {mainCourse ? (
                   <>
                     <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                      <div style={{ width: 38, height: 38, borderRadius: 9, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🎸</div>
+                      <div style={{ width: 38, height: 38, borderRadius: 9, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>🎸</div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{mainCourse.course?.name}</div>
+                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{mainCourse.course?.name}</div>
                         <Bar pct={completedIds.size > 0 ? 30 : 0} />
                       </div>
                     </div>
                     <button onClick={() => window.location.href = '/course?id=' + mainCourse.course_id} style={{ ...btnPrimary, width: '100%', textAlign: 'center' }}>Học ngay →</button>
                   </>
                 ) : (
-                  <div style={{ textAlign: 'center', padding: 16, color: D.text3, fontSize: 12 }}>Chưa có khoá học</div>
+                  <div style={{ textAlign: 'center', padding: 16, color: D.text3, fontSize: 13 }}>Chưa có khoá học</div>
                 )}
               </div>
               <div style={{ padding: '10px 20px', maxHeight: 180, overflowY: 'auto' }}>
                 {enrollments.map((e, i) => (
                   <div key={e.id} onClick={() => window.location.href = '/course?id=' + e.course_id}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: i > 0 ? `1px solid ${D.borderLight}` : 'none', cursor: 'pointer' }}>
-                    <div style={{ width: 26, height: 26, borderRadius: 6, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>🎸</div>
-                    <div style={{ flex: 1, fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.course?.name}</div>
-                    <span style={{ fontSize: 11, color: D.accent }}>›</span>
+                    <div style={{ width: 26, height: 26, borderRadius: 6, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>🎸</div>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.course?.name}</div>
+                    <span style={{ fontSize: 12, color: D.accent }}>›</span>
                   </div>
                 ))}
               </div>
@@ -299,10 +299,10 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             {/* COL 2 — Luyện tập */}
             <div style={card}>
               <div style={{ padding: '14px 20px 12px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}></div>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}></div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 12 }}>HÔM NAY LUYỆN GÌ?</div>
-                  <div style={{ fontSize: 10, color: D.text3 }}>Luyện · Thực hành · Tiến bộ</div>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>HÔM NAY LUYỆN GÌ?</div>
+                  <div style={{ fontSize: 11, color: D.text3 }}>Luyện · Thực hành · Tiến bộ</div>
                 </div>
               </div>
               <div style={{ padding: '8px 14px', maxHeight: 280, overflowY: 'auto' }}>
@@ -313,22 +313,22 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                   return (
                     <div key={ex.id} style={{ padding: '8px 0', borderTop: i > 0 ? `1px solid ${D.borderLight}` : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 8, background: ex.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{ex.icon}</div>
+                        <div style={{ width: 30, height: 30, borderRadius: 8, background: ex.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{ex.icon}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>{ex.name}</div>
-                          <div style={{ fontSize: 10, color: D.text3 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{ex.name}</div>
+                          <div style={{ fontSize: 11, color: D.text3 }}>
                             <span style={{ color: ex.color, fontWeight: 700 }}>{(totalMin/60).toFixed(1)}h</span>
                             {todayMin > 0 && <span style={{ color: D.success }}> · {todayMin}ph hôm nay</span>}
                           </div>
                         </div>
                         {isActive ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 13, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</span>
-                            <button onClick={stopTimer} style={{ background: '#EF4444', border: 'none', borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Dừng</button>
+                            <span style={{ fontSize: 14, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</span>
+                            <button onClick={stopTimer} style={{ background: '#EF4444', border: 'none', borderRadius: 7, padding: '4px 10px', fontSize: 12, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Dừng</button>
                           </div>
                         ) : (
                           <button onClick={() => startTimer(ex.id)} disabled={!!activeTimer}
-                            style={{ background: activeTimer ? D.bg : ex.color, border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 11, fontWeight: 700, color: activeTimer ? D.text3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>▶</button>
+                            style={{ background: activeTimer ? D.bg : ex.color, border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 12, fontWeight: 700, color: activeTimer ? D.text3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>▶</button>
                         )}
                       </div>
                       {totalMin > 0 && <div style={{ marginTop: 5 }}><Bar pct={Math.min(100, totalMin / (1000*60) * 100)} color={ex.color} h={2} /></div>}
@@ -343,7 +343,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                     return (
                       <div key={t.id} onClick={() => { if (unlocked && t.route) window.location.href = t.route }}
                         style={{ background: unlocked ? D.accentLight : D.bg, border: `1px solid ${D.border}`, borderRadius: 7, padding: '7px 6px', textAlign: 'center', cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5 }}>
-                        <div style={{ fontSize: 13, marginBottom: 2 }}>{t.icon}</div>
+                        <div style={{ fontSize: 14, marginBottom: 2 }}>{t.icon}</div>
                         <div style={{ fontSize: 9, color: D.text2, fontWeight: 500, lineHeight: 1.3 }}>{t.name}</div>
                       </div>
                     )
@@ -356,20 +356,20 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
             <div style={card}>
               <div style={{ padding: '14px 20px 12px', borderBottom: `1px solid ${D.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}></div>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: D.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}></div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 12 }}>MY SONGS</div>
-                    <div style={{ fontSize: 10, color: D.text3 }}>Hành trình chinh phục</div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>MY SONGS</div>
+                    <div style={{ fontSize: 11, color: D.text3 }}>Hành trình chinh phục</div>
                   </div>
                 </div>
-                {mySongs.length > 0 && <span style={{ fontSize: 11, color: D.accent }}>{mySongs.length} bài</span>}
+                {mySongs.length > 0 && <span style={{ fontSize: 12, color: D.accent }}>{mySongs.length} bài</span>}
               </div>
               <div style={{ padding: '12px 14px', borderBottom: `1px solid ${D.border}`, maxHeight: 220, overflowY: 'auto' }}>
                 {mySongs.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '16px 0' }}>
                     <div style={{ fontSize: 24, marginBottom: 8 }}>🎸</div>
-                    <div style={{ fontSize: 12, color: D.text3, marginBottom: 12 }}>Chưa có bài hát nào</div>
-                    <button onClick={() => window.location.href = '/tempo'} style={{ ...btnPrimary, fontSize: 12, padding: '7px 16px' }}>🥁 Tap Tempo →</button>
+                    <div style={{ fontSize: 13, color: D.text3, marginBottom: 12 }}>Chưa có bài hát nào</div>
+                    <button onClick={() => window.location.href = '/tempo'} style={{ ...btnPrimary, fontSize: 13, padding: '7px 16px' }}>🥁 Tap Tempo →</button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -379,10 +379,10 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                       return (
                         <div key={s.id} style={{ background: D.bg, borderRadius: 10, padding: '10px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                            <span style={{ fontSize: 15 }}>{st.icon}</span>
+                            <span style={{ fontSize: 16 }}>{st.icon}</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
-                              <div style={{ fontSize: 10, color: D.text3 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
+                              <div style={{ fontSize: 11, color: D.text3 }}>
                                 {s.artist && `${s.artist} · `}
                                 {s.tempo && <span style={{ color: st.color, fontWeight: 700 }}>{s.tempo} BPM</span>}
                               </div>
@@ -397,20 +397,20 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                         </div>
                       )
                     })}
-                    <button onClick={() => window.location.href = '/tempo'} style={{ ...btnSecondary, fontSize: 11, padding: 7 }}>+ Thêm bài hát mới</button>
+                    <button onClick={() => window.location.href = '/tempo'} style={{ ...btnSecondary, fontSize: 12, padding: 7 }}>+ Thêm bài hát mới</button>
                   </div>
                 )}
               </div>
               <div style={{ padding: '12px 14px' }}>
-                <div style={{ fontSize: 10, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Sự kiện sắp tới</div>
-                <div style={{ fontSize: 11, color: D.text3, textAlign: 'center', padding: '12px 0' }}>Chưa có sự kiện nào</div>
+                <div style={{ fontSize: 11, color: D.text3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Sự kiện sắp tới</div>
+                <div style={{ fontSize: 12, color: D.text3, textAlign: 'center', padding: '12px 0' }}>Chưa có sự kiện nào</div>
               </div>
             </div>
           </div>
 
           {/* Bottom stats */}
           <div style={{ ...card, display: 'flex', alignItems: 'center', padding: '14px 24px', gap: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginRight: 28, flexShrink: 0 }}>Thành Quả</div>
+            <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginRight: 28, flexShrink: 0 }}>Thành Quả</div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
               {[
                 { icon: '', v: mySongs.length,     label: 'bài hát' },
@@ -420,9 +420,9 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                 { icon: '', v: mySongs.filter(s => s.status === 'mastered').length, label: 'bài thuần thục' },
               ].map((a, i, arr) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, paddingRight: i < arr.length-1 ? 24 : 0, marginRight: i < arr.length-1 ? 24 : 0, borderRight: i < arr.length-1 ? `1px solid ${D.border}` : 'none' }}>
-                  <span style={{ fontSize: 16 }}>{a.icon}</span>
+                  <span style={{ fontSize: 17 }}>{a.icon}</span>
                   <span style={{ fontSize: 20, fontWeight: 800, color: D.accent }}>{a.v}</span>
-                  <span style={{ fontSize: 11, color: D.text3 }}>{a.label}</span>
+                  <span style={{ fontSize: 12, color: D.text3 }}>{a.label}</span>
                 </div>
               ))}
             </div>

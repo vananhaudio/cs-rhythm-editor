@@ -40,16 +40,16 @@ function SectionHeader({ n, title }: { n: string; title: string }) {
   return (
     <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20}}>
       <span style={{width:20,height:20,borderRadius:'50%',background:C.green,color:'#fff',fontSize:9,fontWeight:700,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>{n}</span>
-      <span style={{fontSize:11,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.textSub}}>{title}</span>
+      <span style={{fontSize:12,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:C.textSub}}>{title}</span>
     </div>
   );
 }
 
 const card: React.CSSProperties = {background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:'24px 28px',boxShadow:'0 1px 4px rgba(31,41,51,0.06)',marginBottom:16};
-const inp: React.CSSProperties = {background:C.surface2,border:`1px solid ${C.border}`,borderRadius:8,padding:'9px 13px',fontSize:13,color:C.text,fontFamily:'inherit',outline:'none'};
-const btnSolid = (bg: string, fg = '#fff'): React.CSSProperties => ({background:bg,border:'none',borderRadius:8,color:fg,fontSize:13,fontWeight:600,padding:'10px 20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:7,transition:'opacity 0.15s'});
-const btnOutline: React.CSSProperties = {background:'transparent',border:`1px solid ${C.borderMid}`,borderRadius:8,color:C.textSub,fontSize:12,fontWeight:500,padding:'7px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:5};
-const tagStyle: React.CSSProperties = {background:C.surface2,border:`1px solid ${C.border}`,borderRadius:5,padding:'3px 10px',fontSize:11,color:C.textSub};
+const inp: React.CSSProperties = {background:C.surface2,border:`1px solid ${C.border}`,borderRadius:8,padding:'9px 13px',fontSize:14,color:C.text,fontFamily:'inherit',outline:'none'};
+const btnSolid = (bg: string, fg = '#fff'): React.CSSProperties => ({background:bg,border:'none',borderRadius:8,color:fg,fontSize:14,fontWeight:600,padding:'10px 20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:7,transition:'opacity 0.15s'});
+const btnOutline: React.CSSProperties = {background:'transparent',border:`1px solid ${C.borderMid}`,borderRadius:8,color:C.textSub,fontSize:13,fontWeight:500,padding:'7px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:5};
+const tagStyle: React.CSSProperties = {background:C.surface2,border:`1px solid ${C.border}`,borderRadius:5,padding:'3px 10px',fontSize:12,color:C.textSub};
 
 const MOCK: TimingJSON = {
   title:'Demo Song',tempo:80,duration:60,
@@ -421,18 +421,18 @@ export default function YouTubeSyncPage() {
       {/* Header */}
       <header style={{background:C.header,height:52,display:'flex',alignItems:'center',padding:'0 28px',gap:16,boxShadow:'0 2px 8px rgba(0,0,0,0.2)'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <div style={{width:28,height:28,background:C.goldStrong,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,color:'#fff'}}>C#</div>
+          <div style={{width:28,height:28,background:C.goldStrong,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:13,color:'#fff'}}>C#</div>
           <div style={{width:1,height:20,background:'rgba(255,255,255,0.12)'}}/>
-          <span style={{fontSize:12,color:'rgba(255,255,255,0.65)'}}>Thầy Văn Anh</span>
+          <span style={{fontSize:13,color:'rgba(255,255,255,0.65)'}}>Thầy Văn Anh</span>
         </div>
         <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:12}}>
-          <span style={{fontSize:14,fontWeight:700,color:'#fff'}}>YouTube Sync</span>
-          <span style={{fontSize:11,color:'rgba(255,255,255,0.4)',background:'rgba(255,255,255,0.08)',borderRadius:4,padding:'2px 10px'}}>Căn chỉnh timing</span>
-          {playerReady&&<span style={{fontSize:10,color:'rgba(255,255,255,0.5)',display:'flex',alignItems:'center',gap:5}}><span style={{width:5,height:5,borderRadius:'50%',background:'#4CAF50',display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>Video đã kết nối</span>}
+          <span style={{fontSize:15,fontWeight:700,color:'#fff'}}>YouTube Sync</span>
+          <span style={{fontSize:12,color:'rgba(255,255,255,0.4)',background:'rgba(255,255,255,0.08)',borderRadius:4,padding:'2px 10px'}}>Căn chỉnh timing</span>
+          {playerReady&&<span style={{fontSize:11,color:'rgba(255,255,255,0.5)',display:'flex',alignItems:'center',gap:5}}><span style={{width:5,height:5,borderRadius:'50%',background:'#4CAF50',display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>Video đã kết nối</span>}
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>{window.location.href='/editor';}} style={{background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.14)',borderRadius:7,color:'rgba(255,255,255,0.75)',fontSize:12,padding:'5px 12px',cursor:'pointer'}}>← Editor</button>
-          <button onClick={()=>{window.location.href='/player';}} style={{background:C.goldStrong,border:'none',borderRadius:7,color:'#fff',fontSize:12,fontWeight:600,padding:'5px 14px',cursor:'pointer'}}>Player →</button>
+          <button onClick={()=>{window.location.href='/editor';}} style={{background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.14)',borderRadius:7,color:'rgba(255,255,255,0.75)',fontSize:13,padding:'5px 12px',cursor:'pointer'}}>← Editor</button>
+          <button onClick={()=>{window.location.href='/player';}} style={{background:C.goldStrong,border:'none',borderRadius:7,color:'#fff',fontSize:13,fontWeight:600,padding:'5px 14px',cursor:'pointer'}}>Player →</button>
         </div>
       </header>
 
@@ -445,9 +445,9 @@ export default function YouTubeSyncPage() {
             <span style={{flex:1}}/>
             {selectedTitle?(
               <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <span style={{fontSize:13,fontWeight:700,color:C.green}}>♪ {selectedTitle}</span>
+                <span style={{fontSize:14,fontWeight:700,color:C.green}}>♪ {selectedTitle}</span>
                 <button onClick={()=>{setSelectedTitle(null);setJsonData(null);setJsonFileName('');offsetRef.current=0;}}
-                  style={{...btnOutline,color:C.red,borderColor:C.red+'55',fontSize:12}}>✕ Đổi bài</button>
+                  style={{...btnOutline,color:C.red,borderColor:C.red+'55',fontSize:13}}>✕ Đổi bài</button>
               </div>
             ):(
               <button onClick={()=>setShowSongList(true)}
@@ -460,7 +460,7 @@ export default function YouTubeSyncPage() {
           {/* URL + JSON upload */}
           <div style={{display:'flex',gap:10,alignItems:'flex-end',flexWrap:'wrap',marginTop:selectedTitle?8:0}}>
             <div style={{flex:2,minWidth:280,display:'flex',flexDirection:'column',gap:6}}>
-              <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>YouTube URL</label>
+              <label style={{fontSize:11,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>YouTube URL</label>
               <div style={{display:'flex',gap:6}}>
                 <input style={{...inp,flex:1}} value={youtubeUrl}
                   onChange={e=>{setYoutubeUrl(e.target.value);setUrlError('');}}
@@ -475,7 +475,7 @@ export default function YouTubeSyncPage() {
                       style={{
                         width:38,height:38,borderRadius:'50%',border:'none',
                         background:isPlaying?C.wood:C.green,color:'#fff',
-                        fontSize:16,cursor:'pointer',display:'flex',
+                        fontSize:17,cursor:'pointer',display:'flex',
                         alignItems:'center',justifyContent:'center',
                         boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`,
                       }}>
@@ -483,16 +483,16 @@ export default function YouTubeSyncPage() {
                     </button>
                     <div style={{display:'flex',alignItems:'center',gap:6,padding:'0 12px',background:C.greenTint,borderRadius:8,border:`1px solid ${C.green}22`,height:38}}>
                       <span style={{width:7,height:7,borderRadius:'50%',background:C.green,display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
-                      <span style={{fontSize:12,color:C.green,fontWeight:600}}>Sẵn sàng</span>
+                      <span style={{fontSize:13,color:C.green,fontWeight:600}}>Sẵn sàng</span>
                     </div>
                   </div>
                 )}
               </div>
-              {urlError&&<div style={{fontSize:11,color:C.red}}>⚠ {urlError}</div>}
+              {urlError&&<div style={{fontSize:12,color:C.red}}>⚠ {urlError}</div>}
             </div>
             {!selectedTitle&&(
               <div style={{flex:1,minWidth:180,display:'flex',flexDirection:'column',gap:6}}>
-                <label style={{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>Hoặc upload JSON</label>
+                <label style={{fontSize:11,fontWeight:600,color:C.textDim,letterSpacing:'0.08em',textTransform:'uppercase'}}>Hoặc upload JSON</label>
                 <label style={{cursor:'pointer'}}>
                   <div style={{...inp,display:'flex',alignItems:'center',gap:8,color:jsonFileName?C.text:C.textDim,cursor:'pointer'}}>
                     <span>📄</span>
@@ -501,13 +501,13 @@ export default function YouTubeSyncPage() {
                   </div>
                   <input type="file" accept=".json" onChange={uploadJson} style={{display:'none'}}/>
                 </label>
-                {jsonParseError&&<div style={{fontSize:11,color:C.red}}>⚠ {jsonParseError}</div>}
+                {jsonParseError&&<div style={{fontSize:12,color:C.red}}>⚠ {jsonParseError}</div>}
               </div>
             )}
             {jsonData?.tempo&&(
               <div style={{display:'flex',alignItems:'center',gap:6,paddingBottom:1}}>
                 <div style={{...inp,fontFamily:'monospace',fontSize:18,fontWeight:700,color:C.green,width:64,textAlign:'center',padding:'8px'}}>{jsonData.tempo}</div>
-                <span style={{fontSize:11,color:C.textDim}}>BPM</span>
+                <span style={{fontSize:12,color:C.textDim}}>BPM</span>
               </div>
             )}
           </div>
@@ -550,8 +550,8 @@ export default function YouTubeSyncPage() {
                         <button key={barIdx} ref={isAct?activeBarRef:undefined}
                           onClick={()=>seekTo(t1)}
                           style={{gridColumn:`span ${span}`,display:'flex',flexDirection:'column',alignItems:'center',padding:'5px 3px 4px',borderRadius:7,cursor:'pointer',border:`1px solid ${isAct?C.goldStrong:C.border}`,background:isAct?C.goldSoft:'rgba(0,0,0,0.01)',transition:'all 0.1s',gap:1}}>
-                          <span style={{fontSize:11,fontFamily:'monospace',color:C.borderMid,minHeight:14}}>—</span>
-                          <span style={{fontSize:13,color:isAct?C.text:C.borderMid}}>{lyric?.text??'—'}</span>
+                          <span style={{fontSize:12,fontFamily:'monospace',color:C.borderMid,minHeight:14}}>—</span>
+                          <span style={{fontSize:14,color:isAct?C.text:C.borderMid}}>{lyric?.text??'—'}</span>
                           <span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>
                         </button>
                       );
@@ -569,8 +569,8 @@ export default function YouTubeSyncPage() {
                             <button key={c.id} ref={isAct?activeBarRef:undefined}
                               onClick={()=>seekTo(c.time)}
                               style={{flex:flexVal,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',padding:'5px 2px 4px',borderRadius:7,cursor:'pointer',border:`1px solid ${isAct?C.goldStrong:C.border}`,background:isAct?C.goldSoft:isPast?'rgba(0,0,0,0.02)':C.surface,boxShadow:isAct?`0 0 0 2px ${C.goldStrong}22`:'none',transition:'all 0.12s',gap:1,overflow:'hidden'}}>
-                              <span style={{fontFamily:'monospace',fontSize:11,fontWeight:700,lineHeight:1.1,color:isAct?C.green:isPast?C.borderMid:C.gold,whiteSpace:'nowrap'}}>{c.name}</span>
-                              <span style={{fontSize:13,lineHeight:1.3,fontWeight:isAct?700:400,color:isAct?C.text:isPast?C.borderMid:C.textSub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'100%'}}>
+                              <span style={{fontFamily:'monospace',fontSize:12,fontWeight:700,lineHeight:1.1,color:isAct?C.green:isPast?C.borderMid:C.gold,whiteSpace:'nowrap'}}>{c.name}</span>
+                              <span style={{fontSize:14,lineHeight:1.3,fontWeight:isAct?700:400,color:isAct?C.text:isPast?C.borderMid:C.textSub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'100%'}}>
                                 {firstWord?firstWord.text:<span style={{opacity:0.2}}>—</span>}
                               </span>
                               {ci===0&&<span style={{fontSize:9,color:isAct?C.goldStrong:C.borderMid,fontFamily:'monospace'}}>{barIdx}</span>}
@@ -594,9 +594,9 @@ export default function YouTubeSyncPage() {
               <div style={{display:'flex',flexDirection:'column',gap:6}}>
                 <div style={{display:'flex',alignItems:'center',gap:7}}>
                   <div style={{display:'flex',gap:2}}>{[3,5,4,6,3,5].map((h,i)=><div key={i} style={{width:3,borderRadius:2,background:C.gold,opacity:isPlaying?1:0.3,height:h}}/>)}</div>
-                  <span style={{fontSize:11,fontWeight:600,color:C.wood}}>{isPlaying?'Đang phát':'Tạm dừng'}</span>
+                  <span style={{fontSize:12,fontWeight:600,color:C.wood}}>{isPlaying?'Đang phát':'Tạm dừng'}</span>
                 </div>
-                {curBarInfo&&<span style={{fontSize:11,color:C.textSub}}>Phách {curBarInfo.beat} / Nhịp {curBarInfo.bar}</span>}
+                {curBarInfo&&<span style={{fontSize:12,color:C.textSub}}>Phách {curBarInfo.beat} / Nhịp {curBarInfo.bar}</span>}
                 <SectionHeader n="③" title="Đang hát (Live)"/>
               </div>
               <div style={{textAlign:'center',padding:'8px 0'}}>
@@ -628,7 +628,7 @@ export default function YouTubeSyncPage() {
               ))}
               {jsonData?.chords.map(c=>{
                 const isAct=activeChord?.id===c.id;
-                return<div key={c.id} style={{position:'absolute',left:c.time*PPS,top:14,transform:'translateX(-50%)',padding:'3px 8px',borderRadius:5,background:isAct?C.goldStrong:C.surface2,border:`1px solid ${isAct?C.goldStrong:C.border}`,color:isAct?'#fff':C.textSub,fontSize:11,fontWeight:isAct?700:500,fontFamily:'monospace',whiteSpace:'nowrap',pointerEvents:'none',boxShadow:isAct?`0 2px 8px ${C.goldStrong}44`:'none'}}>{c.name}</div>;
+                return<div key={c.id} style={{position:'absolute',left:c.time*PPS,top:14,transform:'translateX(-50%)',padding:'3px 8px',borderRadius:5,background:isAct?C.goldStrong:C.surface2,border:`1px solid ${isAct?C.goldStrong:C.border}`,color:isAct?'#fff':C.textSub,fontSize:12,fontWeight:isAct?700:500,fontFamily:'monospace',whiteSpace:'nowrap',pointerEvents:'none',boxShadow:isAct?`0 2px 8px ${C.goldStrong}44`:'none'}}>{c.name}</div>;
               })}
               <div style={{position:'absolute',left:0,top:44,width:'100%',pointerEvents:'none'}}><Waveform width={tlW} dur={dur} jt={jt}/></div>
               <div style={{position:'absolute',left:jt*PPS,top:0,bottom:0,width:2,background:C.green,borderRadius:1,pointerEvents:'none',boxShadow:`0 0 6px ${C.green}66`}}>
@@ -638,16 +638,16 @@ export default function YouTubeSyncPage() {
           </div>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <button onClick={isPlaying?pause:play} disabled={!playerReady||!jsonData}
-              style={{width:40,height:40,borderRadius:'50%',background:isPlaying?C.wood:C.green,border:'none',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:(!playerReady||!jsonData)?0.45:1,boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`,flexShrink:0}}>
+              style={{width:40,height:40,borderRadius:'50%',background:isPlaying?C.wood:C.green,border:'none',color:'#fff',fontSize:17,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:(!playerReady||!jsonData)?0.45:1,boxShadow:isPlaying?'none':`0 2px 8px ${C.green}55`,flexShrink:0}}>
               {isPlaying?'⏸':'▶'}
             </button>
-            <span style={{fontFamily:'monospace',fontSize:13,fontWeight:600,color:C.green,minWidth:72}}>{fmt(jt)}</span>
+            <span style={{fontFamily:'monospace',fontSize:14,fontWeight:600,color:C.green,minWidth:72}}>{fmt(jt)}</span>
             <div style={{flex:1,position:'relative',height:6,background:C.surface2,borderRadius:3,border:`1px solid ${C.border}`,overflow:'visible',cursor:'pointer'}}>
               <div style={{height:'100%',width:`${pct}%`,background:C.green,borderRadius:3,transition:'width 0.05s linear'}}/>
               <div style={{position:'absolute',top:'50%',left:`${pct}%`,transform:'translate(-50%,-50%)',width:14,height:14,borderRadius:'50%',background:C.green,border:`2px solid ${C.surface}`,boxShadow:`0 0 0 2px ${C.green}`,pointerEvents:'none',transition:'left 0.05s linear'}}/>
               <input type="range" min={0} max={dur} step={0.1} value={jt} onChange={e=>seekTo(parseFloat(e.target.value))} style={{position:'absolute',inset:'-4px 0',width:'100%',opacity:0,cursor:'pointer'}}/>
             </div>
-            <span style={{fontFamily:'monospace',fontSize:12,color:C.textDim,minWidth:72,textAlign:'right'}}>{fmt(dur)}</span>
+            <span style={{fontFamily:'monospace',fontSize:13,color:C.textDim,minWidth:72,textAlign:'right'}}>{fmt(dur)}</span>
           </div>
         </div>
 
@@ -656,18 +656,18 @@ export default function YouTubeSyncPage() {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:0}}>
             {/* Tap Tempo */}
             <div style={{paddingRight:24,borderRight:`1px solid ${C.border}`}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:2}}>TAP TEMPO</div>
-              <div style={{fontSize:11,color:C.textSub,marginBottom:14}}>Nhập hoặc tap để đo BPM thực tế</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:2}}>TAP TEMPO</div>
+              <div style={{fontSize:12,color:C.textSub,marginBottom:14}}>Nhập hoặc tap để đo BPM thực tế</div>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
                 <input type="number" min={20} max={300} step={0.5} placeholder="Nhập BPM..." value={tapBpm??''}
                   onChange={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v>0){setTapBpm(Math.round(v));if(jsonData?.tempo)setTapScale(Math.round((jsonData.tempo/v)*10000)/10000);}else{setTapBpm(null);setTapScale(null);}}}
                   style={{...inp,flex:1,fontFamily:'monospace',fontSize:18,fontWeight:700,color:C.wood,textAlign:'center'}}/>
-                <span style={{fontSize:12,color:C.textDim,flexShrink:0}}>BPM</span>
+                <span style={{fontSize:13,color:C.textDim,flexShrink:0}}>BPM</span>
               </div>
               <div style={{display:'flex',gap:10,marginBottom:12}}>
                 <button onPointerDown={tap} style={{flex:1,border:`2px dashed ${tapCount>0?C.wood:C.border}`,borderRadius:10,background:tapCount>0?'#FAF0E4':C.pageBg,cursor:'pointer',padding:'12px 0',display:'flex',flexDirection:'column',alignItems:'center',gap:3,userSelect:'none',transition:'all 0.1s'}}>
                   <span style={{fontSize:18}}>🥁</span>
-                  <span style={{fontSize:10,color:tapCount>0?C.wood:C.textSub,fontWeight:600}}>{tapCount>0?`${tapCount} taps`:'TAP'}</span>
+                  <span style={{fontSize:11,color:tapCount>0?C.wood:C.textSub,fontWeight:600}}>{tapCount>0?`${tapCount} taps`:'TAP'}</span>
                 </button>
                 <div style={{flex:1,background:C.pageBg,border:`1px solid ${C.border}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:1,padding:'8px'}}>
                   <div style={{fontSize:26,fontWeight:700,fontFamily:'monospace',color:tapBpm?C.wood:C.border,lineHeight:1}}>{tapBpm??'--'}</div>
@@ -676,10 +676,10 @@ export default function YouTubeSyncPage() {
                 </div>
               </div>
               {tapBpm&&jsonData?.tempo&&tapScale!==null&&(
-                <div style={{background:C.pageBg,borderRadius:7,padding:'8px 12px',marginBottom:10,fontSize:11,fontFamily:'monospace',display:'flex',gap:16}}>
-                  <div><span style={{color:C.textDim,fontSize:10}}>Scale ratio</span><br/><span style={{color:C.green,fontWeight:700,fontSize:14}}>×{tapScale.toFixed(4)}</span></div>
+                <div style={{background:C.pageBg,borderRadius:7,padding:'8px 12px',marginBottom:10,fontSize:12,fontFamily:'monospace',display:'flex',gap:16}}>
+                  <div><span style={{color:C.textDim,fontSize:11}}>Scale ratio</span><br/><span style={{color:C.green,fontWeight:700,fontSize:15}}>×{tapScale.toFixed(4)}</span></div>
                   <div style={{width:1,background:C.border}}/>
-                  <div><span style={{color:C.textDim,fontSize:10}}>Sai lệch</span><br/><span style={{color:C.goldStrong,fontWeight:600,fontSize:14}}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span></div>
+                  <div><span style={{color:C.textDim,fontSize:11}}>Sai lệch</span><br/><span style={{color:C.goldStrong,fontWeight:600,fontSize:15}}>{tapBpm>jsonData.tempo?'+':''}{((tapBpm/jsonData.tempo-1)*100).toFixed(1)}%</span></div>
                 </div>
               )}
               <div style={{display:'flex',gap:6}}>
@@ -690,38 +690,38 @@ export default function YouTubeSyncPage() {
 
             {/* Mark Beat */}
             <div style={{paddingLeft:24}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:2}}>ĐÁNH DẤU PHÁCH</div>
-              <div style={{fontSize:11,color:C.textSub,marginBottom:14}}>Tạm dừng video tại phách 1, chọn nhịp → Mark</div>
+              <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:2}}>ĐÁNH DẤU PHÁCH</div>
+              <div style={{fontSize:12,color:C.textSub,marginBottom:14}}>Tạm dừng video tại phách 1, chọn nhịp → Mark</div>
               {!jsonData?.tempo?(
-                <div style={{fontSize:11,color:'#92722A',background:'#FDF5E0',border:'1px solid #EED88A',borderRadius:7,padding:'8px 10px'}}>⚠ Cần JSON có <code>tempo</code></div>
+                <div style={{fontSize:12,color:'#92722A',background:'#FDF5E0',border:'1px solid #EED88A',borderRadius:7,padding:'8px 10px'}}>⚠ Cần JSON có <code>tempo</code></div>
               ):(
                 <>
                   <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
                     <button style={{...btnOutline,padding:'5px 14px',fontSize:18}} onClick={()=>setBarNum(b=>Math.max(1,b-1))}>−</button>
                     <div style={{flex:1,textAlign:'center'}}>
                       <span style={{fontSize:32,fontWeight:700,fontFamily:'monospace',color:C.green}}>{barNum}</span>
-                      <span style={{fontSize:11,color:C.textDim,marginLeft:6}}>/ {jsonData.timeSignature??4}</span>
+                      <span style={{fontSize:12,color:C.textDim,marginLeft:6}}>/ {jsonData.timeSignature??4}</span>
                     </div>
                     <button style={{...btnOutline,padding:'5px 14px',fontSize:18}} onClick={()=>setBarNum(b=>b+1)}>+</button>
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:10}}>
                     {[1,2,3,4,5,8,9,13,17].map(n=>(
-                      <button key={n} onClick={()=>setBarNum(n)} style={{...btnOutline,padding:'3px 9px',fontSize:11,fontFamily:'monospace',color:barNum===n?C.green:C.textDim,borderColor:barNum===n?C.green:C.border,background:barNum===n?C.greenTint:'transparent'}}>{n}</button>
+                      <button key={n} onClick={()=>setBarNum(n)} style={{...btnOutline,padding:'3px 9px',fontSize:12,fontFamily:'monospace',color:barNum===n?C.green:C.textDim,borderColor:barNum===n?C.green:C.border,background:barNum===n?C.greenTint:'transparent'}}>{n}</button>
                     ))}
                   </div>
-                  <div style={{fontSize:10,color:C.textDim,fontFamily:'monospace',textAlign:'right',marginBottom:10}}>beat 1 = {getBarT(barNum)?.toFixed(3)}s</div>
-                  <button onPointerDown={markBar} disabled={!playerReady} style={{...btnSolid(C.teal),width:'100%',padding:'13px',fontSize:14,opacity:playerReady?1:0.45,userSelect:'none'}}>
+                  <div style={{fontSize:11,color:C.textDim,fontFamily:'monospace',textAlign:'right',marginBottom:10}}>beat 1 = {getBarT(barNum)?.toFixed(3)}s</div>
+                  <button onPointerDown={markBar} disabled={!playerReady} style={{...btnSolid(C.teal),width:'100%',padding:'13px',fontSize:15,opacity:playerReady?1:0.45,userSelect:'none'}}>
                     ♩ Đánh dấu (Mark)
                   </button>
                   {barResult&&(
-                    <div style={{marginTop:10,background:C.pageBg,borderRadius:7,padding:'8px 12px',fontSize:11,fontFamily:'monospace',display:'flex',gap:16,alignItems:'center'}}>
-                      <div><span style={{color:C.textDim,fontSize:10}}>Nhịp</span><br/><span style={{color:C.text,fontWeight:700}}>#{barResult.bar}</span></div>
+                    <div style={{marginTop:10,background:C.pageBg,borderRadius:7,padding:'8px 12px',fontSize:12,fontFamily:'monospace',display:'flex',gap:16,alignItems:'center'}}>
+                      <div><span style={{color:C.textDim,fontSize:11}}>Nhịp</span><br/><span style={{color:C.text,fontWeight:700}}>#{barResult.bar}</span></div>
                       <div style={{width:1,background:C.border,alignSelf:'stretch'}}/>
-                      <div><span style={{color:C.textDim,fontSize:10}}>YT mark</span><br/><span style={{color:C.red,fontWeight:600}}>{barResult.yt.toFixed(2)}s</span></div>
+                      <div><span style={{color:C.textDim,fontSize:11}}>YT mark</span><br/><span style={{color:C.red,fontWeight:600}}>{barResult.yt.toFixed(2)}s</span></div>
                       <div style={{width:1,background:C.border,alignSelf:'stretch'}}/>
                       <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:5}}>
-                        <span style={{fontSize:16,color:C.goldStrong}}>✓</span>
-                        <span style={{color:C.goldStrong,fontWeight:600,fontSize:11}}>Đã sync</span>
+                        <span style={{fontSize:17,color:C.goldStrong}}>✓</span>
+                        <span style={{color:C.goldStrong,fontWeight:600,fontSize:12}}>Đã sync</span>
                       </div>
                     </div>
                   )}
@@ -736,31 +736,31 @@ export default function YouTubeSyncPage() {
           <SectionHeader n="⑥" title="Export"/>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <div style={{fontSize:11,fontWeight:600,color:C.textSub}}>Xuất file</div>
-              <button onClick={exportJson} disabled={!jsonData} style={{...btnSolid(exportOk?'#2A6B3A':C.goldStrong),padding:'13px',fontSize:14,fontWeight:700,opacity:!jsonData?0.45:1,boxShadow:jsonData&&!exportOk?`0 3px 14px ${C.goldStrong}44`:'none'}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.textSub}}>Xuất file</div>
+              <button onClick={exportJson} disabled={!jsonData} style={{...btnSolid(exportOk?'#2A6B3A':C.goldStrong),padding:'13px',fontSize:15,fontWeight:700,opacity:!jsonData?0.45:1,boxShadow:jsonData&&!exportOk?`0 3px 14px ${C.goldStrong}44`:'none'}}>
                 {exportOk?'✓ Đã xuất!':'⬇ Export JSON'}
               </button>
-              <p style={{fontSize:11,color:C.textSub,margin:0,lineHeight:1.6}}>Tải file JSON về máy.</p>
+              <p style={{fontSize:12,color:C.textSub,margin:0,lineHeight:1.6}}>Tải file JSON về máy.</p>
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <div style={{fontSize:11,fontWeight:600,color:C.textSub}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.textSub}}>
                 Lưu lên hệ thống
-                {isTeacher&&<span style={{marginLeft:6,fontSize:10,color:C.green,background:C.greenTint,borderRadius:4,padding:'1px 7px'}}>Giáo viên</span>}
+                {isTeacher&&<span style={{marginLeft:6,fontSize:11,color:C.green,background:C.greenTint,borderRadius:4,padding:'1px 7px'}}>Giáo viên</span>}
               </div>
               {isTeacher?(
                 <>
                   <button onClick={saveToSystem} disabled={!jsonData||!selectedTitle||saveStatus==='saving'}
-                    style={{...btnSolid(saveStatus==='saved'?'#2A6B3A':saveStatus==='error'?C.red:'#8A5A32'),padding:'13px',fontSize:14,fontWeight:700,opacity:(!jsonData||!selectedTitle)?0.45:1,boxShadow:(jsonData&&selectedTitle&&saveStatus==='idle')?`0 3px 14px rgba(138,90,50,0.35)`:'none'}}>
+                    style={{...btnSolid(saveStatus==='saved'?'#2A6B3A':saveStatus==='error'?C.red:'#8A5A32'),padding:'13px',fontSize:15,fontWeight:700,opacity:(!jsonData||!selectedTitle)?0.45:1,boxShadow:(jsonData&&selectedTitle&&saveStatus==='idle')?`0 3px 14px rgba(138,90,50,0.35)`:'none'}}>
                     {saveStatus==='saving'?'⏳ Đang lưu...':saveStatus==='saved'?'✓ Đã lưu!':saveStatus==='error'?'✗ Lỗi':'☁ Ghi đè lên hệ thống'}
                   </button>
-                  <p style={{fontSize:11,color:C.textSub,margin:0,lineHeight:1.6}}>
+                  <p style={{fontSize:12,color:C.textSub,margin:0,lineHeight:1.6}}>
                     {!selectedTitle?'⚠ Chọn bài từ hệ thống ở bước ① trước.':`Ghi đè "${selectedTitle}" — có xác nhận.`}
                   </p>
                 </>
               ):(
                 <>
-                  <button disabled style={{...btnSolid('#9BA89C'),padding:'13px',fontSize:14,opacity:0.5,cursor:'not-allowed'}}>🔒 Chỉ dành cho giáo viên</button>
-                  <p style={{fontSize:11,color:C.textSub,margin:0,lineHeight:1.6}}>
+                  <button disabled style={{...btnSolid('#9BA89C'),padding:'13px',fontSize:15,opacity:0.5,cursor:'not-allowed'}}>🔒 Chỉ dành cho giáo viên</button>
+                  <p style={{fontSize:12,color:C.textSub,margin:0,lineHeight:1.6}}>
                     {!userRole?'Vui lòng đăng nhập.':'Tính năng này chỉ dành cho giáo viên.'}
                   </p>
                 </>
@@ -798,16 +798,16 @@ export default function YouTubeSyncPage() {
 
           {/* Song title + status */}
           <div style={{display:'flex',flexDirection:'column',gap:2,flexShrink:0,minWidth:0,maxWidth:200}}>
-            <span style={{fontSize:13,fontWeight:600,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+            <span style={{fontSize:14,fontWeight:600,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
               {selectedTitle||jsonData.title}
             </span>
-            <span style={{fontSize:10,color:'rgba(255,255,255,0.45)'}}>
+            <span style={{fontSize:11,color:'rgba(255,255,255,0.45)'}}>
               {!playerReady?'Đang kết nối...':isPlaying?'Đang phát':'Tạm dừng'}
             </span>
           </div>
 
           {/* Time */}
-          <span style={{fontFamily:'monospace',fontSize:13,fontWeight:600,color:C.goldStrong,flexShrink:0}}>
+          <span style={{fontFamily:'monospace',fontSize:14,fontWeight:600,color:C.goldStrong,flexShrink:0}}>
             {fmt(jt)}
           </span>
 
@@ -821,13 +821,13 @@ export default function YouTubeSyncPage() {
           </div>
 
           {/* Total time */}
-          <span style={{fontFamily:'monospace',fontSize:12,color:'rgba(255,255,255,0.4)',flexShrink:0}}>
+          <span style={{fontFamily:'monospace',fontSize:13,color:'rgba(255,255,255,0.4)',flexShrink:0}}>
             {fmt(dur)}
           </span>
 
           {/* Seek -5s */}
           <button onClick={()=>seekTo(Math.max(0,jt-5))}
-            style={{...btnOutline,border:'1px solid rgba(255,255,255,0.15)',color:'rgba(255,255,255,0.6)',fontSize:11,padding:'5px 10px',flexShrink:0}}>
+            style={{...btnOutline,border:'1px solid rgba(255,255,255,0.15)',color:'rgba(255,255,255,0.6)',fontSize:12,padding:'5px 10px',flexShrink:0}}>
             ↩ 5s
           </button>
 
@@ -835,7 +835,7 @@ export default function YouTubeSyncPage() {
           {playerReady&&(
             <div style={{display:'flex',alignItems:'center',gap:5,flexShrink:0}}>
               <span style={{width:6,height:6,borderRadius:'50%',background:'#4CAF50',display:'inline-block',animation:'pulse 1s ease-in-out infinite'}}/>
-              <span style={{fontSize:10,color:'rgba(255,255,255,0.45)'}}>YT {fmtShort(ytTime)}</span>
+              <span style={{fontSize:11,color:'rgba(255,255,255,0.45)'}}>YT {fmtShort(ytTime)}</span>
             </div>
           )}
         </div>

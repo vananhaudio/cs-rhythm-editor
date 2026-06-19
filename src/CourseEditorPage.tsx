@@ -55,24 +55,24 @@ const TYPE_ICON: Record<string, string> = Object.fromEntries(LESSON_TYPES.map(t 
 // ─── Shared components ────────────────────────────────────────────────────────
 const Input = ({ value, onChange, placeholder, style }: { value: string; onChange: (v: string) => void; placeholder?: string; style?: React.CSSProperties }) => (
   <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none', ...style }}
+    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, fontFamily: 'inherit', outline: 'none', ...style }}
     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
     onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
 )
 
 const Textarea = ({ value, onChange, placeholder, rows = 3 }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) => (
   <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
-    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.6 }}
+    style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.6 }}
     onFocus={e => (e.currentTarget.style.borderColor = C.accent)}
     onBlur={e => (e.currentTarget.style.borderColor = C.border)} />
 )
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ fontSize: 12, fontWeight: 600, color: C.text2, marginBottom: 6 }}>{children}</div>
+  <div style={{ fontSize: 13, fontWeight: 600, color: C.text2, marginBottom: 6 }}>{children}</div>
 )
 
 const Btn = ({ children, onClick, variant = 'ghost', style }: { children: React.ReactNode; onClick?: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; style?: React.CSSProperties }) => {
-  const base: React.CSSProperties = { border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }
+  const base: React.CSSProperties = { border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }
   const variants = {
     primary:   { background: C.accent, color: '#fff' },
     secondary: { background: C.surface, color: C.text2, border: `1px solid ${C.border}` },
@@ -217,14 +217,14 @@ export default function CourseEditorPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: '"Inter", system-ui, sans-serif', fontSize: 14, color: C.text1 }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: '"Inter", system-ui, sans-serif', fontSize: 15, color: C.text1 }}>
 
       {/* ── SIDEBAR: Course list ────────────────────────────────────────── */}
       <aside style={{ width: 220, flexShrink: 0, background: C.surface, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '16px 16px 12px', borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <a href="/students" style={{ color: C.text3, fontSize: 18, textDecoration: 'none' }}>←</a>
-            <div style={{ fontWeight: 700, fontSize: 14, color: C.text1 }}>Quản lý khoá học</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: C.text1 }}>Quản lý khoá học</div>
           </div>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
@@ -233,13 +233,13 @@ export default function CourseEditorPage() {
             { label: 'Cánh Cửa',   types: ['canh_cua'] },
           ].map(group => (
             <div key={group.label} style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', padding: '4px 8px 6px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', padding: '4px 8px 6px' }}>
                 {group.label}
               </div>
               {courses.filter(c => group.types.includes(c.type)).map(c => (
                 <div key={c.id}
                   onClick={() => loadCourse(c)}
-                  style={{ padding: '8px 10px', borderRadius: 7, cursor: 'pointer', background: selectedCourse?.id === c.id ? C.accentLight : 'transparent', color: selectedCourse?.id === c.id ? C.accent : C.text2, fontWeight: selectedCourse?.id === c.id ? 600 : 400, fontSize: 13, marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}
+                  style={{ padding: '8px 10px', borderRadius: 7, cursor: 'pointer', background: selectedCourse?.id === c.id ? C.accentLight : 'transparent', color: selectedCourse?.id === c.id ? C.accent : C.text2, fontWeight: selectedCourse?.id === c.id ? 600 : 400, fontSize: 14, marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}
                   onMouseEnter={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = C.bg }}
                   onMouseLeave={e => { if (selectedCourse?.id !== c.id) e.currentTarget.style.background = 'transparent' }}>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
@@ -254,7 +254,7 @@ export default function CourseEditorPage() {
       {/* ── MIDDLE: Course + lesson list ────────────────────────────────── */}
       <div style={{ width: 340, flexShrink: 0, background: C.bg, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {!selectedCourse ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text3, fontSize: 13, flexDirection: 'column', gap: 8 }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text3, fontSize: 14, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 32 }}>📚</span>
             Chọn khoá học để bắt đầu
           </div>
@@ -263,7 +263,7 @@ export default function CourseEditorPage() {
             {/* Course header */}
             <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: C.text1, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 16, color: C.text1, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
                   {selectedCourse.name}
                 </div>
                 <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, flexShrink: 0 }}>
@@ -272,14 +272,14 @@ export default function CourseEditorPage() {
                     const active = selectedCourse.status === s
                     return (
                       <button key={s} onClick={() => setCourseStatus(s)}
-                        style={{ padding: '4px 8px', fontSize: 11, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${C.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : C.surface, color: active ? cfg.color : C.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
+                        style={{ padding: '4px 8px', fontSize: 12, fontWeight: active ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: s !== 'off' ? `1px solid ${C.border}` : 'none', fontFamily: 'inherit', background: active ? cfg.bg : C.surface, color: active ? cfg.color : C.text3, transition: 'all .12s', whiteSpace: 'nowrap' }}>
                         {cfg.label}
                       </button>
                     )
                   })}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: C.text3 }}>
+              <div style={{ fontSize: 12, color: C.text3 }}>
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học
               </div>
             </div>
@@ -290,12 +290,12 @@ export default function CourseEditorPage() {
                 const modLessons = lessons.filter(l => l.module_id === mod.id)
                 return (
                   <div key={mod.id} style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: C.text2, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.text2, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
                       {editingModuleId === mod.id ? (
                         <input autoFocus value={editingModuleName} onChange={e => setEditingModuleName(e.target.value)}
                           onBlur={() => saveModuleName(mod.id)}
                           onKeyDown={e => { if (e.key === 'Enter') saveModuleName(mod.id); if (e.key === 'Escape') setEditingModuleId(null) }}
-                          style={{ flex: 1, border: `1px solid ${C.accent}`, borderRadius: 5, padding: '3px 6px', fontSize: 11, fontFamily: 'inherit', outline: 'none', color: C.text1 }} />
+                          style={{ flex: 1, border: `1px solid ${C.accent}`, borderRadius: 5, padding: '3px 6px', fontSize: 12, fontFamily: 'inherit', outline: 'none', color: C.text1 }} />
                       ) : (
                         <span
                           onDoubleClick={() => { setEditingModuleId(mod.id); setEditingModuleName(mod.name) }}
@@ -312,13 +312,13 @@ export default function CourseEditorPage() {
                         style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 7, cursor: 'pointer', background: selectedLesson?.id === l.id ? C.accentLight : C.surface, border: `1px solid ${selectedLesson?.id === l.id ? C.accent : C.border}`, marginBottom: 4 }}
                         onMouseEnter={e => { if (selectedLesson?.id !== l.id) e.currentTarget.style.background = C.surfaceHover }}
                         onMouseLeave={e => { if (selectedLesson?.id !== l.id) e.currentTarget.style.background = C.surface }}>
-                        <span style={{ fontSize: 11, color: C.text3, width: 16, flexShrink: 0, textAlign: 'center' }}>{li + 1}</span>
-                        <span style={{ fontSize: 14, flexShrink: 0 }}>{TYPE_ICON[l.lesson_type] ?? '📄'}</span>
-                        <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedLesson?.id === l.id ? C.accent : C.text1, fontWeight: selectedLesson?.id === l.id ? 600 : 400 }}>
+                        <span style={{ fontSize: 12, color: C.text3, width: 16, flexShrink: 0, textAlign: 'center' }}>{li + 1}</span>
+                        <span style={{ fontSize: 15, flexShrink: 0 }}>{TYPE_ICON[l.lesson_type] ?? '📄'}</span>
+                        <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedLesson?.id === l.id ? C.accent : C.text1, fontWeight: selectedLesson?.id === l.id ? 600 : 400 }}>
                           {l.title}
                         </span>
                         <button onClick={e => { e.stopPropagation(); deleteLesson(l.id) }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 14, padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: 0 }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.text3, fontSize: 15, padding: '2px 4px', borderRadius: 4, flexShrink: 0, opacity: 0 }}
                           onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = C.danger }}
                           onMouseLeave={e => { e.currentTarget.style.opacity = '0'; e.currentTarget.style.color = C.text3 }}>
                           ×
@@ -328,7 +328,7 @@ export default function CourseEditorPage() {
 
                     {/* Add lesson button */}
                     <button onClick={() => setPopupModuleId(mod.id)}
-                      style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 7, padding: '8px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, marginTop: 4 }}>
+                      style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 7, padding: '8px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, marginTop: 4 }}>
                       + Thêm bài mới
                     </button>
                   </div>
@@ -346,7 +346,7 @@ export default function CourseEditorPage() {
                 </div>
               ) : (
                 <button onClick={() => setAddingModule(true)}
-                  style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 8, padding: '10px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, marginTop: 8 }}>
+                  style={{ width: '100%', background: 'none', border: `1.5px dashed ${C.border}`, borderRadius: 8, padding: '10px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, marginTop: 8 }}>
                   + Thêm tuần / chương
                 </button>
               )}
@@ -360,16 +360,16 @@ export default function CourseEditorPage() {
         {!selectedLesson ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.text3, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 40 }}>✏️</span>
-            <div style={{ fontSize: 14 }}>Chọn bài học để chỉnh sửa</div>
-            <div style={{ fontSize: 12 }}>hoặc thêm bài mới từ danh sách bên trái</div>
+            <div style={{ fontSize: 15 }}>Chọn bài học để chỉnh sửa</div>
+            <div style={{ fontSize: 13 }}>hoặc thêm bài mới từ danh sách bên trái</div>
           </div>
         ) : (
           <>
             {/* Editor header */}
             <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: C.text1 }}>Chỉnh sửa bài học</div>
+              <div style={{ fontWeight: 600, fontSize: 15, color: C.text1 }}>Chỉnh sửa bài học</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                {saved && <span style={{ fontSize: 12, color: C.success }}>✓ Đã lưu</span>}
+                {saved && <span style={{ fontSize: 13, color: C.success }}>✓ Đã lưu</span>}
                 <Btn variant="secondary" onClick={() => setSelectedLesson(null)}>Huỷ</Btn>
                 <Btn variant="primary" onClick={saveLesson}>
                   {saving ? 'Đang lưu...' : '💾 Lưu nháp'}
@@ -384,7 +384,7 @@ export default function CourseEditorPage() {
               <div>
                 <Label>Loại bài học</Label>
                 <select value={fType} onChange={e => setFType(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, color: C.text1, background: C.surface, fontFamily: 'inherit', outline: 'none' }}>
+                  style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, background: C.surface, fontFamily: 'inherit', outline: 'none' }}>
                   {LESSON_TYPES.map(t => (
                     <option key={t.id} value={t.id}>{t.icon} {t.label}</option>
                   ))}
@@ -436,13 +436,13 @@ export default function CourseEditorPage() {
                     <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '8px 10px', borderRadius: 7, border: `1px solid ${fTools.includes(t.id) ? C.accent : C.border}`, background: fTools.includes(t.id) ? C.accentLight : C.surface }}>
                       <input type="checkbox" checked={fTools.includes(t.id)} onChange={() => toggleTool(t.id)}
                         style={{ accentColor: C.accent, cursor: 'pointer' }} />
-                      <span style={{ fontSize: 12, color: fTools.includes(t.id) ? C.accent : C.text2, fontWeight: fTools.includes(t.id) ? 600 : 400 }}>
+                      <span style={{ fontSize: 13, color: fTools.includes(t.id) ? C.accent : C.text2, fontWeight: fTools.includes(t.id) ? 600 : 400 }}>
                         {t.label}
                       </span>
                     </label>
                   ))}
                 </div>
-                <div style={{ fontSize: 11, color: C.text3, marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: C.text3, marginTop: 6 }}>
                   * Học viên sẽ thấy các công cụ đã chọn ở trang học bài
                 </div>
               </div>
@@ -466,8 +466,8 @@ export default function CourseEditorPage() {
           <div
             onClick={e => e.stopPropagation()}
             style={{ background: C.surface, borderRadius: 14, padding: 24, width: 360, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Thêm bài mới</div>
-            <div style={{ fontSize: 12, color: C.text3, marginBottom: 16 }}>Chọn loại bài học</div>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Thêm bài mới</div>
+            <div style={{ fontSize: 13, color: C.text3, marginBottom: 16 }}>Chọn loại bài học</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {LESSON_TYPES.map(t => (
                 <button key={t.id}
@@ -476,12 +476,12 @@ export default function CourseEditorPage() {
                   onMouseEnter={e => (e.currentTarget.style.background = C.accentLight)}
                   onMouseLeave={e => (e.currentTarget.style.background = C.bg)}>
                   <div style={{ fontSize: 22, marginBottom: 5 }}>{t.icon}</div>
-                  <div style={{ fontSize: 12, color: C.text2, fontWeight: 500 }}>{t.label}</div>
+                  <div style={{ fontSize: 13, color: C.text2, fontWeight: 500 }}>{t.label}</div>
                 </button>
               ))}
             </div>
             <button onClick={() => setPopupModuleId(null)}
-              style={{ marginTop: 16, width: '100%', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
+              style={{ marginTop: 16, width: '100%', background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px', color: C.text3, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}>
               Huỷ
             </button>
           </div>

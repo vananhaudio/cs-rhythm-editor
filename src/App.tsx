@@ -78,7 +78,7 @@ function ImportModal({ onImport, onClose }: {
         <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
           {(['Nhập lời', 'Cài đặt', 'Xem trước'] as const).map((s, i) => (
             <div key={i} style={{
-              fontSize: 10, fontWeight: 500, padding: '2px 10px', borderRadius: 10,
+              fontSize: 11, fontWeight: 500, padding: '2px 10px', borderRadius: 10,
               background: ['input', 'settings', 'preview'].indexOf(step) === i ? 'var(--brand)' : 'var(--border)',
               color: ['input', 'settings', 'preview'].indexOf(step) === i ? '#fff' : 'var(--text-4)',
               transition: 'all 0.12s',
@@ -92,7 +92,7 @@ function ImportModal({ onImport, onClose }: {
 
         {step === 'input' && (
           <>
-            <p style={{ color: 'var(--text-3)', fontSize: 12 }}>
+            <p style={{ color: 'var(--text-3)', fontSize: 13 }}>
               Dán text dạng <code style={{ color: 'var(--chord-red)', background: 'var(--chord-bg)', padding: '1px 4px', borderRadius: 3 }}>[Am]Gọi nàng [F]trên vai</code>
             </p>
             <textarea className="modal-textarea"
@@ -108,7 +108,7 @@ function ImportModal({ onImport, onClose }: {
         {step === 'settings' && (
           <>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Loại nhịp</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Loại nhịp</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
                 {timeSigOptions.map(opt => (
                   <button key={opt.value} onClick={() => setSelectedTimeSig(opt.value)} style={{
@@ -118,7 +118,7 @@ function ImportModal({ onImport, onClose }: {
                     cursor: 'pointer', textAlign: 'center', transition: 'all 0.12s',
                   }}>
                     <div style={{ fontSize: 20, fontWeight: 700, color: selectedTimeSig === opt.value ? 'var(--brand)' : 'var(--text)', lineHeight: 1 }}>{opt.label}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-4)', marginTop: 4 }}>{opt.desc}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 4 }}>{opt.desc}</div>
                     {opt.value === 4 && <div style={{ fontSize: 9, color: 'var(--brand)', marginTop: 2, fontWeight: 500 }}>Mặc định</div>}
                   </button>
                 ))}
@@ -126,7 +126,7 @@ function ImportModal({ onImport, onClose }: {
             </div>
 
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Số hợp âm mỗi ô nhịp</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Số hợp âm mỗi ô nhịp</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {([1, 2] as const).map(n => (
                   <button key={n} onClick={() => setChordsPerBar(n)} style={{
@@ -136,10 +136,10 @@ function ImportModal({ onImport, onClose }: {
                     cursor: 'pointer', textAlign: 'left', transition: 'all 0.12s',
                     display: 'flex', flexDirection: 'column', gap: 4,
                   }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: chordsPerBar === n ? 'var(--brand)' : 'var(--text)' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: chordsPerBar === n ? 'var(--brand)' : 'var(--text)' }}>
                       {n === 1 ? '1 hợp âm / ô nhịp' : '2 hợp âm / ô nhịp'}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-4)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-4)' }}>
                       {n === 1 ? 'Mỗi chord chiếm 1 bar — phổ biến nhất' : '2 chord trong 1 bar — nhịp chuyển nhanh'}
                     </div>
                     {n === 1 && <div style={{ fontSize: 9, color: 'var(--brand)', fontWeight: 500 }}>Mặc định</div>}
@@ -158,11 +158,11 @@ function ImportModal({ onImport, onClose }: {
 
         {step === 'preview' && (
           <>
-            <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-3)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-3)', alignItems: 'center' }}>
               <span>🎵 <strong style={{ color: 'var(--chord-red)' }}>{chordToks.length}</strong> hợp âm</span>
               <span>📝 <strong>{lyricToks.length}</strong> từ lời</span>
               <span>📦 <strong>{maxBar}</strong> ô nhịp</span>
-              <span style={{ marginLeft: 'auto', background: 'var(--brand-light)', color: 'var(--brand)', padding: '2px 8px', borderRadius: 4, fontWeight: 500, fontSize: 10 }}>
+              <span style={{ marginLeft: 'auto', background: 'var(--brand-light)', color: 'var(--brand)', padding: '2px 8px', borderRadius: 4, fontWeight: 500, fontSize: 11 }}>
                 {selectedTimeSig}/4 · {chordsPerBar} chord/bar
               </span>
             </div>
@@ -175,12 +175,12 @@ function ImportModal({ onImport, onClose }: {
                     ))}
                   </div>
                   <div style={{ padding: '4px 8px 0', minHeight: 24 }}>
-                    {chord ? <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--chord-red)' }}>{chord.text}</span> : <span style={{ color: 'var(--text-4)', fontSize: 11 }}>—</span>}
+                    {chord ? <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--chord-red)' }}>{chord.text}</span> : <span style={{ color: 'var(--text-4)', fontSize: 12 }}>—</span>}
                     <span style={{ float: 'right', fontSize: 9, color: 'var(--text-4)' }}>M{bi + 1}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: `repeat(${selectedTimeSig},1fr)`, padding: '2px 4px 6px', minHeight: 24 }}>
                     {Array.from({ length: selectedTimeSig }, (_, b) => (
-                      <div key={b} style={{ borderRight: b < selectedTimeSig - 1 ? '1px solid var(--border)' : 'none', padding: '0 2px', fontSize: 11, color: 'var(--text-2)' }}>
+                      <div key={b} style={{ borderRight: b < selectedTimeSig - 1 ? '1px solid var(--border)' : 'none', padding: '0 2px', fontSize: 12, color: 'var(--text-2)' }}>
                         {words.filter(w => w.beatOffset === bi * selectedTimeSig + b).map(w => w.text).join(' ')}
                       </div>
                     ))}
@@ -227,14 +227,14 @@ function AddEventModal({ time, onConfirm, onClose }: {
         </div>
         {kind === 'chord' ? (
           <div>
-            <input ref={ref} className="modal-textarea" style={{ minHeight: 'unset', padding: '8px 12px', fontSize: 14 }}
+            <input ref={ref} className="modal-textarea" style={{ minHeight: 'unset', padding: '8px 12px', fontSize: 15 }}
               placeholder="Am, C, G7..." value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
               {CHORD_SUGGESTIONS.map(c => <button key={c} className="btn sm" onClick={() => setText(c)}>{c}</button>)}
             </div>
           </div>
         ) : (
-          <input ref={ref} className="modal-textarea" style={{ minHeight: 'unset', padding: '8px 12px', fontSize: 14 }}
+          <input ref={ref} className="modal-textarea" style={{ minHeight: 'unset', padding: '8px 12px', fontSize: 15 }}
             placeholder="Nhập từ / lời..." value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && submit()} />
         )}
         <div className="modal-actions">
@@ -940,8 +940,8 @@ export default function App() {
           <input value={song.artist} placeholder="Ca sĩ..." onChange={e => updateField('artist', e.target.value)} style={{ width: 130 }} />
         </div>
         <div className="topbar-controls">
-          <button className="btn" onClick={handleUndo} title="Undo (Cmd+Z)" disabled={historyRef.current.length === 0} style={{ fontSize: 14 }}>↩</button>
-          <button className="btn" onClick={handleRedo} title="Redo (Cmd+Y)" disabled={futureRef.current.length === 0} style={{ fontSize: 14 }}>↪</button>
+          <button className="btn" onClick={handleUndo} title="Undo (Cmd+Z)" disabled={historyRef.current.length === 0} style={{ fontSize: 15 }}>↩</button>
+          <button className="btn" onClick={handleRedo} title="Redo (Cmd+Y)" disabled={futureRef.current.length === 0} style={{ fontSize: 15 }}>↪</button>
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
           <button className="btn primary" onClick={() => { window.location.href = "/player" }}>▶ Player</button>
           <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 2px' }} />
@@ -953,11 +953,11 @@ export default function App() {
           <button className="btn" onClick={() => { window.location.href = "/gp-editor" }} title="Import từ Guitar Pro">🎸 GP Import</button>
 
           <div style={{ display:"flex", alignItems:"center", gap:4, padding:"0 6px", borderLeft:"1px solid rgba(255,255,255,0.15)", marginLeft:2 }}>
-            <span style={{ fontSize:10, color:"rgba(255,255,255,0.5)" }}>Aa</span>
+            <span style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>Aa</span>
             <button className="btn sm" onClick={() => setLyricSize(s => Math.max(11, s - 1))} title="Chữ nhỏ lại">-</button>
-            <span style={{ fontSize:11, color:"rgba(255,255,255,0.8)", fontFamily:"monospace", minWidth:22, textAlign:"center" }}>{lyricSize}</span>
+            <span style={{ fontSize:12, color:"rgba(255,255,255,0.8)", fontFamily:"monospace", minWidth:22, textAlign:"center" }}>{lyricSize}</span>
             <button className="btn sm" onClick={() => setLyricSize(s => Math.min(28, s + 1))} title="Chữ to lên">+</button>
-            <button className="btn sm" onClick={() => setLyricSize(17)} title="Mặc định" style={{ fontSize:10, opacity:0.7 }}>↺</button>
+            <button className="btn sm" onClick={() => setLyricSize(17)} title="Mặc định" style={{ fontSize:11, opacity:0.7 }}>↺</button>
           </div>
           <button className="btn" onClick={() => { window.location.href = '/youtube-sync'; }}>🎵 Sync</button>
           <button className="btn danger" onClick={handleClear} title="Xoá lyrics & chords">🗑</button>
@@ -973,9 +973,9 @@ export default function App() {
           <label className="tb2-label">GIỌNG</label>
           <input className="tb2-input" value={song.tone} onChange={e => updateField('tone', e.target.value)} style={{ width: 40 }} />
           <button className="btn sm" onClick={() => { setSong(transposeSong(song, -1)); setTransposeSteps(s => s - 1); }} title="Giảm 1 semitone" style={{ marginLeft:4 }}>b</button>
-          <span style={{ fontSize:11, color:"var(--text-3)", fontFamily:"monospace", minWidth:28, textAlign:"center" }}>{getTransposeLabel(transposeSteps)}</span>
+          <span style={{ fontSize:12, color:"var(--text-3)", fontFamily:"monospace", minWidth:28, textAlign:"center" }}>{getTransposeLabel(transposeSteps)}</span>
           <button className="btn sm" onClick={() => { setSong(transposeSong(song, 1)); setTransposeSteps(s => s + 1); }} title="Tăng 1 semitone">#</button>
-          <button className="btn sm" onClick={() => { setSong(transposeSong(song, -transposeSteps)); setTransposeSteps(0); }} title="Về gốc" style={{ fontSize:10, opacity:0.7 }}>↺</button>
+          <button className="btn sm" onClick={() => { setSong(transposeSong(song, -transposeSteps)); setTransposeSteps(0); }} title="Về gốc" style={{ fontSize:11, opacity:0.7 }}>↺</button>
         </div>
         <div className="tb2-sep" />
         <div className="tb2-group">
@@ -1054,7 +1054,7 @@ export default function App() {
         <span className="stat">Lyrics: <span className="val">{song.lyrics.length}</span></span>
         <span className="stat">Thời gian: <span className="val">{formatTime(totalTime)}</span></span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontFamily: 'monospace', fontSize: 11 }}>BPM:{song.tempo} · {song.timeSignature}/4 · {song.totalBars} bars · snap:{snapMode}</span>
+        <span style={{ fontFamily: 'monospace', fontSize: 12 }}>BPM:{song.tempo} · {song.timeSignature}/4 · {song.totalBars} bars · snap:{snapMode}</span>
       </footer>
 
       {showImport && <ImportModal key={Date.now()} onImport={handleImport} onClose={() => setShowImport(false)} />}

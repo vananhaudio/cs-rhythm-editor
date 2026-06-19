@@ -812,7 +812,7 @@ export default function ScoreTabViewer({
     border: `1px solid ${active ? '#c8a84b' : danger ? (isDark ? 'rgba(220,80,80,0.4)' : 'rgba(200,60,60,0.35)') : border}`,
     background: active ? 'rgba(200,168,75,0.18)' : (isDark ? 'rgba(255,255,255,0.05)' : '#fff'),
     color: active ? (isDark ? '#e3c878' : '#8a6500') : danger ? (isDark ? '#e98a8a' : '#c0392b') : (isDark ? 'rgba(255,255,255,0.72)' : '#333'),
-    fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none', flexShrink: 0,
+    fontSize: 14, fontWeight: 600, cursor: 'pointer', outline: 'none', flexShrink: 0,
     WebkitTapHighlightColor: 'transparent', userSelect: 'none',
   });
   const sep = <div style={{ width: 1, height: 24, background: border, flexShrink: 0, margin: '0 3px' }} />;
@@ -868,7 +868,7 @@ export default function ScoreTabViewer({
 
       {/* Empty state */}
       {notes.length === 0 && (
-        <div style={{ padding: '10px 16px', textAlign: 'center', color: muted, fontSize: 12, borderTop: `1px solid ${border}` }}>
+        <div style={{ padding: '10px 16px', textAlign: 'center', color: muted, fontSize: 13, borderTop: `1px solid ${border}` }}>
           Click vào khuông nhạc để đặt con trỏ, rồi gõ số fret hoặc bấm nốt trên cần đàn
         </div>
       )}

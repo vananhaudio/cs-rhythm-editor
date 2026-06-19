@@ -82,7 +82,7 @@ export default function DeleteAccountPage() {
 
         {user ? (
           <>
-            <p style={{ color: '#6B7280', fontSize: 15, marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ color: '#6B7280', fontSize: 16, marginBottom: 24, lineHeight: 1.6 }}>
               Bạn sắp xóa tài khoản: <strong>{user.email}</strong>
             </p>
 
@@ -93,7 +93,7 @@ export default function DeleteAccountPage() {
               padding: 16,
               marginBottom: 24,
               textAlign: 'left',
-              fontSize: 14,
+              fontSize: 15,
               color: '#92400E',
             }}>
               <strong>⚠️ Cảnh báo:</strong> Hành động này sẽ:
@@ -111,7 +111,7 @@ export default function DeleteAccountPage() {
                 borderRadius: 8,
                 padding: 12,
                 color: '#DC2626',
-                fontSize: 14,
+                fontSize: 15,
                 marginBottom: 16,
               }}>
                 {error}
@@ -125,7 +125,7 @@ export default function DeleteAccountPage() {
                 borderRadius: 8,
                 padding: 12,
                 color: '#047857',
-                fontSize: 14,
+                fontSize: 15,
                 marginBottom: 16,
               }}>
                 ✓ Tài khoản đã xóa thành công. Đang chuyển hướng...
@@ -140,7 +140,7 @@ export default function DeleteAccountPage() {
                   border: 'none',
                   borderRadius: 8,
                   padding: '12px 24px',
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: 600,
                   cursor: deleting ? 'not-allowed' : 'pointer',
                   opacity: deleting ? 0.6 : 1,
@@ -159,7 +159,7 @@ export default function DeleteAccountPage() {
                 border: '1px solid #D1D5DB',
                 borderRadius: 8,
                 padding: '12px 24px',
-                fontSize: 15,
+                fontSize: 16,
                 cursor: 'pointer',
                 marginTop: 12,
                 width: '100%',
@@ -171,7 +171,7 @@ export default function DeleteAccountPage() {
           </>
         ) : (
           <>
-            <p style={{ color: '#6B7280', fontSize: 15, marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ color: '#6B7280', fontSize: 16, marginBottom: 24, lineHeight: 1.6 }}>
               Bạn chưa đăng nhập. Để xóa tài khoản, vui lòng gửi email tới:
             </p>
 
@@ -184,7 +184,7 @@ export default function DeleteAccountPage() {
               textAlign: 'center',
             }}>
               <strong style={{ color: '#1E40AF' }}>vananhaudio@gmail.com</strong>
-              <p style={{ fontSize: 13, color: '#3730A3', margin: '8px 0 0 0' }}>
+              <p style={{ fontSize: 14, color: '#3730A3', margin: '8px 0 0 0' }}>
                 Tiêu đề: "Delete my account"<br />
                 Kèm email tài khoản của bạn
               </p>
@@ -198,7 +198,7 @@ export default function DeleteAccountPage() {
                 border: 'none',
                 borderRadius: 8,
                 padding: '12px 24px',
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 600,
                 cursor: 'pointer',
                 width: '100%',

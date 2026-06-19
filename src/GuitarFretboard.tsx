@@ -332,7 +332,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
       <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", flexWrap:"wrap" as const, background: isDark ? "#1a1a2a" : "#F0E8D8", borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #D8C8A8" }}>
         {/* Input mode badge */}
         {inputMode && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: 'rgba(200,153,26,0.18)', border: '1px solid rgba(200,153,26,0.45)', color: '#c8991a', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: 'rgba(200,153,26,0.18)', border: '1px solid rgba(200,153,26,0.45)', color: '#c8991a', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c8991a', display: 'inline-block', animation: 'pulse 1s infinite' }} />
             Nhập nốt nhạc
           </div>
@@ -351,7 +351,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                   setActiveNotes(new Map());
                   if (m !== 'scale') { setScalePattern(new Map()); setActiveScaleId(null); }
                 }}
-                style={{ padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer", border:"none", transition:"all 0.2s",
+                style={{ padding:"6px 14px", fontSize:13, fontWeight:600, cursor:"pointer", border:"none", transition:"all 0.2s",
                   background: isCurrent ? activeBg : "transparent",
                   color: isCurrent ? "#fff" : t.textMuted2,
                   borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}
@@ -368,7 +368,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
             <button
               key={mode}
               onClick={() => setAccidental(mode)}
-              style={{ padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer", border:"none", transition:"all 0.2s",
+              style={{ padding:"6px 14px", fontSize:13, fontWeight:600, cursor:"pointer", border:"none", transition:"all 0.2s",
                 background: accidental === mode ? "#3a8cff" : "transparent",
                 color: accidental === mode ? "#fff" : t.textMuted2,
                 borderRight: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}` }}
@@ -380,7 +380,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
 
         <button
           onClick={() => setShowNotes(v => !v)}
-          style={{ padding:"6px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", transition:"all 0.2s",
+          style={{ padding:"6px 14px", borderRadius:20, fontSize:13, fontWeight:600, cursor:"pointer", transition:"all 0.2s",
             background: showNotes ? "#c8a84b" : "transparent",
             border: `1px solid ${showNotes ? "#c8a84b" : "rgba(200,168,75,0.6)"}`,
             color: showNotes ? "#1a1208" : "#c8a84b" }}
@@ -389,7 +389,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
         </button>
         <button
           onClick={() => { setActiveNotes(new Map()); if (playMode !== 'playScale') setScalePattern(new Map()); }}
-          style={{ padding:"6px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", transition:"all 0.2s",
+          style={{ padding:"6px 14px", borderRadius:20, fontSize:13, fontWeight:600, cursor:"pointer", transition:"all 0.2s",
             background:"transparent",
             border: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)"}`,
             color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.45)" }}
@@ -408,19 +408,19 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                   onChange={e => setSaveNameInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') saveScale(); if (e.key === 'Escape') setShowSaveInput(false); }}
                   placeholder="Tên scale..."
-                  style={{ padding:"5px 12px", borderRadius:20, fontSize:12, border:"1px solid rgba(22,163,74,0.5)", outline:"none", width:140, color:t.textMain, background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
+                  style={{ padding:"5px 12px", borderRadius:20, fontSize:13, border:"1px solid rgba(22,163,74,0.5)", outline:"none", width:140, color:t.textMain, background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
                 />
-                <button onClick={saveScale} style={{ padding:"5px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", border:"none", background:"#16a34a", color:"#fff" }}>
+                <button onClick={saveScale} style={{ padding:"5px 14px", borderRadius:20, fontSize:13, fontWeight:600, cursor:"pointer", border:"none", background:"#16a34a", color:"#fff" }}>
                   Lưu
                 </button>
-                <button onClick={() => setShowSaveInput(false)} style={{ padding:"5px 12px", borderRadius:20, fontSize:12, cursor:"pointer", border:"none", background:"transparent", color:t.textMuted2 }}>
+                <button onClick={() => setShowSaveInput(false)} style={{ padding:"5px 12px", borderRadius:20, fontSize:13, cursor:"pointer", border:"none", background:"transparent", color:t.textMuted2 }}>
                   Hủy
                 </button>
               </>
             ) : (
               <button
                 onClick={() => setShowSaveInput(true)}
-                style={{ padding:"6px 14px", borderRadius:20, fontSize:12, fontWeight:600, cursor:"pointer", border:"1px solid rgba(22,163,74,0.6)", color:"#16a34a", background:"rgba(22,163,74,0.08)", display:"flex", alignItems:"center", gap:5, transition:"all 0.2s" }}
+                style={{ padding:"6px 14px", borderRadius:20, fontSize:13, fontWeight:600, cursor:"pointer", border:"1px solid rgba(22,163,74,0.6)", color:"#16a34a", background:"rgba(22,163,74,0.08)", display:"flex", alignItems:"center", gap:5, transition:"all 0.2s" }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Lưu Scale
@@ -457,7 +457,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
       {/* Saved Scales Panel */}
       {savedScales.length > 0 && (
         <div style={{ display:"flex", flexWrap:"wrap" as const, gap:8, alignItems:"center", padding:"8px 14px", background: isDark ? "#141422" : "#FAF7F0", borderBottom: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid #E8E0D0" }}>
-          <span style={{ fontSize:10, fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase" as const, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.35)", marginRight:4, flexShrink:0 }}>Scales đã lưu</span>
+          <span style={{ fontSize:11, fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase" as const, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.35)", marginRight:4, flexShrink:0 }}>Scales đã lưu</span>
           {savedScales.map(scale => {
             const isLoaded = activeScaleId === scale.id;
             const colors = [...new Set(Object.values(scale.pattern))].slice(0, 8);
@@ -474,7 +474,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                 </div>
                 <button
                   onClick={() => isLoaded && playMode === 'playScale' ? (setPlayMode('scale'), setActiveScaleId(null)) : loadScale(scale)}
-                  style={{ fontSize:12, fontWeight:600, cursor:"pointer", border:"none", background:"none", padding:"0 2px", color: isLoaded ? "#0ea5e9" : (isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.6)"), transition:"color 0.15s" }}
+                  style={{ fontSize:13, fontWeight:600, cursor:"pointer", border:"none", background:"none", padding:"0 2px", color: isLoaded ? "#0ea5e9" : (isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.6)"), transition:"color 0.15s" }}
                 >
                   {scale.name}
                 </button>
@@ -519,7 +519,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
                 style={{ width: 72, height: 72, objectFit: 'contain', filter: 'grayscale(1) brightness(3)' }}
               />
               <span style={{
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: 600,
                 color: '#ffffff',
                 letterSpacing: '0.18em',
@@ -539,7 +539,7 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
             </div>
             {Array.from({ length: NUM_FRETS }, (_, i) => i + 1).map(fret => (
               <div key={fret} style={{ flex: fretWidthPercent(fret), minWidth: FRET_BASE * 0.68, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 10, color: INLAY_FRETS.includes(fret) ? (isDark ? 'rgba(200,168,75,0.7)' : '#C99700') : (isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.45)'), fontWeight: 700, fontFamily: 'monospace' }}>{fret}</span>
+                <span style={{ fontSize: 11, color: INLAY_FRETS.includes(fret) ? (isDark ? 'rgba(200,168,75,0.7)' : '#C99700') : (isDark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.45)'), fontWeight: 700, fontFamily: 'monospace' }}>{fret}</span>
               </div>
             ))}
           </div>
@@ -1080,7 +1080,7 @@ function Headstock({ hsW, nutW, boardH, rowHeight, displayStrings, activeNotes, 
                   borderRadius: '50%', background: 'rgba(255,255,255,0.3)',
                   transform: 'rotate(-20deg)',
                 }} />
-                <span style={{ color: '#fff', fontWeight: 800, fontSize: 11, letterSpacing: '-0.01em', position: 'relative' }}>
+                <span style={{ color: '#fff', fontWeight: 800, fontSize: 12, letterSpacing: '-0.01em', position: 'relative' }}>
                   {label}
                 </span>
               </div>
@@ -1096,7 +1096,7 @@ function Headstock({ hsW, nutW, boardH, rowHeight, displayStrings, activeNotes, 
                 boxShadow: isDark ? '0 1px 5px rgba(0,0,0,0.4)' : '0 1px 3px rgba(0,0,0,0.12)',
               }}>
                 <span style={{
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 700,
                   color: isDark ? 'rgba(255,255,255,0.97)' : 'rgba(0,0,0,0.75)',
                   letterSpacing: '0.01em',
