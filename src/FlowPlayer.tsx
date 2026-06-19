@@ -6,6 +6,18 @@ import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg } from './el
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
 const INTERACTIVE_TYPES = ['guitar_neck', 'guitar_strum', 'guitar_ear', 'checklist']
 
+// Nhận MỌI dạng link YouTube → URL embed cho iframe (tránh màn đen khi dán link thường)
+export function toYouTubeEmbed(url: string): string {
+  if (!url) return url
+  const u = url.trim()
+  if (/youtube\.com\/embed\//.test(u)) return u // đã là embed
+  const m = u.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/)
+  if (m) return `https://www.youtube.com/embed/${m[1]}?rel=0`
+  const bare = u.match(/^[\w-]{11}$/) // chỉ ID 11 ký tự
+  if (bare) return `https://www.youtube.com/embed/${u}?rel=0`
+  return u
+}
+
 // ── Logic labels & colors ──────────────────────────────────────────────────
 const LOGIC_META: Record<string, { label: string; bg: string; color: string }> = {
   NHAN:   { label: 'NHẬN',   bg: '#EEF2FF', color: '#4338CA' },
@@ -359,7 +371,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* VIDEO */}
         {slide.type === 'video' && slide.mediaUrl && (
           <div style={{ borderRadius: 12, overflow: 'hidden', aspectRatio: '16/9', background: '#000', marginBottom: 8 }}>
-            <iframe src={slide.mediaUrl} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen title={slide.title} />
+            <iframe src={toYouTubeEmbed(slide.mediaUrl)} style={{ width: '100%', height: '100%', border: 'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen title={slide.title} />
           </div>
         )}
 

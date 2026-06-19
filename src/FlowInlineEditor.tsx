@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import FlowPlayer from './FlowPlayer'
+import FlowPlayer, { toYouTubeEmbed } from './FlowPlayer'
 import { STRINGS, colorOfNum } from './elearn/guitarConst'
 
 // ── Tokens (khớp CourseEditorContent) ─────────────────────────────────────────
@@ -368,9 +368,9 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     {/* Media URL — video/image */}
                     {['video', 'image'].includes(editSlide.type) && (
                       <div>
-                        <Label>{editSlide.type === 'video' ? 'URL YouTube (embed)' : 'URL Ảnh'}</Label>
+                        <Label>{editSlide.type === 'video' ? 'Link YouTube (dán link nào cũng được)' : 'URL Ảnh'}</Label>
                         <Inp value={editSlide.mediaUrl ?? ''} onChange={v => patch('mediaUrl', v)}
-                          placeholder={editSlide.type === 'video' ? 'https://www.youtube.com/embed/...' : 'https://...'} />
+                          placeholder={editSlide.type === 'video' ? 'youtu.be/... · youtube.com/watch?v=... · hoặc ID' : 'https://...'} />
                         {editSlide.type === 'image' && (
                           <div style={{ marginTop: 6 }}>
                             <input type="file" accept="image/*" ref={fileRef} style={{ display: 'none' }}
@@ -385,7 +385,9 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                         )}
                         {editSlide.type === 'video' && editSlide.mediaUrl && (
                           <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', background: '#000', aspectRatio: '16/9' }}>
-                            <iframe src={editSlide.mediaUrl} style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen title="preview" />
+                            <iframe src={toYouTubeEmbed(editSlide.mediaUrl)} style={{ width: '100%', height: '100%', border: 'none' }}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen title="preview" />
                           </div>
                         )}
                       </div>
