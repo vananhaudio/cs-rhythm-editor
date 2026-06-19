@@ -23,13 +23,14 @@ export function toYouTubeEmbed(url: string): string {
 }
 
 // ── Logic labels & colors ──────────────────────────────────────────────────
-const LOGIC_META: Record<string, { label: string; bg: string; color: string }> = {
-  NHAN:   { label: 'NHẬN',   bg: '#EEF2FF', color: '#4338CA' },
-  NGHI:   { label: 'NGHĨ',   bg: '#FFF7ED', color: '#C2410C' },
-  LAM:    { label: 'LÀM',    bg: '#F0FDF4', color: '#16A34A' },
-  NGAM:   { label: 'NGẪM',   bg: '#FDF4FF', color: '#9333EA' },
-  THUONG: { label: 'THƯỞNG', bg: '#FFFBEB', color: '#D97706' },
-  DAN:    { label: 'DẪN',    bg: '#F0F9FF', color: '#0369A1' },
+// Học viên CHỈ thấy icon (chữ NHẬN/NGHĨ… là thuật ngữ nội bộ — ẩn đi, giữ ở tooltip cho thầy)
+const LOGIC_META: Record<string, { label: string; icon: string; bg: string; color: string }> = {
+  NHAN:   { label: 'NHẬN',   icon: '👀', bg: '#EEF2FF', color: '#4338CA' },
+  NGHI:   { label: 'NGHĨ',   icon: '💭', bg: '#FFF7ED', color: '#C2410C' },
+  LAM:    { label: 'LÀM',    icon: '🎸', bg: '#F0FDF4', color: '#16A34A' },
+  NGAM:   { label: 'NGẪM',   icon: '🪞', bg: '#FDF4FF', color: '#9333EA' },
+  THUONG: { label: 'THƯỞNG', icon: '🏆', bg: '#FFFBEB', color: '#D97706' },
+  DAN:    { label: 'DẪN',    icon: '🧭', bg: '#F0F9FF', color: '#0369A1' },
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -345,8 +346,9 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888', padding: '2px 4px 2px 0', lineHeight: 1, flexShrink: 0 }}>
           ←
         </button>
-        <span style={{ background: lm.bg, color: lm.color, borderRadius: 99, padding: '3px 11px', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-          {lm.label}
+        <span title={lm.label}
+          style={{ background: lm.bg, width: 28, height: 28, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
+          {lm.icon}
         </span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 14.5, fontWeight: 700, color: '#18181B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {slide.title ?? ''}
