@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
 interface Student {
-  id: string; full_name: string; phone: string | null; age: number | null
+  id: string; full_name: string; email: string | null; phone: string | null; age: number | null
   level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null
   goals: string | null; learning_style: string | null; instruments: string | null
   enrolled_at: string | null; is_active: boolean; honor?: string | null
@@ -237,6 +237,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                 <span style={{ background: student.is_active ? '#1E3A28' : '#3A2828', color: student.is_active ? T.green : T.danger, borderRadius: 20, padding: '2px 10px', fontSize: 12 }}>{student.is_active ? '● Đang học' : '● Ngừng học'}</span>
               </div>
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 8 }}>
+                {student.email && <span style={{ fontSize: 14, color: T.textMuted, userSelect: 'all' }}>📧 {student.email}</span>}
                 {student.phone && <span style={{ fontSize: 14, color: T.textMuted }}>📞 {student.phone}</span>}
                 {student.age && <span style={{ fontSize: 14, color: T.textMuted }}>🎂 {student.age} tuổi</span>}
                 {student.enrolled_at && <span style={{ fontSize: 14, color: T.textMuted }}>📅 Từ {fmtDate(student.enrolled_at)}</span>}
