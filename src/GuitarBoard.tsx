@@ -23,8 +23,8 @@ function App() {
 
   // Chế độ hiển thị: false = Chế độ 1 (cần đàn to trên), true = Chế độ 2 (khuông nhạc to trên, cần đàn nhỏ phụ dưới)
   const [scoreFocus, setScoreFocus] = useState(false);
-  // Tỉ lệ cần đàn: Chế độ 1 (cần đàn to) nhỏ lại còn 0.95; Chế độ 2 (cần đàn phụ) to thêm 5% (0.58→0.61)
-  const FB_SCALE = scoreFocus ? 0.61 : 0.95;
+  // Tỉ lệ cần đàn: Chế độ 1 (cần đàn to) 0.92 (giảm thêm 3%); Chế độ 2 (cần đàn phụ) 0.61
+  const FB_SCALE = scoreFocus ? 0.61 : 0.92;
   const fbRef = useRef<HTMLDivElement>(null);
   const [fbNaturalH, setFbNaturalH] = useState(385);     // chiều cao tự nhiên cần đàn (đo runtime, transform không đổi scrollHeight)
   useEffect(() => {
@@ -203,8 +203,8 @@ function App() {
             borderTop: scoreFocus ? `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}` : undefined,
             marginTop: scoreFocus ? 10 : undefined,
           }}>
-            {/* CĐ2: width 100/scale% để phủ kín bề ngang (phụ nhưng dùng hết chỗ); CĐ1: 100% container → scale 0.95 = nhỏ 5% */}
-            <div ref={fbRef} style={{ transform: `scale(${FB_SCALE})`, transformOrigin: 'top left', width: scoreFocus ? `${100 / FB_SCALE}%` : undefined }}>
+            {/* CĐ2: width 100/scale% phủ kín bề ngang, căn trái. CĐ1: 100% container, scale 0.92 = nhỏ ~8%, CĂN GIỮA */}
+            <div ref={fbRef} style={{ transform: `scale(${FB_SCALE})`, transformOrigin: scoreFocus ? 'top left' : 'top center', width: scoreFocus ? `${100 / FB_SCALE}%` : undefined }}>
               <GuitarFretboard
                 theme={theme}
                 externalActiveNotes={scoreActiveNotes}
