@@ -21,6 +21,19 @@ function App() {
   // Input mode: fretboard clicks write to score instead of playing audio
   const [inputMode, setInputMode] = useState(false);
 
+  // Chế độ hiển thị: false = Chế độ 1 (cần đàn to trên), true = Chế độ 2 (khuông nhạc to trên, cần đàn nhỏ phụ dưới)
+  const [scoreFocus, setScoreFocus] = useState(false);
+  const FB_SCALE = 0.58;                                  // tỉ lệ thu nhỏ cần đàn khi làm panel phụ
+  const fbRef = useRef<HTMLDivElement>(null);
+  const [fbNaturalH, setFbNaturalH] = useState(385);     // chiều cao tự nhiên cần đàn (đo runtime, transform không đổi scrollHeight)
+  useEffect(() => {
+    const el = fbRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => { const h = el.scrollHeight; if (h > 0) setFbNaturalH(h); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Callback registered by ScoreTabViewer so App can forward fretboard clicks
   const noteInputCbRef = useRef<((str: number, fret: number) => void) | null>(null);
 
@@ -124,6 +137,11 @@ function App() {
           {!isMobile && <span style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginLeft:8, letterSpacing:'0.05em' }}>Standard Tuning E A D G B E</span>}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <button onClick={() => setScoreFocus(v => !v)}
+            title="Đổi bố cục: cần đàn to ↔ khuông nhạc to"
+            style={{ display:'flex', alignItems:'center', gap:5, padding: isMobile ? '4px 10px' : '5px 12px', borderRadius:16, border:'1px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.1)', cursor:'pointer', outline:'none', color:'rgba(255,255,255,0.85)', fontSize: isMobile ? 12 : 12, fontWeight:600 }}>
+            ⇅ {scoreFocus ? 'Khuông to' : 'Cần đàn to'}
+          </button>
           <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
             style={{ display:'flex', alignItems:'center', gap:4, padding: isMobile ? '4px 10px' : '5px 12px', borderRadius:16, border:'1px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.1)', cursor:'pointer', outline:'none', color:'rgba(255,255,255,0.8)', fontSize: isMobile ? 13 : 12, fontWeight:500 }}>
             {isDark ? '☀️' : '🌙'}
@@ -131,12 +149,18 @@ function App() {
         </div>
       </header>
 
-      {/* Mobile: stack dọc — fretboard trên, sheet dưới */}
+      {/* Mobile: stack dọc. Chế độ 1 = cần đàn to trên / khuông dưới; Chế độ 2 = khuông to trên / cần đàn nhỏ phụ dưới.
+          Đảo trên-dưới bằng CSS order để KHÔNG remount (giữ trạng thái cần đàn). */}
       {isMobile ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Fretboard — scroll ngang */}
-          <div style={{ flexShrink: 0, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch' }}>
-            <div style={{ minWidth: 600 }}>
+          {/* Fretboard — Chế độ 2 thu nhỏ thành panel phụ */}
+          <div style={{
+            order: scoreFocus ? 3 : 1, flexShrink: 0,
+            overflowX: scoreFocus ? 'hidden' : 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch',
+            height: scoreFocus ? fbNaturalH * FB_SCALE : undefined,
+            borderTop: scoreFocus ? `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}` : undefined,
+          }}>
+            <div ref={fbRef} style={{ minWidth: 600, transform: scoreFocus ? `scale(${FB_SCALE})` : undefined, transformOrigin: 'top left' }}>
               <GuitarFretboard
                 theme={theme}
                 externalActiveNotes={scoreActiveNotes}
@@ -147,7 +171,7 @@ function App() {
           </div>
 
           {/* Nút input mode */}
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0', flexShrink: 0 }}>
+          <div style={{ order: 2, display: 'flex', justifyContent: 'center', padding: '6px 0', flexShrink: 0 }}>
             <button onClick={() => setInputMode(v => !v)}
               style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 14px', borderRadius:20,
                 border:`1px solid ${inputMode ? 'rgba(200,153,26,0.6)' : 'rgba(255,255,255,0.15)'}`,
@@ -158,8 +182,8 @@ function App() {
             </button>
           </div>
 
-          {/* Sheet nhạc — scroll ngang */}
-          <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 8px 16px' }}>
+          {/* Sheet nhạc — Chế độ 2 chiếm phần lớn (to, trên) */}
+          <div style={{ order: scoreFocus ? 1 : 3, flex: 1, overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 8px 16px' }}>
             <ScoreTabViewer
               theme={theme}
               currentTime={currentTime}
@@ -176,15 +200,25 @@ function App() {
           </div>
         </div>
       ) : (
-        /* Desktop: layout cũ */
-        <main className="px-3 pb-4 max-w-7xl mx-auto" style={{ flex: 1 }}>
-          <GuitarFretboard
-            theme={theme}
-            externalActiveNotes={scoreActiveNotes}
-            inputMode={inputMode}
-            onNoteInput={handleFretboardNoteInput}
-          />
-          <div style={{ display: 'flex', justifyContent: 'center', margin: '6px 0' }}>
+        /* Desktop: Chế độ 1 = cần đàn trên / khuông dưới; Chế độ 2 = khuông trên / cần đàn nhỏ phụ dưới (đảo bằng order) */
+        <main className="px-3 pb-4 max-w-7xl mx-auto" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            order: scoreFocus ? 3 : 1,
+            overflow: scoreFocus ? 'hidden' : undefined,
+            height: scoreFocus ? fbNaturalH * FB_SCALE : undefined,
+            borderTop: scoreFocus ? `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}` : undefined,
+            marginTop: scoreFocus ? 10 : undefined,
+          }}>
+            <div ref={fbRef} style={{ transform: scoreFocus ? `scale(${FB_SCALE})` : undefined, transformOrigin: 'top left', width: scoreFocus ? `${100 / FB_SCALE}%` : undefined }}>
+              <GuitarFretboard
+                theme={theme}
+                externalActiveNotes={scoreActiveNotes}
+                inputMode={inputMode}
+                onNoteInput={handleFretboardNoteInput}
+              />
+            </div>
+          </div>
+          <div style={{ order: 2, display: 'flex', justifyContent: 'center', margin: '6px 0' }}>
             <button onClick={() => setInputMode(v => !v)}
               style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 16px', borderRadius:20,
                 border:`1px solid ${inputMode ? (isDark ? 'rgba(200,153,26,0.6)' : 'rgba(200,153,26,0.5)') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
@@ -198,7 +232,7 @@ function App() {
               )}
             </button>
           </div>
-          <div>
+          <div style={{ order: scoreFocus ? 1 : 3 }}>
             <ScoreTabViewer
               theme={theme}
               currentTime={currentTime}
@@ -213,7 +247,7 @@ function App() {
               onRequestNoteInput={handleRequestNoteInput}
             />
           </div>
-          <div className="mt-3">
+          <div className="mt-3" style={{ order: 4 }}>
             <TeachingBoard theme={theme} />
           </div>
         </main>
