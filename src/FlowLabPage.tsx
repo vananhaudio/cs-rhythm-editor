@@ -77,7 +77,34 @@ const SAMPLE_FLOW_MI = {
   ],
 }
 
-const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI }
+// Khởi đầu đam mê — Đệm hát cơ bản — Bài 1 "Hợp âm là gì?" (tách từ thiết kế của thầy)
+const SAMPLE_FLOW_HOPAM = {
+  id: 'sample-hopam',
+  title: 'Hợp âm là gì?',
+  reward_xp: 10,
+  slides: [
+    { id: 'h1', order: 1, logic: 'DAN', type: 'callout', title: 'Hợp âm là gì?',
+      interactive: { variant: 'teacher' },
+      content: 'Hôm nay mình làm quen điều cốt lõi của đệm hát: <b>hợp âm</b>. Sau bài này em chỉ cần nhớ một điều — <b>hợp âm là nhiều nốt vang lên cùng lúc</b>.' },
+    { id: 'h2', order: 2, logic: 'NHAN', type: 'text', title: 'Một dây & nhiều dây',
+      content: '• Gảy <b>một</b> dây → một <b>nốt</b>, mỏng, đơn lẻ (tiếng <i>ting…</i>).<br/>• Gảy <b>nhiều</b> dây cùng lúc → dày, đầy hơn (tiếng <i>reng…</i>) — đó là <b>hợp âm</b>.' },
+    { id: 'h3', order: 3, logic: 'NHAN', type: 'callout', title: 'Dễ hình dung',
+      interactive: { variant: 'tip' },
+      content: 'Nghĩ về tiếng hát: <b>một nốt</b> = một người hát (nghe mỏng); <b>một hợp âm</b> = nhiều người hát cùng lúc (nghe đầy hơn).' },
+    { id: 'h4', order: 4, logic: 'NHAN', type: 'guitar_chord', title: 'Hợp âm Em trên guitar',
+      interactive: { name: 'Em', caption: 'Đây là thế bấm <b>Em</b> (2 ngón ở phím 2). Bấm <b>Nghe</b> để nghe hợp âm, rồi bấm Em và gảy thử nhiều dây trên cây đàn của em.' } },
+    { id: 'h5', order: 5, logic: 'NHAN', type: 'callout', title: 'Hợp âm để làm gì?',
+      interactive: { variant: 'teacher' },
+      content: 'Hợp âm dùng để <b>đệm hát</b>: người hát giữ <b>giai điệu</b>, guitar đánh <b>hợp âm</b> phía sau làm nền nhạc.' },
+    { id: 'h6', order: 6, logic: 'NGAM', type: 'checklist', title: 'Bài tập nhỏ — tự kiểm',
+      interactive: { items: ['Mình đã gảy 1 dây — nghe tiếng mỏng (ting)', 'Mình đã bấm Em rồi gảy nhiều dây — nghe tiếng đầy (reng)', 'Mình nghe được sự khác nhau giữa một nốt và một hợp âm'] } },
+    { id: 'h7', order: 7, logic: 'DAN', type: 'callout', title: 'Câu chốt',
+      interactive: { variant: 'teacher' },
+      content: '<b>Hợp âm là nhiều nốt vang lên cùng lúc</b> — trên guitar là một thế bấm để tạo âm thanh đầy hơn, dùng để đệm hát.<br/>Mục tiêu khi học hợp âm: <b>bấm đúng · gảy rõ · không rè · không tịt</b>.' },
+  ],
+}
+
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM }
 
 export default function FlowLabPage() {
   const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'

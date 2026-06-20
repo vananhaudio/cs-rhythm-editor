@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow } from './elearn/guitarRenderers'
-import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg } from './elearn/guitarRenderers'
+import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView } from './elearn/guitarRenderers'
+import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg } from './elearn/guitarRenderers'
 import SupportFlow from './SupportFlow'
 
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
@@ -578,6 +578,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* NOTE_SHOW — hình minh hoạ nốt: khuông nhạc / cần đàn + nghe thử (NHẬN) */}
         {slide.type === 'note_show' && (
           <NoteShow cfg={(slide.interactive ?? {}) as NoteShowCfg} />
+        )}
+
+        {/* GUITAR_CHORD — sơ đồ hợp âm + nghe rải + gảy thử (NHẬN) */}
+        {slide.type === 'guitar_chord' && (
+          <ChordView cfg={(slide.interactive ?? {}) as ChordCfg} />
         )}
 
         {/* GUITAR_TOOL — mở công cụ ngay trong bài (LÀM/DẪN) */}

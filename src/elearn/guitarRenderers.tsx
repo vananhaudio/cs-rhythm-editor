@@ -449,6 +449,45 @@ export function NoteShow({ cfg }: { cfg: NoteShowCfg }) {
   )
 }
 
+// ── guitar_chord: sơ đồ hợp âm + nghe "rải" + gảy thử (NHẬN, không gate) ────────
+export interface ChordCfg {
+  name?: string       // tên hợp âm, vd 'Em'
+  frets?: number[]    // theo dây 6→1: -1 câm, 0 buông, n phím
+  freqs?: number[]    // tần số từng dây (thấp→cao) để rải nghe
+  caption?: string
+}
+const EM_FRETS = [0, 2, 2, 0, 0, 0]
+const EM_FREQS = [82.41, 123.47, 164.81, 196.0, 246.94, 329.63]
+
+export function ChordView({ cfg }: { cfg: ChordCfg }) {
+  const name = cfg.name ?? 'Em'
+  const frets = cfg.frets && cfg.frets.length === 6 ? cfg.frets : EM_FRETS
+  const freqs = cfg.freqs && cfg.freqs.length ? cfg.freqs : EM_FREQS
+  const xs = [16, 36, 56, 76, 96, 116]   // dây 6 (trái) → dây 1 (phải)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ background: '#F1ECE2', borderRadius: 14, padding: '14px 12px 10px', display: 'flex', justifyContent: 'center' }}>
+        <svg viewBox="0 0 132 150" width="142" style={{ display: 'block' }}>
+          <rect x={14} y={26} width={104} height={4} rx={2} fill="#2A2622" />
+          {[58, 88, 118].map(y => <line key={y} x1={16} x2={116} y1={y} y2={y} stroke="#C9BBA4" strokeWidth={1.4} />)}
+          {xs.map((x, i) => <line key={i} x1={x} x2={x} y1={28} y2={118} stroke="#B8AD9C" strokeWidth={i === 0 ? 2.6 : 1.6} />)}
+          {frets.map((f, i) => f === 0
+            ? <circle key={'o' + i} cx={xs[i]} cy={13} r={5} fill="none" stroke="#9A8F7E" strokeWidth={1.5} />
+            : f < 0 ? <text key={'x' + i} x={xs[i]} y={17} textAnchor="middle" fontSize={12} fill="#9A8F7E">✕</text> : null)}
+          {frets.map((f, i) => f > 0
+            ? <circle key={'d' + i} cx={xs[i]} cy={28 + (f - 0.5) * 30} r={7.5} fill={ACCENT.a} /> : null)}
+          <text x={66} y={144} textAnchor="middle" fontSize={15} fontWeight="800" fill={ACCENT.a}>{name}</text>
+        </svg>
+      </div>
+      {cfg.caption && <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
+      <button onClick={() => playSequence(freqs, 34)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
+        🔊 Nghe hợp âm {name}
+      </button>
+    </div>
+  )
+}
+
 // ── Nút "nghe lại chuỗi dây vừa học" (bằng chứng tiến bộ, dùng cuối bài) ────────
 export function ReplayStrings({ nums }: { nums: number[] }) {
   return (
