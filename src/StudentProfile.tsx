@@ -7,6 +7,18 @@ interface Student {
   goals: string | null; learning_style: string | null; instruments: string | null
   enrolled_at: string | null; is_active: boolean; honor?: string | null
 }
+interface AppStats {
+  totalXP: number; weekXP: number; bySource: { source: string; xp: number }[]
+  streak: number; daysWeek: number; weekMin: number; totalMin: number
+  doneCount: number; totalLessons: number
+  songs: { title: string; mastered: boolean; steps: number }[]
+  recent: { xp: number; source: string; created_at: string }[]
+}
+const SRC_LABEL: Record<string, string> = {
+  flow: 'Bài Flow', lesson: 'Hoàn thành bài', practice: 'Luyện tập', song_step: 'Bước hành trình',
+  song_mastered: 'Chinh phục bài', practiced_lesson: 'Thực hành', elearn: 'Bài Elearn',
+  submitted_video: 'Gửi video', reviewed_old_lesson: 'Ôn bài cũ',
+}
 interface Skill {
   id: string; category: string; skill_name: string; level_0_10: number
   last_assessed: string | null; note: string | null
@@ -134,10 +146,11 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const [notes, setNotes] = useState<TeacherNote[]>([])
   const [loading, setLoading] = useState(true)
   const [savingHonor, setSavingHonor] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'assignments' | 'timeline' | 'courses'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'assignments' | 'timeline' | 'courses' | 'app'>('overview')
   const [enrollments, setEnrollments] = useState<EnrollmentItem[]>([])
   const [allCourses, setAllCourses] = useState<CourseItem[]>([])
   const [enrolling, setEnrolling] = useState<string | null>(null)
+  const [appStats, setAppStats] = useState<AppStats | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -160,6 +173,52 @@ export default function StudentProfile({ studentId, onBack }: Props) {
       ])
       setEnrollments((enr ?? []) as unknown as EnrollmentItem[])
       setAllCourses(courses ?? [])
+
+      // ── Chỉ số do APP ghi (XP / luyện tập / tiến độ / bài hát) — dùng đúng công thức portal ──
+      const [{ data: xp }, { data: pr }, { data: lp }, { data: sg }] = await Promise.all([
+        supabase.from('student_xp_log').select('xp,source,created_at').eq('student_id', studentId),
+        supabase.from('student_practice_log').select('minutes,practiced_at').eq('student_id', studentId),
+        supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', studentId),
+        supabase.from('student_songs').select('title,status,journey').eq('student_id', studentId),
+      ])
+      const wkAgo = Date.now() - 7 * 24 * 3600 * 1000
+      let totalXP = 0, weekXP = 0; const srcMap: Record<string, number> = {}
+      ;(xp ?? []).forEach((r: any) => {
+        totalXP += r.xp || 0
+        if (new Date(r.created_at).getTime() >= wkAgo) weekXP += r.xp || 0
+        srcMap[r.source || 'khác'] = (srcMap[r.source || 'khác'] || 0) + (r.xp || 0)
+      })
+      const bySource = Object.entries(srcMap).map(([source, x]) => ({ source, xp: x })).sort((a, b) => b.xp - a.xp)
+      const recent = (xp ?? []).slice().sort((a: any, b: any) => +new Date(b.created_at) - +new Date(a.created_at)).slice(0, 8)
+      const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+      const days = new Set((pr ?? []).map((r: any) => dayKey(new Date(r.practiced_at))))
+      let streak = 0; const cur = new Date()
+      if (!days.has(dayKey(cur))) cur.setDate(cur.getDate() - 1)
+      while (days.has(dayKey(cur))) { streak++; cur.setDate(cur.getDate() - 1) }
+      let daysWeek = 0
+      for (let i = 0; i < 7; i++) { const d = new Date(); d.setDate(d.getDate() - i); if (days.has(dayKey(d))) daysWeek++ }
+      let weekMin = 0, totalMin = 0
+      ;(pr ?? []).forEach((r: any) => { totalMin += r.minutes || 0; if (new Date(r.practiced_at).getTime() >= wkAgo) weekMin += r.minutes || 0 })
+      // tiến độ: lộ trình = bài của các khoá đang ghi danh active
+      const courseIds = ((enr ?? []) as any[]).filter(e => e.is_active).map(e => e.course_id)
+      let pathIds: string[] = []
+      if (courseIds.length) {
+        const { data: mods } = await supabase.from('edu_modules').select('id').in('course_id', courseIds)
+        const modIds = (mods ?? []).map((m: any) => m.id)
+        if (modIds.length) {
+          const { data: lns } = await supabase.from('edu_course_lessons').select('id').in('module_id', modIds)
+          pathIds = (lns ?? []).map((l: any) => l.id)
+        }
+      }
+      const completedIds = new Set((lp ?? []).map((r: any) => r.lesson_id))
+      const totalLessons = pathIds.length
+      const doneCount = pathIds.length ? pathIds.filter(id => completedIds.has(id)).length : completedIds.size
+      const songs = (sg ?? []).map((s: any) => ({
+        title: s.title, mastered: s.status === 'mastered',
+        steps: s.journey ? Object.values(s.journey).filter((v: any) => v && v.done).length : 0,
+      }))
+      setAppStats({ totalXP, weekXP, bySource, streak, daysWeek, weekMin, totalMin, doneCount, totalLessons, songs, recent })
+
       setLoading(false)
     }
     load()
@@ -279,8 +338,8 @@ export default function StudentProfile({ studentId, onBack }: Props) {
         </Card>
 
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.bgCard, borderRadius: 10, padding: 4, border: `1px solid ${T.border}` }}>
-          {(['overview', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
-            const labels: Record<'overview'|'lessons'|'assignments'|'timeline'|'courses', string> = { overview: '📊 Tổng quan', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI', courses: '📚 Khoá học' }
+          {(['overview', 'app', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
+            const labels: Record<'overview'|'app'|'lessons'|'assignments'|'timeline'|'courses', string> = { overview: '📊 Tổng quan', app: '📱 Hoạt động app', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI', courses: '📚 Khoá học' }
             return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 13, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? T.text : T.textMuted }}>{labels[tab]}</button>
           })}
         </div>
@@ -436,6 +495,89 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {activeTab === 'app' && (
+          <Card>
+            <SectionTitle>Hoạt động trên app</SectionTitle>
+            {!appStats ? (
+              <div style={{ color: T.textMuted, fontSize: 14, textAlign: 'center', padding: '20px 0' }}>Đang tải…</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+                {/* 🧭 Hành trình */}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.green, marginBottom: 8 }}>🧭 Hành trình — em đi đến đâu</div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Mốc', value: `${Math.min(appStats.doneCount + 1, appStats.totalLessons || appStats.doneCount + 1)}/${appStats.totalLessons || '—'}`, color: T.green },
+                      { label: '% hành trình', value: appStats.totalLessons ? Math.round(appStats.doneCount / appStats.totalLessons * 100) + '%' : '—', color: T.green },
+                      { label: 'Bài hoàn thành', value: appStats.doneCount, color: T.green },
+                      { label: 'Điểm hành trình', value: appStats.totalXP.toLocaleString(), color: T.gold },
+                    ].map(s => (
+                      <div key={s.label} style={{ textAlign: 'center', background: T.bg, borderRadius: 10, padding: '10px 16px', minWidth: 90 }}>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 🔥 Chăm chỉ */}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.warn, marginBottom: 8 }}>🔥 Chăm chỉ — em luyện đều không</div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Chuỗi ngày luyện', value: `${appStats.streak} ngày`, color: T.warn },
+                      { label: 'Ngày luyện/tuần', value: `${appStats.daysWeek}/7`, color: T.warn },
+                      { label: 'Phút luyện tuần', value: appStats.weekMin, color: T.gold },
+                      { label: 'Tổng phút luyện', value: appStats.totalMin, color: T.textMuted },
+                    ].map(s => (
+                      <div key={s.label} style={{ textAlign: 'center', background: T.bg, borderRadius: 10, padding: '10px 16px', minWidth: 90 }}>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 🎵 Sống cùng nhạc */}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.green, marginBottom: 8 }}>🎵 Sống cùng nhạc — bài đang chinh phục</div>
+                  {appStats.songs.length === 0
+                    ? <div style={{ color: T.textMuted, fontSize: 14 }}>Chưa thêm bài hát nào.</div>
+                    : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {appStats.songs.map((s, i) => (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: T.bg, borderRadius: 8, padding: '8px 12px', fontSize: 14 }}>
+                            <span style={{ flex: 1, color: T.text, fontWeight: 600 }}>{s.title}</span>
+                            <span style={{ fontSize: 12, color: T.textMuted }}>{s.steps}/5 bước</span>
+                            {s.mastered && <span style={{ fontSize: 12, fontWeight: 700, color: T.green, background: T.greenLight, borderRadius: 6, padding: '2px 8px' }}>✓ Chinh phục</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
+
+                {/* XP gần đây */}
+                {appStats.recent.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.textMuted, marginBottom: 8 }}>Mốc XP gần đây</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {appStats.recent.map((r, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, padding: '4px 2px' }}>
+                          <span style={{ color: T.gold, fontWeight: 700, width: 48 }}>+{r.xp}</span>
+                          <span style={{ flex: 1, color: T.text }}>{SRC_LABEL[r.source] ?? r.source}</span>
+                          <span style={{ color: T.textDim, fontSize: 12 }}>{fmtDateTime(r.created_at)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
           </Card>
