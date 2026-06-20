@@ -18,10 +18,11 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-const SYSTEM = `Bạn là trợ lý trong trang quản trị của hệ thống dạy guitar (thầy Văn Anh).
-Việc của bạn: giúp THẦY tạo tài khoản cho HỌC SINH. Trả lời bằng tiếng Việt, ngắn gọn, thân thiện.
-Khi đã đủ thông tin (tối thiểu là email mỗi học sinh; tên có thể suy từ email nếu thầy không cho), hãy gọi công cụ propose_students để ĐỀ XUẤT danh sách.
-TUYỆT ĐỐI không nói "đã tạo xong" — bạn chỉ ĐỀ XUẤT, chính thầy mới bấm xác nhận để tạo. Thiếu thông tin thì hỏi lại thầy.`
+const SYSTEM = `Bạn là trợ lý trong trang quản trị của hệ thống dạy guitar (thầy Văn Anh). Trả lời bằng tiếng Việt, ngắn gọn, thân thiện.
+Bạn giúp THẦY hai việc:
+1) TẠO TÀI KHOẢN học sinh — khi đủ thông tin (tối thiểu email mỗi em; tên suy từ email nếu thầy không cho), gọi công cụ propose_students.
+2) GÁN HỌC SINH VÀO NHÓM (Zalo/Facebook) — khi thầy muốn thêm em vào nhóm, gọi công cụ propose_group_add với email học sinh + tên nhóm (khớp danh sách nhóm hiện có ở dưới).
+TUYỆT ĐỐI không nói "đã xong" — bạn chỉ ĐỀ XUẤT, chính thầy mới bấm xác nhận. Thiếu thông tin thì hỏi lại thầy.`
 
 const TOOLS = [{
   name: 'propose_students',
@@ -43,6 +44,26 @@ const TOOLS = [{
       },
     },
     required: ['students'],
+  },
+}, {
+  name: 'propose_group_add',
+  description: 'Đề xuất thêm (các) học sinh vào (các) nhóm để thầy duyệt rồi gán. KHÔNG gán ngay.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      assignments: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            studentEmail: { type: 'string', description: 'email học sinh ĐÃ có tài khoản' },
+            groupName: { type: 'string', description: 'tên nhóm, khớp với danh sách nhóm hiện có' },
+          },
+          required: ['studentEmail', 'groupName'],
+        },
+      },
+    },
+    required: ['assignments'],
   },
 }]
 
@@ -66,18 +87,23 @@ function genPassword() {
   return Array.from(arr, (n) => chars[n % chars.length]).join('')
 }
 
-async function chat(messages: unknown[]) {
+async function chat(messages: unknown[], groups: any[]) {
+  const groupList = groups.length
+    ? groups.map((g) => '• ' + g.name + ' (' + g.group_type + ')').join('\n')
+    : '(chưa có nhóm nào — thầy tạo nhóm ở admin → Cộng đồng trước)'
+  const system = SYSTEM + '\n\nCÁC NHÓM HIỆN CÓ (dùng để gán học sinh):\n' + groupList
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1024, system: SYSTEM, tools: TOOLS, messages }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 1024, system, tools: TOOLS, messages }),
   })
   if (!res.ok) return { reply: 'Lỗi gọi AI: ' + (await res.text()), proposal: null }
   const data = await res.json()
-  let reply = '', proposal = null
+  let reply = '', proposal: any = null
   for (const block of data.content ?? []) {
     if (block.type === 'text') reply += block.text
-    if (block.type === 'tool_use' && block.name === 'propose_students') proposal = block.input.students
+    if (block.type === 'tool_use' && block.name === 'propose_students') proposal = { type: 'students', students: block.input.students }
+    if (block.type === 'tool_use' && block.name === 'propose_group_add') proposal = { type: 'group', assignments: block.input.assignments }
   }
   return { reply: reply.trim(), proposal }
 }
@@ -113,6 +139,31 @@ async function createStudents(admin: ReturnType<typeof createClient>, students: 
   return results
 }
 
+// Gán học sinh vào nhóm — ghi edu_group_members (có unique(user_id,group_id) → upsert an toàn)
+async function addToGroups(admin: ReturnType<typeof createClient>, assignments: any[]) {
+  const results: any[] = []
+  for (const a of assignments) {
+    const email = (a.studentEmail || a.email || '').trim().toLowerCase()
+    const groupName = (a.groupName || a.group || '').trim()
+    try {
+      if (!email || !groupName) throw new Error('thiếu email hoặc tên nhóm')
+      const { data: stuRows } = await admin.from('edu_students').select('user_id,full_name').eq('email', email).limit(1)
+      const stu = stuRows?.[0]
+      if (!stu?.user_id) throw new Error('chưa có tài khoản học sinh với email này')
+      const { data: grpRows } = await admin.from('edu_groups').select('id,name').ilike('name', '%' + groupName + '%').limit(1)
+      const grp = grpRows?.[0]
+      if (!grp?.id) throw new Error('không tìm thấy nhóm "' + groupName + '"')
+      const { error: mErr } = await admin.from('edu_group_members')
+        .upsert({ user_id: stu.user_id, group_id: grp.id, source: 'admin', status: 'active' }, { onConflict: 'user_id,group_id' })
+      if (mErr) throw new Error(mErr.message)
+      results.push({ email, student: stu.full_name, group: grp.name, ok: true })
+    } catch (e) {
+      results.push({ email, group: groupName, ok: false, error: String((e as Error)?.message || e) })
+    }
+  }
+  return results
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Chỉ chấp nhận POST' }, 405)
@@ -125,11 +176,16 @@ Deno.serve(async (req) => {
 
   if (body.action === 'chat') {
     if (!Array.isArray(body.messages)) return json({ error: 'Thiếu messages' }, 400)
-    return json(await chat(body.messages))
+    const { data: groups } = await gate.admin.from('edu_groups').select('id,name,group_type')
+    return json(await chat(body.messages, groups ?? []))
   }
   if (body.action === 'create') {
     if (!Array.isArray(body.students) || !body.students.length) return json({ error: 'Thiếu danh sách học sinh' }, 400)
     return json({ results: await createStudents(gate.admin, body.students) })
   }
-  return json({ error: "action phải là 'chat' hoặc 'create'" }, 400)
+  if (body.action === 'add_group') {
+    if (!Array.isArray(body.assignments) || !body.assignments.length) return json({ error: 'Thiếu danh sách gán nhóm' }, 400)
+    return json({ results: await addToGroups(gate.admin, body.assignments) })
+  }
+  return json({ error: 'action không hợp lệ' }, 400)
 })
