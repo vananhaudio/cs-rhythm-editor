@@ -5,6 +5,7 @@ import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import { QuizViewer } from './components/QuizViewer'
 import ElearnLessonView from './elearn/ElearnLessonView'
+import { NavIcon } from './navIcons'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -2060,7 +2061,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 fontFamily: 'inherit', transition: 'background .15s',
               }}>
-              <span style={{ fontSize: 22 }}>{t.icon}</span>
+              <NavIcon name={t.id} color={active ? L.p1 : L.t3} size={24} />
               <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? L.p1 : L.t3, letterSpacing: '.04em' }}>
                 {t.label}
               </span>
