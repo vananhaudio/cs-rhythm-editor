@@ -652,7 +652,7 @@ export default function ScoreTabViewerAlpha({
           <div style={{ position: 'absolute', left: cursorCol.x - 1, top: cursorCol.y, width: 2, height: cursorCol.h, background: 'rgba(30,100,220,0.45)', pointerEvents: 'none', zIndex: 5 }} />
         )}
         {cursorCell && (
-          <div style={{ position: 'absolute', left: cursorCell.x, top: cursorCell.y, width: cursorCell.w, height: cursorCell.h, border: '1.5px solid rgba(30,100,220,0.9)', background: 'rgba(30,100,220,0.16)', borderRadius: 3, pointerEvents: 'none', zIndex: 6, animation: 'atbBlink 1.1s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', left: cursorCell.x, top: cursorCell.y, width: cursorCell.w, height: cursorCell.h, border: '1.5px solid rgba(30,100,220,0.9)', background: 'rgba(30,100,220,0.16)', borderRadius: 3, pointerEvents: 'none', zIndex: 6 }} />
         )}
       </div>
 
@@ -662,7 +662,6 @@ export default function ScoreTabViewerAlpha({
         </div>
       )}
 
-      <style>{`@keyframes atbBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }`}</style>
     </div>
   );
 }
