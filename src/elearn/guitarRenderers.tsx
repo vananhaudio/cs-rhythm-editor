@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { ACCENT, STRINGS, freqOfNum, colorOfNum, widthOfNum, stringByNum } from './guitarConst'
 import { playTone, playSequence } from './audio'
+import { playGuitarNote } from '../audioEngine'   // engine guitar (nốt ngân độc lập) — để rải hợp âm không bị cắt
 
 export interface NeckCfg { target?: number; successMsg?: string }
 export interface ChecklistCfg { items?: string[]; requireAll?: boolean }
@@ -475,13 +476,13 @@ export function ChordView({ cfg }: { cfg: ChordCfg }) {
             ? <circle key={'o' + i} cx={xs[i]} cy={13} r={5} fill="none" stroke="#9A8F7E" strokeWidth={1.5} />
             : f < 0 ? <text key={'x' + i} x={xs[i]} y={17} textAnchor="middle" fontSize={12} fill="#9A8F7E">✕</text> : null)}
           {frets.map((f, i) => f > 0
-            ? <circle key={'d' + i} cx={xs[i]} cy={28 + (f - 0.5) * 30} r={7.5} fill={ACCENT.a} /> : null)}
-          <text x={66} y={144} textAnchor="middle" fontSize={15} fontWeight="800" fill={ACCENT.a}>{name}</text>
+            ? <circle key={'d' + i} cx={xs[i]} cy={28 + (f - 0.5) * 30} r={7.5} fill="#BF5A37" /> : null)}
+          <text x={66} y={144} textAnchor="middle" fontSize={15} fontWeight="800" fill="#BF5A37">{name}</text>
         </svg>
       </div>
       {cfg.caption && <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
-      <button onClick={() => playSequence(freqs, 34)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#1C1A17', color: '#F4E9D8', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
+      <button onClick={() => freqs.forEach((f, i) => setTimeout(() => playGuitarNote(f, i), i * 30))}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
         🔊 Nghe hợp âm {name}
       </button>
     </div>
