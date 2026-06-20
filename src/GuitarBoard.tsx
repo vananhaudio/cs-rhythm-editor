@@ -23,7 +23,8 @@ function App() {
 
   // Chế độ hiển thị: false = Chế độ 1 (cần đàn to trên), true = Chế độ 2 (khuông nhạc to trên, cần đàn nhỏ phụ dưới)
   const [scoreFocus, setScoreFocus] = useState(false);
-  const FB_SCALE = 0.58;                                  // tỉ lệ thu nhỏ cần đàn khi làm panel phụ
+  // Tỉ lệ cần đàn: Chế độ 1 (cần đàn to) nhỏ lại còn 0.95; Chế độ 2 (cần đàn phụ) to thêm 5% (0.58→0.61)
+  const FB_SCALE = scoreFocus ? 0.61 : 0.95;
   const fbRef = useRef<HTMLDivElement>(null);
   const [fbNaturalH, setFbNaturalH] = useState(385);     // chiều cao tự nhiên cần đàn (đo runtime, transform không đổi scrollHeight)
   useEffect(() => {
@@ -153,22 +154,24 @@ function App() {
           Đảo trên-dưới bằng CSS order để KHÔNG remount (giữ trạng thái cần đàn). */}
       {isMobile ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Fretboard — Chế độ 2 thu nhỏ thành panel phụ */}
+          {/* Fretboard — CĐ1 to (scale 0.95), CĐ2 thu nhỏ thành panel phụ (scale 0.61) */}
           <div style={{
             order: scoreFocus ? 3 : 1, flexShrink: 0,
-            overflowX: scoreFocus ? 'hidden' : 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch',
-            height: scoreFocus ? fbNaturalH * FB_SCALE : undefined,
+            overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch',
             borderTop: scoreFocus ? `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}` : undefined,
           }}>
-            <div ref={fbRef} style={{ minWidth: 600, transform: scoreFocus ? `scale(${FB_SCALE})` : undefined, transformOrigin: 'top left' }}>
-              <GuitarFretboard
-                theme={theme}
-                externalActiveNotes={scoreActiveNotes}
-                inputMode={inputMode}
-                onNoteInput={handleFretboardNoteInput}
-                controlsBelow={scoreFocus}
-                onToggleInputMode={() => setInputMode(v => !v)}
-              />
+            {/* hộp đã thu/phóng — cuộn ngang khớp đúng bề rộng thực */}
+            <div style={{ width: 600 * FB_SCALE, height: fbNaturalH * FB_SCALE, overflow: 'hidden' }}>
+              <div ref={fbRef} style={{ width: 600, transform: `scale(${FB_SCALE})`, transformOrigin: 'top left' }}>
+                <GuitarFretboard
+                  theme={theme}
+                  externalActiveNotes={scoreActiveNotes}
+                  inputMode={inputMode}
+                  onNoteInput={handleFretboardNoteInput}
+                  controlsBelow={scoreFocus}
+                  onToggleInputMode={() => setInputMode(v => !v)}
+                />
+              </div>
             </div>
           </div>
 
@@ -195,12 +198,13 @@ function App() {
         <main className="px-3 pb-4 max-w-7xl mx-auto" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{
             order: scoreFocus ? 3 : 1,
-            overflow: scoreFocus ? 'hidden' : undefined,
-            height: scoreFocus ? fbNaturalH * FB_SCALE : undefined,
+            overflow: 'hidden',
+            height: fbNaturalH * FB_SCALE,
             borderTop: scoreFocus ? `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)'}` : undefined,
             marginTop: scoreFocus ? 10 : undefined,
           }}>
-            <div ref={fbRef} style={{ transform: scoreFocus ? `scale(${FB_SCALE})` : undefined, transformOrigin: 'top left', width: scoreFocus ? `${100 / FB_SCALE}%` : undefined }}>
+            {/* CĐ2: width 100/scale% để phủ kín bề ngang (phụ nhưng dùng hết chỗ); CĐ1: 100% container → scale 0.95 = nhỏ 5% */}
+            <div ref={fbRef} style={{ transform: `scale(${FB_SCALE})`, transformOrigin: 'top left', width: scoreFocus ? `${100 / FB_SCALE}%` : undefined }}>
               <GuitarFretboard
                 theme={theme}
                 externalActiveNotes={scoreActiveNotes}
