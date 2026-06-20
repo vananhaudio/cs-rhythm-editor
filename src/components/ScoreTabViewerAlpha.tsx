@@ -107,6 +107,7 @@ export default function ScoreTabViewerAlpha({
   const [keySig, setKeySig]       = useState('c');   // hoá biểu (giọng): 'c'=Đô trưởng (không dấu)…
   const [repeatOpens, setRepeatOpens]   = useState<Set<number>>(new Set());        // ô nhịp có dấu mở lặp ‖:
   const [repeatCloses, setRepeatCloses] = useState<Map<number, number>>(new Map()); // ô nhịp → số lần lặp :‖
+  const [showTools, setShowTools] = useState(false);   // gập/mở thanh công cụ ký âm (đặt DƯỚI khuông để cần đàn sát khuông)
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -669,51 +670,7 @@ export default function ScoreTabViewerAlpha({
       onBlur={() => { setFocused(false); setFretBuf(''); }}
       style={{ outline: 'none', border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', background: '#fff' }}
     >
-      {/* Thanh trạng thái + nút import */}
-      <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '6px 12px', fontSize: 13, color: muted, borderBottom: `1px solid ${border}`, flexWrap: 'wrap' }}>
-        <span>Trường độ: <b style={{ color: '#8a6500' }}>{durLabel}</b></span>
-        <span>Dây: <b style={{ color: '#14532D' }}>{strLabel}</b></span>
-        <span>BPM: <b style={{ color: '#555' }}>{bpm}</b></span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          Giọng:
-          <select
-            value={keySig}
-            onChange={(e) => setKeySig(e.target.value)}
-            onKeyDown={(e) => e.stopPropagation()}
-            style={{ fontSize: 12, padding: '2px 4px', borderRadius: 6, border: `1px solid ${border}`, background: '#fff', color: '#14532D', fontWeight: 600, cursor: 'pointer' }}
-          >
-            {KEY_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
-          </select>
-        </span>
-        {dotted && <span style={{ color: '#8a6500' }}>• chấm dôi</span>}
-        {triplet && <span style={{ color: '#8a6500' }}>• liên 3</span>}
-        {fretBuf && <span style={{ color: '#1e64dc' }}>fret: {fretBuf}_</span>}
-        <div style={{ marginLeft: 'auto' }}>
-          <input ref={fileInputRef} type="file" accept=".gp,.gp3,.gp4,.gp5,.gpx,.xml,.musicxml" style={{ display: 'none' }} onChange={handleImportFile} />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            style={{ padding: '3px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'none', cursor: 'pointer', fontSize: 12, color: muted, opacity: importing ? 0.5 : 1 }}
-          >
-            {importing ? '⏳ Đang nạp…' : '📂 Nạp file'}
-          </button>
-        </div>
-      </div>
-
-      {/* Thanh công cụ ký âm: dấu nối · luyến · ô nhịp lặp */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 12px', fontSize: 12, color: muted, borderBottom: `1px solid ${border}`, flexWrap: 'wrap' }}>
-        <button title="Dấu nối — nối vào nốt cùng dây trước (phím T)" onClick={toggleTie}
-          style={tbBtn(!!selNote?.tie, !!selNote && selNote.string >= 0)}>⌢ Dấu nối</button>
-        <button title="Luyến / hammer-on / pull-off sang nốt kế (phím H)" onClick={toggleHopo}
-          style={tbBtn(!!selNote?.hopo, !!selNote && selNote.string >= 0)}>⌒ Luyến (H/P)</button>
-        <span style={{ width: 1, height: 16, background: border }} />
-        <span>Ô nhịp {currentBar + 1}:</span>
-        <button title="Dấu mở lặp ‖: ở đầu ô nhịp này" onClick={toggleRepeatOpen}
-          style={tbBtn(repeatOpens.has(currentBar))}>‖: Mở lặp</button>
-        <button title="Dấu đóng lặp :‖ (lặp 2 lần) ở ô nhịp này" onClick={toggleRepeatClose}
-          style={tbBtn(repeatCloses.has(currentBar))}>:‖ Đóng lặp ×2</button>
-      </div>
-
+      {/* KHUÔNG NHẠC ở trên cùng — sát ngay dưới cần đàn (công cụ chuyển xuống dưới) */}
       <div ref={wrapRef} onClick={handleClick}
         style={{ position: 'relative', overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', cursor: 'pointer', minHeight: 200 }}>
         <div ref={alphaRef} />
@@ -739,6 +696,59 @@ export default function ScoreTabViewerAlpha({
         )}
         {cursorCell && (
           <div style={{ position: 'absolute', left: cursorCell.x, top: cursorCell.y, width: cursorCell.w, height: cursorCell.h, border: '1.5px solid rgba(30,100,220,0.9)', background: 'rgba(30,100,220,0.16)', borderRadius: 3, pointerEvents: 'none', zIndex: 6 }} />
+        )}
+      </div>
+
+      {/* CÔNG CỤ KÝ ÂM — gập xuống DƯỚI khuông, ẩn mặc định (cần đàn sát khuông hơn) */}
+      <div style={{ borderTop: `1px solid ${border}` }}>
+        <button
+          onClick={() => setShowTools(v => !v)}
+          onKeyDown={(e) => e.stopPropagation()}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: muted, textAlign: 'left', flexWrap: 'wrap' }}
+        >
+          <span style={{ fontWeight: 700, color: '#14532D' }}>⚙ Công cụ ký âm {showTools ? '▴' : '▾'}</span>
+          <span>Trường độ: <b style={{ color: '#8a6500' }}>{durLabel}</b></span>
+          <span>Dây: <b style={{ color: '#14532D' }}>{strLabel}</b></span>
+          {dotted && <span style={{ color: '#8a6500' }}>• chấm</span>}
+          {triplet && <span style={{ color: '#8a6500' }}>• liên3</span>}
+          {fretBuf && <span style={{ color: '#1e64dc' }}>fret {fretBuf}_</span>}
+        </button>
+
+        {showTools && (
+          <>
+            {/* BPM · Giọng · Nạp file */}
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '6px 12px', fontSize: 13, color: muted, borderTop: `1px solid ${border}`, flexWrap: 'wrap' }}>
+              <span>BPM: <b style={{ color: '#555' }}>{bpm}</b></span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                Giọng:
+                <select value={keySig} onChange={(e) => setKeySig(e.target.value)} onKeyDown={(e) => e.stopPropagation()}
+                  style={{ fontSize: 12, padding: '2px 4px', borderRadius: 6, border: `1px solid ${border}`, background: '#fff', color: '#14532D', fontWeight: 600, cursor: 'pointer' }}>
+                  {KEY_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
+                </select>
+              </span>
+              <div style={{ marginLeft: 'auto' }}>
+                <input ref={fileInputRef} type="file" accept=".gp,.gp3,.gp4,.gp5,.gpx,.xml,.musicxml" style={{ display: 'none' }} onChange={handleImportFile} />
+                <button onClick={() => fileInputRef.current?.click()} disabled={importing}
+                  style={{ padding: '3px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'none', cursor: 'pointer', fontSize: 12, color: muted, opacity: importing ? 0.5 : 1 }}>
+                  {importing ? '⏳ Đang nạp…' : '📂 Nạp file'}
+                </button>
+              </div>
+            </div>
+
+            {/* Dấu nối · luyến · ô nhịp lặp */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 12px', fontSize: 12, color: muted, borderTop: `1px solid ${border}`, flexWrap: 'wrap' }}>
+              <button title="Dấu nối — nối vào nốt cùng dây trước (phím T)" onClick={toggleTie}
+                style={tbBtn(!!selNote?.tie, !!selNote && selNote.string >= 0)}>⌢ Dấu nối</button>
+              <button title="Luyến / hammer-on / pull-off sang nốt kế (phím H)" onClick={toggleHopo}
+                style={tbBtn(!!selNote?.hopo, !!selNote && selNote.string >= 0)}>⌒ Luyến (H/P)</button>
+              <span style={{ width: 1, height: 16, background: border }} />
+              <span>Ô nhịp {currentBar + 1}:</span>
+              <button title="Dấu mở lặp ‖: ở đầu ô nhịp này" onClick={toggleRepeatOpen}
+                style={tbBtn(repeatOpens.has(currentBar))}>‖: Mở lặp</button>
+              <button title="Dấu đóng lặp :‖ (lặp 2 lần) ở ô nhịp này" onClick={toggleRepeatClose}
+                style={tbBtn(repeatCloses.has(currentBar))}>:‖ Đóng lặp ×2</button>
+            </div>
+          </>
         )}
       </div>
 
