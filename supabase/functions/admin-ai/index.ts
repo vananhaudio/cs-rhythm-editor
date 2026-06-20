@@ -84,8 +84,6 @@ async function chat(messages: unknown[]) {
 
 // Tạo tài khoản học sinh — TÁI HIỆN đúng flow StudentOnboarding (KHÔNG ghi app_users)
 async function createStudents(admin: ReturnType<typeof createClient>, students: any[]) {
-  const { data: courses } = await admin.from('edu_courses').select('id')
-  const courseIds = (courses ?? []).map((c: any) => c.id)
   const results: any[] = []
   for (const s of students) {
     const email = (s.email || '').trim().toLowerCase()
@@ -99,19 +97,13 @@ async function createStudents(admin: ReturnType<typeof createClient>, students: 
         throw new Error(/already been registered|already exists/i.test(m) ? 'email này đã có tài khoản' : m)
       }
       const uid = created.user.id
-      // INSERT thẳng — auth user vừa tạo nên user_id chắc chắn mới (không cần ON CONFLICT / unique constraint)
-      const { data: st, error: sErr } = await admin.from('edu_students')
+      // INSERT thẳng — auth user vừa tạo nên user_id chắc chắn mới. KHÔNG tự gán khoá (thầy gán sau ở /admin → Học viên).
+      const { error: sErr } = await admin.from('edu_students')
         .insert({ user_id: uid, full_name, email, is_active: true, level: 'beginner', enrolled_at: new Date().toISOString() })
-        .select('id').single()
       if (sErr) {
         // rollback: xoá auth user vừa tạo để email được giải phóng, tránh tài khoản mồ côi
         await admin.auth.admin.deleteUser(uid).catch(() => {})
         throw new Error('tạo hồ sơ học sinh lỗi: ' + sErr.message)
-      }
-      if (courseIds.length) {
-        const rows = courseIds.map((cid: string) => ({ student_id: st.id, course_id: cid, enrolled_by: uid, is_active: true }))
-        const { error: enErr } = await admin.from('edu_enrollments').insert(rows)
-        if (enErr) console.error('enroll lỗi (hồ sơ vẫn đã tạo):', enErr.message)
       }
       results.push({ email, full_name, password, ok: true })
     } catch (e) {
