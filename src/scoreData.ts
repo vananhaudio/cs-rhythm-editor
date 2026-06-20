@@ -12,6 +12,8 @@ export interface ScoreNote {
   octave: number;
   measure: number;   // 1-indexed
   beat: number;      // 1-indexed, fractional ok (e.g. 1.5 = and of beat 1)
+  tie?: boolean;     // dấu nối: nối vào nốt cùng dây ngay trước (giữ ngân)
+  hopo?: boolean;    // luyến: hammer-on/pull-off sang nốt kế (alphaTab tự chọn chiều)
 }
 
 // Tempo: 80 BPM → quarter note = 0.75s

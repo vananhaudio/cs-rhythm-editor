@@ -7,6 +7,24 @@ import { playGuitarNote } from '../audioEngine';
 import { notesToAlphaTex } from './notesToAlphaTex';
 import { importScoreFile } from './scoreImporter';
 
+// ─── Hoá biểu (giọng) ────────────────────────────────────────────────────────
+// value = ký hiệu giọng cho alphaTab \ks; label = tên tiếng Việt + số dấu hoá
+const KEY_OPTIONS: { value: string; label: string }[] = [
+  { value: 'c',  label: 'Đô trưởng (không dấu)' },
+  { value: 'g',  label: 'Sol trưởng (1♯)' },
+  { value: 'd',  label: 'Rê trưởng (2♯)' },
+  { value: 'a',  label: 'La trưởng (3♯)' },
+  { value: 'e',  label: 'Mi trưởng (4♯)' },
+  { value: 'b',  label: 'Si trưởng (5♯)' },
+  { value: 'f#', label: 'Fa♯ trưởng (6♯)' },
+  { value: 'f',  label: 'Fa trưởng (1♭)' },
+  { value: 'bb', label: 'Si♭ trưởng (2♭)' },
+  { value: 'eb', label: 'Mi♭ trưởng (3♭)' },
+  { value: 'ab', label: 'La♭ trưởng (4♭)' },
+  { value: 'db', label: 'Rê♭ trưởng (5♭)' },
+  { value: 'gb', label: 'Sol♭ trưởng (6♭)' },
+];
+
 // ─── Trường độ ─────────────────────────────────────────────────────────────────
 const DURATIONS = [4, 2, 1, 0.5, 0.25];        // beats: Tròn → Móc đôi
 const spb = (bpm = SCORE_BPM) => 60 / bpm;
@@ -32,7 +50,7 @@ function composeBeats(c: DurClass): number {
 }
 function reflowTimes(notes: ScoreNote[], bpm = SCORE_BPM): ScoreNote[] {
   const sec = spb(bpm);
-  let t = notes.length ? notes[0].time : 0;
+  let t = 0;   // luôn neo bài về thời điểm 0 (không có nhịp lấy đà) — tránh cả bài trôi phải sinh dấu lặng ảo ở ô nhịp đầu
   return notes.map(n => {
     const out: ScoreNote = {
       ...n, time: t,
@@ -86,6 +104,9 @@ export default function ScoreTabViewerAlpha({
   const [pendingStr, setPendingStr] = useState(3);
   const [focused, setFocused]     = useState(false);
   const [bpm, setBpm]             = useState(80);
+  const [keySig, setKeySig]       = useState('c');   // hoá biểu (giọng): 'c'=Đô trưởng (không dấu)…
+  const [repeatOpens, setRepeatOpens]   = useState<Set<number>>(new Set());        // ô nhịp có dấu mở lặp ‖:
+  const [repeatCloses, setRepeatCloses] = useState<Map<number, number>>(new Map()); // ô nhịp → số lần lặp :‖
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,7 +123,7 @@ export default function ScoreTabViewerAlpha({
   const [ready, setReady] = useState(false);
 
   // ── alphaTex từ notes ──────────────────────────────────────────────────────
-  const tex = useMemo(() => notesToAlphaTex(notes, bpm), [notes, bpm]);
+  const tex = useMemo(() => notesToAlphaTex(notes, bpm, keySig, { opens: repeatOpens, closes: repeatCloses }), [notes, bpm, keySig, repeatOpens, repeatCloses]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const cursorTime = useMemo(() => {
@@ -245,6 +266,30 @@ export default function ScoreTabViewerAlpha({
     } else { setTriplet(v => !v); setDotted(false); }
   }, [selIdx, notes, setSelDuration]);
 
+  // Dấu nối (tie) trên nốt đang chọn — nối vào nốt cùng dây ngay trước
+  const toggleTie = useCallback(() => {
+    if (selIdx === null || selIdx >= notes.length || notes[selIdx].string < 0) return;
+    onNotesChange(notes.map((n, i) => i === selIdx ? { ...n, tie: !n.tie } : n));
+  }, [selIdx, notes, onNotesChange]);
+
+  // Luyến / hammer-on / pull-off trên nốt đang chọn — sang nốt kế cùng dây
+  const toggleHopo = useCallback(() => {
+    if (selIdx === null || selIdx >= notes.length || notes[selIdx].string < 0) return;
+    onNotesChange(notes.map((n, i) => i === selIdx ? { ...n, hopo: !n.hopo } : n));
+  }, [selIdx, notes, onNotesChange]);
+
+  // Ô nhịp hiện tại (theo con trỏ) — để gắn dấu lặp
+  const currentBar = useMemo(
+    () => Math.floor((cursorTime + 1e-6) / (spb(bpm) * SCORE_BEATS_PER_MEASURE)),
+    [cursorTime, bpm]
+  );
+  const toggleRepeatOpen = useCallback(() => {
+    setRepeatOpens(prev => { const s = new Set(prev); s.has(currentBar) ? s.delete(currentBar) : s.add(currentBar); return s; });
+  }, [currentBar]);
+  const toggleRepeatClose = useCallback(() => {
+    setRepeatCloses(prev => { const m = new Map(prev); m.has(currentBar) ? m.delete(currentBar) : m.set(currentBar, 2); return m; });
+  }, [currentBar]);
+
   // ── Keyboard ─────────────────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     setFocused(true);
@@ -331,6 +376,8 @@ export default function ScoreTabViewerAlpha({
       return;
     }
     if (k === 'r' || k === 'R') { e.preventDefault(); insertRest(); return; }
+    if (k === 't' || k === 'T') { e.preventDefault(); toggleTie();  return; }   // dấu nối
+    if (k === 'h' || k === 'H') { e.preventDefault(); toggleHopo(); return; }   // luyến (hammer-on/pull-off)
     if (k === ' ') { e.preventDefault(); isPlaying ? onPause() : onPlay(); return; }
     if (e.shiftKey && /^[1-6]$/.test(k)) {
       e.preventDefault();
@@ -338,7 +385,7 @@ export default function ScoreTabViewerAlpha({
       setPendingStr(ns); pendingStrRef.current = ns;
       return;
     }
-  }, [notes, cursorIdx, fretBuf, selIdx, isPlaying, onPlay, onPause, onNotesChange, stepDuration, toggleDot, toggleTrip, insertRest, cursorTime, effectiveDur]);
+  }, [notes, cursorIdx, fretBuf, selIdx, isPlaying, onPlay, onPause, onNotesChange, stepDuration, toggleDot, toggleTrip, toggleTie, toggleHopo, insertRest, cursorTime, effectiveDur]);
 
   // ── AlphaTab init ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -603,6 +650,16 @@ export default function ScoreTabViewerAlpha({
   const durLabel = ({ 4: 'Tròn', 2: 'Trắng', 1: 'Đen', 0.5: 'Móc đơn', 0.25: 'Móc đôi' } as Record<number, string>)[durBeats];
   const strLabel = ['Mi (6)', 'La (5)', 'Rê (4)', 'Sol (3)', 'Si (2)', 'Mi (1)'][pendingStr];
 
+  // Nốt đang chọn + trạng thái dấu nối/luyến/lặp cho thanh công cụ ký âm
+  const selNote = selIdx !== null && selIdx < notes.length ? notes[selIdx] : null;
+  const tbBtn = (active: boolean, enabled = true): React.CSSProperties => ({
+    padding: '3px 10px', borderRadius: 8,
+    border: `1px solid ${active ? '#14532D' : border}`,
+    background: active ? 'rgba(20,83,45,0.10)' : 'none',
+    color: active ? '#14532D' : muted, fontWeight: active ? 700 : 500,
+    fontSize: 12, cursor: enabled ? 'pointer' : 'default', opacity: enabled ? 1 : 0.4,
+  });
+
   return (
     <div
       ref={focusRef}
@@ -617,6 +674,17 @@ export default function ScoreTabViewerAlpha({
         <span>Trường độ: <b style={{ color: '#8a6500' }}>{durLabel}</b></span>
         <span>Dây: <b style={{ color: '#14532D' }}>{strLabel}</b></span>
         <span>BPM: <b style={{ color: '#555' }}>{bpm}</b></span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          Giọng:
+          <select
+            value={keySig}
+            onChange={(e) => setKeySig(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            style={{ fontSize: 12, padding: '2px 4px', borderRadius: 6, border: `1px solid ${border}`, background: '#fff', color: '#14532D', fontWeight: 600, cursor: 'pointer' }}
+          >
+            {KEY_OPTIONS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
+          </select>
+        </span>
         {dotted && <span style={{ color: '#8a6500' }}>• chấm dôi</span>}
         {triplet && <span style={{ color: '#8a6500' }}>• liên 3</span>}
         {fretBuf && <span style={{ color: '#1e64dc' }}>fret: {fretBuf}_</span>}
@@ -630,6 +698,20 @@ export default function ScoreTabViewerAlpha({
             {importing ? '⏳ Đang nạp…' : '📂 Nạp file'}
           </button>
         </div>
+      </div>
+
+      {/* Thanh công cụ ký âm: dấu nối · luyến · ô nhịp lặp */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 12px', fontSize: 12, color: muted, borderBottom: `1px solid ${border}`, flexWrap: 'wrap' }}>
+        <button title="Dấu nối — nối vào nốt cùng dây trước (phím T)" onClick={toggleTie}
+          style={tbBtn(!!selNote?.tie, !!selNote && selNote.string >= 0)}>⌢ Dấu nối</button>
+        <button title="Luyến / hammer-on / pull-off sang nốt kế (phím H)" onClick={toggleHopo}
+          style={tbBtn(!!selNote?.hopo, !!selNote && selNote.string >= 0)}>⌒ Luyến (H/P)</button>
+        <span style={{ width: 1, height: 16, background: border }} />
+        <span>Ô nhịp {currentBar + 1}:</span>
+        <button title="Dấu mở lặp ‖: ở đầu ô nhịp này" onClick={toggleRepeatOpen}
+          style={tbBtn(repeatOpens.has(currentBar))}>‖: Mở lặp</button>
+        <button title="Dấu đóng lặp :‖ (lặp 2 lần) ở ô nhịp này" onClick={toggleRepeatClose}
+          style={tbBtn(repeatCloses.has(currentBar))}>:‖ Đóng lặp ×2</button>
       </div>
 
       <div ref={wrapRef} onClick={handleClick}
