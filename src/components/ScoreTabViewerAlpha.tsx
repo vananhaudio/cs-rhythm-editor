@@ -188,7 +188,20 @@ export default function ScoreTabViewerAlpha({
 
   // ── Hành động dùng chung ──────────────────────────────────────────────────────
   const insertRest = useCallback(() => {
-    const t = cursorTime, sec = spb(bpm);
+    const sec = spb(bpm);
+    // Đang CHỌN 1 nốt → biến chính nốt đó thành dấu lặng (giữ nguyên trường độ), KHÔNG thêm nốt mới
+    if (selIdx !== null && selIdx < notes.length) {
+      const target = notes[selIdx];
+      const rest: ScoreNote = {
+        id: `r${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        time: target.time, duration: target.duration, string: -1, fret: -1, pitch: 'R', octave: 0,
+        measure: target.measure, beat: target.beat,
+      };
+      onNotesChange(reflowTimes(notes.map((n, i) => i === selIdx ? rest : n)));
+      return;   // giữ selection trên dấu lặng vừa đổi
+    }
+    // Con trỏ ở chỗ trống → chèn dấu lặng mới
+    const t = cursorTime;
     const rest: ScoreNote = {
       id: `r${Date.now()}-${Math.random().toString(36).slice(2)}`,
       time: t, duration: effectiveDur, string: -1, fret: -1, pitch: 'R', octave: 0,
@@ -198,7 +211,7 @@ export default function ScoreTabViewerAlpha({
     onNotesChange(reflowTimes([...notes.slice(0, cursorIdx), rest, ...notes.slice(cursorIdx)]));
     setCursorIdx(cursorIdx + 1);
     setSelIdx(cursorIdx);
-  }, [cursorTime, effectiveDur, notes, cursorIdx, onNotesChange]);
+  }, [cursorTime, effectiveDur, notes, cursorIdx, selIdx, bpm, onNotesChange]);
 
   const setSelDuration = useCallback((beats: number) => {
     onNotesChange(reflowTimes(notes.map((n, i) => i === selIdx ? { ...n, duration: beatsToSec(beats) } : n)));
