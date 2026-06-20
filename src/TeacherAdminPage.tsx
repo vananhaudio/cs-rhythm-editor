@@ -4,6 +4,7 @@ import StudentProfile from './StudentProfile'
 import CourseEditorContent from './CourseEditorContent'
 import ToolsManager from './ToolsManager'
 import GroupManager from './GroupManager'
+import AiAssistant from './AiAssistant'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -12,7 +13,7 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
@@ -20,6 +21,7 @@ const NAV = [
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
   { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
   { id: 'community' as Section, icon: '🌱', label: 'Cộng đồng'      },
+  { id: 'assistant' as Section, icon: '🤖', label: 'Trợ lý AI'      },
 ]
 
 export default function TeacherAdminPage() {
@@ -138,6 +140,12 @@ export default function TeacherAdminPage() {
         {section === 'community' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <GroupManager />
+          </div>
+        )}
+
+        {section === 'assistant' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <AiAssistant />
           </div>
         )}
 
