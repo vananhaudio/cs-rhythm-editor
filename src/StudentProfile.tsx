@@ -165,14 +165,29 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     load()
   }, [studentId])
 
+  const SEL = 'id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track,is_free)'
   const handleEnroll = async (courseId: string) => {
     if (!student) return
     setEnrolling(courseId)
+    // Đã có dòng ghi danh (kể cả đã tắt is_active=false)? → BẬT LẠI, tránh chèn trùng (lỗi unique)
+    const { data: existRows } = await supabase.from('edu_enrollments')
+      .select('id').eq('student_id', student.id).eq('course_id', courseId).limit(1)
+    const existing = existRows?.[0]
+    if (existing) {
+      const { data, error } = await supabase.from('edu_enrollments')
+        .update({ is_active: true }).eq('id', existing.id).select(SEL).single()
+      if (error) { alert('Đăng ký khoá học thất bại: ' + error.message) }
+      else if (data) setEnrollments(prev => prev.some(e => e.id === data.id)
+        ? prev.map(e => e.id === data.id ? data as unknown as EnrollmentItem : e)
+        : [...prev, data as unknown as EnrollmentItem])
+      setEnrolling(null)
+      return
+    }
     const { data, error } = await supabase.from('edu_enrollments').insert({
       student_id: student.id, course_id: courseId,
       enrolled_by: (await supabase.auth.getUser()).data.user?.id,
       is_active: true,
-    }).select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track,is_free)').single()
+    }).select(SEL).single()
     if (error) { alert('Đăng ký khoá học thất bại: ' + error.message) }
     else if (data) setEnrollments(prev => [...prev, data as unknown as EnrollmentItem])
     setEnrolling(null)
