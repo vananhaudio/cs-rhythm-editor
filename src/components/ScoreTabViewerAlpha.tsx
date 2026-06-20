@@ -291,17 +291,8 @@ export default function ScoreTabViewerAlpha({
           setCursorIdx(notes.length); setSelIdx(null);
         }
       } else {
-        // Cuối bài → chèn dấu lặng theo trường độ bút
-        const t = cursorTime, sec = spb(bpm);
-        const rest: ScoreNote = {
-          id: `r${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          time: t, duration: effectiveDur, string: -1, fret: -1, pitch: 'R', octave: 0,
-          measure: Math.floor(t / (sec * SCORE_BEATS_PER_MEASURE)) + 1,
-          beat: ((t / sec) % SCORE_BEATS_PER_MEASURE) + 1,
-        };
-        onNotesChange(reflowTimes([...notes, rest]));
-        setCursorIdx(cursorIdx + 1);
-        setSelIdx(null);
+        // Đã ở cuối bài → giữ con trỏ nhập, KHÔNG tự chèn dấu lặng (muốn thêm lặng dùng phím R)
+        setCursorIdx(notes.length); setSelIdx(null);
       }
       return;
     }
