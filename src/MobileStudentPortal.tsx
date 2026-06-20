@@ -773,7 +773,19 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     tapTimer.current = setTimeout(() => { tapTimes.current = []; setTapCount(0) }, 3000)
   }
 
-  const openSettings = () => { setNameDraft(uname(me)); setShowSettings(true) }
+  const [pwDraft, setPwDraft] = useState('')
+  const [pwMsg, setPwMsg] = useState('')
+  const [savingPw, setSavingPw] = useState(false)
+  const changePassword = async () => {
+    const v = pwDraft.trim()
+    if (v.length < 6) { setPwMsg('Mật khẩu cần ít nhất 6 ký tự'); return }
+    setSavingPw(true); setPwMsg('')
+    const { error } = await supabase.auth.updateUser({ password: v })
+    setSavingPw(false)
+    if (error) { setPwMsg('Lỗi: ' + error.message); return }
+    setPwDraft(''); setPwMsg('✓ Đã đổi mật khẩu thành công')
+  }
+  const openSettings = () => { setNameDraft(uname(me)); setShowSettings(true); setPwDraft(''); setPwMsg('') }
   const saveDisplayName = async () => {
     const v = nameDraft.trim()
     if (!v) return
@@ -2092,6 +2104,20 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 Lưu
               </button>
             </div>
+          </div>
+          {/* Đổi mật khẩu — học sinh tự đổi tại chỗ, không cần email */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: L.t2, marginBottom: 8 }}>Đổi mật khẩu</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={pwDraft} onChange={e => setPwDraft(e.target.value)} type="password"
+                placeholder="Mật khẩu mới (ít nhất 6 ký tự)"
+                style={{ flex: 1, padding: '12px 14px', borderRadius: 12, border: `1px solid ${L.border}`, fontSize: 16, fontFamily: 'inherit', outline: 'none', background: L.surface2 }} />
+              <button onClick={changePassword} disabled={savingPw || pwDraft.trim().length < 6}
+                style={{ background: L.p1, color: L.tinv, border: 'none', borderRadius: 12, padding: '0 18px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: (savingPw || pwDraft.trim().length < 6) ? 0.5 : 1 }}>
+                {savingPw ? '…' : 'Đổi'}
+              </button>
+            </div>
+            {pwMsg && <div style={{ fontSize: 13, marginTop: 8, color: pwMsg.startsWith('✓') ? '#16A34A' : '#E53E3E' }}>{pwMsg}</div>}
           </div>
           <button onClick={() => setShowSettings(false)}
             style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '14px', fontSize: 16, fontWeight: 700, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>

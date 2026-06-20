@@ -18,6 +18,9 @@ const EXAMPLES = [
   'Tạo 2 tài khoản: an@gmail.com và binh@gmail.com',
 ]
 
+// Mật khẩu mặc định khi thầy không nói rõ — học sinh đổi sau trong app
+const DEFAULT_PW = '12345678'
+
 export default function AiAssistant() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
@@ -55,7 +58,8 @@ export default function AiAssistant() {
     if (!proposal || creating) return
     setCreating(true); setErr('')
     try {
-      const { data, error } = await supabase.functions.invoke('admin-ai', { body: { action: 'create', students: proposal } })
+      const students = proposal.map(s => ({ ...s, password: (s.password || '').trim() || DEFAULT_PW }))
+      const { data, error } = await supabase.functions.invoke('admin-ai', { body: { action: 'create', students } })
       if (error) throw error
       const rs: Result[] = data.results || []
       setResults(rs); setProposal(null)
@@ -108,7 +112,7 @@ export default function AiAssistant() {
                 <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 12px', fontSize: 13, borderTop: i ? `1px solid ${S.border}` : 'none' }}>
                   <span style={{ flex: 1, color: S.text1, fontWeight: 600 }}>{s.email}</span>
                   <span style={{ flex: 1, color: S.text2 }}>{s.full_name || <em style={{ color: S.text3 }}>tên từ email</em>}</span>
-                  <span style={{ color: S.text3 }}>{s.password ? 'mk: ' + s.password : 'mk: tự sinh'}</span>
+                  <span style={{ color: S.text3 }}>mk: {s.password || DEFAULT_PW}{s.password ? '' : ' (mặc định)'}</span>
                 </div>
               ))}
             </div>
