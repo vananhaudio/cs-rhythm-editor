@@ -37,9 +37,10 @@ interface GuitarFretboardProps {
   onNoteInput?: (stringIndex: number, fret: number) => void;
   inputMode?: boolean;
   controlsBelow?: boolean;   // true (Chế độ 2: cần đàn phụ) → đẩy thanh nút + scale xuống DƯỚI bảng cần đàn
+  onToggleInputMode?: () => void;   // bật/tắt chế độ nhập nốt từ cần đàn (nút nằm trong thanh nút cần đàn)
 }
 
-export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, onNoteInput, inputMode = false, controlsBelow = false }: GuitarFretboardProps) {
+export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, onNoteInput, inputMode = false, controlsBelow = false, onToggleInputMode }: GuitarFretboardProps) {
   const isDark = theme === 'dark';
   const t = {
     toolbarBg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
@@ -331,12 +332,18 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
     <div className="w-full" style={{ borderRadius:16, overflow:"hidden", display:"flex", flexDirection:"column", boxShadow: isDark ? "0 24px 80px rgba(0,0,0,0.6)" : "0 4px 24px rgba(0,0,0,0.1)", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.08)" }}>
       {/* Toolbar — gắn liền với board (Chế độ 2: xuống dưới) */}
       <div style={{ order: controlsBelow ? 2 : 1, display:"flex", alignItems:"center", gap:8, padding:"10px 14px", flexWrap:"wrap" as const, background: isDark ? "#1a1a2a" : "#F0E8D8", [controlsBelow ? 'borderTop' : 'borderBottom']: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #D8C8A8" }}>
-        {/* Input mode badge */}
-        {inputMode && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: 'rgba(200,153,26,0.18)', border: '1px solid rgba(200,153,26,0.45)', color: '#c8991a', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c8991a', display: 'inline-block', animation: 'pulse 1s infinite' }} />
-            Nhập nốt nhạc
-          </div>
+        {/* Nút bật/tắt nhập nốt từ cần đàn — nằm cùng thanh nút cần đàn */}
+        {onToggleInputMode && (
+          <button onClick={onToggleInputMode}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 20,
+              border: `1px solid ${inputMode ? 'rgba(200,153,26,0.6)' : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)')}`,
+              background: inputMode ? 'rgba(200,153,26,0.18)' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'),
+              color: inputMode ? '#c8991a' : t.textMuted2,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none', whiteSpace: 'nowrap' }}>
+            {inputMode
+              ? <><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c8991a', display: 'inline-block', animation: 'pulse 1s infinite' }} />Tắt nhập nốt</>
+              : '+ Nhập nốt từ cần đàn'}
+          </button>
         )}
         {/* Mode toggle */}
         <div style={{ display:"flex", alignItems:"center", borderRadius:20, border:`1px solid ${isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)"}`, overflow:"hidden", background:t.toolbarBg }}>

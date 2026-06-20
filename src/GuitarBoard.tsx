@@ -167,20 +167,9 @@ function App() {
                 inputMode={inputMode}
                 onNoteInput={handleFretboardNoteInput}
                 controlsBelow={scoreFocus}
+                onToggleInputMode={() => setInputMode(v => !v)}
               />
             </div>
-          </div>
-
-          {/* Nút input mode */}
-          <div style={{ order: 2, display: 'flex', justifyContent: 'center', padding: '6px 0', flexShrink: 0 }}>
-            <button onClick={() => setInputMode(v => !v)}
-              style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 14px', borderRadius:20,
-                border:`1px solid ${inputMode ? 'rgba(200,153,26,0.6)' : 'rgba(255,255,255,0.15)'}`,
-                background: inputMode ? 'rgba(200,153,26,0.15)' : 'rgba(255,255,255,0.06)',
-                color: inputMode ? '#c8a84b' : 'rgba(255,255,255,0.5)',
-                fontSize:12, fontWeight:600, cursor:'pointer', outline:'none' }}>
-              {inputMode ? '● Tắt nhập nốt' : '+ Nhập nốt từ cần đàn'}
-            </button>
           </div>
 
           {/* Sheet nhạc — Chế độ 2 chiếm phần lớn (to, trên) */}
@@ -218,22 +207,9 @@ function App() {
                 inputMode={inputMode}
                 onNoteInput={handleFretboardNoteInput}
                 controlsBelow={scoreFocus}
+                onToggleInputMode={() => setInputMode(v => !v)}
               />
             </div>
-          </div>
-          <div style={{ order: 2, display: 'flex', justifyContent: 'center', margin: '6px 0' }}>
-            <button onClick={() => setInputMode(v => !v)}
-              style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 16px', borderRadius:20,
-                border:`1px solid ${inputMode ? (isDark ? 'rgba(200,153,26,0.6)' : 'rgba(200,153,26,0.5)') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
-                background: inputMode ? (isDark ? 'rgba(200,153,26,0.15)' : 'rgba(200,153,26,0.1)') : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
-                color: inputMode ? (isDark ? '#c8a84b' : '#a07820') : (isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)'),
-                fontSize:12, fontWeight:600, cursor:'pointer', outline:'none', letterSpacing:'0.04em' }}>
-              {inputMode ? (
-                <><span style={{ width:7, height:7, borderRadius:'50%', background:'currentColor', display:'inline-block' }} />Tắt nhập nốt từ cần đàn</>
-              ) : (
-                <><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>Nhập nốt từ cần đàn</>
-              )}
-            </button>
           </div>
           <div style={{ order: scoreFocus ? 1 : 3 }}>
             <ScoreTabViewer
