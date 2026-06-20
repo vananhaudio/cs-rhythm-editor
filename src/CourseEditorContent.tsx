@@ -245,6 +245,9 @@ export default function CourseEditorContent() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const dragSrcRef = useRef<{ id: string; moduleId: string } | null>(null)
+  const moduleDragRef = useRef<string | null>(null)
+  const [draggingModuleId, setDraggingModuleId] = useState<string | null>(null)
+  const [dragOverModuleId, setDragOverModuleId] = useState<string | null>(null)
 
   // ── Form state ──
   const [fTitle,   setFTitle]   = useState('')
@@ -596,8 +599,37 @@ export default function CourseEditorContent() {
     if (lessonId !== dragSrcRef.current?.id) setDragOverId(lessonId)
   }
 
+  // ── Kéo-thả ĐỔI THỨ TỰ CHƯƠNG ──
+  const onModuleDragStart = (e: React.DragEvent, modId: string) => {
+    e.stopPropagation()
+    moduleDragRef.current = modId
+    dragSrcRef.current = null
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', modId)
+    setDraggingModuleId(modId)
+  }
+  const onModuleDragEnd = () => { setDraggingModuleId(null); setDragOverModuleId(null); moduleDragRef.current = null }
+  const reorderModules = async (srcId: string, targetId: string) => {
+    const arr = [...modules]
+    const from = arr.findIndex(m => m.id === srcId)
+    const to = arr.findIndex(m => m.id === targetId)
+    if (from < 0 || to < 0 || from === to) return
+    const [moved] = arr.splice(from, 1)
+    arr.splice(to, 0, moved)
+    const reindexed = arr.map((m, i) => ({ ...m, order_index: i }))
+    setModules(reindexed)
+    await Promise.all(reindexed.map(m => supabase.from('edu_modules').update({ order_index: m.order_index }).eq('id', m.id)))
+  }
+
   const onDropModule = async (e: React.DragEvent, targetModuleId: string) => {
     e.preventDefault()
+    if (moduleDragRef.current) {
+      const ms = moduleDragRef.current
+      moduleDragRef.current = null
+      setDraggingModuleId(null); setDragOverModuleId(null)
+      if (ms !== targetModuleId) await reorderModules(ms, targetModuleId)
+      return
+    }
     const src = dragSrcRef.current
     const overId = dragOverId
     setDraggingId(null); setDragOverId(null)
@@ -801,11 +833,16 @@ export default function CourseEditorContent() {
               {modules.map(mod => {
                 const modLessons = lessons.filter(l => l.module_id === mod.id).sort((a, b) => a.order_index - b.order_index)
                 return (
-                  <div key={mod.id} style={{ marginBottom: 12 }}
-                    onDragOver={e => e.preventDefault()}
+                  <div key={mod.id} style={{ marginBottom: 12, borderRadius: 8, opacity: draggingModuleId === mod.id ? 0.4 : 1, boxShadow: dragOverModuleId === mod.id ? `inset 0 3px 0 ${C.accent}` : 'none', transition: 'opacity .12s' }}
+                    onDragOver={e => { e.preventDefault(); if (moduleDragRef.current && moduleDragRef.current !== mod.id) setDragOverModuleId(mod.id) }}
                     onDrop={e => onDropModule(e, mod.id)}>
 
                     <div style={{ fontSize: 12, fontWeight: 700, color: C.text2, padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <span draggable
+                        onDragStart={e => onModuleDragStart(e, mod.id)}
+                        onDragEnd={onModuleDragEnd}
+                        title="Kéo để đổi thứ tự chương"
+                        style={{ color: C.text3, fontSize: 14, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
                       {editingModuleId === mod.id ? (
                         <input autoFocus value={editingModuleName} onChange={e => setEditingModuleName(e.target.value)}
                           onBlur={() => saveModuleName(mod.id)}
