@@ -166,6 +166,7 @@ function App() {
                 externalActiveNotes={scoreActiveNotes}
                 inputMode={inputMode}
                 onNoteInput={handleFretboardNoteInput}
+                controlsBelow={scoreFocus}
               />
             </div>
           </div>
@@ -196,6 +197,7 @@ function App() {
               totalDuration={totalDuration}
               onNotesChange={handleNotesChange}
               onRequestNoteInput={handleRequestNoteInput}
+              toolsOnTop={scoreFocus}
             />
           </div>
         </div>
@@ -215,6 +217,7 @@ function App() {
                 externalActiveNotes={scoreActiveNotes}
                 inputMode={inputMode}
                 onNoteInput={handleFretboardNoteInput}
+                controlsBelow={scoreFocus}
               />
             </div>
           </div>
@@ -245,6 +248,7 @@ function App() {
               totalDuration={totalDuration}
               onNotesChange={handleNotesChange}
               onRequestNoteInput={handleRequestNoteInput}
+              toolsOnTop={scoreFocus}
             />
           </div>
           <div className="mt-3" style={{ order: 4 }}>

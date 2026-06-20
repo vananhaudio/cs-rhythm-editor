@@ -85,13 +85,14 @@ interface Props {
   totalDuration: number;
   onNotesChange: (notes: ScoreNote[]) => void;
   onRequestNoteInput?: (cb: (str: number, fret: number) => void) => void;
+  toolsOnTop?: boolean;   // true (Chế độ 2: khuông to ở trên) → đưa công cụ + lời dẫn lên TRÊN khuông
 }
 
 interface Box { x: number; y: number; w: number; h: number }
 
 export default function ScoreTabViewerAlpha({
   theme, currentTime, isPlaying, onPlay, onPause, onStop,
-  activeNoteIds, notes, onNotesChange, onRequestNoteInput,
+  activeNoteIds, notes, onNotesChange, onRequestNoteInput, toolsOnTop = false,
 }: Props) {
   const isDark = theme === 'dark';
 
@@ -668,11 +669,11 @@ export default function ScoreTabViewerAlpha({
       onKeyDown={handleKeyDown}
       onFocus={() => setFocused(true)}
       onBlur={() => { setFocused(false); setFretBuf(''); }}
-      style={{ outline: 'none', border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', background: '#fff' }}
+      style={{ outline: 'none', border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden', background: '#fff', display: 'flex', flexDirection: 'column' }}
     >
-      {/* KHUÔNG NHẠC ở trên cùng — sát ngay dưới cần đàn (công cụ chuyển xuống dưới) */}
+      {/* KHUÔNG NHẠC. Chế độ 1: khuông trên, công cụ dưới. Chế độ 2 (toolsOnTop): công cụ + lời dẫn LÊN TRÊN khuông. */}
       <div ref={wrapRef} onClick={handleClick}
-        style={{ position: 'relative', overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', cursor: 'pointer', minHeight: 200 }}>
+        style={{ order: toolsOnTop ? 2 : 1, position: 'relative', overflowX: 'auto', overflowY: 'hidden', background: '#faf9f5', cursor: 'pointer', minHeight: 200 }}>
         <div ref={alphaRef} />
 
         {/* Ô nhịp sai luật (tổng phách ≠ nhịp) — nền đỏ nhạt + viền đỏ */}
@@ -699,8 +700,8 @@ export default function ScoreTabViewerAlpha({
         )}
       </div>
 
-      {/* CÔNG CỤ KÝ ÂM — gập xuống DƯỚI khuông, ẩn mặc định (cần đàn sát khuông hơn) */}
-      <div style={{ borderTop: `1px solid ${border}` }}>
+      {/* CÔNG CỤ KÝ ÂM — gập, ẩn mặc định. Chế độ 1: dưới khuông; Chế độ 2: trên khuông */}
+      <div style={{ order: toolsOnTop ? 1 : 2, [toolsOnTop ? 'borderBottom' : 'borderTop']: `1px solid ${border}` }}>
         <button
           onClick={() => setShowTools(v => !v)}
           onKeyDown={(e) => e.stopPropagation()}
@@ -753,7 +754,7 @@ export default function ScoreTabViewerAlpha({
       </div>
 
       {notes.length === 0 && (
-        <div style={{ padding: '10px 16px', textAlign: 'center', color: muted, fontSize: 13, borderTop: `1px solid ${border}` }}>
+        <div style={{ order: toolsOnTop ? 0 : 3, padding: '10px 16px', textAlign: 'center', color: muted, fontSize: 13, [toolsOnTop ? 'borderBottom' : 'borderTop']: `1px solid ${border}` }}>
           Gõ số fret để nhập nốt · ↑↓ đổi dây · +/− trường độ · . chấm dôi · / liên 3 · R lặng · Space phát
         </div>
       )}

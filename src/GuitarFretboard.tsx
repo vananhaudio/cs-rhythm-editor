@@ -36,9 +36,10 @@ interface GuitarFretboardProps {
   // When set, clicking a fret calls this instead of playing audio
   onNoteInput?: (stringIndex: number, fret: number) => void;
   inputMode?: boolean;
+  controlsBelow?: boolean;   // true (Chế độ 2: cần đàn phụ) → đẩy thanh nút + scale xuống DƯỚI bảng cần đàn
 }
 
-export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, onNoteInput, inputMode = false }: GuitarFretboardProps) {
+export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, onNoteInput, inputMode = false, controlsBelow = false }: GuitarFretboardProps) {
   const isDark = theme === 'dark';
   const t = {
     toolbarBg: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
@@ -327,9 +328,9 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
   // Headstock: satin natural maple — Taylor modern style
 
   return (
-    <div className="w-full" style={{ borderRadius:16, overflow:"hidden", boxShadow: isDark ? "0 24px 80px rgba(0,0,0,0.6)" : "0 4px 24px rgba(0,0,0,0.1)", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.08)" }}>
-      {/* Toolbar — gắn liền với board */}
-      <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", flexWrap:"wrap" as const, background: isDark ? "#1a1a2a" : "#F0E8D8", borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #D8C8A8" }}>
+    <div className="w-full" style={{ borderRadius:16, overflow:"hidden", display:"flex", flexDirection:"column", boxShadow: isDark ? "0 24px 80px rgba(0,0,0,0.6)" : "0 4px 24px rgba(0,0,0,0.1)", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.08)" }}>
+      {/* Toolbar — gắn liền với board (Chế độ 2: xuống dưới) */}
+      <div style={{ order: controlsBelow ? 2 : 1, display:"flex", alignItems:"center", gap:8, padding:"10px 14px", flexWrap:"wrap" as const, background: isDark ? "#1a1a2a" : "#F0E8D8", [controlsBelow ? 'borderTop' : 'borderBottom']: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid #D8C8A8" }}>
         {/* Input mode badge */}
         {inputMode && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: 'rgba(200,153,26,0.18)', border: '1px solid rgba(200,153,26,0.45)', color: '#c8991a', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
@@ -454,9 +455,9 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
         )}
       </div>
 
-      {/* Saved Scales Panel */}
+      {/* Saved Scales Panel (Chế độ 2: xuống dưới cùng) */}
       {savedScales.length > 0 && (
-        <div style={{ display:"flex", flexWrap:"wrap" as const, gap:8, alignItems:"center", padding:"8px 14px", background: isDark ? "#141422" : "#FAF7F0", borderBottom: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid #E8E0D0" }}>
+        <div style={{ order: controlsBelow ? 3 : 2, display:"flex", flexWrap:"wrap" as const, gap:8, alignItems:"center", padding:"8px 14px", background: isDark ? "#141422" : "#FAF7F0", [controlsBelow ? 'borderTop' : 'borderBottom']: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid #E8E0D0" }}>
           <span style={{ fontSize:11, fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase" as const, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.35)", marginRight:4, flexShrink:0 }}>Scales đã lưu</span>
           {savedScales.map(scale => {
             const isLoaded = activeScaleId === scale.id;
@@ -498,8 +499,8 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
         </div>
       )}
 
-      {/* Fretboard scroll wrapper */}
-      <div className="overflow-x-auto" style={{ borderRadius:0 }}>
+      {/* Fretboard scroll wrapper (Chế độ 2: lên trên cùng) */}
+      <div className="overflow-x-auto" style={{ order: controlsBelow ? 1 : 3, borderRadius:0 }}>
         <div style={{ minWidth: 860, display: 'flex', flexDirection: 'column', position: 'relative', borderRadius: 16, overflow: 'hidden' }}>
 
           {/* Watermark */}
