@@ -1,4 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { playGuitarNote } from '../audioEngine'
+import { getNoteForFret } from '../guitarNotes'
+
+// Chord voicings: [stringIndex, fret][] — string 0=low E, 5=high E
+// null = mute (skip)
+const CHORDS: Record<string, (readonly [number, number] | null)[]> = {
+  Am:  [null, [1,0], [2,2], [3,2], [4,1], [5,0]],
+  Em:  [[0,0], [1,2], [2,2], [3,0], [4,0], [5,0]],
+  open:[[0,0], [1,0], [2,0], [3,0], [4,0], [5,0]],
+}
+
+function strumChord(name: string) {
+  const voicing = CHORDS[name] ?? CHORDS.open
+  voicing.forEach((n, i) => {
+    if (!n) return
+    const { frequency } = getNoteForFret(n[0], n[1])
+    setTimeout(() => playGuitarNote(frequency, n[0]), i * 40)
+  })
+}
 
 export interface NarratedSlideshowCfg {
   audio_url: string
@@ -45,6 +64,14 @@ function DeckIframe({
           window.parent.postMessage({slideIndexChanged: e.data.slideIndexChanged}, '*');
         }
       });
+      // Bắt click nút hợp âm → báo parent phát tiếng
+      document.addEventListener('click', function(e){
+        var btn = e.target.closest('button');
+        if(!btn) return;
+        var txt = btn.textContent || '';
+        var chord = txt.match(/Am/) ? 'Am' : txt.match(/Em/) ? 'Em' : txt.match(/buông|dây/) ? 'open' : null;
+        if(chord) window.parent.postMessage({playChord: chord}, '*');
+      });
     </script>
   </body></html>`
 
@@ -60,6 +87,9 @@ function DeckIframe({
     const handler = (e: MessageEvent) => {
       if (e.data?.slideIndexChanged !== undefined) {
         onSlideChange(e.data.slideIndexChanged)
+      }
+      if (e.data?.playChord) {
+        strumChord(e.data.playChord)
       }
     }
     window.addEventListener('message', handler)
