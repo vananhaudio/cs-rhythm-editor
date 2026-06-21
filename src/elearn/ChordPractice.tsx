@@ -1,329 +1,286 @@
-// ChordPractice — hiển thị sơ đồ hợp âm + nghe mic 3 giây → chấm đúng/sai
-// Dùng ACF pitch detection (tái dùng từ GuitarTuner) thu thập nhiều nốt trong cửa sổ 3s
-// rồi kiểm tra xem có đủ nốt của hợp âm không.
+// ChordPractice — luyện hợp âm với chord detection thật (PCP chroma + YIN)
+// Dùng useChordDetector (gảy cả chord → nhận dạng ngay)
+// và useStringDetector (rải từng dây → chấm từng dây một)
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useState } from 'react'
+import { useChordDetector } from './useChordDetector'
+import {
+  useStringDetector,
+  AM_SEQUENCE, EM_SEQUENCE, DM_SEQUENCE,
+  E_SEQUENCE, C_SEQUENCE, G_SEQUENCE,
+  type ChordStep,
+  RATING_LABELS, RATING_COLORS,
+} from './useStringDetector'
 
-// ── Chord data ────────────────────────────────────────────────────────────────
 export interface ChordPracticeCfg {
-  chord: string     // 'Am' | 'C' | 'Dm' | 'Em' | 'E' | 'G'
-  chords?: string[] // nếu muốn luyện nhiều hợp âm tuần tự
+  chord?: string      // 'Am' | 'C' | 'Dm' | 'Em' | 'E' | 'G'
+  chords?: string[]   // luyện nhiều hợp âm tuần tự
+  mode?: 'strum' | 'rai'  // 'strum' = gảy chord → nhận dạng ngay; 'rai' = rải từng dây
 }
 
-const CHORD_DATA: Record<string, {
-  frets: number[]   // 6 dây (dây 6 → dây 1): -1=câm, 0=buông, n=phím
-  notes: string[]   // tên nốt cần phát hiện
-  label: string
-  color: string
+// ── Chord metadata ────────────────────────────────────────────────────────────
+const CHORD_META: Record<string, {
+  label: string; color: string; frets: number[]; sequence: ChordStep[]
 }> = {
-  Am: { frets: [-1, 0, 2, 2, 1, 0], notes: ['A', 'C', 'E'], label: 'La thứ',     color: '#C0392B' },
-  C:  { frets: [-1, 3, 2, 0, 1, 0], notes: ['C', 'E', 'G'], label: 'Đô trưởng',  color: '#2980B9' },
-  Dm: { frets: [-1, -1, 0, 2, 3, 1], notes: ['D', 'F', 'A'], label: 'Rê thứ',    color: '#8E44AD' },
-  Em: { frets: [0, 2, 2, 0, 0, 0], notes: ['E', 'G', 'B'], label: 'Mi thứ',      color: '#27AE60' },
-  E:  { frets: [0, 2, 2, 1, 0, 0], notes: ['E', 'G#', 'B'], label: 'Mi trưởng',  color: '#16A085' },
-  G:  { frets: [3, 2, 0, 0, 0, 3], notes: ['G', 'B', 'D'], label: 'Sol trưởng',  color: '#D35400' },
+  Am: { label: 'La thứ',     color: '#C0392B', frets: [-1,0,2,2,1,0], sequence: AM_SEQUENCE },
+  Em: { label: 'Mi thứ',     color: '#27AE60', frets: [0,2,2,0,0,0],  sequence: EM_SEQUENCE },
+  Dm: { label: 'Rê thứ',     color: '#8E44AD', frets: [-1,-1,0,2,3,1],sequence: DM_SEQUENCE },
+  E:  { label: 'Mi trưởng',  color: '#16A085', frets: [0,2,2,1,0,0],  sequence: E_SEQUENCE  },
+  C:  { label: 'Đô trưởng',  color: '#2980B9', frets: [-1,3,2,0,1,0], sequence: C_SEQUENCE  },
+  G:  { label: 'Sol trưởng', color: '#D35400', frets: [3,2,0,0,0,3],  sequence: G_SEQUENCE  },
 }
 
-// ── Pitch detection (ACF — tái dùng từ GuitarTuner) ─────────────────────────
-function detectPitch(buf: Float32Array, sampleRate: number): { freq: number; clarity: number } {
-  const SIZE = buf.length
-  let sum = 0
-  for (let i = 0; i < SIZE; i++) sum += buf[i] * buf[i]
-  if (Math.sqrt(sum / SIZE) < 0.01) return { freq: -1, clarity: 0 }
-
-  const HALF = Math.floor(SIZE / 2)
-  const r = new Float32Array(HALF)
-  for (let lag = 0; lag < HALF; lag++) {
-    let s = 0
-    for (let i = 0; i < HALF; i++) s += buf[i] * buf[i + lag]
-    r[lag] = s
-  }
-
-  let firstMin = 1
-  for (let i = 1; i < HALF - 1; i++) {
-    if (r[i] <= r[i - 1] && r[i] <= r[i + 1]) { firstMin = i; break }
-  }
-
-  const minLag = Math.floor(sampleRate / 1200)
-  const maxLag = Math.floor(sampleRate / 60)
-  const searchFrom = Math.max(firstMin, minLag)
-
-  let bestLag = -1, bestVal = -Infinity
-  for (let i = searchFrom; i < Math.min(HALF - 1, maxLag); i++) {
-    if (r[i] > bestVal) { bestVal = r[i]; bestLag = i }
-  }
-
-  if (bestLag < 2) return { freq: -1, clarity: 0 }
-  const clarity = r[0] > 0 ? bestVal / r[0] : 0
-  if (clarity < 0.55) return { freq: -1, clarity: 0 }
-
-  const y0 = r[bestLag - 1], y1 = r[bestLag], y2 = r[bestLag + 1] ?? y1
-  const denom = 2 * (2 * y1 - y0 - y2)
-  const refined = denom !== 0 ? bestLag - (y0 - y2) / denom : bestLag
-  return { freq: sampleRate / refined, clarity }
-}
-
-const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-function freqToNote(freq: number): string {
-  const midi = Math.round(12 * Math.log2(freq / 440) + 69)
-  return NOTE_NAMES[((midi % 12) + 12) % 12]
-}
-
-// ── Chord diagram SVG ────────────────────────────────────────────────────────
-function ChordDiagramSVG({ name, frets, color }: { name: string; frets: number[]; color: string }) {
+// ── Chord diagram ─────────────────────────────────────────────────────────────
+function Diagram({ name, frets, color, highlightStep }: {
+  name: string; frets: number[]; color: string; highlightStep?: number
+}) {
   const xs = [16, 36, 56, 76, 96, 116]
-  const minFret = Math.min(...frets.filter(f => f > 0))
+  const validFrets = frets.filter(f => f > 0)
+  const minFret = validFrets.length ? Math.min(...validFrets) : 1
   const offset = minFret > 3 ? minFret - 1 : 0
-
   return (
-    <svg viewBox="0 0 132 165" width="160" style={{ display: 'block' }}>
-      {/* Tên hợp âm */}
-      <text x={66} y={14} textAnchor="middle" fontSize={18} fontWeight="800" fill={color}>{name}</text>
-
-      {/* Nut (phím 0) */}
-      <rect x={14} y={28} width={104} height={5} rx={2} fill="#2A2622" />
-
-      {/* Phím đàn */}
-      {[0, 1, 2, 3].map(row => (
-        <line key={row} x1={16} x2={116} y1={33 + row * 28} y2={33 + row * 28} stroke="#C9BBA4" strokeWidth={1.4} />
+    <svg viewBox="0 0 132 160" width="148" style={{ display: 'block' }}>
+      <text x={66} y={13} textAnchor="middle" fontSize={17} fontWeight="800" fill={color}>{name}</text>
+      <rect x={14} y={26} width={104} height={4} rx={2} fill="#2A2622" />
+      {[0,1,2,3].map(r => (
+        <line key={r} x1={16} x2={116} y1={30+r*28} y2={30+r*28} stroke="#C9BBA4" strokeWidth={1.4}/>
       ))}
-
-      {/* Dây */}
-      {xs.map((x, i) => (
-        <line key={i} x1={x} x2={x} y1={28} y2={145} stroke="#B8AD9C" strokeWidth={i === 0 ? 2.6 : 1.6} />
+      {xs.map((x,i) => (
+        <line key={i} x1={x} x2={x} y1={26} y2={142} stroke="#B8AD9C" strokeWidth={i===0?2.6:1.6}/>
       ))}
-
-      {/* Ký hiệu buông / câm */}
-      {frets.map((f, i) => f === 0
-        ? <circle key={'o'+i} cx={xs[i]} cy={20} r={5} fill="none" stroke="#9A8F7E" strokeWidth={1.5} />
-        : f < 0 ? <text key={'x'+i} x={xs[i]} y={24} textAnchor="middle" fontSize={11} fill="#9A8F7E">✕</text>
+      {frets.map((f,i) => f===0
+        ? <circle key={'o'+i} cx={xs[i]} cy={18} r={5} fill="none" stroke="#9A8F7E" strokeWidth={1.5}/>
+        : f<0 ? <text key={'x'+i} x={xs[i]} y={22} textAnchor="middle" fontSize={11} fill="#9A8F7E">✕</text>
         : null
       )}
-
-      {/* Chấm bấm */}
-      {frets.map((f, i) => f > 0 ? (
-        <circle key={'d'+i} cx={xs[i]} cy={33 + (f - offset - 0.5) * 28} r={8} fill={color} />
+      {frets.map((f,i) => f>0 ? (
+        <circle key={'d'+i} cx={xs[i]} cy={30+(f-offset-0.5)*28} r={8}
+          fill={highlightStep === i ? '#FFD700' : color}
+          opacity={highlightStep !== undefined && highlightStep !== i ? 0.4 : 1}/>
       ) : null)}
-
-      {/* Số phím nếu capo */}
-      {offset > 0 && (
-        <text x={10} y={47} textAnchor="end" fontSize={10} fill="#9A8F7E">{offset + 1}fr</text>
-      )}
+      {offset>0 && <text x={9} y={44} textAnchor="end" fontSize={10} fill="#9A8F7E">{offset+1}fr</text>}
     </svg>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-type PracticeState = 'idle' | 'listening' | 'pass' | 'fail'
+// ── Strum mode: gảy cả chord → nhận dạng ─────────────────────────────────────
+function StrumPractice({ chordName, color, onPass }: {
+  chordName: string; color: string; onPass: () => void
+}) {
+  const { state, start, reset } = useChordDetector(chordName)
+  const { phase, score, confirmedFrames, topGuess, rogueNotes } = state
 
-export function ChordPractice({ cfg, onPass }: { cfg: ChordPracticeCfg; onPass?: () => void }) {
-  const chordList = cfg.chords ?? [cfg.chord ?? 'Am']
-  const [chordIdx, setChordIdx] = useState(0)
-  const chordName = chordList[chordIdx]
-  const data = CHORD_DATA[chordName] ?? CHORD_DATA.Am
+  const CONFIRM_FRAMES = 6
+  const progressPct = Math.min(100, (confirmedFrames / CONFIRM_FRAMES) * 100)
 
-  const [state, setState] = useState<PracticeState>('idle')
-  const [countdown, setCountdown] = useState(3)
-  const [detectedSet, setDetectedSet] = useState<Set<string>>(new Set())
-
-  const rafRef = useRef<number | null>(null)
-  const ctxRef = useRef<AudioContext | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-
-  const stopMic = useCallback(() => {
-    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
-    if (ctxRef.current?.state !== 'closed') ctxRef.current?.close().catch(() => {})
-    ctxRef.current = null
-  }, [])
-
-  useEffect(() => () => stopMic(), [stopMic])
-
-  const startListening = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-      })
-      streamRef.current = stream
-      const ac = new AudioContext({ sampleRate: 44100 })
-      if (ac.state === 'suspended') await ac.resume()
-      ctxRef.current = ac
-
-      const analyser = ac.createAnalyser()
-      analyser.fftSize = 8192
-      analyser.smoothingTimeConstant = 0
-      ac.createMediaStreamSource(stream).connect(analyser)
-
-      const buf = new Float32Array(analyser.fftSize)
-      const notes = new Set<string>()
-      const startMs = Date.now()
-      let lastCountdown = 3
-
-      setState('listening')
-      setCountdown(3)
-      setDetectedSet(new Set())
-
-      const tick = () => {
-        const elapsed = (Date.now() - startMs) / 1000
-        const remaining = Math.max(0, Math.ceil(3 - elapsed))
-        if (remaining !== lastCountdown) { lastCountdown = remaining; setCountdown(remaining) }
-
-        if (elapsed >= 3) {
-          stopMic()
-          const required = data.notes
-          const matched = required.filter(n => notes.has(n))
-          setDetectedSet(new Set(notes))
-          if (matched.length >= Math.ceil(required.length * 0.6)) {
-            setState('pass')
-            onPass?.()
-          } else {
-            setState('fail')
-          }
-          return
-        }
-
-        analyser.getFloatTimeDomainData(buf)
-        const { freq, clarity } = detectPitch(buf, ac.sampleRate)
-        if (clarity > 0.65 && freq > 60 && freq < 1400) {
-          notes.add(freqToNote(freq))
-          setDetectedSet(new Set(notes))
-        }
-        rafRef.current = requestAnimationFrame(tick)
-      }
-      rafRef.current = requestAnimationFrame(tick)
-    } catch {
-      setState('fail')
-      stopMic()
-    }
-  }, [data.notes, onPass, stopMic])
-
-  const retry = () => { setState('idle'); setDetectedSet(new Set()) }
-  const nextChord = () => {
-    const next = chordIdx + 1
-    if (next < chordList.length) {
-      setChordIdx(next)
-      setState('idle')
-      setDetectedSet(new Set())
-    }
+  if (phase === 'correct') {
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        <div style={{ padding:'16px', borderRadius:14, background:'#D1FAE5', color:'#065F46', fontSize:17, fontWeight:800, textAlign:'center' }}>
+          ✓ Đúng rồi! Hợp âm {chordName} chuẩn!
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={reset} style={{ flex:1, padding:'13px', borderRadius:12, border:'1.5px solid #E4E4E7', background:'#fff', color:'#52525B', fontSize:15, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+            ↺ Gảy lại
+          </button>
+          <button onClick={onPass} style={{ flex:2, padding:'13px', borderRadius:12, border:'none', background:'#4338CA', color:'#fff', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            Tiếp theo →
+          </button>
+        </div>
+      </div>
+    )
   }
-  const isMulti = chordList.length > 1
-  const isLastChord = chordIdx === chordList.length - 1
+
+  if (phase === 'incorrect') {
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        <div style={{ padding:'14px', borderRadius:14, background:'#FEF3C7', color:'#92400E', fontSize:15, fontWeight:700, textAlign:'center' }}>
+          Chưa nhận ra hợp âm {chordName} — thử lại nhé!
+        </div>
+        <button onClick={reset} style={{ width:'100%', padding:'14px', borderRadius:12, border:'none', background:color, color:'#fff', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          🎤 Thử lại
+        </button>
+      </div>
+    )
+  }
+
+  if (phase === 'listening') {
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {/* Progress bar */}
+        <div style={{ height:8, background:'#E5E7EB', borderRadius:4, overflow:'hidden' }}>
+          <div style={{ height:'100%', width:`${progressPct}%`, background:color, borderRadius:4, transition:'width 0.1s' }}/>
+        </div>
+
+        {topGuess && (
+          <div style={{ textAlign:'center', fontSize:14, color:'#6B7280' }}>
+            Đang nghe: <strong style={{ color: topGuess===chordName ? '#16A34A' : '#DC2626' }}>{topGuess || '—'}</strong>
+            {' '}· Cần: <strong>{chordName}</strong>
+          </div>
+        )}
+
+        {rogueNotes.length > 0 && (
+          <div style={{ textAlign:'center', fontSize:13, color:'#B45309' }}>
+            ⚠ Nghe thấy nốt lạ: {rogueNotes.join(', ')} — kiểm tra lại ngón bấm
+          </div>
+        )}
+
+        <div style={{ padding:'14px', borderRadius:14, background:'#1C1B19', color:'#F4ECDF', fontSize:16, fontWeight:700, textAlign:'center', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+          <span style={{ fontSize:22, animation:'pulse 0.8s infinite' }}>🎤</span>
+          Đang nghe… gảy hợp âm {chordName}
+        </div>
+
+        <div style={{ textAlign:'center', fontSize:13, color:'#9CA3AF' }}>
+          Độ khớp: {Math.round(score * 100)}%
+        </div>
+      </div>
+    )
+  }
+
+  // idle
+  return (
+    <button onClick={start} style={{ width:'100%', padding:'16px', borderRadius:14, border:'none', background:color, color:'#fff', fontSize:16, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+      🎤 Gảy hợp âm {chordName} — bắt đầu nghe
+    </button>
+  )
+}
+
+// ── Rải mode: từng dây một ───────────────────────────────────────────────────
+function RaiPractice({ chordName, meta, onPass }: {
+  chordName: string
+  meta: typeof CHORD_META[string]
+  onPass: () => void
+}) {
+  const { state, start, resetAndStart } = useStringDetector(meta.sequence)
+  const { status, currentStep, listening, done, lastRating, detectedFreq } = state
+
+  const curString = meta.sequence[currentStep]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '8px 0' }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      {/* Dây đang cần gảy */}
+      {!done && (
+        <div style={{ background:'#F8F4EE', borderRadius:12, padding:'12px 16px' }}>
+          <div style={{ fontSize:13, color:'#9A8F7E', marginBottom:4 }}>Gảy dây tiếp theo:</div>
+          <div style={{ fontSize:17, fontWeight:700, color:meta.color }}>
+            Dây {curString?.stringNum} — {curString?.note}
+            {curString?.finger && <span style={{ marginLeft:8, fontSize:13, color:'#6B7280' }}>Ngón {curString.finger} · {curString?.fretLabel}</span>}
+          </div>
+        </div>
+      )}
 
-      {/* Tiến trình nếu nhiều hợp âm */}
-      {isMulti && (
-        <div style={{ display: 'flex', gap: 6 }}>
+      {/* Dây status */}
+      <div style={{ display:'flex', gap:6, justifyContent:'center' }}>
+        {meta.sequence.map((step, i) => (
+          <div key={i} style={{
+            width:36, height:36, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:13, fontWeight:700,
+            background: status[i]==='correct' ? '#D1FAE5' : status[i]==='current' ? meta.color : '#E5E7EB',
+            color: status[i]==='correct' ? '#065F46' : status[i]==='current' ? '#fff' : '#6B7280',
+            border: status[i]==='current' ? `2px solid ${meta.color}` : '2px solid transparent'
+          }}>
+            {status[i]==='correct' ? '✓' : step.stringNum}
+          </div>
+        ))}
+      </div>
+
+      {/* Rating */}
+      {lastRating && (
+        <div style={{ textAlign:'center', fontSize:14, fontWeight:700, color: RATING_COLORS[lastRating] }}>
+          {RATING_LABELS[lastRating]}
+        </div>
+      )}
+
+      {listening && detectedFreq > 0 && (
+        <div style={{ textAlign:'center', fontSize:13, color:'#9CA3AF' }}>
+          Phát hiện: {detectedFreq.toFixed(1)} Hz
+        </div>
+      )}
+
+      {done ? (
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          <div style={{ padding:'16px', borderRadius:14, background:'#D1FAE5', color:'#065F46', fontSize:17, fontWeight:800, textAlign:'center' }}>
+            ✓ Rải đúng hợp âm {chordName}!
+          </div>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => resetAndStart()} style={{ flex:1, padding:'13px', borderRadius:12, border:'1.5px solid #E4E4E7', background:'#fff', color:'#52525B', fontSize:15, fontWeight:600, cursor:'pointer', fontFamily:'inherit' }}>
+              ↺ Rải lại
+            </button>
+            <button onClick={onPass} style={{ flex:2, padding:'13px', borderRadius:12, border:'none', background:'#4338CA', color:'#fff', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              Tiếp theo →
+            </button>
+          </div>
+        </div>
+      ) : listening ? (
+        <div style={{ padding:'14px', borderRadius:14, background:'#1C1B19', color:'#F4ECDF', fontSize:16, fontWeight:700, textAlign:'center', display:'flex', alignItems:'center', justifyContent:'center', gap:10 }}>
+          <span style={{ fontSize:22, animation:'pulse 0.8s infinite' }}>🎤</span>
+          Đang nghe… rải từng dây
+        </div>
+      ) : (
+        <button onClick={start} style={{ width:'100%', padding:'16px', borderRadius:14, border:'none', background:meta.color, color:'#fff', fontSize:16, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          🎤 Bắt đầu rải từng dây
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export function ChordPractice({ cfg, onPass }: { cfg: ChordPracticeCfg; onPass?: () => void }) {
+  const chordList = cfg.chords ?? [cfg.chord ?? 'Am']
+  const mode = cfg.mode ?? 'strum'
+  const [chordIdx, setChordIdx] = useState(0)
+  const [passed, setPassed] = useState(false)
+
+  const chordName = chordList[chordIdx]
+  const meta = CHORD_META[chordName] ?? CHORD_META.Am
+  const isLast = chordIdx === chordList.length - 1
+
+  const handlePass = () => {
+    if (!isLast) {
+      setChordIdx(i => i + 1)
+    } else {
+      setPassed(true)
+      onPass?.()
+    }
+  }
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:20, padding:'4px 0' }}>
+
+      {/* Tiến trình nhiều hợp âm */}
+      {chordList.length > 1 && (
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
           {chordList.map((c, i) => (
-            <div key={c} style={{
-              padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700,
-              background: i < chordIdx ? '#D1FAE5' : i === chordIdx ? data.color : '#E5E7EB',
-              color: i < chordIdx ? '#065F46' : i === chordIdx ? '#fff' : '#6B7280'
-            }}>{c}</div>
+            <div key={c+i} style={{
+              padding:'4px 12px', borderRadius:20, fontSize:13, fontWeight:700,
+              background: i < chordIdx ? '#D1FAE5' : i===chordIdx ? (CHORD_META[c]?.color ?? '#4338CA') : '#E5E7EB',
+              color: i < chordIdx ? '#065F46' : i===chordIdx ? '#fff' : '#6B7280'
+            }}>{c} {i < chordIdx ? '✓' : ''}</div>
           ))}
         </div>
       )}
 
-      {/* Sơ đồ hợp âm */}
-      <div style={{
-        background: '#F8F4EE', borderRadius: 16, padding: '20px 32px',
-        boxShadow: state === 'pass' ? `0 0 0 3px ${data.color}40` : 'none',
-        transition: 'box-shadow 0.3s'
-      }}>
-        <ChordDiagramSVG name={chordName} frets={data.frets} color={data.color} />
-        <div style={{ textAlign: 'center', fontSize: 13, color: '#9A8F7E', marginTop: 8 }}>
-          {data.label} · Nốt: {data.notes.join(' – ')}
+      {/* Sơ đồ */}
+      <div style={{ display:'flex', justifyContent:'center', background:'#F8F4EE', borderRadius:16, padding:'16px 24px' }}>
+        <div style={{ textAlign:'center' }}>
+          <Diagram name={chordName} frets={meta.frets} color={meta.color} />
+          <div style={{ fontSize:13, color:'#9A8F7E', marginTop:6 }}>{meta.label}</div>
         </div>
       </div>
 
-      {/* Nốt đã phát hiện */}
-      {state !== 'idle' && detectedSet.size > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {data.notes.map(n => {
-            const hit = detectedSet.has(n)
-            return (
-              <div key={n} style={{
-                padding: '4px 14px', borderRadius: 20, fontSize: 14, fontWeight: 700,
-                background: hit ? '#D1FAE5' : '#FEF3C7',
-                color: hit ? '#065F46' : '#92400E',
-                border: `1.5px solid ${hit ? '#6EE7B7' : '#FCD34D'}`
-              }}>{n} {hit ? '✓' : '?'}</div>
-            )
-          })}
+      {/* Practice area */}
+      {passed ? (
+        <div style={{ padding:'16px', borderRadius:14, background:'#D1FAE5', color:'#065F46', fontSize:17, fontWeight:800, textAlign:'center' }}>
+          🎉 Hoàn thành tất cả {chordList.length} hợp âm!
         </div>
+      ) : mode === 'strum' ? (
+        <StrumPractice key={chordName} chordName={chordName} color={meta.color} onPass={handlePass} />
+      ) : (
+        <RaiPractice key={chordName} chordName={chordName} meta={meta} onPass={handlePass} />
       )}
 
-      {/* Trạng thái + nút */}
-      {state === 'idle' && (
-        <button onClick={startListening} style={{
-          width: '100%', padding: '16px', borderRadius: 14, border: 'none',
-          background: data.color, color: '#fff', fontSize: 16, fontWeight: 700,
-          cursor: 'pointer', fontFamily: 'inherit'
-        }}>
-          🎤 Gảy hợp âm {chordName} rồi bấm đây
-        </button>
-      )}
-
-      {state === 'listening' && (
-        <div style={{
-          width: '100%', padding: '16px', borderRadius: 14,
-          background: '#1C1B19', color: '#F4ECDF', fontSize: 16, fontWeight: 700,
-          textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10
-        }}>
-          <span style={{ fontSize: 22, animation: 'pulse 0.8s infinite' }}>🎤</span>
-          Đang nghe... {countdown}s
-        </div>
-      )}
-
-      {state === 'pass' && (
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{
-            padding: '16px', borderRadius: 14, background: '#D1FAE5',
-            color: '#065F46', fontSize: 17, fontWeight: 800, textAlign: 'center'
-          }}>
-            ✓ Đúng rồi! Hợp âm {chordName} chuẩn!
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={retry} style={{
-              flex: 1, padding: '13px', borderRadius: 12, border: '1.5px solid #E4E4E7',
-              background: '#fff', color: '#52525B', fontSize: 15, fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit'
-            }}>↺ Gảy lại</button>
-            {isMulti && !isLastChord ? (
-              <button onClick={nextChord} style={{
-                flex: 2, padding: '13px', borderRadius: 12, border: 'none',
-                background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit'
-              }}>Hợp âm tiếp theo →</button>
-            ) : null}
-          </div>
-        </div>
-      )}
-
-      {state === 'fail' && (
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{
-            padding: '14px 16px', borderRadius: 14, background: '#FEF3C7',
-            color: '#92400E', fontSize: 15, fontWeight: 700, textAlign: 'center'
-          }}>
-            Chưa đúng — thử lại nhé!
-            {detectedSet.size > 0 && (
-              <div style={{ fontSize: 13, fontWeight: 400, marginTop: 4, opacity: 0.8 }}>
-                Nghe được: {[...detectedSet].join(', ')} · Cần: {data.notes.join(', ')}
-              </div>
-            )}
-          </div>
-          <button onClick={retry} style={{
-            width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-            background: data.color, color: '#fff', fontSize: 15, fontWeight: 700,
-            cursor: 'pointer', fontFamily: 'inherit'
-          }}>🎤 Thử lại</button>
-        </div>
-      )}
-
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
     </div>
   )
 }
