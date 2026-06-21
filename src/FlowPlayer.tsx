@@ -4,6 +4,8 @@ import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, Cho
 import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg } from './elearn/guitarRenderers'
 import { NarratedSlideshow } from './elearn/NarratedSlideshow'
 import type { NarratedSlideshowCfg } from './elearn/NarratedSlideshow'
+import { ChordPractice } from './elearn/ChordPractice'
+import type { ChordPracticeCfg } from './elearn/ChordPractice'
 import SupportFlow from './SupportFlow'
 
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
@@ -596,6 +598,14 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
             cfg={(slide.interactive ?? {}) as unknown as NarratedSlideshowCfg}
             onComplete={() => markPassed(slide.id, true)}
             onGoNext={goNext}
+          />
+        )}
+
+        {/* CHORD_PRACTICE — nghe mic chấm hợp âm đúng/sai */}
+        {slide.type === 'chord_practice' && (
+          <ChordPractice
+            cfg={(slide.interactive ?? {}) as unknown as ChordPracticeCfg}
+            onPass={() => markPassed(slide.id, true)}
           />
         )}
 
