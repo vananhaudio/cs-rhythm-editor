@@ -595,6 +595,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           <NarratedSlideshow
             cfg={(slide.interactive ?? {}) as unknown as NarratedSlideshowCfg}
             onComplete={() => markPassed(slide.id, true)}
+            onGoNext={goNext}
           />
         )}
 
@@ -647,26 +648,27 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         />
       )}
 
-      {/* Bottom actions — flexShrink:0 + chừa safe-area đáy → nút LUÔN hiển thị & bấm được */}
-      <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-        {/* Hàng nút điều hướng: Trước + Tiếp tục */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {current > 0 && (
-            <button onClick={goPrev}
-              style={{ padding: '15px 18px', borderRadius: 14, border: '2px solid #E8EAF0', background: '#fff', color: '#4338CA', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-              ← Trước
+      {/* narrated_slideshow tự quản lý nav → ẩn bottom bar, truyền goNext vào component */}
+      {slide.type !== 'narrated_slideshow' && (
+        <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {current > 0 && (
+              <button onClick={goPrev}
+                style={{ padding: '15px 18px', borderRadius: 14, border: '2px solid #E8EAF0', background: '#fff', color: '#4338CA', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                ← Trước
+              </button>
+            )}
+            <button onClick={goNext} disabled={!canProceed(slide)}
+              style={{ flex: 1, padding: '15px', borderRadius: 14, border: 'none', background: canProceed(slide) ? '#4338CA' : '#E8EAF0', color: canProceed(slide) ? '#fff' : '#AAA', fontSize: 16, fontWeight: 700, cursor: canProceed(slide) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all .2s' }}>
+              {current >= flow.slides.length - 1
+                ? '✓ Hoàn thành bài học'
+                : slide.type === 'action'
+                  ? (slide.buttonText || '✓ Tôi đã làm xong')
+                  : (slide.buttonText || 'Tiếp tục →')}
             </button>
-          )}
-          <button onClick={goNext} disabled={!canProceed(slide)}
-            style={{ flex: 1, padding: '15px', borderRadius: 14, border: 'none', background: canProceed(slide) ? '#4338CA' : '#E8EAF0', color: canProceed(slide) ? '#fff' : '#AAA', fontSize: 16, fontWeight: 700, cursor: canProceed(slide) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', transition: 'all .2s' }}>
-            {current >= flow.slides.length - 1
-              ? '✓ Hoàn thành bài học'
-              : slide.type === 'action'
-                ? (slide.buttonText || '✓ Tôi đã làm xong')
-                : (slide.buttonText || 'Tiếp tục →')}
-          </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

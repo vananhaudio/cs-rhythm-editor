@@ -82,13 +82,16 @@ function DeckIframe({
 export function NarratedSlideshow({
   cfg,
   onComplete,
+  onGoNext,
 }: {
   cfg: NarratedSlideshowCfg
   onComplete?: () => void
+  onGoNext?: () => void
 }) {
   const [current, setCurrent] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  const [done, setDone] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const totalDur = cfg.end_times[cfg.end_times.length - 1]
@@ -107,7 +110,7 @@ export function NarratedSlideshow({
       const idx = cfg.end_times.findLastIndex((_, i) => t >= slideStart(i))
       if (idx >= 0 && idx !== current) setCurrent(idx)
     }
-    const onEnded = () => { setPlaying(false); onComplete?.() }
+    const onEnded = () => { setPlaying(false); setDone(true); onComplete?.() }
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('ended', onEnded)
     return () => {
@@ -193,12 +196,22 @@ export function NarratedSlideshow({
       </div>
 
       {/* Dot nav */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, paddingBottom: 10, flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, paddingBottom: done ? 4 : 10, flexShrink: 0 }}>
         {cfg.sections.map((_, i) => (
           <button key={i} onClick={() => goTo(i)}
             style={{ width: i === current ? 20 : 7, height: 7, borderRadius: 4, border: 'none', background: i === current ? '#E2673B' : '#CFC8B7', cursor: 'pointer', padding: 0, transition: 'width 0.2s' }} />
         ))}
       </div>
+
+      {/* Tiếp tục → chỉ hiện sau khi nghe xong */}
+      {done && onGoNext && (
+        <div style={{ padding: '0 16px calc(env(safe-area-inset-bottom,0px) + 12px)', flexShrink: 0 }}>
+          <button onClick={onGoNext}
+            style={{ width: '100%', padding: '15px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Tiếp tục →
+          </button>
+        </div>
+      )}
 
       <audio ref={audioRef} src={cfg.audio_url} preload="metadata" />
     </div>
