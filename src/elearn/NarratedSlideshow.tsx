@@ -33,36 +33,21 @@ function SlideFrame({ html, bg }: { html: string; bg: string }) {
     doc.write(`<!DOCTYPE html><html><head>
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link href="${FONT_URL}" rel="stylesheet">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta name="viewport" content="width=900,shrink-to-fit=yes">
       <style>
         *{box-sizing:border-box;margin:0;padding:0;}
-        html,body{width:100%;height:100%;background:${bg};overflow:hidden;}
-        body{display:flex;align-items:center;justify-content:center;font-family:'Be Vietnam Pro',sans-serif;}
-        /* Wrapper scale: nội dung gốc rộng ~900px, co xuống vừa màn hình */
-        .scale-wrap{
-          transform-origin:top center;
+        html,body{width:900px;height:100%;background:${bg};overflow:hidden;}
+        body{display:flex;align-items:center;justify-content:center;
+             font-family:'Be Vietnam Pro',sans-serif;padding:24px;}
+        .slide-inner{
           display:flex;align-items:center;justify-content:center;
-          gap:32px;flex-wrap:wrap;
-          width:900px;
-          padding:20px;
+          gap:40px;flex-wrap:wrap;width:100%;
         }
         svg{height:auto;}
         h1,h2{text-wrap:balance;}
         button{pointer-events:none;opacity:.8;}
       </style>
-      <script>
-        function fit(){
-          var el=document.querySelector('.scale-wrap');
-          if(!el)return;
-          var vw=window.innerWidth, vh=window.innerHeight;
-          var s=Math.min(vw/900, vh/560, 1);
-          el.style.transform='scale('+s+')';
-          el.style.marginTop=((vh - 560*s)/2)+'px';
-        }
-        window.addEventListener('load',fit);
-        window.addEventListener('resize',fit);
-      </script>
-    </head><body><div class="scale-wrap">${cleanHtml(html)}</div></body></html>`)
+    </head><body><div class="slide-inner">${cleanHtml(html)}</div></body></html>`)
     doc.close()
   }, [html, bg])
 
