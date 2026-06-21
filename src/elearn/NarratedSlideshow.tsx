@@ -75,7 +75,7 @@ function SlideFrame({ html, bg }: { html: string; bg: string }) {
         padding: 24,
         boxSizing: 'border-box',
       }}
-        dangerouslySetInnerHTML={{ __html: `<style>*{box-sizing:border-box;margin:0;padding:0;}svg{height:auto;}button{pointer-events:none;opacity:.85;}</style>${cleanHtml(html)}` }}
+        dangerouslySetInnerHTML={{ __html: `<style>*{box-sizing:border-box;margin:0;padding:0;}svg{height:auto;}</style>${cleanHtml(html)}` }}
       />
     </div>
   )
