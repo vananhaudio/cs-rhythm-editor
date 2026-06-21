@@ -356,12 +356,15 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       </div>
 
       {/* Slide body — cuộn NỘI BỘ nếu nội dung dài, nút bấm luôn hiển thị */}
+      {/* narrated_slideshow cần full height không padding → style riêng */}
       <div
         key={current}
         className={slideDir.current === 'next' ? '_fsNext' : '_fsPrev'}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '18px 16px 12px' }}>
+        style={slide.type === 'narrated_slideshow'
+          ? { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }
+          : { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '18px 16px 12px' }}>
 
         {/* TEXT / NEXT */}
         {(slide.type === 'text' || slide.type === 'next') && slide.content && (
