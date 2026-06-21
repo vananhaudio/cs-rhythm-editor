@@ -120,11 +120,19 @@ export function NarratedSlideshow({
   }, [current, cfg.end_times, slideStart, onComplete])
 
   // Deck → audio: người dùng tự tap chuyển slide → seek audio
+  const seekTo = useCallback((i: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const wasPlaying = !audio.paused
+    audio.pause()
+    audio.currentTime = slideStart(i)
+    if (wasPlaying) audio.play().catch(console.error)
+  }, [slideStart])
+
   const handleDeckSlideChange = useCallback((i: number) => {
     setCurrent(i)
-    const audio = audioRef.current
-    if (audio) audio.currentTime = slideStart(i)
-  }, [slideStart])
+    seekTo(i)
+  }, [seekTo])
 
   const toggle = () => {
     const audio = audioRef.current
@@ -136,8 +144,7 @@ export function NarratedSlideshow({
   const goTo = (i: number) => {
     const clamped = Math.max(0, Math.min(cfg.sections.length - 1, i))
     setCurrent(clamped)
-    const audio = audioRef.current
-    if (audio) audio.currentTime = slideStart(clamped)
+    seekTo(clamped)
   }
 
   const progress = totalDur > 0 ? Math.min(100, (elapsed / totalDur) * 100) : 0
