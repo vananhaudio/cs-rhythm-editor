@@ -20,44 +20,61 @@ function cleanHtml(raw: string): string {
     .replace(/\s*data-(pop|rise|float|glow|slide|str|d)(?:="[^"]*")?/g, '')
 }
 
-const FONT_URL = 'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap'
+// Kích thước tham chiếu của deck gốc (landscape ~900×580)
+const REF_W = 900
+const REF_H = 580
 
-// Render một slide trong iframe để font + SVG không bị ảnh hưởng bởi context ngoài
+// Inject font Be Vietnam Pro một lần vào <head> trang chính
+let fontInjected = false
+function injectFont() {
+  if (fontInjected) return
+  fontInjected = true
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = 'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap'
+  document.head.appendChild(link)
+}
+
+// Scale slide HTML vừa container bằng transform (không dùng iframe)
 function SlideFrame({ html, bg }: { html: string; bg: string }) {
-  const ref = useRef<HTMLIFrameElement>(null)
+  const outerRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(0.4)
+
+  useEffect(() => { injectFont() }, [])
 
   useEffect(() => {
-    const doc = ref.current?.contentDocument
-    if (!doc) return
-    doc.open()
-    doc.write(`<!DOCTYPE html><html><head>
-      <link rel="preconnect" href="https://fonts.googleapis.com">
-      <link href="${FONT_URL}" rel="stylesheet">
-      <meta name="viewport" content="width=900,shrink-to-fit=yes">
-      <style>
-        *{box-sizing:border-box;margin:0;padding:0;}
-        html,body{width:900px;height:100%;background:${bg};overflow:hidden;}
-        body{display:flex;align-items:center;justify-content:center;
-             font-family:'Be Vietnam Pro',sans-serif;padding:24px;}
-        .slide-inner{
-          display:flex;align-items:center;justify-content:center;
-          gap:40px;flex-wrap:wrap;width:100%;
-        }
-        svg{height:auto;}
-        h1,h2{text-wrap:balance;}
-        button{pointer-events:none;opacity:.8;}
-      </style>
-    </head><body><div class="slide-inner">${cleanHtml(html)}</div></body></html>`)
-    doc.close()
-  }, [html, bg])
+    const el = outerRef.current
+    if (!el) return
+    const update = () => {
+      const s = Math.min(el.clientWidth / REF_W, el.clientHeight / REF_H)
+      setScale(s)
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   return (
-    <iframe
-      ref={ref}
-      style={{ width: '100%', height: '100%', border: 'none' }}
-      title="slide"
-      sandbox="allow-same-origin"
-    />
+    <div ref={outerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', background: bg }}>
+      <div style={{
+        position: 'absolute',
+        width: REF_W,
+        height: REF_H,
+        top: '50%',
+        left: '50%',
+        transform: `translate(-50%, -50%) scale(${scale})`,
+        transformOrigin: 'center center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "'Be Vietnam Pro', sans-serif",
+        padding: 24,
+        boxSizing: 'border-box',
+      }}
+        dangerouslySetInnerHTML={{ __html: `<style>*{box-sizing:border-box;}svg{height:auto;}button{pointer-events:none;}</style>${cleanHtml(html)}` }}
+      />
+    </div>
   )
 }
 
