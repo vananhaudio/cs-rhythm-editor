@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView } from './elearn/guitarRenderers'
 import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg } from './elearn/guitarRenderers'
+import { NarratedSlideshow } from './elearn/NarratedSlideshow'
+import type { NarratedSlideshowCfg } from './elearn/NarratedSlideshow'
 import SupportFlow from './SupportFlow'
 
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
@@ -583,6 +585,14 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* GUITAR_CHORD — sơ đồ hợp âm + nghe rải + gảy thử (NHẬN) */}
         {slide.type === 'guitar_chord' && (
           <ChordView cfg={(slide.interactive ?? {}) as ChordCfg} />
+        )}
+
+        {/* NARRATED_SLIDESHOW — trình chiếu lồng tiếng: nhiều sub-slide + audio tự lật */}
+        {slide.type === 'narrated_slideshow' && (
+          <NarratedSlideshow
+            cfg={(slide.interactive ?? {}) as NarratedSlideshowCfg}
+            onComplete={() => markPassed(slide.id, true)}
+          />
         )}
 
         {/* GUITAR_TOOL — mở công cụ ngay trong bài (LÀM/DẪN) */}
