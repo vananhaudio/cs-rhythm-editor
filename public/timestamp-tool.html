@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Đánh dấu timestamps</title>
+<style>
+  body { font-family: system-ui; max-width: 600px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+  audio { width: 100%; margin: 16px 0; }
+  button { padding: 12px 24px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; }
+  #mark { background: #E2673B; color: #fff; font-weight: 700; width: 100%; margin-bottom: 12px; }
+  #mark:active { background: #c0522a; }
+  #reset { background: #ddd; color: #333; }
+  #output { background: #fff; border-radius: 8px; padding: 16px; margin-top: 16px; font-family: monospace; font-size: 14px; white-space: pre-wrap; min-height: 60px; border: 1px solid #ddd; }
+  .hint { color: #888; font-size: 13px; margin-bottom: 8px; }
+  h2 { margin-bottom: 4px; }
+  .slide-label { color: #4338CA; font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<h2>Công cụ đánh dấu timestamps</h2>
+<p class="hint">Nghe audio, khi hết mỗi đoạn (trong khoảng im lặng 2 giây) → bấm <strong>Đánh dấu</strong>. Cần đánh dấu đủ 12 lần.</p>
+
+<audio id="audio" controls src="https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/lessons/so%20do%20moi%20nhat%202.mp3"></audio>
+
+<div class="slide-label" id="slideLabel">Sắp đánh dấu: cuối đoạn 1</div>
+<button id="mark" onclick="mark()">⏱ Đánh dấu cuối đoạn (phím Space)</button>
+<button id="reset" onclick="reset()">Reset</button>
+
+<div id="output">Chưa có dấu nào...</div>
+<button id="copy" onclick="copyResult()" style="display:none; background:#4338CA; color:#fff; margin-top:8px; width:100%">📋 Copy kết quả</button>
+
+<script>
+const labels = [
+  'Slide 1 — Mục tiêu bài học',
+  'Slide 2 — Sơ đồ / Mặt cần đàn',
+  'Slide 3 — 6 dây đàn',
+  'Slide 4 — Số ngón tay',
+  'Slide 5 — Ký hiệu ngón',
+  'Slide 6 — Dấu X và O',
+  'Slide 7 — Vị trí bàn tay',
+  'Slide 8 — Hợp âm Am',
+  'Slide 9 — Hợp âm Em',
+  'Slide 10 — So sánh Am/Em',
+  'Slide 11 — Luyện tập',
+  'Slide 12 — Tổng kết',
+]
+
+let marks = []
+const audio = document.getElementById('audio')
+const output = document.getElementById('output')
+const label = document.getElementById('slideLabel')
+const copyBtn = document.getElementById('copy')
+
+function mark() {
+  if (marks.length >= 12) return
+  const t = parseFloat(audio.currentTime.toFixed(1))
+  marks.push(t)
+  updateOutput()
+  const next = marks.length
+  if (next < 12) {
+    label.textContent = `Sắp đánh dấu: cuối đoạn ${next + 1} — ${labels[next]}`
+  } else {
+    label.textContent = '✅ Đủ 12 dấu! Copy kết quả bên dưới.'
+    copyBtn.style.display = 'block'
+  }
+}
+
+function updateOutput() {
+  if (marks.length === 0) { output.textContent = 'Chưa có dấu nào...'; return }
+  output.textContent = `end_times: [${marks.join(', ')}]\n\n(${marks.length}/12 đoạn)`
+}
+
+function reset() {
+  marks = []
+  label.textContent = 'Sắp đánh dấu: cuối đoạn 1'
+  copyBtn.style.display = 'none'
+  updateOutput()
+}
+
+function copyResult() {
+  navigator.clipboard.writeText(`[${marks.join(', ')}]`)
+  copyBtn.textContent = '✅ Đã copy!'
+  setTimeout(() => copyBtn.textContent = '📋 Copy kết quả', 2000)
+}
+
+// Phím Space = đánh dấu
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); mark() }
+})
+</script>
+</body>
+</html>
