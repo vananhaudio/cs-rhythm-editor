@@ -593,7 +593,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* NARRATED_SLIDESHOW — trình chiếu lồng tiếng: nhiều sub-slide + audio tự lật */}
         {slide.type === 'narrated_slideshow' && (
           <NarratedSlideshow
-            cfg={(slide.interactive ?? {}) as NarratedSlideshowCfg}
+            cfg={(slide.interactive ?? {}) as unknown as NarratedSlideshowCfg}
             onComplete={() => markPassed(slide.id, true)}
           />
         )}
