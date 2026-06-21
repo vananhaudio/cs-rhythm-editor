@@ -37,21 +37,32 @@ function SlideFrame({ html, bg }: { html: string; bg: string }) {
       <style>
         *{box-sizing:border-box;margin:0;padding:0;}
         html,body{width:100%;height:100%;background:${bg};overflow:hidden;}
-        body{display:flex;align-items:center;justify-content:center;font-family:'Be Vietnam Pro',sans-serif;padding:16px;}
-        /* Scale nội dung to fit — gốc deck dùng layout landscape lớn */
-        .slide-inner{
+        body{display:flex;align-items:center;justify-content:center;font-family:'Be Vietnam Pro',sans-serif;}
+        /* Wrapper scale: nội dung gốc rộng ~900px, co xuống vừa màn hình */
+        .scale-wrap{
+          transform-origin:top center;
           display:flex;align-items:center;justify-content:center;
-          gap:40px;flex-wrap:wrap;
-          width:100%;height:100%;
-          /* Giới hạn kích thước chữ cho mobile */
-          font-size:clamp(10px,2.8vw,18px);
+          gap:32px;flex-wrap:wrap;
+          width:900px;
+          padding:20px;
         }
-        /* Kéo SVG về max 45vw để không bị cắt */
-        svg{max-width:45vw;height:auto;}
+        svg{height:auto;}
         h1,h2{text-wrap:balance;}
         button{pointer-events:none;opacity:.8;}
       </style>
-    </head><body><div class="slide-inner">${cleanHtml(html)}</div></body></html>`)
+      <script>
+        function fit(){
+          var el=document.querySelector('.scale-wrap');
+          if(!el)return;
+          var vw=window.innerWidth, vh=window.innerHeight;
+          var s=Math.min(vw/900, vh/560, 1);
+          el.style.transform='scale('+s+')';
+          el.style.marginTop=((vh - 560*s)/2)+'px';
+        }
+        window.addEventListener('load',fit);
+        window.addEventListener('resize',fit);
+      </script>
+    </head><body><div class="scale-wrap">${cleanHtml(html)}</div></body></html>`)
     doc.close()
   }, [html, bg])
 
