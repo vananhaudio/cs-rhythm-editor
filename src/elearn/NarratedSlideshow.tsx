@@ -20,9 +20,8 @@ function cleanHtml(raw: string): string {
     .replace(/\s*data-(pop|rise|float|glow|slide|str|d)(?:="[^"]*")?/g, '')
 }
 
-// Kích thước tham chiếu của deck gốc (landscape ~900×580)
-const REF_W = 900
-const REF_H = 580
+// Kích thước tham chiếu deck DỌC (portrait ~840px wide)
+const REF_W = 840
 
 // Inject font Be Vietnam Pro một lần vào <head> trang chính
 let fontInjected = false
@@ -46,7 +45,8 @@ function SlideFrame({ html, bg }: { html: string; bg: string }) {
     const el = outerRef.current
     if (!el) return
     const update = () => {
-      const s = Math.min(el.clientWidth / REF_W, el.clientHeight / REF_H)
+      // Scale theo chiều rộng (deck dọc — width là chiều hạn chế)
+      const s = el.clientWidth / REF_W
       setScale(s)
     }
     update()
@@ -55,25 +55,31 @@ function SlideFrame({ html, bg }: { html: string; bg: string }) {
     return () => ro.disconnect()
   }, [])
 
+  // Chiều cao hiển thị sau khi scale
+  const scaledH = REF_W * scale  // nội dung dọc: height xấp xỉ width (vuông ~ 1:1 mỗi slide)
+
   return (
-    <div ref={outerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', background: bg }}>
-      <div style={{
-        position: 'absolute',
-        width: REF_W,
-        height: REF_H,
-        top: '50%',
-        left: '50%',
-        transform: `translate(-50%, -50%) scale(${scale})`,
-        transformOrigin: 'center center',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: "'Be Vietnam Pro', sans-serif",
-        padding: 24,
-        boxSizing: 'border-box',
-      }}
-        dangerouslySetInnerHTML={{ __html: `<style>*{box-sizing:border-box;}svg{height:auto;}button{pointer-events:none;}</style>${cleanHtml(html)}` }}
-      />
+    <div ref={outerRef} style={{ width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden', background: bg }}>
+      {/* Container có chiều cao = nội dung thật sau scale để scroll hoạt động */}
+      <div style={{ width: '100%', minHeight: scaledH, position: 'relative' }}>
+        <div style={{
+          position: 'absolute',
+          width: REF_W,
+          top: 0,
+          left: 0,
+          transformOrigin: 'top left',
+          transform: `scale(${scale})`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: "'Be Vietnam Pro', sans-serif",
+          padding: 24,
+          boxSizing: 'border-box',
+        }}
+          dangerouslySetInnerHTML={{ __html: `<style>*{box-sizing:border-box;margin:0;padding:0;}svg{height:auto;}button{pointer-events:none;opacity:.85;}</style>${cleanHtml(html)}` }}
+        />
+      </div>
     </div>
   )
 }
@@ -123,8 +129,18 @@ export function NarratedSlideshow({
   const toggle = () => {
     const audio = audioRef.current
     if (!audio) return
-    if (playing) { audio.pause(); setPlaying(false) }
-    else { audio.play().then(() => setPlaying(true)) }
+    if (playing) {
+      audio.pause()
+      setPlaying(false)
+    } else {
+      audio.play()
+        .then(() => setPlaying(true))
+        .catch(() => {
+          // iOS: thử resume AudioContext nếu bị suspend
+          audio.load()
+          audio.play().then(() => setPlaying(true)).catch(console.error)
+        })
+    }
   }
 
   const goTo = (i: number) => {
