@@ -364,7 +364,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         className={slideDir.current === 'next' ? '_fsNext' : '_fsPrev'}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        style={slide.type === 'narrated_slideshow'
+        style={slide.type === 'narrated_slideshow' || slide.type === 'embedded_tool'
           ? { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }
           : { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '18px 16px 12px' }}>
 
@@ -601,6 +601,20 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           />
         )}
 
+        {/* EMBEDDED_TOOL — nhúng tool ngoài (iframe) full-height, ẩn nav FlowPlayer */}
+        {slide.type === 'embedded_tool' && (() => {
+          const url = (slide.interactive?.url as string) ?? ''
+          return (
+            <iframe
+              src={url}
+              allow="microphone; autoplay"
+              style={{ flex: 1, width: '100%', border: 'none' }}
+              title={slide.content ?? 'Tool'}
+              onLoad={() => markPassed(slide.id, true)}
+            />
+          )
+        })()}
+
         {/* CHORD_PRACTICE — nghe mic chấm hợp âm đúng/sai */}
         {slide.type === 'chord_practice' && (
           <ChordPractice
@@ -659,7 +673,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       )}
 
       {/* narrated_slideshow tự quản lý nav → ẩn bottom bar, truyền goNext vào component */}
-      {slide.type !== 'narrated_slideshow' && (
+      {slide.type !== 'narrated_slideshow' && slide.type !== 'embedded_tool' && (
         <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {current > 0 && (
