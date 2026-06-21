@@ -50,7 +50,7 @@ function DeckIframe({
       *{margin:0;padding:0;box-sizing:border-box;}
       body{overflow:hidden;background:#F6F3EC;}
       deck-stage:not(:defined){visibility:hidden;}
-      deck-stage{display:block;width:100vw;height:100vh;}
+      deck-stage{display:block;width:100vw;height:100vh;background:#F6F3EC!important;}
     </style>
     <script src="${origin}/deck-stage.js"><\/script>
   </head><body>
@@ -221,9 +221,9 @@ export function NarratedSlideshow({
         </button>
 
         <button onClick={toggle}
-          style={{ flex: 1, height: 46, border: 'none', borderRadius: 23, background: '#E2673B', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit' }}>
+          style={{ flex: 1, padding: '15px', border: 'none', borderRadius: 14, background: '#E2673B', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit' }}>
           <span style={{ fontSize: 18 }}>{playing ? '⏸' : '▶'}</span>
-          <span>{playing ? `${fmt(elapsed)} / ${fmt(totalDur)}` : 'Nghe giọng thầy'}</span>
+          <span>{playing ? `${fmt(elapsed)} / ${fmt(totalDur)}` : 'Nghe giảng bài'}</span>
         </button>
 
         <button onClick={() => goTo(current + 1)} disabled={current === cfg.sections.length - 1}
