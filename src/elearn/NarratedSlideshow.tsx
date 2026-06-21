@@ -59,27 +59,24 @@ function SlideFrame({ html, bg }: { html: string; bg: string }) {
   const scaledH = REF_W * scale  // nội dung dọc: height xấp xỉ width (vuông ~ 1:1 mỗi slide)
 
   return (
-    <div ref={outerRef} style={{ width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden', background: bg }}>
-      {/* Container có chiều cao = nội dung thật sau scale để scroll hoạt động */}
-      <div style={{ width: '100%', minHeight: scaledH, position: 'relative' }}>
-        <div style={{
-          position: 'absolute',
-          width: REF_W,
-          top: 0,
-          left: 0,
-          transformOrigin: 'top left',
-          transform: `scale(${scale})`,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: "'Be Vietnam Pro', sans-serif",
-          padding: 24,
-          boxSizing: 'border-box',
-        }}
-          dangerouslySetInnerHTML={{ __html: `<style>*{box-sizing:border-box;margin:0;padding:0;}svg{height:auto;}button{pointer-events:none;opacity:.85;}</style>${cleanHtml(html)}` }}
-        />
-      </div>
+    // overflow: hidden PHẢI CÓ để nội dung slide không tràn xuống phủ controls
+    <div ref={outerRef} style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', background: bg }}>
+      <div style={{
+        position: 'absolute',
+        top: 0, left: 0,
+        width: REF_W,
+        transformOrigin: 'top left',
+        transform: `scale(${scale})`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "'Be Vietnam Pro', sans-serif",
+        padding: 24,
+        boxSizing: 'border-box',
+      }}
+        dangerouslySetInnerHTML={{ __html: `<style>*{box-sizing:border-box;margin:0;padding:0;}svg{height:auto;}button{pointer-events:none;opacity:.85;}</style>${cleanHtml(html)}` }}
+      />
     </div>
   )
 }
