@@ -299,7 +299,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         </button>
         <button onClick={onBack}
           style={{ padding: '12px 26px', borderRadius: 14, border: 'none', background: '#4338CA', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-          ← Quay lại
+          Về khoá học
         </button>
       </div>
     </div>
