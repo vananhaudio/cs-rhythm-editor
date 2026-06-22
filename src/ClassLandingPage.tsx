@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
 import ClassJourney2027 from './ClassJourney2027'
 import ClassDemHat from './ClassDemHat'
+import ClassTiaNot from './ClassTiaNot'
 
 // ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
 const CLASSES = [
@@ -18,7 +19,7 @@ const CLASSES = [
 // ─── 3 cửa vào — nút mở bài viết (nếu có) hoặc cuộn tới lớp/chat ───
 const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: string; fallback: string; native?: string }[] = [
   { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Đệm hát căn bản', desc: 'Dành cho người thích hát, hay hát karaoke, muốn tự đệm các bài yêu thích.', cta: 'Xem lớp Đệm hát', slot: 'cua-dem-hat', fallback: 'lichlop', native: 'demhat' },
-  { dq: 'Tôi muốn chơi giai điệu bằng đàn', badge: 'Tỉa nốt căn bản', desc: 'Dành cho người mới, người không mạnh về hát, hoặc muốn cây đàn tự vang lên giai điệu bài hát.', cta: 'Xem lớp Tỉa nốt', slot: 'cua-tia-not', fallback: 'lichlop' },
+  { dq: 'Tôi muốn chơi giai điệu bằng đàn', badge: 'Tỉa nốt căn bản', desc: 'Dành cho người mới, người không mạnh về hát, hoặc muốn cây đàn tự vang lên giai điệu bài hát.', cta: 'Xem lớp Tỉa nốt', slot: 'cua-tia-not', fallback: 'lichlop', native: 'tianot' },
   { dq: 'Tôi đã biết chơi nhưng bí giai điệu / cảm âm', badge: 'Tỉa nốt âm giai & cảm âm', desc: 'Dành cho người đã chơi một thời gian nhưng muốn hiểu nốt, âm giai, cảm âm và tự tìm giai điệu.', cta: 'Hỏi trợ lý xếp đúng trình độ', slot: 'cua-cam-am', fallback: 'chat' },
 ]
 
@@ -82,6 +83,7 @@ export default function ClassLandingPage() {
   const [modal, setModal] = useState<string | null>(null)
   const [showJourney, setShowJourney] = useState(false)
   const [showDemHat, setShowDemHat] = useState(false)
+  const [showTiaNot, setShowTiaNot] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
     { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
   ])
@@ -195,6 +197,8 @@ export default function ClassLandingPage() {
                   <p>{d.desc}</p>
                   {d.native === 'demhat'
                     ? <button className="btn btn-primary" onClick={() => setShowDemHat(true)}>{d.cta} →</button>
+                    : d.native === 'tianot'
+                    ? <button className="btn btn-primary" onClick={() => setShowTiaNot(true)}>{d.cta} →</button>
                     : art
                     ? <button className="btn btn-primary" onClick={() => setModal('art:' + d.slot)}>{d.cta} →</button>
                     : <button className="btn btn-primary" onClick={() => goto(d.fallback)}>{d.cta} →</button>}
@@ -452,6 +456,14 @@ export default function ClassLandingPage() {
           onClose={() => setShowDemHat(false)}
           onRegister={() => { setShowDemHat(false); setTimeout(() => goto('lichlop'), 60) }}
           onChat={() => { setShowDemHat(false); setTimeout(() => goto('chat'), 60) }}
+        />
+      )}
+
+      {showTiaNot && (
+        <ClassTiaNot
+          onClose={() => setShowTiaNot(false)}
+          onRegister={() => { setShowTiaNot(false); setTimeout(() => goto('lichlop'), 60) }}
+          onChat={() => { setShowTiaNot(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
 
