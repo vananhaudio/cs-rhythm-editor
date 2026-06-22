@@ -673,7 +673,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
       )}
 
       {/* narrated_slideshow tự quản lý nav → ẩn bottom bar, truyền goNext vào component */}
-      {slide.type !== 'narrated_slideshow' && slide.type !== 'embedded_tool' && (
+      {slide.type !== 'narrated_slideshow' && (
         <div style={{ padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 20px)', borderTop: '1px solid #F0F0F2', display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {current > 0 && (
