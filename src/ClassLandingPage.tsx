@@ -433,20 +433,34 @@ export default function ClassLandingPage() {
 
       <button className="fab" onClick={() => goto('chat')}>💬 Tư vấn chọn lớp</button>
 
-      {/* MODAL dùng chung */}
-      {modal && (
+      {/* BÀI VIẾT — mở full màn hình (dài, có ảnh) */}
+      {modal?.startsWith('art:') && (() => {
+        const a = articles[modal.slice(4)]
+        return (
+          <div className="art-page">
+            <div className="art-top">
+              <button className="art-close" onClick={() => setModal(null)}>← Quay lại</button>
+              <button className="btn btn-primary art-top-cta" onClick={() => { setModal(null); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+            </div>
+            <div className="art-scroll">
+              <div className="art-inner">
+                {a ? <>
+                  <h1 className="art-h1">{a.title}</h1>
+                  <div className="art-body" dangerouslySetInnerHTML={{ __html: a.body }} />
+                  <button className="btn btn-primary" style={{ marginTop: 28 }} onClick={() => { setModal(null); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+                </> : <div>Bài viết không còn.</div>}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* POPUP NGẮN dùng chung (mô hình học / cam kết / bản đồ rút gọn) */}
+      {modal && !modal.startsWith('art:') && (
         <div className="modal open" onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
-          <div className={`modal-box${modal.startsWith('art:') ? ' wide' : ''}`}>
+          <div className="modal-box">
             <button className="x" onClick={() => setModal(null)}>×</button>
-            {modal.startsWith('art:')
-              ? (() => { const a = articles[modal.slice(4)]; return a
-                  ? <div>
-                      <h3>{a.title}</h3>
-                      <div className="art-body" style={{ marginTop: 12 }} dangerouslySetInnerHTML={{ __html: a.body }} />
-                      <button className="btn btn-primary" style={{ marginTop: 18 }} onClick={() => { setModal(null); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
-                    </div>
-                  : <div>Bài viết không còn.</div> })()
-              : <div dangerouslySetInnerHTML={{ __html: MODALS[modal] ?? '' }} />}
+            <div dangerouslySetInnerHTML={{ __html: MODALS[modal] ?? '' }} />
           </div>
         </div>
       )}
@@ -615,7 +629,16 @@ const CSS = `
 .tva-class .bando .b-branch{display:inline-block;min-width:74px;font-weight:800;color:var(--indigo);}
 .tva-class .bando .b-converge{font-weight:700;color:var(--honey);}
 @media(max-width:560px){.tva-class .mh-grid{grid-template-columns:1fr;}}
-.tva-class .art-body{font-size:15px;line-height:1.75;color:var(--ink-soft);}
+.tva-class .art-page{position:fixed;inset:0;z-index:120;background:var(--bg);display:flex;flex-direction:column;}
+.tva-class .art-top{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;background:rgba(242,238,231,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.tva-class .art-close{border:1.5px solid #D3CEE8;background:#fff;color:var(--indigo);border-radius:10px;padding:9px 16px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
+.tva-class .art-close:hover{background:var(--indigo-tint);}
+.tva-class .art-top-cta{font-size:14px;padding:9px 16px;}
+.tva-class .art-scroll{flex:1;overflow-y:auto;}
+.tva-class .art-inner{max-width:760px;margin:0 auto;padding:32px 22px 64px;}
+.tva-class .art-h1{font-size:30px;font-weight:800;line-height:1.2;letter-spacing:-.5px;margin-bottom:18px;color:var(--ink);}
+@media(max-width:560px){.tva-class .art-h1{font-size:24px;}.tva-class .art-top-cta{display:none;}}
+.tva-class .art-body{font-size:16px;line-height:1.8;color:var(--ink-soft);}
 .tva-class .art-body p{margin:0 0 12px;}
 .tva-class .art-body h2,.tva-class .art-body h3{color:var(--ink);margin:16px 0 8px;}
 .tva-class .art-body ul,.tva-class .art-body ol{margin:0 0 12px;padding-left:20px;}
