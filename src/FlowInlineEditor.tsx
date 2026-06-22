@@ -578,6 +578,13 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                           <Label>Mô tả nhỏ (tuỳ chọn)</Label>
                           <Inp value={(itv.sub as string) ?? ''} onChange={v => patchItv('sub', v)} placeholder="VD: Lên dây chuẩn trước khi tập" />
                         </div>
+                        <div>
+                          <Label>Vị trí nút</Label>
+                          <Sel value={(itv.buttonPos as string) ?? 'bottom'} onChange={v => patchItv('buttonPos', v)}>
+                            <option value="bottom">⬇️ Dưới cùng (thay nút Tiếp tục — 1 chạm mở &amp; qua bài)</option>
+                            <option value="inline">📄 Ngay sau đoạn văn (vẫn có nút Tiếp tục riêng)</option>
+                          </Sel>
+                        </div>
                       </div>
                     )}
 

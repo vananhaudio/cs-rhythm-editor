@@ -623,12 +623,31 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           />
         )}
 
-        {/* GUITAR_TOOL — lời dẫn ở thân; nút mở công cụ nằm dưới (thay nút Tiếp tục) */}
-        {slide.type === 'guitar_tool' && (
-          <div style={{ fontSize: 16, color: '#3A352C', lineHeight: 1.7 }}>
-            {slide.content || 'Bấm nút bên dưới để mở công cụ luyện tập.'}
-          </div>
-        )}
+        {/* GUITAR_TOOL — lời dẫn ở thân; nút mở công cụ: dưới cùng (bottom) hoặc ngay sau đoạn văn (inline) */}
+        {slide.type === 'guitar_tool' && (() => {
+          const pos = (slide.interactive?.buttonPos as string) ?? 'bottom'
+          const tool = (slide.interactive?.tool as string) ?? 'tuner'
+          const label = (slide.interactive?.label as string) || 'Mở công cụ'
+          const sub = (slide.interactive?.sub as string) ?? ''
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ fontSize: 16, color: '#3A352C', lineHeight: 1.7 }}>
+                {slide.content || 'Bấm nút bên dưới để mở công cụ luyện tập.'}
+              </div>
+              {pos === 'inline' && (
+                <button onClick={() => { onOpenTool?.(tool); markPassed(slide.id, true) }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: 'none', borderRadius: 15, background: '#1C1A17', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: '#3F6B4E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎚️</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#F4E9D8' }}>{label}</div>
+                    {sub && <div style={{ fontSize: 13, color: '#9A9082', marginTop: 2 }}>{sub}</div>}
+                  </div>
+                  <span style={{ color: '#F4E9D8', fontSize: 18 }}>›</span>
+                </button>
+              )}
+            </div>
+          )
+        })()}
 
         {/* SUPPORT — Gỡ rối & Đào sâu (opt-in, thầy tự gắn vào bài cần) */}
         {slide.type === 'support' && (
@@ -671,7 +690,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
                 ← Trước
               </button>
             )}
-            {slide.type === 'guitar_tool' ? (
+            {slide.type === 'guitar_tool' && ((slide.interactive?.buttonPos as string) ?? 'bottom') === 'bottom' ? (
               <button onClick={() => {
                   onOpenTool?.((slide.interactive?.tool as string) ?? 'tuner')
                   markPassed(slide.id, true)
