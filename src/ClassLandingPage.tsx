@@ -7,6 +7,7 @@ import { supabase } from './supabase'
 import ClassJourney2027 from './ClassJourney2027'
 import ClassDemHat from './ClassDemHat'
 import ClassTiaNot from './ClassTiaNot'
+import ClassQuiz from './ClassQuiz'
 
 // ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
 const CLASSES = [
@@ -25,8 +26,8 @@ const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: strin
 
 // ─── Showcase hành động (tâm lý → 1 hành động nhỏ) ───
 // slot: nếu có bài viết (articles) published cùng slot → thẻ "sống dậy", CTA mở bài viết.
-const STARTERS: { t: string; d: string; cta: string; href?: string; modal?: string; ready: boolean; note?: string; slot?: string; articleCta?: string }[] = [
-  { t: 'Tìm điểm bắt đầu của tôi', d: 'Bài test 2 phút. Không cần biết trình độ — trả lời vài câu, trợ lý gợi ý đúng điểm bắt đầu.', cta: 'Làm bài test', href: '#chat', ready: true },
+const STARTERS: { t: string; d: string; cta: string; href?: string; modal?: string; ready: boolean; note?: string; slot?: string; articleCta?: string; native?: string }[] = [
+  { t: 'Tìm điểm bắt đầu của tôi', d: 'Bài test 2 phút. Không cần biết trình độ — trả lời vài câu để biết mình phù hợp lớp nào.', cta: 'Làm bài test', ready: true, native: 'quiz' },
   { t: 'Mở bài học thử trên app', d: 'Dùng thử app TVA Guitar 7 ngày: trải nghiệm bài học đầu tiên, cách luyện tập và theo dõi tiến độ.', cta: 'Dùng thử miễn phí', href: '#chat', ready: false, note: 'cần link bản dùng thử app', slot: 'dung-thu-app', articleCta: 'Tìm hiểu dùng thử' },
   { t: 'Xem một buổi học vận hành thế nào', d: 'Lớp Zoom có thầy dẫn, nhóm Zalo nhắc lịch & giao bài, app lưu bài, có trả bài. Học online không phải tự bơi.', cta: 'Xem mô hình học', modal: 'mohinh', ready: false, note: 'cần ảnh Zoom/Zalo/app thật', slot: 'mo-hinh-hoc', articleCta: 'Xem mô hình học' },
   { t: '90 phút mỗi tuần cho cây đàn của bạn', d: 'Một tuần chỉ 90 phút, lộ trình 8 buổi. Nếu không đặt lịch cho ước mơ, nó sẽ bị việc khác chen vào.', cta: 'Đọc bài viết', href: '#chat', ready: false, note: 'cần bài viết', slot: '90-phut-moi-tuan', articleCta: 'Đọc bài viết' },
@@ -84,6 +85,7 @@ export default function ClassLandingPage() {
   const [showJourney, setShowJourney] = useState(false)
   const [showDemHat, setShowDemHat] = useState(false)
   const [showTiaNot, setShowTiaNot] = useState(false)
+  const [showQuiz, setShowQuiz] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
     { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
   ])
@@ -227,7 +229,9 @@ export default function ClassLandingPage() {
               <div className="worry" key={i}>
                 <h3>{x.t}</h3>
                 <p>{x.d}</p>
-                {art
+                {x.native === 'quiz'
+                  ? <button className="btn btn-primary" onClick={() => setShowQuiz(true)}>{x.cta} →</button>
+                  : art
                   ? <button className="btn btn-primary" onClick={() => setModal('art:' + x.slot)}>{x.articleCta ?? 'Đọc bài viết'} →</button>
                   : x.modal
                   ? <button className="btn btn-ghost" onClick={() => setModal(x.modal!)}>{x.cta} →</button>
@@ -464,6 +468,14 @@ export default function ClassLandingPage() {
           onClose={() => setShowTiaNot(false)}
           onRegister={() => { setShowTiaNot(false); setTimeout(() => goto('lichlop'), 60) }}
           onChat={() => { setShowTiaNot(false); setTimeout(() => goto('chat'), 60) }}
+        />
+      )}
+
+      {showQuiz && (
+        <ClassQuiz
+          onClose={() => setShowQuiz(false)}
+          onRegister={() => { setShowQuiz(false); setTimeout(() => goto('lichlop'), 60) }}
+          onChat={() => { setShowQuiz(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
 
