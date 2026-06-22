@@ -13,6 +13,13 @@ const CLASSES = [
   { tag: 'Toàn diện · Combo', name: 'Hành trình Guitar 2027 (combo 10 khoá)', path: 'combo', day: 'Thứ 5 · 20h30', date: 'Khai giảng tháng 9/2026', price: 'Combo' },
 ]
 
+// ─── 3 cửa vào — nút mở bài viết (nếu có) hoặc cuộn tới lớp/chat ───
+const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: string; fallback: string }[] = [
+  { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Đệm hát căn bản', desc: 'Dành cho người thích hát, hay hát karaoke, muốn tự đệm các bài yêu thích.', cta: 'Xem lớp Đệm hát', slot: 'cua-dem-hat', fallback: 'lichlop' },
+  { dq: 'Tôi muốn chơi giai điệu bằng đàn', badge: 'Tỉa nốt căn bản', desc: 'Dành cho người mới, người không mạnh về hát, hoặc muốn cây đàn tự vang lên giai điệu bài hát.', cta: 'Xem lớp Tỉa nốt', slot: 'cua-tia-not', fallback: 'lichlop' },
+  { dq: 'Tôi đã biết chơi nhưng bí giai điệu / cảm âm', badge: 'Tỉa nốt âm giai & cảm âm', desc: 'Dành cho người đã chơi một thời gian nhưng muốn hiểu nốt, âm giai, cảm âm và tự tìm giai điệu.', cta: 'Hỏi trợ lý xếp đúng trình độ', slot: 'cua-cam-am', fallback: 'chat' },
+]
+
 // ─── Showcase hành động (tâm lý → 1 hành động nhỏ) ───
 // slot: nếu có bài viết (articles) published cùng slot → thẻ "sống dậy", CTA mở bài viết.
 const STARTERS: { t: string; d: string; cta: string; href?: string; modal?: string; ready: boolean; note?: string; slot?: string; articleCta?: string }[] = [
@@ -175,24 +182,19 @@ export default function ClassLandingPage() {
           <h2>Chọn cửa vào phù hợp với bạn</h2>
           <p className="lead">Bạn không cần học cả một hành trình dài ngay từ đầu. Trước mắt, chọn một cửa vào hợp với mình.</p>
           <div className="doors">
-            <div className="door">
-              <div className="dq">Tôi muốn vừa đàn vừa hát</div>
-              <span className="dbadge">Đệm hát căn bản</span>
-              <p>Dành cho người thích hát, hay hát karaoke, muốn tự đệm các bài yêu thích.</p>
-              <button className="btn btn-primary" onClick={() => goto('lichlop')}>Xem lớp Đệm hát →</button>
-            </div>
-            <div className="door">
-              <div className="dq">Tôi muốn chơi giai điệu bằng đàn</div>
-              <span className="dbadge">Tỉa nốt căn bản</span>
-              <p>Dành cho người mới, người không mạnh về hát, hoặc muốn cây đàn tự vang lên giai điệu bài hát.</p>
-              <button className="btn btn-primary" onClick={() => goto('lichlop')}>Xem lớp Tỉa nốt →</button>
-            </div>
-            <div className="door">
-              <div className="dq">Tôi đã biết chơi nhưng bí giai điệu / cảm âm</div>
-              <span className="dbadge">Tỉa nốt âm giai &amp; cảm âm</span>
-              <p>Dành cho người đã chơi một thời gian nhưng muốn hiểu nốt, âm giai, cảm âm và tự tìm giai điệu.</p>
-              <button className="btn btn-primary" onClick={() => goto('chat')}>Hỏi trợ lý xếp đúng trình độ →</button>
-            </div>
+            {DOORS.map((d, i) => {
+              const art = articles[d.slot]
+              return (
+                <div className="door" key={i}>
+                  <div className="dq">{d.dq}</div>
+                  <span className="dbadge">{d.badge}</span>
+                  <p>{d.desc}</p>
+                  {art
+                    ? <button className="btn btn-primary" onClick={() => setModal('art:' + d.slot)}>{d.cta} →</button>
+                    : <button className="btn btn-primary" onClick={() => goto(d.fallback)}>{d.cta} →</button>}
+                </div>
+              )
+            })}
           </div>
           <div className="map-hint">
             Sau khóa đầu tiên, bạn có thể đi tiếp theo bản đồ hành trình dài hạn khi sẵn sàng.
@@ -434,7 +436,7 @@ export default function ClassLandingPage() {
       {/* MODAL dùng chung */}
       {modal && (
         <div className="modal open" onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
-          <div className="modal-box">
+          <div className={`modal-box${modal.startsWith('art:') ? ' wide' : ''}`}>
             <button className="x" onClick={() => setModal(null)}>×</button>
             {modal.startsWith('art:')
               ? (() => { const a = articles[modal.slice(4)]; return a
@@ -590,6 +592,8 @@ const CSS = `
 .tva-class .fab{position:fixed;right:18px;bottom:18px;z-index:50;background:var(--indigo);color:#fff;border:none;border-radius:999px;padding:13px 18px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 10px 26px -8px rgba(67,56,202,.6);}
 .tva-class .modal{position:fixed;inset:0;z-index:100;background:rgba(20,16,32,.55);display:flex;align-items:center;justify-content:center;padding:20px;}
 .tva-class .modal-box{background:var(--surface);border-radius:20px;padding:28px;max-width:620px;width:100%;max-height:86vh;overflow-y:auto;position:relative;}
+.tva-class .modal-box.wide{max-width:760px;padding:32px 36px;}
+.tva-class .modal-box.wide h3{font-size:24px;line-height:1.25;}
 .tva-class .modal-box .x{position:absolute;right:16px;top:14px;border:none;background:#F1EFF9;width:32px;height:32px;border-radius:9px;font-size:18px;cursor:pointer;color:var(--ink-soft);}
 .tva-class .modal-box h3{font-size:20px;font-weight:800;}
 .tva-class .mh-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}

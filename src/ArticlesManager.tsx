@@ -12,7 +12,12 @@ const C = {
 
 // Slot = vị trí thẻ trên trang /class (khớp với showcase STARTERS)
 export const ARTICLE_SLOTS: { id: string; label: string }[] = [
-  { id: '90-phut-moi-tuan', label: 'Thẻ "90 phút mỗi tuần"' },
+  // ── 3 cửa vào (nút "Xem lớp...") ──
+  { id: 'cua-dem-hat',       label: 'Cửa "Đệm hát" (nút Xem lớp Đệm hát)' },
+  { id: 'cua-tia-not',       label: 'Cửa "Tỉa nốt" (nút Xem lớp Tỉa nốt)' },
+  { id: 'cua-cam-am',        label: 'Cửa "Tỉa nốt âm giai & cảm âm"' },
+  // ── Thẻ showcase "Bắt đầu" ──
+  { id: '90-phut-moi-tuan',  label: 'Thẻ "90 phút mỗi tuần"' },
   { id: 'hoc-vien-lon-tuoi', label: 'Thẻ "Học viên lớn tuổi"' },
   { id: 'mo-hinh-hoc',       label: 'Thẻ "Xem một buổi học"' },
   { id: 'dung-thu-app',      label: 'Thẻ "Mở bài học thử trên app"' },
