@@ -198,7 +198,7 @@ export default function ClassLandingPage() {
           </div>
           <div className="map-hint">
             Sau khóa đầu tiên, bạn có thể đi tiếp theo bản đồ hành trình dài hạn khi sẵn sàng.
-            <button className="btn btn-ghost" onClick={() => setModal('banDo')}>Xem bản đồ hành trình đầy đủ</button>
+            <button className="btn btn-ghost" onClick={() => setModal(articles['ban-do-hanh-trinh'] ? 'art:ban-do-hanh-trinh' : 'banDo')}>Xem bản đồ hành trình đầy đủ</button>
           </div>
         </div>
       </section>

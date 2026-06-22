@@ -12,6 +12,7 @@ const C = {
 
 // Slot = vị trí thẻ trên trang /class (khớp với showcase STARTERS)
 export const ARTICLE_SLOTS: { id: string; label: string }[] = [
+  { id: 'ban-do-hanh-trinh', label: 'Bản đồ hành trình (nút "Xem bản đồ...")' },
   // ── 3 cửa vào (nút "Xem lớp...") ──
   { id: 'cua-dem-hat',       label: 'Cửa "Đệm hát" (nút Xem lớp Đệm hát)' },
   { id: 'cua-tia-not',       label: 'Cửa "Tỉa nốt" (nút Xem lớp Tỉa nốt)' },
