@@ -575,6 +575,9 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
     setSaving(true)
     const result = calculateResult()
 
+    // Preview của thầy (__preview__) → không ghi kết quả vào DB
+    if (studentId.startsWith('__')) { setSaving(false); setSubmitted(true); onComplete?.(result); return }
+
     const { error } = await supabase.from('edu_quiz_results').insert({
       lesson_id: lessonId,
       student_id: studentId,

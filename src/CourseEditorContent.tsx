@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase } from './supabase'
 import RichEditor from './RichEditor'
 import FlowInlineEditor from './FlowInlineEditor'
+import QuizBuilder from './components/QuizBuilder'
+import { QuizViewer } from './components/QuizViewer'
 import FlowPlayer from './FlowPlayer'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -134,7 +136,13 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
             <iframe src={lesson.content_url} style={{ width: '100%', height: 400, border: 'none', display: 'block' }} />
           </div>
         )}
-        {lesson.content && (
+        {lesson.lesson_type === 'quiz' ? (
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>❓ Bài kiểm tra</div>
+            <QuizViewer lessonId={lesson.id} studentId="__preview__"
+              quizData={(() => { try { return typeof lesson.content === 'string' ? JSON.parse(lesson.content) : lesson.content } catch { return null } })()} />
+          </div>
+        ) : lesson.content && (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>📝 Nội dung bài học</div>
             <div className="rich-preview" style={{ fontSize: 15, color: C.text2, lineHeight: 1.8 }} dangerouslySetInnerHTML={{ __html: lesson.content }} />
@@ -1080,6 +1088,14 @@ export default function CourseEditorContent() {
                       <span>✨</span> Soạn nội dung Flow
                     </div>
                     <FlowInlineEditor lessonId={selectedLesson!.id} />
+                  </div>
+                ) : fType === 'quiz' ? (
+                  /* ── Khi loại bài = Quiz: trình soạn quiz (sinh JSON cho QuizViewer) ── */
+                  <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, background: C.bg }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.accent, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>❓</span> Soạn bài kiểm tra (Quiz)
+                    </div>
+                    <QuizBuilder value={fContent} onChange={setFContent} />
                   </div>
                 ) : (
                   <div>
