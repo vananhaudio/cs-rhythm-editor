@@ -440,7 +440,11 @@ export default function ClassLandingPage() {
             <button className="x" onClick={() => setModal(null)}>×</button>
             {modal.startsWith('art:')
               ? (() => { const a = articles[modal.slice(4)]; return a
-                  ? <div><h3>{a.title}</h3><div className="art-body" style={{ marginTop: 12 }} dangerouslySetInnerHTML={{ __html: a.body }} /></div>
+                  ? <div>
+                      <h3>{a.title}</h3>
+                      <div className="art-body" style={{ marginTop: 12 }} dangerouslySetInnerHTML={{ __html: a.body }} />
+                      <button className="btn btn-primary" style={{ marginTop: 18 }} onClick={() => { setModal(null); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+                    </div>
                   : <div>Bài viết không còn.</div> })()
               : <div dangerouslySetInnerHTML={{ __html: MODALS[modal] ?? '' }} />}
           </div>
