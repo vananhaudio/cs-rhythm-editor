@@ -371,7 +371,7 @@ export default function ClassLandingPage() {
       {/* THẦY */}
       <section className="band-top">
         <div className="wrap teacher">
-          <div className="ph t-photo">Ảnh thật<br />Thầy Văn Anh<br />(thả vào đây)</div>
+          <img className="t-photo" src="/thay-van-anh.png" alt="Thầy Văn Anh" />
           <div>
             <div className="eyebrow">Người dẫn đường</div>
             <h2>Học cùng Thầy Văn Anh</h2>
@@ -550,7 +550,7 @@ const CSS = `
 .tva-class .shot{aspect-ratio:9/16;border-radius:12px;border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;color:#A89FF0;background:rgba(255,255,255,.05);}
 @media(max-width:860px){.tva-class .app-grid{grid-template-columns:1fr;gap:24px;}}
 .tva-class .teacher{display:grid;grid-template-columns:280px 1fr;gap:34px;align-items:center;}
-.tva-class .t-photo{height:300px;}
+.tva-class img.t-photo{width:100%;height:380px;object-fit:contain;object-position:center bottom;border-radius:18px;background:linear-gradient(160deg,#FBF1E4,#F2EEE7);display:block;}
 .tva-class .quote{margin-top:18px;font-size:16px;font-style:italic;color:var(--ink);border-left:3px solid var(--honey);padding-left:16px;}
 @media(max-width:860px){.tva-class .teacher{grid-template-columns:1fr;}.tva-class .t-photo{height:220px;}}
 .tva-class .faq-list{display:flex;flex-direction:column;gap:10px;max-width:760px;}
