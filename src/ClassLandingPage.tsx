@@ -4,6 +4,7 @@
 // Quy ước: dùng chung Supabase (anon ghi leads). Style: scoped CSS .tva-class (responsive/hover).
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
+import ClassJourney2027 from './ClassJourney2027'
 
 // ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
 const CLASSES = [
@@ -78,6 +79,7 @@ export default function ClassLandingPage() {
   const [sent, setSent] = useState(false)
   const [okBox, setOkBox] = useState(false)
   const [modal, setModal] = useState<string | null>(null)
+  const [showJourney, setShowJourney] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
     { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
   ])
@@ -198,7 +200,7 @@ export default function ClassLandingPage() {
           </div>
           <div className="map-hint">
             Sau khóa đầu tiên, bạn có thể đi tiếp theo bản đồ hành trình dài hạn khi sẵn sàng.
-            <button className="btn btn-ghost" onClick={() => setModal(articles['ban-do-hanh-trinh'] ? 'art:ban-do-hanh-trinh' : 'banDo')}>Xem bản đồ hành trình đầy đủ</button>
+            <button className="btn btn-ghost" onClick={() => setShowJourney(true)}>Xem bản đồ hành trình đầy đủ</button>
           </div>
         </div>
       </section>
@@ -432,6 +434,14 @@ export default function ClassLandingPage() {
       </footer>
 
       <button className="fab" onClick={() => goto('chat')}>💬 Tư vấn chọn lớp</button>
+
+      {/* HÀNH TRÌNH 2027 — bài viết thiết kế native, full màn hình */}
+      {showJourney && (
+        <ClassJourney2027
+          onClose={() => setShowJourney(false)}
+          onRegister={() => { setShowJourney(false); setTimeout(() => goto('lichlop'), 60) }}
+        />
+      )}
 
       {/* BÀI VIẾT — mở full màn hình (dài, có ảnh) */}
       {modal?.startsWith('art:') && (() => {
