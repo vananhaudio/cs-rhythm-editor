@@ -23,6 +23,7 @@ import FlowLabPage from './FlowLabPage'
 import FlowMigratePage from './FlowMigratePage'
 import JoinGroupPage from './JoinGroupPage'
 import DeleteAccountPage from './DeleteAccountPage'
+import ClassLandingPage from './ClassLandingPage'
 type AppUser = {
   id: string
   role: string
@@ -132,6 +133,11 @@ export default function AppRouter() {
   // ── Route /join-group/<token> — học viên tự xác nhận nhóm (tự xử lý auth) ──
   if (path.startsWith('/join-group/')) {
     return <JoinGroupPage />
+  }
+
+  // ── Route /class — trang tuyển sinh công khai (class.vananhaudio.com) ──
+  if (path === '/class' || path.startsWith('/class')) {
+    return <ClassLandingPage />
   }
 
   // ── Route /guitarboard ──
