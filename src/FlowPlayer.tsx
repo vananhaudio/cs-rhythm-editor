@@ -94,6 +94,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   // Animation & swipe
   const slideDir    = useRef<'next' | 'prev'>('next')
   const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
   // Đã hoàn thành flow trước đó chưa (để KHÔNG thưởng XP lại khi xem lại)
   const wasFinishedRef = useRef(false)
   // Cổng slide tương tác: slide đã "vượt" + số lần thử (cho lối thoát danh dự)
@@ -320,12 +321,17 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
   // ── Swipe handlers ───────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
   }
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null || !flow) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - (touchStartY.current ?? 0)
     touchStartX.current = null
+    touchStartY.current = null
     const THRESHOLD = 50
+    // Chỉ tính là vuốt NGANG khi ngang trội hơn dọc — tránh kéo dọc đọc bài bị nhận nhầm
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) return
     if (dx < -THRESHOLD && canProceed(slide)) { goNext() }
     else if (dx > THRESHOLD && current > 0)   { goPrev() }
   }
