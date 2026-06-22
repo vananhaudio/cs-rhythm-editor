@@ -119,7 +119,7 @@ export default function ClassLandingPage() {
 
       <nav>
         <div className="wrap nav-in">
-          <div className="brand"><span className="mark">TVA</span> Guitar · Thầy Văn Anh</div>
+          <div className="brand"><img className="mark" src="/logo.png" alt="TVA Guitar" /> Thầy Văn Anh Guitar</div>
           <div className="nav-links">
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
             <a onClick={() => goto('chat')}>Tư vấn</a>
@@ -445,7 +445,7 @@ const CSS = `
 .tva-class nav{position:sticky;top:0;z-index:40;background:rgba(242,238,231,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
 .tva-class .nav-in{display:flex;align-items:center;justify-content:space-between;height:62px;}
 .tva-class .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;}
-.tva-class .brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(150deg,var(--indigo),#6D63E6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;}
+.tva-class .brand .mark{width:36px;height:36px;border-radius:9px;object-fit:contain;display:block;}
 .tva-class .nav-links{display:flex;gap:22px;font-size:14.5px;font-weight:500;}
 .tva-class .nav-links a{color:var(--ink-soft);text-decoration:none;cursor:pointer;}
 .tva-class .nav-links a:hover{color:var(--indigo);}
