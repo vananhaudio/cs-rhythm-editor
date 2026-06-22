@@ -382,18 +382,25 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
 
         {/* VIDEO */}
         {slide.type === 'video' && slide.mediaUrl && (
-          <div style={{ borderRadius: 12, overflow: 'hidden', aspectRatio: '16/9', background: '#000', marginBottom: 8 }}>
-            <iframe src={toYouTubeEmbed(slide.mediaUrl)} style={{ width: '100%', height: '100%', border: 'none' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen title={slide.title} />
-          </div>
+          <>
+            <div style={{ borderRadius: 12, overflow: 'hidden', aspectRatio: '16/9', background: '#000', marginBottom: 8 }}>
+              <iframe src={toYouTubeEmbed(slide.mediaUrl)} style={{ width: '100%', height: '100%', border: 'none' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen title={slide.title} />
+            </div>
+            {slide.content && (
+              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.85, marginTop: 6 }}
+                dangerouslySetInnerHTML={{ __html: richText(slide.content) }} />
+            )}
+          </>
         )}
 
         {/* IMAGE */}
         {slide.type === 'image' && (
           <div style={{ marginBottom: 8 }}>
             {slide.content && (
-              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.85, marginBottom: 14 }}>{slide.content}</div>
+              <div style={{ fontSize: 16, color: '#333', lineHeight: 1.85, marginBottom: 14 }}
+                dangerouslySetInnerHTML={{ __html: richText(slide.content) }} />
             )}
             {slide.mediaUrl ? (
               <img

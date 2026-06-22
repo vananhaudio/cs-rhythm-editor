@@ -359,9 +359,9 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     </div>
 
                     {/* Content */}
-                    {['text', 'callout', 'support', 'next', 'action', 'reward', 'quiz', 'true_false', 'input', 'guitar_tool'].includes(editSlide.type) && (
+                    {['text', 'callout', 'support', 'next', 'action', 'reward', 'quiz', 'true_false', 'input', 'guitar_tool', 'video', 'image'].includes(editSlide.type) && (
                       <div>
-                        <Label>Nội dung / Câu hỏi</Label>
+                        <Label>{['video', 'image'].includes(editSlide.type) ? 'Lời dẫn / Ghi chú (tuỳ chọn)' : 'Nội dung / Câu hỏi'}</Label>
                         <textarea value={editSlide.content ?? ''} onChange={e => patch('content', e.target.value)}
                           rows={editSlide.type === 'guitar_tool' ? 6 : 3} placeholder={'Nội dung hiển thị cho học viên...\nXuống dòng tự do · in đậm: **chữ đậm**'}
                           style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'vertical', color: C.text1 }} />
