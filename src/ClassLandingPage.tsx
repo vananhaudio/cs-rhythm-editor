@@ -119,7 +119,7 @@ export default function ClassLandingPage() {
 
       <nav>
         <div className="wrap nav-in">
-          <div className="brand"><img className="mark" src="/logo.png" alt="TVA Guitar" /> Thầy Văn Anh Guitar</div>
+          <div className="brand"><img className="mark" src="/tva-logo.png" alt="TVA Guitar" /> Thầy Văn Anh Guitar</div>
           <div className="nav-links">
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
             <a onClick={() => goto('chat')}>Tư vấn</a>
