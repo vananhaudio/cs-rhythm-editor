@@ -359,12 +359,13 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                     </div>
 
                     {/* Content */}
-                    {['text', 'callout', 'support', 'next', 'action', 'reward', 'quiz', 'true_false', 'input'].includes(editSlide.type) && (
+                    {['text', 'callout', 'support', 'next', 'action', 'reward', 'quiz', 'true_false', 'input', 'guitar_tool'].includes(editSlide.type) && (
                       <div>
                         <Label>Nội dung / Câu hỏi</Label>
                         <textarea value={editSlide.content ?? ''} onChange={e => patch('content', e.target.value)}
-                          rows={3} placeholder="Nội dung hiển thị cho học viên..."
+                          rows={editSlide.type === 'guitar_tool' ? 6 : 3} placeholder={'Nội dung hiển thị cho học viên...\nXuống dòng tự do · in đậm: **chữ đậm**'}
                           style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'vertical', color: C.text1 }} />
+                        <div style={{ fontSize: 11.5, color: C.text3, marginTop: 4 }}>Dán văn bản thoải mái — giữ xuống dòng. Bôi đậm bằng <code>**chữ đậm**</code>.</div>
                       </div>
                     )}
 
@@ -576,7 +577,9 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                         </div>
                         <div>
                           <Label>Mô tả nhỏ (tuỳ chọn)</Label>
-                          <Inp value={(itv.sub as string) ?? ''} onChange={v => patchItv('sub', v)} placeholder="VD: Lên dây chuẩn trước khi tập" />
+                          <textarea value={(itv.sub as string) ?? ''} onChange={e => patchItv('sub', e.target.value)}
+                            rows={3} placeholder={'VD: Lên dây chuẩn trước khi tập\nXuống dòng tự do · in đậm: **chữ đậm**'}
+                            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, fontFamily: 'inherit', outline: 'none', resize: 'vertical', color: C.text1 }} />
                         </div>
                         <div>
                           <Label>Vị trí nút</Label>

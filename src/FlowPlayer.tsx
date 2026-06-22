@@ -11,6 +11,12 @@ import SupportFlow from './SupportFlow'
 // Slide tương tác cần "vượt" mới qua (cổng hard-mềm). Chỉ gồm loại ĐÃ có renderer.
 const INTERACTIVE_TYPES = ['guitar_neck', 'guitar_strum', 'guitar_ear', 'checklist', 'note_practice']
 
+// Đổi văn bản thuần → HTML an toàn: escape, **đậm** → <strong>, xuống dòng → <br>.
+function richText(s: string): string {
+  const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return esc.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')
+}
+
 // Nhận MỌI dạng link YouTube → URL embed cho iframe.
 // Bắt ID 11 ký tự bất kể thứ tự tham số (watch?v=, watch?app=desktop&v=, m.youtube, youtu.be, shorts, live, embed, hoặc ID trần).
 export function toYouTubeEmbed(url: string): string {
@@ -631,16 +637,15 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
           const sub = (slide.interactive?.sub as string) ?? ''
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ fontSize: 16, color: '#3A352C', lineHeight: 1.7 }}>
-                {slide.content || 'Bấm nút bên dưới để mở công cụ luyện tập.'}
-              </div>
+              <div style={{ fontSize: 16, color: '#3A352C', lineHeight: 1.7 }}
+                dangerouslySetInnerHTML={{ __html: richText(slide.content || 'Bấm nút bên dưới để mở công cụ luyện tập.') }} />
               {pos === 'inline' && (
                 <button onClick={() => { onOpenTool?.(tool); markPassed(slide.id, true) }}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 16, border: 'none', borderRadius: 15, background: '#1C1A17', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                   <div style={{ width: 46, height: 46, flexShrink: 0, borderRadius: 13, background: '#3F6B4E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎚️</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#F4E9D8' }}>{label}</div>
-                    {sub && <div style={{ fontSize: 13, color: '#9A9082', marginTop: 2 }}>{sub}</div>}
+                    {sub && <div style={{ fontSize: 13, color: '#9A9082', marginTop: 2, lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: richText(sub) }} />}
                   </div>
                   <span style={{ color: '#F4E9D8', fontSize: 18 }}>›</span>
                 </button>
