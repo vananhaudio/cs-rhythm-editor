@@ -135,7 +135,6 @@ export default function ClassLandingPage() {
       <header className="hero">
         <div className="wrap hero-grid">
           <div>
-            <div className="eyebrow">TVA Guitar · Thầy Văn Anh</div>
             <h1>Bắt đầu học Guitar bằng <span className="hl">một khóa nhỏ phù hợp với bạn</span></h1>
             <p>Thích hát, thích chơi giai điệu, hay đã chơi nhưng muốn mở khóa cảm âm — mỗi người một cửa vào. Bắt đầu nhẹ nhàng, đi xa lúc nào tùy bạn.</p>
             <div className="hero-cta">
