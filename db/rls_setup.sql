@@ -51,7 +51,10 @@ DECLARE
   -- Bảng tự quản RLS riêng (policy hẹp do migration tính năng đặt) — BỎ QUA:
   self_managed text[] := ARRAY[
     'edu_groups', 'edu_group_members', 'edu_group_claim_tokens',
-    'student_action_logs'
+    'student_action_logs',
+    -- Trang tuyển sinh class.vananhaudio.com — policy HẸP riêng (xem db/class_tuyensinh_setup.sql).
+    -- articles: anon đọc bài published. leads: anon CHỈ ghi (không đọc). ĐỪNG để vòng lặp áp policy rộng.
+    'articles', 'leads'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];
