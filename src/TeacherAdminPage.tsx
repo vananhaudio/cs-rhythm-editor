@@ -6,6 +6,7 @@ import ToolsManager from './ToolsManager'
 import GroupManager from './GroupManager'
 import AiAssistant from './AiAssistant'
 import LeadsManager from './LeadsManager'
+import ArticlesManager from './ArticlesManager'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -14,11 +15,12 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
+  { id: 'articles'  as Section, icon: '📰', label: 'Bài viết'       },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
   { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
@@ -130,6 +132,13 @@ export default function TeacherAdminPage() {
         {section === 'leads' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <LeadsManager />
+          </div>
+        )}
+
+        {/* Articles — bài viết cho trang tuyển sinh */}
+        {section === 'articles' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <ArticlesManager />
           </div>
         )}
 

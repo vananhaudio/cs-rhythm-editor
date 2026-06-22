@@ -14,13 +14,14 @@ const CLASSES = [
 ]
 
 // ─── Showcase hành động (tâm lý → 1 hành động nhỏ) ───
-const STARTERS: { t: string; d: string; cta: string; href?: string; modal?: string; ready: boolean; note?: string }[] = [
+// slot: nếu có bài viết (articles) published cùng slot → thẻ "sống dậy", CTA mở bài viết.
+const STARTERS: { t: string; d: string; cta: string; href?: string; modal?: string; ready: boolean; note?: string; slot?: string; articleCta?: string }[] = [
   { t: 'Tìm điểm bắt đầu của tôi', d: 'Bài test 2 phút. Không cần biết trình độ — trả lời vài câu, trợ lý gợi ý đúng điểm bắt đầu.', cta: 'Làm bài test', href: '#chat', ready: true },
-  { t: 'Mở bài học thử trên app', d: 'Dùng thử app TVA Guitar 7 ngày: trải nghiệm bài học đầu tiên, cách luyện tập và theo dõi tiến độ.', cta: 'Dùng thử miễn phí', href: '#chat', ready: false, note: 'cần link bản dùng thử app' },
-  { t: 'Xem một buổi học vận hành thế nào', d: 'Lớp Zoom có thầy dẫn, nhóm Zalo nhắc lịch & giao bài, app lưu bài, có trả bài. Học online không phải tự bơi.', cta: 'Xem mô hình học', modal: 'mohinh', ready: false, note: 'cần ảnh Zoom/Zalo/app thật' },
-  { t: '90 phút mỗi tuần cho cây đàn của bạn', d: 'Một tuần chỉ 90 phút, lộ trình 8 buổi. Nếu không đặt lịch cho ước mơ, nó sẽ bị việc khác chen vào.', cta: 'Đọc bài viết', href: '#chat', ready: false, note: 'cần bài viết' },
-  { t: 'Những học viên lớn tuổi bắt đầu thế nào', d: 'Nhiều người bắt đầu khi đã 40, 50, 60. Quan trọng không phải tuổi — mà là đi chậm và đúng cách.', cta: 'Xem video lớp học', href: '#chat', ready: false, note: 'cần video' },
-  { t: 'Bạn được hỗ trợ gì sau khi đăng ký', d: 'Chọn sai lớp? Không theo kịp? Bận một buổi? Mỗi lo lắng đều có cách hệ thống hỗ trợ bạn.', cta: 'Xem cam kết', modal: 'camket', ready: true },
+  { t: 'Mở bài học thử trên app', d: 'Dùng thử app TVA Guitar 7 ngày: trải nghiệm bài học đầu tiên, cách luyện tập và theo dõi tiến độ.', cta: 'Dùng thử miễn phí', href: '#chat', ready: false, note: 'cần link bản dùng thử app', slot: 'dung-thu-app', articleCta: 'Tìm hiểu dùng thử' },
+  { t: 'Xem một buổi học vận hành thế nào', d: 'Lớp Zoom có thầy dẫn, nhóm Zalo nhắc lịch & giao bài, app lưu bài, có trả bài. Học online không phải tự bơi.', cta: 'Xem mô hình học', modal: 'mohinh', ready: false, note: 'cần ảnh Zoom/Zalo/app thật', slot: 'mo-hinh-hoc', articleCta: 'Xem mô hình học' },
+  { t: '90 phút mỗi tuần cho cây đàn của bạn', d: 'Một tuần chỉ 90 phút, lộ trình 8 buổi. Nếu không đặt lịch cho ước mơ, nó sẽ bị việc khác chen vào.', cta: 'Đọc bài viết', href: '#chat', ready: false, note: 'cần bài viết', slot: '90-phut-moi-tuan', articleCta: 'Đọc bài viết' },
+  { t: 'Những học viên lớn tuổi bắt đầu thế nào', d: 'Nhiều người bắt đầu khi đã 40, 50, 60. Quan trọng không phải tuổi — mà là đi chậm và đúng cách.', cta: 'Xem video lớp học', href: '#chat', ready: false, note: 'cần video', slot: 'hoc-vien-lon-tuoi', articleCta: 'Đọc bài viết' },
+  { t: 'Bạn được hỗ trợ gì sau khi đăng ký', d: 'Chọn sai lớp? Không theo kịp? Bận một buổi? Mỗi lo lắng đều có cách hệ thống hỗ trợ bạn.', cta: 'Xem cam kết', modal: 'camket', ready: true, slot: 'cam-ket', articleCta: 'Xem cam kết' },
 ]
 
 const CHAT_FAQ: Record<string, string> = {
@@ -74,8 +75,21 @@ export default function ClassLandingPage() {
     { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
   ])
   const [chatInput, setChatInput] = useState('')
+  const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
   const chatBodyRef = useRef<HTMLDivElement>(null)
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  // Đọc bài viết published → map theo slot (thẻ showcase sống dậy khi thầy đăng bài)
+  useEffect(() => {
+    supabase.from('articles').select('slot,title,body').eq('published', true).then(({ data }) => {
+      if (!data) return
+      const m: Record<string, { title: string; body: string }> = {}
+      data.forEach((a: { slot: string | null; title: string; body: string | null }) => {
+        if (a.slot) m[a.slot] = { title: a.title, body: a.body ?? '' }
+      })
+      setArticles(m)
+    })
+  }, [])
 
   useEffect(() => {
     if (chatBodyRef.current) chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight
@@ -194,17 +208,22 @@ export default function ClassLandingPage() {
           <h2>Bắt đầu theo cách phù hợp với bạn</h2>
           <p className="lead">Mỗi người có một điểm bắt đầu khác nhau. Làm bài test, xem thử cách học, đọc một bài ngắn — hoặc hỏi trợ lý, trước khi đăng ký.</p>
           <div className="worries">
-            {STARTERS.map((x, i) => (
+            {STARTERS.map((x, i) => {
+              const art = x.slot ? articles[x.slot] : undefined
+              const live = x.ready || !!art
+              return (
               <div className="worry" key={i}>
                 <h3>{x.t}</h3>
                 <p>{x.d}</p>
-                {x.modal
+                {art
+                  ? <button className="btn btn-primary" onClick={() => setModal('art:' + x.slot)}>{x.articleCta ?? 'Đọc bài viết'} →</button>
+                  : x.modal
                   ? <button className="btn btn-ghost" onClick={() => setModal(x.modal!)}>{x.cta} →</button>
                   : <button className={`btn ${x.ready ? 'btn-primary' : 'btn-ghost'}`} onClick={() => goto((x.href ?? '#chat').replace('#', ''))}>{x.cta} →</button>}
                 <a className="askline" onClick={() => goto('chat')}>Hỏi trợ lý về bước này →</a>
-                {!x.ready && <div className="soon">Sắp có · {x.note}</div>}
+                {!live && <div className="soon">Sắp có · {x.note}</div>}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       </section>
@@ -417,7 +436,11 @@ export default function ClassLandingPage() {
         <div className="modal open" onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
           <div className="modal-box">
             <button className="x" onClick={() => setModal(null)}>×</button>
-            <div dangerouslySetInnerHTML={{ __html: MODALS[modal] ?? '' }} />
+            {modal.startsWith('art:')
+              ? (() => { const a = articles[modal.slice(4)]; return a
+                  ? <div><h3>{a.title}</h3><div className="art-body" style={{ marginTop: 12 }} dangerouslySetInnerHTML={{ __html: a.body }} /></div>
+                  : <div>Bài viết không còn.</div> })()
+              : <div dangerouslySetInnerHTML={{ __html: MODALS[modal] ?? '' }} />}
           </div>
         </div>
       )}
@@ -584,4 +607,10 @@ const CSS = `
 .tva-class .bando .b-branch{display:inline-block;min-width:74px;font-weight:800;color:var(--indigo);}
 .tva-class .bando .b-converge{font-weight:700;color:var(--honey);}
 @media(max-width:560px){.tva-class .mh-grid{grid-template-columns:1fr;}}
+.tva-class .art-body{font-size:15px;line-height:1.75;color:var(--ink-soft);}
+.tva-class .art-body p{margin:0 0 12px;}
+.tva-class .art-body h2,.tva-class .art-body h3{color:var(--ink);margin:16px 0 8px;}
+.tva-class .art-body ul,.tva-class .art-body ol{margin:0 0 12px;padding-left:20px;}
+.tva-class .art-body img{max-width:100%;border-radius:10px;margin:8px 0;}
+.tva-class .art-body b,.tva-class .art-body strong{color:var(--ink);}
 `
