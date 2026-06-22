@@ -414,6 +414,16 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                               <option key={i} value={o}>{String.fromCharCode(65 + i)}. {o}</option>
                             ))}
                           </Sel>
+                          {(() => {
+                            const opts = (editSlide.options ?? []).filter(o => o.trim())
+                            const cor = (editSlide.correctAnswer ?? '').trim()
+                            const ok = cor && opts.some(o => o.trim() === cor)
+                            if (opts.length < 2)
+                              return <div style={{ fontSize: 12, color: '#DC2626', marginTop: 5 }}>⚠ Cần ít nhất 2 đáp án.</div>
+                            if (!ok)
+                              return <div style={{ fontSize: 12, color: '#DC2626', marginTop: 5 }}>⚠ Chưa chọn đáp án đúng (hoặc đáp án đúng không khớp — chọn lại sau khi sửa chữ).</div>
+                            return null
+                          })()}
                         </div>
                       </div>
                     )}

@@ -442,9 +442,10 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
               <div style={{ fontSize: 16, color: '#333', lineHeight: 1.8, marginBottom: 14 }}>{slide.content}</div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {(slide.options ?? []).map((opt, i) => {
+              {(slide.options ?? []).filter(o => o.trim()).map((opt, i) => {
+                const cor = (slide.correctAnswer ?? '').trim()
                 const sel = answer === opt
-                const isCorrect = opt === slide.correctAnswer
+                const isCorrect = opt.trim() === cor
                 let bg = '#F8F8FA', border = '2px solid #E8EAF0', color = '#18181B'
                 if (checked && sel && isCorrect)  { bg = '#F0FDF4'; border = '2px solid #16A34A'; color = '#16A34A' }
                 if (checked && sel && !isCorrect) { bg = '#FEF2F2'; border = '2px solid #EF4444'; color = '#EF4444' }
@@ -453,7 +454,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
                   <div key={i} onClick={() => {
                       if (checked === 'correct') return
                       setAnswer(opt)
-                      setChecked(opt === slide.correctAnswer ? 'correct' : 'wrong')
+                      setChecked(opt.trim() === cor ? 'correct' : 'wrong')
                     }}
                     style={{ padding: '13px 16px', borderRadius: 14, background: bg, border, color, fontSize: 15, fontWeight: 500, cursor: checked === 'correct' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s' }}>
                     <span style={{ width: 24, height: 24, borderRadius: '50%', background: sel ? (checked ? (isCorrect ? '#16A34A' : '#EF4444') : '#4338CA') : '#DDD', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
