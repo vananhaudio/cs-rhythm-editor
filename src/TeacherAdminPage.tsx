@@ -5,6 +5,7 @@ import CourseEditorContent from './CourseEditorContent'
 import ToolsManager from './ToolsManager'
 import GroupManager from './GroupManager'
 import AiAssistant from './AiAssistant'
+import LeadsManager from './LeadsManager'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -13,10 +14,11 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
+  { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
   { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
@@ -121,6 +123,13 @@ export default function TeacherAdminPage() {
               studentId={studentId}
               onBack={() => setStudentId(null)}
             />
+          </div>
+        )}
+
+        {/* Leads — đăng ký từ trang tuyển sinh */}
+        {section === 'leads' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <LeadsManager />
           </div>
         )}
 
