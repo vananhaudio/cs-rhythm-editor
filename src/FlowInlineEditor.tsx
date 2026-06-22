@@ -565,6 +565,9 @@ export default function FlowInlineEditor({ lessonId }: Props) {
                             <option value="tuner">🎚️ Tuner (lên dây)</option>
                             <option value="tempo">🥁 Metronome (nhịp)</option>
                             <option value="guitarboard">🎸 Bảng phím / Tab</option>
+                            <option value="chords">🎵 Chord See (nghe hợp âm)</option>
+                            <option value="tap">👏 Tập gõ nhịp theo bài</option>
+                            <option value="song-builder">🎼 Song Builder</option>
                           </Sel>
                         </div>
                         <div>

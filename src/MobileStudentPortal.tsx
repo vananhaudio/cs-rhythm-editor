@@ -1287,12 +1287,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 actionBusy={actionBusy}
                 onOpenTool={(tool) => {
                   const map: Record<string, [string, string]> = {
-                    tuner:       ['/tuner', 'Tuner — Lên dây'],
-                    tempo:       ['/tempo', 'Metronome'],
-                    guitarboard: ['/guitarboard', 'Bảng phím / Tab'],
+                    tuner:          ['/tuner', 'Tuner — Lên dây'],
+                    tempo:          ['/tempo', 'Metronome'],
+                    guitarboard:    ['/guitarboard', 'Bảng phím / Tab'],
+                    chords:         ['/chords', 'Chord See — Nghe hợp âm'],
+                    tap:            ['/tap', 'Tập gõ nhịp'],
+                    'song-builder': ['/song-builder', 'Song Builder'],
                   }
                   const [route, name] = map[tool] ?? map.tuner
-                  openTool(route, name)
+                  openTool(route, name, tool)
                 }}
               />
             ) : (
