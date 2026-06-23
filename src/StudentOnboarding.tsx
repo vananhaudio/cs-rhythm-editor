@@ -66,7 +66,7 @@ function displayName(s: Student) {
   return name
 }
 
-type Step = 'welcome' | 'login' | 'register' | 'portal'
+type Step = 'welcome' | 'login' | 'portal'
 
 export default function StudentOnboarding() {
   const [step, setStep]           = useState<Step>('welcome')
@@ -86,12 +86,6 @@ export default function StudentOnboarding() {
   const [iapRegLoading, setIapRegLoading] = useState(false)
   const [iapRegError, setIapRegError]   = useState('')
   const passRef  = useRef<HTMLInputElement>(null)
-  // Đăng ký miễn phí (self-serve, web)
-  const [regName, setRegName]       = useState('')
-  const [regEmail, setRegEmail]     = useState('')
-  const [regPass, setRegPass]       = useState('')
-  const [regLoading, setRegLoading] = useState(false)
-  const [regError, setRegError]     = useState('')
 
   // Xác nhận nhóm đang chờ (học viên bấm link /join-group/<token> rồi mới đăng nhập)
   const claimPendingGroup = async () => {
@@ -252,47 +246,6 @@ export default function StudentOnboarding() {
     }
   }
 
-  // Đăng ký tài khoản MIỄN PHÍ (web) — tạo TK beginner = gói free, không cần thanh toán
-  const handleFreeRegister = async () => {
-    const em = regEmail.trim().toLowerCase()
-    if (!em || !regPass) { setRegError('Nhập email và mật khẩu giúp mình nhé.'); return }
-    if (regPass.length < 6) { setRegError('Mật khẩu cần ít nhất 6 ký tự.'); return }
-    setRegLoading(true); setRegError('')
-    try {
-      await supabase.auth.signUp({ email: em, password: regPass })
-      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email: em, password: regPass })
-      if (signInErr) throw new Error(/invalid login/i.test(signInErr.message) ? 'Email này đã có tài khoản. Bạn đăng nhập nhé.' : signInErr.message)
-      const userId = signInData.user.id
-      const { error: upsertErr } = await supabase.from('edu_students').upsert({
-        user_id: userId,
-        full_name: regName.trim() || em.split('@')[0],
-        email: em,
-        is_active: true,
-        level: 'beginner',          // gói Miễn phí
-        enrolled_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-      if (upsertErr) throw new Error('Tạo hồ sơ thất bại: ' + upsertErr.message)
-      const { data: studentData } = await supabase.from('edu_students')
-        .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
-        .eq('user_id', userId).single()
-      if (!studentData) throw new Error('Không tải được hồ sơ. Thử đăng nhập lại.')
-      // Auto-enroll để thấy khoá (nội dung vẫn khoá theo tier; chỉ phần free mở)
-      const { data: courses } = await supabase.from('edu_courses').select('id')
-      if (courses?.length) {
-        await supabase.from('edu_enrollments').upsert(
-          courses.map((c: { id: string }) => ({ student_id: studentData.id, course_id: c.id, enrolled_by: userId, is_active: true })),
-          { onConflict: 'student_id,course_id', ignoreDuplicates: true })
-      }
-      await claimPendingGroup()
-      setStudent(studentData)
-      setStep('portal')
-    } catch (e: any) {
-      setRegError(e.message || 'Không thể tạo tài khoản. Thử lại sau.')
-    } finally {
-      setRegLoading(false)
-    }
-  }
-
   const Btn = ({ style, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button
       {...p}
@@ -359,14 +312,8 @@ export default function StudentOnboarding() {
             background: T.header, color: '#fff', border: 'none', borderRadius: 12,
             padding: '14px 40px', fontSize: 17, fontWeight: 700,
             boxShadow: `0 4px 16px rgba(27,107,58,.3)`,
-          }}>Đăng nhập →</Btn>
-          {!isNativeIOS && (
-            <Btn onClick={() => setStep('register')} style={{
-              background: 'transparent', color: T.header, border: `1.5px solid ${T.header}`, borderRadius: 12,
-              padding: '13px 40px', fontSize: 16, fontWeight: 700, marginTop: 12,
-            }}>Tạo tài khoản miễn phí</Btn>
-          )}
-          <p style={{ color: T.textDim, fontSize: 13, marginTop: 16 }}>Học miễn phí Nhập môn &amp; Nhạc lý căn bản · công cụ luyện tập cơ bản.</p>
+          }}>Bắt đầu hành trình →</Btn>
+          <p style={{ color: T.textDim, fontSize: 13, marginTop: 16 }}>Đã là học sinh? Đăng nhập bên dưới.</p>
 
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIOS && (
@@ -530,53 +477,6 @@ export default function StudentOnboarding() {
               {resetLoading ? 'Đang gửi...' : 'Quên mật khẩu?'}
             </Btn>
           )}
-
-          {!isNativeIOS && (
-            <div style={{ marginTop: 24, paddingTop: 18, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center' }}>
-              <span style={{ fontSize: 14, color: T.textMuted }}>Chưa có tài khoản? </span>
-              <Btn onClick={() => setStep('register')} style={{ background: 'none', border: 'none', color: T.header, fontSize: 14, fontWeight: 700, padding: 0, textDecoration: 'underline' }}>Tạo tài khoản miễn phí</Btn>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* REGISTER (miễn phí, web) */}
-      {step === 'register' && (
-        <div style={{ maxWidth: 420, margin: '0 auto', padding: '40px 24px', minHeight: 'calc(100vh - 56px)' }}>
-          <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 14, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px' }}>Tạo tài khoản miễn phí</h2>
-          <p style={{ color: T.textMuted, fontSize: 14, margin: '0 0 20px', lineHeight: 1.6 }}>Học ngay Nhập môn &amp; Nhạc lý căn bản, dùng các công cụ luyện tập cơ bản. Đăng ký lớp với thầy để mở thêm khoá nâng cao.</p>
-
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Tên của bạn</label>
-            <input value={regName} onChange={e => setRegName(e.target.value)} placeholder="Nguyễn Văn A"
-              style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }} />
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Email</label>
-            <input value={regEmail} onChange={e => setRegEmail(e.target.value)} placeholder="email@example.com" type="email"
-              style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }} />
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Mật khẩu (≥ 6 ký tự)</label>
-            <input value={regPass} onChange={e => setRegPass(e.target.value)} type={showPass ? 'text' : 'password'} placeholder="••••••••"
-              onKeyDown={e => e.key === 'Enter' && handleFreeRegister()}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }} />
-          </div>
-
-          {regError && (
-            <div style={{ background: T.dangerBg, border: `1px solid #F0C4B0`, borderRadius: 8, padding: '10px 14px', fontSize: 14, color: T.danger, marginBottom: 16 }}>{regError}</div>
-          )}
-
-          <Btn onClick={handleFreeRegister} disabled={regLoading || !regEmail || !regPass} style={{
-            width: '100%', background: regLoading ? T.textDim : T.header, color: '#fff', border: 'none',
-            borderRadius: 12, padding: '14px', fontSize: 16, fontWeight: 700, opacity: (!regEmail || !regPass) ? 0.6 : 1,
-          }}>{regLoading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản & vào học →'}</Btn>
-
-          <div style={{ marginTop: 18, textAlign: 'center' }}>
-            <span style={{ fontSize: 14, color: T.textMuted }}>Đã có tài khoản? </span>
-            <Btn onClick={() => setStep('login')} style={{ background: 'none', border: 'none', color: T.header, fontSize: 14, fontWeight: 700, padding: 0, textDecoration: 'underline' }}>Đăng nhập</Btn>
-          </div>
         </div>
       )}
 
