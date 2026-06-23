@@ -22,6 +22,52 @@ const json = (body: unknown, status = 200) =>
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY)
 
+// ── Lịch khai giảng THẬT từ Google Sheet (cùng nguồn với trang /class) ──
+const SHEET_CSV = 'https://docs.google.com/spreadsheets/d/17x2Uhw6iDqS13mbOPRVNGyh8D8clmYHIjAKyO4ShOe8/gviz/tq?tqx=out:csv&gid=602951409&headers=0'
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = []; let row: string[] = []; let cur = ''; let q = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++ } else q = false } else cur += c }
+    else { if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = '' } else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = '' } else if (c === '\r') { /* skip */ } else cur += c }
+  }
+  if (cur.length || row.length) { row.push(cur); rows.push(row) }
+  return rows
+}
+// Trả về đoạn text mô tả lịch khai giảng + số lớp đang học (bằng chứng xã hội). Lỗi → chuỗi rỗng.
+async function fetchScheduleText(): Promise<string> {
+  try {
+    const res = await fetch(SHEET_CSV, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (!res.ok) return ''
+    const rows = parseCSV(await res.text())
+    const up = (s: string) => (s || '').trim().toUpperCase()
+    const norm = (s: string) => (s || '').trim()
+    const upcoming: string[] = []
+    let activeCount = 0, oneOnOne = 0
+    let section: 'active' | 'upcoming' | 'oneonone' | 'smallgroup' = 'active'
+    for (let r = 0; r < rows.length; r++) {
+      const a = norm(rows[r][0]); if (!a) continue
+      const A = up(a)
+      if (r === 0 && A === 'LỚP') continue
+      if (A.includes('SẮP KHAI GIẢNG')) { section = 'upcoming'; continue }
+      if (A.includes('KÈM 1')) { section = 'oneonone'; continue }
+      if (A.includes('NHÓM NHỎ')) { section = 'smallgroup'; continue }
+      if (A === 'LỚP' || A === 'MÃ SỐ LỚP HỌC') continue
+      const schedule = norm(rows[r][2]); const start = norm(rows[r][3])
+      if (section === 'oneonone') { oneOnOne++; continue }
+      if (section === 'smallgroup') { activeCount++; continue }
+      if (section === 'upcoming') upcoming.push(`- ${a}${schedule ? ` · lịch: ${schedule}` : ''}${start ? ` · khai giảng: ${start}` : ''}`)
+      else activeCount++
+    }
+    const lines: string[] = []
+    if (upcoming.length) lines.push(`LỚP SẮP KHAI GIẢNG (lịch thật, được phép dùng để tư vấn):\n${upcoming.join('\n')}`)
+    const totalActive = activeCount + oneOnOne
+    if (totalActive) lines.push(`Hiện có khoảng ${totalActive} lớp đang hoạt động (gồm lớp nhóm và lớp 1 kèm 1) — bằng chứng lớp học sôi nổi. KHÔNG tiết lộ tên học viên lớp 1 kèm 1.`)
+    if (!lines.length) return ''
+    return `\n\n========== LỊCH KHAI GIẢNG THẬT (cập nhật trực tiếp hôm nay) ==========\n${lines.join('\n\n')}\n\nQuy tắc dùng lịch: được phép trả lời khách về các lớp SẮP KHAI GIẢNG ở trên. Nếu khách hỏi lớp/lịch KHÔNG có trong danh sách này, hoặc cần chốt chỗ, mời khách nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist).`
+  } catch { return '' }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
@@ -63,7 +109,10 @@ Deno.serve(async (req) => {
   // Kiến thức huấn luyện (thầy nạp)
   const { data: kn } = await db.from('class_ai_knowledge').select('title,content').eq('enabled', true).order('order_index')
   const knowledge = (kn ?? []).map((k) => `### ${k.title}\n${k.content}`).join('\n\n')
-  const system = persona + (knowledge ? `\n\n========== KIẾN THỨC THAM KHẢO (dùng để trả lời, không bịa ngoài đây) ==========\n${knowledge}` : '')
+  const scheduleText = await fetchScheduleText()  // lịch khai giảng thật (rỗng nếu lỗi)
+  const system = persona
+    + (knowledge ? `\n\n========== KIẾN THỨC THAM KHẢO (dùng để trả lời, không bịa ngoài đây) ==========\n${knowledge}` : '')
+    + scheduleText
 
   // Dựng messages cho Anthropic (role: user / assistant)
   const recent = (hist ?? []).slice(-HISTORY)

@@ -407,7 +407,7 @@ Không được bịa thông tin.
 
 Không tự ý trả lời nếu chưa có dữ liệu về:
 
-* Lịch khai giảng cụ thể
+* Lịch khai giảng cụ thể (LƯU Ý: nếu hệ thống có cung cấp phần "LỊCH KHAI GIẢNG THẬT" thì ĐƯỢC dùng đúng các lớp ghi ở đó; lớp/lịch ngoài danh sách đó thì mời khách nhắn Zalo)
 * Ưu đãi
 * Giảm giá
 * Cam kết đầu ra
