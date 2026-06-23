@@ -28,6 +28,7 @@ const CHORD_META: Record<string, {
   E:  { label: 'Mi trưởng',  color: '#16A085', frets: [0,2,2,1,0,0],  sequence: E_SEQUENCE  },
   C:  { label: 'Đô trưởng',  color: '#2980B9', frets: [-1,3,2,0,1,0], sequence: C_SEQUENCE  },
   G:  { label: 'Sol trưởng', color: '#D35400', frets: [3,2,0,0,0,3],  sequence: G_SEQUENCE  },
+  G7: { label: 'Sol bảy',    color: '#B45309', frets: [3,2,0,0,0,1],  sequence: G_SEQUENCE  },
 }
 
 // ── Chord diagram ─────────────────────────────────────────────────────────────

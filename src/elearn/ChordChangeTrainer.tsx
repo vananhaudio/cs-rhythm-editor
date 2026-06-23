@@ -105,7 +105,7 @@ function useLiveChord() {
 }
 
 // ── Sơ đồ hợp âm nhỏ ──────────────────────────────────────────────────────────
-function MiniDiagram({ name, dim }: { name: string; dim?: boolean }) {
+export function MiniDiagram({ name, dim }: { name: string; dim?: boolean }) {
   const shape = chordShape(name)
   if (!shape) return null
   const frets = shape.frets // dây 6 → dây 1
