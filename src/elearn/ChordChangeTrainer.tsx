@@ -6,7 +6,27 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { buildChroma, scoreAllChords } from './useChordDetector'
 import { chordShape } from '../logic/chordLibrary'
-import { playTone } from './audio'
+
+// ── Tiếng metronome TRUNG TÍNH (tick gõ, không phải nốt nhạc → không chỏi hợp âm) ──
+let clickCtx: AudioContext | null = null
+function click(kind: 'accent' | 'play' | 'rest') {
+  try {
+    if (!clickCtx) clickCtx = new AudioContext()
+    if (clickCtx.state === 'suspended') clickCtx.resume()
+    const t = clickCtx.currentTime
+    const o = clickCtx.createOscillator()
+    const g = clickCtx.createGain()
+    o.type = 'square'
+    o.frequency.value = kind === 'accent' ? 3200 : kind === 'play' ? 2500 : 900  // nghỉ = "tock" trầm rõ khác
+    const peak = kind === 'rest' ? 0.06 : kind === 'accent' ? 0.18 : 0.11
+    const dur = kind === 'rest' ? 0.07 : 0.03
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(peak, t + 0.001)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    o.connect(g); g.connect(clickCtx.destination)
+    o.start(t); o.stop(t + 0.09)
+  } catch { /* bỏ qua */ }
+}
 
 const FFT_SIZE = 4096
 const SAMPLE_RATE = 44100
@@ -153,7 +173,7 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
       // hết chu kỳ → đổi hợp âm cần chơi
       if (b === 0) { reqRef.current = (reqRef.current + 1) % SEQ.length; setReqIdx(reqRef.current); gotRef.current = false }
       // tiếng metronome: ô chơi rõ, ô nghỉ nhẹ
-      playTone(b % 4 === 0 ? 880 : 660)
+      click(b < 4 ? (b === 0 ? 'accent' : 'play') : 'rest')
       // trong ô chơi: nghe mic, đúng hợp âm thì đánh dấu
       if (b < 4 && currentRef.current === SEQ[reqRef.current]) gotRef.current = true
       beatRef.current = b
@@ -184,7 +204,7 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
     <div style={{ flex: 1, background: '#fff', border: `${isReq ? 2 : 1}px solid ${isReq ? INDIGO : '#E1E4EA'}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: isReq ? 1 : 0.78 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: isReq ? INDIGO : '#3A4050' }}>{name}</div>
       <MiniDiagram name={name} dim={!isReq} />
-      <div style={{ fontSize: 10, fontWeight: 700, color: isReq ? ORANGE : '#9AA0B0' }}>{isReq ? (phase === 'play' ? 'gảy đi!' : 'chuyển ngón…') : 'kế tiếp'}</div>
+      <div style={{ fontSize: 14, fontWeight: 800, color: isReq ? (phase === 'play' ? ORANGE : INDIGO) : '#9AA0B0' }}>{isReq ? (phase === 'play' ? 'GẢY!' : 'chuyển ngón…') : 'kế tiếp'}</div>
     </div>
   )
 
@@ -196,18 +216,31 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 16, padding: 12, marginTop: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ fontSize: 12, color: phase === 'play' ? INDIGO : '#7A8194', fontWeight: 600 }}>
-            {running ? (phase === 'play' ? `Gảy xuống hợp âm ${required}` : `Nghỉ — chuyển sang ${next}`) : 'Nhịp 4/4 · chơi 1 ô, nghỉ 1 ô'}
+        <div style={{
+          borderRadius: 12, padding: '12px 14px', marginBottom: 10, textAlign: 'center',
+          background: !running ? '#F4F5F8' : phase === 'play' ? '#FFF0E8' : '#EEF0FB',
+          border: `1.5px solid ${!running ? '#E1E4EA' : phase === 'play' ? '#FBD9C5' : '#D6DAF5'}`,
+        }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: !running ? '#7A8194' : phase === 'play' ? ORANGE : INDIGO, lineHeight: 1.2 }}>
+            {!running ? 'Chơi 1 ô — Nghỉ 1 ô' : phase === 'play' ? `GẢY XUỐNG: ${required}` : `NGHỈ — chuyển sang ${next}`}
           </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: INDIGO }}>{bpm} BPM</div>
+          <div style={{ fontSize: 13, color: '#7A8194', marginTop: 3 }}>
+            {!running ? 'Nhịp 4/4 · gảy ô lẻ, nghỉ ô chẵn để kịp đổi ngón' : phase === 'play' ? 'Gảy xuống đều 4 phách' : 'Không gảy — đặt sẵn ngón cho hợp âm sau'}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 13, color: '#7A8194' }}>Tốc độ</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: INDIGO }}>{bpm}</span>
+          <span style={{ fontSize: 13, color: '#7A8194' }}>BPM</span>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
           {[0, 1, 2, 3].map(i => {
             const on = running && (phase === 'play' ? beat === i : beat - 4 === i)
             const isPlay = phase === 'play'
+            const bg = on ? (isPlay ? INDIGO : '#C7CBF0') : '#fff'
+            const bd = on ? (isPlay ? INDIGO : '#C7CBF0') : '#D8DCE6'
             return (
-              <div key={i} style={{ width: 38, height: 38, borderRadius: 11, border: `1.5px solid ${on ? INDIGO : '#D8DCE6'}`, background: on ? INDIGO : '#fff', color: on ? '#fff' : '#9AA0B0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+              <div key={i} style={{ width: 42, height: 42, borderRadius: 12, border: `1.5px solid ${bd}`, background: bg, color: on ? (isPlay ? '#fff' : '#4338CA') : '#9AA0B0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700 }}>
                 {isPlay ? '↓' : '·'}
               </div>
             )
