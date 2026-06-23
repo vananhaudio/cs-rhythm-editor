@@ -12,13 +12,34 @@ import ClassAppGuide from './ClassAppGuide'
 import ClassNangCao from './ClassNangCao'
 import { FAQS } from './classFaq'
 
-// ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
+// ─── Lớp dự phòng (hiện khi chưa đọc được Google Sheet) ───
 const CLASSES = [
   { tag: 'Đệm hát · Trình độ 1', name: 'Khởi đầu đam mê – Đệm hát TĐ1', path: 'dem_hat', day: 'Thứ 3 · 19h00', date: 'Khai giảng 07/07/2026', price: '990k' },
   { tag: 'Tỉa nốt · Trình độ 3', name: 'Tỉa nốt trên nền karaoke – Cảm âm thực chiến', path: 'tia_not', day: 'Thứ 5 · 19h00', date: 'Khai giảng 09/07/2026', price: '990k' },
   { tag: 'Đệm hát · Trình độ 2', name: 'Khởi đầu đam mê – Đệm hát TĐ2', path: 'dem_hat', day: 'Thứ 6 · 19h00', date: 'Khai giảng 10/07/2026', price: '990k' },
   { tag: 'Toàn diện · Combo', name: 'Hành trình Guitar 2027 (combo 10 khoá)', path: 'combo', day: 'Thứ 5 · 20h30', date: 'Khai giảng tháng 9/2026', price: 'Combo' },
 ]
+
+// Suy ra nhãn/lộ trình/giá từ tên lớp (dữ liệu sheet không có sẵn các cột này)
+const inferTag = (n: string) => { const s = n.toLowerCase()
+  if (s.includes('nhập môn')) return 'Nhập môn · Miễn phí'
+  if (s.includes('hành trình')) return 'Toàn diện · Combo'
+  if (s.includes('đệm hát')) return 'Đệm hát'
+  if (s.includes('tỉa nốt') || s.includes('guitar cho') || s.includes('guitar căn')) return 'Tỉa nốt / Guitar'
+  if (s.includes('cảm nhận') || s.includes('cảm âm') || s.includes('nhạc lý')) return 'Cảm âm / Nhạc lý'
+  if (s.includes('bolero')) return 'Chuyên đề'
+  return 'Guitar' }
+const inferPath = (n: string) => { const s = n.toLowerCase()
+  if (s.includes('đệm hát')) return 'dem_hat'
+  if (s.includes('tỉa nốt') || s.includes('guitar')) return 'tia_not'
+  if (s.includes('hành trình')) return 'combo'
+  return '' }
+const parseVNDate = (s: string): number | null => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null }
+const schedToCard = (it: { name: string; schedule: string; start: string }) => ({
+  tag: inferTag(it.name), name: it.name, path: inferPath(it.name),
+  day: it.schedule || 'Đang cập nhật', date: it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch',
+  price: /nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k',
+})
 
 // ─── 3 cửa vào — nút mở bài viết (nếu có) hoặc cuộn tới lớp/chat ───
 const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: string; fallback: string; native?: string }[] = [
@@ -100,6 +121,9 @@ export default function ClassLandingPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatSessionRef = useRef<string | null>(null)
   const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
+  type SchedItem = { name: string; code: string; schedule: string; start: string }
+  const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
+  const [showActive, setShowActive] = useState(false)
   const chatBodyRef = useRef<HTMLDivElement>(null)
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -113,6 +137,13 @@ export default function ClassLandingPage() {
       })
       setArticles(m)
     })
+  }, [])
+
+  // Đọc thời khoá biểu thật từ Google Sheet (qua Edge Function)
+  useEffect(() => {
+    supabase.functions.invoke('class-schedule', { body: {} }).then(({ data }) => {
+      if (data && Array.isArray(data.upcoming)) setSched(data)
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -313,7 +344,10 @@ export default function ClassLandingPage() {
           <h2>Lớp sắp khai giảng</h2>
           <p className="lead">Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> · 990k/khoá · 2 tháng · 8 buổi. Đã quyết thì đăng ký luôn, còn lăn tăn thì hỏi thêm.</p>
           <div className="cls-list">
-            {CLASSES.map((c, i) => (
+            {(sched?.upcoming?.length
+              ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
+              : CLASSES
+            ).map((c, i) => (
               <div className="cls-item" key={i}>
                 <span className="tag">{c.tag}</span>
                 <h3>{c.name}</h3>
@@ -326,6 +360,11 @@ export default function ClassLandingPage() {
               </div>
             ))}
           </div>
+          {sched && sched.activeCount > 0 && (
+            <div style={{ textAlign: 'center', marginTop: 26 }}>
+              <button className="btn btn-ghost" onClick={() => setShowActive(true)}>👀 Xem thêm {sched.activeCount} lớp đang học →</button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -602,6 +641,38 @@ export default function ClassLandingPage() {
         )
       })()}
 
+      {/* XEM THÊM CÁC LỚP ĐANG HỌC (bằng chứng xã hội) */}
+      {showActive && sched && (
+        <div className="modal open" onClick={e => { if (e.target === e.currentTarget) setShowActive(false) }}>
+          <div className="modal-box">
+            <button className="x" onClick={() => setShowActive(false)}>×</button>
+            <h3>Các lớp đang hoạt động</h3>
+            <p className="lead" style={{ marginTop: 6 }}>Hệ thống đang có <b>nhiều lớp diễn ra song song</b> — bạn không học một mình. Tất cả đều online trực tiếp qua Zoom.</p>
+            <div className="active-list">
+              {sched.active.map((c, i) => (
+                <div className="active-row" key={'a' + i}>
+                  <div className="active-name">{c.name}</div>
+                  <div className="active-sch">{c.schedule || 'Đang cập nhật'}</div>
+                </div>
+              ))}
+              {sched.smallGroup.map((c, i) => (
+                <div className="active-row" key={'g' + i}>
+                  <div className="active-name">Lớp nhóm nhỏ</div>
+                  <div className="active-sch">{c.schedule || 'Lịch linh động'}</div>
+                </div>
+              ))}
+              {sched.oneOnOneCount > 0 && (
+                <div className="active-row active-1v1">
+                  <div className="active-name">🎯 {sched.oneOnOneCount} học viên đang học 1 kèm 1</div>
+                  <div className="active-sch">Lịch linh động</div>
+                </div>
+              )}
+            </div>
+            <button className="btn btn-primary" style={{ marginTop: 18, width: '100%' }} onClick={() => { setShowActive(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp sắp khai giảng &amp; đăng ký →</button>
+          </div>
+        </div>
+      )}
+
       {/* POPUP NGẮN dùng chung (mô hình học / cam kết / bản đồ rút gọn) */}
       {modal && !modal.startsWith('art:') && (
         <div className="modal open" onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
@@ -705,6 +776,11 @@ const CSS = `
 .tva-class .zoom-callout-h{font-size:17px;font-weight:800;color:#fff;margin-bottom:8px;}
 .tva-class .zoom-callout p{font-size:14.5px;line-height:1.7;color:#C9C3DE;margin:0;}
 .tva-class .zoom-callout b{color:#fff;}
+.tva-class .active-list{margin-top:16px;display:flex;flex-direction:column;gap:7px;}
+.tva-class .active-row{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#FAF8F4;border:1px solid var(--line);border-radius:10px;padding:11px 14px;}
+.tva-class .active-name{font-size:14px;font-weight:600;color:var(--ink);}
+.tva-class .active-sch{font-size:12.5px;color:var(--indigo);font-weight:600;white-space:nowrap;flex-shrink:0;}
+.tva-class .active-1v1{background:var(--honey-tint);border-color:#F1D9B8;}
 .tva-class .cls-item .meta b{color:var(--indigo);}
 .tva-class .cls-item .price{font-weight:800;color:var(--honey);}
 .tva-class .cls-item .acts{margin-top:auto;display:flex;gap:8px;}
