@@ -13,6 +13,7 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
+import ChordChangeTrainer from './elearn/ChordChangeTrainer'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
 import SongBuilderPage from './SongBuilderPage'
@@ -148,6 +149,19 @@ export default function AppRouter() {
   // ── Route /guitarboard ──
   if (path === '/guitarboard' || path.startsWith('/guitarboard')) {
     return <GuitarBoard />
+  }
+
+  // ── Route /chord-trainer (THỬ NGHIỆM bài luyện đổi hợp âm) ──
+  if (path === '/chord-trainer' || path.startsWith('/chord-trainer')) {
+    return (
+      <div style={{ minHeight: '100dvh', background: '#F0F2F5', padding: '20px 16px', boxSizing: 'border-box' }}>
+        <div style={{ maxWidth: 360, margin: '0 auto 14px' }}>
+          <div style={{ fontSize: 11, color: '#EA580C', letterSpacing: '.06em', fontWeight: 700 }}>ĐỆM HÁT · BÀI 1 · THỬ NGHIỆM</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#1F2430' }}>Đổi hợp âm C ↔ G7</div>
+        </div>
+        <ChordChangeTrainer bpm={60} target={8} />
+      </div>
+    )
   }
 
   // ── Route /gp-editor ──
