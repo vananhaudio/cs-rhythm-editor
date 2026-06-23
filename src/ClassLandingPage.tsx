@@ -507,7 +507,7 @@ export default function ClassLandingPage() {
               <p className="demo-lead">Xem trực tiếp một buổi học thật: thầy giảng trên Zoom, hướng dẫn từng bước, học viên thực hành và được sửa ngay. Học online ở đây không phải tự bơi.</p>
               <div className="demo-video">
                 <iframe
-                  src="https://www.youtube.com/embed/1PtetZ2VYms?start=6000&rel=0"
+                  src="https://www.youtube.com/embed/1PtetZ2VYms?start=6420&rel=0"
                   title="Một buổi học TVA Guitar"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
