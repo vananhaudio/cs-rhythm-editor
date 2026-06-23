@@ -30,7 +30,7 @@ const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: strin
 const STARTERS: { t: string; d: string; cta: string; href?: string; modal?: string; ready: boolean; note?: string; slot?: string; articleCta?: string; native?: string }[] = [
   { t: 'Tìm điểm bắt đầu của tôi', d: 'Bài test 2 phút. Không cần biết trình độ — trả lời vài câu để biết mình phù hợp lớp nào.', cta: 'Làm bài test', ready: true, native: 'quiz' },
   { t: 'Mở bài học thử trên app', d: 'Dùng thử app TVA Guitar 7 ngày: trải nghiệm bài học đầu tiên, cách luyện tập và theo dõi tiến độ.', cta: 'Dùng thử miễn phí', href: '#chat', ready: false, note: 'cần link bản dùng thử app', slot: 'dung-thu-app', articleCta: 'Tìm hiểu dùng thử' },
-  { t: 'Xem một buổi học vận hành thế nào', d: 'Lớp Zoom có thầy dẫn, nhóm Zalo nhắc lịch & giao bài, app lưu bài, có trả bài. Học online không phải tự bơi.', cta: 'Xem mô hình học', modal: 'mohinh', ready: false, note: 'cần ảnh Zoom/Zalo/app thật', slot: 'mo-hinh-hoc', articleCta: 'Xem mô hình học' },
+  { t: 'Xem một buổi học vận hành thế nào', d: 'Lớp Zoom có thầy dẫn, nhóm Zalo nhắc lịch & giao bài, app lưu bài, có trả bài. Học online không phải tự bơi.', cta: 'Xem một buổi học', ready: true, native: 'demo' },
   { t: '90 phút mỗi tuần cho cây đàn của bạn', d: 'Một tuần chỉ 90 phút, lộ trình 8 buổi. Nếu không đặt lịch cho ước mơ, nó sẽ bị việc khác chen vào.', cta: 'Đọc bài viết', href: '#chat', ready: false, note: 'cần bài viết', slot: '90-phut-moi-tuan', articleCta: 'Đọc bài viết' },
   { t: 'Những học viên lớn tuổi bắt đầu thế nào', d: 'Nhiều người bắt đầu khi đã 40, 50, 60. Quan trọng không phải tuổi — mà là đi chậm và đúng cách.', cta: 'Xem video lớp học', href: '#chat', ready: false, note: 'cần video', slot: 'hoc-vien-lon-tuoi', articleCta: 'Đọc bài viết' },
   { t: 'Bạn được hỗ trợ gì sau khi đăng ký', d: 'Chọn sai lớp? Không theo kịp? Bận một buổi? Mỗi lo lắng đều có cách hệ thống hỗ trợ bạn.', cta: 'Xem cam kết', modal: 'camket', ready: true, slot: 'cam-ket', articleCta: 'Xem cam kết' },
@@ -88,6 +88,7 @@ export default function ClassLandingPage() {
   const [showTiaNot, setShowTiaNot] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
+  const [showDemo, setShowDemo] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
     { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
   ])
@@ -233,6 +234,8 @@ export default function ClassLandingPage() {
                 <p>{x.d}</p>
                 {x.native === 'quiz'
                   ? <button className="btn btn-primary" onClick={() => setShowQuiz(true)}>{x.cta} →</button>
+                  : x.native === 'demo'
+                  ? <button className="btn btn-primary" onClick={() => setShowDemo(true)}>{x.cta} →</button>
                   : art
                   ? <button className="btn btn-primary" onClick={() => setModal('art:' + x.slot)}>{x.articleCta ?? 'Đọc bài viết'} →</button>
                   : x.modal
@@ -491,6 +494,36 @@ export default function ClassLandingPage() {
         />
       )}
 
+      {showDemo && (
+        <div className="demo-page">
+          <div className="demo-top">
+            <button className="demo-back" onClick={() => setShowDemo(false)}>← Quay lại</button>
+            <button className="demo-cta" onClick={() => { setShowDemo(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+          </div>
+          <div className="demo-scroll">
+            <div className="demo-inner">
+              <div className="demo-eyebrow">Mô hình học</div>
+              <h2 className="demo-h2">Một buổi học vận hành thế nào?</h2>
+              <p className="demo-lead">Xem trực tiếp một buổi học thật: thầy giảng trên Zoom, hướng dẫn từng bước, học viên thực hành và được sửa ngay. Học online ở đây không phải tự bơi.</p>
+              <div className="demo-video">
+                <iframe
+                  src="https://www.youtube.com/embed/1PtetZ2VYms?start=6000&rel=0"
+                  title="Một buổi học TVA Guitar"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <div className="demo-points">
+                {[['🎥', 'Lớp Zoom có người dẫn — thầy giảng trực tiếp theo lịch cố định'], ['💬', 'Nhóm Zalo lớp — nhắc lịch, giao bài, hỏi đáp sau buổi học'], ['📱', 'App TVA Guitar — bài học, bài tập, tiến độ lưu lại để ôn'], ['✍️', 'Trả bài có góp ý — gửi bài để thầy xem và sửa cho bạn']].map(([ic, t], i) => (
+                  <div className="demo-point" key={i}><span>{ic}</span>{t}</div>
+                ))}
+              </div>
+              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowDemo(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* BÀI VIẾT — mở full màn hình (dài, có ảnh) */}
       {modal?.startsWith('art:') && (() => {
         const a = articles[modal.slice(4)]
@@ -690,6 +723,21 @@ const CSS = `
 .tva-class .bando .b-branch{display:inline-block;min-width:74px;font-weight:800;color:var(--indigo);}
 .tva-class .bando .b-converge{font-weight:700;color:var(--honey);}
 @media(max-width:560px){.tva-class .mh-grid{grid-template-columns:1fr;}}
+.tva-class .demo-page{position:fixed;inset:0;z-index:120;background:var(--bg);display:flex;flex-direction:column;}
+.tva-class .demo-top{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;background:rgba(242,238,231,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.tva-class .demo-back{border:1.5px solid #D3CEE8;background:#fff;color:var(--indigo);border-radius:10px;padding:9px 16px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
+.tva-class .demo-cta{border:none;background:var(--indigo);color:#fff;border-radius:10px;padding:9px 16px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
+.tva-class .demo-scroll{flex:1;overflow-y:auto;}
+.tva-class .demo-inner{max-width:840px;margin:0 auto;padding:30px 22px 64px;}
+.tva-class .demo-eyebrow{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--honey);margin-bottom:10px;}
+.tva-class .demo-h2{font-size:28px;font-weight:800;letter-spacing:-.4px;color:var(--ink);margin:0 0 10px;}
+.tva-class .demo-lead{font-size:16px;line-height:1.7;color:var(--ink-soft);margin:0 0 20px;max-width:640px;}
+.tva-class .demo-video{position:relative;width:100%;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 18px 44px -20px rgba(33,28,50,.4);}
+.tva-class .demo-video iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
+.tva-class .demo-points{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0;}
+.tva-class .demo-point{display:flex;align-items:flex-start;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px 16px;font-size:14.5px;line-height:1.5;color:var(--ink-soft);}
+.tva-class .demo-point span{font-size:20px;flex-shrink:0;}
+@media(max-width:600px){.tva-class .demo-points{grid-template-columns:1fr;}.tva-class .demo-h2{font-size:24px;}}
 .tva-class .art-page{position:fixed;inset:0;z-index:120;background:var(--bg);display:flex;flex-direction:column;}
 .tva-class .art-top{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;background:rgba(242,238,231,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
 .tva-class .art-close{border:1.5px solid #D3CEE8;background:#fff;color:var(--indigo);border-radius:10px;padding:9px 16px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;}
