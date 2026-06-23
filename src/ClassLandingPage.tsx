@@ -73,7 +73,7 @@ const MODALS: Record<string, string> = {
 }
 
 const ZALO = '0983 259 893'
-const ZALO_LINK = 'https://zalo.me/0983259893'
+const ZALO_LINK = 'https://zalo.me/vananhguitarist'
 
 type Msg = { who: 'ai' | 'me'; html: string }
 
