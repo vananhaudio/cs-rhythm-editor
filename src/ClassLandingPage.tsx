@@ -140,7 +140,8 @@ export default function ClassLandingPage() {
       email: form.email.trim() || null, class_name: form.className, path: cls?.path ?? null,
       intent: 'dang_ky', note: form.note.trim() || null, source: 'landing', status: 'Mới đăng ký',
     })
-    if (error) { console.error('Ghi leads lỗi:', error); alert('Có lỗi khi gửi đăng ký, bạn thử lại hoặc nhắn Zalo ' + ZALO + ' giúp thầy nhé.'); return }
+    // Ghi lead lỗi (vd bảng chưa đủ cột) KHÔNG chặn khách — xác nhận thật là gửi bill Zalo.
+    if (error) console.error('Ghi leads lỗi (vẫn cho sang thanh toán):', error)
     setShowPay(true)
     setTimeout(() => goto('thanhtoan'), 60)
   }
@@ -348,16 +349,16 @@ export default function ClassLandingPage() {
             <p className="lead">Sau khi thanh toán, tài khoản app TVA Guitar sẽ được kích hoạt và bạn được thêm vào nhóm lớp.</p>
             <div className="panel">
               <div className="pay-grid">
-                <div className="ph qr-ph">Ảnh QR chuyển khoản<br />(thầy thả vào đây)</div>
+                <img className="qr-img" src="/qr-thanhtoan.png" alt="QR chuyển khoản TPBank – CTY TNHH Văn Anh Audio" />
                 <div className="pay-info">
-                  <div><span>Ngân hàng</span><span>[ Tên ngân hàng ]</span></div>
-                  <div><span>Số tài khoản</span><span>[ Số TK ]</span></div>
-                  <div><span>Chủ tài khoản</span><span>VAN ANH AUDIO</span></div>
+                  <div><span>Ngân hàng</span><span>TPBank</span></div>
+                  <div><span>Số tài khoản</span><span>06496099801</span></div>
+                  <div><span>Chủ tài khoản</span><span>Công ty TNHH Văn Anh Audio</span></div>
                   <div><span>Số tiền</span><span className="price">990.000đ</span></div>
-                  <div><span>Nội dung CK</span><span>TVA {form.name} {form.className}</span></div>
+                  <div><span>Nội dung CK</span><span>{form.name.trim() || 'Họ tên của bạn'}</span></div>
                 </div>
               </div>
-              <div className="pay-note">💡 Ghi đúng nội dung chuyển khoản giúp thầy kích hoạt tài khoản của bạn nhanh hơn.</div>
+              <div className="pay-note">💡 Nội dung chuyển khoản chỉ cần ghi <b>họ tên của bạn</b>. Chuyển xong, bạn gửi <b>ảnh bill qua Zalo thầy Văn Anh: 0983 259 893</b> để thầy kích hoạt tài khoản &amp; thêm bạn vào nhóm lớp nhanh nhất.</div>
               {!okBox
                 ? <button className="btn btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={() => setOkBox(true)}>Tôi đã chuyển khoản</button>
                 : <div className="ok-box">
@@ -659,6 +660,8 @@ const CSS = `
 @media(max-width:560px){.tva-class .frm{grid-template-columns:1fr;}}
 .tva-class .pay-grid{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center;}
 .tva-class .qr-ph{height:180px;}
+.tva-class .qr-img{width:100%;max-width:220px;border-radius:14px;border:1px solid var(--line);display:block;align-self:center;}
+.tva-class .pay-note b{color:var(--ink);}
 .tva-class .pay-info div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;}
 .tva-class .pay-info div span:first-child{color:var(--ink-soft);}
 .tva-class .pay-info div span:last-child{font-weight:600;}
