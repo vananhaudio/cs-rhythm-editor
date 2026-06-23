@@ -8,6 +8,7 @@ import ClassJourney2027 from './ClassJourney2027'
 import ClassDemHat from './ClassDemHat'
 import ClassTiaNot from './ClassTiaNot'
 import ClassQuiz from './ClassQuiz'
+import ClassAppGuide from './ClassAppGuide'
 
 // ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
 const CLASSES = [
@@ -86,6 +87,7 @@ export default function ClassLandingPage() {
   const [showDemHat, setShowDemHat] = useState(false)
   const [showTiaNot, setShowTiaNot] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
     { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
   ])
@@ -358,6 +360,7 @@ export default function ClassLandingPage() {
                 : <div className="ok-box">
                     <h4>✓ Cảm ơn bạn đã đăng ký!</h4>
                     <p>Thầy sẽ kiểm tra và <b>kích hoạt tài khoản app</b> cho bạn, rồi thêm bạn vào <b>nhóm lớp</b>. Trong lúc chờ, bạn có thể tải app TVA Guitar để xem trước bài định hướng.</p>
+                    <button className="ok-guide" onClick={() => setShowGuide(true)}>📲 Xem hướng dẫn cài app →</button>
                   </div>}
             </div>
           </div>
@@ -392,6 +395,7 @@ export default function ClassLandingPage() {
                     <div className="app-feat" key={i}><span className="ic">{ic}</span><div>{t}</div></div>
                   ))}
                 </div>
+                <button className="app-guide-btn" onClick={() => setShowGuide(true)}>📲 Hướng dẫn cài đặt app →</button>
               </div>
               <div className="app-shots">
                 <img className="shot" src="/app-khoahoc.png" alt="Màn hình Khoá học" />
@@ -477,6 +481,13 @@ export default function ClassLandingPage() {
           onClose={() => setShowQuiz(false)}
           onRegister={() => { setShowQuiz(false); setTimeout(() => goto('lichlop'), 60) }}
           onChat={() => { setShowQuiz(false); setTimeout(() => goto('chat'), 60) }}
+        />
+      )}
+
+      {showGuide && (
+        <ClassAppGuide
+          onClose={() => setShowGuide(false)}
+          onRegister={() => { setShowGuide(false); setTimeout(() => goto('lichlop'), 60) }}
         />
       )}
 
@@ -623,6 +634,9 @@ const CSS = `
 .tva-class .ok-box{margin-top:16px;background:#EAF7EE;border:1px solid #BFE6CC;border-radius:13px;padding:16px;}
 .tva-class .ok-box h4{color:var(--green-d,#2E7D32);font-size:16px;font-weight:700;margin-bottom:6px;}
 .tva-class .ok-box p{font-size:14px;color:var(--ink-soft);}
+.tva-class .ok-guide{margin-top:12px;background:#fff;border:1.5px solid #BFE6CC;color:var(--green-d,#2E7D32);border-radius:10px;padding:11px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.tva-class .app-guide-btn{margin-top:20px;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);color:#fff;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.tva-class .app-guide-btn:hover{background:rgba(255,255,255,.2);}
 @media(max-width:560px){.tva-class .pay-grid{grid-template-columns:1fr;}}
 .tva-class .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:26px;}
 .tva-class .step{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;}
