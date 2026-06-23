@@ -181,11 +181,11 @@ export default function ClassLandingPage() {
           </div>
           <div className="hero-art">
             <h3>Bắt đầu bằng đúng một bước</h3>
-            <p>Chọn một khóa nhỏ hợp với bạn ngay hôm nay. Đi xa tới đâu, lúc nào — hoàn toàn tùy bạn.</p>
+            <p>Chọn một khóa nhỏ phù hợp với bạn. Học theo lớp Zoom, luyện thêm trên app và có lộ trình đi tiếp khi sẵn sàng.</p>
             <div className="hero-stats">
-              <div><b>3</b><span>cửa vào dễ chọn</span></div>
-              <div><b>8 buổi</b><span>/ khóa · 2 tháng</span></div>
-              <div><b>990k</b><span>/ khóa</span></div>
+              <div><b>3</b><span>cửa vào để chọn</span></div>
+              <div><b>8 buổi</b><span>Zoom trực tiếp</span></div>
+              <div><b>24/24</b><span>tự luyện trên app</span></div>
             </div>
           </div>
         </div>
@@ -313,7 +313,7 @@ export default function ClassLandingPage() {
           <div className="eyebrow">Quyền lợi</div>
           <h2>Một khóa học gồm những gì?</h2>
           <div className="benefits">
-            {[['📅', '<b>8 buổi học</b> theo lịch lớp cố định'], ['🎥', '<b>Zoom trực tiếp cùng thầy</b> mỗi buổi'], ['📱', '<b>App TVA Guitar</b> để xem bài & ôn tập'], ['✍️', '<b>Bài tập</b> rõ ràng sau mỗi buổi'], ['👥', '<b>Nhóm lớp</b> nhận thông báo & hỗ trợ'], ['🎯', '<b>Tư vấn chọn đúng trình độ</b> trước khi vào lớp']].map(([ic, t], i) => (
+            {[['🎥', '<b>8 buổi Zoom trực tiếp</b> cùng thầy, mỗi buổi 90 phút'], ['📱', '<b>App TVA Guitar</b> luyện tập 24/24'], ['✍️', '<b>Bài tập</b> rõ ràng sau mỗi buổi'], ['👥', '<b>Nhóm lớp</b> nhận thông báo & hỗ trợ'], ['🎯', '<b>Tư vấn chọn đúng trình độ</b> trước khi vào lớp'], ['🗺️', '<b>Lộ trình học tiếp</b> rõ ràng khi sẵn sàng']].map(([ic, t], i) => (
               <div className="bf" key={i}><span className="bi">{ic}</span><div dangerouslySetInnerHTML={{ __html: t }} /></div>
             ))}
           </div>
