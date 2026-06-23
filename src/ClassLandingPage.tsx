@@ -94,9 +94,11 @@ export default function ClassLandingPage() {
   const [showDemo, setShowDemo] = useState(false)
   const [showNangCao, setShowNangCao] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
-    { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
+    { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý của Thầy Văn Anh Guitar. Bạn đang muốn học guitar theo hướng nào, hay còn băn khoăn gì? Cứ hỏi mình nhé.' },
   ])
   const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const chatSessionRef = useRef<string | null>(null)
   const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
   const chatBodyRef = useRef<HTMLDivElement>(null)
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
@@ -128,12 +130,30 @@ export default function ClassLandingPage() {
   const pickClass = (name: string) => { set('className', name); goto('dangky') }
 
   const chatPush = (m: Msg) => setMsgs(prev => [...prev, m])
-  const askChip = (q: string) => { chatPush({ who: 'me', html: q }); setTimeout(() => chatPush({ who: 'ai', html: CHAT_FAQ[q] }), 350) }
-  const chatSend = () => {
-    const v = chatInput.trim(); if (!v) return
-    chatPush({ who: 'me', html: v }); setChatInput('')
-    setTimeout(() => chatPush({ who: 'ai', html: `Cảm ơn câu hỏi! Trợ lý đang ở mức cơ bản nên câu này thầy sẽ trả lời kỹ hơn. Bạn để lại số <b>Zalo</b> (hoặc nhắn ${ZALO}) nhé, hoặc chọn một gợi ý phía trên.` }), 450)
+  // text thuần → HTML an toàn: escape, link zalo/http, xuống dòng
+  const richReply = (s: string) => {
+    const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return esc
+      .replace(/(https?:\/\/[^\s)]+|zalo\.me\/[^\s)]+)/g, m => {
+        const href = m.startsWith('http') ? m : 'https://' + m
+        return `<a href="${href}" target="_blank" rel="noreferrer" style="color:#4338CA;font-weight:600">${m}</a>`
+      })
+      .replace(/\n/g, '<br>')
   }
+  const chatSendText = async (text: string) => {
+    const t = text.trim(); if (!t || chatLoading) return
+    chatPush({ who: 'me', html: richReply(t) }); setChatInput('')
+    setChatLoading(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('class-ai', { body: { sessionId: chatSessionRef.current, message: t } })
+      if (error) throw error
+      if (data?.sessionId) chatSessionRef.current = data.sessionId
+      chatPush({ who: 'ai', html: richReply(data?.reply || 'Bạn nói rõ hơn giúp mình nhé.') })
+    } catch {
+      chatPush({ who: 'ai', html: `Xin lỗi, trợ lý đang bận một chút. Bạn nhắn Zalo thầy Văn Anh (<a href="${ZALO_LINK}" target="_blank" rel="noreferrer" style="color:#4338CA;font-weight:600">${ZALO}</a>) giúp mình nhé.` })
+    } finally { setChatLoading(false) }
+  }
+  const chatSend = () => chatSendText(chatInput)
 
   const submitReg = async () => {
     if (!form.name.trim() || !form.phone.trim() || !form.className) { setFormErr(true); return }
@@ -271,14 +291,15 @@ export default function ClassLandingPage() {
             </div>
             <div className="cc-body" ref={chatBodyRef}>
               {msgs.map((m, i) => <div key={i} className={`msg ${m.who}`} dangerouslySetInnerHTML={{ __html: m.html }} />)}
+              {chatLoading && <div className="msg ai cc-typing"><span /><span /><span /></div>}
             </div>
             <div className="cc-foot">
               <div className="cc-chips">
-                {Object.keys(CHAT_FAQ).map(q => <button key={q} className="cc-chip" onClick={() => askChip(q)}>{q}</button>)}
+                {Object.keys(CHAT_FAQ).map(q => <button key={q} className="cc-chip" disabled={chatLoading} onClick={() => chatSendText(q)}>{q}</button>)}
               </div>
               <div className="cc-input">
-                <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') chatSend() }} placeholder="Nhập câu hỏi của bạn..." />
-                <button onClick={chatSend}>Gửi</button>
+                <input value={chatInput} disabled={chatLoading} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') chatSend() }} placeholder="Nhập câu hỏi của bạn..." />
+                <button onClick={chatSend} disabled={chatLoading}>Gửi</button>
               </div>
             </div>
           </div>
@@ -663,6 +684,12 @@ const CSS = `
 .tva-class .cc-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:9px;}
 .tva-class .cc-chip{border:1.4px solid #D8D2E6;background:#fff;color:var(--ink);padding:7px 12px;border-radius:999px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;}
 .tva-class .cc-chip:hover{border-color:var(--indigo);background:var(--indigo-tint);color:var(--indigo-dark);}
+.tva-class .cc-chip:disabled,.tva-class .cc-input input:disabled,.tva-class .cc-input button:disabled{opacity:.5;cursor:default;}
+.tva-class .cc-typing{display:flex;gap:4px;align-items:center;}
+.tva-class .cc-typing span{width:7px;height:7px;border-radius:50%;background:#B9B2A4;display:inline-block;animation:ccblink 1.2s infinite both;}
+.tva-class .cc-typing span:nth-child(2){animation-delay:.2s;}
+.tva-class .cc-typing span:nth-child(3){animation-delay:.4s;}
+@keyframes ccblink{0%,80%,100%{opacity:.25}40%{opacity:1}}
 .tva-class .cc-input{display:flex;gap:8px;}
 .tva-class .cc-input input{flex:1;border:1.4px solid var(--line);background:#F7F5F1;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;}
 .tva-class .cc-input input:focus{outline:none;border-color:var(--indigo);background:#fff;}

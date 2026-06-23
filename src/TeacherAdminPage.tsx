@@ -7,6 +7,7 @@ import GroupManager from './GroupManager'
 import AiAssistant from './AiAssistant'
 import LeadsManager from './LeadsManager'
 import ArticlesManager from './ArticlesManager'
+import ClassAiAdmin from './ClassAiAdmin'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -15,11 +16,12 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
+  { id: 'aichat'    as Section, icon: '💬', label: 'AI khách'       },
   { id: 'articles'  as Section, icon: '📰', label: 'Bài viết'       },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
@@ -132,6 +134,13 @@ export default function TeacherAdminPage() {
         {section === 'leads' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <LeadsManager />
+          </div>
+        )}
+
+        {/* AI khách — trợ lý tư vấn tuyển sinh */}
+        {section === 'aichat' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <ClassAiAdmin />
           </div>
         )}
 
