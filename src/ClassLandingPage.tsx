@@ -73,6 +73,7 @@ const MODALS: Record<string, string> = {
 }
 
 const ZALO = '0983 259 893'
+const ZALO_LINK = 'https://zalo.me/0983259893'
 
 type Msg = { who: 'ai' | 'me'; html: string }
 
@@ -358,13 +359,17 @@ export default function ClassLandingPage() {
                   <div><span>Nội dung CK</span><span>{form.name.trim() || 'Họ tên của bạn'}</span></div>
                 </div>
               </div>
-              <div className="pay-note">💡 Nội dung chuyển khoản chỉ cần ghi <b>họ tên của bạn</b>. Chuyển xong, bạn gửi <b>ảnh bill qua Zalo thầy Văn Anh: 0983 259 893</b> để thầy kích hoạt tài khoản &amp; thêm bạn vào nhóm lớp nhanh nhất.</div>
+              <div className="pay-note">💡 Nội dung chuyển khoản chỉ cần ghi <b>họ tên của bạn</b>. Chuyển xong, bấm nút bên dưới gửi <b>ảnh bill qua Zalo thầy</b> để được kích hoạt tài khoản &amp; thêm vào nhóm lớp nhanh nhất.</div>
+              <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Gửi bill qua Zalo thầy Văn Anh →</a>
               {!okBox
                 ? <button className="btn btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={() => setOkBox(true)}>Tôi đã chuyển khoản</button>
                 : <div className="ok-box">
                     <h4>✓ Cảm ơn bạn đã đăng ký!</h4>
-                    <p>Thầy sẽ kiểm tra và <b>kích hoạt tài khoản app</b> cho bạn, rồi thêm bạn vào <b>nhóm lớp</b>. Trong lúc chờ, bạn có thể tải app TVA Guitar để xem trước bài định hướng.</p>
-                    <button className="ok-guide" onClick={() => setShowGuide(true)}>📲 Xem hướng dẫn cài app →</button>
+                    <p>Đừng quên <b>gửi ảnh bill qua Zalo thầy</b> để được kích hoạt tài khoản app &amp; thêm vào nhóm lớp nhanh nhất.</p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                      <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
+                      <button className="ok-guide" onClick={() => setShowGuide(true)}>📲 Xem hướng dẫn cài app →</button>
+                    </div>
                   </div>}
             </div>
           </div>
@@ -450,7 +455,7 @@ export default function ClassLandingPage() {
       <footer>
         <div className="wrap foot-in">
           <div><b>VAN ANH AUDIO</b> · TVA Guitar · vananhaudio.com</div>
-          <div>Đăng ký qua Zalo thầy: <b>{ZALO}</b></div>
+          <div>Đăng ký qua Zalo thầy: <a className="foot-zalo" href={ZALO_LINK} target="_blank" rel="noreferrer">{ZALO}</a></div>
         </div>
       </footer>
 
@@ -662,6 +667,9 @@ const CSS = `
 .tva-class .qr-ph{height:180px;}
 .tva-class .qr-img{width:100%;max-width:220px;border-radius:14px;border:1px solid var(--line);display:block;align-self:center;}
 .tva-class .pay-note b{color:var(--ink);}
+.tva-class .zalo-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;background:#0068FF;color:#fff;text-decoration:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+.tva-class .zalo-btn:hover{background:#0055D4;}
+.tva-class .foot-zalo{color:#fff;font-weight:700;text-decoration:underline;}
 .tva-class .pay-info div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;}
 .tva-class .pay-info div span:first-child{color:var(--ink-soft);}
 .tva-class .pay-info div span:last-child{font-weight:600;}
