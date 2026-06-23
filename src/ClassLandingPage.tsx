@@ -10,6 +10,7 @@ import ClassTiaNot from './ClassTiaNot'
 import ClassQuiz from './ClassQuiz'
 import ClassAppGuide from './ClassAppGuide'
 import ClassNangCao from './ClassNangCao'
+import { FAQS } from './classFaq'
 
 // ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
 const CLASSES = [
@@ -435,12 +436,22 @@ export default function ClassLandingPage() {
       </section>
 
       {/* FAQ */}
-      <section style={{ background: '#fff', paddingTop: 0 }}>
+      <section className="band" id="faq">
         <div className="wrap">
+          <div className="eyebrow">Hỏi đáp</div>
+          <h2>Câu hỏi thường gặp</h2>
+          <p className="lead">Những thắc mắc phổ biến nhất khi bắt đầu học guitar cùng Thầy Văn Anh. Còn câu hỏi riêng? <a onClick={() => goto('chat')} style={{ color: '#4338CA', cursor: 'pointer', fontWeight: 600 }}>Hỏi trợ lý →</a></p>
           <div className="faq-list">
-            <details><summary>Tôi chưa biết gì, có học được không?</summary><p>Được. Lộ trình Nhập môn được thiết kế cho người bắt đầu từ con số 0, đi chậm và chắc.</p></details>
-            <details><summary>Tôi có cần mua đàn đắt tiền không?</summary><p>Không cần. Giai đoạn đầu chỉ cần một cây đàn phù hợp, dễ bấm và đúng âm.</p></details>
-            <details><summary>Tôi học online có được sửa lỗi không?</summary><p>Có. Bạn học qua app, Zoom, nhóm lớp và gửi bài để thầy hướng dẫn thêm.</p></details>
+            {FAQS.map((f, i) => (
+              <details key={i}>
+                <summary>{f.q}</summary>
+                <div className="faq-a">
+                  {f.a.map((b, j) => Array.isArray(b)
+                    ? <ul key={j}>{b.map((li, k) => <li key={k}>{li}</li>)}</ul>
+                    : <p key={j}>{b}</p>)}
+                </div>
+              </details>
+            ))}
           </div>
         </div>
       </section>
@@ -579,7 +590,7 @@ export default function ClassLandingPage() {
 }
 
 const CSS = `
-.tva-class{--bg:#F2EEE7;--surface:#FFFFFF;--ink:#211C32;--ink-soft:#5A5470;--ink-faint:#8A8499;--indigo:#4338CA;--indigo-dark:#352BA3;--indigo-tint:#EEEBFB;--honey:#C9711E;--honey-tint:#FBF1E4;--line:#E4DED4;--online:#16A34A;--orange:#EE7D3C;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px;min-height:100vh;}
+.tva-class{--bg:#F2EEE7;--surface:#FFFFFF;--ink:#211C32;--ink-soft:#5A5470;--ink-faint:#8A8499;--indigo:#4338CA;--indigo-dark:#352BA3;--indigo-tint:#EEEBFB;--honey:#C9711E;--honey-tint:#FBF1E4;--line:#E4DED4;--online:#16A34A;--orange:#EE7D3C;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px;min-height:100vh;text-align:left;}
 .tva-class *{box-sizing:border-box;}
 .tva-class .wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
 .tva-class section{padding:58px 0;}
@@ -714,10 +725,18 @@ const CSS = `
 .tva-class img.t-photo{width:100%;height:380px;object-fit:contain;object-position:center bottom;border-radius:18px;background:linear-gradient(160deg,#FBF1E4,#F2EEE7);display:block;}
 .tva-class .quote{margin-top:18px;font-size:16px;font-style:italic;color:var(--ink);border-left:3px solid var(--honey);padding-left:16px;}
 @media(max-width:860px){.tva-class .teacher{grid-template-columns:1fr;}.tva-class .t-photo{height:220px;}}
-.tva-class .faq-list{display:flex;flex-direction:column;gap:10px;max-width:760px;}
-.tva-class .faq-list details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;}
-.tva-class .faq-list summary{font-weight:600;font-size:15px;cursor:pointer;}
-.tva-class .faq-list p{margin-top:10px;font-size:14px;color:var(--ink-soft);}
+.tva-class .faq-list{display:flex;flex-direction:column;gap:10px;max-width:780px;margin-top:24px;}
+.tva-class .faq-list details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0;overflow:hidden;}
+.tva-class .faq-list summary{font-weight:600;font-size:15.5px;cursor:pointer;list-style:none;padding:15px 44px 15px 18px;position:relative;color:var(--ink);line-height:1.45;}
+.tva-class .faq-list summary::-webkit-details-marker{display:none;}
+.tva-class .faq-list summary::after{content:'+';position:absolute;right:18px;top:13px;font-size:20px;color:var(--honey);font-weight:400;transition:transform .2s;}
+.tva-class .faq-list details[open] summary::after{content:'–';}
+.tva-class .faq-list details[open] summary{color:var(--indigo);}
+.tva-class .faq-a{padding:0 18px 16px;}
+.tva-class .faq-a p{margin:0 0 10px;font-size:14.5px;color:var(--ink-soft);line-height:1.7;}
+.tva-class .faq-a p:last-child{margin-bottom:0;}
+.tva-class .faq-a ul{margin:0 0 10px;padding-left:20px;}
+.tva-class .faq-a li{font-size:14.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;}
 .tva-class .final{background:linear-gradient(150deg,var(--indigo),#6D63E6);border-radius:22px;padding:44px;text-align:center;color:#fff;}
 .tva-class .final h2{color:#fff;}
 .tva-class .final p{margin:12px auto 22px;max-width:480px;color:#E6E2F2;}
