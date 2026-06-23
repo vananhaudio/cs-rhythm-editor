@@ -125,6 +125,11 @@ export default function AppRouter() {
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
+  // ── Domain class.vananhaudio.com → luôn hiện trang tuyển sinh (mọi path) ──
+  if (typeof window !== 'undefined' && window.location.hostname.startsWith('class.')) {
+    return <ClassLandingPage />
+  }
+
   // ── Route /delete-account — xóa tài khoản ──
   if (path === '/delete-account' || path.startsWith('/delete-account')) {
     return <DeleteAccountPage />
