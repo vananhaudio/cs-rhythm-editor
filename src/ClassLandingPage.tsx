@@ -12,7 +12,7 @@ import ClassQuiz from './ClassQuiz'
 // ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
 const CLASSES = [
   { tag: 'Đệm hát · Trình độ 1', name: 'Khởi đầu đam mê – Đệm hát TĐ1', path: 'dem_hat', day: 'Thứ 3 · 19h00', date: 'Khai giảng 07/07/2026', price: '990k' },
-  { tag: 'Tỉa nốt · Trình độ 1', name: 'Tỉa nốt trên nền karaoke – Khoá 11', path: 'tia_not', day: 'Thứ 5 · 19h00', date: 'Khai giảng 09/07/2026', price: '990k' },
+  { tag: 'Tỉa nốt · Trình độ 3', name: 'Tỉa nốt trên nền karaoke – Cảm âm thực chiến', path: 'tia_not', day: 'Thứ 5 · 19h00', date: 'Khai giảng 09/07/2026', price: '990k' },
   { tag: 'Đệm hát · Trình độ 2', name: 'Khởi đầu đam mê – Đệm hát TĐ2', path: 'dem_hat', day: 'Thứ 6 · 19h00', date: 'Khai giảng 10/07/2026', price: '990k' },
   { tag: 'Toàn diện · Combo', name: 'Hành trình Guitar 2027 (combo 10 khoá)', path: 'combo', day: 'Thứ 5 · 20h30', date: 'Khai giảng tháng 9/2026', price: 'Combo' },
 ]
