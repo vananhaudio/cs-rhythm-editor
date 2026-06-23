@@ -4,6 +4,7 @@ import RichEditor from './RichEditor'
 import FlowInlineEditor from './FlowInlineEditor'
 import QuizBuilder from './components/QuizBuilder'
 import { QuizViewer } from './components/QuizViewer'
+import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import FlowPlayer from './FlowPlayer'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ const LESSON_TYPES = [
   { id: 'discussion',    icon: '💬', label: 'Thảo luận'    },
   { id: 'link',          icon: '🔗', label: 'Link ngoài'   },
   { id: 'flow',          icon: '✨', label: 'Flow Bài Học' },
+  { id: 'native',        icon: '🎸', label: 'Bài tương tác' },
 ]
 
 const TOOLS = [
@@ -1029,6 +1031,18 @@ export default function CourseEditorContent() {
                   </div>
                   <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài "Học thử" luôn mở cho mọi người (kể cả khoá trả phí) — dùng cho 1-2 bài đầu. Bài "Trong khoá" chỉ mở khi học viên được cấp quyền khoá đó.</div>
                 </div>
+
+                {fType === 'native' && (
+                  <div>
+                    <Label>Bài tương tác (native)</Label>
+                    <select value={fUrl} onChange={e => setFUrl(e.target.value)}
+                      style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 14, color: C.text1, background: C.surface, fontFamily: 'inherit', outline: 'none' }}>
+                      <option value="">— Chọn bài tương tác —</option>
+                      {Object.entries(NATIVE_LESSONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                    <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài render bằng component có sẵn trong app (mic, metronome, quiz…). Key lưu ở "Link/URL" của bài.</div>
+                  </div>
+                )}
 
                 <div>
                   <Label>Mô tả ngắn (hiển thị cho học viên)</Label>

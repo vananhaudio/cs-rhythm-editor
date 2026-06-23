@@ -5,6 +5,7 @@ import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIOS } from './iap'
+import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ElearnLessonView from './elearn/ElearnLessonView'
 import { NavIcon } from './navIcons'
 
@@ -1287,7 +1288,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         {tab === 'hoc' && screen === 'lesson' && activeLesson && (
           <>
             {/* Flow Player — fullScreen=true → FlowPlayer tự dùng position:fixed, tránh bug iOS WebKit */}
-            {activeLesson.lesson_type === 'flow' ? (
+            {activeLesson.lesson_type === 'native' ? (
+              (() => {
+                const key = (activeLesson.content_url || activeLesson.content || '').trim()
+                const entry = NATIVE_LESSONS[key]
+                if (!entry) return <div style={{ padding: 24, color: L.t2 }}>Bài học chưa cấu hình đúng (native: {key || '—'}).<br /><button onClick={goBack} style={{ marginTop: 12 }}>‹ Quay lại</button></div>
+                const C = entry.Component
+                return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} />
+              })()
+            ) : activeLesson.lesson_type === 'flow' ? (
               <FlowPlayer
                 lessonId={activeLesson.id}
                 studentId={student.id}
