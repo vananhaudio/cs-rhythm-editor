@@ -228,12 +228,7 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
             {!running ? 'Nhịp 4/4 · gảy ô lẻ, nghỉ ô chẵn để kịp đổi ngón' : phase === 'play' ? 'Gảy xuống đều 4 phách' : 'Không gảy — đặt sẵn ngón cho hợp âm sau'}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-          <span style={{ fontSize: 13, color: '#7A8194' }}>Tốc độ</span>
-          <span style={{ fontSize: 15, fontWeight: 800, color: INDIGO }}>{bpm}</span>
-          <span style={{ fontSize: 13, color: '#7A8194' }}>BPM</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
           {[0, 1, 2, 3].map(i => {
             const on = running && (phase === 'play' ? beat === i : beat - 4 === i)
             const isPlay = phase === 'play'
@@ -246,7 +241,26 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
             )
           })}
         </div>
-        <input type="range" min={40} max={100} step={5} value={bpm} disabled={running} onChange={e => setBpm(+e.target.value)} style={{ width: '100%' }} />
+        <div style={{ paddingTop: 10, borderTop: '1px solid #EEF0F4' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: '#7A8194' }}>Tốc độ</span>
+            <span><b style={{ fontSize: 20, fontWeight: 800, color: INDIGO }}>{bpm}</b> <span style={{ fontSize: 12, color: '#7A8194' }}>BPM</span></span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {([['Chậm', 50], ['Vừa', 60], ['Nhanh', 75]] as [string, number][]).map(([lbl, v]) => {
+              const on = bpm === v
+              return (
+                <button key={v} onClick={() => setBpm(v)} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: `1.5px solid ${on ? INDIGO : '#D8DCE6'}`, background: on ? '#EEF0FB' : '#fff', color: on ? INDIGO : '#7A8194', fontWeight: on ? 800 : 600, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>
+                  {lbl}<div style={{ fontSize: 10, fontWeight: 600, opacity: 0.75 }}>{v} BPM</div>
+                </button>
+              )
+            })}
+          </div>
+          <input type="range" min={40} max={100} step={5} value={bpm} onChange={e => setBpm(+e.target.value)} style={{ width: '100%', marginTop: 10 }} />
+          <div style={{ fontSize: 12, color: '#7A8194', textAlign: 'center', marginTop: 6, lineHeight: 1.5 }}>
+            Mỗi ô nhịp ≈ <b style={{ color: '#3A4050' }}>{(240 / bpm).toFixed(1)} giây</b> — gảy {(240 / bpm).toFixed(1)}s rồi nghỉ {(240 / bpm).toFixed(1)}s để kịp đổi ngón. Quen tay thì tăng dần.
+          </div>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF3EC', border: '1px solid #FBD9C5', borderRadius: 14, padding: '9px 12px', marginTop: 10 }}>
