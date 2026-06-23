@@ -394,9 +394,9 @@ export default function ClassLandingPage() {
                 </div>
               </div>
               <div className="app-shots">
-                <div className="shot">Ảnh màn hình<br />Khoá học</div>
-                <div className="shot">Ảnh màn hình<br />Bài học</div>
-                <div className="shot">Ảnh màn hình<br />Tiến độ</div>
+                <img className="shot" src="/app-khoahoc.png" alt="Màn hình Khoá học" />
+                <img className="shot" src="/app-luyentap.png" alt="Màn hình Công cụ luyện tập" />
+                <img className="shot" src="/app-tiendo.png" alt="Màn hình Tiến độ học tập" />
               </div>
             </div>
           </div>
@@ -637,7 +637,7 @@ const CSS = `
 .tva-class .app-feat{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:#E6E2F2;}
 .tva-class .app-feat .ic{font-size:20px;}
 .tva-class .app-shots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.tva-class .shot{aspect-ratio:9/16;border-radius:12px;border:2px dashed rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;color:#A89FF0;background:rgba(255,255,255,.05);}
+.tva-class img.shot{width:100%;display:block;border-radius:14px;border:1px solid rgba(255,255,255,.12);box-shadow:0 10px 30px -12px rgba(0,0,0,.5);}
 @media(max-width:860px){.tva-class .app-grid{grid-template-columns:1fr;gap:24px;}}
 .tva-class .teacher{display:grid;grid-template-columns:280px 1fr;gap:34px;align-items:center;}
 .tva-class img.t-photo{width:100%;height:380px;object-fit:contain;object-position:center bottom;border-radius:18px;background:linear-gradient(160deg,#FBF1E4,#F2EEE7);display:block;}
