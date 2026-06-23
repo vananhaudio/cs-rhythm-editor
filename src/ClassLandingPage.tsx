@@ -20,8 +20,8 @@ const CLASSES = [
 // ─── 3 cửa vào — nút mở bài viết (nếu có) hoặc cuộn tới lớp/chat ───
 const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: string; fallback: string; native?: string }[] = [
   { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Đệm hát căn bản', desc: 'Dành cho người thích hát, hay hát karaoke, muốn tự đệm các bài yêu thích.', cta: 'Xem lớp Đệm hát', slot: 'cua-dem-hat', fallback: 'lichlop', native: 'demhat' },
-  { dq: 'Tôi muốn chơi giai điệu bằng đàn', badge: 'Tỉa nốt căn bản', desc: 'Dành cho người mới, người không mạnh về hát, hoặc muốn cây đàn tự vang lên giai điệu bài hát.', cta: 'Xem lớp Tỉa nốt', slot: 'cua-tia-not', fallback: 'lichlop', native: 'tianot' },
-  { dq: 'Tôi đã biết chơi nhưng bí giai điệu / cảm âm', badge: 'Tỉa nốt âm giai & cảm âm', desc: 'Dành cho người đã chơi một thời gian nhưng muốn hiểu nốt, âm giai, cảm âm và tự tìm giai điệu.', cta: 'Hỏi trợ lý xếp đúng trình độ', slot: 'cua-cam-am', fallback: 'chat' },
+  { dq: 'Tôi muốn học Guitar căn bản từ gốc', badge: 'Guitar căn bản / Tỉa nốt 1', desc: 'Dành cho người mới muốn làm quen với nốt nhạc, vị trí trên cần đàn và chơi những giai điệu đầu tiên.', cta: 'Xem lớp Guitar căn bản', slot: 'cua-tia-not', fallback: 'lichlop', native: 'tianot' },
+  { dq: 'Tôi đã biết chơi nhưng muốn tiến xa hơn', badge: 'Cảm âm · Giai điệu · Thực chiến', desc: 'Dành cho người đã chơi một thời gian nhưng vẫn phụ thuộc tab, khó tự tìm giai điệu, khó hiểu nốt và âm giai.', cta: 'Hỏi trợ lý xếp đúng trình độ', slot: 'cua-cam-am', fallback: 'chat' },
 ]
 
 // ─── Showcase hành động (tâm lý → 1 hành động nhỏ) ───
@@ -165,7 +165,7 @@ export default function ClassLandingPage() {
         <div className="wrap hero-grid">
           <div>
             <h1>Bắt đầu học Guitar bằng <span className="hl">một khóa nhỏ phù hợp với bạn</span></h1>
-            <p>Thích hát, thích chơi giai điệu, hay đã chơi nhưng muốn mở khóa cảm âm — mỗi người một cửa vào. Bắt đầu nhẹ nhàng, đi xa lúc nào tùy bạn.</p>
+            <p>Thích hát, thích chơi giai điệu, hay đã chơi nhưng muốn tiến xa hơn — mỗi người một cửa vào. Bạn không cần học cả hành trình ngay từ đầu, chỉ cần chọn đúng khóa nhỏ đầu tiên. Khi sẵn sàng, bản đồ dài hạn luôn ở đó để bạn đi tiếp.</p>
             <div className="hero-cta">
               <button className="btn btn-primary" onClick={() => goto('cuavao')}>Chọn cửa vào của tôi →</button>
               <button className="btn btn-ghost" onClick={() => goto('chat')}>Tư vấn với trợ lý</button>
@@ -301,7 +301,7 @@ export default function ClassLandingPage() {
           <div className="eyebrow">Quyền lợi</div>
           <h2>Một khóa học gồm những gì?</h2>
           <div className="benefits">
-            {[['📅', '<b>8 buổi học</b> theo lịch lớp cố định'], ['📱', '<b>App TVA Guitar</b> để xem bài & ôn tập'], ['✍️', '<b>Bài tập</b> rõ ràng sau mỗi buổi'], ['👥', '<b>Nhóm lớp</b> nhận thông báo & hỗ trợ'], ['🗺️', '<b>Lộ trình học tiếp theo</b> rõ ràng'], ['🎯', '<b>Tư vấn chọn đúng trình độ</b> trước khi vào lớp']].map(([ic, t], i) => (
+            {[['📅', '<b>8 buổi học</b> theo lịch lớp cố định'], ['🎥', '<b>Zoom trực tiếp cùng thầy</b> mỗi buổi'], ['📱', '<b>App TVA Guitar</b> để xem bài & ôn tập'], ['✍️', '<b>Bài tập</b> rõ ràng sau mỗi buổi'], ['👥', '<b>Nhóm lớp</b> nhận thông báo & hỗ trợ'], ['🎯', '<b>Tư vấn chọn đúng trình độ</b> trước khi vào lớp']].map(([ic, t], i) => (
               <div className="bf" key={i}><span className="bi">{ic}</span><div dangerouslySetInnerHTML={{ __html: t }} /></div>
             ))}
           </div>
@@ -412,6 +412,7 @@ export default function ClassLandingPage() {
             <h2>Học cùng Thầy Văn Anh</h2>
             <p className="lead">Nhiều năm giảng dạy guitar, xây dựng hệ thống bài học cho người mới và cộng đồng học viên online. Phương pháp: dễ hiểu, dễ làm theo, chia nhỏ, luyện đều, theo dõi tiến độ, sửa lỗi từng bước.</p>
             <div className="quote">"Tôi không dạy bạn trở nên cao siêu. Tôi giúp bạn làm chủ cây đàn một cách đơn giản nhất."</div>
+            <p className="lead" style={{ marginTop: 14 }}>Hệ thống bài học được chia nhỏ để người mới dễ theo, dễ luyện và biết mình đang tiến bộ ở đâu.</p>
           </div>
         </div>
       </section>
