@@ -20,9 +20,9 @@ const CLASSES = [
 
 // ─── 3 cửa vào — nút mở bài viết (nếu có) hoặc cuộn tới lớp/chat ───
 const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: string; fallback: string; native?: string }[] = [
-  { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Đệm hát căn bản', desc: 'Dành cho người thích hát, hay hát karaoke, muốn tự đệm các bài yêu thích.', cta: 'Xem lớp Đệm hát', slot: 'cua-dem-hat', fallback: 'lichlop', native: 'demhat' },
-  { dq: 'Tôi muốn học Guitar căn bản từ gốc', badge: 'Guitar căn bản / Tỉa nốt 1', desc: 'Dành cho người mới muốn làm quen với nốt nhạc, vị trí trên cần đàn và chơi những giai điệu đầu tiên.', cta: 'Xem lớp Guitar căn bản', slot: 'cua-tia-not', fallback: 'lichlop', native: 'tianot' },
-  { dq: 'Tôi đã biết chơi nhưng muốn tiến xa hơn', badge: 'Cảm âm · Giai điệu · Thực chiến', desc: 'Dành cho người đã chơi một thời gian nhưng vẫn phụ thuộc tab, khó tự tìm giai điệu, khó hiểu nốt và âm giai.', cta: 'Hỏi trợ lý xếp đúng trình độ', slot: 'cua-cam-am', fallback: 'chat' },
+  { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Guitar căn bản theo hướng Đệm hát', desc: 'Dành cho người mới thích hát, hay hát karaoke, muốn học hợp âm, nhịp phách và tự đệm các bài yêu thích.', cta: 'Xem lớp Đệm hát căn bản', slot: 'cua-dem-hat', fallback: 'lichlop', native: 'demhat' },
+  { dq: 'Tôi muốn học Guitar từ gốc', badge: 'Guitar căn bản theo hướng Giai điệu', desc: 'Dành cho người mới muốn làm quen với nốt nhạc, vị trí trên cần đàn và chơi những giai điệu đầu tiên.', cta: 'Xem lớp Guitar căn bản', slot: 'cua-tia-not', fallback: 'lichlop', native: 'tianot' },
+  { dq: 'Tôi đã biết chơi và muốn tiến xa hơn', badge: 'Xếp trình độ nâng cao', desc: 'Dành cho người đã học một thời gian nhưng còn bí nhịp, tông, nốt, âm giai, cảm âm hoặc cách xử lý bài hát.', cta: 'Hỏi trợ lý xếp đúng trình độ', slot: 'cua-cam-am', fallback: 'chat' },
 ]
 
 // ─── Showcase hành động (tâm lý → 1 hành động nhỏ) ───
@@ -193,7 +193,7 @@ export default function ClassLandingPage() {
         <div className="wrap">
           <div className="eyebrow">Chọn điểm bắt đầu</div>
           <h2>Chọn cửa vào phù hợp với bạn</h2>
-          <p className="lead">Bạn không cần học cả một hành trình dài ngay từ đầu. Trước mắt, chọn một cửa vào hợp với mình.</p>
+          <p className="lead">Nếu bạn mới bắt đầu, hãy chọn một trong hai hướng: <b>Đệm hát</b> hoặc <b>Guitar căn bản theo giai điệu</b>. Nếu bạn đã học rồi, trợ lý sẽ giúp bạn xếp đúng trình độ để đi tiếp.</p>
           <div className="doors">
             {DOORS.map((d, i) => {
               const art = articles[d.slot]
