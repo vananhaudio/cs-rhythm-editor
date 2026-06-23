@@ -173,6 +173,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [masterPath, setMasterPath] = useState<{ id: string; title: string; courseId: string; courseName: string }[]>([])  // đường mốc xuyên suốt mọi khóa
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
+  const [freeCourses, setFreeCourses]   = useState<Set<string>>(new Set())  // khoá miễn phí (is_free)
+  const [accessCourses, setAccessCourses] = useState<Set<string>>(new Set()) // khoá đã được thầy cấp quyền
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
   const [dbTools, setDbTools]     = useState<DBTool[]>([])
   const [exerciseStatuses, setExerciseStatuses] = useState<Record<string, string>>({}) // exId → 'on'|'off'|'coming_soon'
@@ -466,8 +468,13 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
     return completedIds.has(sortedLessons[idx - 1].id)
   }
 
+  // Quyền MỞ KHOÁ THEO TỪNG KHOÁ: khoá đang xem mở nếu là khoá free hoặc đã được cấp quyền.
+  // Bài tier='free' = học thử → luôn mở (kể cả khoá trả phí chưa cấp quyền).
+  const activeCourseUnlocked = !activeCourseId || freeCourses.has(activeCourseId) || accessCourses.has(activeCourseId)
+  const isLessonCourseUnlocked = (l: Lesson) => l.tier === 'free' || activeCourseUnlocked
+
   const isUnlocked = (l: Lesson) =>
-    isTierUnlocked(l.tier) && isSequentiallyUnlocked(l.id)
+    isLessonCourseUnlocked(l) && isSequentiallyUnlocked(l.id)
 
   // ── Màu mốc (gradient) — điểm "độ chắc" ẩn từ event THẬT, nội suy ra màu ──
   // 0 = chưa học (xám) · 40 = đã học (đỏ) · +30 đã thực hành · +30 đã gửi bài → 100 (xanh)
@@ -497,11 +504,15 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   useEffect(() => {
     supabase.from('edu_enrollments')
-      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order)')
+      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order,is_free)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(async ({ data }) => {
         const enr = (data ?? []) as unknown as Enrollment[]
         setEnrollments(enr)
+        // Khoá miễn phí + khoá đã được cấp quyền → dùng để mở/khoá bài theo từng khoá
+        setFreeCourses(new Set(enr.filter(e => (e.course as any)?.is_free !== false).map(e => e.course_id)))
+        supabase.from('edu_course_access').select('course_id').eq('student_id', student.id).eq('active', true)
+          .then(({ data: acc }) => setAccessCourses(new Set((acc ?? []).map((a: any) => a.course_id))))
         // ── Dựng đường mốc XUYÊN SUỐT mọi khóa (master journey) ──
         const courses = enr.filter(e => (e.course?.status ?? 'on') !== 'off')
         const courseIds = courses.map(e => e.course_id)
@@ -1235,7 +1246,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                   {lessons.filter(l => l.module_id === mod.id).sort((a, b) => a.order_index - b.order_index).map((l) => {
                     const icons: Record<string, string> = { video: '▶️', text: '📄', slide: '🖼', quiz: '❓', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹' }
                     const done       = completedIds.has(l.id)
-                    const tierLocked = !isTierUnlocked(l.tier)
+                    const tierLocked = !isLessonCourseUnlocked(l)
                     const seqLocked  = !isSequentiallyUnlocked(l.id)
                     const locked     = tierLocked || seqLocked
                     const isCurrent  = !done && !locked
@@ -1250,7 +1261,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                           {seqLocked && !tierLocked && (
                             <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
                           )}
-                          {tierLocked && l.tier && (
+                          {tierLocked && (
                             <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>{isNativeIOS ? '🔒 Mở khi bạn đăng ký học với thầy' : '🔒 Đăng ký học để mở khoá →'}</div>
                           )}
                           {isCurrent && (

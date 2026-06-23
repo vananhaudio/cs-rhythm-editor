@@ -586,6 +586,14 @@ export default function CourseEditorContent() {
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, status: val } : c))
   }
 
+  const setCourseFree = async (val: boolean) => {
+    if (!selectedCourse) return
+    const { error } = await supabase.from('edu_courses').update({ is_free: val }).eq('id', selectedCourse.id)
+    if (error) { alert('Cập nhật miễn phí/trả phí thất bại: ' + error.message); return }
+    setSelectedCourse(prev => prev ? { ...prev, is_free: val } as Course : prev)
+    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, is_free: val } as Course : c))
+  }
+
   const publishAll = async () => {
     const offCount = courses.filter(c => c.status !== 'on').length
     if (!confirm(`Bật TẤT CẢ ${offCount} khoá chưa hiển thị? Học sinh sẽ nhìn thấy ngay.`)) return
@@ -790,9 +798,21 @@ export default function CourseEditorContent() {
                     )
                   })}
                 </div>
+                {(() => {
+                  const free = (selectedCourse as Course & { is_free?: boolean }).is_free !== false
+                  return (
+                    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+                      <button onClick={() => setCourseFree(true)}
+                        style={{ padding: '4px 8px', fontSize: 12, fontWeight: free ? 700 : 400, cursor: 'pointer', border: 'none', borderRight: `1px solid ${C.border}`, fontFamily: 'inherit', background: free ? '#DCFCE7' : C.surface, color: free ? '#15803D' : C.text3, whiteSpace: 'nowrap' }}>🆓 Miễn phí</button>
+                      <button onClick={() => setCourseFree(false)}
+                        style={{ padding: '4px 8px', fontSize: 12, fontWeight: !free ? 700 : 400, cursor: 'pointer', border: 'none', fontFamily: 'inherit', background: !free ? '#FEF3C7' : C.surface, color: !free ? '#B45309' : C.text3, whiteSpace: 'nowrap' }}>💰 Trả phí</button>
+                    </div>
+                  )
+                })()}
               </div>
               <div style={{ fontSize: 12, color: C.text3 }}>
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học
+                {(selectedCourse as Course & { is_free?: boolean }).is_free === false && ' · 💰 Trả phí (cấp quyền trong Hồ sơ học viên)'}
               </div>
             </div>
 
@@ -993,15 +1013,18 @@ export default function CourseEditorContent() {
                 </div>
 
                 <div>
-                  <Label>Gói mở khoá (freemium)</Label>
+                  <Label>Mở khoá bài học</Label>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {[['free', '🆓 Miễn phí (ai cũng học)'], ['basic', '🔒 Cơ bản'], ['standard', '🔒 Chuẩn'], ['pro', '🔒 Hành trình']].map(([v, lbl]) => (
-                      <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '7px 12px', borderRadius: 8, border: `1px solid ${fTier === v ? C.accent : C.border}`, background: fTier === v ? C.accentLight : C.surface, fontSize: 13, color: fTier === v ? C.accent : C.text2, fontWeight: fTier === v ? 600 : 400 }}>
-                        <input type="radio" name="ftier" checked={fTier === v} onChange={() => setFTier(v)} style={{ accentColor: C.accent }} />{lbl}
-                      </label>
-                    ))}
+                    {[['free', '🆓 Học thử (ai cũng xem)'], ['basic', '🔒 Trong khoá (cần đăng ký)']].map(([v, lbl]) => {
+                      const on = (v === 'free') === (fTier === 'free')
+                      return (
+                        <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '7px 12px', borderRadius: 8, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentLight : C.surface, fontSize: 13, color: on ? C.accent : C.text2, fontWeight: on ? 600 : 400 }}>
+                          <input type="radio" name="ftier" checked={on} onChange={() => setFTier(v)} style={{ accentColor: C.accent }} />{lbl}
+                        </label>
+                      )
+                    })}
                   </div>
-                  <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài "Miễn phí" mọi tài khoản đều xem. Bài gói cao chỉ mở khi học viên được nâng cấp (đã đăng ký học).</div>
+                  <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài "Học thử" luôn mở cho mọi người (kể cả khoá trả phí) — dùng cho 1-2 bài đầu. Bài "Trong khoá" chỉ mở khi học viên được cấp quyền khoá đó.</div>
                 </div>
 
                 <div>

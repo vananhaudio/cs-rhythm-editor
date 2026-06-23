@@ -151,6 +151,8 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const [allCourses, setAllCourses] = useState<CourseItem[]>([])
   const [enrolling, setEnrolling] = useState<string | null>(null)
   const [appStats, setAppStats] = useState<AppStats | null>(null)
+  const [accessSet, setAccessSet] = useState<Set<string>>(new Set())  // khoá trả phí đã được cấp quyền
+  const [grantingId, setGrantingId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -257,6 +259,22 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     if (error) { alert('Huỷ đăng ký thất bại: ' + error.message); return }
     setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, is_active: false } : e))
   }
+
+  // Cấp / thu quyền MỞ KHOÁ trả phí cho học viên này (đóng phí xong thầy bấm "Mở khoá")
+  const setCourseAccess = async (courseId: string, grant: boolean) => {
+    setGrantingId(courseId)
+    const uid = (await supabase.auth.getUser()).data.user?.id
+    const { error } = await supabase.from('edu_course_access')
+      .upsert({ student_id: studentId, course_id: courseId, active: grant, granted_by: uid }, { onConflict: 'student_id,course_id' })
+    setGrantingId(null)
+    if (error) { alert('Cập nhật quyền mở khoá thất bại: ' + error.message); return }
+    setAccessSet(prev => { const n = new Set(prev); grant ? n.add(courseId) : n.delete(courseId); return n })
+  }
+
+  useEffect(() => {
+    supabase.from('edu_course_access').select('course_id').eq('student_id', studentId).eq('active', true)
+      .then(({ data }) => setAccessSet(new Set((data ?? []).map((a: any) => a.course_id))))
+  }, [studentId])
 
   if (loading) return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted }}>Đang tải hồ sơ...</div>
   if (!student) return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.danger }}>Không tìm thấy học sinh.</div>
@@ -440,8 +458,22 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{e.course?.name}</div>
                       <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
                         {e.course?.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · Từ {fmtDate(e.enrolled_at)}
+                        {e.course?.is_free === false && (accessSet.has(e.course_id) ? ' · 🔓 Đã mở (đã đóng phí)' : ' · 🔒 Chưa mở (chỉ học thử)')}
                       </div>
                     </div>
+                    {e.course?.is_free === false && (
+                      accessSet.has(e.course_id) ? (
+                        <button onClick={() => setCourseAccess(e.course_id, false)} disabled={grantingId === e.course_id}
+                          style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 7, padding: '5px 12px', fontSize: 13, color: '#B45309', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {grantingId === e.course_id ? '...' : 'Thu quyền'}
+                        </button>
+                      ) : (
+                        <button onClick={() => setCourseAccess(e.course_id, true)} disabled={grantingId === e.course_id}
+                          style={{ background: '#15803D', border: 'none', borderRadius: 7, padding: '5px 12px', fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          {grantingId === e.course_id ? '...' : '🔓 Mở khoá'}
+                        </button>
+                      )
+                    )}
                     <button onClick={() => handleUnenroll(e.id)} style={{ background: 'none', border: `1px solid ${T.border}`, borderRadius: 7, padding: '5px 12px', fontSize: 13, color: T.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Gỡ khoá
                     </button>
