@@ -9,6 +9,7 @@ import ClassDemHat from './ClassDemHat'
 import ClassTiaNot from './ClassTiaNot'
 import ClassQuiz from './ClassQuiz'
 import ClassAppGuide from './ClassAppGuide'
+import ClassNangCao from './ClassNangCao'
 
 // ─── Lớp sắp khai giảng (tạm hardcode — sau đọc từ Google Sheet/Supabase) ───
 const CLASSES = [
@@ -22,7 +23,7 @@ const CLASSES = [
 const DOORS: { dq: string; badge: string; desc: string; cta: string; slot: string; fallback: string; native?: string }[] = [
   { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Guitar căn bản theo hướng Đệm hát', desc: 'Dành cho người mới thích hát, hay hát karaoke, muốn học hợp âm, nhịp phách và tự đệm các bài yêu thích.', cta: 'Xem lớp Đệm hát căn bản', slot: 'cua-dem-hat', fallback: 'lichlop', native: 'demhat' },
   { dq: 'Tôi muốn học Guitar từ gốc', badge: 'Guitar căn bản theo hướng Giai điệu', desc: 'Dành cho người mới muốn làm quen với nốt nhạc, vị trí trên cần đàn và chơi những giai điệu đầu tiên.', cta: 'Xem lớp Guitar căn bản', slot: 'cua-tia-not', fallback: 'lichlop', native: 'tianot' },
-  { dq: 'Tôi đã biết chơi và muốn tiến xa hơn', badge: 'Xếp trình độ nâng cao', desc: 'Dành cho người đã học một thời gian nhưng còn bí nhịp, tông, nốt, âm giai, cảm âm hoặc cách xử lý bài hát.', cta: 'Hỏi trợ lý xếp đúng trình độ', slot: 'cua-cam-am', fallback: 'chat' },
+  { dq: 'Tôi đã biết chơi và muốn tiến xa hơn', badge: 'Xếp trình độ nâng cao', desc: 'Dành cho người đã học một thời gian nhưng còn bí nhịp, tông, nốt, âm giai, cảm âm hoặc cách xử lý bài hát.', cta: 'Xem mình đang ở đâu', slot: 'cua-cam-am', fallback: 'chat', native: 'nangcao' },
 ]
 
 // ─── Showcase hành động (tâm lý → 1 hành động nhỏ) ───
@@ -90,6 +91,7 @@ export default function ClassLandingPage() {
   const [showQuiz, setShowQuiz] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const [showDemo, setShowDemo] = useState(false)
+  const [showNangCao, setShowNangCao] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
     { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý tư vấn của Thầy Văn Anh. Bạn đang ở đâu trên hành trình, hay còn băn khoăn gì? Chọn một câu hoặc nhập câu hỏi nhé.' },
   ])
@@ -206,6 +208,8 @@ export default function ClassLandingPage() {
                     ? <button className="btn btn-primary" onClick={() => setShowDemHat(true)}>{d.cta} →</button>
                     : d.native === 'tianot'
                     ? <button className="btn btn-primary" onClick={() => setShowTiaNot(true)}>{d.cta} →</button>
+                    : d.native === 'nangcao'
+                    ? <button className="btn btn-primary" onClick={() => setShowNangCao(true)}>{d.cta} →</button>
                     : art
                     ? <button className="btn btn-primary" onClick={() => setModal('art:' + d.slot)}>{d.cta} →</button>
                     : <button className="btn btn-primary" onClick={() => goto(d.fallback)}>{d.cta} →</button>}
@@ -497,6 +501,15 @@ export default function ClassLandingPage() {
         <ClassAppGuide
           onClose={() => setShowGuide(false)}
           onRegister={() => { setShowGuide(false); setTimeout(() => goto('lichlop'), 60) }}
+        />
+      )}
+
+      {showNangCao && (
+        <ClassNangCao
+          onClose={() => setShowNangCao(false)}
+          onChat={() => { setShowNangCao(false); setTimeout(() => goto('chat'), 60) }}
+          onJourney={() => { setShowNangCao(false); setShowJourney(true) }}
+          onQuiz={() => { setShowNangCao(false); setShowQuiz(true) }}
         />
       )}
 
