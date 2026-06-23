@@ -6,6 +6,14 @@
 --   Bài 1 (Downstroke) order_index = 0  →  bài này order_index = 1
 -- =====================================================================
 
+-- 0) Nới ràng buộc lesson_type để chấp nhận loại 'native' (giữ đủ loại cũ + 'flow')
+alter table public.edu_course_lessons drop constraint if exists edu_course_lessons_lesson_type_check;
+alter table public.edu_course_lessons add constraint edu_course_lessons_lesson_type_check
+  check (lesson_type in (
+    'video','text','slide','quiz','game','tap','metronome',
+    'backing_track','submit_video','discussion','link','flow','native'
+  ));
+
 insert into public.edu_course_lessons
   (module_id, title, lesson_type, content_url, order_index, tier, tools)
 select
