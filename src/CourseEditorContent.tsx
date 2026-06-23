@@ -264,6 +264,7 @@ export default function CourseEditorContent() {
   const [fDesc,    setFDesc]    = useState('')
   const [fContent, setFContent] = useState('')
   const [fTools,   setFTools]   = useState<string[]>([])
+  const [fTier,    setFTier]    = useState('free')
   const [dbTools,  setDbTools]  = useState<{ id: string; name: string; icon: string; status?: string; category?: string }[]>([])
 
   // Nhãn/icon công cụ: ưu tiên edu_tools (DB), fallback TOOLS cứng cho tool cũ
@@ -310,6 +311,7 @@ export default function CourseEditorContent() {
     setFDesc(lesson.description ?? '')
     setFContent(lesson.content ?? '')
     setFTools(Array.isArray(lesson.tools) ? lesson.tools : [])
+    setFTier((lesson as Lesson & { tier?: string }).tier ?? 'free')
     setRightMode('edit')
   }
 
@@ -317,10 +319,10 @@ export default function CourseEditorContent() {
     if (!selectedLesson) return
     setSaving(true)
     const saveUrl = fType === 'slide' && fUrl ? normalizeCanvaUrl(fUrl) : (fUrl || null)
-    const { error } = await supabase.from('edu_course_lessons').update({ title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc || null, content: fContent || null, tools: fTools }).eq('id', selectedLesson.id)
+    const { error } = await supabase.from('edu_course_lessons').update({ title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc || null, content: fContent || null, tools: fTools, tier: fTier }).eq('id', selectedLesson.id)
     setSaving(false)
     if (error) { alert('Lưu bài học thất bại: ' + error.message); return }
-    const patch = { title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc, content: fContent, tools: fTools }
+    const patch = { title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc, content: fContent, tools: fTools, tier: fTier }
     setLessons(prev => prev.map(l => l.id === selectedLesson.id ? { ...l, ...patch } : l))
     setSelectedLesson(prev => prev ? { ...prev, ...patch } : prev)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
@@ -988,6 +990,18 @@ export default function CourseEditorContent() {
                     <Label>Tiêu đề bài học</Label>
                     <Input value={fTitle} onChange={setFTitle} placeholder="Bài 1: Làm quen với guitar" />
                   </div>
+                </div>
+
+                <div>
+                  <Label>Gói mở khoá (freemium)</Label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {[['free', '🆓 Miễn phí (ai cũng học)'], ['basic', '🔒 Cơ bản'], ['standard', '🔒 Chuẩn'], ['pro', '🔒 Hành trình']].map(([v, lbl]) => (
+                      <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '7px 12px', borderRadius: 8, border: `1px solid ${fTier === v ? C.accent : C.border}`, background: fTier === v ? C.accentLight : C.surface, fontSize: 13, color: fTier === v ? C.accent : C.text2, fontWeight: fTier === v ? 600 : 400 }}>
+                        <input type="radio" name="ftier" checked={fTier === v} onChange={() => setFTier(v)} style={{ accentColor: C.accent }} />{lbl}
+                      </label>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài "Miễn phí" mọi tài khoản đều xem. Bài gói cao chỉ mở khi học viên được nâng cấp (đã đăng ký học).</div>
                 </div>
 
                 <div>

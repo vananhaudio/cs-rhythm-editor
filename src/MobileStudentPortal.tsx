@@ -4,6 +4,7 @@ import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import { QuizViewer } from './components/QuizViewer'
+import { isNativeIOS } from './iap'
 import ElearnLessonView from './elearn/ElearnLessonView'
 import { NavIcon } from './navIcons'
 
@@ -1239,8 +1240,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                     const locked     = tierLocked || seqLocked
                     const isCurrent  = !done && !locked
                     return (
-                      <div key={l.id} onClick={() => openLesson(l)}
-                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: locked ? 'default' : 'pointer', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
+                      <div key={l.id} onClick={() => { if (tierLocked) { if (!isNativeIOS) window.location.href = '/class' } else if (!seqLocked) openLesson(l) }}
+                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: (tierLocked && !isNativeIOS) || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : isCurrent ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
@@ -1250,7 +1251,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                             <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
                           )}
                           {tierLocked && l.tier && (
-                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>Yêu cầu gói {TIER_VI[l.tier] ?? l.tier}</div>
+                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>{isNativeIOS ? '🔒 Mở khi bạn đăng ký học với thầy' : '🔒 Đăng ký học để mở khoá →'}</div>
                           )}
                           {isCurrent && (
                             <div style={{ fontSize: 11, color: L.p1, fontWeight: 600, marginTop: 2 }}>▶ Học tiếp theo</div>
