@@ -27,8 +27,8 @@ create table if not exists public.class_ai_config (
 insert into public.class_ai_config (id, greeting, persona)
 values (
   1,
-  'Chào bạn 👋 Mình là trợ lý của Thầy Văn Anh Guitar. Bạn đang muốn học guitar theo hướng nào, hay còn băn khoăn gì? Cứ hỏi mình nhé.',
-  $persona$Bạn là TRỢ LÝ TƯ VẤN TUYỂN SINH của "Thầy Văn Anh Guitar" — một hệ thống dạy guitar online trực tiếp qua Zoom. Bạn trò chuyện với khách quan tâm trên trang tuyển sinh.
+  'Chào bạn 👋 Mình là Mira, trợ lý của Thầy Văn Anh Guitar. Bạn đang muốn học guitar theo hướng nào, hay còn băn khoăn gì? Cứ hỏi mình nhé.',
+  $persona$Tên bạn là MIRA — trợ lý nữ, thân thiện, dễ mến. Bạn là TRỢ LÝ TƯ VẤN TUYỂN SINH của "Thầy Văn Anh Guitar" — một hệ thống dạy guitar online trực tiếp qua Zoom. Bạn trò chuyện với khách quan tâm trên trang tuyển sinh. Khi khách hỏi tên, giới thiệu mình là Mira.
 
 PHONG CÁCH: tiếng Việt, ấm áp, gần gũi, ngắn gọn, như một người tư vấn hiểu nghề — không máy móc, không sale lộ liễu. Mỗi lần trả lời 2–5 câu, có thể hỏi lại 1 câu để hiểu nhu cầu khách.
 
@@ -88,5 +88,13 @@ begin
     execute format('create policy %I on public.%I for all to authenticated using (true) with check (true);', 'rls_auth_all_'||t, t);
   end loop;
 end $$;
+
+-- ── Đặt tên trợ lý = Mira (an toàn, chỉ áp nếu chưa có tên Mira) ──
+update public.class_ai_config
+  set persona = 'Tên bạn là MIRA — trợ lý nữ, thân thiện, dễ mến. ' || persona
+  where id = 1 and persona is not null and position('Mira' in persona) = 0;
+update public.class_ai_config
+  set greeting = 'Chào bạn 👋 Mình là Mira, trợ lý của Thầy Văn Anh Guitar. Bạn đang muốn học guitar theo hướng nào, hay còn băn khoăn gì? Cứ hỏi mình nhé.'
+  where id = 1 and (greeting is null or position('Mira' in greeting) = 0);
 
 notify pgrst, 'reload schema';

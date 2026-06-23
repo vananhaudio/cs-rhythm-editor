@@ -94,7 +94,7 @@ export default function ClassLandingPage() {
   const [showDemo, setShowDemo] = useState(false)
   const [showNangCao, setShowNangCao] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
-    { who: 'ai', html: 'Chào bạn 👋 Mình là trợ lý của Thầy Văn Anh Guitar. Bạn đang muốn học guitar theo hướng nào, hay còn băn khoăn gì? Cứ hỏi mình nhé.' },
+    { who: 'ai', html: 'Chào bạn 👋 Mình là <b>Mira</b>, trợ lý của Thầy Văn Anh Guitar. Bạn đang muốn học guitar theo hướng nào, hay còn băn khoăn gì? Cứ hỏi mình nhé.' },
   ])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
@@ -196,7 +196,7 @@ export default function ClassLandingPage() {
             <p>Thích hát, thích chơi giai điệu, hay đã chơi nhưng muốn tiến xa hơn — mỗi người một cửa vào. Bạn không cần học cả hành trình ngay từ đầu, chỉ cần chọn đúng khóa nhỏ đầu tiên. Khi sẵn sàng, bản đồ dài hạn luôn ở đó để bạn đi tiếp.</p>
             <div className="hero-cta">
               <button className="btn btn-primary" onClick={() => goto('cuavao')}>Chọn cửa vào của tôi →</button>
-              <button className="btn btn-ghost" onClick={() => goto('chat')}>Tư vấn với trợ lý</button>
+              <button className="btn btn-ghost" onClick={() => goto('chat')}>Trò chuyện với Mira</button>
             </div>
           </div>
           <div className="hero-art">
@@ -280,14 +280,14 @@ export default function ClassLandingPage() {
       <section className="chat-sec" id="chat">
         <div className="wrap chat-grid">
           <div>
-            <div className="eyebrow">Trợ lý tư vấn</div>
-            <h2>Còn câu hỏi riêng? Cứ hỏi trợ lý</h2>
-            <p className="lead">Trợ lý giúp bạn tìm đúng vị trí trên hành trình và trả lời mọi thắc mắc riêng của bạn — trước khi quyết định đăng ký.</p>
+            <div className="eyebrow">Trợ lý Mira</div>
+            <h2>Còn câu hỏi riêng? Hỏi Mira nhé</h2>
+            <p className="lead">Mira giúp bạn tìm đúng cửa vào phù hợp và trả lời mọi thắc mắc riêng của bạn — trước khi quyết định đăng ký.</p>
           </div>
           <div className="chat-card">
             <div className="cc-head">
-              <div className="av">VA<span className="dot" /></div>
-              <div><h4>Trợ lý tư vấn TVA Guitar</h4><p><b>● Đang trực tuyến</b> · trả lời ngay</p></div>
+              <div className="av">M<span className="dot" /></div>
+              <div><h4>Mira · Trợ lý TVA Guitar</h4><p><b>● Đang trực tuyến</b> · trả lời ngay</p></div>
             </div>
             <div className="cc-body" ref={chatBodyRef}>
               {msgs.map((m, i) => <div key={i} className={`msg ${m.who}`} dangerouslySetInnerHTML={{ __html: m.html }} />)}
@@ -500,7 +500,7 @@ export default function ClassLandingPage() {
         </div>
       </footer>
 
-      <button className="fab" onClick={() => goto('chat')}>💬 Tư vấn chọn lớp</button>
+      <button className="fab" onClick={() => goto('chat')}>💬 Hỏi Mira</button>
 
       {/* HÀNH TRÌNH 2027 — bài viết thiết kế native, full màn hình */}
       {showJourney && (
