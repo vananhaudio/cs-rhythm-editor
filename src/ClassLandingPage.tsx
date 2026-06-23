@@ -184,7 +184,7 @@ export default function ClassLandingPage() {
             <p>Chọn một khóa nhỏ phù hợp với bạn. Học theo lớp Zoom, luyện thêm trên app và có lộ trình đi tiếp khi sẵn sàng.</p>
             <div className="hero-stats">
               <div><b>3</b><span>cửa vào để chọn</span></div>
-              <div><b>8 buổi</b><span>Zoom trực tiếp</span></div>
+              <div><b>8 buổi Zoom</b><span>trực tiếp cùng thầy</span></div>
               <div><b>24/24</b><span>tự luyện trên app</span></div>
             </div>
           </div>
@@ -290,12 +290,13 @@ export default function ClassLandingPage() {
         <div className="wrap">
           <div className="eyebrow">Lịch khai giảng</div>
           <h2>Lớp sắp khai giảng</h2>
-          <p className="lead">990k/khoá · 2 tháng · 8 buổi. Nhập môn miễn phí. Đã quyết thì đăng ký luôn, còn lăn tăn thì hỏi thêm.</p>
+          <p className="lead">Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> · 990k/khoá · 2 tháng · 8 buổi. Đã quyết thì đăng ký luôn, còn lăn tăn thì hỏi thêm.</p>
           <div className="cls-list">
             {CLASSES.map((c, i) => (
               <div className="cls-item" key={i}>
                 <span className="tag">{c.tag}</span>
                 <h3>{c.name}</h3>
+                <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : '8 buổi · mỗi buổi 90 phút'}</div>
                 <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
                 <div className="acts">
                   <button className="btn btn-primary" onClick={() => pickClass(c.name)}>Đăng ký lớp này</button>
@@ -312,6 +313,10 @@ export default function ClassLandingPage() {
         <div className="wrap">
           <div className="eyebrow">Quyền lợi</div>
           <h2>Một khóa học gồm những gì?</h2>
+          <div className="zoom-callout">
+            <div className="zoom-callout-h">🎥 Lớp Online trực tiếp cùng Thầy Văn Anh</div>
+            <p>Bạn <b>không học một mình qua video quay sẵn</b>. Bạn học <b>online trực tiếp qua Zoom</b> (8 buổi / 2 tháng, mỗi buổi 90 phút), luyện thêm trên app TVA Guitar và được theo dõi, hỗ trợ trong nhóm lớp.</p>
+          </div>
           <div className="benefits">
             {[['🎥', '<b>8 buổi Zoom trực tiếp</b> cùng thầy, mỗi buổi 90 phút'], ['📱', '<b>App TVA Guitar</b> luyện tập 24/24'], ['✍️', '<b>Bài tập</b> rõ ràng sau mỗi buổi'], ['👥', '<b>Nhóm lớp</b> nhận thông báo & hỗ trợ'], ['🎯', '<b>Tư vấn chọn đúng trình độ</b> trước khi vào lớp'], ['🗺️', '<b>Lộ trình học tiếp</b> rõ ràng khi sẵn sàng']].map(([ic, t], i) => (
               <div className="bf" key={i}><span className="bi">{ic}</span><div dangerouslySetInnerHTML={{ __html: t }} /></div>
@@ -667,7 +672,12 @@ const CSS = `
 .tva-class .cls-item{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;}
 .tva-class .cls-item .tag{font-size:11px;font-weight:700;color:var(--honey);background:var(--honey-tint);display:inline-block;padding:3px 9px;border-radius:6px;align-self:flex-start;}
 .tva-class .cls-item h3{font-size:16px;font-weight:700;margin:10px 0 8px;line-height:1.3;}
+.tva-class .cls-format{font-size:12.5px;font-weight:600;color:var(--indigo);background:var(--indigo-tint);border-radius:7px;padding:5px 10px;display:inline-block;align-self:flex-start;margin-bottom:10px;}
 .tva-class .cls-item .meta{font-size:13.5px;color:var(--ink-soft);display:flex;flex-direction:column;gap:3px;margin-bottom:14px;}
+.tva-class .zoom-callout{background:linear-gradient(150deg,#2A2440,#1B1730);border-radius:16px;padding:22px 24px;margin:22px 0 26px;}
+.tva-class .zoom-callout-h{font-size:17px;font-weight:800;color:#fff;margin-bottom:8px;}
+.tva-class .zoom-callout p{font-size:14.5px;line-height:1.7;color:#C9C3DE;margin:0;}
+.tva-class .zoom-callout b{color:#fff;}
 .tva-class .cls-item .meta b{color:var(--indigo);}
 .tva-class .cls-item .price{font-weight:800;color:var(--honey);}
 .tva-class .cls-item .acts{margin-top:auto;display:flex;gap:8px;}

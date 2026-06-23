@@ -4,6 +4,11 @@ export type FaqBlock = string | string[]
 export interface Faq { q: string; a: FaqBlock[] }
 
 export const FAQS: Faq[] = [
+  { q: 'Lớp học là online hay học trực tiếp tại trung tâm?', a: [
+    'Các lớp Guitar của Thầy Văn Anh hiện được tổ chức theo hình thức online trực tiếp qua Zoom.',
+    'Mỗi khóa thường kéo dài khoảng 2 tháng, gồm 8 buổi học Zoom trên lớp, mỗi buổi khoảng 90 phút. Trong buổi học, bạn được học trực tiếp cùng thầy, theo lịch lớp cố định — không phải video quay sẵn.',
+    'Ngoài giờ học Zoom, bạn có thể tự luyện hằng ngày trên app TVA Guitar 24/24 để xem lại bài, ôn tập, làm bài tập và theo dõi tiến độ.',
+    'Hiện tại, hệ thống ưu tiên lớp online để học viên ở nhiều tỉnh thành vẫn có thể tham gia. Nếu có lớp trực tiếp hoặc workshop offline, thầy sẽ thông báo riêng theo từng thời điểm.' ] },
   { q: 'Tôi mới hoàn toàn từ số 0 thì nên bắt đầu từ lớp nào?', a: [
     'Nếu bạn mới hoàn toàn, có 2 cửa vào phù hợp.',
     'Nếu bạn thích hát, hay hát karaoke, muốn vừa đàn vừa hát, bạn nên bắt đầu với Đệm Hát căn bản – Khởi Đầu Đam Mê 1.',
