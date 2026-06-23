@@ -766,7 +766,7 @@ export default function CourseEditorContent() {
         ) : (
           <>
             <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 10 }}>
                 {/* Logo khoá học */}
                 <button onClick={() => setShowLogoPicker(true)} title="Đổi logo khoá học"
                   style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', flexShrink: 0, padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
@@ -780,12 +780,15 @@ export default function CourseEditorContent() {
                     onKeyDown={e => { if (e.key === 'Enter') saveCourseName(); if (e.key === 'Escape') setEditingCourseName(false) }}
                     style={{ flex: 1, fontWeight: 700, fontSize: 16, border: `1px solid ${C.accent}`, borderRadius: 6, padding: '4px 8px', fontFamily: 'inherit', outline: 'none', marginRight: 8, minWidth: 0 }} />
                 ) : (
-                  <div onDoubleClick={() => { setEditingCourseName(true); setCourseNameDraft(selectedCourse.name) }}
-                    title="Double-click để đổi tên"
-                    style={{ fontWeight: 700, fontSize: 16, color: C.text1, flex: 1, minWidth: 0, marginRight: 8, cursor: 'text', wordBreak: 'break-word', lineHeight: 1.4 }}>
-                    {selectedCourse.name}
+                  <div onClick={() => { setEditingCourseName(true); setCourseNameDraft(selectedCourse.name) }}
+                    title="Bấm để đổi tên khoá"
+                    style={{ fontWeight: 700, fontSize: 16, color: C.text1, flex: 1, minWidth: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedCourse.name}</span>
+                    <span style={{ fontSize: 13, color: C.text3, flexShrink: 0 }}>✏️</span>
                   </div>
                 )}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
                 <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, flexShrink: 0 }}>
                   {(['on','coming_soon','off'] as CourseStatus[]).map(s => {
                     const cfg = STATUS_CFG[s]
