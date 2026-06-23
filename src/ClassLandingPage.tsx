@@ -124,6 +124,7 @@ export default function ClassLandingPage() {
   type SchedItem = { name: string; code: string; schedule: string; start: string }
   const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
   const [showActive, setShowActive] = useState(false)
+  const [faqAll, setFaqAll] = useState(false)
   const chatBodyRef = useRef<HTMLDivElement>(null)
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -507,7 +508,7 @@ export default function ClassLandingPage() {
           <h2>Câu hỏi thường gặp</h2>
           <p className="lead">Những thắc mắc phổ biến nhất khi bắt đầu học guitar cùng Thầy Văn Anh. Còn câu hỏi riêng? <a onClick={() => goto('chat')} style={{ color: '#4338CA', cursor: 'pointer', fontWeight: 600 }}>Hỏi trợ lý →</a></p>
           <div className="faq-list">
-            {FAQS.map((f, i) => (
+            {(faqAll ? FAQS : FAQS.slice(0, 7)).map((f, i) => (
               <details key={i}>
                 <summary>{f.q}</summary>
                 <div className="faq-a">
@@ -518,6 +519,16 @@ export default function ClassLandingPage() {
               </details>
             ))}
           </div>
+          {!faqAll && FAQS.length > 7 && (
+            <div style={{ marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => setFaqAll(true)}>Xem tất cả {FAQS.length} câu hỏi →</button>
+            </div>
+          )}
+          {faqAll && (
+            <div style={{ marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => { setFaqAll(false); goto('faq') }}>Thu gọn ↑</button>
+            </div>
+          )}
         </div>
       </section>
 
