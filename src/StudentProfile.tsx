@@ -139,6 +139,7 @@ interface Props { studentId: string; onBack: () => void }
 
 export default function StudentProfile({ studentId, onBack }: Props) {
   const [student, setStudent] = useState<Student | null>(null)
+  const [myGroups, setMyGroups] = useState<{ name: string; zalo_url: string | null }[]>([])
   const [skills, setSkills] = useState<Skill[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [assignments, setAssignments] = useState<Assignment[]>([])
@@ -287,6 +288,17 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   useEffect(() => {
     supabase.from('edu_course_access').select('course_id').eq('student_id', studentId).eq('active', true)
       .then(({ data }) => setAccessSet(new Set((data ?? []).map((a: any) => a.course_id))))
+    // Lớp (nhóm Zalo) học sinh đã/đang tham gia — hành trình qua các lớp
+    ;(async () => {
+      const { data: su } = await supabase.from('edu_students').select('user_id').eq('id', studentId).single()
+      const uid = (su as any)?.user_id
+      if (!uid) return
+      const { data: mem } = await supabase.from('edu_group_members').select('group_id').eq('user_id', uid).eq('status', 'active')
+      const gids = (mem ?? []).map((m: any) => m.group_id)
+      if (!gids.length) { setMyGroups([]); return }
+      const { data: grps } = await supabase.from('edu_groups').select('name,zalo_url,group_type').in('id', gids)
+      setMyGroups((grps ?? []).filter((g: any) => g.group_type !== 'facebook'))
+    })()
   }, [studentId])
 
   if (loading) return <div style={{ minHeight: '100vh', background: T.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted }}>Đang tải hồ sơ...</div>
@@ -458,6 +470,18 @@ export default function StudentProfile({ studentId, onBack }: Props) {
 
         {activeTab === 'courses' && (
           <div>
+            {myGroups.length > 0 && (
+              <div style={{ marginBottom: 18 }}>
+                <SectionTitle>Lớp tham gia ({myGroups.length})</SectionTitle>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {myGroups.map((g, i) => (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.greenLight, border: `1px solid #90C4A0`, borderRadius: 20, padding: '5px 12px', fontSize: 13, color: T.header, fontWeight: 600 }}>
+                      💬 {g.name}{g.zalo_url ? <a href={g.zalo_url} target="_blank" rel="noreferrer" style={{ color: T.header, textDecoration: 'underline' }}>↗</a> : null}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <SectionTitle>Khoá học đang học ({enrollments.filter(e => e.is_active).length})</SectionTitle>
             {enrollments.filter(e => e.is_active).length === 0 ? (
               <div style={{ color: T.textMuted, fontSize: 14, marginBottom: 20, padding: '12px 0' }}>
