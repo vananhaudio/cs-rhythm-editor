@@ -14,7 +14,7 @@ const STORE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public
 const WELCOME_TD2 = {
   title: 'Chào mừng đến Trình độ 2',
   crumb: 'KHỞI ĐẦU ĐAM MÊ · TRÌNH ĐỘ 2',
-  audioUrl: STORE + 'Chao%20mung%20trinh%20do%202.wav',
+  audioUrl: STORE + 'Gioi%20thieu%20dem%20hat%202.wav',
   slides: WELCOME_TD2_SLIDES,
 }
 
