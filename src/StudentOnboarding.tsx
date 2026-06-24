@@ -6,11 +6,11 @@ import { isNativeIOS, purchaseMonthly, restorePurchases } from './iap'
 
 // Đồng bộ tông mobile app: primary indigo #4338CA, accent cam #EA580C, nền xám #F0F2F5
 const T = {
-  bg: '#F0F2F5', bgCard: '#FFFFFF', bgLight: '#F7F8FA',
-  header: '#4338CA', headerDark: '#3730A3',
-  gold: '#EA580C', goldLight: '#FB923C',
-  text: '#1F2430', textMuted: '#5A6072', textDim: '#9AA0B0',
-  border: '#E1E4EA', borderLight: '#EEF0F4',
+  bg: '#F4F5FB', bgCard: '#FFFFFF', bgLight: '#F9FAFB',
+  header: '#4F46E5', headerDark: '#4338CA',
+  gold: '#4F46E5', goldLight: '#EEF2FF',
+  text: '#111827', textMuted: '#6B7280', textDim: '#9CA3AF',
+  border: '#E5E7EB', borderLight: '#EEF0F4',
   green: '#16A34A', greenLight: '#DCFCE7', greenMid: '#15803D',
   danger: '#B91C1C', dangerBg: '#FEE2E2',
 }
@@ -301,42 +301,48 @@ export default function StudentOnboarding() {
           <div style={{ width: 96, height: 96, borderRadius: 24, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, boxShadow: `0 8px 28px rgba(67,56,202,.22)`, overflow: 'hidden' }}>
             <img src="/tva-logo.png" alt="Thầy Văn Anh Guitar" style={{ width: '78%', height: '78%', objectFit: 'contain' }} />
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.25 }}>
-            Chào mừng đến với<br /><span style={{ color: T.header }}>Thầy Văn Anh Guitar</span>
+          <h1 style={{ fontSize: 27, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.25 }}>
+            Chào mừng bạn quay lại
           </h1>
-          <p style={{ color: T.textMuted, fontSize: 16, lineHeight: 1.7, maxWidth: 380, margin: '0 0 32px' }}>
-            Chào mừng bạn quay lại. Đăng nhập để tiếp tục hành trình cùng thầy Văn Anh Guitar.
+          <p style={{ color: T.textMuted, fontSize: 16, lineHeight: 1.7, maxWidth: 380, margin: '0 0 4px' }}>
+            Tiếp tục hành trình <span style={{ color: T.header, fontWeight: 600 }}>Học – Tập – Sống cùng âm nhạc</span>.
           </p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 36 }}>
-            {['Luyện nhịp', 'Hợp âm', 'Nhạc lý', 'AI trợ lý'].map(f => (
+          <p style={{ color: T.textDim, fontSize: 14, lineHeight: 1.6, maxWidth: 380, margin: '0 0 30px' }}>
+            Học online qua Zoom, luyện tập mỗi ngày trên app.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 34 }}>
+            {['Bài học', 'Luyện tập', 'Nhạc lý', 'AI trợ lý'].map(f => (
               <span key={f} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 20, padding: '5px 14px', fontSize: 14, color: T.textMuted }}>{f}</span>
             ))}
           </div>
           <Btn onClick={() => setStep('login')} style={{
             background: T.header, color: '#fff', border: 'none', borderRadius: 14,
-            padding: '14px 44px', fontSize: 17, fontWeight: 700,
-            boxShadow: `0 8px 20px rgba(67,56,202,.28)`,
+            padding: '14px 44px', fontSize: 17, fontWeight: 700, width: '100%', maxWidth: 360,
+            boxShadow: `0 8px 20px rgba(79,70,229,.26)`,
           }}>Đăng nhập →</Btn>
-          <p style={{ color: T.textDim, fontSize: 13, marginTop: 16 }}>Chưa có tài khoản? Liên hệ thầy để được cấp.</p>
+          <p style={{ color: T.textDim, fontSize: 13, marginTop: 10 }}>Dành cho học viên đã có tài khoản.</p>
 
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIOS && (
             <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360, width: '100%' }}>
               {!iapPurchased ? (
                 <>
-                  <div style={{ fontSize: 14, color: T.textMuted, marginBottom: 14 }}>
-                    Chưa có tài khoản? Đăng ký trực tiếp qua App Store:
+                  <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 3 }}>
+                    Chưa có tài khoản?
+                  </div>
+                  <div style={{ fontSize: 13.5, color: T.textMuted, marginBottom: 14, lineHeight: 1.55 }}>
+                    Bạn có thể đăng ký học trực tiếp qua App Store.
                   </div>
                   <Btn
                     onClick={handleIAPPurchase}
                     disabled={iapLoading}
                     style={{
                       background: '#1B4332', color: '#fff', border: 'none', borderRadius: 12,
-                      padding: '12px 28px', fontSize: 16, fontWeight: 700, width: '100%',
+                      padding: '12px 24px', fontSize: 15, fontWeight: 600, width: '100%',
                       opacity: iapLoading ? 0.6 : 1,
                     }}
                   >
-                    {iapLoading ? 'Đang xử lý...' : '🍎 Đăng ký học — $49.99 / tháng'}
+                    {iapLoading ? 'Đang xử lý...' : 'Đăng ký học — $49.99 / tháng'}
                   </Btn>
 
                   {iapMsg && (
