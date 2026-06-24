@@ -78,7 +78,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     const id = setInterval(() => {
       let p = posRef.current + 1
       if (p >= timeline.length) {
-        if (hitsRef.current.every(Boolean) && loopRef.current < loops) { loopRef.current += 1; setLoopOk(loopRef.current) }
+        if (loopRef.current < loops) { loopRef.current += 1; setLoopOk(loopRef.current) }  // đếm MỌI vòng đã tập (không gate mic)
         hitsRef.current = exercise.cells.map(() => false)
         setHits([])
         p = 0
@@ -174,12 +174,12 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       })()}
       <div style={{ marginTop: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#374151', marginBottom: 4 }}>
-          <span style={{ fontWeight: 600 }}>Đánh đúng cả bài</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops} lượt</span>
+          <span style={{ fontWeight: 600 }}>Số vòng đã tập</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops} vòng</span>
         </div>
         <div style={{ height: 8, background: '#E1E4EA', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ width: `${Math.min(100, (loopOk / loops) * 100)}%`, height: '100%', background: '#16A34A', borderRadius: 4, transition: 'width .3s' }} />
         </div>
-        <div style={{ fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>Gảy đúng hết các hợp âm từ đầu đến cuối = 1 lượt. Đạt {loops} lượt để qua bài.</div>
+        <div style={{ fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>Cứ tập theo khuông; mỗi lần đi hết bài = 1 vòng. Đủ {loops} vòng là xong bài tập này.</div>
       </div>
 
       {done ? (

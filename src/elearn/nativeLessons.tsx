@@ -5,7 +5,7 @@ import type { ComponentType } from 'react'
 import ChordLesson from './ChordLesson'
 import { AM_E, C_G7 } from './chordLessons'
 
-export interface NativeLessonProps { onClose?: () => void; onComplete?: () => void }
+export interface NativeLessonProps { onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }
 
 export const NATIVE_LESSONS: Record<string, { label: string; Component: ComponentType<NativeLessonProps> }> = {
   'chord-cg7': { label: 'Quạt hợp âm C ↔ G7 (3 bài tập)', Component: (p) => <ChordLesson cfg={C_G7} {...p} /> },

@@ -1294,7 +1294,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 const entry = NATIVE_LESSONS[key]
                 if (!entry) return <div style={{ padding: 24, color: L.t2 }}>Bài học chưa cấu hình đúng (native: {key || '—'}).<br /><button onClick={goBack} style={{ marginTop: 12 }}>‹ Quay lại</button></div>
                 const C = entry.Component
-                return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} />
+                return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={student.id} lessonId={activeLesson.id} />
               })()
             ) : activeLesson.lesson_type === 'flow' ? (
               <FlowPlayer

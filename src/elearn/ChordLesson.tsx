@@ -1,10 +1,16 @@
 // ── BÀI HỌC HỢP ÂM (chung, config-driven) ─────────────────────────────────────
 // Cấu trúc: Lý thuyết → Làm quen (mic) → các bài tập đổi nhịp (ChordSeqTrainer) → Quiz.
 // Mỗi bài mới chỉ cần khai 1 object cfg (xem chordLessons.ts) — không code lại.
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../supabase'
 import { ChordPractice } from './ChordPractice'
 import { MiniDiagram } from './ChordChangeTrainer'
 import ChordSeqTrainer, { type Exercise } from './ChordSeqTrainer'
+
+// Màu kỹ năng theo số phiên đã luyện: 1=đỏ, 2=vàng, 3+=xanh
+const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 'Xanh — đã đủ vòng luyện cơ bản' }
+  : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Vàng — đang ổn định, tập thêm 1 phiên' }
+  : { color: '#DC2626', bg: '#FEE2E2', label: 'Đỏ — đã bắt đầu, cần luyện thêm' }
 
 const INDIGO = '#4338CA'
 const ORANGE = '#EA580C'
@@ -26,7 +32,7 @@ function Btn({ children, onClick, primary }: { children: React.ReactNode; onClic
   return <button onClick={onClick} style={{ width: '100%', padding: 14, borderRadius: 14, border: primary ? 'none' : `1.5px solid ${INDIGO}`, background: primary ? INDIGO : '#fff', color: primary ? '#fff' : INDIGO, fontSize: 15, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>{children}</button>
 }
 
-export default function ChordLesson({ cfg, onClose, onComplete }: { cfg: ChordLessonCfg; onClose?: () => void; onComplete?: () => void }) {
+export default function ChordLesson({ cfg, onClose, onComplete, studentId, lessonId }: { cfg: ChordLessonCfg; onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }) {
   const practice = cfg.practice !== false
   const EX_START = practice ? 2 : 1
   const QUIZ = EX_START + cfg.exercises.length
@@ -37,7 +43,23 @@ export default function ChordLesson({ cfg, onClose, onComplete }: { cfg: ChordLe
   const [qIdx, setQIdx] = useState(0)
   const [qSel, setQSel] = useState<number | null>(null)
   const [qScore, setQScore] = useState(0)
+  const [sessions, setSessions] = useState(0)   // tổng số phiên đã luyện (sau khi ghi nhận)
+  const recordedRef = useRef(false)
   const next = () => setStep(s => Math.min(s + 1, DONE))
+
+  // Tới màn hoàn thành = xong 1 phiên → ghi nhận (1 lần / lần hoàn thành)
+  useEffect(() => {
+    if (step !== DONE || recordedRef.current) return
+    recordedRef.current = true
+    onComplete?.()
+    if (studentId && lessonId) {
+      supabase.rpc('record_skill_session', { p_student: studentId, p_lesson: lessonId })
+        .then(({ data, error }) => setSessions(error ? s => s + 1 : (data as number) || 1))
+    } else setSessions(s => s + 1)
+  }, [step, DONE, studentId, lessonId, onComplete])
+
+  // Tập thêm 1 phiên: quay lại bài tập đầu
+  const practiceAgain = () => { recordedRef.current = false; setQIdx(0); setQSel(null); setStep(EX_START) }
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#F0F2F5', fontFamily: 'system-ui, sans-serif' }}>
@@ -96,7 +118,7 @@ export default function ChordLesson({ cfg, onClose, onComplete }: { cfg: ChordLe
               <div key={step}>
                 <div style={{ fontSize: 16, fontWeight: 800, color: '#1F2430', marginBottom: 4 }}>{ex.name}</div>
                 {ex.hint && <div style={{ fontSize: 13.5, color: '#5A6072', lineHeight: 1.6, marginBottom: 12 }}>{ex.hint}</div>}
-                <ChordSeqTrainer exercise={ex} bpm={ex.strumPerBeat ? 65 : 55} loops={2} onPass={next} />
+                <ChordSeqTrainer exercise={ex} bpm={ex.strumPerBeat ? 65 : 55} loops={4} onPass={next} />
                 <div style={{ marginTop: 14 }}><Btn onClick={next}>{step === QUIZ - 1 ? 'Sang Quiz →' : 'Bài tập tiếp →'}</Btn></div>
               </div>
             )
@@ -132,18 +154,33 @@ export default function ChordLesson({ cfg, onClose, onComplete }: { cfg: ChordLe
             </div>
           )}
 
-          {step === DONE && (
-            <div style={{ textAlign: 'center', paddingTop: 24 }}>
-              <div style={{ fontSize: 48 }}>🎉</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#1F2430', marginTop: 8 }}>Hoàn thành bài!</div>
-              <div style={{ fontSize: 14, color: '#5A6072', marginTop: 6, lineHeight: 1.6 }}>
-                Bạn đã làm quen {cfg.learn.join(', ')} và tập {cfg.exercises.length} bài tập đổi hợp âm.
-                {cfg.quiz.length > 0 && <><br />Quiz đúng <b style={{ color: '#16A34A' }}>{qScore}/{cfg.quiz.length}</b> câu.</>}
+          {step === DONE && (() => {
+            const sk = SKILL(sessions)
+            const green = sessions >= 3
+            return (
+              <div style={{ textAlign: 'center', paddingTop: 20 }}>
+                <div style={{ fontSize: 44 }}>{green ? '🟢' : '🎉'}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#1F2430', marginTop: 6 }}>Xong 1 phiên luyện!</div>
+
+                {/* Trạng thái kỹ năng (đỏ/vàng/xanh) */}
+                <div style={{ background: sk.bg, border: `1.5px solid ${sk.color}`, borderRadius: 14, padding: '12px 14px', margin: '14px 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+                    {[1, 2, 3].map(i => <span key={i} style={{ width: 26, height: 8, borderRadius: 4, background: i <= sessions ? sk.color : '#E5E7EB' }} />)}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: sk.color }}>{sk.label}</div>
+                  <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 3 }}>Đã luyện <b>{sessions}/3</b> phiên{green ? ' — bài đã xanh hóa 🎉' : ` · còn ${3 - sessions} phiên để xanh hóa`}</div>
+                </div>
+
+                {/* Nhắc nghỉ */}
+                <div style={{ fontSize: 13.5, color: '#5A6072', lineHeight: 1.6, marginBottom: 16 }}>
+                  Bạn đã làm được nhiều rồi 👏 <b>Hãy nghỉ 1–2 phút</b> để tay và não kịp ghi nhớ, rồi tập tiếp nếu còn thoải mái.
+                </div>
+
+                {!green && <div style={{ marginBottom: 10 }}><Btn primary onClick={practiceAgain}>Tập thêm 1 phiên →</Btn></div>}
+                <Btn onClick={() => onClose?.()}>{green ? 'Hoàn tất — về danh sách' : 'Dừng tại đây, mai tập tiếp'}</Btn>
               </div>
-              <div style={{ display: 'inline-block', marginTop: 14, background: '#FFF3EC', color: '#9A4316', fontWeight: 800, borderRadius: 20, padding: '6px 16px', fontSize: 14 }}>+15 XP</div>
-              <div style={{ marginTop: 20 }}><Btn primary onClick={() => { onComplete?.(); onClose?.() }}>Về danh sách bài →</Btn></div>
-            </div>
-          )}
+            )
+          })()}
 
         </div>
       </div>
