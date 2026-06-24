@@ -305,7 +305,7 @@ export default function StudentOnboarding() {
             Chào mừng đến với<br /><span style={{ color: T.header }}>Thầy Văn Anh Guitar</span>
           </h1>
           <p style={{ color: T.textMuted, fontSize: 16, lineHeight: 1.7, maxWidth: 380, margin: '0 0 32px' }}>
-            Học guitar theo lộ trình riêng — từ nhịp, hợp âm đến đệm hát. Đăng nhập để tiếp tục hành trình của bạn.
+            Chào mừng bạn quay lại. Đăng nhập để tiếp tục hành trình cùng thầy Văn Anh Guitar.
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 36 }}>
             {['Luyện nhịp', 'Hợp âm', 'Nhạc lý', 'AI trợ lý'].map(f => (
