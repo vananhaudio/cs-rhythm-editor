@@ -62,7 +62,7 @@ export default function ChordLesson({ cfg, onClose, onComplete, studentId, lesso
   const practiceAgain = () => { recordedRef.current = false; setQIdx(0); setQSel(null); setStep(EX_START) }
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#F0F2F5', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: '#F0F2F5', fontFamily: 'system-ui, sans-serif' }}>
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 8px', background: '#fff', borderBottom: '1px solid #E8EAF0', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: INDIGO, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>

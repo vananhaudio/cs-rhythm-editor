@@ -108,11 +108,11 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       <style>{`@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
 
       {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo) */}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
         {distinct.map(c => (
-          <div key={c} style={{ width: 56, textAlign: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#3A4050' }}>{c}</div>
-            <MiniDiagram name={c} />
+          <div key={c} style={{ width: 44, textAlign: 'center' }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#3A4050' }}>{c}</div>
+            <MiniDiagram name={c} size={50} />
           </div>
         ))}
       </div>
@@ -143,7 +143,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
           const kids: ReactNode[] = [vline('l0')]
           row.forEach((b, bj) => { kids.push(bar(b, bj)); kids.push(vline('l' + bj, isLastRow && bj === row.length - 1)) })
           if (row.length === 1) kids.push(<div key="sp" style={{ flex: 1 }} />)
-          return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 16 }}>{kids}</div>
+          return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 12 }}>{kids}</div>
         })}
       </div>
       <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống (1 phách) · ◇ = gảy 1 lần giữ cả ô</div>
@@ -159,16 +159,16 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       {/* Bảng phản hồi mic — hướng dẫn rõ + báo đúng/sai realtime */}
       {(() => {
         let bg = '#F1F2F6', bd = '#E5E7EB', col = '#374151', icon = '🎤'
-        let msg: React.ReactNode = <>App chấm bằng <b>micro</b>: bấm <b>Bắt đầu</b> → <b>cho phép mic</b> → <b>gảy hợp âm theo khuông</b>. App sẽ báo đúng/sai ngay.</>
+        let msg: React.ReactNode = <>Bấm <b>Bắt đầu</b> → cho phép mic → <b>gảy theo khuông</b>. App nghe và báo đúng/sai ngay.</>
         if (running) {
           if (heard && heard === cur?.chord) { bg = '#DCFCE7'; bd = '#86EFAC'; col = '#15803D'; icon = '✓'; msg = <>Đúng rồi! App đang nghe <b>{heard}</b></> }
           else if (heard) { bg = '#FEF3C7'; bd = '#FCD34D'; col = '#92400E'; icon = '✗'; msg = <>Đang nghe <b>{heard}</b> — bạn cần gảy hợp âm <b>{cur?.chord}</b></> }
           else { bg = '#EEF2FF'; bd = '#C7CBF0'; col = '#4338CA'; icon = '🎤'; msg = <>Gảy hợp âm <b>{cur?.chord}</b> đi — app đang lắng nghe…</> }
         }
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11, background: bg, border: `1.5px solid ${bd}`, borderRadius: 14, padding: '13px 14px', marginTop: 12 }}>
-            <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
-            <span style={{ fontSize: 13.5, color: col, fontWeight: 600, lineHeight: 1.45 }}>{msg}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: bg, border: `1.5px solid ${bd}`, borderRadius: 12, padding: '9px 12px', marginTop: 10 }}>
+            <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+            <span style={{ fontSize: 13, color: col, fontWeight: 600, lineHeight: 1.4 }}>{msg}</span>
           </div>
         )
       })()}

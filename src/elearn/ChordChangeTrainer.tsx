@@ -105,7 +105,7 @@ export function useLiveChord() {
 }
 
 // ── Sơ đồ hợp âm nhỏ ──────────────────────────────────────────────────────────
-export function MiniDiagram({ name, dim }: { name: string; dim?: boolean }) {
+export function MiniDiagram({ name, dim, size = 86 }: { name: string; dim?: boolean; size?: number }) {
   const shape = chordShape(name)
   if (!shape) return null
   const frets = shape.frets // dây 6 → dây 1
@@ -121,7 +121,7 @@ export function MiniDiagram({ name, dim }: { name: string; dim?: boolean }) {
     return (map[name]?.[i]) || String(f - offset)
   }
   return (
-    <svg viewBox="0 0 84 96" style={{ width: '100%', height: 86, opacity: dim ? 0.75 : 1 }}>
+    <svg viewBox="0 0 84 96" style={{ width: '100%', height: size, opacity: dim ? 0.75 : 1 }}>
       {[0, 1, 2, 3, 4, 5].map(s => <line key={'s' + s} x1={padX + s * fw} y1={padTop} x2={padX + s * fw} y2={padTop + rows * rh} stroke="#C9CEDA" strokeWidth={1} />)}
       {[0, 1, 2, 3, 4].map(r => <line key={'r' + r} x1={padX} y1={padTop + r * rh} x2={W - padX} y2={padTop + r * rh} stroke="#C9CEDA" strokeWidth={r === 0 && !offset ? 2.5 : 1} />)}
       {frets.map((f, i) => {
