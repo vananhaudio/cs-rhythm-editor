@@ -65,9 +65,10 @@ export default function NarratedSlides({ cfg, onComplete, onClose }: { cfg: Narr
         <div style={{ fontSize: 12, color: '#9AA0B0' }}>{cur + 1}/{N}</div>
       </div>
 
-      {/* Slide (16:9, chứa trọn) */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', minHeight: 0 }}>
-        <div style={{ width: '100%', maxWidth: 760, aspectRatio: '16 / 9', background: '#11121A', borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,.5)', position: 'relative', containerType: 'size' }}>
+      {/* Slide — lấp đầy màn (dọc/ngang đều được); card tự xếp dọc khi màn dọc */}
+      <style>{`@container (max-aspect-ratio: 1/1){.ntd-row{flex-direction:column !important}.ntd-row>*{max-height:none !important}}`}</style>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', justifyContent: 'center', padding: '2px 8px 6px', minHeight: 0 }}>
+        <div style={{ width: '100%', maxWidth: 760, background: '#11121A', borderRadius: 14, overflow: 'hidden', position: 'relative', containerType: 'size' }}>
           {cfg.slides[cur] ?? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: 13 }}>Slide {cur + 1}</div>}
         </div>
       </div>

@@ -31,7 +31,7 @@ export const WELCOME_TD2_SLIDES: ReactNode[] = [
   // 2 — Ôn lại TĐ1
   <Frame key={2} align="flex-start">
     <Eyebrow>ÔN LẠI TRÌNH ĐỘ 1 · NỀN TẢNG ĐÃ CÓ</Eyebrow>
-    <div style={{ display: 'flex', gap: '3cqw', width: '100%', flex: 1, maxHeight: '62cqh' }}>
+    <div className="ntd-row" style={{ display: 'flex', gap: '3cqw', width: '100%', flex: 1, maxHeight: '62cqh' }}>
       <Card c="#5DCAA5" tag="✓ ĐÃ HỌC" en="PHÁCH" vi="Beat" desc="Đơn vị thời gian cơ bản mà con người cảm nhận được trong âm nhạc." />
       <Card c="#5DA8E0" tag="✓ ĐÃ HỌC" en="NHỊP" vi="Meter" desc="Cách tổ chức các phách mạnh – nhẹ thành chu kỳ có trật tự." />
     </div>
@@ -44,7 +44,7 @@ export const WELCOME_TD2_SLIDES: ReactNode[] = [
   // 4 — Hai khái niệm mới
   <Frame key={4} align="flex-start">
     <Eyebrow>TRÌNH ĐỘ 2 · HAI KHÁI NIỆM MỚI</Eyebrow>
-    <div style={{ display: 'flex', gap: '3cqw', width: '100%', flex: 1, maxHeight: '62cqh' }}>
+    <div className="ntd-row" style={{ display: 'flex', gap: '3cqw', width: '100%', flex: 1, maxHeight: '62cqh' }}>
       <Card c={IND} tag="01" en="CHÙM NỐT" vi="Note grouping" desc="Cách chia nhỏ một phách thành những nhóm âm thanh khác nhau." />
       <Card c={GOLD} tag="02" en="TIẾT TẤU" vi="Rhythm" desc="Cách sắp xếp các trường độ ngắn – dài trong thời gian để tạo nên chuyển động âm nhạc." />
     </div>
@@ -77,7 +77,7 @@ export const WELCOME_TD2_SLIDES: ReactNode[] = [
   // 7 — Mục tiêu
   <Frame key={7} align="flex-start">
     <Eyebrow>MỤC TIÊU TRÌNH ĐỘ 2 · HIỂU GỐC CỦA ĐIỆU</Eyebrow>
-    <div style={{ display: 'flex', gap: '2.4cqw', width: '100%', flex: 1, maxHeight: '60cqh' }}>
+    <div className="ntd-row" style={{ display: 'flex', gap: '2.4cqw', width: '100%', flex: 1, maxHeight: '60cqh' }}>
       {[['01', 'Học điệu nhanh hơn', 'Hiểu nguyên lý, không cần ghi nhớ máy móc từng điệu.'], ['02', 'Nhớ lâu hơn', 'Gốc rễ vững thì kiến thức không bị quên theo thời gian.'], ['03', 'Chơi linh hoạt hơn', 'Tiếng đàn có sức sống và cảm giác âm nhạc riêng biệt.']].map(([n, h, d]) => (
         <div key={n} style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: '1px solid #33365088', borderRadius: '2cqw', padding: '3cqh 2.4cqw' }}>
           <div style={{ fontSize: '4cqw', fontWeight: 900, color: GOLD }}>{n}</div>
