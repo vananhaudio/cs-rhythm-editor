@@ -302,13 +302,10 @@ export default function StudentOnboarding() {
             <img src="/tva-logo.png" alt="Thầy Văn Anh Guitar" style={{ width: '78%', height: '78%', objectFit: 'contain' }} />
           </div>
           <h1 style={{ fontSize: 27, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.25 }}>
-            Chào mừng bạn quay lại
+            Chào mừng đến với<br /><span style={{ color: T.header }}>Thầy Văn Anh Guitar</span>
           </h1>
-          <p style={{ color: T.textMuted, fontSize: 16, lineHeight: 1.7, maxWidth: 380, margin: '0 0 4px' }}>
-            Tiếp tục hành trình <span style={{ color: T.header, fontWeight: 600 }}>Học – Tập – Sống cùng âm nhạc</span>.
-          </p>
-          <p style={{ color: T.textDim, fontSize: 14, lineHeight: 1.6, maxWidth: 380, margin: '0 0 30px' }}>
-            Học online qua Zoom, luyện tập mỗi ngày trên app.
+          <p style={{ color: T.textMuted, fontSize: 15, lineHeight: 1.6, maxWidth: 380, margin: '0 0 30px' }}>
+            Học · Tập · Sống cùng âm nhạc
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 34 }}>
             {['Bài học', 'Luyện tập', 'Nhạc lý', 'AI trợ lý'].map(f => (
