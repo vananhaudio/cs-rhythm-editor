@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { QuizViewer } from './components/QuizViewer'
 import FlowPlayer from './FlowPlayer'
 import ElearnLessonView from './elearn/ElearnLessonView'
+import { NATIVE_LESSONS } from './elearn/nativeLessons'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -74,6 +75,15 @@ export default function LessonViewerPage() {
   }
 
   // Hoàn thành bài elearn → ghi tiến độ + XP + "đã thực hành" (điểm hành trình)
+  // Đánh dấu hoàn thành bài NATIVE (chord, slide…) trên desktop
+  const completeNative = (lesson: Lesson) => {
+    if (completedIds.has(lesson.id)) return
+    setCompletedIds(prev => new Set(prev).add(lesson.id))
+    if (!studentId) return
+    supabase.from('edu_lesson_progress').upsert({ student_id: studentId, lesson_id: lesson.id, completed: true, completed_at: new Date().toISOString() }, { onConflict: 'student_id,lesson_id' }).then(() => {})
+    supabase.from('student_xp_log').insert({ student_id: studentId, xp: 15, reason: 'native:' + (lesson.content_url || '') }).then(() => {})
+  }
+
   const completeElearn = async (lesson: Lesson, lessonNum: number) => {
     if (completedIds.has(lesson.id)) return // đã xong rồi, không cộng lại
     setCompletedIds(prev => new Set(prev).add(lesson.id))
@@ -232,9 +242,15 @@ export default function LessonViewerPage() {
         )
       })()}
 
-      {/* ── MAIN: lesson content (ẩn khi bài elearn — overlay đã phủ kín) ─ */}
+      {/* ── BÀI NATIVE (chord, slide…) — overlay full màn, dùng chung với app ── */}
+      {active && active.lesson_type === 'native' && NATIVE_LESSONS[active.content_url ?? ''] && (() => {
+        const C = NATIVE_LESSONS[active.content_url!].Component
+        return <C onClose={() => setActive(null)} onComplete={() => completeNative(active)} studentId={studentId} lessonId={active.id} />
+      })()}
+
+      {/* ── MAIN: lesson content (ẩn khi bài elearn/native — overlay đã phủ kín) ─ */}
       <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
-        {active && elearnNumOf(active) != null ? null : !active ? (
+        {active && (elearnNumOf(active) != null || active.lesson_type === 'native') ? null : !active ? (
           <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: D.text3, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 40 }}>👈</span>
             <div>Chọn bài học từ danh sách</div>
