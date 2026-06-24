@@ -125,6 +125,27 @@ export default function ClassLandingPage() {
   const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
   const [showActive, setShowActive] = useState(false)
   const [faqAll, setFaqAll] = useState(false)
+  // Tạo tài khoản miễn phí (gọi Edge Function signup-free)
+  const [showSignup, setShowSignup] = useState(false)
+  const [suName, setSuName] = useState('')
+  const [suEmail, setSuEmail] = useState('')
+  const [suPass, setSuPass] = useState('')
+  const [suLoading, setSuLoading] = useState(false)
+  const [suErr, setSuErr] = useState('')
+  const [suDone, setSuDone] = useState(false)
+  const submitSignup = async () => {
+    setSuErr('')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(suEmail.trim())) { setSuErr('Email chưa đúng định dạng.'); return }
+    if (suPass.trim().length < 6) { setSuErr('Mật khẩu cần ít nhất 6 ký tự.'); return }
+    setSuLoading(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('signup-free', { body: { name: suName.trim(), email: suEmail.trim(), password: suPass.trim() } })
+      const res = (data || {}) as { ok?: boolean; error?: string }
+      if (error || res.error) { setSuErr(res.error || 'Tạo tài khoản chưa được, thử lại hoặc nhắn Zalo thầy nhé.'); setSuLoading(false); return }
+      setSuDone(true)
+    } catch { setSuErr('Lỗi kết nối, thử lại nhé.') }
+    setSuLoading(false)
+  }
   const chatBodyRef = useRef<HTMLDivElement>(null)
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -229,6 +250,9 @@ export default function ClassLandingPage() {
             <div className="hero-cta">
               <button className="btn btn-primary" onClick={() => goto('cuavao')}>Chọn cửa vào của tôi →</button>
               <button className="btn btn-ghost" onClick={() => goto('chat')}>Trò chuyện với Mira</button>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <button className="btn btn-ghost" onClick={() => setShowSignup(true)} style={{ fontSize: 14 }}>🎁 Tạo tài khoản miễn phí — học thử ngay trên app</button>
             </div>
           </div>
           <div className="hero-art">
@@ -553,6 +577,45 @@ export default function ClassLandingPage() {
       <button className="fab" onClick={() => goto('chat')}>💬 Hỏi Mira</button>
 
       {/* HÀNH TRÌNH 2027 — bài viết thiết kế native, full màn hình */}
+      {showSignup && (
+        <div onClick={() => setShowSignup(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, padding: 24, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,.3)', fontFamily: 'system-ui, sans-serif' }}>
+            {!suDone ? (
+              <>
+                <div style={{ fontSize: 19, fontWeight: 800, color: '#111827', marginBottom: 4 }}>Tạo tài khoản miễn phí</div>
+                <div style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 1.55, marginBottom: 16 }}>
+                  Học thử miễn phí trên app: khoá <b>Nhập Môn</b> và <b>Nhạc lý cơ bản</b>. Đăng ký học với thầy để mở các khoá còn lại.
+                </div>
+                {[['Họ tên', suName, setSuName, 'text', 'Nguyễn Văn A'], ['Email', suEmail, setSuEmail, 'email', 'email@example.com'], ['Mật khẩu (≥ 6 ký tự)', suPass, setSuPass, 'password', '••••••']].map(([lbl, val, set, type, ph]: any) => (
+                  <div key={lbl} style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 13, color: '#6B7280', marginBottom: 5, fontWeight: 500 }}>{lbl}</label>
+                    <input value={val} onChange={e => set(e.target.value)} type={type} placeholder={ph}
+                      onKeyDown={e => { if (e.key === 'Enter') submitSignup() }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 13px', background: '#F9FAFB', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 15, color: '#111827', outline: 'none', fontFamily: 'inherit' }} />
+                  </div>
+                ))}
+                {suErr && <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 12px', fontSize: 13.5, marginBottom: 12 }}>{suErr}</div>}
+                <button onClick={submitSignup} disabled={suLoading} style={{ width: '100%', background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: suLoading ? .65 : 1 }}>
+                  {suLoading ? 'Đang tạo...' : 'Tạo tài khoản & học thử →'}
+                </button>
+                <button onClick={() => setShowSignup(false)} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, marginTop: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Để sau</button>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 42 }}>🎉</div>
+                <div style={{ fontSize: 19, fontWeight: 800, color: '#111827', margin: '6px 0' }}>Tạo tài khoản thành công!</div>
+                <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, marginBottom: 18 }}>
+                  Bạn đã có thể đăng nhập trên app để học thử khoá Nhập Môn và Nhạc lý cơ bản.
+                </div>
+                <a href="https://timming.vananhaudio.com/start" target="_blank" rel="noreferrer"
+                  style={{ display: 'block', background: '#4F46E5', color: '#fff', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>Mở app & đăng nhập →</a>
+                <button onClick={() => { setShowSignup(false); setSuDone(false); setSuName(''); setSuEmail(''); setSuPass('') }} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, marginTop: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Đóng</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {showJourney && (
         <ClassJourney2027
           onClose={() => setShowJourney(false)}
