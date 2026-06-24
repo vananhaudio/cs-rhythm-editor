@@ -200,15 +200,18 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
   }
 
   const done = clean >= target
-  // VỊ TRÍ CỐ ĐỊNH: C luôn bên trái, G7 luôn bên phải — chỉ đổi HIGHLIGHT thẻ đang chơi
+  const restLeft = phase === 'rest' ? 4 - (beat - 4) : 0  // số phách còn lại trước khi vào hợp âm mới
   const card = (name: string) => {
-    const isReq = running && name === required
+    const isPlay = running && phase === 'play' && name === required
+    const isPrep = running && phase === 'rest' && name === next
+    const isLeaving = running && phase === 'rest' && name === required
+    const dim = running && !isPlay && !isPrep
     return (
-      <div key={name} style={{ flex: 1, background: '#fff', border: `${isReq ? 2 : 1}px solid ${isReq ? INDIGO : '#E1E4EA'}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: isReq || !running ? 1 : 0.5, transition: 'opacity .15s, border-color .15s' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: isReq ? INDIGO : '#3A4050' }}>{name}</div>
-        <MiniDiagram name={name} dim={running && !isReq} />
-        <div style={{ fontSize: 14, fontWeight: 800, height: 18, color: isReq ? (phase === 'play' ? ORANGE : INDIGO) : '#C3C8D2' }}>
-          {!running ? ' ' : isReq ? (phase === 'play' ? 'GẢY!' : 'chuyển ngón…') : ' '}
+      <div key={name} className={isPrep ? 'cc-prep' : ''} style={{ flex: 1, background: isPrep ? '#F4F5FF' : '#fff', border: `${isPlay || isPrep ? 2 : 1}px solid ${isPlay ? ORANGE : isPrep ? INDIGO : '#E1E4EA'}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: isLeaving ? 0.3 : dim ? 0.5 : 1, transition: 'opacity .2s, border-color .2s, background .2s' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: isPlay ? ORANGE : isPrep ? INDIGO : '#3A4050' }}>{name}</div>
+        <MiniDiagram name={name} dim={dim || isLeaving} />
+        <div style={{ fontSize: 14, fontWeight: 800, height: 18, color: isPlay ? ORANGE : isPrep ? INDIGO : '#C3C8D2' }}>
+          {!running ? ' ' : isPlay ? 'GẢY!' : isPrep ? `sẵn sàng · ${restLeft}` : isLeaving ? 'rời tay…' : ' '}
         </div>
       </div>
     )
@@ -216,7 +219,8 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
 
   return (
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
-      <div style={{ display: 'flex', gap: 10 }}>
+      <style>{`@keyframes ccPrep{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}.cc-prep{animation:ccPrep .5s ease-in-out infinite}`}</style>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
         {SEQ.map(card)}
       </div>
 
