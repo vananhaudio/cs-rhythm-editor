@@ -262,8 +262,8 @@ export default function StudentOnboarding() {
 
   return (
     <div style={{ minHeight: step === 'portal' ? undefined : '100vh', background: step === 'portal' ? 'transparent' : T.bg, fontFamily: '"Segoe UI", Inter, system-ui, sans-serif', color: T.text }}>
-      {/* Header — ẩn khi đang ở portal (portal tự có header riêng) */}
-      {step !== 'portal' && (
+      {/* Header — chỉ hiện ở màn đăng nhập; màn welcome dùng logo ở giữa cho gọn */}
+      {step === 'login' && (
       <header style={{
         background: T.header, padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 20px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -297,7 +297,7 @@ export default function StudentOnboarding() {
 
       {/* WELCOME */}
       {step === 'welcome' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100dvh - 64px)', padding: 32, textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', padding: 'calc(env(safe-area-inset-top, 0px) + 40px) 32px calc(env(safe-area-inset-bottom, 0px) + 32px)', textAlign: 'center' }}>
           <div style={{ width: 96, height: 96, borderRadius: 24, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, boxShadow: `0 8px 28px rgba(67,56,202,.22)`, overflow: 'hidden' }}>
             <img src="/tva-logo.png" alt="Thầy Văn Anh Guitar" style={{ width: '78%', height: '78%', objectFit: 'contain' }} />
           </div>
