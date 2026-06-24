@@ -35,7 +35,7 @@ const INDIGO = '#4338CA'
 const ORANGE = '#EA580C'
 
 // ── Mic nghe liên tục: trả về tên hợp âm đang nghe (ref, không re-render mỗi frame) ──
-function useLiveChord() {
+export function useLiveChord() {
   const ctxRef = useRef<AudioContext | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef(0)
