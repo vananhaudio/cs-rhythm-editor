@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from './supabase'
 
 interface Student {
   id: string
+  user_id: string | null
   full_name: string
   email: string | null
   phone: string | null
@@ -10,6 +11,7 @@ interface Student {
   is_active: boolean
   enrolled_at: string | null
 }
+interface Grp { id: string; name: string; zalo_url: string | null }
 
 const T = {
   bg: '#EAD7B8', bgCard: '#F5EDD8', bgCardHover: '#FBF5EA',
@@ -37,18 +39,34 @@ export default function StudentList({ onSelect }: Props) {
   const [levelFilter, setLevelFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+  // Lớp = nhóm Zalo (edu_groups). Bấm lớp → lọc học sinh trong lớp đó.
+  const [groups, setGroups] = useState<Grp[]>([])
+  const [memberByGroup, setMemberByGroup] = useState<Record<string, Set<string>>>({})
+  const [classFilter, setClassFilter] = useState('all')
 
   useEffect(() => {
-    supabase.from('edu_students').select('id,full_name,email,phone,level,is_active,enrolled_at')
+    supabase.from('edu_students').select('id,user_id,full_name,email,phone,level,is_active,enrolled_at')
       .order('full_name').then(({ data }) => {
-        setStudents(data ?? [])
-        setFiltered(data ?? [])
+        setStudents((data ?? []) as Student[])
+        setFiltered((data ?? []) as Student[])
         setLoading(false)
+      })
+    supabase.from('edu_groups').select('id,name,zalo_url,group_type').eq('is_active', true).order('name')
+      .then(({ data }) => setGroups((data ?? []).filter((g: any) => g.group_type !== 'facebook') as Grp[]))
+    supabase.from('edu_group_members').select('user_id,group_id').eq('status', 'active')
+      .then(({ data }) => {
+        const m: Record<string, Set<string>> = {}
+        ;(data ?? []).forEach((r: any) => { (m[r.group_id] ??= new Set()).add(r.user_id) })
+        setMemberByGroup(m)
       })
   }, [])
 
   useEffect(() => {
     let result = students
+    if (classFilter !== 'all') {
+      const ids = memberByGroup[classFilter] ?? new Set()
+      result = result.filter(s => s.user_id && ids.has(s.user_id))
+    }
     if (search) {
       const q = search.toLowerCase()
       result = result.filter(s =>
@@ -61,9 +79,10 @@ export default function StudentList({ onSelect }: Props) {
     if (statusFilter === 'active') result = result.filter(s => s.is_active)
     if (statusFilter === 'inactive') result = result.filter(s => !s.is_active)
     setFiltered(result)
-  }, [search, levelFilter, statusFilter, students])
+  }, [search, levelFilter, statusFilter, classFilter, students, memberByGroup])
 
   const activeCount = students.filter(s => s.is_active).length
+  const chip = (on: boolean): CSSProperties => ({ background: on ? T.header : T.bgCard, color: on ? '#fff' : T.text, border: `1px solid ${on ? T.header : T.border}`, borderRadius: 20, padding: '6px 14px', fontSize: 13, fontWeight: on ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit' })
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
@@ -80,6 +99,22 @@ export default function StudentList({ onSelect }: Props) {
       </div>
 
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 24px' }}>
+        {/* Lớp (nhóm Zalo) — bấm để lọc học sinh trong lớp */}
+        {groups.length > 0 && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 12, color: T.textMuted, fontWeight: 700, marginBottom: 8, letterSpacing: '.05em' }}>LỚP (NHÓM ZALO)</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button onClick={() => setClassFilter('all')} style={chip(classFilter === 'all')}>Tất cả ({students.length})</button>
+              {groups.map(g => (
+                <button key={g.id} onClick={() => setClassFilter(g.id)} style={chip(classFilter === g.id)}>{g.name} ({memberByGroup[g.id]?.size ?? 0})</button>
+              ))}
+            </div>
+            {classFilter !== 'all' && (() => {
+              const g = groups.find(x => x.id === classFilter)
+              return g?.zalo_url ? <a href={g.zalo_url} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: T.green, fontWeight: 700 }}>💬 Mở nhóm Zalo {g.name} →</a> : null
+            })()}
+          </div>
+        )}
         {/* Filters */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
           <input
