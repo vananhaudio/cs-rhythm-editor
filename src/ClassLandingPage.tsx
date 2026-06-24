@@ -180,6 +180,26 @@ export default function ClassLandingPage() {
 
   const goto = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
+  // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — vd ?xem=hanhtrinh, ?xem=lich, ?xem=app
+  useEffect(() => {
+    const xem = (new URLSearchParams(window.location.search).get('xem') || window.location.hash.replace('#', '') || '').toLowerCase()
+    if (!xem) return
+    const actions: Record<string, () => void> = {
+      hanhtrinh: () => setShowJourney(true),
+      lich: () => setTimeout(() => goto('lichlop'), 350),
+      lichlop: () => setTimeout(() => goto('lichlop'), 350),
+      app: () => setTimeout(() => goto('app'), 350),
+      caidat: () => setShowGuide(true),
+      demhat: () => setShowDemHat(true),
+      tianot: () => setShowTiaNot(true),
+      nangcao: () => setShowNangCao(true),
+      quiz: () => setShowQuiz(true),
+      dangky: () => setTimeout(() => goto('dangky'), 350),
+      cuavao: () => setTimeout(() => goto('cuavao'), 350),
+    }
+    actions[xem]?.()
+  }, [])
+
   const pickClass = (name: string) => { set('className', name); goto('dangky') }
 
   const chatPush = (m: Msg) => setMsgs(prev => [...prev, m])
@@ -490,7 +510,7 @@ export default function ClassLandingPage() {
       {/* APP */}
       <section>
         <div className="wrap">
-          <div className="app-sec">
+          <div className="app-sec" id="app">
             <div className="app-grid">
               <div>
                 <div className="eyebrow" style={{ color: '#A89FF0' }}>App TVA Guitar</div>
