@@ -198,7 +198,8 @@ export default function ClassJourney2027({ onClose, onRegister }: { onClose: () 
               <h3>Bắt đầu từ Nhập môn — Miễn phí</h3>
               <p>Trải nghiệm trước khi quyết định. Đúng nền tảng trước khi bước vào lớp học.</p>
               <div className="jny-final-row">
-                <div><span>Học phí từng khoá</span><b>990.000đ</b><small>2 tháng · 8 buổi học</small></div>
+                <div><span>Combo Hành Trình 2027 (10 khoá)</span><b>9.990.000đ</b><small>tiết kiệm so với học lẻ</small></div>
+                <div><span>Học lẻ từng khoá</span><b>990.000đ</b><small>2 tháng · 8 buổi / khoá</small></div>
                 <div><span>Đăng ký qua Zalo</span><b className="zalo">0983 259 893</b><small>Thầy Văn Anh</small></div>
               </div>
               <button className="jny-final-btn" onClick={onRegister}>Xem lớp &amp; đăng ký ngay →</button>

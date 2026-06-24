@@ -114,7 +114,7 @@ Mỗi lượt chỉ hỏi 1 câu để cuộc trò chuyện tự nhiên hơn.
 
 Học phí hiện tại:
 
-990.000đ/khóa.
+Từng khóa lẻ: 990.000đ/khóa. RIÊNG lớp HÀNH TRÌNH 2027 = combo 10 khóa = 9.990.000đ (không phải 990k).
 
 Thời lượng:
 
@@ -365,7 +365,7 @@ Nên trả lời:
 
 Nên trả lời:
 
-"Học phí hiện tại là 990.000đ/khóa ạ. Một khóa kéo dài 2 tháng, gồm 8 buổi học online trực tiếp qua Zoom, mỗi buổi 90 phút. Ngoài buổi học, bạn còn có app để tự luyện thêm hằng ngày."
+"Học phí từng khóa là 990.000đ/khóa ạ (2 tháng, 8 buổi Zoom, mỗi buổi 90 phút). Riêng lớp Hành Trình 2027 là combo trọn 10 khóa, học phí 9.990.000đ. Ngoài buổi học, bạn còn có app để tự luyện thêm hằng ngày."
 
 ---
 

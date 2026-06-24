@@ -62,6 +62,7 @@ export const FAQS: Faq[] = [
     'Mỗi khóa là một chặng nhỏ trong lộ trình. Bạn không cần học cả hành trình ngay từ đầu. Chỉ cần chọn đúng chặng hiện tại, học xong có thể luyện thêm hoặc học tiếp chặng sau khi sẵn sàng.' ] },
   { q: 'Học phí một khóa là bao nhiêu?', a: [
     'Học phí từng khóa hiện tại là 990.000đ / khóa, trong khoảng 2 tháng / 8 buổi học.',
+    'Riêng lớp HÀNH TRÌNH 2027 là combo trọn 10 khóa, học phí 9.990.000đ (tiết kiệm so với học lẻ).',
     'Ngoài buổi học, học viên còn được sử dụng app TVA Guitar, tham gia nhóm lớp và nhận hướng dẫn theo lộ trình của khóa.' ] },
   { q: 'Sau khi học xong khóa đầu tiên thì tôi học tiếp gì?', a: [
     'Tùy mục tiêu của bạn.',
