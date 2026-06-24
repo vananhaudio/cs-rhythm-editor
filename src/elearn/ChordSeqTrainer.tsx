@@ -46,6 +46,8 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   const cur = timeline[pos] ?? { cellIdx: 0, beatInCell: 0, strum: true }
   const curCell = exercise.cells[cur.cellIdx]
   const nextChord = exercise.cells[(cur.cellIdx + 1) % exercise.cells.length]?.chord
+  // Phách CUỐI của ô → báo trước "sắp đổi" sang hợp âm kế (chống đổi đột ngột)
+  const prepping = running && !!curCell && cur.beatInCell === curCell.beats - 1 && nextChord !== curCell.chord
 
   useEffect(() => {
     if (!running) return
@@ -91,17 +93,18 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         })}
       </div>
 
-      {/* Hợp âm đang chơi + kế tiếp */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <div style={{ flex: 1, background: '#fff', border: `2px solid ${INDIGO}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center' }}>
+      {/* Hợp âm đang chơi + kế tiếp (báo trước "sắp đổi" ở phách cuối để không bị giật) */}
+      <style>{`@keyframes csPrep{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}.cs-prep{animation:csPrep .45s ease-in-out infinite}`}</style>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+        <div style={{ flex: 1, background: '#fff', border: `2px solid ${INDIGO}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: prepping ? 0.55 : 1, transition: 'opacity .15s' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: INDIGO }}>{curCell?.chord}</div>
-          <MiniDiagram name={curCell?.chord ?? 'C'} />
-          <div style={{ fontSize: 13, fontWeight: 800, height: 18, color: ORANGE }}>{running ? 'GẢY!' : ''}</div>
+          <MiniDiagram name={curCell?.chord ?? 'C'} dim={prepping} />
+          <div style={{ fontSize: 13, fontWeight: 800, height: 18, color: prepping ? '#9CA3AF' : ORANGE }}>{!running ? '' : prepping ? 'rời tay…' : 'GẢY!'}</div>
         </div>
-        <div style={{ flex: 1, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: .7 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#3A4050' }}>{nextChord}</div>
-          <MiniDiagram name={nextChord ?? 'C'} dim />
-          <div style={{ fontSize: 12, fontWeight: 700, height: 18, color: '#9CA3AF' }}>kế tiếp</div>
+        <div className={prepping ? 'cs-prep' : ''} style={{ flex: 1, background: prepping ? '#F4F5FF' : '#fff', border: `${prepping ? 2 : 1}px solid ${prepping ? INDIGO : '#E5E7EB'}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: running ? 1 : .7, transition: 'border-color .15s, background .15s' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: prepping ? INDIGO : '#3A4050' }}>{nextChord}</div>
+          <MiniDiagram name={nextChord ?? 'C'} dim={!prepping} />
+          <div style={{ fontSize: 12, fontWeight: prepping ? 800 : 700, height: 18, color: prepping ? INDIGO : '#9CA3AF' }}>{prepping ? 'sắp đổi →' : 'kế tiếp'}</div>
         </div>
       </div>
 
