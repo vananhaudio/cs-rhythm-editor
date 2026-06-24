@@ -13,7 +13,6 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
-import ChordLessonCG7 from './elearn/ChordLessonCG7'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
@@ -154,7 +153,8 @@ export default function AppRouter() {
 
   // ── Route /chord-trainer (THỬ NGHIỆM bài học C↔G7 hoàn chỉnh) ──
   if (path === '/chord-trainer' || path.startsWith('/chord-trainer')) {
-    return <ChordLessonCG7 onClose={() => { window.location.href = '/start' }} />
+    const C = NATIVE_LESSONS['chord-cg7'].Component
+    return <C onClose={() => { window.location.href = '/start' }} />
   }
   // ── Route /chord-ame (THỬ NGHIỆM bài Am & E) ──
   if (path === '/chord-ame' || path.startsWith('/chord-ame')) {

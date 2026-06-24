@@ -2,6 +2,61 @@
 // Thêm bài mới = thêm 1 object ở đây + 1 dòng trong nativeLessons.tsx. Không code lại.
 import type { ChordLessonCfg } from './ChordLesson'
 
+// Bài ĐẦU về quạt: giải thích Downstroke, KHÔNG dạy bấm hợp âm (đã học), bỏ bước làm quen.
+export const C_G7: ChordLessonCfg = {
+  crumb: 'ĐỆM HÁT · QUẠT HỢP ÂM',
+  title: 'Quạt hợp âm: C và G7',
+  practice: false,
+  introTitle: 'Gạch chéo ╱ = Quạt xuống (Downstroke)',
+  intro: 'Mỗi dấu ╱ là một lần QUẠT XUỐNG: tay phải lướt từ dây trầm xuống dây cao, đều và dứt khoát. Dấu ◇ là gảy 1 lần rồi để hợp âm ngân hết ô. Hợp âm C và G7 bạn đã học ở chương trước — bài này tập quạt và giữ nhịp.',
+  learn: ['C', 'G7'],
+  learnTips: [
+    'Quạt bằng cổ tay thả lỏng, không gồng cả cánh tay.',
+    'Mỗi gạch ╱ = một cú quạt xuống dứt khoát, đều tay.',
+    '◇ (nốt tròn): quạt 1 lần, để ngân hết ô rồi mới đổi hợp âm.',
+  ],
+  exercises: [
+    {
+      name: 'Bài tập 1 · C – G7 (nốt tròn)', short: 'BT1',
+      hint: 'Gảy 1 lần rồi giữ ngân đủ 4 phách, sang ô mới thì đổi.',
+      strumPerBeat: false,
+      cells: [{ chord: 'C', beats: 4 }, { chord: 'G7', beats: 4 }, { chord: 'C', beats: 4 }, { chord: 'G7', beats: 4 }, { chord: 'C', beats: 4 }],
+    },
+    {
+      name: 'Bài tập 2 · giữ hợp âm 2 ô', short: 'BT2',
+      hint: 'Quạt xuống mỗi phách. C giữ 2 ô, G7 giữ 2 ô, rồi về C.',
+      strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 8 }, { chord: 'G7', beats: 8 }, { chord: 'C', beats: 4 }],
+    },
+    {
+      name: 'Bài tập 3 · đổi mỗi ô', short: 'BT3',
+      hint: 'Quạt xuống 4 lần mỗi ô, đổi hợp âm mỗi ô: C – G7 – C – G7 – C.',
+      strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 4 }, { chord: 'G7', beats: 4 }, { chord: 'C', beats: 4 }, { chord: 'G7', beats: 4 }, { chord: 'C', beats: 4 }],
+    },
+  ],
+  quiz: [
+    {
+      q: 'Dấu gạch chéo ╱ nghĩa là gì?',
+      opts: ['Một lần quạt xuống (downstroke)', 'Một lần gảy lên', 'Nghỉ một phách'],
+      correct: 0,
+      explain: 'Mỗi ╱ là một cú quạt xuống — tay phải lướt từ dây trầm xuống dây cao.',
+    },
+    {
+      q: 'Nốt tròn ◇ nghĩa là gì?',
+      opts: ['Quạt 1 lần rồi giữ ngân cả ô (4 phách)', 'Quạt xuống 4 lần', 'Không chơi gì'],
+      correct: 0,
+      explain: 'Nốt tròn = gảy 1 lần và để hợp âm ngân đủ 4 phách rồi mới đổi.',
+    },
+    {
+      q: 'Quạt xuống đúng cách nên thế nào?',
+      opts: ['Cổ tay thả lỏng, quạt dứt khoát và đều', 'Gồng cứng cả cánh tay', 'Chỉ gảy đúng 1 dây'],
+      correct: 0,
+      explain: 'Quạt bằng cổ tay thả lỏng, đều tay — tiếng mới gọn và giữ được nhịp.',
+    },
+  ],
+}
+
 export const AM_E: ChordLessonCfg = {
   crumb: 'BÀI TẬP HỢP ÂM · Am & E',
   title: 'Hợp âm Am và E',

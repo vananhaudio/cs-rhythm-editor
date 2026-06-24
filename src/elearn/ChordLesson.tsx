@@ -19,6 +19,7 @@ export interface ChordLessonCfg {
   learnTips: string[]
   exercises: (Exercise & { short?: string; hint?: string })[]
   quiz: QA[]
+  practice?: boolean   // true (mặc định) = có bước "Làm quen" mic; false = bỏ (hợp âm đã học)
 }
 
 function Btn({ children, onClick, primary }: { children: React.ReactNode; onClick: () => void; primary?: boolean }) {
@@ -26,10 +27,11 @@ function Btn({ children, onClick, primary }: { children: React.ReactNode; onClic
 }
 
 export default function ChordLesson({ cfg, onClose, onComplete }: { cfg: ChordLessonCfg; onClose?: () => void; onComplete?: () => void }) {
-  const EX_START = 2
+  const practice = cfg.practice !== false
+  const EX_START = practice ? 2 : 1
   const QUIZ = EX_START + cfg.exercises.length
   const DONE = QUIZ + 1
-  const steps = ['Lý thuyết', 'Làm quen', ...cfg.exercises.map((e, i) => e.short || `BT${i + 1}`), 'Quiz']
+  const steps = ['Lý thuyết', ...(practice ? ['Làm quen'] : []), ...cfg.exercises.map((e, i) => e.short || `BT${i + 1}`), 'Quiz']
 
   const [step, setStep] = useState(0)
   const [qIdx, setQIdx] = useState(0)
@@ -75,11 +77,11 @@ export default function ChordLesson({ cfg, onClose, onComplete }: { cfg: ChordLe
               <ul style={{ fontSize: 13.5, color: '#5A6072', lineHeight: 1.7, paddingLeft: 18, margin: '0 0 16px' }}>
                 {cfg.learnTips.map((t, i) => <li key={i}>{t}</li>)}
               </ul>
-              <Btn primary onClick={next}>Bắt đầu làm quen →</Btn>
+              <Btn primary onClick={next}>{practice ? 'Bắt đầu làm quen →' : 'Bắt đầu tập →'}</Btn>
             </div>
           )}
 
-          {step === 1 && (
+          {step === 1 && practice && (
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#1F2430', marginBottom: 4 }}>Gảy thử — app nghe & chấm</div>
               <div style={{ fontSize: 13.5, color: '#5A6072', lineHeight: 1.6, marginBottom: 12 }}>Bấm hợp âm, gảy cho vang rồi để app xác nhận. Lần lượt {cfg.learn.join(' rồi ')}.</div>
