@@ -183,15 +183,16 @@ export default function ClassLandingPage() {
   const pickClass = (name: string) => { set('className', name); goto('dangky') }
 
   const chatPush = (m: Msg) => setMsgs(prev => [...prev, m])
-  // text thuần → HTML an toàn: escape, link zalo/http, xuống dòng
+  // text thuần → HTML an toàn: escape, markdown link [text](url) + URL trần + đậm + xuống dòng
   const richReply = (s: string) => {
     const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const A = (href: string, text: string) => `<a href="${href}" target="_blank" rel="noreferrer" style="color:#4338CA;font-weight:600">${text}</a>`
     return esc
-      // linkify TRƯỚC, loại dấu * < ) và dấu câu cuối khỏi URL để không dính '**'
-      .replace(/(https?:\/\/[^\s)*<]+|zalo\.me\/[^\s)*<]+)/g, m => {
-        const url = m.replace(/[.,;!?]+$/, '')
-        const href = url.startsWith('http') ? url : 'https://' + url
-        return `<a href="${href}" target="_blank" rel="noreferrer" style="color:#4338CA;font-weight:600">${url}</a>`
+      // 1 lượt: markdown link [text](url) HOẶC URL/zalo trần — không xử lý chồng nhau
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|(https?:\/\/[^\s)*<]+|zalo\.me\/[^\s)*<]+)/g, (_m, mdText, mdUrl, bareUrl) => {
+        if (mdUrl) return A(mdUrl, mdText)
+        const url = (bareUrl as string).replace(/[.,;!?]+$/, '')
+        return A(url.startsWith('http') ? url : 'https://' + url, url)
       })
       // markdown đậm **...** → <b>
       .replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>')
