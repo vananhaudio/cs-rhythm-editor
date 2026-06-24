@@ -270,9 +270,7 @@ export default function StudentOnboarding() {
         position: 'sticky', top: 0, zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            <img src="/tva-logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          </div>
+          <img src="/tva-logo.png" alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
           <div>
             <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>Thầy Văn Anh Guitar</div>
             <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 12 }}>Học · Tập · Sống cùng âm nhạc</div>
@@ -298,9 +296,7 @@ export default function StudentOnboarding() {
       {/* WELCOME */}
       {step === 'welcome' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', padding: 'calc(env(safe-area-inset-top, 0px) + 40px) 32px calc(env(safe-area-inset-bottom, 0px) + 32px)', textAlign: 'center' }}>
-          <div style={{ width: 96, height: 96, borderRadius: 24, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, boxShadow: `0 8px 28px rgba(67,56,202,.22)`, overflow: 'hidden' }}>
-            <img src="/tva-logo.png" alt="Thầy Văn Anh Guitar" style={{ width: '78%', height: '78%', objectFit: 'contain' }} />
-          </div>
+          <img src="/tva-logo.png" alt="Thầy Văn Anh Guitar" style={{ width: 88, height: 88, borderRadius: 20, objectFit: 'cover', marginBottom: 24, boxShadow: '0 8px 24px rgba(17,24,39,.12)' }} />
           <h1 style={{ fontSize: 27, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.25 }}>
             Chào mừng đến với<br /><span style={{ color: T.header }}>Thầy Văn Anh Guitar</span>
           </h1>
