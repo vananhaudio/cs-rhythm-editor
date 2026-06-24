@@ -51,12 +51,17 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     return tl
   }, [exercise])
 
-  // Gom phách thành các ô nhịp (4 phách / ô)
+  // Gom phách thành các ô nhịp (4 phách / ô), rồi 2 ô / hàng cho thẳng lưới
   const bars = useMemo<Slot[][]>(() => {
     const out: Slot[][] = []
     for (let i = 0; i < timeline.length; i += 4) out.push(timeline.slice(i, i + 4))
     return out
   }, [timeline])
+  const rows = useMemo<Slot[][][]>(() => {
+    const out: Slot[][][] = []
+    for (let i = 0; i < bars.length; i += 2) out.push(bars.slice(i, i + 2))
+    return out
+  }, [bars])
 
   const distinct = useMemo(() => [...new Set(exercise.cells.map(c => c.chord))], [exercise])
 
@@ -98,7 +103,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
 
   return (
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
-      <style>{`@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}`}</style>
+      <style>{`@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
 
       {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo) */}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
@@ -110,29 +115,33 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         ))}
       </div>
 
-      {/* Khuông nhịp — tên hợp âm + gạch chéo theo ô, vạch nhịp, con trỏ chạy */}
-      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '12px 8px', display: 'flex', flexWrap: 'wrap', gap: 0, justifyContent: 'center' }}>
-        {bars.map((bar, bi) => (
-          <div key={bi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: bi === 0 ? 'none' : '2px solid #D8DCE6' }}>
-            <div style={{ display: 'flex' }}>
-              {bar.map(s => {
-                const on = running && s.global === pos
-                const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
-                return (
-                  <div key={s.global} style={{ width: 34, textAlign: 'center', padding: '0 1px' }}>
-                    <div className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12, fontWeight: 700, height: 16, color: isNextSeg ? INDIGO : on && s.segStart ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>
-                      {s.segStart ? s.chord : ''}
-                    </div>
-                    <div style={{ marginTop: 4, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: on ? INDIGO : 'transparent', color: on ? '#fff' : s.mark === 'hold' ? '#D8DCE6' : '#4B5563', fontSize: s.mark === 'whole' ? 16 : 18, fontWeight: 600 }}>
-                      {markGlyph(s.mark)}
-                    </div>
+      {/* Khuông nhịp — lưới 4 cột/ô, thẳng hàng; dấu ╱ SÁNG + nảy khi tới phách */}
+      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '14px 10px' }}>
+        {rows.map((row, ri) => (
+          <div key={ri} style={{ display: 'flex', marginBottom: ri < rows.length - 1 ? 16 : 0 }}>
+            {row.map((bar, bj) => {
+              const lastBar = ri === rows.length - 1 && bj === row.length - 1
+              return (
+                <div key={bj} style={{ flex: 1, paddingLeft: 8, paddingRight: 8, borderLeft: '2px solid #1F2430', borderRight: lastBar ? '2px solid #1F2430' : 'none' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: 16 }}>
+                    {bar.map(s => {
+                      const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
+                      const onSeg = running && s.global === pos && s.segStart
+                      return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12.5, fontWeight: 700, textAlign: 'center', color: isNextSeg ? INDIGO : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? s.chord : ''}</div>
+                    })}
                   </div>
-                )
-              })}
-            </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 6, height: 30, alignItems: 'center' }}>
+                    {bar.map(s => {
+                      const on = running && s.global === pos
+                      return <div key={s.global} className={on ? 'cs-hit' : ''} style={{ textAlign: 'center', fontSize: s.mark === 'whole' ? 17 : 20, fontWeight: 700, color: on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8', transform: on ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{markGlyph(s.mark)}</div>
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+            {row.length === 1 && <div style={{ flex: 1 }} />}
           </div>
         ))}
-        <div style={{ alignSelf: 'stretch', borderLeft: '2px solid #1F2430', marginLeft: 2 }} />
       </div>
       <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống (1 phách) · ◇ = gảy 1 lần giữ cả ô</div>
 
