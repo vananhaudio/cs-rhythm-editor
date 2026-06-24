@@ -173,12 +173,13 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         )
       })()}
       <div style={{ marginTop: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#7A8194', marginBottom: 4 }}>
-          <span>Vòng đổi sạch</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#374151', marginBottom: 4 }}>
+          <span style={{ fontWeight: 600 }}>Đánh đúng cả bài</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops} lượt</span>
         </div>
         <div style={{ height: 8, background: '#E1E4EA', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ width: `${Math.min(100, (loopOk / loops) * 100)}%`, height: '100%', background: '#16A34A', borderRadius: 4, transition: 'width .3s' }} />
         </div>
+        <div style={{ fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>Gảy đúng hết các hợp âm từ đầu đến cuối = 1 lượt. Đạt {loops} lượt để qua bài.</div>
       </div>
 
       {done ? (
