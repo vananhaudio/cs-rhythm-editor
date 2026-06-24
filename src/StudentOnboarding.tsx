@@ -4,14 +4,15 @@ import MobileStudentPortal from './MobileStudentPortal'
 import { supabase } from './supabase'
 import { isNativeIOS, purchaseMonthly, restorePurchases } from './iap'
 
+// Đồng bộ tông mobile app: primary indigo #4338CA, accent cam #EA580C, nền xám #F0F2F5
 const T = {
-  bg: '#EAD7B8', bgCard: '#F5EDD8', bgLight: '#FBF5EA',
-  header: '#1B6B3A', headerDark: '#134D2B',
-  gold: '#A07820', goldLight: '#C8A84B',
-  text: '#2C1F0E', textMuted: '#7A6548', textDim: '#A08B6A',
-  border: '#C8B090', borderLight: '#DDD0B0',
-  green: '#1B6B3A', greenLight: '#E8F2EC', greenMid: '#2E6B40',
-  danger: '#8B3A1E', dangerBg: '#F0D8D0',
+  bg: '#F0F2F5', bgCard: '#FFFFFF', bgLight: '#F7F8FA',
+  header: '#4338CA', headerDark: '#3730A3',
+  gold: '#EA580C', goldLight: '#FB923C',
+  text: '#1F2430', textMuted: '#5A6072', textDim: '#9AA0B0',
+  border: '#E1E4EA', borderLight: '#EEF0F4',
+  green: '#16A34A', greenLight: '#DCFCE7', greenMid: '#15803D',
+  danger: '#B91C1C', dangerBg: '#FEE2E2',
 }
 
 const LEVEL_LABEL: Record<string, string> = {
@@ -264,16 +265,17 @@ export default function StudentOnboarding() {
       {/* Header — ẩn khi đang ở portal (portal tự có header riêng) */}
       {step !== 'portal' && (
       <header style={{
-        background: T.header, padding: '14px 24px',
+        background: T.header, padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 20px 14px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: `1px solid ${T.headerDark}`,
         position: 'sticky', top: 0, zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 22 }}>🎸</span>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+            <img src="/tva-logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
           <div>
             <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.2 }}>Thầy Văn Anh Guitar</div>
-            <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 12 }}>Music Learning System</div>
+            <div style={{ color: 'rgba(255,255,255,.7)', fontSize: 12 }}>Học · Tập · Sống cùng âm nhạc</div>
           </div>
         </div>
         {student && (
@@ -295,13 +297,15 @@ export default function StudentOnboarding() {
 
       {/* WELCOME */}
       {step === 'welcome' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 32, textAlign: 'center' }}>
-          <div style={{ width: 96, height: 96, borderRadius: '50%', background: T.header, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 42, marginBottom: 24, boxShadow: `0 4px 24px rgba(27,107,58,.25)` }}></div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100dvh - 64px)', padding: 32, textAlign: 'center' }}>
+          <div style={{ width: 96, height: 96, borderRadius: 24, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, boxShadow: `0 8px 28px rgba(67,56,202,.22)`, overflow: 'hidden' }}>
+            <img src="/tva-logo.png" alt="Thầy Văn Anh Guitar" style={{ width: '78%', height: '78%', objectFit: 'contain' }} />
+          </div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: T.text, margin: '0 0 10px', lineHeight: 1.25 }}>
             Chào mừng đến với<br /><span style={{ color: T.header }}>Thầy Văn Anh Guitar</span>
           </h1>
           <p style={{ color: T.textMuted, fontSize: 16, lineHeight: 1.7, maxWidth: 380, margin: '0 0 32px' }}>
-            Nơi hành trình âm nhạc của bạn bắt đầu. Học nhịp, hòa âm, và guitar theo lộ trình được thiết kế riêng cho bạn.
+            Học guitar theo lộ trình riêng — từ nhịp, hợp âm đến đệm hát. Đăng nhập để tiếp tục hành trình của bạn.
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 36 }}>
             {['Luyện nhịp', 'Hợp âm', 'Nhạc lý', 'AI trợ lý'].map(f => (
@@ -309,11 +313,11 @@ export default function StudentOnboarding() {
             ))}
           </div>
           <Btn onClick={() => setStep('login')} style={{
-            background: T.header, color: '#fff', border: 'none', borderRadius: 12,
-            padding: '14px 40px', fontSize: 17, fontWeight: 700,
-            boxShadow: `0 4px 16px rgba(27,107,58,.3)`,
-          }}>Bắt đầu hành trình →</Btn>
-          <p style={{ color: T.textDim, fontSize: 13, marginTop: 16 }}>Đã là học sinh? Đăng nhập bên dưới.</p>
+            background: T.header, color: '#fff', border: 'none', borderRadius: 14,
+            padding: '14px 44px', fontSize: 17, fontWeight: 700,
+            boxShadow: `0 8px 20px rgba(67,56,202,.28)`,
+          }}>Đăng nhập →</Btn>
+          <p style={{ color: T.textDim, fontSize: 13, marginTop: 16 }}>Chưa có tài khoản? Liên hệ thầy để được cấp.</p>
 
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIOS && (
