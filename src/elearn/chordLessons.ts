@@ -2,6 +2,44 @@
 // Thêm bài mới = thêm 1 object ở đây + 1 dòng trong nativeLessons.tsx. Không code lại.
 import type { ChordLessonCfg } from './ChordLesson'
 
+// Bài luyện chuyển hợp âm có DẤU NGHỈ — tất cả quạt xuống (bỏ móc đơn). C G7 Am E Dm.
+const REST = { rest: true, beats: 4 } as const
+export const BASIC_1: ChordLessonCfg = {
+  crumb: 'ĐỆM HÁT · CHUYỂN HỢP ÂM',
+  title: 'Luyện chuyển hợp âm cơ bản 1',
+  practice: false,
+  introTitle: 'Chuyển hợp âm — có ô nghỉ',
+  intro: 'Bài này luyện chuyển qua lại giữa các hợp âm. Gảy hết một ô rồi tới ô NGHỉ (dấu 𝄽) — đừng gảy, hãy dùng lúc đó để đặt sẵn ngón sang hợp âm tiếp theo. Mỗi hợp âm gảy số dây khác nhau (xem dưới).',
+  learn: ['C', 'G7', 'Am', 'E', 'Dm'],
+  learnTips: [
+    'Số dây gảy: C = 5 dây · G7 = 6 dây · Am = 5 dây.',
+    'E = 6 dây · Dm = 4 dây (tránh 2 dây trầm nhất).',
+    'Ô nghỉ 𝄽 = không gảy — tranh thủ đổi ngón cho mượt.',
+  ],
+  exercises: [
+    { name: 'Bài tập 1 · C → G7', short: 'BT1', hint: 'Quạt 4 lần, nghỉ 1 ô, đổi sang G7.', strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 4 }, { ...REST }, { chord: 'G7', beats: 4 }, { ...REST }] },
+    { name: 'Bài tập 2 · Am → E', short: 'BT2', hint: 'Quạt 4 lần, nghỉ 1 ô, đổi sang E.', strumPerBeat: true,
+      cells: [{ chord: 'Am', beats: 4 }, { ...REST }, { chord: 'E', beats: 4 }, { ...REST }] },
+    { name: 'Bài tập 3 · C → Am', short: 'BT3', hint: 'Quạt 4 lần, nghỉ 1 ô, đổi sang Am.', strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 4 }, { ...REST }, { chord: 'Am', beats: 4 }, { ...REST }] },
+    { name: 'Bài tập 4 · Am → Dm', short: 'BT4', hint: 'Dm chỉ gảy 4 dây — cẩn thận dây trầm.', strumPerBeat: true,
+      cells: [{ chord: 'Am', beats: 4 }, { ...REST }, { chord: 'Dm', beats: 4 }, { ...REST }] },
+    { name: 'Bài tập 5 · Dm → G7', short: 'BT5', hint: 'Dm 4 dây ↔ G7 6 dây — chuyển hơi xa, đi chậm.', strumPerBeat: true,
+      cells: [{ chord: 'Dm', beats: 4 }, { ...REST }, { chord: 'G7', beats: 4 }, { ...REST }] },
+    { name: 'Bài tập 6 · C – Am – Dm – G7', short: 'BT6', hint: 'Mỗi ô gảy 1 lần (phách 1) rồi nghỉ, đổi hợp âm mỗi ô.', strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 4, oneHit: true }, { chord: 'Am', beats: 4, oneHit: true }, { chord: 'Dm', beats: 4, oneHit: true }, { chord: 'G7', beats: 4, oneHit: true }] },
+  ],
+  quiz: [
+    { q: 'Dấu 𝄽 (nghỉ) trong bài nghĩa là gì?', opts: ['Không gảy — để kịp đổi sang hợp âm sau', 'Quạt mạnh gấp đôi', 'Gảy nhẹ 1 cái'], correct: 0,
+      explain: 'Ô nghỉ là lúc dừng gảy, tranh thủ đặt ngón sang hợp âm tiếp theo cho mượt.' },
+    { q: 'Hợp âm Dm gảy mấy dây?', opts: ['4 dây (tránh 2 dây trầm)', '6 dây', 'Cả 6 dây'], correct: 0,
+      explain: 'Dm là hợp âm 4 dây — chỉ gảy từ dây 4 trở xuống.' },
+    { q: 'Bài tập 6 mỗi ô gảy thế nào?', opts: ['Gảy 1 lần ở phách 1 rồi nghỉ', 'Quạt đủ 4 lần', 'Không gảy'], correct: 0,
+      explain: 'Mỗi ô chỉ gảy 1 cú ở phách 1, 3 phách sau nghỉ — rồi đổi hợp âm sang ô kế.' },
+  ],
+}
+
 // Bài ĐẦU về quạt: giải thích Downstroke, KHÔNG dạy bấm hợp âm (đã học), bỏ bước làm quen.
 export const C_G7: ChordLessonCfg = {
   crumb: 'ĐỆM HÁT · QUẠT HỢP ÂM',

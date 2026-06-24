@@ -8,7 +8,8 @@ import { useLiveChord, MiniDiagram } from './ChordChangeTrainer'
 const INDIGO = '#4338CA'
 const ORANGE = '#EA580C'
 
-export interface Cell { chord: string; beats: number; hold?: boolean } // hold = nốt tròn (1 gảy, giữ)
+// hold = nốt tròn (1 gảy, giữ); oneHit = gảy phách 1 rồi nghỉ; rest = ô nghỉ (không gảy)
+export interface Cell { chord?: string; beats: number; hold?: boolean; oneHit?: boolean; rest?: boolean }
 export interface Exercise { name: string; cells: Cell[]; strumPerBeat: boolean }
 
 let clickCtx: AudioContext | null = null
@@ -24,7 +25,7 @@ function click(accent: boolean) {
   } catch { /* bỏ qua */ }
 }
 
-interface Slot { cellIdx: number; beatInCell: number; chord: string; mark: 'down' | 'whole' | 'hold'; segStart: boolean; global: number }
+interface Slot { cellIdx: number; beatInCell: number; chord: string; mark: 'down' | 'whole' | 'hold' | 'rest' | 'restWhole'; segStart: boolean; global: number }
 
 export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, onPass }: { exercise: Exercise; bpm?: number; loops?: number; onPass?: () => void }) {
   const { start, stop, active, currentRef } = useLiveChord()
@@ -43,10 +44,14 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     const tl: Slot[] = []
     let g = 0
     exercise.cells.forEach((c, ci) => {
-      const whole = c.hold || !exercise.strumPerBeat
+      const whole = c.hold || (!exercise.strumPerBeat && !c.oneHit)
       for (let b = 0; b < c.beats; b++) {
-        tl.push({ cellIdx: ci, beatInCell: b, chord: c.chord, segStart: b === 0, global: g++,
-          mark: whole ? (b === 0 ? 'whole' : 'hold') : 'down' })
+        let mark: Slot['mark']
+        if (c.rest) mark = b === 0 ? 'restWhole' : 'hold'          // ô nghỉ cả ô
+        else if (c.oneHit) mark = b === 0 ? 'down' : 'rest'        // gảy phách 1 rồi nghỉ
+        else if (whole) mark = b === 0 ? 'whole' : 'hold'          // nốt tròn
+        else mark = 'down'                                          // quạt mỗi phách
+        tl.push({ cellIdx: ci, beatInCell: b, chord: c.rest ? '' : (c.chord ?? ''), segStart: b === 0 && !c.rest && !!c.chord, global: g++, mark })
       }
     })
     return tl
@@ -64,13 +69,16 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     return out
   }, [bars])
 
-  const distinct = useMemo(() => [...new Set(exercise.cells.map(c => c.chord))], [exercise])
+  const distinct = useMemo(() => [...new Set(exercise.cells.filter(c => c.chord && !c.rest).map(c => c.chord as string))], [exercise])
 
   const cur = timeline[pos] ?? timeline[0]
   const curCell = exercise.cells[cur?.cellIdx ?? 0]
   const lastBeatOfCell = cur && cur.beatInCell === (curCell?.beats ?? 1) - 1
-  const nextChord = timeline[(pos + 1) % timeline.length]?.chord
-  const prepping = running && lastBeatOfCell && nextChord !== cur?.chord
+  // hợp âm KẾ (bỏ qua ô nghỉ)
+  let nextChord = ''
+  for (let i = 1; i <= timeline.length; i++) { const s = timeline[(pos + i) % timeline.length]; if (s?.chord) { nextChord = s.chord; break } }
+  const isRest = !!curCell?.rest
+  const prepping = running && (isRest || (lastBeatOfCell && nextChord !== cur?.chord)) && !!nextChord
 
   useEffect(() => {
     if (!running) return
@@ -85,7 +93,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       }
       const s = timeline[p]
       click(p % 4 === 0)
-      if (currentRef.current === s.chord) hitsRef.current[s.cellIdx] = true
+      if (s.chord && currentRef.current === s.chord) hitsRef.current[s.cellIdx] = true
       posRef.current = p; setPos(p); setHeard(currentRef.current); setHits([...hitsRef.current])
       if (loopRef.current >= loops) onPass?.()
     }, beatMs)
@@ -101,7 +109,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   }
 
   const done = loopOk >= loops
-  const markGlyph = (m: Slot['mark']) => m === 'down' ? '╱' : m === 'whole' ? '◇' : ''
+  const markGlyph = (m: Slot['mark']) => m === 'down' ? '╱' : m === 'whole' ? '◇' : (m === 'rest' || m === 'restWhole') ? '𝄽' : ''
 
   return (
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
@@ -133,8 +141,10 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 6, height: 30, alignItems: 'center' }}>
                 {b.map(s => {
-                  const on = running && (s.mark === 'whole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
-                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontSize: s.mark === 'whole' ? 18 : 20, fontWeight: 700, color: on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8', transform: on ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{markGlyph(s.mark)}</div>
+                  const restMark = s.mark === 'rest' || s.mark === 'restWhole'
+                  const on = running && (s.mark === 'whole' || s.mark === 'restWhole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
+                  const color = restMark ? (on ? '#9AA0B0' : '#D1D5DB') : on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8'
+                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontSize: s.mark === 'down' ? 20 : 18, fontWeight: 700, color, transform: on && s.mark === 'down' ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{markGlyph(s.mark)}</div>
                 })}
               </div>
             </div>
@@ -146,7 +156,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
           return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 12 }}>{kids}</div>
         })}
       </div>
-      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống (1 phách) · ◇ = gảy 1 lần giữ cả ô</div>
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống · ◇ = giữ cả ô · 𝄽 = nghỉ (không gảy)</div>
 
       {/* BPM */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
@@ -161,7 +171,8 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         let bg = '#F1F2F6', bd = '#E5E7EB', col = '#374151', icon = '🎤'
         let msg: React.ReactNode = <>Bấm <b>Bắt đầu</b> → cho phép mic → <b>gảy theo khuông</b>. App nghe và báo đúng/sai ngay.</>
         if (running) {
-          if (heard && heard === cur?.chord) { bg = '#DCFCE7'; bd = '#86EFAC'; col = '#15803D'; icon = '✓'; msg = <>Đúng rồi! App đang nghe <b>{heard}</b></> }
+          if (isRest) { bg = '#F1F2F6'; bd = '#D8DCE6'; col = '#6B7280'; icon = '🤚'; msg = <>Nghỉ — <b>không gảy</b>, đặt sẵn ngón cho hợp âm <b>{nextChord}</b></> }
+          else if (heard && heard === cur?.chord) { bg = '#DCFCE7'; bd = '#86EFAC'; col = '#15803D'; icon = '✓'; msg = <>Đúng rồi! App đang nghe <b>{heard}</b></> }
           else if (heard) { bg = '#FEF3C7'; bd = '#FCD34D'; col = '#92400E'; icon = '✗'; msg = <>Đang nghe <b>{heard}</b> — bạn cần gảy hợp âm <b>{cur?.chord}</b></> }
           else { bg = '#EEF2FF'; bd = '#C7CBF0'; col = '#4338CA'; icon = '🎤'; msg = <>Gảy hợp âm <b>{cur?.chord}</b> đi — app đang lắng nghe…</> }
         }

@@ -161,6 +161,11 @@ export default function AppRouter() {
     const C = NATIVE_LESSONS['chord-am-e'].Component
     return <C onClose={() => { window.location.href = '/start' }} />
   }
+  // ── Route /chord-basic1 (THỬ NGHIỆM Chuyển hợp âm cơ bản 1) ──
+  if (path === '/chord-basic1' || path.startsWith('/chord-basic1')) {
+    const C = NATIVE_LESSONS['chord-basic-1'].Component
+    return <C onClose={() => { window.location.href = '/start' }} />
+  }
 
   // ── Route /gp-editor ──
   if (path === '/gp-editor') {
