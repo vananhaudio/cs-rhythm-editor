@@ -174,6 +174,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   const [masterPath, setMasterPath] = useState<{ id: string; title: string; courseId: string; courseName: string }[]>([])  // đường mốc xuyên suốt mọi khóa
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
+  const [skillMap, setSkillMap]         = useState<Record<string, number>>({})  // lessonId → số phiên luyện (đỏ/vàng/xanh)
   const [freeCourses, setFreeCourses]   = useState<Set<string>>(new Set())  // khoá miễn phí (is_free)
   const [accessCourses, setAccessCourses] = useState<Set<string>>(new Set()) // khoá đã được thầy cấp quyền
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
@@ -514,6 +515,9 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
         setFreeCourses(new Set(enr.filter(e => (e.course as any)?.is_free !== false).map(e => e.course_id)))
         supabase.from('edu_course_access').select('course_id').eq('student_id', student.id).eq('active', true)
           .then(({ data: acc }) => setAccessCourses(new Set((acc ?? []).map((a: any) => a.course_id))))
+        // Tiến độ KỸ NĂNG (đỏ/vàng/xanh) theo số phiên luyện
+        supabase.from('edu_skill_progress').select('lesson_id,sessions').eq('student_id', student.id)
+          .then(({ data: sk }) => { const m: Record<string, number> = {}; (sk ?? []).forEach((r: any) => { m[r.lesson_id] = r.sessions }); setSkillMap(m) })
         // ── Dựng đường mốc XUYÊN SUỐT mọi khóa (master journey) ──
         const courses = enr.filter(e => (e.course?.status ?? 'on') !== 'off')
         const courseIds = courses.map(e => e.course_id)
@@ -1241,6 +1245,22 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
             })()}
 
             <div style={{ padding: '16px' }}>
+              {(() => {
+                const todo = lessons.filter(l => { const n = skillMap[l.id]; return n > 0 && n < 3 }).slice(0, 3)
+                if (!todo.length) return null
+                return (
+                  <div style={{ background: '#EEF2FF', border: '1px solid #C7CBF0', borderRadius: 14, padding: '12px 14px', marginBottom: 18 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#4338CA', marginBottom: 8 }}>🎯 Việc nên làm hôm nay</div>
+                    {todo.map(l => (
+                      <div key={l.id} onClick={() => openLesson(l)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', cursor: 'pointer' }}>
+                        <span style={{ fontSize: 13, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>Ôn <b>{l.title}</b></span>
+                        <span style={{ fontSize: 12, color: '#4338CA', fontWeight: 700, flexShrink: 0 }}>còn {3 - skillMap[l.id]} phiên →</span>
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 11, color: '#6B7280', marginTop: 6, lineHeight: 1.5 }}>Mỗi ngày xanh hóa 1–2 bài là đẹp. Nghỉ 1–2 phút sau mỗi phiên.</div>
+                  </div>
+                )
+              })()}
               {modules.map(mod => (
                 <div key={mod.id} style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.08em', padding: '0 4px 10px' }}>{mod.name}</div>
@@ -1265,9 +1285,14 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                           {tierLocked && (
                             <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>{isNativeIOS ? '🔒 Mở khi bạn đăng ký học với thầy' : '🔒 Đăng ký học để mở khoá →'}</div>
                           )}
-                          {isCurrent && (
+                          {isCurrent && !skillMap[l.id] && (
                             <div style={{ fontSize: 11, color: L.p1, fontWeight: 600, marginTop: 2 }}>▶ Học tiếp theo</div>
                           )}
+                          {skillMap[l.id] > 0 && (() => {
+                            const n = skillMap[l.id]
+                            const c = n >= 3 ? { dot: '🟢', col: '#16A34A', t: 'Thành thạo' } : n === 2 ? { dot: '🟡', col: '#D97706', t: 'Đang ổn định' } : { dot: '🔴', col: '#DC2626', t: 'Cần luyện thêm' }
+                            return <div style={{ fontSize: 11, color: c.col, fontWeight: 600, marginTop: 2 }}>{c.dot} {c.t} · {Math.min(n, 3)}/3 phiên{n < 3 ? ' để xanh hóa' : ''}</div>
+                          })()}
                         </div>
                         {!locked && !done && <span style={{ color: L.p1, fontSize: 18 }}>›</span>}
                       </div>
