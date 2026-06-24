@@ -255,9 +255,6 @@ export default function ClassLandingPage() {
               <button className="btn btn-primary" onClick={() => goto('cuavao')}>Chọn cửa vào của tôi →</button>
               <button className="btn btn-ghost" onClick={() => goto('chat')}>Trò chuyện với Mira</button>
             </div>
-            <div style={{ marginTop: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setShowSignup(true)} style={{ fontSize: 14 }}>🎁 Tạo tài khoản miễn phí — học thử ngay trên app</button>
-            </div>
           </div>
           <div className="hero-art">
             <h3>Bắt đầu bằng đúng một bước</h3>
@@ -503,7 +500,10 @@ export default function ClassLandingPage() {
                     <div className="app-feat" key={i}><span className="ic">{ic}</span><div>{t}</div></div>
                   ))}
                 </div>
-                <button className="app-guide-btn" onClick={() => setShowGuide(true)}>📲 Hướng dẫn cài đặt app →</button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                  <button className="app-guide-btn" onClick={() => setShowGuide(true)}>📲 Hướng dẫn cài đặt app →</button>
+                  <button className="app-guide-btn" onClick={() => setShowSignup(true)} style={{ background: '#4F46E5', color: '#fff', borderColor: '#4F46E5' }}>🎁 Tạo tài khoản miễn phí — học thử</button>
+                </div>
               </div>
               <div className="app-shots">
                 <img className="shot" src="/app-khoahoc.png" alt="Màn hình Khoá học" />
