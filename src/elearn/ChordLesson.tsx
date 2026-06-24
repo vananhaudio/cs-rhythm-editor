@@ -81,7 +81,7 @@ export default function ChordLesson({ cfg, onClose, onComplete, studentId, lesso
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px calc(env(safe-area-inset-bottom, 0px) + 24px)', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px calc(env(safe-area-inset-bottom, 0px) + 14px)', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ maxWidth: 360, margin: '0 auto' }}>
 
           {step === 0 && (
@@ -116,10 +116,12 @@ export default function ChordLesson({ cfg, onClose, onComplete, studentId, lesso
             const ex = cfg.exercises[step - EX_START]
             return (
               <div key={step}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#1F2430', marginBottom: 4 }}>{ex.name}</div>
-                {ex.hint && <div style={{ fontSize: 13.5, color: '#5A6072', lineHeight: 1.6, marginBottom: 12 }}>{ex.hint}</div>}
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#1F2430', marginBottom: 2, textAlign: 'center' }}>{ex.name}</div>
+                {ex.hint && <div style={{ fontSize: 12.5, color: '#5A6072', lineHeight: 1.45, marginBottom: 8, textAlign: 'center' }}>{ex.hint}</div>}
                 <ChordSeqTrainer exercise={ex} bpm={ex.strumPerBeat ? 65 : 55} loops={4} onPass={next} />
-                <div style={{ marginTop: 14 }}><Btn onClick={next}>{step === QUIZ - 1 ? 'Sang Quiz →' : 'Bài tập tiếp →'}</Btn></div>
+                <div style={{ textAlign: 'center', marginTop: 10 }}>
+                  <button onClick={next} style={{ background: 'none', border: 'none', color: INDIGO, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>{step === QUIZ - 1 ? 'Sang Quiz →' : 'Bỏ qua / bài tập tiếp →'}</button>
+                </div>
               </div>
             )
           })()}

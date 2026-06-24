@@ -117,17 +117,17 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       <style>{`@font-face{font-family:'Bravura';src:url('/font/Bravura.woff2') format('woff2'),url('/font/Bravura.woff') format('woff');font-display:swap}@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
 
       {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo) */}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 7, justifyContent: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
         {distinct.map(c => (
-          <div key={c} style={{ width: 44, textAlign: 'center' }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#3A4050' }}>{c}</div>
-            <MiniDiagram name={c} size={50} />
+          <div key={c} style={{ width: 40, textAlign: 'center' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#3A4050' }}>{c}</div>
+            <MiniDiagram name={c} size={42} />
           </div>
         ))}
       </div>
 
       {/* Khuông nhịp — vạch nhịp là cột riêng (canh thẳng tuyệt đối); ╱ sáng+nảy mỗi phách, ◇ sáng cả ô */}
-      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '14px 8px' }}>
+      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '10px 8px' }}>
         {rows.map((row, ri) => {
           const isLastRow = ri === rows.length - 1
           const bar = (b: Slot[], bj: number) => (
@@ -146,7 +146,8 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                   const on = running && (s.mark === 'whole' || s.mark === 'restWhole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
                   const color = restMark ? (on ? '#6B7280' : '#9AA0B0') : on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8'
                   const glyph = s.mark === 'rest' ? '' : s.mark === 'restWhole' ? '' : markGlyph(s.mark)
-                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 26 : s.mark === 'down' ? 20 : 18, lineHeight: 1, fontWeight: 700, color, transform: on && s.mark === 'down' ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{glyph}</div>
+                  const tf = s.mark === 'restWhole' ? 'translateY(7px)' : s.mark === 'rest' ? 'translateY(3px)' : on && s.mark === 'down' ? 'scale(1.25)' : 'none'
+                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 24 : s.mark === 'down' ? 20 : 18, lineHeight: 1, fontWeight: 700, color, transform: tf, transition: 'color .07s' }}>{glyph}</div>
                 })}
               </div>
             </div>
@@ -158,13 +159,13 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
           return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 12 }}>{kids}</div>
         })}
       </div>
-      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống · ◇ = giữ cả ô · <span style={{ fontFamily: 'Bravura', fontSize: 15, verticalAlign: '-2px' }}>{String.fromCodePoint(0xE4E5)}</span> = dấu lặng (nghỉ)</div>
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>╱ = quạt xuống · ◇ = giữ cả ô · <span style={{ fontFamily: 'Bravura', fontSize: 15, verticalAlign: '-2px' }}>{String.fromCodePoint(0xE4E5)}</span> = dấu lặng (nghỉ)</div>
 
       {/* BPM */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}>
         {([['Chậm', 50], ['Vừa', 65], ['Nhanh', 80]] as [string, number][]).map(([lbl, v]) => {
           const on = bpm === v
-          return <button key={v} onClick={() => setBpm(v)} style={{ flex: 1, maxWidth: 110, padding: '8px 4px', borderRadius: 10, border: `1.5px solid ${on ? INDIGO : '#D8DCE6'}`, background: on ? '#EEF2FF' : '#fff', color: on ? INDIGO : '#6B7280', fontWeight: on ? 800 : 600, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>{lbl}<div style={{ fontSize: 10, opacity: .75 }}>{v}</div></button>
+          return <button key={v} onClick={() => setBpm(v)} style={{ flex: 1, maxWidth: 110, padding: '6px 4px', borderRadius: 10, border: `1.5px solid ${on ? INDIGO : '#D8DCE6'}`, background: on ? '#EEF2FF' : '#fff', color: on ? INDIGO : '#6B7280', fontWeight: on ? 800 : 600, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>{lbl}<div style={{ fontSize: 10, opacity: .75 }}>{v}</div></button>
         })}
       </div>
 
@@ -185,14 +186,13 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
           </div>
         )
       })()}
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginTop: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#374151', marginBottom: 4 }}>
-          <span style={{ fontWeight: 600 }}>Số vòng đã tập</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops} vòng</span>
+          <span style={{ fontWeight: 600 }}>Số vòng đã tập (đủ {loops} là xong)</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops}</span>
         </div>
         <div style={{ height: 8, background: '#E1E4EA', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ width: `${Math.min(100, (loopOk / loops) * 100)}%`, height: '100%', background: '#16A34A', borderRadius: 4, transition: 'width .3s' }} />
         </div>
-        <div style={{ fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>Cứ tập theo khuông; mỗi lần đi hết bài = 1 vòng. Đủ {loops} vòng là xong bài tập này.</div>
       </div>
 
       {done ? (
