@@ -24,13 +24,13 @@ export const AM_E: ChordLessonCfg = {
       name: 'Bài tập 2 · C – Am – E – G7', short: 'BT2',
       hint: 'Quạt xuống 4 lần mỗi ô (/ / / /), đổi hợp âm mỗi ô.',
       strumPerBeat: true,
-      cells: [{ chord: 'C', beats: 4 }, { chord: 'Am', beats: 4 }, { chord: 'E', beats: 4 }, { chord: 'G7', beats: 4 }, { chord: 'C', beats: 4 }],
+      cells: [{ chord: 'C', beats: 4 }, { chord: 'Am', beats: 4 }, { chord: 'E', beats: 4 }, { chord: 'G7', beats: 4 }, { chord: 'C', beats: 4, hold: true }],
     },
     {
       name: 'Bài tập 3 · chuỗi dài', short: 'BT3',
       hint: 'Có ô 2 hợp âm — mỗi hợp âm 2 phách (C–Am, rồi E–Am). G7 và C trọn 4 phách.',
       strumPerBeat: true,
-      cells: [{ chord: 'C', beats: 2 }, { chord: 'Am', beats: 2 }, { chord: 'G7', beats: 4 }, { chord: 'E', beats: 2 }, { chord: 'Am', beats: 2 }, { chord: 'C', beats: 4 }],
+      cells: [{ chord: 'C', beats: 2 }, { chord: 'Am', beats: 2 }, { chord: 'G7', beats: 4 }, { chord: 'E', beats: 2 }, { chord: 'Am', beats: 2 }, { chord: 'C', beats: 4, hold: true }],
     },
   ],
   quiz: [

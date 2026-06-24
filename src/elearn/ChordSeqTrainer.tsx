@@ -1,53 +1,70 @@
-// ── Luyện ĐỔI HỢP ÂM theo CHUỖI (tổng quát) ───────────────────────────────────
-// Chạy y theo bản nhạc: mỗi ô = { hợp âm, số phách }. strumPerBeat: true = quạt mỗi phách
-// (4 gảy/ô), false = nốt tròn (1 gảy/ô, giữ). Mic nhận hợp âm liên tục; đi hết chuỗi = 1 vòng.
+// ── Luyện QUẠT + NHỊP + ĐỔI HỢP ÂM theo khuông (giống tài liệu giấy) ──────────
+// Sơ đồ hợp âm nhỏ, CỐ ĐỊNH ở trên (tham khảo). Phần chính = khuông nhịp: tên hợp âm
+// + gạch chéo / (quạt) hoặc ◇ (nốt tròn) theo từng ô, có vạch nhịp + con trỏ chạy.
+// Mic nhận hợp âm liên tục; đi hết chuỗi = 1 vòng.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveChord, MiniDiagram } from './ChordChangeTrainer'
 
 const INDIGO = '#4338CA'
 const ORANGE = '#EA580C'
 
-export interface Cell { chord: string; beats: number }
+export interface Cell { chord: string; beats: number; hold?: boolean } // hold = nốt tròn (1 gảy, giữ)
 export interface Exercise { name: string; cells: Cell[]; strumPerBeat: boolean }
 
 let clickCtx: AudioContext | null = null
-function click(kind: 'accent' | 'play') {
+function click(accent: boolean) {
   try {
     if (!clickCtx) clickCtx = new AudioContext()
     if (clickCtx.state === 'suspended') clickCtx.resume()
     const t = clickCtx.currentTime, o = clickCtx.createOscillator(), g = clickCtx.createGain()
-    o.type = 'square'; o.frequency.value = kind === 'accent' ? 3200 : 2500
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(kind === 'accent' ? 0.18 : 0.1, t + 0.001)
+    o.type = 'square'; o.frequency.value = accent ? 3200 : 2500
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(accent ? 0.18 : 0.1, t + 0.001)
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03)
     o.connect(g); g.connect(clickCtx.destination); o.start(t); o.stop(t + 0.06)
   } catch { /* bỏ qua */ }
 }
 
+interface Slot { cellIdx: number; beatInCell: number; chord: string; mark: 'down' | 'whole' | 'hold'; segStart: boolean; global: number }
+
 export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, onPass }: { exercise: Exercise; bpm?: number; loops?: number; onPass?: () => void }) {
   const { start, stop, active, currentRef } = useLiveChord()
   const [bpm, setBpm] = useState(bpm0)
   const [running, setRunning] = useState(false)
-  const [pos, setPos] = useState(0)          // beat index trong timeline
-  const [loopOk, setLoopOk] = useState(0)    // số vòng sạch
+  const [pos, setPos] = useState(0)
+  const [loopOk, setLoopOk] = useState(0)
   const [heard, setHeard] = useState('')
   const posRef = useRef(0)
   const hitsRef = useRef<boolean[]>([])
   const loopRef = useRef(0)
 
-  // Dòng thời gian: mỗi phách biết đang ở ô nào + có gảy không
-  const timeline = useMemo(() => {
-    const tl: { cellIdx: number; beatInCell: number; strum: boolean }[] = []
+  // Dòng thời gian theo phách
+  const timeline = useMemo<Slot[]>(() => {
+    const tl: Slot[] = []
+    let g = 0
     exercise.cells.forEach((c, ci) => {
-      for (let b = 0; b < c.beats; b++) tl.push({ cellIdx: ci, beatInCell: b, strum: exercise.strumPerBeat || b === 0 })
+      const whole = c.hold || !exercise.strumPerBeat
+      for (let b = 0; b < c.beats; b++) {
+        tl.push({ cellIdx: ci, beatInCell: b, chord: c.chord, segStart: b === 0, global: g++,
+          mark: whole ? (b === 0 ? 'whole' : 'hold') : 'down' })
+      }
     })
     return tl
   }, [exercise])
 
-  const cur = timeline[pos] ?? { cellIdx: 0, beatInCell: 0, strum: true }
-  const curCell = exercise.cells[cur.cellIdx]
-  const nextChord = exercise.cells[(cur.cellIdx + 1) % exercise.cells.length]?.chord
-  // Phách CUỐI của ô → báo trước "sắp đổi" sang hợp âm kế (chống đổi đột ngột)
-  const prepping = running && !!curCell && cur.beatInCell === curCell.beats - 1 && nextChord !== curCell.chord
+  // Gom phách thành các ô nhịp (4 phách / ô)
+  const bars = useMemo<Slot[][]>(() => {
+    const out: Slot[][] = []
+    for (let i = 0; i < timeline.length; i += 4) out.push(timeline.slice(i, i + 4))
+    return out
+  }, [timeline])
+
+  const distinct = useMemo(() => [...new Set(exercise.cells.map(c => c.chord))], [exercise])
+
+  const cur = timeline[pos] ?? timeline[0]
+  const curCell = exercise.cells[cur?.cellIdx ?? 0]
+  const lastBeatOfCell = cur && cur.beatInCell === (curCell?.beats ?? 1) - 1
+  const nextChord = timeline[(pos + 1) % timeline.length]?.chord
+  const prepping = running && lastBeatOfCell && nextChord !== cur?.chord
 
   useEffect(() => {
     if (!running) return
@@ -55,14 +72,13 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     const id = setInterval(() => {
       let p = posRef.current + 1
       if (p >= timeline.length) {
-        // hết 1 vòng → chấm
         if (hitsRef.current.every(Boolean) && loopRef.current < loops) { loopRef.current += 1; setLoopOk(loopRef.current) }
         hitsRef.current = exercise.cells.map(() => false)
         p = 0
       }
-      const slot = timeline[p]
-      click(slot.beatInCell === 0 ? 'accent' : 'play')
-      if (currentRef.current === exercise.cells[slot.cellIdx].chord) hitsRef.current[slot.cellIdx] = true
+      const s = timeline[p]
+      click(p % 4 === 0)
+      if (currentRef.current === s.chord) hitsRef.current[s.cellIdx] = true
       posRef.current = p; setPos(p); setHeard(currentRef.current)
       if (loopRef.current >= loops) onPass?.()
     }, beatMs)
@@ -78,62 +94,61 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   }
 
   const done = loopOk >= loops
+  const markGlyph = (m: Slot['mark']) => m === 'down' ? '╱' : m === 'whole' ? '◇' : ''
 
   return (
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
-      {/* Dải chuỗi hợp âm — ô đang chơi sáng lên */}
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 12 }}>
-        {exercise.cells.map((c, i) => {
-          const on = running && i === cur.cellIdx
-          return (
-            <div key={i} style={{ padding: '5px 10px', borderRadius: 9, fontSize: 13, fontWeight: on ? 800 : 600, background: on ? INDIGO : '#fff', color: on ? '#fff' : '#6B7280', border: `1.5px solid ${on ? INDIGO : '#E5E7EB'}`, transition: 'all .12s' }}>
-              {c.chord}{c.beats !== 4 ? <span style={{ fontSize: 10, opacity: .7 }}> ·{c.beats}</span> : ''}
+      <style>{`@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}`}</style>
+
+      {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo) */}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+        {distinct.map(c => (
+          <div key={c} style={{ width: 56, textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#3A4050' }}>{c}</div>
+            <MiniDiagram name={c} />
+          </div>
+        ))}
+      </div>
+
+      {/* Khuông nhịp — tên hợp âm + gạch chéo theo ô, vạch nhịp, con trỏ chạy */}
+      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '12px 8px', display: 'flex', flexWrap: 'wrap', gap: 0, justifyContent: 'center' }}>
+        {bars.map((bar, bi) => (
+          <div key={bi} style={{ display: 'flex', alignItems: 'stretch', borderLeft: bi === 0 ? 'none' : '2px solid #D8DCE6' }}>
+            <div style={{ display: 'flex' }}>
+              {bar.map(s => {
+                const on = running && s.global === pos
+                const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
+                return (
+                  <div key={s.global} style={{ width: 34, textAlign: 'center', padding: '0 1px' }}>
+                    <div className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12, fontWeight: 700, height: 16, color: isNextSeg ? INDIGO : on && s.segStart ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>
+                      {s.segStart ? s.chord : ''}
+                    </div>
+                    <div style={{ marginTop: 4, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: on ? INDIGO : 'transparent', color: on ? '#fff' : s.mark === 'hold' ? '#D8DCE6' : '#4B5563', fontSize: s.mark === 'whole' ? 16 : 18, fontWeight: 600 }}>
+                      {markGlyph(s.mark)}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          )
+          </div>
+        ))}
+        <div style={{ alignSelf: 'stretch', borderLeft: '2px solid #1F2430', marginLeft: 2 }} />
+      </div>
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống (1 phách) · ◇ = gảy 1 lần giữ cả ô</div>
+
+      {/* BPM */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+        {([['Chậm', 50], ['Vừa', 65], ['Nhanh', 80]] as [string, number][]).map(([lbl, v]) => {
+          const on = bpm === v
+          return <button key={v} onClick={() => setBpm(v)} style={{ flex: 1, maxWidth: 110, padding: '8px 4px', borderRadius: 10, border: `1.5px solid ${on ? INDIGO : '#D8DCE6'}`, background: on ? '#EEF2FF' : '#fff', color: on ? INDIGO : '#6B7280', fontWeight: on ? 800 : 600, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>{lbl}<div style={{ fontSize: 10, opacity: .75 }}>{v}</div></button>
         })}
-      </div>
-
-      {/* Hợp âm đang chơi + kế tiếp (báo trước "sắp đổi" ở phách cuối để không bị giật) */}
-      <style>{`@keyframes csPrep{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}.cs-prep{animation:csPrep .45s ease-in-out infinite}`}</style>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
-        <div style={{ flex: 1, background: '#fff', border: `2px solid ${INDIGO}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: prepping ? 0.55 : 1, transition: 'opacity .15s' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: INDIGO }}>{curCell?.chord}</div>
-          <MiniDiagram name={curCell?.chord ?? 'C'} dim={prepping} />
-          <div style={{ fontSize: 13, fontWeight: 800, height: 18, color: prepping ? '#9CA3AF' : ORANGE }}>{!running ? '' : prepping ? 'rời tay…' : 'GẢY!'}</div>
-        </div>
-        <div className={prepping ? 'cs-prep' : ''} style={{ flex: 1, background: prepping ? '#F4F5FF' : '#fff', border: `${prepping ? 2 : 1}px solid ${prepping ? INDIGO : '#E5E7EB'}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: running ? 1 : .7, transition: 'border-color .15s, background .15s' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: prepping ? INDIGO : '#3A4050' }}>{nextChord}</div>
-          <MiniDiagram name={nextChord ?? 'C'} dim={!prepping} />
-          <div style={{ fontSize: 12, fontWeight: prepping ? 800 : 700, height: 18, color: prepping ? INDIGO : '#9CA3AF' }}>{prepping ? 'sắp đổi →' : 'kế tiếp'}</div>
-        </div>
-      </div>
-
-      {/* Phách của ô hiện tại */}
-      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 16, padding: 12, marginTop: 10 }}>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 10 }}>
-          {Array.from({ length: curCell?.beats ?? 4 }).map((_, i) => {
-            const on = running && i === cur.beatInCell
-            const strum = exercise.strumPerBeat || i === 0
-            return (
-              <div key={i} style={{ width: 40, height: 40, borderRadius: 11, border: `1.5px solid ${on ? INDIGO : '#D8DCE6'}`, background: on ? INDIGO : '#fff', color: on ? '#fff' : '#9AA0B0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17 }}>
-                {strum ? '↓' : '·'}
-              </div>
-            )
-          })}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          {([['Chậm', 50], ['Vừa', 65], ['Nhanh', 80]] as [string, number][]).map(([lbl, v]) => {
-            const on = bpm === v
-            return <button key={v} onClick={() => setBpm(v)} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: `1.5px solid ${on ? INDIGO : '#D8DCE6'}`, background: on ? '#EEF2FF' : '#fff', color: on ? INDIGO : '#6B7280', fontWeight: on ? 800 : 600, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}>{lbl}<div style={{ fontSize: 10, opacity: .75 }}>{v}</div></button>
-          })}
-        </div>
       </div>
 
       {/* Mic + tiến độ */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF3EC', border: '1px solid #FBD9C5', borderRadius: 14, padding: '9px 12px', marginTop: 10 }}>
         <span style={{ width: 9, height: 9, borderRadius: '50%', background: active ? ORANGE : '#C3C8D2', display: 'inline-block' }} />
         <span style={{ fontSize: 12, color: '#9A4316', fontWeight: 600 }}>
-          {active ? <>App đang nghe: <b style={{ color: heard === curCell?.chord ? '#16A34A' : '#9A4316' }}>{heard || '—'}</b></> : 'Mic tắt — bấm bắt đầu để app nghe & chấm'}
+          {active ? <>App đang nghe: <b style={{ color: heard === cur?.chord ? '#16A34A' : '#9A4316' }}>{heard || '—'}</b></> : 'Mic tắt — bấm bắt đầu để app nghe & chấm'}
         </span>
       </div>
       <div style={{ marginTop: 10 }}>
