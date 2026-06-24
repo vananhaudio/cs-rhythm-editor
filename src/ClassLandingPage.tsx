@@ -187,10 +187,14 @@ export default function ClassLandingPage() {
   const richReply = (s: string) => {
     const esc = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     return esc
-      .replace(/(https?:\/\/[^\s)]+|zalo\.me\/[^\s)]+)/g, m => {
-        const href = m.startsWith('http') ? m : 'https://' + m
-        return `<a href="${href}" target="_blank" rel="noreferrer" style="color:#4338CA;font-weight:600">${m}</a>`
+      // linkify TRƯỚC, loại dấu * < ) và dấu câu cuối khỏi URL để không dính '**'
+      .replace(/(https?:\/\/[^\s)*<]+|zalo\.me\/[^\s)*<]+)/g, m => {
+        const url = m.replace(/[.,;!?]+$/, '')
+        const href = url.startsWith('http') ? url : 'https://' + url
+        return `<a href="${href}" target="_blank" rel="noreferrer" style="color:#4338CA;font-weight:600">${url}</a>`
       })
+      // markdown đậm **...** → <b>
+      .replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>')
       .replace(/\n/g, '<br>')
   }
   const chatSendText = async (text: string) => {
