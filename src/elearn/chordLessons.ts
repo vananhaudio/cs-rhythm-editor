@@ -9,12 +9,12 @@ export const BASIC_1: ChordLessonCfg = {
   title: 'Luyện chuyển hợp âm cơ bản 1',
   practice: false,
   introTitle: 'Chuyển hợp âm — có ô nghỉ',
-  intro: 'Bài này luyện chuyển qua lại giữa các hợp âm. Gảy hết một ô rồi tới ô NGHỉ (dấu 𝄽) — đừng gảy, hãy dùng lúc đó để đặt sẵn ngón sang hợp âm tiếp theo. Mỗi hợp âm gảy số dây khác nhau (xem dưới).',
+  intro: 'Bài này luyện chuyển qua lại giữa các hợp âm. Gảy hết một ô rồi tới ô NGHỈ (dấu lặng) — đừng gảy, hãy dùng lúc đó để đặt sẵn ngón sang hợp âm tiếp theo. Mỗi hợp âm gảy số dây khác nhau (xem dưới).',
   learn: ['C', 'G7', 'Am', 'E', 'Dm'],
   learnTips: [
     'Số dây gảy: C = 5 dây · G7 = 6 dây · Am = 5 dây.',
     'E = 6 dây · Dm = 4 dây (tránh 2 dây trầm nhất).',
-    'Ô nghỉ 𝄽 = không gảy — tranh thủ đổi ngón cho mượt.',
+    'Dấu lặng (nghỉ) = không gảy — tranh thủ đổi ngón cho mượt.',
   ],
   exercises: [
     { name: 'Bài tập 1 · C → G7', short: 'BT1', hint: 'Quạt 4 lần, nghỉ 1 ô, đổi sang G7.', strumPerBeat: true,
@@ -31,7 +31,7 @@ export const BASIC_1: ChordLessonCfg = {
       cells: [{ chord: 'C', beats: 4, oneHit: true }, { chord: 'Am', beats: 4, oneHit: true }, { chord: 'Dm', beats: 4, oneHit: true }, { chord: 'G7', beats: 4, oneHit: true }] },
   ],
   quiz: [
-    { q: 'Dấu 𝄽 (nghỉ) trong bài nghĩa là gì?', opts: ['Không gảy — để kịp đổi sang hợp âm sau', 'Quạt mạnh gấp đôi', 'Gảy nhẹ 1 cái'], correct: 0,
+    { q: 'Dấu lặng (nghỉ) trong bài nghĩa là gì?', opts: ['Không gảy — để kịp đổi sang hợp âm sau', 'Quạt mạnh gấp đôi', 'Gảy nhẹ 1 cái'], correct: 0,
       explain: 'Ô nghỉ là lúc dừng gảy, tranh thủ đặt ngón sang hợp âm tiếp theo cho mượt.' },
     { q: 'Hợp âm Dm gảy mấy dây?', opts: ['4 dây (tránh 2 dây trầm)', '6 dây', 'Cả 6 dây'], correct: 0,
       explain: 'Dm là hợp âm 4 dây — chỉ gảy từ dây 4 trở xuống.' },

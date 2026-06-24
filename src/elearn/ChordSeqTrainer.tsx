@@ -109,11 +109,12 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   }
 
   const done = loopOk >= loops
-  const markGlyph = (m: Slot['mark']) => m === 'down' ? '╱' : m === 'whole' ? '◇' : (m === 'rest' || m === 'restWhole') ? '𝄽' : ''
+  // Dấu lặng dùng font nhạc chuẩn Bravura (SMuFL): lặng đen U+E4E5, lặng tròn U+E4E3
+  const markGlyph = (m: Slot['mark']) => m === 'down' ? '╱' : m === 'whole' ? '◇' : m === 'rest' ? '' : m === 'restWhole' ? '' : ''
 
   return (
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
-      <style>{`@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
+      <style>{`@font-face{font-family:'Bravura';src:url('/font/Bravura.woff2') format('woff2'),url('/font/Bravura.woff') format('woff');font-display:swap}@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
 
       {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo) */}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
@@ -143,8 +144,9 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                 {b.map(s => {
                   const restMark = s.mark === 'rest' || s.mark === 'restWhole'
                   const on = running && (s.mark === 'whole' || s.mark === 'restWhole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
-                  const color = restMark ? (on ? '#9AA0B0' : '#D1D5DB') : on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8'
-                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontSize: s.mark === 'down' ? 20 : 18, fontWeight: 700, color, transform: on && s.mark === 'down' ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{markGlyph(s.mark)}</div>
+                  const color = restMark ? (on ? '#6B7280' : '#9AA0B0') : on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8'
+                  const glyph = s.mark === 'rest' ? '' : s.mark === 'restWhole' ? '' : markGlyph(s.mark)
+                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 26 : s.mark === 'down' ? 20 : 18, lineHeight: 1, fontWeight: 700, color, transform: on && s.mark === 'down' ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{glyph}</div>
                 })}
               </div>
             </div>
@@ -156,7 +158,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
           return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 12 }}>{kids}</div>
         })}
       </div>
-      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống · ◇ = giữ cả ô · 𝄽 = nghỉ (không gảy)</div>
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống · ◇ = giữ cả ô · <span style={{ fontFamily: 'Bravura', fontSize: 15, verticalAlign: '-2px' }}>{String.fromCodePoint(0xE4E5)}</span> = dấu lặng (nghỉ)</div>
 
       {/* BPM */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12 }}>
