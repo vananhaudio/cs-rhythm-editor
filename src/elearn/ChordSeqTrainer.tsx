@@ -2,7 +2,7 @@
 // Sơ đồ hợp âm nhỏ, CỐ ĐỊNH ở trên (tham khảo). Phần chính = khuông nhịp: tên hợp âm
 // + gạch chéo / (quạt) hoặc ◇ (nốt tròn) theo từng ô, có vạch nhịp + con trỏ chạy.
 // Mic nhận hợp âm liên tục; đi hết chuỗi = 1 vòng.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLiveChord, MiniDiagram } from './ChordChangeTrainer'
 
 const INDIGO = '#4338CA'
@@ -115,33 +115,33 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         ))}
       </div>
 
-      {/* Khuông nhịp — lưới 4 cột/ô, thẳng hàng; dấu ╱ SÁNG + nảy khi tới phách */}
-      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '14px 10px' }}>
-        {rows.map((row, ri) => (
-          <div key={ri} style={{ display: 'flex', marginBottom: ri < rows.length - 1 ? 16 : 0 }}>
-            {row.map((bar, bj) => {
-              const lastBar = ri === rows.length - 1 && bj === row.length - 1
-              return (
-                <div key={bj} style={{ flex: 1, paddingLeft: 8, paddingRight: 8, borderLeft: '2px solid #1F2430', borderRight: lastBar ? '2px solid #1F2430' : 'none' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: 16 }}>
-                    {bar.map(s => {
-                      const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
-                      const onSeg = running && s.global === pos && s.segStart
-                      return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12.5, fontWeight: 700, textAlign: 'center', color: isNextSeg ? INDIGO : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? s.chord : ''}</div>
-                    })}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 6, height: 30, alignItems: 'center' }}>
-                    {bar.map(s => {
-                      const on = running && s.global === pos
-                      return <div key={s.global} className={on ? 'cs-hit' : ''} style={{ textAlign: 'center', fontSize: s.mark === 'whole' ? 17 : 20, fontWeight: 700, color: on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8', transform: on ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{markGlyph(s.mark)}</div>
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-            {row.length === 1 && <div style={{ flex: 1 }} />}
-          </div>
-        ))}
+      {/* Khuông nhịp — vạch nhịp là cột riêng (canh thẳng tuyệt đối); ╱ sáng+nảy mỗi phách, ◇ sáng cả ô */}
+      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '14px 8px' }}>
+        {rows.map((row, ri) => {
+          const isLastRow = ri === rows.length - 1
+          const bar = (b: Slot[], bj: number) => (
+            <div key={'b' + bj} style={{ flex: 1, padding: '0 6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: 16 }}>
+                {b.map(s => {
+                  const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
+                  const onSeg = running && cur?.cellIdx === s.cellIdx && s.segStart
+                  return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12.5, fontWeight: 700, textAlign: 'center', color: isNextSeg ? INDIGO : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? s.chord : ''}</div>
+                })}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 6, height: 30, alignItems: 'center' }}>
+                {b.map(s => {
+                  const on = running && (s.mark === 'whole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
+                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontSize: s.mark === 'whole' ? 18 : 20, fontWeight: 700, color: on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8', transform: on ? 'scale(1.25)' : 'none', transition: 'color .07s' }}>{markGlyph(s.mark)}</div>
+                })}
+              </div>
+            </div>
+          )
+          const vline = (key: string, thick?: boolean) => <div key={key} style={{ width: thick ? 3 : 2, alignSelf: 'stretch', background: '#1F2430', borderRadius: 1 }} />
+          const kids: ReactNode[] = [vline('l0')]
+          row.forEach((b, bj) => { kids.push(bar(b, bj)); kids.push(vline('l' + bj, isLastRow && bj === row.length - 1)) })
+          if (row.length === 1) kids.push(<div key="sp" style={{ flex: 1 }} />)
+          return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 16 }}>{kids}</div>
+        })}
       </div>
       <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 6 }}>╱ = quạt xuống (1 phách) · ◇ = gảy 1 lần giữ cả ô</div>
 
