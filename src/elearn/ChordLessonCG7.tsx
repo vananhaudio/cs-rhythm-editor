@@ -35,7 +35,7 @@ export default function ChordLessonCG7({ onClose, onComplete }: { onClose?: () =
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#F0F2F5', fontFamily: 'system-ui, sans-serif' }}>
       {/* Header */}
-      <div style={{ padding: '12px 16px 8px', background: '#fff', borderBottom: '1px solid #E8EAF0', flexShrink: 0 }}>
+      <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 8px', background: '#fff', borderBottom: '1px solid #E8EAF0', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: INDIGO, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
           <div style={{ flex: 1 }}>
@@ -54,7 +54,7 @@ export default function ChordLessonCG7({ onClose, onComplete }: { onClose?: () =
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px calc(env(safe-area-inset-bottom, 0px) + 24px)', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ maxWidth: 360, margin: '0 auto' }}>
 
           {step === 0 && (

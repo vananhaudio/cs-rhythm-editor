@@ -200,19 +200,24 @@ export default function ChordChangeTrainer({ bpm: bpm0 = 60, target = 8, onPass 
   }
 
   const done = clean >= target
-  const card = (name: string, isReq: boolean) => (
-    <div style={{ flex: 1, background: '#fff', border: `${isReq ? 2 : 1}px solid ${isReq ? INDIGO : '#E1E4EA'}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: isReq ? 1 : 0.78 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: isReq ? INDIGO : '#3A4050' }}>{name}</div>
-      <MiniDiagram name={name} dim={!isReq} />
-      <div style={{ fontSize: 14, fontWeight: 800, color: isReq ? (phase === 'play' ? ORANGE : INDIGO) : '#9AA0B0' }}>{isReq ? (phase === 'play' ? 'GẢY!' : 'chuyển ngón…') : 'kế tiếp'}</div>
-    </div>
-  )
+  // VỊ TRÍ CỐ ĐỊNH: C luôn bên trái, G7 luôn bên phải — chỉ đổi HIGHLIGHT thẻ đang chơi
+  const card = (name: string) => {
+    const isReq = running && name === required
+    return (
+      <div key={name} style={{ flex: 1, background: '#fff', border: `${isReq ? 2 : 1}px solid ${isReq ? INDIGO : '#E1E4EA'}`, borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center', opacity: isReq || !running ? 1 : 0.5, transition: 'opacity .15s, border-color .15s' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: isReq ? INDIGO : '#3A4050' }}>{name}</div>
+        <MiniDiagram name={name} dim={running && !isReq} />
+        <div style={{ fontSize: 14, fontWeight: 800, height: 18, color: isReq ? (phase === 'play' ? ORANGE : INDIGO) : '#C3C8D2' }}>
+          {!running ? ' ' : isReq ? (phase === 'play' ? 'GẢY!' : 'chuyển ngón…') : ' '}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: 10 }}>
-        {card(required, true)}
-        {card(next, false)}
+        {SEQ.map(card)}
       </div>
 
       <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 16, padding: 12, marginTop: 10 }}>
