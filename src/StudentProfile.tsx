@@ -260,15 +260,28 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     setEnrollments(prev => prev.map(e => e.id === enrollmentId ? { ...e, is_active: false } : e))
   }
 
-  // Cấp / thu quyền MỞ KHOÁ trả phí cho học viên này (đóng phí xong thầy bấm "Mở khoá")
+  // MỞ KHOÁ (gộp): vừa GHI DANH (khoá hiện ra) vừa CẤP QUYỀN trong 1 bước.
+  // Thu quyền: chỉ tắt quyền, vẫn giữ ghi danh (khoá hiện 🔒).
   const setCourseAccess = async (courseId: string, grant: boolean) => {
     setGrantingId(courseId)
     const uid = (await supabase.auth.getUser()).data.user?.id
     const { error } = await supabase.from('edu_course_access')
       .upsert({ student_id: studentId, course_id: courseId, active: grant, granted_by: uid }, { onConflict: 'student_id,course_id' })
-    setGrantingId(null)
-    if (error) { alert('Cập nhật quyền mở khoá thất bại: ' + error.message); return }
+    if (error) { setGrantingId(null); alert('Cập nhật quyền mở khoá thất bại: ' + error.message); return }
     setAccessSet(prev => { const n = new Set(prev); grant ? n.add(courseId) : n.delete(courseId); return n })
+    // Khi MỞ KHOÁ: đảm bảo đã ghi danh để khoá hiện ra trong app
+    if (grant) {
+      const { data: existRows } = await supabase.from('edu_enrollments').select('id').eq('student_id', studentId).eq('course_id', courseId).limit(1)
+      const ex = existRows?.[0]
+      if (ex) {
+        const { data } = await supabase.from('edu_enrollments').update({ is_active: true }).eq('id', ex.id).select(SEL).single()
+        if (data) setEnrollments(prev => prev.some(e => e.id === data.id) ? prev.map(e => e.id === data.id ? data as unknown as EnrollmentItem : e) : [...prev, data as unknown as EnrollmentItem])
+      } else {
+        const { data } = await supabase.from('edu_enrollments').insert({ student_id: studentId, course_id: courseId, enrolled_by: uid, is_active: true }).select(SEL).single()
+        if (data) setEnrollments(prev => [...prev, data as unknown as EnrollmentItem])
+      }
+    }
+    setGrantingId(null)
   }
 
   useEffect(() => {
@@ -495,6 +508,10 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                     </div>
                     {already ? (
                       <span style={{ fontSize: 13, color: T.header, fontWeight: 600 }}>✓ Đang học</span>
+                    ) : c.is_free === false ? (
+                      <button onClick={() => setCourseAccess(c.id, true)} disabled={grantingId === c.id} style={{ background: '#15803D', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: grantingId === c.id ? .7 : 1 }}>
+                        {grantingId === c.id ? '...' : '🔓 Mở khoá'}
+                      </button>
                     ) : (
                       <button onClick={() => handleEnroll(c.id)} disabled={enrolling === c.id} style={{ background: T.header, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: enrolling === c.id ? .7 : 1 }}>
                         {enrolling === c.id ? '...' : '+ Thêm vào'}
