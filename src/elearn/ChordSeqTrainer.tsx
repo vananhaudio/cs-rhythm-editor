@@ -114,40 +114,40 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
 
   return (
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
-      <style>{`@font-face{font-family:'Bravura';src:url('/font/Bravura.woff2') format('woff2'),url('/font/Bravura.woff') format('woff');font-display:swap}@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
+      <style>{`@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
 
       {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo) */}
-      <div style={{ display: 'flex', gap: 7, justifyContent: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap', opacity: .85 }}>
         {distinct.map(c => (
-          <div key={c} style={{ width: 40, textAlign: 'center' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#3A4050' }}>{c}</div>
-            <MiniDiagram name={c} size={42} />
+          <div key={c} style={{ width: 34, textAlign: 'center' }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: '#6B7280' }}>{c}</div>
+            <MiniDiagram name={c} size={36} />
           </div>
         ))}
       </div>
 
       {/* Khuông nhịp — vạch nhịp là cột riêng (canh thẳng tuyệt đối); ╱ sáng+nảy mỗi phách, ◇ sáng cả ô */}
-      <div style={{ background: '#fff', border: '1px solid #E8EAF0', borderRadius: 14, padding: '10px 8px' }}>
+      <div style={{ background: '#fff', border: '1.5px solid #E1E4EA', borderRadius: 16, padding: '16px 10px', boxShadow: '0 2px 10px rgba(17,24,39,.04)' }}>
         {rows.map((row, ri) => {
           const isLastRow = ri === rows.length - 1
           const bar = (b: Slot[], bj: number) => (
             <div key={'b' + bj} style={{ flex: 1, padding: '0 6px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: 24 }}>
                 {b.map(s => {
                   const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
                   const onSeg = running && cur?.cellIdx === s.cellIdx && s.segStart
-                  const okCell = running && hits[s.cellIdx]
-                  return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12.5, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap', color: isNextSeg ? INDIGO : okCell ? '#16A34A' : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? <>{s.chord}{okCell ? '✓' : ''}</> : ''}</div>
+                  const okCell = running && (hits[s.cellIdx] || (onSeg && heard === s.chord))
+                  return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 18, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap', color: isNextSeg ? INDIGO : okCell ? '#16A34A' : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? <>{s.chord}{okCell ? '✓' : ''}</> : ''}</div>
                 })}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 6, height: 30, alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 8, height: 46, alignItems: 'center' }}>
                 {b.map(s => {
                   const restMark = s.mark === 'rest' || s.mark === 'restWhole'
                   const on = running && (s.mark === 'whole' || s.mark === 'restWhole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
-                  const color = restMark ? (on ? '#6B7280' : '#9AA0B0') : on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#B6BCC8'
+                  const color = restMark ? (on ? '#6B7280' : '#9AA0B0') : on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#C0C6D2'
                   const glyph = s.mark === 'rest' ? '' : s.mark === 'restWhole' ? '' : markGlyph(s.mark)
-                  const tf = s.mark === 'restWhole' ? 'translateY(7px)' : s.mark === 'rest' ? 'translateY(3px)' : on && s.mark === 'down' ? 'scale(1.25)' : 'none'
-                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 24 : s.mark === 'down' ? 20 : 18, lineHeight: 1, fontWeight: 700, color, transform: tf, transition: 'color .07s' }}>{glyph}</div>
+                  const tf = s.mark === 'restWhole' ? 'translateY(11px)' : s.mark === 'rest' ? 'translateY(4px)' : on && s.mark === 'down' ? 'scale(1.3)' : 'none'
+                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 30 : s.mark === 'down' ? 30 : 26, lineHeight: 1, fontWeight: 700, color, transform: tf, transition: 'color .07s' }}>{glyph}</div>
                 })}
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
           const kids: ReactNode[] = [vline('l0')]
           row.forEach((b, bj) => { kids.push(bar(b, bj)); kids.push(vline('l' + bj, isLastRow && bj === row.length - 1)) })
           if (row.length === 1) kids.push(<div key="sp" style={{ flex: 1 }} />)
-          return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 12 }}>{kids}</div>
+          return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 16 }}>{kids}</div>
         })}
       </div>
       <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>╱ = quạt xuống · ◇ = giữ cả ô · <span style={{ fontFamily: 'Bravura', fontSize: 15, verticalAlign: '-2px' }}>{String.fromCodePoint(0xE4E5)}</span> = dấu lặng (nghỉ)</div>
@@ -169,23 +169,11 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         })}
       </div>
 
-      {/* Bảng phản hồi mic — hướng dẫn rõ + báo đúng/sai realtime */}
-      {(() => {
-        let bg = '#F1F2F6', bd = '#E5E7EB', col = '#374151', icon = '🎤'
-        let msg: React.ReactNode = <>Bấm <b>Bắt đầu</b> → cho phép mic → <b>gảy theo khuông</b>. App nghe và báo đúng/sai ngay.</>
-        if (running) {
-          if (isRest) { bg = '#F1F2F6'; bd = '#D8DCE6'; col = '#6B7280'; icon = '🤚'; msg = <>Nghỉ — <b>không gảy</b>, đặt sẵn ngón cho hợp âm <b>{nextChord}</b></> }
-          else if (heard && heard === cur?.chord) { bg = '#DCFCE7'; bd = '#86EFAC'; col = '#15803D'; icon = '✓'; msg = <>Đúng rồi! App đang nghe <b>{heard}</b></> }
-          else if (heard) { bg = '#FEF3C7'; bd = '#FCD34D'; col = '#92400E'; icon = '✗'; msg = <>Đang nghe <b>{heard}</b> — bạn cần gảy hợp âm <b>{cur?.chord}</b></> }
-          else { bg = '#EEF2FF'; bd = '#C7CBF0'; col = '#4338CA'; icon = '🎤'; msg = <>Gảy hợp âm <b>{cur?.chord}</b> đi — app đang lắng nghe…</> }
-        }
-        return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: bg, border: `1.5px solid ${bd}`, borderRadius: 12, padding: '9px 12px', marginTop: 10 }}>
-            <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
-            <span style={{ fontSize: 13, color: col, fontWeight: 600, lineHeight: 1.4 }}>{msg}</span>
-          </div>
-        )
-      })()}
+      {/* Dòng mic TĨNH — không nhảy cửa sổ. Phản hồi đúng/sai nằm ngay trong khuông (tên hợp âm xanh ✓). */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, color: '#6B7280', fontSize: 12.5, fontWeight: 500, lineHeight: 1.4, textAlign: 'center' }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: active ? '#16A34A' : '#C3C8D2', flexShrink: 0 }} />
+        {running ? 'Đang nghe — gảy theo ô đang sáng; đúng thì tên hợp âm chuyển xanh ✓' : 'Bấm Bắt đầu rồi gảy theo ô sáng — app tự chấm (gảy đúng → tên hợp âm xanh ✓)'}
+      </div>
       <div style={{ marginTop: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#374151', marginBottom: 4 }}>
           <span style={{ fontWeight: 600 }}>Số vòng đã tập (đủ {loops} là xong)</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops}</span>
