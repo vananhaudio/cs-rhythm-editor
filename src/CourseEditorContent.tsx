@@ -282,7 +282,7 @@ export default function CourseEditorContent() {
 
   // ── Load ──
   useEffect(() => {
-    supabase.from('edu_courses').select('id,name,slug,type,track,status,icon,image_url')
+    supabase.from('edu_courses').select('id,name,slug,type,track,status,icon,image_url,is_free')
       .order('track').order('level_order')
       .then(({ data }) => setCourses((data ?? []).map((c: any) => ({ ...c, status: c.status ?? 'on' }))))
     // Lấy TẤT CẢ tools (kể cả coming_soon/disabled) để admin thấy và bỏ tick được
