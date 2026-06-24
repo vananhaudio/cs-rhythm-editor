@@ -1,7 +1,7 @@
 // ── Trình chiếu SLIDE NHƯ VIDEO, ÉP NGHE HẾT ──────────────────────────────────
 // Ảnh slide chạy theo audio (chia đều hoặc theo mốc end_times). KHOÁ TUA — chỉ
 // đánh dấu hoàn thành khi audio chạy hết. Học sinh không thể bỏ qua.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 const INDIGO = '#4338CA'
 
@@ -9,7 +9,7 @@ export interface NarratedSlidesCfg {
   title: string
   crumb?: string
   audioUrl: string
-  slides: string[]        // URL ảnh slide
+  slides: ReactNode[]     // slide JSX (hoặc <img>) — phủ trọn khung 16:9
   endTimes?: number[]     // (tuỳ chọn) giây kết thúc mỗi slide; thiếu → chia đều theo audio
 }
 
@@ -67,10 +67,8 @@ export default function NarratedSlides({ cfg, onComplete, onClose }: { cfg: Narr
 
       {/* Slide (16:9, chứa trọn) */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px', minHeight: 0 }}>
-        <div style={{ width: '100%', maxWidth: 720, aspectRatio: '16 / 9', background: '#1A1A24', borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,.5)' }}>
-          {cfg.slides[cur]
-            ? <img src={cfg.slides[cur]} alt={`Slide ${cur + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: 13 }}>Slide {cur + 1}</div>}
+        <div style={{ width: '100%', maxWidth: 760, aspectRatio: '16 / 9', background: '#11121A', borderRadius: 12, overflow: 'hidden', boxShadow: '0 8px 40px rgba(0,0,0,.5)', position: 'relative', containerType: 'size' }}>
+          {cfg.slides[cur] ?? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: 13 }}>Slide {cur + 1}</div>}
         </div>
       </div>
 

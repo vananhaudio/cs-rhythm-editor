@@ -5,17 +5,17 @@ import type { ComponentType } from 'react'
 import ChordLesson from './ChordLesson'
 import { AM_E, C_G7, BASIC_1 } from './chordLessons'
 import NarratedSlides from './NarratedSlides'
+import { WELCOME_TD2_SLIDES } from './welcomeTd2Slides'
 
 export interface NativeLessonProps { onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }
 
-// Slide "Chào mừng Trình độ 2" — trình chiếu ảnh slide theo audio, ép nghe hết.
-// Upload td2-1.png … td2-8.png + file .wav vào bucket lessons (Supabase Storage).
+// Slide "Chào mừng Trình độ 2" — 8 slide DỰNG NATIVE (từ PPTX) + audio sẵn, ép nghe hết.
 const STORE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/lessons/'
 const WELCOME_TD2 = {
   title: 'Chào mừng đến Trình độ 2',
   crumb: 'KHỞI ĐẦU ĐAM MÊ · TRÌNH ĐỘ 2',
   audioUrl: STORE + 'Chao%20mung%20trinh%20do%202.wav',
-  slides: Array.from({ length: 8 }, (_, i) => `${STORE}td2-${i + 1}.png`),
+  slides: WELCOME_TD2_SLIDES,
 }
 
 export const NATIVE_LESSONS: Record<string, { label: string; Component: ComponentType<NativeLessonProps> }> = {
