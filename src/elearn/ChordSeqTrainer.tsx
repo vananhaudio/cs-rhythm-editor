@@ -33,6 +33,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   const [pos, setPos] = useState(0)
   const [loopOk, setLoopOk] = useState(0)
   const [heard, setHeard] = useState('')
+  const [hits, setHits] = useState<boolean[]>([])  // hợp âm nào đã gảy đúng trong vòng này (để hiện ✓)
   const posRef = useRef(0)
   const hitsRef = useRef<boolean[]>([])
   const loopRef = useRef(0)
@@ -79,12 +80,13 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       if (p >= timeline.length) {
         if (hitsRef.current.every(Boolean) && loopRef.current < loops) { loopRef.current += 1; setLoopOk(loopRef.current) }
         hitsRef.current = exercise.cells.map(() => false)
+        setHits([])
         p = 0
       }
       const s = timeline[p]
       click(p % 4 === 0)
       if (currentRef.current === s.chord) hitsRef.current[s.cellIdx] = true
-      posRef.current = p; setPos(p); setHeard(currentRef.current)
+      posRef.current = p; setPos(p); setHeard(currentRef.current); setHits([...hitsRef.current])
       if (loopRef.current >= loops) onPass?.()
     }, beatMs)
     return () => clearInterval(id)
@@ -94,7 +96,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     if (running) { setRunning(false); stop(); return }
     await start()
     posRef.current = timeline.length - 1; loopRef.current = 0; setLoopOk(0)
-    hitsRef.current = exercise.cells.map(() => false)
+    hitsRef.current = exercise.cells.map(() => false); setHits([])
     setRunning(true)
   }
 
@@ -125,7 +127,8 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                 {b.map(s => {
                   const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
                   const onSeg = running && cur?.cellIdx === s.cellIdx && s.segStart
-                  return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12.5, fontWeight: 700, textAlign: 'center', color: isNextSeg ? INDIGO : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? s.chord : ''}</div>
+                  const okCell = running && hits[s.cellIdx]
+                  return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 12.5, fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap', color: isNextSeg ? INDIGO : okCell ? '#16A34A' : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? <>{s.chord}{okCell ? '✓' : ''}</> : ''}</div>
                 })}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 6, height: 30, alignItems: 'center' }}>
@@ -153,13 +156,22 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         })}
       </div>
 
-      {/* Mic + tiến độ */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFF3EC', border: '1px solid #FBD9C5', borderRadius: 14, padding: '9px 12px', marginTop: 10 }}>
-        <span style={{ width: 9, height: 9, borderRadius: '50%', background: active ? ORANGE : '#C3C8D2', display: 'inline-block' }} />
-        <span style={{ fontSize: 12, color: '#9A4316', fontWeight: 600 }}>
-          {active ? <>App đang nghe: <b style={{ color: heard === cur?.chord ? '#16A34A' : '#9A4316' }}>{heard || '—'}</b></> : 'Mic tắt — bấm bắt đầu để app nghe & chấm'}
-        </span>
-      </div>
+      {/* Bảng phản hồi mic — hướng dẫn rõ + báo đúng/sai realtime */}
+      {(() => {
+        let bg = '#F1F2F6', bd = '#E5E7EB', col = '#374151', icon = '🎤'
+        let msg: React.ReactNode = <>App chấm bằng <b>micro</b>: bấm <b>Bắt đầu</b> → <b>cho phép mic</b> → <b>gảy hợp âm theo khuông</b>. App sẽ báo đúng/sai ngay.</>
+        if (running) {
+          if (heard && heard === cur?.chord) { bg = '#DCFCE7'; bd = '#86EFAC'; col = '#15803D'; icon = '✓'; msg = <>Đúng rồi! App đang nghe <b>{heard}</b></> }
+          else if (heard) { bg = '#FEF3C7'; bd = '#FCD34D'; col = '#92400E'; icon = '✗'; msg = <>Đang nghe <b>{heard}</b> — bạn cần gảy hợp âm <b>{cur?.chord}</b></> }
+          else { bg = '#EEF2FF'; bd = '#C7CBF0'; col = '#4338CA'; icon = '🎤'; msg = <>Gảy hợp âm <b>{cur?.chord}</b> đi — app đang lắng nghe…</> }
+        }
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, background: bg, border: `1.5px solid ${bd}`, borderRadius: 14, padding: '13px 14px', marginTop: 12 }}>
+            <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+            <span style={{ fontSize: 13.5, color: col, fontWeight: 600, lineHeight: 1.45 }}>{msg}</span>
+          </div>
+        )
+      })()}
       <div style={{ marginTop: 10 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#7A8194', marginBottom: 4 }}>
           <span>Vòng đổi sạch</span><span style={{ color: '#16A34A', fontWeight: 700 }}>{loopOk} / {loops}</span>
@@ -173,7 +185,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         <button onClick={() => onPass?.()} style={{ width: '100%', marginTop: 12, background: '#16A34A', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontSize: 14, fontWeight: 700, fontFamily: 'inherit' }}>✓ Xong bài tập này — tiếp tục →</button>
       ) : (
         <button onClick={toggle} style={{ width: '100%', marginTop: 12, background: running ? '#fff' : INDIGO, color: running ? INDIGO : '#fff', border: running ? `1.5px solid ${INDIGO}` : 'none', borderRadius: 14, padding: 13, fontSize: 14, fontWeight: 700, fontFamily: 'inherit' }}>
-          {running ? '⏸ Tạm dừng' : '▶ Bắt đầu (xin quyền mic)'}
+          {running ? '⏸ Tạm dừng' : '▶ Bắt đầu — cho phép micro để app chấm'}
         </button>
       )}
     </div>
