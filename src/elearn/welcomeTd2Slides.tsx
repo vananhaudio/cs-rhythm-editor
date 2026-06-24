@@ -11,13 +11,13 @@ function Frame({ children, align = 'center' }: { children: ReactNode; align?: 'c
     </div>
   )
 }
-const Eyebrow = ({ c = IND, children }: { c?: string; children: ReactNode }) => <div style={{ fontSize: '2.6cqw', fontWeight: 800, letterSpacing: '.18em', color: c, marginBottom: '2.5cqh' }}>{children}</div>
+const Eyebrow = ({ c = IND, children }: { c?: string; children: ReactNode }) => <div style={{ fontSize: '3.3cqw', fontWeight: 800, letterSpacing: '.16em', color: c, marginBottom: '2.5cqh' }}>{children}</div>
 const Card = ({ tag, en, vi, desc, c }: { tag: string; en: string; vi: string; desc: string; c: string }) => (
-  <div style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: `1px solid ${c}55`, borderRadius: '2cqw', padding: '3.4cqh 3cqw' }}>
-    <div style={{ fontSize: '2.1cqw', fontWeight: 800, color: c, letterSpacing: '.05em' }}>{tag}</div>
-    <div style={{ fontSize: '4.6cqw', fontWeight: 800, margin: '.6cqh 0 .2cqh' }}>{en}</div>
-    <div style={{ fontSize: '2.2cqw', color: SUB, marginBottom: '1.4cqh' }}>{vi}</div>
-    <div style={{ fontSize: '2.5cqw', color: '#D7DAEE', lineHeight: 1.5 }}>{desc}</div>
+  <div style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: `1px solid ${c}55`, borderRadius: '2cqw', padding: '3.4cqh 3.4cqw' }}>
+    <div style={{ fontSize: '2.9cqw', fontWeight: 800, color: c, letterSpacing: '.05em' }}>{tag}</div>
+    <div style={{ fontSize: '5.2cqw', fontWeight: 800, margin: '.8cqh 0 .4cqh' }}>{en}</div>
+    <div style={{ fontSize: '3cqw', color: SUB, marginBottom: '1.6cqh' }}>{vi}</div>
+    <div style={{ fontSize: '3.7cqw', color: '#E3E6F5', lineHeight: 1.5 }}>{desc}</div>
   </div>
 )
 
@@ -51,11 +51,11 @@ export const WELCOME_TD2_SLIDES: ReactNode[] = [
   </Frame>,
   // 5 — Khi tiết tấu thay đổi
   <Frame key={5}>
-    <div style={{ fontSize: '3cqw', color: SUB, marginBottom: '2cqh' }}>Cùng một vòng hợp âm · Cùng một tốc độ · Cùng một bài hát</div>
-    <div style={{ fontSize: '6.2cqw', fontWeight: 900, color: GOLD, marginBottom: '3cqh' }}>Khi tiết tấu thay đổi…</div>
-    <div style={{ display: 'flex', gap: '2cqw', flexWrap: 'wrap', justifyContent: 'center' }}>
+    <div style={{ fontSize: '3.7cqw', color: SUB, marginBottom: '2cqh' }}>Cùng một vòng hợp âm · Cùng một tốc độ · Cùng một bài hát</div>
+    <div style={{ fontSize: '6.4cqw', fontWeight: 900, color: GOLD, marginBottom: '3cqh' }}>Khi tiết tấu thay đổi…</div>
+    <div style={{ display: 'flex', gap: '2.2cqw', flexWrap: 'wrap', justifyContent: 'center' }}>
       {['Mềm hơn', 'Dày hơn', 'Mạnh mẽ hơn', 'Uyển chuyển hơn', 'Cuốn hút hơn'].map(t => (
-        <span key={t} style={{ fontSize: '3cqw', fontWeight: 700, color: '#EDEFFB', background: 'rgba(139,130,240,.18)', border: `1px solid ${IND}66`, borderRadius: '5cqw', padding: '1.2cqh 3cqw' }}>{t}</span>
+        <span key={t} style={{ fontSize: '3.7cqw', fontWeight: 700, color: '#EDEFFB', background: 'rgba(139,130,240,.18)', border: `1px solid ${IND}66`, borderRadius: '5cqw', padding: '1.4cqh 3.2cqw' }}>{t}</span>
       ))}
     </div>
   </Frame>,
@@ -65,14 +65,14 @@ export const WELCOME_TD2_SLIDES: ReactNode[] = [
     <div style={{ display: 'flex', alignItems: 'center', gap: '1.6cqw', width: '100%', flexWrap: 'wrap' }}>
       {[['Phách', 1], ['Nhịp', 1], ['Chùm nốt', 2], ['Tiết tấu', 2], ['Điệu', 0]].map(([t, st], i, a) => (
         <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '1.4cqw' }}>
-          <span style={{ fontSize: '3cqw', fontWeight: 800, padding: '1.4cqh 2.6cqw', borderRadius: '2cqw', background: st === 1 ? 'rgba(93,202,165,.18)' : st === 2 ? 'rgba(139,130,240,.2)' : 'rgba(255,255,255,.06)', border: `1px solid ${st === 1 ? '#5DCAA5' : st === 2 ? IND : '#3A3D55'}`, color: st === 1 ? '#5DCAA5' : st === 2 ? IND : SUB }}>
+          <span style={{ fontSize: '3.6cqw', fontWeight: 800, padding: '1.5cqh 2.8cqw', borderRadius: '2cqw', background: st === 1 ? 'rgba(93,202,165,.18)' : st === 2 ? 'rgba(139,130,240,.2)' : 'rgba(255,255,255,.06)', border: `1px solid ${st === 1 ? '#5DCAA5' : st === 2 ? IND : '#3A3D55'}`, color: st === 1 ? '#5DCAA5' : st === 2 ? IND : SUB }}>
             {st === 1 ? '✓ ' : st === 2 ? '◉ ' : ''}{t}
           </span>
-          {i < a.length - 1 && <span style={{ color: '#4A4D6B', fontSize: '3cqw' }}>→</span>}
+          {i < a.length - 1 && <span style={{ color: '#4A4D6B', fontSize: '3.4cqw' }}>→</span>}
         </span>
       ))}
     </div>
-    <div style={{ fontSize: '2.4cqw', color: SUB, marginTop: '3cqh' }}>✓ Đã học · ◉ Đang chinh phục ở Trình độ 2</div>
+    <div style={{ fontSize: '3.2cqw', color: SUB, marginTop: '3cqh' }}>✓ Đã học · ◉ Đang chinh phục ở Trình độ 2</div>
   </Frame>,
   // 7 — Mục tiêu
   <Frame key={7} align="flex-start">
@@ -80,9 +80,9 @@ export const WELCOME_TD2_SLIDES: ReactNode[] = [
     <div className="ntd-row" style={{ display: 'flex', gap: '2.4cqw', width: '100%', flex: 1, maxHeight: '60cqh' }}>
       {[['01', 'Học điệu nhanh hơn', 'Hiểu nguyên lý, không cần ghi nhớ máy móc từng điệu.'], ['02', 'Nhớ lâu hơn', 'Gốc rễ vững thì kiến thức không bị quên theo thời gian.'], ['03', 'Chơi linh hoạt hơn', 'Tiếng đàn có sức sống và cảm giác âm nhạc riêng biệt.']].map(([n, h, d]) => (
         <div key={n} style={{ flex: 1, background: 'rgba(255,255,255,.05)', border: '1px solid #33365088', borderRadius: '2cqw', padding: '3cqh 2.4cqw' }}>
-          <div style={{ fontSize: '4cqw', fontWeight: 900, color: GOLD }}>{n}</div>
-          <div style={{ fontSize: '3.2cqw', fontWeight: 800, margin: '1cqh 0' }}>{h}</div>
-          <div style={{ fontSize: '2.4cqw', color: '#D7DAEE', lineHeight: 1.45 }}>{d}</div>
+          <div style={{ fontSize: '4.4cqw', fontWeight: 900, color: GOLD }}>{n}</div>
+          <div style={{ fontSize: '3.9cqw', fontWeight: 800, margin: '1cqh 0' }}>{h}</div>
+          <div style={{ fontSize: '3.5cqw', color: '#E3E6F5', lineHeight: 1.45 }}>{d}</div>
         </div>
       ))}
     </div>
