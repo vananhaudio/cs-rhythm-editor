@@ -37,6 +37,18 @@ function Beamed({ groups, color = '#EDEFFB', flagSingle = false, heightCqh = 22 
   return <svg viewBox={`0 0 ${x} ${H}`} style={{ height: `${heightCqh}cqh`, width: 'auto', maxWidth: '88cqw', overflow: 'visible' }}>{els}</svg>
 }
 
+// Một nốt đơn (vẽ SVG, đồng bộ cỡ/nét với Beamed). kind: móc đơn (có đuôi) | đen (không đuôi).
+function Note({ kind, color, heightCqh = 14 }: { kind: 'eighth' | 'quarter'; color: string; heightCqh?: number }) {
+  const top = 18, baseY = 64, cx = 14, stemX = cx + 6.4
+  return (
+    <svg viewBox="0 0 36 86" style={{ height: `${heightCqh}cqh`, width: 'auto', overflow: 'visible' }}>
+      <ellipse cx={cx} cy={baseY} rx={7.2} ry={5.2} fill={color} transform={`rotate(-22 ${cx} ${baseY})`} />
+      <line x1={stemX} y1={baseY - 3} x2={stemX} y2={top} stroke={color} strokeWidth={2.6} strokeLinecap="round" />
+      {kind === 'eighth' && <path d={`M ${stemX} ${top} q 11 5 7.5 19`} stroke={color} strokeWidth={2.6} fill="none" strokeLinecap="round" />}
+    </svg>
+  )
+}
+
 export const CHUM2_SLIDES: ReactNode[] = [
   // 1 — Tiêu đề
   <Frame key={1}>
@@ -100,9 +112,9 @@ export const CHUM2_SLIDES: ReactNode[] = [
   <Frame key={4}>
     <Eyebrow c={GOLD}>GIÁ TRỊ THỜI GIAN</Eyebrow>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3.5cqw', marginBottom: '3cqh' }}>
-      <Pill main="♪" sub="½ phách" c={IND} />
+      <Pill kind="eighth" sub="½ phách" c={IND} />
       <span style={{ fontSize: '5cqw', fontWeight: 900, color: SUB }}>+</span>
-      <Pill main="♪" sub="½ phách" c={IND} />
+      <Pill kind="eighth" sub="½ phách" c={IND} />
       <span style={{ fontSize: '5cqw', fontWeight: 900, color: SUB }}>=</span>
       <div style={{ textAlign: 'center' }}>
         <Beamed groups={[2]} color={GOLD} heightCqh={16} />
@@ -112,7 +124,7 @@ export const CHUM2_SLIDES: ReactNode[] = [
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3.5cqw', marginBottom: '4cqh' }}>
       <span style={{ fontSize: '3.4cqw', color: GOLD, fontWeight: 700 }}>1 chùm</span>
       <span style={{ fontSize: '5cqw', fontWeight: 900, color: SUB }}>=</span>
-      <Pill main="♩" sub="1 nốt đen" c={GREEN} />
+      <Pill kind="quarter" sub="1 nốt đen" c={GREEN} />
     </div>
     <div style={{ fontSize: '4.6cqw', fontWeight: 800, color: '#EDEFFB' }}>½ phách + ½ phách = <span style={{ color: GREEN }}>1 phách</span></div>
     <div style={{ fontSize: '3.6cqw', color: SUB, marginTop: '2cqh' }}>Chùm 2 nốt móc đơn = 1 nốt đen (♩)</div>
@@ -191,11 +203,11 @@ export const CHUM2_SLIDES: ReactNode[] = [
   </Frame>,
 ]
 
-function Pill({ main, sub, c }: { main: string; sub: string; c: string }) {
+function Pill({ kind, sub, c }: { kind: 'eighth' | 'quarter'; sub: string; c: string }) {
   return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: '7cqw', fontWeight: 900, color: c, lineHeight: 1 }}>{main}</div>
-      <div style={{ fontSize: '3cqw', color: SUB, marginTop: '.6cqh' }}>{sub}</div>
+    <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Note kind={kind} color={c} heightCqh={15} /></div>
+      <div style={{ fontSize: '3cqw', color: SUB, marginTop: '.8cqh' }}>{sub}</div>
     </div>
   )
 }
