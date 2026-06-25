@@ -6,6 +6,7 @@ import ChordLesson from './ChordLesson'
 import { AM_E, C_G7, BASIC_1 } from './chordLessons'
 import NarratedSlides from './NarratedSlides'
 import { WELCOME_TD2_SLIDES } from './welcomeTd2Slides'
+import { CHUM2_SLIDES } from './chum2Slides'
 
 export interface NativeLessonProps { onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }
 
@@ -17,9 +18,16 @@ const WELCOME_TD2 = {
   audioUrl: STORE + 'Gioi%20thieu%20dem%20hat%202.wav',
   slides: WELCOME_TD2_SLIDES,
 }
+const CHUM2 = {
+  title: 'Chùm 2 Nốt Móc Đơn',
+  crumb: 'KHỞI ĐẦU ĐAM MÊ · TRÌNH ĐỘ 2',
+  audioUrl: STORE + 'Chum%202%20not%20moc%20don.wav',
+  slides: CHUM2_SLIDES,
+}
 
 export const NATIVE_LESSONS: Record<string, { label: string; Component: ComponentType<NativeLessonProps> }> = {
   'welcome-td2': { label: 'Chào mừng Trình độ 2 — slide + audio (ép nghe hết)', Component: (p) => <NarratedSlides cfg={WELCOME_TD2} {...p} /> },
+  'chum-2-moc-don': { label: 'Chùm 2 Nốt Móc Đơn — slide + audio (ép nghe hết)', Component: (p) => <NarratedSlides cfg={CHUM2} {...p} /> },
   'chord-cg7': { label: 'Quạt hợp âm C ↔ G7 (3 bài tập)', Component: (p) => <ChordLesson cfg={C_G7} {...p} /> },
   'chord-am-e': { label: 'Hợp âm Am & E + 3 bài tập đổi (mic)', Component: (p) => <ChordLesson cfg={AM_E} {...p} /> },
   'chord-basic-1': { label: 'Chuyển hợp âm cơ bản 1 — C·G7·Am·E·Dm (6 BT, có nghỉ)', Component: (p) => <ChordLesson cfg={BASIC_1} {...p} /> },

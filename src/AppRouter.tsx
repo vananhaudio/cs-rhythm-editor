@@ -171,6 +171,11 @@ export default function AppRouter() {
     const C = NATIVE_LESSONS['welcome-td2'].Component
     return <C onClose={() => { window.location.href = '/start' }} />
   }
+  // ── Route /chum2 (THỬ NGHIỆM slide Chùm 2 Nốt Móc Đơn) ──
+  if (path === '/chum2' || path.startsWith('/chum2')) {
+    const C = NATIVE_LESSONS['chum-2-moc-don'].Component
+    return <C onClose={() => { window.location.href = '/start' }} />
+  }
 
   // ── Route /gp-editor ──
   if (path === '/gp-editor') {
