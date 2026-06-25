@@ -47,7 +47,7 @@ export const QUAT_CHUM2: ChordLessonCfg = {
   title: 'Tập quạt chùm 2 (xuống–lên)',
   practice: false,
   hideDiagrams: true,        // TĐ2 đã thuộc hợp âm — không hiện biểu đồ
-  demoVideoUrl: '',          // ⬅️ DÁN LINK video "thầy đánh mẫu" vào đây khi có (YouTube)
+  demoVideoUrl: 'https://youtu.be/qNg6dP9MXkQ',   // video "thầy đánh mẫu" chùm 2
   introTitle: '╱╲ = quạt XUỐNG rồi LÊN trong một phách',
   intro: 'Nhớ bài Chùm 2: một phách = hai nốt móc đơn. Tay phải làm đúng như vậy — mỗi phách quạt XUỐNG (╱) rồi LÊN (╲), đều như con lắc. App gõ thêm tiếng "và" giữa phách để bạn đặt cú quạt lên cho đúng chỗ. Hợp âm bạn đã học rồi, bài này chỉ tập tay quạt và giữ nhịp.',
   learn: ['C', 'G7', 'Am', 'E', 'Dm'],
