@@ -14,6 +14,7 @@ import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
+import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
 import SongBuilderPage from './SongBuilderPage'
@@ -170,6 +171,16 @@ export default function AppRouter() {
   if (path === '/welcome-td2' || path.startsWith('/welcome-td2')) {
     const C = NATIVE_LESSONS['welcome-td2'].Component
     return <C onClose={() => { window.location.href = '/start' }} />
+  }
+  // ── Route /strum-test (THỬ NGHIỆM màn quạt hợp âm — audio + mốc giả) ──
+  if (path === '/strum-test' || path.startsWith('/strum-test')) {
+    const STORE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/lessons/'
+    const sample = {
+      title: 'Test · quạt hợp âm', audioUrl: STORE + 'Chum%202%20not%20moc%20don.wav',
+      bpm: 80, timeSignature: 4, gridOffset: 1, eighths: true,
+      chords: [{ t: 1, name: 'C' }, { t: 7, name: 'G7' }, { t: 13, name: 'Am' }, { t: 19, name: 'Fmaj7' }, { t: 25, name: 'C' }, { t: 31, name: 'G7' }, { t: 37, name: 'C' }],
+    }
+    return <ChordStrumPlayer song={sample} onClose={() => { window.location.href = '/start' }} />
   }
   // ── Route /chum2 (THỬ NGHIỆM slide Chùm 2 Nốt Móc Đơn) ──
   if (path === '/chum2-strum' || path.startsWith('/chum2-strum')) {
