@@ -46,6 +46,7 @@ export const QUAT_CHUM2: ChordLessonCfg = {
   crumb: 'ĐỆM HÁT · QUẠT CHÙM 2',
   title: 'Tập quạt chùm 2 (xuống–lên)',
   practice: false,
+  skipIntro: true,           // bỏ Lý thuyết (đã học ở bài Chùm 2 trước) → vào thẳng bài tập
   hideDiagrams: true,        // TĐ2 đã thuộc hợp âm — không hiện biểu đồ
   demoVideoUrl: 'https://youtu.be/qNg6dP9MXkQ',   // video "thầy đánh mẫu" chùm 2
   introTitle: '╱╲ = quạt XUỐNG rồi LÊN trong một phách',
