@@ -17,26 +17,31 @@ export interface StrumSong {
   bars: SongBar[]                // 1 phần tử / ô nhịp
 }
 
-// Vẽ NỐT CẢ Ô NHỊP — nốt móc đơn cách ĐỀU (trường độ bằng nhau), thân cao, nối chùm 2 theo phách.
-// eighths=false → nốt đen (1 cú ↓/phách). litBeat = phách đang chơi (sáng), -1 = không.
-function BarStaff({ N, eighths, litBeat }: { N: number; eighths: boolean; litBeat: number }) {
-  const M = eighths ? N * 2 : N           // tổng số nốt trong ô
-  const W = 100, H = 66, pad = 9, top = 8, base = 44
-  const xs = Array.from({ length: M }, (_, i) => pad + (i + 0.5) * (W - 2 * pad) / M)   // cách đều
-  const beatOf = (i: number) => eighths ? Math.floor(i / 2) : i
-  const colOf = (i: number) => beatOf(i) === litBeat ? INDIGO : DIM
-  const els: React.ReactNode[] = []
-  if (eighths) for (let k = 0; k < N; k++) {                                            // dấu chùm mỗi phách
-    const a = xs[2 * k], b = xs[2 * k + 1], c = beatOf(2 * k) === litBeat ? INDIGO : DIM
-    els.push(<rect key={'bm' + k} x={a} y={top} width={b - a} height={4.2} rx={1} fill={c} />)
-  }
-  xs.forEach((x, i) => {
-    const c = colOf(i), litArrow = beatOf(i) === litBeat
-    els.push(<line key={'st' + i} x1={x} y1={top} x2={x} y2={base} stroke={c} strokeWidth={2.4} />)
-    els.push(<line key={'hd' + i} x1={x - 5.5} y1={base + 7} x2={x + 4} y2={base - 3} stroke={c} strokeWidth={4.6} strokeLinecap="round" />)
-    els.push(<text key={'ar' + i} x={x} y={H - 1} textAnchor="middle" fontSize={9} fontWeight={800} fill={litArrow ? INDIGO : '#9AA0B0'}>{eighths ? (i % 2 === 0 ? '↓' : '↑') : '↓'}</text>)
-  })
-  return <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: 62, overflow: 'visible', display: 'block' }}>{els}</svg>
+// Cặp nốt móc đơn NỐI CHÙM — kiểu đẹp tái dùng từ bài tập (đầu nốt slash dày, thân cao, dấu chùm) + ↓↑.
+function NotePair({ lit }: { lit: boolean }) {
+  const c = lit ? INDIGO : DIM, ac = lit ? INDIGO : '#9AA0B0'
+  return (
+    <svg viewBox="0 0 44 60" style={{ height: 52, width: 'auto', overflow: 'visible', display: 'block' }}>
+      <rect x={13} y={4} width={20} height={4} rx={1} fill={c} />
+      <line x1={14.5} y1={6} x2={14.5} y2={31} stroke={c} strokeWidth={3} />
+      <line x1={5} y1={40} x2={15.5} y2={29} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
+      <line x1={32.5} y1={6} x2={32.5} y2={31} stroke={c} strokeWidth={3} />
+      <line x1={23} y1={40} x2={33.5} y2={29} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
+      <text x={9.5} y={57} fontSize={12} textAnchor="middle" fontWeight={800} fill={ac}>↓</text>
+      <text x={28} y={57} fontSize={12} textAnchor="middle" fontWeight={800} fill={ac}>↑</text>
+    </svg>
+  )
+}
+// Nốt đen (Trình độ 1) — 1 cú quạt xuống / phách.
+function NoteQuarter({ lit }: { lit: boolean }) {
+  const c = lit ? INDIGO : DIM, ac = lit ? INDIGO : '#9AA0B0'
+  return (
+    <svg viewBox="0 0 24 60" style={{ height: 52, width: 'auto', overflow: 'visible', display: 'block' }}>
+      <line x1={13} y1={6} x2={13} y2={31} stroke={c} strokeWidth={3} />
+      <line x1={3.5} y1={40} x2={14} y2={29} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
+      <text x={8} y={57} fontSize={12} textAnchor="middle" fontWeight={800} fill={ac}>↓</text>
+    </svg>
+  )
 }
 
 export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: StrumSong; onClose?: () => void; onComplete?: () => void }) {
@@ -140,9 +145,13 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
                       </div>
                       {/* nốt cả ô / nhãn không đàn */}
                       {bar.pickup ? (
-                        <div style={{ height: 62, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#9AA0B0', fontStyle: 'italic', textAlign: 'center' }}>không đàn</div>
+                        <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#9AA0B0', fontStyle: 'italic', textAlign: 'center' }}>không đàn</div>
                       ) : (
-                        <BarStaff N={N} eighths={eighths} litBeat={isCur ? beatInBar : -1} />
+                        <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
+                          {Array.from({ length: N }, (_, j) => eighths
+                            ? <NotePair key={j} lit={isCur && beatInBar === j} />
+                            : <NoteQuarter key={j} lit={isCur && beatInBar === j} />)}
+                        </div>
                       )}
                     </div>
                     <div style={{ width: 2, background: INK, borderRadius: 1, alignSelf: 'stretch' }} />
