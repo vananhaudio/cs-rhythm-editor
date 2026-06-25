@@ -56,6 +56,8 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   const posRef = useRef(0)
   const hitsRef = useRef<boolean[]>([])
   const loopRef = useRef(0)
+  const [count, setCount] = useState(0)   // đếm vào: 4→1 rồi mới chạy
+  const primeRef = useRef(false)          // gảy phách 1 NGAY khi hết đếm (không trễ 1 nhịp)
 
   // Dòng thời gian theo phách
   const timeline = useMemo<Slot[]>(() => {
@@ -98,10 +100,22 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   const isRest = !!curCell?.rest
   const prepping = running && (isRest || (lastBeatOfCell && nextChord !== cur?.chord)) && !!nextChord
 
+  // ── ĐẾM VÀO (count-in) — 1 ô 4 phách: gõ tiếng + số 4→1, rồi mới vào phách 1 ──
+  useEffect(() => {
+    if (count <= 0) return
+    const beatMs = (60 / bpm) * 1000
+    click(true)
+    const id = setTimeout(() => {
+      if (count <= 1) { setCount(0); primeRef.current = true; setRunning(true) }
+      else setCount(count - 1)
+    }, beatMs)
+    return () => clearTimeout(id)
+  }, [count, bpm])
+
   useEffect(() => {
     if (!running) return
     const beatMs = (60 / bpm) * 1000
-    const id = setInterval(() => {
+    const step = () => {
       let p = posRef.current + 1
       if (p >= timeline.length) {
         if (loopRef.current < loops) { loopRef.current += 1; setLoopOk(loopRef.current) }  // đếm MỌI vòng đã tập (không gate mic)
@@ -115,16 +129,18 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       if (s.chord && currentRef.current === s.chord) hitsRef.current[s.cellIdx] = true
       posRef.current = p; setPos(p); setHeard(currentRef.current); setHits([...hitsRef.current])
       if (loopRef.current >= loops) onPass?.()
-    }, beatMs)
+    }
+    if (primeRef.current) { primeRef.current = false; step() }  // vào phách 1 ngay khi hết đếm
+    const id = setInterval(step, beatMs)
     return () => clearInterval(id)
   }, [running, bpm, timeline, exercise, loops, onPass, currentRef])
 
   const toggle = async () => {
-    if (running) { setRunning(false); stop(); return }
+    if (running || count > 0) { setRunning(false); setCount(0); primeRef.current = false; stop(); return }
     await start()
     posRef.current = timeline.length - 1; loopRef.current = 0; setLoopOk(0)
     hitsRef.current = exercise.cells.map(() => false); setHits([])
-    setRunning(true)
+    setCount(4)  // đếm vào 1 ô rồi mới chạy
   }
 
   const done = loopOk >= loops
@@ -146,7 +162,14 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       </div>
 
       {/* Khuông nhịp — vạch nhịp là cột riêng (canh thẳng tuyệt đối); ╱ sáng+nảy mỗi phách, ◇ sáng cả ô */}
-      <div style={{ background: '#fff', border: '1.5px solid #E1E4EA', borderRadius: 16, padding: '16px 10px', boxShadow: '0 2px 10px rgba(17,24,39,.04)' }}>
+      <div style={{ position: 'relative', background: '#fff', border: '1.5px solid #E1E4EA', borderRadius: 16, padding: '16px 10px', boxShadow: '0 2px 10px rgba(17,24,39,.04)' }}>
+        {count > 0 && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,.86)', borderRadius: 16, zIndex: 3 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.12em', color: '#6B7280' }}>ĐẾM VÀO</div>
+            <div style={{ fontSize: 68, fontWeight: 800, color: INDIGO, lineHeight: 1.05 }}>{count}</div>
+            <div style={{ fontSize: 12.5, color: '#6B7280' }}>chuẩn bị… vào ở “1”</div>
+          </div>
+        )}
         {rows.map((row, ri) => {
           const isLastRow = ri === rows.length - 1
           const bar = (b: Slot[], bj: number) => (
@@ -177,7 +200,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
             </div>
           )
           const vline = (key: string, thick?: boolean) => <div key={key} style={{ width: thick ? 3 : 2, alignSelf: 'stretch', background: '#1F2430', borderRadius: 1 }} />
-          const kids: ReactNode[] = [vline('l0')]
+          const kids: ReactNode[] = [vline('lstart')]
           row.forEach((b, bj) => { kids.push(bar(b, bj)); kids.push(vline('l' + bj, isLastRow && bj === row.length - 1)) })
           if (row.length === 1) kids.push(<div key="sp" style={{ flex: 1 }} />)
           return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 16 }}>{kids}</div>
@@ -210,8 +233,8 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       {done ? (
         <button onClick={() => onPass?.()} style={{ width: '100%', marginTop: 12, background: '#16A34A', color: '#fff', border: 'none', borderRadius: 14, padding: 13, fontSize: 14, fontWeight: 700, fontFamily: 'inherit' }}>✓ Xong bài tập này — tiếp tục →</button>
       ) : (
-        <button onClick={toggle} style={{ width: '100%', marginTop: 12, background: running ? '#fff' : INDIGO, color: running ? INDIGO : '#fff', border: running ? `1.5px solid ${INDIGO}` : 'none', borderRadius: 14, padding: 13, fontSize: 14, fontWeight: 700, fontFamily: 'inherit' }}>
-          {running ? '⏸ Tạm dừng' : '▶ Bắt đầu — cho phép micro để app chấm'}
+        <button onClick={toggle} style={{ width: '100%', marginTop: 12, background: (running || count > 0) ? '#fff' : INDIGO, color: (running || count > 0) ? INDIGO : '#fff', border: (running || count > 0) ? `1.5px solid ${INDIGO}` : 'none', borderRadius: 14, padding: 13, fontSize: 14, fontWeight: 700, fontFamily: 'inherit' }}>
+          {count > 0 ? `⏸ Đếm vào… ${count}` : running ? '⏸ Tạm dừng' : '▶ Bắt đầu — cho phép micro để app chấm'}
         </button>
       )}
     </div>
