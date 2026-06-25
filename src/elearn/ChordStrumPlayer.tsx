@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 const INDIGO = '#4338CA', ORANGE = '#EA580C', INK = '#1F2430', DIM = '#C0C6D2', SUB = '#6B7280'
 
-export interface SongBar { chord?: string | null; pickup?: boolean }   // pickup = ô lấy đà (không đàn)
+export interface SongBar { chord?: string | null; pickup?: boolean; rest?: boolean }   // pickup = lấy đà; rest = ô nghỉ (dấu lặng)
 export interface StrumSong {
   title: string
   videoId?: string | null
@@ -49,7 +49,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
   const N = song.timeSignature
   const beatDur = 60 / song.bpm
   const barDur = N * beatDur
-  const perRow = N === 3 ? 3 : 4
+  const perRow = 2   // 2 ô / hàng → nốt to, không tràn
 
   const [t, setT] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -140,12 +140,14 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
                   <div key={idx} style={{ flex: 1, display: 'flex' }}>
                     <div style={{ flex: 1, padding: '0 5px', minWidth: 0 }}>
                       {/* tên hợp âm — đặt trên NỐT ĐẦU của ô (căn trái) */}
-                      <div style={{ height: 22, textAlign: 'left', paddingLeft: '9%', fontSize: bar.pickup ? 11 : 18, fontWeight: 800, lineHeight: '22px', color: bar.pickup ? '#9AA0B0' : isCur ? INDIGO : INK, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-                        {bar.pickup ? 'Lấy đà' : (bar.chord ?? '')}
+                      <div style={{ height: 22, textAlign: 'left', paddingLeft: '9%', fontSize: (bar.pickup || bar.rest) ? 11 : 18, fontWeight: 800, lineHeight: '22px', color: (bar.pickup || bar.rest) ? '#9AA0B0' : isCur ? INDIGO : INK, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                        {bar.pickup ? 'Lấy đà' : bar.rest ? 'Nghỉ' : (bar.chord ?? '')}
                       </div>
-                      {/* nốt cả ô / nhãn không đàn */}
+                      {/* nốt cả ô / nhãn không đàn / dấu lặng */}
                       {bar.pickup ? (
                         <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#9AA0B0', fontStyle: 'italic', textAlign: 'center' }}>không đàn</div>
+                      ) : bar.rest ? (
+                        <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bravura', fontSize: 30, color: isCur ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E3)}</div>
                       ) : (
                         <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
                           {Array.from({ length: N }, (_, j) => eighths

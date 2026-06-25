@@ -8,7 +8,7 @@ const STORE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public
 // Vòng hợp âm theo bản Guitar Pro của thầy: C · G · G · C · C · Fmaj7 · G · C (ô 2–9).
 export const HBD_CHUM2: StrumSong = {
   title: 'Happy Birthday — quạt chùm 2',
-  audioUrl: STORE + 'Happy%20Birthday%20to%20You%202.mp3',
+  audioUrl: STORE + 'Happy%20Birthday%20to%20You%20metronome.mp3',
   bpm: 75,
   timeSignature: 3,
   gridOffset: 0,        // phách 1 ở 0s
@@ -23,6 +23,7 @@ export const HBD_CHUM2: StrumSong = {
     { chord: 'Fmaj7' }, // ô 7
     { chord: 'G' },     // ô 8
     { chord: 'C' },     // ô 9 (kết)
+    { rest: true },     // ô 10 — nghỉ (dấu lặng)
   ],
 }
 
