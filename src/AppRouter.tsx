@@ -15,6 +15,7 @@ import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
+import { HBD_CHUM2 } from './elearn/strumSongs'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
 import SongBuilderPage from './SongBuilderPage'
@@ -181,6 +182,10 @@ export default function AppRouter() {
       chords: [{ t: 1, name: 'C' }, { t: 7, name: 'G7' }, { t: 13, name: 'Am' }, { t: 19, name: 'Fmaj7' }, { t: 25, name: 'C' }, { t: 31, name: 'G7' }, { t: 37, name: 'C' }],
     }
     return <ChordStrumPlayer song={sample} onClose={() => { window.location.href = '/start' }} />
+  }
+  // ── Route /hbd (Happy Birthday — quạt chùm 2, gảy theo) ──
+  if (path === '/hbd' || path.startsWith('/hbd')) {
+    return <ChordStrumPlayer song={HBD_CHUM2} onClose={() => { window.location.href = '/start' }} />
   }
   // ── Route /chum2 (THỬ NGHIỆM slide Chùm 2 Nốt Móc Đơn) ──
   if (path === '/chum2-strum' || path.startsWith('/chum2-strum')) {
