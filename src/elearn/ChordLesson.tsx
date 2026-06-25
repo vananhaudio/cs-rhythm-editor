@@ -25,7 +25,19 @@ export interface ChordLessonCfg {
   learnTips: string[]
   exercises: (Exercise & { short?: string; hint?: string })[]
   quiz: QA[]
-  practice?: boolean   // true (mặc định) = có bước "Làm quen" mic; false = bỏ (hợp âm đã học)
+  practice?: boolean       // true (mặc định) = có bước "Làm quen" mic; false = bỏ (hợp âm đã học)
+  hideDiagrams?: boolean   // true = KHÔNG hiện biểu đồ hợp âm (trình độ cao đã thuộc hợp âm)
+  demoVideoUrl?: string    // (tuỳ chọn) video "thầy đánh mẫu" — bí thì xem, KHÁC video hướng dẫn
+}
+
+// Đổi link YouTube (watch / youtu.be) sang dạng nhúng để mở trong app
+function toEmbed(url: string): string {
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtu.be')) return `https://www.youtube.com/embed/${u.pathname.slice(1)}`
+    if (u.searchParams.get('v')) return `https://www.youtube.com/embed/${u.searchParams.get('v')}`
+    return url
+  } catch { return url }
 }
 
 function Btn({ children, onClick, primary }: { children: React.ReactNode; onClick: () => void; primary?: boolean }) {
@@ -40,6 +52,7 @@ export default function ChordLesson({ cfg, onClose, onComplete, studentId, lesso
   const steps = ['Lý thuyết', ...(practice ? ['Làm quen'] : []), ...cfg.exercises.map((e, i) => e.short || `BT${i + 1}`), 'Quiz']
 
   const [step, setStep] = useState(0)
+  const [showDemo, setShowDemo] = useState(false)
   const [qIdx, setQIdx] = useState(0)
   const [qSel, setQSel] = useState<number | null>(null)
   const [qScore, setQScore] = useState(0)
@@ -88,17 +101,23 @@ export default function ChordLesson({ cfg, onClose, onComplete, studentId, lesso
             <div>
               <div style={{ fontSize: 17, fontWeight: 800, color: '#1F2430', marginBottom: 4 }}>{cfg.introTitle}</div>
               <div style={{ fontSize: 14, color: '#5A6072', lineHeight: 1.6, marginBottom: 14 }}>{cfg.intro}</div>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-                {cfg.learn.map(c => (
-                  <div key={c} style={{ flex: 1, background: '#fff', border: '1px solid #E1E4EA', borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: INDIGO }}>{c}</div>
-                    <MiniDiagram name={c} />
-                  </div>
-                ))}
-              </div>
+              {!cfg.hideDiagrams && (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                  {cfg.learn.map(c => (
+                    <div key={c} style={{ flex: 1, background: '#fff', border: '1px solid #E1E4EA', borderRadius: 16, padding: '10px 8px 8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: INDIGO }}>{c}</div>
+                      <MiniDiagram name={c} />
+                    </div>
+                  ))}
+                </div>
+              )}
               <ul style={{ fontSize: 13.5, color: '#5A6072', lineHeight: 1.7, paddingLeft: 18, margin: '0 0 16px' }}>
                 {cfg.learnTips.map((t, i) => <li key={i}>{t}</li>)}
               </ul>
+              {/* Video "thầy đánh mẫu" — tuỳ chọn, bí thì xem (khác video hướng dẫn) */}
+              <button onClick={() => setShowDemo(true)} style={{ width: '100%', marginBottom: 10, padding: '12px 14px', borderRadius: 14, border: `1.5px solid ${ORANGE}`, background: '#FFF7ED', color: ORANGE, fontSize: 14.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>▶</span> Xem thầy đánh mẫu <span style={{ fontSize: 12, fontWeight: 500, opacity: .8 }}>· bí thì mở</span>
+              </button>
               <Btn primary onClick={next}>{practice ? 'Bắt đầu làm quen →' : 'Bắt đầu tập →'}</Btn>
             </div>
           )}
@@ -118,7 +137,7 @@ export default function ChordLesson({ cfg, onClose, onComplete, studentId, lesso
               <div key={step}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#1F2430', marginBottom: 2, textAlign: 'center' }}>{ex.name}</div>
                 {ex.hint && <div style={{ fontSize: 12.5, color: '#5A6072', lineHeight: 1.45, marginBottom: 8, textAlign: 'center' }}>{ex.hint}</div>}
-                <ChordSeqTrainer exercise={ex} bpm={ex.strumPerBeat ? 65 : 55} loops={4} onPass={next} />
+                <ChordSeqTrainer exercise={ex} bpm={ex.strumPerBeat ? 65 : 55} loops={4} onPass={next} hideDiagram={cfg.hideDiagrams} />
                 <div style={{ textAlign: 'center', marginTop: 10 }}>
                   <button onClick={next} style={{ background: 'none', border: 'none', color: INDIGO, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>{step === QUIZ - 1 ? 'Sang Quiz →' : 'Bỏ qua / bài tập tiếp →'}</button>
                 </div>
@@ -186,6 +205,29 @@ export default function ChordLesson({ cfg, onClose, onComplete, studentId, lesso
 
         </div>
       </div>
+
+      {/* Modal video "thầy đánh mẫu" */}
+      {showDemo && (
+        <div onClick={() => setShowDemo(false)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,.72)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 560 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>▶ Thầy đánh mẫu</div>
+              <button onClick={() => setShowDemo(false)} style={{ background: 'rgba(255,255,255,.16)', border: 'none', color: '#fff', borderRadius: 10, width: 34, height: 34, fontSize: 18, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+            </div>
+            {cfg.demoVideoUrl ? (
+              <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 14, overflow: 'hidden', background: '#000' }}>
+                <iframe src={toEmbed(cfg.demoVideoUrl)} title="Thầy đánh mẫu" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} />
+              </div>
+            ) : (
+              <div style={{ background: '#fff', borderRadius: 14, padding: 28, textAlign: 'center' }}>
+                <div style={{ fontSize: 30, marginBottom: 8 }}>🎬</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1F2430', marginBottom: 4 }}>Video mẫu sắp có</div>
+                <div style={{ fontSize: 13, color: '#5A6072', lineHeight: 1.6 }}>Thầy sẽ cập nhật video đánh mẫu cho bài này sớm. Cứ tập theo khuông nhịp trước nhé!</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

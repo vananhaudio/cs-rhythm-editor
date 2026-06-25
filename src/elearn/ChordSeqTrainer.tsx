@@ -45,7 +45,7 @@ function EighthPair({ color, on }: { color: string; on?: boolean }) {
   )
 }
 
-export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, onPass }: { exercise: Exercise; bpm?: number; loops?: number; onPass?: () => void }) {
+export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, onPass, hideDiagram }: { exercise: Exercise; bpm?: number; loops?: number; onPass?: () => void; hideDiagram?: boolean }) {
   const { start, stop, active, currentRef } = useLiveChord()
   const [bpm, setBpm] = useState(bpm0)
   const [running, setRunning] = useState(false)
@@ -151,15 +151,17 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     <div style={{ fontFamily: 'inherit', maxWidth: 360, margin: '0 auto' }}>
       <style>{`@keyframes csPrep{0%,100%{opacity:1}50%{opacity:.4}}.cs-prep{animation:csPrep .5s ease-in-out infinite}@keyframes csHit{0%{transform:scale(1)}35%{transform:scale(1.45)}100%{transform:scale(1.25)}}.cs-hit{animation:csHit .18s ease-out}`}</style>
 
-      {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo) */}
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap', opacity: .85 }}>
-        {distinct.map(c => (
-          <div key={c} style={{ width: 34, textAlign: 'center' }}>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: '#6B7280' }}>{c}</div>
-            <MiniDiagram name={c} size={36} />
-          </div>
-        ))}
-      </div>
+      {/* Sơ đồ hợp âm — NHỎ, CỐ ĐỊNH (tham khảo). Ẩn ở trình độ cao (đã thuộc hợp âm). */}
+      {!hideDiagram && (
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap', opacity: .85 }}>
+          {distinct.map(c => (
+            <div key={c} style={{ width: 34, textAlign: 'center' }}>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: '#6B7280' }}>{c}</div>
+              <MiniDiagram name={c} size={36} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Khuông nhịp — vạch nhịp là cột riêng (canh thẳng tuyệt đối); ╱ sáng+nảy mỗi phách, ◇ sáng cả ô */}
       <div style={{ position: 'relative', background: '#fff', border: '1.5px solid #E1E4EA', borderRadius: 16, padding: '16px 10px', boxShadow: '0 2px 10px rgba(17,24,39,.04)' }}>
