@@ -2,6 +2,7 @@
 // Ảnh slide chạy theo audio (chia đều hoặc theo mốc end_times). KHOÁ TUA — chỉ
 // đánh dấu hoàn thành khi audio chạy hết. Học sinh không thể bỏ qua.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { STAGE } from './surfaces'
 
 const INDIGO = '#4338CA'
 
@@ -54,12 +55,11 @@ export default function NarratedSlides({ cfg, onComplete, onClose }: { cfg: Narr
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: '#0B0B12', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: STAGE.bg, fontFamily: 'system-ui, sans-serif' }}>
       {/* Header */}
       <div style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 10px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', borderRadius: 10, width: 34, height: 34, fontSize: 18, cursor: 'pointer' }}>‹</button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          {cfg.crumb && <div style={{ fontSize: 10, color: '#9AA0F0', letterSpacing: '.06em', fontWeight: 700 }}>{cfg.crumb}</div>}
           <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.title}</div>
         </div>
         <div style={{ fontSize: 12, color: '#9AA0B0' }}>{cur + 1}/{N}</div>
@@ -68,7 +68,7 @@ export default function NarratedSlides({ cfg, onComplete, onClose }: { cfg: Narr
       {/* Slide — lấp đầy màn (dọc/ngang đều được); card tự xếp dọc khi màn dọc */}
       <style>{`@container (max-aspect-ratio: 1/1){.ntd-row{flex-direction:column !important}.ntd-row>*{max-height:none !important}}`}</style>
       <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', justifyContent: 'center', padding: '2px 8px 6px', minHeight: 0 }}>
-        <div style={{ width: '100%', maxWidth: 760, background: '#11121A', borderRadius: 14, overflow: 'hidden', position: 'relative', containerType: 'size' }}>
+        <div style={{ width: '100%', maxWidth: 760, background: STAGE.panel, borderRadius: 14, overflow: 'hidden', position: 'relative', containerType: 'size' }}>
           {cfg.slides[cur] ?? <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: 13 }}>Slide {cur + 1}</div>}
         </div>
       </div>
