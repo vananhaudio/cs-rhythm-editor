@@ -8,9 +8,10 @@ import { MiniDiagram } from './ChordChangeTrainer'
 import ChordSeqTrainer, { type Exercise } from './ChordSeqTrainer'
 
 // Màu kỹ năng theo số phiên đã luyện: 1=đỏ, 2=vàng, 3+=xanh
-const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 'Xanh — đã đủ vòng luyện cơ bản' }
-  : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Vàng — đang ổn định, tập thêm 1 phiên' }
-  : { color: '#DC2626', bg: '#FEE2E2', label: 'Đỏ — đã bắt đầu, cần luyện thêm' }
+// Lời ĐỘNG VIÊN, hướng tiến bộ (không khiến học sinh tưởng bị sai). Màu giữ theo hệ thống đỏ/vàng/xanh.
+const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 'Quá vững! Bạn làm chủ phần này rồi 🎸' }
+  : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Tiến bộ rõ — thêm 1 lượt nữa là thật vững 💪' }
+  : { color: '#DC2626', bg: '#FEE2E2', label: 'Khởi đầu tốt — luyện thêm cho quen tay 👍' }
 
 const INDIGO = '#4338CA'
 const ORANGE = '#EA580C'

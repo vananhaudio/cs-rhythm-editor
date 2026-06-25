@@ -6,10 +6,10 @@ import { supabase } from '../supabase'
 
 const INDIGO = '#4338CA', ORANGE = '#EA580C', INK = '#1F2430', DIM = '#C0C6D2', SUB = '#6B7280'
 
-// Màu kỹ năng theo số lượt đã gảy: 1=đỏ, 2=vàng, 3+=xanh (xanh hóa)
-const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 'Xanh — đã đủ lượt luyện cơ bản' }
-  : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Vàng — đang ổn định, gảy thêm 1 lượt' }
-  : { color: '#DC2626', bg: '#FEE2E2', label: 'Đỏ — đã bắt đầu, cần luyện thêm' }
+// Mức thành thạo theo số lượt: 1→2→3+ (xanh hóa). Lời ĐỘNG VIÊN, không khiến học sinh tưởng bị sai.
+const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 'Quá vững! Bạn làm chủ phần này rồi 🎸' }
+  : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Tiến bộ rõ — thêm 1 lượt nữa là thật vững 💪' }
+  : { color: '#DC2626', bg: '#FEE2E2', label: 'Khởi đầu tốt — gảy thêm cho quen tay 👍' }
 
 export interface SongBar { chord?: string | null; pickup?: boolean; rest?: boolean }   // pickup = lấy đà; rest = ô nghỉ (dấu lặng)
 export interface StrumSong {
