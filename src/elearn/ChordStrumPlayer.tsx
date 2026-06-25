@@ -2,8 +2,14 @@
 // Cả bài = các ô nhịp (tên hợp âm + chùm 2), sáng theo ô/phách đang chơi.
 // Nguồn tiếng: audio up HOẶC YouTube ẩn. Mốc nhịp do thầy cung cấp (tempo đều).
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { supabase } from '../supabase'
 
 const INDIGO = '#4338CA', ORANGE = '#EA580C', INK = '#1F2430', DIM = '#C0C6D2', SUB = '#6B7280'
+
+// Màu kỹ năng theo số lượt đã gảy: 1=đỏ, 2=vàng, 3+=xanh (xanh hóa)
+const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 'Xanh — đã đủ lượt luyện cơ bản' }
+  : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Vàng — đang ổn định, gảy thêm 1 lượt' }
+  : { color: '#DC2626', bg: '#FEE2E2', label: 'Đỏ — đã bắt đầu, cần luyện thêm' }
 
 export interface SongBar { chord?: string | null; pickup?: boolean; rest?: boolean }   // pickup = lấy đà; rest = ô nghỉ (dấu lặng)
 export interface StrumSong {
@@ -44,7 +50,7 @@ function NoteQuarter({ lit }: { lit: boolean }) {
   )
 }
 
-export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: StrumSong; onClose?: () => void; onComplete?: () => void }) {
+export default function ChordStrumPlayer({ song, onClose, onComplete, studentId, lessonId }: { song: StrumSong; onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }) {
   const eighths = song.eighths !== false
   const N = song.timeSignature
   const beatDur = 60 / song.bpm
@@ -54,6 +60,8 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
   const [t, setT] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [ended, setEnded] = useState(false)
+  const [sessions, setSessions] = useState(0)
+  const recordedRef = useRef(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
@@ -82,7 +90,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
       if (d.event === 'onReady') { post('unMute'); post('setVolume', [100]) }
       const info = (d.info ?? {}) as Record<string, unknown>
       const st = typeof d.info === 'number' ? d.info : info.playerState
-      if (typeof st === 'number') { playingRef.current = st === 1; setPlaying(st === 1); if (st === 0) { setEnded(true); onComplete?.() } }
+      if (typeof st === 'number') { playingRef.current = st === 1; setPlaying(st === 1); if (st === 0) setEnded(true) }
       if (typeof info.currentTime === 'number') { anchorV.current = info.currentTime as number; anchorW.current = performance.now() }
     }
     window.addEventListener('message', h)
@@ -115,6 +123,26 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
 
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
   const curChord = barIdx >= 0 && barIdx < song.bars.length ? song.bars[barIdx].chord : null
+
+  // Gảy hết 1 lượt = 1 phiên luyện → ghi nhận (1 lần / lượt) để xanh hóa
+  useEffect(() => {
+    if (!ended || recordedRef.current) return
+    recordedRef.current = true
+    onComplete?.()
+    if (studentId && lessonId) {
+      supabase.rpc('record_skill_session', { p_student: studentId, p_lesson: lessonId })
+        .then(({ data, error }) => setSessions(error ? (s) => s + 1 : (data as number) || 1))
+    } else setSessions((s) => s + 1)
+  }, [ended, studentId, lessonId, onComplete])
+
+  const replay = () => {
+    recordedRef.current = false
+    setEnded(false)
+    restart()
+    if (isYT) { post('playVideo') }
+    else { const a = audioRef.current; if (a) { a.play(); setPlaying(true) } }
+  }
+  const sk = SKILL(sessions), green = sessions >= 3
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: '#F0F2F5', color: INK, fontFamily: 'system-ui, sans-serif' }}>
@@ -181,7 +209,25 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
         </button>
       </div>
 
-      {song.audioUrl && <audio ref={audioRef} src={song.audioUrl} preload="auto" onEnded={() => { setPlaying(false); setEnded(true); onComplete?.() }} />}
+      {/* Màn XONG LƯỢT — xanh hóa (đỏ/vàng/xanh) */}
+      {ended && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(240,242,245,.98)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+          <div style={{ fontSize: 44 }}>{green ? '🟢' : '🎉'}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: INK, marginTop: 6 }}>Gảy xong một lượt!</div>
+          <div style={{ background: sk.bg, border: `1.5px solid ${sk.color}`, borderRadius: 14, padding: '12px 16px', margin: '14px 0', maxWidth: 340, width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+              {[1, 2, 3].map((i) => <span key={i} style={{ width: 26, height: 8, borderRadius: 4, background: i <= sessions ? sk.color : '#E5E7EB' }} />)}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: sk.color }}>{sk.label}</div>
+            <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 3 }}>Đã gảy <b>{sessions}/3</b> lượt{green ? ' — bài đã xanh hóa 🎉' : ` · còn ${3 - sessions} lượt để xanh hóa`}</div>
+          </div>
+          <div style={{ fontSize: 13.5, color: '#5A6072', lineHeight: 1.6, marginBottom: 16, maxWidth: 340 }}>Nghỉ tay chút rồi gảy lại — lặp nhiều lượt cho thật chắc nhịp.</div>
+          {!green && <button onClick={replay} style={{ width: '100%', maxWidth: 340, marginBottom: 10, background: INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 14, fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Gảy thêm một lượt →</button>}
+          <button onClick={onClose} style={{ width: '100%', maxWidth: 340, background: '#fff', border: `1.5px solid ${INDIGO}`, color: INDIGO, borderRadius: 12, padding: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{green ? 'Hoàn tất — về danh sách' : 'Dừng tại đây'}</button>
+        </div>
+      )}
+
+      {song.audioUrl && <audio ref={audioRef} src={song.audioUrl} preload="auto" onEnded={() => { setPlaying(false); setEnded(true) }} />}
       {isYT && (
         <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none', bottom: 0, left: 0 }}>
           <iframe ref={iframeRef} title="audio" width="200" height="120"
