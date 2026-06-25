@@ -1,27 +1,28 @@
-// ── KHO BÀI "GẢY THEO" (do thầy soạn) — tiếng + mốc hợp âm (giây) + tempo ──────
-// Mốc tính từ tempo đều (bản thu xuất từ Guitar Pro nên đều tuyệt đối).
+// ── KHO BÀI "GẢY THEO" (do thầy soạn) — tiếng + ô nhịp (hợp âm) + tempo ─────────
+// Hiển thị như sách: mỗi ô nhịp 1 hợp âm; ô lấy đà = không đàn. Tempo đều.
 import type { StrumSong } from './ChordStrumPlayer'
 
 const STORE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/lessons/'
 
-// Happy Birthday — 3/4, tempo 75, ô đầu LẤY ĐÀ (1 phách) → phách 1 thật ở 0.8s.
-// Vòng hợp âm (theo bản Guitar Pro của thầy): C · G · G · C · C · Fmaj7 · G · C.
-// Đã gộp các ô trùng hợp âm liền nhau cho hiển thị gọn.
+// Happy Birthday — 3/4, tempo 75, ô 1 LẤY ĐÀ (không hợp âm).
+// Vòng hợp âm theo bản Guitar Pro của thầy: C · G · G · C · C · Fmaj7 · G · C (ô 2–9).
 export const HBD_CHUM2: StrumSong = {
   title: 'Happy Birthday — quạt chùm 2',
   audioUrl: STORE + 'Happy%20Birthday%20to%20You%202.mp3',
   bpm: 75,
   timeSignature: 3,
-  gridOffset: 0,        // phách 1 ở 0s (ô lấy đà là ô đủ, đầu ô có lặng)
+  gridOffset: 0,        // phách 1 ở 0s
   eighths: true,        // chùm 2 (Trình độ 2)
-  // Mỗi ô 2.4s (75bpm, 3/4). Vòng C·G·G·C·C·Fmaj7·G·C → gộp ô trùng:
-  chords: [
-    { t: 0.0, name: 'C' },       // ô 1
-    { t: 2.4, name: 'G' },       // ô 2–3
-    { t: 7.2, name: 'C' },       // ô 4–5
-    { t: 12.0, name: 'Fmaj7' },  // ô 6
-    { t: 14.4, name: 'G' },      // ô 7
-    { t: 16.8, name: 'C' },      // ô 8–9 (kết)
+  bars: [
+    { pickup: true },   // ô 1 — lấy đà, không đàn
+    { chord: 'C' },     // ô 2
+    { chord: 'G' },     // ô 3
+    { chord: 'G' },     // ô 4
+    { chord: 'C' },     // ô 5
+    { chord: 'C' },     // ô 6
+    { chord: 'Fmaj7' }, // ô 7
+    { chord: 'G' },     // ô 8
+    { chord: 'C' },     // ô 9 (kết)
   ],
 }
 

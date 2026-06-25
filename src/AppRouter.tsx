@@ -178,8 +178,8 @@ export default function AppRouter() {
     const STORE = 'https://wojmdilyflffvdtpovmq.supabase.co/storage/v1/object/public/lessons/'
     const sample = {
       title: 'Test · quạt hợp âm', audioUrl: STORE + 'Chum%202%20not%20moc%20don.wav',
-      bpm: 80, timeSignature: 4, gridOffset: 1, eighths: true,
-      chords: [{ t: 1, name: 'C' }, { t: 7, name: 'G7' }, { t: 13, name: 'Am' }, { t: 19, name: 'Fmaj7' }, { t: 25, name: 'C' }, { t: 31, name: 'G7' }, { t: 37, name: 'C' }],
+      bpm: 80, timeSignature: 4, gridOffset: 0, eighths: true,
+      bars: [{ pickup: true }, { chord: 'C' }, { chord: 'G7' }, { chord: 'Am' }, { chord: 'Fmaj7' }, { chord: 'C' }, { chord: 'G7' }, { chord: 'C' }],
     }
     return <ChordStrumPlayer song={sample} onClose={() => { window.location.href = '/start' }} />
   }
