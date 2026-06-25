@@ -6,7 +6,7 @@ const IND = '#8B82F0', GOLD = '#E8B96B', SUB = '#A9AECB', GREEN = '#5DCAA5', RED
 
 function Frame({ children, align = 'center' }: { children: ReactNode; align?: 'center' | 'flex-start' }) {
   return (
-    <div style={{ position: 'absolute', inset: 0, padding: '7cqh 8cqw', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: align, textAlign: align === 'center' ? 'center' : 'left', color: '#fff', background: 'radial-gradient(120% 120% at 80% 0%, #20223A 0%, #0E0F18 70%)' }}>
+    <div style={{ position: 'absolute', inset: 0, padding: '7cqh 8cqw', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: align, textAlign: align === 'center' ? 'center' : 'left', color: '#E8EAF2', background: 'radial-gradient(120% 120% at 80% 0%, #2A2D40 0%, #16171F 72%)' }}>
       {children}
     </div>
   )

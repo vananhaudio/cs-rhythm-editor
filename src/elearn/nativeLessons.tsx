@@ -23,6 +23,7 @@ const CHUM2 = {
   crumb: 'KHỞI ĐẦU ĐAM MÊ · TRÌNH ĐỘ 2',
   audioUrl: STORE + 'Chum%202%20not%20moc%20don.wav',
   slides: CHUM2_SLIDES,
+  dim: true,   // bài này dùng mode TỐI DỊU (đỡ mỏi mắt khi xem lâu)
 }
 
 export const NATIVE_LESSONS: Record<string, { label: string; Component: ComponentType<NativeLessonProps> }> = {
