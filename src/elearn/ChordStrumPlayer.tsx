@@ -17,25 +17,26 @@ export interface StrumSong {
   bars: SongBar[]                // 1 phần tử / ô nhịp
 }
 
-// Cú quạt 1 phách: chùm 2 (↓↑ nối chùm) hoặc nốt đen (1 ↓). lit = đang ở phách này.
-function Beat({ lit, eighths }: { lit: boolean; eighths: boolean }) {
-  const c = lit ? INDIGO : DIM
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, transition: 'transform .07s', transform: lit ? 'scale(1.15)' : 'none' }}>
-      <svg viewBox="0 0 28 38" style={{ height: 30, width: 'auto', overflow: 'visible' }}>
-        {eighths && <rect x={7} y={3} width={13} height={3} rx={1} fill={c} />}
-        <line x1={8.5} y1={eighths ? 5 : 8} x2={8.5} y2={23} stroke={c} strokeWidth={2.2} />
-        <line x1={3} y1={28} x2={10} y2={20} stroke={c} strokeWidth={3.2} strokeLinecap="round" />
-        {eighths && <>
-          <line x1={19} y1={5} x2={19} y2={23} stroke={c} strokeWidth={2.2} />
-          <line x1={13} y1={28} x2={20} y2={20} stroke={c} strokeWidth={3.2} strokeLinecap="round" />
-        </>}
-      </svg>
-      <div style={{ display: 'flex', gap: eighths ? 6 : 0, fontSize: 10, fontWeight: 800, color: lit ? INDIGO : '#9AA0B0' }}>
-        <span>↓</span>{eighths && <span>↑</span>}
-      </div>
-    </div>
-  )
+// Vẽ NỐT CẢ Ô NHỊP — nốt móc đơn cách ĐỀU (trường độ bằng nhau), thân cao, nối chùm 2 theo phách.
+// eighths=false → nốt đen (1 cú ↓/phách). litBeat = phách đang chơi (sáng), -1 = không.
+function BarStaff({ N, eighths, litBeat }: { N: number; eighths: boolean; litBeat: number }) {
+  const M = eighths ? N * 2 : N           // tổng số nốt trong ô
+  const W = 100, H = 66, pad = 9, top = 8, base = 44
+  const xs = Array.from({ length: M }, (_, i) => pad + (i + 0.5) * (W - 2 * pad) / M)   // cách đều
+  const beatOf = (i: number) => eighths ? Math.floor(i / 2) : i
+  const colOf = (i: number) => beatOf(i) === litBeat ? INDIGO : DIM
+  const els: React.ReactNode[] = []
+  if (eighths) for (let k = 0; k < N; k++) {                                            // dấu chùm mỗi phách
+    const a = xs[2 * k], b = xs[2 * k + 1], c = beatOf(2 * k) === litBeat ? INDIGO : DIM
+    els.push(<rect key={'bm' + k} x={a} y={top} width={b - a} height={4.2} rx={1} fill={c} />)
+  }
+  xs.forEach((x, i) => {
+    const c = colOf(i), litArrow = beatOf(i) === litBeat
+    els.push(<line key={'st' + i} x1={x} y1={top} x2={x} y2={base} stroke={c} strokeWidth={2.4} />)
+    els.push(<line key={'hd' + i} x1={x - 5.5} y1={base + 7} x2={x + 4} y2={base - 3} stroke={c} strokeWidth={4.6} strokeLinecap="round" />)
+    els.push(<text key={'ar' + i} x={x} y={H - 1} textAnchor="middle" fontSize={9} fontWeight={800} fill={litArrow ? INDIGO : '#9AA0B0'}>{eighths ? (i % 2 === 0 ? '↓' : '↑') : '↓'}</text>)
+  })
+  return <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: 62, overflow: 'visible', display: 'block' }}>{els}</svg>
 }
 
 export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: StrumSong; onClose?: () => void; onComplete?: () => void }) {
@@ -132,18 +133,16 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
                 const isCur = playing && barIdx === idx
                 return (
                   <div key={idx} style={{ flex: 1, display: 'flex' }}>
-                    <div style={{ flex: 1, padding: '0 4px', minWidth: 0 }}>
-                      {/* tên hợp âm / nhãn lấy đà */}
-                      <div style={{ height: 20, textAlign: 'center', fontSize: bar.pickup ? 10.5 : 17, fontWeight: 800, lineHeight: '20px', color: bar.pickup ? '#9AA0B0' : isCur ? ORANGE : INK, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, padding: '0 5px', minWidth: 0 }}>
+                      {/* tên hợp âm — đặt trên NỐT ĐẦU của ô (căn trái) */}
+                      <div style={{ height: 22, textAlign: 'left', paddingLeft: '9%', fontSize: bar.pickup ? 11 : 18, fontWeight: 800, lineHeight: '22px', color: bar.pickup ? '#9AA0B0' : isCur ? INDIGO : INK, whiteSpace: 'nowrap', overflow: 'hidden' }}>
                         {bar.pickup ? 'Lấy đà' : (bar.chord ?? '')}
                       </div>
-                      {/* dải quạt / nhãn không đàn */}
+                      {/* nốt cả ô / nhãn không đàn */}
                       {bar.pickup ? (
-                        <div style={{ height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, color: '#9AA0B0', fontStyle: 'italic', textAlign: 'center' }}>không đàn</div>
+                        <div style={{ height: 62, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#9AA0B0', fontStyle: 'italic', textAlign: 'center' }}>không đàn</div>
                       ) : (
-                        <div style={{ height: 44, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center' }}>
-                          {Array.from({ length: N }, (_, j) => <Beat key={j} lit={isCur && beatInBar === j} eighths={eighths} />)}
-                        </div>
+                        <BarStaff N={N} eighths={eighths} litBeat={isCur ? beatInBar : -1} />
                       )}
                     </div>
                     <div style={{ width: 2, background: INK, borderRadius: 1, alignSelf: 'stretch' }} />
@@ -154,7 +153,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
           ))}
         </div>
         <div style={{ textAlign: 'center', fontSize: 12, color: SUB, marginTop: 10 }}>
-          {playing ? <>Đang chơi: <b style={{ color: ORANGE }}>{curChord ?? 'lấy đà'}</b> — gảy theo ô đang sáng</> : 'Bấm ▶ để phát — gảy theo ô sáng'}
+          {playing ? <>Đang chơi: <b style={{ color: INDIGO }}>{curChord ?? 'lấy đà'}</b> — gảy theo ô đang sáng</> : 'Bấm ▶ để phát — gảy theo ô sáng'}
         </div>
       </div>
 
