@@ -176,8 +176,9 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         )}
         {rows.map((row, ri) => {
           const isLastRow = ri === rows.length - 1
-          const barLyric = b.map(s => exercise.cells[s.cellIdx]?.lyric).find(Boolean)
-          const bar = (b: Slot[], bj: number) => (
+          const bar = (b: Slot[], bj: number) => {
+            const barLyric = b.map(s => exercise.cells[s.cellIdx]?.lyric).find(Boolean)
+            return (
             <div key={'b' + bj} style={{ flex: 1, padding: '0 6px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${BPB},1fr)`, height: 24 }}>
                 {b.map(s => {
@@ -205,6 +206,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
               {barLyric && <div style={{ marginTop: 4, fontSize: 11.5, color: '#5A6072', textAlign: 'center', lineHeight: 1.3, minHeight: 15 }}>{barLyric}</div>}
             </div>
           )
+          }
           const vline = (key: string, thick?: boolean) => <div key={key} style={{ width: thick ? 3 : 2, alignSelf: 'stretch', background: '#1F2430', borderRadius: 1 }} />
           const kids: ReactNode[] = [vline('lstart')]
           row.forEach((b, bj) => { kids.push(bar(b, bj)); kids.push(vline('l' + bj, isLastRow && bj === row.length - 1)) })
