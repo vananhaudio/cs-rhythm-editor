@@ -1,14 +1,14 @@
 -- =====================================================================
--- BẢNG BÀI TẬP BMS (do THẦY soạn) — đẩy từ Beat My Songs lên để dùng trong khoá.
+-- BẢNG KHO BÀI "GẢY THEO" (do THẦY soạn) — lưu trên Supabase để dùng trong khoá.
 -- CHỈ chứa ~20 bài thầy tự soạn (không đụng dữ liệu người dùng → an toàn bản quyền).
--- Học sinh (authenticated) CHỈ ĐỌC; thầy ghi qua nút "Xuất lên khoá" trong BMS.
+-- Học sinh (authenticated) CHỈ ĐỌC; thầy ghi trực tiếp (gửi Claude hoặc form admin sau này).
 --
 -- Mốc hợp âm đã được "nướng" sẵn thành GIÂY (chords[].t) lúc xuất → player chỉ cần
 -- video_id + chords + lưới nhịp, KHÔNG cần lời (ẩn video/lời vẫn chạy đúng).
 -- Chạy 1 lần. Idempotent.
 -- =====================================================================
 
-create table if not exists public.bms_exercises (
+create table if not exists public.strum_songs (
   id            text primary key,
   title         text not null,
   video_id      text,                     -- YouTube id (lấy tiếng) — DÙNG 1 trong 2
@@ -25,16 +25,16 @@ create table if not exists public.bms_exercises (
   updated_at    timestamptz not null default now()
 );
 
-alter table public.bms_exercises enable row level security;
+alter table public.strum_songs enable row level security;
 
 -- authenticated: TOÀN QUYỀN (thầy ghi; học sinh đọc) — theo nếp chung của dự án
-drop policy if exists rls_authenticated_all on public.bms_exercises;
-create policy rls_authenticated_all on public.bms_exercises
+drop policy if exists rls_authenticated_all on public.strum_songs;
+create policy rls_authenticated_all on public.strum_songs
   for all to authenticated using (true) with check (true);
 
 -- anon: CHỈ đọc bài đang bật (cho phép xem thử khi chưa đăng nhập)
-drop policy if exists rls_anon_read on public.bms_exercises;
-create policy rls_anon_read on public.bms_exercises
+drop policy if exists rls_anon_read on public.strum_songs;
+create policy rls_anon_read on public.strum_songs
   for select to anon using (enabled = true);
 
 notify pgrst, 'reload schema';
