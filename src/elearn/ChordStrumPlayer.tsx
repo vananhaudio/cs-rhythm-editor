@@ -143,9 +143,14 @@ export default function ChordStrumPlayer({ song, onClose, onComplete }: { song: 
                       <div style={{ height: 22, textAlign: 'left', paddingLeft: '9%', fontSize: (bar.pickup || bar.rest) ? 11 : 18, fontWeight: 800, lineHeight: '22px', color: (bar.pickup || bar.rest) ? '#9AA0B0' : isCur ? INDIGO : INK, whiteSpace: 'nowrap', overflow: 'hidden' }}>
                         {bar.pickup ? 'Lấy đà' : bar.rest ? 'Nghỉ' : (bar.chord ?? '')}
                       </div>
-                      {/* nốt cả ô / nhãn không đàn / dấu lặng */}
+                      {/* ô lấy đà: ĐẾM VÀO 1-2-3 (sáng theo phách) / dấu lặng / nốt */}
                       {bar.pickup ? (
-                        <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#9AA0B0', fontStyle: 'italic', textAlign: 'center' }}>không đàn</div>
+                        <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
+                          {Array.from({ length: N }, (_, j) => {
+                            const lit = isCur && beatInBar === j
+                            return <div key={j} style={{ fontSize: lit ? 30 : 22, fontWeight: 800, color: lit ? INDIGO : '#B6BBC9', transition: 'all .07s', transform: lit ? 'scale(1.1)' : 'none' }}>{j + 1}</div>
+                          })}
+                        </div>
                       ) : bar.rest ? (
                         <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bravura', fontSize: 30, color: isCur ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E3)}</div>
                       ) : (
