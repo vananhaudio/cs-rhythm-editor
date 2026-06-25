@@ -28,17 +28,19 @@ function click(accent: boolean) {
 
 interface Slot { cellIdx: number; beatInCell: number; chord: string; mark: 'down' | 'whole' | 'hold' | 'rest' | 'restWhole'; segStart: boolean; global: number; eighths?: boolean }
 
-// Cặp nốt móc đơn NỐI CHÙM (rhythm slash beamed) — vẽ như sách nhạc, kèm mũi tên xuống↓/lên↑.
-function EighthPair({ color }: { color: string }) {
+// Cặp nốt móc đơn NỐI CHÙM (rhythm slash beamed) — thân dài như nốt thật, kèm mũi tên ↓/↑.
+// on = phách đang chơi → mũi tên sáng & đậm theo.
+function EighthPair({ color, on }: { color: string; on?: boolean }) {
+  const aOp = on ? 1 : 0.55
   return (
-    <svg viewBox="0 0 44 50" style={{ height: 44, width: 'auto', overflow: 'visible', display: 'inline-block' }}>
-      <rect x={13} y={6} width={20} height={4} rx={1} fill={color} />
-      <line x1={4} y1={30} x2={15} y2={18} stroke={color} strokeWidth={4.6} strokeLinecap="round" />
-      <line x1={14.5} y1={20} x2={14.5} y2={8} stroke={color} strokeWidth={3} />
-      <line x1={22} y1={30} x2={33} y2={18} stroke={color} strokeWidth={4.6} strokeLinecap="round" />
-      <line x1={32.5} y1={20} x2={32.5} y2={8} stroke={color} strokeWidth={3} />
-      <text x={9.5} y={48} fontSize={11} textAnchor="middle" fill={color} fontFamily="system-ui" opacity={0.85}>↓</text>
-      <text x={27.5} y={48} fontSize={11} textAnchor="middle" fill={color} fontFamily="system-ui" opacity={0.85}>↑</text>
+    <svg viewBox="0 0 44 58" style={{ height: 48, width: 'auto', overflow: 'visible', display: 'inline-block' }}>
+      <rect x={13} y={4} width={20} height={4} rx={1} fill={color} />
+      <line x1={14.5} y1={6} x2={14.5} y2={31} stroke={color} strokeWidth={3} />
+      <line x1={5} y1={40} x2={15.5} y2={29} stroke={color} strokeWidth={4.6} strokeLinecap="round" />
+      <line x1={32.5} y1={6} x2={32.5} y2={31} stroke={color} strokeWidth={3} />
+      <line x1={23} y1={40} x2={33.5} y2={29} stroke={color} strokeWidth={4.6} strokeLinecap="round" />
+      <text x={9.5} y={56} fontSize={on ? 14 : 11} textAnchor="middle" fill={on ? color : '#9AA0B0'} fontFamily="system-ui" opacity={aOp} fontWeight={on ? 800 : 500}>↓</text>
+      <text x={28} y={56} fontSize={on ? 14 : 11} textAnchor="middle" fill={on ? color : '#9AA0B0'} fontFamily="system-ui" opacity={aOp} fontWeight={on ? 800 : 500}>↑</text>
     </svg>
   )
 }
@@ -157,7 +159,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                   return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 18, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap', color: isNextSeg ? INDIGO : okCell ? '#16A34A' : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? <>{s.chord}{okCell ? '✓' : ''}</> : ''}</div>
                 })}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 8, height: 46, alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 8, height: 54, alignItems: 'center' }}>
                 {b.map(s => {
                   const restMark = s.mark === 'rest' || s.mark === 'restWhole'
                   const on = running && (s.mark === 'whole' || s.mark === 'restWhole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
@@ -167,7 +169,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                   const pair = s.mark === 'down' && s.eighths
                   const tf2 = pair ? 'none' : tf
                   const content = pair
-                    ? <EighthPair color={on ? INDIGO : '#C0C6D2'} />
+                    ? <EighthPair color={on ? INDIGO : '#C0C6D2'} on={on} />
                     : glyph
                   return <div key={s.global} className={on && s.mark === 'down' && !pair ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 30 : s.mark === 'down' ? 30 : 26, lineHeight: 1, fontWeight: 700, color, transform: tf2, transition: 'color .07s' }}>{content}</div>
                 })}
