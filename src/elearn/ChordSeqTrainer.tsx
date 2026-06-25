@@ -10,8 +10,9 @@ const ORANGE = '#EA580C'
 
 // hold = nốt tròn (1 gảy, giữ); oneHit = gảy phách 1 rồi nghỉ; rest = ô nghỉ (không gảy)
 // eighths = quạt CHÙM 2 mỗi phách (xuống–lên ╱╲) + gõ thêm tiếng "và" giữa phách
-export interface Cell { chord?: string; beats: number; hold?: boolean; oneHit?: boolean; rest?: boolean; eighths?: boolean }
-export interface Exercise { name: string; cells: Cell[]; strumPerBeat: boolean }
+// lyric = lời hát hiển thị dưới ô (đệm bài hát thật)
+export interface Cell { chord?: string; beats: number; hold?: boolean; oneHit?: boolean; rest?: boolean; eighths?: boolean; lyric?: string }
+export interface Exercise { name: string; cells: Cell[]; strumPerBeat: boolean; beatsPerBar?: number }  // beatsPerBar: 4 (mặc định) hoặc 3 (nhịp 3/4)
 
 let clickCtx: AudioContext | null = null
 function click(accent: boolean) {
@@ -56,8 +57,9 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
   const posRef = useRef(0)
   const hitsRef = useRef<boolean[]>([])
   const loopRef = useRef(0)
-  const [count, setCount] = useState(0)   // đếm vào: 4→1 rồi mới chạy
+  const [count, setCount] = useState(0)   // đếm vào: BPB→1 rồi mới chạy
   const primeRef = useRef(false)          // gảy phách 1 NGAY khi hết đếm (không trễ 1 nhịp)
+  const BPB = exercise.beatsPerBar ?? 4   // số phách / ô nhịp (4 hoặc 3)
 
   // Dòng thời gian theo phách
   const timeline = useMemo<Slot[]>(() => {
@@ -77,12 +79,12 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     return tl
   }, [exercise])
 
-  // Gom phách thành các ô nhịp (4 phách / ô), rồi 2 ô / hàng cho thẳng lưới
+  // Gom phách thành các ô nhịp (BPB phách / ô), rồi 2 ô / hàng cho thẳng lưới
   const bars = useMemo<Slot[][]>(() => {
     const out: Slot[][] = []
-    for (let i = 0; i < timeline.length; i += 4) out.push(timeline.slice(i, i + 4))
+    for (let i = 0; i < timeline.length; i += BPB) out.push(timeline.slice(i, i + BPB))
     return out
-  }, [timeline])
+  }, [timeline, BPB])
   const rows = useMemo<Slot[][][]>(() => {
     const out: Slot[][][] = []
     for (let i = 0; i < bars.length; i += 2) out.push(bars.slice(i, i + 2))
@@ -124,7 +126,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         p = 0
       }
       const s = timeline[p]
-      click(p % 4 === 0)
+      click(p % BPB === 0)
       if (s.eighths) setTimeout(() => { if (posRef.current === p) click(false) }, beatMs / 2)  // tiếng "và" giữa phách cho chùm 2
       if (s.chord && currentRef.current === s.chord) hitsRef.current[s.cellIdx] = true
       posRef.current = p; setPos(p); setHeard(currentRef.current); setHits([...hitsRef.current])
@@ -140,7 +142,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
     await start()
     posRef.current = timeline.length - 1; loopRef.current = 0; setLoopOk(0)
     hitsRef.current = exercise.cells.map(() => false); setHits([])
-    setCount(4)  // đếm vào 1 ô rồi mới chạy
+    setCount(BPB)  // đếm vào 1 ô (BPB phách) rồi mới chạy
   }
 
   const done = loopOk >= loops
@@ -174,9 +176,10 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         )}
         {rows.map((row, ri) => {
           const isLastRow = ri === rows.length - 1
+          const barLyric = b.map(s => exercise.cells[s.cellIdx]?.lyric).find(Boolean)
           const bar = (b: Slot[], bj: number) => (
             <div key={'b' + bj} style={{ flex: 1, padding: '0 6px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${BPB},1fr)`, height: 24 }}>
                 {b.map(s => {
                   const isNextSeg = prepping && s.global === (pos + 1) % timeline.length && s.segStart
                   const onSeg = running && cur?.cellIdx === s.cellIdx && s.segStart
@@ -184,7 +187,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                   return <div key={s.global} className={isNextSeg ? 'cs-prep' : ''} style={{ fontSize: 18, fontWeight: 800, textAlign: 'center', whiteSpace: 'nowrap', color: isNextSeg ? INDIGO : okCell ? '#16A34A' : onSeg ? ORANGE : s.segStart ? '#1F2430' : 'transparent' }}>{s.segStart ? <>{s.chord}{okCell ? '✓' : ''}</> : ''}</div>
                 })}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', marginTop: 8, height: 54, alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${BPB},1fr)`, marginTop: 8, height: 54, alignItems: 'center' }}>
                 {b.map(s => {
                   const restMark = s.mark === 'rest' || s.mark === 'restWhole'
                   const on = running && (s.mark === 'whole' || s.mark === 'restWhole' ? cur?.cellIdx === s.cellIdx : s.global === pos)
@@ -199,6 +202,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                   return <div key={s.global} className={on && s.mark === 'down' && !pair ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 30 : s.mark === 'down' ? 30 : 26, lineHeight: 1, fontWeight: 700, color, transform: tf2, transition: 'color .07s' }}>{content}</div>
                 })}
               </div>
+              {barLyric && <div style={{ marginTop: 4, fontSize: 11.5, color: '#5A6072', textAlign: 'center', lineHeight: 1.3, minHeight: 15 }}>{barLyric}</div>}
             </div>
           )
           const vline = (key: string, thick?: boolean) => <div key={key} style={{ width: thick ? 3 : 2, alignSelf: 'stretch', background: '#1F2430', borderRadius: 1 }} />
