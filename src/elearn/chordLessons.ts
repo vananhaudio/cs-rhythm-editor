@@ -80,8 +80,8 @@ export const QUAT_CHUM2: ChordLessonCfg = {
       cells: [{ chord: 'C', beats: 4, eighths: true }, { chord: 'Am', beats: 4, eighths: true }, { chord: 'Dm', beats: 4, eighths: true }, { chord: 'G7', beats: 4, eighths: true }, { chord: 'C', beats: 4, hold: true }] },
   ],
   quiz: [
-    { q: 'Ký hiệu ╱╲ trong bài nghĩa là gì?', opts: ['Một phách quạt xuống rồi lên (chùm 2)', 'Quạt xuống hai lần', 'Nghỉ một phách'], correct: 0,
-      explain: 'Mỗi phách có 2 cú: ╱ quạt xuống rồi ╲ quạt lên — đúng như chùm 2 nốt móc đơn.' },
+    { q: 'Cặp nốt nối chùm (có mũi tên ↓↑) trong bài nghĩa là gì?', opts: ['Một phách quạt xuống rồi lên (chùm 2)', 'Quạt xuống hai lần', 'Nghỉ một phách'], correct: 0,
+      explain: 'Cặp nốt móc đơn nối chùm = một phách có 2 cú: ↓ quạt xuống rồi ↑ quạt lên — đúng như chùm 2 nốt móc đơn.' },
     { q: 'Một phách quạt chùm 2 thì tay phải gảy mấy lần?', opts: ['2 lần (xuống + lên)', '1 lần', '4 lần'], correct: 0,
       explain: 'Chùm 2 = hai nốt móc đơn trong một phách → tay quạt xuống rồi lên, 2 lần.' },
     { q: 'Cú quạt LÊN nên thế nào?', opts: ['Nhẹ hơn, chỉ lướt vài dây cao', 'Mạnh hơn cú xuống', 'Gảy đủ cả 6 dây thật mạnh'], correct: 0,
