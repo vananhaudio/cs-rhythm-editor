@@ -15,7 +15,7 @@ const Eyebrow = ({ c = IND, children }: { c?: string; children: ReactNode }) => 
 
 // Vẽ một dãy nốt móc đơn theo nhóm chùm. groups = [2,2,2,2] → 4 chùm đôi.
 // flagSingle: nhóm 1 nốt vẽ đuôi cong (chưa nối). heightCqh: cao của hình theo khung.
-function Beamed({ groups, color = '#EDEFFB', flagSingle = false, heightCqh = 22 }: { groups: number[]; color?: string; flagSingle?: boolean; heightCqh?: number }) {
+function Beamed({ groups, color = '#EDEFFB', flagSingle = false, heightCqh = 22, fit = false }: { groups: number[]; color?: string; flagSingle?: boolean; heightCqh?: number; fit?: boolean }) {
   const NW = 26, GAP = 16, H = 86, top = 18, baseY = 64
   const els: ReactNode[] = []
   let x = 10, key = 0
@@ -34,7 +34,10 @@ function Beamed({ groups, color = '#EDEFFB', flagSingle = false, heightCqh = 22 
     }
     x += GAP
   })
-  return <svg viewBox={`0 0 ${x} ${H}`} style={{ height: `${heightCqh}cqh`, width: 'auto', maxWidth: '88cqw', overflow: 'visible' }}>{els}</svg>
+  const style = fit
+    ? { width: '100%', height: 'auto' as const, maxHeight: `${heightCqh}cqh`, overflow: 'visible' as const }
+    : { height: `${heightCqh}cqh`, width: 'auto' as const, maxWidth: '88cqw', overflow: 'visible' as const }
+  return <svg viewBox={`0 0 ${x} ${H}`} style={style}>{els}</svg>
 }
 
 // Một nốt đơn (vẽ SVG, đồng bộ cỡ/nét với Beamed). kind: móc đơn (có đuôi) | đen (không đuôi).
@@ -169,11 +172,11 @@ export const CHUM2_SLIDES: ReactNode[] = [
   <Frame key={7}>
     <Eyebrow>BEAMING TRONG NHỊP 4/4</Eyebrow>
     <div style={{ fontSize: '3.7cqw', color: SUB, marginBottom: '4cqh' }}>4 phách · 8 nốt móc đơn · 4 chùm (mỗi chùm = 1 phách)</div>
-    <div style={{ display: 'flex', gap: '2cqw', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '2cqh' }}>
+    <div style={{ display: 'flex', gap: '2cqw', alignItems: 'stretch', justifyContent: 'center', width: '100%', marginBottom: '2cqh' }}>
       {[1, 2, 3, 4].map(b => (
-        <div key={b} style={{ background: 'rgba(139,130,240,.12)', border: `1px solid ${IND}55`, borderRadius: '1.4cqw', padding: '2cqh 1.6cqw', textAlign: 'center' }}>
-          <Beamed groups={[2]} color={GOLD} heightCqh={15} />
-          <div style={{ fontSize: '2.8cqw', color: IND, fontWeight: 700, marginTop: '.6cqh' }}>Phách {b}</div>
+        <div key={b} style={{ flex: 1, minWidth: 0, background: 'rgba(139,130,240,.12)', border: `1px solid ${IND}55`, borderRadius: '1.4cqw', padding: '2cqh 1cqw', textAlign: 'center' }}>
+          <Beamed groups={[2]} color={GOLD} heightCqh={13} fit />
+          <div style={{ fontSize: '2.8cqw', color: IND, fontWeight: 700, marginTop: '.8cqh' }}>Phách {b}</div>
         </div>
       ))}
     </div>
@@ -183,11 +186,11 @@ export const CHUM2_SLIDES: ReactNode[] = [
   // 8 — Nhịp 3/4 + Tóm tắt
   <Frame key={8} align="flex-start">
     <Eyebrow>NHỊP 3/4 · TÓM TẮT BÀI HỌC</Eyebrow>
-    <div style={{ display: 'flex', gap: '2cqw', alignItems: 'flex-end', marginBottom: '1.4cqh' }}>
+    <div style={{ display: 'flex', gap: '2cqw', alignItems: 'stretch', width: '100%', marginBottom: '1.4cqh' }}>
       {[1, 2, 3].map(b => (
-        <div key={b} style={{ flex: 1, background: 'rgba(139,130,240,.12)', border: `1px solid ${IND}55`, borderRadius: '1.4cqw', padding: '1.6cqh 1.4cqw', textAlign: 'center' }}>
-          <Beamed groups={[2]} color={GOLD} heightCqh={13} />
-          <div style={{ fontSize: '2.6cqw', color: IND, fontWeight: 700 }}>Phách {b}</div>
+        <div key={b} style={{ flex: 1, minWidth: 0, background: 'rgba(139,130,240,.12)', border: `1px solid ${IND}55`, borderRadius: '1.4cqw', padding: '1.6cqh 1cqw', textAlign: 'center' }}>
+          <Beamed groups={[2]} color={GOLD} heightCqh={12} fit />
+          <div style={{ fontSize: '2.6cqw', color: IND, fontWeight: 700, marginTop: '.6cqh' }}>Phách {b}</div>
         </div>
       ))}
     </div>
