@@ -15,7 +15,7 @@ import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
-import { HBD_CHUM2 } from './elearn/strumSongs'
+import { HBD_CHUM2, HBD_TD1 } from './elearn/strumSongs'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
 import SongBuilderPage from './SongBuilderPage'
@@ -184,6 +184,9 @@ export default function AppRouter() {
     return <ChordStrumPlayer song={sample} onClose={() => { window.location.href = '/start' }} />
   }
   // ── Route /hbd (Happy Birthday — quạt chùm 2, gảy theo) ──
+  if (path === '/hbd-td1' || path.startsWith('/hbd-td1')) {
+    return <ChordStrumPlayer song={HBD_TD1} onClose={() => { window.location.href = '/start' }} />
+  }
   if (path === '/hbd' || path.startsWith('/hbd')) {
     return <ChordStrumPlayer song={HBD_CHUM2} onClose={() => { window.location.href = '/start' }} />
   }

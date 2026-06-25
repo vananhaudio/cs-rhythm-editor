@@ -8,7 +8,7 @@ import NarratedSlides from './NarratedSlides'
 import { WELCOME_TD2_SLIDES } from './welcomeTd2Slides'
 import { CHUM2_SLIDES } from './chum2Slides'
 import ChordStrumPlayer from './ChordStrumPlayer'
-import { HBD_CHUM2 } from './strumSongs'
+import { HBD_CHUM2, HBD_TD1 } from './strumSongs'
 
 export interface NativeLessonProps { onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }
 
@@ -36,4 +36,5 @@ export const NATIVE_LESSONS: Record<string, { label: string; Component: Componen
   'chord-basic-1': { label: 'Chuyển hợp âm cơ bản 1 — C·G7·Am·E·Dm (6 BT, có nghỉ)', Component: (p) => <ChordLesson cfg={BASIC_1} {...p} /> },
   'chord-strum-chum2': { label: 'Tập quạt chùm 2 (xuống–lên) — C·G7·Am·E·Dm (5 BT)', Component: (p) => <ChordLesson cfg={QUAT_CHUM2} {...p} /> },
   'song-hbd-chum2': { label: 'Gảy theo: Happy Birthday — quạt chùm 2 (xanh hóa)', Component: (p) => <ChordStrumPlayer song={HBD_CHUM2} {...p} /> },
+  'song-hbd-td1': { label: 'Gảy theo: Happy Birthday — quạt nốt đen (TĐ1, xanh hóa)', Component: (p) => <ChordStrumPlayer song={HBD_TD1} {...p} /> },
 }
