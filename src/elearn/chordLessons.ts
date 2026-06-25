@@ -40,6 +40,52 @@ export const BASIC_1: ChordLessonCfg = {
   ],
 }
 
+// Bài QUẠT CHÙM 2 (xuống–lên mỗi phách) — nối tiếp bài lý thuyết "Chùm 2 nốt móc đơn".
+// Hợp âm đã học (C G7 Am E Dm); bài này tập TAY PHẢI: mỗi phách quạt XUỐNG rồi LÊN.
+export const QUAT_CHUM2: ChordLessonCfg = {
+  crumb: 'ĐỆM HÁT · QUẠT CHÙM 2',
+  title: 'Tập quạt chùm 2 (xuống–lên)',
+  practice: false,
+  introTitle: '╱╲ = quạt XUỐNG rồi LÊN trong một phách',
+  intro: 'Nhớ bài Chùm 2: một phách = hai nốt móc đơn. Tay phải làm đúng như vậy — mỗi phách quạt XUỐNG (╱) rồi LÊN (╲), đều như con lắc. App gõ thêm tiếng "và" giữa phách để bạn đặt cú quạt lên cho đúng chỗ. Hợp âm bạn đã học rồi, bài này chỉ tập tay quạt và giữ nhịp.',
+  learn: ['C', 'G7', 'Am', 'E', 'Dm'],
+  learnTips: [
+    'Xuống – lên là một chuyển động liên tục của cổ tay, không khựng giữa chừng.',
+    'Cú LÊN nhẹ hơn cú xuống, chỉ lướt qua vài dây cao là đủ.',
+    'Theo tiếng metronome: “1” quạt xuống, “và” quạt lên — đều tay.',
+  ],
+  exercises: [
+    { name: 'Bài tập 1 · chỉ tay phải (C)', short: 'BT1',
+      hint: 'Giữ một hợp âm C, chỉ lo tay quạt: xuống–lên đều suốt 2 ô. Đi chậm trước.',
+      strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 8, eighths: true }] },
+    { name: 'Bài tập 2 · C ↔ G7 chùm 2', short: 'BT2',
+      hint: 'Quạt xuống–lên mỗi phách, đổi hợp âm mỗi ô: C – G7 – C – G7.',
+      strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 4, eighths: true }, { chord: 'G7', beats: 4, eighths: true }, { chord: 'C', beats: 4, eighths: true }, { chord: 'G7', beats: 4, eighths: true }] },
+    { name: 'Bài tập 3 · Am ↔ E chùm 2', short: 'BT3',
+      hint: 'Khối 3 ngón trượt giữa Am và E; tay phải vẫn xuống–lên đều.',
+      strumPerBeat: true,
+      cells: [{ chord: 'Am', beats: 4, eighths: true }, { chord: 'E', beats: 4, eighths: true }, { chord: 'Am', beats: 4, eighths: true }, { chord: 'E', beats: 4, eighths: true }] },
+    { name: 'Bài tập 4 · Am ↔ Dm chùm 2', short: 'BT4',
+      hint: 'Dm chỉ gảy 4 dây — cú quạt gọn lại, tránh 2 dây trầm.',
+      strumPerBeat: true,
+      cells: [{ chord: 'Am', beats: 4, eighths: true }, { chord: 'Dm', beats: 4, eighths: true }, { chord: 'Am', beats: 4, eighths: true }, { chord: 'Dm', beats: 4, eighths: true }] },
+    { name: 'Bài tập 5 · vòng C–Am–Dm–G7', short: 'BT5',
+      hint: 'Chùm 2 cả vòng, ô cuối giữ nốt tròn (◇) cho gọn kết.',
+      strumPerBeat: true,
+      cells: [{ chord: 'C', beats: 4, eighths: true }, { chord: 'Am', beats: 4, eighths: true }, { chord: 'Dm', beats: 4, eighths: true }, { chord: 'G7', beats: 4, eighths: true }, { chord: 'C', beats: 4, hold: true }] },
+  ],
+  quiz: [
+    { q: 'Ký hiệu ╱╲ trong bài nghĩa là gì?', opts: ['Một phách quạt xuống rồi lên (chùm 2)', 'Quạt xuống hai lần', 'Nghỉ một phách'], correct: 0,
+      explain: 'Mỗi phách có 2 cú: ╱ quạt xuống rồi ╲ quạt lên — đúng như chùm 2 nốt móc đơn.' },
+    { q: 'Một phách quạt chùm 2 thì tay phải gảy mấy lần?', opts: ['2 lần (xuống + lên)', '1 lần', '4 lần'], correct: 0,
+      explain: 'Chùm 2 = hai nốt móc đơn trong một phách → tay quạt xuống rồi lên, 2 lần.' },
+    { q: 'Cú quạt LÊN nên thế nào?', opts: ['Nhẹ hơn, chỉ lướt vài dây cao', 'Mạnh hơn cú xuống', 'Gảy đủ cả 6 dây thật mạnh'], correct: 0,
+      explain: 'Cú lên nhẹ và lướt qua vài dây cao là đủ — nhờ vậy tiếng đều và cổ tay không bị khựng.' },
+  ],
+}
+
 // Bài ĐẦU về quạt: giải thích Downstroke, KHÔNG dạy bấm hợp âm (đã học), bỏ bước làm quen.
 export const C_G7: ChordLessonCfg = {
   crumb: 'ĐỆM HÁT · QUẠT HỢP ÂM',

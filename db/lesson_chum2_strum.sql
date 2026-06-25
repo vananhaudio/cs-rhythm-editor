@@ -1,28 +1,26 @@
 -- =====================================================================
--- Gắn bài "Chùm 2 Nốt Móc Đơn" (slide native + audio, ép nghe hết)
--- làm BÀI 2 của khoá "Khởi Đầu Đam Mê – Đệm Hát Trình Độ 2".
+-- Gắn bài "Tập quạt chùm 2 (xuống–lên)" (bài tập native, có mic chấm)
+-- vào khoá "Khởi Đầu Đam Mê – Đệm Hát Trình Độ 2", NGAY SAU bài lý thuyết Chùm 2.
 -- Module Tuần 1 = 067ae3bb-7812-4485-8fa2-077fccaea2bf
--- order_index = 1 (sau welcome o-1, trước bài "Tập quạt chùm 2" o2 và video o3). Idempotent.
+-- order_index = 2 (sau lý thuyết o1, trước video "ứng dụng 2/4" o3). Idempotent.
 --
--- Audio đã upload sẵn ở bucket "lessons":
---   Chum 2 not moc don.wav
--- Slide DỰNG NATIVE trong code (src/elearn/chum2Slides.tsx) — KHÔNG cần ảnh.
+-- Bài DỰNG NATIVE trong code (src/elearn/chordLessons.ts → QUAT_CHUM2). KHÔNG cần media.
 -- =====================================================================
 
 insert into public.edu_course_lessons
   (module_id, title, lesson_type, content_url, order_index, tier, tools)
 select
   '067ae3bb-7812-4485-8fa2-077fccaea2bf',
-  'Bài 2: Chùm 2 Nốt Móc Đơn',
+  'Bài 2 (thực hành): Tập quạt chùm 2',
   'native',
-  'chum-2-moc-don',
-  1,
+  'chord-strum-chum2',
+  2,
   'free',
   '[]'::jsonb
 where not exists (
   select 1 from public.edu_course_lessons
   where module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf'
-    and content_url = 'chum-2-moc-don'
+    and content_url = 'chord-strum-chum2'
 );
 
 notify pgrst, 'reload schema';

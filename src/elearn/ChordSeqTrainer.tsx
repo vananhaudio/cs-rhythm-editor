@@ -9,7 +9,8 @@ const INDIGO = '#4338CA'
 const ORANGE = '#EA580C'
 
 // hold = nốt tròn (1 gảy, giữ); oneHit = gảy phách 1 rồi nghỉ; rest = ô nghỉ (không gảy)
-export interface Cell { chord?: string; beats: number; hold?: boolean; oneHit?: boolean; rest?: boolean }
+// eighths = quạt CHÙM 2 mỗi phách (xuống–lên ╱╲) + gõ thêm tiếng "và" giữa phách
+export interface Cell { chord?: string; beats: number; hold?: boolean; oneHit?: boolean; rest?: boolean; eighths?: boolean }
 export interface Exercise { name: string; cells: Cell[]; strumPerBeat: boolean }
 
 let clickCtx: AudioContext | null = null
@@ -25,7 +26,22 @@ function click(accent: boolean) {
   } catch { /* bỏ qua */ }
 }
 
-interface Slot { cellIdx: number; beatInCell: number; chord: string; mark: 'down' | 'whole' | 'hold' | 'rest' | 'restWhole'; segStart: boolean; global: number }
+interface Slot { cellIdx: number; beatInCell: number; chord: string; mark: 'down' | 'whole' | 'hold' | 'rest' | 'restWhole'; segStart: boolean; global: number; eighths?: boolean }
+
+// Cặp nốt móc đơn NỐI CHÙM (rhythm slash beamed) — vẽ như sách nhạc, kèm mũi tên xuống↓/lên↑.
+function EighthPair({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 44 50" style={{ height: 44, width: 'auto', overflow: 'visible', display: 'inline-block' }}>
+      <rect x={13} y={6} width={20} height={4} rx={1} fill={color} />
+      <line x1={4} y1={30} x2={15} y2={18} stroke={color} strokeWidth={4.6} strokeLinecap="round" />
+      <line x1={14.5} y1={20} x2={14.5} y2={8} stroke={color} strokeWidth={3} />
+      <line x1={22} y1={30} x2={33} y2={18} stroke={color} strokeWidth={4.6} strokeLinecap="round" />
+      <line x1={32.5} y1={20} x2={32.5} y2={8} stroke={color} strokeWidth={3} />
+      <text x={9.5} y={48} fontSize={11} textAnchor="middle" fill={color} fontFamily="system-ui" opacity={0.85}>↓</text>
+      <text x={27.5} y={48} fontSize={11} textAnchor="middle" fill={color} fontFamily="system-ui" opacity={0.85}>↑</text>
+    </svg>
+  )
+}
 
 export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, onPass }: { exercise: Exercise; bpm?: number; loops?: number; onPass?: () => void }) {
   const { start, stop, active, currentRef } = useLiveChord()
@@ -51,7 +67,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
         else if (c.oneHit) mark = b === 0 ? 'down' : 'rest'        // gảy phách 1 rồi nghỉ
         else if (whole) mark = b === 0 ? 'whole' : 'hold'          // nốt tròn
         else mark = 'down'                                          // quạt mỗi phách
-        tl.push({ cellIdx: ci, beatInCell: b, chord: c.rest ? '' : (c.chord ?? ''), segStart: b === 0 && !c.rest && !!c.chord, global: g++, mark })
+        tl.push({ cellIdx: ci, beatInCell: b, chord: c.rest ? '' : (c.chord ?? ''), segStart: b === 0 && !c.rest && !!c.chord, global: g++, mark, eighths: !!c.eighths && mark === 'down' })
       }
     })
     return tl
@@ -93,6 +109,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
       }
       const s = timeline[p]
       click(p % 4 === 0)
+      if (s.eighths) setTimeout(() => { if (posRef.current === p) click(false) }, beatMs / 2)  // tiếng "và" giữa phách cho chùm 2
       if (s.chord && currentRef.current === s.chord) hitsRef.current[s.cellIdx] = true
       posRef.current = p; setPos(p); setHeard(currentRef.current); setHits([...hitsRef.current])
       if (loopRef.current >= loops) onPass?.()
@@ -147,7 +164,12 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
                   const color = restMark ? (on ? '#6B7280' : '#9AA0B0') : on ? INDIGO : s.mark === 'hold' ? '#EAECF0' : '#C0C6D2'
                   const glyph = s.mark === 'rest' ? '' : s.mark === 'restWhole' ? '' : markGlyph(s.mark)
                   const tf = s.mark === 'restWhole' ? 'translateY(11px)' : s.mark === 'rest' ? 'translateY(4px)' : on && s.mark === 'down' ? 'scale(1.3)' : 'none'
-                  return <div key={s.global} className={on && s.mark === 'down' ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 30 : s.mark === 'down' ? 30 : 26, lineHeight: 1, fontWeight: 700, color, transform: tf, transition: 'color .07s' }}>{glyph}</div>
+                  const pair = s.mark === 'down' && s.eighths
+                  const tf2 = pair ? 'none' : tf
+                  const content = pair
+                    ? <EighthPair color={on ? INDIGO : '#C0C6D2'} />
+                    : glyph
+                  return <div key={s.global} className={on && s.mark === 'down' && !pair ? 'cs-hit' : ''} style={{ textAlign: 'center', fontFamily: restMark ? 'Bravura' : 'inherit', fontSize: restMark ? 30 : s.mark === 'down' ? 30 : 26, lineHeight: 1, fontWeight: 700, color, transform: tf2, transition: 'color .07s' }}>{content}</div>
                 })}
               </div>
             </div>
@@ -159,7 +181,7 @@ export default function ChordSeqTrainer({ exercise, bpm: bpm0 = 60, loops = 2, o
           return <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: isLastRow ? 0 : 16 }}>{kids}</div>
         })}
       </div>
-      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>╱ = quạt xuống · ◇ = giữ cả ô · <span style={{ fontFamily: 'Bravura', fontSize: 15, verticalAlign: '-2px' }}>{String.fromCodePoint(0xE4E5)}</span> = dấu lặng (nghỉ)</div>
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#9AA0B0', marginTop: 4 }}>╱ = quạt xuống · cặp nốt nối chùm = chùm 2 (↓ xuống · ↑ lên) · ◇ = giữ cả ô · <span style={{ fontFamily: 'Bravura', fontSize: 15, verticalAlign: '-2px' }}>{String.fromCodePoint(0xE4E5)}</span> = lặng</div>
 
       {/* BPM */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8 }}>
