@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import StudentPortalV2 from './StudentPortalV2'
 import MobileStudentPortal from './MobileStudentPortal'
 import { supabase } from './supabase'
 import { isNativeIOS, purchaseMonthly, restorePurchases } from './iap'
@@ -484,7 +483,12 @@ export default function StudentOnboarding() {
       )}
 
       {/* PORTAL */}
-      {step === 'portal' && student && (window.innerWidth < 1024 ? <MobileStudentPortal student={student} onLogout={handleLogout} /> : <StudentPortalV2 student={student} onLogout={handleLogout} />)}
+      {/* Tạm thời: web DÙNG CHUNG giao diện mobile (cột giữa 430px) để đồng bộ hết cải tiến với app. Desktop riêng để cải tiến sau. */}
+      {step === 'portal' && student && (
+        <div style={{ minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
+          <MobileStudentPortal student={student} onLogout={handleLogout} />
+        </div>
+      )}
     </div>
   )
 }
