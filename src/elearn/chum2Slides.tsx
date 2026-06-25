@@ -140,9 +140,9 @@ export const CHUM2_SLIDES: ReactNode[] = [
     <Eyebrow c={GOLD}>QUY TẮC VÀNG CỦA BEAMING</Eyebrow>
     <div style={{ fontSize: '4.4cqw', fontWeight: 800, color: '#EDEFFB', lineHeight: 1.4, marginBottom: '3cqh' }}>Luôn <span style={{ color: GOLD }}>ngắt đường nối</span> tại ranh giới giữa các phách.</div>
     <div className="ntd-row" style={{ display: 'flex', gap: '3cqw', width: '100%' }}>
-      <div style={{ flex: 1, background: 'rgba(224,122,122,.08)', border: `1px solid ${RED}55`, borderRadius: '2cqw', padding: '2.6cqh 3cqw', textAlign: 'center' }}>
-        <div style={{ fontSize: '3.2cqw', fontWeight: 800, color: RED, marginBottom: '1.6cqh' }}>✗ Sai — nối vượt ranh giới</div>
-        <Beamed groups={[4]} color="#D8B0B0" heightCqh={18} />
+      <div style={{ flex: 1, background: 'rgba(232,185,107,.08)', border: `1px solid ${GOLD}55`, borderRadius: '2cqw', padding: '2.6cqh 3cqw', textAlign: 'center' }}>
+        <div style={{ fontSize: '3.2cqw', fontWeight: 800, color: GOLD, marginBottom: '1.6cqh' }}>⚠ Thường không nối liền 4 nốt</div>
+        <Beamed groups={[4]} color="#E8C98B" heightCqh={18} />
       </div>
       <div style={{ flex: 1, background: 'rgba(93,202,165,.1)', border: `1px solid ${GREEN}66`, borderRadius: '2cqw', padding: '2.6cqh 3cqw', textAlign: 'center' }}>
         <div style={{ fontSize: '3.2cqw', fontWeight: 800, color: GREEN, marginBottom: '1.6cqh' }}>✓ Đúng — ngắt tại ranh giới</div>
@@ -150,6 +150,7 @@ export const CHUM2_SLIDES: ReactNode[] = [
       </div>
     </div>
     <div style={{ fontSize: '3.4cqw', color: SUB, marginTop: '3cqh' }}>Nốt cùng phách → nối lại · Nốt khác phách → tách ra</div>
+    <div style={{ fontSize: '3cqw', color: GOLD, marginTop: '1.6cqh', lineHeight: 1.45, background: 'rgba(232,185,107,.08)', border: `1px solid ${GOLD}44`, borderRadius: '1.4cqw', padding: '1.6cqh 2.4cqw' }}>★ Ngoại lệ: trong nhịp 4/4 vẫn được nối liền 4 nốt nếu chúng nằm trọn nửa ô nhịp (phách 1+2 hoặc phách 3+4) — miễn không nối vắt qua giữa ô nhịp.</div>
   </Frame>,
 
   // 7 — Beaming 4/4
