@@ -15,6 +15,7 @@ import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
+import InstallGuidePage from './InstallGuidePage'
 import { HBD_CHUM2, HBD_TD1, STRUM_BALLAD } from './elearn/strumSongs'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
@@ -139,6 +140,11 @@ export default function AppRouter() {
     if (loading) return null
     if (user && !isTeacher) return <StudentOnboarding />
     return <ClassLandingPage />
+  }
+
+  // ── Route /cai-app — hướng dẫn cài app (công khai, để chia sẻ) ──
+  if (path === '/cai-app' || path.startsWith('/cai-app')) {
+    return <InstallGuidePage />
   }
 
   // ── Route /delete-account — xóa tài khoản ──
