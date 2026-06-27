@@ -133,6 +133,47 @@ export default function ClassLandingPage() {
   const [suLoading, setSuLoading] = useState(false)
   const [suErr, setSuErr] = useState('')
   const [suDone, setSuDone] = useState(false)
+
+  // ── Đăng nhập học viên ngay trên trang tuyển sinh ──
+  const [me, setMe] = useState<{ name: string } | null>(null)   // null = chưa đăng nhập
+  const [showLogin, setShowLogin] = useState(false)
+  const [liEmail, setLiEmail] = useState('')
+  const [liPass, setLiPass] = useState('')
+  const [liErr, setLiErr] = useState('')
+  const [liLoading, setLiLoading] = useState(false)
+
+  const loadMe = async (userId: string, email: string | null) => {
+    const { data: stu } = await supabase.from('edu_students').select('full_name,display_name').eq('user_id', userId).maybeSingle()
+    const nm = stu?.display_name || stu?.full_name || (email ? email.split('@')[0] : 'bạn')
+    setMe({ name: (nm || 'bạn').includes('@') ? (nm as string).split('@')[0] : nm as string })
+  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) loadMe(session.user.id, session.user.email ?? null) })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) loadMe(session.user.id, session.user.email ?? null); else setMe(null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Đăng nhập xong → Mira chào theo tên (nếu chat chưa diễn tiến)
+  useEffect(() => {
+    if (!me) return
+    setMsgs(prev => prev.length <= 1
+      ? [{ who: 'ai', html: `Chào ${me.name} 👋 Mình là <b>Mira</b>, trợ lý của Thầy Văn Anh Guitar. Rất vui được gặp lại bạn! Bạn cần mình hỗ trợ gì hôm nay?` }]
+      : prev)
+  }, [me])
+
+  const submitLogin = async () => {
+    setLiErr('')
+    if (!liEmail.trim() || !liPass.trim()) { setLiErr('Nhập email và mật khẩu.'); return }
+    setLiLoading(true)
+    const { data, error } = await supabase.auth.signInWithPassword({ email: liEmail.trim(), password: liPass.trim() })
+    setLiLoading(false)
+    if (error || !data.user) { setLiErr('Sai email hoặc mật khẩu, thử lại nhé.'); return }
+    await loadMe(data.user.id, data.user.email ?? null)
+    setShowLogin(false)
+  }
+
   const submitSignup = async () => {
     setSuErr('')
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(suEmail.trim())) { setSuErr('Email chưa đúng định dạng.'); return }
@@ -223,7 +264,7 @@ export default function ClassLandingPage() {
     chatPush({ who: 'me', html: richReply(t) }); setChatInput('')
     setChatLoading(true)
     try {
-      const { data, error } = await supabase.functions.invoke('class-ai', { body: { sessionId: chatSessionRef.current, message: t } })
+      const { data, error } = await supabase.functions.invoke('class-ai', { body: { sessionId: chatSessionRef.current, message: t, userName: me?.name } })
       if (error) throw error
       if (data?.sessionId) chatSessionRef.current = data.sessionId
       chatPush({ who: 'ai', html: richReply(data?.reply || 'Bạn nói rõ hơn giúp mình nhé.') })
@@ -260,9 +301,12 @@ export default function ClassLandingPage() {
             <a onClick={() => goto('chat')}>Tư vấn</a>
             <a onClick={() => goto('batdau')}>Bắt đầu</a>
             <a onClick={() => goto('lichlop')}>Lịch lớp</a>
-            <a onClick={() => goto('dangky')}>Đăng ký</a>
+            {!me && <a onClick={() => goto('dangky')}>Đăng ký</a>}
+            {!me && <a onClick={() => setShowLogin(true)}>Đăng nhập</a>}
           </div>
-          <button className="btn btn-primary nav-cta" onClick={() => goto('dangky')}>Đăng ký lớp</button>
+          {me
+            ? <button className="btn btn-primary nav-cta" onClick={() => { window.location.href = '/me' }}>🎸 Hành trình của tôi</button>
+            : <button className="btn btn-primary nav-cta" onClick={() => goto('dangky')}>Đăng ký lớp</button>}
         </div>
       </nav>
 
@@ -637,6 +681,29 @@ export default function ClassLandingPage() {
                 <button onClick={() => { setShowSignup(false); setSuDone(false); setSuName(''); setSuEmail(''); setSuPass('') }} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, marginTop: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Đóng</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showLogin && (
+        <div onClick={() => setShowLogin(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, padding: 24, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,.3)', fontFamily: 'system-ui, sans-serif' }}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: '#111827', marginBottom: 4 }}>Đăng nhập học viên</div>
+            <div style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 1.55, marginBottom: 16 }}>Đăng nhập để vào <b>Hành trình của bạn</b> — và để Mira nhớ tên bạn cho những lần trò chuyện sau.</div>
+            {[['Email', liEmail, setLiEmail, 'email', 'email@example.com'], ['Mật khẩu', liPass, setLiPass, 'password', '••••••']].map(([lbl, val, set, type, ph]: any) => (
+              <div key={lbl} style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 13, color: '#6B7280', marginBottom: 5, fontWeight: 500 }}>{lbl}</label>
+                <input value={val} onChange={e => set(e.target.value)} type={type} placeholder={ph}
+                  onKeyDown={e => { if (e.key === 'Enter') submitLogin() }}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '11px 13px', background: '#F9FAFB', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 15, color: '#111827', outline: 'none', fontFamily: 'inherit' }} />
+              </div>
+            ))}
+            {liErr && <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 12px', fontSize: 13.5, marginBottom: 12 }}>{liErr}</div>}
+            <button onClick={submitLogin} disabled={liLoading} style={{ width: '100%', background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: liLoading ? .65 : 1 }}>
+              {liLoading ? 'Đang đăng nhập...' : 'Đăng nhập →'}
+            </button>
+            <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 12 }}>Chưa có tài khoản? <a onClick={() => { setShowLogin(false); setShowSignup(true) }} style={{ color: '#4F46E5', fontWeight: 600, cursor: 'pointer' }}>Tạo tài khoản miễn phí</a></div>
+            <button onClick={() => setShowLogin(false)} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, marginTop: 8, cursor: 'pointer', fontFamily: 'inherit' }}>Để sau</button>
           </div>
         </div>
       )}
