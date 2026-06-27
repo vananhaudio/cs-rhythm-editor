@@ -128,8 +128,16 @@ export default function AppRouter() {
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
-  // ── Domain class.vananhaudio.com → luôn hiện trang tuyển sinh (mọi path) ──
-  if (typeof window !== 'undefined' && window.location.hostname.startsWith('class.')) {
+  // ── Domain class.vananhaudio.com ──
+  //  /class*  → tuyển sinh ; /  → tuyển sinh (khách) hoặc cổng học (học sinh đã đăng nhập)
+  //  /me và các route app khác (bài/công cụ) → rơi xuống routing thường (chạy bình thường)
+  const onClass = typeof window !== 'undefined' && window.location.hostname.startsWith('class.')
+  if (onClass && (path === '/class' || path.startsWith('/class'))) {
+    return <ClassLandingPage />
+  }
+  if (onClass && path === '/') {
+    if (loading) return null
+    if (user && !isTeacher) return <StudentOnboarding />
     return <ClassLandingPage />
   }
 
@@ -264,7 +272,7 @@ if (path === '/flow-migrate' || path.startsWith('/flow-migrate')) {
 }
 
 // ── Route /start — Student onboarding ──
-if (path === '/start' || path.startsWith('/start')) {
+if (path === '/start' || path.startsWith('/start') || path === '/me' || path.startsWith('/me/')) {
   return <StudentOnboarding />
 }
 
