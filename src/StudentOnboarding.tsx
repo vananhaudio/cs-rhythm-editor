@@ -71,6 +71,7 @@ type Step = 'welcome' | 'login' | 'portal'
 export default function StudentOnboarding() {
   const [step, setStep]           = useState<Step>('welcome')
   const [student, setStudent]     = useState<Student | null>(null)
+  const [preview, setPreview]     = useState(false)   // tài khoản thầy xem khoá (mở khoá hết, không ghi tiến độ)
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
   const [loginError, setLoginError] = useState('')
@@ -139,7 +140,11 @@ export default function StudentOnboarding() {
         .eq('id', authData.user.id)
         .single()
       if (appUser?.role === 'teacher' || appUser?.role === 'admin') {
-        window.location.href = '/students'
+        // Tài khoản thầy → vào cổng học ở CHẾ ĐỘ XEM (mở khoá tất cả, không ghi tiến độ)
+        setStudent({ id: authData.user.id, full_name: 'Thầy Văn Anh (xem khoá)', email: authData.user.email ?? null, level: 'advanced' } as Student)
+        setPreview(true)
+        setStep('portal')
+        setLoggingIn(false)
         return
       }
       setLoginError('Tài khoản chưa được liên kết với hồ sơ học sinh. Liên hệ thầy.')
@@ -486,7 +491,7 @@ export default function StudentOnboarding() {
       {/* Tạm thời: web DÙNG CHUNG giao diện mobile (cột giữa 430px) để đồng bộ hết cải tiến với app. Desktop riêng để cải tiến sau. */}
       {step === 'portal' && student && (
         <div style={{ minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
-          <MobileStudentPortal student={student} onLogout={handleLogout} />
+          <MobileStudentPortal student={student} onLogout={handleLogout} preview={preview} />
         </div>
       )}
     </div>

@@ -157,9 +157,9 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
   ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2', route: '/tap'    },
 }
 
-interface Props { student: Student; onLogout: () => void }
+interface Props { student: Student; onLogout: () => void; preview?: boolean }
 
-export default function MobileStudentPortal({ student, onLogout }: Props) {
+export default function MobileStudentPortal({ student, onLogout, preview = false }: Props) {
   const [tab, setTab]             = useState<Tab>('hoc')
   const [me, setMe]               = useState<Student>(student)
   const [showSettings, setShowSettings] = useState(false)
@@ -474,7 +474,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
 
   // Quyền MỞ KHOÁ THEO TỪNG KHOÁ: khoá đang xem mở nếu là khoá free hoặc đã được cấp quyền.
   // Bài tier='free' = học thử → luôn mở (kể cả khoá trả phí chưa cấp quyền).
-  const activeCourseUnlocked = !activeCourseId || freeCourses.has(activeCourseId) || accessCourses.has(activeCourseId)
+  const activeCourseUnlocked = preview || !activeCourseId || freeCourses.has(activeCourseId) || accessCourses.has(activeCourseId)
   const isLessonCourseUnlocked = (l: Lesson) => l.tier === 'free' || activeCourseUnlocked
 
   const isUnlocked = (l: Lesson) =>
@@ -714,6 +714,7 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
   }
 
   const markComplete = async (lessonId: string) => {
+    if (preview) return   // tài khoản thầy xem khoá → không ghi tiến độ
     if (completedIds.has(lessonId) || markingDone) return
     setMarkingDone(true)
     // Kiểm tra đã có record chưa trước khi insert
@@ -1321,10 +1322,10 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 const entry = NATIVE_LESSONS[key]
                 if (!entry) return <div style={{ padding: 24, color: L.t2 }}>Bài học chưa cấu hình đúng (native: {key || '—'}).<br /><button onClick={goBack} style={{ marginTop: 12 }}>‹ Quay lại</button></div>
                 const C = entry.Component
-                return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={student.id} lessonId={activeLesson.id} />
+                return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={preview ? undefined : student.id} lessonId={activeLesson.id} />
               })()
             ) : activeLesson.lesson_type === 'strum' ? (
-              <ChordStrumPlayer song={configToSong(parseStrumConfig(activeLesson.content), activeLesson.title)} onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={student.id} lessonId={activeLesson.id} />
+              <ChordStrumPlayer song={configToSong(parseStrumConfig(activeLesson.content), activeLesson.title)} onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={preview ? undefined : student.id} lessonId={activeLesson.id} />
             ) : activeLesson.lesson_type === 'flow' ? (
               <FlowPlayer
                 lessonId={activeLesson.id}
