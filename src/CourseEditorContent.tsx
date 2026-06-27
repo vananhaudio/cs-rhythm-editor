@@ -1196,11 +1196,6 @@ export default function CourseEditorContent() {
                   </div>
                 </div>
 
-                <div style={{ paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                  <Btn variant="primary" onClick={saveLesson} style={{ width: '100%', justifyContent: 'center', padding: 10 }}>
-                    {saving ? 'Đang lưu...' : '💾 Lưu bài học'}
-                  </Btn>
-                </div>
               </div>
             )}
 

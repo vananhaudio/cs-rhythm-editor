@@ -1,6 +1,6 @@
 // ── Cấu hình bài STRUM SCORE — dùng trong trình soạn khoá (lesson_type='strum') ─
 // value = JSON lưu ở cột content của bài. onChange trả JSON-string.
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { STYLES } from './elearn/backing/backingStyles'
 import { STRUM_PATTERNS } from './elearn/strumPatterns'
 import ChordStrumPlayer, { type StrumSong } from './elearn/ChordStrumPlayer'
@@ -47,6 +47,14 @@ export default function StrumConfigEditor({ value, onChange, title }: { value: s
   const cfg = useMemo(() => parseStrumConfig(value), [value])
   const [chordsText, setChordsText] = useState(cfg.chords.join(' '))
   const [preview, setPreview] = useState<StrumSong | null>(null)
+
+  // Bài mới chọn loại 'strum' → content rỗng. Ghi cấu hình mặc định ngay để lưu không bị trống.
+  useEffect(() => {
+    let ok = false
+    try { const c = JSON.parse(value || '{}'); ok = c && Array.isArray(c.chords) } catch { ok = false }
+    if (!ok) onChange(JSON.stringify(cfg))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const style = STYLES.find((s) => s.id === cfg.styleId) ?? STYLES[0]
   const N = style.beatsPerBar
