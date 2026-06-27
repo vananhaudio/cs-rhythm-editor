@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { BackingEngine } from './backing/backingEngine'
 import { getStyle } from './backing/backingStyles'
+import { resolvePattern, type Stroke } from './strumPatterns'
 
 const INDIGO = '#4338CA', ORANGE = '#EA580C', INK = '#1F2430', DIM = '#C0C6D2', SUB = '#6B7280'
 
@@ -21,34 +22,31 @@ export interface StrumSong {
   bpm: number
   timeSignature: number          // số phách / ô (3 hoặc 4)
   gridOffset: number             // giây của phách 1
-  eighths?: boolean              // chùm 2 (mặc định true)
+  eighths?: boolean              // (cũ) chùm 2 nếu không có patternId
+  patternId?: string             // kiểu quạt từ thư viện chùm (strumPatterns.ts) — ưu tiên hơn eighths
   bars: SongBar[]                // 1 phần tử / ô nhịp
   backing?: { styleId: string; tempo?: number }  // có → NỀN trống+bass synth (loop), bỏ qua audio/video
 }
 
-// Cặp nốt móc đơn NỐI CHÙM — kiểu đẹp tái dùng từ bài tập (đầu nốt slash dày, thân cao, dấu chùm) + ↓↑.
-function NotePair({ lit }: { lit: boolean }) {
+// Vẽ MỘT CHÙM (1..4 nốt) trong một phách — đầu nốt slash dày, thân cao, nối chùm + ↓/↑.
+// M=1 nốt đen; M=2 chùm 2; M=3 liên ba (có số "3"); M=4 móc kép. lit = phách đang chơi.
+function BeatGroup({ strokes, lit }: { strokes: Stroke[]; lit: boolean }) {
   const c = lit ? INDIGO : DIM, ac = lit ? INDIGO : '#9AA0B0'
+  const M = Math.max(1, strokes.length)
+  const SP = 19, pad = 6, W = pad * 2 + (M - 1) * SP + 10   // bề rộng theo số nốt
+  const top = 4, stemBot = 31, base = 40
+  const xs = Array.from({ length: M }, (_, i) => pad + 5 + i * SP)
   return (
-    <svg viewBox="0 0 44 60" style={{ height: 52, width: 'auto', overflow: 'visible', display: 'block' }}>
-      <rect x={13} y={4} width={20} height={4} rx={1} fill={c} />
-      <line x1={14.5} y1={6} x2={14.5} y2={31} stroke={c} strokeWidth={3} />
-      <line x1={5} y1={40} x2={15.5} y2={29} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
-      <line x1={32.5} y1={6} x2={32.5} y2={31} stroke={c} strokeWidth={3} />
-      <line x1={23} y1={40} x2={33.5} y2={29} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
-      <text x={9.5} y={57} fontSize={12} textAnchor="middle" fontWeight={800} fill={ac}>↓</text>
-      <text x={28} y={57} fontSize={12} textAnchor="middle" fontWeight={800} fill={ac}>↑</text>
-    </svg>
-  )
-}
-// Nốt đen (Trình độ 1) — 1 cú quạt xuống / phách.
-function NoteQuarter({ lit }: { lit: boolean }) {
-  const c = lit ? INDIGO : DIM, ac = lit ? INDIGO : '#9AA0B0'
-  return (
-    <svg viewBox="0 0 24 60" style={{ height: 52, width: 'auto', overflow: 'visible', display: 'block' }}>
-      <line x1={13} y1={6} x2={13} y2={31} stroke={c} strokeWidth={3} />
-      <line x1={3.5} y1={40} x2={14} y2={29} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
-      <text x={8} y={57} fontSize={12} textAnchor="middle" fontWeight={800} fill={ac}>↓</text>
+    <svg viewBox={`0 0 ${W} 60`} style={{ height: 52, width: 'auto', maxWidth: '100%', overflow: 'visible', display: 'block' }}>
+      {M >= 2 && <rect x={xs[0]} y={top} width={xs[M - 1] - xs[0]} height={4} rx={1} fill={c} />}
+      {M === 3 && <text x={(xs[0] + xs[2]) / 2} y={top - 1} fontSize={9} textAnchor="middle" fontWeight={800} fill={ac}>3</text>}
+      {xs.map((x, i) => (
+        <g key={i}>
+          <line x1={x} y1={M >= 2 ? top + 2 : 8} x2={x} y2={stemBot} stroke={c} strokeWidth={3} />
+          <line x1={x - 9.5} y1={base + 7} x2={x + 1} y2={base - 3} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
+          <text x={x - 4} y={57} fontSize={11.5} textAnchor="middle" fontWeight={800} fill={ac}>{strokes[i] === 'U' ? '↑' : '↓'}</text>
+        </g>
+      ))}
     </svg>
   )
 }
@@ -56,6 +54,7 @@ function NoteQuarter({ lit }: { lit: boolean }) {
 export default function ChordStrumPlayer({ song, onClose, onComplete, studentId, lessonId }: { song: StrumSong; onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }) {
   const eighths = song.eighths !== false
   const N = song.timeSignature
+  const pattern = resolvePattern(N, eighths, song.patternId)   // kiểu quạt (chùm)
   const beatDur = 60 / song.bpm
   const barDur = N * beatDur
   const perRow = 2   // 2 ô / hàng → nốt to, không tràn
@@ -212,9 +211,9 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
                         <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bravura', fontSize: 30, color: isCur ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E3)}</div>
                       ) : (
                         <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
-                          {Array.from({ length: N }, (_, j) => eighths
-                            ? <NotePair key={j} lit={isCur && beatInBar === j} />
-                            : <NoteQuarter key={j} lit={isCur && beatInBar === j} />)}
+                          {Array.from({ length: N }, (_, j) => (
+                            <BeatGroup key={j} strokes={pattern.beats[j] ?? ['D']} lit={isCur && beatInBar === j} />
+                          ))}
                         </div>
                       )}
                     </div>
