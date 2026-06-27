@@ -5,7 +5,7 @@ import FlowInlineEditor from './FlowInlineEditor'
 import QuizBuilder from './components/QuizBuilder'
 import { QuizViewer } from './components/QuizViewer'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
-import StrumConfigEditor from './StrumConfigEditor'
+import StrumConfigEditor, { StrumPreviewCard } from './StrumConfigEditor'
 import FlowPlayer from './FlowPlayer'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -140,7 +140,9 @@ function LessonPreview({ lesson, toolMeta = TOOL_META }: { lesson: Lesson; toolM
             <iframe src={lesson.content_url} style={{ width: '100%', height: 400, border: 'none', display: 'block' }} />
           </div>
         )}
-        {lesson.lesson_type === 'quiz' ? (
+        {lesson.lesson_type === 'strum' ? (
+          <StrumPreviewCard content={lesson.content} title={lesson.title} />
+        ) : lesson.lesson_type === 'quiz' ? (
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 14 }}>❓ Bài kiểm tra</div>
             <QuizViewer lessonId={lesson.id} studentId="__preview__"

@@ -23,6 +23,26 @@ export function configToSong(c: StrumConfig, title = 'Strum Score'): StrumSong {
 
 const A = { accent: '#4F46E5', border: '#E4E4E7', sub: '#71717A' }
 
+// Thẻ XEM TRƯỚC (admin) — tóm tắt cấu hình + nút mở Strum Score, thay vì hiện JSON thô.
+export function StrumPreviewCard({ content, title }: { content: string | null; title: string }) {
+  const cfg = parseStrumConfig(content)
+  const [open, setOpen] = useState(false)
+  const style = STYLES.find((s) => s.id === cfg.styleId)
+  const pat = STRUM_PATTERNS.find((p) => p.id === cfg.patternId)
+  return (
+    <div style={{ background: '#fff', border: `1px solid ${A.border}`, borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 12 }}>🎼 Strum Score — quạt theo nền tự sinh</div>
+      <div style={{ fontSize: 15, color: '#3F3F46', lineHeight: 1.9 }}>
+        <div><b>Điệu:</b> {style?.name ?? '—'} · <b>Tempo:</b> {cfg.tempo} bpm · <b>Nhịp:</b> {cfg.timeSignature}/4</div>
+        <div><b>Kiểu quạt:</b> {pat?.name ?? '—'}</div>
+        <div><b>Vòng hợp âm:</b> {(cfg.chords || []).join('  ·  ') || '—'}</div>
+      </div>
+      <button type="button" onClick={() => setOpen(true)} style={{ marginTop: 14, background: A.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>▶ Mở Strum Score (gảy theo)</button>
+      {open && <ChordStrumPlayer song={configToSong(cfg, title)} onClose={() => setOpen(false)} />}
+    </div>
+  )
+}
+
 export default function StrumConfigEditor({ value, onChange, title }: { value: string | null; onChange: (json: string) => void; title?: string }) {
   const cfg = useMemo(() => parseStrumConfig(value), [value])
   const [chordsText, setChordsText] = useState(cfg.chords.join(' '))
