@@ -29,3 +29,12 @@ export const HBD_CHUM2: StrumSong = {
 
 // Trình độ 1 — cùng bài, quạt NỐT ĐEN (mỗi phách 1 cú xuống), không chùm 2.
 export const HBD_TD1: StrumSong = { ...HBD_CHUM2, title: 'Happy Birthday — quạt nốt đen', eighths: false }
+
+// Bài tập quạt theo NỀN trống+bass synth (loop) — không cần thu âm, sạch bản quyền.
+// timeSignature PHẢI khớp beatsPerBar của điệu (Ballad = 4/4).
+export const STRUM_BALLAD: StrumSong = {
+  title: 'Quạt chùm 2 trên nền Ballad',
+  bpm: 70, timeSignature: 4, gridOffset: 0, eighths: true,
+  backing: { styleId: 'ballad', tempo: 70 },
+  bars: [{ chord: 'C' }, { chord: 'Am' }, { chord: 'F' }, { chord: 'G' }],
+}

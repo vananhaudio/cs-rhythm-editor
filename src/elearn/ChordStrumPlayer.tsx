@@ -3,6 +3,8 @@
 // Nguồn tiếng: audio up HOẶC YouTube ẩn. Mốc nhịp do thầy cung cấp (tempo đều).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
+import { BackingEngine } from './backing/backingEngine'
+import { getStyle } from './backing/backingStyles'
 
 const INDIGO = '#4338CA', ORANGE = '#EA580C', INK = '#1F2430', DIM = '#C0C6D2', SUB = '#6B7280'
 
@@ -21,6 +23,7 @@ export interface StrumSong {
   gridOffset: number             // giây của phách 1
   eighths?: boolean              // chùm 2 (mặc định true)
   bars: SongBar[]                // 1 phần tử / ô nhịp
+  backing?: { styleId: string; tempo?: number }  // có → NỀN trống+bass synth (loop), bỏ qua audio/video
 }
 
 // Cặp nốt móc đơn NỐI CHÙM — kiểu đẹp tái dùng từ bài tập (đầu nốt slash dày, thân cao, dấu chùm) + ↓↑.
@@ -68,10 +71,28 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
   const playingRef = useRef(false)
   const anchorV = useRef(0)
   const anchorW = useRef(0)
-  const isYT = !!song.videoId && !song.audioUrl
-  const clock = () => isYT
-    ? (playingRef.current ? anchorV.current + (performance.now() - anchorW.current) / 1000 : anchorV.current)
-    : (audioRef.current?.currentTime ?? 0)
+  const isBacking = !!song.backing
+  const isYT = !isBacking && !!song.videoId && !song.audioUrl
+
+  // Nền trống+bass synth (loop). Chords = các ô có hợp âm (bỏ pickup/rest).
+  const backChords = useMemo(() => song.bars.filter((b) => b.chord).map((b) => b.chord as string), [song.bars])
+  const backTempo = song.backing?.tempo ?? song.bpm
+  const engineRef = useRef<BackingEngine | null>(null)
+  if (isBacking && !engineRef.current) {
+    engineRef.current = new BackingEngine({
+      getStyle: () => getStyle(song.backing!.styleId),
+      getChords: () => backChords,
+      getTempo: () => backTempo,
+      getMutes: () => ({ drums: false, bass: false, click: true }),  // nền groove; click tắt
+    })
+  }
+  useEffect(() => () => { engineRef.current?.dispose(); engineRef.current = null }, [])
+
+  const clock = () => isBacking
+    ? (engineRef.current?.getElapsed() ?? -1)
+    : isYT
+      ? (playingRef.current ? anchorV.current + (performance.now() - anchorW.current) / 1000 : anchorV.current)
+      : (audioRef.current?.currentTime ?? 0)
 
   useEffect(() => {
     let raf = 0
@@ -99,19 +120,27 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
   }, [isYT])
 
   const toggle = () => {
-    if (isYT) { playing ? post('pauseVideo') : (post('unMute'), post('playVideo')) }
+    if (isBacking) {
+      const e = engineRef.current; if (!e) return
+      if (e.isPlaying()) { e.stop(); setPlaying(false) } else { e.start(); setPlaying(true) }
+    }
+    else if (isYT) { playing ? post('pauseVideo') : (post('unMute'), post('playVideo')) }
     else { const a = audioRef.current; if (!a) return; if (a.paused) { a.play(); setPlaying(true) } else { a.pause(); setPlaying(false) } }
   }
   const restart = () => {
     setEnded(false)
-    if (isYT) { post('seekTo', [0, true]); anchorV.current = 0; anchorW.current = performance.now() }
+    if (isBacking) { engineRef.current?.stop(); engineRef.current?.start(); setPlaying(true) }
+    else if (isYT) { post('seekTo', [0, true]); anchorV.current = 0; anchorW.current = performance.now() }
     else if (audioRef.current) { audioRef.current.currentTime = 0 }
   }
 
-  // Vị trí hiện tại theo lưới nhịp đều
-  const elapsed = t - song.gridOffset
-  const barIdx = elapsed >= 0 ? Math.floor(elapsed / barDur) : -1
-  const beatInBar = elapsed >= 0 ? Math.floor(elapsed / beatDur) - barIdx * N : -1
+  // Vị trí hiện tại theo lưới nhịp đều (nền: dùng tempo của nền + LOOP vòng)
+  const effBeatDur = isBacking ? 60 / backTempo : beatDur
+  const effBarDur = N * effBeatDur
+  const elapsed = t - (isBacking ? 0 : song.gridOffset)
+  const rawBar = elapsed >= 0 ? Math.floor(elapsed / effBarDur) : -1
+  const barIdx = rawBar < 0 ? -1 : isBacking ? rawBar % song.bars.length : rawBar
+  const beatInBar = elapsed >= 0 ? (Math.floor(elapsed / effBeatDur) % N) : -1
   const rows = useMemo(() => {
     const out: { bar: SongBar; idx: number }[][] = []
     song.bars.forEach((bar, idx) => {
@@ -203,10 +232,11 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
 
       {/* Điều khiển */}
       <div style={{ padding: '12px 18px calc(env(safe-area-inset-bottom,0px) + 16px)', flexShrink: 0, display: 'flex', gap: 10 }}>
-        <button onClick={restart} style={{ flex: '0 0 auto', background: '#fff', border: `1.5px solid ${INDIGO}`, color: INDIGO, borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>⏮</button>
+        {!isBacking && <button onClick={restart} style={{ flex: '0 0 auto', background: '#fff', border: `1.5px solid ${INDIGO}`, color: INDIGO, borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>⏮</button>}
         <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-          {ended ? '✓ Xong — gảy lại' : playing ? '⏸ Tạm dừng' : '▶ Phát — gảy theo'}
+          {ended ? '✓ Xong — gảy lại' : playing ? (isBacking ? '⏸ Dừng nền' : '⏸ Tạm dừng') : (isBacking ? '▶ Chạy nền — gảy theo' : '▶ Phát — gảy theo')}
         </button>
+        {isBacking && playing && <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>}
       </div>
 
       {/* Màn XONG LƯỢT — xanh hóa (đỏ/vàng/xanh) */}
