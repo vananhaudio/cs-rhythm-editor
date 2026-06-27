@@ -52,7 +52,13 @@ export class BackingEngine {
     this.stepsPerBar = style.stepsPerBar
     this.barsTotal = Math.max(1, this.cb.getChords().length)
     this.playing = true; this.stepIdx = 0; this.barIdx = 0; this.applyMutes()
-    this.nextStepTime = ctx.currentTime + LEAD_IN; this.startTime = this.nextStepTime
+    // ĐẾM VÀO 1 ô (beatsPerBar nhịp) — gõ tiếng, rồi nền + khuông vào ở phách 1
+    const beatSec = 60 / this.cb.getTempo()
+    const cN = style.beatsPerBar
+    const countStart = ctx.currentTime + LEAD_IN
+    for (let i = 0; i < cN; i++) this.countClick(countStart + i * beatSec, i === 0)
+    this.startTime = countStart + cN * beatSec   // t=0 của nền/khuông = SAU đếm vào
+    this.nextStepTime = this.startTime
     this.scheduler()
     this.timer = setInterval(() => this.scheduler(), LOOKAHEAD_MS)
   }
@@ -165,5 +171,13 @@ export class BackingEngine {
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(accent ? 0.5 : 0.32, t + 0.002)
     g.gain.exponentialRampToValueAtTime(0.0008, t + 0.03)
     o.connect(g).connect(this.clickBus); o.start(t); o.stop(t + 0.04)
+  }
+  // Đếm vào — vào MASTER (luôn nghe được dù click trong loop bị mute)
+  private countClick(t: number, accent: boolean) {
+    const ctx = this.ctx!, o = ctx.createOscillator(), g = ctx.createGain()
+    o.type = 'sine'; o.frequency.setValueAtTime(accent ? 1850 : 1250, t)
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(accent ? 0.55 : 0.4, t + 0.002)
+    g.gain.exponentialRampToValueAtTime(0.0008, t + 0.045)
+    o.connect(g).connect(this.master); o.start(t); o.stop(t + 0.06)
   }
 }

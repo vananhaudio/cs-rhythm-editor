@@ -140,6 +140,9 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
   const rawBar = elapsed >= 0 ? Math.floor(elapsed / effBarDur) : -1
   const barIdx = rawBar < 0 ? -1 : isBacking ? rawBar % song.bars.length : rawBar
   const beatInBar = elapsed >= 0 ? (Math.floor(elapsed / effBeatDur) % N) : -1
+  // Đếm vào của nền (elapsed âm trong lúc đang chạy) → số đếm 1..N
+  const counting = isBacking && playing && elapsed < 0 && elapsed > -(N * effBeatDur + 1)
+  const countNum = counting ? Math.min(N, Math.max(1, Math.floor(elapsed / effBeatDur) + N + 1)) : 0
   const rows = useMemo(() => {
     const out: { bar: SongBar; idx: number }[][] = []
     song.bars.forEach((bar, idx) => {
@@ -185,7 +188,14 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
       </div>
 
       {/* Khuông nhịp — như sách */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '12px 14px', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '12px 14px', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+        {counting && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(244,246,250,.92)' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.12em', color: SUB }}>ĐẾM VÀO</div>
+            <div style={{ fontSize: 72, fontWeight: 900, color: INDIGO, lineHeight: 1.05 }}>{countNum}</div>
+            <div style={{ fontSize: 13, color: SUB }}>chuẩn bị… vào ở “1”</div>
+          </div>
+        )}
         <div style={{ background: '#fff', border: '1.5px solid #E1E4EA', borderRadius: 16, padding: '14px 8px', boxShadow: '0 2px 10px rgba(17,24,39,.04)', maxWidth: 760, width: '100%', margin: '0 auto' }}>
           {rows.map((row, ri) => (
             <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: ri === rows.length - 1 ? 0 : 14 }}>
