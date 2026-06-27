@@ -101,13 +101,18 @@ export default function StudentOnboarding() {
   // Auto-login nếu đã có session
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user?.id) {
-        const { data } = await supabase
-          .from('edu_students')
-          .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
-          .eq('user_id', session.user.id)
-          .single()
-        if (data) { setStudent(data); setStep('portal'); claimPendingGroup() }
+      if (!session?.user?.id) return
+      const { data } = await supabase
+        .from('edu_students')
+        .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+      if (data) { setStudent(data); setStep('portal'); claimPendingGroup(); return }
+      // Không có hồ sơ học sinh → tài khoản thầy: khôi phục CHẾ ĐỘ XEM (giữ phiên khi F5)
+      const { data: appUser } = await supabase.from('app_users').select('role').eq('id', session.user.id).maybeSingle()
+      if (appUser?.role === 'teacher' || appUser?.role === 'admin') {
+        setStudent({ id: session.user.id, full_name: 'Thầy Văn Anh (xem khoá)', email: session.user.email ?? null, level: 'advanced' } as Student)
+        setPreview(true); setStep('portal')
       }
     })
   }, [])
