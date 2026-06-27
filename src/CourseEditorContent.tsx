@@ -5,6 +5,7 @@ import FlowInlineEditor from './FlowInlineEditor'
 import QuizBuilder from './components/QuizBuilder'
 import { QuizViewer } from './components/QuizViewer'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
+import StrumConfigEditor from './StrumConfigEditor'
 import FlowPlayer from './FlowPlayer'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ const LESSON_TYPES = [
   { id: 'link',          icon: '🔗', label: 'Link ngoài'   },
   { id: 'flow',          icon: '✨', label: 'Flow Bài Học' },
   { id: 'native',        icon: '🎸', label: 'Bài tương tác' },
+  { id: 'strum',         icon: '🎼', label: 'Strum Score'   },
 ]
 
 const TOOLS = [
@@ -1041,6 +1043,14 @@ export default function CourseEditorContent() {
                       {Object.entries(NATIVE_LESSONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                     </select>
                     <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài render bằng component có sẵn trong app (mic, metronome, quiz…). Key lưu ở "Link/URL" của bài.</div>
+                  </div>
+                )}
+
+                {fType === 'strum' && (
+                  <div>
+                    <Label>Strum Score — quạt theo nền tự sinh</Label>
+                    <StrumConfigEditor value={fContent} onChange={setFContent} title={fTitle} />
+                    <div style={{ fontSize: 12, color: C.text3, marginTop: 8 }}>Học sinh quạt theo nền trống+bass tự sinh (không cần thu âm). Cấu hình lưu ở "Nội dung" của bài.</div>
                   </div>
                 )}
 

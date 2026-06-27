@@ -8,7 +8,6 @@ import AiAssistant from './AiAssistant'
 import LeadsManager from './LeadsManager'
 import ArticlesManager from './ArticlesManager'
 import ClassAiAdmin from './ClassAiAdmin'
-import StrumSongsManager from './StrumSongsManager'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -17,7 +16,7 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'strum'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
@@ -27,7 +26,6 @@ const NAV = [
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
   { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
-  { id: 'strum'     as Section, icon: '🎸', label: 'Soạn Strum'     },
   { id: 'community' as Section, icon: '🌱', label: 'Cộng đồng'      },
   { id: 'assistant' as Section, icon: '🤖', label: 'Trợ lý AI'      },
 ]
@@ -166,11 +164,6 @@ export default function TeacherAdminPage() {
           </div>
         )}
 
-        {section === 'strum' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
-            <StrumSongsManager />
-          </div>
-        )}
 
         {section === 'community' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>

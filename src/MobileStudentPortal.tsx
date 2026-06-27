@@ -6,6 +6,8 @@ import ScaleExercise from './ScaleExercise'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIOS } from './iap'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
+import ChordStrumPlayer from './elearn/ChordStrumPlayer'
+import { parseStrumConfig, configToSong } from './StrumConfigEditor'
 import ElearnLessonView from './elearn/ElearnLessonView'
 import { NavIcon } from './navIcons'
 
@@ -1321,6 +1323,8 @@ export default function MobileStudentPortal({ student, onLogout }: Props) {
                 const C = entry.Component
                 return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={student.id} lessonId={activeLesson.id} />
               })()
+            ) : activeLesson.lesson_type === 'strum' ? (
+              <ChordStrumPlayer song={configToSong(parseStrumConfig(activeLesson.content), activeLesson.title)} onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={student.id} lessonId={activeLesson.id} />
             ) : activeLesson.lesson_type === 'flow' ? (
               <FlowPlayer
                 lessonId={activeLesson.id}

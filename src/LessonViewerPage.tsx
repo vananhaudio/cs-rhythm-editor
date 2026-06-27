@@ -4,6 +4,8 @@ import { QuizViewer } from './components/QuizViewer'
 import FlowPlayer from './FlowPlayer'
 import ElearnLessonView from './elearn/ElearnLessonView'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
+import ChordStrumPlayer from './elearn/ChordStrumPlayer'
+import { parseStrumConfig, configToSong } from './StrumConfigEditor'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -248,9 +250,14 @@ export default function LessonViewerPage() {
         return <C onClose={() => setActive(null)} onComplete={() => completeNative(active)} studentId={studentId} lessonId={active.id} />
       })()}
 
+      {/* ── BÀI STRUM SCORE — overlay full màn ── */}
+      {active && active.lesson_type === 'strum' && (
+        <ChordStrumPlayer song={configToSong(parseStrumConfig(active.content), active.title)} onClose={() => setActive(null)} onComplete={() => completeNative(active)} studentId={studentId} lessonId={active.id} />
+      )}
+
       {/* ── MAIN: lesson content (ẩn khi bài elearn/native — overlay đã phủ kín) ─ */}
       <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
-        {active && (elearnNumOf(active) != null || active.lesson_type === 'native') ? null : !active ? (
+        {active && (elearnNumOf(active) != null || active.lesson_type === 'native' || active.lesson_type === 'strum') ? null : !active ? (
           <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: D.text3, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 40 }}>👈</span>
             <div>Chọn bài học từ danh sách</div>
