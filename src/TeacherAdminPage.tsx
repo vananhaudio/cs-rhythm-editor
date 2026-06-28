@@ -60,6 +60,15 @@ export default function TeacherAdminPage() {
               </div>
             )
           })}
+
+          {/* Kho Tri Thức — app riêng, mở tab mới (cùng tài khoản đăng nhập) */}
+          <a href="https://khotrithuc.netlify.app" target="_blank" rel="noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px' : '9px 10px', borderRadius: 8, cursor: 'pointer', background: 'transparent', color: '#A1A1AA', fontWeight: 400, marginTop: 10, paddingTop: 12, borderTop: '1px solid #27272A', justifyContent: collapsed ? 'center' : 'flex-start', whiteSpace: 'nowrap', overflow: 'hidden', textDecoration: 'none' }}
+            onMouseEnter={e => { e.currentTarget.style.background = S.sidebarHover }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+            <span style={{ fontSize: 17, flexShrink: 0 }}>🧠</span>
+            {!collapsed && <span style={{ fontSize: 14 }}>Kho Tri Thức ↗</span>}
+          </a>
         </nav>
 
         {/* Bottom */}
