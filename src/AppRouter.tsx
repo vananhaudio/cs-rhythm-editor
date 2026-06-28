@@ -132,13 +132,8 @@ export default function AppRouter() {
   //  /class*  → tuyển sinh ; /  → tuyển sinh (khách) hoặc cổng học (học sinh đã đăng nhập)
   //  /me và các route app khác (bài/công cụ) → rơi xuống routing thường (chạy bình thường)
   const onClass = typeof window !== 'undefined' && window.location.hostname.startsWith('class.')
-  if (onClass && (path === '/class' || path.startsWith('/class'))) {
-    return <ClassLandingPage />
-  }
-  if (onClass && path === '/') {
-    if (loading) return null
-    if (user && !isTeacher) return <StudentOnboarding />
-    return <ClassLandingPage />
+  if (onClass && (path === '/' || path === '/class' || path.startsWith('/class'))) {
+    return <ClassLandingPage />   // class./ LUÔN là trang tuyển sinh; vào cổng học qua nút "Hành trình của tôi" → /me
   }
 
   // ── Route /delete-account — xóa tài khoản ──
