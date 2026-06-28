@@ -1051,7 +1051,7 @@ export default function CourseEditorContent() {
                 {fType === 'strum' && (
                   <div>
                     <Label>Strum Score — quạt theo nền tự sinh</Label>
-                    <StrumConfigEditor value={fContent} onChange={setFContent} title={fTitle} />
+                    <StrumConfigEditor key={selectedLesson?.id} value={fContent} onChange={setFContent} title={fTitle} />
                     <div style={{ fontSize: 12, color: C.text3, marginTop: 8 }}>Học sinh quạt theo nền trống+bass tự sinh (không cần thu âm). Cấu hình lưu ở "Nội dung" của bài.</div>
                   </div>
                 )}
