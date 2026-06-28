@@ -9,7 +9,12 @@ export interface StrumConfig { styleId: string; tempo: number; patternId: string
 
 export function parseStrumConfig(content: string | null | undefined): StrumConfig {
   let c: Partial<StrumConfig> | null = null
-  try { const p = JSON.parse(content || '{}'); if (p && Array.isArray(p.chords)) c = p } catch { /* */ }
+  try {
+    const raw = (content || '').trim()
+    const m = raw.match(/\{[\s\S]*\}/)               // lấy đoạn {...} kể cả khi bị bọc <p>...</p>
+    const p = JSON.parse(m ? m[0] : (raw || '{}'))
+    if (p && Array.isArray(p.chords)) c = p
+  } catch { /* */ }
   // Chuẩn hoá thứ tự key ổn định → so sánh JSON đáng tin
   return {
     styleId: c?.styleId ?? 'ballad',
