@@ -329,7 +329,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
           <>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 15.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-                {ended ? '✓ Gảy lại' : playing ? '⏸ Dừng nền' : '▶ Chạy nền'}
+                {ended ? '✓ Gảy lại' : playing ? '⏸ Tạm dừng' : '▶ Tập luyện'}
               </button>
               {playing
                 ? <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>
