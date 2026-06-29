@@ -136,7 +136,7 @@ export default function ClassLandingPage() {
   const [suDone, setSuDone] = useState(false)
 
   // ── Đăng nhập học viên ngay trên trang tuyển sinh ──
-  const [me, setMe] = useState<{ name: string; cohort?: string | null } | null>(null)   // null = chưa đăng nhập
+  const [me, setMe] = useState<{ name: string; cohort?: string | null; email?: string | null; phone?: string | null } | null>(null)   // null = chưa đăng nhập
   const [showLogin, setShowLogin] = useState(false)
   const [liEmail, setLiEmail] = useState('')
   const [liPass, setLiPass] = useState('')
@@ -144,14 +144,10 @@ export default function ClassLandingPage() {
   const [liLoading, setLiLoading] = useState(false)
 
   const loadMe = async (userId: string, email: string | null) => {
-    const { data: stu } = await supabase.from('edu_students').select('id,full_name,display_name').eq('user_id', userId).maybeSingle()
+    const { data: stu } = await supabase.from('edu_students').select('id,full_name,display_name,email,phone').eq('user_id', userId).maybeSingle()
     const nm = stu?.display_name || stu?.full_name || (email ? email.split('@')[0] : 'bạn')
-    let cohort: string | null = null
-    if (stu?.id) {
-      const { data: c } = await supabase.from('edu_cohorts').select('cohort').eq('student_id', stu.id).maybeSingle()
-      cohort = (c as any)?.cohort ?? null
-    }
-    setMe({ name: (nm || 'bạn').includes('@') ? (nm as string).split('@')[0] : nm as string, cohort })
+    const cleanName = (nm || 'bạn').includes('@') ? (nm as string).split('@')[0] : nm as string
+    setMe({ name: cleanName, cohort: null, email: (stu as any)?.email || email || null, phone: (stu as any)?.phone || null })
   }
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) loadMe(session.user.id, session.user.email ?? null) })
@@ -160,6 +156,17 @@ export default function ClassLandingPage() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Đăng nhập xong → tự điền sẵn họ tên / email / SĐT vào form đăng ký (đỡ phiền nhập lại)
+  useEffect(() => {
+    if (!me) return
+    setForm(f => ({
+      ...f,
+      name: f.name || me.name || '',
+      email: f.email || me.email || '',
+      phone: f.phone || me.phone || '',
+    }))
+  }, [me])
 
   // Đăng nhập xong → Mira chào theo tên (nếu chat chưa diễn tiến)
   useEffect(() => {
