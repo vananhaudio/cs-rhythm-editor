@@ -525,20 +525,23 @@ function staffSystem(bars: BarCell[], baseY: number, x0: number, nw: number, sp:
   }
   const width = x + 10
   const lines5 = [0, 2, 4, 6, 8].map(p => <line key={k++} x1={x0 - 12} y1={yOf(p)} x2={width - 6} y2={yOf(p)} stroke="#B8AE9B" strokeWidth={1} />)
-  const clef = <text key={k++} x={8} y={baseY + 11} fontFamily="Bravura" fontSize={48} fill={BS_INK}>{''}</text>
+  const clef = <text key={k++} x={5} y={baseY + 6} fontFamily="Bravura" fontSize={24} fill={BS_INK}>{''}</text>
   const bls = barX.map((bx, i) => <line key={k + 100 + i} x1={bx} y1={yOf(8)} x2={bx} y2={yOf(0)} stroke={BS_INK} strokeWidth={i === 0 || i === barX.length - 1 ? 2.4 : 1.6} />)
   return { nodes: [...lines5, clef, ...ledg, ...heads, ...stems, ...bls], width }
 }
 
 // Khuông nhạc SẠCH nhiều dòng (mỗi câu = 1 hệ thống) — chỉ notation, không lời (lời đọc ở dải dưới).
 function MultiStaff({ lines }: { lines: CauLine[] }) {
-  const sp = 5, x0 = 42, nw = 19, sysH = 74, top = 46
+  const sp = 5, x0 = 40, nw = 18, sysH = 56, top = 36
   let maxW = 90
   const all: React.ReactNode[] = []
   lines.forEach((line, si) => { const r = staffSystem(line.bars, top + si * sysH, x0, nw, sp, si * 1000); all.push(...r.nodes); if (r.width > maxW) maxW = r.width })
-  const H = top + lines.length * sysH - 20
+  const H = top + lines.length * sysH - 16
+  const pxH = Math.min(34 + lines.length * 26, 140)   // chiều cao cố định (px) — ép vừa màn
   return (
-    <svg viewBox={`0 0 ${maxW} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '30vh' }} preserveAspectRatio="xMidYMid meet">{all}</svg>
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <svg viewBox={`0 0 ${maxW} ${H}`} height={pxH} style={{ width: 'auto', maxWidth: '100%', display: 'block' }} preserveAspectRatio="xMidYMid meet">{all}</svg>
+    </div>
   )
 }
 
@@ -555,7 +558,7 @@ function PenFlow({ bars, boundary, runKey }: { bars: BarCell[]; boundary: Set<nu
       timers.current.push(setTimeout(() => {
         const l = lineRefs.current[i], p = penRefs.current[i]
         if (p) { p.style.opacity = '1'; p.style.top = '30px' }
-        if (l) l.style.height = (boundary.has(i) ? 50 : 42) + 'px'
+        if (l) l.style.height = (boundary.has(i) ? 34 : 27) + 'px'
         if (p) timers.current.push(setTimeout(() => { p.style.opacity = '0' }, 600))
       }, 300 + i * 620))
     }
@@ -565,7 +568,7 @@ function PenFlow({ bars, boundary, runKey }: { bars: BarCell[]; boundary: Set<nu
   const Bar = (i: number) => {
     const b = boundary.has(i)
     return (
-      <span key={'b' + i} style={{ position: 'relative', display: 'inline-flex', width: b ? 4 : 3, minHeight: 50, alignItems: 'flex-start', justifyContent: 'center', margin: b ? '0 12px' : '0 9px' }}>
+      <span key={'b' + i} style={{ position: 'relative', display: 'inline-flex', width: b ? 4 : 3, minHeight: 34, alignItems: 'flex-start', justifyContent: 'center', margin: b ? '0 9px' : '0 6px' }}>
         <span ref={el => { lineRefs.current[i] = el }} style={{ display: 'block', width: b ? 4 : 3, height: 0, background: b ? BS_PEN : BS_INK, borderRadius: 2, transition: 'height .45s ease-out' }} />
         <span ref={el => { penRefs.current[i] = el }} style={{ position: 'absolute', left: 4, top: -20, opacity: 0, transition: 'top .45s ease-out, opacity .25s', lineHeight: 0 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={BS_PEN} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
@@ -574,13 +577,13 @@ function PenFlow({ bars, boundary, runKey }: { bars: BarCell[]; boundary: Set<nu
     )
   }
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#FBF6ED', border: '1px solid #E6D8C2', borderRadius: 10, padding: '14px 10px', rowGap: 6 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#FBF6ED', border: '1px solid #E6D8C2', borderRadius: 10, padding: '7px 6px', rowGap: 2 }}>
       {bars.map((bar, i) => [
         Bar(i),
         <span key={'o' + i} style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {bar.lead && <span style={{ fontSize: 11, fontStyle: 'italic', color: BS_MUTE, marginRight: 4 }}>(lặng)</span>}
-          {bar.words.map((w, j) => <span key={j} style={{ fontSize: 17.5, padding: '1px 3px', color: BS_INK, whiteSpace: 'nowrap' }}>{w}</span>)}
-          {bar.hold && <span style={{ color: BS_MUTE, fontSize: 14, letterSpacing: 1, marginLeft: 1 }}>~~~</span>}
+          {bar.lead && <span style={{ fontSize: 10, fontStyle: 'italic', color: BS_MUTE, marginRight: 3 }}>(lặng)</span>}
+          {bar.words.map((w, j) => <span key={j} style={{ fontSize: 14.5, padding: '0 2px', color: BS_INK, whiteSpace: 'nowrap' }}>{w}</span>)}
+          {bar.hold && <span style={{ color: BS_MUTE, fontSize: 12, letterSpacing: 1, marginLeft: 1 }}>~~~</span>}
         </span>,
       ])}
       {Bar(N)}
@@ -594,24 +597,21 @@ export function BarSplit({ cfg }: { cfg: BarSplitCfg }) {
   const flat = lines.flatMap(l => l.bars)
   const boundary = (() => { const s = new Set<number>(); let acc = 0; lines.forEach((l, i) => { if (i > 0) s.add(acc); acc += l.bars.length }); return s })()
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: BS_MUTE, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Sheet nhạc — vạch nhịp ở đây</div>
-        <div style={{ background: '#fff', border: '1px solid #E6D8C2', borderRadius: 10, padding: '6px 8px' }}><MultiStaff lines={lines} /></div>
+        <div style={{ fontSize: 10.5, fontWeight: 700, color: BS_MUTE, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Sheet nhạc — vạch nhịp ở đây</div>
+        <div style={{ background: '#fff', border: '1px solid #E6D8C2', borderRadius: 10, padding: '4px 6px' }}><MultiStaff lines={lines} /></div>
       </div>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: BS_MUTE, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Lời — kẻ vạch theo sheet (vạch cam = chỗ nối câu)</div>
+        <div style={{ fontSize: 10.5, fontWeight: 700, color: BS_MUTE, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Lời — bút kẻ vạch (<span style={{ color: BS_PEN }}>cam</span> = chỗ nối câu)</div>
         <PenFlow key={lines.length} bars={flat} boundary={boundary} runKey={runKey} />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <button onClick={() => setRunKey(k => k + 1)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 15px', border: 'none', borderRadius: 11, background: BS_PEN, color: '#fff', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
-          Kẻ lại vạch
-        </button>
-        <span style={{ fontSize: 12.5, color: BS_MUTE }}>bút kẻ hết các vạch — vạch cam là chỗ hết câu này sang câu sau</span>
-      </div>
-      {cfg.caption && <div style={{ fontSize: 14.5, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
+      {cfg.caption && <div style={{ fontSize: 13.5, color: '#3A352C', lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
+      <button onClick={() => setRunKey(k => k + 1)}
+        style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', border: 'none', borderRadius: 10, background: BS_PEN, color: '#fff', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
+        Kẻ lại vạch
+      </button>
     </div>
   )
 }

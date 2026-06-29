@@ -258,7 +258,7 @@ if (path === '/admin' || path.startsWith('/admin')) {
 // ── Route /flow-lab — Xem thử engine Flow mới (mọi người đã đăng nhập; chỉ dữ liệu mẫu) ──
 if (path === '/flow-lab' || path.startsWith('/flow-lab')) {
   if (loading) return null
-  if (!user) { window.location.href = '/start'; return null }
+  if (!user && !import.meta.env.DEV) { window.location.href = '/start'; return null }   // dev: cho xem thử không cần đăng nhập (chỉ dữ liệu mẫu)
   return <FlowLabPage />
 }
 
