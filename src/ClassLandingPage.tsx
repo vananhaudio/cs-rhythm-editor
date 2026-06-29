@@ -136,7 +136,7 @@ export default function ClassLandingPage() {
   const [suDone, setSuDone] = useState(false)
 
   // ── Đăng nhập học viên ngay trên trang tuyển sinh ──
-  const [me, setMe] = useState<{ name: string; cohort?: string | null; email?: string | null; phone?: string | null } | null>(null)   // null = chưa đăng nhập
+  const [me, setMe] = useState<{ name: string; email?: string | null; phone?: string | null } | null>(null)   // null = chưa đăng nhập
   const [showLogin, setShowLogin] = useState(false)
   const [liEmail, setLiEmail] = useState('')
   const [liPass, setLiPass] = useState('')
@@ -147,7 +147,7 @@ export default function ClassLandingPage() {
     const { data: stu } = await supabase.from('edu_students').select('id,full_name,display_name,email,phone').eq('user_id', userId).maybeSingle()
     const nm = stu?.display_name || stu?.full_name || (email ? email.split('@')[0] : 'bạn')
     const cleanName = (nm || 'bạn').includes('@') ? (nm as string).split('@')[0] : nm as string
-    setMe({ name: cleanName, cohort: null, email: (stu as any)?.email || email || null, phone: (stu as any)?.phone || null })
+    setMe({ name: cleanName, email: (stu as any)?.email || email || null, phone: (stu as any)?.phone || null })
   }
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) loadMe(session.user.id, session.user.email ?? null) })
@@ -277,7 +277,7 @@ export default function ClassLandingPage() {
     chatPush({ who: 'me', html: richReply(t) }); setChatInput('')
     setChatLoading(true)
     try {
-      const { data, error } = await supabase.functions.invoke('class-ai', { body: { sessionId: chatSessionRef.current, message: t, userName: me?.name, userCohort: me?.cohort ?? null } })
+      const { data, error } = await supabase.functions.invoke('class-ai', { body: { sessionId: chatSessionRef.current, message: t, userName: me?.name } })
       if (error) throw error
       if (data?.sessionId) chatSessionRef.current = data.sessionId
       chatPush({ who: 'ai', html: richReply(data?.reply || 'Bạn nói rõ hơn giúp mình nhé.') })

@@ -154,8 +154,6 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const [appStats, setAppStats] = useState<AppStats | null>(null)
   const [accessSet, setAccessSet] = useState<Set<string>>(new Set())  // khoá trả phí đã được cấp quyền
   const [grantingId, setGrantingId] = useState<string | null>(null)
-  const [cohort, setCohort] = useState<string | null>(null)           // lớp Hành trình (HT2026/HT2027)
-  const [savingCohort, setSavingCohort] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -287,27 +285,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     setGrantingId(null)
   }
 
-  // Gán/đổi LỚP HÀNH TRÌNH → trigger DB tự cấp TẤT CẢ khoá. Bỏ lớp = xoá hàng (không thu khoá đã cấp).
-  const assignCohort = async (val: string | null) => {
-    setSavingCohort(true)
-    const uid = (await supabase.auth.getUser()).data.user?.id
-    if (val) {
-      const { error } = await supabase.from('edu_cohorts')
-        .upsert({ student_id: studentId, cohort: val, assigned_by: uid, assigned_at: new Date().toISOString() }, { onConflict: 'student_id' })
-      if (error) { setSavingCohort(false); alert('Gán lớp thất bại: ' + error.message); return }
-      setCohort(val)
-      alert(`Đã xếp vào lớp ${val}. Khoá học mở LẦN LƯỢT theo lộ trình — dùng nút "🔓 Mở khoá" bên dưới khi học sinh đăng ký buổi Zoom của khoá kế tiếp.`)
-    } else {
-      const { error } = await supabase.from('edu_cohorts').delete().eq('student_id', studentId)
-      if (error) { setSavingCohort(false); alert('Bỏ lớp thất bại: ' + error.message); return }
-      setCohort(null)
-    }
-    setSavingCohort(false)
-  }
-
   useEffect(() => {
-    supabase.from('edu_cohorts').select('cohort').eq('student_id', studentId).maybeSingle()
-      .then(({ data }) => setCohort((data as any)?.cohort ?? null))
     supabase.from('edu_course_access').select('course_id').eq('student_id', studentId).eq('active', true)
       .then(({ data }) => setAccessSet(new Set((data ?? []).map((a: any) => a.course_id))))
     // Lớp (nhóm Zalo) học sinh đã/đang tham gia — hành trình qua các lớp
@@ -492,28 +470,6 @@ export default function StudentProfile({ studentId, onBack }: Props) {
 
         {activeTab === 'courses' && (
           <div>
-            {/* LỚP HÀNH TRÌNH — gán 1 lần, tự cấp TẤT CẢ khoá */}
-            <div style={{ marginBottom: 18, background: cohort ? T.greenLight : T.bgCard, border: `1px solid ${cohort ? '#90C4A0' : T.border}`, borderRadius: 10, padding: '12px 14px' }}>
-              <SectionTitle>Lớp Hành trình (combo trọn khoá — mở lần lượt theo lộ trình)</SectionTitle>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
-                {(['HT2026', 'HT2027'] as const).map(c => (
-                  <button key={c} onClick={() => assignCohort(c)} disabled={savingCohort}
-                    style={{ background: cohort === c ? '#15803D' : '#fff', color: cohort === c ? '#fff' : T.header, border: `1.5px solid ${cohort === c ? '#15803D' : T.border}`, borderRadius: 8, padding: '7px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {cohort === c ? '✓ ' : ''}{c}
-                  </button>
-                ))}
-                {cohort && (
-                  <button onClick={() => assignCohort(null)} disabled={savingCohort}
-                    style={{ background: 'none', color: T.textMuted, border: `1px solid ${T.border}`, borderRadius: 8, padding: '7px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Bỏ lớp</button>
-                )}
-                {savingCohort && <span style={{ fontSize: 13, color: T.textMuted }}>Đang cấp khoá…</span>}
-              </div>
-              <div style={{ fontSize: 12.5, color: T.textMuted, marginTop: 8 }}>
-                {cohort
-                  ? `Học sinh thuộc lớp ${cohort} (combo trọn khoá). Khoá KHÔNG mở hết — mở lần lượt theo bản đồ hành trình khi học sinh đăng ký buổi Zoom của từng khoá (dùng nút "🔓 Mở khoá" bên dưới).`
-                  : 'Xếp lớp để đánh dấu học sinh combo Hành trình. Khoá mở dần theo lộ trình, không mở hết một lần.'}
-              </div>
-            </div>
             {myGroups.length > 0 && (
               <div style={{ marginBottom: 18 }}>
                 <SectionTitle>Lớp tham gia ({myGroups.length})</SectionTitle>

@@ -507,7 +507,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   useEffect(() => {
-    // Học sinh lớp Hành trình (HT2026/HT2027): tự cấp/top-up TẤT CẢ khoá khi đăng nhập (idempotent)
     const loadCourses = () => supabase.from('edu_enrollments')
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order,is_free)')
       .eq('student_id', student.id).eq('is_active', true)
@@ -542,9 +541,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           .map((p: any) => ({ id: p.id, title: p.title, courseId: p.courseId, courseName: p.courseName }))
         setMasterPath(path)
       })
-    // HT2026/HT2027: cấp/top-up khoá trước rồi mới nạp danh sách (preview của thầy thì bỏ qua)
-    if (preview) loadCourses()
-    else supabase.rpc('sync_my_cohort_access').then(() => loadCourses())
+    loadCourses()
     supabase.from('edu_tools').select('*').order('order_index')
       .then(({ data }) => {
         const all = (data ?? []).map((t: any) => ({
