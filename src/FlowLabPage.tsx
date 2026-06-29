@@ -131,7 +131,7 @@ const SAMPLE_FLOW_BARSPLIT = {
             { lead: false, hold: true, words: ['sâu'], notes: [{ pos: 5, dur: 'w' }] },
           ] },
         ],
-        caption: 'Mỗi <b>ô nhịp</b> đủ 4 phách. Cả câu hát dồn vào <b>một ô</b>, rồi chữ cuối ngân trọn <b>ô kế</b> — ô nhịp không tính theo số chữ. Bấm <b>Câu sau ›</b> để xem tiếp.',
+        caption: 'Mỗi <b>ô nhịp</b> đủ 4 phách — cả câu hát dồn vào một ô, rồi chữ cuối ngân trọn ô kế. Để ý <b style="color:#C2622E">vạch cam</b>: đó là chỗ <b>hết câu này sang câu sau</b> — chỗ người mới hay đọc dính (vd "cổ" và "Dài" là HAI ô khác nhau, đừng đọc liền).',
       } },
     { id: 'bs4', order: 4, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
       interactive: { items: ['Mình hiểu vạch nhịp chia lời thành từng ô', 'Mình thấy một ô có thể chứa nhiều chữ, hoặc chỉ một chữ ngân dài'] } },

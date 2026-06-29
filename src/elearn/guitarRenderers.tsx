@@ -498,25 +498,22 @@ export function ChordView({ cfg }: { cfg: ChordCfg }) {
 // Mục tiêu dạy: nhìn sheet để biết "từ đâu đến đâu là 1 ô nhịp" (ô nhịp ≠ số chữ).
 const BS_INK = '#2A2622', BS_PEN = '#C2622E', BS_MUTE = '#9A8F7E'
 
-// Khuông nhạc SẠCH vẽ từ nốt (clef + nốt + vạch nhịp + lời dưới nốt) cho 1 câu.
-function MiniStaff({ bars }: { bars: BarCell[] }) {
-  const sp = 5, baseY = 72, x0 = 48, nw = 22
+// Vẽ MỘT hệ thống khuông (1 câu) tại baseY → trả node + bề rộng (notation, không lời).
+function staffSystem(bars: BarCell[], baseY: number, x0: number, nw: number, sp: number, kb: number) {
   const yOf = (p: number) => baseY - p * sp
-  const heads: React.ReactNode[] = [], stems: React.ReactNode[] = [], ledg: React.ReactNode[] = [], lyr: React.ReactNode[] = [], bars2: number[] = [x0 - 12]
-  let x = x0, k = 0
+  const heads: React.ReactNode[] = [], stems: React.ReactNode[] = [], ledg: React.ReactNode[] = []
+  const barX: number[] = [x0 - 12]
+  let x = x0, k = kb
   for (const bar of bars) {
-    let wi = 0
     const eighths: { x: number; y: number }[] = []
     for (const n of bar.notes ?? []) {
-      if (n.rest) { heads.push(<text key={k++} x={x} y={yOf(4)} fontFamily="Bravura" fontSize={19} fill={BS_INK} textAnchor="middle">{''}</text>); x += nw; continue }
+      if (n.rest) { heads.push(<text key={k++} x={x} y={yOf(4)} fontFamily="Bravura" fontSize={18} fill={BS_INK} textAnchor="middle">{''}</text>); x += nw; continue }
       const p = n.pos ?? 0, y = yOf(p), open = n.dur === 'h' || n.dur === 'w'
       heads.push(<ellipse key={k++} cx={x} cy={y} rx={open ? 5 : 4.3} ry={3.3} transform={`rotate(-20 ${x} ${y})`} fill={open ? '#fff' : BS_INK} stroke={BS_INK} strokeWidth={open ? 1.6 : 0} />)
       for (let g = 10; g <= p; g += 2) ledg.push(<line key={k++} x1={x - 8} y1={yOf(g)} x2={x + 8} y2={yOf(g)} stroke={BS_INK} strokeWidth={1.1} />)
       for (let g = -2; g >= p; g -= 2) ledg.push(<line key={k++} x1={x - 8} y1={yOf(g)} x2={x + 8} y2={yOf(g)} stroke={BS_INK} strokeWidth={1.1} />)
       if (n.dur === 'e') eighths.push({ x, y })
       else if (n.dur !== 'w') stems.push(<line key={k++} x1={x + 4} y1={y} x2={x + 4} y2={y - 23} stroke={BS_INK} strokeWidth={1.5} />)
-      const w = bar.words[wi++]
-      if (w) lyr.push(<text key={k++} x={x} y={94} fontSize={11.5} fill={BS_INK} textAnchor="middle" fontFamily="inherit">{w}</text>)
       x += nw
     }
     if (eighths.length) {
@@ -524,21 +521,29 @@ function MiniStaff({ bars }: { bars: BarCell[] }) {
       for (const e of eighths) stems.push(<line key={k++} x1={e.x + 4} y1={e.y} x2={e.x + 4} y2={by} stroke={BS_INK} strokeWidth={1.5} />)
       heads.push(<rect key={k++} x={eighths[0].x + 4} y={by} width={eighths[eighths.length - 1].x - eighths[0].x} height={3.4} fill={BS_INK} />)
     }
-    bars2.push(x - nw * 0.42)
+    barX.push(x - nw * 0.42)
   }
-  const W = x + 12
+  const width = x + 10
+  const lines5 = [0, 2, 4, 6, 8].map(p => <line key={k++} x1={x0 - 12} y1={yOf(p)} x2={width - 6} y2={yOf(p)} stroke="#B8AE9B" strokeWidth={1} />)
+  const clef = <text key={k++} x={8} y={baseY + 11} fontFamily="Bravura" fontSize={48} fill={BS_INK}>{''}</text>
+  const bls = barX.map((bx, i) => <line key={k + 100 + i} x1={bx} y1={yOf(8)} x2={bx} y2={yOf(0)} stroke={BS_INK} strokeWidth={i === 0 || i === barX.length - 1 ? 2.4 : 1.6} />)
+  return { nodes: [...lines5, clef, ...ledg, ...heads, ...stems, ...bls], width }
+}
+
+// Khuông nhạc SẠCH nhiều dòng (mỗi câu = 1 hệ thống) — chỉ notation, không lời (lời đọc ở dải dưới).
+function MultiStaff({ lines }: { lines: CauLine[] }) {
+  const sp = 5, x0 = 42, nw = 19, sysH = 74, top = 46
+  let maxW = 90
+  const all: React.ReactNode[] = []
+  lines.forEach((line, si) => { const r = staffSystem(line.bars, top + si * sysH, x0, nw, sp, si * 1000); all.push(...r.nodes); if (r.width > maxW) maxW = r.width })
+  const H = top + lines.length * sysH - 20
   return (
-    <svg viewBox={`0 -16 ${W} 122`} style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '24vh' }} preserveAspectRatio="xMinYMid meet">
-      {[0, 2, 4, 6, 8].map(p => <line key={'s' + p} x1={x0 - 12} y1={yOf(p)} x2={W - 8} y2={yOf(p)} stroke="#B8AE9B" strokeWidth={1} />)}
-      <text x={10} y={84} fontFamily="Bravura" fontSize={52} fill={BS_INK}>{''}</text>
-      {ledg}{heads}{stems}{lyr}
-      {bars2.map((bx, i) => <line key={'b' + i} x1={bx} y1={yOf(8)} x2={bx} y2={yOf(0)} stroke={BS_INK} strokeWidth={i === 0 || i === bars2.length - 1 ? 2.4 : 1.6} />)}
-    </svg>
+    <svg viewBox={`0 0 ${maxW} ${H}`} style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '30vh' }} preserveAspectRatio="xMidYMid meet">{all}</svg>
   )
 }
 
-// Lời + bút kẻ vạch chia ô (animate). runKey đổi → kẻ lại; key={idx} ở cha → remount theo câu.
-function PenLyric({ bars, runKey }: { bars: BarCell[]; runKey: number }) {
+// Dải LỜI liền mạch TẤT CẢ câu + bút kẻ hết vạch; tô CAM vạch ở chỗ nối câu (dễ nhầm).
+function PenFlow({ bars, boundary, runKey }: { bars: BarCell[]; boundary: Set<number>; runKey: number }) {
   const N = bars.length
   const lineRefs = useRef<(HTMLSpanElement | null)[]>([])
   const penRefs = useRef<(HTMLSpanElement | null)[]>([])
@@ -550,31 +555,32 @@ function PenLyric({ bars, runKey }: { bars: BarCell[]; runKey: number }) {
       timers.current.push(setTimeout(() => {
         const l = lineRefs.current[i], p = penRefs.current[i]
         if (p) { p.style.opacity = '1'; p.style.top = '30px' }
-        if (l) l.style.height = '44px'
-        if (p) timers.current.push(setTimeout(() => { p.style.opacity = '0' }, 650))
-      }, 350 + i * 850))
+        if (l) l.style.height = (boundary.has(i) ? 50 : 42) + 'px'
+        if (p) timers.current.push(setTimeout(() => { p.style.opacity = '0' }, 600))
+      }, 300 + i * 620))
     }
     return () => { timers.current.forEach(clearTimeout); timers.current = [] }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runKey, N])
-  const Bar = (i: number) => (
-    <span key={'b' + i} style={{ position: 'relative', display: 'inline-flex', width: 3, minHeight: 44, alignItems: 'flex-start', justifyContent: 'center', margin: '0 10px' }}>
-      <span ref={el => { lineRefs.current[i] = el }} style={{ display: 'block', width: 3, height: 0, background: BS_INK, borderRadius: 2, transition: 'height .5s ease-out' }} />
-      <span ref={el => { penRefs.current[i] = el }} style={{ position: 'absolute', left: 4, top: -20, opacity: 0, transition: 'top .5s ease-out, opacity .25s', lineHeight: 0 }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={BS_PEN} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
+  const Bar = (i: number) => {
+    const b = boundary.has(i)
+    return (
+      <span key={'b' + i} style={{ position: 'relative', display: 'inline-flex', width: b ? 4 : 3, minHeight: 50, alignItems: 'flex-start', justifyContent: 'center', margin: b ? '0 12px' : '0 9px' }}>
+        <span ref={el => { lineRefs.current[i] = el }} style={{ display: 'block', width: b ? 4 : 3, height: 0, background: b ? BS_PEN : BS_INK, borderRadius: 2, transition: 'height .45s ease-out' }} />
+        <span ref={el => { penRefs.current[i] = el }} style={{ position: 'absolute', left: 4, top: -20, opacity: 0, transition: 'top .45s ease-out, opacity .25s', lineHeight: 0 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={BS_PEN} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
+        </span>
       </span>
-    </span>
-  )
+    )
+  }
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#FBF6ED', border: '1px solid #E6D8C2', borderRadius: 10, padding: '16px 10px', gap: 2 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#FBF6ED', border: '1px solid #E6D8C2', borderRadius: 10, padding: '14px 10px', rowGap: 6 }}>
       {bars.map((bar, i) => [
         Bar(i),
-        <span key={'o' + i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '0 2px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {bar.lead && <span style={{ fontSize: 11.5, fontStyle: 'italic', color: BS_MUTE, marginRight: 4 }}>(lặng)</span>}
-            {bar.words.map((w, j) => <span key={j} style={{ fontSize: 18, padding: '2px 3px', color: BS_INK, whiteSpace: 'nowrap' }}>{w}</span>)}
-            {bar.hold && <span style={{ color: BS_MUTE, fontSize: 15, letterSpacing: 1, marginLeft: 2 }}>~~~</span>}
-          </span>
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: BS_PEN }}>{bar.hold ? 'ngân cả ô' : `ô nhịp`}</span>
+        <span key={'o' + i} style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {bar.lead && <span style={{ fontSize: 11, fontStyle: 'italic', color: BS_MUTE, marginRight: 4 }}>(lặng)</span>}
+          {bar.words.map((w, j) => <span key={j} style={{ fontSize: 17.5, padding: '1px 3px', color: BS_INK, whiteSpace: 'nowrap' }}>{w}</span>)}
+          {bar.hold && <span style={{ color: BS_MUTE, fontSize: 14, letterSpacing: 1, marginLeft: 1 }}>~~~</span>}
         </span>,
       ])}
       {Bar(N)}
@@ -584,26 +590,18 @@ function PenLyric({ bars, runKey }: { bars: BarCell[]; runKey: number }) {
 
 export function BarSplit({ cfg }: { cfg: BarSplitCfg }) {
   const lines = cfg.lines ?? []
-  const [idx, setIdx] = useState(0)
   const [runKey, setRunKey] = useState(1)
-  const cur = lines[idx] ?? { bars: [] }
-  const last = lines.length - 1
-  const go = (d: number) => { const ni = Math.max(0, Math.min(last, idx + d)); if (ni !== idx) { setIdx(ni); setRunKey(k => k + 1) } }
-  const navBtn = (dis: boolean): React.CSSProperties => ({ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 13px', border: `1.5px solid ${dis ? '#E0D6C4' : BS_PEN}`, borderRadius: 10, background: '#fff', color: dis ? '#C7BCA8' : BS_PEN, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, cursor: dis ? 'default' : 'pointer' })
+  const flat = lines.flatMap(l => l.bars)
+  const boundary = (() => { const s = new Set<number>(); let acc = 0; lines.forEach((l, i) => { if (i > 0) s.add(acc); acc += l.bars.length }); return s })()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <button onClick={() => go(-1)} disabled={idx === 0} style={navBtn(idx === 0)}>‹ Câu trước</button>
-        <span style={{ fontSize: 13, fontWeight: 700, color: BS_INK }}>Câu {idx + 1} / {lines.length}</span>
-        <button onClick={() => go(1)} disabled={idx === last} style={navBtn(idx === last)}>Câu sau ›</button>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: BS_MUTE, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Sheet nhạc — vạch nhịp ở đây</div>
+        <div style={{ background: '#fff', border: '1px solid #E6D8C2', borderRadius: 10, padding: '6px 8px' }}><MultiStaff lines={lines} /></div>
       </div>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: BS_MUTE, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Sheet nhạc — đọc vạch nhịp</div>
-        <div style={{ background: '#fff', border: '1px solid #E6D8C2', borderRadius: 10, padding: '6px 8px' }}><MiniStaff bars={cur.bars} /></div>
-      </div>
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: BS_MUTE, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Lời — kẻ vạch theo sheet</div>
-        <PenLyric key={idx} bars={cur.bars} runKey={runKey} />
+        <div style={{ fontSize: 11, fontWeight: 700, color: BS_MUTE, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Lời — kẻ vạch theo sheet (vạch cam = chỗ nối câu)</div>
+        <PenFlow key={lines.length} bars={flat} boundary={boundary} runKey={runKey} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <button onClick={() => setRunKey(k => k + 1)}
@@ -611,7 +609,7 @@ export function BarSplit({ cfg }: { cfg: BarSplitCfg }) {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
           Kẻ lại vạch
         </button>
-        <span style={{ fontSize: 12.5, color: BS_MUTE }}>nhìn vạch trên sheet → kẻ vạch tương ứng vào lời</span>
+        <span style={{ fontSize: 12.5, color: BS_MUTE }}>bút kẻ hết các vạch — vạch cam là chỗ hết câu này sang câu sau</span>
       </div>
       {cfg.caption && <div style={{ fontSize: 14.5, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
     </div>
