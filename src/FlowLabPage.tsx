@@ -100,6 +100,26 @@ const SAMPLE_FLOW_HOPAM = {
   ],
 }
 
+// Dữ liệu Diễm Xưa ô 1–8 (nốt + lời, parse từ score.xml) — dùng chung cho bar_split
+const DX_LINES = [
+  { bars: [
+    { lead: true, hold: false, words: ['Mưa', 'vẫn', 'mưa', 'bay', 'trên', 'tầng', 'tháp'], notes: [{ rest: true, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 8, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }] },
+    { lead: false, hold: true, words: ['cổ'], notes: [{ pos: 0, dur: 'w' }] },
+  ] },
+  { bars: [
+    { lead: true, hold: false, words: ['Dài', 'tay', 'em', 'mấy', 'thuở', 'mắt', 'xanh'], notes: [{ rest: true, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 9, dur: 'e' }, { pos: 9, dur: 'e' }, { pos: 10, dur: 'e' }, { pos: 7, dur: 'e' }] },
+    { lead: false, hold: true, words: ['xao'], notes: [{ pos: 6, dur: 'w' }] },
+  ] },
+  { bars: [
+    { lead: true, hold: false, words: ['Nghe', 'lá', 'thu', 'mưa', 'reo', 'mòn', 'gót'], notes: [{ rest: true, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 8, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }] },
+    { lead: false, hold: true, words: ['nhỏ'], notes: [{ pos: 0, dur: 'w' }] },
+  ] },
+  { bars: [
+    { lead: true, hold: false, words: ['Đường', 'dài', 'hun', 'hút', 'cho', 'mắt', 'thêm'], notes: [{ rest: true, dur: 'e' }, { pos: 0, dur: 'e' }, { pos: 2, dur: 'e' }, { pos: 4, dur: 'e' }, { pos: 6, dur: 'e' }, { pos: 6, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 6, dur: 'e' }] },
+    { lead: false, hold: true, words: ['sâu'], notes: [{ pos: 5, dur: 'w' }] },
+  ] },
+]
+
 // Đệm hát — bài "Chia ô nhịp trên lời bài hát" (Diễm Xưa, đối chiếu sheet ↔ lời)
 const SAMPLE_FLOW_BARSPLIT = {
   id: 'sample-barsplit',
@@ -113,24 +133,7 @@ const SAMPLE_FLOW_BARSPLIT = {
       content: '<p style="font-size:16px;line-height:1.7;margin:0;color:#3A352F;"><b>Vạch nhịp</b> ( | ) là đường kẻ dọc chia bài hát thành từng <b>ô nhịp</b>. Nhịp 4/4 nghĩa là mỗi ô gồm <b>4 phách</b> — không tính theo số chữ.</p>' },
     { id: 'bs3', order: 3, logic: 'NHAN', type: 'bar_split', title: 'Nhìn sheet → kẻ vạch vào lời',
       interactive: {
-        lines: [
-          { bars: [
-            { lead: true, hold: false, words: ['Mưa', 'vẫn', 'mưa', 'bay', 'trên', 'tầng', 'tháp'], notes: [{ rest: true, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 8, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }] },
-            { lead: false, hold: true, words: ['cổ'], notes: [{ pos: 0, dur: 'w' }] },
-          ] },
-          { bars: [
-            { lead: true, hold: false, words: ['Dài', 'tay', 'em', 'mấy', 'thuở', 'mắt', 'xanh'], notes: [{ rest: true, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 9, dur: 'e' }, { pos: 9, dur: 'e' }, { pos: 10, dur: 'e' }, { pos: 7, dur: 'e' }] },
-            { lead: false, hold: true, words: ['xao'], notes: [{ pos: 6, dur: 'w' }] },
-          ] },
-          { bars: [
-            { lead: true, hold: false, words: ['Nghe', 'lá', 'thu', 'mưa', 'reo', 'mòn', 'gót'], notes: [{ rest: true, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 8, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }] },
-            { lead: false, hold: true, words: ['nhỏ'], notes: [{ pos: 0, dur: 'w' }] },
-          ] },
-          { bars: [
-            { lead: true, hold: false, words: ['Đường', 'dài', 'hun', 'hút', 'cho', 'mắt', 'thêm'], notes: [{ rest: true, dur: 'e' }, { pos: 0, dur: 'e' }, { pos: 2, dur: 'e' }, { pos: 4, dur: 'e' }, { pos: 6, dur: 'e' }, { pos: 6, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 6, dur: 'e' }] },
-            { lead: false, hold: true, words: ['sâu'], notes: [{ pos: 5, dur: 'w' }] },
-          ] },
-        ],
+        lines: DX_LINES,
         caption: 'Mỗi <b>ô nhịp</b> đủ 4 phách — cả câu hát dồn vào một ô, rồi chữ cuối ngân trọn ô kế. Để ý <b style="color:#C2622E">vạch cam</b>: đó là chỗ <b>hết câu này sang câu sau</b> — chỗ người mới hay đọc dính (vd "cổ" và "Dài" là HAI ô khác nhau, đừng đọc liền).',
       } },
     { id: 'bs4', order: 4, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
@@ -141,7 +144,105 @@ const SAMPLE_FLOW_BARSPLIT = {
   ],
 }
 
-const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT }
+// ── Minh hoạ HTML (palette ấm) dùng trong các slide text ──────────────────────
+const EX1_LOI1 = `<div style="display:flex;flex-direction:column;gap:11px">
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div style="flex:1 1 150px;background:#FBF6ED;border:1px solid #E6D8C2;border-radius:10px;padding:11px 12px">
+      <div style="font-size:10.5px;font-weight:700;color:#9A8F7E;text-transform:uppercase;letter-spacing:.05em;margin-bottom:13px">Bản hợp âm mạng</div>
+      <div style="line-height:2.1;font-size:15px;color:#3A352F">
+        <span style="position:relative"><b style="position:absolute;top:-13px;left:0;font-size:11.5px;color:#BF5A37">Am</b>Chiều</span> buông
+        <span style="position:relative"><b style="position:absolute;top:-13px;left:0;font-size:11.5px;color:#BF5A37">C</b>ngả</span> bên
+        <span style="position:relative"><b style="position:absolute;top:-13px;left:0;font-size:11.5px;color:#BF5A37">Dm</b>thềm</span>
+      </div>
+      <div style="margin-top:8px;font-size:12.5px;color:#9A8F7E">Đếm hợp âm: <b style="color:#C0392B">3</b></div>
+    </div>
+    <div style="flex:1 1 150px;background:#fff;border:1.5px solid #BF5A37;border-radius:10px;padding:11px 12px">
+      <div style="font-size:10.5px;font-weight:700;color:#9A8F7E;text-transform:uppercase;letter-spacing:.05em;margin-bottom:13px">Ô nhịp thật</div>
+      <div style="display:flex;border:1px solid #E6D8C2;border-radius:6px;overflow:hidden;font-weight:700;text-align:center;font-size:15px">
+        <div style="flex:1;padding:8px 0;background:#FBF0D8;color:#B07A14;border-right:1px solid #E6D8C2">Am</div>
+        <div style="flex:1;padding:8px 0;background:#FBF0D8;color:#B07A14;border-right:1px solid #E6D8C2">Am</div>
+        <div style="flex:1;padding:8px 0;border-right:1px solid #E6D8C2;color:#3A352F">C</div>
+        <div style="flex:1;padding:8px 0;color:#3A352F">Dm</div>
+      </div>
+      <div style="margin-top:8px;font-size:12.5px;color:#9A8F7E">Ô thật: <b style="color:#3F6B4E">4</b> · Am giữ <b style="color:#B07A14">2 ô</b></div>
+    </div>
+  </div>
+  <div style="background:#F6E7D8;border-radius:8px;padding:11px 13px;font-size:14px;line-height:1.5;color:#3A352F">Hợp âm lặp (Am sang ô 2) không ghi lại trên bản mạng → <b>số hợp âm ≠ số ô nhịp thật</b>.</div>
+</div>`
+const EX2_LOI2 = `<div style="display:flex;flex-direction:column;gap:10px;max-width:380px">
+  <div style="border:2px solid #2A2622;border-radius:10px;overflow:hidden;display:flex">
+    <div style="flex:1;border-right:2px dashed #C9BBA4">
+      <div style="text-align:center;padding:8px 0 3px;font-size:20px;font-weight:700;color:#BF5A37">C</div>
+      <div style="display:flex;border-top:1px solid #E6D8C2"><div style="flex:1;text-align:center;padding:5px 0;font-size:12.5px;color:#9A8F7E">1</div><div style="flex:1;text-align:center;padding:5px 0;font-size:12.5px;color:#9A8F7E">2</div></div>
+      <div style="display:flex;justify-content:space-around;padding:5px 0;font-size:18px;color:#BF5A37"><span>↓</span><span>↓</span></div>
+    </div>
+    <div style="flex:1">
+      <div style="text-align:center;padding:8px 0 3px;font-size:20px;font-weight:700;color:#3F6B4E">E7</div>
+      <div style="display:flex;border-top:1px solid #E6D8C2"><div style="flex:1;text-align:center;padding:5px 0;font-size:12.5px;color:#9A8F7E">3</div><div style="flex:1;text-align:center;padding:5px 0;font-size:12.5px;color:#9A8F7E">4</div></div>
+      <div style="display:flex;justify-content:space-around;padding:5px 0;font-size:18px;color:#3F6B4E"><span>↓</span><span>↓</span></div>
+    </div>
+  </div>
+  <div style="text-align:center;font-size:11.5px;color:#9A8F7E">một ô nhịp 4/4 — 4 phách</div>
+  <div style="background:#F6E7D8;border-radius:8px;padding:11px 13px;font-size:14px;line-height:1.5;color:#3A352F"><b style="color:#BF5A37">C</b> giữ phách 1–2, <b style="color:#3F6B4E">E7</b> giữ phách 3–4 — mỗi hợp âm <b>2 phách</b>.</div>
+</div>`
+const EXFINAL = `<div style="display:flex;flex-direction:column;gap:11px">
+  <div style="display:flex;align-items:stretch;border:1px solid #E6D8C2;border-radius:10px;overflow:hidden;background:#fff">
+    <div style="width:3px;background:#2A2622"></div>
+    <div style="flex:1;padding:9px 4px;text-align:center;border-right:1px solid #E6D8C2"><div style="font-size:16px;font-weight:700;color:#BF5A37">Am</div><div style="font-size:13.5px;margin-top:6px;color:#3A352F">Chiều buông</div></div>
+    <div style="width:3px;background:#2A2622"></div>
+    <div style="flex:1;padding:9px 4px;text-align:center;border-right:1px solid #E6D8C2;background:#FBF0D8"><div style="font-size:16px;font-weight:700;color:#B07A14">Am</div><div style="font-size:13.5px;margin-top:6px;color:#3A352F">nắng rơi</div></div>
+    <div style="width:3px;background:#2A2622"></div>
+    <div style="flex:1.3;padding:9px 4px;text-align:center;border-right:1px solid #E6D8C2"><div style="display:flex;justify-content:space-around"><span style="font-size:16px;font-weight:700;color:#BF5A37">C</span><span style="font-size:16px;font-weight:700;color:#3F6B4E">E7</span></div><div style="font-size:13.5px;margin-top:6px;color:#3A352F">bên thềm xưa</div></div>
+    <div style="width:3px;background:#2A2622"></div>
+    <div style="flex:1;padding:9px 4px;text-align:center"><div style="font-size:16px;font-weight:700;color:#BF5A37">Dm</div><div style="font-size:13.5px;margin-top:6px;color:#3A352F">ấy</div></div>
+    <div style="width:3px;background:#2A2622"></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:5px;font-size:13px;color:#3A352F">
+    <div>✓ Ô nhịp kẻ sẵn, lời rõ</div>
+    <div>✓ Hợp âm lặp vẫn ghi (Am · Am)</div>
+    <div>✓ Ô 2 hợp âm rõ (C · E7)</div>
+    <div>✓ Nhìn lướt là đệm được, đổi tông chỉ thay tên hợp âm</div>
+  </div>
+</div>`
+const txtSlide = (heading: string, body: string, extra = '') =>
+  `<div style="display:flex;flex-direction:column;gap:12px"><div><div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#BF5A37;margin-bottom:6px">${heading}</div><div style="font-size:15.5px;line-height:1.6;color:#3A352F">${body}</div></div>${extra}</div>`
+
+// Đệm hát — bài "Biên soạn bản hợp âm có chia nhịp chuẩn" (12 slide, dựng ở lab)
+const SAMPLE_FLOW_BIENSOAN = {
+  id: 'sample-biensoan',
+  title: 'Biên soạn bản hợp âm có chia nhịp chuẩn',
+  reward_xp: 15,
+  slides: [
+    { id: 'b1', order: 1, logic: 'DAN', type: 'callout', title: 'Biên soạn bản hợp âm có chia nhịp chuẩn',
+      interactive: { variant: 'teacher' },
+      content: 'Từ <b>sheet nhạc</b> và <b>hợp âm trên mạng</b> → một bản đệm hát <b>dễ chơi, đúng nhịp</b>. Cùng học cách làm nhé.' },
+    { id: 'b2', order: 2, logic: 'NHAN', type: 'text', title: 'Vì sao chưa đủ?',
+      content: txtSlide('Vì sao chưa đủ', 'Bản hợp âm trên mạng chỉ đánh dấu <b>chỗ đổi hợp âm</b> → không cho thấy <b>ô nhịp</b>.<br/>Sheet nhạc chữ nhỏ, cố định một tông, cần màn hình lớn → khó dùng khi vừa hát vừa đàn.') },
+    { id: 'b3', order: 3, logic: 'NGHI', type: 'text', title: 'Lỗi 1',
+      content: txtSlide('Lỗi 1', 'Tưởng <b>1 hợp âm = 1 ô nhịp</b> → đếm nhịp theo số hợp âm, bị <b>thiếu ô</b>, chơi nhanh và lệch nhịp.', EX1_LOI1) },
+    { id: 'b4', order: 4, logic: 'NGHI', type: 'text', title: 'Lỗi 2',
+      content: txtSlide('Lỗi 2', 'Không hiểu <b>1 ô nhịp có thể chứa 2 hợp âm</b> → mỗi hợp âm thật ra chỉ giữ <b>2 phách</b> (trong nhịp 4/4).', EX2_LOI2) },
+    { id: 'b5', order: 5, logic: 'DAN', type: 'callout', title: 'Kết luận',
+      interactive: { variant: 'tip' },
+      content: 'Muốn đệm đúng, phải biến bản hợp âm <b>"mơ hồ"</b> thành bản có <b>ô nhịp rõ ràng</b> trước khi chơi.' },
+    { id: 'b6', order: 6, logic: 'NHAN', type: 'text', title: 'Bước 0: Chuẩn bị',
+      content: txtSlide('Bước 0 · Chuẩn bị', 'Cần 3 thứ:<br/>• <b>Sheet nhạc gốc</b> (để xác định ô nhịp)<br/>• <b>Bản hợp âm lời</b> (copy text — để lấy lời + hợp âm)<br/>• <b>Bút</b> hoặc trình soạn cho phép gạch "|"') },
+    { id: 'b7', order: 7, logic: 'LAM', type: 'bar_split', title: 'Bước 1: Kẻ vạch nhịp',
+      interactive: { lines: DX_LINES, caption: 'Đếm số ô trên sheet → gạch <b>|</b> đúng vị trí đó lên lời. <b style="color:#C2622E">Vạch cam</b> = chỗ hết câu này sang câu sau (dễ kẻ nhầm).' } },
+    { id: 'b8', order: 8, logic: 'LAM', type: 'text', title: 'Bước 2: Chép hợp âm vào từng ô',
+      content: txtSlide('Bước 2 · Chép hợp âm', 'Tại <b>mỗi ô</b>, ghi lại hợp âm đang giữ — <b>trùng cũng ghi</b>.<br/>Không để ô trống.') },
+    { id: 'b9', order: 9, logic: 'LAM', type: 'text', title: 'Bước 3: Xử lý ô có 2 hợp âm',
+      content: txtSlide('Bước 3 · Ô 2 hợp âm', 'Chia ô 4/4 thành 2 phần: phách 1–2 & phách 3–4. Ghi <b>| C&nbsp;&nbsp;E7 |</b> — C giữ 2 phách đầu, E7 giữ 2 phách sau.', EX2_LOI2) },
+    { id: 'b10', order: 10, logic: 'LAM', type: 'text', title: 'Bước 4: Ô giữ nguyên hợp âm',
+      content: txtSlide('Bước 4 · Ô giữ nguyên', 'Nếu sheet cho biết ô tiếp theo <b>không đổi hợp âm</b>, vẫn <b>chép lặp lại</b> hợp âm ấy để tránh nhầm.<br/>Ví dụ: <b>| Am | Am | C | Dm |</b>') },
+    { id: 'b11', order: 11, logic: 'NGAM', type: 'checklist', title: 'Bước 5: Kiểm tra',
+      interactive: { items: ['Đếm 1-2-3-4, gõ nhịp — quạt thử điệu 4 phách nghe có khít giai điệu', 'Số ô nhịp khớp với sheet', 'Đổi hợp âm rơi đúng phách'] } },
+    { id: 'b12', order: 12, logic: 'THUONG', type: 'text', title: 'Kết quả',
+      content: txtSlide('Kết quả · Bản hoàn thiện', 'Một bản hợp âm <b>rõ ô nhịp</b> — nhìn lướt là đệm được, không lệch nhịp.', EXFINAL) },
+  ],
+}
+
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT, 'biensoan': SAMPLE_FLOW_BIENSOAN }
 
 export default function FlowLabPage() {
   const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'
