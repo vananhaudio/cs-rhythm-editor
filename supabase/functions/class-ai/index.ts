@@ -68,6 +68,52 @@ async function fetchScheduleText(): Promise<string> {
   } catch { return '' }
 }
 
+// ── MỨC 1: Danh mục khoá học THẬT (công khai) — để Mira tư vấn đúng khoá/lộ trình ──
+const TRACK_VI: Record<string, string> = { dem_hat: 'Đệm hát', tia_not: 'Tỉa nốt', nhac_ly: 'Nhạc lý', nhap_mon: 'Nhập môn', solo: 'Solo', cam_am: 'Cảm âm' }
+async function fetchCatalogText(): Promise<string> {
+  try {
+    const { data } = await db.from('edu_courses')
+      .select('name,type,track,is_free,sort_order,status').order('sort_order')
+    const cs = (data ?? []).filter((c: any) => (c.status ?? 'on') !== 'off')
+    if (!cs.length) return ''
+    const lines = cs.map((c: any) => `- ${c.name} [${TRACK_VI[c.track] ?? c.track ?? '—'}]${c.is_free ? ' · miễn phí' : ' · trả phí'}`)
+    return `\n\n========== DANH MỤC KHOÁ HỌC THẬT (xếp theo lộ trình) ==========\n${lines.join('\n')}\n\nDùng để tư vấn khoá nào học trước/sau theo thứ tự trên. Không bịa khoá ngoài danh sách.`
+  } catch { return '' }
+}
+
+// ── MỨC 2: Hồ sơ RIÊNG của học sinh ĐANG ĐĂNG NHẬP — xác thực token, chỉ đọc dữ liệu của chính họ ──
+async function fetchStudentText(authHeader: string): Promise<string> {
+  try {
+    const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim()
+    if (!token) return ''
+    const { data: ures } = await db.auth.getUser(token)   // xác thực: token giả → null
+    const uid = ures?.user?.id
+    if (!uid) return ''                                   // không đăng nhập → bỏ qua (chỉ mức 1)
+    const { data: stu } = await db.from('edu_students')
+      .select('id,full_name,display_name,level').eq('user_id', uid).maybeSingle()
+    if (!stu) return ''
+    const sid = (stu as any).id
+    const [{ data: enr }, { data: acc }, { data: xp }] = await Promise.all([
+      db.from('edu_enrollments').select('course:edu_courses(id,name,is_free,sort_order)').eq('student_id', sid).eq('is_active', true),
+      db.from('edu_course_access').select('course_id').eq('student_id', sid).eq('active', true),
+      db.from('student_xp_log').select('xp').eq('student_id', sid),
+    ])
+    const accSet = new Set((acc ?? []).map((a: any) => a.course_id))
+    const courses = (enr ?? []).map((e: any) => e.course).filter(Boolean)
+      .sort((a: any, b: any) => (a.sort_order ?? 99) - (b.sort_order ?? 99))
+    const opened = courses.filter((c: any) => c.is_free !== false || accSet.has(c.id)).map((c: any) => c.name)
+    const locked = courses.filter((c: any) => c.is_free === false && !accSet.has(c.id)).map((c: any) => c.name)
+    const totalXP = (xp ?? []).reduce((s: number, r: any) => s + (r.xp ?? 0), 0)
+    const nm = (stu as any).display_name || (stu as any).full_name || 'bạn'
+    return `\n\n========== HỒ SƠ HỌC SINH ĐANG ĐĂNG NHẬP (CHỈ của người này) ==========\n`
+      + `- Tên: ${nm}\n- Trình độ: ${(stu as any).level ?? 'mới bắt đầu'}\n`
+      + `- Khoá ĐÃ MỞ: ${opened.join(', ') || '(chưa có)'}\n`
+      + `- Khoá CHƯA MỞ (cần đăng ký để mở): ${locked.join(', ') || '(không)'}\n`
+      + `- Tổng điểm XP: ${totalXP}\n`
+      + `QUY TẮC: Dùng hồ sơ này để đồng hành cá nhân — gọi tên, khen tiến độ, gợi ý khoá/bài KẾ TIẾP theo lộ trình, nhắc khoá chưa mở thì đăng ký ở mục Lịch để thầy duyệt. TUYỆT ĐỐI không bịa, không nói về học sinh khác.`
+  } catch { return '' }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
@@ -109,10 +155,15 @@ Deno.serve(async (req) => {
   // Kiến thức huấn luyện (thầy nạp)
   const { data: kn } = await db.from('class_ai_knowledge').select('title,content').eq('enabled', true).order('order_index')
   const knowledge = (kn ?? []).map((k) => `### ${k.title}\n${k.content}`).join('\n\n')
-  const scheduleText = await fetchScheduleText()  // lịch khai giảng thật (rỗng nếu lỗi)
+  // Dữ liệu sống: lịch (sheet) + danh mục khoá (mức 1) + hồ sơ người đang đăng nhập (mức 2, xác thực token)
+  const [scheduleText, catalogText, studentText] = await Promise.all([
+    fetchScheduleText(),
+    fetchCatalogText(),
+    fetchStudentText(req.headers.get('Authorization') || ''),
+  ])
   const system = persona
     + (knowledge ? `\n\n========== KIẾN THỨC THAM KHẢO (dùng để trả lời, không bịa ngoài đây) ==========\n${knowledge}` : '')
-    + scheduleText
+    + scheduleText + catalogText + studentText
 
   // Dựng messages cho Anthropic (role: user / assistant)
   const recent = (hist ?? []).slice(-HISTORY)
