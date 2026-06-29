@@ -8,6 +8,7 @@ export interface MelodyNote { t: number; dur: number; midi: number }   // t,dur 
 export type EngineCallbacks = {
   getStyle: () => Style; getChords: () => string[]; getTempo: () => number; getMutes: () => Mutes
   getMelody?: () => MelodyNote[]                                        // (tuỳ chọn) giai điệu chơi kèm
+  getOutro?: () => boolean[]                                            // (tuỳ chọn) ô nào là ô "Out"/kết (theo index chords)
 }
 
 const midiToFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12)
@@ -119,25 +120,37 @@ export class BackingEngine {
     if (!this.playing || !this.ctx) return
     const ctx = this.ctx, style = this.cb.getStyle(), chords = this.cb.getChords()
     this.applyMutes()
+    const outro = this.cb.getOutro?.() ?? []
     while (this.nextStepTime < ctx.currentTime + SCHEDULE_AHEAD) {
       const s = this.stepIdx, t = this.nextStepTime
-      const hh = style.drum.hh[s]
-      if (hh !== 0) this.hihat(t, hh === 'o')
-      if (style.drum.snare[s]) this.snare(t)
-      if (style.drum.kick[s]) this.kick(t)
-      const isLast = this.barIdx === chords.length - 1
-      const useAlt = style.bassAlt && style.altEvery && this.barIdx % style.altEvery === style.altEvery - 1
-      const pat = isLast && style.bassFinal ? style.bassFinal : useAlt ? style.bassAlt! : style.bass
-      const deg = pat[s]
-      if (deg) {
-        const cur = chords[this.barIdx] ?? chords[0]
-        const nxt = chords[(this.barIdx + 1) % chords.length] ?? cur
-        const f = bassFreq(cur, deg, nxt)
-        if (f) this.bassNote(t, f)
+      const isOutroBar = !!outro[this.barIdx]
+      if (isOutroBar) {
+        // Ô "Out"/kết: chỉ CHỐT phách 1 (kick + crash + bass nốt gốc) rồi IM cả ô.
+        if (s === 0) {
+          this.kick(t, 1.0); this.crash(t)
+          const cur = chords[this.barIdx] ?? chords[0]
+          const f = bassFreq(cur, 'R')
+          if (f) this.bassNote(t, f)
+        }
+      } else {
+        const hh = style.drum.hh[s]
+        if (hh !== 0) this.hihat(t, hh === 'o')
+        if (style.drum.snare[s]) this.snare(t)
+        if (style.drum.kick[s]) this.kick(t)
+        const isLast = this.barIdx === chords.length - 1
+        const useAlt = style.bassAlt && style.altEvery && this.barIdx % style.altEvery === style.altEvery - 1
+        const pat = isLast && style.bassFinal ? style.bassFinal : useAlt ? style.bassAlt! : style.bass
+        const deg = pat[s]
+        if (deg) {
+          const cur = chords[this.barIdx] ?? chords[0]
+          const nxt = chords[(this.barIdx + 1) % chords.length] ?? cur
+          const f = bassFreq(cur, deg, nxt)
+          if (f) this.bassNote(t, f)
+        }
       }
       const perBeat = style.stepsPerBar / style.beatsPerBar
       if (s % perBeat === 0) {
-        this.click(t, s === 0)
+        if (!isOutroBar) this.click(t, s === 0)
         // Giai điệu (nếu có): chơi nốt rơi đúng phách này trong vòng
         const mel = this.cb.getMelody?.()
         if (mel && mel.length) {
@@ -175,6 +188,14 @@ export class BackingEngine {
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.28, t + 0.002)
     g.gain.exponentialRampToValueAtTime(0.001, t + dec)
     src.connect(hp).connect(g).connect(this.drumBus); src.start(t, 0, dec + 0.02); src.stop(t + dec + 0.02)
+  }
+  private crash(t: number) {   // chũm choẹ kết — noise ngân dài
+    const ctx = this.ctx!, src = ctx.createBufferSource(); src.buffer = this.noise
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3000; hp.Q.value = 0.5
+    const g = ctx.createGain(), dec = 0.9
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.34, t + 0.003)
+    g.gain.exponentialRampToValueAtTime(0.001, t + dec)
+    src.connect(hp).connect(g).connect(this.drumBus); src.start(t, 0, dec + 0.05); src.stop(t + dec + 0.05)
   }
   private bassNote(t: number, freq: number) {
     const ctx = this.ctx!

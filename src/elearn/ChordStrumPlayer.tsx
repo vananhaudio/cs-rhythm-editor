@@ -77,6 +77,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
 
   // Nền trống+bass synth (loop). Chords = các ô có hợp âm (bỏ pickup/rest).
   const backChords = useMemo(() => song.bars.filter((b) => b.chord).map((b) => b.chord as string), [song.bars])
+  const backOutro = useMemo(() => song.bars.filter((b) => b.chord).map((b) => !!b.oneStrum), [song.bars])
   const backTempo = song.backing?.tempo ?? song.bpm
   const engineRef = useRef<BackingEngine | null>(null)
   if (isBacking && !engineRef.current) {
@@ -86,6 +87,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
       getTempo: () => backTempo,
       getMutes: () => ({ drums: false, bass: false, click: true }),  // nền groove; click tắt
       getMelody: () => song.melody ?? [],
+      getOutro: () => backOutro,
     })
   }
   useEffect(() => () => { engineRef.current?.dispose(); engineRef.current = null }, [])
