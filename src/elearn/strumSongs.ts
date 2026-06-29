@@ -64,6 +64,7 @@ export const STRUM_JINGLE: StrumSong = {
     { chord: 'F' }, { chord: 'F' }, { chord: 'C' }, { chord: 'G' },
     { chord: 'C' }, { chord: 'C' }, { chord: 'C' }, { chord: 'C' },
     { chord: 'F' }, { chord: 'C' }, { chord: 'G' }, { chord: 'C' },
+    { chord: 'C', oneStrum: true },   // ô cuối: quạt C nốt trắng + lặng trắng (nghỉ)
   ],
 }
 

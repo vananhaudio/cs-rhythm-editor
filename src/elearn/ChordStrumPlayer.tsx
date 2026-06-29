@@ -14,7 +14,7 @@ const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 
   : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Tiến bộ rõ — thêm 1 lượt nữa là thật vững 💪' }
   : { color: '#DC2626', bg: '#FEE2E2', label: 'Khởi đầu tốt — gảy thêm cho quen tay 👍' }
 
-export interface SongBar { chord?: string | null; pickup?: boolean; rest?: boolean }   // pickup = lấy đà; rest = ô nghỉ (dấu lặng)
+export interface SongBar { chord?: string | null; pickup?: boolean; rest?: boolean; oneStrum?: boolean }   // pickup=lấy đà; rest=nghỉ cả ô; oneStrum=quạt 1 cái (nốt trắng) rồi lặng nửa ô
 export interface StrumSong {
   title: string
   videoId?: string | null
@@ -227,6 +227,11 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
                         </div>
                       ) : bar.rest ? (
                         <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bravura', fontSize: 30, color: isCur ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E3)}</div>
+                      ) : bar.oneStrum ? (
+                        <div style={{ height: 52, display: 'flex', alignItems: 'center' }}>
+                          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}><BeatGroup strokes={['D']} lit={isCur && beatInBar < N / 2} /></div>
+                          <div style={{ flex: 1, textAlign: 'center', fontFamily: 'Bravura', fontSize: 28, color: (isCur && beatInBar >= N / 2) ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E4)}</div>
+                        </div>
                       ) : (
                         <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
                           {Array.from({ length: N }, (_, j) => (
