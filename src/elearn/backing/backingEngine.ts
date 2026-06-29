@@ -4,9 +4,13 @@
 import { type Style, bassFreq } from './backingStyles'
 
 export type Mutes = { drums: boolean; bass: boolean; click: boolean }
+export interface MelodyNote { t: number; dur: number; midi: number }   // t,dur theo PHÁCH; midi nốt
 export type EngineCallbacks = {
   getStyle: () => Style; getChords: () => string[]; getTempo: () => number; getMutes: () => Mutes
+  getMelody?: () => MelodyNote[]                                        // (tuỳ chọn) giai điệu chơi kèm
 }
+
+const midiToFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12)
 
 const LOOKAHEAD_MS = 25, SCHEDULE_AHEAD = 0.12, LEAD_IN = 0.15
 
@@ -19,7 +23,7 @@ export class BackingEngine {
   private stepsPerBar = 8; private barsTotal = 1
   private noise: AudioBuffer | null = null
   private satCurve: Float32Array | null = null
-  private master!: GainNode; private drumBus!: GainNode; private bassBus!: GainNode; private clickBus!: GainNode
+  private master!: GainNode; private drumBus!: GainNode; private bassBus!: GainNode; private clickBus!: GainNode; private melBus!: GainNode
 
   constructor(cb: EngineCallbacks) { this.cb = cb }
 
@@ -35,6 +39,7 @@ export class BackingEngine {
     this.drumBus = ctx.createGain(); this.drumBus.connect(this.master)
     this.bassBus = ctx.createGain(); this.bassBus.connect(this.master)
     this.clickBus = ctx.createGain(); this.clickBus.gain.value = 0.6; this.clickBus.connect(this.master)
+    this.melBus = ctx.createGain(); this.melBus.gain.value = 0.6; this.melBus.connect(this.master)
     const len = Math.floor(ctx.sampleRate * 1)
     this.noise = ctx.createBuffer(1, len, ctx.sampleRate)
     const d = this.noise.getChannelData(0)
@@ -110,7 +115,16 @@ export class BackingEngine {
         if (f) this.bassNote(t, f)
       }
       const perBeat = style.stepsPerBar / style.beatsPerBar
-      if (s % perBeat === 0) this.click(t, s === 0)
+      if (s % perBeat === 0) {
+        this.click(t, s === 0)
+        // Giai điệu (nếu có): chơi nốt rơi đúng phách này trong vòng
+        const mel = this.cb.getMelody?.()
+        if (mel && mel.length) {
+          const beatInSong = this.barIdx * style.beatsPerBar + s / perBeat
+          const beatSec = 60 / this.cb.getTempo()
+          for (const m of mel) if (m.t === beatInSong) this.melodyNote(t, midiToFreq(m.midi), m.dur * beatSec)
+        }
+      }
       this.nextStepTime += this.stepDur(style)
       if (++this.stepIdx >= style.stepsPerBar) { this.stepIdx = 0; this.barIdx = (this.barIdx + 1) % Math.max(1, chords.length) }
     }
@@ -172,6 +186,21 @@ export class BackingEngine {
     g.gain.exponentialRampToValueAtTime(0.0008, t + 0.03)
     o.connect(g).connect(this.clickBus); o.start(t); o.stop(t + 0.04)
   }
+  // Giai điệu — tiếng chuông/music-box (sine cơ bản + sine octave lấp lánh), gảy rồi ngân tắt dần.
+  private melodyNote(t: number, freq: number, durSec: number) {
+    const ctx = this.ctx!
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator()
+    const g = ctx.createGain(), g2 = ctx.createGain()
+    o1.type = 'sine'; o1.frequency.setValueAtTime(freq, t)
+    o2.type = 'sine'; o2.frequency.setValueAtTime(freq * 2, t); g2.gain.value = 0.28
+    const dur = Math.min(Math.max(durSec, 0.28), 1.3)
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.55, t + 0.006)
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur)
+    o1.connect(g); o2.connect(g2).connect(g); g.connect(this.melBus)
+    o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05)
+  }
+
   // Đếm vào — vào MASTER (luôn nghe được dù click trong loop bị mute)
   private countClick(t: number, accent: boolean) {
     const ctx = this.ctx!, o = ctx.createOscillator(), g = ctx.createGain()

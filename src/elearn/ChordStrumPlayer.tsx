@@ -3,7 +3,7 @@
 // Nguồn tiếng: audio up HOẶC YouTube ẩn. Mốc nhịp do thầy cung cấp (tempo đều).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
-import { BackingEngine } from './backing/backingEngine'
+import { BackingEngine, type MelodyNote } from './backing/backingEngine'
 import { getStyle } from './backing/backingStyles'
 import { resolvePattern, type Stroke } from './strumPatterns'
 
@@ -26,6 +26,7 @@ export interface StrumSong {
   patternId?: string             // kiểu quạt từ thư viện chùm (strumPatterns.ts) — ưu tiên hơn eighths
   bars: SongBar[]                // 1 phần tử / ô nhịp
   backing?: { styleId: string; tempo?: number }  // có → NỀN trống+bass synth (loop), bỏ qua audio/video
+  melody?: MelodyNote[]                            // (chế độ nền) giai điệu chơi kèm để học sinh theo dõi
 }
 
 // Vẽ MỘT CHÙM (1..4 nốt) trong một phách — đầu nốt slash dày, thân cao, nối chùm + ↓/↑.
@@ -83,6 +84,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
       getChords: () => backChords,
       getTempo: () => backTempo,
       getMutes: () => ({ drums: false, bass: false, click: true }),  // nền groove; click tắt
+      getMelody: () => song.melody ?? [],
     })
   }
   useEffect(() => () => { engineRef.current?.dispose(); engineRef.current = null }, [])
@@ -152,6 +154,13 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
     return out
   }, [song.bars, perRow])
 
+  // Tự cuộn khuông tới hàng đang chơi (bài dài nhiều ô)
+  const rowRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const curRow = barIdx >= 0 ? Math.floor(barIdx / perRow) : -1
+  useEffect(() => {
+    if (curRow >= 0) rowRefs.current[curRow]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [curRow])
+
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
   const curChord = barIdx >= 0 && barIdx < song.bars.length ? song.bars[barIdx].chord : null
 
@@ -188,7 +197,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
       </div>
 
       {/* Khuông nhịp — như sách */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '12px 14px', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '12px 14px', minHeight: 0, overflowY: 'auto', position: 'relative' }}>
         {counting && (
           <div style={{ position: 'absolute', top: 16, left: 0, right: 0, zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}>
             <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '.14em', color: SUB }}>ĐẾM VÀO — nhìn ô đầu, sẵn sàng</div>
@@ -197,7 +206,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
         )}
         <div style={{ background: '#fff', border: '1.5px solid #E1E4EA', borderRadius: 16, padding: '14px 8px', boxShadow: '0 2px 10px rgba(17,24,39,.04)', maxWidth: 760, width: '100%', margin: '0 auto' }}>
           {rows.map((row, ri) => (
-            <div key={ri} style={{ display: 'flex', alignItems: 'stretch', marginBottom: ri === rows.length - 1 ? 0 : 14 }}>
+            <div key={ri} ref={(el) => { rowRefs.current[ri] = el }} style={{ display: 'flex', alignItems: 'stretch', marginBottom: ri === rows.length - 1 ? 0 : 14 }}>
               <div style={{ width: 2, background: INK, borderRadius: 1, alignSelf: 'stretch' }} />
               {row.map(({ bar, idx }) => {
                 const isCur = playing && barIdx === idx
