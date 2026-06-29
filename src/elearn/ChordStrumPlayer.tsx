@@ -316,35 +316,33 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
         </div>
       </div>
 
-      {/* Điều khiển */}
-      <div style={{ padding: '12px 18px calc(env(safe-area-inset-bottom,0px) + 16px)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {recState !== 'recording' && (
-          <div style={{ display: 'flex', gap: 10 }}>
-            {!isBacking && <button onClick={restart} style={{ flex: '0 0 auto', background: '#fff', border: `1.5px solid ${INDIGO}`, color: INDIGO, borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>⏮</button>}
-            <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-              {ended ? '✓ Xong — gảy lại' : playing ? (isBacking ? '⏸ Dừng nền' : '⏸ Tạm dừng') : (isBacking ? '▶ Chạy nền — gảy theo' : '▶ Phát — gảy theo')}
-            </button>
-            {isBacking && playing && <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>}
-          </div>
-        )}
-
-        {/* GHI ÂM — chỉ ở chế độ nền synth */}
-        {isBacking && recState === 'idle' && !playing && (
-          <div style={{ border: '1.5px solid #DC2626', borderRadius: 12, overflow: 'hidden' }}>
-            <button onClick={startRecord} style={{ width: '100%', background: '#fff', border: 'none', color: '#DC2626', padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm — gảy theo nền để nghe lại thành quả</button>
-            <div style={{ textAlign: 'center', fontSize: 12.5, color: '#fff', fontWeight: 800, background: '#DC2626', padding: '6px 10px' }}>🎧 Hãy đeo tai nghe để bản thu sạch, rõ nhất</div>
-          </div>
-        )}
-        {recState === 'recording' && (
+      {/* Điều khiển — gọn: 1 hàng */}
+      <div style={{ padding: '10px 18px calc(env(safe-area-inset-bottom,0px) + 14px)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {recState === 'recording' ? (
           <button onClick={stopRecord} style={{ background: '#DC2626', border: 'none', color: '#fff', borderRadius: 12, padding: 14, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>⏹ Dừng ghi · {curChord ? `đang gảy ${curChord}` : 'đang ghi…'}</button>
-        )}
-        {recState === 'done' && recUrl && (
-          <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: 12, padding: '10px 12px' }}>
-            <div style={{ fontSize: 12.5, fontWeight: 800, color: '#16A34A', marginBottom: 6 }}>🎧 Thành quả của bạn (tiếng đàn + nền)</div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <audio src={recUrl} controls style={{ flex: 1, height: 38 }} />
-              <button onClick={discardRecord} style={{ flex: '0 0 auto', background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi lại</button>
+        ) : recState === 'done' && recUrl ? (
+          <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: 12, padding: '8px 10px', display: 'flex', gap: 8, alignItems: 'center' }}>
+            <audio src={recUrl} controls style={{ flex: 1, height: 36 }} />
+            <button onClick={discardRecord} style={{ flex: '0 0 auto', background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi lại</button>
+          </div>
+        ) : isBacking ? (
+          <>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 15.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {ended ? '✓ Gảy lại' : playing ? '⏸ Dừng nền' : '▶ Chạy nền'}
+              </button>
+              {playing
+                ? <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>
+                : <button onClick={startRecord} style={{ flex: 1, background: '#DC2626', border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 15.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm</button>}
             </div>
+            {!playing && <div style={{ textAlign: 'center', fontSize: 11.5, color: '#DC2626', fontWeight: 700 }}>🎧 Đeo tai nghe để bản thu sạch, rõ</div>}
+          </>
+        ) : (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={restart} style={{ flex: '0 0 auto', background: '#fff', border: `1.5px solid ${INDIGO}`, color: INDIGO, borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>⏮</button>
+            <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {ended ? '✓ Xong — gảy lại' : playing ? '⏸ Tạm dừng' : '▶ Phát — gảy theo'}
+            </button>
           </div>
         )}
       </div>
