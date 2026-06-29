@@ -113,12 +113,25 @@ const SAMPLE_FLOW_BARSPLIT = {
       content: '<p style="font-size:16px;line-height:1.7;margin:0;color:#3A352F;"><b>Vạch nhịp</b> ( | ) là đường kẻ dọc chia bài hát thành từng <b>ô nhịp</b>. Nhịp 4/4 nghĩa là mỗi ô gồm <b>4 phách</b> — không tính theo số chữ.</p>' },
     { id: 'bs3', order: 3, logic: 'NHAN', type: 'bar_split', title: 'Nhìn sheet → kẻ vạch vào lời',
       interactive: {
-        sheetUrl: '/lessons/diemxua_s1.webp',
-        bars: [
-          { lead: true, words: ['Mưa', 'vẫn', 'mưa', 'bay', 'trên', 'tầng', 'tháp'] },
-          { hold: true, words: ['cổ'] },
+        lines: [
+          { bars: [
+            { lead: true, hold: false, words: ['Mưa', 'vẫn', 'mưa', 'bay', 'trên', 'tầng', 'tháp'], notes: [{ rest: true, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 8, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }] },
+            { lead: false, hold: true, words: ['cổ'], notes: [{ pos: 0, dur: 'w' }] },
+          ] },
+          { bars: [
+            { lead: true, hold: false, words: ['Dài', 'tay', 'em', 'mấy', 'thuở', 'mắt', 'xanh'], notes: [{ rest: true, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 9, dur: 'e' }, { pos: 9, dur: 'e' }, { pos: 10, dur: 'e' }, { pos: 7, dur: 'e' }] },
+            { lead: false, hold: true, words: ['xao'], notes: [{ pos: 6, dur: 'w' }] },
+          ] },
+          { bars: [
+            { lead: true, hold: false, words: ['Nghe', 'lá', 'thu', 'mưa', 'reo', 'mòn', 'gót'], notes: [{ rest: true, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 8, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 5, dur: 'e' }, { pos: 3, dur: 'e' }, { pos: 5, dur: 'e' }] },
+            { lead: false, hold: true, words: ['nhỏ'], notes: [{ pos: 0, dur: 'w' }] },
+          ] },
+          { bars: [
+            { lead: true, hold: false, words: ['Đường', 'dài', 'hun', 'hút', 'cho', 'mắt', 'thêm'], notes: [{ rest: true, dur: 'e' }, { pos: 0, dur: 'e' }, { pos: 2, dur: 'e' }, { pos: 4, dur: 'e' }, { pos: 6, dur: 'e' }, { pos: 6, dur: 'e' }, { pos: 7, dur: 'e' }, { pos: 6, dur: 'e' }] },
+            { lead: false, hold: true, words: ['sâu'], notes: [{ pos: 5, dur: 'w' }] },
+          ] },
         ],
-        caption: 'Cả 7 chữ "Mưa vẫn mưa bay trên tầng tháp" nằm gọn trong <b>một ô</b>; còn chữ "cổ" ngân dài trọn <b>ô kế</b>. Ô nhịp không tính theo số chữ!',
+        caption: 'Mỗi <b>ô nhịp</b> đủ 4 phách. Cả câu hát dồn vào <b>một ô</b>, rồi chữ cuối ngân trọn <b>ô kế</b> — ô nhịp không tính theo số chữ. Bấm <b>Câu sau ›</b> để xem tiếp.',
       } },
     { id: 'bs4', order: 4, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
       interactive: { items: ['Mình hiểu vạch nhịp chia lời thành từng ô', 'Mình thấy một ô có thể chứa nhiều chữ, hoặc chỉ một chữ ngân dài'] } },
