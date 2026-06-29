@@ -100,7 +100,10 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
   const startRecord = async () => {
     if (!isBacking || !engineRef.current) return
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // TẮT xử lý giọng nói (EC/NS/AGC) — chúng làm bệt/nhoè tiếng đàn. Thu nhạc cần tín hiệu thô.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } as MediaTrackConstraints,
+      })
       micStreamRef.current = stream
       const mr = engineRef.current.startMixRecording(stream)
       recChunks.current = []
@@ -316,7 +319,10 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
 
         {/* GHI ÂM — chỉ ở chế độ nền synth */}
         {isBacking && recState === 'idle' && !playing && (
-          <button onClick={startRecord} style={{ background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 12, padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm — gảy theo nền để nghe lại thành quả</button>
+          <div>
+            <button onClick={startRecord} style={{ width: '100%', background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 12, padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm — gảy theo nền để nghe lại thành quả</button>
+            <div style={{ textAlign: 'center', fontSize: 11.5, color: SUB, marginTop: 5 }}>🎧 Đeo tai nghe để bản thu sạch nhất (tránh tiếng loa lọt vào mic)</div>
+          </div>
         )}
         {recState === 'recording' && (
           <button onClick={stopRecord} style={{ background: '#DC2626', border: 'none', color: '#fff', borderRadius: 12, padding: 14, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>⏹ Dừng ghi · {curChord ? `đang gảy ${curChord}` : 'đang ghi…'}</button>

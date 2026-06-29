@@ -74,18 +74,22 @@ export class BackingEngine {
   // ── THU TRỘN: nền (master) + tiếng micro → 1 MediaStream để ghi (trộn số, sạch dù loa/tai nghe) ──
   private recDest: MediaStreamAudioDestinationNode | null = null
   private micSrc: MediaStreamAudioSourceNode | null = null
+  private micGain: GainNode | null = null
   startMixRecording(micStream: MediaStream): MediaRecorder {
     this.getCtx(); this.ensureGraph()
     this.recDest = this.ctx!.createMediaStreamDestination()
-    this.master.connect(this.recDest)                         // nền → bản thu
+    const back = this.ctx!.createGain(); back.gain.value = 0.7   // hạ nền nhẹ để tiếng đàn nổi
+    this.master.connect(back); back.connect(this.recDest)        // nền → bản thu
     this.micSrc = this.ctx!.createMediaStreamSource(micStream)
-    this.micSrc.connect(this.recDest)                         // tiếng đàn (micro) → bản thu
-    return new MediaRecorder(this.recDest.stream)
+    this.micGain = this.ctx!.createGain(); this.micGain.gain.value = 1.6   // tăng tiếng đàn (AGC tắt → mic nhỏ)
+    this.micSrc.connect(this.micGain).connect(this.recDest)      // tiếng đàn (micro) → bản thu
+    return new MediaRecorder(this.recDest.stream, { audioBitsPerSecond: 256000 })
   }
   stopMixRecording() {
     try { if (this.recDest) this.master.disconnect(this.recDest) } catch { /* */ }
     try { this.micSrc?.disconnect() } catch { /* */ }
-    this.recDest = null; this.micSrc = null
+    try { this.micGain?.disconnect() } catch { /* */ }
+    this.recDest = null; this.micSrc = null; this.micGain = null
   }
 
   setMutes() { this.applyMutes() }
