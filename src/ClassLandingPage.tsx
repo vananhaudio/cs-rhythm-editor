@@ -101,7 +101,8 @@ const ZALO_LINK = 'https://zalo.me/vananhguitarist'
 type Msg = { who: 'ai' | 'me'; html: string }
 
 export default function ClassLandingPage() {
-  const [form, setForm] = useState({ name: '', phone: '', zalo: '', email: '', className: CLASSES[0].name, note: '' })
+  const [form, setForm] = useState({ name: '', phone: '', zalo: '', email: '', className: CLASSES[0].name, note: '', isHanhtrinh: false })
+  const [showPending, setShowPending] = useState(false)   // học sinh HT gửi yêu cầu miễn phí → chờ duyệt
   const [formErr, setFormErr] = useState(false)
   const [showPay, setShowPay] = useState(false)
   const [sent, setSent] = useState(false)
@@ -280,15 +281,33 @@ export default function ClassLandingPage() {
   const chatSend = () => chatSendText(chatInput)
 
   const submitReg = async () => {
+    const cls = CLASSES.find(c => c.name === form.className)
+    // HỌC SINH LỚP HÀNH TRÌNH (đã đăng nhập + tick miễn phí): gửi YÊU CẦU chờ thầy duyệt, KHÔNG qua thanh toán.
+    if (me && form.isHanhtrinh) {
+      let studentId: string | null = null, phone = form.phone.trim()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: s } = await supabase.from('edu_students').select('id,phone').eq('user_id', user.id).maybeSingle()
+        studentId = (s as any)?.id ?? null; phone = phone || (s as any)?.phone || '—'
+      }
+      const { error } = await supabase.from('leads').insert({
+        name: me.name, phone, zalo: form.zalo.trim() || null, email: form.email.trim() || null,
+        class_name: form.className, path: cls?.path ?? null, intent: 'dang_ky',
+        note: form.note.trim() || null, source: 'app', status: 'Chờ duyệt',
+        is_hanhtrinh: true, student_id: studentId,
+      })
+      if (error) { setFormErr(true); console.error('Gửi yêu cầu lỗi:', error); return }
+      setFormErr(false); setShowPending(true); setTimeout(() => goto('thanhtoan'), 60)
+      return
+    }
+    // Đăng ký thường: cần tên + SĐT → leads → thanh toán
     if (!form.name.trim() || !form.phone.trim() || !form.className) { setFormErr(true); return }
     setFormErr(false)
-    const cls = CLASSES.find(c => c.name === form.className)
     const { error } = await supabase.from('leads').insert({
       name: form.name.trim(), phone: form.phone.trim(), zalo: form.zalo.trim() || null,
       email: form.email.trim() || null, class_name: form.className, path: cls?.path ?? null,
       intent: 'dang_ky', note: form.note.trim() || null, source: 'landing', status: 'Mới đăng ký',
     })
-    // Ghi lead lỗi (vd bảng chưa đủ cột) KHÔNG chặn khách — xác nhận thật là gửi bill Zalo.
     if (error) console.error('Ghi leads lỗi (vẫn cho sang thanh toán):', error)
     setShowPay(true)
     setTimeout(() => goto('thanhtoan'), 60)
@@ -500,15 +519,46 @@ export default function ClassLandingPage() {
                 </select>
               </div>
               <div className="full"><label>Ghi chú thêm (không bắt buộc)</label><textarea value={form.note} onChange={e => set('note', e.target.value)} rows={2} placeholder="Khung giờ rảnh, câu muốn hỏi thầy..." /></div>
-              {formErr && <div className="full err">Bạn vui lòng nhập Họ tên, Số điện thoại và chọn lớp nhé.</div>}
-              <div className="full"><button className="btn btn-primary" style={{ width: '100%' }} onClick={submitReg}>Xác nhận đăng ký lớp →</button></div>
+              {/* Học phí + tick miễn phí cho học sinh lớp Hành trình (chỉ khi đã đăng nhập) */}
+              <div className="full" style={{ background: '#F4F4F5', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ fontSize: 15 }}>Học phí khoá này: <b style={{ color: '#EA580C' }}>{(CLASSES.find(c => c.name === form.className)?.price === 'Combo') ? 'Combo trọn gói' : '990.000đ'}</b></div>
+                {me && (
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, cursor: 'pointer', fontSize: 14.5 }}>
+                    <input type="checkbox" checked={form.isHanhtrinh} onChange={e => setForm(f => ({ ...f, isHanhtrinh: e.target.checked }))} style={{ marginTop: 3, width: 18, height: 18 }} />
+                    <span>Tôi là <b>học sinh lớp Hành trình</b> — được <b>miễn phí</b> khoá này (gửi yêu cầu để thầy duyệt mở khoá).</span>
+                  </label>
+                )}
+              </div>
+              {formErr && <div className="full err">{me && form.isHanhtrinh ? 'Gửi yêu cầu thất bại, thử lại giúp thầy nhé.' : 'Bạn vui lòng nhập Họ tên, Số điện thoại và chọn lớp nhé.'}</div>}
+              <div className="full"><button className="btn btn-primary" style={{ width: '100%' }} onClick={submitReg}>{me && form.isHanhtrinh ? 'Gửi yêu cầu miễn phí (chờ duyệt) →' : 'Xác nhận đăng ký lớp →'}</button></div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* CHỜ DUYỆT — học sinh lớp Hành trình gửi yêu cầu miễn phí */}
+      {showPending && (
+        <section id="thanhtoan">
+          <div className="wrap">
+            <div className="eyebrow">Đã gửi yêu cầu</div>
+            <h2>Yêu cầu mở khoá đã gửi tới thầy 🎸</h2>
+            <p className="lead">Bạn đã đăng ký <b>{form.className}</b> theo diện <b>lớp Hành trình (miễn phí)</b>. Thầy sẽ duyệt và mở khoá cho bạn — không cần thanh toán. Khoá sẽ hiện trong app ngay sau khi thầy duyệt.</p>
+            <div className="panel">
+              <div className="ok-box">
+                <h4>✓ Cảm ơn bạn!</h4>
+                <p>Trong lúc chờ, bạn cứ học các khoá đã mở. Có thắc mắc thì nhắn Zalo thầy nhé.</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                  <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
+                  <button className="ok-guide" onClick={() => { window.location.href = '/me' }}>🎸 Về Hành trình của tôi →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* THANH TOÁN (ẩn đến khi xác nhận) */}
-      {showPay && (
+      {!showPending && showPay && (
         <section id="thanhtoan">
           <div className="wrap">
             <div className="eyebrow">Bước hoàn tất</div>

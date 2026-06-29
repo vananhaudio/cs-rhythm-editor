@@ -8,8 +8,10 @@ const C = {
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-const STATUSES = ['Mới đăng ký', 'Cần gọi', 'Đã tư vấn', 'Học thử', 'Dùng thử app', 'Đã đóng phí', 'Chưa phù hợp']
+const STATUSES = ['Chờ duyệt', 'Đã duyệt', 'Mới đăng ký', 'Cần gọi', 'Đã tư vấn', 'Học thử', 'Dùng thử app', 'Đã đóng phí', 'Chưa phù hợp']
 const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
+  'Chờ duyệt':    { bg: '#FEF9C3', fg: '#854D0E' },
+  'Đã duyệt':     { bg: '#DCFCE7', fg: '#166534' },
   'Mới đăng ký':  { bg: '#EEF2FF', fg: '#4338CA' },
   'Cần gọi':      { bg: '#FEF3C7', fg: '#92400E' },
   'Đã tư vấn':    { bg: '#E0F2FE', fg: '#075985' },
@@ -26,7 +28,9 @@ interface Lead {
   id: number; name: string; phone: string; zalo: string | null; email: string | null
   class_name: string | null; path: string | null; intent: string | null; note: string | null
   source: string | null; status: string; created_at: string
+  is_hanhtrinh?: boolean | null; student_id?: string | null
 }
+interface CourseOpt { id: string; name: string }
 
 export default function LeadsManager() {
   const [leads, setLeads] = useState<Lead[]>([])
@@ -34,6 +38,9 @@ export default function LeadsManager() {
   const [err, setErr] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('all')
   const [q, setQ] = useState('')
+  const [courses, setCourses] = useState<CourseOpt[]>([])
+  const [pick, setPick] = useState<Record<number, string>>({})   // leadId → course_id đã chọn để mở
+  const [opening, setOpening] = useState<number | null>(null)
 
   const load = async () => {
     setLoading(true); setErr(null)
@@ -43,6 +50,32 @@ export default function LeadsManager() {
     setLoading(false)
   }
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    supabase.from('edu_courses').select('id,name').order('sort_order')
+      .then(({ data }) => setCourses((data ?? []) as CourseOpt[]))
+  }, [])
+
+  // Gợi ý khoá khớp nhất với tên lớp đăng ký
+  const guessCourse = (l: Lead): string => {
+    const cn = (l.class_name ?? '').toLowerCase()
+    const hit = courses.find(c => cn && (cn.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(cn)))
+    return hit?.id ?? courses[0]?.id ?? ''
+  }
+  // DUYỆT → mở khoá: ghi danh + cấp quyền cho học sinh, đánh dấu Đã duyệt
+  const approveOpen = async (l: Lead) => {
+    if (!l.student_id) { alert('Yêu cầu này chưa gắn tài khoản học sinh — không mở khoá tự động được. Hãy mở thủ công ở Hồ sơ học viên.'); return }
+    const courseId = pick[l.id] ?? guessCourse(l)
+    if (!courseId) { alert('Chưa chọn được khoá để mở.'); return }
+    setOpening(l.id)
+    const uid = (await supabase.auth.getUser()).data.user?.id
+    await supabase.from('edu_enrollments').upsert({ student_id: l.student_id, course_id: courseId, enrolled_by: uid, is_active: true }, { onConflict: 'student_id,course_id' })
+    const { error } = await supabase.from('edu_course_access').upsert({ student_id: l.student_id, course_id: courseId, active: true, granted_by: uid, note: 'Duyệt đăng ký (Hành trình)' }, { onConflict: 'student_id,course_id' })
+    setOpening(null)
+    if (error) { alert('Mở khoá lỗi: ' + error.message); return }
+    const cname = courses.find(c => c.id === courseId)?.name ?? 'khoá'
+    setStatus(l.id, 'Đã duyệt')
+    alert(`Đã mở "${cname}" cho ${l.name}.`)
+  }
 
   const counts = useMemo(() => {
     const m: Record<string, number> = {}
@@ -129,6 +162,25 @@ export default function LeadsManager() {
                   <td style={td}>
                     {l.class_name && <div>{l.class_name}</div>}
                     <span style={{ fontSize: 11.5, color: C.accent, background: C.accentLight, borderRadius: 5, padding: '1px 7px' }}>{INTENT_LABEL[l.intent ?? ''] ?? l.intent ?? '—'}</span>
+                    {l.is_hanhtrinh && (
+                      <div style={{ marginTop: 8, background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '8px 9px' }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 800, color: '#166534', marginBottom: 6 }}>🎁 Lớp Hành trình — xin mở miễn phí</div>
+                        {l.student_id ? (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <select value={pick[l.id] ?? guessCourse(l)} onChange={e => setPick(p => ({ ...p, [l.id]: e.target.value }))}
+                              style={{ padding: '5px 7px', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12.5, fontFamily: 'inherit', maxWidth: 180 }}>
+                              {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                            <button onClick={() => approveOpen(l)} disabled={opening === l.id}
+                              style={{ background: '#15803D', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              {opening === l.id ? '...' : '✅ Duyệt & mở khoá'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11.5, color: '#92400E' }}>Chưa gắn tài khoản — mở thủ công ở Hồ sơ học viên.</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td style={{ ...td, maxWidth: 220, color: C.text2 }}>{l.note || <span style={{ color: C.text3 }}>—</span>}</td>
                   <td style={td}>
