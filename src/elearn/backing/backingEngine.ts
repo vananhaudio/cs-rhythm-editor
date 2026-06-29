@@ -71,6 +71,23 @@ export class BackingEngine {
   dispose() { this.stop(); try { this.ctx?.close() } catch { /* */ } this.ctx = null; this.master = null as unknown as GainNode }
   isPlaying() { return this.playing }
 
+  // ── THU TRỘN: nền (master) + tiếng micro → 1 MediaStream để ghi (trộn số, sạch dù loa/tai nghe) ──
+  private recDest: MediaStreamAudioDestinationNode | null = null
+  private micSrc: MediaStreamAudioSourceNode | null = null
+  startMixRecording(micStream: MediaStream): MediaRecorder {
+    this.getCtx(); this.ensureGraph()
+    this.recDest = this.ctx!.createMediaStreamDestination()
+    this.master.connect(this.recDest)                         // nền → bản thu
+    this.micSrc = this.ctx!.createMediaStreamSource(micStream)
+    this.micSrc.connect(this.recDest)                         // tiếng đàn (micro) → bản thu
+    return new MediaRecorder(this.recDest.stream)
+  }
+  stopMixRecording() {
+    try { if (this.recDest) this.master.disconnect(this.recDest) } catch { /* */ }
+    try { this.micSrc?.disconnect() } catch { /* */ }
+    this.recDest = null; this.micSrc = null
+  }
+
   setMutes() { this.applyMutes() }
   private applyMutes() {
     const m = this.cb.getMutes()

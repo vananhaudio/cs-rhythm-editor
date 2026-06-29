@@ -89,6 +89,43 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
   }
   useEffect(() => () => { engineRef.current?.dispose(); engineRef.current = null }, [])
 
+  // ── GHI ÂM thành quả: thu tiếng đàn TRỘN nền (lưu tạm tại máy, KHÔNG upload) ──
+  const [recState, setRecState] = useState<'idle' | 'recording' | 'done'>('idle')
+  const [recUrl, setRecUrl] = useState<string | null>(null)
+  const recRef = useRef<MediaRecorder | null>(null)
+  const micStreamRef = useRef<MediaStream | null>(null)
+  const recChunks = useRef<Blob[]>([])
+  useEffect(() => () => { if (recUrl) URL.revokeObjectURL(recUrl); micStreamRef.current?.getTracks().forEach((t) => t.stop()) }, [recUrl])
+
+  const startRecord = async () => {
+    if (!isBacking || !engineRef.current) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      micStreamRef.current = stream
+      const mr = engineRef.current.startMixRecording(stream)
+      recChunks.current = []
+      mr.ondataavailable = (ev) => { if (ev.data.size) recChunks.current.push(ev.data) }
+      mr.onstop = () => {
+        const blob = new Blob(recChunks.current, { type: mr.mimeType || 'audio/webm' })
+        setRecUrl((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(blob) })
+        setRecState('done')
+      }
+      recRef.current = mr
+      mr.start()
+      setEnded(false); await engineRef.current.start(); setPlaying(true)
+      setRecState('recording')
+    } catch {
+      alert('Không truy cập được micro. Hãy cho phép quyền micro cho ứng dụng/trình duyệt rồi thử lại.')
+      setRecState('idle')
+    }
+  }
+  const stopRecord = () => {
+    try { recRef.current?.stop() } catch { /* */ }
+    engineRef.current?.stopMixRecording(); engineRef.current?.stop(); setPlaying(false)
+    micStreamRef.current?.getTracks().forEach((t) => t.stop()); micStreamRef.current = null
+  }
+  const discardRecord = () => { if (recUrl) URL.revokeObjectURL(recUrl); setRecUrl(null); setRecState('idle') }
+
   const clock = () => isBacking
     ? (engineRef.current?.getElapsed() ?? -1)
     : isYT
@@ -266,12 +303,33 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
       </div>
 
       {/* Điều khiển */}
-      <div style={{ padding: '12px 18px calc(env(safe-area-inset-bottom,0px) + 16px)', flexShrink: 0, display: 'flex', gap: 10 }}>
-        {!isBacking && <button onClick={restart} style={{ flex: '0 0 auto', background: '#fff', border: `1.5px solid ${INDIGO}`, color: INDIGO, borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>⏮</button>}
-        <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-          {ended ? '✓ Xong — gảy lại' : playing ? (isBacking ? '⏸ Dừng nền' : '⏸ Tạm dừng') : (isBacking ? '▶ Chạy nền — gảy theo' : '▶ Phát — gảy theo')}
-        </button>
-        {isBacking && playing && <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>}
+      <div style={{ padding: '12px 18px calc(env(safe-area-inset-bottom,0px) + 16px)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {recState !== 'recording' && (
+          <div style={{ display: 'flex', gap: 10 }}>
+            {!isBacking && <button onClick={restart} style={{ flex: '0 0 auto', background: '#fff', border: `1.5px solid ${INDIGO}`, color: INDIGO, borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>⏮</button>}
+            <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {ended ? '✓ Xong — gảy lại' : playing ? (isBacking ? '⏸ Dừng nền' : '⏸ Tạm dừng') : (isBacking ? '▶ Chạy nền — gảy theo' : '▶ Phát — gảy theo')}
+            </button>
+            {isBacking && playing && <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>}
+          </div>
+        )}
+
+        {/* GHI ÂM — chỉ ở chế độ nền synth */}
+        {isBacking && recState === 'idle' && !playing && (
+          <button onClick={startRecord} style={{ background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 12, padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm — gảy theo nền để nghe lại thành quả</button>
+        )}
+        {recState === 'recording' && (
+          <button onClick={stopRecord} style={{ background: '#DC2626', border: 'none', color: '#fff', borderRadius: 12, padding: 14, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>⏹ Dừng ghi · {curChord ? `đang gảy ${curChord}` : 'đang ghi…'}</button>
+        )}
+        {recState === 'done' && recUrl && (
+          <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: 12, padding: '10px 12px' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: '#16A34A', marginBottom: 6 }}>🎧 Thành quả của bạn (tiếng đàn + nền)</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <audio src={recUrl} controls style={{ flex: 1, height: 38 }} />
+              <button onClick={discardRecord} style={{ flex: '0 0 auto', background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi lại</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Màn XONG LƯỢT — xanh hóa (đỏ/vàng/xanh) */}

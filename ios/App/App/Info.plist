@@ -46,7 +46,7 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>TVA Guitar dùng microphone để nhận diện cao độ trong công cụ Lên dây đàn (Guitar Tuner).</string>
+	<string>TVA Guitar dùng microphone để nhận diện cao độ khi lên dây đàn, và để ghi lại tiếng đàn của bạn khi luyện tập (bản ghi chỉ lưu tạm trên thiết bị, không gửi đi).</string>
 	<key>NSCameraUsageDescription</key>
 	<string>TVA Guitar có thể dùng camera để quay video luyện tập và nộp bài.</string>
 </dict>
