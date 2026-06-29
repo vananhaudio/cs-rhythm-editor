@@ -24,6 +24,9 @@ export interface NotePracticeCfg {
   speeds?: { label: string; bpm: number }[]    // các tốc độ chọn
   showStaff?: boolean                           // hiện khuông nhạc (mặc định có nếu nốt có staff)
 }
+// "Chia ô nhịp": đối chiếu sheet (ảnh) ↔ lời, bút kẻ vạch chia lời thành từng ô nhịp
+export interface BarCell { words: string[]; lead?: boolean; hold?: boolean }  // lead=ô mở đầu bằng dấu lặng; hold=1 chữ ngân cả ô
+export interface BarSplitCfg { sheetUrl?: string; bars?: BarCell[]; caption?: string }
 
 interface CB { onPass: () => void; onWrong: () => void }
 
@@ -485,6 +488,83 @@ export function ChordView({ cfg }: { cfg: ChordCfg }) {
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
         🔊 Nghe hợp âm {name}
       </button>
+    </div>
+  )
+}
+
+// ── bar_split: đối chiếu SHEET (ảnh) ↔ LỜI, bút kẻ vạch chia ô nhịp ─────────────
+// Mục tiêu dạy: nhìn sheet để biết "từ đâu đến đâu là 1 ô nhịp" (ô nhịp ≠ số chữ).
+const BS_INK = '#2A2622', BS_PEN = '#C2622E', BS_MUTE = '#9A8F7E'
+export function BarSplit({ cfg }: { cfg: BarSplitCfg }) {
+  const bars = cfg.bars ?? []
+  const N = bars.length
+  const lineRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const penRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    timers.current.forEach(clearTimeout); timers.current = []
+    for (let i = 0; i <= N; i++) {
+      const l = lineRefs.current[i]; if (l) l.style.height = '0'
+      const p = penRefs.current[i]; if (p) { p.style.opacity = '0'; p.style.top = '-20px' }
+    }
+    for (let i = 0; i <= N; i++) {
+      timers.current.push(setTimeout(() => {
+        const l = lineRefs.current[i], p = penRefs.current[i]
+        if (p) { p.style.opacity = '1'; p.style.top = '30px' }
+        if (l) l.style.height = '46px'
+        if (p) timers.current.push(setTimeout(() => { p.style.opacity = '0' }, 650))
+      }, 350 + i * 850))
+    }
+    return () => { timers.current.forEach(clearTimeout); timers.current = [] }
+  }, [tick, N])
+
+  const Bar = (i: number) => (
+    <span key={'b' + i} style={{ position: 'relative', display: 'inline-flex', width: 3, minHeight: 46, alignItems: 'flex-start', justifyContent: 'center', margin: '0 11px' }}>
+      <span ref={el => { lineRefs.current[i] = el }} style={{ display: 'block', width: 3, height: 0, background: BS_INK, borderRadius: 2, transition: 'height .5s ease-out' }} />
+      <span ref={el => { penRefs.current[i] = el }} style={{ position: 'absolute', left: 4, top: -20, opacity: 0, transition: 'top .5s ease-out, opacity .25s', lineHeight: 0 }}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={BS_PEN} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
+      </span>
+    </span>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {cfg.sheetUrl && (
+        <div>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: BS_MUTE, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>Sheet nhạc — có vạch nhịp</div>
+          <div style={{ background: '#fff', border: '1px solid #E6D8C2', borderRadius: 10, padding: '8px 10px' }}>
+            <img src={cfg.sheetUrl} alt="sheet nhạc" style={{ width: '100%', maxHeight: '26vh', objectFit: 'contain', display: 'block' }} />
+          </div>
+        </div>
+      )}
+      <div>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: BS_MUTE, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>Lời bài hát — kẻ vạch chia ô</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#FBF6ED', border: '1px solid #E6D8C2', borderRadius: 10, padding: '18px 12px', gap: 2 }}>
+          {bars.map((bar, i) => [
+            Bar(i),
+            <span key={'o' + i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '0 2px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {bar.lead && <span style={{ fontSize: 12, fontStyle: 'italic', color: BS_MUTE, marginRight: 5 }}>(lặng)</span>}
+                {bar.words.map((w, j) => <span key={j} style={{ fontSize: 19, padding: '2px 4px', color: BS_INK, whiteSpace: 'nowrap' }}>{w}</span>)}
+                {bar.hold && <span style={{ color: BS_MUTE, fontSize: 16, letterSpacing: 1, marginLeft: 2 }}>~~~</span>}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: BS_PEN }}>{`ô ${i + 1}`}{bar.hold ? ' · ngân' : ''}</span>
+            </span>,
+          ])}
+          {Bar(N)}
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button onClick={() => setTick(t => t + 1)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', border: 'none', borderRadius: 11, background: BS_PEN, color: '#fff', fontFamily: 'inherit', fontSize: 14.5, fontWeight: 700, cursor: 'pointer' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20l4-1L18 8l-3-3L5 16l-1 4z" /><path d="M14 6l3 3" /></svg>
+          Kẻ lại vạch
+        </button>
+        <span style={{ fontSize: 13, color: BS_MUTE }}>nhìn vạch trên sheet → kẻ vạch tương ứng vào lời</span>
+      </div>
+      {cfg.caption && <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
     </div>
   )
 }

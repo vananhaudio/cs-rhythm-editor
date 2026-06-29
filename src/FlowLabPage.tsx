@@ -100,7 +100,35 @@ const SAMPLE_FLOW_HOPAM = {
   ],
 }
 
-const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM }
+// Đệm hát — bài "Chia ô nhịp trên lời bài hát" (Diễm Xưa, đối chiếu sheet ↔ lời)
+const SAMPLE_FLOW_BARSPLIT = {
+  id: 'sample-barsplit',
+  title: 'Chia ô nhịp trên lời bài hát',
+  reward_xp: 10,
+  slides: [
+    { id: 'bs1', order: 1, logic: 'DAN', type: 'callout', title: 'Chia ô nhịp trên lời',
+      interactive: { variant: 'teacher' },
+      content: 'Trước khi đệm hát chắc nhịp, ta cần chia lời thành những <b>ô nhịp</b> đều nhau. Cùng nhìn sheet và kẻ vạch nhé.' },
+    { id: 'bs2', order: 2, logic: 'NHAN', type: 'text', title: 'Vạch nhịp là gì?',
+      content: '<p style="font-size:16px;line-height:1.7;margin:0;color:#3A352F;"><b>Vạch nhịp</b> ( | ) là đường kẻ dọc chia bài hát thành từng <b>ô nhịp</b>. Nhịp 4/4 nghĩa là mỗi ô gồm <b>4 phách</b> — không tính theo số chữ.</p>' },
+    { id: 'bs3', order: 3, logic: 'NHAN', type: 'bar_split', title: 'Nhìn sheet → kẻ vạch vào lời',
+      interactive: {
+        sheetUrl: '/lessons/diemxua_s1.webp',
+        bars: [
+          { lead: true, words: ['Mưa', 'vẫn', 'mưa', 'bay', 'trên', 'tầng', 'tháp'] },
+          { hold: true, words: ['cổ'] },
+        ],
+        caption: 'Cả 7 chữ "Mưa vẫn mưa bay trên tầng tháp" nằm gọn trong <b>một ô</b>; còn chữ "cổ" ngân dài trọn <b>ô kế</b>. Ô nhịp không tính theo số chữ!',
+      } },
+    { id: 'bs4', order: 4, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+      interactive: { items: ['Mình hiểu vạch nhịp chia lời thành từng ô', 'Mình thấy một ô có thể chứa nhiều chữ, hoặc chỉ một chữ ngân dài'] } },
+    { id: 'bs5', order: 5, logic: 'DAN', type: 'callout', title: 'Lời thầy',
+      interactive: { variant: 'teacher' },
+      content: 'Giỏi lắm! Khi đã chia được ô nhịp, bài kế ta sẽ tìm <b>phách mạnh</b> trong mỗi ô — chỗ đặt cú bass khi đệm.' },
+  ],
+}
+
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT }
 
 export default function FlowLabPage() {
   const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView } from './elearn/guitarRenderers'
-import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg } from './elearn/guitarRenderers'
+import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView, BarSplit } from './elearn/guitarRenderers'
+import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg, BarSplitCfg } from './elearn/guitarRenderers'
 import { NarratedSlideshow } from './elearn/NarratedSlideshow'
 import type { NarratedSlideshowCfg } from './elearn/NarratedSlideshow'
 import { ChordPractice } from './elearn/ChordPractice'
@@ -610,6 +610,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* GUITAR_CHORD — sơ đồ hợp âm + nghe rải + gảy thử (NHẬN) */}
         {slide.type === 'guitar_chord' && (
           <ChordView cfg={(slide.interactive ?? {}) as ChordCfg} />
+        )}
+
+        {/* BAR_SPLIT — đối chiếu sheet ↔ lời, bút kẻ vạch chia ô nhịp (THẤY) */}
+        {slide.type === 'bar_split' && (
+          <BarSplit cfg={(slide.interactive ?? {}) as BarSplitCfg} />
         )}
 
         {/* NARRATED_SLIDESHOW — trình chiếu lồng tiếng: nhiều sub-slide + audio tự lật */}
