@@ -69,6 +69,9 @@ export const STRUM_JINGLE: StrumSong = {
   ],
 }
 
+// Cơ bản — CÙNG bài Jingle Bells nhưng quạt NỐT ĐEN (mỗi phách 1 cú xuống); ô cuối vẫn nốt trắng + lặng.
+export const STRUM_JINGLE_DEN: StrumSong = { ...STRUM_JINGLE, title: 'Jingle Bells — quạt nốt đen', patternId: 'den' }
+
 // Bài tập quạt theo NỀN trống+bass synth (loop) — không cần thu âm, sạch bản quyền.
 // timeSignature PHẢI khớp beatsPerBar của điệu (Ballad = 4/4).
 export const STRUM_BALLAD: StrumSong = {

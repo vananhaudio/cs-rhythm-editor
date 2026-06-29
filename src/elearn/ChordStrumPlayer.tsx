@@ -90,33 +90,62 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
   }
   useEffect(() => () => { engineRef.current?.dispose(); engineRef.current = null }, [])
 
-  // ── GHI ÂM thành quả: thu tiếng đàn TRỘN nền (lưu tạm tại máy, KHÔNG upload) ──
+  // ── GHI ÂM thành quả: thu tiếng đàn TRỘN nhạc (nền synth HOẶC mp3) — lưu tạm tại máy, KHÔNG upload ──
+  const canRecord = isBacking || (!isYT && !!song.audioUrl)   // nền synth, hoặc mp3 (HBD); KHÔNG cho YouTube
   const [recState, setRecState] = useState<'idle' | 'recording' | 'done'>('idle')
   const [recUrl, setRecUrl] = useState<string | null>(null)
   const recRef = useRef<MediaRecorder | null>(null)
   const micStreamRef = useRef<MediaStream | null>(null)
   const recChunks = useRef<Blob[]>([])
-  useEffect(() => () => { if (recUrl) URL.revokeObjectURL(recUrl); micStreamRef.current?.getTracks().forEach((t) => t.stop()) }, [recUrl])
+  // Chế độ mp3 (HBD): trộn qua AudioContext riêng — MediaElementSource(mp3) + micro
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const mediaElSrcRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const audioRecDestRef = useRef<MediaStreamAudioDestinationNode | null>(null)
+  const audioMicRef = useRef<{ src: MediaStreamAudioSourceNode; gain: GainNode } | null>(null)
+  useEffect(() => () => {
+    if (recUrl) URL.revokeObjectURL(recUrl)
+    micStreamRef.current?.getTracks().forEach((t) => t.stop())
+    try { audioCtxRef.current?.close() } catch { /* */ }
+  }, [recUrl])
 
+  const wireRecorder = (mr: MediaRecorder) => {
+    recChunks.current = []
+    mr.ondataavailable = (ev) => { if (ev.data.size) recChunks.current.push(ev.data) }
+    mr.onstop = () => {
+      const blob = new Blob(recChunks.current, { type: mr.mimeType || 'audio/webm' })
+      setRecUrl((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(blob) })
+      setRecState('done')
+    }
+    recRef.current = mr
+  }
   const startRecord = async () => {
-    if (!isBacking || !engineRef.current) return
+    if (!canRecord) return
     try {
       // TẮT xử lý giọng nói (EC/NS/AGC) — chúng làm bệt/nhoè tiếng đàn. Thu nhạc cần tín hiệu thô.
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } as MediaTrackConstraints,
       })
       micStreamRef.current = stream
-      const mr = engineRef.current.startMixRecording(stream)
-      recChunks.current = []
-      mr.ondataavailable = (ev) => { if (ev.data.size) recChunks.current.push(ev.data) }
-      mr.onstop = () => {
-        const blob = new Blob(recChunks.current, { type: mr.mimeType || 'audio/webm' })
-        setRecUrl((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(blob) })
-        setRecState('done')
+      setEnded(false)
+      if (isBacking && engineRef.current) {
+        wireRecorder(engineRef.current.startMixRecording(stream)); recRef.current!.start()
+        await engineRef.current.start(); setPlaying(true)
+      } else if (audioRef.current) {
+        const el = audioRef.current
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+          mediaElSrcRef.current = audioCtxRef.current.createMediaElementSource(el)
+          mediaElSrcRef.current.connect(audioCtxRef.current.destination)   // vẫn nghe được
+        }
+        const ctx = audioCtxRef.current
+        if (ctx.state === 'suspended') await ctx.resume()
+        const recDest = ctx.createMediaStreamDestination(); audioRecDestRef.current = recDest
+        mediaElSrcRef.current!.connect(recDest)                            // nhạc mp3 → bản thu
+        const src = ctx.createMediaStreamSource(stream), gain = ctx.createGain(); gain.gain.value = 1.6
+        src.connect(gain).connect(recDest); audioMicRef.current = { src, gain }   // tiếng đàn → bản thu
+        wireRecorder(new MediaRecorder(recDest.stream, { audioBitsPerSecond: 256000 })); recRef.current!.start()
+        el.currentTime = 0; await el.play(); setPlaying(true)
       }
-      recRef.current = mr
-      mr.start()
-      setEnded(false); await engineRef.current.start(); setPlaying(true)
       setRecState('recording')
     } catch {
       alert('Không truy cập được micro. Hãy cho phép quyền micro cho ứng dụng/trình duyệt rồi thử lại.')
@@ -125,7 +154,14 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
   }
   const stopRecord = () => {
     try { recRef.current?.stop() } catch { /* */ }
-    engineRef.current?.stopMixRecording(); engineRef.current?.stop(); setPlaying(false)
+    if (isBacking) { engineRef.current?.stopMixRecording(); engineRef.current?.stop() }
+    else if (audioRef.current) {
+      audioRef.current.pause()
+      try { if (audioRecDestRef.current) mediaElSrcRef.current?.disconnect(audioRecDestRef.current) } catch { /* */ }
+      try { audioMicRef.current?.src.disconnect(); audioMicRef.current?.gain.disconnect() } catch { /* */ }
+      audioRecDestRef.current = null; audioMicRef.current = null
+    }
+    setPlaying(false)
     micStreamRef.current?.getTracks().forEach((t) => t.stop()); micStreamRef.current = null
   }
   const discardRecord = () => { if (recUrl) URL.revokeObjectURL(recUrl); setRecUrl(null); setRecState('idle') }
@@ -167,7 +203,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
       if (e.isPlaying()) { e.stop(); setPlaying(false) } else { e.start(); setPlaying(true) }
     }
     else if (isYT) { playing ? post('pauseVideo') : (post('unMute'), post('playVideo')) }
-    else { const a = audioRef.current; if (!a) return; if (a.paused) { a.play(); setPlaying(true) } else { a.pause(); setPlaying(false) } }
+    else { const a = audioRef.current; if (!a) return; if (a.paused) { if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume(); a.play(); setPlaying(true) } else { a.pause(); setPlaying(false) } }
   }
   const restart = () => {
     setEnded(false)
@@ -325,14 +361,16 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
             <audio src={recUrl} controls style={{ flex: 1, height: 36 }} />
             <button onClick={discardRecord} style={{ flex: '0 0 auto', background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi lại</button>
           </div>
-        ) : isBacking ? (
+        ) : canRecord ? (
           <>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={toggle} style={{ flex: 1, background: ended ? '#16A34A' : INDIGO, border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 15.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-                {ended ? '✓ Gảy lại' : playing ? '⏸ Tạm dừng' : '▶ Tập luyện'}
+                {ended ? '✓ Gảy lại' : playing ? '⏸ Tạm dừng' : (isBacking ? '▶ Tập luyện' : '▶ Phát — gảy theo')}
               </button>
               {playing
-                ? <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>
+                ? (isBacking
+                  ? <button onClick={() => { engineRef.current?.stop(); setPlaying(false); setEnded(true) }} style={{ flex: '0 0 auto', background: '#16A34A', border: 'none', color: '#fff', borderRadius: 12, padding: '13px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>✓ Xong lượt</button>
+                  : null)
                 : <button onClick={startRecord} style={{ flex: 1, background: '#DC2626', border: 'none', color: '#fff', borderRadius: 12, padding: 13, fontSize: 15.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm</button>}
             </div>
             {!playing && <div style={{ textAlign: 'center', fontSize: 11.5, color: '#DC2626', fontWeight: 700 }}>🎧 Đeo tai nghe để bản thu sạch, rõ</div>}
@@ -365,7 +403,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
         </div>
       )}
 
-      {song.audioUrl && <audio ref={audioRef} src={song.audioUrl} preload="auto" onEnded={() => { setPlaying(false); setEnded(true) }} />}
+      {song.audioUrl && <audio ref={audioRef} src={song.audioUrl} preload="auto" crossOrigin="anonymous" onEnded={() => { if (recState === 'recording') stopRecord(); else { setPlaying(false); setEnded(true) } }} />}
       {isYT && (
         <div style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none', bottom: 0, left: 0 }}>
           <iframe ref={iframeRef} title="audio" width="200" height="120"
