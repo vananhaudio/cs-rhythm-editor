@@ -228,10 +228,23 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
                       ) : bar.rest ? (
                         <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Bravura', fontSize: 30, color: isCur ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E3)}</div>
                       ) : bar.oneStrum ? (
-                        <div style={{ height: 52, display: 'flex', alignItems: 'center' }}>
-                          <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}><BeatGroup strokes={['D']} lit={isCur && beatInBar < N / 2} /></div>
-                          <div style={{ flex: 1, textAlign: 'center', fontFamily: 'Bravura', fontSize: 28, color: (isCur && beatInBar >= N / 2) ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E4)}</div>
-                        </div>
+                        (() => {
+                          const lit = isCur && beatInBar < N / 2
+                          const c = lit ? INDIGO : DIM, ac = lit ? INDIGO : '#9AA0B0'
+                          return (
+                            <div style={{ height: 52, display: 'flex', alignItems: 'center' }}>
+                              {/* nốt TRẮNG: đầu HÌNH THOI RỖNG (khỏi nhầm nốt đen) + thân + mũi tên xuống */}
+                              <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                                <svg viewBox="0 0 30 60" style={{ height: 52, width: 'auto', overflow: 'visible', display: 'block' }}>
+                                  <line x1={20} y1={38} x2={20} y2={10} stroke={c} strokeWidth={3} />
+                                  <polygon points="13,31 21,38 13,45 5,38" fill="none" stroke={c} strokeWidth={2.6} strokeLinejoin="round" />
+                                  <text x={10} y={57} fontSize={11.5} textAnchor="middle" fontWeight={800} fill={ac}>↓</text>
+                                </svg>
+                              </div>
+                              <div style={{ flex: 1, textAlign: 'center', fontFamily: 'Bravura', fontSize: 28, color: (isCur && beatInBar >= N / 2) ? INDIGO : '#9AA0B0' }}>{String.fromCodePoint(0xE4E4)}</div>
+                            </div>
+                          )
+                        })()
                       ) : (
                         <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
                           {Array.from({ length: N }, (_, j) => (
