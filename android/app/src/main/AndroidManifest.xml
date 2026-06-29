@@ -35,4 +35,6 @@
     <!-- Micro: Tuner, bài chấm hợp âm (useChordDetector), ghi âm Strum Score -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Micro là TUỲ CHỌN → không loại máy thiếu micro (app vẫn học được phần không cần mic) -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>
