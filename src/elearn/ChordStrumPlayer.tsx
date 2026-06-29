@@ -25,8 +25,9 @@ export interface StrumSong {
   eighths?: boolean              // (cũ) chùm 2 nếu không có patternId
   patternId?: string             // kiểu quạt từ thư viện chùm (strumPatterns.ts) — ưu tiên hơn eighths
   bars: SongBar[]                // 1 phần tử / ô nhịp
-  backing?: { styleId: string; tempo?: number }  // có → NỀN trống+bass synth (loop), bỏ qua audio/video
+  backing?: { styleId: string; tempo?: number }  // có → NỀN trống+bass synth, bỏ qua audio/video
   melody?: MelodyNote[]                            // (chế độ nền) giai điệu chơi kèm để học sinh theo dõi
+  loop?: boolean                                   // (chế độ nền) false = chơi 1 lượt rồi DỪNG (mặc định loop)
 }
 
 // Vẽ MỘT CHÙM (1..4 nốt) trong một phách — đầu nốt slash dày, thân cao, nối chùm + ↓/↑.
@@ -201,6 +202,16 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
     if (curRow >= 0) rowRefs.current[curRow]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [curRow])
 
+  // Bài KHÔNG loop (nền): hết lượt (qua ô cuối) thì DỪNG — đang ghi thì dừng ghi luôn.
+  useEffect(() => {
+    if (!isBacking || song.loop !== false || !playing) return
+    if (t >= song.bars.length * effBarDur) {
+      if (recState === 'recording') stopRecord()
+      else { engineRef.current?.stop(); setPlaying(false); setEnded(true) }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t])
+
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
   const curChord = barIdx >= 0 && barIdx < song.bars.length ? song.bars[barIdx].chord : null
 
@@ -319,9 +330,9 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
 
         {/* GHI ÂM — chỉ ở chế độ nền synth */}
         {isBacking && recState === 'idle' && !playing && (
-          <div>
-            <button onClick={startRecord} style={{ width: '100%', background: '#fff', border: '1.5px solid #DC2626', color: '#DC2626', borderRadius: 12, padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm — gảy theo nền để nghe lại thành quả</button>
-            <div style={{ textAlign: 'center', fontSize: 11.5, color: SUB, marginTop: 5 }}>🎧 Đeo tai nghe để bản thu sạch nhất (tránh tiếng loa lọt vào mic)</div>
+          <div style={{ border: '1.5px solid #DC2626', borderRadius: 12, overflow: 'hidden' }}>
+            <button onClick={startRecord} style={{ width: '100%', background: '#fff', border: 'none', color: '#DC2626', padding: 12, fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>🔴 Ghi âm — gảy theo nền để nghe lại thành quả</button>
+            <div style={{ textAlign: 'center', fontSize: 12.5, color: '#fff', fontWeight: 800, background: '#DC2626', padding: '6px 10px' }}>🎧 Hãy đeo tai nghe để bản thu sạch, rõ nhất</div>
           </div>
         )}
         {recState === 'recording' && (

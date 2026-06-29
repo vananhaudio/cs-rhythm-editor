@@ -59,6 +59,7 @@ export const STRUM_JINGLE: StrumSong = {
   bpm: 120, timeSignature: 4, gridOffset: 0, patternId: 'chum2',
   backing: { styleId: 'ballad', tempo: 120 },
   melody: JINGLE_MELODY,
+  loop: false,          // chơi 1 lượt hết bài rồi dừng (không lặp)
   bars: [
     { chord: 'C' }, { chord: 'C' }, { chord: 'C' }, { chord: 'C' },
     { chord: 'F' }, { chord: 'F' }, { chord: 'C' }, { chord: 'G' },
