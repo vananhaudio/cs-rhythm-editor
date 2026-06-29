@@ -7,9 +7,9 @@ export type BassDegree = 'R' | '3' | '5' | '8' | 'A' | 'A1' | 'A2' | 'A3' | null
 
 export interface Style {
   id: string; name: string
-  beatsPerBar: 3 | 4
+  beatsPerBar: 2 | 3 | 4
   feel: Feel
-  stepsPerBar: number        // 8 (4/4 straight) | 12 (4/4 triplet) | 6 (3/4)
+  stepsPerBar: number        // 8 (4/4 straight) | 12 (4/4 triplet) | 6 (3/4) | 4 (2/4)
   defaultTempo: number
   drum: { hh: HH[]; snare: (0 | 1)[]; kick: (0 | 1)[] }  // độ dài = stepsPerBar
   bass: BassDegree[]
@@ -50,6 +50,12 @@ export const STYLES: Style[] = [
     id: 'valse', name: 'Valse', beatsPerBar: 3, feel: 'straight', stepsPerBar: 6, defaultTempo: 140,
     drum: { hh: [0, 0, 1, 0, 1, 0], snare: [0, 0, 1, 0, 1, 0], kick: [1, 0, 0, 0, 0, 0] },
     bass: ['R', null, null, null, null, null],
+  },
+  {
+    // Polka — nhịp 2/4: oom–pah (kick phách 1, snare phách 2; bass gốc–quãng 5)
+    id: 'polka', name: 'Polka', beatsPerBar: 2, feel: 'straight', stepsPerBar: 4, defaultTempo: 100,
+    drum: { hh: [1, 1, 1, 1], snare: [0, 0, 1, 0], kick: [1, 0, 0, 0] },
+    bass: ['R', null, '5', null],
   },
 ]
 

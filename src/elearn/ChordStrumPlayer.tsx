@@ -20,7 +20,7 @@ export interface StrumSong {
   videoId?: string | null
   audioUrl?: string | null
   bpm: number
-  timeSignature: number          // số phách / ô (3 hoặc 4)
+  timeSignature: number          // số phách / ô (2, 3 hoặc 4)
   gridOffset: number             // giây của phách 1
   eighths?: boolean              // (cũ) chùm 2 nếu không có patternId
   patternId?: string             // kiểu quạt từ thư viện chùm (strumPatterns.ts) — ưu tiên hơn eighths
