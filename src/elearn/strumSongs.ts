@@ -30,6 +30,20 @@ export const HBD_CHUM2: StrumSong = {
 // Trình độ 1 — cùng bài, quạt NỐT ĐEN (mỗi phách 1 cú xuống), không chùm 2.
 export const HBD_TD1: StrumSong = { ...HBD_CHUM2, title: 'Happy Birthday — quạt nốt đen', eighths: false }
 
+// Jingle Bells (nhạc cổ điển công cộng) — quạt theo nền trống+bass synth. 4/4, 120bpm, Đô trưởng.
+// Vòng hợp âm dò theo giai điệu: C C C C · F F C G · C C C C · F C G C
+export const STRUM_JINGLE: StrumSong = {
+  title: 'Jingle Bells — quạt theo nền',
+  bpm: 120, timeSignature: 4, gridOffset: 0, patternId: 'chum2',
+  backing: { styleId: 'ballad', tempo: 120 },
+  bars: [
+    { chord: 'C' }, { chord: 'C' }, { chord: 'C' }, { chord: 'C' },
+    { chord: 'F' }, { chord: 'F' }, { chord: 'C' }, { chord: 'G' },
+    { chord: 'C' }, { chord: 'C' }, { chord: 'C' }, { chord: 'C' },
+    { chord: 'F' }, { chord: 'C' }, { chord: 'G' }, { chord: 'C' },
+  ],
+}
+
 // Bài tập quạt theo NỀN trống+bass synth (loop) — không cần thu âm, sạch bản quyền.
 // timeSignature PHẢI khớp beatsPerBar của điệu (Ballad = 4/4).
 export const STRUM_BALLAD: StrumSong = {
