@@ -135,7 +135,7 @@ export default function ClassLandingPage() {
   const [suDone, setSuDone] = useState(false)
 
   // ── Đăng nhập học viên ngay trên trang tuyển sinh ──
-  const [me, setMe] = useState<{ name: string } | null>(null)   // null = chưa đăng nhập
+  const [me, setMe] = useState<{ name: string; cohort?: string | null } | null>(null)   // null = chưa đăng nhập
   const [showLogin, setShowLogin] = useState(false)
   const [liEmail, setLiEmail] = useState('')
   const [liPass, setLiPass] = useState('')
@@ -143,9 +143,14 @@ export default function ClassLandingPage() {
   const [liLoading, setLiLoading] = useState(false)
 
   const loadMe = async (userId: string, email: string | null) => {
-    const { data: stu } = await supabase.from('edu_students').select('full_name,display_name').eq('user_id', userId).maybeSingle()
+    const { data: stu } = await supabase.from('edu_students').select('id,full_name,display_name').eq('user_id', userId).maybeSingle()
     const nm = stu?.display_name || stu?.full_name || (email ? email.split('@')[0] : 'bạn')
-    setMe({ name: (nm || 'bạn').includes('@') ? (nm as string).split('@')[0] : nm as string })
+    let cohort: string | null = null
+    if (stu?.id) {
+      const { data: c } = await supabase.from('edu_cohorts').select('cohort').eq('student_id', stu.id).maybeSingle()
+      cohort = (c as any)?.cohort ?? null
+    }
+    setMe({ name: (nm || 'bạn').includes('@') ? (nm as string).split('@')[0] : nm as string, cohort })
   }
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) loadMe(session.user.id, session.user.email ?? null) })
@@ -264,7 +269,7 @@ export default function ClassLandingPage() {
     chatPush({ who: 'me', html: richReply(t) }); setChatInput('')
     setChatLoading(true)
     try {
-      const { data, error } = await supabase.functions.invoke('class-ai', { body: { sessionId: chatSessionRef.current, message: t, userName: me?.name } })
+      const { data, error } = await supabase.functions.invoke('class-ai', { body: { sessionId: chatSessionRef.current, message: t, userName: me?.name, userCohort: me?.cohort ?? null } })
       if (error) throw error
       if (data?.sessionId) chatSessionRef.current = data.sessionId
       chatPush({ who: 'ai', html: richReply(data?.reply || 'Bạn nói rõ hơn giúp mình nhé.') })
