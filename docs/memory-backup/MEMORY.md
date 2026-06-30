@@ -14,6 +14,7 @@
 - [Tune Lab](project_tune_lab.md) — app tuner standalone (gốc `~/Desktop/pitch-lab/`), duyệt App Store id 6780132453 (2026-06-14)
 - [Song Builder V1](project_song_builder.md) — đã dựng GĐ1-5; bước Xuất KHÓA chờ chốt schema v2.1 (3 quyết định treo)
 - [App BMS riêng](project_bms_standalone_app.md) — Beat my Songs publish thành app iOS riêng (`~/Desktop/beat-my-songs/`), tải /song-builder?standalone=1
+- [Backup bàn giao trong repo](reference_handoff_backup.md) — bàn giao + bản sao bộ nhớ lưu docs/HANDOFF.md + docs/memory-backup/ (đẩy GitHub, không mất); refresh khi xong đợt việc
 - [Vị trí file bàn giao](reference_handoff_docs.md) — handoff/prototype từ Bolt nằm ở `~/App/song builer/` (ngoài repo)
 - [Kho Tri Thức Văn Anh](reference_kho_tri_thuc.md) — app RIÊNG (Next.js, `~/App/Kho tri thức baì giảng/`) có Anthropic API key; LMS này KHÔNG có LLM key — đừng lẫn
 - [Groove Lab](project_groove_lab.md) — app Expo dạy tiết tấu guitar ở `~/App/project/`, ĐÃ LÊN APP STORE v1.0 (id 6778263562, build 7 iPhone-only, duyệt 2026-06-14), privacy /groovelab-privacy/

@@ -1,7 +1,7 @@
 # BÀN GIAO — TVA Guitar LMS (cs-rhythm-editor)
 
 > Bản bàn giao đẩy lên GitHub để **không mất dữ liệu** (backup ngoài máy + lịch sử phiên bản).
-> Cập nhật gần nhất: **2026-06-29**.
+> Cập nhật gần nhất: **2026-06-29 (chiều/tối)**.
 >
 > - **Bộ nhớ chi tiết** (Claude tự đọc mỗi phiên): `~/.claude/projects/-Users-vananhaudio-Desktop-cs-rhythm-editor/memory/`
 > - **Bản sao bộ nhớ trong repo** (an toàn, versioned): [`docs/memory-backup/`](./memory-backup/) — xem [`MEMORY.md`](./memory-backup/MEMORY.md) làm mục lục.
@@ -27,8 +27,20 @@ LMS dạy guitar online "Thầy Văn Anh Guitar". React + TS + Vite + Tailwind (
 - **Edge Function deploy TAY** (Dashboard → Edge Functions, KHÔNG phải SQL Editor, không qua Netlify).
 - Định hướng tiếp: nâng Mira thành **trợ lý chăm sóc học sinh đặc biệt**. Xem `docs/memory-backup/project_mira_assistant.md`.
 
+### Mira đọc dữ liệu (mức 1+2) — đã deploy
+- `class-ai/index.ts`: đọc danh mục khoá thật (mức 1) + hồ sơ RIÊNG người đăng nhập qua xác thực token (mức 2). Hướng tới trợ lý chăm sóc học sinh.
+
+### Phát hành app (2026-06-29)
+- **iOS:** version **1.0.1**, build **12**, icon C# nền xanh → đã upload TestFlight/App Store Connect. Build lại: tăng Build trong Xcode (file đã set sẵn) → Archive → Upload. Train 1.0 đã đóng → mỗi lần nộp phải tăng cả **MARKETING_VERSION**.
+- **Android (Capacitor):** đã thêm quyền **RECORD_AUDIO** (trước thiếu → micro KHÔNG chạy trên app Android: Tuner, chấm hợp âm, ghi âm). `uses-feature microphone required=false`. Ký release đọc từ `android/keystore.properties` (gitignored, mật khẩu KHÔNG commit). Build: `cd android && ANDROID_HOME=~/Library/Android/sdk ./gradlew bundleRelease` → AAB ở `app/build/outputs/bundle/release/`. Upload key: `~/App/TVA Androi/tvauploadkey.jks`. versionCode hiện 5.
+
+### Quản trị & cộng đồng (2026-06-29)
+- **Xếp hạng theo lớp:** `MobileStudentPortal` dùng RPC `my_class_leaderboard` (db/class_leaderboard.sql) — chỉ bạn cùng nhóm Zalo, gộp nhiều lớp, top 5 + "Xem thêm".
+- **Báo cáo admin:** `StudentList` có nút "📊 Báo cáo" — bảng XP/bài xong/khoá đã mở/hoạt động; lọc Toàn bộ / Theo lớp / Theo khoá (chỉ frontend, không cần SQL).
+
 ## SQL cần để ý
 - ĐÃ chạy: `db/course_request_setup.sql`.
+- CẦN chạy: `db/class_leaderboard.sql` (RPC xếp hạng theo lớp — không có thì BXH trống).
 - Chưa chắc đã chạy: `db/lesson_jingle.sql` (gắn 2 bài Jingle vào khoá).
 - ĐÃ XOÁ (đừng chạy): các file cohort cũ.
 
