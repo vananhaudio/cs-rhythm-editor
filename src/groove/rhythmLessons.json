@@ -1,0 +1,1923 @@
+[
+  {
+    "id": "lesson_001",
+    "order": 1,
+    "level": 1,
+    "levelName": "Khởi đầu - Nốt đen",
+    "title": "Bài 1 - Bốn nốt đen",
+    "shortTitle": "4 Nốt Đen",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♩",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Hôm nay chỉ cần giữ đều 4 phách. Đừng quan tâm tới điệu. Hãy nghe thật rõ: 1 - 2 - 3 - 4. Giữ đều được 30 giây là đạt."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Cùng một tiết tấu, hãy thử nhấn nhẹ phách 1 và phách 3. Đừng đánh mạnh cả 4 phách. Chính sự tương phản tạo ra cảm giác chuyển động."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Người lính hành quân",
+        "teacherTip": "Hãy tưởng tượng đây là bước chân của một người đang tiến về phía trước. Cùng tiết tấu nhưng cảm xúc đã khác hoàn toàn. Bạn đang kể câu chuyện gì?"
+      }
+    }
+  },
+  {
+    "id": "lesson_002",
+    "order": 2,
+    "level": 1,
+    "levelName": "Khởi đầu - Nốt đen",
+    "title": "Bài 2 - Bốn nốt đen tempo chậm",
+    "shortTitle": "4 Nốt Đen - Chậm",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♩",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chậm lại để nghe rõ từng phách. Tempo chậm khó giữ đều hơn bạn nghĩ - đó mới là bài tập thật sự."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Vẫn nhấn 1 và 3, nhưng ở tempo chậm sự tương phản càng phải rõ ràng. Đừng để các phách dính vào nhau."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Nhịp thở khi ngồi thiền",
+        "teacherTip": "Mỗi phách như một hơi thở sâu. Không vội, không gấp. Chỉ có bạn và sự đều đặn."
+      }
+    }
+  },
+  {
+    "id": "lesson_003",
+    "order": 3,
+    "level": 1,
+    "levelName": "Khởi đầu - Nốt đen",
+    "title": "Bài 3 - Bốn nốt đen tempo vừa",
+    "shortTitle": "4 Nốt Đen - Vừa",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 70,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♩",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Nhanh hơn một chút. Giữ nguyên độ chắc của tay, đừng để phách bị xô về phía trước."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Tempo nhanh hơn dễ làm mất điểm nhấn. Hãy chủ động giữ phách 1 và 3 nổi bật."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Bước đi thong thả trong công viên",
+        "teacherTip": "Một buổi sáng đẹp trời, bước chân đều và thoải mái. Tiết tấu này có nhịp sống của riêng nó."
+      }
+    }
+  },
+  {
+    "id": "lesson_004",
+    "order": 4,
+    "level": 1,
+    "levelName": "Khởi đầu - Nốt đen",
+    "title": "Bài 4 - Nốt đen nhấn phách 1",
+    "shortTitle": "Nhấn Phách 1",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♩",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Vẫn 4 nốt đen, nhưng phách 1 là điểm tựa. Hãy đặt trọng tâm vào nó."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1
+        ],
+        "teacherTip": "Chỉ nhấn duy nhất phách 1. Ba phách còn lại nhẹ và đều. Cảm nhận sức nặng dồn vào đầu mỗi ô nhịp."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Tiếng gõ cửa dứt khoát",
+        "teacherTip": "Cốc - cốc - cốc - cốc. Tiếng đầu tiên là tiếng quyết định, ba tiếng sau chỉ là dư âm."
+      }
+    }
+  },
+  {
+    "id": "lesson_005",
+    "order": 5,
+    "level": 1,
+    "levelName": "Khởi đầu - Nốt đen",
+    "title": "Bài 5 - Nốt đen nhấn phách 1 và 3",
+    "shortTitle": "Nhấn 1 & 3",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♩",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Hai điểm tựa: phách 1 và phách 3. Đây là khung xương của hầu hết các điệu nhạc."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Nhấn 1 và 3 tạo ra nhịp mạnh - nhẹ - vừa - nhẹ. Đây là nền tảng của cảm giác 'groove'."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Trái tim đang đập",
+        "teacherTip": "Thình - thịch. Trái tim không đập đều như máy, nó có nhịp mạnh và nhịp nhẹ. Hãy đánh như thế."
+      }
+    }
+  },
+  {
+    "id": "lesson_006",
+    "order": 6,
+    "level": 2,
+    "levelName": "Trình độ 1 - Chùm 2",
+    "title": "Bài 6 - Bốn chùm 2",
+    "shortTitle": "4 Chùm 2",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Mỗi phách giờ có 2 nốt. Hãy nghe thật kỹ sự đều đặn. Giữ tempo ổn định là ưu tiên số 1, đừng vội vàng."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Trong mỗi chùm 2: nốt đầu mạnh, nốt sau nhẹ. Đây là điều tạo ra cảm giác 'nảy' trong âm nhạc."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Mưa rơi đều trên mái hiên",
+        "teacherTip": "Những giọt mưa nối nhau không ngừng. Nhẹ nhàng, kiên nhẫn, đều đặn."
+      }
+    }
+  },
+  {
+    "id": "lesson_007",
+    "order": 7,
+    "level": 2,
+    "levelName": "Trình độ 1 - Chùm 2",
+    "title": "Bài 7 - Chùm 2 tempo chậm",
+    "shortTitle": "Chùm 2 - Chậm",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chùm 2 ở tempo chậm. Tay xuống - lên phải thật gọn, đừng để hai nốt cách nhau quá xa."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Tempo chậm là lúc luyện độ tương phản mạnh - nhẹ trong từng chùm. Nghe rõ từng nốt một."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Con lắc đồng hồ cũ",
+        "teacherTip": "Tích - tắc, tích - tắc. Đều đến mức bạn quên cả thời gian."
+      }
+    }
+  },
+  {
+    "id": "lesson_008",
+    "order": 8,
+    "level": 2,
+    "levelName": "Trình độ 1 - Chùm 2",
+    "title": "Bài 8 - Chùm 2 tempo vừa",
+    "shortTitle": "Chùm 2 - Vừa",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 70,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chùm 2 nhanh hơn. Cổ tay thả lỏng, để tay tự rơi xuống và bật lên."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Nhanh nhưng vẫn phải giữ mạnh - nhẹ. Khi mỏi tay là lúc dễ đánh đều băng - hãy chú ý."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Tàu chạy đều trên đường ray",
+        "teacherTip": "Xình xịch - xình xịch. Con tàu lăn bánh đều đặn, càng lúc càng cuốn."
+      }
+    }
+  },
+  {
+    "id": "lesson_009",
+    "order": 9,
+    "level": 2,
+    "levelName": "Trình độ 1 - Chùm 2",
+    "title": "Bài 9 - Chùm 2 nhấn đầu phách",
+    "shortTitle": "Chùm 2 Nhấn Đầu",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Vẫn chùm 2, nhưng đầu mỗi phách phải nổi bật. Đây là bước chuẩn bị cho các điệu rải."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "teacherTip": "Nhấn đầu cả 4 phách. Mỗi chùm bắt đầu bằng một cú mạnh, rồi buông nhẹ ngay sau đó."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Sóng vỗ bờ",
+        "teacherTip": "Từng con sóng dâng lên rồi rút xuống. Đầu sóng mạnh mẽ, đuôi sóng dịu dàng."
+      }
+    }
+  },
+  {
+    "id": "lesson_010",
+    "order": 10,
+    "level": 2,
+    "levelName": "Trình độ 1 - Chùm 2",
+    "title": "Bài 10 - Chùm 2 nhẹ và đều",
+    "shortTitle": "Chùm 2 Nhẹ",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chùm 2 thật nhẹ và đều. Bài này luyện sự kiểm soát - đánh khẽ mà vẫn rõ."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1
+        ],
+        "teacherTip": "Gần như không nhấn. Chỉ một chút sức ở phách 1 để giữ định hướng. Tất cả còn lại thật êm."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Lá rơi nhẹ trong gió",
+        "teacherTip": "Chiếc lá xoay tròn, chạm đất không một tiếng động. Nhẹ đến mức gần như tan biến."
+      }
+    }
+  },
+  {
+    "id": "lesson_011",
+    "order": 11,
+    "level": 3,
+    "levelName": "Trình độ 2 - Pha trộn nốt đen và chùm 2",
+    "title": "Bài 11 - Nốt đen rồi chùm 2",
+    "shortTitle": "Đen + Chùm 2",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "&",
+      "3",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♪",
+      "♪",
+      "♩",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Phách 1 là nốt đen (dài), phách 2 là chùm 2 (ngắn). Cảm nhận sự khác nhau về độ dài."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Nốt đen - chắc, đứng vững. Chùm 2 - nhẹ, lăn tăn. Sự tương phản này tạo cá tính cho câu nhạc."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Người đi rồi dừng lại ngắm cảnh",
+        "teacherTip": "Bước một bước dài, rồi hai bước nhỏ rộn ràng. Đi và sống, không chỉ là di chuyển."
+      }
+    }
+  },
+  {
+    "id": "lesson_012",
+    "order": 12,
+    "level": 3,
+    "levelName": "Trình độ 2 - Pha trộn nốt đen và chùm 2",
+    "title": "Bài 12 - Chùm 2 rồi nốt đen",
+    "shortTitle": "Chùm 2 + Đen",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "3",
+      "&",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♩",
+      "♪",
+      "♪",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↑",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Đảo lại: chùm 2 trước, nốt đen sau. Đừng để chùm 2 kéo nốt đen đi nhanh hơn."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Hai nốt nhỏ dẫn dắt, rồi một nốt dài chốt lại. Như câu hỏi rồi câu trả lời."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Chạy nhẹ rồi bước chậm",
+        "teacherTip": "Hai bước chạy lon ton, rồi một bước đứng lại. Năng động rồi điềm tĩnh."
+      }
+    }
+  },
+  {
+    "id": "lesson_013",
+    "order": 13,
+    "level": 3,
+    "levelName": "Trình độ 2 - Pha trộn nốt đen và chùm 2",
+    "title": "Bài 13 - Xen kẽ đen và chùm 2",
+    "shortTitle": "Xen Kẽ 1",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "&",
+      "3",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♪",
+      "♪",
+      "♩",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Xen kẽ đen và chùm 2 trong cùng một ô nhịp. Bắt đầu làm quen với việc chuyển đổi liên tục."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Mỗi lần đổi từ dài sang ngắn là một lần đổi sắc thái. Giữ cho các chuyển tiếp thật mượt."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Cuộc trò chuyện có nhịp",
+        "teacherTip": "Một người nói chậm rãi, người kia đáp lại dồn dập. Đối thoại có lên có xuống."
+      }
+    }
+  },
+  {
+    "id": "lesson_014",
+    "order": 14,
+    "level": 3,
+    "levelName": "Trình độ 2 - Pha trộn nốt đen và chùm 2",
+    "title": "Bài 14 - Chùm 2 xen nốt đen",
+    "shortTitle": "Xen Kẽ 2",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "3",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♩",
+      "♩",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Mở đầu bằng chùm 2, xen nốt đen ở giữa. Chú ý phách 3 và 4 là hai nốt đen liền nhau."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Bắt đầu lăn tăn rồi chững lại bằng hai nốt chắc. Để hai nốt đen cuối thật vững."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Nhịp chèo thuyền",
+        "teacherTip": "Khua nước hai cái rồi đẩy mái chèo dài. Đều tay thì thuyền mới đi thẳng."
+      }
+    }
+  },
+  {
+    "id": "lesson_015",
+    "order": 15,
+    "level": 3,
+    "levelName": "Trình độ 2 - Pha trộn nốt đen và chùm 2",
+    "title": "Bài 15 - Hai phách đầu nốt đen, hai phách sau chùm 2",
+    "shortTitle": "Đen Trước - Chùm Sau",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "2",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♩",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Hai phách đầu chắc chắn (nốt đen), hai phách sau rộn ràng (chùm 2). Một câu nhạc có cấu trúc rõ."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Phần đầu trang nghiêm, phần sau sôi động. Hãy để khán giả cảm được sự chuyển mình."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Đi bộ rồi chạy nước rút",
+        "teacherTip": "Khởi đầu thong thả, về sau tăng tốc. Cùng một quãng đường, hai trạng thái."
+      }
+    }
+  },
+  {
+    "id": "lesson_016",
+    "order": 16,
+    "level": 3,
+    "levelName": "Trình độ 2 - Pha trộn nốt đen và chùm 2",
+    "title": "Bài 16 - Hai phách đầu chùm 2, hai phách sau nốt đen",
+    "shortTitle": "Chùm Trước - Đen Sau",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 60,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Ngược lại bài trước: rộn ràng trước, vững vàng sau. Kết bằng hai nốt đen như một dấu chấm."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Mở màn bằng năng lượng, kết lại bằng sự chắc chắn. Hai nốt cuối là lời khẳng định."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Khởi động rồi thả lỏng",
+        "teacherTip": "Bắt đầu hăng hái, kết thúc nhẹ nhõm. Như một buổi tập trọn vẹn."
+      }
+    }
+  },
+  {
+    "id": "lesson_017",
+    "order": 17,
+    "level": 4,
+    "levelName": "Trình độ 3 - Làm quen chùm 3 và chùm 4",
+    "title": "Bài 17 - Chùm 3 cơ bản",
+    "shortTitle": "Chùm 3",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "ta",
+      "la",
+      "2",
+      "ta",
+      "la",
+      "3",
+      "ta",
+      "la",
+      "4",
+      "ta",
+      "la"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↑",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chùm 3: mỗi phách chia làm BA nốt đều nhau. Đếm '1-ta-la, 2-ta-la'. Đây là cảm giác hoàn toàn mới."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Trong chùm 3, nốt đầu hơi nhấn để giữ phách. Hai nốt sau lăn nhẹ theo. Đừng biến nó thành chùm 2."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Vó ngựa phi nước kiệu",
+        "teacherTip": "Lóc - cóc - cóc, lóc - cóc - cóc. Nhịp ba quay tròn như vó ngựa trên đường dài."
+      }
+    }
+  },
+  {
+    "id": "lesson_018",
+    "order": 18,
+    "level": 4,
+    "levelName": "Trình độ 3 - Làm quen chùm 3 và chùm 4",
+    "title": "Bài 18 - Một phách chùm 3",
+    "shortTitle": "Một Chùm 3",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "ta",
+      "la",
+      "2",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "♪",
+      "♩",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chỉ phách 1 là chùm 3, ba phách còn lại là nốt đen. So sánh cảm giác chia 3 với phách thường."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1
+        ],
+        "teacherTip": "Một cú chùm 3 mở đầu rồi trở về sự bình thường. Đừng để nhịp ba làm xô lệch ba phách sau."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Một nhịp vấp rồi đi tiếp",
+        "teacherTip": "Hơi loạng choạng một cái ở đầu, rồi bước đi vững vàng trở lại."
+      }
+    }
+  },
+  {
+    "id": "lesson_019",
+    "order": 19,
+    "level": 4,
+    "levelName": "Trình độ 3 - Làm quen chùm 3 và chùm 4",
+    "title": "Bài 19 - Chùm 4 cơ bản",
+    "shortTitle": "Chùm 4",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 45,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "e",
+      "&",
+      "a",
+      "2",
+      "e",
+      "&",
+      "a",
+      "3",
+      "e",
+      "&",
+      "a",
+      "4",
+      "e",
+      "&",
+      "a"
+    ],
+    "rhythmSymbols": [
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♬"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chùm 4: mỗi phách chia làm BỐN nốt. Đếm '1-e-&-a'. Tempo chậm thôi, độ chính xác mới quan trọng."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Nhấn nhẹ nốt đầu mỗi phách để không bị 'trôi'. Bốn nốt phải thật đều như nhau."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Suối chảy róc rách",
+        "teacherTip": "Dòng nước nhỏ chảy liên tục, lấp lánh và không ngừng nghỉ."
+      }
+    }
+  },
+  {
+    "id": "lesson_020",
+    "order": 20,
+    "level": 4,
+    "levelName": "Trình độ 3 - Làm quen chùm 3 và chùm 4",
+    "title": "Bài 20 - Một phách chùm 4",
+    "shortTitle": "Một Chùm 4",
+    "isLocked": false,
+    "isHidden": false,
+    "defaultTempo": 45,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "e",
+      "&",
+      "a",
+      "2",
+      "3",
+      "4"
+    ],
+    "rhythmSymbols": [
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "♩",
+      "♩",
+      "♩"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↓",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chỉ phách 1 chia 4, còn lại là nốt đen. Cảm nhận sự bùng nổ rồi lắng lại."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1
+        ],
+        "teacherTip": "Một tràng bốn nốt mở màn, rồi ba nốt đen thong thả. Tương phản dày - thưa rất rõ."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Một cơn gió lùa rồi lặng",
+        "teacherTip": "Gió thổi ào một cái rồi tất cả tĩnh lại. Động và tĩnh trong một hơi."
+      }
+    }
+  },
+  {
+    "id": "lesson_021",
+    "order": 21,
+    "level": 5,
+    "levelName": "Trình độ cao - Dấu lặng và ngắt",
+    "title": "Bài 21 - Dấu lặng đầu phách",
+    "shortTitle": "Lặng Đầu Phách",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "-",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Phách 1 là dấu lặng - đừng chơi gì cả, chỉ đếm thầm. Sự im lặng cũng là một phần của tiết tấu."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Khoảng lặng tạo ra sự chờ đợi. Khi tiếng đầu tiên vang lên sau im lặng, nó sẽ rất nổi bật."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Khoảng lặng trước cơn mưa",
+        "teacherTip": "Bầu trời nín thở một nhịp, rồi mưa bắt đầu rơi."
+      }
+    }
+  },
+  {
+    "id": "lesson_022",
+    "order": 22,
+    "level": 5,
+    "levelName": "Trình độ cao - Dấu lặng và ngắt",
+    "title": "Bài 22 - Dấu lặng giữa chùm 2",
+    "shortTitle": "Lặng Giữa Chùm 2",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "𝄽",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "-",
+      "↓",
+      "↑",
+      "↓",
+      "-",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Dấu lặng nằm giữa chùm 2. Tay vẫn chuyển động nhưng không phát ra tiếng ở nốt nghỉ."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Cái 'hụt' ở giữa chùm tạo cảm giác giật nhẹ. Đó chính là nét duyên của tiết tấu."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Tiếng tích tắc bị ngắt quãng",
+        "teacherTip": "Đồng hồ bỏ nhịp một cái, khiến tai bạn phải dỏng lên chú ý."
+      }
+    }
+  },
+  {
+    "id": "lesson_023",
+    "order": 23,
+    "level": 5,
+    "levelName": "Trình độ cao - Đảo phách",
+    "title": "Bài 23 - Đảo phách đơn giản",
+    "shortTitle": "Đảo Phách 1",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "𝄽",
+      "♪",
+      "𝄽",
+      "♪",
+      "𝄽",
+      "♪",
+      "𝄽",
+      "♪"
+    ],
+    "strumSymbols": [
+      "-",
+      "↑",
+      "-",
+      "↑",
+      "-",
+      "↑",
+      "-",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Đảo phách: chỉ chơi vào các phách lẻ '&'. Đây là cảm giác 'nghịch phách' rất đặc trưng."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          2,
+          4
+        ],
+        "teacherTip": "Vì né các phách mạnh, trọng tâm dồn vào phách yếu. Nhấn vào '&' để cảm giác đảo thật rõ."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Nhịp tim hồi hộp",
+        "teacherTip": "Tim đập lệch nhịp khi ta hồi hộp. Vừa lạ vừa cuốn hút."
+      }
+    }
+  },
+  {
+    "id": "lesson_024",
+    "order": 24,
+    "level": 5,
+    "levelName": "Trình độ cao - Đảo phách",
+    "title": "Bài 24 - Đảo phách với chùm 2",
+    "shortTitle": "Đảo Phách 2",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 50,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "𝄽",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "-",
+      "↑",
+      "↓",
+      "↑",
+      "-",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Đảo phách kết hợp chùm 2 và dấu lặng. Khó - hãy tập thật chậm từng ô nhịp."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          2,
+          4
+        ],
+        "teacherTip": "Chú ý nhấn vào phách 2 và 4. Sự dịch chuyển trọng âm làm câu nhạc 'đu đưa'."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Bước chân lén lút",
+        "teacherTip": "Đi rón rén, cố tình lệch nhịp để không ai nghe thấy."
+      }
+    }
+  },
+  {
+    "id": "lesson_025",
+    "order": 25,
+    "level": 5,
+    "levelName": "Trình độ cao - Chùm 3 lệch",
+    "title": "Bài 25 - Chùm 3 ngắt",
+    "shortTitle": "Chùm 3 Ngắt",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 45,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "ta",
+      "la",
+      "2",
+      "ta",
+      "la",
+      "3",
+      "ta",
+      "la",
+      "4",
+      "ta",
+      "la"
+    ],
+    "rhythmSymbols": [
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "𝄽",
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "-",
+      "↓",
+      "↓",
+      "↑",
+      "-",
+      "↓",
+      "-",
+      "↓",
+      "↓",
+      "↑",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chùm 3 có nốt nghỉ xen vào. Vừa giữ cảm giác chia 3, vừa biết im đúng lúc."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Nốt nghỉ trong chùm 3 tạo độ 'hẫng'. Giữ phách trong đầu để không bị lạc."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Vó ngựa khập khiễng",
+        "teacherTip": "Con ngựa bước hụt một nhịp rồi lại phi đều. Cái lệch làm nên câu chuyện."
+      }
+    }
+  },
+  {
+    "id": "lesson_026",
+    "order": 26,
+    "level": 5,
+    "levelName": "Trình độ cao - Chùm 4 lệch",
+    "title": "Bài 26 - Chùm 4 ngắt",
+    "shortTitle": "Chùm 4 Ngắt",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 40,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "e",
+      "&",
+      "a",
+      "2",
+      "e",
+      "&",
+      "a",
+      "3",
+      "e",
+      "&",
+      "a",
+      "4",
+      "e",
+      "&",
+      "a"
+    ],
+    "rhythmSymbols": [
+      "♬",
+      "𝄽",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "𝄽",
+      "♬",
+      "♬",
+      "𝄽",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "𝄽",
+      "♬"
+    ],
+    "strumSymbols": [
+      "↓",
+      "-",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "-",
+      "↑",
+      "↓",
+      "-",
+      "↓",
+      "↑",
+      "↓",
+      "↑",
+      "-",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Chùm 4 có nốt nghỉ rải rác. Đây là một trong những bài khó nhất - kiên nhẫn từng phách."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Các khoảng nghỉ rất nhỏ nhưng tạo nhiều điểm nhấn bất ngờ. Đếm thật kỹ."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Giọt nước nhỏ giọt thất thường",
+        "teacherTip": "Lúc nhanh lúc chậm, giọt nước không theo quy luật nào - mà vẫn có nhịp riêng."
+      }
+    }
+  },
+  {
+    "id": "lesson_027",
+    "order": 27,
+    "level": 5,
+    "levelName": "Trình độ cao - Tổ hợp",
+    "title": "Bài 27 - Tổ hợp dấu lặng và đảo phách",
+    "shortTitle": "Tổ Hợp Khó 1",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 45,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "𝄽",
+      "♪",
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "↓",
+      "-",
+      "↓",
+      "↑",
+      "-",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Tổ hợp dấu lặng và đảo phách. Hãy chia nhỏ từng phách ra mà tập."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Nhiều khoảng lặng và trọng âm lệch. Mỗi ô nhịp là một câu nói có ngắt nghỉ riêng."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Câu nói ngập ngừng",
+        "teacherTip": "Nói... rồi ngừng... rồi nói tiếp. Sự ngập ngừng cũng truyền cảm xúc."
+      }
+    }
+  },
+  {
+    "id": "lesson_028",
+    "order": 28,
+    "level": 5,
+    "levelName": "Trình độ cao - Tổ hợp",
+    "title": "Bài 28 - Tổ hợp chùm 3 lệch",
+    "shortTitle": "Tổ Hợp Khó 2",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 45,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "ta",
+      "la",
+      "2",
+      "ta",
+      "la",
+      "3",
+      "ta",
+      "la",
+      "4",
+      "ta",
+      "la"
+    ],
+    "rhythmSymbols": [
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪"
+    ],
+    "strumSymbols": [
+      "-",
+      "↑",
+      "↓",
+      "↓",
+      "-",
+      "↓",
+      "↓",
+      "↑",
+      "-",
+      "↓",
+      "↑",
+      "↓"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Tổ hợp chùm 3 lệch. Giữ vững cảm giác nhịp ba trong khi xử lý các nốt nghỉ."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Sự lệch trong nhịp ba tạo ra groove rất riêng. Cảm nhận thay vì đếm cứng nhắc."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Điệu nhảy phá cách",
+        "teacherTip": "Những bước nhảy không theo khuôn mẫu, nhưng vẫn ăn khớp với nhau."
+      }
+    }
+  },
+  {
+    "id": "lesson_029",
+    "order": 29,
+    "level": 5,
+    "levelName": "Trình độ cao - Tổ hợp",
+    "title": "Bài 29 - Tổ hợp chùm 4 lệch",
+    "shortTitle": "Tổ Hợp Khó 3",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 40,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "e",
+      "&",
+      "a",
+      "2",
+      "e",
+      "&",
+      "a",
+      "3",
+      "e",
+      "&",
+      "a",
+      "4",
+      "e",
+      "&",
+      "a"
+    ],
+    "rhythmSymbols": [
+      "♬",
+      "♬",
+      "𝄽",
+      "♬",
+      "𝄽",
+      "♬",
+      "♬",
+      "♬",
+      "♬",
+      "𝄽",
+      "♬",
+      "𝄽",
+      "♬",
+      "♬",
+      "♬",
+      "♬"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↑",
+      "-",
+      "↑",
+      "-",
+      "↑",
+      "↓",
+      "↑",
+      "↓",
+      "-",
+      "↓",
+      "-",
+      "↓",
+      "↑",
+      "↓",
+      "↑"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Tổ hợp chùm 4 lệch - đỉnh cao của độ khó. Chỉ tập khi đã vững các bài trước."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Mật độ nốt dày, trọng âm di chuyển liên tục. Đây là lúc kỹ thuật gặp cảm xúc."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Nhịp trống chiến",
+        "teacherTip": "Dồn dập, mạnh mẽ, thôi thúc bước chân tiến lên."
+      }
+    }
+  },
+  {
+    "id": "lesson_030",
+    "order": 30,
+    "level": 5,
+    "levelName": "Trình độ cao - Tổng hợp thực chiến",
+    "title": "Bài 30 - Tổng hợp thực chiến",
+    "shortTitle": "Tổng Hợp",
+    "isLocked": false,
+    "isHidden": true,
+    "defaultTempo": 45,
+    "timeSignature": "4/4",
+    "beats": [
+      "1",
+      "&",
+      "2",
+      "&",
+      "3",
+      "&",
+      "4",
+      "&"
+    ],
+    "rhythmSymbols": [
+      "♩",
+      "♪",
+      "♪",
+      "𝄽",
+      "♪",
+      "♪",
+      "♪",
+      "𝄽"
+    ],
+    "strumSymbols": [
+      "↓",
+      "↓",
+      "↑",
+      "-",
+      "↑",
+      "↓",
+      "↑",
+      "-"
+    ],
+    "tabs": {
+      "rhythm": {
+        "title": "Tiết tấu",
+        "subtitle": "Đánh đúng",
+        "teacherTip": "Bài tổng hợp thực chiến: nốt đen, chùm 2, dấu lặng, đảo phách - tất cả trong một ô nhịp."
+      },
+      "expression": {
+        "title": "Sắc thái",
+        "subtitle": "Đánh hay",
+        "accentPattern": [
+          1,
+          3
+        ],
+        "teacherTip": "Đây là lúc gom mọi sắc thái đã học. Hãy chơi như đang biểu diễn, không phải đang tập."
+      },
+      "soul": {
+        "title": "Tâm hồn",
+        "subtitle": "Đánh có ý nghĩa",
+        "theme": "Bản hòa tấu thực chiến",
+        "teacherTip": "Tất cả những gì bạn học hội tụ về đây. Giờ thì kể câu chuyện của riêng bạn."
+      }
+    }
+  }
+]

@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
+import GrooveExercise from './groove/GrooveExercise'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIOS } from './iap'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
@@ -218,7 +219,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     { id: 'finger',    name: 'Luyện ngón',  icon: '🖐', color: '#7C3AED' },
     { id: 'scale',     name: 'Âm giai',     icon: '🎼', color: '#0891B2' },
     { id: 'arpeggio',  name: 'Arpeggio',    icon: '🎸', color: '#4338CA' },
-    { id: 'metronome', name: 'Metronome',   icon: '🥁', color: '#16A34A' },
+    { id: 'metronome', name: 'Tiết tấu',     icon: '🥁', color: '#2E7D52' },
     { id: 'ear',       name: 'Cảm âm',      icon: '👂', color: '#D97706' },
   ]
   const [practiceTotals, setPracticeTotals] = useState<Record<string, number>>({})
@@ -364,6 +365,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [showFingerExercise, setShowFingerExercise] = useState(false)
   // ── Scale Exercise overlay ──
   const [showScaleExercise, setShowScaleExercise] = useState(false)
+  // ── Groove (Tiết tấu) overlay — port từ Groove Lab ──
+  const [showGroove, setShowGroove] = useState(false)
   // Tool ID của bài học đang mở exercise (để mark done khi đóng)
   const [currentLessonToolId, setCurrentLessonToolId] = useState<string | null>(null)
   // ── Coming-soon tools accordion ──
@@ -872,6 +875,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         onClose={async () => {
           await stopTimer(currentLessonToolId ?? undefined)
           setShowScaleExercise(false)
+          setCurrentLessonToolId(null)
+        }}
+      />
+    )}
+
+    {showGroove && (
+      <GrooveExercise
+        onClose={async () => {
+          await stopTimer(currentLessonToolId ?? undefined)
+          setShowGroove(false)
           setCurrentLessonToolId(null)
         }}
       />
@@ -1454,7 +1467,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             setCurrentLessonToolId(tid)
                             if (exId === 'finger') { startTimer('finger'); setShowFingerExercise(true) }
                             else if (exId === 'scale') { startTimer('scale'); setShowScaleExercise(true) }
-                            else { startTimer(exId) } // arpeggio/metronome/ear: chỉ timer
+                            else if (exId === 'metronome') { startTimer('metronome'); setShowGroove(true) }
+                            else { startTimer(exId) } // arpeggio/ear: chỉ timer
                           }
                           return (
                             <div key={tid}
@@ -1675,6 +1689,24 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             <button
                               disabled={!!activeTimer}
                               onClick={() => { startTimer('scale'); setShowScaleExercise(true) }}
+                              style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                              ▶ Bắt đầu
+                            </button>
+                          )
+                        ) : ex.id === 'metronome' ? (
+                          /* Card Tiết tấu: mở GrooveExercise overlay (Học + Tập) */
+                          isActive ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ fontSize: 16, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</div>
+                              <button onClick={() => setShowGroove(true)}
+                                style={{ background: ex.color, border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Mở →
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              disabled={!!activeTimer}
+                              onClick={() => { startTimer('metronome'); setShowGroove(true) }}
                               style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                               ▶ Bắt đầu
                             </button>

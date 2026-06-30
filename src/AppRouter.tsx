@@ -27,6 +27,7 @@ import FlowMigratePage from './FlowMigratePage'
 import JoinGroupPage from './JoinGroupPage'
 import DeleteAccountPage from './DeleteAccountPage'
 import ClassLandingPage from './ClassLandingPage'
+import GrooveExercise from './groove/GrooveExercise'
 type AppUser = {
   id: string
   role: string
@@ -207,6 +208,11 @@ export default function AppRouter() {
   if (path === '/chum2' || path.startsWith('/chum2')) {
     const C = NATIVE_LESSONS['chum-2-moc-don'].Component
     return <C onClose={() => { window.location.href = '/start' }} />
+  }
+
+  // ── Route /groove (xem thử module Groove Lab: tab Học + Tập) ──
+  if (path === '/groove' || path.startsWith('/groove')) {
+    return <GrooveExercise onClose={() => { window.location.href = '/start' }} />
   }
 
   // ── Route /gp-editor ──

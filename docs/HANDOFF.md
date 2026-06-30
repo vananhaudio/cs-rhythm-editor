@@ -39,9 +39,7 @@ LMS dạy guitar online "Thầy Văn Anh Guitar". React + TS + Vite + Tailwind (
 - **Báo cáo admin:** `StudentList` có nút "📊 Báo cáo" — bảng XP/bài xong/khoá đã mở/hoạt động; lọc Toàn bộ / Theo lớp / Theo khoá (chỉ frontend, không cần SQL).
 
 ## SQL cần để ý
-- ĐÃ chạy: `db/course_request_setup.sql`.
-- CẦN chạy: `db/class_leaderboard.sql` (RPC xếp hạng theo lớp — không có thì BXH trống).
-- Chưa chắc đã chạy: `db/lesson_jingle.sql` (gắn 2 bài Jingle vào khoá).
+- ĐÃ chạy: `db/course_request_setup.sql`, `db/class_leaderboard.sql` (RPC xếp hạng theo lớp), `db/lesson_jingle.sql` (gắn 2 bài Jingle vào khoá) — tất cả xác nhận chạy 2026-06-30.
 - ĐÃ XOÁ (đừng chạy): các file cohort cũ.
 
 ## Quy trình làm việc với Claude (khuyến nghị)

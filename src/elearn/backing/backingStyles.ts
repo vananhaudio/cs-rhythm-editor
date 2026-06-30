@@ -59,6 +59,25 @@ export const STYLES: Style[] = [
   },
 ]
 
+// Vòng hợp âm mẫu cho "Nền tập quạt" (1 hợp âm / 1 ô nhịp).
+export interface Preset {
+  id: string
+  name: string
+  styleId: string
+  key: string
+  tempo?: number
+  chords: string[]
+}
+
+export const PRESETS: Preset[] = [
+  { id: 'pop-1645', name: 'Pop 1–6–4–5', styleId: 'ballad', key: 'C', chords: ['C', 'Am', 'F', 'G'] },
+  { id: 'disco-1645', name: 'Disco 1–6–4–5', styleId: 'disco', key: 'C', chords: ['C', 'Am', 'F', 'G'] },
+  { id: 'canon', name: 'Canon', styleId: 'ballad', key: 'C', chords: ['C', 'G', 'Am', 'Em', 'F', 'C', 'F', 'G'] },
+  { id: 'bolero-am', name: 'Bolero buồn', styleId: 'bolero', key: 'Am', chords: ['Am', 'Dm', 'E', 'Am'] },
+  { id: 'valse-c', name: 'Valse', styleId: 'valse', key: 'C', chords: ['C', 'F', 'G', 'C'] },
+  { id: 'polka-c', name: 'Polka', styleId: 'polka', key: 'C', chords: ['C', 'G', 'C', 'G'] },
+]
+
 export const getStyle = (id: string): Style => STYLES.find((s) => s.id === id) ?? STYLES[0]
 
 // ── Hợp âm → tần số nốt bass ──
