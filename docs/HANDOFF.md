@@ -11,6 +11,21 @@ LMS dạy guitar online "Thầy Văn Anh Guitar". React + TS + Vite + Tailwind (
 
 ## Việc làm trong đợt gần nhất (2026-06)
 
+### Đưa Groove Lab vào LMS — module "Tiết tấu" (2026-06-30)
+- **Port toàn bộ Groove Lab** (app Expo riêng `~/App/project/`) sang web, gom ở **`src/groove/`** (inline styles, Web Audio thuần):
+  - `metronomeClock.ts` ← port `audio/clock.ts` (bỏ react-native-audio-api → `window.AudioContext`).
+  - `lessons.ts` + `rhythmLessons.json` ← 30 bài tiết tấu + `analyzeBar` (chia ô nhịp).
+  - `RhythmStaff.tsx` ← vẽ khuông nốt SVG + beam + ↓↑; **rAF nội bộ** cho glow nốt + con trượt sáng theo phách (thay `Animated` của RN).
+  - `GrooveLesson.tsx` ← màn bài: 3 tầng **Nhịp Điệu → Sắc Thái → Câu Chuyện** + tempo + "lời thầy".
+  - `GrooveBackingPad.tsx` ← "Nền tập quạt" (tab Tập mới của Groove Lab); **tái dùng `src/elearn/backing/backingEngine.ts` có sẵn** (không viết lại engine trống+bass).
+  - `GrooveExercise.tsx` ← overlay fullscreen 2 tab **Học | Tập**.
+- **Gắn vào "Hôm nay luyện gì?"** (`MobileStudentPortal`, tab Tập): nâng cấp mục `metronome` → tên **"Tiết tấu"** (🥁, xanh `#2E7D52`) mở `GrooveExercise`; cộng timer/XP như finger/scale. Cùng nhánh `#exercise:metronome` trong bài học.
+- `backingStyles.ts`: thêm `PRESETS` (6 vòng hợp âm mẫu, additive — không đụng `ChordStrumPlayer`).
+- Route trực tiếp **`/groove`** để xem module. Verify preview: danh sách 30 bài, metronome sáng nốt đồng bộ, dấu nhấn Sắc Thái, nền tập quạt highlight ô. Build sạch, push main.
+- **CHƯA làm (đợt sau):** nút "Hỏi thầy về bài này" (Groove offline; LMS có thể nối Mira); phần "SỐNG"/Strum Score.
+
+
+
 ### Strum Score (gảy theo nền) — `src/elearn/ChordStrumPlayer.tsx`
 - Hiển thị bản nhạc hợp âm "như sách", chạy theo nền synth (trống+bass) hoặc mp3/YouTube.
 - **Engine nền** `src/elearn/backing/` (backingEngine.ts + backingStyles.ts): trống+bass 5 điệu, **giai điệu** (tiếng chuông), **count-in**, ô **"Out"/kết** (chốt 1 cú: kick+crash+bass rồi im), **tự cuộn** khuông tới ô đang chơi, cờ `loop=false` (chơi 1 lượt rồi dừng).

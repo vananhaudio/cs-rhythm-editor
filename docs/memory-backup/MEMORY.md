@@ -1,5 +1,7 @@
 # Memory Index
 
+- [Tỉa nốt 1 — triết lý](project_tia_not_1_philosophy.md) — dạy theo cụm→câu→vùng→bài thật, KHÔNG lấy dây làm trục; 6 bài; đồ nghề note_show/note_practice đủ; vùng Si-Đô-Rê-Mi-Fa-Sol = staff 4-9
+
 - [Đơn giản, hiệu quả](feedback_simple_effective_design.md) — trình bày sạch, hạn chế màu mè; nốt nhạc là trọng tâm (to/đều/đẹp); hợp âm trên nốt đầu ô nhịp
 - [Count-in lấy đà](project_countin_pattern.md) — ô lấy đà hiện số 1-2-3 sáng theo phách thay count-in; dùng cho mọi bài gảy-theo (ChordStrumPlayer)
 - [Strum Score](project_strum_score.md) — TÊN CHÍNH THỨC màn gảy-theo-bản-thu = "bản nhạc cho người quạt"; ChordStrumPlayer, route /hbd
@@ -18,6 +20,7 @@
 - [Vị trí file bàn giao](reference_handoff_docs.md) — handoff/prototype từ Bolt nằm ở `~/App/song builer/` (ngoài repo)
 - [Kho Tri Thức Văn Anh](reference_kho_tri_thuc.md) — app RIÊNG (Next.js, `~/App/Kho tri thức baì giảng/`) có Anthropic API key; LMS này KHÔNG có LLM key — đừng lẫn
 - [Groove Lab](project_groove_lab.md) — app Expo dạy tiết tấu guitar ở `~/App/project/`, ĐÃ LÊN APP STORE v1.0 (id 6778263562, build 7 iPhone-only, duyệt 2026-06-14), privacy /groovelab-privacy/
+- [Groove Lab trong LMS](project_groove_in_lms.md) — đã PORT toàn bộ Groove Lab vào LMS (src/groove/), mục "Tiết tấu" trong "Hôm nay luyện gì": tab Học (30 bài 3 tầng + metronome) + Tập (nền tập quạt); 2 codebase tách biệt
 - [Strum Score (Groove Lab)](project_groove_strum_guide.md) — tính năng SẮP LÀM (tên chính thức Strum Score): hướng dẫn quạt chạy theo nhạc user tự chèn; đã chốt khung tích hợp (union kind exercise/strum, route app/strum riêng); CHƯA code, chờ thầy bảo làm
 - [Nền tập quạt (Groove Lab)](project_groove_backing_track.md) — tính năng SẮP LÀM: engine tự sinh loop trống+bass 5 điệu để quạt theo; đặc tả Downloads/BAN-GIAO-groove-lab.md viết theo Tone.js (web) PHẢI port sang react-native-audio-api; trí tuệ nhạc copy thẳng; CHƯA code
 - [Note Trainer](project_note_trainer.md) — game đọc nốt "ScoreLab Trainer" (React/Vite/Tailwind, 1 file App.tsx) ở `~/App/Game nhớ nốt nhạc/app`, ĐÃ LÊN APP STORE v1.0 (id 6780222404, iPhone-only, duyệt 2026-06-15), privacy /scorelab-privacy/
