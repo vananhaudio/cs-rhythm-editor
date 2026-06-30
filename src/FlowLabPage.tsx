@@ -1,6 +1,7 @@
 // ── Flow Lab — xem thử engine Flow mới (GĐ1) với bài mẫu, KHÔNG đụng dữ liệu thật ──
 // Chỉ teacher vào /flow-lab. Dùng để DUYỆT CẢM GIÁC trước khi migrate 11 bài.
 import FlowPlayer from './FlowPlayer'
+import tiaNot1 from './elearn/tiaNot1Lessons.json'
 
 // Bài 4 "Tên 6 dây đàn" dựng theo engine mới (slide tương tác guitar)
 const SAMPLE_FLOW = {
@@ -242,39 +243,13 @@ const SAMPLE_FLOW_BIENSOAN = {
   ],
 }
 
-// Tỉa nốt 1 — Bài 2 "Cụm Mi–Fa–Sol" (cụm nốt đầu tiên; trục = nốt, không phải dây)
-const SAMPLE_FLOW_CUMMFS = {
-  id: 'sample-cummfs',
-  title: 'Cụm Mi – Fa – Sol',
-  reward_xp: 10,
-  slides: [
-    { id: 'c1', order: 1, logic: 'DAN', type: 'callout', title: 'Cụm Mi – Fa – Sol',
-      interactive: { variant: 'teacher' },
-      content: 'Bạn đã chơi được nốt <b>Mi</b>. Hôm nay thêm <b>2 nốt mới</b> ngay cạnh nó — <b>Fa</b> và <b>Sol</b> — để có <b>cụm nốt đầu tiên</b>. Cùng một dây vẫn tạo ra nhiều nốt khác nhau.' },
-    { id: 'c2', order: 2, logic: 'NHAN', type: 'note_show', title: 'Mi — ôn lại',
-      interactive: { label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 7, showStaff: true, showFretboard: true, caption: '<b>Mi</b> bạn đã biết — dây 1 <b>buông</b> (○). Nghe lại cho chắc tai.' } },
-    { id: 'c3', order: 3, logic: 'NHAN', type: 'note_show', title: 'Fa — nốt mới',
-      interactive: { label: 'Fa', freq: 349.23, string: 1, fret: 1, staff: 8, showStaff: true, showFretboard: true, caption: '<b>Fa</b> — nốt mới: cùng dây, bấm <b>ngăn 1</b>. Trên khuông, Fa nằm ngay <b>trên</b> Mi một bậc.' } },
-    { id: 'c4', order: 4, logic: 'NHAN', type: 'note_show', title: 'Sol — nốt mới',
-      interactive: { label: 'Sol', freq: 392.00, string: 1, fret: 3, staff: 9, showStaff: true, showFretboard: true, caption: '<b>Sol</b> — nốt mới: cùng dây, bấm <b>ngăn 3</b>. Cao hơn Fa một bậc nữa.' } },
-    { id: 'c5', order: 5, logic: 'LAM', type: 'note_practice', title: 'Đánh theo: Mi – Fa – Sol',
-      interactive: { notes: [
-        { label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 7 },
-        { label: 'Fa', freq: 349.23, string: 1, fret: 1, staff: 8 },
-        { label: 'Sol', freq: 392.00, string: 1, fret: 3, staff: 9 },
-        { label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 7 },
-        { label: 'Fa', freq: 349.23, string: 1, fret: 1, staff: 8 },
-        { label: 'Sol', freq: 392.00, string: 1, fret: 3, staff: 9 },
-      ] } },
-    { id: 'c6', order: 6, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
-      interactive: { items: ['Mình gảy được 3 nốt Mi – Fa – Sol, tiếng rõ', 'Mình thấy 3 nốt đi LÊN dần trên khuông nhạc', 'Cùng một dây mà ra được 3 nốt khác nhau'] } },
-    { id: 'c7', order: 7, logic: 'DAN', type: 'callout', title: 'Lời thầy',
-      interactive: { variant: 'teacher' },
-      content: 'Giỏi lắm! Bạn đã có <b>cụm nốt đầu tiên</b>. Bài sau, ta ghép 3 nốt này thành một <b>câu nhạc</b> — để thấy nốt là để tạo giai điệu, không phải học thuộc.' },
-  ],
-}
+// Tỉa nốt 1 — Bài 2–6 lấy từ nguồn DÙNG CHUNG (cũng dùng để seed DB) tiaNot1Lessons.json
+const TIANOT1 = Object.fromEntries(
+  (tiaNot1.lessons as Array<{ key: string; flowId: string; title: string; reward_xp: number; slides: unknown[] }>)
+    .map((l) => [l.key, { id: l.flowId, title: l.title, reward_xp: l.reward_xp, slides: l.slides }])
+)
 
-const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT, 'biensoan': SAMPLE_FLOW_BIENSOAN, 'cummfs': SAMPLE_FLOW_CUMMFS }
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT, 'biensoan': SAMPLE_FLOW_BIENSOAN, ...(TIANOT1 as Record<string, typeof SAMPLE_FLOW>) }
 
 export default function FlowLabPage() {
   const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'

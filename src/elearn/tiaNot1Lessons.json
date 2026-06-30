@@ -1,0 +1,84 @@
+{
+  "module_id": "d2fa1b1f-b3bc-4084-a130-71beb14c98f2",
+  "lessons": [
+    {
+      "key": "cummfs",
+      "lessonId": "a2710000-0000-4000-8000-000000000002",
+      "flowId": "f2710000-0000-4000-8000-000000000002",
+      "order": 1,
+      "title": "Bài 2: Cụm Mi – Fa – Sol",
+      "reward_xp": 10,
+      "slides": [
+        { "id": "c1", "order": 1, "logic": "DAN", "type": "callout", "title": "Cụm Mi – Fa – Sol", "interactive": { "variant": "teacher" }, "content": "Bạn đã chơi được nốt <b>Mi</b>. Hôm nay thêm <b>2 nốt mới</b> ngay cạnh nó — <b>Fa</b> và <b>Sol</b> — để có <b>cụm nốt đầu tiên</b>. Cùng một dây vẫn tạo ra nhiều nốt khác nhau." },
+        { "id": "c2", "order": 2, "logic": "NHAN", "type": "note_show", "title": "Mi — ôn lại", "interactive": { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7, "showStaff": true, "showFretboard": true, "caption": "<b>Mi</b> bạn đã biết — dây 1 <b>buông</b> (○). Nghe lại cho chắc tai." } },
+        { "id": "c3", "order": 3, "logic": "NHAN", "type": "note_show", "title": "Fa — nốt mới", "interactive": { "label": "Fa", "freq": 349.23, "string": 1, "fret": 1, "staff": 8, "showStaff": true, "showFretboard": true, "caption": "<b>Fa</b> — nốt mới: cùng dây, bấm <b>ngăn 1</b>. Trên khuông, Fa nằm ngay <b>trên</b> Mi một bậc." } },
+        { "id": "c4", "order": 4, "logic": "NHAN", "type": "note_show", "title": "Sol — nốt mới", "interactive": { "label": "Sol", "freq": 392.00, "string": 1, "fret": 3, "staff": 9, "showStaff": true, "showFretboard": true, "caption": "<b>Sol</b> — nốt mới: cùng dây, bấm <b>ngăn 3</b>. Cao hơn Fa một bậc nữa." } },
+        { "id": "c5", "order": 5, "logic": "LAM", "type": "note_practice", "title": "Đánh theo: Mi – Fa – Sol", "interactive": { "notes": [ { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7 }, { "label": "Fa", "freq": 349.23, "string": 1, "fret": 1, "staff": 8 }, { "label": "Sol", "freq": 392.00, "string": 1, "fret": 3, "staff": 9 }, { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7 }, { "label": "Fa", "freq": 349.23, "string": 1, "fret": 1, "staff": 8 }, { "label": "Sol", "freq": 392.00, "string": 1, "fret": 3, "staff": 9 } ] } },
+        { "id": "c6", "order": 6, "logic": "NGAM", "type": "checklist", "title": "Tự kiểm tra", "interactive": { "items": [ "Mình gảy được 3 nốt Mi – Fa – Sol, tiếng rõ", "Mình thấy 3 nốt đi LÊN dần trên khuông nhạc", "Cùng một dây mà ra được 3 nốt khác nhau" ] } },
+        { "id": "c7", "order": 7, "logic": "DAN", "type": "callout", "title": "Lời thầy", "interactive": { "variant": "teacher" }, "content": "Giỏi lắm! Bạn đã có <b>cụm nốt đầu tiên</b>. Bài sau, ta ghép 3 nốt này thành một <b>câu nhạc</b> — để thấy nốt là để tạo giai điệu, không phải học thuộc." }
+      ]
+    },
+    {
+      "key": "caunhac",
+      "lessonId": "a2710000-0000-4000-8000-000000000003",
+      "flowId": "f2710000-0000-4000-8000-000000000003",
+      "order": 2,
+      "title": "Bài 3: Câu nhạc đầu tiên",
+      "reward_xp": 10,
+      "slides": [
+        { "id": "n1", "order": 1, "logic": "DAN", "type": "callout", "title": "Câu nhạc đầu tiên", "interactive": { "variant": "teacher" }, "content": "Ba nốt <b>Mi – Fa – Sol</b> không chỉ để học thuộc. Ghép lại, ta có một <b>câu nhạc</b>: <b>Mi – Fa – Sol – Fa – Mi</b> — đi lên rồi đi xuống." },
+        { "id": "n2", "order": 2, "logic": "NGHI", "type": "text", "title": "Một giai điệu nhỏ", "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Đọc theo thứ tự: <b>Mi → Fa → Sol → Fa → Mi</b>.<br/>Đi <b>lên</b> 3 nốt rồi đi <b>xuống</b> lại. Đó đã là một giai điệu — nốt nhạc dùng để vậy đó.</p>" },
+        { "id": "n3", "order": 3, "logic": "LAM", "type": "note_practice", "title": "Đánh theo câu nhạc", "interactive": { "notes": [ { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7 }, { "label": "Fa", "freq": 349.23, "string": 1, "fret": 1, "staff": 8 }, { "label": "Sol", "freq": 392.00, "string": 1, "fret": 3, "staff": 9 }, { "label": "Fa", "freq": 349.23, "string": 1, "fret": 1, "staff": 8 }, { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7 } ] } },
+        { "id": "n4", "order": 4, "logic": "NGAM", "type": "checklist", "title": "Tự kiểm tra", "interactive": { "items": [ "Mình chơi liền được câu Mi – Fa – Sol – Fa – Mi", "Mình nghe ra giai điệu đi lên rồi đi xuống" ] } },
+        { "id": "n5", "order": 5, "logic": "DAN", "type": "callout", "title": "Lời thầy", "interactive": { "variant": "teacher" }, "content": "Tuyệt! Bạn vừa chơi <b>câu nhạc đầu tiên</b>. Nốt nhạc là để <b>tạo giai điệu</b>, không phải học thuộc rời rạc. Bài sau ta thêm một cụm nốt mới." }
+      ]
+    },
+    {
+      "key": "cumsdr",
+      "lessonId": "a2710000-0000-4000-8000-000000000004",
+      "flowId": "f2710000-0000-4000-8000-000000000004",
+      "order": 3,
+      "title": "Bài 4: Cụm Si – Đô – Rê",
+      "reward_xp": 10,
+      "slides": [
+        { "id": "d1", "order": 1, "logic": "DAN", "type": "callout", "title": "Cụm Si – Đô – Rê", "interactive": { "variant": "teacher" }, "content": "Thêm một <b>cụm nốt mới</b>: <b>Si – Đô – Rê</b>. Cụm này nằm <b>thấp hơn</b> Mi – Fa – Sol một chút trên khuông nhạc." },
+        { "id": "d2", "order": 2, "logic": "NHAN", "type": "note_show", "title": "Si", "interactive": { "label": "Si", "freq": 246.94, "string": 2, "fret": 0, "staff": 4, "showStaff": true, "showFretboard": true, "caption": "<b>Si</b> — dây 2 <b>buông</b> (○). Trên khuông, Si nằm ở <b>dòng kẻ giữa</b>." } },
+        { "id": "d3", "order": 3, "logic": "NHAN", "type": "note_show", "title": "Đô", "interactive": { "label": "Đô", "freq": 261.63, "string": 2, "fret": 1, "staff": 5, "showStaff": true, "showFretboard": true, "caption": "<b>Đô</b> — cùng dây, bấm <b>ngăn 1</b>. Ngay trên Si một bậc." } },
+        { "id": "d4", "order": 4, "logic": "NHAN", "type": "note_show", "title": "Rê", "interactive": { "label": "Rê", "freq": 293.66, "string": 2, "fret": 3, "staff": 6, "showStaff": true, "showFretboard": true, "caption": "<b>Rê</b> — cùng dây, bấm <b>ngăn 3</b>. Cao hơn Đô một bậc nữa." } },
+        { "id": "d5", "order": 5, "logic": "LAM", "type": "note_practice", "title": "Đánh theo: Si – Đô – Rê", "interactive": { "notes": [ { "label": "Si", "freq": 246.94, "string": 2, "fret": 0, "staff": 4 }, { "label": "Đô", "freq": 261.63, "string": 2, "fret": 1, "staff": 5 }, { "label": "Rê", "freq": 293.66, "string": 2, "fret": 3, "staff": 6 }, { "label": "Si", "freq": 246.94, "string": 2, "fret": 0, "staff": 4 }, { "label": "Đô", "freq": 261.63, "string": 2, "fret": 1, "staff": 5 }, { "label": "Rê", "freq": 293.66, "string": 2, "fret": 3, "staff": 6 } ] } },
+        { "id": "d6", "order": 6, "logic": "NGAM", "type": "checklist", "title": "Tự kiểm tra", "interactive": { "items": [ "Mình gảy được Si – Đô – Rê, tiếng rõ", "Mình thấy cụm này nằm thấp hơn Mi – Fa – Sol trên khuông" ] } },
+        { "id": "d7", "order": 7, "logic": "DAN", "type": "callout", "title": "Lời thầy", "interactive": { "variant": "teacher" }, "content": "Tốt lắm! Giờ bạn có <b>2 cụm nốt</b>. Bài sau ta gộp chúng thành một <b>vùng nốt</b> liền mạch." }
+      ]
+    },
+    {
+      "key": "vung",
+      "lessonId": "a2710000-0000-4000-8000-000000000005",
+      "flowId": "f2710000-0000-4000-8000-000000000005",
+      "order": 4,
+      "title": "Bài 5: Vùng nốt đầu tiên",
+      "reward_xp": 10,
+      "slides": [
+        { "id": "v1", "order": 1, "logic": "DAN", "type": "callout", "title": "Vùng nốt đầu tiên", "interactive": { "variant": "teacher" }, "content": "Gộp 2 cụm lại, ta có <b>vùng nốt đầu tiên</b>: <b>Si – Đô – Rê – Mi – Fa – Sol</b>. Một <b>vùng âm thanh</b> liền mạch — hãy nghĩ theo vùng, đừng nghĩ theo dây." },
+        { "id": "v2", "order": 2, "logic": "NGHI", "type": "text", "title": "6 nốt đi lên", "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Sáu nốt đi <b>lên dần</b>: Si → Đô → Rê → Mi → Fa → Sol.<br/>Ba nốt đầu ở một dây, ba nốt sau ở dây cạnh — nhưng tai ta chỉ nghe <b>một vùng đi lên</b>.</p>" },
+        { "id": "v3", "order": 3, "logic": "LAM", "type": "note_practice", "title": "Đánh theo cả vùng", "interactive": { "notes": [ { "label": "Si", "freq": 246.94, "string": 2, "fret": 0, "staff": 4 }, { "label": "Đô", "freq": 261.63, "string": 2, "fret": 1, "staff": 5 }, { "label": "Rê", "freq": 293.66, "string": 2, "fret": 3, "staff": 6 }, { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7 }, { "label": "Fa", "freq": 349.23, "string": 1, "fret": 1, "staff": 8 }, { "label": "Sol", "freq": 392.00, "string": 1, "fret": 3, "staff": 9 } ] } },
+        { "id": "v4", "order": 4, "logic": "NGAM", "type": "checklist", "title": "Tự kiểm tra", "interactive": { "items": [ "Mình chơi liền 6 nốt Si → Sol, đi lên đều", "Mình thấy đây là một vùng âm thanh, không phải các dây rời rạc" ] } },
+        { "id": "v5", "order": 5, "logic": "DAN", "type": "callout", "title": "Lời thầy", "interactive": { "variant": "teacher" }, "content": "Rất vững! Bạn đã nắm <b>vùng nốt đầu tiên</b>. Bài cuối chương, ta đọc một <b>câu nhạc nhảy qua lại 2 dây</b> — năng lực thật khi tỉa nốt." }
+      ]
+    },
+    {
+      "key": "day2",
+      "lessonId": "a2710000-0000-4000-8000-000000000006",
+      "flowId": "f2710000-0000-4000-8000-000000000006",
+      "order": 5,
+      "title": "Bài 6: Đọc câu nhạc qua 2 dây",
+      "reward_xp": 10,
+      "slides": [
+        { "id": "t1", "order": 1, "logic": "DAN", "type": "callout", "title": "Câu nhạc qua 2 dây", "interactive": { "variant": "teacher" }, "content": "Bài hát thật luôn <b>nhảy qua lại</b> giữa các dây. Thử câu <b>Mi – Rê – Đô – Rê – Mi</b> — đi xuống dây cạnh rồi quay về." },
+        { "id": "t2", "order": 2, "logic": "NGHI", "type": "text", "title": "Chuyển dây", "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\"><b>Mi</b> nằm một dây; <b>Rê</b> và <b>Đô</b> nằm dây cạnh.<br/>Đọc nốt là <b>chuyển dây</b> mượt theo giai điệu — đây mới là năng lực thật của tỉa nốt.</p>" },
+        { "id": "t3", "order": 3, "logic": "LAM", "type": "note_practice", "title": "Đánh theo: Mi – Rê – Đô – Rê – Mi", "interactive": { "notes": [ { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7 }, { "label": "Rê", "freq": 293.66, "string": 2, "fret": 3, "staff": 6 }, { "label": "Đô", "freq": 261.63, "string": 2, "fret": 1, "staff": 5 }, { "label": "Rê", "freq": 293.66, "string": 2, "fret": 3, "staff": 6 }, { "label": "Mi", "freq": 329.63, "string": 1, "fret": 0, "staff": 7 } ] } },
+        { "id": "t4", "order": 4, "logic": "NGAM", "type": "checklist", "title": "Tự kiểm tra", "interactive": { "items": [ "Mình chuyển được giữa 2 dây mà tiếng vẫn đều", "Mình chơi liền câu Mi – Rê – Đô – Rê – Mi" ] } },
+        { "id": "t5", "order": 5, "logic": "DAN", "type": "callout", "title": "Lời thầy", "interactive": { "variant": "teacher" }, "content": "Xuất sắc! Bạn đã đọc và chơi được một câu nhạc <b>qua 2 dây</b>. Đây là nền của mọi bài tỉa nốt về sau — nốt nối thành giai điệu, dây chỉ là nơi đặt ngón." }
+      ]
+    }
+  ]
+}
