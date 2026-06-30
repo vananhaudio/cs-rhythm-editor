@@ -8,6 +8,12 @@
       "port": 5173
     },
     {
+      "name": "dev2",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd /Users/vananhaudio/Desktop/cs-rhythm-editor && npm run dev -- --port 5180 --strictPort"],
+      "port": 5180
+    },
+    {
       "name": "rhythm-web",
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "cd /Users/vananhaudio/App/project && npx expo start --web --port 8081"],
