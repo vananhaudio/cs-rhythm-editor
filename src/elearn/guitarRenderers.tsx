@@ -339,6 +339,47 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
   )
 }
 
+// Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
+// Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
+export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number }) {
+  const top = 22, gap = 11, H = 98
+  const lineY = (i: number) => top + i * gap
+  const noteY = (staff: number) => lineY(4) - staff * (gap / 2)
+  const x0 = 46, sp = 42
+  const noteX = (i: number) => x0 + i * sp
+  const W = x0 + notes.length * sp + 6
+  const scRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = scRef.current
+    if (el && active >= 0) el.scrollTo({ left: Math.max(0, noteX(active) - el.clientWidth / 2), behavior: 'smooth' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active])
+  return (
+    <div ref={scRef} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ display: 'block', margin: '0 auto', maxWidth: 'none' }}>
+        {[0, 1, 2, 3, 4].map(i => <line key={i} x1={10} x2={W - 8} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
+        <text x={8} y={lineY(3) + 17} fontSize={84} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>
+        {notes.map((n, i) => {
+          const st = n.staff ?? 0, y = noteY(st), x = noteX(i), on = i === active
+          const col = on ? ACCENT.c1 : '#6B6456'
+          const stemUp = st < 4, stemX = x + (stemUp ? 7.5 : -7.5)
+          return (
+            <g key={i}>
+              {on && <rect x={x - 16} y={2} width={32} height={72} rx={7} fill="rgba(194,98,46,0.13)" />}
+              <g key={'p' + active} style={{ animation: on ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${x}px ${y}px` }}>
+                <ellipse cx={x} cy={y} rx={on ? 10 : 8} ry={on ? 7.2 : 6} fill={col} transform={`rotate(-18 ${x} ${y})`} />
+                <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -34 : 34)} stroke={col} strokeWidth={2.2} />
+              </g>
+              <text x={x} y={H - 4} textAnchor="middle" fontSize={on ? 13 : 11} fontWeight={on ? 800 : 600} fill={col}>{n.label}</text>
+            </g>
+          )
+        })}
+        <style dangerouslySetInnerHTML={{ __html: '@keyframes _ntPing{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}' }} />
+      </svg>
+    </div>
+  )
+}
+
 export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB, 'onPass'>) {
   const notes: NoteItem[] = cfg.notes?.length ? cfg.notes : Array.from({ length: 4 }, () => ({ label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 7 }))
   const speeds = cfg.speeds?.length ? cfg.speeds : DEFAULT_SPEEDS
@@ -389,10 +430,10 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
         </div>
       </div>
 
-      {/* Khuông nhạc — dạy thụ động vị trí nốt */}
+      {/* Khuông nhạc — CẢ CÂU như bản nhạc, nốt đang chơi sáng lần lượt (dài thì cuộn) */}
       {showStaff && (
-        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 8px 2px', marginBottom: 12 }}>
-          <NoteStaff active={playing && cursor >= 0} label={cur.label} staff={cur.staff ?? 0} pulse={cursor} />
+        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 6px 4px', marginBottom: 12 }}>
+          <NoteSheet notes={notes} active={playing ? cursor : -1} />
         </div>
       )}
 
