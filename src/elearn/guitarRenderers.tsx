@@ -345,7 +345,7 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
   const top = 22, gap = 11, H = 98
   const lineY = (i: number) => top + i * gap
   const noteY = (staff: number) => lineY(4) - staff * (gap / 2)
-  const x0 = 46, sp = 42
+  const x0 = 70, sp = 42                                  // cách khoá Sol cho thoáng
   const noteX = (i: number) => x0 + i * sp
   const W = x0 + notes.length * sp + 6
   const scRef = useRef<HTMLDivElement>(null)
