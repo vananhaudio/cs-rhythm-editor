@@ -209,6 +209,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [lastWeekXP, setLastWeekXP] = useState(0)
   const [classRank, setClassRank] = useState<{ rank: number; total: number } | null>(null)
   const [leaderboard, setLeaderboard] = useState<{ id: string; name: string; avatar: string | null; xp: number }[]>([])
+  const [showAllRank, setShowAllRank] = useState(false)   // bảng xếp hạng: rút gọn / xem thêm
   const [communityGroups, setCommunityGroups] = useState<{ id: string; name: string; group_type: string; zalo_url: string | null; facebook_url: string | null }[]>([])
   const [practiceStats, setPracticeStats] = useState<{ streak: number; daysWeek: number; weekMin: number; weekDays: boolean[] }>({ streak: 0, daysWeek: 0, weekMin: 0, weekDays: [] })
 
@@ -570,28 +571,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const lweek   = data.filter(r => r.created_at >= twoWeeksAgo && r.created_at < weekAgo).reduce((a, r) => a + r.xp, 0)
         setTotalXP(total); setWeekXP(week); setLastWeekXP(lweek)
       })
-    // Class rank + bảng xếp hạng lớp
-    supabase.from('student_xp_log').select('student_id, xp')
-      .then(async ({ data: all }) => {
-        if (!all) return
-        const byStudent: Record<string, number> = {}
-        all.forEach((r: any) => { byStudent[r.student_id] = (byStudent[r.student_id] ?? 0) + r.xp })
-        const myXP   = byStudent[student.id] ?? 0
-        const better = Object.values(byStudent).filter(x => x > myXP).length
-        setClassRank({ rank: better + 1, total: Math.max(Object.keys(byStudent).length, 1) })
-        // Bảng xếp hạng: ghép tên + avatar cho các học viên có XP
-        const ids = Object.keys(byStudent)
-        if (ids.length === 0) { setLeaderboard([]); return }
-        const { data: studs } = await supabase.from('edu_students')
-          .select('id, display_name, full_name, avatar_url').in('id', ids)
-        const clean = (n?: string | null) => { const s = (n ?? '').trim(); return s.includes('@') ? s.split('@')[0] : (s || 'Học viên') }
-        const info: Record<string, { name: string; avatar: string | null }> = {}
-        ;(studs ?? []).forEach((s: any) => { info[s.id] = { name: clean(s.display_name || s.full_name), avatar: s.avatar_url ?? null } })
-        setLeaderboard(
-          ids.map(id => ({ id, xp: byStudent[id], name: info[id]?.name ?? 'Học viên', avatar: info[id]?.avatar ?? null }))
-             .sort((a, b) => b.xp - a.xp)
-        )
-      })
+    // Bảng xếp hạng THEO LỚP (cùng nhóm Zalo, gộp nhiều lớp) — RPC my_class_leaderboard
+    supabase.rpc('my_class_leaderboard').then(({ data }) => {
+      const clean = (n?: string | null) => { const s = (n ?? '').trim(); return s.includes('@') ? s.split('@')[0] : (s || 'Học viên') }
+      const lb = ((data ?? []) as any[])
+        .map(r => ({ id: r.student_id, name: clean(r.name), avatar: r.avatar_url ?? null, xp: Number(r.xp) || 0 }))
+        .sort((a, b) => b.xp - a.xp)
+      setLeaderboard(lb)
+      const myIdx = lb.findIndex(r => r.id === student.id)
+      setClassRank({ rank: myIdx >= 0 ? myIdx + 1 : lb.length, total: Math.max(lb.length, 1) })
+    })
 
     // Cộng đồng của bạn (Facebook chung + nhóm Zalo đã gán) — qua RPC my_groups
     supabase.rpc('my_groups').then(({ data }) => setCommunityGroups((data ?? []) as any))
@@ -2009,17 +1998,26 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     </div>
                   )
                 }
-                const top = leaderboard.slice(0, 10).map((r, i) => ({ ...r, rank: i + 1 }))
-                const meInTop = top.some(r => r.id === student.id)
+                const LIMIT = 5
+                const ranked = leaderboard.map((r, i) => ({ ...r, rank: i + 1 }))
+                const shown = showAllRank ? ranked : ranked.slice(0, LIMIT)
+                const meInShown = shown.some(r => r.id === student.id)
                 const myIdx = leaderboard.findIndex(r => r.id === student.id)
+                const hidden = ranked.length - LIMIT
                 return (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {top.map(Row)}
-                    {!meInTop && myIdx >= 0 && (
+                    {shown.map(Row)}
+                    {!showAllRank && !meInShown && myIdx >= 0 && (
                       <Fragment>
                         <div style={{ textAlign: 'center', color: L.t3, fontSize: 15, lineHeight: 1, padding: '2px 0' }}>···</div>
                         {Row({ ...leaderboard[myIdx], rank: myIdx + 1 })}
                       </Fragment>
+                    )}
+                    {hidden > 0 && (
+                      <button onClick={() => setShowAllRank(v => !v)}
+                        style={{ marginTop: 8, background: 'transparent', border: `1px solid ${L.border}`, color: L.p1, borderRadius: 10, padding: '9px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
+                        {showAllRank ? 'Thu gọn' : `Xem thêm ${hidden} bạn →`}
+                      </button>
                     )}
                   </div>
                 )
