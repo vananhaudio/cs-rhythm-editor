@@ -126,7 +126,7 @@ export default function TeacherAdminPage() {
 
         {/* Students */}
         {section === 'students' && !studentId && (
-          <div style={{ flex: 1, overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
             <StudentList onSelect={id => setStudentId(id)} />
           </div>
         )}
