@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { ACCENT, STRINGS, freqOfNum, colorOfNum, widthOfNum, stringByNum } from './guitarConst'
 import { playTone, playSequence } from './audio'
+import { detectPitch, pitchClass } from './pitch'
 import { playGuitarNote } from '../audioEngine'   // engine guitar (nốt ngân độc lập) — để rải hợp âm không bị cắt
 
 export interface NeckCfg { target?: number; successMsg?: string }
@@ -380,87 +381,167 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
   )
 }
 
+const VN_PC: Record<number, string> = { 0: 'Đô', 1: 'Đô#', 2: 'Rê', 3: 'Rê#', 4: 'Mi', 5: 'Fa', 6: 'Fa#', 7: 'Sol', 8: 'Sol#', 9: 'La', 10: 'La#', 11: 'Si' }
+const MicIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="11" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+)
+
 export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB, 'onPass'>) {
   const notes: NoteItem[] = cfg.notes?.length ? cfg.notes : Array.from({ length: 4 }, () => ({ label: 'Mi', freq: 329.63, string: 1, fret: 0, staff: 7 }))
   const speeds = cfg.speeds?.length ? cfg.speeds : DEFAULT_SPEEDS
   const [speedIdx, setSpeedIdx] = useState(0)
-  const [playing, setPlaying] = useState(false)
+  const [playing, setPlaying] = useState(false)    // chế độ "Nghe mẫu" (máy chạy)
+  const [micOn, setMicOn] = useState(false)        // chế độ "Tự đàn" (mic chấm)
   const [cursor, setCursor] = useState(-1)
   const [done, setDone] = useState(false)
+  const [heard, setHeard] = useState<string | null>(null)
   const timer = useRef<number | null>(null)
   const beat = useRef(0)
+  // mic refs
+  const micStreamR = useRef<MediaStream | null>(null)
+  const audioCtxR = useRef<AudioContext | null>(null)
+  const analyserR = useRef<AnalyserNode | null>(null)
+  const bufR = useRef<Float32Array<ArrayBuffer> | null>(null)
+  const micTimer = useRef<number | null>(null)
+  const cursorR = useRef(0)
+  const stableR = useRef(0)
+  const releaseR = useRef(false)
 
   const stop = () => {
     if (timer.current) { clearInterval(timer.current); timer.current = null }
     setPlaying(false); setCursor(-1)
   }
-  useEffect(() => () => { if (timer.current) clearInterval(timer.current) }, [])
+  const stopMic = () => {
+    if (micTimer.current) { clearInterval(micTimer.current); micTimer.current = null }
+    micStreamR.current?.getTracks().forEach(t => t.stop()); micStreamR.current = null
+    try { audioCtxR.current?.close() } catch { /* */ } audioCtxR.current = null
+    setMicOn(false); setHeard(null)
+  }
+  useEffect(() => () => { if (timer.current) clearInterval(timer.current); if (micTimer.current) clearInterval(micTimer.current); micStreamR.current?.getTracks().forEach(t => t.stop()); try { audioCtxR.current?.close() } catch { /* */ } }, [])
 
+  // ── Nghe mẫu: máy chạy nốt đều ──
   const start = () => {
+    stopMic()
     if (timer.current) clearInterval(timer.current)
-    setPlaying(true); beat.current = 0
+    setPlaying(true); setDone(false); beat.current = 0
     const ms = 60000 / speeds[speedIdx].bpm
     const tick = () => {
       const i = beat.current % notes.length
-      setCursor(i)
-      playTone(notes[i].freq)
-      beat.current++
-      // sau 2 vòng (đủ vài nhịp) → mở hoàn thành
+      setCursor(i); playTone(notes[i].freq); beat.current++
       if (beat.current >= notes.length * 2 && !done) { setDone(true); onPass() }
     }
     tick()
     timer.current = window.setInterval(tick, ms)
   }
 
+  // ── Tự đàn: mic nghe — đàn ĐÚNG TÊN NỐT mới sang nốt kế ──
+  const detect = () => {
+    const an = analyserR.current, buf = bufR.current, ctx = audioCtxR.current
+    if (!an || !buf || !ctx) return
+    an.getFloatTimeDomainData(buf)
+    const { freq } = detectPitch(buf, ctx.sampleRate)
+    const i = cursorR.current
+    const target = pitchClass(notes[i].freq)
+    if (freq > 0) {
+      const pc = pitchClass(freq)
+      setHeard(VN_PC[pc] ?? null)
+      if (releaseR.current) { if (pc !== target) releaseR.current = false }
+      else if (pc === target) {
+        stableR.current++
+        if (stableR.current >= 2) {                 // ~150ms đúng → tính là đàn đúng
+          playTone(notes[i].freq); stableR.current = 0; releaseR.current = true
+          const next = i + 1
+          if (next >= notes.length) { setDone(true); onPass(); stopMic(); return }
+          cursorR.current = next; setCursor(next)
+        }
+      } else stableR.current = 0
+    } else { setHeard(null); stableR.current = 0 }
+  }
+  const startMic = async () => {
+    stop()
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } as MediaTrackConstraints })
+      micStreamR.current = stream
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+      audioCtxR.current = ctx
+      if (ctx.state === 'suspended') { try { await ctx.resume() } catch { /* */ } }   // iOS cần resume trong cử chỉ
+      const src = ctx.createMediaStreamSource(stream)
+      const an = ctx.createAnalyser(); an.fftSize = 2048; src.connect(an)
+      analyserR.current = an; bufR.current = new Float32Array(an.fftSize)
+      cursorR.current = 0; setCursor(0); stableR.current = 0; releaseR.current = false
+      setMicOn(true); setDone(false)
+      micTimer.current = window.setInterval(detect, 60)
+    } catch {
+      alert('Không truy cập được micro. Hãy cho phép quyền micro cho ứng dụng/trình duyệt rồi thử lại.')
+      setMicOn(false)
+    }
+  }
+
+  const active = (playing || micOn) ? cursor : -1
   const cur = notes[cursor >= 0 ? cursor % notes.length : 0]
   const showStaff = cfg.showStaff ?? notes.some(n => n.staff != null)
+  const busy = playing || micOn
 
   return (
     <div>
-      {/* Chọn tốc độ */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
+      {/* Chọn tốc độ (cho Nghe mẫu) */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
         <div style={{ display: 'flex', gap: 4, padding: 4, background: '#EFE9DD', borderRadius: 12 }}>
           {speeds.map((s, i) => (
             <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start() }}
-              style={{ padding: '7px 16px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700,
+              style={{ padding: '6px 15px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
                 background: speedIdx === i ? '#fff' : 'transparent', color: speedIdx === i ? ACCENT.d : '#8A8478',
                 boxShadow: speedIdx === i ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>{s.label}</button>
           ))}
         </div>
       </div>
 
-      {/* Khuông nhạc — CẢ CÂU như bản nhạc, nốt đang chơi sáng lần lượt (dài thì cuộn) */}
+      {/* Khuông nhạc — cả câu, nốt đang chơi/cần đàn sáng lần lượt */}
       {showStaff && (
-        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 6px 4px', marginBottom: 12 }}>
-          <NoteSheet notes={notes} active={playing ? cursor : -1} />
+        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 6px 4px', marginBottom: 10 }}>
+          <NoteSheet notes={notes} active={active} />
         </div>
       )}
 
-      {/* Cần đàn — nốt chạy theo nhịp */}
-      <div style={{ background: '#F1ECE2', borderRadius: 14, padding: '12px 12px 8px', marginBottom: 14 }}>
+      {/* Cần đàn */}
+      <div style={{ background: '#F1ECE2', borderRadius: 14, padding: '12px 12px 8px', marginBottom: 12 }}>
         <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} />
         <div style={{ textAlign: 'center', marginTop: 6, fontSize: 13, color: '#8A8478' }}>
-          {playing ? <>Đang chạy: <b style={{ color: ACCENT.d }}>{cur.label}</b></> : 'Bấm bắt đầu để máy chạy nốt'}
+          {micOn ? <>Đàn nốt: <b style={{ color: ACCENT.c1 }}>{cur.label}</b>{heard ? <span style={{ color: '#A8A294' }}> · máy nghe: {heard}</span> : <span style={{ color: '#A8A294' }}> · máy đang nghe…</span>}</>
+            : playing ? <>Đang chạy: <b style={{ color: ACCENT.d }}>{cur.label}</b></> : 'Nghe mẫu, hoặc tự đàn cho máy chấm'}
         </div>
       </div>
 
       {/* Nút điều khiển */}
-      <button onClick={playing ? stop : start}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 16, border: 'none', borderRadius: 15, background: playing ? '#1C1A17' : ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
-        <span style={{ fontSize: 18 }}>{playing ? '⏹' : '▶'}</span>
-        <span>
-          <span style={{ display: 'block', fontSize: 16, fontWeight: 700 }}>{playing ? 'Dừng lại' : 'Bắt đầu chơi theo'}</span>
-          {!playing && <span style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,.8)', marginTop: 1 }}>Máy chạy nốt đều — bạn đánh theo trên đàn</span>}
-        </span>
-      </button>
+      {busy ? (
+        <button onClick={micOn ? stopMic : stop}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 15, background: '#1C1A17', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 16, fontWeight: 700 }}>
+          <span style={{ fontSize: 17 }}>⏹</span> {micOn ? 'Dừng tự đàn' : 'Dừng nghe mẫu'}
+        </button>
+      ) : (
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={start}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, padding: '12px 8px', border: `1.5px solid ${ACCENT.a}`, borderRadius: 14, background: '#fff', color: ACCENT.d, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>▶ Nghe mẫu</span>
+            <span style={{ fontSize: 11.5, color: '#8A8478' }}>máy chơi để nghe</span>
+          </button>
+          <button onClick={startMic}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '12px 8px', border: 'none', borderRadius: 14, background: ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 700 }}><MicIcon /> Tự đàn</span>
+            <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,.85)' }}>máy nghe — đúng mới qua</span>
+          </button>
+        </div>
+      )}
 
-      <div style={{ marginTop: 12, fontSize: 13, color: '#A8A294', textAlign: 'center', lineHeight: 1.5 }}>
-        Nghe máy chạy rồi gảy theo. Không cần nhanh — đều và rõ là được.
-      </div>
+      {!busy && !done && (
+        <div style={{ marginTop: 11, fontSize: 12.5, color: '#A8A294', textAlign: 'center', lineHeight: 1.5 }}>
+          Nghe mẫu trước cho quen, rồi <b style={{ color: ACCENT.d }}>Tự đàn</b> — đàn đúng nốt đang sáng, máy tự sang nốt kế.
+        </div>
+      )}
       {done && (
         <div style={{ marginTop: 12, padding: '11px 14px', borderRadius: 12, background: ACCENT.s, color: ACCENT.d, fontSize: 14, fontWeight: 600, textAlign: 'center' }}>
-          Tốt lắm! Bạn đã chơi theo được — có thể bấm Dừng và sang bước sau.
+          Tốt lắm! Bạn đàn đúng cả câu rồi — có thể sang bước sau.
         </div>
       )}
     </div>
