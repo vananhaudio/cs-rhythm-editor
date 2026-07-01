@@ -7,6 +7,17 @@ export const DANG_LOP: Record<string, string> = {
   TN1: 'GL', TN2: 'GL', TN3: 'GL',
 }
 
+// Tên năng lực đầy đủ (mục 9) — hiển thị rõ cấp độ
+export const TEN_NANG_LUC: Record<string, string> = {
+  NM: 'Nhập môn',
+  DH1: 'Đệm hát 1', DH2: 'Đệm hát 2', DH3: 'Đệm hát 3', DHNC: 'Đệm hát nâng cao',
+  TN1: 'Tỉa nốt 1', TN2: 'Tỉa nốt 2', TN3: 'Tỉa nốt 3',
+  NL1: 'Nhạc lý 1', NL2: 'Nhạc lý 2', NL3: 'Nhạc lý 3',
+  SOLO: 'Solo Guitar',
+}
+export const tenNangLuc = (code?: string | null): string | null =>
+  code ? (TEN_NANG_LUC[code.trim().toUpperCase()] ?? null) : null
+
 // Nhánh (mục 2)
 export const BRANCH: Record<string, string> = {
   NM: 'Nhập môn',
