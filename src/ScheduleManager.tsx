@@ -174,7 +174,8 @@ export default function ScheduleManager() {
                     return (
                       <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 12px', fontSize: 13.5, borderTop: i ? `1px solid ${S.border}` : 'none', background: on ? S.accentLight : 'transparent' }}>
                         <input type="checkbox" checked={on} onChange={() => toggleCourse(c.id)} style={{ cursor: 'pointer' }} />
-                        <span style={{ flex: 1, color: S.text1 }}>{c.name}</span>
+                        {c.code && <span style={{ fontSize: 11, fontWeight: 800, color: '#4F46E5', background: S.accentLight, borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>{c.code}</span>}
+                        <span style={{ flex: 1, color: c.code ? S.text1 : S.text3 }}>{c.name}{!c.code && ' (ngoài hành trình)'}</span>
                         {on && (
                           <button type="button" onClick={() => set({ main_course_id: c.id })}
                             style={{ background: main ? '#FEF3C7' : '#fff', border: `1px solid ${main ? '#F59E0B' : S.border}`, color: main ? '#B45309' : S.text3, borderRadius: 6, padding: '3px 9px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
