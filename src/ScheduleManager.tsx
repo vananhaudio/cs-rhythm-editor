@@ -2,6 +2,7 @@
 // Mỗi lớp gắn NHIỀU khoá (tick) + 1 nhóm Zalo → nền tảng cho đăng ký 1-chạm.
 import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from './supabase'
+import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
 
 const S = {
   accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
@@ -21,8 +22,8 @@ interface Cls {
   course_ids: string[]; main_course_id: string | null; group_id: string | null; zoom_url: string | null
   sort_order: number; is_active: boolean
 }
-interface Course { id: string; name: string }
-interface Grp { id: string; name: string }
+interface Course { id: string; name: string; code: string | null }
+interface Grp { id: string; name: string; code: string | null; zalo_url: string | null }
 
 const blank = (): Cls => ({
   id: '', code: '', name: '', section: 'upcoming', schedule: '', start_text: '', duration: '8 buổi · mỗi buổi 90 phút',
@@ -34,6 +35,8 @@ export default function ScheduleManager() {
   const [courses, setCourses] = useState<Course[]>([])
   const [groups, setGroups] = useState<Grp[]>([])
   const [form, setForm] = useState<Cls | null>(null)   // null = không mở form
+  const [soKhoa, setSoKhoa] = useState('')             // số khoá (biến đổi) → ghép mã lớp
+  const [zaloUrl, setZaloUrl] = useState('')           // link nhóm Zalo (nhóm ≡ mã lớp)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
@@ -43,10 +46,12 @@ export default function ScheduleManager() {
   }
   useEffect(() => {
     load()
-    supabase.from('edu_courses').select('id,name').order('sort_order').then(({ data }) => setCourses((data ?? []) as Course[]))
-    supabase.from('edu_groups').select('id,name,group_type').eq('is_active', true).order('name')
-      .then(({ data }) => setGroups((data ?? []).filter((g: any) => g.group_type !== 'facebook') as Grp[]))
+    supabase.from('edu_courses').select('id,name,code').order('sort_order').then(({ data }) => setCourses((data ?? []) as Course[]))
+    supabase.from('edu_groups').select('id,name,code,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
   }, [])
+
+  const mainCode = () => courses.find(c => c.id === form?.main_course_id)?.code ?? null   // mã năng lực khoá chính
+  const maLop = () => buildClassCode(mainCode(), soKhoa) ?? (form?.code || '')            // mã lớp = DH2.KD16
 
   const set = (patch: Partial<Cls>) => setForm(f => f ? { ...f, ...patch } : f)
   const toggleCourse = (id: string) => setForm(f => {
@@ -63,12 +68,24 @@ export default function ScheduleManager() {
   const save = async () => {
     if (!form || !form.name.trim()) { setMsg('Nhập tên lớp trước nhé.'); return }
     setBusy(true); setMsg('')
+    const code = maLop().trim() || null
+    // Nhóm Zalo ≡ mã lớp: tự khớp/tạo nhóm cùng mã, cập nhật link (nếu có mã lớp)
+    let group_id = form.group_id || null
+    if (code) {
+      const uid = (await supabase.auth.getUser()).data.user?.id
+      const { data: g, error: gErr } = await supabase.from('edu_groups')
+        .upsert({ code, name: code, group_type: 'zalo', is_active: true, zalo_url: zaloUrl.trim() || null }, { onConflict: 'code' })
+        .select('id').single()
+      if (gErr) { setBusy(false); setMsg('Tạo/khớp nhóm Zalo lỗi: ' + gErr.message); return }
+      group_id = g?.id ?? group_id
+      void uid
+    }
     const rec: any = {
-      code: form.code?.trim() || null, name: form.name.trim(), section: form.section,
+      code, name: form.name.trim(), section: form.section,
       schedule: form.schedule?.trim() || null, start_text: form.start_text?.trim() || null,
       duration: form.duration?.trim() || null, price: form.price?.trim() || null,
       course_ids: form.course_ids, main_course_id: form.main_course_id || form.course_ids[0] || null,
-      group_id: form.group_id || null, zoom_url: form.zoom_url?.trim() || null,
+      group_id, zoom_url: form.zoom_url?.trim() || null,
       sort_order: form.sort_order || 0, is_active: form.is_active,
     }
     const q = form.id
@@ -77,7 +94,9 @@ export default function ScheduleManager() {
     const { error } = await q
     setBusy(false)
     if (error) { setMsg('Lưu lỗi: ' + error.message); return }
-    setForm(null); load()
+    setForm(null)
+    supabase.from('edu_groups').select('id,name,code,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
+    load()
   }
   const del = async (r: Cls) => {
     if (!confirm(`Xoá lớp "${r.name}"?`)) return
@@ -98,7 +117,7 @@ export default function ScheduleManager() {
           <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>🗓 Lịch lớp học</div>
           <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Mỗi lớp gắn sẵn khoá học + nhóm Zalo — set 1 lần, đăng ký tự chảy.</div>
         </div>
-        {!form && <button onClick={() => setForm(blank())} style={{ background: S.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>＋ Thêm lớp</button>}
+        {!form && <button onClick={() => { setForm(blank()); setSoKhoa(''); setZaloUrl('') }} style={{ background: S.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>＋ Thêm lớp</button>}
       </div>
 
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 24px' }}>
@@ -107,9 +126,19 @@ export default function ScheduleManager() {
         {/* FORM thêm/sửa */}
         {form && (
           <div style={{ background: S.surface, border: `1.5px solid ${S.accent}`, borderRadius: 12, padding: 18, marginBottom: 20 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: S.text1, marginBottom: 14 }}>{form.id ? 'Sửa lớp' : 'Lớp mới'}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: S.text1, marginBottom: 10 }}>{form.id ? 'Sửa lớp' : 'Lớp mới'}</div>
+            {(() => {
+              const nl = mainCode(); const ml = buildClassCode(nl, soKhoa)
+              return (
+                <div style={{ background: nl ? S.accentLight : '#FEF9C3', borderRadius: 10, padding: '8px 12px', marginBottom: 14, fontSize: 13.5 }}>
+                  {nl
+                    ? <>Mã năng lực: <b>{nl}</b> · dạng lớp <b>{dangLop(nl) ?? '—'}</b> → Mã lớp: <b style={{ color: S.accent, fontSize: 15 }}>{ml ?? '(nhập số khoá)'}</b>{ml && <span style={{ color: S.text3 }}> · nhóm Zalo ≡ {ml}</span>}</>
+                    : <span style={{ color: '#854D0E' }}>⚠ Chọn <b>khoá chính (★)</b> ở dưới để tự sinh mã lớp. (Khoá chính chưa có mã năng lực thì mã lớp để trống — gõ tay được.)</span>}
+                </div>
+              )
+            })()}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div><label style={lbl}>Mã lớp</label><input style={inp} value={form.code ?? ''} onChange={e => set({ code: e.target.value })} placeholder="KD11" /></div>
+              <div><label style={lbl}>Số khoá (khoá thứ mấy)</label><input style={inp} value={soKhoa} onChange={e => setSoKhoa(e.target.value.replace(/\D/g, ''))} placeholder="16" inputMode="numeric" /></div>
               <div><label style={lbl}>Khối</label>
                 <select style={inp} value={form.section} onChange={e => set({ section: e.target.value })}>
                   {SECTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
@@ -122,11 +151,8 @@ export default function ScheduleManager() {
               <div><label style={lbl}>Học phí</label><input style={inp} value={form.price ?? ''} onChange={e => set({ price: e.target.value })} placeholder="990k / Combo" /></div>
               <div style={{ gridColumn: '1 / 3' }}><label style={lbl}>Link Zoom (tuỳ chọn)</label><input style={inp} value={form.zoom_url ?? ''} onChange={e => set({ zoom_url: e.target.value })} placeholder="https://zoom.us/j/..." /></div>
 
-              <div><label style={lbl}>💬 Nhóm Zalo của lớp (chọn 1)</label>
-                <select style={inp} value={form.group_id ?? ''} onChange={e => set({ group_id: e.target.value || null })}>
-                  <option value="">— chưa gắn —</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
+              <div><label style={lbl}>💬 Link nhóm Zalo (nhóm ≡ mã lớp, tự khớp)</label>
+                <input style={inp} value={zaloUrl} onChange={e => setZaloUrl(e.target.value)} placeholder="https://zalo.me/g/..." />
               </div>
               <div><label style={lbl}>Thứ tự · Hiển thị</label>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -189,7 +215,7 @@ export default function ScheduleManager() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => setForm({ ...r, code: r.code ?? '', schedule: r.schedule ?? '', start_text: r.start_text ?? '', duration: r.duration ?? '', price: r.price ?? '', zoom_url: r.zoom_url ?? '', course_ids: r.course_ids ?? [] })} style={{ background: S.accentLight, color: S.accent, border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Sửa</button>
+                    <button onClick={() => { setForm({ ...r, code: r.code ?? '', schedule: r.schedule ?? '', start_text: r.start_text ?? '', duration: r.duration ?? '', price: r.price ?? '', zoom_url: r.zoom_url ?? '', course_ids: r.course_ids ?? [] }); setSoKhoa(soFromClassCode(r.code)); setZaloUrl(groups.find(g => g.id === r.group_id)?.zalo_url ?? '') }} style={{ background: S.accentLight, color: S.accent, border: 'none', borderRadius: 7, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Sửa</button>
                     <button onClick={() => del(r)} style={{ background: '#fff', color: S.err, border: `1px solid ${S.border}`, borderRadius: 7, padding: '6px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Xoá</button>
                   </div>
                 </div>

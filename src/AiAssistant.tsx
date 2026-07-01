@@ -13,7 +13,7 @@ type Msg = { role: 'user' | 'assistant'; content: string }
 type Student = { email: string; full_name?: string; password?: string }
 type Assignment = { studentEmail: string; groupName: string }
 type Reset = { studentEmail: string; password?: string }
-type ClassItem = { code?: string; name: string; section?: string; schedule?: string; start?: string; duration?: string; price?: string; courseNames?: string[]; groupName?: string }
+type ClassItem = { nangLuc: string; so: string; schedule?: string; start?: string; section?: string }
 type Proposal = { type: 'students'; students: Student[] } | { type: 'group'; assignments: Assignment[] } | { type: 'reset'; resets: Reset[] } | { type: 'schedule'; classes: ClassItem[] }
 type Result = { email: string; full_name?: string; student?: string; password?: string; group?: string; ok: boolean; error?: string }
 
@@ -22,7 +22,7 @@ const EXAMPLES = [
   'Tạo 2 tài khoản: an@gmail.com và binh@gmail.com',
   'Thêm hocsinh02@gmail.com vào nhóm Zalo',
   'Đặt lại mật khẩu cho lan@gmail.com',
-  'Xếp lịch lớp KD11 Đệm hát TĐ1, thứ 3 19h, khai giảng 7/7, nhóm Zalo TĐ1',
+  'Mở lớp DH1 khoá 16, thứ 3 19h, khai giảng 7/7',
 ]
 
 // Mật khẩu mặc định khi thầy không nói rõ — học sinh đổi sau trong app
@@ -165,9 +165,9 @@ export default function AiAssistant() {
                 ))
                 : proposal.classes.map((c, i) => (
                   <div key={i} style={{ padding: '10px 12px', fontSize: 13, borderTop: i ? `1px solid ${S.border}` : 'none' }}>
-                    <div style={{ color: S.text1, fontWeight: 700 }}>{c.code ? c.code + ' · ' : ''}{c.name}</div>
-                    <div style={{ color: S.text2, marginTop: 2 }}>{[c.schedule, c.start && ('KG ' + c.start), c.price].filter(Boolean).join(' · ') || '—'}</div>
-                    <div style={{ color: S.text3, marginTop: 3 }}>💬 {c.groupName || <em>chưa gắn nhóm</em>} · 🎓 {(c.courseNames && c.courseNames.length) ? c.courseNames.join(', ') : <em>chưa gắn khoá</em>}</div>
+                    <div style={{ color: S.text1, fontWeight: 700 }}>{c.nangLuc}{c.so ? ' · Khoá ' + c.so : ''}</div>
+                    <div style={{ color: S.text2, marginTop: 2 }}>{[c.schedule, c.start && ('KG ' + c.start)].filter(Boolean).join(' · ') || '—'}</div>
+                    <div style={{ color: S.text3, marginTop: 3 }}>🎓 Khoá + 💬 nhóm Zalo (mã lớp) tự gắn theo mã năng lực</div>
                   </div>
                 ))}
             </div>

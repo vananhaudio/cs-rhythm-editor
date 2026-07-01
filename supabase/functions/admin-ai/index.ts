@@ -10,6 +10,14 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 const MODEL = 'claude-haiku-4-5' // việc nhẹ + có bước thầy duyệt nên dùng model rẻ; đổi sang sonnet/opus nếu cần
 
+// Bộ luật Hành trình 2027 — mã năng lực → dạng lớp; ghép mã lớp. (đồng bộ với src/hanhtrinh.ts)
+const DANG_LOP: Record<string, string> = { DH1: 'KD', DH2: 'KD', DH3: 'BP', TN1: 'GL', TN2: 'GL', TN3: 'GL' }
+const buildClassCode = (nangLuc: string, so: string | number): string | null => {
+  const c = (nangLuc || '').trim().toUpperCase(); const dl = DANG_LOP[c]
+  const n = String(so ?? '').replace(/\D/g, '')
+  return (dl && n) ? `${c}.${dl}${n.padStart(2, '0')}` : null
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -23,7 +31,7 @@ Bạn giúp THẦY ba việc:
 1) TẠO TÀI KHOẢN học sinh — khi đủ thông tin (tối thiểu email mỗi em; tên suy từ email nếu thầy không cho), gọi công cụ propose_students.
 2) GÁN HỌC SINH VÀO NHÓM (Zalo/Facebook) — khi thầy muốn thêm em vào nhóm, gọi công cụ propose_group_add với email học sinh + tên nhóm (khớp danh sách nhóm hiện có ở dưới).
 3) ĐẶT LẠI (RESET) MẬT KHẨU — khi thầy muốn đổi/đặt lại mật khẩu cho học sinh (theo email), gọi công cụ propose_reset_password. Kèm mật khẩu mới nếu thầy chỉ định; bỏ trống để hệ thống tự sinh.
-4) TẠO / XẾP LỊCH LỚP HỌC — khi thầy muốn mở lớp mới hoặc xếp lịch, gọi công cụ propose_schedule. Mỗi lớp gồm: tên lớp (bắt buộc), mã lớp (nếu có), khối (upcoming=sắp khai giảng / active=đang học / smallgroup / oneonone), lịch (vd "Thứ 3 · 19h00"), ngày khai giảng, thời lượng, học phí, và QUAN TRỌNG: chọn (các) KHOÁ HỌC lớp mở (courseNames) + 1 NHÓM ZALO (groupName) — dùng ĐÚNG tên trong danh sách ở dưới. Thiếu thông tin quan trọng thì hỏi thầy.
+4) TẠO / XẾP LỊCH LỚP HỌC — gọi công cụ propose_schedule. Với mỗi lớp CHỈ hỏi thầy 4 điều BIẾN ĐỔI: (a) NĂNG LỰC — mã năng lực DH1/DH2/DH3/TN1/TN2/TN3 (khớp danh sách khoá theo mã [DHx]/[TNx] ở dưới); (b) SỐ KHOÁ (số thứ tự, vd 16); (c) NGÀY KHAI GIẢNG; (d) LỊCH (thứ + giờ, vd "Thứ 3 · 19h00"). Phần CỐ ĐỊNH (khoá học, dạng lớp KD/BP/GL, nhóm Zalo, tên, học phí) hệ thống TỰ suy từ mã — TUYỆT ĐỐI đừng hỏi lại các thứ đó. Thiếu 1 trong 4 điều thì hỏi thầy.
 TUYỆT ĐỐI không nói "đã xong" — bạn chỉ ĐỀ XUẤT, chính thầy mới bấm xác nhận. Thiếu thông tin thì hỏi lại thầy.`
 
 const TOOLS = [{
@@ -89,7 +97,7 @@ const TOOLS = [{
   },
 }, {
   name: 'propose_schedule',
-  description: 'Đề xuất tạo/xếp (các) lớp vào lịch để thầy duyệt rồi mới tạo. KHÔNG tạo ngay.',
+  description: 'Đề xuất tạo/xếp (các) lớp vào lịch để thầy duyệt rồi mới tạo. KHÔNG tạo ngay. Chỉ cần năng lực + số khoá + ngày + lịch — phần còn lại hệ thống tự suy từ mã.',
   input_schema: {
     type: 'object',
     properties: {
@@ -98,17 +106,13 @@ const TOOLS = [{
         items: {
           type: 'object',
           properties: {
-            code: { type: 'string', description: 'mã lớp, vd KD11' },
-            name: { type: 'string', description: 'tên lớp hiển thị' },
-            section: { type: 'string', description: 'upcoming | active | smallgroup | oneonone' },
+            nangLuc: { type: 'string', description: 'MÃ NĂNG LỰC: DH1/DH2/DH3/TN1/TN2/TN3 (khớp danh sách khoá theo mã)' },
+            so: { type: 'string', description: 'số khoá (số thứ tự), vd "16"' },
             schedule: { type: 'string', description: 'lịch, vd "Thứ 3 · 19h00"' },
             start: { type: 'string', description: 'ngày khai giảng, vd "07/07/2026"' },
-            duration: { type: 'string', description: 'thời lượng, vd "8 buổi · 90 phút"' },
-            price: { type: 'string', description: 'học phí, vd "990k" / "Combo"' },
-            courseNames: { type: 'array', items: { type: 'string' }, description: 'tên (các) khoá lớp mở — khớp danh sách khoá' },
-            groupName: { type: 'string', description: 'tên nhóm Zalo của lớp — khớp danh sách nhóm' },
+            section: { type: 'string', description: 'upcoming (mặc định) | active | smallgroup | oneonone' },
           },
-          required: ['name'],
+          required: ['nangLuc', 'so'],
         },
       },
     },
@@ -141,7 +145,7 @@ async function chat(messages: unknown[], groups: any[], courses: any[]) {
     ? groups.map((g) => '• ' + g.name + ' (' + g.group_type + ')').join('\n')
     : '(chưa có nhóm nào — thầy tạo nhóm ở admin → Cộng đồng trước)'
   const courseList = courses.length
-    ? courses.map((c) => '• ' + c.name).join('\n')
+    ? courses.map((c) => '• ' + (c.code ? '[' + c.code + '] ' : '') + c.name).join('\n')
     : '(chưa có khoá nào)'
   const system = SYSTEM
     + '\n\nCÁC NHÓM HIỆN CÓ (dùng để gán học sinh / gắn vào lịch lớp):\n' + groupList
@@ -241,32 +245,33 @@ async function resetPasswords(admin: ReturnType<typeof createClient>, resets: an
   return results
 }
 
-// Tạo lịch lớp — resolve tên khoá/nhóm → id, insert class_schedule.
+// Tạo lịch lớp — từ MÃ NĂNG LỰC + SỐ KHOÁ: ghép mã lớp, gắn khoá chính, tự khớp/tạo nhóm Zalo ≡ mã lớp.
 async function createSchedule(admin: ReturnType<typeof createClient>, classes: any[]) {
-  const [{ data: allCourses }, { data: allGroups }] = await Promise.all([
-    admin.from('edu_courses').select('id,name'),
-    admin.from('edu_groups').select('id,name'),
-  ])
-  const norm = (s: string) => (s || '').trim().toLowerCase()
-  const findCourse = (nm: string) => (allCourses ?? []).find((c: any) => norm(c.name).includes(norm(nm)) || norm(nm).includes(norm(c.name)))
-  const findGroup = (nm: string) => nm ? (allGroups ?? []).find((g: any) => norm(g.name).includes(norm(nm)) || norm(nm).includes(norm(g.name))) : null
+  const { data: allCourses } = await admin.from('edu_courses').select('id,name,code')
+  const byCode: Record<string, any> = {}
+  ;(allCourses ?? []).forEach((c: any) => { if (c.code) byCode[c.code.trim().toUpperCase()] = c })
   const results: any[] = []
   for (const c of classes) {
     try {
-      if (!(c.name || '').trim()) throw new Error('thiếu tên lớp')
-      const courseIds = (c.courseNames ?? []).map(findCourse).filter(Boolean).map((x: any) => x.id)
-      const grp = findGroup(c.groupName || '')
+      const nl = (c.nangLuc || '').trim().toUpperCase()
+      const main = byCode[nl]
+      if (!main) throw new Error('không có khoá nào mang mã năng lực "' + nl + '" (gán mã ở Khoá học trước)')
+      const code = buildClassCode(nl, c.so)
+      if (!code) throw new Error('không ghép được mã lớp (thiếu số khoá hoặc mã không có dạng lớp)')
+      // Nhóm Zalo ≡ mã lớp — tự khớp/tạo
+      const { data: g } = await admin.from('edu_groups')
+        .upsert({ code, name: code, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id').single()
       const rec = {
-        code: (c.code || '').trim() || null, name: c.name.trim(), section: c.section || 'upcoming',
+        code, name: main.name, section: c.section || 'upcoming',
         schedule: (c.schedule || '').trim() || null, start_text: (c.start || '').trim() || null,
-        duration: (c.duration || '').trim() || null, price: (c.price || '').trim() || null,
-        course_ids: courseIds, group_id: grp?.id || null,
+        price: nl === 'NM' ? 'Free' : '990k',
+        course_ids: [main.id], main_course_id: main.id, group_id: g?.id || null,
       }
       const { error } = await admin.from('class_schedule').insert(rec)
       if (error) throw new Error(error.message)
-      results.push({ email: c.name.trim(), ok: true, group: (grp?.name ? '💬 ' + grp.name + ' · ' : '') + courseIds.length + ' khoá' })
+      results.push({ email: code, ok: true, group: main.name + ' · nhóm Zalo ' + code })
     } catch (e) {
-      results.push({ email: c.name || '(lớp)', ok: false, error: String((e as Error)?.message || e) })
+      results.push({ email: (c.nangLuc || '') + (c.so ? '.' + c.so : '') || '(lớp)', ok: false, error: String((e as Error)?.message || e) })
     }
   }
   return results
@@ -286,7 +291,7 @@ Deno.serve(async (req) => {
     if (!Array.isArray(body.messages)) return json({ error: 'Thiếu messages' }, 400)
     const [{ data: groups }, { data: courses }] = await Promise.all([
       gate.admin.from('edu_groups').select('id,name,group_type'),
-      gate.admin.from('edu_courses').select('id,name').order('sort_order'),
+      gate.admin.from('edu_courses').select('id,name,code').order('sort_order'),
     ])
     return json(await chat(body.messages, groups ?? [], courses ?? []))
   }
