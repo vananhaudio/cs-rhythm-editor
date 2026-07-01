@@ -21,7 +21,7 @@ const C = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type CourseStatus = 'on' | 'off' | 'coming_soon'
-interface Course { id: string; name: string; slug: string; type: string; track: string | null; status: CourseStatus; icon?: string | null; image_url?: string | null }
+interface Course { id: string; name: string; slug: string; type: string; track: string | null; status: CourseStatus; icon?: string | null; image_url?: string | null; code?: string | null }
 const STATUS_CFG: Record<CourseStatus, { label: string; dot: string; color: string; bg: string; border: string }> = {
   on:          { label: '● Bật',         dot: '#16A34A', color: '#16A34A', bg: '#F0FDF4', border: '#86EFAC' },
   coming_soon: { label: '🔜 Sắp ra mắt', dot: '#D97706', color: '#D97706', bg: '#FFFBEB', border: '#FCD34D' },
@@ -286,7 +286,7 @@ export default function CourseEditorContent() {
 
   // ── Load ──
   useEffect(() => {
-    supabase.from('edu_courses').select('id,name,slug,type,track,status,icon,image_url,is_free')
+    supabase.from('edu_courses').select('id,name,slug,type,track,status,icon,image_url,is_free,code')
       .order('track').order('level_order')
       .then(({ data }) => setCourses((data ?? []).map((c: any) => ({ ...c, status: c.status ?? 'on' }))))
     // Lấy TẤT CẢ tools (kể cả coming_soon/disabled) để admin thấy và bỏ tick được
@@ -342,6 +342,17 @@ export default function CourseEditorContent() {
     setSelectedCourse(updated)
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, name: courseNameDraft } : c))
     setEditingCourseName(false)
+  }
+
+  // ── Mã năng lực (Hành trình 2027) ──
+  const saveCourseCode = async (val: string) => {
+    if (!selectedCourse) return
+    const code = val.trim().toUpperCase() || null
+    if (code === (selectedCourse.code ?? null)) return
+    const { error } = await supabase.from('edu_courses').update({ code }).eq('id', selectedCourse.id)
+    if (error) { alert('Lưu mã năng lực lỗi: ' + error.message); return }
+    setSelectedCourse(prev => prev ? { ...prev, code } as Course : prev)
+    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, code } as Course : c))
   }
 
   // ── Logo khoá học ──
@@ -818,6 +829,13 @@ export default function CourseEditorContent() {
                     </div>
                   )
                 })()}
+                {/* Mã năng lực Hành trình 2027 (NM/DH1/TN1/NL1/SOLO...) */}
+                <input key={selectedCourse.id + '-code'} defaultValue={selectedCourse.code ?? ''}
+                  onBlur={e => saveCourseCode(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                  placeholder="Mã: DH1"
+                  title="Mã năng lực Hành trình 2027 — ổn định, dùng cho mở khoá/hiển thị (NM, DH1-3, DHNC, TN1-3, NL1-3, SOLO)"
+                  style={{ width: 96, padding: '4px 8px', fontSize: 12, fontWeight: 700, letterSpacing: '.03em', border: `1px solid ${selectedCourse.code ? '#4F46E5' : C.border}`, borderRadius: 8, fontFamily: 'inherit', textTransform: 'uppercase', color: '#4F46E5', flexShrink: 0 }} />
               </div>
               <div style={{ fontSize: 12, color: C.text3 }}>
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học
