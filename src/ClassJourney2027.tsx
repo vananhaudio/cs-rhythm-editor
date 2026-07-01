@@ -9,10 +9,11 @@ const P = {
   purple: '#6D3B9E', purpleTint: '#F0E9FA', danger: '#C0392B', dangerTint: '#FBECEA',
 }
 
+const SERIF = "'Playfair Display', Georgia, 'Times New Roman', serif"
 const Eyebrow = ({ children, color = P.honey }: { children: React.ReactNode; color?: string }) =>
   <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color, marginBottom: 8 }}>{children}</div>
 const H2 = ({ children }: { children: React.ReactNode }) =>
-  <h2 style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.2, letterSpacing: '-.4px', color: P.ink, margin: '0 0 6px' }}>{children}</h2>
+  <h2 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 800, lineHeight: 1.15, letterSpacing: '-.4px', color: P.ink, margin: '0 0 8px' }}>{children}</h2>
 
 function Node({ title, sub, bg, fg, tint }: { title: string; sub?: string; bg: string; fg: string; tint?: string }) {
   return (
@@ -251,7 +252,7 @@ const CSS = `
 
 .tva-jny .jny-hero{background:linear-gradient(160deg,#2A2440,#1B1730);color:#fff;padding:52px 0 46px;}
 .tva-jny .jny-hero .jny-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#E8B96B;background:rgba(232,185,107,.12);padding:5px 11px;border-radius:6px;margin-bottom:16px;}
-.tva-jny .jny-hero h1{font-size:48px;font-weight:800;line-height:1.02;letter-spacing:-1px;margin:0;}
+.tva-jny .jny-hero h1{font-family:${SERIF};font-size:52px;font-weight:800;line-height:1.02;letter-spacing:-1px;margin:0;}
 .tva-jny .jny-hero h1 .hl{color:#E8B96B;font-style:italic;}
 .tva-jny .jny-hero p{margin:14px 0 0;color:#C9C3DE;font-size:16px;}
 .tva-jny .jny-stats{display:flex;gap:26px;margin-top:26px;border-top:1px solid rgba(255,255,255,.14);padding-top:18px;}
@@ -318,7 +319,7 @@ const CSS = `
 .tva-jny .jny-notneed-yes{font-size:17px;font-weight:800;color:${P.green};}
 
 .tva-jny .jny-final{background:linear-gradient(160deg,#2A2440,#1B1730);border-radius:20px;padding:34px;text-align:center;color:#fff;}
-.tva-jny .jny-final h3{font-size:26px;font-weight:800;font-style:italic;margin:0 0 8px;}
+.tva-jny .jny-final h3{font-family:${SERIF};font-size:30px;font-weight:800;margin:0 0 8px;}
 .tva-jny .jny-final p{color:#C9C3DE;font-size:14.5px;margin:0 auto;max-width:440px;}
 .tva-jny .jny-final-row{display:flex;gap:30px;justify-content:center;flex-wrap:wrap;margin:24px 0;padding-top:20px;border-top:1px solid rgba(255,255,255,.14);text-align:left;}
 .tva-jny .jny-final-row span{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9C95B8;margin-bottom:5px;}
