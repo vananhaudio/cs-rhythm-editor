@@ -225,15 +225,34 @@ export default function ClassJourney2027({ onClose, onRegister }: { onClose: () 
           </div>
         </section>
 
-        {/* 8. CTA + KẾT LUẬN */}
+        {/* 8. QUYỀN LỢI COMBO + CTA + KẾT LUẬN */}
         <section className="jny-sec">
           <div className="jny-wrap">
+            <Eyebrow>Combo Hành Trình 2027 gồm gì?</Eyebrow>
+            <H2>Trọn lộ trình — không chỉ 10 khoá lẻ</H2>
+            <div style={{ display: 'grid', gap: 10, marginTop: 14, marginBottom: 26 }}>
+              {[
+                ['🎓', '10 khoá học chính', 'Toàn bộ lộ trình Đệm hát · Tỉa nốt · Nâng cao · Solo — thích học lớp nào cũng được, không giới hạn hướng đi.'],
+                ['🧩', 'Các khoá phụ trợ', 'Cảm nhận tông nhạc, Thị tấu và các nền nhạc lý — bổ trợ cảm âm và đọc bản, giúp bạn tiến nhanh và chắc hơn.'],
+                ['🎥', '40 buổi học Zoom thực hành riêng', 'Thầy kèm trực tiếp, sửa bài, luyện phản xạ thực chiến — phần mà học lẻ không có.'],
+                ['💰', 'Tiết kiệm hơn rất nhiều', 'So với mua từng khoá lẻ cộng học riêng — một mức chi phí, đi trọn hành trình.'],
+              ].map(([ic, t, d], i) => (
+                <div key={i} style={{ display: 'flex', gap: 13, background: P.surface, border: `1px solid ${P.line}`, borderRadius: 12, padding: '14px 16px' }}>
+                  <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1.1 }}>{ic}</span>
+                  <div>
+                    <b style={{ display: 'block', color: P.ink, fontSize: 15.5, marginBottom: 3 }}>{t}</b>
+                    <span style={{ color: P.soft, fontSize: 14, lineHeight: 1.55 }}>{d}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="jny-final">
               <Eyebrow color="#E8B96B">Bắt đầu hành trình</Eyebrow>
               <h3>Bắt đầu từ Nhập môn — Miễn phí</h3>
               <p>Trải nghiệm trước khi quyết định. Đúng nền tảng trước khi bước vào lớp học.</p>
               <div className="jny-final-row">
-                <div><span>Combo Hành Trình 2027 (10 khoá)</span><b>9.990.000đ</b><small>tiết kiệm so với học lẻ</small></div>
+                <div><span>Combo Hành Trình 2027</span><b>9.990.000đ</b><small>10 khoá + phụ trợ + 40 buổi Zoom</small></div>
                 <div><span>Học lẻ từng khoá</span><b>990.000đ</b><small>2 tháng · 8 buổi / khoá</small></div>
                 <div><span>Đăng ký qua Zalo</span><b className="zalo">0983 259 893</b><small>Thầy Văn Anh</small></div>
               </div>
