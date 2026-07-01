@@ -29,7 +29,7 @@ const json = (body: unknown, status = 200) =>
 const SYSTEM = `Bạn là trợ lý trong trang quản trị của hệ thống dạy guitar (thầy Văn Anh). Trả lời bằng tiếng Việt, ngắn gọn, thân thiện.
 Bạn giúp THẦY ba việc:
 1) TẠO TÀI KHOẢN học sinh — khi đủ thông tin (tối thiểu email mỗi em; tên suy từ email nếu thầy không cho), gọi công cụ propose_students.
-2) GÁN HỌC SINH VÀO NHÓM (Zalo/Facebook) — khi thầy muốn thêm em vào nhóm, gọi công cụ propose_group_add với email học sinh + tên nhóm (khớp danh sách nhóm hiện có ở dưới).
+2) GÁN HỌC SINH VÀO NHÓM (Zalo/Facebook) — khi thầy muốn thêm em vào nhóm/lớp, gọi công cụ propose_group_add với email học sinh + groupName. Nhóm Zalo ≡ MÃ LỚP: nếu thầy nhắc mã lớp (vd "gl11", "dh1.kd16") thì truyền ĐÚNG mã đó vào groupName (viết hoa, vd "GL11") — hệ thống tự khớp/tạo nhóm cùng mã. Đừng bịa tên nhóm dài.
 3) ĐẶT LẠI (RESET) MẬT KHẨU — khi thầy muốn đổi/đặt lại mật khẩu cho học sinh (theo email), gọi công cụ propose_reset_password. Kèm mật khẩu mới nếu thầy chỉ định; bỏ trống để hệ thống tự sinh.
 4) TẠO / XẾP LỊCH LỚP HỌC — gọi công cụ propose_schedule. Với mỗi lớp CHỈ hỏi thầy 4 điều BIẾN ĐỔI: (a) NĂNG LỰC — mã năng lực DH1/DH2/DH3/TN1/TN2/TN3 (khớp danh sách khoá theo mã [DHx]/[TNx] ở dưới); (b) SỐ KHOÁ (số thứ tự, vd 16); (c) NGÀY KHAI GIẢNG; (d) LỊCH (thứ + giờ, vd "Thứ 3 · 19h00"). Phần CỐ ĐỊNH (khoá học, dạng lớp KD/BP/GL, nhóm Zalo, tên, học phí) hệ thống TỰ suy từ mã — TUYỆT ĐỐI đừng hỏi lại các thứ đó. Thiếu 1 trong 4 điều thì hỏi thầy.
 TUYỆT ĐỐI không nói "đã xong" — bạn chỉ ĐỀ XUẤT, chính thầy mới bấm xác nhận. Thiếu thông tin thì hỏi lại thầy.`
@@ -142,8 +142,8 @@ function genPassword() {
 
 async function chat(messages: unknown[], groups: any[], courses: any[]) {
   const groupList = groups.length
-    ? groups.map((g) => '• ' + g.name + ' (' + g.group_type + ')').join('\n')
-    : '(chưa có nhóm nào — thầy tạo nhóm ở admin → Cộng đồng trước)'
+    ? groups.map((g) => '• ' + (g.code ? '[' + g.code + '] ' : '') + g.name + ' (' + g.group_type + ')').join('\n')
+    : '(chưa có nhóm nào — nhóm Zalo trùng MÃ LỚP, tự tạo khi xếp lịch)'
   const courseList = courses.length
     ? courses.map((c) => '• ' + (c.code ? '[' + c.code + '] ' : '') + c.name).join('\n')
     : '(chưa có khoá nào)'
@@ -210,9 +210,18 @@ async function addToGroups(admin: ReturnType<typeof createClient>, assignments: 
       const { data: stuRows } = await admin.from('edu_students').select('user_id,full_name').eq('email', email).limit(1)
       const stu = stuRows?.[0]
       if (!stu?.user_id) throw new Error('chưa có tài khoản học sinh với email này')
-      const { data: grpRows } = await admin.from('edu_groups').select('id,name').ilike('name', '%' + groupName + '%').limit(1)
-      const grp = grpRows?.[0]
-      if (!grp?.id) throw new Error('không tìm thấy nhóm "' + groupName + '"')
+      // Khớp nhóm: ưu tiên MÃ LỚP (vd GL11, DH1.KD16), rồi tên. Tự tạo nếu khớp 1 lớp trong lịch.
+      const codeM = groupName.match(/[A-Za-z]{2,4}\d*\.?[A-Za-z]{0,2}\d+/)
+      const codeGuess = (codeM ? codeM[0] : groupName).trim().toUpperCase()
+      let grp = (await admin.from('edu_groups').select('id,name').ilike('code', codeGuess).limit(1)).data?.[0]
+      if (!grp) grp = (await admin.from('edu_groups').select('id,name').ilike('name', '%' + groupName + '%').limit(1)).data?.[0]
+      if (!grp) {
+        const { data: cls } = await admin.from('class_schedule').select('code').ilike('code', codeGuess).limit(1)
+        if (cls?.[0]?.code) {
+          grp = (await admin.from('edu_groups').upsert({ code: cls[0].code, name: cls[0].code, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id,name').single()).data
+        }
+      }
+      if (!grp?.id) throw new Error('không tìm thấy/không tạo được nhóm "' + groupName + '" (mã ' + codeGuess + ')')
       const { error: mErr } = await admin.from('edu_group_members')
         .upsert({ user_id: stu.user_id, group_id: grp.id, source: 'admin', status: 'active' }, { onConflict: 'user_id,group_id' })
       if (mErr) throw new Error(mErr.message)
@@ -290,7 +299,7 @@ Deno.serve(async (req) => {
   if (body.action === 'chat') {
     if (!Array.isArray(body.messages)) return json({ error: 'Thiếu messages' }, 400)
     const [{ data: groups }, { data: courses }] = await Promise.all([
-      gate.admin.from('edu_groups').select('id,name,group_type'),
+      gate.admin.from('edu_groups').select('id,name,group_type,code'),
       gate.admin.from('edu_courses').select('id,name,code').order('sort_order'),
     ])
     return json(await chat(body.messages, groups ?? [], courses ?? []))
