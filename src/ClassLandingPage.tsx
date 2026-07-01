@@ -35,10 +35,10 @@ const inferPath = (n: string) => { const s = n.toLowerCase()
   if (s.includes('hành trình')) return 'combo'
   return '' }
 const parseVNDate = (s: string): number | null => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null }
-const schedToCard = (it: { name: string; schedule: string; start: string }) => ({
+const schedToCard = (it: { name: string; schedule: string; start: string; price?: string }) => ({
   tag: inferTag(it.name), name: it.name, path: inferPath(it.name),
   day: it.schedule || 'Đang cập nhật', date: it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch',
-  price: /nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k',
+  price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
 })
 
 // ─── 3 cửa vào — nút mở bài viết (nếu có) hoặc cuộn tới lớp/chat ───
@@ -122,7 +122,7 @@ export default function ClassLandingPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatSessionRef = useRef<string | null>(null)
   const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
-  type SchedItem = { name: string; code: string; schedule: string; start: string }
+  type SchedItem = { name: string; code: string; schedule: string; start: string; price?: string }
   const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
   const [showActive, setShowActive] = useState(false)
   const [faqAll, setFaqAll] = useState(false)
@@ -215,11 +215,19 @@ export default function ClassLandingPage() {
     })
   }, [])
 
-  // Đọc thời khoá biểu thật từ Google Sheet (qua Edge Function)
+  // Đọc lịch lớp từ bảng class_schedule (thầy quản lý trong /admin → Lịch lớp)
   useEffect(() => {
-    supabase.functions.invoke('class-schedule', { body: {} }).then(({ data }) => {
-      if (data && Array.isArray(data.upcoming)) setSched(data)
-    }).catch(() => {})
+    supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,is_active,sort_order')
+      .eq('is_active', true).order('sort_order').order('created_at')
+      .then(({ data }) => {
+        const rows = (data ?? []) as any[]
+        const toItem = (r: any) => ({ name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '' })
+        const upcoming = rows.filter(r => r.section === 'upcoming').map(toItem)
+        const active = rows.filter(r => r.section === 'active').map(toItem)
+        const smallGroup = rows.filter(r => r.section === 'smallgroup').map(r => ({ schedule: r.schedule ?? '' }))
+        const oneOnOneCount = rows.filter(r => r.section === 'oneonone').length
+        setSched({ upcoming, active, smallGroup, oneOnOneCount, activeCount: active.length + smallGroup.length + oneOnOneCount })
+      })
   }, [])
 
   useEffect(() => {
