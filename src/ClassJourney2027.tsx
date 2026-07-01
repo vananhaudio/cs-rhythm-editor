@@ -34,7 +34,7 @@ export default function ClassJourney2027({ onClose, onRegister }: { onClose: () 
           <div className="jny-wrap">
             <div className="jny-tag">Thầy Văn Anh · Guitar</div>
             <h1>HÀNH TRÌNH <span className="hl">2027</span></h1>
-            <p>Lộ trình trở thành <b>Nghệ sĩ Guitar</b> — từ số 0 đến làm chủ cây đàn.</p>
+            <p>Lộ trình <b>làm chủ cây đàn guitar</b> — từ số 0 đến khi tự chơi theo cảm xúc của mình.</p>
             <div className="jny-stats">
               <div><b>25+</b><span>năm kinh nghiệm</span></div>
               <div><b>10</b><span>khoá học</span></div>
@@ -160,12 +160,22 @@ export default function ClassJourney2027({ onClose, onRegister }: { onClose: () 
                 <Bul items={['Đệm hát nâng cao', 'Solo guitar', 'Ứng biến và sáng tạo']} />
               </div>
               {arrow}
-              <div className="jny-dich">Đích đến · NGHỆ SĨ GUITAR</div>
-              <ul className="jny-bul" style={{ marginTop: 12 }}>
-                <li>Tự chơi, tự soạn bản solo hợp với kỹ năng và tầm của mình — không phụ thuộc</li>
-                <li>Tự đệm – tự tỉa – tự sáng tạo</li>
-                <li>Chơi theo cảm xúc, có phong cách riêng</li>
-              </ul>
+              <div className="jny-dich">Đích đến · LÀM CHỦ CÂY ĐÀN GUITAR</div>
+              <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+                {[
+                  ['Tự mình cảm nhận được tiếng đàn', 'Không cần ai phán xét, bạn tự biết trong tâm rằng mình đang dần làm chủ cây đàn.'],
+                  ['Đệm hát được cho mình và cho người khác', 'Biết chọn đúng tông, đúng giọng, biết giữ nhịp và điều khiển nhanh chậm theo cảm xúc của người hát.'],
+                  ['Chơi được bài hát theo cách của mình', 'Không còn phụ thuộc hoàn toàn vào tab có sẵn, mà có thể tự đệm, tự tỉa, tự soạn solo phù hợp với kỹ năng và phong cách riêng.'],
+                ].map(([t, d], i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, background: P.surface, border: `1px solid ${P.line}`, borderRadius: 12, padding: '14px 16px' }}>
+                    <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: P.indigoTint, color: P.indigo, fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+                    <div>
+                      <b style={{ display: 'block', color: P.ink, fontSize: 15.5, marginBottom: 3 }}>{t}</b>
+                      <span style={{ color: P.soft, fontSize: 14, lineHeight: 1.55 }}>{d}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
