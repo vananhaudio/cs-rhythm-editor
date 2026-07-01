@@ -18,7 +18,7 @@ const SECTIONS = [
 interface Cls {
   id: string; code: string | null; name: string; section: string
   schedule: string | null; start_text: string | null; duration: string | null; price: string | null
-  course_ids: string[]; group_id: string | null; zoom_url: string | null
+  course_ids: string[]; main_course_id: string | null; group_id: string | null; zoom_url: string | null
   sort_order: number; is_active: boolean
 }
 interface Course { id: string; name: string }
@@ -26,7 +26,7 @@ interface Grp { id: string; name: string }
 
 const blank = (): Cls => ({
   id: '', code: '', name: '', section: 'upcoming', schedule: '', start_text: '', duration: '8 buổi · mỗi buổi 90 phút',
-  price: '990k', course_ids: [], group_id: null, zoom_url: '', sort_order: 0, is_active: true,
+  price: '990k', course_ids: [], main_course_id: null, group_id: null, zoom_url: '', sort_order: 0, is_active: true,
 })
 
 export default function ScheduleManager() {
@@ -52,7 +52,12 @@ export default function ScheduleManager() {
   const toggleCourse = (id: string) => setForm(f => {
     if (!f) return f
     const has = f.course_ids.includes(id)
-    return { ...f, course_ids: has ? f.course_ids.filter(x => x !== id) : [...f.course_ids, id] }
+    const course_ids = has ? f.course_ids.filter(x => x !== id) : [...f.course_ids, id]
+    // bỏ tick khoá đang là "chính" → gỡ chính; tick khoá đầu tiên → tự làm chính
+    let main_course_id = f.main_course_id
+    if (has && main_course_id === id) main_course_id = null
+    if (!has && !main_course_id) main_course_id = id
+    return { ...f, course_ids, main_course_id }
   })
 
   const save = async () => {
@@ -62,7 +67,8 @@ export default function ScheduleManager() {
       code: form.code?.trim() || null, name: form.name.trim(), section: form.section,
       schedule: form.schedule?.trim() || null, start_text: form.start_text?.trim() || null,
       duration: form.duration?.trim() || null, price: form.price?.trim() || null,
-      course_ids: form.course_ids, group_id: form.group_id || null, zoom_url: form.zoom_url?.trim() || null,
+      course_ids: form.course_ids, main_course_id: form.main_course_id || form.course_ids[0] || null,
+      group_id: form.group_id || null, zoom_url: form.zoom_url?.trim() || null,
       sort_order: form.sort_order || 0, is_active: form.is_active,
     }
     const q = form.id
@@ -132,16 +138,26 @@ export default function ScheduleManager() {
               </div>
 
               <div style={{ gridColumn: '1 / 3' }}>
-                <label style={lbl}>🎓 Khoá học lớp này mở (tick nhiều khoá)</label>
-                <div style={{ border: `1px solid ${S.border}`, borderRadius: 8, maxHeight: 200, overflowY: 'auto' }}>
-                  {courses.map((c, i) => (
-                    <label key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 12px', fontSize: 13.5, cursor: 'pointer', borderTop: i ? `1px solid ${S.border}` : 'none', background: form.course_ids.includes(c.id) ? S.accentLight : 'transparent' }}>
-                      <input type="checkbox" checked={form.course_ids.includes(c.id)} onChange={() => toggleCourse(c.id)} />
-                      <span style={{ color: S.text1 }}>{c.name}</span>
-                    </label>
-                  ))}
+                <label style={lbl}>🎓 Khoá học lớp này mở (tick nhiều khoá · chọn ★ khoá CHÍNH để hiện trên trang)</label>
+                <div style={{ border: `1px solid ${S.border}`, borderRadius: 8, maxHeight: 220, overflowY: 'auto' }}>
+                  {courses.map((c, i) => {
+                    const on = form.course_ids.includes(c.id)
+                    const main = form.main_course_id === c.id
+                    return (
+                      <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 12px', fontSize: 13.5, borderTop: i ? `1px solid ${S.border}` : 'none', background: on ? S.accentLight : 'transparent' }}>
+                        <input type="checkbox" checked={on} onChange={() => toggleCourse(c.id)} style={{ cursor: 'pointer' }} />
+                        <span style={{ flex: 1, color: S.text1 }}>{c.name}</span>
+                        {on && (
+                          <button type="button" onClick={() => set({ main_course_id: c.id })}
+                            style={{ background: main ? '#FEF3C7' : '#fff', border: `1px solid ${main ? '#F59E0B' : S.border}`, color: main ? '#B45309' : S.text3, borderRadius: 6, padding: '3px 9px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            {main ? '★ Khoá chính' : '☆ Đặt chính'}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-                <div style={{ fontSize: 12, color: S.text3, marginTop: 4 }}>Đã chọn {form.course_ids.length} khoá</div>
+                <div style={{ fontSize: 12, color: S.text3, marginTop: 4 }}>Đã chọn {form.course_ids.length} khoá · khoá chính = {courses.find(c => c.id === form.main_course_id)?.name ?? '(chưa chọn — mặc định khoá đầu)'}</div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

@@ -222,14 +222,15 @@ export default function ClassLandingPage() {
   useEffect(() => {
     const TRACK_VI: Record<string, string> = { dem_hat: 'Đệm hát', tia_not: 'Tỉa nốt', nhac_ly: 'Nhạc lý', nhap_mon: 'Nhập môn', solo: 'Solo', cam_am: 'Cảm âm' }
     Promise.all([
-      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,is_active,sort_order').eq('is_active', true).order('sort_order').order('created_at'),
+      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,main_course_id,is_active,sort_order').eq('is_active', true).order('sort_order').order('created_at'),
       supabase.from('edu_courses').select('id,name,track'),
     ]).then(([{ data: rows }, { data: cs }]) => {
       const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })
       const toItem = (r: any) => {
-        const linked = (r.course_ids ?? []).map((id: string) => byId[id]).filter(Boolean)
-        const courseTitle = linked.length === 0 ? r.name : linked.length === 1 ? linked[0].name : `Combo ${linked.length} khoá`
-        const tag = linked.length > 1 ? 'Combo' : (TRACK_VI[linked[0]?.track] ?? 'Guitar')
+        // Chỉ hiển thị KHOÁ CHÍNH (main_course_id, hoặc khoá đầu nếu chưa đặt)
+        const main = byId[r.main_course_id] ?? byId[(r.course_ids ?? [])[0]]
+        const courseTitle = main?.name ?? r.name
+        const tag = TRACK_VI[main?.track] ?? 'Guitar'
         return { name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '', courseTitle, tag }
       }
       const all = (rows ?? []) as any[]
