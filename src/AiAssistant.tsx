@@ -12,13 +12,15 @@ const S = {
 type Msg = { role: 'user' | 'assistant'; content: string }
 type Student = { email: string; full_name?: string; password?: string }
 type Assignment = { studentEmail: string; groupName: string }
-type Proposal = { type: 'students'; students: Student[] } | { type: 'group'; assignments: Assignment[] }
+type Reset = { studentEmail: string; password?: string }
+type Proposal = { type: 'students'; students: Student[] } | { type: 'group'; assignments: Assignment[] } | { type: 'reset'; resets: Reset[] }
 type Result = { email: string; full_name?: string; student?: string; password?: string; group?: string; ok: boolean; error?: string }
 
 const EXAMPLES = [
   'Tạo tài khoản cho em Lan, email lan@gmail.com',
   'Tạo 2 tài khoản: an@gmail.com và binh@gmail.com',
   'Thêm hocsinh02@gmail.com vào nhóm Zalo',
+  'Đặt lại mật khẩu cho lan@gmail.com',
 ]
 
 // Mật khẩu mặc định khi thầy không nói rõ — học sinh đổi sau trong app
@@ -29,7 +31,7 @@ export default function AiAssistant() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [proposal, setProposal] = useState<Proposal | null>(null)
-  const [results, setResults] = useState<{ kind: 'students' | 'group'; items: Result[] } | null>(null)
+  const [results, setResults] = useState<{ kind: 'students' | 'group' | 'reset'; items: Result[] } | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -62,30 +64,34 @@ export default function AiAssistant() {
     const kind = proposal.type
     setBusy(true); setErr('')
     try {
-      const body = kind === 'students'
-        ? { action: 'create', students: proposal.students.map(s => ({ ...s, password: (s.password || '').trim() || DEFAULT_PW })) }
-        : { action: 'add_group', assignments: proposal.assignments }
+      let body: any
+      if (proposal.type === 'students') body = { action: 'create', students: proposal.students.map(s => ({ ...s, password: (s.password || '').trim() || DEFAULT_PW })) }
+      else if (proposal.type === 'group') body = { action: 'add_group', assignments: proposal.assignments }
+      else body = { action: 'reset_password', resets: proposal.resets.map(r => ({ ...r, password: (r.password || '').trim() || DEFAULT_PW })) }
       const { data, error } = await supabase.functions.invoke('admin-ai', { body })
       if (error) throw error
       const rs: Result[] = data.results || []
       setResults({ kind, items: rs }); setProposal(null)
       const ok = rs.filter(r => r.ok).length
-      setMessages(m => [...m, { role: 'assistant', content: kind === 'students'
-        ? `Đã tạo ${ok}/${rs.length} tài khoản. Chi tiết (kèm mật khẩu) ở dưới.`
+      setMessages(m => [...m, { role: 'assistant', content:
+        kind === 'students' ? `Đã tạo ${ok}/${rs.length} tài khoản. Chi tiết (kèm mật khẩu) ở dưới.`
+        : kind === 'reset' ? `Đã đặt lại ${ok}/${rs.length} mật khẩu. Chi tiết (mật khẩu mới) ở dưới.`
         : `Đã gán ${ok}/${rs.length} vào nhóm. Chi tiết ở dưới.` }])
     } catch (e) { setErr(await readErr(e)) }
     finally { setBusy(false) }
   }
 
-  const count = proposal ? (proposal.type === 'students' ? proposal.students.length : proposal.assignments.length) : 0
-  const confirmLabel = proposal?.type === 'group' ? `✓ Xác nhận thêm ${count} vào nhóm` : `✓ Xác nhận tạo ${count} tài khoản`
+  const count = proposal ? (proposal.type === 'students' ? proposal.students.length : proposal.type === 'group' ? proposal.assignments.length : proposal.resets.length) : 0
+  const confirmLabel = proposal?.type === 'group' ? `✓ Xác nhận thêm ${count} vào nhóm`
+    : proposal?.type === 'reset' ? `✓ Xác nhận đặt lại ${count} mật khẩu`
+    : `✓ Xác nhận tạo ${count} tài khoản`
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: S.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
       {/* Header */}
       <div style={{ padding: '16px 24px', borderBottom: `1px solid ${S.border}`, background: S.surface }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>🤖 Trợ lý AI</div>
-        <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Tạo tài khoản học sinh & gán nhóm Zalo — thầy duyệt rồi mới làm.</div>
+        <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Tạo tài khoản · gán nhóm Zalo · đặt lại mật khẩu — thầy duyệt rồi mới làm.</div>
       </div>
 
       {/* Messages */}
@@ -118,7 +124,9 @@ export default function AiAssistant() {
         {proposal && (
           <div style={{ background: S.surface, border: `1.5px solid ${S.accent}`, borderRadius: 12, padding: 16, marginTop: 8, marginBottom: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: S.text1, marginBottom: 10 }}>
-              {proposal.type === 'group' ? `Đề xuất thêm ${count} học sinh vào nhóm — thầy kiểm:` : `Đề xuất tạo ${count} tài khoản — thầy kiểm:`}
+              {proposal.type === 'group' ? `Đề xuất thêm ${count} học sinh vào nhóm — thầy kiểm:`
+                : proposal.type === 'reset' ? `Đề xuất ĐẶT LẠI mật khẩu cho ${count} học sinh — thầy kiểm:`
+                : `Đề xuất tạo ${count} tài khoản — thầy kiểm:`}
             </div>
             <div style={{ border: `1px solid ${S.border}`, borderRadius: 8, overflow: 'hidden' }}>
               {proposal.type === 'students'
@@ -129,11 +137,18 @@ export default function AiAssistant() {
                     <span style={{ color: S.text3 }}>mk: {s.password || DEFAULT_PW}{s.password ? '' : ' (mặc định)'}</span>
                   </div>
                 ))
-                : proposal.assignments.map((a, i) => (
+                : proposal.type === 'group'
+                ? proposal.assignments.map((a, i) => (
                   <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 12px', fontSize: 13, borderTop: i ? `1px solid ${S.border}` : 'none' }}>
                     <span style={{ flex: 1, color: S.text1, fontWeight: 600 }}>{a.studentEmail}</span>
                     <span style={{ color: S.text3 }}>→</span>
                     <span style={{ flex: 1, color: S.text2 }}>{a.groupName}</span>
+                  </div>
+                ))
+                : proposal.resets.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 12px', fontSize: 13, borderTop: i ? `1px solid ${S.border}` : 'none' }}>
+                    <span style={{ flex: 1, color: S.text1, fontWeight: 600 }}>{r.studentEmail}</span>
+                    <span style={{ color: S.text3 }}>mk mới: {r.password || DEFAULT_PW}{r.password ? '' : ' (mặc định)'}</span>
                   </div>
                 ))}
             </div>
@@ -154,7 +169,7 @@ export default function AiAssistant() {
         {results && (
           <div style={{ background: S.surface, border: `1px solid ${S.border}`, borderRadius: 12, padding: 16, marginTop: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: S.text1, marginBottom: 10 }}>
-              {results.kind === 'group' ? 'Kết quả gán nhóm:' : 'Kết quả — lưu mật khẩu để đưa học sinh:'}
+              {results.kind === 'group' ? 'Kết quả gán nhóm:' : results.kind === 'reset' ? 'Kết quả đặt lại — lưu MẬT KHẨU MỚI để đưa học sinh:' : 'Kết quả — lưu mật khẩu để đưa học sinh:'}
             </div>
             {results.items.map((r, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 6, background: r.ok ? S.okBg : S.errBg }}>

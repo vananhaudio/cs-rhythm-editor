@@ -19,9 +19,10 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
 const SYSTEM = `Bạn là trợ lý trong trang quản trị của hệ thống dạy guitar (thầy Văn Anh). Trả lời bằng tiếng Việt, ngắn gọn, thân thiện.
-Bạn giúp THẦY hai việc:
+Bạn giúp THẦY ba việc:
 1) TẠO TÀI KHOẢN học sinh — khi đủ thông tin (tối thiểu email mỗi em; tên suy từ email nếu thầy không cho), gọi công cụ propose_students.
 2) GÁN HỌC SINH VÀO NHÓM (Zalo/Facebook) — khi thầy muốn thêm em vào nhóm, gọi công cụ propose_group_add với email học sinh + tên nhóm (khớp danh sách nhóm hiện có ở dưới).
+3) ĐẶT LẠI (RESET) MẬT KHẨU — khi thầy muốn đổi/đặt lại mật khẩu cho học sinh (theo email), gọi công cụ propose_reset_password. Kèm mật khẩu mới nếu thầy chỉ định; bỏ trống để hệ thống tự sinh.
 TUYỆT ĐỐI không nói "đã xong" — bạn chỉ ĐỀ XUẤT, chính thầy mới bấm xác nhận. Thiếu thông tin thì hỏi lại thầy.`
 
 const TOOLS = [{
@@ -65,6 +66,26 @@ const TOOLS = [{
     },
     required: ['assignments'],
   },
+}, {
+  name: 'propose_reset_password',
+  description: 'Đề xuất ĐẶT LẠI mật khẩu cho (các) học sinh để thầy duyệt rồi mới đổi. KHÔNG đổi ngay.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      resets: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            studentEmail: { type: 'string', description: 'email học sinh ĐÃ có tài khoản' },
+            password: { type: 'string', description: 'mật khẩu mới nếu thầy chỉ định; bỏ trống để tự sinh' },
+          },
+          required: ['studentEmail'],
+        },
+      },
+    },
+    required: ['resets'],
+  },
 }]
 
 async function requireTeacher(req: Request) {
@@ -104,6 +125,7 @@ async function chat(messages: unknown[], groups: any[]) {
     if (block.type === 'text') reply += block.text
     if (block.type === 'tool_use' && block.name === 'propose_students') proposal = { type: 'students', students: block.input.students }
     if (block.type === 'tool_use' && block.name === 'propose_group_add') proposal = { type: 'group', assignments: block.input.assignments }
+    if (block.type === 'tool_use' && block.name === 'propose_reset_password') proposal = { type: 'reset', resets: block.input.resets }
   }
   return { reply: reply.trim(), proposal }
 }
@@ -164,6 +186,27 @@ async function addToGroups(admin: ReturnType<typeof createClient>, assignments: 
   return results
 }
 
+// Đặt lại mật khẩu học sinh — updateUserById (service_role). Trả mật khẩu mới để thầy đưa học sinh.
+async function resetPasswords(admin: ReturnType<typeof createClient>, resets: any[]) {
+  const results: any[] = []
+  for (const r of resets) {
+    const email = (r.studentEmail || r.email || '').trim().toLowerCase()
+    try {
+      if (!email) throw new Error('thiếu email')
+      const password = (r.password || '').trim() || genPassword()
+      const { data: stuRows } = await admin.from('edu_students').select('user_id,full_name').eq('email', email).limit(1)
+      const stu = stuRows?.[0]
+      if (!stu?.user_id) throw new Error('không tìm thấy học sinh với email này')
+      const { error: uErr } = await admin.auth.admin.updateUserById(stu.user_id, { password })
+      if (uErr) throw new Error(uErr.message)
+      results.push({ email, full_name: stu.full_name, password, ok: true })
+    } catch (e) {
+      results.push({ email, ok: false, error: String((e as Error)?.message || e) })
+    }
+  }
+  return results
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Chỉ chấp nhận POST' }, 405)
@@ -186,6 +229,10 @@ Deno.serve(async (req) => {
   if (body.action === 'add_group') {
     if (!Array.isArray(body.assignments) || !body.assignments.length) return json({ error: 'Thiếu danh sách gán nhóm' }, 400)
     return json({ results: await addToGroups(gate.admin, body.assignments) })
+  }
+  if (body.action === 'reset_password') {
+    if (!Array.isArray(body.resets) || !body.resets.length) return json({ error: 'Thiếu danh sách đặt lại mật khẩu' }, 400)
+    return json({ results: await resetPasswords(gate.admin, body.resets) })
   }
   return json({ error: 'action không hợp lệ' }, 400)
 })
