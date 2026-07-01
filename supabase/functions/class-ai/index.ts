@@ -34,50 +34,54 @@ function parseCSV(text: string): string[][] {
   if (cur.length || row.length) { row.push(cur); rows.push(row) }
   return rows
 }
-// Trả về đoạn text mô tả lịch khai giảng + số lớp đang học (bằng chứng xã hội). Lỗi → chuỗi rỗng.
+// Lịch khai giảng — đọc từ bảng class_schedule (thầy quản lý trong /admin → Lịch lớp). Lỗi → rỗng.
 async function fetchScheduleText(): Promise<string> {
   try {
-    const res = await fetch(SHEET_CSV, { headers: { 'User-Agent': 'Mozilla/5.0' } })
-    if (!res.ok) return ''
-    const rows = parseCSV(await res.text())
-    const up = (s: string) => (s || '').trim().toUpperCase()
-    const norm = (s: string) => (s || '').trim()
-    const upcoming: string[] = []
-    let activeCount = 0, oneOnOne = 0
-    let section: 'active' | 'upcoming' | 'oneonone' | 'smallgroup' = 'active'
-    for (let r = 0; r < rows.length; r++) {
-      const a = norm(rows[r][0]); if (!a) continue
-      const A = up(a)
-      if (r === 0 && A === 'LỚP') continue
-      if (A.includes('SẮP KHAI GIẢNG')) { section = 'upcoming'; continue }
-      if (A.includes('KÈM 1')) { section = 'oneonone'; continue }
-      if (A.includes('NHÓM NHỎ')) { section = 'smallgroup'; continue }
-      if (A === 'LỚP' || A === 'MÃ SỐ LỚP HỌC') continue
-      const schedule = norm(rows[r][2]); const start = norm(rows[r][3])
-      if (section === 'oneonone') { oneOnOne++; continue }
-      if (section === 'smallgroup') { activeCount++; continue }
-      if (section === 'upcoming') upcoming.push(`- ${a}${schedule ? ` · lịch: ${schedule}` : ''}${start ? ` · khai giảng: ${start}` : ''}`)
-      else activeCount++
+    const [{ data: rows }, { data: cs }] = await Promise.all([
+      db.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,main_course_id').eq('is_active', true).order('sort_order'),
+      db.from('edu_courses').select('id,name,code,track'),
+    ])
+    const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })
+    const all = (rows ?? []) as any[]
+    const label = (r: any): string => {
+      const linked = (r.course_ids ?? []).map((id: string) => byId[id]).filter(Boolean)
+      const coded = linked.filter((c: any) => c.code && c.code !== 'NM')
+      const main = byId[r.main_course_id] ?? coded[0]
+      const nl = main?.code ? (TEN_NANG_LUC[main.code] ?? main.code) : (TRACK_VI[main?.track] ?? 'Guitar')
+      return `- ${main?.name ?? r.name} (${nl})${r.schedule ? ' · ' + r.schedule : ''}${r.start_text ? ' · khai giảng ' + r.start_text : ''}${r.price ? ' · ' + r.price : ''}`
     }
+    const upcoming = all.filter((r) => r.section === 'upcoming').map(label)
+    const activeCount = all.filter((r) => r.section === 'active' || r.section === 'smallgroup' || r.section === 'oneonone').length
     const lines: string[] = []
-    if (upcoming.length) lines.push(`LỚP SẮP KHAI GIẢNG (lịch thật, được phép dùng để tư vấn):\n${upcoming.join('\n')}`)
-    const totalActive = activeCount + oneOnOne
-    if (totalActive) lines.push(`Hiện có khoảng ${totalActive} lớp đang hoạt động (gồm lớp nhóm và lớp 1 kèm 1) — bằng chứng lớp học sôi nổi. KHÔNG tiết lộ tên học viên lớp 1 kèm 1.`)
+    if (upcoming.length) lines.push(`LỚP SẮP KHAI GIẢNG (lịch thật, được phép tư vấn):\n${upcoming.join('\n')}`)
+    if (activeCount) lines.push(`Hiện có khoảng ${activeCount} lớp đang hoạt động — bằng chứng lớp học sôi nổi.`)
     if (!lines.length) return ''
-    return `\n\n========== LỊCH KHAI GIẢNG THẬT (cập nhật trực tiếp hôm nay) ==========\n${lines.join('\n\n')}\n\nQuy tắc dùng lịch: được phép trả lời khách về các lớp SẮP KHAI GIẢNG ở trên. Nếu khách hỏi lớp/lịch KHÔNG có trong danh sách này, hoặc cần chốt chỗ, mời khách nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist).`
+    return `\n\n========== LỊCH KHAI GIẢNG THẬT (cập nhật trực tiếp) ==========\n${lines.join('\n\n')}\n\nĐược phép tư vấn khách về các lớp SẮP KHAI GIẢNG ở trên. Lớp/lịch không có trong danh sách này, hoặc cần chốt chỗ → mời khách nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist).`
   } catch { return '' }
 }
 
 // ── MỨC 1: Danh mục khoá học THẬT (công khai) — để Mira tư vấn đúng khoá/lộ trình ──
 const TRACK_VI: Record<string, string> = { dem_hat: 'Đệm hát', tia_not: 'Tỉa nốt', nhac_ly: 'Nhạc lý', nhap_mon: 'Nhập môn', solo: 'Solo', cam_am: 'Cảm âm' }
+const TEN_NANG_LUC: Record<string, string> = {
+  NM: 'Nhập môn', DH1: 'Đệm hát 1', DH2: 'Đệm hát 2', DH3: 'Đệm hát 3', DHNC: 'Đệm hát nâng cao',
+  TN1: 'Tỉa nốt 1', TN2: 'Tỉa nốt 2', TN3: 'Tỉa nốt 3', NL1: 'Nhạc lý 1', NL2: 'Nhạc lý 2', NL3: 'Nhạc lý 3', SOLO: 'Solo Guitar',
+}
+// Luật Hành trình 2027 (gọn) — để Mira tư vấn đúng lộ trình cho khách.
+const HANHTRINH_RULES = `\n\n========== LỘ TRÌNH HÀNH TRÌNH 2027 (dùng để tư vấn lộ trình học) ==========
+Bản đồ: NHẬP MÔN (free) → 3 nhánh ngang hàng: ĐỆM HÁT (1→2→3) · TỈA NỐT (1→2→3) · NHẠC LÝ (1→2→3) → ĐỆM HÁT NÂNG CAO → SOLO GUITAR.
+Điều kiện học: học Đệm hát 2 cần xong Đệm hát 1 + Nhạc lý 1; Đệm hát 3 cần Đệm hát 2 + Nhạc lý 2; Tỉa nốt 2 cần Tỉa nốt 1 + Nhạc lý 1; Tỉa nốt 3 cần Tỉa nốt 2 + Nhạc lý 2. Nâng cao cần đủ Đệm 1-3 + Tỉa 1-3 + Nhạc lý 1-2. Solo cần Nâng cao.
+Ai mới bắt đầu → khuyên học Nhập môn (miễn phí) trước, rồi chọn nhánh Đệm hát / Tỉa nốt (kèm Nhạc lý 1 làm nền).`
 async function fetchCatalogText(): Promise<string> {
   try {
     const { data } = await db.from('edu_courses')
-      .select('name,type,track,is_free,sort_order,status').order('sort_order')
+      .select('name,code,type,track,is_free,sort_order,status').order('sort_order')
     const cs = (data ?? []).filter((c: any) => (c.status ?? 'on') !== 'off')
     if (!cs.length) return ''
-    const lines = cs.map((c: any) => `- ${c.name} [${TRACK_VI[c.track] ?? c.track ?? '—'}]${c.is_free ? ' · miễn phí' : ' · trả phí'}`)
-    return `\n\n========== DANH MỤC KHOÁ HỌC THẬT (xếp theo lộ trình) ==========\n${lines.join('\n')}\n\nDùng để tư vấn khoá nào học trước/sau theo thứ tự trên. Không bịa khoá ngoài danh sách.`
+    const lines = cs.map((c: any) => {
+      const nl = c.code && TEN_NANG_LUC[c.code] ? ` (${TEN_NANG_LUC[c.code]})` : ` [${TRACK_VI[c.track] ?? c.track ?? '—'}]`
+      return `- ${c.code ? '[' + c.code + '] ' : ''}${c.name}${nl}${c.is_free ? ' · miễn phí' : ' · trả phí'}`
+    })
+    return `\n\n========== DANH MỤC KHOÁ HỌC THẬT (mã năng lực + tên) ==========\n${lines.join('\n')}\n\nDùng để tư vấn khoá/cấp độ theo lộ trình. Không bịa khoá ngoài danh sách.`
   } catch { return '' }
 }
 
@@ -163,7 +167,7 @@ Deno.serve(async (req) => {
   ])
   const system = persona
     + (knowledge ? `\n\n========== KIẾN THỨC THAM KHẢO (dùng để trả lời, không bịa ngoài đây) ==========\n${knowledge}` : '')
-    + scheduleText + catalogText + studentText
+    + HANHTRINH_RULES + catalogText + scheduleText + studentText
 
   // Dựng messages cho Anthropic (role: user / assistant)
   const recent = (hist ?? []).slice(-HISTORY)
