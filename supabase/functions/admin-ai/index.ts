@@ -18,6 +18,19 @@ const buildClassCode = (nangLuc: string, so: string | number): string | null => 
   return (dl && n) ? `${c}.${dl}${n.padStart(2, '0')}` : null
 }
 
+// Bộ luật Hành trình 2027 (đầy đủ) — nạp vào ngữ cảnh AI để nó hiểu toàn hệ thống, không phải hỏi lắt nhắt.
+const HANHTRINH_RULES = `
+========== BỘ LUẬT HÀNH TRÌNH 2027 (quản lý theo MÃ, tên chỉ là nhãn) ==========
+BẢN ĐỒ: NM → [ĐỆM HÁT: DH1→DH2→DH3] [TỈA NỐT: TN1→TN2→TN3] [NHẠC LÝ: NL1→NL2→NL3] → DHNC (Đệm hát nâng cao) → SOLO.
+3 nhánh Đệm hát / Tỉa nốt / Nhạc lý NGANG HÀNG.
+MÃ NĂNG LỰC & TÊN NĂNG LỰC: NM=Nhập môn · DH1/DH2/DH3=Đệm hát 1/2/3 · DHNC=Đệm hát nâng cao · TN1/TN2/TN3=Tỉa nốt 1/2/3 · NL1/NL2/NL3=Nhạc lý 1/2/3 · SOLO=Solo Guitar.
+DẠNG LỚP (ghép mã lớp): DH1,DH2 → KD · DH3 → BP · TN1,TN2,TN3 → GL. (NM, NL*, DHNC, SOLO chưa cần mã lớp.)
+MÃ LỚP = [mã năng lực].[dạng lớp][số 2 chữ số], vd DH2.KD16, TN3.GL11. NHÓM ZALO ≡ MÃ LỚP (trùng nhau).
+TIÊN QUYẾT MỞ KHOÁ (hoàn thành mới mở): DH1/TN1/NL1 ← NM; DH2 ← DH1+NL1; DH3 ← DH2+NL2; TN2 ← TN1+NL1; TN3 ← TN2+NL2; NL2 ← NL1; NL3 ← NL2; DHNC ← DH1+DH2+DH3+TN1+TN2+TN3+NL1+NL2; SOLO ← DHNC.
+NM là khoá FREE cửa vào, học sinh ai cũng có — KHÔNG gắn NM vào lớp bán.
+HIỂN THỊ: app học sinh = tên năng lực + tên thương mại (không hiện mã lớp); web tuyển sinh = "tên thương mại — Khóa N | mã lớp"; admin/AI = dùng MÃ.
+========================================================================`
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -140,16 +153,20 @@ function genPassword() {
   return Array.from(arr, (n) => chars[n % chars.length]).join('')
 }
 
-async function chat(messages: unknown[], groups: any[], courses: any[]) {
+async function chat(messages: unknown[], groups: any[], courses: any[], classes: any[]) {
   const groupList = groups.length
     ? groups.map((g) => '• ' + (g.code ? '[' + g.code + '] ' : '') + g.name + ' (' + g.group_type + ')').join('\n')
     : '(chưa có nhóm nào — nhóm Zalo trùng MÃ LỚP, tự tạo khi xếp lịch)'
   const courseList = courses.length
     ? courses.map((c) => '• ' + (c.code ? '[' + c.code + '] ' : '') + c.name).join('\n')
     : '(chưa có khoá nào)'
-  const system = SYSTEM
-    + '\n\nCÁC NHÓM HIỆN CÓ (dùng để gán học sinh / gắn vào lịch lớp):\n' + groupList
-    + '\n\nCÁC KHOÁ HỌC HIỆN CÓ (dùng để gắn vào lịch lớp):\n' + courseList
+  const classList = classes.length
+    ? classes.map((c) => '• ' + (c.code ? c.code + ' — ' : '') + c.name + (c.schedule ? ' · ' + c.schedule : '') + (c.start_text ? ' · KG ' + c.start_text : '')).join('\n')
+    : '(chưa có lớp nào trong lịch)'
+  const system = SYSTEM + '\n' + HANHTRINH_RULES
+    + '\n\nCÁC KHOÁ HỌC HIỆN CÓ (mã năng lực + tên) — dùng để gắn vào lịch, xét tiên quyết:\n' + courseList
+    + '\n\nCÁC NHÓM ZALO HIỆN CÓ (mã lớp + tên) — dùng để gán học sinh vào lớp:\n' + groupList
+    + '\n\nCÁC LỚP ĐANG CÓ TRONG LỊCH (mã lớp + tên + lịch):\n' + classList
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
@@ -298,11 +315,12 @@ Deno.serve(async (req) => {
 
   if (body.action === 'chat') {
     if (!Array.isArray(body.messages)) return json({ error: 'Thiếu messages' }, 400)
-    const [{ data: groups }, { data: courses }] = await Promise.all([
+    const [{ data: groups }, { data: courses }, { data: classes }] = await Promise.all([
       gate.admin.from('edu_groups').select('id,name,group_type,code'),
       gate.admin.from('edu_courses').select('id,name,code').order('sort_order'),
+      gate.admin.from('class_schedule').select('code,name,schedule,start_text').eq('is_active', true).order('sort_order'),
     ])
-    return json(await chat(body.messages, groups ?? [], courses ?? []))
+    return json(await chat(body.messages, groups ?? [], courses ?? [], classes ?? []))
   }
   if (body.action === 'create') {
     if (!Array.isArray(body.students) || !body.students.length) return json({ error: 'Thiếu danh sách học sinh' }, 400)
