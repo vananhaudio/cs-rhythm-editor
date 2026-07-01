@@ -250,15 +250,15 @@ const CSS = `
 .tva-jny .jny-lead{font-size:16px;line-height:1.7;color:${P.soft};margin:0 0 18px;}
 .tva-jny .jny-lead b{color:${P.ink};}
 
-.tva-jny .jny-hero{background:linear-gradient(160deg,#2A2440,#1B1730);color:#fff;padding:52px 0 46px;}
-.tva-jny .jny-hero .jny-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#E8B96B;background:rgba(232,185,107,.12);padding:5px 11px;border-radius:6px;margin-bottom:16px;}
-.tva-jny .jny-hero h1{font-family:${SERIF};font-size:52px;font-weight:800;line-height:1.02;letter-spacing:-1px;margin:0;}
-.tva-jny .jny-hero h1 .hl{color:#E8B96B;font-style:italic;}
-.tva-jny .jny-hero p{margin:14px 0 0;color:#C9C3DE;font-size:16px;}
-.tva-jny .jny-stats{display:flex;gap:26px;margin-top:26px;border-top:1px solid rgba(255,255,255,.14);padding-top:18px;}
-.tva-jny .jny-stats b{display:block;font-size:26px;font-weight:800;font-style:italic;color:#fff;}
-.tva-jny .jny-stats span{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:#9C95B8;}
-@media(max-width:560px){.tva-jny .jny-hero h1{font-size:36px;}}
+.tva-jny .jny-hero{padding:48px 0 26px;}
+.tva-jny .jny-hero .jny-tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${P.honey};margin-bottom:14px;}
+.tva-jny .jny-hero h1{font-family:${SERIF};font-size:56px;font-weight:800;line-height:1.03;letter-spacing:-1px;margin:0;color:${P.ink};}
+.tva-jny .jny-hero h1 .hl{color:${P.honey};}
+.tva-jny .jny-hero p{margin:16px 0 0;color:${P.soft};font-size:17px;line-height:1.6;}
+.tva-jny .jny-stats{display:flex;gap:28px;margin-top:24px;border-top:1px solid ${P.line};padding-top:18px;}
+.tva-jny .jny-stats b{display:block;font-family:${SERIF};font-size:30px;font-weight:800;color:${P.ink};}
+.tva-jny .jny-stats span{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:${P.faint};}
+@media(max-width:560px){.tva-jny .jny-hero h1{font-size:38px;}}
 
 .tva-jny .jny-grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
 .tva-jny .jny-card{border:1px solid ${P.line};border-radius:12px;padding:13px;background:#fff;}
@@ -266,10 +266,10 @@ const CSS = `
 .tva-jny .jny-card span{font-size:12.5px;color:${P.faint};line-height:1.45;}
 @media(max-width:680px){.tva-jny .jny-grid4{grid-template-columns:1fr 1fr;}}
 
-.tva-jny .jny-quote{background:linear-gradient(160deg,#2A2440,#1B1730);border-radius:16px;padding:26px 28px;margin:8px 0 26px;}
-.tva-jny .jny-quote>div:first-child{font-size:19px;font-weight:700;font-style:italic;line-height:1.4;color:#fff;}
-.tva-jny .jny-quote .hl{color:#E8B96B;}
-.tva-jny .jny-quote-by{margin-top:14px;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9C95B8;}
+.tva-jny .jny-quote{background:${P.honeyTint};border-left:3px solid ${P.honey};border-radius:0 16px 16px 0;padding:24px 28px;margin:8px 0 26px;}
+.tva-jny .jny-quote>div:first-child{font-family:${SERIF};font-size:23px;font-weight:700;font-style:italic;line-height:1.4;color:${P.ink};}
+.tva-jny .jny-quote .hl{color:${P.honey};}
+.tva-jny .jny-quote-by{margin-top:14px;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${P.faint};}
 
 .tva-jny .jny-list{display:flex;flex-direction:column;gap:9px;}
 .tva-jny .jny-no{display:flex;align-items:center;gap:11px;background:${P.dangerTint};border:1px solid #F1C9C4;border-radius:11px;padding:12px 15px;font-size:14.5px;color:${P.ink};font-weight:500;}
