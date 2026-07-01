@@ -228,8 +228,10 @@ export default function ClassLandingPage() {
     ]).then(([{ data: rows }, { data: cs }]) => {
       const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })
       const toItem = (r: any) => {
-        // Chỉ hiển thị KHOÁ CHÍNH (main_course_id, hoặc khoá đầu nếu chưa đặt)
-        const main = byId[r.main_course_id] ?? byId[(r.course_ids ?? [])[0]]
+        // Chỉ hiển thị KHOÁ CHÍNH. NM (Nhập môn) không bao giờ làm tiêu đề lớp bán.
+        const linked = (r.course_ids ?? []).map((id: string) => byId[id]).filter(Boolean)
+        let main = byId[r.main_course_id]
+        if (!main || main.code === 'NM') main = linked.find((c: any) => c.code && c.code !== 'NM') ?? linked.find((c: any) => c.code !== 'NM') ?? main
         const courseTitle = main?.name ?? r.name
         const tag = tenNangLuc(main?.code) ?? TRACK_VI[main?.track] ?? 'Guitar'   // hiển thị năng lực rõ: "Đệm hát 2"
         return { name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '', courseTitle, tag }

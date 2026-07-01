@@ -80,11 +80,13 @@ export default function ScheduleManager() {
       group_id = g?.id ?? group_id
       void uid
     }
+    // Khoá chính: ưu tiên ★ đã chọn; nếu chưa, lấy khoá đầu KHÔNG PHẢI NM (NM không làm khoá chính)
+    const nonNM = form.course_ids.find(id => courses.find(c => c.id === id)?.code !== 'NM')
     const rec: any = {
       code, name: form.name.trim(), section: form.section,
       schedule: form.schedule?.trim() || null, start_text: form.start_text?.trim() || null,
       duration: form.duration?.trim() || null, price: form.price?.trim() || null,
-      course_ids: form.course_ids, main_course_id: form.main_course_id || form.course_ids[0] || null,
+      course_ids: form.course_ids, main_course_id: form.main_course_id || nonNM || form.course_ids[0] || null,
       group_id, zoom_url: form.zoom_url?.trim() || null,
       sort_order: form.sort_order || 0, is_active: form.is_active,
     }
