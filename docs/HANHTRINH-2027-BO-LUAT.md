@@ -1,75 +1,88 @@
-# BỘ LUẬT HÀNH TRÌNH 2027
+# BỘ LUẬT HÀNH TRÌNH 2027 (bản chính thức)
 
-> Luật gốc cho hệ mở khoá & bản đồ học của Hành trình 2027. Mọi tính năng liên quan (mở khoá, hiển thị trạng thái, cảnh báo nền tảng, học vượt cấp) PHẢI bám theo tài liệu này. Do thầy Trần Văn Anh soạn (2026-07-01).
+> Luật gốc cho hệ mở khoá, mã hoá & hiển thị của Hành trình 2027. **Quản lý theo MÃ, không theo tên.** Mọi tính năng (app, CRM, phân quyền, mở khoá, báo cáo, AI) phải hiểu theo mã. Do thầy Trần Văn Anh soạn (2026-07-01). Bản này thay thế bản tóm tắt trước.
 
 ## 1. Nguyên tắc gốc
-Hành trình 2027 KHÔNG học tự do muốn học đâu thì học. Học sinh được dẫn theo **bản đồ rõ ràng**, có **điều kiện mở khoá**, có **cảnh báo nền tảng**, có **gợi ý học bổ sung**.
-Mục tiêu: **không học nhảy cóc · không học sai đường · không bỏ sót nền tảng** — nhưng vẫn **linh hoạt** cho người có năng lực đầu vào tốt.
+**Mã là dữ liệu gốc. Tên là nhãn hiển thị.** Tên khoá có thể đổi theo truyền thông, nhưng **mã năng lực** và **mã lớp** phải ổn định lâu dài.
 
-## 2. Cửa vào bắt buộc
-Tất cả bắt đầu bằng **NHẬP MÔN GUITAR** (khoá miễn phí, bắt buộc). Hoàn thành xong app mới mở **bản đồ hành trình chính**.
-
-## 3. Ba nhánh ngang hàng
-Sau Nhập môn → 3 nhánh song song, ngang hàng (không nhánh nào phụ):
-1. **ĐỆM HÁT**
-2. **TỈA NỐT**
-3. **NHẠC LÝ**
-Có thể đi Đệm 1 + Nhạc lý 1, hoặc Tỉa 1 + Nhạc lý 1, hoặc cả 3 cùng lúc nếu phù hợp.
-
-## 4. Cấu trúc bản đồ chính
+## 2. Bản đồ hành trình
+Cửa vào bắt buộc: khoá miễn phí **"Khởi Đầu Đam Mê — Nhập Môn"**. Xong Nhập môn mới mở 3 nhánh.
+3 nhánh ngang hàng: **Đệm hát · Tỉa nốt · Nhạc lý**.
 ```
-NHẬP MÔN GUITAR
+NHẬP MÔN
   ↓
-ĐỆM HÁT:  Đệm 1 → Đệm 2 → Đệm 3
-TỈA NỐT:  Tỉa 1 → Tỉa 2 → Tỉa 3
-NHẠC LÝ:  Nhạc lý 1 → Nhạc lý 2
+ĐỆM HÁT:  DH1 → DH2 → DH3
+TỈA NỐT:  TN1 → TN2 → TN3
+NHẠC LÝ:  NL1 → NL2 → NL3
   ↓
-ĐỆM HÁT NÂNG CAO
+ĐỆM HÁT NÂNG CAO (DHNC)
   ↓
-SOLO GUITAR
+SOLO GUITAR (SOLO)
 ```
 
-## 5. Luật mở khoá tiêu chuẩn (điều kiện = hoàn thành)
-| Khoá | Điều kiện mở |
+## 3. Mã năng lực (không dấu)
+| Nhánh | Tên năng lực | Mã |
+|---|---|---|
+| Nhập môn | Nhập môn | **NM** |
+| Đệm hát | Đệm hát 1/2/3 | **DH1 / DH2 / DH3** |
+| Đệm hát | Đệm hát nâng cao | **DHNC** |
+| Tỉa nốt | Tỉa nốt 1/2/3 | **TN1 / TN2 / TN3** |
+| Nhạc lý | Nhạc lý 1/2/3 | **NL1 / NL2 / NL3** |
+| Solo | Solo Guitar | **SOLO** |
+
+## 4. Luật mở khoá
+Sau Nhập môn → mở **DH1, TN1, NL1**.
+| Muốn mở | Điều kiện (hoàn thành) |
 |---|---|
-| Đệm 1 / Tỉa 1 / Nhạc lý 1 | Hoàn thành **Nhập môn Guitar** |
-| Đệm 2 | Đệm 1 **+** Nhạc lý 1 |
-| Tỉa 2 | Tỉa 1 **+** Nhạc lý 1 |
-| Đệm 3 | Đệm 2 **+** Nhạc lý 2 |
-| Tỉa 3 | Tỉa 2 **+** Nhạc lý 2 |
+| DH1 / TN1 / NL1 | NM |
+| DH2 | DH1 + NL1 |
+| DH3 | DH2 + NL2 |
+| TN2 | TN1 + NL1 |
+| TN3 | TN2 + NL2 |
+| NL2 | NL1 |
+| NL3 | NL2 |
+| **DHNC** | DH1+DH2+DH3 + TN1+TN2+TN3 + NL1+NL2 (cửa tổng hợp) |
+| **SOLO** | DHNC |
 
-## 6. Mở ĐỆM HÁT NÂNG CAO (cửa tổng hợp)
-Không phải chỉ tiếp theo Đệm 3. Bắt buộc hoàn thành **đủ nền**:
-Đệm 1, Đệm 2, Đệm 3 · Tỉa 1, Tỉa 2, Tỉa 3 · Nhạc lý 1, Nhạc lý 2.
+## 5. Luật hoàn thành khoá
+Khoá hoàn thành khi **học sinh xem hết nội dung khoá học**. Dùng để mở khoá tiếp theo.
 
-## 7. Mở SOLO GUITAR (khoá cuối)
-Bắt buộc hoàn thành **Đệm hát nâng cao**. Solo chỉ mở khi đã có nền tảng tổng hợp.
+## 6. Luật vượt cấp
+Thầy + AI đánh giá đầu vào → chủ động thêm học sinh vào **khoá đầu tiên phù hợp** (vd đủ năng lực vào DH2 → mở DH2). Các khoá phía trước chưa học → đánh dấu **"Thiếu nền tảng"**: khoá **mờ · chỉ lộ mục lục · cảnh báo đỏ · khuyến khích mua học bổ sung**. KHÔNG ép thời hạn, KHÔNG bắt học bù mới được học tiếp — chỉ **nhắc** học sinh biết đang thiếu nền nào.
 
-## 8. Luật đặc cách đầu vào (học vượt cấp)
-Học sinh giỏi sẵn có thể không cần đi từ đầu. Cần: **thầy kiểm tra đầu vào + thầy phê duyệt** → app mở khoá ở giữa chương trình.
-Ví dụ: được duyệt học Đệm 2 → app mở Đệm 2. **Nhưng các khoá nền phía trước chưa hoàn thành vẫn phải hiển thị.**
+## 7. Tên thương mại (mã năng lực → tên hiển thị)
+| Mã | Tên thương mại |
+|---|---|
+| NM | Khởi Đầu Đam Mê — Nhập Môn |
+| DH1 | Khởi Đầu Đam Mê — Đệm Hát Cơ Bản |
+| DH2 | Khởi Đầu Đam Mê — Đệm Hát Trình Độ 2 |
+| DH3 | Bứt Phá Đam Mê — Đệm Hát Trình Độ 3 |
+| DHNC | Đệm Hát Nâng Cao |
+| TN1 | Tỉa Nốt 1 — Guitar Căn Bản |
+| TN2 | Tỉa Nốt 2 — Tỉa Nốt Guitar Phương Pháp Thị Tấu |
+| TN3 | Tỉa Nốt 3 — Tỉa Nốt Guitar Trên Nền Karaoke Phương Pháp Cảm Âm |
+| SOLO | Solo Guitar |
+| NL1 | Chìa Khoá Nhạc Lý Cơ Bản |
+| NL2 | Chìa Khoá Nhạc Lý 2 |
+| NL3 | Hoà Âm — Cảm Âm |
 
-## 9. Hiển thị khoá chưa vượt qua (khi học vượt cấp)
-Không được ẩn hoàn toàn. Hiển thị ở trạng thái:
-- **Mờ**
-- **Khoá nội dung chính**
-- **Chỉ lộ mục lục**
-- **Có cảnh báo đỏ**
+## 8. Luật mã lớp
+Công thức: **`[Mã năng lực].[Mã dạng lớp][Số khóa 2 chữ số]`** — vd `DH1.KD16`, `DH2.KD15`, `DH3.BP01`, `TN1.GL06`.
+Mã dạng lớp: DH1/DH2 = **KD** · DH3 = **BP** · TN1/TN2/TN3 = **GL**.
+Số khóa: 2 chữ số (Khóa 1→01, Khóa 16→16).
+Chưa cần mã lớp: Nhập môn, Nhạc lý (chỉ dùng mã năng lực); DHNC & Solo bàn sau.
 
-Ví dụ: *Đệm hát trình độ 1* — Chưa hoàn thành nền tảng · Hiển thị mờ · Cho xem mục lục · Không cho học đầy đủ nếu chưa đăng ký · Cảnh báo "Bạn đang thiếu nền tảng ở phần này".
+## 9. Hiển thị theo môi trường
+- **App học sinh:** Logo mã năng lực + Tên năng lực + Tên thương mại. VD `[DH1] · Đệm hát 1 · Khởi Đầu Đam Mê — Đệm Hát Cơ Bản`. KHÔNG hiện: số khóa, mã lớp, tên lớp đầy đủ.
+- **Website tuyển sinh / lịch / Zalo:** `[Tên thương mại] — Khóa [số] | [Mã lớp]`. VD `Khởi Đầu Đam Mê — Đệm Hát Cơ Bản — Khóa 16 | DH1.KD16`.
+- **Admin / AI / CRM:** ưu tiên mã lớp / mã năng lực (DH1.KD16, NL1). AI phải hiểu: `DH1.KD16` thuộc năng lực `DH1`; `DH1` là điều kiện mở `DH2`; tên chỉ là nhãn.
 
-## 10. Mục đích cảnh báo đỏ
-Không để doạ. Để tạo cảm giác: *"Mình đang học vượt cấp, nhưng còn nền tảng chưa bù lại"* → kích thích đăng ký học bổ sung.
-Thông điệp mẫu:
-> Bạn đang học vượt cấp theo phê duyệt của giáo viên. Tuy nhiên bạn vẫn còn một số nền tảng chưa hoàn thành. Bạn nên học bổ sung để hành trình được chắc hơn.
+## 10. Hiển thị website phân tầng (giữ nguyên — đang tốt)
+```
+Tiêu đề lớn = Nhóm khóa / trình độ
+Tiêu đề nhỏ = Tên lớp cụ thể
+```
+VD: **KHÓA ĐỆM HÁT TRÌNH ĐỘ 2** → *Khởi Đầu Đam Mê — Đệm Hát Trình Độ 2 — Khóa 15 | DH2.KD15 · Thứ 6 — 19:00 — 17/07/2026*.
 
-## 11. Trạng thái khoá trên app
-1. Chưa mở khoá
-2. Được mở khoá
-3. Đang học
-4. Đã hoàn thành
-5. **Học vượt cấp** (mở nhờ thầy phê duyệt)
-6. **Thiếu nền tảng** (khoá phía trước chưa hoàn thành)
-
-## 12. Tư tưởng cuối cùng
-Hành trình 2027 không chỉ là danh sách khoá — là **bản đồ phát triển năng lực guitar**. Đi nhanh nếu đủ năng lực, nhưng không được quên nền tảng. App không chỉ mở khoá bài học mà còn **nhắc học sinh biết mình đang thiếu gì, cần bổ sung gì, nên đi tiếp hướng nào**.
+## 11. Tư tưởng cuối cùng
+Học sinh nhìn thấy hành trình rõ ràng. App dẫn đường theo năng lực. AI & hệ thống quản lý bằng **mã**. Tên thương mại phục vụ truyền thông. Mã lớp phục vụ vận hành. Hành trình 2027 = **bản đồ phát triển năng lực guitar**, có luật mở khoá, đặc cách đầu vào, cảnh báo thiếu nền, và hệ mã đủ rõ để AI quản lý lâu dài.
