@@ -35,8 +35,11 @@ const inferPath = (n: string) => { const s = n.toLowerCase()
   if (s.includes('hành trình')) return 'combo'
   return '' }
 const parseVNDate = (s: string): number | null => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null }
-const schedToCard = (it: { name: string; schedule: string; start: string; price?: string }) => ({
-  tag: inferTag(it.name), name: it.name, path: inferPath(it.name),
+const schedToCard = (it: { name: string; code?: string; schedule: string; start: string; price?: string; courseTitle?: string; tag?: string }) => ({
+  tag: it.tag || inferTag(it.courseTitle || it.name),
+  title: it.courseTitle || it.name,                                   // TÊN KHOÁ/CẤP ĐỘ (tiêu đề to)
+  className: it.code ? `${it.name} · ${it.code}` : it.name,           // TÊN LỚP (dòng phụ)
+  regName: it.name, path: inferPath(it.courseTitle || it.name),
   day: it.schedule || 'Đang cập nhật', date: it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch',
   price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
 })
@@ -122,7 +125,7 @@ export default function ClassLandingPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatSessionRef = useRef<string | null>(null)
   const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
-  type SchedItem = { name: string; code: string; schedule: string; start: string; price?: string }
+  type SchedItem = { name: string; code: string; schedule: string; start: string; price?: string; courseTitle?: string; tag?: string }
   const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
   const [showActive, setShowActive] = useState(false)
   const [faqAll, setFaqAll] = useState(false)
@@ -215,19 +218,27 @@ export default function ClassLandingPage() {
     })
   }, [])
 
-  // Đọc lịch lớp từ bảng class_schedule (thầy quản lý trong /admin → Lịch lớp)
+  // Đọc lịch lớp từ bảng class_schedule + gắn TÊN KHOÁ/CẤP ĐỘ (từ khoá đã liên kết)
   useEffect(() => {
-    supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,is_active,sort_order')
-      .eq('is_active', true).order('sort_order').order('created_at')
-      .then(({ data }) => {
-        const rows = (data ?? []) as any[]
-        const toItem = (r: any) => ({ name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '' })
-        const upcoming = rows.filter(r => r.section === 'upcoming').map(toItem)
-        const active = rows.filter(r => r.section === 'active').map(toItem)
-        const smallGroup = rows.filter(r => r.section === 'smallgroup').map(r => ({ schedule: r.schedule ?? '' }))
-        const oneOnOneCount = rows.filter(r => r.section === 'oneonone').length
-        setSched({ upcoming, active, smallGroup, oneOnOneCount, activeCount: active.length + smallGroup.length + oneOnOneCount })
-      })
+    const TRACK_VI: Record<string, string> = { dem_hat: 'Đệm hát', tia_not: 'Tỉa nốt', nhac_ly: 'Nhạc lý', nhap_mon: 'Nhập môn', solo: 'Solo', cam_am: 'Cảm âm' }
+    Promise.all([
+      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,is_active,sort_order').eq('is_active', true).order('sort_order').order('created_at'),
+      supabase.from('edu_courses').select('id,name,track'),
+    ]).then(([{ data: rows }, { data: cs }]) => {
+      const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })
+      const toItem = (r: any) => {
+        const linked = (r.course_ids ?? []).map((id: string) => byId[id]).filter(Boolean)
+        const courseTitle = linked.length === 0 ? r.name : linked.length === 1 ? linked[0].name : `Combo ${linked.length} khoá`
+        const tag = linked.length > 1 ? 'Combo' : (TRACK_VI[linked[0]?.track] ?? 'Guitar')
+        return { name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '', courseTitle, tag }
+      }
+      const all = (rows ?? []) as any[]
+      const upcoming = all.filter(r => r.section === 'upcoming').map(toItem)
+      const active = all.filter(r => r.section === 'active').map(toItem)
+      const smallGroup = all.filter(r => r.section === 'smallgroup').map(r => ({ schedule: r.schedule ?? '' }))
+      const oneOnOneCount = all.filter(r => r.section === 'oneonone').length
+      setSched({ upcoming, active, smallGroup, oneOnOneCount, activeCount: active.length + smallGroup.length + oneOnOneCount })
+    })
   }, [])
 
   useEffect(() => {
@@ -477,18 +488,24 @@ export default function ClassLandingPage() {
             {(sched?.upcoming?.length
               ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
               : CLASSES
-            ).map((c, i) => (
+            ).map((raw, i) => {
+              const c: any = raw
+              const title = c.title ?? c.name
+              const reg = c.regName ?? c.name
+              return (
               <div className="cls-item" key={i}>
                 <span className="tag">{c.tag}</span>
-                <h3>{c.name}</h3>
+                <h3>{title}</h3>
+                {c.className && <div style={{ fontSize: 13.5, color: '#8A5A2B', fontWeight: 700, margin: '-2px 0 8px' }}>🎓 Lớp: {c.className}</div>}
                 <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : '8 buổi · mỗi buổi 90 phút'}</div>
                 <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
                 <div className="acts">
-                  <button className="btn btn-primary" onClick={() => pickClass(c.name)}>Đăng ký lớp này</button>
+                  <button className="btn btn-primary" onClick={() => pickClass(reg)}>Đăng ký lớp này</button>
                   <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi thêm</button>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
           {sched && sched.activeCount > 0 && (
             <div style={{ textAlign: 'center', marginTop: 26 }}>
