@@ -8,6 +8,7 @@ import AiAssistant from './AiAssistant'
 import LeadsManager from './LeadsManager'
 import ArticlesManager from './ArticlesManager'
 import ClassAiAdmin from './ClassAiAdmin'
+import ScheduleManager from './ScheduleManager'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -16,11 +17,12 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
+  { id: 'schedule'  as Section, icon: '🗓', label: 'Lịch lớp'       },
   { id: 'aichat'    as Section, icon: '💬', label: 'AI khách'       },
   { id: 'articles'  as Section, icon: '📰', label: 'Bài viết'       },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
@@ -143,6 +145,13 @@ export default function TeacherAdminPage() {
         {section === 'leads' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <LeadsManager />
+          </div>
+        )}
+
+        {/* Lịch lớp học */}
+        {section === 'schedule' && (
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <ScheduleManager />
           </div>
         )}
 
