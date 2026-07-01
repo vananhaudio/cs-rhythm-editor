@@ -160,8 +160,15 @@ async function chat(messages: unknown[], groups: any[], courses: any[], classes:
   const courseList = courses.length
     ? courses.map((c) => '• ' + (c.code ? '[' + c.code + '] ' : '') + c.name).join('\n')
     : '(chưa có khoá nào)'
+  const codeById: Record<string, string> = {}
+  courses.forEach((c: any) => { codeById[c.id] = c.code || c.name })
   const classList = classes.length
-    ? classes.map((c) => '• ' + (c.code ? c.code + ' — ' : '') + c.name + (c.schedule ? ' · ' + c.schedule : '') + (c.start_text ? ' · KG ' + c.start_text : '')).join('\n')
+    ? classes.map((c) => {
+      const ks = (c.course_ids || []).map((id: string) => codeById[id]).filter(Boolean).join(' + ')
+      return '• ' + (c.code ? c.code + ' — ' : '') + c.name
+        + (c.schedule ? ' · ' + c.schedule : '') + (c.start_text ? ' · KG ' + c.start_text : '')
+        + (ks ? ' · KHOÁ HỌC SINH LỚP NÀY SỞ HỮU: ' + ks : ' · (chưa gắn khoá)')
+    }).join('\n')
     : '(chưa có lớp nào trong lịch)'
   const system = SYSTEM + '\n' + HANHTRINH_RULES
     + '\n\nCÁC KHOÁ HỌC HIỆN CÓ (mã năng lực + tên) — dùng để gắn vào lịch, xét tiên quyết:\n' + courseList
@@ -318,7 +325,7 @@ Deno.serve(async (req) => {
     const [{ data: groups }, { data: courses }, { data: classes }] = await Promise.all([
       gate.admin.from('edu_groups').select('id,name,group_type,code'),
       gate.admin.from('edu_courses').select('id,name,code').order('sort_order'),
-      gate.admin.from('class_schedule').select('code,name,schedule,start_text').eq('is_active', true).order('sort_order'),
+      gate.admin.from('class_schedule').select('code,name,schedule,start_text,course_ids').eq('is_active', true).order('sort_order'),
     ])
     return json(await chat(body.messages, groups ?? [], courses ?? [], classes ?? []))
   }
