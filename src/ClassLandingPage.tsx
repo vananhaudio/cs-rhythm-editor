@@ -92,11 +92,12 @@ const MODALS: Record<string, string> = {
     <p class="lead" style="margin-top:6px">Bạn không cần học hết ngay — chỉ cần bắt đầu bằng khóa đầu tiên phù hợp. Đây là con đường nếu bạn muốn đi xa.</p>
     <div class="bando">
       <div class="b-row"><span class="b-node b-free">Nhập môn (miễn phí)</span></div>
-      <div class="b-row"><span class="b-branch">Nhạc lý</span> căn bản → nâng cao → hoà âm cảm âm</div>
-      <div class="b-row"><span class="b-branch">Đệm hát</span> TĐ1 → TĐ2 → TĐ3 (bứt phá)</div>
-      <div class="b-row"><span class="b-branch">Tỉa nốt</span> TĐ1 → TĐ2 → nâng cao</div>
-      <div class="b-row b-converge">↓ hội tụ: Đệm hát nâng cao → Solo Guitar → Nghệ sĩ Guitar</div>
-    </div>`,
+      <div class="b-row"><span class="b-branch">Nhạc lý</span> 1 → 2 → 3 (hoà âm cảm âm)</div>
+      <div class="b-row"><span class="b-branch">Đệm hát</span> 1 → 2 → 3</div>
+      <div class="b-row"><span class="b-branch">Tỉa nốt</span> 1 → 2 → 3</div>
+      <div class="b-row b-converge">↓ hội tụ: Đệm hát nâng cao → Solo Guitar</div>
+    </div>
+    <p class="lead" style="margin-top:10px"><b>Học có điều kiện</b>: mỗi khoá chỉ mở khi đủ nền — ví dụ Đệm hát 2 cần xong Đệm hát 1 + Nhạc lý 1. Không nhảy cóc, không hổng gốc.</p>`,
 }
 
 const ZALO = '0983 259 893'

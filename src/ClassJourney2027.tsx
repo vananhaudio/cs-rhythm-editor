@@ -144,18 +144,43 @@ export default function ClassJourney2027({ onClose, onRegister }: { onClose: () 
                   <div className="jny-branch-h" style={{ color: P.blue }}>Tỉa nốt · bè giai điệu</div>
                   <Node title="Tỉa nốt Trình độ 1" bg="" fg={P.ink} tint={P.blueTint} />
                   {arrow}<Node title="Tỉa nốt Trình độ 2" bg="" fg={P.ink} tint={P.blueTint} />
-                  {arrow}<Node title="Tỉa nốt Nâng cao" bg={P.blue} fg="#fff" />
+                  {arrow}<Node title="Tỉa nốt Trình độ 3" bg={P.blue} fg="#fff" />
                 </div>
               </div>
               {arrow}
               <div className="jny-step-lbl">Bước 3 · Nâng cao &amp; hội tụ</div>
-              <div className="jny-grid2">
-                <Node title="Đệm hát Nâng cao" sub="Nâng cao" bg="" fg={P.ink} tint="#fff" />
-                <Node title="Solo Guitar" sub="Độc tấu" bg="" fg={P.ink} tint="#fff" />
-              </div>
+              <Node title="Đệm hát Nâng cao" sub="Hội tụ Đệm + Tỉa + Nhạc lý" bg="" fg={P.ink} tint="#fff" />
+              {arrow}
+              <Node title="Solo Guitar" sub="Độc tấu · đỉnh cao hành trình" bg={P.honey} fg="#fff" />
               {arrow}
               <div className="jny-dich">Đích đến · LÀM CHỦ GUITAR</div>
             </div>
+          </div>
+        </section>
+
+        {/* 5b. HỌC CÓ ĐIỀU KIỆN — không nhảy cóc */}
+        <section className="jny-sec">
+          <div className="jny-wrap">
+            <Eyebrow>Vì sao bạn không "học sai đường"</Eyebrow>
+            <H2>Học có điều kiện — không nhảy cóc, không hổng nền</H2>
+            <p className="jny-lead">Mỗi khoá chỉ mở khi bạn đã đủ nền tảng. App tự dẫn đường theo bản đồ — bạn không thể vô tình bỏ sót gốc rễ.</p>
+            <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
+              {[
+                ['Đệm hát 2', 'Đệm hát 1 + Nhạc lý 1'],
+                ['Đệm hát 3', 'Đệm hát 2 + Nhạc lý 2'],
+                ['Tỉa nốt 2', 'Tỉa nốt 1 + Nhạc lý 1'],
+                ['Tỉa nốt 3', 'Tỉa nốt 2 + Nhạc lý 2'],
+                ['Đệm hát Nâng cao', 'đủ Đệm 1-3 · Tỉa 1-3 · Nhạc lý'],
+                ['Solo Guitar', 'Đệm hát Nâng cao'],
+              ].map(([a, b], i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: P.surface, border: `1px solid ${P.line}`, borderRadius: 10, padding: '10px 14px' }}>
+                  <b style={{ color: P.ink, fontSize: 14.5 }}>{a}</b>
+                  <span style={{ color: P.faint, fontSize: 12.5 }}>chỉ mở khi xong</span>
+                  <em style={{ color: P.indigo, fontWeight: 700, fontStyle: 'normal', fontSize: 14 }}>{b}</em>
+                </div>
+              ))}
+            </div>
+            <div className="jny-callout" style={{ marginTop: 16 }}>Đi nhanh nếu đủ năng lực — nhưng không quên nền tảng. Nếu bạn học vượt cấp (được thầy duyệt), app vẫn nhắc phần nền còn thiếu để bạn bổ sung, để hành trình luôn chắc.</div>
           </div>
         </section>
 
