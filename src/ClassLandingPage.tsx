@@ -724,7 +724,10 @@ export default function ClassLandingPage() {
           <div className="final">
             <h2>Bắt đầu hành trình guitar của bạn hôm nay</h2>
             <p>Chọn lớp phù hợp và giữ chỗ ngay — thầy sẽ đồng hành cùng bạn từ buổi đầu tiên.</p>
-            <button className="btn btn-primary" onClick={() => goto('lichlop')}>Xem lớp &amp; đăng ký</button>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="btn btn-primary" onClick={() => goto('lichlop')}>Xem lớp &amp; đăng ký</button>
+              <button className="btn btn-ghost" onClick={() => setShowJourney(true)}>🗺 Tìm hiểu Bản đồ hành trình</button>
+            </div>
           </div>
         </div>
       </section>
