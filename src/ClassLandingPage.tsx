@@ -489,7 +489,7 @@ export default function ClassLandingPage() {
         <div className="wrap">
           <div className="eyebrow">Lịch khai giảng</div>
           <h2>Lớp sắp khai giảng</h2>
-          <p className="lead">Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> · 990k/khoá · 2 tháng · 8 buổi. Đã quyết thì đăng ký luôn, còn lăn tăn thì hỏi thêm.</p>
+          <p className="lead">Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
           <div className="cls-list">
             {(sched?.upcoming?.length
               ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
