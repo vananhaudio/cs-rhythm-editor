@@ -243,9 +243,10 @@ const SAMPLE_FLOW_BIENSOAN = {
   ],
 }
 
-// Tỉa nốt 1 — Bài 2–6 lấy từ nguồn DÙNG CHUNG (cũng dùng để seed DB) tiaNot1Lessons.json
+// Tỉa nốt 1 — các bài lấy từ nguồn DÙNG CHUNG (cũng dùng để seed DB) tiaNot1Lessons.json
+type TnLesson = { key: string; flowId: string; title: string; reward_xp: number; slides: unknown[] }
 const TIANOT1 = Object.fromEntries(
-  (tiaNot1.lessons as Array<{ key: string; flowId: string; title: string; reward_xp: number; slides: unknown[] }>)
+  (tiaNot1.modules as Array<{ lessons: TnLesson[] }>).flatMap((m) => m.lessons)
     .map((l) => [l.key, { id: l.flowId, title: l.title, reward_xp: l.reward_xp, slides: l.slides }])
 )
 
