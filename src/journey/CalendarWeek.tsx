@@ -53,7 +53,7 @@ export default function CalendarWeek({ classes, sessById, onChanged }: {
   }
 
   const label = (dt: Date) => `${dt.getDate()}/${dt.getMonth() + 1}`
-  const col: CSSProperties = { flex: 1, minWidth: 0, borderRight: `1px solid ${S.border}` }
+  const col: CSSProperties = { flex: 1, minWidth: 108, borderRight: `1px solid ${S.border}` }
 
   return (
     <div>
@@ -67,8 +67,8 @@ export default function CalendarWeek({ classes, sessById, onChanged }: {
         </div>
       </div>
 
-      {/* Lưới 7 cột */}
-      <div style={{ display: 'flex', background: S.surface, border: `1px solid ${S.border}`, borderRadius: 12, overflow: 'hidden' }}>
+      {/* Lưới 7 cột (cuộn ngang khi màn hẹp) */}
+      <div style={{ display: 'flex', background: S.surface, border: `1px solid ${S.border}`, borderRadius: 12, overflow: 'auto' }}>
         {days.map((d, i) => {
           const isToday = startOfDay(d).getTime() === todayKey
           const dayS = inWeek

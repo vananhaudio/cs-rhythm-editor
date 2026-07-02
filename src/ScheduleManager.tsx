@@ -52,6 +52,7 @@ export default function ScheduleManager() {
   const [msg, setMsg] = useState('')
   const [sessById, setSessById] = useState<Record<string, SessionRow[]>>({})  // buổi theo lớp
   const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'demands' | 'offers' | 'mira' | 'dashboard'>('list')
+  const [demandCount, setDemandCount] = useState(0)  // nhu cầu đang chờ (badge tab)
 
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
@@ -66,6 +67,10 @@ export default function ScheduleManager() {
     supabase.from('edu_courses').select('id,name,code').order('sort_order').then(({ data }) => setCourses((data ?? []) as Course[]))
     supabase.from('edu_groups').select('id,name,code,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
   }, [])
+  // đếm nhu cầu đang chờ (badge tab) — làm mới khi đổi tab để phản ánh thay đổi
+  useEffect(() => {
+    supabase.from('class_demands').select('id', { count: 'exact', head: true }).eq('status', 'waiting').then(({ count }) => setDemandCount(count ?? 0))
+  }, [view])
 
   const mainCode = () => courses.find(c => c.id === form?.main_course_id)?.code ?? null   // mã năng lực khoá chính
   const maLop = () => buildClassCode(mainCode(), soKhoa) ?? (form?.code || '')            // mã lớp = DH2.KD16
@@ -187,11 +192,14 @@ export default function ScheduleManager() {
 
       {/* Thanh tab: Danh sách / Lịch tuần / Chỉ số */}
       {!form && (
-        <div style={{ display: 'flex', gap: 4, padding: '10px 24px 0', borderBottom: `1px solid ${S.border}`, background: S.surface }}>
+        <div style={{ display: 'flex', gap: 4, padding: '10px 24px 0', borderBottom: `1px solid ${S.border}`, background: S.surface, overflowX: 'auto' }}>
           {TABS.map(t => (
             <button key={t.v} onClick={() => setView(t.v)}
-              style={{ padding: '8px 16px', border: 'none', borderBottom: `2px solid ${view === t.v ? S.accent : 'transparent'}`, background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, fontWeight: view === t.v ? 700 : 500, color: view === t.v ? S.accent : S.text2 }}>
+              style={{ padding: '8px 16px', border: 'none', borderBottom: `2px solid ${view === t.v ? S.accent : 'transparent'}`, background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, fontWeight: view === t.v ? 700 : 500, color: view === t.v ? S.accent : S.text2, whiteSpace: 'nowrap', flexShrink: 0 }}>
               {t.l}
+              {t.v === 'demands' && demandCount > 0 && (
+                <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#fff', background: S.accent, borderRadius: 9, padding: '1px 7px' }}>{demandCount}</span>
+              )}
             </button>
           ))}
         </div>
