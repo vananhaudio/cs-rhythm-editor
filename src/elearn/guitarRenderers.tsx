@@ -343,35 +343,44 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
 export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number }) {
-  const top = 22, gap = 11, H = 98
-  const lineY = (i: number) => top + i * gap
-  const noteY = (staff: number) => lineY(4) - staff * (gap / 2)
-  const x0 = 70, sp = 42                                  // cách khoá Sol cho thoáng
-  const noteX = (i: number) => x0 + i * sp
-  const W = x0 + notes.length * sp + 6
+  const gap = 8.5, x0 = 44, sp = 40, perRow = 7, rowH = 74, headTop = 22
+  const rows = Math.max(1, Math.ceil(notes.length / perRow))
+  const rowW = x0 + perRow * sp + 8
+  const H = headTop + rows * rowH + 4
+  const bY = (row: number) => headTop + row * rowH + 4 * gap            // dòng kẻ dưới cùng của hàng
+  const noteY = (staff: number, row: number) => bY(row) - staff * (gap / 2)
   const scRef = useRef<HTMLDivElement>(null)
+  const activeRow = active >= 0 ? Math.floor(active / perRow) : -1
   useEffect(() => {
     const el = scRef.current
-    if (el && active >= 0) el.scrollTo({ left: Math.max(0, noteX(active) - el.clientWidth / 2), behavior: 'smooth' })
+    if (el && activeRow >= 0) {
+      const frac = (headTop + activeRow * rowH + rowH / 2) / H
+      el.scrollTo({ top: Math.max(0, frac * el.scrollHeight - el.clientHeight / 2), behavior: 'smooth' })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active])
+  }, [activeRow])
+  const staffEls: React.ReactNode[] = []
+  for (let row = 0; row < rows; row++) {
+    for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
+    staffEls.push(<text key={`cl${row}`} x={7} y={bY(row) - 2 * gap + 14} fontSize={56} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>)
+  }
   return (
-    <div ref={scRef} style={{ overflowX: 'auto', overflowY: 'hidden' }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ display: 'block', margin: '0 auto', maxWidth: 'none' }}>
-        {[0, 1, 2, 3, 4].map(i => <line key={i} x1={10} x2={W - 8} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
-        <text x={8} y={lineY(3) + 17} fontSize={84} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>
+    <div ref={scRef} style={{ maxHeight: 210, overflowY: 'auto', overflowX: 'hidden' }}>
+      <svg viewBox={`0 0 ${rowW} ${H}`} width="100%" style={{ display: 'block' }}>
+        {staffEls}
         {notes.map((n, i) => {
-          const st = n.staff ?? 0, y = noteY(st), x = noteX(i), on = i === active
-          const col = on ? ACCENT.c1 : '#6B6456'
+          const row = Math.floor(i / perRow), col = i % perRow
+          const st = n.staff ?? 0, y = noteY(st, row), x = x0 + col * sp, on = i === active
+          const c = on ? ACCENT.c1 : '#6B6456'
           const stemUp = st < 4, stemX = x + (stemUp ? 7.5 : -7.5)
           return (
             <g key={i}>
-              {on && <rect x={x - 16} y={2} width={32} height={72} rx={7} fill="rgba(194,98,46,0.13)" />}
+              {on && <rect x={x - 15} y={bY(row) - 50} width={30} height={64} rx={7} fill="rgba(194,98,46,0.13)" />}
               <g key={'p' + active} style={{ animation: on ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${x}px ${y}px` }}>
-                <ellipse cx={x} cy={y} rx={on ? 10 : 8} ry={on ? 7.2 : 6} fill={col} transform={`rotate(-18 ${x} ${y})`} />
-                <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -34 : 34)} stroke={col} strokeWidth={2.2} />
+                <ellipse cx={x} cy={y} rx={on ? 9.5 : 8} ry={on ? 7 : 6} fill={c} transform={`rotate(-18 ${x} ${y})`} />
+                <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -24 : 24)} stroke={c} strokeWidth={2.2} />
               </g>
-              <text x={x} y={H - 4} textAnchor="middle" fontSize={on ? 13 : 11} fontWeight={on ? 800 : 600} fill={col}>{n.label}</text>
+              <text x={x} y={bY(row) + 19} textAnchor="middle" fontSize={on ? 12.5 : 11} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
             </g>
           )
         })}
@@ -431,7 +440,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       setCursor(i); playTone(notes[i].freq)
       const d = (notes[i].dur ?? 1) * beatMs                 // giữ nốt đúng trường độ rồi mới sang nốt kế
       beat.current++
-      if (beat.current >= notes.length * 2 && !passedR.current) { passedR.current = true; setDone(true); onPass() }
+      if (beat.current >= notes.length && !passedR.current) { passedR.current = true; setDone(true); onPass() }
       timer.current = window.setTimeout(tick, d)
     }
     tick()

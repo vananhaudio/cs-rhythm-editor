@@ -1125,11 +1125,276 @@
       "order": 2,
       "lessons": [
         {
+          "key": "happybday",
+          "lessonId": "a2730000-0000-4000-8000-000000000002",
+          "flowId": "f2730000-0000-4000-8000-000000000002",
+          "order": 0,
+          "title": "Bài 1: Happy Birthday",
+          "reward_xp": 15,
+          "slides": [
+            {
+              "id": "h1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Chơi Happy Birthday",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Bài đầu tiên: <b>Happy Birthday</b> — khúc chúc mừng sinh nhật ai cũng biết! Nó dùng đúng các nốt bạn đã học, trải trên <b>cả 3 dây</b>."
+            },
+            {
+              "id": "h2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Đi qua 3 dây",
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài này đi từ vùng thấp (<b>Sol – La</b> dây 3) qua <b>Si – Đô – Rê</b> (dây 2) lên tới <b>Mi – Fa – Sol</b> (dây 1). Có chỗ nhảy xa (đoạn \"birthday dear...\") — cứ <b>chậm rãi</b>. Bấm <b>Nghe mẫu</b> để nghe đúng giai điệu trước.</p>"
+            },
+            {
+              "id": "h3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Happy Birthday",
+              "interactive": {
+                "notes": [
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.75
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.25
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.75
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.25
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.75
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.25
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 0.75
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 0.25
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "h4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình chơi hết được giai điệu, đúng các nốt",
+                  "Mình nhận ra đúng bài Happy Birthday",
+                  "Mình chuyển được qua cả 3 dây"
+                ]
+              }
+            },
+            {
+              "id": "h5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tuyệt vời! Bạn vừa chơi trọn một bài hát <b>qua cả 3 dây</b> — áp dụng mọi nốt đã học. Bài sau: một giai điệu quen khác — Ode to Joy."
+            }
+          ]
+        },
+        {
           "key": "odetojoy",
           "lessonId": "a2730000-0000-4000-8000-000000000001",
           "flowId": "f2730000-0000-4000-8000-000000000001",
-          "order": 0,
-          "title": "Bài 1: Ode to Joy (Niềm Vui)",
+          "order": 1,
+          "title": "Bài 2: Ode to Joy (Niềm Vui)",
           "reward_xp": 15,
           "slides": [
             {
@@ -1141,7 +1406,7 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Giờ ta chơi một <b>bài hát thật</b>: <b>Ode to Joy</b> (Niềm Vui) của Beethoven — giai điệu quen thuộc. Nó chỉ dùng đúng các nốt <b>Đô – Rê – Mi – Fa – Sol</b> bạn đã học."
+              "content": "Thêm một <b>bài hát</b> nữa: <b>Ode to Joy</b> (Niềm Vui) của Beethoven — giai điệu quen thuộc. Nó chỉ dùng các nốt <b>Đô – Rê – Mi – Fa – Sol</b> đã học."
             },
             {
               "id": "j2",
@@ -1305,7 +1570,7 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Tuyệt vời! Bạn vừa chơi một <b>bài hát hoàn chỉnh</b> chỉ từ những nốt đã học. Đây là lý do ta học nốt: để chơi được nhạc thật. Bài sau ta thêm <b>trường độ</b> (nốt ngắn-dài) cho bài hát có hồn hơn."
+              "content": "Tuyệt vời! Hai bài hát bạn đã chơi được chỉ từ những nốt đã học. Đây là lý do ta học nốt: để chơi được nhạc thật."
             }
           ]
         }
