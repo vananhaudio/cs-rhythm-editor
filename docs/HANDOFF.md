@@ -26,6 +26,12 @@ Biến `/admin` tab **Lịch lớp** thành nền của "hệ điều hành hàn
 - **Lịch lớp = 7 tab:** Danh sách · Lịch tuần · Bản đồ · Nhu cầu · Ưu đãi · Mira · Chỉ số.
 - **Mở rộng sau:** nút thu nhu cầu phía HV (app) · nối admin-ai diễn giải NN · hỗ trợ nhiều buổi/tuần · đánh bóng UI 7 tab.
 
+### Journey OS — Mở rộng: Nối lịch thật vào trang tuyển sinh công khai (2026-07-02, LIVE)
+- `ClassLandingPage.tsx` (class.vananhaudio.com / /class) giờ đọc `start_date/end_date/status`, không chỉ field text.
+- **`bucketOf()`**: TỰ ẨN status ∈ {draft, cancelled, merged, completed, paused} (không lộ lớp nháp) + lớp quá `end_date`. Tự phân "sắp khai giảng"/"đang học" theo ngày+status. Lớp cũ chưa có `start_date` → fallback theo `section` (không phá).
+- Nhãn ngày động: "Khai giảng dd/mm · còn X ngày" / "Đang học · kết thúc dd/mm".
+- **Từ nay `status` = công tắc hiển thị công khai.** anon KHÔNG đọc `class_sessions` (RLS) → đếm ngược suy từ `class_schedule`. Verify dev OK. Commit `7b48eae`.
+
 ### Journey OS — Mở rộng: Lưu & duyệt đề xuất Mira bền (2026-07-02, LIVE)
 - **SQL `db/journey_os_mira_recs.sql` (CẦN chạy):** bảng `mira_recommendations` lưu trạng thái đề xuất theo `rec_key` **ổn định** (R1:<classId>, R2:<code>, R3:<day>, R4/R5:<classId>). Trigger updated_at, RLS thầy-only → `self_managed`.
 - MiraPlanner: nút **✓ Duyệt / Đã xong / Ẩn** (upsert bền), 2 tab con **Đang chờ / Đã xử lý** + badge + ↩ đưa lại chờ. Rule vẫn tính client mỗi lần; bảng chỉ giữ trạng thái. Commit `2324209`.
