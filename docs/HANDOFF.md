@@ -11,6 +11,16 @@ LMS dạy guitar online "Thầy Văn Anh Guitar". React + TS + Vite + Tailwind (
 
 ## Việc làm trong đợt gần nhất (2026-07)
 
+### Làm mới công cụ "Lên dây đàn" (GuitarTuner) — 2026-07-02, LIVE
+File `src/GuitarTuner.tsx` (giữ nguyên 100% engine nhận cao độ autocorrelation + median). Chỉ thay giao diện + luồng:
+- **Bố cục pro:** nốt TO ở giữa + vành cung (thay kim nửa vòng), con trỏ chạy trên vành, vùng "chuẩn" xanh ở đỉnh (`Gauge` component).
+- **Bỏ emoji → icon line SVG** (check, chevron, mũi tên); **rung nhẹ** khi đạt chuẩn (`navigator.vibrate`).
+- **Tự bật mic khi mở màn** (bỏ nút bật/tắt + "nhấn để bắt đầu"); chạm bất kỳ đâu để bật lại nếu iOS chặn cử chỉ.
+- **Bỏ** nút "Âm mẫu" + bảng "Tần số chuẩn". Mặc định chọn **Dây 6**. Lệnh gảy rõ: *"Hãy gảy dây Mi trầm (dây to nhất)"* + số dây (mỗi dây có `vn` + `size`).
+- **Tông màu khớp app TVA:** header dải indigo (`#4338CA→#6366F1`), thẻ sáng `#FFFFFF`/nền `#F0F2F5`, **mặt đồng hồ nền tối navy** (nốt trắng nổi bật), nhấn cam `#EA580C` khi lệch, xanh `#16A34A` khi chuẩn. 6 màu dây về cùng họ -600 (rose/cam/hổ phách/lục/lam/tím). Nền route `/tuner` (AppRouter) đổi đen→`#F0F2F5`.
+- Chế độ **Tự động** (tự nhận dây) bên cạnh **Chọn dây**. Commit `730fd2c`.
+
+
 ### Journey OS — GĐ1: Lịch thật + tiến trình lớp (2026-07-02, LIVE)
 Biến `/admin` tab **Lịch lớp** thành nền của "hệ điều hành hành trình". Spec đầy đủ: `docs/JOURNEY-OS-SPEC.md`. Nguyên tắc: **Mira đề xuất, thầy duyệt** (GĐ sau).
 - **SQL `db/journey_os_stage1.sql` (ĐÃ chạy, idempotent):** nâng `class_schedule` thêm cột ngày/giờ thật (`start_date`, `weekday` 0=CN..6=T7, `start_time`, `duration_minutes`, `total_sessions`, `end_date`, `status` enum 11 trạng thái lớp, `max/min_students`) — **giữ nguyên** cột text cũ (`schedule`/`start_text`/`duration`) cho trang tuyển sinh. Bảng MỚI **`class_sessions`** (từng buổi: `session_number`/`start_at`/`end_at`/`status` 6 trạng thái buổi). RLS: `class_sessions` **thầy-only**, anon KHÔNG đọc → nếu chạy lại `rls_setup.sql` phải thêm `'class_sessions'` vào mảng `self_managed`.

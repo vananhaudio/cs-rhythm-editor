@@ -34,6 +34,7 @@
 - [Tự chủ việc dễ](feedback_autonomy_easy_tasks.md) — thầy muốn Claude tự làm việc an toàn (edit/git/build/push main), ít hỏi; chỉ hỏi ở quyết định thật/khó đảo/rủi ro Apple
 - [Triết lý thiết kế giáo trình](project_lesson_philosophy.md) — HỌC-TẬP-SỐNG Spiral, app-như-công-cụ, bộ đồ nghề xuyên suốt, trục người thầy (chốt 2026-06-18)
 - [Hướng nhận diện hình ảnh](project_visual_identity.md) — bỏ dần emoji-làm-UI → bộ icon line thống nhất (thầy tự thiết kế); đã dọn mặt học viên, bản đồ ở docs/emoji-cleanup.md
+- [Gu phối màu UI](feedback_ui_color_depth.md) — tránh quá trắng "thư sinh", thích tầng lớp có chiều sâu (header indigo → thẻ sáng → hero nền tối); palette TVA indigo/cam/nền xám; bộ nhiều màu cùng họ -600
 - [Elearn engine](project_elearn_engine.md) — khoá "Khởi Đầu Đam Mê" = 11 link-lesson DB → render NATIVE `src/elearn/`; nội dung soạn trong admin tab "Bài Elearn" → bảng `elearn_lessons` (fallback data.ts); bỏ iframe; ĐỪNG sửa ô "Nội dung chi tiết" CourseEditor (chỉ là marker)
 - [Mira trợ lý (class-ai)](project_mira_assistant.md) — đã cho truy cập dữ liệu mức 1 (danh mục khoá) + mức 2 (hồ sơ riêng người đăng nhập, xác thực token); hướng tới trợ lý chăm sóc học sinh đặc biệt
 - [Trợ lý AI admin](project_admin_ai_assistant.md) — tab AI trong /admin tạo TK học sinh qua Edge Function `admin-ai` (deploy tay Dashboard, verify_jwt TẮT, dùng chung khoá Anthropic — chờ nạp credit); mk mặc định 12345678 + Đổi mật khẩu ở Hồ sơ học viên
