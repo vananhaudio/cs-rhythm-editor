@@ -1944,7 +1944,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                               <span style={{ fontSize: 11, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
                             </div>
                           )}
-                          <div style={{ width: 44, height: 44, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10 }}>{t.icon}</div>
+                          <div style={{ width: 44, height: 44, borderRadius: 12, background: route.startsWith('/tuner') ? 'transparent' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10, overflow: 'hidden' }}>
+                            {route.startsWith('/tuner') ? <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 44, height: 44, borderRadius: 12 }} /> : t.icon}
+                          </div>
                           <div style={{ fontSize: 15, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
                           <div style={{ fontSize: 12, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
                         </div>

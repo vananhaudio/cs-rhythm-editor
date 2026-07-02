@@ -19,6 +19,7 @@ File `src/GuitarTuner.tsx` (giữ nguyên 100% engine nhận cao độ autocorre
 - **Bỏ** nút "Âm mẫu" + bảng "Tần số chuẩn". Mặc định chọn **Dây 6**. Lệnh gảy rõ: *"Hãy gảy dây Mi trầm (dây to nhất)"* + số dây (mỗi dây có `vn` + `size`).
 - **Tông màu khớp app TVA:** header dải indigo (`#4338CA→#6366F1`), thẻ sáng `#FFFFFF`/nền `#F0F2F5`, **mặt đồng hồ nền tối navy** (nốt trắng nổi bật), nhấn cam `#EA580C` khi lệch, xanh `#16A34A` khi chuẩn. 6 màu dây về cùng họ -600 (rose/cam/hổ phách/lục/lam/tím). Nền route `/tuner` (AppRouter) đổi đen→`#F0F2F5`.
 - Chế độ **Tự động** (tự nhận dây) bên cạnh **Chọn dây**. Commit `730fd2c`.
+- **Thương hiệu Tune Lab:** dùng logo `public/tune-lab.png` (copy từ app Tune Lab gốc `~/Desktop/pitch-lab/`) thay icon — cả thẻ công cụ màn chính (nhận qua route `/tuner`, không phụ thuộc icon DB) lẫn header trong tuner (standalone: logo trên dải indigo; embedded: dòng gọn "Tune Lab"). Kim trả về mượt (transition 0.32s); lời nhắc rõ "Cần TĂNG lên / GIẢM xuống" + tên dây. Fix header lồng khi embedded (ẩn header indigo). Commits `37684de`, kế tiếp.
 
 
 ### Journey OS — GĐ1: Lịch thật + tiến trình lớp (2026-07-02, LIVE)

@@ -337,16 +337,21 @@ export default function GuitarTuner({ embedded = false }: { embedded?: boolean }
       borderRadius: 22, overflow: 'hidden',
       border: `1px solid ${T.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.05)',
     }}>
-      {/* Header — dải indigo thương hiệu (ẩn khi chạy trong app: app đã có thanh 'Lên dây đàn') */}
-      {!embedded && (
+      {/* Header — thương hiệu Tune Lab */}
+      {!embedded ? (
         <div style={{ padding: '20px 20px 18px', textAlign: 'center', background: T.headerBg }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2.5, color: 'rgba(255,255,255,0.72)', marginBottom: 5 }}>GUITAR TUNER</div>
+          <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 46, height: 46, borderRadius: 12, marginBottom: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.22)' }} />
           <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -0.4 }}>Lên dây đàn</div>
-          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.8)', marginTop: 3 }}>Chuẩn EADGBE tiêu chuẩn</div>
+          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.8)', marginTop: 3 }}>Tune Lab · Chuẩn EADGBE tiêu chuẩn</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 0 0' }}>
+          <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 26, height: 26, borderRadius: 7 }} />
+          <span style={{ fontSize: 15, fontWeight: 800, color: T.primary, letterSpacing: 0.2 }}>Tune Lab</span>
         </div>
       )}
 
-      <div style={{ padding: embedded ? '18px 18px 22px' : '16px 18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ padding: embedded ? '12px 18px 22px' : '16px 18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* Auto / Manual toggle */}
         <div style={{ display: 'flex', background: T.bg, borderRadius: 12, padding: 4, gap: 4 }}>
