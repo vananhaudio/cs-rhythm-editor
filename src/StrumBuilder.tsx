@@ -109,10 +109,26 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
     setSheetOpen(true); setShowCse(true)
     const el = await loadCseElement()
     if (!cseRendered.current && cseBox.current) {
-      el.render({ div: cseBox.current, tag: 'searchresults-only', gname: 'sheetcse', attributes: { enableImageSearch: true, defaultToImageSearch: true } })
+      el.render({ div: cseBox.current, tag: 'searchresults-only', gname: 'sheetcse', attributes: { enableImageSearch: true, defaultToImageSearch: true, imageSearchLayout: 'popup' } })
       cseRendered.current = true
     }
     setTimeout(() => { try { el.getElement('sheetcse')?.execute(q + ' sheet hợp âm guitar') } catch { /* */ } }, 60)
+  }
+
+  // Bấm 1 ảnh kết quả → widget mở popup preview (ảnh GỐC) → ta chộp src điền vào ô sheet
+  const grabTimer = useRef<number | null>(null)
+  useEffect(() => () => { if (grabTimer.current) window.clearInterval(grabTimer.current) }, [])
+  const grabPreview = () => {
+    if (grabTimer.current) window.clearInterval(grabTimer.current)
+    let tries = 0
+    grabTimer.current = window.setInterval(() => {
+      const img = document.querySelector('img.gs-imagePreview') as HTMLImageElement | null
+      const src = img?.src || ''
+      if (src && !src.includes('encrypted-tbn')) {
+        window.clearInterval(grabTimer.current!); grabTimer.current = null
+        setSheetUrl(src); setShowCse(false); setZoom(1)
+      } else if (++tries > 12) { window.clearInterval(grabTimer.current!); grabTimer.current = null }
+    }, 200)
   }
 
   const lines = useMemo(() => raw.split('\n').map(parseChordLine), [raw])
@@ -217,8 +233,13 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
         )}
 
         {sheetOpen && <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
-          {/* Kết quả tìm Google (widget CSE) — luôn mounted để render 1 lần, ẩn/hiện bằng display */}
-          <div style={{ display: showCse ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}>
+          {/* Kết quả tìm Google (widget CSE) — luôn mounted để render 1 lần, ẩn/hiện bằng display.
+              Bấm ảnh trong kết quả → chộp ảnh gốc từ popup preview điền vào ô sheet. */}
+          <div style={{ display: showCse ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
+            onClickCapture={(e) => {
+              const t = e.target as HTMLElement
+              if (t.closest('.gs-imageResult') || t.closest('a.gs-image') || t.classList.contains('gs-imagePreview')) grabPreview()
+            }}>
             <div ref={cseBox} />
           </div>
           {!showCse && (sheetUrl
