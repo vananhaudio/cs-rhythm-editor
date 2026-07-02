@@ -1,38 +1,26 @@
-// ── Tìm ảnh sheet qua Google Programmable Search (Custom Search JSON API) ──────
-// Khoá đặt trong biến môi trường (KHÔNG hardcode): VITE_GOOGLE_CSE_KEY, VITE_GOOGLE_CSE_CX.
-// Chưa cấu hình → cseConfigured=false, UI tự lùi về "mở tab Google Ảnh" + dán link.
-// Hạn mức miễn phí: 100 lượt/ngày; vượt $5/1000 (đặt trần ở Google Cloud để khỏi cháy quota).
-const KEY = import.meta.env.VITE_GOOGLE_CSE_KEY as string | undefined
-const CX = import.meta.env.VITE_GOOGLE_CSE_CX as string | undefined
+// ── Tìm ảnh sheet bằng Google CSE ELEMENT (widget nhúng) — hiện kết quả NGAY TRONG APP ─
+// Lưu ý lịch sử: Custom Search JSON API đã ĐÓNG với khách mới (403 dù đủ key+billing,
+// xem memory project_strum_score). Widget cse.js thì vẫn free, không cần key/billing.
+// cx là mã CÔNG KHAI của Programmable Search Engine (bật "toàn bộ web" + image search).
+export const CSE_CX = '35dc10d3ccf47407c'
 
-export const cseConfigured = !!(KEY && CX)
-
-export interface ImgResult { url: string; thumb: string; title: string; w?: number; h?: number }
-
-// Mở tab Google Hình ảnh (phương án lùi, không tốn quota)
+// Mở tab Google Hình ảnh (đường phụ)
 export function googleImagesUrl(q: string): string {
   return 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(q + ' sheet hợp âm guitar')
 }
 
-export async function searchImages(q: string): Promise<ImgResult[]> {
-  if (!cseConfigured) throw new Error('Chưa cấu hình tìm ảnh')
-  const u = new URL('https://www.googleapis.com/customsearch/v1')
-  u.searchParams.set('key', KEY!)
-  u.searchParams.set('cx', CX!)
-  u.searchParams.set('q', q + ' sheet hợp âm guitar')
-  u.searchParams.set('searchType', 'image')
-  u.searchParams.set('num', '10')
-  u.searchParams.set('safe', 'active')
-  const r = await fetch(u.toString())
-  if (!r.ok) {
-    if (r.status === 429) throw new Error('Hết lượt tìm miễn phí hôm nay (100/ngày). Thử lại mai hoặc dán link.')
-    throw new Error('Google trả lỗi ' + r.status)
-  }
-  const d = await r.json()
-  return (d.items || []).map((it: any): ImgResult => ({
-    url: it.link,
-    thumb: it.image?.thumbnailLink || it.link,
-    title: it.title || '',
-    w: it.image?.width, h: it.image?.height,
-  }))
+// Nạp script cse.js một lần, trả về google.search.cse.element (API render/execute)
+let pending: Promise<any> | null = null
+export function loadCseElement(): Promise<any> {
+  const w = window as any
+  if (w.google?.search?.cse?.element) return Promise.resolve(w.google.search.cse.element)
+  if (pending) return pending
+  pending = new Promise((resolve) => {
+    w.__gcse = { ...(w.__gcse || {}), parsetags: 'explicit', initializationCallback: () => resolve(w.google.search.cse.element) }
+    const s = document.createElement('script')
+    s.async = true
+    s.src = 'https://cse.google.com/cse.js?cx=' + CSE_CX
+    document.head.appendChild(s)
+  })
+  return pending
 }
