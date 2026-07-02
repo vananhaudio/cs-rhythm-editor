@@ -19,6 +19,12 @@ Biến `/admin` tab **Lịch lớp** thành nền của "hệ điều hành hàn
 - **Giả định:** 1 buổi/tuần (`weekday` kiểu int). Muốn nhiều buổi/tuần phải đổi sang mảng.
 - **Còn lại:** GĐ3 Nhu cầu + lớp nháp · GĐ4 Ưu đãi + Mira Planner. Commits `84cb734`, `c72a151`.
 
+### Journey OS — GĐ3: Nhu cầu mở lớp + lớp nháp (2026-07-02, LIVE)
+- **SQL `db/journey_os_stage3.sql` (ĐÃ chạy):** bảng **`class_demands`** (thầy nhập tay: HV muốn học mã năng lực nào, khung ngày/giờ, ưu tiên, status waiting/planned/enrolled/cancelled). RLS thầy-only → thêm `'class_demands'` vào `self_managed` nếu chạy lại `rls_setup.sql`.
+- **Nguồn nhu cầu = thầy nhập tay ở /admin** (đã chốt; nút phía học viên để GĐ sau).
+- Tab **📥 Nhu cầu** (`src/journey/DemandsBoard.tsx`): form ghi + gom theo mã năng lực. **Rule R2** ngưỡng 4 người/khoá → badge "Đủ mở lớp" + nút "Tạo lớp nháp" (mở form lớp prefill khoá chính + status draft). Lớp nháp: nét đứt/nền nhạt trên Calendar. Commit `2d3ff94`.
+- **Còn lại:** GĐ4 Ưu đãi + Mira Planner.
+
 ### Journey OS — GĐ2: Bản đồ hành trình (2026-07-02, LIVE)
 - Tab **🗺 Bản đồ** trong Lịch lớp — `src/journey/JourneyMap.tsx`. **Thuần frontend, không SQL** (suy từ dữ liệu sẵn có, không tạo bảng `student_journeys`).
 - Vẽ 5 nhánh từ `hanhtrinh.ts`: Nhập môn · Đệm hát (DH1→DH2→DH3→DHNC) · Tỉa nốt (TN1→TN2→TN3) · Nhạc lý (NL1→NL2→NL3) · Solo, nối bằng →.
