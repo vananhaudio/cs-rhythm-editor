@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { StrumDraft } from './strumDrafts'
 import { saveDraft } from './strumDrafts'
+import { cseConfigured, searchImages, googleImagesUrl, type ImgResult } from './googleImageSearch'
 
 const A = { accent: '#4F46E5', border: '#E4E4E7', sub: '#71717A', ink: '#27272A', bg: '#F4F4F5' }
 
@@ -70,6 +71,21 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const [editing, setEditing] = useState(draft.raw_lyric.trim().length === 0)
   const [cuts, setCuts] = useState<Set<number>>(() => new Set(draft.cuts))
   const [status, setStatus] = useState<SaveStatus>('saved')
+  // Tìm ảnh sheet
+  const [searchQ, setSearchQ] = useState('')
+  const [results, setResults] = useState<ImgResult[] | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [searchErr, setSearchErr] = useState<string | null>(null)
+  const [showPaste, setShowPaste] = useState(false)
+
+  const doSearch = async () => {
+    const q = searchQ.trim(); if (!q) return
+    setSearching(true); setSearchErr(null)
+    try { setResults(await searchImages(q)) }
+    catch (e: any) { setSearchErr(e?.message || 'Lỗi tìm ảnh'); setResults([]) }
+    finally { setSearching(false) }
+  }
+  const pickImage = (url: string) => { setSheetUrl(url); setResults(null); setZoom(1) }
 
   const lines = useMemo(() => raw.split('\n').map(parseChordLine), [raw])
   const tokens = useMemo(() => tokenize(lines), [lines])
@@ -137,22 +153,50 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
         </select>
       </div>
 
-      {/* NỬA TRÊN — ảnh sheet (chỉ để nhìn). Điện thoại: gọn lại nhường chỗ cho lời */}
-      <div style={{ flex: narrow ? '0 0 30vh' : 1, minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: `2px solid ${A.border}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 18px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}` }}>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: '#A1A1AA', textTransform: 'uppercase' }}>Sheet nhạc (tham chiếu)</span>
-          <input value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value.trim())} placeholder="Dán link ảnh sheet (Google hình ảnh)…"
-            style={{ flex: 1, maxWidth: 520, padding: '6px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit' }} />
-          {sheetUrl && <>
+      {/* NỬA TRÊN — sheet tham chiếu: tìm ảnh Google → bấm chọn. Điện thoại: gọn lại */}
+      <div style={{ flex: narrow ? '0 0 32vh' : 1, minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: `2px solid ${A.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}`, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: '#A1A1AA', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Sheet tham chiếu</span>
+          <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSearch() }}
+            placeholder="Tìm sheet: tên bài…"
+            style={{ flex: 1, minWidth: 120, padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit' }} />
+          {cseConfigured
+            ? <button onClick={doSearch} disabled={searching} style={{ ...ghost, background: A.accent, color: '#fff', border: 'none', opacity: searching ? .6 : 1 }}>{searching ? '⏳' : '🔍 Tìm'}</button>
+            : <a href={googleImagesUrl(searchQ || title)} target="_blank" rel="noreferrer" style={{ ...ghost, textDecoration: 'none', display: 'inline-block' }}>Google Ảnh ↗</a>}
+          <button onClick={() => setShowPaste((v) => !v)} title="Dán link ảnh thủ công" style={zbtn}>🔗</button>
+          {sheetUrl && !results && <>
             <button onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.25).toFixed(2)))} style={zbtn}>−</button>
-            <span style={{ fontSize: 12, color: A.sub, minWidth: 42, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+            <span style={{ fontSize: 12, color: A.sub, minWidth: 40, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))} style={zbtn}>+</button>
           </>}
         </div>
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46', display: 'flex', alignItems: sheetUrl ? 'flex-start' : 'center', justifyContent: 'center', padding: 16 }}>
-          {sheetUrl
-            ? <img src={sheetUrl} alt="sheet" style={{ width: `${zoom * 100}%`, maxWidth: 'none', display: 'block' }} />
-            : <div style={{ color: '#A1A1AA', fontSize: 14, textAlign: 'center', lineHeight: 1.7 }}>Dán link ảnh sheet ở trên để xem.<br />Chỉ để nhìn vạch nhịp — không xử lý gì.</div>}
+
+        {showPaste && (
+          <div style={{ padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}` }}>
+            <input value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value.trim())} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
+              style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+          </div>
+        )}
+
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
+          {results
+            ? (searchErr
+                ? <div style={{ color: '#FCA5A5', fontSize: 13.5, textAlign: 'center', padding: 24, lineHeight: 1.7 }}>{searchErr}</div>
+                : results.length === 0
+                  ? <div style={{ color: '#A1A1AA', fontSize: 13.5, textAlign: 'center', padding: 24 }}>Không tìm thấy ảnh. Thử từ khoá khác.</div>
+                  : <div style={{ display: 'grid', gridTemplateColumns: `repeat(${narrow ? 3 : 5}, 1fr)`, gap: 6, padding: 8 }}>
+                      {results.map((r, i) => (
+                        <img key={i} src={r.thumb} alt={r.title} title={r.title} onClick={() => pickImage(r.url)}
+                          style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, cursor: 'pointer', background: '#52525B' }} />
+                      ))}
+                    </div>)
+            : sheetUrl
+              ? <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
+                  <img src={sheetUrl} alt="sheet" style={{ width: `${zoom * 100}%`, maxWidth: 'none', display: 'block' }} />
+                </div>
+              : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1AA', fontSize: 14, textAlign: 'center', lineHeight: 1.7, padding: 16 }}>
+                  {cseConfigured ? 'Gõ tên bài rồi bấm 🔍 Tìm để chọn sheet.' : 'Bấm 🔗 dán link ảnh, hoặc “Google Ảnh ↗” để tìm rồi dán.'}<br />Sheet chỉ để nhìn canh nhịp.
+                </div>}
         </div>
       </div>
 

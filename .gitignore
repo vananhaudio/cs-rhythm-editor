@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Biến môi trường (chứa khoá API — KHÔNG commit)
+.env
+.env.*
+!.env.example
+
 # Claude Code — cấu hình quyền cá nhân (không commit)
 .claude/settings.local.json
 
