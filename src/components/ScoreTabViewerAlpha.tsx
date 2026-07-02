@@ -620,6 +620,8 @@ export default function ScoreTabViewerAlpha({
       onNotesChange(result.notes);
       setCursorIdx(result.notes.length);
       setSelIdx(null);
+      // Trả focus về vùng soạn nhạc để phím Space (play/pause) không rơi vào mặc định trình duyệt (cuộn trang)
+      requestAnimationFrame(() => { focusRef.current?.focus({ preventScroll: true }); setFocused(true); });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('Import lỗi:', msg, err);
