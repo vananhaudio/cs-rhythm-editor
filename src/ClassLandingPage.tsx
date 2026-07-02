@@ -764,7 +764,7 @@ export default function ClassLandingPage() {
             <p>Chọn lớp phù hợp và giữ chỗ ngay — thầy sẽ đồng hành cùng bạn từ buổi đầu tiên.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button className="btn btn-primary" onClick={() => goto('lichlop')}>Xem lớp &amp; đăng ký</button>
-              <button className="btn btn-ghost" onClick={() => setShowJourney(true)}>
+              <button className="btn" onClick={() => setShowJourney(true)} style={{ background: 'rgba(255,255,255,.14)', color: '#fff', border: '1.5px solid rgba(255,255,255,.6)', backdropFilter: 'blur(4px)' }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>
                 Tìm hiểu Bản đồ hành trình
               </button>
