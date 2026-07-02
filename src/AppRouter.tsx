@@ -319,8 +319,8 @@ if (path === '/students') {
   // ── Route /tuner ──
   if (path === "/tuner" || path.startsWith("/tuner")) {
     return (
-      <div style={{ minHeight: "100vh", backgroundColor: "#F0F2F5", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "16px 16px 40px" }}>
-        <GuitarTuner />
+      <div style={{ minHeight: "100vh", backgroundColor: "#F0F2F5", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: embedded ? "12px 12px 40px" : "16px 16px 40px" }}>
+        <GuitarTuner embedded={embedded} />
       </div>
     )
   }
