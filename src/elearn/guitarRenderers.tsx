@@ -14,7 +14,7 @@ export interface NoteChartCfg { highlight?: string[] }
 export interface StrumCfg { sequence?: number[] }                 // dãy số dây cần gảy đúng thứ tự
 export interface EarCfg { pool?: number[]; rounds?: number; passScore?: number }
 // "Đánh theo mẫu": máy chạy chuỗi nốt theo nhịp, học viên bắt chước
-export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number }
+export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number; dur?: number }  // dur = số phách (mặc định 1) — cho "Nghe mẫu" chạy đúng trường độ
 // "Xem nốt": hình minh hoạ tĩnh (khuông nhạc và/hoặc cần đàn) + nút nghe thử
 export interface NoteShowCfg {
   label?: string; freq?: number; string?: number; fret?: number; staff?: number
@@ -397,6 +397,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const [heard, setHeard] = useState<string | null>(null)
   const timer = useRef<number | null>(null)
   const beat = useRef(0)
+  const passedR = useRef(false)
   // mic refs
   const micStreamR = useRef<MediaStream | null>(null)
   const audioCtxR = useRef<AudioContext | null>(null)
@@ -408,7 +409,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const releaseR = useRef(false)
 
   const stop = () => {
-    if (timer.current) { clearInterval(timer.current); timer.current = null }
+    if (timer.current) { clearTimeout(timer.current); timer.current = null }
     setPlaying(false); setCursor(-1)
   }
   const stopMic = () => {
@@ -419,19 +420,21 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   }
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); if (micTimer.current) clearInterval(micTimer.current); micStreamR.current?.getTracks().forEach(t => t.stop()); try { audioCtxR.current?.close() } catch { /* */ } }, [])
 
-  // ── Nghe mẫu: máy chạy nốt đều ──
+  // ── Nghe mẫu: máy chạy CÓ TRƯỜNG ĐỘ (mỗi nốt giữ đúng số phách = dur) ──
   const start = () => {
     stopMic()
-    if (timer.current) clearInterval(timer.current)
-    setPlaying(true); setDone(false); beat.current = 0
-    const ms = 60000 / speeds[speedIdx].bpm
+    if (timer.current) clearTimeout(timer.current)
+    setPlaying(true); setDone(false); beat.current = 0; passedR.current = false
+    const beatMs = 60000 / speeds[speedIdx].bpm
     const tick = () => {
       const i = beat.current % notes.length
-      setCursor(i); playTone(notes[i].freq); beat.current++
-      if (beat.current >= notes.length * 2 && !done) { setDone(true); onPass() }
+      setCursor(i); playTone(notes[i].freq)
+      const d = (notes[i].dur ?? 1) * beatMs                 // giữ nốt đúng trường độ rồi mới sang nốt kế
+      beat.current++
+      if (beat.current >= notes.length * 2 && !passedR.current) { passedR.current = true; setDone(true); onPass() }
+      timer.current = window.setTimeout(tick, d)
     }
     tick()
-    timer.current = window.setInterval(tick, ms)
   }
 
   // ── Tự đàn: mic nghe — đàn ĐÚNG TÊN NỐT mới sang nốt kế ──

@@ -1164,105 +1164,120 @@
                     "freq": 329.63,
                     "string": 1,
                     "fret": 0,
-                    "staff": 7
+                    "staff": 7,
+                    "dur": 1
                   },
                   {
                     "label": "Mi",
                     "freq": 329.63,
                     "string": 1,
                     "fret": 0,
-                    "staff": 7
+                    "staff": 7,
+                    "dur": 1
                   },
                   {
                     "label": "Fa",
                     "freq": 349.23,
                     "string": 1,
                     "fret": 1,
-                    "staff": 8
+                    "staff": 8,
+                    "dur": 1
                   },
                   {
                     "label": "Sol",
                     "freq": 392,
                     "string": 1,
                     "fret": 3,
-                    "staff": 9
+                    "staff": 9,
+                    "dur": 1
                   },
                   {
                     "label": "Sol",
                     "freq": 392,
                     "string": 1,
                     "fret": 3,
-                    "staff": 9
+                    "staff": 9,
+                    "dur": 1
                   },
                   {
                     "label": "Fa",
                     "freq": 349.23,
                     "string": 1,
                     "fret": 1,
-                    "staff": 8
+                    "staff": 8,
+                    "dur": 1
                   },
                   {
                     "label": "Mi",
                     "freq": 329.63,
                     "string": 1,
                     "fret": 0,
-                    "staff": 7
+                    "staff": 7,
+                    "dur": 1
                   },
                   {
                     "label": "Rê",
                     "freq": 293.66,
                     "string": 2,
                     "fret": 3,
-                    "staff": 6
+                    "staff": 6,
+                    "dur": 1
                   },
                   {
                     "label": "Đô",
                     "freq": 261.63,
                     "string": 2,
                     "fret": 1,
-                    "staff": 5
+                    "staff": 5,
+                    "dur": 1
                   },
                   {
                     "label": "Đô",
                     "freq": 261.63,
                     "string": 2,
                     "fret": 1,
-                    "staff": 5
+                    "staff": 5,
+                    "dur": 1
                   },
                   {
                     "label": "Rê",
                     "freq": 293.66,
                     "string": 2,
                     "fret": 3,
-                    "staff": 6
+                    "staff": 6,
+                    "dur": 1
                   },
                   {
                     "label": "Mi",
                     "freq": 329.63,
                     "string": 1,
                     "fret": 0,
-                    "staff": 7
+                    "staff": 7,
+                    "dur": 1
                   },
                   {
                     "label": "Mi",
                     "freq": 329.63,
                     "string": 1,
                     "fret": 0,
-                    "staff": 7
+                    "staff": 7,
+                    "dur": 1.5
                   },
                   {
                     "label": "Rê",
                     "freq": 293.66,
                     "string": 2,
                     "fret": 3,
-                    "staff": 6
+                    "staff": 6,
+                    "dur": 0.5
                   },
                   {
                     "label": "Rê",
                     "freq": 293.66,
                     "string": 2,
                     "fret": 3,
-                    "staff": 6
+                    "staff": 6,
+                    "dur": 2
                   }
                 ]
               }
