@@ -219,8 +219,12 @@ export default function GuitarFretboard({ theme = 'dark', externalActiveNotes, o
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // rect là toạ độ VISUAL (đã bị CSS transform scale ở /guitarboard); canvas.width là pixel gốc.
+    // Quy đổi toạ độ chuột về không gian canvas để vệt sáng khớp đúng con trỏ khi cần đàn bị thu/phóng.
+    const sx = rect.width  ? canvas.width  / rect.width  : 1;
+    const sy = rect.height ? canvas.height / rect.height : 1;
+    const x = (e.clientX - rect.left) * sx;
+    const y = (e.clientY - rect.top)  * sy;
 
     mousePosRef.current = { x, y };
 
