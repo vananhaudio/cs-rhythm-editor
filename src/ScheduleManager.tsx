@@ -3,23 +3,9 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from './supabase'
 import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
-import { generateSessions, realEndDate, realStartDate, scheduleText, fmtDMY, progressInfo, WEEKDAYS, type SessionRow } from './journey/sessions'
-
-// Trạng thái lớp (spec Journey OS) — nhãn + màu chấm
-const STATUS: { v: string; l: string; c: string }[] = [
-  { v: 'draft',         l: 'Nháp',           c: '#A1A1AA' },
-  { v: 'recruiting',    l: 'Đang tuyển',     c: '#F59E0B' },
-  { v: 'ready_to_open', l: 'Đủ điều kiện mở', c: '#F59E0B' },
-  { v: 'scheduled',     l: 'Đã lên lịch',    c: '#6366F1' },
-  { v: 'upcoming',      l: 'Sắp khai giảng', c: '#F59E0B' },
-  { v: 'active',        l: 'Đang học',       c: '#16A34A' },
-  { v: 'ending_soon',   l: 'Sắp kết thúc',   c: '#F59E0B' },
-  { v: 'completed',     l: 'Đã hoàn thành',  c: '#71717A' },
-  { v: 'paused',        l: 'Tạm dừng',       c: '#A1A1AA' },
-  { v: 'cancelled',     l: 'Đã huỷ',         c: '#DC2626' },
-  { v: 'merged',        l: 'Đã gộp',         c: '#A1A1AA' },
-]
-const statusInfo = (v?: string | null) => STATUS.find(s => s.v === v) ?? STATUS[0]
+import { generateSessions, realEndDate, realStartDate, scheduleText, fmtDMY, progressInfo, WEEKDAYS, STATUS, statusInfo, type SessionRow } from './journey/sessions'
+import CalendarWeek from './journey/CalendarWeek'
+import ScheduleDashboard from './journey/ScheduleDashboard'
 
 const S = {
   accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
@@ -61,6 +47,7 @@ export default function ScheduleManager() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [sessById, setSessById] = useState<Record<string, SessionRow[]>>({})  // buổi theo lớp
+  const [view, setView] = useState<'list' | 'calendar' | 'dashboard'>('list')
 
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
@@ -162,6 +149,15 @@ export default function ScheduleManager() {
   const courseNames = (ids: string[]) => ids.map(id => courses.find(c => c.id === id)?.name).filter(Boolean)
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name
 
+  // Dữ liệu gọn cho Calendar/Dashboard
+  const classLite = rows.map(r => ({
+    id: r.id, code: r.code, name: r.name, status: r.status, total_sessions: r.total_sessions,
+    mainCourseName: courses.find(c => c.id === r.main_course_id)?.name ?? null, is_active: r.is_active,
+  }))
+  const TABS: { v: typeof view; l: string }[] = [
+    { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch tuần' }, { v: 'dashboard', l: '📊 Chỉ số' },
+  ]
+
   return (
     <div style={{ minHeight: '100%', background: S.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
       <div style={{ padding: '16px 24px', borderBottom: `1px solid ${S.border}`, background: S.surface, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -169,10 +165,26 @@ export default function ScheduleManager() {
           <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>🗓 Lịch lớp học</div>
           <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Mỗi lớp gắn sẵn khoá học + nhóm Zalo — set 1 lần, đăng ký tự chảy.</div>
         </div>
-        {!form && <button onClick={() => { setForm(blank()); setSoKhoa(''); setZaloUrl('') }} style={{ background: S.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>＋ Thêm lớp</button>}
+        {!form && <button onClick={() => { setForm(blank()); setSoKhoa(''); setZaloUrl(''); setView('list') }} style={{ background: S.accent, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>＋ Thêm lớp</button>}
       </div>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 24px' }}>
+      {/* Thanh tab: Danh sách / Lịch tuần / Chỉ số */}
+      {!form && (
+        <div style={{ display: 'flex', gap: 4, padding: '10px 24px 0', borderBottom: `1px solid ${S.border}`, background: S.surface }}>
+          {TABS.map(t => (
+            <button key={t.v} onClick={() => setView(t.v)}
+              style={{ padding: '8px 16px', border: 'none', borderBottom: `2px solid ${view === t.v ? S.accent : 'transparent'}`, background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, fontWeight: view === t.v ? 700 : 500, color: view === t.v ? S.accent : S.text2 }}>
+              {t.l}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ maxWidth: view === 'list' || form ? 860 : 1100, margin: '0 auto', padding: '20px 24px' }}>
+        {!form && view === 'dashboard' && <ScheduleDashboard classes={classLite} sessById={sessById} />}
+        {!form && view === 'calendar' && <CalendarWeek classes={classLite} sessById={sessById} onChanged={load} />}
+        {(form || view === 'list') && (<>
+
         {msg && <div style={{ background: '#FEF2F2', color: S.err, border: '1px solid #FECACA', borderRadius: 8, padding: '9px 14px', fontSize: 13, marginBottom: 14 }}>⚠ {msg}</div>}
 
         {/* FORM thêm/sửa */}
@@ -318,6 +330,7 @@ export default function ScheduleManager() {
             ))}
           </div>
         )}
+        </>)}
       </div>
     </div>
   )

@@ -4,6 +4,22 @@
 
 export const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] // 0..6
 
+// Trạng thái lớp (spec Journey OS) — nhãn + màu chấm/khối
+export const STATUS: { v: string; l: string; c: string }[] = [
+  { v: 'draft',         l: 'Nháp',            c: '#A1A1AA' },
+  { v: 'recruiting',    l: 'Đang tuyển',      c: '#F59E0B' },
+  { v: 'ready_to_open', l: 'Đủ điều kiện mở', c: '#F59E0B' },
+  { v: 'scheduled',     l: 'Đã lên lịch',     c: '#6366F1' },
+  { v: 'upcoming',      l: 'Sắp khai giảng',  c: '#F59E0B' },
+  { v: 'active',        l: 'Đang học',        c: '#16A34A' },
+  { v: 'ending_soon',   l: 'Sắp kết thúc',    c: '#F59E0B' },
+  { v: 'completed',     l: 'Đã hoàn thành',   c: '#71717A' },
+  { v: 'paused',        l: 'Tạm dừng',        c: '#A1A1AA' },
+  { v: 'cancelled',     l: 'Đã huỷ',          c: '#DC2626' },
+  { v: 'merged',        l: 'Đã gộp',          c: '#A1A1AA' },
+]
+export const statusInfo = (v?: string | null) => STATUS.find(s => s.v === v) ?? STATUS[0]
+
 export interface GenSession {
   session_number: number
   start_at: string   // ISO
