@@ -48,6 +48,31 @@ Chúc mừng sinh [C]nhật
 Chúc mừng [F]bạn [C]thân [G]mến
 Chúc mừng sinh [C]nhật`
 
+// Sửa lời xong, dời VẠCH theo TỪ (không theo số thứ tự) — so khớp từ cũ↔mới bằng LCS.
+// Vạch c = ranh giới TRƯỚC từ cũ thứ c → tìm từ cũ ≥ c còn khớp ở bản mới, đặt vạch trước nó.
+export function remapCuts(oldWords: string[], newWords: string[], cuts: Set<number>): Set<number> {
+  const n = oldWords.length, m = newWords.length
+  if (cuts.size === 0 || n === 0 || m === 0) return new Set<number>()
+  const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1))
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      dp[i][j] = oldWords[i] === newWords[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
+  const o2n = new Array<number>(n).fill(-1)
+  let i = 0, j = 0
+  while (i < n && j < m) {
+    if (oldWords[i] === newWords[j]) { o2n[i] = j; i++; j++ }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) i++
+    else j++
+  }
+  const out = new Set<number>()
+  for (const c of cuts) {
+    let k = c
+    while (k < n && o2n[k] === -1) k++          // từ cũ tại vạch bị xoá → bám từ khớp kế tiếp
+    if (k < n && o2n[k] > 0) out.add(o2n[k])    // vạch về đầu bài (0) thì bỏ (Ô1 cố định sẵn)
+  }
+  return out
+}
+
 // Màn hẹp (điện thoại) < 1024px — khớp breakpoint app (MobileStudentPortal)
 function useNarrow() {
   const [n, setN] = useState(typeof window !== 'undefined' && window.innerWidth < 1024)
@@ -91,6 +116,16 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const lines = useMemo(() => raw.split('\n').map(parseChordLine), [raw])
   const tokens = useMemo(() => tokenize(lines), [lines])
   const hasLyric = raw.trim().length > 0
+
+  // Lời thay đổi (sửa/thêm/bớt chữ) → dời vạch bám theo TỪ, không để trượt sai chỗ
+  const wordsRef = useRef<string[]>(tokens.map((t) => t.word))
+  useEffect(() => {
+    const oldW = wordsRef.current
+    const newW = tokens.map((t) => t.word)
+    const same = oldW.length === newW.length && oldW.every((w, k) => w === newW[k])
+    if (!same) setCuts((prev) => remapCuts(oldW, newW, prev))
+    wordsRef.current = newW
+  }, [tokens])
 
   // Ảnh chụp trạng thái đã lưu (để biết "chưa lưu")
   const snap = () => JSON.stringify({ title, sheetUrl, meter, raw, cuts: [...cuts] })
