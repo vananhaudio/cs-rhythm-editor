@@ -4,7 +4,7 @@ import { statusInfo, type SessionRow } from './sessions'
 
 export interface ClassLite {
   id: string; code: string | null; name: string; status: string
-  total_sessions: number; mainCourseName: string | null; is_active: boolean
+  total_sessions: number; mainCourseName: string | null; mainCourseCode?: string | null; is_active: boolean
 }
 
 const S = { surface: '#FFFFFF', border: '#E4E4E7', text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', accent: '#4F46E5' }

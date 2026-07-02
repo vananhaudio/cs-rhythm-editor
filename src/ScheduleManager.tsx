@@ -6,6 +6,7 @@ import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
 import { generateSessions, realEndDate, realStartDate, scheduleText, fmtDMY, progressInfo, WEEKDAYS, STATUS, statusInfo, type SessionRow } from './journey/sessions'
 import CalendarWeek from './journey/CalendarWeek'
 import ScheduleDashboard from './journey/ScheduleDashboard'
+import JourneyMap from './journey/JourneyMap'
 
 const S = {
   accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
@@ -47,7 +48,7 @@ export default function ScheduleManager() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [sessById, setSessById] = useState<Record<string, SessionRow[]>>({})  // buổi theo lớp
-  const [view, setView] = useState<'list' | 'calendar' | 'dashboard'>('list')
+  const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'dashboard'>('list')
 
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
@@ -149,13 +150,17 @@ export default function ScheduleManager() {
   const courseNames = (ids: string[]) => ids.map(id => courses.find(c => c.id === id)?.name).filter(Boolean)
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name
 
-  // Dữ liệu gọn cho Calendar/Dashboard
-  const classLite = rows.map(r => ({
-    id: r.id, code: r.code, name: r.name, status: r.status, total_sessions: r.total_sessions,
-    mainCourseName: courses.find(c => c.id === r.main_course_id)?.name ?? null, is_active: r.is_active,
-  }))
+  // Dữ liệu gọn cho Calendar/Dashboard/Journey
+  const classLite = rows.map(r => {
+    const mc = courses.find(c => c.id === r.main_course_id)
+    return {
+      id: r.id, code: r.code, name: r.name, status: r.status, total_sessions: r.total_sessions,
+      mainCourseName: mc?.name ?? null, mainCourseCode: mc?.code ?? null, is_active: r.is_active,
+    }
+  })
   const TABS: { v: typeof view; l: string }[] = [
-    { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch tuần' }, { v: 'dashboard', l: '📊 Chỉ số' },
+    { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch tuần' },
+    { v: 'journey', l: '🗺 Bản đồ' }, { v: 'dashboard', l: '📊 Chỉ số' },
   ]
 
   return (
@@ -183,6 +188,7 @@ export default function ScheduleManager() {
       <div style={{ maxWidth: view === 'list' || form ? 860 : 1100, margin: '0 auto', padding: '20px 24px' }}>
         {!form && view === 'dashboard' && <ScheduleDashboard classes={classLite} sessById={sessById} />}
         {!form && view === 'calendar' && <CalendarWeek classes={classLite} sessById={sessById} onChanged={load} />}
+        {!form && view === 'journey' && <JourneyMap courses={courses} classes={classLite} sessById={sessById} />}
         {(form || view === 'list') && (<>
 
         {msg && <div style={{ background: '#FEF2F2', color: S.err, border: '1px solid #FECACA', borderRadius: 8, padding: '9px 14px', fontSize: 13, marginBottom: 14 }}>⚠ {msg}</div>}
