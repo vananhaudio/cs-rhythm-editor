@@ -764,7 +764,10 @@ export default function ClassLandingPage() {
             <p>Chọn lớp phù hợp và giữ chỗ ngay — thầy sẽ đồng hành cùng bạn từ buổi đầu tiên.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button className="btn btn-primary" onClick={() => goto('lichlop')}>Xem lớp &amp; đăng ký</button>
-              <button className="btn btn-ghost" onClick={() => setShowJourney(true)}>🗺 Tìm hiểu Bản đồ hành trình</button>
+              <button className="btn btn-ghost" onClick={() => setShowJourney(true)}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>
+                Tìm hiểu Bản đồ hành trình
+              </button>
             </div>
           </div>
         </div>
@@ -1153,7 +1156,11 @@ const CSS = `
 .tva-class .final{background:linear-gradient(150deg,var(--indigo),#6D63E6);border-radius:22px;padding:44px;text-align:center;color:#fff;}
 .tva-class .final h2{color:#fff;}
 .tva-class .final p{margin:12px auto 22px;max-width:480px;color:#E6E2F2;}
-.tva-class .final .btn-primary{background:#fff;color:var(--indigo);}
+.tva-class .final .btn-primary{background:#fff;color:var(--indigo);box-shadow:0 10px 24px -10px rgba(0,0,0,.35);}
+.tva-class .final .btn-primary:hover{background:#fff;transform:translateY(-1px);box-shadow:0 14px 30px -10px rgba(0,0,0,.4);}
+.tva-class .final .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.55);backdrop-filter:blur(4px);}
+.tva-class .final .btn-ghost:hover{background:rgba(255,255,255,.22);border-color:#fff;transform:translateY(-1px);}
+.tva-class .final .btn-ghost svg{opacity:.9;}
 .tva-class footer{background:#211C32;color:#C9C3DE;padding:26px 0;font-size:13.5px;}
 .tva-class .foot-in{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;}
 .tva-class .foot-in b{color:#fff;}
