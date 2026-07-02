@@ -19,6 +19,13 @@ Biến `/admin` tab **Lịch lớp** thành nền của "hệ điều hành hàn
 - **Giả định:** 1 buổi/tuần (`weekday` kiểu int). Muốn nhiều buổi/tuần phải đổi sang mảng.
 - **Còn lại:** GĐ3 Nhu cầu + lớp nháp · GĐ4 Ưu đãi + Mira Planner. Commits `84cb734`, `c72a151`.
 
+### Journey OS — GĐ4: Ưu đãi + Mira Planner (2026-07-02, LIVE) — HOÀN TẤT MVP
+- **SQL `db/journey_os_stage4.sql` (ĐÃ chạy):** bảng **`offer_campaigns`** (mã năng lực/gói, giá gốc→ưu đãi, hạn, quota/used, target_rules, status). RLS thầy-only → `self_managed`.
+- Tab **🎁 Ưu đãi** (`OffersBoard.tsx`): CRUD, trạng thái hiệu lực tự tính theo ngày+quota (đang chạy/sắp mở/hết hạn/hết suất).
+- Tab **🧭 Mira** (`MiraPlanner.tsx`): đề xuất bằng **RULE thuần frontend** (thầy chốt KHÔNG dùng AI/Edge Function). R1 lớp còn 1-2 buổi→khoá tiếp · R2 đủ 4 người/khoá→mở lớp · R3 ≥3 buổi/ngày→quá tải · R4 lớp DH2+/TN2+ sắp xong→HT2027+ưu đãi · R5 lớp nháp gần đủ→đẩy TT. `hanhtrinh.ts` thêm `nextCourses()`. Không tạo bảng mira_recommendations. Commit `32e2719`.
+- **Lịch lớp = 7 tab:** Danh sách · Lịch tuần · Bản đồ · Nhu cầu · Ưu đãi · Mira · Chỉ số.
+- **Mở rộng sau:** nút thu nhu cầu phía HV (app) · nối admin-ai diễn giải NN · lưu recommendations để duyệt/ẩn bền · hỗ trợ nhiều buổi/tuần.
+
 ### Journey OS — GĐ3: Nhu cầu mở lớp + lớp nháp (2026-07-02, LIVE)
 - **SQL `db/journey_os_stage3.sql` (ĐÃ chạy):** bảng **`class_demands`** (thầy nhập tay: HV muốn học mã năng lực nào, khung ngày/giờ, ưu tiên, status waiting/planned/enrolled/cancelled). RLS thầy-only → thêm `'class_demands'` vào `self_managed` nếu chạy lại `rls_setup.sql`.
 - **Nguồn nhu cầu = thầy nhập tay ở /admin** (đã chốt; nút phía học viên để GĐ sau).
