@@ -106,6 +106,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
 
   const doSearch = async () => {
     const q = searchQ.trim(); if (!q) return
+    if (!cseConfigured) { window.open(googleImagesUrl(q), '_blank'); return }   // không có API → Enter cũng mở tab Google Ảnh
     setSheetOpen(true); setSearching(true); setSearchErr(null)
     try { setResults(await searchImages(q)) }
     catch (e: any) { setSearchErr(e?.message || 'Lỗi tìm ảnh'); setResults([]) }
