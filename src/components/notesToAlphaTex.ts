@@ -26,9 +26,13 @@ export interface RepeatInfo {
   closes?: Map<number, number>;   // ô nhịp → số lần lặp (dấu đóng :‖)
 }
 
-// fret.string của 1 nốt; dấu nối (tie) → '-' thay số phím (nối nốt cùng dây trước đó)
+// fret.string của 1 nốt + hiệu ứng NỐT gắn liền: luyến {h}, dấu nối {t}.
+// (Note-effect PHẢI nằm giữa string và duration: `3.3{t}.4`; đặt sau duration sẽ lỗi parse.)
 function noteToken(n: ScoreNote): string {
-  return `${n.tie ? '-' : n.fret}.${6 - n.string}`;
+  const nfx: string[] = [];
+  if (n.hopo) nfx.push('h');   // hammer-on/pull-off
+  if (n.tie)  nfx.push('t');   // dấu nối (tie destination → nối vào nốt cùng cao độ trước)
+  return `${n.fret}.${6 - n.string}${nfx.length ? `{${nfx.join(' ')}}` : ''}`;
 }
 
 export function notesToAlphaTex(notes: ScoreNote[], bpm = 80, keySig = 'c', repeats: RepeatInfo = {}): string {
@@ -70,11 +74,11 @@ export function notesToAlphaTex(notes: ScoreNote[], bpm = 80, keySig = 'c', repe
         const real = g.filter(n => n.string >= 0);
         body = real.length > 0 ? `(${real.map(noteToken).join(' ')}).${dur}` : `r.${dur}`;
       }
-      // Hiệu ứng cấp phách: chấm dôi {d}, liên 3 {tu 3}, luyến/hammer-pull {h}
+      // Hiệu ứng cấp PHÁCH (đặt sau trường độ): chấm dôi {d}, liên 3 {tu 3}.
+      // (Luyến {h} & dấu nối {t} là hiệu ứng NỐT — đã gắn trong noteToken, KHÔNG để ở đây.)
       const fx: string[] = [];
       if (cls.dotted)  fx.push('d');
       if (cls.triplet) fx.push('tu 3');
-      if (g.some(n => n.hopo)) fx.push('h');
       return fx.length ? `${body} {${fx.join(' ')}}` : body;
     }).join(' ');
 
