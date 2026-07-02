@@ -15,4 +15,6 @@ metadata:
 - Để qua review Apple đã: bỏ Pro/FREE badge + tab bar + login screen; thêm NSMicrophoneUsageDescription, ITSAppUsesNonExemptEncryption=NO; auto-start mic, kim mượt.
 - Privacy page host trong repo cs-rhythm-editor: `public/tunelab-privacy/` (deploy theo timming.vananhaudio.com).
 
+- **2026-07-02:** đồng bộ giao diện với tuner LMS — viết lại `src/GuitarTuner.tsx` (nốt to giữa + vành cung, tự bật mic, mặc định dây 6, nhắc TĂNG/GIẢM, kim mượt, icon line, bỏ nút thừa/bảng tần số, chế độ Tự động) nhưng **tông TỐI SANG** (charcoal + xanh lá + nhấn cam logo) giữ nhận diện riêng. Build pass, CHƯA commit + CHƯA phát hành. Bàn giao đầy đủ ở `~/Desktop/pitch-lab/HANDOFF.md` + `TUNER-UPDATE.md`. Bản gốc đối chiếu: LMS `src/GuitarTuner.tsx` (tông indigo/sáng) — sửa logic thì đồng bộ cả 2.
+
 Liên quan: tuner trong LMS [[project_lms_roadmap]] (file `src/GuitarTuner.tsx` cũng tồn tại trong cs-rhythm-editor).
