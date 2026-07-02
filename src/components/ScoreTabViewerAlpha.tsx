@@ -77,7 +77,7 @@ interface Props {
   theme: Theme;
   currentTime: number;
   isPlaying: boolean;
-  onPlay: () => void;
+  onPlay: (fromTime?: number) => void;
   onPause: () => void;
   onStop: () => void;
   activeNoteIds: Set<string>;
@@ -380,7 +380,7 @@ export default function ScoreTabViewerAlpha({
     if (k === 'r' || k === 'R') { e.preventDefault(); insertRest(); return; }
     if (k === 't' || k === 'T') { e.preventDefault(); toggleTie();  return; }   // dấu nối
     if (k === 'h' || k === 'H') { e.preventDefault(); toggleHopo(); return; }   // luyến (hammer-on/pull-off)
-    if (k === ' ') { e.preventDefault(); isPlaying ? onPause() : onPlay(); return; }
+    if (k === ' ') { e.preventDefault(); isPlaying ? onPause() : onPlay(cursorTime); return; }
     if (e.shiftKey && /^[1-6]$/.test(k)) {
       e.preventDefault();
       const ns = 6 - parseInt(k, 10);

@@ -89,9 +89,12 @@ function App() {
     rafRef.current = requestAnimationFrame(tickPlayback);
   }, [notes, totalDuration]);
 
-  const handlePlay = useCallback(() => {
-    if (currentTime >= totalDuration) { startTimeRef.current = 0; setCurrentTime(0); }
-    else startTimeRef.current = currentTime;
+  // Phát từ vị trí con trỏ (fromTime) nếu được truyền; nếu ở/quá cuối bài thì phát lại từ đầu
+  const handlePlay = useCallback((fromTime?: number) => {
+    let start = fromTime != null ? fromTime : currentTime;
+    if (start >= totalDuration - 1e-6) start = 0;
+    startTimeRef.current = start;
+    setCurrentTime(start);
     startWallRef.current = performance.now();
     playedRef.current.clear();
     setIsPlaying(true);
