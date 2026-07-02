@@ -56,7 +56,9 @@ DECLARE
     -- articles: anon đọc bài published. leads: anon CHỈ ghi (không đọc). ĐỪNG để vòng lặp áp policy rộng.
     'articles', 'leads',
     -- Quyền mở khoá từng khoá: authenticated ĐỌC, chỉ thầy GHI (xem db/course_access_setup.sql)
-    'edu_course_access'
+    'edu_course_access',
+    -- Strum Score học sinh tự soạn: mỗi HS chỉ CRUD bài của mình, thầy chỉ đọc (xem db/student_strum_drafts.sql)
+    'student_strum_drafts'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];

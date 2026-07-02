@@ -28,6 +28,7 @@ import JoinGroupPage from './JoinGroupPage'
 import DeleteAccountPage from './DeleteAccountPage'
 import ClassLandingPage from './ClassLandingPage'
 import GrooveExercise from './groove/GrooveExercise'
+import StrumWorkshop from './StrumWorkshop'
 type AppUser = {
   id: string
   role: string
@@ -218,6 +219,13 @@ export default function AppRouter() {
   // ── Route /gp-editor ──
   if (path === '/gp-editor') {
     return <GpEditor onClose={() => { window.location.href = '/tap' }} />
+  }
+
+  // ── Route /strum-builder — Công cụ tạo Strum Score (chỉ teacher) ──
+  if (path === '/strum-builder' || path.startsWith('/strum-builder')) {
+    if (loading) return null
+    if (!import.meta.env.DEV && (!user || !isTeacher)) { window.location.href = '/start'; return null }   // dev: xem thử không cần đăng nhập
+    return <StrumWorkshop onExit={() => { window.location.href = '/start' }} />
   }
 
   // ── Route /youtube-sync — chỉ teacher ──          ← THÊM BLOCK NÀY
