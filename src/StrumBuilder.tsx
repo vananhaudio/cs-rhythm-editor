@@ -77,6 +77,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const [searching, setSearching] = useState(false)
   const [searchErr, setSearchErr] = useState<string | null>(null)
   const [showPaste, setShowPaste] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(!!draft.sheet_url)   // chưa có ảnh → thu gọn, nhường chỗ cho vạch nhịp
 
   const doSearch = async () => {
     const q = searchQ.trim(); if (!q) return

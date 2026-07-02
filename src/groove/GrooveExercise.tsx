@@ -36,13 +36,13 @@ export default function GrooveExercise({ onClose }: { onClose: () => void }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: '#F5F0E8', fontFamily: 'Inter, sans-serif', display: 'flex', flexDirection: 'column' }}>
       {/* header */}
-      <div style={{ flexShrink: 0, padding: '12px 14px 8px', maxWidth: 520, width: '100%', margin: '0 auto' }}>
+      <div style={{ flexShrink: 0, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 14px 8px', maxWidth: 520, width: '100%', margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 19, fontWeight: 800, color: '#1A1A1A' }}>Tiết tấu</div>
-            <div style={{ fontSize: 11, color: '#8A8175', fontWeight: 600, letterSpacing: 0.3 }}>{APP_SLOGAN}</div>
+            <div style={{ fontSize: 11, color: '#8A8175', fontWeight: 600, letterSpacing: 0.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{APP_SLOGAN}</div>
           </div>
-          <button onClick={onClose} style={{ border: 'none', background: '#EDE7DA', borderRadius: 18, width: 36, height: 36, fontSize: 18, cursor: 'pointer', flexShrink: 0 }}>✕</button>
+          <button onClick={onClose} aria-label="Đóng" style={{ border: 'none', background: '#EDE7DA', borderRadius: 20, width: 40, height: 40, fontSize: 18, cursor: 'pointer', flexShrink: 0, marginLeft: 10 }}>✕</button>
         </div>
 
         {/* tab Học | Tập */}
