@@ -81,7 +81,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
 
   const doSearch = async () => {
     const q = searchQ.trim(); if (!q) return
-    setSearching(true); setSearchErr(null)
+    setSheetOpen(true); setSearching(true); setSearchErr(null)
     try { setResults(await searchImages(q)) }
     catch (e: any) { setSearchErr(e?.message || 'Lỗi tìm ảnh'); setResults([]) }
     finally { setSearching(false) }
@@ -154,9 +154,10 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
         </select>
       </div>
 
-      {/* NỬA TRÊN — sheet tham chiếu: tìm ảnh Google → bấm chọn. Điện thoại: gọn lại */}
-      <div style={{ flex: narrow ? '0 0 32vh' : 1, minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: `2px solid ${A.border}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}`, flexWrap: 'wrap' }}>
+      {/* NỬA TRÊN — sheet tham chiếu (thu gọn được để nhường chỗ cho vạch nhịp) */}
+      <div style={{ flex: sheetOpen ? (narrow ? '0 0 32vh' : 1) : '0 0 auto', minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: `2px solid ${A.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#FAFAFA', borderBottom: sheetOpen ? `1px solid ${A.border}` : 'none', flexWrap: 'wrap' }}>
+          <button onClick={() => setSheetOpen((v) => !v)} title={sheetOpen ? 'Thu gọn sheet' : 'Mở sheet'} style={{ ...zbtn, fontSize: 12 }}>{sheetOpen ? '▾' : '▸'}</button>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: '#A1A1AA', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Sheet tham chiếu</span>
           <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSearch() }}
             placeholder="Tìm sheet: tên bài…"
@@ -174,12 +175,12 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
 
         {showPaste && (
           <div style={{ padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}` }}>
-            <input value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value.trim())} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
+            <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); if (e.target.value.trim()) setSheetOpen(true) }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
               style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
           </div>
         )}
 
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
+        {sheetOpen && <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
           {results
             ? (searchErr
                 ? <div style={{ color: '#FCA5A5', fontSize: 13.5, textAlign: 'center', padding: 24, lineHeight: 1.7 }}>{searchErr}</div>
@@ -198,7 +199,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
               : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1AA', fontSize: 14, textAlign: 'center', lineHeight: 1.7, padding: 16 }}>
                   {cseConfigured ? 'Gõ tên bài rồi bấm 🔍 Tìm để chọn sheet.' : 'Bấm 🔗 dán link ảnh, hoặc “Google Ảnh ↗” để tìm rồi dán.'}<br />Sheet chỉ để nhìn canh nhịp.
                 </div>}
-        </div>
+        </div>}
       </div>
 
       {/* NỬA DƯỚI — lời + hợp âm + vạch nhịp */}
