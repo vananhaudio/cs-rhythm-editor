@@ -17,7 +17,12 @@ Biến `/admin` tab **Lịch lớp** thành nền của "hệ điều hành hàn
 - **Sinh buổi Ở CLIENT** (không dùng trigger) — `src/journey/sessions.ts`: `generateSessions` sinh N buổi cách 7 ngày (1 buổi/tuần), tự dời buổi 1 về đúng thứ; `realStart/EndDate`, `progressInfo` (buổi X/tổng), `scheduleText`; export `STATUS`/`statusInfo` dùng chung. Khi lưu lớp: đồng bộ `class_sessions`, **giữ buổi đã `completed`**, tự tính `end_date` + gợi ý text lịch cũ.
 - **UI `ScheduleManager` — 3 tab:** 📋 Danh sách (badge buổi X/8 + chấm màu trạng thái + ngày KT) · 📅 **Lịch tuần** (`src/journey/CalendarWeek.tsx`: lưới T2–CN, khối buổi màu theo status lớp, ◀ Tuần này ▶, click buổi → popup đánh dấu đã dạy/huỷ/dời/bù/nghỉ) · 📊 **Chỉ số** (`src/journey/ScheduleDashboard.tsx`: buổi hôm nay/tuần này, đang học, sắp KG, sắp KT/xếp tiếp, nháp).
 - **Giả định:** 1 buổi/tuần (`weekday` kiểu int). Muốn nhiều buổi/tuần phải đổi sang mảng.
-- **Còn lại:** GĐ2 Bản đồ hành trình · GĐ3 Nhu cầu + lớp nháp · GĐ4 Ưu đãi + Mira Planner. Commits `84cb734`, `c72a151`.
+- **Còn lại:** GĐ3 Nhu cầu + lớp nháp · GĐ4 Ưu đãi + Mira Planner. Commits `84cb734`, `c72a151`.
+
+### Journey OS — GĐ2: Bản đồ hành trình (2026-07-02, LIVE)
+- Tab **🗺 Bản đồ** trong Lịch lớp — `src/journey/JourneyMap.tsx`. **Thuần frontend, không SQL** (suy từ dữ liệu sẵn có, không tạo bảng `student_journeys`).
+- Vẽ 5 nhánh từ `hanhtrinh.ts`: Nhập môn · Đệm hát (DH1→DH2→DH3→DHNC) · Tỉa nốt (TN1→TN2→TN3) · Nhạc lý (NL1→NL2→NL3) · Solo, nối bằng →.
+- Mỗi mốc = 1 mã năng lực: node **đậm** nếu `edu_courses` có code đó, **mờ** nếu chưa dựng. **Gắn lớp thật** vào mốc qua `main_course_id`→code: mã lớp + buổi X/8 + chấm màu status. Commit `7129d10`.
 
 ## Việc làm trong đợt trước (2026-06)
 
