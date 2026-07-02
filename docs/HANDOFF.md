@@ -1,7 +1,7 @@
 # BÀN GIAO — TVA Guitar LMS (cs-rhythm-editor)
 
 > Bản bàn giao đẩy lên GitHub để **không mất dữ liệu** (backup ngoài máy + lịch sử phiên bản).
-> Cập nhật gần nhất: **2026-06-29 (chiều/tối)**.
+> Cập nhật gần nhất: **2026-07-02** (Journey OS GĐ1).
 >
 > - **Bộ nhớ chi tiết** (Claude tự đọc mỗi phiên): `~/.claude/projects/-Users-vananhaudio-Desktop-cs-rhythm-editor/memory/`
 > - **Bản sao bộ nhớ trong repo** (an toàn, versioned): [`docs/memory-backup/`](./memory-backup/) — xem [`MEMORY.md`](./memory-backup/MEMORY.md) làm mục lục.
@@ -9,7 +9,17 @@
 ## Dự án
 LMS dạy guitar online "Thầy Văn Anh Guitar". React + TS + Vite + Tailwind (chủ yếu **inline styles**). Supabase (`wojmdilyflffvdtpovmq`). Deploy: push `main` → Netlify → `timming.vananhaudio.com` (app) & `class.vananhaudio.com` (tuyển sinh). Vỏ iOS Capacitor (TestFlight) tải web live. **Build BẮT BUỘC `npm run build` (tsc -b + vite) trước khi push.** Xem `CLAUDE.md` cho quy ước đầy đủ.
 
-## Việc làm trong đợt gần nhất (2026-06)
+## Việc làm trong đợt gần nhất (2026-07)
+
+### Journey OS — GĐ1: Lịch thật + tiến trình lớp (2026-07-02, LIVE)
+Biến `/admin` tab **Lịch lớp** thành nền của "hệ điều hành hành trình". Spec đầy đủ: `docs/JOURNEY-OS-SPEC.md`. Nguyên tắc: **Mira đề xuất, thầy duyệt** (GĐ sau).
+- **SQL `db/journey_os_stage1.sql` (ĐÃ chạy, idempotent):** nâng `class_schedule` thêm cột ngày/giờ thật (`start_date`, `weekday` 0=CN..6=T7, `start_time`, `duration_minutes`, `total_sessions`, `end_date`, `status` enum 11 trạng thái lớp, `max/min_students`) — **giữ nguyên** cột text cũ (`schedule`/`start_text`/`duration`) cho trang tuyển sinh. Bảng MỚI **`class_sessions`** (từng buổi: `session_number`/`start_at`/`end_at`/`status` 6 trạng thái buổi). RLS: `class_sessions` **thầy-only**, anon KHÔNG đọc → nếu chạy lại `rls_setup.sql` phải thêm `'class_sessions'` vào mảng `self_managed`.
+- **Sinh buổi Ở CLIENT** (không dùng trigger) — `src/journey/sessions.ts`: `generateSessions` sinh N buổi cách 7 ngày (1 buổi/tuần), tự dời buổi 1 về đúng thứ; `realStart/EndDate`, `progressInfo` (buổi X/tổng), `scheduleText`; export `STATUS`/`statusInfo` dùng chung. Khi lưu lớp: đồng bộ `class_sessions`, **giữ buổi đã `completed`**, tự tính `end_date` + gợi ý text lịch cũ.
+- **UI `ScheduleManager` — 3 tab:** 📋 Danh sách (badge buổi X/8 + chấm màu trạng thái + ngày KT) · 📅 **Lịch tuần** (`src/journey/CalendarWeek.tsx`: lưới T2–CN, khối buổi màu theo status lớp, ◀ Tuần này ▶, click buổi → popup đánh dấu đã dạy/huỷ/dời/bù/nghỉ) · 📊 **Chỉ số** (`src/journey/ScheduleDashboard.tsx`: buổi hôm nay/tuần này, đang học, sắp KG, sắp KT/xếp tiếp, nháp).
+- **Giả định:** 1 buổi/tuần (`weekday` kiểu int). Muốn nhiều buổi/tuần phải đổi sang mảng.
+- **Còn lại:** GĐ2 Bản đồ hành trình · GĐ3 Nhu cầu + lớp nháp · GĐ4 Ưu đãi + Mira Planner. Commits `84cb734`, `c72a151`.
+
+## Việc làm trong đợt trước (2026-06)
 
 ### Đưa Groove Lab vào LMS — module "Tiết tấu" (2026-06-30)
 - **Port toàn bộ Groove Lab** (app Expo riêng `~/App/project/`) sang web, gom ở **`src/groove/`** (inline styles, Web Audio thuần):

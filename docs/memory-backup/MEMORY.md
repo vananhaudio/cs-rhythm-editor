@@ -1,5 +1,7 @@
 # Memory Index
 
+- [Bộ luật Hành trình 2027](project_hanhtrinh2027_boluat.md) — bản đồ học + luật mở khoá theo tiên quyết + học vượt cấp (thầy duyệt) + cảnh báo thiếu nền tảng; spec ở docs/HANHTRINH-2027-BO-LUAT.md; CHƯA build
+
 - [Tỉa nốt 1 — triết lý](project_tia_not_1_philosophy.md) — dạy theo cụm→câu→vùng→bài thật, KHÔNG lấy dây làm trục; 6 bài; đồ nghề note_show/note_practice đủ; vùng Si-Đô-Rê-Mi-Fa-Sol = staff 4-9
 
 - [Đơn giản, hiệu quả](feedback_simple_effective_design.md) — trình bày sạch, hạn chế màu mè; nốt nhạc là trọng tâm (to/đều/đẹp); hợp âm trên nốt đầu ô nhịp
@@ -22,7 +24,7 @@
 - [Groove Lab](project_groove_lab.md) — app Expo dạy tiết tấu guitar ở `~/App/project/`, ĐÃ LÊN APP STORE v1.0 (id 6778263562, build 7 iPhone-only, duyệt 2026-06-14), privacy /groovelab-privacy/
 - [Groove Lab trong LMS](project_groove_in_lms.md) — đã PORT toàn bộ Groove Lab vào LMS (src/groove/), mục "Tiết tấu" trong "Hôm nay luyện gì": tab Học (30 bài 3 tầng + metronome) + Tập (nền tập quạt); 2 codebase tách biệt
 - [Strum Score (Groove Lab)](project_groove_strum_guide.md) — tính năng SẮP LÀM (tên chính thức Strum Score): hướng dẫn quạt chạy theo nhạc user tự chèn; đã chốt khung tích hợp (union kind exercise/strum, route app/strum riêng); CHƯA code, chờ thầy bảo làm
-- [Nền tập quạt (Groove Lab)](project_groove_backing_track.md) — tính năng SẮP LÀM: engine tự sinh loop trống+bass 5 điệu để quạt theo; đặc tả Downloads/BAN-GIAO-groove-lab.md viết theo Tone.js (web) PHẢI port sang react-native-audio-api; trí tuệ nhạc copy thẳng; CHƯA code
+- [Nền tập quạt (Groove Lab)](project_groove_backing_track.md) — ĐÃ LÀM & LIVE (tab Tập, Groove Lab v1.1.0 App Store+CH Play 2026-06-30): engine synth loop trống+bass 5 điệu trên react-native-audio-api; bass thầy chốt công thức từng điệu; Bolero hi-hat đơn-kép-kép (v1.1.1 TestFlight)
 - [Note Trainer](project_note_trainer.md) — game đọc nốt "ScoreLab Trainer" (React/Vite/Tailwind, 1 file App.tsx) ở `~/App/Game nhớ nốt nhạc/app`, ĐÃ LÊN APP STORE v1.0 (id 6780222404, iPhone-only, duyệt 2026-06-15), privacy /scorelab-privacy/
 - [GuitarBoard AlphaTab](project_guitarboard_alphatab.md) — editor /guitarboard chuyển từ canvas tự vẽ sang AlphaTab render (ScoreTabViewerAlpha); giữ logic gõ phím cũ
 - [Nhịp độ chỉnh GuitarBoard](feedback_guitarboard_pace.md) — làm chậm từng chi tiết một, không tự push, chờ duyệt
@@ -36,3 +38,4 @@
 - [Mira trợ lý (class-ai)](project_mira_assistant.md) — đã cho truy cập dữ liệu mức 1 (danh mục khoá) + mức 2 (hồ sơ riêng người đăng nhập, xác thực token); hướng tới trợ lý chăm sóc học sinh đặc biệt
 - [Trợ lý AI admin](project_admin_ai_assistant.md) — tab AI trong /admin tạo TK học sinh qua Edge Function `admin-ai` (deploy tay Dashboard, verify_jwt TẮT, dùng chung khoá Anthropic — chờ nạp credit); mk mặc định 12345678 + Đổi mật khẩu ở Hồ sơ học viên
 - [Xưng hô "bạn" không "em"](feedback_address_learners_neutral.md) — nội dung bài học gọi học viên là "bạn" (có thể người lớn tuổi), tránh "em"
+- [Journey OS](project_journey_os.md) — tầm nhìn /admin/schedule thành hệ điều hành đào tạo 1 năm (lịch thật + tự sinh buổi + Mira đề xuất mở/gộp lớp, ưu đãi); spec docs/JOURNEY-OS-SPEC.md; MVP 4 giai đoạn, CHƯA build
