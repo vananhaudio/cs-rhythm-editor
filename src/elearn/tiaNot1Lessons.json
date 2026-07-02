@@ -613,7 +613,7 @@
     },
     {
       "module_id": "c2710000-0000-4000-8000-000000000001",
-      "name": "Chương 2: Mở rộng vùng xuống trầm",
+      "name": "Chương 2: Mở rộng vùng nốt",
       "order": 1,
       "lessons": [
         {
@@ -621,7 +621,7 @@
           "lessonId": "a2720000-0000-4000-8000-000000000001",
           "flowId": "f2720000-0000-4000-8000-000000000001",
           "order": 0,
-          "title": "Bài 1: Cụm Sol – La (trầm)",
+          "title": "Bài 1: Cụm Sol – La",
           "reward_xp": 10,
           "slides": [
             {
@@ -629,18 +629,18 @@
               "order": 1,
               "logic": "DAN",
               "type": "callout",
-              "title": "Xuống vùng trầm",
+              "title": "Mở rộng xuống dưới",
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Bạn đã chơi vùng nốt cao (Si → Sol). Giờ ta đi <b>xuống dưới</b> — thêm 2 nốt <b>trầm hơn</b> nằm ở dây dày hơn: <b>Sol</b> và <b>La</b>. Nghe trầm và ấm hơn."
+              "content": "Bạn đã chơi vùng nốt cao (Si → Sol). Giờ ta <b>mở rộng xuống dưới</b> — thêm 2 nốt <b>thấp hơn</b>: <b>Sol</b> và <b>La</b>, nằm ở dây dày hơn."
             },
             {
               "id": "s2",
               "order": 2,
               "logic": "NHAN",
               "type": "note_show",
-              "title": "Sol (trầm)",
+              "title": "Sol (thấp)",
               "interactive": {
                 "label": "Sol",
                 "freq": 196,
@@ -649,7 +649,7 @@
                 "staff": 2,
                 "showStaff": true,
                 "showFretboard": true,
-                "caption": "<b>Sol</b> trầm — dây 3 <b>buông</b> (○). Trên khuông nằm <b>thấp</b>, gần đáy. Nghe trầm hơn Sol cao đã học."
+                "caption": "<b>Sol</b> (thấp) — dây 3 <b>buông</b> (○). Nằm <b>thấp</b> trên khuông. Đây là Sol thấp hơn Sol cao đã học một quãng tám."
               }
             },
             {
@@ -657,7 +657,7 @@
               "order": 3,
               "logic": "NHAN",
               "type": "note_show",
-              "title": "La (trầm)",
+              "title": "La",
               "interactive": {
                 "label": "La",
                 "freq": 220,
@@ -730,8 +730,8 @@
               "title": "Tự kiểm tra",
               "interactive": {
                 "items": [
-                  "Mình gảy được Sol – La ở vùng trầm, tiếng rõ",
-                  "Mình nghe ra chúng TRẦM hơn vùng nốt cao",
+                  "Mình gảy được Sol – La, tiếng rõ",
+                  "Mình nghe ra chúng THẤP hơn vùng nốt cao",
                   "Sol – La nối lên được Si (nốt đã học)"
                 ]
               }
@@ -745,7 +745,7 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Tốt! Hai nốt trầm này nối liền xuống dưới vùng cũ. Bài sau thêm 3 nốt trầm nữa."
+              "content": "Tốt! Hai nốt này nối liền xuống dưới vùng cũ. Bài sau thêm vài nốt thấp hơn nữa."
             }
           ]
         },
@@ -754,7 +754,7 @@
           "lessonId": "a2720000-0000-4000-8000-000000000002",
           "flowId": "f2720000-0000-4000-8000-000000000002",
           "order": 1,
-          "title": "Bài 2: Cụm Rê – Mi – Fa (trầm)",
+          "title": "Bài 2: Cụm Rê – Mi – Fa",
           "reward_xp": 10,
           "slides": [
             {
@@ -762,18 +762,18 @@
               "order": 1,
               "logic": "DAN",
               "type": "callout",
-              "title": "Xuống sâu hơn",
+              "title": "Xuống thấp hơn nữa",
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Thêm 3 nốt <b>trầm hơn nữa</b> ở dây dày nhất mình dùng tới lúc này: <b>Rê – Mi – Fa</b>. Chúng nằm ở <b>đáy khuông nhạc</b>."
+              "content": "Thêm 3 nốt <b>thấp hơn nữa</b> ở dây dày hơn: <b>Rê – Mi – Fa</b>. Chúng nằm ở <b>đáy khuông nhạc</b>."
             },
             {
               "id": "r2",
               "order": 2,
               "logic": "NHAN",
               "type": "note_show",
-              "title": "Rê (trầm)",
+              "title": "Rê",
               "interactive": {
                 "label": "Rê",
                 "freq": 146.83,
@@ -782,7 +782,7 @@
                 "staff": -1,
                 "showStaff": true,
                 "showFretboard": true,
-                "caption": "<b>Rê</b> — dây 4 <b>buông</b> (○). Nằm ngay <b>dưới dòng kẻ cuối</b> của khuông — nốt trầm nhất bài này."
+                "caption": "<b>Rê</b> — dây 4 <b>buông</b> (○). Nằm ngay <b>dưới dòng kẻ cuối</b> của khuông — nốt thấp nhất bài này."
               }
             },
             {
@@ -790,7 +790,7 @@
               "order": 3,
               "logic": "NHAN",
               "type": "note_show",
-              "title": "Mi (trầm)",
+              "title": "Mi (thấp)",
               "interactive": {
                 "label": "Mi",
                 "freq": 164.81,
@@ -799,7 +799,7 @@
                 "staff": 0,
                 "showStaff": true,
                 "showFretboard": true,
-                "caption": "<b>Mi</b> — cùng dây, bấm <b>ngăn 2</b>. Nằm <b>trên dòng kẻ cuối</b>."
+                "caption": "<b>Mi</b> (thấp) — cùng dây, bấm <b>ngăn 2</b>. Nằm <b>trên dòng kẻ cuối</b>. Thấp hơn Mi cao đã học một quãng tám."
               }
             },
             {
@@ -807,7 +807,7 @@
               "order": 4,
               "logic": "NHAN",
               "type": "note_show",
-              "title": "Fa (trầm)",
+              "title": "Fa (thấp)",
               "interactive": {
                 "label": "Fa",
                 "freq": 174.61,
@@ -816,7 +816,7 @@
                 "staff": 1,
                 "showStaff": true,
                 "showFretboard": true,
-                "caption": "<b>Fa</b> — cùng dây, bấm <b>ngăn 3</b>. Cao hơn Mi một bậc."
+                "caption": "<b>Fa</b> (thấp) — cùng dây, bấm <b>ngăn 3</b>. Cao hơn Mi một bậc."
               }
             },
             {
@@ -880,7 +880,7 @@
               "title": "Tự kiểm tra",
               "interactive": {
                 "items": [
-                  "Mình gảy được Rê – Mi – Fa trầm, tiếng rõ",
+                  "Mình gảy được Rê – Mi – Fa, tiếng rõ",
                   "Mình thấy Rê nằm dưới dòng kẻ cuối khuông"
                 ]
               }
@@ -894,7 +894,7 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Giỏi! Giờ bạn đọc được cả nốt <b>dưới khuông</b>. Bài sau gộp thành một vùng trầm liền mạch."
+              "content": "Giỏi! Giờ bạn đọc được cả nốt <b>dưới khuông</b>. Bài sau gộp thành một vùng liền mạch."
             }
           ]
         },
@@ -903,7 +903,7 @@
           "lessonId": "a2720000-0000-4000-8000-000000000003",
           "flowId": "f2720000-0000-4000-8000-000000000003",
           "order": 2,
-          "title": "Bài 3: Vùng nốt trầm",
+          "title": "Bài 3: Vùng nốt mở rộng",
           "reward_xp": 10,
           "slides": [
             {
@@ -911,11 +911,11 @@
               "order": 1,
               "logic": "DAN",
               "type": "callout",
-              "title": "Vùng nốt trầm",
+              "title": "Vùng nốt mở rộng",
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Gộp lại: <b>Rê – Mi – Fa – Sol – La</b> — một <b>vùng trầm</b> liền mạch, nằm ngay dưới vùng cao đã học."
+              "content": "Gộp lại: <b>Rê – Mi – Fa – Sol – La</b> — một vùng nốt <b>thấp hơn</b>, nối ngay dưới vùng đã học."
             },
             {
               "id": "v2",
@@ -923,14 +923,14 @@
               "logic": "NGHI",
               "type": "text",
               "title": "5 nốt đi lên",
-              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Năm nốt đi <b>lên dần</b>: Rê → Mi → Fa → Sol → La. Hai nốt đầu ở dây dày, ba nốt sau nhích lên dây cạnh — tai chỉ nghe <b>một vùng trầm đi lên</b>.</p>"
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Năm nốt đi <b>lên dần</b>: Rê → Mi → Fa → Sol → La. Hai nốt đầu ở dây dày, ba nốt sau nhích lên dây cạnh — tai chỉ nghe <b>một vùng đi lên</b>.</p>"
             },
             {
               "id": "v3",
               "order": 3,
               "logic": "LAM",
               "type": "note_practice",
-              "title": "Đánh theo cả vùng trầm",
+              "title": "Đánh theo cả vùng",
               "interactive": {
                 "notes": [
                   {
@@ -980,7 +980,7 @@
               "interactive": {
                 "items": [
                   "Mình chơi liền 5 nốt Rê → La, đi lên đều",
-                  "Mình thấy đây là một vùng trầm, không phải dây rời rạc"
+                  "Mình thấy đây là một vùng nốt, không phải dây rời rạc"
                 ]
               }
             },
@@ -993,7 +993,7 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Rất vững! Bạn có thêm một vùng nốt. Bài cuối: nối vùng trầm với vùng cao thành cả một quãng tám."
+              "content": "Rất vững! Bạn có thêm một vùng nốt. Bài cuối: nối vùng này với vùng cao thành cả một quãng tám."
             }
           ]
         },
@@ -1014,7 +1014,7 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Giờ nối <b>vùng trầm</b> và <b>vùng cao</b> thành một mạch dài: <b>Rê → Mi → Fa → Sol → La → Si → Đô → Rê</b> — trọn <b>một quãng tám</b>, qua 3 dây."
+              "content": "Giờ nối <b>vùng thấp</b> và <b>vùng cao</b> thành một mạch dài: <b>Rê → Mi → Fa → Sol → La → Si → Đô → Rê</b> — trọn <b>một quãng tám</b>, qua 3 dây."
             },
             {
               "id": "o2",
@@ -1022,7 +1022,7 @@
               "logic": "NGHI",
               "type": "text",
               "title": "Đọc trôi qua 3 dây",
-              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Câu này đi từ <b>Rê trầm</b> (đáy khuông) lên tới <b>Rê cao</b> (giữa khuông) — chuyển mượt qua 3 dây. Đọc trôi cả câu = năng lực thật của tỉa nốt.</p>"
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Câu này đi từ <b>Rê thấp</b> (đáy khuông) lên tới <b>Rê cao</b> (giữa khuông) — chuyển mượt qua 3 dây. Đọc trôi cả câu = năng lực thật của tỉa nốt.</p>"
             },
             {
               "id": "o3",
