@@ -40,6 +40,13 @@ export const PREREQ: Record<string, string[]> = {
 export const dangLop = (code?: string | null): string | null =>
   code ? (DANG_LOP[code.trim().toUpperCase()] ?? null) : null
 
+// Khoá tiếp nối: các mã có `code` trong danh sách tiên quyết (đảo PREREQ). Vd nextCourses('DH1') → ['DH2'].
+export const nextCourses = (code?: string | null): string[] => {
+  const c = (code || '').trim().toUpperCase()
+  if (!c) return []
+  return Object.entries(PREREQ).filter(([, reqs]) => reqs.includes(c)).map(([k]) => k)
+}
+
 // Ghép MÃ LỚP: mã năng lực + dạng lớp + số 2 chữ số → 'DH2.KD16'. Trả null nếu năng lực không có dạng lớp.
 export const buildClassCode = (nangLuc?: string | null, so?: number | string): string | null => {
   const nl = (nangLuc || '').trim().toUpperCase()

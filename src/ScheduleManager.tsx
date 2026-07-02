@@ -8,6 +8,8 @@ import CalendarWeek from './journey/CalendarWeek'
 import ScheduleDashboard from './journey/ScheduleDashboard'
 import JourneyMap from './journey/JourneyMap'
 import DemandsBoard from './journey/DemandsBoard'
+import OffersBoard from './journey/OffersBoard'
+import MiraPlanner from './journey/MiraPlanner'
 
 const S = {
   accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
@@ -49,7 +51,7 @@ export default function ScheduleManager() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [sessById, setSessById] = useState<Record<string, SessionRow[]>>({})  // buổi theo lớp
-  const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'demands' | 'dashboard'>('list')
+  const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'demands' | 'offers' | 'mira' | 'dashboard'>('list')
 
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
@@ -161,7 +163,8 @@ export default function ScheduleManager() {
   })
   const TABS: { v: typeof view; l: string }[] = [
     { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch tuần' },
-    { v: 'journey', l: '🗺 Bản đồ' }, { v: 'demands', l: '📥 Nhu cầu' }, { v: 'dashboard', l: '📊 Chỉ số' },
+    { v: 'journey', l: '🗺 Bản đồ' }, { v: 'demands', l: '📥 Nhu cầu' },
+    { v: 'offers', l: '🎁 Ưu đãi' }, { v: 'mira', l: '🧭 Mira' }, { v: 'dashboard', l: '📊 Chỉ số' },
   ]
 
   // Từ bảng nhu cầu → mở form lớp NHÁP với khoá chính đã chọn sẵn
@@ -199,6 +202,8 @@ export default function ScheduleManager() {
         {!form && view === 'calendar' && <CalendarWeek classes={classLite} sessById={sessById} onChanged={load} />}
         {!form && view === 'journey' && <JourneyMap courses={courses} classes={classLite} sessById={sessById} />}
         {!form && view === 'demands' && <DemandsBoard courses={courses} onCreateDraft={createDraftFor} />}
+        {!form && view === 'offers' && <OffersBoard courses={courses} />}
+        {!form && view === 'mira' && <MiraPlanner courses={courses} classes={classLite} sessById={sessById} onCreateDraft={createDraftFor} onGoTab={setView} />}
         {(form || view === 'list') && (<>
 
         {msg && <div style={{ background: '#FEF2F2', color: S.err, border: '1px solid #FECACA', borderRadius: 8, padding: '9px 14px', fontSize: 13, marginBottom: 14 }}>⚠ {msg}</div>}
