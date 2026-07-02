@@ -247,11 +247,13 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         right: 0 as number | string, bottom: 0 as number | string,
         background: '#fff', zIndex: 100,
         boxSizing: 'border-box' as const,
+        maxWidth: 480 as number | string, margin: '0 auto' as const,   // desktop: giữ cột hẹp như mobile, không phình
         display: 'flex' as const, flexDirection: 'column' as const, overflow: 'hidden' as const,
       }
     : {
         display: 'flex' as const, flexDirection: 'column' as const,
         flex: 1, minHeight: 0, overflow: 'hidden' as const,
+        width: '100%' as const, maxWidth: 480 as number | string, margin: '0 auto' as const,
       }
 
   // ── Loading ──────────────────────────────────────────────────────────────
