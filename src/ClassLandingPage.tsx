@@ -36,12 +36,13 @@ const inferPath = (n: string) => { const s = n.toLowerCase()
   if (s.includes('hành trình')) return 'combo'
   return '' }
 const parseVNDate = (s: string): number | null => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null }
-const schedToCard = (it: { name: string; code?: string; schedule: string; start: string; price?: string; courseTitle?: string; tag?: string }) => ({
+const schedToCard = (it: { name: string; code?: string; schedule: string; start: string; price?: string; courseTitle?: string; tag?: string; dateLabel?: string }) => ({
   tag: it.tag || inferTag(it.courseTitle || it.name),
   title: it.courseTitle || it.name,                                   // TÊN KHOÁ/CẤP ĐỘ (tiêu đề to)
   className: it.code ? `${it.name} · ${it.code}` : it.name,           // TÊN LỚP (dòng phụ)
   regName: it.name, path: inferPath(it.courseTitle || it.name),
-  day: it.schedule || 'Đang cập nhật', date: it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch',
+  day: it.schedule || 'Đang cập nhật',
+  date: it.dateLabel || (it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch'),   // nhãn ngày thật (đếm ngược) nếu có
   price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
 })
 
@@ -127,7 +128,7 @@ export default function ClassLandingPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatSessionRef = useRef<string | null>(null)
   const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
-  type SchedItem = { name: string; code: string; schedule: string; start: string; price?: string; courseTitle?: string; tag?: string }
+  type SchedItem = { name: string; code: string; schedule: string; start: string; price?: string; courseTitle?: string; tag?: string; dateLabel?: string }
   const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
   const [showActive, setShowActive] = useState(false)
   const [faqAll, setFaqAll] = useState(false)
@@ -224,11 +225,31 @@ export default function ClassLandingPage() {
   useEffect(() => {
     const TRACK_VI: Record<string, string> = { dem_hat: 'Đệm hát', tia_not: 'Tỉa nốt', nhac_ly: 'Nhạc lý', nhap_mon: 'Nhập môn', solo: 'Solo', cam_am: 'Cảm âm' }
     Promise.all([
-      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,main_course_id,is_active,sort_order').eq('is_active', true).order('sort_order').order('created_at'),
+      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,main_course_id,is_active,sort_order,start_date,end_date,status').eq('is_active', true).order('sort_order').order('created_at'),
       supabase.from('edu_courses').select('id,name,track,code'),
     ]).then(([{ data: rows }, { data: cs }]) => {
       const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })
-      const toItem = (r: any) => {
+      const DAY = 86400000
+      const today = new Date(); today.setHours(0, 0, 0, 0)
+      const HIDDEN = ['draft', 'cancelled', 'merged', 'completed', 'paused']   // status KHÔNG hiện công khai
+      const dmy = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
+      const dayStart = (s: string) => new Date(s + 'T00:00:00').setHours(0, 0, 0, 0)
+
+      // Nhóm hiển thị suy từ status + ngày thật; lớp cũ chưa có ngày → theo section (không phá)
+      const bucketOf = (r: any): 'hidden' | 'upcoming' | 'active' | 'smallgroup' | 'oneonone' => {
+        if (HIDDEN.includes(r.status)) return 'hidden'                    // tự ẩn nháp/huỷ/xong/gộp/dừng
+        if (r.section === 'smallgroup') return 'smallgroup'
+        if (r.section === 'oneonone') return 'oneonone'
+        if (!r.start_date) return r.section === 'active' ? 'active' : 'upcoming'   // dữ liệu cũ
+        const start = dayStart(r.start_date)
+        const end = r.end_date ? dayStart(r.end_date) : null
+        if (r.status === 'active' || r.status === 'ending_soon') return 'active'
+        if (start > today.getTime()) return 'upcoming'
+        if (end === null || end >= today.getTime()) return 'active'
+        return 'hidden'                                                   // đã quá ngày kết thúc
+      }
+
+      const toItem = (r: any): SchedItem => {
         // Tiêu đề = khoá chính CÓ MÃ HÀNH TRÌNH (không phải NM). Không có khoá mã → dùng tên lớp.
         const linked = (r.course_ids ?? []).map((id: string) => byId[id]).filter(Boolean)
         const coded = linked.filter((c: any) => c.code && c.code !== 'NM')   // khoá có mã năng lực, bỏ NM
@@ -236,13 +257,30 @@ export default function ClassLandingPage() {
         if (!main || !main.code || main.code === 'NM') main = coded[0] ?? null
         const courseTitle = main?.name ?? r.name
         const tag = tenNangLuc(main?.code) ?? TRACK_VI[main?.track] ?? 'Guitar'   // hiển thị năng lực rõ: "Đệm hát 2"
-        return { name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '', courseTitle, tag }
+        // Nhãn ngày động từ lịch thật (đếm ngược / kết thúc)
+        let dateLabel: string | undefined
+        if (r.start_date) {
+          const start = dayStart(r.start_date)
+          if (start > today.getTime()) {
+            const days = Math.ceil((start - today.getTime()) / DAY)
+            dateLabel = `Khai giảng ${dmy(r.start_date)}` + (days > 0 ? ` · còn ${days} ngày` : ' · hôm nay')
+          } else {
+            dateLabel = r.end_date ? `Đang học · kết thúc ${dmy(r.end_date)}` : 'Đang học'
+          }
+        }
+        return { name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '', courseTitle, tag, dateLabel }
       }
+
       const all = (rows ?? []) as any[]
-      const upcoming = all.filter(r => r.section === 'upcoming').map(toItem)
-      const active = all.filter(r => r.section === 'active').map(toItem)
-      const smallGroup = all.filter(r => r.section === 'smallgroup').map(r => ({ schedule: r.schedule ?? '' }))
-      const oneOnOneCount = all.filter(r => r.section === 'oneonone').length
+      const upcoming: SchedItem[] = [], active: SchedItem[] = [], smallGroup: { schedule: string }[] = []
+      let oneOnOneCount = 0
+      for (const r of all) {
+        const b = bucketOf(r)
+        if (b === 'hidden') continue
+        if (b === 'smallgroup') { smallGroup.push({ schedule: r.schedule ?? '' }); continue }
+        if (b === 'oneonone') { oneOnOneCount++; continue }
+        ;(b === 'active' ? active : upcoming).push(toItem(r))
+      }
       setSched({ upcoming, active, smallGroup, oneOnOneCount, activeCount: active.length + smallGroup.length + oneOnOneCount })
     })
   }, [])
