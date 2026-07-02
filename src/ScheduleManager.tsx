@@ -167,7 +167,7 @@ export default function ScheduleManager() {
     }
   })
   const TABS: { v: typeof view; l: string }[] = [
-    { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch tuần' },
+    { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch' },
     { v: 'journey', l: '🗺 Bản đồ' }, { v: 'demands', l: '📥 Nhu cầu' },
     { v: 'offers', l: '🎁 Ưu đãi' }, { v: 'mira', l: '🧭 Mira' }, { v: 'dashboard', l: '📊 Chỉ số' },
   ]
