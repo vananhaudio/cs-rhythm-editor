@@ -243,8 +243,8 @@ function Gauge({ cents, note, octave, active, isInTune }: {
       {ind && (
         <>
           <line x1={centXY(cents!, GA_R - 20).x} y1={centXY(cents!, GA_R - 20).y} x2={ind.x} y2={ind.y}
-            stroke={stateColor} strokeWidth={3} strokeLinecap="round" style={{ transition: 'all 0.12s ease-out' }} />
-          <circle cx={ind.x} cy={ind.y} r={6.5} fill={stateColor} style={{ transition: 'all 0.12s ease-out, fill 0.25s' }} />
+            stroke={stateColor} strokeWidth={3} strokeLinecap="round" style={{ transition: 'all 0.32s cubic-bezier(0.22,1,0.36,1)' }} />
+          <circle cx={ind.x} cy={ind.y} r={6.5} fill={stateColor} style={{ transition: 'all 0.32s cubic-bezier(0.22,1,0.36,1), fill 0.25s' }} />
         </>
       )}
       {/* nốt to ở giữa */}
@@ -321,9 +321,9 @@ export default function GuitarTuner({ embedded = false }: { embedded?: boolean }
         ? { icon: null, text: 'Đang nghe — gảy một dây', fg: T.sub }
         : { icon: null, text: `Hãy gảy dây ${selectedString.vn} (${selectedString.size})`, sub: `Dây số ${selectedString.number}`, fg: T.sub };
       case 'wrongString': return { icon: null, text: 'Chưa đúng dây', sub: detectedString ? `Đang là dây ${detectedString.number} (${detectedString.note}) — cần dây ${selectedString.number}` : undefined, fg: T.amber };
-      case 'tooLow':  return { icon: <IconChevronUp size={18} color={T.amber} />,  text: 'Hơi thấp', sub: 'Căng dây lên (vặn khóa)', fg: T.amber };
-      case 'tooHigh': return { icon: <IconChevronDown size={18} color={T.amber} />, text: 'Hơi cao',  sub: 'Nới dây xuống (nới khóa)', fg: T.amber };
-      case 'inTune':  return { icon: <IconCheck size={18} color={T.green} />, text: 'Chuẩn rồi', sub: shownString ? `${shownString.label} đã đúng` : undefined, fg: T.green };
+      case 'tooLow':  return { icon: <IconChevronUp size={22} color={T.amber} />,  text: 'Cần TĂNG lên', sub: `Vặn khóa để căng dây ${shownString?.vn ?? ''} (âm đang thấp)`, fg: T.amber };
+      case 'tooHigh': return { icon: <IconChevronDown size={22} color={T.amber} />, text: 'Cần GIẢM xuống',  sub: `Nới khóa để chùng dây ${shownString?.vn ?? ''} (âm đang cao)`, fg: T.amber };
+      case 'inTune':  return { icon: <IconCheck size={20} color={T.green} />, text: 'Chuẩn rồi', sub: shownString ? `${shownString.label} đã đúng` : undefined, fg: T.green };
     }
   })();
 
