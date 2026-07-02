@@ -24,7 +24,12 @@ Biến `/admin` tab **Lịch lớp** thành nền của "hệ điều hành hàn
 - Tab **🎁 Ưu đãi** (`OffersBoard.tsx`): CRUD, trạng thái hiệu lực tự tính theo ngày+quota (đang chạy/sắp mở/hết hạn/hết suất).
 - Tab **🧭 Mira** (`MiraPlanner.tsx`): đề xuất bằng **RULE thuần frontend** (thầy chốt KHÔNG dùng AI/Edge Function). R1 lớp còn 1-2 buổi→khoá tiếp · R2 đủ 4 người/khoá→mở lớp · R3 ≥3 buổi/ngày→quá tải · R4 lớp DH2+/TN2+ sắp xong→HT2027+ưu đãi · R5 lớp nháp gần đủ→đẩy TT. `hanhtrinh.ts` thêm `nextCourses()`. Không tạo bảng mira_recommendations. Commit `32e2719`.
 - **Lịch lớp = 7 tab:** Danh sách · Lịch tuần · Bản đồ · Nhu cầu · Ưu đãi · Mira · Chỉ số.
-- **Mở rộng sau:** nút thu nhu cầu phía HV (app) · nối admin-ai diễn giải NN · lưu recommendations để duyệt/ẩn bền · hỗ trợ nhiều buổi/tuần.
+- **Mở rộng sau:** nút thu nhu cầu phía HV (app) · nối admin-ai diễn giải NN · hỗ trợ nhiều buổi/tuần · đánh bóng UI 7 tab.
+
+### Journey OS — Mở rộng: Lưu & duyệt đề xuất Mira bền (2026-07-02, LIVE)
+- **SQL `db/journey_os_mira_recs.sql` (CẦN chạy):** bảng `mira_recommendations` lưu trạng thái đề xuất theo `rec_key` **ổn định** (R1:<classId>, R2:<code>, R3:<day>, R4/R5:<classId>). Trigger updated_at, RLS thầy-only → `self_managed`.
+- MiraPlanner: nút **✓ Duyệt / Đã xong / Ẩn** (upsert bền), 2 tab con **Đang chờ / Đã xử lý** + badge + ↩ đưa lại chờ. Rule vẫn tính client mỗi lần; bảng chỉ giữ trạng thái. Commit `2324209`.
+- **4 bảng Journey OS cần thêm vào `self_managed` nếu chạy lại `rls_setup.sql`:** `class_sessions`, `class_demands`, `offer_campaigns`, `mira_recommendations` (+ giữ `class_schedule`).
 
 ### Journey OS — GĐ3: Nhu cầu mở lớp + lớp nháp (2026-07-02, LIVE)
 - **SQL `db/journey_os_stage3.sql` (ĐÃ chạy):** bảng **`class_demands`** (thầy nhập tay: HV muốn học mã năng lực nào, khung ngày/giờ, ưu tiên, status waiting/planned/enrolled/cancelled). RLS thầy-only → thêm `'class_demands'` vào `self_managed` nếu chạy lại `rls_setup.sql`.
