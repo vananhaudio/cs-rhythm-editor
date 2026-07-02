@@ -24,6 +24,7 @@ export interface NotePracticeCfg {
   notes?: NoteItem[]                            // chuỗi nốt (vd 4× Mi). string/fret để vẽ cần đàn, staff = vị trí trên khuông (0 = dòng kẻ dưới cùng = Mi/E4)
   speeds?: { label: string; bpm: number }[]    // các tốc độ chọn
   showStaff?: boolean                           // hiện khuông nhạc (mặc định có nếu nốt có staff)
+  hint?: string                                 // dòng nhắc nhỏ dưới khuông (vd: chưa cần để ý trường độ)
 }
 // "Chia ô nhịp": đối chiếu SHEET (vẽ sạch từ nốt MusicXML) ↔ LỜI, bút kẻ vạch chia ô nhịp
 export interface SNote { pos?: number; rest?: boolean; dur: 'e' | 'q' | 'h' | 'w' }  // pos = bậc trên khuông (E4=0, mỗi bậc = nửa dòng), dur = trường độ
@@ -365,7 +366,7 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
     staffEls.push(<text key={`cl${row}`} x={7} y={bY(row) - 2 * gap + 14} fontSize={56} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>)
   }
   return (
-    <div ref={scRef} style={{ maxHeight: 210, overflowY: 'auto', overflowX: 'hidden' }}>
+    <div ref={scRef} style={{ maxHeight: 162, overflowY: 'auto', overflowX: 'hidden' }}>
       <svg viewBox={`0 0 ${rowW} ${H}`} width="100%" style={{ display: 'block' }}>
         {staffEls}
         {notes.map((n, i) => {
@@ -511,9 +512,13 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
 
       {/* Khuông nhạc — cả câu, nốt đang chơi/cần đàn sáng lần lượt */}
       {showStaff && (
-        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 6px 4px', marginBottom: 10 }}>
+        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 6px 4px', marginBottom: cfg.hint ? 8 : 10 }}>
           <NoteSheet notes={notes} active={active} />
         </div>
+      )}
+      {cfg.hint && (
+        <div style={{ background: '#FBF0D8', border: '1px solid #E6D3A8', borderLeft: '4px solid #C99A2E', borderRadius: 6, padding: '9px 12px', marginBottom: 12, fontSize: 12.5, lineHeight: 1.5, color: '#7A5A12' }}
+          dangerouslySetInnerHTML={{ __html: cfg.hint }} />
       )}
 
       {/* Cần đàn */}
