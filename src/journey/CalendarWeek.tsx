@@ -86,13 +86,15 @@ export default function CalendarWeek({ classes, sessById, onChanged }: {
                   const si = statusInfo(cls?.status)
                   const done = s.status === 'completed'
                   const cancelled = s.status === 'cancelled'
+                  const draft = cls?.status === 'draft'
                   return (
                     <button key={j} onClick={() => setSel({ cid: s.class_id, s })}
                       title={cls?.name}
                       style={{
-                        textAlign: 'left', border: 'none', borderLeft: `3px solid ${si.c}`, borderRadius: 6, cursor: 'pointer',
-                        padding: '5px 7px', background: cancelled ? '#FEF2F2' : done ? '#F0FDF4' : `${si.c}14`,
-                        opacity: cancelled ? 0.6 : 1, fontFamily: 'inherit', width: '100%',
+                        textAlign: 'left', borderRadius: 6, cursor: 'pointer',
+                        border: draft ? `1px dashed ${si.c}` : 'none', borderLeft: `3px solid ${si.c}`,
+                        padding: '5px 7px', background: cancelled ? '#FEF2F2' : done ? '#F0FDF4' : draft ? '#FAFAFA' : `${si.c}14`,
+                        opacity: cancelled ? 0.6 : draft ? 0.8 : 1, fontFamily: 'inherit', width: '100%',
                         textDecoration: cancelled ? 'line-through' : 'none',
                       }}>
                       <div style={{ fontSize: 11, fontWeight: 800, color: S.text1 }}>{hm(s.start_at)} · {cls?.code || cls?.name || '—'}</div>

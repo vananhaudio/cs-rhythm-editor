@@ -7,6 +7,7 @@ import { generateSessions, realEndDate, realStartDate, scheduleText, fmtDMY, pro
 import CalendarWeek from './journey/CalendarWeek'
 import ScheduleDashboard from './journey/ScheduleDashboard'
 import JourneyMap from './journey/JourneyMap'
+import DemandsBoard from './journey/DemandsBoard'
 
 const S = {
   accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
@@ -48,7 +49,7 @@ export default function ScheduleManager() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [sessById, setSessById] = useState<Record<string, SessionRow[]>>({})  // buổi theo lớp
-  const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'dashboard'>('list')
+  const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'demands' | 'dashboard'>('list')
 
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
@@ -160,8 +161,16 @@ export default function ScheduleManager() {
   })
   const TABS: { v: typeof view; l: string }[] = [
     { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch tuần' },
-    { v: 'journey', l: '🗺 Bản đồ' }, { v: 'dashboard', l: '📊 Chỉ số' },
+    { v: 'journey', l: '🗺 Bản đồ' }, { v: 'demands', l: '📥 Nhu cầu' }, { v: 'dashboard', l: '📊 Chỉ số' },
   ]
+
+  // Từ bảng nhu cầu → mở form lớp NHÁP với khoá chính đã chọn sẵn
+  const createDraftFor = (code: string) => {
+    const c = courses.find(cc => (cc.code || '').toUpperCase() === code.toUpperCase())
+    const b = blank()
+    setForm({ ...b, status: 'draft', section: 'upcoming', course_ids: c ? [c.id] : [], main_course_id: c?.id ?? null })
+    setSoKhoa(''); setZaloUrl(''); setView('list')
+  }
 
   return (
     <div style={{ minHeight: '100%', background: S.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
@@ -189,6 +198,7 @@ export default function ScheduleManager() {
         {!form && view === 'dashboard' && <ScheduleDashboard classes={classLite} sessById={sessById} />}
         {!form && view === 'calendar' && <CalendarWeek classes={classLite} sessById={sessById} onChanged={load} />}
         {!form && view === 'journey' && <JourneyMap courses={courses} classes={classLite} sessById={sessById} />}
+        {!form && view === 'demands' && <DemandsBoard courses={courses} onCreateDraft={createDraftFor} />}
         {(form || view === 'list') && (<>
 
         {msg && <div style={{ background: '#FEF2F2', color: S.err, border: '1px solid #FECACA', borderRadius: 8, padding: '9px 14px', fontSize: 13, marginBottom: 14 }}>⚠ {msg}</div>}
