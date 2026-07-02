@@ -8,12 +8,12 @@ type TuneStatus = 'waiting' | 'wrongString' | 'tooLow' | 'tooHigh' | 'inTune';
 // ─── Guitar strings ───────────────────────────────────────────────────────────
 
 const STRINGS = [
-  { number: 6, name: 'E', octave: 2, freq: 82.41,  note: 'E2', color: '#ef4444', label: 'Dây 6 — Mi trầm' },
-  { number: 5, name: 'A', octave: 2, freq: 110.0,  note: 'A2', color: '#f97316', label: 'Dây 5 — La'       },
-  { number: 4, name: 'D', octave: 3, freq: 146.83, note: 'D3', color: '#eab308', label: 'Dây 4 — Rê'       },
-  { number: 3, name: 'G', octave: 3, freq: 196.0,  note: 'G3', color: '#22c55e', label: 'Dây 3 — Sol'      },
-  { number: 2, name: 'B', octave: 3, freq: 246.94, note: 'B3', color: '#3b82f6', label: 'Dây 2 — Si'       },
-  { number: 1, name: 'E', octave: 4, freq: 329.63, note: 'E4', color: '#a855f7', label: 'Dây 1 — Mi cao'   },
+  { number: 6, name: 'E', octave: 2, freq: 82.41,  note: 'E2', color: '#E11D48', label: 'Dây 6 — Mi trầm', vn: 'Mi trầm', size: 'dây to nhất' },
+  { number: 5, name: 'A', octave: 2, freq: 110.0,  note: 'A2', color: '#EA580C', label: 'Dây 5 — La',       vn: 'La',      size: 'dây to thứ nhì' },
+  { number: 4, name: 'D', octave: 3, freq: 146.83, note: 'D3', color: '#D97706', label: 'Dây 4 — Rê',       vn: 'Rê',      size: 'dây to thứ ba' },
+  { number: 3, name: 'G', octave: 3, freq: 196.0,  note: 'G3', color: '#16A34A', label: 'Dây 3 — Sol',      vn: 'Sol',     size: 'dây nhỏ thứ ba' },
+  { number: 2, name: 'B', octave: 3, freq: 246.94, note: 'B3', color: '#2563EB', label: 'Dây 2 — Si',       vn: 'Si',      size: 'dây nhỏ thứ nhì' },
+  { number: 1, name: 'E', octave: 4, freq: 329.63, note: 'E4', color: '#7C3AED', label: 'Dây 1 — Mi cao',   vn: 'Mi cao',  size: 'dây nhỏ nhất' },
 ];
 
 // ─── Pitch detection (ACF2+) ──────────────────────────────────────────────────
@@ -74,24 +74,6 @@ function identifyString(freq: number) {
 
 function getCents(detected: number, target: number): number {
   return 1200 * Math.log2(detected / target);
-}
-
-function playReferenceTone(frequency: number) {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'triangle';
-    osc.frequency.value = frequency;
-    gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.4, ctx.currentTime + 1.5);
-    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.2);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 2.2);
-  } catch (_) {}
 }
 
 // ─── usePitchDetection hook ───────────────────────────────────────────────────
@@ -181,72 +163,99 @@ function usePitchDetection() {
   return { pitch, isActive, hasPermission, error, startListening, stopListening };
 }
 
-// ─── SVG Needle ───────────────────────────────────────────────────────────────
+// ─── Line icons (thay emoji) ────────────────────────────────────────────────────
 
-const W = 300, H = 170, CX = W / 2, CY = H - 12, R = 135, MAX_DEG = 65;
+type IconProps = { size?: number; color?: string; sw?: number };
+const svgBase = (size: number, color: string, sw: number) => ({
+  width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
+  stroke: color, strokeWidth: sw, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+});
+const IconArrowRight = ({ size = 18, color = 'currentColor', sw = 2 }: IconProps) => (
+  <svg {...svgBase(size, color, sw)}><line x1="4" y1="12" x2="19" y2="12" /><path d="m13 6 6 6-6 6" /></svg>
+);
+const IconCheck = ({ size = 18, color = 'currentColor', sw = 2.4 }: IconProps) => (
+  <svg {...svgBase(size, color, sw)}><path d="m5 12 5 5L20 6" /></svg>
+);
+const IconChevronUp = ({ size = 18, color = 'currentColor', sw = 2.4 }: IconProps) => (
+  <svg {...svgBase(size, color, sw)}><path d="m6 15 6-6 6 6" /></svg>
+);
+const IconChevronDown = ({ size = 18, color = 'currentColor', sw = 2.4 }: IconProps) => (
+  <svg {...svgBase(size, color, sw)}><path d="m6 9 6 6 6-6" /></svg>
+);
+
+// ─── Gauge (nốt to giữa + vành cung) ────────────────────────────────────────────
+
+const GA_W = 280, GA_H = 168, GA_CX = 140, GA_CY = 150, GA_R = 118;
 const TICKS = [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50];
+const THRESHOLD = 8;
 
-function degToRad(d: number) { return (d * Math.PI) / 180; }
-
-function tickCoords(cent: number, inner: number, outer: number) {
-  const a = degToRad((cent / 50) * MAX_DEG);
-  return {
-    x1: CX + inner * Math.sin(a), y1: CY - inner * Math.cos(a),
-    x2: CX + outer * Math.sin(a), y2: CY - outer * Math.cos(a),
-  };
+const clampC = (c: number) => Math.max(-50, Math.min(50, c));
+function centXY(c: number, r: number) {
+  const th = ((90 - (clampC(c) / 50) * 90) * Math.PI) / 180;
+  return { x: GA_CX + r * Math.cos(th), y: GA_CY - r * Math.sin(th) };
+}
+function arc(cFrom: number, cTo: number, r: number) {
+  const a = centXY(cFrom, r), b = centXY(cTo, r);
+  return `M ${a.x.toFixed(1)} ${a.y.toFixed(1)} A ${r} ${r} 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
 }
 
-const arcPath = (() => {
-  const a0 = degToRad(-MAX_DEG), a1 = degToRad(MAX_DEG);
-  return `M ${CX + R * Math.sin(a0)} ${CY - R * Math.cos(a0)} A ${R} ${R} 0 0 1 ${CX + R * Math.sin(a1)} ${CY - R * Math.cos(a1)}`;
-})();
+// Tông màu khớp mặt học viên mobile TVA (thẻ sáng + điểm nhấn indigo/cam + đồng hồ nền tối)
+const T = {
+  bg: '#F0F2F5', card: '#FFFFFF', panel: '#F7F8FA', border: '#E8EAF0',
+  ink: '#111827', sub: '#6B7280', faint: '#9CA3AF',
+  primary: '#4338CA', primarySoft: '#EEF2FF', primaryBd: '#C7D2FE',
+  green: '#16A34A', greenBg: '#F0FDF4', greenBd: '#BBF7D0',
+  amber: '#EA580C', amberBg: '#FFF7ED', amberBd: '#FED7AA',
+  headerBg: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
+  gaugeBg: 'linear-gradient(160deg, #312E81 0%, #1E1B4B 100%)',
+};
+// Palette cho ĐỒNG HỒ nền tối (nốt trắng nổi bật)
+const COL = {
+  dim: '#4B5563', track: '#3B3A5E', text: '#FFFFFF', mute: '#A5B4FC',
+  green: '#22C55E', greenSoft: '#4ADE80', amber: '#FB923C', zoneOff: '#2A4C39',
+};
 
-function TunerNeedle({ cents, isInTune }: { cents: number | null; isInTune: boolean }) {
-  const deg = cents !== null ? (Math.max(-50, Math.min(50, cents)) / 50) * MAX_DEG : 0;
-  const rad = degToRad(deg);
-  const nx = CX + R * Math.sin(rad);
-  const ny = CY - R * Math.cos(rad);
-  const active = cents !== null;
-  const needleColor = !active ? '#444' : isInTune ? '#22c55e' : '#f97316';
-  const pivotColor  = !active ? '#444' : isInTune ? '#22c55e' : '#ef4444';
+function Gauge({ cents, note, octave, active, isInTune }: {
+  cents: number | null; note: string; octave: string | null; active: boolean; isInTune: boolean;
+}) {
+  const hasCents = cents !== null;
+  const stateColor = !active ? COL.dim : isInTune ? COL.green : hasCents ? COL.amber : COL.mute;
+  const noteColor  = !active ? COL.mute : isInTune ? COL.greenSoft : COL.text;
+  const ind = hasCents ? centXY(cents!, GA_R) : null;
+  const zone = arc(-THRESHOLD, THRESHOLD, GA_R);
 
   return (
-    <svg
-      width={W} height={H}
-      style={{ transition: 'none', display: 'block', margin: '0 auto' }}
-    >
-      {/* Arc */}
-      <path d={arcPath} stroke="#2a2a2a" strokeWidth={2.5} fill="none" />
-
-      {/* Ticks */}
+    <svg width="100%" viewBox={`0 0 ${GA_W} ${GA_H}`} style={{ display: 'block', maxWidth: GA_W, margin: '0 auto' }}>
+      {/* vành nền */}
+      <path d={arc(-50, 50, GA_R)} stroke={COL.track} strokeWidth={3} fill="none" strokeLinecap="round" />
+      {/* vùng "chuẩn" ở giữa */}
+      <path d={zone} stroke={isInTune ? COL.green : COL.zoneOff} strokeWidth={isInTune ? 5 : 3.5} fill="none" strokeLinecap="round"
+        style={{ transition: 'stroke 0.25s' }} />
+      {/* vạch chia */}
       {TICKS.map(c => {
-        const major = c % 20 === 0;
-        const t = tickCoords(c, R - (major ? 20 : 10), R + 1);
-        return (
-          <line key={c} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-            stroke={c === 0 ? '#22c55e' : '#2e2e2e'}
-            strokeWidth={major ? 2 : 1.2}
-          />
-        );
+        const major = c % 50 === 0 || c === 0;
+        const p1 = centXY(c, GA_R - (major ? 13 : 7));
+        const p2 = centXY(c, GA_R);
+        return <line key={c} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+          stroke={c === 0 ? COL.green : COL.dim} strokeWidth={c === 0 ? 2.4 : 1.3} strokeLinecap="round" />;
       })}
-
-      {/* In-tune glow */}
-      {isInTune && <circle cx={CX} cy={CY} r={28} fill="#22c55e" opacity={0.1} />}
-
-      {/* Needle — CSS transition for smooth animation */}
-      <line
-        x1={CX} y1={CY} x2={nx} y2={ny}
-        stroke={needleColor} strokeWidth={2.5} strokeLinecap="round"
-        style={{ transition: 'x2 0.12s ease-out, y2 0.12s ease-out, stroke 0.2s' }}
-      />
-
-      {/* Pivot */}
-      <circle cx={CX} cy={CY} r={8} fill={pivotColor} style={{ transition: 'fill 0.2s' }} />
-      <circle cx={CX} cy={CY} r={3.5} fill="#0d0d0d" />
-
-      {/* Labels */}
-      <text x={14} y={CY + 18} fill="#3a3a3a" fontSize={9} fontWeight={700} textAnchor="middle">THẤP</text>
-      <text x={W - 14} y={CY + 18} fill="#3a3a3a" fontSize={9} fontWeight={700} textAnchor="middle">CAO</text>
+      {/* con trỏ trên vành */}
+      {ind && (
+        <>
+          <line x1={centXY(cents!, GA_R - 20).x} y1={centXY(cents!, GA_R - 20).y} x2={ind.x} y2={ind.y}
+            stroke={stateColor} strokeWidth={3} strokeLinecap="round" style={{ transition: 'all 0.12s ease-out' }} />
+          <circle cx={ind.x} cy={ind.y} r={6.5} fill={stateColor} style={{ transition: 'all 0.12s ease-out, fill 0.25s' }} />
+        </>
+      )}
+      {/* nốt to ở giữa */}
+      <text x={GA_CX} y={118} textAnchor="middle" style={{ transition: 'fill 0.25s' }}
+        fontSize={62} fontWeight={800} fill={noteColor} fontFamily="'Inter', system-ui, sans-serif">
+        {active ? note : '–'}
+        {active && octave && <tspan fontSize={24} dy={-26} fill={COL.mute}>{octave}</tspan>}
+      </text>
+      {/* nhãn ♭ ♯ hai đầu */}
+      <text x={centXY(-50, GA_R + 12).x - 2} y={centXY(-50, GA_R + 12).y + 4} textAnchor="middle" fontSize={13} fill="#6B6BA0" fontWeight={700}>♭</text>
+      <text x={centXY(50, GA_R + 12).x + 2} y={centXY(50, GA_R + 12).y + 4} textAnchor="middle" fontSize={13} fill="#6B6BA0" fontWeight={700}>♯</text>
     </svg>
   );
 }
@@ -254,276 +263,169 @@ function TunerNeedle({ cents, isInTune }: { cents: number | null; isInTune: bool
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function GuitarTuner() {
-  const [selectedIndex, setSelectedIndex] = useState(1);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [autoMode, setAutoMode]           = useState(false);
   const [tuneStatus, setTuneStatus]       = useState<TuneStatus>('waiting');
   const [detectedString, setDetectedString] = useState<typeof STRINGS[number] | null>(null);
   const [cents, setCents]                 = useState<number | null>(null);
   const [displayFreq, setDisplayFreq]     = useState<number | null>(null);
 
-  const { pitch, isActive, error, startListening, stopListening } = usePitchDetection();
+  const { pitch, isActive, error, startListening } = usePitchDetection();
   const selectedString = STRINGS[selectedIndex];
-  const TUNE_THRESHOLD = 12;
 
-  useEffect(() => {
-    setTuneStatus('waiting'); setCents(null); setDetectedString(null); setDisplayFreq(null);
-  }, [selectedIndex]);
+  const reset = () => { setTuneStatus('waiting'); setCents(null); setDetectedString(null); setDisplayFreq(null); };
 
-  useEffect(() => {
-    if (!isActive) { setTuneStatus('waiting'); setCents(null); setDisplayFreq(null); setDetectedString(null); }
-  }, [isActive]);
+  useEffect(() => { reset(); }, [selectedIndex, autoMode]);
+  useEffect(() => { if (!isActive) reset(); }, [isActive]);
 
   useEffect(() => {
     if (!isActive) return;
-    if (pitch.frequency === null) {
-      setTuneStatus('waiting'); setCents(null); setDisplayFreq(null); setDetectedString(null);
-      return;
-    }
+    if (pitch.frequency === null) { setTuneStatus('waiting'); setCents(null); setDisplayFreq(null); setDetectedString(null); return; }
     const freq = pitch.frequency;
     setDisplayFreq(freq);
     const matched = identifyString(freq);
     setDetectedString(matched);
 
-    if (!matched) { setTuneStatus('waiting'); setCents(null); return; }
-    if (matched.number !== selectedString.number) { setTuneStatus('wrongString'); setCents(null); return; }
+    const target = autoMode ? matched : selectedString;
+    if (!target) { setTuneStatus('waiting'); setCents(null); return; }
+    if (!autoMode && matched && matched.number !== selectedString.number) { setTuneStatus('wrongString'); setCents(null); return; }
 
-    const c = getCents(freq, selectedString.freq);
+    const c = getCents(freq, target.freq);
     setCents(c);
-    setTuneStatus(Math.abs(c) <= TUNE_THRESHOLD ? 'inTune' : c < 0 ? 'tooLow' : 'tooHigh');
-  }, [pitch, isActive, selectedString]);
+    setTuneStatus(Math.abs(c) <= THRESHOLD ? 'inTune' : c < 0 ? 'tooLow' : 'tooHigh');
+  }, [pitch, isActive, selectedString, autoMode]);
 
-  const handleToggle = () => {
-    if (isActive) { stopListening(); setTuneStatus('waiting'); setCents(null); }
-    else startListening();
-  };
+  // rung nhẹ khi vừa đạt chuẩn
+  const prevStatus = useRef<TuneStatus>('waiting');
+  useEffect(() => {
+    if (tuneStatus === 'inTune' && prevStatus.current !== 'inTune') {
+      try { navigator.vibrate?.(30); } catch (_) {}
+    }
+    prevStatus.current = tuneStatus;
+  }, [tuneStatus]);
 
+  // Tự bật mic khi mở màn (không còn nút bật/tắt). Hook tự stop khi unmount.
+  useEffect(() => { startListening(); }, [startListening]);
   const isInTune = tuneStatus === 'inTune';
 
-  // Feedback config
-  const feedback: { icon: string; text: string; sub?: string; bg: string; fg: string; border: string } = (() => {
-    if (!isActive) return { icon: '🎸', text: 'Nhấn mic để bắt đầu', bg: '#161616', fg: '#666', border: '#2a2a2a' };
+  // dây đang hiển thị: auto → dây nhận được; tay → dây đã chọn
+  const shownString = isActive ? (autoMode ? detectedString : (detectedString ?? selectedString)) : selectedString;
+  const noteName = shownString?.name ?? '–';
+  const noteOct  = shownString ? String(shownString.octave) : null;
+
+  // dòng trạng thái (không emoji)
+  const fb: { icon: React.ReactNode; text: string; sub?: string; fg: string } = (() => {
+    if (!isActive) return { icon: null, text: error ? 'Không nghe được mic' : 'Đang bật micro…', fg: T.faint };
     switch (tuneStatus) {
-      case 'waiting':    return { icon: '👂', text: `Gảy dây ${selectedString.number}`, bg: '#161616', fg: '#999', border: '#2a2a2a' };
-      case 'wrongString': return {
-        icon: '⚠️', text: 'Sai dây!',
-        sub: detectedString ? `Đang gảy dây ${detectedString.number} (${detectedString.note}) — cần dây ${selectedString.number}` : `Hãy gảy dây ${selectedString.number}`,
-        bg: '#1f0f0f', fg: '#f87171', border: '#7f1d1d',
-      };
-      case 'tooLow':  return { icon: '⬆️', text: 'Âm đang THẤP', sub: 'Vặn khóa theo chiều kim đồng hồ để căng dây', bg: '#0c1929', fg: '#60a5fa', border: '#1e3a5f' };
-      case 'tooHigh': return { icon: '⬇️', text: 'Âm đang CAO',  sub: 'Xoay khóa ngược chiều kim đồng hồ để nới dây', bg: '#1a0f05', fg: '#fb923c', border: '#7c2d12' };
-      case 'inTune':  return { icon: '✅', text: 'Đúng rồi!', sub: `Dây ${selectedString.number} (${selectedString.note}) đã chuẩn!`, bg: '#061812', fg: '#4ade80', border: '#14532d' };
+      case 'waiting':    return autoMode
+        ? { icon: null, text: 'Đang nghe — gảy một dây', fg: T.sub }
+        : { icon: null, text: `Hãy gảy dây ${selectedString.vn} (${selectedString.size})`, sub: `Dây số ${selectedString.number}`, fg: T.sub };
+      case 'wrongString': return { icon: null, text: 'Chưa đúng dây', sub: detectedString ? `Đang là dây ${detectedString.number} (${detectedString.note}) — cần dây ${selectedString.number}` : undefined, fg: T.amber };
+      case 'tooLow':  return { icon: <IconChevronUp size={18} color={T.amber} />,  text: 'Hơi thấp', sub: 'Căng dây lên (vặn khóa)', fg: T.amber };
+      case 'tooHigh': return { icon: <IconChevronDown size={18} color={T.amber} />, text: 'Hơi cao',  sub: 'Nới dây xuống (nới khóa)', fg: T.amber };
+      case 'inTune':  return { icon: <IconCheck size={18} color={T.green} />, text: 'Chuẩn rồi', sub: shownString ? `${shownString.label} đã đúng` : undefined, fg: T.green };
     }
   })();
 
   return (
-    <div style={{
+    <div
+      onClick={() => { if (!isActive) startListening(); }}
+      style={{
       width: '100%', maxWidth: 420, margin: '0 auto',
-      backgroundColor: '#0d0d0d', color: '#f5f5f5',
+      backgroundColor: T.card, color: T.ink,
       fontFamily: "'Inter', system-ui, sans-serif",
-      borderRadius: 20, overflow: 'hidden',
-      boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+      borderRadius: 22, overflow: 'hidden',
+      border: `1px solid ${T.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.05)',
     }}>
-      {/* Header */}
-      <div style={{ padding: '20px 20px 0', textAlign: 'center', borderBottom: '1px solid #1a1a1a', paddingBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: '#555', marginBottom: 6, textTransform: 'uppercase' }}>
-          Guitar Tuner
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#f0f0f0', letterSpacing: -0.5 }}>
-          Chỉnh dây đàn
-        </div>
-        <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>Chuẩn dây EADGBE tiêu chuẩn</div>
+      {/* Header — dải indigo thương hiệu */}
+      <div style={{ padding: '20px 20px 18px', textAlign: 'center', background: T.headerBg }}>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2.5, color: 'rgba(255,255,255,0.72)', marginBottom: 5 }}>GUITAR TUNER</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -0.4 }}>Lên dây đàn</div>
+        <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.8)', marginTop: 3 }}>Chuẩn EADGBE tiêu chuẩn</div>
       </div>
 
-      <div style={{ padding: '16px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ padding: '16px 18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+        {/* Auto / Manual toggle */}
+        <div style={{ display: 'flex', background: T.bg, borderRadius: 12, padding: 4, gap: 4 }}>
+          {([[false, 'Chọn dây'], [true, 'Tự động']] as const).map(([v, lbl]) => {
+            const on = autoMode === v;
+            return (
+              <button key={String(v)} onClick={() => setAutoMode(v)}
+                style={{ flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 13.5, fontWeight: 700, transition: 'all .18s',
+                  background: on ? T.card : 'transparent', color: on ? T.primary : T.sub,
+                  boxShadow: on ? '0 1px 2px rgba(0,0,0,0.08)' : 'none' }}>
+                {lbl}
+              </button>
+            );
+          })}
+        </div>
 
         {/* String selector */}
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#444', marginBottom: 10, textTransform: 'uppercase' }}>
-            Chọn dây
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
-            {STRINGS.map((s, i) => {
-              const sel = i === selectedIndex;
-              return (
-                <button
-                  key={s.number}
-                  onClick={() => { stopListening(); setSelectedIndex(i); }}
-                  style={{
-                    padding: '10px 4px',
-                    borderRadius: 10,
-                    border: `2px solid ${sel ? s.color : '#222'}`,
-                    backgroundColor: sel ? s.color + '22' : '#161616',
-                    cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <span style={{ fontSize: 17, fontWeight: 800, color: sel ? s.color : '#666' }}>{s.number}</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: sel ? s.color : '#444', letterSpacing: 0.5 }}>{s.note}</span>
-                </button>
-              );
-            })}
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
+          {STRINGS.map((s, i) => {
+            const isSel = !autoMode && i === selectedIndex;
+            const isDet = isActive && detectedString?.number === s.number;
+            const hl = isSel || isDet;
+            return (
+              <button key={s.number}
+                onClick={() => { setAutoMode(false); setSelectedIndex(i); }}
+                style={{ padding: '9px 4px', borderRadius: 11, cursor: 'pointer',
+                  border: `1.5px solid ${hl ? s.color : T.border}`,
+                  background: hl ? s.color + '1e' : T.panel,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, transition: 'all .15s' }}>
+                <span style={{ fontSize: 16, fontWeight: 800, color: hl ? s.color : T.sub }}>{s.number}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: hl ? s.color : T.faint, letterSpacing: 0.4 }}>{s.name}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Active string badge */}
-        <div style={{
-          borderRadius: 14, border: `1.5px solid ${selectedString.color}22`,
-          backgroundColor: '#111', padding: '12px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: selectedString.color, textTransform: 'uppercase', marginBottom: 4 }}>
-              Đang chỉnh
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#f0f0f0' }}>{selectedString.label}</div>
-          </div>
-          <div style={{
-            fontSize: 14, fontWeight: 700, color: '#555',
-            backgroundColor: '#1a1a1a', borderRadius: 8, padding: '4px 10px',
-          }}>
-            {selectedString.freq} Hz
-          </div>
-        </div>
-
-        {/* Needle */}
-        <div style={{
-          backgroundColor: '#111', borderRadius: 16,
-          padding: '16px 8px 8px', position: 'relative',
-        }}>
-          <TunerNeedle cents={isActive ? cents : null} isInTune={isInTune} />
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, padding: '0 8px' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: displayFreq && isActive ? '#ccc' : '#333' }}>
+        {/* Gauge — mặt đồng hồ nền tối (nốt trắng nổi bật) */}
+        <div style={{ background: T.gaugeBg, borderRadius: 18, padding: '18px 10px 12px', border: `1px solid ${isInTune ? '#22C55E' : 'transparent'}`, boxShadow: '0 6px 18px rgba(49,46,129,0.28)', transition: 'border-color .25s' }}>
+          <Gauge cents={isActive ? cents : null} note={noteName} octave={noteOct} active={isActive} isInTune={isInTune} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, padding: '0 12px' }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: displayFreq && isActive ? '#C7D2FE' : '#6B6BA0', fontVariantNumeric: 'tabular-nums' }}>
               {displayFreq && isActive ? `${displayFreq.toFixed(1)} Hz` : '— Hz'}
             </span>
-            <span style={{
-              fontSize: 14, fontWeight: 700,
-              color: isInTune ? '#4ade80' : cents !== null && isActive ? '#f97316' : '#333',
-            }}>
-              {cents !== null && isActive
-                ? `${cents > 0 ? '+' : ''}${cents.toFixed(0)} ¢`
-                : '0 ¢'}
+            <span style={{ fontSize: 13.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+              color: isInTune ? '#4ADE80' : cents !== null && isActive ? '#FB923C' : '#6B6BA0' }}>
+              {cents !== null && isActive ? `${cents > 0 ? '+' : ''}${cents.toFixed(0)} ¢` : '0 ¢'}
             </span>
           </div>
         </div>
 
-        {/* Feedback */}
-        <div style={{
-          borderRadius: 14, padding: '14px 18px',
-          backgroundColor: feedback.bg, border: `1px solid ${feedback.border}`,
-          transition: 'background-color 0.3s, border-color 0.3s',
-          minHeight: 64,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{feedback.icon}</span>
-            <div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: feedback.fg, letterSpacing: 0.2 }}>
-                {feedback.text}
+        {/* Feedback — nền đổi theo trạng thái */}
+        {(() => {
+          const off = isActive && (tuneStatus === 'tooLow' || tuneStatus === 'tooHigh' || tuneStatus === 'wrongString');
+          const bg = isInTune ? T.greenBg : off ? T.amberBg : T.panel;
+          const bd = isInTune ? T.greenBd : off ? T.amberBd : T.border;
+          return (
+            <div style={{ borderRadius: 14, padding: '13px 16px', backgroundColor: bg, border: `1px solid ${bd}`, minHeight: 58, display: 'flex', alignItems: 'center', gap: 11, transition: 'all .25s' }}>
+              {fb.icon && <span style={{ display: 'flex', flexShrink: 0 }}>{fb.icon}</span>}
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: fb.fg, letterSpacing: 0.2 }}>{fb.text}</div>
+                {fb.sub && <div style={{ fontSize: 12.5, color: T.faint, marginTop: 2, lineHeight: 1.45 }}>{fb.sub}</div>}
               </div>
-              {feedback.sub && (
-                <div style={{ fontSize: 13, color: feedback.fg, opacity: 0.8, marginTop: 3, lineHeight: 1.5 }}>
-                  {feedback.sub}
-                </div>
-              )}
             </div>
-          </div>
-        </div>
+          );
+        })()}
 
-        {/* Mic button */}
-        <button
-          onClick={handleToggle}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '16px 0', borderRadius: 50,
-            border: `2px solid ${isActive ? '#22c55e' : '#2a2a2a'}`,
-            backgroundColor: isActive ? '#061812' : '#161616',
-            cursor: 'pointer', transition: 'all 0.2s',
-          }}
-        >
-          <span style={{ fontSize: 22 }}>{isActive ? '⏹' : '🎙'}</span>
-          <span style={{ fontSize: 17, fontWeight: 700, color: isActive ? '#4ade80' : '#f0f0f0' }}>
-            {isActive ? 'Dừng nghe' : 'Bắt đầu nghe'}
-          </span>
-          {isActive && (
-            <span style={{
-              width: 8, height: 8, borderRadius: 4,
-              backgroundColor: '#22c55e',
-              animation: 'pulse 1.4s infinite',
-            }} />
-          )}
+        {/* Dây tiếp (chỉ dùng khi Chọn dây) */}
+        <button onClick={() => { setAutoMode(false); setSelectedIndex(i => (i + 1) % STRINGS.length); }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 0', borderRadius: 12, border: `1px solid ${T.primaryBd}`, background: T.primarySoft, cursor: 'pointer', color: T.primary, width: '100%', fontFamily: 'inherit' }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600 }}>Dây tiếp theo</span><IconArrowRight size={17} />
         </button>
-
-        {/* Actions */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <button
-            onClick={() => playReferenceTone(selectedString.freq)}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '13px 0', borderRadius: 12,
-              border: '1px solid #222', backgroundColor: '#161616',
-              cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 17 }}>🔊</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#ccc' }}>Nghe âm mẫu</span>
-          </button>
-          <button
-            onClick={() => { stopListening(); setSelectedIndex(i => (i + 1) % STRINGS.length); }}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '13px 0', borderRadius: 12,
-              border: '1px solid #1e3a5f', backgroundColor: '#0a1624',
-              cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 17 }}>➡</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#93c5fd' }}>Dây tiếp theo</span>
-          </button>
-        </div>
 
         {/* Error */}
         {error && (
-          <div style={{ backgroundColor: '#1f0505', borderRadius: 10, padding: '12px 16px', border: '1px solid #7f1d1d' }}>
-            <span style={{ fontSize: 14, color: '#f87171', lineHeight: 1.5 }}>{error}</span>
+          <div style={{ backgroundColor: '#FEF2F2', borderRadius: 10, padding: '12px 16px', border: '1px solid #FECACA' }}>
+            <span style={{ fontSize: 13.5, color: '#B91C1C', lineHeight: 1.5 }}>{error}</span>
           </div>
         )}
-
-        {/* Reference table */}
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: '#444', marginBottom: 10, textTransform: 'uppercase' }}>
-            Tần số chuẩn
-          </div>
-          <div style={{ backgroundColor: '#111', borderRadius: 12, overflow: 'hidden' }}>
-            {STRINGS.map((s, i) => (
-              <div
-                key={s.number}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '10px 16px',
-                  borderBottom: i < STRINGS.length - 1 ? '1px solid #1a1a1a' : 'none',
-                  backgroundColor: i === selectedIndex ? '#161616' : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s',
-                }}
-                onClick={() => { stopListening(); setSelectedIndex(i); }}
-              >
-                <div style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: s.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 14, color: '#888', flex: 1 }}>
-                  {s.label}
-                </span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#555' }}>{s.freq} Hz</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.4; transform: scale(0.85); }
-        }
-      `}</style>
     </div>
   );
 }
