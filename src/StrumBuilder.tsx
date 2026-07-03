@@ -101,6 +101,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const [showCse, setShowCse] = useState(false)
   const [showPaste, setShowPaste] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(!!draft.sheet_url)   // chưa có ảnh → thu gọn, nhường chỗ cho vạch nhịp
+  const [sheetBroken, setSheetBroken] = useState(false)           // trang nguồn chặn hotlink → ảnh không tải được ở đây
   const cseBox = useRef<HTMLDivElement>(null)
   const cseRendered = useRef(false)
 
@@ -126,7 +127,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
       const src = img?.src || ''
       if (src && !src.includes('encrypted-tbn')) {
         window.clearInterval(grabTimer.current!); grabTimer.current = null
-        setSheetUrl(src); setShowCse(false); setZoom(1)
+        setSheetUrl(src); setSheetBroken(false); setShowCse(false); setZoom(1)
       } else if (++tries > 12) { window.clearInterval(grabTimer.current!); grabTimer.current = null }
     }, 200)
   }
@@ -227,7 +228,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
 
         {showPaste && (
           <div style={{ padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}` }}>
-            <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); if (e.target.value.trim()) { setSheetOpen(true); setShowCse(false) } }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
+            <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); setSheetBroken(false); if (e.target.value.trim()) { setSheetOpen(true); setShowCse(false) } }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
               style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
           </div>
         )}
@@ -244,7 +245,10 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
           </div>
           {!showCse && (sheetUrl
             ? <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
-                <img src={sheetUrl} alt="sheet" style={{ width: `${zoom * 100}%`, maxWidth: 'none', display: 'block' }} />
+                {sheetBroken
+                  ? <div style={{ color: '#FCA5A5', fontSize: 13.5, textAlign: 'center', padding: 24, lineHeight: 1.7 }}>Trang nguồn chặn hiển thị ảnh này ở đây.<br />Bấm <b>🔍 Tìm</b> chọn ảnh khác, hoặc mở tab <b>Web</b> để xem trực tiếp trên trang gốc.</div>
+                  : <img src={sheetUrl} alt="sheet" referrerPolicy="no-referrer" onError={() => setSheetBroken(true)} onLoad={() => setSheetBroken(false)}
+                      style={{ width: `${zoom * 100}%`, maxWidth: 'none', display: 'block' }} />}
               </div>
             : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1AA', fontSize: 14, textAlign: 'center', lineHeight: 1.7, padding: 16 }}>
                 Gõ tên bài rồi bấm <b>🔍 Tìm</b> — kết quả hiện ngay tại đây.<br />Sheet chỉ để nhìn canh nhịp.
