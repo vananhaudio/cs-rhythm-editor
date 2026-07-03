@@ -360,9 +360,9 @@ export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: bo
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
 export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[]; active: number; showDur?: boolean }) {
-  const gap = 7.2, x0 = 54, sp = 33, perRow = 8, headTop = 18   // x0: chừa khoảng sau khóa Sol (cân đối như bản nhạc chuẩn); 8 nốt/dòng
+  const gap = 9, x0 = 54, sp = 33, perRow = 8, headTop = 20   // gap: khoảng dòng kẻ (khuông cao thoáng, cân với cỡ nốt); x0 chừa khoảng sau khóa Sol; 8 nốt/dòng
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
-  const rowH = 60 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
+  const rowH = 72 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
   const rows = Math.max(1, Math.ceil(notes.length / perRow))
   const rowW = x0 + perRow * sp + 8
   const H = headTop + rows * rowH + 4
@@ -427,7 +427,7 @@ export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[
                 {hollow
                   ? <ellipse cx={x} cy={y} rx={on ? 8.3 : 7.4} ry={on ? 6.1 : 5.4} fill="none" stroke={c} strokeWidth={2.3} transform={`rotate(-18 ${x} ${y})`} />
                   : <ellipse cx={x} cy={y} rx={on ? 8 : 7} ry={on ? 6 : 5.2} fill={c} transform={`rotate(-18 ${x} ${y})`} />}
-                {!noStem && <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -21 : 21)} stroke={c} strokeWidth={2} />}
+                {!noStem && <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -26 : 26)} stroke={c} strokeWidth={2} />}
               </g>
               <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 11.5 : 10.5} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
             </g>
