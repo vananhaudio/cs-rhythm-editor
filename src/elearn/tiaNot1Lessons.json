@@ -1422,6 +1422,126 @@
               "content": "Xuất sắc! Bạn vừa chinh phục vùng <b>trầm nhất</b> của cây đàn. Bài sau ta <b>nối các dây trầm</b> lại thành một câu chạy liền mạch."
             }
           ]
+        },
+        {
+          "key": "cautram",
+          "lessonId": "a3720000-0000-4000-8000-000000000003",
+          "flowId": "f3720000-0000-4000-8000-000000000003",
+          "order": 3,
+          "title": "Bài 3: Nối câu qua dây 6 → 5 → 4",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "t1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Nối các dây trầm",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Bạn đã biết từng cụm ở dây 6, dây 5, dây 4. Giờ ta <b>nối chúng lại</b> thành một câu chạy liền: bắt đầu từ <b>Mi trầm nhất</b> (dây 6), đi lên trọn <b>một quãng tám</b> tới <b>Mi ở dây 4</b>."
+            },
+            {
+              "id": "t2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Chuyển dây khi đang chơi",
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Câu này đi lên: cứ chơi hết <b>3 nốt</b> một dây là <b>sang dây mảnh hơn</b> (dây 6 → 5 → 4). Việc <b>chuyển dây mượt</b> khi đang chơi mới là kỹ năng thật của tỉa nốt — hãy đi <b>chậm</b>, nghe cho liền mạch.</p>"
+            },
+            {
+              "id": "t3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: một quãng tám vùng trầm",
+              "interactive": {
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 82.41,
+                    "string": 6,
+                    "fret": 0,
+                    "staff": -7
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 87.31,
+                    "string": 6,
+                    "fret": 1,
+                    "staff": -6
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0
+                  }
+                ]
+              }
+            },
+            {
+              "id": "t4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình chơi liền Mi (dây 6) lên tới Mi (dây 4), chuyển dây mượt",
+                  "Mình nghe ra giai điệu đi lên trọn một quãng tám ở vùng trầm"
+                ]
+              }
+            },
+            {
+              "id": "t5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tuyệt vời! Bạn vừa đọc và chơi trọn <b>một quãng tám vùng trầm</b> qua ba dây. Bài cuối chương ta nối luôn <b>từ nốt trầm nhất lên tận nốt cao nhất</b> — đọc trọn cần đàn."
+            }
+          ]
         }
       ]
     },
