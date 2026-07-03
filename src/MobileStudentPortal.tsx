@@ -1172,10 +1172,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 if (miss.length === 0) return null
                 const names = miss.map(c => tenNangLuc(c) || c)
                 return (
-                  <div style={{ marginTop: 12, background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C2410C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    <div style={{ fontSize: 13, color: '#7C2D12', lineHeight: 1.55 }}>
-                      <b>Bạn đang thiếu nền tảng.</b> Khoá này nối tiếp {names.length > 1 ? 'các khoá' : 'khoá'} <b>{names.join(' · ')}</b> mà bạn chưa học. Bạn vẫn xem được, nhưng nên hoàn thành {names.length > 1 ? 'chúng' : 'khoá đó'} trước để theo kịp và chơi vững hơn.
+                  <div style={{ marginTop: 12, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <div style={{ fontSize: 13, color: '#991B1B', lineHeight: 1.55 }}>
+                      <b>Thiếu nền tảng.</b> Bạn chưa học {names.length > 1 ? 'các khoá' : 'khoá'} <b>{names.join(' · ')}</b> — nền tảng của khoá này. Nên học bổ sung {names.length > 1 ? 'các khoá đó' : 'khoá đó'} để theo kịp và chơi vững hơn.
                     </div>
                   </div>
                 )
