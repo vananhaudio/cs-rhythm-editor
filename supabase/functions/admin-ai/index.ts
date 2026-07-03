@@ -237,19 +237,22 @@ async function addToGroups(admin: ReturnType<typeof createClient>, assignments: 
       // Khớp nhóm: ưu tiên MÃ LỚP (vd GL11, DH1.KD16), rồi tên. Tự tạo nếu khớp 1 lớp trong lịch.
       const codeM = groupName.match(/[A-Za-z]{2,4}\d*\.?[A-Za-z]{0,2}\d+/)
       const codeGuess = (codeM ? codeM[0] : groupName).trim().toUpperCase()
-      let grp = (await admin.from('edu_groups').select('id,name').ilike('code', codeGuess).limit(1)).data?.[0]
-      if (!grp) grp = (await admin.from('edu_groups').select('id,name').ilike('name', '%' + groupName + '%').limit(1)).data?.[0]
+      let grp = (await admin.from('edu_groups').select('id,name,code').ilike('code', codeGuess).limit(1)).data?.[0]
+      if (!grp) grp = (await admin.from('edu_groups').select('id,name,code').ilike('name', '%' + groupName + '%').limit(1)).data?.[0]
       if (!grp) {
         const { data: cls } = await admin.from('class_schedule').select('code').ilike('code', codeGuess).limit(1)
         if (cls?.[0]?.code) {
-          grp = (await admin.from('edu_groups').upsert({ code: cls[0].code, name: cls[0].code, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id,name').single()).data
+          grp = (await admin.from('edu_groups').upsert({ code: cls[0].code, name: cls[0].code, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id,name,code').single()).data
         }
       }
       if (!grp?.id) throw new Error('không tìm thấy/không tạo được nhóm "' + groupName + '" (mã ' + codeGuess + ')')
       const { error: mErr } = await admin.from('edu_group_members')
         .upsert({ user_id: stu.user_id, group_id: grp.id, source: 'admin', status: 'active' }, { onConflict: 'user_id,group_id' })
       if (mErr) throw new Error(mErr.message)
-      results.push({ email, student: stu.full_name, group: grp.name, ok: true })
+      // CẤP KHOÁ CỦA LỚP ngay — không phụ thuộc trigger (idempotent). backfill_class cấp đủ khoá cho mọi thành viên active.
+      const { data: gn, error: gErr } = await admin.rpc('backfill_class', { p_code: grp.code || codeGuess })
+      if (gErr) results.push({ email, student: stu.full_name, group: grp.name, ok: true, warn: 'vào nhóm OK nhưng cấp khoá lỗi: ' + gErr.message })
+      else results.push({ email, student: stu.full_name, group: grp.name, ok: true, coursesGranted: gn as number })
     } catch (e) {
       results.push({ email, group: groupName, ok: false, error: String((e as Error)?.message || e) })
     }
