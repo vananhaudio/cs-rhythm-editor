@@ -356,9 +356,9 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
 export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number }) {
-  const gap = 8.5, x0 = 44, sp = 40, perRow = 7, headTop = 22
+  const gap = 7.2, x0 = 40, sp = 34, perRow = 8, headTop = 18   // gọn hơn: nốt nhỏ lại, 8 nốt/dòng, dòng thấp → thấy nhiều khuông
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
-  const rowH = 74 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 24 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
+  const rowH = 60 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
   const rows = Math.max(1, Math.ceil(notes.length / perRow))
   const rowW = x0 + perRow * sp + 8
   const H = headTop + rows * rowH + 4
@@ -390,7 +390,7 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
   // Nhãn tên nốt: đặt DƯỚI nốt thấp nhất của từng dòng (nốt trầm nằm dưới khuông sẽ không bị nhãn đè)
   const rowMaxY: number[] = []
   notes.forEach((n, i) => { const r = Math.floor(i / perRow), yy = noteY(n.staff ?? 0, r); if (rowMaxY[r] == null || yy > rowMaxY[r]) rowMaxY[r] = yy })
-  const labelYOf = (row: number) => Math.max(bY(row) + 19, (rowMaxY[row] ?? bY(row)) + 18)
+  const labelYOf = (row: number) => Math.max(bY(row) + 16, (rowMaxY[row] ?? bY(row)) + 15)
   return (
     <div ref={outerRef} style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <div ref={scRef} style={{ height: innerH, maxHeight: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
@@ -400,16 +400,16 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
           const row = Math.floor(i / perRow), col = i % perRow
           const st = n.staff ?? 0, y = noteY(st, row), x = x0 + col * sp, on = i === active
           const c = on ? ACCENT.c1 : '#6B6456'
-          const stemUp = st < 4, stemX = x + (stemUp ? 7.5 : -7.5)
+          const stemUp = st < 4, stemX = x + (stemUp ? 6.5 : -6.5)
           return (
             <g key={i}>
-              {on && <rect x={x - 15} y={bY(row) - 50} width={30} height={64} rx={7} fill="rgba(194,98,46,0.13)" />}
-              {ledgersFor(st).map(e => { const ly = bY(row) - e * (gap / 2); return <line key={`lg${e}`} x1={x - 12} x2={x + 12} y1={ly} y2={ly} stroke="#CBBF9E" strokeWidth={1.3} /> })}
+              {on && <rect x={x - 12} y={y - 30} width={24} height={46} rx={6} fill="rgba(194,98,46,0.13)" />}
+              {ledgersFor(st).map(e => { const ly = bY(row) - e * (gap / 2); return <line key={`lg${e}`} x1={x - 10} x2={x + 10} y1={ly} y2={ly} stroke="#CBBF9E" strokeWidth={1.2} /> })}
               <g key={'p' + active} style={{ animation: on ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${x}px ${y}px` }}>
-                <ellipse cx={x} cy={y} rx={on ? 9.5 : 8} ry={on ? 7 : 6} fill={c} transform={`rotate(-18 ${x} ${y})`} />
-                <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -24 : 24)} stroke={c} strokeWidth={2.2} />
+                <ellipse cx={x} cy={y} rx={on ? 8 : 7} ry={on ? 6 : 5.2} fill={c} transform={`rotate(-18 ${x} ${y})`} />
+                <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -21 : 21)} stroke={c} strokeWidth={2} />
               </g>
-              <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 12.5 : 11} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
+              <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 11.5 : 10.5} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
             </g>
           )
         })}
@@ -526,7 +526,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const active = (playing || micOn) ? cursor : -1
   const cur = notes[cursor >= 0 ? cursor % notes.length : 0]
   const showStaff = cfg.showStaff ?? notes.some(n => n.staff != null)
-  const sheetRows = Math.ceil(notes.length / 7)   // khớp perRow=7 trong NoteSheet; 1 dòng = bài ngắn
+  const sheetRows = Math.ceil(notes.length / 8)   // khớp perRow=8 trong NoteSheet; 1 dòng = bài ngắn
   const busy = playing || micOn
 
   return (
