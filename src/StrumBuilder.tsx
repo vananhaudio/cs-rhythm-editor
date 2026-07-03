@@ -242,7 +242,11 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
           <div style={{ display: showCse ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
             onClickCapture={(e) => {
               const t = e.target as HTMLElement
-              if (t.closest('.gs-imageResult') || t.closest('a.gs-image') || t.classList.contains('gs-imagePreview')) grabPreview()
+              if (t.closest('.gs-imageResult') || t.closest('a.gs-image') || t.classList.contains('gs-imagePreview')) { grabPreview(); return }
+              // Kết quả Web (Hợp Âm Việt…) — Google ép target=_blank, chặn lại để mở CÙNG TAB
+              // (bấm "Quay lại" của trình duyệt để về app, quen thuộc hơn tìm tab mới trên điện thoại).
+              const a = t.closest('a[href]') as HTMLAnchorElement | null
+              if (a && a.target === '_blank' && a.href) { e.preventDefault(); window.location.href = a.href }
             }}>
             <div ref={cseBox} />
           </div>
