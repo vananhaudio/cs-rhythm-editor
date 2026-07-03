@@ -217,6 +217,54 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
 
   const toggleCut = (gi: number) => setCuts((prev) => { const n = new Set(prev); n.has(gi) ? n.delete(gi) : n.add(gi); return n })
 
+  // Xem toàn màn hình — bản vạch nhịp đã lưu (tự lưu liên tục), hiện to rõ, không vướng thanh
+  // công cụ/khung tìm sheet. Chỉ để NHÌN, không sửa được ở đây.
+  const [fullView, setFullView] = useState(false)
+  if (fullView) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: 'Inter, system-ui, sans-serif', color: A.ink }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${A.border}` }}>
+          <button onClick={() => setFullView(false)} style={{ ...ghost, fontSize: 15 }}>✕ Đóng</button>
+          <div style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
+          <div style={{ width: 74 }} />
+        </div>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '28px 20px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 760 }}>
+            {lines.map((_, li) => {
+              const lineToks = tokens.filter((t) => t.line === li)
+              if (lineToks.length === 0) return <div key={li} style={{ height: 26 }} />
+              return (
+                <div key={li} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
+                  {lineToks.map((t) => (
+                    <span key={t.gi} style={{ display: 'inline-flex', alignItems: 'stretch' }}>
+                      <FullBoundary active={t.gi === 0 || cuts.has(t.gi)} num={barOf[t.gi]} />
+                      <span style={{ display: 'inline-flex', flexDirection: 'column', whiteSpace: 'pre', padding: '0 5px' }}>
+                        <span style={{ height: 26, fontSize: 20, fontWeight: 800, color: A.accent, lineHeight: '26px' }}>{t.chord ?? ''}</span>
+                        <span style={{ fontSize: 30, lineHeight: '42px' }}>{t.word}</span>
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        {hasLyric && (
+          <div style={{ borderTop: `1px solid ${A.border}`, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 14, overflowX: 'auto' }}>
+            <span style={{ fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap' }}>{totalBars} ô · nhịp {meter}/4</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {barSummary.map(([n, chords]) => (
+                <span key={n} style={{ whiteSpace: 'nowrap', fontSize: 13, color: A.sub, border: `1px solid ${A.border}`, borderRadius: 7, padding: '4px 10px' }}>
+                  <b style={{ color: A.accent }}>Ô{n}</b> {chords.length ? chords.join(' ') : '—'}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: A.bg, fontFamily: 'Inter, system-ui, sans-serif', color: A.ink }}>
       {/* Thanh công cụ */}
@@ -329,6 +377,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: '#A1A1AA', textTransform: 'uppercase' }}>Lời &amp; hợp âm</span>
           {!editing && <span style={{ fontSize: 12, color: A.sub }}>Bấm khe giữa các chữ để cắm/xoá vạch nhịp │</span>}
           <div style={{ flex: 1 }} />
+          {!editing && hasLyric && <button onClick={() => setFullView(true)} style={{ ...ghost, background: A.accent, color: '#fff', border: 'none' }}>⛶ Toàn màn hình</button>}
           {!editing && cuts.size > 0 && <button onClick={() => setCuts(new Set())} style={ghost}>Xoá hết vạch</button>}
           {!editing && <button onClick={() => setRaw(SAMPLE)} style={ghost}>Dán mẫu</button>}
           <button onClick={() => setEditing((v) => !v)} style={ghost}>{editing ? '✓ Xong, vạch nhịp' : '✎ Sửa lời'}</button>
@@ -388,6 +437,16 @@ function Boundary({ gi, active, fixed, num, onToggle, big }: { gi: number; activ
       style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', cursor: fixed ? 'default' : 'pointer', padding: big ? '0 9px' : '0 4px', userSelect: 'none' }}>
       <span style={{ height: 18, fontSize: big ? 11 : 10, fontWeight: 800, color: active ? A.accent : 'transparent', lineHeight: '18px' }}>{active ? num : ''}</span>
       <span style={{ width: active ? 3 : 2, flex: 1, minHeight: big ? 30 : 26, borderRadius: 2, background: active ? A.accent : '#E7E7EA' }} />
+    </span>
+  )
+}
+
+// Vạch nhịp CHỈ ĐỂ NHÌN (chế độ Toàn màn hình) — to hơn hẳn, không bấm được.
+function FullBoundary({ active, num }: { active: boolean; num: number }) {
+  return (
+    <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '0 10px', userSelect: 'none' }}>
+      <span style={{ height: 24, fontSize: 14, fontWeight: 800, color: active ? A.accent : 'transparent', lineHeight: '24px' }}>{active ? num : ''}</span>
+      <span style={{ width: active ? 4 : 2, flex: 1, minHeight: 42, borderRadius: 2, background: active ? A.accent : '#E7E7EA' }} />
     </span>
   )
 }
