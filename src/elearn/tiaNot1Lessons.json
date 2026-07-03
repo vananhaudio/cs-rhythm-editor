@@ -3187,6 +3187,528 @@
               "content": "Tuyệt vời! Giờ bạn đọc được <b>ba độ dài</b> cơ bản. Bài sau thêm một thứ nữa: <b>dấu lặng</b> — khoảng <b>nghỉ</b> (im lặng) cũng là một phần của nhạc."
             }
           ]
+        },
+        {
+          "key": "daulang",
+          "lessonId": "a5720000-0000-4000-8000-000000000003",
+          "flowId": "f5720000-0000-4000-8000-000000000003",
+          "order": 3,
+          "title": "Bài 3: Dấu lặng — khoảng nghỉ",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "l1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Im lặng cũng là nhạc",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhạc không chỉ có tiếng đàn — có những lúc phải <b>nghỉ</b> (im lặng). Khoảng nghỉ đó ghi bằng <b>dấu lặng</b>, và nó cũng có <b>độ dài</b> đúng như nốt vậy."
+            },
+            {
+              "id": "l2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Dấu lặng đen = nghỉ 1 phách",
+              "content": "<p style=\"font-size:16px;line-height:1.75;margin:0;color:#3A352F\">Loại cơ bản là <b>dấu lặng đen</b> — <b>nghỉ 1 phách</b> (im bằng một nốt đen). Khi <b>Nghe mẫu</b>, tới dấu lặng thì đàn <b>im</b> nhưng metronome <b>vẫn gõ</b> — bạn đếm tiếng gõ và giữ im đúng <b>1 phách</b> rồi mới chơi nốt kế.</p>"
+            },
+            {
+              "id": "l3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: có dấu lặng",
+              "interactive": {
+                "showDur": true,
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "",
+                    "freq": 0,
+                    "rest": true,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "l4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình nhận ra dấu lặng trên khuông (không phải nốt)",
+                  "Tới dấu lặng mình giữ IM đúng 1 phách, metronome vẫn gõ",
+                  "Mình vào lại nốt kế đúng nhịp sau khoảng nghỉ"
+                ]
+              }
+            },
+            {
+              "id": "l5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Giỏi lắm! Giờ bạn đọc được cả <b>nốt</b> lẫn <b>khoảng nghỉ</b> — đủ để đọc một bản nhạc thật. Bài cuối chương: <b>chơi lại một bài quen thuộc đúng nhịp</b>."
+            }
+          ]
+        },
+        {
+          "key": "twinkleNhip",
+          "lessonId": "a5720000-0000-4000-8000-000000000004",
+          "flowId": "f5720000-0000-4000-8000-000000000004",
+          "order": 4,
+          "title": "Bài 4: Ngôi Sao Nhỏ — đọc đúng nhịp",
+          "reward_xp": 15,
+          "slides": [
+            {
+              "id": "z1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Bài tổng kết chương",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Bài cuối chương: chơi lại <b>Ngôi Sao Nhỏ</b> — nhưng lần này <b>đọc đúng nhịp</b>! Giờ bạn nhìn ra nốt nào <b>đen</b> (ngắn), nốt nào <b>trắng</b> (dài gấp đôi). Nghe khác hẳn lúc đàn đều đều."
+            },
+            {
+              "id": "z2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Để ý cuối mỗi câu",
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Nhìn kỹ: <b>cuối mỗi câu</b> là một nốt <b>trắng</b> (đầu rỗng) — ngân <b>2 phách</b>, như chỗ lấy hơi của giai điệu. Bấm <b>Nghe mẫu</b>: có <b>đếm lấy đà</b> và <b>metronome</b> — đàn theo, giữ nốt trắng cho đủ 2 tiếng gõ.</p>"
+            },
+            {
+              "id": "z3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Ngôi Sao Nhỏ (đúng nhịp)",
+              "interactive": {
+                "showDur": true,
+                "notes": [
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "z4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình chơi trọn bài, giữ nốt trắng đủ 2 phách",
+                  "Mình theo được metronome, không vội không chậm",
+                  "Mình nghe bài vang ĐÚNG như Ngôi Sao Nhỏ thật (không còn đều đều)"
+                ]
+              }
+            },
+            {
+              "id": "z5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Chúc mừng bạn!",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Hoàn thành Chương 5! Giờ bạn đọc được cả <b>cao độ</b> (nốt nào) lẫn <b>trường độ</b> (dài bao lâu) — tức là <b>đọc được một bản nhạc thật</b>. Đây là một cột mốc lớn trên hành trình tỉa nốt của bạn. 🎸"
+            }
+          ]
         }
       ]
     }

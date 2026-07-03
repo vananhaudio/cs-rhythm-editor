@@ -521,6 +521,10 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const detect = () => {
     const an = analyserR.current, buf = bufR.current, ctx = audioCtxR.current
     if (!an || !buf || !ctx) return
+    while (cursorR.current < notes.length && notes[cursorR.current].rest) {   // dấu lặng: không đàn được → tự nhảy qua
+      cursorR.current++; setCursor(cursorR.current)
+    }
+    if (cursorR.current >= notes.length) { setDone(true); onPass(); stopMic(); return }
     an.getFloatTimeDomainData(buf)
     const { freq } = detectPitch(buf, ctx.sampleRate)
     const i = cursorR.current
