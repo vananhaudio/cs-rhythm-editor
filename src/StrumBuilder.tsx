@@ -243,10 +243,17 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
             onClickCapture={(e) => {
               const t = e.target as HTMLElement
               if (t.closest('.gs-imageResult') || t.closest('a.gs-image') || t.classList.contains('gs-imagePreview')) { grabPreview(); return }
-              // Kết quả Web (Hợp Âm Việt…) — Google ép target=_blank, chặn lại để mở CÙNG TAB
-              // (bấm "Quay lại" của trình duyệt để về app, quen thuộc hơn tìm tab mới trên điện thoại).
+              // Kết quả Web (Hợp Âm Việt…) — Google ép target=_blank + tự window.open() bằng JS riêng
+              // của họ trên chính thẻ <a>. Phải chặn sự kiện lan xuống TỚI thẻ đó (stopPropagation ở
+              // capture, chạy trước khi mã của Google kịp thấy) — chỉ preventDefault là chưa đủ.
               const a = t.closest('a[href]') as HTMLAnchorElement | null
-              if (a && a.target === '_blank' && a.href) { e.preventDefault(); window.location.href = a.href }
+              if (a && a.target === '_blank' && a.href) {
+                e.preventDefault()
+                e.stopPropagation()
+                ;(e.nativeEvent as Event).stopImmediatePropagation()
+                const href = a.href
+                setTimeout(() => { window.location.href = href }, 0)
+              }
             }}>
             <div ref={cseBox} />
           </div>
