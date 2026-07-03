@@ -1273,6 +1273,155 @@
               "content": "Tốt lắm! Bạn đã đọc được nốt <b>dưới khuông</b> nhờ dòng kẻ phụ. Bài sau xuống nốt <b>trầm nhất</b> — dây 6."
             }
           ]
+        },
+        {
+          "key": "cumd6",
+          "lessonId": "a3720000-0000-4000-8000-000000000002",
+          "flowId": "f3720000-0000-4000-8000-000000000002",
+          "order": 2,
+          "title": "Bài 2: Cụm dây 6 — Mi – Fa – Sol",
+          "reward_xp": 10,
+          "slides": [
+            {
+              "id": "d61",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Dây trầm nhất",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Cuối cùng là <b>dây 6</b> — dây <b>to nhất, trầm nhất</b> của đàn. Ba nốt <b>Mi – Fa – Sol</b> ở đây nằm sâu nhất dưới khuông, phải dùng tới <b>ba dòng kẻ phụ</b>. Đừng ngại — cứ nhìn vị trí trên cần đàn là chơi được."
+            },
+            {
+              "id": "d62",
+              "order": 2,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Mi (trầm nhất)",
+              "interactive": {
+                "label": "Mi",
+                "freq": 82.41,
+                "string": 6,
+                "fret": 0,
+                "staff": -7,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Mi</b> — dây 6 <b>buông</b> (○), nốt <b>trầm nhất</b> của cây đàn. Trùng tên với Mi cao ở dây 1, nhưng thấp hơn <b>hai quãng tám</b>."
+              }
+            },
+            {
+              "id": "d63",
+              "order": 3,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Fa (trầm)",
+              "interactive": {
+                "label": "Fa",
+                "freq": 87.31,
+                "string": 6,
+                "fret": 1,
+                "staff": -6,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Fa</b> — cùng dây 6, bấm <b>ngón 1</b> ở <b>ngăn 1</b>. Cao hơn Mi một bậc."
+              }
+            },
+            {
+              "id": "d64",
+              "order": 4,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Sol (trầm)",
+              "interactive": {
+                "label": "Sol",
+                "freq": 98,
+                "string": 6,
+                "fret": 3,
+                "staff": -5,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Sol</b> — cùng dây 6, bấm <b>ngón 3</b> ở <b>ngăn 3</b>. Cao hơn Fa một bậc."
+              }
+            },
+            {
+              "id": "d65",
+              "order": 5,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Mi – Fa – Sol",
+              "interactive": {
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 82.41,
+                    "string": 6,
+                    "fret": 0,
+                    "staff": -7
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 87.31,
+                    "string": 6,
+                    "fret": 1,
+                    "staff": -6
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 87.31,
+                    "string": 6,
+                    "fret": 1,
+                    "staff": -6
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 82.41,
+                    "string": 6,
+                    "fret": 0,
+                    "staff": -7
+                  }
+                ]
+              }
+            },
+            {
+              "id": "d66",
+              "order": 6,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình gảy được Mi – Fa – Sol ở dây 6, tiếng trầm và rõ",
+                  "Mình đọc được nốt dù nằm sâu dưới khuông (ba dòng kẻ phụ)"
+                ]
+              }
+            },
+            {
+              "id": "d67",
+              "order": 7,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Xuất sắc! Bạn vừa chinh phục vùng <b>trầm nhất</b> của cây đàn. Bài sau ta <b>nối các dây trầm</b> lại thành một câu chạy liền mạch."
+            }
+          ]
         }
       ]
     },

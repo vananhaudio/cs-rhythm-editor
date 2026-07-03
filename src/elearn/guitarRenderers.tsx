@@ -329,7 +329,8 @@ function ledgersFor(staff: number): number[] {
 // staff = số bậc (nửa-dòng) tính từ DÒNG KẺ DƯỚI CÙNG (=0). LƯU Ý: guitar viết CAO HƠN THỰC TẾ 1 QUÃNG 8,
 // nên Mi dây-1-buông (E4 thực) VIẾT là E5 = KHE 4 = staff 7 (gần đỉnh). Dây2(B4)=4, dây3(G4)=2.
 export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean; label: string; staff?: number; pulse?: number }) {
-  const W = 240, H = 92, top = 22, gap = 11
+  const W = 240, top = 22, gap = 11
+  const H = 92 + (staff < -1 ? Math.round((-1 - staff) * (gap / 2)) + 20 : 0)   // giãn cao cho nốt trầm (dây 5–6) không tràn khung
   const lineY = (i: number) => top + i * gap            // i=0 dòng trên cùng … i=4 dòng dưới cùng
   const noteY = lineY(4) - staff * (gap / 2)            // mỗi bậc = nửa khoảng dòng
   const noteX = 158
