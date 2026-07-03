@@ -242,7 +242,20 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
           <div style={{ display: showCse ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
             onClickCapture={(e) => {
               const t = e.target as HTMLElement
+              // Ảnh nhỏ trong LƯỚI kết quả — KHÔNG chặn gì, để Google tự mở popup phóng to bằng
+              // JS của họ (chặn ở đây sẽ làm popup không mở được nữa). Ta chỉ chạy song song
+              // grabPreview() để chộp ảnh gốc ngay khi popup xuất hiện.
               if (t.closest('.gs-imageResult') || t.closest('a.gs-image') || t.classList.contains('gs-imagePreview')) { grabPreview(); return }
+              // Bấm ngay TRONG popup xem ảnh to (không trúng đúng .gs-imageResult ở trên) — ví dụ
+              // lớp link ẨN gs-previewLink phủ lên khung ảnh to, trỏ ra trang nguồn. PHẢI chặn
+              // triệt để, không thì lọt xuống nhánh "tab Web" bên dưới, nhảy sang trang khác.
+              if (t.closest('[class*="image"]')) {
+                e.preventDefault()
+                e.stopPropagation()
+                ;(e.nativeEvent as Event).stopImmediatePropagation()
+                grabPreview()
+                return
+              }
               // Kết quả Web (Hợp Âm Việt…) — Google ép target=_blank + tự window.open() bằng JS riêng
               // của họ trên chính thẻ <a>. Phải chặn sự kiện lan xuống TỚI thẻ đó (stopPropagation ở
               // capture, chạy trước khi mã của Google kịp thấy) — chỉ preventDefault là chưa đủ.
