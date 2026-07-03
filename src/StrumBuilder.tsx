@@ -230,6 +230,9 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
           <div style={{ padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}` }}>
             <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); setSheetBroken(false); if (e.target.value.trim()) { setSheetOpen(true); setShowCse(false) } }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
               style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            <div style={{ fontSize: 12, color: A.sub, marginTop: 6, lineHeight: 1.6 }}>
+              <b>Nếu ảnh nằm TRONG một trang web</b> (không phải file ảnh riêng): bấm giữ ngón tay lên đúng tấm ảnh đó (điện thoại) hoặc bấm chuột phải (máy tính) → chọn <b>"Sao chép địa chỉ hình ảnh"</b> / <b>"Copy image link"</b> → quay lại đây dán.
+            </div>
           </div>
         )}
 
