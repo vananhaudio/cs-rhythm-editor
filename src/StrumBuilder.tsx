@@ -235,15 +235,18 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
               if (lineToks.length === 0) return <div key={li} style={{ height: 26 }} />
               return (
                 <div key={li} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
-                  {lineToks.map((t) => (
+                  {lineToks.map((t) => {
+                    const barStart = t.gi === 0 || cuts.has(t.gi)
+                    return (
                     <span key={t.gi} style={{ display: 'inline-flex', alignItems: 'stretch' }}>
-                      <FullBoundary active={t.gi === 0 || cuts.has(t.gi)} num={barOf[t.gi]} />
+                      {barStart && <FullBoundary num={barOf[t.gi]} />}
                       <span style={{ display: 'inline-flex', flexDirection: 'column', whiteSpace: 'pre', padding: '0 5px' }}>
                         <span style={{ height: 26, fontSize: 20, fontWeight: 800, color: A.accent, lineHeight: '26px' }}>{t.chord ?? ''}</span>
                         <span style={{ fontSize: 30, lineHeight: '42px' }}>{t.word}</span>
                       </span>
                     </span>
-                  ))}
+                    )
+                  })}
                 </div>
               )
             })}
@@ -442,11 +445,11 @@ function Boundary({ gi, active, fixed, num, onToggle, big }: { gi: number; activ
 }
 
 // Vạch nhịp CHỈ ĐỂ NHÌN (chế độ Toàn màn hình) — to hơn hẳn, không bấm được.
-function FullBoundary({ active, num }: { active: boolean; num: number }) {
+function FullBoundary({ num }: { num: number }) {
   return (
     <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '0 10px', userSelect: 'none' }}>
-      <span style={{ height: 24, fontSize: 14, fontWeight: 800, color: active ? A.accent : 'transparent', lineHeight: '24px' }}>{active ? num : ''}</span>
-      <span style={{ width: active ? 4 : 2, flex: 1, minHeight: 42, borderRadius: 2, background: active ? A.accent : '#E7E7EA' }} />
+      <span style={{ height: 24, fontSize: 14, fontWeight: 800, color: A.accent, lineHeight: '24px' }}>{num}</span>
+      <span style={{ width: 4, flex: 1, minHeight: 42, borderRadius: 2, background: A.accent }} />
     </span>
   )
 }
