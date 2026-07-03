@@ -105,34 +105,33 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const [sheetBroken, setSheetBroken] = useState(false)           // trang nguồn chặn hotlink → ảnh không tải được ở đây
   const cseBox = useRef<HTMLDivElement>(null)
   const cseRendered = useRef(false)
-  // Bấm kết quả "Web" (Hợp Âm Việt…) — thay vì đẩy sang trang đó, TỰ CHUI VÀO lục ảnh sheet
-  // trong trang (Edge Function server-side, tránh CORS) → hiện lưới ảnh, bấm chọn tại chỗ.
-  const [pageImages, setPageImages] = useState<string[] | null>(null)
-  const [pageImagesLoading, setPageImagesLoading] = useState(false)
-  const [pageImagesErr, setPageImagesErr] = useState<string | null>(null)
-  const [pageImagesSource, setPageImagesSource] = useState<string | null>(null)
-  const pageImagesActive = pageImagesLoading || pageImages !== null || pageImagesErr !== null
-
-  const fetchImagesFromPage = async (url: string) => {
-    setPageImagesLoading(true); setPageImagesErr(null); setPageImages(null); setPageImagesSource(url)
+  // Tải ảnh lên (chụp màn hình / ảnh chụp bản nhạc) — thay cho việc tự "chui vào" trang web
+  // (Hợp Âm Việt chặn robot đọc trang bằng Cloudflare nên không lục ảnh tự động được).
+  const [uploading, setUploading] = useState(false)
+  const [uploadErr, setUploadErr] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadSheetFile = async (file: File) => {
+    setUploading(true); setUploadErr(null)
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-page-images', { body: { url } })
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+      const path = `${draft.owner_id || 'anon'}/${draft.id}-${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('strum-sheets').upload(path, file, { upsert: true, contentType: file.type || undefined })
       if (error) throw error
-      if (data?.error) throw new Error(data.error)
-      const imgs: string[] = data?.images || []
-      if (imgs.length === 0) throw new Error('Không tìm thấy ảnh nào trong trang này.')
-      setPageImages(imgs)
+      const { data } = supabase.storage.from('strum-sheets').getPublicUrl(path)
+      setSheetUrl(data.publicUrl); setSheetBroken(false); setSheetOpen(true); setShowCse(false); setZoom(1)
     } catch (e: any) {
-      setPageImagesErr(e?.message || 'Không lục được ảnh trong trang này.')
+      const m = (e?.message || '').toLowerCase()
+      setUploadErr(
+        m.includes('bucket not found') ? 'Tính năng tải ảnh chưa sẵn sàng (thiếu nơi lưu trữ). Báo thầy nhé.'
+        : m.includes('exceeded') || m.includes('too large') ? 'Ảnh quá lớn (tối đa 20MB).'
+        : m.includes('mime') || m.includes('type') ? 'Định dạng ảnh chưa hỗ trợ — dùng JPG/PNG/WEBP.'
+        : e?.message || 'Tải ảnh lên lỗi, thử lại nhé.'
+      )
     } finally {
-      setPageImagesLoading(false)
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
-  const pickPageImage = (url: string) => {
-    setSheetUrl(url); setSheetBroken(false); setZoom(1)
-    setPageImages(null); setPageImagesErr(null); setPageImagesSource(null); setShowCse(false)
-  }
-  const backToSearchResults = () => { setPageImages(null); setPageImagesErr(null); setPageImagesSource(null); setShowCse(true) }
 
   const doSearch = async () => {
     const q = searchQ.trim(); if (!q) return
@@ -247,6 +246,10 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
             style={{ flex: 1, minWidth: 120, padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit' }} />
           <button onClick={doSearch} style={{ ...ghost, background: A.accent, color: '#fff', border: 'none' }}>🔍 Tìm</button>
           <button onClick={() => setShowPaste((v) => !v)} title="Dán link ảnh thủ công" style={zbtn}>🔗</button>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSheetFile(f) }} />
+          <button onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Tải ảnh sheet lên (chụp màn hình/ảnh chụp)"
+            style={{ ...ghost, opacity: uploading ? .6 : 1 }}>{uploading ? '⏳' : '📤 Tải ảnh lên'}</button>
           {showCse && sheetUrl && <button onClick={() => setShowCse(false)} style={ghost}>Ảnh đã dán</button>}
           {sheetUrl && !showCse && <>
             <button onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.25).toFixed(2)))} style={zbtn}>−</button>
@@ -261,14 +264,18 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
               style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
             <div style={{ fontSize: 12, color: A.sub, marginTop: 6, lineHeight: 1.6 }}>
               <b>Nếu ảnh nằm TRONG một trang web</b> (không phải file ảnh riêng): bấm giữ ngón tay lên đúng tấm ảnh đó (điện thoại) hoặc bấm chuột phải (máy tính) → chọn <b>"Sao chép địa chỉ hình ảnh"</b> / <b>"Copy image link"</b> → quay lại đây dán.
+              Không lấy được link? Chụp màn hình rồi bấm <b>📤 Tải ảnh lên</b> ở trên.
             </div>
           </div>
+        )}
+        {uploadErr && (
+          <div style={{ padding: '8px 14px', background: '#FEF2F2', color: '#B91C1C', fontSize: 12.5, borderBottom: `1px solid ${A.border}` }}>{uploadErr}</div>
         )}
 
         {sheetOpen && <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
           {/* Kết quả tìm Google (widget CSE) — luôn mounted để render 1 lần, ẩn/hiện bằng display.
               Bấm ảnh trong kết quả → chộp ảnh gốc từ popup preview điền vào ô sheet. */}
-          <div style={{ display: showCse && !pageImagesActive ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
+          <div style={{ display: showCse ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
             onClickCapture={(e) => {
               const t = e.target as HTMLElement
               // Ảnh nhỏ trong LƯỚI kết quả — KHÔNG chặn gì, để Google tự mở popup phóng to bằng
@@ -288,45 +295,22 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
               // Kết quả Web (Hợp Âm Việt…) — Google ép target=_blank + tự window.open() bằng JS riêng
               // của họ trên chính thẻ <a>. Phải chặn sự kiện lan xuống TỚI thẻ đó (stopPropagation ở
               // capture, chạy trước khi mã của Google kịp thấy) — chỉ preventDefault là chưa đủ.
-              // Thay vì đẩy sang trang đó, TỰ CHUI VÀO lục ảnh sheet trong trang (fetchImagesFromPage).
+              // Không "chui vào" trang tự động được (Hợp Âm Việt chặn robot bằng Cloudflare) —
+              // mở CÙNG TAB, học sinh tự xem/copy (giữ ngón tay → sao chép địa chỉ ảnh, xem gợi ý
+              // ở nút 🔗), bấm Back để quay lại app.
               const a = t.closest('a[href]') as HTMLAnchorElement | null
               if (a && a.target === '_blank' && a.href) {
                 e.preventDefault()
                 e.stopPropagation()
                 ;(e.nativeEvent as Event).stopImmediatePropagation()
-                fetchImagesFromPage(a.href)
+                const href = a.href
+                setTimeout(() => { window.location.href = href }, 0)
               }
             }}>
             <div ref={cseBox} />
           </div>
 
-          {pageImagesActive && (
-            <div style={{ background: '#fff', minHeight: '100%', padding: 14 }}>
-              <button onClick={backToSearchResults} style={{ ...ghost, marginBottom: 12 }}>← Quay lại kết quả</button>
-              {pageImagesLoading && <div style={{ color: A.sub, fontSize: 13.5, textAlign: 'center', padding: 24 }}>⏳ Đang lục ảnh trong trang…</div>}
-              {pageImagesErr && (
-                <div style={{ color: '#B91C1C', fontSize: 13.5, textAlign: 'center', padding: 16, lineHeight: 1.7 }}>
-                  {pageImagesErr}
-                  {pageImagesSource && (
-                    <div style={{ marginTop: 10 }}>
-                      <a href={pageImagesSource} target="_blank" rel="noreferrer" style={{ color: A.accent, fontWeight: 700 }}>Mở trang này để xem trực tiếp ↗</a>
-                    </div>
-                  )}
-                </div>
-              )}
-              {pageImages && pageImages.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${narrow ? 3 : 5}, 1fr)`, gap: 6 }}>
-                  {pageImages.map((u, i) => (
-                    <img key={i} src={u} alt="" referrerPolicy="no-referrer" onClick={() => pickPageImage(u)}
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, cursor: 'pointer', background: '#F4F4F5', border: `1px solid ${A.border}` }} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {!showCse && !pageImagesActive && (sheetUrl
+          {!showCse && (sheetUrl
             ? <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
                 {sheetBroken
                   ? <div style={{ color: '#FCA5A5', fontSize: 13.5, textAlign: 'center', padding: 24, lineHeight: 1.7 }}>Trang nguồn chặn hiển thị ảnh này ở đây.<br />Bấm <b>🔍 Tìm</b> chọn ảnh khác, hoặc mở tab <b>Web</b> để xem trực tiếp trên trang gốc.</div>
