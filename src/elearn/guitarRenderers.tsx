@@ -447,11 +447,15 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
     setPlaying(true); setDone(false); beat.current = 0; passedR.current = false
     const beatMs = 60000 / speeds[speedIdx].bpm
     const tick = () => {
-      const i = beat.current % notes.length
+      const i = beat.current
       setCursor(i); playTone(notes[i].freq)
       const d = (notes[i].dur ?? 1) * beatMs                 // giữ nốt đúng trường độ rồi mới sang nốt kế
       beat.current++
-      if (beat.current >= notes.length && !passedR.current) { passedR.current = true; setDone(true); onPass() }
+      if (beat.current >= notes.length) {                    // hết bài → cho nốt cuối ngân đủ rồi DỪNG (không lặp lại)
+        if (!passedR.current) { passedR.current = true; setDone(true); onPass() }
+        timer.current = window.setTimeout(stop, d)
+        return
+      }
       timer.current = window.setTimeout(tick, d)
     }
     tick()
