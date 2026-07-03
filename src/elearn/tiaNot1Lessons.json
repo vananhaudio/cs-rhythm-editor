@@ -3047,6 +3047,146 @@
               "content": "Tốt lắm! Bạn vừa đọc được <b>độ dài</b> của nốt — không chỉ cao độ. Bài sau ta thêm nốt <b>tròn</b> (ngân 4 phách) và ghép cả ba loại."
             }
           ]
+        },
+        {
+          "key": "notron",
+          "lessonId": "a5720000-0000-4000-8000-000000000002",
+          "flowId": "f5720000-0000-4000-8000-000000000002",
+          "order": 2,
+          "title": "Bài 2: Nốt tròn & ghép ba loại",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "o1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Nốt dài nhất",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Thêm loại nốt <b>dài nhất</b>: nốt <b>tròn</b>. Nó ngân tận <b>4 phách</b> — bằng <b>hai nốt trắng</b> hoặc <b>bốn nốt đen</b> cộng lại. Sau đó ta sẽ ghép cả ba loại vào một câu."
+            },
+            {
+              "id": "o2",
+              "order": 2,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Nốt tròn — 4 phách",
+              "interactive": {
+                "label": "Mi",
+                "freq": 329.63,
+                "string": 1,
+                "fret": 0,
+                "staff": 7,
+                "dur": 4,
+                "showStaff": true,
+                "showFretboard": false,
+                "caption": "<b>Nốt tròn</b>: đầu nốt <b>rỗng</b> và <b>KHÔNG có đuôi</b>. Ngân <b>4 phách</b> — giữ thật lâu, đếm trọn \"1 – 2 – 3 – 4\"."
+              }
+            },
+            {
+              "id": "o3",
+              "order": 3,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Bảng độ dài",
+              "content": "<p style=\"font-size:16px;line-height:1.75;margin:0;color:#3A352F\">Ba loại đã học:<br/>• Nốt <b>đen</b> (đầu đặc) = <b>1</b> phách<br/>• Nốt <b>trắng</b> (đầu rỗng, có đuôi) = <b>2</b> phách<br/>• Nốt <b>tròn</b> (đầu rỗng, không đuôi) = <b>4</b> phách<br/>Bấm <b>Nghe mẫu</b>: nghe theo tiếng gõ metronome để cảm mỗi loại giữ mấy phách.</p>"
+            },
+            {
+              "id": "o4",
+              "order": 4,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: ghép đen – trắng – tròn",
+              "interactive": {
+                "showDur": true,
+                "notes": [
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 4
+                  }
+                ]
+              }
+            },
+            {
+              "id": "o5",
+              "order": 5,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình phân biệt được đen (1) – trắng (2) – tròn (4) phách",
+                  "Mình nghe nốt tròn ngân dài nhất, trọn 4 tiếng gõ",
+                  "Mình đàn theo được cả câu, giữ đúng độ dài từng nốt"
+                ]
+              }
+            },
+            {
+              "id": "o6",
+              "order": 6,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tuyệt vời! Giờ bạn đọc được <b>ba độ dài</b> cơ bản. Bài sau thêm một thứ nữa: <b>dấu lặng</b> — khoảng <b>nghỉ</b> (im lặng) cũng là một phần của nhạc."
+            }
+          ]
         }
       ]
     }
