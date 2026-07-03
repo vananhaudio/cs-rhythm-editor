@@ -530,10 +530,12 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       {/* Cần đàn — quan trọng ngang khuông */}
       <div style={{ flexShrink: 0, background: '#F1ECE2', borderRadius: 12, padding: '9px 12px 6px', marginBottom: 9 }}>
         <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} h={112} />
-        <div style={{ textAlign: 'center', marginTop: 4, fontSize: 12.5, color: '#8A8478' }}>
-          {micOn ? <>Đàn nốt: <b style={{ color: ACCENT.c1 }}>{cur.label}</b>{heard ? <span style={{ color: '#A8A294' }}> · máy nghe: {heard}</span> : <span style={{ color: '#A8A294' }}> · máy đang nghe…</span>}</>
-            : playing ? <>Đang chạy: <b style={{ color: ACCENT.d }}>{cur.label}</b></> : 'Nghe mẫu, hoặc tự đàn cho máy chấm'}
-        </div>
+        {busy && (
+          <div style={{ textAlign: 'center', marginTop: 4, fontSize: 12.5, color: '#8A8478' }}>
+            {micOn ? <>Đàn nốt: <b style={{ color: ACCENT.c1 }}>{cur.label}</b>{heard ? <span style={{ color: '#A8A294' }}> · máy nghe: {heard}</span> : <span style={{ color: '#A8A294' }}> · máy đang nghe…</span>}</>
+              : <>Đang chạy: <b style={{ color: ACCENT.d }}>{cur.label}</b></>}
+          </div>
+        )}
       </div>
 
       {/* Nút điều khiển — sát đáy màn */}
