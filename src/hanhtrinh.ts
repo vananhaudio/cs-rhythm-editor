@@ -47,6 +47,14 @@ export const nextCourses = (code?: string | null): string[] => {
   return Object.entries(PREREQ).filter(([, reqs]) => reqs.includes(c)).map(([k]) => k)
 }
 
+// Khoá nền tảng còn THIẾU: các mã tiên quyết mà học viên CHƯA sở hữu (bỏ qua NM vì là khoá free ai cũng có).
+// `owned` = tập mã năng lực học viên đã có quyền. Trả mảng mã còn thiếu (vd vào DH2 mà chưa có DH1 → ['DH1']).
+export const missingPrereqs = (code: string | null | undefined, owned: Set<string>): string[] => {
+  const c = (code || '').trim().toUpperCase()
+  const reqs = PREREQ[c] ?? []
+  return reqs.filter(r => r !== 'NM' && !owned.has(r))
+}
+
 // Ghép MÃ LỚP: mã năng lực + dạng lớp + số 2 chữ số → 'DH2.KD16'. Trả null nếu năng lực không có dạng lớp.
 export const buildClassCode = (nangLuc?: string | null, so?: number | string): string | null => {
   const nl = (nangLuc || '').trim().toUpperCase()

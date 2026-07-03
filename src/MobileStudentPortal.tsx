@@ -10,6 +10,7 @@ import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { parseStrumConfig, configToSong } from './StrumConfigEditor'
 import ElearnLessonView from './elearn/ElearnLessonView'
+import { missingPrereqs, tenNangLuc } from './hanhtrinh'
 import { NavIcon } from './navIcons'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ const TOOL_TO_EX: Record<string, string> = Object.fromEntries(
 )
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
-  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; status?: string; sort_order?: number }
+  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; status?: string; sort_order?: number; code?: string | null }
 }
 interface Module { id: string; name: string; order_index: number }
 interface Lesson {
@@ -512,7 +513,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
   useEffect(() => {
     const loadCourses = () => supabase.from('edu_enrollments')
-      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order,is_free)')
+      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order,is_free,code)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(async ({ data }) => {
         const enr = (data ?? []) as unknown as Enrollment[]
@@ -1163,6 +1164,22 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             <div style={{ background: L.surface, padding: '52px 16px 16px', boxShadow: '0 1px 0 ' + L.border }}>
               <button onClick={goBack} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, marginBottom: 12 }}>‹</button>
               <div style={{ fontWeight: 800, fontSize: 20 }}>Danh sách bài học</div>
+              {/* ── Cảnh báo thiếu khoá nền tảng (vào DH2 mà chưa có DH1/NL1…) ── */}
+              {activeCourseId && (() => {
+                const cur = enrollments.find(e => e.course_id === activeCourseId)?.course
+                const owned = new Set(enrollments.map(e => (e.course?.code || '').trim().toUpperCase()).filter(Boolean))
+                const miss = missingPrereqs(cur?.code, owned)
+                if (miss.length === 0) return null
+                const names = miss.map(c => tenNangLuc(c) || c)
+                return (
+                  <div style={{ marginTop: 12, background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C2410C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <div style={{ fontSize: 13, color: '#7C2D12', lineHeight: 1.55 }}>
+                      <b>Bạn đang thiếu nền tảng.</b> Khoá này nối tiếp {names.length > 1 ? 'các khoá' : 'khoá'} <b>{names.join(' · ')}</b> mà bạn chưa học. Bạn vẫn xem được, nhưng nên hoàn thành {names.length > 1 ? 'chúng' : 'khoá đó'} trước để theo kịp và chơi vững hơn.
+                    </div>
+                  </div>
+                )
+              })()}
               {/* Progress summary */}
               {activeCourseId && lessons.length > 0 && (() => {
                 const done = lessons.filter(l => completedIds.has(l.id)).length
