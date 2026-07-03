@@ -1149,7 +1149,7 @@
               "logic": "NGHI",
               "type": "text",
               "title": "Đi qua 3 dây",
-              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài này đi từ vùng thấp (<b>Sol – La</b> dây 3) qua <b>Si – Đô – Rê</b> (dây 2) lên tới <b>Mi – Fa – Sol</b> (dây 1). Có chỗ nhảy xa (đoạn \"birthday dear...\") — cứ <b>chậm rãi</b>. Bấm <b>Nghe mẫu</b> để nghe đúng giai điệu trước.</p>"
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài này đi từ vùng thấp (<b>Sol – La</b> dây 3) qua <b>Si – Đô – Rê</b> (dây 2) lên tới <b>Mi – Fa – Sol</b> (dây 1). Có chỗ nhảy xa (đoạn \"birthday dear...\") — cứ <b>chậm rãi</b>. Bấm <b>Nghe mẫu</b> để nghe đúng giai điệu trước.</p><div style=\"margin-top:13px;background:#FBF0D8;border:1px solid #E6D3A8;border-left:4px solid #C99A2E;border-radius:6px;padding:10px 13px;font-size:14px;line-height:1.5;color:#7A5A12\"><b>Chưa cần để ý nhịp ngắn-dài (trường độ)</b> — cứ đàn cho <b>đúng nốt</b> là được. Chuyện nốt dài-ngắn sẽ học ở bài sau.</div>"
             },
             {
               "id": "h3",
@@ -1359,8 +1359,7 @@
                     "staff": 5,
                     "dur": 2
                   }
-                ],
-                "hint": "Chưa cần để ý <b>nhịp ngắn-dài (trường độ)</b> — cứ nghe máy chạy rồi đàn cho <b>đúng nốt</b> là được. Chuyện nốt dài-ngắn sẽ học ở bài sau."
+                ]
               }
             },
             {
@@ -1415,7 +1414,7 @@
               "logic": "NGHI",
               "type": "text",
               "title": "Giai điệu này quen mà!",
-              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Cả bài đi quanh vùng <b>Đô → Sol</b>, có chuyển qua lại giữa <b>dây 1</b> (Mi-Fa-Sol) và <b>dây 2</b> (Đô-Rê).<br/>Chơi <b>đều từng nốt</b> cho đúng cao độ trước — <b>nhịp điệu ngắn-dài</b> để bài sau.</p>"
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Cả bài đi quanh vùng <b>Đô → Sol</b>, có chuyển qua lại giữa <b>dây 1</b> (Mi-Fa-Sol) và <b>dây 2</b> (Đô-Rê).<br/>Chơi <b>đều từng nốt</b> cho đúng cao độ trước — <b>nhịp điệu ngắn-dài</b> để bài sau.</p><div style=\"margin-top:13px;background:#FBF0D8;border:1px solid #E6D3A8;border-left:4px solid #C99A2E;border-radius:6px;padding:10px 13px;font-size:14px;line-height:1.5;color:#7A5A12\"><b>Chưa cần để ý nhịp ngắn-dài (trường độ)</b> — cứ đàn cho <b>đúng nốt</b> là được. Chuyện nốt dài-ngắn sẽ học ở bài sau.</div>"
             },
             {
               "id": "j3",
@@ -1545,8 +1544,7 @@
                     "staff": 6,
                     "dur": 2
                   }
-                ],
-                "hint": "Chưa cần để ý <b>nhịp ngắn-dài (trường độ)</b> — cứ nghe máy chạy rồi đàn cho <b>đúng nốt</b> là được. Chuyện nốt dài-ngắn sẽ học ở bài sau."
+                ]
               }
             },
             {

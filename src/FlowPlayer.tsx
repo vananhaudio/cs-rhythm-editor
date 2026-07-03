@@ -378,7 +378,7 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         className={slideDir.current === 'next' ? '_fsNext' : '_fsPrev'}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        style={slide.type === 'narrated_slideshow' || slide.type === 'embedded_tool'
+        style={slide.type === 'narrated_slideshow' || slide.type === 'embedded_tool' || slide.type === 'note_practice'
           ? { flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }
           : { flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '18px 16px 12px' }}>
 

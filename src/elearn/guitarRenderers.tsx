@@ -350,25 +350,34 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
   const H = headTop + rows * rowH + 4
   const bY = (row: number) => headTop + row * rowH + 4 * gap            // dòng kẻ dưới cùng của hàng
   const noteY = (staff: number, row: number) => bY(row) - staff * (gap / 2)
+  const outerRef = useRef<HTMLDivElement>(null)
   const scRef = useRef<HTMLDivElement>(null)
+  const [availH, setAvailH] = useState(0)
+  useEffect(() => {
+    const el = outerRef.current; if (!el) return
+    const measure = () => setAvailH(el.clientHeight)
+    measure()
+    const ro = new ResizeObserver(measure); ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const activeRow = active >= 0 ? Math.floor(active / perRow) : -1
+  const visRows = availH > 0 ? Math.max(1, Math.floor((availH - 2) / rowH)) : rows   // số dòng hiện TRỌN VẸN
+  const innerH = Math.min(rows, visRows) * rowH + 2
   useEffect(() => {
     const el = scRef.current
-    if (el && activeRow >= 0) {
-      const frac = (headTop + activeRow * rowH + rowH / 2) / H
-      el.scrollTo({ top: Math.max(0, frac * el.scrollHeight - el.clientHeight / 2), behavior: 'smooth' })
-    }
+    if (el && activeRow >= 0) el.scrollTo({ top: activeRow * rowH, behavior: 'smooth' })   // cuộn snap theo trọn dòng
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRow])
+  }, [activeRow, innerH])
   const staffEls: React.ReactNode[] = []
   for (let row = 0; row < rows; row++) {
     for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={7} y={bY(row) - 2 * gap + 14} fontSize={56} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>)
   }
   return (
-    <div ref={scRef} style={{ maxHeight: 226, overflowY: 'auto', overflowX: 'hidden' }}>
-      <svg viewBox={`0 0 ${rowW} ${H}`} width="100%" style={{ display: 'block' }}>
-        {staffEls}
+    <div ref={outerRef} style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div ref={scRef} style={{ height: innerH, maxHeight: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
+        <svg viewBox={`0 0 ${rowW} ${H}`} width={rowW} height={H} style={{ display: 'block' }}>
+          {staffEls}
         {notes.map((n, i) => {
           const row = Math.floor(i / perRow), col = i % perRow
           const st = n.staff ?? 0, y = noteY(st, row), x = x0 + col * sp, on = i === active
@@ -386,7 +395,8 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
           )
         })}
         <style dangerouslySetInnerHTML={{ __html: '@keyframes _ntPing{0%{transform:scale(.6)}60%{transform:scale(1.18)}100%{transform:scale(1)}}' }} />
-      </svg>
+        </svg>
+      </div>
     </div>
   )
 }
@@ -496,9 +506,9 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const busy = playing || micOn
 
   return (
-    <div>
-      {/* Chọn tốc độ (cho Nghe mẫu) */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '12px 16px 10px', boxSizing: 'border-box' }}>
+      {/* Tốc độ */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexShrink: 0 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
         <div style={{ display: 'flex', gap: 4, padding: 4, background: '#EFE9DD', borderRadius: 12 }}>
           {speeds.map((s, i) => (
@@ -510,49 +520,47 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
         </div>
       </div>
 
-      {/* Khuông nhạc — cả câu, nốt đang chơi/cần đàn sáng lần lượt */}
+      {/* Khuông nhạc — TRỌNG TÂM, lấp đầy khoảng trống (luôn hiện trọn dòng) */}
       {showStaff && (
-        <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 6px 4px', marginBottom: cfg.hint ? 8 : 10 }}>
+        <div style={{ flex: 1, minHeight: 0, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '4px 6px', marginBottom: 9, display: 'flex' }}>
           <NoteSheet notes={notes} active={active} />
         </div>
       )}
-      {cfg.hint && (
-        <div style={{ background: '#FBF0D8', border: '1px solid #E6D3A8', borderLeft: '3px solid #C99A2E', borderRadius: 6, padding: '6px 10px', marginBottom: 8, fontSize: 11.5, lineHeight: 1.4, color: '#7A5A12' }}
-          dangerouslySetInnerHTML={{ __html: cfg.hint }} />
-      )}
 
-      {/* Cần đàn — gọn, nhường chỗ cho khuông */}
-      <div style={{ background: '#F1ECE2', borderRadius: 12, padding: '8px 10px 5px', marginBottom: 8 }}>
-        <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} h={88} />
+      {/* Cần đàn — quan trọng ngang khuông */}
+      <div style={{ flexShrink: 0, background: '#F1ECE2', borderRadius: 12, padding: '9px 12px 6px', marginBottom: 9 }}>
+        <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} h={112} />
         <div style={{ textAlign: 'center', marginTop: 4, fontSize: 12.5, color: '#8A8478' }}>
           {micOn ? <>Đàn nốt: <b style={{ color: ACCENT.c1 }}>{cur.label}</b>{heard ? <span style={{ color: '#A8A294' }}> · máy nghe: {heard}</span> : <span style={{ color: '#A8A294' }}> · máy đang nghe…</span>}</>
             : playing ? <>Đang chạy: <b style={{ color: ACCENT.d }}>{cur.label}</b></> : 'Nghe mẫu, hoặc tự đàn cho máy chấm'}
         </div>
       </div>
 
-      {/* Nút điều khiển — 1 dòng, gọn */}
-      {busy ? (
-        <button onClick={micOn ? stopMic : stop}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, padding: 12, border: 'none', borderRadius: 13, background: '#1C1A17', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15.5, fontWeight: 700 }}>
-          <span style={{ fontSize: 16 }}>⏹</span> {micOn ? 'Dừng tự đàn' : 'Dừng nghe mẫu'}
-        </button>
-      ) : (
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={start}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 8px', border: `1.5px solid ${ACCENT.a}`, borderRadius: 12, background: '#fff', color: ACCENT.d, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14.5, fontWeight: 700 }}>
-            ▶ Nghe mẫu
+      {/* Nút điều khiển — sát đáy màn */}
+      <div style={{ flexShrink: 0 }}>
+        {busy ? (
+          <button onClick={micOn ? stopMic : stop}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, padding: 13, border: 'none', borderRadius: 13, background: '#1C1A17', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15.5, fontWeight: 700 }}>
+            <span style={{ fontSize: 16 }}>⏹</span> {micOn ? 'Dừng tự đàn' : 'Dừng nghe mẫu'}
           </button>
-          <button onClick={startMic}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '11px 8px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14.5, fontWeight: 700 }}>
-            <MicIcon size={16} /> Tự đàn
-          </button>
-        </div>
-      )}
-      {done && (
-        <div style={{ marginTop: 10, padding: '9px 13px', borderRadius: 11, background: ACCENT.s, color: ACCENT.d, fontSize: 13.5, fontWeight: 600, textAlign: 'center' }}>
-          Tốt lắm! Bạn đàn đúng cả câu rồi — có thể sang bước sau.
-        </div>
-      )}
+        ) : (
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={start}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 8px', border: `1.5px solid ${ACCENT.a}`, borderRadius: 12, background: '#fff', color: ACCENT.d, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700 }}>
+              ▶ Nghe mẫu
+            </button>
+            <button onClick={startMic}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 8px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700 }}>
+              <MicIcon size={16} /> Tự đàn
+            </button>
+          </div>
+        )}
+        {done && (
+          <div style={{ marginTop: 8, padding: '8px 13px', borderRadius: 11, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+            Tốt lắm! Bạn đàn đúng cả câu rồi — có thể sang bước sau.
+          </div>
+        )}
+      </div>
     </div>
   )
 }
