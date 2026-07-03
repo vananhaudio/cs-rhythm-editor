@@ -233,18 +233,30 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
             {lines.map((_, li) => {
               const lineToks = tokens.filter((t) => t.line === li)
               if (lineToks.length === 0) return <div key={li} style={{ height: 26 }} />
+              // Nhóm các từ liên tiếp CÙNG Ô NHỊP thành 1 khối — để khi xuống dòng, cả ô
+              // đi cùng nhau (không bao giờ bị tách rời giữa chừng), vạch luôn thẳng hàng.
+              const groups: typeof lineToks[] = []
+              lineToks.forEach((t) => {
+                const last = groups[groups.length - 1]
+                if (last && barOf[last[0].gi] === barOf[t.gi]) last.push(t)
+                else groups.push([t])
+              })
               return (
-                <div key={li} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16 }}>
-                  {lineToks.map((t) => {
-                    const barStart = t.gi === 0 || cuts.has(t.gi)
+                <div key={li} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 18, rowGap: 10, marginBottom: 16 }}>
+                  {groups.map((g) => {
+                    const barStart = g[0].gi === 0 || cuts.has(g[0].gi)
                     return (
-                    <span key={t.gi} style={{ display: 'inline-flex', alignItems: 'stretch' }}>
-                      {barStart && <FullBoundary num={barOf[t.gi]} />}
-                      <span style={{ display: 'inline-flex', flexDirection: 'column', whiteSpace: 'pre', padding: '0 5px' }}>
-                        <span style={{ height: 26, fontSize: 20, fontWeight: 800, color: A.accent, lineHeight: '26px' }}>{t.chord ?? ''}</span>
-                        <span style={{ fontSize: 30, lineHeight: '42px' }}>{t.word}</span>
+                      <span key={g[0].gi} style={{ display: 'inline-flex', alignItems: 'stretch' }}>
+                        {barStart && <FullBoundary num={barOf[g[0].gi]} />}
+                        <span style={{ display: 'flex', gap: 10 }}>
+                          {g.map((t) => (
+                            <span key={t.gi} style={{ display: 'inline-flex', flexDirection: 'column', whiteSpace: 'pre' }}>
+                              <span style={{ height: 26, fontSize: 20, fontWeight: 800, color: A.accent, lineHeight: '26px' }}>{t.chord ?? ''}</span>
+                              <span style={{ fontSize: 30, lineHeight: '42px' }}>{t.word}</span>
+                            </span>
+                          ))}
+                        </span>
                       </span>
-                    </span>
                     )
                   })}
                 </div>
