@@ -365,11 +365,34 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
   const x0 = beatsPerBar > 0 ? 70 : 54               // có số chỉ nhịp → nốt đầu lùi phải cho thoáng; thường thì chừa khoảng sau khóa Sol
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
   const rowH = 72 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
-  const rows = Math.max(1, Math.ceil(notes.length / perRow))
-  const notesInRow = (r: number) => Math.min(perRow, notes.length - r * perRow)
-  // bài ô nhịp: mỗi DÒNG kết ngay sau vạch nhịp cuối của dòng đó (không thừa đuôi trống)
-  const rowRight = (r: number) => beatsPerBar > 0 ? x0 + (notesInRow(r) - 0.5) * sp + 10 : x0 + perRow * sp + 8
-  const rowW = beatsPerBar > 0 ? Math.max(...Array.from({ length: rows }, (_, r) => rowRight(r))) : x0 + perRow * sp + 8
+  // ── Bố cục: mỗi nốt có (x, dòng). Bài ô nhịp gom thành Ô rồi XUỐNG DÒNG theo ranh giới ô (không cắt ngang ô) ──
+  const NX: number[] = new Array(notes.length)
+  const NR: number[] = new Array(notes.length)
+  const bars: { x: number; row: number }[] = []
+  let rows = 1
+  if (beatsPerBar > 0) {
+    const measures: number[][] = []
+    let curM: number[] = [], cum = 0
+    notes.forEach((n, i) => { curM.push(i); cum += (n.dur ?? 1); if (Math.abs(cum % beatsPerBar) < 0.001) { measures.push(curM); curM = [] } })
+    if (curM.length) measures.push(curM)
+    let row = 0, col = 0
+    for (const m of measures) {
+      if (col > 0 && col + m.length > perRow) { row++; col = 0 }   // ô không vừa dòng → xuống dòng nguyên ô
+      for (const idx of m) { NX[idx] = x0 + col * sp; NR[idx] = row; col++ }
+      bars.push({ x: x0 + (col - 0.5) * sp, row })                 // vạch nhịp ngay sau nốt cuối ô
+    }
+    rows = row + 1
+  } else {
+    notes.forEach((_, i) => { NX[i] = x0 + (i % perRow) * sp; NR[i] = Math.floor(i / perRow) })
+    rows = Math.max(1, Math.ceil(notes.length / perRow))
+  }
+  const rowEndX = (r: number) => {
+    if (beatsPerBar <= 0) return x0 + perRow * sp + 8
+    let mx = x0
+    notes.forEach((_, i) => { if (NR[i] === r) mx = Math.max(mx, NX[i] + sp * 0.6) })
+    return mx + 6
+  }
+  const rowW = Math.max(...Array.from({ length: rows }, (_, r) => rowEndX(r)))
   const H = headTop + rows * rowH + 4
   const bY = (row: number) => headTop + row * rowH + 4 * gap            // dòng kẻ dưới cùng của hàng
   const noteY = (staff: number, row: number) => bY(row) - staff * (gap / 2)
@@ -383,7 +406,7 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
     const ro = new ResizeObserver(measure); ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  const activeRow = active >= 0 ? Math.floor(active / perRow) : -1
+  const activeRow = active >= 0 ? NR[active] : -1
   const visRows = availH > 0 ? Math.max(1, Math.floor((availH - 2) / rowH)) : rows   // số dòng hiện TRỌN VẸN
   const innerH = rows <= visRows ? H : visRows * rowH + 2   // vừa đủ → hiện TRỌN (không thanh cuộn thừa); dài hơn → cuộn theo dòng
   useEffect(() => {
@@ -393,29 +416,20 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
   }, [activeRow, innerH])
   const staffEls: React.ReactNode[] = []
   for (let row = 0; row < rows; row++) {
-    for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowRight(row)} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
+    for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowEndX(row)} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
     if (beatsPerBar > 0 && row === 0) {   // số chỉ nhịp chỉ ở DÒNG ĐẦU (như bản nhạc chuẩn), giữa khóa Sol và nốt đầu
       staffEls.push(<text key={`tsn${row}`} x={47} y={bY(row) - 3 * gap} textAnchor="middle" dominantBaseline="central" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
       staffEls.push(<text key={`tsd${row}`} x={47} y={bY(row) - 1 * gap} textAnchor="middle" dominantBaseline="central" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
     }
   }
-  // Vạch nhịp: kẻ dọc cuối mỗi ô (dồn dur đủ beatsPerBar)
-  const barEls: React.ReactNode[] = []
-  if (beatsPerBar > 0) {
-    let cum = 0
-    notes.forEach((n, i) => {
-      cum += (n.dur ?? 1)
-      if (Math.abs(cum % beatsPerBar) < 0.001) {           // nốt này kết thúc một ô
-        const row = Math.floor(i / perRow), col = i % perRow
-        const bx = Math.min(x0 + (col + 0.5) * sp, rowW - 8)
-        barEls.push(<line key={`bar${i}`} x1={bx} x2={bx} y1={bY(row) - 4 * gap} y2={bY(row)} stroke="#B0A588" strokeWidth={1.5} />)
-      }
-    })
-  }
+  // Vạch nhịp: kẻ dọc cuối mỗi ô (theo bố cục đã tính)
+  const barEls: React.ReactNode[] = bars.map((b, k) => (
+    <line key={`bar${k}`} x1={b.x} x2={b.x} y1={bY(b.row) - 4 * gap} y2={bY(b.row)} stroke="#B0A588" strokeWidth={1.5} />
+  ))
   // Nhãn tên nốt: đặt DƯỚI nốt thấp nhất của từng dòng (nốt trầm nằm dưới khuông sẽ không bị nhãn đè)
   const rowMaxY: number[] = []
-  notes.forEach((n, i) => { if (n.rest) return; const r = Math.floor(i / perRow), yy = noteY(n.staff ?? 0, r); if (rowMaxY[r] == null || yy > rowMaxY[r]) rowMaxY[r] = yy })
+  notes.forEach((n, i) => { if (n.rest) return; const r = NR[i], yy = noteY(n.staff ?? 0, r); if (rowMaxY[r] == null || yy > rowMaxY[r]) rowMaxY[r] = yy })
   const labelYOf = (row: number) => Math.max(bY(row) + 16, (rowMaxY[row] ?? bY(row)) + 15)
   return (
     <div ref={outerRef} style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -424,8 +438,7 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
           {staffEls}
           {barEls}
         {notes.map((n, i) => {
-          const row = Math.floor(i / perRow), col = i % perRow
-          const x = x0 + col * sp, on = i === active
+          const row = NR[i], x = NX[i], on = i === active
           const c = on ? ACCENT.c1 : '#6B6456'
           const dur = n.dur ?? 1
           if (n.rest) {   // dấu lặng — glyph Bravura quanh dòng giữa, không đầu nốt/đuôi

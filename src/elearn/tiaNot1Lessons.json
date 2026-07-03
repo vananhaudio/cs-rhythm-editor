@@ -4234,6 +4234,530 @@
           ]
         }
       ]
+    },
+    {
+      "module_id": "c7720000-0000-4000-8000-000000000001",
+      "name": "Chương 7: Ôn tập & Tốt nghiệp",
+      "order": 6,
+      "lessons": [
+        {
+          "key": "onCaoDo",
+          "lessonId": "a7720000-0000-4000-8000-000000000001",
+          "flowId": "f7720000-0000-4000-8000-000000000001",
+          "order": 1,
+          "title": "Bài 1: Ôn cao độ — đọc nốt khắp cần đàn",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "a1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Ôn lại: đọc nốt mọi dây",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Bắt đầu ôn tập! Câu này là <b>hợp âm rải Đô trưởng</b> đi lên qua <b>cả sáu dây</b> — mỗi dây một nốt (Sol–Đô–Mi–Sol–Đô–Mi). Đọc tên nốt và tìm đúng vị trí trên từng dây nhé."
+            },
+            {
+              "id": "a2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: rải qua 6 dây",
+              "interactive": {
+                "notes": [
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7
+                  }
+                ]
+              }
+            },
+            {
+              "id": "a3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đọc và tìm đúng nốt trên cả 6 dây",
+                  "Mình chuyển từ dây trầm nhất lên dây cao mượt"
+                ]
+              }
+            },
+            {
+              "id": "a4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Đọc nốt khắp cần đàn — bạn làm được rồi! Bài sau ôn <b>trường độ và ô nhịp</b>."
+            }
+          ]
+        },
+        {
+          "key": "onNhip",
+          "lessonId": "a7720000-0000-4000-8000-000000000002",
+          "flowId": "f7720000-0000-4000-8000-000000000002",
+          "order": 2,
+          "title": "Bài 2: Ôn trường độ & ô nhịp",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "n1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Ôn lại: đọc nhịp",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Ôn cả bốn loại: nốt <b>đen</b> (1), <b>trắng</b> (2), <b>tròn</b> (4) và <b>dấu lặng</b> — trong nhịp <b>4/4</b>. Nghe mẫu có đếm lấy đà và metronome."
+            },
+            {
+              "id": "n2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: ôn nhịp 4/4",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "",
+                    "freq": 0,
+                    "rest": true,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 4
+                  }
+                ]
+              }
+            },
+            {
+              "id": "n3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đọc đúng đen/trắng/tròn/lặng",
+                  "Mỗi ô mình giữ đủ 4 phách theo metronome"
+                ]
+              }
+            },
+            {
+              "id": "n4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Trường độ và ô nhịp — chắc rồi! Giờ tới <b>bài tốt nghiệp</b>: đọc trọn một bản nhạc hoàn chỉnh."
+            }
+          ]
+        },
+        {
+          "key": "totNghiep",
+          "lessonId": "a7720000-0000-4000-8000-000000000003",
+          "flowId": "f7720000-0000-4000-8000-000000000003",
+          "order": 3,
+          "title": "Bài 3: TỐT NGHIỆP — Ode to Joy (trọn bài)",
+          "reward_xp": 25,
+          "slides": [
+            {
+              "id": "t1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Bài thẩm định tốt nghiệp",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Đây rồi — <b>bài tốt nghiệp</b>! Đọc trọn <b>Ode to Joy</b> (8 ô nhịp) như một bản nhạc thật: <b>khóa Sol · số chỉ nhịp 4/4 · vạch nhịp · nốt đen/trắng</b>. Gói gọn mọi thứ bạn đã học."
+            },
+            {
+              "id": "t2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Trọn 8 ô",
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài chia <b>8 ô</b>, mỗi ô 4 phách. Câu đầu kết ở nốt trắng <b>Rê</b> (nửa cadence), câu sau kết trọn ở nốt trắng <b>Đô</b> (kết bài). Nghe mẫu một lượt rồi đàn theo — <b>chắc từng ô</b>, giữ nhịp đều.</p>"
+            },
+            {
+              "id": "t3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Ode to Joy (trọn bài)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "t4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra tốt nghiệp",
+              "interactive": {
+                "items": [
+                  "Mình đọc được trọn bản nhạc: cao độ + trường độ + ô nhịp",
+                  "Mình chơi liền 8 ô, giữ nhịp đều theo metronome",
+                  "Mình nghe ra trọn giai điệu Ode to Joy, kết đẹp ở nốt Đô"
+                ]
+              }
+            },
+            {
+              "id": "t5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "🎓 Chúc mừng tốt nghiệp!",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "<b>Xuất sắc!</b> Bạn đã hoàn thành <b>Tỉa Nốt 1</b> — từ nốt đầu tiên tới đọc trọn một bản nhạc thật. Bạn giờ biết: đọc nốt <b>khắp cần đàn</b>, hiểu <b>trường độ</b>, và đọc theo <b>ô nhịp</b>. Đây là nền tảng vững cho cả hành trình guitar phía trước. Tự hào về bạn! 🎸🎓"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
