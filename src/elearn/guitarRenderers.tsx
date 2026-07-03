@@ -361,7 +361,8 @@ export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: bo
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
 export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: { notes: NoteItem[]; active: number; showDur?: boolean; beatsPerBar?: number }) {
-  const gap = 9, x0 = 54, sp = 33, perRow = 8, headTop = 20   // gap: khoảng dòng kẻ (khuông cao thoáng, cân với cỡ nốt); x0 chừa khoảng sau khóa Sol; 8 nốt/dòng
+  const gap = 9, sp = 33, perRow = 8, headTop = 20   // gap: khoảng dòng kẻ (khuông cao thoáng, cân với cỡ nốt); 8 nốt/dòng
+  const x0 = beatsPerBar > 0 ? 64 : 54               // có số chỉ nhịp → nốt đầu lùi phải cho thoáng; thường thì chừa khoảng sau khóa Sol
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
   const rowH = 72 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
   const rows = Math.max(1, Math.ceil(notes.length / perRow))
@@ -393,8 +394,8 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
     for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
     if (beatsPerBar > 0 && row === 0) {   // số chỉ nhịp chỉ ở DÒNG ĐẦU (như bản nhạc chuẩn), giữa khóa Sol và nốt đầu
-      staffEls.push(<text key={`tsn${row}`} x={40} y={bY(row) - 2.25 * gap} textAnchor="middle" fontSize={1.95 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
-      staffEls.push(<text key={`tsd${row}`} x={40} y={bY(row) - 0.3 * gap} textAnchor="middle" fontSize={1.95 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
+      staffEls.push(<text key={`tsn${row}`} x={41} y={bY(row) - 2.3 * gap} textAnchor="middle" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
+      staffEls.push(<text key={`tsd${row}`} x={41} y={bY(row) - 0.3 * gap} textAnchor="middle" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
     }
   }
   // Vạch nhịp: kẻ dọc cuối mỗi ô (dồn dur đủ beatsPerBar)
