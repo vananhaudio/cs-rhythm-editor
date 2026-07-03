@@ -4,7 +4,7 @@
 // (App chưa nghe được tay đàn — phần chấm bằng mic để Giai đoạn 3.)
 import { useState, useEffect, useRef } from 'react'
 import { ACCENT, STRINGS, freqOfNum, colorOfNum, widthOfNum, stringByNum } from './guitarConst'
-import { playTone, playSequence } from './audio'
+import { playTone, playSequence, playClick } from './audio'
 import { detectPitch, pitchClass } from './pitch'
 import { playGuitarNote } from '../audioEngine'   // engine guitar (nốt ngân độc lập) — để rải hợp âm không bị cắt
 
@@ -466,9 +466,12 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const cursorR = useRef(0)
   const stableR = useRef(0)
   const releaseR = useRef(false)
+  const metro = useRef<number | null>(null)   // metronome (chỉ bài trường độ)
 
+  const stopMetro = () => { if (metro.current) { clearInterval(metro.current); metro.current = null } }
   const stop = () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null }
+    stopMetro()
     setPlaying(false); setCursor(-1)
   }
   const stopMic = () => {
@@ -477,14 +480,15 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
     try { audioCtxR.current?.close() } catch { /* */ } audioCtxR.current = null
     setMicOn(false); setHeard(null)
   }
-  useEffect(() => () => { if (timer.current) clearInterval(timer.current); if (micTimer.current) clearInterval(micTimer.current); micStreamR.current?.getTracks().forEach(t => t.stop()); try { audioCtxR.current?.close() } catch { /* */ } }, [])
+  useEffect(() => () => { if (timer.current) clearInterval(timer.current); if (micTimer.current) clearInterval(micTimer.current); if (metro.current) clearInterval(metro.current); micStreamR.current?.getTracks().forEach(t => t.stop()); try { audioCtxR.current?.close() } catch { /* */ } }, [])
 
   // ── Nghe mẫu: máy chạy CÓ TRƯỜNG ĐỘ (mỗi nốt giữ đúng số phách = dur) ──
   const start = () => {
-    stopMic()
+    stopMic(); stopMetro()
     if (timer.current) clearTimeout(timer.current)
     setPlaying(true); setDone(false); beat.current = 0; passedR.current = false
     const beatMs = 60000 / speeds[speedIdx].bpm
+    if (cfg.showDur) { playClick(); metro.current = window.setInterval(() => playClick(), beatMs) }   // metronome đập theo phách (bài trường độ)
     const tick = () => {
       const i = beat.current
       setCursor(i); if (!notes[i].rest) playTone(notes[i].freq)   // dấu lặng = im lặng đúng số phách

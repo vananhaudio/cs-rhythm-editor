@@ -64,6 +64,24 @@ export function playTone(freq: number) {
   } catch { /* trình duyệt chặn audio — bỏ qua */ }
 }
 
+// Tiếng "tick" metronome — blip ngắn, gọn; KHÔNG cắt tiếng đàn đang vang (không đụng _voices).
+// accent = phách mạnh (cao & to hơn) để định hướng đầu ô nhịp.
+export function playClick(accent = false) {
+  const ac = ctx()
+  if (!ac) return
+  try {
+    const t = ac.currentTime
+    const o = ac.createOscillator(); o.type = 'square'
+    o.frequency.value = accent ? 2000 : 1300
+    const g = ac.createGain()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(accent ? 0.3 : 0.19, t + 0.002)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045)
+    o.connect(g); g.connect(ac.destination)
+    o.start(t); o.stop(t + 0.06)
+  } catch { /* trình duyệt chặn audio — bỏ qua */ }
+}
+
 // Gảy 1 chuỗi dây liền mạch (dùng cuối bài LÀM: "nghe lại 6 dây bạn vừa gảy")
 export function playSequence(freqs: number[], gapMs = 380) {
   freqs.forEach((f, i) => setTimeout(() => playTone(f), i * gapMs))
