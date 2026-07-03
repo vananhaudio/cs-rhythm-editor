@@ -360,7 +360,7 @@ export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: bo
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
 export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[]; active: number; showDur?: boolean }) {
-  const gap = 7.2, x0 = 40, sp = 34, perRow = 8, headTop = 18   // gọn hơn: nốt nhỏ lại, 8 nốt/dòng, dòng thấp → thấy nhiều khuông
+  const gap = 7.2, x0 = 54, sp = 33, perRow = 8, headTop = 18   // x0: chừa khoảng sau khóa Sol (cân đối như bản nhạc chuẩn); 8 nốt/dòng
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
   const rowH = 60 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
   const rows = Math.max(1, Math.ceil(notes.length / perRow))
@@ -380,7 +380,7 @@ export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[
   }, [])
   const activeRow = active >= 0 ? Math.floor(active / perRow) : -1
   const visRows = availH > 0 ? Math.max(1, Math.floor((availH - 2) / rowH)) : rows   // số dòng hiện TRỌN VẸN
-  const innerH = Math.min(rows, visRows) * rowH + 2
+  const innerH = rows <= visRows ? H : visRows * rowH + 2   // vừa đủ → hiện TRỌN (không thanh cuộn thừa); dài hơn → cuộn theo dòng
   useEffect(() => {
     const el = scRef.current
     if (el && activeRow >= 0) el.scrollTo({ top: activeRow * rowH, behavior: 'smooth' })   // cuộn snap theo trọn dòng
