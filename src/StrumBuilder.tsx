@@ -4,6 +4,7 @@
 // LÁT 1a: khung + xem ảnh sheet + dán & render lời-hợp âm.
 // LÁT 1b: bấm khe cắm/xoá vạch nhịp, đánh số ô, tóm tắt hợp âm/ô, lưu localStorage.
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { supabase } from './supabase'
 import type { StrumDraft } from './strumDrafts'
 import { saveDraft } from './strumDrafts'
 import { loadCseElement } from './googleImageSearch'
@@ -104,6 +105,34 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const [sheetBroken, setSheetBroken] = useState(false)           // trang nguồn chặn hotlink → ảnh không tải được ở đây
   const cseBox = useRef<HTMLDivElement>(null)
   const cseRendered = useRef(false)
+  // Bấm kết quả "Web" (Hợp Âm Việt…) — thay vì đẩy sang trang đó, TỰ CHUI VÀO lục ảnh sheet
+  // trong trang (Edge Function server-side, tránh CORS) → hiện lưới ảnh, bấm chọn tại chỗ.
+  const [pageImages, setPageImages] = useState<string[] | null>(null)
+  const [pageImagesLoading, setPageImagesLoading] = useState(false)
+  const [pageImagesErr, setPageImagesErr] = useState<string | null>(null)
+  const [pageImagesSource, setPageImagesSource] = useState<string | null>(null)
+  const pageImagesActive = pageImagesLoading || pageImages !== null || pageImagesErr !== null
+
+  const fetchImagesFromPage = async (url: string) => {
+    setPageImagesLoading(true); setPageImagesErr(null); setPageImages(null); setPageImagesSource(url)
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-page-images', { body: { url } })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      const imgs: string[] = data?.images || []
+      if (imgs.length === 0) throw new Error('Không tìm thấy ảnh nào trong trang này.')
+      setPageImages(imgs)
+    } catch (e: any) {
+      setPageImagesErr(e?.message || 'Không lục được ảnh trong trang này.')
+    } finally {
+      setPageImagesLoading(false)
+    }
+  }
+  const pickPageImage = (url: string) => {
+    setSheetUrl(url); setSheetBroken(false); setZoom(1)
+    setPageImages(null); setPageImagesErr(null); setPageImagesSource(null); setShowCse(false)
+  }
+  const backToSearchResults = () => { setPageImages(null); setPageImagesErr(null); setPageImagesSource(null); setShowCse(true) }
 
   const doSearch = async () => {
     const q = searchQ.trim(); if (!q) return
@@ -239,7 +268,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
         {sheetOpen && <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
           {/* Kết quả tìm Google (widget CSE) — luôn mounted để render 1 lần, ẩn/hiện bằng display.
               Bấm ảnh trong kết quả → chộp ảnh gốc từ popup preview điền vào ô sheet. */}
-          <div style={{ display: showCse ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
+          <div style={{ display: showCse && !pageImagesActive ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
             onClickCapture={(e) => {
               const t = e.target as HTMLElement
               // Ảnh nhỏ trong LƯỚI kết quả — KHÔNG chặn gì, để Google tự mở popup phóng to bằng
@@ -259,18 +288,45 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
               // Kết quả Web (Hợp Âm Việt…) — Google ép target=_blank + tự window.open() bằng JS riêng
               // của họ trên chính thẻ <a>. Phải chặn sự kiện lan xuống TỚI thẻ đó (stopPropagation ở
               // capture, chạy trước khi mã của Google kịp thấy) — chỉ preventDefault là chưa đủ.
+              // Thay vì đẩy sang trang đó, TỰ CHUI VÀO lục ảnh sheet trong trang (fetchImagesFromPage).
               const a = t.closest('a[href]') as HTMLAnchorElement | null
               if (a && a.target === '_blank' && a.href) {
                 e.preventDefault()
                 e.stopPropagation()
                 ;(e.nativeEvent as Event).stopImmediatePropagation()
-                const href = a.href
-                setTimeout(() => { window.location.href = href }, 0)
+                fetchImagesFromPage(a.href)
               }
             }}>
             <div ref={cseBox} />
           </div>
-          {!showCse && (sheetUrl
+
+          {pageImagesActive && (
+            <div style={{ background: '#fff', minHeight: '100%', padding: 14 }}>
+              <button onClick={backToSearchResults} style={{ ...ghost, marginBottom: 12 }}>← Quay lại kết quả</button>
+              {pageImagesLoading && <div style={{ color: A.sub, fontSize: 13.5, textAlign: 'center', padding: 24 }}>⏳ Đang lục ảnh trong trang…</div>}
+              {pageImagesErr && (
+                <div style={{ color: '#B91C1C', fontSize: 13.5, textAlign: 'center', padding: 16, lineHeight: 1.7 }}>
+                  {pageImagesErr}
+                  {pageImagesSource && (
+                    <div style={{ marginTop: 10 }}>
+                      <a href={pageImagesSource} target="_blank" rel="noreferrer" style={{ color: A.accent, fontWeight: 700 }}>Mở trang này để xem trực tiếp ↗</a>
+                    </div>
+                  )}
+                </div>
+              )}
+              {pageImages && pageImages.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${narrow ? 3 : 5}, 1fr)`, gap: 6 }}>
+                  {pageImages.map((u, i) => (
+                    <img key={i} src={u} alt="" referrerPolicy="no-referrer" onClick={() => pickPageImage(u)}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, cursor: 'pointer', background: '#F4F4F5', border: `1px solid ${A.border}` }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!showCse && !pageImagesActive && (sheetUrl
             ? <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
                 {sheetBroken
                   ? <div style={{ color: '#FCA5A5', fontSize: 13.5, textAlign: 'center', padding: 24, lineHeight: 1.7 }}>Trang nguồn chặn hiển thị ảnh này ở đây.<br />Bấm <b>🔍 Tìm</b> chọn ảnh khác, hoặc mở tab <b>Web</b> để xem trực tiếp trên trang gốc.</div>

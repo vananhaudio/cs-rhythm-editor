@@ -159,7 +159,13 @@ export function NarratedSlideshow({
     if (wasPlaying) audio.play().catch(console.error)
   }, [slideStart])
 
+  // Ref theo dõi slide hiện tại — dùng để phân biệt echo (audio đẩy) với tap thật, tránh vòng lặp seek.
+  const currentRef = useRef(0)
+  useEffect(() => { currentRef.current = current }, [current])
+
   const handleDeckSlideChange = useCallback((i: number) => {
+    // Nếu deck báo đúng slide đang chạy → đây là ECHO của goTo do audio đẩy, KHÔNG tua audio (nếu không sẽ kẹt lặp).
+    if (i === currentRef.current) return
     setCurrent(i)
     seekTo(i)
   }, [seekTo])

@@ -503,6 +503,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const active = (playing || micOn) ? cursor : -1
   const cur = notes[cursor >= 0 ? cursor % notes.length : 0]
   const showStaff = cfg.showStaff ?? notes.some(n => n.staff != null)
+  const sheetRows = Math.ceil(notes.length / 7)   // khớp perRow=7 trong NoteSheet; 1 dòng = bài ngắn
   const busy = playing || micOn
 
   return (
@@ -522,8 +523,16 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
 
       {/* Khuông nhạc — TRỌNG TÂM, lấp đầy khoảng trống (luôn hiện trọn dòng) */}
       {showStaff && (
-        <div style={{ flex: 1, minHeight: 0, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '4px 6px', marginBottom: 9, display: 'flex' }}>
-          <NoteSheet notes={notes} active={active} />
+        <div style={{ flex: 1, minHeight: 0, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '4px 6px', marginBottom: 9, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+            <NoteSheet notes={notes} active={active} />
+          </div>
+          {cfg.hint && sheetRows <= 1 && (   // bài ngắn còn chỗ → dùng khoảng trống để dặn dò
+            <div style={{ flexShrink: 0, margin: '2px 8px 8px', padding: '9px 13px', background: '#FBF3E7', border: '1px solid #F0E2C9', borderRadius: 11, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: 15, lineHeight: '19px' }}>💡</span>
+              <span style={{ fontSize: 13.5, lineHeight: '19px', color: '#8A6D3B', fontWeight: 500 }}>{cfg.hint}</span>
+            </div>
+          )}
         </div>
       )}
 
