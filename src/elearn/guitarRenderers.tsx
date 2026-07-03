@@ -14,17 +14,18 @@ export interface NoteChartCfg { highlight?: string[] }
 export interface StrumCfg { sequence?: number[] }                 // dãy số dây cần gảy đúng thứ tự
 export interface EarCfg { pool?: number[]; rounds?: number; passScore?: number }
 // "Đánh theo mẫu": máy chạy chuỗi nốt theo nhịp, học viên bắt chước
-export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number; dur?: number }  // dur = số phách (mặc định 1) — cho "Nghe mẫu" chạy đúng trường độ
+export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number; dur?: number; rest?: boolean }  // dur = số phách (mặc định 1) — cho "Nghe mẫu" chạy đúng trường độ; rest = dấu lặng (im lặng đúng dur)
 // "Xem nốt": hình minh hoạ tĩnh (khuông nhạc và/hoặc cần đàn) + nút nghe thử
 export interface NoteShowCfg {
   label?: string; freq?: number; string?: number; fret?: number; staff?: number
-  showStaff?: boolean; showFretboard?: boolean; caption?: string
+  showStaff?: boolean; showFretboard?: boolean; caption?: string; dur?: number   // dur ≥2 → nốt trắng/tròn đầu rỗng (dạy trường độ)
 }
 export interface NotePracticeCfg {
   notes?: NoteItem[]                            // chuỗi nốt (vd 4× Mi). string/fret để vẽ cần đàn, staff = vị trí trên khuông (0 = dòng kẻ dưới cùng = Mi/E4)
   speeds?: { label: string; bpm: number }[]    // các tốc độ chọn
   showStaff?: boolean                           // hiện khuông nhạc (mặc định có nếu nốt có staff)
   hint?: string                                 // dòng nhắc nhỏ dưới khuông (vd: chưa cần để ý trường độ)
+  showDur?: boolean                             // vẽ nốt đen/trắng/tròn theo dur (chỉ chương Trường độ); mặc định mọi nốt giống nhau
 }
 // "Chia ô nhịp": đối chiếu SHEET (vẽ sạch từ nốt MusicXML) ↔ LỜI, bút kẻ vạch chia ô nhịp
 export interface SNote { pos?: number; rest?: boolean; dur: 'e' | 'q' | 'h' | 'w' }  // pos = bậc trên khuông (E4=0, mỗi bậc = nửa dòng), dur = trường độ
@@ -328,8 +329,9 @@ function ledgersFor(staff: number): number[] {
 // Khuông nhạc nhỏ — dạy thụ động vị trí nốt.
 // staff = số bậc (nửa-dòng) tính từ DÒNG KẺ DƯỚI CÙNG (=0). LƯU Ý: guitar viết CAO HƠN THỰC TẾ 1 QUÃNG 8,
 // nên Mi dây-1-buông (E4 thực) VIẾT là E5 = KHE 4 = staff 7 (gần đỉnh). Dây2(B4)=4, dây3(G4)=2.
-export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean; label: string; staff?: number; pulse?: number }) {
+export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: boolean; label: string; staff?: number; pulse?: number; dur?: number }) {
   const W = 240, top = 22, gap = 11
+  const hollow = (dur ?? 1) >= 2, noStem = (dur ?? 1) >= 4    // nốt trắng/tròn = đầu rỗng; nốt tròn = không đuôi
   const H = 92 + (staff < -1 ? Math.round((-1 - staff) * (gap / 2)) + 20 : 0)   // giãn cao cho nốt trầm (dây 5–6) không tràn khung
   const lineY = (i: number) => top + i * gap            // i=0 dòng trên cùng … i=4 dòng dưới cùng
   const noteY = lineY(4) - staff * (gap / 2)            // mỗi bậc = nửa khoảng dòng
@@ -345,8 +347,10 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
       {/* Khóa Sol — font nhạc chuẩn Bravura (SMuFL U+E050); 1 em = 4 khoảng dòng; baseline trên dòng Sol lineY(3) để xoắn ốc ôm đúng dòng */}
       <text x={9} y={lineY(3)} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>
       <g key={pulse} style={{ animation: active ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${noteX}px ${noteY}px` }}>
-        <ellipse cx={noteX} cy={noteY} rx={9} ry={6.6} fill={col} transform={`rotate(-18 ${noteX} ${noteY})`} />
-        <line x1={stemX} x2={stemX} y1={noteY + (stemUp ? -2 : 2)} y2={noteY + (stemUp ? -38 : 38)} stroke={col} strokeWidth={2.2} />
+        {hollow
+          ? <ellipse cx={noteX} cy={noteY} rx={9.4} ry={6.9} fill="none" stroke={col} strokeWidth={2.8} transform={`rotate(-18 ${noteX} ${noteY})`} />
+          : <ellipse cx={noteX} cy={noteY} rx={9} ry={6.6} fill={col} transform={`rotate(-18 ${noteX} ${noteY})`} />}
+        {!noStem && <line x1={stemX} x2={stemX} y1={noteY + (stemUp ? -2 : 2)} y2={noteY + (stemUp ? -38 : 38)} stroke={col} strokeWidth={2.2} />}
       </g>
       <text x={noteX} y={H - 3} textAnchor="middle" fontSize={13} fontWeight="700" fill={col}>{label}</text>
     </svg>
@@ -355,7 +359,7 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
 
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
-export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number }) {
+export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[]; active: number; showDur?: boolean }) {
   const gap = 7.2, x0 = 40, sp = 34, perRow = 8, headTop = 18   // gọn hơn: nốt nhỏ lại, 8 nốt/dòng, dòng thấp → thấy nhiều khuông
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
   const rowH = 60 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
@@ -389,7 +393,7 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
   }
   // Nhãn tên nốt: đặt DƯỚI nốt thấp nhất của từng dòng (nốt trầm nằm dưới khuông sẽ không bị nhãn đè)
   const rowMaxY: number[] = []
-  notes.forEach((n, i) => { const r = Math.floor(i / perRow), yy = noteY(n.staff ?? 0, r); if (rowMaxY[r] == null || yy > rowMaxY[r]) rowMaxY[r] = yy })
+  notes.forEach((n, i) => { if (n.rest) return; const r = Math.floor(i / perRow), yy = noteY(n.staff ?? 0, r); if (rowMaxY[r] == null || yy > rowMaxY[r]) rowMaxY[r] = yy })
   const labelYOf = (row: number) => Math.max(bY(row) + 16, (rowMaxY[row] ?? bY(row)) + 15)
   return (
     <div ref={outerRef} style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -398,16 +402,32 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
           {staffEls}
         {notes.map((n, i) => {
           const row = Math.floor(i / perRow), col = i % perRow
-          const st = n.staff ?? 0, y = noteY(st, row), x = x0 + col * sp, on = i === active
+          const x = x0 + col * sp, on = i === active
           const c = on ? ACCENT.c1 : '#6B6456'
+          const dur = n.dur ?? 1
+          if (n.rest) {   // dấu lặng — glyph Bravura quanh dòng giữa, không đầu nốt/đuôi
+            const glyph = dur >= 4 ? 0xE4E3 : dur >= 2 ? 0xE4E4 : dur >= 1 ? 0xE4E5 : 0xE4E6
+            return (
+              <g key={i}>
+                {on && <rect x={x - 12} y={bY(row) - 4 * gap - 4} width={24} height={4 * gap + 12} rx={6} fill="rgba(194,98,46,0.13)" />}
+                <text x={x} y={bY(row) - 2 * gap} textAnchor="middle" fontFamily="Bravura" fontSize={4 * gap} fill={c}>{String.fromCodePoint(glyph)}</text>
+                <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 11 : 10} fontWeight={600} fill={c}>lặng</text>
+              </g>
+            )
+          }
+          const st = n.staff ?? 0, y = noteY(st, row)
           const stemUp = st < 4, stemX = x + (stemUp ? 6.5 : -6.5)
+          const hollow = showDur && dur >= 2      // nốt trắng/tròn = đầu rỗng
+          const noStem = showDur && dur >= 4      // nốt tròn = không đuôi
           return (
             <g key={i}>
               {on && <rect x={x - 12} y={y - 30} width={24} height={46} rx={6} fill="rgba(194,98,46,0.13)" />}
               {ledgersFor(st).map(e => { const ly = bY(row) - e * (gap / 2); return <line key={`lg${e}`} x1={x - 10} x2={x + 10} y1={ly} y2={ly} stroke="#CBBF9E" strokeWidth={1.2} /> })}
               <g key={'p' + active} style={{ animation: on ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${x}px ${y}px` }}>
-                <ellipse cx={x} cy={y} rx={on ? 8 : 7} ry={on ? 6 : 5.2} fill={c} transform={`rotate(-18 ${x} ${y})`} />
-                <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -21 : 21)} stroke={c} strokeWidth={2} />
+                {hollow
+                  ? <ellipse cx={x} cy={y} rx={on ? 8.3 : 7.4} ry={on ? 6.1 : 5.4} fill="none" stroke={c} strokeWidth={2.3} transform={`rotate(-18 ${x} ${y})`} />
+                  : <ellipse cx={x} cy={y} rx={on ? 8 : 7} ry={on ? 6 : 5.2} fill={c} transform={`rotate(-18 ${x} ${y})`} />}
+                {!noStem && <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -21 : 21)} stroke={c} strokeWidth={2} />}
               </g>
               <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 11.5 : 10.5} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
             </g>
@@ -467,7 +487,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
     const beatMs = 60000 / speeds[speedIdx].bpm
     const tick = () => {
       const i = beat.current
-      setCursor(i); playTone(notes[i].freq)
+      setCursor(i); if (!notes[i].rest) playTone(notes[i].freq)   // dấu lặng = im lặng đúng số phách
       const d = (notes[i].dur ?? 1) * beatMs                 // giữ nốt đúng trường độ rồi mới sang nốt kế
       beat.current++
       if (beat.current >= notes.length) {                    // hết bài → cho nốt cuối ngân đủ rồi DỪNG (không lặp lại)
@@ -548,7 +568,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       {showStaff && (
         <div style={{ flex: 1, minHeight: 0, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '4px 6px', marginBottom: 9, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-            <NoteSheet notes={notes} active={active} />
+            <NoteSheet notes={notes} active={active} showDur={cfg.showDur} />
           </div>
           {cfg.hint && sheetRows <= 1 && (   // bài ngắn còn chỗ → dùng khoảng trống để dặn dò
             <div style={{ flexShrink: 0, margin: '2px 8px 8px', padding: '9px 13px', background: '#FBF3E7', border: '1px solid #F0E2C9', borderRadius: 11, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -603,7 +623,7 @@ export function NoteShow({ cfg }: { cfg: NoteShowCfg }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {showStaff && (
         <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 8px 2px' }}>
-          <NoteStaff active label={label} staff={cfg.staff ?? 0} />
+          <NoteStaff active label={label} staff={cfg.staff ?? 0} dur={cfg.dur} />
         </div>
       )}
       {showFb && (

@@ -2893,6 +2893,162 @@
           ]
         }
       ]
+    },
+    {
+      "module_id": "c5720000-0000-4000-8000-000000000001",
+      "name": "Chương 5: Đọc nhịp — dài & ngắn",
+      "order": 4,
+      "lessons": [
+        {
+          "key": "denTrang",
+          "lessonId": "a5720000-0000-4000-8000-000000000001",
+          "flowId": "f5720000-0000-4000-8000-000000000001",
+          "order": 1,
+          "title": "Bài 1: Nốt đen & nốt trắng",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "n1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Nốt dài, nốt ngắn",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tới giờ ta chơi mọi nốt <b>đều nhau</b> — nhưng thật ra mỗi nốt có <b>độ dài riêng</b>. Có nốt ngân ngắn, có nốt ngân dài. Bắt đầu bằng <b>hai loại cơ bản</b> nhất: nốt <b>đen</b> và nốt <b>trắng</b>."
+            },
+            {
+              "id": "n2",
+              "order": 2,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Nốt đen — 1 phách",
+              "interactive": {
+                "label": "Mi",
+                "freq": 329.63,
+                "string": 1,
+                "fret": 0,
+                "staff": 7,
+                "dur": 1,
+                "showStaff": true,
+                "showFretboard": false,
+                "caption": "<b>Nốt đen</b>: đầu nốt <b>đặc</b>, có đuôi. Ngân <b>1 phách</b> — đây là đơn vị đếm cơ bản (\"một\")."
+              }
+            },
+            {
+              "id": "n3",
+              "order": 3,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Nốt trắng — 2 phách",
+              "interactive": {
+                "label": "Mi",
+                "freq": 329.63,
+                "string": 1,
+                "fret": 0,
+                "staff": 7,
+                "dur": 2,
+                "showStaff": true,
+                "showFretboard": false,
+                "caption": "<b>Nốt trắng</b>: đầu nốt <b>rỗng</b>, có đuôi. Ngân <b>2 phách</b> — dài <b>gấp đôi</b> nốt đen. Vẫn là nốt Mi, chỉ khác <b>độ dài</b>."
+              }
+            },
+            {
+              "id": "n4",
+              "order": 4,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Đếm phách",
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Cách cảm nhận: nốt <b>đen</b> đếm <b>\"1\"</b> rồi gảy nốt kế; nốt <b>trắng</b> giữ ngân qua <b>\"1 – 2\"</b> mới sang nốt kế. Bấm <b>Nghe mẫu</b> ở dưới để nghe nốt trắng <b>ngân lâu gấp đôi</b>.</p>"
+            },
+            {
+              "id": "n5",
+              "order": 5,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: đen – đen – trắng",
+              "interactive": {
+                "showDur": true,
+                "notes": [
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "n6",
+              "order": 6,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình phân biệt được nốt đen (đầu đặc) và nốt trắng (đầu rỗng)",
+                  "Khi Nghe mẫu, mình nghe nốt trắng ngân lâu gấp đôi nốt đen"
+                ]
+              }
+            },
+            {
+              "id": "n7",
+              "order": 7,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tốt lắm! Bạn vừa đọc được <b>độ dài</b> của nốt — không chỉ cao độ. Bài sau ta thêm nốt <b>tròn</b> (ngân 4 phách) và ghép cả ba loại."
+            }
+          ]
+        }
+      ]
     }
   ]
 }
