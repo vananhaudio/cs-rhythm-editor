@@ -392,7 +392,7 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
   for (let row = 0; row < rows; row++) {
     for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
-    if (beatsPerBar > 0) {   // số chỉ nhịp (tử trên / mẫu 4 dưới), giữa khóa Sol và nốt đầu
+    if (beatsPerBar > 0 && row === 0) {   // số chỉ nhịp chỉ ở DÒNG ĐẦU (như bản nhạc chuẩn), giữa khóa Sol và nốt đầu
       staffEls.push(<text key={`tsn${row}`} x={40} y={bY(row) - 2.25 * gap} textAnchor="middle" fontSize={1.95 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
       staffEls.push(<text key={`tsd${row}`} x={40} y={bY(row) - 0.3 * gap} textAnchor="middle" fontSize={1.95 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
     }
