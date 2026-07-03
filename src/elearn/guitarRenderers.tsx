@@ -454,6 +454,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const [cursor, setCursor] = useState(-1)
   const [done, setDone] = useState(false)
   const [heard, setHeard] = useState<string | null>(null)
+  const [countIn, setCountIn] = useState(0)        // đếm lấy đà 1-2-3-4 (bài trường độ)
   const timer = useRef<number | null>(null)
   const beat = useRef(0)
   const passedR = useRef(false)
@@ -472,7 +473,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const stop = () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null }
     stopMetro()
-    setPlaying(false); setCursor(-1)
+    setPlaying(false); setCursor(-1); setCountIn(0)
   }
   const stopMic = () => {
     if (micTimer.current) { clearInterval(micTimer.current); micTimer.current = null }
@@ -486,9 +487,8 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const start = () => {
     stopMic(); stopMetro()
     if (timer.current) clearTimeout(timer.current)
-    setPlaying(true); setDone(false); beat.current = 0; passedR.current = false
+    setPlaying(true); setDone(false); beat.current = 0; passedR.current = false; setCountIn(0)
     const beatMs = 60000 / speeds[speedIdx].bpm
-    if (cfg.showDur) { playClick(); metro.current = window.setInterval(() => playClick(), beatMs) }   // metronome đập theo phách (bài trường độ)
     const tick = () => {
       const i = beat.current
       setCursor(i); if (!notes[i].rest) playTone(notes[i].freq)   // dấu lặng = im lặng đúng số phách
@@ -501,7 +501,20 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       }
       timer.current = window.setTimeout(tick, d)
     }
-    tick()
+    const beginMelody = () => {                              // vào bài: metronome tiếp tục + nốt đầu
+      setCountIn(0)
+      if (cfg.showDur) { playClick(true); metro.current = window.setInterval(() => playClick(), beatMs) }
+      tick()
+    }
+    if (cfg.showDur) {                                       // ĐẾM LẤY ĐÀ 4 phách rồi mới vào bài
+      let cn = 1; setCountIn(1); playClick(true)
+      const countTick = () => {
+        cn++
+        if (cn <= 4) { setCountIn(cn); playClick(false); timer.current = window.setTimeout(countTick, beatMs) }
+        else beginMelody()
+      }
+      timer.current = window.setTimeout(countTick, beatMs)
+    } else beginMelody()
   }
 
   // ── Tự đàn: mic nghe — đàn ĐÚNG TÊN NỐT mới sang nốt kế ──
@@ -570,10 +583,16 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
 
       {/* Khuông nhạc — TRỌNG TÂM, lấp đầy khoảng trống (luôn hiện trọn dòng) */}
       {showStaff && (
-        <div style={{ flex: 1, minHeight: 0, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '4px 6px', marginBottom: 9, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'relative', flex: 1, minHeight: 0, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '4px 6px', marginBottom: 9, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
             <NoteSheet notes={notes} active={active} showDur={cfg.showDur} />
           </div>
+          {countIn > 0 && (   // đếm lấy đà 1-2-3-4 phủ giữa khuông
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8478', letterSpacing: '.08em', marginBottom: 2 }}>LẤY ĐÀ</div>
+              <div key={countIn} style={{ fontSize: 72, fontWeight: 900, color: ACCENT.d, lineHeight: 1, animation: '_ntPing .25s ease-out' }}>{countIn}</div>
+            </div>
+          )}
           {cfg.hint && sheetRows <= 1 && (   // bài ngắn còn chỗ → dùng khoảng trống để dặn dò
             <div style={{ flexShrink: 0, margin: '2px 8px 8px', padding: '9px 13px', background: '#FBF3E7', border: '1px solid #F0E2C9', borderRadius: 11, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <span style={{ fontSize: 15, lineHeight: '19px' }}>💡</span>
