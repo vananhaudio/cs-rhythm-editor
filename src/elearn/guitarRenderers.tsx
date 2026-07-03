@@ -26,6 +26,7 @@ export interface NotePracticeCfg {
   showStaff?: boolean                           // hiện khuông nhạc (mặc định có nếu nốt có staff)
   hint?: string                                 // dòng nhắc nhỏ dưới khuông (vd: chưa cần để ý trường độ)
   showDur?: boolean                             // vẽ nốt đen/trắng/tròn theo dur (chỉ chương Trường độ); mặc định mọi nốt giống nhau
+  beatsPerBar?: number                          // số phách mỗi ô nhịp (2/3/4) → vẽ vạch nhịp + số chỉ nhịp + count-in đếm đúng
 }
 // "Chia ô nhịp": đối chiếu SHEET (vẽ sạch từ nốt MusicXML) ↔ LỜI, bút kẻ vạch chia ô nhịp
 export interface SNote { pos?: number; rest?: boolean; dur: 'e' | 'q' | 'h' | 'w' }  // pos = bậc trên khuông (E4=0, mỗi bậc = nửa dòng), dur = trường độ
@@ -359,12 +360,13 @@ export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: bo
 
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
-export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[]; active: number; showDur?: boolean }) {
+export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: { notes: NoteItem[]; active: number; showDur?: boolean; beatsPerBar?: number }) {
   const gap = 9, x0 = 54, sp = 33, perRow = 8, headTop = 20   // gap: khoảng dòng kẻ (khuông cao thoáng, cân với cỡ nốt); x0 chừa khoảng sau khóa Sol; 8 nốt/dòng
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
   const rowH = 72 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
   const rows = Math.max(1, Math.ceil(notes.length / perRow))
-  const rowW = x0 + perRow * sp + 8
+  // bài ô nhịp 1 dòng: khuông kết ngay sau vạch nhịp cuối (không thừa đuôi trống)
+  const rowW = (beatsPerBar > 0 && rows === 1) ? x0 + (notes.length - 0.5) * sp + 12 : x0 + perRow * sp + 8
   const H = headTop + rows * rowH + 4
   const bY = (row: number) => headTop + row * rowH + 4 * gap            // dòng kẻ dưới cùng của hàng
   const noteY = (staff: number, row: number) => bY(row) - staff * (gap / 2)
@@ -390,6 +392,23 @@ export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[
   for (let row = 0; row < rows; row++) {
     for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
+    if (beatsPerBar > 0) {   // số chỉ nhịp (tử trên / mẫu 4 dưới), giữa khóa Sol và nốt đầu
+      staffEls.push(<text key={`tsn${row}`} x={40} y={bY(row) - 2.25 * gap} textAnchor="middle" fontSize={1.95 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
+      staffEls.push(<text key={`tsd${row}`} x={40} y={bY(row) - 0.3 * gap} textAnchor="middle" fontSize={1.95 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
+    }
+  }
+  // Vạch nhịp: kẻ dọc cuối mỗi ô (dồn dur đủ beatsPerBar)
+  const barEls: React.ReactNode[] = []
+  if (beatsPerBar > 0) {
+    let cum = 0
+    notes.forEach((n, i) => {
+      cum += (n.dur ?? 1)
+      if (Math.abs(cum % beatsPerBar) < 0.001) {           // nốt này kết thúc một ô
+        const row = Math.floor(i / perRow), col = i % perRow
+        const bx = Math.min(x0 + (col + 0.5) * sp, rowW - 8)
+        barEls.push(<line key={`bar${i}`} x1={bx} x2={bx} y1={bY(row) - 4 * gap} y2={bY(row)} stroke="#B0A588" strokeWidth={1.5} />)
+      }
+    })
   }
   // Nhãn tên nốt: đặt DƯỚI nốt thấp nhất của từng dòng (nốt trầm nằm dưới khuông sẽ không bị nhãn đè)
   const rowMaxY: number[] = []
@@ -400,6 +419,7 @@ export function NoteSheet({ notes, active, showDur = false }: { notes: NoteItem[
       <div ref={scRef} style={{ height: innerH, maxHeight: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
         <svg viewBox={`0 0 ${rowW} ${H}`} width={rowW} height={H} style={{ display: 'block' }}>
           {staffEls}
+          {barEls}
         {notes.map((n, i) => {
           const row = Math.floor(i / perRow), col = i % perRow
           const x = x0 + col * sp, on = i === active
@@ -507,11 +527,12 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       if (cfg.showDur) { playClick(true); metro.current = window.setInterval(() => playClick(), beatMs) }
       tick()
     }
-    if (cfg.showDur) {                                       // ĐẾM LẤY ĐÀ 4 phách rồi mới vào bài
+    if (cfg.showDur) {                                       // ĐẾM LẤY ĐÀ đúng số phách 1 ô (mặc định 4) rồi vào bài
+      const countN = cfg.beatsPerBar && cfg.beatsPerBar > 0 ? cfg.beatsPerBar : 4
       let cn = 1; setCountIn(1); playClick(true)
       const countTick = () => {
         cn++
-        if (cn <= 4) { setCountIn(cn); playClick(false); timer.current = window.setTimeout(countTick, beatMs) }
+        if (cn <= countN) { setCountIn(cn); playClick(false); timer.current = window.setTimeout(countTick, beatMs) }
         else beginMelody()
       }
       timer.current = window.setTimeout(countTick, beatMs)
@@ -590,7 +611,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       {showStaff && (
         <div style={{ position: 'relative', flex: 1, minHeight: 0, background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '4px 6px', marginBottom: 9, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-            <NoteSheet notes={notes} active={active} showDur={cfg.showDur} />
+            <NoteSheet notes={notes} active={active} showDur={cfg.showDur} beatsPerBar={cfg.beatsPerBar} />
           </div>
           {countIn > 0 && (   // count-in 1-2-3-4 — nằm TRÊN, né khuông nhạc, cỡ vừa
             <div style={{ position: 'absolute', top: 6, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, pointerEvents: 'none' }}>

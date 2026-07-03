@@ -3711,6 +3711,128 @@
           ]
         }
       ]
+    },
+    {
+      "module_id": "c6720000-0000-4000-8000-000000000001",
+      "name": "Chương 6: Ô nhịp & số chỉ nhịp",
+      "order": 5,
+      "lessons": [
+        {
+          "key": "onhip44",
+          "lessonId": "a6720000-0000-4000-8000-000000000001",
+          "flowId": "f6720000-0000-4000-8000-000000000001",
+          "order": 1,
+          "title": "Bài 1: Ô nhịp & nhịp 4/4",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "m1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Chia bản nhạc thành ô",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Một bản nhạc được chia thành nhiều <b>ô nhịp</b> bằng những <b>vạch dọc</b>. Đầu bản nhạc có <b>số chỉ nhịp</b> cho biết mỗi ô có <b>mấy phách</b> — đây chính là lý do ta đếm \"1-2-3-4\" lúc lấy đà."
+            },
+            {
+              "id": "m2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Nhịp 4/4",
+              "content": "<p style=\"font-size:16px;line-height:1.75;margin:0;color:#3A352F\">Số <b>4/4</b> (số 4 trên) nghĩa là <b>mỗi ô có 4 phách</b>. Mỗi <b>vạch dọc</b> khép lại một ô đủ 4 phách. Ví dụ dưới: ô đầu là <b>4 nốt đen</b> (1+1+1+1), ô sau là <b>2 nốt trắng</b> (2+2) — cả hai đều đủ <b>4 phách</b>. Nghe mẫu sẽ đếm 4 phách lấy đà.</p>"
+            },
+            {
+              "id": "m3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: nhịp 4/4",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "m4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình thấy vạch nhịp chia bài thành từng ô 4 phách",
+                  "Mình đếm được mỗi ô đủ 4 phách (đen=1, trắng=2)",
+                  "Mình đàn theo, mỗi ô đúng 4 tiếng gõ metronome"
+                ]
+              }
+            },
+            {
+              "id": "m5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tốt lắm! Giờ bạn hiểu <b>ô nhịp</b> — cách nhạc gom phách thành nhóm đều đặn. Bài sau đổi sang <b>nhịp 3/4</b> (nhịp valse, mỗi ô 3 phách)."
+            }
+          ]
+        }
+      ]
     }
   ]
 }
