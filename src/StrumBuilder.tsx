@@ -230,38 +230,43 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
         </div>
         <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '28px 20px', display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: 760 }}>
-            {lines.map((_, li) => {
-              const lineToks = tokens.filter((t) => t.line === li)
-              if (lineToks.length === 0) return <div key={li} style={{ height: 26 }} />
-              // Nhóm các từ liên tiếp CÙNG Ô NHỊP thành 1 khối — để khi xuống dòng, cả ô
-              // đi cùng nhau (không bao giờ bị tách rời giữa chừng), vạch luôn thẳng hàng.
-              const groups: typeof lineToks[] = []
-              lineToks.forEach((t) => {
+            {(() => {
+              // Cả bài CHẢY LIÊN TỤC như đoạn văn — KHÔNG ngắt hàng cứng ở từng dòng dán gốc
+              // (trước đây mỗi dòng dán = 1 hàng riêng, nhìn bị tách vụn quá). Chỉ nhóm theo
+              // Ô NHỊP để không tách rời giữa chừng khi tự xuống dòng theo bề rộng màn hình,
+              // và chỉ chừa khoảng cách đoạn tại DÒNG TRỐNG thật sự (cách câu/đoạn trong lời).
+              const groups: typeof tokens[] = []
+              tokens.forEach((t) => {
                 const last = groups[groups.length - 1]
                 if (last && barOf[last[0].gi] === barOf[t.gi]) last.push(t)
                 else groups.push([t])
               })
               return (
-                <div key={li} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 18, rowGap: 10, marginBottom: 16 }}>
-                  {groups.map((g) => {
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', columnGap: 18, rowGap: 14 }}>
+                  {groups.map((g, gi) => {
                     const barStart = g[0].gi === 0 || cuts.has(g[0].gi)
+                    const prevLine = gi > 0 ? groups[gi - 1][groups[gi - 1].length - 1].line : g[0].line
+                    const newParagraph = g[0].line > prevLine + 1   // có ≥1 dòng trống ở giữa
                     return (
-                      <span key={g[0].gi} style={{ display: 'inline-flex', alignItems: 'stretch' }}>
-                        {barStart && <FullBoundary num={barOf[g[0].gi]} />}
-                        <span style={{ display: 'flex', gap: 10 }}>
-                          {g.map((t) => (
-                            <span key={t.gi} style={{ display: 'inline-flex', flexDirection: 'column', whiteSpace: 'pre' }}>
-                              <span style={{ height: 26, fontSize: 20, fontWeight: 800, color: A.accent, lineHeight: '26px' }}>{t.chord ?? ''}</span>
-                              <span style={{ fontSize: 30, lineHeight: '42px' }}>{t.word}</span>
-                            </span>
-                          ))}
+                      <span key={g[0].gi} style={{ display: 'contents' }}>
+                        {newParagraph && <span style={{ flexBasis: '100%', height: 0 }} />}
+                        <span style={{ display: 'inline-flex', alignItems: 'stretch' }}>
+                          {barStart && <FullBoundary num={barOf[g[0].gi]} />}
+                          <span style={{ display: 'flex', gap: 10 }}>
+                            {g.map((t) => (
+                              <span key={t.gi} style={{ display: 'inline-flex', flexDirection: 'column', whiteSpace: 'pre' }}>
+                                <span style={{ height: 26, fontSize: 20, fontWeight: 800, color: A.accent, lineHeight: '26px' }}>{t.chord ?? ''}</span>
+                                <span style={{ fontSize: 30, lineHeight: '42px' }}>{t.word}</span>
+                              </span>
+                            ))}
+                          </span>
                         </span>
                       </span>
                     )
                   })}
                 </div>
               )
-            })}
+            })()}
           </div>
         </div>
         {hasLyric && (
