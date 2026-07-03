@@ -181,6 +181,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [skillMap, setSkillMap]         = useState<Record<string, number>>({})  // lessonId → số phiên luyện (đỏ/vàng/xanh)
   const [freeCourses, setFreeCourses]   = useState<Set<string>>(new Set())  // khoá miễn phí (is_free)
   const [accessCourses, setAccessCourses] = useState<Set<string>>(new Set()) // khoá đã được thầy cấp quyền
+  const [foundationGaps, setFoundationGaps] = useState<Enrollment['course'][]>([]) // khoá NỀN còn thiếu (đặc cách vượt cấp) — §6 bộ luật
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
   const [dbTools, setDbTools]     = useState<DBTool[]>([])
   const [exerciseStatuses, setExerciseStatuses] = useState<Record<string, string>>({}) // exId → 'on'|'off'|'coming_soon'
@@ -522,6 +523,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         setFreeCourses(new Set(enr.filter(e => (e.course as any)?.is_free !== false).map(e => e.course_id)))
         supabase.from('edu_course_access').select('course_id').eq('student_id', student.id).eq('active', true)
           .then(({ data: acc }) => setAccessCourses(new Set((acc ?? []).map((a: any) => a.course_id))))
+        // ── Khoá NỀN còn thiếu (§6): gom mã tiên quyết chưa sở hữu, nạp thẻ mờ để nhắc học bổ sung ──
+        const ownedCodes = new Set(enr.map(e => (e.course?.code || '').trim().toUpperCase()).filter(Boolean))
+        const gapCodes = new Set<string>()
+        enr.forEach(e => missingPrereqs(e.course?.code, ownedCodes).forEach(c => gapCodes.add(c)))
+        if (gapCodes.size > 0) {
+          supabase.from('edu_courses').select('id,name,type,track,icon,image_url,status,sort_order,is_free,code')
+            .in('code', [...gapCodes])
+            .then(({ data: gc }) => setFoundationGaps(((gc ?? []) as any[])
+              .filter(c => (c.status ?? 'on') !== 'off' && !ownedCodes.has((c.code || '').trim().toUpperCase()))))
+        } else setFoundationGaps([])
         // Tiến độ KỸ NĂNG (đỏ/vàng/xanh) theo số phiên luyện
         supabase.from('edu_skill_progress').select('lesson_id,sessions').eq('student_id', student.id)
           .then(({ data: sk }) => { const m: Record<string, number> = {}; (sk ?? []).forEach((r: any) => { m[r.lesson_id] = r.sessions }); setSkillMap(m) })
@@ -648,8 +659,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
       const parsed = (lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] }))
       setLessons(parsed)
-      // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách
-      if (parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')) {
+      // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách (CHỈ khi đã sở hữu — khoá nền thiếu thì luôn dừng ở mục lục)
+      const ownedNow = preview || freeCourses.has(courseId) || accessCourses.has(courseId) || enrollments.some(e => e.course_id === courseId)
+      if (ownedNow && parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')) {
         setActiveLesson(parsed[0])
         setScreen('lesson')
         return
@@ -1154,6 +1166,33 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   })}
                 </div>
               )}
+
+              {/* ── Nền tảng còn thiếu (§6): khoá tiên quyết chưa học, hiện mờ · chỉ lộ mục lục · khuyến khích học bổ sung ── */}
+              {foundationGaps.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4, color: '#991B1B' }}>Nền tảng còn thiếu</div>
+                  <div style={{ fontSize: 12.5, color: L.t2, marginBottom: 12, lineHeight: 1.5 }}>Bạn được vào khoá cao hơn, nhưng chưa học các khoá nền dưới đây. Xem trước mục lục và học bổ sung để chắc gốc.</div>
+                  {foundationGaps.map(g => (
+                    <div key={g!.id}
+                      onClick={() => openCourse(g!.id)}
+                      style={{
+                        background: L.surface, borderRadius: 16, padding: '14px 16px',
+                        boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12,
+                        marginBottom: 8, cursor: 'pointer',
+                        border: '1px solid #FECACA',
+                      }}>
+                      <div style={{ position: 'relative', flexShrink: 0, opacity: .55 }}>
+                        <CourseLogo course={g} size={42} radius={12} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: L.t2 }}>{g!.name}</div>
+                        <div style={{ fontSize: 11.5, color: '#B91C1C', marginTop: 3, fontWeight: 700, letterSpacing: '.02em', display: 'inline-block', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 7, padding: '2px 7px' }}>Thiếu nền tảng</div>
+                      </div>
+                      <span style={{ color: L.t3, fontSize: 18 }}>›</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -1180,8 +1219,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   </div>
                 )
               })()}
-              {/* Progress summary */}
-              {activeCourseId && lessons.length > 0 && (() => {
+              {/* ── Khoá NỀN chưa mở (đặc cách) — chỉ lộ mục lục, khuyến khích học bổ sung (§6) ── */}
+              {activeCourseId && foundationGaps.some(g => g?.id === activeCourseId) && (
+                <div style={{ marginTop: 12, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '13px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <div style={{ fontSize: 13, color: '#991B1B', lineHeight: 1.55 }}>
+                    <b>Khoá nền — bạn chưa mở.</b> Đây là nền tảng cho khoá bạn đang học. Bạn xem trước được mục lục dưới đây; hãy học bổ sung khoá này để chắc gốc và theo kịp. Liên hệ thầy để mở khoá.
+                  </div>
+                </div>
+              )}
+              {/* Progress summary — không hiện cho khoá nền chưa mở */}
+              {activeCourseId && lessons.length > 0 && !foundationGaps.some(g => g?.id === activeCourseId) && (() => {
                 const done = lessons.filter(l => completedIds.has(l.id)).length
                 const pct  = Math.round((done / lessons.length) * 100)
                 return (
@@ -1198,8 +1246,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               })()}
             </div>
 
-            {/* ── Bản đồ hành trình ── */}
-            {activeCourseId && sortedLessons.length > 0 && (() => {
+            {/* ── Bản đồ hành trình (ẩn cho khoá nền chưa mở — chỉ lộ mục lục) ── */}
+            {activeCourseId && sortedLessons.length > 0 && !foundationGaps.some(g => g?.id === activeCourseId) && (() => {
               const total = sortedLessons.length
               const completedCount = sortedLessons.filter(l => completedIds.has(l.id)).length
               let curIdx = sortedLessons.findIndex(l => !completedIds.has(l.id))
