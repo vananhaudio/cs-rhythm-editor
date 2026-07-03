@@ -237,13 +237,14 @@ async function addToGroups(admin: ReturnType<typeof createClient>, assignments: 
       // Khớp nhóm: ưu tiên MÃ LỚP (vd GL11, DH1.KD16), rồi tên. Tự tạo nếu khớp 1 lớp trong lịch.
       const codeM = groupName.match(/[A-Za-z]{2,4}\d*\.?[A-Za-z]{0,2}\d+/)
       const codeGuess = (codeM ? codeM[0] : groupName).trim().toUpperCase()
-      let grp = (await admin.from('edu_groups').select('id,name,code').ilike('code', codeGuess).limit(1)).data?.[0]
+      // Quy về MÃ LỚP THẬT trong lịch (vd "KD17" → "DH1.KD17") để nhóm Zalo luôn cùng mã với lớp → backfill khớp.
+      let canonical = codeGuess
+      const { data: clsMatch } = await admin.from('class_schedule').select('code').ilike('code', '%' + codeGuess + '%').limit(1)
+      if (clsMatch?.[0]?.code) canonical = clsMatch[0].code
+      let grp = (await admin.from('edu_groups').select('id,name,code').ilike('code', canonical).limit(1)).data?.[0]
       if (!grp) grp = (await admin.from('edu_groups').select('id,name,code').ilike('name', '%' + groupName + '%').limit(1)).data?.[0]
       if (!grp) {
-        const { data: cls } = await admin.from('class_schedule').select('code').ilike('code', codeGuess).limit(1)
-        if (cls?.[0]?.code) {
-          grp = (await admin.from('edu_groups').upsert({ code: cls[0].code, name: cls[0].code, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id,name,code').single()).data
-        }
+        grp = (await admin.from('edu_groups').upsert({ code: canonical, name: canonical, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id,name,code').single()).data
       }
       if (!grp?.id) throw new Error('không tìm thấy/không tạo được nhóm "' + groupName + '" (mã ' + codeGuess + ')')
       const { error: mErr } = await admin.from('edu_group_members')
