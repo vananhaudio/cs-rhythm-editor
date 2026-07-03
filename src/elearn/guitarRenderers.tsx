@@ -316,6 +316,15 @@ export function MiniFretboard({ string, fret, pulse, h = 128 }: { string?: numbe
   )
 }
 
+// Dòng kẻ phụ (ledger line): nốt nằm sâu DƯỚI/TRÊN khuông. Dòng kẻ ở các bậc CHẴN;
+// dưới khuông kẻ từ -2 trở xuống tới nốt, trên khuông từ 10 trở lên. Trả về danh sách bậc-staff cần kẻ.
+function ledgersFor(staff: number): number[] {
+  const out: number[] = []
+  if (staff <= -2) { const deep = staff % 2 === 0 ? staff : staff + 1; for (let e = -2; e >= deep; e -= 2) out.push(e) }
+  else if (staff >= 10) { const high = staff % 2 === 0 ? staff : staff - 1; for (let e = 10; e <= high; e += 2) out.push(e) }
+  return out
+}
+
 // Khuông nhạc nhỏ — dạy thụ động vị trí nốt.
 // staff = số bậc (nửa-dòng) tính từ DÒNG KẺ DƯỚI CÙNG (=0). LƯU Ý: guitar viết CAO HƠN THỰC TẾ 1 QUÃNG 8,
 // nên Mi dây-1-buông (E4 thực) VIẾT là E5 = KHE 4 = staff 7 (gần đỉnh). Dây2(B4)=4, dây3(G4)=2.
@@ -330,6 +339,8 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: 270, display: 'block', margin: '0 auto' }}>
       {[0, 1, 2, 3, 4].map(i => <line key={i} x1={10} x2={W - 12} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
+      {/* Dòng kẻ phụ cho nốt trầm (dây 5–6) / cao ngoài khuông */}
+      {ledgersFor(staff).map(e => { const y = lineY(4) - e * (gap / 2); return <line key={`lg${e}`} x1={noteX - 14} x2={noteX + 14} y1={y} y2={y} stroke="#CBBF9E" strokeWidth={1.5} /> })}
       {/* Khóa Sol — font nhạc chuẩn Bravura (SMuFL U+E050); 1 em = 4 khoảng dòng; baseline trên dòng Sol lineY(3) để xoắn ốc ôm đúng dòng */}
       <text x={9} y={lineY(3)} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>
       <g key={pulse} style={{ animation: active ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${noteX}px ${noteY}px` }}>
@@ -344,7 +355,9 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
 // Khuông nhạc CẢ CÂU như bản nhạc — mọi nốt hiện sẵn, nốt đang chơi SÁNG lên, chạy lần lượt.
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
 export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number }) {
-  const gap = 8.5, x0 = 44, sp = 40, perRow = 7, rowH = 74, headTop = 22
+  const gap = 8.5, x0 = 44, sp = 40, perRow = 7, headTop = 22
+  const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
+  const rowH = 74 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 24 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
   const rows = Math.max(1, Math.ceil(notes.length / perRow))
   const rowW = x0 + perRow * sp + 8
   const H = headTop + rows * rowH + 4
@@ -373,6 +386,10 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
     for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
   }
+  // Nhãn tên nốt: đặt DƯỚI nốt thấp nhất của từng dòng (nốt trầm nằm dưới khuông sẽ không bị nhãn đè)
+  const rowMaxY: number[] = []
+  notes.forEach((n, i) => { const r = Math.floor(i / perRow), yy = noteY(n.staff ?? 0, r); if (rowMaxY[r] == null || yy > rowMaxY[r]) rowMaxY[r] = yy })
+  const labelYOf = (row: number) => Math.max(bY(row) + 19, (rowMaxY[row] ?? bY(row)) + 18)
   return (
     <div ref={outerRef} style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <div ref={scRef} style={{ height: innerH, maxHeight: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
@@ -386,11 +403,12 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
           return (
             <g key={i}>
               {on && <rect x={x - 15} y={bY(row) - 50} width={30} height={64} rx={7} fill="rgba(194,98,46,0.13)" />}
+              {ledgersFor(st).map(e => { const ly = bY(row) - e * (gap / 2); return <line key={`lg${e}`} x1={x - 12} x2={x + 12} y1={ly} y2={ly} stroke="#CBBF9E" strokeWidth={1.3} /> })}
               <g key={'p' + active} style={{ animation: on ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${x}px ${y}px` }}>
                 <ellipse cx={x} cy={y} rx={on ? 9.5 : 8} ry={on ? 7 : 6} fill={c} transform={`rotate(-18 ${x} ${y})`} />
                 <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -24 : 24)} stroke={c} strokeWidth={2.2} />
               </g>
-              <text x={x} y={bY(row) + 19} textAnchor="middle" fontSize={on ? 12.5 : 11} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
+              <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 12.5 : 11} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
             </g>
           )
         })}

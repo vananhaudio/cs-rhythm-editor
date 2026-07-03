@@ -1121,9 +1121,165 @@
       ]
     },
     {
-      "module_id": "c3710000-0000-4000-8000-000000000001",
-      "name": "Chương 3: Chơi bài hát",
+      "module_id": "c3720000-0000-4000-8000-000000000001",
+      "name": "Chương 3: Xuống dây trầm — đọc trọn cần đàn",
       "order": 2,
+      "lessons": [
+        {
+          "key": "cumd5",
+          "lessonId": "a3720000-0000-4000-8000-000000000001",
+          "flowId": "f3720000-0000-4000-8000-000000000001",
+          "order": 1,
+          "title": "Bài 1: Cụm dây 5 — La – Si – Đô",
+          "reward_xp": 10,
+          "slides": [
+            {
+              "id": "d51",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Xuống dây trầm nhất",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Giờ ta xuống <b>hai dây to nhất</b> của đàn (dây 5 và dây 6). Nốt ở đây <b>rất trầm</b>, nằm sâu <b>dưới khuông</b> nên phải mượn thêm những vạch ngắn gọi là <b>dòng kẻ phụ</b>. Bài này làm quen dây 5: <b>La – Si – Đô</b>."
+            },
+            {
+              "id": "d52",
+              "order": 2,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "La (trầm)",
+              "interactive": {
+                "label": "La",
+                "freq": 110,
+                "string": 5,
+                "fret": 0,
+                "staff": -4,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>La</b> — dây 5 <b>buông</b> (○), dây to thứ hai. Trên khuông nó nằm <b>trên dòng kẻ phụ thứ hai</b> dưới khuông."
+              }
+            },
+            {
+              "id": "d53",
+              "order": 3,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Si (trầm)",
+              "interactive": {
+                "label": "Si",
+                "freq": 123.47,
+                "string": 5,
+                "fret": 2,
+                "staff": -3,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Si</b> — cùng dây 5, bấm <b>ngón 2</b> ở <b>ngăn 2</b>. Cao hơn La một bậc."
+              }
+            },
+            {
+              "id": "d54",
+              "order": 4,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Đô (trầm)",
+              "interactive": {
+                "label": "Đô",
+                "freq": 130.81,
+                "string": 5,
+                "fret": 3,
+                "staff": -2,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Đô</b> — cùng dây 5, bấm <b>ngón 3</b> ở <b>ngăn 3</b>. Nó nằm ngay <b>trên dòng kẻ phụ đầu tiên</b> sát dưới khuông — nốt Đô dễ nhớ."
+              }
+            },
+            {
+              "id": "d55",
+              "order": 5,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: La – Si – Đô",
+              "interactive": {
+                "notes": [
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4
+                  }
+                ]
+              }
+            },
+            {
+              "id": "d56",
+              "order": 6,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình gảy được La – Si – Đô ở dây 5, tiếng rõ và trầm",
+                  "Mình thấy các nốt này nằm trên dòng kẻ phụ dưới khuông"
+                ]
+              }
+            },
+            {
+              "id": "d57",
+              "order": 7,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tốt lắm! Bạn đã đọc được nốt <b>dưới khuông</b> nhờ dòng kẻ phụ. Bài sau xuống nốt <b>trầm nhất</b> — dây 6."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_id": "c3710000-0000-4000-8000-000000000001",
+      "name": "Chương 4: Chơi bài hát",
+      "order": 3,
       "lessons": [
         {
           "key": "happybday",
