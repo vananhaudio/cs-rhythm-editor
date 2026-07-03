@@ -222,14 +222,14 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const [fullView, setFullView] = useState(false)
   if (fullView) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: 'Inter, system-ui, sans-serif', color: A.ink }}>
+      <div style={{ height: '100vh', width: '100vw', maxWidth: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: 'Inter, system-ui, sans-serif', color: A.ink }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${A.border}` }}>
           <button onClick={() => setFullView(false)} style={{ ...ghost, fontSize: 15 }}>✕ Đóng</button>
           <div style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
           <div style={{ width: 74 }} />
         </div>
-        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '28px 20px', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ width: '100%', maxWidth: 760 }}>
+        <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', padding: '28px 20px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 760, minWidth: 0 }}>
             {(() => {
               // Cả bài CHẢY LIÊN TỤC như đoạn văn — KHÔNG ngắt hàng cứng ở từng dòng dán gốc
               // (trước đây mỗi dòng dán = 1 hàng riêng, nhìn bị tách vụn quá). Chỉ nhóm theo
@@ -250,9 +250,9 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
                     return (
                       <span key={g[0].gi} style={{ display: 'contents' }}>
                         {newParagraph && <span style={{ flexBasis: '100%', height: 0 }} />}
-                        <span style={{ display: 'inline-flex', alignItems: 'stretch' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'stretch', flexShrink: 0, maxWidth: '100%' }}>
                           {barStart && <FullBoundary num={barOf[g[0].gi]} />}
-                          <span style={{ display: 'flex', gap: 10 }}>
+                          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 10, minWidth: 0 }}>
                             {g.map((t) => (
                               <span key={t.gi} style={{ display: 'inline-flex', flexDirection: 'column', whiteSpace: 'pre' }}>
                                 <span style={{ height: 26, fontSize: 20, fontWeight: 800, color: A.accent, lineHeight: '26px' }}>{t.chord ?? ''}</span>
