@@ -6,6 +6,7 @@ import ElearnLessonView from './elearn/ElearnLessonView'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { parseStrumConfig, configToSong } from './StrumConfigEditor'
+import { missingPrereqs, tenNangLuc } from './hanhtrinh'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -22,7 +23,7 @@ interface Lesson {
   content_url: string | null; description: string | null; content: string | null
   tools: string[]; order_index: number; is_published: boolean
 }
-interface Course { id: string; name: string; type: string }
+interface Course { id: string; name: string; type: string; code?: string | null }
 
 const TOOL_LABELS: Record<string, { label: string; icon: string; route: string }> = {
   tap:           { label: 'Tap nhịp',      icon: '🥁', route: '/tap'         },
@@ -66,6 +67,7 @@ export default function LessonViewerPage() {
   const [studentId, setStudentId] = useState('')
   const [studentName, setStudentName] = useState('')
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
+  const [ownedCodes, setOwnedCodes] = useState<Set<string>>(new Set()) // mã năng lực học viên đã sở hữu (tính thiếu nền)
 
   // Bài elearn? → trả về số bài (1..11), ngược lại null
   const elearnNumOf = (l: Lesson | null): number | null => {
@@ -117,6 +119,10 @@ export default function LessonViewerPage() {
           const { data: prog } = await supabase.from('edu_lesson_progress')
             .select('lesson_id').eq('student_id', st.id).eq('completed', true)
           if (prog) setCompletedIds(new Set(prog.map((r: { lesson_id: string }) => r.lesson_id)))
+          // Mã năng lực đã sở hữu → tính khoá nền còn thiếu (§6)
+          const { data: enr } = await supabase.from('edu_enrollments')
+            .select('course:edu_courses(code)').eq('student_id', st.id).eq('is_active', true)
+          setOwnedCodes(new Set(((enr ?? []) as any[]).map(e => (e.course?.code || '').trim().toUpperCase()).filter(Boolean)))
         }
         if (au?.name) setStudentName(au.name)
       }
@@ -127,7 +133,7 @@ export default function LessonViewerPage() {
     if (!courseId) return
     const load = async () => {
       const [{ data: c }, { data: mods }] = await Promise.all([
-        supabase.from('edu_courses').select('id,name,type').eq('id', courseId).single(),
+        supabase.from('edu_courses').select('id,name,type,code').eq('id', courseId).single(),
         supabase.from('edu_modules').select('*').eq('course_id', courseId).order('order_index'),
       ])
       setCourse(c)
@@ -184,6 +190,20 @@ export default function LessonViewerPage() {
           <div style={{ fontSize: 13, color: D.text3, marginTop: 4 }}>
             {lessons.length} bài học
           </div>
+          {/* ── Cảnh báo thiếu khoá nền tảng (§6) ── */}
+          {(() => {
+            const miss = missingPrereqs(course?.code, ownedCodes)
+            if (miss.length === 0) return null
+            const names = miss.map(c => tenNangLuc(c) || c)
+            return (
+              <div style={{ marginTop: 12, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <div style={{ fontSize: 12, color: '#991B1B', lineHeight: 1.5 }}>
+                  <b>Thiếu nền tảng.</b> Bạn chưa học <b>{names.join(' · ')}</b> — nền tảng của khoá này. Nên học bổ sung để theo kịp và chơi vững hơn.
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Module + lesson list */}
