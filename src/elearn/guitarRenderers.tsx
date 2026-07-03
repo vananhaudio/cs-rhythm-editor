@@ -587,10 +587,10 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
           <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
             <NoteSheet notes={notes} active={active} showDur={cfg.showDur} />
           </div>
-          {countIn > 0 && (   // đếm lấy đà 1-2-3-4 phủ giữa khuông
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#8A8478', letterSpacing: '.08em', marginBottom: 2 }}>LẤY ĐÀ</div>
-              <div key={countIn} style={{ fontSize: 72, fontWeight: 900, color: ACCENT.d, lineHeight: 1, animation: '_ntPing .25s ease-out' }}>{countIn}</div>
+          {countIn > 0 && (   // count-in 1-2-3-4 — nằm TRÊN, né khuông nhạc, cỡ vừa
+            <div style={{ position: 'absolute', top: 6, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, pointerEvents: 'none' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#8A8478', letterSpacing: '.08em' }}>COUNT IN</span>
+              <span key={countIn} style={{ fontSize: 38, fontWeight: 900, color: ACCENT.d, lineHeight: 1, animation: '_ntPing .25s ease-out' }}>{countIn}</span>
             </div>
           )}
           {cfg.hint && sheetRows <= 1 && (   // bài ngắn còn chỗ → dùng khoảng trống để dặn dò
