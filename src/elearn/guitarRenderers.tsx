@@ -330,8 +330,8 @@ export function NoteStaff({ active, label, staff = 0, pulse }: { active: boolean
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxWidth: 270, display: 'block', margin: '0 auto' }}>
       {[0, 1, 2, 3, 4].map(i => <line key={i} x1={10} x2={W - 12} y1={lineY(i)} y2={lineY(i)} stroke="#D8CFBE" strokeWidth={1.4} />)}
-      {/* Khóa Sol — vạch khuông xuyên qua khóa (đúng chuẩn); baseline canh xoắn ốc ôm dòng Sol (lineY(3)) */}
-      <text x={8} y={lineY(3) + 17} fontSize={84} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>
+      {/* Khóa Sol — font nhạc chuẩn Bravura (SMuFL U+E050); 1 em = 4 khoảng dòng; baseline trên dòng Sol lineY(3) để xoắn ốc ôm đúng dòng */}
+      <text x={9} y={lineY(3)} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>
       <g key={pulse} style={{ animation: active ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${noteX}px ${noteY}px` }}>
         <ellipse cx={noteX} cy={noteY} rx={9} ry={6.6} fill={col} transform={`rotate(-18 ${noteX} ${noteY})`} />
         <line x1={stemX} x2={stemX} y1={noteY + (stemUp ? -2 : 2)} y2={noteY + (stemUp ? -38 : 38)} stroke={col} strokeWidth={2.2} />
@@ -371,7 +371,7 @@ export function NoteSheet({ notes, active }: { notes: NoteItem[]; active: number
   const staffEls: React.ReactNode[] = []
   for (let row = 0; row < rows; row++) {
     for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
-    staffEls.push(<text key={`cl${row}`} x={7} y={bY(row) - 2 * gap + 14} fontSize={56} fill="#2E2A24" fontFamily="'Times New Roman', Georgia, serif">𝄞</text>)
+    staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
   }
   return (
     <div ref={outerRef} style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
