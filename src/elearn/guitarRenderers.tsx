@@ -362,12 +362,14 @@ export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: bo
 // Câu dài → cuộn ngang; tự cuộn để nốt đang chơi vào giữa.
 export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: { notes: NoteItem[]; active: number; showDur?: boolean; beatsPerBar?: number }) {
   const gap = 9, sp = 33, perRow = 8, headTop = 20   // gap: khoảng dòng kẻ (khuông cao thoáng, cân với cỡ nốt); 8 nốt/dòng
-  const x0 = beatsPerBar > 0 ? 64 : 54               // có số chỉ nhịp → nốt đầu lùi phải cho thoáng; thường thì chừa khoảng sau khóa Sol
+  const x0 = beatsPerBar > 0 ? 70 : 54               // có số chỉ nhịp → nốt đầu lùi phải cho thoáng; thường thì chừa khoảng sau khóa Sol
   const minStaff = notes.length ? Math.min(...notes.map(n => n.staff ?? 0)) : 0
   const rowH = 72 + (minStaff < -1 ? Math.round((-1 - minStaff) * (gap / 2)) + 20 : 0)   // giãn dòng cho nốt trầm (dây 5–6) + nhãn tụt xuống
   const rows = Math.max(1, Math.ceil(notes.length / perRow))
-  // bài ô nhịp 1 dòng: khuông kết ngay sau vạch nhịp cuối (không thừa đuôi trống)
-  const rowW = (beatsPerBar > 0 && rows === 1) ? x0 + (notes.length - 0.5) * sp + 12 : x0 + perRow * sp + 8
+  const notesInRow = (r: number) => Math.min(perRow, notes.length - r * perRow)
+  // bài ô nhịp: mỗi DÒNG kết ngay sau vạch nhịp cuối của dòng đó (không thừa đuôi trống)
+  const rowRight = (r: number) => beatsPerBar > 0 ? x0 + (notesInRow(r) - 0.5) * sp + 10 : x0 + perRow * sp + 8
+  const rowW = beatsPerBar > 0 ? Math.max(...Array.from({ length: rows }, (_, r) => rowRight(r))) : x0 + perRow * sp + 8
   const H = headTop + rows * rowH + 4
   const bY = (row: number) => headTop + row * rowH + 4 * gap            // dòng kẻ dưới cùng của hàng
   const noteY = (staff: number, row: number) => bY(row) - staff * (gap / 2)
@@ -391,11 +393,11 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
   }, [activeRow, innerH])
   const staffEls: React.ReactNode[] = []
   for (let row = 0; row < rows; row++) {
-    for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowW - 8} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
+    for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowRight(row)} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
     if (beatsPerBar > 0 && row === 0) {   // số chỉ nhịp chỉ ở DÒNG ĐẦU (như bản nhạc chuẩn), giữa khóa Sol và nốt đầu
-      staffEls.push(<text key={`tsn${row}`} x={41} y={bY(row) - 2.3 * gap} textAnchor="middle" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
-      staffEls.push(<text key={`tsd${row}`} x={41} y={bY(row) - 0.3 * gap} textAnchor="middle" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
+      staffEls.push(<text key={`tsn${row}`} x={47} y={bY(row) - 2.3 * gap} textAnchor="middle" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
+      staffEls.push(<text key={`tsd${row}`} x={47} y={bY(row) - 0.3 * gap} textAnchor="middle" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
     }
   }
   // Vạch nhịp: kẻ dọc cuối mỗi ô (dồn dur đủ beatsPerBar)
