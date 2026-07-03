@@ -4237,7 +4237,7 @@
     },
     {
       "module_id": "c7720000-0000-4000-8000-000000000001",
-      "name": "Chương 7: Ôn tập & Tốt nghiệp",
+      "name": "Chương 7: Ôn tập & Vận dụng",
       "order": 6,
       "lessons": [
         {
@@ -4455,7 +4455,7 @@
           "lessonId": "a7720000-0000-4000-8000-000000000003",
           "flowId": "f7720000-0000-4000-8000-000000000003",
           "order": 3,
-          "title": "Bài 3: TỐT NGHIỆP — Ode to Joy (trọn bài)",
+          "title": "Bài 3: Vận dụng — Ode to Joy (trọn bài)",
           "reward_xp": 25,
           "slides": [
             {
@@ -4463,11 +4463,11 @@
               "order": 1,
               "logic": "DAN",
               "type": "callout",
-              "title": "Bài thẩm định tốt nghiệp",
+              "title": "Ôn tập tổng hợp",
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Đây rồi — <b>bài tốt nghiệp</b>! Đọc trọn <b>Ode to Joy</b> (8 ô nhịp) như một bản nhạc thật: <b>khóa Sol · số chỉ nhịp 4/4 · vạch nhịp · nốt đen/trắng</b>. Gói gọn mọi thứ bạn đã học."
+              "content": "Bài ôn <b>tổng hợp</b>: đọc trọn <b>Ode to Joy</b> (8 ô nhịp) như một bản nhạc thật — gói gọn mọi thứ đã học: <b>khóa Sol · số chỉ nhịp 4/4 · vạch nhịp · nốt đen/trắng</b>."
             },
             {
               "id": "t2",
@@ -4735,7 +4735,7 @@
               "order": 4,
               "logic": "NGAM",
               "type": "checklist",
-              "title": "Tự kiểm tra tốt nghiệp",
+              "title": "Tự kiểm tra",
               "interactive": {
                 "items": [
                   "Mình đọc được trọn bản nhạc: cao độ + trường độ + ô nhịp",
@@ -4749,11 +4749,11 @@
               "order": 5,
               "logic": "DAN",
               "type": "callout",
-              "title": "🎓 Chúc mừng tốt nghiệp!",
+              "title": "Lời thầy",
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "<b>Xuất sắc!</b> Bạn đã hoàn thành <b>Tỉa Nốt 1</b> — từ nốt đầu tiên tới đọc trọn một bản nhạc thật. Bạn giờ biết: đọc nốt <b>khắp cần đàn</b>, hiểu <b>trường độ</b>, và đọc theo <b>ô nhịp</b>. Đây là nền tảng vững cho cả hành trình guitar phía trước. Tự hào về bạn! 🎸🎓"
+              "content": "<b>Rất giỏi!</b> Bạn vừa đọc trọn một bản nhạc thật — kết hợp cao độ, trường độ và ô nhịp. Đây là cột mốc đáng tự hào, nhưng <b>hành trình còn tiếp</b>: phía trước là những giai điệu hay hơn, kỹ thuật mới và nhiều bài hát bạn yêu thích. Tiếp tục nhé! 🎸"
             }
           ]
         }
