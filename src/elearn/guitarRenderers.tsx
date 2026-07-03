@@ -484,11 +484,12 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); if (micTimer.current) clearInterval(micTimer.current); if (metro.current) clearInterval(metro.current); micStreamR.current?.getTracks().forEach(t => t.stop()); try { audioCtxR.current?.close() } catch { /* */ } }, [])
 
   // ── Nghe mẫu: máy chạy CÓ TRƯỜNG ĐỘ (mỗi nốt giữ đúng số phách = dur) ──
-  const start = () => {
+  // spi = chỉ số tốc độ dùng NGAY (tránh đọc speedIdx cũ khi vừa đổi tốc độ lúc đang chạy)
+  const start = (spi: number = speedIdx) => {
     stopMic(); stopMetro()
     if (timer.current) clearTimeout(timer.current)
     setPlaying(true); setDone(false); beat.current = 0; passedR.current = false; setCountIn(0)
-    const beatMs = 60000 / speeds[speedIdx].bpm
+    const beatMs = 60000 / speeds[spi].bpm
     const tick = () => {
       const i = beat.current
       setCursor(i); if (!notes[i].rest) playTone(notes[i].freq)   // dấu lặng = im lặng đúng số phách
@@ -577,7 +578,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
         <span style={{ fontSize: 13, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
         <div style={{ display: 'flex', gap: 4, padding: 4, background: '#EFE9DD', borderRadius: 12 }}>
           {speeds.map((s, i) => (
-            <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start() }}
+            <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start(i) }}
               style={{ padding: '6px 15px', border: 'none', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
                 background: speedIdx === i ? '#fff' : 'transparent', color: speedIdx === i ? ACCENT.d : '#8A8478',
                 boxShadow: speedIdx === i ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>{s.label}</button>
@@ -620,7 +621,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
           </button>
         ) : (
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={start}
+            <button onClick={() => start()}
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 8px', border: `1.5px solid ${ACCENT.a}`, borderRadius: 12, background: '#fff', color: ACCENT.d, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700 }}>
               ▶ Nghe mẫu
             </button>
