@@ -6852,6 +6852,624 @@
               "content": "Xuất sắc! Giờ bạn chơi được Sol# ở cả <b>ba vùng</b>: dây 3, dây 6, dây 1 — sẵn sàng cho các bài La thứ. 🎸"
             }
           ]
+        },
+        {
+          "key": "faThang",
+          "lessonId": "a8720000-0000-4000-8000-000000000005",
+          "flowId": "f8720000-0000-4000-8000-000000000005",
+          "order": 5,
+          "title": "Bài 5: Nốt Fa# (Fa thăng)",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "f1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Nốt Fa# là gì?",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "<b>Fa#</b> = Fa thêm dấu <b>#</b> → bấm <b>cao hơn 1 ngăn</b>. Có ở <b>dây 1</b> và <b>dây 6</b>."
+            },
+            {
+              "id": "f2",
+              "order": 2,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Fa# ở dây 1",
+              "interactive": {
+                "label": "Fa#",
+                "freq": 369.99,
+                "string": 1,
+                "fret": 2,
+                "staff": 8,
+                "acc": "#",
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Fa#</b> ở <b>dây 1</b>: Fa là dây 1 ngăn 1 → thêm # → bấm <b>ngăn 2</b>."
+              }
+            },
+            {
+              "id": "f3",
+              "order": 3,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Fa# ở dây 6",
+              "interactive": {
+                "label": "Fa#",
+                "freq": 92.5,
+                "string": 6,
+                "fret": 2,
+                "staff": -6,
+                "acc": "#",
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "Và ở <b>dây 6</b> (trầm): Fa là dây 6 ngăn 1 → thêm # → bấm <b>ngăn 2</b>."
+              }
+            },
+            {
+              "id": "f4",
+              "order": 4,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Mi – Fa# – Sol",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa#",
+                    "freq": 369.99,
+                    "string": 1,
+                    "fret": 2,
+                    "staff": 8,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa#",
+                    "freq": 369.99,
+                    "string": 1,
+                    "fret": 2,
+                    "staff": 8,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "f5",
+              "order": 5,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm được Fa# (dây1 ngăn2, dây6 ngăn2)",
+                  "Nghe Fa# cao hơn Fa nửa cung"
+                ]
+              }
+            },
+            {
+              "id": "f6",
+              "order": 6,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Fa# hay dẫn lên Sol. Giỏi lắm! 🎸"
+            }
+          ]
+        },
+        {
+          "key": "doThang",
+          "lessonId": "a8720000-0000-4000-8000-000000000006",
+          "flowId": "f8720000-0000-4000-8000-000000000006",
+          "order": 6,
+          "title": "Bài 6: Nốt Đô# (Đô thăng)",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "c1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Nốt Đô# là gì?",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "<b>Đô#</b> = Đô thêm dấu <b>#</b> → bấm <b>cao hơn 1 ngăn</b>. Nằm ở <b>dây 2 ngăn 2</b>."
+            },
+            {
+              "id": "c2",
+              "order": 2,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Đô# ở dây 2",
+              "interactive": {
+                "label": "Đô#",
+                "freq": 277.18,
+                "string": 2,
+                "fret": 2,
+                "staff": 5,
+                "acc": "#",
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Đô#</b>: Đô là dây 2 ngăn 1 → thêm # → bấm <b>ngăn 2</b>. Đô# hay dẫn lên Rê."
+              }
+            },
+            {
+              "id": "c3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Si – Đô# – Rê",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô#",
+                    "freq": 277.18,
+                    "string": 2,
+                    "fret": 2,
+                    "staff": 5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô#",
+                    "freq": 277.18,
+                    "string": 2,
+                    "fret": 2,
+                    "staff": 5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "c4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm được Đô# (dây 2 ngăn 2)",
+                  "Nghe Đô# dẫn lên Rê"
+                ]
+              }
+            },
+            {
+              "id": "c5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tốt! Giờ bạn có thêm Fa# và Đô#. 🎸"
+            }
+          ]
+        },
+        {
+          "key": "tapFs",
+          "lessonId": "a8720000-0000-4000-8000-000000000007",
+          "flowId": "f8720000-0000-4000-8000-000000000007",
+          "order": 7,
+          "title": "Bài 7: Đoạn nhạc có Fa#",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "g1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thực hành Fa#",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Một đoạn ngắn có <b>Fa#</b> (dây 1) dẫn lên Sol. Đọc & đàn."
+            },
+            {
+              "id": "g2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Fa# dẫn Sol",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa#",
+                    "freq": 369.99,
+                    "string": 1,
+                    "fret": 2,
+                    "staff": 8,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa#",
+                    "freq": 369.99,
+                    "string": 1,
+                    "fret": 2,
+                    "staff": 8,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "g3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm Fa# đúng mỗi lần gặp #",
+                  "Nghe Fa# → Sol mượt"
+                ]
+              }
+            },
+            {
+              "id": "g4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Ngon! 🎸"
+            }
+          ]
+        },
+        {
+          "key": "tapCs",
+          "lessonId": "a8720000-0000-4000-8000-000000000008",
+          "flowId": "f8720000-0000-4000-8000-000000000008",
+          "order": 8,
+          "title": "Bài 8: Đoạn nhạc có Đô#",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "h1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thực hành Đô#",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Đoạn ngắn có <b>Đô#</b> (dây 2) dẫn lên Rê."
+            },
+            {
+              "id": "h2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Đô# dẫn Rê",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô#",
+                    "freq": 277.18,
+                    "string": 2,
+                    "fret": 2,
+                    "staff": 5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô#",
+                    "freq": 277.18,
+                    "string": 2,
+                    "fret": 2,
+                    "staff": 5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "h3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm Đô# đúng (dây 2 ngăn 2)",
+                  "Nghe Đô# → Rê mượt"
+                ]
+              }
+            },
+            {
+              "id": "h4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tuyệt! 🎸"
+            }
+          ]
+        },
+        {
+          "key": "tapReTruong",
+          "lessonId": "a8720000-0000-4000-8000-000000000009",
+          "flowId": "f8720000-0000-4000-8000-000000000009",
+          "order": 9,
+          "title": "Bài 9: Đoạn nhạc có cả Fa# & Đô#",
+          "reward_xp": 14,
+          "slides": [
+            {
+              "id": "r1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Rê trưởng — có Fa# và Đô#",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Đoạn <b>Rê trưởng</b> dùng cả <b>Đô#</b> và <b>Fa#</b> — nghe tươi sáng. Đọc & đàn."
+            },
+            {
+              "id": "r2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Rê trưởng",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô#",
+                    "freq": 277.18,
+                    "string": 2,
+                    "fret": 2,
+                    "staff": 5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa#",
+                    "freq": 369.99,
+                    "string": 1,
+                    "fret": 2,
+                    "staff": 8,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "r3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm đúng cả Đô# và Fa#",
+                  "Nghe ra màu Rê trưởng tươi sáng"
+                ]
+              }
+            },
+            {
+              "id": "r4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Xuất sắc! Giờ bạn đọc được Sol#, Fa#, Đô#. 🎸"
+            }
+          ]
         }
       ]
     },
@@ -8054,6 +8672,528 @@
                   "Mình thử Tự đàn TRƯỚC khi Nghe mẫu (đọc thẳng)",
                   "Mình đọc đúng cao độ + trường độ",
                   "Mình giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau5",
+          "lessonId": "aa720000-0000-4000-8000-000000000005",
+          "flowId": "fa720000-0000-4000-8000-000000000005",
+          "order": 5,
+          "title": "Thị tấu 5 — vùng trầm (dây 5-6)",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau51",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó là <b>thị tấu</b>! Đọc tới đâu đàn tới đó, xong Nghe mẫu đối chiếu. Toàn nốt <b>dây 5 và 6</b> (Mi Fa Sol La Si Đô)."
+            },
+            {
+              "id": "thitau52",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 5 — vùng trầm (dây 5-6)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 82.41,
+                    "string": 6,
+                    "fret": 0,
+                    "staff": -7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 87.31,
+                    "string": 6,
+                    "fret": 1,
+                    "staff": -6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau53",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình bấm đúng vị trí trên cần đàn",
+                  "Giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau6",
+          "lessonId": "aa720000-0000-4000-8000-000000000006",
+          "flowId": "fa720000-0000-4000-8000-000000000006",
+          "order": 6,
+          "title": "Thị tấu 6 — vùng giữa (dây 3-4)",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau61",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó là <b>thị tấu</b>! Đọc tới đâu đàn tới đó, xong Nghe mẫu đối chiếu. Nốt <b>dây 4 và 3</b> (Rê Mi Fa Sol La)."
+            },
+            {
+              "id": "thitau62",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 6 — vùng giữa (dây 3-4)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau63",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình bấm đúng vị trí trên cần đàn",
+                  "Giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau7",
+          "lessonId": "aa720000-0000-4000-8000-000000000007",
+          "flowId": "fa720000-0000-4000-8000-000000000007",
+          "order": 7,
+          "title": "Thị tấu 7 — vùng cao (dây 1-2)",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau71",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó là <b>thị tấu</b>! Đọc tới đâu đàn tới đó, xong Nghe mẫu đối chiếu. Nốt <b>dây 2 và 1</b> (Si Đô Rê Mi Fa Sol)."
+            },
+            {
+              "id": "thitau72",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 7 — vùng cao (dây 1-2)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau73",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình bấm đúng vị trí trên cần đàn",
+                  "Giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau8",
+          "lessonId": "aa720000-0000-4000-8000-000000000008",
+          "flowId": "fa720000-0000-4000-8000-000000000008",
+          "order": 8,
+          "title": "Thị tấu 8 — có Fa# & Đô#",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau81",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó là <b>thị tấu</b>! Đọc tới đâu đàn tới đó, xong Nghe mẫu đối chiếu. Đoạn có <b>Đô#</b> và <b>Fa#</b> (nhớ bấm cao hơn 1 ngăn)."
+            },
+            {
+              "id": "thitau82",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 8 — có Fa# & Đô#",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô#",
+                    "freq": 277.18,
+                    "string": 2,
+                    "fret": 2,
+                    "staff": 5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa#",
+                    "freq": 369.99,
+                    "string": 1,
+                    "fret": 2,
+                    "staff": 8,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau83",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình bấm đúng vị trí trên cần đàn",
+                  "Giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau9",
+          "lessonId": "aa720000-0000-4000-8000-000000000009",
+          "flowId": "fa720000-0000-4000-8000-000000000009",
+          "order": 9,
+          "title": "Thị tấu 9 — trọn cần đàn",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau91",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó là <b>thị tấu</b>! Đọc tới đâu đàn tới đó, xong Nghe mẫu đối chiếu. Chạy qua <b>cả 6 dây</b> từ trầm lên cao."
+            },
+            {
+              "id": "thitau92",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 9 — trọn cần đàn",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 82.41,
+                    "string": 6,
+                    "fret": 0,
+                    "staff": -7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau93",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình bấm đúng vị trí trên cần đàn",
+                  "Giữ nhịp đều theo metronome"
                 ]
               }
             }
