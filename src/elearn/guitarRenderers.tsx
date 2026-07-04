@@ -14,11 +14,12 @@ export interface NoteChartCfg { highlight?: string[] }
 export interface StrumCfg { sequence?: number[] }                 // dãy số dây cần gảy đúng thứ tự
 export interface EarCfg { pool?: number[]; rounds?: number; passScore?: number }
 // "Đánh theo mẫu": máy chạy chuỗi nốt theo nhịp, học viên bắt chước
-export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number; dur?: number; rest?: boolean }  // dur = số phách (mặc định 1) — cho "Nghe mẫu" chạy đúng trường độ; rest = dấu lặng (im lặng đúng dur)
+export interface NoteItem { label: string; freq: number; string?: number; fret?: number; staff?: number; dur?: number; rest?: boolean; acc?: '#' | 'b' }  // dur = số phách (mặc định 1); rest = dấu lặng; acc = dấu hoá (#/b) vẽ trước nốt (cùng dòng với nốt tự nhiên)
 // "Xem nốt": hình minh hoạ tĩnh (khuông nhạc và/hoặc cần đàn) + nút nghe thử
 export interface NoteShowCfg {
   label?: string; freq?: number; string?: number; fret?: number; staff?: number
   showStaff?: boolean; showFretboard?: boolean; caption?: string; dur?: number   // dur ≥2 → nốt trắng/tròn đầu rỗng (dạy trường độ)
+  acc?: '#' | 'b'                                                                // dấu hoá vẽ trước nốt (dạy dấu thăng/giáng)
 }
 export interface NotePracticeCfg {
   notes?: NoteItem[]                            // chuỗi nốt (vd 4× Mi). string/fret để vẽ cần đàn, staff = vị trí trên khuông (0 = dòng kẻ dưới cùng = Mi/E4)
@@ -332,7 +333,7 @@ function ledgersFor(staff: number): number[] {
 // Khuông nhạc nhỏ — dạy thụ động vị trí nốt.
 // staff = số bậc (nửa-dòng) tính từ DÒNG KẺ DƯỚI CÙNG (=0). LƯU Ý: guitar viết CAO HƠN THỰC TẾ 1 QUÃNG 8,
 // nên Mi dây-1-buông (E4 thực) VIẾT là E5 = KHE 4 = staff 7 (gần đỉnh). Dây2(B4)=4, dây3(G4)=2.
-export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: boolean; label: string; staff?: number; pulse?: number; dur?: number }) {
+export function NoteStaff({ active, label, staff = 0, pulse, dur, acc }: { active: boolean; label: string; staff?: number; pulse?: number; dur?: number; acc?: '#' | 'b' }) {
   const W = 240, top = 22, gap = 11
   const hollow = (dur ?? 1) >= 2, noStem = (dur ?? 1) >= 4    // nốt trắng/tròn = đầu rỗng; nốt tròn = không đuôi
   const flag = (dur ?? 1) > 0 && (dur ?? 1) <= 0.5           // nốt móc đơn = có dấu móc
@@ -350,6 +351,7 @@ export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: bo
       {ledgersFor(staff).map(e => { const y = lineY(4) - e * (gap / 2); return <line key={`lg${e}`} x1={noteX - 14} x2={noteX + 14} y1={y} y2={y} stroke="#CBBF9E" strokeWidth={1.5} /> })}
       {/* Khóa Sol — font nhạc chuẩn Bravura (SMuFL U+E050); 1 em = 4 khoảng dòng; baseline trên dòng Sol lineY(3) để xoắn ốc ôm đúng dòng */}
       <text x={9} y={lineY(3)} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>
+      {acc && <text x={noteX - 17} y={noteY} textAnchor="middle" dominantBaseline="central" fontFamily="Bravura" fontSize={3.4 * gap} fill={col}>{String.fromCodePoint(acc === '#' ? 0xE262 : 0xE260)}</text>}
       <g key={pulse} style={{ animation: active ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${noteX}px ${noteY}px` }}>
         {hollow
           ? <ellipse cx={noteX} cy={noteY} rx={9.4} ry={6.9} fill="none" stroke={col} strokeWidth={2.8} transform={`rotate(-18 ${noteX} ${noteY})`} />
@@ -465,6 +467,7 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
             <g key={i}>
               {on && <rect x={x - 12} y={y - 30} width={24} height={46} rx={6} fill="rgba(194,98,46,0.13)" />}
               {ledgersFor(st).map(e => { const ly = bY(row) - e * (gap / 2); return <line key={`lg${e}`} x1={x - 10} x2={x + 10} y1={ly} y2={ly} stroke="#CBBF9E" strokeWidth={1.2} /> })}
+              {n.acc && <text x={x - 13} y={y} textAnchor="middle" dominantBaseline="central" fontFamily="Bravura" fontSize={3.4 * gap} fill={c}>{String.fromCodePoint(n.acc === '#' ? 0xE262 : 0xE260)}</text>}
               <g key={'p' + active} style={{ animation: on ? '_ntPing .25s ease-out' : undefined, transformOrigin: `${x}px ${y}px` }}>
                 {hollow
                   ? <ellipse cx={x} cy={y} rx={on ? 8.3 : 7.4} ry={on ? 6.1 : 5.4} fill="none" stroke={c} strokeWidth={2.3} transform={`rotate(-18 ${x} ${y})`} />
@@ -784,7 +787,7 @@ export function NoteShow({ cfg }: { cfg: NoteShowCfg }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {showStaff && (
         <div style={{ background: '#fff', border: '1px solid #EAE4D8', borderRadius: 14, padding: '8px 8px 2px' }}>
-          <NoteStaff active label={label} staff={cfg.staff ?? 0} dur={cfg.dur} />
+          <NoteStaff active label={label} staff={cfg.staff ?? 0} dur={cfg.dur} acc={cfg.acc} />
         </div>
       )}
       {showFb && (
