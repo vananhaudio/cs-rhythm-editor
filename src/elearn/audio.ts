@@ -139,19 +139,28 @@ export function playBass(freq: number) {
   } catch { /* */ }
 }
 // Strings pad — hợp âm êm, ngân cả ô nhịp rồi tắt dần (lót nhẹ dưới giai điệu)
+// Đệm hợp âm: tiếng synth/EP SÁNG, gảy nảy (pluck) — trẻ trung, không u ám như strings tối
 export function playPad(freqs: number[], durMs: number) {
   const ac = ctx(); if (!ac) return
   try {
-    const t = ac.currentTime, rel = Math.max(0.3, durMs / 1000)
+    const t = ac.currentTime, rel = Math.max(0.4, durMs / 1000)
     const g = ac.createGain()
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.12)   // pad êm, vào chậm
-    g.gain.setValueAtTime(0.05, t + rel * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + rel + 0.15)
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200
-    lp.connect(g); g.connect(ac.destination)
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.exponentialRampToValueAtTime(0.06, t + 0.012)     // attack nhanh (gảy)
+    g.gain.exponentialRampToValueAtTime(0.022, t + 0.35)     // nảy xuống nhanh (pluck), còn ngân nhẹ
+    g.gain.setValueAtTime(0.022, t + rel * 0.72)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + rel + 0.2)
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 190   // bỏ tiếng trầm đục
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'
+    lp.frequency.setValueAtTime(4600, t); lp.frequency.exponentialRampToValueAtTime(1700, t + 0.55)   // sáng lúc gảy rồi dịu
+    hp.connect(lp); lp.connect(g); g.connect(ac.destination)
     freqs.forEach(f => {
-      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f
-      const og = ac.createGain(); og.gain.value = 0.33
-      o.connect(og); og.connect(lp); o.start(t); o.stop(t + rel + 0.2)
+      const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f       // triangle: sạch & sáng
+      const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2     // bội âm 8ve cho lấp lánh
+      const og = ac.createGain(); og.gain.value = 0.5
+      const og2 = ac.createGain(); og2.gain.value = 0.13
+      o.connect(og); og.connect(hp); o2.connect(og2); og2.connect(hp)
+      o.start(t); o.stop(t + rel + 0.3); o2.start(t); o2.stop(t + rel + 0.3)
     })
   } catch { /* */ }
 }
