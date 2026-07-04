@@ -6070,14 +6070,31 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Dấu <b>thăng (#)</b> đặt <b>trước</b> một nốt = <b>nâng nửa cung</b> = trên đàn bấm <b>cao hơn 1 ngăn</b>. Nốt hay gặp nhất là <b>Sol#</b> — cùng một tên, nhưng có ở <b>nhiều chỗ</b> trên cần đàn. Cùng đi tìm nhé!"
+              "content": "Dấu <b>thăng (#)</b> đặt <b>trước</b> một nốt = <b>nâng nửa cung</b> = trên đàn bấm <b>cao hơn 1 ngăn</b>. Hãy so sánh <b>Sol</b> và <b>Sol#</b> để thấy rõ."
             },
             {
               "id": "s2",
               "order": 2,
               "logic": "NHAN",
               "type": "note_show",
-              "title": "Sol# ở dây 3",
+              "title": "Sol thường",
+              "interactive": {
+                "label": "Sol",
+                "freq": 196,
+                "string": 3,
+                "fret": 0,
+                "staff": 2,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Sol thường</b> — dây 3 <b>buông</b> (○), không có dấu gì. Nghe kỹ cao độ của nó."
+              }
+            },
+            {
+              "id": "s3",
+              "order": 3,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Sol thăng (Sol#)",
               "interactive": {
                 "label": "Sol#",
                 "freq": 207.65,
@@ -6087,12 +6104,12 @@
                 "acc": "#",
                 "showStaff": true,
                 "showFretboard": true,
-                "caption": "<b>Sol#</b> ở <b>dây 3</b>: Sol là dây 3 <b>buông</b> → thêm # → bấm <b>ngăn 1</b> (cao hơn 1 ngăn)."
+                "caption": "<b>Sol#</b> — có dấu <b>#</b> trước nốt (cùng dòng với Sol). Bấm <b>cao hơn 1 ngăn</b> (dây 3 ngăn 1). Nghe <b>cao hơn Sol nửa cung</b>."
               }
             },
             {
-              "id": "s3",
-              "order": 3,
+              "id": "s4",
+              "order": 4,
               "logic": "NHAN",
               "type": "note_show",
               "title": "Sol# ở dây 1",
@@ -6105,12 +6122,12 @@
                 "acc": "#",
                 "showStaff": true,
                 "showFretboard": true,
-                "caption": "<b>Sol#</b> ở <b>dây 1</b>: Sol là dây 1 <b>ngăn 3</b> → thêm # → bấm <b>ngăn 4</b>. (Cao hơn Sol dây 3 đúng một quãng tám.)"
+                "caption": "Sol# cũng có ở <b>dây 1</b>: Sol là dây 1 <b>ngăn 3</b> → thêm # → bấm <b>ngăn 4</b>."
               }
             },
             {
-              "id": "s4",
-              "order": 4,
+              "id": "s5",
+              "order": 5,
               "logic": "NHAN",
               "type": "note_show",
               "title": "Sol# ở dây 6",
@@ -6123,25 +6140,24 @@
                 "acc": "#",
                 "showStaff": true,
                 "showFretboard": true,
-                "caption": "<b>Sol#</b> ở <b>dây 6</b> (trầm nhất): Sol là dây 6 <b>ngăn 3</b> → thêm # → bấm <b>ngăn 4</b>. Trên khuông nằm sâu dưới (dòng kẻ phụ)."
+                "caption": "Và ở <b>dây 6</b> (trầm nhất): Sol là dây 6 <b>ngăn 3</b> → thêm # → bấm <b>ngăn 4</b>."
               }
             },
             {
-              "id": "s5",
-              "order": 5,
+              "id": "s6",
+              "order": 6,
               "logic": "LAM",
               "type": "note_practice",
-              "title": "Đánh theo: Sol# ba nơi",
+              "title": "Đánh theo: Sol → Sol# → La",
               "interactive": {
                 "showDur": true,
                 "notes": [
                   {
-                    "label": "Sol#",
-                    "freq": 103.83,
-                    "string": 6,
-                    "fret": 4,
-                    "staff": -5,
-                    "acc": "#",
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
                     "dur": 1
                   },
                   {
@@ -6154,40 +6170,256 @@
                     "dur": 1
                   },
                   {
-                    "label": "Sol#",
-                    "freq": 415.3,
-                    "string": 1,
-                    "fret": 4,
-                    "staff": 9,
-                    "acc": "#",
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
                     "dur": 2
                   }
                 ]
               }
             },
             {
-              "id": "s6",
-              "order": 6,
+              "id": "s7",
+              "order": 7,
               "logic": "NGAM",
               "type": "checklist",
               "title": "Tự kiểm tra",
               "interactive": {
                 "items": [
-                  "Mình hiểu # = nâng nửa cung = bấm cao hơn 1 ngăn",
-                  "Mình tìm & bấm được Sol# ở dây 3 (ngăn 1), dây 1 (ngăn 4), dây 6 (ngăn 4)"
+                  "Mình phân biệt được Sol và Sol# (Sol# cao hơn nửa cung)",
+                  "Mình biết # = bấm cao hơn 1 ngăn",
+                  "Mình tìm được Sol# ở dây 3, dây 1, dây 6"
                 ]
               }
             },
             {
-              "id": "s7",
-              "order": 7,
+              "id": "s8",
+              "order": 8,
               "logic": "DAN",
               "type": "callout",
               "title": "Lời thầy",
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Giỏi! Giờ thấy dấu <b>#</b> là bạn biết ngay: bấm <b>cao hơn 1 ngăn</b>. Sol# sẽ gặp nhiều ở các bài buồn (La thứ). 🎸"
+              "content": "Giỏi! Thấy dấu <b>#</b> là bấm <b>cao hơn 1 ngăn</b>. Bài sau ta chơi thử một <b>đoạn nhạc ngắn có Sol#</b>."
+            }
+          ]
+        },
+        {
+          "key": "solthangtap",
+          "lessonId": "a8720000-0000-4000-8000-000000000002",
+          "flowId": "f8720000-0000-4000-8000-000000000002",
+          "order": 2,
+          "title": "Bài 2: Đoạn nhạc ngắn có Sol#",
+          "reward_xp": 14,
+          "slides": [
+            {
+              "id": "t1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thực hành với Sol#",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Một đoạn ngắn tông <b>La thứ</b> có <b>Sol#</b> (dây 3 ngăn 1). Để ý mỗi lần <b>Sol# → La</b> nghe rất \"muốn\" về nhà. Nghe mẫu (có nhạc nền) rồi tự đàn."
+            },
+            {
+              "id": "t2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: đoạn nhạc có Sol#",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "chords": [
+                  {
+                    "bass": 110,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      220
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81,
+                      207.65
+                    ]
+                  },
+                  {
+                    "bass": 110,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      220
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81,
+                      207.65
+                    ]
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 207.65,
+                    "string": 3,
+                    "fret": 1,
+                    "staff": 2,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 207.65,
+                    "string": 3,
+                    "fret": 1,
+                    "staff": 2,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 207.65,
+                    "string": 3,
+                    "fret": 1,
+                    "staff": 2,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "t3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm đúng Sol# (dây 3 ngăn 1) mỗi lần gặp dấu #",
+                  "Mình nghe Sol# dẫn về La",
+                  "Mình chơi liền cả đoạn theo nhạc nền"
+                ]
+              }
+            },
+            {
+              "id": "t4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tuyệt! Chơi được Sol# trong một đoạn nhạc thật rồi. Đây là chìa khoá để đàn các bài buồn tông La thứ. 🎸"
             }
           ]
         }
