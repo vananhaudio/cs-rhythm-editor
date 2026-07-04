@@ -335,6 +335,7 @@ function ledgersFor(staff: number): number[] {
 export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: boolean; label: string; staff?: number; pulse?: number; dur?: number }) {
   const W = 240, top = 22, gap = 11
   const hollow = (dur ?? 1) >= 2, noStem = (dur ?? 1) >= 4    // nốt trắng/tròn = đầu rỗng; nốt tròn = không đuôi
+  const flag = (dur ?? 1) > 0 && (dur ?? 1) <= 0.5           // nốt móc đơn = có dấu móc
   const H = 92 + (staff < -1 ? Math.round((-1 - staff) * (gap / 2)) + 20 : 0)   // giãn cao cho nốt trầm (dây 5–6) không tràn khung
   const lineY = (i: number) => top + i * gap            // i=0 dòng trên cùng … i=4 dòng dưới cùng
   const noteY = lineY(4) - staff * (gap / 2)            // mỗi bậc = nửa khoảng dòng
@@ -354,6 +355,7 @@ export function NoteStaff({ active, label, staff = 0, pulse, dur }: { active: bo
           ? <ellipse cx={noteX} cy={noteY} rx={9.4} ry={6.9} fill="none" stroke={col} strokeWidth={2.8} transform={`rotate(-18 ${noteX} ${noteY})`} />
           : <ellipse cx={noteX} cy={noteY} rx={9} ry={6.6} fill={col} transform={`rotate(-18 ${noteX} ${noteY})`} />}
         {!noStem && <line x1={stemX} x2={stemX} y1={noteY + (stemUp ? -2 : 2)} y2={noteY + (stemUp ? -38 : 38)} stroke={col} strokeWidth={2.2} />}
+        {flag && <text x={stemX} y={noteY + (stemUp ? -38 : 38)} fontFamily="Bravura" fontSize={4 * gap} fill={col}>{String.fromCodePoint(stemUp ? 0xE240 : 0xE241)}</text>}
       </g>
       <text x={noteX} y={H - 3} textAnchor="middle" fontSize={13} fontWeight="700" fill={col}>{label}</text>
     </svg>
@@ -457,6 +459,8 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
           const stemUp = st < 4, stemX = x + (stemUp ? 6.5 : -6.5)
           const hollow = showDur && dur >= 2      // nốt trắng/tròn = đầu rỗng
           const noStem = showDur && dur >= 4      // nốt tròn = không đuôi
+          const flag = showDur && dur > 0 && dur <= 0.5   // nốt móc đơn = có dấu móc
+          const stemEnd = y + (stemUp ? -26 : 26)
           return (
             <g key={i}>
               {on && <rect x={x - 12} y={y - 30} width={24} height={46} rx={6} fill="rgba(194,98,46,0.13)" />}
@@ -465,7 +469,8 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
                 {hollow
                   ? <ellipse cx={x} cy={y} rx={on ? 8.3 : 7.4} ry={on ? 6.1 : 5.4} fill="none" stroke={c} strokeWidth={2.3} transform={`rotate(-18 ${x} ${y})`} />
                   : <ellipse cx={x} cy={y} rx={on ? 8 : 7} ry={on ? 6 : 5.2} fill={c} transform={`rotate(-18 ${x} ${y})`} />}
-                {!noStem && <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={y + (stemUp ? -26 : 26)} stroke={c} strokeWidth={2} />}
+                {!noStem && <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={stemEnd} stroke={c} strokeWidth={2} />}
+                {flag && <text x={stemX} y={stemEnd} fontFamily="Bravura" fontSize={4 * gap} fill={c}>{String.fromCodePoint(stemUp ? 0xE240 : 0xE241)}</text>}
               </g>
               <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 11.5 : 10.5} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
             </g>
