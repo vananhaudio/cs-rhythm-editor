@@ -6422,6 +6422,436 @@
               "content": "Tuyệt! Chơi được Sol# trong một đoạn nhạc thật rồi. Đây là chìa khoá để đàn các bài buồn tông La thứ. 🎸"
             }
           ]
+        },
+        {
+          "key": "solthang6",
+          "lessonId": "a8720000-0000-4000-8000-000000000003",
+          "flowId": "f8720000-0000-4000-8000-000000000003",
+          "order": 3,
+          "title": "Bài 3: Đoạn nhạc có Sol# (dây 6)",
+          "reward_xp": 14,
+          "slides": [
+            {
+              "id": "u1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Sol# ở vùng trầm (dây 6)",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Lần này đoạn nhạc ở <b>vùng trầm</b>, dùng <b>Sol# ở dây 6</b> (ngăn 4). Vẫn là câu \"Sol# → La\" quen thuộc, nhưng trầm và ấm hơn. Nghe mẫu rồi tự đàn."
+            },
+            {
+              "id": "u2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Sol# dây 6",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "chords": [
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81
+                    ]
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 103.83,
+                    "string": 6,
+                    "fret": 4,
+                    "staff": -5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 103.83,
+                    "string": 6,
+                    "fret": 4,
+                    "staff": -5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 103.83,
+                    "string": 6,
+                    "fret": 4,
+                    "staff": -5,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "u3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm đúng Sol# ở dây 6 ngăn 4",
+                  "Mình nghe Sol# trầm dẫn về La",
+                  "Mình chơi liền cả đoạn"
+                ]
+              }
+            },
+            {
+              "id": "u4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tốt! Sol# ở dây trầm nghe rất da diết — hợp các đoạn nhạc buồn sâu. 🎸"
+            }
+          ]
+        },
+        {
+          "key": "solthang1",
+          "lessonId": "a8720000-0000-4000-8000-000000000004",
+          "flowId": "f8720000-0000-4000-8000-000000000004",
+          "order": 4,
+          "title": "Bài 4: Đoạn nhạc có Sol# (dây 1)",
+          "reward_xp": 14,
+          "slides": [
+            {
+              "id": "w1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Sol# ở vùng cao (dây 1)",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Đoạn này ở <b>vùng cao</b>, dùng <b>Sol# ở dây 1</b> (ngăn 4). Giai điệu rải lên tới Sol# cao rồi kéo về La — nghe sáng và tha thiết. Nghe mẫu rồi tự đàn."
+            },
+            {
+              "id": "w2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Sol# dây 1",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "chords": [
+                  {
+                    "bass": 110,
+                    "pad": [
+                      164.81,
+                      220,
+                      261.63
+                    ]
+                  },
+                  {
+                    "bass": 110,
+                    "pad": [
+                      164.81,
+                      220,
+                      261.63
+                    ]
+                  },
+                  {
+                    "bass": 110,
+                    "pad": [
+                      164.81,
+                      220,
+                      261.63
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      164.81,
+                      207.65,
+                      246.94
+                    ]
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 415.3,
+                    "string": 1,
+                    "fret": 4,
+                    "staff": 9,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 415.3,
+                    "string": 1,
+                    "fret": 4,
+                    "staff": 9,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 415.3,
+                    "string": 1,
+                    "fret": 4,
+                    "staff": 9,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "w3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình bấm đúng Sol# ở dây 1 ngăn 4",
+                  "Mình chơi rải lên tới Sol# rồi về La",
+                  "Mình chơi liền cả đoạn"
+                ]
+              }
+            },
+            {
+              "id": "w4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Xuất sắc! Giờ bạn chơi được Sol# ở cả <b>ba vùng</b>: dây 3, dây 6, dây 1 — sẵn sàng cho các bài La thứ. 🎸"
+            }
+          ]
         }
       ]
     },
