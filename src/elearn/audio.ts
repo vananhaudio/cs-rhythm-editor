@@ -139,28 +139,34 @@ export function playBass(freq: number) {
   } catch { /* */ }
 }
 // Strings pad — hợp âm êm, ngân cả ô nhịp rồi tắt dần (lót nhẹ dưới giai điệu)
-// Đệm hợp âm: tiếng synth/EP SÁNG, gảy nảy (pluck) — trẻ trung, không u ám như strings tối
+// Đệm hợp âm = tiếng PIANO (tổng hợp): búa gõ dây, hài âm sine, tắt dần tự nhiên, sáng→tối
 export function playPad(freqs: number[], durMs: number) {
   const ac = ctx(); if (!ac) return
   try {
-    const t = ac.currentTime, rel = Math.max(0.4, durMs / 1000)
-    const g = ac.createGain()
-    g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.06, t + 0.012)     // attack nhanh (gảy)
-    g.gain.exponentialRampToValueAtTime(0.022, t + 0.35)     // nảy xuống nhanh (pluck), còn ngân nhẹ
-    g.gain.setValueAtTime(0.022, t + rel * 0.72)
-    g.gain.exponentialRampToValueAtTime(0.0001, t + rel + 0.2)
-    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 190   // bỏ tiếng trầm đục
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'
-    lp.frequency.setValueAtTime(4600, t); lp.frequency.exponentialRampToValueAtTime(1700, t + 0.55)   // sáng lúc gảy rồi dịu
-    hp.connect(lp); lp.connect(g); g.connect(ac.destination)
-    freqs.forEach(f => {
-      const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = f       // triangle: sạch & sáng
-      const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2     // bội âm 8ve cho lấp lánh
-      const og = ac.createGain(); og.gain.value = 0.5
-      const og2 = ac.createGain(); og2.gain.value = 0.13
-      o.connect(og); og.connect(hp); o2.connect(og2); og2.connect(hp)
-      o.start(t); o.stop(t + rel + 0.3); o2.start(t); o2.stop(t + rel + 0.3)
+    const t = ac.currentTime, rel = Math.max(0.6, durMs / 1000)
+    freqs.forEach((f, idx) => {
+      const g = ac.createGain()
+      const peak = idx === 0 ? 0.05 : 0.036                        // nốt trầm nhất to hơn chút
+      g.gain.setValueAtTime(0.0001, t)
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.004)         // búa gõ — attack rất nhanh
+      g.gain.exponentialRampToValueAtTime(peak * 0.32, t + 0.28)   // giảm nhanh ban đầu
+      g.gain.exponentialRampToValueAtTime(0.0001, t + rel + 0.5)   // ngân tắt dần (piano)
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'
+      lp.frequency.setValueAtTime(5200, t); lp.frequency.exponentialRampToValueAtTime(1300, t + 0.7)  // sáng lúc gõ, tối dần
+      lp.connect(g); g.connect(ac.destination)
+      ;([[1, 1], [2, 0.45], [3, 0.22], [4, 0.1]] as const).forEach(([h, amp]) => {
+        const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = f * h    // hài âm sine kiểu piano
+        const og = ac.createGain(); og.gain.value = amp
+        o.connect(og); og.connect(lp); o.start(t); o.stop(t + rel + 0.6)
+      })
     })
+    // tiếng "búa chạm dây" — burst nhiễu rất ngắn cho chất gõ
+    const nb = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.015), ac.sampleRate)
+    const ch = nb.getChannelData(0)
+    for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length)
+    const noise = ac.createBufferSource(); noise.buffer = nb
+    const ng = ac.createGain(); ng.gain.value = 0.025
+    const nbp = ac.createBiquadFilter(); nbp.type = 'bandpass'; nbp.frequency.value = 2600
+    noise.connect(nbp); nbp.connect(ng); ng.connect(ac.destination); noise.start(t)
   } catch { /* */ }
 }
