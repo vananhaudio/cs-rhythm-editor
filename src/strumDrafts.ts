@@ -2,6 +2,8 @@
 // RLS: học sinh chỉ thấy/sửa bài của mình; thầy đọc hết. Xem db/student_strum_drafts.sql
 import { supabase } from './supabase'
 
+export type DraftStatus = 'draft' | 'done'
+
 export interface StrumDraft {
   id: string
   owner_id?: string
@@ -10,6 +12,7 @@ export interface StrumDraft {
   meter: number
   raw_lyric: string
   cuts: number[]
+  status: DraftStatus   // 'draft' = đang soạn · 'done' = xong, hiện ở "Bài hát của tôi"
   pattern_id?: string | null
   style_id?: string | null
   tempo?: number | null
@@ -17,14 +20,15 @@ export interface StrumDraft {
   updated_at?: string
 }
 
-// Chuẩn hoá hàng DB → StrumDraft (cuts có thể là null/chuỗi)
+// Chuẩn hoá hàng DB → StrumDraft (cuts có thể là null/chuỗi; status có thể chưa có cột)
 function normalize(row: any): StrumDraft {
   let cuts: number[] = []
   try { cuts = Array.isArray(row.cuts) ? row.cuts : JSON.parse(row.cuts ?? '[]') } catch { cuts = [] }
   return {
     id: row.id, owner_id: row.owner_id, title: row.title ?? 'Bài chưa đặt tên',
     sheet_url: row.sheet_url ?? null, meter: row.meter ?? 4, raw_lyric: row.raw_lyric ?? '',
-    cuts, pattern_id: row.pattern_id ?? null, style_id: row.style_id ?? null, tempo: row.tempo ?? null,
+    cuts, status: row.status === 'done' ? 'done' : 'draft',
+    pattern_id: row.pattern_id ?? null, style_id: row.style_id ?? null, tempo: row.tempo ?? null,
     created_at: row.created_at, updated_at: row.updated_at,
   }
 }

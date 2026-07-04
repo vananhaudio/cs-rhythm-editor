@@ -1,5 +1,6 @@
 // ── "Strum Score của tôi" — danh sách bài học sinh tự soạn + mở trình vạch nhịp ─
-// Route /strum-builder render màn này. Chọn/ tạo bài → mở StrumBuilder.
+// Route /strum-builder render màn này. 2 khu: "Bài hát của tôi" (đã hoàn tất —
+// mở thẳng Toàn màn hình để tập) và "Đang soạn" (mở màn vạch nhịp như cũ).
 import { useEffect, useState } from 'react'
 import StrumBuilder from './StrumBuilder'
 import { listMyDrafts, createDraft, deleteDraft, type StrumDraft } from './strumDrafts'
@@ -9,6 +10,7 @@ const A = { accent: '#4F46E5', border: '#E4E4E7', sub: '#71717A', ink: '#27272A'
 export default function StrumWorkshop({ onExit }: { onExit?: () => void }) {
   const [drafts, setDrafts] = useState<StrumDraft[] | null>(null)   // null = đang tải
   const [current, setCurrent] = useState<StrumDraft | null>(null)
+  const [openDone, setOpenDone] = useState(false)   // mở thẳng Toàn màn hình (bài đã hoàn tất)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -20,17 +22,22 @@ export default function StrumWorkshop({ onExit }: { onExit?: () => void }) {
 
   const onNew = async () => {
     setBusy(true)
-    try { setCurrent(await createDraft()) }
+    try { setCurrent(await createDraft()); setOpenDone(false) }
     catch (e: any) { setErr(friendly(e)) }
     finally { setBusy(false) }
   }
+
+  const openDraft = (d: StrumDraft) => { setCurrent(d); setOpenDone(d.status === 'done') }
 
   const onDelete = async (d: StrumDraft) => {
     if (!confirm(`Xoá bài "${d.title}"?`)) return
     try { await deleteDraft(d.id); reload() } catch (e: any) { setErr(e?.message || 'Không xoá được') }
   }
 
-  if (current) return <StrumBuilder draft={current} onBack={() => { setCurrent(null); reload() }} />
+  if (current) return <StrumBuilder draft={current} openDone={openDone} onBack={() => { setCurrent(null); reload() }} />
+
+  const songs = (drafts ?? []).filter((d) => d.status === 'done')
+  const inProgress = (drafts ?? []).filter((d) => d.status !== 'done')
 
   return (
     <div style={{ minHeight: '100vh', background: A.bg, fontFamily: 'Inter, system-ui, sans-serif', color: A.ink }}>
@@ -56,19 +63,44 @@ export default function StrumWorkshop({ onExit }: { onExit?: () => void }) {
             ? <div style={{ color: A.sub, fontSize: 14, padding: '40px 0', textAlign: 'center', lineHeight: 1.8 }}>
                 Chưa có bài nào.<br />Bấm <b style={{ color: A.accent }}>+ Tạo bài mới</b> để bắt đầu.
               </div>
-            : <div style={{ display: 'grid', gap: 10 }}>
-                {drafts.map((d) => (
-                  <div key={d.id} style={{ background: '#fff', border: `1px solid ${A.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div onClick={() => setCurrent(d)} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
-                      <div style={{ fontSize: 15.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.title}</div>
-                      <div style={{ fontSize: 12.5, color: A.sub, marginTop: 3 }}>{(d.cuts.length + 1)} ô · nhịp {d.meter}/4{d.updated_at ? ' · ' + fmtDate(d.updated_at) : ''}</div>
-                    </div>
-                    <button onClick={() => setCurrent(d)} style={{ background: '#EEF2FF', color: A.accent, border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>Mở</button>
-                    <button onClick={() => onDelete(d)} title="Xoá" style={{ background: 'none', border: `1px solid ${A.border}`, borderRadius: 8, padding: '8px 11px', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>🗑</button>
-                  </div>
-                ))}
-              </div>}
+            : <>
+                {songs.length > 0 && (
+                  <Section title="🎵 Bài hát của tôi" hint="Đã vạch nhịp xong — bấm để tập">
+                    {songs.map((d) => <DraftRow key={d.id} d={d} onOpen={() => openDraft(d)} onDelete={() => onDelete(d)} />)}
+                  </Section>
+                )}
+                {inProgress.length > 0 && (
+                  <Section title="✎ Đang soạn">
+                    {inProgress.map((d) => <DraftRow key={d.id} d={d} onOpen={() => openDraft(d)} onDelete={() => onDelete(d)} />)}
+                  </Section>
+                )}
+              </>}
       </div>
+    </div>
+  )
+}
+
+function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 800, color: A.ink }}>{title}</div>
+        {hint && <div style={{ fontSize: 12, color: A.sub }}>{hint}</div>}
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>{children}</div>
+    </div>
+  )
+}
+
+function DraftRow({ d, onOpen, onDelete }: { d: StrumDraft; onOpen: () => void; onDelete: () => void }) {
+  return (
+    <div style={{ background: '#fff', border: `1px solid ${A.border}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div onClick={onOpen} style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
+        <div style={{ fontSize: 15.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.title}</div>
+        <div style={{ fontSize: 12.5, color: A.sub, marginTop: 3 }}>{(d.cuts.length + 1)} ô · nhịp {d.meter}/4{d.updated_at ? ' · ' + fmtDate(d.updated_at) : ''}</div>
+      </div>
+      <button onClick={onOpen} style={{ background: '#EEF2FF', color: A.accent, border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>{d.status === 'done' ? 'Tập' : 'Mở'}</button>
+      <button onClick={onDelete} title="Xoá" style={{ background: 'none', border: `1px solid ${A.border}`, borderRadius: 8, padding: '8px 11px', fontSize: 14, color: '#9CA3AF', cursor: 'pointer' }}>🗑</button>
     </div>
   )
 }

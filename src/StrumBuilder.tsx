@@ -1,13 +1,12 @@
 // ── CÔNG CỤ TẠO STRUM SCORE — Bước 1: vạch nhịp trên lời bài hát ───────────────
 // Màn chia đôi: TRÊN = ảnh sheet (chỉ để nhìn vạch nhịp) · DƯỚI = lời + hợp âm
 // (dán từ Hợp Âm Việt kiểu [C]lời), thầy bấm khe giữa các từ để cắm vạch nhịp.
-// LÁT 1a: khung + xem ảnh sheet + dán & render lời-hợp âm.
-// LÁT 1b: bấm khe cắm/xoá vạch nhịp, đánh số ô, tóm tắt hợp âm/ô, lưu localStorage.
+// Ảnh sheet: chỉ dán link hoặc tải ảnh lên (đã bỏ tìm kiếm trong app — Hợp Âm
+// Việt chặn robot nên không "chui vào trang" được, xem googleImageSearch cũ).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import type { StrumDraft } from './strumDrafts'
 import { saveDraft } from './strumDrafts'
-import { loadCseElement } from './googleImageSearch'
 
 const A = { accent: '#4F46E5', border: '#E4E4E7', sub: '#71717A', ink: '#27272A', bg: '#F4F4F5' }
 
@@ -87,7 +86,7 @@ function useNarrow() {
 
 type SaveStatus = 'saved' | 'dirty' | 'saving' | 'error'
 
-export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onBack: () => void }) {
+export default function StrumBuilder({ draft, onBack, openDone }: { draft: StrumDraft; onBack: () => void; openDone?: boolean }) {
   const narrow = useNarrow()
   const [title, setTitle] = useState(draft.title)
   const [sheetUrl, setSheetUrl] = useState(draft.sheet_url ?? '')
@@ -96,17 +95,12 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   const [raw, setRaw] = useState(draft.raw_lyric)
   const [editing, setEditing] = useState(draft.raw_lyric.trim().length === 0)
   const [cuts, setCuts] = useState<Set<number>>(() => new Set(draft.cuts))
+  const [docStatus, setDocStatus] = useState(draft.status)
   const [status, setStatus] = useState<SaveStatus>('saved')
-  // Tìm ảnh sheet — widget Google CSE hiện kết quả NGAY TRONG ô sheet
-  const [searchQ, setSearchQ] = useState('')
-  const [showCse, setShowCse] = useState(false)
   const [showPaste, setShowPaste] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(!!draft.sheet_url)   // chưa có ảnh → thu gọn, nhường chỗ cho vạch nhịp
   const [sheetBroken, setSheetBroken] = useState(false)           // trang nguồn chặn hotlink → ảnh không tải được ở đây
-  const cseBox = useRef<HTMLDivElement>(null)
-  const cseRendered = useRef(false)
-  // Tải ảnh lên (chụp màn hình / ảnh chụp bản nhạc) — thay cho việc tự "chui vào" trang web
-  // (Hợp Âm Việt chặn robot đọc trang bằng Cloudflare nên không lục ảnh tự động được).
+  // Tải ảnh lên (chụp màn hình / ảnh chụp bản nhạc)
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -118,7 +112,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
       const { error } = await supabase.storage.from('strum-sheets').upload(path, file, { upsert: true, contentType: file.type || undefined })
       if (error) throw error
       const { data } = supabase.storage.from('strum-sheets').getPublicUrl(path)
-      setSheetUrl(data.publicUrl); setSheetBroken(false); setSheetOpen(true); setShowCse(false); setZoom(1)
+      setSheetUrl(data.publicUrl); setSheetBroken(false); setSheetOpen(true); setZoom(1)
     } catch (e: any) {
       const m = (e?.message || '').toLowerCase()
       setUploadErr(
@@ -131,33 +125,6 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
-  }
-
-  const doSearch = async () => {
-    const q = searchQ.trim(); if (!q) return
-    setSheetOpen(true); setShowCse(true)
-    const el = await loadCseElement()
-    if (!cseRendered.current && cseBox.current) {
-      el.render({ div: cseBox.current, tag: 'searchresults-only', gname: 'sheetcse', attributes: { enableImageSearch: true, defaultToImageSearch: true, imageSearchLayout: 'popup' } })
-      cseRendered.current = true
-    }
-    setTimeout(() => { try { el.getElement('sheetcse')?.execute(q + ' sheet hợp âm guitar') } catch { /* */ } }, 60)
-  }
-
-  // Bấm 1 ảnh kết quả → widget mở popup preview (ảnh GỐC) → ta chộp src điền vào ô sheet
-  const grabTimer = useRef<number | null>(null)
-  useEffect(() => () => { if (grabTimer.current) window.clearInterval(grabTimer.current) }, [])
-  const grabPreview = () => {
-    if (grabTimer.current) window.clearInterval(grabTimer.current)
-    let tries = 0
-    grabTimer.current = window.setInterval(() => {
-      const img = document.querySelector('img.gs-imagePreview') as HTMLImageElement | null
-      const src = img?.src || ''
-      if (src && !src.includes('encrypted-tbn')) {
-        window.clearInterval(grabTimer.current!); grabTimer.current = null
-        setSheetUrl(src); setSheetBroken(false); setShowCse(false); setZoom(1)
-      } else if (++tries > 12) { window.clearInterval(grabTimer.current!); grabTimer.current = null }
-    }, 200)
   }
 
   const lines = useMemo(() => raw.split('\n').map(parseChordLine), [raw])
@@ -175,13 +142,13 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
   }, [tokens])
 
   // Ảnh chụp trạng thái đã lưu (để biết "chưa lưu")
-  const snap = () => JSON.stringify({ title, sheetUrl, meter, raw, cuts: [...cuts] })
-  const savedRef = useRef(JSON.stringify({ title: draft.title, sheetUrl: draft.sheet_url ?? '', meter: draft.meter, raw: draft.raw_lyric, cuts: draft.cuts }))
+  const snap = () => JSON.stringify({ title, sheetUrl, meter, raw, cuts: [...cuts], docStatus })
+  const savedRef = useRef(JSON.stringify({ title: draft.title, sheetUrl: draft.sheet_url ?? '', meter: draft.meter, raw: draft.raw_lyric, cuts: draft.cuts, docStatus: draft.status }))
 
   const persist = async () => {
     setStatus('saving')
     try {
-      await saveDraft(draft.id, { title: title.trim() || 'Bài chưa đặt tên', sheet_url: sheetUrl || null, meter, raw_lyric: raw, cuts: [...cuts] })
+      await saveDraft(draft.id, { title: title.trim() || 'Bài chưa đặt tên', sheet_url: sheetUrl || null, meter, raw_lyric: raw, cuts: [...cuts], status: docStatus })
       savedRef.current = snap(); setStatus('saved')
     } catch { setStatus('error') }
   }
@@ -193,7 +160,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
     const h = setTimeout(persist, 1200)
     return () => clearTimeout(h)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, sheetUrl, meter, raw, cuts])
+  }, [title, sheetUrl, meter, raw, cuts, docStatus])
 
   const handleBack = async () => {
     if (snap() !== savedRef.current) await persist()
@@ -217,24 +184,24 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
 
   const toggleCut = (gi: number) => setCuts((prev) => { const n = new Set(prev); n.has(gi) ? n.delete(gi) : n.add(gi); return n })
 
-  // Xem toàn màn hình — bản vạch nhịp đã lưu (tự lưu liên tục), hiện to rõ, không vướng thanh
-  // công cụ/khung tìm sheet. Chỉ để NHÌN, không sửa được ở đây.
-  const [fullView, setFullView] = useState(false)
+  // Xem toàn màn hình — bản vạch nhịp, hiện to rõ, không vướng thanh công cụ/khung sheet.
+  // Bấm "✓ Hoàn tất" (lần đầu) → đánh dấu xong (chuyển sang "Bài hát của tôi") + mở màn này.
+  const [fullView, setFullView] = useState(!!openDone && hasLyric)
+  const markDone = () => { setDocStatus('done'); setFullView(true) }
   if (fullView) {
     return (
       <div style={{ height: '100vh', width: '100vw', maxWidth: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', background: '#fff', fontFamily: 'Inter, system-ui, sans-serif', color: A.ink }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${A.border}` }}>
-          <button onClick={() => setFullView(false)} style={{ ...ghost, fontSize: 15 }}>✕ Đóng</button>
+          <button onClick={() => setFullView(false)} style={{ ...ghost, fontSize: 15 }}>✎ Sửa lại</button>
           <div style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</div>
-          <div style={{ width: 74 }} />
+          <button onClick={handleBack} style={{ ...ghost, fontSize: 15 }}>✕ Đóng</button>
         </div>
         <div style={{ flex: 1, minHeight: 0, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', padding: '28px 20px', display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: 760, minWidth: 0 }}>
             {(() => {
-              // Cả bài CHẢY LIÊN TỤC như đoạn văn — KHÔNG ngắt hàng cứng ở từng dòng dán gốc
-              // (trước đây mỗi dòng dán = 1 hàng riêng, nhìn bị tách vụn quá). Chỉ nhóm theo
-              // Ô NHỊP để không tách rời giữa chừng khi tự xuống dòng theo bề rộng màn hình,
-              // và chỉ chừa khoảng cách đoạn tại DÒNG TRỐNG thật sự (cách câu/đoạn trong lời).
+              // Cả bài CHẢY LIÊN TỤC như đoạn văn — KHÔNG ngắt hàng cứng ở từng dòng dán gốc.
+              // Nhóm theo Ô NHỊP để không tách rời giữa chừng khi tự xuống dòng, chỉ chừa
+              // khoảng cách đoạn tại DÒNG TRỐNG thật sự (cách câu/đoạn trong lời).
               const groups: typeof tokens[] = []
               tokens.forEach((t) => {
                 const last = groups[groups.length - 1]
@@ -309,17 +276,13 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: '#FAFAFA', borderBottom: sheetOpen ? `1px solid ${A.border}` : 'none', flexWrap: 'wrap' }}>
           <button onClick={() => setSheetOpen((v) => !v)} title={sheetOpen ? 'Thu gọn sheet' : 'Mở sheet'} style={{ ...zbtn, fontSize: 12 }}>{sheetOpen ? '▾' : '▸'}</button>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: '#A1A1AA', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Sheet tham chiếu</span>
-          <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') doSearch() }}
-            placeholder="Tìm sheet: tên bài…"
-            style={{ flex: 1, minWidth: 120, padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit' }} />
-          <button onClick={doSearch} style={{ ...ghost, background: A.accent, color: '#fff', border: 'none' }}>🔍 Tìm</button>
-          <button onClick={() => setShowPaste((v) => !v)} title="Dán link ảnh thủ công" style={zbtn}>🔗</button>
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setShowPaste((v) => !v)} title="Dán link ảnh" style={zbtn}>🔗</button>
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSheetFile(f) }} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Tải ảnh sheet lên (chụp màn hình/ảnh chụp)"
-            style={{ ...ghost, opacity: uploading ? .6 : 1 }}>{uploading ? '⏳' : '📤 Tải ảnh lên'}</button>
-          {showCse && sheetUrl && <button onClick={() => setShowCse(false)} style={ghost}>Ảnh đã dán</button>}
-          {sheetUrl && !showCse && <>
+          <button onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Tải ảnh lên (chụp màn hình)"
+            style={{ ...zbtn, opacity: uploading ? .6 : 1 }}>{uploading ? '⏳' : '📤'}</button>
+          {sheetUrl && <>
             <button onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.25).toFixed(2)))} style={zbtn}>−</button>
             <span style={{ fontSize: 12, color: A.sub, minWidth: 40, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))} style={zbtn}>+</button>
@@ -328,11 +291,10 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
 
         {showPaste && (
           <div style={{ padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}` }}>
-            <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); setSheetBroken(false); if (e.target.value.trim()) { setSheetOpen(true); setShowCse(false) } }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
+            <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); setSheetBroken(false); if (e.target.value.trim()) setSheetOpen(true) }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
               style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
             <div style={{ fontSize: 12, color: A.sub, marginTop: 6, lineHeight: 1.6 }}>
-              <b>Nếu ảnh nằm TRONG một trang web</b> (không phải file ảnh riêng): bấm giữ ngón tay lên đúng tấm ảnh đó (điện thoại) hoặc bấm chuột phải (máy tính) → chọn <b>"Sao chép địa chỉ hình ảnh"</b> / <b>"Copy image link"</b> → quay lại đây dán.
-              Không lấy được link? Chụp màn hình rồi bấm <b>📤 Tải ảnh lên</b> ở trên.
+              Ảnh trong 1 trang web: giữ ngón tay (hoặc chuột phải) trên ảnh → <b>"Sao chép địa chỉ hình ảnh"</b> → dán vào đây.
             </div>
           </div>
         )}
@@ -341,53 +303,16 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
         )}
 
         {sheetOpen && <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
-          {/* Kết quả tìm Google (widget CSE) — luôn mounted để render 1 lần, ẩn/hiện bằng display.
-              Bấm ảnh trong kết quả → chộp ảnh gốc từ popup preview điền vào ô sheet. */}
-          <div style={{ display: showCse ? 'block' : 'none', background: '#fff', minHeight: '100%', padding: '2px 10px 10px' }}
-            onClickCapture={(e) => {
-              const t = e.target as HTMLElement
-              // Ảnh nhỏ trong LƯỚI kết quả — KHÔNG chặn gì, để Google tự mở popup phóng to bằng
-              // JS của họ (chặn ở đây sẽ làm popup không mở được nữa). Ta chỉ chạy song song
-              // grabPreview() để chộp ảnh gốc ngay khi popup xuất hiện.
-              if (t.closest('.gs-imageResult') || t.closest('a.gs-image') || t.classList.contains('gs-imagePreview')) { grabPreview(); return }
-              // Bấm ngay TRONG popup xem ảnh to (không trúng đúng .gs-imageResult ở trên) — ví dụ
-              // lớp link ẨN gs-previewLink phủ lên khung ảnh to, trỏ ra trang nguồn. PHẢI chặn
-              // triệt để, không thì lọt xuống nhánh "tab Web" bên dưới, nhảy sang trang khác.
-              if (t.closest('[class*="image"]')) {
-                e.preventDefault()
-                e.stopPropagation()
-                ;(e.nativeEvent as Event).stopImmediatePropagation()
-                grabPreview()
-                return
-              }
-              // Kết quả Web (Hợp Âm Việt…) — Google ép target=_blank + tự window.open() bằng JS riêng
-              // của họ trên chính thẻ <a>. Phải chặn sự kiện lan xuống TỚI thẻ đó (stopPropagation ở
-              // capture, chạy trước khi mã của Google kịp thấy) — chỉ preventDefault là chưa đủ.
-              // Không "chui vào" trang tự động được (Hợp Âm Việt chặn robot bằng Cloudflare) —
-              // mở CÙNG TAB, học sinh tự xem/copy (giữ ngón tay → sao chép địa chỉ ảnh, xem gợi ý
-              // ở nút 🔗), bấm Back để quay lại app.
-              const a = t.closest('a[href]') as HTMLAnchorElement | null
-              if (a && a.target === '_blank' && a.href) {
-                e.preventDefault()
-                e.stopPropagation()
-                ;(e.nativeEvent as Event).stopImmediatePropagation()
-                const href = a.href
-                setTimeout(() => { window.location.href = href }, 0)
-              }
-            }}>
-            <div ref={cseBox} />
-          </div>
-
-          {!showCse && (sheetUrl
+          {sheetUrl
             ? <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
                 {sheetBroken
-                  ? <div style={{ color: '#FCA5A5', fontSize: 13.5, textAlign: 'center', padding: 24, lineHeight: 1.7 }}>Trang nguồn chặn hiển thị ảnh này ở đây.<br />Bấm <b>🔍 Tìm</b> chọn ảnh khác, hoặc mở tab <b>Web</b> để xem trực tiếp trên trang gốc.</div>
+                  ? <div style={{ color: '#FCA5A5', fontSize: 13.5, textAlign: 'center', padding: 24, lineHeight: 1.7 }}>Không hiện được ảnh này ở đây.<br />Thử dán link khác hoặc tải ảnh lên.</div>
                   : <img src={sheetUrl} alt="sheet" referrerPolicy="no-referrer" onError={() => setSheetBroken(true)} onLoad={() => setSheetBroken(false)}
                       style={{ width: `${zoom * 100}%`, maxWidth: 'none', display: 'block' }} />}
               </div>
             : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1AA', fontSize: 14, textAlign: 'center', lineHeight: 1.7, padding: 16 }}>
-                Gõ tên bài rồi bấm <b>🔍 Tìm</b> — kết quả hiện ngay tại đây.<br />Sheet chỉ để nhìn canh nhịp.
-              </div>)}
+                🔗 Dán link ảnh, hoặc 📤 tải ảnh lên.<br />Sheet chỉ để nhìn canh nhịp.
+              </div>}
         </div>}
       </div>
 
@@ -397,7 +322,7 @@ export default function StrumBuilder({ draft, onBack }: { draft: StrumDraft; onB
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: '#A1A1AA', textTransform: 'uppercase' }}>Lời &amp; hợp âm</span>
           {!editing && <span style={{ fontSize: 12, color: A.sub }}>Bấm khe giữa các chữ để cắm/xoá vạch nhịp │</span>}
           <div style={{ flex: 1 }} />
-          {!editing && hasLyric && <button onClick={() => setFullView(true)} style={{ ...ghost, background: A.accent, color: '#fff', border: 'none' }}>⛶ Toàn màn hình</button>}
+          {!editing && hasLyric && <button onClick={markDone} style={{ ...ghost, background: A.accent, color: '#fff', border: 'none' }}>{docStatus === 'done' ? '⛶ Xem toàn màn hình' : '✓ Hoàn tất'}</button>}
           {!editing && cuts.size > 0 && <button onClick={() => setCuts(new Set())} style={ghost}>Xoá hết vạch</button>}
           {!editing && <button onClick={() => setRaw(SAMPLE)} style={ghost}>Dán mẫu</button>}
           <button onClick={() => setEditing((v) => !v)} style={ghost}>{editing ? '✓ Xong, vạch nhịp' : '✎ Sửa lời'}</button>
