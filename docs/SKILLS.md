@@ -10,6 +10,7 @@
 | Tên skill | Việc nó làm | Sửa gần nhất |
 |---|---|---|
 | `strum-score` | Tạo/nhúng bài Strum Score (gảy theo nền) đúng quy ước: lấy đà, ô kết hình thoi, ô Out, ghi âm | 2026-07-04 |
+| `khuong-nhac` | Chuẩn hoá bố cục & khắc nhạc màn "Đánh theo" (NotePractice): số chỉ nhịp, vạch nhịp, vạch kết, dàn đều dòng, không co giãn màn hình | 2026-07-04 |
 
 ## Dự kiến làm (ứng viên skill — chưa dựng)
 
@@ -17,7 +18,6 @@
 |---|---|
 | `tia-not` | Soạn bài Tỉa nốt theo triết lý cụm→câu→vùng, note_show/note_practice, cảnh báo trường độ |
 | `narrated-slideshow` | Tạo bài slideshow deck có audio đồng bộ (end_times), tránh vòng lặp seek |
-| `khuong-nhac` | Nhập nốt/khuông: nốt đen/trắng, móc đơn, chùm 2, dấu lặng, hợp âm đầu ô |
 | `lich-lop` | Tạo lịch + mã lớp + nhóm Zalo + cấp khoá (buildClassCode, backfill_class) |
 | `bo-luat-hanh-trinh` | Áp bộ luật 2027: mã năng lực → PREREQ → cảnh báo thiếu nền |
 | `deploy` | Quy trình build (tsc -b) + commit tiếng Việt + push main; Edge Function deploy tay |

@@ -390,15 +390,26 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
       bars.push({ x: x0 + (col - 0.5) * sp, row })                 // vạch nhịp ngay sau nốt cuối ô
     }
     rows = row + 1
+    // Dàn đều (justify) mỗi dòng cho vạch nhịp CUỐI của mọi dòng thẳng hàng lề phải — dòng ngắn hơn không để vạch nhịp lửng lơ giữa chừng
+    const lastBarXNatural = (r: number) => { const rb = bars.filter(b => b.row === r); return rb.length ? rb[rb.length - 1].x : x0 }
+    const targetBarX = Math.max(...Array.from({ length: rows }, (_, r) => lastBarXNatural(r)))
+    for (let r = 0; r < rows; r++) {
+      const natX = lastBarXNatural(r)
+      if (natX <= x0 + 1) continue
+      const k = (targetBarX - x0) / (natX - x0)
+      if (Math.abs(k - 1) < 0.001) continue
+      notes.forEach((_, i) => { if (NR[i] === r) NX[i] = x0 + (NX[i] - x0) * k })
+      bars.forEach(b => { if (b.row === r) b.x = x0 + (b.x - x0) * k })
+    }
   } else {
     notes.forEach((_, i) => { NX[i] = x0 + (i % perRow) * sp; NR[i] = Math.floor(i / perRow) })
     rows = Math.max(1, Math.ceil(notes.length / perRow))
   }
   const rowEndX = (r: number) => {
     if (beatsPerBar <= 0) return x0 + perRow * sp + 8
-    let mx = x0
-    notes.forEach((_, i) => { if (NR[i] === r) mx = Math.max(mx, NX[i] + sp * 0.6) })
-    return mx + 6
+    const rowBars = bars.filter(b => b.row === r)
+    const lastBarX = rowBars.length ? rowBars[rowBars.length - 1].x : x0
+    return lastBarX + (r === rows - 1 ? 9 : 4)   // khuông kết thúc SÁT vạch nhịp cuối (không kéo dư); hàng cuối cùng chừa thêm chỗ cho vạch kết đôi nét
   }
   const rowW = Math.max(...Array.from({ length: rows }, (_, r) => rowEndX(r)))
   const H = headTop + rows * rowH + 4
@@ -406,35 +417,47 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
   const noteY = (staff: number, row: number) => bY(row) - staff * (gap / 2)
   const outerRef = useRef<HTMLDivElement>(null)
   const scRef = useRef<HTMLDivElement>(null)
+  const [availW, setAvailW] = useState(0)
   const [availH, setAvailH] = useState(0)
   useEffect(() => {
     const el = outerRef.current; if (!el) return
-    const measure = () => setAvailH(el.clientHeight)
+    const measure = () => { setAvailW(el.clientWidth); setAvailH(el.clientHeight) }
     measure()
     const ro = new ResizeObserver(measure); ro.observe(el)
     return () => ro.disconnect()
   }, [])
+  const scale = availW > 0 ? Math.min(1.6, Math.max(1, availW / rowW)) : 1   // lấp đầy chiều ngang khung, tránh co cụm nhỏ giữa khoảng trắng
+  const rowHs = rowH * scale
   const activeRow = active >= 0 ? NR[active] : -1
-  const visRows = availH > 0 ? Math.max(1, Math.floor((availH - 2) / rowH)) : rows   // số dòng hiện TRỌN VẸN
-  const innerH = rows <= visRows ? H : visRows * rowH + 2   // vừa đủ → hiện TRỌN (không thanh cuộn thừa); dài hơn → cuộn theo dòng
+  const visRows = availH > 0 ? Math.max(1, Math.floor((availH - 2) / rowHs)) : rows   // số dòng hiện TRỌN VẸN
+  const innerH = rows <= visRows ? H * scale : visRows * rowHs + 2   // vừa đủ → hiện TRỌN (không thanh cuộn thừa); dài hơn → cuộn theo dòng
   useEffect(() => {
     const el = scRef.current
-    if (el && activeRow >= 0) el.scrollTo({ top: activeRow * rowH, behavior: 'smooth' })   // cuộn snap theo trọn dòng
+    if (el && activeRow >= 0) el.scrollTo({ top: activeRow * rowHs, behavior: 'smooth' })   // cuộn snap theo trọn dòng
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRow, innerH])
+  }, [activeRow, innerH, scale])
   const staffEls: React.ReactNode[] = []
   for (let row = 0; row < rows; row++) {
     for (const li of [0, 1, 2, 3, 4]) staffEls.push(<line key={`l${row}-${li}`} x1={10} x2={rowEndX(row)} y1={bY(row) - li * gap} y2={bY(row) - li * gap} stroke="#D8CFBE" strokeWidth={1.3} />)
     staffEls.push(<text key={`cl${row}`} x={8} y={bY(row) - gap} fontSize={4 * gap} fill="#2E2A24" fontFamily="Bravura">{String.fromCodePoint(0xE050)}</text>)
-    if (beatsPerBar > 0 && row === 0) {   // số chỉ nhịp chỉ ở DÒNG ĐẦU (như bản nhạc chuẩn), giữa khóa Sol và nốt đầu
-      staffEls.push(<text key={`tsn${row}`} x={47} y={bY(row) - 3 * gap} textAnchor="middle" dominantBaseline="central" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">{beatsPerBar}</text>)
-      staffEls.push(<text key={`tsd${row}`} x={47} y={bY(row) - 1 * gap} textAnchor="middle" dominantBaseline="central" fontSize={1.9 * gap} fontWeight={700} fontFamily="Georgia, 'Times New Roman', serif" fill="#2E2A24">4</text>)
+    if (beatsPerBar > 0 && row === 0) {   // số chỉ nhịp chuẩn hoá: glyph Bravura (SMuFL timeSig, cùng bộ font với khóa Sol), tử số chiếm 2 khe trên, mẫu số chiếm 2 khe dưới
+      staffEls.push(<text key={`tsn${row}`} x={44} y={bY(row) - 3 * gap} textAnchor="middle" dominantBaseline="central" fontFamily="Bravura" fontSize={4 * gap} fill="#2E2A24">{String.fromCodePoint(0xE080 + beatsPerBar)}</text>)
+      staffEls.push(<text key={`tsd${row}`} x={44} y={bY(row) - 1 * gap} textAnchor="middle" dominantBaseline="central" fontFamily="Bravura" fontSize={4 * gap} fill="#2E2A24">{String.fromCodePoint(0xE080 + 4)}</text>)
     }
   }
-  // Vạch nhịp: kẻ dọc cuối mỗi ô (theo bố cục đã tính)
-  const barEls: React.ReactNode[] = bars.map((b, k) => (
-    <line key={`bar${k}`} x1={b.x} x2={b.x} y1={bY(b.row) - 4 * gap} y2={bY(b.row)} stroke="#B0A588" strokeWidth={1.5} />
-  ))
+  // Vạch nhịp: kẻ dọc cuối mỗi ô (theo bố cục đã tính); vạch CUỐI CÙNG của cả bài = vạch kết (2 nét, nét sau đậm) theo đúng quy tắc soạn nhạc
+  const barEls: React.ReactNode[] = bars.map((b, k) => {
+    const y1 = bY(b.row) - 4 * gap, y2 = bY(b.row)
+    if (k === bars.length - 1) {
+      return (
+        <g key={`bar${k}`}>
+          <line x1={b.x} x2={b.x} y1={y1} y2={y2} stroke="#B0A588" strokeWidth={1.3} />
+          <line x1={b.x + 4} x2={b.x + 4} y1={y1} y2={y2} stroke="#6B6456" strokeWidth={2.6} />
+        </g>
+      )
+    }
+    return <line key={`bar${k}`} x1={b.x} x2={b.x} y1={y1} y2={y2} stroke="#B0A588" strokeWidth={1.5} />
+  })
   // Nhãn tên nốt: đặt DƯỚI nốt thấp nhất của từng dòng (nốt trầm nằm dưới khuông sẽ không bị nhãn đè)
   const rowMaxY: number[] = []
   notes.forEach((n, i) => { if (n.rest) return; const r = NR[i], yy = noteY(n.staff ?? 0, r); if (rowMaxY[r] == null || yy > rowMaxY[r]) rowMaxY[r] = yy })
@@ -442,7 +465,7 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
   return (
     <div ref={outerRef} style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <div ref={scRef} style={{ height: innerH, maxHeight: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
-        <svg viewBox={`0 0 ${rowW} ${H}`} width={rowW} height={H} style={{ display: 'block' }}>
+        <svg viewBox={`0 0 ${rowW} ${H}`} width={rowW * scale} height={H * scale} style={{ display: 'block' }}>
           {staffEls}
           {barEls}
         {notes.map((n, i) => {
@@ -709,9 +732,14 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '12px 16px 10px', boxSizing: 'border-box' }}>
-      {/* Tốc độ */}
+      {/* Hàng trên: bên trái hiện COUNT IN lúc đếm lấy đà (không thì để trống); bên phải Chậm/Vừa/Nhanh LUÔN hiện, không đổi khi bấm nút gì */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexShrink: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#8A8478', letterSpacing: '.04em' }}>TỐC ĐỘ</span>
+        {countIn > 0 ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#8A8478', letterSpacing: '.08em' }}>COUNT IN</span>
+            <span key={countIn} style={{ fontSize: 20, fontWeight: 900, color: ACCENT.d, lineHeight: 1, animation: '_ntPing .25s ease-out' }}>{countIn}</span>
+          </div>
+        ) : <span />}
         <div style={{ display: 'flex', gap: 4, padding: 4, background: '#EFE9DD', borderRadius: 12 }}>
           {speeds.map((s, i) => (
             <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start(i) }}
@@ -728,12 +756,6 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
           <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
             <NoteSheet notes={notes} active={active} showDur={cfg.showDur} beatsPerBar={cfg.beatsPerBar} />
           </div>
-          {countIn > 0 && (   // count-in 1-2-3-4 — nằm TRÊN, né khuông nhạc, cỡ vừa
-            <div style={{ position: 'absolute', top: 6, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, pointerEvents: 'none' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#8A8478', letterSpacing: '.08em' }}>COUNT IN</span>
-              <span key={countIn} style={{ fontSize: 38, fontWeight: 900, color: ACCENT.d, lineHeight: 1, animation: '_ntPing .25s ease-out' }}>{countIn}</span>
-            </div>
-          )}
           {cfg.hint && sheetRows <= 1 && (   // bài ngắn còn chỗ → dùng khoảng trống để dặn dò
             <div style={{ flexShrink: 0, margin: '2px 8px 8px', padding: '9px 13px', background: '#FBF3E7', border: '1px solid #F0E2C9', borderRadius: 11, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <span style={{ fontSize: 15, lineHeight: '19px' }}>💡</span>
@@ -767,18 +789,21 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
             </button>
           </div>
         )}
-        {score !== null ? (
-          (() => { const pct = score.total ? score.hit / score.total : 0; const stars = pct >= 0.9 ? '⭐⭐⭐' : pct >= 0.75 ? '⭐⭐' : pct >= 0.6 ? '⭐' : ''
-            return (
-              <div style={{ marginTop: 8, padding: '9px 13px', borderRadius: 11, background: pct >= 0.6 ? ACCENT.s : '#FBECEC', color: pct >= 0.6 ? ACCENT.d : '#A23B3B', fontSize: 13.5, fontWeight: 700, textAlign: 'center' }}>
-                Kết quả: <b>{score.hit}/{score.total}</b> nốt đúng nhịp {stars || (pct >= 0.4 ? '— cố thêm chút nữa!' : '— tập lại nhé!')}
-              </div>
-            ) })()
-        ) : done && (
-          <div style={{ marginTop: 8, padding: '8px 13px', borderRadius: 11, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-            Tốt lắm! Bạn đàn đúng cả câu rồi — có thể sang bước sau.
-          </div>
-        )}
+        {/* Chỗ kết quả LUÔN chừa sẵn chiều cao (dù trống) — tránh khuông nhạc phía trên co giãn khi bài kết thúc */}
+        <div style={{ marginTop: 8, minHeight: 39, boxSizing: 'border-box' }}>
+          {score !== null ? (
+            (() => { const pct = score.total ? score.hit / score.total : 0; const stars = pct >= 0.9 ? '⭐⭐⭐' : pct >= 0.75 ? '⭐⭐' : pct >= 0.6 ? '⭐' : ''
+              return (
+                <div style={{ padding: '9px 13px', borderRadius: 11, background: pct >= 0.6 ? ACCENT.s : '#FBECEC', color: pct >= 0.6 ? ACCENT.d : '#A23B3B', fontSize: 13.5, fontWeight: 700, textAlign: 'center' }}>
+                  Kết quả: <b>{score.hit}/{score.total}</b> nốt đúng nhịp {stars || (pct >= 0.4 ? '— cố thêm chút nữa!' : '— tập lại nhé!')}
+                </div>
+              ) })()
+          ) : done ? (
+            <div style={{ padding: '8px 13px', borderRadius: 11, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
+              Tốt lắm! Bạn đàn đúng cả câu rồi — có thể sang bước sau.
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   )
