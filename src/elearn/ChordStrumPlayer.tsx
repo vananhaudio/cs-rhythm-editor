@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { BackingEngine, type MelodyNote } from './backing/backingEngine'
 import { getStyle } from './backing/backingStyles'
-import { resolvePattern, type FigureStroke } from './strumPatterns'
+import { resolvePattern, getFigure, type FigureStroke, type BeatGroup } from './strumPatterns'
 
 const INDIGO = '#4338CA', ORANGE = '#EA580C', INK = '#1F2430', DIM = '#C0C6D2', SUB = '#6B7280'
 
@@ -14,7 +14,10 @@ const SKILL = (n: number) => n >= 3 ? { color: '#16A34A', bg: '#DCFCE7', label: 
   : n === 2 ? { color: '#D97706', bg: '#FEF3C7', label: 'Tiến bộ rõ — thêm 1 lượt nữa là thật vững 💪' }
   : { color: '#DC2626', bg: '#FEE2E2', label: 'Khởi đầu tốt — gảy thêm cho quen tay 👍' }
 
-export interface SongBar { chord?: string | null; pickup?: boolean; rest?: boolean; oneStrum?: boolean }   // pickup=lấy đà; rest=nghỉ cả ô; oneStrum=quạt 1 cái (nốt trắng) rồi lặng nửa ô
+export interface SongBar { chord?: string | null; pickup?: boolean; rest?: boolean; oneStrum?: boolean; figures?: string[] }
+// pickup=lấy đà; rest=nghỉ cả ô; oneStrum=quạt 1 cái (nốt trắng) rồi lặng nửa ô
+// figures = mỗi phần tử là id 1 Hình tiết tấu (RHYTHM_FIGURES) cho TỪNG PHÁCH của ô này — ghi đè kiểu quạt chung của bài (patternId).
+// Độ dài nên = số phách (timeSignature). Dùng để soạn ô Fill In/Fill Out/Transition (mỗi phách 1 hình khác nhau); ô không có field này vẫn dùng patternId như cũ.
 export interface StrumSong {
   title: string
   videoId?: string | null
@@ -62,7 +65,10 @@ function BeatGroup({ strokes, lit }: { strokes: FigureStroke[]; lit: boolean }) 
 export default function ChordStrumPlayer({ song, onClose, onComplete, studentId, lessonId }: { song: StrumSong; onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }) {
   const eighths = song.eighths !== false
   const N = song.timeSignature
-  const pattern = resolvePattern(N, eighths, song.patternId)   // kiểu quạt (chùm)
+  const pattern = resolvePattern(N, eighths, song.patternId)   // kiểu quạt (chùm) — mặc định cho CẢ BÀI
+  // Ô có `figures` (Fill In/Out/Transition) → từng phách lấy đúng Hình tiết tấu riêng; không có → dùng pattern chung của bài.
+  const beatStrokes = (bar: SongBar, j: number): BeatGroup =>
+    (bar.figures && getFigure(bar.figures[j])?.strokes) || pattern.beats[j] || [{ dir: 'D', frac: 1 }]
   const beatDur = 60 / song.bpm
   const barDur = N * beatDur
   const perRow = 2   // 2 ô / hàng → nốt to, không tràn
@@ -343,7 +349,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
                       ) : (
                         <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
                           {Array.from({ length: N }, (_, j) => (
-                            <BeatGroup key={j} strokes={pattern.beats[j] ?? [{ dir: 'D', frac: 1 }]} lit={isCur && beatInBar === j} />
+                            <BeatGroup key={j} strokes={beatStrokes(bar, j)} lit={isCur && beatInBar === j} />
                           ))}
                         </div>
                       )}
