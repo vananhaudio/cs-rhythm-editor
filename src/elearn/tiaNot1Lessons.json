@@ -7627,6 +7627,439 @@
           ]
         }
       ]
+    },
+    {
+      "module_id": "ca720000-0000-4000-8000-000000000001",
+      "name": "Chương 10: Thị tấu (đọc & đàn ngay)",
+      "order": 9,
+      "lessons": [
+        {
+          "key": "thitau1",
+          "lessonId": "aa720000-0000-4000-8000-000000000001",
+          "flowId": "fa720000-0000-4000-8000-000000000001",
+          "order": 1,
+          "title": "Thị tấu 1 — Đô trưởng",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau11",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> này rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó chính là <b>thị tấu</b>! Sai cũng không sao, đọc tới đâu đàn tới đó. Xong hãy Nghe mẫu để đối chiếu."
+            },
+            {
+              "id": "thitau12",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 1 — Đô trưởng",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau13",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình thử Tự đàn TRƯỚC khi Nghe mẫu (đọc thẳng)",
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau2",
+          "lessonId": "aa720000-0000-4000-8000-000000000002",
+          "flowId": "fa720000-0000-4000-8000-000000000002",
+          "order": 2,
+          "title": "Thị tấu 2 — Đô trưởng (có móc đơn)",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau21",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> này rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó chính là <b>thị tấu</b>! Sai cũng không sao, đọc tới đâu đàn tới đó. Xong hãy Nghe mẫu để đối chiếu."
+            },
+            {
+              "id": "thitau22",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 2 — Đô trưởng (có móc đơn)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 349.23,
+                    "string": 1,
+                    "fret": 1,
+                    "staff": 8,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau23",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình thử Tự đàn TRƯỚC khi Nghe mẫu (đọc thẳng)",
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau3",
+          "lessonId": "aa720000-0000-4000-8000-000000000003",
+          "flowId": "fa720000-0000-4000-8000-000000000003",
+          "order": 3,
+          "title": "Thị tấu 3 — La thứ",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau31",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> này rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó chính là <b>thị tấu</b>! Sai cũng không sao, đọc tới đâu đàn tới đó. Xong hãy Nghe mẫu để đối chiếu."
+            },
+            {
+              "id": "thitau32",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 3 — La thứ",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau33",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình thử Tự đàn TRƯỚC khi Nghe mẫu (đọc thẳng)",
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "key": "thitau4",
+          "lessonId": "aa720000-0000-4000-8000-000000000004",
+          "flowId": "fa720000-0000-4000-8000-000000000004",
+          "order": 4,
+          "title": "Thị tấu 4 — La thứ (có Sol#)",
+          "reward_xp": 12,
+          "slides": [
+            {
+              "id": "thitau41",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Thị tấu — đọc & đàn ngay",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Nhìn bản nhạc <b>lạ</b> này rồi thử <b>Tự đàn ngay</b> (chưa nghe mẫu) — đó chính là <b>thị tấu</b>! Sai cũng không sao, đọc tới đâu đàn tới đó. Xong hãy Nghe mẫu để đối chiếu."
+            },
+            {
+              "id": "thitau42",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Thị tấu 4 — La thứ (có Sol#)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 207.65,
+                    "string": 3,
+                    "fret": 1,
+                    "staff": 2,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 207.65,
+                    "string": 3,
+                    "fret": 1,
+                    "staff": 2,
+                    "acc": "#",
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "thitau43",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình thử Tự đàn TRƯỚC khi Nghe mẫu (đọc thẳng)",
+                  "Mình đọc đúng cao độ + trường độ",
+                  "Mình giữ nhịp đều theo metronome"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }
