@@ -9,7 +9,7 @@
 
 | Tên skill | Việc nó làm | Sửa gần nhất |
 |---|---|---|
-| `strum-score` | Tạo/nhúng bài Strum Score (gảy theo nền) đúng quy ước: lấy đà, ô kết hình thoi, ô Out, ghi âm | 2026-07-04 |
+| `strum-score` | Tạo/nhúng bài Strum Score (gảy theo nền) đúng quy ước: lấy đà, ô kết hình thoi, ô Out, ghi âm, bộ hình tiết tấu cơ bản | 2026-07-04 |
 | `khuong-nhac` | Chuẩn hoá bố cục & khắc nhạc màn "Đánh theo" (NotePractice): số chỉ nhịp, vạch nhịp, vạch kết, dàn đều dòng, không co giãn màn hình | 2026-07-04 |
 
 ## Dự kiến làm (ứng viên skill — chưa dựng)

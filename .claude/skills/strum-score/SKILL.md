@@ -24,6 +24,22 @@ Thầy muốn tạo một bài để học viên **quạt theo nền** (synth / 
 - Kiểu quạt: `strumPatterns.ts` (9 kiểu: đen/chùm2/liên3/móc kép × 4/4,3/4,2/4), `resolvePattern(N, eighths, patternId)`.
 - Font glyph nốt trắng/lặng = **Bravura** (đã nhúng ở index.html).
 
+## Hình tiết tấu (nền tảng mới, 2026-07-04) — `RhythmFigure` trong `strumPatterns.ts`
+Đơn vị nhỏ nhất = **1 hình tiết tấu trong ĐÚNG 1 PHÁCH** (`RhythmFigure { id, name, strokes: FigureStroke[] }`), mỗi cú quạt mang `frac` (tỉ lệ trường độ trong phách, cộng lại = 1) — nên biểu diễn được cả hình CHIA ĐỀU lẫn hình CHIA LỆCH. Một `StrumPattern` (kiểu quạt/`patternId`) hiện = 1 hình lặp lại cho CẢ Ô NHỊP; đây là nền để sau này Fill In/Fill Out/Transition trộn nhiều hình khác nhau trong cùng 1 ô (CHƯA làm).
+
+**Bộ cơ bản đã chốt (hướng quạt do thầy quyết, đừng tự đổi):**
+| id | Tên | Cú quạt (frac) | Có số "3"? |
+|---|---|---|---|
+| `den` | Đen | D (1) | không |
+| `chum2` | Chùm 2 | D-U (.5/.5) | không |
+| `donkepkep` | Chùm 3 — Đơn kép kép | D-D-U (.5/.25/.25) | **không** (không phải liên ba, chia lệch 2:1:1) |
+| `lien3` | Chùm 3 — Liên ba | D-D-D (1/3 đều) | **có** (chia đều mới có ngoặc 3) |
+| `mockep` | Chùm 4 — Móc kép | D-U-D-U (.25 đều) | không |
+
+`BeatGroup` (component vẽ trong `ChordStrumPlayer.tsx`) định vị từng cú theo `frac` (không còn cách đều theo index) — hình lệch như `donkepkep` sẽ giãn cách khác hình đều. Chỉ hiện ngoặc "3" khi `M===3 && mọi frac≈1/3` (phân biệt liên ba thật với "đơn kép kép" cũng 3 cú nhưng KHÔNG phải triplet).
+
+⚠️ Đổi từ bản cũ: `lien3` trước đây là D-U-D (chia đều nhưng SAI hướng) → nay sửa thành D-D-D theo đúng quy ước thầy chốt. Nếu bài cũ dùng `patternId:'lien3'` sẽ đổi hướng hiển thị theo bản mới này.
+
 ## 2 cách đưa một bài vào hệ thống
 **A. Bài "xịn" (melody, lấy đà, ô kết, đổi nguồn tiếng)** → hiện phải HARDCODE trong `src/elearn/strumSongs.ts` (mẫu: `HBD_CHUM2`, Jingle). Thêm route thử trong AppRouter nếu cần xem nhanh (`/hbd`, `/jinglebell`…).
 **B. Bài gắn vào KHOÁ qua admin** → lesson `lesson_type='strum'`, config JSON lưu ở cột `content` (`StrumConfigEditor.tsx`: `parseStrumConfig`/`configToSong`). ⚠️ `configToSong` HIỆN chỉ làm bản rút gọn (nền synth + vòng hợp âm đều một kiểu quạt) — KHÔNG tạo được lấy đà/nghỉ/kết/melody/mp3. Bài cần các thứ đó → dùng cách A.
