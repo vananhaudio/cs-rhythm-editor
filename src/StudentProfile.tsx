@@ -155,6 +155,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
   const [appStats, setAppStats] = useState<AppStats | null>(null)
   const [accessSet, setAccessSet] = useState<Set<string>>(new Set())  // khoá trả phí đã được cấp quyền
   const [grantingId, setGrantingId] = useState<string | null>(null)
+  const [htSaving, setHtSaving] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -317,7 +318,6 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     setStudent(prev => prev ? { ...prev, honor } : prev)
   }
 
-  const [htSaving, setHtSaving] = useState(false)
   const toggleHt = async (on: boolean) => {
     if (!student) return
     setHtSaving(true)
