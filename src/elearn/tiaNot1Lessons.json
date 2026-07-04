@@ -5330,6 +5330,395 @@
               "content": "Chơi cùng ban nhạc đã tai chưa! Càng tập, điểm càng cao và tay càng chắc. Cố lấy đủ <b>3 sao</b> nhé! 🎸🥁"
             }
           ]
+        },
+        {
+          "key": "buomvangBand",
+          "lessonId": "a7720000-0000-4000-8000-000000000005",
+          "flowId": "f7720000-0000-4000-8000-000000000005",
+          "order": 5,
+          "title": "Bài 5: Vận dụng — Kìa con bướm vàng (có nhạc nền)",
+          "reward_xp": 16,
+          "slides": [
+            {
+              "id": "k1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Bài Việt quen thuộc — có ban nhạc",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Một bài <b>ai cũng thuộc</b>: <b>Kìa con bướm vàng</b>! Lần này có <b>ban nhạc đệm</b> cho vui. Bài ở <b>vùng trầm</b> (có Sol dây 6) và có cả <b>nốt móc đơn</b> ở câu \"tung cánh bay ra vườn\". Cứ <b>nhìn nốt trên khuông</b> mà đàn — chưa cần thuộc lòng."
+            },
+            {
+              "id": "k2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Nhìn nốt mà chơi",
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài 8 ô, nhịp <b>4/4</b>. Câu \"tung cánh bay ra vườn\" chạy <b>móc đơn</b> (nhanh gấp đôi). Bấm <b>Nghe mẫu</b> (có ban nhạc) nghe cho quen, rồi <b>Tự đàn</b> — máy chờ bạn đàn đúng mới sang nốt, <b>không vội</b>.</p>"
+            },
+            {
+              "id": "k3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Kìa con bướm vàng (có nhạc nền)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "chords": [
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      98,
+                      130.81,
+                      164.81
+                    ]
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 98,
+                    "string": 6,
+                    "fret": 3,
+                    "staff": -5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "k4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình nhìn nốt và đàn đúng cả bài",
+                  "Mình chơi được câu móc đơn 'tung cánh bay ra vườn'",
+                  "Nghe ra đúng giai điệu Kìa con bướm vàng, có ban nhạc đệm vui"
+                ]
+              }
+            },
+            {
+              "id": "k5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Chơi một bài Việt quen thuộc cùng ban nhạc — đã chưa! Cứ nhìn nốt mà đàn cho quen tay; nhớ cao độ sẽ đến dần sau nhiều lần chơi. 🎸"
+            }
+          ]
         }
       ]
     }
