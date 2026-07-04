@@ -4,7 +4,7 @@
 // (App chưa nghe được tay đàn — phần chấm bằng mic để Giai đoạn 3.)
 import { useState, useEffect, useRef } from 'react'
 import { ACCENT, STRINGS, freqOfNum, colorOfNum, widthOfNum, stringByNum } from './guitarConst'
-import { playTone, playSequence, playClick } from './audio'
+import { playTone, playSequence, playClick, playKick, playSnare, playHat, playBass, playPad } from './audio'
 import { detectPitch, pitchClass } from './pitch'
 import { playGuitarNote } from '../audioEngine'   // engine guitar (nốt ngân độc lập) — để rải hợp âm không bị cắt
 
@@ -27,6 +27,7 @@ export interface NotePracticeCfg {
   hint?: string                                 // dòng nhắc nhỏ dưới khuông (vd: chưa cần để ý trường độ)
   showDur?: boolean                             // vẽ nốt đen/trắng/tròn theo dur (chỉ chương Trường độ); mặc định mọi nốt giống nhau
   beatsPerBar?: number                          // số phách mỗi ô nhịp (2/3/4) → vẽ vạch nhịp + số chỉ nhịp + count-in đếm đúng
+  chords?: { bass: number; pad: number[] }[]    // nền đệm ban nhạc: mỗi ô 1 hợp âm (bass + strings pad); có = bật trống+bass+pad khi Nghe mẫu
 }
 // "Chia ô nhịp": đối chiếu SHEET (vẽ sạch từ nốt MusicXML) ↔ LỜI, bút kẻ vạch chia ô nhịp
 export interface SNote { pos?: number; rest?: boolean; dur: 'e' | 'q' | 'h' | 'w' }  // pos = bậc trên khuông (E4=0, mỗi bậc = nửa dòng), dur = trường độ
@@ -538,12 +539,30 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       }
       timer.current = window.setTimeout(tick, d)
     }
-    const beginMelody = () => {                              // vào bài: metronome tiếp tục + nốt đầu
+    const beginMelody = () => {                              // vào bài: nền đệm/metronome + nốt đầu
       setCountIn(0)
-      if (cfg.showDur) { playClick(true); metro.current = window.setInterval(() => playClick(), beatMs) }
+      const bpb = cfg.beatsPerBar && cfg.beatsPerBar > 0 ? cfg.beatsPerBar : 4
+      const chords = cfg.chords
+      if (chords && chords.length) {                          // NỀN BAN NHẠC: trống + bass + strings pad
+        let bi = 0
+        const band = () => {
+          const beatInBar = bi % bpb, barIdx = Math.floor(bi / bpb)
+          const ch = chords[barIdx % chords.length]
+          playHat()
+          if (beatInBar === 0 || (bpb >= 4 && beatInBar === 2)) playKick()
+          if (bpb >= 4 ? (beatInBar === 1 || beatInBar === 3) : beatInBar === Math.floor(bpb / 2)) playSnare()
+          if (beatInBar === 0) { playBass(ch.bass); playPad(ch.pad, beatMs * bpb) }
+          else if (bpb >= 4 && beatInBar === 2) playBass(ch.bass)
+          bi++
+        }
+        band()
+        metro.current = window.setInterval(band, beatMs)
+      } else if (cfg.showDur) {                               // metronome đơn
+        playClick(true); metro.current = window.setInterval(() => playClick(), beatMs)
+      }
       tick()
     }
-    if (cfg.showDur) {                                       // ĐẾM LẤY ĐÀ đúng số phách 1 ô (mặc định 4) rồi vào bài
+    if (cfg.showDur || (cfg.chords && cfg.chords.length)) {  // ĐẾM LẤY ĐÀ đúng số phách 1 ô (mặc định 4) rồi vào bài
       const countN = cfg.beatsPerBar && cfg.beatsPerBar > 0 ? cfg.beatsPerBar : 4
       let cn = 1; setCountIn(1); playClick(true)
       const countTick = () => {

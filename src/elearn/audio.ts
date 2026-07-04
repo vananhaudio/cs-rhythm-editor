@@ -86,3 +86,72 @@ export function playClick(accent = false) {
 export function playSequence(freqs: number[], gapMs = 380) {
   freqs.forEach((f, i) => setTimeout(() => playTone(f), i * gapMs))
 }
+
+// ── NỀN ĐỆM: trống + bass + strings pad (cho bài Vận dụng, nghe như ban nhạc) ──
+// Trống — kick (thump trầm)
+export function playKick() {
+  const ac = ctx(); if (!ac) return
+  try {
+    const t = ac.currentTime
+    const o = ac.createOscillator(); o.type = 'sine'
+    o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.11)
+    const g = ac.createGain()
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.55, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26)
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.3)
+  } catch { /* */ }
+}
+// Trống — snare (nhiễu + tí thân)
+export function playSnare() {
+  const ac = ctx(); if (!ac) return
+  try {
+    const t = ac.currentTime, dur = 0.16
+    const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate)
+    const ch = buf.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / ch.length)
+    const n = ac.createBufferSource(); n.buffer = buf
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400
+    const g = ac.createGain(); g.gain.setValueAtTime(0.28, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    n.connect(hp); hp.connect(g); g.connect(ac.destination); n.start(t)
+  } catch { /* */ }
+}
+// Trống — hi-hat (nhiễu cao rất ngắn)
+export function playHat() {
+  const ac = ctx(); if (!ac) return
+  try {
+    const t = ac.currentTime, dur = 0.04
+    const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate)
+    const ch = buf.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = (Math.random() * 2 - 1)
+    const n = ac.createBufferSource(); n.buffer = buf
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000
+    const g = ac.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    n.connect(hp); hp.connect(g); g.connect(ac.destination); n.start(t)
+  } catch { /* */ }
+}
+// Bass — nốt trầm gọn, ấm
+export function playBass(freq: number) {
+  const ac = ctx(); if (!ac) return
+  try {
+    const t = ac.currentTime
+    const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = freq
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700
+    const g = ac.createGain()
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5)
+    o.connect(lp); lp.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.55)
+  } catch { /* */ }
+}
+// Strings pad — hợp âm êm, ngân cả ô nhịp rồi tắt dần (lót nhẹ dưới giai điệu)
+export function playPad(freqs: number[], durMs: number) {
+  const ac = ctx(); if (!ac) return
+  try {
+    const t = ac.currentTime, rel = Math.max(0.3, durMs / 1000)
+    const g = ac.createGain()
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.05, t + 0.12)   // pad êm, vào chậm
+    g.gain.setValueAtTime(0.05, t + rel * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + rel + 0.15)
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200
+    lp.connect(g); g.connect(ac.destination)
+    freqs.forEach(f => {
+      const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f
+      const og = ac.createGain(); og.gain.value = 0.33
+      o.connect(og); og.connect(lp); o.start(t); o.stop(t + rel + 0.2)
+    })
+  } catch { /* */ }
+}

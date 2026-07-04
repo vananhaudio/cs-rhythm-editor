@@ -4455,7 +4455,7 @@
           "lessonId": "a7720000-0000-4000-8000-000000000003",
           "flowId": "f7720000-0000-4000-8000-000000000003",
           "order": 3,
-          "title": "Bài 3: Vận dụng — Ode to Joy (trọn bài)",
+          "title": "Bài 3: Vận dụng — Ode to Joy cùng ban nhạc",
           "reward_xp": 25,
           "slides": [
             {
@@ -4467,7 +4467,7 @@
               "interactive": {
                 "variant": "teacher"
               },
-              "content": "Bài ôn <b>tổng hợp</b>: đọc trọn <b>Ode to Joy</b> (8 ô nhịp) như một bản nhạc thật — gói gọn mọi thứ đã học: <b>khóa Sol · số chỉ nhịp 4/4 · vạch nhịp · nốt đen/trắng</b>."
+              "content": "Giờ chơi cho <b>đã tai</b>: đọc trọn <b>Ode to Joy</b> (8 ô) nhưng lần này có cả <b>ban nhạc đệm</b> — trống, bass và strings — chạy nền phía dưới. Bạn tỉa giai điệu, ban nhạc lo phần còn lại!"
             },
             {
               "id": "t2",
@@ -4475,14 +4475,14 @@
               "logic": "NGHI",
               "type": "text",
               "title": "Trọn 8 ô",
-              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài chia <b>8 ô</b>, mỗi ô 4 phách. Câu đầu kết ở nốt trắng <b>Rê</b> (nửa cadence), câu sau kết trọn ở nốt trắng <b>Đô</b> (kết bài). Nghe mẫu một lượt rồi đàn theo — <b>chắc từng ô</b>, giữ nhịp đều.</p>"
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài chia <b>8 ô</b> nhịp 4/4. Bấm <b>Nghe mẫu</b>: sau 4 phách đếm lấy đà, <b>ban nhạc vào</b> và giai điệu chạy theo. Nghe cho quen rồi <b>đàn theo</b> — giữ nhịp đều cùng trống nhé.</p>"
             },
             {
               "id": "t3",
               "order": 3,
               "logic": "LAM",
               "type": "note_practice",
-              "title": "Đánh theo: Ode to Joy (trọn bài)",
+              "title": "Đánh theo: Ode to Joy (có ban nhạc)",
               "interactive": {
                 "showDur": true,
                 "beatsPerBar": 4,
@@ -4727,6 +4727,72 @@
                     "staff": 5,
                     "dur": 2
                   }
+                ],
+                "chords": [
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 98,
+                    "pad": [
+                      146.83,
+                      196,
+                      246.94
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 98,
+                    "pad": [
+                      146.83,
+                      196,
+                      246.94
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 98,
+                    "pad": [
+                      146.83,
+                      196,
+                      246.94
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  }
                 ]
               }
             },
@@ -4738,9 +4804,9 @@
               "title": "Tự kiểm tra",
               "interactive": {
                 "items": [
-                  "Mình đọc được trọn bản nhạc: cao độ + trường độ + ô nhịp",
-                  "Mình chơi liền 8 ô, giữ nhịp đều theo metronome",
-                  "Mình nghe ra trọn giai điệu Ode to Joy, kết đẹp ở nốt Đô"
+                  "Mình chơi theo được cùng ban nhạc, không lạc nhịp",
+                  "Mình đọc trọn bản nhạc: cao độ + trường độ + ô nhịp",
+                  "Nghe vui tai như đang biểu diễn thật"
                 ]
               }
             },
