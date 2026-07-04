@@ -6045,12 +6045,185 @@
               "content": "Rộn ràng chưa! Chơi lại vài lần cho tay quen và điểm cao dần nhé. 🎸🔔"
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "module_id": "c8720000-0000-4000-8000-000000000001",
+      "name": "Chương 8: Dấu thăng — tông La thứ",
+      "order": 7,
+      "lessons": [
+        {
+          "key": "solthang",
+          "lessonId": "a8720000-0000-4000-8000-000000000001",
+          "flowId": "f8720000-0000-4000-8000-000000000001",
+          "order": 1,
+          "title": "Bài 1: Dấu thăng (#) — nốt Sol#",
+          "reward_xp": 14,
+          "slides": [
+            {
+              "id": "s1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Dấu thăng là gì?",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Dấu <b>thăng (#)</b> đặt <b>trước</b> một nốt nghĩa là <b>nâng nốt đó lên nửa cung</b> — trên đàn là bấm <b>cao hơn 1 ngăn</b>. Ta học <b>Sol#</b> trước, vì nó xuất hiện <b>rất nhiều</b> trong các bài tông <b>La thứ (Am)</b>."
+            },
+            {
+              "id": "s2",
+              "order": 2,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Sol thường",
+              "interactive": {
+                "label": "Sol",
+                "freq": 196,
+                "string": 3,
+                "fret": 0,
+                "staff": 2,
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Sol thường</b> — dây 3 <b>buông</b> (○), không có dấu gì."
+              }
+            },
+            {
+              "id": "s3",
+              "order": 3,
+              "logic": "NHAN",
+              "type": "note_show",
+              "title": "Sol thăng (Sol#)",
+              "interactive": {
+                "label": "Sol#",
+                "freq": 207.65,
+                "string": 3,
+                "fret": 1,
+                "staff": 2,
+                "acc": "#",
+                "showStaff": true,
+                "showFretboard": true,
+                "caption": "<b>Sol#</b> — có dấu <b>#</b> trước nốt (cùng dòng với Sol). Bấm <b>cao hơn 1 ngăn</b> — dây 3 <b>ngăn 1</b>. Cao hơn Sol nửa cung."
+              }
+            },
+            {
+              "id": "s4",
+              "order": 4,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Nốt \"dẫn\" về La",
+              "content": "<p style=\"font-size:16px;line-height:1.75;margin:0;color:#3A352F\">Trong tông <b>La thứ</b>, <b>Sol#</b> là nốt <b>dẫn</b>: nghe nó rất \"muốn\" đi lên nốt <b>La</b>. Câu dưới kết bằng <b>Sol# → La</b> — nghe cái sức hút về chủ âm. Chú ý dấu # chỉ tác dụng cho nốt Sol ngay sau nó.</p>"
+            },
+            {
+              "id": "s5",
+              "order": 5,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Đánh theo: Sol# dẫn về La",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "notes": [
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol#",
+                    "freq": 207.65,
+                    "string": 3,
+                    "fret": 1,
+                    "staff": 2,
+                    "dur": 1,
+                    "acc": "#"
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 2
+                  }
+                ]
+              }
+            },
+            {
+              "id": "s6",
+              "order": 6,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình hiểu dấu # = nâng nửa cung = bấm cao hơn 1 ngăn",
+                  "Mình bấm được Sol# (dây 3 ngăn 1)",
+                  "Mình nghe Sol# 'dẫn' về La rất tự nhiên"
+                ]
+              }
+            },
+            {
+              "id": "s7",
+              "order": 7,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Tốt lắm! Giờ bạn đọc được dấu <b>#</b> và chơi được <b>Sol#</b> — nốt then chốt của tông La thứ. Nhiều bài buồn (Am) sẽ hay dùng nó ở đoạn kết. 🎸"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "module_id": "c9720000-0000-4000-8000-000000000001",
+      "name": "Chương 9: Bài hát yêu thích",
+      "order": 8,
+      "lessons": [
         {
           "key": "conduongxua",
           "lessonId": "a7720000-0000-4000-8000-000000000007",
           "flowId": "f7720000-0000-4000-8000-000000000007",
-          "order": 7,
+          "order": 1,
           "title": "Bài 7: Vận dụng — Con đường xưa em đi (Am)",
           "reward_xp": 20,
           "slides": [
@@ -6192,7 +6365,7 @@
                     "pad": [
                       123.47,
                       164.81,
-                      196
+                      207.65
                     ]
                   },
                   {
@@ -6750,12 +6923,13 @@
                     "dur": 0.5
                   },
                   {
-                    "label": "Sol",
-                    "freq": 196,
+                    "label": "Sol#",
+                    "freq": 207.65,
                     "string": 3,
-                    "fret": 0,
+                    "fret": 1,
                     "staff": 2,
-                    "dur": 1
+                    "dur": 1,
+                    "acc": "#"
                   },
                   {
                     "label": "La",
@@ -6808,172 +6982,6 @@
                 "variant": "teacher"
               },
               "content": "Chơi được một bài nhạc Việt trữ tình ở tông thứ — đáng tự hào! Đây là bản giản lược để tập; nhớ cao độ sẽ đến dần. 🎸"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "module_id": "c8720000-0000-4000-8000-000000000001",
-      "name": "Chương 8: Dấu thăng — tông La thứ",
-      "order": 7,
-      "lessons": [
-        {
-          "key": "solthang",
-          "lessonId": "a8720000-0000-4000-8000-000000000001",
-          "flowId": "f8720000-0000-4000-8000-000000000001",
-          "order": 1,
-          "title": "Bài 1: Dấu thăng (#) — nốt Sol#",
-          "reward_xp": 14,
-          "slides": [
-            {
-              "id": "s1",
-              "order": 1,
-              "logic": "DAN",
-              "type": "callout",
-              "title": "Dấu thăng là gì?",
-              "interactive": {
-                "variant": "teacher"
-              },
-              "content": "Dấu <b>thăng (#)</b> đặt <b>trước</b> một nốt nghĩa là <b>nâng nốt đó lên nửa cung</b> — trên đàn là bấm <b>cao hơn 1 ngăn</b>. Ta học <b>Sol#</b> trước, vì nó xuất hiện <b>rất nhiều</b> trong các bài tông <b>La thứ (Am)</b>."
-            },
-            {
-              "id": "s2",
-              "order": 2,
-              "logic": "NHAN",
-              "type": "note_show",
-              "title": "Sol thường",
-              "interactive": {
-                "label": "Sol",
-                "freq": 196,
-                "string": 3,
-                "fret": 0,
-                "staff": 2,
-                "showStaff": true,
-                "showFretboard": true,
-                "caption": "<b>Sol thường</b> — dây 3 <b>buông</b> (○), không có dấu gì."
-              }
-            },
-            {
-              "id": "s3",
-              "order": 3,
-              "logic": "NHAN",
-              "type": "note_show",
-              "title": "Sol thăng (Sol#)",
-              "interactive": {
-                "label": "Sol#",
-                "freq": 207.65,
-                "string": 3,
-                "fret": 1,
-                "staff": 2,
-                "acc": "#",
-                "showStaff": true,
-                "showFretboard": true,
-                "caption": "<b>Sol#</b> — có dấu <b>#</b> trước nốt (cùng dòng với Sol). Bấm <b>cao hơn 1 ngăn</b> — dây 3 <b>ngăn 1</b>. Cao hơn Sol nửa cung."
-              }
-            },
-            {
-              "id": "s4",
-              "order": 4,
-              "logic": "NGHI",
-              "type": "text",
-              "title": "Nốt \"dẫn\" về La",
-              "content": "<p style=\"font-size:16px;line-height:1.75;margin:0;color:#3A352F\">Trong tông <b>La thứ</b>, <b>Sol#</b> là nốt <b>dẫn</b>: nghe nó rất \"muốn\" đi lên nốt <b>La</b>. Câu dưới kết bằng <b>Sol# → La</b> — nghe cái sức hút về chủ âm. Chú ý dấu # chỉ tác dụng cho nốt Sol ngay sau nó.</p>"
-            },
-            {
-              "id": "s5",
-              "order": 5,
-              "logic": "LAM",
-              "type": "note_practice",
-              "title": "Đánh theo: Sol# dẫn về La",
-              "interactive": {
-                "showDur": true,
-                "beatsPerBar": 4,
-                "notes": [
-                  {
-                    "label": "La",
-                    "freq": 220,
-                    "string": 3,
-                    "fret": 2,
-                    "staff": 3,
-                    "dur": 1
-                  },
-                  {
-                    "label": "Si",
-                    "freq": 246.94,
-                    "string": 2,
-                    "fret": 0,
-                    "staff": 4,
-                    "dur": 1
-                  },
-                  {
-                    "label": "Đô",
-                    "freq": 261.63,
-                    "string": 2,
-                    "fret": 1,
-                    "staff": 5,
-                    "dur": 1
-                  },
-                  {
-                    "label": "Si",
-                    "freq": 246.94,
-                    "string": 2,
-                    "fret": 0,
-                    "staff": 4,
-                    "dur": 1
-                  },
-                  {
-                    "label": "La",
-                    "freq": 220,
-                    "string": 3,
-                    "fret": 2,
-                    "staff": 3,
-                    "dur": 1
-                  },
-                  {
-                    "label": "Sol#",
-                    "freq": 207.65,
-                    "string": 3,
-                    "fret": 1,
-                    "staff": 2,
-                    "dur": 1,
-                    "acc": "#"
-                  },
-                  {
-                    "label": "La",
-                    "freq": 220,
-                    "string": 3,
-                    "fret": 2,
-                    "staff": 3,
-                    "dur": 2
-                  }
-                ]
-              }
-            },
-            {
-              "id": "s6",
-              "order": 6,
-              "logic": "NGAM",
-              "type": "checklist",
-              "title": "Tự kiểm tra",
-              "interactive": {
-                "items": [
-                  "Mình hiểu dấu # = nâng nửa cung = bấm cao hơn 1 ngăn",
-                  "Mình bấm được Sol# (dây 3 ngăn 1)",
-                  "Mình nghe Sol# 'dẫn' về La rất tự nhiên"
-                ]
-              }
-            },
-            {
-              "id": "s7",
-              "order": 7,
-              "logic": "DAN",
-              "type": "callout",
-              "title": "Lời thầy",
-              "interactive": {
-                "variant": "teacher"
-              },
-              "content": "Tốt lắm! Giờ bạn đọc được dấu <b>#</b> và chơi được <b>Sol#</b> — nốt then chốt của tông La thứ. Nhiều bài buồn (Am) sẽ hay dùng nó ở đoạn kết. 🎸"
             }
           ]
         }
