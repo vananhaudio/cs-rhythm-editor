@@ -6045,6 +6045,771 @@
               "content": "Rộn ràng chưa! Chơi lại vài lần cho tay quen và điểm cao dần nhé. 🎸🔔"
             }
           ]
+        },
+        {
+          "key": "conduongxua",
+          "lessonId": "a7720000-0000-4000-8000-000000000007",
+          "flowId": "f7720000-0000-4000-8000-000000000007",
+          "order": 7,
+          "title": "Bài 7: Vận dụng — Con đường xưa em đi (Am)",
+          "reward_xp": 20,
+          "slides": [
+            {
+              "id": "cd1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Bài Việt sâu lắng — tông La thứ",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "<b>Con đường xưa em đi</b> — một giai điệu Việt trữ tình, ở tông <b>La thứ (Am)</b>, nằm gọn thế tay 1 (dây 2–5). Cứ nhìn nốt mà đàn; Nghe mẫu (có nhạc nền) cho quen rồi Tự đàn thong thả."
+            },
+            {
+              "id": "cd2",
+              "order": 2,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Con đường xưa em đi (Am)",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "chords": [
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 73.42,
+                    "pad": [
+                      110,
+                      146.83,
+                      174.61
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 73.42,
+                    "pad": [
+                      110,
+                      146.83,
+                      174.61
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 82.41,
+                    "pad": [
+                      123.47,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 55,
+                    "pad": [
+                      82.41,
+                      110,
+                      164.81
+                    ]
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "",
+                    "freq": 0,
+                    "rest": true,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 4
+                  },
+                  {
+                    "label": "",
+                    "freq": 0,
+                    "rest": true,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 4
+                  },
+                  {
+                    "label": "",
+                    "freq": 0,
+                    "rest": true,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 130.81,
+                    "string": 5,
+                    "fret": 3,
+                    "staff": -2,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 4
+                  },
+                  {
+                    "label": "",
+                    "freq": 0,
+                    "rest": true,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 110,
+                    "string": 5,
+                    "fret": 0,
+                    "staff": -4,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 146.83,
+                    "string": 4,
+                    "fret": 0,
+                    "staff": -1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 123.47,
+                    "string": 5,
+                    "fret": 2,
+                    "staff": -3,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Fa",
+                    "freq": 174.61,
+                    "string": 4,
+                    "fret": 3,
+                    "staff": 1,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 164.81,
+                    "string": 4,
+                    "fret": 2,
+                    "staff": 0,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 196,
+                    "string": 3,
+                    "fret": 0,
+                    "staff": 2,
+                    "dur": 1
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "Si",
+                    "freq": 246.94,
+                    "string": 2,
+                    "fret": 0,
+                    "staff": 4,
+                    "dur": 0.5
+                  },
+                  {
+                    "label": "La",
+                    "freq": 220,
+                    "string": 3,
+                    "fret": 2,
+                    "staff": 3,
+                    "dur": 4
+                  }
+                ]
+              }
+            },
+            {
+              "id": "cd3",
+              "order": 3,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình đàn được 2 khổ đầu, nhìn nốt mà chơi",
+                  "Nghe ra giai điệu Con đường xưa em đi",
+                  "Cảm được màu La thứ (buồn, sâu)"
+                ]
+              }
+            },
+            {
+              "id": "cd4",
+              "order": 4,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Chơi được một bài nhạc Việt trữ tình ở tông thứ — đáng tự hào! Đây là bản giản lược để tập; nhớ cao độ sẽ đến dần. 🎸"
+            }
+          ]
         }
       ]
     }
