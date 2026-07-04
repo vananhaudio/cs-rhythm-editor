@@ -98,7 +98,7 @@ export default function StrumBuilder({ draft, onBack, openDone }: { draft: Strum
   const [docStatus, setDocStatus] = useState(draft.status)
   const [status, setStatus] = useState<SaveStatus>('saved')
   const [showPaste, setShowPaste] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(!!draft.sheet_url)   // chưa có ảnh → thu gọn, nhường chỗ cho vạch nhịp
+  const [sheetOpen, setSheetOpen] = useState(true)   // luôn mở sẵn — chưa có ảnh cũng thấy ngay hướng dẫn chèn/tải
   const [sheetBroken, setSheetBroken] = useState(false)           // trang nguồn chặn hotlink → ảnh không tải được ở đây
   // Tải ảnh lên (chụp màn hình / ảnh chụp bản nhạc)
   const [uploading, setUploading] = useState(false)
@@ -277,32 +277,29 @@ export default function StrumBuilder({ draft, onBack, openDone }: { draft: Strum
           <button onClick={() => setSheetOpen((v) => !v)} title={sheetOpen ? 'Thu gọn sheet' : 'Mở sheet'} style={{ ...zbtn, fontSize: 12 }}>{sheetOpen ? '▾' : '▸'}</button>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: '#A1A1AA', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Sheet tham chiếu</span>
           <div style={{ flex: 1 }} />
-          <button onClick={() => setShowPaste((v) => !v)} title="Dán link ảnh" style={zbtn}>🔗</button>
-          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSheetFile(f) }} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Tải ảnh lên (chụp màn hình)"
-            style={{ ...zbtn, opacity: uploading ? .6 : 1 }}>{uploading ? '⏳' : '📤'}</button>
           {sheetUrl && <>
+            <button onClick={() => setShowPaste((v) => !v)} title="Đổi link ảnh khác" style={zbtn}>🔗</button>
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSheetFile(f) }} />
+            <button onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Tải ảnh khác lên"
+              style={{ ...zbtn, opacity: uploading ? .6 : 1 }}>{uploading ? '⏳' : '📤'}</button>
             <button onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.25).toFixed(2)))} style={zbtn}>−</button>
             <span style={{ fontSize: 12, color: A.sub, minWidth: 40, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))} style={zbtn}>+</button>
           </>}
         </div>
 
-        {showPaste && (
+        {showPaste && sheetUrl && (
           <div style={{ padding: '8px 14px', background: '#FAFAFA', borderBottom: `1px solid ${A.border}` }}>
-            <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); setSheetBroken(false); if (e.target.value.trim()) setSheetOpen(true) }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
+            <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); setSheetBroken(false) }} placeholder="Dán link ảnh sheet (…​.jpg/.png)"
               style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: `1px solid ${A.border}`, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
-            <div style={{ fontSize: 12, color: A.sub, marginTop: 6, lineHeight: 1.6 }}>
-              Ảnh trong 1 trang web: giữ ngón tay (hoặc chuột phải) trên ảnh → <b>"Sao chép địa chỉ hình ảnh"</b> → dán vào đây.
-            </div>
           </div>
         )}
         {uploadErr && (
           <div style={{ padding: '8px 14px', background: '#FEF2F2', color: '#B91C1C', fontSize: 12.5, borderBottom: `1px solid ${A.border}` }}>{uploadErr}</div>
         )}
 
-        {sheetOpen && <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: '#3F3F46' }}>
+        {sheetOpen && <div style={{ flex: 1, minHeight: 0, overflow: 'auto', background: sheetUrl ? '#3F3F46' : '#fff' }}>
           {sheetUrl
             ? <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 16 }}>
                 {sheetBroken
@@ -310,8 +307,20 @@ export default function StrumBuilder({ draft, onBack, openDone }: { draft: Strum
                   : <img src={sheetUrl} alt="sheet" referrerPolicy="no-referrer" onError={() => setSheetBroken(true)} onLoad={() => setSheetBroken(false)}
                       style={{ width: `${zoom * 100}%`, maxWidth: 'none', display: 'block' }} />}
               </div>
-            : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A1A1AA', fontSize: 14, textAlign: 'center', lineHeight: 1.7, padding: 16 }}>
-                🔗 Dán link ảnh, hoặc 📤 tải ảnh lên.<br />Sheet chỉ để nhìn canh nhịp.
+            : <div style={{ minHeight: '100%', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 20, boxSizing: 'border-box' }}>
+                <div style={{ width: '100%', maxWidth: 420, textAlign: 'center' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: A.ink, marginBottom: 12 }}>Chèn link bản nhạc để tham chiếu</div>
+                  <input value={sheetUrl} onChange={(e) => { setSheetUrl(e.target.value.trim()); setSheetBroken(false) }} placeholder="Dán link ảnh sheet vào đây…"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1.5px solid ${A.accent}`, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  <div style={{ fontSize: 12.5, color: A.sub, margin: '14px 0' }}>— hoặc —</div>
+                  <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                    style={{ background: A.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: uploading ? 'default' : 'pointer', opacity: uploading ? .6 : 1 }}>
+                    {uploading ? '⏳ Đang tải…' : '📤 Tải ảnh sheet nhạc lên'}
+                  </button>
+                  <div style={{ fontSize: 12, color: A.sub, marginTop: 14, lineHeight: 1.6 }}>
+                    Ảnh nằm trong 1 trang web: giữ ngón tay (hoặc chuột phải) trên ảnh → <b>"Sao chép địa chỉ hình ảnh"</b> → dán vào ô trên.
+                  </div>
+                </div>
               </div>}
         </div>}
       </div>
