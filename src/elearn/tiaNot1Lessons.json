@@ -4823,6 +4823,348 @@
               "content": "<b>Rất giỏi!</b> Bạn vừa đọc trọn một bản nhạc thật — kết hợp cao độ, trường độ và ô nhịp. Đây là cột mốc đáng tự hào, nhưng <b>hành trình còn tiếp</b>: phía trước là những giai điệu hay hơn, kỹ thuật mới và nhiều bài hát bạn yêu thích. Tiếp tục nhé! 🎸"
             }
           ]
+        },
+        {
+          "key": "maryBand",
+          "lessonId": "a7720000-0000-4000-8000-000000000004",
+          "flowId": "f7720000-0000-4000-8000-000000000004",
+          "order": 4,
+          "title": "Bài 4: Vận dụng — Mary Had a Little Lamb (chơi & chấm)",
+          "reward_xp": 18,
+          "slides": [
+            {
+              "id": "y1",
+              "order": 1,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Chơi cùng ban nhạc — có chấm điểm",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Một giai điệu <b>siêu đơn giản</b> để bạn <b>chơi cùng ban nhạc</b> và <b>tự chấm điểm</b>! Bấm <b>Chơi & chấm</b>: nốt chạy đều theo nhịp, bạn tỉa theo — cuối bài máy chấm bao nhiêu nốt đúng. <i>Mẹo: đeo tai nghe để mic chỉ nghe tiếng đàn của bạn.</i>"
+            },
+            {
+              "id": "y2",
+              "order": 2,
+              "logic": "NGHI",
+              "type": "text",
+              "title": "Nhịp 4/4, vùng Đô–Sol",
+              "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài chỉ dùng <b>Đô – Rê – Mi – Sol</b> (dây 1–2), nhịp <b>4/4</b>, 8 ô. Nghe mẫu (có ban nhạc) một lượt cho quen, rồi <b>Chơi & chấm</b> — cố theo kịp nhịp trống nhé!</p>"
+            },
+            {
+              "id": "y3",
+              "order": 3,
+              "logic": "LAM",
+              "type": "note_practice",
+              "title": "Chơi & chấm: Mary Had a Little Lamb",
+              "interactive": {
+                "showDur": true,
+                "beatsPerBar": 4,
+                "scored": true,
+                "chords": [
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 98,
+                    "pad": [
+                      146.83,
+                      196,
+                      246.94
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  },
+                  {
+                    "bass": 98,
+                    "pad": [
+                      146.83,
+                      196,
+                      246.94
+                    ]
+                  },
+                  {
+                    "bass": 65.41,
+                    "pad": [
+                      130.81,
+                      164.81,
+                      196
+                    ]
+                  }
+                ],
+                "notes": [
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Sol",
+                    "freq": 392,
+                    "string": 1,
+                    "fret": 3,
+                    "staff": 9,
+                    "dur": 2
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Mi",
+                    "freq": 329.63,
+                    "string": 1,
+                    "fret": 0,
+                    "staff": 7,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Rê",
+                    "freq": 293.66,
+                    "string": 2,
+                    "fret": 3,
+                    "staff": 6,
+                    "dur": 1
+                  },
+                  {
+                    "label": "Đô",
+                    "freq": 261.63,
+                    "string": 2,
+                    "fret": 1,
+                    "staff": 5,
+                    "dur": 4
+                  }
+                ]
+              }
+            },
+            {
+              "id": "y4",
+              "order": 4,
+              "logic": "NGAM",
+              "type": "checklist",
+              "title": "Tự kiểm tra",
+              "interactive": {
+                "items": [
+                  "Mình chơi theo kịp ban nhạc",
+                  "Điểm mình đạt từ ⭐ trở lên",
+                  "Nghe vui như đang biểu diễn"
+                ]
+              }
+            },
+            {
+              "id": "y5",
+              "order": 5,
+              "logic": "DAN",
+              "type": "callout",
+              "title": "Lời thầy",
+              "interactive": {
+                "variant": "teacher"
+              },
+              "content": "Chơi cùng ban nhạc đã tai chưa! Càng tập, điểm càng cao và tay càng chắc. Cố lấy đủ <b>3 sao</b> nhé! 🎸🥁"
+            }
+          ]
         }
       ]
     }
