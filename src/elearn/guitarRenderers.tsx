@@ -284,6 +284,8 @@ export function Ear({ cfg, onPass }: { cfg: EarCfg } & Pick<CB, 'onPass'>) {
 
 // ── note_practice: máy chạy chuỗi nốt theo nhịp → học viên ĐÁNH THEO (bắt chước) ──
 const DEFAULT_SPEEDS = [{ label: 'Chậm', bpm: 60 }, { label: 'Vừa', bpm: 80 }, { label: 'Nhanh', bpm: 100 }]
+// Điệu BALLAD (port từ backingStyles) — 8 bước/ô (4/4): hi-hat mọi bước, snare phách 2&4, kick phách 1&3, bass bước 0/3/4
+const BALLAD = { hh: [1, 1, 1, 1, 1, 1, 1, 1], snare: [0, 0, 1, 0, 0, 0, 1, 0], kick: [1, 0, 0, 0, 1, 0, 0, 0], bass: [1, 0, 0, 1, 1, 0, 0, 0] }
 
 // Cần đàn mini gỗ tối — hiện 1 nốt theo (dây 1..6 từ trên xuống, phím 0=buông sát nut)
 export function MiniFretboard({ string, fret, pulse, h = 128 }: { string?: number; fret?: number; pulse?: number; h?: number }) {
@@ -519,6 +521,34 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const metro = useRef<number | null>(null)   // metronome (chỉ bài trường độ)
 
   const stopMetro = () => { if (metro.current) { clearInterval(metro.current); metro.current = null } }
+  // Nền ban nhạc — điệu BALLAD (8 bước/ô) cho nhịp 4/4; nhịp khác thì gõ đơn giản theo phách
+  const startBand = (beatMs: number, bpb: number, chords: { bass: number; pad: number[] }[]) => {
+    if (bpb === 4) {
+      let step = 0
+      const stepTick = () => {
+        const s = step % 8, ch = chords[Math.floor(step / 8) % chords.length]
+        if (BALLAD.hh[s]) playHat()
+        if (BALLAD.snare[s]) playSnare()
+        if (BALLAD.kick[s]) playKick()
+        if (s === 0) playPad(ch.pad, beatMs * bpb)
+        if (BALLAD.bass[s]) playBass(ch.bass)
+        step++
+      }
+      stepTick()
+      metro.current = window.setInterval(stepTick, beatMs / 2)   // móc đơn
+    } else {
+      let bi = 0
+      const beatTick = () => {
+        const inBar = bi % bpb, ch = chords[Math.floor(bi / bpb) % chords.length]
+        playHat()
+        if (inBar === 0) { playKick(); playBass(ch.bass); playPad(ch.pad, beatMs * bpb) }
+        if (inBar === Math.floor(bpb / 2)) playSnare()
+        bi++
+      }
+      beatTick()
+      metro.current = window.setInterval(beatTick, beatMs)
+    }
+  }
   const stop = () => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null }
     stopMetro()
@@ -557,20 +587,8 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       setCountIn(0)
       const bpb = cfg.beatsPerBar && cfg.beatsPerBar > 0 ? cfg.beatsPerBar : 4
       const chords = cfg.chords
-      if (chords && chords.length) {                          // NỀN BAN NHẠC: trống + bass + strings pad
-        let bi = 0
-        const band = () => {
-          const beatInBar = bi % bpb, barIdx = Math.floor(bi / bpb)
-          const ch = chords[barIdx % chords.length]
-          playHat()
-          if (beatInBar === 0 || (bpb >= 4 && beatInBar === 2)) playKick()
-          if (bpb >= 4 ? (beatInBar === 1 || beatInBar === 3) : beatInBar === Math.floor(bpb / 2)) playSnare()
-          if (beatInBar === 0) { playBass(ch.bass); playPad(ch.pad, beatMs * bpb) }
-          else if (bpb >= 4 && beatInBar === 2) playBass(ch.bass)
-          bi++
-        }
-        band()
-        metro.current = window.setInterval(band, beatMs)
+      if (chords && chords.length) {                          // NỀN BAN NHẠC: điệu Ballad (trống + bass + piano)
+        startBand(beatMs, bpb, chords)
       } else if (cfg.showDur) {                               // metronome đơn
         playClick(true); metro.current = window.setInterval(() => playClick(), beatMs)
       }
@@ -665,19 +683,8 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
     }, 45)
     const runMelody = () => {                       // nốt chạy đều theo nhịp (KHÔNG phát tiếng đàn — học sinh tự đàn)
       setCountIn(0)
-      if (chords && chords.length) {
-        let bi = 0
-        const band = () => {
-          const bInBar = bi % bpb, barIdx = Math.floor(bi / bpb), ch = chords[barIdx % chords.length]
-          playHat()
-          if (bInBar === 0 || (bpb >= 4 && bInBar === 2)) playKick()
-          if (bpb >= 4 ? (bInBar === 1 || bInBar === 3) : bInBar === Math.floor(bpb / 2)) playSnare()
-          if (bInBar === 0) { playBass(ch.bass); playPad(ch.pad, beatMs * bpb) }
-          else if (bpb >= 4 && bInBar === 2) playBass(ch.bass)
-          bi++
-        }
-        band(); metro.current = window.setInterval(band, beatMs)
-      } else { playClick(true); metro.current = window.setInterval(() => playClick(), beatMs) }
+      if (chords && chords.length) { startBand(beatMs, bpb, chords) }
+      else { playClick(true); metro.current = window.setInterval(() => playClick(), beatMs) }
       const step = (i: number) => {
         cursorR.current = i; setCursor(i); hitR.current = false
         const d = (notes[i].dur ?? 1) * beatMs
