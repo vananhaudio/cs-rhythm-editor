@@ -182,6 +182,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [freeCourses, setFreeCourses]   = useState<Set<string>>(new Set())  // khoá miễn phí (is_free)
   const [accessCourses, setAccessCourses] = useState<Set<string>>(new Set()) // khoá đã được thầy cấp quyền
   const [foundationGaps, setFoundationGaps] = useState<Enrollment['course'][]>([]) // khoá NỀN còn thiếu (đặc cách vượt cấp) — §6 bộ luật
+  const [htMember, setHtMember] = useState(false) // học viên Hành trình 2026/27: full khoá NHƯNG học tuần tự
+  const [courseLessonIds, setCourseLessonIds] = useState<Record<string, string[]>>({}) // courseId → mọi lesson id (tính hoàn thành khoá)
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
   const [dbTools, setDbTools]     = useState<DBTool[]>([])
   const [exerciseStatuses, setExerciseStatuses] = useState<Record<string, string>>({}) // exId → 'on'|'off'|'coming_soon'
@@ -465,6 +467,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
   const isTierUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
 
+  // ── Chặn tuần tự cho học viên Hành trình (HT): khoá cấp trên chỉ mở khi HOÀN THÀNH hết bài cấp dưới ──
+  // Mã năng lực đã hoàn thành = mọi bài của khoá đó đều xong.
+  const completedCodes = new Set<string>()
+  enrollments.forEach(e => {
+    const code = (e.course?.code || '').trim().toUpperCase()
+    const ids = courseLessonIds[e.course_id]
+    if (code && ids && ids.length > 0 && ids.every(id => completedIds.has(id))) completedCodes.add(code)
+  })
+  const seqLockMissing = (code?: string | null) => htMember ? missingPrereqs(code, completedCodes).map(c => tenNangLuc(c) || c) : []
+  const isSeqLocked = (code?: string | null) => seqLockMissing(code).length > 0
+
   // Tất cả bài đã sắp xếp đúng thứ tự: module order_index → lesson order_index
   const sortedLessons = [...lessons].sort((a, b) => {
     const ma = modules.find(m => m.id === a.module_id)?.order_index ?? 0
@@ -550,6 +563,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const modIds = (mods ?? []).map((m: any) => m.id)
         if (modIds.length === 0) { setMasterPath([]); return }
         const { data: lsns } = await supabase.from('edu_course_lessons').select('id,module_id,title,order_index').in('module_id', modIds)
+        // Gom lesson id theo khoá → tính khoá đã hoàn thành (chặn tuần tự HT)
+        const cli: Record<string, string[]> = {}
+        ;(lsns ?? []).forEach((l: any) => { const cid = modMap[l.module_id]?.course_id; if (cid) (cli[cid] ??= []).push(l.id) })
+        setCourseLessonIds(cli)
         const path = (lsns ?? []).map((l: any) => {
           const m = modMap[l.module_id]; const cid = m?.course_id ?? ''
           return { id: l.id, title: l.title, courseId: cid, courseName: cname[cid] ?? '', cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
@@ -647,9 +664,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       .then(({ data }) => {
         if (data) setCompletedIds(new Set(data.map((r: any) => r.lesson_id)))
       })
+    supabase.from('edu_students').select('ht_member').eq('id', student.id).single()
+      .then(({ data }) => setHtMember(!!(data as any)?.ht_member))
   }, [student.id])
 
   const openCourse = async (courseId: string) => {
+    // HT: chặn mở khoá cấp trên khi chưa hoàn thành cấp dưới (lưới an toàn cho mọi lối vào)
+    const code = enrollments.find(e => e.course_id === courseId)?.course?.code
+    if (isSeqLocked(code)) return
     setActiveCourseId(courseId)
     const { data: mods } = await supabase.from('edu_modules')
       .select('*').eq('course_id', courseId).order('order_index')
@@ -1136,30 +1158,37 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Tất cả khoá học</div>
                   {sortedEnrollments.map(e => {
                     const isPublished = (e.course?.status ?? 'on') === 'on'
+                    const seqMiss = seqLockMissing(e.course?.code)  // HT: khoá cấp dưới chưa xong → khoá lại
+                    const seqLocked = isPublished && seqMiss.length > 0
+                    const canOpen = isPublished && !seqLocked
                     return (
                       <div key={e.id}
-                        onClick={() => isPublished ? openCourse(e.course_id) : undefined}
+                        onClick={() => canOpen ? openCourse(e.course_id) : undefined}
                         style={{
                           background: L.surface, borderRadius: 16, padding: '14px 16px',
                           boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12,
                           marginBottom: 8,
-                          cursor: isPublished ? 'pointer' : 'default',
-                          opacity: isPublished ? 1 : 0.45,
+                          cursor: canOpen ? 'pointer' : 'default',
+                          opacity: !isPublished ? 0.45 : seqLocked ? 0.6 : 1,
                         }}>
-                        <CourseLogo course={e.course} size={42} radius={12} />
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <CourseLogo course={e.course} size={42} radius={12} />
+                          {seqLocked && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.35)', borderRadius: 12, color: '#fff', fontSize: 16 }}>🔒</span>}
+                        </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isPublished ? L.t1 : L.t2 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isPublished ? (seqLocked ? L.t2 : L.t1) : L.t2 }}>
                             {e.course?.name}
                           </div>
-                          <div style={{ fontSize: 12, color: L.t3, marginTop: 2 }}>
-                            {isPublished
-                              ? (e.course?.type === 'canh_cua' ? 'Cánh Cửa' : 'Hành Trình')
-                              : '🔜 Sắp ra mắt'}
+                          <div style={{ fontSize: 12, color: seqLocked ? '#B91C1C' : L.t3, marginTop: 2 }}>
+                            {!isPublished ? '🔜 Sắp ra mắt'
+                              : seqLocked ? `Hoàn thành ${seqMiss.join(' · ')} để mở`
+                              : (e.course?.type === 'canh_cua' ? 'Cánh Cửa' : 'Hành Trình')}
                           </div>
                         </div>
-                        {isPublished
-                          ? <span style={{ color: L.t3, fontSize: 18 }}>›</span>
-                          : <span style={{ fontSize: 11, color: L.t3, background: L.surface2, borderRadius: 8, padding: '3px 8px', fontWeight: 600, flexShrink: 0 }}>Sắp ra mắt</span>
+                        {!isPublished
+                          ? <span style={{ fontSize: 11, color: L.t3, background: L.surface2, borderRadius: 8, padding: '3px 8px', fontWeight: 600, flexShrink: 0 }}>Sắp ra mắt</span>
+                          : seqLocked ? null
+                          : <span style={{ color: L.t3, fontSize: 18 }}>›</span>
                         }
                       </div>
                     )

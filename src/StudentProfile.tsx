@@ -6,6 +6,7 @@ interface Student {
   level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null
   goals: string | null; learning_style: string | null; instruments: string | null
   enrolled_at: string | null; is_active: boolean; honor?: string | null
+  ht_member?: boolean | null
 }
 interface AppStats {
   totalXP: number; weekXP: number; bySource: { source: string; xp: number }[]
@@ -316,6 +317,28 @@ export default function StudentProfile({ studentId, onBack }: Props) {
     setStudent(prev => prev ? { ...prev, honor } : prev)
   }
 
+  const [htSaving, setHtSaving] = useState(false)
+  const toggleHt = async (on: boolean) => {
+    if (!student) return
+    setHtSaving(true)
+    const { error } = await supabase.from('edu_students').update({ ht_member: on }).eq('id', student.id)
+    if (error) { setHtSaving(false); alert('Lưu cờ Hành trình thất bại: ' + error.message); return }
+    setStudent(prev => prev ? { ...prev, ht_member: on } : prev)
+    if (on) {
+      // Cấp full khoá qua RPC (enroll + access mọi khoá đang mở)
+      const { error: gErr } = await supabase.rpc('grant_all_courses', { p_student: student.id })
+      if (gErr) { setHtSaving(false); alert('Bật cờ OK nhưng cấp khoá lỗi: ' + gErr.message); return }
+      // Nạp lại danh sách khoá + quyền
+      const [{ data: enr }, { data: acc }] = await Promise.all([
+        supabase.from('edu_enrollments').select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,slug,type,track,is_free)').eq('student_id', student.id),
+        supabase.from('edu_course_access').select('course_id').eq('student_id', student.id).eq('active', true),
+      ])
+      setEnrollments((enr ?? []) as unknown as EnrollmentItem[])
+      setAccessSet(new Set((acc ?? []).map((a: any) => a.course_id)))
+    }
+    setHtSaving(false)
+  }
+
   const avgSkill = skills.length > 0 ? Math.round(skills.reduce((s, k) => s + k.level_0_10, 0) / skills.length * 10) / 10 : null
   const pendingCount = assignments.filter(a => a.status === 'pending').length
   const doneCount = assignments.filter(a => a.status === 'done').length
@@ -470,6 +493,19 @@ export default function StudentProfile({ studentId, onBack }: Props) {
 
         {activeTab === 'courses' && (
           <div>
+            {/* ── Cờ Học viên Hành trình 2026/27 — full khoá, học tuần tự ── */}
+            <div style={{ marginBottom: 18, background: student?.ht_member ? '#EEF2FF' : T.bgCard, border: `1px solid ${student?.ht_member ? '#C7D2FE' : T.border}`, borderRadius: 10, padding: '12px 14px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: htSaving ? 'default' : 'pointer' }}>
+                <input type="checkbox" checked={!!student?.ht_member} disabled={htSaving}
+                  onChange={e => toggleHt(e.target.checked)} style={{ marginTop: 3, width: 17, height: 17, cursor: 'pointer', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#3730A3' }}>Học viên Hành trình 2026/27 {htSaving && '· đang lưu…'}</div>
+                  <div style={{ fontSize: 12.5, color: T.textMuted, marginTop: 3, lineHeight: 1.5 }}>
+                    Bật = cấp <b>toàn bộ khoá hiện có</b>, nhưng app <b>bắt học tuần tự</b> (Đệm/Tỉa/Nhạc lý 1→2→3, phải hoàn thành hết bài cấp dưới mới mở cấp trên). Khoá chưa dựng thì bỏ qua.
+                  </div>
+                </div>
+              </label>
+            </div>
             {myGroups.length > 0 && (
               <div style={{ marginBottom: 18 }}>
                 <SectionTitle>Lớp tham gia ({myGroups.length})</SectionTitle>
