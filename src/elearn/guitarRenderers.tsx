@@ -288,12 +288,14 @@ const DEFAULT_SPEEDS = [{ label: 'Chậm', bpm: 60 }, { label: 'Vừa', bpm: 80 
 const BALLAD = { hh: [1, 1, 1, 1, 1, 1, 1, 1], snare: [0, 0, 1, 0, 0, 0, 1, 0], kick: [1, 0, 0, 0, 1, 0, 0, 0], bass: [1, 0, 0, 1, 1, 0, 0, 0] }
 
 // Cần đàn mini gỗ tối — hiện 1 nốt theo (dây 1..6 từ trên xuống, phím 0=buông sát nut)
-export function MiniFretboard({ string, fret, pulse, h = 128 }: { string?: number; fret?: number; pulse?: number; h?: number }) {
+export function MiniFretboard({ string, fret, pulse, h = 128, nextString, nextFret }: { string?: number; fret?: number; pulse?: number; h?: number; nextString?: number; nextFret?: number }) {
   const STRING_CNT = 6, FRET_COUNT = 4, H = h
   const rowY = (num: number) => ((num - 1 + 0.5) / STRING_CNT) * 100   // dây 1 → trên cùng
   const strW = (num: number) => 1.2 + (num - 1) * (2.4 / 5)
   const active = string != null && fret != null
   const xPct = fret === 0 ? 2 : ((fret! - 0.5) / FRET_COUNT) * 100
+  const hasNext = nextString != null && nextFret != null && !(nextString === string && nextFret === fret)   // nốt KẾ (ghost) để nhìn trước
+  const nxPct = nextFret === 0 ? 2 : ((nextFret! - 0.5) / FRET_COUNT) * 100
   return (
     <div>
       <div style={{ display: 'flex', height: H }}>
@@ -308,6 +310,11 @@ export function MiniFretboard({ string, fret, pulse, h = 128 }: { string?: numbe
           {[1, 2, 3, 4, 5, 6].map(num => { const t = strW(num); return (
             <div key={num} style={{ position: 'absolute', left: 6, right: 0, top: `${rowY(num)}%`, height: t, marginTop: -(t / 2), background: `linear-gradient(90deg,${colorOfNum(num)}99,${colorOfNum(num)})`, zIndex: 3 }} />
           )})}
+          {hasNext && (   // nốt KẾ TIẾP — ghost mờ, viền nét đứt, để học viên nhìn trước & chuẩn bị ngón
+            <div style={{ position: 'absolute', left: `${nxPct}%`, top: `${rowY(nextString!)}%`, width: 23, height: 23, marginLeft: -11.5, marginTop: -11.5, borderRadius: '50%', background: 'rgba(234,88,12,0.14)', border: '2px dashed rgba(234,88,12,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, fontWeight: 800, color: 'rgba(255,255,255,0.75)', zIndex: 8 }}>
+              {nextFret === 0 ? '○' : nextFret}
+            </div>
+          )}
           {active && (
             <div key={pulse} style={{ position: 'absolute', left: `${xPct}%`, top: `${rowY(string!)}%`, width: 26, height: 26, marginLeft: -13, marginTop: -13, borderRadius: '50%', background: ACCENT.a, border: '2px solid rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, color: '#fff', zIndex: 10, boxShadow: `0 0 14px ${ACCENT.a}, 0 2px 6px rgba(0,0,0,.5)`, animation: '_ntPing .25s ease-out' }}>
               {fret === 0 ? '○' : fret}
@@ -726,6 +733,12 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
 
   const active = (playing || micOn) ? cursor : -1
   const cur = notes[cursor >= 0 ? cursor % notes.length : 0]
+  // nốt KẾ TIẾP (bỏ qua dấu lặng) để hiện ghost trên cần đàn — học viên nhìn trước, chuẩn bị ngón
+  const nextCur = (() => {
+    let j = (cursor >= 0 ? cursor : 0) + 1
+    while (j < notes.length && notes[j].rest) j++
+    return j < notes.length ? notes[j] : undefined
+  })()
   const showStaff = cfg.showStaff ?? notes.some(n => n.staff != null)
   const sheetRows = Math.ceil(notes.length / 8)   // khớp perRow=8 trong NoteSheet; 1 dòng = bài ngắn
   const busy = playing || micOn
@@ -767,7 +780,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
 
       {/* Cần đàn — quan trọng ngang khuông (nốt đã hiện trên khuông + cần đàn nên bỏ dòng chữ) */}
       <div style={{ flexShrink: 0, background: '#F1ECE2', borderRadius: 12, padding: '10px 12px', marginBottom: 9 }}>
-        <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} h={118} />
+        <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} h={118} nextString={nextCur?.string} nextFret={nextCur?.fret} />
       </div>
 
       {/* Nút điều khiển — sát đáy màn */}
