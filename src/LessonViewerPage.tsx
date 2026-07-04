@@ -6,7 +6,7 @@ import ElearnLessonView from './elearn/ElearnLessonView'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { parseStrumConfig, configToSong } from './StrumConfigEditor'
-import { missingPrereqs, tenNangLuc } from './hanhtrinh'
+import { missingPrereqs, tenNangLuc, PREREQ } from './hanhtrinh'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -68,6 +68,8 @@ export default function LessonViewerPage() {
   const [studentName, setStudentName] = useState('')
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [ownedCodes, setOwnedCodes] = useState<Set<string>>(new Set()) // mã năng lực học viên đã sở hữu (tính thiếu nền)
+  const [htMember, setHtMember] = useState(false) // học viên Hành trình: chặn tuần tự
+  const [seqLockNames, setSeqLockNames] = useState<string[]>([]) // tên khoá cấp dưới CHƯA hoàn thành → khoá này bị chặn
 
   // Bài elearn? → trả về số bài (1..11), ngược lại null
   const elearnNumOf = (l: Lesson | null): number | null => {
@@ -123,6 +125,8 @@ export default function LessonViewerPage() {
           const { data: enr } = await supabase.from('edu_enrollments')
             .select('course:edu_courses(code)').eq('student_id', st.id).eq('is_active', true)
           setOwnedCodes(new Set(((enr ?? []) as any[]).map(e => (e.course?.code || '').trim().toUpperCase()).filter(Boolean)))
+          const { data: stRow } = await supabase.from('edu_students').select('ht_member').eq('id', st.id).single()
+          setHtMember(!!(stRow as any)?.ht_member)
         }
         if (au?.name) setStudentName(au.name)
       }
@@ -159,6 +163,34 @@ export default function LessonViewerPage() {
     load()
   }, [courseId])
 
+  // HT: chặn tuần tự — khoá này bị khoá nếu còn mã tiên quyết CHƯA hoàn thành (khoá chưa dựng thì bỏ qua)
+  useEffect(() => {
+    const code = (course?.code || '').trim().toUpperCase()
+    if (!htMember || !studentId || !code || !PREREQ[code]) { setSeqLockNames([]); return }
+    const need = PREREQ[code].filter(c => c !== 'NM')
+    if (need.length === 0) { setSeqLockNames([]); return }
+    ;(async () => {
+      const { data: cs } = await supabase.from('edu_courses').select('id,code').in('code', need)
+      const idsByCode: Record<string, string[]> = {}
+      ;(cs ?? []).forEach((c: any) => { const cc = (c.code || '').trim().toUpperCase(); (idsByCode[cc] ??= []).push(c.id) })
+      const courseIds = (cs ?? []).map((c: any) => c.id)
+      if (courseIds.length === 0) { setSeqLockNames([]); return }  // chưa dựng khoá nền → không chặn
+      const { data: mods } = await supabase.from('edu_modules').select('id,course_id').in('course_id', courseIds)
+      const modCourse: Record<string, string> = {}; (mods ?? []).forEach((m: any) => { modCourse[m.id] = m.course_id })
+      const modIds = (mods ?? []).map((m: any) => m.id)
+      const { data: lsns } = modIds.length
+        ? await supabase.from('edu_course_lessons').select('id,module_id').in('module_id', modIds)
+        : { data: [] as any[] }
+      const lessonsByCourse: Record<string, string[]> = {}
+      ;(lsns ?? []).forEach((l: any) => { const cid = modCourse[l.module_id]; if (cid) (lessonsByCourse[cid] ??= []).push(l.id) })
+      const { data: prog } = await supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', studentId).eq('completed', true)
+      const done = new Set((prog ?? []).map((r: any) => r.lesson_id))
+      const codeDone = (cc: string) => (idsByCode[cc] || []).some(cid => { const ls = lessonsByCourse[cid]; return ls && ls.length > 0 && ls.every(id => done.has(id)) })
+      const missing = need.filter(cc => (idsByCode[cc]?.length) && !codeDone(cc))
+      setSeqLockNames(missing.map(c => tenNangLuc(c) || c))
+    })()
+  }, [course, htMember, studentId])
+
   if (!courseId) return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: D.bg, color: D.text3 }}>
       Không tìm thấy khoá học.
@@ -168,6 +200,21 @@ export default function LessonViewerPage() {
   if (loading) return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: D.bg, color: D.text3 }}>
       Đang tải...
+    </div>
+  )
+
+  if (seqLockNames.length > 0) return (
+    <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: D.bg, padding: 24 }}>
+      <div style={{ maxWidth: 460, textAlign: 'center', background: D.surface, border: `1px solid ${D.border}`, borderRadius: 16, padding: '32px 26px' }}>
+        <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div style={{ fontWeight: 800, fontSize: 19, color: D.text1, marginBottom: 8 }}>Chưa mở khoá này</div>
+        <div style={{ fontSize: 14.5, color: D.text3, lineHeight: 1.6 }}>
+          Bạn cần hoàn thành <b style={{ color: '#B91C1C' }}>{seqLockNames.join(' · ')}</b> trước. Hành trình học tuần tự — chắc gốc từng cấp rồi mới lên cấp trên.
+        </div>
+        <a href="/start" style={{ display: 'inline-block', marginTop: 20, background: D.text1, color: D.bg, textDecoration: 'none', borderRadius: 10, padding: '11px 22px', fontSize: 14.5, fontWeight: 700 }}>← Về trang chủ</a>
+      </div>
     </div>
   )
 
