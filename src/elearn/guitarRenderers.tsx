@@ -28,6 +28,7 @@ export interface NotePracticeCfg {
   showDur?: boolean                             // vẽ nốt đen/trắng/tròn theo dur (chỉ chương Trường độ); mặc định mọi nốt giống nhau
   beatsPerBar?: number                          // số phách mỗi ô nhịp (2/3/4) → vẽ vạch nhịp + số chỉ nhịp + count-in đếm đúng
   chords?: { bass: number; pad: number[] }[]    // nền đệm ban nhạc: mỗi ô 1 hợp âm (bass + strings pad); có = bật trống+bass+pad khi Nghe mẫu
+  scored?: boolean                              // Tự đàn kiểu B: nốt CHẠY THEO NHỊP (không chờ), mic chấm điểm cuối bài. Mặc định = kiểu A (đàn đúng mới chạy)
 }
 // "Chia ô nhịp": đối chiếu SHEET (vẽ sạch từ nốt MusicXML) ↔ LỜI, bút kẻ vạch chia ô nhịp
 export interface SNote { pos?: number; rest?: boolean; dur: 'e' | 'q' | 'h' | 'w' }  // pos = bậc trên khuông (E4=0, mỗi bậc = nửa dòng), dur = trường độ
@@ -492,6 +493,9 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const [done, setDone] = useState(false)
   const [heard, setHeard] = useState<string | null>(null)
   const [countIn, setCountIn] = useState(0)        // đếm lấy đà 1-2-3-4 (bài trường độ)
+  const [score, setScore] = useState<{ hit: number; total: number } | null>(null)   // điểm Tự đàn kiểu B
+  const hitR = useRef(false)                       // nốt hiện tại đã đàn đúng chưa (chấm điểm)
+  const resultsR = useRef<boolean[]>([])           // đúng/sai từng nốt
   const timer = useRef<number | null>(null)
   const beat = useRef(0)
   const passedR = useRef(false)
@@ -514,9 +518,11 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   }
   const stopMic = () => {
     if (micTimer.current) { clearInterval(micTimer.current); micTimer.current = null }
+    if (timer.current) { clearTimeout(timer.current); timer.current = null }   // dừng con trỏ chạy-theo-nhịp (kiểu B)
+    stopMetro()                                                                // dừng ban nhạc
     micStreamR.current?.getTracks().forEach(t => t.stop()); micStreamR.current = null
     try { audioCtxR.current?.close() } catch { /* */ } audioCtxR.current = null
-    setMicOn(false); setHeard(null)
+    setMicOn(false); setHeard(null); setCountIn(0)
   }
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); if (micTimer.current) clearInterval(micTimer.current); if (metro.current) clearInterval(metro.current); micStreamR.current?.getTracks().forEach(t => t.stop()); try { audioCtxR.current?.close() } catch { /* */ } }, [])
 
@@ -525,7 +531,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const start = (spi: number = speedIdx) => {
     stopMic(); stopMetro()
     if (timer.current) clearTimeout(timer.current)
-    setPlaying(true); setDone(false); beat.current = 0; passedR.current = false; setCountIn(0)
+    setPlaying(true); setDone(false); beat.current = 0; passedR.current = false; setCountIn(0); setScore(null)
     const beatMs = 60000 / speeds[spi].bpm
     const tick = () => {
       const i = beat.current
@@ -601,8 +607,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       } else stableR.current = 0
     } else { setHeard(null); stableR.current = 0 }
   }
-  const startMic = async () => {
-    stop()
+  const openMic = async (): Promise<boolean> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } as MediaTrackConstraints })
       micStreamR.current = stream
@@ -612,13 +617,73 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
       const src = ctx.createMediaStreamSource(stream)
       const an = ctx.createAnalyser(); an.fftSize = 2048; src.connect(an)
       analyserR.current = an; bufR.current = new Float32Array(an.fftSize)
-      cursorR.current = 0; setCursor(0); stableR.current = 0; releaseR.current = false
-      setMicOn(true); setDone(false)
-      micTimer.current = window.setInterval(detect, 60)
+      return true
     } catch {
       alert('Không truy cập được micro. Hãy cho phép quyền micro cho ứng dụng/trình duyệt rồi thử lại.')
-      setMicOn(false)
+      setMicOn(false); return false
     }
+  }
+  // Kiểu A — tự dò: đàn ĐÚNG mới sang nốt kế
+  const startMic = async () => {
+    stop()
+    if (!(await openMic())) return
+    cursorR.current = 0; setCursor(0); stableR.current = 0; releaseR.current = false
+    setMicOn(true); setDone(false); setScore(null)
+    micTimer.current = window.setInterval(detect, 60)
+  }
+  // Kiểu B — chơi theo nhịp + chấm điểm: nốt CHẠY ĐỀU (không chờ), mic chấm từng nốt, cuối bài cho điểm. Giữ ban nhạc.
+  const finishScored = () => {
+    const hit = resultsR.current.filter(Boolean).length, total = resultsR.current.length
+    stopMic()
+    setCursor(-1); setScore({ hit, total })
+    if (total > 0 && hit / total >= 0.6) { setDone(true); onPass() }
+  }
+  const startScored = async () => {
+    stop()
+    if (!(await openMic())) return
+    setMicOn(true); setDone(false); setScore(null)
+    resultsR.current = []; hitR.current = false; cursorR.current = -1
+    const beatMs = 60000 / speeds[speedIdx].bpm
+    const bpb = cfg.beatsPerBar && cfg.beatsPerBar > 0 ? cfg.beatsPerBar : 4
+    const chords = cfg.chords
+    micTimer.current = window.setInterval(() => {   // nghe liên tục, đánh dấu nốt hiện tại đàn đúng chưa
+      const an = analyserR.current, buf = bufR.current, ctx = audioCtxR.current
+      if (!an || !buf || !ctx) return
+      const i = cursorR.current
+      if (i < 0 || i >= notes.length || notes[i].rest) return
+      an.getFloatTimeDomainData(buf)
+      const { freq } = detectPitch(buf, ctx.sampleRate)
+      if (freq > 0) { const pc = pitchClass(freq); setHeard(VN_PC[pc] ?? null); if (pc === pitchClass(notes[i].freq)) hitR.current = true }
+    }, 45)
+    const runMelody = () => {                       // nốt chạy đều theo nhịp (KHÔNG phát tiếng đàn — học sinh tự đàn)
+      setCountIn(0)
+      if (chords && chords.length) {
+        let bi = 0
+        const band = () => {
+          const bInBar = bi % bpb, barIdx = Math.floor(bi / bpb), ch = chords[barIdx % chords.length]
+          playHat()
+          if (bInBar === 0 || (bpb >= 4 && bInBar === 2)) playKick()
+          if (bpb >= 4 ? (bInBar === 1 || bInBar === 3) : bInBar === Math.floor(bpb / 2)) playSnare()
+          if (bInBar === 0) { playBass(ch.bass); playPad(ch.pad, beatMs * bpb) }
+          else if (bpb >= 4 && bInBar === 2) playBass(ch.bass)
+          bi++
+        }
+        band(); metro.current = window.setInterval(band, beatMs)
+      } else { playClick(true); metro.current = window.setInterval(() => playClick(), beatMs) }
+      const step = (i: number) => {
+        cursorR.current = i; setCursor(i); hitR.current = false
+        const d = (notes[i].dur ?? 1) * beatMs
+        timer.current = window.setTimeout(() => {
+          if (!notes[i].rest) resultsR.current.push(hitR.current)   // hết trường độ nốt i → ghi điểm
+          if (i + 1 >= notes.length) finishScored()
+          else step(i + 1)
+        }, d)
+      }
+      step(0)
+    }
+    let cn = 1; setCountIn(1); playClick(true)      // đếm lấy đà 1 ô rồi vào
+    const countTick = () => { cn++; if (cn <= bpb) { setCountIn(cn); playClick(false); timer.current = window.setTimeout(countTick, beatMs) } else runMelody() }
+    timer.current = window.setTimeout(countTick, beatMs)
   }
 
   const active = (playing || micOn) ? cursor : -1
@@ -681,13 +746,20 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 8px', border: `1.5px solid ${ACCENT.a}`, borderRadius: 12, background: '#fff', color: ACCENT.d, cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700 }}>
               ▶ Nghe mẫu
             </button>
-            <button onClick={startMic}
+            <button onClick={cfg.scored ? startScored : startMic}
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 8px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700 }}>
-              <MicIcon size={16} /> Tự đàn
+              <MicIcon size={16} /> {cfg.scored ? 'Chơi & chấm' : 'Tự đàn'}
             </button>
           </div>
         )}
-        {done && (
+        {score !== null ? (
+          (() => { const pct = score.total ? score.hit / score.total : 0; const stars = pct >= 0.9 ? '⭐⭐⭐' : pct >= 0.75 ? '⭐⭐' : pct >= 0.6 ? '⭐' : ''
+            return (
+              <div style={{ marginTop: 8, padding: '9px 13px', borderRadius: 11, background: pct >= 0.6 ? ACCENT.s : '#FBECEC', color: pct >= 0.6 ? ACCENT.d : '#A23B3B', fontSize: 13.5, fontWeight: 700, textAlign: 'center' }}>
+                Kết quả: <b>{score.hit}/{score.total}</b> nốt đúng nhịp {stars || (pct >= 0.4 ? '— cố thêm chút nữa!' : '— tập lại nhé!')}
+              </div>
+            ) })()
+        ) : done && (
           <div style={{ marginTop: 8, padding: '8px 13px', borderRadius: 11, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
             Tốt lắm! Bạn đàn đúng cả câu rồi — có thể sang bước sau.
           </div>
