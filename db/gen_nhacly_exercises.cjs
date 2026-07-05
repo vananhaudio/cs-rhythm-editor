@@ -46,7 +46,7 @@ const EXERCISES = [
   },
   {
     lessonId: 'a2100004-0000-4000-8000-000000000004', flowId: 'a2200004-0000-4000-8000-000000000004',
-    module_id: MOD_CH4, order: 2, title: 'Bài tập: Đếm phách trong ô nhịp', reward_xp: 10,
+    module_id: MOD_CH4, order: 3, title: 'Bài tập: Đếm phách trong ô nhịp', reward_xp: 10,
     slides: [
       { id: 'b1', order: 1, logic: 'DAN', type: 'callout', title: 'Nhịp 3/4 — mỗi ô ba phách',
         interactive: { variant: 'tip' },
