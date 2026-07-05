@@ -7,7 +7,7 @@
 
 -- Bài tập: Đọc nốt trên khuông
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, order_index, is_published, tier)
-VALUES ('a2100002-0000-4000-8000-000000000002', 'b1000002-0000-4000-8000-000000000002', 'Bài tập: Đọc nốt trên khuông', 'flow', 2, false, 'free')
+VALUES ('a2100002-0000-4000-8000-000000000002', 'b1000002-0000-4000-8000-000000000002', 'Bài tập: Đọc nốt trên khuông', 'flow', 3, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, title = EXCLUDED.title, order_index = EXCLUDED.order_index, lesson_type = 'flow';
 
 INSERT INTO flows (id, lesson_id, title, status, reward_xp, slides)

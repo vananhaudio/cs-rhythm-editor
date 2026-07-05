@@ -15,7 +15,7 @@ const MOD_CH5 = 'b1000005-0000-4000-8000-000000000005'  // Thực hành đọc n
 const EXERCISES = [
   {
     lessonId: 'a2100002-0000-4000-8000-000000000002', flowId: 'a2200002-0000-4000-8000-000000000002',
-    module_id: MOD_CH2, order: 2, title: 'Bài tập: Đọc nốt trên khuông', reward_xp: 10,
+    module_id: MOD_CH2, order: 3, title: 'Bài tập: Đọc nốt trên khuông', reward_xp: 10,
     slides: [
       { id: 'n1', order: 1, logic: 'DAN', type: 'callout', title: 'Đọc nốt trên khuông',
         interactive: { variant: 'tip' },
