@@ -9,6 +9,7 @@ const nl = (label, freq, string, fret, staff, dur) =>
 // Chương đích (khớp db/nhacly_restructure.sql)
 const MOD_CH2 = 'b1000002-0000-4000-8000-000000000002'  // Nốt nhạc & Khuông
 const MOD_CH3 = 'b1000003-0000-4000-8000-000000000003'  // Trường độ
+const MOD_CH4 = 'b1000004-0000-4000-8000-000000000004'  // Nhịp & Ô nhịp
 const MOD_CH5 = 'b1000005-0000-4000-8000-000000000005'  // Thực hành đọc nhạc
 
 const EXERCISES = [
@@ -41,6 +42,22 @@ const EXERCISES = [
                    nl('La',220,3,2,3,2), nl('La',220,3,2,3,2), nl('La',220,3,2,3,4) ] } },
       { id: 'd3', order: 3, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
         interactive: { items: ['Mình nghe rõ nốt tròn ngân dài gấp 4 lần nốt đen', 'Mình nhận ra đầu nốt rỗng = trắng/tròn, đầu đặc = đen'] } },
+    ],
+  },
+  {
+    lessonId: 'a2100004-0000-4000-8000-000000000004', flowId: 'a2200004-0000-4000-8000-000000000004',
+    module_id: MOD_CH4, order: 2, title: 'Bài tập: Đếm phách trong ô nhịp', reward_xp: 10,
+    slides: [
+      { id: 'b1', order: 1, logic: 'DAN', type: 'callout', title: 'Nhịp 3/4 — mỗi ô ba phách',
+        interactive: { variant: 'tip' },
+        content: 'Số chỉ nhịp <b>3/4</b> nghĩa là mỗi ô nhịp có <b>3 phách</b>: mạnh – nhẹ – nhẹ. Cùng đọc và đếm 1‑2‑3, 1‑2‑3.' },
+      { id: 'b2', order: 2, logic: 'LAM', type: 'note_practice', title: 'Đọc câu nhịp 3/4',
+        interactive: { noFretboard: true, showDur: true, beatsPerBar: 3,
+          hint: 'Để ý số chỉ nhịp 3/4 đầu khuông và vạch nhịp. Ô 1: ba nốt đen. Ô 2: một đen + một trắng (1 + 2 = đủ 3 phách).',
+          notes: [ nl('Đô',130.81,5,3,-2,1), nl('Mi',164.81,4,2,0,1), nl('Sol',196,3,0,2,1),
+                   nl('Mi',164.81,4,2,0,1), nl('Đô',130.81,5,3,-2,2) ] } },
+      { id: 'b3', order: 3, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+        interactive: { items: ['Mình đếm đúng 3 phách mỗi ô', 'Mình cảm được phách mạnh rơi vào đầu ô nhịp'] } },
     ],
   },
   {

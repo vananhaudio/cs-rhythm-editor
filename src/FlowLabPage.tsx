@@ -282,6 +282,23 @@ const SAMPLE_FLOW_NL3 = {
   ],
 }
 
+// Ch4 "Đếm phách trong ô nhịp" — nhịp 3/4 (mỗi ô 3 phách), tương phản với 4/4 ở Ch5
+const SAMPLE_FLOW_NL4 = {
+  id: 'sample-nl4', title: 'Đếm phách trong ô nhịp', reward_xp: 10,
+  slides: [
+    { id: 'b1', order: 1, logic: 'DAN', type: 'callout', title: 'Nhịp 3/4 — mỗi ô ba phách',
+      interactive: { variant: 'tip' },
+      content: 'Số chỉ nhịp <b>3/4</b> nghĩa là mỗi ô nhịp có <b>3 phách</b>: mạnh – nhẹ – nhẹ. Cùng đọc và đếm 1‑2‑3, 1‑2‑3.' },
+    { id: 'b2', order: 2, logic: 'LAM', type: 'note_practice', title: 'Đọc câu nhịp 3/4',
+      interactive: { noFretboard: true, showDur: true, beatsPerBar: 3,
+        hint: 'Để ý số chỉ nhịp 3/4 đầu khuông và vạch nhịp. Ô 1: ba nốt đen. Ô 2: một đen + một trắng (1 + 2 = đủ 3 phách).',
+        notes: [ nl('Đô',130.81,5,3,-2,1), nl('Mi',164.81,4,2,0,1), nl('Sol',196,3,0,2,1),
+                 nl('Mi',164.81,4,2,0,1), nl('Đô',130.81,5,3,-2,2) ] } },
+    { id: 'b3', order: 3, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+      interactive: { items: ['Mình đếm đúng 3 phách mỗi ô', 'Mình cảm được phách mạnh rơi vào đầu ô nhịp'] } },
+  ],
+}
+
 // Ch5 "Đọc một câu nhạc" — gộp cao độ + trường độ + số chỉ nhịp (2 ô 4/4, Đô trưởng)
 const SAMPLE_FLOW_NL5 = {
   id: 'sample-nl5', title: 'Đọc một câu nhạc', reward_xp: 12,
@@ -306,7 +323,7 @@ const TIANOT1 = Object.fromEntries(
     .map((l) => [l.key, { id: l.flowId, title: l.title, reward_xp: l.reward_xp, slides: l.slides }])
 )
 
-const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT, 'biensoan': SAMPLE_FLOW_BIENSOAN, 'nl2': SAMPLE_FLOW_NL2, 'nl3': SAMPLE_FLOW_NL3, 'nl5': SAMPLE_FLOW_NL5, ...(TIANOT1 as Record<string, typeof SAMPLE_FLOW>) }
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT, 'biensoan': SAMPLE_FLOW_BIENSOAN, 'nl2': SAMPLE_FLOW_NL2, 'nl3': SAMPLE_FLOW_NL3, 'nl4': SAMPLE_FLOW_NL4, 'nl5': SAMPLE_FLOW_NL5, ...(TIANOT1 as Record<string, typeof SAMPLE_FLOW>) }
 
 export default function FlowLabPage() {
   const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'
