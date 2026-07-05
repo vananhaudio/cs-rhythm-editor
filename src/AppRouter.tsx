@@ -13,6 +13,7 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
+import NoteGame from './NoteGame'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { HBD_CHUM2, HBD_TD1, STRUM_BALLAD, STRUM_JINGLE } from './elearn/strumSongs'
@@ -331,6 +332,11 @@ if (path === '/students') {
         <GuitarTuner embedded={embedded} />
       </div>
     )
+  }
+
+  // ── Route /notesheet — game nhận diện nốt (native, thay app Bolt) ──
+  if (path === '/notesheet' || path.startsWith('/notesheet')) {
+    return <NoteGame />
   }
 
     // ── Route /tap ──
