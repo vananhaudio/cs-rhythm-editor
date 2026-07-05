@@ -243,6 +243,62 @@ const SAMPLE_FLOW_BIENSOAN = {
   ],
 }
 
+// ── NHẠC LÝ CHUNG — 3 bài tập tương tác STAFF-ONLY (noFretboard) cho khoá Chìa Khoá Nhạc Lý ──
+// Dùng lại đúng staff/freq/dây-ngăn của TN1 để "Nghe mẫu" + "Tự đàn" (mic kiểu A) chạy chuẩn.
+type NL = { label: string; freq: number; string: number; fret: number; staff: number; dur?: number }
+const nl = (label: string, freq: number, string: number, fret: number, staff: number, dur?: number): NL =>
+  dur != null ? { label, freq, string, fret, staff, dur } : { label, freq, string, fret, staff }
+
+// Ch2 "Đọc nốt trên khuông" — gam Đô trưởng đi lên, đọc tên theo vị trí (uniform, chưa trường độ)
+const SAMPLE_FLOW_NL2 = {
+  id: 'sample-nl2', title: 'Đọc nốt trên khuông', reward_xp: 10,
+  slides: [
+    { id: 'n1', order: 1, logic: 'DAN', type: 'callout', title: 'Đọc nốt trên khuông',
+      interactive: { variant: 'tip' },
+      content: 'Nhìn <b>vị trí</b> từng nốt trên khuông rồi đọc tên. Bấm <b>Nghe mẫu</b> để nghe từng nốt sáng lên, hoặc <b>Tự đàn</b> để tự kiểm.' },
+    { id: 'n2', order: 2, logic: 'LAM', type: 'note_practice', title: 'Gam Đô trưởng — đọc lên dần',
+      interactive: { noFretboard: true, hint: 'Từ Đô (dưới khuông) đi lên tới Đô cao: Đô – Rê – Mi – Fa – Sol – La – Si – Đô. Đọc to tên nốt theo từng bước.',
+        notes: [ nl('Đô',130.81,5,3,-2), nl('Rê',146.83,4,0,-1), nl('Mi',164.81,4,2,0), nl('Fa',174.61,4,3,1),
+                 nl('Sol',196,3,0,2), nl('La',220,3,2,3), nl('Si',246.94,2,0,4), nl('Đô',261.63,2,1,5) ] } },
+    { id: 'n3', order: 3, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+      interactive: { items: ['Mình đọc đúng tên nốt theo vị trí trên khuông', 'Mình phân biệt được nốt trên dòng và nốt trong khe'] } },
+  ],
+}
+
+// Ch3 "Nghe & nhìn trường độ" — cùng 1 nốt, vẽ khác nhau = ngân khác nhau (đen/trắng/tròn)
+const SAMPLE_FLOW_NL3 = {
+  id: 'sample-nl3', title: 'Nghe & nhìn trường độ', reward_xp: 10,
+  slides: [
+    { id: 'd1', order: 1, logic: 'DAN', type: 'callout', title: 'Trường độ — dài ngắn của nốt',
+      interactive: { variant: 'tip' },
+      content: 'Cùng một cao độ nhưng <b>hình nốt khác nhau</b> thì ngân <b>dài ngắn khác nhau</b>. Nghe mẫu để cảm nhận rõ.' },
+    { id: 'd2', order: 2, logic: 'LAM', type: 'note_practice', title: 'Đen (1) → Trắng (2) → Tròn (4)',
+      interactive: { noFretboard: true, showDur: true, beatsPerBar: 4,
+        hint: 'Ô 1: bốn nốt đen (mỗi nốt 1 phách). Ô 2: hai nốt trắng (2 phách). Ô 3: một nốt tròn (ngân trọn 4 phách).',
+        notes: [ nl('La',220,3,2,3,1), nl('La',220,3,2,3,1), nl('La',220,3,2,3,1), nl('La',220,3,2,3,1),
+                 nl('La',220,3,2,3,2), nl('La',220,3,2,3,2), nl('La',220,3,2,3,4) ] } },
+    { id: 'd3', order: 3, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+      interactive: { items: ['Mình nghe rõ nốt tròn ngân dài gấp 4 lần nốt đen', 'Mình nhận ra đầu nốt rỗng = trắng/tròn, đầu đặc = đen'] } },
+  ],
+}
+
+// Ch5 "Đọc một câu nhạc" — gộp cao độ + trường độ + số chỉ nhịp (2 ô 4/4, Đô trưởng)
+const SAMPLE_FLOW_NL5 = {
+  id: 'sample-nl5', title: 'Đọc một câu nhạc', reward_xp: 12,
+  slides: [
+    { id: 'r1', order: 1, logic: 'DAN', type: 'callout', title: 'Đọc trọn một câu nhạc',
+      interactive: { variant: 'tip' },
+      content: 'Ghép mọi thứ đã học: <b>tên nốt + trường độ + ô nhịp</b>. Nghe mẫu một lượt cho quen, rồi Tự đàn theo nhịp.' },
+    { id: 'r2', order: 2, logic: 'LAM', type: 'note_practice', title: 'Câu nhạc ngắn — nhịp 4/4',
+      interactive: { noFretboard: true, showDur: true, beatsPerBar: 4,
+        hint: 'Đọc lần lượt: tên nốt kèm trường độ. Câu kết bằng nốt trắng (Đô, ngân 2 phách).',
+        notes: [ nl('Đô',130.81,5,3,-2,1), nl('Rê',146.83,4,0,-1,1), nl('Mi',164.81,4,2,0,1), nl('Fa',174.61,4,3,1,1),
+                 nl('Mi',164.81,4,2,0,1), nl('Rê',146.83,4,0,-1,1), nl('Đô',130.81,5,3,-2,2) ] } },
+    { id: 'r3', order: 3, logic: 'NGAM', type: 'checklist', title: 'Tự kiểm tra',
+      interactive: { items: ['Mình đọc trôi cả câu, không dừng giữa chừng', 'Mình giữ phách đều từ đầu đến cuối'] } },
+  ],
+}
+
 // Tỉa nốt 1 — các bài lấy từ nguồn DÙNG CHUNG (cũng dùng để seed DB) tiaNot1Lessons.json
 type TnLesson = { key: string; flowId: string; title: string; reward_xp: number; slides: unknown[] }
 const TIANOT1 = Object.fromEntries(
@@ -250,7 +306,7 @@ const TIANOT1 = Object.fromEntries(
     .map((l) => [l.key, { id: l.flowId, title: l.title, reward_xp: l.reward_xp, slides: l.slides }])
 )
 
-const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT, 'biensoan': SAMPLE_FLOW_BIENSOAN, ...(TIANOT1 as Record<string, typeof SAMPLE_FLOW>) }
+const SAMPLES: Record<string, typeof SAMPLE_FLOW> = { '4': SAMPLE_FLOW, '8': SAMPLE_FLOW_8, 'mi': SAMPLE_FLOW_MI, 'hopam': SAMPLE_FLOW_HOPAM, 'barsplit': SAMPLE_FLOW_BARSPLIT, 'biensoan': SAMPLE_FLOW_BIENSOAN, 'nl2': SAMPLE_FLOW_NL2, 'nl3': SAMPLE_FLOW_NL3, 'nl5': SAMPLE_FLOW_NL5, ...(TIANOT1 as Record<string, typeof SAMPLE_FLOW>) }
 
 export default function FlowLabPage() {
   const bai = new URLSearchParams(window.location.search).get('bai') ?? '4'
