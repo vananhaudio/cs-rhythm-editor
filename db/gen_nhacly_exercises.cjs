@@ -30,7 +30,7 @@ const EXERCISES = [
   },
   {
     lessonId: 'a2100003-0000-4000-8000-000000000003', flowId: 'a2200003-0000-4000-8000-000000000003',
-    module_id: MOD_CH3, order: 2, title: 'Bài tập: Nghe & nhìn trường độ', reward_xp: 10,
+    module_id: MOD_CH3, order: 3, title: 'Bài tập: Nghe & nhìn trường độ', reward_xp: 10,
     slides: [
       { id: 'd1', order: 1, logic: 'DAN', type: 'callout', title: 'Trường độ — dài ngắn của nốt',
         interactive: { variant: 'tip' },

@@ -16,7 +16,7 @@ ON CONFLICT (id) DO UPDATE SET lesson_id = EXCLUDED.lesson_id, title = EXCLUDED.
 
 -- Bài tập: Nghe & nhìn trường độ
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, order_index, is_published, tier)
-VALUES ('a2100003-0000-4000-8000-000000000003', 'b1000003-0000-4000-8000-000000000003', 'Bài tập: Nghe & nhìn trường độ', 'flow', 2, false, 'free')
+VALUES ('a2100003-0000-4000-8000-000000000003', 'b1000003-0000-4000-8000-000000000003', 'Bài tập: Nghe & nhìn trường độ', 'flow', 3, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, title = EXCLUDED.title, order_index = EXCLUDED.order_index, lesson_type = 'flow';
 
 INSERT INTO flows (id, lesson_id, title, status, reward_xp, slides)
