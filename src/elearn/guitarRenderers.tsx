@@ -743,6 +743,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
   const showStaff = cfg.showStaff ?? notes.some(n => n.staff != null)
   const sheetRows = Math.ceil(notes.length / 8)   // khớp perRow=8 trong NoteSheet; 1 dòng = bài ngắn
   const busy = playing || micOn
+  const solfege = !!cfg.noFretboard   // NHẠC LÝ CHUNG: không đàn → HÁT xướng âm (chấm theo tên nốt, bỏ octave)
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '12px 16px 10px', boxSizing: 'border-box' }}>
@@ -791,7 +792,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
         {busy ? (
           <button onClick={micOn ? stopMic : stop}
             style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, padding: 13, border: 'none', borderRadius: 13, background: '#1C1A17', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15.5, fontWeight: 700 }}>
-            <span style={{ fontSize: 16 }}>⏹</span> {micOn ? 'Dừng tự đàn' : 'Dừng nghe mẫu'}
+            <span style={{ fontSize: 16 }}>⏹</span> {micOn ? (solfege ? 'Dừng xướng âm' : 'Dừng tự đàn') : 'Dừng nghe mẫu'}
           </button>
         ) : (
           <div style={{ display: 'flex', gap: 10 }}>
@@ -801,7 +802,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
             </button>
             <button onClick={cfg.scored ? startScored : startMic}
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '13px 8px', border: 'none', borderRadius: 12, background: ACCENT.a, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 15, fontWeight: 700 }}>
-              <MicIcon size={16} /> {cfg.scored ? 'Chơi & chấm' : 'Tự đàn'}
+              <MicIcon size={16} /> {solfege ? (cfg.scored ? 'Xướng âm & chấm' : 'Xướng âm') : (cfg.scored ? 'Chơi & chấm' : 'Tự đàn')}
             </button>
           </div>
         )}
@@ -816,7 +817,7 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
               ) })()
           ) : done ? (
             <div style={{ padding: '8px 13px', borderRadius: 11, background: ACCENT.s, color: ACCENT.d, fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-              Tốt lắm! Bạn đàn đúng cả câu rồi — có thể sang bước sau.
+              Tốt lắm! Bạn {solfege ? 'xướng âm' : 'đàn'} đúng cả câu rồi — có thể sang bước sau.
             </div>
           ) : null}
         </div>

@@ -255,7 +255,7 @@ const SAMPLE_FLOW_NL2 = {
   slides: [
     { id: 'n1', order: 1, logic: 'DAN', type: 'callout', title: 'Đọc nốt trên khuông',
       interactive: { variant: 'tip' },
-      content: 'Nhìn <b>vị trí</b> từng nốt trên khuông rồi đọc tên. Bấm <b>Nghe mẫu</b> để nghe từng nốt sáng lên, hoặc <b>Tự đàn</b> để tự kiểm.' },
+      content: 'Nhìn <b>vị trí</b> từng nốt trên khuông rồi đọc tên. Bấm <b>Nghe mẫu</b> để nghe từng nốt sáng lên, hoặc <b>Xướng âm</b> (hát tên nốt) để tự kiểm.' },
     { id: 'n2', order: 2, logic: 'LAM', type: 'note_practice', title: 'Gam Đô trưởng — đọc lên dần',
       interactive: { noFretboard: true, hint: 'Từ Đô (dưới khuông) đi lên tới Đô cao: Đô – Rê – Mi – Fa – Sol – La – Si – Đô. Đọc to tên nốt theo từng bước.',
         notes: [ nl('Đô',130.81,5,3,-2), nl('Rê',146.83,4,0,-1), nl('Mi',164.81,4,2,0), nl('Fa',174.61,4,3,1),
@@ -288,7 +288,7 @@ const SAMPLE_FLOW_NL5 = {
   slides: [
     { id: 'r1', order: 1, logic: 'DAN', type: 'callout', title: 'Đọc trọn một câu nhạc',
       interactive: { variant: 'tip' },
-      content: 'Ghép mọi thứ đã học: <b>tên nốt + trường độ + ô nhịp</b>. Nghe mẫu một lượt cho quen, rồi Tự đàn theo nhịp.' },
+      content: 'Ghép mọi thứ đã học: <b>tên nốt + trường độ + ô nhịp</b>. Nghe mẫu một lượt cho quen, rồi <b>Xướng âm</b> theo nhịp.' },
     { id: 'r2', order: 2, logic: 'LAM', type: 'note_practice', title: 'Câu nhạc ngắn — nhịp 4/4',
       interactive: { noFretboard: true, showDur: true, beatsPerBar: 4,
         hint: 'Đọc lần lượt: tên nốt kèm trường độ. Câu kết bằng nốt trắng (Đô, ngân 2 phách).',
