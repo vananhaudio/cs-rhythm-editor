@@ -13,7 +13,7 @@ Thầy muốn sửa/kiểm tra bố cục màn luyện đọc-đánh-theo: khuô
 ## Bố cục 1 màn hình (thứ tự cố định, xem `NotePractice`)
 1. Hàng trên: bên trái để TRỐNG bình thường, chỉ hiện **"COUNT IN N"** khi đang đếm lấy đà (thay đúng chỗ đó, KHÔNG đè/thay nút tốc độ); bên phải là 3 nút **Chậm/Vừa/Nhanh** — LUÔN hiện, không đổi vị trí dù bấm gì.
 2. Khung khuông nhạc (nền trắng, bo góc) — TRỌNG TÂM màn hình, chứa `NoteSheet`.
-3. Khung cần đàn mini (`MiniFretboard`, nền tối) — nốt đang phát sáng vàng cam, đồng bộ theo `cursor`.
+3. Khung cần đàn mini (`MiniFretboard`, nền tối) — nốt đang phát sáng vàng cam, đồng bộ theo `cursor`. **ẨN khi `cfg.noFretboard`** (xem "Biến thể nhạc lý chung").
 4. 2 nút hành động: "▶ Nghe mẫu" / "🎤 Tự đàn" (hoặc "Chơi & chấm" nếu `cfg.scored`).
 5. Ô kết quả cuối bài — LUÔN chừa sẵn `minHeight` (hiện tại 39px) dù trống, để không ăn vào phần khuông nhạc phía trên khi bài kết thúc.
 
@@ -27,6 +27,11 @@ Bấm bất kỳ nút nào (Nghe mẫu, Tự đàn, đổi tốc độ, hoàn th
 4. **Vạch kết (final barline)** — vạch nhịp CUỐI CÙNG của cả bài vẽ 2 nét (nét mảnh + nét đậm cách 4px), các vạch giữa bài vẫn là nét đơn.
 5. **Dàn đều (justify) mỗi dòng** — dòng có ít nốt/ô hơn dòng dài nhất sẽ bị GIÃN ĐỀU khoảng cách nốt (nhân hệ số `k` cho mọi `NX` và vị trí vạch nhịp trong dòng đó) để vạch nhịp CUỐI của MỌI dòng thẳng hàng cùng một lề phải — không được để vạch nhịp "lửng lơ" giữa chừng ở dòng ngắn. Neo trái (`x0`) giữ nguyên, chỉ giãn về bên phải.
 6. **Nhiều dòng dài → cuộn theo dòng**, tự `scrollTo` dòng có nốt đang chơi (không cuộn ngang từng nốt).
+
+## Biến thể "nhạc lý chung" — không có cần đàn (`noFretboard`)
+Khoá **Chìa Khoá Nhạc Lý Cơ Bản** dạy nhạc lý CHUNG (không gắn guitar). Dùng ĐÚNG bộ khắc nhạc này, chỉ khác: bật `cfg.noFretboard: true` để **ẩn mục 3 (cần đàn mini)** — khuông nhạc chiếm trọn chỗ đó. Mọi chuẩn khắc nhạc (lấp đầy ngang, số chỉ nhịp Bravura, vạch kết, dàn đều) GIỮ NGUYÊN.
+- Dữ liệu nốt (`staff`/`freq`/`dây`/`ngăn`) **tái dùng đúng bảng của TN1** cho nhất quán — đừng bịa vị trí. Trích nhanh: lọc `src/elearn/tiaNot1Lessons.json` theo `label`+`staff`.
+- Test staff-only ở `/flow-lab?bai=nl2` (đọc nốt, uniform), `nl3` (đen/trắng/tròn, showDur+4/4), `nl5` (câu nhạc 2 ô). Nguồn 3 sample: `src/FlowLabPage.tsx`; sinh SQL: `db/gen_nhacly_exercises.cjs`. Xem bộ nhớ `project_nhacly_course`.
 
 ## Quy trình khi sửa bố cục/khắc nhạc
 1. Xác định đúng hàm cần sửa trong `NoteSheet` (layout nốt/vạch nhịp) hay `NotePractice` (bố cục màn, nút, count-in).
