@@ -30,6 +30,7 @@ export interface NotePracticeCfg {
   beatsPerBar?: number                          // số phách mỗi ô nhịp (2/3/4) → vẽ vạch nhịp + số chỉ nhịp + count-in đếm đúng
   chords?: { bass: number; pad: number[] }[]    // nền đệm ban nhạc: mỗi ô 1 hợp âm (bass + strings pad); có = bật trống+bass+pad khi Nghe mẫu
   scored?: boolean                              // Tự đàn kiểu B: nốt CHẠY THEO NHỊP (không chờ), mic chấm điểm cuối bài. Mặc định = kiểu A (đàn đúng mới chạy)
+  noFretboard?: boolean                         // NHẠC LÝ CHUNG: ẩn cần đàn guitar, chỉ hiện khuông nhạc (bài đọc nốt/trường độ/ô nhịp không gắn đàn)
 }
 // "Chia ô nhịp": đối chiếu SHEET (vẽ sạch từ nốt MusicXML) ↔ LỜI, bút kẻ vạch chia ô nhịp
 export interface SNote { pos?: number; rest?: boolean; dur: 'e' | 'q' | 'h' | 'w' }  // pos = bậc trên khuông (E4=0, mỗi bậc = nửa dòng), dur = trường độ
@@ -778,10 +779,12 @@ export function NotePractice({ cfg, onPass }: { cfg: NotePracticeCfg } & Pick<CB
         </div>
       )}
 
-      {/* Cần đàn — quan trọng ngang khuông (nốt đã hiện trên khuông + cần đàn nên bỏ dòng chữ) */}
-      <div style={{ flexShrink: 0, background: '#F1ECE2', borderRadius: 12, padding: '10px 12px', marginBottom: 9 }}>
-        <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} h={118} nextString={nextCur?.string} nextFret={nextCur?.fret} />
-      </div>
+      {/* Cần đàn — ẩn ở bài NHẠC LÝ CHUNG (chỉ khuông nhạc) */}
+      {!cfg.noFretboard && (
+        <div style={{ flexShrink: 0, background: '#F1ECE2', borderRadius: 12, padding: '10px 12px', marginBottom: 9 }}>
+          <MiniFretboard string={cur.string} fret={cur.fret} pulse={cursor} h={118} nextString={nextCur?.string} nextFret={nextCur?.fret} />
+        </div>
+      )}
 
       {/* Nút điều khiển — sát đáy màn */}
       <div style={{ flexShrink: 0 }}>
