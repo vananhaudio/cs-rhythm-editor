@@ -214,7 +214,7 @@ VALUES ('d2c00807-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c7
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index;
 
 -- ===== Dọn bài placeholder mồ côi (khung cũ) =====
-DELETE FROM edu_course_lessons WHERE id LIKE 'd2c00%'
+DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
   AND id NOT IN (
     'd2c00101-0000-4000-8000-000000000000',
     'd2c00102-0000-4000-8000-000000000000',

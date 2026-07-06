@@ -136,7 +136,7 @@ CHAPTERS.forEach((c) => {
 // Dọn placeholder MỒ CÔI: bài 'd2c00…' của khung cũ nhưng không còn trong khung mới
 // (vd rải Ballad đã dời chương). Chỉ đụng placeholder DH2; bài có nội dung đều nằm trong newIds.
 sql += `-- ===== Dọn bài placeholder mồ côi (khung cũ) =====\n`
-sql += `DELETE FROM edu_course_lessons WHERE id LIKE 'd2c00%'\n  AND id NOT IN (\n    ${newIds.map(id => `'${id}'`).join(',\n    ')}\n  );\n\n`
+sql += `DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'\n  AND id NOT IN (\n    ${newIds.map(id => `'${id}'`).join(',\n    ')}\n  );\n\n`
 
 // Bossa Nova → chuyển sang Trình độ 3 (tạo module mới ở TĐ3, dời 4 bài sang)
 sql += `-- ===== Chuyển cụm Bossa Nova sang Đệm Hát Trình Độ 3 =====\n`
