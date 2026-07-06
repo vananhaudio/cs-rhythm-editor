@@ -20,7 +20,8 @@ UPDATE edu_course_lessons SET content =
 <blockquote>Mục tiêu không phải &ldquo;quạt được&rdquo;, mà là quạt tới lúc bạn <strong>không cần nghĩ nữa</strong>. Khi tay tự chạy đều còn đầu óc rảnh để hát — đó là lúc bạn thật sự có nó.</blockquote>'
 WHERE id = 'd2c00107-0000-4000-8000-000000000000';
 
--- Khi thầy có link YouTube, chạy thêm dòng này (điền URL vào chỗ <LINK>):
--- UPDATE edu_course_lessons SET lesson_type = 'video', content_url = '<LINK>' WHERE id = 'd2c00107-0000-4000-8000-000000000000';
+-- Video "Quạt ballad chùm 2 — Thầy Văn Anh Guitar" (đã có):
+UPDATE edu_course_lessons SET lesson_type = 'video', content_url = 'https://www.youtube.com/watch?v=PwSGfSGeuaE'
+  WHERE id = 'd2c00107-0000-4000-8000-000000000000';
 
 NOTIFY pgrst, 'reload schema';
