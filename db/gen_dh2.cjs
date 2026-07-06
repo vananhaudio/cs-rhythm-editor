@@ -49,7 +49,7 @@ const CHAPTERS = [
     { t: 'Ballad dùng chùm 2 như thế nào', note: 'bài giảng (text)' },
     { t: 'Mẫu quạt Ballad cơ bản', note: 'video thầy quay 🎬' },
     { t: 'Nền tập Ballad', note: 'công cụ app 🎛 (Groove Lab điệu Ballad)' },
-    { t: 'Gảy theo: 1 bài Ballad (chọn bài sau)', note: 'gảy theo 🎸 (Strum Score)' },
+    { t: 'Gảy theo: Ode to Joy (Ballad)', note: 'gảy theo 🎸 (Strum Score) — native song-ode-ballad' },
   ] },
   { code: 6, order: 3, mid: '271e9988-0e3b-4171-a829-139a6b399263', name: 'Chương 4: Điệu Valse', lessons: [
     { t: 'Tính chất Valse', note: 'bài giảng (text)' },

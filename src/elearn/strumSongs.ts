@@ -72,6 +72,31 @@ export const STRUM_JINGLE: StrumSong = {
 // Cơ bản — CÙNG bài Jingle Bells nhưng quạt NỐT ĐEN (mỗi phách 1 cú xuống); ô cuối vẫn nốt trắng + lặng.
 export const STRUM_JINGLE_DEN: StrumSong = { ...STRUM_JINGLE, title: 'Jingle Bells — quạt nốt đen', patternId: 'den' }
 
+// Ode to Joy (Beethoven — nhạc công cộng) — Ballad chùm 2, 4/4, Đô trưởng. Nền synth, không loop.
+// Hợp âm bản dễ (I–V): C · G · C · G7 · C · G · C · C(kết). Melody theo chủ đề gốc.
+const ODE_MELODY: MelodyNote[] = [
+  { t: 0, dur: 1, midi: E4 }, { t: 1, dur: 1, midi: E4 }, { t: 2, dur: 1, midi: F4 }, { t: 3, dur: 1, midi: G4 },
+  { t: 4, dur: 1, midi: G4 }, { t: 5, dur: 1, midi: F4 }, { t: 6, dur: 1, midi: E4 }, { t: 7, dur: 1, midi: D4 },
+  { t: 8, dur: 1, midi: C4 }, { t: 9, dur: 1, midi: C4 }, { t: 10, dur: 1, midi: D4 }, { t: 11, dur: 1, midi: E4 },
+  { t: 12, dur: 1.5, midi: E4 }, { t: 13.5, dur: 0.5, midi: D4 }, { t: 14, dur: 2, midi: D4 },
+  { t: 16, dur: 1, midi: E4 }, { t: 17, dur: 1, midi: E4 }, { t: 18, dur: 1, midi: F4 }, { t: 19, dur: 1, midi: G4 },
+  { t: 20, dur: 1, midi: G4 }, { t: 21, dur: 1, midi: F4 }, { t: 22, dur: 1, midi: E4 }, { t: 23, dur: 1, midi: D4 },
+  { t: 24, dur: 1, midi: C4 }, { t: 25, dur: 1, midi: C4 }, { t: 26, dur: 1, midi: D4 }, { t: 27, dur: 1, midi: E4 },
+  { t: 28, dur: 1.5, midi: D4 }, { t: 29.5, dur: 0.5, midi: C4 }, { t: 30, dur: 2, midi: C4 },
+]
+export const STRUM_ODE: StrumSong = {
+  title: 'Ode to Joy — quạt theo nền',
+  bpm: 72, timeSignature: 4, gridOffset: 0, patternId: 'chum2',
+  backing: { styleId: 'ballad', tempo: 72 },
+  melody: ODE_MELODY,
+  loop: false,
+  bars: [
+    { chord: 'C' }, { chord: 'G' }, { chord: 'C' }, { chord: 'G7' },
+    { chord: 'C' }, { chord: 'G' }, { chord: 'C' },
+    { chord: 'C', oneStrum: true },   // ô kết — nốt trắng (hình thoi)
+  ],
+}
+
 // Bài tập quạt theo NỀN trống+bass synth (loop) — không cần thu âm, sạch bản quyền.
 // timeSignature PHẢI khớp beatsPerBar của điệu (Ballad = 4/4).
 export const STRUM_BALLAD: StrumSong = {
