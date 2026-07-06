@@ -184,6 +184,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [foundationGaps, setFoundationGaps] = useState<Enrollment['course'][]>([]) // khoá NỀN còn thiếu (đặc cách vượt cấp) — §6 bộ luật
   const [htMember, setHtMember] = useState(false) // học viên Hành trình 2026/27: full khoá NHƯNG học tuần tự
   const [courseLessonIds, setCourseLessonIds] = useState<Record<string, string[]>>({}) // courseId → mọi lesson id (tính hoàn thành khoá)
+  const [lastOpenedCourse, setLastOpenedCourse] = useState<string | null>(null) // khoá mở gần nhất (localStorage) → "Học ngay" resume
+  const [lastDoneLesson, setLastDoneLesson] = useState<string | null>(null)      // bài hoàn thành gần nhất (fallback resume → tra khoá ở render)
   const [lessonTab, setLessonTab] = useState<'content' | 'note'>('content')
   const [dbTools, setDbTools]     = useState<DBTool[]>([])
   const [exerciseStatuses, setExerciseStatuses] = useState<Record<string, string>>({}) // exId → 'on'|'off'|'coming_soon'
@@ -666,13 +668,20 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       })
     supabase.from('edu_students').select('ht_member').eq('id', student.id).single()
       .then(({ data }) => setHtMember(!!(data as any)?.ht_member))
+    try { setLastOpenedCourse(localStorage.getItem('lastCourse:' + student.id)) } catch { /**/ }
+    // Khoá có bài hoàn thành GẦN NHẤT → fallback cho "Học ngay" khi chưa có lastOpened
+    supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('completed', true)
+      .order('completed_at', { ascending: false }).limit(1)
+      .then(({ data }) => { const lid = (data ?? [])[0]?.lesson_id; if (lid) setLastDoneLesson(lid) })
   }, [student.id])
 
-  const openCourse = async (courseId: string) => {
+  const openCourse = async (courseId: string, targetLessonId?: string) => {
     // HT: chặn mở khoá cấp trên khi chưa hoàn thành cấp dưới (lưới an toàn cho mọi lối vào)
     const code = enrollments.find(e => e.course_id === courseId)?.course?.code
     if (isSeqLocked(code)) return
     setActiveCourseId(courseId)
+    try { localStorage.setItem('lastCourse:' + student.id, courseId) } catch { /**/ }  // ghi khoá vừa mở → "Học ngay" resume đúng chỗ
+    setLastOpenedCourse(courseId)
     const { data: mods } = await supabase.from('edu_modules')
       .select('*').eq('course_id', courseId).order('order_index')
     setModules(mods ?? [])
@@ -681,8 +690,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
       const parsed = (lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] }))
       setLessons(parsed)
-      // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách (CHỈ khi đã sở hữu — khoá nền thiếu thì luôn dừng ở mục lục)
       const ownedNow = preview || freeCourses.has(courseId) || accessCourses.has(courseId) || enrollments.some(e => e.course_id === courseId)
+      // Mở THẲNG vào 1 bài cụ thể (nút Học tiếp / Học ngay) — nếu bài mở được
+      if (targetLessonId && ownedNow) {
+        const t = parsed.find(l => l.id === targetLessonId)
+        if (t) { setActiveLesson(t); setLessonTab('content'); try { setUsedToolIds(new Set(JSON.parse(localStorage.getItem(usedToolsKey(t.id)) || '[]'))) } catch { /**/ } setScreen('lesson'); return }
+      }
+      // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách (CHỈ khi đã sở hữu — khoá nền thiếu thì luôn dừng ở mục lục)
       if (ownedNow && parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')) {
         setActiveLesson(parsed[0])
         setScreen('lesson')
@@ -890,6 +904,19 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   // % hiển thị ở home cho mainCourse
   const mainProgress = mainCourse && lessons.length > 0 ? courseProgress(mainCourse.course_id) : null
 
+  // ── HAI NÚT: "Học tiếp" (theo thứ tự hành trình) vs "Học ngay" (resume chỗ dang dở) ──
+  const codeByCourse: Record<string, string> = {}
+  enrollments.forEach(e => { const c = (e.course?.code || '').trim().toUpperCase(); if (c) codeByCourse[e.course_id] = c })
+  const courseSeqLocked = (cid?: string | null) => !!cid && isSeqLocked(codeByCourse[cid])
+  const nextLessonOf = (cid?: string | null) => cid ? masterPath.find(m => m.courseId === cid && !completedIds.has(m.id)) : undefined
+  // Học tiếp = bài chưa xong ĐẦU TIÊN theo thứ tự giáo trình, BỎ QUA khoá đang khoá (seq-lock HT)
+  const journeyNext = masterPath.find(m => !completedIds.has(m.id) && !courseSeqLocked(m.courseId))
+  // Học ngay = khoá dang dở gần nhất còn học được (localStorage → bài hoàn thành gần nhất → journey → mainCourse)
+  const canResume = (cid?: string | null) => !!cid && sortedEnrollments.some(e => e.course_id === cid) && !courseSeqLocked(cid) && !!nextLessonOf(cid)
+  const resumeCourseId = [lastOpenedCourse, masterPath.find(m => m.id === lastDoneLesson)?.courseId, journeyNext?.courseId, mainCourse?.course_id].find(canResume) ?? undefined
+  const resumeLesson = nextLessonOf(resumeCourseId)
+  const resumeCourse = sortedEnrollments.find(e => e.course_id === resumeCourseId)
+
   return (
     <>
     {/* ── Finger Exercise overlay (fullscreen, position:fixed) ── */}
@@ -1002,7 +1029,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               const cur = masterPath[curIdx]
               const posLabel = Math.min(doneCount + 1, total)
               const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0
-              const nextItem = masterPath.find(m => !completedIds.has(m.id))
               // điểm chất lượng trung bình mỗi chặng (khóa) → màu cờ
               const cSum: Record<string, number> = {}; const cCnt: Record<string, number> = {}
               masterPath.forEach(m => { if (completedIds.has(m.id)) { cSum[m.courseId] = (cSum[m.courseId] ?? 0) + scoreById(m.id); cCnt[m.courseId] = (cCnt[m.courseId] ?? 0) + 1 } })
@@ -1061,12 +1087,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                       <div style={{ fontSize: 11, color: L.t3 }}>Hạng trong lớp</div>
                     </div>
                   </div>
-                  {/* việc tiếp theo */}
-                  {nextItem ? (
-                    <button onClick={() => openCourse(nextItem.courseId)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                  {/* HỌC TIẾP — bài kế theo thứ tự bản đồ hành trình (bỏ qua khoá đang khoá) */}
+                  {journeyNext ? (
+                    <button onClick={() => openCourse(journeyNext.courseId, journeyNext.id)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: 'block', fontSize: 11, color: L.t3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nextItem.courseName}</span>
-                        <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {nextItem.title}</span>
+                        <span style={{ display: 'block', fontSize: 11, color: L.t3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học tiếp theo hành trình · {journeyNext.courseName}</span>
+                        <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {journeyNext.title}</span>
                       </span>
                       <span style={{ color: L.p1 }}>›</span>
                     </button>
@@ -1111,20 +1137,21 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
             </div>
 
-            {/* Tiếp tục học */}
-              {mainCourse && (
+            {/* Học ngay — TIẾP NỐI chỗ đang dang dở (khoá vừa học gần nhất) */}
+              {(() => { const rc = resumeCourse ?? mainCourse; if (!rc) return null; const rl = resumeLesson
+              return (
               <div>
-                <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Tiếp tục học</div>
-                <div onClick={() => openCourse(mainCourse.course_id)}
+                <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Học ngay</div>
+                <div onClick={() => openCourse(rc.course_id, rl?.id)}
                   style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadowLg, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    <CourseLogo course={mainCourse.course} size={48} radius={14} bg={L.p2} />
+                    <CourseLogo course={rc.course} size={48} radius={14} bg={L.p2} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: L.t3, marginBottom: 3 }}>Đang theo học</div>
-                      <div style={{ fontWeight: 700, fontSize: 16, color: L.p1, lineHeight: 1.3 }}>{mainCourse.course?.name}</div>
+                      <div style={{ fontSize: 13, color: L.t3, marginBottom: 3 }}>{rl ? 'Học tiếp chỗ dang dở' : 'Đang theo học'}</div>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: L.p1, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rc.course?.name}</div>
+                      {rl && <div style={{ fontSize: 13, color: L.t2, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Bài: {rl.title}</div>}
                     </div>
                   </div>
-                  {/* Progress bar */}
                   {mainProgress !== null && (
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -1142,7 +1169,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   </button>
                 </div>
               </div>
-              )}
+              ) })()}
 
               {!mainCourse && (
                 <div style={{ background: L.surface, borderRadius: 20, padding: '32px 20px', textAlign: 'center', boxShadow: L.shadow }}>
