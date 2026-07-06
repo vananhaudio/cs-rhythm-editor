@@ -67,7 +67,7 @@ const CHAPTERS = [
     { t: 'Cảm giác dàn trải của Slowrock', note: 'bài giảng (text) + audio' },
     { t: 'Mẫu Slowrock cơ bản', note: 'video thầy quay 🎬' },
     { t: 'Nền tập Slowrock', note: 'công cụ app 🎛 (Groove Lab điệu Slowrock)' },
-    { t: 'Gảy theo: Diễm Xưa', note: 'gảy theo 🎸 (Strum Score) — Slowrock' },
+    { t: 'Gảy theo: 1 bài Slowrock (mọi lứa tuổi — chọn sau)', note: 'gảy theo 🎸 (Strum Score)' },
   ] },
   // MÓC dồn CUỐI: Bolero (móc) + rải — học sau khi đã thạo quạt (nguyên tắc "It works")
   { code: 4, order: 5, mid: M_BOLERO, name: 'Chương 6: Điệu Bolero & kỹ thuật móc', lessons: [
@@ -78,7 +78,7 @@ const CHAPTERS = [
     { ex: 'aec7a2a0-3b49-4902-891d-22c52759d71f' },
     { t: 'Mẫu rải Ballad đơn giản (kỹ thuật móc)', note: 'video thầy quay 🎬 — rải/móc, để sau khi thạo quạt' },
     { t: 'Nền tập Bolero', note: 'công cụ app 🎛 (Groove Lab điệu Bolero)' },
-    { t: 'Gảy theo: Con đường xưa em đi', note: 'gảy theo 🎸 (Strum Score) — Bolero' },
+    { t: 'Gảy theo: 1 bài Bolero (mọi lứa tuổi — chọn sau)', note: 'gảy theo 🎸 (Strum Score)' },
   ] },
   { code: 7, order: 6, mid: 'a844e611-71a9-48c1-84cf-a645b8c79d08', name: 'Chương 7: Bố cục bài hát', lessons: [
     { ex: 'd3624d28-47e2-48d3-a1d3-ee7ead6c3de2' },
@@ -95,10 +95,7 @@ const CHAPTERS = [
   ] },
   { code: 8, order: 7, mid: '974b0073-61d3-4b76-857a-e4f01c738d42', name: 'Chương 8: Áp dụng vào bài hát thực tế', lessons: [
     { t: 'Quy trình đệm 1 bài mới — 5 bước', note: 'bài giảng (text/slide): tông → điệu → bố cục → tập đoạn → ghép' },
-    { t: 'Thực hành 1 — bài Ballad (chọn bài sau)', note: 'gảy theo 🎸 + phân tích bố cục' },
-    { t: 'Thực hành 2 — Con đường xưa em đi (Bolero)', note: 'gảy theo 🎸 + phân tích bố cục' },
-    { t: 'Thực hành 3 — Diễm Xưa (Slowrock)', note: 'gảy theo 🎸 + phân tích bố cục' },
-    { t: 'Thực hành 4 — bài Valse (chọn bài sau)', note: 'gảy theo 🎸 + phân tích bố cục' },
+    { t: 'Tự đệm bài bạn thích — công cụ Strum Builder', note: 'công cụ 🎛 — học sinh TỰ CHỌN bài & tự dựng phần đệm (skill strum-builder, phần tự do; làm sau)' },
     { t: 'Dự án cuối khoá: tự chọn 1 bài, tự đệm và thu lại nộp', note: 'bài nộp (submit_video)' },
     { t: 'Tổng kết Đệm hát Trình độ 2', note: 'bài giảng (text)' },
     { t: 'Lộ trình lên Đệm hát Trình độ 3', note: 'bài giảng (text)' },
