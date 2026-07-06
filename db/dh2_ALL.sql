@@ -2,219 +2,177 @@
 
 -- ==================== db/dh2_full.sql ====================
 -- ============================================================================
--- ĐỆM HÁT TRÌNH ĐỘ 2 (DH2) — KHUNG 8 CHƯƠNG. QUẠT trước, MÓC cuối (nguyên tắc "It works").
---   Chùm nốt → Tiết tấu → Ballad → Valse → Slowrock → Bolero&móc → Bố cục → Áp dụng.
--- SINH TỰ ĐỘNG từ db/gen_dh2.cjs — đừng sửa tay. Course DH2: c7ab2fcb-aff1-4485-a381-4edc83e4a62b
--- Tiêu đề đánh số "Bài <chương>.<thứ tự> — <tên>". Bài mới placeholder (text ⏳).
+-- ĐỆM HÁT TRÌNH ĐỘ 2 (DH2) — SINH TỰ ĐỘNG từ db/gen_dh2.cjs (đừng sửa tay).
+-- Tổ chức theo BƯỚC ĐI & THÀNH QUẢ (mỗi chương → chơi được 1 bài). Course: c7ab2fcb-aff1-4485-a381-4edc83e4a62b
+-- Tiêu đề "Bài <chương>.<thứ tự> — <tên>". Bài mới placeholder (text ⏳).
 -- Idempotent: ON CONFLICT bài mới KHÔNG đè nội dung (chỉ module/order/title).
 -- ============================================================================
 
--- ===== Chương 1: Chùm nốt =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('067ae3bb-7812-4485-8fa2-077fccaea2bf', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 1: Chùm nốt', 0)
+-- ===== Chương 1: Quạt chùm 2 & chơi bài đầu tiên =====
+INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('067ae3bb-7812-4485-8fa2-077fccaea2bf', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 1: Quạt chùm 2 & chơi bài đầu tiên', 0)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
 UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 0, title = 'Bài 1.1 — Chào mừng Trình độ 2' WHERE id = 'aca3b657-b2c8-46dd-ac1e-5fe8b7828158';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00101-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.2 — Ôn nhanh: Phách & Nhịp — cầu nối từ Trình độ 1', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài ôn / quiz 📝</p>', 1, false, 'free')
+VALUES ('d2c00103-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.2 — Chùm nốt là gì — chia nhỏ phách', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 2, title = 'Bài 1.3 — Chùm 2 — nốt móc đơn' WHERE id = '1bc21a87-d39f-48ee-a62c-a753902631cf';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00102-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.3 — Từ nốt đen sang chùm nốt', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text/slide)</p>', 2, false, 'free')
+VALUES ('d2c00106-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.4 — Thực hành gõ chùm 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (đếm 1&2& + gõ theo)</p>', 3, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 4, title = 'Bài 1.5 — Thực hành quạt chùm 2 (xuống–lên)' WHERE id = 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 5, title = 'Bài 1.6 — Quạt chùm 2 vào ô nhịp (2/4 → 4/4)' WHERE id = 'd76e8798-76bd-485e-b0fb-4fadb6b98458';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00103-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.4 — Chùm nốt là gì', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text/slide)</p>', 3, false, 'free')
+VALUES ('d2c00107-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.7 — Nền tập quạt — tập với trống + bass', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab nền tập)</p>', 6, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 4, title = 'Bài 1.5 — Chùm 2 — nốt móc đơn' WHERE id = '1bc21a87-d39f-48ee-a62c-a753902631cf';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 7, title = 'Bài 1.8 — Gảy theo: Happy Birthday — quạt chùm 2' WHERE id = '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 8, title = 'Bài 1.9 — Gảy theo: Jingle Bells — quạt chùm 2' WHERE id = '4692e092-3591-4dda-99d6-265b82e0d34c';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00105-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.6 — Cách đếm chùm 2 (1 & 2 & 3 & 4 &)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text) + tiếng đếm mẫu</p>', 5, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00106-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.7 — Thực hành gõ chùm 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (metronome / gõ theo)</p>', 6, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 7, title = 'Bài 1.8 — Thực hành quạt chùm 2 (xuống–lên)' WHERE id = 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9';
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 8, title = 'Bài 1.9 — Chùm 2 ứng dụng vào nhịp 2/4' WHERE id = 'd76e8798-76bd-485e-b0fb-4fadb6b98458';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00108-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.10 — Nghe thử chùm 3 và liên 3 — biết trước, học kỹ sau', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng + audio mẫu</p>', 9, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00109-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.11 — Checkpoint Chương 1', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 10, false, 'free')
+VALUES ('d2c00109-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.10 — Checkpoint Chương 1', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 9, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
--- ===== Chương 2: Tiết tấu quạt =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 2: Tiết tấu quạt', 1)
+-- ===== Chương 2: Điệu Ballad =====
+INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 2: Điệu Ballad', 1)
+ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
+UPDATE edu_course_lessons SET module_id = '2a3011f7-750e-49e6-9b55-ea0af1725d0d', order_index = 0, title = 'Bài 2.1 — Điệu Ballad — lịch sử, tính chất, tiết tấu' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00301-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 2.2 — Ballad dùng chùm 2 như thế nào', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00302-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 2.3 — Mẫu quạt Ballad cơ bản', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 2, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00303-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 2.4 — Nền tập Ballad', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Ballad)</p>', 3, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00304-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 2.5 — Gảy theo: Ode to Joy', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score) — native song-ode-ballad</p>', 4, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+
+-- ===== Chương 3: Điệu Valse =====
+INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('271e9988-0e3b-4171-a829-139a6b399263', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 3: Điệu Valse', 2)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00200-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.1 — Tiết tấu là gì — mẫu lặp trong âm nhạc', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text/slide)</p>', 0, false, 'free')
+VALUES ('d2c00600-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 3.1 — Tính chất Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 0, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00201-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.2 — Ký hiệu quạt: xuống ↓ và lên ↑', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
+VALUES ('d2c00601-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 3.2 — Nhịp 3/4: mạnh — nhẹ — nhẹ', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00202-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.3 — Tay phải: đều, nhẹ, cổ tay thả lỏng', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 2, false, 'free')
+VALUES ('d2c00602-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 3.3 — Mẫu Valse nốt đen', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 2, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00205-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.4 — Ứng dụng chùm 2 vào nhịp 4/4', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video / bài giảng</p>', 3, false, 'free')
+VALUES ('d2c00603-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 3.4 — Mẫu Valse có chùm 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 3, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00206-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.5 — Nền tập quạt — tập với trống + bass', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab nền tập)</p>', 4, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155', order_index = 5, title = 'Bài 2.6 — Gảy theo: Happy Birthday — quạt chùm 2' WHERE id = '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829';
-UPDATE edu_course_lessons SET module_id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155', order_index = 6, title = 'Bài 2.7 — Gảy theo: Jingle Bells — quạt chùm 2' WHERE id = '4692e092-3591-4dda-99d6-265b82e0d34c';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00209-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.8 — Gảy theo: 1 bài Việt đơn giản (chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 7, false, 'free')
+VALUES ('d2c00604-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 3.5 — Trộn nốt đen và chùm 2 trong Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video / bài giảng</p>', 4, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00210-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.9 — Checkpoint Chương 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 8, false, 'free')
+VALUES ('d2c00605-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 3.6 — Nền tập Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Valse)</p>', 5, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00606-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 3.7 — Gảy theo: 1 bài Valse (mọi lứa tuổi — chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 6, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
--- ===== Chương 3: Điệu Ballad =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 3: Điệu Ballad', 2)
-ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
-UPDATE edu_course_lessons SET module_id = '2a3011f7-750e-49e6-9b55-ea0af1725d0d', order_index = 0, title = 'Bài 3.1 — Điệu Ballad — lịch sử, tính chất, tiết tấu' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00301-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 3.2 — Ballad dùng chùm 2 như thế nào', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00302-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 3.3 — Mẫu quạt Ballad cơ bản', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 2, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00303-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 3.4 — Nền tập Ballad', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Ballad)</p>', 3, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00304-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 3.5 — Gảy theo: Ode to Joy', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score) — native song-ode-ballad</p>', 4, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-
--- ===== Chương 4: Điệu Valse =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('271e9988-0e3b-4171-a829-139a6b399263', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 4: Điệu Valse', 3)
+-- ===== Chương 4: Điệu Slowrock =====
+INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('d2000055-0000-4000-8000-000000000055', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 4: Điệu Slowrock', 3)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00600-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 4.1 — Tính chất Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 0, false, 'free')
+VALUES ('d2c00108-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 4.1 — Nghe thử chùm 3 và liên 3 — làm quen', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng + audio mẫu</p>', 0, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00601-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 4.2 — Nhịp 3/4: mạnh — nhẹ — nhẹ', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
+VALUES ('d2c00501-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 4.2 — Tính chất Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00602-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 4.3 — Mẫu Valse nốt đen', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 2, false, 'free')
+VALUES ('d2c00501-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 4.3 — Liên 3 là gì trong đệm hát', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 2, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = 'd2000055-0000-4000-8000-000000000055', order_index = 3, title = 'Bài 4.4 — Chùm 3 – Liên 3 (nền tảng Slowrock)' WHERE id = 'db6fddb4-7d3b-4a3b-9a01-f143928f02e5';
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00503-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 4.5 — Cảm giác dàn trải của Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text) + audio</p>', 4, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00603-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 4.4 — Mẫu Valse có chùm 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 3, false, 'free')
+VALUES ('d2c00504-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 4.6 — Mẫu Slowrock cơ bản', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 5, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00604-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 4.5 — Trộn nốt đen và chùm 2 trong Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video / bài giảng</p>', 4, false, 'free')
+VALUES ('d2c00505-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 4.7 — Nền tập Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Slowrock)</p>', 6, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00605-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 4.6 — Nền tập Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Valse)</p>', 5, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00606-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 4.7 — Gảy theo: 1 bài Valse (mọi lứa tuổi — chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 6, false, 'free')
+VALUES ('d2c00506-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 4.8 — Gảy theo: 1 bài Slowrock (mọi lứa tuổi — chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 7, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
--- ===== Chương 5: Điệu Slowrock =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('d2000055-0000-4000-8000-000000000055', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 5: Điệu Slowrock', 4)
+-- ===== Chương 5: Điệu Bolero & kỹ thuật móc =====
+INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('d2000044-0000-4000-8000-000000000044', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 5: Điệu Bolero & kỹ thuật móc', 4)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00500-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 5.1 — Tính chất Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 0, false, 'free')
+VALUES ('d2c00400-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 5.1 — Tính chất Bolero', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 0, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 1, title = 'Bài 5.2 — Chùm 3 lệch phải (đơn – kép – kép) — đặc trưng Bolero' WHERE id = '12bb1218-6dcd-447c-8145-7f7f0302482b';
+UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 2, title = 'Bài 5.3 — Bolero móc kiểu 1' WHERE id = '5f7acacd-9214-48f3-9349-93cc382649fb';
+UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 3, title = 'Bài 5.4 — Bolero móc kiểu 2' WHERE id = 'a85592d5-b519-470d-84d0-4d9182d224b3';
+UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 4, title = 'Bài 5.5 — Quạt ballad cho điệp khúc Bolero' WHERE id = 'aec7a2a0-3b49-4902-891d-22c52759d71f';
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00405-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 5.6 — Mẫu rải Ballad đơn giản (kỹ thuật móc)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬 — rải/móc</p>', 5, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00501-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 5.2 — Liên 3 là gì trong đệm hát', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = 'd2000055-0000-4000-8000-000000000055', order_index = 2, title = 'Bài 5.3 — Chùm 3 – Liên 3 (nền tảng Slowrock)' WHERE id = 'db6fddb4-7d3b-4a3b-9a01-f143928f02e5';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00503-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 5.4 — Cảm giác dàn trải của Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text) + audio</p>', 3, false, 'free')
+VALUES ('d2c00406-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 5.7 — Nền tập Bolero', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Bolero)</p>', 6, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00504-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 5.5 — Mẫu Slowrock cơ bản', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 4, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00505-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 5.6 — Nền tập Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Slowrock)</p>', 5, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00506-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 5.7 — Gảy theo: 1 bài Slowrock (mọi lứa tuổi — chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 6, false, 'free')
+VALUES ('d2c00407-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 5.8 — Gảy theo: 1 bài Bolero (mọi lứa tuổi — chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 7, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
--- ===== Chương 6: Điệu Bolero & kỹ thuật móc =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('d2000044-0000-4000-8000-000000000044', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 6: Điệu Bolero & kỹ thuật móc', 5)
+-- ===== Chương 6: Bố cục bài hát =====
+INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('a844e611-71a9-48c1-84cf-a645b8c79d08', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 6: Bố cục bài hát', 5)
+ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
+UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 0, title = 'Bài 6.1 — Cấu trúc bài hát (Musical Form)' WHERE id = 'd3624d28-47e2-48d3-a1d3-ee7ead6c3de2';
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00701-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 6.2 — Intro — Phiên khúc — Điệp khúc — Cầu nối — Kết', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text) + nghe ví dụ</p>', 1, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 2, title = 'Bài 6.3 — Bố cục một bài hát thông dụng' WHERE id = 'c2a2a5eb-411e-4e0a-a2ed-2a891b5ac970';
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00703-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 6.4 — Chọn điệu theo tính chất bài hát', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 3, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00704-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 6.5 — Chọn sắc thái theo từng đoạn', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 4, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00705-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 6.6 — Phiên khúc đánh nhẹ — điệp khúc bung hơn', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 5, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00706-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 6.7 — Bố cục mẫu Ballad', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 6, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 7, title = 'Bài 6.8 — Bố cục mẫu cho một bài Bolero' WHERE id = '21b2be1b-533a-4d2d-9610-a698e01b31d5';
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00708-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 6.9 — Bố cục mẫu Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 8, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00709-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 6.10 — Bố cục mẫu Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 9, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 10, title = 'Bài 6.11 — Bài tập tự luận: phân tích bố cục bài hát' WHERE id = 'a3a059a1-7b85-4505-962a-aba56892d28f';
+
+-- ===== Chương 7: Áp dụng vào bài hát thực tế =====
+INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('974b0073-61d3-4b76-857a-e4f01c738d42', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 7: Áp dụng vào bài hát thực tế', 6)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00400-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 6.1 — Tính chất Bolero', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 0, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 1, title = 'Bài 6.2 — Chùm 3 lệch phải (đơn – kép – kép) — đặc trưng Bolero' WHERE id = '12bb1218-6dcd-447c-8145-7f7f0302482b';
-UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 2, title = 'Bài 6.3 — Bolero móc kiểu 1' WHERE id = '5f7acacd-9214-48f3-9349-93cc382649fb';
-UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 3, title = 'Bài 6.4 — Bolero móc kiểu 2' WHERE id = 'a85592d5-b519-470d-84d0-4d9182d224b3';
-UPDATE edu_course_lessons SET module_id = 'd2000044-0000-4000-8000-000000000044', order_index = 4, title = 'Bài 6.5 — Quạt ballad cho điệp khúc Bolero' WHERE id = 'aec7a2a0-3b49-4902-891d-22c52759d71f';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00405-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 6.6 — Mẫu rải Ballad đơn giản (kỹ thuật móc)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬 — rải/móc</p>', 5, false, 'free')
+VALUES ('d2c00800-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 7.1 — Quy trình đệm 1 bài mới — 5 bước', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text/slide)</p>', 0, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00406-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 6.7 — Nền tập Bolero', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Bolero)</p>', 6, false, 'free')
+VALUES ('d2c00801-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 7.2 — Tự đệm bài bạn thích — công cụ Strum Builder', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ 🎛 (skill strum-builder, phần tự do)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00407-0000-4000-8000-000000000000', 'd2000044-0000-4000-8000-000000000044', 'Bài 6.8 — Gảy theo: 1 bài Bolero (mọi lứa tuổi — chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 7, false, 'free')
+VALUES ('d2c00805-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 7.3 — Dự án cuối khoá: tự chọn 1 bài, tự đệm và thu lại nộp', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài nộp (submit_video)</p>', 2, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00806-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 7.4 — Tổng kết Đệm hát Trình độ 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 3, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00807-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 7.5 — Lộ trình lên Đệm hát Trình độ 3', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 4, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
--- ===== Chương 7: Bố cục bài hát =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('a844e611-71a9-48c1-84cf-a645b8c79d08', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 7: Bố cục bài hát', 6)
-ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
-UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 0, title = 'Bài 7.1 — Cấu trúc bài hát (Musical Form)' WHERE id = 'd3624d28-47e2-48d3-a1d3-ee7ead6c3de2';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00701-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 7.2 — Intro — Phiên khúc — Điệp khúc — Cầu nối — Kết', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text) + nghe ví dụ</p>', 1, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 2, title = 'Bài 7.3 — Bố cục một bài hát thông dụng' WHERE id = 'c2a2a5eb-411e-4e0a-a2ed-2a891b5ac970';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00703-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 7.4 — Chọn điệu theo tính chất bài hát', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 3, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00704-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 7.5 — Chọn sắc thái theo từng đoạn', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 4, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00705-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 7.6 — Phiên khúc đánh nhẹ — điệp khúc bung hơn', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 5, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00706-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 7.7 — Bố cục mẫu Ballad', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 6, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 7, title = 'Bài 7.8 — Bố cục mẫu cho một bài Bolero' WHERE id = '21b2be1b-533a-4d2d-9610-a698e01b31d5';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00708-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 7.9 — Bố cục mẫu Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 8, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00709-0000-4000-8000-000000000000', 'a844e611-71a9-48c1-84cf-a645b8c79d08', 'Bài 7.10 — Bố cục mẫu Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 9, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = 'a844e611-71a9-48c1-84cf-a645b8c79d08', order_index = 10, title = 'Bài 7.11 — Bài tập tự luận: phân tích bố cục bài hát' WHERE id = 'a3a059a1-7b85-4505-962a-aba56892d28f';
-
--- ===== Chương 8: Áp dụng vào bài hát thực tế =====
-INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('974b0073-61d3-4b76-857a-e4f01c738d42', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 8: Áp dụng vào bài hát thực tế', 7)
-ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00800-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 8.1 — Quy trình đệm 1 bài mới — 5 bước', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text/slide): tông → điệu → bố cục → tập đoạn → ghép</p>', 0, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00801-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 8.2 — Tự đệm bài bạn thích — công cụ Strum Builder', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ 🎛 — học sinh TỰ CHỌN bài (skill strum-builder, phần tự do)</p>', 1, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00805-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 8.3 — Dự án cuối khoá: tự chọn 1 bài, tự đệm và thu lại nộp', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài nộp (submit_video)</p>', 2, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00806-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 8.4 — Tổng kết Đệm hát Trình độ 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 3, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00807-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 8.5 — Lộ trình lên Đệm hát Trình độ 3', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 4, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-
--- ===== Dọn bài placeholder mồ côi (khung cũ) =====
+-- ===== Dọn bài placeholder mồ côi (khung cũ, vd các bài lý thuyết đã gộp bỏ) =====
 DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
   AND id NOT IN (
-    'd2c00101-0000-4000-8000-000000000000',
-    'd2c00102-0000-4000-8000-000000000000',
     'd2c00103-0000-4000-8000-000000000000',
-    'd2c00105-0000-4000-8000-000000000000',
     'd2c00106-0000-4000-8000-000000000000',
-    'd2c00108-0000-4000-8000-000000000000',
+    'd2c00107-0000-4000-8000-000000000000',
     'd2c00109-0000-4000-8000-000000000000',
-    'd2c00200-0000-4000-8000-000000000000',
-    'd2c00201-0000-4000-8000-000000000000',
-    'd2c00202-0000-4000-8000-000000000000',
-    'd2c00205-0000-4000-8000-000000000000',
-    'd2c00206-0000-4000-8000-000000000000',
-    'd2c00209-0000-4000-8000-000000000000',
-    'd2c00210-0000-4000-8000-000000000000',
     'd2c00301-0000-4000-8000-000000000000',
     'd2c00302-0000-4000-8000-000000000000',
     'd2c00303-0000-4000-8000-000000000000',
@@ -226,7 +184,8 @@ DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
     'd2c00604-0000-4000-8000-000000000000',
     'd2c00605-0000-4000-8000-000000000000',
     'd2c00606-0000-4000-8000-000000000000',
-    'd2c00500-0000-4000-8000-000000000000',
+    'd2c00108-0000-4000-8000-000000000000',
+    'd2c00501-0000-4000-8000-000000000000',
     'd2c00501-0000-4000-8000-000000000000',
     'd2c00503-0000-4000-8000-000000000000',
     'd2c00504-0000-4000-8000-000000000000',
@@ -249,6 +208,8 @@ DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
     'd2c00806-0000-4000-8000-000000000000',
     'd2c00807-0000-4000-8000-000000000000'
   );
+-- Xoá module 'Tiết tấu quạt' cũ (đã gộp vào Chương 1)
+DELETE FROM edu_modules WHERE id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155';
 
 -- ===== Chuyển cụm Bossa Nova sang Đệm Hát Trình Độ 3 =====
 INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('d3000001-0000-4000-8000-000000000001', 'd5f963ac-bcd7-45e2-b002-7970ba33e710', 'Điệu Bossa Nova (chuyển từ Trình độ 2)', 0)
@@ -262,200 +223,45 @@ NOTIFY pgrst, 'reload schema';
 
 -- ==================== db/dh2_content_ch1.sql ====================
 -- ============================================================================
--- DH2 — Nội dung CỤM TEXT, Chương 1: Chùm nốt (5 bài giảng nền)
--- Phong cách "dài mà cuốn" (hook + mở vòng + ẩn dụ + câu khai thông). Xưng "bạn".
--- UPDATE content theo id placeholder (từ db/dh2_full.sql). Idempotent.
+-- DH2 — Nội dung TEXT còn lại của Chương 1 sau khi gộp/bỏ rườm rà.
+-- Chỉ còn: "Chùm nốt là gì" (gộp cả phần 'từ nốt đen') + "Nghe thử chùm 3" (đã dời sang Slowrock).
+-- Phong cách "dài mà cuốn" nhưng gọn. Xưng "bạn". Idempotent.
 -- ============================================================================
 
--- 1) Ôn nhanh: Phách & Nhịp — cầu nối từ Trình độ 1  (d2c00101)
-UPDATE edu_course_lessons SET content =
-'<h2>Ôn nhanh: Phách &amp; Nhịp — hành trang bước sang Trình độ 2</h2>
-<p>Hãy tưởng tượng bạn đang đứng ở một ngưỡng cửa. Phía sau là Trình độ 1 — nơi bạn đã đổ mồ hôi để bấm cho sạch, quạt cho đều, hát cho khớp. Phía trước là Trình độ 2, với những điệu đàn rộn ràng đang chờ. Nhưng trước khi bước qua, ta hãy quay lại nhìn <strong>hai người bạn đồng hành</strong> đã cõng bạn tới tận đây. Vì thật ra, mọi thứ sắp học đều chỉ là trò chơi mới trên chính hai nền tảng cũ này.</p>
-
-<h3>Phách — trái tim thầm lặng của bài hát</h3>
-<p>Bạn có để ý, khi nghe một bài hát mình thích, chân bạn tự nhiên giậm, tay tự nhiên vỗ? Cái mà cơ thể bạn bắt được — không cần ai dạy — chính là <strong>phách</strong>. Phách là những cú đập đều đặn chạy ngầm bên dưới mọi giai điệu, như <em>nhịp tim</em>, như tiếng tích-tắc của chiếc đồng hồ treo tường.</p>
-<p>Phách không nhanh, không chậm, không cảm xúc. Nó chỉ đều. Và chính cái đều tuyệt đối ấy là điểm tựa để mọi thứ hoa mỹ phía trên được phép bay bổng mà không rơi.</p>
-
-<h3>Nhịp — cách sắp phách thành từng ô</h3>
-<p>Nếu phách là những bước chân, thì <strong>nhịp</strong> là cách ta gom các bước ấy thành từng nhóm đều nhau. Nhịp <strong>2/4</strong> gom 2 phách một ô, <strong>3/4</strong> gom 3 phách, <strong>4/4</strong> gom 4 phách. Và trong mỗi ô, phách đầu tiên luôn được nhấn hơn một chút — ta gọi là <strong>phách mạnh</strong>. Nó giống như trọng âm của một câu nói: có nó, câu mới có hồn.</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:15px"><b>Mạnh</b>-nhẹ-nhẹ-nhẹ &nbsp;|&nbsp; <b>Mạnh</b>-nhẹ-nhẹ-nhẹ &nbsp;→&nbsp; đó là cảm giác của nhịp 4/4</div>
-
-<h3>Vậy Trình độ 2 sẽ khác ở đâu?</h3>
-<p>Ở Trình độ 1, bạn học <em>đi cho đều</em>: mỗi phách một cú quạt, chắc nịch. Đó là điều đúng đắn phải làm đầu tiên — không ai chạy được khi chưa đứng vững.</p>
-<blockquote>Trình độ 2 không dạy bạn đi nhanh hơn. Nó dạy bạn <strong>nhảy múa</strong> trên chính nền phách đều đặn ấy. Mà muốn múa đẹp, cái nền bên dưới phải càng vững, càng đều.</blockquote>
-<p>Cho nên, nếu ngay lúc này bạn còn thấy tay mình quạt chưa thật đều, đừng ngại quay lại luyện thêm vài buổi. Đó không phải là lùi — đó là đang <em>gia cố móng</em> cho toà nhà sắp xây. Khi cái đều đã nằm trong máu, ta bước tiếp.</p>'
-WHERE id = 'd2c00101-0000-4000-8000-000000000000';
-
--- 2) Từ nốt đen sang chùm nốt  (d2c00102) — bản đã thầy duyệt
-UPDATE edu_course_lessons SET content =
-'<h2>Từ nốt đen sang chùm nốt</h2>
-<p>Bạn còn nhớ cảm giác lần đầu đệm trọn một bài ở Trình độ 1 không? Tay phải quạt đều &ldquo;chát – chát – chát&rdquo;, giọng hát bắt được nhịp, và trong lòng bạn vang lên một câu: <em>&ldquo;Mình đệm được rồi!&rdquo;</em> Đó là một cột mốc thật sự — và bạn xứng đáng tự hào về nó.</p>
-<p>Nhưng rồi, có thể chỉ vài hôm sau, bạn thu âm lại và ngồi nghe. Một cảm giác lạ len vào: <strong>hình như còn thiếu cái gì đó.</strong> Tiếng đàn đúng nhịp, đúng hợp âm, không hề sai — nhưng nghe hơi trống, hơi đều đều, hơi &ldquo;phẳng&rdquo;. Đúng, nhưng chưa <em>đã</em>.</p>
-<p>Nếu bạn từng thấy vậy, xin đừng lo. Cảm giác đó không phải dấu hiệu bạn kém đi.</p>
-<blockquote>Nó là dấu hiệu <strong>tai nhạc của bạn đang lớn lên</strong> — và nó bắt đầu đòi hỏi nhiều hơn những gì đôi tay hiện giờ mang lại.</blockquote>
-
-<h3>Cái &ldquo;phẳng&rdquo; ấy đến từ đâu?</h3>
-<p>Hãy hình dung bạn đang đi bộ trên một con đường, mỗi bước cách nhau đúng một nhịp: <em>bước… bước… bước… bước…</em> Đều đặn, chắc chắn, nhưng đơn điệu. Đó chính là cách đệm ở Trình độ 1: <strong>mỗi phách một tiếng</strong>, một cú quạt xuống.</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:15px">Nốt đen — <b>1 phách = 1 tiếng</b> → tay quạt: <b>↓ &nbsp; ↓ &nbsp; ↓ &nbsp; ↓</b></div>
-<p>Không có gì sai với những bước chân đều ấy. Chúng là nền móng. Nhưng âm nhạc, giống như cảm xúc con người, cần có <em>chỗ dồn, chỗ nhặt, chỗ rộn ràng</em>. Một tiếng cho mỗi phách thì… hơi ít để kể một câu chuyện.</p>
-<p>Vậy các nghệ sĩ đệm hát làm gì để tiếng đàn &ldquo;đầy&rdquo; lên, rộn ràng lên — <strong>mà nhịp vẫn không hề loạn?</strong></p>
-
-<h3>Bí mật hoá ra rất giản dị</h3>
-<p>Họ không đổi nhịp. Họ không đàn nhanh hơn. Họ chỉ làm một việc: <strong>chia nhỏ mỗi phách ra thành nhiều tiếng đều nhau.</strong></p>
-<p>Thay vì một bước dài, hãy tưởng tượng bạn bước <em>hai bước nhỏ</em> gọn trong đúng khoảng thời gian của một bước cũ. Con đường vẫn dài y như thế, bạn vẫn đến đích đúng lúc — nhưng nhịp chân giờ rộn ràng hẳn.</p>
-<div style="background:#EEF2FF;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:15px">Chia đôi — <b>1 phách = 2 tiếng</b> → tay quạt: <b>↓↑ &nbsp; ↓↑ &nbsp; ↓↑ &nbsp; ↓↑</b></div>
-<p>Chỉ vậy thôi. Tiếng đàn lập tức &ldquo;dày&rdquo; và tươi hơn hẳn, trong khi người nghe vẫn cảm thấy đúng cái nhịp cũ, quen thuộc, vững vàng.</p>
-
-<h3>Khoảnh khắc &ldquo;à, ra thế&rdquo;</h3>
-<p>Đây là điều tinh tế mà nhiều người học lâu năm vẫn nhầm: khi chia phách, <strong>nhịp của bài KHÔNG nhanh lên.</strong> Cái nhanh lên chỉ là <em>số tiếng bên trong mỗi phách</em>. Phách vẫn đập đúng tốc độ ấy — bạn chỉ lấp đầy khoảng trống giữa hai phách bằng những tiếng nhỏ.</p>
-<p>Hiểu được điều này, bạn vừa chạm tay vào <strong>gốc rễ của mọi điệu đệm</strong>. Ballad, Bolero, Slowrock, Valse — nghe thì khác nhau một trời một vực, nhưng tất cả đều sinh ra từ một câu hỏi duy nhất: <em>ta chia mỗi phách thành mấy tiếng, và nhấn nhá vào đâu?</em></p>
-
-<h3>Bạn sắp bước vào điều gì</h3>
-<p>Cái nhóm nhiều tiếng nhỏ, đều nhau, nằm gọn trong một phách ấy — nó có một cái tên: <strong>chùm nốt</strong>. Đó là viên gạch đầu tiên, và cũng là viên gạch quan trọng nhất, của cả Trình độ 2.</p>
-<blockquote>Cái cảm giác &ldquo;còn thiếu gì đó&rdquo; lúc nãy — nó chính là cánh cửa. Bước qua cánh cửa ấy, bạn không chỉ đệm <em>đúng</em> nữa, mà bắt đầu đệm cho <em>hay</em>. Bài kế tiếp, ta gọi đúng tên và mổ xẻ viên gạch đó.</blockquote>'
-WHERE id = 'd2c00102-0000-4000-8000-000000000000';
-
--- 3) Chùm nốt là gì — chia 1 phách thành nhiều tiếng  (d2c00103)
+-- Chùm nốt là gì — chia nhỏ phách  (d2c00103) — gộp motivation "từ nốt đen" + định nghĩa
 UPDATE edu_course_lessons SET content =
 '<h2>Chùm nốt là gì?</h2>
-<p>Ở bài trước, ta đã hé lộ một viên gạch chưa gọi tên. Giờ là lúc gọi nó ra ánh sáng và nhìn cho kỹ. Bởi vì — nói không ngoa — nếu bạn thật sự thấm được điều trong bài này, bạn sẽ không bao giờ phải &ldquo;học vẹt&rdquo; một điệu đàn nào nữa.</p>
-<p><strong>Chùm nốt</strong> là một nhóm nốt nhỏ, <strong>đều nhau</strong>, cùng nằm gọn trong <strong>một phách</strong>.</p>
-<p>Hãy hình dung mỗi phách là một <em>chiếc hộp</em> có kích thước cố định. Ở Trình độ 1, bạn bỏ vào mỗi hộp đúng <em>một viên bi</em>. Chùm nốt đơn giản là: ta bỏ vào cùng chiếc hộp ấy <em>hai</em>, hoặc <em>ba</em> viên bi nhỏ hơn — xếp thật đều. Chiếc hộp không to ra, không nhỏ đi. Chỉ là bên trong nó giờ nhiều hơn.</p>
+<p>Bạn còn nhớ cảm giác lần đầu đệm trọn một bài ở Trình độ 1 chứ? Tay phải quạt đều &ldquo;chát – chát – chát&rdquo;, và bạn thấy tự hào: <em>&ldquo;Mình đệm được rồi!&rdquo;</em> Nhưng nghe lại, có gì đó… hơi trống, hơi đều đều, hơi <strong>phẳng</strong>. Đúng, mà chưa <em>đã</em>.</p>
+<p>Cái &ldquo;phẳng&rdquo; ấy đến từ một điều đơn giản: ở Trình độ 1, <strong>mỗi phách bạn chỉ chơi một tiếng</strong> — một cú quạt. Như đi bộ từng bước đều, chắc, nhưng đơn điệu.</p>
+<blockquote>Bí quyết để tiếng đàn &ldquo;đầy&rdquo; và rộn ràng hơn — <em>mà nhịp vẫn không loạn</em> — là <strong>chia nhỏ mỗi phách thành nhiều tiếng đều nhau</strong>. Nhóm nhiều tiếng nhỏ ấy gọi là <strong>chùm nốt</strong>.</blockquote>
 
-<h3>Hai loại chùm bạn sẽ dùng suốt Trình độ 2</h3>
+<h3>Định nghĩa gọn</h3>
+<p><strong>Chùm nốt</strong> = một nhóm nốt nhỏ, <strong>đều nhau</strong>, cùng nằm gọn trong <strong>một phách</strong>. Hãy hình dung mỗi phách là một chiếc hộp cố định: thay vì bỏ vào 1 viên bi, ta bỏ vào 2 hoặc 3 viên nhỏ hơn, xếp thật đều. Hộp không to ra — chỉ bên trong dày hơn.</p>
 <table>
-<thead><tr><th>Loại</th><th>Số tiếng / phách</th><th>Cách đếm</th><th>Tên nhạc lý</th></tr></thead>
+<thead><tr><th>Loại</th><th>Số tiếng / phách</th><th>Đếm</th></tr></thead>
 <tbody>
-<tr><td><strong>Chùm 2</strong></td><td>2 tiếng</td><td>&ldquo;1 và&rdquo;</td><td>nốt móc đơn</td></tr>
-<tr><td><strong>Chùm 3</strong></td><td>3 tiếng</td><td>&ldquo;1 2 3&rdquo;</td><td>liên 3</td></tr>
+<tr><td><strong>Chùm 2</strong> (móc đơn)</td><td>2 tiếng</td><td>&ldquo;1 và&rdquo;</td></tr>
+<tr><td><strong>Chùm 3</strong> (liên 3)</td><td>3 tiếng</td><td>&ldquo;1 2 3&rdquo;</td></tr>
 </tbody>
 </table>
-<p>Điểm mấu chốt — hãy đọc chậm câu này: dù chia thành 2 hay 3 tiếng, cả chùm vẫn <strong>chỉ chiếm đúng một phách</strong>. Nhịp đập của bài không hề nhanh lên. Đây là chỗ mà rất nhiều người tự học vấp phải: họ chia phách rồi vô thức… đàn nhanh dần, cuốn theo, loạn nhịp. Bạn thì đã biết trước cái bẫy đó.</p>
-
-<h3>Vì sao đây là chiếc chìa khoá?</h3>
-<p>Vì mỗi <strong>điệu đệm</strong> mà bạn từng nghe và mê — thực chất chỉ là một <em>công thức chia phách</em> được đặt tên:</p>
-<ul>
-<li><strong>Ballad</strong> êm đềm ư? Đó là <strong>chùm 2</strong> được sắp khéo.</li>
-<li><strong>Slowrock</strong> dập dìu, <strong>Bolero</strong> da diết ư? Đó là <strong>chùm 3</strong>.</li>
-<li>Và <strong>Valse</strong> xoay tròn? Cũng chỉ là chùm nốt, đặt trong nhịp 3/4.</li>
-</ul>
-<blockquote>Người học vẹt sẽ phải nhớ hàng chục &ldquo;mẫu quạt&rdquo; rời rạc và mau quên. Còn bạn, khi đã nắm chùm nốt, chỉ cần hỏi đúng một câu cho mọi điệu: <em>&ldquo;Phách này chia mấy, nhấn vào đâu?&rdquo;</em> — và tự mình dựng lại được điệu đàn. Đó là khác biệt giữa người <strong>thuộc bài</strong> và người <strong>hiểu bài</strong>.</blockquote>'
+<p>Điểm mấu chốt: dù chia 2 hay 3, cả chùm vẫn <strong>chỉ chiếm đúng một phách</strong> — nhịp của bài <em>không hề nhanh lên</em>. Đây là chỗ nhiều người tự học vấp: chia phách rồi vô thức đàn nhanh dần, loạn nhịp. Bạn thì đã biết trước cái bẫy đó.</p>
+<blockquote>Ở Trình độ 2 này ta bắt đầu với <strong>chùm 2</strong> — và chỉ vài bước nữa thôi, bạn sẽ quạt được một bài thật bằng chính nó.</blockquote>'
 WHERE id = 'd2c00103-0000-4000-8000-000000000000';
 
--- 4) Cách đếm chùm 2: 1 & 2 & 3 & 4 &  (d2c00105)
+-- Nghe thử chùm 3 và liên 3 — làm quen  (d2c00108) — nay là bài MỞ ĐẦU chương Slowrock
 UPDATE edu_course_lessons SET content =
-'<h2>Đếm chùm 2 cho đều — bí quyết nằm ở cái miệng</h2>
-<p>Có một sự thật hơi ngược đời mà những người thầy giỏi luôn nhắc: muốn tay quạt cho đều, việc đầu tiên <strong>đừng đụng vào cây đàn</strong>. Hãy để cái miệng học trước. Vì một khi miệng bạn đã đếm trơn tru, đôi tay chỉ việc bám theo — nhẹ tênh. Còn nếu miệng còn lúng túng mà tay đã quạt, bạn sẽ mãi vật lộn với một mớ bòng bong.</p>
-
-<h3>Thêm một chữ nhỏ, mở ra cả thế giới</h3>
-<p>Chùm 2 chia mỗi phách làm hai. Để đếm được cái nửa sau ấy, ta chèn thêm một chữ <strong>&ldquo;và&rdquo;</strong>:</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:16px;margin:14px 0;font-size:19px;text-align:center;letter-spacing:.04em"><b>1</b> và <b>2</b> và <b>3</b> và <b>4</b> và</div>
-<p>Con số là <em>đầu phách</em>. Chữ &ldquo;và&rdquo; là <em>nửa sau</em>. Đọc lên, bạn sẽ nghe thấy nó rộn ràng gấp đôi cái &ldquo;một–hai–ba–bốn&rdquo; khô khan ngày trước.</p>
-
-<h3>Gắn tiếng đếm vào bàn tay</h3>
-<p>Giờ mới đến lượt bàn tay, và quy ước cực kỳ tự nhiên:</p>
-<ul>
-<li><strong>Số (1 2 3 4)</strong> → tay đưa <strong>xuống ↓</strong></li>
-<li><strong>&ldquo;và&rdquo;</strong> → tay hất <strong>lên ↑</strong></li>
-</ul>
-<p>Ghép lại thành một dòng chảy không đứt: <strong>↓↑ ↓↑ ↓↑ ↓↑</strong>. Xuống rồi lên, xuống rồi lên — như hơi thở: <em>ra rồi vào</em>, không bao giờ dừng giữa chừng.</p>
-
-<h3>Điều ít ai nói cho bạn</h3>
-<p>Hãy để tay phải <strong>đung đưa đều như một con lắc</strong>, xuống ở &ldquo;số&rdquo; và lên ở &ldquo;và&rdquo; — <em>kể cả khi tay chưa chạm dây</em>. Nghĩa là con lắc ấy đưa liên tục, chỉ khi nào cần tiếng thì mới cho chạm vào dây, còn lại vẫn cứ đưa không.</p>
-<blockquote>Đây là bí mật lớn nhất của tay phải: <strong>nhịp nằm ở cánh tay đung đưa, không nằm ở đầu ngón.</strong> Người mới cố &ldquo;gảy đúng lúc&rdquo; bằng ngón tay nên luôn giật cục. Người chơi hay để cả cánh tay lắc đều như con lắc đồng hồ, và dây đàn chỉ là thứ tình cờ nằm trên đường đi của nó.</blockquote>
-<p>Hãy tập đếm to &ldquo;một-và-hai-và&rdquo; trong lúc đung đưa tay không, cho tới khi bạn <em>quên mất mình đang đếm</em>. Lúc đó, bạn đã sẵn sàng cho cây đàn.</p>'
-WHERE id = 'd2c00105-0000-4000-8000-000000000000';
-
--- 5) Nghe thử chùm 3 và liên 3 — biết trước, học kỹ sau  (d2c00108)
-UPDATE edu_course_lessons SET content =
-'<h2>Ghé thăm người anh em: chùm 3</h2>
-<p>Bạn vừa làm quen khá kỹ với <strong>chùm 2</strong> — cách chia một phách làm đôi, tươi tắn như bước đi trái-phải. Nhưng chùm 2 có một người anh em, mang tính cách hoàn toàn khác, và hôm nay ta chỉ <em>ghé thăm</em> thôi, chưa ở lại. Vì sao chỉ ghé thăm, cuối bài bạn sẽ hiểu.</p>
-<p>Người anh em ấy là <strong>chùm 3</strong> — chia mỗi phách thành <strong>ba tiếng đều nhau</strong>. Nhạc lý gọi nó là <strong>liên 3</strong>.</p>
-
-<h3>Hai tiếng &ldquo;bước đi&rdquo; và ba tiếng &ldquo;đung đưa&rdquo;</h3>
+'<h2>Làm quen với chùm 3</h2>
+<p>Suốt phần đầu khoá, bạn đã thân với <strong>chùm 2</strong> — chia một phách làm đôi, tươi tắn như bước đi trái‑phải. Giờ ta gặp người anh em của nó: <strong>chùm 3</strong> — chia mỗi phách thành <strong>ba tiếng đều nhau</strong>, nhạc lý gọi là <strong>liên 3</strong>. Đây chính là trái tim của điệu Slowrock.</p>
 <table>
-<thead><tr><th></th><th>Chia mấy phần</th><th>Đếm</th><th>Cảm giác gợi lên</th></tr></thead>
+<thead><tr><th></th><th>Chia mấy phần</th><th>Đếm</th><th>Cảm giác</th></tr></thead>
 <tbody>
-<tr><td><strong>Chùm 2</strong></td><td>2</td><td>&ldquo;1 và&rdquo;</td><td>bước chân, tươi, dứt khoát</td></tr>
+<tr><td><strong>Chùm 2</strong></td><td>2</td><td>&ldquo;1 và&rdquo;</td><td>bước đi, tươi, dứt khoát</td></tr>
 <tr><td><strong>Chùm 3</strong></td><td>3</td><td>&ldquo;1 2 3&rdquo;</td><td>lắc lư, dàn trải, đung đưa</td></tr>
 </tbody>
 </table>
-<p>Thử làm thí nghiệm nhỏ ngay bây giờ. Đọc đều &ldquo;<strong>một-và, hai-và</strong>&rdquo; — bạn nghe thấy cái gì đó thẳng thớm, như đang sải bước. Giờ đổi sang &ldquo;<strong>một-hai-ba, một-hai-ba</strong>&rdquo; — lập tức có cái gì đó <em>tròn hơn, mềm hơn</em>, như con thuyền dập dềnh trên sóng, như người ta đưa võng.</p>
-<p>Chính cái &ldquo;đung đưa&rdquo; ấy là linh hồn của hai điệu rất được yêu ở Việt Nam: <strong>Slowrock</strong> dập dìu và <strong>Bolero</strong> da diết. Nghe một bản bolero buồn mà thấy lòng chùng xuống, đung đưa — đó chính là chùm 3 đang làm việc.</p>
-
-<h3>Vì sao hôm nay chỉ ghé thăm?</h3>
-<p>Bởi vì chùm 3 xứng đáng có cả một chương riêng để luyện cho tới nơi tới chốn. Nếu ta nhồi hết vào đây, bạn sẽ quá tải và cả chùm 2 lẫn chùm 3 đều nửa vời. Nên hôm nay, nhiệm vụ của bạn <em>nhẹ nhàng thôi</em>:</p>
-<blockquote>Chỉ cần tai bạn <strong>nghe ra được</strong> rằng &ldquo;chia hai&rdquo; nghe khác &ldquo;chia ba&rdquo; — thế là đủ hành trang. Cái hạt giống nhận biết ấy, gieo xuống hôm nay, sẽ nảy mầm đúng lúc ta tới <strong>Chương 5 — Điệu Slowrock</strong>, nơi bạn sẽ gặp lại người anh em này và ở lại với nó thật lâu.</blockquote>
-<p>Còn bây giờ, ta khép chương Chùm nốt lại với một sự tự tin mới: bạn đã hiểu <em>gốc rễ</em> của mọi điệu đàn. Từ đây, học điệu nào cũng chỉ là biến tấu trên nền tảng bạn vừa nắm.</p>'
+<p>Thử ngay: đọc &ldquo;<strong>một‑và, hai‑và</strong>&rdquo; — nghe thẳng thớm như sải bước. Giờ đổi sang &ldquo;<strong>một‑hai‑ba, một‑hai‑ba</strong>&rdquo; — lập tức có gì đó <em>tròn hơn, mềm hơn</em>, như con thuyền dập dềnh, như đưa võng.</p>
+<blockquote>Bài này bạn chỉ cần <strong>nghe và cảm</strong> ra &ldquo;chia hai&rdquo; khác &ldquo;chia ba&rdquo; ở đâu — thế là đủ. Các bài kế trong chương sẽ luyện chùm 3 tới nơi tới chốn để bạn chơi được điệu Slowrock đong đưa.</blockquote>'
 WHERE id = 'd2c00108-0000-4000-8000-000000000000';
-
-NOTIFY pgrst, 'reload schema';
-
--- ==================== db/dh2_content_ch2.sql ====================
--- ============================================================================
--- DH2 — Nội dung CỤM TEXT, Chương 2: Tiết tấu quạt (3 bài giảng)
--- Phong cách "dài mà cuốn". Xưng "bạn". UPDATE theo id placeholder. Idempotent.
--- ============================================================================
-
--- 1) Tiết tấu là gì — mẫu lặp trong âm nhạc  (d2c00200)
-UPDATE edu_course_lessons SET content =
-'<h2>Tiết tấu là gì?</h2>
-<p>Ở chương trước, bạn đã có trong tay một thứ nguyên liệu quý: <strong>chùm nốt</strong>. Nhưng hãy thành thật — có bột chưa chắc gột nên hồ. Một đống gạch đẹp chưa phải là ngôi nhà. Chùm nốt cũng vậy: nó là <em>nguyên liệu</em>, còn thứ biến nguyên liệu ấy thành âm nhạc có hồn, có cá tính — đó là <strong>tiết tấu</strong>.</p>
-<p>Vậy tiết tấu là gì? Nói gọn nhất:</p>
-<blockquote><strong>Tiết tấu là một mẫu nhấn nhá được lặp đi lặp lại.</strong> Cùng một nắm chùm nốt, nhưng cách bạn sắp xếp chỗ mạnh – chỗ nhẹ – chỗ nghỉ sẽ tạo ra những &ldquo;khuôn mặt&rdquo; hoàn toàn khác nhau.</blockquote>
-
-<h3>Cùng nguyên liệu, khác linh hồn</h3>
-<p>Đây là điều kỳ diệu bạn cần cảm cho được. Lấy đúng <strong>chùm 2</strong> mà bạn vừa học. Sắp nó một kiểu, ta có điệu <strong>Ballad</strong> êm đềm ru ngủ. Sắp lại theo kiểu khác — nhấn mạnh vào phách nghịch — ta có ngay chất <strong>Disco</strong> sôi động nhảy nhót. Cùng một nguyên liệu duy nhất!</p>
-<p>Giống như 12 nốt nhạc tạo ra mọi bài hát trên đời, hay 24 chữ cái viết nên mọi cuốn sách — sự phong phú không nằm ở <em>số lượng nguyên liệu</em>, mà ở <strong>cách sắp xếp</strong> chúng.</p>
-
-<h3>Vì sao &ldquo;mẫu lặp&rdquo; là một tin cực vui cho bạn</h3>
-<p>Hãy để ý chữ <strong>lặp lại</strong>. Một điệu đệm không phải là hàng trăm động tác khác nhau bạn phải nhớ. Nó thường chỉ là <em>một ô nhịp</em> — một mẫu ngắn — được nhắc đi nhắc lại từ đầu đến cuối bài, chỉ thay hợp âm bên tay trái.</p>
-<blockquote>Nghĩa là: nắm chắc <strong>một</strong> mẫu tiết tấu, bạn chơi được <strong>cả</strong> bài. Thậm chí cả trăm bài cùng điệu. Đó là lý do vì sao người biết đệm hát có thể ngồi xuống và chơi một bài họ chưa từng tập — họ không thuộc bài, họ thuộc <em>cái mẫu</em>.</blockquote>
-<p>Trong chương này, ta sẽ học cách <em>đọc</em> và <em>dựng</em> những mẫu ấy. Và bước đầu tiên, như mọi ngôn ngữ, là học vài ký hiệu thật đơn giản. Bài kế tiếp.</p>'
-WHERE id = 'd2c00200-0000-4000-8000-000000000000';
-
--- 2) Ký hiệu quạt: xuống và lên  (d2c00201)
-UPDATE edu_course_lessons SET content =
-'<h2>Ký hiệu quạt: xuống ↓ và lên ↑</h2>
-<p>Âm nhạc truyền miệng có một nhược điểm chí mạng: nó bay đi mất. Thầy chỉ tay đàn cho bạn xem một mẫu quạt hay, về nhà vài hôm là quên sạch. Bởi vậy, loài người nghĩ ra <em>cách viết lại</em> tiết tấu — và tin vui là thứ &ldquo;chữ viết&rdquo; này gọn đến bất ngờ: chỉ cần <strong>hai mũi tên</strong>.</p>
-
-<h3>Mũi tên xuống ↓ — cú quạt đầy đặn</h3>
-<p>Dấu <strong>↓</strong> nghĩa là tay phải quét <strong>từ dây trầm xuống dây cao</strong> — từ trên xuống dưới theo hướng nhìn của bạn. Vì nó thuận theo trọng lực và thường quét qua <em>nhiều dây</em>, tiếng của cú xuống nghe <strong>đầy, chắc, mạnh mẽ</strong>. Đây là cú quạt xương sống, thường rơi vào các phách chính.</p>
-
-<h3>Mũi tên lên ↑ — cú vuốt nhẹ nhàng</h3>
-<p>Dấu <strong>↑</strong> là tay hất ngược <strong>từ dây cao lên dây trầm</strong>. Cú này thường chỉ lướt qua <em>vài dây cao</em>, nên tiếng nghe <strong>mỏng hơn, nhẹ hơn, tinh tế hơn</strong>. Nó khéo léo lấp vào những khoảng &ldquo;và&rdquo; giữa các phách, làm tiếng đàn liền lạc mà không nặng nề.</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:15px"><b>↓</b> = xuống, tiếng <b>đầy &amp; mạnh</b> &nbsp;·&nbsp; <b>↑</b> = lên, tiếng <b>mỏng &amp; nhẹ</b></div>
-<p>Chính cái tương phản đầy–mỏng, mạnh–nhẹ này là thứ tạo nên <em>sức sống</em> cho tiết tấu. Một chuỗi toàn cú xuống nghe sẽ cứng đờ như máy; xen cú lên vào, nó lập tức &ldquo;thở&rdquo;.</p>
-
-<h3>Đọc một dòng tiết tấu</h3>
-<p>Giờ khi nhìn một dòng như thế này:</p>
-<div style="background:#EEF2FF;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:18px;text-align:center;letter-spacing:.08em"><b>↓ ↓↑ ↑ ↓↑</b></div>
-<p>bạn không còn thấy một mớ ký hiệu khó hiểu nữa. Bạn <em>đọc</em> được nó: xuống — xuống-lên — lên — xuống-lên. Như đọc một câu chữ.</p>
-<blockquote>Đây là bước ngoặt nhỏ mà quan trọng: từ giờ, mỗi điệu đàn không còn là thứ &ldquo;xem thầy làm rồi bắt chước&rdquo; nữa. Nó trở thành một dòng ký hiệu bạn <strong>đọc được, ghi được, và tự dựng lại được</strong> bất cứ lúc nào. Bạn vừa biết đọc chữ, trong ngôn ngữ của tay phải.</blockquote>'
-WHERE id = 'd2c00201-0000-4000-8000-000000000000';
-
--- 3) Ứng dụng chùm 2 vào nhịp 4/4  (d2c00205)
-UPDATE edu_course_lessons SET content =
-'<h2>Ghép tất cả lại: chùm 2 trong một ô nhịp 4/4</h2>
-<p>Đây là khoảnh khắc mọi mảnh ghép rời rạc bấy nay khớp vào nhau. Bạn đã có chùm 2, đã biết đếm &ldquo;1 và 2 và&rdquo;, đã đọc được ↓ và ↑. Giờ ta đặt tất cả vào một khung quen thuộc nhất của nhạc phổ thông: <strong>nhịp 4/4</strong> — bốn phách một ô.</p>
-
-<h3>Trải chùm 2 lên bốn phách</h3>
-<p>Nhịp 4/4 có 4 phách. Cho mỗi phách một chùm 2 (một cú xuống, một cú lên), ta được một chuỗi liền mạch:</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:16px;margin:14px 0;font-size:17px;text-align:center;letter-spacing:.03em">
-Đếm: &nbsp;<b>1</b> và &nbsp;<b>2</b> và &nbsp;<b>3</b> và &nbsp;<b>4</b> và<br/>
-Tay: &nbsp;&nbsp;<b>↓ ↑ &nbsp; ↓ ↑ &nbsp; ↓ ↑ &nbsp; ↓ ↑</b>
-</div>
-<p>Tám cú quạt đều tăm tắp, gói gọn trong một ô nhịp. Nghe qua thì đơn giản, nhưng khoan — nếu chỉ quạt đều tăm tắp như máy, nó lại rơi vào cái bẫy &ldquo;phẳng&rdquo; mà ta đã nói ở Chương 1.</p>
-
-<h3>Linh hồn nằm ở chỗ nhấn</h3>
-<p>Hãy nhớ lại: mỗi ô nhịp có <strong>phách mạnh</strong>. Trong 4/4, phách <strong>1</strong> mạnh nhất, phách <strong>3</strong> mạnh vừa, còn 2 và 4 thì nhẹ. Bạn đưa cái quy luật mạnh–nhẹ đó vào tay phải: <em>nhấn hơi sâu tay ở phách 1 và 3, buông nhẹ ở phách 2 và 4.</em></p>
-<div style="background:#EEF2FF;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:16px;text-align:center"><b>Ⓓ</b>↑ &nbsp; ↓↑ &nbsp; <b>Ⓓ</b>↑ &nbsp; ↓↑ &nbsp;&nbsp;<span style="font-size:13px;color:#71717A">(Ⓓ = cú xuống nhấn sâu ở phách 1 &amp; 3)</span></div>
-<p>Chỉ một chỉnh sửa nhỏ ấy thôi, chuỗi quạt cứng đờ lập tức có <em>nhịp thở</em>, có chỗ dồn chỗ buông. Và bạn có biết không —</p>
-<blockquote>cái mẫu bạn vừa dựng nên chính là <strong>điệu Ballad căn bản nhất</strong>. Bạn chưa hề &ldquo;học điệu Ballad&rdquo;, vậy mà đã tự tay xây được nó từ những viên gạch nền. Đó chính xác là sức mạnh của việc hiểu gốc rễ.</blockquote>
-
-<h3>Và đây là món quà</h3>
-<p>Một ô nhịp 4/4 bạn đã quạt trơn tru. Cả bài hát thì sao? Nó chỉ là <em>ô nhịp ấy lặp lại</em>, mỗi lần tay trái đổi sang một hợp âm mới. Tập thật nhuyễn một ô — đều, có nhấn, không vấp — rồi nối vòng lặp lại, và bạn đã cầm trong tay chiếc chìa khoá để đệm hàng trăm bài. Ở các bài thực hành kế tiếp, ta sẽ tập đúng vòng lặp này cùng nền trống và những bài hát quen thuộc.</p>'
-WHERE id = 'd2c00205-0000-4000-8000-000000000000';
 
 NOTIFY pgrst, 'reload schema';
 
