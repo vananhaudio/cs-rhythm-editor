@@ -74,23 +74,13 @@ export const STRUM_JINGLE: StrumSong = {
 // (Rê Dorian) dịch lên +2 nửa cung. Hợp âm theo bản lời Việt của thầy. Không loop.
 const SF_TRON = ['den', 'chum2', 'chum2']   // mỗi ô: phách 1 nốt đen, phách 2&3 chùm 2
 const sfBar = (chord: string) => ({ chord, figures: SF_TRON })
+// Melody CHUẨN (đủ nốt luyến/âm tiết) — trích bè Voice bản voice+accompaniment của thầy, dịch +2 lên Em.
 const SCARBOROUGH_MELODY: MelodyNote[] = [
-  { t: 0, dur: 2, midi: 64 }, { t: 2, dur: 1, midi: 64 },                         // E E
-  { t: 3, dur: 2, midi: 71 }, { t: 5, dur: 1, midi: 71 },                         // B B
-  { t: 6, dur: 1.5, midi: 66 }, { t: 7.5, dur: .5, midi: 67 }, { t: 8, dur: 1, midi: 66 }, // F# G F#
-  { t: 9, dur: 3, midi: 64 },                                                     // E
-  { t: 13, dur: 1, midi: 71 }, { t: 14, dur: 1, midi: 74 },                       // (lặng) B D
-  { t: 15, dur: 2, midi: 76 }, { t: 17, dur: 1, midi: 74 },                       // E' D
-  { t: 18, dur: 1, midi: 71 }, { t: 19, dur: 1, midi: 73 }, { t: 20, dur: 1, midi: 69 }, // B C# A
-  { t: 21, dur: 2, midi: 71 },                                                    // B (lặng)
-  { t: 24, dur: 2, midi: 76 }, { t: 26, dur: 1, midi: 76 },                       // E' E'
-  { t: 27, dur: 2, midi: 74 }, { t: 29, dur: 1, midi: 71 },                       // D B
-  { t: 30, dur: 1, midi: 71 }, { t: 31, dur: 1, midi: 69 }, { t: 32, dur: 1, midi: 67 }, // B A G
-  { t: 33, dur: 3, midi: 66 },                                                    // F#
-  { t: 36, dur: 2, midi: 64 }, { t: 38, dur: 1, midi: 71 },                       // E B
-  { t: 39, dur: 2, midi: 69 }, { t: 41, dur: 1, midi: 67 },                       // A G
-  { t: 42, dur: 1, midi: 66 }, { t: 43, dur: 1, midi: 64 }, { t: 44, dur: 1, midi: 62 }, // F# E D
-  { t: 45, dur: 3, midi: 64 },                                                    // E
+  { t: 0, dur: 2, midi: 64 }, { t: 2, dur: 1, midi: 64 }, { t: 3, dur: 0.5, midi: 71 }, { t: 3.5, dur: 1.5, midi: 71 }, { t: 5, dur: 0.5, midi: 71 }, { t: 5.5, dur: 0.5, midi: 71 }, { t: 6, dur: 1.5, midi: 66 }, { t: 7.5, dur: 0.5, midi: 67 },
+  { t: 8, dur: 1, midi: 66 }, { t: 9, dur: 3, midi: 64 }, { t: 13, dur: 1, midi: 71 }, { t: 14, dur: 1, midi: 74 }, { t: 15, dur: 2, midi: 76 }, { t: 17, dur: 1, midi: 74 }, { t: 18, dur: 1, midi: 71 }, { t: 19, dur: 1, midi: 73 },
+  { t: 20, dur: 1, midi: 69 }, { t: 21, dur: 3, midi: 71 }, { t: 24, dur: 2, midi: 76 }, { t: 26, dur: 1, midi: 76 }, { t: 27, dur: 2, midi: 74 }, { t: 29, dur: 1, midi: 71 }, { t: 30, dur: 1, midi: 71 }, { t: 31, dur: 1, midi: 69 },
+  { t: 32, dur: 1, midi: 67 }, { t: 33, dur: 3, midi: 66 }, { t: 36, dur: 2, midi: 64 }, { t: 38, dur: 1, midi: 71 }, { t: 39, dur: 2, midi: 69 }, { t: 41, dur: 1, midi: 67 }, { t: 42, dur: 1, midi: 66 }, { t: 43, dur: 1, midi: 64 },
+  { t: 44, dur: 1, midi: 62 }, { t: 45, dur: 3, midi: 64 },
 ]
 export const STRUM_SCARBOROUGH: StrumSong = {
   title: 'Scarborough Fair — quạt theo nền (Valse)',
