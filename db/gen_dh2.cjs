@@ -15,8 +15,10 @@ const M_BOSSA_TD3 = 'd3000001-0000-4000-8000-000000000001'
 const L = (ch, idx) => `d2c00${ch}${String(idx).padStart(2, '0')}-0000-4000-8000-000000000000`
 
 // note = loại dự kiến (đưa vào content placeholder để thầy thấy ý đồ khi mở bài)
+// code = cơ sở UUID bài mới (SỐ CHƯƠNG GỐC, cố định — KHÔNG đổi khi sắp lại thứ tự,
+//        giữ liên kết với các file nội dung đã viết). order = vị trí hiển thị (0-based).
 const CHAPTERS = [
-  { mid: '067ae3bb-7812-4485-8fa2-077fccaea2bf', name: 'Chương 1: Chùm nốt', lessons: [
+  { code: 1, order: 0, mid: '067ae3bb-7812-4485-8fa2-077fccaea2bf', name: 'Chương 1: Chùm nốt', lessons: [
     { ex: 'aca3b657-b2c8-46dd-ac1e-5fe8b7828158' },
     { t: 'Ôn nhanh: Phách & Nhịp — cầu nối từ Trình độ 1', note: 'bài ôn / quiz 📝' },
     { t: 'Từ nốt đen sang chùm nốt', note: 'bài giảng ngắn (text/slide)' },
@@ -28,7 +30,7 @@ const CHAPTERS = [
     { t: 'Nghe thử chùm 3 và liên 3 — biết trước, học kỹ sau', note: 'bài giảng + audio mẫu' },
     { t: 'Checkpoint Chương 1', note: 'quiz 📝' },
   ] },
-  { mid: '46e55dbe-dd8f-40b5-a8ec-6464219f7155', name: 'Chương 2: Tiết tấu quạt', lessons: [
+  { code: 2, order: 1, mid: '46e55dbe-dd8f-40b5-a8ec-6464219f7155', name: 'Chương 2: Tiết tấu quạt', lessons: [
     { t: 'Tiết tấu là gì — mẫu lặp trong âm nhạc', note: 'bài giảng (text/slide)' },
     { t: 'Ký hiệu quạt: xuống ↓ và lên ↑', note: 'bài giảng (text)' },
     { t: 'Tay phải: đều, nhẹ, cổ tay thả lỏng', note: 'video thầy quay 🎬' },
@@ -41,33 +43,15 @@ const CHAPTERS = [
     { t: 'Gảy theo: 1 bài Việt đơn giản', note: 'gảy theo 🎸 (Strum Score) — chọn bài sau' },
     { t: 'Checkpoint Chương 2', note: 'quiz 📝' },
   ] },
-  { mid: '2a3011f7-750e-49e6-9b55-ea0af1725d0d', name: 'Chương 3: Điệu Ballad', lessons: [
+  // QUẠT trước (Ballad · Valse · Slowrock) — cho học sinh sớm "It works"
+  { code: 3, order: 2, mid: '2a3011f7-750e-49e6-9b55-ea0af1725d0d', name: 'Chương 3: Điệu Ballad', lessons: [
     { ex: '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac' },
     { t: 'Ballad dùng chùm 2 như thế nào', note: 'bài giảng (text)' },
     { t: 'Mẫu quạt Ballad cơ bản', note: 'video thầy quay 🎬' },
-    { t: 'Mẫu rải Ballad đơn giản', note: 'video thầy quay 🎬' },
     { t: 'Nền tập Ballad', note: 'công cụ app 🎛 (Groove Lab điệu Ballad)' },
     { t: 'Gảy theo: 1 bài Ballad (chọn bài sau)', note: 'gảy theo 🎸 (Strum Score)' },
   ] },
-  { mid: M_BOLERO, name: 'Chương 4: Điệu Bolero', lessons: [
-    { t: 'Tính chất Bolero', note: 'bài giảng (text)' },
-    { ex: '12bb1218-6dcd-447c-8145-7f7f0302482b', title: 'Chùm 3 lệch phải (đơn – kép – kép) — đặc trưng Bolero' },
-    { ex: '5f7acacd-9214-48f3-9349-93cc382649fb' },
-    { ex: 'a85592d5-b519-470d-84d0-4d9182d224b3' },
-    { ex: 'aec7a2a0-3b49-4902-891d-22c52759d71f' },
-    { t: 'Nền tập Bolero', note: 'công cụ app 🎛 (Groove Lab điệu Bolero)' },
-    { t: 'Gảy theo: Con đường xưa em đi', note: 'gảy theo 🎸 (Strum Score) — Bolero' },
-  ] },
-  { mid: M_SLOWROCK, name: 'Chương 5: Điệu Slowrock', lessons: [
-    { t: 'Tính chất Slowrock', note: 'bài giảng (text)' },
-    { t: 'Liên 3 là gì trong đệm hát', note: 'bài giảng (text)' },
-    { ex: 'db6fddb4-7d3b-4a3b-9a01-f143928f02e5' },
-    { t: 'Cảm giác dàn trải của Slowrock', note: 'bài giảng (text) + audio' },
-    { t: 'Mẫu Slowrock cơ bản', note: 'video thầy quay 🎬' },
-    { t: 'Nền tập Slowrock', note: 'công cụ app 🎛 (Groove Lab điệu Slowrock)' },
-    { t: 'Gảy theo: Diễm Xưa', note: 'gảy theo 🎸 (Strum Score) — Slowrock' },
-  ] },
-  { mid: '271e9988-0e3b-4171-a829-139a6b399263', name: 'Chương 6: Điệu Valse', lessons: [
+  { code: 6, order: 3, mid: '271e9988-0e3b-4171-a829-139a6b399263', name: 'Chương 4: Điệu Valse', lessons: [
     { t: 'Tính chất Valse', note: 'bài giảng (text)' },
     { t: 'Nhịp 3/4: mạnh — nhẹ — nhẹ', note: 'bài giảng (text)' },
     { t: 'Mẫu Valse nốt đen', note: 'video thầy quay 🎬' },
@@ -76,7 +60,27 @@ const CHAPTERS = [
     { t: 'Nền tập Valse', note: 'công cụ app 🎛 (Groove Lab điệu Valse)' },
     { t: 'Gảy theo: 1 bài Valse (chọn bài sau)', note: 'gảy theo 🎸 (Strum Score)' },
   ] },
-  { mid: 'a844e611-71a9-48c1-84cf-a645b8c79d08', name: 'Chương 7: Bố cục bài hát', lessons: [
+  { code: 5, order: 4, mid: M_SLOWROCK, name: 'Chương 5: Điệu Slowrock', lessons: [
+    { t: 'Tính chất Slowrock', note: 'bài giảng (text)' },
+    { t: 'Liên 3 là gì trong đệm hát', note: 'bài giảng (text)' },
+    { ex: 'db6fddb4-7d3b-4a3b-9a01-f143928f02e5' },
+    { t: 'Cảm giác dàn trải của Slowrock', note: 'bài giảng (text) + audio' },
+    { t: 'Mẫu Slowrock cơ bản', note: 'video thầy quay 🎬' },
+    { t: 'Nền tập Slowrock', note: 'công cụ app 🎛 (Groove Lab điệu Slowrock)' },
+    { t: 'Gảy theo: Diễm Xưa', note: 'gảy theo 🎸 (Strum Score) — Slowrock' },
+  ] },
+  // MÓC dồn CUỐI: Bolero (móc) + rải — học sau khi đã thạo quạt (nguyên tắc "It works")
+  { code: 4, order: 5, mid: M_BOLERO, name: 'Chương 6: Điệu Bolero & kỹ thuật móc', lessons: [
+    { t: 'Tính chất Bolero', note: 'bài giảng (text)' },
+    { ex: '12bb1218-6dcd-447c-8145-7f7f0302482b', title: 'Chùm 3 lệch phải (đơn – kép – kép) — đặc trưng Bolero' },
+    { ex: '5f7acacd-9214-48f3-9349-93cc382649fb' },
+    { ex: 'a85592d5-b519-470d-84d0-4d9182d224b3' },
+    { ex: 'aec7a2a0-3b49-4902-891d-22c52759d71f' },
+    { t: 'Mẫu rải Ballad đơn giản (kỹ thuật móc)', note: 'video thầy quay 🎬 — rải/móc, để sau khi thạo quạt' },
+    { t: 'Nền tập Bolero', note: 'công cụ app 🎛 (Groove Lab điệu Bolero)' },
+    { t: 'Gảy theo: Con đường xưa em đi', note: 'gảy theo 🎸 (Strum Score) — Bolero' },
+  ] },
+  { code: 7, order: 6, mid: 'a844e611-71a9-48c1-84cf-a645b8c79d08', name: 'Chương 7: Bố cục bài hát', lessons: [
     { ex: 'd3624d28-47e2-48d3-a1d3-ee7ead6c3de2' },
     { t: 'Intro — Phiên khúc — Điệp khúc — Cầu nối — Kết', note: 'bài giảng (text) + nghe ví dụ' },
     { ex: 'c2a2a5eb-411e-4e0a-a2ed-2a891b5ac970' },
@@ -89,7 +93,7 @@ const CHAPTERS = [
     { t: 'Bố cục mẫu Valse', note: 'bài giảng (text)' },
     { ex: 'a3a059a1-7b85-4505-962a-aba56892d28f' },
   ] },
-  { mid: '974b0073-61d3-4b76-857a-e4f01c738d42', name: 'Chương 8: Áp dụng vào bài hát thực tế', lessons: [
+  { code: 8, order: 7, mid: '974b0073-61d3-4b76-857a-e4f01c738d42', name: 'Chương 8: Áp dụng vào bài hát thực tế', lessons: [
     { t: 'Quy trình đệm 1 bài mới — 5 bước', note: 'bài giảng (text/slide): tông → điệu → bố cục → tập đoạn → ghép' },
     { t: 'Thực hành 1 — bài Ballad (chọn bài sau)', note: 'gảy theo 🎸 + phân tích bố cục' },
     { t: 'Thực hành 2 — Con đường xưa em đi (Bolero)', note: 'gảy theo 🎸 + phân tích bố cục' },
@@ -102,23 +106,23 @@ const CHAPTERS = [
 ]
 
 let sql = `-- ============================================================================
--- ĐỆM HÁT TRÌNH ĐỘ 2 (DH2) — KHUNG ĐẦY ĐỦ 8 CHƯƠNG (mạch: Chùm nốt → Tiết tấu →
---   Ballad → Bolero → Slowrock → Valse → Bố cục → Áp dụng thực tế).
+-- ĐỆM HÁT TRÌNH ĐỘ 2 (DH2) — KHUNG 8 CHƯƠNG. QUẠT trước, MÓC cuối (nguyên tắc "It works").
+--   Chùm nốt → Tiết tấu → Ballad → Valse → Slowrock → Bolero&móc → Bố cục → Áp dụng.
 -- SINH TỰ ĐỘNG từ db/gen_dh2.cjs — đừng sửa tay. Course DH2: ${DH2}
 -- Bài mới = placeholder (text, ⏳) — điền nội dung sau. Bài cũ chỉ đổi chương/thứ tự.
 -- Idempotent: ON CONFLICT của bài mới KHÔNG đè nội dung đã điền (chỉ chỉnh module/order).
 -- ============================================================================
 
 `
-CHAPTERS.forEach((c, ci) => {
+CHAPTERS.forEach((c) => {
   sql += `-- ===== ${c.name} =====\n`
-  sql += `INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('${c.mid}', '${DH2}', '${esc(c.name)}', ${ci})\n`
+  sql += `INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('${c.mid}', '${DH2}', '${esc(c.name)}', ${c.order})\n`
   sql += `ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;\n`
   c.lessons.forEach((l, oi) => {
     if (l.ex) {
       sql += `UPDATE edu_course_lessons SET module_id = '${c.mid}', order_index = ${oi}${l.title ? `, title = '${esc(l.title)}'` : ''} WHERE id = '${l.ex}';\n`
     } else {
-      const id = L(ci + 1, oi)
+      const id = L(c.code, oi)
       const content = `<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> ${esc(l.note)}</p>`
       sql += `INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)\n`
       sql += `VALUES ('${id}', '${c.mid}', '${esc(l.t)}', 'text', '${content}', ${oi}, false, 'free')\n`
