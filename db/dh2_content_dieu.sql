@@ -4,6 +4,18 @@
 -- Phong cách "dài mà cuốn". Xưng "bạn". Idempotent.
 -- ============================================================================
 
+-- ── Ballad: Điệu Ballad — ta sẽ học kiểu nào?  (2b73cd3b, ex) — thay bài 'lịch sử' cũ ──
+UPDATE edu_course_lessons SET content =
+'<h2>Điệu Ballad — ta sẽ học kiểu nào?</h2>
+<p>Bạn vừa quạt được chùm 2 và chơi trọn <em>Happy Birthday</em> — xin chúc mừng! Giờ ta khoác cho kỹ năng ấy một cái tên mà ai chơi guitar cũng mê: <strong>điệu Ballad</strong>.</p>
+<p>Ballad là điệu đệm <strong>dịu dàng, lãng mạn</strong> — điệu của những bản tình ca, của những tối ôm đàn hát khẽ. Nhưng có một điều ít người nói cho bạn biết ngay từ đầu:</p>
+<blockquote>&ldquo;Ballad&rdquo; <strong>không phải một kiểu đàn cố định.</strong> Cùng gọi là Ballad, người ta có thể quạt kiểu này, rải kiểu kia, thêm bớt đủ biến tấu — nó là cả một <em>họ hàng đông đúc</em>.</blockquote>
+<h3>Vậy ta học kiểu nào?</h3>
+<p>Nếu ôm hết mọi biến tấu, bạn sẽ rối và nản. Nên trong khoá này ta đi khôn ngoan: <strong>chỉ chọn vài kiểu Ballad phổ biến và dễ dùng nhất</strong>. Nắm chắc vài kiểu đó thôi, bạn đã đệm được vô số bài — còn hơn biết lơ mơ chục kiểu.</p>
+<p>Và ta bắt đầu từ kiểu <strong>nền tảng nhất</strong> — cũng là kiểu bạn <em>đã có sẵn trong tay</em>: <strong>Ballad chùm 2</strong>.</p>
+<blockquote>Cái chùm 2 bạn quạt ở chương trước — chỉ cần sắp lại một chút là thành một điệu Ballad hoàn chỉnh. Bài kế, ta làm đúng điều đó.</blockquote>'
+WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
+
 -- ── Ch3 Ballad: Ballad dùng chùm 2 như thế nào  (d2c00301) ──
 UPDATE edu_course_lessons SET content =
 '<h2>Ballad dùng chùm 2 như thế nào?</h2>

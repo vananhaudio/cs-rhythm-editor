@@ -26,7 +26,7 @@ ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXC
 -- ===== Chương 2: Điệu Ballad =====
 INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 2: Điệu Ballad', 1)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
-UPDATE edu_course_lessons SET module_id = '2a3011f7-750e-49e6-9b55-ea0af1725d0d', order_index = 0, title = 'Bài 2.1 — Điệu Ballad — lịch sử, tính chất, tiết tấu' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
+UPDATE edu_course_lessons SET module_id = '2a3011f7-750e-49e6-9b55-ea0af1725d0d', order_index = 0, title = 'Bài 2.1 — Điệu Ballad — ta sẽ học kiểu nào?' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
 VALUES ('d2c00301-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 2.2 — Ballad dùng chùm 2 như thế nào', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;

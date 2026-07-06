@@ -29,7 +29,7 @@ ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXC
 -- ===== Chương 2: Điệu Ballad =====
 INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 2: Điệu Ballad', 1)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
-UPDATE edu_course_lessons SET module_id = '2a3011f7-750e-49e6-9b55-ea0af1725d0d', order_index = 0, title = 'Bài 2.1 — Điệu Ballad — lịch sử, tính chất, tiết tấu' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
+UPDATE edu_course_lessons SET module_id = '2a3011f7-750e-49e6-9b55-ea0af1725d0d', order_index = 0, title = 'Bài 2.1 — Điệu Ballad — ta sẽ học kiểu nào?' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
 VALUES ('d2c00301-0000-4000-8000-000000000000', '2a3011f7-750e-49e6-9b55-ea0af1725d0d', 'Bài 2.2 — Ballad dùng chùm 2 như thế nào', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
@@ -268,6 +268,18 @@ NOTIFY pgrst, 'reload schema';
 -- Ballad · Bolero · Slowrock (tính chất + liên 3 + dàn trải) · Valse (tính chất + trộn chùm 2)
 -- Phong cách "dài mà cuốn". Xưng "bạn". Idempotent.
 -- ============================================================================
+
+-- ── Ballad: Điệu Ballad — ta sẽ học kiểu nào?  (2b73cd3b, ex) — thay bài 'lịch sử' cũ ──
+UPDATE edu_course_lessons SET content =
+'<h2>Điệu Ballad — ta sẽ học kiểu nào?</h2>
+<p>Bạn vừa quạt được chùm 2 và chơi trọn <em>Happy Birthday</em> — xin chúc mừng! Giờ ta khoác cho kỹ năng ấy một cái tên mà ai chơi guitar cũng mê: <strong>điệu Ballad</strong>.</p>
+<p>Ballad là điệu đệm <strong>dịu dàng, lãng mạn</strong> — điệu của những bản tình ca, của những tối ôm đàn hát khẽ. Nhưng có một điều ít người nói cho bạn biết ngay từ đầu:</p>
+<blockquote>&ldquo;Ballad&rdquo; <strong>không phải một kiểu đàn cố định.</strong> Cùng gọi là Ballad, người ta có thể quạt kiểu này, rải kiểu kia, thêm bớt đủ biến tấu — nó là cả một <em>họ hàng đông đúc</em>.</blockquote>
+<h3>Vậy ta học kiểu nào?</h3>
+<p>Nếu ôm hết mọi biến tấu, bạn sẽ rối và nản. Nên trong khoá này ta đi khôn ngoan: <strong>chỉ chọn vài kiểu Ballad phổ biến và dễ dùng nhất</strong>. Nắm chắc vài kiểu đó thôi, bạn đã đệm được vô số bài — còn hơn biết lơ mơ chục kiểu.</p>
+<p>Và ta bắt đầu từ kiểu <strong>nền tảng nhất</strong> — cũng là kiểu bạn <em>đã có sẵn trong tay</em>: <strong>Ballad chùm 2</strong>.</p>
+<blockquote>Cái chùm 2 bạn quạt ở chương trước — chỉ cần sắp lại một chút là thành một điệu Ballad hoàn chỉnh. Bài kế, ta làm đúng điều đó.</blockquote>'
+WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
 
 -- ── Ch3 Ballad: Ballad dùng chùm 2 như thế nào  (d2c00301) ──
 UPDATE edu_course_lessons SET content =

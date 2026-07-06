@@ -28,7 +28,7 @@ const CHAPTERS = [
     { t: 'Checkpoint Chương 1', note: 'quiz 📝', n: 9 },
   ] },
   { code: 3, order: 1, mid: '2a3011f7-750e-49e6-9b55-ea0af1725d0d', name: 'Chương 2: Điệu Ballad', lessons: [
-    { ex: '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac', title: 'Điệu Ballad — lịch sử, tính chất, tiết tấu' },
+    { ex: '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac', title: 'Điệu Ballad — ta sẽ học kiểu nào?' },
     { t: 'Ballad dùng chùm 2 như thế nào', note: 'bài giảng (text)' },
     { t: 'Mẫu quạt Ballad cơ bản', note: 'video thầy quay 🎬' },
     { t: 'Nền tập Ballad', note: 'công cụ app 🎛 (Groove Lab điệu Ballad)' },
