@@ -114,6 +114,7 @@ let sql = `-- ==================================================================
 -- ============================================================================
 
 `
+const newIds = []
 CHAPTERS.forEach((c) => {
   sql += `-- ===== ${c.name} =====\n`
   sql += `INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('${c.mid}', '${DH2}', '${esc(c.name)}', ${c.order})\n`
@@ -122,7 +123,7 @@ CHAPTERS.forEach((c) => {
     if (l.ex) {
       sql += `UPDATE edu_course_lessons SET module_id = '${c.mid}', order_index = ${oi}${l.title ? `, title = '${esc(l.title)}'` : ''} WHERE id = '${l.ex}';\n`
     } else {
-      const id = L(c.code, oi)
+      const id = L(c.code, oi); newIds.push(id)
       const content = `<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> ${esc(l.note)}</p>`
       sql += `INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)\n`
       sql += `VALUES ('${id}', '${c.mid}', '${esc(l.t)}', 'text', '${content}', ${oi}, false, 'free')\n`
@@ -131,6 +132,11 @@ CHAPTERS.forEach((c) => {
   })
   sql += `\n`
 })
+
+// Dọn placeholder MỒ CÔI: bài 'd2c00…' của khung cũ nhưng không còn trong khung mới
+// (vd rải Ballad đã dời chương). Chỉ đụng placeholder DH2; bài có nội dung đều nằm trong newIds.
+sql += `-- ===== Dọn bài placeholder mồ côi (khung cũ) =====\n`
+sql += `DELETE FROM edu_course_lessons WHERE id LIKE 'd2c00%'\n  AND id NOT IN (\n    ${newIds.map(id => `'${id}'`).join(',\n    ')}\n  );\n\n`
 
 // Bossa Nova → chuyển sang Trình độ 3 (tạo module mới ở TĐ3, dời 4 bài sang)
 sql += `-- ===== Chuyển cụm Bossa Nova sang Đệm Hát Trình Độ 3 =====\n`
