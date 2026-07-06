@@ -22,9 +22,7 @@ const CHAPTERS = [
     { t: 'Chùm nốt là gì — chia nhỏ phách', note: 'bài giảng (text)', n: 3 },
     { ex: '1bc21a87-d39f-48ee-a62c-a753902631cf', title: 'Chùm 2 — nốt móc đơn' },
     { t: 'Thực hành gõ chùm 2', note: 'công cụ app 🎛 (đếm 1&2& + gõ theo)', n: 6 },
-    { ex: 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9', title: 'Thực hành quạt chùm 2 (xuống–lên)' },
-    { ex: 'd76e8798-76bd-485e-b0fb-4fadb6b98458', title: 'Quạt chùm 2 vào ô nhịp (2/4 → 4/4)' },
-    { t: 'Nền tập quạt — tập với trống + bass', note: 'công cụ app 🎛 (Groove Lab nền tập)', n: 7 },
+    { ex: 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9', title: 'Thực hành quạt chùm 2 (xuống–lên)' }, // bản này đã đủ: quạt chùm 2 + vòng hợp âm
     { ex: '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829', title: 'Gảy theo: Happy Birthday — quạt chùm 2' },
     { ex: '4692e092-3591-4dda-99d6-265b82e0d34c', title: 'Gảy theo: Jingle Bells — quạt chùm 2' },
     { t: 'Checkpoint Chương 1', note: 'quiz 📝', n: 9 },
@@ -120,7 +118,10 @@ CHAPTERS.forEach((c) => {
 sql += `-- ===== Dọn bài placeholder mồ côi (khung cũ, vd các bài lý thuyết đã gộp bỏ) =====\n`
 sql += `DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'\n  AND id NOT IN (\n    ${newIds.map(id => `'${id}'`).join(',\n    ')}\n  );\n`
 sql += `-- Xoá module 'Tiết tấu quạt' cũ (đã gộp vào Chương 1)\n`
-sql += `DELETE FROM edu_modules WHERE id = '${M_CH2_OLD}';\n\n`
+sql += `DELETE FROM edu_modules WHERE id = '${M_CH2_OLD}';\n`
+// Bài cũ (ex) đã bỏ khỏi khoá — xoá tường minh (dọn 'd2c00%' không bắt id thường)
+sql += `-- Bỏ 'Quạt chùm 2 vào ô nhịp' (video WX3Gc1QU-tM) — trùng với bài Thực hành quạt chùm 2\n`
+sql += `DELETE FROM edu_course_lessons WHERE id = 'd76e8798-76bd-485e-b0fb-4fadb6b98458';\n\n`
 
 sql += `-- ===== Chuyển cụm Bossa Nova sang Đệm Hát Trình Độ 3 =====\n`
 sql += `INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('${M_BOSSA_TD3}', '${TD3}', 'Điệu Bossa Nova (chuyển từ Trình độ 2)', 0)\n`
