@@ -4,32 +4,21 @@
 -- Phong cách "dài mà cuốn". Xưng "bạn". Idempotent.
 -- ============================================================================
 
--- ── Ballad: Điệu Ballad — ta sẽ học kiểu nào?  (2b73cd3b, ex) — thay bài 'lịch sử' cũ ──
+-- ── Điệu Ballad là gì  (2b73cd3b, ex) — GỘP 'Ballad là gì' + 'Ballad dùng chùm 2'; đứng SAU khi đã chơi HBD/Jingle ──
 UPDATE edu_course_lessons SET content =
-'<h2>Điệu Ballad — ta sẽ học kiểu nào?</h2>
-<p>Bạn vừa quạt được chùm 2 và chơi trọn <em>Happy Birthday</em> — xin chúc mừng! Giờ ta khoác cho kỹ năng ấy một cái tên mà ai chơi guitar cũng mê: <strong>điệu Ballad</strong>.</p>
-<p>Ballad là điệu đệm <strong>dịu dàng, lãng mạn</strong> — điệu của những bản tình ca, của những tối ôm đàn hát khẽ. Nhưng có một điều ít người nói cho bạn biết ngay từ đầu:</p>
-<blockquote>&ldquo;Ballad&rdquo; <strong>không phải một kiểu đàn cố định.</strong> Cùng gọi là Ballad, người ta có thể quạt kiểu này, rải kiểu kia, thêm bớt đủ biến tấu — nó là cả một <em>họ hàng đông đúc</em>.</blockquote>
-<h3>Vậy ta học kiểu nào?</h3>
-<p>Nếu ôm hết mọi biến tấu, bạn sẽ rối và nản. Nên trong khoá này ta đi khôn ngoan: <strong>chỉ chọn vài kiểu Ballad phổ biến và dễ dùng nhất</strong>. Nắm chắc vài kiểu đó thôi, bạn đã đệm được vô số bài — còn hơn biết lơ mơ chục kiểu.</p>
-<p>Và ta bắt đầu từ kiểu <strong>nền tảng nhất</strong> — cũng là kiểu bạn <em>đã có sẵn trong tay</em>: <strong>Ballad chùm 2</strong>.</p>
-<blockquote>Cái chùm 2 bạn quạt ở chương trước — chỉ cần sắp lại một chút là thành một điệu Ballad hoàn chỉnh. Bài kế, ta làm đúng điều đó.</blockquote>'
+'<h2>Điệu Ballad là gì? — Và bạn vừa chơi nó đấy!</h2>
+<p>Bạn vừa quạt chùm 2 và chơi trọn <em>Happy Birthday</em>, <em>Jingle Bells</em> — xin chúc mừng! Nhưng có một bí mật nho nhỏ: <strong>bạn vừa đệm điệu Ballad mà không hề hay biết.</strong></p>
+<p><strong>Ballad</strong> là điệu đệm <strong>dịu dàng, lãng mạn</strong> — điệu của những bản tình ca, của những tối ôm đàn hát khẽ. Và chính cái chùm 2 đều đều bạn vừa quạt — đó là Ballad ở dạng cơ bản nhất.</p>
+<h3>Điều gì làm nên chất Ballad?</h3>
+<ul>
+<li><strong>Đều, không giật</strong> — chùm 2 chạy mượt như hơi thở: ↓↑ ↓↑ ↓↑ ↓↑, không cú nào bật gắt phá vỡ sự êm ả.</li>
+<li><strong>Tempo gần bằng nhịp tim</strong> — khi tiếng đàn đập cùng nhịp trái tim người nghe, họ vô thức &ldquo;đồng bộ&rdquo; theo và thấy dễ chịu, thấy tình. Đó không phải phép màu, là sinh học.</li>
+<li><strong>Nhấn phách 1 &amp; 3 thật khẽ</strong> — đủ giữ nhịp, không đủ làm giật.</li>
+</ul>
+<h3>Ta học kiểu Ballad nào?</h3>
+<p>Có một điều ít ai nói: <strong>&ldquo;Ballad&rdquo; không phải một kiểu đàn cố định</strong> — người ta quạt kiểu này, rải kiểu kia, cả một họ hàng đông đúc. Ôm hết thì rối và nản. Nên khoá này ta khôn ngoan: chỉ chọn <strong>vài kiểu phổ biến, dễ dùng nhất</strong>, bắt đầu từ chùm 2 (bạn đã có). Các bài kế sẽ cho bạn xem thầy đàn mẫu và tập kỹ hơn.</p>
+<blockquote>Ballad dạy bạn một chân lý người mới hay quên: <strong>đôi khi, đều đặn chính là đỉnh cao.</strong> Không phải lúc nào &ldquo;nhiều kỹ thuật&rdquo; cũng bằng một nhịp đều biết nâng niu người nghe.</blockquote>'
 WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
-
--- ── Ch3 Ballad: Ballad dùng chùm 2 như thế nào  (d2c00301) ──
-UPDATE edu_course_lessons SET content =
-'<h2>Ballad dùng chùm 2 như thế nào?</h2>
-<p>Ở Chương 2, bạn đã tự tay dựng nên một mẫu quạt chùm 2 trong nhịp 4/4 — và mình đã hé rằng nó chính là <strong>Ballad căn bản</strong>. Giờ hãy hiểu vì sao cái mẫu giản dị ấy lại có sức làm mềm lòng người đến thế.</p>
-<h3>Chất của Ballad: lãng mạn và nhẹ nhàng</h3>
-<p>Ballad là điệu của <strong>tình yêu</strong>, của những lời thủ thỉ. Nó không gào thét, không giật cục. Bí quyết nằm ở hai chữ: <strong>đều đặn</strong>. Tiết tấu Ballad chạy tương đối đều, mượt, <em>không giật</em> — và chính cái đều dịu dàng ấy là thứ ôm lấy người nghe.</p>
-<h3>Bí mật nằm ở tempo</h3>
-<p>Đây là điều tinh tế nhất, và cũng đẹp nhất, của Ballad:</p>
-<blockquote>Tempo của Ballad thường <strong>gần bằng nhịp tim con người</strong>. Khi tiếng đàn đập cùng nhịp với trái tim người nghe, cơ thể họ vô thức &ldquo;đồng bộ&rdquo; theo — và họ thấy dễ chịu, thấy tình, thấy được vỗ về. Đó không phải phép màu, đó là sinh học.</blockquote>
-<p>Vì thế, khi đệm Ballad, bạn đừng cố hoa mỹ. Hãy để chùm 2 chạy <strong>đều như hơi thở</strong>: ↓↑ ↓↑ ↓↑ ↓↑, các cú gần bằng nhau, không cú nào bật gắt lên phá vỡ sự êm ả. Nhấn phách mạnh chỉ <em>khẽ thôi</em>, đủ để giữ nhịp, không đủ để làm giật.</p>
-<h3>Vì sao nên thạo Ballad đầu tiên</h3>
-<p>Trong bốn điệu của Trình độ 2, Ballad là điệu <strong>bao dung nhất</strong>. Nó không đòi hỏi cú nhấn hiểm hóc hay đảo phách rắc rối. Chỉ cần bạn quạt <em>đều và nhẹ</em>, nó đã hay. Đó là lý do ta bắt đầu từ đây.</p>
-<blockquote>Ballad dạy bạn một chân lý mà người mới hay quên: <strong>đôi khi, đều đặn chính là đỉnh cao.</strong> Không phải lúc nào &ldquo;nhiều kỹ thuật&rdquo; cũng bằng &ldquo;một nhịp đều biết nâng niu người nghe&rdquo;.</blockquote>'
-WHERE id = 'd2c00301-0000-4000-8000-000000000000';
 
 -- ── Ch4 Bolero: Tính chất Bolero  (d2c00400) ──
 UPDATE edu_course_lessons SET content =
