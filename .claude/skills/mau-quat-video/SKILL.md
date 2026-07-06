@@ -22,8 +22,17 @@ Tạo một **Artifact HTML fullscreen** hiển thị một ô nhịp đệm há
 ```
 - `bpb` = số phách/ô; `bpm` = nhịp độ mặc định (Ballad ~72 = gần nhịp tim; Slowrock ~64; Valse ~100).
 - Mỗi `cell`: `s` = mũi tên `'↓'`/`'↑'` (hoặc chữ); `d` = độ dài tính bằng PHÁCH (0.5 = móc đơn/chùm 2, 1/3 = liên 3/chùm 3, .25 = kép). **Tổng `d` mỗi ô phải = `bpb`.**
-- `big:1` = mũi tên to (cú nhấn/đầu phách); `ac:1` = tô sáng "nhấn" (phách mạnh, thường phách 1 & 3); `c` = nhãn đếm dưới mũi tên (`'1' '&' '2'` hoặc `'Bùm' 'chát'`).
+- `str` = **độ mạnh phách → kích thước mũi tên** (xem QUY TẮC dưới); `c` = nhãn đếm dưới mũi tên (`'1' '&' '2'` hoặc `'Bùm' 'chát'`).
 - Barline tự vẽ ở ranh giới phách nguyên (code nhóm theo `cum` chạm số nguyên).
+
+## ⭐ QUY TẮC HỆ THỐNG — kích thước mũi tên = độ mạnh phách
+Áp cho MỌI hiển thị quạt trong hệ skill (mau-quat-video, và tinh thần chung cho [[strum-score]]):
+- `str:3` = **mạnh** → mũi tên **to & DÀI nhất** (phách 1).
+- `str:2` = **vừa** → to vừa (phách 3 trong 4/4).
+- `str:1` = **nhẹ** → nhỏ (phách 2 & 4).
+- `str:0` = **siêu nhỏ** → các phách phụ "và"/nốt kép/nốt lấp.
+
+Với **nhịp 4/4**, luật mạnh-nhẹ chuẩn là: **1 mạnh · 2 nhẹ · 3 vừa · 4 nhẹ**, các "và" siêu nhỏ. (Nhịp 3/4: 1 mạnh · 2,3 nhẹ.) Kích thước do class CSS `.cell.s0…s3` (font-size + scaleY) — bậc phải TÁCH BẠCH rõ, phách 3 (vừa) phải nhìn rõ lớn hơn phách 2/4 (nhẹ).
 
 ## Chữ ký từng điệu (theo thầy — xem [[project_dh2_course]])
 - **Ballad**: chùm 2, ↓↑ đều, nhấn phách 1&3, ~72bpm (đều, không giật).
@@ -39,4 +48,4 @@ Tạo một **Artifact HTML fullscreen** hiển thị một ô nhịp đệm há
 
 ## Lưu ý kỹ thuật
 - Artifact CSP chặn tài nguyên ngoài → mọi thứ inline, dùng font hệ thống (không nhúng webfont). Mũi tên ↓↑ là Unicode.
-- Giữ tông ấm gỗ (nâu walnut nền, mũi tên mật ong) — hợp thế giới guitar, tương phản tốt khi quay.
+- Palette theo **màu chung app TVA**: nền indigo sâu `#1e1b4b`, accent cam `#ea580c` (mũi tên đang chơi + vạch quét), mũi tên tĩnh indigo sáng `#b9bdec`. Nền xanh chroma `#00b140` khi bật.

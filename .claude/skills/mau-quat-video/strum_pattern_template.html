@@ -1,103 +1,99 @@
 <style>
   * { box-sizing: border-box; }
+  /* Palette theo màu chung app TVA: indigo nền sâu + cam accent */
   :root {
-    --ground: #17120d;      /* dark walnut */
-    --panel: #211a12;
-    --line: #3b2f21;
-    --idle: #b3a084;        /* honey-dim arrows */
-    --accent: #f5a524;      /* honey */
-    --accent-bright: #ffd479;
-    --downbeat: #fbe3b0;
-    --muted: #8a7a63;
-    --text: #efe4d2;
+    --ground: #1e1b4b;      /* indigo-950 */
+    --panel: #272264;
+    --line: #3b3684;
+    --idle: #b9bdec;        /* mũi tên tĩnh: indigo sáng */
+    --accent: #ea580c;      /* cam TVA */
+    --accent-bright: #fb923c;
+    --text: #eef0ff;
+    --muted: #8b8fce;
   }
-  .app.bg-green { --ground: #00b140; --panel: #00a83c; --line: #33c46b; --muted: #0a5a24; }
+  .app.bg-green { --ground: #00b140; --panel: #00a83c; --line: #33c46b; --muted: #0a5a24; --idle:#0c4a1e; }
 
   .app {
     position: fixed; inset: 0; background: var(--ground); color: var(--text);
     font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, Segoe UI, sans-serif;
-    display: flex; flex-direction: column; overflow: hidden; user-select: none;
-    -webkit-user-select: none;
+    display: flex; flex-direction: column; overflow: hidden; user-select: none; -webkit-user-select: none;
   }
 
-  /* ── Top chrome ── */
-  .top { display: flex; align-items: baseline; gap: 18px; padding: 22px 30px 0; flex-wrap: wrap; }
-  .top .name { font-size: clamp(20px, 3.4vw, 40px); font-weight: 800; letter-spacing: -.01em; }
-  .top .meter { font-size: clamp(15px, 2vw, 22px); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .top .bpm { margin-left: auto; font-size: clamp(13px,1.6vw,17px); color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
-  .top .bpm b { color: var(--text); font-size: 1.5em; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  /* ── Top chrome (nhỏ gọn) ── */
+  .top { display: flex; align-items: baseline; gap: 14px; padding: 16px 26px 0; flex-wrap: wrap; }
+  .top .name { font-size: clamp(16px, 2.4vw, 26px); font-weight: 800; letter-spacing: -.01em; }
+  .top .meter { font-size: clamp(13px, 1.5vw, 17px); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .top .bpm { margin-left: auto; font-size: clamp(11px,1.3vw,13px); color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+  .top .bpm b { color: var(--text); font-size: 1.55em; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 
   /* ── Stage ── */
-  .stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 10px 30px 6px; min-height: 0; }
-  .bar { position: relative; display: flex; align-items: stretch; gap: 0;
-    border-left: 2px solid var(--line); border-right: 2px solid var(--line); max-width: 100%; }
-  .beatgrp { display: flex; }
+  .stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 6px 26px; min-height: 0; }
+  .bar { position: relative; display: flex; align-items: flex-end; border-left: 2px solid var(--line); border-right: 2px solid var(--line); max-width: 100%; }
+  .beatgrp { display: flex; align-items: flex-end; }
   .beatgrp + .beatgrp { border-left: 1px solid var(--line); }
-  .cell { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 0 clamp(6px, 1.6vw, 22px); position: relative; }
-  .arrow { font-size: clamp(34px, 8.5vw, 104px); line-height: 1; font-weight: 700; color: var(--idle);
-    transition: color .12s ease, transform .12s ease, text-shadow .12s ease; }
-  .cell.big .arrow { font-size: clamp(46px, 11vw, 140px); }
-  .cell.accent .arrow { color: var(--downbeat); }
-  .cell .cnt { margin-top: 14px; font-size: clamp(13px, 1.9vw, 24px); font-weight: 700; color: var(--muted);
-    font-variant-numeric: tabular-nums; letter-spacing: .02em; transition: color .12s ease; min-height: 1.2em; }
-  .cell.accent .cnt { color: var(--idle); }
-  .cell .dot { position: absolute; top: -2px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
-    opacity: 0; transition: opacity .12s; }
-  .cell.accent .dot { opacity: .55; }
+  .cell { display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: 0 clamp(4px, 1.1vw, 15px); position: relative; }
+  /* Kích thước mũi tên = ĐỘ MẠNH phách (quy tắc hệ thống). s3 mạnh > s2 vừa > s1 nhẹ > s0 siêu nhỏ (và) */
+  .arrow { line-height: .9; font-weight: 800; color: var(--idle);
+    transition: color .11s ease, transform .11s ease, text-shadow .11s ease; transform-origin: bottom center; }
+  .cell.s3 .arrow { font-size: clamp(42px, 8.4vw, 98px); transform: scaleY(1.32); }
+  .cell.s2 .arrow { font-size: clamp(31px, 6.2vw, 72px); transform: scaleY(1.16); }
+  .cell.s1 .arrow { font-size: clamp(20px, 3.7vw, 44px); transform: scaleY(1.05); }
+  .cell.s0 .arrow { font-size: clamp(12px, 2.1vw, 25px); color: var(--muted); }
+  .cell .cnt { margin-top: 12px; font-size: clamp(11px, 1.4vw, 17px); font-weight: 700; color: var(--muted);
+    font-variant-numeric: tabular-nums; letter-spacing: .02em; transition: color .11s ease; min-height: 1.15em; }
+  .cell.s0 .cnt { font-size: clamp(9px, 1vw, 12px); }
+  .cell .dot { position: absolute; top: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity .11s; }
 
-  /* active */
-  .cell.on .arrow { color: var(--accent-bright); transform: translateY(-4px) scale(1.06);
-    text-shadow: 0 0 26px rgba(245,165,36,.55); }
+  /* active (đang chơi) */
+  .cell.on .arrow { color: var(--accent-bright); text-shadow: 0 0 22px rgba(234,88,12,.55); }
+  .cell.on.s3 .arrow { transform: scaleY(1.28) translateY(-3px); }
+  .cell.on.s2 .arrow { transform: scaleY(1.16) translateY(-3px); }
+  .cell.on.s1 .arrow { transform: scaleY(1.08) translateY(-3px); }
+  .cell.on.s0 .arrow { transform: translateY(-3px); color: var(--accent-bright); }
   .cell.on .cnt { color: var(--accent-bright); }
-  .cell.on .dot { opacity: 1; background: var(--accent-bright); box-shadow: 0 0 14px var(--accent); }
+  .cell.on .dot { opacity: 1; background: var(--accent-bright); box-shadow: 0 0 12px var(--accent); }
 
-  /* sweep line */
-  .sweep { position: absolute; top: 8%; bottom: 8%; width: 3px; border-radius: 2px;
-    background: linear-gradient(var(--accent-bright), transparent); opacity: .0; pointer-events: none;
-    box-shadow: 0 0 16px var(--accent); }
+  .sweep { position: absolute; top: 12%; bottom: 12%; width: 2px; border-radius: 2px;
+    background: linear-gradient(var(--accent-bright), transparent); opacity: 0; pointer-events: none; box-shadow: 0 0 14px var(--accent); }
   .playing .sweep { opacity: .5; }
 
-  /* count-in overlay */
   .countin { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-    background: rgba(15,11,7,.72); backdrop-filter: blur(2px); z-index: 5; }
+    background: rgba(20,17,55,.72); backdrop-filter: blur(2px); z-index: 5; }
   .countin.show { display: flex; }
-  .countin span { font-size: clamp(90px, 22vw, 260px); font-weight: 800; color: var(--accent-bright);
-    text-shadow: 0 0 40px rgba(245,165,36,.5); }
+  .countin span { font-size: clamp(80px, 20vw, 220px); font-weight: 800; color: var(--accent-bright); text-shadow: 0 0 40px rgba(234,88,12,.5); }
 
-  /* ── Controls ── */
-  .controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    padding: 16px 30px 24px; border-top: 1px solid var(--line); background: var(--panel); }
-  button, select { font-family: inherit; font-size: 15px; font-weight: 700; color: var(--text);
-    background: #2f2416; border: 1px solid var(--line); border-radius: 11px; padding: 11px 16px; cursor: pointer;
-    transition: background .15s, border-color .15s; }
-  button:hover, select:hover { background: #3a2d1a; border-color: var(--accent); }
+  /* ── Controls (nhỏ gọn) ── */
+  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 26px 18px; border-top: 1px solid var(--line); background: var(--panel); }
+  button, select { font-family: inherit; font-size: 14px; font-weight: 700; color: var(--text); background: #322c72; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover, select:hover { background: #3c3688; border-color: var(--accent); }
   button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .play { background: var(--accent); color: #201607; border-color: var(--accent); min-width: 128px; font-size: 16px; }
+  .play { background: var(--accent); color: #fff; border-color: var(--accent); min-width: 116px; font-size: 15px; }
   .play:hover { background: var(--accent-bright); }
-  .toggle.act { background: var(--accent); color: #201607; border-color: var(--accent); }
-  .bpmwrap { display: flex; align-items: center; gap: 10px; }
-  .bpmwrap input { width: clamp(120px, 18vw, 240px); accent-color: var(--accent); }
+  .toggle.act { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .bpmwrap input { width: clamp(110px, 16vw, 220px); accent-color: var(--accent); }
   .spacer { flex: 1; }
-  .hint { color: var(--muted); font-size: 12.5px; padding: 0 30px 16px; background: var(--panel); }
+  .hint { color: var(--muted); font-size: 12px; padding: 0 26px 14px; background: var(--panel); }
 
-  /* recording mode: hide chrome */
   .app.rec .top .bpm, .app.rec .controls, .app.rec .hint { display: none; }
-  .app.rec .top { padding-top: 30px; }
-  .exitrec { position: fixed; top: 14px; right: 14px; z-index: 20; display: none;
-    opacity: .25; transition: opacity .2s; }
+  .app.rec .top { padding-top: 22px; }
+  .exitrec { position: fixed; top: 12px; right: 12px; z-index: 20; display: none; opacity: .25; transition: opacity .2s; }
   .app.rec .exitrec { display: block; }
   .exitrec:hover { opacity: 1; }
 
   @media (prefers-reduced-motion: reduce) {
-    .arrow, .cnt, .cell.on .arrow { transition: none; transform: none; }
+    .arrow, .cnt { transition: none; }
+    .cell.on.s3 .arrow { transform: scaleY(1.28); }
+    .cell.on.s2 .arrow { transform: scaleY(1.16); }
+    .cell.on.s1 .arrow { transform: scaleY(1.08); }
+    .cell.on.s0 .arrow { transform: none; }
     .sweep { display: none; }
   }
 </style>
 
 <div class="app" id="app">
   <div class="top">
-    <div class="name" id="pname">Chùm 2 — Ballad</div>
+    <div class="name" id="pname">Ballad — chùm 2</div>
     <div class="meter" id="pmeter">4/4</div>
     <div class="bpm">Nhịp độ <b id="bpmv">72</b></div>
   </div>
@@ -110,9 +106,7 @@
 
   <div class="controls">
     <button class="play" id="play">▶ Chạy</button>
-    <div class="bpmwrap">
-      <input type="range" id="bpm" min="40" max="140" value="72" aria-label="Nhịp độ (BPM)">
-    </div>
+    <div class="bpmwrap"><input type="range" id="bpm" min="40" max="140" value="72" aria-label="Nhịp độ (BPM)"></div>
     <select id="preset" aria-label="Chọn mẫu quạt"></select>
     <button class="toggle act" id="tSound">🔊 Gõ nhịp</button>
     <button class="toggle act" id="tCount">Đếm vào</button>
@@ -120,33 +114,33 @@
     <button id="tBg">Nền xanh</button>
     <button id="tRec">🎬 Chế độ quay</button>
   </div>
-  <div class="hint">Mẹo quay: bấm <b>Chế độ quay</b> để ẩn nút · <b>Nền xanh</b> để tách lớp (chroma key) ghép vào video · phím <b>Space</b> chạy/dừng.</div>
-
+  <div class="hint">Kích thước mũi tên = độ mạnh phách (1 mạnh · 3 vừa · 2,4 nhẹ · các "và" siêu nhỏ) · <b>Chế độ quay</b> ẩn nút · <b>Nền xanh</b> để chroma key · <b>Space</b> chạy/dừng.</div>
   <button class="exitrec" id="exitRec">✕ Thoát chế độ quay</button>
 </div>
 
 <script>
 (function () {
+  // str = độ mạnh phách: 3 mạnh (to&dài nhất) · 2 vừa · 1 nhẹ · 0 siêu nhỏ (các "và"/nốt phụ)
   var PATTERNS = [
-    { id:'chum2', name:'Chùm 2 — Ballad', meter:'4/4', bpb:4, bpm:72, cells:[
-      {s:'↓',big:1,ac:1,c:'1',d:.5},{s:'↑',c:'&',d:.5},{s:'↓',c:'2',d:.5},{s:'↑',c:'&',d:.5},
-      {s:'↓',big:1,ac:1,c:'3',d:.5},{s:'↑',c:'&',d:.5},{s:'↓',c:'4',d:.5},{s:'↑',c:'&',d:.5} ]},
+    { id:'chum2', name:'Ballad — chùm 2', meter:'4/4', bpb:4, bpm:72, cells:[
+      {s:'↓',str:3,c:'1',d:.5},{s:'↑',str:0,c:'&',d:.5},{s:'↓',str:1,c:'2',d:.5},{s:'↑',str:0,c:'&',d:.5},
+      {s:'↓',str:2,c:'3',d:.5},{s:'↑',str:0,c:'&',d:.5},{s:'↓',str:1,c:'4',d:.5},{s:'↑',str:0,c:'&',d:.5} ]},
     { id:'den', name:'Nốt đen cơ bản', meter:'4/4', bpb:4, bpm:80, cells:[
-      {s:'↓',big:1,ac:1,c:'1',d:1},{s:'↓',c:'2',d:1},{s:'↓',big:1,ac:1,c:'3',d:1},{s:'↓',c:'4',d:1} ]},
+      {s:'↓',str:3,c:'1',d:1},{s:'↓',str:1,c:'2',d:1},{s:'↓',str:2,c:'3',d:1},{s:'↓',str:1,c:'4',d:1} ]},
     { id:'valse', name:'Valse — nốt đen', meter:'3/4', bpb:3, bpm:100, cells:[
-      {s:'↓',big:1,ac:1,c:'1',d:1},{s:'↑',c:'2',d:1},{s:'↑',c:'3',d:1} ]},
+      {s:'↓',str:3,c:'1',d:1},{s:'↑',str:1,c:'2',d:1},{s:'↑',str:1,c:'3',d:1} ]},
     { id:'valse2', name:'Valse — chùm 2', meter:'3/4', bpb:3, bpm:104, cells:[
-      {s:'↓',big:1,ac:1,c:'1',d:.5},{s:'↑',c:'&',d:.5},{s:'↓',c:'2',d:.5},{s:'↑',c:'&',d:.5},{s:'↓',c:'3',d:.5},{s:'↑',c:'&',d:.5} ]},
-    { id:'slow', name:'Chùm 3 — Slowrock', meter:'4/4', bpb:4, bpm:64, cells:[
-      {s:'↓',big:1,ac:1,c:'1',d:1/3},{s:'↑',c:'·',d:1/3},{s:'↓',c:'·',d:1/3},
-      {s:'↓',big:1,ac:1,c:'2',d:1/3},{s:'↑',c:'·',d:1/3},{s:'↓',c:'·',d:1/3},
-      {s:'↓',big:1,ac:1,c:'3',d:1/3},{s:'↑',c:'·',d:1/3},{s:'↓',c:'·',d:1/3},
-      {s:'↓',big:1,ac:1,c:'4',d:1/3},{s:'↑',c:'·',d:1/3},{s:'↓',c:'·',d:1/3} ]},
+      {s:'↓',str:3,c:'1',d:.5},{s:'↑',str:0,c:'&',d:.5},{s:'↓',str:1,c:'2',d:.5},{s:'↑',str:0,c:'&',d:.5},{s:'↓',str:1,c:'3',d:.5},{s:'↑',str:0,c:'&',d:.5} ]},
+    { id:'slow', name:'Slowrock — chùm 3', meter:'4/4', bpb:4, bpm:64, cells:[
+      {s:'↓',str:3,c:'1',d:1/3},{s:'↑',str:0,c:'·',d:1/3},{s:'↓',str:0,c:'·',d:1/3},
+      {s:'↓',str:1,c:'2',d:1/3},{s:'↑',str:0,c:'·',d:1/3},{s:'↓',str:0,c:'·',d:1/3},
+      {s:'↓',str:2,c:'3',d:1/3},{s:'↑',str:0,c:'·',d:1/3},{s:'↓',str:0,c:'·',d:1/3},
+      {s:'↓',str:1,c:'4',d:1/3},{s:'↑',str:0,c:'·',d:1/3},{s:'↓',str:0,c:'·',d:1/3} ]},
     { id:'bolero', name:'Bolero — đơn·kép·kép', meter:'4/4', bpb:4, bpm:72, cells:[
-      {s:'↓',big:1,ac:1,c:'Bùm',d:.5},{s:'↑',c:'chát',d:.25},{s:'↑',c:'chát',d:.25},
-      {s:'↓',big:1,ac:1,c:'Bùm',d:.5},{s:'↑',c:'chát',d:.25},{s:'↑',c:'chát',d:.25},
-      {s:'↓',big:1,ac:1,c:'Bùm',d:.5},{s:'↑',c:'chát',d:.25},{s:'↑',c:'chát',d:.25},
-      {s:'↓',big:1,ac:1,c:'Bùm',d:.5},{s:'↑',c:'chát',d:.25},{s:'↑',c:'chát',d:.25} ]}
+      {s:'↓',str:3,c:'Bùm',d:.5},{s:'↑',str:0,c:'chát',d:.25},{s:'↑',str:0,c:'chát',d:.25},
+      {s:'↓',str:1,c:'Bùm',d:.5},{s:'↑',str:0,c:'chát',d:.25},{s:'↑',str:0,c:'chát',d:.25},
+      {s:'↓',str:2,c:'Bùm',d:.5},{s:'↑',str:0,c:'chát',d:.25},{s:'↑',str:0,c:'chát',d:.25},
+      {s:'↓',str:1,c:'Bùm',d:.5},{s:'↑',str:0,c:'chát',d:.25},{s:'↑',str:0,c:'chát',d:.25} ]}
   ];
 
   var app=document.getElementById('app'), bar=document.getElementById('bar'), stage=document.getElementById('stage');
@@ -161,27 +155,19 @@
   PATTERNS.forEach(function(p,i){ var o=document.createElement('option'); o.value=i; o.textContent=p.name; presetSel.appendChild(o); });
 
   function buildBar(){
-    bar.innerHTML=''; cellEls=[]; starts=[];
-    var grp=null, acc=0, cum=0;
+    bar.innerHTML=''; cellEls=[]; starts=[]; var grp=null, cum=0;
     cur.cells.forEach(function(cell){
-      // group by whole-beat boundaries for barlines
       if(!grp || Math.abs(cum-Math.round(cum))<1e-6){ grp=document.createElement('div'); grp.className='beatgrp'; bar.appendChild(grp); }
-      var el=document.createElement('div'); el.className='cell'+(cell.big?' big':'')+(cell.ac?' accent':'');
+      var el=document.createElement('div'); el.className='cell s'+cell.str;
       el.innerHTML='<div class="dot"></div><div class="arrow">'+cell.s+'</div><div class="cnt">'+cell.c+'</div>';
       grp.appendChild(el); cellEls.push(el); starts.push(cum); cum+=cell.d;
     });
-    starts.push(cum); // sentinel = bpb
+    starts.push(cum);
   }
+  function activeIndex(pos){ for(var i=0;i<cellEls.length;i++){ if(pos>=starts[i]-1e-6 && pos<starts[i+1]-1e-6) return i; } return cellEls.length-1; }
 
-  function activeIndex(pos){
-    for(var i=0;i<cellEls.length;i++){ if(pos>=starts[i]-1e-6 && pos<starts[i+1]-1e-6) return i; }
-    return cellEls.length-1;
-  }
-
-  // ── audio click ──
   var actx=null;
-  function click(accent){
-    if(!sound) return;
+  function click(accent){ if(!sound) return;
     try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
       var t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain();
       o.type='square'; o.frequency.value=accent?2000:1300;
@@ -189,50 +175,28 @@
       o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+.06);
     }catch(e){}
   }
-
   function setActive(idx){ for(var i=0;i<cellEls.length;i++) cellEls[i].classList.toggle('on', i===idx); }
   function clearActive(){ cellEls.forEach(function(e){e.classList.remove('on');}); }
 
-  function loadPattern(p){
-    cur=p; bpm=p.bpm; bpmR.value=bpm; bpmv.textContent=bpm;
-    pname.textContent=p.name; pmeter.textContent=p.meter; buildBar(); stop();
-  }
+  function loadPattern(p){ cur=p; bpm=p.bpm; bpmR.value=bpm; bpmv.textContent=bpm; pname.textContent=p.name; pmeter.textContent=p.meter; buildBar(); stop(); }
 
   function frame(now){
     if(!playing) return;
-    var beatMs=60000/bpm;
-    var eb=(now-t0)/beatMs;            // elapsed beats since play pressed
-    if(doCount && eb<ciLen){
-      countin.classList.add('show'); clearActive();
-      var n=Math.floor(eb), rem=cur.bpb-n;
-      cinum.textContent=rem;
-      if(n!==lastClick){ lastClick=n; click(n===0); }
-      sweep.style.opacity='0';
-      raf=requestAnimationFrame(frame); return;
-    }
+    var beatMs=60000/bpm, eb=(now-t0)/beatMs;
+    if(doCount && eb<ciLen){ countin.classList.add('show'); clearActive();
+      var n=Math.floor(eb); cinum.textContent=cur.bpb-n; if(n!==lastClick){ lastClick=n; click(n===0); } sweep.style.opacity='0';
+      raf=requestAnimationFrame(frame); return; }
     countin.classList.remove('show'); sweep.style.opacity='';
-    var loopBeats=eb-(doCount?ciLen:0);
-    var pos=((loopBeats%cur.bpb)+cur.bpb)%cur.bpb;
+    var loopBeats=eb-(doCount?ciLen:0), pos=((loopBeats%cur.bpb)+cur.bpb)%cur.bpb;
     setActive(activeIndex(pos));
-    // sweep position across bar
     var r=bar.getBoundingClientRect(), sr=stage.getBoundingClientRect();
     sweep.style.left=(r.left-sr.left + (pos/cur.bpb)*r.width)+'px';
-    // metronome on each whole beat
-    var wb=Math.floor(loopBeats);
-    if(wb!==lastClick){ lastClick=wb; click(pos<0.5); }
+    var wb=Math.floor(loopBeats); if(wb!==lastClick){ lastClick=wb; click(pos<0.5); }
     raf=requestAnimationFrame(frame);
   }
-
-  function play(){
-    playing=true; app.classList.add('playing'); playBtn.textContent='⏸ Dừng';
-    ciLen=doCount?cur.bpb:0; lastClick=-1;
-    if(actx && actx.state==='suspended') actx.resume();
-    t0=performance.now(); raf=requestAnimationFrame(frame);
-  }
-  function stop(){
-    playing=false; app.classList.remove('playing'); playBtn.textContent='▶ Chạy';
-    cancelAnimationFrame(raf); clearActive(); countin.classList.remove('show'); sweep.style.opacity='0';
-  }
+  function play(){ playing=true; app.classList.add('playing'); playBtn.textContent='⏸ Dừng'; ciLen=doCount?cur.bpb:0; lastClick=-1;
+    if(actx && actx.state==='suspended') actx.resume(); t0=performance.now(); raf=requestAnimationFrame(frame); }
+  function stop(){ playing=false; app.classList.remove('playing'); playBtn.textContent='▶ Chạy'; cancelAnimationFrame(raf); clearActive(); countin.classList.remove('show'); sweep.style.opacity='0'; }
   function toggle(){ playing?stop():play(); }
 
   playBtn.addEventListener('click', toggle);
