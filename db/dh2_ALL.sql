@@ -1,4 +1,4 @@
--- ĐỆM HÁT TRÌNH ĐỘ 2 — CHẠY TẤT CẢ (khung + text + video + gảy theo). Idempotent.
+-- ĐỆM HÁT TRÌNH ĐỘ 2 — CHẠY TẤT CẢ. Idempotent.
 
 -- ==================== db/dh2_full.sql ====================
 -- ============================================================================
@@ -40,25 +40,28 @@ ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXC
 INSERT INTO edu_modules (id, course_id, name, order_index) VALUES ('271e9988-0e3b-4171-a829-139a6b399263', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 2: Điệu Valse', 1)
 ON CONFLICT (id) DO UPDATE SET course_id = EXCLUDED.course_id, name = EXCLUDED.name, order_index = EXCLUDED.order_index;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00600-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.1 — Tính chất Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 0, false, 'free')
+VALUES ('d2c00600-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.1 — Valse là gì — nhịp 3/4 chắc, rắn rỏi', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 0, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00601-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.2 — Nhịp 3/4: mạnh — nhẹ — nhẹ', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
+VALUES ('d2c00602-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.2 — Mẫu Valse nốt đen (kiểu cơ bản)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00602-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.3 — Mẫu Valse nốt đen', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 2, false, 'free')
+VALUES ('d2c00605-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.3 — Nền tập Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Valse)</p>', 2, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00603-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.4 — Mẫu Valse có chùm 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 3, false, 'free')
+VALUES ('d2c00606-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.4 — Gảy theo: 1 bài Valse — nốt đen (chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 3, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00604-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.5 — Trộn nốt đen và chùm 2 trong Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video / bài giảng</p>', 4, false, 'free')
+VALUES ('d2c00603-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.5 — Mẫu Valse có chùm 2 (mềm hơn — cho điệp khúc)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 4, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00605-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.6 — Nền tập Valse', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Valse)</p>', 5, false, 'free')
+VALUES ('d2c00604-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.6 — Tiết tấu trộn: Đen – đon đon – đon đon', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video / bài giảng — 1 nốt đen + 2 chùm 2 trong 3/4</p>', 5, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00606-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.7 — Gảy theo: 1 bài Valse (mọi lứa tuổi — chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 6, false, 'free')
+VALUES ('d2c00607-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.7 — Gảy theo: Scarborough Fair', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score) — áp dụng tiết tấu trộn</p>', 6, false, 'free')
+ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
+VALUES ('d2c00608-0000-4000-8000-000000000000', '271e9988-0e3b-4171-a829-139a6b399263', 'Bài 2.8 — Checkpoint Chương 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 7, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
 -- ===== Chương 3: Điệu Slowrock =====
@@ -165,12 +168,13 @@ DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
     'd2c00304-0000-4000-8000-000000000000',
     'd2c00109-0000-4000-8000-000000000000',
     'd2c00600-0000-4000-8000-000000000000',
-    'd2c00601-0000-4000-8000-000000000000',
     'd2c00602-0000-4000-8000-000000000000',
-    'd2c00603-0000-4000-8000-000000000000',
-    'd2c00604-0000-4000-8000-000000000000',
     'd2c00605-0000-4000-8000-000000000000',
     'd2c00606-0000-4000-8000-000000000000',
+    'd2c00603-0000-4000-8000-000000000000',
+    'd2c00604-0000-4000-8000-000000000000',
+    'd2c00607-0000-4000-8000-000000000000',
+    'd2c00608-0000-4000-8000-000000000000',
     'd2c00108-0000-4000-8000-000000000000',
     'd2c00501-0000-4000-8000-000000000000',
     'd2c00501-0000-4000-8000-000000000000',
@@ -329,17 +333,18 @@ UPDATE edu_course_lessons SET content =
 <p>Khi bạn buông được đôi tay, thôi không &ldquo;cố&rdquo; nữa mà để tiếng đàn tự trôi — đó là lúc bạn thật sự chơi được Slowrock.</p>'
 WHERE id = 'd2c00503-0000-4000-8000-000000000000';
 
--- ── Ch6 Valse: Tính chất Valse  (d2c00600) ──
+-- ── Ch6 Valse: Valse là gì — nhịp 3/4 chắc, rắn rỏi  (d2c00600) — GỘP tính chất + nhịp 3/4 ──
 UPDATE edu_course_lessons SET content =
-'<h2>Tính chất Valse: chắc chắn và rắn rỏi</h2>
-<p>Bạn đã cảm được cái &ldquo;xoay&rdquo; của nhịp 3/4 — <strong>MẠNH</strong>-nhẹ-nhẹ. Giờ ta khoác cho cái nhịp xoay ấy một tính cách. Và tính cách của Valse có thể khiến bạn bất ngờ: nó không mềm oặt như ta tưởng về những điệu nhảy cổ điển, mà ngược lại — <strong>chắc chắn, rắn rỏi, dứt khoát</strong>.</p>
-<h3>Hãy nhìn người ta nhảy Valse</h3>
-<p>Muốn hiểu chất của một điệu, cứ nhìn người ta cử động theo nó. Người nhảy Valse di chuyển thế nào? <strong>Rất dứt khoát.</strong> Từng bước gọn gàng, rõ ràng, đặt xuống là chắc, nhấc lên là ngay — không nhoè, không lê. Trong âm nhạc, kiểu chuyển động sắc nét, tách bạch ấy có một cái tên: <strong>staccato</strong> — nốt gọn, ngắt rõ.</p>
-<h3>Nên tiếng đàn Valse cơ bản cũng phải &ldquo;chắc&rdquo;</h3>
-<p>Vì thế, mẫu Valse nền tảng thường dùng <strong>nốt đen</strong> — mỗi phách một tiếng, gọn và rõ — với phách 1 nhấn chắc như một cú giậm gót:</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:17px;text-align:center;letter-spacing:.04em"><b>BÙM</b> – chát – chát &nbsp;|&nbsp; <b>BÙM</b> – chát – chát &nbsp;<span style="font-size:13px;color:#71717A">(gọn, dứt khoát)</span></div>
-<p>Bass chắc ở phách 1, hai cú gọn ở phách 2 và 3. Tất cả <em>sắc nét</em>, không nhoè vào nhau.</p>
-<blockquote>Đây là nét duyên riêng của Valse: chính sự <strong>rắn rỏi, dứt khoát</strong> ấy lại tạo nên vẻ <em>sang trọng, quý phái</em> — khác hẳn cái mềm mại của Ballad hay cái dập dềnh của Slowrock. Ở Valse, chắc chắn chính là đẹp.</blockquote>'
+'<h2>Valse là gì — nhịp 3/4 chắc, rắn rỏi</h2>
+<p>Suốt tới giờ, gần như mọi thứ ta làm đều trong nhịp <em>chẵn</em> — 2/4, 4/4, phách chia đôi ngăn nắp. Nhưng có cả một thế giới duyên dáng sống trong nhịp <em>lẻ</em>: nhịp <strong>3/4</strong> — ngôi nhà của điệu <strong>Valse</strong>.</p>
+<p>3/4 nghĩa là mỗi ô có <strong>ba phách</strong>, với công thức bạn phải thuộc nằm lòng:</p>
+<div style="background:#F4F4F5;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:19px;text-align:center;letter-spacing:.04em"><b>MẠNH</b> – nhẹ – nhẹ &nbsp;|&nbsp; <b>MẠNH</b> – nhẹ – nhẹ</div>
+<p>Thử đứng dậy bước theo &ldquo;<strong>một</strong>-hai-ba, <strong>một</strong>-hai-ba&rdquo;, dồn trọng tâm vào chữ &ldquo;một&rdquo; — cơ thể bạn tự muốn <em>lượn, muốn xoay</em>. Đó là lý do Valse gắn với những vũ điệu xoay tròn.</p>
+<h3>Tính cách Valse: chắc chắn, dứt khoát</h3>
+<p>Điều bất ngờ: Valse <strong>không mềm oặt</strong> như ta tưởng, mà ngược lại — <strong>chắc, rắn rỏi, dứt khoát</strong>. Nhìn người nhảy Valse mà xem: từng bước gọn gàng, đặt xuống là chắc, nhấc lên là ngay, không nhoè, không lê (nhạc lý gọi là <strong>staccato</strong> — nốt gọn, ngắt rõ).</p>
+<p>Nên mẫu Valse nền tảng dùng <strong>nốt đen</strong> — mỗi phách một tiếng gọn, phách 1 nhấn chắc như một cú giậm gót:</p>
+<div style="background:#F4F4F5;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:17px;text-align:center;letter-spacing:.04em"><b>BÙM</b> – chát – chát &nbsp;|&nbsp; <b>BÙM</b> – chát – chát</div>
+<blockquote>Chính sự <strong>rắn rỏi, dứt khoát</strong> ấy tạo nên vẻ <em>sang trọng</em> của Valse — khác hẳn cái mềm mại của Ballad hay dập dềnh của Slowrock. Ở Valse, chắc chắn chính là đẹp.</blockquote>'
 WHERE id = 'd2c00600-0000-4000-8000-000000000000';
 
 -- ── Ch6 Valse: Trộn nốt đen và chùm 2 trong Valse  (d2c00604) ──
@@ -436,18 +441,6 @@ UPDATE edu_course_lessons SET content =
 <p>Người mới hay bị &ldquo;giật cấp&rdquo;: đang nhẹ, vào điệp khúc thì đột ngột nện thình thình. Người chơi hay thì <em>dâng lên từ từ</em> ở câu cuối phiên khúc, như con sóng gom nước trước khi vỗ bờ, để khi vào điệp khúc, năng lượng đã sẵn sàng tuôn ra một cách <strong>tự nhiên, liền mạch</strong>.</p>
 <blockquote>Hãy thử ngay: chọn một bài quen, đệm phiên khúc thật khẽ, rồi bung điệp khúc. Lần đầu có thể gượng, nhưng chỉ cần cảm được sự tương phản ấy một lần, bạn sẽ nghiện — vì đó là lúc cây đàn bắt đầu <em>biết nói</em>.</blockquote>'
 WHERE id = 'd2c00705-0000-4000-8000-000000000000';
-
--- ── Ch6 (Valse): Nhịp 3/4 — mạnh, nhẹ, nhẹ  (d2c00601) ──
-UPDATE edu_course_lessons SET content =
-'<h2>Nhịp 3/4: một-hai-ba, một-hai-ba</h2>
-<p>Suốt Trình độ 2 tới giờ, gần như mọi thứ ta làm đều nằm trong nhịp chẵn — 2/4, 4/4 — nơi các phách chia đôi ngăn nắp. Nhưng có cả một thế giới âm nhạc duyên dáng sống trong nhịp <strong>lẻ</strong>: nhịp <strong>3/4</strong>, ngôi nhà của điệu <strong>Valse</strong>.</p>
-<p>3/4 nghĩa là mỗi ô nhịp có <strong>ba phách</strong>. Và cái hồn của nó nằm gọn trong một công thức bạn phải thuộc nằm lòng:</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:16px;margin:14px 0;font-size:19px;text-align:center;letter-spacing:.04em"><b>MẠNH</b> – nhẹ – nhẹ &nbsp;|&nbsp; <b>MẠNH</b> – nhẹ – nhẹ</div>
-<p>Phách 1 được nhấn rõ, hai phách sau buông nhẹ, rồi lại nhấn, lại buông. Cứ thế xoay vòng.</p>
-<h3>Vì sao 3/4 khiến người ta muốn xoay?</h3>
-<p>Hãy thử đứng dậy và bước theo &ldquo;<strong>một</strong>-hai-ba, <strong>một</strong>-hai-ba&rdquo;, dồn trọng tâm vào chữ &ldquo;một&rdquo;. Bạn có cảm thấy cơ thể mình muốn <em>lượn, muốn xoay</em> không? Đó chính xác là lý do điệu Valse gắn liền với những vũ điệu xoay tròn trong các buổi dạ hội cổ điển. Cái nhịp ba phách ấy đẩy cơ thể đi thành vòng, khác hẳn cái &ldquo;trái-phải, trái-phải&rdquo; thẳng thớm của nhịp chẵn.</p>
-<blockquote>Chỉ cần bạn cảm được cái &ldquo;xoay&rdquo; của <strong>MẠNH</strong>-nhẹ-nhẹ trong người, bạn đã nắm được linh hồn của Valse — phần còn lại chỉ là đưa nó xuống mười ngón tay.</blockquote>'
-WHERE id = 'd2c00601-0000-4000-8000-000000000000';
 
 -- ── Ch8: Quy trình đệm 1 bài mới — 5 bước  (d2c00800) ──
 UPDATE edu_course_lessons SET content =

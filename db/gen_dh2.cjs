@@ -36,13 +36,14 @@ const CHAPTERS = [
     { t: 'Checkpoint Chương 1', note: 'quiz 📝', n: 9 },
   ] },
   { code: 6, order: 1, mid: '271e9988-0e3b-4171-a829-139a6b399263', name: 'Chương 2: Điệu Valse', lessons: [
-    { t: 'Tính chất Valse', note: 'bài giảng (text)' },
-    { t: 'Nhịp 3/4: mạnh — nhẹ — nhẹ', note: 'bài giảng (text)' },
-    { t: 'Mẫu Valse nốt đen', note: 'video thầy quay 🎬' },
-    { t: 'Mẫu Valse có chùm 2', note: 'video thầy quay 🎬' },
-    { t: 'Trộn nốt đen và chùm 2 trong Valse', note: 'video / bài giảng' },
-    { t: 'Nền tập Valse', note: 'công cụ app 🎛 (Groove Lab điệu Valse)' },
-    { t: 'Gảy theo: 1 bài Valse (mọi lứa tuổi — chọn sau)', note: 'gảy theo 🎸 (Strum Score)' },
+    { t: 'Valse là gì — nhịp 3/4 chắc, rắn rỏi', note: 'bài giảng (text)', n: 0 },        // gộp tính chất + nhịp 3/4
+    { t: 'Mẫu Valse nốt đen (kiểu cơ bản)', note: 'video thầy quay 🎬', n: 2 },
+    { t: 'Nền tập Valse', note: 'công cụ app 🎛 (Groove Lab điệu Valse)', n: 5 },
+    { t: 'Gảy theo: 1 bài Valse — nốt đen (chọn sau)', note: 'gảy theo 🎸 (Strum Score)', n: 6 }, // thành quả sớm
+    { t: 'Mẫu Valse có chùm 2 (mềm hơn — cho điệp khúc)', note: 'video thầy quay 🎬', n: 3 },
+    { t: 'Tiết tấu trộn: Đen – đon đon – đon đon', note: 'video / bài giảng — 1 nốt đen + 2 chùm 2 trong 3/4', n: 4 },
+    { t: 'Gảy theo: Scarborough Fair', note: 'gảy theo 🎸 (Strum Score) — áp dụng tiết tấu trộn', n: 7 },
+    { t: 'Checkpoint Chương 2', note: 'quiz 📝', n: 8 },
   ] },
   { code: 5, order: 2, mid: M_SLOWROCK, name: 'Chương 3: Điệu Slowrock', lessons: [
     { t: 'Nghe thử chùm 3 và liên 3 — làm quen', note: 'bài giảng + audio mẫu', code: 1, n: 8 }, // giữ UUID d2c00108

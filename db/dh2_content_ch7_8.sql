@@ -78,18 +78,6 @@ UPDATE edu_course_lessons SET content =
 <blockquote>Hãy thử ngay: chọn một bài quen, đệm phiên khúc thật khẽ, rồi bung điệp khúc. Lần đầu có thể gượng, nhưng chỉ cần cảm được sự tương phản ấy một lần, bạn sẽ nghiện — vì đó là lúc cây đàn bắt đầu <em>biết nói</em>.</blockquote>'
 WHERE id = 'd2c00705-0000-4000-8000-000000000000';
 
--- ── Ch6 (Valse): Nhịp 3/4 — mạnh, nhẹ, nhẹ  (d2c00601) ──
-UPDATE edu_course_lessons SET content =
-'<h2>Nhịp 3/4: một-hai-ba, một-hai-ba</h2>
-<p>Suốt Trình độ 2 tới giờ, gần như mọi thứ ta làm đều nằm trong nhịp chẵn — 2/4, 4/4 — nơi các phách chia đôi ngăn nắp. Nhưng có cả một thế giới âm nhạc duyên dáng sống trong nhịp <strong>lẻ</strong>: nhịp <strong>3/4</strong>, ngôi nhà của điệu <strong>Valse</strong>.</p>
-<p>3/4 nghĩa là mỗi ô nhịp có <strong>ba phách</strong>. Và cái hồn của nó nằm gọn trong một công thức bạn phải thuộc nằm lòng:</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:16px;margin:14px 0;font-size:19px;text-align:center;letter-spacing:.04em"><b>MẠNH</b> – nhẹ – nhẹ &nbsp;|&nbsp; <b>MẠNH</b> – nhẹ – nhẹ</div>
-<p>Phách 1 được nhấn rõ, hai phách sau buông nhẹ, rồi lại nhấn, lại buông. Cứ thế xoay vòng.</p>
-<h3>Vì sao 3/4 khiến người ta muốn xoay?</h3>
-<p>Hãy thử đứng dậy và bước theo &ldquo;<strong>một</strong>-hai-ba, <strong>một</strong>-hai-ba&rdquo;, dồn trọng tâm vào chữ &ldquo;một&rdquo;. Bạn có cảm thấy cơ thể mình muốn <em>lượn, muốn xoay</em> không? Đó chính xác là lý do điệu Valse gắn liền với những vũ điệu xoay tròn trong các buổi dạ hội cổ điển. Cái nhịp ba phách ấy đẩy cơ thể đi thành vòng, khác hẳn cái &ldquo;trái-phải, trái-phải&rdquo; thẳng thớm của nhịp chẵn.</p>
-<blockquote>Chỉ cần bạn cảm được cái &ldquo;xoay&rdquo; của <strong>MẠNH</strong>-nhẹ-nhẹ trong người, bạn đã nắm được linh hồn của Valse — phần còn lại chỉ là đưa nó xuống mười ngón tay.</blockquote>'
-WHERE id = 'd2c00601-0000-4000-8000-000000000000';
-
 -- ── Ch8: Quy trình đệm 1 bài mới — 5 bước  (d2c00800) ──
 UPDATE edu_course_lessons SET content =
 '<h2>Cầm một bài lạ trên tay — bắt đầu từ đâu?</h2>

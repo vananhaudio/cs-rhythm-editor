@@ -73,17 +73,18 @@ UPDATE edu_course_lessons SET content =
 <p>Khi bạn buông được đôi tay, thôi không &ldquo;cố&rdquo; nữa mà để tiếng đàn tự trôi — đó là lúc bạn thật sự chơi được Slowrock.</p>'
 WHERE id = 'd2c00503-0000-4000-8000-000000000000';
 
--- ── Ch6 Valse: Tính chất Valse  (d2c00600) ──
+-- ── Ch6 Valse: Valse là gì — nhịp 3/4 chắc, rắn rỏi  (d2c00600) — GỘP tính chất + nhịp 3/4 ──
 UPDATE edu_course_lessons SET content =
-'<h2>Tính chất Valse: chắc chắn và rắn rỏi</h2>
-<p>Bạn đã cảm được cái &ldquo;xoay&rdquo; của nhịp 3/4 — <strong>MẠNH</strong>-nhẹ-nhẹ. Giờ ta khoác cho cái nhịp xoay ấy một tính cách. Và tính cách của Valse có thể khiến bạn bất ngờ: nó không mềm oặt như ta tưởng về những điệu nhảy cổ điển, mà ngược lại — <strong>chắc chắn, rắn rỏi, dứt khoát</strong>.</p>
-<h3>Hãy nhìn người ta nhảy Valse</h3>
-<p>Muốn hiểu chất của một điệu, cứ nhìn người ta cử động theo nó. Người nhảy Valse di chuyển thế nào? <strong>Rất dứt khoát.</strong> Từng bước gọn gàng, rõ ràng, đặt xuống là chắc, nhấc lên là ngay — không nhoè, không lê. Trong âm nhạc, kiểu chuyển động sắc nét, tách bạch ấy có một cái tên: <strong>staccato</strong> — nốt gọn, ngắt rõ.</p>
-<h3>Nên tiếng đàn Valse cơ bản cũng phải &ldquo;chắc&rdquo;</h3>
-<p>Vì thế, mẫu Valse nền tảng thường dùng <strong>nốt đen</strong> — mỗi phách một tiếng, gọn và rõ — với phách 1 nhấn chắc như một cú giậm gót:</p>
-<div style="background:#F4F4F5;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:17px;text-align:center;letter-spacing:.04em"><b>BÙM</b> – chát – chát &nbsp;|&nbsp; <b>BÙM</b> – chát – chát &nbsp;<span style="font-size:13px;color:#71717A">(gọn, dứt khoát)</span></div>
-<p>Bass chắc ở phách 1, hai cú gọn ở phách 2 và 3. Tất cả <em>sắc nét</em>, không nhoè vào nhau.</p>
-<blockquote>Đây là nét duyên riêng của Valse: chính sự <strong>rắn rỏi, dứt khoát</strong> ấy lại tạo nên vẻ <em>sang trọng, quý phái</em> — khác hẳn cái mềm mại của Ballad hay cái dập dềnh của Slowrock. Ở Valse, chắc chắn chính là đẹp.</blockquote>'
+'<h2>Valse là gì — nhịp 3/4 chắc, rắn rỏi</h2>
+<p>Suốt tới giờ, gần như mọi thứ ta làm đều trong nhịp <em>chẵn</em> — 2/4, 4/4, phách chia đôi ngăn nắp. Nhưng có cả một thế giới duyên dáng sống trong nhịp <em>lẻ</em>: nhịp <strong>3/4</strong> — ngôi nhà của điệu <strong>Valse</strong>.</p>
+<p>3/4 nghĩa là mỗi ô có <strong>ba phách</strong>, với công thức bạn phải thuộc nằm lòng:</p>
+<div style="background:#F4F4F5;border-radius:8px;padding:14px 16px;margin:14px 0;font-size:19px;text-align:center;letter-spacing:.04em"><b>MẠNH</b> – nhẹ – nhẹ &nbsp;|&nbsp; <b>MẠNH</b> – nhẹ – nhẹ</div>
+<p>Thử đứng dậy bước theo &ldquo;<strong>một</strong>-hai-ba, <strong>một</strong>-hai-ba&rdquo;, dồn trọng tâm vào chữ &ldquo;một&rdquo; — cơ thể bạn tự muốn <em>lượn, muốn xoay</em>. Đó là lý do Valse gắn với những vũ điệu xoay tròn.</p>
+<h3>Tính cách Valse: chắc chắn, dứt khoát</h3>
+<p>Điều bất ngờ: Valse <strong>không mềm oặt</strong> như ta tưởng, mà ngược lại — <strong>chắc, rắn rỏi, dứt khoát</strong>. Nhìn người nhảy Valse mà xem: từng bước gọn gàng, đặt xuống là chắc, nhấc lên là ngay, không nhoè, không lê (nhạc lý gọi là <strong>staccato</strong> — nốt gọn, ngắt rõ).</p>
+<p>Nên mẫu Valse nền tảng dùng <strong>nốt đen</strong> — mỗi phách một tiếng gọn, phách 1 nhấn chắc như một cú giậm gót:</p>
+<div style="background:#F4F4F5;border-radius:8px;padding:12px 16px;margin:14px 0;font-size:17px;text-align:center;letter-spacing:.04em"><b>BÙM</b> – chát – chát &nbsp;|&nbsp; <b>BÙM</b> – chát – chát</div>
+<blockquote>Chính sự <strong>rắn rỏi, dứt khoát</strong> ấy tạo nên vẻ <em>sang trọng</em> của Valse — khác hẳn cái mềm mại của Ballad hay dập dềnh của Slowrock. Ở Valse, chắc chắn chính là đẹp.</blockquote>'
 WHERE id = 'd2c00600-0000-4000-8000-000000000000';
 
 -- ── Ch6 Valse: Trộn nốt đen và chùm 2 trong Valse  (d2c00604) ──
