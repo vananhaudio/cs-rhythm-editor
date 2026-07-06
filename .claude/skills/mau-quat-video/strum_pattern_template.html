@@ -1,94 +1,52 @@
 <style>
   * { box-sizing: border-box; }
-  /* Palette theo màu chung app TVA: indigo nền sâu + cam accent */
   :root {
-    --ground: #1e1b4b;      /* indigo-950 */
-    --panel: #272264;
-    --line: #3b3684;
-    --idle: #b9bdec;        /* mũi tên tĩnh: indigo sáng */
-    --accent: #ea580c;      /* cam TVA */
-    --accent-bright: #fb923c;
-    --text: #eef0ff;
-    --muted: #8b8fce;
+    --bg: #ffffff;
+    --panel: #f4f4f5;
+    --line: #e4e4e7;
+    --accent: #4f46e5;      /* tím indigo — accent */
+    --accent-press: #4338ca;
+    --text: #18181b;
+    --muted: #71717a;
   }
-  .app.bg-green { --ground: #00b140; --panel: #00a83c; --line: #33c46b; --muted: #0a5a24; --idle:#0c4a1e; }
-
   .app {
-    position: fixed; inset: 0; background: var(--ground); color: var(--text);
-    font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, Segoe UI, sans-serif;
+    position: fixed; inset: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     display: flex; flex-direction: column; overflow: hidden; user-select: none; -webkit-user-select: none;
   }
-
-  /* ── Top chrome (nhỏ gọn) ── */
-  .top { display: flex; align-items: baseline; gap: 14px; padding: 16px 26px 0; flex-wrap: wrap; }
-  .top .name { font-size: clamp(16px, 2.4vw, 26px); font-weight: 800; letter-spacing: -.01em; }
-  .top .meter { font-size: clamp(13px, 1.5vw, 17px); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .top .bpm { margin-left: auto; font-size: clamp(11px,1.3vw,13px); color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+  .top { display: flex; align-items: baseline; gap: 14px; padding: 16px 26px 6px; flex-wrap: wrap; }
+  .top .name { font-size: clamp(16px, 2.4vw, 25px); font-weight: 800; letter-spacing: -.01em; }
+  .top .meter { font-size: clamp(13px, 1.5vw, 17px); font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .top .bpm { margin-left: auto; font-size: clamp(11px,1.3vw,13px); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
   .top .bpm b { color: var(--text); font-size: 1.55em; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 
-  /* ── Stage ── */
-  .stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 6px 26px; min-height: 0; }
-  .bar { position: relative; display: flex; align-items: flex-end; border-left: 2px solid var(--line); border-right: 2px solid var(--line); max-width: 100%; }
-  .beatgrp { display: flex; align-items: flex-end; }
-  .beatgrp + .beatgrp { border-left: 1px solid var(--line); }
-  .cell { display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    padding: 0 clamp(4px, 1.1vw, 15px); position: relative; }
-  /* Kích thước mũi tên = ĐỘ MẠNH phách (quy tắc hệ thống). s3 mạnh > s2 vừa > s1 nhẹ > s0 siêu nhỏ (và) */
-  .arrow { line-height: .9; font-weight: 800; color: var(--idle);
-    transition: color .11s ease, transform .11s ease, text-shadow .11s ease; transform-origin: bottom center; }
-  .cell.s3 .arrow { font-size: clamp(42px, 8.4vw, 98px); transform: scaleY(1.32); }
-  .cell.s2 .arrow { font-size: clamp(31px, 6.2vw, 72px); transform: scaleY(1.16); }
-  .cell.s1 .arrow { font-size: clamp(20px, 3.7vw, 44px); transform: scaleY(1.05); }
-  .cell.s0 .arrow { font-size: clamp(12px, 2.1vw, 25px); color: var(--muted); }
-  .cell .cnt { margin-top: 12px; font-size: clamp(11px, 1.4vw, 17px); font-weight: 700; color: var(--muted);
-    font-variant-numeric: tabular-nums; letter-spacing: .02em; transition: color .11s ease; min-height: 1.15em; }
-  .cell.s0 .cnt { font-size: clamp(9px, 1vw, 12px); }
-  .cell .dot { position: absolute; top: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: 0; transition: opacity .11s; }
+  .stage { flex: 1; position: relative; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  .recdot { position: absolute; top: 14px; left: 18px; display: none; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; color: #dc2626; background: rgba(255,255,255,.9); padding: 5px 11px; border-radius: 20px; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+  .recdot.show { display: flex; }
+  .recdot i { width: 10px; height: 10px; border-radius: 50%; background: #dc2626; animation: bl 1s infinite; }
+  @keyframes bl { 50% { opacity: .25; } }
 
-  /* active (đang chơi) */
-  .cell.on .arrow { color: var(--accent-bright); text-shadow: 0 0 22px rgba(234,88,12,.55); }
-  .cell.on.s3 .arrow { transform: scaleY(1.28) translateY(-3px); }
-  .cell.on.s2 .arrow { transform: scaleY(1.16) translateY(-3px); }
-  .cell.on.s1 .arrow { transform: scaleY(1.08) translateY(-3px); }
-  .cell.on.s0 .arrow { transform: translateY(-3px); color: var(--accent-bright); }
-  .cell.on .cnt { color: var(--accent-bright); }
-  .cell.on .dot { opacity: 1; background: var(--accent-bright); box-shadow: 0 0 12px var(--accent); }
-
-  .sweep { position: absolute; top: 12%; bottom: 12%; width: 2px; border-radius: 2px;
-    background: linear-gradient(var(--accent-bright), transparent); opacity: 0; pointer-events: none; box-shadow: 0 0 14px var(--accent); }
-  .playing .sweep { opacity: .5; }
-
-  .countin { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-    background: rgba(20,17,55,.72); backdrop-filter: blur(2px); z-index: 5; }
-  .countin.show { display: flex; }
-  .countin span { font-size: clamp(80px, 20vw, 220px); font-weight: 800; color: var(--accent-bright); text-shadow: 0 0 40px rgba(234,88,12,.5); }
-
-  /* ── Controls (nhỏ gọn) ── */
-  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 26px 18px; border-top: 1px solid var(--line); background: var(--panel); }
-  button, select { font-family: inherit; font-size: 14px; font-weight: 700; color: var(--text); background: #322c72; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer; transition: background .15s, border-color .15s; }
-  button:hover, select:hover { background: #3c3688; border-color: var(--accent); }
+  .controls { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; padding: 13px 26px; border-top: 1px solid var(--line); background: var(--panel); }
+  button, select { font-family: inherit; font-size: 14px; font-weight: 700; color: var(--text); background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  button:hover, select:hover { border-color: var(--accent); }
   button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .play { background: var(--accent); color: #fff; border-color: var(--accent); min-width: 116px; font-size: 15px; }
-  .play:hover { background: var(--accent-bright); }
+  button:disabled { opacity: .5; cursor: default; }
+  .play { background: var(--accent); color: #fff; border-color: var(--accent); min-width: 112px; font-size: 15px; }
+  .play:hover { background: var(--accent-press); }
+  .save { background: #fff; color: var(--accent); border-color: var(--accent); }
+  .save:hover { background: #eef2ff; }
   .toggle.act { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .bpmwrap input { width: clamp(110px, 16vw, 220px); accent-color: var(--accent); }
+  .bpmwrap input { width: clamp(110px, 15vw, 210px); accent-color: var(--accent); }
   .spacer { flex: 1; }
   .hint { color: var(--muted); font-size: 12px; padding: 0 26px 14px; background: var(--panel); }
 
   .app.rec .top .bpm, .app.rec .controls, .app.rec .hint { display: none; }
   .app.rec .top { padding-top: 22px; }
-  .exitrec { position: fixed; top: 12px; right: 12px; z-index: 20; display: none; opacity: .25; transition: opacity .2s; }
+  .exitrec { position: fixed; top: 12px; right: 12px; z-index: 20; display: none; opacity: .3; }
   .app.rec .exitrec { display: block; }
   .exitrec:hover { opacity: 1; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .arrow, .cnt { transition: none; }
-    .cell.on.s3 .arrow { transform: scaleY(1.28); }
-    .cell.on.s2 .arrow { transform: scaleY(1.16); }
-    .cell.on.s1 .arrow { transform: scaleY(1.08); }
-    .cell.on.s0 .arrow { transform: none; }
-    .sweep { display: none; }
-  }
 </style>
 
 <div class="app" id="app">
@@ -99,9 +57,8 @@
   </div>
 
   <div class="stage" id="stage">
-    <div class="bar" id="bar"></div>
-    <div class="sweep" id="sweep"></div>
-    <div class="countin" id="countin"><span id="cinum">4</span></div>
+    <canvas id="cv"></canvas>
+    <div class="recdot" id="recdot"><i></i><span id="reclbl">Đang lưu… nhịp 1/16</span></div>
   </div>
 
   <div class="controls">
@@ -110,17 +67,18 @@
     <select id="preset" aria-label="Chọn mẫu quạt"></select>
     <button class="toggle act" id="tSound">🔊 Gõ nhịp</button>
     <button class="toggle act" id="tCount">Đếm vào</button>
+    <button class="save" id="save">⬇ Lưu video 16 nhịp</button>
     <div class="spacer"></div>
     <button id="tBg">Nền xanh</button>
     <button id="tRec">🎬 Chế độ quay</button>
   </div>
-  <div class="hint">Kích thước mũi tên = độ mạnh phách (1 mạnh · 3 vừa · 2,4 nhẹ · các "và" siêu nhỏ) · <b>Chế độ quay</b> ẩn nút · <b>Nền xanh</b> để chroma key · <b>Space</b> chạy/dừng.</div>
+  <div class="hint">Kích thước mũi tên = độ mạnh phách (1 mạnh · 3 vừa · 2,4 nhẹ · các "và" siêu nhỏ). <b>Lưu video 16 nhịp</b> xuất file .webm nền trắng (hoặc <b>Nền xanh</b> để chroma key) chèn vào video. <b>Space</b> chạy/dừng.</div>
   <button class="exitrec" id="exitRec">✕ Thoát chế độ quay</button>
 </div>
 
 <script>
 (function () {
-  // str = độ mạnh phách: 3 mạnh (to&dài nhất) · 2 vừa · 1 nhẹ · 0 siêu nhỏ (các "và"/nốt phụ)
+  // str = độ mạnh phách → kích thước mũi tên: 3 mạnh(to&dài nhất) · 2 vừa · 1 nhẹ · 0 siêu nhỏ
   var PATTERNS = [
     { id:'chum2', name:'Ballad — chùm 2', meter:'4/4', bpb:4, bpm:72, cells:[
       {s:'↓',str:3,c:'1',d:.5},{s:'↑',str:0,c:'&',d:.5},{s:'↓',str:1,c:'2',d:.5},{s:'↑',str:0,c:'&',d:.5},
@@ -143,31 +101,72 @@
       {s:'↓',str:1,c:'Bùm',d:.5},{s:'↑',str:0,c:'chát',d:.25},{s:'↑',str:0,c:'chát',d:.25} ]}
   ];
 
-  var app=document.getElementById('app'), bar=document.getElementById('bar'), stage=document.getElementById('stage');
-  var sweep=document.getElementById('sweep'), countin=document.getElementById('countin'), cinum=document.getElementById('cinum');
+  var app=document.getElementById('app'), stage=document.getElementById('stage'), cv=document.getElementById('cv'), ctx=cv.getContext('2d');
   var playBtn=document.getElementById('play'), bpmR=document.getElementById('bpm'), bpmv=document.getElementById('bpmv');
   var presetSel=document.getElementById('preset'), pname=document.getElementById('pname'), pmeter=document.getElementById('pmeter');
-  var tSound=document.getElementById('tSound'), tCount=document.getElementById('tCount'), tBg=document.getElementById('tBg'), tRec=document.getElementById('tRec'), exitRec=document.getElementById('exitRec');
+  var tSound=document.getElementById('tSound'), tCount=document.getElementById('tCount'), saveBtn=document.getElementById('save');
+  var tBg=document.getElementById('tBg'), tRec=document.getElementById('tRec'), exitRec=document.getElementById('exitRec');
+  var recdot=document.getElementById('recdot'), reclbl=document.getElementById('reclbl');
 
-  var cur=PATTERNS[0], bpm=72, playing=false, sound=true, doCount=true;
-  var cellEls=[], starts=[], t0=0, raf=0, lastClick=-1, ciLen=0;
+  var cur=PATTERNS[0], bpm=72, playing=false, sound=true, doCount=true, greenOn=false;
+  var starts=[], t0=0, raf=0, lastClick=-1, ciLen=0, ciActive=false, W=0, H=0, dpr=1;
+  var recording=false, recorder=null, recStopTO=0;
+  var SCALE={3:1, 2:0.66, 1:0.46, 0:0.19};
 
   PATTERNS.forEach(function(p,i){ var o=document.createElement('option'); o.value=i; o.textContent=p.name; presetSel.appendChild(o); });
 
-  function buildBar(){
-    bar.innerHTML=''; cellEls=[]; starts=[]; var grp=null, cum=0;
-    cur.cells.forEach(function(cell){
-      if(!grp || Math.abs(cum-Math.round(cum))<1e-6){ grp=document.createElement('div'); grp.className='beatgrp'; bar.appendChild(grp); }
-      var el=document.createElement('div'); el.className='cell s'+cell.str;
-      el.innerHTML='<div class="dot"></div><div class="arrow">'+cell.s+'</div><div class="cnt">'+cell.c+'</div>';
-      grp.appendChild(el); cellEls.push(el); starts.push(cum); cum+=cell.d;
-    });
-    starts.push(cum);
+  function resize(){
+    var r=stage.getBoundingClientRect(); dpr=Math.min(window.devicePixelRatio||1, 2);
+    W=r.width; H=r.height; cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); if(!playing) draw(0,-1,null);
   }
-  function activeIndex(pos){ for(var i=0;i<cellEls.length;i++){ if(pos>=starts[i]-1e-6 && pos<starts[i+1]-1e-6) return i; } return cellEls.length-1; }
+  window.addEventListener('resize', resize);
+
+  function computeStarts(){ starts=[]; var cum=0; cur.cells.forEach(function(c){ starts.push(cum); cum+=c.d; }); starts.push(cum); }
+  function activeIndex(pos){ for(var i=0;i<cur.cells.length;i++){ if(pos>=starts[i]-1e-6 && pos<starts[i+1]-1e-6) return i; } return cur.cells.length-1; }
+
+  function drawArrow(x, cy, dir, L, color, glow){
+    var half=L/2, headW=L*0.26, headLen=L*0.34, shaftW=Math.max(2, L*0.12);
+    var tipY = dir==='down'? cy+half : cy-half, tailY = dir==='down'? cy-half : cy+half;
+    var neckY = dir==='down'? tipY-headLen : tipY+headLen;
+    ctx.save();
+    if(glow){ ctx.shadowColor=color; ctx.shadowBlur=16; }
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=shaftW; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x,tailY); ctx.lineTo(x,neckY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,tipY); ctx.lineTo(x-headW,neckY); ctx.lineTo(x+headW,neckY); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function draw(pos, activeIdx, ci){
+    var w=W,h=H;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = greenOn? '#00b140' : '#ffffff'; ctx.fillRect(0,0,w,h);
+    var padX=Math.max(30, w*0.07), innerW=w-2*padX;
+    var cy=h*0.40, countY=h*0.72, barTop=h*0.13, barBot=h*0.60;
+    var xAt=function(b){ return padX+(b/cur.bpb)*innerW; };
+    // barlines
+    ctx.strokeStyle = greenOn?'#29a84c':'#e4e4e7'; ctx.lineWidth=1;
+    for(var b=1;b<cur.bpb;b++){ var xb=xAt(b); ctx.beginPath(); ctx.moveTo(xb,barTop); ctx.lineTo(xb,barBot); ctx.stroke(); }
+    ctx.lineWidth=2.5; ctx.strokeStyle=greenOn?'#177a37':'#a1a1aa';
+    [0,cur.bpb].forEach(function(b){ var xe=xAt(b); ctx.beginPath(); ctx.moveTo(xe,barTop-6); ctx.lineTo(xe,barBot+6); ctx.stroke(); });
+    // sweep
+    if(playing && ci==null){ var xs=xAt(pos); ctx.strokeStyle='rgba(79,70,229,.45)'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(xs,barTop-4); ctx.lineTo(xs,barBot+4); ctx.stroke(); }
+    // arrows + counts
+    var maxL=h*0.46;
+    cur.cells.forEach(function(cell,i){
+      var cx=xAt((starts[i]+starts[i+1])/2), on=(i===activeIdx && ci==null), col=on?'#dc2626':'#1a1a1a';
+      drawArrow(cx, cy, cell.s==='↓'?'down':'up', maxL*SCALE[cell.str], col, on);
+      ctx.fillStyle=on?'#dc2626':(greenOn?'#0a5a24':'#71717a');
+      ctx.font=(cell.str===0?'600 ':'700 ')+Math.round(cell.str===0?h*0.05:h*0.064)+'px system-ui,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(cell.c, cx, countY);
+    });
+    // count-in overlay
+    if(ci!=null){ ctx.fillStyle='rgba(255,255,255,.62)'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#4f46e5'; ctx.font='800 '+Math.round(h*0.4)+'px system-ui,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(ci, w/2, h/2); }
+  }
 
   var actx=null;
-  function click(accent){ if(!sound) return;
+  function click(accent){ if(!sound||recording) return;
     try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
       var t=actx.currentTime, o=actx.createOscillator(), g=actx.createGain();
       o.type='square'; o.frequency.value=accent?2000:1300;
@@ -175,40 +174,56 @@
       o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t+.06);
     }catch(e){}
   }
-  function setActive(idx){ for(var i=0;i<cellEls.length;i++) cellEls[i].classList.toggle('on', i===idx); }
-  function clearActive(){ cellEls.forEach(function(e){e.classList.remove('on');}); }
-
-  function loadPattern(p){ cur=p; bpm=p.bpm; bpmR.value=bpm; bpmv.textContent=bpm; pname.textContent=p.name; pmeter.textContent=p.meter; buildBar(); stop(); }
 
   function frame(now){
     if(!playing) return;
     var beatMs=60000/bpm, eb=(now-t0)/beatMs;
-    if(doCount && eb<ciLen){ countin.classList.add('show'); clearActive();
-      var n=Math.floor(eb); cinum.textContent=cur.bpb-n; if(n!==lastClick){ lastClick=n; click(n===0); } sweep.style.opacity='0';
-      raf=requestAnimationFrame(frame); return; }
-    countin.classList.remove('show'); sweep.style.opacity='';
-    var loopBeats=eb-(doCount?ciLen:0), pos=((loopBeats%cur.bpb)+cur.bpb)%cur.bpb;
-    setActive(activeIndex(pos));
-    var r=bar.getBoundingClientRect(), sr=stage.getBoundingClientRect();
-    sweep.style.left=(r.left-sr.left + (pos/cur.bpb)*r.width)+'px';
+    if(ciActive && eb<ciLen){ var n=Math.floor(eb); if(n!==lastClick){lastClick=n;click(n===0);} draw(0,-1,cur.bpb-n); raf=requestAnimationFrame(frame); return; }
+    var loopBeats=eb-(ciActive?ciLen:0), pos=((loopBeats%cur.bpb)+cur.bpb)%cur.bpb;
+    if(recording){ var bar=Math.min(16, Math.floor(loopBeats/cur.bpb)+1); reclbl.textContent='Đang lưu… nhịp '+bar+'/16'; }
     var wb=Math.floor(loopBeats); if(wb!==lastClick){ lastClick=wb; click(pos<0.5); }
+    draw(pos, activeIndex(pos), null);
     raf=requestAnimationFrame(frame);
   }
-  function play(){ playing=true; app.classList.add('playing'); playBtn.textContent='⏸ Dừng'; ciLen=doCount?cur.bpb:0; lastClick=-1;
+  function play(rec){ playing=true; app.classList.add('playing'); playBtn.textContent='⏸ Dừng';
+    ciActive=(doCount && !rec); ciLen=ciActive?cur.bpb:0; lastClick=-1;
     if(actx && actx.state==='suspended') actx.resume(); t0=performance.now(); raf=requestAnimationFrame(frame); }
-  function stop(){ playing=false; app.classList.remove('playing'); playBtn.textContent='▶ Chạy'; cancelAnimationFrame(raf); clearActive(); countin.classList.remove('show'); sweep.style.opacity='0'; }
-  function toggle(){ playing?stop():play(); }
+  function stop(){ playing=false; app.classList.remove('playing'); playBtn.textContent='▶ Chạy'; cancelAnimationFrame(raf); draw(0,-1,null); }
+  function toggle(){ playing?stop():play(false); }
+
+  function loadPattern(p){ cur=p; bpm=p.bpm; bpmR.value=bpm; bpmv.textContent=bpm; pname.textContent=p.name; pmeter.textContent=p.meter; computeStarts(); stop(); }
+
+  // ── Lưu video 16 nhịp ──
+  function saveVideo(){
+    if(recording) return;
+    if(!('MediaRecorder' in window) || !cv.captureStream){ alert('Trình duyệt không hỗ trợ lưu video. Hãy dùng Chrome mới nhất.'); return; }
+    var stream=cv.captureStream(30);
+    var mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':(MediaRecorder.isTypeSupported('video/webm;codecs=vp8')?'video/webm;codecs=vp8':'video/webm');
+    var chunks=[]; try{ recorder=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:8000000}); }catch(e){ alert('Không tạo được bộ ghi video: '+e.message); return; }
+    recorder.ondataavailable=function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop=function(){
+      var blob=new Blob(chunks,{type:'video/webm'}), url=URL.createObjectURL(blob);
+      var a=document.createElement('a'); a.href=url; a.download='mauquat-'+cur.id+'-16nhip.webm'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+      recording=false; recdot.classList.remove('show'); saveBtn.disabled=false; saveBtn.textContent='⬇ Lưu video 16 nhịp'; stop();
+    };
+    stop(); recording=true; saveBtn.disabled=true; saveBtn.textContent='⏺ Đang lưu…'; recdot.classList.add('show'); reclbl.textContent='Đang lưu… nhịp 1/16';
+    play(true); recorder.start();
+    var durMs = 16*cur.bpb*(60000/bpm);
+    recStopTO=setTimeout(function(){ if(recorder && recorder.state!=='inactive') recorder.stop(); }, durMs+150);
+  }
 
   playBtn.addEventListener('click', toggle);
   bpmR.addEventListener('input', function(){ bpm=+bpmR.value; bpmv.textContent=bpm; });
   presetSel.addEventListener('change', function(){ loadPattern(PATTERNS[+presetSel.value]); presetSel.blur(); });
   tSound.addEventListener('click', function(){ sound=!sound; tSound.classList.toggle('act',sound); });
   tCount.addEventListener('click', function(){ doCount=!doCount; tCount.classList.toggle('act',doCount); });
-  tBg.addEventListener('click', function(){ var g=app.classList.toggle('bg-green'); tBg.textContent=g?'Nền tối':'Nền xanh'; });
-  tRec.addEventListener('click', function(){ app.classList.add('rec'); });
-  exitRec.addEventListener('click', function(){ app.classList.remove('rec'); });
-  document.addEventListener('keydown', function(e){ if(e.code==='Space'){ e.preventDefault(); toggle(); } if(e.key==='Escape') app.classList.remove('rec'); });
+  tBg.addEventListener('click', function(){ greenOn=!greenOn; tBg.textContent=greenOn?'Nền trắng':'Nền xanh'; if(!playing) draw(0,-1,null); });
+  saveBtn.addEventListener('click', saveVideo);
+  tRec.addEventListener('click', function(){ app.classList.add('rec'); setTimeout(resize,50); });
+  exitRec.addEventListener('click', function(){ app.classList.remove('rec'); setTimeout(resize,50); });
+  document.addEventListener('keydown', function(e){ if(e.code==='Space'){ e.preventDefault(); toggle(); } if(e.key==='Escape'){ app.classList.remove('rec'); setTimeout(resize,50); } });
 
-  loadPattern(PATTERNS[0]);
+  computeStarts(); loadPattern(PATTERNS[0]); resize();
 })();
 </script>

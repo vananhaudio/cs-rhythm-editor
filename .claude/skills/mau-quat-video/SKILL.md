@@ -41,11 +41,13 @@ Với **nhịp 4/4**, luật mạnh-nhẹ chuẩn là: **1 mạnh · 2 nhẹ · 
 - **Valse**: nhịp 3/4, nốt đen "Bùm-chát-chát" (chắc, staccato); biến thể chùm 2 cho điệp khúc (nhún nhảy hơn).
 
 ## Tính năng trang (đã có sẵn trong template)
-- **🎬 Chế độ quay**: ẩn nút + chữ, chỉ còn ô nhịp sạch (phím Esc thoát).
-- **Nền xanh**: đổi nền chroma (#00b140) để key-out ghép overlay lên video.
-- BPM slider, **🔊 Gõ nhịp** (WebAudio click), **Đếm vào** (đếm ngược 1 ô), phím **Space** chạy/dừng.
-- `prefers-reduced-motion`: tắt sweep + transition.
+- **⬇ Lưu video 16 nhịp**: xuất file `.webm` (MediaRecorder + `canvas.captureStream(30)`, 16 ô nhịp, không đếm vào) để thầy chèn/overlay vào video. Nền theo trạng thái hiện tại (trắng, hoặc **Nền xanh** để chroma key). Tên file `mauquat-<id>-16nhip.webm`.
+- **🎬 Chế độ quay**: ẩn nút + chữ, chỉ còn ô nhịp sạch (Esc thoát) — dùng khi screen-record.
+- **Nền xanh**: đổi nền chroma `#00b140` để key-out.
+- BPM slider, **🔊 Gõ nhịp** (WebAudio click — KHÔNG lọt vào file video vì captureStream chỉ lấy canvas), **Đếm vào**, phím **Space** chạy/dừng.
 
 ## Lưu ý kỹ thuật
-- Artifact CSP chặn tài nguyên ngoài → mọi thứ inline, dùng font hệ thống (không nhúng webfont). Mũi tên ↓↑ là Unicode.
-- Palette theo **màu chung app TVA**: nền indigo sâu `#1e1b4b`, accent cam `#ea580c` (mũi tên đang chơi + vạch quét), mũi tên tĩnh indigo sáng `#b9bdec`. Nền xanh chroma `#00b140` khi bật.
+- **Vẽ bằng CANVAS 2D** (không phải DOM) — nguồn CHUNG cho cả hiển thị lẫn xuất video. Mũi tên vẽ vector (shaft + head), độ dài theo `SCALE={3:1,2:.66,1:.46,0:.19}`.
+- Artifact CSP chặn tài nguyên ngoài → mọi thứ inline, font hệ thống.
+- Palette theo **màu app TVA (bản trắng)**: nền **trắng** `#ffffff`, accent **tím** `#4f46e5` (UI + vạch quét + count-in), mũi tên **đen** `#1a1a1a` tĩnh → **đỏ** `#dc2626` khi đang chơi. Nền xanh chroma `#00b140` khi bật.
+- Xuất `.webm` (vp9/vp8): nếu trình biên tập của thầy không nhận webm → chuyển sang mov/mp4, hoặc dùng bản Nền xanh rồi chroma key.
