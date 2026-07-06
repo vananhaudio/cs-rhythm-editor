@@ -27,8 +27,8 @@ const CHAPTERS = [
     { ex: '1bc21a87-d39f-48ee-a62c-a753902631cf', title: 'Chùm 2 — nốt móc đơn' },
     { t: 'Cách đếm chùm 2 (1 & 2 & 3 & 4 &)', note: 'bài giảng (text) + tiếng đếm mẫu', n: 5 },
     { t: 'Thực hành gõ chùm 2', note: 'công cụ app 🎛 (metronome / gõ theo)', n: 6 },
+    { ex: 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9', title: 'Thực hành quạt chùm 2 (xuống–lên)' }, // dời từ Ch2: quạt = ĐỘNG TÁC (thực hành chùm 2)
     { ex: 'd76e8798-76bd-485e-b0fb-4fadb6b98458', title: 'Chùm 2 ứng dụng vào nhịp 2/4' }, // dời từ Ch2 (nội dung là chùm nốt)
-    { t: 'Thực hành quạt chùm 2 — xuống/lên đều', note: 'video thầy quay 🎬', n: 7 },
     { t: 'Nghe thử chùm 3 và liên 3 — biết trước, học kỹ sau', note: 'bài giảng + audio mẫu', n: 8 },
     { t: 'Checkpoint Chương 1', note: 'quiz 📝', n: 9 },
   ] },
@@ -36,7 +36,6 @@ const CHAPTERS = [
     { t: 'Tiết tấu là gì — mẫu lặp trong âm nhạc', note: 'bài giảng (text/slide)', n: 0 },
     { t: 'Ký hiệu quạt: xuống ↓ và lên ↑', note: 'bài giảng (text)', n: 1 },
     { t: 'Tay phải: đều, nhẹ, cổ tay thả lỏng', note: 'video thầy quay 🎬', n: 2 },
-    { ex: 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9', title: 'Tập quạt chùm 2 (thực hành)' },
     { t: 'Ứng dụng chùm 2 vào nhịp 4/4', note: 'video / bài giảng', n: 5 },
     { t: 'Nền tập quạt — tập với trống + bass', note: 'công cụ app 🎛 (Groove Lab nền tập)', n: 6 },
     { ex: '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829', title: 'Gảy theo: Happy Birthday — quạt chùm 2' },

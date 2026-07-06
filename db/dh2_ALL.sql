@@ -29,10 +29,8 @@ ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXC
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
 VALUES ('d2c00106-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.7 — Thực hành gõ chùm 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (metronome / gõ theo)</p>', 6, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 7, title = 'Bài 1.8 — Chùm 2 ứng dụng vào nhịp 2/4' WHERE id = 'd76e8798-76bd-485e-b0fb-4fadb6b98458';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00107-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.9 — Thực hành quạt chùm 2 — xuống/lên đều', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 8, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 7, title = 'Bài 1.8 — Thực hành quạt chùm 2 (xuống–lên)' WHERE id = 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 8, title = 'Bài 1.9 — Chùm 2 ứng dụng vào nhịp 2/4' WHERE id = 'd76e8798-76bd-485e-b0fb-4fadb6b98458';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
 VALUES ('d2c00108-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.10 — Nghe thử chùm 3 và liên 3 — biết trước, học kỹ sau', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng + audio mẫu</p>', 9, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
@@ -52,20 +50,19 @@ ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXC
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
 VALUES ('d2c00202-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.3 — Tay phải: đều, nhẹ, cổ tay thả lỏng', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 2, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155', order_index = 3, title = 'Bài 2.4 — Tập quạt chùm 2 (thực hành)' WHERE id = 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00205-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.5 — Ứng dụng chùm 2 vào nhịp 4/4', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video / bài giảng</p>', 4, false, 'free')
+VALUES ('d2c00205-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.4 — Ứng dụng chùm 2 vào nhịp 4/4', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video / bài giảng</p>', 3, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00206-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.6 — Nền tập quạt — tập với trống + bass', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab nền tập)</p>', 5, false, 'free')
+VALUES ('d2c00206-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.5 — Nền tập quạt — tập với trống + bass', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab nền tập)</p>', 4, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155', order_index = 6, title = 'Bài 2.7 — Gảy theo: Happy Birthday — quạt chùm 2' WHERE id = '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829';
-UPDATE edu_course_lessons SET module_id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155', order_index = 7, title = 'Bài 2.8 — Gảy theo: Jingle Bells — quạt chùm 2' WHERE id = '4692e092-3591-4dda-99d6-265b82e0d34c';
+UPDATE edu_course_lessons SET module_id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155', order_index = 5, title = 'Bài 2.6 — Gảy theo: Happy Birthday — quạt chùm 2' WHERE id = '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829';
+UPDATE edu_course_lessons SET module_id = '46e55dbe-dd8f-40b5-a8ec-6464219f7155', order_index = 6, title = 'Bài 2.7 — Gảy theo: Jingle Bells — quạt chùm 2' WHERE id = '4692e092-3591-4dda-99d6-265b82e0d34c';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00209-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.9 — Gảy theo: 1 bài Việt đơn giản (chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 8, false, 'free')
+VALUES ('d2c00209-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.8 — Gảy theo: 1 bài Việt đơn giản (chọn sau)', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score)</p>', 7, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00210-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.10 — Checkpoint Chương 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 9, false, 'free')
+VALUES ('d2c00210-0000-4000-8000-000000000000', '46e55dbe-dd8f-40b5-a8ec-6464219f7155', 'Bài 2.9 — Checkpoint Chương 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 8, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
 -- ===== Chương 3: Điệu Ballad =====
@@ -209,7 +206,6 @@ DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
     'd2c00103-0000-4000-8000-000000000000',
     'd2c00105-0000-4000-8000-000000000000',
     'd2c00106-0000-4000-8000-000000000000',
-    'd2c00107-0000-4000-8000-000000000000',
     'd2c00108-0000-4000-8000-000000000000',
     'd2c00109-0000-4000-8000-000000000000',
     'd2c00200-0000-4000-8000-000000000000',
@@ -715,27 +711,6 @@ NOTIFY pgrst, 'reload schema';
 -- DH2 — CỤM VIDEO 🎬 (thầy quay). Mỗi bài: content = "điều cần chú ý khi xem"
 -- (soạn trước, chạy được ngay); khi có link → đổi lesson_type='video' + content_url.
 -- ============================================================================
-
--- ── Ch1 · Thực hành quạt chùm 2 — xuống/lên đều  (d2c00107) ──────────────────
--- Bài này dùng VIDEO HƯỚNG DẪN CHÙM 2 (tổng quát) đã có sẵn của thầy — CHỜ link.
--- (Video "Quạt ballad chùm 2" đã chuyển xuống mục Mẫu quạt Ballad ở Chương 3.)
-UPDATE edu_course_lessons SET lesson_type = 'text', content_url = NULL, content =
-'<h2>Xem thầy đàn — rồi bắt chước cho tới khi thành phản xạ</h2>
-<p>Bạn đã hiểu <em>lý thuyết</em> của chùm 2 và cách đếm &ldquo;1 và 2 và&rdquo;. Nhưng đàn là môn của đôi tay, không phải của cái đầu. Ở bài này, hãy xem thật kỹ tay phải của thầy, rồi tạm dừng video và làm theo — càng nhiều lần càng tốt.</p>
-<h3>Bốn điều hãy dán mắt vào khi xem</h3>
-<ul>
-<li><strong>Cổ tay thả lỏng</strong> — tay đàn không gồng, không cứng. Lực đến từ cả cẳng tay đung đưa, không phải từ mấy ngón bấu vào.</li>
-<li><strong>Con lắc đều</strong> — tay đưa lên xuống <em>đều như con lắc đồng hồ</em>, không dừng khựng giữa chừng, kể cả lúc chưa cần tiếng.</li>
-<li><strong>Xuống ở &ldquo;số&rdquo;, lên ở &ldquo;và&rdquo;</strong> — cú ↓ rơi đúng đầu phách (1 2 3 4), cú ↑ chen vào chữ &ldquo;và&rdquo;.</li>
-<li><strong>Tiếng đều, không giật</strong> — các cú quạt gần bằng nhau, mượt mà.</li>
-</ul>
-<h3>Cách luyện theo video</h3>
-<p>Xem một lượt để nắm tổng thể. Lượt hai, <em>tắt tiếng đàn của thầy</em> và quạt theo tay thầy trên màn hình. Lượt ba, tự đàn và tự đếm to. Đừng nóng vội — thà chậm mà đều, còn hơn nhanh mà giật.</p>
-<blockquote>Mục tiêu không phải &ldquo;quạt được&rdquo;, mà là quạt tới lúc bạn <strong>không cần nghĩ nữa</strong>. Khi tay tự chạy đều còn đầu óc rảnh để hát — đó là lúc bạn thật sự có nó.</blockquote>'
-WHERE id = 'd2c00107-0000-4000-8000-000000000000';
-
--- Khi thầy gửi link video chùm 2 (tổng quát) đã có sẵn, chạy thêm:
--- UPDATE edu_course_lessons SET lesson_type='video', content_url='<LINK>' WHERE id='d2c00107-0000-4000-8000-000000000000';
 
 -- ── Ch3 Ballad · Mẫu quạt Ballad cơ bản  (d2c00302) ─────────────────────────
 -- Video "Quạt ballad chùm 2 — Thầy Văn Anh Guitar" (PwSGfSGeuaE)
