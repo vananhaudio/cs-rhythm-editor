@@ -16,7 +16,7 @@ import GuitarTuner from './GuitarTuner'
 import NoteGame from './NoteGame'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
-import { HBD_CHUM2, HBD_TD1, STRUM_BALLAD, STRUM_JINGLE, STRUM_ODE } from './elearn/strumSongs'
+import { HBD_CHUM2, HBD_TD1, STRUM_BALLAD, STRUM_JINGLE, STRUM_ODE, STRUM_SCARBOROUGH } from './elearn/strumSongs'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
 import SongBuilderPage from './SongBuilderPage'
@@ -204,6 +204,9 @@ export default function AppRouter() {
   }
   if (path === '/ode' || path.startsWith('/ode')) {
     return <ChordStrumPlayer song={STRUM_ODE} onClose={() => { window.location.href = '/start' }} />
+  }
+  if (path === '/scarborough' || path.startsWith('/scarborough')) {
+    return <ChordStrumPlayer song={STRUM_SCARBOROUGH} onClose={() => { window.location.href = '/start' }} />
   }
   // ── Route /chum2 (THỬ NGHIỆM slide Chùm 2 Nốt Móc Đơn) ──
   if (path === '/chum2-strum' || path.startsWith('/chum2-strum')) {

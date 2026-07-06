@@ -529,4 +529,8 @@ NOTIFY pgrst, 'reload schema';
 UPDATE edu_course_lessons SET lesson_type = 'native', content_url = 'song-ode-ballad'
   WHERE id = 'd2c00304-0000-4000-8000-000000000000';
 
+-- Ch2 Valse · Gảy theo: Scarborough Fair (d2c00607) → Strum Score 'song-scarborough' (tiết tấu trộn)
+UPDATE edu_course_lessons SET lesson_type = 'native', content_url = 'song-scarborough'
+  WHERE id = 'd2c00607-0000-4000-8000-000000000000';
+
 NOTIFY pgrst, 'reload schema';
