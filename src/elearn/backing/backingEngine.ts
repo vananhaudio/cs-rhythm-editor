@@ -228,19 +228,21 @@ export class BackingEngine {
     g.gain.exponentialRampToValueAtTime(0.0008, t + 0.03)
     o.connect(g).connect(this.clickBus); o.start(t); o.stop(t + 0.04)
   }
-  // Giai điệu — tiếng chuông/music-box (sine cơ bản + sine octave lấp lánh), gảy rồi ngân tắt dần.
+  // Giai điệu — tiếng ấm, NGÂN VANG (triangle ấm + octave lấp lánh); thân giữ lâu rồi ngân tắt quá nốt một chút.
   private melodyNote(t: number, freq: number, durSec: number) {
     const ctx = this.ctx!
     const o1 = ctx.createOscillator(), o2 = ctx.createOscillator()
     const g = ctx.createGain(), g2 = ctx.createGain()
-    o1.type = 'sine'; o1.frequency.setValueAtTime(freq, t)
-    o2.type = 'sine'; o2.frequency.setValueAtTime(freq * 2, t); g2.gain.value = 0.28
-    const dur = Math.min(Math.max(durSec, 0.28), 1.3)
+    o1.type = 'triangle'; o1.frequency.setValueAtTime(freq, t)        // triangle: ấm & dày hơn sine thuần
+    o2.type = 'sine'; o2.frequency.setValueAtTime(freq * 2, t); g2.gain.value = 0.20
+    const dur = Math.min(Math.max(durSec, 0.5), 3.2)                   // nới ngân (trước cap 1.3s → cụt)
+    const end = t + dur + 0.35                                         // ngân vượt hết nốt một chút cho vang
     g.gain.setValueAtTime(0.0001, t)
-    g.gain.exponentialRampToValueAtTime(0.55, t + 0.006)
-    g.gain.exponentialRampToValueAtTime(0.0008, t + dur)
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.01)                 // gảy
+    g.gain.exponentialRampToValueAtTime(0.24, t + Math.min(0.35, dur * 0.4))  // vào thân, giữ tiếng lâu hơn
+    g.gain.exponentialRampToValueAtTime(0.0008, end)                  // ngân tắt dần
     o1.connect(g); o2.connect(g2).connect(g); g.connect(this.melBus)
-    o1.start(t); o2.start(t); o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05)
+    o1.start(t); o2.start(t); o1.stop(end + 0.05); o2.stop(end + 0.05)
   }
 
   // Đếm vào — vào MASTER (luôn nghe được dù click trong loop bị mute)
