@@ -1,7 +1,7 @@
 // Sinh khung SQL cho khoá ĐỆM HÁT TRÌNH ĐỘ 2 (DH2) — 8 chương theo mạch học.
 // Chạy: node db/gen_dh2.cjs  → db/dh2_full.sql
 // Bài CŨ: UPDATE (đổi chương/thứ tự, đổi tên nếu cần). Bài MỚI: INSERT placeholder (text, ⏳).
-// Idempotent. ON CONFLICT của bài mới CHỈ cập nhật module/thứ tự → KHÔNG đè nội dung thầy điền sau.
+// Idempotent. ON CONFLICT của bài mới cập nhật module/thứ tự/tiêu đề → KHÔNG đè NỘI DUNG (content) thầy điền sau.
 const fs = require('fs')
 const esc = (s) => String(s).replace(/'/g, "''")
 const DH2 = 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b'
@@ -25,8 +25,8 @@ const CHAPTERS = [
     { t: 'Chùm nốt là gì — chia 1 phách thành nhiều tiếng', note: 'bài giảng (text/slide)' },
     { ex: '1bc21a87-d39f-48ee-a62c-a753902631cf' },
     { t: 'Cách đếm chùm 2: 1 & 2 & 3 & 4 &', note: 'bài giảng (text) + tiếng đếm mẫu' },
-    { t: 'Xưởng gõ chùm 2', note: 'công cụ app 🎛 (metronome / gõ theo)' },
-    { t: 'Xưởng quạt chùm 2 — xuống/lên đều', note: 'video thầy quay 🎬' },
+    { t: 'Thực hành gõ chùm 2', note: 'công cụ app 🎛 (metronome / gõ theo)' },
+    { t: 'Thực hành quạt chùm 2 — xuống/lên đều', note: 'video thầy quay 🎬' },
     { t: 'Nghe thử chùm 3 và liên 3 — biết trước, học kỹ sau', note: 'bài giảng + audio mẫu' },
     { t: 'Checkpoint Chương 1', note: 'quiz 📝' },
   ] },
@@ -127,7 +127,7 @@ CHAPTERS.forEach((c) => {
       const content = `<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> ${esc(l.note)}</p>`
       sql += `INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)\n`
       sql += `VALUES ('${id}', '${c.mid}', '${esc(l.t)}', 'text', '${content}', ${oi}, false, 'free')\n`
-      sql += `ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index;\n`
+      sql += `ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;\n`
     }
   })
   sql += `\n`

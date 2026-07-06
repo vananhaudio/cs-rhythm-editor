@@ -3,7 +3,7 @@
 -- (soạn trước, chạy được ngay); khi có link → đổi lesson_type='video' + content_url.
 -- ============================================================================
 
--- ── Ch1 · Xưởng quạt chùm 2 — xuống/lên đều  (d2c00107) ──────────────────────
+-- ── Ch1 · Thực hành quạt chùm 2 — xuống/lên đều  (d2c00107) ──────────────────
 -- Bài này dùng VIDEO HƯỚNG DẪN CHÙM 2 (tổng quát) đã có sẵn của thầy — CHỜ link.
 -- (Video "Quạt ballad chùm 2" đã chuyển xuống mục Mẫu quạt Ballad ở Chương 3.)
 UPDATE edu_course_lessons SET lesson_type = 'text', content_url = NULL, content =
