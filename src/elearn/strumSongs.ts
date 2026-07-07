@@ -69,19 +69,24 @@ export const STRUM_JINGLE: StrumSong = {
   ],
 }
 
-// Amazing Grace (thánh ca — công cộng) — VALSE 3/4 nốt đen, tông Đô. Nền synth Valse.
-// Vòng hợp âm chuẩn (I–IV–V): mỗi câu 4 ô. Melody để trống — thêm chuẩn khi có file (tránh 'gầy').
+// Amazing Grace (thánh ca — công cộng) — VALSE 3/4 nốt đen, tông SOL. Nền synth Valse.
+// Melody trích từ file violin của thầy (Sol trưởng), có nốt lấy đà (dịch +2 để khớp ô nhịp).
+// Vòng hợp âm chuẩn G–C–D. Ô 1 = lấy đà (nốt A rơi phách 3).
+const AMAZING_MELODY: MelodyNote[] = [
+  { t: 2, dur: 1, midi: 69 }, { t: 3, dur: 2, midi: 74 }, { t: 5, dur: 0.5, midi: 78 }, { t: 5.5, dur: 0.5, midi: 74 }, { t: 6, dur: 2, midi: 78 }, { t: 8, dur: 1, midi: 76 }, { t: 9, dur: 2, midi: 74 }, { t: 11, dur: 1, midi: 71 }, { t: 12, dur: 2, midi: 69 }, { t: 14, dur: 1, midi: 69 }, { t: 15, dur: 2, midi: 74 }, { t: 17, dur: 0.5, midi: 78 }, { t: 17.5, dur: 0.5, midi: 74 }, { t: 18, dur: 2, midi: 78 }, { t: 20, dur: 1, midi: 76 }, { t: 21, dur: 3, midi: 81 }, { t: 24, dur: 2, midi: 81 }, { t: 26, dur: 1, midi: 78 }, { t: 27, dur: 1.5, midi: 81 }, { t: 28.5, dur: 0.5, midi: 78 }, { t: 29, dur: 0.5, midi: 81 }, { t: 29.5, dur: 0.5, midi: 78 }, { t: 30, dur: 2, midi: 74 }, { t: 32, dur: 1, midi: 69 }, { t: 33, dur: 1.5, midi: 71 }, { t: 34.5, dur: 0.5, midi: 74 }, { t: 35, dur: 0.5, midi: 74 }, { t: 35.5, dur: 0.5, midi: 71 }, { t: 36, dur: 2, midi: 69 }, { t: 38, dur: 1, midi: 69 }, { t: 39, dur: 2, midi: 74 }, { t: 41, dur: 0.5, midi: 78 }, { t: 41.5, dur: 0.5, midi: 74 }, { t: 42, dur: 2, midi: 78 }, { t: 44, dur: 1, midi: 76 }, { t: 45, dur: 3, midi: 74 },
+]
 export const STRUM_AMAZING: StrumSong = {
   title: 'Amazing Grace — quạt theo nền (Valse)',
   bpm: 96, timeSignature: 3, gridOffset: 0, patternId: 'den',
   backing: { styleId: 'valse', tempo: 96 },
+  melody: AMAZING_MELODY,
   loop: false,
   bars: [
-    { chord: 'C' }, { chord: 'C' }, { chord: 'F' }, { chord: 'C' },   // Amazing grace how sweet the sound
-    { chord: 'C' }, { chord: 'C' }, { chord: 'G' }, { chord: 'G' },   // that saved a wretch like me
-    { chord: 'C' }, { chord: 'C' }, { chord: 'F' }, { chord: 'C' },   // I once was lost but now am found
-    { chord: 'C' }, { chord: 'G' }, { chord: 'C' },                    // was blind but now I see
-    { chord: 'C', oneStrum: true },                                    // ô kết
+    { chord: 'G' }, { chord: 'G' }, { chord: 'G' }, { chord: 'C' },   // (A-)ma-zing grace how sweet the sound
+    { chord: 'G' }, { chord: 'G' }, { chord: 'D' }, { chord: 'D' },   // that saved a wretch like me
+    { chord: 'G' }, { chord: 'G' }, { chord: 'C' }, { chord: 'G' },   // I once was lost but now am found
+    { chord: 'G' }, { chord: 'D' }, { chord: 'G' },                    // was blind but now I see
+    { chord: 'G', oneStrum: true },                                    // ô kết
   ],
 }
 
