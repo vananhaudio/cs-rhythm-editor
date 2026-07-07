@@ -533,4 +533,8 @@ UPDATE edu_course_lessons SET lesson_type = 'native', content_url = 'song-ode-ba
 UPDATE edu_course_lessons SET lesson_type = 'native', content_url = 'song-scarborough'
   WHERE id = 'd2c00607-0000-4000-8000-000000000000';
 
+-- Ch2 Valse · Gảy theo: Amazing Grace (d2c00606) → Strum Score 'song-amazing'
+UPDATE edu_course_lessons SET lesson_type = 'native', content_url = 'song-amazing'
+  WHERE id = 'd2c00606-0000-4000-8000-000000000000';
+
 NOTIFY pgrst, 'reload schema';

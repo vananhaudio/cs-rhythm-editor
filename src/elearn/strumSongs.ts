@@ -69,6 +69,22 @@ export const STRUM_JINGLE: StrumSong = {
   ],
 }
 
+// Amazing Grace (thánh ca — công cộng) — VALSE 3/4 nốt đen, tông Đô. Nền synth Valse.
+// Vòng hợp âm chuẩn (I–IV–V): mỗi câu 4 ô. Melody để trống — thêm chuẩn khi có file (tránh 'gầy').
+export const STRUM_AMAZING: StrumSong = {
+  title: 'Amazing Grace — quạt theo nền (Valse)',
+  bpm: 96, timeSignature: 3, gridOffset: 0, patternId: 'den',
+  backing: { styleId: 'valse', tempo: 96 },
+  loop: false,
+  bars: [
+    { chord: 'C' }, { chord: 'C' }, { chord: 'F' }, { chord: 'C' },   // Amazing grace how sweet the sound
+    { chord: 'C' }, { chord: 'C' }, { chord: 'G' }, { chord: 'G' },   // that saved a wretch like me
+    { chord: 'C' }, { chord: 'C' }, { chord: 'F' }, { chord: 'C' },   // I once was lost but now am found
+    { chord: 'C' }, { chord: 'G' }, { chord: 'C' },                    // was blind but now I see
+    { chord: 'C', oneStrum: true },                                    // ô kết
+  ],
+}
+
 // Scarborough Fair (dân ca — công cộng) — VALSE 3/4, tông Mi (Em/E Dorian), tiết tấu TRỘN
 // "Đen – đon đon – đon đon" (1 nốt đen + 2 chùm 2), qua bar.figures. Melody từ file MusicXML của thầy
 // (Rê Dorian) dịch lên +2 nửa cung. Hợp âm theo bản lời Việt của thầy. Không loop.

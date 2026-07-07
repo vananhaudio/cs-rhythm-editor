@@ -8,7 +8,7 @@ import NarratedSlides from './NarratedSlides'
 import { WELCOME_TD2_SLIDES } from './welcomeTd2Slides'
 import { CHUM2_SLIDES } from './chum2Slides'
 import ChordStrumPlayer from './ChordStrumPlayer'
-import { HBD_CHUM2, HBD_TD1, STRUM_JINGLE, STRUM_JINGLE_DEN, STRUM_ODE, STRUM_SCARBOROUGH } from './strumSongs'
+import { HBD_CHUM2, HBD_TD1, STRUM_JINGLE, STRUM_JINGLE_DEN, STRUM_ODE, STRUM_SCARBOROUGH, STRUM_AMAZING } from './strumSongs'
 
 export interface NativeLessonProps { onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }
 
@@ -41,4 +41,5 @@ export const NATIVE_LESSONS: Record<string, { label: string; Component: Componen
   'song-jingle-chum2': { label: 'Gảy theo: Jingle Bells — quạt chùm 2 (nền trống-bass + ghi âm)', Component: (p) => <ChordStrumPlayer song={STRUM_JINGLE} {...p} /> },
   'song-ode-ballad': { label: 'Gảy theo: Ode to Joy — quạt chùm 2 (Ballad, nền synth)', Component: (p) => <ChordStrumPlayer song={STRUM_ODE} {...p} /> },
   'song-scarborough': { label: 'Gảy theo: Scarborough Fair — Valse (nền synth)', Component: (p) => <ChordStrumPlayer song={STRUM_SCARBOROUGH} {...p} /> },
+  'song-amazing': { label: 'Gảy theo: Amazing Grace — Valse (nền synth)', Component: (p) => <ChordStrumPlayer song={STRUM_AMAZING} {...p} /> },
 }
