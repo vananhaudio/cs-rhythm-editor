@@ -18,7 +18,10 @@ Trang `/guitarboard` (GuitarBoard.tsx) trước đây vẽ khuông nhạc + TAB 
 - Toạ độ overlay (con trỏ/selection/playback) đọc từ `api.renderer.boundsLookup` (KHÔNG có `.at-note-head` trong bản này). `StaveProfile.ScoreTab` tách **2 staff** (khuông + TAB) → mỗi nốt có 2 beat box, phải GỘP lại thành 1 box cao toàn phần. Beat ↔ notes[] map 1-1 theo thứ tự.
 - `LayoutMode.Horizontal` (không Page) hợp editor (1 dòng cuộn ngang) và bỏ footer canh giữa.
 - Dòng "rendered by alphaTab" hardcode trong thư viện → ẩn bằng **MutationObserver** trên container, set display:none cho `text` chứa "alphaTab" (postRenderFinished chạy TRƯỚC khi text được append nên query 1 lần không đủ).
-- Font Bravura đã copy sang `public/font/` (cần cho production; `settings.core.fontDirectory='/font/'`).
+- Font Bravura đã copy sang `public/font/` (cần cho production; `settings.core.fontDirectory='/font/'`). Nếu font CHƯA nạp (vd preview dev port lạ) → khuông render nhưng glyph VÔ HÌNH (trông như trống). Kiểm `document.fonts` thấy `Bravura:unloaded`.
+- **GOTCHA hiệu ứng alphaTex (đã gây lỗi thật):** *note-effect* (dấu nối `t`, hammer/pull `h`) PHẢI gắn vào nốt GIỮA string và duration: `3.3{t}.4`. Đặt sau trường độ (`3.3.4 {t}` hay `3.3.4{h}`) → **lỗi parse → CẢ khuông render trống**. *Beat-effect* (chấm `d`, liên3 `tu 3`) thì đặt SAU trường độ: `3.3.4 {d}`. `-` KHÔNG phải tie (là accidental ForceNone). Verify nhanh bằng Node: `new AlphaTexImporter().initFromString(tex, new Settings()).readScore()` rồi xem `note.isTieDestination`/`isHammerPullOrigin`.
 - `ScoreTabViewer.tsx` (canvas cũ) vẫn còn trên disk, không dùng nữa — có thể xoá sau khi bản AlphaTab ổn định.
 
-**Còn cần xử lý:** nốt dài tràn ô nhịp (chưa nối ngân/tie), dark theme (đang render nền sáng cố định), test kỹ trên iPad. CHƯA push (user nói còn nhiều lỗi).
+**Đã LIVE (đẩy main nhiều đợt 2026-07-02):** bộ công cụ ký âm (chọn giọng/hoá biểu `\ks`, dấu nối, luyến hammer-on/pull-off, ô nhịp lặp `\ro`/`\rc`), nạp file GP/MusicXML, 2 chế độ hiển thị (cần đàn to ↔ khuông to, đảo bằng CSS `order`, cần đàn phụ scale ~0.61), công cụ gập xuống dưới khuông, play từ vị trí con trỏ. Cần đàn CĐ1 scale ~0.92 căn giữa.
+
+**Còn cần xử lý:** dark theme (đang render nền sáng cố định), test kỹ trên iPad; mở rộng hiệu ứng (staccato/accent/vibrato/palm-mute/bend), chỉnh số lần lặp (hiện cố định ×2).

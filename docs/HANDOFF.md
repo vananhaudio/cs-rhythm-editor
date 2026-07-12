@@ -1,7 +1,7 @@
 # BÀN GIAO — TVA Guitar LMS (cs-rhythm-editor)
 
 > Bản bàn giao đẩy lên GitHub để **không mất dữ liệu** (backup ngoài máy + lịch sử phiên bản).
-> Cập nhật gần nhất: **2026-07-02** (Journey OS GĐ1).
+> Cập nhật gần nhất: **2026-07-12** (DH2 đợt 2 — Ch1 hoàn chỉnh, quiz Ch1+Ch2, nền tập 4 điệu, Ch5 đầy đủ, tier chuẩn).
 >
 > - **Bộ nhớ chi tiết** (Claude tự đọc mỗi phiên): `~/.claude/projects/-Users-vananhaudio-Desktop-cs-rhythm-editor/memory/`
 > - **Bản sao bộ nhớ trong repo** (an toàn, versioned): [`docs/memory-backup/`](./memory-backup/) — xem [`MEMORY.md`](./memory-backup/MEMORY.md) làm mục lục.
@@ -10,6 +10,13 @@
 LMS dạy guitar online "Thầy Văn Anh Guitar". React + TS + Vite + Tailwind (chủ yếu **inline styles**). Supabase (`wojmdilyflffvdtpovmq`). Deploy: push `main` → Netlify → `timming.vananhaudio.com` (app) & `class.vananhaudio.com` (tuyển sinh). Vỏ iOS Capacitor (TestFlight) tải web live. **Build BẮT BUỘC `npm run build` (tsc -b + vite) trước khi push.** Xem `CLAUDE.md` cho quy ước đầy đủ.
 
 ## Việc làm trong đợt gần nhất (2026-07)
+
+### Khoá Đệm Hát TĐ2 (DH2) — 2026-07-12, 45/50 bài hoạt động
+- **Chương 1 HOÀN CHỈNH 11/11** (bỏ bài 'gõ chùm 2' thừa; quiz Checkpoint 6 câu `db/dh2_quiz_ch1.sql`).
+- **Nền tập 4 điệu = lesson_type='strum' config JSON** (Ballad/Valse/Slowrock/Bolero — cách B skill strum-score, KHÔNG component riêng). Quiz Ch2 + 7 bài text Chương 5 (bố cục) trong `db/dh2_dot2.sql`.
+- **Tier chuẩn: FREE = Bài 1.1–1.6**, còn lại basic. Fix trùng UUID bài 3.2 (generator: bài mới PHẢI có `n` riêng).
+- CÒN: 4 video thầy quay (2.2/2.5/3.6/4.6), chọn bài gảy theo Slowrock 3.8 + Bolero 4.8, Ch6 (Strum Builder 6.2, dự án submit_video 6.3).
+
 
 ### Làm mới công cụ "Lên dây đàn" (GuitarTuner) — 2026-07-02, LIVE
 File `src/GuitarTuner.tsx` (giữ nguyên 100% engine nhận cao độ autocorrelation + median). Chỉ thay giao diện + luồng:

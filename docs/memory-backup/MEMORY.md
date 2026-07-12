@@ -1,12 +1,17 @@
 # Memory Index
 
+- [Hệ Skill của thầy](project_skills_system.md) — Tool (cho học viên) vs Skill (quy trình cho Claude); skill ở .claude/skills/, danh bạ docs/SKILLS.md; đã dựng strum-score + khuong-nhac + mau-quat-video (trang Mẫu Quạt overlay video)
+- [Skill khuong-nhac](project_khuong_nhac_skill.md) — chuẩn hoá bố cục/khắc nhạc màn Đánh theo (NotePractice), commit 2c6567b 2026-07-04
+
 - [Bộ luật Hành trình 2027](project_hanhtrinh2027_boluat.md) — bản đồ học + luật mở khoá theo tiên quyết + học vượt cấp (thầy duyệt) + cảnh báo thiếu nền tảng; spec ở docs/HANHTRINH-2027-BO-LUAT.md; CHƯA build
 
 - [Tỉa nốt 1 — triết lý](project_tia_not_1_philosophy.md) — dạy theo cụm→câu→vùng→bài thật, KHÔNG lấy dây làm trục; 6 bài; đồ nghề note_show/note_practice đủ; vùng Si-Đô-Rê-Mi-Fa-Sol = staff 4-9
 
+- [It works trước tiên](feedback_it_works_first.md) — KIM CHỈ NAM SỐ 1: học sinh phải SỚM có cảm giác "mình làm được, ra nhạc thật"; dạy cái cho thành quả nhanh trước (quạt trước móc), mỗi cụm kết bằng gảy theo bài thật; cái làm chậm thành công đẩy về sau
+- [Bài giảng dài mà cuốn](feedback_long_engaging_lessons.md) — text bài học cố ý DÀI (vũ khí tâm lý, đọc hết thấy khai thông); trình bày cuốn hút (hook/mở vòng/ẩn dụ/câu khai thông) để không bị lướt
 - [Đơn giản, hiệu quả](feedback_simple_effective_design.md) — trình bày sạch, hạn chế màu mè; nốt nhạc là trọng tâm (to/đều/đẹp); hợp âm trên nốt đầu ô nhịp
 - [Count-in lấy đà](project_countin_pattern.md) — ô lấy đà hiện số 1-2-3 sáng theo phách thay count-in; dùng cho mọi bài gảy-theo (ChordStrumPlayer)
-- [Strum Score](project_strum_score.md) — TÊN CHÍNH THỨC màn gảy-theo-bản-thu = "bản nhạc cho người quạt"; ChordStrumPlayer, route /hbd
+- [Strum Score](project_strum_score.md) — TÊN CHÍNH THỨC màn gảy-theo-bản-thu = "bản nhạc cho người quạt"; ChordStrumPlayer, route /hbd; đã có bộ Hình tiết tấu cơ bản (nền cho Fill In/Out/Transition)
 - [Ghi âm Strum Score](project_strum_recording.md) — thu tiếng đàn TRỘN SỐ với nền (cùng AudioContext), lưu local không upload; mic permission đã có sẵn (Tuner), route /jinglebell
 
 - [Kỷ luật luyện tập](project_practice_discipline.md) — phiên + màu kỹ năng đỏ/vàng/xanh (3 phiên→xanh), tách trục Học vs Kỹ năng; edu_skill_progress; GĐ A+B đã làm, cần chạy db/skill_progress_setup.sql
@@ -40,3 +45,5 @@
 - [Trợ lý AI admin](project_admin_ai_assistant.md) — tab AI trong /admin tạo TK học sinh qua Edge Function `admin-ai` (deploy tay Dashboard, verify_jwt TẮT, dùng chung khoá Anthropic — chờ nạp credit); mk mặc định 12345678 + Đổi mật khẩu ở Hồ sơ học viên
 - [Xưng hô "bạn" không "em"](feedback_address_learners_neutral.md) — nội dung bài học gọi học viên là "bạn" (có thể người lớn tuổi), tránh "em"
 - [Journey OS](project_journey_os.md) — tầm nhìn /admin/schedule thành hệ điều hành đào tạo 1 năm (lịch thật + tự sinh buổi + Mira đề xuất mở/gộp lớp, ưu đãi); spec docs/JOURNEY-OS-SPEC.md; MVP 4 giai đoạn, CHƯA build
+- [Khoá Đệm Hát TĐ2 (DH2)](project_dh2_course.md) — khung 8 chương (Chùm nốt·Tiết tấu·Ballad·Bolero·Slowrock·Valse·Bố cục·Áp dụng), db/dh2_full.sql chờ chạy; 51 bài placeholder chờ điền; Bossa dời TĐ3
+- [Khoá Chìa Khoá Nhạc Lý](project_nhacly_course.md) — cải tiến 2026-07-05: tái cấu trúc 5 chương + điền Bài 8/9 + 3 bài tập tương tác staff-only (noFretboard); 3 file db/nhacly_*.sql CHỜ thầy chạy; chưa publish
