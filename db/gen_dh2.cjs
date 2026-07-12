@@ -25,13 +25,13 @@ const CHAPTERS = [
     { ex: 'aca3b657-b2c8-46dd-ac1e-5fe8b7828158', title: 'Chào mừng Trình độ 2' },
     { t: 'Chùm nốt là gì — chia nhỏ phách', note: 'bài giảng (text)', n: 3 },
     { ex: '1bc21a87-d39f-48ee-a62c-a753902631cf', title: 'Chùm 2 — nốt móc đơn' },
-    { t: 'Thực hành gõ chùm 2', note: 'công cụ app 🎛 (đếm 1&2& + gõ theo)', n: 6 },
+    // 'Thực hành gõ chùm 2' (d2c00106) ĐÃ BỎ 2026-07-12 — thừa: 1.3 (slide) + quạt có mic đã ôm phần cảm nhịp. Xoá ở db/dh2_ch1_don.sql.
     { ex: 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9', title: 'Thực hành quạt chùm 2 (xuống–lên)' },
     { ex: '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829', title: 'Gảy theo: Happy Birthday — quạt chùm 2' },
     { ex: '4692e092-3591-4dda-99d6-265b82e0d34c', title: 'Gảy theo: Jingle Bells — quạt chùm 2' },
     { ex: '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac', title: 'Điệu Ballad là gì' }, // gộp 'Ballad là gì' + 'Ballad dùng chùm 2'
     { t: 'Mẫu quạt Ballad cơ bản', note: 'video thầy quay 🎬', code: 3, n: 2 },        // giữ UUID d2c00302 (đã có video)
-    { t: 'Nền tập Ballad', note: 'công cụ app 🎛 (Groove Lab điệu Ballad)', code: 3, n: 3 },
+    { t: 'Nền tập Ballad', note: 'Strum Score tự sinh (nền Ballad + chùm 2) — db/dh2_ch1_don.sql', code: 3, n: 3 },
     { t: 'Gảy theo: Ode to Joy', note: 'gảy theo 🎸 (Strum Score) — native song-ode-ballad', code: 3, n: 4 }, // giữ UUID d2c00304
     { t: 'Checkpoint Chương 1', note: 'quiz 📝', n: 9 },
   ] },

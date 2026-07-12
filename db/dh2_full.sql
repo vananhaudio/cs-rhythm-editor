@@ -13,24 +13,21 @@ INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, orde
 VALUES ('d2c00103-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.2 — Chùm nốt là gì — chia nhỏ phách', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 2, title = 'Bài 1.3 — Chùm 2 — nốt móc đơn' WHERE id = '1bc21a87-d39f-48ee-a62c-a753902631cf';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 3, title = 'Bài 1.4 — Thực hành quạt chùm 2 (xuống–lên)' WHERE id = 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 4, title = 'Bài 1.5 — Gảy theo: Happy Birthday — quạt chùm 2' WHERE id = '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 5, title = 'Bài 1.6 — Gảy theo: Jingle Bells — quạt chùm 2' WHERE id = '4692e092-3591-4dda-99d6-265b82e0d34c';
+UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 6, title = 'Bài 1.7 — Điệu Ballad là gì' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00106-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.4 — Thực hành gõ chùm 2', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (đếm 1&2& + gõ theo)</p>', 3, false, 'free')
-ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 4, title = 'Bài 1.5 — Thực hành quạt chùm 2 (xuống–lên)' WHERE id = 'df4ddd1b-768b-4d74-8b9a-40a310ac99e9';
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 5, title = 'Bài 1.6 — Gảy theo: Happy Birthday — quạt chùm 2' WHERE id = '2f6b416d-7d4f-4bd0-8c13-0e4ad2e11829';
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 6, title = 'Bài 1.7 — Gảy theo: Jingle Bells — quạt chùm 2' WHERE id = '4692e092-3591-4dda-99d6-265b82e0d34c';
-UPDATE edu_course_lessons SET module_id = '067ae3bb-7812-4485-8fa2-077fccaea2bf', order_index = 7, title = 'Bài 1.8 — Điệu Ballad là gì' WHERE id = '2b73cd3b-cc6e-4ba9-baff-9ef6acc984ac';
-INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00302-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.9 — Mẫu quạt Ballad cơ bản', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 8, false, 'free')
+VALUES ('d2c00302-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.8 — Mẫu quạt Ballad cơ bản', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> video thầy quay 🎬</p>', 7, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00303-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.10 — Nền tập Ballad', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> công cụ app 🎛 (Groove Lab điệu Ballad)</p>', 9, false, 'free')
+VALUES ('d2c00303-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.9 — Nền tập Ballad', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> Strum Score tự sinh (nền Ballad + chùm 2) — db/dh2_ch1_don.sql</p>', 8, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00304-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.11 — Gảy theo: Ode to Joy', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score) — native song-ode-ballad</p>', 10, false, 'free')
+VALUES ('d2c00304-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.10 — Gảy theo: Ode to Joy', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> gảy theo 🎸 (Strum Score) — native song-ode-ballad</p>', 9, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00109-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.12 — Checkpoint Chương 1', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 11, false, 'free')
+VALUES ('d2c00109-0000-4000-8000-000000000000', '067ae3bb-7812-4485-8fa2-077fccaea2bf', 'Bài 1.11 — Checkpoint Chương 1', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> quiz 📝</p>', 10, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 
 -- ===== Chương 2: Điệu Valse =====
@@ -159,7 +156,6 @@ ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXC
 DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
   AND id NOT IN (
     'd2c00103-0000-4000-8000-000000000000',
-    'd2c00106-0000-4000-8000-000000000000',
     'd2c00302-0000-4000-8000-000000000000',
     'd2c00303-0000-4000-8000-000000000000',
     'd2c00304-0000-4000-8000-000000000000',
