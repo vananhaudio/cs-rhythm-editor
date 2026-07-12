@@ -71,7 +71,7 @@ INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, orde
 VALUES ('d2c00108-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 3.1 — Nghe thử chùm 3 và liên 3 — làm quen', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng + audio mẫu</p>', 0, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
-VALUES ('d2c00501-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 3.2 — Tính chất Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
+VALUES ('d2c00500-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 3.2 — Tính chất Slowrock', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 1, false, 'free')
 ON CONFLICT (id) DO UPDATE SET module_id = EXCLUDED.module_id, order_index = EXCLUDED.order_index, title = EXCLUDED.title;
 INSERT INTO edu_course_lessons (id, module_id, title, lesson_type, content, order_index, is_published, tier)
 VALUES ('d2c00501-0000-4000-8000-000000000000', 'd2000055-0000-4000-8000-000000000055', 'Bài 3.3 — Liên 3 là gì trong đệm hát', 'text', '<p><em>⏳ Bài đang xây dựng.</em></p><p><b>Dự kiến:</b> bài giảng (text)</p>', 2, false, 'free')
@@ -176,7 +176,7 @@ DELETE FROM edu_course_lessons WHERE id::text LIKE 'd2c00%'
     'd2c00607-0000-4000-8000-000000000000',
     'd2c00608-0000-4000-8000-000000000000',
     'd2c00108-0000-4000-8000-000000000000',
-    'd2c00501-0000-4000-8000-000000000000',
+    'd2c00500-0000-4000-8000-000000000000',
     'd2c00501-0000-4000-8000-000000000000',
     'd2c00503-0000-4000-8000-000000000000',
     'd2c00504-0000-4000-8000-000000000000',

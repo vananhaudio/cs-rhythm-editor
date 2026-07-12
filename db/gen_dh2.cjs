@@ -47,7 +47,7 @@ const CHAPTERS = [
   ] },
   { code: 5, order: 2, mid: M_SLOWROCK, name: 'Chương 3: Điệu Slowrock', lessons: [
     { t: 'Nghe thử chùm 3 và liên 3 — làm quen', note: 'bài giảng + audio mẫu', code: 1, n: 8 }, // giữ UUID d2c00108
-    { t: 'Tính chất Slowrock', note: 'bài giảng (text)' },
+    { t: 'Tính chất Slowrock', note: 'bài giảng (text)', n: 0 },   // n BẮT BUỘC — thiếu từng gây trùng UUID với 'Liên 3 là gì' (n:1)
     { t: 'Liên 3 là gì trong đệm hát', note: 'bài giảng (text)', n: 1 },
     { ex: 'db6fddb4-7d3b-4a3b-9a01-f143928f02e5', title: 'Chùm 3 – Liên 3 (nền tảng Slowrock)' },
     { t: 'Cảm giác dàn trải của Slowrock', note: 'bài giảng (text) + audio', n: 3 },
