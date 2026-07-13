@@ -141,9 +141,34 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
 
   const activeLine = activeWordIndex != null ? words.find(w => w.index === activeWordIndex)?.line : undefined
   const sortedChords = useMemo(() => [...chords].sort((a, b) => a.wordIndex - b.wordIndex), [chords])
-  const currentChord = activeWordIndex != null
-    ? (sortedChords.filter(c => c.wordIndex <= activeWordIndex).pop()?.name ?? sortedChords[0]?.name)
-    : sortedChords[0]?.name
+  // Vị trí hợp âm HIỆN TẠI trong dãy (để dải cuộn ngang: trước · hiện tại · sắp tới)
+  const curChordIndex = useMemo(() => {
+    if (activeWordIndex == null) return 0
+    let idx = 0
+    for (let i = 0; i < sortedChords.length; i++) { if (sortedChords[i].wordIndex <= activeWordIndex) idx = i; else break }
+    return idx
+  }, [sortedChords, activeWordIndex])
+  // Tự cuộn NGANG để hợp âm hiện tại về giữa (gán scrollLeft trực tiếp → chạy cả iOS WebView)
+  const chordRailRef = useRef<HTMLDivElement | null>(null)
+  const chordCardRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const chordScrollRef = useRef(0)
+  useEffect(() => {
+    const rail = chordRailRef.current, card = chordCardRefs.current[curChordIndex]
+    if (!rail || !card) return
+    const to = Math.max(0, rail.scrollLeft + (card.getBoundingClientRect().left - rail.getBoundingClientRect().left) - (rail.clientWidth - card.clientWidth) / 2)
+    const from = rail.scrollLeft, d = to - from
+    if (Math.abs(d) < 1) return
+    cancelAnimationFrame(chordScrollRef.current)
+    let ts0 = 0
+    const step = (ts: number) => {
+      if (!ts0) ts0 = ts
+      const p = Math.min(1, (ts - ts0) / 320)
+      rail.scrollLeft = from + d * (1 - Math.pow(1 - p, 3))
+      if (p < 1) chordScrollRef.current = requestAnimationFrame(step)
+    }
+    chordScrollRef.current = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(chordScrollRef.current)
+  }, [curChordIndex])
 
   // ── karaoke auto-cuộn ──
   const lines = useMemo(() => {
@@ -227,15 +252,28 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
           </div>
         )}
 
-        {/* Dải hợp âm hiện tại */}
+        {/* Dải hợp âm cuộn ngang — trước · hiện tại · sắp tới */}
         {hasChords && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '10px 14px', flexShrink: 0 }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: C.muted }}>HỢP ÂM</div>
-              <div style={{ fontSize: 30, fontWeight: 800, color: currentChord ? C.accent : C.dim, lineHeight: 1.1 }}>{currentChord ?? '—'}</div>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '9px 0 11px', flexShrink: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: C.muted, padding: '0 14px', marginBottom: 8 }}>HỢP ÂM · trước · hiện tại · sắp tới</div>
+            <div ref={chordRailRef} style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 14px', scrollbarWidth: 'none' }}>
+              {sortedChords.map((c, i) => {
+                const isCur = i === curChordIndex
+                const isPast = i < curChordIndex
+                const shape = chordShape(c.name)
+                return (
+                  <div key={i} ref={el => { chordCardRefs.current[i] = el }}
+                    style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      borderRadius: 12, padding: '6px 10px', minWidth: 74,
+                      background: isCur ? C.accentSoft : 'transparent',
+                      border: `1px solid ${isCur ? C.accent + '66' : 'transparent'}`,
+                      opacity: isPast ? 0.4 : isCur ? 1 : 0.82, transition: 'all .25s' }}>
+                    <span style={{ fontSize: isCur ? 24 : 18, fontWeight: 800, color: isCur ? C.accent : C.text, lineHeight: 1 }}>{c.name}</span>
+                    {shape ? <ChordDiagram shape={shape} width={isCur ? 60 : 48} /> : <div style={{ height: isCur ? 60 : 48 }} />}
+                  </div>
+                )
+              })}
             </div>
-            <div style={{ flex: 1 }} />
-            {currentChord && chordShape(currentChord) && <ChordDiagram shape={chordShape(currentChord)!} width={64} />}
           </div>
         )}
 
