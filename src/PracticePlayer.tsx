@@ -253,7 +253,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: embedded ? 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 16px' : '0 16px 16px', maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0, position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: embedded ? 'calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 12px)' : `0 16px calc(env(safe-area-inset-bottom, 0px) + 12px)`, maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
         {/* Thanh nút TRÊN video (không đè video → dùng được thanh tua YouTube) */}
         {(embedded || draft.videoId) && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexShrink: 0 }}>
