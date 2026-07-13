@@ -161,30 +161,29 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
     ro.observe(el); setBoxH(el.clientHeight)
     return () => ro.disconnect()
   }, [])
-  // Teleprompter: đưa dòng đang hát lên ~34% từ trên → thấy nhiều lời SẮP tới bên dưới để chuẩn bị.
-  // TỰ CUỘN bằng rAF (gán scrollTop trực tiếp) — iOS WebView bỏ qua scrollTo({behavior:'smooth'}) nên phải tween tay.
-  const scrollAnimRef = useRef(0)
+  // Teleprompter: BÁM LIÊN TỤC — mỗi frame kéo dòng đang hát về ~30% từ trên (luôn tự sửa sai lệch,
+  // kể cả khi chữ to lên làm dòng xê dịch). Gán scrollTop trực tiếp → chạy cả iOS WebView.
+  const LINE_ANCHOR = 0.30
+  const activeLineRef = useRef<number | undefined>(undefined)
+  activeLineRef.current = activeLine
   useEffect(() => {
-    if (activeLine == null) return
-    const box = scrollBoxRef.current, el = lineRefs.current[activeLine]
-    if (!box || !el) return
-    const to = Math.max(0, box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top) - box.clientHeight * 0.34)
-    const from = box.scrollTop
-    const dist = to - from
-    if (Math.abs(dist) < 1) return
-    cancelAnimationFrame(scrollAnimRef.current)
-    const dur = 480
-    let startTs = 0
-    const step = (ts: number) => {
-      if (!startTs) startTs = ts
-      const p = Math.min(1, (ts - startTs) / dur)
-      const ease = 1 - Math.pow(1 - p, 3)   // easeOutCubic
-      box.scrollTop = from + dist * ease
-      if (p < 1) scrollAnimRef.current = requestAnimationFrame(step)
+    let raf = 0
+    const follow = () => {
+      const box = scrollBoxRef.current
+      const al = activeLineRef.current
+      if (box && al != null) {
+        const el = lineRefs.current[al]
+        if (el) {
+          const to = Math.max(0, box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top) - box.clientHeight * LINE_ANCHOR)
+          const d = to - box.scrollTop
+          box.scrollTop += Math.abs(d) < 0.5 ? d : d * 0.16   // lerp mượt về đích
+        }
+      }
+      raf = requestAnimationFrame(follow)
     }
-    scrollAnimRef.current = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(scrollAnimRef.current)
-  }, [activeLine])
+    raf = requestAnimationFrame(follow)
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   const ctrlBtn = (label: string, onClick: () => void, kind: 'solid' | 'soft' | 'ghost', disabled?: boolean): React.ReactElement => {
     const skin = kind === 'solid' ? { background: C.accent, color: '#fff', border: 'none' }
@@ -235,7 +234,7 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
           {words.length === 0 ? (
             <div style={{ color: C.muted, fontSize: 14, flex: 1 }}>Bài này chưa có lời.</div>
           ) : (
-            <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', paddingTop: boxH ? boxH * 0.34 : '20vh', paddingBottom: boxH ? boxH * 0.66 : '40vh', maskImage: 'linear-gradient(to bottom, transparent, #000 14%, #000 88%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 14%, #000 88%, transparent)' }}>
+            <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', paddingTop: boxH ? boxH * 0.30 : '18vh', paddingBottom: boxH ? boxH * 0.70 : '42vh', maskImage: 'linear-gradient(to bottom, transparent, #000 12%, #000 90%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 12%, #000 90%, transparent)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {lines.map(ln => {
                   const rel = activeLine != null ? ln.line - activeLine : null   // <0 đã hát · 0 đang hát · >0 sắp tới
