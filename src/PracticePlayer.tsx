@@ -33,6 +33,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
   const [playing, setPlaying] = useState(false)
   const [playerReady, setPlayerReady] = useState(false)
   const [metronomeOn, setMetronomeOn] = useState(false)
+  const [videoBig, setVideoBig] = useState(false)   // mặc định video NHỎ — ưu tiên lời + hợp âm
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const playingRef = useRef(false)
@@ -213,11 +214,16 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
           <button onClick={onClose} style={{ position: 'absolute', top: 8, left: 8, zIndex: 3, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', borderRadius: 16, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>‹ Danh sách</button>
         )}
         {draft.videoId && (
-          <div style={{ height: 'min(23vh, 170px)', borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0 }}>
+          <div style={{ height: videoBig ? 'min(32vh, 210px)' : 52, borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0, position: 'relative', transition: 'height .25s' }}>
             <iframe ref={iframeRef} src={buildEmbedUrl(draft.videoId)} title="YouTube"
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen
               onLoad={() => { setTimeout(startListening, 400); setTimeout(startListening, 1200) }} />
+            {/* nút thu/phóng video — mặc định nhỏ để ưu tiên lời + hợp âm */}
+            <button onClick={() => setVideoBig(v => !v)} aria-label={videoBig ? 'Thu nhỏ video' : 'Phóng to video'}
+              style={{ position: 'absolute', top: 6, right: 6, zIndex: 4, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', borderRadius: 9, height: 30, padding: '0 10px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {videoBig ? '⤡ Thu nhỏ' : '⤢ Phóng to'}
+            </button>
           </div>
         )}
 
