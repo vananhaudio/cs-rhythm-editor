@@ -8,7 +8,7 @@ import { CHORD_LIBRARY, chordShape } from './logic/chordLibrary'
 import ChordDiagram from './ChordDiagram'
 import PracticePlayer from './PracticePlayer'
 import {
-  newDraftId, autosaveCurrentDraft, getLatestDraft, getCurrentId, loadDraft as loadDraftById,
+  newDraftId, saveDraft, saveScratch, loadScratch, clearScratch, loadDraft as loadDraftById,
   listDrafts, deleteDraft, renameDraft, duplicateDraft, migrateLegacyDraft, hasContent, progressOf,
   serializeDraft, importDraftJSON,
 } from './logic/songDraftStorage'
@@ -182,6 +182,7 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
   const [resumeDraft, setResumeDraft] = useState<SongDraft | null>(null)
   const [showDrafts, setShowDrafts] = useState(false)
   const [practiceDraft, setPracticeDraft] = useState<SongDraft | null>(null)
+  const [savedToLib, setSavedToLib] = useState(false)   // đã lưu vào 'Bài của tôi' chưa (bước 6)
   const hydrated = useRef(false)   // chặn autosave ghi đè trước khi khôi phục xong
 
   const applyDraft = useCallback((d: SongDraft) => {
@@ -235,10 +236,9 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
       hydrated.current = true
       return
     }
-    // Luồng bình thường: kiểm tra nháp đang làm dở
-    const curId = getCurrentId()
-    const latest = (curId && loadDraftById(curId)) || getLatestDraft()
-    if (latest && hasContent(latest)) setResumeDraft(latest)
+    // Luồng bình thường: kiểm tra NHÁP TẠM (scratch) đang làm dở
+    const scratch = loadScratch()
+    if (scratch && hasContent(scratch)) setResumeDraft(scratch)
     else hydrated.current = true
   }, [])
 
@@ -421,20 +421,36 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
 
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 2200); return () => clearTimeout(id) }, [toast])
 
-  /* ---- autosave nháp: mỗi thay đổi quan trọng đều lưu ngay ---- */
-  useEffect(() => {
-    if (!hydrated.current) return            // chưa khôi phục xong thì chưa ghi
+  /* ---- Dựng SongDraft từ state hiện tại (dùng cho cả autosave-scratch lẫn 'Lưu vào Bài của tôi') ---- */
+  const buildDraft = useCallback((): SongDraft => {
     const now = Date.now()
     const fallbackTitle = videoId ? `Bài ${videoId}` : (lyricsText.trim().split(/\s+/).slice(0, 4).join(' ') || '')
-    const d: SongDraft = {
+    return {
       id: draftId, title: songTitle.trim() || fallbackTitle,
       youtubeUrl, videoId, thumbnail: videoThumb,
       lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, chords, step,
       createdAt: now, updatedAt: now,
     }
-    if (!hasContent(d)) return               // bài rỗng thì không tạo nháp
-    autosaveCurrentDraft(d)
   }, [draftId, songTitle, youtubeUrl, videoId, videoThumb, lyricsText, fit, timeSignature, downbeatPosition, groupBeats, anchors, chords, step])
+
+  /* ---- autosave vào NHÁP TẠM (scratch) — KHÔNG vào thư viện 'Bài của tôi' (tránh trùng lắp) ---- */
+  useEffect(() => {
+    if (!hydrated.current) return            // chưa khôi phục xong thì chưa ghi
+    const d = buildDraft()
+    if (!hasContent(d)) return               // bài rỗng thì không lưu
+    saveScratch(d)
+    setSavedToLib(false)                     // có thay đổi mới → cần lưu lại
+  }, [buildDraft])
+
+  /* ---- Lưu vào thư viện 'Bài của tôi' (chỉ khi người dùng bấm ở bước 6) ---- */
+  const saveToLibrary = () => {
+    const d = buildDraft()
+    if (!hasContent(d)) { setToast('Bài còn trống — chưa lưu được'); return }
+    saveDraft(d)          // ghi vào thư viện
+    clearScratch()        // đã lưu → bỏ nháp tạm (lần sau không hỏi tiếp tục bài này)
+    setSavedToLib(true)
+    setToast('Đã lưu vào Bài hát của tôi ✓')
+  }
 
   /* ---- thao tác nháp ---- */
   const resumeLatest = () => { if (resumeDraft) applyDraft(resumeDraft); setResumeDraft(null) }
@@ -583,6 +599,16 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
         <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 14px max(10px, env(safe-area-inset-bottom))', borderTop: `1px solid ${C.border}`, background: C.surface, ...center }}>
           {step > 0 && <Btn kind="ghost" onClick={goBack} style={{ flex: 1 }}>← Quay lại</Btn>}
           <Btn onClick={goNext} disabled={!canNext()} style={{ flex: 2 }}>Tiếp tục →</Btn>
+        </div>
+      )}
+
+      {/* Bước cuối (Nghe thử): HỎI có lưu vào 'Bài của tôi' không — chỉ lưu khi bấm (tránh trùng lắp) */}
+      {step === STEPS.length - 1 && (
+        <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 14px max(10px, env(safe-area-inset-bottom))', borderTop: `1px solid ${C.border}`, background: C.surface, ...center }}>
+          <Btn kind="ghost" onClick={goBack} style={{ flex: 1 }}>← Quay lại</Btn>
+          <Btn onClick={saveToLibrary} style={{ flex: 2, ...(savedToLib ? { background: C.green, color: '#04210f' } : null) }}>
+            {savedToLib ? '✓ Đã lưu · Lưu lại' : '💾 Lưu vào Bài hát của tôi'}
+          </Btn>
         </div>
       )}
 

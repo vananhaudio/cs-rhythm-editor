@@ -155,6 +155,19 @@ export function clearCurrentId() {
   try { localStorage.removeItem(CURRENT_KEY) } catch { /* sandbox */ }
 }
 
+// ── Nháp TẠM (scratch) — 1 slot để "tiếp tục bài đang làm dở"; KHÔNG vào thư viện "Bài của tôi".
+//    Chỉ khi người dùng bấm "Lưu vào Bài hát của tôi" (bước 6) mới saveDraft() vào thư viện.
+const SCRATCH_KEY = 'csre-sb-scratch-v1'
+export function saveScratch(draft: SongDraft) {
+  try { localStorage.setItem(SCRATCH_KEY, JSON.stringify({ ...draft, updatedAt: Date.now() })) } catch { /* sandbox / quota */ }
+}
+export function loadScratch(): SongDraft | null {
+  try { const r = localStorage.getItem(SCRATCH_KEY); return r ? JSON.parse(r) as SongDraft : null } catch { return null }
+}
+export function clearScratch() {
+  try { localStorage.removeItem(SCRATCH_KEY) } catch { /* sandbox */ }
+}
+
 // ── Xuất / Nhập file .bms (chia sẻ bài, local-first) ──
 export function serializeDraft(d: SongDraft): string {
   return JSON.stringify(d, null, 2)
