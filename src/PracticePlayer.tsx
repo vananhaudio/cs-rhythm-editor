@@ -202,25 +202,20 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
         <span style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {draft.title || 'Luyện tập'}
         </span>
-        <span style={{ width: 48 }} />
+        <span style={{ minWidth: 48, textAlign: 'right', fontFamily: MONO, fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
+          {hasGrid ? `${Math.round(fit!.bpm)}·${draft.timeSignature}/4` : ''}
+        </span>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px 16px', maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0 }}>
         {draft.videoId && (
-          <div style={{ aspectRatio: '16 / 9', borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0 }}>
+          <div style={{ height: 'min(26vh, 190px)', borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0 }}>
             <iframe ref={iframeRef} src={buildEmbedUrl(draft.videoId)} title="YouTube"
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen
               onLoad={() => { setTimeout(startListening, 400); setTimeout(startListening, 1200) }} />
           </div>
         )}
-
-        {/* Controls */}
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          {ctrlBtn(playing ? '⏸ Tạm dừng' : '▶ Phát', () => playing ? pause() : play(), 'solid', !playerReady)}
-          {ctrlBtn('⏮ Về đầu', () => seekTo(0), 'ghost', !playerReady)}
-          {ctrlBtn('🔊 Metro', toggleMetro, metronomeOn ? 'solid' : 'soft', !hasGrid)}
-        </div>
 
         {/* Dải hợp âm hiện tại */}
         {hasChords && (
@@ -277,22 +272,13 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
           {!hasGrid && <div style={{ fontSize: 12, color: C.dim, marginTop: 6 }}>Bài này chưa có lưới nhịp nên lời không tự cuộn / tô sáng.</div>}
         </div>
 
-        {/* Stats */}
+        {/* Điều khiển — đặt dưới cùng, vừa tầm ngón tay */}
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          {stat('BPM', hasGrid ? String(Math.round(fit!.bpm)) : '—', C.accent)}
-          {stat('Nhịp', `${draft.timeSignature}/4`, C.text)}
-          {stat('Mốc', String(draft.anchors.length), C.green)}
+          {ctrlBtn(playing ? '⏸ Tạm dừng' : '▶ Phát', () => playing ? pause() : play(), 'solid', !playerReady)}
+          {ctrlBtn('⏮ Về đầu', () => seekTo(0), 'ghost', !playerReady)}
+          {ctrlBtn('🔊 Metro', toggleMetro, metronomeOn ? 'solid' : 'soft', !hasGrid)}
         </div>
       </div>
     </div>
   )
-
-  function stat(label: string, value: string, color: string) {
-    return (
-      <div style={{ flex: 1, textAlign: 'center', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 4px' }}>
-        <div style={{ fontFamily: MONO, fontSize: 18, fontWeight: 700, color }}>{value}</div>
-        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{label}</div>
-      </div>
-    )
-  }
 }
