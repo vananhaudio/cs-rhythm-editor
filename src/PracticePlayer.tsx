@@ -298,13 +298,19 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
                       style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', justifyContent: 'center', alignItems: 'flex-end', opacity, padding: '2px', transition: 'opacity 0.3s' }}>
                       {ln.words.map(w => {
                         const chord = chordByWord.get(w.index)
-                        const size = isActiveLine ? 26 : 21
+                        const strong = isActiveLine && !!chord   // từ mang hợp âm = phách mạnh (điểm cần "vào") của dòng đang hát
                         return (
                           <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                            {chord && <span style={{ fontSize: isActiveLine ? 17 : 14.5, fontWeight: 800, color: C.accent, lineHeight: 1.1 }}>{chord}</span>}
+                            {chord && <span style={{
+                              fontSize: 15, fontWeight: 800, lineHeight: 1.1,
+                              color: isActiveLine ? '#FBBF24' : C.accent,   // hợp âm SÁNG (vàng ấm) khi đến lượt
+                              transition: 'color .2s',
+                            }}>{chord}</span>}
                             <span style={{
-                              fontSize: size, fontWeight: isActiveLine ? 700 : 600,
-                              color: isActiveLine ? '#FFF4E0' : C.text,
+                              fontSize: 24,   // TO SẴN & ĐỀU — không phóng to khi đến lượt (đỡ giật, dễ hát)
+                              fontWeight: strong ? 800 : 600,
+                              color: strong ? '#FDE68A' : isActiveLine ? '#FFFFFF' : C.text,   // phách mạnh vàng sáng; dòng đang hát trắng sáng
+                              transition: 'color .2s',
                             }}>{w.text}</span>
                           </div>
                         )
