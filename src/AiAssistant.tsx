@@ -48,6 +48,10 @@ export default function AiAssistant() {
   async function send(text?: string) {
     const t = (text ?? input).trim()
     if (!t || loading) return
+    // Đang có đề xuất chờ duyệt + gõ "ok/đồng ý/xác nhận…" → XÁC NHẬN luôn (khỏi phải bấm nút, và xoá ô nhập)
+    if (proposal && !busy && /^(ok|oke|okê|okay|đồng ý|dong y|xác nhận|xac nhan|được|duoc|đúng|dung|yes|ừ|ừm|uh)\s*[.!]*$/i.test(t)) {
+      setInput(''); confirm(); return
+    }
     setErr(''); setResults(null); setProposal(null)
     const next = [...messages, { role: 'user' as const, content: t }]
     setMessages(next); setInput(''); setLoading(true)
