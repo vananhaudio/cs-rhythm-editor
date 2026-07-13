@@ -491,7 +491,7 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
           <button onClick={() => setShowDrafts(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, height: 32, padding: '0 12px', color: C.text, cursor: 'pointer', fontSize: 13, fontWeight: 700, flexShrink: 0, fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>📂 Bài của tôi</button>
           <button onClick={() => setShowHelp(true)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 16, fontWeight: 700, flexShrink: 0 }}>?</button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: 10, ...center }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', ...center, marginTop: 20 }}>
           {STEPS.map((s, i) => {
             const active = i === step
             const done = i < step
