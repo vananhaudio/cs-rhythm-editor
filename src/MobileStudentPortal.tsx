@@ -4,6 +4,7 @@ import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import GrooveExercise from './groove/GrooveExercise'
+import SongBuilderPage from './SongBuilderPage'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIOS } from './iap'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
@@ -374,6 +375,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [showScaleExercise, setShowScaleExercise] = useState(false)
   // ── Groove (Tiết tấu) overlay — port từ Groove Lab ──
   const [showGroove, setShowGroove] = useState(false)
+  // ── BMS (Song Builder) render THẲNG trong app (không iframe) — hết app-chồng-app ──
+  const [showBMS, setShowBMS] = useState(false)
+  const [bmsInit, setBmsInit] = useState<{ title?: string | null; youtube?: string | null; tempo?: string | null } | undefined>(undefined)
   // Tool ID của bài học đang mở exercise (để mark done khi đóng)
   const [currentLessonToolId, setCurrentLessonToolId] = useState<string | null>(null)
   // ── Coming-soon tools accordion ──
@@ -436,17 +440,27 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     return null
   }
 
+  const markToolUsed = (toolId: string) => setUsedToolIds(prev => {
+    const next = new Set([...prev, toolId])
+    if (activeLesson) { try { localStorage.setItem(usedToolsKey(activeLesson.id), JSON.stringify([...next])) } catch { /* bỏ qua */ } }
+    return next
+  })
+
   const openTool = (route: string, name: string, toolId?: string) => {
+    // BMS: render THẲNG (không iframe) → hết "app chồng app". Tham số truyền qua prop, không qua URL iframe.
+    if (route.startsWith('/song-builder')) {
+      const p = new URLSearchParams(route.split('?')[1] ?? '')
+      setBmsInit({ title: p.get('title'), youtube: p.get('youtube'), tempo: p.get('tempo') })
+      setShowBMS(true)
+      if (toolId) markToolUsed(toolId)
+      return
+    }
     // Thêm embedded=1 để tool bên trong ẩn nút ✕ của mình (tránh 2 nút đóng)
     const sep = route.includes('?') ? '&' : '?'
     const embeddedRoute = route.startsWith('http') ? route : route + sep + 'embedded=1'
     const url = embeddedRoute.startsWith('http') ? embeddedRoute : window.location.origin + embeddedRoute
     setActiveTool({ name, url })
-    if (toolId) setUsedToolIds(prev => {
-      const next = new Set([...prev, toolId])
-      if (activeLesson) { try { localStorage.setItem(usedToolsKey(activeLesson.id), JSON.stringify([...next])) } catch { /* bỏ qua */ } }
-      return next
-    })
+    if (toolId) markToolUsed(toolId)
   }
 
   // Đóng tool — nếu có bước journey đang chờ, đọc lại bài & đánh dấu bước nếu DỮ LIỆU xác nhận
@@ -964,6 +978,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           setCurrentLessonToolId(null)
         }}
       />
+    )}
+
+    {showBMS && (
+      <SongBuilderPage embedded initial={bmsInit} onClose={() => setShowBMS(false)} />
     )}
 
     {celebrate && (

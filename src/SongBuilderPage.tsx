@@ -148,7 +148,11 @@ function LyricBlock({ words, mapping, activeIndex, onTap, picker, chords }: {
 }
 
 /* ============================ PAGE ============================ */
-export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
+export default function SongBuilderPage({ onClose, embedded = false, initial }: {
+  onClose?: () => void
+  embedded?: boolean                                   // render THẲNG trong app (không iframe) → overlay fullscreen
+  initial?: { title?: string | null; youtube?: string | null; tempo?: string | null }  // tham số qua prop thay cho URL
+}) {
   const [draftId, setDraftId] = useState<string>(() => newDraftId())
   const [songTitle, setSongTitle] = useState('')
   const [videoThumb, setVideoThumb] = useState<string | null>(null)
@@ -211,8 +215,8 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
     migrateLegacyDraft()
     // Nếu mở từ journey ?title= → nạp thẳng, bỏ qua hỏi nháp cũ
     const urlParams = new URLSearchParams(window.location.search)
-    const urlTitle   = urlParams.get('title')
-    const urlYoutube = urlParams.get('youtube')
+    const urlTitle   = initial ? (initial.title ?? null) : urlParams.get('title')
+    const urlYoutube = initial ? (initial.youtube ?? null) : urlParams.get('youtube')
     if (urlTitle) {
       setSongTitle(urlTitle)
       if (urlYoutube) {
@@ -221,7 +225,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
         if (vid) setVideoId(vid)
       }
       // Pre-fill BPM từ Tap Tempo — tạo tapTimes giả để fitTempo tính ra đúng BPM
-      const urlTempo = parseFloat(urlParams.get('tempo') ?? '')
+      const urlTempo = parseFloat((initial ? initial.tempo : urlParams.get('tempo')) ?? '')
       if (urlTempo > 0) {
         const beatDur = 60 / urlTempo
         const synth = Array.from({ length: 8 }, (_, i) => i * beatDur)
@@ -468,7 +472,8 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
 
   /* ===================== RENDER ===================== */
   return (
-    <div style={{ minHeight: '100dvh', background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column',
+      ...(embedded ? { position: 'fixed' as const, inset: 0, zIndex: 600, minHeight: 0, height: '100dvh' } : null) }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
         *{box-sizing:border-box} button:active:not(:disabled){transform:scale(0.97)}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
@@ -603,7 +608,7 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
       )}
       {practiceDraft && (
         <PracticePlayer draft={practiceDraft} onClose={() => setPracticeDraft(null)}
-          embedded={new URLSearchParams(window.location.search).get('embedded') === '1'} />
+          embedded={embedded || new URLSearchParams(window.location.search).get('embedded') === '1'} />
       )}
     </div>
   )
