@@ -177,6 +177,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [lessonActionMap, setLessonActionMap] = useState<Record<string, Set<string>>>({})  // lessonId → set action_type (cho màu mốc)
   const [masterPath, setMasterPath] = useState<{ id: string; title: string; courseId: string; courseName: string }[]>([])  // đường mốc xuyên suốt mọi khóa
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
+  const [returnLessonId, setReturnLessonId] = useState<string | null>(null) // bài vừa mở → khi quay lại danh sách cuộn về đúng chỗ
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
   const [skillMap, setSkillMap]         = useState<Record<string, number>>({})  // lessonId → số phiên luyện (đỏ/vàng/xanh)
   const [freeCourses, setFreeCourses]   = useState<Set<string>>(new Set())  // khoá miễn phí (is_free)
@@ -680,6 +681,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     const code = enrollments.find(e => e.course_id === courseId)?.course?.code
     if (isSeqLocked(code)) return
     setActiveCourseId(courseId)
+    setReturnLessonId(null)   // vào khoá mới → bắt đầu từ đầu (chỉ cuộn-giữ-chỗ khi quay lại từ 1 bài)
     try { localStorage.setItem('lastCourse:' + student.id, courseId) } catch { /**/ }  // ghi khoá vừa mở → "Học ngay" resume đúng chỗ
     setLastOpenedCourse(courseId)
     const { data: mods } = await supabase.from('edu_modules')
@@ -694,7 +696,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       // Mở THẲNG vào 1 bài cụ thể (nút Học tiếp / Học ngay) — nếu bài mở được
       if (targetLessonId && ownedNow) {
         const t = parsed.find(l => l.id === targetLessonId)
-        if (t) { setActiveLesson(t); setLessonTab('content'); try { setUsedToolIds(new Set(JSON.parse(localStorage.getItem(usedToolsKey(t.id)) || '[]'))) } catch { /**/ } setScreen('lesson'); return }
+        if (t) { setReturnLessonId(t.id); setActiveLesson(t); setLessonTab('content'); try { setUsedToolIds(new Set(JSON.parse(localStorage.getItem(usedToolsKey(t.id)) || '[]'))) } catch { /**/ } setScreen('lesson'); return }
       }
       // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách (CHỈ khi đã sở hữu — khoá nền thiếu thì luôn dừng ở mục lục)
       if (ownedNow && parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')) {
@@ -716,6 +718,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
   const openLesson = (l: Lesson) => {
     if (!isUnlocked(l)) return // khoá, không mở
+    setReturnLessonId(l.id)   // nhớ để khi quay lại danh sách cuộn về đúng bài
     setActiveLesson(l)
     setLessonTab('content')
     // Khôi phục tool đã thực hành của bài này (nếu có) → không bị "khoá lại" khi mở lại
@@ -811,6 +814,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   const goBack = () => screen === 'lesson' ? setScreen('courses') : (setScreen('home'), setActiveCourseId(null))
+
+  // Quay lại danh sách bài → cuộn về ĐÚNG bài vừa học (không nhảy về đầu khoá)
+  useEffect(() => {
+    if (screen !== 'courses' || !returnLessonId) return
+    const id = returnLessonId
+    const t = window.setTimeout(() => {
+      document.getElementById('ls-' + id)?.scrollIntoView({ block: 'center', behavior: 'auto' })
+      setReturnLessonId(null)
+    }, 60)
+    return () => window.clearTimeout(t)
+  }, [screen, returnLessonId])
 
   // % hoàn thành của 1 khoá
   const courseProgress = (courseId: string) => {
@@ -1399,7 +1413,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     const locked     = tierLocked || seqLocked
                     const isCurrent  = !done && !locked
                     return (
-                      <div key={l.id} onClick={() => { if (tierLocked) { if (!isNativeIOS) window.location.href = '/class' } else if (!seqLocked) openLesson(l) }}
+                      <div key={l.id} id={'ls-' + l.id} onClick={() => { if (tierLocked) { if (!isNativeIOS) window.location.href = '/class' } else if (!seqLocked) openLesson(l) }}
                         style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: (tierLocked && !isNativeIOS) || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : isCurrent ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
