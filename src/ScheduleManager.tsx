@@ -91,16 +91,25 @@ export default function ScheduleManager() {
     if (!form || !form.name.trim()) { setMsg('Nhập tên lớp trước nhé.'); return }
     setBusy(true); setMsg('')
     const code = maLop().trim() || null
-    // Nhóm Zalo ≡ mã lớp: tự khớp/tạo nhóm cùng mã, cập nhật link (nếu có mã lớp)
+    // CHUẨN MÃ: lớp năng lực (có dạng lớp) BẮT BUỘC có mã lớp → chặn lưu thiếu Số khoá (tránh lệch nhóm↔lịch)
+    const nl = mainCode()
+    if (nl && dangLop(nl) && !code) {
+      setBusy(false); setMsg(`Lớp năng lực ${nl} cần nhập "Số khoá" để sinh mã lớp (nhóm Zalo ≡ mã lớp). Xem docs/QUY-TAC-MA.md.`); return
+    }
+    // Nhóm Zalo ≡ mã lớp: khớp nhóm cùng mã (GIỮ tên nhóm sẵn có — code là authoritative, tên để người đọc)
     let group_id = form.group_id || null
     if (code) {
-      const uid = (await supabase.auth.getUser()).data.user?.id
-      const { data: g, error: gErr } = await supabase.from('edu_groups')
-        .upsert({ code, name: code, group_type: 'zalo', is_active: true, zalo_url: zaloUrl.trim() || null }, { onConflict: 'code' })
-        .select('id').single()
-      if (gErr) { setBusy(false); setMsg('Tạo/khớp nhóm Zalo lỗi: ' + gErr.message); return }
-      group_id = g?.id ?? group_id
-      void uid
+      const { data: exist } = await supabase.from('edu_groups').select('id').ilike('code', code).limit(1)
+      if (exist?.[0]?.id) {
+        await supabase.from('edu_groups').update({ is_active: true, zalo_url: zaloUrl.trim() || null }).eq('id', exist[0].id)
+        group_id = exist[0].id
+      } else {
+        const { data: g, error: gErr } = await supabase.from('edu_groups')
+          .insert({ code, name: code, group_type: 'zalo', is_active: true, zalo_url: zaloUrl.trim() || null })
+          .select('id').single()
+        if (gErr) { setBusy(false); setMsg('Tạo nhóm Zalo lỗi: ' + gErr.message); return }
+        group_id = g?.id ?? group_id
+      }
     }
     // Khoá chính: ưu tiên ★ đã chọn; nếu chưa, lấy khoá đầu KHÔNG PHẢI NM (NM không làm khoá chính)
     const nonNM = form.course_ids.find(id => courses.find(c => c.id === id)?.code !== 'NM')
