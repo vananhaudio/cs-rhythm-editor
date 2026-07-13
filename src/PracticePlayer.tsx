@@ -129,15 +129,18 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
       if (beat !== lastBeatRef.current) {
         lastBeatRef.current = beat
         const inBar = ((beat % N) + N) % N
-        setBeatNum(inBar + 1)                          // số phách nhảy 1..N
-        click(inBar === (draft.downbeatPosition - 1))  // đập MẠNH ở phách 1
+        const dp0 = (draft.downbeatPosition || 1) - 1                 // remainder của phách mạnh
+        const pos = (((inBar - dp0) % N) + N) % N                     // 0 tại phách MẠNH → đánh số lại: phách 1 = phách mạnh
+        setBeatNum(pos + 1)                                           // số phách nhảy 1..N (1 = phách mạnh)
+        click(pos === 0)                                             // đập MẠNH ở phách 1
       }
     }, 22)
     return () => clearInterval(id)
   }, [metronomeOn, fit, draft.timeSignature, draft.downbeatPosition, videoClock, click])
-  // Bật "Đập nhịp" → MUTE tiếng YouTube (chỉ nghe click + nhìn số phách); tắt → mở lại tiếng
-  useEffect(() => { post(metronomeOn ? 'mute' : 'unMute') }, [metronomeOn, playing, post])
   const toggleMetro = () => { ensureAudio(); setMetronomeOn(v => !v) }
+  // Người dùng TỰ bật/tắt tiếng YouTube (không auto-mute theo Đập nhịp)
+  const [ytMuted, setYtMuted] = useState(false)
+  useEffect(() => { post(ytMuted ? 'mute' : 'unMute') }, [ytMuted, playing, post])
 
   useEffect(() => () => { post('pauseVideo') }, [post])
 
@@ -258,10 +261,16 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
               ? <button onClick={onClose} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>‹ Danh sách</button>
               : <span />}
             {draft.videoId && (
-              <button onClick={() => setVideoBig(v => !v)} aria-label={videoBig ? 'Thu nhỏ video' : 'Phóng to video'}
-                style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '6px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>
-                {videoBig ? '⤡ Thu nhỏ' : '⤢ Phóng to'}
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setYtMuted(m => !m)} aria-label={ytMuted ? 'Bật tiếng video' : 'Tắt tiếng video'}
+                  style={{ background: ytMuted ? C.accentSoft : C.surface, border: `1px solid ${ytMuted ? C.accent + '55' : C.border}`, color: ytMuted ? C.accent : C.text, borderRadius: 10, width: 40, padding: '6px 0', fontSize: 15, cursor: 'pointer', fontFamily: FONT }}>
+                  {ytMuted ? '🔇' : '🔊'}
+                </button>
+                <button onClick={() => setVideoBig(v => !v)} aria-label={videoBig ? 'Thu nhỏ video' : 'Phóng to video'}
+                  style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '6px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {videoBig ? '⤡ Thu nhỏ' : '⤢ Phóng to'}
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -299,17 +308,17 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
           </div>
         )}
 
-        {/* Đập nhịp — số phách nhảy (khi bật; tiếng YouTube đã mute) */}
+        {/* Đập nhịp — số phách nhảy. Khung CAO CỐ ĐỊNH để phách sáng không làm co giãn khung lời */}
         {metronomeOn && hasGrid && (
-          <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          <div style={{ flexShrink: 0, height: 54, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
             {Array.from({ length: draft.timeSignature }, (_, i) => {
               const on = beatNum === i + 1
-              const isDown = i === (draft.downbeatPosition - 1)   // phách mạnh
+              const isDown = i === 0   // sau khi đánh số lại: phách 1 = phách MẠNH
               return (
                 <div key={i} style={{
-                  width: on ? 46 : 34, height: on ? 46 : 34, borderRadius: '50%',
+                  width: on ? 46 : 34, height: on ? 46 : 34, borderRadius: '50%', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 900, fontSize: on ? 22 : 15, lineHeight: 1, transition: 'all .07s',
+                  fontWeight: 900, fontSize: on ? 22 : 15, lineHeight: 1, transition: 'width .07s, height .07s, background .07s',
                   background: on ? (isDown ? C.amber : C.accent) : C.surface,
                   color: on ? '#fff' : C.muted, border: `1px solid ${on ? 'transparent' : C.border}`,
                 }}>{i + 1}</div>
