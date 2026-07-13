@@ -28,6 +28,17 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
   const chords = draft.chords ?? []
   const hasChords = chords.length > 0
   const chordByWord = useMemo(() => new Map(chords.map(c => [c.wordIndex, c.name])), [chords])
+  // Từ rơi vào PHÁCH MẠNH (phách 1 của ô nhịp) — để tô đậm hơn hợp âm ở phách yếu.
+  const strongBeatWords = useMemo(() => {
+    const s = new Set<number>()
+    const N = draft.timeSignature || 4
+    const dp = (draft.downbeatPosition || 1) - 1     // remainder của phách mạnh
+    for (const m of mapping) {
+      if (m.beatPosition == null) continue
+      if ((((Math.round(m.beatPosition) % N) + N) % N) === dp) s.add(m.index)
+    }
+    return s
+  }, [mapping, draft.timeSignature, draft.downbeatPosition])
 
   const [videoTime, setVideoTime] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -298,18 +309,19 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
                       style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', justifyContent: 'center', alignItems: 'flex-end', opacity, padding: '2px', transition: 'opacity 0.3s' }}>
                       {ln.words.map(w => {
                         const chord = chordByWord.get(w.index)
-                        const strong = isActiveLine && !!chord   // từ mang hợp âm = phách mạnh (điểm cần "vào") của dòng đang hát
+                        const strong = isActiveLine && !!chord && strongBeatWords.has(w.index)   // hợp âm + PHÁCH MẠNH → đậm nhất
+                        const chordWeak = isActiveLine && !!chord && !strong                     // hợp âm nhưng KHÔNG phải phách mạnh
                         return (
                           <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                             {chord && <span style={{
-                              fontSize: 15, fontWeight: 800, lineHeight: 1.1,
-                              color: isActiveLine ? '#FBBF24' : C.accent,   // hợp âm SÁNG (vàng ấm) khi đến lượt
+                              fontSize: strong ? 16.5 : 14.5, fontWeight: 800, lineHeight: 1.1,
+                              color: !isActiveLine ? C.accent : strong ? '#FFE45E' : '#F0A93B',   // phách mạnh: vàng sáng rực · hợp âm yếu: cam ấm
                               transition: 'color .2s',
                             }}>{chord}</span>}
                             <span style={{
                               fontSize: 24,   // TO SẴN & ĐỀU — không phóng to khi đến lượt (đỡ giật, dễ hát)
-                              fontWeight: strong ? 800 : 600,
-                              color: strong ? '#FDE68A' : isActiveLine ? '#FFFFFF' : C.text,   // phách mạnh vàng sáng; dòng đang hát trắng sáng
+                              fontWeight: strong ? 900 : chordWeak ? 700 : 600,
+                              color: strong ? '#FFE45E' : chordWeak ? '#F0A93B' : isActiveLine ? '#FFFFFF' : C.text,   // phách mạnh ĐẬM NHẤT (vàng rực) > hợp âm yếu (cam) > chữ thường (trắng)
                               transition: 'color .2s',
                             }}>{w.text}</span>
                           </div>
