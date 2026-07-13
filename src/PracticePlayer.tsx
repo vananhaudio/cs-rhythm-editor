@@ -200,9 +200,10 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
       if (box && al != null) {
         const el = lineRefs.current[al]
         if (el) {
-          const to = Math.max(0, box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top) - box.clientHeight * LINE_ANCHOR)
+          const to = Math.round(Math.max(0, box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top) - box.clientHeight * LINE_ANCHOR))
           const d = to - box.scrollTop
-          box.scrollTop += Math.abs(d) < 0.5 ? d : d * 0.16   // lerp mượt về đích
+          if (Math.abs(d) >= 0.5) box.scrollTop = Math.round(box.scrollTop + d * 0.16)   // lerp mượt, làm tròn tránh nhoè
+          else box.scrollTop = to
         }
       }
       raf = requestAnimationFrame(follow)
@@ -283,7 +284,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
           {words.length === 0 ? (
             <div style={{ color: C.muted, fontSize: 14, flex: 1 }}>Bài này chưa có lời.</div>
           ) : (
-            <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', paddingTop: (playing && boxH) ? boxH * 0.26 : 14, paddingBottom: boxH ? boxH * 0.74 : '42vh', maskImage: 'linear-gradient(to bottom, transparent, #000 10%, #000 92%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 10%, #000 92%, transparent)' }}>
+            <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', paddingTop: (playing && boxH) ? boxH * 0.26 : 14, paddingBottom: boxH ? boxH * 0.74 : '42vh' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {lines.map(ln => {
                   const rel = activeLine != null ? ln.line - activeLine : null   // <0 đã hát · 0 đang hát · >0 sắp tới
