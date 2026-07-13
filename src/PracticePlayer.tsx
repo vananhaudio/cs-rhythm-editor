@@ -20,7 +20,7 @@ const MONO = `'JetBrains Mono','Space Mono',monospace`
 const buildEmbedUrl = (id: string) =>
   `https://www.youtube.com/embed/${id}?${new URLSearchParams({ enablejsapi: '1', controls: '1', rel: '0', modestbranding: '1', playsinline: '1' })}`
 
-export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; onClose: () => void }) {
+export default function PracticePlayer({ draft, onClose, embedded = false }: { draft: SongDraft; onClose: () => void; embedded?: boolean }) {
   const words = useMemo(() => splitWords(draft.lyricsText), [draft.lyricsText])
   const mapping = useMemo(() => computeMapping(words, draft.anchors), [words, draft.anchors])
   const fit = draft.fit
@@ -163,7 +163,7 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
   }, [])
   // Teleprompter: BÁM LIÊN TỤC — mỗi frame kéo dòng đang hát về ~30% từ trên (luôn tự sửa sai lệch,
   // kể cả khi chữ to lên làm dòng xê dịch). Gán scrollTop trực tiếp → chạy cả iOS WebView.
-  const LINE_ANCHOR = 0.30
+  const LINE_ANCHOR = 0.26
   const activeLineRef = useRef<number | undefined>(undefined)
   activeLineRef.current = activeLine
   useEffect(() => {
@@ -195,20 +195,25 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 10, flexShrink: 0 }}>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>‹ Đóng</button>
-        <span style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {draft.title || 'Luyện tập'}
-        </span>
-        <span style={{ minWidth: 48, textAlign: 'right', fontFamily: MONO, fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
-          {hasGrid ? `${Math.round(fit!.bpm)}·${draft.timeSignature}/4` : ''}
-        </span>
-      </div>
+      {/* Header — ẩn khi mở trong app TVA (đã có thanh 'Đóng · BMS' của app); giữ khi chạy standalone */}
+      {!embedded && (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 10, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>‹ Đóng</button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {draft.title || 'Luyện tập'}
+          </span>
+          <span style={{ minWidth: 48, textAlign: 'right', fontFamily: MONO, fontSize: 12, color: C.muted, whiteSpace: 'nowrap' }}>
+            {hasGrid ? `${Math.round(fit!.bpm)}·${draft.timeSignature}/4` : ''}
+          </span>
+        </div>
+      )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px 16px', maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: embedded ? '12px 16px 16px' : '0 16px 16px', maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0, position: 'relative' }}>
+        {embedded && (
+          <button onClick={onClose} style={{ position: 'absolute', top: 8, left: 8, zIndex: 3, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', borderRadius: 16, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>‹ Danh sách</button>
+        )}
         {draft.videoId && (
-          <div style={{ height: 'min(26vh, 190px)', borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0 }}>
+          <div style={{ height: 'min(23vh, 170px)', borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0 }}>
             <iframe ref={iframeRef} src={buildEmbedUrl(draft.videoId)} title="YouTube"
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen
@@ -234,7 +239,7 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
           {words.length === 0 ? (
             <div style={{ color: C.muted, fontSize: 14, flex: 1 }}>Bài này chưa có lời.</div>
           ) : (
-            <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', paddingTop: boxH ? boxH * 0.30 : '18vh', paddingBottom: boxH ? boxH * 0.70 : '42vh', maskImage: 'linear-gradient(to bottom, transparent, #000 12%, #000 90%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 12%, #000 90%, transparent)' }}>
+            <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', paddingTop: (playing && boxH) ? boxH * 0.26 : 14, paddingBottom: boxH ? boxH * 0.74 : '42vh', maskImage: 'linear-gradient(to bottom, transparent, #000 10%, #000 92%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 10%, #000 92%, transparent)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {lines.map(ln => {
                   const rel = activeLine != null ? ln.line - activeLine : null   // <0 đã hát · 0 đang hát · >0 sắp tới

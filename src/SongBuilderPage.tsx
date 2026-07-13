@@ -602,7 +602,8 @@ export default function SongBuilderPage({ onClose }: { onClose?: () => void }) {
         />
       )}
       {practiceDraft && (
-        <PracticePlayer draft={practiceDraft} onClose={() => setPracticeDraft(null)} />
+        <PracticePlayer draft={practiceDraft} onClose={() => setPracticeDraft(null)}
+          embedded={new URLSearchParams(window.location.search).get('embedded') === '1'} />
       )}
     </div>
   )
