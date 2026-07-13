@@ -162,12 +162,28 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
     return () => ro.disconnect()
   }, [])
   // Teleprompter: đưa dòng đang hát lên ~34% từ trên → thấy nhiều lời SẮP tới bên dưới để chuẩn bị.
+  // TỰ CUỘN bằng rAF (gán scrollTop trực tiếp) — iOS WebView bỏ qua scrollTo({behavior:'smooth'}) nên phải tween tay.
+  const scrollAnimRef = useRef(0)
   useEffect(() => {
     if (activeLine == null) return
     const box = scrollBoxRef.current, el = lineRefs.current[activeLine]
     if (!box || !el) return
-    const target = box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top) - box.clientHeight * 0.34
-    box.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
+    const to = Math.max(0, box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top) - box.clientHeight * 0.34)
+    const from = box.scrollTop
+    const dist = to - from
+    if (Math.abs(dist) < 1) return
+    cancelAnimationFrame(scrollAnimRef.current)
+    const dur = 480
+    let startTs = 0
+    const step = (ts: number) => {
+      if (!startTs) startTs = ts
+      const p = Math.min(1, (ts - startTs) / dur)
+      const ease = 1 - Math.pow(1 - p, 3)   // easeOutCubic
+      box.scrollTop = from + dist * ease
+      if (p < 1) scrollAnimRef.current = requestAnimationFrame(step)
+    }
+    scrollAnimRef.current = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(scrollAnimRef.current)
   }, [activeLine])
 
   const ctrlBtn = (label: string, onClick: () => void, kind: 'solid' | 'soft' | 'ghost', disabled?: boolean): React.ReactElement => {
