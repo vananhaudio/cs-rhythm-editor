@@ -309,20 +309,21 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
                       style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', justifyContent: 'center', alignItems: 'flex-end', opacity, padding: '2px', transition: 'opacity 0.3s' }}>
                       {ln.words.map(w => {
                         const chord = chordByWord.get(w.index)
-                        const strong = isActiveLine && !!chord && strongBeatWords.has(w.index)   // hợp âm + PHÁCH MẠNH → đậm nhất
-                        const chordWeak = isActiveLine && !!chord && !strong                     // hợp âm nhưng KHÔNG phải phách mạnh
+                        const isCurrent = w.index === activeWordIndex   // từ ĐANG chơi (playhead vừa chạm tới)
+                        const strong = isCurrent && !!chord && strongBeatWords.has(w.index)   // ĐANG ở phách mạnh (có hợp âm) → vàng rực
+                        const chordWeak = isCurrent && !!chord && !strong                     // ĐANG ở hợp âm phách yếu → cam
                         return (
                           <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                             {chord && <span style={{
                               fontSize: strong ? 16.5 : 14.5, fontWeight: 800, lineHeight: 1.1,
-                              color: !isActiveLine ? C.accent : strong ? '#FFE45E' : '#F0A93B',   // phách mạnh: vàng sáng rực · hợp âm yếu: cam ấm
-                              transition: 'color .2s',
+                              color: strong ? '#FFE45E' : chordWeak ? '#F0A93B' : C.accent,   // hợp âm chỉ SÁNG VÀNG khi playhead chạm tới; còn lại indigo (đọc trước)
+                              transition: 'color .15s',
                             }}>{chord}</span>}
                             <span style={{
-                              fontSize: 24,   // TO SẴN & ĐỀU — không phóng to khi đến lượt (đỡ giật, dễ hát)
+                              fontSize: 24,   // TO SẴN & ĐỀU — không phóng to (đỡ giật, dễ hát)
                               fontWeight: strong ? 900 : chordWeak ? 700 : 600,
-                              color: strong ? '#FFE45E' : chordWeak ? '#F0A93B' : isActiveLine ? '#FFFFFF' : C.text,   // phách mạnh ĐẬM NHẤT (vàng rực) > hợp âm yếu (cam) > chữ thường (trắng)
-                              transition: 'color .2s',
+                              color: strong ? '#FFE45E' : chordWeak ? '#F0A93B' : isActiveLine ? '#FFFFFF' : C.text,   // chỉ vàng lên ĐÚNG LÚC đến phách mạnh; cả câu vẫn trắng sáng
+                              transition: 'color .15s',
                             }}>{w.text}</span>
                           </div>
                         )
