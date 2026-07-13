@@ -44,6 +44,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
   const [playing, setPlaying] = useState(false)
   const [playerReady, setPlayerReady] = useState(false)
   const [metronomeOn, setMetronomeOn] = useState(false)
+  const [beatNum, setBeatNum] = useState(0)          // số phách đang nhảy (1..N) khi bật Đập nhịp
   const [videoBig, setVideoBig] = useState(false)   // mặc định video NHỎ — ưu tiên lời + hợp âm
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
@@ -119,7 +120,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
     o.start(t0); o.stop(t0 + 0.09)
   }, [])
   useEffect(() => {
-    if (!metronomeOn || !fit?.ok) return
+    if (!metronomeOn || !fit?.ok) { setBeatNum(0); return }
     lastBeatRef.current = -1
     const N = draft.timeSignature
     const id = setInterval(() => {
@@ -128,11 +129,14 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
       if (beat !== lastBeatRef.current) {
         lastBeatRef.current = beat
         const inBar = ((beat % N) + N) % N
-        click(draft.groupBeats === true && inBar === draft.downbeatPosition - 1)
+        setBeatNum(inBar + 1)                          // số phách nhảy 1..N
+        click(inBar === (draft.downbeatPosition - 1))  // đập MẠNH ở phách 1
       }
     }, 22)
     return () => clearInterval(id)
-  }, [metronomeOn, fit, draft.timeSignature, draft.downbeatPosition, draft.groupBeats, videoClock, click])
+  }, [metronomeOn, fit, draft.timeSignature, draft.downbeatPosition, videoClock, click])
+  // Bật "Đập nhịp" → MUTE tiếng YouTube (chỉ nghe click + nhìn số phách); tắt → mở lại tiếng
+  useEffect(() => { post(metronomeOn ? 'mute' : 'unMute') }, [metronomeOn, playing, post])
   const toggleMetro = () => { ensureAudio(); setMetronomeOn(v => !v) }
 
   useEffect(() => () => { post('pauseVideo') }, [post])
@@ -247,20 +251,26 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
       )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: embedded ? 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 16px' : '0 16px 16px', maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0, position: 'relative' }}>
-        {embedded && (
-          <button onClick={onClose} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 8px)', left: 8, zIndex: 3, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', borderRadius: 16, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>‹ Danh sách</button>
+        {/* Thanh nút TRÊN video (không đè video → dùng được thanh tua YouTube) */}
+        {(embedded || draft.videoId) && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {embedded
+              ? <button onClick={onClose} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>‹ Danh sách</button>
+              : <span />}
+            {draft.videoId && (
+              <button onClick={() => setVideoBig(v => !v)} aria-label={videoBig ? 'Thu nhỏ video' : 'Phóng to video'}
+                style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: '6px 12px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>
+                {videoBig ? '⤡ Thu nhỏ' : '⤢ Phóng to'}
+              </button>
+            )}
+          </div>
         )}
         {draft.videoId && (
-          <div style={{ height: videoBig ? 'min(32vh, 210px)' : 52, borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0, position: 'relative', transition: 'height .25s' }}>
+          <div style={{ height: videoBig ? 'min(32vh, 210px)' : 52, borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0, transition: 'height .25s' }}>
             <iframe ref={iframeRef} src={buildEmbedUrl(draft.videoId)} title="YouTube"
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen
               onLoad={() => { setTimeout(startListening, 400); setTimeout(startListening, 1200) }} />
-            {/* nút thu/phóng video — mặc định nhỏ để ưu tiên lời + hợp âm */}
-            <button onClick={() => setVideoBig(v => !v)} aria-label={videoBig ? 'Thu nhỏ video' : 'Phóng to video'}
-              style={{ position: 'absolute', top: 6, right: 6, zIndex: 4, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', borderRadius: 9, height: 30, padding: '0 10px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 5 }}>
-              {videoBig ? '⤡ Thu nhỏ' : '⤢ Phóng to'}
-            </button>
           </div>
         )}
 
@@ -286,6 +296,25 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {/* Đập nhịp — số phách nhảy (khi bật; tiếng YouTube đã mute) */}
+        {metronomeOn && hasGrid && (
+          <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+            {Array.from({ length: draft.timeSignature }, (_, i) => {
+              const on = beatNum === i + 1
+              const isDown = i === (draft.downbeatPosition - 1)   // phách mạnh
+              return (
+                <div key={i} style={{
+                  width: on ? 46 : 34, height: on ? 46 : 34, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 900, fontSize: on ? 22 : 15, lineHeight: 1, transition: 'all .07s',
+                  background: on ? (isDown ? C.amber : C.accent) : C.surface,
+                  color: on ? '#fff' : C.muted, border: `1px solid ${on ? 'transparent' : C.border}`,
+                }}>{i + 1}</div>
+              )
+            })}
           </div>
         )}
 
@@ -341,7 +370,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           {ctrlBtn(playing ? '⏸ Tạm dừng' : '▶ Phát', () => playing ? pause() : play(), 'solid', !playerReady)}
           {ctrlBtn('⏮ Về đầu', () => seekTo(0), 'ghost', !playerReady)}
-          {ctrlBtn('🔊 Metro', toggleMetro, metronomeOn ? 'solid' : 'soft', !hasGrid)}
+          {ctrlBtn('🥁 Đập nhịp', toggleMetro, metronomeOn ? 'solid' : 'soft', !hasGrid)}
         </div>
       </div>
     </div>
