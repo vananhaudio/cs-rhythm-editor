@@ -294,11 +294,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
                     : rel <= 2 ? 0.9 : rel <= 4 ? 0.62 : 0.42     // sắp tới → giữ RÕ để đọc trước
                   return (
                     <div key={ln.line} ref={el => { lineRefs.current[ln.line] = el }}
-                      style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', justifyContent: 'center', alignItems: 'flex-end', opacity,
-                        background: isActiveLine ? 'rgba(245,158,11,0.16)' : 'transparent',
-                        border: isActiveLine ? '1px solid rgba(245,158,11,0.45)' : '1px solid transparent',
-                        borderRadius: 14, padding: isActiveLine ? '8px 12px' : '0 2px',
-                        transition: 'opacity 0.3s, background 0.3s, border-color 0.3s' }}>
+                      style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', justifyContent: 'center', alignItems: 'flex-end', opacity, padding: '2px', transition: 'opacity 0.3s' }}>
                       {ln.words.map(w => {
                         const chord = chordByWord.get(w.index)
                         const size = isActiveLine ? 26 : 21
