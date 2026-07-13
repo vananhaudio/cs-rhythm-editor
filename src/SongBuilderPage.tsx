@@ -481,7 +481,7 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
         ::placeholder{color:${C.dim}}`}</style>
 
       {/* Header gọn + thanh bước dạng dot */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '8px 12px', flexShrink: 0 }}>
+      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: 'calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...center }}>
           {onClose && <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 9, width: 32, height: 32, color: C.muted, cursor: 'pointer', fontSize: 17, flexShrink: 0 }}>✕</button>}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>

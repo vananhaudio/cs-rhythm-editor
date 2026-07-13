@@ -223,7 +223,7 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
     <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
       {/* Header — ẩn khi mở trong app TVA (đã có thanh 'Đóng · BMS' của app); giữ khi chạy standalone */}
       {!embedded && (
-        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px', gap: 10, flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>‹ Đóng</button>
           <span style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {draft.title || 'Luyện tập'}
@@ -234,9 +234,9 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
         </div>
       )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: embedded ? '12px 16px 16px' : '0 16px 16px', maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0, position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: embedded ? 'calc(env(safe-area-inset-top, 0px) + 12px) 16px 16px' : '0 16px 16px', maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0, position: 'relative' }}>
         {embedded && (
-          <button onClick={onClose} style={{ position: 'absolute', top: 8, left: 8, zIndex: 3, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', borderRadius: 16, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>‹ Danh sách</button>
+          <button onClick={onClose} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 8px)', left: 8, zIndex: 3, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', borderRadius: 16, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>‹ Danh sách</button>
         )}
         {draft.videoId && (
           <div style={{ height: videoBig ? 'min(32vh, 210px)' : 52, borderRadius: 14, overflow: 'hidden', background: '#000', flexShrink: 0, position: 'relative', transition: 'height .25s' }}>
