@@ -153,9 +153,21 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
     return out
   }, [words])
   const lineRefs = useRef<Record<number, HTMLDivElement | null>>({})
+  const scrollBoxRef = useRef<HTMLDivElement | null>(null)
+  const [boxH, setBoxH] = useState(0)
+  useEffect(() => {
+    const el = scrollBoxRef.current; if (!el) return
+    const ro = new ResizeObserver(() => setBoxH(el.clientHeight))
+    ro.observe(el); setBoxH(el.clientHeight)
+    return () => ro.disconnect()
+  }, [])
+  // Teleprompter: đưa dòng đang hát lên ~34% từ trên → thấy nhiều lời SẮP tới bên dưới để chuẩn bị.
   useEffect(() => {
     if (activeLine == null) return
-    lineRefs.current[activeLine]?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    const box = scrollBoxRef.current, el = lineRefs.current[activeLine]
+    if (!box || !el) return
+    const target = box.scrollTop + (el.getBoundingClientRect().top - box.getBoundingClientRect().top) - box.clientHeight * 0.34
+    box.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
   }, [activeLine])
 
   const ctrlBtn = (label: string, onClick: () => void, kind: 'solid' | 'soft' | 'ghost', disabled?: boolean): React.ReactElement => {
@@ -212,22 +224,25 @@ export default function PracticePlayer({ draft, onClose }: { draft: SongDraft; o
           {words.length === 0 ? (
             <div style={{ color: C.muted, fontSize: 14, flex: 1 }}>Bài này chưa có lời.</div>
           ) : (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8vh 0', maskImage: 'linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div ref={scrollBoxRef} style={{ flex: 1, overflowY: 'auto', paddingTop: boxH ? boxH * 0.34 : '20vh', paddingBottom: boxH ? boxH * 0.66 : '40vh', maskImage: 'linear-gradient(to bottom, transparent, #000 14%, #000 88%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 14%, #000 88%, transparent)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {lines.map(ln => {
-                  const dist = activeLine != null ? Math.abs(activeLine - ln.line) : null
-                  const opacity = dist == null ? 0.72 : dist === 0 ? 1 : dist === 1 ? 0.5 : dist === 2 ? 0.32 : 0.2
-                  const isActiveLine = dist === 0
+                  const rel = activeLine != null ? ln.line - activeLine : null   // <0 đã hát · 0 đang hát · >0 sắp tới
+                  const isActiveLine = rel === 0
+                  const opacity = rel == null ? 0.72
+                    : rel === 0 ? 1
+                    : rel < 0 ? (rel === -1 ? 0.4 : 0.2)          // đã hát → mờ dần
+                    : rel <= 2 ? 0.9 : rel <= 4 ? 0.62 : 0.42     // sắp tới → giữ RÕ để đọc trước
                   return (
                     <div key={ln.line} ref={el => { lineRefs.current[ln.line] = el }}
                       style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', justifyContent: 'center', alignItems: 'flex-end', opacity, transition: 'opacity 0.3s' }}>
                       {ln.words.map(w => {
                         const isActive = activeWordIndex === w.index
                         const chord = chordByWord.get(w.index)
-                        const size = isActive ? 27 : isActiveLine ? 23 : 19
+                        const size = isActive ? 31 : isActiveLine ? 26 : 21
                         return (
-                          <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                            {chord && <span style={{ fontSize: isActiveLine ? 16 : 14, fontWeight: 800, color: C.accent }}>{chord}</span>}
+                          <div key={w.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                            {chord && <span style={{ fontSize: isActiveLine ? 17 : 14.5, fontWeight: 800, color: C.accent, lineHeight: 1.1 }}>{chord}</span>}
                             <span style={{
                               fontSize: size, fontWeight: isActive ? 800 : isActiveLine ? 700 : 600,
                               color: isActive ? '#1A1200' : C.text,
