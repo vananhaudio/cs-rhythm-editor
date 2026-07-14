@@ -31,7 +31,7 @@ const TOOLS: ToolItem[] = [
   { id: 'tap-sing',      icon: '🎤', name: 'Tap & Sing',   desc: 'Gõ nhịp và hát theo',    tier: 'basic',    category: 'Luyện nhịp' },
   { id: 'tap-strum',     icon: '🎸', name: 'Tap & Strum',  desc: 'Gõ nhịp và đệm guitar',  tier: 'standard', category: 'Luyện nhịp' },
   { id: 'scroll-kara',   icon: '📜', name: 'Scroll Kara',  desc: 'Lời cuộn + hợp âm',      tier: 'basic',    category: 'Player' },
-  { id: 'chord-seeing',  icon: '👁',  name: 'Hợp âm',       desc: 'Luyện tập bấm hợp âm',   tier: 'standard', category: 'Player' },
+  { id: 'chord-seeing',  icon: '🤟', name: 'Hợp âm',       desc: 'Luyện tập bấm hợp âm',   tier: 'standard', category: 'Player' },
   { id: 'backing-track', icon: '🎧', name: 'Backing Track',desc: 'Nhạc nền luyện tập',     tier: 'standard', category: 'Player' },
   { id: 'note-sheet',    icon: '📖', name: 'Note Sheet',   desc: 'Đọc và viết nốt nhạc',   tier: 'standard', category: 'Nhạc lý' },
   { id: 'hoa-am',        icon: '🎹', name: 'Hòa âm',       desc: 'Diatonic · Triad',        tier: 'standard', category: 'Nhạc lý' },
