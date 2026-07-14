@@ -43,6 +43,30 @@ const TOOLS: ToolItem[] = [
   { id: 'mj-chat',       icon: '🤖', name: 'MJ Chat Bot',  desc: 'Trợ lý học nhạc AI',     tier: 'pro',      category: 'Studio' },
   { id: 'book-tools',    icon: '📚', name: 'Book & Tools', desc: 'Tài liệu & giáo trình',  tier: 'pro',      category: 'Studio' },
 ]
+
+// Icon line-art cho công cụ Hợp âm — sơ đồ hợp âm (khung cần đàn + chấm ngón bấm)
+function ChordDiagramIcon({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="-6 -9 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <line x1="0" y1="0" x2="60" y2="0" stroke="#3F3F46" strokeWidth="6" strokeLinecap="round" />
+      <g stroke="#3F3F46" strokeWidth="2.4" strokeLinecap="round">
+        <line x1="0" y1="18" x2="60" y2="18" />
+        <line x1="0" y1="36" x2="60" y2="36" />
+        <line x1="0" y1="54" x2="60" y2="54" />
+        <line x1="0" y1="0" x2="0" y2="54" />
+        <line x1="15" y1="0" x2="15" y2="54" />
+        <line x1="30" y1="0" x2="30" y2="54" />
+        <line x1="45" y1="0" x2="45" y2="54" />
+        <line x1="60" y1="0" x2="60" y2="54" />
+      </g>
+      <g fill="#4338CA">
+        <circle cx="15" cy="27" r="7" />
+        <circle cx="30" cy="27" r="7" />
+        <circle cx="45" cy="45" r="7" />
+      </g>
+    </svg>
+  )
+}
 const UNLOCKED_TIERS: Record<string, string[]> = {
   beginner:     ['free'],
   elementary:   ['free', 'basic'],
@@ -578,7 +602,9 @@ function PortalView({ student, onLogout }: { student: Student; onLogout: () => v
                     style={{ background: unlocked ? T.bgLight : T.bgCard, border: `1.5px solid ${unlocked ? T.border : T.borderLight}`, borderRadius: 10, padding: '12px', display: 'flex', flexDirection: 'column', gap: 5, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : 0.6, textAlign: 'left', fontFamily: 'inherit', position: 'relative', transition: 'transform .1s' }}>
                     {!unlocked && <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 13, opacity: .5 }}>🔒</span>}
                     {unlocked && <span style={{ position: 'absolute', top: 8, right: 8, background: T.greenLight, borderRadius: 4, padding: '1px 6px', fontSize: 11, color: T.greenMid, fontWeight: 600, border: `1px solid ${T.borderLight}` }}>Mở</span>}
-                    <span style={{ fontSize: 22 }}>{tool.icon}</span>
+                    {tool.id === 'chord-seeing'
+                      ? <ChordDiagramIcon />
+                      : <span style={{ fontSize: 22 }}>{tool.icon}</span>}
                     <span style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{tool.name}</span>
                     <span style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.4 }}>{tool.desc}</span>
                     {!unlocked && <span style={{ fontSize: 11, color: '#A07820', fontWeight: 600, marginTop: 2 }}>Cần: {TIER_LABEL[tool.tier]}</span>}
