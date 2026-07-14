@@ -114,14 +114,25 @@ function playClick(accent: boolean) {
   } catch { /* ignore */ }
 }
 
-// ═══ Cần đàn 5 phím (cửa sổ pos.winStart .. +4) ══════════════════════════════
+// ═══ Cần đàn ═══════════════════════════════════════════════════════════════════
+//  · Thế di động: 5 ngăn (winStart..+4), không nut.
+//  · Thế mở (winStart=0): dải NUT bên trái (dây buông đặt trên nut) + 4 ngăn 1·2·3·4.
+//    → KHÔNG có "ngăn 0" giả để tránh hiểu nhầm là ngăn 1.
 function ArpFretboard({ pos, rootPc, quality, activeStep }: {
   pos: ArpPos; rootPc: number; quality: Quality; activeStep: Step | null
 }) {
   const BOARD_H = 180
   const STRING_CNT = 6
+  const open = pos.winStart === 0
+  const cells = open ? 4 : FRET_COUNT       // số ngăn phím hiển thị
+  const firstFret = open ? 1 : pos.winStart  // phím của ngăn đầu
+  const NUT = open ? 13 : 0                   // % bề ngang dành cho dải nut (dây buông)
+  const fretW = 100 - NUT
+  const cellFrets = Array.from({ length: cells }, (_, i) => firstFret + i)
+
   const rowY = (row: number) => ((row + 0.5) / STRING_CNT) * 100
-  const slotX = (fret: number) => (((fret - pos.winStart) + 0.5) / FRET_COUNT) * 100
+  const cellCenter = (idx: number) => NUT + ((idx + 0.5) / cells) * fretW
+  const noteX = (fret: number) => (open && fret === 0) ? (NUT / 2) : cellCenter(fret - firstFret)
   const strW = (si: number) => 3.4 - si * (2.4 / 5)
   const rootSet = new Set(pos.roots.map(r => `${r.s}-${r.f}`))
 
@@ -141,20 +152,19 @@ function ArpFretboard({ pos, rootPc, quality, activeStep }: {
         </div>
         {/* Thân cần đàn */}
         <div style={{ flex: 1, position: 'relative', background: 'linear-gradient(180deg,#1e1008 0%,#20140F 55%,#1a0d06 100%)', border: '1.5px solid #3a2a1f', borderRadius: '0 8px 8px 0', overflow: 'hidden' }}>
-          {/* Fret wires */}
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} style={{ position: 'absolute', left: `${(i / FRET_COUNT) * 100}%`, top: 0, bottom: 0, width: 2, background: 'linear-gradient(90deg,#777,#bbb,#777)', zIndex: 3, boxShadow: '0 0 3px rgba(0,0,0,0.5)' }} />
-          ))}
-          {/* Nut (xương đàn) — chỉ ở thế mở */}
-          {pos.winStart === 0 && (
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: 'linear-gradient(90deg,#f3e9cf,#ddc9a1,#b89b6a)', zIndex: 6, boxShadow: '2px 0 4px rgba(0,0,0,0.55)' }} />
+          {/* Dải NUT (xương đàn) — chỉ ở thế mở; dây buông đặt trên đây */}
+          {open && (
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${NUT}%`, background: 'linear-gradient(90deg,#f3e9cf,#e6d3ab 55%,#c9b183)', zIndex: 2, boxShadow: 'inset -3px 0 5px rgba(0,0,0,0.4)' }} />
           )}
+          {/* Fret wires (ngăn cách các ngăn phím) */}
+          {Array.from({ length: cells - 1 }, (_, k) => k + 1).map(i => (
+            <div key={i} style={{ position: 'absolute', left: `${NUT + (i / cells) * fretW}%`, top: 0, bottom: 0, width: 2, background: 'linear-gradient(90deg,#777,#bbb,#777)', zIndex: 3, boxShadow: '0 0 3px rgba(0,0,0,0.5)' }} />
+          ))}
           {/* Inlay dots */}
-          {Array.from({ length: FRET_COUNT }, (_, i) => pos.winStart + i).map(fret => {
+          {cellFrets.map((fret, idx) => {
             if (!fretMarkers.includes(fret)) return null
-            const slot = fret - pos.winStart
             return (
-              <div key={fret} style={{ position: 'absolute', left: `${(slot + 0.5) / FRET_COUNT * 100}%`, top: '50%', transform: 'translate(-50%,-50%)', width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.06)', zIndex: 1 }} />
+              <div key={fret} style={{ position: 'absolute', left: `${cellCenter(idx)}%`, top: '50%', transform: 'translate(-50%,-50%)', width: 14, height: 14, borderRadius: '50%', background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.06)', zIndex: 1 }} />
             )
           })}
           {/* Dây đàn */}
@@ -174,11 +184,11 @@ function ArpFretboard({ pos, rootPc, quality, activeStep }: {
               const isActive = activeStep?.s === si && activeStep?.f === fret
               const isOpen = fret === 0
               const bg = isActive ? '#4338CA' : isRoot ? '#EA580C' : 'rgba(255,255,255,0.22)'
-              const border = isActive ? '2px solid rgba(255,255,255,0.85)' : isOpen ? '2.5px solid #22C55E' : isRoot ? '2px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(255,255,255,0.15)'
+              const border = isActive ? '2px solid rgba(255,255,255,0.85)' : isOpen ? '2.5px solid #16A34A' : isRoot ? '2px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(255,255,255,0.15)'
               const size = isActive ? 28 : isRoot ? 26 : 22
               const semi = (((OPC[si] + fret) - rootPc) % 12 + 12) % 12
               return (
-                <div key={key} style={{ position: 'absolute', left: `${slotX(fret)}%`, top: `${rowY(row)}%`, width: size, height: size, marginLeft: -(size / 2), marginTop: -(size / 2), borderRadius: '50%', background: bg, border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#fff', zIndex: isActive ? 12 : isRoot ? 8 : 5, boxShadow: isActive ? '0 0 14px rgba(67,56,202,0.9)' : isRoot ? '0 0 8px rgba(234,88,12,0.6)' : 'none', transition: 'background .07s', overflow: 'hidden' }}>
+                <div key={key} style={{ position: 'absolute', left: `${noteX(fret)}%`, top: `${rowY(row)}%`, width: size, height: size, marginLeft: -(size / 2), marginTop: -(size / 2), borderRadius: '50%', background: bg, border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#fff', zIndex: isActive ? 12 : isRoot ? 8 : isOpen ? 7 : 5, boxShadow: isActive ? '0 0 14px rgba(67,56,202,0.9)' : isRoot ? '0 0 8px rgba(234,88,12,0.6)' : 'none', transition: 'background .07s', overflow: 'hidden' }}>
                   <span style={{ fontSize: isActive ? 8 : 9, lineHeight: 1, textAlign: 'center', whiteSpace: 'nowrap' }}>
                     {isActive ? noteName(si, fret) : degreeLabel(semi)}
                   </span>
@@ -190,12 +200,13 @@ function ArpFretboard({ pos, rootPc, quality, activeStep }: {
       </div>
       {/* Số phím dưới */}
       <div style={{ display: 'flex', marginLeft: 28, marginTop: 5 }}>
-        {Array.from({ length: FRET_COUNT }, (_, i) => {
-          const fret = pos.winStart + i
+        {open && (
+          <div style={{ flex: `0 0 ${NUT}%`, textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#16A34A' }}>mở</div>
+        )}
+        {cellFrets.map((fret, i) => {
           const marked = fretMarkers.includes(fret)
-          const isOpen = fret === 0
           return (
-            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: isOpen ? 12 : 11, fontWeight: (marked || isOpen) ? 700 : 400, color: isOpen ? '#16A34A' : marked ? '#C99700' : '#9CA3AF' }}>{isOpen ? '○ mở' : fret}</div>
+            <div key={i} style={{ flex: `0 0 ${fretW / cells}%`, textAlign: 'center', fontSize: 11, fontWeight: marked ? 700 : 400, color: marked ? '#C99700' : '#9CA3AF' }}>{fret}</div>
           )
         })}
       </div>
