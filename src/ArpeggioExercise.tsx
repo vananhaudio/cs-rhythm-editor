@@ -3,7 +3,8 @@ import { playGuitarNote } from './audioEngine'
 import { STRING_COLORS, stringLabels, fretMarkers } from './guitarNotes'
 
 // ── CHẠY HỢP ÂM RẢI (Arpeggio) — như Âm giai nhưng chỉ các NỐT HỢP ÂM (1·3·5·8) ──
-//    Luyện tay trái + định vị nốt hợp âm trên cần đàn. Cửa sổ 5 phím di động.
+//    Luyện tay trái + định vị nốt hợp âm trên cần đàn.
+//    Tier 1 = THẾ MỞ (winStart 0, dùng dây buông, có nut). Tier 2 = thế di động (bấm chặn).
 
 // ── Hằng số ─────────────────────────────────────────────────────────────────
 const OPEN_FREQ = [82.41, 110, 146.83, 196, 246.94, 329.63]   // dây 6→1 (index 0 = dây 6)
@@ -62,10 +63,17 @@ interface Lesson {
   unlockMin: number
 }
 const LESSONS: Lesson[] = [
-  { id: 'Cmaj', name: 'Hợp âm rải Trưởng', subtitle: 'Đô trưởng (C) · thế I', rootPc: 0, quality: 'major', winStart: 3, unlockMin: 0 },
-  { id: 'Amin', name: 'Hợp âm rải thứ',    subtitle: 'La thứ (Am) · thế I',  rootPc: 9, quality: 'minor', winStart: 3, unlockMin: 0 },
-  { id: 'Gmaj', name: 'Hợp âm rải Trưởng', subtitle: 'Sol trưởng (G) · thế II', rootPc: 7, quality: 'major', winStart: 5, unlockMin: 60 },
-  { id: 'Emin', name: 'Hợp âm rải thứ',    subtitle: 'Mi thứ (Em) · thế II',  rootPc: 4, quality: 'minor', winStart: 5, unlockMin: 120 },
+  // ── Thế mở (dùng dây buông) — NỀN TẢNG, người mới học trước ──
+  { id: 'Em-open', name: 'Rải Mi thứ (mở)',    subtitle: 'Em · thế mở · dễ nhất', rootPc: 4, quality: 'minor', winStart: 0, unlockMin: 0 },
+  { id: 'Am-open', name: 'Rải La thứ (mở)',    subtitle: 'Am · thế mở',           rootPc: 9, quality: 'minor', winStart: 0, unlockMin: 0 },
+  { id: 'C-open',  name: 'Rải Đô trưởng (mở)', subtitle: 'C · thế mở',            rootPc: 0, quality: 'major', winStart: 0, unlockMin: 0 },
+  { id: 'G-open',  name: 'Rải Sol trưởng (mở)', subtitle: 'G · thế mở',           rootPc: 7, quality: 'major', winStart: 0, unlockMin: 30 },
+  { id: 'D-open',  name: 'Rải Rê trưởng (mở)', subtitle: 'D · thế mở',            rootPc: 2, quality: 'major', winStart: 0, unlockMin: 60 },
+  // ── Thế di động (bấm chặn) — nâng cao ──
+  { id: 'Cmaj', name: 'Rải Đô trưởng (thế I)',   subtitle: 'C · thế I · phím 3',  rootPc: 0, quality: 'major', winStart: 3, unlockMin: 90 },
+  { id: 'Amin', name: 'Rải La thứ (thế I)',      subtitle: 'Am · thế I · phím 3', rootPc: 9, quality: 'minor', winStart: 3, unlockMin: 120 },
+  { id: 'Gmaj', name: 'Rải Sol trưởng (thế II)', subtitle: 'G · thế II · phím 5', rootPc: 7, quality: 'major', winStart: 5, unlockMin: 180 },
+  { id: 'Emin', name: 'Rải Mi thứ (thế II)',     subtitle: 'Em · thế II · phím 5', rootPc: 4, quality: 'minor', winStart: 5, unlockMin: 240 },
 ]
 const LOCKED_LESSONS = [
   { name: 'Hợp âm rải 7', subtitle: 'Đô 7 (C7) · thêm bậc ♭7' },
@@ -137,6 +145,10 @@ function ArpFretboard({ pos, rootPc, quality, activeStep }: {
           {[1, 2, 3, 4].map(i => (
             <div key={i} style={{ position: 'absolute', left: `${(i / FRET_COUNT) * 100}%`, top: 0, bottom: 0, width: 2, background: 'linear-gradient(90deg,#777,#bbb,#777)', zIndex: 3, boxShadow: '0 0 3px rgba(0,0,0,0.5)' }} />
           ))}
+          {/* Nut (xương đàn) — chỉ ở thế mở */}
+          {pos.winStart === 0 && (
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: 'linear-gradient(90deg,#f3e9cf,#ddc9a1,#b89b6a)', zIndex: 6, boxShadow: '2px 0 4px rgba(0,0,0,0.55)' }} />
+          )}
           {/* Inlay dots */}
           {Array.from({ length: FRET_COUNT }, (_, i) => pos.winStart + i).map(fret => {
             if (!fretMarkers.includes(fret)) return null
@@ -160,8 +172,9 @@ function ArpFretboard({ pos, rootPc, quality, activeStep }: {
               const key = `${si}-${fret}`
               const isRoot = rootSet.has(key)
               const isActive = activeStep?.s === si && activeStep?.f === fret
+              const isOpen = fret === 0
               const bg = isActive ? '#4338CA' : isRoot ? '#EA580C' : 'rgba(255,255,255,0.22)'
-              const border = isActive ? '2px solid rgba(255,255,255,0.85)' : isRoot ? '2px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(255,255,255,0.15)'
+              const border = isActive ? '2px solid rgba(255,255,255,0.85)' : isOpen ? '2.5px solid #22C55E' : isRoot ? '2px solid rgba(255,255,255,0.55)' : '1.5px solid rgba(255,255,255,0.15)'
               const size = isActive ? 28 : isRoot ? 26 : 22
               const semi = (((OPC[si] + fret) - rootPc) % 12 + 12) % 12
               return (
@@ -180,8 +193,9 @@ function ArpFretboard({ pos, rootPc, quality, activeStep }: {
         {Array.from({ length: FRET_COUNT }, (_, i) => {
           const fret = pos.winStart + i
           const marked = fretMarkers.includes(fret)
+          const isOpen = fret === 0
           return (
-            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 11, fontWeight: marked ? 700 : 400, color: marked ? '#C99700' : '#9CA3AF' }}>{fret}</div>
+            <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: isOpen ? 12 : 11, fontWeight: (marked || isOpen) ? 700 : 400, color: isOpen ? '#16A34A' : marked ? '#C99700' : '#9CA3AF' }}>{isOpen ? '○ mở' : fret}</div>
           )
         })}
       </div>
@@ -317,6 +331,7 @@ export default function ArpeggioExercise({ totalMinutes, onClose }: Props) {
             {[
               { color: A1, label: 'Chủ âm (1)' },
               { color: 'rgba(255,255,255,0.5)', bg: '#555', label: 'Nốt hợp âm (3·5)' },
+              ...(curLesson.winStart === 0 ? [{ color: '#22C55E', label: 'Dây buông (○)' }] : []),
               { color: P1, label: 'Đang chơi' },
             ].map(item => (
               <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
