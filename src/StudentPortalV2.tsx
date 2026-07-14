@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
+import ChordDiagramIcon from './ChordDiagramIcon'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -343,7 +344,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
                     return (
                       <div key={t.id} onClick={() => { if (unlocked && t.route) window.location.href = t.route }}
                         style={{ background: unlocked ? D.accentLight : D.bg, border: `1px solid ${D.border}`, borderRadius: 7, padding: '7px 6px', textAlign: 'center', cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5 }}>
-                        <div style={{ fontSize: 14, marginBottom: 2 }}>{t.icon}</div>
+                        <div style={{ fontSize: 14, marginBottom: 2, display: 'flex', justifyContent: 'center' }}>{t.id === 'chord-seeing' ? <ChordDiagramIcon size={18} /> : t.icon}</div>
                         <div style={{ fontSize: 9, color: D.text2, fontWeight: 500, lineHeight: 1.3 }}>{t.name}</div>
                       </div>
                     )

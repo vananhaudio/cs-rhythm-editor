@@ -5,6 +5,7 @@ import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import ArpeggioExercise from './ArpeggioExercise'
 import GrooveExercise from './groove/GrooveExercise'
+import ChordDiagramIcon from './ChordDiagramIcon'
 import SongBuilderPage from './SongBuilderPage'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIOS } from './iap'
@@ -2131,7 +2132,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             </div>
                           )}
                           <div style={{ width: 44, height: 44, borderRadius: 12, background: route.startsWith('/tuner') ? 'transparent' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10, overflow: 'hidden' }}>
-                            {route.startsWith('/tuner') ? <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 44, height: 44, borderRadius: 12 }} /> : t.icon}
+                            {route.startsWith('/tuner')
+                              ? <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 44, height: 44, borderRadius: 12 }} />
+                              : t.id === 'chord-seeing' ? <ChordDiagramIcon size={30} />
+                              : t.icon}
                           </div>
                           <div style={{ fontSize: 15, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
                           <div style={{ fontSize: 12, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
