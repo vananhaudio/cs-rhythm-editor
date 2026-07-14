@@ -267,7 +267,8 @@ export default function ArpeggioExercise({ totalMinutes, onClose }: Props) {
   const progressPct = nextLocked ? Math.min(100, (totalMinutes / nextLocked.unlockMin) * 100) : 100
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: BG, display: 'flex', flexDirection: 'column', fontFamily: '"SF Pro Display","DM Sans",system-ui,sans-serif', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#0A0A0F', display: 'flex', justifyContent: 'center', fontFamily: '"SF Pro Display","DM Sans",system-ui,sans-serif' }}>
+      <div style={{ width: '100%', maxWidth: 480, height: '100%', background: BG, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 0 40px rgba(0,0,0,0.45)' }}>
       {/* Header */}
       <div style={{ background: P1, paddingTop: 'env(safe-area-inset-top,44px)', paddingLeft: 16, paddingRight: 16, paddingBottom: 16, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -383,6 +384,7 @@ export default function ArpeggioExercise({ totalMinutes, onClose }: Props) {
             {muted ? '🔇 Đang tắt' : '🔊 Âm thanh'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   )

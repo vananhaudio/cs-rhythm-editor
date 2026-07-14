@@ -374,10 +374,10 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: BG, display: 'flex', flexDirection: 'column',
+      background: '#0A0A0F', display: 'flex', justifyContent: 'center',
       fontFamily: '"SF Pro Display","DM Sans",system-ui,sans-serif',
-      overflow: 'hidden',
     }}>
+      <div style={{ width: '100%', maxWidth: 480, height: '100%', background: BG, display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 0 40px rgba(0,0,0,0.45)' }}>
 
       {/* ── Header ── */}
       <div style={{
@@ -556,6 +556,7 @@ export default function FingerExercise({ totalMinutes, onClose }: Props) {
             Lùi 1 bậc
           </button>
         </div>
+      </div>
       </div>
     </div>
   )
