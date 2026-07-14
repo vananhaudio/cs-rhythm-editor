@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
+import ArpeggioExercise from './ArpeggioExercise'
 import GrooveExercise from './groove/GrooveExercise'
 import SongBuilderPage from './SongBuilderPage'
 import { QuizViewer } from './components/QuizViewer'
@@ -373,6 +374,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [showFingerExercise, setShowFingerExercise] = useState(false)
   // ── Scale Exercise overlay ──
   const [showScaleExercise, setShowScaleExercise] = useState(false)
+  // ── Arpeggio Exercise overlay ──
+  const [showArpExercise, setShowArpExercise] = useState(false)
   // ── Groove (Tiết tấu) overlay — port từ Groove Lab ──
   const [showGroove, setShowGroove] = useState(false)
   // ── BMS (Song Builder) render THẲNG trong app (không iframe) — hết app-chồng-app ──
@@ -965,6 +968,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         onClose={async () => {
           await stopTimer(currentLessonToolId ?? undefined)
           setShowScaleExercise(false)
+          setCurrentLessonToolId(null)
+        }}
+      />
+    )}
+
+    {showArpExercise && (
+      <ArpeggioExercise
+        totalMinutes={practiceTotals['arpeggio'] ?? 0}
+        onClose={async () => {
+          await stopTimer(currentLessonToolId ?? undefined)
+          setShowArpExercise(false)
           setCurrentLessonToolId(null)
         }}
       />
@@ -1620,8 +1634,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             setCurrentLessonToolId(tid)
                             if (exId === 'finger') { startTimer('finger'); setShowFingerExercise(true) }
                             else if (exId === 'scale') { startTimer('scale'); setShowScaleExercise(true) }
+                            else if (exId === 'arpeggio') { startTimer('arpeggio'); setShowArpExercise(true) }
                             else if (exId === 'metronome') { startTimer('metronome'); setShowGroove(true) }
-                            else { startTimer(exId) } // arpeggio/ear: chỉ timer
+                            else { startTimer(exId) } // ear: chỉ timer
                           }
                           return (
                             <div key={tid}
@@ -1637,7 +1652,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                                   </div>
                                 </div>
                                 {!done && (
-                                  running && (exId === 'finger' || exId === 'scale') ? (
+                                  running && (exId === 'finger' || exId === 'scale' || exId === 'arpeggio' || exId === 'metronome') ? (
                                     // Đang chạy overlay-based exercise → nút mở lại overlay
                                     <button onClick={openExercise}
                                       style={{ background: t.color, color: '#fff', border: 'none', borderRadius: 12, padding: '8px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
@@ -1860,6 +1875,24 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             <button
                               disabled={!!activeTimer}
                               onClick={() => { startTimer('metronome'); setShowGroove(true) }}
+                              style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                              ▶ Bắt đầu
+                            </button>
+                          )
+                        ) : ex.id === 'arpeggio' ? (
+                          /* Card Arpeggio: mở ArpeggioExercise overlay */
+                          isActive ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ fontSize: 16, fontWeight: 900, color: ex.color, fontVariantNumeric: 'tabular-nums' }}>{fmtTimer(timerSeconds)}</div>
+                              <button onClick={() => setShowArpExercise(true)}
+                                style={{ background: ex.color, border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Mở →
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              disabled={!!activeTimer}
+                              onClick={() => { startTimer('arpeggio'); setShowArpExercise(true) }}
                               style={{ background: activeTimer ? L.surface2 : ex.color, border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: activeTimer ? L.t3 : '#fff', cursor: activeTimer ? 'default' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                               ▶ Bắt đầu
                             </button>
