@@ -125,6 +125,24 @@ export default function StudentList({ onSelect }: Props) {
   }
   const fmtDate = (iso?: string) => { if (!iso) return '—'; const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` }
   const reportTotalXP = filtered.reduce((a, s) => a + (xpBy[s.id] ?? 0), 0)
+  // ── Số liệu tình hình học tập (theo danh sách đã lọc = theo lớp) ──
+  const daysSince = (iso?: string): number | null => { if (!iso) return null; return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) }
+  const INACTIVE_DAYS = 7
+  const isInactive = (s: Student) => { const d = daysSince(lastBy[s.id]); return d === null || d >= INACTIVE_DAYS }
+  const reportDone = filtered.reduce((a, s) => a + (doneBy[s.id] ?? 0), 0)
+  const reportInactive = filtered.filter(isInactive).length
+  const classLabel = classFilter === 'all' ? 'Tất cả lớp' : (groups.find(g => g.id === classFilter)?.name ?? 'Lớp')
+  const exportCSV = () => {
+    const head = ['Họ tên', 'Email/ĐT', 'Lớp', 'Trình độ', 'XP', 'Bài xong', 'Khoá đã mở', 'Hoạt động gần nhất', 'Ngày chưa học']
+    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const rows = [...filtered].sort((a, b) => (xpBy[b.id] ?? 0) - (xpBy[a.id] ?? 0)).map(s => {
+      const d = daysSince(lastBy[s.id])
+      return [s.full_name, s.email ?? s.phone ?? '', classNamesOf(s), LEVEL_LABEL[s.level ?? ''] ?? '', xpBy[s.id] ?? 0, doneBy[s.id] ?? 0, accessBy[s.id] ?? 0, fmtDate(lastBy[s.id]), d === null ? 'chưa học' : d].map(esc).join(',')
+    })
+    const csv = '﻿' + [head.map(esc).join(','), ...rows].join('\r\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a'); a.href = url; a.download = `bao-cao-hoc-tap-${classLabel.replace(/[^\w.-]+/g, '_')}.csv`; a.click(); URL.revokeObjectURL(url)
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
@@ -210,25 +228,33 @@ export default function StudentList({ onSelect }: Props) {
           <div style={{ textAlign: 'center', color: T.textMuted, padding: 40 }}>Không tìm thấy học sinh nào.</div>
         ) : showReport ? (
           <div>
+            {/* Tiêu đề lớp + xuất CSV */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.header }}>Tình hình học tập — <span style={{ color: T.gold }}>{classLabel}</span></div>
+              <button onClick={exportCSV} disabled={!filtered.length} style={{ background: T.bgCard, color: T.header, border: `1px solid ${T.border}`, borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: filtered.length ? 'pointer' : 'default', fontFamily: 'inherit', opacity: filtered.length ? 1 : .5 }}>⬇ Xuất CSV</button>
+            </div>
             {/* Tóm tắt */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
               {[
-                { l: 'Học sinh', v: filtered.length },
-                { l: 'Tổng XP', v: reportTotalXP.toLocaleString() },
-                { l: 'XP trung bình', v: Math.round(reportTotalXP / Math.max(filtered.length, 1)).toLocaleString() },
+                { l: 'Học sinh', v: filtered.length, c: T.header },
+                { l: 'Tổng XP', v: reportTotalXP.toLocaleString(), c: T.header },
+                { l: 'XP trung bình', v: Math.round(reportTotalXP / Math.max(filtered.length, 1)).toLocaleString(), c: T.header },
+                { l: 'Tổng bài xong', v: reportDone.toLocaleString(), c: T.header },
+                { l: `Chưa học ≥${INACTIVE_DAYS} ngày`, v: reportInactive, c: reportInactive > 0 ? T.danger : T.green },
               ].map(b => (
-                <div key={b.l} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 16px', minWidth: 120 }}>
+                <div key={b.l} style={{ background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 16px', minWidth: 110 }}>
                   <div style={{ fontSize: 12, color: T.textMuted, fontWeight: 700 }}>{b.l}</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: T.header }}>{b.v}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: b.c }}>{b.v}</div>
                 </div>
               ))}
             </div>
             <div style={{ overflowX: 'auto', background: T.bgCard, border: `1px solid ${T.border}`, borderRadius: 12 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5, minWidth: 720 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5, minWidth: 760 }}>
                 <thead>
                   <tr style={{ background: T.greenLight, textAlign: 'left', color: T.header }}>
                     <th style={rTh}>Học sinh</th>
                     <th style={rTh}>Lớp</th>
+                    <th style={rTh}>Trình độ</th>
                     <th style={{ ...rTh, textAlign: 'right' }}>XP</th>
                     <th style={{ ...rTh, textAlign: 'right' }}>Bài xong</th>
                     <th style={{ ...rTh, textAlign: 'right' }}>Khoá đã mở</th>
@@ -236,7 +262,9 @@ export default function StudentList({ onSelect }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...filtered].sort((a, b) => (xpBy[b.id] ?? 0) - (xpBy[a.id] ?? 0)).map(s => (
+                  {[...filtered].sort((a, b) => (xpBy[b.id] ?? 0) - (xpBy[a.id] ?? 0)).map(s => {
+                    const d = daysSince(lastBy[s.id]); const inact = d === null || d >= INACTIVE_DAYS
+                    return (
                     <tr key={s.id} onClick={() => onSelect(s.id)} style={{ borderTop: `1px solid ${T.borderLight}`, cursor: 'pointer' }}
                       onMouseEnter={e => (e.currentTarget.style.background = T.bgCardHover)} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                       <td style={rTd}>
@@ -244,12 +272,13 @@ export default function StudentList({ onSelect }: Props) {
                         <div style={{ fontSize: 12, color: T.textDim }}>{s.email ?? s.phone ?? '—'}</div>
                       </td>
                       <td style={{ ...rTd, color: T.textMuted }}>{classNamesOf(s)}</td>
+                      <td style={{ ...rTd, color: s.level ? (LEVEL_COLOR[s.level] ?? T.textMuted) : T.textDim, fontWeight: 600 }}>{LEVEL_LABEL[s.level ?? ''] ?? '—'}</td>
                       <td style={{ ...rTd, textAlign: 'right', fontWeight: 800, color: T.gold }}>{(xpBy[s.id] ?? 0).toLocaleString()}</td>
                       <td style={{ ...rTd, textAlign: 'right' }}>{doneBy[s.id] ?? 0}</td>
                       <td style={{ ...rTd, textAlign: 'right' }}>{accessBy[s.id] ?? 0}</td>
-                      <td style={{ ...rTd, color: T.textMuted }}>{fmtDate(lastBy[s.id])}</td>
+                      <td style={{ ...rTd, color: inact ? T.danger : T.textMuted, fontWeight: inact ? 700 : 400 }}>{d === null ? 'chưa học' : fmtDate(lastBy[s.id]) + (inact ? ` · ${d}n` : '')}</td>
                     </tr>
-                  ))}
+                  ) })}
                 </tbody>
               </table>
             </div>
