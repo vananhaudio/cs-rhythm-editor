@@ -74,19 +74,17 @@ export default function StudentList({ onSelect }: Props) {
     // Chỉ số cho BÁO CÁO
     supabase.from('edu_courses').select('id,name,sort_order').order('sort_order')
       .then(({ data }) => setCourses((data ?? []).map((c: any) => ({ id: c.id, name: c.name }))))
-    supabase.from('student_xp_log').select('student_id,xp,created_at')
-      .then(({ data }) => {
-        const xp: Record<string, number> = {}, last: Record<string, string> = {}
-        ;(data ?? []).forEach((r: any) => {
-          xp[r.student_id] = (xp[r.student_id] ?? 0) + (r.xp ?? 0)
-          if (!last[r.student_id] || r.created_at > last[r.student_id]) last[r.student_id] = r.created_at
-        })
-        setXpBy(xp); setLastBy(last)
+    // Gom XP/bài/khoá Ở PHÍA DB (RPC) — tránh giới hạn 1000 dòng làm mất số của học viên nhiều dữ liệu
+    supabase.rpc('report_stats').then(({ data }) => {
+      const xp: Record<string, number> = {}, last: Record<string, string> = {}, done: Record<string, number> = {}, acc: Record<string, number> = {}
+      ;(data ?? []).forEach((r: any) => {
+        xp[r.student_id] = Number(r.total_xp) || 0
+        if (r.last_at) last[r.student_id] = r.last_at
+        done[r.student_id] = Number(r.done) || 0
+        acc[r.student_id] = Number(r.opened) || 0
       })
-    supabase.from('edu_lesson_progress').select('student_id')
-      .then(({ data }) => { const d: Record<string, number> = {}; (data ?? []).forEach((r: any) => { d[r.student_id] = (d[r.student_id] ?? 0) + 1 }); setDoneBy(d) })
-    supabase.from('edu_course_access').select('student_id').eq('active', true)
-      .then(({ data }) => { const a: Record<string, number> = {}; (data ?? []).forEach((r: any) => { a[r.student_id] = (a[r.student_id] ?? 0) + 1 }); setAccessBy(a) })
+      setXpBy(xp); setLastBy(last); setDoneBy(done); setAccessBy(acc)
+    })
     supabase.from('edu_enrollments').select('student_id,course_id').eq('is_active', true)
       .then(({ data }) => { const m: Record<string, Set<string>> = {}; (data ?? []).forEach((r: any) => { (m[r.course_id] ??= new Set()).add(r.student_id) }); setStudentsByCourse(m) })
   }, [])
