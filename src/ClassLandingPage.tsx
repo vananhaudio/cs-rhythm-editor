@@ -5,6 +5,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
 import ClassJourney2027 from './ClassJourney2027'
+import BrandMark from './BrandMark'
 import ClassDemHat from './ClassDemHat'
 import ClassTiaNot from './ClassTiaNot'
 import ClassQuiz from './ClassQuiz'
@@ -389,7 +390,7 @@ export default function ClassLandingPage() {
 
       <nav>
         <div className="wrap nav-in">
-          <div className="brand"><img className="mark" src="/tva-logo.png" alt="TVA Guitar" /> Thầy Văn Anh Guitar</div>
+          <div className="brand"><BrandMark size={38} /> Thầy Văn Anh Guitar</div>
           <div className="nav-links">
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
             <a onClick={() => goto('chat')}>Tư vấn</a>
