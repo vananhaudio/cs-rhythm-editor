@@ -155,6 +155,14 @@ export default function ClassLandingPage() {
     const cleanName = (nm || 'bạn').includes('@') ? (nm as string).split('@')[0] : nm as string
     setMe({ name: cleanName, email: (stu as any)?.email || email || null, phone: (stu as any)?.phone || null })
   }
+  // Favicon riêng CHO TRANG CLASS (component này chỉ chạy trên hostname class.) = logo gốc
+  useEffect(() => {
+    document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]').forEach(el => el.remove())
+    const link = document.createElement('link')
+    link.rel = 'icon'; link.type = 'image/svg+xml'; link.href = '/logo-green.svg'
+    document.head.appendChild(link)
+  }, [])
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { if (session?.user) loadMe(session.user.id, session.user.email ?? null) })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
