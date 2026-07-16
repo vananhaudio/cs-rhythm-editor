@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+<title>Chorder C# Logo</title>
+<defs><clipPath id="c"><circle cx="251.3" cy="250" r="216.6"/></clipPath></defs>
+
+<g fill="none" stroke="#1E5C30">
+  <circle cx="251.3" cy="250" r="228.24" stroke-width="23.3"/>
+  <path d="M 157.412,129.828 A 152.5,152.5 0 1,1 157.412,370.172" stroke-width="66.5" stroke-linecap="butt"/>
+  <line x1="243.26" y1="133.58" x2="243.26" y2="375.0"  stroke-width="16.1" clip-path="url(#c)"/>
+  <line x1="295.6"  y1="150.75" x2="295.6"  y2="391.63" stroke-width="16.1" clip-path="url(#c)"/>
+  <line x1="35.9"   y1="227.47" x2="466.7"  y2="227.47" stroke-width="17.6" clip-path="url(#c)"/>
+  <line x1="35.9"   y1="278.43" x2="466.7"  y2="278.43" stroke-width="17.6" clip-path="url(#c)"/>
+</g>
+</svg>
