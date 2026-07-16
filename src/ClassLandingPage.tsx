@@ -998,12 +998,13 @@ export default function ClassLandingPage() {
 }
 
 const CSS = `
-.tva-class{--bg:#F2EEE7;--surface:#FFFFFF;--ink:#211C32;--ink-soft:#5A5470;--ink-faint:#8A8499;--indigo:#4338CA;--indigo-dark:#352BA3;--indigo-tint:#EEEBFB;--honey:#C9711E;--honey-tint:#FBF1E4;--line:#E4DED4;--online:#16A34A;--orange:#EE7D3C;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px;min-height:100vh;text-align:left;}
+.tva-class{--bg:#F2EEE7;--surface:#FFFFFF;--ink:#211C32;--ink-soft:#5A5470;--ink-faint:#8A8499;--indigo:#4338CA;--indigo-dark:#352BA3;--indigo-tint:#EEEBFB;--honey:#C9711E;--honey-tint:#FBF1E4;--line:#E4DED4;--online:#16A34A;--orange:#EE7D3C;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px;min-height:100vh;text-align:left;color-scheme:light;}
 .tva-class *{box-sizing:border-box;}
 .tva-class .wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
 .tva-class section{padding:58px 0;}
 .tva-class .band{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
 .tva-class .band-top{background:#fff;border-top:1px solid var(--line);}
+.tva-class h1,.tva-class h2,.tva-class h3,.tva-class h4,.tva-class h5{color:var(--ink);}
 .tva-class h2{font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.5px;}
 .tva-class .eyebrow{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--honey);margin-bottom:10px;}
 .tva-class .lead{color:var(--ink-soft);font-size:16.5px;max-width:640px;margin-top:12px;}
