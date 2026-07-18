@@ -8,6 +8,7 @@ import { STRING_COLORS, stringLabels, fretMarkers } from './guitarNotes'
 
 // ── Hằng số ─────────────────────────────────────────────────────────────────
 const OPEN_FREQ = [82.41, 110, 146.83, 196, 246.94, 329.63]   // dây 6→1 (index 0 = dây 6)
+const OPEN_MIDI = [40, 45, 50, 55, 59, 64]                    // cao độ (MIDI) dây buông — để phát hiện nốt đồng âm
 const NM = ['Đô', 'Đô#', 'Rê', 'Rê#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si']
 const OPC = [4, 9, 2, 7, 11, 4]   // pitch class dây buông, index 0 = dây 6 (Mi trầm)
 const DEFAULT_FRETS = 5           // số phím hiển thị mặc định (2 quãng tám dùng nhiều hơn)
@@ -117,14 +118,24 @@ function noteName(stringIdx: number, fret: number): string {
 
 // ── Chuỗi bước: chạy LÊN rồi XUỐNG qua các nốt hợp âm ─────────────────────────
 interface Step { s: number; f: number }
+const pitchOf = (st: Step) => OPEN_MIDI[st.s] + st.f
 function buildSteps(pos: ArpPos): Step[] {
   const up: Step[] = []
   for (let s = 0; s < 6; s++) {
     const fs = [...pos.frets[s]].sort((a, b) => a - b)
     for (const f of fs) up.push({ s, f })
   }
+  if (!up.length) return []
   const down = [...up].reverse()
-  return up.length ? [...up, ...down.slice(1, -1)] : []   // không lặp nốt đỉnh & đáy
+  const seq = [...up, ...down]
+  // Bỏ nốt TRÙNG CAO ĐỘ liền kề (nốt đồng âm ở chỗ đổi dây → tránh kêu 2 lần) — kể cả mối nối vòng lặp
+  const out: Step[] = []
+  for (const st of seq) {
+    if (out.length && pitchOf(out[out.length - 1]) === pitchOf(st)) continue
+    out.push(st)
+  }
+  while (out.length > 1 && pitchOf(out[out.length - 1]) === pitchOf(out[0])) out.pop()
+  return out
 }
 
 // ── Metronome click ──────────────────────────────────────────────────────────
