@@ -2,17 +2,17 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { playGuitarNote } from './audioEngine'
 import { STRING_COLORS, stringLabels, fretMarkers } from './guitarNotes'
 
-// ── CHẠY HỢP ÂM RẢI (Arpeggio) — như Âm giai nhưng chỉ các NỐT HỢP ÂM (1·3·5·8) ──
-//    Luyện tay trái + định vị nốt hợp âm trên cần đàn.
-//    Tier 1 = THẾ MỞ (winStart 0, dùng dây buông, có nut). Tier 2 = thế di động (bấm chặn).
+// ── CHẠY HỢP ÂM RẢI (Arpeggio) — chỉ các NỐT HỢP ÂM (1·3·5·7) trên cần đàn ──
+//    Giáo trình 4 nhóm: Thế mở (dây buông) → Thế di động (bấm chặn)
+//      → Rải 2 quãng tám (cửa sổ rộng) → Hợp âm 7 (thêm bậc 7).
 
 // ── Hằng số ─────────────────────────────────────────────────────────────────
 const OPEN_FREQ = [82.41, 110, 146.83, 196, 246.94, 329.63]   // dây 6→1 (index 0 = dây 6)
 const NM = ['Đô', 'Đô#', 'Rê', 'Rê#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si']
 const OPC = [4, 9, 2, 7, 11, 4]   // pitch class dây buông, index 0 = dây 6 (Mi trầm)
-const FRET_COUNT = 5              // hiển thị 5 phím
+const DEFAULT_FRETS = 5           // số phím hiển thị mặc định (2 quãng tám dùng nhiều hơn)
 
-type Quality = 'major' | 'minor'
+type Quality = 'major' | 'minor' | 'dom7' | 'maj7' | 'min7'
 
 // Bậc trong hợp âm → nhãn (theo khoảng cách nửa cung tới chủ âm)
 function degreeLabel(semi: number): string | null {
@@ -21,26 +21,36 @@ function degreeLabel(semi: number): string | null {
     case 3:  return '3'    // bậc 3 thứ
     case 4:  return '3'    // bậc 3 trưởng
     case 7:  return '5'    // quãng 5
+    case 10: return '7'    // bậc 7 thứ (♭7 — dom7/min7)
+    case 11: return '7'    // bậc 7 trưởng (maj7)
     default: return null
   }
 }
 function chordSemis(q: Quality): number[] {
-  return q === 'minor' ? [0, 3, 7] : [0, 4, 7]
+  switch (q) {
+    case 'minor': return [0, 3, 7]
+    case 'dom7':  return [0, 4, 7, 10]
+    case 'maj7':  return [0, 4, 7, 11]
+    case 'min7':  return [0, 3, 7, 10]
+    default:      return [0, 4, 7]   // major
+  }
 }
+const has7th = (q: Quality) => q === 'dom7' || q === 'maj7' || q === 'min7'
 
-// ── Tính THẾ arpeggio trong cửa sổ [winStart .. winStart+4] ───────────────────
+// ── Tính THẾ arpeggio trong cửa sổ [winStart .. winStart+fretCount-1] ─────────
 interface ArpPos {
   winStart: number
+  fretCount: number
   frets: number[][]                 // phím hợp âm trên từng dây (index 0 = dây 6)
   roots: { s: number; f: number }[] // vị trí chủ âm (cam)
 }
-function buildArpPos(rootPc: number, q: Quality, winStart: number): ArpPos {
+function buildArpPos(rootPc: number, q: Quality, winStart: number, fretCount = DEFAULT_FRETS): ArpPos {
   const semis = new Set(chordSemis(q))
   const frets: number[][] = []
   const roots: { s: number; f: number }[] = []
   for (let s = 0; s < 6; s++) {
     const onStr: number[] = []
-    for (let f = winStart; f < winStart + FRET_COUNT; f++) {
+    for (let f = winStart; f < winStart + fretCount; f++) {
       const semi = (((OPC[s] + f) - rootPc) % 12 + 12) % 12
       if (semis.has(semi)) {
         onStr.push(f)
@@ -49,36 +59,56 @@ function buildArpPos(rootPc: number, q: Quality, winStart: number): ArpPos {
     }
     frets.push(onStr)
   }
-  return { winStart, frets, roots }
+  return { winStart, fretCount, frets, roots }
 }
 
 // ── Bài luyện ─────────────────────────────────────────────────────────────────
+type Group = 'open' | 'movable' | 'twooct' | 'seventh'
 interface Lesson {
   id: string
+  group: Group
   name: string
   subtitle: string
   rootPc: number
   quality: Quality
   winStart: number
+  frets?: number       // cửa sổ phím (mặc định 5; 2 quãng tám = 7)
   unlockMin: number
 }
+const GROUP_LABEL: Record<Group, string> = {
+  open: 'Thế mở · dây buông',
+  movable: 'Thế di động · bấm chặn',
+  twooct: 'Rải 2 quãng tám',
+  seventh: 'Hợp âm 7 · nâng cao',
+}
 const LESSONS: Lesson[] = [
-  // ── Thế mở (dùng dây buông) — NỀN TẢNG, người mới học trước ──
-  { id: 'Em-open', name: 'Rải Mi thứ (mở)',    subtitle: 'Em · thế mở · dễ nhất', rootPc: 4, quality: 'minor', winStart: 0, unlockMin: 0 },
-  { id: 'Am-open', name: 'Rải La thứ (mở)',    subtitle: 'Am · thế mở',           rootPc: 9, quality: 'minor', winStart: 0, unlockMin: 0 },
-  { id: 'C-open',  name: 'Rải Đô trưởng (mở)', subtitle: 'C · thế mở',            rootPc: 0, quality: 'major', winStart: 0, unlockMin: 0 },
-  { id: 'G-open',  name: 'Rải Sol trưởng (mở)', subtitle: 'G · thế mở',           rootPc: 7, quality: 'major', winStart: 0, unlockMin: 30 },
-  { id: 'D-open',  name: 'Rải Rê trưởng (mở)', subtitle: 'D · thế mở',            rootPc: 2, quality: 'major', winStart: 0, unlockMin: 60 },
-  // ── Thế di động (bấm chặn) — nâng cao ──
-  { id: 'Cmaj', name: 'Rải Đô trưởng (thế I)',   subtitle: 'C · thế I · phím 3',  rootPc: 0, quality: 'major', winStart: 3, unlockMin: 90 },
-  { id: 'Amin', name: 'Rải La thứ (thế I)',      subtitle: 'Am · thế I · phím 3', rootPc: 9, quality: 'minor', winStart: 3, unlockMin: 120 },
-  { id: 'Gmaj', name: 'Rải Sol trưởng (thế II)', subtitle: 'G · thế II · phím 5', rootPc: 7, quality: 'major', winStart: 5, unlockMin: 180 },
-  { id: 'Emin', name: 'Rải Mi thứ (thế II)',     subtitle: 'Em · thế II · phím 5', rootPc: 4, quality: 'minor', winStart: 5, unlockMin: 240 },
-]
-const LOCKED_LESSONS = [
-  { name: 'Hợp âm rải 7', subtitle: 'Đô 7 (C7) · thêm bậc ♭7' },
-  { name: 'Hợp âm rải maj7', subtitle: 'Đô maj7 · thêm bậc 7' },
-  { name: 'Rải 2 quãng tám', subtitle: 'Trải dài cả cần đàn' },
+  // ── Nhóm 1 · Thế mở (dây buông) — NỀN TẢNG, ai mới học cũng chơi được ──
+  { id: 'Em-open', group: 'open', name: 'Mi thứ (mở)',     subtitle: 'Em · dây buông · dễ nhất', rootPc: 4, quality: 'minor', winStart: 0, unlockMin: 0 },
+  { id: 'Am-open', group: 'open', name: 'La thứ (mở)',     subtitle: 'Am · dây buông',           rootPc: 9, quality: 'minor', winStart: 0, unlockMin: 0 },
+  { id: 'C-open',  group: 'open', name: 'Đô trưởng (mở)',  subtitle: 'C · dây buông',            rootPc: 0, quality: 'major', winStart: 0, unlockMin: 0 },
+  { id: 'G-open',  group: 'open', name: 'Sol trưởng (mở)', subtitle: 'G · dây buông',            rootPc: 7, quality: 'major', winStart: 0, unlockMin: 0 },
+  { id: 'D-open',  group: 'open', name: 'Rê trưởng (mở)',  subtitle: 'D · dây buông',            rootPc: 2, quality: 'major', winStart: 0, unlockMin: 0 },
+  { id: 'E-open',  group: 'open', name: 'Mi trưởng (mở)',  subtitle: 'E · dây buông',            rootPc: 4, quality: 'major', winStart: 0, unlockMin: 20 },
+  { id: 'A-open',  group: 'open', name: 'La trưởng (mở)',  subtitle: 'A · dây buông',            rootPc: 9, quality: 'major', winStart: 0, unlockMin: 20 },
+  // ── Nhóm 2 · Thế di động (bấm chặn) ──
+  { id: 'F-mov',   group: 'movable', name: 'Fa trưởng',   subtitle: 'F · dạng Mi · phím 1',  rootPc: 5,  quality: 'major', winStart: 1, unlockMin: 45 },
+  { id: 'C-mov',   group: 'movable', name: 'Đô trưởng',   subtitle: 'C · thế I · phím 3',    rootPc: 0,  quality: 'major', winStart: 3, unlockMin: 45 },
+  { id: 'Am-mov',  group: 'movable', name: 'La thứ',      subtitle: 'Am · thế I · phím 3',   rootPc: 9,  quality: 'minor', winStart: 3, unlockMin: 60 },
+  { id: 'G-mov',   group: 'movable', name: 'Sol trưởng',  subtitle: 'G · thế II · phím 5',   rootPc: 7,  quality: 'major', winStart: 5, unlockMin: 90 },
+  { id: 'Em-mov',  group: 'movable', name: 'Mi thứ',      subtitle: 'Em · thế II · phím 5',  rootPc: 4,  quality: 'minor', winStart: 5, unlockMin: 90 },
+  { id: 'A-mov',   group: 'movable', name: 'La trưởng',   subtitle: 'A · dạng Sol · phím 5', rootPc: 9,  quality: 'major', winStart: 5, unlockMin: 120 },
+  { id: 'Dm-mov',  group: 'movable', name: 'Rê thứ',      subtitle: 'Dm · phím 5',           rootPc: 2,  quality: 'minor', winStart: 5, unlockMin: 120 },
+  { id: 'Bm-mov',  group: 'movable', name: 'Si thứ',      subtitle: 'Bm · dạng La · phím 2', rootPc: 11, quality: 'minor', winStart: 2, unlockMin: 150 },
+  // ── Nhóm 3 · Rải 2 quãng tám (cửa sổ 7 phím) ──
+  { id: 'C-2oct',  group: 'twooct', name: 'Đô trưởng · 2 quãng tám',  subtitle: 'C · phím 3–9',  rootPc: 0, quality: 'major', winStart: 3, frets: 7, unlockMin: 180 },
+  { id: 'G-2oct',  group: 'twooct', name: 'Sol trưởng · 2 quãng tám', subtitle: 'G · phím 3–9',  rootPc: 7, quality: 'major', winStart: 3, frets: 7, unlockMin: 180 },
+  { id: 'Am-2oct', group: 'twooct', name: 'La thứ · 2 quãng tám',     subtitle: 'Am · phím 5–11', rootPc: 9, quality: 'minor', winStart: 5, frets: 7, unlockMin: 210 },
+  { id: 'Em-2oct', group: 'twooct', name: 'Mi thứ · 2 quãng tám',     subtitle: 'Em · phím 5–11', rootPc: 4, quality: 'minor', winStart: 5, frets: 7, unlockMin: 210 },
+  // ── Nhóm 4 · Hợp âm 7 (nâng cao) ──
+  { id: 'C7',    group: 'seventh', name: 'Đô 7 (C7)',      subtitle: 'C7 · thêm bậc ♭7',   rootPc: 0, quality: 'dom7', winStart: 3, unlockMin: 260 },
+  { id: 'Cmaj7', group: 'seventh', name: 'Đô maj7',        subtitle: 'Cmaj7 · thêm bậc 7', rootPc: 0, quality: 'maj7', winStart: 3, unlockMin: 260 },
+  { id: 'Am7',   group: 'seventh', name: 'La thứ 7 (Am7)', subtitle: 'Am7 · phím 5',       rootPc: 9, quality: 'min7', winStart: 5, unlockMin: 320 },
+  { id: 'G7',    group: 'seventh', name: 'Sol 7 (G7)',     subtitle: 'G7 · phím 3',        rootPc: 7, quality: 'dom7', winStart: 3, unlockMin: 320 },
 ]
 
 function noteName(stringIdx: number, fret: number): string {
@@ -124,8 +154,8 @@ function ArpFretboard({ pos, rootPc, quality, activeStep }: {
   const BOARD_H = 180
   const STRING_CNT = 6
   const open = pos.winStart === 0
-  const cells = open ? 4 : FRET_COUNT       // số ngăn phím hiển thị
-  const firstFret = open ? 1 : pos.winStart  // phím của ngăn đầu
+  const cells = open ? pos.fretCount - 1 : pos.fretCount   // số ngăn phím hiển thị
+  const firstFret = open ? 1 : pos.winStart                // phím của ngăn đầu
   const NUT = open ? 13 : 0                   // % bề ngang dành cho dải nut (dây buông)
   const fretW = 100 - NUT
   const cellFrets = Array.from({ length: cells }, (_, i) => firstFret + i)
@@ -233,7 +263,7 @@ export default function ArpeggioExercise({ totalMinutes, onClose }: Props) {
   const [muted, setMuted] = useState(false)
 
   const curLesson = availableLessons[lessonIdx % availableLessons.length]
-  const pos = useMemo(() => buildArpPos(curLesson.rootPc, curLesson.quality, curLesson.winStart), [curLesson])
+  const pos = useMemo(() => buildArpPos(curLesson.rootPc, curLesson.quality, curLesson.winStart, curLesson.frets), [curLesson])
   const steps = useMemo(() => buildSteps(pos), [pos])
 
   const playingRef = useRef(false)
@@ -341,7 +371,7 @@ export default function ArpeggioExercise({ totalMinutes, onClose }: Props) {
           <div style={{ display: 'flex', gap: 14, marginTop: 14, flexWrap: 'wrap' }}>
             {[
               { color: A1, label: 'Chủ âm (1)' },
-              { color: 'rgba(255,255,255,0.5)', bg: '#555', label: 'Nốt hợp âm (3·5)' },
+              { color: 'rgba(255,255,255,0.5)', bg: '#555', label: has7th(curLesson.quality) ? 'Nốt hợp âm (3·5·7)' : 'Nốt hợp âm (3·5)' },
               ...(curLesson.winStart === 0 ? [{ color: '#22C55E', label: 'Dây buông (○)' }] : []),
               { color: P1, label: 'Đang chơi' },
             ].map(item => (
@@ -355,37 +385,42 @@ export default function ArpeggioExercise({ totalMinutes, onClose }: Props) {
 
         {/* Chọn bài */}
         <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
-          <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Chọn bài</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {LESSONS.map((l) => {
-              const locked = totalMinutes < l.unlockMin
-              const isActive = !locked && availableLessons[lessonIdx % availableLessons.length]?.id === l.id
-              return (
-                <button key={l.id} disabled={locked}
-                  onClick={() => {
-                    if (!locked) { const idx = availableLessons.findIndex(al => al.id === l.id); if (idx >= 0) setLessonIdx(idx) }
-                    else alert(`Cần luyện thêm ${l.unlockMin - totalMinutes} phút để mở bài này.`)
-                  }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: isActive ? `${P1}14` : locked ? '#F9FAFB' : '#F3F4F6', border: `1.5px solid ${isActive ? P1 : 'transparent'}`, borderRadius: 12, padding: '10px 14px', cursor: locked ? 'default' : 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: locked ? 0.55 : 1 }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: isActive ? P1 : '#374151' }}>{locked ? '🔒 ' : ''}{l.name}</div>
-                    <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
-                  </div>
-                  {locked ? <div style={{ fontSize: 12, color: '#9CA3AF', flexShrink: 0 }}>{l.unlockMin}′</div>
-                    : isActive ? <div style={{ fontSize: 12, fontWeight: 700, color: P1, flexShrink: 0 }}>● Đang dùng</div> : null}
-                </button>
-              )
-            })}
-            {LOCKED_LESSONS.map((l, i) => (
-              <button key={`adv-${i}`} onClick={() => alert('Dành cho học sinh nâng cao.')}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F9FAFB', border: '1.5px solid transparent', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: 0.45 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#374151' }}>🔒 Nâng cao · {l.name}</div>
-                  <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
+          <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Chọn bài · {LESSONS.length} bài</div>
+          {(['open', 'movable', 'twooct', 'seventh'] as Group[]).map(g => {
+            const groupLessons = LESSONS.filter(l => l.group === g)
+            if (!groupLessons.length) return null
+            const groupOpen = groupLessons.some(l => totalMinutes >= l.unlockMin)
+            return (
+              <div key={g} style={{ marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0 2px 8px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: groupOpen ? P1 : '#9CA3AF' }}>{!groupOpen && '🔒 '}{GROUP_LABEL[g]}</div>
+                  <div style={{ flex: 1, height: 1, background: '#EEF0F4' }} />
+                  <div style={{ fontSize: 11, color: '#9CA3AF' }}>{groupLessons.length}</div>
                 </div>
-              </button>
-            ))}
-          </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {groupLessons.map((l) => {
+                    const locked = totalMinutes < l.unlockMin
+                    const isActive = !locked && availableLessons[lessonIdx % availableLessons.length]?.id === l.id
+                    return (
+                      <button key={l.id} disabled={locked}
+                        onClick={() => {
+                          if (!locked) { const idx = availableLessons.findIndex(al => al.id === l.id); if (idx >= 0) setLessonIdx(idx) }
+                          else alert(`Cần luyện thêm ${l.unlockMin - totalMinutes} phút để mở bài này.`)
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: isActive ? `${P1}14` : locked ? '#F9FAFB' : '#F3F4F6', border: `1.5px solid ${isActive ? P1 : 'transparent'}`, borderRadius: 12, padding: '10px 14px', cursor: locked ? 'default' : 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: locked ? 0.55 : 1 }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: isActive ? P1 : '#374151' }}>{locked ? '🔒 ' : ''}{l.name}</div>
+                          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
+                        </div>
+                        {locked ? <div style={{ fontSize: 12, color: '#9CA3AF', flexShrink: 0 }}>{l.unlockMin}′</div>
+                          : isActive ? <div style={{ fontSize: 12, fontWeight: 700, color: P1, flexShrink: 0 }}>● Đang dùng</div> : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
