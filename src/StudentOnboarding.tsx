@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import MobileStudentPortal from './MobileStudentPortal'
 import ChordDiagramIcon from './ChordDiagramIcon'
+import { checkEmail } from './logic/emailCheck'
 import { supabase } from './supabase'
 import { isNativeIOS, purchaseMonthly, restorePurchases } from './iap'
 
@@ -206,6 +207,8 @@ export default function StudentOnboarding() {
 
   const handleIAPRegister = async () => {
     if (!iapRegEmail || !iapRegPass) return
+    const ec = checkEmail(iapRegEmail)
+    if (!ec.ok) { setIapRegError(ec.error || 'Email chưa đúng.'); return }
     setIapRegLoading(true)
     setIapRegError('')
     try {

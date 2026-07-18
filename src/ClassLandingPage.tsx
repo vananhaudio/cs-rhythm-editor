@@ -4,6 +4,7 @@
 // Quy ước: dùng chung Supabase (anon ghi leads). Style: scoped CSS .tva-class (responsive/hover).
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
+import { checkEmail } from './logic/emailCheck'
 import ClassJourney2027 from './ClassJourney2027'
 import ClassDemHat from './ClassDemHat'
 import ClassTiaNot from './ClassTiaNot'
@@ -139,6 +140,7 @@ export default function ClassLandingPage() {
   const [suPass, setSuPass] = useState('')
   const [suLoading, setSuLoading] = useState(false)
   const [suErr, setSuErr] = useState('')
+  const [suSuggest, setSuSuggest] = useState('')   // email gợi ý sửa khi gõ nhầm tên miền
   const [suDone, setSuDone] = useState(false)
 
   // ── Đăng nhập học viên ngay trên trang tuyển sinh ──
@@ -202,8 +204,9 @@ export default function ClassLandingPage() {
   }
 
   const submitSignup = async () => {
-    setSuErr('')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(suEmail.trim())) { setSuErr('Email chưa đúng định dạng.'); return }
+    setSuErr(''); setSuSuggest('')
+    const ec = checkEmail(suEmail)
+    if (!ec.ok) { setSuErr(ec.error || 'Email chưa đúng.'); setSuSuggest(ec.suggestion || ''); return }
     if (suPass.trim().length < 6) { setSuErr('Mật khẩu cần ít nhất 6 ký tự.'); return }
     setSuLoading(true)
     try {
@@ -808,7 +811,17 @@ export default function ClassLandingPage() {
                       style={{ width: '100%', boxSizing: 'border-box', padding: '11px 13px', background: '#F9FAFB', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 15, color: '#111827', outline: 'none', fontFamily: 'inherit' }} />
                   </div>
                 ))}
-                {suErr && <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 12px', fontSize: 13.5, marginBottom: 12 }}>{suErr}</div>}
+                {suErr && (
+                  <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 12px', fontSize: 13.5, marginBottom: 12 }}>
+                    {suErr}
+                    {suSuggest && (
+                      <button onClick={() => { setSuEmail(suSuggest); setSuErr(''); setSuSuggest('') }}
+                        style={{ display: 'block', marginTop: 7, background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Sửa thành {suSuggest}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <button onClick={submitSignup} disabled={suLoading} style={{ width: '100%', background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: suLoading ? .65 : 1 }}>
                   {suLoading ? 'Đang tạo...' : 'Tạo tài khoản & học thử →'}
                 </button>
