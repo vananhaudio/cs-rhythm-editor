@@ -192,12 +192,38 @@ async function chat(messages: unknown[], groups: any[], courses: any[], classes:
   return { reply: reply.trim(), proposal }
 }
 
+// Bắt lỗi gõ nhầm tên miền phổ biến (gmai.com → gmail.com, .con → .com…). Trả email đúng nếu phát hiện.
+const DOMAIN_TYPOS: Record<string, string> = {
+  'gmai.com': 'gmail.com', 'gmial.com': 'gmail.com', 'gmil.com': 'gmail.com', 'gmali.com': 'gmail.com',
+  'gamil.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmaill.com': 'gmail.com', 'gmaul.com': 'gmail.com',
+  'gimail.com': 'gmail.com', 'gmaili.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.con': 'gmail.com',
+  'gmail.cm': 'gmail.com', 'gmail.om': 'gmail.com', 'gmail.comm': 'gmail.com', 'gmail.vn': 'gmail.com', 'gmail.cim': 'gmail.com',
+  'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'yhoo.com': 'yahoo.com', 'yhaoo.com': 'yahoo.com',
+  'yahoo.co': 'yahoo.com', 'yahoo.con': 'yahoo.com', 'yahho.com': 'yahoo.com',
+  'hotmai.com': 'hotmail.com', 'hotmial.com': 'hotmail.com', 'hotmil.com': 'hotmail.com', 'hotmaill.com': 'hotmail.com',
+  'hotmail.co': 'hotmail.com', 'hotmail.con': 'hotmail.com', 'hormail.com': 'hotmail.com',
+  'outlok.com': 'outlook.com', 'outloo.com': 'outlook.com', 'outllok.com': 'outlook.com', 'outlook.co': 'outlook.com', 'outlook.con': 'outlook.com',
+  'iclod.com': 'icloud.com', 'iclould.com': 'icloud.com', 'icloud.co': 'icloud.com',
+}
+const TLD_TYPOS: Record<string, string> = { con: 'com', comm: 'com', vom: 'com', xom: 'com', cmo: 'com', ocm: 'com' }
+function emailTypoFix(e: string): string | null {
+  const at = e.lastIndexOf('@'); if (at < 0) return null
+  const local = e.slice(0, at), domain = e.slice(at + 1)
+  if (DOMAIN_TYPOS[domain]) return `${local}@${DOMAIN_TYPOS[domain]}`
+  const parts = domain.split('.'); const tld = parts[parts.length - 1]
+  if (TLD_TYPOS[tld] !== undefined) { parts[parts.length - 1] = TLD_TYPOS[tld]; return `${local}@${parts.filter(Boolean).join('.')}` }
+  return null
+}
+
 // Tạo tài khoản học sinh — TÁI HIỆN đúng flow StudentOnboarding (KHÔNG ghi app_users)
 async function createStudents(admin: ReturnType<typeof createClient>, students: any[]) {
   const results: any[] = []
   for (const s of students) {
     const email = (s.email || '').trim().toLowerCase()
     if (!email) { results.push({ email: s.email, ok: false, error: 'thiếu email' }); continue }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { results.push({ email, ok: false, error: 'email sai định dạng' }); continue }
+    const emailFix = emailTypoFix(email)
+    if (emailFix) { results.push({ email, ok: false, error: `email có vẻ gõ nhầm — ý thầy là ${emailFix}?` }); continue }
     const password = (s.password || '').trim() || genPassword()
     const full_name = (s.full_name || '').trim() || email.split('@')[0]
     try {

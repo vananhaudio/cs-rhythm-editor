@@ -18,6 +18,29 @@ const json = (b: unknown, s = 200) =>
 
 const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
 
+// Bắt lỗi gõ nhầm tên miền phổ biến (gmai.com → gmail.com, .con → .com…). Trả email đúng nếu phát hiện.
+const DOMAIN_TYPOS: Record<string, string> = {
+  'gmai.com': 'gmail.com', 'gmial.com': 'gmail.com', 'gmil.com': 'gmail.com', 'gmali.com': 'gmail.com',
+  'gamil.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmaill.com': 'gmail.com', 'gmaul.com': 'gmail.com',
+  'gimail.com': 'gmail.com', 'gmaili.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.con': 'gmail.com',
+  'gmail.cm': 'gmail.com', 'gmail.om': 'gmail.com', 'gmail.comm': 'gmail.com', 'gmail.vn': 'gmail.com', 'gmail.cim': 'gmail.com',
+  'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'yhoo.com': 'yahoo.com', 'yhaoo.com': 'yahoo.com',
+  'yahoo.co': 'yahoo.com', 'yahoo.con': 'yahoo.com', 'yahho.com': 'yahoo.com',
+  'hotmai.com': 'hotmail.com', 'hotmial.com': 'hotmail.com', 'hotmil.com': 'hotmail.com', 'hotmaill.com': 'hotmail.com',
+  'hotmail.co': 'hotmail.com', 'hotmail.con': 'hotmail.com', 'hormail.com': 'hotmail.com',
+  'outlok.com': 'outlook.com', 'outloo.com': 'outlook.com', 'outllok.com': 'outlook.com', 'outlook.co': 'outlook.com', 'outlook.con': 'outlook.com',
+  'iclod.com': 'icloud.com', 'iclould.com': 'icloud.com', 'icloud.co': 'icloud.com',
+}
+const TLD_TYPOS: Record<string, string> = { con: 'com', comm: 'com', vom: 'com', xom: 'com', cmo: 'com', ocm: 'com' }
+const emailTypoFix = (e: string): string | null => {
+  const at = e.lastIndexOf('@'); if (at < 0) return null
+  const local = e.slice(0, at), domain = e.slice(at + 1)
+  if (DOMAIN_TYPOS[domain]) return `${local}@${DOMAIN_TYPOS[domain]}`
+  const parts = domain.split('.'); const tld = parts[parts.length - 1]
+  if (TLD_TYPOS[tld] !== undefined) { parts[parts.length - 1] = TLD_TYPOS[tld]; return `${local}@${parts.filter(Boolean).join('.')}` }
+  return null
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
@@ -30,6 +53,8 @@ Deno.serve(async (req) => {
   const name = (body.name || '').trim() || email.split('@')[0]
 
   if (!emailOk(email)) return json({ error: 'Email không hợp lệ' }, 400)
+  const fix = emailTypoFix(email)
+  if (fix) return json({ error: `Email có vẻ gõ nhầm. Ý bạn là ${fix}?`, suggestion: fix, code: 'typo' }, 400)
   if (password.length < 6) return json({ error: 'Mật khẩu cần ít nhất 6 ký tự' }, 400)
 
   // Đã có tài khoản với email này?
