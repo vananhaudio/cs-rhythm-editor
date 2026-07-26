@@ -58,7 +58,13 @@ DECLARE
     -- Quyền mở khoá từng khoá: authenticated ĐỌC, chỉ thầy GHI (xem db/course_access_setup.sql)
     'edu_course_access',
     -- Strum Score học sinh tự soạn: mỗi HS chỉ CRUD bài của mình, thầy chỉ đọc (xem db/student_strum_drafts.sql)
-    'student_strum_drafts'
+    'student_strum_drafts',
+    -- Lịch lớp: anon ĐƯỢC ĐỌC (trang tuyển sinh /class) — policy cs_anon_read + cs_auth_all
+    -- do db/class_schedule_setup.sql đặt. ĐỪNG để vòng lặp xoá cs_anon_read (mất lịch công khai).
+    'class_schedule',
+    -- Buổi học: dữ liệu vận hành nội bộ, chỉ authenticated (policy cses_auth_all
+    -- do db/journey_os_stage1.sql đặt) — giữ nguyên, anon không đọc.
+    'class_sessions'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];

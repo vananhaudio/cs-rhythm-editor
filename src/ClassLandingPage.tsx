@@ -14,13 +14,9 @@ import ClassNangCao from './ClassNangCao'
 import { FAQS } from './classFaq'
 import { tenNangLuc } from './hanhtrinh'
 
-// ─── Lớp dự phòng (hiện khi chưa đọc được Google Sheet) ───
-const CLASSES = [
-  { tag: 'Đệm hát · Trình độ 1', name: 'Khởi đầu đam mê – Đệm hát TĐ1', path: 'dem_hat', day: 'Thứ 3 · 19h00', date: 'Khai giảng 07/07/2026', price: '990k' },
-  { tag: 'Tỉa nốt · Trình độ 3', name: 'Tỉa nốt trên nền karaoke – Cảm âm thực chiến', path: 'tia_not', day: 'Thứ 5 · 19h00', date: 'Khai giảng 09/07/2026', price: '990k' },
-  { tag: 'Đệm hát · Trình độ 2', name: 'Khởi đầu đam mê – Đệm hát TĐ2', path: 'dem_hat', day: 'Thứ 6 · 19h00', date: 'Khai giảng 10/07/2026', price: '990k' },
-  { tag: 'Toàn diện · Combo', name: 'Hành trình Guitar 2027 (combo 10 khoá)', path: 'combo', day: 'Thứ 5 · 20h30', date: 'Khai giảng tháng 9/2026', price: 'Combo' },
-]
+// ─── Combo Hành trình — sản phẩm bán quanh năm, KHÔNG nằm trong class_schedule ───
+// (Lịch lớp thật đọc từ bảng class_schedule; tuyệt đối không hardcode lớp ở đây.)
+const COMBO_HT = { name: 'Hành trình Guitar 2027 (combo 10 khoá)', path: 'combo', price: 'Combo' }
 
 // Suy ra nhãn/lộ trình/giá từ tên lớp (dữ liệu sheet không có sẵn các cột này)
 const inferTag = (n: string) => { const s = n.toLowerCase()
@@ -108,7 +104,7 @@ const ZALO_LINK = 'https://zalo.me/vananhguitarist'
 type Msg = { who: 'ai' | 'me'; html: string }
 
 export default function ClassLandingPage() {
-  const [form, setForm] = useState({ name: '', phone: '', zalo: '', email: '', className: CLASSES[0].name, note: '', isHanhtrinh: false })
+  const [form, setForm] = useState({ name: '', phone: '', zalo: '', email: '', className: '', note: '', isHanhtrinh: false })
   const [showPending, setShowPending] = useState(false)   // học sinh HT gửi yêu cầu miễn phí → chờ duyệt
   const [formErr, setFormErr] = useState(false)
   const [showPay, setShowPay] = useState(false)
@@ -330,6 +326,13 @@ export default function ClassLandingPage() {
 
   const pickClass = (name: string) => { set('className', name); goto('dangky') }
 
+  // Lớp có thể đăng ký = lớp THẬT từ class_schedule (sắp khai giảng + đang học) + combo Hành trình
+  const regClasses = [
+    ...(sched?.upcoming ?? []).map(it => ({ name: it.name, path: inferPath(it.courseTitle || it.name), price: it.price || '990k', label: it.name })),
+    ...(sched?.active ?? []).map(it => ({ name: it.name, path: inferPath(it.courseTitle || it.name), price: it.price || '990k', label: `${it.name} · đang học` })),
+    { ...COMBO_HT, label: COMBO_HT.name },
+  ]
+
   const chatPush = (m: Msg) => setMsgs(prev => [...prev, m])
   // text thuần → HTML an toàn: escape, markdown link [text](url) + URL trần + đậm + xuống dòng
   const richReply = (s: string) => {
@@ -362,7 +365,7 @@ export default function ClassLandingPage() {
   const chatSend = () => chatSendText(chatInput)
 
   const submitReg = async () => {
-    const cls = CLASSES.find(c => c.name === form.className)
+    const cls = regClasses.find(c => c.name === form.className) ?? { path: inferPath(form.className) }
     // HỌC SINH LỚP HÀNH TRÌNH (đã đăng nhập + tick miễn phí): gửi YÊU CẦU chờ thầy duyệt, KHÔNG qua thanh toán.
     if (me && form.isHanhtrinh) {
       let studentId: string | null = null, phone = form.phone.trim()
@@ -539,10 +542,24 @@ export default function ClassLandingPage() {
           <div className="eyebrow">Lịch khai giảng</div>
           <h2>Lớp sắp khai giảng</h2>
           <p className="lead">Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
+          {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
+          {sched === null && <div style={{ textAlign: 'center', color: '#8A8A93', padding: '28px 0', fontSize: 15 }}>Đang tải lịch lớp…</div>}
+          {/* Hết lớp sắp khai giảng → nói thật + mời giữ chỗ, thay vì hiện lớp cũ */}
+          {sched !== null && sched.upcoming.length === 0 && (
+            <div className="panel" style={{ textAlign: 'center', padding: '30px 22px' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📅</div>
+              <h3 style={{ margin: '0 0 8px' }}>Các khoá hiện tại đã khai giảng — lớp mới đang được xếp lịch</h3>
+              <p style={{ color: '#52525B', margin: '0 auto 18px', maxWidth: 520 }}>Để lại thông tin bên dưới, thầy sẽ giữ chỗ và báo bạn ngay khi mở lớp mới. Bạn cũng có thể hỏi Mira xem lớp nào phù hợp với mình.</p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" onClick={() => goto('dangky')}>Để lại thông tin giữ chỗ →</button>
+                <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi Mira</button>
+              </div>
+            </div>
+          )}
           <div className="cls-list">
             {(sched?.upcoming?.length
               ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
-              : CLASSES
+              : []
             ).map((raw, i) => {
               const c: any = raw
               const title = c.title ?? c.name
@@ -602,13 +619,14 @@ export default function ClassLandingPage() {
               <div><label>Email (tạo tài khoản app)</label><input value={form.email} onChange={e => set('email', e.target.value)} type="email" placeholder="email@..." /></div>
               <div className="full"><label>Lớp muốn đăng ký</label>
                 <select value={form.className} onChange={e => set('className', e.target.value)}>
-                  {CLASSES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                  <option value="">— Chọn lớp —</option>
+                  {regClasses.map(c => <option key={c.name} value={c.name}>{c.label}</option>)}
                 </select>
               </div>
               <div className="full"><label>Ghi chú thêm (không bắt buộc)</label><textarea value={form.note} onChange={e => set('note', e.target.value)} rows={2} placeholder="Khung giờ rảnh, câu muốn hỏi thầy..." /></div>
               {/* Học phí + tick miễn phí cho học sinh lớp Hành trình (chỉ khi đã đăng nhập) */}
               <div className="full" style={{ background: '#F4F4F5', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 15 }}>Học phí khoá này: <b style={{ color: '#EA580C' }}>{(CLASSES.find(c => c.name === form.className)?.price === 'Combo') ? 'Combo trọn gói' : '990.000đ'}</b></div>
+                <div style={{ fontSize: 15 }}>Học phí khoá này: <b style={{ color: '#EA580C' }}>{(regClasses.find(c => c.name === form.className)?.price === 'Combo') ? 'Combo trọn gói' : '990.000đ'}</b></div>
                 {me && (
                   <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, cursor: 'pointer', fontSize: 14.5 }}>
                     <input type="checkbox" checked={form.isHanhtrinh} onChange={e => setForm(f => ({ ...f, isHanhtrinh: e.target.checked }))} style={{ marginTop: 3, width: 18, height: 18 }} />
