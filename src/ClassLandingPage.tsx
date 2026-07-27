@@ -112,6 +112,11 @@ export default function ClassLandingPage() {
   const [okBox, setOkBox] = useState(false)
   const [modal, setModal] = useState<string | null>(null)
   const [showJourney, setShowJourney] = useState(false)
+
+  // Deep-link: /class#hanh-trinh mở thẳng Bản đồ hành trình (chia sẻ được qua Zalo)
+  useEffect(() => {
+    if (window.location.hash === '#hanh-trinh') setShowJourney(true)
+  }, [])
   const [showDemHat, setShowDemHat] = useState(false)
   const [showTiaNot, setShowTiaNot] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
