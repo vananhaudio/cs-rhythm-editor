@@ -9,9 +9,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
-const MODEL_CHAT = 'claude-haiku-4-5'
-const MODEL_WRITE = 'claude-haiku-4-5'
-const MODEL_REVIEW = 'claude-haiku-4-5'
+const MODEL_CHAT = 'claude-haiku-4-5-20251001'
+const MODEL_WRITE = 'claude-haiku-4-5-20251001'
+const MODEL_REVIEW = 'claude-haiku-4-5-20251001'
 
 const MAX_MSG_LEN = 2000
 const MAX_STORY_MSGS = 80
