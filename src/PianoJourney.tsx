@@ -138,16 +138,16 @@ export default function PianoJourney({ onClose }: Props) {
       await pc.setLocalDescription(offer)
       log('SDP offer created')
 
-      // 7. Send to edge function
+      // 7. Send to edge function (JSON to avoid ByteString error)
       const fnUrl = `${SUPABASE_URL}/functions/v1/realtime-token`
       log('Gửi SDP đến edge function...')
       const sdpRes = await fetch(fnUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/sdp',
+          'Content-Type': 'application/json',
         },
-        body: offer.sdp,
+        body: JSON.stringify({ sdp: offer.sdp }),
       })
 
       if (!sdpRes.ok) {
@@ -159,9 +159,10 @@ export default function PianoJourney({ onClose }: Props) {
       }
 
       // 8. Answer SDP
-      const answerSdp = await sdpRes.text()
-      log('Nhận answer SDP (' + answerSdp.length + ' bytes)')
-      await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp })
+      const data = await sdpRes.json()
+      if (!data.sdp) throw new Error('Không nhận được SDP từ server')
+      log('Nhận answer SDP (' + data.sdp.length + ' bytes)')
+      await pc.setRemoteDescription({ type: 'answer', sdp: data.sdp })
       log('Kết nối thành công! Hãy nói gì đó...')
       setState('idle')
 
