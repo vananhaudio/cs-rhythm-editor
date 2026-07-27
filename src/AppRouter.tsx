@@ -32,6 +32,7 @@ import StoryLandingPage from './story/StoryLandingPage'
 import StoryTellPage from './story/StoryTellPage'
 import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
+import PianoJourney from './PianoJourney'
 type AppUser = {
   id: string
   role: string
@@ -232,6 +233,12 @@ export default function AppRouter() {
   // ── Route /groove (xem thử module Groove Lab: tab Học + Tập) ──
   if (path === '/groove' || path.startsWith('/groove')) {
     return <GrooveExercise onClose={() => { window.location.href = '/start' }} />
+  }
+
+  // ── Route /piano-journey — Piano Journey 🎹 ──
+  if (path === '/piano-journey' || path.startsWith('/piano-journey')) {
+    const embedded = new URLSearchParams(window.location.search).get('embedded') === '1'
+    return <PianoJourney onClose={embedded ? undefined : () => { window.location.href = '/start' }} />
   }
 
   // ── Route /gp-editor ──

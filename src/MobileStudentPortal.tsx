@@ -145,6 +145,7 @@ const TOOL_ROUTES: Record<string, string> = {
   tuner:         '/tuner',
   submit_video:  '/tap',
   ear:           '/tap',
+  'piano-journey': '/piano-journey',
 }
 
 const TABS = [

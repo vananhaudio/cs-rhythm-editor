@@ -1,20 +1,18 @@
-// Edge Function: story-ai — MVP 01: Story Interview
-// Mira = người phỏng vấn tạo tác phẩm, KHÔNG phải chatbot.
-// Hành vi mặc định: lắng nghe + ghi nhớ. Chỉ phản hồi khi thật sự cần.
-// Actions: chat (kể) · write (sinh bản thảo) · revise (sửa bản thảo) · review (gửi biên tập)
-// DEPLOY: Supabase Dashboard → Edge Functions → story-ai → "Verify JWT" = BẬT
+// Edge Function: story-ai -- MVP 01: Story Interview
+// Mira = interview facilitator creating a work, NOT a chatbot.
+// Default behavior: listen + remember. Only respond when truly needed.
+// Actions: chat (tell) - write (draft) - revise (edit) - review (submit)
+// DEPLOY: Supabase Dashboard -> Edge Functions -> story-ai -> "Verify JWT" = ON
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
-// Models — tách theo tác vụ
 const MODEL_CHAT = 'claude-haiku-4-5'
-const MODEL_WRITE = 'claude-haiku-4-5'  // TODO: đổi sang sonnet khi verify được model name chính xác
+const MODEL_WRITE = 'claude-haiku-4-5'
 const MODEL_REVIEW = 'claude-haiku-4-5'
 
-// Giới hạn
 const MAX_MSG_LEN = 2000
 const MAX_STORY_MSGS = 80
 const MAX_OPEN_STORIES = 3
@@ -30,112 +28,94 @@ const json = (body: unknown, status = 200) =>
 
 const db = createClient(SUPABASE_URL, SERVICE_KEY)
 
-// ═══════════════════════════════════════════
-// SYSTEM PROMPT — MVP 01
-// ═══════════════════════════════════════════
-const MIRA_SYSTEM = `Bạn là Mira — người phỏng vấn của dự án "1001 Câu chuyện cùng Guitar".
+// ============================================================
+// SYSTEM PROMPT -- MVP 01 (ASCII only -- Supabase Dashboard corrupts UTF-8)
+// ============================================================
+const MIRA_SYSTEM = `You are Mira -- an interviewer for the project "1001 Stories with Guitar" by teacher Van Anh.
 
-VAI TRÒ: Bạn KHÔNG phải chatbot. Bạn là người phỏng vấn — công việc của bạn là lắng nghe, ghi nhớ, và nhận ra khi nào câu chuyện đã đủ để tạo thành một tác phẩm.
+YOUR ROLE: You are NOT a chatbot. You are an interviewer -- your job is to listen, remember, and recognize when a story has enough material to become a work.
 
-NHIỆM VỤ CỦA BẠN (theo thứ tự ưu tiên):
-1. LẮNG NGHE — ghi nhớ mọi chi tiết người dùng kể
-2. GHI NHẬN — khi nào câu chuyện đã đủ chất liệu (có cốt truyện rõ ràng + chi tiết cụ thể + cảm xúc thật)
-3. HỎI THÊM — CHỈ khi thật sự thiếu một chi tiết quan trọng để hiểu được câu chuyện
-4. TẠO BẢN THẢO — sắp xếp lại lời kể thành bài hoàn chỉnh (ở action write, không phải lúc này)
+YOUR TASKS (in priority order):
+1. LISTEN -- remember every detail the user tells
+2. RECOGNIZE -- when the story has enough material (clear narrative + specific details + real emotion)
+3. ASK -- ONLY when truly missing an important detail needed to understand the story
+4. DRAFT -- later, you will arrange the story into a complete article (in the write action, not now)
 
-GIỌNG:
-- Xưng "mình", gọi "bạn". Mộc, chân thành, không văn hoa.
-- KHÔNG BAO GIỜ nói: "Mình đang nghe…", "Cảm ơn bạn…", "Mình nhớ rồi…", "Hay quá…", "Cảm động quá…"
-- KHÔNG khen sáo rỗng. KHÔNG khuyến khích quá mức. KHÔNG giải thích. KHÔNG giáo dục.
-- Khi cần hỏi: một câu hỏi ngắn, trực tiếp, không dẫn dắt.
-- Emoji cực kỳ tiết chế — gần như không dùng.
+VOICE:
+- Address the user as "ban" (you), call yourself "minh" (me). Warm, genuine, no fluff.
+- NEVER say: "I'm listening...", "Thank you...", "I remember...", "That's great...", "So touching..."
+- NO empty praise. NO excessive encouragement. NO explaining. NO lecturing.
+- When you need to ask: one short, direct, open-ended question.
+- NO emojis -- almost never use them.
 
-═══ HÀNH VI MẶC ĐỊNH: IM LẶNG ═══
-Người dùng gửi lời kể → bạn ghi nhớ. Đa số trường hợp bạn KHÔNG CẦN NÓI GÌ.
-- KHÔNG phản hồi sau mỗi tin
-- KHÔNG "gật đầu bằng chữ"
-- KHÔNG "mình đang nghe"
-- Im lặng là hành vi mặc định và đúng đắn nhất
+=== DEFAULT BEHAVIOR: SILENCE ===
+User sends a message -> you remember it. Most of the time, you say NOTHING.
+- NO response after every message
+- NO "nodding in text"
+- NO "I'm listening"
+- Silence is the default and correct behavior
 
-═══ KHI NÀO MỚI NÓI ═══
-Bạn CHỈ nói khi thuộc MỘT trong các trường hợp sau:
+=== WHEN TO SPEAK ===
+Only speak in ONE of these cases:
 
-A. THIẾU CHI TIẾT QUAN TRỌNG — câu chuyện có một lỗ hổng khiến người đọc không hiểu được.
-   → Hỏi MỘT câu ngắn, mở, không dẫn dắt.
-   → Sau câu hỏi, thêm dấu hiệu: [[PHASE:asking]]
-   Ví dụ: "Người tặng bạn cây đàn đó là ai vậy?" [[PHASE:asking]]
+A. MISSING IMPORTANT DETAIL -- the story has a gap that prevents understanding.
+   -> Ask ONE short, open question.
+   -> Add marker: [[PHASE:asking]]
+   Example: "Who gave you that guitar?" [[PHASE:asking]]
 
-B. ĐÃ ĐỦ CHẤT LIỆU — bạn đánh giá câu chuyện đã có: cốt truyện rõ + chi tiết cụ thể + cảm xúc.
-   → Nói MỘT câu ngắn báo đã sẵn sàng.
-   → Thêm dấu hiệu: [[PHASE:ready]]
-   Ví dụ: "Mình đã hiểu câu chuyện của bạn và sẵn sàng viết bản thảo đầu tiên." [[PHASE:ready]]
+B. ENOUGH MATERIAL -- you judge the story has: clear narrative + specific details + real emotion.
+   -> Say ONE short sentence indicating readiness.
+   -> Add marker: [[PHASE:ready]]
+   Example: "I've understood your story and am ready to write the first draft." [[PHASE:ready]]
 
-C. NGOÀI LỀ — người dùng hỏi về dự án, quy trình…
-   → Trả lời ngắn, đúng tinh thần, rồi quay lại lắng nghe.
+C. OFF-TOPIC -- user asks about the project, process, etc.
+   -> Answer briefly, in the right spirit, then return to listening.
 
-═══ ĐIỀU CẤM LÀM ═══
-- KHÔNG sáng tác thêm tình tiết
-- KHÔNG gợi ý nội dung ("Bạn thử kể về…")
-- KHÔNG gieo cảm xúc ("Chắc lúc đó bạn rất buồn…")
-- KHÔNG câu hỏi đóng ("Có phải…", "…phải không?")
-- KHÔNG đánh giá câu chuyện hay hay dở
-- KHÔNG khen quá mức, KHÔNG động viên quá mức
-- KHÔNG nói dài — mỗi lần nói tối đa 2 câu`
+=== FORBIDDEN ===
+- NO inventing details
+- NO suggesting content ("Try telling about...")
+- NO planting emotions ("You must have been very sad...")
+- NO closed questions ("Was it...?", "...right?")
+- NO judging whether the story is good or bad
+- NO excessive praise, NO excessive encouragement
+- NO long responses -- max 2 sentences per response`
 
-// ═══════════════════════════════════════════
-// PROMPT VIẾT BẢN THẢO
-// ═══════════════════════════════════════════
-const WRITE_PROMPT = `Bạn là Mira — người biên tập của dự án "1001 Câu chuyện cùng Guitar".
+const WRITE_SYSTEM = `You are an editor. From the storyteller's words below, write a 300-600 word article in Vietnamese, first-person voice, keeping their raw authentic tone. Only use details they actually told -- do not add anything.
 
-Nhiệm vụ: Từ cuộc trò chuyện phía trên (người dùng kể + bạn ghi nhận), hãy sắp xếp lại thành một bài viết hoàn chỉnh.
+Return ONLY this exact JSON, nothing else:
+{"title":"Title in Vietnamese","topic":"topic-slug","content":"Full article in Vietnamese"}
 
-NGUYÊN TẮC:
-- Ngôi thứ nhất — giọng của chính người kể
-- CHỈ dùng chi tiết có thật trong lời kể — KHÔNG thêm thắt, không bịa
-- Giữ nguyên giọng mộc mạc của người kể (họ nói sao giữ vậy, chỉ sắp xếp lại)
-- 300–600 chữ
-- Có tiêu đề hấp dẫn nhưng trung thực
-- Gắn 1 chủ đề phù hợp nhất trong 10 chủ đề: cay-dan-dau-tien, bai-hat-thay-doi-toi, guitar-va-tuoi-tho, vuot-qua-kho-khan, guitar-trong-gia-dinh, nguoi-thay-dau-tien, dau-tay-va-chai-san, lan-dau-dan-truoc-moi-nguoi, bo-do-roi-quay-lai, cay-dan-va-nguoi-than
+10 valid topics: cay-dan-dau-tien, bai-hat-thay-doi-toi, guitar-va-tuoi-tho, vuot-qua-kho-khan, guitar-trong-gia-dinh, nguoi-thay-dau-tien, dau-tay-va-chai-san, lan-dau-dan-truoc-moi-nguoi, bo-do-roi-quay-lai, cay-dan-va-nguoi-than`
 
-Trả về CHỈ một JSON object (không markdown, không giải thích):
-{"title": "...", "topic": "...", "content": "..."}`
+const REVISE_SYSTEM = `You are an editor. You wrote a draft from the user's story. Now they want changes.
 
-// ═══════════════════════════════════════════
-// PROMPT SỬA BẢN THẢO
-// ═══════════════════════════════════════════
-const REVISE_PROMPT = `Bạn là Mira — người biên tập. Bạn đã viết một bản thảo từ lời kể của người dùng. Bây giờ họ yêu cầu sửa.
+Original article (title + content) is provided along with the revision request. Apply the request and return the revised version.
 
-Bài gốc (title, content) được cung cấp kèm yêu cầu sửa. Hãy áp dụng yêu cầu đó và trả về bản đã sửa.
+RULES:
+- ONLY change what was requested
+- If "shorter" -> condense, keep best details
+- If "add more about X" -> integrate the additional story from recent conversation
+- If "change title" -> change it
+- If "less flowery" -> write more plainly
+- Keep the storyteller's authentic voice
 
-NGUYÊN TẮC:
-- CHỈ sửa những gì được yêu cầu
-- Nếu yêu cầu "ngắn lại" → rút gọn, giữ chi tiết đắt nhất
-- Nếu yêu cầu "kể thêm đoạn X" → đoạn X đã được kể thêm trong hội thoại gần nhất, hãy tích hợp vào
-- Nếu yêu cầu "đổi tiêu đề" → đổi
-- Nếu yêu cầu "bớt văn hoa" → viết mộc hơn
-- Giữ nguyên giọng người kể
+Return ONLY this exact JSON, nothing else:
+{"title":"...","topic":"...","content":"..."}`
 
-Trả về CHỈ một JSON object (không markdown):
-{"title": "...", "topic": "...", "content": "..."}`
+const REVIEW_SYSTEM = `You are the editorial board for "1001 Stories with Guitar".
 
-// ═══════════════════════════════════════════
-// PROMPT BIÊN TẬP (REVIEW)
-// ═══════════════════════════════════════════
-const REVIEW_PROMPT = `Bạn là ban biên tập của dự án "1001 Câu chuyện cùng Guitar".
+Read the article below and evaluate against this checklist:
+1. True to project spirit? (real story, no ads/spam)
+2. No inappropriate content?
+3. No personally identifiable info of others (phone, address)?
+4. Spelling/formatting OK? (if not -> light edit, don't change voice)
 
-Nhiệm vụ: đọc bài viết dưới đây và đánh giá theo checklist:
+Return ONLY this exact JSON, nothing else:
+{"verdict":"ok"|"need_more"|"escalate","notes":"brief reason if need_more or escalate","content":"lightly edited article if ok"}`
 
-1. Đúng tinh thần dự án? (câu chuyện thật, không quảng cáo/spam)
-2. Không có nội dung không phù hợp?
-3. Không lộ thông tin nhạy cảm của người khác (SĐT, địa chỉ cụ thể…)?
-4. Chính tả/ngắt đoạn ổn? (nếu không → sửa nhẹ, không đổi giọng)
-
-Trả về CHỈ một JSON object (không markdown):
-{"verdict": "ok" | "need_more" | "escalate", "notes": "lý do ngắn nếu need_more hoặc escalate", "content": "bài đã sửa nhẹ nếu ok"}`
-
-// ═══════════════════════════════════════════
+// ============================================================
 // HELPERS
-// ═══════════════════════════════════════════
+// ============================================================
 
 async function getUser(req: Request) {
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim()
@@ -162,70 +142,66 @@ async function callAnthropic(system: string, messages: { role: string; content: 
     .map((b: { text: string }) => b.text).join('').trim()
 }
 
-// ═══════════════════════════════════════════
+// ============================================================
 // MAIN
-// ═══════════════════════════════════════════
+// ============================================================
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
   const user = await getUser(req)
-  if (!user) return json({ error: 'Cần đăng nhập' }, 401)
+  if (!user) return json({ error: 'Login required' }, 401)
 
-  let body: { action?: string; storyId?: string; message?: string; instruction?: string }
-  try { body = await req.json() } catch { return json({ error: 'Body không hợp lệ' }, 400) }
+  let body: { action?: string; storyId?: string; message?: string; instruction?: string; stuck?: boolean }
+  try { body = await req.json() } catch { return json({ error: 'Invalid body' }, 400) }
 
   const action = body.action || 'chat'
 
-  // ═══════════ ACTION: CHAT ═══════════
+  // ============ ACTION: CHAT ============
   if (action === 'chat') {
     const message = (body.message || '').trim()
-    const stuck = (body as { stuck?: boolean }).stuck === true
-    if (!message && !stuck) return json({ error: 'Thiếu nội dung' }, 400)
-    if (message.length > MAX_MSG_LEN) return json({ error: 'Tin nhắn quá dài' }, 400)
+    const stuck = body.stuck === true
+    if (!message && !stuck) return json({ error: 'Missing content' }, 400)
+    if (message.length > MAX_MSG_LEN) return json({ error: 'Message too long' }, 400)
 
-    // Lấy hoặc tạo story
     let story: { id: string; user_id: string; status: string; conversation: Msg[] } | null = null
     if (body.storyId) {
       const { data } = await db.from('stories')
         .select('id,user_id,status,conversation').eq('id', body.storyId).maybeSingle()
       story = data as typeof story
-      if (!story) return json({ error: 'Không tìm thấy câu chuyện' }, 404)
-      if (story.user_id !== user.id) return json({ error: 'Không phải bài của bạn' }, 403)
+      if (!story) return json({ error: 'Story not found' }, 404)
+      if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
       if (!['telling', 'collecting_photos'].includes(story.status)) {
-        return json({ error: 'Bài này đã qua bước kể' }, 400)
+        return json({ error: 'Story already past telling phase' }, 400)
       }
     } else {
       const { count } = await db.from('stories')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).not('status', 'in', '("published","unpublished")')
       if ((count ?? 0) >= MAX_OPEN_STORIES) {
-        return json({ reply: 'Bạn đang có vài câu chuyện kể dở. Vào "Câu chuyện của tôi" để kể tiếp nhé.', phase: 'telling', storyId: null })
+        return json({ reply: 'You have some unfinished stories. Go to "My Stories" to continue.', phase: 'telling', storyId: null })
       }
       const { data, error } = await db.from('stories')
         .insert({ user_id: user.id, status: 'telling', conversation: [] })
         .select('id,user_id,status,conversation').single()
-      if (error || !data) return json({ error: 'Không tạo được câu chuyện' }, 500)
+      if (error || !data) return json({ error: 'Could not create story' }, 500)
       story = data as typeof story
     }
 
     const conv: Msg[] = Array.isArray(story!.conversation) ? story!.conversation : []
     if (conv.length > MAX_STORY_MSGS) {
-      // Đủ chất liệu → gợi ý chuyển bước
-      return json({ reply: 'Mình đã hiểu câu chuyện của bạn và sẵn sàng viết bản thảo đầu tiên.', phase: 'ready_for_draft', storyId: story!.id })
+      return json({ reply: 'I have enough material. Ready to write your first draft.', phase: 'ready_for_draft', storyId: story!.id })
     }
 
-    const userMsg = stuck ? '[BẤM NÚT: Mình đang bí…]' : message
+    const userMsg = stuck ? '[STUCK_BUTTON]' : message
     conv.push({ role: 'user', text: userMsg, at: new Date().toISOString() })
 
-    // System prompt
     let system = MIRA_SYSTEM
     if (stuck) {
-      system += `\n\n⚠️ Người dùng vừa báo "bí" — họ không biết kể gì tiếp. Hãy hỏi MỘT câu hỏi mở, ngắn để giúp họ nhớ ra điều gì đó. [[PHASE:asking]]`
+      system += '\n\nUser just pressed "stuck" button -- they don\'t know what to tell next. Ask ONE short open question to help them remember. [[PHASE:asking]]'
     }
 
-    // Build messages for Anthropic
     const aiMessages = conv.slice(-HISTORY).map((m) => ({
       role: m.role === 'user' ? 'user' as const : 'assistant' as const,
       content: m.text,
@@ -238,7 +214,6 @@ Deno.serve(async (req) => {
       const rawReply = await callAnthropic(system, aiMessages, MODEL_CHAT, 500)
       reply = rawReply
 
-      // Parse phase markers
       if (/\[\[PHASE:ready\]\]/i.test(reply)) {
         phase = 'ready_for_draft'
         reply = reply.replace(/\[\[PHASE:ready\]\]/gi, '').trim()
@@ -247,122 +222,106 @@ Deno.serve(async (req) => {
         reply = reply.replace(/\[\[PHASE:asking\]\]/gi, '').trim()
       }
 
-      // Nếu reply rỗng hoặc chỉ có whitespace → Mira đang lắng nghe
-      if (!reply) {
-        phase = 'telling'
-      }
+      if (!reply) phase = 'telling'
     } catch (e) {
-      console.error('story-ai chat exception', e)
+      console.error('chat error', e)
       reply = ''
       phase = 'telling'
     }
 
-    conv.push({ role: 'mira', text: reply || '(im lặng — đang lắng nghe)', at: new Date().toISOString() })
+    conv.push({ role: 'mira', text: reply || '(silent -- listening)', at: new Date().toISOString() })
     await db.from('stories').update({ conversation: conv }).eq('id', story!.id)
 
     return json({ reply, phase, storyId: story!.id })
   }
 
-  // ═══════════ ACTION: WRITE ═══════════
+  // ============ ACTION: WRITE ============
   if (action === 'write') {
-    if (!body.storyId) return json({ error: 'Thiếu storyId' }, 400)
+    if (!body.storyId) return json({ error: 'Missing storyId' }, 400)
 
     const { data: story } = await db.from('stories')
       .select('id,user_id,status,conversation').eq('id', body.storyId).maybeSingle()
-    if (!story) return json({ error: 'Không tìm thấy câu chuyện' }, 404)
-    if (story.user_id !== user.id) return json({ error: 'Không phải bài của bạn' }, 403)
+    if (!story) return json({ error: 'Story not found' }, 404)
+    if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
     if (!['telling', 'collecting_photos'].includes(story.status)) {
-      return json({ error: 'Bài này đã qua bước kể' }, 400)
+      return json({ error: 'Already past telling phase' }, 400)
     }
 
     await db.from('stories').update({ status: 'writing' }).eq('id', story.id)
 
     const conv: Msg[] = Array.isArray(story.conversation) ? story.conversation : []
-    const convText = conv
-      .filter(m => m.role === 'user' && !m.text.startsWith('[BẤM NÚT:'))
-      .map(m => `Người kể: ${m.text}`).join('\n\n')
+    const userMessages = conv
+      .filter(m => m.role === 'user' && !m.text.startsWith('[STUCK'))
+      .map(m => m.text).join('\n\n')
 
-    if (!convText.trim()) {
+    if (!userMessages.trim()) {
       await db.from('stories').update({ status: 'telling' }).eq('id', story.id)
-      return json({ error: 'Chưa có đủ nội dung để viết' }, 400)
+      return json({ error: 'Not enough content to write' }, 400)
     }
 
-    // Simple prompt — yêu cầu JSON rõ ràng
-    const writeSystem = `Bạn là người biên tập. Từ lời kể, hãy viết thành bài 300-600 chữ, ngôi thứ nhất.
-Trả về CHÍNH XÁC JSON này, không thêm gì khác:
-{"title":"Tiêu đề","topic":"chu-de","content":"Nội dung bài"}
-10 chủ đề: cay-dan-dau-tien, bai-hat-thay-doi-toi, guitar-va-tuoi-tho, vuot-qua-kho-khan, guitar-trong-gia-dinh, nguoi-thay-dau-tien, dau-tay-va-chai-san, lan-dau-dan-truoc-moi-nguoi, bo-do-roi-quay-lai, cay-dan-va-nguoi-than.`
-
     try {
-      const rawReply = await callAnthropic(writeSystem, [{
-        role: 'user', content: `Lời kể:\n${convText.slice(0, 8000)}`
+      const rawReply = await callAnthropic(WRITE_SYSTEM, [{
+        role: 'user', content: `Storyteller's words:\n${userMessages.slice(0, 8000)}`
       }], MODEL_WRITE, 3000)
 
-      console.error('WRITE RAW:', rawReply.slice(0, 500))
-
-      // Trích JSON
+      // Extract JSON
       let jsonStr = rawReply.trim()
       const m = jsonStr.match(/\{[\s\S]*\}/)
-      if (!m) throw new Error(`Không tìm thấy JSON trong response: ${rawReply.slice(0, 200)}`)
+      if (!m) throw new Error(`No JSON found: ${rawReply.slice(0, 200)}`)
       jsonStr = m[0]
       const parsed = JSON.parse(jsonStr)
 
-      if (!parsed.content) throw new Error('Thiếu content')
+      if (!parsed.content) throw new Error('Missing content field')
 
       await db.from('stories').update({
         status: 'user_review',
-        title: parsed.title || 'Không có tiêu đề',
+        title: parsed.title || 'Untitled',
         topic: parsed.topic || '',
         content: parsed.content,
       }).eq('id', story.id)
 
       return json({ title: parsed.title, topic: parsed.topic, content: parsed.content })
     } catch (e) {
-      console.error('story-ai write error', e)
+      console.error('write error', e)
       await db.from('stories').update({ status: 'telling' }).eq('id', story.id)
-      return json({ error: `CODE_VER:20260727-2141 | ${e instanceof Error ? e.message : String(e)}` }, 500)
+      return json({ error: `CODE_VER:v3 | ${e instanceof Error ? e.message : String(e)}` }, 500)
     }
   }
 
-  // ═══════════ ACTION: REVISE ═══════════
+  // ============ ACTION: REVISE ============
   if (action === 'revise') {
-    if (!body.storyId || !body.instruction) return json({ error: 'Thiếu storyId hoặc instruction' }, 400)
+    if (!body.storyId || !body.instruction) return json({ error: 'Missing storyId or instruction' }, 400)
 
     const { data: story } = await db.from('stories')
       .select('id,user_id,status,title,content,topic,conversation')
       .eq('id', body.storyId).maybeSingle()
-    if (!story) return json({ error: 'Không tìm thấy câu chuyện' }, 404)
-    if (story.user_id !== user.id) return json({ error: 'Không phải bài của bạn' }, 403)
+    if (!story) return json({ error: 'Story not found' }, 404)
+    if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
     if (!['user_review'].includes(story.status)) {
-      return json({ error: 'Bài này chưa có bản thảo để sửa' }, 400)
+      return json({ error: 'No draft to revise' }, 400)
     }
 
     const conv: Msg[] = Array.isArray(story.conversation) ? story.conversation : []
     const convText = conv
-      .filter(m => m.role === 'user' && !m.text.startsWith('[BẤM NÚT:'))
-      .map(m => `Người kể: ${m.text}`).join('\n\n')
+      .filter(m => m.role === 'user' && !m.text.startsWith('[STUCK'))
+      .map(m => m.text).join('\n\n')
 
     try {
-      const rawReply = await callAnthropic(
-        REVISE_PROMPT,
-        [{
-          role: 'user',
-          content: [
-            `Bài gốc — Tiêu đề: ${story.title || ''}`,
-            `Nội dung: ${story.content || ''}`,
-            '',
-            `YÊU CẦU SỬA: ${body.instruction}`,
-            '',
-            `Toàn bộ lời kể gốc (để tham khảo nếu cần thêm chi tiết):`,
-            convText,
-          ].join('\n'),
-        }],
-        MODEL_WRITE,
-        2000,
-      )
+      const rawReply = await callAnthropic(REVISE_SYSTEM, [{
+        role: 'user',
+        content: [
+          `Original title: ${story.title || ''}`,
+          `Original content: ${story.content || ''}`,
+          '',
+          `REVISION REQUEST: ${body.instruction}`,
+          '',
+          `Full original story (for reference):`,
+          convText,
+        ].join('\n'),
+      }], MODEL_WRITE, 2000)
 
-      let jsonStr = rawReply
-      const m = rawReply.match(/\{[\s\S]*\}/)
+      let jsonStr = rawReply.trim()
+      const m = jsonStr.match(/\{[\s\S]*\}/)
       if (m) jsonStr = m[0]
       jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
       const parsed = JSON.parse(jsonStr)
@@ -372,41 +331,35 @@ Trả về CHÍNH XÁC JSON này, không thêm gì khác:
       const content = parsed.content || story.content
 
       await db.from('stories').update({ title, topic, content }).eq('id', story.id)
-
       return json({ title, topic, content })
     } catch (e) {
-      console.error('story-ai revise error', e)
-      return json({ error: 'Không thể sửa bản thảo — thử lại nhé' }, 500)
+      console.error('revise error', e)
+      return json({ error: 'Could not revise draft' }, 500)
     }
   }
 
-  // ═══════════ ACTION: REVIEW ═══════════
+  // ============ ACTION: REVIEW ============
   if (action === 'review') {
-    if (!body.storyId) return json({ error: 'Thiếu storyId' }, 400)
+    if (!body.storyId) return json({ error: 'Missing storyId' }, 400)
 
     const { data: story } = await db.from('stories')
       .select('id,user_id,status,title,content').eq('id', body.storyId).maybeSingle()
-    if (!story) return json({ error: 'Không tìm thấy câu chuyện' }, 404)
-    if (story.user_id !== user.id) return json({ error: 'Không phải bài của bạn' }, 403)
+    if (!story) return json({ error: 'Story not found' }, 404)
+    if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
     if (story.status !== 'submitted') {
-      return json({ error: 'Bài chưa được gửi biên tập' }, 400)
+      return json({ error: 'Story not submitted' }, 400)
     }
 
     await db.from('stories').update({ status: 'pending_publish' }).eq('id', story.id)
 
     try {
-      const rawReply = await callAnthropic(
-        REVIEW_PROMPT,
-        [{
-          role: 'user',
-          content: `Tiêu đề: ${story.title || ''}\n\nNội dung: ${story.content || ''}`,
-        }],
-        MODEL_REVIEW,
-        1000,
-      )
+      const rawReply = await callAnthropic(REVIEW_SYSTEM, [{
+        role: 'user',
+        content: `Title: ${story.title || ''}\n\nContent: ${story.content || ''}`,
+      }], MODEL_REVIEW, 1000)
 
-      let jsonStr = rawReply
-      const m = rawReply.match(/\{[\s\S]*\}/)
+      let jsonStr = rawReply.trim()
+      const m = jsonStr.match(/\{[\s\S]*\}/)
       if (m) jsonStr = m[0]
       jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
       const parsed = JSON.parse(jsonStr)
@@ -415,17 +368,14 @@ Trả về CHÍNH XÁC JSON này, không thêm gì khác:
       const notes = parsed.notes || ''
 
       if (verdict === 'ok') {
-        // Tự động xuất bản
         const finalContent = parsed.content || story.content
 
-        // Lấy story_number tiếp theo
         const { data: maxRow } = await db.from('stories')
           .select('story_number').not('story_number', 'is', null)
           .order('story_number', { ascending: false }).limit(1).maybeSingle()
         const nextNumber = (maxRow?.story_number ?? 0) + 1
 
-        // Tạo slug
-        const slug = (story.title || 'cau-chuyen')
+        const slug = (story.title || 'story')
           .toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
           .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
           + '-' + String(nextNumber)
@@ -441,25 +391,22 @@ Trả về CHÍNH XÁC JSON này, không thêm gì khác:
 
         return json({ verdict: 'ok', story_number: nextNumber, slug })
       } else if (verdict === 'need_more') {
-        // Trả về cho người dùng sửa
         await db.from('stories').update({
           status: 'user_review',
           ai_review: { verdict, notes, at: new Date().toISOString() },
         }).eq('id', story.id)
         return json({ verdict: 'need_more', notes })
       } else {
-        // escalate — giữ pending_publish, chờ thầy
         await db.from('stories').update({
           ai_review: { verdict, notes, at: new Date().toISOString() },
         }).eq('id', story.id)
         return json({ verdict: 'escalate', notes })
       }
     } catch (e) {
-      console.error('story-ai review error', e)
-      // Giữ pending_publish để retry
-      return json({ error: 'Biên tập đang bận — sẽ thử lại sau' }, 500)
+      console.error('review error', e)
+      return json({ error: 'Editorial review unavailable -- will retry' }, 500)
     }
   }
 
-  return json({ error: `Action '${action}' không tồn tại` }, 400)
+  return json({ error: `Unknown action: ${action}` }, 400)
 })
