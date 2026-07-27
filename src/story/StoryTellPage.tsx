@@ -1,20 +1,22 @@
-// ── /story/tell — Trang giấy đang viết cùng Mira ──
-// Hiến pháp: MIRA_CONSTITUTION.md — UI không được giống chat AI.
-// Thiết kế: lời người kể = dòng chảy chính; lời Mira = ghi chú nhỏ bên lề.
-// Component: LivingBookBar · StoryPage · TellComposer · AuthGate
-import { useEffect, useRef, useState, useCallback } from 'react'
+// ── /story/tell — MVP 01: Story Interview ──
+// Triết lý: không phải chatbot — là không gian để kể chuyện.
+// Conversation = trí nhớ của Mira, KHÔNG render ra UI.
+// UI chỉ có: tiêu đề + lời mời + ô nhập + nút gửi.
+// Mira chỉ xuất hiện khi thật sự cần (hỏi thêm / báo đủ).
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../supabase'
 import type { User } from '@supabase/supabase-js'
 
-type Msg = { role: 'user' | 'mira'; text: string; at?: string }
-type Phase = 'telling' | 'suggest_photos' | 'suggest_write'
+type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'submitting' | 'submitted'
 
-const GREETING: Msg = {
-  role: 'mira',
-  text: 'Chào bạn, mình là Mira 🌿 Mình đang giúp thầy Văn Anh gom đủ 1001 câu chuyện thật của những người yêu guitar.\n\nBạn không cần biết viết đâu — cứ kể tự nhiên, phần viết để mình lo.',
-}
+const INVITATIONS = [
+  'Có một câu chuyện nào bạn nghĩ đáng để người khác đọc không?',
+  'Có một câu chuyện nào bạn muốn lưu giữ và chia sẻ với cộng đồng không?',
+  'Có câu chuyện nào bạn nghĩ sẽ mang lại điều gì đó cho một người khác không?',
+  'Có một câu chuyện thật mà bạn nghĩ đáng được lưu giữ không?',
+]
 
-// ── AuthGate: màn đăng nhập/tạo tài khoản giọng Mira (B0) ──
+// ── AuthGate: màn đăng nhập/tạo tài khoản giọng Mira ──
 function AuthGate({ onSubmit, busy, err }: {
   onSubmit: (mode: 'login' | 'signup', email: string, pass: string, name: string) => void
   busy: boolean; err: string
@@ -23,7 +25,6 @@ function AuthGate({ onSubmit, busy, err }: {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
-
   const submit = () => onSubmit(mode, email, pass, name)
 
   return (
@@ -55,7 +56,7 @@ function AuthGate({ onSubmit, busy, err }: {
   )
 }
 
-// ── LivingBookBar: dòng Cuốn sách sống cố định trên đầu ──
+// ── LivingBookBar ──
 function LivingBookBar() {
   return (
     <div className="lb-bar">
@@ -64,77 +65,46 @@ function LivingBookBar() {
   )
 }
 
-// ── StoryPage: dòng chảy văn bản chính (lời người kể) + ghi chú Mira bên lề ──
-function StoryPage({ msgs, sending, phase }: {
-  msgs: Msg[]; sending: boolean; phase: Phase
+// ── DraftView: bản thảo + 3 nút ──
+function DraftView({ title, topic, content, onAccept, onEdit, onTellMore, busy }: {
+  title: string; topic: string; content: string
+  onAccept: () => void; onEdit: () => void; onTellMore: () => void
+  busy: boolean
 }) {
-  const bodyRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
-  }, [msgs, sending])
-
-  return (
-    <div className="sp-body" ref={bodyRef}>
-      <div className="sp-page">
-        {msgs.map((m, i) =>
-          m.role === 'user' ? (
-            <p key={i} className="sp-teller">{m.text}</p>
-          ) : (
-            <div key={i} className="sp-mira">{m.text}</div>
-          )
-        )}
-        {sending && <div className="sp-listening">Mira đang nghe…</div>}
-        {phase === 'suggest_write' && !sending && (
-          <div className="sp-write-hint">
-            ✍️ Chất liệu đã đủ đầy. Bước <b>Mira viết lại thành bài</b> sẽ mở ở bản cập nhật
-            sắp tới — toàn bộ câu chuyện của bạn đã được lưu. Bạn vẫn có thể kể thêm nhé 🌿
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── TellComposer: ô nhập + nút "Mình đang bí…" (sáng sau 60s im lặng) ──
-function TellComposer({ input, setInput, send, sending, msgsLen, onStuck }: {
-  input: string; setInput: (v: string) => void; send: (text?: string) => void
-  sending: boolean; msgsLen: number; onStuck: () => void
-}) {
-  const [idleSec, setIdleSec] = useState(0)
-  const idleTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  // Reset idle timer mỗi khi input thay đổi hoặc gửi tin
-  useEffect(() => {
-    setIdleSec(0)
-    if (idleTimer.current) clearInterval(idleTimer.current)
-    idleTimer.current = setInterval(() => setIdleSec(s => s + 1), 1000)
-    return () => { if (idleTimer.current) clearInterval(idleTimer.current) }
-  }, [input, msgsLen])
-
-  const showStuck = idleSec >= 60 && !sending
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+  const TOPIC_LABELS: Record<string, string> = {
+    'cay-dan-dau-tien': 'Cây đàn đầu tiên',
+    'bai-hat-thay-doi-toi': 'Bài hát thay đổi tôi',
+    'guitar-va-tuoi-tho': 'Guitar và tuổi thơ',
+    'vuot-qua-kho-khan': 'Vượt qua giai đoạn khó khăn',
+    'guitar-trong-gia-dinh': 'Guitar trong gia đình',
+    'nguoi-thay-dau-tien': 'Người thầy đầu tiên',
+    'dau-tay-va-chai-san': 'Đau tay và chai sạn',
+    'lan-dau-dan-truoc-moi-nguoi': 'Lần đầu đàn trước mọi người',
+    'bo-do-roi-quay-lai': 'Bỏ dở rồi quay lại',
+    'cay-dan-va-nguoi-than': 'Cây đàn và người thân',
   }
 
   return (
-    <div className="tc-foot">
-      <div className="tc-input-row">
-        <textarea
-          value={input} disabled={sending} rows={1}
-          onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
-          placeholder="Kể tự nhiên như đang nói chuyện — sai chính tả cũng không sao…"
-        />
-        <button onClick={() => send()} disabled={sending || !input.trim()}>Gửi</button>
+    <div className="dv-wrap">
+      <div className="dv-header">📄 Bản thảo câu chuyện</div>
+      <div className="dv-body">
+        {topic && TOPIC_LABELS[topic] && (
+          <span className="dv-topic">{TOPIC_LABELS[topic]}</span>
+        )}
+        <h2 className="dv-title">{title}</h2>
+        <div className="dv-content">{content.split('\n').map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}</div>
       </div>
-      <div className="tc-bottom">
-        <div className="tc-note">Câu chuyện tự lưu sau mỗi tin nhắn — nghỉ lúc nào cũng được, quay lại Mira vẫn nhớ.</div>
-        <button
-          className={`tc-stuck ${showStuck ? 'tc-stuck--show' : ''}`}
-          disabled={sending}
-          onClick={onStuck}
-        >
-          Mình đang bí…
+      <div className="dv-actions">
+        <button className="dv-btn dv-btn-primary" onClick={onAccept} disabled={busy}>
+          ✓ Đúng rồi
+        </button>
+        <button className="dv-btn" onClick={onEdit} disabled={busy}>
+          ✏️ Biên tập lại
+        </button>
+        <button className="dv-btn" onClick={onTellMore} disabled={busy}>
+          ➕ Tôi muốn kể thêm
         </button>
       </div>
     </div>
@@ -146,15 +116,26 @@ export default function StoryTellPage() {
   const [user, setUser] = useState<User | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [storyId, setStoryId] = useState<string | null>(null)
-  const [msgs, setMsgs] = useState<Msg[]>([GREETING])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [phase, setPhase] = useState<Phase>('telling')
-  const [resumed, setResumed] = useState(false)
+  const [miraReply, setMiraReply] = useState('')
+  const [miraReady, setMiraReady] = useState(false) // Mira đã đánh giá đủ
+
+  // Draft state
+  const [draftTitle, setDraftTitle] = useState('')
+  const [draftTopic, setDraftTopic] = useState('')
+  const [draftContent, setDraftContent] = useState('')
 
   // Auth
   const [authBusy, setAuthBusy] = useState(false)
   const [authErr, setAuthErr] = useState('')
+
+  // Lời mời ngẫu nhiên (chỉ chọn 1 lần khi mount)
+  const invitation = useMemo(() => INVITATIONS[Math.floor(Math.random() * INVITATIONS.length)], [])
+
+  // Mở lại bài kể dở (nếu có)
+  const [draftResumed, setDraftResumed] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -166,64 +147,145 @@ export default function StoryTellPage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Nháp tự lưu: mở lại bài đang kể dở gần nhất (B2b)
+  // Nháp tự lưu: kiểm tra bài dở khi đăng nhập
   useEffect(() => {
     if (!user) return
     supabase.from('stories')
-      .select('id,conversation,status')
-      .eq('user_id', user.id).in('status', ['telling', 'collecting_photos'])
+      .select('id,status,conversation,title,content,topic')
+      .eq('user_id', user.id)
+      .in('status', ['telling', 'user_review'])
       .order('updated_at', { ascending: false }).limit(1)
       .then(({ data }) => {
         const s = data?.[0]
-        if (s && Array.isArray(s.conversation) && s.conversation.length > 0) {
+        if (!s) return
+        if (s.status === 'user_review' && s.title && s.content) {
+          // Có bản nháp đang chờ duyệt → hiển thị lại
           setStoryId(s.id)
-          setMsgs([
-            GREETING,
-            ...(s.conversation as Msg[]),
-            { role: 'mira', text: 'Mừng bạn quay lại 🌿 Mình vẫn nhớ câu chuyện đang kể dở — bạn kể tiếp cho mình nghe chứ?' },
-          ])
-          setResumed(true)
+          setDraftTitle(s.title)
+          setDraftTopic(s.topic || '')
+          setDraftContent(s.content)
+          setPhase('draft')
+          setDraftResumed(true)
+        } else if (Array.isArray(s.conversation) && s.conversation.length > 0) {
+          // Có bài đang kể dở → kể tiếp
+          setStoryId(s.id)
+          setPhase('telling')
+          setDraftResumed(true)
         }
       })
   }, [user])
 
-  const send = useCallback(async (text?: string) => {
-    const t = (text ?? input).trim()
+  // ── Gửi lời kể (chat) ──
+  const send = useCallback(async () => {
+    const t = input.trim()
     if (!t || sending) return
     setInput('')
-    setMsgs(m => [...m, { role: 'user', text: t }])
+    setMiraReply('')
     setSending(true)
+
     try {
       const { data, error } = await supabase.functions.invoke('story-ai', {
         body: { action: 'chat', storyId, message: t },
       })
-      if (error || !data?.reply) throw error ?? new Error('empty')
+      if (error || !data) throw error ?? new Error('empty')
       if (data.storyId) setStoryId(data.storyId)
-      if (data.phase) setPhase(data.phase as Phase)
-      setMsgs(m => [...m, { role: 'mira', text: data.reply }])
+
+      const p = data.phase as string
+      if (p === 'asking') {
+        setPhase('asking')
+        setMiraReply(data.reply || '')
+      } else if (p === 'ready_for_draft') {
+        setMiraReady(true)
+        setPhase('ready_for_draft')
+        if (data.reply) setMiraReply(data.reply)
+      } else {
+        // telling — Mira lắng nghe, không hiện gì
+        setPhase('telling')
+      }
     } catch (e) {
       console.error('story-ai chat', e)
-      setMsgs(m => [...m, { role: 'mira', text: 'Xin lỗi, mình gặp trục trặc nhỏ 🌿 Bạn gửi lại tin vừa rồi giúp mình nhé — những gì đã kể vẫn được lưu.' }])
+      setMiraReply('Có lỗi kết nối — câu chuyện vẫn được lưu. Bạn gửi lại giúp mình nhé 🌿')
+      setPhase('asking')
     } finally { setSending(false) }
   }, [input, sending, storyId])
 
-  const stuck = useCallback(async () => {
-    if (sending) return
+  // ── Yêu cầu viết bản thảo ──
+  const requestDraft = useCallback(async () => {
+    if (!storyId || sending) return
+    setSending(true)
+    setPhase('draft_loading')
+    try {
+      const { data, error } = await supabase.functions.invoke('story-ai', {
+        body: { action: 'write', storyId },
+      })
+      if (error || !data) throw error ?? new Error('empty')
+      setDraftTitle(data.title || '')
+      setDraftTopic(data.topic || '')
+      setDraftContent(data.content || '')
+      setPhase('draft')
+    } catch (e) {
+      console.error('story-ai write', e)
+      setMiraReply('Có lỗi khi tạo bản thảo. Bạn thử lại giúp mình nhé 🌿')
+      setPhase('ready_for_draft')
+    } finally { setSending(false) }
+  }, [storyId, sending])
+
+  // ── Gửi biên tập ──
+  const submitReview = useCallback(async () => {
+    if (!storyId || sending) return
+    setSending(true)
+    setPhase('submitting')
+    // Cập nhật status trước
+    await supabase.from('stories').update({ status: 'submitted' }).eq('id', storyId)
+    try {
+      await supabase.functions.invoke('story-ai', {
+        body: { action: 'review', storyId },
+      })
+    } catch (e) {
+      console.error('story-ai review', e)
+      // Vẫn coi là submitted — review sẽ được retry
+    }
+    setPhase('submitted')
+    setSending(false)
+  }, [storyId, sending])
+
+  // ── Biên tập lại ──
+  const startEdit = useCallback(() => {
+    setPhase('editing')
+    setMiraReply('Bạn muốn mình sửa phần nào?')
+  }, [])
+
+  // ── Gửi yêu cầu biên tập ──
+  const sendEdit = useCallback(async () => {
+    const t = input.trim()
+    if (!t || sending || !storyId) return
+    setInput('')
     setSending(true)
     try {
       const { data, error } = await supabase.functions.invoke('story-ai', {
-        body: { action: 'chat', storyId, message: '', stuck: true },
+        body: { action: 'revise', storyId, instruction: t },
       })
-      if (error || !data?.reply) throw error ?? new Error('empty')
-      if (data.storyId) setStoryId(data.storyId)
-      if (data.phase) setPhase(data.phase as Phase)
-      setMsgs(m => [...m, { role: 'mira', text: data.reply }])
+      if (error || !data) throw error ?? new Error('empty')
+      setDraftTitle(data.title || draftTitle)
+      setDraftTopic(data.topic || draftTopic)
+      setDraftContent(data.content || draftContent)
+      setPhase('draft')
     } catch (e) {
-      console.error('story-ai stuck', e)
-      setMsgs(m => [...m, { role: 'mira', text: 'Mình đây 🌿 Bạn cứ kể bất cứ điều gì hiện lên trong đầu — không cần theo thứ tự đâu.' }])
+      console.error('story-ai revise', e)
+      setMiraReply('Có lỗi khi sửa bản thảo. Bạn thử lại giúp mình nhé 🌿')
     } finally { setSending(false) }
-  }, [sending, storyId])
+  }, [input, sending, storyId, draftTitle, draftTopic, draftContent])
 
+  // ── Kể thêm (từ draft) ──
+  const tellMore = useCallback(async () => {
+    setMiraReady(false)
+    setMiraReply('')
+    // Cập nhật status về telling để chat tiếp
+    await supabase.from('stories').update({ status: 'telling' }).eq('id', storyId)
+    setPhase('telling')
+  }, [storyId])
+
+  // ── Đăng nhập / tạo tài khoản ──
   const submitAuth = async (mode: 'login' | 'signup', email: string, pass: string, name: string) => {
     setAuthErr('')
     if (!email.trim() || !pass.trim() || (mode === 'signup' && !name.trim())) {
@@ -246,6 +308,15 @@ export default function StoryTellPage() {
     } finally { setAuthBusy(false) }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (phase === 'editing') sendEdit()
+      else send()
+    }
+  }
+
+  // ── Render ──
   return (
     <div className="tva-tell">
       <style>{CSS}</style>
@@ -254,14 +325,95 @@ export default function StoryTellPage() {
         <div className="center-note">Đang mở cửa…</div>
       ) : !user ? (
         <AuthGate onSubmit={submitAuth} busy={authBusy} err={authErr} />
-      ) : (
+      ) : phase === 'submitted' ? (
         <>
           <LivingBookBar />
-          <StoryPage msgs={msgs} sending={sending} phase={phase} />
-          <TellComposer
-            input={input} setInput={setInput} send={send} sending={sending}
-            msgsLen={msgs.length} onStuck={stuck}
-          />
+          <div className="mv-body">
+            <div className="mv-submitted">
+              <div className="mv-done-icon">🎉</div>
+              <h2>Câu chuyện của bạn đã được gửi đến Ban biên tập</h2>
+              <p>Cảm ơn bạn đã chia sẻ câu chuyện của mình. Ban biên tập sẽ đọc và phản hồi trong thời gian sớm nhất.</p>
+              <a className="mv-back" href="/story">← Về trang 1001 Câu chuyện</a>
+            </div>
+          </div>
+        </>
+      ) : phase === 'draft' ? (
+        <>
+          <LivingBookBar />
+          <div className="mv-body">
+            <DraftView
+              title={draftTitle} topic={draftTopic} content={draftContent}
+              onAccept={submitReview} onEdit={startEdit} onTellMore={tellMore}
+              busy={sending}
+            />
+          </div>
+        </>
+      ) : phase === 'draft_loading' || phase === 'submitting' ? (
+        <>
+          <LivingBookBar />
+          <div className="mv-body">
+            <div className="mv-loading">
+              <div className="mv-spinner" />
+              <p>{phase === 'draft_loading' ? 'Mira đang sắp xếp lại câu chuyện của bạn…' : 'Đang gửi câu chuyện…'}</p>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Telling / Asking / Ready for draft / Editing */
+        <>
+          {draftResumed && (
+            <div className="mv-resume-bar">📝 Bạn có một câu chuyện đang kể dở — kể tiếp nhé.</div>
+          )}
+
+          {!draftResumed && (
+            <LivingBookBar />
+          )}
+
+          <div className="mv-body">
+            <div className="mv-invitation">
+              <p>{draftResumed ? 'Bạn đang kể dở — kể tiếp cho mình nghe chứ?' : invitation}</p>
+            </div>
+
+            {miraReply && (
+              <div className="mv-mira">{miraReply}</div>
+            )}
+
+            {miraReady && (
+              <div className="mv-ready">
+                <p>Mira đã hiểu câu chuyện của bạn và sẵn sàng viết bản thảo đầu tiên.</p>
+                <button className="mv-ready-btn" onClick={requestDraft} disabled={sending}>
+                  📄 Tạo bản thảo
+                </button>
+              </div>
+            )}
+
+            <div className="mv-composer">
+              <textarea
+                className="mv-textarea"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={sending}
+                rows={5}
+                placeholder={
+                  phase === 'editing'
+                    ? 'Bạn muốn sửa phần nào? (vd: đổi tiêu đề, viết lại đoạn về cây đàn…)'
+                    : 'Kể câu chuyện của bạn ở đây…'
+                }
+              />
+              <button
+                className="mv-send"
+                onClick={phase === 'editing' ? sendEdit : send}
+                disabled={sending || !input.trim()}
+              >
+                {phase === 'editing' ? 'Gửi yêu cầu sửa' : 'Gửi'}
+              </button>
+            </div>
+
+            <div className="mv-footnote">
+              Câu chuyện của bạn được lưu tự động — có thể nghỉ và quay lại bất cứ lúc nào.
+            </div>
+          </div>
         </>
       )}
     </div>
@@ -278,10 +430,13 @@ const CSS = `
   --ink-subtle: #B8B2A8;
   --indigo: #4338CA;
   --indigo-dark: #352BA3;
+  --indigo-tint: #EEEBFB;
   --line: #E4DED4;
   --line-soft: #EDE8DF;
   --honey: #C9711E;
   --honey-tint: #FBF1E4;
+  --green: #0D9488;
+  --green-tint: #E6F7F5;
   font-family: 'Be Vietnam Pro', system-ui, sans-serif;
   background: var(--bg);
   color: var(--ink);
@@ -308,139 +463,228 @@ const CSS = `
 }
 .lb-bar b { color: var(--indigo); font-weight: 700; }
 
-/* ── StoryPage ── */
-.sp-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 20px;
-  display: flex;
-  justify-content: center;
-}
-.sp-page {
-  max-width: 680px;
-  width: 100%;
-  padding: 36px 0 24px;
-}
-.sp-teller {
-  margin: 0 0 20px;
-  font-size: 17px;
-  line-height: 1.75;
-  color: var(--ink);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.sp-mira {
-  margin: 0 0 16px;
-  padding-left: 14px;
-  border-left: 2px solid var(--ink-subtle);
-  font-size: 14px;
-  font-style: italic;
-  color: var(--ink-faint);
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-.sp-listening {
-  margin: 0 0 16px;
-  padding-left: 14px;
-  border-left: 2px solid var(--ink-subtle);
+.mv-resume-bar {
+  flex: none;
+  text-align: center;
+  padding: 10px 16px;
   font-size: 13px;
-  font-style: italic;
-  color: var(--ink-subtle);
-  animation: sp-pulse 2s infinite;
-}
-@keyframes sp-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
-.sp-write-hint {
-  margin: 20px 0;
-  padding: 14px 16px;
+  color: var(--honey);
   background: var(--honey-tint);
-  border: 1px solid #F0DFC8;
-  border-radius: 12px;
-  font-size: 14px;
-  color: var(--ink-soft);
-  line-height: 1.55;
+  border-bottom: 1px solid #F0DFC8;
+  font-weight: 600;
 }
 
-/* ── TellComposer ── */
-.tc-foot {
-  flex: none;
-  border-top: 1px solid var(--line);
-  background: rgba(254, 252, 247, 0.95);
-  padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
+/* ── Main view body ── */
+.mv-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 20px 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.tc-input-row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  max-width: 680px;
+.mv-invitation {
+  max-width: 600px;
   width: 100%;
+  margin-bottom: 28px;
 }
-.tc-input-row textarea {
-  flex: 1;
-  resize: none;
-  padding: 13px 15px;
-  background: var(--bg);
-  border: 1.5px solid var(--line);
-  border-radius: 14px;
-  font-size: 15px;
-  font-family: inherit;
-  outline: none;
-  max-height: 120px;
+.mv-invitation p {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
   line-height: 1.45;
+  margin: 0;
 }
-.tc-input-row textarea:focus { border-color: var(--indigo); }
-.tc-input-row button {
-  background: var(--indigo);
+
+/* ── Mira reply (hiếm khi hiện) ── */
+.mv-mira {
+  max-width: 600px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--indigo-tint);
+  border-left: 3px solid var(--indigo);
+  border-radius: 0 10px 10px 0;
+  font-size: 15px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+  font-style: italic;
+}
+
+/* ── Ready for draft ── */
+.mv-ready {
+  max-width: 600px;
+  width: 100%;
+  padding: 18px;
+  background: var(--green-tint);
+  border: 1px solid #A7DED9;
+  border-radius: 14px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.mv-ready p { margin: 0 0 14px; font-size: 15px; color: var(--ink-soft); }
+.mv-ready-btn {
+  background: var(--green);
   color: #fff;
   border: none;
-  border-radius: 12px;
-  padding: 13px 22px;
+  border-radius: 10px;
+  padding: 11px 24px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  flex: none;
 }
-.tc-input-row button:disabled { opacity: 0.5; cursor: default; }
-.tc-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 680px;
+.mv-ready-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Composer (ô nhập + nút gửi) ── */
+.mv-composer {
+  max-width: 600px;
   width: 100%;
-  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
-.tc-note {
-  font-size: 11.5px;
-  color: var(--ink-subtle);
+.mv-textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 16px 18px;
+  background: var(--page);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  font-size: 16px;
+  font-family: inherit;
+  line-height: 1.7;
+  outline: none;
+  min-height: 140px;
+  color: var(--ink);
 }
-.tc-stuck {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-subtle);
-  background: none;
+.mv-textarea:focus { border-color: var(--indigo); }
+.mv-textarea::placeholder { color: var(--ink-subtle); }
+.mv-textarea:disabled { opacity: 0.6; }
+.mv-send {
+  align-self: flex-end;
+  background: var(--indigo);
+  color: #fff;
   border: none;
+  border-radius: 12px;
+  padding: 13px 28px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  padding: 4px 10px;
-  border-radius: 8px;
-  opacity: 0;
-  transition: opacity 0.6s, color 0.6s, background 0.6s;
-  white-space: nowrap;
+  transition: background 0.15s;
 }
-.tc-stuck--show {
-  opacity: 1;
-  color: var(--ink-faint);
+.mv-send:hover:not(:disabled) { background: var(--indigo-dark); }
+.mv-send:disabled { opacity: 0.5; cursor: default; }
+.mv-footnote {
+  max-width: 600px;
+  width: 100%;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--ink-subtle);
+  text-align: center;
 }
-.tc-stuck--show:hover {
-  background: var(--honey-tint);
+
+/* ── Draft view ── */
+.dv-wrap {
+  max-width: 680px;
+  width: 100%;
+}
+.dv-header {
+  font-size: 13px;
+  font-weight: 700;
   color: var(--honey);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+.dv-body {
+  background: var(--page);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 20px;
+}
+.dv-topic {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--honey);
+  background: var(--honey-tint);
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.dv-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 16px;
+  line-height: 1.3;
+}
+.dv-content { font-size: 15.5px; line-height: 1.75; color: var(--ink-soft); }
+.dv-content p { margin: 0 0 12px; }
+.dv-content p:last-child { margin-bottom: 0; }
+.dv-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dv-btn {
+  flex: 1;
+  min-width: 160px;
+  background: var(--page);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.dv-btn:hover:not(:disabled) { background: var(--bg); border-color: var(--ink-subtle); }
+.dv-btn-primary {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+.dv-btn-primary:hover:not(:disabled) { background: #0B827B; border-color: #0B827B; }
+.dv-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Submitted ── */
+.mv-submitted {
+  max-width: 500px;
+  text-align: center;
+  padding: 40px 0;
+}
+.mv-done-icon { font-size: 48px; margin-bottom: 16px; }
+.mv-submitted h2 { font-size: 22px; font-weight: 800; margin: 0 0 12px; }
+.mv-submitted p { font-size: 15px; color: var(--ink-soft); margin: 0 0 24px; line-height: 1.6; }
+.mv-back {
+  display: inline-block;
+  color: var(--indigo);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+/* ── Loading ── */
+.mv-loading {
+  text-align: center;
+  padding: 60px 0;
+}
+.mv-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--line);
+  border-top-color: var(--indigo);
+  border-radius: 50%;
+  animation: mv-spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes mv-spin { to { transform: rotate(360deg); } }
+.mv-loading p {
+  font-size: 15px;
+  color: var(--ink-faint);
+  margin: 0;
 }
 
 /* ── AuthGate ── */

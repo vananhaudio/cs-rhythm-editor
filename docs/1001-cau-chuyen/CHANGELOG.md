@@ -242,3 +242,54 @@
 -   Build `npm run build` pass. **Edge Function chưa deploy lại**
     (cần thầy dán code mới qua Dashboard). **Chưa push main**
     (quy trình: thầy test kể thật → push).
+
+### 2026-07-27 (phiên 10) — MVP 01: Story Interview
+
+#### Changed — Triết lý & UI
+
+-   **Làm lại toàn bộ UI `/story/tell` theo MVP 01:**
+    -   KHÔNG render conversation ra giao diện — conversation là trí
+        nhớ của Mira, lưu trong DB nhưng không hiển thị.
+    -   UI tối giản: LivingBookBar + 1 lời mời ngẫu nhiên (4 câu) +
+        ô textarea lớn + nút Gửi.
+    -   Mira CHỈ xuất hiện khi thật sự cần: hỏi thêm chi tiết quan
+        trọng, hoặc báo đã đủ để tạo bản thảo. Không "Mình đang
+        nghe…", không "Cảm ơn…", không lời phản hồi sau mỗi tin.
+    -   Màn bản thảo (DraftView): 📄 Bản thảo câu chuyện + 3 nút
+        ✓ Đúng rồi / ✏️ Biên tập lại / ➕ Tôi muốn kể thêm.
+    -   ✓ Đúng rồi → gọi review → màn "đã gửi đến Ban biên tập".
+    -   ✏️ Biên tập lại → Mira hỏi phần cần sửa → gọi revise.
+    -   ➕ Kể thêm → quay lại chế độ kể.
+    -   Màn loading khi tạo bản thảo (spinner + "Mira đang sắp xếp…").
+    -   Nháp tự lưu: nếu có bài dở → hiện resume bar; nếu có bản
+        thảo chờ duyệt → hiển thị lại bản thảo.
+    -   Bỏ hoàn toàn: bubble chat, timeline, lịch sử hội thoại,
+        "trang giấy đang viết" phiên bản cũ, nút "Mình đang bí…".
+
+#### Changed — Edge Function `story-ai`
+
+-   **Viết lại toàn bộ Edge Function cho MVP 01:**
+    -   **Prompt chat:** Mira = người phỏng vấn tạo tác phẩm.
+        Hành vi MẶC ĐỊNH là IM LẶNG — không nói gì sau mỗi tin.
+        Chỉ nói khi: thiếu chi tiết quan trọng (`[[PHASE:asking]]`)
+        hoặc đã đủ chất liệu (`[[PHASE:ready]]`).
+        Cấm: "Mình đang nghe…", "Cảm ơn…", "Mình nhớ rồi…",
+        khen sáo, khuyến khích quá mức, giải thích, giáo dục.
+    -   **Action `write`:** nhận storyId → gọi model tốt
+        (claude-sonnet-4-6) → sinh bản thảo 300–600 chữ, ngôi
+        thứ nhất, đúng giọng người kể → ghi title/topic/content
+        vào DB, chuyển status `user_review`.
+    -   **Action `revise`:** nhận storyId + instruction → sửa bản
+        thảo theo yêu cầu → trả về bản đã sửa.
+    -   **Action `review`:** nhận storyId (status `submitted`) →
+        AI biên tập checklist → ok: tự xuất bản + gán slug,
+        story_number / need_more: về user_review / escalate:
+        giữ pending_publish chờ thầy.
+    -   Bỏ: 6 lớp câu hỏi, chế độ lắng nghe/khai quật (thay bằng
+        hành vi mặc định im lặng + hỏi khi cần).
+
+#### Status
+
+-   Build pass. **Edge Function chưa deploy.** Cần thầy dán code
+    mới qua Supabase Dashboard.
+-   **Chưa push main** (quy trình: thầy test → push).

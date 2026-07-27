@@ -232,20 +232,19 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
         nhớ, thẻ báo "bước viết sắp mở" khi đủ chất liệu).
     -   CTA landing đã trỏ về /story/tell (Zalo thành đường phụ).
     -   Build pass, màn B0 đã xem trên dev server.
--   **Story Interview theo Hiến pháp Mira — CODE XONG** (2026-07-27):
-    -   Viết lại system prompt `story-ai`: 2 chế độ LẮNG NGHE (mặc
-        định, phản hồi ≤1 câu ngắn) + KHAI QUẬT (chỉ khi bí, câu hỏi
-        MỞ duy nhất; cấm câu hỏi đóng/dẫn dắt/gieo ký ức). 6 lớp
-        câu hỏi cũ → bản đồ ngầm. Thêm `stuck?: boolean` trong body.
-    -   Làm lại UI `/story/tell` từ chat bubbles → "trang giấy đang
-        viết": lời người kể = dòng chảy chính; lời Mira = ghi chú nhỏ
-        nghiêng mờ bên lề; dòng Cuốn sách sống cố định trên đầu
-        (LivingBookBar); nút "Mình đang bí…" sáng sau 60s im lặng.
-    -   Tách component: LivingBookBar, StoryPage, TellComposer, AuthGate.
-    -   Sửa CTA landing: "Mira lắng nghe bạn kể và giúp sắp xếp lại
-        thành bài — bạn chỉ cần kể thật."
-    -   Build pass. Edge Function chưa deploy lại (cần thầy dán
-        code mới qua Dashboard).
+-   **MVP 01: Story Interview — CODE XONG** (2026-07-27):
+    -   Làm lại UI `/story/tell`: không render conversation; chỉ
+        tiêu đề + lời mời ngẫu nhiên + ô nhập + nút gửi. Mira chỉ
+        xuất hiện khi thật sự cần (hỏi thêm / báo đủ).
+    -   Màn bản thảo: 📄 Bản thảo câu chuyện + 3 nút ✓ Đúng rồi /
+        ✏️ Biên tập lại / ➕ Kể thêm.
+    -   Luồng hoàn chỉnh: Kể → Mira ghi nhớ → đánh giá đủ → sinh
+        bản thảo → duyệt → gửi biên tập.
+    -   Viết lại toàn bộ Edge Function: prompt chat mới (Mira =
+        người phỏng vấn, hành vi mặc định = im lặng); implement
+        action `write` (sinh bản thảo), `revise` (sửa), `review`
+        (AI biên tập + tự xuất bản).
+    -   Build pass. Edge Function chưa deploy.
 
 ## Đang thực hiện
 
@@ -253,13 +252,9 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
 
 ## Tiếp theo
 
--   **Deploy lại Edge Function `story-ai`** với prompt mới (code đã
-    sửa — thầy dán Dashboard, Verify JWT = BẬT như hiện tại).
--   Test kể thật với prompt/UI mới → push main.
--   Hạng mục sau: action `write` + màn bản nháp B5; Growth Loop +
-    hồ sơ 3 số (khi có bài xuất bản đầu tiên).
--   (Kiểm tra khi dev: học sinh A không sửa được bài học sinh B,
-    owner không tự set published.)
+-   **Deploy lại Edge Function `story-ai`** với code MVP 01 mới
+    (thầy dán Dashboard, Verify JWT = BẬT).
+-   Test kể thật toàn bộ luồng MVP 01 → push main.
 
 ------------------------------------------------------------------------
 
