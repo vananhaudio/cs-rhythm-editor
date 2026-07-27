@@ -26,11 +26,16 @@ Deno.serve(async (req) => {
     const fd = new FormData()
     fd.set('sdp', sdpOffer)
     fd.set('session', JSON.stringify({
-      model: 'gpt-4o-realtime-preview',
-      voice: 'ash',
+      type: 'realtime',
+      model: 'gpt-realtime',
       instructions: 'You are Co Piano, a friendly piano teacher for children aged 5-12. Speak in Vietnamese. Short, warm, encouraging. Never lecture. Max 2 sentences.',
-      input_audio_transcription: { model: 'whisper-1' },
-      turn_detection: { type: 'server_vad' },
+      audio: {
+        input: {
+          transcription: { model: 'whisper-1' },
+          turn_detection: { type: 'server_vad' },
+        },
+        output: { voice: 'ash' },
+      },
     }))
 
     const res = await fetch('https://api.openai.com/v1/realtime/calls', {

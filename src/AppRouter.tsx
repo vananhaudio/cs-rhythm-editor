@@ -33,6 +33,7 @@ import StoryTellPage from './story/StoryTellPage'
 import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
 import PianoJourney from './PianoJourney'
+import MusicPlayer from './piano/MusicPlayer'
 type AppUser = {
   id: string
   role: string
@@ -239,6 +240,12 @@ export default function AppRouter() {
   if (path === '/piano-journey' || path.startsWith('/piano-journey')) {
     const embedded = new URLSearchParams(window.location.search).get('embedded') === '1'
     return <PianoJourney onClose={embedded ? undefined : () => { window.location.href = '/start' }} />
+  }
+
+  // ── Route /piano-player — Music Player (luyện đàn) ──
+  if (path === '/piano-player' || path.startsWith('/piano-player')) {
+    const embedded = new URLSearchParams(window.location.search).get('embedded') === '1'
+    return <MusicPlayer onClose={embedded ? undefined : () => { window.location.href = '/start' }} />
   }
 
   // ── Route /gp-editor ──
