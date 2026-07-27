@@ -151,11 +151,14 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
-  const user = await getUser(req)
-  if (!user) return json({ error: 'Login required' }, 401)
-
   let body: { action?: string; storyId?: string; message?: string; instruction?: string; stuck?: boolean }
   try { body = await req.json() } catch { return json({ error: 'Invalid body' }, 400) }
+
+  // Ping để kiểm tra deploy
+  if (body.action === 'ping') return json({ ping: 'pong', ver: 'v3' })
+
+  const user = await getUser(req)
+  if (!user) return json({ error: 'Login required' }, 401)
 
   const action = body.action || 'chat'
 
