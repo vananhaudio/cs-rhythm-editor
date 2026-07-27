@@ -31,6 +31,10 @@ interface Lead {
   is_hanhtrinh?: boolean | null; student_id?: string | null
 }
 interface CourseOpt { id: string; name: string }
+interface ClassOpt { id: string; code: string | null; name: string }
+
+// Mật khẩu mặc định khi tạo tài khoản từ duyệt đăng ký — học viên đổi sau trong app (đồng bộ AiAssistant)
+const DEFAULT_PW = '12345678'
 
 export default function LeadsManager() {
   const [leads, setLeads] = useState<Lead[]>([])
@@ -41,6 +45,9 @@ export default function LeadsManager() {
   const [courses, setCourses] = useState<CourseOpt[]>([])
   const [pick, setPick] = useState<Record<number, string>>({})   // leadId → course_id đã chọn để mở
   const [opening, setOpening] = useState<number | null>(null)
+  const [classes, setClasses] = useState<ClassOpt[]>([])          // lịch lớp — để duyệt nhanh vào đúng lớp
+  const [pickClass, setPickClass] = useState<Record<number, string>>({})  // leadId → class id đã chọn
+  const [approving, setApproving] = useState<number | null>(null)
 
   const load = async () => {
     setLoading(true); setErr(null)
@@ -53,6 +60,8 @@ export default function LeadsManager() {
   useEffect(() => {
     supabase.from('edu_courses').select('id,name').order('sort_order')
       .then(({ data }) => setCourses((data ?? []) as CourseOpt[]))
+    supabase.from('class_schedule').select('id,code,name').eq('is_active', true).order('sort_order')
+      .then(({ data }) => setClasses((data ?? []) as ClassOpt[]))
   }, [])
 
   // Gợi ý khoá khớp nhất với tên lớp đăng ký
@@ -75,6 +84,62 @@ export default function LeadsManager() {
     const cname = courses.find(c => c.id === courseId)?.name ?? 'khoá'
     setStatus(l.id, 'Đã duyệt')
     alert(`Đã mở "${cname}" cho ${l.name}.`)
+  }
+
+  // Khớp lớp với tên lớp học viên đã bấm đăng ký (form ghi đúng name từ class_schedule)
+  const guessClass = (l: Lead): string => {
+    const cn = (l.class_name ?? '').trim().toLowerCase()
+    if (!cn) return ''
+    const hit = classes.find(c => c.name.trim().toLowerCase() === cn)
+      ?? classes.find(c => c.code && cn.includes(c.code.toLowerCase()))
+      ?? classes.find(c => c.name.toLowerCase().includes(cn) || cn.includes(c.name.toLowerCase()))
+    return hit?.id ?? ''
+  }
+
+  // Đọc lỗi từ functions.invoke (FunctionsHttpError giấu message trong context)
+  const fnErr = async (e: any): Promise<string> => {
+    try { const j = await e?.context?.json?.(); if (j?.error) return j.error } catch { /* ignore */ }
+    return e?.message || 'lỗi gọi máy chủ'
+  }
+
+  // ⚡ DUYỆT NHANH đăng ký thường: tạo tài khoản (nếu chưa có) + vào đúng lớp theo MÃ
+  // (qua admin-ai: action create + add_group — add_group tự gọi backfill_class cấp khoá của lớp)
+  const approveCreate = async (l: Lead) => {
+    const email = (l.email ?? '').trim().toLowerCase()
+    if (!email) { alert('Đăng ký này không có email — cần email để tạo tài khoản. Thầy liên hệ học viên bổ sung rồi duyệt sau.'); return }
+    const clsId = pickClass[l.id] ?? guessClass(l)
+    const cls = classes.find(c => c.id === clsId)
+    if (!cls) { if (!confirm('Chưa chọn được lớp — sẽ CHỈ TẠO TÀI KHOẢN, không tự vào lớp. Tiếp tục?')) return }
+    else if (!cls.code) { if (!confirm(`Lớp "${cls.name}" chưa có MÃ LỚP — sẽ chỉ tạo tài khoản, không tự vào nhóm/cấp khoá được. Tiếp tục?`)) return }
+    setApproving(l.id)
+    try {
+      // 1) Tạo tài khoản — email đã tồn tại thì bỏ qua, đi tiếp bước vào lớp (idempotent)
+      let password: string | null = null
+      let existed = false
+      try {
+        const { data: cr, error: crErr } = await supabase.functions.invoke('admin-ai',
+          { body: { action: 'create', students: [{ email, full_name: l.name, password: DEFAULT_PW }] } })
+        if (crErr) throw crErr
+        const r0 = cr?.results?.[0]
+        if (r0?.ok) password = r0.password
+        else if (/đã có tài khoản/i.test(r0?.error ?? '')) existed = true
+        else throw new Error(r0?.error || 'không tạo được tài khoản')
+      } catch (e: any) { throw new Error(e?.context ? await fnErr(e) : (e?.message || String(e))) }
+      // 2) Vào lớp theo mã (nhóm Zalo ≡ mã lớp; backfill_class cấp toàn bộ khoá của lớp)
+      let groupMsg = ''
+      if (cls?.code) {
+        const { data: ga, error: gaErr } = await supabase.functions.invoke('admin-ai',
+          { body: { action: 'add_group', assignments: [{ studentEmail: email, groupName: cls.code }] } })
+        if (gaErr) throw new Error(await fnErr(gaErr))
+        const g0 = ga?.results?.[0]
+        if (!g0?.ok) throw new Error(g0?.error || 'không vào được lớp')
+        groupMsg = `\n• Vào lớp ${cls.code}` + (typeof g0.coursesGranted === 'number' ? ` — đã cấp khoá của lớp` : '') + (g0.warn ? `\n⚠ ${g0.warn}` : '')
+      }
+      setStatus(l.id, 'Đã duyệt')
+      alert(`✅ Duyệt xong cho ${l.name}:\n• Tài khoản: ${email}${existed ? ' (đã có từ trước — giữ nguyên mật khẩu cũ)' : ` · mật khẩu: ${password ?? DEFAULT_PW}`}${groupMsg}\n\nGửi thông tin đăng nhập cho học viên qua Zalo/điện thoại nhé.`)
+    } catch (e) {
+      alert('Duyệt lỗi: ' + ((e as Error)?.message || e))
+    } finally { setApproving(null) }
   }
 
   const counts = useMemo(() => {
@@ -162,6 +227,27 @@ export default function LeadsManager() {
                   <td style={td}>
                     {l.class_name && <div>{l.class_name}</div>}
                     <span style={{ fontSize: 11.5, color: C.accent, background: C.accentLight, borderRadius: 5, padding: '1px 7px' }}>{INTENT_LABEL[l.intent ?? ''] ?? l.intent ?? '—'}</span>
+                    {/* ⚡ Duyệt nhanh đăng ký thường: tạo tài khoản + vào đúng lớp đã đăng ký */}
+                    {!l.is_hanhtrinh && l.intent === 'dang_ky' && l.status !== 'Đã duyệt' && (
+                      <div style={{ marginTop: 8, background: C.accentLight, border: '1px solid #C7D2FE', borderRadius: 8, padding: '8px 9px' }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 800, color: '#3730A3', marginBottom: 6 }}>⚡ Duyệt nhanh — tạo tài khoản + vào lớp</div>
+                        {l.email ? (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <select value={pickClass[l.id] ?? guessClass(l)} onChange={e => setPickClass(p => ({ ...p, [l.id]: e.target.value }))}
+                              style={{ padding: '5px 7px', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12.5, fontFamily: 'inherit', maxWidth: 200 }}>
+                              <option value="">— chọn lớp —</option>
+                              {classes.map(c => <option key={c.id} value={c.id}>{(c.code ? c.code + ' · ' : '') + c.name}</option>)}
+                            </select>
+                            <button onClick={() => approveCreate(l)} disabled={approving === l.id}
+                              style={{ background: approving === l.id ? C.text3 : C.accent, color: '#fff', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              {approving === l.id ? 'Đang duyệt…' : '✅ Duyệt: tạo TK + vào lớp'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11.5, color: '#92400E' }}>Thiếu email — không tạo tài khoản tự động được (liên hệ học viên bổ sung).</div>
+                        )}
+                      </div>
+                    )}
                     {l.is_hanhtrinh && (
                       <div style={{ marginTop: 8, background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '8px 9px' }}>
                         <div style={{ fontSize: 11.5, fontWeight: 800, color: '#166534', marginBottom: 6 }}>🎁 Lớp Hành trình — xin mở miễn phí</div>
