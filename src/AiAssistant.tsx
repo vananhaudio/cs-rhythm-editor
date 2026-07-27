@@ -14,13 +14,14 @@ type Student = { email: string; full_name?: string; password?: string }
 type Assignment = { studentEmail: string; groupName: string }
 type Reset = { studentEmail: string; password?: string }
 type ClassItem = { nangLuc: string; so: string; schedule?: string; start?: string; section?: string }
-type Proposal = { type: 'students'; students: Student[] } | { type: 'group'; assignments: Assignment[] } | { type: 'reset'; resets: Reset[] } | { type: 'schedule'; classes: ClassItem[] }
+type Proposal = { type: 'students'; students: Student[] } | { type: 'group'; assignments: Assignment[] } | { type: 'group_remove'; removals: Assignment[] } | { type: 'reset'; resets: Reset[] } | { type: 'schedule'; classes: ClassItem[] }
 type Result = { email: string; full_name?: string; student?: string; password?: string; group?: string; ok: boolean; error?: string; warn?: string }
 
 const EXAMPLES = [
   'Tạo tài khoản cho em Lan, email lan@gmail.com',
   'Tạo 2 tài khoản: an@gmail.com và binh@gmail.com',
   'Thêm hocsinh02@gmail.com vào nhóm Zalo',
+  'Gỡ hocsinh02@gmail.com khỏi nhóm GL11',
   'Đặt lại mật khẩu cho lan@gmail.com',
   'Mở lớp DH1 khoá 16, thứ 3 19h, khai giảng 7/7',
 ]
@@ -34,7 +35,7 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [proposal, setProposal] = useState<Proposal | null>(null)
-  const [results, setResults] = useState<{ kind: 'students' | 'group' | 'reset' | 'schedule'; items: Result[] } | null>(null)
+  const [results, setResults] = useState<{ kind: 'students' | 'group' | 'group_remove' | 'reset' | 'schedule'; items: Result[] } | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -74,6 +75,7 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
       let body: any
       if (proposal.type === 'students') body = { action: 'create', students: proposal.students.map(s => ({ ...s, password: (s.password || '').trim() || DEFAULT_PW })) }
       else if (proposal.type === 'group') body = { action: 'add_group', assignments: proposal.assignments }
+      else if (proposal.type === 'group_remove') body = { action: 'remove_group', removals: proposal.removals }
       else if (proposal.type === 'reset') body = { action: 'reset_password', resets: proposal.resets.map(r => ({ ...r, password: (r.password || '').trim() || DEFAULT_PW })) }
       else body = { action: 'create_schedule', classes: proposal.classes }
       const { data, error } = await supabase.functions.invoke('admin-ai', { body })
@@ -85,6 +87,7 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
         kind === 'students' ? `Đã tạo ${ok}/${rs.length} tài khoản. Chi tiết (kèm mật khẩu) ở dưới.`
         : kind === 'reset' ? `Đã đặt lại ${ok}/${rs.length} mật khẩu. Chi tiết (mật khẩu mới) ở dưới.`
         : kind === 'schedule' ? `Đã tạo ${ok}/${rs.length} lớp vào lịch. Chi tiết ở dưới.`
+        : kind === 'group_remove' ? `Đã gỡ ${ok}/${rs.length} khỏi nhóm (khoá đã cấp không bị thu hồi). Chi tiết ở dưới.`
         : `Đã gán ${ok}/${rs.length} vào nhóm. Chi tiết ở dưới.` }])
       if (ok > 0) onDone?.()
     } catch (e) { setErr(await readErr(e)) }
@@ -94,10 +97,12 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
   const count = proposal
     ? (proposal.type === 'students' ? proposal.students.length
       : proposal.type === 'group' ? proposal.assignments.length
+      : proposal.type === 'group_remove' ? proposal.removals.length
       : proposal.type === 'reset' ? proposal.resets.length
       : proposal.classes.length)
     : 0
   const confirmLabel = proposal?.type === 'group' ? `✓ Xác nhận thêm ${count} vào nhóm`
+    : proposal?.type === 'group_remove' ? `✓ Xác nhận GỠ ${count} khỏi nhóm`
     : proposal?.type === 'reset' ? `✓ Xác nhận đặt lại ${count} mật khẩu`
     : proposal?.type === 'schedule' ? `✓ Xác nhận tạo ${count} lớp`
     : `✓ Xác nhận tạo ${count} tài khoản`
@@ -143,6 +148,7 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
           <div style={{ background: S.surface, border: `1.5px solid ${S.accent}`, borderRadius: 12, padding: 16, marginTop: 8, marginBottom: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: S.text1, marginBottom: 10 }}>
               {proposal.type === 'group' ? `Đề xuất thêm ${count} học sinh vào nhóm — thầy kiểm:`
+                : proposal.type === 'group_remove' ? `Đề xuất GỠ ${count} học sinh khỏi nhóm (khoá đã cấp KHÔNG bị thu hồi) — thầy kiểm:`
                 : proposal.type === 'reset' ? `Đề xuất ĐẶT LẠI mật khẩu cho ${count} học sinh — thầy kiểm:`
                 : proposal.type === 'schedule' ? `Đề xuất tạo ${count} lớp vào lịch — thầy kiểm:`
                 : `Đề xuất tạo ${count} tài khoản — thầy kiểm:`}
@@ -161,6 +167,14 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
                   <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 12px', fontSize: 13, borderTop: i ? `1px solid ${S.border}` : 'none' }}>
                     <span style={{ flex: 1, color: S.text1, fontWeight: 600 }}>{a.studentEmail}</span>
                     <span style={{ color: S.text3 }}>→</span>
+                    <span style={{ flex: 1, color: S.text2 }}>{a.groupName}</span>
+                  </div>
+                ))
+                : proposal.type === 'group_remove'
+                ? proposal.removals.map((a, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 12px', fontSize: 13, borderTop: i ? `1px solid ${S.border}` : 'none', background: '#FEF2F2' }}>
+                    <span style={{ flex: 1, color: S.text1, fontWeight: 600 }}>{a.studentEmail}</span>
+                    <span style={{ color: S.err, fontWeight: 700 }}>✕ gỡ khỏi</span>
                     <span style={{ flex: 1, color: S.text2 }}>{a.groupName}</span>
                   </div>
                 ))
@@ -196,15 +210,15 @@ export default function AiAssistant({ embedded = false, onDone, seedExamples }: 
         {results && (
           <div style={{ background: S.surface, border: `1px solid ${S.border}`, borderRadius: 12, padding: 16, marginTop: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: S.text1, marginBottom: 10 }}>
-              {results.kind === 'group' ? 'Kết quả gán nhóm:' : results.kind === 'schedule' ? 'Kết quả tạo lịch lớp:' : results.kind === 'reset' ? 'Kết quả đặt lại — lưu MẬT KHẨU MỚI để đưa học sinh:' : 'Kết quả — lưu mật khẩu để đưa học sinh:'}
+              {results.kind === 'group' ? 'Kết quả gán nhóm:' : results.kind === 'group_remove' ? 'Kết quả gỡ khỏi nhóm:' : results.kind === 'schedule' ? 'Kết quả tạo lịch lớp:' : results.kind === 'reset' ? 'Kết quả đặt lại — lưu MẬT KHẨU MỚI để đưa học sinh:' : 'Kết quả — lưu mật khẩu để đưa học sinh:'}
             </div>
             {results.items.map((r, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 6, background: r.ok ? S.okBg : S.errBg }}>
                 <span style={{ color: r.ok ? S.ok : S.err, fontWeight: 700 }}>{r.ok ? '✓' : '✕'}</span>
                 <span style={{ flex: 1, color: S.text1, fontWeight: 600 }}>{r.email}</span>
                 {r.ok
-                  ? ((results.kind === 'group' || results.kind === 'schedule')
-                    ? <span style={{ color: S.text2 }}>→ {r.group}{r.warn ? <em style={{ color: '#B45309' }}> · ⚠ {r.warn}</em> : null}</span>
+                  ? ((results.kind === 'group' || results.kind === 'group_remove' || results.kind === 'schedule')
+                    ? <span style={{ color: S.text2 }}>{results.kind === 'group_remove' ? '✕ đã gỡ khỏi ' : '→ '}{r.group}{r.warn ? <em style={{ color: '#B45309' }}> · ⚠ {r.warn}</em> : null}</span>
                     : <span style={{ color: S.text2, fontFamily: 'monospace' }}>mật khẩu: <b>{r.password}</b></span>)
                   : <span style={{ color: S.err }}>{r.error}</span>}
               </div>

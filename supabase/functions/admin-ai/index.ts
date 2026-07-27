@@ -43,6 +43,7 @@ const SYSTEM = `Bạn là trợ lý trong trang quản trị của hệ thống 
 Bạn giúp THẦY ba việc:
 1) TẠO TÀI KHOẢN học sinh — khi đủ thông tin (tối thiểu email mỗi em; tên suy từ email nếu thầy không cho), gọi công cụ propose_students.
 2) GÁN HỌC SINH VÀO NHÓM (Zalo/Facebook) — khi thầy muốn thêm em vào nhóm/lớp, gọi công cụ propose_group_add với email học sinh + groupName. Nhóm Zalo ≡ MÃ LỚP: nếu thầy nhắc mã lớp (vd "gl11", "dh1.kd16") thì truyền ĐÚNG mã đó vào groupName (viết hoa, vd "GL11") — hệ thống tự khớp/tạo nhóm cùng mã. Đừng bịa tên nhóm dài.
+2b) GỠ HỌC SINH KHỎI NHÓM — khi thầy muốn gỡ/xoá em khỏi nhóm/lớp (chuyển lớp, đăng ký nhầm, nghỉ học), gọi công cụ propose_group_remove với email + groupName (ưu tiên MÃ LỚP như trên). LƯU Ý nói rõ với thầy: gỡ khỏi nhóm KHÔNG tự thu hồi khoá đã cấp — muốn khoá lại khoá học thì làm ở Hồ sơ học viên. Thầy nói "chuyển em A từ GL11 sang GL12" = gỡ khỏi GL11 + thêm vào GL12 (gọi cả 2 công cụ được, hoặc đề xuất lần lượt).
 3) ĐẶT LẠI (RESET) MẬT KHẨU — khi thầy muốn đổi/đặt lại mật khẩu cho học sinh (theo email), gọi công cụ propose_reset_password. Kèm mật khẩu mới nếu thầy chỉ định; bỏ trống để hệ thống tự sinh.
 4) TẠO / XẾP LỊCH LỚP HỌC — gọi công cụ propose_schedule. Với mỗi lớp CHỈ hỏi thầy 4 điều BIẾN ĐỔI: (a) NĂNG LỰC — mã năng lực DH1/DH2/DH3/TN1/TN2/TN3 (khớp danh sách khoá theo mã [DHx]/[TNx] ở dưới); (b) SỐ KHOÁ (số thứ tự, vd 16); (c) NGÀY KHAI GIẢNG; (d) LỊCH (thứ + giờ, vd "Thứ 3 · 19h00"). Phần CỐ ĐỊNH (khoá học, dạng lớp KD/BP/GL, nhóm Zalo, tên, học phí) hệ thống TỰ suy từ mã — TUYỆT ĐỐI đừng hỏi lại các thứ đó. Thiếu 1 trong 4 điều thì hỏi thầy.
    Khi gọi propose_schedule, TỰ QUY ĐỔI (c)+(d) thành trường máy đọc: startDate = 'yyyy-mm-dd' (thầy nói "7/7" thì hiểu là ngày sắp tới gần nhất, dựa vào NGÀY HÔM NAY ở dưới); weekday = 0..6 (0=Chủ nhật, 1=Thứ Hai, 2=Thứ Ba, … 6=Thứ Bảy — "Thứ 3"=2, "Thứ 5"=4); time = 'HH:MM' 24h ("19h"→"19:00", "20h30"→"20:30"). totalSessions mặc định 8, durationMinutes mặc định 90 — chỉ đổi khi thầy nói khác. Ngày khai giảng không rơi đúng thứ đã chọn thì hệ thống tự lùi tới đúng thứ gần nhất — cứ điền, không cần hỏi lại.
@@ -89,6 +90,26 @@ const TOOLS = [{
       },
     },
     required: ['assignments'],
+  },
+}, {
+  name: 'propose_group_remove',
+  description: 'Đề xuất GỠ (các) học sinh khỏi (các) nhóm để thầy duyệt rồi mới gỡ. KHÔNG gỡ ngay. Không thu hồi khoá đã cấp.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      removals: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            studentEmail: { type: 'string', description: 'email học sinh ĐÃ có tài khoản' },
+            groupName: { type: 'string', description: 'nhóm cần gỡ — ưu tiên MÃ LỚP (vd GL11, DH1.KD16), hoặc tên nhóm' },
+          },
+          required: ['studentEmail', 'groupName'],
+        },
+      },
+    },
+    required: ['removals'],
   },
 }, {
   name: 'propose_reset_password',
@@ -197,6 +218,7 @@ async function chat(messages: unknown[], groups: any[], courses: any[], classes:
     if (block.type === 'text') reply += block.text
     if (block.type === 'tool_use' && block.name === 'propose_students') proposal = { type: 'students', students: block.input.students }
     if (block.type === 'tool_use' && block.name === 'propose_group_add') proposal = { type: 'group', assignments: block.input.assignments }
+    if (block.type === 'tool_use' && block.name === 'propose_group_remove') proposal = { type: 'group_remove', removals: block.input.removals }
     if (block.type === 'tool_use' && block.name === 'propose_reset_password') proposal = { type: 'reset', resets: block.input.resets }
     if (block.type === 'tool_use' && block.name === 'propose_schedule') proposal = { type: 'schedule', classes: block.input.classes }
   }
@@ -291,6 +313,39 @@ async function addToGroups(admin: ReturnType<typeof createClient>, assignments: 
       const { data: gn, error: gErr } = await admin.rpc('backfill_class', { p_code: grp.code || codeGuess })
       if (gErr) results.push({ email, student: stu.full_name, group: grp.name, ok: true, warn: 'vào nhóm OK nhưng cấp khoá lỗi: ' + gErr.message })
       else results.push({ email, student: stu.full_name, group: grp.name, ok: true, coursesGranted: gn as number })
+    } catch (e) {
+      results.push({ email, group: groupName, ok: false, error: String((e as Error)?.message || e) })
+    }
+  }
+  return results
+}
+
+// Gỡ học sinh khỏi nhóm — XOÁ hàng edu_group_members. KHÔNG tự tạo nhóm, KHÔNG thu hồi khoá đã cấp.
+async function removeFromGroups(admin: ReturnType<typeof createClient>, removals: any[]) {
+  const results: any[] = []
+  for (const a of removals) {
+    const email = (a.studentEmail || a.email || '').trim().toLowerCase()
+    const groupName = (a.groupName || a.group || '').trim()
+    try {
+      if (!email || !groupName) throw new Error('thiếu email hoặc tên nhóm')
+      const { data: stuRows } = await admin.from('edu_students').select('user_id,full_name').eq('email', email).limit(1)
+      const stu = stuRows?.[0]
+      if (!stu?.user_id) throw new Error('không tìm thấy học sinh với email này')
+      // Khớp nhóm như addToGroups (mã → mã lớp thật → tên) nhưng KHÔNG tạo mới khi gỡ
+      const codeM = groupName.match(/[A-Za-z]{2,4}\d*\.?[A-Za-z]{0,2}\d+/)
+      const codeGuess = (codeM ? codeM[0] : groupName).trim().toUpperCase()
+      let grp = (await admin.from('edu_groups').select('id,name,code').ilike('code', codeGuess).limit(1)).data?.[0]
+      if (!grp) {
+        const { data: clsMatch } = await admin.from('class_schedule').select('code').ilike('code', '%' + codeGuess + '%').limit(1)
+        if (clsMatch?.[0]?.code) grp = (await admin.from('edu_groups').select('id,name,code').ilike('code', clsMatch[0].code).limit(1)).data?.[0]
+      }
+      if (!grp) grp = (await admin.from('edu_groups').select('id,name,code').ilike('name', '%' + groupName + '%').limit(1)).data?.[0]
+      if (!grp?.id) throw new Error('không tìm thấy nhóm "' + groupName + '"')
+      const { data: del, error } = await admin.from('edu_group_members')
+        .delete().eq('user_id', stu.user_id).eq('group_id', grp.id).select('id')
+      if (error) throw new Error(error.message)
+      if (!del?.length) throw new Error(`${stu.full_name || email} vốn không ở trong nhóm ${grp.code || grp.name}`)
+      results.push({ email, student: stu.full_name, group: (grp.code ? grp.code + ' · ' : '') + grp.name, ok: true, warn: 'khoá đã cấp KHÔNG bị thu hồi — muốn khoá lại làm ở Hồ sơ học viên' })
     } catch (e) {
       results.push({ email, group: groupName, ok: false, error: String((e as Error)?.message || e) })
     }
@@ -420,6 +475,10 @@ Deno.serve(async (req) => {
   if (body.action === 'add_group') {
     if (!Array.isArray(body.assignments) || !body.assignments.length) return json({ error: 'Thiếu danh sách gán nhóm' }, 400)
     return json({ results: await addToGroups(gate.admin, body.assignments) })
+  }
+  if (body.action === 'remove_group') {
+    if (!Array.isArray(body.removals) || !body.removals.length) return json({ error: 'Thiếu danh sách gỡ nhóm' }, 400)
+    return json({ results: await removeFromGroups(gate.admin, body.removals) })
   }
   if (body.action === 'reset_password') {
     if (!Array.isArray(body.resets) || !body.resets.length) return json({ error: 'Thiếu danh sách đặt lại mật khẩu' }, 400)
