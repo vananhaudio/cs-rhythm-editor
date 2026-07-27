@@ -512,7 +512,15 @@ export function QuizViewer({ lessonId, studentId, quizData, onComplete }: QuizVi
   const [alreadyDone, setAlreadyDone] = useState(false)
   const [prevResult, setPrevResult] = useState<QuizResult | null>(null)
 
-  if (!quizData || !quizData.questions) return <div style={{padding:24,color:"#dc2626"}}>JSON quiz không hợp lệ hoặc chưa có dữ liệu.</div>
+  // Bài quiz chưa có dữ liệu (thầy chưa nhập / gắn nhầm kiểu) → nói thân thiện với HỌC SINH,
+  // không hiện lỗi kỹ thuật đỏ; học sinh vẫn bấm "✓ Đánh dấu đã học" bên dưới để đi tiếp.
+  if (!quizData || !quizData.questions) return (
+    <div style={{ padding: 24, textAlign: 'center', color: '#52525B', background: '#FFFFFF', borderRadius: 16, lineHeight: 1.7 }}>
+      <div style={{ fontSize: 30, marginBottom: 8 }}>📝</div>
+      <div style={{ fontWeight: 700, color: '#18181B', marginBottom: 4 }}>Bài này chưa có câu hỏi</div>
+      <div style={{ fontSize: 14 }}>Bạn đọc kỹ tiêu đề bài, làm theo hướng dẫn (nếu có) rồi bấm <b>“✓ Đánh dấu đã học”</b> để tiếp tục nhé.</div>
+    </div>
+  )
   const qs = quizData.questions
   const q = qs[current]
   const passingScore = quizData.passing_score ?? 70
