@@ -147,6 +147,7 @@ async function callAnthropic(system: string, messages: { role: string; content: 
 // ============================================================
 
 Deno.serve(async (req) => {
+  try {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
@@ -409,4 +410,8 @@ Deno.serve(async (req) => {
   }
 
   return json({ error: `Unknown action: ${action}` }, 400)
+  } catch (e) {
+    console.error('story-ai FATAL', e)
+    return json({ error: 'Internal error: ' + (e instanceof Error ? e.message : String(e)) }, 500)
+  }
 })
