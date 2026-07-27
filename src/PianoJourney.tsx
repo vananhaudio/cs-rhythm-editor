@@ -183,6 +183,23 @@ export default function PianoJourney({ onClose }: Props) {
           {cfg.label}
         </div>
         {error && <div style={{ fontSize:13,color:'#FCA5A5',textAlign:'center',marginTop:8 }}>{error}</div>}
+
+        {/* Text input fallback */}
+        {flow === 'idle' && (
+          <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:8,marginTop:20,width:'80%',maxWidth:320 }}>
+            <div style={{ fontSize:12,color:C.dim }}>hoặc gõ yêu cầu:</div>
+            <input
+              value={transcript} onChange={e => setTranscript(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && transcript.trim()) generateMission(transcript.trim()) }}
+              placeholder='VD: bài hát thiếu nhi...'
+              style={{ width:'100%',padding:'10px 14px',fontSize:14,borderRadius:12,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.05)',color:'#fff',outline:'none',fontFamily:'inherit',textAlign:'center' }}
+            />
+            <button onClick={() => transcript.trim() && generateMission(transcript.trim())} disabled={!transcript.trim()}
+              style={{ padding:'10px 20px',fontSize:14,fontWeight:600,borderRadius:12,border:'none',background:transcript.trim()?'linear-gradient(135deg,#F59E0B,#D97706)':'rgba(255,255,255,.05)',color:transcript.trim()?'#fff':'rgba(255,255,255,.2)',cursor:transcript.trim()?'pointer':'default',fontFamily:'inherit' }}>
+              🎹 Tạo bài tập
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ position:'absolute',top:'12%',left:-20,fontSize:64,opacity:.04,pointerEvents:'none' }}>🎵</div>
