@@ -9,6 +9,22 @@ import type { User } from '@supabase/supabase-js'
 
 type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'submitting' | 'submitted'
 
+// Helper: trích xuất thông điệp lỗi từ Edge Function response
+async function getErrMsg(e: unknown): Promise<string> {
+  if (e && typeof e === 'object' && 'context' in e) {
+    try {
+      const ctx = (e as { context: { json?: () => Promise<unknown> } }).context
+      if (ctx?.json) {
+        const body = await ctx.json()
+        if (body && typeof body === 'object' && 'error' in body) {
+          return String((body as { error: string }).error)
+        }
+      }
+    } catch { /* fall through */ }
+  }
+  return (e as { message?: string })?.message || String(e)
+}
+
 const INVITATIONS = [
   'Có một câu chuyện nào bạn nghĩ đáng để người khác đọc không?',
   'Có một câu chuyện nào bạn muốn lưu giữ và chia sẻ với cộng đồng không?',
@@ -225,7 +241,8 @@ export default function StoryTellPage() {
       setPhase('draft')
     } catch (e) {
       console.error('story-ai write', e)
-      setMiraReply('Có lỗi khi tạo bản thảo. Bạn thử lại giúp mình nhé 🌿')
+      const msg = await getErrMsg(e)
+      setMiraReply(`Có lỗi khi tạo bản thảo: ${msg}. Bạn thử lại nhé 🌿`)
       setPhase('ready_for_draft')
     } finally { setSending(false) }
   }, [storyId, sending])

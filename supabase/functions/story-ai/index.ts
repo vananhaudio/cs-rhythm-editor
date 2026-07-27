@@ -10,9 +10,9 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
 // Models — tách theo tác vụ
-const MODEL_CHAT = 'claude-haiku-4-5-20251001'
-const MODEL_WRITE = 'claude-sonnet-4-6-20250514'
-const MODEL_REVIEW = 'claude-haiku-4-5-20251001'
+const MODEL_CHAT = 'claude-haiku-4-5'
+const MODEL_WRITE = 'claude-sonnet-4-6'
+const MODEL_REVIEW = 'claude-haiku-4-5'
 
 // Giới hạn
 const MAX_MSG_LEN = 2000
@@ -155,7 +155,7 @@ async function callAnthropic(system: string, messages: { role: string; content: 
   if (!res.ok) {
     const errBody = await res.text()
     console.error('Anthropic error', res.status, errBody)
-    throw new Error(`Anthropic ${res.status}`)
+    throw new Error(`Anthropic ${res.status}: ${errBody.slice(0, 200)}`)
   }
   const data = await res.json()
   return (data.content ?? []).filter((b: { type: string }) => b.type === 'text')
@@ -289,15 +289,14 @@ Deno.serve(async (req) => {
     }
 
     try {
-      const rawReply = await callAnthropic(
-        WRITE_PROMPT,
-        [{ role: 'user', content: `Dưới đây là toàn bộ lời kể của người dùng:\n\n${convText}\n\nHãy viết lại thành bài hoàn chỉnh.` }],
-        MODEL_WRITE,
-        2000,
-      )
+      const userMsg = `Dưới đây là toàn bộ lời kể của người dùng:\n\n${convText.slice(0, 8000)}\n\nHãy viết lại thành bài hoàn chỉnh.`
+      const rawReply = await callAnthropic(WRITE_PROMPT, [{ role: 'user', content: userMsg }], MODEL_WRITE, 3000)
 
-      // Parse JSON from response (có thể có markdown ```json)
-      let jsonStr = rawReply.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      // Parse JSON — tìm object đầu tiên trong response
+      let jsonStr = rawReply
+      const m = rawReply.match(/\{[\s\S]*\}/)
+      if (m) jsonStr = m[0]
+      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
       const parsed = JSON.parse(jsonStr)
 
       const title = parsed.title || 'Không có tiêu đề'
@@ -315,7 +314,7 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.error('story-ai write error', e)
       await db.from('stories').update({ status: 'telling' }).eq('id', story.id)
-      return json({ error: 'Không thể tạo bản thảo — thử lại nhé' }, 500)
+      return json({ error: `Không thể tạo bản thảo: ${e instanceof Error ? e.message : String(e)}` }, 500)
     }
   }
 
@@ -356,7 +355,10 @@ Deno.serve(async (req) => {
         2000,
       )
 
-      let jsonStr = rawReply.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      let jsonStr = rawReply
+      const m = rawReply.match(/\{[\s\S]*\}/)
+      if (m) jsonStr = m[0]
+      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
       const parsed = JSON.parse(jsonStr)
 
       const title = parsed.title || story.title
@@ -397,7 +399,10 @@ Deno.serve(async (req) => {
         1000,
       )
 
-      let jsonStr = rawReply.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      let jsonStr = rawReply
+      const m = rawReply.match(/\{[\s\S]*\}/)
+      if (m) jsonStr = m[0]
+      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
       const parsed = JSON.parse(jsonStr)
 
       const verdict = parsed.verdict || 'ok'
