@@ -244,9 +244,8 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
     + khai quật khi bí), làm lại UI /story/tell từ dạng chat sang
     "trang giấy đang viết" + dòng Cuốn sách sống. Phân tích trước —
     được duyệt mới code.
--   Văn Anh deploy Edge Function `story-ai` qua Dashboard (Verify JWT
-    BẬT; lần dán đầu bị cắt cụt — dán lại từ clipboard). **Chưa xong
-    thì màn kể sẽ báo lỗi nhẹ khi gửi tin (trang vẫn mở được).**
+-   ~~Deploy Edge Function~~ **ĐÃ deploy `story-ai`** (2026-07-27,
+    Verify JWT BẬT — test gọi không JWT trả 401 đúng).
 -   Hạng mục sau: action `write` + màn bản nháp B5; Growth Loop +
     hồ sơ 3 số (khi có bài xuất bản đầu tiên).
 -   (Kiểm tra khi dev: học sinh A không sửa được bài học sinh B,

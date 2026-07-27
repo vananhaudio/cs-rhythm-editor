@@ -197,5 +197,7 @@
     vào `docs/1001-cau-chuyen/` trong repo (README chỉ dẫn AI đọc
     theo thứ tự: PROJECT_CONTEXT → MIRA_CONSTITUTION → Growth Loop →
     UX flow → database/api) để AI khác vào cùng code.
--   Edge Function `story-ai` vẫn chờ thầy deploy qua Dashboard —
-    chat sẽ báo lỗi nhẹ cho đến khi deploy xong.
+-   Edge Function `story-ai` **ĐÃ được thầy deploy** (Verify JWT BẬT,
+    smoke-test 401 đạt) — luồng kể chat hoạt động đầy đủ trên bản sống.
+-   Thêm `HANDOFF-AI.md` (cả 2 nơi): văn bản bàn giao cho AI kế tiếp
+    — trạng thái, nhiệm vụ kế đã duyệt, quy trình ra hàng.
