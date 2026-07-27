@@ -37,7 +37,8 @@ const schedToCard = (it: { name: string; code?: string; schedule: string; start:
   tag: it.tag || inferTag(it.courseTitle || it.name),
   title: it.courseTitle || it.name,                                   // TÊN KHOÁ/CẤP ĐỘ (tiêu đề to)
   className: it.code ? `${it.name} · ${it.code}` : it.name,           // TÊN LỚP (dòng phụ)
-  regName: it.name, path: inferPath(it.courseTitle || it.name),
+  regName: it.code ? `${it.name} · ${it.code}` : it.name,   // ghi vào leads KÈM MÃ — 2 lớp có thể trùng tên
+  path: inferPath(it.courseTitle || it.name),
   day: it.schedule || 'Đang cập nhật',
   date: it.dateLabel || (it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch'),   // nhãn ngày thật (đếm ngược) nếu có
   price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
@@ -331,10 +332,12 @@ export default function ClassLandingPage() {
 
   const pickClass = (name: string) => { set('className', name); goto('dangky') }
 
-  // Lớp có thể đăng ký = lớp THẬT từ class_schedule (sắp khai giảng + đang học) + combo Hành trình
+  // Lớp có thể đăng ký = lớp THẬT từ class_schedule (sắp khai giảng + đang học) + combo Hành trình.
+  // name (giá trị ghi vào leads) KÈM MÃ LỚP — vì có thể 2 lớp trùng tên (vd TN3.GL12 và TN3.GL13).
+  const regName = (it: { name: string; code?: string }) => it.code ? `${it.name} · ${it.code}` : it.name
   const regClasses = [
-    ...(sched?.upcoming ?? []).map(it => ({ name: it.name, path: inferPath(it.courseTitle || it.name), price: it.price || '990k', label: it.name })),
-    ...(sched?.active ?? []).map(it => ({ name: it.name, path: inferPath(it.courseTitle || it.name), price: it.price || '990k', label: `${it.name} · đang học` })),
+    ...(sched?.upcoming ?? []).map(it => ({ name: regName(it), path: inferPath(it.courseTitle || it.name), price: it.price || '990k', label: regName(it) })),
+    ...(sched?.active ?? []).map(it => ({ name: regName(it), path: inferPath(it.courseTitle || it.name), price: it.price || '990k', label: `${regName(it)} · đang học` })),
     { ...COMBO_HT, label: COMBO_HT.name },
   ]
 
@@ -417,9 +420,15 @@ export default function ClassLandingPage() {
             {!me && <a onClick={() => goto('dangky')}>Đăng ký</a>}
             {!me && <a onClick={() => setShowLogin(true)}>Đăng nhập</a>}
           </div>
-          {me
-            ? <button className="btn btn-primary nav-cta" onClick={() => { window.location.href = '/me' }}>🎸 Hành trình của tôi</button>
-            : <button className="btn btn-primary nav-cta" onClick={() => goto('dangky')}>Đăng ký lớp</button>}
+          <div className="nav-right">
+            {/* CTA 1001 Câu chuyện — pill nổi hơn menu, nhẹ hơn nút chính; mobile rút gọn "📖 1001" */}
+            <button className="story-cta" onClick={() => { window.location.href = '/story' }} aria-label="1001 Câu chuyện cùng Guitar">
+              📖 <span className="story-cta-full">1001 Câu chuyện</span><span className="story-cta-short">1001</span>
+            </button>
+            {me
+              ? <button className="btn btn-primary nav-cta" onClick={() => { window.location.href = '/me' }}>🎸 Hành trình của tôi</button>
+              : <button className="btn btn-primary nav-cta" onClick={() => goto('dangky')}>Đăng ký lớp</button>}
+          </div>
         </div>
       </nav>
 
@@ -1058,7 +1067,15 @@ const CSS = `
 .tva-class .nav-links a{color:var(--ink-soft);text-decoration:none;cursor:pointer;}
 .tva-class .nav-links a:hover{color:var(--indigo);}
 .tva-class .nav-cta{font-size:14px;padding:9px 16px;}
-@media(max-width:860px){.tva-class .nav-links{display:none;}}
+.tva-class .nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.tva-class .story-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--indigo);background:var(--surface);color:var(--indigo);font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;line-height:1;}
+.tva-class .story-cta:hover{background:var(--indigo-tint);}
+.tva-class .story-cta-short{display:none;}
+@media(max-width:860px){.tva-class .nav-links{display:none;}
+.tva-class .nav-right{gap:8px;}
+.tva-class .story-cta{padding:7px 11px;font-size:13px;}
+.tva-class .story-cta-full{display:none;}
+.tva-class .story-cta-short{display:inline;}}
 .tva-class .hero{padding:60px 0 46px;}
 .tva-class .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center;}
 .tva-class .hero h1{font-size:42px;font-weight:800;line-height:1.1;letter-spacing:-1px;}
