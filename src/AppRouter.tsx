@@ -28,6 +28,8 @@ import FlowMigratePage from './FlowMigratePage'
 import JoinGroupPage from './JoinGroupPage'
 import DeleteAccountPage from './DeleteAccountPage'
 import ClassLandingPage from './ClassLandingPage'
+import StoryLandingPage from './story/StoryLandingPage'
+import StoryTellPage from './story/StoryTellPage'
 import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
 type AppUser = {
@@ -137,6 +139,12 @@ export default function AppRouter() {
   const onClass = typeof window !== 'undefined' && window.location.hostname.startsWith('class.')
   if (onClass && (path === '/' || path === '/class' || path.startsWith('/class'))) {
     return <ClassLandingPage />   // class./ LUÔN là trang tuyển sinh; vào cổng học qua nút "Hành trình của tôi" → /me
+  }
+
+  // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
+  if (path === '/story/tell') return <StoryTellPage />   // kể chuyện cùng Mira (cần login, tự xử lý auth)
+  if (path === '/story' || path.startsWith('/story/')) {
+    return <StoryLandingPage />
   }
 
   // ── Route /delete-account — xóa tài khoản ──

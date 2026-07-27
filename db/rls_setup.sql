@@ -64,7 +64,12 @@ DECLARE
     'class_schedule',
     -- Buổi học: dữ liệu vận hành nội bộ, chỉ authenticated (policy cses_auth_all
     -- do db/journey_os_stage1.sql đặt) — giữ nguyên, anon không đọc.
-    'class_sessions'
+    'class_sessions',
+    -- 1001 Câu chuyện cùng Guitar (/story): anon CHỈ đọc bài published;
+    -- người kể chỉ CRUD bài của mình khi chưa gửi biên tập; thầy toàn quyền.
+    -- Policy hẹp do db/story_setup.sql đặt — ĐỪNG để vòng lặp áp policy rộng
+    -- (sẽ cho học sinh sửa bài của nhau + tự xuất bản).
+    'stories', 'story_comments'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];
