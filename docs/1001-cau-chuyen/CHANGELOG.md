@@ -188,3 +188,14 @@
 -   **Code hiện tại chưa sửa** — system prompt story-ai và UI chat
     /story/tell đang theo bản cũ, sẽ làm lại sau khi bản phân tích
     được duyệt (đúng yêu cầu "không code ngay").
+
+#### Deployed (phiên 8)
+
+-   **Push `main` (commit 3901eef) → Netlify → SỐNG trên
+    class.vananhaudio.com/story** (landing) và `/story/tell` (màn
+    kể — gate đăng nhập hiển thị đúng). Kèm toàn bộ tài liệu đồng bộ
+    vào `docs/1001-cau-chuyen/` trong repo (README chỉ dẫn AI đọc
+    theo thứ tự: PROJECT_CONTEXT → MIRA_CONSTITUTION → Growth Loop →
+    UX flow → database/api) để AI khác vào cùng code.
+-   Edge Function `story-ai` vẫn chờ thầy deploy qua Dashboard —
+    chat sẽ báo lỗi nhẹ cho đến khi deploy xong.
