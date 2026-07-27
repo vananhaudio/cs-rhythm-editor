@@ -220,8 +220,8 @@ export default function StoryTellPage() {
       }
     } catch (e) {
       console.error('story-ai chat', e)
-      setMiraReply('Có lỗi kết nối — câu chuyện vẫn được lưu. Bạn gửi lại giúp mình nhé 🌿')
-      setPhase('asking')
+      const msg = (e as { message?: string })?.message || String(e)
+      setMiraReply('Lỗi: ' + msg)
     } finally { setSending(false) }
   }, [input, sending, storyId])
 
@@ -297,10 +297,19 @@ export default function StoryTellPage() {
   const tellMore = useCallback(async () => {
     setMiraReady(false)
     setMiraReply('')
-    // Cập nhật status về telling để chat tiếp
     await supabase.from('stories').update({ status: 'telling' }).eq('id', storyId)
     setPhase('telling')
   }, [storyId])
+
+  // ── Bắt đầu câu chuyện mới ──
+  const startNew = useCallback(() => {
+    setStoryId(null)
+    setMiraReply('')
+    setMiraReady(false)
+    setDraftResumed(false)
+    setPhase('telling')
+    setInput('')
+  }, [])
 
   // ── Đăng nhập / tạo tài khoản ──
   const submitAuth = async (mode: 'login' | 'signup', email: string, pass: string, name: string) => {
@@ -379,7 +388,10 @@ export default function StoryTellPage() {
         /* Telling / Asking / Ready for draft / Editing */
         <>
           {draftResumed && (
-            <div className="mv-resume-bar">📝 Bạn có một câu chuyện đang kể dở — kể tiếp nhé.</div>
+            <div className="mv-resume-bar">
+              📝 Bạn có một câu chuyện đang kể dở — kể tiếp nhé.
+              <button className="mv-new-btn" onClick={startNew}>+ Câu chuyện mới</button>
+            </div>
           )}
 
           {!draftResumed && (
@@ -489,7 +501,24 @@ const CSS = `
   background: var(--honey-tint);
   border-bottom: 1px solid #F0DFC8;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
+.mv-new-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--indigo);
+  background: var(--indigo-tint);
+  border: 1px solid #D3CEE8;
+  border-radius: 8px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mv-new-btn:hover { background: var(--indigo); color: #fff; }
 
 /* ── Main view body ── */
 .mv-body {
