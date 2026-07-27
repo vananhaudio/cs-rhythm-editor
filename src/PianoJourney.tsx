@@ -88,22 +88,30 @@ export default function PianoJourney({ onClose }: Props) {
     rec.start()
   }, [transcript])
 
-  // ── Generate mission via AI ──
+  // ── Generate mission (AI hoặc fallback) ──
   const generateMission = async (prompt: string) => {
     setFlow('generating'); setError('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { setError('Vui lòng đăng nhập'); setFlow('idle'); return }
 
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/piano-generate`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `Server ${res.status}`)
+      // Thử gọi edge function
+      let ex: Exercise | null = null
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/piano-generate`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        })
+        if (res.ok) { const data = await res.json(); if (data.notes) ex = data as Exercise }
+      } catch { /* fallback bên dưới */ }
 
-      setExercise(data as Exercise)
+      // Fallback: tự tạo bài tập mẫu nếu edge function chưa sẵn sàng
+      if (!ex) {
+        ex = makeFallbackExercise(prompt)
+      }
+
+      setExercise(ex)
       setFlow('playing')
     } catch (e: any) {
       setError(e.message); setFlow('idle')
@@ -188,6 +196,29 @@ function Dots() {
     {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:'50%',background:'#fff',animation:`pj-bounce 1.2s ${i*.15}s infinite ease-in-out`}}/>)}
     <style>{`@keyframes pj-bounce{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1);opacity:1}}`}</style>
   </div>
+}
+
+// ── Fallback: tự tạo bài tập mẫu ──
+function makeFallbackExercise(prompt: string): Exercise {
+  const patterns: [string, number[]][] = [
+    ['Đô Rê Mi', [0,1,2,3,2,1,0,-1]],
+    ['bậc thang', [0,0,1,1,2,2,3,3,4,4,5,5]],
+    ['lên xuống', [0,2,4,2,0,2,4,2,0,-1]],
+    ['bước nhảy', [0,3,0,3,2,0,2,0,-1]],
+  ]
+  const p = patterns.find(([name]) => prompt.toLowerCase().includes(name.toLowerCase()))
+  const steps = p ? p[1] : [0,0,1,1,2,2,1,-1]
+  const pitches = ['C4','D4','E4','F4','G4','A4','B4','C5']
+
+  return {
+    title: prompt.slice(0, 60) || 'Bài tập mới',
+    bpm: 90,
+    notes: steps.filter(s => s >= 0).map((s, i) => ({
+      pitch: pitches[Math.min(s, pitches.length - 1)],
+      startBeat: i,
+      duration: i === steps.filter(s => s >= 0).length - 1 ? 2 : 1,
+    })),
+  }
 }
 
 const cfgDefault = { icon:'🎤',label:'',bg:'',shadow:'',scale:1,lc:C.dim }
