@@ -202,8 +202,7 @@ export default function StoryLandingPage() {
         <div className="wrap cta-in">
           <h2>Câu chuyện của bạn có thể là điều ai đó đang cần</h2>
           <p>
-            Bạn không cần biết viết — Mira sẽ trò chuyện cùng bạn, đặt câu hỏi,
-            gợi nhớ kỷ niệm, rồi viết lại thành bài hoàn chỉnh. Bạn chỉ cần kể.
+            Mira lắng nghe bạn kể và giúp sắp xếp lại thành bài — bạn chỉ cần kể thật.
           </p>
           <a className="btn btn-light" href="/story/tell">🌿 Kể cùng Mira ngay</a>
           <div className="cta-alt">hoặc <a href={ZALO_LINK} target="_blank" rel="noreferrer">gửi câu chuyện qua Zalo cho thầy Văn Anh</a></div>

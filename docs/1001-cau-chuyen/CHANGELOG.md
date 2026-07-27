@@ -201,3 +201,44 @@
     smoke-test 401 đạt) — luồng kể chat hoạt động đầy đủ trên bản sống.
 -   Thêm `HANDOFF-AI.md` (cả 2 nơi): văn bản bàn giao cho AI kế tiếp
     — trạng thái, nhiệm vụ kế đã duyệt, quy trình ra hàng.
+
+### 2026-07-27 (phiên 9)
+
+#### Changed
+
+-   **Viết lại system prompt `MIRA_SYSTEM`** trong Edge Function
+    `story-ai` theo Hiến pháp Mira:
+    -   Mặc định: CHẾ ĐỘ LẮNG NGHE — người dùng đang kể → Mira chỉ
+        lắng nghe, không hỏi. Phản hồi ≤1 câu ngắn ("Mình đang
+        nghe…", "Rồi sao nữa?") hoặc im lặng.
+    -   CHẾ ĐỘ KHAI QUẬT chỉ khi: người dùng nói "bí"/"không nhớ" /
+        "không biết kể gì" HOẶC body có `stuck: true`. Chỉ câu hỏi
+        MỞ, mỗi lần một câu. CẤM "Có phải…", câu hỏi dẫn dắt,
+        gợi chủ đề, gieo ký ức. Khai quật xong → trở về lắng nghe.
+    -   6 lớp câu hỏi cũ chỉ còn là bản đồ ngầm.
+    -   Thêm tham số `stuck?: boolean` trong body.
+    -   Giữ nguyên: tín hiệu [[PHASE:write]], tách model, JWT.
+-   **Làm lại UI `/story/tell`** từ chat bubbles → **"trang giấy
+    đang viết"**:
+    -   Lời người kể = dòng chảy văn bản chính, full-width, font
+        17px, line-height 1.75.
+    -   Lời Mira = ghi chú nhỏ chữ nghiêng, mờ, border-left, nằm
+        như ghi chú bên lề — KHÔNG avatar, KHÔNG bong bóng chat,
+        KHÔNG typing dots.
+    -   Dòng cố định `📖 Bạn đang viết một trang cho 1001 Câu chuyện
+        cùng Guitar.` (LivingBookBar).
+    -   Nút "Mình đang bí…" kín đáo, sáng nhẹ sau ~60s im lặng.
+        Mira KHÔNG tự chen khi người dùng im lặng.
+    -   Tách component: `LivingBookBar`, `StoryPage`, `TellComposer`,
+        `AuthGate` (giữ nguyên gate đăng nhập/tạo tài khoản).
+    -   "Mira đang nghe…" thay cho typing dots (chữ mờ, pulse nhẹ).
+-   **Sửa CTA landing** (`StoryLandingPage.tsx`, khối cuối):
+    "Mira sẽ trò chuyện cùng bạn, đặt câu hỏi, gợi nhớ kỷ niệm…" →
+    "Mira lắng nghe bạn kể và giúp sắp xếp lại thành bài — bạn chỉ
+    cần kể thật."
+
+#### Status
+
+-   Build `npm run build` pass. **Edge Function chưa deploy lại**
+    (cần thầy dán code mới qua Dashboard). **Chưa push main**
+    (quy trình: thầy test kể thật → push).

@@ -232,6 +232,20 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
         nhớ, thẻ báo "bước viết sắp mở" khi đủ chất liệu).
     -   CTA landing đã trỏ về /story/tell (Zalo thành đường phụ).
     -   Build pass, màn B0 đã xem trên dev server.
+-   **Story Interview theo Hiến pháp Mira — CODE XONG** (2026-07-27):
+    -   Viết lại system prompt `story-ai`: 2 chế độ LẮNG NGHE (mặc
+        định, phản hồi ≤1 câu ngắn) + KHAI QUẬT (chỉ khi bí, câu hỏi
+        MỞ duy nhất; cấm câu hỏi đóng/dẫn dắt/gieo ký ức). 6 lớp
+        câu hỏi cũ → bản đồ ngầm. Thêm `stuck?: boolean` trong body.
+    -   Làm lại UI `/story/tell` từ chat bubbles → "trang giấy đang
+        viết": lời người kể = dòng chảy chính; lời Mira = ghi chú nhỏ
+        nghiêng mờ bên lề; dòng Cuốn sách sống cố định trên đầu
+        (LivingBookBar); nút "Mình đang bí…" sáng sau 60s im lặng.
+    -   Tách component: LivingBookBar, StoryPage, TellComposer, AuthGate.
+    -   Sửa CTA landing: "Mira lắng nghe bạn kể và giúp sắp xếp lại
+        thành bài — bạn chỉ cần kể thật."
+    -   Build pass. Edge Function chưa deploy lại (cần thầy dán
+        code mới qua Dashboard).
 
 ## Đang thực hiện
 
@@ -239,13 +253,9 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
 
 ## Tiếp theo
 
--   **Story Interview theo Hiến pháp Mira** (quyết định 12–15, ban
-    hành 2026-07-27): sửa system prompt story-ai (lắng nghe mặc định
-    + khai quật khi bí), làm lại UI /story/tell từ dạng chat sang
-    "trang giấy đang viết" + dòng Cuốn sách sống. Phân tích trước —
-    được duyệt mới code.
--   ~~Deploy Edge Function~~ **ĐÃ deploy `story-ai`** (2026-07-27,
-    Verify JWT BẬT — test gọi không JWT trả 401 đúng).
+-   **Deploy lại Edge Function `story-ai`** với prompt mới (code đã
+    sửa — thầy dán Dashboard, Verify JWT = BẬT như hiện tại).
+-   Test kể thật với prompt/UI mới → push main.
 -   Hạng mục sau: action `write` + màn bản nháp B5; Growth Loop +
     hồ sơ 3 số (khi có bài xuất bản đầu tiên).
 -   (Kiểm tra khi dev: học sinh A không sửa được bài học sinh B,
