@@ -45,6 +45,8 @@ Bạn giúp THẦY ba việc:
 2) GÁN HỌC SINH VÀO NHÓM (Zalo/Facebook) — khi thầy muốn thêm em vào nhóm/lớp, gọi công cụ propose_group_add với email học sinh + groupName. Nhóm Zalo ≡ MÃ LỚP: nếu thầy nhắc mã lớp (vd "gl11", "dh1.kd16") thì truyền ĐÚNG mã đó vào groupName (viết hoa, vd "GL11") — hệ thống tự khớp/tạo nhóm cùng mã. Đừng bịa tên nhóm dài.
 3) ĐẶT LẠI (RESET) MẬT KHẨU — khi thầy muốn đổi/đặt lại mật khẩu cho học sinh (theo email), gọi công cụ propose_reset_password. Kèm mật khẩu mới nếu thầy chỉ định; bỏ trống để hệ thống tự sinh.
 4) TẠO / XẾP LỊCH LỚP HỌC — gọi công cụ propose_schedule. Với mỗi lớp CHỈ hỏi thầy 4 điều BIẾN ĐỔI: (a) NĂNG LỰC — mã năng lực DH1/DH2/DH3/TN1/TN2/TN3 (khớp danh sách khoá theo mã [DHx]/[TNx] ở dưới); (b) SỐ KHOÁ (số thứ tự, vd 16); (c) NGÀY KHAI GIẢNG; (d) LỊCH (thứ + giờ, vd "Thứ 3 · 19h00"). Phần CỐ ĐỊNH (khoá học, dạng lớp KD/BP/GL, nhóm Zalo, tên, học phí) hệ thống TỰ suy từ mã — TUYỆT ĐỐI đừng hỏi lại các thứ đó. Thiếu 1 trong 4 điều thì hỏi thầy.
+   Khi gọi propose_schedule, TỰ QUY ĐỔI (c)+(d) thành trường máy đọc: startDate = 'yyyy-mm-dd' (thầy nói "7/7" thì hiểu là ngày sắp tới gần nhất, dựa vào NGÀY HÔM NAY ở dưới); weekday = 0..6 (0=Chủ nhật, 1=Thứ Hai, 2=Thứ Ba, … 6=Thứ Bảy — "Thứ 3"=2, "Thứ 5"=4); time = 'HH:MM' 24h ("19h"→"19:00", "20h30"→"20:30"). totalSessions mặc định 8, durationMinutes mặc định 90 — chỉ đổi khi thầy nói khác. Ngày khai giảng không rơi đúng thứ đã chọn thì hệ thống tự lùi tới đúng thứ gần nhất — cứ điền, không cần hỏi lại.
+   Thầy hỏi nên mở lớp gì / giờ nào trống → nhìn "CÁC LỚP ĐANG CÓ TRONG LỊCH" để tư vấn (tránh trùng giờ, nối tiếp khoá) rồi mới đề xuất.
 TUYỆT ĐỐI không nói "đã xong" — bạn chỉ ĐỀ XUẤT, chính thầy mới bấm xác nhận. Thiếu thông tin thì hỏi lại thầy.`
 
 const TOOLS = [{
@@ -121,8 +123,13 @@ const TOOLS = [{
           properties: {
             nangLuc: { type: 'string', description: 'MÃ NĂNG LỰC: DH1/DH2/DH3/TN1/TN2/TN3 (khớp danh sách khoá theo mã)' },
             so: { type: 'string', description: 'số khoá (số thứ tự), vd "16"' },
-            schedule: { type: 'string', description: 'lịch, vd "Thứ 3 · 19h00"' },
-            start: { type: 'string', description: 'ngày khai giảng, vd "07/07/2026"' },
+            schedule: { type: 'string', description: 'lịch hiển thị, vd "Thứ 3 · 19h00"' },
+            start: { type: 'string', description: 'ngày khai giảng hiển thị, vd "07/07/2026"' },
+            startDate: { type: 'string', description: 'ngày khai giảng máy đọc dạng yyyy-mm-dd, vd "2026-07-07" — BẮT BUỘC điền khi thầy đã cho ngày' },
+            weekday: { type: 'number', description: 'thứ trong tuần 0..6 (0=CN, 1=Thứ Hai, 2=Thứ Ba… 6=Thứ Bảy) — BẮT BUỘC điền khi thầy đã cho lịch' },
+            time: { type: 'string', description: 'giờ bắt đầu 24h dạng HH:MM, vd "19:00" — BẮT BUỘC điền khi thầy đã cho lịch' },
+            totalSessions: { type: 'number', description: 'tổng số buổi, mặc định 8' },
+            durationMinutes: { type: 'number', description: 'phút mỗi buổi, mặc định 90' },
             section: { type: 'string', description: 'upcoming (mặc định) | active | smallgroup | oneonone' },
           },
           required: ['nangLuc', 'so'],
@@ -170,7 +177,11 @@ async function chat(messages: unknown[], groups: any[], courses: any[], classes:
         + (ks ? ' · KHOÁ HỌC SINH LỚP NÀY SỞ HỮU: ' + ks : ' · (chưa gắn khoá)')
     }).join('\n')
     : '(chưa có lớp nào trong lịch)'
+  // Ngày hôm nay theo giờ Việt Nam (UTC+7) — để AI quy đổi "thứ 3 tuần sau", "7/7"… chính xác
+  const todayVN = new Date(Date.now() + 7 * 3600 * 1000)
+  const DOW_VI = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy']
   const system = SYSTEM + '\n' + HANHTRINH_RULES
+    + `\n\nNGÀY HÔM NAY: ${DOW_VI[todayVN.getUTCDay()]}, ${todayVN.getUTCDate()}/${todayVN.getUTCMonth() + 1}/${todayVN.getUTCFullYear()} (giờ Việt Nam).`
     + '\n\nCÁC KHOÁ HỌC HIỆN CÓ (mã năng lực + tên) — dùng để gắn vào lịch, xét tiên quyết:\n' + courseList
     + '\n\nCÁC NHÓM ZALO HIỆN CÓ (mã lớp + tên) — dùng để gán học sinh vào lớp:\n' + groupList
     + '\n\nCÁC LỚP ĐANG CÓ TRONG LỊCH (mã lớp + tên + lịch):\n' + classList
@@ -308,7 +319,28 @@ async function resetPasswords(admin: ReturnType<typeof createClient>, resets: an
   return results
 }
 
+// ── Sinh buổi học theo GIỜ VIỆT NAM (+07:00) — edge function chạy UTC nên phải ghim múi giờ ──
+// Cùng quy ước src/journey/sessions.ts: buổi 1 = ngày đầu >= startDate rơi đúng thứ; mỗi buổi cách 7 ngày.
+const DAY_MS = 86400000
+const ymdOfVN = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+function genSessionsVN(startYmd: string, weekday: number, hm: string, durMin: number, total: number) {
+  // mốc 12:00 VN của startYmd → getUTCDay() trả đúng thứ theo lịch VN
+  const base = new Date(`${startYmd}T12:00:00+07:00`)
+  if (isNaN(base.getTime())) return []
+  const diff = ((weekday - base.getUTCDay()) % 7 + 7) % 7
+  const out: { session_number: number; start_at: string; end_at: string; ymd: string }[] = []
+  for (let i = 0; i < total; i++) {
+    const day = new Date(base.getTime() + (diff + i * 7) * DAY_MS)   // 05:00Z = 12:00 VN cùng ngày → getUTC* ra đúng lịch VN
+    const ymd = ymdOfVN(day)
+    const s = new Date(`${ymd}T${hm}:00+07:00`)
+    out.push({ session_number: i + 1, start_at: s.toISOString(), end_at: new Date(s.getTime() + durMin * 60000).toISOString(), ymd })
+  }
+  return out
+}
+const dmyVN = (ymd: string) => { const [y, m, d] = ymd.split('-'); return `${d}/${m}/${y}` }
+
 // Tạo lịch lớp — từ MÃ NĂNG LỰC + SỐ KHOÁ: ghép mã lớp, gắn khoá chính, tự khớp/tạo nhóm Zalo ≡ mã lớp.
+// Có startDate + weekday + time → sinh LỊCH THẬT + BUỔI HỌC (class_sessions) như form trong /admin.
 async function createSchedule(admin: ReturnType<typeof createClient>, classes: any[]) {
   const { data: allCourses } = await admin.from('edu_courses').select('id,name,code')
   const byCode: Record<string, any> = {}
@@ -321,18 +353,40 @@ async function createSchedule(admin: ReturnType<typeof createClient>, classes: a
       if (!main) throw new Error('không có khoá nào mang mã năng lực "' + nl + '" (gán mã ở Khoá học trước)')
       const code = buildClassCode(nl, c.so)
       if (!code) throw new Error('không ghép được mã lớp (thiếu số khoá hoặc mã không có dạng lớp)')
+      // Chặn trùng mã lớp (1 lớp = 1 mã)
+      const { data: dup } = await admin.from('class_schedule').select('id').ilike('code', code).limit(1)
+      if (dup?.length) throw new Error(`mã lớp ${code} đã có trong lịch — kiểm tra lại số khoá`)
       // Nhóm Zalo ≡ mã lớp — tự khớp/tạo
       const { data: g } = await admin.from('edu_groups')
         .upsert({ code, name: code, group_type: 'zalo', is_active: true }, { onConflict: 'code' }).select('id').single()
-      const rec = {
+      // Lịch thật (nếu AI đưa đủ startDate + weekday + time)
+      const weekday = (typeof c.weekday === 'number' && c.weekday >= 0 && c.weekday <= 6) ? c.weekday : null
+      const time = /^\d{1,2}:\d{2}$/.test(c.time || '') ? c.time : null
+      const startDate = /^\d{4}-\d{2}-\d{2}$/.test(c.startDate || '') ? c.startDate : null
+      const total = Math.max(1, Number(c.totalSessions) || 8)
+      const durMin = Math.max(15, Number(c.durationMinutes) || 90)
+      const sessions = (startDate && weekday !== null && time) ? genSessionsVN(startDate, weekday, time, durMin, total) : []
+      const realStart = sessions[0]?.ymd ?? startDate
+      const realEnd = sessions[sessions.length - 1]?.ymd ?? null
+      const rec: any = {
         code, name: main.name, section: c.section || 'upcoming',
-        schedule: (c.schedule || '').trim() || null, start_text: (c.start || '').trim() || null,
+        schedule: (c.schedule || '').trim() || (weekday !== null && time ? `${weekday === 0 ? 'Chủ nhật' : 'Thứ ' + (weekday + 1)} · ${time.replace(':', 'h')}` : null),
+        start_text: (c.start || '').trim() || (realStart ? dmyVN(realStart) : null),
+        duration: `${total} buổi · mỗi buổi ${durMin} phút`,
         price: nl === 'NM' ? 'Free' : '990k',
         course_ids: [main.id], main_course_id: main.id, group_id: g?.id || null,
+        start_date: realStart, weekday, start_time: time,
+        duration_minutes: durMin, total_sessions: total, end_date: realEnd, status: 'upcoming',
       }
-      const { error } = await admin.from('class_schedule').insert(rec)
+      const { data: ins, error } = await admin.from('class_schedule').insert(rec).select('id').single()
       if (error) throw new Error(error.message)
-      results.push({ email: code, ok: true, group: main.name + ' · nhóm Zalo ' + code })
+      if (ins?.id && sessions.length) {
+        const { error: sErr } = await admin.from('class_sessions').insert(
+          sessions.map(s => ({ class_id: ins.id, session_number: s.session_number, start_at: s.start_at, end_at: s.end_at, status: 'scheduled' })))
+        if (sErr) { results.push({ email: code, ok: true, group: `${main.name} · nhóm Zalo ${code}`, warn: 'lớp tạo OK nhưng sinh buổi lỗi: ' + sErr.message }); continue }
+      }
+      results.push({ email: code, ok: true, group: main.name + ' · nhóm Zalo ' + code
+        + (sessions.length ? ` · ${total} buổi, KG ${dmyVN(realStart!)} → KT ${dmyVN(realEnd!)}` : ' · (chưa có ngày/giờ — lớp chỉ có text, vào form Sửa để bổ sung)') })
     } catch (e) {
       results.push({ email: (c.nangLuc || '') + (c.so ? '.' + c.so : '') || '(lớp)', ok: false, error: String((e as Error)?.message || e) })
     }

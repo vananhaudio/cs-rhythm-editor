@@ -15,7 +15,7 @@ type Assignment = { studentEmail: string; groupName: string }
 type Reset = { studentEmail: string; password?: string }
 type ClassItem = { nangLuc: string; so: string; schedule?: string; start?: string; section?: string }
 type Proposal = { type: 'students'; students: Student[] } | { type: 'group'; assignments: Assignment[] } | { type: 'reset'; resets: Reset[] } | { type: 'schedule'; classes: ClassItem[] }
-type Result = { email: string; full_name?: string; student?: string; password?: string; group?: string; ok: boolean; error?: string }
+type Result = { email: string; full_name?: string; student?: string; password?: string; group?: string; ok: boolean; error?: string; warn?: string }
 
 const EXAMPLES = [
   'Tạo tài khoản cho em Lan, email lan@gmail.com',
@@ -28,7 +28,8 @@ const EXAMPLES = [
 // Mật khẩu mặc định khi thầy không nói rõ — học sinh đổi sau trong app
 const DEFAULT_PW = '12345678'
 
-export default function AiAssistant() {
+// embedded: nhúng vào màn khác (ẩn header, nền phẳng) · onDone: gọi sau khi thầy DUYỆT thành công (để màn cha tải lại dữ liệu) · seedExamples: câu gợi ý theo ngữ cảnh
+export default function AiAssistant({ embedded = false, onDone, seedExamples }: { embedded?: boolean; onDone?: () => void; seedExamples?: string[] } = {}) {
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -85,6 +86,7 @@ export default function AiAssistant() {
         : kind === 'reset' ? `Đã đặt lại ${ok}/${rs.length} mật khẩu. Chi tiết (mật khẩu mới) ở dưới.`
         : kind === 'schedule' ? `Đã tạo ${ok}/${rs.length} lớp vào lịch. Chi tiết ở dưới.`
         : `Đã gán ${ok}/${rs.length} vào nhóm. Chi tiết ở dưới.` }])
+      if (ok > 0) onDone?.()
     } catch (e) { setErr(await readErr(e)) }
     finally { setBusy(false) }
   }
@@ -102,18 +104,20 @@ export default function AiAssistant() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: S.bg, fontFamily: '"Inter", system-ui, sans-serif' }}>
-      {/* Header */}
+      {/* Header (ẩn khi nhúng vào màn khác) */}
+      {!embedded && (
       <div style={{ padding: '16px 24px', borderBottom: `1px solid ${S.border}`, background: S.surface }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: S.text1 }}>🤖 Trợ lý AI</div>
         <div style={{ fontSize: 13, color: S.text3, marginTop: 2 }}>Tạo tài khoản · gán nhóm · đặt lại mật khẩu · xếp lịch lớp — thầy duyệt rồi mới làm.</div>
       </div>
+      )}
 
       {/* Messages */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
         {messages.length === 0 && !proposal && (
           <div style={{ maxWidth: 560, margin: '24px auto', textAlign: 'center', color: S.text3 }}>
             <div style={{ fontSize: 14, marginBottom: 14, color: S.text2 }}>Thử gõ một câu như:</div>
-            {EXAMPLES.map((ex, i) => (
+            {(seedExamples ?? EXAMPLES).map((ex, i) => (
               <div key={i} onClick={() => send(ex)}
                 style={{ background: S.surface, border: `1px solid ${S.border}`, borderRadius: 10, padding: '10px 14px', marginBottom: 8, fontSize: 14, color: S.text2, cursor: 'pointer' }}>
                 « {ex} »
@@ -200,7 +204,7 @@ export default function AiAssistant() {
                 <span style={{ flex: 1, color: S.text1, fontWeight: 600 }}>{r.email}</span>
                 {r.ok
                   ? ((results.kind === 'group' || results.kind === 'schedule')
-                    ? <span style={{ color: S.text2 }}>→ {r.group}</span>
+                    ? <span style={{ color: S.text2 }}>→ {r.group}{r.warn ? <em style={{ color: '#B45309' }}> · ⚠ {r.warn}</em> : null}</span>
                     : <span style={{ color: S.text2, fontFamily: 'monospace' }}>mật khẩu: <b>{r.password}</b></span>)
                   : <span style={{ color: S.err }}>{r.error}</span>}
               </div>

@@ -10,6 +10,7 @@ import JourneyMap from './journey/JourneyMap'
 import DemandsBoard from './journey/DemandsBoard'
 import OffersBoard from './journey/OffersBoard'
 import MiraPlanner from './journey/MiraPlanner'
+import AiAssistant from './AiAssistant'
 
 const S = {
   accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
@@ -220,7 +221,23 @@ export default function ScheduleManager() {
         {!form && view === 'journey' && <JourneyMap courses={courses} classes={classLite} sessById={sessById} />}
         {!form && view === 'demands' && <DemandsBoard courses={courses} onCreateDraft={createDraftFor} />}
         {!form && view === 'offers' && <OffersBoard courses={courses} />}
-        {!form && view === 'mira' && <MiraPlanner courses={courses} classes={classLite} sessById={sessById} onCreateDraft={createDraftFor} onGoTab={setView} />}
+        {!form && view === 'mira' && (<>
+          {/* Chat với Mira — nói chuyện là xếp được lịch: Mira đề xuất lớp → thầy duyệt → tự tạo lớp + buổi + nhóm Zalo */}
+          <div style={{ background: S.surface, border: `1px solid ${S.border}`, borderRadius: 12, height: 460, overflow: 'hidden', marginBottom: 18, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px 16px', borderBottom: `1px solid ${S.border}`, fontSize: 14, fontWeight: 800, color: S.text1 }}>
+              💬 Chat với Mira để xếp lịch <span style={{ fontWeight: 500, color: S.text3, fontSize: 12.5 }}>— nói năng lực · số khoá · ngày · thứ+giờ, Mira đề xuất, thầy duyệt là lớp + buổi + nhóm Zalo tự tạo</span>
+            </div>
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <AiAssistant embedded onDone={load} seedExamples={[
+                'Mở lớp DH1 khoá 18, thứ 3 19h, khai giảng 4/8',
+                'Xếp lớp TN3 khoá 12, thứ 5 20h30, khai giảng đầu tháng 9',
+                'Mở 2 lớp cùng lúc: DH2 khoá 17 thứ 4 19h KG 5/8, và TN1 khoá 5 thứ 6 19h KG 7/8',
+                'Tuần này còn khung giờ tối nào trống để mở lớp mới?',
+              ]} />
+            </div>
+          </div>
+          <MiraPlanner courses={courses} classes={classLite} sessById={sessById} onCreateDraft={createDraftFor} onGoTab={setView} />
+        </>)}
         {(form || view === 'list') && (<>
 
         {msg && <div style={{ background: '#FEF2F2', color: S.err, border: '1px solid #FECACA', borderRadius: 8, padding: '9px 14px', fontSize: 13, marginBottom: 14 }}>⚠ {msg}</div>}
