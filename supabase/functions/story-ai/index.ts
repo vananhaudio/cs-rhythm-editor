@@ -11,7 +11,7 @@ const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!
 
 // Models — tách theo tác vụ
 const MODEL_CHAT = 'claude-haiku-4-5'
-const MODEL_WRITE = 'claude-sonnet-4-6'
+const MODEL_WRITE = 'claude-haiku-4-5'  // TODO: đổi sang sonnet khi verify được model name chính xác
 const MODEL_REVIEW = 'claude-haiku-4-5'
 
 // Giới hạn
@@ -275,7 +275,6 @@ Deno.serve(async (req) => {
       return json({ error: 'Bài này đã qua bước kể' }, 400)
     }
 
-    // Set status writing
     await db.from('stories').update({ status: 'writing' }).eq('id', story.id)
 
     const conv: Msg[] = Array.isArray(story.conversation) ? story.conversation : []
@@ -288,33 +287,40 @@ Deno.serve(async (req) => {
       return json({ error: 'Chưa có đủ nội dung để viết' }, 400)
     }
 
-    try {
-      const userMsg = `Dưới đây là toàn bộ lời kể của người dùng:\n\n${convText.slice(0, 8000)}\n\nHãy viết lại thành bài hoàn chỉnh.`
-      const rawReply = await callAnthropic(WRITE_PROMPT, [{ role: 'user', content: userMsg }], MODEL_WRITE, 3000)
+    // Simple prompt — yêu cầu JSON rõ ràng
+    const writeSystem = `Bạn là người biên tập. Từ lời kể, hãy viết thành bài 300-600 chữ, ngôi thứ nhất.
+Trả về CHÍNH XÁC JSON này, không thêm gì khác:
+{"title":"Tiêu đề","topic":"chu-de","content":"Nội dung bài"}
+10 chủ đề: cay-dan-dau-tien, bai-hat-thay-doi-toi, guitar-va-tuoi-tho, vuot-qua-kho-khan, guitar-trong-gia-dinh, nguoi-thay-dau-tien, dau-tay-va-chai-san, lan-dau-dan-truoc-moi-nguoi, bo-do-roi-quay-lai, cay-dan-va-nguoi-than.`
 
-      // Parse JSON — tìm object đầu tiên trong response
-      let jsonStr = rawReply
-      const m = rawReply.match(/\{[\s\S]*\}/)
-      if (m) jsonStr = m[0]
-      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+    try {
+      const rawReply = await callAnthropic(writeSystem, [{
+        role: 'user', content: `Lời kể:\n${convText.slice(0, 8000)}`
+      }], MODEL_WRITE, 3000)
+
+      console.error('WRITE RAW:', rawReply.slice(0, 500))
+
+      // Trích JSON
+      let jsonStr = rawReply.trim()
+      const m = jsonStr.match(/\{[\s\S]*\}/)
+      if (!m) throw new Error(`Không tìm thấy JSON trong response: ${rawReply.slice(0, 200)}`)
+      jsonStr = m[0]
       const parsed = JSON.parse(jsonStr)
 
-      const title = parsed.title || 'Không có tiêu đề'
-      const topic = parsed.topic || ''
-      const content = parsed.content || ''
+      if (!parsed.content) throw new Error('Thiếu content')
 
       await db.from('stories').update({
         status: 'user_review',
-        title,
-        topic,
-        content,
+        title: parsed.title || 'Không có tiêu đề',
+        topic: parsed.topic || '',
+        content: parsed.content,
       }).eq('id', story.id)
 
-      return json({ title, topic, content })
+      return json({ title: parsed.title, topic: parsed.topic, content: parsed.content })
     } catch (e) {
       console.error('story-ai write error', e)
       await db.from('stories').update({ status: 'telling' }).eq('id', story.id)
-      return json({ error: `Không thể tạo bản thảo: ${e instanceof Error ? e.message : String(e)}` }, 500)
+      return json({ error: `CODE_VER:20260727-2141 | ${e instanceof Error ? e.message : String(e)}` }, 500)
     }
   }
 

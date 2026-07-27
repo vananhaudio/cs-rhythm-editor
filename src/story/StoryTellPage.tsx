@@ -241,8 +241,8 @@ export default function StoryTellPage() {
       setPhase('draft')
     } catch (e) {
       console.error('story-ai write', e)
-      const msg = await getErrMsg(e)
-      setMiraReply(`Có lỗi khi tạo bản thảo: ${msg}. Bạn thử lại nhé 🌿`)
+      const msg = (e as { message?: string })?.message || String(e)
+      setMiraReply('Lỗi: ' + msg)
       setPhase('ready_for_draft')
     } finally { setSending(false) }
   }, [storyId, sending])
