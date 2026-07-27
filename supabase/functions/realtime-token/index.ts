@@ -1,27 +1,10 @@
 // Edge Function: realtime-token
-// Tạo ephemeral token cho OpenAI Realtime API (WebRTC).
-// DEPLOY: Supabase Dashboard -> Edge Functions -> Create -> paste code này
+// Nhận SDP từ browser → forward đến OpenAI /v1/realtime/calls → trả về answer SDP.
+// DEPLOY: Supabase Dashboard -> Edge Functions -> Create -> paste code
 //         -> "Verify JWT" = ON -> Deploy.
-//         KHÔNG cần env vars — paste thẳng key OpenAI vào dòng dưới.
+//         Sửa dòng OPENAI_API_KEY bên dưới.
 
-const OPENAI_API_KEY = 'THAY_BANG_KEY_OPENAI_CUA_THAY'
-
-const MODEL = 'gpt-4o-realtime-preview-2024-12-17'
-const VOICE = 'ash'
-
-const SYSTEM_PROMPT = `You are Co Piano, a friendly piano teacher for children aged 5-12.
-
-PERSONALITY:
-- Warm, encouraging, patient.
-- Speak naturally in Vietnamese. Short sentences. Simple words kids understand.
-- NEVER lecture. NEVER give long explanations.
-- Keep responses under 2 sentences unless the child asks.
-
-RULES:
-- If child wants to play something: "Tuyet voi! Minh cung choi nhe!" + ONE follow-up.
-- If child doesn't know what to say: suggest ONE idea.
-- NEVER use technical music terms unless child uses them first.
-- Goal: make child excited about playing piano.`
+const OPENAI_API_KEY = 'THAY_B…THAY'
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -29,46 +12,45 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+const SESSION_CONFIG = JSON.stringify({
+  type: 'realtime',
+  model: 'gpt-realtime-2.1',
+  audio: { output: { voice: 'ash' } },
+  instructions: `You are Co Piano, a friendly piano teacher for children aged 5-12. Speak in Vietnamese. Short, warm, encouraging. Never lecture. Max 2 sentences.`,
+  input_audio_transcription: { model: 'whisper-1' },
+  turn_detection: { type: 'server_vad' },
+})
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
-  if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'POST only' }), { status: 405, headers: { ...cors, 'Content-Type': 'application/json' } })
 
   try {
-    const res = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    const sdpOffer = await req.text()
+    if (!sdpOffer || !sdpOffer.includes('v=0')) {
+      return new Response(JSON.stringify({ error: 'Missing valid SDP' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
+    }
+
+    const fd = new FormData()
+    fd.set('sdp', sdpOffer)
+    fd.set('session', SESSION_CONFIG)
+
+    const res = await fetch('https://api.openai.com/v1/realtime/calls', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        voice: VOICE,
-        instructions: SYSTEM_PROMPT,
-        input_audio_transcription: { model: 'whisper-1' },
-        turn_detection: { type: 'server_vad' },
-      }),
+      headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+      body: fd,
     })
 
     if (!res.ok) {
       const err = await res.text()
-      console.error('OpenAI session error', res.status, err)
-      return json({ error: `OpenAI error: ${res.status}` }, 502)
+      console.error('OpenAI error', res.status, err)
+      return new Response(JSON.stringify({ error: `OpenAI ${res.status}: ${err.slice(0, 100)}` }), { status: 502, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
-    const data = await res.json()
-    const token = data.client_secret?.value
-
-    if (!token) {
-      console.error('No token', JSON.stringify(data))
-      return json({ error: 'No ephemeral token' }, 502)
-    }
-
-    return json({ token })
-  } catch (e) {
+    const answerSdp = await res.text()
+    return new Response(answerSdp, { headers: { ...cors, 'Content-Type': 'application/sdp' } })
+  } catch (e: any) {
     console.error('realtime-token error', e)
-    return json({ error: 'Internal error' }, 500)
+    return new Response(JSON.stringify({ error: e?.message || 'Internal error' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
 })
