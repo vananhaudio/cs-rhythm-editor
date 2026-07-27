@@ -34,29 +34,67 @@ function parseCSV(text: string): string[][] {
   if (cur.length || row.length) { row.push(cur); rows.push(row) }
   return rows
 }
-// Lịch khai giảng — đọc từ bảng class_schedule (thầy quản lý trong /admin → Lịch lớp). Lỗi → rỗng.
+// Lịch THẬT — đọc class_schedule + class_sessions MỖI LƯỢT CHAT (Mira luôn có lịch mới nhất).
+// Phân nhóm bằng STATUS + NGÀY THẬT (đồng bộ bucketOf của ClassLandingPage) — KHÔNG dùng cột
+// `section` (nhóm hiển thị tĩnh, thầy không cập nhật → lịch lỗi thời, Mira tư vấn sai ngày).
 async function fetchScheduleText(): Promise<string> {
   try {
-    const [{ data: rows }, { data: cs }] = await Promise.all([
-      db.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,main_course_id').eq('is_active', true).order('sort_order'),
+    const [{ data: rows }, { data: cs }, { data: sess }] = await Promise.all([
+      db.from('class_schedule').select('id,code,name,section,schedule,start_text,price,course_ids,main_course_id,start_date,end_date,status').eq('is_active', true).order('sort_order'),
       db.from('edu_courses').select('id,name,code,track'),
+      db.from('class_sessions').select('class_id,start_at,status'),
     ])
     const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })
-    const all = (rows ?? []) as any[]
+    const sessBy: Record<string, any[]> = {}
+    for (const s of (sess ?? []) as any[]) (sessBy[s.class_id] ??= []).push(s)
+
+    const DAY = 86400000
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const dayStart = (s: string) => new Date(s + 'T00:00:00').setHours(0, 0, 0, 0)
+    const dmy = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
+    const HIDDEN = ['draft', 'cancelled', 'merged', 'completed', 'paused']
+
+    // Đếm buổi CÙNG QUY ƯỚC src/journey/sessions.ts: bỏ huỷ/nghỉ lễ; buổi dời chưa tính "đã học"
+    const progress = (cid: string) => {
+      const teach = (sessBy[cid] ?? []).filter((s: any) => s.status !== 'cancelled' && s.status !== 'holiday')
+      const now = Date.now()
+      const current = teach.filter((s: any) => s.status === 'completed' || (new Date(s.start_at).getTime() <= now && s.status !== 'rescheduled')).length
+      return { current: Math.min(current, teach.length), total: teach.length, remaining: Math.max(0, teach.length - current) }
+    }
     const label = (r: any): string => {
       const linked = (r.course_ids ?? []).map((id: string) => byId[id]).filter(Boolean)
       const coded = linked.filter((c: any) => c.code && c.code !== 'NM')
       const main = byId[r.main_course_id] ?? coded[0]
       const nl = main?.code ? (TEN_NANG_LUC[main.code] ?? main.code) : (TRACK_VI[main?.track] ?? 'Guitar')
-      return `- ${main?.name ?? r.name} (${nl})${r.schedule ? ' · ' + r.schedule : ''}${r.start_text ? ' · khai giảng ' + r.start_text : ''}${r.price ? ' · ' + r.price : ''}`
+      return `- ${main?.name ?? r.name} (${nl})${r.schedule ? ' · ' + r.schedule : ''}${r.price ? ' · ' + r.price : ''}`
     }
-    const upcoming = all.filter((r) => r.section === 'upcoming').map(label)
-    const activeCount = all.filter((r) => r.section === 'active' || r.section === 'smallgroup' || r.section === 'oneonone').length
-    const lines: string[] = []
-    if (upcoming.length) lines.push(`LỚP SẮP KHAI GIẢNG (lịch thật, được phép tư vấn):\n${upcoming.join('\n')}`)
-    if (activeCount) lines.push(`Hiện có khoảng ${activeCount} lớp đang hoạt động — bằng chứng lớp học sôi nổi.`)
-    if (!lines.length) return ''
-    return `\n\n========== LỊCH KHAI GIẢNG THẬT (cập nhật trực tiếp) ==========\n${lines.join('\n\n')}\n\nĐược phép tư vấn khách về các lớp SẮP KHAI GIẢNG ở trên. Lớp/lịch không có trong danh sách này, hoặc cần chốt chỗ → mời khách nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist).`
+
+    const upcoming: string[] = [], active: string[] = []
+    let smallCount = 0
+    for (const r of (rows ?? []) as any[]) {
+      if (HIDDEN.includes(r.status)) continue
+      if (r.section === 'smallgroup' || r.section === 'oneonone') { smallCount++; continue }
+      const isActiveStatus = r.status === 'active' || r.status === 'ending_soon'
+      const notStarted = !isActiveStatus && (r.start_date ? dayStart(r.start_date) > today.getTime() : r.section !== 'active')
+      if (notStarted) {
+        const days = r.start_date ? Math.ceil((dayStart(r.start_date) - today.getTime()) / DAY) : null
+        const kg = r.start_date ? dmy(r.start_date) : (r.start_text || 'đang xếp lịch')
+        upcoming.push(`${label(r)} · khai giảng ${kg}${days !== null ? ` (còn ${days} ngày)` : ''}`)
+      } else {
+        if (!isActiveStatus && r.end_date && dayStart(r.end_date) < today.getTime()) continue   // đã qua ngày kết thúc
+        const p = progress(r.id)
+        active.push(label(r)
+          + (p.total ? ` · đã học ${p.current}/${p.total} buổi, còn ${p.remaining} buổi` : '')
+          + (r.end_date ? ` · kết thúc ${dmy(r.end_date)}` : ''))
+      }
+    }
+
+    const lines: string[] = [`HÔM NAY là ${dmy(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`)} — mọi tính toán ngày/buổi dựa trên mốc này.`]
+    if (upcoming.length) lines.push(`LỚP SẮP KHAI GIẢNG (lịch thật, được phép tư vấn + mời đăng ký):\n${upcoming.join('\n')}`)
+    else lines.push(`HIỆN KHÔNG CÓ LỚP SẮP KHAI GIẢNG — lớp mới đang được xếp lịch. Tư vấn khách ĐỂ LẠI THÔNG TIN ở form đăng ký (mục Lịch trên trang) để thầy giữ chỗ và báo ngay khi mở lớp. TUYỆT ĐỐI không bịa ngày khai giảng.`)
+    if (active.length) lines.push(`LỚP ĐANG HỌC (đúng tiến độ thật — khách muốn vào giữa khoá thì mời nhắn Zalo thầy xác nhận):\n${active.join('\n')}`)
+    if (smallCount) lines.push(`Ngoài ra có ${smallCount} nhóm nhỏ / kèm 1-1 đang hoạt động.`)
+    return `\n\n========== LỊCH LỚP THẬT (đọc trực tiếp từ hệ thống, mới nhất từng lượt chat) ==========\n${lines.join('\n\n')}\n\nChỉ tư vấn lớp/lịch CÓ trong danh sách này. Lớp không có ở đây, hoặc cần chốt chỗ → mời khách nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist).`
   } catch { return '' }
 }
 

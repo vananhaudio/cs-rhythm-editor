@@ -101,13 +101,18 @@ export function scheduleText(weekday?: number | null, startTime?: string | null)
   return `${thu} · ${hh}h${mm && mm !== '00' ? mm : '00'}`
 }
 
-// Buổi hiện tại / tổng, dựa vào thời điểm now. Trả {current, total, done}.
-// current = số buổi ĐÃ tới (start_at <= now) — buổi đang/đã diễn ra; done = số buổi status='completed'.
+// Buổi hiện tại / tổng / còn lại, dựa vào thời điểm now.
+// Quy ước đếm:
+//   - 'cancelled' (huỷ) + 'holiday' (nghỉ lễ): KHÔNG phải buổi dạy → loại khỏi cả "đã học" lẫn "tổng".
+//   - 'rescheduled' (dời buổi): chưa dạy tại giờ gốc, sẽ dạy bù → KHÔNG tính "đã học", VẪN tính "còn lại".
+//   - còn lại: đã qua giờ (hoặc 'completed') = đã học; total - current = còn lại.
 export interface SessionRow { session_number: number; start_at: string; status: string }
-export function progressInfo(sessions: SessionRow[], now = new Date()): { current: number; total: number; done: number } {
-  const total = sessions.length
+const NON_TEACHING = new Set(['cancelled', 'holiday'])
+export function progressInfo(sessions: SessionRow[], now = new Date()): { current: number; total: number; done: number; remaining: number } {
+  const teach = sessions.filter(s => !NON_TEACHING.has(s.status))
+  const total = teach.length
   const t = now.getTime()
-  const current = sessions.filter(s => new Date(s.start_at).getTime() <= t && s.status !== 'cancelled').length
+  const current = teach.filter(s => s.status === 'completed' || (new Date(s.start_at).getTime() <= t && s.status !== 'rescheduled')).length
   const done = sessions.filter(s => s.status === 'completed').length
-  return { current, total, done }
+  return { current, total, done, remaining: Math.max(0, total - current) }
 }

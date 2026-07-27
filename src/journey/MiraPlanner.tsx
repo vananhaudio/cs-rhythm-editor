@@ -3,7 +3,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { supabase } from '../supabase'
 import { TEN_NANG_LUC, nextCourses } from '../hanhtrinh'
-import { type SessionRow } from './sessions'
+import { progressInfo, type SessionRow } from './sessions'
 import type { ClassLite } from './ScheduleDashboard'
 
 const S = { surface: '#FFFFFF', border: '#E4E4E7', text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', accent: '#4F46E5', accentLight: '#EEF2FF', bg: '#F4F4F5', ok: '#16A34A', okBg: '#F0FDF4', warn: '#B45309', warnBg: '#FEF3C7', err: '#DC2626', errBg: '#FEF2F2' }
@@ -55,8 +55,8 @@ export default function MiraPlanner({ courses, classes, sessById, onCreateDraft,
 
   const now = new Date()
   const hasCourse = (code: string) => courses.some(c => (c.code || '').toUpperCase() === code)
-  // số buổi còn lại (chưa tới, chưa completed/cancelled)
-  const remaining = (cid: string) => (sessById[cid] ?? []).filter(s => new Date(s.start_at).getTime() > now.getTime() && s.status !== 'cancelled' && s.status !== 'completed').length
+  // số buổi còn lại — đếm chuẩn progressInfo (bỏ huỷ/nghỉ lễ, tính buổi dời chờ bù)
+  const remaining = (cid: string) => progressInfo(sessById[cid] ?? [], now).remaining
   const activeClassCodes = new Set(classes.filter(c => c.is_active && c.status !== 'completed' && c.status !== 'cancelled' && c.status !== 'merged').map(c => (c.mainCourseCode || '').toUpperCase()))
 
   const recs: Rec[] = []

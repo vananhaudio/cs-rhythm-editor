@@ -1,6 +1,6 @@
 // ── JOURNEY OS — Dashboard chỉ số (thẻ tổng quan lịch) ──
 import type { CSSProperties } from 'react'
-import { statusInfo, type SessionRow } from './sessions'
+import { statusInfo, progressInfo, type SessionRow } from './sessions'
 
 export interface ClassLite {
   id: string; code: string | null; name: string; status: string
@@ -32,12 +32,11 @@ export default function ScheduleDashboard({ classes, sessById }: { classes: Clas
   const sapKG = classes.filter(c => c.is_active && (c.status === 'upcoming' || c.status === 'scheduled'))
   const draft = classes.filter(c => c.is_active && (c.status === 'draft' || c.status === 'recruiting'))
 
-  // Lớp sắp kết thúc / cần xếp tiếp: còn ≤2 buổi chưa tới (theo class_sessions)
+  // Lớp sắp kết thúc / cần xếp tiếp: còn ≤2 buổi (đếm chuẩn progressInfo — bỏ huỷ/nghỉ lễ, tính buổi dời chờ bù)
   const conLai = (c: ClassLite) => {
     const ss = sessById[c.id] ?? []
     if (!ss.length) return null
-    const nowT = now.getTime()
-    return ss.filter(s => new Date(s.start_at).getTime() > nowT && s.status !== 'cancelled' && s.status !== 'completed').length
+    return progressInfo(ss, now).remaining
   }
   const sapKT = classes.filter(c => c.is_active && c.status !== 'completed' && (() => { const r = conLai(c); return r !== null && r > 0 && r <= 2 })())
 
