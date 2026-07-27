@@ -7,7 +7,6 @@ interface Exercise { title: string; bpm: number; notes: PianoNote[] }
 
 const SUPABASE_URL = 'https://wojmdilyflffvdtpovmq.supabase.co'
 
-// ── Demo fallback ─────────────────────────────────────────────────────────────
 const DEMO: Exercise = {
   title: 'Twinkle Twinkle Little Star',
   bpm: 100,
@@ -23,34 +22,34 @@ const DEMO: Exercise = {
   ],
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const PITCH_Y: Record<string, number> = {
-  'C4':5,'D4':4,'E4':3,'F4':2,'G4':1,'A4':0,'B4':-1,'C5':-2,'D5':-3,'E5':-4,'F5':-5,
-}
-const COLORS: Record<string, string> = {
-  'C':'#EF4444','D':'#F59E0B','E':'#10B981','F':'#3B82F6','G':'#8B5CF6','A':'#EC4899','B':'#06B6D4',
-}
+const PITCH_Y: Record<string, number> = { 'C4':5,'D4':4,'E4':3,'F4':2,'G4':1,'A4':0,'B4':-1,'C5':-2,'D5':-3,'E5':-4,'F5':-5 }
+const COLORS: Record<string, string> = { 'C':'#EF4444','D':'#F59E0B','E':'#10B981','F':'#3B82F6','G':'#8B5CF6','A':'#EC4899','B':'#06B6D4' }
 function pc(p: string) { return COLORS[p[0]] || '#F59E0B' }
 function py(p: string) { return PITCH_Y[p] ?? 3 }
 
 const STAFF_LH = 12; const NR = 18; const PH_RATIO = 0.28; const PX_BEAT = 90
 
-interface Props { onClose?: () => void }
+interface Props {
+  exercise?: Exercise
+  onClose?: () => void
+  onBack?: () => void
+}
 
-export default function MusicPlayer({ onClose }: Props) {
+export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef   = useRef(0)
   const stRef     = useRef(0)
-  const [exercise, setExercise] = useState<Exercise>(DEMO)
-  const [prompt, setPrompt]     = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [playing, setPlaying]   = useState(false)
-  const [tempo, setTempo]       = useState(DEMO.bpm)
-  const [beat, setBeat]         = useState(0)
+  const [ex, setEx]       = useState<Exercise>(propEx || DEMO)
+  const [prompt, setPrompt]   = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
+  const [playing, setPlaying] = useState(false)
+  const [tempo, setTempo]     = useState((propEx || DEMO).bpm)
+  const [beat, setBeat]       = useState(0)
+  const [showInput, setShowInput] = useState(!propEx)
 
-  // Sync tempo when exercise changes
-  useEffect(() => { setTempo(exercise.bpm); setBeat(0); setPlaying(false); stRef.current = 0 }, [exercise])
+  useEffect(() => { if (propEx) { setEx(propEx); setTempo(propEx.bpm); setShowInput(false) } }, [propEx])
+  useEffect(() => { setTempo(ex.bpm); setBeat(0); setPlaying(false); stRef.current = 0 }, [ex])
 
   // ── Generate ──
   const generate = async () => {
@@ -59,7 +58,6 @@ export default function MusicPlayer({ onClose }: Props) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { setError('Vui lòng đăng nhập'); setLoading(false); return }
-
       const res = await fetch(`${SUPABASE_URL}/functions/v1/piano-generate`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
@@ -67,11 +65,9 @@ export default function MusicPlayer({ onClose }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Server ${res.status}`)
-
-      setExercise(data as Exercise)
-    } catch (e: any) {
-      setError(e.message)
-    }
+      setEx(data as Exercise)
+      setShowInput(false)
+    } catch (e: any) { setError(e.message) }
     setLoading(false)
   }
 
@@ -88,13 +84,11 @@ export default function MusicPlayer({ onClose }: Props) {
     setBeat(cb)
 
     ctx.clearRect(0, 0, W, H)
-
-    // BG
     const bg = ctx.createLinearGradient(0, 0, 0, H)
     bg.addColorStop(0, '#1a1206'); bg.addColorStop(1, '#0d0a04')
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
 
-    // Staff
+    // Staff lines
     for (let i = 0; i < 5; i++) {
       const y = st + i * STAFF_LH * 2
       ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1
@@ -118,7 +112,7 @@ export default function MusicPlayer({ onClose }: Props) {
     ctx.fillText('𝄞', sl+4, sm+STAFF_LH*3.5)
 
     // Notes
-    for (const n of exercise.notes) {
+    for (const n of ex.notes) {
       const nx = ph + (n.startBeat - cb) * PX_BEAT
       if (nx+NR < sl || nx-NR > sr) continue
       const y = st + py(n.pitch) * STAFF_LH + STAFF_LH
@@ -126,14 +120,12 @@ export default function MusicPlayer({ onClose }: Props) {
       const atPH = n.startBeat <= cb && n.startBeat + n.duration >= cb
       const done = n.startBeat + n.duration <= cb
 
-      // Glow
       if (atPH) {
         const g = ctx.createRadialGradient(nx, y, 0, nx, y, NR*1.8)
         g.addColorStop(0, 'rgba(251,191,36,0.25)'); g.addColorStop(1, 'rgba(251,191,36,0)')
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(nx, y, NR*1.8, 0, Math.PI*2); ctx.fill()
       }
 
-      // Ledger C4
       if (n.pitch === 'C4') {
         const ly = st + STAFF_LH * 10
         ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2
@@ -142,28 +134,24 @@ export default function MusicPlayer({ onClose }: Props) {
 
       const nc = done ? '#10B981' : atPH ? '#FEF3C7' : col
       const na = done ? 0.7 : 1
-
-      // Stem
       const up = py(n.pitch) >= 2
+
       ctx.strokeStyle = nc; ctx.globalAlpha = na; ctx.lineWidth = 3
       ctx.beginPath()
       if (up) { ctx.moveTo(nx+NR-2, y); ctx.lineTo(nx+NR-2, y-STAFF_LH*5) }
       else    { ctx.moveTo(nx-NR+2, y); ctx.lineTo(nx-NR+2, y+STAFF_LH*5) }
       ctx.stroke()
 
-      // Head
       ctx.fillStyle = nc; ctx.beginPath()
       ctx.ellipse(nx, y, NR, NR*0.75, -0.15, 0, Math.PI*2); ctx.fill()
       ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5; ctx.stroke()
       ctx.globalAlpha = 1
     }
 
-    // Beat counter
     ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '13px Inter, system-ui, sans-serif'
     ctx.fillText(`🎵 ${Math.floor(cb)+1}`, sr-50, st-14)
-
     animRef.current = requestAnimationFrame(draw)
-  }, [tempo, playing, exercise])
+  }, [tempo, playing, ex])
 
   useEffect(() => { animRef.current = requestAnimationFrame(draw); return () => cancelAnimationFrame(animRef.current) }, [draw])
 
@@ -175,36 +163,32 @@ export default function MusicPlayer({ onClose }: Props) {
 
   return (
     <div style={{ width:'100%',height:'100dvh',background:'#0d0a04',display:'flex',flexDirection:'column',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflow:'hidden' }}>
-      {onClose && <button onClick={onClose} style={{ position:'absolute',top:16,right:16,zIndex:10,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:40,height:40,fontSize:16,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>}
+      {/* Top bar */}
+      <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:10,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 16px 0' }}>
+        {onBack ? (
+          <button onClick={onBack} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:40,height:40,fontSize:16,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>←</button>
+        ) : onClose ? (
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:40,height:40,fontSize:16,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
+        ) : <div />}
+        <div style={{ fontSize:18,fontWeight:700,color:'rgba(255,255,255,.7)' }}>🎹 {ex.title}</div>
+        <div style={{ width:40 }} />
+      </div>
 
       <canvas ref={canvasRef} style={{ flex:1,width:'100%',display:'block' }} width={typeof window!=='undefined'?window.innerWidth:400} height={typeof window!=='undefined'?window.innerHeight:700} />
 
-      {/* AI Input */}
-      {!playing && (
+      {/* AI Input overlay */}
+      {showInput && !playing && (
         <div style={{ position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:12,width:'80%',maxWidth:360 }}>
-          <div style={{ fontSize:15,color:'rgba(255,255,255,.5)',textAlign:'center' }}>
-            {exercise === DEMO ? 'Con muốn tập bài gì?' : exercise.title}
-          </div>
-          <input
-            value={prompt} onChange={e => setPrompt(e.target.value)}
-            onKeyDown={e => e.key==='Enter' && generate()}
-            placeholder='VD: bài hát thiếu nhi vui nhộn...'
-            autoFocus
-            style={{ width:'100%',padding:'14px 18px',fontSize:16,borderRadius:14,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.05)',color:'#fff',outline:'none',fontFamily:'inherit',textAlign:'center' }}
-          />
+          <div style={{ fontSize:15,color:'rgba(255,255,255,.5)',textAlign:'center' }}>Con muốn tập bài gì?</div>
+          <input value={prompt} onChange={e => setPrompt(e.target.value)} onKeyDown={e => e.key==='Enter' && generate()} placeholder='VD: bài hát thiếu nhi vui nhộn...' autoFocus
+            style={{ width:'100%',padding:'14px 18px',fontSize:16,borderRadius:14,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.05)',color:'#fff',outline:'none',fontFamily:'inherit',textAlign:'center' }} />
           <button onClick={generate} disabled={loading || !prompt.trim()}
             style={{ padding:'14px 32px',fontSize:16,fontWeight:700,borderRadius:14,border:'none',background:loading?'rgba(255,255,255,.05)':'linear-gradient(135deg,#F59E0B,#D97706)',color:loading?'rgba(255,255,255,.3)':'#fff',cursor:loading?'default':'pointer',fontFamily:'inherit' }}>
             {loading ? '⏳ Đang tạo...' : '🎹 Tạo bài tập'}
           </button>
           {error && <div style={{ fontSize:13,color:'#FCA5A5',textAlign:'center' }}>{error}</div>}
-          {exercise !== DEMO && <div onClick={() => { setExercise(DEMO); setPrompt('') }} style={{ fontSize:13,color:'rgba(255,255,255,.3)',cursor:'pointer' }}>← Quay lại bài mẫu</div>}
         </div>
       )}
-
-      {/* Title */}
-      <div style={{ position:'absolute',top:16,left:0,right:0,textAlign:'center',pointerEvents:'none' }}>
-        <div style={{ fontSize:18,fontWeight:700,color:'rgba(255,255,255,.7)' }}>🎹 {exercise.title}</div>
-      </div>
 
       {/* Controls */}
       <div style={{ position:'absolute',bottom:0,left:0,right:0,display:'flex',alignItems:'center',justifyContent:'center',gap:16,padding:'16px 20px 32px',background:'linear-gradient(to top,rgba(13,10,4,.95),transparent)' }}>
