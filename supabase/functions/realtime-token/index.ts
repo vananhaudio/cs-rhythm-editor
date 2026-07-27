@@ -1,29 +1,27 @@
 // Edge Function: realtime-token
 // Tạo ephemeral token cho OpenAI Realtime API (WebRTC).
-// Chỉ học viên đã đăng nhập mới gọi được.
-// DEPLOY: Supabase Dashboard -> Edge Functions -> realtime-token -> "Verify JWT" = ON
-//         + thêm env OPENAI_API_KEY
+// DEPLOY: Supabase Dashboard -> Edge Functions -> Create -> paste code này
+//         -> "Verify JWT" = ON -> Deploy.
+//         KHÔNG cần env vars — paste thẳng key OpenAI vào dòng dưới.
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!
+const OPENAI_API_KEY = 'THAY_BANG_KEY_OPENAI_CUA_THAY'
+
 const MODEL = 'gpt-4o-realtime-preview-2024-12-17'
-const VOICE = 'ash' // giọng nhẹ nhàng, thân thiện với trẻ em
+const VOICE = 'ash'
 
-const SYSTEM_PROMPT = `You are a friendly piano teacher for children aged 5-12. Your name is Cô Piano.
+const SYSTEM_PROMPT = `You are Co Piano, a friendly piano teacher for children aged 5-12.
 
 PERSONALITY:
 - Warm, encouraging, patient.
 - Speak naturally in Vietnamese. Short sentences. Simple words kids understand.
 - NEVER lecture. NEVER give long explanations.
-- ALWAYS keep responses under 2 sentences unless the child asks a direct question.
+- Keep responses under 2 sentences unless the child asks.
 
 RULES:
-- If the child says they want to play something, say "Tuyệt vời! Mình cùng chơi nhé!" and ask ONE simple follow-up.
-- If the child doesn't know what to say, suggest ONE idea (like "Mình tập bài Twinkle Twinkle Star nhé?").
-- NEVER use technical music terms unless the child uses them first.
-- Your ONLY goal is to make the child feel excited about playing piano.
-
-FORMAT:
-- No markdown. No emoji lists. Max 1 emoji per response.`
+- If child wants to play something: "Tuyet voi! Minh cung choi nhe!" + ONE follow-up.
+- If child doesn't know what to say: suggest ONE idea.
+- NEVER use technical music terms unless child uses them first.
+- Goal: make child excited about playing piano.`
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -64,7 +62,7 @@ Deno.serve(async (req) => {
     const token = data.client_secret?.value
 
     if (!token) {
-      console.error('No token in response', JSON.stringify(data))
+      console.error('No token', JSON.stringify(data))
       return json({ error: 'No ephemeral token' }, 502)
     }
 
