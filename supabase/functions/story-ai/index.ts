@@ -358,6 +358,45 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ============ ACTION: COMPLETE ============
+  if (action === 'complete') {
+    if (!body.storyId || !body.rawContent) return json({ error: 'Missing storyId or rawContent' }, 400)
+
+    const { data: story } = await db.from('stories')
+      .select('id,user_id,status').eq('id', body.storyId).maybeSingle()
+    if (!story) return json({ error: 'Story not found' }, 404)
+    if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
+
+    await db.from('stories').update({ status: 'user_review' }).eq('id', story.id)
+
+    const COMPLETE_SYSTEM = `You are Mira. Read the storyteller's complete story below. Evaluate if it has enough material for a draft.
+
+Criteria: clear narrative + specific details + emotional truth.
+
+Return ONLY this JSON:
+{"ready":true|false,"reply":"your response in Vietnamese"}
+
+If ready: reply warmly, briefly — the story has enough.
+If not ready: reply gently, suggest what could be added.`
+
+    try {
+      const rawReply = await callAnthropic(COMPLETE_SYSTEM, [{
+        role: 'user',
+        content: `Complete story:\n${(body.rawContent as string).slice(0, 8000)}`
+      }], MODEL_CHAT, 400)
+
+      let jsonStr = rawReply.trim()
+      const m = jsonStr.match(/\{[\s\S]*\}/)
+      if (m) jsonStr = m[0]
+      jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      const parsed = JSON.parse(jsonStr)
+      return json({ ready: parsed.ready === true, reply: parsed.reply || '' })
+    } catch (e) {
+      console.error('complete error', e)
+      return json({ ready: true, reply: 'Câu chuyện của bạn đã sẵn sàng để tạo bản thảo.' })
+    }
+  }
+
   // ============ ACTION: REVIEW ============
   if (action === 'review') {
     if (!body.storyId) return json({ error: 'Missing storyId' }, 400)

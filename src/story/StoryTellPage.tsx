@@ -382,7 +382,29 @@ export default function StoryTellPage() {
     } finally { setSending(false) }
   }, [input, sending, storyId])
 
-  // ── Request draft ──
+  // ── MVP 04: Hoàn thành lời kể ──
+  const completeStory = useCallback(async () => {
+    if (!storyId || sending || !rawContent) return
+    setSending(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('story-ai', {
+        body: { action: 'complete', storyId, rawContent },
+      })
+      if (error || !data) throw error ?? new Error('empty')
+      if (data.ready) {
+        setMiraReady(true)
+        setPhase('ready_for_draft')
+        const miraMsg: ChatMsg = { role: 'mira', text: data.reply || 'Câu chuyện đã sẵn sàng để tạo bản thảo.', at: new Date().toISOString() }
+        setConversation(prev => [...prev, miraMsg])
+      } else {
+        const miraMsg: ChatMsg = { role: 'mira', text: data.reply || 'Bạn có thể kể thêm một chút nữa không?', at: new Date().toISOString() }
+        setConversation(prev => [...prev, miraMsg])
+        setPhase('asking')
+      }
+    } catch (e) {
+      console.error('completeStory', e)
+    } finally { setSending(false) }
+  }, [storyId, sending, rawContent])
   const requestDraft = useCallback(async () => {
     if (!storyId || sending) return
     setSending(true)
@@ -757,6 +779,22 @@ export default function StoryTellPage() {
                   <button className="sw-ready-btn" onClick={requestDraft} disabled={sending}>
                     ✨ Biên tập thành bản thảo
                   </button>
+                </div>
+              </section>
+            )}
+
+            {/* ── SECTION: COMPLETE CTA ── */}
+            {!miraReady && rawContent && userMsgCount >= 2 && (
+              <section className="sw-section sw-complete-section">
+                <button
+                  className="sw-complete-btn"
+                  onClick={completeStory}
+                  disabled={sending}
+                >
+                  ✓ Hoàn thành lời kể
+                </button>
+                <div className="sw-complete-hint">
+                  Bạn luôn có thể quay lại chỉnh sửa hoặc kể thêm sau.
                 </div>
               </section>
             )}
@@ -1211,7 +1249,30 @@ const CSS = `
   box-shadow: none;
 }
 
-/* ── READY ── */
+/* ── COMPLETE CTA ── */
+.sw-complete-section {
+  padding: 12px 0 4px;
+  text-align: center;
+}
+.sw-complete-btn {
+  background: transparent;
+  color: var(--green);
+  border: 2px solid var(--green);
+  border-radius: 20px;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sw-complete-btn:active { background: var(--green); color: #fff; }
+.sw-complete-btn:disabled { opacity: 0.3; cursor: default; }
+.sw-complete-hint {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 6px;
+}
 .sw-ready-card {
   background: rgba(52,199,89,0.08);
   border-radius: 16px;

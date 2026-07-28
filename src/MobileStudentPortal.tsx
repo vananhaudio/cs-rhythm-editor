@@ -7,6 +7,7 @@ import ArpeggioExercise from './ArpeggioExercise'
 import GrooveExercise from './groove/GrooveExercise'
 import ChordDiagramIcon from './ChordDiagramIcon'
 import SongBuilderPage from './SongBuilderPage'
+import PianoJourney from './PianoJourney'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIOS } from './iap'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
@@ -382,6 +383,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [showGroove, setShowGroove] = useState(false)
   // ── BMS (Song Builder) render THẲNG trong app (không iframe) — hết app-chồng-app ──
   const [showBMS, setShowBMS] = useState(false)
+  const [showPiano, setShowPiano] = useState(false)
   const [bmsInit, setBmsInit] = useState<{ title?: string | null; youtube?: string | null; tempo?: string | null } | undefined>(undefined)
   // Tool ID của bài học đang mở exercise (để mark done khi đóng)
   const [currentLessonToolId, setCurrentLessonToolId] = useState<string | null>(null)
@@ -452,6 +454,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   })
 
   const openTool = (route: string, name: string, toolId?: string) => {
+    // Piano Journey: render THẲNG như BMS. Bắt buộc phải thẳng, không iframe —
+    // getUserMedia trong iframe của WKWebView (app iOS) hay bị chặn ⇒ mic chết.
+    if (route.startsWith('/piano-journey')) {
+      setShowPiano(true)
+      if (toolId) markToolUsed(toolId)
+      return
+    }
     // BMS: render THẲNG (không iframe) → hết "app chồng app". Tham số truyền qua prop, không qua URL iframe.
     if (route.startsWith('/song-builder')) {
       const p = new URLSearchParams(route.split('?')[1] ?? '')
@@ -998,6 +1007,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
     {showBMS && (
       <SongBuilderPage embedded initial={bmsInit} onClose={() => setShowBMS(false)} />
+    )}
+
+    {showPiano && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+        <PianoJourney onClose={() => setShowPiano(false)} />
+      </div>
     )}
 
     {celebrate && (
