@@ -191,6 +191,7 @@ export default function StoryTellPage() {
   const [draftTitle, setDraftTitle] = useState('')
   const [draftTopic, setDraftTopic] = useState('')
   const [draftContent, setDraftContent] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
   // ── Refs ──
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -407,6 +408,7 @@ export default function StoryTellPage() {
   }, [storyId, sending, rawContent])
   const requestDraft = useCallback(async () => {
     if (!storyId || sending) return
+    setErrorMsg('')
     setSending(true)
     setPhase('draft_loading')
     try {
@@ -414,12 +416,14 @@ export default function StoryTellPage() {
         body: { action: 'write', storyId },
       })
       if (error || !data) throw error ?? new Error('empty')
+      if (data.error) throw new Error(data.error)
       setDraftTitle(data.title || '')
       setDraftTopic(data.topic || '')
       setDraftContent(data.content || '')
       setPhase('draft')
     } catch (e) {
       console.error('story-ai write', e)
+      setErrorMsg((e as Error).message || 'Lỗi khi tạo bản thảo')
       setPhase('ready_for_draft')
     } finally { setSending(false) }
   }, [storyId, sending])
@@ -779,6 +783,9 @@ export default function StoryTellPage() {
                   <button className="sw-ready-btn" onClick={requestDraft} disabled={sending}>
                     ✨ Biên tập thành bản thảo
                   </button>
+                  {errorMsg && (
+                    <div className="sw-error">{errorMsg}</div>
+                  )}
                 </div>
               </section>
             )}
@@ -1292,6 +1299,12 @@ const CSS = `
 }
 .sw-ready-btn:active { opacity: 0.8; }
 .sw-ready-btn:disabled { opacity: 0.4; cursor: default; }
+.sw-error {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--red);
+  text-align: center;
+}
 
 /* ── COMPOSER — iMessage style ── */
 .sw-composer-section {
