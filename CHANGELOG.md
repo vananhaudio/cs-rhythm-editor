@@ -4,7 +4,7 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 28/07/2026
 
-- **Piano Journey — mic chạy được trong app**: nguyên nhân gốc là **WKWebView/Android WebView KHÔNG có Web Speech API** (chỉ Safari/Chrome trình duyệt mới có), nên trong app đóng gói mic chết ngay từ đầu — test trên Chrome desktop thì luôn thấy chạy tốt. Thêm `src/piano/useVoiceInput.ts` với 3 tầng tự tụt: Web Speech → thu âm (`MediaRecorder`) + Whisper qua edge function `piano-stt` → gõ text. Giữ nguyên `server.url` nên **không phải build lại Xcode**.
+- **Piano Journey — mic chạy được trong app**: nguyên nhân gốc là trong **WKWebView, `webkitSpeechRecognition` CÓ MẶT nhưng CHẾT** — `start()` chạy xong rồi không bao giờ bắn event nào, treo ở "Đang nghe..." vĩnh viễn không báo lỗi. Phép kiểm "API có tồn tại" luôn PASS nên chẩn đoán bị lệch; test trên Chrome desktop cũng luôn thấy chạy tốt. Thêm `src/piano/useVoiceInput.ts` với 3 tầng tự tụt: Web Speech (có watchdog `onstart`/`onaudiostart` 3s) → thu âm (`MediaRecorder`) + Whisper qua edge function `piano-stt` → gõ text. Giữ nguyên `server.url` nên **không phải build lại Xcode**.
 - **Fix 4 bug logic mic**: (1) `onend` đọc `transcript` từ closure cũ → mất trắng câu nói khi recognizer kết thúc mà chưa có final result; (2) `no-speech` gọi `rec.start()` trong `onerror` → luôn throw `InvalidStateError` rồi tuột về idle, chuyển sang restart trong `onend`; (3) `setState` trong thân render; (4) animation `setState` 60fps → chuyển sang CSS.
 - **Chặn treo**: `generateMission` và xin quyền micro đều có timeout (8s / 15s) rồi lùi về bài mẫu — mạng yếu không còn để trẻ kẹt ở "Đang sáng tác".
 - **Piano Journey render thẳng, không iframe** (`MobileStudentPortal`): `getUserMedia` trong iframe của WKWebView hay bị chặn. Cùng khuôn với BMS.
