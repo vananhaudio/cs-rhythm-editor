@@ -26,18 +26,10 @@ export default function PianoJourney({ onClose }: Props) {
   const [exercise, setExercise]   = useState<Exercise | null>(null)
   const [error, setError]         = useState('')
   const [elapsed, setElapsed]     = useState(0)
-  const [voiceSupported, setVoiceSupported] = useState(false)
 
   const flowRef       = useRef<FlowState>('idle')
   const recognitionRef = useRef<any>(null)
   const animRef       = useRef(0)
-
-  // Check voice support on mount
-  useEffect(() => {
-    // @ts-ignore
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    setVoiceSupported(!!SR)
-  }, [])
 
   useEffect(() => { flowRef.current = flow }, [flow])
 
@@ -187,21 +179,16 @@ export default function PianoJourney({ onClose }: Props) {
 
       {/* Button area */}
       <div style={{ display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:40 }}>
-        {/* Mic button — only if voice supported */}
-        {voiceSupported && (
-          <>
-            <div style={{ position:'relative',width:BUTTON*3,height:BUTTON*3,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8 }}>
-              {rings.map((r,i) => <div key={i} style={{ position:'absolute',width:BUTTON,height:BUTTON,borderRadius:'50%',border:`2px solid ${C.ring}`,transform:`scale(${r.scale})`,opacity:r.opacity }} />)}
-              <button onClick={handleTap} disabled={flow !== 'idle'}
-                style={{ width:BUTTON,height:BUTTON,borderRadius:'50%',background:cfg.bg,border:'none',cursor:flow==='idle'?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:cfg.shadow,transform:`scale(${cfg.scale})`,transition:'transform .3s ease,box-shadow .5s ease,background .5s ease',position:'relative',zIndex:2,outline:'none',fontSize:36 }}>
-                {flow === 'generating' ? <Dots /> : cfg.icon}
-              </button>
-            </div>
-            <div style={{ fontSize:15,fontWeight:600,color:cfg.lc,transition:'color .5s ease',textAlign:'center',maxWidth:320,lineHeight:1.4 }}>
-              {cfg.label}
-            </div>
-          </>
-        )}
+        <div style={{ position:'relative',width:BUTTON*3,height:BUTTON*3,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8 }}>
+          {rings.map((r,i) => <div key={i} style={{ position:'absolute',width:BUTTON,height:BUTTON,borderRadius:'50%',border:`2px solid ${C.ring}`,transform:`scale(${r.scale})`,opacity:r.opacity }} />)}
+          <button onClick={handleTap} disabled={flow !== 'idle'}
+            style={{ width:BUTTON,height:BUTTON,borderRadius:'50%',background:cfg.bg,border:'none',cursor:flow==='idle'?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:cfg.shadow,transform:`scale(${cfg.scale})`,transition:'transform .3s ease,box-shadow .5s ease,background .5s ease',position:'relative',zIndex:2,outline:'none',fontSize:36 }}>
+            {flow === 'generating' ? <Dots /> : cfg.icon}
+          </button>
+        </div>
+        <div style={{ fontSize:15,fontWeight:600,color:cfg.lc,transition:'color .5s ease',textAlign:'center',maxWidth:320,lineHeight:1.4 }}>
+          {cfg.label}
+        </div>
         {error && <div style={{ fontSize:13,color:'#C2410C',textAlign:'center',marginTop:8 }}>{error}</div>}
 
         {/* Text input */}
