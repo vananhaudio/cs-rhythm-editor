@@ -937,9 +937,7 @@ const CSS = `
 
 /* ── COMPOSER ── */
 .sw-composer-section {
-  position: sticky;
-  bottom: 0;
-  background: var(--bg);
+  padding-top: 8px;
   padding-bottom: 12px;
 }
 .sw-composer {
