@@ -49,10 +49,97 @@ const STEP_INSTRUCTIONS: Record<string, string> = {
 }
 
 const STEP_CTA: Record<string, string> = {
-  listen: '▶ Nghe',
-  note: '▶ Bắt đầu',
-  rhythm: '▶ Bắt đầu',
-  perform: '▶ Biểu diễn',
+  listen: 'Nghe',
+  note: 'Bắt đầu',
+  rhythm: 'Bắt đầu',
+  perform: 'Biểu diễn',
+}
+
+// ── Shared Bottom Bar ─────────────────────────────────────────────────────────
+
+function BottomBar({
+  onReplay, onToggle, onSkip, onSpeedCycle,
+  isPlaying, ctaLabel, speedLabel, showSpeed = true,
+}: {
+  onReplay: () => void
+  onToggle: () => void
+  onSkip: () => void
+  onSpeedCycle: () => void
+  isPlaying: boolean
+  ctaLabel: string
+  speedLabel: string
+  showSpeed?: boolean
+}) {
+  return (
+    <div style={{
+      flexShrink: 0, display: 'flex', alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '8px 12px calc(16px + env(safe-area-inset-bottom, 0px))',
+      gap: 8,
+    }}>
+      {/* Replay */}
+      <button onClick={onReplay} style={{
+        width: 40, height: 40, borderRadius: 12,
+        background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.06)',
+        color: C.dim, fontSize: 18, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        ↺
+      </button>
+
+      {/* Play/Pause + Speed group */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={onToggle} style={{
+          width: 56, height: 56, borderRadius: 16,
+          border: 'none',
+          background: isPlaying ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
+          color: isPlaying ? C.text : '#fff',
+          fontSize: 20, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(245,158,11,.3)',
+          transition: 'all .2s',
+          flexShrink: 0,
+        }}>
+          {isPlaying ? '⏸' : '▶'}
+        </button>
+
+        {/* Speed chip */}
+        <button onClick={onSpeedCycle} style={{
+          padding: `6px 10px`, height: 32,
+          borderRadius: 8,
+          border: `1px solid ${C.border}`,
+          background: '#fff',
+          color: C.dim, fontSize: 11, fontWeight: 700,
+          fontFamily: 'inherit', cursor: 'pointer',
+          opacity: showSpeed ? 1 : 0.4,
+          pointerEvents: showSpeed ? 'auto' : 'none',
+          whiteSpace: 'nowrap', flexShrink: 0,
+        }}>
+          {speedLabel}
+        </button>
+
+        {/* CTA label */}
+        <span style={{
+          fontSize: 11, fontWeight: 600, color: C.dim,
+          whiteSpace: 'nowrap', minWidth: 48, textAlign: 'center',
+        }}>
+          {ctaLabel}
+        </span>
+      </div>
+
+      {/* Skip */}
+      <button onClick={onSkip} style={{
+        padding: '8px 14px', height: 40, borderRadius: 12,
+        background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.06)',
+        color: C.muted, fontSize: 12, fontWeight: 600,
+        fontFamily: 'inherit', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+      }}>
+        Bỏ qua →
+      </button>
+    </div>
+  )
 }
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -252,42 +339,15 @@ function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
       </div>
 
       {/* Bottom CTA */}
-      <div style={{
-        flexShrink: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', gap: 6,
-        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
-      }}>
-        {!done ? (
-          <button onClick={playing ? stop : start}
-            style={{
-              width: '100%', maxWidth: 280, padding: '12px 0',
-              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-              background: playing ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
-              color: playing ? C.text : '#fff',
-              fontFamily: 'inherit', cursor: 'pointer',
-            }}>
-            {playing ? '⏸ Tạm dừng' : STEP_CTA.listen}
-          </button>
-        ) : (
-          <button onClick={onComplete}
-            style={{
-              width: '100%', maxWidth: 280, padding: '12px 0',
-              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-              background: C.green, color: '#fff',
-              fontFamily: 'inherit', cursor: 'pointer',
-            }}>
-            Tiếp tục →
-          </button>
-        )}
-        <button onClick={() => { stop(); onComplete() }}
-          style={{
-            background: 'none', border: 'none',
-            fontSize: 12, color: C.muted, cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}>
-          Bỏ qua
-        </button>
-      </div>
+      <BottomBar
+        onReplay={() => { stop(); setDone(false); start() }}
+        onToggle={() => playing ? stop() : start()}
+        onSkip={() => { stop(); onComplete() }}
+        isPlaying={playing}
+        ctaLabel={STEP_CTA.listen}
+        speedLabel={SPEEDS[speedIdx].label}
+        onSpeedCycle={() => setSpeedIdx(i => (i + 1) % SPEEDS.length)}
+      />
     </div>
   )
 }
@@ -384,33 +444,20 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
         <NoteSheet notes={noteItems} active={state === 'idle' ? -1 : cursor} />
       </div>
 
-      {/* Bottom CTA */}
-      <div style={{
-        flexShrink: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', gap: 6,
-        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
-      }}>
-        {state === 'idle' ? (
-          <button onClick={startMic}
-            style={{
-              width: '100%', maxWidth: 280, padding: '12px 0',
-              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-              background: `linear-gradient(135deg,${C.accent},#D97706)`, color: '#fff',
-              fontFamily: 'inherit', cursor: 'pointer',
-            }}>
-            {STEP_CTA.note}
-          </button>
-        ) : (
-          <button onClick={() => { detector.stop(); onComplete() }}
-            style={{
-              background: 'none', border: 'none',
-              fontSize: 12, color: C.muted, cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}>
-            Bỏ qua
-          </button>
-        )}
-      </div>
+      {/* Bottom */}
+      <BottomBar
+        onReplay={() => { setCursor(0); setState('active') }}
+        onToggle={() => {
+          if (state === 'idle') startMic()
+          else { detector.stop(); setState('idle') }
+        }}
+        onSkip={() => { detector.stop(); onComplete() }}
+        isPlaying={state === 'active'}
+        ctaLabel={STEP_CTA.note}
+        speedLabel="Vừa"
+        showSpeed={false}
+        onSpeedCycle={() => {}}
+      />
     </div>
   )
 }
@@ -579,60 +626,24 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         </div>
       )}
 
-      {/* Bottom CTA */}
-      <div style={{
-        flexShrink: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', gap: 6,
-        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
-      }}>
-        {!done ? (
-          <button onClick={toggle}
-            style={{
-              width: '100%', maxWidth: 280, padding: '12px 0',
-              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-              background: playing || countdown !== null
-                ? 'rgba(0,0,0,.05)'
-                : `linear-gradient(135deg,${C.accent},#D97706)`,
-              color: playing || countdown !== null ? C.text : '#fff',
-              fontFamily: 'inherit',
-              cursor: countdown !== null ? 'default' : 'pointer',
-            }}>
-            {playing ? '⏸ Tạm dừng'
-              : countdown !== null ? countdown
-              : STEP_CTA.rhythm}
-          </button>
-        ) : score && score.hit / score.total < 0.5 ? (
-          <button onClick={retry}
-            style={{
-              width: '100%', maxWidth: 280, padding: '12px 0',
-              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-              background: `linear-gradient(135deg,${C.accent},#D97706)`, color: '#fff',
-              fontFamily: 'inherit', cursor: 'pointer',
-            }}>
-            ↻ Thử lại
-          </button>
-        ) : score ? (
-          <button onClick={onComplete}
-            style={{
-              width: '100%', maxWidth: 280, padding: '12px 0',
-              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-              background: C.green, color: '#fff',
-              fontFamily: 'inherit', cursor: 'pointer',
-            }}>
-            Tiếp tục →
-          </button>
-        ) : null}
-        {!done && (
-          <button onClick={() => { stopPlayback(); detector.stop(); onComplete() }}
-            style={{
-              background: 'none', border: 'none',
-              fontSize: 12, color: C.muted, cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}>
-            Bỏ qua
-          </button>
-        )}
-      </div>
+      {/* Bottom */}
+      <BottomBar
+        onReplay={() => {
+          stopPlayback(); setScore(null); setNoteResults([])
+          if (detector.listening) setCountdown(3)
+          else startAll()
+        }}
+        onToggle={() => {
+          if (playing) { stopPlayback(); return }
+          setScore(null); setNoteResults([])
+          startAll()
+        }}
+        onSkip={() => { stopPlayback(); detector.stop(); onComplete() }}
+        isPlaying={playing}
+        ctaLabel={done && score && score.hit / score.total < 0.5 ? 'Thử lại' : STEP_CTA.rhythm}
+        speedLabel={SPEEDS[speedIdx].label}
+        onSpeedCycle={() => setSpeedIdx(i => (i + 1) % SPEEDS.length)}
+      />
     </div>
   )
 }
@@ -760,52 +771,24 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
         </div>
       )}
 
-      {/* Bottom CTA */}
-      <div style={{
-        flexShrink: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', gap: 6,
-        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
-      }}>
-        {!done ? (
-          <button onClick={toggle}
-            style={{
-              width: '100%', maxWidth: 280, padding: '12px 0',
-              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-              background: playing || countdown !== null
-                ? 'rgba(0,0,0,.05)'
-                : `linear-gradient(135deg,${C.accent},#D97706)`,
-              color: playing || countdown !== null ? C.text : '#fff',
-              fontFamily: 'inherit',
-              cursor: countdown !== null ? 'default' : 'pointer',
-            }}>
-            {playing ? '⏸ Tạm dừng'
-              : countdown !== null ? countdown
-              : STEP_CTA.perform}
-          </button>
-        ) : (
-          <>
-            <button onClick={() => { stopPlayback(); setScore(null); startAll() }}
-              style={{
-                width: '100%', maxWidth: 280, padding: '10px 0',
-                fontSize: 14, fontWeight: 700, borderRadius: 14,
-                border: `1.5px solid ${C.border}`,
-                background: '#fff', color: C.dim,
-                fontFamily: 'inherit', cursor: 'pointer',
-              }}>
-              ↻ Chơi lại
-            </button>
-            <button onClick={onComplete}
-              style={{
-                width: '100%', maxWidth: 280, padding: '12px 0',
-                fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
-                background: C.green, color: '#fff',
-                fontFamily: 'inherit', cursor: 'pointer',
-              }}>
-              Hoàn thành ✓
-            </button>
-          </>
-        )}
-      </div>
+      {/* Bottom */}
+      <BottomBar
+        onReplay={() => {
+          stopPlayback(); setScore(null)
+          if (detector.listening) setCountdown(3)
+          else startAll()
+        }}
+        onToggle={() => {
+          if (playing) { stopPlayback(); return }
+          setScore(null); startAll()
+        }}
+        onSkip={() => { stopPlayback(); detector.stop(); onComplete() }}
+        isPlaying={playing}
+        ctaLabel={done ? 'Hoàn thành' : STEP_CTA.perform}
+        speedLabel="Vừa"
+        showSpeed={false}
+        onSpeedCycle={() => {}}
+      />
     </div>
   )
 }
