@@ -105,7 +105,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
   return (
     <div style={{
       width: '100%', maxWidth: 800, margin: '0 auto',
-      height: '100dvh', background: '#0d0a04',
+      height: '100dvh', background: '#F9F7F1',
       display: 'flex', flexDirection: 'column',
       fontFamily: 'Inter, system-ui, sans-serif',
       position: 'relative', overflowX: 'hidden', overflowY: 'auto',
@@ -122,7 +122,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
           <button onClick={onClose} style={btnSm}>✕</button>
         ) : <div />}
         <div style={{
-          fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,.7)',
+          fontSize: 15, fontWeight: 700, color: '#2E2A24',
           textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
           whiteSpace: 'nowrap', maxWidth: '65%',
         }}>
@@ -138,7 +138,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
       }}>
         <div style={{
           display: 'flex', gap: 3, padding: 3,
-          background: 'rgba(255,255,255,.05)', borderRadius: 10,
+          background: '#F0ECE3', borderRadius: 10,
         }}>
           {SPEEDS.map((s, i) => (
             <button
@@ -150,7 +150,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
                 cursor: playing ? 'default' : 'pointer',
                 fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
                 background: speedIdx === i ? 'rgba(245,158,11,.18)' : 'transparent',
-                color: speedIdx === i ? '#F59E0B' : 'rgba(255,255,255,.35)',
+                color: speedIdx === i ? '#C2622E' : '#8A8478',
                 transition: 'background .2s, color .2s',
               }}
             >
@@ -166,8 +166,8 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
         margin: '0 10px 6px',
         borderRadius: 12,
         overflow: 'hidden',
-        background: '#1a1206',
-        border: '1px solid rgba(255,255,255,.06)',
+        background: '#fff',
+        border: '1px solid #EAE4D8',
       }}>
         <NoteSheet notes={noteItems} active={cursor} />
       </div>
@@ -183,8 +183,8 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
             key={countdown}
             style={{
               fontSize: 72, fontWeight: 900,
-              color: 'rgba(251,191,36,.85)',
-              textShadow: '0 0 50px rgba(251,191,36,.35)',
+              color: '#D97706',
+              textShadow: '0 0 50px rgba(217,119,6,.25)',
               animation: 'cd-pop .6s ease-out',
               lineHeight: 1,
             }}
@@ -204,8 +204,8 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
         }}>
           <div style={{
             fontSize: 14, fontWeight: 600,
-            color: 'rgba(16,185,129,.7)',
-            background: 'rgba(16,185,129,.08)',
+            color: '#059669',
+            background: 'rgba(16,185,129,.1)',
             padding: '8px 20px', borderRadius: 20,
           }}>
             ✅ Hoàn thành!
@@ -224,11 +224,11 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
           {playing ? '⏸' : '▶'}
         </button>
         <div style={{
-          color: 'rgba(255,255,255,.45)', fontSize: 15, fontWeight: 700,
+          color: '#8A8478', fontSize: 15, fontWeight: 700,
           minWidth: 56, textAlign: 'center', lineHeight: 1.1,
         }}>
-          <span style={{ color: 'rgba(255,255,255,.8)' }}>{bpm}</span>
-          <span style={{ display: 'block', fontSize: 10, fontWeight: 400, opacity: .45, marginTop: 1 }}>BPM</span>
+          <span style={{ color: '#2E2A24' }}>{bpm}</span>
+          <span style={{ display: 'block', fontSize: 10, fontWeight: 400, opacity: .5, marginTop: 1 }}>BPM</span>
         </div>
       </div>
 
@@ -239,14 +239,14 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
 
 const bs: React.CSSProperties = {
   width: 48, height: 48, borderRadius: '50%',
-  background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)',
-  color: 'rgba(255,255,255,.8)', fontSize: 20, cursor: 'pointer',
+  background: 'rgba(0,0,0,.05)', border: '1px solid rgba(0,0,0,.08)',
+  color: '#2E2A24', fontSize: 20, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 
 const btnSm: React.CSSProperties = {
-  background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)',
+  background: 'rgba(0,0,0,.05)', border: '1px solid rgba(0,0,0,.08)',
   borderRadius: 50, width: 36, height: 36, fontSize: 14,
-  color: 'rgba(255,255,255,.5)', cursor: 'pointer',
+  color: '#8A8478', cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }

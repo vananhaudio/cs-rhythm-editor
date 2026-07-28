@@ -12,9 +12,10 @@ const SUPABASE_URL = 'https://wojmdilyflffvdtpovmq.supabase.co'
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const C = {
-  bg1: '#2D1F0A', bg2: '#1C1408',
-  ring: 'rgba(251,191,36,0.35)',
-  text: '#FEF3C7', dim: '#A78B4A',
+  bg1: '#F9F7F1', bg2: '#F0ECE3',
+  ring: 'rgba(245,158,11,0.4)',
+  text: '#2E2A24', dim: '#8A8478',
+  accent: '#F59E0B',
 }
 
 interface Props { onClose?: () => void }
@@ -155,7 +156,7 @@ export default function PianoJourney({ onClose }: Props) {
 
   return (
     <div style={{ minHeight:'100dvh',background:`linear-gradient(180deg,${C.bg1} 0%,${C.bg2} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
-      {onClose && <button onClick={onClose} style={{ position:'fixed',top:20,right:20,zIndex:100,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',borderRadius:50,width:44,height:44,fontSize:18,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(12px)' }}>✕</button>}
+      {onClose && <button onClick={onClose} style={{ position:'fixed',top:20,right:20,zIndex:100,background:'rgba(0,0,0,.06)',border:'1px solid rgba(0,0,0,.08)',borderRadius:50,width:44,height:44,fontSize:18,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(12px)' }}>✕</button>}
 
       {/* Header */}
       <div style={{ width:'100%',textAlign:'center',paddingTop:36,paddingBottom:16 }}>
@@ -187,7 +188,7 @@ export default function PianoJourney({ onClose }: Props) {
         <div style={{ fontSize:15,fontWeight:600,color:cfg.lc,transition:'color .5s ease',textAlign:'center',maxWidth:320,lineHeight:1.4 }}>
           {cfg.label}
         </div>
-        {error && <div style={{ fontSize:13,color:'#FCA5A5',textAlign:'center',marginTop:8 }}>{error}</div>}
+        {error && <div style={{ fontSize:13,color:'#C2410C',textAlign:'center',marginTop:8 }}>{error}</div>}
 
         {/* Text input */}
         {flow === 'idle' && (
@@ -198,7 +199,7 @@ export default function PianoJourney({ onClose }: Props) {
               placeholder={'Ví dụ:\nCon muốn bài về khủng long\nCon muốn bài thiếu nhi\nCon muốn bài về mèo'}
               rows={3}
               autoFocus
-              style={{ width:'100%',padding:'12px 16px',fontSize:14,borderRadius:14,border:'1px solid rgba(255,255,255,.12)',background:'rgba(255,255,255,.04)',color:'#fff',outline:'none',fontFamily:'inherit',textAlign:'center',resize:'none',lineHeight:1.6 }}
+              style={{ width:'100%',padding:'12px 16px',fontSize:14,borderRadius:14,border:'1px solid #EAE4D8',background:'#fff',color:'#2E2A24',outline:'none',fontFamily:'inherit',textAlign:'center',resize:'none',lineHeight:1.6 }}
             />
             {transcript.trim() && (
               <button onClick={() => generateMission(transcript.trim())}
