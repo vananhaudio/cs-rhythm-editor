@@ -546,6 +546,23 @@ export default function StoryTellPage() {
               </section>
             )}
 
+            {/* ── SECTION: STORY RAW (collapsible) — TOP ── */}
+            {rawContent && userMsgCount >= 2 && (
+              <section className="sw-section sw-raw-collapse">
+                <button
+                  className="sw-raw-toggle"
+                  onClick={() => setShowRaw(!showRaw)}
+                >
+                  <span className="sw-raw-toggle-icon">{showRaw ? '▾' : '▸'}</span>
+                  📄 Lời kể của bạn
+                  <span className="sw-raw-toggle-hint">{showRaw ? 'Thu gọn' : 'Xem'}</span>
+                </button>
+                {showRaw && (
+                  <div className="sw-raw">{rawContent}</div>
+                )}
+              </section>
+            )}
+
             {/* ── SECTION: CONVERSATION ── */}
             {conversation.length > 0 && (
               <section className="sw-section">
@@ -563,23 +580,6 @@ export default function StoryTellPage() {
                     </div>
                   )}
                 </div>
-              </section>
-            )}
-
-            {/* ── SECTION: STORY RAW (collapsible) ── */}
-            {rawContent && userMsgCount >= 2 && (
-              <section className="sw-section sw-raw-collapse">
-                <button
-                  className="sw-raw-toggle"
-                  onClick={() => setShowRaw(!showRaw)}
-                >
-                  <span className="sw-raw-toggle-icon">{showRaw ? '▾' : '▸'}</span>
-                  📄 Lời kể của bạn
-                  <span className="sw-raw-toggle-hint">{showRaw ? 'Thu gọn' : 'Xem'}</span>
-                </button>
-                {showRaw && (
-                  <div className="sw-raw">{rawContent}</div>
-                )}
               </section>
             )}
 
