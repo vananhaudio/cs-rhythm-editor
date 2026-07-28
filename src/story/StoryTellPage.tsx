@@ -671,25 +671,11 @@ export default function StoryTellPage() {
           <div className="sw-workspace">
           {/* ── HEADER ── */}
           <header className="sw-header">
-            <button className="sw-menu-btn" onClick={() => { setShowSidebar(true); fetchStoryList() }} aria-label="Menu">
+            <button className="sw-sidebar-btn" onClick={() => { setShowSidebar(true); fetchStoryList() }} aria-label="Menu">
               ☰
             </button>
-            <div className="sw-header-left">
-              <div className="sw-avatar">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
-              <div className="sw-header-meta">
-                <div className="sw-author">{displayName}</div>
-                <div className="sw-status">
-                  <span className="sw-status-dot" />
-                  {statusLabel}
-                  <span className="sw-status-sep">·</span>
-                  <span className="sw-autosave">Đã lưu tự động</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="sw-header-center">
+            <div className="sw-header-main">
               {editingTitle ? (
                 <input
                   ref={titleInputRef}
@@ -710,6 +696,10 @@ export default function StoryTellPage() {
                   {storyId && <span className="sw-title-icon">✎</span>}
                 </h1>
               )}
+              <div className="sw-status-line">
+                <span className="sw-status-dot" />
+                {statusLabel}
+              </div>
             </div>
 
             <div className="sw-header-right">
@@ -1018,49 +1008,34 @@ const CSS = `
   overflow: hidden;
 }
 
-/* ── HEADER — Apple Journal style ── */
+/* ── HEADER — PO1: tối giản, ưu tiên câu chuyện ── */
 .sw-header {
   flex: none;
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 12px 12px 8px;
   background: var(--bg);
-  gap: 12px;
+  gap: 4px;
 }
-.sw-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex-shrink: 0; }
-.sw-avatar {
-  width: 34px; height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #5856D6, #AF52DE);
-  color: #fff;
-  font-weight: 600;
-  font-size: 15px;
+.sw-sidebar-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: var(--ink);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.sw-author {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ink);
-  line-height: 1.3;
+.sw-sidebar-btn:active { background: rgba(0,0,0,0.05); }
+.sw-header-main {
+  flex: 1;
+  min-width: 0;
+  padding: 0 4px;
 }
-.sw-status {
-  font-size: 12px;
-  color: var(--ink-muted);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.sw-status-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--green);
-  flex-shrink: 0;
-}
-.sw-autosave { color: var(--ink-muted); }
-.sw-header-center { flex: 1; text-align: center; min-width: 0; }
 .sw-title {
   font-size: 17px;
   font-weight: 700;
@@ -1069,9 +1044,16 @@ const CSS = `
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 .sw-title:hover { opacity: 0.7; }
-.sw-title-icon { display: inline-block; margin-left: 4px; font-size: 12px; color: var(--ink-muted); opacity: 0; }
+.sw-title-icon {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--ink-muted);
+  opacity: 0;
+}
 .sw-title:hover .sw-title-icon { opacity: 1; }
 .sw-title-input {
   font-size: 17px;
@@ -1079,12 +1061,25 @@ const CSS = `
   font-family: inherit;
   color: var(--ink);
   border: none;
+  border-bottom: 2px solid var(--blue);
   background: transparent;
-  text-align: center;
   outline: none;
   width: 100%;
-  max-width: 280px;
-  padding: 0;
+  padding: 1px 0;
+}
+.sw-status-line {
+  font-size: 12px;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+.sw-status-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
 }
 .sw-header-right { flex-shrink: 0; }
 .sw-menu-wrap { position: relative; }

@@ -30,13 +30,46 @@ const INDIGO = 'linear-gradient(135deg,#6366F1,#4F46E5)'
 const GREEN  = 'linear-gradient(135deg,#16A34A,#15803D)'
 const RED    = 'linear-gradient(135deg,#DC2626,#B91C1C)'
 
-interface Props {
-  onClose?: () => void
-  /** Mở màn tạo bài tập (LearningFlow) */
-  onOpenMission?: () => void
+// ── Công cụ Cô Piano được phép gọi ───────────────────────────────────────────
+// Khai báo TỪ CLIENT qua `session.update` chứ KHÔNG sửa edge function:
+// file realtime-token trong repo để key là '***', bản deploy mới có key thật
+// ⇒ deploy lại file đó là phá hỏng hội thoại. Đừng đụng vào nó.
+const TOOL_TAO_BAI = {
+  type: 'function',
+  name: 'tao_bai_tap',
+  description:
+    'Tạo một bài tập piano ngắn cho bé. GỌI NGAY khi bé nói bé muốn tập/chơi/học bài gì, ' +
+    'muốn bài về một con vật, đồ vật, câu chuyện hay cảm xúc nào đó. Đừng hỏi lại nhiều lần.',
+  parameters: {
+    type: 'object',
+    properties: {
+      chu_de: {
+        type: 'string',
+        description: 'Điều bé muốn, ghi bằng tiếng Việt theo đúng lời bé. Ví dụ: "bài về con khủng long".',
+      },
+    },
+    required: ['chu_de'],
+  },
 }
 
-export default function TalkWithTeacher({ onClose, onOpenMission }: Props) {
+const INSTRUCTIONS =
+  'Bạn là Cô Piano, cô giáo dạy piano thân thiện cho trẻ 5–12 tuổi. Luôn nói tiếng Việt, ' +
+  'ấm áp, ngắn gọn, tối đa 2 câu, không giảng giải dài. ' +
+  'Nhiệm vụ chính: hỏi bé hôm nay muốn tập bài gì, rồi GỌI công cụ tao_bai_tap với điều bé nói. ' +
+  'Ngay sau khi gọi công cụ, nói một câu vui để bé chờ, ví dụ "Cô soạn bài cho con ngay đây!". ' +
+  'Nếu bé nói lan man, nhẹ nhàng hỏi lại bé muốn bài về cái gì.'
+
+interface Props {
+  onClose?: () => void
+  /** Mở màn gõ yêu cầu (không nói) */
+  onOpenMission?: () => void
+  /** Bé đã nói xong → tạo bài tập với chủ đề này */
+  onCreateMission?: (chuDe: string) => void
+  /** Đang soạn bài — giữ màn hội thoại để bé còn nghe cô nói */
+  busy?: boolean
+}
+
+export default function TalkWithTeacher({ onClose, onOpenMission, onCreateMission, busy }: Props) {
   const [state, setState]       = useState<TalkState>('idle')
   const [messages, setMessages] = useState<Message[]>([])
   const [errorMsg, setErrorMsg] = useState('')
