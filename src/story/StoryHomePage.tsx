@@ -177,6 +177,8 @@ export default function StoryHomePage() {
 
 // ── Styles — đồng bộ token với /story ──
 const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
 /* ── Root ── */
 .sh-root {
   min-height: 100dvh;

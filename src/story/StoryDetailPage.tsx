@@ -129,6 +129,8 @@ export default function StoryDetailPage() {
 }
 
 const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
 .sd-root {
   min-height: 100dvh;
   background: #F2EEE7;
