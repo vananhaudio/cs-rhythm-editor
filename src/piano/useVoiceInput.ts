@@ -23,6 +23,7 @@ const SILENCE_MS    = 1500   // nói xong, im bao lâu thì chốt
 const MAX_MS        = 20000  // trần cứng, tránh thu vô tận
 const MIN_BLOB      = 1200   // blob nhỏ hơn = chưa kịp thu gì
 const MAX_RESTARTS  = 2      // số lần tự nghe lại khi 'no-speech'
+const GUM_TIMEOUT_MS = 15000 // chờ trẻ bấm "cho phép" micro
 
 // ── Kiểu tối thiểu cho Web Speech API (lib.dom chưa có sẵn) ──
 interface SpeechAlt { transcript: string }
@@ -158,15 +159,24 @@ export function useVoiceInput({ onFinal, lang = 'vi-VN' }: Options) {
     setTier('record')
     go('listening'); setText(''); setError('')
 
-    let stream: MediaStream
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      })
-    } catch {
-      setError('Chưa được dùng micro — bấm cho phép, hoặc gõ yêu cầu bên dưới nhé ✍️')
+    // Hộp thoại xin quyền có thể treo (trẻ không bấm gì, hoặc WKWebView không hiện
+    // hộp thoại). KHÔNG để trẻ kẹt ở "Đang nghe" — bỏ cuộc sau GUM_TIMEOUT_MS.
+    const gumP = navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    })
+    const got = await Promise.race([
+      gumP.catch(() => 'denied' as const),
+      new Promise<'timeout'>(r => window.setTimeout(() => r('timeout'), GUM_TIMEOUT_MS)),
+    ])
+    if (got === 'denied' || got === 'timeout') {
+      // Nếu quyền được cấp muộn thì nhả stream ngay, đừng để đèn mic sáng vô ích
+      void gumP.then(s => s.getTracks().forEach(t => t.stop())).catch(() => { /* */ })
+      setError(got === 'timeout'
+        ? 'Chưa thấy con cho phép dùng micro — thử lại hoặc gõ bên dưới nhé ✍️'
+        : 'Chưa được dùng micro — bấm cho phép, hoặc gõ yêu cầu bên dưới nhé ✍️')
       go('idle'); return
     }
+    const stream: MediaStream = got
     streamRef.current = stream
 
     const { mime, ext } = pickMime()
