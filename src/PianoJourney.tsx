@@ -48,7 +48,7 @@ export default function PianoJourney({ onClose }: Props) {
 
     // @ts-ignore
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) { setError('Trình duyệt không hỗ trợ nhận giọng nói. Dùng Chrome nhé!'); setFlow('idle'); return }
+    if (!SpeechRecognition) { setFlow('idle'); setError('Micro không khả dụng — gõ bên dưới nhé ✍️'); return }
 
     const rec = new SpeechRecognition()
     rec.lang = 'vi-VN'
@@ -155,7 +155,7 @@ export default function PianoJourney({ onClose }: Props) {
   }
 
   return (
-    <div style={{ minHeight:'100dvh',background:`linear-gradient(180deg,${C.bg1} 0%,${C.bg2} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
+    <div style={{ height:'100dvh',background:`linear-gradient(180deg,${C.bg1} 0%,${C.bg2} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
       {onClose && <button onClick={onClose} style={{ position:'fixed',top:20,right:20,zIndex:100,background:'rgba(0,0,0,.06)',border:'1px solid rgba(0,0,0,.08)',borderRadius:50,width:44,height:44,fontSize:18,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(12px)' }}>✕</button>}
 
       {/* Header */}
@@ -198,7 +198,6 @@ export default function PianoJourney({ onClose }: Props) {
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && transcript.trim()) { e.preventDefault(); generateMission(transcript.trim()) } }}
               placeholder={'Ví dụ:\nCon muốn bài về khủng long\nCon muốn bài thiếu nhi\nCon muốn bài về mèo'}
               rows={3}
-              autoFocus
               style={{ width:'100%',padding:'12px 16px',fontSize:14,borderRadius:14,border:'1px solid #EAE4D8',background:'#fff',color:'#2E2A24',outline:'none',fontFamily:'inherit',textAlign:'center',resize:'none',lineHeight:1.6 }}
             />
             {transcript.trim() && (
