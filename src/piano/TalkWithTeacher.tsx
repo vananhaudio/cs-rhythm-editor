@@ -18,11 +18,14 @@ type TalkState = 'idle' | 'connecting' | 'ready' | 'listening' | 'thinking' | 's
 
 interface Message { role: 'user' | 'assistant'; text: string }
 
+// Nền sáng — dùng chung bảng màu với màn bài tập (LearningFlow) cho liền mạch,
+// bé không bị chói mắt khi chuyển từ hội thoại sang tập đàn.
 const C = {
-  bg1: '#2D1F0A', bg2: '#1C1408',
-  ring: 'rgba(251,191,36,0.35)',
-  text: '#FEF3C7', dim: '#A78B4A', err: '#FCA5A5',
-  bubbleUser: '#3D2E0A', bubbleAsst: '#2D1F0A',
+  bg1: '#F9F7F1', bg2: '#F0ECE3',
+  ring: 'rgba(217,119,6,0.30)',
+  text: '#2E2A24', dim: '#8A8478', err: '#C2410C',
+  border: '#EAE4D8',
+  bubbleUser: '#FDF1DC', bubbleAsst: '#FFFFFF',
 }
 
 // Nút mic co theo bề ngang máy: iPhone SE (375px) ra ~127px, máy lớn giữ 140px.
@@ -57,6 +60,12 @@ const TOOL_TAO_BAI = {
     required: ['chu_de'],
   },
 }
+
+// Giọng Cô Piano. `realtime-token` đang đặt 'ash' (nghe ra nam) nhưng ĐỪNG sửa
+// file đó — key thật nằm trong bản đã deploy. Đổi ở đây, client ghi đè lúc kết nối.
+// Giọng nữ của Realtime API: coral, shimmer, sage, ballad. 'coral' ấm và trẻ,
+// hợp cô giáo dạy trẻ con nhất.
+const VOICE = 'coral'
 
 const INSTRUCTIONS =
   'Bạn là Cô Piano, cô giáo dạy piano thân thiện cho trẻ 5–12 tuổi. Luôn nói tiếng Việt, ' +
@@ -113,10 +122,19 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
     setDebug(prev => [...prev.slice(-19), m])
   }, [])
 
-  // Cuộn xuống tin mới
+  // Cuộn xuống tin mới. Cuộn HAI lần: ngay lập tức, rồi lặp lại sau 60ms để bắt
+  // trường hợp bong bóng giãn chiều cao muộn — bản cũ chỉ đo một lần trong effect
+  // nên luôn cuộn thiếu, tin mới nhất bị khuất dưới đáy.
+  // Không dùng requestAnimationFrame: khi app chạy nền/ẩn thì rAF bị treo, cuộn
+  // không bao giờ xảy ra.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [messages])
+    const el = scrollRef.current
+    if (!el) return
+    const toBottom = () => { el.scrollTop = el.scrollHeight }
+    toBottom()
+    const id = window.setTimeout(toBottom, 60)
+    return () => clearTimeout(id)
+  }, [messages, busy])
 
   const teardown = useCallback(() => {
     try { dcRef.current?.close() } catch { /* */ }
@@ -243,13 +261,27 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
       dcRef.current = dc
       dc.onopen = () => {
         log('Kênh sự kiện mở')
-        // Nạp công cụ + lời dặn từ client. Làm ở đây để KHÔNG phải deploy lại
-        // realtime-token (file repo có key '***', deploy đè là hỏng hội thoại).
+        // Nạp công cụ + lời dặn + GIỌNG từ client. Làm ở đây để KHÔNG phải deploy
+        // lại realtime-token (file repo có key '***', deploy đè là hỏng hội thoại).
+        //
+        // Phải gửi CẢ khối `audio` gồm phần input: session.update thay nguyên
+        // khối, nếu chỉ gửi output.voice thì mất luôn server_vad + whisper ⇒
+        // hỏng nhận lượt nói và mất phụ đề.
+        // Giọng đổi được vì gửi ngay lúc kênh vừa mở, trước khi cô nói câu nào.
         send({
           type: 'session.update',
-          session: { type: 'realtime', instructions: INSTRUCTIONS, tools: [TOOL_TAO_BAI], tool_choice: 'auto' },
+          session: {
+            type: 'realtime',
+            instructions: INSTRUCTIONS,
+            tools: [TOOL_TAO_BAI],
+            tool_choice: 'auto',
+            audio: {
+              input: { transcription: { model: 'whisper-1' }, turn_detection: { type: 'server_vad' } },
+              output: { voice: VOICE },
+            },
+          },
         })
-        log('Đã nạp công cụ tao_bai_tap')
+        log(`Đã nạp công cụ + giọng "${VOICE}"`)
       }
       dc.onmessage = e => handleEvent(e.data)
 
@@ -295,8 +327,8 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
   const face: Record<TalkState, { icon: React.ReactNode; label: string; bg: string; shadow: string; scale: number; lc: string }> = {
     idle:       { icon: <MicIcon />,            label: 'Chạm để nói với Cô Piano', bg: GOLD,   shadow: '0 8px 40px rgba(245,158,11,.3)',                                  scale: 1,    lc: C.dim  },
     connecting: { icon: <Dots />,               label: 'Đang kết nối…',            bg: INDIGO, shadow: '0 8px 40px rgba(99,102,241,.35)',                                 scale: 1,    lc: C.dim  },
-    ready:      { icon: <MicIcon active />,     label: 'Cô đang nghe — con nói đi', bg: GOLD,  shadow: '0 8px 60px rgba(251,191,36,.4)',                                  scale: 1.02, lc: C.text },
-    listening:  { icon: <MicIcon active />,     label: 'Đang nghe con…',           bg: GOLD,   shadow: '0 8px 60px rgba(251,191,36,.5),0 0 120px rgba(251,191,36,.2)',   scale: 1.05, lc: C.text },
+    ready:      { icon: <MicIcon active />,     label: 'Cô đang nghe — con nói đi', bg: GOLD,  shadow: '0 8px 36px rgba(217,119,6,.30)',                                  scale: 1.02, lc: C.text },
+    listening:  { icon: <MicIcon active />,     label: 'Đang nghe con…',           bg: GOLD,   shadow: '0 8px 40px rgba(217,119,6,.35),0 0 90px rgba(217,119,6,.15)',   scale: 1.05, lc: C.text },
     thinking:   { icon: <Dots />,               label: 'Cô đang nghĩ…',            bg: INDIGO, shadow: '0 8px 40px rgba(99,102,241,.35)',                                 scale: 1,    lc: C.dim  },
     speaking:   { icon: <Bars />,               label: 'Cô đang nói…',             bg: GREEN,  shadow: '0 8px 40px rgba(22,163,74,.35)',                                  scale: 1,    lc: C.dim  },
     error:      { icon: <span style={{ fontSize: 36 }}>🔌</span>, label: errorMsg || 'Lỗi kết nối', bg: RED, shadow: '0 8px 40px rgba(220,38,38,.35)',                    scale: 1,    lc: C.err  },
@@ -315,7 +347,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
       {/* ✕ phải tránh status bar / tai thỏ — bản cũ để top:20 nên vẽ chồng lên chỗ pin */}
       {onClose && (
         <button onClick={onClose} aria-label="Đóng"
-          style={{ position:'absolute',top:`calc(${SAFE_TOP} + 10px)`,right:14,zIndex:10,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.12)',borderRadius:50,width:40,height:40,fontSize:17,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(12px)',touchAction:'manipulation' }}>
+          style={{ position:'absolute',top:`calc(${SAFE_TOP} + 10px)`,right:14,zIndex:10,background:'rgba(0,0,0,.05)',border:`1px solid ${C.border}`,borderRadius:50,width:40,height:40,fontSize:17,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(12px)',touchAction:'manipulation' }}>
           ✕
         </button>
       )}
@@ -337,14 +369,14 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
         {messages.map((m, i) => (
           // textAlign:'left' là BẮT BUỘC — #root trong index.css đặt text-align:center
           // cho cả app, không sửa global được nên phải chặn tại bong bóng.
-          <div key={i} style={{ alignSelf:m.role==='user'?'flex-end':'flex-start',maxWidth:'88%',background:m.role==='user'?C.bubbleUser:C.bubbleAsst,borderRadius:m.role==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px',padding:'12px 15px',border:`1px solid ${m.role==='user'?'rgba(251,191,36,.15)':'rgba(255,255,255,.06)'}`,overflowWrap:'break-word',textAlign:'left',flexShrink:0 }}>
+          <div key={i} style={{ alignSelf:m.role==='user'?'flex-end':'flex-start',maxWidth:'88%',background:m.role==='user'?C.bubbleUser:C.bubbleAsst,borderRadius:m.role==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px',padding:'12px 15px',border:`1px solid ${m.role==='user'?'#F0DCB4':C.border}`,boxShadow:'0 1px 3px rgba(0,0,0,.04)',overflowWrap:'break-word',textAlign:'left',flexShrink:0 }}>
             <div style={{ fontSize:10,fontWeight:700,color:C.dim,marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px' }}>{m.role==='user'?'Con':'🎹 Cô Piano'}</div>
             <div style={{ fontSize:15,color:C.text,lineHeight:1.55 }}>{m.text}</div>
           </div>
         ))}
 
         {busy && (
-          <div style={{ alignSelf:'center',display:'flex',alignItems:'center',gap:8,color:C.text,fontSize:14,fontWeight:600,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.2)',borderRadius:999,padding:'9px 16px',marginTop:4 }}>
+          <div style={{ alignSelf:'center',display:'flex',alignItems:'center',gap:8,color:C.text,fontSize:14,fontWeight:600,background:'#FDF1DC',border:'1px solid #F0DCB4',borderRadius:999,padding:'9px 16px',marginTop:4 }}>
             <span style={{ fontSize:17,animation:'pj-pulse 2s ease-in-out infinite' }}>✨</span>
             Cô đang soạn bài cho con…
           </div>
@@ -353,7 +385,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
 
       {/* Nút mic — chừa chỗ cho vạch home iPhone. Có lớp gradient để bong bóng chat
           mờ dần vào nền, tránh vòng sóng mic chồng lộn xộn lên tin nhắn. */}
-      <div style={{ flexShrink:0,width:'100%',display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:`calc(${SAFE_BOTTOM} + 18px)`,paddingTop:14,background:`linear-gradient(180deg,rgba(28,20,8,0) 0%,${C.bg2} 38%)`,zIndex:3 }}>
+      <div style={{ flexShrink:0,width:'100%',display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:`calc(${SAFE_BOTTOM} + 18px)`,paddingTop:14,background:`linear-gradient(180deg,rgba(240,236,227,0) 0%,${C.bg2} 38%)`,zIndex:3 }}>
         <div style={{ position:'relative',width:BTN,height:BTN,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:10 }}>
           {showRings && [0,1,2].map(i => (
             <div key={i} style={{ position:'absolute',width:BTN,height:BTN,borderRadius:'50%',border:`2px solid ${C.ring}`,animation:`pj-ring 2.4s ${i*0.8}s ease-out infinite`,pointerEvents:'none' }} />
@@ -370,14 +402,14 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
 
         {/* TẠM — chip đổi bậc để thí nghiệm luồng. Bỏ khi bậc lấy từ hồ sơ học viên. */}
         <button onClick={cycleLevel}
-          style={{ marginTop:12,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:999,padding:'6px 14px',fontSize:12,fontWeight:600,color:C.dim,cursor:'pointer',fontFamily:'inherit',touchAction:'manipulation' }}>
+          style={{ marginTop:12,background:'rgba(0,0,0,.03)',border:`1px solid ${C.border}`,borderRadius:999,padding:'6px 14px',fontSize:12,fontWeight:600,color:C.dim,cursor:'pointer',fontFamily:'inherit',touchAction:'manipulation' }}>
           Bậc {level.id} · {level.name} ⟳
         </button>
       </div>
 
       {/* Bảng chẩn đoán — là flex item, KHÔNG absolute, để không che nút mic */}
       {debug.length > 0 && (
-        <details style={{ flexShrink:0,width:'100%',background:'rgba(0,0,0,.85)',fontSize:10,fontFamily:'monospace',color:'#10B981',paddingBottom:SAFE_BOTTOM }}>
+        <details style={{ flexShrink:0,width:'100%',background:'#F2EEE4',borderTop:`1px solid ${C.border}`,fontSize:10,fontFamily:'monospace',color:'#5B7C5B',paddingBottom:SAFE_BOTTOM }}>
           <summary style={{ padding:'5px 14px',cursor:'pointer',color:C.dim,fontSize:11,touchAction:'manipulation' }}>Chi tiết kết nối</summary>
           <div style={{ padding:'0 14px 8px',maxHeight:110,overflowY:'auto',WebkitOverflowScrolling:'touch' }}>
             {debug.map((d, i) => <div key={i}>{d}</div>)}
@@ -385,8 +417,8 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
         </details>
       )}
 
-      <div style={{ position:'absolute',top:'14%',left:-24,fontSize:60,opacity:.04,pointerEvents:'none' }}>🎵</div>
-      <div style={{ position:'absolute',top:'32%',right:-18,fontSize:52,opacity:.04,pointerEvents:'none' }}>🎶</div>
+      <div style={{ position:'absolute',top:'14%',left:-24,fontSize:60,opacity:.06,pointerEvents:'none' }}>🎵</div>
+      <div style={{ position:'absolute',top:'32%',right:-18,fontSize:52,opacity:.06,pointerEvents:'none' }}>🎶</div>
     </div>
   )
 }
