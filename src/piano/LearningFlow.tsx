@@ -1,10 +1,10 @@
 // ── Learning Flow: 4-step piano learning system ──
 // Architecture: StepDefinition[] → dễ thêm/bớt bước, không cần sửa code orchestrator.
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { NoteSheet } from '../elearn/guitarRenderers'
 import type { NoteItem } from '../elearn/guitarRenderers'
-import { exerciseToNoteItems, pitchToFreq, pitchToLabel } from './notationAdapter'
+import { exerciseToNoteItems, pitchToFreq } from './notationAdapter'
 import { playTone } from '../elearn/audio'
 import { usePitchDetector } from './usePitchDetector'
 import { pitchClass } from '../elearn/pitch'
@@ -40,6 +40,20 @@ const SPEEDS = [
   { label: 'Vừa', bpm: 80 },
   { label: 'Nhanh', bpm: 100 },
 ]
+
+const STEP_INSTRUCTIONS: Record<string, string> = {
+  listen: 'Nghe giai điệu mẫu',
+  note: 'Luyện từng nốt',
+  rhythm: 'Giữ đúng nhịp',
+  perform: 'Chơi như đọc sheet',
+}
+
+const STEP_CTA: Record<string, string> = {
+  listen: '▶ Nghe',
+  note: '▶ Bắt đầu',
+  rhythm: '▶ Bắt đầu',
+  perform: '▶ Biểu diễn',
+}
 
 // ── Colors ────────────────────────────────────────────────────────────────────
 const C = {
@@ -82,6 +96,7 @@ export default function LearningFlow({ exercise, onBack, onClose }: Props) {
   }
 
   const CurrentStep = STEPS[stepIdx].component
+  const curStepId = STEPS[stepIdx].id
 
   return (
     <div style={{
@@ -94,54 +109,68 @@ export default function LearningFlow({ exercise, onBack, onClose }: Props) {
       {/* Top bar */}
       <div style={{
         flexShrink: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', padding: '10px 16px 6px',
+        justifyContent: 'space-between', padding: '8px 12px 4px',
+        minHeight: 36,
       }}>
-        <button onClick={onBack} style={btnBack}>←</button>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', borderRadius: 8,
+          width: 32, height: 32, fontSize: 16,
+          color: C.dim, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>←</button>
         <div style={{
-          fontSize: 14, fontWeight: 700, color: C.text,
+          fontSize: 13, fontWeight: 700, color: C.text,
           textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap', maxWidth: '60%',
+          whiteSpace: 'nowrap', maxWidth: '55%',
         }}>
-          🎹 {exercise.title}
+          {exercise.title}
         </div>
-        {onClose
-          ? <button onClick={onClose} style={btnBack}>✕</button>
-          : <div style={{ width: 36 }} />}
+        <div style={{ width: 32 }} />
       </div>
 
-      {/* Progress bar */}
+      {/* Timeline progress */}
       <div style={{
-        flexShrink: 0, display: 'flex', gap: 4,
-        padding: '0 12px 10px',
+        flexShrink: 0, padding: '4px 16px 0', minHeight: 28,
       }}>
-        {STEPS.map((s, i) => {
-          const isActive = i === stepIdx
-          const isDone = completed.has(i)
-          const locked = !completed.has(i)
-          return (
-            <button
-              key={s.id}
-              onClick={() => { if (!locked) setStepIdx(i) }}
-              disabled={locked}
-              style={{
-                flex: 1, textAlign: 'center',
-                padding: '7px 4px 6px', borderRadius: 10,
-                border: isActive ? `2px solid ${C.accent}` : '2px solid transparent',
-                background: isActive ? 'rgba(194,98,46,.08)' : isDone ? 'rgba(16,185,129,.06)' : 'transparent',
-                color: isActive ? C.accent : isDone ? C.green : C.muted,
-                cursor: locked ? 'default' : 'pointer',
-                fontFamily: 'inherit', fontSize: 11, fontWeight: 700,
-                lineHeight: 1.3, transition: 'all .2s',
-                opacity: locked ? 0.5 : 1,
-              }}
-            >
-              <div style={{ fontSize: 16, marginBottom: 1 }}>
-                {isDone ? '✓' : s.icon}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0,
+        }}>
+          {STEPS.map((s, i) => {
+            const isActive = i === stepIdx
+            const isDone = completed.has(i)
+            const locked = !completed.has(i) && !isActive
+            return (
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
+                {i > 0 && (
+                  <div style={{
+                    width: 24, height: 2, borderRadius: 1,
+                    background: isDone || completed.has(i - 1) ? C.green : C.muted,
+                    opacity: completed.has(i - 1) ? 1 : 0.3,
+                    margin: '0 1px',
+                  }} />
+                )}
+                <div style={{
+                  fontSize: 11, fontWeight: 700,
+                  color: isActive ? C.accent : isDone ? C.green : C.muted,
+                  opacity: locked ? 0.4 : 1,
+                  transition: 'color .2s',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {isDone ? '✓' : isActive ? '●' : '○'} {s.label}
+                </div>
               </div>
-              <div>{s.label}</div>
-            </button>
-          )
-        })}
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Instruction */}
+      <div style={{
+        flexShrink: 0, textAlign: 'center', padding: '2px 16px 6px',
+      }}>
+        <span style={{ fontSize: 12, color: C.dim, fontWeight: 500 }}>
+          {STEP_INSTRUCTIONS[curStepId] || ''}
+        </span>
       </div>
 
       {/* Step content */}
@@ -161,11 +190,11 @@ export default function LearningFlow({ exercise, onBack, onClose }: Props) {
 // STEP 1 — NGHE MẪU
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StepListen({ exercise, noteItems, onComplete, onBack }: StepComponentProps) {
+function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
   const [playing, setPlaying] = useState(false)
   const [cursor, setCursor] = useState(-1)
   const [done, setDone] = useState(false)
-  const [speedIdx, setSpeedIdx] = useState(1) // Vừa
+  const [speedIdx, setSpeedIdx] = useState(1)
   const timerRef = useRef<number | null>(null)
   const bpm = SPEEDS[speedIdx].bpm
 
@@ -194,25 +223,26 @@ function StepListen({ exercise, noteItems, onComplete, onBack }: StepComponentPr
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Speed selector — compact */}
       <div style={{
-        flexShrink: 0, display: 'flex', justifyContent: 'center', marginBottom: 6,
+        flexShrink: 0, display: 'flex', justifyContent: 'center',
+        marginBottom: 4, gap: 2,
       }}>
-        <div style={{ display: 'flex', gap: 3, padding: 3, background: '#F0ECE3', borderRadius: 10 }}>
-          {SPEEDS.map((s, i) => (
-            <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start() }}
-              disabled={playing}
-              style={{
-                padding: '5px 14px', border: 'none', borderRadius: 8,
-                cursor: playing ? 'default' : 'pointer',
-                fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
-                background: speedIdx === i ? 'rgba(194,98,46,.15)' : 'transparent',
-                color: speedIdx === i ? C.accent : C.dim,
-              }}
-            >{s.label}</button>
-          ))}
-        </div>
+        {SPEEDS.map((s, i) => (
+          <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start() }}
+            disabled={playing}
+            style={{
+              padding: '3px 10px', border: `1px solid ${C.border}`, borderRadius: 6,
+              cursor: playing ? 'default' : 'pointer',
+              fontFamily: 'inherit', fontSize: 10, fontWeight: 600,
+              background: speedIdx === i ? C.accent : '#fff',
+              color: speedIdx === i ? '#fff' : C.dim,
+            }}
+          >{s.label}</button>
+        ))}
       </div>
 
+      {/* NoteSheet */}
       <div style={{
         flex: 1, minHeight: 0, margin: '0 10px 6px',
         borderRadius: 12, overflow: 'hidden',
@@ -221,42 +251,42 @@ function StepListen({ exercise, noteItems, onComplete, onBack }: StepComponentPr
         <NoteSheet notes={noteItems} active={cursor} />
       </div>
 
+      {/* Bottom CTA */}
       <div style={{
-        flexShrink: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', gap: 20,
-        padding: '10px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
+        flexShrink: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', gap: 6,
+        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
       }}>
-        <button onClick={() => { stop(); onComplete() }}
-          style={{
-            padding: '10px 24px', fontSize: 14, fontWeight: 700,
-            borderRadius: 12, border: `1.5px solid ${C.border}`,
-            background: '#fff', color: C.dim,
-            fontFamily: 'inherit', cursor: 'pointer',
-          }}>
-          Bỏ qua →
-        </button>
-        <button onClick={playing ? stop : start}
-          style={{
-            width: 56, height: 56, borderRadius: '50%',
-            border: 'none',
-            background: playing ? 'rgba(0,0,0,.06)' : `linear-gradient(135deg,${C.accent},#D97706)`,
-            color: playing ? C.text : '#fff',
-            fontSize: 22, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-          {playing ? '⏸' : '▶'}
-        </button>
-        {done && (
+        {!done ? (
+          <button onClick={playing ? stop : start}
+            style={{
+              width: '100%', maxWidth: 280, padding: '12px 0',
+              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
+              background: playing ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
+              color: playing ? C.text : '#fff',
+              fontFamily: 'inherit', cursor: 'pointer',
+            }}>
+            {playing ? '⏸ Tạm dừng' : STEP_CTA.listen}
+          </button>
+        ) : (
           <button onClick={onComplete}
             style={{
-              padding: '10px 24px', fontSize: 14, fontWeight: 700,
-              borderRadius: 12, border: 'none',
+              width: '100%', maxWidth: 280, padding: '12px 0',
+              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
               background: C.green, color: '#fff',
               fontFamily: 'inherit', cursor: 'pointer',
             }}>
             Tiếp tục →
           </button>
         )}
+        <button onClick={() => { stop(); onComplete() }}
+          style={{
+            background: 'none', border: 'none',
+            fontSize: 12, color: C.muted, cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}>
+          Bỏ qua
+        </button>
       </div>
     </div>
   )
@@ -268,49 +298,42 @@ function StepListen({ exercise, noteItems, onComplete, onBack }: StepComponentPr
 
 function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps) {
   const [cursor, setCursor] = useState(0)
-  const [state, setState] = useState<'waiting' | 'correct' | 'wrong'>('waiting')
+  const [state, setState] = useState<'idle' | 'active' | 'correct' | 'wrong'>('idle')
   const [errorMic, setErrorMic] = useState('')
   const detector = usePitchDetector()
   const stableRef = useRef(0)
   const wrongRef = useRef(0)
   const timerRef = useRef<number | null>(null)
 
-  // Start mic on mount
-  useEffect(() => {
-    let cancelled = false
-    const init = async () => {
-      const ok = await detector.start()
-      if (!ok && !cancelled) setErrorMic('Không truy cập được micro. Hãy cho phép quyền micro.')
-    }
-    init()
-    return () => { cancelled = true; detector.stop(); if (timerRef.current) clearInterval(timerRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const startMic = async () => {
+    const ok = await detector.start()
+    if (!ok) { setErrorMic('Không truy cập được micro.'); return }
+    setState('active')
+  }
+
+  useEffect(() => () => { detector.stop(); if (timerRef.current) clearInterval(timerRef.current) }, [])
 
   // Pitch detection loop
   useEffect(() => {
-    if (!detector.listening) return
+    if (!detector.listening || state !== 'active') return
     const loop = () => {
       const d = detector.detect()
+      const curNote = exercise.notes[cursor]
       if (!d) { stableRef.current = 0; return }
-      const target = pitchClass(pitchToFreq(exercise.notes[cursor].pitch))
+      const target = pitchClass(pitchToFreq(curNote.pitch))
       if (d.pc === target) {
         stableRef.current++
-        if (stableRef.current >= 3) { // ~180ms stable
+        if (stableRef.current >= 3) {
           stableRef.current = 0
           setState('correct')
-          playTone(pitchToFreq(exercise.notes[cursor].pitch), 0.3)
-          // Advance to next note after short delay
+          playTone(pitchToFreq(curNote.pitch), 0.3)
           timerRef.current = window.setTimeout(() => {
             setCursor(c => {
               const next = c + 1
-              if (next >= exercise.notes.length) {
-                onComplete()
-                return c
-              }
+              if (next >= exercise.notes.length) { onComplete(); return c }
               return next
             })
-            setState('waiting')
+            setState('active')
           }, 500)
         }
       } else {
@@ -319,56 +342,74 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
         if (wrongRef.current >= 2) {
           setState('wrong')
           wrongRef.current = 0
-          timerRef.current = window.setTimeout(() => setState('waiting'), 400)
+          timerRef.current = window.setTimeout(() => setState('active'), 400)
         }
       }
     }
     const id = setInterval(loop, 60)
     return () => { clearInterval(id); if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [detector.listening, cursor, exercise.notes, onComplete])
+  }, [detector.listening, state, cursor, exercise.notes, onComplete])
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Status bar */}
       <div style={{
         flexShrink: 0, display: 'flex', justifyContent: 'center',
-        padding: '4px 16px 6px', gap: 12, alignItems: 'center',
+        padding: '2px 16px 4px', gap: 16, alignItems: 'center',
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>
           Nốt {cursor + 1}/{exercise.notes.length}
         </span>
-        <span style={{
-          fontSize: 13, fontWeight: 700,
-          color: state === 'correct' ? C.green : state === 'wrong' ? C.red : C.dim,
-        }}>
-          {state === 'correct' ? '✓ Đúng!' : state === 'wrong' ? '✗ Sai — thử lại' : 'Đợi con đàn...'}
-        </span>
-        {detector.listening && (
-          <span style={{ fontSize: 11, color: C.muted }}>🎤 {detector.heard || '...'}</span>
+        {state === 'idle' && (
+          <span style={{ fontSize: 12, color: C.muted }}>Nhấn Bắt đầu</span>
+        )}
+        {state === 'active' && (
+          <span style={{ fontSize: 12, color: C.dim }}>🎤 {detector.heard || 'chờ...'}</span>
+        )}
+        {state === 'correct' && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.green }}>✓ Đúng!</span>
+        )}
+        {state === 'wrong' && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.red }}>✗ Sai</span>
         )}
         {errorMic && <span style={{ fontSize: 11, color: C.red }}>{errorMic}</span>}
       </div>
 
+      {/* NoteSheet */}
       <div style={{
         flex: 1, minHeight: 0, margin: '0 10px 6px',
         borderRadius: 12, overflow: 'hidden',
         background: '#fff', border: `1px solid ${C.border}`,
       }}>
-        <NoteSheet notes={noteItems} active={cursor} />
+        <NoteSheet notes={noteItems} active={state === 'idle' ? -1 : cursor} />
       </div>
 
+      {/* Bottom CTA */}
       <div style={{
-        flexShrink: 0, display: 'flex', justifyContent: 'center',
-        padding: '10px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
+        flexShrink: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', gap: 6,
+        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
       }}>
-        <button onClick={onComplete}
-          style={{
-            padding: '10px 24px', fontSize: 14, fontWeight: 700,
-            borderRadius: 12, border: `1.5px solid ${C.border}`,
-            background: '#fff', color: C.dim,
-            fontFamily: 'inherit', cursor: 'pointer',
-          }}>
-          Bỏ qua →
-        </button>
+        {state === 'idle' ? (
+          <button onClick={startMic}
+            style={{
+              width: '100%', maxWidth: 280, padding: '12px 0',
+              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
+              background: `linear-gradient(135deg,${C.accent},#D97706)`, color: '#fff',
+              fontFamily: 'inherit', cursor: 'pointer',
+            }}>
+            {STEP_CTA.note}
+          </button>
+        ) : (
+          <button onClick={() => { detector.stop(); onComplete() }}
+            style={{
+              background: 'none', border: 'none',
+              fontSize: 12, color: C.muted, cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}>
+            Bỏ qua
+          </button>
+        )}
       </div>
     </div>
   )
@@ -392,18 +433,22 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
   const hitRef = useRef(false)
   const bpm = SPEEDS[speedIdx].bpm
 
-  // Start mic
-  useEffect(() => {
-    const init = async () => {
-      const ok = await detector.start()
-      if (!ok) setErrorMic('Không truy cập được micro.')
-    }
-    init()
-    return () => detector.stop()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const startMic = async () => {
+    const ok = await detector.start()
+    if (!ok) { setErrorMic('Không truy cập được micro.'); return false }
+    return true
+  }
 
-  // Countdown
+  useEffect(() => () => detector.stop(), [])
+
+  const startAll = async () => {
+    if (!detector.listening) {
+      const ok = await startMic()
+      if (!ok) return
+    }
+    setCountdown(3)
+  }
+
   useEffect(() => {
     if (countdown === null) return
     if (countdown > 0) {
@@ -415,7 +460,6 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown])
 
-  // Pitch detection (runs while playing)
   useEffect(() => {
     if (!playing || done || !detector.listening) return
     const loop = () => {
@@ -440,20 +484,12 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         setPlaying(false); setDone(true); setCursor(-1)
         const hit = results.filter(r => r === 'correct').length
         setScore({ hit, total: results.length })
-        // Auto-advance if >50% correct
-        if (hit / results.length >= 0.5) {
-          setTimeout(onComplete, 1500)
-        }
+        if (hit / results.length >= 0.5) setTimeout(onComplete, 1500)
         return
       }
-      // Record result for PREVIOUS note
-      if (i > 0 && !exercise.notes[i - 1].pitch.match(/rest/i)) {
+      if (i > 0) {
         results.push(hitRef.current ? 'correct' : 'wrong')
-        setNoteResults(prev => {
-          const next = [...prev]
-          next[i - 1] = hitRef.current ? 'correct' : 'wrong'
-          return next
-        })
+        setNoteResults(prev => { const next = [...prev]; next[i - 1] = hitRef.current ? 'correct' : 'wrong'; return next })
       }
       setCursor(i)
       hitRef.current = false
@@ -471,38 +507,39 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
 
   const toggle = () => {
     if (playing) { stopPlayback(); return }
-    setScore(null); setCountdown(3)
+    setScore(null); startAll()
+  }
+
+  const retry = () => {
+    stopPlayback(); setScore(null); setNoteResults([])
+    startAll()
   }
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Status bar */}
+      {/* BPM selector + status */}
       <div style={{
-        flexShrink: 0, display: 'flex', justifyContent: 'space-between',
-        padding: '4px 16px 6px', gap: 12, alignItems: 'center',
+        flexShrink: 0, display: 'flex', justifyContent: 'center',
+        padding: '2px 16px 4px', gap: 8, alignItems: 'center',
       }}>
-        <div style={{ display: 'flex', gap: 3, padding: 3, background: '#F0ECE3', borderRadius: 10 }}>
+        <div style={{ display: 'flex', gap: 1, padding: 2, background: '#F0ECE3', borderRadius: 8 }}>
           {SPEEDS.map((s, i) => (
             <button key={i} onClick={() => { setSpeedIdx(i); if (playing) { stopPlayback(); setCountdown(3) } }}
               disabled={playing}
               style={{
-                padding: '4px 12px', border: 'none', borderRadius: 8,
+                padding: '3px 10px', border: 'none', borderRadius: 6,
                 cursor: playing ? 'default' : 'pointer',
-                fontFamily: 'inherit', fontSize: 11, fontWeight: 700,
+                fontFamily: 'inherit', fontSize: 10, fontWeight: 700,
                 background: speedIdx === i ? 'rgba(194,98,46,.15)' : 'transparent',
                 color: speedIdx === i ? C.accent : C.dim,
               }}
-            >{s.label}</button>
+            >{s.label}<span style={{ fontSize: 8, marginLeft: 2, opacity: .5 }}>{s.bpm}</span></button>
           ))}
         </div>
-        {playing && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>
-            🎤 {detector.heard || '...'}
-          </span>
-        )}
-        {errorMic && <span style={{ fontSize: 11, color: C.red }}>{errorMic}</span>}
+        {playing && <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>🎤 {detector.heard || '...'}</span>}
+        {errorMic && <span style={{ fontSize: 10, color: C.red }}>{errorMic}</span>}
       </div>
 
       {/* NoteSheet */}
@@ -522,7 +559,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         }}>
           {noteResults.map((r, i) => (
             <div key={i} style={{
-              width: 8, height: 8, borderRadius: '50%',
+              width: 6, height: 6, borderRadius: '50%',
               background: r === 'correct' ? C.green : r === 'wrong' ? C.red : '#E5E0D5',
             }} />
           ))}
@@ -531,57 +568,68 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
 
       {/* Score summary */}
       {done && score && (
-        <div style={{
-          flexShrink: 0, textAlign: 'center', padding: '6px 16px',
-        }}>
-          <div style={{
-            display: 'inline-block', fontSize: 14, fontWeight: 700,
+        <div style={{ flexShrink: 0, textAlign: 'center', padding: '2px 16px 4px' }}>
+          <span style={{
+            fontSize: 13, fontWeight: 700,
             color: score.hit / score.total >= 0.5 ? C.green : C.red,
-            background: score.hit / score.total >= 0.5 ? 'rgba(16,185,129,.08)' : 'rgba(220,38,38,.06)',
-            padding: '8px 20px', borderRadius: 12,
           }}>
-            {score.hit}/{score.total} nốt đúng
+            {score.hit}/{score.total} đúng
             {score.hit / score.total >= 0.5 ? ' ✅' : ' — thử lại nhé'}
-          </div>
+          </span>
         </div>
       )}
 
-      {/* Controls */}
+      {/* Bottom CTA */}
       <div style={{
-        flexShrink: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', gap: 20,
-        padding: '8px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
+        flexShrink: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', gap: 6,
+        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
       }}>
-        {done && score && score.hit / score.total < 0.5 && (
-          <button onClick={() => { stopPlayback(); setCountdown(3); setScore(null) }}
+        {!done ? (
+          <button onClick={toggle}
             style={{
-              padding: '10px 24px', fontSize: 14, fontWeight: 700,
-              borderRadius: 12, border: `1.5px solid ${C.border}`,
-              background: '#fff', color: C.dim,
+              width: '100%', maxWidth: 280, padding: '12px 0',
+              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
+              background: playing || countdown !== null
+                ? 'rgba(0,0,0,.05)'
+                : `linear-gradient(135deg,${C.accent},#D97706)`,
+              color: playing || countdown !== null ? C.text : '#fff',
+              fontFamily: 'inherit',
+              cursor: countdown !== null ? 'default' : 'pointer',
+            }}>
+            {playing ? '⏸ Tạm dừng'
+              : countdown !== null ? countdown
+              : STEP_CTA.rhythm}
+          </button>
+        ) : score && score.hit / score.total < 0.5 ? (
+          <button onClick={retry}
+            style={{
+              width: '100%', maxWidth: 280, padding: '12px 0',
+              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
+              background: `linear-gradient(135deg,${C.accent},#D97706)`, color: '#fff',
               fontFamily: 'inherit', cursor: 'pointer',
             }}>
             ↻ Thử lại
           </button>
-        )}
-        <button onClick={toggle}
-          style={{
-            width: 56, height: 56, borderRadius: '50%', border: 'none',
-            background: playing ? 'rgba(0,0,0,.06)' : countdown !== null ? C.dim : `linear-gradient(135deg,${C.accent},#D97706)`,
-            color: playing ? C.text : '#fff',
-            fontSize: 22, cursor: countdown !== null ? 'default' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-          {playing ? '⏸' : countdown !== null ? countdown : '▶'}
-        </button>
-        {done && score && score.hit / score.total >= 0.5 && (
+        ) : score ? (
           <button onClick={onComplete}
             style={{
-              padding: '10px 24px', fontSize: 14, fontWeight: 700,
-              borderRadius: 12, border: 'none',
+              width: '100%', maxWidth: 280, padding: '12px 0',
+              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
               background: C.green, color: '#fff',
               fontFamily: 'inherit', cursor: 'pointer',
             }}>
             Tiếp tục →
+          </button>
+        ) : null}
+        {!done && (
+          <button onClick={() => { stopPlayback(); detector.stop(); onComplete() }}
+            style={{
+              background: 'none', border: 'none',
+              fontSize: 12, color: C.muted, cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}>
+            Bỏ qua
           </button>
         )}
       </div>
@@ -603,17 +651,23 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
   const detector = usePitchDetector()
   const timerRef = useRef<number | null>(null)
   const hitRef = useRef(false)
-  const bpm = SPEEDS[1].bpm // Vừa
+  const bpm = SPEEDS[1].bpm
 
-  useEffect(() => {
-    const init = async () => {
-      const ok = await detector.start()
-      if (!ok) setErrorMic('Không truy cập được micro.')
+  const startMic = async () => {
+    const ok = await detector.start()
+    if (!ok) { setErrorMic('Không truy cập được micro.'); return false }
+    return true
+  }
+
+  useEffect(() => () => detector.stop(), [])
+
+  const startAll = async () => {
+    if (!detector.listening) {
+      const ok = await startMic()
+      if (!ok) return
     }
-    init()
-    return () => detector.stop()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    setCountdown(3)
+  }
 
   useEffect(() => {
     if (countdown === null) return
@@ -651,9 +705,7 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
         setScore({ hit, total: results.length })
         return
       }
-      if (i > 0 && !(exercise.notes[i - 1] as any)?.rest) {
-        results.push(hitRef.current ? 'correct' : 'wrong')
-      }
+      if (i > 0) results.push(hitRef.current ? 'correct' : 'wrong')
       setCursor(i)
       hitRef.current = false
       i++
@@ -670,30 +722,23 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
 
   const toggle = () => {
     if (playing) { stopPlayback(); return }
-    setScore(null); setCountdown(3)
+    setScore(null); startAll()
   }
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Status */}
       <div style={{
         flexShrink: 0, display: 'flex', justifyContent: 'center',
-        padding: '4px 16px 6px', gap: 12, alignItems: 'center',
+        padding: '2px 16px 4px', gap: 12, alignItems: 'center',
       }}>
-        {playing && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>
-            🎤 {detector.heard || '...'}
-          </span>
-        )}
-        {errorMic && <span style={{ fontSize: 11, color: C.red }}>{errorMic}</span>}
-        {!playing && !done && (
-          <span style={{ fontSize: 13, fontWeight: 600, color: C.dim }}>
-            Chơi theo bản nhạc — đừng nhìn highlight
-          </span>
-        )}
+        {playing && <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>🎤 {detector.heard || '...'}</span>}
+        {errorMic && <span style={{ fontSize: 10, color: C.red }}>{errorMic}</span>}
       </div>
 
+      {/* NoteSheet */}
       <div style={{
         flex: 1, minHeight: 0, margin: '0 10px 6px',
         borderRadius: 12, overflow: 'hidden',
@@ -702,70 +747,65 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
         <NoteSheet notes={noteItems} active={cursor} />
       </div>
 
+      {/* Score */}
       {done && score && (
-        <div style={{
-          flexShrink: 0, textAlign: 'center', padding: '6px 16px',
-        }}>
-          <div style={{
-            display: 'inline-block', fontSize: 14, fontWeight: 700,
-            color: C.accent, background: 'rgba(194,98,46,.08)',
-            padding: '8px 20px', borderRadius: 12, marginBottom: 8,
-          }}>
-            🎉 Kết quả: {score.hit}/{score.total} ({Math.round(score.hit / score.total * 100)}%)
+        <div style={{ flexShrink: 0, textAlign: 'center', padding: '2px 16px 4px' }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.accent, marginBottom: 2 }}>
+            🎉 {Math.round(score.hit / score.total * 100)}%
           </div>
           <div style={{ fontSize: 12, color: C.dim }}>
-            {score.hit / score.total >= 0.8 ? 'Xuất sắc! ⭐' :
-             score.hit / score.total >= 0.5 ? 'Tốt lắm! 👏' :
-             'Luyện thêm nhé 💪'}
+            {score.hit}/{score.total} nốt đúng
+            {score.hit / score.total >= 0.8 ? ' · Xuất sắc! ⭐' : score.hit / score.total >= 0.5 ? ' · Tốt lắm! 👏' : ' · Luyện thêm nhé 💪'}
           </div>
         </div>
       )}
 
+      {/* Bottom CTA */}
       <div style={{
-        flexShrink: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', gap: 20,
-        padding: '8px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
+        flexShrink: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', gap: 6,
+        padding: '4px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
       }}>
-        {done && (
-          <button onClick={() => { stopPlayback(); setCountdown(3); setScore(null) }}
+        {!done ? (
+          <button onClick={toggle}
             style={{
-              padding: '10px 24px', fontSize: 14, fontWeight: 700,
-              borderRadius: 12, border: `1.5px solid ${C.border}`,
-              background: '#fff', color: C.dim,
-              fontFamily: 'inherit', cursor: 'pointer',
+              width: '100%', maxWidth: 280, padding: '12px 0',
+              fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
+              background: playing || countdown !== null
+                ? 'rgba(0,0,0,.05)'
+                : `linear-gradient(135deg,${C.accent},#D97706)`,
+              color: playing || countdown !== null ? C.text : '#fff',
+              fontFamily: 'inherit',
+              cursor: countdown !== null ? 'default' : 'pointer',
             }}>
-            ↻ Chơi lại
+            {playing ? '⏸ Tạm dừng'
+              : countdown !== null ? countdown
+              : STEP_CTA.perform}
           </button>
-        )}
-        <button onClick={toggle}
-          style={{
-            width: 56, height: 56, borderRadius: '50%', border: 'none',
-            background: playing ? 'rgba(0,0,0,.06)' : countdown !== null ? C.dim : `linear-gradient(135deg,${C.accent},#D97706)`,
-            color: playing ? C.text : '#fff',
-            fontSize: 22, cursor: countdown !== null ? 'default' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-          {playing ? '⏸' : countdown !== null ? countdown : '▶'}
-        </button>
-        {done && (
-          <button onClick={onComplete}
-            style={{
-              padding: '10px 24px', fontSize: 14, fontWeight: 700,
-              borderRadius: 12, border: 'none',
-              background: C.green, color: '#fff',
-              fontFamily: 'inherit', cursor: 'pointer',
-            }}>
-            Hoàn thành ✓
-          </button>
+        ) : (
+          <>
+            <button onClick={() => { stopPlayback(); setScore(null); startAll() }}
+              style={{
+                width: '100%', maxWidth: 280, padding: '10px 0',
+                fontSize: 14, fontWeight: 700, borderRadius: 14,
+                border: `1.5px solid ${C.border}`,
+                background: '#fff', color: C.dim,
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}>
+              ↻ Chơi lại
+            </button>
+            <button onClick={onComplete}
+              style={{
+                width: '100%', maxWidth: 280, padding: '12px 0',
+                fontSize: 15, fontWeight: 700, borderRadius: 14, border: 'none',
+                background: C.green, color: '#fff',
+                fontFamily: 'inherit', cursor: 'pointer',
+              }}>
+              Hoàn thành ✓
+            </button>
+          </>
         )}
       </div>
     </div>
   )
-}
-
-const btnBack: React.CSSProperties = {
-  background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.06)',
-  borderRadius: 50, width: 36, height: 36, fontSize: 14,
-  color: '#8A8478', cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
