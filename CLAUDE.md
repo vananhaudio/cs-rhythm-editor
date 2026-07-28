@@ -60,6 +60,14 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 ## File chính
 `AppRouter.tsx` (routing), `main.tsx` (entry), `StudentOnboarding.tsx`, `StudentPortalV2.tsx`, `MobileStudentPortal.tsx`, `TeacherAdminPage.tsx`, `CourseEditorContent.tsx`, `LessonViewerPage.tsx`, `ToolsManager.tsx`, `StudentList.tsx`, `StudentProfile.tsx`, `App.tsx` (rhythm editor), `GuitarTuner.tsx`, `TapWithSong.tsx`, `YouTubeSyncPage.tsx`, `ImportPage.tsx`, `GuitarBoard.tsx` (+ `GuitarFretboard`, `ScoreTabViewer`, `TeachingBoard`, `audioEngine`, `guitarNotes`, `scoreData`), `supabase.ts`, `types.ts`, `utils.ts`.
 
+## Mic trong app — CÁI BẪY ĐÃ LÀM MẤT 1 NGÀY
+**WKWebView (app iOS) và Android WebView KHÔNG có `webkitSpeechRecognition`.** Chỉ Safari/Chrome mở bằng TRÌNH DUYỆT mới có. Vì `server.url` trỏ web live, app là WebView ⇒ mọi tính năng dựa Web Speech API sẽ chết trong app trong khi **test trên Chrome desktop luôn thấy chạy tốt**. Đừng chẩn đoán bằng desktop.
+- Dùng `src/piano/useVoiceInput.ts` (3 tầng tự tụt: Web Speech → `MediaRecorder` + Whisper qua edge function `piano-stt` → gõ text). Cần mic ở đâu thì tái sử dụng hook này, đừng gọi `SpeechRecognition` trực tiếp.
+- **`SpeechRecognition.start()` phải gọi ĐỒNG BỘ trong user gesture.** `await getUserMedia()` trước `start()` làm mất user-activation → iOS chặn (đây là lý do commit `05adc37` hỏng rồi bị revert).
+- **Đừng restart trong `onerror`** — spec chạy `onerror` TRƯỚC `onend`, `start()` lúc đó throw `InvalidStateError`. Restart trong `onend`.
+- Tool cần mic thì **render thẳng, KHÔNG iframe** (`getUserMedia` trong iframe của WKWebView hay bị chặn) — xem khuôn BMS/Piano Journey trong `openTool`.
+- Edge function `piano-stt` cần secret `OPENAI_API_KEY` (Whisper). Thiếu secret thì Tầng 2 trả 502 và app tự lùi về ô gõ.
+
 ## App iOS (Capacitor) — đã lên TestFlight
 - Vỏ Capacitor. `appId` `com.vananhaudio.guitar`, app name "TVA Guitar". Dự án iOS: `ios/App/App.xcworkspace`.
 - `capacitor.config.json`: `server.url = https://timming.vananhaudio.com` → app chỉ tải web live ⇒ **deploy web là app tự cập nhật**, KHÔNG cần build lại Xcode. Chỉ khi đổi vỏ native (icon/plugin) hay bỏ `server.url` mới phải build lại.

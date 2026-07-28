@@ -2,6 +2,14 @@
 
 Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
+## 28/07/2026
+
+- **Piano Journey — mic chạy được trong app**: nguyên nhân gốc là **WKWebView/Android WebView KHÔNG có Web Speech API** (chỉ Safari/Chrome trình duyệt mới có), nên trong app đóng gói mic chết ngay từ đầu — test trên Chrome desktop thì luôn thấy chạy tốt. Thêm `src/piano/useVoiceInput.ts` với 3 tầng tự tụt: Web Speech → thu âm (`MediaRecorder`) + Whisper qua edge function `piano-stt` → gõ text. Giữ nguyên `server.url` nên **không phải build lại Xcode**.
+- **Fix 4 bug logic mic**: (1) `onend` đọc `transcript` từ closure cũ → mất trắng câu nói khi recognizer kết thúc mà chưa có final result; (2) `no-speech` gọi `rec.start()` trong `onerror` → luôn throw `InvalidStateError` rồi tuột về idle, chuyển sang restart trong `onend`; (3) `setState` trong thân render; (4) animation `setState` 60fps → chuyển sang CSS.
+- **Chặn treo**: `generateMission` và xin quyền micro đều có timeout (8s / 15s) rồi lùi về bài mẫu — mạng yếu không còn để trẻ kẹt ở "Đang sáng tác".
+- **Piano Journey render thẳng, không iframe** (`MobileStudentPortal`): `getUserMedia` trong iframe của WKWebView hay bị chặn. Cùng khuôn với BMS.
+- **`NSMicrophoneUsageDescription`**: sửa mô tả — bản cũ cam kết bản ghi "không gửi đi", sai kể từ khi có Tầng 2 (rủi ro bị App Review từ chối).
+
 ## 27/07/2026
 
 - **Trang tuyển sinh (class.vananhaudio.com)**: thêm CTA "📖 1001 Câu chuyện" trên header — pill nằm giữa nhóm menu và nút "Hành trình của tôi", dẫn tới `/story`. Mobile rút gọn thành "📖 1001" (trang chưa có menu hamburger nên pill hiển thị trực tiếp).
