@@ -9,6 +9,19 @@ type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft
 type ChatMsg = { role: 'user' | 'mira'; text: string; at: string }
 
 // ── Helpers ──
+function timeAgo(ts: string) {
+  const diff = Date.now() - new Date(ts).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Vừa xong'
+  if (mins < 60) return `${mins} phút trước`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs} giờ trước`
+  const days = Math.floor(hrs / 24)
+  if (days === 1) return 'Hôm qua'
+  if (days < 7) return `${days} ngày trước`
+  return new Date(ts).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short' })
+}
+
 async function getErrMsg(e: unknown): Promise<string> {
   if (e && typeof e === 'object' && 'context' in e) {
     try {
@@ -165,6 +178,11 @@ export default function StoryTellPage() {
   const [editingTitle, setEditingTitle] = useState(false)
   const [showRaw, setShowRaw] = useState(false)  // collapsible Story Raw
 
+  // ── MVP 04: Sidebar + Story Library ──
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [storyList, setStoryList] = useState<{ id: string; title: string; status: string; updated_at: string; conversation: ChatMsg[] }[]>([])
+  const [loadingList, setLoadingList] = useState(false)
+
   // ── Conversation + Story Raw ──
   const [conversation, setConversation] = useState<ChatMsg[]>([])
   const [rawContent, setRawContent] = useState('')
@@ -217,6 +235,57 @@ export default function StoryTellPage() {
 
   // ── Resume draft ──
   const draftLoadedRef = useRef(false)
+
+  // ── MVP 04: Load story vào workspace ──
+  const loadStory = useCallback(async (sid: string) => {
+    const { data: s } = await supabase.from('stories')
+      .select('id,status,title,conversation,content,topic')
+      .eq('id', sid).maybeSingle()
+    if (!s) return
+    draftLoadedRef.current = true
+    setStoryId(s.id)
+    setStoryTitle(s.title || '')
+    setDraftResumed(true)
+    setShowSidebar(false)
+    setShowRaw(false)
+
+    if (s.status === 'user_review' && s.title && s.content) {
+      setDraftTitle(s.title)
+      setDraftTopic(s.topic || '')
+      setDraftContent(s.content)
+      setPhase('draft')
+      return
+    }
+
+    const conv = Array.isArray(s.conversation) ? s.conversation : []
+    setConversation(conv.filter((m: ChatMsg) => m.role !== 'mira' || !m.text.includes('(silent')))
+    setPhase('telling')
+    setMiraReady(false)
+    setInput('')
+
+    supabase.from('story_chunks')
+      .select('content, order_index')
+      .eq('story_id', s.id)
+      .order('order_index', { ascending: true })
+      .then(({ data: chunks }) => {
+        if (chunks) {
+          const unique = chunks.filter((c, i, arr) => i === 0 || c.content !== arr[i - 1].content)
+          setRawContent(unique.map(c => c.content).join('\n\n'))
+        }
+      })
+  }, [])
+
+  // ── MVP 04: Fetch story list ──
+  const fetchStoryList = useCallback(async () => {
+    if (!user) return
+    setLoadingList(true)
+    const { data } = await supabase.from('stories')
+      .select('id,title,status,updated_at,conversation')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+    if (data) setStoryList(data as any)
+    setLoadingList(false)
+  }, [user])
   useEffect(() => {
     if (!user || draftLoadedRef.current) return
     supabase.from('stories')
@@ -257,7 +326,8 @@ export default function StoryTellPage() {
             })
         }
       })
-  }, [user])
+    fetchStoryList()
+  }, [user, fetchStoryList])
 
   // ── Send message ──
   const send = useCallback(async () => {
@@ -506,9 +576,65 @@ export default function StoryTellPage() {
         </div>
       ) : (
         /* ═══ STORY WORKSPACE ═══ */
-        <div className="sw-workspace">
+        <>
+          {/* ── SIDEBAR OVERLAY ── */}
+          {showSidebar && (
+            <div className="sw-overlay" onClick={() => setShowSidebar(false)} />
+          )}
+
+          {/* ── SIDEBAR DRAWER ── */}
+          <div className={`sw-drawer ${showSidebar ? 'sw-drawer-open' : ''}`}>
+            <div className="sw-drawer-header">
+              <div className="sw-drawer-avatar">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="sw-drawer-name">{displayName}</div>
+                <div className="sw-drawer-count">{storyList.length} câu chuyện</div>
+              </div>
+            </div>
+
+            <button className="sw-drawer-new" onClick={() => { startNew(); fetchStoryList() }}>
+              + Câu chuyện mới
+            </button>
+
+            <div className="sw-drawer-list">
+              {loadingList ? (
+                <div className="sw-drawer-loading">Đang tải…</div>
+              ) : storyList.length === 0 ? (
+                <div className="sw-drawer-empty">Chưa có câu chuyện nào</div>
+              ) : (
+                storyList.map(s => (
+                  <button
+                    key={s.id}
+                    className={`sw-drawer-item ${s.id === storyId ? 'sw-drawer-item-active' : ''}`}
+                    onClick={() => loadStory(s.id)}
+                  >
+                    <div className="sw-drawer-item-top">
+                      <span className="sw-drawer-item-title">{s.title || 'Câu chuyện chưa đặt tên'}</span>
+                      <span className={`sw-drawer-badge sw-drawer-badge-${s.status === 'published' ? 'done' : s.status === 'submitted' || s.status === 'pending_publish' ? 'done' : 'telling'}`}>
+                        {s.status === 'published' ? 'Đã xuất bản' : s.status === 'submitted' || s.status === 'pending_publish' ? 'Đã hoàn thành' : s.status === 'user_review' ? 'Đã hoàn thành' : 'Đang kể'}
+                      </span>
+                    </div>
+                    <div className="sw-drawer-item-time">{timeAgo(s.updated_at)}</div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="sw-drawer-footer">
+              <button className="sw-drawer-item" onClick={() => setShowSidebar(false)}>
+                <span className="sw-drawer-item-title">⚙️ Cài đặt</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="sw-workspace">
           {/* ── HEADER ── */}
           <header className="sw-header">
+            <button className="sw-menu-btn" onClick={() => { setShowSidebar(true); fetchStoryList() }} aria-label="Menu">
+              ☰
+            </button>
             <div className="sw-header-left">
               <div className="sw-avatar">
                 {displayName.charAt(0).toUpperCase()}
@@ -657,6 +783,7 @@ export default function StoryTellPage() {
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   )
@@ -706,6 +833,123 @@ const CSS = `
   align-items: center;
   justify-content: center;
   color: var(--ink-muted);
+}
+
+/* ── SIDEBAR ── */
+.sw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  animation: sw-fade-overlay 0.2s ease;
+}
+@keyframes sw-fade-overlay { from { opacity: 0; } to { opacity: 1; } }
+.sw-drawer {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: min(300px, 85vw);
+  background: var(--bg);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+.sw-drawer-open { transform: translateX(0); box-shadow: 0 0 30px rgba(0,0,0,0.1); }
+.sw-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px 20px;
+}
+.sw-drawer-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5856D6, #AF52DE);
+  color: #fff;
+  font-weight: 600;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sw-drawer-name { font-size: 17px; font-weight: 700; color: var(--ink); }
+.sw-drawer-count { font-size: 13px; color: var(--ink-muted); margin-top: 1px; }
+.sw-drawer-new {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 0 12px 8px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--blue);
+  cursor: pointer;
+  text-align: left;
+}
+.sw-drawer-new:active { background: rgba(0,122,255,0.06); }
+.sw-drawer-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px;
+}
+.sw-drawer-loading,
+.sw-drawer-empty {
+  font-size: 14px;
+  color: var(--ink-muted);
+  text-align: center;
+  padding: 40px 0;
+}
+.sw-drawer-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+.sw-drawer-item:active { background: rgba(0,0,0,0.04); }
+.sw-drawer-item-active { background: rgba(0,122,255,0.08); }
+.sw-drawer-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sw-drawer-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.sw-drawer-item-time {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+.sw-drawer-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.sw-drawer-badge-telling { background: rgba(255,149,0,0.1); color: #C93400; }
+.sw-drawer-badge-done { background: rgba(52,199,89,0.1); color: #248A3D; }
+.sw-drawer-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--separator);
 }
 
 /* ── Workspace ── */
