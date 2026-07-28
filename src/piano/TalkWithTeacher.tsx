@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from '../supabase'
-import { LEVELS, getLevel, currentLevelId, setLevelId } from './rules'
+import { LEVELS, getLevel, currentLevelId, setLevelId, randomTheme } from './rules'
 
 type TalkState = 'idle' | 'connecting' | 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
 
@@ -72,7 +72,8 @@ const INSTRUCTIONS =
   'ấm áp, ngắn gọn, tối đa 2 câu, không giảng giải dài. ' +
   'Nhiệm vụ chính: hỏi bé hôm nay muốn tập bài gì, rồi GỌI công cụ tao_bai_tap với điều bé nói. ' +
   'Ngay sau khi gọi công cụ, nói một câu vui để bé chờ, ví dụ "Cô soạn bài cho con ngay đây!". ' +
-  'Nếu bé nói lan man, nhẹ nhàng hỏi lại bé muốn bài về cái gì.'
+  'Nếu bé nói lan man hoặc bảo không biết, hãy TỰ NGHĨ một chủ đề dễ thương ' +
+  '(con vật, đồ vật, cảnh thiên nhiên) rồi gọi công cụ luôn — đừng hỏi đi hỏi lại.'
 
 interface Props {
   onClose?: () => void
@@ -400,11 +401,18 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
           {state === 'error' && <div style={{ fontSize:13,marginTop:4,opacity:.8 }}>Chạm để thử lại</div>}
         </div>
 
-        {/* TẠM — chip đổi bậc để thí nghiệm luồng. Bỏ khi bậc lấy từ hồ sơ học viên. */}
-        <button onClick={cycleLevel}
-          style={{ marginTop:12,background:'rgba(0,0,0,.03)',border:`1px solid ${C.border}`,borderRadius:999,padding:'6px 14px',fontSize:12,fontWeight:600,color:C.dim,cursor:'pointer',fontFamily:'inherit',touchAction:'manipulation' }}>
-          Bậc {level.id} · {level.name} ⟳
-        </button>
+        <div style={{ display:'flex',alignItems:'center',gap:8,marginTop:12,flexWrap:'wrap',justifyContent:'center' }}>
+          {/* Bé chưa nghĩ ra muốn gì thì bấm cái này — cô soạn luôn một chủ đề bất kỳ */}
+          <button onClick={() => createRef.current?.(randomTheme())} disabled={busy}
+            style={{ background:'#FDF1DC',border:'1px solid #F0DCB4',borderRadius:999,padding:'7px 16px',fontSize:13,fontWeight:700,color:'#B45309',cursor:busy?'default':'pointer',opacity:busy?.5:1,fontFamily:'inherit',touchAction:'manipulation' }}>
+            🎲 Bài bất kỳ
+          </button>
+          {/* TẠM — chip đổi bậc để thí nghiệm luồng. Bỏ khi bậc lấy từ hồ sơ học viên. */}
+          <button onClick={cycleLevel}
+            style={{ background:'rgba(0,0,0,.03)',border:`1px solid ${C.border}`,borderRadius:999,padding:'7px 14px',fontSize:12,fontWeight:600,color:C.dim,cursor:'pointer',fontFamily:'inherit',touchAction:'manipulation' }}>
+            Bậc {level.id} · {level.name} ⟳
+          </button>
+        </div>
       </div>
 
       {/* Bảng chẩn đoán — là flex item, KHÔNG absolute, để không che nút mic */}

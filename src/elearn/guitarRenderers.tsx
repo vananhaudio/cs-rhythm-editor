@@ -495,6 +495,10 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
           const hollow = showDur && dur >= 2      // nốt trắng/tròn = đầu rỗng
           const noStem = showDur && dur >= 4      // nốt tròn = không đuôi
           const flag = showDur && dur > 0 && dur <= 0.5   // nốt móc đơn = có dấu móc
+          // Nốt có chấm dôi (3 = trắng chấm, 1.5 = đen chấm…): thiếu dấu chấm thì
+          // nốt 3 phách vẽ y hệt nốt trắng 2 phách — sai trường độ. Chấm nằm bên
+          // phải đầu nốt; nốt nằm TRÊN DÒNG KẺ thì chấm nhích lên nửa khe.
+          const dotted = showDur && [0.75, 1.5, 3, 6].includes(dur)
           const stemEnd = y + (stemUp ? -26 : 26)
           return (
             <g key={i}>
@@ -507,6 +511,7 @@ export function NoteSheet({ notes, active, showDur = false, beatsPerBar = 0 }: {
                   : <ellipse cx={x} cy={y} rx={on ? 8 : 7} ry={on ? 6 : 5.2} fill={c} transform={`rotate(-18 ${x} ${y})`} />}
                 {!noStem && <line x1={stemX} x2={stemX} y1={y + (stemUp ? -2 : 2)} y2={stemEnd} stroke={c} strokeWidth={2} />}
                 {flag && <text x={stemX} y={stemEnd} fontFamily="Bravura" fontSize={4 * gap} fill={c}>{String.fromCodePoint(stemUp ? 0xE240 : 0xE241)}</text>}
+                {dotted && <circle cx={x + 12.5} cy={y - (Math.abs(st) % 2 === 0 ? gap / 2 : 0)} r={1.9} fill={c} />}
               </g>
               <text x={x} y={labelYOf(row)} textAnchor="middle" fontSize={on ? 11.5 : 10.5} fontWeight={on ? 800 : 600} fill={c}>{n.label}</text>
             </g>

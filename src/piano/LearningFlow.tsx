@@ -11,7 +11,7 @@ import { pitchClass } from '../elearn/pitch'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PianoNote { pitch: string; startBeat: number; duration: number }
-interface Exercise { title: string; bpm: number; notes: PianoNote[] }
+interface Exercise { title: string; bpm: number; notes: PianoNote[]; beatsPerBar?: number }
 
 interface StepComponentProps {
   exercise: Exercise
@@ -369,7 +369,7 @@ function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
         borderRadius: 12, overflow: 'hidden',
         background: '#fff', border: `1px solid ${C.border}`,
       }}>
-        <NoteSheet notes={noteItems} active={cursor} />
+        <NoteSheet notes={noteItems} active={cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
 
       {/* Bottom CTA */}
@@ -509,7 +509,7 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
         borderRadius: 12, overflow: 'hidden',
         background: '#fff', border: `1px solid ${C.border}`,
       }}>
-        <NoteSheet notes={noteItems} active={state === 'idle' ? -1 : cursor} />
+        <NoteSheet notes={noteItems} active={state === 'idle' ? -1 : cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
 
       {/* Bottom */}
@@ -660,7 +660,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         borderRadius: 12, overflow: 'hidden',
         background: '#fff', border: `1px solid ${C.border}`,
       }}>
-        <NoteSheet notes={noteItems} active={cursor} />
+        <NoteSheet notes={noteItems} active={cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
 
       {/* Score dots */}
@@ -823,7 +823,7 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
         borderRadius: 12, overflow: 'hidden',
         background: '#fff', border: `1px solid ${C.border}`,
       }}>
-        <NoteSheet notes={noteItems} active={cursor} />
+        <NoteSheet notes={noteItems} active={cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
 
       {/* Score */}

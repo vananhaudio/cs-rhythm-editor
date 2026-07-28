@@ -1,73 +1,95 @@
 // ── LUẬT SINH BÀI TẬP PIANO — thầy sửa ở file này, không đụng chỗ khác ────────
 //
 // ⚠️ ĐÂY LÀ BỘ LUẬT DEMO. Thầy Văn Anh sẽ thay bằng giáo trình thật.
-// Suy từ PROJECT_CONTEXT.md (3 nốt C-D-E, tay phải, nhịp đơn giản) + quy ước
-// Faber/Alfred trong PEDAGOGY.md. Chưa qua kiểm định sư phạm.
+// Suy từ PROJECT_CONTEXT.md + quy ước Faber/Alfred trong PEDAGOGY.md.
+// Chưa qua kiểm định sư phạm.
 //
 // Kiến trúc: luật ở đây → gửi kèm khi gọi AI → AI sinh → hàm kiểm bên dưới soi
 // và SỬA. Nhờ lớp kiểm mà bé không bao giờ nhận bài vượt bậc, kể cả khi AI ẩu.
 // Vì luật nằm trong repo (không nằm trong prompt của edge function) nên sửa luật
-// KHÔNG cần deploy lại `piano-generate` — key thật trong function đó vẫn an toàn.
+// KHÔNG cần deploy lại `piano-generate`.
+//
+// ĐƠN VỊ LÀ Ô NHỊP, KHÔNG PHẢI SỐ NỐT. Có vạch nhịp thì bài buộc phải đủ ô —
+// tổng trường độ phải bằng đúng bars × beatsPerBar, không thừa không thiếu.
 
 export interface PianoNote { pitch: string; startBeat: number; duration: number }
-export interface Exercise { title: string; bpm: number; notes: PianoNote[] }
+export interface Exercise {
+  title: string
+  bpm: number
+  notes: PianoNote[]
+  /** Số phách mỗi ô nhịp — NoteSheet dùng để kẻ vạch nhịp + số chỉ nhịp */
+  beatsPerBar?: number
+}
 
 export interface PianoLevel {
   id: number
   name: string
   /** Nốt được phép, xếp THẤP → CAO. Quãng nhảy đếm theo vị trí trong mảng này. */
   pitches: string[]
-  /** Trường độ được phép: 1 = đen, 2 = trắng, 4 = tròn */
+  /** Trường độ được phép: 0.5 = móc đơn, 1 = đen, 2 = trắng, 3 = trắng chấm, 4 = tròn */
   durations: number[]
-  minNotes: number
-  maxNotes: number
+  /** Số phách mỗi ô nhịp (4 = nhịp 4/4, 3 = nhịp 3/4) */
+  beatsPerBar: number
+  /** Số ô nhịp của bài */
+  bars: number
   /** Quãng nhảy tối đa giữa 2 nốt liền nhau (1 = chỉ được đi liền bậc) */
   maxStep: number
   bpm: [number, number]
-  /** Bắt buộc kết ở nốt chủ (nốt đầu tiên của `pitches`) */
+  /** Kết bài ở nốt chủ (nốt đầu tiên của `pitches`) */
   endOnTonic: boolean
   /** Kỹ năng hôm nay — đưa vào prompt để AI sáng tác có mục đích sư phạm */
   skill: string
 }
 
-// ── BỘ LUẬT DEMO — 3 bậc đầu ─────────────────────────────────────────────────
+// ── BỘ LUẬT DEMO — 10 bậc ────────────────────────────────────────────────────
+// Mỗi bậc chỉ mở THÊM MỘT thứ so với bậc trước: hoặc thêm nốt, hoặc thêm trường
+// độ, hoặc nới quãng nhảy, hoặc đổi nhịp. Không mở hai thứ cùng lúc.
+// Giới hạn cao độ: C4–B5 (ngoài khoảng này notationAdapter chưa có vị trí trên
+// khuông nhạc, nốt sẽ vẽ sai chỗ).
+const P5  = ['C4', 'D4', 'E4', 'F4', 'G4']
+const P8  = [...P5, 'A4', 'B4', 'C5']
+const P10 = [...P8, 'D5', 'E5']
+
 export const LEVELS: PianoLevel[] = [
-  {
-    id: 1,
-    name: 'Ba nốt đầu',
-    pitches: ['C4', 'D4', 'E4'],
-    durations: [1, 2],
-    minNotes: 6,
-    maxNotes: 8,
-    maxStep: 1,                 // chỉ đi liền bậc — ngón chưa phải nhảy
-    bpm: [60, 80],
-    endOnTonic: true,
-    skill: 'Chơi 3 nốt Đô Rê Mi tay phải, đi liền bậc, giữ đều nhịp đen',
-  },
-  {
-    id: 2,
-    name: 'Năm nốt bàn tay',
-    pitches: ['C4', 'D4', 'E4', 'F4', 'G4'],
-    durations: [1, 2],
-    minNotes: 8,
-    maxNotes: 12,
-    maxStep: 2,                 // được nhảy qua 1 nốt
-    bpm: [70, 90],
-    endOnTonic: true,
-    skill: 'Mở rộng ra 5 nốt Đô–Sol, tập nhảy quãng ba, giữ nhịp khi đổi ngón',
-  },
-  {
-    id: 3,
-    name: 'Trọn quãng tám',
-    pitches: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
-    durations: [1, 2, 4],
-    minNotes: 8,
-    maxNotes: 16,
-    maxStep: 3,
-    bpm: [80, 100],
-    endOnTonic: true,
-    skill: 'Đi hết quãng tám Đô4–Đô5, phối hợp nốt đen/trắng/tròn, câu nhạc có mở và kết',
-  },
+  { id: 1,  name: 'Ba nốt đầu',      pitches: ['C4','D4','E4'], durations: [1],
+    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 72], endOnTonic: true,
+    skill: 'Ba nốt Đô Rê Mi tay phải, toàn nốt đen, đi liền bậc' },
+
+  { id: 2,  name: 'Năm nốt bàn tay',  pitches: P5, durations: [1],
+    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [63, 76], endOnTonic: true,
+    skill: 'Mở rộng ra năm nốt Đô–Sol, vẫn toàn nốt đen, đi liền bậc' },
+
+  { id: 3,  name: 'Nốt trắng',        pitches: P5, durations: [1, 2],
+    beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 80], endOnTonic: true,
+    skill: 'Làm quen nốt trắng — giữ tiếng ngân đủ hai phách' },
+
+  { id: 4,  name: 'Nốt tròn',         pitches: P5, durations: [1, 2, 4],
+    beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 80], endOnTonic: true,
+    skill: 'Thêm nốt tròn ngân trọn một ô nhịp, tập đếm bốn phách' },
+
+  { id: 5,  name: 'Quãng ba',         pitches: P5, durations: [1, 2],
+    beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [72, 86], endOnTonic: true,
+    skill: 'Tập nhảy quãng ba, giữ nhịp đều khi đổi ngón' },
+
+  { id: 6,  name: 'Nhịp ba bốn',      pitches: P5, durations: [1, 2, 3],
+    beatsPerBar: 3, bars: 4, maxStep: 2, bpm: [72, 86], endOnTonic: true,
+    skill: 'Nhịp 3/4 — cảm giác một–hai–ba, nhấn phách đầu mỗi ô' },
+
+  { id: 7,  name: 'Trọn quãng tám',   pitches: P8, durations: [1, 2, 4],
+    beatsPerBar: 4, bars: 4, maxStep: 3, bpm: [76, 92], endOnTonic: true,
+    skill: 'Đi hết quãng tám Đô4–Đô5, câu nhạc có mở và có kết' },
+
+  { id: 8,  name: 'Móc đơn',          pitches: P8, durations: [0.5, 1, 2],
+    beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [76, 92], endOnTonic: true,
+    skill: 'Làm quen nốt móc đơn — hai nốt gọn trong một phách' },
+
+  { id: 9,  name: 'Quãng rộng',       pitches: P10, durations: [1, 2, 3, 4],
+    beatsPerBar: 4, bars: 4, maxStep: 4, bpm: [84, 100], endOnTonic: true,
+    skill: 'Nhảy quãng bốn–quãng năm, tay phải mở rộng lên Mi5' },
+
+  { id: 10, name: 'Tổng hợp',         pitches: P10, durations: [0.5, 1, 2, 3, 4],
+    beatsPerBar: 4, bars: 8, maxStep: 4, bpm: [88, 108], endOnTonic: true,
+    skill: 'Bài dài tám ô, phối hợp mọi trường độ đã học, giữ nhịp từ đầu đến cuối' },
 ]
 
 export const DEFAULT_LEVEL_ID = 1
@@ -118,21 +140,32 @@ function nearestIndex(pitch: string, level: PianoLevel): number {
 }
 
 // ── Chống ra mãi một bài ─────────────────────────────────────────────────────
-// Bậc thấp có không gian giai điệu rất hẹp (bậc 1: 3 nốt, đi liền bậc, kết ở Đô)
-// nên với cùng một prompt, AI luôn trả về đúng một lời giải hiển nhiên — đo thật:
-// gọi 3 lần ra y hệt C4 D4 E4 D4 E4 D4 C4. Hai cách chữa, đều ở client nên KHÔNG
-// phải deploy lại function: (1) mỗi lần giao một DÁNG giai điệu khác, (2) kèm
-// danh sách bài vừa ra để AI tránh lặp.
+// Bậc thấp có không gian giai điệu rất hẹp nên với cùng một prompt, AI luôn trả
+// về đúng một lời giải hiển nhiên — đo thật: gọi 3 lần ra y hệt nhau. Hai cách
+// chữa, đều ở client: (1) mỗi lần giao một DÁNG khác, (2) kèm bài vừa ra để tránh.
 const SHAPES = [
   'đi lên dần rồi kết',
   'đi xuống dần rồi kết',
   'vòng cung: lên tới đỉnh rồi quay về',
-  'hỏi–đáp: nửa đầu đi lên như câu hỏi, nửa sau đi xuống như câu trả lời',
+  'hỏi–đáp: ô nhịp đầu như câu hỏi đi lên, ô sau trả lời đi xuống',
   'lắc lư quanh một nốt rồi mới về nốt chủ',
   'bậc thang: mỗi nốt lặp hai lần rồi mới đi tiếp',
   'mở đầu bằng nốt ngân dài rồi chạy đều',
-  'chạy đều rồi kết bằng hai nốt ngân dài',
+  'chạy đều rồi kết bằng nốt ngân dài',
+  'nhắc lại: ô nhịp thứ hai lặp gần giống ô đầu nhưng đổi nốt cuối',
 ]
+
+/** Chủ đề cho nút "Bài bất kỳ" — khi bé chưa nghĩ ra muốn gì. */
+const RANDOM_THEMES = [
+  'con mèo đi rón rén', 'chú khủng long to lớn', 'giọt mưa rơi', 'ông mặt trời buổi sáng',
+  'con thuyền trôi trên sông', 'chú chim non tập bay', 'cái cây trong vườn', 'ông trăng tròn',
+  'đàn cá bơi tung tăng', 'bé chạy trong sân', 'con bướm vàng', 'tiếng chuông gió',
+  'chú gấu ngủ đông', 'bông hoa nở', 'con tàu vào ga', 'đám mây trắng bay',
+]
+
+export function randomTheme(): string {
+  return RANDOM_THEMES[Math.floor(Math.random() * RANDOM_THEMES.length)]
+}
 
 const RECENT_KEY = 'piano_recent'
 const RECENT_MAX = 4
@@ -156,9 +189,13 @@ export function rememberExercise(ex: Exercise) {
 
 // ── Ràng buộc gửi kèm cho AI ─────────────────────────────────────────────────
 // Gộp vào `prompt` gửi tới piano-generate, KHÔNG sửa prompt cứng của function.
+const DUR_NAME: Record<number, string> = { 0.5: 'móc đơn', 1: 'đen', 2: 'trắng', 3: 'trắng chấm', 4: 'tròn' }
+
 export function buildPrompt(chuDe: string, level: PianoLevel): string {
   const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)]
   const avoid = recentSignatures()
+  const total = level.bars * level.beatsPerBar
+  const durList = level.durations.map(d => `${d} (${DUR_NAME[d] ?? '?'})`).join(', ')
   return [
     `Bé muốn một bài về: "${chuDe}".`,
     `Mục tiêu sư phạm hôm nay: ${level.skill}.`,
@@ -167,12 +204,13 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
       ? `KHÔNG được trùng với các bài vừa soạn: ${avoid.join(' | ')}. Hãy làm khác hẳn.`
       : '',
     `RÀNG BUỘC BẮT BUỘC (bậc ${level.id} — ${level.name}):`,
+    `- Nhịp ${level.beatsPerBar}/4, đúng ${level.bars} ô nhịp.`,
+    `- TỔNG trường độ tất cả các nốt phải bằng ĐÚNG ${total} phách — không thừa, không thiếu.`,
     `- CHỈ được dùng các nốt: ${level.pitches.join(' ')} — tuyệt đối không dùng nốt khác.`,
-    `- duration chỉ được là: ${level.durations.join(' hoặc ')}.`,
-    `- Tổng số nốt từ ${level.minNotes} đến ${level.maxNotes}.`,
+    `- duration chỉ được là: ${durList}.`,
     `- Hai nốt liền nhau cách nhau tối đa ${level.maxStep} bậc trong thang nốt trên.`,
     `- bpm trong khoảng ${level.bpm[0]}–${level.bpm[1]}.`,
-    level.endOnTonic ? `- Nốt cuối phải là ${level.pitches[0]} và ngân dài hơn các nốt khác.` : '',
+    level.endOnTonic ? `- Ô nhịp cuối kết ở nốt ${level.pitches[0]}, nên ngân dài.` : '',
     `- Không lặp cùng một nốt quá 3 lần liên tiếp.`,
     `- Giai điệu phải nghe ra chủ đề bé muốn, nhưng ĐÚNG LUẬT là ưu tiên số một.`,
   ].filter(Boolean).join('\n')
@@ -185,18 +223,24 @@ export interface CheckResult {
   problems: string[]
 }
 
+/** Trường độ hợp lệ LỚN NHẤT còn nhét vừa `remain` phách; null nếu không có. */
+function fitDur(level: PianoLevel, remain: number): number | null {
+  const ok = level.durations.filter(d => d <= remain + 1e-9).sort((a, b) => b - a)
+  return ok.length ? ok[0] : null
+}
+
 export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallbackTitle: string): CheckResult {
   const problems: string[] = []
-  const maxDur = Math.max(...level.durations)
+  const target = level.bars * level.beatsPerBar
 
-  const notes: PianoNote[] = Array.isArray(raw?.notes) ? raw!.notes.filter(n => n && typeof n.pitch === 'string') : []
+  const notes: PianoNote[] = Array.isArray(raw?.notes) ? raw.notes.filter(n => n && typeof n.pitch === 'string') : []
   if (!notes.length) {
     problems.push('AI không trả về nốt nào')
     return { exercise: template(level, fallbackTitle), problems }
   }
 
   // 1. Kéo mọi nốt về thang nốt của bậc
-  let idx = notes.map(n => {
+  const rawIdx = notes.map(n => {
     const i = nearestIndex(n.pitch, level)
     if (i < 0) { problems.push(`không đọc được cao độ "${n.pitch}"`); return 0 }
     if (level.pitches[i] !== n.pitch) problems.push(`nốt ${n.pitch} ngoài bậc → ${level.pitches[i]}`)
@@ -204,39 +248,59 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
   })
 
   // 2. Trường độ về giá trị hợp lệ
-  let durs = notes.map(n => {
+  const rawDur = notes.map(n => {
     const d = Number(n.duration)
     if (level.durations.includes(d)) return d
     problems.push(`trường độ ${n.duration} không hợp lệ`)
     return level.durations.reduce((a, b) => Math.abs(b - d) < Math.abs(a - d) ? b : a, level.durations[0])
   })
 
-  // 3. Số nốt
-  if (idx.length > level.maxNotes) {
-    problems.push(`${idx.length} nốt, quá ${level.maxNotes}`)
-    idx = idx.slice(0, level.maxNotes); durs = durs.slice(0, level.maxNotes)
+  // 3+4. Nhồi cho ĐỦ Ô NHỊP — tổng phải bằng đúng bars × beatsPerBar.
+  //
+  // DÀNH SẴN ô nhịp cuối cho nốt chủ TRƯỚC KHI nhồi, rồi mới lấp phần còn lại.
+  // Bản đầu làm ngược (nhồi đầy rồi cắt ô cuối để thay nốt chủ) — phần cắt ra
+  // thường NHIỀU HƠN một ô nên bài bị hụt phách: fuzz 800 bài thì 242 bài sai
+  // tổng phách. Dành trước thì phép cộng luôn khớp.
+  const reserve = (level.endOnTonic && level.durations.includes(level.beatsPerBar))
+    ? level.beatsPerBar : 0
+  const fillTarget = target - reserve
+
+  const idx: number[] = []
+  const durs: number[] = []
+  let total = 0
+  for (let i = 0; i < rawIdx.length && total < fillTarget - 1e-9; i++) {
+    const remain = fillTarget - total
+    let d = rawDur[i]
+    if (d > remain + 1e-9) {
+      const fit = fitDur(level, remain)
+      if (fit == null) break
+      d = fit
+    }
+    idx.push(rawIdx[i]); durs.push(d); total += d
   }
-  while (idx.length < level.minNotes) {
-    problems.push('thiếu nốt, thêm cho đủ')
+  if (idx.length < rawIdx.length) problems.push(`bài dài quá ${level.bars} ô, đã cắt`)
+
+  let guard = 0
+  while (total < fillTarget - 1e-9 && guard++ < 400) {
+    const fit = fitDur(level, fillTarget - total)
+    if (fit == null) break
+    problems.push('thiếu ô nhịp, thêm nốt cho đầy')
     const last = idx[idx.length - 1] ?? 0
-    idx.push(Math.max(0, last - 1)); durs.push(level.durations[0])
+    idx.push(clamp(last - 1, 0, level.pitches.length - 1))
+    durs.push(fit); total += fit
   }
 
-  // ⚠️ THỨ TỰ DƯỚI ĐÂY QUAN TRỌNG. Bản đầu đặt "kết ở nốt chủ" và "phá lặp" SAU
-  // bước quãng nhảy nên chúng phá lại chính nó — fuzz 300 bài rác thì 134 bài vẫn
-  // nhảy quá xa. Nay: chốt nốt kết TRƯỚC, rồi duyệt NGƯỢC để nắn quãng nhảy.
-
-  // 4. Kết ở nốt chủ và ngân dài — chốt trước để bước sau nắn đường đi tới nó
-  const last = idx.length - 1
-  if (level.endOnTonic) {
-    if (idx[last] !== 0) { problems.push('không kết ở nốt chủ'); idx[last] = 0 }
-    if (durs[last] < maxDur) durs[last] = maxDur
+  if (reserve) {
+    idx.push(0); durs.push(reserve)          // ô cuối: nốt chủ ngân trọn ô
+  } else if (level.endOnTonic && idx.length && idx[idx.length - 1] !== 0) {
+    problems.push('không kết ở nốt chủ')
+    idx[idx.length - 1] = 0
   }
 
-  // 5. Quãng nhảy — duyệt NGƯỢC từ nốt cuối. Mỗi vòng ép cặp (i, i+1) vào tầm
-  // với, và duyệt ngược phủ hết mọi cặp liền nhau đúng một lần ⇒ xong là chắc
-  // chắn không còn cặp nào vượt maxStep, mà nốt kết vẫn nguyên.
-  for (let i = last - 1; i >= 0; i--) {
+  // 5. Quãng nhảy — duyệt NGƯỢC từ nốt cuối. Mỗi vòng ép cặp (i, i+1) vào tầm với,
+  //    duyệt ngược phủ hết mọi cặp đúng một lần ⇒ xong là chắc chắn không còn cặp
+  //    nào vượt maxStep, mà nốt kết vẫn nguyên.
+  for (let i = idx.length - 2; i >= 0; i--) {
     const lo = idx[i + 1] - level.maxStep
     const hi = idx[i + 1] + level.maxStep
     if (idx[i] < lo || idx[i] > hi) {
@@ -246,8 +310,7 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
   }
 
   // 6. Không lặp một nốt quá 3 lần — CHỈ sửa khi không phá vỡ quãng nhảy.
-  // Đây là yêu cầu mềm (nghe cho đỡ nhàm), không phải ràng buộc sư phạm cứng,
-  // nên thà để lặp còn hơn đẩy bé vào một quãng nhảy quá tầm.
+  //    Đây là yêu cầu mềm (nghe cho đỡ nhàm), không phải ràng buộc sư phạm cứng.
   let run = 1
   for (let i = 1; i < idx.length; i++) {
     if (idx[i] !== idx[i - 1]) { run = 1; continue }
@@ -256,7 +319,7 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
     const thu = clamp(idx[i] + (idx[i] > 0 ? -1 : 1), 0, level.pitches.length - 1)
     const truocOk = Math.abs(thu - idx[i - 1]) <= level.maxStep
     const sauOk = i + 1 >= idx.length || Math.abs(idx[i + 1] - thu) <= level.maxStep
-    const cuoiOk = !(level.endOnTonic && i === last)
+    const cuoiOk = !(level.endOnTonic && i === idx.length - 1)
     if (truocOk && sauOk && cuoiOk && thu !== idx[i]) {
       problems.push('lặp một nốt quá 3 lần')
       idx[i] = thu; run = 1
@@ -270,8 +333,9 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
     notesOut.push({ pitch: level.pitches[idx[i]], startBeat: beat, duration: durs[i] })
     beat += durs[i]
   }
-  const beatSai = notes.some((n, i) => notesOut[i] && n.startBeat !== notesOut[i].startBeat)
-  if (beatSai) problems.push('startBeat sai, đã tính lại')
+  if (notes.some((n, i) => notesOut[i] && n.startBeat !== notesOut[i].startBeat)) {
+    problems.push('startBeat sai, đã tính lại')
+  }
 
   // 8. bpm
   let bpm = Number(raw?.bpm)
@@ -281,34 +345,37 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
   }
 
   const title = (typeof raw?.title === 'string' && raw.title.trim()) ? raw.title.trim().slice(0, 60) : fallbackTitle
-  return { exercise: { title, bpm, notes: notesOut }, problems }
+  return { exercise: { title, bpm, notes: notesOut, beatsPerBar: level.beatsPerBar }, problems }
 }
 
 /** Bài mẫu đúng luật — dùng khi AI hỏng hẳn hoặc chưa đăng nhập.
- *  Hình vòng cung: đi lên rồi quay về nốt chủ, mỗi bước 1 bậc. Phải TỰ QUAY ĐẦU
- *  đúng lúc để về kịp nốt chủ — bản đầu chỉ ép nốt cuối về 0 nên tạo ra cú nhảy
- *  xa y hệt lỗi đã sửa ở checkAndRepair. */
+ *  Hình vòng cung: đi lên rồi quay về nốt chủ, mỗi bước 1 bậc, lấp đủ số ô nhịp. */
 export function template(level: PianoLevel, title: string): Exercise {
-  const n = Math.min(level.maxNotes, Math.max(level.minNotes, 8))
+  const target = level.bars * level.beatsPerBar
+  const unit = Math.min(...level.durations.filter(d => d >= 1)) || Math.min(...level.durations)
   const peak = level.pitches.length - 1
+
   const idx: number[] = []
-  let i = 0, dir = 1
-  for (let k = 0; k < n - 1; k++) {
-    idx.push(i)
-    const conLai = n - 1 - k          // số bước còn lại để về nốt chủ
+  const durs: number[] = []
+  let total = 0, i = 0, dir = 1
+  while (total < target - 1e-9) {
+    const fit = fitDur(level, target - total)
+    if (fit == null) break
+    const d = Math.min(fit, unit)
+    idx.push(i); durs.push(d); total += d
+    const conLai = Math.ceil((target - total) / unit)     // còn mấy nốt nữa để về nốt chủ
     if (dir === 1 && (i + 1 > peak || i + 1 > conLai - 1)) dir = -1
     i = clamp(i + dir, 0, peak)
   }
-  idx.push(0)                          // nốt kết — giờ chỉ cách nốt trước 1 bậc
+  if (idx.length) idx[idx.length - 1] = 0                  // chốt nốt kết ở nốt chủ
 
   let beat = 0
   const notes: PianoNote[] = idx.map((v, k) => {
-    const dur = k === idx.length - 1 ? Math.max(...level.durations) : level.durations[0]
-    const nt = { pitch: level.pitches[v], startBeat: beat, duration: dur }
-    beat += dur
-    return nt
+    const n = { pitch: level.pitches[v], startBeat: beat, duration: durs[k] }
+    beat += durs[k]
+    return n
   })
-  return { title: title || `Bài bậc ${level.id}`, bpm: level.bpm[0], notes }
+  return { title: title || `Bài bậc ${level.id}`, bpm: level.bpm[0], notes, beatsPerBar: level.beatsPerBar }
 }
 
 function clamp(v: number, lo: number, hi: number) { return Math.min(hi, Math.max(lo, v)) }
