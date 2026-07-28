@@ -60,7 +60,15 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 ## File chính
 `AppRouter.tsx` (routing), `main.tsx` (entry), `StudentOnboarding.tsx`, `StudentPortalV2.tsx`, `MobileStudentPortal.tsx`, `TeacherAdminPage.tsx`, `CourseEditorContent.tsx`, `LessonViewerPage.tsx`, `ToolsManager.tsx`, `StudentList.tsx`, `StudentProfile.tsx`, `App.tsx` (rhythm editor), `GuitarTuner.tsx`, `TapWithSong.tsx`, `YouTubeSyncPage.tsx`, `ImportPage.tsx`, `GuitarBoard.tsx` (+ `GuitarFretboard`, `ScoreTabViewer`, `TeachingBoard`, `audioEngine`, `guitarNotes`, `scoreData`), `supabase.ts`, `types.ts`, `utils.ts`.
 
-## Mic trong app — CÁI BẪY ĐÃ LÀM MẤT 1 NGÀY
+## Piano Journey — "TRÒ CHUYỆN" là WebRTC Realtime, KHÔNG phải speech-to-text
+Màn đầu của Piano Journey là **hội thoại 2 chiều với Cô Piano** qua **OpenAI Realtime API + WebRTC** (`src/piano/TalkWithTeacher.tsx` ↔ edge function `realtime-token`). Trẻ nói, AI trả lời **bằng giọng nói**. Đây là tính năng chính, và nó CHẠY THẬT trong WKWebView vì WebRTC + `getUserMedia` được hỗ trợ đầy đủ.
+- **ĐỪNG thay bằng `SpeechRecognition`.** Ngày 28/07 commit `0406b72` đã làm đúng việc đó — thay cả PianoJourney bằng Web Speech API — và **xoá mất hội thoại**, tốn trọn một ngày đi tìm "lỗi mic" không tồn tại. Nếu thấy PianoJourney không còn `RTCPeerConnection`, tức là hội thoại lại bị xoá.
+- Giao thức: client tạo SDP offer → **gửi dạng JSON** `{sdp}` tới `realtime-token` (gửi raw text gây lỗi ByteString header, xem `bcfb8dd`) → function proxy sang `/v1/realtime/calls` → trả `{sdp}` answer.
+- `realtime-token` **hardcode key OpenAI ngay trong function đã deploy** (không dùng secret) — sửa key thì sửa trên Supabase dashboard.
+- Kết nối **bằng cú chạm của trẻ**, đừng auto-connect: iOS cần user gesture để mở micro và phát tiếng AI.
+- Cần đăng nhập (Realtime tốn tiền). Chưa đăng nhập → báo rõ, không im lặng.
+
+## Mic trong app (phần tạo bài tập) — CÁI BẪY ĐÃ LÀM MẤT 1 NGÀY
 **Trong WKWebView (app iOS), `webkitSpeechRecognition` CÓ MẶT nhưng CHẾT.** Đây là điểm khiến chẩn đoán sai: kiểm `if (!SpeechRecognition)` sẽ THẤY CÓ và tưởng ổn, nhưng `start()` chạy xong rồi **không bao giờ bắn `onstart`/`onresult`/`onerror`/`onend`** ⇒ treo ở "Đang nghe..." vĩnh viễn, không một lỗi nào. Vì `server.url` trỏ web live nên app là WebView, còn **test trên Chrome desktop thì luôn thấy chạy tốt**. Đừng chẩn đoán bằng desktop, và đừng tin phép kiểm "API có tồn tại".
 - Cách phát hiện duy nhất đáng tin: **watchdog dựa trên `onstart`/`onaudiostart`** (browser thật bắn gần như tức thì) — không thấy dấu hiệu sống trong ~3s thì coi là chết và tụt tầng. ĐỪNG dùng watchdog trên `onresult`, vì trẻ nói chậm là tụt tầng oan.
 - Dùng `src/piano/useVoiceInput.ts` (3 tầng tự tụt: Web Speech → `MediaRecorder` + Whisper qua edge function `piano-stt` → gõ text). Cần mic ở đâu thì tái sử dụng hook này, đừng gọi `SpeechRecognition` trực tiếp.
