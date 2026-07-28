@@ -9,6 +9,12 @@
 // Vì luật nằm trong repo (không nằm trong prompt của edge function) nên sửa luật
 // KHÔNG cần deploy lại `piano-generate`.
 //
+// ── THUẬT NGỮ — đọc trước khi sửa, hai chữ này TỪNG BỊ DÙNG LẪN ─────────────
+//   BẬC  = level = ĐỘ KHÓ của bản nhạc (bậc 1 dễ nhất → bậc 10 khó nhất).
+//   BƯỚC = khoảng cách giữa hai nốt liền nhau, đếm theo vị trí trong `pitches`.
+//          1 bước = nốt liền kề (quãng hai) · 2 bước = quãng ba · 3 bước = quãng bốn.
+//   Đừng dùng chữ "bậc" cho khoảng cách nốt.
+//
 // ĐƠN VỊ LÀ Ô NHỊP, KHÔNG PHẢI SỐ NỐT. Có vạch nhịp thì bài buộc phải đủ ô —
 // tổng trường độ phải bằng đúng bars × beatsPerBar, không thừa không thiếu.
 
@@ -32,7 +38,8 @@ export interface PianoLevel {
   beatsPerBar: number
   /** Số ô nhịp của bài */
   bars: number
-  /** Quãng nhảy tối đa giữa 2 nốt liền nhau (1 = chỉ được đi liền bậc) */
+  /** Số BƯỚC nhảy tối đa giữa 2 nốt liền nhau. 1 = chỉ đi liền kề (quãng hai),
+   *  2 = được nhảy quãng ba, 3 = quãng bốn… Đếm theo vị trí trong `pitches`. */
   maxStep: number
   bpm: [number, number]
   /** Kết bài ở nốt chủ (nốt đầu tiên của `pitches`) */
@@ -53,11 +60,11 @@ const P10 = [...P8, 'D5', 'E5']
 export const LEVELS: PianoLevel[] = [
   { id: 1,  name: 'Ba nốt đầu',      pitches: ['C4','D4','E4'], durations: [1],
     beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 72], endOnTonic: true,
-    skill: 'Ba nốt Đô Rê Mi tay phải, toàn nốt đen, đi liền bậc' },
+    skill: 'Ba nốt Đô Rê Mi tay phải, toàn nốt đen, đi liền kề' },
 
   { id: 2,  name: 'Năm nốt bàn tay',  pitches: P5, durations: [1],
     beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [63, 76], endOnTonic: true,
-    skill: 'Mở rộng ra năm nốt Đô–Sol, vẫn toàn nốt đen, đi liền bậc' },
+    skill: 'Mở rộng ra năm nốt Đô–Sol, vẫn toàn nốt đen, đi liền kề' },
 
   { id: 3,  name: 'Nốt trắng',        pitches: P5, durations: [1, 2],
     beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 80], endOnTonic: true,
@@ -127,7 +134,7 @@ export function pitchToMidi(pitch: string): number | null {
   return (parseInt(m[3], 10) + 1) * 12 + step + acc
 }
 
-/** Vị trí trong thang nốt của bậc; -1 nếu không đọc được cao độ. */
+/** Vị trí của một cao độ trong thang nốt của bậc; -1 nếu không đọc được. */
 function nearestIndex(pitch: string, level: PianoLevel): number {
   const midi = pitchToMidi(pitch)
   if (midi == null) return -1
@@ -149,7 +156,7 @@ const SHAPES = [
   'vòng cung: lên tới đỉnh rồi quay về',
   'hỏi–đáp: ô nhịp đầu như câu hỏi đi lên, ô sau trả lời đi xuống',
   'lắc lư quanh một nốt rồi mới về nốt chủ',
-  'bậc thang: mỗi nốt lặp hai lần rồi mới đi tiếp',
+  'đi từng nấc: mỗi nốt lặp hai lần rồi mới đi tiếp',
   'mở đầu bằng nốt ngân dài rồi chạy đều',
   'chạy đều rồi kết bằng nốt ngân dài',
   'nhắc lại: ô nhịp thứ hai lặp gần giống ô đầu nhưng đổi nốt cuối',
@@ -208,7 +215,8 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
     `- TỔNG trường độ tất cả các nốt phải bằng ĐÚNG ${total} phách — không thừa, không thiếu.`,
     `- CHỈ được dùng các nốt: ${level.pitches.join(' ')} — tuyệt đối không dùng nốt khác.`,
     `- duration chỉ được là: ${durList}.`,
-    `- Hai nốt liền nhau cách nhau tối đa ${level.maxStep} bậc trong thang nốt trên.`,
+    `- Hai nốt liền nhau cách nhau tối đa ${level.maxStep} bước trong thang nốt trên `
+    + `(1 bước = hai nốt liền kề nhau trong danh sách, ví dụ C4→D4).`,
     `- bpm trong khoảng ${level.bpm[0]}–${level.bpm[1]}.`,
     level.endOnTonic ? `- Ô nhịp cuối kết ở nốt ${level.pitches[0]}, nên ngân dài.` : '',
     `- Không lặp cùng một nốt quá 3 lần liên tiếp.`,
@@ -243,7 +251,7 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
   const rawIdx = notes.map(n => {
     const i = nearestIndex(n.pitch, level)
     if (i < 0) { problems.push(`không đọc được cao độ "${n.pitch}"`); return 0 }
-    if (level.pitches[i] !== n.pitch) problems.push(`nốt ${n.pitch} ngoài bậc → ${level.pitches[i]}`)
+    if (level.pitches[i] !== n.pitch) problems.push(`nốt ${n.pitch} không có trong bậc ${level.id} → ${level.pitches[i]}`)
     return i
   })
 
@@ -304,7 +312,7 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
     const lo = idx[i + 1] - level.maxStep
     const hi = idx[i + 1] + level.maxStep
     if (idx[i] < lo || idx[i] > hi) {
-      problems.push(`nhảy ${Math.abs(idx[i] - idx[i + 1])} bậc, quá ${level.maxStep}`)
+      problems.push(`nhảy ${Math.abs(idx[i] - idx[i + 1])} bước, quá ${level.maxStep}`)
       idx[i] = clamp(clamp(idx[i], lo, hi), 0, level.pitches.length - 1)
     }
   }
@@ -349,7 +357,7 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
 }
 
 /** Bài mẫu đúng luật — dùng khi AI hỏng hẳn hoặc chưa đăng nhập.
- *  Hình vòng cung: đi lên rồi quay về nốt chủ, mỗi bước 1 bậc, lấp đủ số ô nhịp. */
+ *  Hình vòng cung: đi lên rồi quay về nốt chủ, mỗi lần 1 bước, lấp đủ số ô nhịp. */
 export function template(level: PianoLevel, title: string): Exercise {
   const target = level.bars * level.beatsPerBar
   const unit = Math.min(...level.durations.filter(d => d >= 1)) || Math.min(...level.durations)
