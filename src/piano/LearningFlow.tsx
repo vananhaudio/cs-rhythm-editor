@@ -59,7 +59,8 @@ const STEP_CTA: Record<string, string> = {
 
 function BottomBar({
   onReplay, onToggle, onSkip, onSpeedCycle,
-  isPlaying, isDone, replayLabel, speedLabel, showSpeed = true,
+  isPlaying, isDone, isCountingDown, countdownValue,
+  replayLabel, speedLabel, showSpeed = true,
 }: {
   onReplay: () => void
   onToggle: () => void
@@ -67,10 +68,13 @@ function BottomBar({
   onSpeedCycle: () => void
   isPlaying: boolean
   isDone: boolean
+  isCountingDown: boolean
+  countdownValue: number
   replayLabel: string
   speedLabel: string
   showSpeed?: boolean
 }) {
+  const showPlayBtn = !isDone && !isCountingDown
   return (
     <div style={{
       flexShrink: 0, display: 'flex', alignItems: 'center',
@@ -102,6 +106,16 @@ function BottomBar({
           }}>
             Tiếp tục →
           </button>
+        ) : isCountingDown ? (
+          <div style={{
+            width: 48, height: 48, borderRadius: 16,
+            background: `linear-gradient(135deg,${C.accent},#D97706)`,
+            color: '#fff', fontSize: 22, fontWeight: 900,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'cd-pop .6s ease-out',
+          }} key={countdownValue}>
+            {countdownValue}
+          </div>
         ) : (
           <button onClick={onToggle} style={{
             width: 48, height: 48, borderRadius: 16,
@@ -143,6 +157,7 @@ function BottomBar({
       }}>
         Bỏ qua →
       </button>
+      <style>{`@keyframes cd-pop{0%{opacity:0;transform:scale(1.8)}50%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}`}</style>
     </div>
   )
 }
@@ -351,6 +366,8 @@ function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
         isPlaying={playing}
         isDone={done}
         replayLabel="Nghe lại"
+        isCountingDown={false}
+        countdownValue={0}
         speedLabel={SPEEDS[speedIdx].label}
         onSpeedCycle={() => setSpeedIdx(i => (i + 1) % SPEEDS.length)}
       />
@@ -461,6 +478,8 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
         isPlaying={state === 'active'}
         isDone={false}
         replayLabel="Tập lại"
+        isCountingDown={false}
+        countdownValue={0}
         speedLabel="Vừa"
         showSpeed={false}
         onSpeedCycle={() => {}}
@@ -636,6 +655,8 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         isPlaying={playing}
         isDone={done && !!score}
         replayLabel="Chơi lại"
+        isCountingDown={countdown !== null}
+        countdownValue={countdown ?? 0}
         speedLabel={SPEEDS[speedIdx].label}
         onSpeedCycle={() => setSpeedIdx(i => (i + 1) % SPEEDS.length)}
       />
@@ -781,6 +802,8 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
         isPlaying={playing}
         isDone={done && !!score}
         replayLabel="Chơi lại"
+        isCountingDown={countdown !== null}
+        countdownValue={countdown ?? 0}
         speedLabel="Vừa"
         showSpeed={false}
         onSpeedCycle={() => {}}
