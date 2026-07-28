@@ -42,13 +42,30 @@ export default function PianoJourney({ onClose }: Props) {
   }, [flow])
 
   // ── Voice: SpeechRecognition ──
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     if (flowRef.current !== 'idle') return
-    setFlow('listening'); setTranscript(''); setError(''); setElapsed(0)
+    setError('')
 
     // @ts-ignore
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) { setFlow('idle'); setError('Micro không khả dụng — gõ bên dưới nhé ✍️'); return }
+
+    // Request mic permission first — required on iOS for speech recognition
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach(t => t.stop()) // release immediately
+      } catch {
+        setError('Micro bị chặn — gõ yêu cầu bên dưới nhé ✍️')
+        return
+      }
+    }
+
+    if (!SpeechRecognition) {
+      setError('Micro không khả dụng — gõ bên dưới nhé ✍️')
+      return
+    }
+
+    setFlow('listening'); setTranscript(''); setElapsed(0)
 
     const rec = new SpeechRecognition()
     rec.lang = 'vi-VN'
