@@ -174,7 +174,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
   const reset = () => { setPlaying(false); setCountdown(null); stRef.current = 0; setBeat(0) }
 
   return (
-    <div style={{ width:'100%',maxWidth:800,margin:'0 auto',height:'100dvh',background:'#0d0a04',display:'flex',flexDirection:'column',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflow:'hidden' }}>
+    <div style={{ width:'100%',maxWidth:800,margin:'0 auto',height:'100dvh',background:'#0d0a04',display:'flex',flexDirection:'column',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
       {/* Top bar */}
       <div style={{ flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px 4px',zIndex:10 }}>
         {onBack ? (
@@ -190,7 +190,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
 
       {/* Countdown overlay */}
       {countdown !== null && (
-        <div style={{ position:'absolute',top:'16%',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:20 }}>
+        <div style={{ position:'absolute',top:'10%',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:20 }}>
           <div style={{
             fontSize: 72, fontWeight: 900,
             color: 'rgba(251,191,36,0.85)',
@@ -218,7 +218,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
       )}
 
       {/* Controls */}
-      <div style={{ flexShrink:0,width:'100%',maxWidth:400,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'center',gap:20,padding:'8px 20px 28px' }}>
+      <div style={{ flexShrink:0,width:'100%',maxWidth:400,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'center',gap:20,padding:'8px 20px calc(24px + env(safe-area-inset-bottom, 0px))' }}>
         <button onClick={reset} style={bs}>⟲</button>
         <button onClick={toggle} style={{ ...bs,width:60,height:60,fontSize:22 }}>{playing?'⏸':'▶'}</button>
         <div style={{ display:'flex',alignItems:'center',gap:8 }}>
