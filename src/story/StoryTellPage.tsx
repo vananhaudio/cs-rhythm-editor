@@ -669,6 +669,22 @@ export default function StoryTellPage() {
           </div>
 
           <div className="sw-workspace">
+          {/* ── TOP BAR: back to magazine ── */}
+          <div className="sw-topbar">
+            <a href="/story" className="sw-back-link">← 1001 Câu chuyện</a>
+            <div className="sw-menu-wrap" ref={menuRef}>
+              <button className="sw-menu-btn" onClick={() => setShowMenu(!showMenu)}>···</button>
+              {showMenu && (
+                <div className="sw-menu-drop">
+                  <button onClick={renameStory}>Đổi tên câu chuyện</button>
+                  <button onClick={deleteStory} className="sw-menu-danger">Xóa câu chuyện</button>
+                  <hr />
+                  <button onClick={() => { setShowMenu(false) }}>Báo lỗi</button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* ── HEADER ── */}
           <header className="sw-header">
             <button className="sw-sidebar-btn" onClick={() => { setShowSidebar(true); fetchStoryList() }} aria-label="Menu">
@@ -702,21 +718,6 @@ export default function StoryTellPage() {
               </div>
             </div>
 
-            <div className="sw-header-right">
-              <div className="sw-menu-wrap" ref={menuRef}>
-                <button className="sw-menu-btn" onClick={() => setShowMenu(!showMenu)}>
-                  ···
-                </button>
-                {showMenu && (
-                  <div className="sw-menu-drop">
-                    <button onClick={renameStory}>Đổi tên câu chuyện</button>
-                    <button onClick={deleteStory} className="sw-menu-danger">Xóa câu chuyện</button>
-                    <hr />
-                    <button onClick={() => { setShowMenu(false) }}>Báo lỗi</button>
-                  </div>
-                )}
-              </div>
-            </div>
           </header>
 
           {/* ── STORY RAW PANEL — neo cố định, không cuộn theo chat ── */}
@@ -1001,6 +1002,27 @@ const CSS = `
 }
 
 /* ── HEADER — PO1: tối giản, ưu tiên câu chuyện ── */
+.sw-topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px 6px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.sw-back-link {
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  transition: color .15s;
+}
+.sw-back-link:hover { color: var(--ink); }
+.sw-topbar .sw-menu-btn {
+  width: 28px; height: 28px;
+  font-size: 14px;
+}
+
 .sw-header {
   flex: none;
   display: flex;
