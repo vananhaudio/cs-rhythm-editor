@@ -6,7 +6,6 @@ import { useState, useRef, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
-import { useVoiceInput } from './piano/useVoiceInput'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PianoNote { pitch: string; startBeat: number; duration: number }
@@ -88,65 +87,48 @@ export default function PianoJourney({ onClose }: Props) {
     setStageSync('playing')
   }, [setStageSync])
 
-  // ── Mic 3 tầng: Web Speech → thu âm + Whisper → gõ text ──
-  const voice = useVoiceInput({ onFinal: generateMission })
-
-  // ── Quay lại màn nói ──
-  const backToVoice = useCallback(() => {
-    voice.cancel()
+  // ── Quay lại ──
+  const backToTalk = useCallback(() => {
     setExercise(null); setDraft(''); setPrompt(''); setGenError('')
-    setStageSync('voice')
-  }, [voice, setStageSync])
+    setStageSync('voice'); setView('talk')
+  }, [setStageSync])
 
   if (stage === 'playing' && exercise) {
-    return <LearningFlow exercise={exercise} onClose={onClose} onBack={backToVoice} />
+    return <LearningFlow exercise={exercise} onClose={onClose} onBack={backToTalk} />
   }
 
-  // Màn đầu tiên: trò chuyện với Cô Piano
+  // Màn đầu tiên: trò chuyện với Cô Piano.
+  // Bé nói → cô gọi công cụ tao_bai_tap → generateMission chạy NGAY trong lúc cô
+  // còn đang nói. Giữ màn này mounted khi 'generating' để tiếng cô không bị cắt;
+  // xong bài thì stage='playing' và nhánh trên đưa sang LearningFlow.
   if (view === 'talk') {
-    return <TalkWithTeacher onClose={onClose} onOpenMission={() => setView('mission')} />
+    return (
+      <TalkWithTeacher
+        onClose={onClose}
+        onOpenMission={() => setView('mission')}
+        onCreateMission={generateMission}
+        busy={stage === 'generating'}
+      />
+    )
   }
 
-  // ── Trạng thái hiển thị ──
-  // 'playing' mà thiếu bài (không nên xảy ra) → coi như màn nói. Dẫn xuất, KHÔNG
-  // setState trong render hay trong effect để tự chữa.
-  const listening    = voice.state === 'listening'
-  const transcribing = voice.state === 'transcribing'
-  const generating   = stage === 'generating'
-  const busy         = listening || transcribing || generating
-  const showRings    = listening || transcribing
-  const noMic        = voice.tier === 'none'
-  const error        = genError || voice.error
-
-  const face = generating
-    ? { icon: '⏳', label: 'Đang tạo bài tập...',            bg: INDIGO, shadow: '0 8px 40px rgba(99,102,241,.35)',                                  lc: C.dim  }
-    : transcribing
-    ? { icon: '💭', label: 'Đang nghe con nói...',           bg: INDIGO, shadow: '0 8px 40px rgba(99,102,241,.35)',                                  lc: C.dim  }
-    : listening
-    // Tầng 2 (thu âm) không có chữ hiện dần → nói rõ là đang THU, đừng để trẻ chờ chữ.
-    // Chữ khác nhau giữa 2 tầng cũng giúp nhìn ảnh là biết tầng nào đang chạy.
-    ? { icon: '🎙️', label: voice.transcript || (voice.tier === 'record' ? 'Đang thu tiếng con…' : 'Đang nghe...'), bg: GOLD, shadow: '0 8px 60px rgba(251,191,36,.5),0 0 120px rgba(251,191,36,.2)', lc: C.text }
-    : { icon: '🎤', label: 'Chạm để nói',                    bg: GOLD,   shadow: '0 8px 40px rgba(245,158,11,.3)',                                  lc: C.dim  }
-
-  // Nghe: nhích theo cường độ mic thật (10 lần/giây) thay vì animate bằng state 60fps
-  const scale = listening ? 1.05 + voice.level * 0.06 : 1
-
-  const handleTap = () => {
-    if (listening) { voice.stop(); return }   // nói xong bấm lại để chốt sớm
-    if (busy) return
-    voice.start()                             // gọi ĐỒNG BỘ — giữ user gesture cho iOS
-  }
+  // ── Màn 2: CHỈ GÕ, không mic ──
+  // Muốn nói thì nói ở màn 1 với Cô Piano (WebRTC Realtime — chạy thật trong app).
+  // Trước đây màn này có mic riêng dùng Web Speech API; nó chết trong WKWebView nên
+  // chỉ làm bé tưởng app hỏng. Đây là đường gõ cho bé không muốn/không thể nói.
+  const generating = stage === 'generating'
+  const error      = genError
 
   const submitDraft = () => {
     const t = draft.trim()
-    if (t && !busy) generateMission(t)
+    if (t && !generating) generateMission(t)
   }
 
   return (
     <div style={{ height:'100dvh',background:`linear-gradient(180deg,${C.bg1} 0%,${C.bg2} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
       <style>{KEYFRAMES}</style>
 
-      <button onClick={() => { voice.cancel(); setView('talk') }}
+      <button onClick={() => setView('talk')}
         style={{ position:'fixed',top:20,left:20,zIndex:100,background:'rgba(0,0,0,.06)',border:'1px solid rgba(0,0,0,.08)',borderRadius:999,height:44,padding:'0 16px',fontSize:14,fontWeight:600,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',gap:6,fontFamily:'inherit',backdropFilter:'blur(12px)' }}>
         ‹ Cô Piano
       </button>
@@ -160,8 +142,7 @@ export default function PianoJourney({ onClose }: Props) {
 
       {/* Instruction */}
       <div style={{ fontSize:16,color:C.dim,textAlign:'center',padding:'0 40px',lineHeight:1.5,marginBottom:24,minHeight:24 }}>
-        {!busy && (noMic ? 'Con muốn tập bài gì? Gõ vào ô bên dưới nhé' : 'Con muốn tập bài gì hôm nay?')}
-        {listening && 'Nói xong bấm lại vào nút nhé'}
+        {!generating && 'Gõ điều con muốn tập, hoặc quay lại nói với Cô Piano'}
         {generating && (
           <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:6 }}>
             <span style={{ fontSize:24,animation:'pj-pulse 2s ease-in-out infinite' }}>✨</span>
@@ -171,29 +152,17 @@ export default function PianoJourney({ onClose }: Props) {
         )}
       </div>
 
-      {/* Button area */}
       <div style={{ display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:40 }}>
-        {!noMic && (
-          <>
-            <div style={{ position:'relative',width:BUTTON*3,height:BUTTON*3,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8 }}>
-              {showRings && [0,1,2].map(i => (
-                <div key={i} style={{ position:'absolute',width:BUTTON,height:BUTTON,borderRadius:'50%',border:`2px solid ${C.ring}`,animation:`pj-ring 2.4s ${i*0.8}s ease-out infinite`,pointerEvents:'none' }} />
-              ))}
-              <button onClick={handleTap} disabled={transcribing || generating}
-                style={{ width:BUTTON,height:BUTTON,borderRadius:'50%',background:face.bg,border:'none',cursor:(transcribing||generating)?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:face.shadow,transform:`scale(${scale})`,transition:'transform .12s ease-out,box-shadow .5s ease,background .5s ease',position:'relative',zIndex:2,outline:'none',fontSize:36,WebkitTapHighlightColor:'transparent' }}>
-                {generating || transcribing ? <Dots /> : face.icon}
-              </button>
-            </div>
-            <div style={{ fontSize:15,fontWeight:600,color:face.lc,transition:'color .5s ease',textAlign:'center',maxWidth:320,lineHeight:1.4,minHeight:21 }}>
-              {face.label}
-            </div>
-          </>
+        {generating && (
+          <div style={{ width:BUTTON,height:BUTTON,borderRadius:'50%',background:INDIGO,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 40px rgba(99,102,241,.35)',marginBottom:8 }}>
+            <Dots />
+          </div>
         )}
 
         {error && <div style={{ fontSize:13,color:'#C2410C',textAlign:'center',marginTop:8,maxWidth:300,lineHeight:1.5 }}>{error}</div>}
 
-        {/* Ô gõ — luôn có, kể cả khi mic chạy tốt */}
-        {!busy && (
+        {/* Ô gõ */}
+        {!generating && (
           <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:10,marginTop:24,width:'85%',maxWidth:340 }}>
             <textarea
               value={draft} onChange={e => setDraft(e.target.value)}

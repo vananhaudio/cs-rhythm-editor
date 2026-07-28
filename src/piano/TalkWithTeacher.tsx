@@ -83,6 +83,16 @@ export default function TalkWithTeacher({ onClose, onOpenMission, onCreateMissio
   const userText  = useRef('')
   const aiText    = useRef('')
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const doneCalls = useRef<Set<string>>(new Set())   // chống gọi tạo bài 2 lần
+  const createRef = useRef(onCreateMission)
+
+  useEffect(() => { createRef.current = onCreateMission }, [onCreateMission])
+
+  /** Gửi sự kiện lên OpenAI qua data channel */
+  const send = useCallback((obj: unknown) => {
+    const dc = dcRef.current
+    if (dc?.readyState === 'open') dc.send(JSON.stringify(obj))
+  }, [])
 
   const go = useCallback((s: TalkState) => { stateRef.current = s; setState(s) }, [])
   const cur = useCallback((): TalkState => stateRef.current, [])
@@ -107,10 +117,43 @@ export default function TalkWithTeacher({ onClose, onOpenMission, onCreateMissio
   // Rời màn hình → ngắt kết nối, nhả micro
   useEffect(() => () => teardown(), [teardown])
 
+  // ── Cô Piano gọi công cụ tạo bài tập ──
+  const runToolCall = useCallback((callId: string, argsRaw: string) => {
+    if (!callId || doneCalls.current.has(callId)) return
+    doneCalls.current.add(callId)
+
+    let chuDe = ''
+    try { chuDe = String(JSON.parse(argsRaw || '{}')?.chu_de || '').trim() } catch { /* */ }
+    log('Cô gọi tạo bài: ' + (chuDe || '(trống)'))
+
+    // Báo lại cho model để cô nói câu chờ — bé nghe cô nói trong lúc đang soạn bài
+    send({
+      type: 'conversation.item.create',
+      item: { type: 'function_call_output', call_id: callId, output: JSON.stringify({ ok: true, chu_de: chuDe }) },
+    })
+    send({ type: 'response.create' })
+
+    if (chuDe) createRef.current?.(chuDe)
+  }, [log, send])
+
   // ── Sự kiện từ OpenAI Realtime ──
   const handleEvent = useCallback((raw: string) => {
-    let ev: { type?: string; transcript?: string; delta?: string; error?: unknown }
+    let ev: {
+      type?: string; transcript?: string; delta?: string; error?: unknown
+      call_id?: string; name?: string; arguments?: string
+      item?: { type?: string; name?: string; call_id?: string; arguments?: string }
+    }
     try { ev = JSON.parse(raw) } catch { return }
+
+    // Function call — API bắn 1 trong 2 dạng tuỳ phiên bản, đỡ cả hai
+    if (ev.type === 'response.function_call_arguments.done' && ev.name === 'tao_bai_tap') {
+      runToolCall(ev.call_id || '', ev.arguments || '')
+      return
+    }
+    if (ev.type === 'response.output_item.done' && ev.item?.type === 'function_call' && ev.item?.name === 'tao_bai_tap') {
+      runToolCall(ev.item.call_id || '', ev.item.arguments || '')
+      return
+    }
 
     switch (ev.type) {
       case 'input_audio_buffer.speech_started':
@@ -146,7 +189,7 @@ export default function TalkWithTeacher({ onClose, onOpenMission, onCreateMissio
       default:
         break
     }
-  }, [go, cur, log])
+  }, [go, cur, log, runToolCall])
 
   // ── Kết nối ──
   // Gọi TỪ CÚ CHẠM của trẻ: iOS cần user gesture để mở micro và phát tiếng AI.
@@ -186,7 +229,16 @@ export default function TalkWithTeacher({ onClose, onOpenMission, onCreateMissio
 
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
-      dc.onopen = () => log('Kênh sự kiện mở')
+      dc.onopen = () => {
+        log('Kênh sự kiện mở')
+        // Nạp công cụ + lời dặn từ client. Làm ở đây để KHÔNG phải deploy lại
+        // realtime-token (file repo có key '***', deploy đè là hỏng hội thoại).
+        send({
+          type: 'session.update',
+          session: { type: 'realtime', instructions: INSTRUCTIONS, tools: [TOOL_TAO_BAI], tool_choice: 'auto' },
+        })
+        log('Đã nạp công cụ tao_bai_tap')
+      }
       dc.onmessage = e => handleEvent(e.data)
 
       const offer = await pc.createOffer()
@@ -225,7 +277,7 @@ export default function TalkWithTeacher({ onClose, onOpenMission, onCreateMissio
       go('error')
       teardown()
     }
-  }, [go, cur, log, teardown, handleEvent])
+  }, [go, cur, log, send, teardown, handleEvent])
 
   // ── Mặt nút theo trạng thái ──
   const face: Record<TalkState, { icon: React.ReactNode; label: string; bg: string; shadow: string; scale: number; lc: string }> = {
@@ -266,6 +318,13 @@ export default function TalkWithTeacher({ onClose, onOpenMission, onCreateMissio
             <div style={{ fontSize:15,color:C.text,lineHeight:1.6 }}>{m.text}</div>
           </div>
         ))}
+
+        {busy && (
+          <div style={{ alignSelf:'center',display:'flex',alignItems:'center',gap:8,color:C.text,fontSize:14,fontWeight:600,background:'rgba(251,191,36,.1)',border:'1px solid rgba(251,191,36,.2)',borderRadius:999,padding:'10px 18px' }}>
+            <span style={{ fontSize:18,animation:'pj-pulse 2s ease-in-out infinite' }}>✨</span>
+            Cô đang soạn bài cho con…
+          </div>
+        )}
       </div>
 
       {/* Nút mic */}
@@ -313,6 +372,7 @@ const KEYFRAMES = `
 @keyframes pj-ring{0%{transform:scale(1);opacity:.45}100%{transform:scale(2.1);opacity:0}}
 @keyframes pj-bounce{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1);opacity:1}}
 @keyframes pj-wave{0%,100%{height:6px;opacity:.4}50%{height:28px;opacity:1}}
+@keyframes pj-pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
 `
 
 function MicIcon({ active }: { active?: boolean }) {
