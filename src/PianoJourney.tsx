@@ -133,7 +133,7 @@ export default function PianoJourney({ onClose }: Props) {
   }
 
   // ── Voice UI ──
-  const BUTTON = 140
+  const BUTTON = 120
   const isListening = flow === 'listening'
   const isGenerating = flow === 'generating'
 
@@ -152,27 +152,24 @@ export default function PianoJourney({ onClose }: Props) {
   }
 
   return (
-    <div style={{ minHeight:'100dvh',background:`linear-gradient(180deg,${C.bg1} 0%,${C.bg2} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflow:'hidden',userSelect:'none' }}>
+    <div style={{ minHeight:'100dvh',background:`linear-gradient(180deg,${C.bg1} 0%,${C.bg2} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
       {onClose && <button onClick={onClose} style={{ position:'absolute',top:20,right:20,zIndex:10,background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',borderRadius:50,width:44,height:44,fontSize:18,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(12px)' }}>✕</button>}
 
       {/* Header */}
-      <div style={{ width:'100%',textAlign:'center',paddingTop:72,paddingBottom:24 }}>
-        <div style={{ fontSize:40,marginBottom:4 }}>🎹</div>
-        <div style={{ fontSize:20,fontWeight:700,color:C.text,letterSpacing:'-.3px' }}>Piano Journey</div>
+      <div style={{ width:'100%',textAlign:'center',paddingTop:36,paddingBottom:16 }}>
+        <div style={{ fontSize:32,marginBottom:2 }}>🎹</div>
+        <div style={{ fontSize:18,fontWeight:700,color:C.text,letterSpacing:'-.3px' }}>Piano Journey</div>
       </div>
 
       {/* Instruction */}
-      <div style={{ fontSize:18,color:C.dim,textAlign:'center',padding:'0 40px',lineHeight:1.6,marginBottom:40 }}>
+      <div style={{ fontSize:16,color:C.dim,textAlign:'center',padding:'0 40px',lineHeight:1.5,marginBottom:24 }}>
         {flow === 'idle' && 'Con muốn tập bài gì hôm nay?'}
         {flow === 'generating' && `Cherry đang soạn bài "${transcript}"...`}
       </div>
 
-      {/* Spacer */}
-      <div style={{ flex:1 }} />
-
       {/* Button area */}
-      <div style={{ display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:100 }}>
-        <div style={{ position:'relative',width:BUTTON*4,height:BUTTON*4,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8 }}>
+      <div style={{ display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:40 }}>
+        <div style={{ position:'relative',width:BUTTON*3,height:BUTTON*3,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8 }}>
           {rings.map((r,i) => <div key={i} style={{ position:'absolute',width:BUTTON,height:BUTTON,borderRadius:'50%',border:`2px solid ${C.ring}`,transform:`scale(${r.scale})`,opacity:r.opacity }} />)}
           <button onClick={handleTap} disabled={flow !== 'idle'}
             style={{ width:BUTTON,height:BUTTON,borderRadius:'50%',background:cfg.bg,border:'none',cursor:flow==='idle'?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:cfg.shadow,transform:`scale(${cfg.scale})`,transition:'transform .3s ease,box-shadow .5s ease,background .5s ease',position:'relative',zIndex:2,outline:'none',fontSize:36 }}>
