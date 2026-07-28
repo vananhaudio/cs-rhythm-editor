@@ -163,6 +163,7 @@ export default function StoryTellPage() {
   const [draftResumed, setDraftResumed] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)  // collapsible Story Raw
 
   // ── Conversation + Story Raw ──
   const [conversation, setConversation] = useState<ChatMsg[]>([])
@@ -367,7 +368,7 @@ export default function StoryTellPage() {
   const startNew = useCallback(() => {
     draftLoadedRef.current = false
     setStoryId(null); setStoryTitle(''); setConversation([]); setRawContent('')
-    setMiraReady(false); setDraftResumed(false)
+    setMiraReady(false); setDraftResumed(false); setShowRaw(false)
     setPhase('telling'); setInput('')
   }, [])
 
@@ -565,11 +566,20 @@ export default function StoryTellPage() {
               </section>
             )}
 
-            {/* ── SECTION: STORY RAW ── */}
+            {/* ── SECTION: STORY RAW (collapsible) ── */}
             {rawContent && userMsgCount >= 2 && (
-              <section className="sw-section">
-                <div className="sw-section-label">📄 Lời kể của bạn</div>
-                <div className="sw-raw">{rawContent}</div>
+              <section className="sw-section sw-raw-collapse">
+                <button
+                  className="sw-raw-toggle"
+                  onClick={() => setShowRaw(!showRaw)}
+                >
+                  <span className="sw-raw-toggle-icon">{showRaw ? '▾' : '▸'}</span>
+                  📄 Lời kể của bạn
+                  <span className="sw-raw-toggle-hint">{showRaw ? 'Thu gọn' : 'Xem'}</span>
+                </button>
+                {showRaw && (
+                  <div className="sw-raw">{rawContent}</div>
+                )}
               </section>
             )}
 
@@ -921,19 +931,47 @@ const CSS = `
 .sw-msg-dots { color: var(--ink-faint); font-style: italic; }
 
 /* ── STORY RAW ── */
-.sw-section-label {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--honey);
-  margin-bottom: 10px;
+/* ── STORY RAW ── */
+.sw-raw-collapse {
+  margin-top: 4px;
 }
-.sw-raw {
+.sw-raw-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 28px 32px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--honey);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+.sw-raw-toggle:hover { background: var(--honey-tint); }
+.sw-raw-toggle-icon {
+  font-size: 12px;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.sw-raw-toggle-hint {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  text-transform: none;
+}
+.sw-raw {
+  margin-top: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
   font-size: 17px;
   line-height: 1.7;
   color: var(--ink);
@@ -941,6 +979,8 @@ const CSS = `
   text-align: left;
   box-shadow: var(--shadow-sm);
   font-family: 'Be Vietnam Pro', Georgia, serif;
+  max-height: 360px;
+  overflow-y: auto;
 }
 
 /* ── READY CARD ── */
