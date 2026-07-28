@@ -15,7 +15,7 @@ export function usePitchDetector() {
   const micStreamRef = useRef<MediaStream | null>(null)
   const audioCtxRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const bufRef = useRef<Float32Array | null>(null)
+  const bufRef = useRef<Float32Array<ArrayBuffer> | null>(null)
 
   const start = useCallback(async (): Promise<boolean> => {
     try {
@@ -31,7 +31,7 @@ export function usePitchDetector() {
       an.fftSize = 2048
       src.connect(an)
       analyserRef.current = an
-      bufRef.current = new Float32Array(an.fftSize)
+      bufRef.current = new Float32Array(new ArrayBuffer(an.fftSize * 4))
       setListening(true)
       return true
     } catch {
@@ -58,7 +58,7 @@ export function usePitchDetector() {
     const ctx = audioCtxRef.current
     if (!an || !buf || !ctx) return null
     an.getFloatTimeDomainData(buf)
-    const { freq } = detectPitch(buf, ctx.sampleRate)
+    const { freq } = detectPitch(buf as Float32Array<ArrayBuffer>, ctx.sampleRate)
     if (freq <= 0) { setHeard(null); return null }
     const pc = pitchClass(freq)
     const name = NOTE_NAMES[pc] ?? '?'

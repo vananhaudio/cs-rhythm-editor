@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from './supabase'
-import MusicPlayer from './piano/MusicPlayer'
+import LearningFlow from './piano/LearningFlow'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PianoNote { pitch: string; startBeat: number; duration: number }
@@ -119,18 +119,18 @@ export default function PianoJourney({ onClose }: Props) {
   // ── Back to voice ──
   const backToVoice = () => { setFlow('idle'); setExercise(null); setTranscript('') }
 
-  // ── If playing: show MusicPlayer ──
+  // ── If playing: show LearningFlow ──
   if (flow === 'playing') {
     if (exercise) {
       return (
-        <MusicPlayer
+        <LearningFlow
           exercise={exercise}
           onClose={onClose}
           onBack={backToVoice}
         />
       )
     }
-    // safety fallback — shouldn't reach here
+    // safety fallback
     setFlow('idle'); setExercise(null);
   }
 
