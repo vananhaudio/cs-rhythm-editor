@@ -177,6 +177,7 @@ export default function StoryTellPage() {
   // ── Refs ──
   const titleInputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const convoEndRef = useRef<HTMLDivElement>(null)
 
   const invitation = useMemo(() => INVITATIONS[Math.floor(Math.random() * INVITATIONS.length)], [])
 
@@ -200,6 +201,11 @@ export default function StoryTellPage() {
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [showMenu])
+
+  // ── Auto-scroll conversation về cuối ──
+  useEffect(() => {
+    convoEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [conversation])
 
   // ── Focus title input when editing ──
   useEffect(() => {
@@ -432,6 +438,35 @@ export default function StoryTellPage() {
   const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Người kể'
   const statusLabel = phase === 'editing' ? 'Đang biên tập' : phase === 'ready_for_draft' ? 'Sẵn sàng tạo bản thảo' : 'Đang kể'
 
+  // ── Date grouping cho conversation ──
+  const groupedConvo = useMemo(() => {
+    const DAY_NAMES = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy']
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
+
+    const formatDate = (d: Date) => {
+      const d0 = new Date(d); d0.setHours(0, 0, 0, 0)
+      if (d0.getTime() === today.getTime()) return 'Hôm nay'
+      if (d0.getTime() === yesterday.getTime()) return 'Hôm qua'
+      const diffDays = Math.floor((today.getTime() - d0.getTime()) / 86400000)
+      if (diffDays < 7) return DAY_NAMES[d.getDay()]
+      return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })
+    }
+
+    const groups: { date: string; msgs: ChatMsg[] }[] = []
+    for (const msg of conversation) {
+      const dateStr = formatDate(new Date(msg.at))
+      const last = groups[groups.length - 1]
+      if (last && last.date === dateStr) {
+        last.msgs.push(msg)
+      } else {
+        groups.push({ date: dateStr, msgs: [msg] })
+      }
+    }
+    return groups
+  }, [conversation])
+
   // ══════════════════════════════════════════════════════════════
   // RENDER
   // ══════════════════════════════════════════════════════════════
@@ -567,10 +602,15 @@ export default function StoryTellPage() {
             {conversation.length > 0 && (
               <section className="sw-section">
                 <div className="sw-convo">
-                  {conversation.map((msg, i) => (
-                    <div key={i} className={`sw-msg ${msg.role === 'user' ? 'sw-msg-user' : 'sw-msg-mira'}`}>
-                      {msg.role === 'mira' && <div className="sw-msg-name">Mira</div>}
-                      <div className="sw-msg-text">{msg.text}</div>
+                  {groupedConvo.map((group, gi) => (
+                    <div key={gi}>
+                      <div className="sw-date-sep">{group.date}</div>
+                      {group.msgs.map((msg, i) => (
+                        <div key={i} className={`sw-msg ${msg.role === 'user' ? 'sw-msg-user' : 'sw-msg-mira'}`}>
+                          {msg.role === 'mira' && <div className="sw-msg-name">Mira</div>}
+                          <div className="sw-msg-text">{msg.text}</div>
+                        </div>
+                      ))}
                     </div>
                   ))}
                   {sending && (
@@ -579,6 +619,7 @@ export default function StoryTellPage() {
                       <div className="sw-msg-text sw-msg-dots">đang nghĩ…</div>
                     </div>
                   )}
+                  <div ref={convoEndRef} />
                 </div>
               </section>
             )}
@@ -871,6 +912,15 @@ const CSS = `
 }
 .sw-msg-pending { opacity: 0.5; }
 .sw-msg-dots { color: var(--ink-muted); }
+
+/* ── Date separator ── */
+.sw-date-sep {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  padding: 12px 0 6px;
+}
 
 /* ── STORY RAW PANEL — Apple Notes style ── */
 .sw-raw-panel {
