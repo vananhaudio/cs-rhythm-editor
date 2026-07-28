@@ -51,7 +51,7 @@ const STEPS = [
   { n: '4', t: 'Xuất bản', d: 'Câu chuyện của bạn vào thư viện, để cộng đồng cùng đọc và sẻ chia.' },
 ]
 
-export default function StoryLandingPage() {
+export default function StoryLegacyLandingPage() {
   const goto = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
   return (

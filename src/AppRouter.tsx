@@ -28,7 +28,7 @@ import FlowMigratePage from './FlowMigratePage'
 import JoinGroupPage from './JoinGroupPage'
 import DeleteAccountPage from './DeleteAccountPage'
 import ClassLandingPage from './ClassLandingPage'
-import StoryLandingPage from './story/StoryLandingPage'
+import StoryLegacyLandingPage from './story/StoryLegacyLandingPage'
 import StoryTellPage from './story/StoryTellPage'
 import StoryHomePage from './story/StoryHomePage'
 import GrooveExercise from './groove/GrooveExercise'
@@ -145,10 +145,11 @@ export default function AppRouter() {
   }
 
   // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
-  if (path === '/story' || path === '/story/home') return <StoryHomePage />   // 📖 Tạp chí
+  if (path === '/story/home') { window.location.replace('/story'); return null }  // redirect link cũ
+  if (path === '/story') return <StoryHomePage />   // 📖 Tạp chí
   if (path === '/story/write' || path === '/story/tell') return <StoryTellPage />  // ✍️ Phòng viết
   if (path.startsWith('/story/')) {
-    return <StoryLandingPage />   // 📄 Trang đọc (/story/:slug)
+    return <StoryLegacyLandingPage />   // 📄 Trang đọc (/story/:slug)
   }
 
   // ── Route /delete-account — xóa tài khoản ──
