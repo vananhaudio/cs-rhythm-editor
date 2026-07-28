@@ -456,7 +456,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const openTool = (route: string, name: string, toolId?: string) => {
     // Piano Journey: render THẲNG như BMS. Bắt buộc phải thẳng, không iframe —
     // getUserMedia trong iframe của WKWebView (app iOS) hay bị chặn ⇒ mic chết.
-    if (route.startsWith('/piano-journey')) {
+    if (route.includes('/piano-journey')) {   // includes: bắt cả khi route là URL tuyệt đối
       setShowPiano(true)
       if (toolId) markToolUsed(toolId)
       return

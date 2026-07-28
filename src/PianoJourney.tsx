@@ -111,7 +111,9 @@ export default function PianoJourney({ onClose }: Props) {
     : transcribing
     ? { icon: '💭', label: 'Đang nghe con nói...',           bg: INDIGO, shadow: '0 8px 40px rgba(99,102,241,.35)',                                  lc: C.dim  }
     : listening
-    ? { icon: '🎙️', label: voice.transcript || 'Đang nghe...', bg: GOLD,   shadow: '0 8px 60px rgba(251,191,36,.5),0 0 120px rgba(251,191,36,.2)', lc: C.text }
+    // Tầng 2 (thu âm) không có chữ hiện dần → nói rõ là đang THU, đừng để trẻ chờ chữ.
+    // Chữ khác nhau giữa 2 tầng cũng giúp nhìn ảnh là biết tầng nào đang chạy.
+    ? { icon: '🎙️', label: voice.transcript || (voice.tier === 'record' ? 'Đang thu tiếng con…' : 'Đang nghe...'), bg: GOLD, shadow: '0 8px 60px rgba(251,191,36,.5),0 0 120px rgba(251,191,36,.2)', lc: C.text }
     : { icon: '🎤', label: 'Chạm để nói',                    bg: GOLD,   shadow: '0 8px 40px rgba(245,158,11,.3)',                                  lc: C.dim  }
 
   // Nghe: nhích theo cường độ mic thật (10 lần/giây) thay vì animate bằng state 60fps

@@ -25,6 +25,13 @@ const MIN_BLOB      = 1200   // blob nhỏ hơn = chưa kịp thu gì
 const MAX_RESTARTS  = 2      // số lần tự nghe lại khi 'no-speech'
 const GUM_TIMEOUT_MS = 15000 // chờ trẻ bấm "cho phép" micro
 
+// WKWebView (app iOS) CÓ `webkitSpeechRecognition` nhưng nó CHẾT: start() thành công
+// rồi không bao giờ bắn onstart/onresult/onerror/onend ⇒ treo ở "Đang nghe" vĩnh viễn.
+// Dò bằng onstart/onaudiostart — browser thật bắn gần như tức thì.
+const ALIVE_CHECK_MS = 3000
+// Bắt được tiếng rồi nhưng không bao giờ onend → chốt cứng
+const SPEECH_CAP_MS  = 25000
+
 // ── Kiểu tối thiểu cho Web Speech API (lib.dom chưa có sẵn) ──
 interface SpeechAlt { transcript: string }
 interface SpeechResult { 0: SpeechAlt; isFinal: boolean }
@@ -39,6 +46,8 @@ interface SpeechRecognizer {
   onresult: ((e: SpeechResultEvent) => void) | null
   onerror: ((e: SpeechErrorEvent) => void) | null
   onend: (() => void) | null
+  onstart: (() => void) | null
+  onaudiostart: (() => void) | null
   start(): void
   stop(): void
   abort(): void
@@ -111,6 +120,8 @@ export function useVoiceInput({ onFinal, lang = 'vi-VN' }: Options) {
   const ctxRef    = useRef<AudioContext | null>(null)
   const rafRef    = useRef(0)
   const timersRef = useRef<number[]>([])
+  const aliveTimerRef = useRef(0)   // watchdog "API còn sống" của Tầng 1
+  const capTimerRef   = useRef(0)   // trần cứng thời gian nghe của Tầng 1
 
   useEffect(() => { onFinalRef.current = onFinal }, [onFinal])
 
@@ -124,6 +135,7 @@ export function useVoiceInput({ onFinal, lang = 'vi-VN' }: Options) {
   // ── Dọn dẹp audio graph + timer ──
   const cleanupAudio = useCallback(() => {
     timersRef.current.forEach(clearTimeout); timersRef.current = []
+    clearTimeout(aliveTimerRef.current); clearTimeout(capTimerRef.current)
     cancelAnimationFrame(rafRef.current)
     streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null
     try { ctxRef.current?.close() } catch { /* */ }
@@ -269,14 +281,33 @@ export function useVoiceInput({ onFinal, lang = 'vi-VN' }: Options) {
     rec.continuous = false
 
     let wantRestart = false, restarts = 0, fatal = ''
+    let alive = false, abandoned = false
+
+    // Bỏ Tầng 1 vì API chết, chuyển sang thu âm. abandoned chặn onend của
+    // abort() chạy chen vào Tầng 2 vừa khởi động.
+    const abandonForTier2 = (reason: string) => {
+      if (abandoned) return
+      abandoned = true
+      clearTimeout(aliveTimerRef.current)
+      clearTimeout(capTimerRef.current)
+      try { rec.abort() } catch { /* */ }
+      if (canRecord()) { void startRecording(); return }
+      setError(reason); go('idle')
+    }
+
+    const markAlive = () => { alive = true; clearTimeout(aliveTimerRef.current) }
+    rec.onstart = markAlive
+    rec.onaudiostart = markAlive
 
     rec.onresult = e => {
+      markAlive()
       let t = ''
       for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript
       setText(t)                       // ← ghi vào ref, onend đọc lại được
     }
 
     rec.onerror = e => {
+      markAlive()
       const err = e?.error
       if (err === 'no-speech')  { wantRestart = restarts < MAX_RESTARTS; return }
       if (err === 'aborted')    return
@@ -286,6 +317,9 @@ export function useVoiceInput({ onFinal, lang = 'vi-VN' }: Options) {
     // Toàn bộ quyết định nằm ở onend — không restart trong onerror như code cũ,
     // vì lúc đó recognition chưa end, start() sẽ throw InvalidStateError.
     rec.onend = () => {
+      clearTimeout(aliveTimerRef.current)
+      clearTimeout(capTimerRef.current)
+      if (abandoned) return                               // đã sang Tầng 2
       if (cur() !== 'listening') return                   // đã bị cancel
 
       if (wantRestart) {
@@ -318,7 +352,20 @@ export function useVoiceInput({ onFinal, lang = 'vi-VN' }: Options) {
       // start() throw ngay (thường do gọi 2 lần) → thử Tầng 2
       if (canRecord()) { void startRecording(); return }
       setError('Micro không dùng được — gõ bên dưới nhé ✍️'); go('idle')
+      return
     }
+
+    // Watchdog: start() không throw nhưng API chết (WKWebView) → tụt Tầng 2
+    aliveTimerRef.current = window.setTimeout(() => {
+      if (alive || cur() !== 'listening') return
+      abandonForTier2('Micro không dùng được — gõ bên dưới nhé ✍️')
+    }, ALIVE_CHECK_MS)
+
+    // Trần cứng: có bắn event nhưng không bao giờ onend
+    capTimerRef.current = window.setTimeout(() => {
+      if (cur() !== 'listening' || abandoned) return
+      try { rec.stop() } catch { abandonForTier2('Micro không dùng được — gõ bên dưới nhé ✍️') }
+    }, SPEECH_CAP_MS)
   }, [lang, go, cur, setText, startRecording])
 
   // ── API công khai — GỌI TRỰC TIẾP TRONG onClick, đừng bọc async ──
