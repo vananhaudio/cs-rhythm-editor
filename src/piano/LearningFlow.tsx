@@ -94,6 +94,7 @@ function BottomBar({
           <button onClick={onSkip} style={{
             padding: '12px 28px', borderRadius: 16,
             border: 'none',
+            minWidth: 130, justifyContent: 'center',
             background: C.green, color: '#fff',
             fontSize: 15, fontWeight: 700,
             fontFamily: 'inherit', cursor: 'pointer',
@@ -105,6 +106,7 @@ function BottomBar({
           <button onClick={onToggle} style={{
             padding: '12px 28px', borderRadius: 16,
             border: 'none',
+            minWidth: 130, justifyContent: 'center',
             background: isPlaying ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
             color: isPlaying ? C.text : '#fff',
             fontSize: 15, fontWeight: 700,
