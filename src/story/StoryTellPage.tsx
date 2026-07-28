@@ -209,8 +209,9 @@ export default function StoryTellPage() {
   }, [editingTitle])
 
   // ── Resume draft ──
+  const draftLoadedRef = useRef(false)
   useEffect(() => {
-    if (!user) return
+    if (!user || draftLoadedRef.current) return
     supabase.from('stories')
       .select('id,status,title,conversation,content,topic')
       .eq('user_id', user.id)
@@ -228,6 +229,7 @@ export default function StoryTellPage() {
           setPhase('draft')
           setDraftResumed(true)
         } else if (Array.isArray(s.conversation) && s.conversation.length > 0) {
+          draftLoadedRef.current = true
           setStoryId(s.id)
           setStoryTitle(s.title || '')
           setConversation(s.conversation)
@@ -239,7 +241,12 @@ export default function StoryTellPage() {
             .eq('story_id', s.id)
             .order('order_index', { ascending: true })
             .then(({ data: chunks }) => {
-              if (chunks) setRawContent(chunks.map(c => c.content).join('\n\n'))
+              if (chunks) {
+                const unique = chunks.filter((c, i, arr) =>
+                  i === 0 || c.content !== arr[i - 1].content
+                )
+                setRawContent(unique.map(c => c.content).join('\n\n'))
+              }
             })
         }
       })
@@ -276,7 +283,12 @@ export default function StoryTellPage() {
           .eq('story_id', sid)
           .order('order_index', { ascending: true })
           .then(({ data: chunks }) => {
-            if (chunks) setRawContent(chunks.map(c => c.content).join('\n\n'))
+            if (chunks) {
+              const unique = chunks.filter((c, i, arr) =>
+                i === 0 || c.content !== arr[i - 1].content
+              )
+              setRawContent(unique.map(c => c.content).join('\n\n'))
+            }
           })
       }
 
@@ -353,6 +365,7 @@ export default function StoryTellPage() {
 
   // ── Start new ──
   const startNew = useCallback(() => {
+    draftLoadedRef.current = false
     setStoryId(null); setStoryTitle(''); setConversation([]); setRawContent('')
     setMiraReady(false); setDraftResumed(false)
     setPhase('telling'); setInput('')
@@ -895,6 +908,7 @@ const CSS = `
   color: var(--ink-soft);
   padding: 10px 16px;
   border-radius: var(--radius) var(--radius) 4px var(--radius);
+  text-align: left;
 }
 .sw-msg-mira .sw-msg-text {
   color: var(--ink);
