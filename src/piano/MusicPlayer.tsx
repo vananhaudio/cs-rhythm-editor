@@ -47,9 +47,21 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
   const [tempo, setTempo]     = useState((propEx || DEMO).bpm)
   const [beat, setBeat]       = useState(0)
   const [showInput, setShowInput] = useState(!propEx)
+  const [countdown, setCountdown] = useState<number | null>(null)
 
   useEffect(() => { if (propEx) { setEx(propEx); setTempo(propEx.bpm); setShowInput(false) } }, [propEx])
-  useEffect(() => { setTempo(ex.bpm); setBeat(0); setPlaying(false); stRef.current = 0 }, [ex])
+  useEffect(() => { setTempo(ex.bpm); setBeat(0); setPlaying(false); setCountdown(null); stRef.current = 0 }, [ex])
+
+  // ── Countdown timer ──
+  useEffect(() => {
+    if (countdown === null) return
+    if (countdown > 0) {
+      const t = setTimeout(() => setCountdown(c => c! - 1), 700)
+      return () => clearTimeout(t)
+    }
+    // countdown done → play
+    setPlaying(true); stRef.current = performance.now(); setCountdown(null)
+  }, [countdown])
 
   // ── Generate ──
   const generate = async () => {
@@ -75,7 +87,7 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
   const draw = useCallback(() => {
     const c = canvasRef.current; if (!c) return
     const ctx = c.getContext('2d')!; const W = c.width; const H = c.height
-    const st = H * 0.45; const sh = STAFF_LH * 8; const sb = st + sh; const sm = st + sh/2
+    const st = H * 0.18; const sh = STAFF_LH * 8; const sb = st + sh; const sm = st + sh/2
     const sl = 60; const sr = W - 20; const sw = sr - sl
     const ph = sl + sw * PH_RATIO; const pps = PX_BEAT * (tempo / 60)
 
@@ -156,25 +168,40 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
   useEffect(() => { animRef.current = requestAnimationFrame(draw); return () => cancelAnimationFrame(animRef.current) }, [draw])
 
   const toggle = () => {
-    if (playing) { setPlaying(false); stRef.current = 0 }
-    else { setPlaying(true); stRef.current = performance.now() - beat * (60/tempo) * 1000 }
+    if (playing) { setPlaying(false); stRef.current = 0; return }
+    setCountdown(3)
   }
-  const reset = () => { setPlaying(false); stRef.current = 0; setBeat(0) }
+  const reset = () => { setPlaying(false); setCountdown(null); stRef.current = 0; setBeat(0) }
 
   return (
-    <div style={{ width:'100%',height:'100dvh',background:'#0d0a04',display:'flex',flexDirection:'column',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflow:'hidden' }}>
+    <div style={{ width:'100%',maxWidth:800,margin:'0 auto',height:'100dvh',background:'#0d0a04',display:'flex',flexDirection:'column',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflow:'hidden' }}>
       {/* Top bar */}
-      <div style={{ position:'absolute',top:0,left:0,right:0,zIndex:10,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 16px 0' }}>
+      <div style={{ flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px 4px',zIndex:10 }}>
         {onBack ? (
-          <button onClick={onBack} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:40,height:40,fontSize:16,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>←</button>
+          <button onClick={onBack} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:36,height:36,fontSize:14,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>←</button>
         ) : onClose ? (
-          <button onClick={onClose} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:40,height:40,fontSize:16,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:36,height:36,fontSize:14,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
         ) : <div />}
-        <div style={{ fontSize:18,fontWeight:700,color:'rgba(255,255,255,.7)' }}>🎹 {ex.title}</div>
-        <div style={{ width:40 }} />
+        <div style={{ fontSize:16,fontWeight:700,color:'rgba(255,255,255,.7)',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%' }}>🎹 {ex.title}</div>
+        <div style={{ width:36 }} />
       </div>
 
-      <canvas ref={canvasRef} style={{ flex:1,width:'100%',display:'block' }} width={typeof window!=='undefined'?window.innerWidth:400} height={typeof window!=='undefined'?window.innerHeight:700} />
+      <canvas ref={canvasRef} style={{ flex:1,width:'100%',display:'block' }} width={typeof window!=='undefined'?Math.min(window.innerWidth,800):400} height={typeof window!=='undefined'?window.innerHeight:700} />
+
+      {/* Countdown overlay */}
+      {countdown !== null && (
+        <div style={{ position:'absolute',top:'16%',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:20 }}>
+          <div style={{
+            fontSize: 72, fontWeight: 900,
+            color: 'rgba(251,191,36,0.85)',
+            textShadow: '0 0 50px rgba(251,191,36,0.35)',
+            animation: 'cd-pop 0.6s ease-out',
+            lineHeight: 1,
+          }} key={countdown}>
+            {countdown}
+          </div>
+        </div>
+      )}
 
       {/* AI Input overlay */}
       {showInput && !playing && (
@@ -191,15 +218,19 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
       )}
 
       {/* Controls */}
-      <div style={{ position:'absolute',bottom:0,left:0,right:0,display:'flex',alignItems:'center',justifyContent:'center',gap:16,padding:'16px 20px 32px',background:'linear-gradient(to top,rgba(13,10,4,.95),transparent)' }}>
+      <div style={{ flexShrink:0,width:'100%',maxWidth:400,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'center',gap:20,padding:'8px 20px 28px' }}>
         <button onClick={reset} style={bs}>⟲</button>
-        <button onClick={toggle} style={{ ...bs,width:64,height:64,fontSize:24 }}>{playing?'⏸':'▶'}</button>
-        <div style={{ display:'flex',alignItems:'center',gap:6 }}>
+        <button onClick={toggle} style={{ ...bs,width:60,height:60,fontSize:22 }}>{playing?'⏸':'▶'}</button>
+        <div style={{ display:'flex',alignItems:'center',gap:8 }}>
           <button onClick={() => setTempo(t=>Math.max(40,t-10))} style={bss}>−</button>
-          <span style={{ color:'rgba(255,255,255,.6)',fontSize:14,fontWeight:600,minWidth:44,textAlign:'center' }}>{tempo}<span style={{fontSize:10,opacity:.6}}>BPM</span></span>
+          <span style={{ color:'rgba(255,255,255,.85)',fontSize:18,fontWeight:700,minWidth:52,textAlign:'center',lineHeight:1 }}>
+            {tempo}
+            <span style={{ display:'block',fontSize:10,fontWeight:400,opacity:.45,marginTop:1 }}>BPM</span>
+          </span>
           <button onClick={() => setTempo(t=>Math.min(200,t+10))} style={bss}>+</button>
         </div>
       </div>
+      <style>{`@keyframes cd-pop{0%{opacity:0;transform:scale(1.8)}50%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}`}</style>
     </div>
   )
 }

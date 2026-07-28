@@ -166,7 +166,13 @@ export default function PianoJourney({ onClose }: Props) {
       {/* Instruction */}
       <div style={{ fontSize:16,color:C.dim,textAlign:'center',padding:'0 40px',lineHeight:1.5,marginBottom:24 }}>
         {flow === 'idle' && 'Con muốn tập bài gì hôm nay?'}
-        {flow === 'generating' && `Cherry đang soạn bài "${transcript}"...`}
+        {flow === 'generating' && (
+          <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:6 }}>
+            <span style={{ fontSize:24,animation:'pj-pulse 2s ease-in-out infinite' }}>✨</span>
+            <span style={{ fontSize:15,color:C.text,fontWeight:600 }}>Đang sáng tác bản nhạc...</span>
+            <span style={{ fontSize:13,color:C.dim }}>"{transcript}"</span>
+          </div>
+        )}
       </div>
 
       {/* Button area */}
@@ -183,20 +189,23 @@ export default function PianoJourney({ onClose }: Props) {
         </div>
         {error && <div style={{ fontSize:13,color:'#FCA5A5',textAlign:'center',marginTop:8 }}>{error}</div>}
 
-        {/* Text input fallback */}
+        {/* Text input */}
         {flow === 'idle' && (
-          <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:8,marginTop:20,width:'80%',maxWidth:320 }}>
-            <div style={{ fontSize:12,color:C.dim }}>hoặc gõ yêu cầu:</div>
-            <input
+          <div style={{ display:'flex',flexDirection:'column',alignItems:'center',gap:10,marginTop:24,width:'85%',maxWidth:340 }}>
+            <textarea
               value={transcript} onChange={e => setTranscript(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && transcript.trim()) generateMission(transcript.trim()) }}
-              placeholder='VD: bài hát thiếu nhi...'
-              style={{ width:'100%',padding:'10px 14px',fontSize:14,borderRadius:12,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.05)',color:'#fff',outline:'none',fontFamily:'inherit',textAlign:'center' }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && transcript.trim()) { e.preventDefault(); generateMission(transcript.trim()) } }}
+              placeholder={'Ví dụ:\nCon muốn bài về khủng long\nCon muốn bài thiếu nhi\nCon muốn bài về mèo'}
+              rows={3}
+              autoFocus
+              style={{ width:'100%',padding:'12px 16px',fontSize:14,borderRadius:14,border:'1px solid rgba(255,255,255,.12)',background:'rgba(255,255,255,.04)',color:'#fff',outline:'none',fontFamily:'inherit',textAlign:'center',resize:'none',lineHeight:1.6 }}
             />
-            <button onClick={() => transcript.trim() && generateMission(transcript.trim())} disabled={!transcript.trim()}
-              style={{ padding:'10px 20px',fontSize:14,fontWeight:600,borderRadius:12,border:'none',background:transcript.trim()?'linear-gradient(135deg,#F59E0B,#D97706)':'rgba(255,255,255,.05)',color:transcript.trim()?'#fff':'rgba(255,255,255,.2)',cursor:transcript.trim()?'pointer':'default',fontFamily:'inherit' }}>
-              🎹 Tạo bài tập
-            </button>
+            {transcript.trim() && (
+              <button onClick={() => generateMission(transcript.trim())}
+                style={{ padding:'11px 24px',fontSize:15,fontWeight:700,borderRadius:14,border:'none',background:'linear-gradient(135deg,#F59E0B,#D97706)',color:'#fff',cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 20px rgba(245,158,11,.25)' }}>
+                🎹 Tạo bài tập
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -210,7 +219,7 @@ export default function PianoJourney({ onClose }: Props) {
 function Dots() {
   return <div style={{display:'flex',gap:6}}>
     {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:'50%',background:'#fff',animation:`pj-bounce 1.2s ${i*.15}s infinite ease-in-out`}}/>)}
-    <style>{`@keyframes pj-bounce{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1);opacity:1}}`}</style>
+    <style>{`@keyframes pj-bounce{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1);opacity:1}}@keyframes pj-pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}`}</style>
   </div>
 }
 
