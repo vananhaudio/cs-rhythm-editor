@@ -67,12 +67,13 @@ export default function PianoJourney({ onClose }: Props) {
 
     rec.onerror = (e: any) => {
       if (e.error === 'no-speech') {
-        // Thử lại
         if (flowRef.current === 'listening') {
           try { rec.start() } catch {}
         }
+      } else if (e.error === 'not-allowed') {
+        setError('Micro bị chặn — gõ yêu cầu bên dưới nhé ✍️'); setFlow('idle')
       } else {
-        setError('Lỗi micro: ' + e.error); setFlow('idle')
+        setError('Micro không khả dụng — gõ bên dưới nhé ✍️'); setFlow('idle')
       }
     }
 
