@@ -1,14 +1,14 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
-import { supabase } from '../supabase'
+import { useRef, useEffect, useState, useMemo } from 'react'
+import { NoteSheet } from '../elearn/guitarRenderers'
+import { exerciseToNoteItems, pitchToFreq } from './notationAdapter'
+import { playTone } from '../elearn/audio'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PianoNote { pitch: string; startBeat: number; duration: number }
 interface Exercise { title: string; bpm: number; notes: PianoNote[] }
 
-const SUPABASE_URL = 'https://wojmdilyflffvdtpovmq.supabase.co'
-
 const DEMO: Exercise = {
-  title: 'Twinkle Twinkle Little Star',
+  title: 'Twinkle Twinkle',
   bpm: 100,
   notes: [
     {pitch:'C4',startBeat:0,duration:1},{pitch:'C4',startBeat:1,duration:1},
@@ -22,12 +22,11 @@ const DEMO: Exercise = {
   ],
 }
 
-const PITCH_Y: Record<string, number> = { 'C4':5,'D4':4,'E4':3,'F4':2,'G4':1,'A4':0,'B4':-1,'C5':-2,'D5':-3,'E5':-4,'F5':-5 }
-const COLORS: Record<string, string> = { 'C':'#EF4444','D':'#F59E0B','E':'#10B981','F':'#3B82F6','G':'#8B5CF6','A':'#EC4899','B':'#06B6D4' }
-function pc(p: string) { return COLORS[p[0]] || '#F59E0B' }
-function py(p: string) { return PITCH_Y[p] ?? 3 }
-
-const STAFF_LH = 12; const NR = 18; const PH_RATIO = 0.28; const PX_BEAT = 90
+const SPEEDS = [
+  { label: 'Chậm', bpm: 60 },
+  { label: 'Vừa', bpm: 80 },
+  { label: 'Nhanh', bpm: 100 },
+]
 
 interface Props {
   exercise?: Exercise
@@ -36,21 +35,22 @@ interface Props {
 }
 
 export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animRef   = useRef(0)
-  const stRef     = useRef(0)
-  const [ex, setEx]       = useState<Exercise>(propEx || DEMO)
-  const [prompt, setPrompt]   = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
+  const [ex] = useState<Exercise>(propEx || DEMO)
   const [playing, setPlaying] = useState(false)
-  const [tempo, setTempo]     = useState((propEx || DEMO).bpm)
-  const [beat, setBeat]       = useState(0)
-  const [showInput, setShowInput] = useState(!propEx)
+  const [cursor, setCursor] = useState(-1)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [done, setDone] = useState(false)
+  const [speedIdx, setSpeedIdx] = useState(() => {
+    // pick closest speed to exercise's bpm
+    const bpm = (propEx || DEMO).bpm
+    let best = 1
+    SPEEDS.forEach((s, i) => { if (Math.abs(s.bpm - bpm) < Math.abs(SPEEDS[best].bpm - bpm)) best = i })
+    return best
+  })
 
-  useEffect(() => { if (propEx) { setEx(propEx); setTempo(propEx.bpm); setShowInput(false) } }, [propEx])
-  useEffect(() => { setTempo(ex.bpm); setBeat(0); setPlaying(false); setCountdown(null); stRef.current = 0 }, [ex])
+  const timerRef = useRef<number | null>(null)
+  const noteItems = useMemo(() => exerciseToNoteItems(ex), [ex])
+  const bpm = SPEEDS[speedIdx].bpm
 
   // ── Countdown timer ──
   useEffect(() => {
@@ -59,181 +59,194 @@ export default function MusicPlayer({ exercise: propEx, onClose, onBack }: Props
       const t = setTimeout(() => setCountdown(c => c! - 1), 700)
       return () => clearTimeout(t)
     }
-    // countdown done → play
-    setPlaying(true); stRef.current = performance.now(); setCountdown(null)
+    // countdown done → start playback
+    setCountdown(null)
+    startPlayback(bpm)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown])
 
-  // ── Generate ──
-  const generate = async () => {
-    if (!prompt.trim()) return
-    setLoading(true); setError('')
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Vui lòng đăng nhập'); setLoading(false); return }
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/piano-generate`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `Server ${res.status}`)
-      setEx(data as Exercise)
-      setShowInput(false)
-    } catch (e: any) { setError(e.message) }
-    setLoading(false)
+  // ── Playback (timer-based note advance) ──
+  const startPlayback = (bpmVal: number) => {
+    stop()
+    setDone(false)
+    setPlaying(true)
+    const beatMs = 60000 / bpmVal
+    let i = 0
+    const tick = () => {
+      if (i >= ex.notes.length) {
+        setDone(true); setPlaying(false); setCursor(-1)
+        return
+      }
+      setCursor(i)
+      const note = ex.notes[i]
+      try { playTone(pitchToFreq(note.pitch), note.duration * beatMs / 1000) } catch { /* */ }
+      i++
+      timerRef.current = window.setTimeout(tick, note.duration * beatMs)
+    }
+    tick()
   }
 
-  // ── Draw ──
-  const draw = useCallback(() => {
-    const c = canvasRef.current; if (!c) return
-    const ctx = c.getContext('2d')!; const W = c.width; const H = c.height
-    const st = H * 0.18; const sh = STAFF_LH * 8; const sb = st + sh; const sm = st + sh/2
-    const sl = 60; const sr = W - 20; const sw = sr - sl
-    const ph = sl + sw * PH_RATIO; const pps = PX_BEAT * (tempo / 60)
-
-    let cb = 0
-    if (playing && stRef.current > 0) cb = ((performance.now() - stRef.current) / 1000) * (tempo / 60)
-    setBeat(cb)
-
-    ctx.clearRect(0, 0, W, H)
-    const bg = ctx.createLinearGradient(0, 0, 0, H)
-    bg.addColorStop(0, '#1a1206'); bg.addColorStop(1, '#0d0a04')
-    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
-
-    // Staff lines
-    for (let i = 0; i < 5; i++) {
-      const y = st + i * STAFF_LH * 2
-      ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1
-      ctx.beginPath(); ctx.moveTo(sl, y); ctx.lineTo(sr, y); ctx.stroke()
-    }
-    const sg = ctx.createLinearGradient(0, st, 0, sb)
-    sg.addColorStop(0, 'rgba(0,0,0,0.3)'); sg.addColorStop(0.5, 'rgba(0,0,0,0)'); sg.addColorStop(1, 'rgba(0,0,0,0.3)')
-    ctx.fillStyle = sg; ctx.fillRect(sl, st, sw, sh)
-
-    // Playhead
-    const pg = ctx.createLinearGradient(ph-20, 0, ph+20, 0)
-    pg.addColorStop(0, 'rgba(251,191,36,0)'); pg.addColorStop(0.4, 'rgba(251,191,36,0.08)')
-    pg.addColorStop(0.5, 'rgba(251,191,36,0.25)'); pg.addColorStop(0.6, 'rgba(251,191,36,0.08)')
-    pg.addColorStop(1, 'rgba(251,191,36,0)')
-    ctx.fillStyle = pg; ctx.fillRect(ph-30, st-20, 60, sh+40)
-    ctx.strokeStyle = 'rgba(251,191,36,0.6)'; ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(ph, st-16); ctx.lineTo(ph, sb+16); ctx.stroke()
-
-    // Clef
-    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = `${STAFF_LH*10}px serif`
-    ctx.fillText('𝄞', sl+4, sm+STAFF_LH*3.5)
-
-    // Notes
-    for (const n of ex.notes) {
-      const nx = ph + (n.startBeat - cb) * PX_BEAT
-      if (nx+NR < sl || nx-NR > sr) continue
-      const y = st + py(n.pitch) * STAFF_LH + STAFF_LH
-      const col = pc(n.pitch)
-      const atPH = n.startBeat <= cb && n.startBeat + n.duration >= cb
-      const done = n.startBeat + n.duration <= cb
-
-      if (atPH) {
-        const g = ctx.createRadialGradient(nx, y, 0, nx, y, NR*1.8)
-        g.addColorStop(0, 'rgba(251,191,36,0.25)'); g.addColorStop(1, 'rgba(251,191,36,0)')
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(nx, y, NR*1.8, 0, Math.PI*2); ctx.fill()
-      }
-
-      if (n.pitch === 'C4') {
-        const ly = st + STAFF_LH * 10
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2
-        ctx.beginPath(); ctx.moveTo(nx-NR, ly); ctx.lineTo(nx+NR, ly); ctx.stroke()
-      }
-
-      const nc = done ? '#10B981' : atPH ? '#FEF3C7' : col
-      const na = done ? 0.7 : 1
-      const up = py(n.pitch) >= 2
-
-      ctx.strokeStyle = nc; ctx.globalAlpha = na; ctx.lineWidth = 3
-      ctx.beginPath()
-      if (up) { ctx.moveTo(nx+NR-2, y); ctx.lineTo(nx+NR-2, y-STAFF_LH*5) }
-      else    { ctx.moveTo(nx-NR+2, y); ctx.lineTo(nx-NR+2, y+STAFF_LH*5) }
-      ctx.stroke()
-
-      ctx.fillStyle = nc; ctx.beginPath()
-      ctx.ellipse(nx, y, NR, NR*0.75, -0.15, 0, Math.PI*2); ctx.fill()
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5; ctx.stroke()
-      ctx.globalAlpha = 1
-    }
-
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.font = '13px Inter, system-ui, sans-serif'
-    ctx.fillText(`🎵 ${Math.floor(cb)+1}`, sr-50, st-14)
-    animRef.current = requestAnimationFrame(draw)
-  }, [tempo, playing, ex])
-
-  useEffect(() => { animRef.current = requestAnimationFrame(draw); return () => cancelAnimationFrame(animRef.current) }, [draw])
+  const stop = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+    setPlaying(false); setCursor(-1)
+  }
 
   const toggle = () => {
-    if (playing) { setPlaying(false); stRef.current = 0; return }
+    if (playing) { stop(); return }
+    setDone(false)
     setCountdown(3)
   }
-  const reset = () => { setPlaying(false); setCountdown(null); stRef.current = 0; setBeat(0) }
+
+  const reset = () => { stop(); setCountdown(null); setDone(false); setCursor(-1) }
+
+  // Cleanup timer on unmount
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
 
   return (
-    <div style={{ width:'100%',maxWidth:800,margin:'0 auto',height:'100dvh',background:'#0d0a04',display:'flex',flexDirection:'column',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
+    <div style={{
+      width: '100%', maxWidth: 800, margin: '0 auto',
+      height: '100dvh', background: '#0d0a04',
+      display: 'flex', flexDirection: 'column',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      position: 'relative', overflowX: 'hidden', overflowY: 'auto',
+      userSelect: 'none',
+    }}>
       {/* Top bar */}
-      <div style={{ flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px 4px',zIndex:10 }}>
+      <div style={{
+        flexShrink: 0, display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', padding: '12px 16px 6px', zIndex: 10,
+      }}>
         {onBack ? (
-          <button onClick={onBack} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:36,height:36,fontSize:14,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>←</button>
+          <button onClick={onBack} style={btnSm}>←</button>
         ) : onClose ? (
-          <button onClick={onClose} style={{ background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',borderRadius:50,width:36,height:36,fontSize:14,color:'rgba(255,255,255,.5)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
+          <button onClick={onClose} style={btnSm}>✕</button>
         ) : <div />}
-        <div style={{ fontSize:16,fontWeight:700,color:'rgba(255,255,255,.7)',textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'60%' }}>🎹 {ex.title}</div>
-        <div style={{ width:36 }} />
+        <div style={{
+          fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,.7)',
+          textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap', maxWidth: '65%',
+        }}>
+          🎹 {ex.title}
+        </div>
+        <div style={{ width: 36 }} />
       </div>
 
-      <canvas ref={canvasRef} style={{ flex:1,width:'100%',display:'block' }} width={typeof window!=='undefined'?Math.min(window.innerWidth,800):400} height={typeof window!=='undefined'?window.innerHeight:700} />
+      {/* Speed selector */}
+      <div style={{
+        flexShrink: 0, display: 'flex', justifyContent: 'center',
+        marginBottom: 6, padding: '0 16px',
+      }}>
+        <div style={{
+          display: 'flex', gap: 3, padding: 3,
+          background: 'rgba(255,255,255,.05)', borderRadius: 10,
+        }}>
+          {SPEEDS.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => { setSpeedIdx(i); if (playing || countdown !== null) { stop(); setCountdown(null); setDone(false); setCursor(-1) } }}
+              disabled={playing}
+              style={{
+                padding: '5px 14px', border: 'none', borderRadius: 8,
+                cursor: playing ? 'default' : 'pointer',
+                fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+                background: speedIdx === i ? 'rgba(245,158,11,.18)' : 'transparent',
+                color: speedIdx === i ? '#F59E0B' : 'rgba(255,255,255,.35)',
+                transition: 'background .2s, color .2s',
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* NoteSheet — centerpiece */}
+      <div style={{
+        flex: 1, minHeight: 0,
+        margin: '0 10px 6px',
+        borderRadius: 12,
+        overflow: 'hidden',
+        background: '#1a1206',
+        border: '1px solid rgba(255,255,255,.06)',
+      }}>
+        <NoteSheet notes={noteItems} active={cursor} />
+      </div>
 
       {/* Countdown overlay */}
       {countdown !== null && (
-        <div style={{ position:'absolute',top:'10%',left:0,right:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:20 }}>
-          <div style={{
-            fontSize: 72, fontWeight: 900,
-            color: 'rgba(251,191,36,0.85)',
-            textShadow: '0 0 50px rgba(251,191,36,0.35)',
-            animation: 'cd-pop 0.6s ease-out',
-            lineHeight: 1,
-          }} key={countdown}>
+        <div style={{
+          position: 'absolute', top: '20%', left: 0, right: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none', zIndex: 20,
+        }}>
+          <div
+            key={countdown}
+            style={{
+              fontSize: 72, fontWeight: 900,
+              color: 'rgba(251,191,36,.85)',
+              textShadow: '0 0 50px rgba(251,191,36,.35)',
+              animation: 'cd-pop .6s ease-out',
+              lineHeight: 1,
+            }}
+          >
             {countdown}
           </div>
         </div>
       )}
 
-      {/* AI Input overlay */}
-      {showInput && !playing && (
-        <div style={{ position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:12,width:'80%',maxWidth:360 }}>
-          <div style={{ fontSize:15,color:'rgba(255,255,255,.5)',textAlign:'center' }}>Con muốn tập bài gì?</div>
-          <input value={prompt} onChange={e => setPrompt(e.target.value)} onKeyDown={e => e.key==='Enter' && generate()} placeholder='VD: bài hát thiếu nhi vui nhộn...' autoFocus
-            style={{ width:'100%',padding:'14px 18px',fontSize:16,borderRadius:14,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.05)',color:'#fff',outline:'none',fontFamily:'inherit',textAlign:'center' }} />
-          <button onClick={generate} disabled={loading || !prompt.trim()}
-            style={{ padding:'14px 32px',fontSize:16,fontWeight:700,borderRadius:14,border:'none',background:loading?'rgba(255,255,255,.05)':'linear-gradient(135deg,#F59E0B,#D97706)',color:loading?'rgba(255,255,255,.3)':'#fff',cursor:loading?'default':'pointer',fontFamily:'inherit' }}>
-            {loading ? '⏳ Đang tạo...' : '🎹 Tạo bài tập'}
-          </button>
-          {error && <div style={{ fontSize:13,color:'#FCA5A5',textAlign:'center' }}>{error}</div>}
+      {/* Done indicator */}
+      {done && !playing && (
+        <div style={{
+          position: 'absolute', top: '50%', left: 0, right: 0,
+          transform: 'translateY(-50%)',
+          display: 'flex', justifyContent: 'center',
+          pointerEvents: 'none', zIndex: 15,
+        }}>
+          <div style={{
+            fontSize: 14, fontWeight: 600,
+            color: 'rgba(16,185,129,.7)',
+            background: 'rgba(16,185,129,.08)',
+            padding: '8px 20px', borderRadius: 20,
+          }}>
+            ✅ Hoàn thành!
+          </div>
         </div>
       )}
 
       {/* Controls */}
-      <div style={{ flexShrink:0,width:'100%',maxWidth:400,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'center',gap:20,padding:'8px 20px calc(24px + env(safe-area-inset-bottom, 0px))' }}>
+      <div style={{
+        flexShrink: 0, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', gap: 24,
+        padding: '10px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
+      }}>
         <button onClick={reset} style={bs}>⟲</button>
-        <button onClick={toggle} style={{ ...bs,width:60,height:60,fontSize:22 }}>{playing?'⏸':'▶'}</button>
-        <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-          <button onClick={() => setTempo(t=>Math.max(40,t-10))} style={bss}>−</button>
-          <span style={{ color:'rgba(255,255,255,.85)',fontSize:18,fontWeight:700,minWidth:52,textAlign:'center',lineHeight:1 }}>
-            {tempo}
-            <span style={{ display:'block',fontSize:10,fontWeight:400,opacity:.45,marginTop:1 }}>BPM</span>
-          </span>
-          <button onClick={() => setTempo(t=>Math.min(200,t+10))} style={bss}>+</button>
+        <button onClick={toggle} style={{ ...bs, width: 58, height: 58, fontSize: 22 }}>
+          {playing ? '⏸' : '▶'}
+        </button>
+        <div style={{
+          color: 'rgba(255,255,255,.45)', fontSize: 15, fontWeight: 700,
+          minWidth: 56, textAlign: 'center', lineHeight: 1.1,
+        }}>
+          <span style={{ color: 'rgba(255,255,255,.8)' }}>{bpm}</span>
+          <span style={{ display: 'block', fontSize: 10, fontWeight: 400, opacity: .45, marginTop: 1 }}>BPM</span>
         </div>
       </div>
+
       <style>{`@keyframes cd-pop{0%{opacity:0;transform:scale(1.8)}50%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}`}</style>
     </div>
   )
 }
 
-const bs: React.CSSProperties = { width:48,height:48,borderRadius:'50%',background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.1)',color:'rgba(255,255,255,.8)',fontSize:20,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }
-const bss: React.CSSProperties = { width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.08)',color:'rgba(255,255,255,.6)',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }
+const bs: React.CSSProperties = {
+  width: 48, height: 48, borderRadius: '50%',
+  background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.1)',
+  color: 'rgba(255,255,255,.8)', fontSize: 20, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+
+const btnSm: React.CSSProperties = {
+  background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)',
+  borderRadius: 50, width: 36, height: 36, fontSize: 14,
+  color: 'rgba(255,255,255,.5)', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
