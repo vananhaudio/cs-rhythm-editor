@@ -60,7 +60,7 @@ export default function StoryLegacyLandingPage() {
 
       <nav>
         <div className="wrap nav-in">
-          <a href="/story" style="text-decoration:none;color:var(--ink-muted);font-size:13px;font-weight:500;margin-right:12px">← Tạp chí</a>
+          <a href="/story" className="nav-back">← Tạp chí</a>
             <div className="brand">
             <img className="mark" src="/logo-green.svg" alt="Thầy Văn Anh Guitar" />
             1001 Câu chuyện cùng Guitar
@@ -220,7 +220,9 @@ export default function StoryLegacyLandingPage() {
   )
 }
 
-const CSS = `
+const CSS = `.tva-story .nav-back{text-decoration:none;color:var(--ink-muted);font-size:13px;font-weight:500;margin-right:12px;flex-shrink:0;}
+.tva-story .nav-back:hover{color:var(--ink);}
+
 .tva-story{--bg:#F2EEE7;--surface:#FFFFFF;--ink:#211C32;--ink-soft:#5A5470;--ink-faint:#8A8499;--indigo:#4338CA;--indigo-dark:#352BA3;--indigo-tint:#EEEBFB;--honey:#C9711E;--honey-tint:#FBF1E4;--line:#E4DED4;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px;min-height:100vh;text-align:left;color-scheme:light;}
 .tva-story *{box-sizing:border-box;}
 .tva-story .wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
