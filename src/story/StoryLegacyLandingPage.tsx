@@ -60,7 +60,8 @@ export default function StoryLegacyLandingPage() {
 
       <nav>
         <div className="wrap nav-in">
-          <div className="brand">
+          <a href="/story" style="text-decoration:none;color:var(--ink-muted);font-size:13px;font-weight:500;margin-right:12px">← Tạp chí</a>
+            <div className="brand">
             <img className="mark" src="/logo-green.svg" alt="Thầy Văn Anh Guitar" />
             1001 Câu chuyện cùng Guitar
           </div>
