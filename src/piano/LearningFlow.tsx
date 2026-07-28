@@ -127,7 +127,7 @@ function BottomBar({
             color: isPlaying ? C.text : '#fff',
             fontSize: 15, fontWeight: 700,
             fontFamily: 'inherit', cursor: 'pointer',
-            display: 'flex', alignItems: 'center',
+            display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
             boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(245,158,11,.3)',
             transition: 'all .2s',
           }}>
