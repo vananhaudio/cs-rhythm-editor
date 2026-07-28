@@ -78,38 +78,40 @@ function BottomBar({
   return (
     <div style={{
       flexShrink: 0, display: 'flex', alignItems: 'center',
-      padding: '8px 12px calc(16px + env(safe-area-inset-bottom, 0px))',
-      gap: 8,
+      padding: '8px 10px calc(16px + env(safe-area-inset-bottom, 0px))',
+      gap: 6,
     }}>
       {/* Left group: Replay + Play + Speed */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
         {/* Replay */}
         <button onClick={onReplay} style={{
           display: 'flex', alignItems: 'center', gap: 5,
-          padding: '6px 12px', height: 36, borderRadius: 12,
+          padding: '6px 10px', height: 36, borderRadius: 12,
           background: 'rgba(0,0,0,.04)', border: `1px solid ${C.border}`,
           color: C.dim, fontSize: 12, fontWeight: 700,
           fontFamily: 'inherit', cursor: 'pointer',
+          whiteSpace: 'nowrap', flexShrink: 0,
         }}>
           <span style={{ fontSize: 16 }}>↺</span> {replayLabel}
         </button>
 
         {isDone ? (
           <button onClick={onSkip} style={{
-            padding: '12px 28px', borderRadius: 16,
+            padding: '12px 16px', borderRadius: 16,
             border: 'none',
-            minWidth: 130, justifyContent: 'center',
+            minWidth: 104, justifyContent: 'center',
             background: C.green, color: '#fff',
             fontSize: 15, fontWeight: 700,
             fontFamily: 'inherit', cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(16,185,129,.3)',
+            display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
           }}>
             Tiếp tục →
           </button>
         ) : isCountingDown ? (
           <div style={{
-            padding: '12px 28px', borderRadius: 16,
-            minWidth: 130, justifyContent: 'center',
+            padding: '12px 16px', borderRadius: 16,
+            minWidth: 104, justifyContent: 'center',
             background: `linear-gradient(135deg,${C.accent},#D97706)`,
             color: '#fff', fontSize: 22, fontWeight: 900,
             display: 'flex', alignItems: 'center',
@@ -120,9 +122,9 @@ function BottomBar({
           </div>
         ) : (
           <button onClick={onToggle} style={{
-            padding: '12px 28px', borderRadius: 16,
+            padding: '12px 16px', borderRadius: 16,
             border: 'none',
-            minWidth: 130, justifyContent: 'center',
+            minWidth: 104, justifyContent: 'center',
             background: isPlaying ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
             color: isPlaying ? C.text : '#fff',
             fontSize: 15, fontWeight: 700,
@@ -137,8 +139,8 @@ function BottomBar({
 
         {/* Speed chip — spaced away from Play */}
         <button onClick={onSpeedCycle} style={{
-          marginLeft: 4,
-          padding: '7px 12px', height: 30, borderRadius: 8,
+          marginLeft: 2,
+          padding: '7px 10px', height: 30, borderRadius: 8,
           border: `1px solid ${C.border}`,
           background: '#fff',
           color: C.dim, fontSize: 11, fontWeight: 700,
@@ -153,11 +155,12 @@ function BottomBar({
 
       {/* Skip — far right */}
       <button onClick={onSkip} style={{
-        padding: '7px 14px', height: 36, borderRadius: 12,
+        padding: '7px 11px', height: 36, borderRadius: 12,
         background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.06)',
         color: C.muted, fontSize: 12, fontWeight: 600,
         fontFamily: 'inherit', cursor: 'pointer',
         display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
+        whiteSpace: 'nowrap',
       }}>
         Bỏ qua →
       </button>
@@ -217,10 +220,12 @@ export default function LearningFlow({ exercise, onBack, onClose }: Props) {
       fontFamily: 'Inter, system-ui, sans-serif',
       overflow: 'hidden',
     }}>
-      {/* Top bar */}
+      {/* Top bar — phải chừa tai thỏ/status bar, không thì nút ← và tên bài
+          bị vẽ chồng lên giờ và cột pin trên iPhone. */}
       <div style={{
         flexShrink: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', padding: '8px 12px 4px',
+        justifyContent: 'space-between',
+        padding: 'calc(env(safe-area-inset-top, 0px) + 8px) 12px 4px',
         minHeight: 36,
       }}>
         <button onClick={onBack} style={{
