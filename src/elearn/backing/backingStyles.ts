@@ -59,11 +59,12 @@ export const STYLES: Style[] = [
   },
   {
     // Cha Cha Cha — tiết tấu quạt: Đen · đơn-đơn · Đen · đơn-đơn (hi-hat đánh đúng khuôn này
-    // để học viên quạt theo); snare "cha-cha" ở 2 móc đơn phách 4; bass gốc p1 – quãng 5 p3.
+    // để học viên quạt theo); snare "cha-cha" ở 2 móc đơn phách 4; bass gốc p1 – quãng 5 p3,
+    // kick + bass quãng 5 chèn thêm ở nhịp "&" trước phách 3 (đẩy đà sang nửa sau ô).
     id: 'chachacha', name: 'Cha Cha Cha', beatsPerBar: 4, feel: 'straight', stepsPerBar: 8, defaultTempo: 100,
-    drum: { hh: [1, 0, 1, 1, 1, 0, 1, 1], snare: [0, 0, 1, 0, 0, 0, 1, 1], kick: [1, 0, 0, 0, 1, 0, 0, 0] },
-    bass: ['R', null, null, null, '5', null, null, null],
-    bassFinal: ['R', null, null, null, '5', null, 'A', null],
+    drum: { hh: [1, 0, 1, 1, 1, 0, 1, 1], snare: [0, 0, 1, 0, 0, 0, 1, 1], kick: [1, 0, 0, 1, 1, 0, 0, 0] },
+    bass: ['R', null, null, '5', '5', null, null, null],
+    bassFinal: ['R', null, null, '5', '5', null, 'A', null],
   },
 ]
 
