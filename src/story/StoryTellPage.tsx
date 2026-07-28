@@ -785,22 +785,6 @@ export default function StoryTellPage() {
               </section>
             )}
 
-            {/* ── SECTION: COMPLETE CTA ── */}
-            {!miraReady && rawContent && userMsgCount >= 2 && (
-              <section className="sw-section sw-complete-section">
-                <button
-                  className="sw-complete-btn"
-                  onClick={completeStory}
-                  disabled={sending}
-                >
-                  ✓ Hoàn thành lời kể
-                </button>
-                <div className="sw-complete-hint">
-                  Bạn luôn có thể quay lại chỉnh sửa hoặc kể thêm sau.
-                </div>
-              </section>
-            )}
-
             {/* ── SECTION: COMPOSER ── */}
             {!miraReady && (
               <section className="sw-section sw-composer-section">
@@ -818,6 +802,22 @@ export default function StoryTellPage() {
                     disabled={sending || !input.trim()}
                     aria-label="Gửi"
                   />
+                </div>
+              </section>
+            )}
+
+            {/* ── SECTION: COMPLETE CTA ── */}
+            {!miraReady && rawContent && userMsgCount >= 2 && (
+              <section className="sw-section sw-complete-section">
+                <button
+                  className="sw-complete-btn"
+                  onClick={completeStory}
+                  disabled={sending}
+                >
+                  {sending ? 'Mira đang đọc lại câu chuyện…' : '✓ Hoàn thành lời kể'}
+                </button>
+                <div className="sw-complete-hint">
+                  Bạn luôn có thể quay lại chỉnh sửa hoặc kể thêm sau.
                 </div>
               </section>
             )}
@@ -1229,29 +1229,29 @@ const CSS = `
   box-shadow: none;
 }
 
-/* ── COMPLETE CTA ── */
+/* ── COMPLETE CTA — dưới composer ── */
 .sw-complete-section {
-  padding: 12px 0 4px;
+  padding: 16px 0 20px;
   text-align: center;
 }
 .sw-complete-btn {
   background: transparent;
-  color: var(--green);
-  border: 2px solid var(--green);
-  border-radius: 20px;
-  padding: 10px 24px;
+  color: var(--ink-soft);
+  border: 1.5px solid var(--separator);
+  border-radius: 14px;
+  padding: 12px 28px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.15s;
 }
-.sw-complete-btn:active { background: var(--green); color: #fff; }
-.sw-complete-btn:disabled { opacity: 0.3; cursor: default; }
+.sw-complete-btn:active { background: var(--separator); }
+.sw-complete-btn:disabled { opacity: 0.4; cursor: default; }
 .sw-complete-hint {
   font-size: 12px;
   color: var(--ink-muted);
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .sw-ready-card {
   background: rgba(52,199,89,0.08);
