@@ -108,26 +108,30 @@ function BottomBar({
           </button>
         ) : isCountingDown ? (
           <div style={{
-            width: 48, height: 48, borderRadius: 16,
+            padding: '12px 28px', borderRadius: 16,
+            minWidth: 130, justifyContent: 'center',
             background: `linear-gradient(135deg,${C.accent},#D97706)`,
             color: '#fff', fontSize: 22, fontWeight: 900,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', alignItems: 'center',
+            boxShadow: '0 4px 16px rgba(245,158,11,.3)',
             animation: 'cd-pop .6s ease-out',
           }} key={countdownValue}>
             {countdownValue}
           </div>
         ) : (
           <button onClick={onToggle} style={{
-            width: 48, height: 48, borderRadius: 16,
+            padding: '12px 28px', borderRadius: 16,
             border: 'none',
+            minWidth: 130, justifyContent: 'center',
             background: isPlaying ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
             color: isPlaying ? C.text : '#fff',
-            fontSize: 20, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 15, fontWeight: 700,
+            fontFamily: 'inherit', cursor: 'pointer',
+            display: 'flex', alignItems: 'center',
             boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(245,158,11,.3)',
             transition: 'all .2s',
           }}>
-            {isPlaying ? '⏸' : '▶'}
+            {isPlaying ? '⏸ Tạm dừng' : '▶'}
           </button>
         )}
 
