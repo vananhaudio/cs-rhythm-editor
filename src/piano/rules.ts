@@ -117,12 +117,55 @@ function nearestIndex(pitch: string, level: PianoLevel): number {
   return best
 }
 
+// ── Chống ra mãi một bài ─────────────────────────────────────────────────────
+// Bậc thấp có không gian giai điệu rất hẹp (bậc 1: 3 nốt, đi liền bậc, kết ở Đô)
+// nên với cùng một prompt, AI luôn trả về đúng một lời giải hiển nhiên — đo thật:
+// gọi 3 lần ra y hệt C4 D4 E4 D4 E4 D4 C4. Hai cách chữa, đều ở client nên KHÔNG
+// phải deploy lại function: (1) mỗi lần giao một DÁNG giai điệu khác, (2) kèm
+// danh sách bài vừa ra để AI tránh lặp.
+const SHAPES = [
+  'đi lên dần rồi kết',
+  'đi xuống dần rồi kết',
+  'vòng cung: lên tới đỉnh rồi quay về',
+  'hỏi–đáp: nửa đầu đi lên như câu hỏi, nửa sau đi xuống như câu trả lời',
+  'lắc lư quanh một nốt rồi mới về nốt chủ',
+  'bậc thang: mỗi nốt lặp hai lần rồi mới đi tiếp',
+  'mở đầu bằng nốt ngân dài rồi chạy đều',
+  'chạy đều rồi kết bằng hai nốt ngân dài',
+]
+
+const RECENT_KEY = 'piano_recent'
+const RECENT_MAX = 4
+
+/** Chữ ký giai điệu để so trùng, ví dụ "C4-D4-E4-C4". */
+export function signature(ex: Exercise): string {
+  return ex.notes.map(n => n.pitch).join('-')
+}
+
+export function recentSignatures(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').slice(0, RECENT_MAX) } catch { return [] }
+}
+
+export function rememberExercise(ex: Exercise) {
+  try {
+    const sig = signature(ex)
+    const list = [sig, ...recentSignatures().filter(s => s !== sig)].slice(0, RECENT_MAX)
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list))
+  } catch { /* */ }
+}
+
 // ── Ràng buộc gửi kèm cho AI ─────────────────────────────────────────────────
 // Gộp vào `prompt` gửi tới piano-generate, KHÔNG sửa prompt cứng của function.
 export function buildPrompt(chuDe: string, level: PianoLevel): string {
+  const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)]
+  const avoid = recentSignatures()
   return [
     `Bé muốn một bài về: "${chuDe}".`,
     `Mục tiêu sư phạm hôm nay: ${level.skill}.`,
+    `Lần này hãy soạn theo DÁNG: ${shape}.`,
+    avoid.length
+      ? `KHÔNG được trùng với các bài vừa soạn: ${avoid.join(' | ')}. Hãy làm khác hẳn.`
+      : '',
     `RÀNG BUỘC BẮT BUỘC (bậc ${level.id} — ${level.name}):`,
     `- CHỈ được dùng các nốt: ${level.pitches.join(' ')} — tuyệt đối không dùng nốt khác.`,
     `- duration chỉ được là: ${level.durations.join(' hoặc ')}.`,

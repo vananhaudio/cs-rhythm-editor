@@ -14,7 +14,7 @@ import { useState, useRef, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
-import { getLevel, currentLevelId, buildPrompt, checkAndRepair } from './piano/rules'
+import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise } from './piano/rules'
 import type { Exercise, PianoLevel } from './piano/rules'
 
 type Stage = 'talk' | 'generating' | 'playing'
@@ -88,6 +88,7 @@ export default function PianoJourney({ onClose }: Props) {
 
     if (import.meta.env.DEV && problems.length) console.warn('[luật] AI phạm:', problems)
 
+    rememberExercise(ex)      // để lần sau AI tránh soạn trùng
     setExercise(ex)
     setStageSync('playing')
   }, [setStageSync])
