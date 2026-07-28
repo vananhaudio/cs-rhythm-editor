@@ -104,18 +104,16 @@ function BottomBar({
           </button>
         ) : (
           <button onClick={onToggle} style={{
-            padding: '12px 28px', borderRadius: 16,
+            width: 48, height: 48, borderRadius: 16,
             border: 'none',
-            minWidth: 130, justifyContent: 'center',
             background: isPlaying ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
             color: isPlaying ? C.text : '#fff',
-            fontSize: 15, fontWeight: 700,
-            fontFamily: 'inherit', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8,
+            fontSize: 20, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(245,158,11,.3)',
             transition: 'all .2s',
           }}>
-            {isPlaying ? '⏸ Tạm dừng' : '▶'}
+            {isPlaying ? '⏸' : '▶'}
           </button>
         )}
 
