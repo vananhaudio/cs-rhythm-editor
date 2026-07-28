@@ -326,7 +326,9 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} style={{ alignSelf:m.role==='user'?'flex-end':'flex-start',maxWidth:'88%',background:m.role==='user'?C.bubbleUser:C.bubbleAsst,borderRadius:m.role==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px',padding:'12px 15px',border:`1px solid ${m.role==='user'?'rgba(251,191,36,.15)':'rgba(255,255,255,.06)'}`,overflowWrap:'break-word' }}>
+          // textAlign:'left' là BẮT BUỘC — #root trong index.css đặt text-align:center
+          // cho cả app, không sửa global được nên phải chặn tại bong bóng.
+          <div key={i} style={{ alignSelf:m.role==='user'?'flex-end':'flex-start',maxWidth:'88%',background:m.role==='user'?C.bubbleUser:C.bubbleAsst,borderRadius:m.role==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px',padding:'12px 15px',border:`1px solid ${m.role==='user'?'rgba(251,191,36,.15)':'rgba(255,255,255,.06)'}`,overflowWrap:'break-word',textAlign:'left',flexShrink:0 }}>
             <div style={{ fontSize:10,fontWeight:700,color:C.dim,marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px' }}>{m.role==='user'?'Con':'🎹 Cô Piano'}</div>
             <div style={{ fontSize:15,color:C.text,lineHeight:1.55 }}>{m.text}</div>
           </div>
@@ -340,8 +342,9 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
         )}
       </div>
 
-      {/* Nút mic — chừa chỗ cho vạch home của iPhone */}
-      <div style={{ flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:`calc(${SAFE_BOTTOM} + 18px)`,paddingTop:6 }}>
+      {/* Nút mic — chừa chỗ cho vạch home iPhone. Có lớp gradient để bong bóng chat
+          mờ dần vào nền, tránh vòng sóng mic chồng lộn xộn lên tin nhắn. */}
+      <div style={{ flexShrink:0,width:'100%',display:'flex',flexDirection:'column',alignItems:'center',paddingBottom:`calc(${SAFE_BOTTOM} + 18px)`,paddingTop:14,background:`linear-gradient(180deg,rgba(28,20,8,0) 0%,${C.bg2} 38%)`,zIndex:3 }}>
         <div style={{ position:'relative',width:BTN,height:BTN,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:10 }}>
           {showRings && [0,1,2].map(i => (
             <div key={i} style={{ position:'absolute',width:BTN,height:BTN,borderRadius:'50%',border:`2px solid ${C.ring}`,animation:`pj-ring 2.4s ${i*0.8}s ease-out infinite`,pointerEvents:'none' }} />
@@ -375,7 +378,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
 
 // Vòng sóng chạy bằng CSS — không re-render React mỗi frame như bản cũ
 const KEYFRAMES = `
-@keyframes pj-ring{0%{transform:scale(1);opacity:.45}100%{transform:scale(2.1);opacity:0}}
+@keyframes pj-ring{0%{transform:scale(1);opacity:.4}100%{transform:scale(1.6);opacity:0}}
 @keyframes pj-bounce{0%,80%,100%{transform:scale(.5);opacity:.4}40%{transform:scale(1);opacity:1}}
 @keyframes pj-wave{0%,100%{height:6px;opacity:.4}50%{height:28px;opacity:1}}
 @keyframes pj-pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
