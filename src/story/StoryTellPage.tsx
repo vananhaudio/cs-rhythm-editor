@@ -537,29 +537,29 @@ export default function StoryTellPage() {
             </div>
           )}
 
+          {/* ── STORY RAW PANEL — neo cố định, không cuộn theo chat ── */}
+          {rawContent && userMsgCount >= 2 && (
+            <div className="sw-raw-panel">
+              <button
+                className="sw-raw-toggle"
+                onClick={() => setShowRaw(!showRaw)}
+              >
+                <span className="sw-raw-toggle-icon">{showRaw ? '▾' : '▸'}</span>
+                📄 Lời kể của bạn
+                <span className="sw-raw-toggle-hint">{showRaw ? 'Thu gọn' : 'Xem'}</span>
+              </button>
+              {showRaw && (
+                <div className="sw-raw">{rawContent}</div>
+              )}
+            </div>
+          )}
+
           {/* ── CONTENT ── */}
           <div className="sw-content">
             {/* ── SECTION: INVITATION ── */}
             {conversation.length === 0 && (
               <section className="sw-section sw-invitation">
                 <p>{draftResumed ? 'Bạn đang kể dở — kể tiếp cho mình nghe chứ?' : invitation}</p>
-              </section>
-            )}
-
-            {/* ── SECTION: STORY RAW (collapsible) — TOP ── */}
-            {rawContent && userMsgCount >= 2 && (
-              <section className="sw-section sw-raw-collapse">
-                <button
-                  className="sw-raw-toggle"
-                  onClick={() => setShowRaw(!showRaw)}
-                >
-                  <span className="sw-raw-toggle-icon">{showRaw ? '▾' : '▸'}</span>
-                  📄 Lời kể của bạn
-                  <span className="sw-raw-toggle-hint">{showRaw ? 'Thu gọn' : 'Xem'}</span>
-                </button>
-                {showRaw && (
-                  <div className="sw-raw">{rawContent}</div>
-                )}
               </section>
             )}
 
@@ -930,20 +930,20 @@ const CSS = `
 .sw-msg-pending { opacity: 0.55; }
 .sw-msg-dots { color: var(--ink-faint); font-style: italic; }
 
-/* ── STORY RAW ── */
-/* ── STORY RAW ── */
-.sw-raw-collapse {
-  margin-top: 4px;
+/* ── STORY RAW PANEL — neo cố định dưới header ── */
+.sw-raw-panel {
+  flex: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 .sw-raw-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 10px 20px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: none;
   font-size: 13px;
   font-weight: 700;
   font-family: inherit;
@@ -966,21 +966,22 @@ const CSS = `
   color: var(--ink-faint);
   text-transform: none;
 }
-.sw-raw {
-  margin-top: 10px;
+.sw-raw-panel .sw-raw {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border-light);
+  border-radius: 0;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px 28px;
-  font-size: 17px;
+  padding: 20px 24px;
+  font-size: 16px;
   line-height: 1.7;
   color: var(--ink);
   white-space: pre-wrap;
   text-align: left;
-  box-shadow: var(--shadow-sm);
-  font-family: 'Be Vietnam Pro', Georgia, serif;
-  max-height: 360px;
+  max-height: 220px;
   overflow-y: auto;
+  box-shadow: none;
+  font-family: 'Be Vietnam Pro', Georgia, serif;
 }
 
 /* ── READY CARD ── */
