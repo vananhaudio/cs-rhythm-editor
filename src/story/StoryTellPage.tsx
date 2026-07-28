@@ -603,7 +603,7 @@ export default function StoryTellPage() {
               <section className="sw-section">
                 <div className="sw-convo">
                   {groupedConvo.map((group, gi) => (
-                    <div key={gi}>
+                    <div key={gi} style={{ display: 'contents' }}>
                       <div className="sw-date-sep">{group.date}</div>
                       {group.msgs.map((msg, i) => (
                         <div key={i} className={`sw-msg ${msg.role === 'user' ? 'sw-msg-user' : 'sw-msg-mira'}`}>
@@ -881,7 +881,7 @@ const CSS = `
 
 /* ── CONVERSATION — iMessage style ── */
 .sw-convo { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; }
-.sw-msg { max-width: 80%; }
+.sw-msg { max-width: 72%; }
 @keyframes sw-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .sw-msg-user { align-self: flex-end; }
 .sw-msg-mira { align-self: flex-start; }
