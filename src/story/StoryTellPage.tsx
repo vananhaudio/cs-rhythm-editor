@@ -1,23 +1,22 @@
-// ── /story/tell — MVP 03: Giao diện kể chuyện ──
-// Layout stacked: Conversation → Story Raw → Composer
-// Mira luôn hỏi 1 câu sau mỗi message người dùng.
-import { useEffect, useState, useCallback, useMemo } from 'react'
+// ── /story/tell — MVP 03: Story Workspace ──
+// Document-first design. Mira = interviewer. Story = the product.
+// Sections: Header → Conversation → Story Raw → Composer → (future sections)
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../supabase'
 import type { User } from '@supabase/supabase-js'
 
 type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'submitting' | 'submitted'
 type ChatMsg = { role: 'user' | 'mira'; text: string; at: string }
 
-// Helper: trích xuất thông điệp lỗi từ Edge Function response
+// ── Helpers ──
 async function getErrMsg(e: unknown): Promise<string> {
   if (e && typeof e === 'object' && 'context' in e) {
     try {
       const ctx = (e as { context: { json?: () => Promise<unknown> } }).context
       if (ctx?.json) {
         const body = await ctx.json()
-        if (body && typeof body === 'object' && 'error' in body) {
+        if (body && typeof body === 'object' && 'error' in body)
           return String((body as { error: string }).error)
-        }
       }
     } catch { /* fall through */ }
   }
@@ -31,7 +30,7 @@ const INVITATIONS = [
   'Có một câu chuyện thật mà bạn nghĩ đáng được lưu giữ không?',
 ]
 
-// ── AuthGate: màn đăng nhập/tạo tài khoản giọng Mira ──
+// ── AuthGate ──
 function AuthGate({ onSubmit, busy, err }: {
   onSubmit: (mode: 'login' | 'signup', email: string, pass: string, name: string) => void
   busy: boolean; err: string
@@ -71,16 +70,7 @@ function AuthGate({ onSubmit, busy, err }: {
   )
 }
 
-// ── LivingBookBar ──
-function LivingBookBar() {
-  return (
-    <div className="lb-bar">
-      📖 Bạn đang viết một trang cho <b>1001 Câu chuyện cùng Guitar</b>.
-    </div>
-  )
-}
-
-// ── DraftView: bản thảo + 3 nút ──
+// ── DraftView ──
 function DraftView({ title, topic, content, onAccept, onEdit, onTellMore, busy }: {
   title: string; topic: string; content: string
   onAccept: () => void; onEdit: () => void; onTellMore: () => void
@@ -126,37 +116,70 @@ function DraftView({ title, topic, content, onAccept, onEdit, onTellMore, busy }
   )
 }
 
-// ── StoryTellPage ──
+// ── AutoGrow Textarea ──
+function AutoTextarea({ value, onChange, onKeyDown, disabled, placeholder }: {
+  value: string; onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  onKeyDown: (e: React.KeyboardEvent) => void; disabled: boolean; placeholder: string
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px'
+  }, [value])
+
+  return (
+    <textarea
+      ref={ref}
+      className="sw-textarea"
+      value={value}
+      onChange={onChange}
+      onKeyDown={onKeyDown}
+      disabled={disabled}
+      rows={1}
+      placeholder={placeholder}
+    />
+  )
+}
+
+// ══════════════════════════════════════════════════════════════
+// STORY WORKSPACE
+// ══════════════════════════════════════════════════════════════
 export default function StoryTellPage() {
+  // ── Auth ──
   const [user, setUser] = useState<User | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authErr, setAuthErr] = useState('')
+
+  // ── Story ──
   const [storyId, setStoryId] = useState<string | null>(null)
+  const [storyTitle, setStoryTitle] = useState('')
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [phase, setPhase] = useState<Phase>('telling')
-  const [miraReply, setMiraReply] = useState('')
-  const [miraReady, setMiraReady] = useState(false) // Mira đã đánh giá đủ
+  const [miraReady, setMiraReady] = useState(false)
+  const [draftResumed, setDraftResumed] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
 
-  // Draft state
+  // ── Conversation + Story Raw ──
+  const [conversation, setConversation] = useState<ChatMsg[]>([])
+  const [rawContent, setRawContent] = useState('')
+
+  // ── Draft ──
   const [draftTitle, setDraftTitle] = useState('')
   const [draftTopic, setDraftTopic] = useState('')
   const [draftContent, setDraftContent] = useState('')
 
-  // Auth
-  const [authBusy, setAuthBusy] = useState(false)
-  const [authErr, setAuthErr] = useState('')
+  // ── Refs ──
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
-  // Lời mời ngẫu nhiên (chỉ chọn 1 lần khi mount)
   const invitation = useMemo(() => INVITATIONS[Math.floor(Math.random() * INVITATIONS.length)], [])
 
-  // Mở lại bài kể dở (nếu có)
-  const [draftResumed, setDraftResumed] = useState(false)
-
-  // ── MVP 03: Conversation + Story Raw ──
-  const [conversation, setConversation] = useState<ChatMsg[]>([])
-  const [rawContent, setRawContent] = useState('')
-  const [loadingRaw, setLoadingRaw] = useState(false)
-
+  // ── Auth listener ──
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null); setAuthChecked(true)
@@ -167,11 +190,29 @@ export default function StoryTellPage() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Nháp tự lưu: kiểm tra bài dở khi đăng nhập
+  // ── Close menu on outside click ──
+  useEffect(() => {
+    if (!showMenu) return
+    const h = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [showMenu])
+
+  // ── Focus title input when editing ──
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [editingTitle])
+
+  // ── Resume draft ──
   useEffect(() => {
     if (!user) return
     supabase.from('stories')
-      .select('id,status,conversation,title,content,topic')
+      .select('id,status,title,conversation,content,topic')
       .eq('user_id', user.id)
       .in('status', ['telling', 'user_review'])
       .order('updated_at', { ascending: false }).limit(1)
@@ -179,20 +220,20 @@ export default function StoryTellPage() {
         const s = data?.[0]
         if (!s) return
         if (s.status === 'user_review' && s.title && s.content) {
-          // Có bản nháp đang chờ duyệt → hiển thị lại
           setStoryId(s.id)
+          setStoryTitle(s.title)
           setDraftTitle(s.title)
           setDraftTopic(s.topic || '')
           setDraftContent(s.content)
           setPhase('draft')
           setDraftResumed(true)
         } else if (Array.isArray(s.conversation) && s.conversation.length > 0) {
-          // Có bài đang kể dở → kể tiếp
           setStoryId(s.id)
+          setStoryTitle(s.title || '')
           setConversation(s.conversation)
           setPhase('telling')
           setDraftResumed(true)
-          // Tải Story Raw
+          // Load Story Raw
           supabase.from('story_chunks')
             .select('content, order_index')
             .eq('story_id', s.id)
@@ -204,18 +245,15 @@ export default function StoryTellPage() {
       })
   }, [user])
 
-  // ── Gửi lời kể (chat) ──
+  // ── Send message ──
   const send = useCallback(async () => {
     const t = input.trim()
     if (!t || sending) return
     setInput('')
     setSending(true)
 
-    // Hiển thị message của user ngay lập tức
     const userMsg: ChatMsg = { role: 'user', text: t, at: new Date().toISOString() }
     setConversation(prev => [...prev, userMsg])
-
-    // Cập nhật Story Raw ngay (thêm đoạn mới vào)
     setRawContent(prev => prev ? prev + '\n\n' + t : t)
 
     try {
@@ -233,20 +271,18 @@ export default function StoryTellPage() {
       if (p === 'ready_for_draft') {
         setMiraReady(true)
         setPhase('ready_for_draft')
-        setMiraReply(miraText)
       } else {
         setPhase('asking')
-        setMiraReply(miraText)
       }
     } catch (e) {
       console.error('story-ai chat', e)
       const msg = (e as { message?: string })?.message || String(e)
-      const errMsg: ChatMsg = { role: 'mira', text: 'Lỗi: ' + msg, at: new Date().toISOString() }
+      const errMsg: ChatMsg = { role: 'mira', text: 'Có lỗi xảy ra. Bạn thử lại nhé.', at: new Date().toISOString() }
       setConversation(prev => [...prev, errMsg])
     } finally { setSending(false) }
   }, [input, sending, storyId])
 
-  // ── Yêu cầu viết bản thảo ──
+  // ── Request draft ──
   const requestDraft = useCallback(async () => {
     if (!storyId || sending) return
     setSending(true)
@@ -262,38 +298,23 @@ export default function StoryTellPage() {
       setPhase('draft')
     } catch (e) {
       console.error('story-ai write', e)
-      const msg = (e as { message?: string })?.message || String(e)
-      setMiraReply('Lỗi: ' + msg)
       setPhase('ready_for_draft')
     } finally { setSending(false) }
   }, [storyId, sending])
 
-  // ── Gửi biên tập ──
+  // ── Submit review ──
   const submitReview = useCallback(async () => {
     if (!storyId || sending) return
     setSending(true)
     setPhase('submitting')
-    // Cập nhật status trước
-    await supabase.from('stories').update({ status: 'submitted' }).eq('id', storyId)
-    try {
-      await supabase.functions.invoke('story-ai', {
-        body: { action: 'review', storyId },
-      })
-    } catch (e) {
-      console.error('story-ai review', e)
-      // Vẫn coi là submitted — review sẽ được retry
-    }
+    await supabase.from('stories').update({ status: 'submitted', title: storyTitle || draftTitle }).eq('id', storyId)
+    try { await supabase.functions.invoke('story-ai', { body: { action: 'review', storyId } }) } catch { /* retry later */ }
     setPhase('submitted')
     setSending(false)
-  }, [storyId, sending])
+  }, [storyId, sending, storyTitle, draftTitle])
 
-  // ── Biên tập lại ──
-  const startEdit = useCallback(() => {
-    setPhase('editing')
-    setMiraReply('Bạn muốn mình sửa phần nào?')
-  }, [])
-
-  // ── Gửi yêu cầu biên tập ──
+  // ── Edit draft ──
+  const startEdit = useCallback(() => setPhase('editing'), [])
   const sendEdit = useCallback(async () => {
     const t = input.trim()
     if (!t || sending || !storyId) return
@@ -310,48 +331,42 @@ export default function StoryTellPage() {
       setPhase('draft')
     } catch (e) {
       console.error('story-ai revise', e)
-      setMiraReply('Có lỗi khi sửa bản thảo. Bạn thử lại giúp mình nhé 🌿')
     } finally { setSending(false) }
   }, [input, sending, storyId, draftTitle, draftTopic, draftContent])
 
-  // ── Kể thêm (từ draft) ──
-  const tellMore = useCallback(async () => {
+  // ── Tell more ──
+  const tellMore = useCallback(() => {
     setMiraReady(false)
-    setMiraReply('')
     setPhase('telling')
   }, [])
 
-  // ── MVP 02: Lấy Story Raw từ chunks ──
-  const fetchRaw = useCallback(async () => {
-    if (!storyId) return
-    setLoadingRaw(true)
-    try {
-      const { data, error } = await supabase
-        .from('story_chunks')
-        .select('content, order_index')
-        .eq('story_id', storyId)
-        .order('order_index', { ascending: true })
-      if (error) { console.error('fetchRaw', error); return }
-      const raw = (data || []).map(c => c.content).join('\n\n')
-      setRawContent(raw)
-    } catch (e) {
-      console.error('fetchRaw', e)
-    } finally { setLoadingRaw(false) }
-  }, [storyId])
-
-  // ── Bắt đầu câu chuyện mới ──
+  // ── Start new ──
   const startNew = useCallback(() => {
-    setStoryId(null)
-    setConversation([])
-    setRawContent('')
-    setMiraReply('')
-    setMiraReady(false)
-    setDraftResumed(false)
-    setPhase('telling')
-    setInput('')
+    setStoryId(null); setStoryTitle(''); setConversation([]); setRawContent('')
+    setMiraReady(false); setDraftResumed(false)
+    setPhase('telling'); setInput('')
   }, [])
 
-  // ── Đăng nhập / tạo tài khoản ──
+  // ── Rename story ──
+  const renameStory = useCallback(() => {
+    setEditingTitle(true)
+    setShowMenu(false)
+  }, [])
+  const saveTitle = useCallback(async () => {
+    setEditingTitle(false)
+    if (storyId && storyTitle.trim()) {
+      await supabase.from('stories').update({ title: storyTitle.trim() }).eq('id', storyId)
+    }
+  }, [storyId, storyTitle])
+
+  // ── Delete story ──
+  const deleteStory = useCallback(async () => {
+    if (!storyId || !window.confirm('Bạn có chắc muốn xóa câu chuyện này? Hành động này không thể hoàn tác.')) return
+    await supabase.from('stories').delete().eq('id', storyId)
+    startNew()
+  }, [storyId, startNew])
+
+  // ── Auth ──
   const submitAuth = async (mode: 'login' | 'signup', email: string, pass: string, name: string) => {
     setAuthErr('')
     if (!email.trim() || !pass.trim() || (mode === 'signup' && !name.trim())) {
@@ -382,403 +397,612 @@ export default function StoryTellPage() {
     }
   }
 
-  // ── Render ──
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveTitle() }
+    if (e.key === 'Escape') setEditingTitle(false)
+  }
+
+  // ── Computed ──
+  const userMsgCount = conversation.filter(m => m.role === 'user').length
+  const displayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'Người kể'
+  const statusLabel = phase === 'editing' ? 'Đang biên tập' : phase === 'ready_for_draft' ? 'Sẵn sàng tạo bản thảo' : 'Đang kể'
+
+  // ══════════════════════════════════════════════════════════════
+  // RENDER
+  // ══════════════════════════════════════════════════════════════
   return (
     <div className="tva-tell">
       <style>{CSS}</style>
 
       {!authChecked ? (
-        <div className="center-note">Đang mở cửa…</div>
+        <div className="sw-center">Đang mở cửa…</div>
       ) : !user ? (
         <AuthGate onSubmit={submitAuth} busy={authBusy} err={authErr} />
       ) : phase === 'submitted' ? (
-        <>
-          <LivingBookBar />
-          <div className="mv-body">
-            <div className="mv-submitted">
-              <div className="mv-done-icon">🎉</div>
-              <h2>Câu chuyện của bạn đã được gửi đến Ban biên tập</h2>
-              <p>Cảm ơn bạn đã chia sẻ câu chuyện của mình. Ban biên tập sẽ đọc và phản hồi trong thời gian sớm nhất.</p>
-              <a className="mv-back" href="/story">← Về trang 1001 Câu chuyện</a>
-            </div>
+        <div className="sw-page">
+          <div className="sw-submitted">
+            <div className="sw-done-icon">🎉</div>
+            <h2>Câu chuyện của bạn đã được gửi đến Ban biên tập</h2>
+            <p>Cảm ơn bạn đã chia sẻ. Ban biên tập sẽ đọc và phản hồi sớm nhất.</p>
+            <a className="sw-link" href="/story">← Về trang 1001 Câu chuyện</a>
           </div>
-        </>
+        </div>
       ) : phase === 'draft' ? (
-        <>
-          <LivingBookBar />
-          <div className="mv-body">
+        <div className="sw-page">
+          <div className="sw-draft-wrap">
             <DraftView
               title={draftTitle} topic={draftTopic} content={draftContent}
               onAccept={submitReview} onEdit={startEdit} onTellMore={tellMore}
               busy={sending}
             />
           </div>
-        </>
+        </div>
       ) : phase === 'draft_loading' || phase === 'submitting' ? (
-        <>
-          <LivingBookBar />
-          <div className="mv-body">
-            <div className="mv-loading">
-              <div className="mv-spinner" />
-              <p>{phase === 'draft_loading' ? 'Mira đang sắp xếp lại câu chuyện của bạn…' : 'Đang gửi câu chuyện…'}</p>
-            </div>
+        <div className="sw-page">
+          <div className="sw-loading">
+            <div className="sw-spinner" />
+            <p>{phase === 'draft_loading' ? 'Mira đang sắp xếp lại câu chuyện của bạn…' : 'Đang gửi câu chuyện…'}</p>
           </div>
-        </>
+        </div>
       ) : (
-        /* Telling / Asking / Ready for draft / Editing */
-        <>
-          {draftResumed && (
-            <div className="mv-resume-bar">
-              📝 Bạn có một câu chuyện đang kể dở — kể tiếp nhé.
-              <button className="mv-new-btn" onClick={startNew}>+ Câu chuyện mới</button>
+        /* ═══ STORY WORKSPACE ═══ */
+        <div className="sw-workspace">
+          {/* ── HEADER ── */}
+          <header className="sw-header">
+            <div className="sw-header-left">
+              <div className="sw-avatar">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+              <div className="sw-header-meta">
+                <div className="sw-author">{displayName}</div>
+                <div className="sw-status">
+                  <span className="sw-status-dot" />
+                  {statusLabel}
+                  <span className="sw-status-sep">·</span>
+                  <span className="sw-autosave">Đã lưu tự động</span>
+                </div>
+              </div>
             </div>
-          )}
 
-          {!draftResumed && (
-            <LivingBookBar />
-          )}
+            <div className="sw-header-center">
+              {editingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  className="sw-title-input"
+                  value={storyTitle}
+                  onChange={e => setStoryTitle(e.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  onBlur={saveTitle}
+                  placeholder="Nhập tiêu đề câu chuyện…"
+                />
+              ) : (
+                <h1
+                  className="sw-title"
+                  onClick={() => storyId && setEditingTitle(true)}
+                  title="Nhấn để đổi tên"
+                >
+                  {storyTitle || 'Câu chuyện chưa đặt tên'}
+                  {storyId && <span className="sw-title-icon">✎</span>}
+                </h1>
+              )}
+            </div>
 
-          <div className="mv-body">
-            {/* ── CONVERSATION ── */}
-            {conversation.length > 0 && (
-              <div className="mv-convo-wrap">
-                {conversation.map((msg, i) => (
-                  <div key={i} className={`mv-bubble ${msg.role === 'user' ? 'mv-bubble-user' : 'mv-bubble-mira'}`}>
-                    {msg.role === 'mira' && <div className="mv-bubble-label">Mira</div>}
-                    <div className="mv-bubble-text">{msg.text}</div>
-                  </div>
-                ))}
-                {sending && (
-                  <div className="mv-bubble mv-bubble-mira mv-bubble-typing">
-                    <div className="mv-bubble-label">Mira</div>
-                    <div className="mv-bubble-text mv-typing">đang nghĩ…</div>
+            <div className="sw-header-right">
+              <div className="sw-menu-wrap" ref={menuRef}>
+                <button className="sw-menu-btn" onClick={() => setShowMenu(!showMenu)}>
+                  ···
+                </button>
+                {showMenu && (
+                  <div className="sw-menu-drop">
+                    <button onClick={renameStory}>Đổi tên câu chuyện</button>
+                    <button onClick={deleteStory} className="sw-menu-danger">Xóa câu chuyện</button>
+                    <hr />
+                    <button onClick={() => { setShowMenu(false) }}>Báo lỗi</button>
                   </div>
                 )}
               </div>
-            )}
-
-            {/* ── INVITATION (chỉ khi chưa có gì) ── */}
-            {conversation.length === 0 && (
-              <div className="mv-invitation">
-                <p>{draftResumed ? 'Bạn đang kể dở — kể tiếp cho mình nghe chứ?' : invitation}</p>
-              </div>
-            )}
-
-            {/* ── STORY RAW ── */}
-            {rawContent && conversation.filter(m => m.role === 'user').length >= 2 && (
-              <div className="mv-raw-section">
-                <div className="mv-raw-label">📄 Lời kể của bạn</div>
-                <div className="mv-raw-doc">{rawContent}</div>
-              </div>
-            )}
-
-            {/* ── READY FOR DRAFT ── */}
-            {miraReady && (
-              <div className="mv-ready">
-                <button className="mv-ready-btn" onClick={requestDraft} disabled={sending}>
-                  ✨ Tạo bản thảo
-                </button>
-              </div>
-            )}
-
-            {/* ── COMPOSER ── */}
-            {!miraReady && (
-              <div className="mv-composer">
-                <textarea
-                  className="mv-textarea"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={sending}
-                  rows={4}
-                  placeholder={
-                    phase === 'editing'
-                      ? 'Bạn muốn sửa phần nào?'
-                      : 'Kể tiếp cho mình nghe nhé…'
-                  }
-                />
-                <button
-                  className="mv-send"
-                  onClick={phase === 'editing' ? sendEdit : send}
-                  disabled={sending || !input.trim()}
-                >
-                  {sending ? 'Đang gửi…' : phase === 'editing' ? 'Gửi yêu cầu sửa' : 'Gửi'}
-                </button>
-              </div>
-            )}
-
-            <div className="mv-footnote">
-              Câu chuyện của bạn được lưu tự động — có thể nghỉ và quay lại bất cứ lúc nào.
             </div>
+          </header>
+
+          {/* ── RESUME BAR ── */}
+          {draftResumed && (
+            <div className="sw-resume">
+              📝 Bạn có một câu chuyện đang kể dở — kể tiếp nhé.
+              <button onClick={startNew}>+ Câu chuyện mới</button>
+            </div>
+          )}
+
+          {/* ── CONTENT ── */}
+          <div className="sw-content">
+            {/* ── SECTION: INVITATION ── */}
+            {conversation.length === 0 && (
+              <section className="sw-section sw-invitation">
+                <p>{draftResumed ? 'Bạn đang kể dở — kể tiếp cho mình nghe chứ?' : invitation}</p>
+              </section>
+            )}
+
+            {/* ── SECTION: CONVERSATION ── */}
+            {conversation.length > 0 && (
+              <section className="sw-section">
+                <div className="sw-convo">
+                  {conversation.map((msg, i) => (
+                    <div key={i} className={`sw-msg ${msg.role === 'user' ? 'sw-msg-user' : 'sw-msg-mira'}`}>
+                      {msg.role === 'mira' && <div className="sw-msg-name">Mira</div>}
+                      <div className="sw-msg-text">{msg.text}</div>
+                    </div>
+                  ))}
+                  {sending && (
+                    <div className="sw-msg sw-msg-mira sw-msg-pending">
+                      <div className="sw-msg-name">Mira</div>
+                      <div className="sw-msg-text sw-msg-dots">đang nghĩ…</div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* ── SECTION: STORY RAW ── */}
+            {rawContent && userMsgCount >= 2 && (
+              <section className="sw-section">
+                <div className="sw-section-label">📄 Lời kể của bạn</div>
+                <div className="sw-raw">{rawContent}</div>
+              </section>
+            )}
+
+            {/* ── SECTION: READY ── */}
+            {miraReady && (
+              <section className="sw-section">
+                <div className="sw-ready-card">
+                  <button className="sw-ready-btn" onClick={requestDraft} disabled={sending}>
+                    ✨ Biên tập thành bản thảo
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {/* ── SECTION: COMPOSER ── */}
+            {!miraReady && (
+              <section className="sw-section sw-composer-section">
+                <div className="sw-composer">
+                  <AutoTextarea
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={sending}
+                    placeholder={phase === 'editing' ? 'Bạn muốn sửa phần nào?' : 'Hãy kể tiếp câu chuyện…'}
+                  />
+                  <button
+                    className="sw-send"
+                    onClick={phase === 'editing' ? sendEdit : send}
+                    disabled={sending || !input.trim()}
+                  >
+                    {sending ? 'Đang gửi…' : 'Gửi'}
+                  </button>
+                </div>
+              </section>
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   )
 }
 
+// ══════════════════════════════════════════════════════════════
+// CSS — Document-first design
+// ══════════════════════════════════════════════════════════════
 const CSS = `
 .tva-tell {
-  --bg: #F2EEE7;
-  --page: #FEFCF7;
-  --ink: #211C32;
-  --ink-soft: #5A5470;
-  --ink-faint: #8A8499;
-  --ink-subtle: #B8B2A8;
-  --indigo: #4338CA;
-  --indigo-dark: #352BA3;
-  --indigo-tint: #EEEBFB;
-  --line: #E4DED4;
-  --line-soft: #EDE8DF;
-  --honey: #C9711E;
-  --honey-tint: #FBF1E4;
+  --bg: #FAF8F5;
+  --surface: #FFFFFF;
+  --ink: #1A1625;
+  --ink-soft: #4A4458;
+  --ink-muted: #787180;
+  --ink-faint: #A09BA8;
+  --border: #E8E3DC;
+  --border-light: #F0EDE8;
+  --accent: #4338CA;
+  --accent-hover: #352BA3;
+  --accent-tint: #EEEBFB;
   --green: #0D9488;
   --green-tint: #E6F7F5;
-  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  --honey: #B3620C;
+  --honey-tint: #FDF2E4;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(26, 22, 37, 0.04);
+  --shadow-md: 0 4px 16px rgba(26, 22, 37, 0.06);
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--ink);
   height: 100dvh;
   display: flex;
   flex-direction: column;
   font-size: 16px;
-  line-height: 1.55;
-  color-scheme: light;
-  text-align: left;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
-.tva-tell * { box-sizing: border-box; }
+.tva-tell * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── LivingBookBar ── */
-.lb-bar {
-  flex: none;
-  text-align: center;
-  padding: 12px 16px 10px;
-  font-size: 13px;
-  color: var(--ink-soft);
-  background: var(--page);
-  border-bottom: 1px solid var(--line-soft);
-  letter-spacing: 0.2px;
+/* ── Shared page wrapper ── */
+.sw-page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
-.lb-bar b { color: var(--indigo); font-weight: 700; }
 
-.mv-resume-bar {
+/* ── Workspace ── */
+.sw-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+.sw-header {
   flex: none;
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+  position: relative;
+}
+.sw-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.sw-avatar {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sw-header-meta { min-width: 0; }
+.sw-author {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-status {
+  font-size: 12px;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.sw-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+.sw-status-sep { color: var(--ink-faint); }
+.sw-autosave { color: var(--ink-faint); }
+
+.sw-header-center {
+  flex: 1;
   text-align: center;
+  min-width: 0;
+}
+.sw-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  transition: color 0.15s;
+}
+.sw-title:hover { color: var(--accent); }
+.sw-title-icon {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.sw-title:hover .sw-title-icon { opacity: 1; }
+.sw-title-input {
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--ink);
+  border: none;
+  border-bottom: 2px solid var(--accent);
+  background: transparent;
+  text-align: center;
+  outline: none;
+  width: 100%;
+  max-width: 320px;
+  padding: 2px 0;
+}
+
+.sw-header-right { flex-shrink: 0; }
+.sw-menu-wrap { position: relative; }
+.sw-menu-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 1px;
+  transition: all 0.15s;
+}
+.sw-menu-btn:hover { background: var(--border-light); color: var(--ink); }
+.sw-menu-drop {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  min-width: 200px;
+  z-index: 100;
+  overflow: hidden;
+}
+.sw-menu-drop button {
+  display: block;
+  width: 100%;
   padding: 10px 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.sw-menu-drop button:hover { background: var(--border-light); }
+.sw-menu-drop hr {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 4px 0;
+}
+.sw-menu-danger { color: #DC2626 !important; }
+
+/* ── RESUME BAR ── */
+.sw-resume {
+  flex: none;
+  text-align: center;
+  padding: 8px 16px;
   font-size: 13px;
   color: var(--honey);
   background: var(--honey-tint);
-  border-bottom: 1px solid #F0DFC8;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16px;
-  flex-wrap: wrap;
 }
-.mv-new-btn {
+.sw-resume button {
   font-size: 12px;
   font-weight: 600;
-  color: var(--indigo);
-  background: var(--indigo-tint);
+  color: var(--accent);
+  background: var(--accent-tint);
   border: 1px solid #D3CEE8;
   border-radius: 8px;
   padding: 4px 12px;
   cursor: pointer;
   font-family: inherit;
 }
-.mv-new-btn:hover { background: var(--indigo); color: #fff; }
+.sw-resume button:hover { background: var(--accent); color: #fff; }
 
-/* ── Main view body ── */
-.mv-body {
+/* ── CONTENT ── */
+.sw-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 16px 30px;
+  padding: 32px 20px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 28px;
 }
 
-/* ── Invitation (chỉ khi chưa có conversation) ── */
-.mv-invitation {
-  max-width: 600px;
+/* ── SECTIONS ── */
+.sw-section {
+  max-width: 640px;
   width: 100%;
-  padding: 40px 0;
+}
+
+/* ── INVITATION ── */
+.sw-invitation {
+  padding: 60px 0;
   text-align: center;
 }
-.mv-invitation p {
-  font-size: 19px;
+.sw-invitation p {
+  font-size: 20px;
   font-weight: 500;
   color: var(--ink-soft);
   line-height: 1.5;
-  margin: 0;
 }
 
-/* ── MVP 03: Conversation bubbles ── */
-.mv-convo-wrap {
-  max-width: 600px;
-  width: 100%;
+/* ── CONVERSATION ── */
+.sw-convo {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
-.mv-bubble {
-  max-width: 85%;
-  padding: 12px 16px;
-  border-radius: 16px;
-  font-size: 15px;
-  line-height: 1.65;
-  animation: mv-fade-in 0.25s ease;
+.sw-msg {
+  max-width: 88%;
+  animation: sw-fade-in 0.3s ease;
 }
-@keyframes mv-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-.mv-bubble-user {
+@keyframes sw-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.sw-msg-user {
   align-self: flex-end;
-  background: var(--indigo-tint);
-  color: var(--ink-soft);
-  border-bottom-right-radius: 6px;
 }
-.mv-bubble-mira {
+.sw-msg-mira {
   align-self: flex-start;
-  background: var(--page);
-  color: var(--ink);
-  border: 1px solid var(--line-soft);
-  border-bottom-left-radius: 6px;
 }
-.mv-bubble-label {
+.sw-msg-name {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--honey);
   margin-bottom: 4px;
 }
-.mv-bubble-text {
+.sw-msg-text {
+  font-size: 15px;
+  line-height: 1.65;
   white-space: pre-wrap;
 }
-.mv-bubble-typing { opacity: 0.7; }
-.mv-typing {
-  color: var(--ink-faint);
-  font-style: italic;
+.sw-msg-user .sw-msg-text {
+  background: var(--accent-tint);
+  color: var(--ink-soft);
+  padding: 10px 16px;
+  border-radius: var(--radius) var(--radius) 4px var(--radius);
 }
+.sw-msg-mira .sw-msg-text {
+  color: var(--ink);
+  padding: 0;
+}
+.sw-msg-pending { opacity: 0.55; }
+.sw-msg-dots { color: var(--ink-faint); font-style: italic; }
 
-/* ── MVP 03: Story Raw document ── */
-.mv-raw-section {
-  max-width: 640px;
-  width: 100%;
-  margin-top: 8px;
-}
-.mv-raw-label {
-  font-size: 13px;
+/* ── STORY RAW ── */
+.sw-section-label {
+  font-size: 12px;
   font-weight: 700;
-  color: var(--honey);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+  color: var(--honey);
   margin-bottom: 10px;
 }
-.mv-raw-doc {
-  background: var(--page);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 24px 28px;
+.sw-raw {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 32px;
   font-size: 17px;
-  line-height: 1.85;
+  line-height: 1.9;
   color: var(--ink);
   white-space: pre-wrap;
-  font-family: 'Be Vietnam Pro', system-ui, serif;
+  box-shadow: var(--shadow-sm);
+  font-family: 'Be Vietnam Pro', Georgia, serif;
 }
 
-/* ── Ready for draft ── */
-.mv-ready {
-  max-width: 600px;
-  width: 100%;
-  padding: 18px;
+/* ── READY CARD ── */
+.sw-ready-card {
   background: var(--green-tint);
   border: 1px solid #A7DED9;
-  border-radius: 14px;
+  border-radius: var(--radius);
+  padding: 22px;
   text-align: center;
 }
-.mv-ready-btn {
+.sw-ready-btn {
   background: var(--green);
   color: #fff;
   border: none;
   border-radius: 10px;
-  padding: 12px 28px;
+  padding: 13px 32px;
   font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-}
-.mv-ready-btn:hover:not(:disabled) { background: #0B827B; }
-.mv-ready-btn:disabled { opacity: 0.6; cursor: default; }
-
-/* ── Composer ── */
-.mv-composer {
-  max-width: 600px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.mv-textarea {
-  width: 100%;
-  resize: vertical;
-  padding: 14px 16px;
-  background: var(--page);
-  border: 1.5px solid var(--line);
-  border-radius: 14px;
-  font-size: 15px;
-  font-family: inherit;
-  line-height: 1.7;
-  outline: none;
-  min-height: 80px;
-  color: var(--ink);
-}
-.mv-textarea:focus { border-color: var(--indigo); }
-.mv-textarea::placeholder { color: var(--ink-subtle); }
-.mv-textarea:disabled { opacity: 0.6; }
-.mv-send {
-  align-self: flex-end;
-  background: var(--indigo);
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  padding: 11px 24px;
-  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s;
 }
-.mv-send:hover:not(:disabled) { background: var(--indigo-dark); }
-.mv-send:disabled { opacity: 0.5; cursor: default; }
-.mv-footnote {
-  max-width: 600px;
-  width: 100%;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--ink-subtle);
-  text-align: center;
-}
+.sw-ready-btn:hover:not(:disabled) { background: #0B827B; }
+.sw-ready-btn:disabled { opacity: 0.6; cursor: default; }
 
-/* ── Draft view ── */
-.dv-wrap {
+/* ── COMPOSER ── */
+.sw-composer-section {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg);
+  padding-bottom: 12px;
+}
+.sw-composer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.sw-textarea {
+  width: 100%;
+  resize: none;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.7;
+  outline: none;
+  color: var(--ink);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.sw-textarea:focus { border-color: var(--accent); }
+.sw-textarea::placeholder { color: var(--ink-faint); }
+.sw-textarea:disabled { opacity: 0.5; background: var(--border-light); }
+.sw-send {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.sw-send:hover:not(:disabled) { background: var(--accent-hover); }
+.sw-send:disabled { opacity: 0.4; cursor: default; }
+
+/* ── DRAFT ── */
+.sw-draft-wrap {
   max-width: 680px;
   width: 100%;
 }
+.dv-wrap { width: 100%; }
 .dv-header {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  color: var(--honey);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: var(--honey);
   margin-bottom: 16px;
 }
 .dv-body {
-  background: var(--page);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
   margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
 }
 .dv-topic {
   display: inline-block;
@@ -788,28 +1012,23 @@ const CSS = `
   background: var(--honey-tint);
   padding: 4px 10px;
   border-radius: 6px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .dv-title {
   font-size: 22px;
   font-weight: 800;
-  margin: 0 0 16px;
+  margin-bottom: 16px;
   line-height: 1.3;
 }
-.dv-content { font-size: 15.5px; line-height: 1.75; color: var(--ink-soft); }
-.dv-content p { margin: 0 0 12px; }
+.dv-content { font-size: 16px; line-height: 1.8; color: var(--ink-soft); }
+.dv-content p { margin-bottom: 12px; }
 .dv-content p:last-child { margin-bottom: 0; }
-.dv-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.dv-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .dv-btn {
-  flex: 1;
-  min-width: 160px;
-  background: var(--page);
-  border: 1.5px solid var(--line);
-  border-radius: 12px;
+  flex: 1; min-width: 160px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
   padding: 14px;
   font-size: 15px;
   font-weight: 600;
@@ -817,53 +1036,41 @@ const CSS = `
   font-family: inherit;
   transition: all 0.15s;
 }
-.dv-btn:hover:not(:disabled) { background: var(--bg); border-color: var(--ink-subtle); }
-.dv-btn-primary {
-  background: var(--green);
-  color: #fff;
-  border-color: var(--green);
-}
-.dv-btn-primary:hover:not(:disabled) { background: #0B827B; border-color: #0B827B; }
+.dv-btn:hover:not(:disabled) { background: var(--bg); }
+.dv-btn-primary { background: var(--green); color: #fff; border-color: var(--green); }
+.dv-btn-primary:hover:not(:disabled) { background: #0B827B; }
 .dv-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* ── Submitted ── */
-.mv-submitted {
-  max-width: 500px;
-  text-align: center;
-  padding: 40px 0;
-}
-.mv-done-icon { font-size: 48px; margin-bottom: 16px; }
-.mv-submitted h2 { font-size: 22px; font-weight: 800; margin: 0 0 12px; }
-.mv-submitted p { font-size: 15px; color: var(--ink-soft); margin: 0 0 24px; line-height: 1.6; }
-.mv-back {
-  display: inline-block;
-  color: var(--indigo);
-  font-weight: 600;
-  text-decoration: none;
-  font-size: 15px;
-}
+/* ── SUBMITTED ── */
+.sw-submitted { max-width: 480px; text-align: center; }
+.sw-done-icon { font-size: 48px; margin-bottom: 16px; }
+.sw-submitted h2 { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+.sw-submitted p { font-size: 15px; color: var(--ink-soft); margin-bottom: 24px; line-height: 1.6; }
+.sw-link { color: var(--accent); font-weight: 600; text-decoration: none; font-size: 15px; }
 
-/* ── Loading ── */
-.mv-loading {
-  text-align: center;
-  padding: 60px 0;
-}
-.mv-spinner {
-  width: 36px; height: 36px;
-  border: 3px solid var(--line);
-  border-top-color: var(--indigo);
+/* ── LOADING ── */
+.sw-loading { text-align: center; padding: 60px 0; }
+.sw-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
   border-radius: 50%;
-  animation: mv-spin 0.8s linear infinite;
+  animation: sw-spin 0.7s linear infinite;
   margin: 0 auto 16px;
 }
-@keyframes mv-spin { to { transform: rotate(360deg); } }
-.mv-loading p {
-  font-size: 15px;
+@keyframes sw-spin { to { transform: rotate(360deg); } }
+.sw-loading p { font-size: 15px; color: var(--ink-faint); }
+
+/* ── CENTER ── */
+.sw-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--ink-faint);
-  margin: 0;
 }
 
-/* ── AuthGate ── */
+/* ── AUTH GATE ── */
 .ag-gate {
   flex: 1;
   display: flex;
@@ -873,18 +1080,18 @@ const CSS = `
   background: var(--bg);
 }
 .ag-card {
-  background: var(--page);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
   max-width: 400px;
   width: 100%;
-  box-shadow: 0 20px 50px -24px rgba(33, 28, 50, 0.25);
+  box-shadow: var(--shadow-md);
 }
 .ag-avatar {
   width: 42px; height: 42px;
-  border-radius: 999px;
-  background: var(--indigo);
+  border-radius: 12px;
+  background: var(--accent);
   color: #fff;
   font-weight: 800;
   font-size: 18px;
@@ -893,24 +1100,19 @@ const CSS = `
   justify-content: center;
   margin-bottom: 12px;
 }
-.ag-say {
-  font-size: 15px;
-  color: var(--ink-soft);
-  margin: 0 0 16px;
-  line-height: 1.6;
-}
+.ag-say { font-size: 15px; color: var(--ink-soft); margin-bottom: 16px; line-height: 1.6; }
 .ag-card input {
   width: 100%;
-  padding: 11px 13px;
-  background: #FBFAF7;
-  border: 1.5px solid var(--line);
+  padding: 11px 14px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
   border-radius: 10px;
   font-size: 15px;
   margin-bottom: 10px;
   font-family: inherit;
   outline: none;
 }
-.ag-card input:focus { border-color: var(--indigo); }
+.ag-card input:focus { border-color: var(--accent); }
 .ag-err {
   background: #FEE2E2;
   border: 1px solid #FECACA;
@@ -922,32 +1124,18 @@ const CSS = `
 }
 .ag-btn {
   width: 100%;
-  background: var(--indigo);
+  background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 13px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
 }
-.ag-btn:hover { background: var(--indigo-dark); }
+.ag-btn:hover { background: var(--accent-hover); }
 .ag-btn:disabled { opacity: 0.65; }
-.ag-switch {
-  font-size: 13px;
-  color: var(--ink-faint);
-  text-align: center;
-  margin-top: 12px;
-}
-.ag-switch a { color: var(--indigo); font-weight: 600; cursor: pointer; }
-
-/* ── Shared ── */
-.center-note {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ink-faint);
-}
+.ag-switch { font-size: 13px; color: var(--ink-faint); text-align: center; margin-top: 12px; }
+.ag-switch a { color: var(--accent); font-weight: 600; cursor: pointer; }
 `
