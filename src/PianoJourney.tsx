@@ -91,12 +91,11 @@ export default function PianoJourney({ onClose }: Props) {
   // ── Generate mission (AI hoặc fallback) ──
   const generateMission = async (prompt: string) => {
     setFlow('generating'); setError('')
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Vui lòng đăng nhập'); setFlow('idle'); return }
+    let ex: Exercise | null = null
 
-      // Thử gọi edge function
-      let ex: Exercise | null = null
+    // Thử gọi AI edge function nếu đã đăng nhập
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
       try {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/piano-generate`, {
           method: 'POST',
@@ -105,17 +104,15 @@ export default function PianoJourney({ onClose }: Props) {
         })
         if (res.ok) { const data = await res.json(); if (data.notes) ex = data as Exercise }
       } catch { /* fallback bên dưới */ }
-
-      // Fallback: tự tạo bài tập mẫu nếu edge function chưa sẵn sàng
-      if (!ex) {
-        ex = makeFallbackExercise(prompt)
-      }
-
-      setExercise(ex)
-      setFlow('playing')
-    } catch (e: any) {
-      setError(e.message); setFlow('idle')
     }
+
+    // Fallback: tự tạo bài tập mẫu — luôn chạy, không cần đăng nhập
+    if (!ex) {
+      ex = makeFallbackExercise(prompt)
+    }
+
+    setExercise(ex)
+    setFlow('playing')
   }
 
   // ── Back to voice ──
