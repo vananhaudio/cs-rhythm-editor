@@ -131,7 +131,7 @@ function BottomBar({
             boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(245,158,11,.3)',
             transition: 'all .2s',
           }}>
-            {isPlaying ? '⏸ Tạm dừng' : '▶'}
+            {isPlaying ? '⏸ Dừng' : '▶'}
           </button>
         )}
 
