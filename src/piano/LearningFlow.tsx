@@ -219,48 +219,67 @@ export default function LearningFlow({ exercise, onBack, onClose }: Props) {
         <div style={{ width: 32 }} />
       </div>
 
-      {/* Timeline progress */}
+      {/* Timeline progress — stepper */}
       <div style={{
-        flexShrink: 0, padding: '4px 16px 0', minHeight: 28,
+        flexShrink: 0, padding: '6px 10px 2px',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
       }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0,
-        }}>
-          {STEPS.map((s, i) => {
-            const isActive = i === stepIdx
-            const isDone = completed.has(i)
-            const locked = !completed.has(i) && !isActive
-            return (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
-                {i > 0 && (
-                  <div style={{
-                    width: 24, height: 2, borderRadius: 1,
-                    background: isDone || completed.has(i - 1) ? C.green : C.muted,
-                    opacity: completed.has(i - 1) ? 1 : 0.3,
-                    margin: '0 1px',
-                  }} />
-                )}
+        {STEPS.map((s, i) => {
+          const isActive = i === stepIdx
+          const isDone = completed.has(i)
+          const prevDone = i > 0 && completed.has(i - 1)
+          return (
+            <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
+              {/* Connector line to previous */}
+              {i > 0 && (
                 <div style={{
-                  fontSize: 11, fontWeight: 700,
-                  color: isActive ? C.accent : isDone ? C.green : C.muted,
-                  opacity: locked ? 0.4 : 1,
-                  transition: 'color .2s',
-                  whiteSpace: 'nowrap',
-                }}>
-                  {isDone ? '✓' : isActive ? '●' : '○'} {s.label}
-                </div>
+                  position: 'absolute', top: 15, right: '50%', width: '100%', height: 3, borderRadius: 2,
+                  background: prevDone ? C.green : '#E0DACE',
+                  zIndex: 0,
+                }} />
+              )}
+              {/* Circle badge */}
+              <div style={{
+                position: 'relative', zIndex: 1,
+                width: isActive ? 32 : 28, height: isActive ? 32 : 28,
+                borderRadius: '50%',
+                background: isActive ? C.accent : isDone ? C.green : '#fff',
+                border: isActive ? `3px solid ${C.accent}` : isDone ? `2px solid ${C.green}` : `2px solid #D8D0C0`,
+                boxShadow: isActive ? `0 3px 12px rgba(194,98,46,.4)` : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: isActive ? 16 : 14,
+                color: isActive ? '#fff' : isDone ? '#fff' : C.muted,
+                transition: 'all .25s',
+                marginBottom: 4,
+              }}>
+                {isDone && !isActive ? '✓' : s.icon}
               </div>
-            )
-          })}
-        </div>
+              {/* Label */}
+              <div style={{
+                fontSize: 10.5, lineHeight: 1.2, textAlign: 'center',
+                fontWeight: isActive ? 800 : isDone ? 700 : 500,
+                color: isActive ? C.accent : isDone ? C.green : C.muted,
+                transition: 'all .25s',
+                padding: '0 2px',
+              }}>
+                {s.label}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Instruction */}
+      {/* Instruction — current step highlighted */}
       <div style={{
-        flexShrink: 0, textAlign: 'center', padding: '2px 16px 6px',
+        flexShrink: 0, textAlign: 'center', padding: '4px 16px 6px',
       }}>
-        <span style={{ fontSize: 12, color: C.dim, fontWeight: 500 }}>
-          {STEP_INSTRUCTIONS[curStepId] || ''}
+        <span style={{
+          display: 'inline-block',
+          fontSize: 12.5, color: C.accent, fontWeight: 700,
+          background: 'rgba(194,98,46,.08)',
+          padding: '3px 14px', borderRadius: 20,
+        }}>
+          {STEPS[stepIdx].icon} {STEP_INSTRUCTIONS[curStepId] || ''}
         </span>
       </div>
 
