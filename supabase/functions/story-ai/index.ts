@@ -201,6 +201,19 @@ Deno.serve(async (req) => {
     const userMsg = stuck ? '[STUCK_BUTTON]' : message
     conv.push({ role: 'user', text: userMsg, at: new Date().toISOString() })
 
+    // ── MVP 02: lưu StoryChunk (chỉ lưu lời kể thật, không lưu STUCK_BUTTON) ──
+    if (!stuck) {
+      const { count } = await db.from('story_chunks')
+        .select('id', { count: 'exact', head: true })
+        .eq('story_id', story!.id)
+      const nextIndex = (count ?? 0) + 1
+      await db.from('story_chunks').insert({
+        story_id: story!.id,
+        order_index: nextIndex,
+        content: message,
+      })
+    }
+
     let system = MIRA_SYSTEM
     if (stuck) {
       system += '\n\nUser just pressed "stuck" button -- they don\'t know what to tell next. Ask ONE short open question to help them remember. [[PHASE:asking]]'

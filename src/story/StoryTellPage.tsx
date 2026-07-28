@@ -153,6 +153,11 @@ export default function StoryTellPage() {
   // Mở lại bài kể dở (nếu có)
   const [draftResumed, setDraftResumed] = useState(false)
 
+  // ── MVP 02: Story Raw ──
+  const [showRaw, setShowRaw] = useState(false)
+  const [rawContent, setRawContent] = useState('')
+  const [loadingRaw, setLoadingRaw] = useState(false)
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null); setAuthChecked(true)
@@ -301,6 +306,24 @@ export default function StoryTellPage() {
     setPhase('telling')
   }, [storyId])
 
+  // ── MVP 02: Lấy Story Raw từ chunks ──
+  const fetchRaw = useCallback(async () => {
+    if (!storyId) return
+    setLoadingRaw(true)
+    try {
+      const { data, error } = await supabase
+        .from('story_chunks')
+        .select('content, order_index')
+        .eq('story_id', storyId)
+        .order('order_index', { ascending: true })
+      if (error) { console.error('fetchRaw', error); return }
+      const raw = (data || []).map(c => c.content).join('\n\n')
+      setRawContent(raw)
+    } catch (e) {
+      console.error('fetchRaw', e)
+    } finally { setLoadingRaw(false) }
+  }, [storyId])
+
   // ── Bắt đầu câu chuyện mới ──
   const startNew = useCallback(() => {
     setStoryId(null)
@@ -399,24 +422,55 @@ export default function StoryTellPage() {
           )}
 
           <div className="mv-body">
-            <div className="mv-invitation">
-              <p>{draftResumed ? 'Bạn đang kể dở — kể tiếp cho mình nghe chứ?' : invitation}</p>
-            </div>
-
-            {miraReply && (
-              <div className="mv-mira">{miraReply}</div>
-            )}
-
-            {miraReady && (
-              <div className="mv-ready">
-                <p>Mira đã hiểu câu chuyện của bạn và sẵn sàng viết bản thảo đầu tiên.</p>
-                <button className="mv-ready-btn" onClick={requestDraft} disabled={sending}>
-                  📄 Tạo bản thảo
+            {storyId && (
+              <div className="mv-tabs">
+                <button
+                  className={`mv-tab ${!showRaw ? 'mv-tab-active' : ''}`}
+                  onClick={() => setShowRaw(false)}
+                >
+                  📝 Đang kể
+                </button>
+                <button
+                  className={`mv-tab ${showRaw ? 'mv-tab-active' : ''}`}
+                  onClick={() => { setShowRaw(true); fetchRaw() }}
+                >
+                  📄 Bản gốc
                 </button>
               </div>
             )}
 
-            <div className="mv-composer">
+            {showRaw ? (
+              /* ── Story Raw View ── */
+              <div className="mv-raw-wrap">
+                <div className="mv-raw-header">Lời kể gốc của bạn (chỉ đọc)</div>
+                {loadingRaw ? (
+                  <div className="mv-raw-loading">Đang tải…</div>
+                ) : rawContent ? (
+                  <div className="mv-raw-content">{rawContent}</div>
+                ) : (
+                  <div className="mv-raw-empty">Chưa có lời kể nào. Hãy gửi câu chuyện của bạn ở tab "📝 Đang kể".</div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="mv-invitation">
+                  <p>{draftResumed ? 'Bạn đang kể dở — kể tiếp cho mình nghe chứ?' : invitation}</p>
+                </div>
+
+                {miraReply && (
+                  <div className="mv-mira">{miraReply}</div>
+                )}
+
+                {miraReady && (
+                  <div className="mv-ready">
+                    <p>Mira đã hiểu câu chuyện của bạn và sẵn sàng viết bản thảo đầu tiên.</p>
+                    <button className="mv-ready-btn" onClick={requestDraft} disabled={sending}>
+                      📄 Tạo bản thảo
+                    </button>
+                  </div>
+                )}
+
+                <div className="mv-composer">
               <textarea
                 className="mv-textarea"
                 value={input}
@@ -438,6 +492,8 @@ export default function StoryTellPage() {
                 {phase === 'editing' ? 'Gửi yêu cầu sửa' : 'Gửi'}
               </button>
             </div>
+          </>
+        )}
 
             <div className="mv-footnote">
               Câu chuyện của bạn được lưu tự động — có thể nghỉ và quay lại bất cứ lúc nào.
@@ -628,6 +684,73 @@ const CSS = `
   font-size: 12px;
   color: var(--ink-subtle);
   text-align: center;
+}
+
+/* ── MVP 02: Tab bar ── */
+.mv-tabs {
+  max-width: 600px;
+  width: 100%;
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  background: var(--page);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.mv-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mv-tab:first-child { border-right: 1px solid var(--line); }
+.mv-tab-active {
+  background: var(--indigo);
+  color: #fff;
+}
+
+/* ── MVP 02: Story Raw View ── */
+.mv-raw-wrap {
+  max-width: 600px;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.mv-raw-header {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--honey);
+  margin-bottom: 12px;
+}
+.mv-raw-loading,
+.mv-raw-empty {
+  font-size: 14px;
+  color: var(--ink-faint);
+  text-align: center;
+  padding: 40px 0;
+}
+.mv-raw-content {
+  background: var(--page);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  overflow-y: auto;
+  max-height: 420px;
+  flex: 1;
 }
 
 /* ── Draft view ── */
