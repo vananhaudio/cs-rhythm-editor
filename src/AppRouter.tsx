@@ -30,6 +30,7 @@ import DeleteAccountPage from './DeleteAccountPage'
 import ClassLandingPage from './ClassLandingPage'
 import StoryLandingPage from './story/StoryLandingPage'
 import StoryTellPage from './story/StoryTellPage'
+import StoryHomePage from './story/StoryHomePage'
 import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
 import PianoJourney from './PianoJourney'
@@ -144,6 +145,7 @@ export default function AppRouter() {
   }
 
   // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
+  if (path === '/story/home') return <StoryHomePage />    // PO1: Home — tạp chí cộng đồng
   if (path === '/story/tell') return <StoryTellPage />   // kể chuyện cùng Mira (cần login, tự xử lý auth)
   if (path === '/story' || path.startsWith('/story/')) {
     return <StoryLandingPage />
