@@ -1121,11 +1121,11 @@ const CSS = `
 .sw-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 16px 0;
+  padding: 12px 16px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 .sw-section { max-width: 640px; width: 100%; }
 
@@ -1142,7 +1142,7 @@ const CSS = `
 }
 
 /* ── CONVERSATION — iMessage style ── */
-.sw-convo { display: flex; flex-direction: column; gap: 4px; padding-bottom: 8px; }
+.sw-convo { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
 .sw-msg { max-width: 72%; }
 @keyframes sw-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .sw-msg-user { align-self: flex-end; }
@@ -1231,7 +1231,7 @@ const CSS = `
 
 /* ── COMPLETE CTA — dưới composer ── */
 .sw-complete-section {
-  padding: 16px 0 20px;
+  padding: 12px 0 24px;
   text-align: center;
 }
 .sw-complete-btn {
