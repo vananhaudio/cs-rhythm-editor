@@ -1,7 +1,7 @@
 // ── /story/home — PO1: Home "1001 Câu chuyện" ──
-// Magazine-style home. Read stories. Start telling yours.
+// Magazine-style home. Read stories. Then — if you have one — tell yours.
 // No draft status. No "continue writing". No AI. No dashboard.
-// Design tokens đồng bộ với /story (StoryLandingPage).
+// Design tokens đồng bộ với /story.
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
@@ -85,16 +85,6 @@ export default function StoryHomePage() {
         </div>
       </header>
 
-      {/* ── CTA: Kể câu chuyện của bạn ── */}
-      <section className="sh-section sh-section-cta">
-        <div className="sh-section-inner">
-          <a href="/story/tell" className="sh-new-story-cta">
-            <span className="sh-new-story-icon">✍️</span>
-            <span className="sh-new-story-label">Kể câu chuyện của bạn</span>
-          </a>
-        </div>
-      </section>
-
       {/* ── Những câu chuyện mới ── */}
       <section className="sh-section sh-section-stories">
         <div className="sh-section-inner">
@@ -148,6 +138,17 @@ export default function StoryHomePage() {
               })}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── Lời mời cuối trang — như Ban biên tập mời bạn đọc kể chuyện ── */}
+      <section className="sh-section sh-invitation">
+        <div className="sh-section-inner">
+          <p className="sh-invite-q">Bạn cũng có một câu chuyện?</p>
+          <blockquote className="sh-invite-motto">
+            Nếu câu chuyện của bạn có thể giúp được một ai đó, hãy kể lại nhé.
+          </blockquote>
+          <a href="/story/tell" className="sh-invite-btn">Kể câu chuyện của bạn →</a>
         </div>
       </section>
 
@@ -290,38 +291,6 @@ const CSS = `
   font-size: 26px;
 }
 
-/* ── CTA ── */
-.sh-section-cta {
-  border-bottom: 1px solid #E4DED4;
-}
-
-.sh-new-story-cta {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 40px;
-  background: #FFFFFF;
-  border: 1.5px dashed #D3CEE8;
-  border-radius: 12px;
-  text-decoration: none;
-  transition: border-color .15s, background .15s;
-  cursor: pointer;
-}
-.sh-new-story-cta:hover {
-  border-color: #4338CA;
-  background: #EEEBFB;
-}
-.sh-new-story-icon {
-  font-size: 32px;
-}
-.sh-new-story-label {
-  font-size: 18px;
-  font-weight: 600;
-  color: #4338CA;
-}
-
 /* ── Story Grid ── */
 .sh-story-grid {
   display: grid;
@@ -344,7 +313,6 @@ const CSS = `
   transform: translateY(-2px);
 }
 
-/* Card image */
 .sh-story-card-img-wrap {
   aspect-ratio: 3 / 2;
   overflow: hidden;
@@ -369,7 +337,6 @@ const CSS = `
   opacity: 0.35;
 }
 
-/* Card body */
 .sh-story-card-body {
   padding: 18px 20px 20px;
 }
@@ -429,10 +396,55 @@ const CSS = `
   margin: 0;
 }
 
+/* ── Lời mời cuối trang (Ban biên tập) ── */
+.sh-invitation {
+  text-align: center;
+  border-top: 1px solid #E4DED4;
+  border-bottom: 1px solid #E4DED4;
+  background: #FFFFFF;
+  padding: 56px 20px;
+}
+.sh-invite-q {
+  font-size: 16px;
+  font-weight: 600;
+  color: #C9711E;
+  margin: 0 0 12px;
+  letter-spacing: 0.02em;
+}
+.sh-invite-motto {
+  font-size: 16px;
+  font-style: italic;
+  color: #5A5470;
+  margin: 0 auto 24px;
+  border: none;
+  padding: 0;
+  max-width: 500px;
+  line-height: 1.6;
+}
+.sh-invite-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 12px;
+  padding: 13px 22px;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  text-decoration: none;
+  background: #4338CA;
+  color: #fff;
+  transition: background .15s;
+}
+.sh-invite-btn:hover {
+  background: #352BA3;
+}
+
 /* ── Footer ── */
 .sh-footer {
-  border-top: 1px solid #E4DED4;
   padding: 32px 20px;
+  background: #F2EEE7;
 }
 .sh-footer-inner {
   max-width: 960px;
@@ -485,8 +497,12 @@ const CSS = `
   .sh-section-heading {
     font-size: 24px;
   }
-  .sh-new-story-cta {
-    padding: 32px 16px;
+  .sh-invitation {
+    padding: 40px 16px;
+  }
+  .sh-invite-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 `
