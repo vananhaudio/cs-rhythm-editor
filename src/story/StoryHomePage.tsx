@@ -148,7 +148,7 @@ export default function StoryHomePage() {
           <blockquote className="sh-invite-motto">
             Nếu câu chuyện của bạn có thể giúp được một ai đó, hãy kể lại nhé.
           </blockquote>
-          <a href="/story/tell" className="sh-invite-btn">Kể câu chuyện của bạn →</a>
+          <a href="/story/write" className="sh-invite-btn">Vào Phòng viết →</a>
         </div>
       </section>
 

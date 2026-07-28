@@ -145,10 +145,10 @@ export default function AppRouter() {
   }
 
   // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
-  if (path === '/story/home') return <StoryHomePage />    // PO1: Home — tạp chí cộng đồng
-  if (path === '/story/tell') return <StoryTellPage />   // kể chuyện cùng Mira (cần login, tự xử lý auth)
-  if (path === '/story' || path.startsWith('/story/')) {
-    return <StoryLandingPage />
+  if (path === '/story' || path === '/story/home') return <StoryHomePage />   // 📖 Tạp chí
+  if (path === '/story/write' || path === '/story/tell') return <StoryTellPage />  // ✍️ Phòng viết
+  if (path.startsWith('/story/')) {
+    return <StoryLandingPage />   // 📄 Trang đọc (/story/:slug)
   }
 
   // ── Route /delete-account — xóa tài khoản ──
