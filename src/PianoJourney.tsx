@@ -3,22 +3,25 @@
 // Luồng: TalkWithTeacher (WebRTC Realtime) → cô gọi công cụ tao_bai_tap
 //        → generateMission → LearningFlow.
 //
-// KHÔNG thêm màn "gõ yêu cầu" hay mic Web Speech riêng nữa: đã thử và bỏ vì
-// `webkitSpeechRecognition` có mặt nhưng CHẾT trong WKWebView, chỉ làm bé tưởng
-// app hỏng. Chỗ để nói là Cô Piano.
+// Bài tập đi qua 3 lớp: LUẬT (src/piano/rules.ts) → SINH (AI) → KIỂM (checkAndRepair).
+// Lớp KIỂM mới là thứ đảm bảo bé không nhận bài vượt bậc — luật viết trong prompt
+// chỉ là gợi ý, AI vẫn phạm như thường.
+//
+// KHÔNG thêm màn "gõ yêu cầu" hay mic Web Speech riêng: đã thử và bỏ vì
+// `webkitSpeechRecognition` có mặt nhưng CHẾT trong WKWebView.
 
 import { useState, useRef, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
-
-// ── Types ────────────────────────────────────────────────────────────────────
-interface PianoNote { pitch: string; startBeat: number; duration: number }
-interface Exercise { title: string; bpm: number; notes: PianoNote[] }
+import { getLevel, currentLevelId, buildPrompt, checkAndRepair } from './piano/rules'
+import type { Exercise, PianoLevel } from './piano/rules'
 
 type Stage = 'talk' | 'generating' | 'playing'
 
 const AI_TIMEOUT_MS = 8000
+/** AI phạm nhiều hơn ngần này lỗi luật thì bắt sáng tác lại một lần. */
+const REDO_THRESHOLD = 3
 
 /** Chặn cứng thời gian chờ — hết hạn thì trả null để lùi về bài mẫu. */
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
@@ -43,6 +46,19 @@ async function askAI(prompt: string, signal: AbortSignal): Promise<Exercise | nu
   return data?.notes ? (data as Exercise) : null
 }
 
+/** Một lượt: gọi AI (có chặn thời gian) rồi soi & sửa theo luật của bậc. */
+async function attempt(chuDe: string, level: PianoLevel, extra = '') {
+  const ctrl = new AbortController()
+  const timer = window.setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS)
+  let raw: Exercise | null = null
+  try {
+    raw = await withTimeout(askAI(buildPrompt(chuDe, level) + extra, ctrl.signal), AI_TIMEOUT_MS)
+  } catch { /* mạng lỗi → coi như AI không trả về */ }
+  clearTimeout(timer)
+  const checked = checkAndRepair(raw, level, chuDe)
+  return { raw, exercise: checked.exercise, problems: checked.problems }
+}
+
 interface Props { onClose?: () => void }
 
 export default function PianoJourney({ onClose }: Props) {
@@ -52,24 +68,25 @@ export default function PianoJourney({ onClose }: Props) {
   const stageRef = useRef<Stage>('talk')
   const setStageSync = useCallback((s: Stage) => { stageRef.current = s; setStage(s) }, [])
 
-  // ── Tạo bài tập (AI, có fallback) ──
-  const generateMission = useCallback(async (text: string) => {
+  // ── Tạo bài tập: LUẬT → AI → KIỂM ──
+  const generateMission = useCallback(async (chuDe: string) => {
     if (stageRef.current === 'generating') return
     setStageSync('generating')
 
-    // Mạng yếu KHÔNG được để bé kẹt ở "đang soạn bài" vô hạn: chặn cứng bằng
-    // timeout rồi lùi về bài mẫu. getSession() cũng phải bọc — nó có thể treo
-    // khi đang tự refresh token.
-    const ctrl = new AbortController()
-    const timer = window.setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS)
-    let ex: Exercise | null = null
-    try {
-      ex = await withTimeout(askAI(text, ctrl.signal), AI_TIMEOUT_MS)
-    } catch { /* lùi về bài mẫu bên dưới */ }
-    clearTimeout(timer)
+    const level = getLevel(currentLevelId())
+    const first = await attempt(chuDe, level)
+    let ex = first.exercise
+    let problems = first.problems
 
-    // Fallback: tự tạo bài tập mẫu — luôn chạy, không cần đăng nhập
-    if (!ex) ex = makeFallbackExercise(text)
+    // AI phạm luật quá nhiều → bắt làm lại một lần, nói rõ nó sai ở đâu.
+    // Bản đã sửa vẫn luôn ĐÚNG LUẬT; làm lại chỉ để câu nhạc tự nhiên hơn.
+    if (first.raw && problems.length >= REDO_THRESHOLD) {
+      const lai = await attempt(chuDe, level,
+        `\n\nLần trước bạn làm sai: ${problems.slice(0, 5).join('; ')}. Hãy tuân thủ đúng ràng buộc.`)
+      if (lai.raw && lai.problems.length < problems.length) { ex = lai.exercise; problems = lai.problems }
+    }
+
+    if (import.meta.env.DEV && problems.length) console.warn('[luật] AI phạm:', problems)
 
     setExercise(ex)
     setStageSync('playing')
@@ -92,27 +109,4 @@ export default function PianoJourney({ onClose }: Props) {
       busy={stage === 'generating'}
     />
   )
-}
-
-// ── Fallback: tự tạo bài tập mẫu ──
-function makeFallbackExercise(prompt: string): Exercise {
-  const patterns: [string, number[]][] = [
-    ['Đô Rê Mi', [0,1,2,3,2,1,0,-1]],
-    ['bậc thang', [0,0,1,1,2,2,3,3,4,4,5,5]],
-    ['lên xuống', [0,2,4,2,0,2,4,2,0,-1]],
-    ['bước nhảy', [0,3,0,3,2,0,2,0,-1]],
-  ]
-  const p = patterns.find(([name]) => prompt.toLowerCase().includes(name.toLowerCase()))
-  const steps = (p ? p[1] : [0,0,1,1,2,2,1,-1]).filter(s => s >= 0)
-  const pitches = ['C4','D4','E4','F4','G4','A4','B4','C5']
-
-  return {
-    title: prompt.slice(0, 60) || 'Bài tập mới',
-    bpm: 90,
-    notes: steps.map((s, i) => ({
-      pitch: pitches[Math.min(s, pitches.length - 1)],
-      startBeat: i,
-      duration: i === steps.length - 1 ? 2 : 1,
-    })),
-  }
 }

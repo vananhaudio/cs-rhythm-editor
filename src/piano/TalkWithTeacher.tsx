@@ -12,6 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from '../supabase'
+import { LEVELS, getLevel, currentLevelId, setLevelId } from './rules'
 
 type TalkState = 'idle' | 'connecting' | 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
 
@@ -77,6 +78,14 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
   const [messages, setMessages] = useState<Message[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const [debug, setDebug]       = useState<string[]>([])
+  // TẠM cho giai đoạn thí nghiệm: đổi bậc ngay trên máy. Khi có dữ liệu học viên
+  // thật thì bỏ chip này đi, bậc lấy từ hồ sơ do thầy đặt ở /admin.
+  const [levelId, setLvl]       = useState(currentLevelId)
+  const level = getLevel(levelId)
+  const cycleLevel = () => {
+    const next = LEVELS[(LEVELS.findIndex(l => l.id === levelId) + 1) % LEVELS.length].id
+    setLevelId(next); setLvl(next)
+  }
 
   const stateRef  = useRef<TalkState>('idle')
   const pcRef     = useRef<RTCPeerConnection | null>(null)
@@ -358,6 +367,12 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
           {f.label}
           {state === 'error' && <div style={{ fontSize:13,marginTop:4,opacity:.8 }}>Chạm để thử lại</div>}
         </div>
+
+        {/* TẠM — chip đổi bậc để thí nghiệm luồng. Bỏ khi bậc lấy từ hồ sơ học viên. */}
+        <button onClick={cycleLevel}
+          style={{ marginTop:12,background:'rgba(255,255,255,.05)',border:'1px solid rgba(255,255,255,.1)',borderRadius:999,padding:'6px 14px',fontSize:12,fontWeight:600,color:C.dim,cursor:'pointer',fontFamily:'inherit',touchAction:'manipulation' }}>
+          Bậc {level.id} · {level.name} ⟳
+        </button>
       </div>
 
       {/* Bảng chẩn đoán — là flex item, KHÔNG absolute, để không che nút mic */}
