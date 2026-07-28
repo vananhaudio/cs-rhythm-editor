@@ -64,7 +64,8 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 Màn đầu của Piano Journey là **hội thoại 2 chiều với Cô Piano** qua **OpenAI Realtime API + WebRTC** (`src/piano/TalkWithTeacher.tsx` ↔ edge function `realtime-token`). Trẻ nói, AI trả lời **bằng giọng nói**. Đây là tính năng chính, và nó CHẠY THẬT trong WKWebView vì WebRTC + `getUserMedia` được hỗ trợ đầy đủ.
 - **ĐỪNG thay bằng `SpeechRecognition`.** Ngày 28/07 commit `0406b72` đã làm đúng việc đó — thay cả PianoJourney bằng Web Speech API — và **xoá mất hội thoại**, tốn trọn một ngày đi tìm "lỗi mic" không tồn tại. Nếu thấy PianoJourney không còn `RTCPeerConnection`, tức là hội thoại lại bị xoá.
 - Giao thức: client tạo SDP offer → **gửi dạng JSON** `{sdp}` tới `realtime-token` (gửi raw text gây lỗi ByteString header, xem `bcfb8dd`) → function proxy sang `/v1/realtime/calls` → trả `{sdp}` answer.
-- `realtime-token` **hardcode key OpenAI ngay trong function đã deploy** (không dùng secret) — sửa key thì sửa trên Supabase dashboard.
+- ⚠️ **TUYỆT ĐỐI KHÔNG `supabase functions deploy realtime-token`.** File trong repo để `OPENAI_API_KEY = '***'`, còn **bản đã deploy mới có key thật** (hardcode, không dùng secret). Deploy đè = phá hỏng hội thoại. Muốn đổi cấu hình session thì làm từ client bằng `session.update`, đừng sửa function.
+- **Nói chuyện để TẠO BÀI TẬP**: client gửi `session.update` khi data channel mở, khai báo công cụ `tao_bai_tap`. Bé nói "con muốn bài về khủng long" → cô gọi công cụ → `generateMission` chạy ngay trong lúc cô còn nói → sang LearningFlow. Bắt **cả hai** dạng sự kiện `response.function_call_arguments.done` và `response.output_item.done` (API bắn khác nhau tuỳ phiên bản), chống gọi trùng bằng `Set` call_id.
 - Kết nối **bằng cú chạm của trẻ**, đừng auto-connect: iOS cần user gesture để mở micro và phát tiếng AI.
 - Cần đăng nhập (Realtime tốn tiền). Chưa đăng nhập → báo rõ, không im lặng.
 

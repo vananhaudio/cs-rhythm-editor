@@ -719,14 +719,6 @@ export default function StoryTellPage() {
             </div>
           </header>
 
-          {/* ── RESUME BAR ── */}
-          {draftResumed && (
-            <div className="sw-resume">
-              📝 Bạn có một câu chuyện đang kể dở — kể tiếp nhé.
-              <button onClick={startNew}>+ Câu chuyện mới</button>
-            </div>
-          )}
-
           {/* ── STORY RAW PANEL — neo cố định, không cuộn theo chat ── */}
           {rawContent && userMsgCount >= 2 && (
             <div className="sw-raw-panel">
@@ -1124,33 +1116,6 @@ const CSS = `
 .sw-menu-drop button:hover { background: rgba(0,0,0,0.04); }
 .sw-menu-drop hr { border: none; border-top: 1px solid var(--separator); margin: 4px 0; }
 .sw-menu-danger { color: var(--red) !important; }
-
-/* ── RESUME ── */
-.sw-resume {
-  flex: none;
-  text-align: center;
-  padding: 10px 16px;
-  font-size: 14px;
-  color: var(--blue);
-  background: rgba(0,122,255,0.06);
-  border-bottom: 1px solid var(--separator);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-.sw-resume button {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--blue);
-  background: rgba(0,122,255,0.1);
-  border: none;
-  border-radius: 8px;
-  padding: 4px 12px;
-  cursor: pointer;
-  font-family: inherit;
-}
-.sw-resume button:hover { background: var(--blue); color: #fff; }
 
 /* ── CONTENT ── */
 .sw-content {
