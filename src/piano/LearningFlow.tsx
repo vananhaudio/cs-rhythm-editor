@@ -61,6 +61,7 @@ function BottomBar({
   onReplay, onToggle, onSkip, onSpeedCycle,
   isPlaying, isDone, isCountingDown, countdownValue,
   replayLabel, speedLabel, showSpeed = true,
+  skipLabel = 'Bỏ qua →', doneLabel = 'Tiếp tục →',
 }: {
   onReplay: () => void
   onToggle: () => void
@@ -73,6 +74,10 @@ function BottomBar({
   replayLabel: string
   speedLabel: string
   showSpeed?: boolean
+  /** Nút phải. Bước cuối đổi thành "Tập bài mới". */
+  skipLabel?: string
+  /** Nút chính khi đã xong bước. Bước cuối đổi thành "Tập bài mới". */
+  doneLabel?: string
 }) {
   const showPlayBtn = !isDone && !isCountingDown
   return (
@@ -106,7 +111,7 @@ function BottomBar({
             boxShadow: '0 4px 16px rgba(16,185,129,.3)',
             display: 'flex', alignItems: 'center', whiteSpace: 'nowrap',
           }}>
-            Tiếp tục →
+            {doneLabel}
           </button>
         ) : isCountingDown ? (
           <div style={{
@@ -162,7 +167,7 @@ function BottomBar({
         display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
         whiteSpace: 'nowrap',
       }}>
-        Bỏ qua →
+        {skipLabel}
       </button>
       <style>{`@keyframes cd-pop{0%{opacity:0;transform:scale(1.8)}50%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}`}</style>
     </div>
@@ -715,7 +720,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
 // STEP 4 — BIỂU DIỄN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
+function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
   const [playing, setPlaying] = useState(false)
   const [cursor, setCursor] = useState(-1)
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -845,7 +850,12 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
           if (playing) { stopPlayback(); return }
           setScore(null); startAll()
         }}
-        onSkip={() => { stopPlayback(); detector.stop(); onComplete() }}
+        // Bước cuối: cả hai nút đều dẫn về Cô Piano để xin bài mới.
+        // Trước đây chúng gọi onComplete() — ở bước cuối hàm này không làm gì cả,
+        // nên bé tập xong là cụt đường.
+        onSkip={() => { stopPlayback(); detector.stop(); onBack() }}
+        skipLabel="Tập bài mới"
+        doneLabel="🎹 Tập bài mới"
         isPlaying={playing}
         isDone={done && !!score}
         replayLabel="Chơi lại"
