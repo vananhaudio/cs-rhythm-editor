@@ -415,7 +415,15 @@ export default function StoryTellPage() {
       const { data, error } = await supabase.functions.invoke('story-ai', {
         body: { action: 'write', storyId },
       })
-      if (error || !data) throw error ?? new Error('empty')
+      if (error) {
+        const ctx = (error as any)?.context
+        let msg = (error as any)?.message || 'Lỗi Edge Function'
+        if (ctx) {
+          try { const j = await ctx.json(); if (j?.error) msg = j.error } catch {}
+        }
+        throw new Error(msg)
+      }
+      if (!data) throw new Error('Không có dữ liệu trả về')
       if (data.error) throw new Error(data.error)
       setDraftTitle(data.title || '')
       setDraftTopic(data.topic || '')
