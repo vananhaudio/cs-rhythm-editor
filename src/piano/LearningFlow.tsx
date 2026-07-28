@@ -314,25 +314,6 @@ function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Speed selector — compact */}
-      <div style={{
-        flexShrink: 0, display: 'flex', justifyContent: 'center',
-        marginBottom: 4, gap: 2,
-      }}>
-        {SPEEDS.map((s, i) => (
-          <button key={i} onClick={() => { setSpeedIdx(i); if (playing) start() }}
-            disabled={playing}
-            style={{
-              padding: '3px 10px', border: `1px solid ${C.border}`, borderRadius: 6,
-              cursor: playing ? 'default' : 'pointer',
-              fontFamily: 'inherit', fontSize: 10, fontWeight: 600,
-              background: speedIdx === i ? C.accent : '#fff',
-              color: speedIdx === i ? '#fff' : C.dim,
-            }}
-          >{s.label}</button>
-        ))}
-      </div>
-
       {/* NoteSheet */}
       <div style={{
         flex: 1, minHeight: 0, margin: '0 10px 6px',
@@ -572,25 +553,12 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* BPM selector + status */}
+      {/* Mic status */}
       <div style={{
         flexShrink: 0, display: 'flex', justifyContent: 'center',
         padding: '2px 16px 4px', gap: 8, alignItems: 'center',
+        minHeight: 20,
       }}>
-        <div style={{ display: 'flex', gap: 1, padding: 2, background: '#F0ECE3', borderRadius: 8 }}>
-          {SPEEDS.map((s, i) => (
-            <button key={i} onClick={() => { setSpeedIdx(i); if (playing) { stopPlayback(); setCountdown(3) } }}
-              disabled={playing}
-              style={{
-                padding: '3px 10px', border: 'none', borderRadius: 6,
-                cursor: playing ? 'default' : 'pointer',
-                fontFamily: 'inherit', fontSize: 10, fontWeight: 700,
-                background: speedIdx === i ? 'rgba(194,98,46,.15)' : 'transparent',
-                color: speedIdx === i ? C.accent : C.dim,
-              }}
-            >{s.label}<span style={{ fontSize: 8, marginLeft: 2, opacity: .5 }}>{s.bpm}</span></button>
-          ))}
-        </div>
         {playing && <span style={{ fontSize: 11, fontWeight: 600, color: C.accent }}>🎤 {detector.heard || '...'}</span>}
         {errorMic && <span style={{ fontSize: 10, color: C.red }}>{errorMic}</span>}
       </div>
