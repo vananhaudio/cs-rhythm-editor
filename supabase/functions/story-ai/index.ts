@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
       .select('id,user_id,status,conversation').eq('id', body.storyId).maybeSingle()
     if (!story) return json({ error: 'Story not found' }, 404)
     if (story.user_id !== user.id) return json({ error: 'Not your story' }, 403)
-    if (!['telling', 'collecting_photos'].includes(story.status)) {
+    if (!['telling', 'collecting_photos', 'user_review'].includes(story.status)) {
       return json({ error: 'Already past telling phase' }, 400)
     }
 
