@@ -396,51 +396,82 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
   const stableRef = useRef(0)
   const wrongRef = useRef(0)
   const timerRef = useRef<number | null>(null)
+  const loopRef = useRef<number | null>(null)
 
-  const startMic = async () => {
-    const ok = await detector.start()
-    if (!ok) { setErrorMic('Không truy cập được micro.'); return }
-    setState('active')
+  // Vòng nghe chạy bằng REF, KHÔNG đặt trong useEffect theo state.
+  // Bản cũ để vòng lặp trong useEffect có `state` trong deps, mà cleanup lại
+  // clearTimeout(timerRef) — nên ngay khi chấm đúng một nốt, setState('correct')
+  // làm effect dọn dẹp và GIẾT luôn cái hẹn giờ 500ms sang nốt kế ⇒ đứng im
+  // vĩnh viễn ở "✓ Đúng!". Đây là khuôn của guitarRenderers vốn chạy tốt lâu nay:
+  // một interval duy nhất cho cả phiên, trạng thái đọc qua ref.
+  const cursorRef = useRef(0)
+  const stateRef  = useRef<'idle' | 'active' | 'correct' | 'wrong'>('idle')
+  const doneRef   = useRef(onComplete)
+  useEffect(() => { doneRef.current = onComplete }, [onComplete])
+
+  const setSt  = (s: 'idle' | 'active' | 'correct' | 'wrong') => { stateRef.current = s; setState(s) }
+  const setCur = (c: number) => { cursorRef.current = c; setCursor(c) }
+
+  const stopAll = () => {
+    if (loopRef.current)  { clearInterval(loopRef.current); loopRef.current = null }
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+    detector.stop()
   }
 
-  useEffect(() => () => { detector.stop(); if (timerRef.current) clearInterval(timerRef.current) }, [])
+  const tick = () => {
+    if (stateRef.current === 'idle') return
+    const curNote = exercise.notes[cursorRef.current]
+    if (!curNote) return
+    const d = detector.detect()
+    if (!d) { stableRef.current = 0; return }
 
-  // Pitch detection loop
-  useEffect(() => {
-    if (!detector.listening || state !== 'active') return
-    const loop = () => {
-      const d = detector.detect()
-      const curNote = exercise.notes[cursor]
-      if (!d) { stableRef.current = 0; return }
-      const target = pitchClass(pitchToFreq(curNote.pitch))
-      if (d.pc === target) {
-        stableRef.current++
-        if (stableRef.current >= 3) {
-          stableRef.current = 0
-          setState('correct')
-          playTone(pitchToFreq(curNote.pitch), 0.3)
-          timerRef.current = window.setTimeout(() => {
-            setCursor(c => {
-              const next = c + 1
-              if (next >= exercise.notes.length) { onComplete(); return c }
-              return next
-            })
-            setState('active')
-          }, 500)
-        }
-      } else {
+    const target = pitchClass(pitchToFreq(curNote.pitch))
+    if (d.pc === target) {
+      wrongRef.current = 0
+      if (stateRef.current === 'correct') return      // đang chờ sang nốt kế
+      stableRef.current++
+      if (stableRef.current >= 3) {
         stableRef.current = 0
-        wrongRef.current++
-        if (wrongRef.current >= 2) {
-          setState('wrong')
-          wrongRef.current = 0
-          timerRef.current = window.setTimeout(() => setState('active'), 400)
-        }
+        setSt('correct')
+        playTone(pitchToFreq(curNote.pitch), 0.3)
+        if (timerRef.current) clearTimeout(timerRef.current)
+        timerRef.current = window.setTimeout(() => {
+          const next = cursorRef.current + 1
+          if (next >= exercise.notes.length) { stopAll(); setSt('idle'); doneRef.current(); return }
+          setCur(next); setSt('active')
+        }, 500)
+      }
+    } else {
+      stableRef.current = 0
+      if (stateRef.current === 'correct') return      // đừng báo sai khi đang chuyển nốt
+      wrongRef.current++
+      if (wrongRef.current >= 2) {
+        wrongRef.current = 0
+        setSt('wrong')
+        if (timerRef.current) clearTimeout(timerRef.current)
+        timerRef.current = window.setTimeout(() => setSt('active'), 400)
       }
     }
-    const id = setInterval(loop, 60)
-    return () => { clearInterval(id); if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [detector.listening, state, cursor, exercise.notes, onComplete])
+  }
+
+  const startMic = async () => {
+    setErrorMic('')
+    const ok = await detector.start()
+    if (!ok) { setErrorMic('Chưa dùng được micro — hãy cho phép quyền micro rồi thử lại.'); return }
+    stableRef.current = 0; wrongRef.current = 0
+    setSt('active')
+    if (loopRef.current) clearInterval(loopRef.current)
+    loopRef.current = window.setInterval(tick, 60)
+  }
+
+  // Rời màn hình → nhả micro, dọn hẹn giờ
+  useEffect(() => () => {
+    if (loopRef.current)  clearInterval(loopRef.current)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    detector.stop()
+    // detector.stop ổn định (useCallback), chỉ chạy khi unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -478,13 +509,20 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
 
       {/* Bottom */}
       <BottomBar
-        onReplay={() => { setCursor(0); setState('active') }}
+        // "Tập lại" phải BẬT LẠI MIC nếu đang tắt — bản cũ chỉ đặt state='active'
+        // nên nút hiện "⏸ Dừng" mà máy không hề nghe gì.
+        onReplay={() => {
+          if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+          stableRef.current = 0; wrongRef.current = 0
+          setCur(0)
+          if (loopRef.current) setSt('active'); else startMic()
+        }}
         onToggle={() => {
           if (state === 'idle') startMic()
-          else { detector.stop(); setState('idle') }
+          else { stopAll(); setSt('idle') }
         }}
-        onSkip={() => { detector.stop(); onComplete() }}
-        isPlaying={state === 'active'}
+        onSkip={() => { stopAll(); onComplete() }}
+        isPlaying={state !== 'idle'}
         isDone={false}
         replayLabel="Tập lại"
         isCountingDown={false}
