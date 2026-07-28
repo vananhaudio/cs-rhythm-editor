@@ -122,14 +122,18 @@ export default function PianoJourney({ onClose }: Props) {
   const backToVoice = () => { setFlow('idle'); setExercise(null); setTranscript('') }
 
   // ── If playing: show MusicPlayer ──
-  if (flow === 'playing' && exercise) {
-    return (
-      <MusicPlayer
-        exercise={exercise}
-        onClose={onClose}
-        onBack={backToVoice}
-      />
-    )
+  if (flow === 'playing') {
+    if (exercise) {
+      return (
+        <MusicPlayer
+          exercise={exercise}
+          onClose={onClose}
+          onBack={backToVoice}
+        />
+      )
+    }
+    // safety fallback — shouldn't reach here
+    setFlow('idle'); setExercise(null);
   }
 
   // ── Voice UI ──
@@ -145,6 +149,7 @@ export default function PianoJourney({ onClose }: Props) {
     idle:       { icon: '🎤', label: 'Chạm để nói', bg: 'linear-gradient(135deg,#F59E0B,#D97706)', shadow: '0 8px 40px rgba(245,158,11,.3)', scale:1, lc:C.dim },
     listening:  { icon: '🎙️', label: transcript || 'Đang nghe...', bg: 'linear-gradient(135deg,#F59E0B,#D97706)', shadow: '0 8px 60px rgba(251,191,36,.5),0 0 120px rgba(251,191,36,.2)', scale:1.05, lc:C.text },
     generating: { icon: '⏳', label: 'Đang tạo bài tập...', bg: 'linear-gradient(135deg,#6366F1,#4F46E5)', shadow: '0 8px 40px rgba(99,102,241,.35)', scale:1, lc:C.dim },
+    playing:    { icon: '🎵', label: '', bg: 'linear-gradient(135deg,#F59E0B,#D97706)', shadow: '0 8px 40px rgba(245,158,11,.3)', scale:1, lc:C.text },
   }[flow] || cfgDefault
 
   const handleTap = () => {
