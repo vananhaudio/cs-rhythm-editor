@@ -197,6 +197,7 @@ export default function StoryTellPage() {
   const titleInputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const convoEndRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const invitation = useMemo(() => INVITATIONS[Math.floor(Math.random() * INVITATIONS.length)], [])
 
@@ -223,7 +224,11 @@ export default function StoryTellPage() {
 
   // ── Auto-scroll conversation về cuối ──
   useEffect(() => {
-    convoEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = contentRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    })
   }, [conversation])
 
   // ── Focus title input when editing ──
@@ -750,7 +755,7 @@ export default function StoryTellPage() {
           )}
 
           {/* ── CONTENT ── */}
-          <div className="sw-content">
+          <div className="sw-content" ref={contentRef}>
             {/* ── SECTION: INVITATION ── */}
             {conversation.length === 0 && (
               <section className="sw-section sw-invitation">
