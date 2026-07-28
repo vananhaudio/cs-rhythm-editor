@@ -147,7 +147,8 @@ export default function AppRouter() {
   // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
   if (path === '/story/home') { window.location.replace('/story'); return null }  // redirect link cũ
   if (path === '/story' || path === '/story/') return <StoryHomePage />   // 📖 Tạp chí
-  if (path === '/story/write' || path === '/story/write/' || path === '/story/tell' || path === '/story/tell/') return <StoryTellPage />  // ✍️ Phòng viết
+  if (path === '/story/write' || path === '/story/write/') return <StoryLegacyLandingPage />  // landing giới thiệu dự án
+  if (path === '/story/tell' || path === '/story/tell/') return <StoryTellPage />  // ✍️ Phòng viết (có Mira)
   if (path.startsWith('/story/')) {
     return <StoryLegacyLandingPage />   // 📄 Trang đọc (/story/:slug)
   }
