@@ -254,19 +254,31 @@ export default function StoryTellPage() {
 
     const userMsg: ChatMsg = { role: 'user', text: t, at: new Date().toISOString() }
     setConversation(prev => [...prev, userMsg])
-    setRawContent(prev => prev ? prev + '\n\n' + t : t)
 
     try {
       const { data, error } = await supabase.functions.invoke('story-ai', {
         body: { action: 'chat', storyId, message: t },
       })
       if (error || !data) throw error ?? new Error('empty')
-      if (data.storyId) setStoryId(data.storyId)
+      const newStoryId = data.storyId
+      if (newStoryId) setStoryId(newStoryId)
 
       const p = data.phase as string
       const miraText = data.reply || ''
       const miraMsg: ChatMsg = { role: 'mira', text: miraText, at: new Date().toISOString() }
       setConversation(prev => [...prev, miraMsg])
+
+      // Fetch raw từ DB (tránh duplicate)
+      const sid = newStoryId || storyId
+      if (sid) {
+        supabase.from('story_chunks')
+          .select('content, order_index')
+          .eq('story_id', sid)
+          .order('order_index', { ascending: true })
+          .then(({ data: chunks }) => {
+            if (chunks) setRawContent(chunks.map(c => c.content).join('\n\n'))
+          })
+      }
 
       if (p === 'ready_for_draft') {
         setMiraReady(true)
@@ -276,7 +288,6 @@ export default function StoryTellPage() {
       }
     } catch (e) {
       console.error('story-ai chat', e)
-      const msg = (e as { message?: string })?.message || String(e)
       const errMsg: ChatMsg = { role: 'mira', text: 'Có lỗi xảy ra. Bạn thử lại nhé.', at: new Date().toISOString() }
       setConversation(prev => [...prev, errMsg])
     } finally { setSending(false) }
@@ -712,6 +723,8 @@ const CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.4;
+  letter-spacing: normal;
+  word-spacing: normal;
   transition: color 0.15s;
 }
 .sw-title:hover { color: var(--accent); }
@@ -851,7 +864,7 @@ const CSS = `
 .sw-convo {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 .sw-msg {
   max-width: 88%;
@@ -885,7 +898,10 @@ const CSS = `
 }
 .sw-msg-mira .sw-msg-text {
   color: var(--ink);
-  padding: 0;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius) var(--radius) var(--radius) 4px;
 }
 .sw-msg-pending { opacity: 0.55; }
 .sw-msg-dots { color: var(--ink-faint); font-style: italic; }
@@ -905,9 +921,10 @@ const CSS = `
   border-radius: var(--radius);
   padding: 28px 32px;
   font-size: 17px;
-  line-height: 1.9;
+  line-height: 1.7;
   color: var(--ink);
   white-space: pre-wrap;
+  text-align: left;
   box-shadow: var(--shadow-sm);
   font-family: 'Be Vietnam Pro', Georgia, serif;
 }
@@ -978,7 +995,7 @@ const CSS = `
   flex-shrink: 0;
 }
 .sw-send:hover:not(:disabled) { background: var(--accent-hover); }
-.sw-send:disabled { opacity: 0.4; cursor: default; }
+.sw-send:disabled { opacity: 0.35; cursor: default; }
 
 /* ── DRAFT ── */
 .sw-draft-wrap {

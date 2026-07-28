@@ -57,7 +57,7 @@ export function usePitchDetector() {
     const buf = bufRef.current
     const ctx = audioCtxRef.current
     if (!an || !buf || !ctx) return null
-    an.getFloatTimeDomainData(buf)
+    an.getFloatTimeDomainData(buf as Float32Array<ArrayBuffer>)
     const { freq } = detectPitch(buf as Float32Array, ctx.sampleRate)
     if (freq <= 0) { setHeard(null); return null }
     const pc = pitchClass(freq)
