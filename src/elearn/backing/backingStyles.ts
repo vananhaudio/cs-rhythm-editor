@@ -57,6 +57,14 @@ export const STYLES: Style[] = [
     drum: { hh: [1, 1, 1, 1], snare: [0, 0, 1, 0], kick: [1, 0, 0, 0] },
     bass: ['R', null, '5', null],
   },
+  {
+    // Cha Cha Cha — tiết tấu quạt: Đen · đơn-đơn · Đen · đơn-đơn (hi-hat đánh đúng khuôn này
+    // để học viên quạt theo); snare "cha-cha" ở 2 móc đơn phách 4; bass gốc p1 – quãng 5 p3.
+    id: 'chachacha', name: 'Cha Cha Cha', beatsPerBar: 4, feel: 'straight', stepsPerBar: 8, defaultTempo: 100,
+    drum: { hh: [1, 0, 1, 1, 1, 0, 1, 1], snare: [0, 0, 1, 0, 0, 0, 1, 1], kick: [1, 0, 0, 0, 1, 0, 0, 0] },
+    bass: ['R', null, null, null, '5', null, null, null],
+    bassFinal: ['R', null, null, null, '5', null, 'A', null],
+  },
 ]
 
 // Vòng hợp âm mẫu cho "Nền tập quạt" (1 hợp âm / 1 ô nhịp).
@@ -76,6 +84,7 @@ export const PRESETS: Preset[] = [
   { id: 'bolero-am', name: 'Bolero buồn', styleId: 'bolero', key: 'Am', chords: ['Am', 'Dm', 'E', 'Am'] },
   { id: 'valse-c', name: 'Valse', styleId: 'valse', key: 'C', chords: ['C', 'F', 'G', 'C'] },
   { id: 'polka-c', name: 'Polka', styleId: 'polka', key: 'C', chords: ['C', 'G', 'C', 'G'] },
+  { id: 'chacha-am', name: 'Cha cha cha', styleId: 'chachacha', key: 'Am', chords: ['Am', 'Dm', 'E7', 'Am'] },
 ]
 
 export const getStyle = (id: string): Style => STYLES.find((s) => s.id === id) ?? STYLES[0]
