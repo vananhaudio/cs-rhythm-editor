@@ -59,7 +59,7 @@ const STEP_CTA: Record<string, string> = {
 
 function BottomBar({
   onReplay, onToggle, onSkip, onSpeedCycle,
-  isPlaying, isDone, speedLabel, showSpeed = true,
+  isPlaying, isDone, replayLabel, speedLabel, showSpeed = true,
 }: {
   onReplay: () => void
   onToggle: () => void
@@ -67,6 +67,7 @@ function BottomBar({
   onSpeedCycle: () => void
   isPlaying: boolean
   isDone: boolean
+  replayLabel: string
   speedLabel: string
   showSpeed?: boolean
 }) {
@@ -74,21 +75,21 @@ function BottomBar({
     <div style={{
       flexShrink: 0, display: 'flex', alignItems: 'center',
       padding: '8px 12px calc(16px + env(safe-area-inset-bottom, 0px))',
+      gap: 8,
     }}>
-      {/* Left: Replay */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+      {/* Left group: Replay + Play + Speed */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+        {/* Replay */}
         <button onClick={onReplay} style={{
-          width: 38, height: 38, borderRadius: 12,
-          background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.06)',
-          color: C.dim, fontSize: 18, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '6px 12px', height: 36, borderRadius: 12,
+          background: 'rgba(0,0,0,.04)', border: `1px solid ${C.border}`,
+          color: C.dim, fontSize: 12, fontWeight: 700,
+          fontFamily: 'inherit', cursor: 'pointer',
         }}>
-          ↺
+          <span style={{ fontSize: 16 }}>↺</span> {replayLabel}
         </button>
-      </div>
 
-      {/* Center: Play/Pause + Speed */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         {isDone ? (
           <button onClick={onSkip} style={{
             padding: '12px 28px', borderRadius: 16,
@@ -101,47 +102,46 @@ function BottomBar({
             Tiếp tục →
           </button>
         ) : (
-          <>
-            <button onClick={onToggle} style={{
-              width: 56, height: 56, borderRadius: 16,
-              border: 'none',
-              background: isPlaying ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
-              color: isPlaying ? C.text : '#fff',
-              fontSize: 20, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(245,158,11,.3)',
-              transition: 'all .2s',
-            }}>
-              {isPlaying ? '⏸' : '▶'}
-            </button>
-            <button onClick={onSpeedCycle} style={{
-              padding: '6px 10px', height: 30, borderRadius: 8,
-              border: `1px solid ${C.border}`,
-              background: '#fff',
-              color: C.dim, fontSize: 11, fontWeight: 700,
-              fontFamily: 'inherit', cursor: 'pointer',
-              opacity: showSpeed ? 1 : 0.4,
-              pointerEvents: showSpeed ? 'auto' : 'none',
-              whiteSpace: 'nowrap',
-            }}>
-              {speedLabel}
-            </button>
-          </>
+          <button onClick={onToggle} style={{
+            width: 52, height: 52, borderRadius: 16,
+            border: 'none',
+            background: isPlaying ? 'rgba(0,0,0,.05)' : `linear-gradient(135deg,${C.accent},#D97706)`,
+            color: isPlaying ? C.text : '#fff',
+            fontSize: 20, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: isPlaying ? 'none' : '0 4px 16px rgba(245,158,11,.3)',
+            transition: 'all .2s',
+          }}>
+            {isPlaying ? '⏸' : '▶'}
+          </button>
         )}
-      </div>
 
-      {/* Right: Skip */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onSkip} style={{
-          padding: '7px 12px', height: 38, borderRadius: 12,
-          background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.06)',
-          color: C.muted, fontSize: 12, fontWeight: 600,
+        {/* Speed chip — spaced away from Play */}
+        <button onClick={onSpeedCycle} style={{
+          marginLeft: 4,
+          padding: '7px 12px', height: 30, borderRadius: 8,
+          border: `1px solid ${C.border}`,
+          background: '#fff',
+          color: C.dim, fontSize: 11, fontWeight: 700,
           fontFamily: 'inherit', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 3,
+          opacity: showSpeed ? 1 : 0.4,
+          pointerEvents: showSpeed ? 'auto' : 'none',
+          whiteSpace: 'nowrap',
         }}>
-          Bỏ qua →
+          {speedLabel}
         </button>
       </div>
+
+      {/* Skip — far right */}
+      <button onClick={onSkip} style={{
+        padding: '7px 14px', height: 36, borderRadius: 12,
+        background: 'rgba(0,0,0,.04)', border: '1px solid rgba(0,0,0,.06)',
+        color: C.muted, fontSize: 12, fontWeight: 600,
+        fontFamily: 'inherit', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
+      }}>
+        Bỏ qua →
+      </button>
     </div>
   )
 }
@@ -349,6 +349,7 @@ function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
         onSkip={() => { stop(); onComplete() }}
         isPlaying={playing}
         isDone={done}
+        replayLabel="Nghe lại"
         speedLabel={SPEEDS[speedIdx].label}
         onSpeedCycle={() => setSpeedIdx(i => (i + 1) % SPEEDS.length)}
       />
@@ -458,6 +459,7 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
         onSkip={() => { detector.stop(); onComplete() }}
         isPlaying={state === 'active'}
         isDone={false}
+        replayLabel="Tập lại"
         speedLabel="Vừa"
         showSpeed={false}
         onSpeedCycle={() => {}}
@@ -645,6 +647,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         onSkip={() => { stopPlayback(); detector.stop(); onComplete() }}
         isPlaying={playing}
         isDone={done && !!score}
+        replayLabel="Chơi lại"
         speedLabel={SPEEDS[speedIdx].label}
         onSpeedCycle={() => setSpeedIdx(i => (i + 1) % SPEEDS.length)}
       />
@@ -789,6 +792,7 @@ function StepPerform({ exercise, noteItems, onComplete }: StepComponentProps) {
         onSkip={() => { stopPlayback(); detector.stop(); onComplete() }}
         isPlaying={playing}
         isDone={done && !!score}
+        replayLabel="Chơi lại"
         speedLabel="Vừa"
         showSpeed={false}
         onSpeedCycle={() => {}}
