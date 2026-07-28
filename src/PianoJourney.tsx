@@ -1,12 +1,18 @@
+// Màn đầu tiên = TRÒ CHUYỆN với Cô Piano (WebRTC Realtime) — đây mới là thứ đã
+// chạy mượt hôm 27/07 và bị commit 0406b72 thay mất bằng SpeechRecognition.
+// Màn tạo bài tập (LearningFlow) giữ nguyên, vào từ nút "🎼 Tập bài tập".
+
 import { useState, useRef, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
+import TalkWithTeacher from './piano/TalkWithTeacher'
 import { useVoiceInput } from './piano/useVoiceInput'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface PianoNote { pitch: string; startBeat: number; duration: number }
 interface Exercise { title: string; bpm: number; notes: PianoNote[] }
 
+type View  = 'talk' | 'mission'
 type Stage = 'voice' | 'generating' | 'playing'
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -49,6 +55,7 @@ async function askAI(prompt: string, signal: AbortSignal): Promise<Exercise | nu
 interface Props { onClose?: () => void }
 
 export default function PianoJourney({ onClose }: Props) {
+  const [view, setView]         = useState<View>('talk')
   const [stage, setStage]       = useState<Stage>('voice')
   const [exercise, setExercise] = useState<Exercise | null>(null)
   const [draft, setDraft]       = useState('')       // ô gõ — TÁCH RIÊNG khỏi lời nói
@@ -95,6 +102,11 @@ export default function PianoJourney({ onClose }: Props) {
     return <LearningFlow exercise={exercise} onClose={onClose} onBack={backToVoice} />
   }
 
+  // Màn đầu tiên: trò chuyện với Cô Piano
+  if (view === 'talk') {
+    return <TalkWithTeacher onClose={onClose} onOpenMission={() => setView('mission')} />
+  }
+
   // ── Trạng thái hiển thị ──
   // 'playing' mà thiếu bài (không nên xảy ra) → coi như màn nói. Dẫn xuất, KHÔNG
   // setState trong render hay trong effect để tự chữa.
@@ -134,12 +146,16 @@ export default function PianoJourney({ onClose }: Props) {
     <div style={{ height:'100dvh',background:`linear-gradient(180deg,${C.bg1} 0%,${C.bg2} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',fontFamily:'Inter,system-ui,sans-serif',position:'relative',overflowX:'hidden',overflowY:'auto' }}>
       <style>{KEYFRAMES}</style>
 
+      <button onClick={() => { voice.cancel(); setView('talk') }}
+        style={{ position:'fixed',top:20,left:20,zIndex:100,background:'rgba(0,0,0,.06)',border:'1px solid rgba(0,0,0,.08)',borderRadius:999,height:44,padding:'0 16px',fontSize:14,fontWeight:600,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',gap:6,fontFamily:'inherit',backdropFilter:'blur(12px)' }}>
+        ‹ Cô Piano
+      </button>
       {onClose && <button onClick={onClose} style={{ position:'fixed',top:20,right:20,zIndex:100,background:'rgba(0,0,0,.06)',border:'1px solid rgba(0,0,0,.08)',borderRadius:50,width:44,height:44,fontSize:18,color:C.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',backdropFilter:'blur(12px)' }}>✕</button>}
 
       {/* Header */}
       <div style={{ width:'100%',textAlign:'center',paddingTop:36,paddingBottom:16 }}>
-        <div style={{ fontSize:32,marginBottom:2 }}>🎹</div>
-        <div style={{ fontSize:18,fontWeight:700,color:C.text,letterSpacing:'-.3px' }}>Piano Journey</div>
+        <div style={{ fontSize:32,marginBottom:2 }}>🎼</div>
+        <div style={{ fontSize:18,fontWeight:700,color:C.text,letterSpacing:'-.3px' }}>Tập bài tập</div>
       </div>
 
       {/* Instruction */}
