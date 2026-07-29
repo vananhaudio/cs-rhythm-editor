@@ -35,6 +35,12 @@ const STEPS: StepDefinition[] = [
   { id: 'perform', icon: '🎵', label: 'Biểu diễn',       component: StepPerform },
 ]
 
+// Sau khi bé bấm ▶: cho một khoảng LẶNG để bé rút tay khỏi màn hình, đặt lên
+// phím — rồi MỚI tự đếm vào. Không bắt bấm thêm nút nào, vì bấm xong rút tay về
+// đàn là đã trễ mất nhịp.
+const READY_MS = 2600
+const COUNT_IN = 4          // đếm vào trọn một ô nhịp 4/4
+
 const SPEEDS = [
   { label: 'Chậm', bpm: 60 },
   { label: 'Vừa', bpm: 80 },
@@ -104,20 +110,20 @@ function BottomBar({
         </button>
 
         {isWaitingReady ? (
-          // Cửa "Sẵn sàng": mic đã mở nhưng CHƯA đếm ngược. Bản cũ mở mic xong là
-          // đếm luôn (3 nhịp × 700ms = 2,1s) — bé chưa kịp đặt tay lên phím.
-          <button onClick={onToggle} style={{
-            padding: '12px 12px', borderRadius: 16, border: 'none',
+          // "Sẵn sàng" là GIAI ĐOẠN TỰ CHẠY, KHÔNG phải nút — cố ý dùng <div> để
+          // không ai bấm được. Bé bấm ▶ xong chỉ việc đặt tay lên phím, hết
+          // READY_MS là máy tự đếm vào.
+          <div style={{
+            padding: '12px 12px', borderRadius: 16,
             minWidth: 104, justifyContent: 'center',
             background: C.green, color: '#fff',
             fontSize: 15, fontWeight: 700,
-            fontFamily: 'inherit', cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(16,185,129,.3)',
             display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
             animation: 'rd-breathe 1.6s ease-in-out infinite',
           }}>
             🙌 Sẵn sàng
-          </button>
+          </div>
         ) : isDone ? (
           <button onClick={onSkip} style={{
             padding: '12px 16px', borderRadius: 16,
@@ -650,6 +656,13 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
     setWaitReady(true)      // chờ bé đặt tay lên phím rồi tự bấm
   }
 
+  // Hết khoảng chuẩn bị thì TỰ đếm vào — bé không phải bấm gì thêm
+  useEffect(() => {
+    if (!waitReady) return
+    const t = setTimeout(() => { setWaitReady(false); setCountdown(COUNT_IN) }, READY_MS)
+    return () => clearTimeout(t)
+  }, [waitReady])
+
   useEffect(() => {
     if (countdown === null) return
     if (countdown > 0) {
@@ -787,8 +800,6 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
           else startAll()
         }}
         onToggle={() => {
-          // Bé bấm "Sẵn sàng" → giờ mới đếm ngược
-          if (waitReady) { setWaitReady(false); setCountdown(3); return }
           if (playing) { stopPlayback(); setWaitReady(false); return }
           setScore(null); setNoteResults([])
           startAll()
@@ -840,6 +851,13 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
     }
     setWaitReady(true)      // chờ bé đặt tay lên phím rồi tự bấm
   }
+
+  // Hết khoảng chuẩn bị thì TỰ đếm vào — bé không phải bấm gì thêm
+  useEffect(() => {
+    if (!waitReady) return
+    const t = setTimeout(() => { setWaitReady(false); setCountdown(COUNT_IN) }, READY_MS)
+    return () => clearTimeout(t)
+  }, [waitReady])
 
   useEffect(() => {
     if (countdown === null) return
@@ -940,7 +958,6 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
           else startAll()
         }}
         onToggle={() => {
-          if (waitReady) { setWaitReady(false); setCountdown(3); return }
           if (playing) { stopPlayback(); setWaitReady(false); return }
           setScore(null); startAll()
         }}
