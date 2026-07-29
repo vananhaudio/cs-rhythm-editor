@@ -2,6 +2,7 @@
 // Hiển thị nội dung đầy đủ của một câu chuyện đã xuất bản.
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import ReportButton, { REPORT_CSS } from './ReportButton'
 
 const TOPIC_LABELS: Record<string, string> = {
   'dam-bat-dau': 'Dám bắt đầu',
@@ -223,6 +224,7 @@ export default function StoryDetailPage() {
             <span className="sd-f-sep">·</span>
             <a href="https://zalo.me/vananhguitarist" target="_blank" rel="noopener">Liên hệ</a>
           </div>
+          {story && <div className="sd-footer-report"><ReportButton storyId={story.id} /></div>}
           <div className="sd-footer-copy">© 2026 Thầy Văn Anh Guitar — 1001 Câu chuyện cùng Guitar</div>
         </div>
       </footer>
@@ -230,7 +232,8 @@ export default function StoryDetailPage() {
   )
 }
 
-const CSS = `
+const CSS = REPORT_CSS + `
+.sd-footer-report { margin-top: 10px; text-align: center; }
 .sd-root {
   min-height: 100dvh;
   background: #F2EEE7;

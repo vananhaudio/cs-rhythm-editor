@@ -317,6 +317,12 @@ Deno.serve(async (req) => {
         return json({ error: 'Story already past telling phase' }, 400)
       }
     } else {
+      // Người kể bị Ban biên tập chặn (Guideline 1.2) → không mở chuyện mới
+      const { data: stu } = await db.from('edu_students')
+        .select('blocked_at').eq('user_id', user.id).maybeSingle()
+      if (stu?.blocked_at) {
+        return json({ reply: 'Tài khoản của bạn hiện không gửi được câu chuyện mới. Nếu bạn nghĩ đây là nhầm lẫn, nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist) giúp mình nhé.', phase: 'telling', storyId: null })
+      }
       const { count } = await db.from('stories')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).not('status', 'in', '("published","unpublished")')

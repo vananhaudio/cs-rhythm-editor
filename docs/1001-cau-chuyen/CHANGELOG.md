@@ -409,3 +409,36 @@
     nhận diện giọng nói" — đây là quyền khác với micro, hỏi một lần
     rồi thôi. App vào /story bằng `window.location.href = '/story'`
     (cùng origin timming.vananhaudio.com) nên không có vấn đề đa origin.
+
+#### Added — Báo cáo nội dung & chặn người kể (2026-07-29)
+
+Đáp ứng **App Store Review Guideline 1.2** (nội dung do người dùng tạo)
+trước khi gửi duyệt bản 1.1.0:
+
+| Apple đòi | Đáp ứng |
+|---|---|
+| Lọc nội dung không phù hợp | Ban biên tập duyệt TRƯỚC khi xuất bản (đã có) |
+| Cơ chế báo cáo | `ReportButton` ở cuối mỗi trang câu chuyện |
+| Chặn người gây hại | `edu_students.blocked_at` + nút "Chặn người kể" |
+| Thông tin liên hệ công khai | nút "Liên hệ" (Zalo) ở footer (đã có) |
+
+-   `db/story_reports.sql` (mới, **CHƯA chạy**): bảng `story_reports`
+    (ai cũng GHI được kể cả khách chưa đăng nhập — Apple yêu cầu báo
+    cáo phải sẵn cho mọi người đọc; CHỈ thầy đọc/xử lý) +
+    `edu_students.blocked_at` / `blocked_reason`.
+-   `db/rls_setup.sql`: thêm `story_reports` vào self_managed.
+-   `src/story/ReportButton.tsx` (mới): nút ⚑ + hộp thoại 6 lý do +
+    ghi chú tuỳ chọn. Gửi xong cam kết **"xem lại trong vòng 24 giờ"**
+    (Apple đòi phản hồi kịp thời).
+-   `src/story/ReportsPage.tsx` (mới) — **`/story/reports`**, chỉ
+    thầy/admin vào được: 2 tab Chờ xử lý / Đã xử lý, mỗi báo cáo có
+    nút Đọc bài · Gỡ khỏi Tạp chí · Chặn người kể · Đã xử lý · Bỏ qua.
+-   `supabase/functions/story-ai/index.ts`: chặn có HIỆU LỰC THẬT —
+    người bị chặn không mở được câu chuyện mới (kiểm tra `blocked_at`
+    trước khi tạo story). **Cần deploy lại Edge Function.**
+-   `ios/.../project.pbxproj`: Build 12 → 13 (Version 1.1.0 thầy đã tự
+    nâng; App Store Connect từ chối trùng số Build).
+
+**Còn phải làm khi gửi duyệt:** khai nhãn Privacy trong App Store
+Connect có mục **User Content** (app thu thập câu chuyện, tên/bút danh,
+lớp học, ảnh đại diện).

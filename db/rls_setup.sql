@@ -69,7 +69,10 @@ DECLARE
     -- người kể chỉ CRUD bài của mình khi chưa gửi biên tập; thầy toàn quyền.
     -- Policy hẹp do db/story_setup.sql đặt — ĐỪNG để vòng lặp áp policy rộng
     -- (sẽ cho học sinh sửa bài của nhau + tự xuất bản).
-    'stories', 'story_comments'
+    'stories', 'story_comments',
+    -- Báo cáo nội dung (Guideline 1.2): ai cũng GHI được (kể cả anon),
+    -- CHỈ thầy đọc/xử lý. Policy hẹp do db/story_reports.sql đặt.
+    'story_reports'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];
