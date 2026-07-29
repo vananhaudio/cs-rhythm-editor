@@ -146,8 +146,12 @@ export default function AppRouter() {
     return <ClassLandingPage />   // class./ LUÔN là trang tuyển sinh; vào cổng học qua nút "Hành trình của tôi" → /me
   }
 
-  // ── Route /editorial — Ban biên tập (công khai) ──
-  if (path === '/editorial' || path === '/editorial/') return <EditorPage />
+  // ── Route /editorial — Ban biên tập (chỉ teacher/admin) ──
+  if (path === '/editorial' || path === '/editorial/') {
+    if (loading) return null
+    if (!user || !isTeacher) { window.location.href = '/start'; return null }
+    return <EditorPage />
+  }
 
   // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
   if (path === '/story/home') { window.location.replace('/story'); return null }  // redirect link cũ
