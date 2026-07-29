@@ -320,6 +320,8 @@ const CSS = `
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   position: sticky; top: 0; z-index: 40;
+  /* chừa tai thỏ / thanh trạng thái trên iPhone (app Capacitor dùng viewport-fit=cover) */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .sh-nav-inner {
   max-width: 1024px; margin: 0 auto; padding: 12px 20px;

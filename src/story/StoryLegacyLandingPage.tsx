@@ -299,7 +299,7 @@ const CSS = `.tva-story .nav-back{text-decoration:none;color:var(--ink-muted);fo
 .tva-story .btn-primary:hover{background:var(--indigo-dark);}
 .tva-story .btn-ghost{background:transparent;color:var(--indigo);border:1.5px solid #D3CEE8;}
 .tva-story .btn-ghost:hover{background:var(--indigo-tint);}
-.tva-story nav{position:sticky;top:0;z-index:40;background:rgba(242,238,231,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.tva-story nav{position:sticky;top:0;z-index:40;background:rgba(242,238,231,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);/* chừa tai thỏ iPhone */}
 .tva-story .nav-in{display:flex;align-items:center;justify-content:space-between;height:62px;gap:12px;}
 .tva-story .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;}
 .tva-story .brand .mark{width:34px;height:34px;border-radius:9px;object-fit:contain;display:block;}

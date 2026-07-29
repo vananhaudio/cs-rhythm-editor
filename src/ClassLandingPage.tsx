@@ -1059,7 +1059,7 @@ const CSS = `
 .tva-class .btn-ghost{background:transparent;color:var(--indigo);border:1.5px solid #D3CEE8;}
 .tva-class .btn-ghost:hover{background:var(--indigo-tint);}
 .tva-class .ph{border:2px dashed #CFC9DA;border-radius:14px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--ink-faint);font-size:12.5px;font-weight:600;padding:14px;background:#FBFAF7;}
-.tva-class nav{position:sticky;top:0;z-index:40;background:rgba(242,238,231,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+.tva-class nav{position:sticky;top:0;z-index:40;background:rgba(242,238,231,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);/* chừa tai thỏ iPhone */}
 .tva-class .nav-in{display:flex;align-items:center;justify-content:space-between;height:62px;}
 .tva-class .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;}
 .tva-class .brand .mark{width:36px;height:36px;border-radius:9px;object-fit:contain;display:block;}

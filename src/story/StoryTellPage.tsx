@@ -978,7 +978,8 @@ const CSS = `
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 48px 16px 20px;
+  /* 48px cứng không đủ trên máy tai thỏ cao (iPhone 14/15 Pro ~59px) → tính theo safe-area */
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 20px;
 }
 .sw-drawer-avatar {
   width: 44px; height: 44px;
@@ -1132,7 +1133,8 @@ const CSS = `
   flex: none;
   display: flex;
   align-items: center;
-  padding: 12px 12px 12px 8px;
+  /* chừa tai thỏ / thanh trạng thái trên iPhone */
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 12px 12px 8px;
   background: var(--bg);
   gap: 4px;
 }

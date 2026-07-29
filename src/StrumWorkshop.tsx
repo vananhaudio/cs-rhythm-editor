@@ -42,7 +42,7 @@ export default function StrumWorkshop({ onExit }: { onExit?: () => void }) {
   return (
     <div style={{ minHeight: '100vh', background: A.bg, fontFamily: 'Inter, system-ui, sans-serif', color: A.ink }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', background: '#fff', borderBottom: `1px solid ${A.border}`, position: 'sticky', top: 0, zIndex: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 18px 14px', background: '#fff', borderBottom: `1px solid ${A.border}`, position: 'sticky', top: 0, zIndex: 1 }}>
         {onExit && <button onClick={onExit} style={{ background: 'none', border: `1px solid ${A.border}`, borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 600, color: A.sub, cursor: 'pointer' }}>←</button>}
         <div style={{ fontSize: 17, fontWeight: 800 }}>🎼 Strum Score của tôi</div>
         <div style={{ flex: 1 }} />

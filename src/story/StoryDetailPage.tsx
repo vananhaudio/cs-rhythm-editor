@@ -248,6 +248,8 @@ const CSS = `
   background: rgba(242,238,231,0.9);
   backdrop-filter: blur(10px);
   position: sticky; top: 0; z-index: 40;
+  /* chừa tai thỏ / thanh trạng thái trên iPhone */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 .sd-nav-inner {
   max-width: 720px; margin: 0 auto; padding: 12px 20px;

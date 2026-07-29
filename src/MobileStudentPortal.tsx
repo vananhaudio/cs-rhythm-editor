@@ -1056,7 +1056,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               const yearBadge = getYearBadge(me.enrolled_at)
               const headerBg = honor.bg
               return (
-                <div style={{ background: headerBg, padding: '52px 20px 24px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ background: headerBg, padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 20px 24px', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,.06)' }} />
                   <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1331,7 +1331,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ── COURSES (danh sách bài học) ──────────────────────────────── */}
         {tab === 'hoc' && screen === 'courses' && (
           <>
-            <div style={{ background: L.surface, padding: '52px 16px 16px', boxShadow: '0 1px 0 ' + L.border }}>
+            <div style={{ background: L.surface, padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 16px', boxShadow: '0 1px 0 ' + L.border }}>
               <button onClick={goBack} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, marginBottom: 12 }}>‹</button>
               <div style={{ fontWeight: 800, fontSize: 20 }}>Danh sách bài học</div>
               {/* ── Cảnh báo thiếu khoá nền tảng (vào DH2 mà chưa có DH1/NL1…) ── */}
@@ -1550,7 +1550,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               />
             ) : (
             <>
-            <div style={{ background: L.surface, padding: '52px 16px 0', boxShadow: '0 1px 0 ' + L.border }}>
+            <div style={{ background: L.surface, padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 0', boxShadow: '0 1px 0 ' + L.border }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <button onClick={goBack} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1822,7 +1822,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
         {/* ── TẬP ─────────────────────────────────────────────────────── */}
         {tab === 'tap' && (
-          <div style={{ padding: '52px 16px 16px' }}>
+          <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 16px' }}>
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Luyện tập</div>
 
             {/* ══ HÔM NAY LUYỆN GÌ ══ */}
@@ -2213,7 +2213,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ══ SỐNG ══ Lớp = đơn vị đào tạo · Band = đơn vị cộng đồng.
             Mỗi mục là 1 entry điều hướng (không feed, không dashboard). ═══════ */}
         {tab === 'song' && (
-          <div style={{ padding: '52px 16px 110px' }}>{/* chừa chỗ cho thanh điều hướng dưới */}
+          <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 110px' }}>{/* chừa chỗ cho thanh điều hướng dưới */}
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Sống cùng âm nhạc</div>
             <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>Kết nối · Trải nghiệm · Truyền cảm hứng</div>
 
