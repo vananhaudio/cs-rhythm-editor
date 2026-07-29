@@ -93,7 +93,23 @@ export default function StoryDetailPage() {
         {story.photos && Array.isArray(story.photos) && story.photos.length > 0 && (
           <div className="sd-photos">
             {story.photos.map((p, i) => (
-              <img key={i} src={p.url} alt={p.caption || ''} className="sd-photo" />
+              <img
+                key={i}
+                src={p.url}
+                alt={p.caption || ''}
+                className="sd-photo"
+                onError={(e) => {
+                  const el = e.currentTarget
+                  el.style.display = 'none'
+                  const wrap = el.parentElement
+                  if (wrap) {
+                    const ph = document.createElement('div')
+                    ph.style.cssText = 'width:100%;aspect-ratio:3/2;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#EEEBFB,#E4DED4);border-radius:12px;font-size:48px;opacity:0.3'
+                    ph.textContent = '🎸'
+                    wrap.appendChild(ph)
+                  }
+                }}
+              />
             ))}
           </div>
         )}

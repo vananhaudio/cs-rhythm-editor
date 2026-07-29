@@ -114,7 +114,26 @@ export default function StoryHomePage() {
                   >
                     <div className="sh-story-card-img-wrap">
                       {img ? (
-                        <img src={img} alt="" className="sh-story-card-img" loading="lazy" />
+                        <img
+                          src={img}
+                          alt=""
+                          className="sh-story-card-img"
+                          loading="lazy"
+                          onError={(e) => {
+                            const el = e.currentTarget
+                            el.style.display = 'none'
+                            const wrap = el.parentElement
+                            if (wrap) {
+                              const ph = document.createElement('div')
+                              ph.className = 'sh-story-card-img-placeholder'
+                              const icon = document.createElement('span')
+                              icon.className = 'sh-story-card-img-icon'
+                              icon.textContent = '🎸'
+                              ph.appendChild(icon)
+                              wrap.appendChild(ph)
+                            }
+                          }}
+                        />
                       ) : (
                         <div className="sh-story-card-img-placeholder">
                           <span className="sh-story-card-img-icon">🎸</span>
