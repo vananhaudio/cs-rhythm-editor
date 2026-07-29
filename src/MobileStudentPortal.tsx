@@ -42,6 +42,9 @@ const L = {
   shadowLg:   '0 8px 24px rgba(0,0,0,0.10)',
 }
 
+// Mở link ngoài app (Zalo/Facebook): '_system' để iOS đẩy ra trình duyệt/app thật, web fallback '_blank'.
+const openExternal = (u: string) => { try { window.open(u, '_system') } catch { window.open(u, '_blank') } }
+
 // Tên khoá/bài tiếng Việt thường dài hơn bề ngang điện thoại. Cắt cụt 1 dòng ("Đệm Hát Trình …")
 // làm học viên không đọc được tên đầy đủ → cho xuống tối đa 2 dòng, chỉ cắt khi thật sự quá dài.
 const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }
@@ -2238,7 +2241,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 ['classgroup', '💬', 'Nhóm lớp của tôi'],
               ] as const).map(([key, icon, label]) => (
                 <button key={key}
-                  onClick={() => { if (key === 'story') window.location.href = '/story'; else setLivePage(key) }}
+                  onClick={() => {
+                    if (key === 'story') { window.location.href = '/story'; return }
+                    // Cộng đồng → mở thẳng NHÓM FACEBOOK cộng đồng (nhóm cũ, đã có sẵn người sinh hoạt).
+                    // Chưa cấu hình nhóm FB thì mới rơi về trang giới thiệu.
+                    if (key === 'community') {
+                      const fb = communityGroups.find(g => g.group_type === 'facebook' && g.facebook_url)
+                      if (fb?.facebook_url) { openExternal(fb.facebook_url); return }
+                    }
+                    setLivePage(key)
+                  }}
                   style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 16, boxShadow: L.shadow, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                   <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>{icon}</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: L.t1, lineHeight: 1.35 }}>{label}</span>

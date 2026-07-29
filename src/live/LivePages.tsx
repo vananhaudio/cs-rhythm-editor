@@ -104,7 +104,8 @@ function CommunityPage() {
         <div style={{ fontSize: 15.5, fontWeight: 700, color: S.t1, marginBottom: 6 }}>Đang xây dựng</div>
         <div style={{ fontSize: 14, color: S.t2, lineHeight: 1.7 }}>
           Sắp có: bảng tin · chia sẻ · thử thách · hoạt động chung.
-          Trong lúc chờ, bạn giữ liên lạc qua nhóm lớp của mình nhé.
+          Hiện cộng đồng đang sinh hoạt trên <b>nhóm Facebook</b> — nếu chưa thấy nhóm mở ra,
+          bạn nhắn thầy trong nhóm lớp để được thêm vào nhé.
         </div>
       </div>
     </>
