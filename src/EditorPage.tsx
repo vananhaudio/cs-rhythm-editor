@@ -430,8 +430,16 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
           <p className="ed-empty">Chưa có nội dung</p>
         )}
 
+        {/* ── Trạng thái ── */}
+        {(story.status as string) === 'published' || published ? (
+          <div className="ed-section ed-pub-done-wrap">
+            <div className="ed-pub-done">✅ Đã xuất bản trên Tạp chí</div>
+            <span className="ed-pub-hint">Sau khi Lưu, refresh Tạp chí để thấy nội dung mới.</span>
+          </div>
+        ) : null}
+
         {/* ── Xuất bản nhanh ── */}
-        {!published && story.status !== 'published' && (
+        {(story.status as string) !== 'published' && !published && (
           <div className="ed-section ed-quick-pub">
             <button className="ed-pub-quick-btn" onClick={async () => {
               setPublishing(true)
@@ -459,7 +467,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
         )}
 
         {/* ── Xuất bản (có ảnh) ── */}
-        {!published && story.status !== 'published' && (
+        {(story.status as string) !== 'published' && !published && (
           <div className="ed-section">
             <h3 className="ed-section-title">🚀 Xuất bản</h3>
 
@@ -643,6 +651,7 @@ const CSS = `
 .ed-pub-quick-btn { width:100%; padding:14px; background:#8B7355; color:#fff; border:none; border-radius:8px; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; transition:opacity .15s; }
 .ed-pub-quick-btn:hover { opacity:0.9; }
 .ed-pub-quick-btn:disabled { opacity:0.5; cursor:default; }
+.ed-pub-done { font-size:15px; color:#3C7A42; font-weight:600; text-align:center; padding:12px; background:#EDF7EE; border-radius:8px; margin-bottom:8px; }
 .ed-pub-hint { display:block; text-align:center; font-size:12px; color:#8C8C8C; margin-top:8px; }
 .ed-quick-pub { padding:16px 0; border-bottom:1px solid #EBE5DB; margin-bottom:8px; }
 .ed-pub-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border:1px solid #E5E0D8; border-radius:8px; background:#FFF; color:#5C5C5C; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:background .12s,border-color .12s; }
