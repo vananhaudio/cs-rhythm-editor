@@ -382,7 +382,8 @@ export default function ElearnLessonView({ num, title, courseSlug = 'khoi-dau-da
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: ACCENT.a, letterSpacing: '.03em' }}>{L.crumb}</div>
-          <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: '-.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{L.title}</div>
+          {/* tên bài dài → xuống tối đa 2 dòng thay vì cắt cụt (header vẫn gọn, không đẩy nội dung) */}
+          <div style={{ fontSize: 15.5, fontWeight: 800, letterSpacing: '-.01em', lineHeight: 1.25, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{L.title}</div>
         </div>
       </div>
 

@@ -45,7 +45,7 @@ export default function ForcedVideo({ cfg, onComplete, onClose }: { cfg: ForcedV
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', borderRadius: 10, width: 34, height: 34, fontSize: 18, cursor: 'pointer' }}>‹</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           {cfg.crumb && <div style={{ fontSize: 10, color: '#9AA0F0', letterSpacing: '.06em', fontWeight: 700 }}>{cfg.crumb}</div>}
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.title}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', lineHeight: 1.3, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{cfg.title}</div>
         </div>
       </div>
 

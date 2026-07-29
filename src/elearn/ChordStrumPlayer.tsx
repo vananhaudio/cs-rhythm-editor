@@ -292,7 +292,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: INDIGO, fontSize: 22, cursor: 'pointer', padding: 0 }}>‹</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 10, color: ORANGE, letterSpacing: '.08em', fontWeight: 700 }}>GẢY THEO BÀI · QUẠT HỢP ÂM</div>
-          <div style={{ fontSize: 15, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.3, display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>{song.title}</div>
         </div>
         <div style={{ fontSize: 12, color: SUB }}>{mmss(t)}</div>
       </div>

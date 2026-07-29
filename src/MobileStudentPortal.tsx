@@ -41,6 +41,10 @@ const L = {
   shadowLg:   '0 8px 24px rgba(0,0,0,0.10)',
 }
 
+// Tên khoá/bài tiếng Việt thường dài hơn bề ngang điện thoại. Cắt cụt 1 dòng ("Đệm Hát Trình …")
+// làm học viên không đọc được tên đầy đủ → cho xuống tối đa 2 dòng, chỉ cắt khi thật sự quá dài.
+const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }
+
 type Tab    = 'hoc' | 'tap' | 'song'
 type Screen = 'home' | 'courses' | 'lesson'
 
@@ -1022,7 +1026,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           <div style={{ fontSize: 18, fontWeight: 900, color: celebrate.mastered ? L.green : L.p1, marginBottom: 4 }}>
             {celebrate.mastered ? 'Chinh phục thành công!' : 'Hoàn thành bước!'}
           </div>
-          <div style={{ fontSize: 14, color: L.t2, marginBottom: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{celebrate.title}</div>
+          <div style={{ fontSize: 14, color: L.t2, marginBottom: 14, lineHeight: 1.4, ...clamp2 }}>{celebrate.title}</div>
           <div style={{ display: 'inline-block', background: '#D9770618', color: '#D97706', fontWeight: 800, fontSize: 16, padding: '6px 16px', borderRadius: 99 }}>+{celebrate.xp} XP</div>
         </div>
         <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes popIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}`}</style>
@@ -1154,8 +1158,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   {journeyNext ? (
                     <button onClick={() => openCourse(journeyNext.courseId, journeyNext.id)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: 'block', fontSize: 11, color: L.t3, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học tiếp theo hành trình · {journeyNext.courseName}</span>
-                        <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {journeyNext.title}</span>
+                        <span style={{ fontSize: 11, color: L.t3, fontWeight: 600, lineHeight: 1.4, ...clamp2 }}>Học tiếp theo hành trình · {journeyNext.courseName}</span>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: L.p1, lineHeight: 1.35, ...clamp2 }}>Học: {journeyNext.title}</span>
                       </span>
                       <span style={{ color: L.p1 }}>›</span>
                     </button>
@@ -1211,8 +1215,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     <CourseLogo course={rc.course} size={48} radius={14} bg={L.p2} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, color: L.t3, marginBottom: 3 }}>{rl ? 'Học tiếp chỗ dang dở' : 'Đang theo học'}</div>
-                      <div style={{ fontWeight: 700, fontSize: 16, color: L.p1, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rc.course?.name}</div>
-                      {rl && <div style={{ fontSize: 13, color: L.t2, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Bài: {rl.title}</div>}
+                      <div style={{ fontWeight: 700, fontSize: 16, color: L.p1, lineHeight: 1.3, ...clamp2 }}>{rc.course?.name}</div>
+                      {rl && <div style={{ fontSize: 13, color: L.t2, marginTop: 2, lineHeight: 1.4, ...clamp2 }}>Bài: {rl.title}</div>}
                     </div>
                   </div>
                   {mainProgress !== null && (
@@ -1266,7 +1270,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                           {seqLocked && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.35)', borderRadius: 12, color: '#fff', fontSize: 16 }}>🔒</span>}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isPublished ? (seqLocked ? L.t2 : L.t1) : L.t2 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: isPublished ? (seqLocked ? L.t2 : L.t1) : L.t2 }}>
                             {e.course?.name}
                           </div>
                           <div style={{ fontSize: 12, color: seqLocked ? '#B91C1C' : L.t3, marginTop: 2 }}>
@@ -1304,7 +1308,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                         <CourseLogo course={g} size={42} radius={12} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: L.t2 }}>{g!.name}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: L.t2 }}>{g!.name}</div>
                         <div style={{ fontSize: 11.5, color: '#B91C1C', marginTop: 3, fontWeight: 700, letterSpacing: '.02em', display: 'inline-block', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 7, padding: '2px 7px' }}>Thiếu nền tảng</div>
                       </div>
                       <span style={{ color: L.t3, fontSize: 18 }}>›</span>
@@ -1417,7 +1421,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     {nextLesson ? (
                       <button onClick={() => openLesson(nextLesson)}
                         style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: L.p1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Học: {nextLesson.title}</span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: L.p1, lineHeight: 1.35, ...clamp2 }}>Học: {nextLesson.title}</span>
                         <span style={{ color: L.p1 }}>›</span>
                       </button>
                     ) : (
@@ -1426,7 +1430,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     {redLesson && (
                       <button onClick={() => openLesson(redLesson)}
                         style={{ width: '100%', textAlign: 'left', background: 'transparent', border: '1px dashed #EF444466', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ flex: 1, fontSize: 14, color: L.t2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Củng cố cho chắc: <b style={{ color: L.t1 }}>{redLesson.title}</b></span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: L.t2, lineHeight: 1.4, ...clamp2 }}>Củng cố cho chắc: <b style={{ color: L.t1 }}>{redLesson.title}</b></span>
                       </button>
                     )}
                   </div>
@@ -1443,7 +1447,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     <div style={{ fontSize: 12.5, fontWeight: 700, color: '#4338CA', marginBottom: 8 }}>🎯 Việc nên làm hôm nay</div>
                     {todo.map(l => (
                       <div key={l.id} onClick={() => openLesson(l)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', cursor: 'pointer' }}>
-                        <span style={{ fontSize: 13, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>Ôn <b>{l.title}</b></span>
+                        <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.4, marginRight: 8, ...clamp2 }}>Ôn <b>{l.title}</b></span>
                         <span style={{ fontSize: 12, color: '#4338CA', fontWeight: 700, flexShrink: 0 }}>còn {3 - skillMap[l.id]} phiên →</span>
                       </div>
                     ))}
@@ -1468,7 +1472,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: done ? L.green : locked ? L.t3 : L.t1 }}>{l.title}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: done ? L.green : locked ? L.t3 : L.t1 }}>{l.title}</div>
                           {seqLocked && !tierLocked && (
                             <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
                           )}
@@ -1542,7 +1546,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <button onClick={goBack} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 17, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeLesson.title}</div>
+                  <div style={{ fontWeight: 700, fontSize: 17, ...clamp2, lineHeight: 1.3 }}>{activeLesson.title}</div>
                 </div>
                 {/* Trạng thái hoàn thành */}
                 {completedIds.has(activeLesson.id)
@@ -2040,7 +2044,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                         <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #4338CA20, #EA580C20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🎸</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 800, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+                          <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.3, ...clamp2 }}>{song.title}</div>
                           <div style={{ fontSize: 12, color: L.t2, marginTop: 2 }}>
                             {song.tempo
                               ? <span>🥁 <span style={{ color: L.p1, fontWeight: 700 }}>{song.tempo} BPM</span></span>
@@ -2110,7 +2114,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             style={{ display: 'flex', alignItems: 'center', gap: 10, background: L.surface, borderRadius: 12, padding: '10px 12px', cursor: 'pointer', marginTop: 6 }}>
                             <span style={{ fontSize: 16 }}>🎸</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</div>
+                              <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.35, ...clamp2 }}>{s.title}</div>
                               <div style={{ fontSize: 11, color: L.t3 }}>{s.tempo ? `🥁 ${s.tempo} BPM` : 'Chưa đo tempo'}</div>
                             </div>
                           </div>

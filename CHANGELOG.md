@@ -2,6 +2,10 @@
 
 Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
+## 29/07/2026
+
+- **Hết cắt cụt tên khoá/tên bài trên điện thoại**: tên tiếng Việt dài hơn bề ngang máy bị cắt thành "Đệm Hát Trình …", học viên không đọc được mình đang học khoá nào. Sửa 13 chỗ trong `MobileStudentPortal` (danh sách "Tất cả khoá học", "Nền tảng còn thiếu", danh sách bài, header bài học, thẻ "Học ngay", "Học tiếp theo hành trình", "Việc tiếp theo", "Củng cố cho chắc", "Việc nên làm hôm nay", danh sách bài hát, popup chúc mừng) + header `ElearnLessonView`, `ChordStrumPlayer`, `NarratedSlides`, `ForcedVideo`: đổi từ cắt 1 dòng sang xuống **tối đa 2 dòng**. `FlowPlayer` giữ nguyên 1 dòng có chủ ý — quy tắc "mỗi slide 1 màn trọn vẹn, nút luôn hiển thị".
+
 ## 28/07/2026
 
 - **Nói chuyện để tạo bài tập**: bé nói "con muốn bài về khủng long" là ra bài luôn. Công cụ `tao_bai_tap` được khai báo cho Realtime qua `session.update` **từ client** (không sửa `realtime-token` — file repo để key `'***'`, deploy đè là phá hỏng hội thoại). Cô nói câu chờ trong lúc bài đang soạn nên không có khoảng lặng. Màn "Tập bài tập" giờ chỉ để gõ, bỏ hẳn mic Web Speech vì nó chết trong WKWebView.
