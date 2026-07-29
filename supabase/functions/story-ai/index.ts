@@ -467,6 +467,31 @@ If not ready: reply gently, suggest what could be added.`
     }
   }
 
+  // ============ ACTION: fix_data — one-time data repair (encoding + expired photos) ============
+  if (action === 'fix_data') {
+    const results: string[] = []
+
+    // Fix pen_name encoding corruption
+    const penFixes: Record<string, string> = {
+      'cddfb454-49a9-41a5-8004-d37487ac321f': 'Kh\u00e1nh',
+      'ea611a49-fbf8-4313-810c-a51435b257ee': 'Ho\u00e0ng',
+      '1d0ffefc-100b-4163-8f19-d02d5768327d': 'Ph\u00fac',
+    }
+    for (const [id, name] of Object.entries(penFixes)) {
+      const { error } = await db.from('stories').update({ pen_name: name }).eq('id', id)
+      results.push(error ? `FAIL pen_name ${id}: ${error.message}` : `OK pen_name ${id} -> ${name}`)
+    }
+
+    // Clear expired Replicate photos -> placeholder appears
+    const { count, error: photoErr } = await db.from('stories')
+      .update({ photos: null })
+      .eq('status', 'published')
+      .not('photos', 'is', null)
+    results.push(photoErr ? `FAIL photos: ${photoErr.message}` : `OK photos cleared for ${count ?? 0} published stories`)
+
+    return json({ action: 'fix_data', results })
+  }
+
   return json({ error: `Unknown action: ${action}` }, 400)
   } catch (e) {
     console.error('story-ai FATAL', e)
