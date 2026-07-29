@@ -1015,7 +1015,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
     {showPiano && (
       <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
-        <PianoJourney onClose={() => setShowPiano(false)} />
+        <PianoJourney onClose={() => setShowPiano(false)} studentName={me.display_name ?? me.full_name ?? undefined} />
       </div>
     )}
 

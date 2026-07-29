@@ -1,4 +1,4 @@
-// ── Trò chuyện 2 chiều với Cô Piano — OpenAI Realtime API qua WebRTC ──────────
+// ── Trò chuyện 2 chiều với Lyra — OpenAI Realtime API qua WebRTC ──────────
 //
 // PHỤC HỒI từ commit 1076ed5 (27/07). Bản này ĐÃ CHẠY MƯỢT rồi bị commit 0406b72
 // thay bằng SpeechRecognition — đó là lý do mic "không trò chuyện được".
@@ -39,7 +39,7 @@ const INDIGO = 'linear-gradient(135deg,#6366F1,#4F46E5)'
 const GREEN  = 'linear-gradient(135deg,#16A34A,#15803D)'
 const RED    = 'linear-gradient(135deg,#DC2626,#B91C1C)'
 
-// ── Công cụ Cô Piano được phép gọi ───────────────────────────────────────────
+// ── Công cụ Lyra được phép gọi ───────────────────────────────────────────
 // Khai báo TỪ CLIENT qua `session.update` chứ KHÔNG sửa edge function:
 // file realtime-token trong repo để key là '***', bản deploy mới có key thật
 // ⇒ deploy lại file đó là phá hỏng hội thoại. Đừng đụng vào nó.
@@ -61,14 +61,15 @@ const TOOL_TAO_BAI = {
   },
 }
 
-// Giọng Cô Piano. `realtime-token` đang đặt 'ash' (nghe ra nam) nhưng ĐỪNG sửa
+// Giọng Lyra. `realtime-token` đang đặt 'ash' (nghe ra nam) nhưng ĐỪNG sửa
 // file đó — key thật nằm trong bản đã deploy. Đổi ở đây, client ghi đè lúc kết nối.
 // Giọng nữ của Realtime API: coral, shimmer, sage, ballad. 'coral' ấm và trẻ,
 // hợp cô giáo dạy trẻ con nhất.
 const VOICE = 'coral'
 
 const INSTRUCTIONS =
-  'Bạn là Cô Piano, cô giáo dạy piano thân thiện cho trẻ 5–12 tuổi. Luôn nói tiếng Việt, ' +
+  'Bạn là Lyra — cô giáo dạy piano thân thiện cho trẻ 5–12 tuổi. Tên của bạn là Lyra, ' +
+  'nếu bé hỏi thì giới thiệu đúng tên đó. Luôn nói tiếng Việt, ' +
   'ấm áp, ngắn gọn, tối đa 2 câu, không giảng giải dài. ' +
   'Nhiệm vụ chính: hỏi bé hôm nay muốn tập bài gì, rồi GỌI công cụ tao_bai_tap với điều bé nói. ' +
   'Ngay sau khi gọi công cụ, nói một câu vui để bé chờ, ví dụ "Cô soạn bài cho con ngay đây!". ' +
@@ -148,7 +149,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
   // Rời màn hình → ngắt kết nối, nhả micro
   useEffect(() => () => teardown(), [teardown])
 
-  // ── Cô Piano gọi công cụ tạo bài tập ──
+  // ── Lyra gọi công cụ tạo bài tập ──
   const runToolCall = useCallback((callId: string, argsRaw: string) => {
     if (!callId || doneCalls.current.has(callId)) return
     doneCalls.current.add(callId)
@@ -232,7 +233,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        setErrorMsg('Con cần đăng nhập để trò chuyện với Cô Piano nhé.')
+        setErrorMsg('Con cần đăng nhập để trò chuyện với Lyra nhé.')
         go('error'); return
       }
       log('Đã đăng nhập')
@@ -249,7 +250,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
         audioEl = el
       }
       const out = audioEl
-      pc.ontrack = e => { log('Nhận tiếng Cô Piano'); out.srcObject = e.streams[0] }
+      pc.ontrack = e => { log('Nhận tiếng Lyra'); out.srcObject = e.streams[0] }
 
       // Micro → AI
       log('Xin quyền micro…')
@@ -326,7 +327,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
 
   // ── Mặt nút theo trạng thái ──
   const face: Record<TalkState, { icon: React.ReactNode; label: string; bg: string; shadow: string; scale: number; lc: string }> = {
-    idle:       { icon: <MicIcon />,            label: 'Chạm để nói với Cô Piano', bg: GOLD,   shadow: '0 8px 40px rgba(245,158,11,.3)',                                  scale: 1,    lc: C.dim  },
+    idle:       { icon: <MicIcon />,            label: 'Chạm để nói với Lyra', bg: GOLD,   shadow: '0 8px 40px rgba(245,158,11,.3)',                                  scale: 1,    lc: C.dim  },
     connecting: { icon: <Dots />,               label: 'Đang kết nối…',            bg: INDIGO, shadow: '0 8px 40px rgba(99,102,241,.35)',                                 scale: 1,    lc: C.dim  },
     ready:      { icon: <MicIcon active />,     label: 'Cô đang nghe — con nói đi', bg: GOLD,  shadow: '0 8px 36px rgba(217,119,6,.30)',                                  scale: 1.02, lc: C.text },
     listening:  { icon: <MicIcon active />,     label: 'Đang nghe con…',           bg: GOLD,   shadow: '0 8px 40px rgba(217,119,6,.35),0 0 90px rgba(217,119,6,.15)',   scale: 1.05, lc: C.text },
@@ -356,7 +357,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
       {/* Header — gọn lại khi đã có hội thoại để nhường chỗ cho bong bóng chat */}
       <div style={{ width:'100%',textAlign:'center',paddingTop:`calc(${SAFE_TOP} + ${hasChat ? 14 : 22}px)`,paddingBottom:hasChat ? 8 : 14,flexShrink:0,transition:'padding .3s ease' }}>
         <div style={{ fontSize:hasChat ? 24 : 34,lineHeight:1.1,marginBottom:2,transition:'font-size .3s ease' }}>🎹</div>
-        <div style={{ fontSize:hasChat ? 16 : 19,fontWeight:700,color:C.text,letterSpacing:'-.3px' }}>Cô Piano</div>
+        <div style={{ fontSize:hasChat ? 16 : 19,fontWeight:700,color:C.text,letterSpacing:'-.3px' }}>Lyra</div>
       </div>
 
       {/* Hội thoại — chưa có tin thì căn giữa lời mời, đỡ khoảng trống hoác */}
@@ -371,7 +372,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
           // textAlign:'left' là BẮT BUỘC — #root trong index.css đặt text-align:center
           // cho cả app, không sửa global được nên phải chặn tại bong bóng.
           <div key={i} style={{ alignSelf:m.role==='user'?'flex-end':'flex-start',maxWidth:'88%',background:m.role==='user'?C.bubbleUser:C.bubbleAsst,borderRadius:m.role==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px',padding:'12px 15px',border:`1px solid ${m.role==='user'?'#F0DCB4':C.border}`,boxShadow:'0 1px 3px rgba(0,0,0,.04)',overflowWrap:'break-word',textAlign:'left',flexShrink:0 }}>
-            <div style={{ fontSize:10,fontWeight:700,color:C.dim,marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px' }}>{m.role==='user'?'Con':'🎹 Cô Piano'}</div>
+            <div style={{ fontSize:10,fontWeight:700,color:C.dim,marginBottom:3,textTransform:'uppercase',letterSpacing:'.5px' }}>{m.role==='user'?'Con':'🎹 Lyra'}</div>
             <div style={{ fontSize:15,color:C.text,lineHeight:1.55 }}>{m.text}</div>
           </div>
         ))}

@@ -961,7 +961,7 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
           if (playing) { stopPlayback(); setWaitReady(false); return }
           setScore(null); startAll()
         }}
-        // Bước cuối: cả hai nút đều dẫn về Cô Piano để xin bài mới.
+        // Bước cuối: cả hai nút đều dẫn về Lyra để xin bài mới.
         // Trước đây chúng gọi onComplete() — ở bước cuối hàm này không làm gì cả,
         // nên bé tập xong là cụt đường.
         onSkip={() => { stopPlayback(); setWaitReady(false); detector.stop(); onBack() }}

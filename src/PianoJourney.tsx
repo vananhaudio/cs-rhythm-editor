@@ -1,7 +1,7 @@
-// Piano Journey — MỘT màn duy nhất: bé nói chuyện với Cô Piano, cô tự soạn bài.
+// Piano Journey — Home → nói chuyện với Lyra → tập bài.
 //
-// Luồng: TalkWithTeacher (WebRTC Realtime) → cô gọi công cụ tao_bai_tap
-//        → generateMission → LearningFlow.
+// Luồng: HomeScreen (theo HOME_SCREEN_SPEC.md) → TalkWithTeacher (WebRTC Realtime)
+//        → Lyra gọi công cụ tao_bai_tap → generateMission → LearningFlow.
 //
 // Bài tập đi qua 3 lớp: LUẬT (src/piano/rules.ts) → SINH (AI) → KIỂM (checkAndRepair).
 // Lớp KIỂM mới là thứ đảm bảo bé không nhận bài vượt bậc — luật viết trong prompt
@@ -14,10 +14,11 @@ import { useState, useRef, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
+import HomeScreen from './piano/HomeScreen'
 import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise } from './piano/rules'
 import type { Exercise, PianoLevel } from './piano/rules'
 
-type Stage = 'talk' | 'generating' | 'playing'
+type Stage = 'home' | 'talk' | 'generating' | 'playing'
 
 const AI_TIMEOUT_MS = 8000
 /** AI phạm nhiều hơn ngần này lỗi luật thì bắt sáng tác lại một lần. */
@@ -59,13 +60,17 @@ async function attempt(chuDe: string, level: PianoLevel, extra = '') {
   return { raw, exercise: checked.exercise, problems: checked.problems }
 }
 
-interface Props { onClose?: () => void }
+interface Props {
+  onClose?: () => void
+  /** Tên bé cho lời chào ở Home. Không có thì dùng mặc định của spec. */
+  studentName?: string
+}
 
-export default function PianoJourney({ onClose }: Props) {
-  const [stage, setStage]       = useState<Stage>('talk')
+export default function PianoJourney({ onClose, studentName }: Props) {
+  const [stage, setStage]       = useState<Stage>('home')
   const [exercise, setExercise] = useState<Exercise | null>(null)
 
-  const stageRef = useRef<Stage>('talk')
+  const stageRef = useRef<Stage>('home')
   const setStageSync = useCallback((s: Stage) => { stageRef.current = s; setStage(s) }, [])
 
   // ── Tạo bài tập: LUẬT → AI → KIỂM ──
@@ -98,14 +103,38 @@ export default function PianoJourney({ onClose }: Props) {
     setStageSync('talk')
   }, [setStageSync])
 
+  const backToHome = useCallback(() => {
+    setExercise(null)
+    setStageSync('home')
+  }, [setStageSync])
+
   if (stage === 'playing' && exercise) {
     return <LearningFlow exercise={exercise} onClose={onClose} onBack={backToTalk} />
   }
 
-  // Giữ màn hội thoại mounted khi 'generating' để tiếng cô không bị cắt giữa câu.
+  if (stage === 'home') {
+    return (
+      <HomeScreen
+        studentName={studentName}
+        // Chưa lưu tiến độ giữa các phiên, nên thẻ "Tiếp tục" hiện nội dung mặc
+        // định của spec; bấm vào thì Lyra soạn bài mới.
+        current={exercise ? { title: exercise.title, step: 1, totalSteps: 4 } : null}
+        onTalkToLyra={() => setStageSync('talk')}
+        onContinue={() => {
+          if (exercise) { setStageSync('playing'); return }
+          setStageSync('talk')
+        }}
+        // Spec không định nghĩa đích đến cho hamburger; đây là lối duy nhất ra
+        // khỏi tool nên tạm nối vào đó.
+        onOpenMenu={onClose}
+      />
+    )
+  }
+
+  // Giữ màn hội thoại mounted khi 'generating' để tiếng Lyra không bị cắt giữa câu.
   return (
     <TalkWithTeacher
-      onClose={onClose}
+      onClose={backToHome}
       onCreateMission={generateMission}
       busy={stage === 'generating'}
     />
