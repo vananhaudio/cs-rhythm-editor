@@ -114,23 +114,72 @@ export default function StoryLegacyLandingPage() {
       <section id="loi-ngo" className="band">
         <div className="wrap letter-wrap">
           <div className="eyebrow">Lời ngỏ</div>
-          <h2>Gửi bạn — người đang giữ một câu chuyện</h2>
+          <h2>Gửi bạn — người đang giữ một câu chuyện.</h2>
           <div className="letter">
+            <hr className="letter-sep" />
             <p>
-              Hơn hai mươi năm dạy đàn, điều tôi nhớ nhất không phải là những bản nhạc,
-              mà là những câu chuyện. Cậu học trò tập đàn để hát tặng mẹ. Người cha ngoài năm mươi
-              học lại từ đầu vì lời hứa thời trẻ. Cô bé rụt rè dần tự tin lên sau từng buổi tập.
+              Có những điều, không một cuốn sách nào dạy.
+            </p>
+            <p>Không phải vì sách không hay.</p>
+            <p>
+              Mà vì <b>chỉ những người đã đi qua mới có thể kể lại.</b>
+            </p>
+            <hr className="letter-sep" />
+            <p>
+              Có người mất mười năm mới đủ can đảm cầm cây đàn lên một lần nữa.
             </p>
             <p>
-              Những câu chuyện ấy quý lắm — nhưng nếu không ai kể lại, chúng sẽ lặng lẽ trôi đi.
-              Vì thế dự án này ra đời: một nơi để <b>1001 câu chuyện thật</b> của những người yêu guitar
-              được viết xuống, giữ gìn, và trao lại cho những người đến sau.
+              Có người dành cả tuổi trẻ để mải mê kiếm sống, luôn nghĩ rằng:{' '}
+              <i>"Đợi bớt bận rồi mình sẽ học."</i> Đến khi có thời gian, điều thay đổi đầu tiên lại là mái tóc.
             </p>
             <p>
-              Bạn không cần viết hay. Chỉ cần viết thật. Nếu câu chuyện của bạn giúp được
-              một người khác — dù chỉ một người — thì nó xứng đáng được kể lại.
+              Có người từng nghĩ mình không có năng khiếu. Chỉ vì kiên trì thêm một chút, họ mới biết mình đã nhầm.
             </p>
-            <div className="sign">Thầy Văn Anh</div>
+            <hr className="letter-sep" />
+            <p>
+              Ai rồi cũng có những bài học của riêng mình.
+            </p>
+            <p>
+              Điều đáng tiếc là{' '}
+              <b>rất nhiều bài học chỉ dừng lại ở một người.</b>
+            </p>
+            <p>
+              Nếu được kể lại, chúng có thể giúp một người khác bớt đi vài năm chần chừ.
+            </p>
+            <p>Giúp một người dám bắt đầu sớm hơn.</p>
+            <p>
+              Hay giúp một người không bỏ cuộc, chỉ vì biết rằng đã có ai đó từng đi qua con đường giống mình.
+            </p>
+            <hr className="letter-sep" />
+            <p>
+              Tôi tin rằng, giá trị lớn nhất của một câu chuyện không nằm ở người kể.
+            </p>
+            <p>
+              <b>Mà nằm ở người đọc.</b>
+            </p>
+            <p>Ở khoảnh khắc họ chợt nhận ra:</p>
+            <blockquote className="letter-quote">
+              <i>"Hóa ra, mình không phải người duy nhất."</i>
+            </blockquote>
+            <hr className="letter-sep" />
+            <p>
+              Đó là lý do <b>1001 Câu chuyện cùng Guitar</b> ra đời.
+            </p>
+            <p>
+              Tôi hy vọng nơi đây sẽ có thật nhiều câu chuyện được kể lại, để những người đến sau có thêm niềm tin, thêm động lực và đôi khi chỉ là một lời nhắc rằng:{' '}
+              <b>đừng chần chừ quá lâu với điều mình yêu.</b>
+            </p>
+            <hr className="letter-sep" />
+            <p>Bạn không cần viết hay.</p>
+            <p>Bạn cũng không cần có một câu chuyện thật đặc biệt.</p>
+            <p>
+              <b>Chỉ cần đó là câu chuyện thật của bạn.</b>
+            </p>
+            <p>
+              Biết đâu, điều rất bình thường với bạn hôm nay lại chính là điều mà một người khác đang cần để bước tiếp.
+            </p>
+            <hr className="letter-sep" />
+            <div className="sign"><b>Thầy Văn Anh</b></div>
           </div>
         </div>
       </section>
@@ -266,6 +315,9 @@ const CSS = `.tva-story .nav-back{text-decoration:none;color:var(--ink-muted);fo
 .tva-story .letter{margin-top:18px;}
 .tva-story .letter p{color:var(--ink-soft);font-size:16.5px;margin:0 0 16px;}
 .tva-story .letter .sign{font-family:Lora,Georgia,serif;font-style:italic;font-size:20px;font-weight:600;color:var(--ink);margin-top:22px;}
+.tva-story .letter .letter-sep{border:none;border-top:1px solid var(--line);margin:22px 0;width:60px;}
+.tva-story .letter .letter-quote{border-left:3px solid var(--indigo);margin:18px 0;padding:8px 0 8px 18px;}
+.tva-story .letter .letter-quote i{color:var(--ink-soft);font-size:16.5px;line-height:1.7;}
 .tva-story .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
 .tva-story .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;}
 .tva-story .band .card{background:var(--bg);}
