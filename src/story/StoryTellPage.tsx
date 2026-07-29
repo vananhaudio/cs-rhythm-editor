@@ -1137,7 +1137,7 @@ const CSS = `
   gap: 4px;
 }
 .sw-sidebar-btn {
-  width: 34px; height: 34px;
+  width: 32px; height: 32px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -1203,7 +1203,7 @@ const CSS = `
 .sw-header-right { flex-shrink: 0; }
 .sw-menu-wrap { position: relative; }
 .sw-menu-btn {
-  width: 34px; height: 34px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   border: none;
   background: transparent;
