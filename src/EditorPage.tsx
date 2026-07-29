@@ -264,6 +264,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
       const { data, error } = await supabase.functions.invoke('story-ai', {
         body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, title: editTitle, content: editContent },
       })
+      console.log('Save result:', { data, error, storyId: story.id })
       if (!error && data?.ok) {
         story.title = editTitle
         story.content = editContent
@@ -380,9 +381,10 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
           ) : (
             <h2 className="ed-detail-title">{story.title}</h2>
           )}
-          <button className="ed-edit-btn" onClick={() => { if (isEditing) handleSaveEdit(); else { setEditTitle(story.title); setEditContent(story.content); setIsEditing(true) } }} disabled={saving}>
+          <button className="ed-edit-btn" onClick={() => { if (isEditing) handleSaveEdit(); else { setEditTitle(story.title); setEditContent(story.content); setIsEditing(true); setStatusMsg('') } }} disabled={saving}>
             {isEditing ? (saving ? 'Đang lưu…' : '✓ Lưu') : '✏️ Sửa'}
           </button>
+          {statusMsg && <span className="ed-status-msg" style={statusMsg.includes('Lỗi') ? {color:'#C53030'} : {color:'#3C7A42'}}>{statusMsg}</span>}
           {isEditing && (
             <button className="ed-edit-btn ed-edit-cancel" onClick={() => setIsEditing(false)}>Hủy</button>
           )}
@@ -630,6 +632,7 @@ const CSS = `
 .ed-edit-btn:hover { background:#F5F2ED; }
 .ed-edit-btn:disabled { opacity:0.5; cursor:default; }
 .ed-edit-cancel { color:#8C8C8C; }
+.ed-status-msg { display:block; font-size:13px; margin-top:6px; }
 .ed-detail-meta { font-size:13px; color:#8C8C8C; display:flex; align-items:center; gap:6px; margin-bottom:20px; }
 .ed-detail-content { font-size:15px; line-height:1.8; color:#3A3A3A; }
 .ed-detail-content p { margin:0 0 1.2em; }
