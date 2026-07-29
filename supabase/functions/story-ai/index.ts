@@ -186,6 +186,14 @@ Deno.serve(async (req) => {
   // ── ADMIN: bypass auth for insert/management ──
   const ADMIN_KEY = 'st-1001-adm-7x9k2'
   if (body.admin_key === ADMIN_KEY) {
+    if (body.action === 'list_all') {
+      const { data: stories, error } = await db.from('stories')
+        .select('id,title,content,pen_name,status,published_at,created_at,conversation')
+        .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
+        .order('created_at', { ascending: false })
+      if (error) return json({ error: error.message }, 500)
+      return json({ stories })
+    }
     if (body.action === "admin_insert_story") {
       const { title, content, pen_name, location, topic, photos, story_number, image_base64 = null } = body
       if (!title || !content) return json({ error: 'Missing title or content' }, 400)

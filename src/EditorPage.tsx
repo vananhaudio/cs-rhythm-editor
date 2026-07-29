@@ -66,7 +66,7 @@ export default function EditorPage() {
   // Fetch all stories via edge function (bypasses RLS)
   useEffect(() => {
     supabase.functions.invoke('story-ai', {
-      body: { action: 'list_all' },
+      body: { action: 'list_all', admin_key: 'st-1001-adm-7x9k2' },
     }).then(({ data, error }) => {
       if (error || !data?.stories) { console.error('Editor fetch error:', error); setLoading(false); return }
       const mapped: Story[] = (data.stories || []).map((s: any) => ({
