@@ -123,6 +123,9 @@ export default function StoryHomePage() {
   const [latest, setLatest] = useState<Story[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  // Học viên vào từ app (đã đăng nhập) cần lối quay lại cổng học; khách vãng lai thì không hiện.
+  const [dangNhap, setDangNhap] = useState(false)
+  useEffect(() => { supabase.auth.getSession().then(({ data }) => setDangNhap(!!data.session)) }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -176,9 +179,11 @@ export default function StoryHomePage() {
         <div className="sh-nav-inner">
           <a href="/story" className="sh-brand">
             <img src="/logo-green.svg" alt="" className="sh-brand-mark" />
-            <span>1001 Câu chuyện cùng Guitar</span>
+            <span className="sh-brand-full">1001 Câu chuyện cùng Guitar</span>
+            <span className="sh-brand-short">1001 Câu chuyện</span>
           </a>
           <div className="sh-nav-actions">
+            {dangNhap && <a href="/me" className="sh-nav-back">← <span className="sh-nav-back-full">Về app</span><span className="sh-nav-back-short">App</span></a>}
             <a href="/story/write" className="sh-nav-cta">Kể chuyện</a>
           </div>
         </div>
@@ -301,8 +306,6 @@ export default function StoryHomePage() {
 
 // ── Styles ──
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
-
 .sh-root {
   min-height: 100dvh;
   background: #F2EEE7;
@@ -339,6 +342,15 @@ const CSS = `
   transition: background .15s;
 }
 .sh-nav-cta:hover { background: #352BA3; }
+.sh-nav-back {
+  text-decoration: none; color: #4338CA; background: transparent;
+  border: 1px solid #D3CEE8; border-radius: 8px;
+  font-size: 13px; font-weight: 600; padding: 8px 12px; white-space: nowrap;
+}
+.sh-nav-back:hover { background: #EEEBFB; }
+.sh-nav-back-short { display: none; }
+.sh-brand-short { display: none; }
+.sh-nav-cta, .sh-nav-back { white-space: nowrap; }
 
 /* Hero */
 .sh-hero { border-bottom: 1px solid #E4DED4; }
@@ -474,6 +486,14 @@ const CSS = `
 
 /* Responsive */
 @media (max-width: 640px) {
+  /* nav hẹp: rút "Về app" → "App", tiêu đề nhỏ lại để 2 nút vẫn đủ chỗ */
+  .sh-nav-back-full { display: none; }
+  .sh-nav-back-short { display: inline; }
+  .sh-nav-back, .sh-nav-cta { padding: 8px 10px; font-size: 12.5px; }
+  .sh-nav-actions { gap: 6px; flex-shrink: 0; }
+  .sh-brand { font-size: 13.5px; min-width: 0; }
+  .sh-brand-full { display: none; }
+  .sh-brand-short { display: inline; }
   .sh-hero-inner { padding: 36px 16px 32px; }
   .sh-hero-title { font-size: 30px; }
   .sh-motto { font-size: 15px; }
