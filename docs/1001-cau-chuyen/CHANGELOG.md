@@ -293,3 +293,56 @@
 -   Build pass. **Edge Function chưa deploy.** Cần thầy dán code
     mới qua Supabase Dashboard.
 -   **Chưa push main** (quy trình: thầy test → push).
+
+------------------------------------------------------------------------
+
+### 2026-07-29
+
+#### Added — Bước "Chuẩn bị xuất bản"
+
+-   `src/story/PublishPrep.tsx` (mới) — màn hình người kể xác nhận cách
+    hiển thị TRƯỚC khi gửi Ban biên tập. Component độc lập, TS strict,
+    responsive, có khối xem trước dòng tên như in trên tạp chí:
+    -   **Ảnh đại diện:** luôn lấy từ `edu_students.avatar_url`,
+        KHÔNG cho upload riêng. Chưa có ảnh → lời nhắc + nút
+        "Cập nhật hồ sơ" (mở `/me`).
+    -   **Tên hiển thị:** Họ và tên · Chỉ tên (từ cuối của họ tên) ·
+        Bút danh (có ô nhập + tuỳ chọn lưu làm mặc định) · Ẩn danh
+        ("Một người yêu guitar"). Chưa có hồ sơ học viên → mặc định
+        Bút danh.
+    -   **Lớp học:** lấy tự động qua RPC `my_groups()` →
+        `class_schedule.group_id`. Một lớp → checkbox hiển thị/ẩn;
+        nhiều lớp → chọn lớp hoặc "Không hiển thị lớp học".
+    -   **Xác nhận:** 2 ô bắt buộc (đồng ý biên tập câu chữ · đồng ý
+        xuất bản trên Tạp chí) — chưa tick đủ thì nút gửi bị khoá.
+-   `db/story_publish_prep.sql` (mới, **ĐÃ chạy trên Supabase** 2026-07-29,
+    smoke-test REST: tất cả cột mới đọc được, ghi vẫn bị RLS chặn):
+    thêm cột `stories.display_mode / author_name / author_avatar_url /
+    class_display / consent_edit / consent_publish / consent_at` và
+    `edu_students.default_pen_name / default_display_mode`.
+    Ảnh + tên được CHỐT (snapshot) lúc gửi vì anon không đọc được
+    `edu_students` (PII) — trang công khai cần dữ liệu này.
+
+#### Changed
+
+-   `StoryTellPage.tsx`: thêm phase `publish_prep`. Nút bản thảo
+    "✓ Đúng rồi" → **"Gửi Ban biên tập →"**, KHÔNG gửi ngay mà mở màn
+    Chuẩn bị xuất bản; nút cuối là **"Xác nhận gửi Ban biên tập"**.
+    Màn hoàn tất đổi thành "✓ Đã gửi Ban biên tập / Ban biên tập sẽ
+    đọc, biên tập và gửi lại bạn duyệt trước khi xuất bản."
+-   Luồng mới: Kể → Hoàn thành → Gửi Ban biên tập → **Chuẩn bị xuất
+    bản** → Xác nhận gửi → Chờ Ban biên tập.
+-   Mira KHÔNG hỏi avatar/tên/lớp/quyền riêng tư trong lúc kể — mọi
+    thông tin xuất bản chỉ xử lý ở bước này (đúng MIRA_CONSTITUTION).
+
+#### Status
+
+-   Build pass; đã xem trực quan màn hình mới trên dev server.
+-   `db/story_publish_prep.sql` đã chạy — sẵn sàng test luồng gửi thật.
+    **Chưa push main** (chờ thầy test).
+-   ⚠️ **Còn mâu thuẫn cần thầy quyết:** màn hoàn tất nói "Ban biên tập
+    sẽ gửi lại bạn duyệt trước khi xuất bản", nhưng action `review`
+    hiện vẫn TỰ ĐỘNG xuất bản (quyết định 11 cũ) và `EditorPage` mới
+    chỉ đọc, chưa có nút xuất bản tay. Chọn một: (a) bỏ auto-publish +
+    thêm nút xuất bản cho Ban biên tập, hay (b) giữ auto-publish và
+    sửa lại câu thông báo.

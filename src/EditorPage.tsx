@@ -13,6 +13,7 @@ interface Story {
   status: StoryStatus
   content: string
   conversation?: { role: string; text: string; at: string }[]
+  photos?: { url: string; caption?: string }[] | null
 }
 
 interface Category {
@@ -255,6 +256,92 @@ function SeriesView() {
 function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) {
   const hasConversation = story.conversation && story.conversation.length > 0
   const hasContent = story.content && story.content.trim().length > 0
+  const [showPublish, setShowPublish] = useState(false)
+  const [fluxPrompt, setFluxPrompt] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [useStudentPhoto, setUseStudentPhoto] = useState(false)
+  const [statusMsg, setStatusMsg] = useState('')
+  const [published, setPublished] = useState(false)
+
+  // Check if story has existing photos from student
+  const studentPhotos = (story as any).photos as { url: string; caption?: string }[] | null | undefined
+  const hasStudentPhoto = studentPhotos && studentPhotos.length > 0
+
+  const handleGenerate = async () => {
+    if (!fluxPrompt.trim()) return
+    setGenerating(true)
+    setStatusMsg('Đang tạo ảnh FLUX...')
+    try {
+      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate_image', prompt: fluxPrompt }),
+      })
+      const data = await res.json()
+      if (data.ok && data.url) {
+        setPreviewUrl(data.url)
+        setStatusMsg('Ảnh đã tạo xong! Nhấn Xuất bản để lưu.')
+      } else {
+        setStatusMsg('Lỗi: ' + (data.error || 'Không thể tạo ảnh'))
+      }
+    } catch (e: any) {
+      setStatusMsg('Lỗi: ' + e.message)
+    }
+    setGenerating(false)
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadedFile(file)
+    setUseStudentPhoto(false)
+    // Preview local file
+    const reader = new FileReader()
+    reader.onload = (ev) => setPreviewUrl(ev.target?.result as string)
+    reader.readAsDataURL(file)
+    setStatusMsg('Ảnh đã chọn. Nhấn Xuất bản để lưu.')
+  }
+
+  const handlePublish = async () => {
+    setPublishing(true)
+    setStatusMsg('Đang xuất bản...')
+    try {
+      const payload: any = { action: 'publish', story_id: story.id }
+
+      if (useStudentPhoto && hasStudentPhoto) {
+        payload.use_existing_photo = true
+      } else if (uploadedFile) {
+        const b64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.readAsDataURL(uploadedFile)
+        })
+        payload.image_base64 = b64
+      } else if (previewUrl && !previewUrl.startsWith('data:')) {
+        // Replicate URL - need to re-download in edge function via prompt
+        payload.prompt = fluxPrompt || 'Warm editorial photo of a person with acoustic guitar, natural lighting, photorealistic'
+      }
+
+      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setStatusMsg(`Đã xuất bản! Số thứ tự: #${data.story_number}`)
+        setPublished(true)
+      } else {
+        setStatusMsg('Lỗi: ' + (data.error || 'Không thể xuất bản'))
+      }
+    } catch (e: any) {
+      setStatusMsg('Lỗi: ' + e.message)
+    }
+    setPublishing(false)
+  }
 
   return (
     <aside className="ed-detail">
@@ -298,6 +385,86 @@ function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) 
 
         {!hasConversation && !hasContent && (
           <p className="ed-empty">Chưa có nội dung</p>
+        )}
+
+        {/* ── Xuất bản ── */}
+        {!published && story.status !== 'published' && (
+          <div className="ed-section">
+            <h3 className="ed-section-title">🚀 Xuất bản</h3>
+
+            {!showPublish ? (
+              <button className="ed-pub-btn" onClick={() => setShowPublish(true)}>
+                Mở công cụ xuất bản
+              </button>
+            ) : (
+              <>
+                {/* Ảnh của học sinh */}
+                {hasStudentPhoto && (
+                  <div className="ed-pub-block">
+                    <label className="ed-pub-label">
+                      <input type="checkbox" checked={useStudentPhoto} onChange={e => { setUseStudentPhoto(e.target.checked); if (e.target.checked) { setUploadedFile(null); setPreviewUrl(null) } }} />
+                      {' '}Dùng ảnh của học sinh
+                    </label>
+                    {useStudentPhoto && (
+                      <img src={studentPhotos![0].url} alt="" className="ed-pub-preview" />
+                    )}
+                  </div>
+                )}
+
+                {/* Upload ảnh */}
+                {!useStudentPhoto && (
+                  <div className="ed-pub-block">
+                    <label className="ed-pub-label">📤 Tải ảnh lên</label>
+                    <input type="file" accept="image/*" onChange={handleFileUpload} className="ed-pub-file" />
+                    {uploadedFile && <span className="ed-pub-filename">{uploadedFile.name}</span>}
+                  </div>
+                )}
+
+                {/* FLUX generate */}
+                {!useStudentPhoto && !uploadedFile && (
+                  <div className="ed-pub-block">
+                    <label className="ed-pub-label">🤖 AI tạo ảnh FLUX</label>
+                    <textarea
+                      className="ed-pub-textarea"
+                      rows={3}
+                      placeholder="Mô tả ảnh minh họa...&#10;VD: Một người đàn ông trung niên ngồi chơi guitar bên cửa sổ, ánh chiều ấm áp..."
+                      value={fluxPrompt}
+                      onChange={e => setFluxPrompt(e.target.value)}
+                    />
+                    <button className="ed-pub-btn-sm" onClick={handleGenerate} disabled={generating || !fluxPrompt.trim()}>
+                      {generating ? '⏳ Đang tạo...' : '🤖 Tạo ảnh'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Preview */}
+                {previewUrl && (
+                  <div className="ed-pub-block">
+                    <label className="ed-pub-label">🖼️ Xem trước</label>
+                    <img src={previewUrl} alt="Preview" className="ed-pub-preview" />
+                  </div>
+                )}
+
+                {/* Status */}
+                {statusMsg && <p className="ed-pub-status">{statusMsg}</p>}
+
+                {/* Publish button */}
+                <button
+                  className="ed-pub-btn ed-pub-btn-primary"
+                  onClick={handlePublish}
+                  disabled={publishing}
+                >
+                  {publishing ? '⏳ Đang xuất bản...' : '✅ Xuất bản'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {published && (
+          <div className="ed-section">
+            <p className="ed-pub-status" style={{color:'#3C7A42'}}>{statusMsg}</p>
+          </div>
         )}
       </div>
     </aside>
@@ -389,6 +556,24 @@ const CSS = `
 .ed-convo-msg { padding:14px 16px; background:#F9F8F6; border-radius:10px; border:1px solid #F0EDE6; }
 .ed-convo-msg p { font-size:15px; line-height:1.6; color:#3A3A3A; margin:0; }
 .ed-empty { color:#8C8C8C; font-style:italic; }
+
+/* Publish tools */
+.ed-pub-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border:1px solid #E5E0D8; border-radius:8px; background:#FFF; color:#5C5C5C; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:background .12s,border-color .12s; }
+.ed-pub-btn:hover { background:#F5F2ED; border-color:#D4C9B8; }
+.ed-pub-btn-primary { background:#4338CA; color:#FFF; border-color:#4338CA; font-weight:600; width:100%; justify-content:center; margin-top:12px; }
+.ed-pub-btn-primary:hover { background:#352BA3; border-color:#352BA3; }
+.ed-pub-btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+.ed-pub-btn-sm { padding:8px 14px; border:1px solid #E5E0D8; border-radius:6px; background:#FFF; color:#5C5C5C; font-size:13px; cursor:pointer; font-family:inherit; margin-top:8px; }
+.ed-pub-btn-sm:hover { background:#F5F2ED; }
+.ed-pub-btn-sm:disabled { opacity:.5; cursor:not-allowed; }
+.ed-pub-block { margin-bottom:16px; }
+.ed-pub-label { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:#5C5C5C; margin-bottom:8px; }
+.ed-pub-textarea { width:100%; padding:10px; border:1px solid #E5E0D8; border-radius:8px; font-size:13px; font-family:inherit; resize:vertical; background:#FAF9F7; box-sizing:border-box; }
+.ed-pub-textarea:focus { outline:none; border-color:#4338CA; }
+.ed-pub-file { font-size:13px; margin-top:4px; }
+.ed-pub-filename { display:block; font-size:12px; color:#8C8C8C; margin-top:4px; }
+.ed-pub-preview { width:100%; border-radius:10px; margin-top:8px; border:1px solid #E5E0D8; }
+.ed-pub-status { font-size:13px; color:#5C5C5C; margin:8px 0; padding:8px 12px; background:#F5F2ED; border-radius:6px; }
 
 /* Responsive */
 @media (max-width: 768px) {

@@ -187,6 +187,17 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
 15. **Hồ sơ thành viên chỉ 3 số:** 📖 Đã đóng góp · 📚 Trang trong
     sách · ❤️ Đã giúp hình thành. Không điểm/level/số lời mời/ranking.
     (12–15 Văn Anh ban hành 2026-07-27.)
+16. **Bước "Chuẩn bị xuất bản"** (Văn Anh chốt 2026-07-29): sau khi
+    người kể bấm "Gửi Ban biên tập", KHÔNG gửi ngay — hiện màn xác
+    nhận cách hiển thị: ảnh đại diện (LUÔN lấy từ hồ sơ học viên,
+    KHÔNG upload riêng) · tên hiển thị (Họ và tên / Chỉ tên / Bút
+    danh / Ẩn danh) · lớp học (tự động từ hệ thống, có thể ẩn) ·
+    2 xác nhận bắt buộc (đồng ý biên tập câu chữ, đồng ý xuất bản).
+    Nút cuối: "Xác nhận gửi Ban biên tập".
+    **Mira KHÔNG được hỏi các thông tin này trong lúc kể** — chỉ xử
+    lý ở bước này. Ưu tiên tái sử dụng dữ liệu hồ sơ sẵn có, không
+    tạo nguồn dữ liệu mới. Thiết kế theo tinh thần tạp chí, không
+    giống biểu mẫu hành chính. Chi tiết: `src/story/PublishPrep.tsx`.
 
 ------------------------------------------------------------------------
 
@@ -250,11 +261,22 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
 
 -   (chưa có)
 
+-   **Bước "Chuẩn bị xuất bản"** (2026-07-29): `src/story/PublishPrep.tsx`
+    + phase `publish_prep` trong StoryTellPage + `db/story_publish_prep.sql`.
+    Build pass, đã xem trực quan. **SQL ĐÃ chạy** (2026-07-29).
+
 ## Tiếp theo
 
+-   Thầy test luồng gửi thật (kể → bản thảo → Chuẩn bị xuất bản →
+    Xác nhận gửi) rồi push `main`.
 -   **Deploy lại Edge Function `story-ai`** với code MVP 01 mới
     (thầy dán Dashboard, Verify JWT = BẬT).
--   Test kể thật toàn bộ luồng MVP 01 → push main.
+-   Test kể thật toàn bộ luồng → push main.
+-   **Cần quyết:** màn hoàn tất hứa "Ban biên tập gửi lại bạn duyệt
+    trước khi xuất bản" nhưng action `review` vẫn tự động xuất bản
+    (quyết định 11) và EditorPage chưa có nút xuất bản tay. Chọn (a)
+    bỏ auto-publish + thêm nút xuất bản cho Ban biên tập, hoặc (b)
+    giữ auto-publish và sửa câu thông báo.
 
 ------------------------------------------------------------------------
 
