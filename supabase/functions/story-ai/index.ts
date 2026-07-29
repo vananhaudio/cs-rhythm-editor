@@ -183,6 +183,52 @@ Deno.serve(async (req) => {
   // Ping để kiểm tra deploy
   if (body.action === 'ping') return json({ ping: 'pong', ver: 'v3' })
 
+  // ── ADMIN: bypass auth for insert/management ──
+  const ADMIN_KEY = 'st-1001-adm-7x9k2'
+  if (body.admin_key === ADMIN_KEY) {
+    if (body.action === "admin_insert_story") {
+      const { title, content, pen_name, location, topic, photos, story_number, image_base64 = null } = body
+      if (!title || !content) return json({ error: 'Missing title or content' }, 400)
+      const { data: maxRow } = await db.from('stories')
+        .select('story_number').not('story_number', 'is', null)
+        .order('story_number', { ascending: false }).limit(1).maybeSingle()
+      const nextNum = story_number || (maxRow?.story_number ?? 0) + 1
+      const slug = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + String(nextNum)
+      const { data: story, error } = await db.from('stories').insert({
+        user_id: body.user_id || '00000000-0000-0000-0000-000000000001',
+        status: 'published',
+        title, content, pen_name: pen_name || '', location: location || '',
+        topic: topic || 'cay-dan-dau-tien',
+        story_number: nextNum, slug,
+        photos: photos || [],
+        published_at: new Date().toISOString(),
+        conversation: [],
+      }).select('id,story_number,slug,title').single()
+      if (error) return json({ error: `Insert failed: ${error.message}` }, 500)
+      return json({ ok: true, story })
+    }
+    if (body.action === 'admin_update_photo') {
+      const { story_id, image_base64: img } = body
+      if (!story_id || !img) return json({ error: 'Missing story_id or image_base64' }, 400)
+      try {
+        const { data: st } = await db.from('stories').select('story_number,slug').eq('id', story_id).maybeSingle()
+        if (!st) return json({ error: 'Story not found' }, 404)
+        const path = `stories/${st.story_number}-${st.slug}.jpg`
+        const imageBytes = Uint8Array.from(atob(img), c => c.charCodeAt(0))
+        const bucketName = 'story-photos'
+        const { data: buckets } = await db.storage.listBuckets()
+        const exists = buckets?.some((b: { name: string }) => b.name === bucketName)
+        if (!exists) await db.storage.createBucket(bucketName, { public: true })
+        const { error: uploadErr } = await db.storage.from(bucketName).upload(path, imageBytes, { contentType: 'image/jpeg', upsert: true })
+        if (uploadErr) return json({ error: `Upload: ${uploadErr.message}` }, 500)
+        const { data: { publicUrl } } = db.storage.from(bucketName).getPublicUrl(path)
+        await db.from('stories').update({ photos: [{ url: publicUrl, caption: '' }] }).eq('id', story_id)
+        return json({ ok: true, url: publicUrl })
+      } catch (e) { return json({ error: String(e) }, 500) }
+    }
+  }
+
   const user = await getUser(req)
   if (!user) return json({ error: 'Login required' }, 401)
 
