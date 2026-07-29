@@ -109,7 +109,6 @@ export default function StoryLegacyLandingPage() {
           </div>
           <div className="hero-art">
             <div className="story-card">
-              <div className="sc-topic">Cây đàn đầu tiên</div>
               <h3>Bố biết chơi guitar không?</h3>
               <p>
                 "Bố trả lời qua loa: 'Quên hết rồi.' Một tuần sau, tôi vô tình nghe tiếng đàn vọng ra từ căn phòng nhỏ. Hé cửa nhìn vào, tôi thấy bố đang loay hoay chỉnh từng dây đàn trên cây guitar cũ. Gương mặt ấy rạng rỡ như một cậu thanh niên mới biết đàn. Tôi chợt hiểu, người lớn không từ bỏ ước mơ. Họ chỉ gác nó lại vì cuộc sống."
