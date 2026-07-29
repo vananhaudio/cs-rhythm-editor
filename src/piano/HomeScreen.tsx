@@ -8,10 +8,15 @@
 //   (CLAUDE.md cũng quy định toàn app dùng inline style.)
 // - `#root` trong index.css có `text-align:center` cho cả app, nên mọi khối chữ
 //   ở đây phải tự đặt textAlign, đừng tin vào mặc định.
-// - Hình Lyra hiện là VÒNG TRÒN GRADIENT TẠM. Có asset thật thì thay đúng chỗ
-//   đánh dấu "THAY ASSET LYRA" bên dưới, kích thước giữ nguyên.
+// - HÌNH LYRA: thả file ảnh vào `public/lyra.png` là nó tự hiện, không phải sửa
+//   code. Chưa có file thì tự lùi về vòng tròn gradient tạm (bắt lỗi onError).
+//   Nên dùng ảnh vuông, nền trong suốt, tối thiểu 384×384 cho màn Retina.
 
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
+
+/** Thả ảnh vào public/lyra.png là tự dùng; không có thì hiện hình tạm. */
+const LYRA_IMG = '/lyra.png'
 
 const SAFE_TOP    = 'env(safe-area-inset-top, 0px)'
 const SAFE_BOTTOM = 'env(safe-area-inset-bottom, 0px)'
@@ -64,6 +69,7 @@ export default function HomeScreen({
   onOpenSongs,
   onOpenAchievements,
 }: HomeScreenProps) {
+  const [anhLyraOk, setAnhLyraOk] = useState(true)
   const step = current?.step ?? 2
   const total = current?.totalSteps ?? 4
   const title = current?.title ?? 'Chú Chim Non'
@@ -115,15 +121,23 @@ export default function HomeScreen({
               <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '-.5px', marginBottom: 4 }}>Lyra</div>
               <div style={{ fontSize: 13.5, color: C.dim, lineHeight: 1.45 }}>Chuyên tạo bài tập thực hành</div>
             </div>
-            {/* ═══ THAY ASSET LYRA Ở ĐÂY — giữ nguyên 92×92 ═══ */}
-            <div style={{
-              width: 92, height: 92, flexShrink: 0, borderRadius: '50%',
-              background: 'radial-gradient(circle at 32% 28%, #FFD9A8 0%, #F7A86B 45%, #E0708F 100%)',
-              boxShadow: '0 10px 24px rgba(224,112,143,.28)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
-            }}>
-              🎹
-            </div>
+            {/* Ảnh Lyra: có public/lyra.png thì dùng, không thì hình tạm */}
+            {anhLyraOk ? (
+              <img
+                src={LYRA_IMG} alt="Lyra"
+                onError={() => setAnhLyraOk(false)}
+                style={{ width: 92, height: 92, flexShrink: 0, objectFit: 'contain', display: 'block' }}
+              />
+            ) : (
+              <div style={{
+                width: 92, height: 92, flexShrink: 0, borderRadius: '50%',
+                background: 'radial-gradient(circle at 32% 28%, #FFD9A8 0%, #F7A86B 45%, #E0708F 100%)',
+                boxShadow: '0 10px 24px rgba(224,112,143,.28)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
+              }}>
+                🎹
+              </div>
+            )}
           </section>
 
           {/* ── LỜI CHÀO ── */}
