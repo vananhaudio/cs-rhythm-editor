@@ -15,10 +15,12 @@ import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
 import HomeScreen from './piano/HomeScreen'
+import SongLibrary from './piano/SongLibrary'
+import { rememberSong, recordScore } from './piano/library'
 import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise } from './piano/rules'
 import type { Exercise, PianoLevel } from './piano/rules'
 
-type Stage = 'home' | 'talk' | 'generating' | 'playing'
+type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
 
 const AI_TIMEOUT_MS = 8000
 /** AI phạm nhiều hơn ngần này lỗi luật thì bắt sáng tác lại một lần. */
@@ -69,6 +71,7 @@ interface Props {
 export default function PianoJourney({ onClose, studentName }: Props) {
   const [stage, setStage]       = useState<Stage>('home')
   const [exercise, setExercise] = useState<Exercise | null>(null)
+  const levelRef = useRef(currentLevelId())   // độ khó của bài đang mở, dùng khi ghi điểm
 
   const stageRef = useRef<Stage>('home')
   const setStageSync = useCallback((s: Stage) => { stageRef.current = s; setStage(s) }, [])
@@ -93,7 +96,9 @@ export default function PianoJourney({ onClose, studentName }: Props) {
 
     if (import.meta.env.DEV && problems.length) console.warn('[luật] AI phạm:', problems)
 
-    rememberExercise(ex)      // để lần sau AI tránh soạn trùng
+    rememberExercise(ex)                       // để lần sau AI tránh soạn trùng
+    levelRef.current = level.id
+    rememberSong(ex, level.id, Date.now())     // vào "Bài hát của con"
     setExercise(ex)
     setStageSync('playing')
   }, [setStageSync])
@@ -109,7 +114,26 @@ export default function PianoJourney({ onClose, studentName }: Props) {
   }, [setStageSync])
 
   if (stage === 'playing' && exercise) {
-    return <LearningFlow exercise={exercise} onClose={onClose} onBack={backToTalk} />
+    return (
+      <LearningFlow
+        exercise={exercise} onClose={onClose} onBack={backToTalk}
+        onScore={(hit, total) => recordScore(exercise, levelRef.current, hit, total, Date.now())}
+      />
+    )
+  }
+
+  if (stage === 'library') {
+    return (
+      <SongLibrary
+        onBack={backToHome}
+        onAskLyra={() => setStageSync('talk')}
+        onPlay={song => {
+          levelRef.current = song.levelId
+          setExercise(song.exercise)
+          setStageSync('playing')
+        }}
+      />
+    )
   }
 
   if (stage === 'home') {
@@ -126,6 +150,7 @@ export default function PianoJourney({ onClose, studentName }: Props) {
         }}
         // Spec không định nghĩa đích đến cho hamburger; đây là lối duy nhất ra
         // khỏi tool nên tạm nối vào đó.
+        onOpenSongs={() => setStageSync('library')}
         onOpenMenu={onClose}
       />
     )

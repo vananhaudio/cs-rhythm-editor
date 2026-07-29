@@ -18,6 +18,8 @@ interface StepComponentProps {
   noteItems: NoteItem[]
   onComplete: () => void
   onBack: () => void
+  /** Báo điểm ra ngoài để lưu vào "Bài hát của con" */
+  onScore?: (hit: number, total: number) => void
 }
 
 interface StepDefinition {
@@ -274,13 +276,15 @@ interface Props {
   exercise: Exercise
   onBack: () => void
   onClose?: () => void
+  /** Báo điểm mỗi lần bé chơi xong một bước có chấm điểm */
+  onScore?: (hit: number, total: number) => void
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ORCHESTRATOR
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export default function LearningFlow({ exercise, onBack, onClose }: Props) {
+export default function LearningFlow({ exercise, onBack, onClose, onScore }: Props) {
   const [stepIdx, setStepIdx] = useState(0)
   const [completed, setCompleted] = useState<Set<number>>(new Set([0])) // step 0 auto-unlocked
   const noteItems = useMemo(() => exerciseToNoteItems(exercise), [exercise])
@@ -404,6 +408,7 @@ export default function LearningFlow({ exercise, onBack, onClose }: Props) {
           noteItems={noteItems}
           onComplete={handleComplete}
           onBack={onBack}
+          onScore={onScore}
         />
       </div>
     </div>
@@ -624,7 +629,7 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
 // STEP 3 — CHƠI THEO NHỊP
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
+function StepRhythm({ exercise, noteItems, onComplete, onScore }: StepComponentProps) {
   const [playing, setPlaying] = useState(false)
   const [cursor, setCursor] = useState(-1)
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -720,6 +725,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         const hit = results.filter(r => r === 'correct').length
         setScore({ hit, total: results.length })
         playResultSound(starsOf(hit, results.length))   // nghe cũng biết kết quả
+        onScore?.(hit, results.length)                  // lưu vào thư viện bài hát
         if (hit / results.length >= 0.5) setTimeout(onComplete, 1500)
         return
       }
@@ -822,7 +828,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
 // STEP 4 — BIỂU DIỄN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
+function StepPerform({ exercise, noteItems, onBack, onScore }: StepComponentProps) {
   const [playing, setPlaying] = useState(false)
   const [cursor, setCursor] = useState(-1)
   const [countdown, setCountdown] = useState<number | null>(null)
@@ -903,6 +909,7 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
         const hit = results.filter(r => r === 'correct').length
         setScore({ hit, total: results.length })
         playResultSound(starsOf(hit, results.length))   // nghe cũng biết kết quả
+        onScore?.(hit, results.length)                  // lưu vào thư viện bài hát
         return
       }
       if (i > 0) results.push(hitRef.current ? 'correct' : 'wrong')
