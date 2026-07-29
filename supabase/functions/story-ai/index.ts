@@ -188,11 +188,18 @@ Deno.serve(async (req) => {
   if (body.admin_key === ADMIN_KEY) {
     if (body.action === 'list_all') {
       const { data: stories, error } = await db.from('stories')
-        .select('id,title,content,pen_name,status,published_at,created_at,conversation')
+        .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation')
         .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
         .order('created_at', { ascending: false })
       if (error) return json({ error: error.message }, 500)
-      return json({ stories })
+      const userIds = [...new Set((stories || []).map(s => s.user_id).filter(Boolean))]
+      const userMap: Record<string, string> = {}
+      if (userIds.length > 0) {
+        const { data: users } = await db.auth.admin.listUsers({ perPage: userIds.length })
+        if (users?.users) for (const u of users.users) userMap[u.id] = u.user_metadata?.name || u.email?.split('@')[0] || u.email || ''
+      }
+      const enriched = (stories || []).map(s => ({ ...s, pen_name: s.pen_name || userMap[s.user_id] || '' }))
+      return json({ stories: enriched })
     }
     if (body.action === 'admin_update_story') {
       const { story_id, title, content } = body
@@ -256,11 +263,28 @@ Deno.serve(async (req) => {
   // ============ ACTION: list_all — ban biên tập (bypass RLS) ============
   if (action === 'list_all') {
     const { data: stories, error } = await db.from('stories')
-      .select('id,title,content,pen_name,status,published_at,created_at,conversation')
+      .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation')
       .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
       .order('created_at', { ascending: false })
     if (error) return json({ error: error.message }, 500)
-    return json({ stories })
+    
+    // Lấy tên user từ auth nếu pen_name trống
+    const userIds = [...new Set((stories || []).map(s => s.user_id).filter(Boolean))]
+    const userMap: Record<string, string> = {}
+    if (userIds.length > 0) {
+      const { data: users } = await db.auth.admin.listUsers({ perPage: userIds.length })
+      if (users?.users) {
+        for (const u of users.users) {
+          userMap[u.id] = u.user_metadata?.name || u.email?.split('@')[0] || u.email || ''
+        }
+      }
+    }
+    
+    const enriched = (stories || []).map(s => ({
+      ...s,
+      pen_name: s.pen_name || userMap[s.user_id] || '',
+    }))
+    return json({ stories: enriched })
   }
 
   // ============ ACTION: CHAT ============
