@@ -8,15 +8,16 @@
 //   (CLAUDE.md cũng quy định toàn app dùng inline style.)
 // - `#root` trong index.css có `text-align:center` cho cả app, nên mọi khối chữ
 //   ở đây phải tự đặt textAlign, đừng tin vào mặc định.
-// - HÌNH LYRA: thả file ảnh vào `public/lyra.png` là nó tự hiện, không phải sửa
-//   code. Chưa có file thì tự lùi về vòng tròn gradient tạm (bắt lỗi onError).
-//   Nên dùng ảnh vuông, nền trong suốt, tối thiểu 384×384 cho màn Retina.
+// - HÌNH LYRA: mặc định dùng public/lyra.svg (vẽ tay, ~4KB, nét ở mọi cỡ). Có
+//   bản render đẹp hơn thì thả public/lyra.png — tự được ưu tiên, không sửa code.
+//   Ảnh nên vuông, nền trong suốt, tối thiểu 384×384 cho màn Retina.
 
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 
-/** Thả ảnh vào public/lyra.png là tự dùng; không có thì hiện hình tạm. */
-const LYRA_IMG = '/lyra.png'
+/** Thứ tự ưu tiên hình Lyra: bản render thật → hình SVG vẽ tay → vòng tròn tạm.
+ *  Thả public/lyra.png vào là nó tự lên đầu, không phải sửa dòng code nào. */
+const LYRA_SRCS = ['/lyra.png', '/lyra.svg']
 
 const SAFE_TOP    = 'env(safe-area-inset-top, 0px)'
 const SAFE_BOTTOM = 'env(safe-area-inset-bottom, 0px)'
@@ -69,7 +70,7 @@ export default function HomeScreen({
   onOpenSongs,
   onOpenAchievements,
 }: HomeScreenProps) {
-  const [anhLyraOk, setAnhLyraOk] = useState(true)
+  const [srcIdx, setSrcIdx] = useState(0)   // trượt dần qua LYRA_SRCS khi ảnh lỗi
   const step = current?.step ?? 2
   const total = current?.totalSteps ?? 4
   const title = current?.title ?? 'Chú Chim Non'
@@ -122,11 +123,17 @@ export default function HomeScreen({
               <div style={{ fontSize: 13.5, color: C.dim, lineHeight: 1.45 }}>Chuyên tạo bài tập thực hành</div>
             </div>
             {/* Ảnh Lyra: có public/lyra.png thì dùng, không thì hình tạm */}
-            {anhLyraOk ? (
+            {srcIdx < LYRA_SRCS.length ? (
               <img
-                src={LYRA_IMG} alt="Lyra"
-                onError={() => setAnhLyraOk(false)}
-                style={{ width: 92, height: 92, flexShrink: 0, objectFit: 'contain', display: 'block' }}
+                src={LYRA_SRCS[srcIdx]} alt="Lyra"
+                onError={() => setSrcIdx(i => i + 1)}
+                style={{
+                  width: 92, height: 92, flexShrink: 0, display: 'block',
+                  // Ảnh render có nền kem đặc; bo tròn để thành huy hiệu tròn chứ
+                  // không phải miếng dán vuông trên nền gradient của thẻ hero.
+                  objectFit: 'cover', borderRadius: '50%',
+                  boxShadow: '0 8px 20px rgba(224,112,143,.26)',
+                }}
               />
             ) : (
               <div style={{
