@@ -401,8 +401,10 @@
     `webkitSpeechRecognition` đi qua framework Speech của Apple.
 -   Sửa: thêm `NSSpeechRecognitionUsageDescription` vào
     `ios/App/App/Info.plist` (đã `plutil -lint` OK).
--   ⚠️ **CẦN BUILD LẠI XCODE + UPLOAD TESTFLIGHT** — đổi vỏ native nên
-    cơ chế "deploy web là app tự cập nhật" KHÔNG đủ.
+-   ⚠️ **CẦN BUILD LẠI XCODE + GỬI DUYỆT BẢN MỚI LÊN APP STORE** — đổi
+    vỏ native nên cơ chế "deploy web là app tự cập nhật" KHÔNG đủ.
+    (App đã phát hành công khai trên App Store; TestFlight chỉ là bước
+    thử trước khi gửi duyệt, không bắt buộc.)
 -   Lưu ý: kể cả sau khi sửa, lần đầu iOS VẪN hỏi một lần "cho phép
     nhận diện giọng nói" — đây là quyền khác với micro, hỏi một lần
     rồi thôi. App vào /story bằng `window.location.href = '/story'`

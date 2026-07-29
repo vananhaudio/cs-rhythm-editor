@@ -78,13 +78,14 @@ Màn đầu của Piano Journey là **hội thoại 2 chiều với Cô Piano** 
 - Tool cần mic thì **render thẳng, KHÔNG iframe** (`getUserMedia` trong iframe của WKWebView hay bị chặn) — xem khuôn BMS/Piano Journey trong `openTool`.
 - Edge function `piano-stt` cần secret `OPENAI_API_KEY` (Whisper). Thiếu secret thì Tầng 2 trả 502 và app tự lùi về ô gõ.
 
-## App iOS (Capacitor) — đã lên TestFlight
+## App iOS (Capacitor) — ĐÃ PHÁT HÀNH TRÊN APP STORE
 - Vỏ Capacitor. `appId` `com.vananhaudio.guitar`, app name "TVA Guitar". Dự án iOS: `ios/App/App.xcworkspace`.
 - `capacitor.config.json`: `server.url = https://timming.vananhaudio.com` → app chỉ tải web live ⇒ **deploy web là app tự cập nhật**, KHÔNG cần build lại Xcode. Chỉ khi đổi vỏ native (icon/plugin) hay bỏ `server.url` mới phải build lại.
 - Podfile `platform :ios, '15.0'`. App target **Minimum Deployment iOS 15.0** (Capacitor 8 cần ≥15; trước để 14.0 gây lỗi compile).
 - Team: VAN ANH AUDIO COMPANY LIMITED (Team ID `S6ASX8GP62`). App Store Connect app id `6776205968`. Nhóm internal TestFlight: "Thầy Văn Anh v1".
-- Build TestFlight hết hạn ~90 ngày → tăng số **Build** trong Xcode (tab General), Archive, Upload lại. Học viên chỉ bấm Update trong app TestFlight (không cài lại).
-- Lên App Store công khai cần qua Guideline 4.2: thêm lớp native (push notification, offline cho công cụ lõi, điều hướng native, icon/splash). Icon hiện vẫn mặc định trắng.
+- **Cập nhật vỏ native** (đổi Info.plist/quyền/icon/plugin): tăng số **Build** (và Version nếu phát hành) trong Xcode → Archive → Upload → App Store Connect → gửi duyệt bản mới → học viên Update từ App Store. TestFlight chỉ là bước thử TRƯỚC khi gửi duyệt, không bắt buộc.
+- Thay đổi CHỈ ở web thì KHÔNG cần đụng Xcode (xem `server.url` ở trên).
+- (Cũ, đã qua: từng chỉ ở TestFlight và vướng Guideline 4.2 — nay đã phát hành công khai. Nhóm internal TestFlight "Thầy Văn Anh v1" vẫn dùng để thử bản mới.)
 
 ## Đang làm dở / cần làm
 - Theo dõi tiến độ thật (đánh dấu hoàn thành bài) — đã có `edu_lesson_progress` + nút "✓ Xong"/XP trong `MobileStudentPortal`.
