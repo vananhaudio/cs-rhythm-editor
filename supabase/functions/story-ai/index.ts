@@ -111,7 +111,7 @@ const WRITE_SYSTEM = `You are an editor. From the storyteller's words below, wri
 Return ONLY this exact JSON, nothing else:
 {"title":"Title in Vietnamese","topic":"topic-slug","content":"Full article in Vietnamese"}
 
-10 valid topics: cay-dan-dau-tien, bai-hat-thay-doi-toi, guitar-va-tuoi-tho, vuot-qua-kho-khan, guitar-trong-gia-dinh, nguoi-thay-dau-tien, dau-tay-va-chai-san, lan-dau-dan-truoc-moi-nguoi, bo-do-roi-quay-lai, cay-dan-va-nguoi-than`
+10 valid topics: dam-bat-dau, khong-bo-cuoc, theo-duoi-dam-me, tin-vao-ban-than, chua-lanh, yeu-thuong, biet-on, ket-noi, cho-di, can-bang-cuoc-song`
 
 const REVISE_SYSTEM = `You are an editor. You wrote a draft from the user's story. Now they want changes.
 

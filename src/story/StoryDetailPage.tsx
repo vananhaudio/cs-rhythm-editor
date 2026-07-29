@@ -4,16 +4,16 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 const TOPIC_LABELS: Record<string, string> = {
-  'cay-dan-dau-tien': 'Cây đàn đầu tiên',
-  'bai-hat-thay-doi-toi': 'Bài hát thay đổi tôi',
-  'guitar-va-tuoi-tho': 'Guitar và tuổi thơ',
-  'vuot-qua-kho-khan': 'Vượt qua khó khăn',
-  'guitar-trong-gia-dinh': 'Guitar trong gia đình',
-  'nguoi-thay-dau-tien': 'Người thầy đầu tiên',
-  'dau-tay-va-chai-san': 'Đau tay và chai sạn',
-  'lan-dau-dan-truoc-moi-nguoi': 'Lần đầu đàn trước mọi người',
-  'bo-do-roi-quay-lai': 'Bỏ dở rồi quay lại',
-  'cay-dan-va-nguoi-than': 'Cây đàn và người thân',
+  'dam-bat-dau': 'Dám bắt đầu',
+  'khong-bo-cuoc': 'Không bỏ cuộc',
+  'theo-duoi-dam-me': 'Theo đuổi đam mê',
+  'tin-vao-ban-than': 'Tin vào bản thân',
+  'chua-lanh': 'Chữa lành',
+  'yeu-thuong': 'Yêu thương',
+  'biet-on': 'Biết ơn',
+  'ket-noi': 'Kết nối',
+  'cho-di': 'Cho đi',
+  'can-bang-cuoc-song': 'Cân bằng cuộc sống',
 }
 
 interface StoryDetail {
@@ -169,13 +169,13 @@ export default function StoryDetailPage() {
           <div className="sd-taxonomy">
             {story.topic && TOPIC_LABELS[story.topic] && (
               <div className="sd-tax-group">
-                <span className="sd-tax-label">Chủ đề cũ</span>
+                <span className="sd-tax-label">For Change</span>
                 <a href={`/story/topic/${story.topic}`} className="sd-tag">{TOPIC_LABELS[story.topic]}</a>
               </div>
             )}
             {categories.length > 0 && (
               <div className="sd-tax-group">
-                <span className="sd-tax-label">Chủ đề</span>
+                <span className="sd-tax-label">For Change</span>
                 {categories.map(c => (
                   <a key={c.slug} href={`/story/topic/${c.slug}`} className="sd-tag">{c.name}</a>
                 ))}

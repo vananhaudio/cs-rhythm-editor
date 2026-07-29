@@ -22,16 +22,16 @@ interface Category {
 }
 
 const TOPIC_LABELS: Record<string, string> = {
-  'cay-dan-dau-tien': 'Cây đàn đầu tiên',
-  'bai-hat-thay-doi-toi': 'Bài hát thay đổi tôi',
-  'guitar-va-tuoi-tho': 'Guitar và tuổi thơ',
-  'vuot-qua-kho-khan': 'Vượt qua khó khăn',
-  'guitar-trong-gia-dinh': 'Guitar trong gia đình',
-  'nguoi-thay-dau-tien': 'Người thầy đầu tiên',
-  'dau-tay-va-chai-san': 'Đau tay và chai sạn',
-  'lan-dau-dan-truoc-moi-nguoi': 'Lần đầu đàn trước mọi người',
-  'bo-do-roi-quay-lai': 'Bỏ dở rồi quay lại',
-  'cay-dan-va-nguoi-than': 'Cây đàn và người thân',
+  'dam-bat-dau': 'Dám bắt đầu',
+  'khong-bo-cuoc': 'Không bỏ cuộc',
+  'theo-duoi-dam-me': 'Theo đuổi đam mê',
+  'tin-vao-ban-than': 'Tin vào bản thân',
+  'chua-lanh': 'Chữa lành',
+  'yeu-thuong': 'Yêu thương',
+  'biet-on': 'Biết ơn',
+  'ket-noi': 'Kết nối',
+  'cho-di': 'Cho đi',
+  'can-bang-cuoc-song': 'Cân bằng cuộc sống',
 }
 
 // ── Helpers ──
@@ -225,11 +225,12 @@ export default function StoryHomePage() {
           </div>
         </section>
 
-        {/* 📚 Categories */}
+        {/* 💡 For Change — from Supabase categories */}
         {categories.length > 0 && (
           <section className="sh-section">
             <div className="sh-section-inner">
-              <SectionHead icon="📚" title="Chủ đề" />
+              <SectionHead icon="💡" title="For Change" />
+              <p className="sh-section-desc">Sau khi đọc xong, Ban biên tập mong người đọc sẽ thay đổi điều gì?</p>
               <div className="sh-topics">
                 {categories.map(c => (
                   <a key={c.id} href={`/story/topic/${c.slug}`} className="sh-topic-chip">
@@ -241,11 +242,12 @@ export default function StoryHomePage() {
           </section>
         )}
 
-        {/* Old topics fallback (if categories table not yet created) */}
+        {/* 💡 For Change — fallback */}
         {categories.length === 0 && (
           <section className="sh-section">
             <div className="sh-section-inner">
-              <SectionHead icon="📚" title="Chủ đề" />
+              <SectionHead icon="💡" title="For Change" />
+              <p className="sh-section-desc">Sau khi đọc xong, Ban biên tập mong người đọc sẽ thay đổi điều gì?</p>
               <div className="sh-topics">
                 {Object.entries(TOPIC_LABELS).slice(0, 8).map(([slug, name]) => (
                   <a key={slug} href={`/story/topic/${slug}`} className="sh-topic-chip">
