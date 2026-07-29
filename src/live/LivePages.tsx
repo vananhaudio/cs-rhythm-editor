@@ -40,7 +40,7 @@ export default function LivePageView({ page, groups, onClose }: { page: LivePage
       {/* nội dung — cuộn được (đây là trang đọc, không phải slide) */}
       <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '16px 16px 32px' }}>
         {page === 'band' && <BandPage />}
-        {page === 'community' && <CommunityPage />}
+        {page === 'community' && <CommunityPage groups={groups} />}
         {page === 'festival' && <FestivalPage />}
         {page === 'classgroup' && <ClassGroupPage groups={groups} />}
       </div>
@@ -88,24 +88,31 @@ function BandPage() {
   )
 }
 
-// ── Cộng đồng Hành trình: placeholder ──
-function CommunityPage() {
+// ── Cộng đồng Hành trình: bình thường bấm nút ngoài là mở thẳng Facebook.
+//    Trang này chỉ hiện khi chưa lấy được link (mạng chậm) — nên vẫn để sẵn nút mở. ──
+function CommunityPage({ groups }: { groups: Grp[] }) {
+  const fb = groups.find(g => g.group_type === 'facebook' && g.facebook_url)
   return (
     <>
       <div style={card}>
         <div style={h2}>Ngôi nhà chung của học viên</div>
         <div style={p}>
-          Đây sẽ là nơi toàn bộ học viên trong Hành trình gặp nhau: khoe thành quả, hỏi bài,
-          rủ nhau luyện tập và tham gia các thử thách chung.
+          Đây là nơi toàn bộ học viên trong Hành trình gặp nhau: khoe thành quả, hỏi bài,
+          rủ nhau luyện tập và tham gia các hoạt động chung.
         </div>
+        {fb && (
+          <button onClick={() => openUrl(fb.facebook_url!)}
+            style={{ width: '100%', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#1877F2', color: '#fff', border: 'none', borderRadius: 12, padding: '13px 14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            📘 Mở cộng đồng Facebook
+          </button>
+        )}
       </div>
       <div style={{ ...card, textAlign: 'center', padding: '28px 20px' }}>
         <div style={{ fontSize: 34, marginBottom: 8 }}>🌱</div>
         <div style={{ fontSize: 15.5, fontWeight: 700, color: S.t1, marginBottom: 6 }}>Đang xây dựng</div>
         <div style={{ fontSize: 14, color: S.t2, lineHeight: 1.7 }}>
-          Sắp có: bảng tin · chia sẻ · thử thách · hoạt động chung.
-          Hiện cộng đồng đang sinh hoạt trên <b>nhóm Facebook</b> — nếu chưa thấy nhóm mở ra,
-          bạn nhắn thầy trong nhóm lớp để được thêm vào nhé.
+          Sắp có ngay trong app: bảng tin · chia sẻ · thử thách · hoạt động chung.
+          Hiện cộng đồng đang sinh hoạt trên <b>Facebook</b> — bấm nút phía trên để tham gia cùng mọi người.
         </div>
       </div>
     </>
