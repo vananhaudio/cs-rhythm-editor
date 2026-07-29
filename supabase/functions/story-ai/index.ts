@@ -186,8 +186,8 @@ Deno.serve(async (req) => {
   // ============ ACTION: list_all — ban biên tập (bypass RLS) ============
   if (body.action === 'list_all') {
     const { data: stories, error } = await db.from('stories')
-      .select('id,title,content,pen_name,status,published_at,created_at')
-      .in('status', ['submitted', 'pending_publish', 'user_review', 'published'])
+      .select('id,title,content,pen_name,status,published_at,created_at,conversation')
+      .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
       .order('created_at', { ascending: false })
     if (error) return json({ error: error.message }, 500)
     return json({ stories })

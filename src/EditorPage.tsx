@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
 type Tab = 'inbox' | 'categories' | 'series'
-type StoryStatus = 'submitted' | 'editing' | 'waiting_author' | 'published' | 'archived'
+type StoryStatus = 'telling' | 'drafting' | 'submitted' | 'editing' | 'published'
 
 interface Story {
   id: string
@@ -12,6 +12,7 @@ interface Story {
   submittedAt: string
   status: StoryStatus
   content: string
+  conversation?: { role: string; text: string; at: string }[]
 }
 
 interface Category {
@@ -23,19 +24,20 @@ interface Series {
 }
 
 const DB_STATUS_MAP: Record<string, StoryStatus> = {
+  telling: 'telling',
+  writing: 'telling',
+  user_review: 'drafting',
   submitted: 'submitted',
   pending_publish: 'editing',
-  user_review: 'waiting_author',
   published: 'published',
-  archived: 'archived',
 }
 
 const STATUS_LABELS: Record<StoryStatus, string> = {
+  telling: 'Đang kể',
+  drafting: 'Chờ tác giả duyệt',
   submitted: 'Chờ đọc',
   editing: 'Đang biên tập',
-  waiting_author: 'Chờ tác giả duyệt',
   published: 'Đã xuất bản',
-  archived: 'Lưu trữ',
 }
 
 function fmtDate(iso: string) {
@@ -46,11 +48,11 @@ function fmtDate(iso: string) {
 }
 
 const STATUS_FILTERS = [
+  { key: 'telling', label: '✍️ Đang kể' },
+  { key: 'drafting', label: '📝 Chờ tác giả duyệt' },
   { key: 'submitted', label: '📥 Chờ đọc' },
-  { key: 'editing', label: '📝 Đang biên tập' },
-  { key: 'waiting_author', label: '📨 Chờ tác giả duyệt' },
+  { key: 'editing', label: '📋 Đang biên tập' },
   { key: 'published', label: '🌱 Đã xuất bản' },
-  { key: 'archived', label: '📦 Lưu trữ' },
 ] as const
 
 // ══════════════════════════════════════════
@@ -72,7 +74,8 @@ export default function EditorPage() {
         title: s.title || 'Chưa có tiêu đề',
         author: s.pen_name || 'Ẩn danh',
         submittedAt: s.published_at || s.created_at || new Date().toISOString(),
-        status: DB_STATUS_MAP[s.status] || 'submitted',
+        status: DB_STATUS_MAP[s.status] || 'telling',
+        conversation: s.conversation || [],
         content: s.content || '',
       }))
       setStories(mapped)
@@ -264,9 +267,20 @@ function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) 
           <span>{fmtDate(story.submittedAt)}</span>
         </div>
         <div className="ed-detail-content">
-          {story.content.split('\n').map((p, i) => (
-            p.trim() ? <p key={i}>{p}</p> : <br key={i} />
-          ))}
+          {story.status === 'telling' && story.conversation ? (
+            story.conversation.filter(m => m.role === 'user').map((m, i) => (
+              <div key={i} className="ed-convo-msg">
+                <span className="ed-convo-role">🧑 Người kể:</span>
+                <p>{m.text}</p>
+              </div>
+            ))
+          ) : story.content ? (
+            story.content.split('\n').map((p, i) => (
+              p.trim() ? <p key={i}>{p}</p> : <br key={i} />
+            ))
+          ) : (
+            <p className="ed-empty">Chưa có nội dung</p>
+          )}
         </div>
       </div>
     </aside>
@@ -334,6 +348,9 @@ const CSS = `
 .ed-badge-submitted { background:#F0EDE6; color:#8B7355; } .ed-badge-submitted .ed-badge-dot { background:#A68A61; }
 .ed-badge-editing { background:#EDF2F7; color:#4A6FA5; } .ed-badge-editing .ed-badge-dot { background:#4A6FA5; }
 .ed-badge-waiting_author { background:#FDF2E9; color:#B7791F; } .ed-badge-waiting_author .ed-badge-dot { background:#B7791F; }
+.ed-badge-telling { background:#F0F7FF; color:#4A6FA5; } .ed-badge-telling .ed-badge-dot { background:#4A6FA5; }
+.ed-badge-drafting { background:#FDF2E9; color:#B7791F; } .ed-badge-drafting .ed-badge-dot { background:#B7791F; }
+
 .ed-badge-published { background:#EDF7EE; color:#3C7A42; } .ed-badge-published .ed-badge-dot { background:#3C7A42; }
 .ed-badge-archived { background:#F2F2F2; color:#8C8C8C; } .ed-badge-archived .ed-badge-dot { background:#8C8C8C; }
 
@@ -348,6 +365,10 @@ const CSS = `
 .ed-detail-content { font-size:15px; line-height:1.8; color:#3A3A3A; }
 .ed-detail-content p { margin:0 0 1.2em; }
 .ed-detail-content p:last-child { margin-bottom:0; }
+.ed-convo-msg { margin-bottom:16px; }
+.ed-convo-role { font-size:12px; font-weight:600; color:#8C8C8C; display:block; margin-bottom:4px; }
+.ed-convo-msg p { font-size:15px; line-height:1.6; color:#3A3A3A; margin:0; }
+.ed-empty { color:#8C8C8C; font-style:italic; }
 
 /* Responsive */
 @media (max-width: 768px) {
