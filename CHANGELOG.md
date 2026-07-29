@@ -4,6 +4,8 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 29/07/2026
 
+- **Thiết kế lại tab "Sống"** phục vụ chiến dịch 1001 Câu chuyện: bỏ dashboard (thống kê, bảng xếp hạng, quote, thẻ sự kiện) → còn **Band của tôi** (hero, trạng thái "chưa tham gia Band" + nút tìm hiểu) và 4 entry điều hướng: Cộng đồng Hành trình · 1001 Câu chuyện cùng Guitar (→ `/story`) · Đại hội Guitar · Nhóm lớp của tôi. Trang đích ở `src/live/LivePages.tsx` — nội dung tĩnh, không feed. Giữ hàng tài khoản (đổi hồ sơ / đăng xuất) vì đây là lối vào duy nhất trên điện thoại. Kiến trúc: Lớp = đơn vị đào tạo, Band = đơn vị cộng đồng lập sau các khoá nâng cao.
+
 - **Hết cắt cụt tên khoá/tên bài trên điện thoại**: tên tiếng Việt dài hơn bề ngang máy bị cắt thành "Đệm Hát Trình …", học viên không đọc được mình đang học khoá nào. Sửa 13 chỗ trong `MobileStudentPortal` (danh sách "Tất cả khoá học", "Nền tảng còn thiếu", danh sách bài, header bài học, thẻ "Học ngay", "Học tiếp theo hành trình", "Việc tiếp theo", "Củng cố cho chắc", "Việc nên làm hôm nay", danh sách bài hát, popup chúc mừng) + header `ElearnLessonView`, `ChordStrumPlayer`, `NarratedSlides`, `ForcedVideo`: đổi từ cắt 1 dòng sang xuống **tối đa 2 dòng**. `FlowPlayer` giữ nguyên 1 dòng có chủ ý — quy tắc "mỗi slide 1 màn trọn vẹn, nút luôn hiển thị".
 
 ## 28/07/2026

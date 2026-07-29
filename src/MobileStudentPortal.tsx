@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import FingerExercise from './FingerExercise'
@@ -16,6 +16,7 @@ import { parseStrumConfig, configToSong } from './StrumConfigEditor'
 import ElearnLessonView from './elearn/ElearnLessonView'
 import { missingPrereqs, tenNangLuc } from './hanhtrinh'
 import { NavIcon } from './navIcons'
+import LivePageView, { type LivePage } from './live/LivePages'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -225,9 +226,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [weekXP, setWeekXP]       = useState(0)
   const [lastWeekXP, setLastWeekXP] = useState(0)
   const [classRank, setClassRank] = useState<{ rank: number; total: number } | null>(null)
-  const [leaderboard, setLeaderboard] = useState<{ id: string; name: string; avatar: string | null; xp: number }[]>([])
-  const [showAllRank, setShowAllRank] = useState(false)   // bảng xếp hạng: rút gọn / xem thêm
+  // (Bảng xếp hạng đầy đủ đã gỡ khỏi tab Sống — chỉ còn HẠNG của mình hiện ở tab Học)
   const [communityGroups, setCommunityGroups] = useState<{ id: string; name: string; group_type: string; zalo_url: string | null; facebook_url: string | null }[]>([])
+  const [livePage, setLivePage] = useState<LivePage | null>(null)   // trang con của tab Sống
   const [practiceStats, setPracticeStats] = useState<{ streak: number; daysWeek: number; weekMin: number; weekDays: boolean[] }>({ streak: 0, daysWeek: 0, weekMin: 0, weekDays: [] })
 
   // ── Practice tracker ──
@@ -644,7 +645,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       const lb = ((data ?? []) as any[])
         .map(r => ({ id: r.student_id, name: clean(r.name), avatar: r.avatar_url ?? null, xp: Number(r.xp) || 0 }))
         .sort((a, b) => b.xp - a.xp)
-      setLeaderboard(lb)
       const myIdx = lb.findIndex(r => r.id === student.id)
       setClassRank({ rank: myIdx >= 0 ? myIdx + 1 : lb.length, total: Math.max(lb.length, 1) })
     })
@@ -1011,6 +1011,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
     {showBMS && (
       <SongBuilderPage embedded initial={bmsInit} onClose={() => setShowBMS(false)} />
+    )}
+
+    {/* Trang con của tab Sống (Band · Cộng đồng · Đại hội · Nhóm lớp) */}
+    {livePage && (
+      <LivePageView page={livePage} groups={communityGroups} onClose={() => setLivePage(null)} />
     )}
 
     {showPiano && (
@@ -2202,140 +2207,62 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         )}
 
         {/* ── SỐNG ────────────────────────────────────────────────────── */}
+        {/* ══ SỐNG ══ Lớp = đơn vị đào tạo · Band = đơn vị cộng đồng.
+            Mỗi mục là 1 entry điều hướng (không feed, không dashboard). ═══════ */}
         {tab === 'song' && (
-          <div style={{ padding: '52px 16px 16px' }}>
+          <div style={{ padding: '52px 16px 110px' }}>{/* chừa chỗ cho thanh điều hướng dưới */}
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Sống cùng âm nhạc</div>
             <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>Kết nối · Trải nghiệm · Truyền cảm hứng</div>
 
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: L.p1 }}>{completedIds.size}</div>
-                <div style={{ fontSize: 13, color: L.t2, marginTop: 4 }}>Bài đã học</div>
+            {/* 1. BAND CỦA TÔI — hero. Đa số học viên chưa có Band: hiện trạng thái + lối tìm hiểu.
+                Khi đã có Band, chỗ này sẽ đổi thành logo · tên · thành viên · shortcut vào Band. */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: '18px', boxShadow: L.shadow, marginBottom: 14 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>🎸 Band của tôi</div>
+              <div style={{ fontSize: 15, color: L.t1, fontWeight: 600 }}>Bạn chưa tham gia Band nào.</div>
+              <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.7, marginTop: 6 }}>
+                Sau khi hoàn thành các khoá nâng cao, bạn sẽ được tư vấn ghép Band phù hợp để cùng luyện tập,
+                biểu diễn và gắn bó lâu dài.
               </div>
-              <div style={{ background: L.surface, borderRadius: 16, padding: '16px', boxShadow: L.shadow, textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: L.a1 }}>{enrollments.length}</div>
-                <div style={{ fontSize: 13, color: L.t2, marginTop: 4 }}>Khoá học</div>
-              </div>
+              <button onClick={() => setLivePage('band')}
+                style={{ width: '100%', marginTop: 14, background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 14.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Tìm hiểu về Band
+              </button>
             </div>
 
-            {/* Bảng xếp hạng lớp */}
-            <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ fontWeight: 800, fontSize: 16 }}>🏆 Bảng xếp hạng lớp</div>
-                {classRank && <div style={{ fontSize: 13, color: L.t2 }}>Hạng bạn <b style={{ color: L.p1 }}>#{classRank.rank}</b>/{classRank.total}</div>}
-              </div>
-              {leaderboard.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '16px 0', color: L.t3, fontSize: 14 }}>Chưa có dữ liệu — học và luyện tập để ghi điểm nhé!</div>
-              ) : (() => {
-                const medal = (rank: number) => rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`
-                const Row = (r: { id: string; name: string; avatar: string | null; xp: number; rank: number }) => {
-                  const isMe = r.id === student.id
-                  return (
-                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 12, background: isMe ? L.p2 : 'transparent' }}>
-                      <div style={{ width: 30, textAlign: 'center', fontSize: r.rank <= 3 ? 18 : 14, fontWeight: 700, color: isMe ? L.p1 : L.t2, flexShrink: 0 }}>{medal(r.rank)}</div>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
-                        {r.avatar ? <img src={r.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : r.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0, fontWeight: isMe ? 700 : 500, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {r.name}{isMe && <span style={{ color: L.p1, fontWeight: 600 }}> (bạn)</span>}
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: L.a1, flexShrink: 0 }}>{r.xp.toLocaleString()} XP</div>
-                    </div>
-                  )
-                }
-                const LIMIT = 5
-                const ranked = leaderboard.map((r, i) => ({ ...r, rank: i + 1 }))
-                const shown = showAllRank ? ranked : ranked.slice(0, LIMIT)
-                const meInShown = shown.some(r => r.id === student.id)
-                const myIdx = leaderboard.findIndex(r => r.id === student.id)
-                const hidden = ranked.length - LIMIT
-                return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {shown.map(Row)}
-                    {!showAllRank && !meInShown && myIdx >= 0 && (
-                      <Fragment>
-                        <div style={{ textAlign: 'center', color: L.t3, fontSize: 15, lineHeight: 1, padding: '2px 0' }}>···</div>
-                        {Row({ ...leaderboard[myIdx], rank: myIdx + 1 })}
-                      </Fragment>
-                    )}
-                    {hidden > 0 && (
-                      <button onClick={() => setShowAllRank(v => !v)}
-                        style={{ marginTop: 8, background: 'transparent', border: `1px solid ${L.border}`, color: L.p1, borderRadius: 10, padding: '9px 0', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}>
-                        {showAllRank ? 'Thu gọn' : `Xem thêm ${hidden} bạn →`}
-                      </button>
-                    )}
-                  </div>
-                )
-              })()}
+            {/* 2–5. Các entry điều hướng — cùng kiểu nút, không preview */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {([
+                ['community',  '👥', 'Cộng đồng Hành trình'],
+                ['story',      '📖', '1001 Câu chuyện cùng Guitar'],
+                ['festival',   '🎸', 'Đại hội Guitar'],
+                ['classgroup', '💬', 'Nhóm lớp của tôi'],
+              ] as const).map(([key, icon, label]) => (
+                <button key={key}
+                  onClick={() => { if (key === 'story') window.location.href = '/story'; else setLivePage(key) }}
+                  style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 16, boxShadow: L.shadow, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>{icon}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: L.t1, lineHeight: 1.35 }}>{label}</span>
+                  <span style={{ color: L.t3, fontSize: 18, flexShrink: 0 }}>›</span>
+                </button>
+              ))}
             </div>
 
-            {/* Cộng đồng của bạn */}
-            <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, marginBottom: 16 }}>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 12 }}>🌱 Cộng đồng của bạn</div>
-              {(() => {
-                const fb = communityGroups.filter(g => g.group_type === 'facebook' && g.facebook_url)
-                const zl = communityGroups.filter(g => g.group_type !== 'facebook' && g.zalo_url)
-                const openUrl = (u: string) => { try { window.open(u, '_system') } catch { window.open(u, '_blank') } }
-                return (
-                  <>
-                    {fb.map(g => (
-                      <button key={g.id} onClick={() => openUrl(g.facebook_url!)}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: '#1877F2', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8 }}>
-                        <span style={{ fontSize: 18 }}>📘</span> Tham gia cộng đồng Facebook
-                      </button>
-                    ))}
-                    {zl.length > 0 ? (
-                      <>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, margin: '8px 0', letterSpacing: '.04em' }}>NHÓM ZALO CỦA BẠN</div>
-                        {zl.map(g => (
-                          <button key={g.id} onClick={() => openUrl(g.zalo_url!)}
-                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: '#E8F0FE', color: '#0068FF', border: '1px solid #C5DBFF', borderRadius: 12, padding: '12px 14px', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 8, textAlign: 'left' }}>
-                            <span style={{ fontSize: 18 }}>💬</span><span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span><span>›</span>
-                          </button>
-                        ))}
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.6, marginTop: fb.length ? 6 : 0 }}>
-                        Bạn chưa có nhóm Zalo riêng trên app. Nếu đang học lớp Zoom/Zalo với thầy, bấm link xác nhận thầy gửi trong nhóm Zalo của mình.
-                      </div>
-                    )}
-                  </>
-                )
-              })()}
-            </div>
-
-            {/* Sự kiện */}
-            <div style={{ background: L.surface, borderRadius: 18, padding: '28px 20px', boxShadow: L.shadow, textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Sự kiện & giao lưu</div>
-              <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.6 }}>Workshop, Open Mic và các buổi giao lưu học viên sẽ sớm xuất hiện ở đây.</div>
-            </div>
-
-            {/* Quote */}
-            <div style={{ background: L.p1, borderRadius: 20, padding: '20px 20px 24px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -20, right: -20, fontSize: 80, opacity: .08, lineHeight: 1 }}>"</div>
-              <div style={{ fontSize: 15, color: 'rgba(255,255,255,.85)', lineHeight: 1.8, fontStyle: 'italic' }}>
-                Bạn không cần phải giỏi ngay từ đầu. Nhưng bạn phải bắt đầu để trở nên giỏi.
-              </div>
-            </div>
-
-            {/* Profile card */}
-            <div style={{ background: L.surface, borderRadius: 18, padding: '16px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
+            {/* Tài khoản — lối vào duy nhất để đổi hồ sơ / đăng xuất trên điện thoại, giữ gọn 1 hàng */}
+            <div style={{ background: L.surface, borderRadius: 16, padding: '12px 14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, marginTop: 22 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
                 {me.avatar_url
                   ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : name.charAt(0).toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                <div style={{ fontSize: 13, color: L.t2 }}>{LEVEL_VI[me.level ?? ''] ?? 'Học viên'}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.35, ...clamp2 }}>{name}</div>
+                <div style={{ fontSize: 12.5, color: L.t2 }}>{LEVEL_VI[me.level ?? ''] ?? 'Học viên'}</div>
               </div>
-              <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 38, height: 38, fontSize: 17, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
-              <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 14px', color: L.t2, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
+              <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 12px', color: L.t2, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                 Đăng xuất
               </button>
             </div>
-            <div style={{ fontSize: 12, color: L.t3, textAlign: 'center', marginTop: 10 }}>Bấm ⚙️ để đổi tên và ảnh đại diện</div>
           </div>
         )}
       </div>
