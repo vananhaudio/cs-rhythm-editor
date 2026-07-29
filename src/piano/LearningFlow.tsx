@@ -62,6 +62,7 @@ function BottomBar({
   isPlaying, isDone, isCountingDown, countdownValue,
   replayLabel, speedLabel, showSpeed = true,
   skipLabel = 'Bỏ qua →', doneLabel = 'Tiếp tục →',
+  isWaitingReady = false,
 }: {
   onReplay: () => void
   onToggle: () => void
@@ -78,6 +79,8 @@ function BottomBar({
   skipLabel?: string
   /** Nút chính khi đã xong bước. Bước cuối đổi thành "Tập bài mới". */
   doneLabel?: string
+  /** Mic đã mở, đang CHỜ bé bấm "Sẵn sàng" rồi mới đếm ngược. */
+  isWaitingReady?: boolean
 }) {
   const showPlayBtn = !isDone && !isCountingDown
   return (
@@ -100,7 +103,22 @@ function BottomBar({
           <span style={{ fontSize: 16 }}>↺</span> {replayLabel}
         </button>
 
-        {isDone ? (
+        {isWaitingReady ? (
+          // Cửa "Sẵn sàng": mic đã mở nhưng CHƯA đếm ngược. Bản cũ mở mic xong là
+          // đếm luôn (3 nhịp × 700ms = 2,1s) — bé chưa kịp đặt tay lên phím.
+          <button onClick={onToggle} style={{
+            padding: '12px 12px', borderRadius: 16, border: 'none',
+            minWidth: 104, justifyContent: 'center',
+            background: C.green, color: '#fff',
+            fontSize: 15, fontWeight: 700,
+            fontFamily: 'inherit', cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(16,185,129,.3)',
+            display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+            animation: 'rd-breathe 1.6s ease-in-out infinite',
+          }}>
+            🙌 Sẵn sàng
+          </button>
+        ) : isDone ? (
           <button onClick={onSkip} style={{
             padding: '12px 16px', borderRadius: 16,
             border: 'none',
@@ -142,20 +160,22 @@ function BottomBar({
           </button>
         )}
 
-        {/* Speed chip — spaced away from Play */}
-        <button onClick={onSpeedCycle} style={{
-          marginLeft: 2,
-          padding: '7px 10px', height: 30, borderRadius: 8,
-          border: `1px solid ${C.border}`,
-          background: '#fff',
-          color: C.dim, fontSize: 11, fontWeight: 700,
-          fontFamily: 'inherit', cursor: 'pointer',
-          opacity: showSpeed ? 1 : 0.4,
-          pointerEvents: showSpeed ? 'auto' : 'none',
-          whiteSpace: 'nowrap',
-        }}>
-          {speedLabel}
-        </button>
+        {/* Nút tốc độ — ẨN HẲN khi bước không cho đổi. Bản cũ vẫn vẽ nó mờ mờ,
+            bấm không được mà vẫn ăn ~54px bề ngang; trên máy 360px điều đó đẩy
+            nút "Tập bài mới" ra sát mép, chỉ còn dư 1px. */}
+        {showSpeed && (
+          <button onClick={onSpeedCycle} style={{
+            marginLeft: 2,
+            padding: '7px 10px', height: 30, borderRadius: 8,
+            border: `1px solid ${C.border}`,
+            background: '#fff',
+            color: C.dim, fontSize: 11, fontWeight: 700,
+            fontFamily: 'inherit', cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}>
+            {speedLabel}
+          </button>
+        )}
       </div>
 
       {/* Skip — far right */}
@@ -169,7 +189,7 @@ function BottomBar({
       }}>
         {skipLabel}
       </button>
-      <style>{`@keyframes cd-pop{0%{opacity:0;transform:scale(1.8)}50%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}`}</style>
+      <style>{`@keyframes cd-pop{0%{opacity:0;transform:scale(1.8)}50%{opacity:1;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}@keyframes rd-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}`}</style>
     </div>
   )
 }
@@ -602,6 +622,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
   const [playing, setPlaying] = useState(false)
   const [cursor, setCursor] = useState(-1)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [waitReady, setWaitReady] = useState(false)
   const [done, setDone] = useState(false)
   const [score, setScore] = useState<{ hit: number; total: number } | null>(null)
   const [noteResults, setNoteResults] = useState<('correct' | 'wrong' | 'pending')[]>([])
@@ -626,13 +647,14 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
       const ok = await startMic()
       if (!ok) return
     }
-    setCountdown(3)
+    setWaitReady(true)      // chờ bé đặt tay lên phím rồi tự bấm
   }
 
   useEffect(() => {
     if (countdown === null) return
     if (countdown > 0) {
-      const t = setTimeout(() => setCountdown(c => c! - 1), 700)
+      // Đếm vào ĐÚNG tốc độ bài để bé bắt được nhịp, không phải 700ms cố định
+      const t = setTimeout(() => setCountdown(c => c! - 1), 60000 / bpm)
       return () => clearTimeout(t)
     }
     setCountdown(null)
@@ -761,18 +783,21 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
       <BottomBar
         onReplay={() => {
           stopPlayback(); setScore(null); setNoteResults([])
-          if (detector.listening) setCountdown(3)
+          if (detector.listening) setWaitReady(true)
           else startAll()
         }}
         onToggle={() => {
-          if (playing) { stopPlayback(); return }
+          // Bé bấm "Sẵn sàng" → giờ mới đếm ngược
+          if (waitReady) { setWaitReady(false); setCountdown(3); return }
+          if (playing) { stopPlayback(); setWaitReady(false); return }
           setScore(null); setNoteResults([])
           startAll()
         }}
-        onSkip={() => { stopPlayback(); detector.stop(); onComplete() }}
+        onSkip={() => { stopPlayback(); setWaitReady(false); detector.stop(); onComplete() }}
         isPlaying={playing}
         isDone={done && !!score}
         replayLabel="Chơi lại"
+        isWaitingReady={waitReady}
         isCountingDown={countdown !== null}
         countdownValue={countdown ?? 0}
         speedLabel={SPEEDS[speedIdx].label}
@@ -790,6 +815,7 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
   const [playing, setPlaying] = useState(false)
   const [cursor, setCursor] = useState(-1)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [waitReady, setWaitReady] = useState(false)
   const [done, setDone] = useState(false)
   const [score, setScore] = useState<{ hit: number; total: number } | null>(null)
   const [errorMic, setErrorMic] = useState('')
@@ -812,13 +838,14 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
       const ok = await startMic()
       if (!ok) return
     }
-    setCountdown(3)
+    setWaitReady(true)      // chờ bé đặt tay lên phím rồi tự bấm
   }
 
   useEffect(() => {
     if (countdown === null) return
     if (countdown > 0) {
-      const t = setTimeout(() => setCountdown(c => c! - 1), 700)
+      // Đếm vào ĐÚNG tốc độ bài để bé bắt được nhịp, không phải 700ms cố định
+      const t = setTimeout(() => setCountdown(c => c! - 1), 60000 / bpm)
       return () => clearTimeout(t)
     }
     setCountdown(null)
@@ -909,22 +936,24 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
       <BottomBar
         onReplay={() => {
           stopPlayback(); setScore(null)
-          if (detector.listening) setCountdown(3)
+          if (detector.listening) setWaitReady(true)
           else startAll()
         }}
         onToggle={() => {
-          if (playing) { stopPlayback(); return }
+          if (waitReady) { setWaitReady(false); setCountdown(3); return }
+          if (playing) { stopPlayback(); setWaitReady(false); return }
           setScore(null); startAll()
         }}
         // Bước cuối: cả hai nút đều dẫn về Cô Piano để xin bài mới.
         // Trước đây chúng gọi onComplete() — ở bước cuối hàm này không làm gì cả,
         // nên bé tập xong là cụt đường.
-        onSkip={() => { stopPlayback(); detector.stop(); onBack() }}
+        onSkip={() => { stopPlayback(); setWaitReady(false); detector.stop(); onBack() }}
         skipLabel="Tập bài mới"
         doneLabel="🎹 Tập bài mới"
         isPlaying={playing}
         isDone={done && !!score}
         replayLabel="Chơi lại"
+        isWaitingReady={waitReady}
         isCountingDown={countdown !== null}
         countdownValue={countdown ?? 0}
         speedLabel="Vừa"
