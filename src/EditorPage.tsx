@@ -61,25 +61,23 @@ export default function EditorPage() {
   const [stories, setStories] = useState<Story[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch real stories from Supabase
+  // Fetch all stories via edge function (bypasses RLS)
   useEffect(() => {
-    supabase.from('stories')
-      .select('id,title,content,pen_name,status,published_at,created_at')
-      .in('status', ['submitted', 'pending_publish', 'user_review', 'published'])
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) { console.error('Editor fetch error:', error); setLoading(false); return }
-        const mapped: Story[] = (data || []).map((s: any) => ({
-          id: s.id,
-          title: s.title || 'Chưa có tiêu đề',
-          author: s.pen_name || 'Ẩn danh',
-          submittedAt: s.published_at || s.created_at || new Date().toISOString(),
-          status: DB_STATUS_MAP[s.status] || 'submitted',
-          content: s.content || '',
-        }))
-        setStories(mapped)
-        setLoading(false)
-      })
+    supabase.functions.invoke('story-ai', {
+      body: { action: 'list_all' },
+    }).then(({ data, error }) => {
+      if (error || !data?.stories) { console.error('Editor fetch error:', error); setLoading(false); return }
+      const mapped: Story[] = (data.stories || []).map((s: any) => ({
+        id: s.id,
+        title: s.title || 'Chưa có tiêu đề',
+        author: s.pen_name || 'Ẩn danh',
+        submittedAt: s.published_at || s.created_at || new Date().toISOString(),
+        status: DB_STATUS_MAP[s.status] || 'submitted',
+        content: s.content || '',
+      }))
+      setStories(mapped)
+      setLoading(false)
+    })
   }, [])
 
   const filtered = activeFilter
