@@ -2151,9 +2151,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                               <span style={{ fontSize: 11, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
                             </div>
                           )}
-                          <div style={{ width: 44, height: 44, borderRadius: 12, background: route.startsWith('/tuner') ? 'transparent' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10, overflow: 'hidden' }}>
+                          <div style={{ width: 44, height: 44, borderRadius: 12, background: (route.startsWith('/tuner') || route.startsWith('/piano-journey')) ? 'transparent' : L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 10, overflow: 'hidden' }}>
                             {route.startsWith('/tuner')
                               ? <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 44, height: 44, borderRadius: 12 }} />
+                              : route.startsWith('/piano-journey')
+                              ? <img src="/piano-journey.png" alt="Piano Journey" style={{ width: 44, height: 44, borderRadius: 12 }} />
                               : t.id === 'chord-seeing' ? <ChordDiagramIcon size={30} />
                               : t.icon}
                           </div>
