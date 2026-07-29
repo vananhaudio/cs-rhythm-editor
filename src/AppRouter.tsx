@@ -32,6 +32,7 @@ import StoryDetailPage from './story/StoryDetailPage'
 import StoryLegacyLandingPage from './story/StoryLegacyLandingPage'
 import StoryTellPage from './story/StoryTellPage'
 import StoryHomePage from './story/StoryHomePage'
+import TopicPage from './story/TopicPage'
 import EditorPage from './EditorPage'
 import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
@@ -158,6 +159,8 @@ export default function AppRouter() {
   if (path === '/story' || path === '/story/') return <StoryHomePage />   // 📖 Tạp chí
   if (path === '/story/write' || path === '/story/write/') return <StoryLegacyLandingPage />  // landing giới thiệu
   if (path === '/story/tell' || path === '/story/tell/') return <StoryTellPage />  // ✍️ Phòng viết (có Mira)
+  if (path.startsWith('/story/topic/')) return <TopicPage />   // Chủ đề
+  if (path.startsWith('/story/series/')) return <TopicPage />  // Series (reuse same layout)
   if (path.startsWith('/story/')) {
     return <StoryDetailPage />   // 📄 Trang đọc
   }

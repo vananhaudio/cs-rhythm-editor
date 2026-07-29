@@ -1,7 +1,5 @@
-// ── /story/home — PO1: Home "1001 Câu chuyện" ──
-// Magazine-style home. Read stories. Then — if you have one — tell yours.
-// No draft status. No "continue writing". No AI. No dashboard.
-// Design tokens đồng bộ với /story.
+// ── /story — Tạp chí "1001 Câu chuyện cùng Guitar" ──
+// Magazine layout with content blocks: Featured, Latest, Topics
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
@@ -14,6 +12,26 @@ interface Story {
   photos: { url: string; caption?: string }[] | null
   published_at: string
   topic: string | null
+  featured?: boolean
+}
+
+interface Category {
+  id: string
+  name: string
+  slug: string
+}
+
+const TOPIC_LABELS: Record<string, string> = {
+  'cay-dan-dau-tien': 'Cây đàn đầu tiên',
+  'bai-hat-thay-doi-toi': 'Bài hát thay đổi tôi',
+  'guitar-va-tuoi-tho': 'Guitar và tuổi thơ',
+  'vuot-qua-kho-khan': 'Vượt qua khó khăn',
+  'guitar-trong-gia-dinh': 'Guitar trong gia đình',
+  'nguoi-thay-dau-tien': 'Người thầy đầu tiên',
+  'dau-tay-va-chai-san': 'Đau tay và chai sạn',
+  'lan-dau-dan-truoc-moi-nguoi': 'Lần đầu đàn trước mọi người',
+  'bo-do-roi-quay-lai': 'Bỏ dở rồi quay lại',
+  'cay-dan-va-nguoi-than': 'Cây đàn và người thân',
 }
 
 // ── Helpers ──
@@ -30,139 +48,228 @@ function firstPhoto(photos: { url: string }[] | null): string | null {
   return photos[0]?.url ?? null
 }
 
+function StoryImg({ img }: { img: string | null }) {
+  if (!img) {
+    return (
+      <div className="sh-card-img-placeholder">
+        <span className="sh-card-img-icon">🎸</span>
+      </div>
+    )
+  }
+  return (
+    <img
+      src={img}
+      alt=""
+      className="sh-card-img"
+      loading="lazy"
+      onError={(e) => {
+        const el = e.currentTarget
+        el.style.display = 'none'
+        const wrap = el.parentElement
+        if (wrap) {
+          const ph = document.createElement('div')
+          ph.className = 'sh-card-img-placeholder'
+          const icon = document.createElement('span')
+          icon.className = 'sh-card-img-icon'
+          icon.textContent = '🎸'
+          ph.appendChild(icon)
+          wrap.appendChild(ph)
+        }
+      }}
+    />
+  )
+}
+
+// ── Story Card ──
+function StoryCard({ story }: { story: Story }) {
+  const img = firstPhoto(story.photos)
+  return (
+    <a href={`/story/${story.slug || story.id}`} className="sh-card">
+      <div className="sh-card-img-wrap">
+        <StoryImg img={img} />
+      </div>
+      <div className="sh-card-body">
+        {story.topic && TOPIC_LABELS[story.topic] && (
+          <span className="sh-card-topic">{TOPIC_LABELS[story.topic]}</span>
+        )}
+        <h3 className="sh-card-title">{story.title}</h3>
+        <div className="sh-card-meta">
+          <span className="sh-card-author">{story.pen_name || 'Ẩn danh'}</span>
+          <span className="sh-card-sep">·</span>
+          <span className="sh-card-date">{story.published_at ? fmtDate(story.published_at) : ''}</span>
+        </div>
+      </div>
+    </a>
+  )
+}
+
+// ── Section Header ──
+function SectionHead({ icon, title, href }: { icon: string; title: string; href?: string }) {
+  return (
+    <div className="sh-section-head">
+      <h2 className="sh-section-heading">
+        <span className="sh-section-icon">{icon}</span> {title}
+      </h2>
+      {href && (
+        <a href={href} className="sh-section-more">Xem tất cả →</a>
+      )}
+    </div>
+  )
+}
+
 // ── Component ──
 export default function StoryHomePage() {
-  const [publishedStories, setPublishedStories] = useState<Story[]>([])
+  const [featured, setFeatured] = useState<Story[]>([])
+  const [latest, setLatest] = useState<Story[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
 
-    supabase
-      .from('stories')
-      .select('id, title, slug, pen_name, photos, published_at, topic')
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        if (!cancelled) {
-          setPublishedStories((data as Story[]) || [])
-          setLoading(false)
-        }
-      })
+    Promise.all([
+      // Featured stories
+      supabase.from('stories')
+        .select('id, title, slug, pen_name, photos, published_at, topic, featured')
+        .eq('status', 'published').eq('featured', true)
+        .order('published_at', { ascending: false }).limit(5),
+      // Latest stories
+      supabase.from('stories')
+        .select('id, title, slug, pen_name, photos, published_at, topic, featured')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false }).limit(8),
+      // Categories (new table — graceful fallback if not exists)
+      supabase.from('categories').select('id, name, slug').order('name'),
+    ]).then(([featRes, latestRes, catRes]) => {
+      if (cancelled) return
+      setFeatured((featRes.data as Story[]) || [])
+      setLatest((latestRes.data as Story[]) || [])
+      setCategories((catRes.data as Category[]) || [])
+      setLoading(false)
+    }).catch(() => {
+      // Fallback: categories table may not exist yet
+      if (!cancelled) setLoading(false)
+    })
 
     return () => { cancelled = true }
   }, [])
 
-  // ── Render ──
+  if (loading) {
+    return (
+      <div className="sh-root">
+        <style>{CSS}</style>
+        <div className="sh-loading">Đang tải...</div>
+      </div>
+    )
+  }
+
+  // Deduplicate: featured stories excluded from latest
+  const featuredIds = new Set(featured.map(s => s.id))
+  const latestFiltered = latest.filter(s => !featuredIds.has(s.id))
+
   return (
     <div className="sh-root">
       <style>{CSS}</style>
 
-      {/* ── Nav ── */}
+      {/* Nav */}
       <nav className="sh-nav">
         <div className="sh-nav-inner">
-          <a href="/story/home" className="sh-brand">
+          <a href="/story" className="sh-brand">
             <img src="/logo-green.svg" alt="" className="sh-brand-mark" />
             <span>1001 Câu chuyện cùng Guitar</span>
           </a>
+          <div className="sh-nav-actions">
+            <a href="/story/write" className="sh-nav-cta">Kể chuyện</a>
+          </div>
         </div>
       </nav>
 
-      {/* ── Hero ── */}
+      {/* Hero */}
       <header className="sh-hero">
         <div className="sh-hero-inner">
           <h1 className="sh-hero-title">1001 Câu chuyện cùng Guitar</h1>
           <blockquote className="sh-motto">
-            <strong>Nếu câu chuyện của bạn có thể giúp được một ai đó, hãy kể lại nhé.</strong>
+            Nếu câu chuyện của bạn có thể giúp được một ai đó, hãy kể lại nhé.
           </blockquote>
           <p className="sh-hero-desc">
-            1001 Câu chuyện cùng Guitar là nơi lưu giữ những câu chuyện thật của những người yêu guitar.
-          </p>
-          <p className="sh-hero-note">
-            Những câu chuyện được kể lại để truyền cảm hứng cho những người đến sau.
+            Tạp chí lưu giữ những câu chuyện thật của cộng đồng Guitar.
           </p>
         </div>
       </header>
 
-      {/* ── Những câu chuyện mới ── */}
-      <section className="sh-section sh-section-stories">
-        <div className="sh-section-inner">
-          <h2 className="sh-section-heading">
-            <span className="sh-section-icon">📖</span> Những câu chuyện mới
-          </h2>
-
-          {loading ? (
-            <div className="sh-loading">Đang tải câu chuyện...</div>
-          ) : publishedStories.length === 0 ? (
-            <div className="sh-empty">
-              <p className="sh-empty-icon">📭</p>
-              <p className="sh-empty-title">Chưa có câu chuyện nào được xuất bản</p>
-              <p className="sh-empty-desc">
-                Hãy là người đầu tiên kể câu chuyện của mình.
-              </p>
+      <div className="sh-content">
+        {/* ⭐ Featured */}
+        {featured.length > 0 && (
+          <section className="sh-section">
+            <div className="sh-section-inner">
+              <SectionHead icon="⭐" title="Câu chuyện nổi bật" />
+              <div className="sh-story-grid sh-featured">
+                {featured.map(s => <StoryCard key={s.id} story={s} />)}
+              </div>
             </div>
-          ) : (
+          </section>
+        )}
+
+        {/* 🔥 Latest */}
+        <section className="sh-section">
+          <div className="sh-section-inner">
+            <SectionHead icon="🔥" title="Mới xuất bản" />
             <div className="sh-story-grid">
-              {publishedStories.map((story) => {
-                const img = firstPhoto(story.photos)
-                return (
-                  <a
-                    key={story.id}
-                    href={`/story/${story.slug || story.id}`}
-                    className="sh-story-card"
-                  >
-                    <div className="sh-story-card-img-wrap">
-                      {img ? (
-                        <img
-                          src={img}
-                          alt=""
-                          className="sh-story-card-img"
-                          loading="lazy"
-                          onError={(e) => {
-                            const el = e.currentTarget
-                            el.style.display = 'none'
-                            const wrap = el.parentElement
-                            if (wrap) {
-                              const ph = document.createElement('div')
-                              ph.className = 'sh-story-card-img-placeholder'
-                              const icon = document.createElement('span')
-                              icon.className = 'sh-story-card-img-icon'
-                              icon.textContent = '🎸'
-                              ph.appendChild(icon)
-                              wrap.appendChild(ph)
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="sh-story-card-img-placeholder">
-                          <span className="sh-story-card-img-icon">🎸</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="sh-story-card-body">
-                      <h3 className="sh-story-card-title">{story.title}</h3>
-                      <div className="sh-story-card-meta">
-                        <span className="sh-story-card-author">
-                          {story.pen_name || 'Ẩn danh'}
-                        </span>
-                        <span className="sh-story-card-sep">·</span>
-                        <span className="sh-story-card-date">
-                          {story.published_at ? fmtDate(story.published_at) : ''}
-                        </span>
-                      </div>
-                    </div>
-                  </a>
-                )
-              })}
+              {latestFiltered.slice(0, 6).map(s => <StoryCard key={s.id} story={s} />)}
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* ── Lời mời cuối trang — như Ban biên tập mời bạn đọc kể chuyện ── */}
-      <section className="sh-section sh-invitation">
-        <div className="sh-section-inner">
+        {/* 📚 Categories */}
+        {categories.length > 0 && (
+          <section className="sh-section">
+            <div className="sh-section-inner">
+              <SectionHead icon="📚" title="Chủ đề" />
+              <div className="sh-topics">
+                {categories.map(c => (
+                  <a key={c.id} href={`/story/topic/${c.slug}`} className="sh-topic-chip">
+                    {c.name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Old topics fallback (if categories table not yet created) */}
+        {categories.length === 0 && (
+          <section className="sh-section">
+            <div className="sh-section-inner">
+              <SectionHead icon="📚" title="Chủ đề" />
+              <div className="sh-topics">
+                {Object.entries(TOPIC_LABELS).slice(0, 8).map(([slug, name]) => (
+                  <a key={slug} href={`/story/topic/${slug}`} className="sh-topic-chip">
+                    {name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 🔍 Search placeholder */}
+        <section className="sh-section">
+          <div className="sh-section-inner">
+            <SectionHead icon="🔍" title="Tìm kiếm" />
+            <div className="sh-search-placeholder">
+              <p>Tìm kiếm câu chuyện theo từ khóa, tác giả, hoặc chủ đề.</p>
+              <div className="sh-search-box">
+                <input type="text" placeholder="Tìm câu chuyện..." className="sh-search-input" disabled />
+                <button className="sh-search-btn" disabled>🔍</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* CTA */}
+      <section className="sh-invitation">
+        <div className="sh-section-inner sh-invitation-inner">
           <p className="sh-invite-q">Bạn cũng có một câu chuyện?</p>
           <blockquote className="sh-invite-motto">
             Nếu câu chuyện của bạn có thể giúp được một ai đó, hãy kể lại nhé.
@@ -171,15 +278,13 @@ export default function StoryHomePage() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <footer className="sh-footer">
         <div className="sh-footer-inner">
           <div className="sh-footer-links">
-            <a href="/story#loi-ngo">Về dự án</a>
+            <a href="/story">Tạp chí</a>
             <span className="sh-footer-sep">·</span>
-            <a href="/story#loi-ngo">Lời ngỏ</a>
-            <span className="sh-footer-sep">·</span>
-            <a href="/story#vi-sao">Giới thiệu</a>
+            <a href="/story/write">Phòng viết</a>
             <span className="sh-footer-sep">·</span>
             <a href="/story">Điều khoản</a>
             <span className="sh-footer-sep">·</span>
@@ -194,11 +299,10 @@ export default function StoryHomePage() {
   )
 }
 
-// ── Styles — đồng bộ token với /story ──
+// ── Styles ──
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 
-/* ── Root ── */
 .sh-root {
   min-height: 100dvh;
   background: #F2EEE7;
@@ -209,321 +313,174 @@ const CSS = `
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Nav ── */
+/* Nav */
 .sh-nav {
   border-bottom: 1px solid #E4DED4;
   background: rgba(242,238,231,0.9);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  z-index: 40;
+  position: sticky; top: 0; z-index: 40;
 }
 .sh-nav-inner {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 12px 20px;
-  display: flex;
-  align-items: center;
+  max-width: 1024px; margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .sh-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  color: #211C32;
-  font-weight: 800;
-  font-size: 15px;
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: #211C32; font-weight: 800; font-size: 15px;
 }
-.sh-brand-mark {
-  width: 28px;
-  height: 28px;
+.sh-brand-mark { width: 28px; height: 28px; }
+.sh-nav-actions { display: flex; gap: 12px; }
+.sh-nav-cta {
+  text-decoration: none; color: #fff; background: #4338CA;
+  font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 8px;
+  transition: background .15s;
 }
+.sh-nav-cta:hover { background: #352BA3; }
 
-/* ── Hero ── */
-.sh-hero {
-  border-bottom: 1px solid #E4DED4;
-}
+/* Hero */
+.sh-hero { border-bottom: 1px solid #E4DED4; }
 .sh-hero-inner {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 48px 20px 44px;
-  text-align: center;
+  max-width: 720px; margin: 0 auto; padding: 48px 20px 48px; text-align: center;
 }
-.sh-hero-title {
-  font-size: 42px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -1px;
-  color: #211C32;
-  margin: 0 0 20px;
-}
+.sh-hero-title { font-size: 42px; font-weight: 800; line-height: 1.1; letter-spacing: -1px; color: #211C32; margin: 0 0 16px; }
 .sh-motto {
-  margin: 0 0 22px;
-  padding: 10px 0 10px 16px;
-  border-left: 3px solid #C9711E;
-  color: #C9711E;
-  font-size: 17px;
-  font-weight: 600;
-  font-style: italic;
-  line-height: 1.55;
-  display: inline-block;
-  text-align: left;
+  margin: 0 0 16px; padding: 10px 0 10px 16px;
+  border-left: 3px solid #C9711E; color: #C9711E;
+  font-size: 17px; font-weight: 600; font-style: italic; text-align: left; display: inline-block;
 }
-.sh-motto strong {
-  font-weight: 700;
-  font-style: normal;
-  color: #C9711E;
-}
-.sh-hero-desc {
-  font-size: 17px;
-  color: #5A5470;
-  margin: 0 auto 10px;
-  line-height: 1.6;
-  max-width: 580px;
-}
-.sh-hero-note {
-  font-size: 14px;
-  color: #8A8499;
-  margin: 0;
-  line-height: 1.7;
-}
+.sh-hero-desc { font-size: 16px; color: #5A5470; margin: 0; }
 
-/* ── Sections ── */
-.sh-section {
-  padding: 40px 20px;
-}
-.sh-section-inner {
-  max-width: 960px;
-  margin: 0 auto;
+/* Content */
+.sh-content { padding-bottom: 40px; }
+
+/* Section */
+.sh-section { padding: 36px 20px; }
+.sh-section + .sh-section { border-top: 1px solid #E4DED4; }
+.sh-section-inner { max-width: 1024px; margin: 0 auto; }
+.sh-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 20px;
 }
 .sh-section-heading {
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -.5px;
-  color: #211C32;
-  margin: 0 0 24px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 22px; font-weight: 700; color: #211C32; margin: 0;
+  display: flex; align-items: center; gap: 8px;
 }
-.sh-section-icon {
-  font-size: 26px;
+.sh-section-icon { font-size: 20px; }
+.sh-section-more {
+  text-decoration: none; font-size: 14px; font-weight: 500; color: #4338CA;
+  transition: color .12s;
 }
+.sh-section-more:hover { color: #352BA3; }
 
-/* ── Story Grid ── */
+/* Story Grid */
 .sh-story-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+  gap: 20px;
+}
+.sh-featured .sh-card {
+  border-color: #C9711E;
+  background: #FFFBF5;
 }
 
-.sh-story-card {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  background: #FFFFFF;
-  border: 1px solid #E4DED4;
-  border-radius: 16px;
-  overflow: hidden;
-  transition: box-shadow .15s, transform .15s;
+/* Card */
+.sh-card {
+  display: block; text-decoration: none; color: inherit;
+  background: #FFFFFF; border: 1px solid #E4DED4; border-radius: 14px;
+  overflow: hidden; transition: box-shadow .15s, transform .15s;
 }
-.sh-story-card:hover {
-  box-shadow: 0 12px 32px -16px rgba(33,28,50,.18);
+.sh-card:hover {
+  box-shadow: 0 8px 28px -14px rgba(33,28,50,.16);
   transform: translateY(-2px);
 }
-
-.sh-story-card-img-wrap {
-  aspect-ratio: 3 / 2;
-  overflow: hidden;
-  background: #F2EEE7;
+.sh-card-img-wrap {
+  aspect-ratio: 3 / 2; overflow: hidden; background: #F2EEE7;
 }
-.sh-story-card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.sh-story-card-img-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.sh-card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sh-card-img-placeholder {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, #EEEBFB 0%, #E4DED4 100%);
 }
-.sh-story-card-img-icon {
-  font-size: 40px;
-  opacity: 0.35;
+.sh-card-img-icon { font-size: 40px; opacity: 0.35; }
+.sh-card-body { padding: 16px 18px 18px; }
+.sh-card-topic {
+  display: inline-block; font-size: 11px; font-weight: 600; color: #4338CA;
+  background: #EEEBFB; padding: 2px 8px; border-radius: 6px; margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: 0.3px;
 }
-
-.sh-story-card-body {
-  padding: 18px 20px 20px;
-}
-.sh-story-card-title {
-  font-size: 16.5px;
-  font-weight: 700;
-  color: #211C32;
-  line-height: 1.4;
+.sh-card-title {
+  font-size: 16px; font-weight: 700; color: #211C32; line-height: 1.4;
   margin: 0 0 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.sh-story-card-meta {
-  font-size: 12.5px;
-  color: #8A8499;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.sh-card-meta { font-size: 12.5px; color: #8A8499; display: flex; align-items: center; gap: 6px; }
+.sh-card-author { font-weight: 500; color: #5A5470; }
+.sh-card-sep { color: #C4BED4; }
+.sh-card-date { color: #8A8499; }
+
+/* Topics */
+.sh-topics { display: flex; flex-wrap: wrap; gap: 10px; }
+.sh-topic-chip {
+  display: inline-flex; text-decoration: none;
+  padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 500;
+  background: #FFFFFF; border: 1px solid #E4DED4; color: #5A5470;
+  transition: border-color .12s, color .12s, background .12s;
 }
-.sh-story-card-author {
-  font-weight: 500;
-  color: #5A5470;
+.sh-topic-chip:hover { border-color: #4338CA; color: #4338CA; background: #F8F6FF; }
+
+/* Search */
+.sh-search-placeholder { text-align: center; padding: 24px 0; }
+.sh-search-placeholder p { font-size: 14px; color: #8A8499; margin: 0 0 14px; }
+.sh-search-box { display: flex; max-width: 400px; margin: 0 auto; gap: 8px; }
+.sh-search-input {
+  flex: 1; padding: 10px 16px; border: 1px solid #E4DED4; border-radius: 10px;
+  font-size: 14px; font-family: inherit; background: #FFFFFF; color: #8A8499;
 }
-.sh-story-card-sep {
-  color: #C4BED4;
-}
-.sh-story-card-date {
-  color: #8A8499;
+.sh-search-btn {
+  padding: 10px 16px; border: 1px solid #E4DED4; border-radius: 10px;
+  background: #FFFFFF; cursor: not-allowed; font-size: 16px;
 }
 
-/* ── Loading / Empty ── */
-.sh-loading {
-  text-align: center;
-  padding: 48px 0;
-  color: #8A8499;
-  font-size: 15px;
-}
-.sh-empty {
-  text-align: center;
-  padding: 48px 20px;
-}
-.sh-empty-icon {
-  font-size: 40px;
-  margin: 0 0 12px;
-}
-.sh-empty-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #5A5470;
-  margin: 0 0 6px;
-}
-.sh-empty-desc {
-  font-size: 14px;
-  color: #8A8499;
-  margin: 0;
-}
+/* Loading */
+.sh-loading { text-align: center; padding: 80px 20px; color: #8A8499; }
 
-/* ── Lời mời cuối trang (Ban biên tập) ── */
+/* Invitation */
 .sh-invitation {
-  text-align: center;
-  border-top: 1px solid #E4DED4;
-  border-bottom: 1px solid #E4DED4;
-  background: #FFFFFF;
-  padding: 56px 20px;
+  text-align: center; border-top: 1px solid #E4DED4; border-bottom: 1px solid #E4DED4;
+  background: #FFFFFF; padding: 56px 20px;
 }
-.sh-invite-q {
-  font-size: 16px;
-  font-weight: 600;
-  color: #C9711E;
-  margin: 0 0 12px;
-  letter-spacing: 0.02em;
-}
-.sh-invite-motto {
-  font-size: 16px;
-  font-style: italic;
-  color: #5A5470;
-  margin: 0 auto 24px;
-  border: none;
-  padding: 0;
-  max-width: 500px;
-  line-height: 1.6;
-}
+.sh-invitation-inner { text-align: center; }
+.sh-invite-q { font-size: 16px; font-weight: 600; color: #C9711E; margin: 0 0 12px; }
+.sh-invite-motto { font-size: 16px; font-style: italic; color: #5A5470; margin: 0 auto 24px; max-width: 500px; line-height: 1.6; border: none; padding: 0; }
 .sh-invite-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 15px;
-  border-radius: 12px;
-  padding: 13px 22px;
-  cursor: pointer;
-  border: none;
-  font-family: inherit;
-  text-decoration: none;
-  background: #4338CA;
-  color: #fff;
-  transition: background .15s;
+  display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;
+  border-radius: 12px; padding: 13px 22px; cursor: pointer; border: none;
+  font-family: inherit; text-decoration: none;
+  background: #4338CA; color: #fff; transition: background .15s;
 }
-.sh-invite-btn:hover {
-  background: #352BA3;
-}
+.sh-invite-btn:hover { background: #352BA3; }
 
-/* ── Footer ── */
-.sh-footer {
-  padding: 32px 20px;
-  background: #F2EEE7;
-}
-.sh-footer-inner {
-  max-width: 960px;
-  margin: 0 auto;
-  text-align: center;
-}
-.sh-footer-links {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-.sh-footer-links a {
-  text-decoration: none;
-  color: #5A5470;
-  font-size: 14px;
-  font-weight: 500;
-  transition: color .15s;
-}
+/* Footer */
+.sh-footer { padding: 32px 20px; background: #F2EEE7; }
+.sh-footer-inner { max-width: 1024px; margin: 0 auto; text-align: center; }
+.sh-footer-links { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.sh-footer-links a { text-decoration: none; color: #5A5470; font-size: 14px; font-weight: 500; }
 .sh-footer-links a:hover { color: #4338CA; }
-.sh-footer-sep {
-  color: #C4BED4;
-  font-size: 12px;
-}
-.sh-footer-copy {
-  font-size: 13px;
-  color: #8A8499;
-}
+.sh-footer-sep { color: #C4BED4; font-size: 12px; }
+.sh-footer-copy { font-size: 13px; color: #8A8499; }
 
-/* ── Responsive: mobile ── */
+/* Responsive */
 @media (max-width: 640px) {
-  .sh-hero-inner {
-    padding: 36px 16px 32px;
-  }
-  .sh-hero-title {
-    font-size: 32px;
-  }
-  .sh-motto {
-    font-size: 16px;
-  }
-  .sh-hero-desc {
-    font-size: 15px;
-  }
-  .sh-story-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  .sh-section-heading {
-    font-size: 24px;
-  }
-  .sh-invitation {
-    padding: 40px 16px;
-  }
-  .sh-invite-btn {
-    width: 100%;
-    justify-content: center;
-  }
+  .sh-hero-inner { padding: 36px 16px 32px; }
+  .sh-hero-title { font-size: 30px; }
+  .sh-motto { font-size: 15px; }
+  .sh-story-grid { grid-template-columns: 1fr; gap: 14px; }
+  .sh-section-head { flex-direction: column; gap: 8px; align-items: flex-start; }
+  .sh-section { padding: 28px 16px; }
+  .sh-topics { gap: 8px; }
+  .sh-topic-chip { padding: 6px 12px; font-size: 13px; }
+  .sh-invitation { padding: 40px 16px; }
+  .sh-invite-btn { width: 100%; justify-content: center; }
 }
 `

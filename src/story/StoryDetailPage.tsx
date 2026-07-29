@@ -3,8 +3,23 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
+const TOPIC_LABELS: Record<string, string> = {
+  'cay-dan-dau-tien': 'Cây đàn đầu tiên',
+  'bai-hat-thay-doi-toi': 'Bài hát thay đổi tôi',
+  'guitar-va-tuoi-tho': 'Guitar và tuổi thơ',
+  'vuot-qua-kho-khan': 'Vượt qua khó khăn',
+  'guitar-trong-gia-dinh': 'Guitar trong gia đình',
+  'nguoi-thay-dau-tien': 'Người thầy đầu tiên',
+  'dau-tay-va-chai-san': 'Đau tay và chai sạn',
+  'lan-dau-dan-truoc-moi-nguoi': 'Lần đầu đàn trước mọi người',
+  'bo-do-roi-quay-lai': 'Bỏ dở rồi quay lại',
+  'cay-dan-va-nguoi-than': 'Cây đàn và người thân',
+}
+
 interface StoryDetail {
+  id: string
   title: string
+  slug: string
   pen_name: string | null
   location: string | null
   content: string
@@ -23,6 +38,9 @@ export default function StoryDetailPage() {
   const [story, setStory] = useState<StoryDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [categories, setCategories] = useState<{ name: string; slug: string }[]>([])
+  const [seriesList, setSeriesList] = useState<{ name: string; slug: string }[]>([])
+  const [related, setRelated] = useState<StoryDetail[]>([])
 
   useEffect(() => {
     const slug = window.location.pathname.replace('/story/', '')
@@ -30,13 +48,38 @@ export default function StoryDetailPage() {
 
     supabase
       .from('stories')
-      .select('title, pen_name, location, content, photos, published_at, topic')
+      .select('id, title, slug, pen_name, location, content, photos, published_at, topic')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()
-      .then(({ data, error }) => {
-        if (error || !data) { setNotFound(true) }
-        else { setStory(data as StoryDetail) }
+      .then(async ({ data, error }) => {
+        if (error || !data) { setNotFound(true); setLoading(false); return }
+        const s = data as StoryDetail
+        setStory(s)
+
+        // Fetch categories & series (graceful if tables not yet exist)
+        try {
+          const [{ data: cats }, { data: sers }] = await Promise.all([
+            supabase.from('story_categories')
+              .select('categories!inner(name, slug)')
+              .eq('story_id', s.id),
+            supabase.from('story_series')
+              .select('series!inner(name, slug)')
+              .eq('story_id', s.id),
+          ])
+          if (cats) setCategories(cats.map((c: any) => c.categories))
+          if (sers) setSeriesList(sers.map((s: any) => s.series))
+        } catch { /* tables may not exist yet */ }
+
+        // Related stories (same topic)
+        if (s.topic) {
+          const { data: rel } = await supabase.from('stories')
+            .select('id, title, slug, pen_name, photos, published_at')
+            .eq('status', 'published').eq('topic', s.topic)
+            .neq('id', s.id).order('published_at', { ascending: false }).limit(4)
+          if (rel) setRelated(rel as StoryDetail[])
+        }
+
         setLoading(false)
       })
   }, [])
@@ -121,6 +164,49 @@ export default function StoryDetailPage() {
           ))}
         </div>
 
+        {/* Categories & Series */}
+        {(categories.length > 0 || seriesList.length > 0 || story.topic) && (
+          <div className="sd-taxonomy">
+            {story.topic && TOPIC_LABELS[story.topic] && (
+              <div className="sd-tax-group">
+                <span className="sd-tax-label">Chủ đề cũ</span>
+                <a href={`/story/topic/${story.topic}`} className="sd-tag">{TOPIC_LABELS[story.topic]}</a>
+              </div>
+            )}
+            {categories.length > 0 && (
+              <div className="sd-tax-group">
+                <span className="sd-tax-label">Chủ đề</span>
+                {categories.map(c => (
+                  <a key={c.slug} href={`/story/topic/${c.slug}`} className="sd-tag">{c.name}</a>
+                ))}
+              </div>
+            )}
+            {seriesList.length > 0 && (
+              <div className="sd-tax-group">
+                <span className="sd-tax-label">Series</span>
+                {seriesList.map(s => (
+                  <a key={s.slug} href={`/story/series/${s.slug}`} className="sd-tag sd-tag-series">{s.name}</a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Related Stories */}
+        {related.length > 0 && (
+          <div className="sd-related">
+            <h3 className="sd-related-title">Bài liên quan</h3>
+            <div className="sd-related-list">
+              {related.map(r => (
+                <a key={r.id} href={`/story/${r.slug || r.id}`} className="sd-related-item">
+                  <span className="sd-related-item-title">{r.title}</span>
+                  <span className="sd-related-item-author">{r.pen_name || 'Ẩn danh'}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Back to magazine */}
         <div className="sd-back-cta">
           <a href="/story" className="sd-back-link">← Về Tạp chí</a>
@@ -199,6 +285,59 @@ const CSS = `
   text-decoration: none; color: #5A5470; font-size: 15px; font-weight: 500;
 }
 .sd-back-link:hover { color: #4338CA; }
+
+/* Taxonomy (categories + series) */
+.sd-taxonomy {
+  margin-top: 32px; padding-top: 24px;
+  border-top: 1px solid #E4DED4;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.sd-tax-group {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.sd-tax-label {
+  font-size: 12px; font-weight: 600; color: #8A8499;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.sd-tag {
+  display: inline-block; text-decoration: none;
+  font-size: 13px; font-weight: 500; padding: 4px 12px;
+  border-radius: 8px; background: #EEEBFB; color: #4338CA;
+  transition: background .12s;
+}
+.sd-tag:hover { background: #DBD6F5; }
+.sd-tag-series {
+  background: #FDF2E9; color: #B7791F;
+}
+.sd-tag-series:hover { background: #FAE5D3; }
+
+/* Related Stories */
+.sd-related {
+  margin-top: 32px; padding-top: 24px;
+  border-top: 1px solid #E4DED4;
+}
+.sd-related-title {
+  font-size: 16px; font-weight: 700; color: #211C32; margin: 0 0 14px;
+}
+.sd-related-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sd-related-item {
+  display: flex; justify-content: space-between; align-items: baseline;
+  text-decoration: none; padding: 10px 14px; border-radius: 8px;
+  background: #FFFFFF; border: 1px solid #E4DED4;
+  transition: border-color .12s, background .12s;
+}
+.sd-related-item:hover {
+  border-color: #C4BED4; background: #FAF9F7;
+}
+.sd-related-item-title {
+  font-size: 14px; font-weight: 600; color: #211C32;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;
+}
+.sd-related-item-author {
+  font-size: 12px; color: #8A8499; flex-shrink: 0;
+}
 
 .sd-footer { padding: 32px 20px; background: #F2EEE7; }
 .sd-footer-inner { max-width: 720px; margin: 0 auto; text-align: center; }
