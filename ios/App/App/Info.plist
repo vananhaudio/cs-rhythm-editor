@@ -49,5 +49,7 @@
 	<string>TVA Guitar dùng microphone để nhận diện cao độ khi lên dây đàn và ghi lại tiếng đàn khi bạn luyện tập (bản thu này chỉ lưu tạm trên thiết bị). Khi bạn nói yêu cầu bài tập cho Piano Journey, đoạn ghi âm ngắn đó được gửi đi để chuyển thành chữ, rồi xoá ngay sau khi xử lý.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>TVA Guitar có thể dùng camera để quay video luyện tập và nộp bài.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>TVA Guitar dùng nhận diện giọng nói để bạn kể câu chuyện của mình bằng lời thay vì gõ chữ, trong dự án 1001 Câu chuyện cùng Guitar. Lời bạn nói được chuyển thành chữ và hiện ngay trên màn hình để bạn đọc lại, sửa và tự quyết định có gửi đi hay không.</string>
 </dict>
 </plist>
