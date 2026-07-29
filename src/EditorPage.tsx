@@ -261,13 +261,10 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const handleSaveEdit = async () => {
     setSaving(true)
     try {
-      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/story-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, title: editTitle, content: editContent }),
+      const { data, error } = await supabase.functions.invoke('story-ai', {
+        body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, title: editTitle, content: editContent },
       })
-      const data = await res.json()
-      if (data.ok) {
+      if (!error && data?.ok) {
         story.title = editTitle
         story.content = editContent
         setIsEditing(false)
@@ -445,12 +442,10 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
               setPublishing(true)
               setStatusMsg('Đang xuất bản...')
               try {
-                const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/story-ai', {
-                  method: 'POST',
-                  body: JSON.stringify({ admin_key: 'st-1001-adm-7x9k2', action: 'admin_publish', story_id: story.id }),
+                const { data, error } = await supabase.functions.invoke('story-ai', {
+                  body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_publish', story_id: story.id },
                 })
-                const data = await res.json()
-                if (data.ok) {
+                if (!error && data?.ok) {
                   setStatusMsg(`Đã xuất bản! Số #${data.story_number} — hiện trên Tạp chí ngay.`)
                   setPublished(true)
                   story.status = 'published'
