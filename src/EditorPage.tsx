@@ -132,7 +132,8 @@ function CategoriesView() {
   useEffect(() => {
     supabase.from('categories').select('*').order('name')
       .then(({ data }) => { setCats((data as Category[]) || []); setLoading(false) })
-      .catch(() => setLoading(false))
+    // eslint-disable-next-line
+    ;
   }, [])
 
   if (loading) return <div className="ed-count">Đang tải...</div>
@@ -168,7 +169,8 @@ function SeriesView() {
   useEffect(() => {
     supabase.from('series').select('*').order('name')
       .then(({ data }) => { setList((data as Series[]) || []); setLoading(false) })
-      .catch(() => setLoading(false))
+    // eslint-disable-next-line
+    ;
   }, [])
 
   if (loading) return <div className="ed-count">Đang tải...</div>
