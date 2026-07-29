@@ -32,6 +32,7 @@ import StoryDetailPage from './story/StoryDetailPage'
 import StoryLegacyLandingPage from './story/StoryLegacyLandingPage'
 import StoryTellPage from './story/StoryTellPage'
 import StoryHomePage from './story/StoryHomePage'
+import EditorPage from './EditorPage'
 import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
 import PianoJourney from './PianoJourney'
@@ -144,6 +145,9 @@ export default function AppRouter() {
   if (onClass && (path === '/' || path === '/class' || path.startsWith('/class'))) {
     return <ClassLandingPage />   // class./ LUÔN là trang tuyển sinh; vào cổng học qua nút "Hành trình của tôi" → /me
   }
+
+  // ── Route /editorial — Ban biên tập (công khai) ──
+  if (path === '/editorial' || path === '/editorial/') return <EditorPage />
 
   // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
   if (path === '/story/home') { window.location.replace('/story'); return null }  // redirect link cũ
