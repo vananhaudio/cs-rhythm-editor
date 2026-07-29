@@ -388,3 +388,22 @@
     có dữ liệu hỏng cần dọn.
 -   Action `review` trong `story-ai` giữ nguyên nhưng KHÔNG còn ai
     gọi — dọn sau, tránh đè code phiên khác đang sửa cùng file.
+
+#### Fixed — Micro trong app iOS vẫn đòi cấp quyền (2026-07-29)
+
+-   Triệu chứng: mở /story/tell trong app TVA Guitar, bấm micro vẫn bị
+    đòi cấp quyền dù app đã có quyền microphone.
+-   Nguyên nhân: **iOS coi "Nhận diện giọng nói" là quyền RIÊNG**, tách
+    khỏi microphone. `Info.plist` mới chỉ có `NSMicrophoneUsageDescription`,
+    **thiếu `NSSpeechRecognitionUsageDescription`**. Capacitor đã tự cấp
+    quyền media capture cho WebView (`WebViewDelegationHandler.swift` trả
+    `.grant`) nhưng đường đó KHÔNG áp dụng cho speech recognition —
+    `webkitSpeechRecognition` đi qua framework Speech của Apple.
+-   Sửa: thêm `NSSpeechRecognitionUsageDescription` vào
+    `ios/App/App/Info.plist` (đã `plutil -lint` OK).
+-   ⚠️ **CẦN BUILD LẠI XCODE + UPLOAD TESTFLIGHT** — đổi vỏ native nên
+    cơ chế "deploy web là app tự cập nhật" KHÔNG đủ.
+-   Lưu ý: kể cả sau khi sửa, lần đầu iOS VẪN hỏi một lần "cho phép
+    nhận diện giọng nói" — đây là quyền khác với micro, hỏi một lần
+    rồi thôi. App vào /story bằng `window.location.href = '/story'`
+    (cùng origin timming.vananhaudio.com) nên không có vấn đề đa origin.
