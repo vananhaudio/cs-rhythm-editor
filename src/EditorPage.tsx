@@ -23,6 +23,7 @@ const STATUS_FILTERS = [
 
 export default function EditorPage() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Story | null>(null)
 
   const filtered = activeFilter
     ? MOCK_STORIES.filter((s: Story) => s.status === activeFilter)
@@ -73,19 +74,42 @@ export default function EditorPage() {
 
           <div className="ed-list">
             {filtered.map((story: Story) => (
-              <Card key={story.id} story={story} />
+              <Card key={story.id} story={story} onClick={() => setSelected(story)} />
             ))}
           </div>
         </main>
+
+        {/* Detail Panel */}
+        {selected && (
+          <aside className="ed-detail">
+            <div className="ed-detail-header">
+              <button className="ed-detail-close" onClick={() => setSelected(null)}>✕</button>
+            </div>
+            <div className="ed-detail-body">
+              <StatusBadge status={selected.status} />
+              <h2 className="ed-detail-title">{selected.title}</h2>
+              <div className="ed-detail-meta">
+                <span>{selected.author}</span>
+                <span className="ed-card-sep">·</span>
+                <span>{fmtDate(selected.submittedAt)}</span>
+              </div>
+              <div className="ed-detail-content">
+                {selected.content.split('\n').map((p, i) => (
+                  p.trim() ? <p key={i}>{p}</p> : <br key={i} />
+                ))}
+              </div>
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   )
 }
 
 // ── Card ──
-function Card({ story }: { story: Story }) {
+function Card({ story, onClick }: { story: Story; onClick: () => void }) {
   return (
-    <article className="ed-card">
+    <article className="ed-card" onClick={onClick}>
       <div className="ed-card-body">
         <h2 className="ed-card-title">{story.title}</h2>
         <div className="ed-card-meta">
@@ -350,6 +374,68 @@ const CSS = `
   background: #8C8C8C;
 }
 
+/* Detail Panel */
+.ed-detail {
+  width: 420px;
+  flex-shrink: 0;
+  border-left: 1px solid #E5E0D8;
+  background: #FFFFFF;
+  overflow-y: auto;
+  max-height: calc(100dvh - 100px);
+  position: sticky;
+  top: 0;
+}
+.ed-detail-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-bottom: 1px solid #F0EDE6;
+}
+.ed-detail-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #8C8C8C;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background .12s, color .12s;
+}
+.ed-detail-close:hover {
+  background: #F5F2ED;
+  color: #1A1A1A;
+}
+.ed-detail-body {
+  padding: 20px 24px 40px;
+}
+.ed-detail-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin: 12px 0 8px;
+  line-height: 1.3;
+  letter-spacing: -0.2px;
+}
+.ed-detail-meta {
+  font-size: 13px;
+  color: #8C8C8C;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.ed-detail-content {
+  font-size: 15px;
+  line-height: 1.8;
+  color: #3A3A3A;
+}
+.ed-detail-content p {
+  margin: 0 0 1.2em;
+}
+.ed-detail-content p:last-child {
+  margin-bottom: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .ed-header-inner {
@@ -386,5 +472,16 @@ const CSS = `
   }
   .ed-main { padding: 16px; }
   .ed-card { padding: 14px 16px; }
+  .ed-detail {
+    width: 100%;
+    max-height: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    border-left: none;
+  }
 }
 `
