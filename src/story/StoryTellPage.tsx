@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../supabase'
 import type { User } from '@supabase/supabase-js'
 import PublishPrep, { PUBLISH_PREP_CSS, type PublishPrefs } from './PublishPrep'
+import { useVoiceInput, appendSpoken } from './useVoiceInput'
 
 type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'publish_prep' | 'submitting' | 'submitted'
 type ChatMsg = { role: 'user' | 'mira'; text: string; at: string }
@@ -178,6 +179,11 @@ export default function StoryTellPage() {
   const [showMenu, setShowMenu] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [showRaw, setShowRaw] = useState(false)  // collapsible Story Raw
+
+  // ── Kể bằng giọng nói: lời nói đổ thẳng vào ô soạn thảo, người kể tự bấm gửi ──
+  const voice = useVoiceInput(useCallback((text: string) => {
+    setInput(prev => appendSpoken(prev, text))
+  }, []))
 
   // ── MVP 04: Sidebar + Story Library ──
   const [showSidebar, setShowSidebar] = useState(false)
@@ -898,7 +904,18 @@ export default function StoryTellPage() {
             {/* ── SECTION: COMPOSER ── */}
             {!miraReady && (
               <section className="sw-section sw-composer-section">
-                <div className="sw-composer">
+                {voice.listening && (
+                  <div className="sw-voice-live" aria-live="polite">
+                    <span className="sw-voice-wave"><i /><i /><i /></span>
+                    {voice.interim
+                      ? <span className="sw-voice-interim">{voice.interim}</span>
+                      : <span className="sw-voice-hint">Đang nghe — bạn cứ nói tự nhiên…</span>}
+                  </div>
+                )}
+                {voice.error && (
+                  <div className="sw-voice-err" role="alert" onClick={voice.clearError}>{voice.error}</div>
+                )}
+                <div className={`sw-composer ${voice.listening ? 'listening' : ''}`}>
                   <AutoTextarea
                     value={input}
                     onChange={e => setInput(e.target.value)}
@@ -906,13 +923,26 @@ export default function StoryTellPage() {
                     disabled={sending}
                     placeholder={phase === 'editing' ? 'Bạn muốn sửa phần nào?' : 'Bắt đầu từ điều bạn nhớ nhất…'}
                   />
+                  {voice.supported && (
+                    <button
+                      className={`sw-mic ${voice.listening ? 'on' : ''}`}
+                      onClick={voice.toggle}
+                      disabled={sending}
+                      aria-label={voice.listening ? 'Dừng nói' : 'Kể bằng giọng nói'}
+                      aria-pressed={voice.listening}
+                      title={voice.listening ? 'Dừng nói' : 'Kể bằng giọng nói'}
+                    />
+                  )}
                   <button
                     className="sw-send"
-                    onClick={phase === 'editing' ? sendEdit : send}
+                    onClick={() => { voice.stop(); (phase === 'editing' ? sendEdit : send)() }}
                     disabled={sending || !input.trim()}
                     aria-label="Gửi"
                   />
                 </div>
+                {voice.supported && !voice.listening && !input && (
+                  <div className="sw-voice-tip">🎙️ Thích nói hơn viết? Bấm micro rồi kể — chữ tự hiện ra.</div>
+                )}
               </section>
             )}
 
@@ -1514,6 +1544,54 @@ const CSS = `
 .sw-send::after { content: '↑'; font-weight: 700; }
 .sw-send:active { opacity: 0.7; }
 .sw-send:disabled { opacity: 0.25; cursor: default; }
+
+/* ── Kể bằng giọng nói ── */
+.sw-composer.listening { border-color: var(--red); }
+.sw-mic {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.sw-mic::after { content: '🎙️'; }
+.sw-mic:active { opacity: 0.6; }
+.sw-mic:disabled { opacity: 0.3; cursor: default; }
+.sw-mic.on { background: var(--red); }
+.sw-mic.on::after { content: '⏸'; color: #fff; font-size: 15px; }
+.sw-voice-live {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 14px; margin-bottom: 7px;
+  background: var(--surface); border-radius: 16px;
+  font-size: 15px; line-height: 1.4;
+}
+.sw-voice-wave { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.sw-voice-wave i {
+  width: 3px; height: 13px; border-radius: 2px;
+  background: var(--red);
+  animation: sw-wave 0.9s ease-in-out infinite;
+}
+.sw-voice-wave i:nth-child(2) { animation-delay: 0.15s; }
+.sw-voice-wave i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes sw-wave { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+.sw-voice-hint { color: var(--ink-muted); }
+.sw-voice-interim { color: var(--ink-soft); }
+.sw-voice-err {
+  background: #FFF0EF; color: var(--red);
+  border-radius: 14px; padding: 10px 14px; margin-bottom: 7px;
+  font-size: 14px; line-height: 1.4; cursor: pointer;
+}
+.sw-voice-tip {
+  font-size: 13px; color: var(--ink-muted);
+  text-align: center; padding: 8px 4px 0;
+}
 
 /* ── DRAFT ── */
 .sw-draft-wrap { max-width: 680px; width: 100%; }

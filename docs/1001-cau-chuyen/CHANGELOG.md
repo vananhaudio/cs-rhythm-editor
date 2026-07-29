@@ -346,3 +346,26 @@
     chỉ đọc, chưa có nút xuất bản tay. Chọn một: (a) bỏ auto-publish +
     thêm nút xuất bản cho Ban biên tập, hay (b) giữ auto-publish và
     sửa lại câu thông báo.
+
+#### Added — Kể bằng giọng nói (2026-07-29)
+
+-   `src/story/useVoiceInput.ts` (mới) — hook nhận giọng nói dùng
+    **Web Speech API sẵn có của trình duyệt**: KHÔNG tốn API, KHÔNG
+    gửi audio lên server, không thêm thư viện. Tiếng Việt `vi-VN`,
+    `continuous` + `interimResults`, tự bật lại khi trình duyệt ngắt
+    vì im lặng (người kể ngừng nghĩ giữa chừng vẫn không mất mạch).
+-   Nút micro trong ô soạn thảo `/story/tell`: đang nghe thì viền đỏ +
+    sóng nhấp nháy + hiện chữ tạm thời; bấm lần nữa để dừng; bấm Gửi
+    tự tắt micro.
+-   **Lời nói chỉ đổ vào ô soạn thảo — KHÔNG tự gửi.** Người kể đọc
+    lại, sửa, rồi tự bấm gửi (đúng nguyên tắc "người kể quyết định"
+    của MIRA_CONSTITUTION).
+-   Xuống cấp êm: trình duyệt không hỗ trợ → **ẩn hẳn nút micro**
+    (không hiện nút hỏng). Chưa cấp quyền → báo tiếng Việt thân thiện
+    "Trình duyệt chưa cho phép dùng micro…", vẫn gõ chữ bình thường.
+-   ⚠️ **Lưu ý nền tảng:** Web Speech API chạy tốt trên Chrome/Edge
+    (máy tính + Android) và Safari trên iOS. **KHÔNG có trong
+    WKWebView** → học viên mở bằng **app TVA Guitar (iOS) sẽ không
+    thấy nút micro**; muốn nói thì mở bằng Safari. Nếu sau này cần
+    micro trong app, phải chuyển sang ghi âm + API chuyển giọng nói
+    thành chữ (tốn phí, cần Edge Function mới).
