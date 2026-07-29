@@ -183,16 +183,6 @@ Deno.serve(async (req) => {
   // Ping để kiểm tra deploy
   if (body.action === 'ping') return json({ ping: 'pong', ver: 'v3' })
 
-  // ============ ACTION: list_all — ban biên tập (bypass RLS) ============
-  if (body.action === 'list_all') {
-    const { data: stories, error } = await db.from('stories')
-      .select('id,title,content,pen_name,status,published_at,created_at,conversation')
-      .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
-      .order('created_at', { ascending: false })
-    if (error) return json({ error: error.message }, 500)
-    return json({ stories })
-  }
-
   // ── ADMIN: bypass auth for insert/management ──
   const ADMIN_KEY = 'st-1001-adm-7x9k2'
   if (body.admin_key === ADMIN_KEY) {
@@ -243,6 +233,16 @@ Deno.serve(async (req) => {
   if (!user) return json({ error: 'Login required' }, 401)
 
   const action = body.action || 'chat'
+
+  // ============ ACTION: list_all — ban biên tập (bypass RLS) ============
+  if (action === 'list_all') {
+    const { data: stories, error } = await db.from('stories')
+      .select('id,title,content,pen_name,status,published_at,created_at,conversation')
+      .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
+      .order('created_at', { ascending: false })
+    if (error) return json({ error: error.message }, 500)
+    return json({ stories })
+  }
 
   // ============ ACTION: CHAT ============
   if (action === 'chat') {
