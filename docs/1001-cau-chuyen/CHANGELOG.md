@@ -369,3 +369,22 @@
     thấy nút micro**; muốn nói thì mở bằng Safari. Nếu sau này cần
     micro trong app, phải chuyển sang ghi âm + API chuyển giọng nói
     thành chữ (tốn phí, cần Edge Function mới).
+
+#### Changed — Ban biên tập duyệt, bỏ AI tự xuất bản (2026-07-29)
+
+-   `StoryTellPage.tsx` **bỏ lời gọi `action: 'review'`** sau khi gửi.
+    Bài dừng ở `submitted` và nằm trong tab **📥 Chờ đọc** của
+    `/editor`; Ban biên tập đọc rồi bấm xuất bản (kèm ảnh bìa).
+    Lý do: `review` xuất bản ngay trong vài giây → bài lên Tạp chí
+    **trước khi có người đọc**, **không có ảnh bìa** (luồng kể chưa
+    thu ảnh), và vì bài đã `published` nên hai nút xuất bản trong
+    `/editor` bị ẩn → luồng xuất bản có ảnh FLUX không bao giờ chạy.
+-   Màn hoàn tất: bỏ câu "Ban biên tập sẽ đọc, biên tập và **gửi lại
+    bạn duyệt** trước khi xuất bản" (hứa việc hệ thống không làm) →
+    "Cảm ơn bạn đã kể. Ban biên tập sẽ đọc và biên tập câu chuyện
+    của bạn."
+-   Chưa bài nào đi qua đường AI tự xuất bản trước khi sửa (6 bài
+    published hiện tại đều do Ban biên tập đăng, đều có ảnh) → không
+    có dữ liệu hỏng cần dọn.
+-   Action `review` trong `story-ai` giữ nguyên nhưng KHÔNG còn ai
+    gọi — dọn sau, tránh đè code phiên khác đang sửa cùng file.

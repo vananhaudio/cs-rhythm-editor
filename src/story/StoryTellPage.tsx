@@ -479,7 +479,9 @@ export default function StoryTellPage() {
         .eq('user_id', user.id)
     }
 
-    try { await supabase.functions.invoke('story-ai', { body: { action: 'review', storyId } }) } catch { /* retry later */ }
+    // Dừng ở 'submitted' — Ban biên tập đọc và tự xuất bản trong /editor.
+    // KHÔNG gọi action 'review' (AI tự xuất bản) nữa: bài sẽ lên Tạp chí
+    // trước khi có người đọc, và bỏ qua luôn luồng xuất bản có ảnh bìa.
     setPhase('submitted')
     setSending(false)
   }, [storyId, sending, storyTitle, draftTitle, user])
@@ -649,7 +651,7 @@ export default function StoryTellPage() {
           <div className="sw-submitted">
             <div className="sw-done-icon">✓</div>
             <h2>Đã gửi Ban biên tập</h2>
-            <p>Ban biên tập sẽ đọc, biên tập và gửi lại bạn duyệt trước khi xuất bản.</p>
+            <p>Cảm ơn bạn đã kể. Ban biên tập sẽ đọc và biên tập câu chuyện của bạn.</p>
             <a className="sw-link" href="/story">← Về trang 1001 Câu chuyện</a>
           </div>
         </div>

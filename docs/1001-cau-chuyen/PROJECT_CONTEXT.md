@@ -167,9 +167,13 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
     email + Zalo (tùy chọn).
 10. **Mira engine dùng chung hạ tầng** trang tuyển sinh; được phép
     thêm model rẻ hơn cho tác vụ phù hợp nếu chi phí API cao.
-11. **Biên tập: người kể duyệt → AI biên tập duyệt → TỰ ĐỘNG xuất
-    bản.** Thầy chỉ giám sát sau xuất bản; AI không chắc mới chuyển
-    thầy xem tay. (Tất cả Văn Anh chốt, 2026-07-27.)
+11. ~~Biên tập: AI duyệt → tự động xuất bản~~ **ĐÃ THAY (Văn Anh
+    chốt 2026-07-29): người kể duyệt bản thảo → gửi → bài dừng ở
+    `submitted` → BAN BIÊN TẬP đọc và tự xuất bản** trong `/editor`
+    (kèm ảnh bìa). Client KHÔNG gọi `action: 'review'` nữa — gọi thì
+    bài lên Tạp chí trước khi có người đọc và bỏ qua luôn luồng xuất
+    bản có ảnh. Action `review` vẫn còn trong Edge Function nhưng
+    không ai gọi (dọn sau).
 12. **Hiến pháp Mira** (`docs/MIRA_CONSTITUTION.md` — đứng trên mọi
     tài liệu UX/kỹ thuật về Mira): Mira KHÔNG tạo/sáng tác/gợi ý nội
     dung/gieo ký ức. Chỉ lắng nghe (mặc định, không hỏi khi người
