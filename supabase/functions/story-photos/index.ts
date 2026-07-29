@@ -66,6 +66,20 @@ Deno.serve(async (req) => {
       })
     }
 
+    // ── Fix pen_name encoding ──
+    if (action === 'fix_names') {
+      const fixes: Record<string, string> = {
+        '84f25b89-1a70-432f-a680-503b21b28d2b': 'H\u01b0\u01a1ng',
+        '03816b14-7daf-45da-ac8c-b9cc8442fd77': 'Tu\u1ea5n',
+      }
+      const results: string[] = []
+      for (const [id, name] of Object.entries(fixes)) {
+        const { error } = await db.from('stories').update({ pen_name: name }).eq('id', id)
+        results.push(error ? `FAIL ${id}: ${error.message}` : `OK ${id} -> ${name}`)
+      }
+      return new Response(JSON.stringify({ results }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    }
+
     return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
