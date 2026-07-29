@@ -1,9 +1,18 @@
 // ── /editorial — Ban biên tập ──
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
-import { MOCK_STORIES, STATUS_LABELS, type Story } from './data/stories'
 
 type Tab = 'inbox' | 'categories' | 'series'
+type StoryStatus = 'submitted' | 'editing' | 'waiting_author' | 'published' | 'archived'
+
+interface Story {
+  id: string
+  title: string
+  author: string
+  submittedAt: string
+  status: StoryStatus
+  content: string
+}
 
 interface Category {
   id: string; name: string; slug: string
@@ -11,6 +20,22 @@ interface Category {
 
 interface Series {
   id: string; name: string; slug: string; description: string | null
+}
+
+const DB_STATUS_MAP: Record<string, StoryStatus> = {
+  submitted: 'submitted',
+  pending_publish: 'editing',
+  user_review: 'waiting_author',
+  published: 'published',
+  archived: 'archived',
+}
+
+const STATUS_LABELS: Record<StoryStatus, string> = {
+  submitted: 'Chờ đọc',
+  editing: 'Đang biên tập',
+  waiting_author: 'Chờ tác giả duyệt',
+  published: 'Đã xuất bản',
+  archived: 'Lưu trữ',
 }
 
 function fmtDate(iso: string) {
@@ -33,10 +58,33 @@ export default function EditorPage() {
   const [tab, setTab] = useState<Tab>('inbox')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [selected, setSelected] = useState<Story | null>(null)
+  const [stories, setStories] = useState<Story[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch real stories from Supabase
+  useEffect(() => {
+    supabase.from('stories')
+      .select('id,title,content,pen_name,status,published_at,created_at')
+      .in('status', ['submitted', 'pending_publish', 'user_review', 'published'])
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { console.error('Editor fetch error:', error); setLoading(false); return }
+        const mapped: Story[] = (data || []).map((s: any) => ({
+          id: s.id,
+          title: s.title || 'Chưa có tiêu đề',
+          author: s.pen_name || 'Ẩn danh',
+          submittedAt: s.published_at || s.created_at || new Date().toISOString(),
+          status: DB_STATUS_MAP[s.status] || 'submitted',
+          content: s.content || '',
+        }))
+        setStories(mapped)
+        setLoading(false)
+      })
+  }, [])
 
   const filtered = activeFilter
-    ? MOCK_STORIES.filter((s: Story) => s.status === activeFilter)
-    : MOCK_STORIES
+    ? stories.filter(s => s.status === activeFilter)
+    : stories
 
   return (
     <div className="ed-root">
@@ -80,7 +128,10 @@ export default function EditorPage() {
         </aside>
 
         <main className="ed-main">
-          {tab === 'inbox' && <InboxView stories={filtered} onSelect={setSelected} />}
+          {tab === 'inbox' && (
+            loading ? <div className="ed-count" style={{padding:20}}>Đang tải...</div>
+            : <InboxView stories={filtered} onSelect={setSelected} />
+          )}
           {tab === 'categories' && <CategoriesView />}
           {tab === 'series' && <SeriesView />}
         </main>
@@ -240,8 +291,6 @@ function StatusBadge({ status }: { status: Story['status'] }) {
 // STYLES
 // ══════════════════════════════════════════
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 .ed-root { min-height:100dvh; background:#F9F8F6; color:#1A1A1A; font-family:'Inter',system-ui,sans-serif; line-height:1.5; font-size:15px; -webkit-font-smoothing:antialiased; }
 
 .ed-header { background:#FFFFFF; border-bottom:1px solid #E5E0D8; }
