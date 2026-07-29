@@ -201,6 +201,18 @@ Deno.serve(async (req) => {
       const enriched = (stories || []).map(s => ({ ...s, pen_name: s.pen_name || userMap[s.user_id] || '' }))
       return json({ stories: enriched })
     }
+    if (body.action === 'admin_publish') {
+      const { story_id } = body
+      if (!story_id) return json({ error: 'Missing story_id' }, 400)
+      const { data: st } = await db.from('stories').select('id,title,content,status,story_number').eq('id', story_id).maybeSingle()
+      if (!st) return json({ error: 'Story not found' }, 404)
+      const { data: maxRow } = await db.from('stories').select('story_number').not('story_number','is',null).order('story_number',{ascending:false}).limit(1).maybeSingle()
+      const nextNum = (maxRow?.story_number ?? 0) + 1
+      const slug = (st.title || 'story').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '-' + String(nextNum)
+      const { error } = await db.from('stories').update({ status: 'published', story_number: nextNum, slug, published_at: new Date().toISOString() }).eq('id', story_id)
+      if (error) return json({ error: error.message }, 500)
+      return json({ ok: true, story_number: nextNum, slug })
+    }
     if (body.action === 'admin_update_story') {
       const { story_id, title, content } = body
       if (!story_id) return json({ error: 'Missing story_id' }, 400)

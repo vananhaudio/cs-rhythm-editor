@@ -430,7 +430,35 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
           <p className="ed-empty">Chưa có nội dung</p>
         )}
 
-        {/* ── Xuất bản ── */}
+        {/* ── Xuất bản nhanh ── */}
+        {!published && story.status !== 'published' && (
+          <div className="ed-section ed-quick-pub">
+            <button className="ed-pub-quick-btn" onClick={async () => {
+              setPublishing(true)
+              setStatusMsg('Đang xuất bản...')
+              try {
+                const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/story-ai', {
+                  method: 'POST',
+                  body: JSON.stringify({ admin_key: 'st-1001-adm-7x9k2', action: 'admin_publish', story_id: story.id }),
+                })
+                const data = await res.json()
+                if (data.ok) {
+                  setStatusMsg(`Đã xuất bản! Số #${data.story_number} — hiện trên Tạp chí ngay.`)
+                  setPublished(true)
+                  story.status = 'published'
+                } else {
+                  setStatusMsg('Lỗi: ' + (data.error || 'Không thể xuất bản'))
+                }
+              } catch (e) { setStatusMsg('Lỗi: ' + (e as Error).message) }
+              setPublishing(false)
+            }} disabled={publishing}>
+              {publishing ? 'Đang xuất bản...' : '🚀 Xuất bản ngay'}
+            </button>
+            <span className="ed-pub-hint">Câu chuyện sẽ hiện trên Tạp chí ngay lập tức.</span>
+          </div>
+        )}
+
+        {/* ── Xuất bản (có ảnh) ── */}
         {!published && story.status !== 'published' && (
           <div className="ed-section">
             <h3 className="ed-section-title">🚀 Xuất bản</h3>
@@ -612,6 +640,11 @@ const CSS = `
 .ed-empty { color:#8C8C8C; font-style:italic; }
 
 /* Publish tools */
+.ed-pub-quick-btn { width:100%; padding:14px; background:#8B7355; color:#fff; border:none; border-radius:8px; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; transition:opacity .15s; }
+.ed-pub-quick-btn:hover { opacity:0.9; }
+.ed-pub-quick-btn:disabled { opacity:0.5; cursor:default; }
+.ed-pub-hint { display:block; text-align:center; font-size:12px; color:#8C8C8C; margin-top:8px; }
+.ed-quick-pub { padding:16px 0; border-bottom:1px solid #EBE5DB; margin-bottom:8px; }
 .ed-pub-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border:1px solid #E5E0D8; border-radius:8px; background:#FFF; color:#5C5C5C; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:background .12s,border-color .12s; }
 .ed-pub-btn:hover { background:#F5F2ED; border-color:#D4C9B8; }
 .ed-pub-btn-primary { background:#4338CA; color:#FFF; border-color:#4338CA; font-weight:600; width:100%; justify-content:center; margin-top:12px; }
