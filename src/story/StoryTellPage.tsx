@@ -182,6 +182,9 @@ export default function StoryTellPage() {
   const [showSidebar, setShowSidebar] = useState(false)
   const [storyList, setStoryList] = useState<{ id: string; title: string; status: string; updated_at: string; conversation: ChatMsg[] }[]>([])
   const [loadingList, setLoadingList] = useState(false)
+  const [storyMenuId, setStoryMenuId] = useState<string | null>(null)
+  const [sidebarRenameId, setSidebarRenameId] = useState<string | null>(null)
+  const [sidebarRenameInput, setSidebarRenameInput] = useState('')
 
   // ── Conversation + Story Raw ──
   const [conversation, setConversation] = useState<ChatMsg[]>([])
@@ -499,6 +502,31 @@ export default function StoryTellPage() {
     }
   }, [storyId, storyTitle])
 
+  // ── Sidebar rename ──
+  const startSidebarRename = (sid: string, currentTitle: string) => {
+    setStoryMenuId(null)
+    setSidebarRenameId(sid)
+    setSidebarRenameInput(currentTitle || '')
+  }
+  const submitSidebarRename = async (sid: string) => {
+    const t = sidebarRenameInput.trim()
+    setSidebarRenameId(null)
+    if (t) {
+      await supabase.from('stories').update({ title: t }).eq('id', sid)
+      if (sid === storyId) setStoryTitle(t)
+      fetchStoryList()
+    }
+  }
+
+  // ── Sidebar delete ──
+  const deleteStoryById = async (sid: string) => {
+    setStoryMenuId(null)
+    if (!window.confirm('Bạn có chắc muốn xóa câu chuyện này? Hành động này không thể hoàn tác.')) return
+    await supabase.from('stories').delete().eq('id', sid)
+    if (sid === storyId) startNew()
+    fetchStoryList()
+  }
+
   // ── Delete story ──
   const deleteStory = useCallback(async () => {
     if (!storyId || !window.confirm('Bạn có chắc muốn xóa câu chuyện này? Hành động này không thể hoàn tác.')) return
@@ -634,7 +662,7 @@ export default function StoryTellPage() {
             </div>
 
             <button className="sw-drawer-new" onClick={() => { startNew(); fetchStoryList() }}>
-              + Câu chuyện mới
+              + Bắt đầu câu chuyện mới
             </button>
 
             <div className="sw-drawer-list">
@@ -644,19 +672,58 @@ export default function StoryTellPage() {
                 <div className="sw-drawer-empty">Chưa có câu chuyện nào</div>
               ) : (
                 storyList.map(s => (
-                  <button
-                    key={s.id}
-                    className={`sw-drawer-item ${s.id === storyId ? 'sw-drawer-item-active' : ''}`}
-                    onClick={() => loadStory(s.id)}
-                  >
-                    <div className="sw-drawer-item-top">
-                      <span className="sw-drawer-item-title">{s.title || 'Câu chuyện chưa đặt tên'}</span>
-                      <span className={`sw-drawer-badge sw-drawer-badge-${s.status === 'published' ? 'done' : s.status === 'submitted' || s.status === 'pending_publish' ? 'done' : 'telling'}`}>
-                        {s.status === 'published' ? 'Đã xuất bản' : s.status === 'submitted' || s.status === 'pending_publish' ? 'Đã hoàn thành' : s.status === 'user_review' ? 'Đã hoàn thành' : 'Đang kể'}
-                      </span>
+                  <div key={s.id} className={`sw-drawer-item-row ${s.id === storyId ? 'sw-drawer-item-row-active' : ''}`}>
+                    {sidebarRenameId === s.id ? (
+                      <div className="sw-drawer-item-rename">
+                        <input
+                          className="sw-drawer-rename-input"
+                          value={sidebarRenameInput}
+                          onChange={e => setSidebarRenameInput(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); submitSidebarRename(s.id) }
+                            if (e.key === 'Escape') setSidebarRenameId(null)
+                          }}
+                          onBlur={() => submitSidebarRename(s.id)}
+                          placeholder="Tên câu chuyện…"
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        className={`sw-drawer-item ${s.id === storyId ? 'sw-drawer-item-active' : ''}`}
+                        onClick={() => loadStory(s.id)}
+                      >
+                        <span className="sw-drawer-item-icon">📖</span>
+                        <div className="sw-drawer-item-body">
+                          <div className="sw-drawer-item-top">
+                            <span className="sw-drawer-item-title">{s.title || '✍️ Đang kể câu chuyện'}</span>
+                            <span className={`sw-drawer-badge sw-drawer-badge-${s.status === 'published' ? 'done' : s.status === 'submitted' || s.status === 'pending_publish' ? 'done' : 'telling'}`}>
+                              {s.status === 'published' ? 'Đã xuất bản' : s.status === 'submitted' || s.status === 'pending_publish' ? 'Đã hoàn thành' : s.status === 'user_review' ? 'Đã hoàn thành' : 'Đang kể'}
+                            </span>
+                          </div>
+                          <div className="sw-drawer-item-time">{timeAgo(s.updated_at)}</div>
+                        </div>
+                      </button>
+                    )}
+                    <div className="sw-drawer-item-actions">
+                      <button
+                        className="sw-drawer-item-menu-btn"
+                        onClick={e => { e.stopPropagation(); setStoryMenuId(storyMenuId === s.id ? null : s.id) }}
+                        aria-label="Tùy chọn"
+                      >
+                        ⋯
+                      </button>
+                      {storyMenuId === s.id && (
+                        <>
+                          <div className="sw-drawer-item-menu-overlay" onClick={() => setStoryMenuId(null)} />
+                          <div className="sw-drawer-item-menu-drop">
+                            <button onClick={() => startSidebarRename(s.id, s.title)}>✎ Đổi tên</button>
+                            <button onClick={() => deleteStoryById(s.id)} className="sw-menu-danger">🗑 Xóa</button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <div className="sw-drawer-item-time">{timeAgo(s.updated_at)}</div>
-                  </button>
+                  </div>
                 ))
               )}
             </div>
@@ -708,7 +775,7 @@ export default function StoryTellPage() {
                   onClick={() => storyId && setEditingTitle(true)}
                   title="Nhấn để đổi tên"
                 >
-                  {storyTitle || 'Câu chuyện chưa đặt tên'}
+                  {storyTitle || '✍️ Đang kể câu chuyện'}
                   {storyId && <span className="sw-title-icon">✎</span>}
                 </h1>
               )}
@@ -739,10 +806,20 @@ export default function StoryTellPage() {
 
           {/* ── CONTENT ── */}
           <div className="sw-content" ref={contentRef}>
-            {/* ── SECTION: INVITATION ── */}
+            {/* ── SECTION: MIRA INTRODUCTION ── */}
             {conversation.length === 0 && (
-              <section className="sw-section sw-invitation">
-                <p>{draftResumed ? 'Bạn đang kể dở — kể tiếp cho mình nghe chứ?' : invitation}</p>
+              <section className="sw-section sw-mira-intro">
+                <div className="sw-mira-avatar">M</div>
+                <div className="sw-msg sw-msg-mira sw-msg-intro">
+                  <div className="sw-msg-text">
+                    Xin chào!<br /><br />
+                    Tôi là Mira.<br /><br />
+                    Tôi sẽ giúp bạn ghi lại câu chuyện này.<br /><br />
+                    Đừng lo về câu chữ.<br /><br />
+                    Hãy kể như đang trò chuyện với một người bạn.<br /><br />
+                    Tôi sẽ giúp bạn sắp xếp lại sau.
+                  </div>
+                </div>
               </section>
             )}
 
@@ -795,7 +872,7 @@ export default function StoryTellPage() {
                     onChange={e => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     disabled={sending}
-                    placeholder={phase === 'editing' ? 'Bạn muốn sửa phần nào?' : 'Hãy kể tiếp câu chuyện…'}
+                    placeholder={phase === 'editing' ? 'Bạn muốn sửa phần nào?' : 'Bắt đầu từ điều bạn nhớ nhất…'}
                   />
                   <button
                     className="sw-send"
@@ -946,7 +1023,9 @@ const CSS = `
   padding: 40px 0;
 }
 .sw-drawer-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   padding: 10px 12px;
   background: transparent;
@@ -955,10 +1034,18 @@ const CSS = `
   font-family: inherit;
   text-align: left;
   cursor: pointer;
-  margin-bottom: 2px;
 }
 .sw-drawer-item:active { background: rgba(0,0,0,0.04); }
 .sw-drawer-item-active { background: rgba(0,122,255,0.08); }
+.sw-drawer-item-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.sw-drawer-item-body {
+  flex: 1;
+  min-width: 0;
+}
 .sw-drawer-item-top {
   display: flex;
   align-items: center;
@@ -979,6 +1066,24 @@ const CSS = `
   color: var(--ink-muted);
   margin-top: 2px;
 }
+.sw-drawer-item-row {
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+  margin-bottom: 2px;
+  position: relative;
+}
+.sw-drawer-item-row-active { background: rgba(0,122,255,0.08); }
+.sw-drawer-item-row .sw-drawer-item { flex: 1; margin-bottom: 0; }
+.sw-drawer-item-actions { position: relative; flex-shrink: 0; padding-right: 6px; }
+.sw-drawer-item-menu-btn { width: 28px; height: 28px; border: none; border-radius: 8px; background: transparent; color: var(--ink-muted); font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; letter-spacing: 1px; }
+.sw-drawer-item-menu-btn:hover { background: rgba(0,0,0,0.06); }
+.sw-drawer-item-menu-overlay { position: fixed; inset: 0; z-index: 299; }
+.sw-drawer-item-menu-drop { position: absolute; top: 100%; right: 0; margin-top: 2px; background: var(--surface); border-radius: 12px; box-shadow: 0 2px 14px rgba(0,0,0,0.14); min-width: 150px; z-index: 300; overflow: hidden; }
+.sw-drawer-item-menu-drop button { display: block; width: 100%; padding: 10px 14px; border: none; background: transparent; font-size: 14px; font-family: inherit; color: var(--ink); cursor: pointer; text-align: left; }
+.sw-drawer-item-menu-drop button:hover { background: rgba(0,0,0,0.04); }
+.sw-drawer-item-rename { flex: 1; padding: 6px 12px; }
+.sw-drawer-rename-input { width: 100%; padding: 6px 8px; font-size: 15px; font-family: inherit; border: 1.5px solid var(--blue); border-radius: 8px; background: var(--surface); color: var(--ink); outline: none; }
 .sw-drawer-badge {
   font-size: 11px;
   font-weight: 600;
@@ -1032,7 +1137,7 @@ const CSS = `
   gap: 4px;
 }
 .sw-sidebar-btn {
-  width: 32px; height: 32px;
+  width: 34px; height: 34px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -1098,7 +1203,7 @@ const CSS = `
 .sw-header-right { flex-shrink: 0; }
 .sw-menu-wrap { position: relative; }
 .sw-menu-btn {
-  width: 32px; height: 32px;
+  width: 34px; height: 34px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -1151,21 +1256,43 @@ const CSS = `
 }
 .sw-section { max-width: 640px; width: 100%; }
 
-/* ── INVITATION ── */
-.sw-invitation {
-  padding: 80px 0;
-  text-align: center;
+/* ── MIRA INTRODUCTION ── */
+.sw-mira-intro {
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: sw-fade-in 0.5s ease;
 }
-.sw-invitation p {
-  font-size: 22px;
-  font-weight: 400;
-  color: var(--ink-soft);
-  line-height: 1.4;
+.sw-mira-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5856D6, #AF52DE);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sw-msg-intro {
+  max-width: 85% !important;
+  align-self: center !important;
+}
+.sw-msg-intro .sw-msg-text {
+  background: #E9E9EB;
+  font-size: 15px;
+  line-height: 1.55;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  max-width: none;
 }
 
 /* ── CONVERSATION — iMessage style ── */
 .sw-convo { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
-.sw-msg { max-width: 72%; }
+.sw-msg { max-width: 66%; }
 @keyframes sw-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .sw-msg-user { align-self: flex-end; }
 .sw-msg-mira { align-self: flex-start; }
@@ -1177,22 +1304,22 @@ const CSS = `
   padding: 0 12px;
 }
 .sw-msg-text {
-  font-size: 17px;
-  line-height: 1.35;
+  font-size: 16px;
+  line-height: 1.4;
   white-space: pre-wrap;
-  padding: 8px 13px;
-  border-radius: 20px;
+  padding: 7px 14px;
+  border-radius: 18px;
   position: relative;
 }
 .sw-msg-user .sw-msg-text {
   background: var(--blue);
   color: #fff;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 6px;
 }
 .sw-msg-mira .sw-msg-text {
-  background: var(--mira-bg);
+  background: #E9E9EB;
   color: var(--ink);
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 6px;
 }
 .sw-msg-pending { opacity: 0.5; }
 .sw-msg-dots { color: var(--ink-muted); }
@@ -1312,8 +1439,8 @@ const CSS = `
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--separator);
-  border-radius: 22px;
-  padding: 4px 4px 4px 14px;
+  border-radius: 24px;
+  padding: 5px 5px 5px 16px;
 }
 .sw-textarea {
   flex: 1;
@@ -1332,12 +1459,12 @@ const CSS = `
 .sw-textarea::placeholder { color: var(--ink-faint); }
 .sw-textarea:disabled { opacity: 0.4; }
 .sw-send {
-  width: 32px; height: 32px;
+  font-size: 18px;
+  width: 34px; height: 34px;
   border-radius: 50%;
   background: var(--blue);
   color: #fff;
   border: none;
-  font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
