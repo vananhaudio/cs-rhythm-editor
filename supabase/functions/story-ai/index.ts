@@ -15,7 +15,7 @@ const MODEL_REVIEW = 'claude-haiku-4-5-20251001'
 
 const MAX_MSG_LEN = 2000
 const MAX_STORY_MSGS = 80
-const MAX_OPEN_STORIES = 3
+const MAX_OPEN_STORIES = 10
 const HISTORY = 40
 
 const cors = {
@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id).not('status', 'in', '("published","unpublished")')
       if ((count ?? 0) >= MAX_OPEN_STORIES) {
-        return json({ reply: 'You have some unfinished stories. Go to "My Stories" to continue.', phase: 'telling', storyId: null })
+        return json({ reply: 'Bạn có một số câu chuyện đang kể dở. Hãy mở menu ☰ bên trái để tiếp tục nhé.', phase: 'telling', storyId: null })
       }
       const { data, error } = await db.from('stories')
         .insert({ user_id: user.id, status: 'telling', conversation: [] })
