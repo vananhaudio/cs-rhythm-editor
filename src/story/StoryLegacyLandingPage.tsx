@@ -45,10 +45,26 @@ const TOPICS = [
 ]
 
 const STEPS = [
-  { n: '1', t: 'Viết', d: 'Kể tự nhiên như đang trò chuyện. Không cần văn hay — chỉ cần thật.' },
-  { n: '2', t: 'Gửi', d: 'Gửi câu chuyện về dự án, kèm tên hoặc bút danh và địa phương của bạn.' },
-  { n: '3', t: 'Duyệt', d: 'Thầy Văn Anh đọc từng câu chuyện trước khi xuất bản — để nơi này luôn là những câu chuyện thật.' },
-  { n: '4', t: 'Xuất bản', d: 'Câu chuyện của bạn vào thư viện, để cộng đồng cùng đọc và sẻ chia.' },
+  {
+    n: '1',
+    t: 'Kể',
+    d: <>Hãy kể như đang trò chuyện với một người bạn.<br /><br />Không cần văn hay.<br /><br />Chỉ cần thật.</>,
+  },
+  {
+    n: '2',
+    t: 'Mira cùng sắp xếp',
+    d: <>Mira giúp bạn sắp xếp lại câu chuyện cho mạch lạc và dễ đọc hơn.<br /><br />Bạn luôn là người quyết định nội dung cuối cùng.</>,
+  },
+  {
+    n: '3',
+    t: 'Ban biên tập đọc lại',
+    d: <>Tôi sẽ đọc từng câu chuyện trước khi xuất bản, để nơi đây luôn là những câu chuyện thật, chân thành và có thể truyền cảm hứng cho người khác.</>,
+  },
+  {
+    n: '4',
+    t: 'Lan tỏa cùng cộng đồng',
+    d: <>Những câu chuyện sẽ được lưu giữ trong 1001 Câu chuyện cùng Guitar.<br /><br />Những câu chuyện truyền cảm hứng nhất sẽ được giới thiệu tại Đại hội Guitar, đăng trong Tạp chí 1001 Câu chuyện cùng Guitar và có cơ hội được phổ nhạc, phát hành thành một bài hát.</>,
+  },
 ]
 
 export default function StoryLegacyLandingPage() {
@@ -329,10 +345,10 @@ const CSS = `.tva-story .nav-back{text-decoration:none;color:var(--ink-muted);fo
 .tva-story .topics{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px;}
 .tva-story .topic{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:9px 18px;font-size:14.5px;font-weight:600;color:var(--ink-soft);}
 .tva-story .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:26px;}
-.tva-story .step{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:20px;}
-.tva-story .step .sn{width:32px;height:32px;border-radius:999px;background:var(--indigo);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
-.tva-story .step h3{font-size:16px;font-weight:700;margin-bottom:6px;}
-.tva-story .step p{font-size:13.5px;color:var(--ink-soft);margin:0;line-height:1.5;}
+.tva-story .step{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;height:100%;}
+.tva-story .step .sn{width:32px;height:32px;border-radius:999px;background:var(--indigo);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;flex-shrink:0;}
+.tva-story .step h3{font-size:16px;font-weight:700;margin-bottom:6px;flex-shrink:0;}
+.tva-story .step p{font-size:13.5px;color:var(--ink-soft);margin:0;line-height:1.6;}
 @media(max-width:860px){.tva-story .steps{grid-template-columns:1fr 1fr;}}
 .tva-story .note{margin-top:20px;font-size:13.5px;color:var(--ink-faint);}
 .tva-story .cta-sec{background:var(--indigo);}
