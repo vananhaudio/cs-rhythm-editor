@@ -174,6 +174,64 @@ function BottomBar({
   )
 }
 
+// ── CHẤM ĐIỂM CHO TRẺ CHƯA BIẾT CHỮ ──────────────────────────────────────────
+// Bé 5–12 tuổi có thể chưa đọc được chữ nhưng ĐỌC ĐƯỢC SỐ. Nên bảng điểm chỉ
+// dùng 3 thứ bé hiểu ngay: SỐ thật to, SAO, và MÀU. Bản cũ toàn chữ nhỏ 12–16px
+// ("Xuất sắc!", "Tốt lắm!", "Luyện thêm nhé") — bé không biết đọc thì vô nghĩa.
+// Thêm tiếng đàn báo kết quả: nghe cũng hiểu, không cần nhìn.
+
+const STAR_AT = [0.5, 0.7, 0.9]   // ngưỡng 1, 2, 3 sao
+
+function starsOf(hit: number, total: number): number {
+  if (!total) return 0
+  const r = hit / total
+  return r >= STAR_AT[2] ? 3 : r >= STAR_AT[1] ? 2 : r >= STAR_AT[0] ? 1 : 0
+}
+
+/** Tiếng báo kết quả — càng nhiều sao càng leo cao. 0 sao: hai nốt trầm nhẹ. */
+function playResultSound(stars: number) {
+  const up = [261.63, 329.63, 392.0, 523.25]          // Đô Mi Sol Đô
+  const seq = stars === 0 ? [220.0, 196.0] : up.slice(0, stars + 1)
+  seq.forEach((f, i) => window.setTimeout(() => playTone(f, stars === 0 ? 0.35 : 0.5), i * 170))
+}
+
+/** Bảng điểm: sao + số to + hàng chấm từng nốt. Không một chữ nào cần đọc. */
+function ScoreCard({ hit, total, results }: {
+  hit: number; total: number; results?: ('correct' | 'wrong' | 'pending')[]
+}) {
+  const stars = starsOf(hit, total)
+  const color = stars >= 2 ? C.green : stars === 1 ? C.accent : C.red
+  return (
+    <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '4px 12px 2px' }}>
+      <div style={{ display: 'flex', gap: 5 }}>
+        {[0, 1, 2].map(i => (
+          <span key={i} style={{
+            fontSize: 28, lineHeight: 1,
+            opacity: i < stars ? 1 : 0.2,
+            filter: i < stars ? 'none' : 'grayscale(1)',
+            animation: i < stars ? `sc-pop .45s ${i * 0.14}s backwards` : undefined,
+          }}>⭐</span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+        <span style={{ fontSize: 38, fontWeight: 900, color, lineHeight: 1.05 }}>{hit}</span>
+        <span style={{ fontSize: 19, fontWeight: 800, color: C.muted }}>/{total}</span>
+      </div>
+      {results && results.length > 0 && (
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 300 }}>
+          {results.map((r, i) => (
+            <div key={i} style={{
+              width: 11, height: 11, borderRadius: '50%',
+              background: r === 'correct' ? C.green : r === 'wrong' ? C.red : '#E5E0D5',
+            }} />
+          ))}
+        </div>
+      )}
+      <style>{'@keyframes sc-pop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.3)}100%{transform:scale(1);opacity:1}}'}</style>
+    </div>
+  )
+}
+
 // ── Colors ────────────────────────────────────────────────────────────────────
 const C = {
   bg: '#F9F7F1',
@@ -485,21 +543,17 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
         flexShrink: 0, display: 'flex', justifyContent: 'center',
         padding: '2px 16px 4px', gap: 16, alignItems: 'center',
       }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>
-          Nốt {cursor + 1}/{exercise.notes.length}
+        {/* Số to — bé chưa biết chữ vẫn đọc được "3 / 7" */}
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: C.text, lineHeight: 1 }}>{cursor + 1}</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: C.muted }}>/{exercise.notes.length}</span>
         </span>
-        {state === 'idle' && (
-          <span style={{ fontSize: 12, color: C.muted }}>Nhấn Bắt đầu</span>
-        )}
+        {state === 'idle' && <span style={{ fontSize: 18, color: C.muted }}>▶</span>}
         {state === 'active' && (
-          <span style={{ fontSize: 12, color: C.dim }}>🎤 {detector.heard || 'chờ...'}</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.dim }}>🎤 {detector.heard || '…'}</span>
         )}
-        {state === 'correct' && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.green }}>✓ Đúng!</span>
-        )}
-        {state === 'wrong' && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.red }}>✗ Sai</span>
-        )}
+        {state === 'correct' && <span style={{ fontSize: 26, color: C.green, lineHeight: 1, animation: 'sc-pop .35s' }}>✓</span>}
+        {state === 'wrong' && <span style={{ fontSize: 26, color: C.red, lineHeight: 1, animation: 'sc-pop .35s' }}>✗</span>}
         {errorMic && <span style={{ fontSize: 11, color: C.red }}>{errorMic}</span>}
       </div>
 
@@ -556,6 +610,7 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
   const detector = usePitchDetector()
   const timerRef = useRef<number | null>(null)
   const hitRef = useRef(false)
+  const cursorRef = useRef(-1)
   const bpm = SPEEDS[speedIdx].bpm
 
   const startMic = async () => {
@@ -585,17 +640,24 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown])
 
+  // Vòng nghe chạy LIÊN TỤC suốt bài, đọc nốt đang tới qua ref.
+  // Bản cũ để `cursor` và `detector` trong deps: `detector` là object mới mỗi lần
+  // render, mà mỗi lần detect() lại setHeard → render → effect dọn dẹp và DỰNG LẠI
+  // interval. Kết quả là có nốt không kịp nghe, bé đàn đúng vẫn bị chấm sai.
   useEffect(() => {
     if (!playing || done || !detector.listening) return
     const loop = () => {
+      const c = cursorRef.current
+      if (c < 0 || c >= exercise.notes.length) return
       const d = detector.detect()
-      if (!d || cursor < 0 || cursor >= exercise.notes.length) return
-      const target = pitchClass(pitchToFreq(exercise.notes[cursor].pitch))
-      if (d.pc === target) hitRef.current = true
+      if (!d) return
+      if (d.pc === pitchClass(pitchToFreq(exercise.notes[c].pitch))) hitRef.current = true
     }
     const id = setInterval(loop, 60)
     return () => clearInterval(id)
-  }, [playing, done, cursor, exercise.notes, detector])
+    // detector.detect ổn định (useCallback), cursor đọc qua ref → deps chỉ cần 2 cờ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, done, detector.listening])
 
   const startPlayback = () => {
     stopPlayback()
@@ -603,20 +665,34 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
     setNoteResults(new Array(exercise.notes.length).fill('pending'))
     const beatMs = 60000 / bpm
     const results: ('correct' | 'wrong')[] = []
+      // Hàng chấm là ẢNH CHIẾU của chính mảng `results` đã tính điểm — một nguồn
+      // sự thật duy nhất. Trước đây `noteResults` được ghi riêng theo chỉ số nên
+      // lệch với số đếm (số báo 2 đúng mà chỉ 1 chấm xanh, lại thừa 1 chấm xám).
+      const veCham = () => {
+        const arr: ('correct' | 'wrong' | 'pending')[] = [...results]
+        while (arr.length < exercise.notes.length) arr.push('pending')
+        setNoteResults(arr)
+      }
     let i = 0
     const tick = () => {
       if (i >= exercise.notes.length) {
-        setPlaying(false); setDone(true); setCursor(-1)
+        setPlaying(false); setDone(true); cursorRef.current = -1; setCursor(-1)
+        // Chấm NỐT CUỐI trước khi tổng kết. Bản cũ thoát ngay ở đây nên nốt cuối
+        // không bao giờ được tính — bài 8 nốt chỉ chấm 7, bé đàn đúng nốt kết vẫn
+        // không được điểm.
+        results.push(hitRef.current ? 'correct' : 'wrong')
+        veCham()
         const hit = results.filter(r => r === 'correct').length
         setScore({ hit, total: results.length })
+        playResultSound(starsOf(hit, results.length))   // nghe cũng biết kết quả
         if (hit / results.length >= 0.5) setTimeout(onComplete, 1500)
         return
       }
       if (i > 0) {
         results.push(hitRef.current ? 'correct' : 'wrong')
-        setNoteResults(prev => { const next = [...prev]; next[i - 1] = hitRef.current ? 'correct' : 'wrong'; return next })
+        veCham()
       }
-      setCursor(i)
+      cursorRef.current = i; setCursor(i)
       hitRef.current = false
       i++
       const dur = exercise.notes[i - 1]?.duration ?? 1
@@ -678,18 +754,8 @@ function StepRhythm({ exercise, noteItems, onComplete }: StepComponentProps) {
         </div>
       )}
 
-      {/* Score summary */}
-      {done && score && (
-        <div style={{ flexShrink: 0, textAlign: 'center', padding: '2px 16px 4px' }}>
-          <span style={{
-            fontSize: 13, fontWeight: 700,
-            color: score.hit / score.total >= 0.5 ? C.green : C.red,
-          }}>
-            {score.hit}/{score.total} đúng
-            {score.hit / score.total >= 0.5 ? ' ✅' : ' — thử lại nhé'}
-          </span>
-        </div>
-      )}
+      {/* Bảng điểm — số to + sao + màu, không cần biết đọc */}
+      {done && score && <ScoreCard hit={score.hit} total={score.total} results={noteResults} />}
 
       {/* Bottom */}
       <BottomBar
@@ -730,6 +796,7 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
   const detector = usePitchDetector()
   const timerRef = useRef<number | null>(null)
   const hitRef = useRef(false)
+  const cursorRef = useRef(-1)
   const bpm = SPEEDS[1].bpm
 
   const startMic = async () => {
@@ -759,17 +826,24 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown])
 
+  // Vòng nghe chạy LIÊN TỤC suốt bài, đọc nốt đang tới qua ref.
+  // Bản cũ để `cursor` và `detector` trong deps: `detector` là object mới mỗi lần
+  // render, mà mỗi lần detect() lại setHeard → render → effect dọn dẹp và DỰNG LẠI
+  // interval. Kết quả là có nốt không kịp nghe, bé đàn đúng vẫn bị chấm sai.
   useEffect(() => {
     if (!playing || done || !detector.listening) return
     const loop = () => {
+      const c = cursorRef.current
+      if (c < 0 || c >= exercise.notes.length) return
       const d = detector.detect()
-      if (!d || cursor < 0 || cursor >= exercise.notes.length) return
-      const target = pitchClass(pitchToFreq(exercise.notes[cursor].pitch))
-      if (d.pc === target) hitRef.current = true
+      if (!d) return
+      if (d.pc === pitchClass(pitchToFreq(exercise.notes[c].pitch))) hitRef.current = true
     }
     const id = setInterval(loop, 60)
     return () => clearInterval(id)
-  }, [playing, done, cursor, exercise.notes, detector])
+    // detector.detect ổn định (useCallback), cursor đọc qua ref → deps chỉ cần 2 cờ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, done, detector.listening])
 
   const startPlayback = () => {
     stopPlayback()
@@ -779,13 +853,15 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
     let i = 0
     const tick = () => {
       if (i >= exercise.notes.length) {
-        setPlaying(false); setDone(true); setCursor(-1)
+        setPlaying(false); setDone(true); cursorRef.current = -1; setCursor(-1)
+        results.push(hitRef.current ? 'correct' : 'wrong')   // chấm cả NỐT CUỐI
         const hit = results.filter(r => r === 'correct').length
         setScore({ hit, total: results.length })
+        playResultSound(starsOf(hit, results.length))   // nghe cũng biết kết quả
         return
       }
       if (i > 0) results.push(hitRef.current ? 'correct' : 'wrong')
-      setCursor(i)
+      cursorRef.current = i; setCursor(i)
       hitRef.current = false
       i++
       const dur = exercise.notes[i - 1]?.duration ?? 1
@@ -826,18 +902,8 @@ function StepPerform({ exercise, noteItems, onBack }: StepComponentProps) {
         <NoteSheet notes={noteItems} active={cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
 
-      {/* Score */}
-      {done && score && (
-        <div style={{ flexShrink: 0, textAlign: 'center', padding: '2px 16px 4px' }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: C.accent, marginBottom: 2 }}>
-            🎉 {Math.round(score.hit / score.total * 100)}%
-          </div>
-          <div style={{ fontSize: 12, color: C.dim }}>
-            {score.hit}/{score.total} nốt đúng
-            {score.hit / score.total >= 0.8 ? ' · Xuất sắc! ⭐' : score.hit / score.total >= 0.5 ? ' · Tốt lắm! 👏' : ' · Luyện thêm nhé 💪'}
-          </div>
-        </div>
-      )}
+      {/* Bảng điểm — bỏ % (trẻ chưa hiểu phần trăm) và bỏ hết lời khen bằng chữ */}
+      {done && score && <ScoreCard hit={score.hit} total={score.total} />}
 
       {/* Bottom */}
       <BottomBar
