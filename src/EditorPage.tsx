@@ -253,6 +253,9 @@ function SeriesView() {
 // DETAIL PANEL
 // ══════════════════════════════════════════
 function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) {
+  const hasConversation = story.conversation && story.conversation.length > 0
+  const hasContent = story.content && story.content.trim().length > 0
+
   return (
     <aside className="ed-detail">
       <div className="ed-detail-header">
@@ -266,22 +269,36 @@ function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) 
           <span className="ed-card-sep">·</span>
           <span>{fmtDate(story.submittedAt)}</span>
         </div>
-        <div className="ed-detail-content">
-          {story.status === 'telling' && story.conversation ? (
-            story.conversation.filter(m => m.role === 'user').map((m, i) => (
-              <div key={i} className="ed-convo-msg">
-                <span className="ed-convo-role">🧑 Người kể:</span>
-                <p>{m.text}</p>
-              </div>
-            ))
-          ) : story.content ? (
-            story.content.split('\n').map((p, i) => (
-              p.trim() ? <p key={i}>{p}</p> : <br key={i} />
-            ))
-          ) : (
-            <p className="ed-empty">Chưa có nội dung</p>
-          )}
-        </div>
+
+        {/* Bản gốc — conversation */}
+        {hasConversation && (
+          <div className="ed-section">
+            <h3 className="ed-section-title">📝 Bản gốc (lời kể)</h3>
+            <div className="ed-convo-list">
+              {story.conversation!.filter(m => m.role === 'user' && m.text !== '[STUCK_BUTTON]').map((m, i) => (
+                <div key={i} className="ed-convo-msg">
+                  <p>{m.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Bản đã biên tập — content */}
+        {hasContent && (
+          <div className="ed-section">
+            <h3 className="ed-section-title">📄 Bản đã biên tập</h3>
+            <div className="ed-detail-content">
+              {story.content.split('\n').map((p, i) => (
+                p.trim() ? <p key={i}>{p}</p> : <br key={i} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!hasConversation && !hasContent && (
+          <p className="ed-empty">Chưa có nội dung</p>
+        )}
       </div>
     </aside>
   )
@@ -365,8 +382,11 @@ const CSS = `
 .ed-detail-content { font-size:15px; line-height:1.8; color:#3A3A3A; }
 .ed-detail-content p { margin:0 0 1.2em; }
 .ed-detail-content p:last-child { margin-bottom:0; }
-.ed-convo-msg { margin-bottom:16px; }
-.ed-convo-role { font-size:12px; font-weight:600; color:#8C8C8C; display:block; margin-bottom:4px; }
+.ed-section { margin-top:24px; padding-top:20px; border-top:1px solid #F0EDE6; }
+.ed-section:first-of-type { margin-top:0; padding-top:0; border-top:none; }
+.ed-section-title { font-size:14px; font-weight:600; color:#8C8C8C; margin:0 0 14px; text-transform:uppercase; letter-spacing:0.3px; }
+.ed-convo-list { display:flex; flex-direction:column; gap:12px; }
+.ed-convo-msg { padding:14px 16px; background:#F9F8F6; border-radius:10px; border:1px solid #F0EDE6; }
 .ed-convo-msg p { font-size:15px; line-height:1.6; color:#3A3A3A; margin:0; }
 .ed-empty { color:#8C8C8C; font-style:italic; }
 

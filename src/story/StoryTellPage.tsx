@@ -4,8 +4,9 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../supabase'
 import type { User } from '@supabase/supabase-js'
+import PublishPrep, { PUBLISH_PREP_CSS, type PublishPrefs } from './PublishPrep'
 
-type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'submitting' | 'submitted'
+type Phase = 'telling' | 'asking' | 'ready_for_draft' | 'draft_loading' | 'draft' | 'editing' | 'publish_prep' | 'submitting' | 'submitted'
 type ChatMsg = { role: 'user' | 'mira'; text: string; at: string }
 
 // ── Helpers ──
@@ -116,7 +117,7 @@ function DraftView({ title, topic, content, onAccept, onEdit, onTellMore, busy }
       </div>
       <div className="dv-actions">
         <button className="dv-btn dv-btn-primary" onClick={onAccept} disabled={busy}>
-          ✓ Đúng rồi
+          Gửi Ban biên tập →
         </button>
         <button className="dv-btn" onClick={onEdit} disabled={busy}>
           ✏️ Biên tập lại
@@ -444,16 +445,38 @@ export default function StoryTellPage() {
     } finally { setSending(false) }
   }, [storyId, sending])
 
-  // ── Submit review ──
-  const submitReview = useCallback(async () => {
+  // ── Bản thảo OK → sang bước "Chuẩn bị xuất bản" (KHÔNG gửi ngay) ──
+  const goPublishPrep = useCallback(() => setPhase('publish_prep'), [])
+
+  // ── Xác nhận gửi Ban biên tập (kèm cách hiển thị người kể đã chọn) ──
+  const submitReview = useCallback(async (prefs: PublishPrefs) => {
     if (!storyId || sending) return
     setSending(true)
     setPhase('submitting')
-    await supabase.from('stories').update({ status: 'submitted', title: storyTitle || draftTitle }).eq('id', storyId)
+    await supabase.from('stories').update({
+      status: 'submitted',
+      title: storyTitle || draftTitle,
+      display_mode: prefs.display_mode,
+      author_name: prefs.author_name,
+      author_avatar_url: prefs.author_avatar_url,
+      class_display: prefs.class_display,
+      pen_name: prefs.pen_name,
+      consent_edit: true,
+      consent_publish: true,
+      consent_at: new Date().toISOString(),
+    }).eq('id', storyId)
+
+    // Bút danh mặc định cho những câu chuyện sau → lưu vào hồ sơ học viên
+    if (prefs.save_pen_name && user) {
+      await supabase.from('edu_students')
+        .update({ default_pen_name: prefs.pen_name, default_display_mode: prefs.display_mode })
+        .eq('user_id', user.id)
+    }
+
     try { await supabase.functions.invoke('story-ai', { body: { action: 'review', storyId } }) } catch { /* retry later */ }
     setPhase('submitted')
     setSending(false)
-  }, [storyId, sending, storyTitle, draftTitle])
+  }, [storyId, sending, storyTitle, draftTitle, user])
 
   // ── Edit draft ──
   const startEdit = useCallback(() => setPhase('editing'), [])
@@ -618,18 +641,27 @@ export default function StoryTellPage() {
       ) : phase === 'submitted' ? (
         <div className="sw-page">
           <div className="sw-submitted">
-            <div className="sw-done-icon">🎉</div>
-            <h2>Câu chuyện của bạn đã được gửi đến Ban biên tập</h2>
-            <p>Cảm ơn bạn đã chia sẻ. Ban biên tập sẽ đọc và phản hồi sớm nhất.</p>
+            <div className="sw-done-icon">✓</div>
+            <h2>Đã gửi Ban biên tập</h2>
+            <p>Ban biên tập sẽ đọc, biên tập và gửi lại bạn duyệt trước khi xuất bản.</p>
             <a className="sw-link" href="/story">← Về trang 1001 Câu chuyện</a>
           </div>
+        </div>
+      ) : phase === 'publish_prep' ? (
+        <div className="sw-page sw-page-scroll">
+          <PublishPrep
+            userId={user.id}
+            onBack={() => setPhase('draft')}
+            onConfirm={submitReview}
+            busy={sending}
+          />
         </div>
       ) : phase === 'draft' ? (
         <div className="sw-page">
           <div className="sw-draft-wrap">
             <DraftView
               title={draftTitle} topic={draftTopic} content={draftContent}
-              onAccept={submitReview} onEdit={startEdit} onTellMore={tellMore}
+              onAccept={goPublishPrep} onEdit={startEdit} onTellMore={tellMore}
               busy={sending}
             />
           </div>
@@ -944,6 +976,11 @@ const CSS = `
   align-items: center;
   justify-content: center;
   padding: 20px;
+}
+.sw-page-scroll {
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 0;
 }
 .sw-center {
   flex: 1;
@@ -1607,4 +1644,7 @@ const CSS = `
 .ag-btn:disabled { opacity: 0.5; }
 .ag-switch { font-size: 13px; color: var(--ink-muted); text-align: center; margin-top: 12px; }
 .ag-switch a { color: var(--blue); font-weight: 600; cursor: pointer; }
+
+/* ── Chuẩn bị xuất bản ── */
+${PUBLISH_PREP_CSS}
 `
