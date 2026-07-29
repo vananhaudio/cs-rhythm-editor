@@ -194,6 +194,17 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 500)
       return json({ stories })
     }
+    if (body.action === 'admin_update_story') {
+      const { story_id, title, content } = body
+      if (!story_id) return json({ error: 'Missing story_id' }, 400)
+      const updates: Record<string, any> = {}
+      if (title !== undefined) updates.title = title
+      if (content !== undefined) updates.content = content
+      if (Object.keys(updates).length === 0) return json({ error: 'Nothing to update' }, 400)
+      const { error } = await db.from('stories').update(updates).eq('id', story_id)
+      if (error) return json({ error: error.message }, 500)
+      return json({ ok: true })
+    }
     if (body.action === "admin_insert_story") {
       const { title, content, pen_name, location, topic, photos, story_number, image_base64 = null } = body
       if (!title || !content) return json({ error: 'Missing title or content' }, 400)

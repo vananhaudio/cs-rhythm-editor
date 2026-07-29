@@ -139,7 +139,7 @@ export default function EditorPage() {
         </main>
 
         {tab === 'inbox' && selected && (
-          <DetailPanel story={selected} onClose={() => setSelected(null)} />
+          <DetailPanel story={selected} onClose={() => setSelected(null)} onUpdate={() => {}} />
         )}
       </div>
     </div>
@@ -253,7 +253,34 @@ function SeriesView() {
 // ══════════════════════════════════════════
 // DETAIL PANEL
 // ══════════════════════════════════════════
-function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) {
+function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () => void; onUpdate?: () => void }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(story.title)
+  const [editContent, setEditContent] = useState(story.content)
+  const [saving, setSaving] = useState(false)
+  const handleSaveEdit = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/story-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, title: editTitle, content: editContent }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        story.title = editTitle
+        story.content = editContent
+        setIsEditing(false)
+        if (onUpdate) onUpdate()
+      } else {
+        setStatusMsg('Lỗi: ' + (data.error || 'Không thể lưu'))
+      }
+    } catch (e: any) {
+      setStatusMsg('Lỗi: ' + e.message)
+    }
+    setSaving(false)
+  }
+
   const hasConversation = story.conversation && story.conversation.length > 0
   const hasContent = story.content && story.content.trim().length > 0
   const [showPublish, setShowPublish] = useState(false)
@@ -350,7 +377,19 @@ function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) 
       </div>
       <div className="ed-detail-body">
         <StatusBadge status={story.status} />
-        <h2 className="ed-detail-title">{story.title}</h2>
+        <div className="ed-detail-title-row">
+          {isEditing ? (
+            <input className="ed-edit-input ed-edit-title" value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="Tiêu đề" />
+          ) : (
+            <h2 className="ed-detail-title">{story.title}</h2>
+          )}
+          <button className="ed-edit-btn" onClick={() => { if (isEditing) handleSaveEdit(); else { setEditTitle(story.title); setEditContent(story.content); setIsEditing(true) } }} disabled={saving}>
+            {isEditing ? (saving ? 'Đang lưu…' : '✓ Lưu') : '✏️ Sửa'}
+          </button>
+          {isEditing && (
+            <button className="ed-edit-btn ed-edit-cancel" onClick={() => setIsEditing(false)}>Hủy</button>
+          )}
+        </div>
         <div className="ed-detail-meta">
           <span>{story.author}</span>
           <span className="ed-card-sep">·</span>
@@ -375,11 +414,15 @@ function DetailPanel({ story, onClose }: { story: Story; onClose: () => void }) 
         {hasContent && (
           <div className="ed-section">
             <h3 className="ed-section-title">📄 Bản đã biên tập</h3>
-            <div className="ed-detail-content">
-              {story.content.split('\n').map((p, i) => (
-                p.trim() ? <p key={i}>{p}</p> : <br key={i} />
-              ))}
-            </div>
+            {isEditing ? (
+              <textarea className="ed-edit-textarea" value={editContent} onChange={e => setEditContent(e.target.value)} rows={12} />
+            ) : (
+              <div className="ed-detail-content">
+                {story.content.split('\n').map((p, i) => (
+                  p.trim() ? <p key={i}>{p}</p> : <br key={i} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -545,6 +588,17 @@ const CSS = `
 .ed-detail-close:hover { background:#F5F2ED; color:#1A1A1A; }
 .ed-detail-body { padding:20px 24px 40px; }
 .ed-detail-title { font-size:22px; font-weight:700; color:#1A1A1A; margin:12px 0 8px; line-height:1.3; letter-spacing:-0.2px; }
+.ed-detail-title-row { display:flex; align-items:flex-start; gap:8px; margin:12px 0 8px; }
+.ed-detail-title-row .ed-detail-title { flex:1; margin:0; }
+.ed-edit-input { font-family:inherit; font-size:15px; padding:6px 10px; border:1px solid #D4C9B8; border-radius:6px; outline:none; width:100%; }
+.ed-edit-input:focus { border-color:#8B7355; }
+.ed-edit-title { font-size:22px; font-weight:700; }
+.ed-edit-textarea { width:100%; font-family:inherit; font-size:15px; line-height:1.7; padding:12px; border:1px solid #D4C9B8; border-radius:8px; outline:none; resize:vertical; min-height:200px; }
+.ed-edit-textarea:focus { border-color:#8B7355; }
+.ed-edit-btn { padding:6px 14px; border:1px solid #D4C9B8; border-radius:6px; background:#fff; font-family:inherit; font-size:13px; cursor:pointer; white-space:nowrap; transition:background .12s; }
+.ed-edit-btn:hover { background:#F5F2ED; }
+.ed-edit-btn:disabled { opacity:0.5; cursor:default; }
+.ed-edit-cancel { color:#8C8C8C; }
 .ed-detail-meta { font-size:13px; color:#8C8C8C; display:flex; align-items:center; gap:6px; margin-bottom:20px; }
 .ed-detail-content { font-size:15px; line-height:1.8; color:#3A3A3A; }
 .ed-detail-content p { margin:0 0 1.2em; }
