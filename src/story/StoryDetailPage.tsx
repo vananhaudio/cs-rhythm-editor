@@ -27,6 +27,15 @@ interface StoryDetail {
   photos: { url: string; caption?: string }[] | null
   published_at: string
   topic: string | null
+  // Đôi nét về người kể (chỉ hiện khi người kể đã đồng ý công khai)
+  author_full_name?: string | null
+  author_age?: number | null
+  author_hometown?: string | null
+  author_living_in?: string | null
+  author_job?: string | null
+  author_bio?: string | null
+  author_portrait_url?: string | null
+  consent_bio_publish?: boolean | null
 }
 
 function fmtDate(iso: string) {
@@ -49,7 +58,7 @@ export default function StoryDetailPage() {
 
     supabase
       .from('stories')
-      .select('id, title, slug, pen_name, location, content, photos, published_at, topic')
+      .select('id, title, slug, pen_name, location, content, photos, published_at, topic, author_full_name, author_age, author_hometown, author_living_in, author_job, author_bio, author_portrait_url, consent_bio_publish')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()
@@ -165,6 +174,31 @@ export default function StoryDetailPage() {
           ))}
         </div>
 
+        {/* Đôi nét về người kể — phần giới thiệu tác giả, chỉ hiện khi đã đồng ý công khai */}
+        {story.consent_bio_publish && (story.author_bio || story.author_full_name) && (
+          <aside className="sd-author">
+            <div className="sd-author-label">Đôi nét về người kể</div>
+            <div className="sd-author-row">
+              {story.author_portrait_url && (
+                <img className="sd-author-photo" src={story.author_portrait_url} alt={story.author_full_name ?? 'Người kể'} />
+              )}
+              <div className="sd-author-main">
+                {story.author_full_name && <div className="sd-author-name">{story.author_full_name}</div>}
+                {(() => {
+                  const bits = [
+                    story.author_age ? `${story.author_age} tuổi` : null,
+                    story.author_hometown ? `quê ${story.author_hometown}` : null,
+                    story.author_living_in ? `sống tại ${story.author_living_in}` : null,
+                    story.author_job,
+                  ].filter(Boolean)
+                  return bits.length > 0 ? <div className="sd-author-meta">{bits.join(' · ')}</div> : null
+                })()}
+                {story.author_bio && <p className="sd-author-bio">{story.author_bio}</p>}
+              </div>
+            </div>
+          </aside>
+        )}
+
         {/* Categories & Series */}
         {(categories.length > 0 || seriesList.length > 0 || story.topic) && (
           <div className="sd-taxonomy">
@@ -234,6 +268,16 @@ export default function StoryDetailPage() {
 
 const CSS = REPORT_CSS + `
 .sd-footer-report { margin-top: 10px; text-align: center; }
+/* ── Đôi nét về người kể ── */
+.sd-author { margin: 40px 0 8px; padding: 22px 0; border-top: 1px solid #E4DED4; border-bottom: 1px solid #E4DED4; }
+.sd-author-label { font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #C9711E; margin-bottom: 14px; }
+.sd-author-row { display: flex; gap: 16px; align-items: flex-start; }
+.sd-author-photo { width: 86px; height: 86px; border-radius: 50%; object-fit: cover; flex: none; }
+.sd-author-main { flex: 1; min-width: 0; }
+.sd-author-name { font-size: 17px; font-weight: 700; color: #211C32; }
+.sd-author-meta { font-size: 14px; color: #6B6478; margin-top: 3px; }
+.sd-author-bio { font-size: 15.5px; color: #4A4458; line-height: 1.7; margin-top: 10px; }
+@media (max-width: 520px) { .sd-author-row { flex-direction: column; } .sd-author-photo { width: 76px; height: 76px; } }
 .sd-root {
   min-height: 100dvh;
   background: #F2EEE7;

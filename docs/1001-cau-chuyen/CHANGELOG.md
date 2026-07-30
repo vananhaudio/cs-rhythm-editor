@@ -455,3 +455,24 @@ lớp học, ảnh đại diện).
     không hiện hộp xin quyền** — người dùng bấm micro thấy không có gì
     xảy ra. Nhắc ngay tại chỗ cho đúng người gặp lỗi, không thông báo
     đại trà (đa số máy tự cập nhật trong ~1 ngày).
+
+#### Added — "Đôi nét về người kể" (2026-07-30)
+
+-   `db/story_author_bio.sql` (mới, **CHƯA chạy**): thêm cột vào
+    `stories` — `author_full_name`, `author_age`, `author_hometown`,
+    `author_living_in`, `author_job`, `author_bio`,
+    `author_portrait_url`, `consent_bio_edit`, `consent_bio_publish`.
+    Lưu **theo từng câu chuyện**, KHÔNG lưu vào `edu_students`: đây là
+    phần giới thiệu tác giả của tác phẩm, không phải hồ sơ người dùng.
+-   `PublishPrep.tsx` — mục mới "Đôi nét về người kể" trong bước Chuẩn
+    bị xuất bản: lời hướng dẫn, 5 trường thông tin cơ bản, textarea
+    giới thiệu (có ví dụ), tải 1 ảnh chân dung (JPG/PNG/WEBP, xem
+    trước, đổi/bỏ được, dùng lại bucket `story-photos/{uid}/`), và
+    **2 checkbox bắt buộc** riêng cho phần này.
+    → Nay phải tích **đủ 4 ô** mới bấm được "Xác nhận gửi Ban biên tập".
+    Điền sẵn từ bài gần nhất của chính người kể cho đỡ gõ lại (sửa
+    thoải mái) — vẫn là dữ liệu của từng bài, không phải hồ sơ.
+-   `StoryDetailPage.tsx` — khối cuối bài viết: nhãn "Đôi nét về người
+    kể", ảnh chân dung, họ tên, dòng thông tin (tuổi · quê · nơi sống ·
+    nghề), đoạn giới thiệu. **Chỉ hiện khi `consent_bio_publish` = true.**
+-   `StoryTellPage.tsx` — lưu toàn bộ trường mới khi gửi Ban biên tập.

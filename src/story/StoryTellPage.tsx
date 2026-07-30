@@ -470,6 +470,16 @@ export default function StoryTellPage() {
       consent_edit: true,
       consent_publish: true,
       consent_at: new Date().toISOString(),
+      // Đôi nét về người kể — phần giới thiệu tác giả in ở cuối bài
+      author_full_name: prefs.author_full_name,
+      author_age: prefs.author_age,
+      author_hometown: prefs.author_hometown,
+      author_living_in: prefs.author_living_in,
+      author_job: prefs.author_job,
+      author_bio: prefs.author_bio,
+      author_portrait_url: prefs.author_portrait_url,
+      consent_bio_edit: prefs.consent_bio_edit,
+      consent_bio_publish: prefs.consent_bio_publish,
     }).eq('id', storyId)
 
     // Bút danh mặc định cho những câu chuyện sau → lưu vào hồ sơ học viên
