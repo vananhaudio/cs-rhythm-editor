@@ -25,23 +25,30 @@ function summarize(content: string, max = 200): string {
   return (lastSpace > 120 ? cut.slice(0, lastSpace) : cut) + '…'
 }
 
+/** Gắn dấu hiệu để kiểm chứng hàm CÓ chạy hay không (xem header x-og-fn). */
+function mark(res: Response, note: string): Response {
+  const h = new Headers(res.headers)
+  h.set('x-og-fn', note)
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h })
+}
+
 export default async function handler(req: Request, context: { next: () => Promise<Response> }) {
   const res = await context.next()
   const ct = res.headers.get('content-type') || ''
-  if (!ct.includes('text/html')) return res
+  if (!ct.includes('text/html')) return mark(res, 'skip-not-html')
 
   const url = new URL(req.url)
   const slug = decodeURIComponent(url.pathname.replace(/^\/story\//, '').replace(/\/$/, ''))
-  if (!slug || slug.includes('/') || SKIP.has(slug)) return res
+  if (!slug || slug.includes('/') || SKIP.has(slug)) return mark(res, 'skip-' + (slug || 'root'))
 
   try {
     const q = `${SUPA}/rest/v1/stories?select=title,content,photos,pen_name,story_number`
       + `&slug=eq.${encodeURIComponent(slug)}&status=eq.published&limit=1`
     const r = await fetch(q, { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } })
-    if (!r.ok) return res
+    if (!r.ok) return mark(res, 'db-' + r.status)
     const rows = await r.json()
     const s = rows?.[0]
-    if (!s) return res
+    if (!s) return mark(res, 'no-story')
 
     const title = `${s.title} — 1001 Câu chuyện cùng Guitar`
     const desc = summarize(s.content || '')
@@ -63,8 +70,8 @@ export default async function handler(req: Request, context: { next: () => Promi
           else if (key === 'og:image:width' || key === 'og:image:height') el.remove()
         },
       })
-      .transform(res)
+      .transform(mark(res, 'ok'))
   } catch {
-    return res   // có trục trặc thì trả trang gốc, không bao giờ làm hỏng trang
+    return mark(res, 'error')   // có trục trặc thì trả trang gốc, không bao giờ làm hỏng trang
   }
 }
