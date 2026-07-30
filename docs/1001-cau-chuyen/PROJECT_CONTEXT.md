@@ -271,6 +271,18 @@ Chưa chốt — sẽ định nghĩa trong `ui/` khi bắt đầu làm Landing P
 
 ## Tiếp theo
 
+-   ⏰ **HẠN 07/09/2026 — Age Ratings: trả lời bộ câu hỏi mới của Apple
+    về "social media capabilities"** (App Store Connect → App
+    Information → Age Ratings). Ngày 30/07/2026 mở ra chỉ XEM được,
+    chưa sửa được → làm khi tạo phiên bản app kế tiếp.
+    Đáp án đã chốt theo hiện trạng: **User-Generated Content = YES**
+    (Tạp chí đăng chuyện học viên — trước đây khai NO, nay đã sai);
+    Social Media = NO (không có chia sẻ lại/thích/bảng tin, bình luận
+    chưa bật); Social Media Disabled Under 13 = NO (app không gọi
+    Declared Age Range API); Unrestricted Web Access / Messaging and
+    Chat / Advertising = NO.
+    Văn Anh chốt: **chấp nhận độ tuổi cao hơn 4+, KHÔNG cắt tính năng.**
+
 -   Thầy test luồng gửi thật (kể → bản thảo → Chuẩn bị xuất bản →
     Xác nhận gửi) rồi push `main`.
 -   **Deploy lại Edge Function `story-ai`** với code MVP 01 mới
