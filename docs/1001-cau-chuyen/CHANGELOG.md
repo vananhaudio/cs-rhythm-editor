@@ -494,3 +494,20 @@ lớp học, ảnh đại diện).
     sạch chủ đề cũ).
 -   Lý do làm: 10 bài xuất bản trước khi có tính năng đều chưa có phần
     giới thiệu tác giả; nay Ban biên tập bổ sung được khi người kể đồng ý.
+
+#### Added — Ban biên tập tự nhập bài (bài gửi qua Zalo) (2026-07-30)
+
+-   Nút **"✍️ Nhập bài gửi qua Zalo"** trên đầu trang `/editor` → form:
+    tiêu đề, tên người kể, địa phương, ô dán nội dung.
+-   Bài tạo ra ở trạng thái **`submitted`** (vào tab 📥 Chờ đọc), KHÔNG
+    đăng thẳng — để đi đúng luồng: chọn chủ đề + ảnh bìa rồi mới xuất
+    bản, giống hệt bài học viên tự gửi.
+-   `story-ai` action `admin_insert_story`: nhận thêm `status`
+    ('submitted' | mặc định 'published' giữ tương thích) và
+    `author_name`; chỉ gán `story_number`/`slug`/`published_at` khi
+    xuất bản thẳng, còn lại gán `submitted_at`.
+-   `list_all` trả thêm `photos` + toàn bộ trường `author_*` —
+    **sửa lỗi**: trước đó DetailPanel đọc các trường này nhưng chúng
+    không được ánh xạ nên ô "Đôi nét về người kể" luôn trống dù DB có dữ liệu.
+-   Tách hàm `load()` để tạo bài xong tự làm mới danh sách.
+-   **CẦN dán lại Edge Function story-ai qua Dashboard.**

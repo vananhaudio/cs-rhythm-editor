@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
   if (body.admin_key === ADMIN_KEY) {
     if (body.action === 'list_all') {
       const { data: stories, error } = await db.from('stories')
-        .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation')
+        .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation,photos,author_full_name,author_age,author_hometown,author_living_in,author_job,author_bio,author_portrait_url,consent_bio_publish')
         .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
         .order('created_at', { ascending: false })
       if (error) return json({ error: error.message }, 500)
@@ -259,22 +259,35 @@ Deno.serve(async (req) => {
     if (body.action === "admin_insert_story") {
       const { title, content, pen_name, location, topic, photos, story_number, image_base64 = null } = body
       if (!title || !content) return json({ error: 'Missing title or content' }, 400)
-      const { data: maxRow } = await db.from('stories')
-        .select('story_number').not('story_number', 'is', null)
-        .order('story_number', { ascending: false }).limit(1).maybeSingle()
-      const nextNum = story_number || (maxRow?.story_number ?? 0) + 1
-      const slug = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + String(nextNum)
-      const { data: story, error } = await db.from('stories').insert({
+      // status mặc định 'published' (giữ tương thích lời gọi cũ).
+      // Bài nhận qua Zalo nên dùng 'submitted' để đi đúng luồng biên tập:
+      // vào tab "Chờ đọc" → chọn chủ đề + ảnh bìa → mới xuất bản.
+      const st = body.status === 'submitted' ? 'submitted' : 'published'
+      const row: Record<string, any> = {
         user_id: body.user_id || '00000000-0000-0000-0000-000000000001',
-        status: 'published',
-        title, content, pen_name: pen_name || '', location: location || '',
-        topic: topic || 'cay-dan-dau-tien',
-        story_number: nextNum, slug,
+        status: st,
+        title, content,
+        pen_name: pen_name || '',
+        author_name: body.author_name || pen_name || '',
+        location: location || '',
+        topic: topic || null,
         photos: photos || [],
-        published_at: new Date().toISOString(),
         conversation: [],
-      }).select('id,story_number,slug,title').single()
+      }
+      if (st === 'published') {
+        const { data: maxRow } = await db.from('stories')
+          .select('story_number').not('story_number', 'is', null)
+          .order('story_number', { ascending: false }).limit(1).maybeSingle()
+        const nextNum = story_number || (maxRow?.story_number ?? 0) + 1
+        row.story_number = nextNum
+        row.slug = title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + String(nextNum)
+        row.published_at = new Date().toISOString()
+      } else {
+        row.submitted_at = new Date().toISOString()
+      }
+      const { data: story, error } = await db.from('stories').insert(row)
+        .select('id,story_number,slug,title,status').single()
       if (error) return json({ error: `Insert failed: ${error.message}` }, 500)
       return json({ ok: true, story })
     }

@@ -1,5 +1,5 @@
 // ── /editorial — Ban biên tập ──
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './supabase'
 
 type Tab = 'inbox' | 'categories' | 'series'
@@ -14,6 +14,15 @@ interface Story {
   content: string
   conversation?: { role: string; text: string; at: string }[]
   photos?: { url: string; caption?: string }[] | null
+  // Đôi nét về người kể (Ban biên tập xem/sửa)
+  author_full_name?: string | null
+  author_age?: number | null
+  author_hometown?: string | null
+  author_living_in?: string | null
+  author_job?: string | null
+  author_bio?: string | null
+  author_portrait_url?: string | null
+  consent_bio_publish?: boolean | null
 }
 
 interface Category {
@@ -60,12 +69,44 @@ const STATUS_FILTERS = [
 export default function EditorPage() {
   const [tab, setTab] = useState<Tab>('inbox')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+
+  // ── Nhập bài gửi qua Zalo (Ban biên tập tự đẩy lên) ──
+  const [showNew, setShowNew] = useState(false)
+  const [nTitle, setNTitle] = useState('')
+  const [nAuthor, setNAuthor] = useState('')
+  const [nLocation, setNLocation] = useState('')
+  const [nContent, setNContent] = useState('')
+  const [nSaving, setNSaving] = useState(false)
+  const [nMsg, setNMsg] = useState('')
+  const createStory = async () => {
+    if (!nTitle.trim() || !nContent.trim()) { setNMsg('Cần có tiêu đề và nội dung.'); return }
+    setNSaving(true); setNMsg('')
+    try {
+      const { data, error } = await supabase.functions.invoke('story-ai', {
+        body: {
+          admin_key: 'st-1001-adm-7x9k2', action: 'admin_insert_story',
+          status: 'submitted',                       // vào tab "Chờ đọc", chưa lên Tạp chí
+          title: nTitle.trim(), content: nContent.trim(),
+          pen_name: nAuthor.trim(), author_name: nAuthor.trim(),
+          location: nLocation.trim(),
+        },
+      })
+      if (!error && data?.ok) {
+        setNMsg('')
+        setShowNew(false)
+        setNTitle(''); setNAuthor(''); setNLocation(''); setNContent('')
+        setTab('inbox'); setActiveFilter('submitted')
+        load()
+      } else setNMsg('Lỗi: ' + (data?.error || 'Không tạo được bài'))
+    } catch (e: any) { setNMsg('Lỗi: ' + e.message) }
+    setNSaving(false)
+  }
   const [selected, setSelected] = useState<Story | null>(null)
   const [stories, setStories] = useState<Story[]>([])
   const [loading, setLoading] = useState(true)
 
   // Fetch all stories via edge function (bypasses RLS)
-  useEffect(() => {
+  const load = useCallback(() => {
     supabase.functions.invoke('story-ai', {
       body: { action: 'list_all', admin_key: 'st-1001-adm-7x9k2' },
     }).then(({ data, error }) => {
@@ -78,11 +119,21 @@ export default function EditorPage() {
         status: DB_STATUS_MAP[s.status] || 'telling',
         conversation: s.conversation || [],
         content: s.content || '',
+        photos: s.photos ?? null,
+        author_full_name: s.author_full_name ?? null,
+        author_age: s.author_age ?? null,
+        author_hometown: s.author_hometown ?? null,
+        author_living_in: s.author_living_in ?? null,
+        author_job: s.author_job ?? null,
+        author_bio: s.author_bio ?? null,
+        author_portrait_url: s.author_portrait_url ?? null,
+        consent_bio_publish: s.consent_bio_publish ?? false,
       }))
       setStories(mapped)
       setLoading(false)
     })
   }, [])
+  useEffect(() => { load() }, [load])
 
   const filtered = activeFilter
     ? stories.filter(s => s.status === activeFilter)
@@ -98,9 +149,42 @@ export default function EditorPage() {
             <h1 className="ed-title">Ban biên tập</h1>
             <p className="ed-subtitle">Quản lý các câu chuyện được gửi từ cộng đồng.</p>
           </div>
-          <a href="/story" className="ed-mag-link">← Tạp chí</a>
+          <div className="ed-head-actions">
+            <button className="ed-new-btn" onClick={() => setShowNew(true)}>✍️ Nhập bài gửi qua Zalo</button>
+            <a href="/story" className="ed-mag-link">← Tạp chí</a>
+          </div>
         </div>
       </header>
+
+      {showNew && (
+        <div className="ed-new-overlay" onClick={() => !nSaving && setShowNew(false)}>
+          <div className="ed-new-card" onClick={e => e.stopPropagation()}>
+            <h2 className="ed-new-title">Nhập bài gửi qua Zalo</h2>
+            <p className="ed-new-sub">
+              Bài sẽ vào mục <b>📥 Chờ đọc</b> — chọn chủ đề và ảnh bìa rồi mới xuất bản,
+              đi đúng luồng như bài học viên tự gửi.
+            </p>
+            <input className="ed-bio-input ed-new-full" placeholder="Tiêu đề câu chuyện"
+              value={nTitle} onChange={e => setNTitle(e.target.value)} />
+            <div className="ed-bio-grid" style={{ marginTop: 8 }}>
+              <input className="ed-bio-input" placeholder="Tên người kể (hoặc bút danh)"
+                value={nAuthor} onChange={e => setNAuthor(e.target.value)} />
+              <input className="ed-bio-input" placeholder="Địa phương (không bắt buộc)"
+                value={nLocation} onChange={e => setNLocation(e.target.value)} />
+            </div>
+            <textarea className="ed-edit-textarea" style={{ marginTop: 8 }} rows={12}
+              placeholder="Dán nội dung câu chuyện nhận được qua Zalo vào đây…"
+              value={nContent} onChange={e => setNContent(e.target.value)} />
+            {nMsg && <div className="ed-new-msg">{nMsg}</div>}
+            <div className="ed-new-actions">
+              <button className="ed-pub-quick-btn" disabled={nSaving} onClick={createStory}>
+                {nSaving ? 'Đang tạo…' : '＋ Tạo bài, đưa vào Chờ đọc'}
+              </button>
+              <button className="ed-edit-btn" disabled={nSaving} onClick={() => setShowNew(false)}>Hủy</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="ed-body">
         <aside className="ed-sidebar">
@@ -813,6 +897,15 @@ const CSS = `
 .ed-pub-quick-btn { width:100%; padding:14px; background:#8B7355; color:#fff; border:none; border-radius:8px; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; transition:opacity .15s; }
 .ed-pub-quick-btn:hover { opacity:0.9; }
 .ed-pub-quick-btn:disabled { opacity:0.5; cursor:default; }
+.ed-head-actions { display:flex; align-items:center; gap:12px; }
+.ed-new-btn { background:#4F46E5; color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; }
+.ed-new-overlay { position:fixed; inset:0; background:rgba(24,24,27,.55); z-index:2500; display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto; }
+.ed-new-card { background:#fff; border-radius:14px; padding:24px; width:100%; max-width:680px; }
+.ed-new-title { font-size:20px; font-weight:700; margin:0 0 6px; }
+.ed-new-sub { font-size:13.5px; color:#8C8C8C; margin:0 0 16px; line-height:1.5; }
+.ed-new-full { width:100%; box-sizing:border-box; }
+.ed-new-msg { background:#FEECEC; color:#C53030; border-radius:8px; padding:9px 12px; font-size:13.5px; margin-top:10px; }
+.ed-new-actions { display:flex; gap:10px; align-items:center; margin-top:14px; }
 .ed-bio-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .ed-bio-input { padding:9px 11px; border:1px solid #E0E0E0; border-radius:8px; font-size:14px; font-family:inherit; outline:none; }
 .ed-bio-input:focus { border-color:#4F46E5; }
