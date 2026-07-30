@@ -6,7 +6,6 @@
 //
 // Khai báo đường dẫn trong netlify.toml. Trang khác vẫn dùng thẻ mặc định
 // trong index.html.
-import type { Config, Context } from 'https://edge.netlify.com'
 
 const SUPA = 'https://wojmdilyflffvdtpovmq.supabase.co'
 const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvam1kaWx5ZmxmZnZkdHBvdm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjk0OTYsImV4cCI6MjA5NDg0NTQ5Nn0.JxlY5iqBTK3q5BYnF1MgY8A5zS3R5okrD8uddsEFavY'
@@ -26,7 +25,7 @@ function summarize(content: string, max = 200): string {
   return (lastSpace > 120 ? cut.slice(0, lastSpace) : cut) + '…'
 }
 
-export default async function handler(req: Request, context: Context) {
+export default async function handler(req: Request, context: { next: () => Promise<Response> }) {
   const res = await context.next()
   const ct = res.headers.get('content-type') || ''
   if (!ct.includes('text/html')) return res
@@ -69,5 +68,3 @@ export default async function handler(req: Request, context: Context) {
     return res   // có trục trặc thì trả trang gốc, không bao giờ làm hỏng trang
   }
 }
-
-export const config: Config = { path: '/story/*' }
