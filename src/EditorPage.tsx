@@ -291,6 +291,53 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const [statusMsg, setStatusMsg] = useState('')
   const [published, setPublished] = useState(false)
 
+  // ── Đôi nét về người kể — Ban biên tập bổ sung/sửa (kể cả bài đã xuất bản) ──
+  const st = story as any
+  const [bioOpen, setBioOpen] = useState(false)
+  const [bioName, setBioName] = useState('')
+  const [bioAge, setBioAge] = useState('')
+  const [bioHometown, setBioHometown] = useState('')
+  const [bioLivingIn, setBioLivingIn] = useState('')
+  const [bioJob, setBioJob] = useState('')
+  const [bioText, setBioText] = useState('')
+  const [bioPortrait, setBioPortrait] = useState('')
+  const [bioShow, setBioShow] = useState(false)
+  const [bioSaving, setBioSaving] = useState(false)
+  useEffect(() => {
+    setBioName(st.author_full_name ?? '')
+    setBioAge(st.author_age != null ? String(st.author_age) : '')
+    setBioHometown(st.author_hometown ?? '')
+    setBioLivingIn(st.author_living_in ?? '')
+    setBioJob(st.author_job ?? '')
+    setBioText(st.author_bio ?? '')
+    setBioPortrait(st.author_portrait_url ?? '')
+    setBioShow(!!st.consent_bio_publish)
+  }, [story.id])   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveBio = async () => {
+    setBioSaving(true); setStatusMsg('')
+    try {
+      const { data, error } = await supabase.functions.invoke('story-ai', {
+        body: {
+          admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id,
+          author_full_name: bioName.trim() || null,
+          author_age: bioAge.trim() || null,
+          author_hometown: bioHometown.trim() || null,
+          author_living_in: bioLivingIn.trim() || null,
+          author_job: bioJob.trim() || null,
+          author_bio: bioText.trim() || null,
+          author_portrait_url: bioPortrait.trim() || null,
+          consent_bio_publish: bioShow,
+        },
+      })
+      if (!error && data?.ok) {
+        setStatusMsg('Đã lưu phần Đôi nét về người kể.')
+        if (onUpdate) onUpdate()
+      } else setStatusMsg('Lỗi: ' + (data?.error || 'Không lưu được'))
+    } catch (e: any) { setStatusMsg('Lỗi: ' + e.message) }
+    setBioSaving(false)
+  }
+
   // ── Chủ đề (categories) — bắt buộc chọn ít nhất 1 khi xuất bản ──
   const [allCategories, setAllCategories] = useState<Category[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set())
@@ -299,6 +346,17 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
       .then(({ data }) => { if (data) setAllCategories(data as Category[]) })
       .then(undefined, () => {})
   }, [])
+  // Nạp sẵn chủ đề ĐANG gắn của bài — nếu không, bấm Lưu sẽ xoá sạch chủ đề cũ
+  useEffect(() => {
+    let alive = true
+    supabase.from('story_categories').select('category_id').eq('story_id', story.id)
+      .then(({ data }) => {
+        if (!alive || !data) return
+        setSelectedCategoryIds(new Set(data.map((r: { category_id: string }) => r.category_id)))
+      }, () => {})
+    return () => { alive = false }
+  }, [story.id])
+
   const toggleCategory = (id: string) => {
     setSelectedCategoryIds(prev => {
       const next = new Set(prev)
@@ -452,6 +510,75 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
             <span className="ed-pub-hint">Sau khi Lưu, refresh Tạp chí để thấy nội dung mới.</span>
           </div>
         ) : null}
+
+        {/* ── Sửa bài ĐÃ XUẤT BẢN: gắn lại chủ đề + Đôi nét về người kể ── */}
+        {((story.status as string) === 'published' || published) && (
+          <>
+            {allCategories.length > 0 && (
+              <div className="ed-section">
+                <h3 className="ed-section-title">📚 Gắn lại chủ đề</h3>
+                <p style={{fontSize:13,color:'#8C8C8C',margin:'0 0 12px'}}>Chọn chủ đề rồi bấm Lưu — áp dụng ngay cho bài đã xuất bản.</p>
+                <div className="ed-cat-grid">
+                  {allCategories.map(c => (
+                    <button key={c.id} type="button"
+                      className={`ed-cat-chip ${selectedCategoryIds.has(c.id) ? 'ed-cat-on' : ''}`}
+                      onClick={() => toggleCategory(c.id)}>
+                      {selectedCategoryIds.has(c.id) ? '✓ ' : ''}{c.name}
+                    </button>
+                  ))}
+                </div>
+                <button className="ed-edit-btn" style={{marginTop:12}} disabled={bioSaving} onClick={async () => {
+                  setBioSaving(true); setStatusMsg('')
+                  try {
+                    const { data, error } = await supabase.functions.invoke('story-ai', {
+                      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story',
+                              story_id: story.id, category_ids: [...selectedCategoryIds] },
+                    })
+                    if (!error && data?.ok) { setStatusMsg('Đã cập nhật chủ đề.'); if (onUpdate) onUpdate() }
+                    else setStatusMsg('Lỗi: ' + (data?.error || 'Không lưu được'))
+                  } catch (e: any) { setStatusMsg('Lỗi: ' + e.message) }
+                  setBioSaving(false)
+                }}>💾 Lưu chủ đề</button>
+              </div>
+            )}
+
+            <div className="ed-section">
+              <h3 className="ed-section-title">
+                🙂 Đôi nét về người kể
+                <button className="ed-edit-btn" style={{marginLeft:10,fontSize:12}}
+                  onClick={() => setBioOpen(o => !o)}>{bioOpen ? 'Thu gọn' : 'Mở ra sửa'}</button>
+              </h3>
+              {!bioOpen ? (
+                <p style={{fontSize:13,color:'#8C8C8C',margin:0}}>
+                  {st.author_bio ? (st.consent_bio_publish ? '✅ Đang hiện ở cuối bài' : '⚠️ Đã có nội dung nhưng CHƯA bật hiển thị') : 'Chưa có — bấm "Mở ra sửa" để bổ sung.'}
+                </p>
+              ) : (
+                <>
+                  <p style={{fontSize:13,color:'#8C8C8C',margin:'0 0 12px'}}>
+                    Bổ sung giúp người kể (khi đã được họ đồng ý). Ban biên tập được sửa câu chữ, không đổi nội dung họ chia sẻ.
+                  </p>
+                  <div className="ed-bio-grid">
+                    <input className="ed-bio-input" placeholder="Họ và tên" value={bioName} onChange={e => setBioName(e.target.value)} />
+                    <input className="ed-bio-input" placeholder="Tuổi" value={bioAge} inputMode="numeric" onChange={e => setBioAge(e.target.value.replace(/\D/g, ''))} />
+                    <input className="ed-bio-input" placeholder="Quê quán" value={bioHometown} onChange={e => setBioHometown(e.target.value)} />
+                    <input className="ed-bio-input" placeholder="Nơi đang sinh sống" value={bioLivingIn} onChange={e => setBioLivingIn(e.target.value)} />
+                    <input className="ed-bio-input" placeholder="Nghề nghiệp" value={bioJob} onChange={e => setBioJob(e.target.value)} />
+                    <input className="ed-bio-input" placeholder="Link ảnh chân dung (nếu có)" value={bioPortrait} onChange={e => setBioPortrait(e.target.value)} />
+                  </div>
+                  <textarea className="ed-edit-textarea" style={{marginTop:10}} rows={4} value={bioText}
+                    onChange={e => setBioText(e.target.value)} placeholder="Đoạn giới thiệu về người kể…" />
+                  <label className="ed-bio-check">
+                    <input type="checkbox" checked={bioShow} onChange={e => setBioShow(e.target.checked)} />
+                    <span>Hiện khối này ở cuối bài viết — <b>chỉ bật khi người kể đã đồng ý công khai</b></span>
+                  </label>
+                  <button className="ed-edit-btn" disabled={bioSaving} onClick={saveBio}>
+                    {bioSaving ? 'Đang lưu…' : '💾 Lưu Đôi nét về người kể'}
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
 
         {/* ── Chọn chủ đề (bắt buộc khi xuất bản) ── */}
         {(story.status as string) !== 'published' && !published && allCategories.length > 0 && (
@@ -686,6 +813,11 @@ const CSS = `
 .ed-pub-quick-btn { width:100%; padding:14px; background:#8B7355; color:#fff; border:none; border-radius:8px; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; transition:opacity .15s; }
 .ed-pub-quick-btn:hover { opacity:0.9; }
 .ed-pub-quick-btn:disabled { opacity:0.5; cursor:default; }
+.ed-bio-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ed-bio-input { padding:9px 11px; border:1px solid #E0E0E0; border-radius:8px; font-size:14px; font-family:inherit; outline:none; }
+.ed-bio-input:focus { border-color:#4F46E5; }
+.ed-bio-check { display:flex; gap:9px; align-items:flex-start; margin:12px 0; font-size:13.5px; color:#3F3F46; line-height:1.45; cursor:pointer; }
+@media (max-width:560px){ .ed-bio-grid { grid-template-columns:1fr; } }
 .ed-pub-done { font-size:15px; color:#3C7A42; font-weight:600; text-align:center; padding:12px; background:#EDF7EE; border-radius:8px; margin-bottom:8px; }
 .ed-pub-hint { display:block; text-align:center; font-size:12px; color:#8C8C8C; margin-top:8px; }
 .ed-quick-pub { padding:16px 0; border-bottom:1px solid #EBE5DB; margin-bottom:8px; }

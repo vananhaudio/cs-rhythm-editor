@@ -219,14 +219,41 @@ Deno.serve(async (req) => {
       return json({ ok: true, story_number: nextNum, slug })
     }
     if (body.action === 'admin_update_story') {
-      const { story_id, title, content } = body
+      const { story_id, title, content, category_ids } = body
       if (!story_id) return json({ error: 'Missing story_id' }, 400)
       const updates: Record<string, any> = {}
       if (title !== undefined) updates.title = title
       if (content !== undefined) updates.content = content
-      if (Object.keys(updates).length === 0) return json({ error: 'Nothing to update' }, 400)
-      const { error } = await db.from('stories').update(updates).eq('id', story_id)
-      if (error) return json({ error: error.message }, 500)
+      // Đôi nét về người kể — Ban biên tập bổ sung/sửa cho bài đã xuất bản
+      for (const f of ['author_full_name', 'author_hometown', 'author_living_in',
+                       'author_job', 'author_bio', 'author_portrait_url']) {
+        if (body[f] !== undefined) updates[f] = body[f]
+      }
+      if (body.author_age !== undefined) {
+        updates.author_age = body.author_age === null || body.author_age === ''
+          ? null : Number(body.author_age)
+      }
+      // Công tắc hiển thị khối tác giả cuối bài (chỉ bật khi người kể đã đồng ý)
+      if (body.consent_bio_publish !== undefined) updates.consent_bio_publish = !!body.consent_bio_publish
+
+      if (Object.keys(updates).length > 0) {
+        const { error } = await db.from('stories').update(updates).eq('id', story_id)
+        if (error) return json({ error: error.message }, 500)
+      }
+
+      // Gắn lại chủ đề — kể cả khi bài ĐÃ xuất bản
+      if (Array.isArray(category_ids)) {
+        await db.from('story_categories').delete().eq('story_id', story_id)
+        if (category_ids.length > 0) {
+          const { error: cErr } = await db.from('story_categories')
+            .insert(category_ids.map((cid: string) => ({ story_id, category_id: cid })))
+          if (cErr) return json({ error: cErr.message }, 500)
+        }
+      }
+
+      if (Object.keys(updates).length === 0 && !Array.isArray(category_ids)) {
+        return json({ error: 'Nothing to update' }, 400)
+      }
       return json({ ok: true })
     }
     if (body.action === "admin_insert_story") {

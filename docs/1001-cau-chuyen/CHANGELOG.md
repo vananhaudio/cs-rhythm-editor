@@ -476,3 +476,21 @@ lớp học, ảnh đại diện).
     kể", ảnh chân dung, họ tên, dòng thông tin (tuổi · quê · nơi sống ·
     nghề), đoạn giới thiệu. **Chỉ hiện khi `consent_bio_publish` = true.**
 -   `StoryTellPage.tsx` — lưu toàn bộ trường mới khi gửi Ban biên tập.
+
+#### Added — Sửa bài ĐÃ XUẤT BẢN (2026-07-30)
+
+-   `story-ai` action `admin_update_story` mở rộng: nhận thêm
+    `category_ids` (gắn lại chủ đề — xoá rồi chèn lại) và toàn bộ
+    trường "Đôi nét về người kể" + `consent_bio_publish`.
+    **CẦN dán lại Edge Function qua Dashboard (672 dòng).**
+-   `EditorPage.tsx` — với bài đã xuất bản, hiện thêm 2 khối:
+    -   **📚 Gắn lại chủ đề** — chip chọn + nút Lưu, áp dụng ngay.
+    -   **🙂 Đôi nét về người kể** — thu gọn/mở ra sửa; 6 ô thông tin,
+        đoạn giới thiệu, và công tắc *"Hiện khối này ở cuối bài"* kèm
+        cảnh báo **chỉ bật khi người kể đã đồng ý công khai**.
+        Khi thu gọn hiển thị trạng thái: đang hiện / có nội dung nhưng
+        chưa bật / chưa có.
+-   Nạp sẵn chủ đề ĐANG gắn của bài khi mở (nếu không, bấm Lưu sẽ xoá
+    sạch chủ đề cũ).
+-   Lý do làm: 10 bài xuất bản trước khi có tính năng đều chưa có phần
+    giới thiệu tác giả; nay Ban biên tập bổ sung được khi người kể đồng ý.
