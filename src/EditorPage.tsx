@@ -192,15 +192,20 @@ export default function EditorPage() {
             <div className="ed-nav-section">Hộp thư</div>
             <button className={`ed-nav-item ${tab === 'inbox' && !activeFilter ? 'ed-nav-active' : ''}`}
               onClick={() => { setTab('inbox'); setActiveFilter(null) }}>
-              Tất cả
+              <span>Tất cả</span>
+              {stories.length > 0 && <span className="ed-nav-count">{stories.length}</span>}
             </button>
-            {STATUS_FILTERS.map(f => (
-              <button key={f.key}
-                className={`ed-nav-item ${tab === 'inbox' && activeFilter === f.key ? 'ed-nav-active' : ''}`}
-                onClick={() => { setTab('inbox'); setActiveFilter(f.key) }}>
-                {f.label}
-              </button>
-            ))}
+            {STATUS_FILTERS.map(f => {
+              const n = stories.filter(s => s.status === f.key).length
+              return (
+                <button key={f.key}
+                  className={`ed-nav-item ${tab === 'inbox' && activeFilter === f.key ? 'ed-nav-active' : ''}`}
+                  onClick={() => { setTab('inbox'); setActiveFilter(f.key) }}>
+                  <span>{f.label}</span>
+                  {n > 0 && <span className={`ed-nav-count ${f.key === 'submitted' ? 'ed-nav-count-hot' : ''}`}>{n}</span>}
+                </button>
+              )
+            })}
             <div className="ed-nav-section">Quản lý</div>
             <button className={`ed-nav-item ${tab === 'categories' ? 'ed-nav-active' : ''}`}
               onClick={() => { setTab('categories'); setActiveFilter(null); setSelected(null) }}>
@@ -216,7 +221,7 @@ export default function EditorPage() {
         <main className="ed-main">
           {tab === 'inbox' && (
             loading ? <div className="ed-count" style={{padding:20}}>Đang tải...</div>
-            : <InboxView stories={filtered} onSelect={setSelected} />
+            : <InboxView stories={filtered} onSelect={setSelected} selectedId={selected?.id} />
           )}
           {tab === 'categories' && <CategoriesView />}
           {tab === 'series' && <SeriesView />}
@@ -233,27 +238,63 @@ export default function EditorPage() {
 // ══════════════════════════════════════════
 // INBOX VIEW
 // ══════════════════════════════════════════
-function InboxView({ stories, onSelect }: { stories: Story[]; onSelect: (s: Story) => void }) {
+function InboxView({ stories, onSelect, selectedId }: {
+  stories: Story[]; onSelect: (s: Story) => void; selectedId?: string | null
+}) {
+  const [q, setQ] = useState('')
+  const [sort, setSort] = useState<'new' | 'old'>('new')
+
+  const kw = q.trim().toLowerCase()
+  const list = stories
+    .filter(s => !kw || s.title.toLowerCase().includes(kw) || (s.author || '').toLowerCase().includes(kw))
+    .slice()
+    .sort((a, b) => {
+      const d = new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      return sort === 'new' ? d : -d
+    })
+
   return (
     <>
       <div className="ed-toolbar">
-        <span className="ed-count">{stories.length} câu chuyện</span>
+        <input className="ed-search" value={q} onChange={e => setQ(e.target.value)}
+          placeholder="Tìm theo tiêu đề hoặc tên người kể…" aria-label="Tìm câu chuyện" />
+        <button className="ed-sort" onClick={() => setSort(v => v === 'new' ? 'old' : 'new')}
+          title="Đổi thứ tự">{sort === 'new' ? '↓ Mới nhất' : '↑ Cũ nhất'}</button>
+      </div>
+      <div className="ed-count-row">
+        {kw ? `${list.length} / ${stories.length} câu chuyện` : `${stories.length} câu chuyện`}
       </div>
       <div className="ed-list">
-        {stories.map(story => (
-          <article key={story.id} className="ed-card" onClick={() => onSelect(story)}>
-            <div className="ed-card-body">
-              <h2 className="ed-card-title">{story.title}</h2>
-              <div className="ed-card-meta">
-                <span className="ed-card-author">{story.author}</span>
-                <span className="ed-card-sep">·</span>
-                <span className="ed-card-date">{fmtDate(story.submittedAt)}</span>
+        {list.length === 0 && <div className="ed-empty">Không có câu chuyện nào khớp.</div>}
+        {list.map(story => {
+          const hasPhoto = !!(story.photos && story.photos.length > 0)
+          const hasBio = !!story.author_bio
+          return (
+            <article key={story.id}
+              className={`ed-card ${selectedId === story.id ? 'ed-card-on' : ''}`}
+              onClick={() => onSelect(story)}>
+              <div className="ed-card-body">
+                <h2 className="ed-card-title">{story.title}</h2>
+                <div className="ed-card-meta">
+                  <span className="ed-card-author">{story.author}</span>
+                  <span className="ed-card-sep">·</span>
+                  <span className="ed-card-date">{fmtDate(story.submittedAt)}</span>
+                </div>
+                <div className="ed-card-tags">
+                  <StatusBadge status={story.status} />
+                  {hasPhoto && <span className="ed-tag" title="Đã có ảnh">🖼 ảnh</span>}
+                  {hasBio && (
+                    <span className={`ed-tag ${story.consent_bio_publish ? 'ed-tag-on' : 'ed-tag-warn'}`}
+                      title={story.consent_bio_publish ? 'Đôi nét về người kể đang hiện' : 'Có đôi nét nhưng chưa bật hiển thị'}>
+                      🙂 đôi nét{story.consent_bio_publish ? '' : ' (ẩn)'}
+                    </span>
+                  )}
+                </div>
               </div>
-              <StatusBadge status={story.status} />
-            </div>
-            <div className="ed-card-arrow">→</div>
-          </article>
-        ))}
+              <div className="ed-card-arrow">→</div>
+            </article>
+          )
+        })}
       </div>
     </>
   )
@@ -820,7 +861,13 @@ const CSS = `
 .ed-mag-link { text-decoration:none; color:#6B6B6B; font-size:13px; font-weight:500; padding:6px 14px; border:1px solid #E5E0D8; border-radius:6px; white-space:nowrap; transition:background .15s,color .15s; }
 .ed-mag-link:hover { background:#F5F2ED; color:#1A1A1A; }
 
-.ed-body { max-width:1200px; margin:0 auto; display:flex; min-height:calc(100dvh - 100px); }
+.ed-body { max-width:1560px; margin:0 auto; display:flex; min-height:calc(100dvh - 100px); }
+/* Trang biên tập là công cụ đọc–sửa: chữ luôn căn trái, không kế thừa
+   text-align:center của trang cha (làm cả nội dung bài bị căn giữa). */
+.ed-root, .ed-root * { text-align:left; }
+.ed-root .ed-toolbar, .ed-root .ed-count-row { text-align:left; }
+/* Danh sách co được để bảng chi tiết không tràn khỏi màn hình hẹp */
+.ed-main { flex:1; min-width:0; }
 
 /* Sidebar */
 .ed-sidebar { width:220px; flex-shrink:0; border-right:1px solid #E5E0D8; background:#FFFFFF; padding:16px 0; }
@@ -837,7 +884,7 @@ const CSS = `
 .ed-list { display:flex; flex-direction:column; gap:8px; }
 
 /* Card */
-.ed-card { display:flex; align-items:center; background:#FFFFFF; border:1px solid #EBE5DB; border-radius:8px; padding:18px 20px; cursor:pointer; transition:box-shadow .15s,border-color .15s; }
+.ed-card { display:flex; align-items:center; background:#FFFFFF; border:1px solid #EBE5DB; border-radius:8px; padding:14px 16px; cursor:pointer; transition:box-shadow .15s,border-color .15s; }
 .ed-card:hover { border-color:#D4C9B8; box-shadow:0 2px 12px rgba(0,0,0,0.04); }
 .ed-card-body { flex:1; min-width:0; }
 .ed-card-title { font-size:16px; font-weight:600; color:#1A1A1A; margin:0 0 6px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -863,7 +910,7 @@ const CSS = `
 .ed-badge-archived { background:#F2F2F2; color:#8C8C8C; } .ed-badge-archived .ed-badge-dot { background:#8C8C8C; }
 
 /* Detail Panel */
-.ed-detail { width:420px; flex-shrink:0; border-left:1px solid #E5E0D8; background:#FFFFFF; overflow-y:auto; max-height:calc(100dvh - 100px); position:sticky; top:0; }
+.ed-detail { width:min(560px, 42vw); min-width:380px; flex-shrink:0; border-left:1px solid #E5E0D8; background:#FFFFFF; overflow-y:auto; max-height:calc(100dvh - 100px); position:sticky; top:0; }
 .ed-detail-header { display:flex; justify-content:flex-end; padding:12px 16px; border-bottom:1px solid #F0EDE6; }
 .ed-detail-close { background:none; border:none; font-size:18px; color:#8C8C8C; cursor:pointer; padding:4px 8px; border-radius:4px; transition:background .12s,color .12s; }
 .ed-detail-close:hover { background:#F5F2ED; color:#1A1A1A; }
@@ -897,6 +944,24 @@ const CSS = `
 .ed-pub-quick-btn { width:100%; padding:14px; background:#8B7355; color:#fff; border:none; border-radius:8px; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; transition:opacity .15s; }
 .ed-pub-quick-btn:hover { opacity:0.9; }
 .ed-pub-quick-btn:disabled { opacity:0.5; cursor:default; }
+/* Thanh công cụ danh sách */
+.ed-toolbar { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+.ed-search { flex:1; min-width:0; padding:10px 14px; border:1px solid #E0D9CE; border-radius:9px; font-size:14px; font-family:inherit; outline:none; background:#fff; }
+.ed-search:focus { border-color:#8B7355; }
+.ed-sort { background:#fff; border:1px solid #E0D9CE; border-radius:9px; padding:10px 13px; font-size:13.5px; font-family:inherit; color:#5C5C5C; cursor:pointer; white-space:nowrap; }
+.ed-sort:hover { border-color:#D4C9B8; }
+.ed-count-row { font-size:12.5px; color:#9C9384; margin-bottom:10px; }
+.ed-card-on { border-color:#8B7355 !important; box-shadow:0 2px 14px rgba(139,115,85,.14); }
+.ed-card-tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px; }
+.ed-tag { font-size:11.5px; padding:3px 8px; border-radius:999px; background:#F3F0EA; color:#6E6455; white-space:nowrap; }
+.ed-tag-on { background:#EDF7EE; color:#3C7A42; }
+.ed-tag-warn { background:#FFF4E5; color:#B4690E; }
+/* Đếm bài ở thanh bên */
+.ed-nav-item { display:flex !important; align-items:center; justify-content:space-between; gap:8px; }
+.ed-nav-count { font-size:11.5px; font-weight:600; color:#8C8477; background:#F0ECE4; border-radius:999px; padding:1px 8px; }
+.ed-nav-count-hot { background:#4F46E5; color:#fff; }
+/* Ô nhập trong bảng chi tiết: chặn tràn khỏi lưới */
+.ed-bio-input, .ed-edit-textarea, .ed-edit-input { box-sizing:border-box; min-width:0; max-width:100%; }
 .ed-head-actions { display:flex; align-items:center; gap:12px; }
 .ed-new-btn { background:#4F46E5; color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; }
 .ed-new-overlay { position:fixed; inset:0; background:rgba(24,24,27,.55); z-index:2500; display:flex; align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto; }

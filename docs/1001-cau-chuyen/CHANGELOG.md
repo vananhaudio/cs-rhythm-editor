@@ -542,3 +542,20 @@ lớp học, ảnh đại diện).
 -   ĐÃ KIỂM CHỨNG trên bản sống: `x-og-fn: ok`, `<title>` và `og:title` =
     tên bài, `og:image` = ảnh bìa bài (HTTP 200, image/png), `og:type` =
     article; các trang `/`, `/story`, `/story/tell` vẫn giữ thẻ mặc định.
+
+#### Changed — Trang Ban biên tập dễ dùng hơn (2026-07-30)
+
+-   **Sửa 2 lỗi bố cục thật** (nhìn thấy trong ảnh Văn Anh gửi):
+    -   Chữ bị **căn giữa toàn bộ**, kể cả nội dung bài → rất khó đọc.
+        Nguyên nhân: kế thừa `text-align:center` từ trang cha. Đã ép
+        căn trái cho cả trang biên tập.
+    -   Bảng chi tiết rộng cố định 420px nên **các ô nhập bị cắt mất**
+        (tuổi, nơi sống, link ảnh). Nay `min(560px, 42vw)`, khung
+        chính `min-width:0`, ô nhập `box-sizing:border-box` → hết tràn.
+-   **Thêm công cụ cho danh sách:** ô tìm theo tiêu đề/tên người kể,
+    nút đổi thứ tự mới nhất ↔ cũ nhất, dòng đếm kết quả.
+-   **Thanh bên hiện số bài từng mục**; mục "Chờ đọc" tô nổi bật.
+-   **Thẻ bài giàu thông tin hơn:** ngoài trạng thái còn có nhãn
+    "🖼 ảnh" và "🙂 đôi nét" (vàng = có nội dung nhưng chưa bật hiển
+    thị, xanh = đang hiện ở cuối bài); bài đang mở có viền nổi bật.
+-   Vùng làm việc rộng ra 1560px, thẻ bớt khoảng trống thừa.
