@@ -511,3 +511,20 @@ lớp học, ảnh đại diện).
     không được ánh xạ nên ô "Đôi nét về người kể" luôn trống dù DB có dữ liệu.
 -   Tách hàm `load()` để tạo bài xong tự làm mới danh sách.
 -   **CẦN dán lại Edge Function story-ai qua Dashboard.**
+
+#### Added — Ảnh thumbnail khi share link (2026-07-30)
+
+-   **Vấn đề:** `index.html` KHÔNG có thẻ Open Graph nào → share link ra
+    Zalo/Facebook chỉ hiện chữ trơn, không ảnh. Lại là SPA nên trình thu
+    thập của mạng xã hội (không chạy JavaScript) không thấy được nội dung.
+-   **Lớp 1 — mặc định cho mọi trang:** thêm bộ thẻ og:* + twitter:* vào
+    `index.html`, kèm ảnh `public/og-default.png` (1200×630, tự tạo: logo
+    + tên + "HỌC · TẬP · SỐNG CÙNG ÂM NHẠC" + địa chỉ).
+-   **Lớp 2 — riêng từng câu chuyện:** `netlify/edge-functions/og-tags.ts`
+    chạy ở tầng CDN cho `/story/*`: đọc bài theo slug từ Supabase (chỉ bài
+    đã xuất bản), chèn thẳng vào HTML tiêu đề bài + đoạn tóm tắt 200 ký tự
+    + **ảnh bìa của chính bài đó**. Có lỗi thì trả trang gốc, không bao giờ
+    làm hỏng trang. Bỏ qua /story/tell, /write, /reports, /topic, /series.
+-   `netlify.toml` (mới) khai báo build + edge function.
+-   ⚠️ **shop.vananhaudio.com là repo KHÁC** (`~/App/Shop.vananhaudio.com`)
+    — phải làm riêng, chưa đụng tới.

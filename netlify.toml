@@ -1,0 +1,12 @@
+# Netlify — cấu hình build & Edge Function
+# Trước đây không có file này (Netlify tự nhận Vite). Thêm vào để khai báo
+# Edge Function chèn thẻ chia sẻ cho từng câu chuyện.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Thẻ chia sẻ riêng cho /story/<slug> — xem netlify/edge-functions/og-tags.ts
+[[edge_functions]]
+  function = "og-tags"
+  path = "/story/*"
