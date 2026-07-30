@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
       return json({ stories: enriched })
     }
     if (body.action === 'admin_publish') {
-      const { story_id } = body
+      const { story_id, category_ids } = body
       if (!story_id) return json({ error: 'Missing story_id' }, 400)
       const { data: st } = await db.from('stories').select('id,title,content,status,story_number').eq('id', story_id).maybeSingle()
       if (!st) return json({ error: 'Story not found' }, 404)
@@ -211,6 +211,11 @@ Deno.serve(async (req) => {
       const slug = (st.title || 'story').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '-' + String(nextNum)
       const { error } = await db.from('stories').update({ status: 'published', story_number: nextNum, slug, published_at: new Date().toISOString() }).eq('id', story_id)
       if (error) return json({ error: error.message }, 500)
+      // Gán chủ đề (categories) cho story
+      if (category_ids && Array.isArray(category_ids) && category_ids.length > 0) {
+        const rows = category_ids.map((cid: string) => ({ story_id, category_id: cid }))
+        await db.from('story_categories').upsert(rows, { onConflict: 'story_id,category_id' }).select()
+      }
       return json({ ok: true, story_number: nextNum, slug })
     }
     if (body.action === 'admin_update_story') {

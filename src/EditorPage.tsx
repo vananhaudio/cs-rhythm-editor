@@ -291,6 +291,22 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const [statusMsg, setStatusMsg] = useState('')
   const [published, setPublished] = useState(false)
 
+  // ── Chủ đề (categories) — bắt buộc chọn ít nhất 1 khi xuất bản ──
+  const [allCategories, setAllCategories] = useState<Category[]>([])
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    supabase.from('categories').select('*').order('name')
+      .then(({ data }) => { if (data) setAllCategories(data as Category[]) })
+      .catch(() => {})
+  }, [])
+  const toggleCategory = (id: string) => {
+    setSelectedCategoryIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
   // Check if story has existing photos from student
   const studentPhotos = (story as any).photos as { url: string; caption?: string }[] | null | undefined
   const hasStudentPhoto = studentPhotos && studentPhotos.length > 0
@@ -334,7 +350,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     setPublishing(true)
     setStatusMsg('Đang xuất bản...')
     try {
-      const payload: any = { action: 'publish', story_id: story.id }
+      const payload: any = { action: 'publish', story_id: story.id, category_ids: [...selectedCategoryIds] }
 
       if (useStudentPhoto && hasStudentPhoto) {
         payload.use_existing_photo = true
@@ -437,15 +453,36 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
           </div>
         ) : null}
 
+        {/* ── Chọn chủ đề (bắt buộc khi xuất bản) ── */}
+        {(story.status as string) !== 'published' && !published && allCategories.length > 0 && (
+          <div className="ed-section">
+            <h3 className="ed-section-title">📚 Chọn chủ đề <span style={{color:'#C53030',fontWeight:400}}>*</span></h3>
+            <p style={{fontSize:13,color:'#8C8C8C',margin:'0 0 12px'}}>Chọn ít nhất một chủ đề cho câu chuyện trước khi xuất bản.</p>
+            <div className="ed-cat-grid">
+              {allCategories.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`ed-cat-chip ${selectedCategoryIds.has(c.id) ? 'ed-cat-on' : ''}`}
+                  onClick={() => toggleCategory(c.id)}
+                >
+                  {selectedCategoryIds.has(c.id) ? '✓ ' : ''}{c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Xuất bản nhanh ── */}
         {(story.status as string) !== 'published' && !published && (
           <div className="ed-section ed-quick-pub">
-            <button className="ed-pub-quick-btn" onClick={async () => {
+            <button className="ed-pub-quick-btn" disabled={publishing || selectedCategoryIds.size === 0} onClick={async () => {
+              if (selectedCategoryIds.size === 0) { setStatusMsg('Vui lòng chọn ít nhất một chủ đề.'); return }
               setPublishing(true)
               setStatusMsg('Đang xuất bản...')
               try {
                 const { data, error } = await supabase.functions.invoke('story-ai', {
-                  body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_publish', story_id: story.id },
+                  body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_publish', story_id: story.id, category_ids: [...selectedCategoryIds] },
                 })
                 if (!error && data?.ok) {
                   setStatusMsg(`Đã xuất bản! Số #${data.story_number} — hiện trên Tạp chí ngay.`)
@@ -528,9 +565,9 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
                 <button
                   className="ed-pub-btn ed-pub-btn-primary"
                   onClick={handlePublish}
-                  disabled={publishing}
+                  disabled={publishing || selectedCategoryIds.size === 0}
                 >
-                  {publishing ? '⏳ Đang xuất bản...' : '✅ Xuất bản'}
+                  {publishing ? '⏳ Đang xuất bản...' : (selectedCategoryIds.size === 0 ? '⚠️ Cần chọn chủ đề' : '✅ Xuất bản')}
                 </button>
               </>
             )}
@@ -668,6 +705,13 @@ const CSS = `
 .ed-pub-filename { display:block; font-size:12px; color:#8C8C8C; margin-top:4px; }
 .ed-pub-preview { width:100%; border-radius:10px; margin-top:8px; border:1px solid #E5E0D8; }
 .ed-pub-status { font-size:13px; color:#5C5C5C; margin:8px 0; padding:8px 12px; background:#F5F2ED; border-radius:6px; }
+
+/* Category chips */
+.ed-cat-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.ed-cat-chip { padding:8px 14px; border:1.5px solid #E5E0D8; border-radius:10px; background:#FFF; color:#5C5C5C; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all .12s; }
+.ed-cat-chip:hover { border-color:#8B7355; color:#1A1A1A; background:#F9F8F6; }
+.ed-cat-on { border-color:#4338CA; background:#EEF2FF; color:#4338CA; font-weight:600; }
+.ed-cat-on:hover { border-color:#352BA3; background:#E0E7FF; }
 
 /* Responsive */
 @media (max-width: 768px) {

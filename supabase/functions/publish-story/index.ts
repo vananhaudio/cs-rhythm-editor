@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
 
     if (action === 'publish') {
       if (!story_id) return new Response(JSON.stringify({ error: 'Missing story_id' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
+      const category_ids: string[] | undefined = body.category_ids
 
       const { data: story, error: fetchErr } = await db.from('stories')
         .select('id, title, content, photos, pen_name, status')
@@ -133,6 +134,12 @@ Deno.serve(async (req) => {
 
       const { error: updateErr } = await db.from('stories').update(updateData).eq('id', story_id)
       if (updateErr) throw new Error(`Publish failed: ${updateErr.message}`)
+
+      // Gán chủ đề (categories) cho story
+      if (category_ids && Array.isArray(category_ids) && category_ids.length > 0) {
+        const rows = category_ids.map((cid: string) => ({ story_id, category_id: cid }))
+        await db.from('story_categories').upsert(rows, { onConflict: 'story_id,category_id' }).select()
+      }
 
       return new Response(JSON.stringify({ ok: true, story_number: nextNumber, slug, photo_url: photoUrl }), { headers: { ...cors, 'Content-Type': 'application/json' } })
     }
