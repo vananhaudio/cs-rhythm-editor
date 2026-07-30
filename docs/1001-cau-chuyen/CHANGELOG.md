@@ -442,3 +442,16 @@ trước khi gửi duyệt bản 1.1.0:
 **Còn phải làm khi gửi duyệt:** khai nhãn Privacy trong App Store
 Connect có mục **User Content** (app thu thập câu chuyện, tên/bút danh,
 lớp học, ảnh đại diện).
+
+#### Changed — Nhắc cập nhật app đúng lúc (2026-07-30)
+
+-   `useVoiceInput.ts`: khi micro bị từ chối quyền, phân biệt **đang ở
+    trong app TVA Guitar** (`window.Capacitor`) hay trong trình duyệt.
+    -   Trong app → "Vào App Store cập nhật app… nếu đã cập nhật rồi
+        thì bật Micro và Nhận diện giọng nói trong Cài đặt".
+    -   Trong trình duyệt → giữ câu cũ về quyền của trang web.
+-   Lý do: bản app cũ (trước 1.1.0) KHÔNG khai
+    `NSSpeechRecognitionUsageDescription` nên iOS **im lặng từ chối,
+    không hiện hộp xin quyền** — người dùng bấm micro thấy không có gì
+    xảy ra. Nhắc ngay tại chỗ cho đúng người gặp lỗi, không thông báo
+    đại trà (đa số máy tự cập nhật trong ~1 ngày).

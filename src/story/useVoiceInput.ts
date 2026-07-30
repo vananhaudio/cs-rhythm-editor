@@ -27,6 +27,12 @@ function getCtor(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
+/** Đang chạy trong app TVA Guitar (vỏ Capacitor) hay trong trình duyệt? */
+function inNativeApp(): boolean {
+  if (typeof window === 'undefined') return false
+  return !!(window as unknown as { Capacitor?: unknown }).Capacitor
+}
+
 /** Nối lời vừa nói vào phần đã có, tự thêm khoảng trắng. */
 export function appendSpoken(prev: string, spoken: string): string {
   const add = spoken.trim()
@@ -77,10 +83,15 @@ export function useVoiceInput(onFinal: (text: string) => void) {
       wantRef.current = false
       setListening(false)
       setInterim('')
+      const denied = e.error === 'not-allowed' || e.error === 'service-not-allowed'
       setError(
-        e.error === 'not-allowed' || e.error === 'service-not-allowed'
-          ? 'Trình duyệt chưa cho phép dùng micro. Bạn bật quyền micro cho trang này rồi thử lại nhé.'
-          : 'Micro đang trục trặc. Bạn thử lại, hoặc cứ gõ chữ cũng được.'
+        !denied
+          ? 'Micro đang trục trặc. Bạn thử lại, hoặc cứ gõ chữ cũng được.'
+          : inNativeApp()
+            // Trong app: nguyên nhân hay gặp nhất là app chưa cập nhật (bản cũ
+            // chưa khai quyền nhận diện giọng nói nên iOS im lặng từ chối).
+            ? 'Chưa dùng được micro. Bạn vào App Store cập nhật app TVA Guitar lên bản mới nhất rồi thử lại nhé — nếu đã cập nhật rồi thì bật "Micro" và "Nhận diện giọng nói" trong Cài đặt → TVA Guitar.'
+            : 'Trình duyệt chưa cho phép dùng micro. Bạn bật quyền micro cho trang này rồi thử lại nhé.'
       )
     }
 
