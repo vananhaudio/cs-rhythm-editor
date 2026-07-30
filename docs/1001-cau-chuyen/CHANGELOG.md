@@ -528,3 +528,17 @@ lớp học, ảnh đại diện).
 -   `netlify.toml` (mới) khai báo build + edge function.
 -   ⚠️ **shop.vananhaudio.com là repo KHÁC** (`~/App/Shop.vananhaudio.com`)
     — phải làm riêng, chưa đụng tới.
+
+#### Fixed — Edge function OG không chạy (2026-07-30)
+
+-   Triệu chứng: lớp mặc định OK nhưng trang bài vẫn trả thẻ mặc định.
+-   Cách tìm ra: gắn header chẩn đoán `x-og-fn` → trang bài trả `error`,
+    trang khác trả `skip-tell` ⇒ hàm CHẠY nhưng ném lỗi bên trong (không
+    phải lỗi cấu hình Netlify như nghi ban đầu).
+-   Nguyên nhân: dùng **`HTMLRewriter`** — API của Cloudflare Workers,
+    **Netlify Edge Functions KHÔNG có**. Đã thay bằng đọc HTML thành chuỗi
+    + regex. Giữ lại header `x-og-fn` (ok / skip-* / db-* / no-story /
+    error:*) để lần sau chẩn đoán trong vài giây.
+-   ĐÃ KIỂM CHỨNG trên bản sống: `x-og-fn: ok`, `<title>` và `og:title` =
+    tên bài, `og:image` = ảnh bìa bài (HTTP 200, image/png), `og:type` =
+    article; các trang `/`, `/story`, `/story/tell` vẫn giữ thẻ mặc định.
