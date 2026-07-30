@@ -297,7 +297,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   useEffect(() => {
     supabase.from('categories').select('*').order('name')
       .then(({ data }) => { if (data) setAllCategories(data as Category[]) })
-      .catch(() => {})
+      .then(undefined, () => {})
   }, [])
   const toggleCategory = (id: string) => {
     setSelectedCategoryIds(prev => {
@@ -493,7 +493,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
                 }
               } catch (e) { setStatusMsg('Lỗi: ' + (e as Error).message) }
               setPublishing(false)
-            }} disabled={publishing}>
+            }}>
               {publishing ? 'Đang xuất bản...' : '🚀 Xuất bản ngay'}
             </button>
             <span className="ed-pub-hint">Câu chuyện sẽ hiện trên Tạp chí ngay lập tức.</span>
