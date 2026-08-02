@@ -11,6 +11,12 @@ begin;
 -- The UI enforces this by locking edit for non-draft mails.
 -- This ensures idempotency-key retries send the same payload.
 -- Violation → Resend returns 409 invalid_idempotent_request.
+--
+-- TEST AUDIENCE SAFETY:
+--   audience_type = 'test'      → backend CHỈ gửi tới test_emails (max 10)
+--   audience_type = 'all_active' → backend lấy toàn bộ edu_students active
+--   Default bắt buộc = 'test' để fail safe.
+--   NULL/invalid → fail closed, gửi 0 email.
 -- ============================================================
 create table if not exists public.daily_mail (
   id            uuid primary key default gen_random_uuid(),
@@ -21,17 +27,21 @@ create table if not exists public.daily_mail (
   scheduled_at  timestamptz not null,
   status        text not null default 'draft'
                 check (status in ('draft','scheduled','processing','sent','failed')),
+  audience_type text not null default 'test'
+                check (audience_type in ('test','all_active')),
+  test_emails   text[] default '{}',   -- whitelist email cho test mode, max 10
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
 
 -- ============================================================
 -- 2. Bảng daily_mail_recipient — trạng thái từng người nhận
+--    student_id nullable: NULL cho test emails (không có học sinh thật)
 -- ============================================================
 create table if not exists public.daily_mail_recipient (
   id                uuid primary key default gen_random_uuid(),
   daily_mail_id     uuid not null references public.daily_mail(id) on delete cascade,
-  student_id        uuid not null references public.edu_students(id) on delete cascade,
+  student_id        uuid references public.edu_students(id) on delete cascade,  -- nullable for test emails
   email             text not null,
   student_name      text,
   unsubscribe_token text unique,   -- token khó đoán cho link huỷ nhận mail
@@ -42,6 +52,7 @@ create table if not exists public.daily_mail_recipient (
   sent_at           timestamptz,
   created_at        timestamptz not null default now(),
   unique(daily_mail_id, student_id)  -- mỗi học sinh chỉ nhận 1 lần/chiến dịch
+                                     -- (NULL student_id treated as distinct per SQL standard)
 );
 
 -- Index lookup token nhanh
@@ -82,7 +93,7 @@ create trigger trg_email_preference_updated_at
 
 -- ============================================================
 -- 5. Function: lấy danh sách học sinh active + enabled email
---    Dùng trong Edge Function sender
+--    Dùng trong Edge Function sender (chỉ gọi khi audience_type = all_active)
 -- ============================================================
 create or replace function public.get_daily_mail_recipients(p_daily_mail_id uuid)
 returns table (
@@ -158,7 +169,7 @@ $$ language plpgsql security definer;
 
 -- ============================================================
 -- 10. Function: unsubscribe bằng token (công khai — SECURITY DEFINER)
---     Token được sinh từ SHA-256(daily_mail_id + student_id + secret)
+--     Token được sinh từ HMAC-SHA-256(daily_mail_id + student_id, INTERNAL_SECRET)
 --     Chỉ có Edge Function mới biết secret → token khó đoán
 -- ============================================================
 create or replace function public.unsubscribe_by_token(p_token text)
@@ -173,6 +184,11 @@ begin
 
   if not found then
     return jsonb_build_object('success', false, 'error', 'Token không hợp lệ hoặc đã hết hạn.');
+  end if;
+
+  -- Test emails không có student_id → không cần update preference
+  if v_student_id is null then
+    return jsonb_build_object('success', true, 'message', 'Đã huỷ nhận Daily Mail thành công.');
   end if;
 
   -- Cập nhật email_preference
