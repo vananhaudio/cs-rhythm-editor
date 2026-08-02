@@ -26,8 +26,14 @@ export default function BlockRenderer({ block }: Props) {
 // ── Individual Block Components ──
 
 function HeadingBlock({ data }: { data: { level?: number; text?: string } }) {
-  const Tag = `h${data.level || 2}` as keyof JSX.IntrinsicElements
-  return <Tag className={`sb-heading sb-h${data.level || 2}`}>{data.text || ''}</Tag>
+  const level = Math.min(Math.max(data.level || 2, 1), 6)
+  const cn = `sb-heading sb-h${level}`
+  if (level === 1) return <h1 className={cn}>{data.text || ''}</h1>
+  if (level === 2) return <h2 className={cn}>{data.text || ''}</h2>
+  if (level === 3) return <h3 className={cn}>{data.text || ''}</h3>
+  if (level === 4) return <h4 className={cn}>{data.text || ''}</h4>
+  if (level === 5) return <h5 className={cn}>{data.text || ''}</h5>
+  return <h6 className={cn}>{data.text || ''}</h6>
 }
 
 function ParagraphBlock({ data }: { data: { text?: string } }) {
