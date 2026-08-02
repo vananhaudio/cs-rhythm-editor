@@ -9,6 +9,8 @@ import LeadsManager from './LeadsManager'
 import ArticlesManager from './ArticlesManager'
 import ClassAiAdmin from './ClassAiAdmin'
 import ScheduleManager from './ScheduleManager'
+import ShowcaseAdmin from './admin/ShowcaseAdmin'
+import DailyMailPage from './admin/DailyMailPage'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -17,13 +19,15 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
   { id: 'schedule'  as Section, icon: '🗓', label: 'Lịch lớp'       },
   { id: 'aichat'    as Section, icon: '💬', label: 'AI khách'       },
+  { id: 'showcase'  as Section, icon: '📄', label: 'Showcase'      },
+  { id: 'dailymail' as Section, icon: '📧', label: 'Daily Mail'     },
   { id: 'articles'  as Section, icon: '📰', label: 'Bài viết'       },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
@@ -159,6 +163,20 @@ export default function TeacherAdminPage() {
         {section === 'aichat' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ClassAiAdmin />
+          </div>
+        )}
+
+        {/* Showcase CMS — block-based page builder */}
+        {section === 'showcase' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <ShowcaseAdmin onClose={() => setSection('dashboard')} />
+          </div>
+        )}
+
+        {/* Daily Mail */}
+        {section === 'dailymail' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <DailyMailPage />
           </div>
         )}
 

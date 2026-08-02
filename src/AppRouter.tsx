@@ -34,6 +34,11 @@ import StoryTellPage from './story/StoryTellPage'
 import ReportsPage from './story/ReportsPage'
 import StoryHomePage from './story/StoryHomePage'
 import TopicPage from './story/TopicPage'
+import ShowcaseIndexPage from './showcase/ShowcaseIndexPage'
+import ShowcaseDetailPage from './showcase/ShowcaseDetailPage'
+import ShowcaseAdmin from './admin/ShowcaseAdmin'
+import DailyMailPage from './admin/DailyMailPage'
+import UnsubscribePage from './UnsubscribePage'
 import EditorPage from './EditorPage'
 import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
@@ -154,6 +159,10 @@ export default function AppRouter() {
     if (!user || !isTeacher) { window.location.href = '/start'; return null }
     return <EditorPage />
   }
+
+  // ── Route /showcase* — Block-based CMS Pages ──
+  if (path === '/showcase' || path === '/showcase/') return <ShowcaseIndexPage />
+  if (path.startsWith('/showcase/')) return <ShowcaseDetailPage />
 
   // ── Route /story* — 1001 Câu chuyện cùng Guitar ──
   if (path === '/story/home') { window.location.replace('/story'); return null }  // redirect link cũ
@@ -310,6 +319,25 @@ if (path === '/course-editor' || path.startsWith('/course-editor')) {
   if (loading) return null
   if (!user || !isTeacher) { window.location.href = '/tap'; return null }
   return <CourseEditorPage />
+}
+
+// ── Route /admin/showcase — Showcase CMS (teacher/admin) ──
+if (path === '/admin/showcase' || path.startsWith('/admin/showcase')) {
+  if (loading) return null
+  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  return <ShowcaseAdmin onClose={() => { window.location.href = '/admin' }} />
+}
+
+// ── Route /admin/daily-mail — Daily Mail admin (teacher/admin) ──
+if (path === '/admin/daily-mail' || path.startsWith('/admin/daily-mail')) {
+  if (loading) return null
+  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  return <DailyMailPage />
+}
+
+// ── Route /unsubscribe — Huỷ nhận Daily Mail (công khai) ──
+if (path === '/unsubscribe' || path.startsWith('/unsubscribe')) {
+  return <UnsubscribePage />
 }
 
 // ── Route /admin — Teacher admin panel ──
