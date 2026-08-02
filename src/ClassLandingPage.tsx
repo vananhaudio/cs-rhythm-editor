@@ -838,7 +838,8 @@ export default function ClassLandingPage() {
         </div>
       </footer>
 
-      <button className="fab" onClick={() => goto('chat')}>💬 Hỏi Mira</button>
+      {/* Ẩn nút khi khung chat đang mở — để khung ngồi đúng góc, không bị "kê" lên nút. */}
+      {!miraOpen && <button className="fab" onClick={() => goto('chat')}>💬 Hỏi Mira</button>}
 
       {/* HÀNH TRÌNH 2027 — bài viết thiết kế native, full màn hình */}
       {showSignup && (
@@ -1322,7 +1323,7 @@ const CSS = `
 .tva-class .mira-cta .btn{margin-top:6px;}
 
 /* Khung chat Mira nổi góc phải (mở bằng nút "💬 Hỏi Mira" sẵn có) */
-.mira-panel{position:fixed;right:18px;bottom:74px;z-index:60;width:370px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 120px);flex-direction:column;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:0 24px 64px -16px rgba(15,23,42,.4);}
+.mira-panel{position:fixed;right:18px;bottom:18px;z-index:60;width:370px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 120px);flex-direction:column;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:0 24px 64px -16px rgba(15,23,42,.4);}
 .mira-panel-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#4338CA;color:#fff;}
 .mira-panel-head .mp-av{width:34px;height:34px;border-radius:50%;background:#fff;color:#4338CA;display:grid;place-items:center;font-weight:800;}
 .mira-panel-head .mp-title{display:flex;flex-direction:column;line-height:1.25;}
@@ -1330,5 +1331,5 @@ const CSS = `
 .mira-panel-head .mp-title span{font-size:11px;opacity:.85;}
 .mira-panel-head .mp-close{margin-left:auto;background:transparent;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;}
 .mira-frame{flex:1;width:100%;border:0;background:#fff;}
-@media(max-width:560px){.mira-panel{right:12px;left:12px;width:auto;bottom:74px;height:70vh;}}
+@media(max-width:560px){.mira-panel{right:12px;left:12px;width:auto;bottom:12px;height:72vh;}}
 `
