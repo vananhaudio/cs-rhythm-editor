@@ -220,7 +220,27 @@ export default function ClassLandingPage() {
     setSuLoading(false)
   }
   const chatBodyRef = useRef<HTMLDivElement>(null)
+  const miraRef = useRef<HTMLIFrameElement>(null) // iframe Mira mới
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
+
+  // DANH TÍNH: gửi token đăng nhập sang iframe Mira (đúng origin Mira) để Mira
+  // biết tên & hồ sơ học viên. Iframe báo 'mira-ready' → gửi token; đăng nhập/
+  // đăng xuất giữa chừng cũng cập nhật.
+  useEffect(() => {
+    const MIRA_ORIGIN = 'https://mira-vananhaudio.netlify.app'
+    const postToken = async () => {
+      const { data } = await supabase.auth.getSession()
+      miraRef.current?.contentWindow?.postMessage(
+        { type: 'mira-auth', token: data.session?.access_token ?? null }, MIRA_ORIGIN)
+    }
+    const onMsg = (ev: MessageEvent) => {
+      if (ev.origin !== MIRA_ORIGIN) return
+      if ((ev.data as { type?: string } | null)?.type === 'mira-ready') void postToken()
+    }
+    window.addEventListener('message', onMsg)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => { void postToken() })
+    return () => { window.removeEventListener('message', onMsg); subscription.unsubscribe() }
+  }, [])
 
   // Đọc bài viết published → map theo slot (thẻ showcase sống dậy khi thầy đăng bài)
   useEffect(() => {
@@ -528,24 +548,15 @@ export default function ClassLandingPage() {
             <h2>Còn câu hỏi riêng? Hỏi Mira nhé</h2>
             <p className="lead">Mira giúp bạn tìm đúng cửa vào phù hợp và trả lời mọi thắc mắc riêng của bạn — trước khi quyết định đăng ký.</p>
           </div>
+          {/* MIRA MỚI — nhúng app Mira (nguồn 'class'); trang gửi token đăng nhập
+              sang để Mira biết tên & hồ sơ học viên. Thay cho Mira cũ (class-ai). */}
           <div className="chat-card">
-            <div className="cc-head">
-              <div className="av">M<span className="dot" /></div>
-              <div><h4>Mira · Trợ lý TVA Guitar</h4><p><b>● Đang trực tuyến</b> · trả lời ngay</p></div>
-            </div>
-            <div className="cc-body" ref={chatBodyRef}>
-              {msgs.map((m, i) => <div key={i} className={`msg ${m.who}`} dangerouslySetInnerHTML={{ __html: m.html }} />)}
-              {chatLoading && <div className="msg ai cc-typing"><span /><span /><span /></div>}
-            </div>
-            <div className="cc-foot">
-              <div className="cc-chips">
-                {Object.keys(CHAT_FAQ).map(q => <button key={q} className="cc-chip" disabled={chatLoading} onClick={() => chatSendText(q)}>{q}</button>)}
-              </div>
-              <div className="cc-input">
-                <input value={chatInput} disabled={chatLoading} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') chatSend() }} placeholder="Nhập câu hỏi của bạn..." />
-                <button onClick={chatSend} disabled={chatLoading}>Gửi</button>
-              </div>
-            </div>
+            <iframe
+              ref={miraRef}
+              src="https://mira-vananhaudio.netlify.app/shop?channel=class"
+              title="Mira · Trợ lý TVA Guitar"
+              style={{ flex: 1, width: '100%', border: 0 }}
+            />
           </div>
         </div>
       </section>
