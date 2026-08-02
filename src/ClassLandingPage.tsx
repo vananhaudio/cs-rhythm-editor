@@ -1072,15 +1072,6 @@ export default function ClassLandingPage() {
           />
         </div>
       )}
-      <button
-        className="mira-fab"
-        onClick={() => (miraOpen ? setMiraOpen(false) : openMira())}
-        aria-label={miraOpen ? 'Đóng chat Mira' : 'Mở chat Mira'}
-      >
-        {miraOpen ? <span className="mf-x">✕</span> : (
-          <><span className="mf-av">M</span><span className="mf-tx">Mira</span><span className="mf-dot" /></>
-        )}
-      </button>
     </div>
   )
 }
@@ -1330,14 +1321,8 @@ const CSS = `
 .tva-class .mira-cta p{margin:0;color:var(--ink-soft);font-size:14px;}
 .tva-class .mira-cta .btn{margin-top:6px;}
 
-/* Bong bóng Mira nổi góc phải */
-.mira-fab{position:fixed;right:20px;bottom:20px;z-index:60;display:inline-flex;align-items:center;gap:9px;border:0;cursor:pointer;background:#4338CA;color:#fff;border-radius:999px;padding:11px 17px 11px 12px;font:inherit;font-weight:800;box-shadow:0 12px 30px -8px rgba(67,56,202,.6);}
-.mira-fab:hover{background:#3730A3;}
-.mira-fab .mf-av{width:28px;height:28px;border-radius:50%;background:#fff;color:#4338CA;display:grid;place-items:center;font-weight:800;font-size:14px;}
-.mira-fab .mf-tx{font-size:14px;}
-.mira-fab .mf-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;}
-.mira-fab .mf-x{font-size:18px;line-height:1;padding:0 4px;}
-.mira-panel{position:fixed;right:20px;bottom:78px;z-index:60;width:370px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 120px);flex-direction:column;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:0 24px 64px -16px rgba(15,23,42,.4);}
+/* Khung chat Mira nổi góc phải (mở bằng nút "💬 Hỏi Mira" sẵn có) */
+.mira-panel{position:fixed;right:18px;bottom:74px;z-index:60;width:370px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 120px);flex-direction:column;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:0 24px 64px -16px rgba(15,23,42,.4);}
 .mira-panel-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#4338CA;color:#fff;}
 .mira-panel-head .mp-av{width:34px;height:34px;border-radius:50%;background:#fff;color:#4338CA;display:grid;place-items:center;font-weight:800;}
 .mira-panel-head .mp-title{display:flex;flex-direction:column;line-height:1.25;}
