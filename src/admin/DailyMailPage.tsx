@@ -336,17 +336,32 @@ export default function DailyMailPage() {
       )}
 
       {/* ── EDIT VIEW ── */}
-      {view === 'edit' && (
+      {view === 'edit' && (() => {
+        // Payload immutability: khóa chỉnh sửa khi daily_mail không còn là draft
+        const editingMail = selectedId ? mails.find(m => m.id === selectedId) : null
+        const isLocked = editingMail !== undefined && editingMail !== null && editingMail.status !== 'draft'
+
+        return (
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
           <div style={{ background: S.surface, borderRadius: 12, padding: 24, border: `1px solid ${S.border}`, maxWidth: 700 }}>
+
+            {/* Immutability warning khi đã scheduled/processing/sent */}
+            {isLocked && (
+              <div style={{ marginBottom: 16, padding: '10px 14px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, fontSize: 13, color: '#C2410C' }}>
+                ⚠️ Daily Mail này đang ở trạng thái <strong>{statusLabel[editingMail!.status]}</strong>.
+                Nội dung email (subject, content, CTA, from) <strong>không thể thay đổi</strong> sau khi đã lên lịch
+                để đảm bảo idempotency khi retry. Tạo bản mới nếu cần chỉnh sửa.
+              </div>
+            )}
 
             {/* Tiêu đề */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: S.text2, marginBottom: 6 }}>Tiêu đề email *</label>
               <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })}
                 placeholder="Ví dụ: Bài tập hôm nay — Thứ 2, 02/08"
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => { e.currentTarget.style.borderColor = S.accent }}
+                disabled={isLocked}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box', opacity: isLocked ? 0.6 : 1, background: isLocked ? '#FAFAFA' : '#fff' }}
+                onFocus={e => { if (!isLocked) e.currentTarget.style.borderColor = S.accent }}
                 onBlur={e => { e.currentTarget.style.borderColor = S.border }} />
             </div>
 
@@ -355,9 +370,10 @@ export default function DailyMailPage() {
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: S.text2, marginBottom: 6 }}>Nội dung email (HTML)</label>
               <textarea value={form.content} onChange={e => setForm({ ...form, content: e.target.value })}
                 placeholder="<p>Chào các bạn,</p><p>Hôm nay chúng ta sẽ...</p>"
+                disabled={isLocked}
                 rows={8}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'monospace', boxSizing: 'border-box' }}
-                onFocus={e => { e.currentTarget.style.borderColor = S.accent }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'monospace', boxSizing: 'border-box', opacity: isLocked ? 0.6 : 1, background: isLocked ? '#FAFAFA' : '#fff' }}
+                onFocus={e => { if (!isLocked) e.currentTarget.style.borderColor = S.accent }}
                 onBlur={e => { e.currentTarget.style.borderColor = S.border }} />
             </div>
 
@@ -367,16 +383,18 @@ export default function DailyMailPage() {
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: S.text2, marginBottom: 6 }}>Nút CTA (tuỳ chọn)</label>
                 <input value={form.cta_text} onChange={e => setForm({ ...form, cta_text: e.target.value })}
                   placeholder="Bắt đầu tập hôm nay"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = S.accent }}
+                  disabled={isLocked}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box', opacity: isLocked ? 0.6 : 1, background: isLocked ? '#FAFAFA' : '#fff' }}
+                  onFocus={e => { if (!isLocked) e.currentTarget.style.borderColor = S.accent }}
                   onBlur={e => { e.currentTarget.style.borderColor = S.border }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: S.text2, marginBottom: 6 }}>Link CTA</label>
                 <input value={form.cta_url} onChange={e => setForm({ ...form, cta_url: e.target.value })}
                   placeholder="https://class.vananhaudio.com/..."
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = S.accent }}
+                  disabled={isLocked}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box', opacity: isLocked ? 0.6 : 1, background: isLocked ? '#FAFAFA' : '#fff' }}
+                  onFocus={e => { if (!isLocked) e.currentTarget.style.borderColor = S.accent }}
                   onBlur={e => { e.currentTarget.style.borderColor = S.border }} />
               </div>
             </div>
@@ -386,37 +404,44 @@ export default function DailyMailPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: S.text2, marginBottom: 6 }}>Ngày gửi *</label>
                 <input type="date" value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = S.accent }}
+                  disabled={isLocked}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box', opacity: isLocked ? 0.6 : 1, background: isLocked ? '#FAFAFA' : '#fff' }}
+                  onFocus={e => { if (!isLocked) e.currentTarget.style.borderColor = S.accent }}
                   onBlur={e => { e.currentTarget.style.borderColor = S.border }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: S.text2, marginBottom: 6 }}>Giờ gửi *</label>
                 <input type="time" value={form.scheduled_time} onChange={e => setForm({ ...form, scheduled_time: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={e => { e.currentTarget.style.borderColor = S.accent }}
+                  disabled={isLocked}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: `1px solid ${S.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box', opacity: isLocked ? 0.6 : 1, background: isLocked ? '#FAFAFA' : '#fff' }}
+                  onFocus={e => { if (!isLocked) e.currentTarget.style.borderColor = S.accent }}
                   onBlur={e => { e.currentTarget.style.borderColor = S.border }} />
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions — ẩn nút lưu khi locked */}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => saveMail('scheduled')} disabled={saving}
-                style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: S.accent, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600, opacity: saving ? 0.6 : 1 }}>
-                {saving ? 'Đang lưu...' : selectedId ? '💾 Cập nhật & Lên lịch' : '📅 Lên lịch gửi'}
-              </button>
-              <button onClick={() => saveMail('draft')} disabled={saving}
-                style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${S.border}`, background: S.surface, color: S.text2, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 14 }}>
-                Lưu nháp
-              </button>
+              {!isLocked && (
+                <>
+                  <button onClick={() => saveMail('scheduled')} disabled={saving}
+                    style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: S.accent, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600, opacity: saving ? 0.6 : 1 }}>
+                    {saving ? 'Đang lưu...' : selectedId ? '💾 Cập nhật & Lên lịch' : '📅 Lên lịch gửi'}
+                  </button>
+                  <button onClick={() => saveMail('draft')} disabled={saving}
+                    style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${S.border}`, background: S.surface, color: S.text2, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 14 }}>
+                    Lưu nháp
+                  </button>
+                </>
+              )}
               <button onClick={() => setView('preview')}
-                style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${S.border}`, background: S.surface, color: S.text2, cursor: 'pointer', fontSize: 14, marginLeft: 'auto' }}>
+                style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${S.border}`, background: S.surface, color: S.text2, cursor: 'pointer', fontSize: 14, marginLeft: isLocked ? 0 : 'auto' }}>
                 👁 Xem trước
               </button>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* ── PREVIEW VIEW ── */}
       {view === 'preview' && (

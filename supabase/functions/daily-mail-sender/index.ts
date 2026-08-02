@@ -1,16 +1,27 @@
 // Edge function: daily-mail-sender
 // Gửi email hàng loạt qua Resend API với batch processing
 //
-// V3: HMAC-SHA-256 token + Idempotency-Key verified + mandatory secrets
+// V4: 409 classification + payload immutability + HMAC-SHA-256 + mandatory secrets
 //
 // Resend Idempotency-Key (verified against official docs 2026-08-02):
 //   - Supported on POST /emails and POST /emails/batch
 //   - Key retention: 24 hours (source: resend.com/docs/dashboard/emails/idempotency-keys)
 //   - Max key length: 256 chars
-//   - Same key + different payload → 409 invalid_idempotent_request
-//   - Concurrent same-key requests → 409 concurrent_idempotent_requests
+//   - Same key + different payload → 409 invalid_idempotent_request → FAILED (invariant violation)
+//   - Concurrent same-key requests → 409 concurrent_idempotent_requests → KEEP PENDING (retry)
 //   - Our retry window: 60 min (scheduler resets processing→scheduled) << 24h → SAFE
 //   - Key format: dm_{daily_mail_id}_{student_id} (~70 chars, well within 256 limit)
+//
+// 409 State Machine:
+//   pending ──┬── Resend 200 ──────────► sent (+ resend_id)
+//             ├── Resend 409 concurrent ─► pending (giữ nguyên, retry lần sau)
+//             ├── Resend 409 invalid ────► failed [INVARIANT] payload mismatch
+//             └── Network/other error ───► failed
+//
+// Payload immutability:
+//   Daily mail content (subject, content, CTA, from) MUST NOT change after
+//   status transitions to 'processing'. The UI locks editing for non-draft status.
+//   This ensures retry always sends the same payload → idempotency key remains valid.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -227,45 +238,68 @@ Deno.serve(async (req) => {
 
             const body = await res.json()
 
-            // 409 = idempotency conflict — key đã dùng với payload khác
-            // hoặc request gốc đang xử lý. Đều coi là đã gửi (key tồn tại = email đã
-            // hoặc đang được xử lý bởi Resend).
             if (!res.ok) {
+              // ── Phân loại lỗi Resend ──
+              const errorName = body.name || ''
+              const errorMsg = body.message || `HTTP ${res.status}`
+
               if (res.status === 409) {
-                console.warn(`   ⚠️  Idempotency conflict for ${rec.email}, treating as sent`)
-                return { recipient_id: rec.id, resend_id: idempotencyKey, ok: true }
+                if (errorName === 'concurrent_idempotent_requests') {
+                  // Request gốc đang được Resend xử lý.
+                  // Giữ pending để retry — lần sau Resend sẽ trả cached 200.
+                  console.warn(`   🔄 concurrent for ${rec.email}, keeping pending`)
+                  return { recipient_id: rec.id, retry: true, ok: false, error: errorMsg }
+                }
+
+                if (errorName === 'invalid_idempotent_request') {
+                  // INVARIANT VIOLATION: cùng key nhưng payload khác.
+                  // Admin có thể đã sửa nội dung daily_mail sau khi bắt đầu gửi.
+                  console.error(`   ❌ invalid_idempotent_request for ${rec.email}: payload mismatch`)
+                  return { recipient_id: rec.id, retry: false, ok: false, error: `[INVARIANT] Idempotency payload mismatch. Daily mail content may have changed after processing started. ${errorMsg}` }
+                }
               }
-              throw new Error(body.message || `HTTP ${res.status}`)
+
+              // Lỗi khác (400, 422, 429, 5xx...): đánh dấu failed
+              return { recipient_id: rec.id, retry: false, ok: false, error: errorMsg }
             }
 
+            // 200 OK: email đã gửi thành công
             return { recipient_id: rec.id, resend_id: body.id, ok: true }
           } catch (err: any) {
-            return { recipient_id: rec.id, error: err.message, ok: false }
+            // Network error: đánh dấu failed
+            return { recipient_id: rec.id, retry: false, ok: false, error: err.message }
           }
         })
       )
 
-      // ── 6. Cập nhật trạng thái NGAY SAU mỗi batch ──
+      // ── 6. Cập nhật trạng thái theo kết quả ──
+      //     sent:    Resend 200 OK → status = 'sent' + resend_id
+      //     retry:   Resend 409 concurrent → giữ nguyên pending (retry lần sau)
+      //     failed:  Resend 409 invalid / network error → status = 'failed'
       const successUpdates: any[] = []
       const failUpdates: any[] = []
+      let retryCount = 0
 
       results.forEach((r) => {
-        if (r.status === 'fulfilled' && r.value.ok) {
+        const val = r.status === 'fulfilled' ? r.value : null
+        const err = r.status === 'rejected' ? r.reason : null
+
+        if (val?.ok) {
           successUpdates.push({
-            id: r.value.recipient_id,
+            id: val.recipient_id,
             status: 'sent',
-            resend_id: r.value.resend_id,
+            resend_id: val.resend_id,
             sent_at: new Date().toISOString(),
           })
           sentCount++
+        } else if (val?.retry) {
+          // concurrent_idempotent_requests — giữ nguyên pending
+          retryCount++
         } else {
-          const errMsg = r.status === 'fulfilled' ? r.value.error : (r.reason?.message || 'Unknown error')
-          failUpdates.push({
-            id: r.status === 'fulfilled' ? r.value.recipient_id : (r.reason?.recipient_id || ''),
-            status: 'failed',
-            error: errMsg,
-          })
-          failCount++
+          const errMsg = val?.error || err?.message || 'Unknown error'
+          const recId = val?.recipient_id || err?.recipient_id || ''
+          failUpdates.push({ id: recId, status: 'failed', error: errMsg })
+          if (recId) failCount++
         }
       })
 
@@ -292,7 +326,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log(`   Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${successUpdates.length} sent, ${failUpdates.length} failed`)
+      console.log(`   Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${successUpdates.length} sent, ${retryCount} retry, ${failUpdates.length} failed`)
     }
 
     // ── 7. Đánh dấu daily_mail hoàn tất ──

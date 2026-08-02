@@ -5,6 +5,12 @@ begin;
 
 -- ============================================================
 -- 1. Bảng daily_mail — lưu mỗi chiến dịch gửi mail
+--
+-- INVARIANT (payload immutability): subject, content, cta_text,
+-- cta_url MUST NOT change after status transitions from 'draft'.
+-- The UI enforces this by locking edit for non-draft mails.
+-- This ensures idempotency-key retries send the same payload.
+-- Violation → Resend returns 409 invalid_idempotent_request.
 -- ============================================================
 create table if not exists public.daily_mail (
   id            uuid primary key default gen_random_uuid(),
