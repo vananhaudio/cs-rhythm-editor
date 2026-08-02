@@ -124,6 +124,8 @@ export default function ClassLandingPage() {
   const [showGuide, setShowGuide] = useState(false)
   const [showDemo, setShowDemo] = useState(false)
   const [showNangCao, setShowNangCao] = useState(false)
+  const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
+  const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
   const [msgs, setMsgs] = useState<Msg[]>([
     { who: 'ai', html: 'Chào bạn 👋 Mình là <b>Mira</b>, trợ lý của Thầy Văn Anh Guitar. Bạn đang muốn học guitar theo hướng nào, hay còn băn khoăn gì? Cứ hỏi mình nhé.' },
   ])
@@ -328,7 +330,12 @@ export default function ClassLandingPage() {
     return () => window.removeEventListener('keydown', onEsc)
   }, [])
 
-  const goto = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  const openMira = () => { setMiraEver(true); setMiraOpen(true) }
+  // 'chat' → mở bong bóng Mira ở góc (không đẩy chat ra giữa trang nữa). Còn lại: cuộn tới mục.
+  const goto = (id: string) => {
+    if (id === 'chat') { openMira(); return }
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — vd ?xem=hanhtrinh, ?xem=lich, ?xem=app
   useEffect(() => {
@@ -548,15 +555,12 @@ export default function ClassLandingPage() {
             <h2>Còn câu hỏi riêng? Hỏi Mira nhé</h2>
             <p className="lead">Mira giúp bạn tìm đúng cửa vào phù hợp và trả lời mọi thắc mắc riêng của bạn — trước khi quyết định đăng ký.</p>
           </div>
-          {/* MIRA MỚI — nhúng app Mira (nguồn 'class'); trang gửi token đăng nhập
-              sang để Mira biết tên & hồ sơ học viên. Thay cho Mira cũ (class-ai). */}
-          <div className="chat-card">
-            <iframe
-              ref={miraRef}
-              src="https://mira-vananhaudio.netlify.app/shop?channel=class"
-              title="Mira · Trợ lý TVA Guitar"
-              style={{ flex: 1, width: '100%', border: 0 }}
-            />
+          {/* CTA mở Mira ở GÓC (không nhúng giữa trang). Chat thật là bong bóng nổi. */}
+          <div className="mira-cta">
+            <div className="mc-av">M<span className="mc-dot" /></div>
+            <h4>Trò chuyện riêng với Mira</h4>
+            <p>Mira mở ở góc màn hình và trả lời ngay — cứ hỏi gì bạn còn băn khoăn.</p>
+            <button className="btn btn-primary" onClick={openMira}>💬 Mở khung chat với Mira</button>
           </div>
         </div>
       </section>
@@ -1049,6 +1053,34 @@ export default function ClassLandingPage() {
           </div>
         </div>
       )}
+
+      {/* MIRA — bong bóng chat nổi ở GÓC PHẢI. Iframe app Mira (nguồn 'class');
+          trang gửi token đăng nhập sang để Mira biết tên & hồ sơ học viên.
+          Giữ iframe sau lần mở đầu (miraEver) để không tải lại giữa cuộc. */}
+      {miraEver && (
+        <div className="mira-panel" style={{ display: miraOpen ? 'flex' : 'none' }}>
+          <div className="mira-panel-head">
+            <span className="mp-av">M</span>
+            <div className="mp-title"><b>Mira</b><span>Trợ lý TVA Guitar · trả lời ngay</span></div>
+            <button className="mp-close" onClick={() => setMiraOpen(false)} aria-label="Đóng">×</button>
+          </div>
+          <iframe
+            ref={miraRef}
+            src="https://mira-vananhaudio.netlify.app/shop?channel=class"
+            title="Mira · Trợ lý TVA Guitar"
+            className="mira-frame"
+          />
+        </div>
+      )}
+      <button
+        className="mira-fab"
+        onClick={() => (miraOpen ? setMiraOpen(false) : openMira())}
+        aria-label={miraOpen ? 'Đóng chat Mira' : 'Mở chat Mira'}
+      >
+        {miraOpen ? <span className="mf-x">✕</span> : (
+          <><span className="mf-av">M</span><span className="mf-tx">Mira</span><span className="mf-dot" /></>
+        )}
+      </button>
     </div>
   )
 }
@@ -1289,4 +1321,29 @@ const CSS = `
 .tva-class .art-body ul,.tva-class .art-body ol{margin:0 0 12px;padding-left:20px;}
 .tva-class .art-body img{max-width:100%;border-radius:10px;margin:8px 0;}
 .tva-class .art-body b,.tva-class .art-body strong{color:var(--ink);}
+
+/* CTA mở Mira (thay ô chat giữa trang) */
+.tva-class .mira-cta{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 44px -22px rgba(33,28,50,.22);padding:28px 24px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;}
+.tva-class .mira-cta .mc-av{position:relative;width:48px;height:48px;border-radius:50%;background:#4338CA;color:#fff;display:grid;place-items:center;font-weight:800;font-size:20px;}
+.tva-class .mira-cta .mc-dot{position:absolute;right:1px;bottom:1px;width:11px;height:11px;border-radius:50%;background:#22c55e;border:2px solid var(--surface);}
+.tva-class .mira-cta h4{margin:4px 0 0;font-size:17px;color:var(--ink);}
+.tva-class .mira-cta p{margin:0;color:var(--ink-soft);font-size:14px;}
+.tva-class .mira-cta .btn{margin-top:6px;}
+
+/* Bong bóng Mira nổi góc phải */
+.mira-fab{position:fixed;right:20px;bottom:20px;z-index:60;display:inline-flex;align-items:center;gap:9px;border:0;cursor:pointer;background:#4338CA;color:#fff;border-radius:999px;padding:11px 17px 11px 12px;font:inherit;font-weight:800;box-shadow:0 12px 30px -8px rgba(67,56,202,.6);}
+.mira-fab:hover{background:#3730A3;}
+.mira-fab .mf-av{width:28px;height:28px;border-radius:50%;background:#fff;color:#4338CA;display:grid;place-items:center;font-weight:800;font-size:14px;}
+.mira-fab .mf-tx{font-size:14px;}
+.mira-fab .mf-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;}
+.mira-fab .mf-x{font-size:18px;line-height:1;padding:0 4px;}
+.mira-panel{position:fixed;right:20px;bottom:78px;z-index:60;width:370px;max-width:calc(100vw - 32px);height:520px;max-height:calc(100vh - 120px);flex-direction:column;overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:0 24px 64px -16px rgba(15,23,42,.4);}
+.mira-panel-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:11px 14px;background:#4338CA;color:#fff;}
+.mira-panel-head .mp-av{width:34px;height:34px;border-radius:50%;background:#fff;color:#4338CA;display:grid;place-items:center;font-weight:800;}
+.mira-panel-head .mp-title{display:flex;flex-direction:column;line-height:1.25;}
+.mira-panel-head .mp-title b{font-size:14.5px;}
+.mira-panel-head .mp-title span{font-size:11px;opacity:.85;}
+.mira-panel-head .mp-close{margin-left:auto;background:transparent;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;}
+.mira-frame{flex:1;width:100%;border:0;background:#fff;}
+@media(max-width:560px){.mira-panel{right:12px;left:12px;width:auto;bottom:74px;height:70vh;}}
 `
