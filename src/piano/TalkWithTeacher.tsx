@@ -98,6 +98,18 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
     setLevelId(next); setLvl(next)
   }
 
+  // ── CHẶN CHÁY TIỀN ──────────────────────────────────────────────────────
+  // Realtime tính tiền THEO PHÚT âm thanh mở kết nối, kể cả lúc không ai nói.
+  // Trước đây phiên CHỈ đóng khi rời màn hình → trẻ chạm mic rồi đặt máy xuống,
+  // chuyển tab, đi chỗ khác là đồng hồ vẫn quay (tiếng ồn phòng cũng đủ để server
+  // VAD tiếp tục nhận). Ba lớp chặn dưới đây không đụng gì tới người đang thật sự
+  // nói chuyện, chỉ cắt những phiên bỏ quên.
+  const IDLE_MS = 90_000        // 90 giây không có tiếng nói → ngắt
+  const MAX_MS  = 10 * 60_000   // trần 10 phút một phiên, muốn tiếp thì chạm lại
+  const idleTimer = useRef<number | null>(null)
+  const maxTimer  = useRef<number | null>(null)
+  const [endNote, setEndNote] = useState('')
+
   const stateRef  = useRef<TalkState>('idle')
   const pcRef     = useRef<RTCPeerConnection | null>(null)
   const dcRef     = useRef<RTCDataChannel | null>(null)
@@ -138,16 +150,48 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
     return () => clearTimeout(id)
   }, [messages, busy])
 
+  const clearTimers = useCallback(() => {
+    if (idleTimer.current) { clearTimeout(idleTimer.current); idleTimer.current = null }
+    if (maxTimer.current)  { clearTimeout(maxTimer.current);  maxTimer.current = null }
+  }, [])
+
   const teardown = useCallback(() => {
+    clearTimers()
     try { dcRef.current?.close() } catch { /* */ }
     try { pcRef.current?.close() } catch { /* */ }
     dcRef.current = null; pcRef.current = null
     streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null
     if (audioRef.current) audioRef.current.srcObject = null
-  }, [])
+  }, [clearTimers])
 
   // Rời màn hình → ngắt kết nối, nhả micro
   useEffect(() => () => teardown(), [teardown])
+
+  // Ngắt phiên và cho biết vì sao (nút quay về "Chạm để nói với Lyra").
+  const stopSession = useCallback((note: string) => {
+    if (stateRef.current === 'idle') return
+    teardown()
+    stateRef.current = 'idle'; setState('idle')
+    setEndNote(note)
+  }, [teardown])
+
+  // Mỗi lần có tiếng nói (người hoặc Lyra) thì hẹn lại đồng hồ im lặng.
+  const armIdle = useCallback(() => {
+    if (idleTimer.current) clearTimeout(idleTimer.current)
+    idleTimer.current = window.setTimeout(
+      () => stopSession('Đã tạm dừng vì không nghe thấy ai nói. Chạm để nói tiếp nhé.'),
+      IDLE_MS,
+    )
+  }, [stopSession])
+
+  // Ẩn tab / khoá máy → ngắt ngay. Đây là kiểu bỏ quên hay gặp nhất.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.hidden) stopSession('Đã tạm dừng khi con chuyển sang việc khác. Chạm để nói tiếp nhé.')
+    }
+    document.addEventListener('visibilitychange', onHide)
+    return () => document.removeEventListener('visibilitychange', onHide)
+  }, [stopSession])
 
   // ── Lyra gọi công cụ tạo bài tập ──
   const runToolCall = useCallback((callId: string, argsRaw: string) => {
@@ -189,12 +233,15 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
 
     switch (ev.type) {
       case 'input_audio_buffer.speech_started':
+        armIdle()   // có tiếng nói → hoãn đồng hồ im lặng
         go('listening'); userText.current = ''
         break
       case 'input_audio_buffer.speech_stopped':
+        armIdle()
         go('thinking')
         break
       case 'response.audio.delta':
+        armIdle()   // Lyra đang nói cũng tính là phiên còn sống
         if (cur() !== 'speaking') { go('speaking'); aiText.current = '' }
         break
       case 'response.done': {
@@ -221,13 +268,13 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
       default:
         break
     }
-  }, [go, cur, log, runToolCall])
+  }, [go, cur, log, runToolCall, armIdle])
 
   // ── Kết nối ──
   // Gọi TỪ CÚ CHẠM của trẻ: iOS cần user gesture để mở micro và phát tiếng AI.
   const connect = useCallback(async () => {
     if (cur() !== 'idle' && cur() !== 'error') return
-    go('connecting'); setErrorMsg(''); setDebug([])
+    go('connecting'); setErrorMsg(''); setDebug([]); setEndNote('')
     log('Bắt đầu kết nối…')
 
     try {
@@ -312,6 +359,13 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
 
       log('Kết nối xong — con nói đi!')
       go('ready')
+      // Phiên bắt đầu tính tiền từ đây → bật đồng hồ im lặng + trần thời lượng.
+      armIdle()
+      if (maxTimer.current) clearTimeout(maxTimer.current)
+      maxTimer.current = window.setTimeout(
+        () => stopSession('Đã hết 10 phút cho một lần trò chuyện. Chạm để nói tiếp nhé.'),
+        MAX_MS,
+      )
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       log('LỖI: ' + msg)
@@ -400,6 +454,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
         <div style={{ fontSize:15,fontWeight:600,color:f.lc,textAlign:'center',maxWidth:330,lineHeight:1.4,minHeight:21,padding:'0 24px' }}>
           {f.label}
           {state === 'error' && <div style={{ fontSize:13,marginTop:4,opacity:.8 }}>Chạm để thử lại</div>}
+          {state === 'idle' && endNote && <div style={{ fontSize:13,marginTop:4,opacity:.75 }}>{endNote}</div>}
         </div>
 
         <div style={{ display:'flex',alignItems:'center',gap:8,marginTop:12,flexWrap:'wrap',justifyContent:'center' }}>
