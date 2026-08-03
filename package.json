@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mira:content": "node scripts/mira-content.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",

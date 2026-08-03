@@ -60,12 +60,13 @@ Deno.serve(async (req) => {
       // Đánh dấu processing (idempotent — chỉ khi status=scheduled)
       await db.rpc('mark_daily_mail_processing', { p_id: mail.id })
 
-      // Gọi sender edge function với internal secret
+      // Gọi sender edge function với Authorization (JWT) + internal secret
       try {
         const senderRes = await fetch(SENDER_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SERVICE_KEY}`,
             'x-internal-secret': INTERNAL_SECRET,
           },
           body: JSON.stringify({ daily_mail_id: mail.id }),
