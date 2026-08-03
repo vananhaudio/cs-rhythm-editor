@@ -101,6 +101,7 @@ const MODALS: Record<string, string> = {
 
 const ZALO = '0983 259 893'
 const ZALO_LINK = 'https://zalo.me/vananhguitarist'
+const SHOP_URL = 'https://shop.vananhaudio.com'
 
 type Msg = { who: 'ai' | 'me'; html: string }
 
@@ -444,10 +445,14 @@ export default function ClassLandingPage() {
             <a onClick={() => goto('chat')}>Tư vấn</a>
             <a onClick={() => goto('batdau')}>Bắt đầu</a>
             <a onClick={() => goto('lichlop')}>Lịch lớp</a>
+            {/* Sang shop — cùng tài khoản (SSO cookie .vananhaudio.com) nên không phải đăng nhập lại */}
+            <a href={SHOP_URL}>Shop</a>
             {!me && <a onClick={() => goto('dangky')}>Đăng ký</a>}
             {!me && <a onClick={() => setShowLogin(true)}>Đăng nhập</a>}
           </div>
           <div className="nav-right">
+            {/* Menu chữ bị ẩn dưới 860px → nút Shop gọn này chỉ hiện trên điện thoại */}
+            <a className="shop-cta" href={SHOP_URL} aria-label="Shop nhạc cụ Văn Anh Audio">🛒<span className="shop-cta-full">Shop</span></a>
             {/* CTA 1001 Câu chuyện — pill nổi hơn menu, nhẹ hơn nút chính; mobile rút gọn "📖 1001" */}
             <button className="story-cta" onClick={() => { window.location.href = '/story' }} aria-label="1001 Câu chuyện cùng Guitar">
               📖 <span className="story-cta-full">1001 Câu chuyện</span><span className="story-cta-short">1001</span>
@@ -1106,7 +1111,15 @@ const CSS = `
 .tva-class .story-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--indigo);background:var(--surface);color:var(--indigo);font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;line-height:1;}
 .tva-class .story-cta:hover{background:var(--indigo-tint);}
 .tva-class .story-cta-short{display:none;}
+/* Nút Shop gọn: chỉ dùng khi menu chữ bị ẩn (mobile) — desktop đã có mục Shop trong menu */
+/* Máy nhỏ: giấu CHỮ thương hiệu (giữ logo) để đủ chỗ cho nút Shop — trước đây chữ
+   này cũng đã bị xuống 2 dòng, giấu đi lại gọn hơn. */
+@media(max-width:520px){.tva-class .brand{font-size:0;gap:0;}}
+.tva-class .shop-cta{display:none;align-items:center;gap:5px;padding:7px 11px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;line-height:1;}
 @media(max-width:860px){.tva-class .nav-links{display:none;}
+.tva-class .shop-cta{display:inline-flex;}
+/* Máy rất hẹp (≤360px): nút Shop rút còn mỗi biểu tượng, không thì header tràn */
+@media(max-width:360px){.tva-class .shop-cta-full{display:none;}.tva-class .shop-cta{padding:7px 9px;}}
 .tva-class .nav-right{gap:8px;}
 .tva-class .story-cta{padding:7px 11px;font-size:13px;}
 .tva-class .story-cta-full{display:none;}
