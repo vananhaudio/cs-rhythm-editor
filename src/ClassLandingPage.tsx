@@ -445,14 +445,21 @@ export default function ClassLandingPage() {
             <a onClick={() => goto('chat')}>Tư vấn</a>
             <a onClick={() => goto('batdau')}>Bắt đầu</a>
             <a onClick={() => goto('lichlop')}>Lịch lớp</a>
-            {/* Sang shop — cùng tài khoản (SSO cookie .vananhaudio.com) nên không phải đăng nhập lại */}
-            <a href={SHOP_URL}>Shop</a>
-            {!me && <a onClick={() => goto('dangky')}>Đăng ký</a>}
+            {/* Bỏ mục chữ "Đăng ký" — trùng đích với nút "Đăng ký lớp" bên phải, mà hàng
+                nav cần chỗ cho nút Shop. */}
             {!me && <a onClick={() => setShowLogin(true)}>Đăng nhập</a>}
           </div>
           <div className="nav-right">
-            {/* Menu chữ bị ẩn dưới 860px → nút Shop gọn này chỉ hiện trên điện thoại */}
-            <a className="shop-cta" href={SHOP_URL} aria-label="Shop nhạc cụ Văn Anh Audio">🛒<span className="shop-cta-full">Shop</span></a>
+            {/* Nút Shop — mang màu cam của shop.vananhaudio.com để khách nhận ra
+                đang sang cửa hàng. Hiện ở MỌI cỡ màn (menu chữ bị ẩn dưới 860px). */}
+            <a className="shop-cta" href={SHOP_URL} aria-label="Shop nhạc cụ Văn Anh Audio">
+              <svg className="shop-cta-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              <span className="shop-cta-full">Shop</span>
+            </a>
             {/* CTA 1001 Câu chuyện — pill nổi hơn menu, nhẹ hơn nút chính; mobile rút gọn "📖 1001" */}
             <button className="story-cta" onClick={() => { window.location.href = '/story' }} aria-label="1001 Câu chuyện cùng Guitar">
               📖 <span className="story-cta-full">1001 Câu chuyện</span><span className="story-cta-short">1001</span>
@@ -1101,25 +1108,31 @@ const CSS = `
 .tva-class .ph{border:2px dashed #CFC9DA;border-radius:14px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--ink-faint);font-size:12.5px;font-weight:600;padding:14px;background:#FBFAF7;}
 .tva-class nav{position:sticky;top:0;z-index:40;background:rgba(242,238,231,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);/* chừa tai thỏ iPhone */}
 .tva-class .nav-in{display:flex;align-items:center;justify-content:space-between;height:62px;}
-.tva-class .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;}
+.tva-class .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;white-space:nowrap;}
 .tva-class .brand .mark{width:36px;height:36px;border-radius:9px;object-fit:contain;display:block;}
-.tva-class .nav-links{display:flex;gap:22px;font-size:14.5px;font-weight:500;}
-.tva-class .nav-links a{color:var(--ink-soft);text-decoration:none;cursor:pointer;}
+/* gap 22 → 16: hàng nav có thêm nút Shop, cần chỗ cho 3 nút bên phải */
+.tva-class .nav-links{display:flex;gap:16px;font-size:14px;font-weight:500;}
+.tva-class .nav-links a{color:var(--ink-soft);text-decoration:none;cursor:pointer;white-space:nowrap;}
 .tva-class .nav-links a:hover{color:var(--indigo);}
 .tva-class .nav-cta{font-size:14px;padding:9px 16px;}
 .tva-class .nav-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .tva-class .story-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--indigo);background:var(--surface);color:var(--indigo);font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;line-height:1;}
 .tva-class .story-cta:hover{background:var(--indigo-tint);}
 .tva-class .story-cta-short{display:none;}
-/* Nút Shop gọn: chỉ dùng khi menu chữ bị ẩn (mobile) — desktop đã có mục Shop trong menu */
 /* Máy nhỏ: giấu CHỮ thương hiệu (giữ logo) để đủ chỗ cho nút Shop — trước đây chữ
    này cũng đã bị xuống 2 dòng, giấu đi lại gọn hơn. */
 @media(max-width:520px){.tva-class .brand{font-size:0;gap:0;}}
-.tva-class .shop-cta{display:none;align-items:center;gap:5px;padding:7px 11px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;line-height:1;}
-@media(max-width:860px){.tva-class .nav-links{display:none;}
-.tva-class .shop-cta{display:inline-flex;}
+/* NÚT SHOP — mượn đúng cam của shop.vananhaudio.com (#FF9F1C → #F59E0B, nhấn #E87900)
+   để khách thấy ngay đây là cửa sang cửa hàng, không lẫn với màu chàm của lớp học. */
+.tva-class .shop-cta{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:999px;border:none;background:linear-gradient(135deg,#FF9F1C,#F59E0B);color:#fff;font-size:13.5px;font-weight:700;text-decoration:none;white-space:nowrap;line-height:1;box-shadow:0 6px 16px -7px rgba(232,121,0,.9);transition:transform .16s ease,box-shadow .16s ease,background .16s ease;}
+.tva-class .shop-cta:hover{background:linear-gradient(135deg,#FFB347,#E87900);transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(232,121,0,.95);}
+.tva-class .shop-cta:active{transform:translateY(0);box-shadow:0 4px 12px -7px rgba(232,121,0,.9);}
+.tva-class .shop-cta-ico{width:15px;height:15px;flex-shrink:0;}
+/* Ngưỡng ẩn menu chữ nâng 860 → 1120px: hàng nav có thêm nút Shop nên hẹp hơn mức
+   này là không đủ chỗ cho cả menu chữ lẫn 3 nút (đo thật: cần ~1045px). */
+@media(max-width:1120px){.tva-class .nav-links{display:none;}
 /* Máy rất hẹp (≤360px): nút Shop rút còn mỗi biểu tượng, không thì header tràn */
-@media(max-width:360px){.tva-class .shop-cta-full{display:none;}.tva-class .shop-cta{padding:7px 9px;}}
+@media(max-width:360px){.tva-class .shop-cta-full{display:none;}.tva-class .shop-cta{padding:8px 10px;}}
 .tva-class .nav-right{gap:8px;}
 .tva-class .story-cta{padding:7px 11px;font-size:13px;}
 .tva-class .story-cta-full{display:none;}
