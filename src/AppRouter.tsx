@@ -38,6 +38,7 @@ import ShowcaseIndexPage from './showcase/ShowcaseIndexPage'
 import ShowcaseDetailPage from './showcase/ShowcaseDetailPage'
 import ShowcaseAdmin from './admin/ShowcaseAdmin'
 import DailyMailPage from './admin/DailyMailPage'
+import ChatMailPage from './admin/ChatMailPage'
 import UnsubscribePage from './UnsubscribePage'
 import EditorPage from './EditorPage'
 import GrooveExercise from './groove/GrooveExercise'
@@ -326,6 +327,13 @@ if (path === '/admin/showcase' || path.startsWith('/admin/showcase')) {
   if (loading) return null
   if (!user || !isTeacher) { window.location.href = '/start'; return null }
   return <ShowcaseAdmin onClose={() => { window.location.href = '/admin' }} />
+}
+
+// ── Route /admin/chat-mail — Chat Mail gửi nhanh kiểu chat (teacher/admin) ──
+if (path === '/admin/chat-mail' || path.startsWith('/admin/chat-mail')) {
+  if (loading) return null
+  if (!user || !isTeacher) { window.location.href = '/start'; return null }
+  return <ChatMailPage />
 }
 
 // ── Route /admin/daily-mail — Daily Mail admin (teacher/admin) ──

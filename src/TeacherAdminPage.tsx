@@ -11,6 +11,7 @@ import ClassAiAdmin from './ClassAiAdmin'
 import ScheduleManager from './ScheduleManager'
 import ShowcaseAdmin from './admin/ShowcaseAdmin'
 import DailyMailPage from './admin/DailyMailPage'
+import ChatMailPage from './admin/ChatMailPage'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -19,7 +20,7 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
@@ -28,6 +29,7 @@ const NAV = [
   { id: 'aichat'    as Section, icon: '💬', label: 'AI khách'       },
   { id: 'showcase'  as Section, icon: '📄', label: 'Showcase'      },
   { id: 'dailymail' as Section, icon: '📧', label: 'Daily Mail'     },
+  { id: 'chatmail'  as Section, icon: '💬', label: 'Chat Mail'       },
   { id: 'articles'  as Section, icon: '📰', label: 'Bài viết'       },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
@@ -170,6 +172,13 @@ export default function TeacherAdminPage() {
         {section === 'showcase' && (
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <ShowcaseAdmin onClose={() => setSection('dashboard')} />
+          </div>
+        )}
+
+        {/* Chat Mail */}
+        {section === 'chatmail' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <ChatMailPage />
           </div>
         )}
 
