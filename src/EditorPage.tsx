@@ -12,6 +12,7 @@ interface Story {
   submittedAt: string
   status: StoryStatus
   content: string
+  user_id?: string | null
   conversation?: { role: string; text: string; at: string }[]
   photos?: { url: string; caption?: string }[] | null
   // Đôi nét về người kể (Ban biên tập xem/sửa)
@@ -78,6 +79,35 @@ export default function EditorPage() {
   const [nContent, setNContent] = useState('')
   const [nSaving, setNSaving] = useState(false)
   const [nMsg, setNMsg] = useState('')
+  // ── Chọn người viết từ tài khoản có sẵn ──
+  const [nUserId, setNUserId] = useState('')
+  const [userSearchQ, setUserSearchQ] = useState('')
+  const [userSearchRes, setUserSearchRes] = useState<{ id: string; name: string; email: string; role: string }[]>([])
+  const [userSearching, setUserSearching] = useState(false)
+  const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const searchUsers = async (q: string) => {
+    setUserSearchQ(q)
+    if (!q.trim()) { setUserSearchRes([]); setShowUserDropdown(false); return }
+    setUserSearching(true)
+    const { data } = await supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'search_users', q: q.trim() },
+    })
+    setUserSearchRes(data?.users || [])
+    setShowUserDropdown(true)
+    setUserSearching(false)
+  }
+  const selectUser = (u: { id: string; name: string; email: string }) => {
+    setNUserId(u.id)
+    setNAuthor(u.name)
+    setUserSearchQ(u.name)
+    setShowUserDropdown(false)
+  }
+  const clearUser = () => {
+    setNUserId('')
+    setNAuthor('')
+    setUserSearchQ('')
+    setShowUserDropdown(false)
+  }
   const createStory = async () => {
     if (!nTitle.trim() || !nContent.trim()) { setNMsg('Cần có tiêu đề và nội dung.'); return }
     setNSaving(true); setNMsg('')
@@ -89,12 +119,14 @@ export default function EditorPage() {
           title: nTitle.trim(), content: nContent.trim(),
           pen_name: nAuthor.trim(), author_name: nAuthor.trim(),
           location: nLocation.trim(),
+          user_id: nUserId || undefined,             // null nếu không chọn user
         },
       })
       if (!error && data?.ok) {
         setNMsg('')
         setShowNew(false)
         setNTitle(''); setNAuthor(''); setNLocation(''); setNContent('')
+        setNUserId(''); setUserSearchQ('')
         setTab('inbox'); setActiveFilter('submitted')
         load()
       } else setNMsg('Lỗi: ' + (data?.error || 'Không tạo được bài'))
@@ -117,6 +149,7 @@ export default function EditorPage() {
         author: s.pen_name || 'Ẩn danh',
         submittedAt: s.published_at || s.created_at || new Date().toISOString(),
         status: DB_STATUS_MAP[s.status] || 'telling',
+        user_id: s.user_id ?? null,
         conversation: s.conversation || [],
         content: s.content || '',
         photos: s.photos ?? null,
@@ -167,8 +200,33 @@ export default function EditorPage() {
             <input className="ed-bio-input ed-new-full" placeholder="Tiêu đề câu chuyện"
               value={nTitle} onChange={e => setNTitle(e.target.value)} />
             <div className="ed-bio-grid" style={{ marginTop: 8 }}>
-              <input className="ed-bio-input" placeholder="Tên người kể (hoặc bút danh)"
-                value={nAuthor} onChange={e => setNAuthor(e.target.value)} />
+              {/* ── Chọn người viết từ tài khoản ── */}
+              <div style={{ position: 'relative' }}>
+                <input className="ed-bio-input" placeholder="Tìm người viết theo tên/email…"
+                  value={userSearchQ}
+                  onChange={e => { searchUsers(e.target.value); if (!nUserId) setNAuthor(e.target.value) }}
+                  onFocus={() => { if (userSearchRes.length > 0) setShowUserDropdown(true) }}
+                  onBlur={() => setTimeout(() => setShowUserDropdown(false), 200)}
+                />
+                {nUserId && (
+                  <span style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', fontSize:11, color:'#4338CA', fontWeight:600, background:'#EEF2FF', padding:'2px 8px', borderRadius:6, cursor:'pointer' }}
+                    onClick={clearUser}>✕ Bỏ chọn</span>
+                )}
+                {showUserDropdown && userSearchRes.length > 0 && (
+                  <div className="ed-user-dropdown">
+                    {userSearching && <div className="ed-user-drop-item" style={{color:'#8A8499'}}>Đang tìm…</div>}
+                    {userSearchRes.map(u => (
+                      <div key={u.id} className="ed-user-drop-item"
+                        onMouseDown={() => selectUser(u)}
+                        style={{ background: u.id === nUserId ? '#EEF2FF' : undefined }}>
+                        <b>{u.name}</b>
+                        <span style={{fontSize:12,color:'#8A8499'}}>{u.email}</span>
+                        <span className={`ed-user-role ${u.role}`}>{u.role === 'teacher' || u.role === 'admin' ? 'Giáo viên' : 'Học viên'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <input className="ed-bio-input" placeholder="Địa phương (không bắt buộc)"
                 value={nLocation} onChange={e => setNLocation(e.target.value)} />
             </div>
@@ -428,6 +486,58 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const [bioPortrait, setBioPortrait] = useState('')
   const [bioShow, setBioShow] = useState(false)
   const [bioSaving, setBioSaving] = useState(false)
+  // ── Gán người viết từ tài khoản ──
+  const [linkUserQ, setLinkUserQ] = useState('')
+  const [linkUserRes, setLinkUserRes] = useState<{ id: string; name: string; email: string; role: string }[]>([])
+  const [linkUserOpen, setLinkUserOpen] = useState(false)
+  const [linkUserBusy, setLinkUserBusy] = useState(false)
+  const [linkedUserName, setLinkedUserName] = useState('')
+  const searchLinkUsers = async (q: string) => {
+    setLinkUserQ(q)
+    if (!q.trim()) { setLinkUserRes([]); setLinkUserOpen(false); return }
+    const { data } = await supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'search_users', q: q.trim() },
+    })
+    setLinkUserRes(data?.users || [])
+    setLinkUserOpen(true)
+  }
+  const linkUser = async (u: { id: string; name: string }) => {
+    setLinkUserBusy(true)
+    setLinkUserOpen(false)
+    setLinkUserQ(u.name)
+    const { data } = await supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, user_id: u.id, pen_name: u.name, author_name: u.name },
+    })
+    if (data?.ok) {
+      story.user_id = u.id
+      story.author = u.name
+      setLinkedUserName(u.name)
+      setStatusMsg('Đã gán người viết: ' + u.name)
+    } else setStatusMsg('Lỗi khi gán: ' + (data?.error || ''))
+    setLinkUserBusy(false)
+  }
+  const unlinkUser = async () => {
+    setLinkUserBusy(true)
+    const { data } = await supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, user_id: null },
+    })
+    if (data?.ok) {
+      story.user_id = null
+      setLinkedUserName('')
+      setLinkUserQ('')
+      setStatusMsg('Đã bỏ liên kết tài khoản.')
+    } else setStatusMsg('Lỗi: ' + (data?.error || ''))
+    setLinkUserBusy(false)
+  }
+  // Nạp tên user đã gán khi mở panel
+  useEffect(() => {
+    if (!story.user_id || story.user_id === '00000000-0000-0000-0000-000000000001') { setLinkedUserName(''); return }
+    supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'search_users', q: story.user_id },
+    }).then(({ data: d }) => {
+      if (d?.users?.[0]) setLinkedUserName(d.users[0].name)
+    }, () => {})
+  }, [story.id, story.user_id])
   useEffect(() => {
     setBioName(st.author_full_name ?? '')
     setBioAge(st.author_age != null ? String(st.author_age) : '')
@@ -592,6 +702,51 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
           <span>{story.author}</span>
           <span className="ed-card-sep">·</span>
           <span>{fmtDate(story.submittedAt)}</span>
+          {linkedUserName && (
+            <>
+              <span className="ed-card-sep">·</span>
+              <span style={{color:'#4338CA',fontSize:13,fontWeight:500}}>🔗 {linkedUserName}</span>
+            </>
+          )}
+        </div>
+
+        {/* ── Gán/bỏ người viết từ tài khoản ── */}
+        <div className="ed-section" style={{paddingTop:12}}>
+          <h3 className="ed-section-title">👤 Người viết</h3>
+          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+            <div style={{position:'relative',flex:1,minWidth:180}}>
+              <input className="ed-bio-input" placeholder="Tìm người viết theo tên/email…"
+                value={linkUserQ}
+                onChange={e => searchLinkUsers(e.target.value)}
+                onFocus={() => { if (linkUserRes.length > 0) setLinkUserOpen(true) }}
+                onBlur={() => setTimeout(() => setLinkUserOpen(false), 200)}
+                disabled={linkUserBusy}
+              />
+              {linkUserOpen && linkUserRes.length > 0 && (
+                <div className="ed-user-dropdown">
+                  {linkUserRes.map(u => (
+                    <div key={u.id} className="ed-user-drop-item"
+                      onMouseDown={() => linkUser(u)}
+                      style={{ background: u.id === story.user_id ? '#EEF2FF' : undefined }}>
+                      <b>{u.name}</b>
+                      <span style={{fontSize:12,color:'#8A8499'}}>{u.email}</span>
+                      <span className={`ed-user-role ${u.role}`}>{u.role === 'teacher' || u.role === 'admin' ? 'Giáo viên' : 'Học viên'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {story.user_id && story.user_id !== '00000000-0000-0000-0000-000000000001' && (
+              <button className="ed-edit-btn ed-edit-cancel" onClick={unlinkUser} disabled={linkUserBusy}>
+                {linkUserBusy ? '…' : '✕ Bỏ liên kết'}
+              </button>
+            )}
+          </div>
+          <p style={{fontSize:12,color:'#8A8499',marginTop:6}}>
+            {story.user_id && story.user_id !== '00000000-0000-0000-0000-000000000001'
+              ? 'Đã liên kết với tài khoản. Nếu người này đổi tên, tên hiển thị sẽ tự cập nhật.'
+              : 'Chưa liên kết với tài khoản nào. Tìm và chọn để đồng bộ tên tự động.'}
+          </p>
         </div>
 
         {/* Bản gốc — conversation */}
@@ -974,6 +1129,14 @@ const CSS = `
 .ed-bio-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .ed-bio-input { padding:9px 11px; border:1px solid #E0E0E0; border-radius:8px; font-size:14px; font-family:inherit; outline:none; }
 .ed-bio-input:focus { border-color:#4F46E5; }
+/* ── User search dropdown ── */
+.ed-user-dropdown { position:absolute; top:100%; left:0; right:0; margin-top:4px; background:#FFFFFF; border:1px solid #E5E0D8; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.1); z-index:100; max-height:240px; overflow-y:auto; }
+.ed-user-drop-item { display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; font-size:13px; transition:background .1s; }
+.ed-user-drop-item:hover { background:#F5F2ED; }
+.ed-user-drop-item b { font-weight:600; color:#1A1A1A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
+.ed-user-drop-item span { flex-shrink:0; }
+.ed-user-role { font-size:10px; font-weight:600; padding:2px 7px; border-radius:999px; background:#F0F2F5; color:#6B6B6B; }
+.ed-user-role.teacher, .ed-user-role.admin { background:#EEF2FF; color:#4338CA; }
 .ed-bio-check { display:flex; gap:9px; align-items:flex-start; margin:12px 0; font-size:13.5px; color:#3F3F46; line-height:1.45; cursor:pointer; }
 @media (max-width:560px){ .ed-bio-grid { grid-template-columns:1fr; } }
 .ed-pub-done { font-size:15px; color:#3C7A42; font-weight:600; text-align:center; padding:12px; background:#EDF7EE; border-radius:8px; margin-bottom:8px; }

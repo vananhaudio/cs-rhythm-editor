@@ -201,6 +201,29 @@ Deno.serve(async (req) => {
       const enriched = (stories || []).map(s => ({ ...s, pen_name: s.pen_name || userMap[s.user_id] || '' }))
       return json({ stories: enriched })
     }
+    if (body.action === 'search_users') {
+      const q = (body.q || '').trim().toLowerCase()
+      // Lấy tất cả users từ auth (có email/name) + app_users (có role)
+      const { data: authUsers } = await db.auth.admin.listUsers({ perPage: 500 })
+      const { data: appUsers } = await db.from('app_users').select('id,role')
+      const roleMap: Record<string, string> = {}
+      if (appUsers) for (const u of appUsers) roleMap[u.id] = u.role
+      const results = (authUsers?.users || [])
+        .filter(u => {
+          if (!q) return true
+          const name = (u.user_metadata?.name || u.email?.split('@')[0] || '').toLowerCase()
+          const email = (u.email || '').toLowerCase()
+          return name.includes(q) || email.includes(q)
+        })
+        .map(u => ({
+          id: u.id,
+          email: u.email || '',
+          name: u.user_metadata?.name || u.email?.split('@')[0] || '',
+          role: roleMap[u.id] || 'student',
+        }))
+        .slice(0, 20)
+      return json({ users: results })
+    }
     if (body.action === 'admin_publish') {
       const { story_id, category_ids } = body
       if (!story_id) return json({ error: 'Missing story_id' }, 400)
@@ -235,6 +258,10 @@ Deno.serve(async (req) => {
       }
       // Công tắc hiển thị khối tác giả cuối bài (chỉ bật khi người kể đã đồng ý)
       if (body.consent_bio_publish !== undefined) updates.consent_bio_publish = !!body.consent_bio_publish
+      // Gán người viết từ tài khoản có sẵn
+      if (body.user_id !== undefined) updates.user_id = body.user_id
+      if (body.pen_name !== undefined) updates.pen_name = body.pen_name
+      if (body.author_name !== undefined) updates.author_name = body.author_name
 
       if (Object.keys(updates).length > 0) {
         const { error } = await db.from('stories').update(updates).eq('id', story_id)
