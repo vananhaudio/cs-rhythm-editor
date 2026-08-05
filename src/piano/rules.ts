@@ -30,6 +30,9 @@ export interface Exercise {
 export interface PianoLevel {
   id: number
   name: string
+  /** 'exercise' = bài tập kế thừa từng nốt, chưa thành tác phẩm.
+   *  'piece'    = bản nhạc có câu có kết. */
+  kind: 'exercise' | 'piece'
   /** Nốt được phép, xếp THẤP → CAO. Quãng nhảy đếm theo vị trí trong mảng này. */
   pitches: string[]
   /** Trường độ được phép: 0.5 = móc đơn, 1 = đen, 2 = trắng, 3 = trắng chấm, 4 = tròn */
@@ -44,6 +47,9 @@ export interface PianoLevel {
   bpm: [number, number]
   /** Kết bài ở nốt chủ (nốt đầu tiên của `pitches`) */
   endOnTonic: boolean
+  /** Nốt được phép rơi vào PHÁCH MẠNH (phách 1 mỗi ô). Bỏ trống = không ràng buộc.
+   *  Đây là luật "phách mạnh phải là C hoặc E" của Ex.2 trở đi. */
+  strongBeatPitches?: string[]
   /** Kỹ năng hôm nay — đưa vào prompt để AI sáng tác có mục đích sư phạm */
   skill: string
 }
@@ -57,44 +63,85 @@ const P5  = ['C4', 'D4', 'E4', 'F4', 'G4']
 const P8  = [...P5, 'A4', 'B4', 'C5']
 const P10 = [...P8, 'D5', 'E5']
 
+// ── BÀI TẬP (Ex.0–Ex.4) — kế thừa từng nốt một ───────────────────────────────
+// Theo tài liệu "Progressive Exercises" của thầy. Mỗi bài chỉ THÊM MỘT nốt so với
+// bài trước, giữ nguyên phần cũ. Ngắn 2–4 ô, chưa phải tác phẩm, chỉ cần bé quen
+// tay và cảm được phách.
+//
+// BA CHỖ LỆCH TÀI LIỆU, cố ý:
+// 1. Ex.1 trong tài liệu kết ở Rê ở ví dụ nhưng luật ghi phải kết ở Đô — theo LUẬT.
+// 2. Tài liệu có dấu "(nghỉ)" cuối ô; định dạng bài chưa có dấu lặng nên thay bằng
+//    NỐT NGÂN DÀI cuối bài — với bé mới học tác dụng tương đương, mà máy vẫn chấm được.
+// 3. Bè đệm tay trái (Ex.2+) CHƯA làm: app chỉ có một bè, thêm bè thứ hai là bộ dò
+//    cao độ nghe lẫn và chấm sai. Để dành khi có phần đệm riêng.
+const EX1 = ['C4']
+const EX2 = ['C4', 'D4']
+const EX3 = ['C4', 'D4', 'E4']
+const EX5 = ['C4', 'D4', 'E4', 'F4', 'G4']
+const EX7 = [...EX5, 'A4', 'B4']
+
 export const LEVELS: PianoLevel[] = [
-  { id: 1,  name: 'Ba nốt đầu',      pitches: ['C4','D4','E4'], durations: [1],
+  { id: 1, name: 'Chỉ nốt Đô', kind: 'exercise', pitches: EX1, durations: [1, 2],
+    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 66], endOnTonic: true,
+    skill: 'Chỉ một nốt Đô. Bé làm quen mặt nốt và cảm giác phách mạnh — phách nhẹ, đổi giữa nốt đen và nốt trắng' },
+
+  { id: 2, name: 'Thêm nốt Rê', kind: 'exercise', pitches: EX2, durations: [1, 2],
+    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 69], endOnTonic: true,
+    skill: 'Hai nốt Đô–Rê. Bé cảm nhận đi lên và đi xuống một bậc, kết lại về Đô' },
+
+  { id: 3, name: 'Thêm nốt Mi', kind: 'exercise', pitches: EX3, durations: [1, 2],
+    beatsPerBar: 4, bars: 3, maxStep: 1, bpm: [63, 72], endOnTonic: true,
+    strongBeatPitches: ['C4', 'E4'],
+    skill: 'Ba nốt Đô–Rê–Mi. Rê chỉ là nốt đi qua; phách mạnh rơi vào Đô hoặc Mi để bé quen trọng tâm hợp âm Đô trưởng' },
+
+  { id: 4, name: 'Thêm Fa và Sol', kind: 'exercise', pitches: EX5, durations: [1, 2],
+    beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 76], endOnTonic: true,
+    strongBeatPitches: ['C4', 'E4', 'G4'],
+    skill: 'Đủ năm nốt Đô–Sol, trọn bàn tay. Câu nhạc đi lên tới đỉnh Sol rồi quay về Đô — có hỏi có đáp' },
+
+  { id: 5, name: 'Đủ bảy nốt', kind: 'exercise', pitches: EX7, durations: [1, 2],
+    beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [69, 80], endOnTonic: true,
+    strongBeatPitches: ['C4', 'E4', 'G4'],
+    skill: 'Thêm La và Si. Si là nốt hút về Đô — bài phải kết bằng Si rồi Đô để bé nghe ra cảm giác "về nhà"' },
+
+// ── BẢN NHẠC (bậc 6–15) — đã thành tác phẩm có câu có kết ────────────────────
+  { id: 6,  name: 'Ba nốt đầu',      kind: 'piece', pitches: ['C4','D4','E4'], durations: [1],
     beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 72], endOnTonic: true,
     skill: 'Ba nốt Đô Rê Mi tay phải, toàn nốt đen, đi liền kề' },
 
-  { id: 2,  name: 'Năm nốt bàn tay',  pitches: P5, durations: [1],
+  { id: 7,  name: 'Năm nốt bàn tay',  kind: 'piece', pitches: P5, durations: [1],
     beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [63, 76], endOnTonic: true,
     skill: 'Mở rộng ra năm nốt Đô–Sol, vẫn toàn nốt đen, đi liền kề' },
 
-  { id: 3,  name: 'Nốt trắng',        pitches: P5, durations: [1, 2],
+  { id: 8,  name: 'Nốt trắng',        kind: 'piece', pitches: P5, durations: [1, 2],
     beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 80], endOnTonic: true,
     skill: 'Làm quen nốt trắng — giữ tiếng ngân đủ hai phách' },
 
-  { id: 4,  name: 'Nốt tròn',         pitches: P5, durations: [1, 2, 4],
+  { id: 9,  name: 'Nốt tròn',         kind: 'piece', pitches: P5, durations: [1, 2, 4],
     beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 80], endOnTonic: true,
     skill: 'Thêm nốt tròn ngân trọn một ô nhịp, tập đếm bốn phách' },
 
-  { id: 5,  name: 'Quãng ba',         pitches: P5, durations: [1, 2],
+  { id: 10,  name: 'Quãng ba',         kind: 'piece', pitches: P5, durations: [1, 2],
     beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [72, 86], endOnTonic: true,
     skill: 'Tập nhảy quãng ba, giữ nhịp đều khi đổi ngón' },
 
-  { id: 6,  name: 'Nhịp ba bốn',      pitches: P5, durations: [1, 2, 3],
+  { id: 11,  name: 'Nhịp ba bốn',      kind: 'piece', pitches: P5, durations: [1, 2, 3],
     beatsPerBar: 3, bars: 4, maxStep: 2, bpm: [72, 86], endOnTonic: true,
     skill: 'Nhịp 3/4 — cảm giác một–hai–ba, nhấn phách đầu mỗi ô' },
 
-  { id: 7,  name: 'Trọn quãng tám',   pitches: P8, durations: [1, 2, 4],
+  { id: 12,  name: 'Trọn quãng tám',   kind: 'piece', pitches: P8, durations: [1, 2, 4],
     beatsPerBar: 4, bars: 4, maxStep: 3, bpm: [76, 92], endOnTonic: true,
     skill: 'Đi hết quãng tám Đô4–Đô5, câu nhạc có mở và có kết' },
 
-  { id: 8,  name: 'Móc đơn',          pitches: P8, durations: [0.5, 1, 2],
+  { id: 13,  name: 'Móc đơn',          kind: 'piece', pitches: P8, durations: [0.5, 1, 2],
     beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [76, 92], endOnTonic: true,
     skill: 'Làm quen nốt móc đơn — hai nốt gọn trong một phách' },
 
-  { id: 9,  name: 'Quãng rộng',       pitches: P10, durations: [1, 2, 3, 4],
+  { id: 14,  name: 'Quãng rộng',       kind: 'piece', pitches: P10, durations: [1, 2, 3, 4],
     beatsPerBar: 4, bars: 4, maxStep: 4, bpm: [84, 100], endOnTonic: true,
     skill: 'Nhảy quãng bốn–quãng năm, tay phải mở rộng lên Mi5' },
 
-  { id: 10, name: 'Tổng hợp',         pitches: P10, durations: [0.5, 1, 2, 3, 4],
+  { id: 15, name: 'Tổng hợp',         kind: 'piece', pitches: P10, durations: [0.5, 1, 2, 3, 4],
     beatsPerBar: 4, bars: 8, maxStep: 4, bpm: [88, 108], endOnTonic: true,
     skill: 'Bài dài tám ô, phối hợp mọi trường độ đã học, giữ nhịp từ đầu đến cuối' },
 ]
@@ -210,6 +257,9 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
     avoid.length
       ? `KHÔNG được trùng với các bài vừa soạn: ${avoid.join(' | ')}. Hãy làm khác hẳn.`
       : '',
+    level.kind === 'exercise'
+      ? `Đây là BÀI TẬP LUYỆN NGÓN cho bé mới học, KHÔNG cần thành tác phẩm. Ngắn, dễ, lặp lại được.`
+      : '',
     `RÀNG BUỘC BẮT BUỘC (bậc ${level.id} — ${level.name}):`,
     `- Nhịp ${level.beatsPerBar}/4, đúng ${level.bars} ô nhịp.`,
     `- TỔNG trường độ tất cả các nốt phải bằng ĐÚNG ${total} phách — không thừa, không thiếu.`,
@@ -218,6 +268,10 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
     `- Hai nốt liền nhau cách nhau tối đa ${level.maxStep} bước trong thang nốt trên `
     + `(1 bước = hai nốt liền kề nhau trong danh sách, ví dụ C4→D4).`,
     `- bpm trong khoảng ${level.bpm[0]}–${level.bpm[1]}.`,
+    level.strongBeatPitches?.length
+      ? `- PHÁCH MẠNH (phách đầu mỗi ô nhịp) chỉ được là: ${level.strongBeatPitches.join(' ')}. `
+        + `Các nốt khác chỉ dùng làm nốt đi qua ở phách yếu.`
+      : '',
     level.endOnTonic ? `- Ô nhịp cuối kết ở nốt ${level.pitches[0]}, nên ngân dài.` : '',
     `- Không lặp cùng một nốt quá 3 lần liên tiếp.`,
     `- Giai điệu phải nghe ra chủ đề bé muốn, nhưng ĐÚNG LUẬT là ưu tiên số một.`,
@@ -305,16 +359,87 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
     idx[idx.length - 1] = 0
   }
 
-  // 5. Quãng nhảy — duyệt NGƯỢC từ nốt cuối. Mỗi vòng ép cặp (i, i+1) vào tầm với,
-  //    duyệt ngược phủ hết mọi cặp đúng một lần ⇒ xong là chắc chắn không còn cặp
-  //    nào vượt maxStep, mà nốt kết vẫn nguyên.
-  for (let i = idx.length - 2; i >= 0; i--) {
-    const lo = idx[i + 1] - level.maxStep
-    const hi = idx[i + 1] + level.maxStep
-    if (idx[i] < lo || idx[i] > hi) {
-      problems.push(`nhảy ${Math.abs(idx[i] - idx[i + 1])} bước, quá ${level.maxStep}`)
-      idx[i] = clamp(clamp(idx[i], lo, hi), 0, level.pitches.length - 1)
+  // 4b. PHÁCH MẠNH — nốt rơi đúng đầu ô nhịp phải nằm trong strongBeatPitches.
+  //
+  //     KHÓ Ở CHỖ TẦM VỚI: ghim hai đầu rồi mới nắn quãng nhảy là hỏng. Bậc 4 đi
+  //     liền kề (maxStep 1), nếu phách mạnh ô cuối là Sol mà bài phải kết ở Đô thì
+  //     chỉ còn 3 nốt ở giữa — không cách nào đi hết 4 bước. Fuzz bắt đúng ca này.
+  //     Nên chọn phách mạnh phải thoả CẢ HAI phía: với tới được từ phách mạnh
+  //     trước, VÀ còn kịp về nốt kết.
+  const ghim = new Set<number>()
+  const cuoi = idx.length - 1
+  if (level.endOnTonic && idx.length) ghim.add(cuoi)
+
+  if (level.strongBeatPitches?.length && idx.length) {
+    const manh = level.strongBeatPitches.map(p => level.pitches.indexOf(p)).filter(i => i >= 0)
+    if (manh.length) {
+      let beatTam = 0, truoc = -1
+      for (let i = 0; i < idx.length; i++) {
+        const dauO = Math.abs(beatTam % level.beatsPerBar) < 1e-9
+        const beatCuaNot = beatTam
+        beatTam += durs[i]
+        if (!dauO || i === cuoi) continue
+
+        const toiTruoc = truoc < 0 ? Infinity : idx[truoc] + (i - truoc) * level.maxStep
+        const tuTruoc  = truoc < 0 ? -Infinity : idx[truoc] - (i - truoc) * level.maxStep
+        const veKip    = level.endOnTonic ? (cuoi - i) * level.maxStep : Infinity
+        const hop = manh.filter(v =>
+          v >= tuTruoc && v <= toiTruoc && (!level.endOnTonic || Math.abs(v - 0) <= veKip))
+        const ungVien = hop.length ? hop : manh
+        const chon = ungVien.reduce((a, b) => Math.abs(b - idx[i]) < Math.abs(a - idx[i]) ? b : a, ungVien[0])
+        if (chon !== idx[i]) {
+          problems.push(`phách mạnh ô ${Math.round(beatCuaNot / level.beatsPerBar) + 1} là ${level.pitches[idx[i]]}, không được phép`)
+          idx[i] = chon
+        }
+        ghim.add(i); truoc = i
+      }
     }
+  }
+
+  // 5. Quãng nhảy — LAN TRUYỀN KHOẢNG KHẢ THI, không nắn theo từng cặp.
+  //
+  //    Nắn từng cặp là sai: sửa cặp này lại phá cặp kia, và khi cả hai đầu đều
+  //    ghim thì buộc phải ghi đè lên nốt đã ghim. Fuzz bắt được cả hai (38/1200).
+  //
+  //    Cách đúng: mỗi vị trí có một khoảng [lo, hi] các nốt còn dùng được. Ghim
+  //    thì khoảng thu về đúng một giá trị. Lan truyền xuôi rồi ngược là mọi khoảng
+  //    đều tính tới ràng buộc của cả hai phía. Sau đó đi một lượt chọn nốt gần ý
+  //    AI nhất trong khoảng — chắc chắn không cặp nào vượt maxStep.
+  const n = idx.length
+  const top = level.pitches.length - 1
+  const goc = idx.slice()
+
+  const lanTruyen = (ghimNay: Set<number>) => {
+    const lo = new Array(n).fill(0), hi = new Array(n).fill(top)
+    ghimNay.forEach(i => { lo[i] = idx[i]; hi[i] = idx[i] })
+    for (let i = 1; i < n; i++) {
+      lo[i] = Math.max(lo[i], lo[i - 1] - level.maxStep)
+      hi[i] = Math.min(hi[i], hi[i - 1] + level.maxStep)
+    }
+    for (let i = n - 2; i >= 0; i--) {
+      lo[i] = Math.max(lo[i], lo[i + 1] - level.maxStep)
+      hi[i] = Math.min(hi[i], hi[i + 1] + level.maxStep)
+    }
+    return lo.every((v, i) => v <= hi[i]) ? { lo, hi } : null
+  }
+
+  // Ghim đầy đủ mà bí thì nới: bỏ ghim phách mạnh, chỉ giữ nốt kết.
+  let kq = lanTruyen(ghim)
+  if (!kq && level.endOnTonic && n) {
+    problems.push('phách mạnh không thể vừa đúng vừa về kịp nốt kết, đã nới phách mạnh')
+    kq = lanTruyen(new Set([n - 1]))
+  }
+  if (!kq) kq = lanTruyen(new Set())
+
+  if (kq) {
+    let truoc: number | null = null
+    for (let i = 0; i < n; i++) {
+      const a = Math.max(kq.lo[i], truoc === null ? -Infinity : truoc - level.maxStep)
+      const b = Math.min(kq.hi[i], truoc === null ? Infinity : truoc + level.maxStep)
+      idx[i] = clamp(goc[i], a, b)
+      truoc = idx[i]
+    }
+    if (idx.some((v, i) => v !== goc[i])) problems.push(`có nốt vượt ${level.maxStep} bước, đã nắn lại`)
   }
 
   // 6. Không lặp một nốt quá 3 lần — CHỈ sửa khi không phá vỡ quãng nhảy.
@@ -372,7 +497,10 @@ export function template(level: PianoLevel, title: string): Exercise {
     const d = Math.min(fit, unit)
     idx.push(i); durs.push(d); total += d
     const conLai = Math.ceil((target - total) / unit)     // còn mấy nốt nữa để về nốt chủ
+    // Đang lên mà chạm trần, hoặc không còn kịp xuống → quay đầu.
     if (dir === 1 && (i + 1 > peak || i + 1 > conLai - 1)) dir = -1
+    // Đang xuống mà chạm đáy và bài còn dài → đi lên lại, đừng nằm im trên nốt chủ.
+    else if (dir === -1 && i - 1 < 0 && conLai > 2) dir = 1
     i = clamp(i + dir, 0, peak)
   }
   if (idx.length) idx[idx.length - 1] = 0                  // chốt nốt kết ở nốt chủ

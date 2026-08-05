@@ -466,7 +466,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
           {/* TẠM — chip đổi bậc để thí nghiệm luồng. Bỏ khi bậc lấy từ hồ sơ học viên. */}
           <button onClick={cycleLevel}
             style={{ background:'rgba(0,0,0,.03)',border:`1px solid ${C.border}`,borderRadius:999,padding:'7px 14px',fontSize:12,fontWeight:600,color:C.dim,cursor:'pointer',fontFamily:'inherit',touchAction:'manipulation' }}>
-            Độ khó {level.id}/{LEVELS.length} · {level.name} ⟳
+            {level.kind === 'exercise' ? `Bài tập ${level.id}` : `Bậc ${level.id}`}/{LEVELS.length} · {level.name} ⟳
           </button>
         </div>
       </div>

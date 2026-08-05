@@ -135,7 +135,7 @@ export default function SongLibrary({ onBack, onPlay, onAskLyra }: Props) {
 
                   {/* Dòng chi tiết — dành cho phụ huynh */}
                   <div style={{ fontSize: 12, color: C.dim, marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    <span>Độ khó {s.levelId} · {getLevel(s.levelId).name}</span>
+                    <span>{getLevel(s.levelId).kind === 'exercise' ? 'Bài tập' : 'Bậc'} {s.levelId} · {getLevel(s.levelId).name}</span>
                     {daChoi && (
                       <span style={{ fontWeight: 700, color: sao >= 2 ? C.green : sao === 1 ? C.accentDeep : C.red }}>
                         {s.bestHit}/{s.bestTotal} nốt
