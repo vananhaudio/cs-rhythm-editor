@@ -13,7 +13,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from '../supabase'
 import { LEVELS, getLevel, currentLevelId, setLevelId, randomTheme } from './rules'
-import { takeJustAdvanced } from './library'
+import { takeJustAdvanced, soBaiDatSao, CAN_DE_LEN_BAC } from './library'
 
 type TalkState = 'idle' | 'connecting' | 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
 
@@ -96,6 +96,7 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
   // Vừa lên bậc thì khoe một lần rồi thôi (cờ tự xoá khi đọc)
   const [vuaLenBac]             = useState(takeJustAdvanced)
   const level = getLevel(levelId)
+  const datSao = soBaiDatSao(levelId)      // đọc lại mỗi lần vào màn — bé vừa tập xong bài nào là thấy ngay
   const cycleLevel = () => {
     const next = LEVELS[(LEVELS.findIndex(l => l.id === levelId) + 1) % LEVELS.length].id
     setLevelId(next); setLvl(next)
@@ -474,7 +475,13 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
           {/* TẠM — chip đổi bậc để thí nghiệm luồng. Bỏ khi bậc lấy từ hồ sơ học viên. */}
           <button onClick={cycleLevel}
             style={{ background:'rgba(0,0,0,.03)',border:`1px solid ${C.border}`,borderRadius:999,padding:'7px 14px',fontSize:12,fontWeight:600,color:C.dim,cursor:'pointer',fontFamily:'inherit',touchAction:'manipulation' }}>
-            {level.kind === 'exercise' ? `Bài tập ${level.id}` : `Bậc ${level.id}`}/{LEVELS.length} · {level.name} ⟳
+            {level.kind === 'exercise' ? `Bài tập ${level.id}` : `Bậc ${level.id}`}/{LEVELS.length} · {level.name}
+            {' · '}
+            {/* Tiến độ lên bậc: mấy bài đã đạt ≥2 sao trên tổng số cần */}
+            <span style={{ fontWeight: 800, color: datSao >= CAN_DE_LEN_BAC ? '#059669' : C.dim }}>
+              {Math.min(datSao, CAN_DE_LEN_BAC)}/{CAN_DE_LEN_BAC}⭐
+            </span>
+            {' ⟳'}
           </button>
         </div>
       </div>

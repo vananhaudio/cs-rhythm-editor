@@ -126,17 +126,33 @@ export function tongKet(list: SavedSong[]) {
 
 // ── Tự lên bậc ──────────────────────────────────────────────────────────────
 // Tài liệu của thầy: xong Ex.0 thì mở Ex.1, giữ kiến thức cũ + thêm một nốt.
-// Ở đây làm dạng TỰ TIẾN, không khoá bậc: bé đạt từ 2 sao trở lên ở bậc đang học
-// thì tự sang bậc kế. Thầy vẫn đổi tay được bất cứ lúc nào bằng chip trên màn
-// Lyra — máy chỉ gợi đường, không chặn đường.
+// Ở đây làm dạng TỰ TIẾN, không khoá bậc. Thầy vẫn đổi tay được bất cứ lúc nào
+// bằng chip trên màn Lyra — máy chỉ gợi đường, không chặn đường.
+//
+// ⚠️ MỘT BÀI ĐẠT 2 SAO KHÔNG PHẢI LÀ HỌC XONG MỘT BẬC.
+// Bản đầu cho lên bậc ngay sau một bài, mà bậc 1 chỉ có mỗi nốt Đô nên gần như
+// không thể trượt → chỉ 14 bài là chạm bậc 15, xong bé nhận bài khó nhất trong
+// khi tay vẫn còn ở mức bậc 1. Nay phải LÀM TỐT ĐỀU: đủ 3 BÀI KHÁC NHAU ở bậc
+// hiện tại cùng đạt từ 2 sao. Đếm bằng chính thư viện nên không cần biến đếm
+// riêng, và "khác nhau" là miễn phí — hai bài trùng giai điệu vốn chung một id.
 const ADVANCE_KEY = 'piano_just_advanced'
 
-/** Gọi sau mỗi lần chấm điểm. Trả về bậc mới nếu vừa lên, không thì null. */
+/** Số bài khác nhau phải đạt ≥2 sao ở một bậc thì mới được lên bậc kế. */
+export const CAN_DE_LEN_BAC = 3
+
+/** Số bài đã đạt ≥2 sao ở một bậc — dùng cho cả việc lên bậc lẫn thanh tiến độ. */
+export function soBaiDatSao(levelId: number): number {
+  return read().filter(s => s.levelId === levelId && starsOfSong(s) >= 2).length
+}
+
+/** Gọi sau mỗi lần chấm điểm. Trả về bậc mới nếu vừa lên, không thì null.
+ *  Gọi SAU recordScore, vì hàm này đếm trên dữ liệu đã ghi. */
 export function advanceIfEarned(levelId: number, hit: number, total: number): number | null {
   if (!total) return null
   const sao = hit / total >= 0.9 ? 3 : hit / total >= 0.7 ? 2 : hit / total >= 0.5 ? 1 : 0
   if (sao < 2) return null
   if (levelId !== currentLevelId()) return null       // đang tập lại bài bậc cũ thì thôi
+  if (soBaiDatSao(levelId) < CAN_DE_LEN_BAC) return null
   const i = LEVELS.findIndex(l => l.id === levelId)
   if (i < 0 || i >= LEVELS.length - 1) return null    // đã ở bậc cuối
   const moi = LEVELS[i + 1].id

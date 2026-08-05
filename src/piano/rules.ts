@@ -268,6 +268,12 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
     `- TỔNG trường độ tất cả các nốt phải bằng ĐÚNG ${total} phách — không thừa, không thiếu.`,
     `- CHỈ được dùng các nốt: ${level.pitches.join(' ')} — tuyệt đối không dùng nốt khác.`,
     `- duration chỉ được là: ${durList}.`,
+    `- MỖI NỐT PHẢI NẰM GỌN TRONG MỘT Ô NHỊP, không nốt nào vắt qua vạch nhịp. `
+    + `Cộng dồn trường độ từ đầu bài, mỗi ${level.beatsPerBar} phách là một vạch nhịp; `
+    + `một nốt bắt đầu ở phách thứ k trong ô thì trường độ tối đa là ${level.beatsPerBar}−k+1.`,
+    level.durations.includes(0.5)
+      ? `- Nốt móc đơn luôn đi thành CẶP nằm trọn trong một phách, không bao giờ đứng lẻ.`
+      : '',
     `- Hai nốt liền nhau cách nhau tối đa ${level.maxStep} bước trong thang nốt trên `
     + `(1 bước = hai nốt liền kề nhau trong danh sách, ví dụ C4→D4).`,
     `- bpm trong khoảng ${level.bpm[0]}–${level.bpm[1]}.`,
@@ -292,6 +298,28 @@ export interface CheckResult {
 function fitDur(level: PianoLevel, remain: number): number | null {
   const ok = level.durations.filter(d => d <= remain + 1e-9).sort((a, b) => b - a)
   return ok.length ? ok[0] : null
+}
+
+/** Những trường độ đặt được TẠI phách `beat`. Ba điều kiện:
+ *  1. còn nhét vừa phần bài chưa lấp;
+ *  2. NẰM GỌN TRONG MỘT Ô NHỊP — không vắt qua vạch nhịp. Nốt vắt vạch thì
+ *     phải viết bằng dấu nối, mà bản nhạc cho bé chưa có dấu nối, nên khuông
+ *     vẽ ra sai và bé đếm ô cũng không khớp;
+ *  3. đang đứng ở nửa phách thì CHỈ được móc đơn — nhờ vậy móc đơn luôn đi
+ *     thành cặp, không có nốt lẻ làm lệch nửa phách toàn bộ phần sau.
+ */
+function durationsAt(level: PianoLevel, beat: number, remain: number): number[] {
+  const conTrongO = level.beatsPerBar - (beat % level.beatsPerBar)
+  const nuaPhach = Math.abs(beat - Math.round(beat)) > 1e-9
+  return level.durations.filter(d =>
+    d <= remain + 1e-9 && d <= conTrongO + 1e-9 && (!nuaPhach || d === 0.5))
+}
+
+/** Trường độ hợp lệ tại `beat` gần ý AI nhất; null nếu không còn chỗ nào đặt được. */
+function fitAt(level: PianoLevel, beat: number, remain: number, muon: number): number | null {
+  const ok = durationsAt(level, beat, remain)
+  if (!ok.length) return null
+  return ok.reduce((a, b) => Math.abs(b - muon) < Math.abs(a - muon) ? b : a, ok[0])
 }
 
 export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallbackTitle: string): CheckResult {
@@ -334,20 +362,17 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
   const durs: number[] = []
   let total = 0
   for (let i = 0; i < rawIdx.length && total < fillTarget - 1e-9; i++) {
-    const remain = fillTarget - total
-    let d = rawDur[i]
-    if (d > remain + 1e-9) {
-      const fit = fitDur(level, remain)
-      if (fit == null) break
-      d = fit
-    }
+    // `total` chính là phách bắt đầu của nốt này — dùng nó để soi vạch nhịp.
+    const d = fitAt(level, total, fillTarget - total, rawDur[i])
+    if (d == null) break
+    if (Math.abs(d - rawDur[i]) > 1e-9) problems.push(`nốt ${i + 1} vắt qua vạch nhịp, đã nắn trường độ`)
     idx.push(rawIdx[i]); durs.push(d); total += d
   }
   if (idx.length < rawIdx.length) problems.push(`bài dài quá ${level.bars} ô, đã cắt`)
 
   let guard = 0
   while (total < fillTarget - 1e-9 && guard++ < 400) {
-    const fit = fitDur(level, fillTarget - total)
+    const fit = fitAt(level, total, fillTarget - total, 999)   // lấy nốt dài nhất còn vừa
     if (fit == null) break
     problems.push('thiếu ô nhịp, thêm nốt cho đầy')
     const last = idx[idx.length - 1] ?? 0
