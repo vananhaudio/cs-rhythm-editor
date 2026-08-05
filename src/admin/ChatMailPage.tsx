@@ -23,6 +23,7 @@ interface ChatMailMessage {
   subject: string
   content: string
   status: string
+  direction?: string // 'outbound' | 'inbound'
 }
 
 interface MailList {
@@ -166,7 +167,7 @@ export default function ChatMailPage() {
       const res = await fetch(EDGE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ subject, content, recipients: recips }),
+        body: JSON.stringify({ subject, content, recipients: recips, thread_id: threadId }),
       })
       if (!res.ok) throw new Error(`Edge: HTTP ${res.status}`)
       const { results } = await res.json()
@@ -440,17 +441,26 @@ export default function ChatMailPage() {
             </header>
 
             <div style={{ flex:'1 1 auto',overflow:'auto',padding:'16px 22px',background:Z.threadBg,display:'flex',flexDirection:'column',gap:12 }}>
-              {msgs.map(m => (
-                <div key={m.id} style={{ alignSelf:'flex-end',maxWidth:'80%' }}>
-                  <div style={{ fontSize:11,color:Z.muted,marginBottom:3,textAlign:'right' }}>
-                    → {shortEmail(m.to_email)} {m.status==='failed'?<span style={{ color:Z.red }}>❌</span>:<span style={{ color:Z.green }}>✓</span>}
+              {msgs.map(m => {
+                const isReply = m.direction === 'inbound'
+                return (
+                <div key={m.id} style={{ alignSelf: isReply ? 'flex-start' : 'flex-end', maxWidth:'80%' }}>
+                  <div style={{ fontSize:11,color:Z.muted,marginBottom:3,textAlign: isReply ? 'left' : 'right' }}>
+                    {isReply ? `← ${shortEmail(m.to_email)}` : `→ ${shortEmail(m.to_email)}`} {m.status==='failed'?<span style={{ color:Z.red }}>❌</span>:<span style={{ color:Z.green }}>✓</span>}
                   </div>
-                  <div style={{ background:Z.bubble,color:Z.bubbleFg,padding:'12px 15px',borderRadius:'14px 14px 4px 14px',whiteSpace:'pre-wrap',lineHeight:1.55,fontSize:14 }}>
+                  <div style={{
+                    background: isReply ? Z.card : Z.bubble,
+                    color: isReply ? Z.fg : Z.bubbleFg,
+                    padding:'12px 15px',
+                    borderRadius: isReply ? '14px 14px 14px 4px' : '14px 14px 4px 14px',
+                    whiteSpace:'pre-wrap',lineHeight:1.55,fontSize:14,
+                    border: isReply ? `1px solid ${Z.border}` : 'none',
+                  }}>
                     <div style={{ fontWeight:700,marginBottom:4 }}>{m.subject}</div>
                     {m.content}
                   </div>
                 </div>
-              ))}
+                )})}
               <div ref={endRef} />
             </div>
           </>

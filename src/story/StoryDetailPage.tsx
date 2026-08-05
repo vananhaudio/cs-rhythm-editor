@@ -1,6 +1,6 @@
 // ── /story/:slug — Trang đọc câu chuyện ──
 // Hiển thị nội dung đầy đủ của một câu chuyện đã xuất bản.
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import ReportButton, { REPORT_CSS } from './ReportButton'
 
@@ -41,6 +41,57 @@ interface StoryDetail {
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('vi-VN', {
     day: 'numeric', month: 'long', year: 'numeric',
+  })
+}
+
+/** Process story content: strip leading markdown heading markers,
+ *  convert **bold** and --- separators, keep paragraph structure. */
+function renderContent(raw: string) {
+  const lines = raw.split('\n')
+  const elements: React.ReactNode[] = []
+  let key = 0
+  let i = 0
+
+  while (i < lines.length) {
+    let line = lines[i]
+
+    // Skip leading markdown heading # or ## (title is already in <h1>)
+    line = line.replace(/^#{1,2}\s+/, '')
+
+    // Collapse consecutive blank lines into one separator
+    if (!line.trim()) {
+      // Skip all consecutive blanks, but add one break if we have content before & after
+      while (i < lines.length && !lines[i].trim()) i++
+      // Only insert separator if there's more content ahead and we already have elements
+      if (i < lines.length && elements.length > 0) {
+        elements.push(<div key={key++} className="sd-separator" />)
+      }
+      continue
+    }
+
+    // Horizontal rule: --- or *** or ___ (alone on line)
+    if (/^[-*_]{3,}\s*$/.test(line.trim())) {
+      elements.push(<hr key={key++} className="sd-hr" />)
+      i++
+      continue
+    }
+
+    // Render paragraph with inline markdown (bold only)
+    const segments = parseInline(line)
+    elements.push(<p key={key++}>{segments}</p>)
+    i++
+  }
+
+  return elements
+}
+
+/** Parse **bold** and plain text into React nodes */
+function parseInline(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, idx) => {
+    const m = part.match(/^\*\*(.+)\*\*$/)
+    if (m) return <strong key={idx}>{m[1]}</strong>
+    return part
   })
 }
 
@@ -169,9 +220,7 @@ export default function StoryDetailPage() {
 
         {/* Content */}
         <div className="sd-content">
-          {story.content.split('\n').map((p, i) => (
-            p.trim() ? <p key={i}>{p}</p> : <br key={i} />
-          ))}
+          {renderContent(story.content)}
         </div>
 
         {/* Đôi nét về người kể — phần giới thiệu tác giả, chỉ hiện khi đã đồng ý công khai */}
@@ -324,8 +373,11 @@ const CSS = REPORT_CSS + `
 .sd-photos { margin-bottom: 32px; display: flex; flex-direction: column; gap: 12px; }
 .sd-photo { width: 100%; border-radius: 12px; display: block; }
 
+.sd-content { text-align: left; }
 .sd-content p { margin: 0 0 1.2em; font-size: 17px; color: #211C32; line-height: 1.8; }
 .sd-content p:last-child { margin-bottom: 0; }
+.sd-content .sd-separator { height: 1.5em; }
+.sd-content .sd-hr { border: none; border-top: 1px solid #D3CEE8; margin: 2em 0; }
 
 .sd-back-cta { text-align: center; padding: 24px 0 0; border-top: 1px solid #E4DED4; margin-top: 40px; }
 .sd-back-link {

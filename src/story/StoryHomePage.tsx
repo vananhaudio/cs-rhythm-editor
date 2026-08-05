@@ -22,16 +22,14 @@ interface Category {
 }
 
 const TOPIC_LABELS: Record<string, string> = {
-  'dam-bat-dau': 'Dám bắt đầu',
-  'khong-bo-cuoc': 'Không bỏ cuộc',
-  'theo-duoi-dam-me': 'Theo đuổi đam mê',
-  'tin-vao-ban-than': 'Tin vào bản thân',
-  'chua-lanh': 'Chữa lành',
-  'yeu-thuong': 'Yêu thương',
-  'biet-on': 'Biết ơn',
-  'ket-noi': 'Kết nối',
-  'cho-di': 'Cho đi',
-  'can-bang-cuoc-song': 'Cân bằng cuộc sống',
+  'ban-be': 'Bạn bè',
+  'band': 'Band',
+  'bat-dau-hoc-guitar': 'Bắt đầu học Guitar',
+  'bieu-dien': 'Biểu diễn',
+  'dai-hoi-guitar': 'Đại hội Guitar',
+  'dong-luc': 'Động lực',
+  'gia-dinh': 'Gia đình',
+  'nguoi-thay': 'Người thầy',
 }
 
 // ── Helpers ──
