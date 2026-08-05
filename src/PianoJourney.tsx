@@ -16,7 +16,7 @@ import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
 import HomeScreen from './piano/HomeScreen'
 import SongLibrary from './piano/SongLibrary'
-import { rememberSong, recordScore } from './piano/library'
+import { rememberSong, recordScore, advanceIfEarned } from './piano/library'
 import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise } from './piano/rules'
 import type { Exercise, PianoLevel } from './piano/rules'
 
@@ -117,7 +117,10 @@ export default function PianoJourney({ onClose, studentName }: Props) {
     return (
       <LearningFlow
         exercise={exercise} onClose={onClose} onBack={backToTalk}
-        onScore={(hit, total) => recordScore(exercise, levelRef.current, hit, total, Date.now())}
+        onScore={(hit, total) => {
+          recordScore(exercise, levelRef.current, hit, total, Date.now())
+          advanceIfEarned(levelRef.current, hit, total)   // đạt 2 sao thì tự sang bậc kế
+        }}
       />
     )
   }

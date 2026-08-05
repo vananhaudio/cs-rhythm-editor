@@ -10,6 +10,7 @@
 // thí nghiệm luồng.)
 
 import type { Exercise } from './rules'
+import { LEVELS, currentLevelId, setLevelId } from './rules'
 
 export interface SavedSong {
   /** Khoá chống trùng — cùng giai điệu + trường độ thì coi là một bài. */
@@ -121,4 +122,34 @@ export function tongKet(list: SavedSong[]) {
   const tongLuot = list.reduce((n, s) => n + s.plays, 0)
   const soSao = list.reduce((n, s) => n + starsOfSong(s), 0)
   return { soBai: list.length, soBaiDaChoi: daChoi.length, tongLuot, soSao }
+}
+
+// ── Tự lên bậc ──────────────────────────────────────────────────────────────
+// Tài liệu của thầy: xong Ex.0 thì mở Ex.1, giữ kiến thức cũ + thêm một nốt.
+// Ở đây làm dạng TỰ TIẾN, không khoá bậc: bé đạt từ 2 sao trở lên ở bậc đang học
+// thì tự sang bậc kế. Thầy vẫn đổi tay được bất cứ lúc nào bằng chip trên màn
+// Lyra — máy chỉ gợi đường, không chặn đường.
+const ADVANCE_KEY = 'piano_just_advanced'
+
+/** Gọi sau mỗi lần chấm điểm. Trả về bậc mới nếu vừa lên, không thì null. */
+export function advanceIfEarned(levelId: number, hit: number, total: number): number | null {
+  if (!total) return null
+  const sao = hit / total >= 0.9 ? 3 : hit / total >= 0.7 ? 2 : hit / total >= 0.5 ? 1 : 0
+  if (sao < 2) return null
+  if (levelId !== currentLevelId()) return null       // đang tập lại bài bậc cũ thì thôi
+  const i = LEVELS.findIndex(l => l.id === levelId)
+  if (i < 0 || i >= LEVELS.length - 1) return null    // đã ở bậc cuối
+  const moi = LEVELS[i + 1].id
+  setLevelId(moi)
+  try { localStorage.setItem(ADVANCE_KEY, String(moi)) } catch { /* */ }
+  return moi
+}
+
+/** Đọc RỒI XOÁ cờ vừa lên bậc — để lời chúc mừng chỉ hiện đúng một lần. */
+export function takeJustAdvanced(): number | null {
+  try {
+    const v = parseInt(localStorage.getItem(ADVANCE_KEY) || '', 10)
+    localStorage.removeItem(ADVANCE_KEY)
+    return LEVELS.some(l => l.id === v) ? v : null
+  } catch { return null }
 }

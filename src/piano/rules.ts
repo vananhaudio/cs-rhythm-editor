@@ -50,6 +50,9 @@ export interface PianoLevel {
   /** Nốt được phép rơi vào PHÁCH MẠNH (phách 1 mỗi ô). Bỏ trống = không ràng buộc.
    *  Đây là luật "phách mạnh phải là C hoặc E" của Ex.2 trở đi. */
   strongBeatPitches?: string[]
+  /** Nốt áp chót phải LIỀN KỀ nốt kết — vào nhà bằng một bước, không nhảy vào.
+   *  Bật cho bài tập; bản nhạc thì để tắt, vì kết Sol→Đô là cách kết kinh điển. */
+  approachTonicByStep?: boolean
   /** Kỹ năng hôm nay — đưa vào prompt để AI sáng tác có mục đích sư phạm */
   skill: string
 }
@@ -82,25 +85,25 @@ const EX7 = [...EX5, 'A4', 'B4']
 
 export const LEVELS: PianoLevel[] = [
   { id: 1, name: 'Chỉ nốt Đô', kind: 'exercise', pitches: EX1, durations: [1, 2],
-    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 66], endOnTonic: true,
+    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 66], endOnTonic: true, approachTonicByStep: true,
     skill: 'Chỉ một nốt Đô. Bé làm quen mặt nốt và cảm giác phách mạnh — phách nhẹ, đổi giữa nốt đen và nốt trắng' },
 
   { id: 2, name: 'Thêm nốt Rê', kind: 'exercise', pitches: EX2, durations: [1, 2],
-    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 69], endOnTonic: true,
+    beatsPerBar: 4, bars: 2, maxStep: 1, bpm: [60, 69], endOnTonic: true, approachTonicByStep: true,
     skill: 'Hai nốt Đô–Rê. Bé cảm nhận đi lên và đi xuống một bậc, kết lại về Đô' },
 
   { id: 3, name: 'Thêm nốt Mi', kind: 'exercise', pitches: EX3, durations: [1, 2],
-    beatsPerBar: 4, bars: 3, maxStep: 1, bpm: [63, 72], endOnTonic: true,
+    beatsPerBar: 4, bars: 3, maxStep: 1, bpm: [63, 72], endOnTonic: true, approachTonicByStep: true,
     strongBeatPitches: ['C4', 'E4'],
     skill: 'Ba nốt Đô–Rê–Mi. Rê chỉ là nốt đi qua; phách mạnh rơi vào Đô hoặc Mi để bé quen trọng tâm hợp âm Đô trưởng' },
 
   { id: 4, name: 'Thêm Fa và Sol', kind: 'exercise', pitches: EX5, durations: [1, 2],
-    beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 76], endOnTonic: true,
+    beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 76], endOnTonic: true, approachTonicByStep: true,
     strongBeatPitches: ['C4', 'E4', 'G4'],
     skill: 'Đủ năm nốt Đô–Sol, trọn bàn tay. Câu nhạc đi lên tới đỉnh Sol rồi quay về Đô — có hỏi có đáp' },
 
   { id: 5, name: 'Đủ bảy nốt', kind: 'exercise', pitches: EX7, durations: [1, 2],
-    beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [69, 80], endOnTonic: true,
+    beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [69, 80], endOnTonic: true, approachTonicByStep: true,
     strongBeatPitches: ['C4', 'E4', 'G4'],
     skill: 'Thêm La và Si. Si là nốt hút về Đô — bài phải kết bằng Si rồi Đô để bé nghe ra cảm giác "về nhà"' },
 
@@ -412,6 +415,8 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
   const lanTruyen = (ghimNay: Set<number>) => {
     const lo = new Array(n).fill(0), hi = new Array(n).fill(top)
     ghimNay.forEach(i => { lo[i] = idx[i]; hi[i] = idx[i] })
+    // Vào nốt kết bằng MỘT BƯỚC: nốt áp chót không được xa nốt chủ quá 1 bậc.
+    if (level.approachTonicByStep && level.endOnTonic && n >= 2) hi[n - 2] = Math.min(hi[n - 2], 1)
     for (let i = 1; i < n; i++) {
       lo[i] = Math.max(lo[i], lo[i - 1] - level.maxStep)
       hi[i] = Math.min(hi[i], hi[i - 1] + level.maxStep)

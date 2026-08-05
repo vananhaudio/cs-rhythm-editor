@@ -13,6 +13,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from '../supabase'
 import { LEVELS, getLevel, currentLevelId, setLevelId, randomTheme } from './rules'
+import { takeJustAdvanced } from './library'
 
 type TalkState = 'idle' | 'connecting' | 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
 
@@ -92,6 +93,8 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
   // TẠM cho giai đoạn thí nghiệm: đổi bậc ngay trên máy. Khi có dữ liệu học viên
   // thật thì bỏ chip này đi, bậc lấy từ hồ sơ do thầy đặt ở /admin.
   const [levelId, setLvl]       = useState(currentLevelId)
+  // Vừa lên bậc thì khoe một lần rồi thôi (cờ tự xoá khi đọc)
+  const [vuaLenBac]             = useState(takeJustAdvanced)
   const level = getLevel(levelId)
   const cycleLevel = () => {
     const next = LEVELS[(LEVELS.findIndex(l => l.id === levelId) + 1) % LEVELS.length].id
@@ -457,6 +460,11 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
           {state === 'idle' && endNote && <div style={{ fontSize:13,marginTop:4,opacity:.75 }}>{endNote}</div>}
         </div>
 
+        {vuaLenBac != null && (
+          <div style={{ marginTop:10,background:'#DCFCE7',border:'1px solid #86EFAC',color:'#166534',borderRadius:999,padding:'7px 16px',fontSize:13,fontWeight:800 }}>
+            🎉 Con giỏi quá! Lên {getLevel(vuaLenBac).kind === 'exercise' ? 'Bài tập' : 'Bậc'} {vuaLenBac} rồi
+          </div>
+        )}
         <div style={{ display:'flex',alignItems:'center',gap:8,marginTop:12,flexWrap:'wrap',justifyContent:'center' }}>
           {/* Bé chưa nghĩ ra muốn gì thì bấm cái này — cô soạn luôn một chủ đề bất kỳ */}
           <button onClick={() => createRef.current?.(randomTheme())} disabled={busy}
