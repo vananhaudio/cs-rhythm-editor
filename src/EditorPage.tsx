@@ -14,6 +14,7 @@ interface Story {
   content: string
   featured: boolean
   slug: string | null
+  rawStatus: string  // DB status gốc để phân biệt 'unpublished' với 'published'
   user_id?: string | null
   conversation?: { role: string; text: string; at: string }[]
   photos?: { url: string; caption?: string }[] | null
@@ -43,6 +44,7 @@ const DB_STATUS_MAP: Record<string, StoryStatus> = {
   submitted: 'submitted',
   pending_publish: 'editing',
   published: 'published',
+  unpublished: 'published', // vẫn hiện trong tab "Đã xuất bản" nhưng có badge ẩn
 }
 
 const STATUS_LABELS: Record<StoryStatus, string> = {
@@ -151,6 +153,7 @@ export default function EditorPage() {
         author: s.pen_name || 'Ẩn danh',
         submittedAt: s.published_at || s.created_at || new Date().toISOString(),
         status: DB_STATUS_MAP[s.status] || 'telling',
+        rawStatus: s.status || 'telling',
         featured: s.featured || false,
         slug: s.slug ?? null,
         user_id: s.user_id ?? null,
@@ -344,6 +347,7 @@ function InboxView({ stories, onSelect, selectedId }: {
                 </div>
                 <div className="ed-card-tags">
                   <StatusBadge status={story.status} />
+                  {story.rawStatus === 'unpublished' && <span className="ed-tag ed-tag-hidden" title="Đã ẩn khỏi Tạp chí">🙈 Đã ẩn</span>}
                   {story.featured && <span className="ed-tag ed-tag-featured" title="Đang nổi bật">⭐ Nổi bật</span>}
                   {hasPhoto && <span className="ed-tag" title="Đã có ảnh">🖼 ảnh</span>}
                   {hasBio && (
@@ -501,6 +505,24 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     if (!error) { setIsFeatured(!isFeatured); story.featured = !isFeatured; setStatusMsg(isFeatured ? 'Đã bỏ nổi bật.' : '⭐ Đã đánh dấu nổi bật!'); if (onUpdate) onUpdate() }
     else setStatusMsg('Lỗi: ' + error.message)
     setFeatBusy(false)
+  }
+
+  // ── 🙈 Ẩn/Hiện bài đã xuất bản ──
+  const [hideBusy, setHideBusy] = useState(false)
+  const isHidden = story.rawStatus === 'unpublished'
+  const toggleHide = async () => {
+    const newStatus = isHidden ? 'published' : 'unpublished'
+    const label = isHidden ? 'hiện lại' : 'ẩn'
+    if (!isHidden && !confirm(`Ẩn "${story.title}" khỏi Tạp chí?\n\nBài sẽ không hiển thị công khai nhưng vẫn còn trong hệ thống. Có thể hiện lại sau.`)) return
+    setHideBusy(true); setStatusMsg('')
+    const { error } = await supabase.from('stories').update({ status: newStatus }).eq('id', story.id)
+    if (!error) {
+      story.rawStatus = newStatus
+      story.status = DB_STATUS_MAP[newStatus] || 'published'
+      setStatusMsg(isHidden ? '✅ Đã hiện lại trên Tạp chí.' : '🙈 Đã ẩn khỏi Tạp chí.')
+      if (onUpdate) onUpdate()
+    } else setStatusMsg('Lỗi: ' + error.message)
+    setHideBusy(false)
   }
 
   // ── 🗑 Delete story ──
@@ -799,9 +821,17 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
           </button>
           <button className="ed-delete-btn" onClick={handleDelete} disabled={delBusy}
             title="Xoá câu chuyện">🗑 Xoá</button>
-          {(story.status as string) === 'published' || published ? (
-            <button className="ed-photo-btn" onClick={() => setShowPhotoReplace(o => !o)}
-              title="Thay ảnh bìa">🖼 {showPhotoReplace ? 'Đóng' : 'Thay ảnh'}</button>
+          {(story.status as string) === 'published' || (story.status as string) === 'unpublished' || published ? (
+            <>
+              <button className="ed-photo-btn" onClick={() => setShowPhotoReplace(o => !o)}
+                title="Thay ảnh bìa">🖼 {showPhotoReplace ? 'Đóng' : 'Thay ảnh'}</button>
+              <button
+                className={`ed-hide-btn ${isHidden ? 'ed-hide-on' : ''}`}
+                onClick={toggleHide} disabled={hideBusy}
+                title={isHidden ? 'Hiện lại trên Tạp chí' : 'Ẩn khỏi Tạp chí'}>
+                {isHidden ? '👁 Hiện lại' : '🙈 Ẩn'}
+              </button>
+            </>
           ) : null}
         </div>
         <button className="ed-detail-close" onClick={onClose}>✕</button>
@@ -908,15 +938,19 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
         )}
 
         {/* ── Trạng thái ── */}
-        {(story.status as string) === 'published' || published ? (
+        {(story.status as string) === 'published' || (story.status as string) === 'unpublished' || published ? (
           <div className="ed-section ed-pub-done-wrap">
-            <div className="ed-pub-done">✅ Đã xuất bản trên Tạp chí</div>
+            {isHidden ? (
+              <div className="ed-pub-hidden">🙈 Đã ẩn khỏi Tạp chí — chỉ Ban biên tập thấy</div>
+            ) : (
+              <div className="ed-pub-done">✅ Đã xuất bản trên Tạp chí</div>
+            )}
             <span className="ed-pub-hint">Sau khi Lưu, refresh Tạp chí để thấy nội dung mới.</span>
           </div>
         ) : null}
 
         {/* ── 🖼 Thay ảnh bìa (bài đã xuất bản) ── */}
-        {showPhotoReplace && ((story.status as string) === 'published' || published) && (
+        {showPhotoReplace && ((story.status as string) === 'published' || (story.status as string) === 'unpublished' || published) && (
           <div className="ed-section">
             <h3 className="ed-section-title">🖼 Thay ảnh bìa</h3>
             <p style={{fontSize:13,color:'#8C8C8C',margin:'0 0 16px'}}>Thay ảnh đại diện cho bài đã xuất bản. Ảnh mới sẽ hiển thị ngay trên Tạp chí.</p>
@@ -967,7 +1001,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
         )}
 
         {/* ── Sửa bài ĐÃ XUẤT BẢN: gắn lại chủ đề + Đôi nét về người kể ── */}
-        {((story.status as string) === 'published' || published) && (
+        {((story.status as string) === 'published' || (story.status as string) === 'unpublished' || published) && (
           <>
             {allCategories.length > 0 && (
               <div className="ed-section">
@@ -1264,6 +1298,14 @@ const CSS = `
   transition:background .12s;
 }
 .ed-photo-btn:hover { background:#F5F2ED; }
+.ed-hide-btn {
+  padding:5px 10px; border:1px solid #C4BED4; border-radius:6px; background:#F8F6FF;
+  font-family:inherit; font-size:12px; font-weight:500; color:#6B6478; cursor:pointer; white-space:nowrap;
+  transition:background .12s;
+}
+.ed-hide-btn:hover { background:#EEEBFB; }
+.ed-hide-btn:disabled { opacity:0.5; cursor:default; }
+.ed-hide-on { background:#F5F2ED; color:#8C8477; }
 .ed-detail-close { background:none; border:none; font-size:18px; color:#8C8C8C; cursor:pointer; padding:4px 8px; border-radius:4px; transition:background .12s,color .12s; flex-shrink:0; }
 .ed-detail-close:hover { background:#F5F2ED; color:#1A1A1A; }
 .ed-detail-body { padding:20px 24px 40px; }
@@ -1308,6 +1350,7 @@ const CSS = `
 .ed-tag { font-size:11.5px; padding:3px 8px; border-radius:999px; background:#F3F0EA; color:#6E6455; white-space:nowrap; }
 .ed-tag-on { background:#EDF7EE; color:#3C7A42; }
 .ed-tag-featured { background:#FFFBF0; color:#B7791F; border:1px solid #FDE68A; }
+.ed-tag-hidden { background:#F5F2ED; color:#8C8477; }
 .ed-tag-warn { background:#FFF4E5; color:#B4690E; }
 /* Đếm bài ở thanh bên */
 .ed-nav-item { display:flex !important; align-items:center; justify-content:space-between; gap:8px; }
@@ -1338,6 +1381,7 @@ const CSS = `
 .ed-bio-check { display:flex; gap:9px; align-items:flex-start; margin:12px 0; font-size:13.5px; color:#3F3F46; line-height:1.45; cursor:pointer; }
 @media (max-width:560px){ .ed-bio-grid { grid-template-columns:1fr; } }
 .ed-pub-done { font-size:15px; color:#3C7A42; font-weight:600; text-align:center; padding:12px; background:#EDF7EE; border-radius:8px; margin-bottom:8px; }
+.ed-pub-hidden { font-size:15px; color:#8C8477; font-weight:600; text-align:center; padding:12px; background:#F5F2ED; border-radius:8px; margin-bottom:8px; }
 .ed-pub-hint { display:block; text-align:center; font-size:12px; color:#8C8C8C; margin-top:8px; }
 .ed-quick-pub { padding:16px 0; border-bottom:1px solid #EBE5DB; margin-bottom:8px; }
 .ed-pub-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border:1px solid #E5E0D8; border-radius:8px; background:#FFF; color:#5C5C5C; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:background .12s,border-color .12s; }

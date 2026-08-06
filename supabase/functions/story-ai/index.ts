@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
     if (body.action === 'list_all') {
       const { data: stories, error } = await db.from('stories')
         .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation,photos,featured,slug,author_full_name,author_age,author_hometown,author_living_in,author_job,author_bio,author_portrait_url,consent_bio_publish')
-        .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
+        .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published', 'unpublished'])
         .order('created_at', { ascending: false })
       if (error) return json({ error: error.message }, 500)
       const userIds = [...new Set((stories || []).map(s => s.user_id).filter(Boolean))]
