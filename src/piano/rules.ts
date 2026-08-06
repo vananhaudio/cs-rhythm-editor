@@ -975,9 +975,6 @@ export function checkAndRepair(
     }
   }
 
-    }
-  }
-
   // ── 7. startBeat — tính lại từ đầu ──────────────────────────────────────
   const notesOut: PianoNote[] = []
   let beat = 0
