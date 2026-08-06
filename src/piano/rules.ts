@@ -584,7 +584,6 @@ export function checkAndRepair(
     return m.length >= 5 ? [m[2], m[3]] : [-1, -1]
   }
 
-  if (chepTietTau()) problems.push('câu 3 phải nhắc lại câu 1, đã chép tiết tấu câu 1 sang')
 
   for (const d of canDur) {
     if (durs.some(x => Math.abs(x - d) < 1e-9)) continue
@@ -662,7 +661,6 @@ export function checkAndRepair(
   }
 
   // Chép lại tiết tấu sau khi chèn trường độ
-  chepTietTau()
 
   // Mốc câu chốt
   const bienCau: [number, number, number, number] | null = (() => {
@@ -910,117 +908,73 @@ export function checkAndRepair(
     }
   }
 
-  // ── 6b. CÂU NHẠC — chép cao độ câu 1 sang câu 3 ───────────────────────
-  if (bienCau) {
-    const [a0, a1, c0, c1] = bienCau
-    if (a1 - a0 === c1 - c0 && idx.slice(a0, a1).some((v, k) => !isRestAt(a0 + k) && !isRestAt(c0 + k) && v !== idx[c0 + k])) {
-      const luu = idx.slice()
-      const chep = (tu: number, den: number) => {
-        for (let i = 0; i < idx.length; i++) idx[i] = luu[i]
-        for (let k = 0; k < a1 - a0; k++) if (!isRestAt(tu + k) && !isRestAt(den + k)) idx[den + k] = idx[tu + k]
-        const g = new Set(ghim)
-        for (let k = 0; k < a1 - a0; k++) { g.add(a0 + k); g.add(c0 + k) }
-        const r = lanTruyen(g)
-        if (!r) return false
-        let truoc: number | null = null
-        for (let i = 0; i < n; i++) {
-          if (isRestAt(i)) { truoc = null; continue }
-          const lo = Math.max(r.lo[i], truoc === null ? -Infinity : truoc - level.maxStep)
-          const hi = Math.min(r.hi[i], truoc === null ? Infinity : truoc + level.maxStep)
-          idx[i] = clamp(idx[i], lo, hi)
-          truoc = idx[i]
-        }
-        return idx.slice(a0, a1).every((v, k) => isRestAt(a0 + k) || isRestAt(c0 + k) || v === idx[c0 + k]) &&
-          [...viTriManh].every(i => manhVal.includes(idx[i])) &&
-          (!level.minRange || tamRong() >= level.minRange) &&
-          (!level.minLeaps || demNhay() >= level.minLeaps) &&
-          (level.mustPitches ?? []).every(p => idx.includes(level.pitches.indexOf(p)))
+  // ── 6b. ÉP CẤU TRÚC MOTIF 8 Ô NHỊP (10 LUẬT) ──────────────────────
+  if (level.bars === 8 && level.kind === 'piece') {
+    const B = level.beatsPerBar
+    
+    // LUẬT 4: Ô 4 phải kết MỞ — nốt cuối ô 4 KHÔNG được là chủ âm (C)
+    // Tìm nốt cuối cùng trong ô 4 (beat 3*B đến 4*B)
+    {
+      let beat4 = 0, lastNoteInBar4 = -1
+      for (let i = 0; i < idx.length; i++) {
+        if (beat4 + durs[i] > 3*B && beat4 < 4*B) lastNoteInBar4 = i
+        beat4 += durs[i]
       }
-      if (chep(a0, c0)) problems.push('câu 3 chưa nhắc lại câu 1, đã chép cao độ câu 1 sang')
-      else if (chep(c0, a0)) problems.push('câu 3 chưa nhắc lại câu 1, đã chép ngược cao độ câu 3 về câu 1')
-      else {
-        for (let i = 0; i < idx.length; i++) idx[i] = luu[i]
-        problems.push('câu 3 không nhắc lại câu 1 được mà không phá luật khác')
+      if (lastNoteInBar4 >= 0 && idx[lastNoteInBar4] === 0) {
+        // Đổi nốt cuối ô 4 sang nốt khác (ưu tiên G hoặc E — hợp âm V)
+        const alt = level.pitches.indexOf('G4') >= 0 ? level.pitches.indexOf('G4') 
+                  : level.pitches.indexOf('E4') >= 0 ? level.pitches.indexOf('E4') 
+                  : clamp(idx[lastNoteInBar4] + 2, 0, top)
+        if (alt !== 0) {
+          idx[lastNoteInBar4] = alt
+          problems.push('ô 4 kết mở: đã đổi nốt cuối ô 4 sang ' + level.pitches[alt] + ' (không kết ở C)')
+        }
       }
     }
-  }
 
-  // ── 6c. ÉP LUẬT TRƯỜNG ĐỘ ──────────────────────────────────────────
+    // LUẬT 5: Ô 5 phải quay lại motif — nốt đầu ô 5 giống/gần nốt đầu ô 1
+    {
+      let firstNoteBar1 = -1, firstNoteBar5 = -1
+      let beat5 = 0
+      for (let i = 0; i < idx.length; i++) {
+        if (beat5 < 1*B && beat5 + durs[i] > 0*B && firstNoteBar1 < 0) firstNoteBar1 = i
+        if (beat5 >= 4*B && firstNoteBar5 < 0) firstNoteBar5 = i
+        beat5 += durs[i]
+      }
+      if (firstNoteBar1 >= 0 && firstNoteBar5 >= 0 && idx[firstNoteBar5] !== idx[firstNoteBar1]) {
+        idx[firstNoteBar5] = idx[firstNoteBar1]
+        problems.push('ô 5 phải quay lại motif: đã chép nốt đầu ô 1 sang ô 5')
+      }
+    }
 
-  // 6c1. Không để 2 ô nhịp liên tiếp toàn nốt tròn
-  {
-    let beatCheck = 0
-    for (let barStart = 0; barStart < level.bars - 1; barStart++) {
-      // Tìm các nốt trong ô barStart và barStart+1
-      const b1 = beatCheck, b1end = b1 + level.beatsPerBar
-      const b2 = b1end, b2end = b2 + level.beatsPerBar
-      const onlyWhole1 = durs.filter((_d, i) => {
-        let s = 0; for (let j = 0; j < i; j++) s += durs[j]; return s < b1end && s + durs[i] > b1
-      }).every(d => Math.abs(d - 4) < 1e-9)
-      const onlyWhole2 = durs.filter((_d, i) => {
-        let s = 0; for (let j = 0; j < i; j++) s += durs[j]; return s < b2end && s + durs[i] > b2
-      }).every(d => Math.abs(d - 4) < 1e-9)
-      if (onlyWhole1 && onlyWhole2 && durs.length > 0) {
-        // Sửa: đổi nốt cuối ô thứ hai thành 2 nốt trắng
-        let s2 = b2
-        for (let k = 0; k < durs.length; k++) {
-          if (s2 >= b2end) break
-          if (s2 + durs[k] > b2 && Math.abs(durs[k] - 4) < 1e-9) {
-            durs.splice(k, 1, 2, 2)
-            const v = idx[k] >= 0 ? idx[k] : 0
-            idx.splice(k, 1, v, clamp(v - 1, 0, top))
-            rests.splice(k, 1, false, false)
-            problems.push('2 ô tròn liên tiếp, đã sửa')
-            break
+    // LUẬT 8: Ô 8 kết ĐÓNG — nốt cuối = C (đã có endOnTonic), nhưng đảm bảo hướng V→I
+    // (endOnTonic đã xử lý việc kết ở C, nhưng ta đảm bảo ô 7 có nốt G hoặc B)
+    {
+      let beat7 = 0, hasVorVII = false
+      for (let i = 0; i < idx.length; i++) {
+        const barPos = beat7 % (4*B)
+        if (barPos >= 6*B && barPos < 7*B) {
+          const p = level.pitches[idx[i]]
+          if (p === 'G4' || p === 'B4' || p === 'G5') hasVorVII = true
+        }
+        beat7 += durs[i]
+      }
+      if (!hasVorVII && idx.length > 0) {
+        // Chèn nốt G vào ô 7 nếu có chỗ
+        let b = 0, found = false
+        for (let i = 0; i < idx.length && !found; i++) {
+          const barPos = b % (4*B)
+          if (barPos >= 6*B && barPos + durs[i] <= 7*B && !isRestAt(i)) {
+            const gIdx = level.pitches.indexOf('G4')
+            if (gIdx >= 0) { idx[i] = gIdx; found = true }
           }
-          s2 += durs[k]
+          b += durs[i]
         }
-        break  // chỉ sửa một chỗ một lần
-      }
-      beatCheck += level.beatsPerBar
-    }
-  }
-
-  // 6c2. Nốt dài nhất phải ở đầu hoặc cuối mỗi câu (nếu có phraseBars)
-  if (coCau) {
-    const m = mocCau()
-    for (let ci = 0; ci < m.length - 1; ci++) {
-      const pStart = m[ci], pEnd = m[ci + 1]
-      let maxD = 0, maxI = -1
-      for (let i = pStart; i < pEnd; i++) {
-        if (durs[i] > maxD + 1e-9) { maxD = durs[i]; maxI = i }
-      }
-      // Nốt dài nhất nằm lưng chừng (không phải đầu hoặc cuối câu)
-      if (maxI > pStart && maxI < pEnd - 1 && maxD >= 2) {
-        // Di chuyển trường độ dài ra đầu câu
-        const tmp = durs[pStart]
-        durs[pStart] = durs[maxI]
-        durs[maxI] = tmp
-        problems.push('nốt dài nhất nằm giữa câu, đã đưa ra đầu câu')
+        if (found) problems.push('ô 7 dẫn về V: đã thêm nốt G/Sol vào ô 7')
       }
     }
   }
 
-  // 6c3. Giới hạn số loại trường độ (cho bậc thấp)
-  {
-    const uniqueDurs = [...new Set(durs.map(d => Math.round(d * 10) / 10))]
-    const maxTypes = level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5
-    if (uniqueDurs.length > maxTypes) {
-      // Gộp các trường độ hiếm về trường độ phổ biến nhất
-      const count: Record<number, number> = {}
-      durs.forEach(d => { const k = Math.round(d * 10) / 10; count[k] = (count[k] || 0) + 1 })
-      const sorted = Object.entries(count).sort((a, b) => b[1] - a[1])
-      const keep = new Set(sorted.slice(0, maxTypes).map(e => parseFloat(e[0])))
-      for (let i = 0; i < durs.length; i++) {
-        const k = Math.round(durs[i] * 10) / 10
-        if (!keep.has(k)) {
-          // Thay bằng trường độ gần nhất trong keep
-          let best = 1, bestDist = Infinity
-          keep.forEach(v => { const dist = Math.abs(v - k); if (dist < bestDist) { bestDist = dist; best = v } })
-          durs[i] = best
-        }
-      }
-      problems.push(`quá ${maxTypes} loại trường độ, đã gộp về ${keep.size} loại`)
     }
   }
 
