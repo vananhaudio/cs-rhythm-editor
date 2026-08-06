@@ -361,12 +361,13 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
     '- Nốt đầu và nốt cuối của bài phải là nốt chủ âm (Đô).',
     '- Nốt trong hợp âm Đô trưởng (C, E, G) nên ở phách mạnh; nốt phụ (D, F, A, B) ở phách nhẹ.',
     '',
-    'LUẬT TRƯỜNG ĐỘ:',
-    `- Phải dùng ÍT NHẤT ${level.durations.length >= 2 ? '2' : '1'} loại trường độ khác nhau.`,
-    '- Trong một câu 4 ô, không dùng cùng một trường độ cho cả 4 ô.',
+    'LUẬT TRƯỜNG ĐỘ (QUAN TRỌNG — vi phạm là sai):',
+    `- Phải dùng ĐÚNG ${level.durations.length >= 2 ? Math.min(level.durations.length, 3) : 1} loại trường độ trong bài này (trong số: ${durList}).`,
+    `- KHÔNG được dùng quá ${level.id <= 8 ? Math.min(level.durations.length, 3) : level.id <= 11 ? Math.min(level.durations.length, 4) : Math.min(level.durations.length, 5)} loại trường độ khác nhau trong một bài.`,
+    '- Trong một câu 4 ô, không dùng cùng một trường độ cho cả 4 ô — phải có ít nhất 2 loại.',
     '- Nốt dài nhất của câu phải ở ĐẦU hoặc CUỐI câu — không để lưng chừng giữa câu.',
-    '- Không để 2 ô nhịp liên tiếp toàn nốt tròn (mất mạch chảy).',
-    '- Nốt càng cao → trường độ càng dài (tạo đỉnh điểm).',
+    '- KHÔNG để 2 ô nhịp liên tiếp toàn nốt tròn (mất mạch chảy).',
+    '- Nốt càng cao → trường độ càng dài (tạo đỉnh điểm). Nốt cao nhất bài phải là nốt trắng hoặc tròn.',
     level.durations.includes(1.5)
       ? '- Nốt chấm dôi (♩.) đi kèm móc đơn: mẫu ♩. + ♪ tạo uyển chuyển, mềm mại.'
       : '',
@@ -941,6 +942,85 @@ export function checkAndRepair(
         for (let i = 0; i < idx.length; i++) idx[i] = luu[i]
         problems.push('câu 3 không nhắc lại câu 1 được mà không phá luật khác')
       }
+    }
+  }
+
+  // ── 6c. ÉP LUẬT TRƯỜNG ĐỘ ──────────────────────────────────────────
+
+  // 6c1. Không để 2 ô nhịp liên tiếp toàn nốt tròn
+  {
+    let beatCheck = 0
+    for (let barStart = 0; barStart < level.bars - 1; barStart++) {
+      // Tìm các nốt trong ô barStart và barStart+1
+      const b1 = beatCheck, b1end = b1 + level.beatsPerBar
+      const b2 = b1end, b2end = b2 + level.beatsPerBar
+      const onlyWhole1 = durs.filter((_d, i) => {
+        let s = 0; for (let j = 0; j < i; j++) s += durs[j]; return s < b1end && s + durs[i] > b1
+      }).every(d => Math.abs(d - 4) < 1e-9)
+      const onlyWhole2 = durs.filter((_d, i) => {
+        let s = 0; for (let j = 0; j < i; j++) s += durs[j]; return s < b2end && s + durs[i] > b2
+      }).every(d => Math.abs(d - 4) < 1e-9)
+      if (onlyWhole1 && onlyWhole2 && durs.length > 0) {
+        // Sửa: đổi nốt cuối ô thứ hai thành 2 nốt trắng
+        let s2 = b2
+        for (let k = 0; k < durs.length; k++) {
+          if (s2 >= b2end) break
+          if (s2 + durs[k] > b2 && Math.abs(durs[k] - 4) < 1e-9) {
+            durs.splice(k, 1, 2, 2)
+            const v = idx[k] >= 0 ? idx[k] : 0
+            idx.splice(k, 1, v, clamp(v - 1, 0, top))
+            rests.splice(k, 1, false, false)
+            problems.push('2 ô tròn liên tiếp, đã sửa')
+            break
+          }
+          s2 += durs[k]
+        }
+        break  // chỉ sửa một chỗ một lần
+      }
+      beatCheck += level.beatsPerBar
+    }
+  }
+
+  // 6c2. Nốt dài nhất phải ở đầu hoặc cuối mỗi câu (nếu có phraseBars)
+  if (coCau) {
+    const m = mocCau()
+    for (let ci = 0; ci < m.length - 1; ci++) {
+      const pStart = m[ci], pEnd = m[ci + 1]
+      let maxD = 0, maxI = -1
+      for (let i = pStart; i < pEnd; i++) {
+        if (durs[i] > maxD + 1e-9) { maxD = durs[i]; maxI = i }
+      }
+      // Nốt dài nhất nằm lưng chừng (không phải đầu hoặc cuối câu)
+      if (maxI > pStart && maxI < pEnd - 1 && maxD >= 2) {
+        // Di chuyển trường độ dài ra đầu câu
+        const tmp = durs[pStart]
+        durs[pStart] = durs[maxI]
+        durs[maxI] = tmp
+        problems.push('nốt dài nhất nằm giữa câu, đã đưa ra đầu câu')
+      }
+    }
+  }
+
+  // 6c3. Giới hạn số loại trường độ (cho bậc thấp)
+  {
+    const uniqueDurs = [...new Set(durs.map(d => Math.round(d * 10) / 10))]
+    const maxTypes = level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5
+    if (uniqueDurs.length > maxTypes) {
+      // Gộp các trường độ hiếm về trường độ phổ biến nhất
+      const count: Record<number, number> = {}
+      durs.forEach(d => { const k = Math.round(d * 10) / 10; count[k] = (count[k] || 0) + 1 })
+      const sorted = Object.entries(count).sort((a, b) => b[1] - a[1])
+      const keep = new Set(sorted.slice(0, maxTypes).map(e => parseFloat(e[0])))
+      for (let i = 0; i < durs.length; i++) {
+        const k = Math.round(durs[i] * 10) / 10
+        if (!keep.has(k)) {
+          // Thay bằng trường độ gần nhất trong keep
+          let best = 1, bestDist = Infinity
+          keep.forEach(v => { const dist = Math.abs(v - k); if (dist < bestDist) { bestDist = dist; best = v } })
+          durs[i] = best
+        }
+      }
+      problems.push(`quá ${maxTypes} loại trường độ, đã gộp về ${keep.size} loại`)
     }
   }
 
