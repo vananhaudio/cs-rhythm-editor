@@ -237,7 +237,7 @@ export function getLevel(id: number): PianoLevel {
 const BASE: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }
 
 export function pitchToMidi(pitch: string): number | null {
-  if (pitch === 'rest') return null
+  if (!pitch || pitch === 'rest') return null
   const m = /^([A-Ga-g])([#b]?)(-?\d)$/.exec(pitch.trim())
   if (!m) return null
   const step = BASE[m[1].toUpperCase()]
