@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import HomeScreen from './piano/HomeScreen'
 import TalkWithTeacher from './piano/TalkWithTeacher'
 import SongLibrary from './piano/SongLibrary'
+import LearningFlow from './piano/LearningFlow'
 
 type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
 
@@ -10,7 +11,7 @@ export default function PianoJourney({ onClose, studentName }: { onClose?: () =>
 
   return (
     <div style={{ padding: 12, background: '#fff', minHeight: '100dvh', fontFamily: 'system-ui' }}>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>🔍 Test Render: {testStage}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>🔍 Test Render (+LearningFlow import)</div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
         {(['home', 'talk', 'library'] as Stage[]).map(s => (
           <button key={s} onClick={() => setTestStage(s)} style={{
@@ -26,6 +27,7 @@ export default function PianoJourney({ onClose, studentName }: { onClose?: () =>
         {testStage === 'talk' && <TalkWithTeacher onClose={() => setTestStage('home')} />}
         {testStage === 'library' && <SongLibrary onBack={() => setTestStage('home')} onPlay={() => {}} onAskLyra={() => setTestStage('talk')} />}
       </div>
+      <div style={{ marginTop: 8, fontSize: 11, color: '#059669' }}>LearningFlow imported (chưa render) — nếu thấy dòng này là OK</div>
     </div>
   )
 }
