@@ -1016,7 +1016,14 @@ function StepPerform({ exercise, noteItems, onBack, onScore }: StepComponentProp
 
 function LeftHandBar({ exercise, cursor }: { exercise: any; cursor: number }) {
   try {
-    if (!exercise || !exercise.leftHand?.length) return null
+    if (!exercise || !exercise.leftHand?.length) {
+      // Debug: show why no left hand
+      return (
+        <div style={{ margin: '2px 16px 4px', fontSize: 10, color: '#D4CFC4', textAlign: 'center' }}>
+          🅱 tay trái: {exercise?.leftHand ? exercise.leftHand.length + ' nốt nhưng lọc hết' : 'không có (bậc này chưa hỗ trợ)'}
+        </div>
+      )
+    }
     const items = leftHandToNoteItems(exercise)
     if (!items.length) return null
     return (
@@ -1039,5 +1046,5 @@ function LeftHandBar({ exercise, cursor }: { exercise: any; cursor: number }) {
       ))}
     </div>
   )
-  } catch { return null }
+  } catch(e: any) { return <div style={{ fontSize: 10, color: 'red' }}>LH err: {e.message}</div> }
 }
