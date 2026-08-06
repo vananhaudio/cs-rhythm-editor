@@ -99,7 +99,7 @@ export default function PianoJourney({ onClose, studentName }: Props) {
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      await Promise.all([loadPianoLevel(), loadLibraryFromServer()])
+      // TẠM TẮT ĐỂ DEBUG: await Promise.all([loadPianoLevel(), loadLibraryFromServer()])
       if (cancelled) return
       levelRef.current = currentLevelId()   // cập nhật sau khi load từ server
       setReady(true)
