@@ -26,17 +26,22 @@ type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
 class PianoErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: string | null }> {
   constructor(props: any) { super(props); this.state = { error: null } }
   static getDerivedStateFromError(e: Error) { return { error: e.message || String(e) } }
+  componentDidCatch(error: Error, info: any) {
+    console.error('[Piano]', error.message, error.stack)
+    try { (window as any).__pianoErr = error.message + ' | ' + (error.stack || '') } catch {}
+  }
   render() {
     if (this.state.error) {
-      return (<PianoErrorBoundary>
-        <div style={{ height: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "system-ui", textAlign: "center", background: "#FFF8F0" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🎹</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: "#B45309", marginBottom: 8 }}>Có chút trục trặc</div>
-          <div style={{ fontSize: 13, color: "#8A8478", maxWidth: 280, lineHeight: 1.6, wordBreak: "break-all" }}>{this.state.error}</div>
-          <button onClick={() => { this.setState({ error: null }); window.location.reload() }} style={{ marginTop: 18, padding: "12px 28px", borderRadius: 14, border: "none", background: "#F59E0B", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Thử lại</button>
+      const msg = this.state.error
+      const short = msg.length > 150 ? msg.slice(0, 150) + '…' : msg
+      return (
+        <div style={{ height: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "system-ui", textAlign: "center", background: "#FFF8F0" }}>
+          <div style={{ fontSize: 40, marginBottom: 6 }}>🎹</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#B45309", marginBottom: 6 }}>Có chút trục trặc</div>
+          <div style={{ fontSize: 11, color: "#333", maxWidth: 320, lineHeight: 1.5, wordBreak: "break-all", background: "#FFF", padding: 10, borderRadius: 10, border: "1px solid #FDE68A", maxHeight: 220, overflow: "auto", whiteSpace: "pre-wrap", textAlign: "left" }}>{short}</div>
+          <button onClick={() => { this.setState({ error: null }); window.location.reload() }} style={{ marginTop: 14, padding: "12px 28px", borderRadius: 14, border: "none", background: "#F59E0B", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Thử lại</button>
         </div>
       )
-      </PianoErrorBoundary>)
     }
     return this.props.children
   }
