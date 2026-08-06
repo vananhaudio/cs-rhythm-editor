@@ -1,93 +1,31 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
+import HomeScreen from './piano/HomeScreen'
+import TalkWithTeacher from './piano/TalkWithTeacher'
+import SongLibrary from './piano/SongLibrary'
 
-// DEBUG: Kiểm tra từng import để tìm file gây lỗi
+type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
+
 export default function PianoJourney({ onClose, studentName }: { onClose?: () => void; studentName?: string }) {
-  const [results, setResults] = useState<string[]>([])
-  const [done, setDone] = useState(false)
-
-  useEffect(() => {
-    const tests: { name: string; fn: () => Promise<string> }[] = [
-      {
-        name: 'rules.ts',
-        fn: async () => {
-          const m = await import('./piano/rules')
-          return `rules: ${m.LEVELS.length} bậc, current=${m.currentLevelId()}`
-        }
-      },
-      {
-        name: 'library.ts',
-        fn: async () => {
-          const m = await import('./piano/library')
-          const songs = m.listSongs()
-          return `library: ${songs.length} bài`
-        }
-      },
-      {
-        name: 'notationAdapter',
-        fn: async () => {
-          await import('./piano/notationAdapter')
-          return 'notationAdapter OK'
-        }
-      },
-      {
-        name: 'HomeScreen',
-        fn: async () => {
-          await import('./piano/HomeScreen')
-          return 'HomeScreen OK'
-        }
-      },
-      {
-        name: 'TalkWithTeacher',
-        fn: async () => {
-          await import('./piano/TalkWithTeacher')
-          return 'TalkWithTeacher OK'
-        }
-      },
-      {
-        name: 'LearningFlow',
-        fn: async () => {
-          await import('./piano/LearningFlow')
-          return 'LearningFlow OK'
-        }
-      },
-      {
-        name: 'SongLibrary',
-        fn: async () => {
-          await import('./piano/SongLibrary')
-          return 'SongLibrary OK'
-        }
-      },
-    ]
-
-    const res: string[] = []
-    async function run() {
-      for (const t of tests) {
-        try {
-          res.push(await t.fn())
-        } catch (e: any) {
-          res.push(`${t.name} FAIL: ${e.message || String(e)}`)
-        }
-      }
-      setResults(res)
-      setDone(true)
-    }
-    run()
-  }, [])
+  const [testStage, setTestStage] = useState<Stage>('home')
 
   return (
-    <div style={{ padding: 20, fontFamily: 'monospace', fontSize: 12, lineHeight: 1.8, background: '#fff', minHeight: '100dvh', overflow: 'auto' }}>
-      <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>🔍 Debug Piano Journey</div>
-      {results.map((r, i) => (
-        <div key={i} style={{ color: r.includes('FAIL') ? '#DC2626' : '#059669', marginBottom: 4 }}>
-          {i + 1}. {r}
-        </div>
-      ))}
-      {!done && <div style={{ color: '#8A8478' }}>Đang kiểm tra...</div>}
-      {done && results.every(r => !r.includes('FAIL')) && (
-        <div style={{ marginTop: 16, padding: 12, background: '#DCFCE7', borderRadius: 8, color: '#166534', fontWeight: 700 }}>
-          ✅ Tất cả import OK — lỗi nằm ở render component
-        </div>
-      )}
+    <div style={{ padding: 12, background: '#fff', minHeight: '100dvh', fontFamily: 'system-ui' }}>
+      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>🔍 Test Render: {testStage}</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        {(['home', 'talk', 'library'] as Stage[]).map(s => (
+          <button key={s} onClick={() => setTestStage(s)} style={{
+            padding: '8px 14px', borderRadius: 10, border: 'none',
+            background: testStage === s ? '#F59E0B' : '#F3F4F6',
+            color: testStage === s ? '#fff' : '#333',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}>{s}</button>
+        ))}
+      </div>
+      <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, padding: 8, minHeight: 200 }}>
+        {testStage === 'home' && <HomeScreen studentName={studentName} onTalkToLyra={() => {}} onContinue={() => {}} onOpenSongs={() => setTestStage('library')} onOpenMenu={onClose} />}
+        {testStage === 'talk' && <TalkWithTeacher onClose={() => setTestStage('home')} />}
+        {testStage === 'library' && <SongLibrary onBack={() => setTestStage('home')} onPlay={() => {}} onAskLyra={() => setTestStage('talk')} />}
+      </div>
     </div>
   )
 }
