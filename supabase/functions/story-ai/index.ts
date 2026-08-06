@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
   if (body.admin_key === ADMIN_KEY) {
     if (body.action === 'list_all') {
       const { data: stories, error } = await db.from('stories')
-        .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation,photos,author_full_name,author_age,author_hometown,author_living_in,author_job,author_bio,author_portrait_url,consent_bio_publish')
+        .select('id,title,content,pen_name,user_id,status,published_at,created_at,conversation,photos,featured,slug,author_full_name,author_age,author_hometown,author_living_in,author_job,author_bio,author_portrait_url,consent_bio_publish')
         .in('status', ['telling', 'writing', 'user_review', 'submitted', 'pending_publish', 'published'])
         .order('created_at', { ascending: false })
       if (error) return json({ error: error.message }, 500)
@@ -262,6 +262,7 @@ Deno.serve(async (req) => {
       if (body.user_id !== undefined) updates.user_id = body.user_id
       if (body.pen_name !== undefined) updates.pen_name = body.pen_name
       if (body.author_name !== undefined) updates.author_name = body.author_name
+      if (body.featured !== undefined) updates.featured = !!body.featured
 
       if (Object.keys(updates).length > 0) {
         const { error } = await db.from('stories').update(updates).eq('id', story_id)

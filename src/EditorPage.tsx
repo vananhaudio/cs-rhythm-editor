@@ -12,6 +12,8 @@ interface Story {
   submittedAt: string
   status: StoryStatus
   content: string
+  featured: boolean
+  slug: string | null
   user_id?: string | null
   conversation?: { role: string; text: string; at: string }[]
   photos?: { url: string; caption?: string }[] | null
@@ -149,6 +151,8 @@ export default function EditorPage() {
         author: s.pen_name || 'Ẩn danh',
         submittedAt: s.published_at || s.created_at || new Date().toISOString(),
         status: DB_STATUS_MAP[s.status] || 'telling',
+        featured: s.featured || false,
+        slug: s.slug ?? null,
         user_id: s.user_id ?? null,
         conversation: s.conversation || [],
         content: s.content || '',
@@ -340,6 +344,7 @@ function InboxView({ stories, onSelect, selectedId }: {
                 </div>
                 <div className="ed-card-tags">
                   <StatusBadge status={story.status} />
+                  {story.featured && <span className="ed-tag ed-tag-featured" title="Đang nổi bật">⭐ Nổi bật</span>}
                   {hasPhoto && <span className="ed-tag" title="Đã có ảnh">🖼 ảnh</span>}
                   {hasBio && (
                     <span className={`ed-tag ${story.consent_bio_publish ? 'ed-tag-on' : 'ed-tag-warn'}`}
@@ -486,6 +491,97 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const [bioPortrait, setBioPortrait] = useState('')
   const [bioShow, setBioShow] = useState(false)
   const [bioSaving, setBioSaving] = useState(false)
+
+  // ── ⭐ Featured toggle ──
+  const [isFeatured, setIsFeatured] = useState(story.featured)
+  const [featBusy, setFeatBusy] = useState(false)
+  const toggleFeatured = async () => {
+    setFeatBusy(true); setStatusMsg('')
+    const { error } = await supabase.from('stories').update({ featured: !isFeatured }).eq('id', story.id)
+    if (!error) { setIsFeatured(!isFeatured); story.featured = !isFeatured; setStatusMsg(isFeatured ? 'Đã bỏ nổi bật.' : '⭐ Đã đánh dấu nổi bật!'); if (onUpdate) onUpdate() }
+    else setStatusMsg('Lỗi: ' + error.message)
+    setFeatBusy(false)
+  }
+
+  // ── 🗑 Delete story ──
+  const [delBusy, setDelBusy] = useState(false)
+  const handleDelete = async () => {
+    if (!confirm(`Xoá vĩnh viễn câu chuyện "${story.title}"?\n\nHành động này KHÔNG thể hoàn tác.`)) return
+    setDelBusy(true); setStatusMsg('')
+    const { error } = await supabase.from('stories').delete().eq('id', story.id)
+    if (!error) { onClose(); if (onUpdate) onUpdate(); return }
+    setStatusMsg('Lỗi: ' + error.message)
+    setDelBusy(false)
+  }
+
+  // ── 🖼 Thay ảnh cho bài đã xuất bản ──
+  const [showPhotoReplace, setShowPhotoReplace] = useState(false)
+  const [replacePhotoUpload, setReplacePhotoUpload] = useState<File | null>(null)
+  const [replacePhotoPreview, setReplacePhotoPreview] = useState<string | null>(null)
+  const [replacePhotoPrompt, setReplacePhotoPrompt] = useState('')
+  const [replaceGenerating, setReplaceGenerating] = useState(false)
+  const [replaceSaving, setReplaceSaving] = useState(false)
+
+  const handleReplaceFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setReplacePhotoUpload(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setReplacePhotoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+    setStatusMsg('Ảnh đã chọn. Nhấn "Thay ảnh" để lưu.')
+  }
+
+  const handleReplaceGenerate = async () => {
+    if (!replacePhotoPrompt.trim()) return
+    setReplaceGenerating(true); setStatusMsg('Đang tạo ảnh FLUX...')
+    try {
+      const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate_image', prompt: replacePhotoPrompt }),
+      })
+      const data = await res.json()
+      if (data.ok && data.url) { setReplacePhotoPreview(data.url); setReplacePhotoUpload(null); setStatusMsg('Ảnh đã tạo! Nhấn "Thay ảnh" để lưu.') }
+      else setStatusMsg('Lỗi: ' + (data.error || 'Không thể tạo ảnh'))
+    } catch (e: any) { setStatusMsg('Lỗi: ' + e.message) }
+    setReplaceGenerating(false)
+  }
+
+  const handleReplacePhotos = async () => {
+    setReplaceSaving(true); setStatusMsg('Đang thay ảnh...')
+    try {
+      if (replacePhotoUpload) {
+        const b64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.readAsDataURL(replacePhotoUpload)
+        })
+        const { data, error } = await supabase.functions.invoke('story-ai', {
+          body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_photo', story_id: story.id, image_base64: b64 },
+        })
+        if (!error && data?.ok) {
+          story.photos = [{ url: data.url || '', caption: '' }]
+          setStatusMsg('✅ Đã thay ảnh! Refresh Tạp chí để thấy ảnh mới.')
+          setShowPhotoReplace(false); setReplacePhotoUpload(null); setReplacePhotoPreview(null)
+          if (onUpdate) onUpdate()
+        } else setStatusMsg('Lỗi: ' + (data?.error || 'Không thay được ảnh'))
+      } else if (replacePhotoPreview) {
+        const { data, error } = await supabase.functions.invoke('story-ai', {
+          body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, photos: [{ url: replacePhotoPreview, caption: '' }] },
+        })
+        if (!error && data?.ok) {
+          story.photos = [{ url: replacePhotoPreview, caption: '' }]
+          setStatusMsg('✅ Đã thay ảnh! Refresh Tạp chí để thấy ảnh mới.')
+          setShowPhotoReplace(false); setReplacePhotoPreview(null)
+          if (onUpdate) onUpdate()
+        } else setStatusMsg('Lỗi: ' + (data?.error || 'Không thay được ảnh'))
+      } else {
+        setStatusMsg('Vui lòng chọn ảnh hoặc tạo ảnh AI trước.')
+      }
+    } catch (e: any) { setStatusMsg('Lỗi: ' + e.message) }
+    setReplaceSaving(false)
+  }
+
   // ── Gán người viết từ tài khoản ──
   const [linkUserQ, setLinkUserQ] = useState('')
   const [linkUserRes, setLinkUserRes] = useState<{ id: string; name: string; email: string; role: string }[]>([])
@@ -680,6 +776,20 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   return (
     <aside className="ed-detail">
       <div className="ed-detail-header">
+        <div className="ed-detail-header-left">
+          <button
+            className={`ed-feat-btn ${isFeatured ? 'ed-feat-on' : ''}`}
+            onClick={toggleFeatured} disabled={featBusy}
+            title={isFeatured ? 'Bỏ nổi bật' : 'Đánh dấu nổi bật'}>
+            {isFeatured ? '⭐' : '☆'} {isFeatured ? 'Nổi bật' : 'Nổi bật'}
+          </button>
+          <button className="ed-delete-btn" onClick={handleDelete} disabled={delBusy}
+            title="Xoá câu chuyện">🗑 Xoá</button>
+          {(story.status as string) === 'published' || published ? (
+            <button className="ed-photo-btn" onClick={() => setShowPhotoReplace(o => !o)}
+              title="Thay ảnh bìa">🖼 {showPhotoReplace ? 'Đóng' : 'Thay ảnh'}</button>
+          ) : null}
+        </div>
         <button className="ed-detail-close" onClick={onClose}>✕</button>
       </div>
       <div className="ed-detail-body">
@@ -790,6 +900,57 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
             <span className="ed-pub-hint">Sau khi Lưu, refresh Tạp chí để thấy nội dung mới.</span>
           </div>
         ) : null}
+
+        {/* ── 🖼 Thay ảnh bìa (bài đã xuất bản) ── */}
+        {showPhotoReplace && ((story.status as string) === 'published' || published) && (
+          <div className="ed-section">
+            <h3 className="ed-section-title">🖼 Thay ảnh bìa</h3>
+            <p style={{fontSize:13,color:'#8C8C8C',margin:'0 0 16px'}}>Thay ảnh đại diện cho bài đã xuất bản. Ảnh mới sẽ hiển thị ngay trên Tạp chí.</p>
+
+            {/* Ảnh hiện tại */}
+            {studentPhotos && studentPhotos.length > 0 && (
+              <div className="ed-pub-block">
+                <label className="ed-pub-label">Ảnh hiện tại</label>
+                <img src={studentPhotos[0].url} alt="" className="ed-pub-preview" style={{maxWidth:300}} />
+              </div>
+            )}
+
+            {/* Upload ảnh mới */}
+            <div className="ed-pub-block">
+              <label className="ed-pub-label">📤 Tải ảnh mới lên</label>
+              <input type="file" accept="image/*" onChange={handleReplaceFile} className="ed-pub-file" />
+              {replacePhotoUpload && <span className="ed-pub-filename">{replacePhotoUpload.name}</span>}
+            </div>
+
+            {/* Hoặc AI tạo ảnh */}
+            {!replacePhotoUpload && (
+              <div className="ed-pub-block">
+                <label className="ed-pub-label">🤖 Hoặc AI tạo ảnh FLUX</label>
+                <textarea className="ed-pub-textarea" rows={3}
+                  placeholder="Mô tả ảnh minh họa mới..."
+                  value={replacePhotoPrompt}
+                  onChange={e => setReplacePhotoPrompt(e.target.value)} />
+                <button className="ed-pub-btn-sm" onClick={handleReplaceGenerate}
+                  disabled={replaceGenerating || !replacePhotoPrompt.trim()}>
+                  {replaceGenerating ? '⏳ Đang tạo...' : '🤖 Tạo ảnh'}
+                </button>
+              </div>
+            )}
+
+            {/* Preview ảnh mới */}
+            {replacePhotoPreview && (
+              <div className="ed-pub-block">
+                <label className="ed-pub-label">🖼️ Xem trước ảnh mới</label>
+                <img src={replacePhotoPreview} alt="Preview" className="ed-pub-preview" style={{maxWidth:300}} />
+              </div>
+            )}
+
+            <button className="ed-pub-btn ed-pub-btn-primary" onClick={handleReplacePhotos}
+              disabled={replaceSaving}>
+              {replaceSaving ? '⏳ Đang thay ảnh...' : (replacePhotoUpload || replacePhotoPreview ? '✅ Thay ảnh' : '⚠️ Chọn ảnh trước')}
+            </button>
+          </div>
+        )}
 
         {/* ── Sửa bài ĐÃ XUẤT BẢN: gắn lại chủ đề + Đôi nét về người kể ── */}
         {((story.status as string) === 'published' || published) && (
@@ -1066,8 +1227,30 @@ const CSS = `
 
 /* Detail Panel */
 .ed-detail { width:min(560px, 42vw); min-width:380px; flex-shrink:0; border-left:1px solid #E5E0D8; background:#FFFFFF; overflow-y:auto; max-height:calc(100dvh - 100px); position:sticky; top:0; }
-.ed-detail-header { display:flex; justify-content:flex-end; padding:12px 16px; border-bottom:1px solid #F0EDE6; }
-.ed-detail-close { background:none; border:none; font-size:18px; color:#8C8C8C; cursor:pointer; padding:4px 8px; border-radius:4px; transition:background .12s,color .12s; }
+.ed-detail-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #F0EDE6; gap:8px; }
+.ed-detail-header-left { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ed-feat-btn {
+  padding:5px 10px; border:1px solid #E5C87D; border-radius:6px; background:#FFFBF0;
+  font-family:inherit; font-size:12px; font-weight:600; color:#B7791F; cursor:pointer; white-space:nowrap;
+  transition:background .12s,color .12s;
+}
+.ed-feat-btn:hover { background:#FFF3D6; }
+.ed-feat-btn:disabled { opacity:0.5; cursor:default; }
+.ed-feat-on { background:#FDF2E9; color:#C9711E; border-color:#C9711E; }
+.ed-delete-btn {
+  padding:5px 10px; border:1px solid #F4C8C8; border-radius:6px; background:#FFF5F5;
+  font-family:inherit; font-size:12px; font-weight:600; color:#C53030; cursor:pointer; white-space:nowrap;
+  transition:background .12s;
+}
+.ed-delete-btn:hover { background:#FED7D7; }
+.ed-delete-btn:disabled { opacity:0.5; cursor:default; }
+.ed-photo-btn {
+  padding:5px 10px; border:1px solid #D4C9B8; border-radius:6px; background:#FFFFFF;
+  font-family:inherit; font-size:12px; font-weight:500; color:#5C5C5C; cursor:pointer; white-space:nowrap;
+  transition:background .12s;
+}
+.ed-photo-btn:hover { background:#F5F2ED; }
+.ed-detail-close { background:none; border:none; font-size:18px; color:#8C8C8C; cursor:pointer; padding:4px 8px; border-radius:4px; transition:background .12s,color .12s; flex-shrink:0; }
 .ed-detail-close:hover { background:#F5F2ED; color:#1A1A1A; }
 .ed-detail-body { padding:20px 24px 40px; }
 .ed-detail-title { font-size:22px; font-weight:700; color:#1A1A1A; margin:12px 0 8px; line-height:1.3; letter-spacing:-0.2px; }
@@ -1110,6 +1293,7 @@ const CSS = `
 .ed-card-tags { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:8px; }
 .ed-tag { font-size:11.5px; padding:3px 8px; border-radius:999px; background:#F3F0EA; color:#6E6455; white-space:nowrap; }
 .ed-tag-on { background:#EDF7EE; color:#3C7A42; }
+.ed-tag-featured { background:#FFFBF0; color:#B7791F; border:1px solid #FDE68A; }
 .ed-tag-warn { background:#FFF4E5; color:#B4690E; }
 /* Đếm bài ở thanh bên */
 .ed-nav-item { display:flex !important; align-items:center; justify-content:space-between; gap:8px; }
