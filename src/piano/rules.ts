@@ -975,6 +975,184 @@ export function checkAndRepair(
     }
   }
 
+  // ── 6c. ÉP LUẬT TRƯỜNG ĐỘ ──────────────────────────────────────────
+
+  // 6c1. Không để 2 ô nhịp liên tiếp toàn nốt tròn
+  {
+    let beatCheck = 0
+    for (let barStart = 0; barStart < level.bars - 1; barStart++) {
+      const barEnd1 = beatCheck + level.beatsPerBar
+      const barEnd2 = barEnd1 + level.beatsPerBar
+      let onlyWhole1 = false, onlyWhole2 = false
+      // Check bar 1
+      let s1 = beatCheck, hasWhole1 = false
+      for (let i = 0; i < durs.length; i++) {
+        if (s1 >= barEnd1) break
+        if (s1 + durs[i] >= barEnd1 && s1 < barEnd1) {
+          hasWhole1 = hasWhole1 || (Math.abs(durs[i] - 4) < 1e-9 || (durs[i] >= 3 && i === durs.length - 1))
+        }
+        s1 += durs[i]
+      }
+      onlyWhole1 = hasWhole1
+      // Check bar 2
+      let s2 = barEnd1, hasWhole2 = false
+      for (let i = 0; i < durs.length; i++) {
+        if (s2 >= barEnd2) break
+        if (s2 + durs[i] >= barEnd1 && s2 < barEnd2) {
+          hasWhole2 = hasWhole2 || (Math.abs(durs[i] - 4) < 1e-9 || (durs[i] >= 3 && i === durs.length - 1))
+        }
+        s2 += durs[i]
+      }
+      onlyWhole2 = hasWhole2
+      if (onlyWhole1 && onlyWhole2) {
+        // Fix: tách nốt tròn ô 2 thành 2 nốt trắng
+        let s = barEnd1
+        for (let k = 0; k < durs.length; k++) {
+          if (s >= barEnd2) break
+          if (s + durs[k] > barEnd1 && Math.abs(durs[k] - 4) < 1e-9) {
+            durs.splice(k, 1, 2, 2)
+            const v = idx[k] >= 0 ? idx[k] : 0
+            idx.splice(k, 1, v, clamp(v - 1, 0, top))
+            rests.splice(k, 1, false, false)
+            problems.push('2 ô tròn liên tiếp, đã sửa')
+            break
+          }
+          s += durs[k]
+        }
+        break
+      }
+      beatCheck += level.beatsPerBar
+    }
+  }
+
+  // 6c2. Nốt dài nhất phải ở đầu hoặc cuối mỗi câu (nếu có phraseBars)
+  if (coCau) {
+    const m = mocCau()
+    for (let ci = 0; ci < m.length - 1; ci++) {
+      const pStart = m[ci], pEnd = m[ci + 1]
+      if (pEnd - pStart <= 1) continue
+      let maxD = 0, maxI = -1
+      for (let i = pStart; i < pEnd; i++) {
+        if (durs[i] > maxD + 1e-9) { maxD = durs[i]; maxI = i }
+      }
+      if (maxI > pStart && maxI < pEnd - 1 && maxD >= 2 && level.durations.length >= 3) {
+        const tmp = durs[pStart]
+        durs[pStart] = durs[maxI]
+        durs[maxI] = tmp
+        problems.push('nốt dài nhất nằm giữa câu, đã đưa ra đầu câu')
+      }
+    }
+  }
+
+  // 6c3. Giới hạn số loại trường độ
+  {
+    const uniqueDurs = [...new Set(durs.map(d => Math.round(d * 10) / 10))]
+    const maxTypes = level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5
+    if (uniqueDurs.length > maxTypes) {
+      const count: Record<number, number> = {}
+      durs.forEach(d => { const k = Math.round(d * 10) / 10; count[k] = (count[k] || 0) + 1 })
+      const sorted = Object.entries(count).sort((a, b) => b[1] - a[1])
+      const keep = new Set(sorted.slice(0, maxTypes).map(e => parseFloat(e[0])))
+      for (let i = 0; i < durs.length; i++) {
+        const k = Math.round(durs[i] * 10) / 10
+        if (!keep.has(k)) {
+          let best = 1, bestDist = Infinity
+          keep.forEach(v => { const dist = Math.abs(v - k); if (dist < bestDist) { bestDist = dist; best = v } })
+          durs[i] = best
+        }
+      }
+      problems.push(`quá ${maxTypes} loại trường độ, đã gộp về ${keep.size} loại`)
+    }
+  }
+
+  // 6c4. Ép tần suất tối thiểu + tỉ lệ
+  {
+    const count: Record<number, number> = {}
+    durs.forEach(d => { const k = Math.round(d * 10) / 10; count[k] = (count[k] || 0) + 1 })
+    const totalN = durs.length
+    if (!totalN) totalN as any; else {
+
+    // Mỗi trường độ được phép ≥2 lần (trừ tròn: 1 lần)
+    for (const d of level.durations) {
+      const k = Math.round(d * 10) / 10
+      const minCount = d >= 4 ? 1 : 2
+      if ((count[k] || 0) < minCount) {
+        let replaced = 0
+        for (let i = 0; i < durs.length && replaced < minCount - (count[k] || 0); i++) {
+          if (Math.abs(durs[i] - 1) < 1e-9) {
+            if (Math.abs(d - 2) < 1e-9 && i + 1 < durs.length && Math.abs(durs[i + 1] - 1) < 1e-9) {
+              durs.splice(i, 2, 2)
+              const v = idx[i] >= 0 ? idx[i] : 0
+              idx.splice(i, 2, v)
+              rests.splice(i, 2, false)
+              replaced++
+            } else if (d === 0.5) {
+              let s = 0; for (let j = 0; j < i; j++) s += durs[j]
+              if (Math.abs(s - Math.round(s)) < 1e-9) {
+                const v = idx[i] >= 0 ? idx[i] : 0
+                const v2 = clamp(v + 1, 0, top)
+                durs.splice(i, 1, 0.5, 0.5)
+                idx.splice(i, 1, v, v2)
+                rests.splice(i, 1, false, false)
+                replaced++
+              }
+            } else if (d === 1.5 || d === 4) {
+              let s = 0; for (let j = 0; j < i; j++) s += durs[j]
+              const rem = level.beatsPerBar - (s % level.beatsPerBar)
+              if (d <= rem + 1e-9) { durs[i] = d; replaced++ }
+            }
+          }
+        }
+        if (replaced > 0) problems.push(`thiếu trường độ ${DUR_NAME[d] ?? d}, đã thêm ${replaced}`)
+      }
+    }
+
+    // Móc đơn ≥25% nếu có trong bậc
+    if (level.durations.includes(0.5)) {
+      const ec = count[0.5] || 0
+      const minE = Math.ceil(totalN * 0.25)
+      if (ec < minE) {
+        let added = 0
+        for (let i = 0; i < durs.length && added < minE - ec; i++) {
+          if (Math.abs(durs[i] - 1) < 1e-9) {
+            let s = 0; for (let j = 0; j < i; j++) s += durs[j]
+            if (Math.abs(s - Math.round(s)) < 1e-9) {
+              const v = idx[i] >= 0 ? idx[i] : 0
+              const v2 = clamp(v + 1, 0, top)
+              durs.splice(i, 1, 0.5, 0.5)
+              idx.splice(i, 1, v, v2)
+              rests.splice(i, 1, false, false)
+              added += 2
+            }
+          }
+        }
+        if (added > 0) problems.push(`móc đơn chưa đủ 25%, đã thêm ${added} nốt`)
+      }
+    }
+
+    // Nốt đen ≤50% (bậc ≥3 loại trường độ)
+    if (level.durations.length >= 3) {
+      const qc = count[1] || 0
+      if (qc > totalN * 0.5) {
+        let tr = Math.ceil(qc - totalN * 0.5)
+        for (let i = 0; i < durs.length && tr > 0; i++) {
+          if (Math.abs(durs[i] - 1) < 1e-9) {
+            const alt = level.durations.find(x => Math.abs(x - 1) > 1e-9 && x <= level.beatsPerBar && x !== 0.5)
+            if (alt) {
+              let s = 0; for (let j = 0; j < i; j++) s += durs[j]
+              if (alt <= level.beatsPerBar - (s % level.beatsPerBar) + 1e-9) {
+                durs[i] = alt; tr--
+              }
+            }
+          }
+        }
+        if (tr < Math.ceil(qc - totalN * 0.5)) problems.push('nốt đen quá 50%, đã thay bằng trường độ khác')
+      }
+    }
+
+    }
+  }
+
   // ── 7. startBeat — tính lại từ đầu ──────────────────────────────────────
   const notesOut: PianoNote[] = []
   let beat = 0
