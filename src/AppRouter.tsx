@@ -13,6 +13,7 @@ import StudentList from './StudentList'
 import StudentProfile from './StudentProfile'
 import StudentOnboarding from './StudentOnboarding'
 import GuitarTuner from './GuitarTuner'
+import QrRedirectPage from './QrRedirectPage'
 import NoteGame from './NoteGame'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
@@ -185,6 +186,11 @@ export default function AppRouter() {
   // ── Route /join-group/<token> — học viên tự xác nhận nhóm (tự xử lý auth) ──
   if (path.startsWith('/join-group/')) {
     return <JoinGroupPage />
+  }
+
+  // ── Route /qr/<slug> — QR trong SÁCH GIẤY → tra bảng qr_links → chuyển hướng ──
+  if (path === '/qr' || path.startsWith('/qr/')) {
+    return <QrRedirectPage />
   }
 
   // ── Route /class — trang tuyển sinh công khai (class.vananhaudio.com) ──
