@@ -17,7 +17,7 @@ import TalkWithTeacher from './piano/TalkWithTeacher'
 import HomeScreen from './piano/HomeScreen'
 import SongLibrary from './piano/SongLibrary'
 import { rememberSong, recordScore, advanceIfEarned, loadLibraryFromServer } from './piano/library'
-import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise, loadPianoLevel } from './piano/rules'
+import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise, loadPianoLevel, template } from './piano/rules'
 import type { Exercise, PianoLevel } from './piano/rules'
 
 type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
@@ -149,7 +149,7 @@ export default function PianoJourney({ onClose, studentName }: Props) {
       setStageSync('playing')
     } else {
       // AI không trả về bài — dùng bài mẫu
-      const fallback = (await import('./piano/rules')).template(level, chuDe)
+      const fallback = template(level, chuDe)
       rememberExercise(fallback)
       levelRef.current = level.id
       rememberSong(fallback, level.id, Date.now())
