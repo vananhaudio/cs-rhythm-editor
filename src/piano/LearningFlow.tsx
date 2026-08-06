@@ -1015,9 +1015,11 @@ function StepPerform({ exercise, noteItems, onBack, onScore }: StepComponentProp
 // ── Hiển thị tay trái (bass) ──────────────────────────────────────────────────
 
 function LeftHandBar({ exercise, cursor }: { exercise: any; cursor: number }) {
-  const items = leftHandToNoteItems(exercise)
-  if (!items.length) return null
-  return (
+  try {
+    if (!exercise || !exercise.leftHand?.length) return null
+    const items = leftHandToNoteItems(exercise)
+    if (!items.length) return null
+    return (
     <div style={{
       margin: '2px 26px 4px',
       display: 'flex', alignItems: 'center', gap: 6,
@@ -1037,4 +1039,5 @@ function LeftHandBar({ exercise, cursor }: { exercise: any; cursor: number }) {
       ))}
     </div>
   )
+  } catch { return null }
 }
