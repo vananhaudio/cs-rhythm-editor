@@ -10,7 +10,7 @@
 // KHÔNG thêm màn "gõ yêu cầu" hay mic Web Speech riêng: đã thử và bỏ vì
 // `webkitSpeechRecognition` có mặt nhưng CHẾT trong WKWebView.
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
@@ -21,6 +21,27 @@ import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise
 import type { Exercise, PianoLevel } from './piano/rules'
 
 type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
+
+// ── Error Boundary ──────────────────────────────────────────────────────────
+class PianoErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: string | null }> {
+  constructor(props: any) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(e: Error) { return { error: e.message || String(e) } }
+  render() {
+    if (this.state.error) {
+      return (<PianoErrorBoundary>
+        <div style={{ height: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "system-ui", textAlign: "center", background: "#FFF8F0" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>🎹</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "#B45309", marginBottom: 8 }}>Có chút trục trặc</div>
+          <div style={{ fontSize: 13, color: "#8A8478", maxWidth: 280, lineHeight: 1.6, wordBreak: "break-all" }}>{this.state.error}</div>
+          <button onClick={() => { this.setState({ error: null }); window.location.reload() }} style={{ marginTop: 18, padding: "12px 28px", borderRadius: 14, border: "none", background: "#F59E0B", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Thử lại</button>
+        </div>
+      )
+      </PianoErrorBoundary>)
+    }
+    return this.props.children
+  }
+}
+
 
 const AI_TIMEOUT_MS = 8000
 /** AI phạm nhiều hơn ngần này lỗi luật thì bắt sáng tác lại một lần. */
@@ -127,7 +148,7 @@ export default function PianoJourney({ onClose, studentName }: Props) {
   }, [setStageSync])
 
   if (stage === 'playing' && exercise) {
-    return (
+    return (<PianoErrorBoundary>
       <LearningFlow
         exercise={exercise} onClose={onClose} onBack={backToTalk}
         onScore={(hit, total) => {
@@ -136,10 +157,11 @@ export default function PianoJourney({ onClose, studentName }: Props) {
         }}
       />
     )
+    </PianoErrorBoundary>)
   }
 
   if (stage === 'library') {
-    return (
+    return (<PianoErrorBoundary>
       <SongLibrary
         onBack={backToHome}
         onAskLyra={() => setStageSync('talk')}
@@ -150,10 +172,11 @@ export default function PianoJourney({ onClose, studentName }: Props) {
         }}
       />
     )
+    </PianoErrorBoundary>)
   }
 
   if (stage === 'home') {
-    return (
+    return (<PianoErrorBoundary>
       <HomeScreen
         studentName={studentName}
         // Chưa lưu tiến độ giữa các phiên, nên thẻ "Tiếp tục" hiện nội dung mặc
@@ -170,14 +193,16 @@ export default function PianoJourney({ onClose, studentName }: Props) {
         onOpenMenu={onClose}
       />
     )
+    </PianoErrorBoundary>)
   }
 
   // Giữ màn hội thoại mounted khi 'generating' để tiếng Lyra không bị cắt giữa câu.
-  return (
+  return (<PianoErrorBoundary>
     <TalkWithTeacher
       onClose={backToHome}
       onCreateMission={generateMission}
       busy={stage === 'generating'}
     />
   )
+  </PianoErrorBoundary>)
 }
