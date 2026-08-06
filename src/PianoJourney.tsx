@@ -141,11 +141,21 @@ export default function PianoJourney({ onClose, studentName }: Props) {
 
     if (import.meta.env.DEV && problems.length) console.warn('[luật] AI phạm:', problems)
 
-    rememberExercise(ex)                       // để lần sau AI tránh soạn trùng
-    levelRef.current = level.id
-    rememberSong(ex, level.id, Date.now())     // vào "Bài hát của con"
-    setExercise(ex)
-    setStageSync('playing')
+    if (ex) {
+      rememberExercise(ex)                       // để lần sau AI tránh soạn trùng
+      levelRef.current = level.id
+      rememberSong(ex, level.id, Date.now())     // vào "Bài hát của con"
+      setExercise(ex)
+      setStageSync('playing')
+    } else {
+      // AI không trả về bài — dùng bài mẫu
+      const fallback = (await import('./piano/rules')).template(level, chuDe)
+      rememberExercise(fallback)
+      levelRef.current = level.id
+      rememberSong(fallback, level.id, Date.now())
+      setExercise(fallback)
+      setStageSync('playing')
+    }
     } catch(e: any) {
       console.error('[generateMission]', e)
       setStageSync('talk')
