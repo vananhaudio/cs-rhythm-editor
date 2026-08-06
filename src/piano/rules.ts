@@ -366,6 +366,8 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
     'NGUYÊN LÝ: Motif = Cao độ + Trường độ. Mẫu trường độ ô 1-2 là Rhythmic DNA của bài.',
     `- Trường độ được dùng: ${durList}.`,
     `- Số loại trường độ tối đa: ${level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5}.`,
+    level.bars === 16 ? '- Bài 16 ô: áp dụng chu kỳ 8 ô HAI LẦN. Mỗi chu kỳ phải có đủ trường độ đa dạng, không được chu kỳ 2 toàn nốt đen.' : '',
+    '- QUAN TRỌNG: Mỗi loại trường độ phải xuất hiện ở CẢ HAI NỬA BÀI (nếu bài 8 ô: nửa đầu ô 1-4 và nửa sau ô 5-8). KHÔNG dồn hết vào một chỗ.',
     '',
     'CÂU A (ô 1-4) — THIẾT LẬP → PHÁT TRIỂN → NGHỈ:',
     '  Luật 4-5: Ô 1-2 thiết lập Rhythmic DNA (ổn định, lặp > biến đổi).',
@@ -927,7 +929,7 @@ export function checkAndRepair(
   }
 
   // ── 6b. ÉP CẤU TRÚC MOTIF 8 Ô NHỊP (10 LUẬT) ──────────────────────
-  if (level.bars === 8 && level.kind === 'piece') {
+  if ((level.bars === 8 || level.bars === 16) && level.kind === 'piece') {
     const B = level.beatsPerBar
     
     // LUẬT 4: Ô 4 phải kết MỞ — nốt cuối ô 4 KHÔNG được là chủ âm (C)
@@ -994,17 +996,20 @@ export function checkAndRepair(
   }
 
   // ── 6c. ÉP LUẬT TRƯỜNG ĐỘ 8 Ô NHỊP ──────────────────────────────
-  if (level.bars === 8 && level.kind === 'piece') {
+  if ((level.bars === 8 || level.bars === 16) && level.kind === 'piece') {
     const B = level.beatsPerBar
 
-    // Luật 7+11: Ô 4 phải kết bằng Trắng (2 phách) — nếu có trắng trong bậc
+    // Luật 7+11: Ô 4, ô 12 (nếu 16 ô) phải kết bằng Trắng (2 phách)
     if (level.durations.includes(2)) {
-      let beatPos = 0, lastInBar4 = -1
+      const endBars = level.bars === 16 ? [4, 12] : [4]
+      for (const endBar of endBars) {
+      let beatPos = 0, lastInBar = -1
+      const targetBeat = endBar * B
       for (let i = 0; i < durs.length; i++) {
-        if (beatPos + durs[i] >= 4*B && beatPos < 4*B) lastInBar4 = i
+        if (beatPos + durs[i] >= targetBeat && beatPos < targetBeat) lastInBar = i
         beatPos += durs[i]
       }
-      if (lastInBar4 >= 0 && Math.abs(durs[lastInBar4] - 2) > 1e-9) {
+      if (lastInBar >= 0 && Math.abs(durs[lastInBar] - 2) > 1e-9) {
         // Nốt cuối ô 4 chưa phải trắng → sửa
         let s = 0
         for (let j = 0; j <= lastInBar4; j++) s += durs[j]
@@ -1034,20 +1039,25 @@ export function checkAndRepair(
             durs.splice(first4, lastInBar4 - first4 + 1, 2)
             idx.splice(first4, lastInBar4 - first4 + 1, newIdx)
             rests.splice(first4, lastInBar4 - first4 + 1, false)
-            problems.push('ô 4 phải kết bằng Trắng, đã sửa')
+            problems.push(`ô ${endBar} phải kết bằng Trắng, đã sửa`)
           }
         }
       }
+      }  // end for endBars
     }
 
-    // Luật 11: Ô 8 phải kết bằng Tròn (4 phách)
+    // Luật 11: Ô 8 (và ô 16 nếu 16 ô) phải kết bằng Tròn (4 phách)
     if (level.durations.includes(4)) {
-      let beatPos = 0, lastInBar8 = -1
+      const endBars = level.bars === 16 ? [8, 16] : [8]
+      for (const endBar of endBars) {
+        if (endBar !== level.bars) continue  // ô giữa (8 của bài 16 ô) không cần kết Tròn
+      let beatPos = 0, lastInBar = -1
+      const targetBeat = endBar * B
       for (let i = 0; i < durs.length; i++) {
-        if (beatPos + durs[i] >= 8*B && beatPos < 8*B) lastInBar8 = i
+        if (beatPos + durs[i] >= targetBeat && beatPos < targetBeat) lastInBar = i
         beatPos += durs[i]
       }
-      if (lastInBar8 >= 0 && lastInBar8 === durs.length - 1 && Math.abs(durs[lastInBar8] - 4) > 1e-9) {
+      if (lastInBar >= 0 && lastInBar === durs.length - 1 && Math.abs(durs[lastInBar] - 4) > 1e-9) {
         // Gộp các nốt cuối thành 1 nốt tròn
         let totalEnd = 0, firstEnd = lastInBar8
         for (let j = lastInBar8; j >= 0; j--) {
@@ -1059,12 +1069,13 @@ export function checkAndRepair(
           durs.splice(firstEnd, lastInBar8 - firstEnd + 1, 4)
           idx.splice(firstEnd, lastInBar8 - firstEnd + 1, 0)  // nốt chủ = C
           rests.splice(firstEnd, lastInBar8 - firstEnd + 1, false)
-          problems.push('ô 8 phải kết bằng Tròn, đã sửa')
+          problems.push(`ô ${endBar} phải kết bằng Tròn, đã sửa`)
         }
       }
+      }  // end for endBars
     }
 
-    // Luật 9+10: Ô 6 mật độ ≥ ô 5, ô 7 mật độ ≤ ô 6
+    // Luật 9+10: áp dụng cho từng chu kỳ 8 ô
     {
       const density = (startBar: number, endBar: number) => {
         let n = 0
@@ -1075,38 +1086,40 @@ export function checkAndRepair(
         }
         return n
       }
-      const d5 = density(4, 5), d6 = density(5, 6), d7 = density(6, 7)
-      // Ô 6 mật độ ≥ ô 5
-      if (d6 < d5 && d5 > 0) {
-        // Tách 1 nốt dài ô 6 thành 2 nốt ngắn hơn
-        let bp = 0
-        for (let i = 0; i < durs.length; i++) {
-          const barPos = Math.floor(bp / B)
-          if (barPos === 5 && durs[i] >= 2 && level.durations.includes(1)) {
-            durs.splice(i, 1, 1, 1)
-            const v = idx[i] >= 0 ? idx[i] : 0
-            idx.splice(i, 1, v, clamp(v + 1, 0, top))
-            rests.splice(i, 1, false, false)
-            problems.push('ô 6 mật độ < ô 5, đã tăng')
-            break
+      // Áp dụng cho chu kỳ 1 (ô 4-7) và chu kỳ 2 nếu 16 ô (ô 12-15)
+      const cycles = level.bars === 16 ? [[4,5,6,7], [12,13,14,15]] : [[4,5,6,7]]
+      for (const [b4, b5, b6, b7] of cycles) {
+        const d5 = density(b5 - 1, b5), d6 = density(b6 - 1, b6), d7 = density(b7 - 1, b7)
+        // Ô 6 mật độ ≥ ô 5
+        if (d6 < d5 && d5 > 0) {
+          let bp = 0
+          for (let i = 0; i < durs.length; i++) {
+            const barPos = Math.floor(bp / B)
+            if (barPos === b6 - 1 && durs[i] >= 2 && level.durations.includes(1)) {
+              durs.splice(i, 1, 1, 1)
+              const v = idx[i] >= 0 ? idx[i] : 0
+              idx.splice(i, 1, v, clamp(v + 1, 0, top))
+              rests.splice(i, 1, false, false)
+              problems.push(`ô ${b6} mật độ < ô ${b5}, đã tăng`)
+              break
+            }
+            bp += durs[i]
           }
-          bp += durs[i]
         }
-      }
-      // Ô 7 mật độ ≤ ô 6
-      if (d7 > d6 && d7 > 0 && level.durations.some(x => x >= 2)) {
-        let bp = 0
-        for (let i = 0; i < durs.length; i++) {
-          const barPos = Math.floor(bp / B)
-          if (barPos === 6 && i + 1 < durs.length && Math.abs(durs[i] - 1) < 1e-9 && Math.abs(durs[i + 1] - 1) < 1e-9) {
-            // Gộp 2 nốt đen thành 1 trắng
-            durs.splice(i, 2, 2)
-            idx.splice(i, 2, idx[i])
-            rests.splice(i, 2, false)
-            problems.push('ô 7 mật độ > ô 6, đã giảm')
-            break
+        // Ô 7 mật độ ≤ ô 6
+        if (d7 > d6 && d7 > 0 && level.durations.some(x => x >= 2)) {
+          let bp = 0
+          for (let i = 0; i < durs.length; i++) {
+            const barPos = Math.floor(bp / B)
+            if (barPos === b7 - 1 && i + 1 < durs.length && Math.abs(durs[i] - 1) < 1e-9 && Math.abs(durs[i + 1] - 1) < 1e-9) {
+              durs.splice(i, 2, 2)
+              idx.splice(i, 2, idx[i])
+              rests.splice(i, 2, false)
+              problems.push(`ô ${b7} mật độ > ô ${b6}, đã giảm`)
+              break
+            }
+            bp += durs[i]
           }
-          bp += durs[i]
         }
       }
     }
