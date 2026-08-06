@@ -173,7 +173,11 @@ export default function PianoJourney({ onClose, studentName }: Props) {
   }, [setStageSync])
 
   if (stage === 'playing' && exercise) {
+    const lvl = getLevel(levelRef.current)
     return (<PianoErrorBoundary>
+      <div style={{ position: 'fixed', top: 8, right: 8, zIndex: 99, background: '#fff', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#8A8478', border: '1px solid #E5E7EB', opacity: 0.85 }}>
+        Bậc {lvl.id}: {lvl.hasLeftHand ? '🅱 có tay trái' : '✋ chỉ tay phải'} | leftHand={exercise.leftHand?.length || 0} nốt
+      </div>
       <LearningFlow
         exercise={exercise} onClose={onClose} onBack={backToTalk}
         onScore={(hit, total) => {
