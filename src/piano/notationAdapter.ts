@@ -35,14 +35,15 @@ const BASS_STAFF_MAP: Record<string, number> = {
   'C2': -8, 'D2': -7,
 }
 
-function parsePitch(pitch: string): { pc: string; octave: number } | null {
+function parsePitch(pitch: string | undefined): { pc: string; octave: number } | null {
+  if (!pitch) return null
   const m = pitch.match(/^([A-G][#b]?)(\d)$/i)
   if (!m) return null
   return { pc: m[1].charAt(0).toUpperCase() + m[1].slice(1), octave: parseInt(m[2]) }
 }
 
 export function pitchToFreq(pitch: string): number {
-  if (pitch === 'rest') return 0
+  if (!pitch || pitch === 'rest') return 0
   const p = parsePitch(pitch)
   if (!p) return 440
   const base = BASE_FREQ[p.pc] ?? 440
@@ -50,12 +51,12 @@ export function pitchToFreq(pitch: string): number {
 }
 
 export function pitchToStaff(pitch: string): number {
-  if (pitch === 'rest') return 3  // rest sits on middle line
+  if (!pitch || pitch === 'rest') return 3  // rest sits on middle line
   return STAFF_MAP[pitch] ?? 3
 }
 
 export function pitchToLabel(pitch: string): string {
-  if (pitch === 'rest') return 'Nghỉ'
+  if (!pitch || pitch === 'rest') return 'Nghỉ'
   const p = parsePitch(pitch)
   if (!p) return pitch
   return PC_LABEL[p.pc] ?? pitch
