@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase, SUPABASE_URL } from '../supabase'
-import { LEVELS, getLevel, currentLevelId, setLevelId, randomTheme } from './rules'
+import { LEVELS, getLevel, currentLevelId, setLevelId, randomTheme, loadPianoLevel } from './rules'
 import { takeJustAdvanced, soBaiDatSao, CAN_DE_LEN_BAC } from './library'
 
 type TalkState = 'idle' | 'connecting' | 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
@@ -93,6 +93,8 @@ export default function TalkWithTeacher({ onClose, onCreateMission, busy }: Prop
   // TẠM cho giai đoạn thí nghiệm: đổi bậc ngay trên máy. Khi có dữ liệu học viên
   // thật thì bỏ chip này đi, bậc lấy từ hồ sơ do thầy đặt ở /admin.
   const [levelId, setLvl]       = useState(currentLevelId)
+  // Kéo bậc từ server khi mount
+  useEffect(() => { void loadPianoLevel().then(() => setLvl(currentLevelId())) }, [])
   // Vừa lên bậc thì khoe một lần rồi thôi (cờ tự xoá khi đọc)
   const [vuaLenBac]             = useState(takeJustAdvanced)
   const level = getLevel(levelId)

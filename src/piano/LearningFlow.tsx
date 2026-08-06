@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { NoteSheet } from '../elearn/guitarRenderers'
 import type { NoteItem } from '../elearn/guitarRenderers'
-import { exerciseToNoteItems, pitchToFreq } from './notationAdapter'
+import { exerciseToNoteItems, pitchToFreq, playableNoteCount, leftHandToNoteItems } from './notationAdapter'
 import { playTone } from '../elearn/audio'
 import { usePitchDetector } from './usePitchDetector'
 import { pitchClass } from '../elearn/pitch'
@@ -436,7 +436,9 @@ function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
       if (i >= exercise.notes.length) { setDone(true); setPlaying(false); setCursor(-1); return }
       setCursor(i)
       const note = exercise.notes[i]
-      try { playTone(pitchToFreq(note.pitch), note.duration * beatMs / 1000) } catch { /* */ }
+      if (note.pitch !== 'rest') {
+        try { playTone(pitchToFreq(note.pitch), note.duration * beatMs / 1000) } catch { /* */ }
+      }
       i++
       timerRef.current = window.setTimeout(tick, note.duration * beatMs)
     }
@@ -460,6 +462,7 @@ function StepListen({ exercise, noteItems, onComplete }: StepComponentProps) {
       }}>
         <NoteSheet notes={noteItems} active={cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
+      <LeftHandBar exercise={exercise} cursor={cursor} />
 
       {/* Bottom CTA */}
       <BottomBar
@@ -516,6 +519,13 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
     if (stateRef.current === 'idle') return
     const curNote = exercise.notes[cursorRef.current]
     if (!curNote) return
+    // Dấu lặng — tự động qua, không cần mic
+    if (curNote.pitch === 'rest') {
+      const next = cursorRef.current + 1
+      if (next >= exercise.notes.length) { stopAll(); setSt('idle'); doneRef.current(); return }
+      setCur(next); setSt('active')
+      return
+    }
     const d = detector.detect()
     if (!d) { stableRef.current = 0; return }
 
@@ -596,6 +606,7 @@ function StepNoteByNote({ exercise, noteItems, onComplete }: StepComponentProps)
       }}>
         <NoteSheet notes={noteItems} active={state === 'idle' ? -1 : cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
+      <LeftHandBar exercise={exercise} cursor={cursor} />
 
       {/* Bottom */}
       <BottomBar
@@ -691,6 +702,8 @@ function StepRhythm({ exercise, noteItems, onComplete, onScore }: StepComponentP
       if (c < 0 || c >= exercise.notes.length) return
       const d = detector.detect()
       if (!d) return
+      // Dấu lặng — tự động đúng, không cần mic nghe
+      if (exercise.notes[c]?.pitch === 'rest') { hitRef.current = true; return }
       if (d.pc === pitchClass(pitchToFreq(exercise.notes[c].pitch))) hitRef.current = true
     }
     const id = setInterval(loop, 60)
@@ -702,7 +715,8 @@ function StepRhythm({ exercise, noteItems, onComplete, onScore }: StepComponentP
   const startPlayback = () => {
     stopPlayback()
     setPlaying(true); setDone(false)
-    setNoteResults(new Array(exercise.notes.length).fill('pending'))
+    const playableTotal = playableNoteCount(exercise)
+    setNoteResults(new Array(playableTotal).fill('pending'))
     const beatMs = 60000 / bpm
     const results: ('correct' | 'wrong')[] = []
       // Hàng chấm là ẢNH CHIẾU của chính mảng `results` đã tính điểm — một nguồn
@@ -714,23 +728,24 @@ function StepRhythm({ exercise, noteItems, onComplete, onScore }: StepComponentP
         setNoteResults(arr)
       }
     let i = 0
+    let playableIdx = 0  // chỉ đếm nốt thật (bỏ qua rest)
     const tick = () => {
       if (i >= exercise.notes.length) {
         setPlaying(false); setDone(true); cursorRef.current = -1; setCursor(-1)
-        // Chấm NỐT CUỐI trước khi tổng kết. Bản cũ thoát ngay ở đây nên nốt cuối
-        // không bao giờ được tính — bài 8 nốt chỉ chấm 7, bé đàn đúng nốt kết vẫn
-        // không được điểm.
-        results.push(hitRef.current ? 'correct' : 'wrong')
+        // Chấm NỐT CUỐI trước khi tổng kết
+        const curNote = exercise.notes[i - 1]
+        results.push((curNote?.pitch === 'rest' || hitRef.current) ? 'correct' : 'wrong')
         veCham()
         const hit = results.filter(r => r === 'correct').length
-        setScore({ hit, total: results.length })
-        playResultSound(starsOf(hit, results.length))   // nghe cũng biết kết quả
-        onScore?.(hit, results.length)                  // lưu vào thư viện bài hát
-        if (hit / results.length >= 0.5) setTimeout(onComplete, 1500)
+        setScore({ hit, total: playableTotal })
+        playResultSound(starsOf(hit, playableTotal))
+        onScore?.(hit, playableTotal)
+        if (hit / playableTotal >= 0.5) setTimeout(onComplete, 1500)
         return
       }
       if (i > 0) {
-        results.push(hitRef.current ? 'correct' : 'wrong')
+        const prevNote = exercise.notes[i - 1]
+        results.push((prevNote?.pitch === 'rest' || hitRef.current) ? 'correct' : 'wrong')
         veCham()
       }
       cursorRef.current = i; setCursor(i)
@@ -779,6 +794,7 @@ function StepRhythm({ exercise, noteItems, onComplete, onScore }: StepComponentP
       }}>
         <NoteSheet notes={noteItems} active={cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
+      <LeftHandBar exercise={exercise} cursor={cursor} />
 
       {/* Score dots */}
       {playing && (
@@ -886,6 +902,8 @@ function StepPerform({ exercise, noteItems, onBack, onScore }: StepComponentProp
     const loop = () => {
       const c = cursorRef.current
       if (c < 0 || c >= exercise.notes.length) return
+      // Dấu lặng — tự động đúng, không cần mic nghe
+      if (exercise.notes[c]?.pitch === 'rest') { hitRef.current = true; return }
       const d = detector.detect()
       if (!d) return
       if (d.pc === pitchClass(pitchToFreq(exercise.notes[c].pitch))) hitRef.current = true
@@ -901,18 +919,23 @@ function StepPerform({ exercise, noteItems, onBack, onScore }: StepComponentProp
     setPlaying(true); setDone(false)
     const beatMs = 60000 / bpm
     const results: ('correct' | 'wrong')[] = []
+    const playableTotal = playableNoteCount(exercise)
     let i = 0
     const tick = () => {
       if (i >= exercise.notes.length) {
         setPlaying(false); setDone(true); cursorRef.current = -1; setCursor(-1)
-        results.push(hitRef.current ? 'correct' : 'wrong')   // chấm cả NỐT CUỐI
+        const curNote = exercise.notes[i - 1]
+        results.push((curNote?.pitch === 'rest' || hitRef.current) ? 'correct' : 'wrong')
         const hit = results.filter(r => r === 'correct').length
-        setScore({ hit, total: results.length })
-        playResultSound(starsOf(hit, results.length))   // nghe cũng biết kết quả
-        onScore?.(hit, results.length)                  // lưu vào thư viện bài hát
+        setScore({ hit, total: playableTotal })
+        playResultSound(starsOf(hit, playableTotal))
+        onScore?.(hit, playableTotal)
         return
       }
-      if (i > 0) results.push(hitRef.current ? 'correct' : 'wrong')
+      if (i > 0) {
+        const prevNote = exercise.notes[i - 1]
+        results.push((prevNote?.pitch === 'rest' || hitRef.current) ? 'correct' : 'wrong')
+      }
       cursorRef.current = i; setCursor(i)
       hitRef.current = false
       i++
@@ -953,6 +976,7 @@ function StepPerform({ exercise, noteItems, onBack, onScore }: StepComponentProp
       }}>
         <NoteSheet notes={noteItems} active={cursor} showDur beatsPerBar={exercise.beatsPerBar ?? 4} />
       </div>
+      <LeftHandBar exercise={exercise} cursor={cursor} />
 
       {/* Bảng điểm — bỏ % (trẻ chưa hiểu phần trăm) và bỏ hết lời khen bằng chữ */}
       {done && score && <ScoreCard hit={score.hit} total={score.total} />}
@@ -984,6 +1008,33 @@ function StepPerform({ exercise, noteItems, onBack, onScore }: StepComponentProp
         showSpeed={false}
         onSpeedCycle={() => {}}
       />
+    </div>
+  )
+}
+
+// ── Hiển thị tay trái (bass) ──────────────────────────────────────────────────
+
+function LeftHandBar({ exercise, cursor }: { exercise: any; cursor: number }) {
+  const items = leftHandToNoteItems(exercise)
+  if (!items.length) return null
+  return (
+    <div style={{
+      margin: '2px 26px 4px',
+      display: 'flex', alignItems: 'center', gap: 6,
+      fontSize: 12, fontWeight: 700, color: '#8A8478',
+    }}>
+      <span style={{ fontSize: 14 }}>🅱</span>
+      {items.map((n, i) => (
+        <span key={i} style={{
+          padding: '2px 10px',
+          borderRadius: 8,
+          background: cursor >= 0 && i === Math.floor(cursor / (exercise.beatsPerBar ?? 4)) ? '#FDE68A' : '#F5F2EB',
+          color: cursor >= 0 && i === Math.floor(cursor / (exercise.beatsPerBar ?? 4)) ? '#92400E' : '#8A8478',
+          transition: 'background .2s',
+        }}>
+          {n.label}
+        </span>
+      ))}
     </div>
   )
 }

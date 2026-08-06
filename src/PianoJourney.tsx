@@ -10,14 +10,14 @@
 // KHÔNG thêm màn "gõ yêu cầu" hay mic Web Speech riêng: đã thử và bỏ vì
 // `webkitSpeechRecognition` có mặt nhưng CHẾT trong WKWebView.
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
 import TalkWithTeacher from './piano/TalkWithTeacher'
 import HomeScreen from './piano/HomeScreen'
 import SongLibrary from './piano/SongLibrary'
-import { rememberSong, recordScore, advanceIfEarned } from './piano/library'
-import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise } from './piano/rules'
+import { rememberSong, recordScore, advanceIfEarned, loadLibraryFromServer } from './piano/library'
+import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise, loadPianoLevel } from './piano/rules'
 import type { Exercise, PianoLevel } from './piano/rules'
 
 type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
@@ -71,7 +71,20 @@ interface Props {
 export default function PianoJourney({ onClose, studentName }: Props) {
   const [stage, setStage]       = useState<Stage>('home')
   const [exercise, setExercise] = useState<Exercise | null>(null)
+  const [ready, setReady]       = useState(false)
   const levelRef = useRef(currentLevelId())   // độ khó của bài đang mở, dùng khi ghi điểm
+
+  // Kéo dữ liệu từ server khi mount — bậc + thư viện bài hát
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      await Promise.all([loadPianoLevel(), loadLibraryFromServer()])
+      if (cancelled) return
+      levelRef.current = currentLevelId()   // cập nhật sau khi load từ server
+      setReady(true)
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const stageRef = useRef<Stage>('home')
   const setStageSync = useCallback((s: Stage) => { stageRef.current = s; setStage(s) }, [])

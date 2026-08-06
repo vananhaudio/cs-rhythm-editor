@@ -20,8 +20,8 @@ const SYSTEM = `Bạn soạn bài tập piano ngắn cho trẻ 5–12 tuổi Vi�
 CHỈ trả về JSON hợp lệ, không giải thích, không markdown, không rào đầu:
 {"title":"Tên bài tiếng Việt","bpm":80,"notes":[{"pitch":"C4","startBeat":0,"duration":1}]}
 
-- pitch: tên nốt Anh + quãng tám, ví dụ C4, D4, E4.
-- duration: 1 = nốt đen, 2 = trắng, 4 = tròn.
+- pitch: tên nốt Anh + quãng tám, ví dụ C4, D4, E4. Dùng "rest" cho dấu lặng.
+- duration: 1 = nốt đen, 2 = trắng, 4 = tròn, 0.5 = móc đơn.
 - startBeat: vị trí phách, bắt đầu từ 0, cộng dồn theo duration của nốt trước.
 - title: tiếng Việt, gợi đúng điều bé xin, ngắn và vui.
 

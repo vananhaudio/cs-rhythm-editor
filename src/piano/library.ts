@@ -2,15 +2,13 @@
 // Lưu lại mọi bản nhạc bé đã chơi, kèm điểm, để bé mở ra tập lại và phụ huynh
 // mở ra xem con học thế nào.
 //
-// ⚠️ HIỆN LƯU TRÊN MÁY (localStorage), KHÔNG đồng bộ lên server.
-// Nghĩa là: đổi máy hoặc xoá app là mất, và phụ huynh phải xem trên chính máy bé
-// dùng. Muốn nhiều máy cùng thấy thì đổi 4 hàm đọc/ghi bên dưới sang Supabase —
-// phần còn lại của app không phải sửa gì, vì mọi nơi đều chỉ gọi qua đây.
-// (Chưa làm ngay vì tạo bảng cần chạy SQL trên dashboard, mà giai đoạn này đang
-// thí nghiệm luồng.)
+// Đọc/ghi qua Supabase (bảng piano_songs) làm nguồn chính.
+// localStorage + module cache làm fallback tức thời — UI không bao giờ phải chờ mạng.
+// Mỗi lần ghi: cập nhật cache + localStorage NGAY, rồi đồng bộ lên server bất đồng bộ.
 
 import type { Exercise } from './rules'
 import { LEVELS, currentLevelId, setLevelId } from './rules'
+import { supabase } from '../supabase'
 
 export interface SavedSong {
   /** Khoá chống trùng — cùng giai điệu + trường độ thì coi là một bài. */
@@ -31,22 +29,107 @@ export interface SavedSong {
 const KEY = 'piano_library'
 const MAX = 60              // giữ 60 bài gần nhất, tránh phình localStorage
 
+/** Module cache — null = chưa nạp. */
+let _cache: SavedSong[] | null = null
+let _serverLoaded = false
+
 /** Chữ ký bài: cao độ + trường độ. Hai bài khác tiết tấu là hai bài khác nhau. */
 export function songId(ex: Exercise): string {
   return ex.notes.map(n => `${n.pitch}:${n.duration}`).join('-')
 }
 
 function read(): SavedSong[] {
+  if (_cache != null) return _cache
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || '[]')
-    if (!Array.isArray(raw)) return []
-    return raw.filter(s => s && typeof s.id === 'string' && Array.isArray(s.exercise?.notes))
-  } catch { return [] }
+    if (!Array.isArray(raw)) { _cache = []; return [] }
+    _cache = raw.filter(s => s && typeof s.id === 'string' && Array.isArray(s.exercise?.notes))
+    return _cache
+  } catch { _cache = []; return [] }
 }
 
 function write(list: SavedSong[]) {
-  try { localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX))) } catch { /* đầy bộ nhớ thì bỏ qua */ }
+  _cache = list.slice(0, MAX)
+  try { localStorage.setItem(KEY, JSON.stringify(_cache)) } catch { /* đầy bộ nhớ thì bỏ qua */ }
 }
+
+// ── Server sync ──────────────────────────────────────────────────────────────
+
+async function _upsertToServer(s: SavedSong): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await supabase.from('piano_songs').upsert({
+      user_id: session.user.id,
+      song_id: s.id,
+      title: s.title,
+      level_id: s.levelId,
+      exercise: s.exercise as any,
+      created_at: new Date(s.createdAt).toISOString(),
+      last_played_at: new Date(s.lastPlayedAt).toISOString(),
+      plays: s.plays,
+      best_hit: s.bestHit,
+      best_total: s.bestTotal,
+    }, { onConflict: 'user_id, song_id' })
+  } catch { /* mạng lỗi — đã có cache + localStorage */ }
+}
+
+async function _deleteFromServer(songId: string): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await supabase.from('piano_songs').delete().eq('song_id', songId).eq('user_id', session.user.id)
+  } catch { /* */ }
+}
+
+/** Gọi MỘT LẦN khi app mount để kéo dữ liệu từ server.
+ *  Merge với localStorage: server thắng khi cùng bài, giữ bài local chưa từng lên server. */
+export async function loadLibraryFromServer(): Promise<void> {
+  if (_serverLoaded) return
+  _serverLoaded = true
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const { data } = await supabase.from('piano_songs')
+      .select('*').eq('user_id', session.user.id)
+      .order('last_played_at', { ascending: false }).limit(MAX)
+    if (!data?.length) return
+
+    const local = read()
+    const map = new Map(local.map(s => [s.id, s]))
+    const serverIds = new Set<string>()
+
+    for (const r of data as any[]) {
+      const ss: SavedSong = {
+        id: r.song_id,
+        title: r.title,
+        levelId: r.level_id,
+        exercise: r.exercise as Exercise,
+        createdAt: new Date(r.created_at).getTime(),
+        lastPlayedAt: new Date(r.last_played_at).getTime(),
+        plays: r.plays ?? 0,
+        bestHit: r.best_hit ?? 0,
+        bestTotal: r.best_total ?? 0,
+      }
+      serverIds.add(ss.id)
+      const loc = map.get(ss.id)
+      // Server thắng, trừ khi local mới hơn (bé vừa tập xong trên máy này)
+      if (!loc || ss.lastPlayedAt >= loc.lastPlayedAt) {
+        map.set(ss.id, ss)
+      }
+    }
+
+    const merged = [...map.values()].sort((a, b) => b.lastPlayedAt - a.lastPlayedAt)
+    write(merged)
+
+    // Đồng bộ ngược: bài local chưa có trên server → đẩy lên
+    for (const s of merged) {
+      if (!serverIds.has(s.id)) void _upsertToServer(s)
+    }
+  } catch { /* mạng lỗi — đã có localStorage */ }
+}
+
+// ── Public API (không đổi chữ ký) ─────────────────────────────────────────────
 
 /** Danh sách bài, mới chơi gần nhất lên đầu. */
 export function listSongs(): SavedSong[] {
@@ -65,14 +148,17 @@ export function rememberSong(ex: Exercise, levelId: number, now: number): void {
   if (cu) {
     cu.lastPlayedAt = now
     write(list)
+    void _upsertToServer(cu)
     return
   }
-  list.unshift({
+  const moi: SavedSong = {
     id, title: ex.title, levelId, exercise: ex,
     createdAt: now, lastPlayedAt: now,
     plays: 0, bestHit: 0, bestTotal: 0,
-  })
+  }
+  list.unshift(moi)
   write(list)
+  void _upsertToServer(moi)
 }
 
 /** Ghi điểm sau khi bé chơi xong. Chỉ nâng điểm khi tốt hơn lần trước. */
@@ -87,18 +173,27 @@ export function recordScore(ex: Exercise, levelId: number, hit: number, total: n
   }
   s.plays += 1
   s.lastPlayedAt = now
-  // So bằng TỈ LỆ, vì hai lần chơi có thể khác tổng số nốt
   const cuTot = s.bestTotal ? s.bestHit / s.bestTotal : -1
   if (hit / total > cuTot) { s.bestHit = hit; s.bestTotal = total }
   write(list)
+  void _upsertToServer(s)
 }
 
 export function removeSong(id: string): void {
   write(read().filter(s => s.id !== id))
+  void _deleteFromServer(id)
 }
 
 export function clearLibrary(): void {
+  _cache = []
   try { localStorage.removeItem(KEY) } catch { /* */ }
+  void (async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      await supabase.from('piano_songs').delete().eq('user_id', session.user.id)
+    } catch { /* */ }
+  })()
 }
 
 // ── Tiện ích hiển thị ────────────────────────────────────────────────────────
@@ -125,16 +220,6 @@ export function tongKet(list: SavedSong[]) {
 }
 
 // ── Tự lên bậc ──────────────────────────────────────────────────────────────
-// Tài liệu của thầy: xong Ex.0 thì mở Ex.1, giữ kiến thức cũ + thêm một nốt.
-// Ở đây làm dạng TỰ TIẾN, không khoá bậc. Thầy vẫn đổi tay được bất cứ lúc nào
-// bằng chip trên màn Lyra — máy chỉ gợi đường, không chặn đường.
-//
-// ⚠️ MỘT BÀI ĐẠT 2 SAO KHÔNG PHẢI LÀ HỌC XONG MỘT BẬC.
-// Bản đầu cho lên bậc ngay sau một bài, mà bậc 1 chỉ có mỗi nốt Đô nên gần như
-// không thể trượt → chỉ 14 bài là chạm bậc 15, xong bé nhận bài khó nhất trong
-// khi tay vẫn còn ở mức bậc 1. Nay phải LÀM TỐT ĐỀU: đủ 3 BÀI KHÁC NHAU ở bậc
-// hiện tại cùng đạt từ 2 sao. Đếm bằng chính thư viện nên không cần biến đếm
-// riêng, và "khác nhau" là miễn phí — hai bài trùng giai điệu vốn chung một id.
 const ADVANCE_KEY = 'piano_just_advanced'
 
 /** Số bài khác nhau phải đạt ≥2 sao ở một bậc thì mới được lên bậc kế. */
