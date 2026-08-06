@@ -263,6 +263,7 @@ Deno.serve(async (req) => {
       if (body.pen_name !== undefined) updates.pen_name = body.pen_name
       if (body.author_name !== undefined) updates.author_name = body.author_name
       if (body.featured !== undefined) updates.featured = !!body.featured
+      if (body.status !== undefined) updates.status = body.status
 
       if (Object.keys(updates).length > 0) {
         const { error } = await db.from('stories').update(updates).eq('id', story_id)
@@ -337,6 +338,13 @@ Deno.serve(async (req) => {
         await db.from('stories').update({ photos: [{ url: publicUrl, caption: '' }] }).eq('id', story_id)
         return json({ ok: true, url: publicUrl })
       } catch (e) { return json({ error: String(e) }, 500) }
+    }
+    if (body.action === 'admin_delete_story') {
+      const { story_id } = body
+      if (!story_id) return json({ error: 'Missing story_id' }, 400)
+      const { error } = await db.from('stories').delete().eq('id', story_id)
+      if (error) return json({ error: error.message }, 500)
+      return json({ ok: true })
     }
   }
 

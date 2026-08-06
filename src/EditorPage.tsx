@@ -501,9 +501,11 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const [featBusy, setFeatBusy] = useState(false)
   const toggleFeatured = async () => {
     setFeatBusy(true); setStatusMsg('')
-    const { error } = await supabase.from('stories').update({ featured: !isFeatured }).eq('id', story.id)
-    if (!error) { setIsFeatured(!isFeatured); story.featured = !isFeatured; setStatusMsg(isFeatured ? 'Đã bỏ nổi bật.' : '⭐ Đã đánh dấu nổi bật!'); if (onUpdate) onUpdate() }
-    else setStatusMsg('Lỗi: ' + error.message)
+    const { data, error } = await supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, featured: !isFeatured },
+    })
+    if (!error && data?.ok) { setIsFeatured(!isFeatured); story.featured = !isFeatured; setStatusMsg(isFeatured ? 'Đã bỏ nổi bật.' : '⭐ Đã đánh dấu nổi bật!'); if (onUpdate) onUpdate() }
+    else setStatusMsg('Lỗi: ' + ((data as any)?.error || error?.message || 'Không cập nhật được'))
     setFeatBusy(false)
   }
 
@@ -515,8 +517,10 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     const label = isHidden ? 'hiện lại' : 'ẩn'
     if (!isHidden && !confirm(`Ẩn "${story.title}" khỏi Tạp chí?\n\nBài sẽ không hiển thị công khai nhưng vẫn còn trong hệ thống. Có thể hiện lại sau.`)) return
     setHideBusy(true); setStatusMsg('')
-    const { error } = await supabase.from('stories').update({ status: newStatus }).eq('id', story.id)
-    if (!error) {
+    const { data, error } = await supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, status: newStatus },
+    })
+    if (!error && data?.ok) {
       story.rawStatus = newStatus
       story.status = DB_STATUS_MAP[newStatus] || 'published'
       setStatusMsg(isHidden ? '✅ Đã hiện lại trên Tạp chí.' : '🙈 Đã ẩn khỏi Tạp chí.')
@@ -530,9 +534,11 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const handleDelete = async () => {
     if (!confirm(`Xoá vĩnh viễn câu chuyện "${story.title}"?\n\nHành động này KHÔNG thể hoàn tác.`)) return
     setDelBusy(true); setStatusMsg('')
-    const { error } = await supabase.from('stories').delete().eq('id', story.id)
-    if (!error) { onClose(); if (onUpdate) onUpdate(); return }
-    setStatusMsg('Lỗi: ' + error.message)
+    const { data, error } = await supabase.functions.invoke('story-ai', {
+      body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_delete_story', story_id: story.id },
+    })
+    if (!error && (data as any)?.ok) { onClose(); if (onUpdate) onUpdate(); return }
+    setStatusMsg('Lỗi: ' + ((data as any)?.error || error?.message || 'Không xoá được'))
     setDelBusy(false)
   }
 
