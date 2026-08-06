@@ -1,33 +1,167 @@
-import React, { useState } from 'react'
-import HomeScreen from './piano/HomeScreen'
-import TalkWithTeacher from './piano/TalkWithTeacher'
-import SongLibrary from './piano/SongLibrary'
+// Piano Journey — Home → nói chuyện với Lyra → tập bài.
+//
+// Luồng: HomeScreen (theo HOME_SCREEN_SPEC.md) → TalkWithTeacher (WebRTC Realtime)
+//        → Lyra gọi công cụ tao_bai_tap → generateMission → LearningFlow.
+//
+// Bài tập đi qua 3 lớp: LUẬT (src/piano/rules.ts) → SINH (AI) → KIỂM (checkAndRepair).
+// Lớp KIỂM mới là thứ đảm bảo bé không nhận bài vượt bậc — luật viết trong prompt
+// chỉ là gợi ý, AI vẫn phạm như thường.
+//
+// KHÔNG thêm màn "gõ yêu cầu" hay mic Web Speech riêng: đã thử và bỏ vì
+// `webkitSpeechRecognition` có mặt nhưng CHẾT trong WKWebView.
+
+import React, { useState, useRef, useCallback, useEffect } from 'react'
+import { supabase, SUPABASE_URL } from './supabase'
 import LearningFlow from './piano/LearningFlow'
+import TalkWithTeacher from './piano/TalkWithTeacher'
+import HomeScreen from './piano/HomeScreen'
+import SongLibrary from './piano/SongLibrary'
+import { rememberSong, recordScore, advanceIfEarned, loadLibraryFromServer } from './piano/library'
+import { getLevel, currentLevelId, buildPrompt, checkAndRepair, rememberExercise, loadPianoLevel } from './piano/rules'
+import type { Exercise, PianoLevel } from './piano/rules'
 
 type Stage = 'home' | 'talk' | 'generating' | 'playing' | 'library'
 
-export default function PianoJourney({ onClose, studentName }: { onClose?: () => void; studentName?: string }) {
-  const [testStage, setTestStage] = useState<Stage>('home')
+// ── Error Boundary ──────────────────────────────────────────────────────────
+class PianoErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: string | null }> {
+  constructor(props: any) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(e: Error) { return { error: e.message || String(e) } }
+  componentDidCatch(error: Error, info: any) {
+    console.error('[Piano]', error.message, error.stack)
+    try { (window as any).__pianoErr = error.message + ' | ' + (error.stack || '') } catch {}
+  }
+  render() {
+    if (this.state.error) {
+      const msg = this.state.error
+      const short = msg.length > 150 ? msg.slice(0, 150) + '…' : msg
+      return (
+        <div style={{ height: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "system-ui", textAlign: "center", background: "#FFF8F0" }}>
+          <div style={{ fontSize: 40, marginBottom: 6 }}>🎹</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#B45309", marginBottom: 6 }}>Có chút trục trặc</div>
+          <div style={{ fontSize: 11, color: "#333", maxWidth: 320, lineHeight: 1.5, wordBreak: "break-all", background: "#FFF", padding: 10, borderRadius: 10, border: "1px solid #FDE68A", maxHeight: 220, overflow: "auto", whiteSpace: "pre-wrap", textAlign: "left" }}>{short}</div>
+          <button onClick={() => { this.setState({ error: null }); window.location.reload() }} style={{ marginTop: 14, padding: "12px 28px", borderRadius: 14, border: "none", background: "#F59E0B", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Thử lại</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
-  return (
-    <div style={{ padding: 12, background: '#fff', minHeight: '100dvh', fontFamily: 'system-ui' }}>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>🔍 Test Render (+LearningFlow import)</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-        {(['home', 'talk', 'library'] as Stage[]).map(s => (
-          <button key={s} onClick={() => setTestStage(s)} style={{
-            padding: '8px 14px', borderRadius: 10, border: 'none',
-            background: testStage === s ? '#F59E0B' : '#F3F4F6',
-            color: testStage === s ? '#fff' : '#333',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}>{s}</button>
-        ))}
-      </div>
-      <div style={{ border: '1px solid #E5E7EB', borderRadius: 12, padding: 8, minHeight: 200 }}>
-        {testStage === 'home' && <HomeScreen studentName={studentName} onTalkToLyra={() => {}} onContinue={() => {}} onOpenSongs={() => setTestStage('library')} onOpenMenu={onClose} />}
-        {testStage === 'talk' && <TalkWithTeacher onClose={() => setTestStage('home')} />}
-        {testStage === 'library' && <SongLibrary onBack={() => setTestStage('home')} onPlay={() => {}} onAskLyra={() => setTestStage('talk')} />}
-      </div>
-      <div style={{ marginTop: 8, fontSize: 11, color: '#059669' }}>LearningFlow imported (chưa render) — nếu thấy dòng này là OK</div>
-    </div>
+
+
+// ── DEBUG: AI helpers disabled ──
+const AI_TIMEOUT_MS = 8000
+const REDO_THRESHOLD = 3
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([p, new Promise<null>(resolve => window.setTimeout(() => resolve(null), ms))])
+}
+
+async function askAI(_prompt: string, _signal: AbortSignal): Promise<any> { return null }
+
+async function attempt(_chuDe: string, _level: any, _extra = "") {
+  return { raw: null, exercise: null, problems: ["AI disabled for debug"] }
+}
+
+interface Props {
+  onClose?: () => void
+  /** Tên bé cho lời chào ở Home. Không có thì dùng mặc định của spec. */
+  studentName?: string
+}
+
+export default function PianoJourney({ onClose, studentName }: Props) {
+  const [stage, setStage]       = useState<Stage>('home')
+  const [exercise, setExercise] = useState<Exercise | null>(null)
+  const [ready, setReady]       = useState(false)
+  const levelRef = useRef(currentLevelId())   // độ khó của bài đang mở, dùng khi ghi điểm
+
+  // Kéo dữ liệu từ server khi mount — bậc + thư viện bài hát
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      // TẠM TẮT ĐỂ DEBUG: await Promise.all([loadPianoLevel(), loadLibraryFromServer()])
+      if (cancelled) return
+      levelRef.current = currentLevelId()   // cập nhật sau khi load từ server
+      setReady(true)
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const stageRef = useRef<Stage>('home')
+  const setStageSync = useCallback((s: Stage) => { stageRef.current = s; setStage(s) }, [])
+
+  // ── Tạo bài tập: LUẬT → AI → KIỂM ──
+  const generateMission = useCallback(async (_chuDe: string) => {
+    // DEBUG: stub — không gọi AI
+    console.log('generateMission stub')
+  }, [setStageSync])
+
+  const backToTalk = useCallback(() => {
+    setExercise(null)
+    setStageSync('talk')
+  }, [setStageSync])
+
+  const backToHome = useCallback(() => {
+    setExercise(null)
+    setStageSync('home')
+  }, [setStageSync])
+
+  if (stage === 'playing' && exercise) {
+    return (<PianoErrorBoundary>
+      <LearningFlow
+        exercise={exercise} onClose={onClose} onBack={backToTalk}
+        onScore={(hit, total) => {
+          recordScore(exercise, levelRef.current, hit, total, Date.now())
+          advanceIfEarned(levelRef.current, hit, total)   // đạt 2 sao thì tự sang bậc kế
+        }}
+      />
+    )
+    </PianoErrorBoundary>)
+  }
+
+  if (stage === 'library') {
+    return (<PianoErrorBoundary>
+      <SongLibrary
+        onBack={backToHome}
+        onAskLyra={() => setStageSync('talk')}
+        onPlay={song => {
+          levelRef.current = song.levelId
+          setExercise(song.exercise)
+          setStageSync('playing')
+        }}
+      />
+    )
+    </PianoErrorBoundary>)
+  }
+
+  if (stage === 'home') {
+    return (<PianoErrorBoundary>
+      <HomeScreen
+        studentName={studentName}
+        // Chưa lưu tiến độ giữa các phiên, nên thẻ "Tiếp tục" hiện nội dung mặc
+        // định của spec; bấm vào thì Lyra soạn bài mới.
+        current={exercise ? { title: exercise.title, step: 1, totalSteps: 4 } : null}
+        onTalkToLyra={() => setStageSync('talk')}
+        onContinue={() => {
+          if (exercise) { setStageSync('playing'); return }
+          setStageSync('talk')
+        }}
+        // Spec không định nghĩa đích đến cho hamburger; đây là lối duy nhất ra
+        // khỏi tool nên tạm nối vào đó.
+        onOpenSongs={() => setStageSync('library')}
+        onOpenMenu={onClose}
+      />
+    )
+    </PianoErrorBoundary>)
+  }
+
+  // Giữ màn hội thoại mounted khi 'generating' để tiếng Lyra không bị cắt giữa câu.
+  return (<PianoErrorBoundary>
+    <TalkWithTeacher
+      onClose={backToHome}
+      onCreateMission={generateMission}
+      busy={stage === 'generating'}
+    />
   )
+  </PianoErrorBoundary>)
 }
