@@ -361,13 +361,29 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
     '- Nốt đầu và nốt cuối của bài phải là nốt chủ âm (Đô).',
     '- Nốt trong hợp âm Đô trưởng (C, E, G) nên ở phách mạnh; nốt phụ (D, F, A, B) ở phách nhẹ.',
     '',
-    'LUẬT TRƯỜNG ĐỘ (QUAN TRỌNG — vi phạm là sai):',
-    `- Phải dùng ĐÚNG ${level.durations.length >= 2 ? Math.min(level.durations.length, 3) : 1} loại trường độ trong bài này (trong số: ${durList}).`,
-    `- KHÔNG được dùng quá ${level.id <= 8 ? Math.min(level.durations.length, 3) : level.id <= 11 ? Math.min(level.durations.length, 4) : Math.min(level.durations.length, 5)} loại trường độ khác nhau trong một bài.`,
-    '- Trong một câu 4 ô, không dùng cùng một trường độ cho cả 4 ô — phải có ít nhất 2 loại.',
-    '- Nốt dài nhất của câu phải ở ĐẦU hoặc CUỐI câu — không để lưng chừng giữa câu.',
-    '- KHÔNG để 2 ô nhịp liên tiếp toàn nốt tròn (mất mạch chảy).',
-    '- Nốt càng cao → trường độ càng dài (tạo đỉnh điểm). Nốt cao nhất bài phải là nốt trắng hoặc tròn.',
+    'LUẬT TRƯỜNG ĐỘ 8 Ô NHỊP (15 luật — theo CHỨC NĂNG, không cấm đoán):',
+    '',
+    'NGUYÊN LÝ: Motif = Cao độ + Trường độ. Mẫu trường độ ô 1-2 là Rhythmic DNA của bài.',
+    `- Trường độ được dùng: ${durList}.`,
+    `- Số loại trường độ tối đa: ${level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5}.`,
+    '',
+    'CÂU A (ô 1-4) — THIẾT LẬP → PHÁT TRIỂN → NGHỈ:',
+    '  Luật 4-5: Ô 1-2 thiết lập Rhythmic DNA (ổn định, lặp > biến đổi).',
+    '  Luật 6: Ô 3 PHẢI có biến đổi trường độ (đổi mật độ, vị trí nốt dài/ngắn, cách chia phách).',
+    '  Luật 7: Ô 4 kết câu = nốt TRẮNG (2 phách). Điểm nghỉ nhưng chưa kết thúc bài.',
+    '',
+    'CÂU A\' (ô 5-8) — TÁI HIỆN → PHÁT TRIỂN → DẪN → KẾT:',
+    '  Luật 8: Ô 5-6 tái hiện Rhythmic DNA của ô 1-2 (lặp nguyên hoặc biến đổi nhẹ).',
+    '  Luật 9: Ô 6 PHÁT TRIỂN — mật độ nốt ô 6 ≥ mật độ ô 5 (tăng chuyển động).',
+    '  Luật 10: Ô 7 DẪN — mật độ ô 7 ≤ mật độ ô 6 (giảm, chuẩn bị kết). KHÔNG tăng tiếp.',
+    '  Luật 11: Ô 8 KẾT = nốt TRÒN (4 phách). Điểm nghỉ mạnh nhất toàn bài.',
+    '',
+    'CHỨC NĂNG TRƯỜNG ĐỘ:',
+    '  Móc đơn → chuyển động mạnh | Đen → cơ bản | Trắng → nghỉ/ổn định | Tròn → kết thúc',
+    '  Phát triển → mật độ tăng | Hướng về kết → mật độ giảm',
+    `  Ô 4 = Trắng (bắt buộc). Ô 8 = Tròn (bắt buộc).`,
+    '',
+    'CÔNG THỨC: THIẾT LẬP → BIẾN → NGHỈ | TÁI HIỆN → ĐẨY → DẪN → KẾT',
     level.durations.includes(1.5)
       ? '- Nốt chấm dôi (♩.) đi kèm móc đơn: mẫu ♩. + ♪ tạo uyển chuyển, mềm mại.'
       : '',
@@ -440,15 +456,17 @@ export interface CheckResult {
 }
 
 const CHECKLIST_LABELS = [
-  'Có ít nhất 2 loại trường độ',
-  'Nốt mới xuất hiện ≥ 3 lần',
-  'Nốt đầu và cuối là chủ âm',
-  '≥ 70% chuyển động là bước liền',
-  'Không lặp 1 nốt quá 3 lần',
-  'Có cấu trúc Hỏi-Đáp rõ ràng',
-  'Trường độ phù hợp cảm xúc',
-  'Dấu lặng ở vị trí hợp lý',
-  'Tất cả nốt trong bản đồ (chỉ phím trắng)',
+  'Bài đúng cấu trúc 4+4 (8 ô nhịp)',
+  'Ô 1-2 thiết lập Rhythmic DNA',
+  'Ô 3 có biến đổi trường độ',
+  'Ô 4 tạo điểm nghỉ rõ ràng',
+  'Ô 4 kết bằng Trắng (2 phách)',
+  'Ô 5-6 tái hiện DNA của ô 1-2',
+  'Ô 6 mật độ ≥ ô 5',
+  'Ô 7 giảm chuyển động, chuẩn bị kết',
+  'Ô 8 kết bằng Tròn (4 phách)',
+  'Ô 8 nghỉ mạnh hơn ô 4',
+  'Toàn bài: thiết lập → phát triển → nghỉ → tái hiện → phát triển → kết',
   'Tổng trường độ = bars × beatsPerBar',
 ]
 
@@ -975,93 +993,143 @@ export function checkAndRepair(
     }
   }
 
-  // ── 6c. ÉP LUẬT TRƯỜNG ĐỘ ──────────────────────────────────────────
+  // ── 6c. ÉP LUẬT TRƯỜNG ĐỘ 8 Ô NHỊP ──────────────────────────────
+  if (level.bars === 8 && level.kind === 'piece') {
+    const B = level.beatsPerBar
 
-  // 6c1. Không để 2 ô nhịp liên tiếp toàn nốt tròn
-  {
-    let beatCheck = 0
-    for (let barStart = 0; barStart < level.bars - 1; barStart++) {
-      const barEnd1 = beatCheck + level.beatsPerBar
-      const barEnd2 = barEnd1 + level.beatsPerBar
-      let onlyWhole1 = false, onlyWhole2 = false
-      // Check bar 1
-      let s1 = beatCheck, hasWhole1 = false
+    // Luật 7+11: Ô 4 phải kết bằng Trắng (2 phách) — nếu có trắng trong bậc
+    if (level.durations.includes(2)) {
+      let beatPos = 0, lastInBar4 = -1
       for (let i = 0; i < durs.length; i++) {
-        if (s1 >= barEnd1) break
-        if (s1 + durs[i] >= barEnd1 && s1 < barEnd1) {
-          hasWhole1 = hasWhole1 || (Math.abs(durs[i] - 4) < 1e-9 || (durs[i] >= 3 && i === durs.length - 1))
-        }
-        s1 += durs[i]
+        if (beatPos + durs[i] >= 4*B && beatPos < 4*B) lastInBar4 = i
+        beatPos += durs[i]
       }
-      onlyWhole1 = hasWhole1
-      // Check bar 2
-      let s2 = barEnd1, hasWhole2 = false
+      if (lastInBar4 >= 0 && Math.abs(durs[lastInBar4] - 2) > 1e-9) {
+        // Nốt cuối ô 4 chưa phải trắng → sửa
+        let s = 0
+        for (let j = 0; j <= lastInBar4; j++) s += durs[j]
+        const needExtra = s - 4*B  // số phách thừa sau ô 4
+        if (needExtra > 0) {
+          // Cắt bớt để vừa ô 4 rồi đặt trắng
+          durs[lastInBar4] -= needExtra
+          // Thêm phần dư vào đầu ô 5
+          if (lastInBar4 + 1 < durs.length) {
+            durs.splice(lastInBar4 + 1, 0, needExtra)
+            idx.splice(lastInBar4 + 1, 0, idx[lastInBar4])
+            rests.splice(lastInBar4 + 1, 0, false)
+          }
+        }
+        // Đổi nốt cuối ô 4 thành trắng nếu chưa phải
+        if (Math.abs(durs[lastInBar4] - 2) > 1e-9) {
+          // Gộp/cắt để được đúng 2 phách ở cuối ô 4
+          let total4 = 0, first4 = lastInBar4
+          for (let j = lastInBar4; j >= 0; j--) {
+            total4 += durs[j]
+            first4 = j
+            if (total4 >= 2) break
+          }
+          if (Math.abs(total4 - 2) < 1e-9 && first4 < lastInBar4) {
+            // Gộp các nốt cuối ô 4 thành 1 nốt trắng
+            const newIdx = idx[first4]
+            durs.splice(first4, lastInBar4 - first4 + 1, 2)
+            idx.splice(first4, lastInBar4 - first4 + 1, newIdx)
+            rests.splice(first4, lastInBar4 - first4 + 1, false)
+            problems.push('ô 4 phải kết bằng Trắng, đã sửa')
+          }
+        }
+      }
+    }
+
+    // Luật 11: Ô 8 phải kết bằng Tròn (4 phách)
+    if (level.durations.includes(4)) {
+      let beatPos = 0, lastInBar8 = -1
       for (let i = 0; i < durs.length; i++) {
-        if (s2 >= barEnd2) break
-        if (s2 + durs[i] >= barEnd1 && s2 < barEnd2) {
-          hasWhole2 = hasWhole2 || (Math.abs(durs[i] - 4) < 1e-9 || (durs[i] >= 3 && i === durs.length - 1))
-        }
-        s2 += durs[i]
+        if (beatPos + durs[i] >= 8*B && beatPos < 8*B) lastInBar8 = i
+        beatPos += durs[i]
       }
-      onlyWhole2 = hasWhole2
-      if (onlyWhole1 && onlyWhole2) {
-        // Fix: tách nốt tròn ô 2 thành 2 nốt trắng
-        let s = barEnd1
-        for (let k = 0; k < durs.length; k++) {
-          if (s >= barEnd2) break
-          if (s + durs[k] > barEnd1 && Math.abs(durs[k] - 4) < 1e-9) {
-            durs.splice(k, 1, 2, 2)
-            const v = idx[k] >= 0 ? idx[k] : 0
-            idx.splice(k, 1, v, clamp(v - 1, 0, top))
-            rests.splice(k, 1, false, false)
-            problems.push('2 ô tròn liên tiếp, đã sửa')
+      if (lastInBar8 >= 0 && lastInBar8 === durs.length - 1 && Math.abs(durs[lastInBar8] - 4) > 1e-9) {
+        // Gộp các nốt cuối thành 1 nốt tròn
+        let totalEnd = 0, firstEnd = lastInBar8
+        for (let j = lastInBar8; j >= 0; j--) {
+          totalEnd += durs[j]
+          firstEnd = j
+          if (totalEnd >= 4) break
+        }
+        if (Math.abs(totalEnd - 4) < 1e-9 && firstEnd < lastInBar8) {
+          durs.splice(firstEnd, lastInBar8 - firstEnd + 1, 4)
+          idx.splice(firstEnd, lastInBar8 - firstEnd + 1, 0)  // nốt chủ = C
+          rests.splice(firstEnd, lastInBar8 - firstEnd + 1, false)
+          problems.push('ô 8 phải kết bằng Tròn, đã sửa')
+        }
+      }
+    }
+
+    // Luật 9+10: Ô 6 mật độ ≥ ô 5, ô 7 mật độ ≤ ô 6
+    {
+      const density = (startBar: number, endBar: number) => {
+        let n = 0
+        let beatP = 0
+        for (let i = 0; i < durs.length; i++) {
+          if (beatP >= startBar * B && beatP < endBar * B) n++
+          beatP += durs[i]
+        }
+        return n
+      }
+      const d5 = density(4, 5), d6 = density(5, 6), d7 = density(6, 7)
+      // Ô 6 mật độ ≥ ô 5
+      if (d6 < d5 && d5 > 0) {
+        // Tách 1 nốt dài ô 6 thành 2 nốt ngắn hơn
+        let bp = 0
+        for (let i = 0; i < durs.length; i++) {
+          const barPos = Math.floor(bp / B)
+          if (barPos === 5 && durs[i] >= 2 && level.durations.includes(1)) {
+            durs.splice(i, 1, 1, 1)
+            const v = idx[i] >= 0 ? idx[i] : 0
+            idx.splice(i, 1, v, clamp(v + 1, 0, top))
+            rests.splice(i, 1, false, false)
+            problems.push('ô 6 mật độ < ô 5, đã tăng')
             break
           }
-          s += durs[k]
-        }
-        break
-      }
-      beatCheck += level.beatsPerBar
-    }
-  }
-
-  // 6c2. Nốt dài nhất phải ở đầu hoặc cuối mỗi câu (nếu có phraseBars)
-  if (coCau) {
-    const m = mocCau()
-    for (let ci = 0; ci < m.length - 1; ci++) {
-      const pStart = m[ci], pEnd = m[ci + 1]
-      if (pEnd - pStart <= 1) continue
-      let maxD = 0, maxI = -1
-      for (let i = pStart; i < pEnd; i++) {
-        if (durs[i] > maxD + 1e-9) { maxD = durs[i]; maxI = i }
-      }
-      if (maxI > pStart && maxI < pEnd - 1 && maxD >= 2 && level.durations.length >= 3) {
-        const tmp = durs[pStart]
-        durs[pStart] = durs[maxI]
-        durs[maxI] = tmp
-        problems.push('nốt dài nhất nằm giữa câu, đã đưa ra đầu câu')
-      }
-    }
-  }
-
-  // 6c3. Giới hạn số loại trường độ
-  {
-    const uniqueDurs = [...new Set(durs.map(d => Math.round(d * 10) / 10))]
-    const maxTypes = level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5
-    if (uniqueDurs.length > maxTypes) {
-      const count: Record<number, number> = {}
-      durs.forEach(d => { const k = Math.round(d * 10) / 10; count[k] = (count[k] || 0) + 1 })
-      const sorted = Object.entries(count).sort((a, b) => b[1] - a[1])
-      const keep = new Set(sorted.slice(0, maxTypes).map(e => parseFloat(e[0])))
-      for (let i = 0; i < durs.length; i++) {
-        const k = Math.round(durs[i] * 10) / 10
-        if (!keep.has(k)) {
-          let best = 1, bestDist = Infinity
-          keep.forEach(v => { const dist = Math.abs(v - k); if (dist < bestDist) { bestDist = dist; best = v } })
-          durs[i] = best
+          bp += durs[i]
         }
       }
-      problems.push(`quá ${maxTypes} loại trường độ, đã gộp về ${keep.size} loại`)
+      // Ô 7 mật độ ≤ ô 6
+      if (d7 > d6 && d7 > 0 && level.durations.some(x => x >= 2)) {
+        let bp = 0
+        for (let i = 0; i < durs.length; i++) {
+          const barPos = Math.floor(bp / B)
+          if (barPos === 6 && i + 1 < durs.length && Math.abs(durs[i] - 1) < 1e-9 && Math.abs(durs[i + 1] - 1) < 1e-9) {
+            // Gộp 2 nốt đen thành 1 trắng
+            durs.splice(i, 2, 2)
+            idx.splice(i, 2, idx[i])
+            rests.splice(i, 2, false)
+            problems.push('ô 7 mật độ > ô 6, đã giảm')
+            break
+          }
+          bp += durs[i]
+        }
+      }
+    }
+
+    // Giới hạn số loại trường độ
+    {
+      const uniqueDurs = [...new Set(durs.map(d => Math.round(d * 10) / 10))]
+      const maxTypes = level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5
+      if (uniqueDurs.length > maxTypes) {
+        const count: Record<number, number> = {}
+        durs.forEach(d => { const k = Math.round(d * 10) / 10; count[k] = (count[k] || 0) + 1 })
+        const sorted = Object.entries(count).sort((a, b) => b[1] - a[1])
+        const keep = new Set(sorted.slice(0, maxTypes).map(e => parseFloat(e[0])))
+        for (let i = 0; i < durs.length; i++) {
+          const k = Math.round(durs[i] * 10) / 10
+          if (!keep.has(k)) {
+            let best = 1, bestDist = Infinity
+            keep.forEach(v => { const dist = Math.abs(v - k); if (dist < bestDist) { bestDist = dist; best = v } })
+            durs[i] = best
+          }
+        }
+        problems.push(`quá ${maxTypes} loại trường độ, đã gộp về ${keep.size} loại`)
+      }
     }
   }
 
