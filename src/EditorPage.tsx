@@ -550,12 +550,36 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
   const handleReplacePhotos = async () => {
     setReplaceSaving(true); setStatusMsg('Đang thay ảnh...')
     try {
+      let b64: string | null = null
+
       if (replacePhotoUpload) {
-        const b64 = await new Promise<string>((resolve) => {
+        // Upload file từ máy → base64
+        b64 = await new Promise<string>((resolve) => {
           const reader = new FileReader()
           reader.onload = () => resolve((reader.result as string).split(',')[1])
           reader.readAsDataURL(replacePhotoUpload)
         })
+      } else if (replacePhotoPreview) {
+        // Ảnh từ FLUX (Replicate URL tạm thời) hoặc data URL → tải về thành base64
+        if (replacePhotoPreview.startsWith('data:')) {
+          b64 = replacePhotoPreview.split(',')[1]
+        } else {
+          const res = await fetch(replacePhotoPreview)
+          if (!res.ok) { setStatusMsg('Lỗi: Không tải được ảnh từ URL.'); setReplaceSaving(false); return }
+          const blob = await res.blob()
+          b64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve((reader.result as string).split(',')[1])
+            reader.readAsDataURL(blob)
+          })
+        }
+      } else {
+        setStatusMsg('Vui lòng chọn ảnh hoặc tạo ảnh AI trước.')
+        setReplaceSaving(false)
+        return
+      }
+
+      if (b64) {
         const { data, error } = await supabase.functions.invoke('story-ai', {
           body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_photo', story_id: story.id, image_base64: b64 },
         })
@@ -564,19 +588,9 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
           setStatusMsg('✅ Đã thay ảnh! Refresh Tạp chí để thấy ảnh mới.')
           setShowPhotoReplace(false); setReplacePhotoUpload(null); setReplacePhotoPreview(null)
           if (onUpdate) onUpdate()
-        } else setStatusMsg('Lỗi: ' + (data?.error || 'Không thay được ảnh'))
-      } else if (replacePhotoPreview) {
-        const { data, error } = await supabase.functions.invoke('story-ai', {
-          body: { admin_key: 'st-1001-adm-7x9k2', action: 'admin_update_story', story_id: story.id, photos: [{ url: replacePhotoPreview, caption: '' }] },
-        })
-        if (!error && data?.ok) {
-          story.photos = [{ url: replacePhotoPreview, caption: '' }]
-          setStatusMsg('✅ Đã thay ảnh! Refresh Tạp chí để thấy ảnh mới.')
-          setShowPhotoReplace(false); setReplacePhotoPreview(null)
-          if (onUpdate) onUpdate()
-        } else setStatusMsg('Lỗi: ' + (data?.error || 'Không thay được ảnh'))
-      } else {
-        setStatusMsg('Vui lòng chọn ảnh hoặc tạo ảnh AI trước.')
+        } else {
+          setStatusMsg('Lỗi: ' + (data?.error || 'Không thay được ảnh'))
+        }
       }
     } catch (e: any) { setStatusMsg('Lỗi: ' + e.message) }
     setReplaceSaving(false)
