@@ -35,7 +35,12 @@ export interface PianoLevel {
   kind: 'exercise' | 'piece'
   /** Nốt được phép, xếp THẤP → CAO. Quãng nhảy đếm theo vị trí trong mảng này. */
   pitches: string[]
-  /** Trường độ được phép: 0.5 = móc đơn, 1 = đen, 2 = trắng, 3 = trắng chấm, 4 = tròn */
+  /** Trường độ được phép: 0.5 móc đơn · 1 đen · 1.5 đen chấm dôi · 2 trắng ·
+   *  3 trắng chấm · 4 tròn.
+   *  ⚠️ 1.5 CHỈ được mở ở bậc đã có 0.5. Nốt 1.5 đặt ở đầu phách thì nốt sau rơi
+   *  vào nửa phách, mà luật nửa phách chỉ cho phép móc đơn — không có 0.5 trong
+   *  bậc thì bài kẹt giữa chừng, không lấp đủ ô nhịp. Đổi lại, ở bậc có cả hai
+   *  thì luật đó TỰ SINH RA mẫu ♩. + ♪ mà thầy muốn, không cần luật riêng. */
   durations: number[]
   /** Số phách mỗi ô nhịp (4 = nhịp 4/4, 3 = nhịp 3/4) */
   beatsPerBar: number
@@ -69,6 +74,17 @@ export interface PianoLevel {
   minRange?: number
   /** Số lần phải đi cách nhau từ 2 bước trở lên (quãng ba trở lên). */
   minLeaps?: number
+  /** Số ô nhịp mỗi CÂU. Bài chia thành các câu bằng nhau và CÂU THỨ BA NHẮC LẠI
+   *  CÂU ĐẦU — luật "Hỏi – Đáp – Hỏi biến tấu – Kết" của thầy.
+   *
+   *  Đây là thứ làm một bài nghe ra bài chứ không phải một chuỗi nốt đúng luật.
+   *  Bé năm tuổi nhớ được "Kìa con bướm vàng" chính vì câu 1 và câu 3 giống hệt
+   *  nhau. Engine trước đây không có khái niệm câu, nên mọi bài đều là 8 ô trôi
+   *  tuột không nhắc lại gì — đúng luật mà không ai nhớ nổi.
+   *
+   *  Chỉ có tác dụng khi bars chia hết cho phraseBars và ra từ 4 câu trở lên
+   *  (cần có câu 3 mà câu 3 không phải câu kết). */
+  phraseBars?: number
   /** Kỹ năng hôm nay — đưa vào prompt để AI sáng tác có mục đích sư phạm */
   skill: string
 }
@@ -140,41 +156,49 @@ export const LEVELS: PianoLevel[] = [
   { id: 8,  name: 'Nốt trắng',        kind: 'piece', pitches: P5, durations: [1, 2],
     beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 80], endOnTonic: true,
     mustDurations: [2], minRange: 3,
+    phraseBars: 1,
     skill: 'Làm quen nốt trắng — giữ tiếng ngân đủ hai phách' },
 
   { id: 9,  name: 'Nốt tròn',         kind: 'piece', pitches: P5, durations: [1, 2, 4],
     beatsPerBar: 4, bars: 4, maxStep: 1, bpm: [66, 80], endOnTonic: true,
     mustDurations: [4], minRange: 3,
+    phraseBars: 1,
     skill: 'Thêm nốt tròn ngân trọn một ô nhịp, tập đếm bốn phách' },
 
   { id: 10,  name: 'Quãng ba',         kind: 'piece', pitches: P5, durations: [1, 2],
     beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [72, 86], endOnTonic: true,
-    minRange: 4, minLeaps: 2,
+    mustDurations: [2], minRange: 4, minLeaps: 2,
+    phraseBars: 1,
     skill: 'Tập nhảy quãng ba, giữ nhịp đều khi đổi ngón' },
 
   { id: 11,  name: 'Nhịp ba bốn',      kind: 'piece', pitches: P5, durations: [1, 2, 3],
     beatsPerBar: 3, bars: 4, maxStep: 2, bpm: [72, 86], endOnTonic: true,
     mustDurations: [3], minRange: 3,
+    phraseBars: 1,
     skill: 'Nhịp 3/4 — cảm giác một–hai–ba, nhấn phách đầu mỗi ô' },
 
   { id: 12,  name: 'Trọn quãng tám',   kind: 'piece', pitches: P8, durations: [1, 2, 4],
     beatsPerBar: 4, bars: 4, maxStep: 3, bpm: [76, 92], endOnTonic: true,
     mustPitches: ['C5'], mustDurations: [4], minRange: 5,
+    phraseBars: 1,
     skill: 'Đi hết quãng tám Đô4–Đô5, câu nhạc có mở và có kết' },
 
-  { id: 13,  name: 'Móc đơn',          kind: 'piece', pitches: P8, durations: [0.5, 1, 2],
+  { id: 13,  name: 'Móc đơn',          kind: 'piece', pitches: P8, durations: [0.5, 1, 1.5, 2],
     beatsPerBar: 4, bars: 4, maxStep: 2, bpm: [76, 92], endOnTonic: true,
-    mustDurations: [0.5], minRange: 4, minLeaps: 2,
+    mustDurations: [0.5, 1.5], minRange: 4, minLeaps: 2,
+    phraseBars: 1,
     skill: 'Làm quen nốt móc đơn — hai nốt gọn trong một phách' },
 
   { id: 14,  name: 'Quãng rộng',       kind: 'piece', pitches: P10, durations: [1, 2, 3, 4],
     beatsPerBar: 4, bars: 4, maxStep: 4, bpm: [84, 100], endOnTonic: true,
     mustPitches: ['D5'], mustDurations: [3], minRange: 6, minLeaps: 2,
+    phraseBars: 1,
     skill: 'Nhảy quãng bốn–quãng năm, tay phải mở rộng lên Mi5' },
 
-  { id: 15, name: 'Tổng hợp',         kind: 'piece', pitches: P10, durations: [0.5, 1, 2, 3, 4],
+  { id: 15, name: 'Tổng hợp',         kind: 'piece', pitches: P10, durations: [0.5, 1, 1.5, 2, 3, 4],
     beatsPerBar: 4, bars: 8, maxStep: 4, bpm: [88, 108], endOnTonic: true,
     mustPitches: ['C5'], mustDurations: [0.5, 3], minRange: 6, minLeaps: 3,
+    phraseBars: 2,
     skill: 'Bài dài tám ô, phối hợp mọi trường độ đã học, giữ nhịp từ đầu đến cuối' },
 ]
 
@@ -275,7 +299,7 @@ export function rememberExercise(ex: Exercise) {
 
 // ── Ràng buộc gửi kèm cho AI ─────────────────────────────────────────────────
 // Gộp vào `prompt` gửi tới piano-generate, KHÔNG sửa prompt cứng của function.
-const DUR_NAME: Record<number, string> = { 0.5: 'móc đơn', 1: 'đen', 2: 'trắng', 3: 'trắng chấm', 4: 'tròn' }
+const DUR_NAME: Record<number, string> = { 0.5: 'móc đơn', 1: 'đen', 1.5: 'đen chấm dôi', 2: 'trắng', 3: 'trắng chấm', 4: 'tròn' }
 
 export function buildPrompt(chuDe: string, level: PianoLevel): string {
   const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)]
@@ -296,6 +320,8 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
       ? `Phải có ÍT NHẤT ${level.minLeaps} lần hai nốt liền nhau cách nhau từ 2 bước trở lên.`
       : '',
   ].filter(Boolean)
+  const soCau = level.phraseBars && Number.isInteger(level.bars / level.phraseBars)
+    ? level.bars / level.phraseBars : 0
   return [
     `Bé muốn một bài về: "${chuDe}".`,
     `Mục tiêu sư phạm hôm nay: ${level.skill}.`,
@@ -334,6 +360,26 @@ export function buildPrompt(chuDe: string, level: PianoLevel): string {
          + `là bài của bậc 6, nộp cho bậc này là SAI.`,
          ...san.map(s => `- ${s}`)].join('\n')
       : '',
+    // ── Luật soạn nhạc của thầy ────────────────────────────────────────────
+    // Hai luật này không phải ràng buộc kỹ thuật mà là thứ làm bài NGHE RA BÀI.
+    // Lớp KIỂM ép được cấu trúc câu, nhưng ép xong thì máy móc; nói trước với AI
+    // thì bản nó viết ra đã có sẵn hình dáng, đỡ phải vá.
+    soCau >= 4
+      ? [`CẤU TRÚC CÂU (luật của thầy) — bài chia ${soCau} câu, mỗi câu ${level.phraseBars} ô nhịp:`,
+         `  · câu 1 = HỎI, đặt vấn đề`,
+         `  · câu 2 = ĐÁP, trả lời và phát triển`,
+         `  · câu 3 = HỎI NHẮC LẠI — phải GIỐNG HỆT câu 1, cùng nốt cùng trường độ`,
+         `  · câu ${soCau} = KẾT, dứt khoát, về nốt chủ và ngân dài`,
+         `Câu 3 giống câu 1 chính là thứ làm bé nhớ được bài — đây là ràng buộc, không phải gợi ý.`]
+        .join('\n')
+      : '',
+    `CẢM XÚC QUYẾT ĐỊNH TRƯỜNG ĐỘ (luật của thầy). Đọc chủ đề "${chuDe}", chọn ĐÚNG MỘT nhóm rồi soạn theo — đừng rải trường độ ngẫu nhiên:`,
+    `  · vui tươi, nhí nhảnh → chủ yếu nốt đen và móc đơn; nốt ngân dài chỉ để chốt cuối câu.`,
+    `  · buồn, trầm lắng → chủ yếu nốt trắng và tròn; nốt đen chỉ dùng để tạo chuyển động giữa câu.`,
+    `  · hồi hộp, dồn dập → móc đơn chạy liên tục, chặn lại bằng một nốt dài ở cuối câu.`,
+    `  · trang nghiêm, vững chãi → chủ yếu đen và trắng, thêm đen chấm dôi cho uyển chuyển.`,
+    `- Không dùng toàn một loại nốt cho cả bài; mỗi câu nên trộn ít nhất hai loại trường độ.`,
+    `- Hai câu liền nhau nên TƯƠNG PHẢN: câu này thong thả thì câu kia dồn hơn.`,
     `- Giai điệu phải nghe ra chủ đề bé muốn, nhưng ĐÚNG LUẬT là ưu tiên số một.`,
   ].filter(Boolean).join('\n')
 }
@@ -451,15 +497,60 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
   //     chấm, ăn mất cả hai móc đơn — đo thật, bài ra vẫn không có móc đơn nào).
   const khoaCuoi = reserve ? 1 : 0          // đừng đụng vào ô kết đã dành sẵn
   const canDur = [...(level.mustDurations ?? [])].sort((a, b) => b - a)
+
+  // Mốc câu phải biết TRƯỚC khi chèn trường độ, để không chèn vào đúng câu 3 —
+  // câu 3 lát nữa bị chép đè bằng tiết tấu câu 1 là mất trắng. Bậc 14 hụt nốt
+  // trắng chấm 131/1500 bài đúng vì thế.
+  const phachCau = (level.phraseBars ?? 0) * level.beatsPerBar
+  const soCau = phachCau ? level.bars / level.phraseBars! : 0
+  const coCau = phachCau > 0 && Number.isInteger(soCau) && soCau >= 4
+  /** Chỉ số nốt mở đầu từng câu, kèm phần tử cuối = hết bài. */
+  const mocCau = (): number[] => {
+    const m: number[] = []
+    let b = 0
+    for (let i = 0; i < durs.length; i++) {
+      if (Math.abs(b % phachCau) < 1e-9) m.push(i)
+      b += durs[i]
+    }
+    m.push(durs.length)
+    return m
+  }
+  /** Chép TIẾT TẤU câu 1 sang câu 3. Gọi lại được nhiều lần, lần sau là vô hại. */
+  const chepTietTau = (): boolean => {
+    if (!coCau) return false
+    const m = mocCau()
+    if (m.length < 5) return false
+    const [a0, a1, c0, c1] = [m[0], m[1], m[2], m[3]]
+    if (a1 - a0 === c1 - c0 && durs.slice(a0, a1).every((d, k) => Math.abs(d - durs[c0 + k]) < 1e-9)) return false
+    durs.splice(c0, c1 - c0, ...durs.slice(a0, a1))
+    idx.splice(c0, c1 - c0, ...idx.slice(a0, a1))
+    return true
+  }
+  /** Khoảng chỉ số của câu 3 ở trạng thái hiện tại — vùng cấm chèn. */
+  const vungCau3 = (): [number, number] => {
+    if (!coCau) return [-1, -1]
+    const m = mocCau()
+    return m.length >= 5 ? [m[2], m[3]] : [-1, -1]
+  }
+
+  if (chepTietTau()) problems.push('câu 3 phải nhắc lại câu 1, đã chép tiết tấu câu 1 sang')
+
   for (const d of canDur) {
     if (durs.some(x => Math.abs(x - d) < 1e-9)) continue
     let beat = 0, xong = false
     // Nốt đang mang một trường độ bắt buộc KHÁC thì đừng đụng vào, không thì
     // phép sau ăn mất thành quả của phép trước (bậc 15 tách móc đơn ra từ chính
     // nốt trắng chấm vừa tạo — hụt 419/1500 bài).
-    const dungYen = (j: number) => canDur.some(x => x !== d && Math.abs(x - durs[j]) < 1e-9)
+    // …nhưng chỉ giữ khi đó là BẢN SAO CUỐI CÙNG. Cấm tuyệt đối là quá tay: mẫu
+    // ♩. + ♪ phải gộp đúng một nốt đen với một móc đơn, mà cấm đụng vào móc đơn
+    // thì không bao giờ gộp được — bậc 13 hụt nốt đen chấm dôi 415/1500 bài.
+    const demDur = (x: number) => durs.reduce((s, y) => s + (Math.abs(y - x) < 1e-9 ? 1 : 0), 0)
+    const dungYen = (j: number) =>
+      canDur.some(x => x !== d && Math.abs(x - durs[j]) < 1e-9 && demDur(x) <= 1)
+    const [c3a, c3b] = vungCau3()
+    const camChen = (j: number) => j >= c3a && j < c3b
     for (let i = 0; i < durs.length - khoaCuoi && !xong; i++) {
-      const dauPhach = Math.abs(beat - Math.round(beat)) < 1e-9 && !dungYen(i)
+      const dauPhach = Math.abs(beat - Math.round(beat)) < 1e-9 && !dungYen(i) && !camChen(i)
       if (d === 0.5) {
         // Cắt một nốt ≥1 phách ở đầu phách thành cặp móc đơn + phần dư.
         // Bản đầu chỉ nhận đúng nốt đen, nên ô nhịp toàn nốt trắng và nốt tròn
@@ -485,7 +576,7 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
         const oCua = Math.floor(beat / level.beatsPerBar)
         let s = 0
         for (let j = i; j < durs.length - khoaCuoi; j++) {
-          if (canDur.some(x => x !== d && Math.abs(x - durs[j]) < 1e-9)) break   // đừng nuốt trường độ bắt buộc khác
+          if (dungYen(j)) break                    // đừng nuốt bản sao cuối cùng của trường độ bắt buộc khác
           s += durs[j]
           if (s > d + 1e-9) break
           if (Math.abs(s - d) < 1e-9 &&
@@ -497,10 +588,54 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
       }
       beat += durs[i]
     }
+
+    // Lối cuối: VIẾT LẠI HẲN MỘT Ô NHỊP — đặt nốt cần ở đầu ô rồi lấp cho đủ ô.
+    // Tách và gộp đều làm việc tại chỗ nên có ô chịu chết: ô toàn nốt trắng thì
+    // không tách ra nổi trắng chấm (2 < 3) mà gộp cũng không ra (2+2 = 4). Viết
+    // lại cả ô thì luôn được, miễn nốt cần không dài hơn một ô.
+    if (!xong && d <= level.beatsPerBar + 1e-9) {
+      let b2 = 0, p = -1, q = -1, dauO = 0
+      for (let i = 0; i < durs.length - khoaCuoi; i++) {
+        if (Math.abs(b2 % level.beatsPerBar) < 1e-9) { p = camChen(i) ? -1 : i; dauO = b2 }
+        b2 += durs[i]
+        if (p >= 0 && Math.abs(b2 - dauO - level.beatsPerBar) < 1e-9) { q = i + 1; break }
+      }
+      if (p >= 0 && q > p) {
+        const dMoi = [d], iMoi = [idx[p]]
+        let con = level.beatsPerBar - d, pos = d
+        while (con > 1e-9) {
+          const f = fitAt(level, pos, con, 999)
+          if (f == null) break
+          dMoi.push(f)
+          iMoi.push(clamp(idx[p] + (dMoi.length % 2 ? -1 : 1), 0, level.pitches.length - 1))
+          con -= f; pos += f
+        }
+        if (con <= 1e-9) {
+          durs.splice(p, q - p, ...dMoi); idx.splice(p, q - p, ...iMoi); xong = true
+        }
+      }
+    }
+
     problems.push(xong
       ? `bậc ${level.id} bắt buộc phải có nốt ${DUR_NAME[d] ?? d}, đã sửa`
       : `bậc ${level.id} thiếu nốt ${DUR_NAME[d] ?? d} mà không chỗ nào chèn được`)
   }
+
+  // 4a2. Chèn trường độ ở trên chỉ động vào câu 1 / câu 2 / câu 4, nên chép lại
+  //      một lần nữa để câu 3 mang đúng tiết tấu mới của câu 1. Lần này chắc
+  //      chắn là lần cuối: từ đây xuống dưới không bước nào đổi trường độ.
+  chepTietTau()
+
+  // Từ đây trở đi trường độ không đổi nữa (các bước sau chỉ nắn cao độ), nên mốc
+  // câu chốt được luôn. Phần nâng sàn sẽ TRÁNH hai câu này ra để giữ nguyên chỗ
+  // nhắc lại; chỉ khi ngoài đó hết chỗ mới đụng vào.
+  const bienCau: [number, number, number, number] | null = (() => {
+    if (!coCau) return null
+    const m = mocCau()
+    return m.length >= 5 ? [m[0], m[1], m[2], m[3]] : null
+  })()
+  const trongCau13 = (i: number) =>
+    !!bienCau && ((i >= bienCau[0] && i < bienCau[1]) || (i >= bienCau[2] && i < bienCau[3]))
 
   // 4b. PHÁCH MẠNH — nốt rơi đúng đầu ô nhịp phải nằm trong strongBeatPitches.
   //
@@ -662,10 +797,20 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
     const v = level.pitches.indexOf(p)
     if (v < 0 || idx.includes(v)) continue
     let xong = false
-    for (let i = n - 2; i >= 0 && !xong; i--) if (duocDat(i, v)) xong = datThu(i, v)
+    // Ưu tiên đặt NGOÀI câu 1 và câu 3 để không phá chỗ nhắc lại; hết chỗ mới vào.
+    const thuDat = () => {
+      for (const traNgoai of [true, false]) {
+        for (let i = n - 2; i >= 0; i--) {
+          if (traNgoai && trongCau13(i)) continue
+          if (duocDat(i, v) && datThu(i, v)) return true
+        }
+      }
+      return false
+    }
+    xong = thuDat()
     for (let lan = 0; !xong && lan < 6; lan++) {
       if (!nangPhachManh()) break
-      for (let i = n - 2; i >= 0 && !xong; i--) if (duocDat(i, v)) xong = datThu(i, v)
+      xong = thuDat()
     }
     problems.push(xong
       ? `bài chưa dùng nốt ${p} của bậc ${level.id}, đã thêm`
@@ -687,7 +832,9 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
         ? Math.max(...manhVal.filter(v => v >= rr.lo[i] && v <= rr.hi[i]), -1)
         : rr.hi[i]
       if (canDat <= idx[i] || !duocDat(i, canDat)) continue
-      if (canDat > tri) { tri = canDat; chon = i }
+      // Ngoài câu 1/câu 3 luôn được ưu tiên, dù trần có thấp hơn một chút.
+      if (chon >= 0 && trongCau13(i) && !trongCau13(chon)) continue
+      if (canDat > tri || (!trongCau13(i) && trongCau13(chon))) { tri = canDat; chon = i }
     }
     return chon >= 0 && datThu(chon, tri)
   }
@@ -704,7 +851,9 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
       for (const v of ung) {
         if (!duocDat(i, v)) continue
         const cach = Math.abs(v - idx[i - 1])
-        if (cach >= 2 && cach > xa) { xa = cach; chon = i; tri = v }
+        if (cach < 2) continue
+        if (chon >= 0 && trongCau13(i) && !trongCau13(chon)) continue
+        if (cach > xa || (!trongCau13(i) && trongCau13(chon))) { xa = cach; chon = i; tri = v }
       }
     }
     return chon >= 0 && datThu(chon, tri)
@@ -758,6 +907,57 @@ export function checkAndRepair(raw: Exercise | null, level: PianoLevel, fallback
     if (truocOk && sauOk && cuoiOk && manhOk && rongOk && nhayOk && apChotOk && thu !== idx[i]) {
       problems.push('lặp một nốt quá 3 lần')
       idx[i] = thu; run = 1
+    }
+  }
+
+  // 6b. CÂU NHẠC, chặng hai: chép CAO ĐỘ câu 1 sang câu 3.
+  //
+  //     Tiết tấu đã giống nhau từ 4a2 nên đây chỉ là ghi đè một mảng cùng độ dài.
+  //     Nhưng bước 5 và 5b nắn cao độ theo khoảng khả thi của TỪNG vị trí, mà câu 3
+  //     ở gần nốt kết hơn nên khoảng của nó hẹp hơn — hai câu vì thế đã trôi ra
+  //     khác nhau. Chép lại rồi SOI LẠI TOÀN BỘ: chỗ nối có vượt bước không, phách
+  //     mạnh có còn đúng không, sàn có tụt không. Hỏng bất cứ điều gì thì trả nguyên
+  //     trạng — nhắc lại câu là luật MỀM, không được phép đạp lên luật cứng.
+  if (bienCau) {
+    const [a0, a1, c0, c1] = bienCau
+    if (a1 - a0 === c1 - c0 && idx.slice(a0, a1).some((v, k) => v !== idx[c0 + k])) {
+      const luu = idx.slice()
+      /** Chép cao độ từ câu bắt đầu ở `tu` sang câu bắt đầu ở `den`, rồi GHIM CẢ
+       *  HAI CÂU và lan truyền lại để câu 2 tự bắc cầu giữa chúng.
+       *
+       *  Chỉ soi chỗ nối rồi bỏ cuộc là hỏng ở bậc đi liền kề: maxStep 1 thì câu 1
+       *  và câu 3 tự nhiên trôi cách nhau vài bước, chép xong bao giờ cũng gãy chỗ
+       *  nối — bậc 9 chỉ nhắc lại được 14% số bài. Lan truyền lại thì câu 2 được
+       *  phép đi đường khác để nối hai đầu, và chỗ nhắc lại giữ nguyên. */
+      const chep = (tu: number, den: number) => {
+        for (let i = 0; i < idx.length; i++) idx[i] = luu[i]
+        for (let k = 0; k < a1 - a0; k++) idx[den + k] = idx[tu + k]
+        const g = new Set(ghim)
+        for (let k = 0; k < a1 - a0; k++) { g.add(a0 + k); g.add(c0 + k) }
+        const r = lanTruyen(g)
+        if (!r) return false
+        let truoc: number | null = null
+        for (let i = 0; i < n; i++) {
+          const lo = Math.max(r.lo[i], truoc === null ? -Infinity : truoc - level.maxStep)
+          const hi = Math.min(r.hi[i], truoc === null ? Infinity : truoc + level.maxStep)
+          idx[i] = clamp(idx[i], lo, hi)
+          truoc = idx[i]
+        }
+        return idx.slice(a0, a1).every((v, k) => v === idx[c0 + k]) &&
+          [...viTriManh].every(i => manhVal.includes(idx[i])) &&
+          (!level.minRange || tamRong() >= level.minRange) &&
+          (!level.minLeaps || demNhay() >= level.minLeaps) &&
+          (level.mustPitches ?? []).every(p => idx.includes(level.pitches.indexOf(p)))
+      }
+      // Thử CẢ HAI CHIỀU. Chép câu 1 sang câu 3 là chiều tự nhiên, nhưng phần nâng
+      // sàn nhiều khi đã cắm nốt bắt buộc vào đúng câu 3 — chép đè lên là mất nó,
+      // trong khi chép ngược lại thì vừa giữ được nốt đó vừa có chỗ nhắc lại.
+      if (chep(a0, c0)) problems.push('câu 3 chưa nhắc lại câu 1, đã chép cao độ câu 1 sang')
+      else if (chep(c0, a0)) problems.push('câu 3 chưa nhắc lại câu 1, đã chép ngược cao độ câu 3 về câu 1')
+      else {
+        for (let i = 0; i < idx.length; i++) idx[i] = luu[i]
+        problems.push('câu 3 không nhắc lại câu 1 được mà không phá luật khác')
+      }
     }
   }
 
