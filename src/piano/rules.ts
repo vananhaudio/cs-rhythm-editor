@@ -1010,35 +1010,35 @@ export function checkAndRepair(
         beatPos += durs[i]
       }
       if (lastInBar >= 0 && Math.abs(durs[lastInBar] - 2) > 1e-9) {
-        // Nốt cuối ô 4 chưa phải trắng → sửa
+        // Nốt cuối ô chưa phải trắng → sửa: gộp nốt cuối ô thành trắng
         let s = 0
-        for (let j = 0; j <= lastInBar4; j++) s += durs[j]
-        const needExtra = s - 4*B  // số phách thừa sau ô 4
+        for (let j = 0; j <= lastInBar; j++) s += durs[j]
+        const needExtra = s - endBar * B  // số phách thừa sau ô
         if (needExtra > 0) {
-          // Cắt bớt để vừa ô 4 rồi đặt trắng
-          durs[lastInBar4] -= needExtra
-          // Thêm phần dư vào đầu ô 5
-          if (lastInBar4 + 1 < durs.length) {
-            durs.splice(lastInBar4 + 1, 0, needExtra)
-            idx.splice(lastInBar4 + 1, 0, idx[lastInBar4])
-            rests.splice(lastInBar4 + 1, 0, false)
+          // Cắt bớt để vừa ô rồi đặt trắng
+          durs[lastInBar] -= needExtra
+          // Thêm phần dư vào đầu ô kế
+          if (lastInBar + 1 < durs.length) {
+            durs.splice(lastInBar + 1, 0, needExtra)
+            idx.splice(lastInBar + 1, 0, idx[lastInBar])
+            rests.splice(lastInBar + 1, 0, false)
           }
         }
-        // Đổi nốt cuối ô 4 thành trắng nếu chưa phải
-        if (Math.abs(durs[lastInBar4] - 2) > 1e-9) {
-          // Gộp/cắt để được đúng 2 phách ở cuối ô 4
-          let total4 = 0, first4 = lastInBar4
-          for (let j = lastInBar4; j >= 0; j--) {
+        // Đổi nốt cuối ô thành trắng nếu chưa phải
+        if (Math.abs(durs[lastInBar] - 2) > 1e-9) {
+          // Gộp/cắt để được đúng 2 phách ở cuối ô
+          let total4 = 0, first4 = lastInBar
+          for (let j = lastInBar; j >= 0; j--) {
             total4 += durs[j]
             first4 = j
             if (total4 >= 2) break
           }
-          if (Math.abs(total4 - 2) < 1e-9 && first4 < lastInBar4) {
-            // Gộp các nốt cuối ô 4 thành 1 nốt trắng
+          if (Math.abs(total4 - 2) < 1e-9 && first4 < lastInBar) {
+            // Gộp các nốt cuối ô thành 1 nốt trắng
             const newIdx = idx[first4]
-            durs.splice(first4, lastInBar4 - first4 + 1, 2)
-            idx.splice(first4, lastInBar4 - first4 + 1, newIdx)
-            rests.splice(first4, lastInBar4 - first4 + 1, false)
+            durs.splice(first4, lastInBar - first4 + 1, 2)
+            idx.splice(first4, lastInBar - first4 + 1, newIdx)
+            rests.splice(first4, lastInBar - first4 + 1, false)
             problems.push(`ô ${endBar} phải kết bằng Trắng, đã sửa`)
           }
         }
@@ -1059,16 +1059,16 @@ export function checkAndRepair(
       }
       if (lastInBar >= 0 && lastInBar === durs.length - 1 && Math.abs(durs[lastInBar] - 4) > 1e-9) {
         // Gộp các nốt cuối thành 1 nốt tròn
-        let totalEnd = 0, firstEnd = lastInBar8
-        for (let j = lastInBar8; j >= 0; j--) {
+        let totalEnd = 0, firstEnd = lastInBar
+        for (let j = lastInBar; j >= 0; j--) {
           totalEnd += durs[j]
           firstEnd = j
           if (totalEnd >= 4) break
         }
-        if (Math.abs(totalEnd - 4) < 1e-9 && firstEnd < lastInBar8) {
-          durs.splice(firstEnd, lastInBar8 - firstEnd + 1, 4)
-          idx.splice(firstEnd, lastInBar8 - firstEnd + 1, 0)  // nốt chủ = C
-          rests.splice(firstEnd, lastInBar8 - firstEnd + 1, false)
+        if (Math.abs(totalEnd - 4) < 1e-9 && firstEnd < lastInBar) {
+          durs.splice(firstEnd, lastInBar - firstEnd + 1, 4)
+          idx.splice(firstEnd, lastInBar - firstEnd + 1, 0)  // nốt chủ = C
+          rests.splice(firstEnd, lastInBar - firstEnd + 1, false)
           problems.push(`ô ${endBar} phải kết bằng Tròn, đã sửa`)
         }
       }
