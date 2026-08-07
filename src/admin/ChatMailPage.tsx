@@ -111,7 +111,7 @@ export default function ChatMailPage() {
   useEffect(() => { loadThreads(); loadLists(); const id = setInterval(() => { loadThreads(); loadLists() }, 5000); return () => clearInterval(id) }, [loadThreads, loadLists])
 
   useEffect(() => {
-    if (tab === 'compose') return
+    if (tab === 'compose') { setThread(null); setMsgs([]); return }
     const load = async () => {
       try {
         const { data: t } = await supabase.from('chat_mails').select('*').eq('id', tab).single()
@@ -121,6 +121,8 @@ export default function ChatMailPage() {
       } catch { /* */ }
     }
     load()
+    const id = setInterval(load, 4000)
+    return () => clearInterval(id)
   }, [tab])
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [msgs.length])
