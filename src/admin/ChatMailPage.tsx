@@ -90,6 +90,9 @@ export default function ChatMailPage() {
   const [newListName, setNewListName] = useState('')
   const [newListEmails, setNewListEmails] = useState('')
   const [error, setError] = useState('')
+  const [prevMsgCount, setPrevMsgCount] = useState(0)
+  const [newReplyToast, setNewReplyToast] = useState<string | null>(null)
+  const [unreadThreads, setUnreadThreads] = useState<Set<string>>(new Set())
 
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -97,7 +100,18 @@ export default function ChatMailPage() {
   const loadThreads = useCallback(async () => {
     try {
       const { data } = await supabase.from('chat_mails').select('*').order('last_at', { ascending: false }).limit(100)
-      setThreads((data || []) as ChatMailThread[])
+      const ts = (data || []) as ChatMailThread[]
+      setThreads(ts)
+      // Kiểm tra thread nào có reply inbound → đánh dấu unread
+      if (ts.length > 0) {
+        const ids = ts.map(t => t.id)
+        const { data: replies } = await supabase.from('chat_mail_messages')
+          .select('thread_id')
+          .in('thread_id', ids)
+          .eq('direction', 'inbound')
+        const replyThreadIds = new Set((replies || []).map((r: any) => r.thread_id))
+        setUnreadThreads(new Set(replyThreadIds))
+      }
     } catch { /* table may not exist yet */ }
   }, [])
 
@@ -112,12 +126,24 @@ export default function ChatMailPage() {
 
   useEffect(() => {
     if (tab === 'compose') { setThread(null); setMsgs([]); return }
+    // Clear unread for this thread
+    setUnreadThreads(prev => { const next = new Set(prev); next.delete(tab); return next })
     const load = async () => {
       try {
         const { data: t } = await supabase.from('chat_mails').select('*').eq('id', tab).single()
         setThread((t as ChatMailThread) ?? null)
         const { data: m } = await supabase.from('chat_mail_messages').select('*').eq('thread_id', tab).order('created_at', { ascending: true })
-        setMsgs((m || []) as ChatMailMessage[])
+        const newMsgs = (m || []) as ChatMailMessage[]
+        // Detect new reply (không phải lần đầu load)
+        if (prevMsgCount > 0 && newMsgs.length > prevMsgCount) {
+          const latest = newMsgs[newMsgs.length - 1]
+          if (latest.direction === 'inbound') {
+            setNewReplyToast(`📥 Reply mới từ ${latest.to_email}`)
+            setTimeout(() => setNewReplyToast(null), 4000)
+          }
+        }
+        setPrevMsgCount(newMsgs.length)
+        setMsgs(newMsgs)
       } catch { /* */ }
     }
     load()
@@ -327,8 +353,13 @@ export default function ChatMailPage() {
             {filtered.map(t => (
               <div key={t.id} onClick={() => t.status === 'draft' ? openDraft(t) : setTab(t.id)}
                 style={{ display:'flex',alignItems:'center',gap:11,padding:'11px 14px',cursor:'pointer',background:tab===t.id?Z.bubble:'transparent',minWidth:0 }}>
-                <div style={{ flex:'0 0 46px',width:46,height:46,borderRadius:'50%',background:`hsl(${hue(t.recipients?.[0]??'')} 55% 45%)`,display:'grid',placeItems:'center',color:'#fff',fontWeight:700,fontSize:15 }}>
-                  {t.recipients?.[0] ? initials(t.recipients[0]) : '?'}
+                <div style={{ position:'relative',flex:'0 0 46px' }}>
+                  <div style={{ width:46,height:46,borderRadius:'50%',background:`hsl(${hue(t.recipients?.[0]??'')} 55% 45%)`,display:'grid',placeItems:'center',color:'#fff',fontWeight:700,fontSize:15 }}>
+                    {t.recipients?.[0] ? initials(t.recipients[0]) : '?'}
+                  </div>
+                  {unreadThreads.has(t.id) && (
+                    <div style={{ position:'absolute',top:-2,right:-2,width:14,height:14,borderRadius:'50%',background:Z.accent,border:'2px solid #fff' }} />
+                  )}
                 </div>
                 <div style={{ flex:'1 1 auto',minWidth:0 }}>
                   <div style={{ display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:8 }}>
@@ -347,7 +378,17 @@ export default function ChatMailPage() {
       </section>
 
       {/* ── KHUNG CHÍNH PHẢI ── */}
-      <section style={{ flex:'1 1 auto',display:'flex',flexDirection:'column',minWidth:0 }}>
+      <section style={{ flex:'1 1 auto',display:'flex',flexDirection:'column',minWidth:0,position:'relative' }}>
+        {/* Toast notification khi có reply mới */}
+        {newReplyToast && (
+          <div style={{
+            position:'absolute',top:12,left:'50%',transform:'translateX(-50%)',zIndex:99,
+            background:Z.accent,color:'#fff',padding:'8px 18px',borderRadius:20,fontSize:13,fontWeight:600,
+            boxShadow:'0 4px 16px rgba(0,104,255,.35)',animation:'fadeIn .3s ease',
+          }}>
+            {newReplyToast}
+          </div>
+        )}
         {tab === 'compose' ? (
           <>
             <header style={{ flex:'0 0 auto',display:'flex',alignItems:'center',gap:11,padding:'10px 18px',background:Z.card,borderBottom:`1px solid ${Z.border}` }}>
