@@ -928,224 +928,54 @@ export function checkAndRepair(
     }
   }
 
-  // ── 6b. ÉP CẤU TRÚC MOTIF 8 Ô NHỊP (10 LUẬT) ──────────────────────
-  if ((level.bars === 8 || level.bars === 16) && level.kind === 'piece') {
-    const B = level.beatsPerBar
-    
-    // LUẬT 4: Ô 4 phải kết MỞ — nốt cuối ô 4 KHÔNG được là chủ âm (C)
-    // Tìm nốt cuối cùng trong ô 4 (beat 3*B đến 4*B)
-    {
-      let beat4 = 0, lastNoteInBar4 = -1
-      for (let i = 0; i < idx.length; i++) {
-        if (beat4 + durs[i] > 3*B && beat4 < 4*B) lastNoteInBar4 = i
-        beat4 += durs[i]
-      }
-      if (lastNoteInBar4 >= 0 && idx[lastNoteInBar4] === 0) {
-        // Đổi nốt cuối ô 4 sang nốt khác (ưu tiên G hoặc E — hợp âm V)
-        const alt = level.pitches.indexOf('G4') >= 0 ? level.pitches.indexOf('G4') 
-                  : level.pitches.indexOf('E4') >= 0 ? level.pitches.indexOf('E4') 
-                  : clamp(idx[lastNoteInBar4] + 2, 0, top)
-        if (alt !== 0) {
-          idx[lastNoteInBar4] = alt
-          problems.push('ô 4 kết mở: đã đổi nốt cuối ô 4 sang ' + level.pitches[alt] + ' (không kết ở C)')
-        }
-      }
+  // ── 6b. ENGINE LUẬT TRƯỜNG ĐỘ — kiến trúc mới ──────────────────────────
+  // Mỗi luật là một hàm transform độc lập. Luật chạy tuần tự.
+  // Thêm/sửa/xoá luật không ảnh hưởng đến luật khác.
+  {
+    interface DurRule {
+      name: string
+      apply: () => string | null
     }
 
-    // LUẬT 5: Ô 5 phải quay lại motif — nốt đầu ô 5 giống/gần nốt đầu ô 1
-    {
-      let firstNoteBar1 = -1, firstNoteBar5 = -1
-      let beat5 = 0
-      for (let i = 0; i < idx.length; i++) {
-        if (beat5 < 1*B && beat5 + durs[i] > 0*B && firstNoteBar1 < 0) firstNoteBar1 = i
-        if (beat5 >= 4*B && firstNoteBar5 < 0) firstNoteBar5 = i
-        beat5 += durs[i]
-      }
-      if (firstNoteBar1 >= 0 && firstNoteBar5 >= 0 && idx[firstNoteBar5] !== idx[firstNoteBar1]) {
-        idx[firstNoteBar5] = idx[firstNoteBar1]
-        problems.push('ô 5 phải quay lại motif: đã chép nốt đầu ô 1 sang ô 5')
-      }
-    }
+    const rules: DurRule[] = []
 
-    // LUẬT 8: Ô 8 kết ĐÓNG — nốt cuối = C (đã có endOnTonic), nhưng đảm bảo hướng V→I
-    // (endOnTonic đã xử lý việc kết ở C, nhưng ta đảm bảo ô 7 có nốt G hoặc B)
-    {
-      let beat7 = 0, hasVorVII = false
-      for (let i = 0; i < idx.length; i++) {
-        const barPos = beat7 % (4*B)
-        if (barPos >= 6*B && barPos < 7*B) {
-          const p = level.pitches[idx[i]]
-          if (p === 'G4' || p === 'B4' || p === 'G5') hasVorVII = true
+    // ═══════════════════════════════════════════════════════════════════
+    // LUẬT TEST: Tất cả nốt móc đơn.
+    // Mục đích: xác nhận engine luật mới ghi đè được output của AI.
+    // Sau khi test OK, Thầy sẽ cho luật thật.
+    // ═══════════════════════════════════════════════════════════════════
+    rules.push({
+      name: 'all-eighth',
+      apply: () => {
+        const totalBeats = level.bars * level.beatsPerBar
+        const count = Math.round(totalBeats / 0.5)
+        const already = durs.length === count && durs.every(d => Math.abs(d - 0.5) < 1e-9)
+        if (already) return null
+
+        const srcIdx = idx.filter((_, i) => !rests[i])
+        const src = srcIdx.length > 0 ? srcIdx : [0]
+        const newDurs: number[] = []
+        const newIdx: number[] = []
+        const newRests: boolean[] = []
+
+        for (let i = 0; i < count; i++) {
+          newDurs.push(0.5)
+          newIdx.push(src[i % src.length])
+          newRests.push(false)
         }
-        beat7 += durs[i]
-      }
-      if (!hasVorVII && idx.length > 0) {
-        // Chèn nốt G vào ô 7 nếu có chỗ
-        let b = 0, found = false
-        for (let i = 0; i < idx.length && !found; i++) {
-          const barPos = b % (4*B)
-          if (barPos >= 6*B && barPos + durs[i] <= 7*B && !isRestAt(i)) {
-            const gIdx = level.pitches.indexOf('G4')
-            if (gIdx >= 0) { idx[i] = gIdx; found = true }
-          }
-          b += durs[i]
-        }
-        if (found) problems.push('ô 7 dẫn về V: đã thêm nốt G/Sol vào ô 7')
-      }
+
+        durs.length = 0; durs.push(...newDurs)
+        idx.length = 0; idx.push(...newIdx)
+        rests.length = 0; rests.push(...newRests)
+        return `luật all-eighth: ${durs.length} nốt móc đơn (${count} phách)`
+      },
+    })
+
+    for (const rule of rules) {
+      try { const msg = rule.apply(); if (msg) problems.push(msg) }
+      catch (e: any) { problems.push(`luật "${rule.name}" lỗi: ${e.message || e}`) }
     }
   }
-
-  // ── 6c. ÉP LUẬT TRƯỜNG ĐỘ 8 Ô NHỊP ──────────────────────────────
-  if ((level.bars === 8 || level.bars === 16) && level.kind === 'piece') {
-    const B = level.beatsPerBar
-
-    // Luật 7+11: Ô 4, ô 12 (nếu 16 ô) phải kết bằng Trắng (2 phách)
-    if (level.durations.includes(2)) {
-      const endBars = level.bars === 16 ? [4, 12] : [4]
-      for (const endBar of endBars) {
-      let beatPos = 0, lastInBar = -1
-      const targetBeat = endBar * B
-      for (let i = 0; i < durs.length; i++) {
-        if (beatPos + durs[i] >= targetBeat && beatPos < targetBeat) lastInBar = i
-        beatPos += durs[i]
-      }
-      if (lastInBar >= 0 && Math.abs(durs[lastInBar] - 2) > 1e-9) {
-        // Nốt cuối ô chưa phải trắng → sửa: gộp nốt cuối ô thành trắng
-        let s = 0
-        for (let j = 0; j <= lastInBar; j++) s += durs[j]
-        const needExtra = s - endBar * B  // số phách thừa sau ô
-        if (needExtra > 0) {
-          // Cắt bớt để vừa ô rồi đặt trắng
-          durs[lastInBar] -= needExtra
-          // Thêm phần dư vào đầu ô kế
-          if (lastInBar + 1 < durs.length) {
-            durs.splice(lastInBar + 1, 0, needExtra)
-            idx.splice(lastInBar + 1, 0, idx[lastInBar])
-            rests.splice(lastInBar + 1, 0, false)
-          }
-        }
-        // Đổi nốt cuối ô thành trắng nếu chưa phải
-        if (Math.abs(durs[lastInBar] - 2) > 1e-9) {
-          // Gộp/cắt để được đúng 2 phách ở cuối ô
-          let total4 = 0, first4 = lastInBar
-          for (let j = lastInBar; j >= 0; j--) {
-            total4 += durs[j]
-            first4 = j
-            if (total4 >= 2) break
-          }
-          if (Math.abs(total4 - 2) < 1e-9 && first4 < lastInBar) {
-            // Gộp các nốt cuối ô thành 1 nốt trắng
-            const newIdx = idx[first4]
-            durs.splice(first4, lastInBar - first4 + 1, 2)
-            idx.splice(first4, lastInBar - first4 + 1, newIdx)
-            rests.splice(first4, lastInBar - first4 + 1, false)
-            problems.push(`ô ${endBar} phải kết bằng Trắng, đã sửa`)
-          }
-        }
-      }
-      }  // end for endBars
-    }
-
-    // Luật 11: Ô 8 (và ô 16 nếu 16 ô) phải kết bằng Tròn (4 phách)
-    if (level.durations.includes(4)) {
-      const endBars = level.bars === 16 ? [8, 16] : [8]
-      for (const endBar of endBars) {
-        if (endBar !== level.bars) continue  // ô giữa (8 của bài 16 ô) không cần kết Tròn
-      let beatPos = 0, lastInBar = -1
-      const targetBeat = endBar * B
-      for (let i = 0; i < durs.length; i++) {
-        if (beatPos + durs[i] >= targetBeat && beatPos < targetBeat) lastInBar = i
-        beatPos += durs[i]
-      }
-      if (lastInBar >= 0 && lastInBar === durs.length - 1 && Math.abs(durs[lastInBar] - 4) > 1e-9) {
-        // Gộp các nốt cuối thành 1 nốt tròn
-        let totalEnd = 0, firstEnd = lastInBar
-        for (let j = lastInBar; j >= 0; j--) {
-          totalEnd += durs[j]
-          firstEnd = j
-          if (totalEnd >= 4) break
-        }
-        if (Math.abs(totalEnd - 4) < 1e-9 && firstEnd < lastInBar) {
-          durs.splice(firstEnd, lastInBar - firstEnd + 1, 4)
-          idx.splice(firstEnd, lastInBar - firstEnd + 1, 0)  // nốt chủ = C
-          rests.splice(firstEnd, lastInBar - firstEnd + 1, false)
-          problems.push(`ô ${endBar} phải kết bằng Tròn, đã sửa`)
-        }
-      }
-      }  // end for endBars
-    }
-
-    // Luật 9+10: áp dụng cho từng chu kỳ 8 ô
-    {
-      const density = (startBar: number, endBar: number) => {
-        let n = 0
-        let beatP = 0
-        for (let i = 0; i < durs.length; i++) {
-          if (beatP >= startBar * B && beatP < endBar * B) n++
-          beatP += durs[i]
-        }
-        return n
-      }
-      // Áp dụng cho chu kỳ 1 (ô 4-7) và chu kỳ 2 nếu 16 ô (ô 12-15)
-      const cycles = level.bars === 16 ? [[4,5,6,7], [12,13,14,15]] : [[4,5,6,7]]
-      for (const [b4, b5, b6, b7] of cycles) {
-        const d5 = density(b5 - 1, b5), d6 = density(b6 - 1, b6), d7 = density(b7 - 1, b7)
-        // Ô 6 mật độ ≥ ô 5
-        if (d6 < d5 && d5 > 0) {
-          let bp = 0
-          for (let i = 0; i < durs.length; i++) {
-            const barPos = Math.floor(bp / B)
-            if (barPos === b6 - 1 && durs[i] >= 2 && level.durations.includes(1)) {
-              durs.splice(i, 1, 1, 1)
-              const v = idx[i] >= 0 ? idx[i] : 0
-              idx.splice(i, 1, v, clamp(v + 1, 0, top))
-              rests.splice(i, 1, false, false)
-              problems.push(`ô ${b6} mật độ < ô ${b5}, đã tăng`)
-              break
-            }
-            bp += durs[i]
-          }
-        }
-        // Ô 7 mật độ ≤ ô 6
-        if (d7 > d6 && d7 > 0 && level.durations.some(x => x >= 2)) {
-          let bp = 0
-          for (let i = 0; i < durs.length; i++) {
-            const barPos = Math.floor(bp / B)
-            if (barPos === b7 - 1 && i + 1 < durs.length && Math.abs(durs[i] - 1) < 1e-9 && Math.abs(durs[i + 1] - 1) < 1e-9) {
-              durs.splice(i, 2, 2)
-              idx.splice(i, 2, idx[i])
-              rests.splice(i, 2, false)
-              problems.push(`ô ${b7} mật độ > ô ${b6}, đã giảm`)
-              break
-            }
-            bp += durs[i]
-          }
-        }
-      }
-    }
-
-    // Giới hạn số loại trường độ
-    {
-      const uniqueDurs = [...new Set(durs.map(d => Math.round(d * 10) / 10))]
-      const maxTypes = level.id <= 8 ? 3 : level.id <= 11 ? 4 : 5
-      if (uniqueDurs.length > maxTypes) {
-        const count: Record<number, number> = {}
-        durs.forEach(d => { const k = Math.round(d * 10) / 10; count[k] = (count[k] || 0) + 1 })
-        const sorted = Object.entries(count).sort((a, b) => b[1] - a[1])
-        const keep = new Set(sorted.slice(0, maxTypes).map(e => parseFloat(e[0])))
-        for (let i = 0; i < durs.length; i++) {
-          const k = Math.round(durs[i] * 10) / 10
-          if (!keep.has(k)) {
-            let best = 1, bestDist = Infinity
-            keep.forEach(v => { const dist = Math.abs(v - k); if (dist < bestDist) { bestDist = dist; best = v } })
-            durs[i] = best
-          }
-        }
-        problems.push(`quá ${maxTypes} loại trường độ, đã gộp về ${keep.size} loại`)
-      }
-    }
-  }
-
   // ── 7. startBeat — tính lại từ đầu ──────────────────────────────────────
   const notesOut: PianoNote[] = []
   let beat = 0
