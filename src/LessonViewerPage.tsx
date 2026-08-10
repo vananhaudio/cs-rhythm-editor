@@ -57,7 +57,9 @@ function getYouTubeId(url: string) {
 }
 
 export default function LessonViewerPage() {
-  const courseId = new URLSearchParams(window.location.search).get('id')
+  const params = new URLSearchParams(window.location.search)
+  const courseId = params.get('id')
+  const lessonParam = params.get('lesson')   // deep-link QR: mở thẳng 1 bài
   const [course, setCourse]   = useState<Course | null>(null)
   const [modules, setModules] = useState<Module[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
@@ -136,10 +138,25 @@ export default function LessonViewerPage() {
   useEffect(() => {
     if (!courseId) return
     const load = async () => {
-      const [{ data: c }, { data: mods }] = await Promise.all([
-        supabase.from('edu_courses').select('id,name,type,code').eq('id', courseId).single(),
-        supabase.from('edu_modules').select('*').eq('course_id', courseId).order('order_index'),
-      ])
+      // `id` có thể là COURSE id (bình thường) HOẶC LESSON id (deep-link QR từ sách).
+      // Nếu không tìm thấy khoá theo id → coi id là bài, truy ngược ra khoá chứa nó
+      // và mở thẳng đúng bài đó. Giữ tương thích ngược cho link /course?id=<courseId>.
+      let resolvedCourseId = courseId
+      let wantLessonId = lessonParam
+      let { data: c } = await supabase.from('edu_courses').select('id,name,type,code').eq('id', courseId).maybeSingle()
+      if (!c) {
+        const { data: lrow } = await supabase.from('edu_course_lessons').select('id,module_id').eq('id', courseId).maybeSingle()
+        const { data: mrow } = lrow?.module_id
+          ? await supabase.from('edu_modules').select('course_id').eq('id', lrow.module_id).maybeSingle()
+          : { data: null as { course_id: string } | null }
+        if (mrow?.course_id) {
+          resolvedCourseId = mrow.course_id
+          wantLessonId = wantLessonId || courseId
+          const r = await supabase.from('edu_courses').select('id,name,type,code').eq('id', resolvedCourseId).maybeSingle()
+          c = r.data
+        }
+      }
+      const { data: mods } = await supabase.from('edu_modules').select('*').eq('course_id', resolvedCourseId).order('order_index')
       setCourse(c)
       setModules(mods ?? [])
       if (mods && mods.length > 0) {
@@ -149,7 +166,7 @@ export default function LessonViewerPage() {
           ...l, tools: Array.isArray(l.tools) ? l.tools : [],
         }))
         setLessons(parsed)
-        if (parsed.length > 0) setActive(parsed[0])
+        if (parsed.length > 0) setActive(parsed.find((l: Lesson) => l.id === wantLessonId) ?? parsed[0])
       }
       // Load tool map từ DB
       const { data: toolsData } = await supabase.from('edu_tools').select('id,name,icon,route').eq('enabled', true)
