@@ -72,6 +72,14 @@ export default function LessonViewerPage() {
   const [ownedCodes, setOwnedCodes] = useState<Set<string>>(new Set()) // mã năng lực học viên đã sở hữu (tính thiếu nền)
   const [htMember, setHtMember] = useState(false) // học viên Hành trình: chặn tuần tự
   const [seqLockNames, setSeqLockNames] = useState<string[]>([]) // tên khoá cấp dưới CHƯA hoàn thành → khoá này bị chặn
+  // Trên điện thoại (QR từ sách hay mở /course trực tiếp): sidebar thành ngăn kéo, nội dung chiếm trọn bề rộng
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 1024)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1024)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // Bài elearn? → trả về số bài (1..11), ngược lại null
   const elearnNumOf = (l: Lesson | null): number | null => {
@@ -237,12 +245,29 @@ export default function LessonViewerPage() {
 
   const ytId = active?.content_url ? getYouTubeId(active.content_url) : null
   const tools = active?.tools ?? []
+  // Bài phủ toàn màn (overlay/flow) → không cần nút ☰ nổi (đã có nút back riêng)
+  const overlayActive = !!active && (elearnNumOf(active) != null || active.lesson_type === 'native' || active.lesson_type === 'strum')
+  const flowActive = active?.lesson_type === 'flow'
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: D.bg, fontFamily: '"Inter", system-ui, sans-serif', color: D.text1, fontSize: 15 }}>
 
-      {/* ── SIDEBAR: lesson list ─────────────────────────────────────── */}
-      <aside style={{ width: 280, flexShrink: 0, background: D.surface, borderRight: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* ── Nền mờ khi mở ngăn kéo trên điện thoại ── */}
+      {isMobile && drawerOpen && (
+        <div onClick={() => setDrawerOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 55, background: 'rgba(0,0,0,.45)' }} />
+      )}
+
+      {/* ── Nút ☰ mở danh sách bài trên điện thoại (ẩn khi bài phủ toàn màn) ── */}
+      {isMobile && !drawerOpen && !overlayActive && !flowActive && (
+        <button onClick={() => setDrawerOpen(true)} aria-label="Danh sách bài"
+          style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top,0px) + 10px)', left: 10, zIndex: 50, width: 42, height: 42, borderRadius: 11, border: `1px solid ${D.border}`, background: D.surface, boxShadow: D.shadow, cursor: 'pointer', fontSize: 19, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: D.text1 }}>
+          ☰
+        </button>
+      )}
+
+      {/* ── SIDEBAR: lesson list (desktop cố định · mobile là ngăn kéo) ── */}
+      <aside style={{ width: 280, flexShrink: 0, background: D.surface, borderRight: `1px solid ${D.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        ...(isMobile ? { position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 60, width: 'min(300px,85vw)', transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform .25s ease', boxShadow: drawerOpen ? '0 0 40px rgba(0,0,0,.25)' : 'none' } : {}) }}>
         {/* Header */}
         <div style={{ padding: '14px 16px', borderBottom: `1px solid ${D.border}` }}>
           <a href="/start" style={{ fontSize: 13, color: D.text3, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 10 }}>
@@ -284,7 +309,7 @@ export default function LessonViewerPage() {
                   const isActive = active?.id === l.id
                   const typeIcon: Record<string, string> = { video: '▶', text: '📄', slide: '🖼', quiz: '❓', game: '🎮', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹', discussion: '💬', link: '🔗' }
                   return (
-                    <div key={l.id} onClick={() => setActive(l)}
+                    <div key={l.id} onClick={() => { setActive(l); if (isMobile) setDrawerOpen(false) }}
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', background: isActive ? D.accentLight : 'transparent', borderLeft: `3px solid ${isActive ? D.accent : 'transparent'}`, transition: 'background .1s' }}
                       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = D.bg }}
                       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
@@ -357,7 +382,7 @@ export default function LessonViewerPage() {
             />
           </div>
         ) : (
-          <div style={{ maxWidth: 860, margin: '0 auto', padding: '28px 32px 60px' }}>
+          <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? '62px 16px 60px' : '28px 32px 60px' }}>
 
             {/* Lesson title */}
             <div style={{ marginBottom: 20 }}>
