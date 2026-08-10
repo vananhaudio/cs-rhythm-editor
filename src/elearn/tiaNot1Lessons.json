@@ -260,8 +260,8 @@
      "key": "cumsdr",
      "lessonId": "a2710000-0000-4000-8000-000000000004",
      "flowId": "f2710000-0000-4000-8000-000000000004",
-     "order": 3,
-     "title": "Bài 4: Cụm Si – Đô – Rê",
+     "order": 4,
+     "title": "Bài 5: Cụm Si – Đô – Rê",
      "reward_xp": 10,
      "slides": [
       {
@@ -409,8 +409,8 @@
      "key": "vung",
      "lessonId": "a2710000-0000-4000-8000-000000000005",
      "flowId": "f2710000-0000-4000-8000-000000000005",
-     "order": 4,
-     "title": "Bài 5: Vùng nốt đầu tiên",
+     "order": 5,
+     "title": "Bài 6: Vùng nốt đầu tiên",
      "reward_xp": 10,
      "slides": [
       {
@@ -515,8 +515,8 @@
      "key": "day2",
      "lessonId": "a2710000-0000-4000-8000-000000000006",
      "flowId": "f2710000-0000-4000-8000-000000000006",
-     "order": 5,
-     "title": "Bài 6: Đọc câu nhạc qua 2 dây",
+     "order": 6,
+     "title": "Bài 7: Đọc câu nhạc qua 2 dây",
      "reward_xp": 10,
      "slides": [
       {
@@ -614,8 +614,8 @@
      "key": "baihat1",
      "lessonId": "a2710000-0000-4000-8000-000000000007",
      "flowId": "f2710000-0000-4000-8000-000000000007",
-     "order": 6,
-     "title": "Bài 7: Bài hát đầu tiên",
+     "order": 7,
+     "title": "Bài 8: Bài hát đầu tiên",
      "reward_xp": 12,
      "slides": [
       {
@@ -763,6 +763,361 @@
         "variant": "teacher"
        },
        "content": "<b>“Tôi chơi được bài hát đầu tiên!”</b> — hãy tự nói câu đó, bạn xứng đáng. Chương sau ta mở rộng vùng nốt xuống thấp hơn."
+      }
+     ]
+    },
+    {
+     "key": "nghetim1",
+     "lessonId": "a2710000-0000-4000-8000-000000000008",
+     "flowId": "f2710000-0000-4000-8000-000000000008",
+     "order": 3,
+     "title": "Bài 4: Nghe & tìm — Mi, Fa, Sol",
+     "reward_xp": 10,
+     "slides": [
+      {
+       "id": "g1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Nghe rồi tự tìm",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Giờ luyện <b>cảm âm</b>: nghe một mẫu ngắn, tự đoán thứ tự nốt trong đầu, rồi mới bấm <b>Nghe mẫu</b> để kiểm tra và tìm lại trên đàn."
+      },
+      {
+       "id": "g2",
+       "order": 2,
+       "logic": "NGHI",
+       "type": "text",
+       "title": "Cách chơi",
+       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Mỗi mẫu dưới đây chỉ dùng 3 nốt <b>Mi – Fa – Sol</b>. Đừng bấm Nghe mẫu ngay — thử <b>đoán trước</b> xem giai điệu đi lên hay xuống, rồi mới kiểm tra bằng tai và tìm lại đúng vị trí trên đàn.</p>"
+      },
+      {
+       "id": "g3",
+       "order": 3,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Mẫu 1",
+       "interactive": {
+        "hint": "Đoán trước: đi lên hay xuống rồi lại lên?",
+        "notes": [
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         }
+        ]
+       }
+      },
+      {
+       "id": "g4",
+       "order": 4,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Mẫu 2",
+       "interactive": {
+        "hint": "Đoán trước rồi mới nghe mẫu.",
+        "notes": [
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         }
+        ]
+       }
+      },
+      {
+       "id": "g5",
+       "order": 5,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Mẫu 3",
+       "interactive": {
+        "hint": "Đoán trước rồi mới nghe mẫu.",
+        "notes": [
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 1
+         }
+        ]
+       }
+      },
+      {
+       "id": "g6",
+       "order": 6,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Mẫu 4",
+       "interactive": {
+        "hint": "Đoán trước rồi mới nghe mẫu.",
+        "notes": [
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 1
+         }
+        ]
+       }
+      },
+      {
+       "id": "g7",
+       "order": 7,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Mẫu 5",
+       "interactive": {
+        "hint": "Đoán trước rồi mới nghe mẫu.",
+        "notes": [
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         }
+        ]
+       }
+      },
+      {
+       "id": "g8",
+       "order": 8,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình đoán đúng hướng đi lên/xuống trước khi nghe, ít nhất 3/5 mẫu",
+         "Mình tự tìm lại được cả 5 mẫu trên đàn"
+        ]
+       }
+      },
+      {
+       "id": "g9",
+       "order": 9,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Lời thầy",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Nghe rồi tìm lại là kỹ năng gốc của tỉa nốt — không chỉ nhìn TAB. Càng luyện, tai bạn càng nhạy."
+      }
+     ]
+    },
+    {
+     "key": "thuthach1",
+     "lessonId": "a2710000-0000-4000-8000-000000000009",
+     "flowId": "f2710000-0000-4000-8000-000000000009",
+     "order": 8,
+     "title": "Bài 9: Thử thách — bài lạ (dây 1 & 2)",
+     "reward_xp": 12,
+     "slides": [
+      {
+       "id": "h1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Thử thách bài lạ",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Câu nhạc dưới đây bạn <b>chưa từng tập</b> — nhưng chỉ dùng 6 nốt đã học (Si Đô Rê Mi Fa Sol). Đừng xem đáp án ngay: tự đọc tên nốt trên khuông, tìm vị trí, rồi tỉa."
+      },
+      {
+       "id": "h2",
+       "order": 2,
+       "logic": "NGHI",
+       "type": "text",
+       "title": "Tự xử lý trước",
+       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Quy trình: <b>đọc nốt trên khuông → xác định dây/ngăn → tìm trên đàn → tỉa</b>. Chỉ bấm Nghe mẫu khi đã tự thử ít nhất một lần.</p>"
+      },
+      {
+       "id": "h3",
+       "order": 3,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Câu nhạc lạ",
+       "interactive": {
+        "hint": "Tự tìm trước khi nghe mẫu.",
+        "notes": [
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7
+         },
+         {
+          "label": "Đô",
+          "freq": 261.63,
+          "string": 2,
+          "fret": 1,
+          "staff": 5
+         },
+         {
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 2
+         }
+        ]
+       }
+      },
+      {
+       "id": "h4",
+       "order": 4,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình tự tìm & chơi được câu này mà không cần chỉ dẫn từng nốt",
+         "Mình chơi liền mạch, không dừng giữa chừng"
+        ]
+       }
+      },
+      {
+       "id": "h5",
+       "order": 5,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Lời thầy",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Tự xử lý được một câu chưa học là dấu hiệu bạn đã <b>làm chủ</b> vùng nốt này, không chỉ học thuộc bài mẫu."
       }
      ]
     }
@@ -1271,6 +1626,121 @@
         "variant": "teacher"
        },
        "content": "Xuất sắc! Bạn đã đọc và chơi trọn một quãng tám ở thế tay 1 — nền của mọi bài tỉa nốt về sau."
+      }
+     ]
+    },
+    {
+     "key": "thuthach2",
+     "lessonId": "a2720000-0000-4000-8000-000000000005",
+     "flowId": "f2720000-0000-4000-8000-000000000005",
+     "order": 4,
+     "title": "Bài 5: Thử thách — Happy Birthday (câu đầu, tự dò)",
+     "reward_xp": 12,
+     "slides": [
+      {
+       "id": "k1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Tự dò trước khi học bài đầy đủ",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Trước khi học <b>Happy Birthday</b> đầy đủ ở chương sau, thử tự dò <b>câu đầu giản lược</b> này — toàn nốt đen, nhịp 3/4, chỉ dùng nốt bạn đã có."
+      },
+      {
+       "id": "k2",
+       "order": 2,
+       "logic": "NGHI",
+       "type": "text",
+       "title": "Tự dò",
+       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Đọc khuông trước, đoán giai điệu quen thuộc này là bài gì, rồi mới tỉa. Nhịp <b>3/4</b>: mỗi ô 3 phách, toàn <b>nốt đen</b>.</p>"
+      },
+      {
+       "id": "k3",
+       "order": 3,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Câu đầu — tự dò",
+       "interactive": {
+        "beatsPerBar": 3,
+        "showDur": true,
+        "hint": "Đoán tên bài trước khi nghe mẫu.",
+        "notes": [
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "La",
+          "freq": 220,
+          "string": 3,
+          "fret": 2,
+          "staff": 3,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 261.63,
+          "string": 2,
+          "fret": 1,
+          "staff": 5,
+          "dur": 1
+         },
+         {
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
+          "dur": 1
+         }
+        ]
+       }
+      },
+      {
+       "id": "k4",
+       "order": 4,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình nhận ra đây là giai điệu quen thuộc trước khi xem đáp án",
+         "Mình tỉa đúng nhịp 3/4, đều phách"
+        ]
+       }
+      },
+      {
+       "id": "k5",
+       "order": 5,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Lời thầy",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Nhận ra bài hát chỉ qua khuông nhạc là bước đầu của việc <b>tự học một bài mới</b>. Chương sau ta chơi bản đầy đủ!"
       }
      ]
     }
@@ -3224,6 +3694,687 @@
        "content": "Giỏi lắm! Thêm một bài hát trọn vẹn vào 'kho' của bạn. Chơi được những giai điệu quen thế này nghĩa là bạn đã <b>đọc nốt và chuyển dây</b> thành thạo rồi."
       }
      ]
+    },
+    {
+     "key": "mary",
+     "lessonId": "a2730000-0000-4000-8000-000000000005",
+     "flowId": "f2730000-0000-4000-8000-000000000005",
+     "order": 4,
+     "title": "Bài 5: Mary Had a Little Lamb",
+     "reward_xp": 12,
+     "slides": [
+      {
+       "id": "m1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Chơi: Mary Had a Little Lamb",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Một giai điệu cổ điển siêu quen thuộc, chỉ dùng <b>Đô – Rê – Mi – Sol</b> ở dây 1–2. Nghe mẫu rồi đàn theo chậm rãi."
+      },
+      {
+       "id": "m2",
+       "order": 2,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Đánh theo: Mary Had a Little Lamb",
+       "interactive": {
+        "notes": [
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 261.63,
+          "string": 2,
+          "fret": 1,
+          "staff": 5,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 2
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 2
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 2
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 261.63,
+          "string": 2,
+          "fret": 1,
+          "staff": 5,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 261.63,
+          "string": 2,
+          "fret": 1,
+          "staff": 5,
+          "dur": 4
+         }
+        ]
+       }
+      },
+      {
+       "id": "m3",
+       "order": 3,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình chơi trọn bài không dừng giữa chừng",
+         "Mình nghe ra đúng giai điệu quen thuộc"
+        ]
+       }
+      },
+      {
+       "id": "m4",
+       "order": 4,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Lời thầy",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Gọn gàng! Bài sau thử một giai điệu vui nhộn hơn — Jingle Bells."
+      }
+     ]
+    },
+    {
+     "key": "jingle",
+     "lessonId": "a2730000-0000-4000-8000-000000000006",
+     "flowId": "f2730000-0000-4000-8000-000000000006",
+     "order": 5,
+     "title": "Bài 6: Jingle Bells",
+     "reward_xp": 12,
+     "slides": [
+      {
+       "id": "j1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Chơi: Jingle Bells",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Giai điệu Giáng Sinh rộn ràng, vùng <b>Đô–Sol</b>. Nghe mẫu một lượt rồi đàn theo."
+      },
+      {
+       "id": "j2",
+       "order": 2,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Đánh theo: Jingle Bells",
+       "interactive": {
+        "notes": [
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 2
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 2
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 261.63,
+          "string": 2,
+          "fret": 1,
+          "staff": 5,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 4
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 349.23,
+          "string": 1,
+          "fret": 1,
+          "staff": 8,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 293.66,
+          "string": 2,
+          "fret": 3,
+          "staff": 6,
+          "dur": 2
+         },
+         {
+          "label": "Sol",
+          "freq": 392,
+          "string": 1,
+          "fret": 3,
+          "staff": 9,
+          "dur": 2
+         }
+        ]
+       }
+      },
+      {
+       "id": "j3",
+       "order": 3,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình chơi trọn bài giữ nhịp",
+         "Mình nghe ra đúng giai điệu Jingle Bells"
+        ]
+       }
+      },
+      {
+       "id": "j4",
+       "order": 4,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Lời thầy",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Rộn ràng chưa! Bài sau ta học kỹ thuật mới — rải hợp âm."
+      }
+     ]
+    },
+    {
+     "key": "arpeggioEmAm",
+     "lessonId": "a2730000-0000-4000-8000-000000000007",
+     "flowId": "f2730000-0000-4000-8000-000000000007",
+     "order": 6,
+     "title": "Bài 7: Tỉa hợp âm rải Em & Am",
+     "reward_xp": 15,
+     "slides": [
+      {
+       "id": "e1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Rải hợp âm — kỹ thuật mới",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Từ giờ ta không chỉ tỉa từng nốt rời — mà <b>giữ nguyên một thế bấm</b> (hợp âm) rồi <b>rải lần lượt qua từng dây</b> bằng p–i–m–a. Bắt đầu với hai hợp âm dễ nhất: <b>Em</b> và <b>Am</b>."
+      },
+      {
+       "id": "e2",
+       "order": 2,
+       "logic": "NGHI",
+       "type": "text",
+       "title": "Thế bấm Em",
+       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\"><b>Em</b>: dây 6 buông, dây 5 ngăn 2, dây 4 ngăn 2, dây 3-2-1 đều buông. Bấm giữ nguyên cả thế tay, rồi rải từng dây theo thứ tự <b>p(6)–p(5)–p(4)–i(3)–m(2)–a(1)</b>.</p>"
+      },
+      {
+       "id": "e3",
+       "order": 3,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Rải hợp âm Em",
+       "interactive": {
+        "notes": [
+         {
+          "label": "Mi",
+          "freq": 82.41,
+          "string": 6,
+          "fret": 0,
+          "staff": -7
+         },
+         {
+          "label": "Si",
+          "freq": 123.47,
+          "string": 5,
+          "fret": 2,
+          "staff": -3
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2
+         },
+         {
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7
+         }
+        ]
+       }
+      },
+      {
+       "id": "e4",
+       "order": 4,
+       "logic": "NGHI",
+       "type": "text",
+       "title": "Thế bấm Am",
+       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\"><b>Am</b>: dây 6 không gảy, dây 5 buông, dây 4 ngăn 2, dây 3 ngăn 2, dây 2 ngăn 1, dây 1 buông. Rải theo thứ tự <b>p(5)–p(4)–i(3)–m(2)–a(1)</b>.</p>"
+      },
+      {
+       "id": "e5",
+       "order": 5,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Rải hợp âm Am",
+       "interactive": {
+        "notes": [
+         {
+          "label": "La",
+          "freq": 110,
+          "string": 5,
+          "fret": 0,
+          "staff": -4
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0
+         },
+         {
+          "label": "La",
+          "freq": 220,
+          "string": 3,
+          "fret": 2,
+          "staff": 3
+         },
+         {
+          "label": "Đô",
+          "freq": 261.63,
+          "string": 2,
+          "fret": 1,
+          "staff": 5
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7
+         }
+        ]
+       }
+      },
+      {
+       "id": "e6",
+       "order": 6,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình giữ nguyên thế bấm Em/Am trong khi rải từng dây",
+         "Tiếng các dây vang chồng lên nhau, đều và không đứt quãng",
+         "Mình chuyển được Em ↔ Am"
+        ]
+       }
+      },
+      {
+       "id": "e7",
+       "order": 7,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Lời thầy",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Đây là bước đầu tiên vào thế giới <b>hợp âm</b> — nền tảng của đệm hát sau này. Rải chậm, đều, giữ chắc thế bấm."
+      }
+     ]
     }
    ]
   },
@@ -3237,7 +4388,7 @@
      "lessonId": "a5720000-0000-4000-8000-000000000001",
      "flowId": "f5720000-0000-4000-8000-000000000001",
      "order": 1,
-     "title": "Bài 1: Nốt đen & nốt trắng",
+     "title": "Bài 2: Nốt đen & nốt trắng",
      "reward_xp": 12,
      "slides": [
       {
@@ -3386,7 +4537,7 @@
      "lessonId": "a5720000-0000-4000-8000-000000000002",
      "flowId": "f5720000-0000-4000-8000-000000000002",
      "order": 2,
-     "title": "Bài 2: Nốt tròn & ghép ba loại",
+     "title": "Bài 3: Nốt tròn & ghép ba loại",
      "reward_xp": 12,
      "slides": [
       {
@@ -3526,7 +4677,7 @@
      "lessonId": "a5720000-0000-4000-8000-000000000003",
      "flowId": "f5720000-0000-4000-8000-000000000003",
      "order": 3,
-     "title": "Bài 3: Dấu lặng — khoảng nghỉ",
+     "title": "Bài 4: Dấu lặng — khoảng nghỉ",
      "reward_xp": 12,
      "slides": [
       {
@@ -3646,7 +4797,7 @@
      "lessonId": "a5720000-0000-4000-8000-000000000004",
      "flowId": "f5720000-0000-4000-8000-000000000004",
      "order": 4,
-     "title": "Bài 4: Ngôi Sao Nhỏ — đọc đúng nhịp",
+     "title": "Bài 5: Ngôi Sao Nhỏ — đọc đúng nhịp",
      "reward_xp": 15,
      "slides": [
       {
@@ -4048,7 +5199,7 @@
      "lessonId": "a5720000-0000-4000-8000-000000000005",
      "flowId": "f5720000-0000-4000-8000-000000000005",
      "order": 5,
-     "title": "Bài 5: Nốt móc đơn (nửa phách)",
+     "title": "Bài 6: Nốt móc đơn (nửa phách)",
      "reward_xp": 14,
      "slides": [
       {
@@ -4213,7 +5364,7 @@
      "lessonId": "a5720000-0000-4000-8000-000000000006",
      "flowId": "f5720000-0000-4000-8000-000000000006",
      "order": 6,
-     "title": "Bài 6: Bản tiết tấu đầu tiên",
+     "title": "Bài 7: Bản tiết tấu đầu tiên",
      "reward_xp": 15,
      "slides": [
       {
@@ -4470,6 +5621,59 @@
         "variant": "teacher"
        },
        "content": "<b>“Tôi chơi được một bản tiết tấu!”</b> Nhịp của bạn đã đủ vững để sang chương sau: <b>ô nhịp & số chỉ nhịp</b>."
+      }
+     ]
+    },
+    {
+     "key": "dapphach",
+     "lessonId": "a5720000-0000-4000-8000-000000000007",
+     "flowId": "f5720000-0000-4000-8000-000000000007",
+     "order": 0,
+     "title": "Bài 1: Đập chân giữ phách",
+     "reward_xp": 8,
+     "slides": [
+      {
+       "id": "p1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Cảm nhận phách",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Trước khi đọc nốt dài-ngắn, ta cần cảm nhận được <b>phách</b> — nhịp đều đặn như tiếng đồng hồ. Chưa cần đàn, chỉ cần đập chân và đếm."
+      },
+      {
+       "id": "p2",
+       "order": 2,
+       "logic": "NGHI",
+       "type": "text",
+       "title": "Đếm 1-2-3-4",
+       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bật metronome tốc độ <b>60</b>. Đập chân đều theo từng tiếng click, miệng đếm to <b>\"1-2-3-4\"</b> lặp lại. Nhấn mạnh hơn ở phách <b>1</b> — đó là phách <b>mạnh</b> đầu mỗi ô nhịp.</p>"
+      },
+      {
+       "id": "p3",
+       "order": 3,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình đập chân đều 1 phút liền, không bị lệch nhịp",
+         "Mình nhấn rõ phách 1 mỗi lần đếm lại từ đầu"
+        ]
+       }
+      },
+      {
+       "id": "p4",
+       "order": 4,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Lời thầy",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Giữ phách đều là nền của mọi bài nhạc sau này. Mỗi ngày dành 1 phút đập chân theo metronome trước khi cầm đàn."
       }
      ]
     }
@@ -8216,7 +9420,7 @@
      "lessonId": "a7720000-0000-4000-8000-000000000007",
      "flowId": "f7720000-0000-4000-8000-000000000007",
      "order": 1,
-     "title": "Bài 7: Vận dụng — Con đường xưa em đi (Am)",
+     "title": "Bài 1: Vận dụng — Con đường xưa em đi (Am)",
      "reward_xp": 20,
      "slides": [
       {
