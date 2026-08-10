@@ -527,7 +527,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const isSequentiallyUnlocked = (lessonId: string) => {
     const idx = sortedLessons.findIndex(l => l.id === lessonId)
     if (idx <= 0) return true
-    return completedIds.has(sortedLessons[idx - 1].id)
+    // Mở nếu bài liền trước đã xong, HOẶC chính bài này đã hoàn thành — để khi
+    // đổi thứ tự chương/bài, học viên không bị "khoá ngược" các bài đã học xong.
+    return completedIds.has(sortedLessons[idx - 1].id) || completedIds.has(lessonId)
   }
 
   // Quyền MỞ KHOÁ THEO TỪNG KHOÁ: khoá đang xem mở nếu là khoá free hoặc đã được cấp quyền.
