@@ -17,7 +17,7 @@ BEGIN
   FROM edu_course_lessons l
   JOIN edu_modules m ON m.id = l.module_id
   WHERE m.course_id = 'fd23a7a2-bfce-44c6-8bde-6d76289a3625'
-    AND (l.content::jsonb->>'num') = '9'
+    AND l.title = 'Bàn tay phải'
   LIMIT 1;
 
   IF v_id IS NOT NULL THEN
