@@ -1827,8 +1827,8 @@
      "key": "cummfs",
      "lessonId": "a2710000-0000-4000-8000-000000000002",
      "flowId": "f2710000-0000-4000-8000-000000000002",
-     "order": 0,
-     "title": "Bài 1: Cụm Mi – Fa – Sol",
+     "order": 1,
+     "title": "Bài 2: Cụm Mi – Fa – Sol",
      "reward_xp": 10,
      "slides": [
       {
@@ -1978,8 +1978,8 @@
      "key": "caunhac",
      "lessonId": "a2710000-0000-4000-8000-000000000003",
      "flowId": "f2710000-0000-4000-8000-000000000003",
-     "order": 1,
-     "title": "Bài 2: Câu nhạc đầu tiên",
+     "order": 2,
+     "title": "Bài 3: Câu nhạc đầu tiên",
      "reward_xp": 10,
      "slides": [
       {
@@ -2077,8 +2077,8 @@
      "key": "nghetim1",
      "lessonId": "a2710000-0000-4000-8000-000000000008",
      "flowId": "f2710000-0000-4000-8000-000000000008",
-     "order": 2,
-     "title": "Bài 3: Nghe & tìm — Mi, Fa, Sol",
+     "order": 3,
+     "title": "Bài 4: Nghe & tìm — Mi, Fa, Sol",
      "reward_xp": 10,
      "slides": [
       {
@@ -2310,8 +2310,8 @@
      "key": "cumsdr",
      "lessonId": "a2710000-0000-4000-8000-000000000004",
      "flowId": "f2710000-0000-4000-8000-000000000004",
-     "order": 3,
-     "title": "Bài 4: Cụm Si – Đô – Rê",
+     "order": 4,
+     "title": "Bài 5: Cụm Si – Đô – Rê",
      "reward_xp": 10,
      "slides": [
       {
@@ -2459,8 +2459,8 @@
      "key": "vung",
      "lessonId": "a2710000-0000-4000-8000-000000000005",
      "flowId": "f2710000-0000-4000-8000-000000000005",
-     "order": 4,
-     "title": "Bài 5: Vùng nốt đầu tiên",
+     "order": 5,
+     "title": "Bài 6: Vùng nốt đầu tiên",
      "reward_xp": 10,
      "slides": [
       {
@@ -2565,8 +2565,8 @@
      "key": "day2",
      "lessonId": "a2710000-0000-4000-8000-000000000006",
      "flowId": "f2710000-0000-4000-8000-000000000006",
-     "order": 5,
-     "title": "Bài 6: Đọc câu nhạc qua 2 dây",
+     "order": 6,
+     "title": "Bài 7: Đọc câu nhạc qua 2 dây",
      "reward_xp": 10,
      "slides": [
       {
@@ -2664,8 +2664,8 @@
      "key": "baihat1",
      "lessonId": "a2710000-0000-4000-8000-000000000007",
      "flowId": "f2710000-0000-4000-8000-000000000007",
-     "order": 6,
-     "title": "Bài 7: Bài hát đầu tiên",
+     "order": 7,
+     "title": "Bài 8: Bài hát đầu tiên",
      "reward_xp": 12,
      "slides": [
       {
@@ -2820,8 +2820,8 @@
      "key": "thuthach1",
      "lessonId": "a2710000-0000-4000-8000-000000000009",
      "flowId": "f2710000-0000-4000-8000-000000000009",
-     "order": 7,
-     "title": "Bài 8: Thử thách — bài lạ (dây 1 & 2)",
+     "order": 8,
+     "title": "Bài 9: Thử thách — bài lạ (dây 1 & 2)",
      "reward_xp": 12,
      "slides": [
       {
