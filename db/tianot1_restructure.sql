@@ -28,6 +28,12 @@ DELETE FROM edu_modules m
         SELECT 1 FROM edu_course_lessons l WHERE l.module_id = m.id
        );
 
+-- 3) Bỏ hẳn bài "Đọc bài có ô nhịp — Ode to Joy" (onhipBai) — đã rời khỏi
+--    tiaNot1Lessons.json. Xoá flow trước (FK), rồi lesson. Tiến độ/XP của học
+--    viên (nếu có) trỏ vào lesson này sẽ thành bản ghi mồ côi vô hại.
+DELETE FROM flows              WHERE id = 'f6720000-0000-4000-8000-000000000004';
+DELETE FROM edu_course_lessons WHERE id = 'a6720000-0000-4000-8000-000000000004';
+
 -- Kiểm tra: câu này PHẢI trả về 0 dòng sau khi chạy (không còn module mồ côi).
 -- SELECT id, name FROM edu_modules
 --  WHERE id IN ('c6720000-0000-4000-8000-000000000001',

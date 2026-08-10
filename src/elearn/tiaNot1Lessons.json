@@ -132,19 +132,19 @@
         "showDur": true,
         "notes": [
          {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
@@ -156,19 +156,19 @@
           "dur": 2
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
@@ -263,19 +263,19 @@
         "showDur": true,
         "notes": [
          {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
@@ -287,20 +287,12 @@
           "dur": 1
          },
          {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 392,
-          "string": 1,
-          "fret": 3,
-          "staff": 9,
-          "dur": 2
          },
          {
           "label": "Mi",
@@ -311,11 +303,19 @@
           "dur": 2
          },
          {
-          "label": "Đô",
-          "freq": 261.63,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "fret": 0,
+          "staff": 4,
+          "dur": 2
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 4
          }
         ]
@@ -393,25 +393,11 @@
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
-          "dur": 1
-         },
-         {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
-          "dur": 1
-         },
-         {
-          "label": "",
-          "freq": 0,
-          "rest": true,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
@@ -423,19 +409,32 @@
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
-          "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "label": "",
+          "rest": true,
           "dur": 1
          },
          {
-          "label": "Đô",
-          "freq": 261.63,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "fret": 0,
+          "staff": 4,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 1
+         },
+         {
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
           "dur": 2
          }
         ]
@@ -464,7 +463,7 @@
        "interactive": {
         "variant": "teacher"
        },
-       "content": "Giỏi lắm! Giờ bạn đọc được cả <b>nốt</b> lẫn <b>khoảng nghỉ</b> — đủ để đọc một bản nhạc thật. Bài cuối chương: <b>chơi lại một bài quen thuộc đúng nhịp</b>."
+       "content": "Giỏi lắm! Giờ bạn đọc được cả <b>nốt</b> lẫn <b>khoảng nghỉ</b>. Bài sau: <b>nốt móc đơn</b> — nốt nhanh nhất, chỉ nửa phách."
       }
      ]
     },
@@ -524,19 +523,19 @@
         "beatsPerBar": 4,
         "notes": [
          {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
@@ -548,35 +547,27 @@
           "dur": 0.5
          },
          {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
           "dur": 0.5
          },
          {
-          "label": "Sol",
-          "freq": 392,
+          "label": "Mi",
+          "freq": 329.63,
           "string": 1,
-          "fret": 3,
-          "staff": 9,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
-          "label": "Sol",
-          "freq": 392,
-          "string": 1,
-          "fret": 3,
-          "staff": 9,
-          "dur": 0.5
-         },
-         {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
           "dur": 0.5
          },
          {
@@ -588,19 +579,27 @@
           "dur": 0.5
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 0.5
          },
          {
-          "label": "Đô",
-          "freq": 261.63,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
+          "dur": 0.5
+         },
+         {
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "fret": 0,
+          "staff": 4,
           "dur": 2
          }
         ]
@@ -629,7 +628,7 @@
        "interactive": {
         "variant": "teacher"
        },
-       "content": "Tuyệt! Giờ bạn đọc được đủ <b>bốn loại trường độ</b>: tròn, trắng, đen, móc đơn — chơi được nhịp điệu của gần như mọi bài hát. Bài sau ta <b>vận dụng</b> vào một bài Việt quen thuộc!"
+       "content": "Tuyệt! Giờ bạn đủ <b>bốn loại trường độ</b>: tròn · trắng · đen · móc đơn. Bài sau: 🎉 <b>Bản tiết tấu đầu tiên</b> — trộn tất cả vào một bản nhạc hoàn chỉnh trên dây buông."
       }
      ]
     },
@@ -894,409 +893,7 @@
        "interactive": {
         "variant": "teacher"
        },
-       "content": "<b>“Tôi chơi được một bản tiết tấu!”</b> Nhịp của bạn đã đủ vững để sang chương sau: <b>ô nhịp & số chỉ nhịp</b>."
-      }
-     ]
-    },
-    {
-     "key": "twinkleNhip",
-     "lessonId": "a5720000-0000-4000-8000-000000000004",
-     "flowId": "f5720000-0000-4000-8000-000000000004",
-     "order": 6,
-     "title": "Bài 7: Ngôi Sao Nhỏ — đọc đúng nhịp",
-     "reward_xp": 15,
-     "slides": [
-      {
-       "id": "z1",
-       "order": 1,
-       "logic": "DAN",
-       "type": "callout",
-       "title": "Bài tổng kết chương",
-       "interactive": {
-        "variant": "teacher"
-       },
-       "content": "Bài cuối chương: chơi lại <b>Ngôi Sao Nhỏ</b> — nhưng lần này <b>đọc đúng nhịp</b>! Giờ bạn nhìn ra nốt nào <b>đen</b> (ngắn), nốt nào <b>trắng</b> (dài gấp đôi). Nghe khác hẳn lúc đàn đều đều."
-      },
-      {
-       "id": "z2",
-       "order": 2,
-       "logic": "NGHI",
-       "type": "text",
-       "title": "Để ý cuối mỗi câu",
-       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Nhìn kỹ: <b>cuối mỗi câu</b> là một nốt <b>trắng</b> (đầu rỗng) — ngân <b>2 phách</b>, như chỗ lấy hơi của giai điệu. Bấm <b>Nghe mẫu</b>: có <b>đếm lấy đà</b> và <b>metronome</b> — đàn theo, giữ nốt trắng cho đủ 2 tiếng gõ.</p>"
-      },
-      {
-       "id": "z3",
-       "order": 3,
-       "logic": "LAM",
-       "type": "note_practice",
-       "title": "Đánh theo: Ngôi Sao Nhỏ (đúng nhịp)",
-       "interactive": {
-        "showDur": true,
-        "notes": [
-         {
-          "label": "Đô",
-          "freq": 130.81,
-          "string": 5,
-          "fret": 3,
-          "staff": -2,
-          "dur": 1
-         },
-         {
-          "label": "Đô",
-          "freq": 130.81,
-          "string": 5,
-          "fret": 3,
-          "staff": -2,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "La",
-          "freq": 220,
-          "string": 3,
-          "fret": 2,
-          "staff": 3,
-          "dur": 1
-         },
-         {
-          "label": "La",
-          "freq": 220,
-          "string": 3,
-          "fret": 2,
-          "staff": 3,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 2
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 146.83,
-          "string": 4,
-          "fret": 0,
-          "staff": -1,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 146.83,
-          "string": 4,
-          "fret": 0,
-          "staff": -1,
-          "dur": 1
-         },
-         {
-          "label": "Đô",
-          "freq": 130.81,
-          "string": 5,
-          "fret": 3,
-          "staff": -2,
-          "dur": 2
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 146.83,
-          "string": 4,
-          "fret": 0,
-          "staff": -1,
-          "dur": 2
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 146.83,
-          "string": 4,
-          "fret": 0,
-          "staff": -1,
-          "dur": 2
-         },
-         {
-          "label": "Đô",
-          "freq": 130.81,
-          "string": 5,
-          "fret": 3,
-          "staff": -2,
-          "dur": 1
-         },
-         {
-          "label": "Đô",
-          "freq": 130.81,
-          "string": 5,
-          "fret": 3,
-          "staff": -2,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 1
-         },
-         {
-          "label": "La",
-          "freq": 220,
-          "string": 3,
-          "fret": 2,
-          "staff": 3,
-          "dur": 1
-         },
-         {
-          "label": "La",
-          "freq": 220,
-          "string": 3,
-          "fret": 2,
-          "staff": 3,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 196,
-          "string": 3,
-          "fret": 0,
-          "staff": 2,
-          "dur": 2
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 174.61,
-          "string": 4,
-          "fret": 3,
-          "staff": 1,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 164.81,
-          "string": 4,
-          "fret": 2,
-          "staff": 0,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 146.83,
-          "string": 4,
-          "fret": 0,
-          "staff": -1,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 146.83,
-          "string": 4,
-          "fret": 0,
-          "staff": -1,
-          "dur": 1
-         },
-         {
-          "label": "Đô",
-          "freq": 130.81,
-          "string": 5,
-          "fret": 3,
-          "staff": -2,
-          "dur": 2
-         }
-        ]
-       }
-      },
-      {
-       "id": "z4",
-       "order": 4,
-       "logic": "NGAM",
-       "type": "checklist",
-       "title": "Tự kiểm tra",
-       "interactive": {
-        "items": [
-         "Mình chơi trọn bài, giữ nốt trắng đủ 2 phách",
-         "Mình theo được metronome, không vội không chậm",
-         "Mình nghe bài vang ĐÚNG như Ngôi Sao Nhỏ thật (không còn đều đều)"
-        ]
-       }
-      },
-      {
-       "id": "z5",
-       "order": 5,
-       "logic": "DAN",
-       "type": "callout",
-       "title": "Chúc mừng bạn!",
-       "interactive": {
-        "variant": "teacher"
-       },
-       "content": "Hoàn thành Chương 5! Giờ bạn đọc được cả <b>cao độ</b> (nốt nào) lẫn <b>trường độ</b> (dài bao lâu) — tức là <b>đọc được một bản nhạc thật</b>. Đây là một cột mốc lớn trên hành trình tỉa nốt của bạn. 🎸"
+       "content": "<b>“Tôi chơi được một bản tiết tấu!”</b> Tiếp theo ta học cách nhạc chia thành <b>ô nhịp &amp; số chỉ nhịp</b> — vẫn trên dây buông."
       }
      ]
     },
@@ -1304,8 +901,8 @@
      "key": "onhip44",
      "lessonId": "a6720000-0000-4000-8000-000000000001",
      "flowId": "f6720000-0000-4000-8000-000000000001",
-     "order": 7,
-     "title": "Bài 8: Ô nhịp & nhịp 4/4",
+     "order": 6,
+     "title": "Bài 7: Ô nhịp & nhịp 4/4",
      "reward_xp": 12,
      "slides": [
       {
@@ -1338,19 +935,19 @@
         "beatsPerBar": 4,
         "notes": [
          {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
@@ -1362,27 +959,27 @@
           "dur": 1
          },
          {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
-          "label": "Sol",
-          "freq": 392,
+          "label": "Mi",
+          "freq": 329.63,
           "string": 1,
-          "fret": 3,
-          "staff": 9,
+          "fret": 0,
+          "staff": 7,
           "dur": 2
          },
          {
-          "label": "Mi",
-          "freq": 329.63,
-          "string": 1,
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
           "fret": 0,
-          "staff": 7,
+          "staff": 4,
           "dur": 2
          }
         ]
@@ -1419,8 +1016,8 @@
      "key": "onhip34",
      "lessonId": "a6720000-0000-4000-8000-000000000002",
      "flowId": "f6720000-0000-4000-8000-000000000002",
-     "order": 8,
-     "title": "Bài 9: Nhịp 3/4 (valse)",
+     "order": 7,
+     "title": "Bài 8: Nhịp 3/4 (valse)",
      "reward_xp": 12,
      "slides": [
       {
@@ -1453,19 +1050,19 @@
         "beatsPerBar": 3,
         "notes": [
          {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
@@ -1477,19 +1074,19 @@
           "dur": 1
          },
          {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
-          "label": "Sol",
-          "freq": 392,
+          "label": "Mi",
+          "freq": 329.63,
           "string": 1,
-          "fret": 3,
-          "staff": 9,
+          "fret": 0,
+          "staff": 7,
           "dur": 2
          }
         ]
@@ -1526,8 +1123,8 @@
      "key": "onhip24",
      "lessonId": "a6720000-0000-4000-8000-000000000003",
      "flowId": "f6720000-0000-4000-8000-000000000003",
-     "order": 9,
-     "title": "Bài 10: Nhịp 2/4 (hành khúc)",
+     "order": 8,
+     "title": "Bài 9: Nhịp 2/4 (hành khúc)",
      "reward_xp": 12,
      "slides": [
       {
@@ -1560,19 +1157,19 @@
         "beatsPerBar": 2,
         "notes": [
          {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
+          "label": "Mi",
+          "freq": 329.63,
+          "string": 1,
+          "fret": 0,
+          "staff": 7,
           "dur": 1
          },
          {
-          "label": "Rê",
-          "freq": 293.66,
+          "label": "Si",
+          "freq": 246.94,
           "string": 2,
-          "fret": 3,
-          "staff": 6,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
@@ -1584,19 +1181,19 @@
           "dur": 1
          },
          {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
+          "label": "Si",
+          "freq": 246.94,
+          "string": 2,
+          "fret": 0,
+          "staff": 4,
           "dur": 1
          },
          {
-          "label": "Sol",
-          "freq": 392,
+          "label": "Mi",
+          "freq": 329.63,
           "string": 1,
-          "fret": 3,
-          "staff": 9,
+          "fret": 0,
+          "staff": 7,
           "dur": 2
          }
         ]
@@ -1625,194 +1222,7 @@
        "interactive": {
         "variant": "teacher"
        },
-       "content": "Giỏi! Giờ bạn phân biệt được <b>2/4 · 3/4 · 4/4</b>. Bài cuối chương: đọc một <b>bài hát thật</b> có đủ số chỉ nhịp và vạch nhịp."
-      }
-     ]
-    },
-    {
-     "key": "onhipBai",
-     "lessonId": "a6720000-0000-4000-8000-000000000004",
-     "flowId": "f6720000-0000-4000-8000-000000000004",
-     "order": 10,
-     "title": "Bài 11: Đọc bài có ô nhịp — Ode to Joy",
-     "reward_xp": 15,
-     "slides": [
-      {
-       "id": "b1",
-       "order": 1,
-       "logic": "DAN",
-       "type": "callout",
-       "title": "Bản nhạc hoàn chỉnh",
-       "interactive": {
-        "variant": "teacher"
-       },
-       "content": "Bài tổng kết: đọc <b>Ode to Joy</b> như một <b>bản nhạc thật</b> — có <b>khóa Sol</b>, <b>số chỉ nhịp 4/4</b>, <b>vạch nhịp</b> chia ô, và nốt <b>đen/trắng</b>. Bạn đã đủ 'đồ nghề' để đọc nó!"
-      },
-      {
-       "id": "b2",
-       "order": 2,
-       "logic": "NGHI",
-       "type": "text",
-       "title": "Bốn ô nhịp 4/4",
-       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Bài này có <b>4 ô</b>, mỗi ô 4 phách. Nhìn vạch nhịp để biết mình đang ở ô nào. Câu kết là một <b>nốt trắng</b> ngân 2 phách. Nghe mẫu (đếm 4 lấy đà) rồi đàn theo cho <b>chắc từng ô</b>.</p>"
-      },
-      {
-       "id": "b3",
-       "order": 3,
-       "logic": "LAM",
-       "type": "note_practice",
-       "title": "Đánh theo: Ode to Joy (4/4)",
-       "interactive": {
-        "showDur": true,
-        "beatsPerBar": 4,
-        "notes": [
-         {
-          "label": "Mi",
-          "freq": 329.63,
-          "string": 1,
-          "fret": 0,
-          "staff": 7,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 329.63,
-          "string": 1,
-          "fret": 0,
-          "staff": 7,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 392,
-          "string": 1,
-          "fret": 3,
-          "staff": 9,
-          "dur": 1
-         },
-         {
-          "label": "Sol",
-          "freq": 392,
-          "string": 1,
-          "fret": 3,
-          "staff": 9,
-          "dur": 1
-         },
-         {
-          "label": "Fa",
-          "freq": 349.23,
-          "string": 1,
-          "fret": 1,
-          "staff": 8,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 329.63,
-          "string": 1,
-          "fret": 0,
-          "staff": 7,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 293.66,
-          "string": 2,
-          "fret": 3,
-          "staff": 6,
-          "dur": 1
-         },
-         {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
-          "dur": 1
-         },
-         {
-          "label": "Đô",
-          "freq": 261.63,
-          "string": 2,
-          "fret": 1,
-          "staff": 5,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 293.66,
-          "string": 2,
-          "fret": 3,
-          "staff": 6,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 329.63,
-          "string": 1,
-          "fret": 0,
-          "staff": 7,
-          "dur": 1
-         },
-         {
-          "label": "Mi",
-          "freq": 329.63,
-          "string": 1,
-          "fret": 0,
-          "staff": 7,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 293.66,
-          "string": 2,
-          "fret": 3,
-          "staff": 6,
-          "dur": 1
-         },
-         {
-          "label": "Rê",
-          "freq": 293.66,
-          "string": 2,
-          "fret": 3,
-          "staff": 6,
-          "dur": 2
-         }
-        ]
-       }
-      },
-      {
-       "id": "b4",
-       "order": 4,
-       "logic": "NGAM",
-       "type": "checklist",
-       "title": "Tự kiểm tra",
-       "interactive": {
-        "items": [
-         "Mình đọc được cả bài: khóa Sol + 4/4 + vạch nhịp + nốt đen/trắng",
-         "Mình chơi đúng từng ô, mỗi ô đủ 4 phách",
-         "Mình nghe ra giai điệu Ode to Joy, giữ nhịp đều"
-        ]
-       }
-      },
-      {
-       "id": "b5",
-       "order": 5,
-       "logic": "DAN",
-       "type": "callout",
-       "title": "Chúc mừng!",
-       "interactive": {
-        "variant": "teacher"
-       },
-       "content": "Hoàn thành Chương 6! Giờ bạn đọc được một <b>bản nhạc chuẩn</b> đầy đủ: cao độ, trường độ, và ô nhịp. Bạn đã thật sự <b>biết đọc nhạc</b> rồi. 🎉"
+       "content": "Giỏi! Giờ bạn phân biệt được <b>2/4 · 3/4 · 4/4</b>. Bạn đã hoàn thành <b>Chặng Trường độ</b> — chặng sau ta bắt đầu học <b>nốt nhạc trên dây 1 &amp; 2</b>."
       }
      ]
     }
@@ -7285,11 +6695,413 @@
      ]
     },
     {
+     "key": "twinkleNhip",
+     "lessonId": "a5720000-0000-4000-8000-000000000004",
+     "flowId": "f5720000-0000-4000-8000-000000000004",
+     "order": 4,
+     "title": "Bài 5: Ngôi Sao Nhỏ — đọc đúng nhịp",
+     "reward_xp": 15,
+     "slides": [
+      {
+       "id": "z1",
+       "order": 1,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Bài tổng kết chương",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Bài cuối chương: chơi lại <b>Ngôi Sao Nhỏ</b> — nhưng lần này <b>đọc đúng nhịp</b>! Giờ bạn nhìn ra nốt nào <b>đen</b> (ngắn), nốt nào <b>trắng</b> (dài gấp đôi). Nghe khác hẳn lúc đàn đều đều."
+      },
+      {
+       "id": "z2",
+       "order": 2,
+       "logic": "NGHI",
+       "type": "text",
+       "title": "Để ý cuối mỗi câu",
+       "content": "<p style=\"font-size:16px;line-height:1.7;margin:0;color:#3A352F\">Nhìn kỹ: <b>cuối mỗi câu</b> là một nốt <b>trắng</b> (đầu rỗng) — ngân <b>2 phách</b>, như chỗ lấy hơi của giai điệu. Bấm <b>Nghe mẫu</b>: có <b>đếm lấy đà</b> và <b>metronome</b> — đàn theo, giữ nốt trắng cho đủ 2 tiếng gõ.</p>"
+      },
+      {
+       "id": "z3",
+       "order": 3,
+       "logic": "LAM",
+       "type": "note_practice",
+       "title": "Đánh theo: Ngôi Sao Nhỏ (đúng nhịp)",
+       "interactive": {
+        "showDur": true,
+        "notes": [
+         {
+          "label": "Đô",
+          "freq": 130.81,
+          "string": 5,
+          "fret": 3,
+          "staff": -2,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 130.81,
+          "string": 5,
+          "fret": 3,
+          "staff": -2,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "La",
+          "freq": 220,
+          "string": 3,
+          "fret": 2,
+          "staff": 3,
+          "dur": 1
+         },
+         {
+          "label": "La",
+          "freq": 220,
+          "string": 3,
+          "fret": 2,
+          "staff": 3,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 2
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 146.83,
+          "string": 4,
+          "fret": 0,
+          "staff": -1,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 146.83,
+          "string": 4,
+          "fret": 0,
+          "staff": -1,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 130.81,
+          "string": 5,
+          "fret": 3,
+          "staff": -2,
+          "dur": 2
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 146.83,
+          "string": 4,
+          "fret": 0,
+          "staff": -1,
+          "dur": 2
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 146.83,
+          "string": 4,
+          "fret": 0,
+          "staff": -1,
+          "dur": 2
+         },
+         {
+          "label": "Đô",
+          "freq": 130.81,
+          "string": 5,
+          "fret": 3,
+          "staff": -2,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 130.81,
+          "string": 5,
+          "fret": 3,
+          "staff": -2,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 1
+         },
+         {
+          "label": "La",
+          "freq": 220,
+          "string": 3,
+          "fret": 2,
+          "staff": 3,
+          "dur": 1
+         },
+         {
+          "label": "La",
+          "freq": 220,
+          "string": 3,
+          "fret": 2,
+          "staff": 3,
+          "dur": 1
+         },
+         {
+          "label": "Sol",
+          "freq": 196,
+          "string": 3,
+          "fret": 0,
+          "staff": 2,
+          "dur": 2
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Fa",
+          "freq": 174.61,
+          "string": 4,
+          "fret": 3,
+          "staff": 1,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Mi",
+          "freq": 164.81,
+          "string": 4,
+          "fret": 2,
+          "staff": 0,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 146.83,
+          "string": 4,
+          "fret": 0,
+          "staff": -1,
+          "dur": 1
+         },
+         {
+          "label": "Rê",
+          "freq": 146.83,
+          "string": 4,
+          "fret": 0,
+          "staff": -1,
+          "dur": 1
+         },
+         {
+          "label": "Đô",
+          "freq": 130.81,
+          "string": 5,
+          "fret": 3,
+          "staff": -2,
+          "dur": 2
+         }
+        ]
+       }
+      },
+      {
+       "id": "z4",
+       "order": 4,
+       "logic": "NGAM",
+       "type": "checklist",
+       "title": "Tự kiểm tra",
+       "interactive": {
+        "items": [
+         "Mình chơi trọn bài, giữ nốt trắng đủ 2 phách",
+         "Mình theo được metronome, không vội không chậm",
+         "Mình nghe bài vang ĐÚNG như Ngôi Sao Nhỏ thật (không còn đều đều)"
+        ]
+       }
+      },
+      {
+       "id": "z5",
+       "order": 5,
+       "logic": "DAN",
+       "type": "callout",
+       "title": "Chúc mừng bạn!",
+       "interactive": {
+        "variant": "teacher"
+       },
+       "content": "Hoàn thành Chương 5! Giờ bạn đọc được cả <b>cao độ</b> (nốt nào) lẫn <b>trường độ</b> (dài bao lâu) — tức là <b>đọc được một bản nhạc thật</b>. Đây là một cột mốc lớn trên hành trình tỉa nốt của bạn. 🎸"
+      }
+     ]
+    },
+    {
      "key": "mary",
      "lessonId": "a2730000-0000-4000-8000-000000000005",
      "flowId": "f2730000-0000-4000-8000-000000000005",
-     "order": 4,
-     "title": "Bài 5: Mary Had a Little Lamb",
+     "order": 5,
+     "title": "Bài 6: Mary Had a Little Lamb",
      "reward_xp": 12,
      "slides": [
       {
@@ -7552,8 +7364,8 @@
      "key": "jingle",
      "lessonId": "a2730000-0000-4000-8000-000000000006",
      "flowId": "f2730000-0000-4000-8000-000000000006",
-     "order": 5,
-     "title": "Bài 6: Jingle Bells",
+     "order": 6,
+     "title": "Bài 7: Jingle Bells",
      "reward_xp": 12,
      "slides": [
       {
@@ -7808,8 +7620,8 @@
      "key": "arpeggioEmAm",
      "lessonId": "a2730000-0000-4000-8000-000000000007",
      "flowId": "f2730000-0000-4000-8000-000000000007",
-     "order": 6,
-     "title": "Bài 7: Tỉa hợp âm rải Em & Am",
+     "order": 7,
+     "title": "Bài 8: Tỉa hợp âm rải Em & Am",
      "reward_xp": 15,
      "slides": [
       {
@@ -7969,8 +7781,8 @@
      "key": "maryBand",
      "lessonId": "a7720000-0000-4000-8000-000000000004",
      "flowId": "f7720000-0000-4000-8000-000000000004",
-     "order": 7,
-     "title": "Bài 8: Vận dụng — Mary Had a Little Lamb (chơi & chấm)",
+     "order": 8,
+     "title": "Bài 9: Vận dụng — Mary Had a Little Lamb (chơi & chấm)",
      "reward_xp": 18,
      "slides": [
       {
@@ -8311,8 +8123,8 @@
      "key": "buomvangBand",
      "lessonId": "a7720000-0000-4000-8000-000000000005",
      "flowId": "f7720000-0000-4000-8000-000000000005",
-     "order": 8,
-     "title": "Bài 9: Vận dụng — Kìa con bướm vàng (có nhạc nền)",
+     "order": 9,
+     "title": "Bài 10: Vận dụng — Kìa con bướm vàng (có nhạc nền)",
      "reward_xp": 16,
      "slides": [
       {
@@ -8700,8 +8512,8 @@
      "key": "jingleBand",
      "lessonId": "a7720000-0000-4000-8000-000000000006",
      "flowId": "f7720000-0000-4000-8000-000000000006",
-     "order": 9,
-     "title": "Bài 10: Vận dụng — Jingle Bells (chơi & chấm)",
+     "order": 10,
+     "title": "Bài 11: Vận dụng — Jingle Bells (chơi & chấm)",
      "reward_xp": 18,
      "slides": [
       {
