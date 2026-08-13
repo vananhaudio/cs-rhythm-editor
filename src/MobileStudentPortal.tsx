@@ -148,7 +148,7 @@ const TOOL_ROUTES: Record<string, string> = {
   'tap-sing':    '/tap',
   'tap-strum':   '/tap',
   'scroll-kara': '/tap',
-  metronome:     '/tap',
+  metronome:     '/metronome',
   backing_track: '/tap',
   chord:         '/chords',
   tuner:         '/tuner',
@@ -165,7 +165,7 @@ const TABS = [
 const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; route: string }> = {
   tap:           { label: 'Tap nhịp',     icon: '🥁', color: L.p1,      route: '/tempo'  },
   'tap-tempo':   { label: 'Tap Tempo',    icon: '🥁', color: L.p1,      route: '/tempo'  },
-  metronome:     { label: 'Metronome',    icon: '🎵', color: L.green,   route: '/tap'    },
+  metronome:     { label: 'Máy đập nhịp', icon: '🎼', color: L.green,   route: '/metronome' },
   backing_track: { label: 'Backing Track',icon: '🎧', color: L.gold,    route: '/tap'    },
   submit_video:  { label: 'Nộp video',    icon: '📹', color: L.a1,      route: '/tap'    },
   chord:         { label: 'Luyện hợp âm', icon: '🎸', color: '#7C3AED', route: '/chords' },
@@ -1540,7 +1540,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 onOpenTool={(tool) => {
                   const map: Record<string, [string, string]> = {
                     tuner:          ['/tuner', 'Tuner — Lên dây'],
-                    tempo:          ['/tempo', 'Metronome'],
+                    tempo:          ['/metronome', 'Máy đập nhịp'],
                     guitarboard:    ['/guitarboard', 'Bảng phím / Tab'],
                     chords:         ['/chords', 'Chord See — Nghe hợp âm'],
                     tap:            ['/tap', 'Tập gõ nhịp'],
@@ -1612,7 +1612,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                       isDone={completedIds.has(activeLesson.id)}
                       onBack={goBack}
                       onComplete={() => finishElearnLesson(activeLesson.id)}
-                      onOpenTool={(tool) => openTool(tool === 'tuner' ? '/tuner' : '/tempo', tool === 'tuner' ? 'Tuner — Lên dây' : 'Metronome')}
+                      onOpenTool={(tool) => openTool(tool === 'tuner' ? '/tuner' : '/metronome', tool === 'tuner' ? 'Tuner — Lên dây' : 'Máy đập nhịp')}
                     />
                   </div>
                 )

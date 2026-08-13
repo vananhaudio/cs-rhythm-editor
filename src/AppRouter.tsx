@@ -20,6 +20,7 @@ import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { HBD_CHUM2, HBD_TD1, STRUM_BALLAD, STRUM_JINGLE, STRUM_ODE, STRUM_SCARBOROUGH, STRUM_AMAZING } from './elearn/strumSongs'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
+import Metronome from './Metronome'
 import SongBuilderPage from './SongBuilderPage'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
@@ -408,6 +409,11 @@ if (path === '/students') {
   // ── Route /tempo — Tap Tempo Tool ──
   if (path === '/tempo' || path.startsWith('/tempo')) {
     return <TapTempoTool onClose={embedded ? undefined : () => { window.history.back() }} />
+  }
+
+  // ── Route /metronome — Máy đập nhịp ──
+  if (path === '/metronome' || path.startsWith('/metronome')) {
+    return <Metronome onClose={embedded ? undefined : () => { window.history.back() }} />
   }
 
   // ── Route /song-builder — Song Builder V1 ──
