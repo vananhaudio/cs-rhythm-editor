@@ -123,6 +123,72 @@ async function fetchCatalogText(): Promise<string> {
   } catch { return '' }
 }
 
+// ── SHOP: Catalogue sản phẩm thật từ shop.vananhaudio.com — để Mira tư vấn đàn, phụ kiện ──
+const INSTRUMENT_VI: Record<string, string> = {
+  guitar: 'Đàn Guitar', classic_guitar: 'Guitar Classic', acoustic_guitar: 'Guitar Acoustic',
+  electric_guitar: 'Guitar Điện', bass: 'Guitar Bass', ukulele: 'Ukulele',
+  piano: 'Piano', keyboard: 'Keyboard/Organ', drum: 'Trống',
+  accessory: 'Phụ kiện', audio: 'Âm thanh/Tai nghe', other: 'Khác',
+}
+const fmt = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+
+// Trích xuất ngân sách từ tin nhắn (vd: "3 triệu" → [2000000, 4000000])
+function extractBudget(msg: string): [number, number] | null {
+  const t = msg.toLowerCase()
+  const m = t.match(/(\d+[\.\,]?\d*)\s*(triệu|tr|trieu|triêụ|M|m|k|củ)/)
+  if (!m) return null
+  let v = parseFloat(m[1].replace(/,/g, '.'))
+  if (m[2] === 'k') v = v * 1000
+  else if (m[2] !== 'm' && m[2] !== 'M') v = v * 1000000 // triệu, tr, củ, etc
+  if (v < 10000) v = v * 1000000 // plain number like "3" → 3tr
+  if (v < 100000) return null // too small
+  return [Math.max(0, v * 0.5), v * 1.5] // range: 50%-150% of budget
+}
+
+async function fetchShopText(message: string): Promise<string> {
+  const BUY_INTENT = /\bmua\b|\bbán\b|\bgiá\b|bao nhiêu tiền|\bhàng\b|\bhàng hoá\b|nguồn hàng|mặt hàng|\bsản phẩm\b|\bcatalogue\b|\btư vấn đàn\b|\bchọn đàn\b|cây đàn|\bphụ kiện\b|dây đàn|pick|capo|EQ |pickup|khóa đàn|bao đàn|case đàn|chân kê|tai nghe|ampli|cần mua|\bđàn\b|guitar|ukulele|piano|organ|keyboard|trống|loa|\bmẫu\b|gợi ý|recommend|tư vấn|\dmẫu|mẫu nào|loại nào|option|hàng có sẵn|mới nhất|shop có|bên mình có|cửa hàng|cấp quyền|dữ liệu hàng|kiểm tra hàng|danh sách/
+  // Luôn nạp nếu có số tiền: "2 triệu", "3tr", "500k", "1 củ"
+  const hasMoney = /\d+[\.\,]?\d*\s*(triệu|tr|k|củ|ngàn|nghìn|m$|triêụ)/i.test(message)
+  if (!BUY_INTENT.test(message.toLowerCase()) && !hasMoney) return ''
+
+  try {
+    const budget = extractBudget(message)
+    let query = db.from('shop_products')
+      .select('name,brand,instrument_type,public_price,sale_price,in_stock,card_note,fit_for')
+      .eq('status', 'published')
+      .eq('in_stock', true)
+      .order('instrument_type')
+      .order('public_price', { ascending: true })
+
+    // Lọc theo ngân sách nếu có
+    if (budget) {
+      query = query.gte('public_price', budget[0]).lte('public_price', budget[1])
+    }
+    const { data: products } = await query.limit(30)
+    if (!products?.length) return ''
+
+    // Gom theo instrument_type
+    const groups: Record<string, any[]> = {}
+    for (const p of products as any[]) {
+      const t = p.instrument_type || 'other'
+      ;(groups[t] ??= []).push(p)
+    }
+
+    const lines: string[] = [`Tổng ${products.length} sản phẩm${budget ? ` trong tầm ${fmt(budget[0])}–${fmt(budget[1])}` : ''}:`]
+    for (const [type, items] of Object.entries(groups)) {
+      const label = INSTRUMENT_VI[type] || type
+      lines.push(`\n${label}:`)
+      for (const p of items) {
+        const sp = p.sale_price ? `${fmt(p.sale_price)} (KM, gốc ${fmt(p.public_price)})` : fmt(p.public_price)
+        const fit = p.fit_for && Array.isArray(p.fit_for) ? p.fit_for.slice(0, 2).join('; ') : ''
+        const note = p.card_note ? ` · ${p.card_note}` : ''
+        lines.push(`- [${p.brand}] ${p.name} — ${sp}${fit ? ` | ${fit}` : ''}${note}`)
+      }
+    }
+    return `\n\n${lines.join('\n')}`
+  } catch { return '' }
+}
+
 // ── MỨC 2: Hồ sơ RIÊNG của học sinh ĐANG ĐĂNG NHẬP — xác thực token, chỉ đọc dữ liệu của chính họ ──
 async function fetchStudentText(authHeader: string): Promise<string> {
   try {
@@ -173,7 +239,7 @@ Deno.serve(async (req) => {
     return json({ reply: 'Hiện trợ lý đang tạm nghỉ. Bạn vui lòng nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist) để được hỗ trợ nhé.', sessionId: body.sessionId ?? null })
   }
   const model = cfg?.model || 'claude-sonnet-4-6'
-  const persona = cfg?.persona || 'Bạn là trợ lý tư vấn tuyển sinh lớp guitar của thầy Văn Anh. Trả lời tiếng Việt, ngắn gọn, thân thiện. Không chắc thì mời khách nhắn Zalo thầy.'
+  const persona = cfg?.persona || 'Bạn là trợ lý tư vấn của Văn Anh Audio — tư vấn khoá học guitar VÀ sản phẩm nhạc cụ. Trả lời tiếng Việt, ngắn gọn, thân thiện. Không chắc thì mời khách nhắn Zalo thầy Văn Anh (zalo.me/vananhguitarist).'
 
   // Phiên: tạo mới nếu chưa có
   let sessionId = body.sessionId || ''
@@ -197,14 +263,17 @@ Deno.serve(async (req) => {
   // Kiến thức huấn luyện (thầy nạp)
   const { data: kn } = await db.from('class_ai_knowledge').select('title,content').eq('enabled', true).order('order_index')
   const knowledge = (kn ?? []).map((k) => `### ${k.title}\n${k.content}`).join('\n\n')
-  // Dữ liệu sống: lịch (sheet) + danh mục khoá (mức 1) + hồ sơ người đang đăng nhập (mức 2, xác thực token)
+  // Dữ liệu sống: lịch + danh mục khoá (luôn tải) + shop (khi khách hỏi mua sắm)
+  const shopText = await fetchShopText(message)
   const [scheduleText, catalogText, studentText] = await Promise.all([
     fetchScheduleText(),
     fetchCatalogText(),
     fetchStudentText(req.headers.get('Authorization') || ''),
   ])
+  // Shop data lên đầu để Mira thấy ngay (nếu có)
   const system = persona
-    + (knowledge ? `\n\n========== KIẾN THỨC THAM KHẢO (dùng để trả lời, không bịa ngoài đây) ==========\n${knowledge}` : '')
+    + (shopText ? `\n\n>>> DỮ LIỆU SẢN PHẨM SHOP (đã cấp quyền truy cập) <<<${shopText}` : '')
+    + (knowledge ? `\n\n========== KIẾN THỨC THAM KHẢO ==========\n${knowledge}` : '')
     + HANHTRINH_RULES + catalogText + scheduleText + studentText
 
   // Dựng messages cho Anthropic (role: user / assistant)
@@ -217,7 +286,7 @@ Deno.serve(async (req) => {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model, max_tokens: 700, system, messages: aiMessages }),
+      body: JSON.stringify({ model, max_tokens: 1000, system, messages: aiMessages }),
     })
     if (!res.ok) {
       const t = await res.text()
@@ -237,5 +306,12 @@ Deno.serve(async (req) => {
   await db.from('class_chat_messages').insert({ session_id: sessionId, role: 'ai', content: reply })
   await db.from('class_chat_sessions').update({ last_at: new Date().toISOString() }).eq('id', sessionId)
 
-  return json({ reply, sessionId })
+  // Debug: kèm thông tin shop data đã nạp (chỉ khi request có debug=true)
+  const debug = (body as any).debug === true
+  const resBody: any = { reply, sessionId }
+  if (debug) {
+    const spCount = (shopText.match(/\n- \[/g) || []).length
+    resBody._debug = { shopLoaded: shopText.length > 0, productCount: spCount }
+  }
+  return json(resBody)
 })
