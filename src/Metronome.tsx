@@ -199,7 +199,7 @@ export default function Metronome({ onClose }: Props) {
   const rowLabel: React.CSSProperties = { width: 46, flexShrink: 0, fontSize: 12, fontWeight: 700, color: L.t3 }
 
   return (
-    <div style={{ height: '100dvh', background: L.bg, color: L.t1, fontFamily: '"SF Pro Display", system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: L.bg, color: L.t1, fontFamily: '"SF Pro Display", system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
       {/* Header */}
       <div style={{ background: L.surface, borderBottom: `1px solid ${L.border}`, padding: 'max(10px, calc(env(safe-area-inset-top,0px) + 6px)) 16px 10px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -218,7 +218,7 @@ export default function Metronome({ onClose }: Props) {
         {/* ── HERO: vòng nhịp co giãn theo chiều cao ── */}
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{
-            position: 'relative', width: 'clamp(130px, 24vh, 190px)', aspectRatio: '1', borderRadius: '50%',
+            position: 'relative', width: 'min(190px, 46vw)', aspectRatio: '1', borderRadius: '50%',
             background: L.surface, display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: playing ? L.shadowLg : L.shadow, border: `1px solid ${L.border}`, transition: 'box-shadow .2s',
           }}>
@@ -230,7 +230,7 @@ export default function Metronome({ onClose }: Props) {
               transition: 'transform .09s ease-out, opacity .12s, border-color .05s',
             }} />
             <div style={{ textAlign: 'center', zIndex: 1 }}>
-              <div style={{ fontSize: 'clamp(44px, 9vh, 62px)', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{bpm}</div>
+              <div style={{ fontSize: 'min(60px, 15vw)', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{bpm}</div>
               <div style={{ fontSize: 11, fontWeight: 700, color: L.t3, letterSpacing: '.1em', marginTop: 2 }}>BPM</div>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: L.p1, marginTop: 6 }}>{tempoName(bpm)}</div>
             </div>
