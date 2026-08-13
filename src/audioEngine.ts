@@ -122,3 +122,55 @@ export function playGuitarNote(frequency: number, stringIndex: number) {
   reverbDelay.connect(reverbGain);
   reverbGain.connect(ctx.destination);
 }
+
+// Ngân dài một hợp âm (drone) — để tập NGHE CHỦ ĐỘNG / bám giọng ở Level 1.
+// freqs: tần số từng dây (bỏ giá trị 0). seconds: độ dài tiếng ngân.
+// Trả về hàm stop() để tắt sớm (fade mềm, không "cụp").
+export function playChordDrone(frequencies: number[], seconds = 12): () => void {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+  const live = frequencies.filter(f => f && f > 0);
+  const level = 0.16 / Math.max(1, Math.sqrt(live.length));
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(level, now + 0.15);      // fade-in mềm
+
+  const warm = ctx.createBiquadFilter();
+  warm.type = 'lowpass';
+  warm.frequency.value = 2600;
+  warm.Q.value = 0.4;
+  master.connect(warm);
+  warm.connect(ctx.destination);
+
+  const oscs: OscillatorNode[] = [];
+  live.forEach((f, si) => {
+    ([[1, 0.5, 'sawtooth'], [2, 0.15, 'sine'], [3, 0.07, 'sine']] as const).forEach(([mult, g, wave]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = wave;
+      osc.frequency.value = f * mult;
+      osc.detune.value = (Math.random() - 0.5) * 4;                 // hơi lệch cho ấm
+      gain.gain.value = g;
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start(now + si * 0.02);                                   // vào rất khẽ như một cú rải
+      oscs.push(osc);
+    });
+  });
+
+  const end = now + seconds;
+  master.gain.setValueAtTime(level, end - 0.6);
+  master.gain.exponentialRampToValueAtTime(0.0001, end);            // fade-out cuối
+  oscs.forEach(o => o.stop(end + 0.05));
+
+  return () => {
+    const t = ctx.currentTime;
+    try {
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), t);
+      master.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    } catch { /* context có thể đã đóng */ }
+    oscs.forEach(o => { try { o.stop(t + 0.3); } catch { /* đã stop */ } });
+  };
+}

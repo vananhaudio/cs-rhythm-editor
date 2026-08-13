@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView, BarSplit } from './elearn/guitarRenderers'
-import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg, BarSplitCfg } from './elearn/guitarRenderers'
+import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView, ChordDrone, ListenChoice, StrumScore, Backing, BarSplit } from './elearn/guitarRenderers'
+import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg, DroneCfg, ListenCfg, StrumScoreCfg, BackingCfg, BarSplitCfg } from './elearn/guitarRenderers'
 import { NarratedSlideshow } from './elearn/NarratedSlideshow'
 import type { NarratedSlideshowCfg } from './elearn/NarratedSlideshow'
 import { ChordPractice } from './elearn/ChordPractice'
@@ -612,6 +612,26 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* GUITAR_CHORD — sơ đồ hợp âm + nghe rải + gảy thử (NHẬN) */}
         {slide.type === 'guitar_chord' && (
           <ChordView cfg={(slide.interactive ?? {}) as ChordCfg} />
+        )}
+
+        {/* GUITAR_DRONE — ngân dài một hợp âm để tập nghe chủ động (NGHE) */}
+        {slide.type === 'guitar_drone' && (
+          <ChordDrone cfg={(slide.interactive ?? {}) as DroneCfg} />
+        )}
+
+        {/* GUITAR_LISTEN — nghe hợp âm/đoạn rồi chọn đáp án (NGHE) */}
+        {slide.type === 'guitar_listen' && (
+          <ListenChoice cfg={(slide.interactive ?? {}) as ListenCfg} />
+        )}
+
+        {/* GUITAR_STRUMSCORE — ô nhịp sáng theo phách (LÀM) */}
+        {slide.type === 'guitar_strumscore' && (
+          <StrumScore cfg={(slide.interactive ?? {}) as StrumScoreCfg} />
+        )}
+
+        {/* GUITAR_BACKING — nhạc nền loop vòng/cặp hợp âm (LÀM) */}
+        {slide.type === 'guitar_backing' && (
+          <Backing cfg={(slide.interactive ?? {}) as BackingCfg} />
         )}
 
         {/* BAR_SPLIT — đối chiếu sheet ↔ lời, bút kẻ vạch chia ô nhịp (THẤY) */}

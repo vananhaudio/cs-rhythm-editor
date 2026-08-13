@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ACCENT, STRINGS, freqOfNum, colorOfNum, widthOfNum, stringByNum } from './guitarConst'
 import { playTone, playSequence, playClick, playKick, playSnare, playHat, playBass, playPad } from './audio'
 import { detectPitch, pitchClass } from './pitch'
-import { playGuitarNote } from '../audioEngine'   // engine guitar (nốt ngân độc lập) — để rải hợp âm không bị cắt
+import { playGuitarNote, playChordDrone } from '../audioEngine'   // engine guitar (nốt ngân độc lập) — để rải hợp âm không bị cắt
 
 export interface NeckCfg { target?: number; successMsg?: string }
 export interface ChecklistCfg { items?: string[]; requireAll?: boolean }
@@ -894,6 +894,216 @@ export function ChordView({ cfg }: { cfg: ChordCfg }) {
       <button onClick={() => freqs.forEach((f, i) => setTimeout(() => playGuitarNote(f, i), i * 30))}
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: 'none', borderRadius: 14, background: '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
         🔊 Nghe hợp âm {name}
+      </button>
+    </div>
+  )
+}
+
+// ── guitar_drone: NGÂN DÀI một hợp âm — tập nghe chủ động / bám giọng (Level 1) ──
+export interface DroneCfg {
+  name?: string       // tên hợp âm hiển thị, vd 'Am'
+  freqs?: number[]    // tần số từng dây (bỏ 0) để ngân
+  seconds?: number    // độ dài tiếng ngân (mặc định 12s)
+  caption?: string
+}
+export function ChordDrone({ cfg }: { cfg: DroneCfg }) {
+  const name = cfg.name ?? 'Am'
+  const freqs = cfg.freqs && cfg.freqs.length ? cfg.freqs : EM_FREQS
+  const seconds = cfg.seconds ?? 12
+  const [playing, setPlaying] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  const stopR = useRef<null | (() => void)>(null)
+  const timerR = useRef<ReturnType<typeof setInterval> | null>(null)
+  const t0R = useRef(0)
+
+  const clearTimer = () => { if (timerR.current) { clearInterval(timerR.current); timerR.current = null } }
+  const stop = () => { stopR.current?.(); stopR.current = null; clearTimer(); setPlaying(false); setElapsed(0) }
+  useEffect(() => () => { stopR.current?.(); clearTimer() }, [])
+
+  const toggle = () => {
+    if (playing) { stop(); return }
+    stopR.current = playChordDrone(freqs, seconds)
+    setPlaying(true); setElapsed(0); t0R.current = Date.now()
+    timerR.current = setInterval(() => {
+      const e = (Date.now() - t0R.current) / 1000
+      if (e >= seconds) { stop(); return }
+      setElapsed(e)
+    }, 100)
+  }
+
+  const pct = Math.min(100, (elapsed / seconds) * 100)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+      <div style={{ fontSize: 46, fontWeight: 800, color: '#BF5A37', letterSpacing: 1, lineHeight: 1 }}>{name}</div>
+      {cfg.caption && <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6, textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
+      <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: 32, fontWeight: 700, color: playing ? '#2A7D5A' : '#9A8F7E' }}>
+        {elapsed.toFixed(1)}<span style={{ fontSize: 18 }}>s</span>
+      </div>
+      <div style={{ width: '100%', maxWidth: 320, height: 6, background: '#E6DDCE', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ width: pct + '%', height: '100%', background: '#2A7D5A', transition: 'width .1s linear' }} />
+      </div>
+      <button onClick={toggle}
+        style={{ width: '100%', maxWidth: 320, padding: 16, border: 'none', borderRadius: 14, background: playing ? '#8A3B2A' : '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 17, fontWeight: 700, cursor: 'pointer' }}>
+        {playing ? '⏹  Dừng' : `🎸  Ngân ${name} (${seconds}s)`}
+      </button>
+    </div>
+  )
+}
+
+// Gảy một hợp âm (rải nhanh từ dây trầm) — dùng chung cho các tool nghe/nhịp.
+const strumFreqs = (freqs: number[]) => freqs.forEach((f, i) => setTimeout(() => playGuitarNote(f, i), i * 26))
+
+// ── guitar_listen: nghe (hợp âm / đoạn) rồi chọn đáp án — bài nghe & cảm nhận ────
+export interface ListenCfg {
+  question?: string
+  plays?: { label: string; chords: number[][]; gap?: number }[]   // mỗi nút phát một chuỗi hợp âm
+  options?: string[]
+  answer?: number      // index đáp án đúng; bỏ trống = câu cảm nhận (không có "sai")
+  explain?: string
+}
+export function ListenChoice({ cfg }: { cfg: ListenCfg }) {
+  const [sel, setSel] = useState<number | null>(null)
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => { timers.current.forEach(clearTimeout) }, [])
+  const playSeq = (chords: number[][], gap = 900) => {
+    timers.current.forEach(clearTimeout); timers.current = []
+    chords.forEach((freqs, ci) => timers.current.push(setTimeout(() => strumFreqs(freqs), ci * gap)))
+  }
+  const hasAnswer = typeof cfg.answer === 'number'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {cfg.question && <div style={{ fontSize: 16, color: '#2A2622', fontWeight: 600, lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: cfg.question }} />}
+      {(cfg.plays ?? []).length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {(cfg.plays ?? []).map((p, i) => (
+            <button key={i} onClick={() => playSeq(p.chords, p.gap ?? 900)}
+              style={{ flex: '1 1 40%', minWidth: 130, padding: 13, border: 'none', borderRadius: 12, background: '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              🔊 {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {(cfg.options ?? []).length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 2 }}>
+          {(cfg.options ?? []).map((o, i) => {
+            const chosen = sel === i, correct = hasAnswer && i === cfg.answer
+            const bg = sel === null ? '#F1ECE2' : correct ? '#DCEFE4' : chosen ? '#F5DEDA' : '#F1ECE2'
+            const bd = sel === null ? '#E0D6C6' : correct ? '#2A7D5A' : chosen ? '#B5493A' : '#E0D6C6'
+            return (
+              <button key={i} onClick={() => setSel(i)}
+                style={{ textAlign: 'left', padding: '12px 14px', border: `1.5px solid ${bd}`, borderRadius: 12, background: bg, color: '#2A2622', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+                {sel !== null && correct ? '✓  ' : sel !== null && chosen && !correct ? '✗  ' : ''}{o}
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {sel !== null && cfg.explain && (
+        <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6, background: '#EAF3F1', borderLeft: '4px solid #3E7C74', borderRadius: 8, padding: '11px 14px' }}
+          dangerouslySetInnerHTML={{ __html: (hasAnswer && sel === cfg.answer ? 'Đúng rồi! ' : '') + cfg.explain }} />
+      )}
+    </div>
+  )
+}
+
+// ── guitar_strumscore: ô nhịp sáng theo phách (metronome + quạt xuống) ───────────
+export interface StrumScoreCfg {
+  chords?: string[]        // nhãn hợp âm mỗi ô nhịp
+  freqsList?: number[][]   // tần số mỗi ô để tự gảy vào phách 1
+  beatsPerBar?: number
+  tempo?: number
+  caption?: string
+}
+export function StrumScore({ cfg }: { cfg: StrumScoreCfg }) {
+  const bars = cfg.chords && cfg.chords.length ? cfg.chords : ['C', 'Am', 'Dm', 'G7']
+  const bpb = cfg.beatsPerBar ?? 4
+  const tempo = cfg.tempo ?? 70
+  const freqsList = cfg.freqsList ?? []
+  const total = bars.length * bpb
+  const [beat, setBeat] = useState(-1)
+  const [playing, setPlaying] = useState(false)
+  const iv = useRef<ReturnType<typeof setInterval> | null>(null)
+  const bR = useRef(0)
+  const stop = () => { if (iv.current) { clearInterval(iv.current); iv.current = null } setPlaying(false); setBeat(-1) }
+  useEffect(() => () => { if (iv.current) clearInterval(iv.current) }, [])
+  const toggle = () => {
+    if (playing) { stop(); return }
+    setPlaying(true); bR.current = 0
+    const tick = () => {
+      const b = bR.current, inBar = b % bpb, barIdx = Math.floor(b / bpb)
+      playClick(inBar === 0)
+      if (inBar === 0 && freqsList[barIdx] && freqsList[barIdx].length) strumFreqs(freqsList[barIdx])
+      setBeat(b); bR.current = (b + 1) % total
+    }
+    tick(); iv.current = setInterval(tick, 60000 / tempo)
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {cfg.caption && <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {bars.map((ch, bi) => (
+          <div key={bi} style={{ border: '1.5px solid #D9CBB4', borderRadius: 10, padding: '6px 6px 8px', background: '#FBF6ED', minWidth: bpb * 26 + 12 }}>
+            <div style={{ textAlign: 'center', fontWeight: 800, color: '#BF5A37', fontSize: 16, marginBottom: 4 }}>{ch}</div>
+            <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+              {Array.from({ length: bpb }).map((_, k) => {
+                const on = beat === bi * bpb + k
+                return (
+                  <div key={k} style={{ width: 22, height: 30, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, background: on ? '#2A7D5A' : k === 0 ? '#EFE4D2' : '#F4ECDF', color: on ? '#fff' : '#9A8F7E', transition: 'background .05s' }}>↓</div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={toggle}
+        style={{ width: '100%', maxWidth: 320, alignSelf: 'center', padding: 15, border: 'none', borderRadius: 14, background: playing ? '#8A3B2A' : '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
+        {playing ? '⏹  Dừng' : `▶  Chạy (${tempo} BPM)`}
+      </button>
+    </div>
+  )
+}
+
+// ── guitar_backing: nhạc nền loop vòng/cặp hợp âm để quạt/ngân/hát theo ──────────
+export interface BackingCfg {
+  chords?: string[]
+  freqsList?: number[][]
+  tempo?: number
+  beatsPerBar?: number
+  caption?: string
+}
+export function Backing({ cfg }: { cfg: BackingCfg }) {
+  const bars = cfg.chords && cfg.chords.length ? cfg.chords : ['Am', 'C']
+  const bpb = cfg.beatsPerBar ?? 4
+  const tempo = cfg.tempo ?? 70
+  const freqsList = cfg.freqsList ?? []
+  const [cur, setCur] = useState(-1)
+  const [playing, setPlaying] = useState(false)
+  const iv = useRef<ReturnType<typeof setInterval> | null>(null)
+  const bR = useRef(0)
+  const stop = () => { if (iv.current) { clearInterval(iv.current); iv.current = null } setPlaying(false); setCur(-1) }
+  useEffect(() => () => { if (iv.current) clearInterval(iv.current) }, [])
+  const toggle = () => {
+    if (playing) { stop(); return }
+    setPlaying(true); bR.current = 0
+    const tick = () => {
+      const b = bR.current, inBar = b % bpb, barIdx = Math.floor(b / bpb)
+      if (inBar === 0) { if (freqsList[barIdx] && freqsList[barIdx].length) strumFreqs(freqsList[barIdx]); setCur(barIdx) }
+      else playClick(false)
+      bR.current = (b + 1) % (bars.length * bpb)
+    }
+    tick(); iv.current = setInterval(tick, 60000 / tempo)
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {cfg.caption && <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {bars.map((ch, i) => (
+          <div key={i} style={{ minWidth: 58, padding: '10px 8px', borderRadius: 12, textAlign: 'center', fontWeight: 800, fontSize: 20, background: cur === i ? '#2A7D5A' : '#F1ECE2', color: cur === i ? '#fff' : '#BF5A37', border: '1.5px solid ' + (cur === i ? '#2A7D5A' : '#E0D6C6'), transition: 'all .1s' }}>{ch}</div>
+        ))}
+      </div>
+      <button onClick={toggle}
+        style={{ width: '100%', maxWidth: 320, alignSelf: 'center', padding: 15, border: 'none', borderRadius: 14, background: playing ? '#8A3B2A' : '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
+        {playing ? '⏹  Dừng nền' : `▶  Bật nền (${tempo} BPM)`}
       </button>
     </div>
   )
