@@ -47,8 +47,8 @@ const drone = (nm='Am', seconds=12, caption='') => ({ logic:'LAM', type:'guitar_
   interactive:{ name:nm, freqs: CH[nm].freqs.filter(f => f > 0), seconds, caption } })
 const ear = (title, pool, rounds=5) => ({ logic:'LAM', type:'guitar_ear', title, interactive:{ pool, rounds, passScore: Math.ceil(rounds*0.6) } })
 const strum = (title, sequence) => ({ logic:'LAM', type:'guitar_strum', title, interactive:{ sequence } })
-const metro = (content, sub='Metronome — giữ nhịp đều') => ({ logic:'LAM', type:'guitar_tool', title:'Bật Metronome',
-  content, interactive:{ tool:'tempo', label:'Mở Metronome', sub, buttonPos:'inline' } })
+const metro = (content) => ({ logic:'LAM', type:'guitar_metronome', title:'Metronome',
+  interactive:{ tempo:70, beatsPerBar:4, caption:(content||'') } })
 const tuner = (content) => ({ logic:'LAM', type:'guitar_tool', title:'Lên dây', content,
   interactive:{ tool:'tuner', label:'Mở Tuner — Lên dây', sub:'Chỉnh đàn trước khi tập', buttonPos:'inline' } })
 const embedChord = (nm) => ({ logic:'LAM', type:'embedded_tool', title:`Luyện hợp âm ${nm}`,

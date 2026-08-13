@@ -1109,6 +1109,54 @@ export function Backing({ cfg }: { cfg: BackingCfg }) {
   )
 }
 
+// ── guitar_metronome: máy đập nhịp — chọn BPM & loại nhịp, click + đèn phách ─────
+export interface MetronomeCfg { tempo?: number; beatsPerBar?: number; caption?: string }
+export function Metronome({ cfg }: { cfg: MetronomeCfg }) {
+  const [bpm, setBpm] = useState(cfg.tempo ?? 70)
+  const [bpb, setBpb] = useState(cfg.beatsPerBar ?? 4)
+  const [beat, setBeat] = useState(-1)
+  const [playing, setPlaying] = useState(false)
+  const bR = useRef(0)
+  useEffect(() => {
+    if (!playing) { setBeat(-1); return }
+    bR.current = 0
+    const id = setInterval(() => {
+      const b = bR.current, inBar = b % bpb
+      playClick(inBar === 0); setBeat(inBar); bR.current = b + 1
+    }, 60000 / bpm)
+    return () => clearInterval(id)
+  }, [playing, bpm, bpb])
+  const setBpmClamped = (v: number) => setBpm(Math.max(40, Math.min(160, v)))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+      {cfg.caption && <div style={{ fontSize: 15, color: '#3A352C', lineHeight: 1.6, textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: cfg.caption }} />}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {Array.from({ length: bpb }).map((_, k) => (
+          <div key={k} style={{ width: 26, height: 26, borderRadius: '50%', background: beat === k ? (k === 0 ? '#BF5A37' : '#2A7D5A') : '#E6DDCE', transition: 'background .04s' }} />
+        ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <button onClick={() => setBpmClamped(bpm - 5)} style={{ width: 40, height: 40, borderRadius: 10, border: '1.5px solid #D9CBB4', background: '#F4ECDF', fontSize: 22, fontWeight: 700, color: '#2A2622', cursor: 'pointer' }}>−</button>
+        <div style={{ textAlign: 'center', minWidth: 96 }}>
+          <div style={{ fontSize: 34, fontWeight: 800, color: '#2A2622', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{bpm}</div>
+          <div style={{ fontSize: 12, color: '#9A8F7E', fontWeight: 600, letterSpacing: 1 }}>BPM</div>
+        </div>
+        <button onClick={() => setBpmClamped(bpm + 5)} style={{ width: 40, height: 40, borderRadius: 10, border: '1.5px solid #D9CBB4', background: '#F4ECDF', fontSize: 22, fontWeight: 700, color: '#2A2622', cursor: 'pointer' }}>+</button>
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[2, 3, 4].map(n => (
+          <button key={n} onClick={() => setBpb(n)}
+            style={{ padding: '7px 14px', borderRadius: 10, border: '1.5px solid ' + (bpb === n ? '#2A7D5A' : '#D9CBB4'), background: bpb === n ? '#DCEFE4' : '#F4ECDF', color: '#2A2622', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>{n}/4</button>
+        ))}
+      </div>
+      <button onClick={() => setPlaying(p => !p)}
+        style={{ width: '100%', maxWidth: 320, padding: 15, border: 'none', borderRadius: 14, background: playing ? '#8A3B2A' : '#2A2622', color: '#F4ECDF', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
+        {playing ? '⏹  Dừng' : '▶  Bật nhịp'}
+      </button>
+    </div>
+  )
+}
+
 // ── bar_split: đối chiếu SHEET (vẽ sạch từ nốt) ↔ LỜI, bút kẻ vạch chia ô nhịp ───
 // Mục tiêu dạy: nhìn sheet để biết "từ đâu đến đâu là 1 ô nhịp" (ô nhịp ≠ số chữ).
 const BS_INK = '#2A2622', BS_PEN = '#C2622E', BS_MUTE = '#9A8F7E'

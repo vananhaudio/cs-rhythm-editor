@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
-import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView, ChordDrone, ListenChoice, StrumScore, Backing, BarSplit } from './elearn/guitarRenderers'
-import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg, DroneCfg, ListenCfg, StrumScoreCfg, BackingCfg, BarSplitCfg } from './elearn/guitarRenderers'
+import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView, ChordDrone, ListenChoice, StrumScore, Backing, Metronome, BarSplit } from './elearn/guitarRenderers'
+import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg, DroneCfg, ListenCfg, StrumScoreCfg, BackingCfg, MetronomeCfg, BarSplitCfg } from './elearn/guitarRenderers'
 import { NarratedSlideshow } from './elearn/NarratedSlideshow'
 import type { NarratedSlideshowCfg } from './elearn/NarratedSlideshow'
 import { ChordPractice } from './elearn/ChordPractice'
@@ -632,6 +632,11 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* GUITAR_BACKING — nhạc nền loop vòng/cặp hợp âm (LÀM) */}
         {slide.type === 'guitar_backing' && (
           <Backing cfg={(slide.interactive ?? {}) as BackingCfg} />
+        )}
+
+        {/* GUITAR_METRONOME — máy đập nhịp (chọn BPM & nhịp, click + đèn phách) (LÀM) */}
+        {slide.type === 'guitar_metronome' && (
+          <Metronome cfg={(slide.interactive ?? {}) as MetronomeCfg} />
         )}
 
         {/* BAR_SPLIT — đối chiếu sheet ↔ lời, bút kẻ vạch chia ô nhịp (THẤY) */}
