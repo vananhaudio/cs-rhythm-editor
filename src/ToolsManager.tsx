@@ -29,8 +29,9 @@ interface Tool {
   category: string; route: string; tier: string; enabled: boolean; status: ToolStatus; order_index: number
 }
 
-// 5 bài luyện mặc định — tự upsert vào edu_tools nếu chưa có
+// Công cụ + bài luyện mặc định — tự upsert vào edu_tools nếu chưa có
 const EXERCISE_DEFAULTS: Omit<Tool, 'enabled'>[] = [
+  { id: 'metronome',           name: 'Máy đập nhịp', icon: '🎼', description: 'Giữ nhịp khi luyện tập', category: 'Luyện',     route: '/metronome', tier: 'free', status: 'on', order_index: 40 },
   { id: 'bai-luyen-ngon',      name: 'Luyện ngón',  icon: '🖐', description: 'Tập ngón tay từng bước',  category: 'Bài luyện', route: '#', tier: 'free',  status: 'on',  order_index: 100 },
   { id: 'bai-luyen-am-giai',   name: 'Âm giai',     icon: '🎼', description: 'Âm giai trưởng và thứ',  category: 'Bài luyện', route: '#', tier: 'free',  status: 'on',  order_index: 101 },
   { id: 'bai-luyen-arpeggio',  name: 'Arpeggio',    icon: '🎸', description: 'Bài luyện arpeggio',      category: 'Bài luyện', route: '#', tier: 'free',  status: 'on',  order_index: 102 },
