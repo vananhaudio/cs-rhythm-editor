@@ -8,6 +8,7 @@ import GrooveExercise from './groove/GrooveExercise'
 import ChordDiagramIcon from './ChordDiagramIcon'
 import SongBuilderPage from './SongBuilderPage'
 import PianoJourney from './PianoJourney'
+import Metronome from './Metronome'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIOS } from './iap'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
@@ -392,6 +393,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   // ── BMS (Song Builder) render THẲNG trong app (không iframe) — hết app-chồng-app ──
   const [showBMS, setShowBMS] = useState(false)
   const [showPiano, setShowPiano] = useState(false)
+  const [showMetronome, setShowMetronome] = useState(false)
+  const [metronomeBpm, setMetronomeBpm]   = useState<number | null>(null)
   const [bmsInit, setBmsInit] = useState<{ title?: string | null; youtube?: string | null; tempo?: string | null } | undefined>(undefined)
   // Tool ID của bài học đang mở exercise (để mark done khi đóng)
   const [currentLessonToolId, setCurrentLessonToolId] = useState<string | null>(null)
@@ -466,6 +469,15 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     // getUserMedia trong iframe của WKWebView (app iOS) hay bị chặn ⇒ mic chết.
     if (route.includes('/piano-journey')) {   // includes: bắt cả khi route là URL tuyệt đối
       setShowPiano(true)
+      if (toolId) markToolUsed(toolId)
+      return
+    }
+    // Máy đập nhịp: render THẲNG (không iframe) → chỉ 1 header, hết "app chồng app".
+    if (route.includes('/metronome')) {
+      const p = new URLSearchParams(route.split('?')[1] ?? '')
+      const t = parseInt(p.get('tempo') ?? '', 10)
+      setMetronomeBpm(Number.isFinite(t) ? t : null)
+      setShowMetronome(true)
       if (toolId) markToolUsed(toolId)
       return
     }
@@ -1016,6 +1028,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
     {showBMS && (
       <SongBuilderPage embedded initial={bmsInit} onClose={() => setShowBMS(false)} />
+    )}
+
+    {showMetronome && (
+      <Metronome initialBpm={metronomeBpm} onClose={() => setShowMetronome(false)} />
     )}
 
     {/* Trang con của tab Sống (Band · Cộng đồng · Đại hội · Nhóm lớp) */}
