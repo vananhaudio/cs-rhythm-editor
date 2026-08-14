@@ -1,16 +1,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-// ─── Palette (theo đặc tả Rhythm Lab) ───────────────────────────────────────────
+// ─── Palette (Rhythm Lab · visual system) ───────────────────────────────────────
+// Vai trò màu: TÍM = đang chọn/đang hoạt động · LAVENDER = vùng âm nhạc/chiều sâu/
+// selected nhẹ · CAM = hành động chính · TRẮNG+XÁM = nền & thông tin.
 const C = {
-  bg1: '#F7F7FA', bg2: '#EDEDF3',
+  bg1: '#F6F6F8', bg2: '#EDEDF1',
   card: '#FFFFFF',
-  ink:  '#242438',
-  sub:  '#A5A5B5',
-  faint:'#C4C4D0',
-  line: '#EAEAF1',
+  ink:  '#252536',
+  sub:  '#9696A6',
+  faint:'#C0C0CC',
+  line: '#EAEAF0',
   ind:  '#5146E5', indDeep: '#4038CC', indSoft: '#EEEDFC', indPale: '#D9D7F7',
-  acc:  '#F97316', accDeep: '#EA6207', accSoft: '#FFF3EA', accPale: '#F8D6B9',
-  noteOff: '#6E6E88',   // notation lúc chưa chọn (xám tím)
+  lav:  '#F1F0FC', lavBorder: '#DAD7F5',
+  acc:  '#FF8A2A', accEnd: '#FF7A12',
+  accPale: '#FBD9B9',
+  noteOff: '#7C7C92',
+  track: '#E6E6EE',
   shadow:    '0 1px 2px rgba(37,36,56,.05), 0 6px 16px rgba(37,36,56,.06)',
   shadowCard:'0 2px 10px rgba(48,44,110,.05), 0 20px 46px rgba(48,44,110,.09)',
 }
@@ -39,8 +44,7 @@ const MIN_BPM = 30
 const MAX_BPM = 260
 const AMP     = 26
 
-// ─── Notation SVG chuẩn cho phần CHIA NHỊP ──────────────────────────────────────
-// 1 = nốt đen · 2 = chùm 2 móc đơn · 3 = liên 3 · 4 = chùm 4 móc kép
+// ─── Notation SVG cho CHIA NHỊP (giữ nguyên ký hiệu) ────────────────────────────
 function SubdivGlyph({ kind, color, h = 30 }: { kind: number; color: string; h?: number }) {
   const head = (cx: number, cy: number) => (
     <ellipse cx={cx} cy={cy} rx={6.4} ry={4.7} fill={color} transform={`rotate(-18 ${cx} ${cy})`} />
@@ -53,7 +57,6 @@ function SubdivGlyph({ kind, color, h = 30 }: { kind: number; color: string; h?:
   )
 
   if (kind === 1) {
-    // Nốt đen: đầu nốt + đuôi thẳng
     return (
       <svg height={h} viewBox="0 0 26 50" style={{ display: 'block' }}>
         {stem(16.4, 6, 42)}
@@ -62,7 +65,6 @@ function SubdivGlyph({ kind, color, h = 30 }: { kind: number; color: string; h?:
     )
   }
   if (kind === 2) {
-    // Chùm 2 móc đơn (1 beam)
     return (
       <svg height={h} viewBox="0 0 50 50" style={{ display: 'block' }}>
         {beam(15.2, 44.5, 7)}
@@ -74,7 +76,6 @@ function SubdivGlyph({ kind, color, h = 30 }: { kind: number; color: string; h?:
     )
   }
   if (kind === 3) {
-    // Liên 3 (3 móc đơn + số 3 trên beam)
     return (
       <svg height={h} viewBox="0 0 58 50" style={{ display: 'block' }}>
         <text x={28.5} y={11} textAnchor="middle" fill={color}
@@ -89,7 +90,6 @@ function SubdivGlyph({ kind, color, h = 30 }: { kind: number; color: string; h?:
       </svg>
     )
   }
-  // kind === 4 — Chùm 4 móc kép (beam đôi)
   return (
     <svg height={h} viewBox="0 0 70 50" style={{ display: 'block' }}>
       {beam(13.2, 65.5, 12, 4)}
@@ -106,7 +106,6 @@ function SubdivGlyph({ kind, color, h = 30 }: { kind: number; color: string; h?:
   )
 }
 
-// Icon play / pause vẽ SVG (rõ, không dùng emoji)
 const PlayIcon  = ({ s = 17 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24"><path d="M8 5.2 L18.5 12 L8 18.8 Z" fill="#fff" /></svg>
 )
@@ -137,7 +136,6 @@ export default function Metronome({ onClose, initialBpm }: Props) {
 
   const sig = TIME_SIGS[sigIdx]
 
-  // ── Web Audio scheduler ───────────────────────────────────────────────────────
   const ctxRef      = useRef<AudioContext | null>(null)
   const nextTickRef = useRef(0)
   const tickRef     = useRef(0)
@@ -145,7 +143,6 @@ export default function Metronome({ onClose, initialBpm }: Props) {
   const queueRef    = useRef<{ beat: number; time: number }[]>([])
   const rafRef      = useRef<number>(0)
 
-  // ── Con lắc + glow bám đồng hồ audio, cập nhật thẳng DOM ───────────────────────
   const armRef        = useRef<SVGGElement | null>(null)
   const glowRef       = useRef<HTMLDivElement | null>(null)
   const bobGlowRef    = useRef<SVGCircleElement | null>(null)
@@ -214,10 +211,10 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         const deg = pendCurRef.current * AMP * Math.cos(phase * Math.PI)
         armRef.current.setAttribute('transform', `rotate(${deg.toFixed(2)} 100 176)`)
       }
-      const since = now - pendAnchorRef.current
-      const g = Math.max(0, 1 - since / 0.24)   // xung dịu, tắt dần sau mỗi phách
-      if (glowRef.current)    glowRef.current.style.opacity = String(g * 0.5)
-      if (bobGlowRef.current) bobGlowRef.current.style.opacity = String(g * 0.4)
+      // "thở" theo nhịp: glow tăng khi đánh phách rồi dịu dần
+      const g = Math.max(0, 1 - (now - pendAnchorRef.current) / 0.26)
+      if (glowRef.current)    glowRef.current.style.opacity = String(0.32 + g * 0.42)
+      if (bobGlowRef.current) bobGlowRef.current.style.opacity = String(g * 0.34)
     }
     rafRef.current = requestAnimationFrame(visualLoop)
   }, [])
@@ -280,13 +277,23 @@ export default function Metronome({ onClose, initialBpm }: Props) {
     tapTORef.current = setTimeout(() => { tapTimesRef.current = [] }, 2500)
   }
 
-  const chip = (active: boolean): React.CSSProperties => ({
-    flex: 1, border: `1px solid ${active ? C.ind : C.line}`,
+  const bpmPct = ((bpm - MIN_BPM) / (MAX_BPM - MIN_BPM) * 100).toFixed(1) + '%'
+  const volPct = (volume * 100).toFixed(1) + '%'
+
+  // NHỊP — selected MẠNH (nền tím đặc)
+  const chipStrong = (active: boolean): React.CSSProperties => ({
+    flex: 1, height: 48, borderRadius: 14, border: `1px solid ${active ? C.ind : C.line}`,
     background: active ? C.ind : C.card, color: active ? '#fff' : C.sub,
-    borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
-    height: 48, fontSize: 16.5, WebkitTapHighlightColor: 'transparent',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    boxShadow: active ? '0 6px 16px rgba(81,70,229,0.28)' : C.shadow,
+    fontFamily: 'inherit', fontWeight: 700, fontSize: 16.5, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
+    boxShadow: active ? '0 6px 16px rgba(81,70,229,0.26)' : C.shadow,
+  })
+  // CHIA — selected NHẸ (nền lavender, notation tím)
+  const chipSoft = (active: boolean): React.CSSProperties => ({
+    flex: 1, height: 52, borderRadius: 14, border: `1px solid ${active ? C.lavBorder : C.line}`,
+    background: active ? C.lav : C.card, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
+    boxShadow: active ? '0 4px 12px rgba(81,70,229,0.10)' : C.shadow,
   })
   const rowLabel: React.CSSProperties = { width: 40, flexShrink: 0, fontSize: 11, fontWeight: 800, color: C.faint, letterSpacing: '.08em', textTransform: 'uppercase' }
   const roundBtn: React.CSSProperties = {
@@ -303,7 +310,12 @@ export default function Metronome({ onClose, initialBpm }: Props) {
       <style>{`
         .rl-mtr button { transition: transform .09s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease; }
         .rl-mtr button:active { transform: scale(.955); }
-        .rl-mtr input[type=range]{ accent-color: ${C.ind}; }
+        .rl-mtr input[type=range]{ -webkit-appearance:none; appearance:none; height:22px; background:transparent; cursor:pointer; }
+        .rl-mtr input[type=range]::-webkit-slider-runnable-track{ height:6px; border-radius:99px; background:linear-gradient(90deg, ${C.ind} var(--p,50%), ${C.track} var(--p,50%)); }
+        .rl-mtr input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; height:20px; width:20px; border-radius:50%; background:#fff; margin-top:-7px; box-shadow:0 1px 3px rgba(37,36,54,.32), 0 0 0 1px rgba(37,36,54,.05); }
+        .rl-mtr input[type=range]::-moz-range-track{ height:6px; border-radius:99px; background:${C.track}; }
+        .rl-mtr input[type=range]::-moz-range-progress{ height:6px; border-radius:99px; background:${C.ind}; }
+        .rl-mtr input[type=range]::-moz-range-thumb{ height:20px; width:20px; border:none; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(37,36,54,.32); }
       `}</style>
 
       {/* Header */}
@@ -314,39 +326,39 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.01em' }}>Máy đập nhịp</div>
         </div>
-        <div style={{ fontSize: 21, opacity: 0.85 }}>🎼</div>
+        <div style={{ fontSize: 21, opacity: 0.8 }}>🎼</div>
       </div>
 
       {/* Thân — 1 màn, không cuộn */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '14px 16px 12px', gap: 13, maxWidth: 440, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
 
         {/* ── HERO CARD ── */}
-        <div style={{ flex: 1, minHeight: 0, background: `linear-gradient(165deg, #FFFFFF 0%, #F8F8FC 100%)`, borderRadius: 26, border: `1px solid ${C.line}`, boxShadow: C.shadowCard,
+        <div style={{ flex: 1, minHeight: 0, background: C.card, borderRadius: 26, border: `1px solid ${C.line}`, boxShadow: C.shadowCard,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '20px 16px', position: 'relative', overflow: 'hidden' }}>
 
-          {/* Glow tím rất nhẹ phía sau metronome */}
-          <div ref={glowRef} style={{ position: 'absolute', top: '32%', width: 'min(280px, 74%)', aspectRatio: '1', borderRadius: '50%',
-            background: `radial-gradient(circle, ${curBeat === 0 && accentOn ? 'rgba(249,115,22,.5)' : 'rgba(81,70,229,.45)'} 0%, transparent 68%)`,
-            filter: 'blur(16px)', opacity: 0, transform: 'translateY(-50%)', transition: 'background .1s', pointerEvents: 'none' }} />
+          {/* Glow lavender phía sau — "thở" theo nhịp */}
+          <div ref={glowRef} style={{ position: 'absolute', top: '32%', width: 'min(290px, 76%)', aspectRatio: '1', borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(81,70,229,.40) 0%, rgba(129,140,248,.14) 45%, transparent 70%)',
+            filter: 'blur(18px)', opacity: 0, transform: 'translateY(-50%)', pointerEvents: 'none' }} />
 
           {/* Con lắc */}
           <svg viewBox="0 0 200 200" style={{ width: 'min(224px, 55vw)', height: 'auto', flexShrink: 1, minHeight: 0, display: 'block', position: 'relative' }}>
             <defs>
               <linearGradient id="mBody" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#FFFFFF" />
-                <stop offset="1" stopColor="#F1F1F7" />
+                <stop offset="1" stopColor="#F3F3F8" />
               </linearGradient>
               <linearGradient id="mArm" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#8A82F2" />
                 <stop offset="1" stopColor="#5146E5" />
               </linearGradient>
               <radialGradient id="mBob" cx="0.36" cy="0.3" r="0.85">
-                <stop offset="0" stopColor="#B8B2FB" />
-                <stop offset="0.5" stopColor="#6A5EEC" />
-                <stop offset="1" stopColor="#4238C6" />
+                <stop offset="0" stopColor="#B3ADFA" />
+                <stop offset="0.55" stopColor="#6459EA" />
+                <stop offset="1" stopColor="#4A40D4" />
               </radialGradient>
               <filter id="mShadow" x="-40%" y="-40%" width="180%" height="180%">
-                <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#5146E5" floodOpacity="0.24" />
+                <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#5146E5" floodOpacity="0.20" />
               </filter>
             </defs>
 
@@ -354,19 +366,19 @@ export default function Metronome({ onClose, initialBpm }: Props) {
             <path d="M66 182 L83 32 Q85 22 100 22 Q115 22 117 32 L134 182 Q135 190 127 190 L73 190 Q65 190 66 182 Z"
               fill="url(#mBody)" stroke={C.line} strokeWidth="1.5" />
 
-            {/* Vạch chia (tím rất nhạt) */}
+            {/* Vạch chia (lavender rất nhạt) */}
             {Array.from({ length: 7 }).map((_, i) => {
               const y = 56 + i * 17.5
               const half = 9 + i * 1.3
               return <line key={i} x1={100 - half} y1={y} x2={100 - half + 5} y2={y} stroke={C.indPale} strokeWidth="2" strokeLinecap="round" />
             })}
 
-            {/* Cần + quả nặng (+ glow pulse) */}
+            {/* Cần + quả cầu (+ glow pulse) */}
             <g ref={armRef} style={{ transition: playing ? 'none' : 'transform .45s cubic-bezier(.34,1.25,.5,1)' }}>
               <line x1="100" y1="176" x2="100" y2="46" stroke="url(#mArm)" strokeWidth="5.5" strokeLinecap="round" />
-              <circle ref={bobGlowRef} cx="100" cy="88" r="20" fill="#5146E5" opacity="0" />
+              <circle ref={bobGlowRef} cx="100" cy="88" r="20" fill="#8B82F5" opacity="0" />
               <circle cx="100" cy="88" r="12.5" fill="url(#mBob)" filter="url(#mShadow)" />
-              <circle cx="96" cy="84" r="3.4" fill="#fff" opacity="0.55" />
+              <circle cx="96" cy="84" r="3.4" fill="#fff" opacity="0.5" />
             </g>
 
             {/* Trục */}
@@ -393,7 +405,7 @@ export default function Metronome({ onClose, initialBpm }: Props) {
                 <div key={i} style={{
                   width: on ? 13 : 9, height: on ? 13 : 9, borderRadius: '50%',
                   background: on ? (isAccent ? C.acc : C.ind) : (isAccent ? C.accPale : C.indPale),
-                  boxShadow: on ? `0 0 12px ${isAccent ? 'rgba(249,115,22,.55)' : 'rgba(81,70,229,.5)'}` : 'none',
+                  boxShadow: on ? `0 0 12px ${isAccent ? 'rgba(255,138,42,.5)' : 'rgba(81,70,229,.5)'}` : 'none',
                   opacity: on ? 1 : 0.7, transform: on ? 'scale(1.08)' : 'scale(1)',
                   transition: 'all .1s ease-out',
                 }} />
@@ -407,50 +419,50 @@ export default function Metronome({ onClose, initialBpm }: Props) {
           <button onPointerDown={() => changeBpm(-1)} style={roundBtn}>−</button>
           <input type="range" min={MIN_BPM} max={MAX_BPM} value={bpm}
             onChange={e => setBpm(parseInt(e.target.value, 10))}
-            style={{ flex: 1, height: 5 }} />
+            style={{ flex: 1, ['--p' as any]: bpmPct }} />
           <button onPointerDown={() => changeBpm(1)} style={roundBtn}>+</button>
         </div>
 
-        {/* ── Loại nhịp ── */}
+        {/* ── Loại nhịp — selected MẠNH ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={rowLabel}>Nhịp</span>
           {TIME_SIGS.map((s, i) => (
-            <button key={s.label} onClick={() => setSigIdx(i)} style={chip(i === sigIdx)}>{s.label}</button>
+            <button key={s.label} onClick={() => setSigIdx(i)} style={chipStrong(i === sigIdx)}>{s.label}</button>
           ))}
         </div>
 
-        {/* ── Chia nhịp (notation SVG) ── */}
+        {/* ── Chia nhịp — selected NHẸ (lavender + notation tím) ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={rowLabel}>Chia</span>
           {SUBDIVS.map(n => {
             const active = n === subdiv
             return (
-              <button key={n} onClick={() => setSubdiv(n)} style={{ ...chip(active), height: 52 }}>
-                <SubdivGlyph kind={n} color={active ? '#fff' : C.noteOff} h={n === 1 ? 30 : 30} />
+              <button key={n} onClick={() => setSubdiv(n)} style={chipSoft(active)}>
+                <SubdivGlyph kind={n} color={active ? C.ind : C.noteOff} h={30} />
               </button>
             )
           })}
         </div>
 
-        {/* ── Phách 1 + Âm lượng ── */}
+        {/* ── Phách 1 (control đang bật) + Âm lượng ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 48, flexShrink: 0 }}>
           <button onClick={() => setAccentOn(v => !v)} style={{
             display: 'flex', alignItems: 'center', gap: 8, height: 48, padding: '0 14px', flexShrink: 0,
             border: `1px solid ${accentOn ? C.ind : C.line}`, borderRadius: 15,
-            background: accentOn ? C.indSoft : C.card, color: accentOn ? C.ind : C.sub,
+            background: accentOn ? C.lav : C.card, color: accentOn ? C.ind : C.sub,
             fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', WebkitTapHighlightColor: 'transparent',
             boxShadow: C.shadow,
           }}>
             <span style={{ fontSize: 15 }}>{accentOn ? '🔔' : '🔕'}</span> Phách 1
           </button>
-          <span style={{ fontSize: 15, flexShrink: 0, opacity: 0.7 }}>🔊</span>
+          <span style={{ fontSize: 15, flexShrink: 0, color: C.sub }}>🔊</span>
           <input type="range" min={0} max={1} step={0.01} value={volume}
             onChange={e => setVolume(parseFloat(e.target.value))}
-            style={{ flex: 1, height: 5 }} />
+            style={{ flex: 1, ['--p' as any]: volPct }} />
         </div>
       </div>
 
-      {/* ── Thanh nút cố định dưới ── */}
+      {/* ── Thanh nút cố định dưới — CAM = hành động chính ── */}
       <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 16px max(12px, env(safe-area-inset-bottom))', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: `1px solid ${C.line}`, maxWidth: 440, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <button onPointerDown={tap} style={{
           width: 76, flexShrink: 0, height: 56, borderRadius: 18, border: `1px solid ${C.line}`,
@@ -463,9 +475,9 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         </button>
         <button onClick={toggle} style={{
           flex: 1, height: 56, border: 'none', borderRadius: 20,
-          background: playing ? `linear-gradient(135deg, #FB923C 0%, ${C.acc} 100%)` : `linear-gradient(135deg, #6A5EEC 0%, ${C.indDeep} 100%)`,
+          background: `linear-gradient(135deg, ${C.acc} 0%, ${C.accEnd} 100%)`,
           color: '#fff', fontSize: 18, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          boxShadow: playing ? '0 8px 20px rgba(249,115,22,0.34)' : '0 8px 20px rgba(81,70,229,0.38)',
+          boxShadow: '0 8px 20px rgba(255,138,42,0.32)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, WebkitTapHighlightColor: 'transparent',
           letterSpacing: '.01em',
         }}>
