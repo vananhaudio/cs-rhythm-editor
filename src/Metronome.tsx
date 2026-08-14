@@ -1,23 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-// ─── Light theme tokens (đồng bộ MobileStudentPortal) ───────────────────────────
-const L = {
-  bg:       '#F0F2F5',
-  surface:  '#FFFFFF',
-  surface2: '#F7F8FA',
-  border:   '#E8EAF0',
-  p1:       '#4338CA',
-  p2:       '#EEF2FF',
-  p3:       '#C7D2FE',
-  a1:       '#EA580C',
-  a2:       '#FFF7ED',
-  a3:       '#FED7AA',
-  t1:       '#111827',
-  t2:       '#6B7280',
-  t3:       '#9CA3AF',
-  green:    '#16A34A',
-  shadow:   '0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04)',
-  shadowLg: '0 12px 34px rgba(67,56,202,0.22)',
+// ─── Palette tinh tế (indigo dịu + trung tính ấm) ───────────────────────────────
+const C = {
+  bg1: '#FAFAFC', bg2: '#EFEFF4',
+  card: '#FFFFFF',
+  ink:  '#26243A',   // số & chữ đậm (slate ấm, không đen gắt)
+  sub:  '#8B8B9E',   // nhãn phụ
+  faint:'#C3C3CF',
+  line: '#ECEDF2',
+  ind:  '#4F46E5', indDeep: '#3F37C9', indSoft: '#EEF0FC', indPale: '#DDE0F6',
+  acc:  '#EA580C', accSoft: '#FFF4EC', accPale: '#F6D6BE',
+  shadow:    '0 1px 2px rgba(30,27,60,.05), 0 6px 18px rgba(30,27,60,.05)',
+  shadowCard:'0 2px 10px rgba(48,44,110,.05), 0 18px 44px rgba(48,44,110,.09)',
 }
 
 function tempoName(bpm: number): string {
@@ -47,7 +41,7 @@ const SUBDIVS = [
 
 const MIN_BPM = 30
 const MAX_BPM = 260
-const AMP     = 27          // biên độ con lắc (độ)
+const AMP     = 26
 
 interface Props { onClose?: () => void; initialBpm?: number | null }
 
@@ -77,11 +71,12 @@ export default function Metronome({ onClose, initialBpm }: Props) {
   const queueRef    = useRef<{ beat: number; time: number }[]>([])
   const rafRef      = useRef<number>(0)
 
-  // ── Con lắc: bám đồng hồ audio, cập nhật thẳng DOM (không re-render 60fps) ──────
+  // ── Con lắc + quầng sáng: bám đồng hồ audio, cập nhật thẳng DOM ────────────────
   const armRef        = useRef<SVGGElement | null>(null)
-  const pendAnchorRef = useRef(0)   // thời điểm phách gần nhất
-  const pendSignRef   = useRef(1)   // dấu cho khoảng KẾ tiếp
-  const pendCurRef    = useRef(1)   // dấu đang dùng
+  const glowRef       = useRef<HTMLDivElement | null>(null)
+  const pendAnchorRef = useRef(0)
+  const pendSignRef   = useRef(1)
+  const pendCurRef    = useRef(1)
 
   const paramsRef = useRef({ bpm, beats: sig.top, subdiv, volume, accentOn })
   useEffect(() => {
@@ -138,12 +133,16 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         pendSignRef.current   = -pendSignRef.current
         q.shift()
       }
-      // góc con lắc theo pha giữa 2 phách (cos → chậm ở hai đầu như con lắc thật)
+      const beatSec = 60 / paramsRef.current.bpm
       if (armRef.current) {
-        const beatSec = 60 / paramsRef.current.bpm
         const phase = Math.min(1, Math.max(0, (now - pendAnchorRef.current) / beatSec))
         const deg = pendCurRef.current * AMP * Math.cos(phase * Math.PI)
         armRef.current.setAttribute('transform', `rotate(${deg.toFixed(2)} 100 176)`)
+      }
+      if (glowRef.current) {
+        const since = now - pendAnchorRef.current
+        const g = Math.max(0, 1 - since / 0.22)
+        glowRef.current.style.opacity = String(g * 0.55)
       }
     }
     rafRef.current = requestAnimationFrame(visualLoop)
@@ -175,6 +174,7 @@ export default function Metronome({ onClose, initialBpm }: Props) {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     queueRef.current = []
     if (armRef.current) armRef.current.setAttribute('transform', 'rotate(0 100 176)')
+    if (glowRef.current) glowRef.current.style.opacity = '0'
     setPlaying(false)
     setCurBeat(-1)
   }, [])
@@ -206,104 +206,112 @@ export default function Metronome({ onClose, initialBpm }: Props) {
   }
 
   const chip = (active: boolean): React.CSSProperties => ({
-    flex: 1, border: `1.5px solid ${active ? L.p1 : L.border}`,
-    background: active ? L.p1 : L.surface, color: active ? '#fff' : L.t2,
-    borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
-    height: 44, fontSize: 16, transition: 'all .12s', WebkitTapHighlightColor: 'transparent',
-    boxShadow: active ? '0 4px 12px rgba(67,56,202,0.28)' : 'none',
+    flex: 1, border: `1px solid ${active ? C.ind : C.line}`,
+    background: active ? C.ind : C.card, color: active ? '#fff' : C.sub,
+    borderRadius: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
+    height: 46, fontSize: 16, transition: 'all .14s ease', WebkitTapHighlightColor: 'transparent',
+    boxShadow: active ? '0 5px 14px rgba(79,70,229,0.26)' : 'none',
   })
-  const rowLabel: React.CSSProperties = { width: 44, flexShrink: 0, fontSize: 12, fontWeight: 700, color: L.t3, letterSpacing: '.02em' }
+  const rowLabel: React.CSSProperties = { width: 40, flexShrink: 0, fontSize: 11, fontWeight: 800, color: C.faint, letterSpacing: '.08em', textTransform: 'uppercase' }
   const roundBtn: React.CSSProperties = {
-    width: 46, height: 46, borderRadius: 14, border: `1.5px solid ${L.border}`, background: L.surface,
-    color: L.t1, fontSize: 26, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+    width: 48, height: 48, borderRadius: 15, border: `1px solid ${C.line}`, background: C.card,
+    color: C.ink, fontSize: 26, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
     WebkitTapHighlightColor: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    boxShadow: L.shadow,
+    boxShadow: C.shadow,
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, color: L.t1, fontFamily: '"SF Pro Display", system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      background: 'linear-gradient(180deg, #F5F6FB 0%, #ECEEF6 60%, #E7E9F3 100%)' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, color: C.ink, fontFamily: '"SF Pro Display", system-ui, -apple-system, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      background: `linear-gradient(180deg, ${C.bg1} 0%, ${C.bg2} 100%)` }}>
 
       {/* Header */}
-      <div style={{ background: 'rgba(255,255,255,0.86)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: `1px solid ${L.border}`, padding: 'max(10px, calc(env(safe-area-inset-top,0px) + 6px)) 16px 10px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+      <div style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderBottom: `1px solid ${C.line}`, padding: 'max(10px, calc(env(safe-area-inset-top,0px) + 6px)) 16px 11px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         {onClose && (
-          <button onClick={onClose} style={{ background: L.p2, border: 'none', borderRadius: 12, minWidth: 40, height: 40, padding: '0 12px', color: L.p1, cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, flexShrink: 0, fontWeight: 700 }}>‹</button>
+          <button onClick={onClose} style={{ background: C.indSoft, border: 'none', borderRadius: 12, minWidth: 40, height: 40, padding: '0 12px', color: C.ind, cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700 }}>‹</button>
         )}
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.01em' }}>Máy đập nhịp</div>
         </div>
-        <div style={{ fontSize: 22 }}>🎼</div>
+        <div style={{ fontSize: 21, opacity: 0.85 }}>🎼</div>
       </div>
 
-      {/* Thân — lấp đầy 1 màn, KHÔNG cuộn */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 16px', gap: 10, maxWidth: 460, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      {/* Thân — 1 màn, KHÔNG cuộn. Tỉ lệ: hero card ~ phần lớn, controls gọn dưới */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '14px 16px 12px', gap: 14, maxWidth: 440, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
 
-        {/* ── HERO: con lắc + số BPM ── */}
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        {/* ── HERO CARD ── */}
+        <div style={{ flex: 1, minHeight: 0, background: `linear-gradient(165deg, #FFFFFF 0%, #F7F7FB 100%)`, borderRadius: 26, border: `1px solid ${C.line}`, boxShadow: C.shadowCard,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '18px 16px', position: 'relative', overflow: 'hidden' }}>
 
-          <svg viewBox="0 0 200 200" style={{ width: 'min(230px, 58vw)', height: 'auto', flexShrink: 0, display: 'block' }}>
+          {/* quầng sáng dịu đập theo phách */}
+          <div ref={glowRef} style={{ position: 'absolute', top: '30%', width: 'min(260px, 70%)', aspectRatio: '1', borderRadius: '50%',
+            background: `radial-gradient(circle, ${curBeat === 0 && accentOn ? 'rgba(234,88,12,.5)' : 'rgba(79,70,229,.45)'} 0%, transparent 70%)`,
+            filter: 'blur(14px)', opacity: 0, transform: 'translateY(-50%)', transition: 'background .1s', pointerEvents: 'none' }} />
+
+          {/* Con lắc */}
+          <svg viewBox="0 0 200 200" style={{ width: 'min(224px, 56vw)', height: 'auto', flexShrink: 1, minHeight: 0, display: 'block', position: 'relative' }}>
             <defs>
               <linearGradient id="mBody" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#FFFFFF" />
-                <stop offset="1" stopColor="#F1F2F8" />
+                <stop offset="1" stopColor="#F0F0F6" />
               </linearGradient>
               <linearGradient id="mArm" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#6366F1" />
-                <stop offset="1" stopColor="#4338CA" />
+                <stop offset="0" stopColor="#8C8AF0" />
+                <stop offset="1" stopColor="#4F46E5" />
               </linearGradient>
-              <radialGradient id="mBob" cx="0.35" cy="0.3" r="0.8">
-                <stop offset="0" stopColor="#818CF8" />
-                <stop offset="1" stopColor="#4338CA" />
+              <radialGradient id="mBob" cx="0.36" cy="0.3" r="0.85">
+                <stop offset="0" stopColor="#B7BAFA" />
+                <stop offset="0.5" stopColor="#6D66EC" />
+                <stop offset="1" stopColor="#4239C4" />
               </radialGradient>
-              <filter id="mShadow" x="-30%" y="-30%" width="160%" height="160%">
-                <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#4338CA" floodOpacity="0.28" />
+              <filter id="mShadow" x="-40%" y="-40%" width="180%" height="180%">
+                <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#4F46E5" floodOpacity="0.24" />
               </filter>
             </defs>
 
-            {/* Thân tháp metronome (hình thang bo góc) */}
-            <path d="M64 182 L82 30 Q84 20 100 20 Q116 20 118 30 L136 182 Q137 190 128 190 L72 190 Q63 190 64 182 Z"
-              fill="url(#mBody)" stroke={L.border} strokeWidth="1.5" />
+            {/* Thân tháp hình thang bo góc */}
+            <path d="M66 182 L83 32 Q85 22 100 22 Q115 22 117 32 L134 182 Q135 190 127 190 L73 190 Q65 190 66 182 Z"
+              fill="url(#mBody)" stroke={C.line} strokeWidth="1.5" />
 
-            {/* Thang chia độ */}
+            {/* Thang chia độ (dịu) */}
             {Array.from({ length: 7 }).map((_, i) => {
-              const y = 54 + i * 18
-              const half = 10 + i * 1.4
-              return <line key={i} x1={100 - half} y1={y} x2={100 - half + 5} y2={y} stroke={L.p3} strokeWidth="2" strokeLinecap="round" />
+              const y = 56 + i * 17.5
+              const half = 9 + i * 1.3
+              return <line key={i} x1={100 - half} y1={y} x2={100 - half + 5} y2={y} stroke={C.indPale} strokeWidth="2" strokeLinecap="round" />
             })}
 
-            {/* Cần lắc + quả nặng — nhóm xoay quanh trục (100,176) */}
-            <g ref={armRef} style={{ transition: playing ? 'none' : 'transform .4s cubic-bezier(.34,1.3,.5,1)' }}>
-              <line x1="100" y1="176" x2="100" y2="44" stroke="url(#mArm)" strokeWidth="6" strokeLinecap="round" />
-              <circle cx="100" cy="86" r="13" fill="url(#mBob)" filter="url(#mShadow)" />
-              <circle cx="100" cy="86" r="13" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.5" />
+            {/* Cần + quả nặng */}
+            <g ref={armRef} style={{ transition: playing ? 'none' : 'transform .45s cubic-bezier(.34,1.25,.5,1)' }}>
+              <line x1="100" y1="176" x2="100" y2="46" stroke="url(#mArm)" strokeWidth="5.5" strokeLinecap="round" />
+              <circle cx="100" cy="88" r="12.5" fill="url(#mBob)" filter="url(#mShadow)" />
+              <circle cx="96" cy="84" r="3.4" fill="#fff" opacity="0.55" />
             </g>
 
-            {/* Trục xoay */}
-            <circle cx="100" cy="176" r="7" fill="#312E81" />
-            <circle cx="100" cy="176" r="3" fill="#C7D2FE" />
+            {/* Trục */}
+            <circle cx="100" cy="176" r="6.5" fill="#2E2A5A" />
+            <circle cx="100" cy="176" r="2.6" fill="#C7D2FE" />
           </svg>
 
           {/* Số BPM */}
-          <div style={{ textAlign: 'center', marginTop: -4 }}>
-            <div style={{ fontSize: 'min(58px, 15vw)', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.03em', color: L.t1, fontVariantNumeric: 'tabular-nums' }}>{bpm}</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 5 }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: L.t3, letterSpacing: '.14em' }}>BPM</span>
-              <span style={{ width: 4, height: 4, borderRadius: 9, background: L.p3 }} />
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: L.p1, letterSpacing: '.02em' }}>{tempoName(bpm)}</span>
+          <div style={{ textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ fontSize: 'min(56px, 14.5vw)', fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', color: C.ink, fontVariantNumeric: 'tabular-nums' }}>{bpm}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 7 }}>
+              <span style={{ fontSize: 10.5, fontWeight: 800, color: C.faint, letterSpacing: '.16em' }}>BPM</span>
+              <span style={{ width: 3, height: 3, borderRadius: 9, background: C.faint }} />
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: C.ind, letterSpacing: '.01em' }}>{tempoName(bpm)}</span>
             </div>
           </div>
 
           {/* Dải phách */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', minHeight: 16, marginTop: 4 }}>
+          <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', justifyContent: 'center', minHeight: 14, flexShrink: 0 }}>
             {Array.from({ length: sig.top }).map((_, i) => {
               const on = curBeat === i
               const isAccent = i === 0 && accentOn
               return (
                 <div key={i} style={{
-                  width: on ? 15 : 10, height: on ? 15 : 10, borderRadius: '50%',
-                  background: on ? (isAccent ? L.a1 : L.p1) : (isAccent ? L.a3 : L.p3),
-                  boxShadow: on ? `0 0 12px ${isAccent ? 'rgba(234,88,12,.6)' : 'rgba(67,56,202,.55)'}` : 'none',
-                  opacity: on ? 1 : 0.55, transform: on ? 'scale(1.1)' : 'scale(1)',
+                  width: on ? 13 : 9, height: on ? 13 : 9, borderRadius: '50%',
+                  background: on ? (isAccent ? C.acc : C.ind) : (isAccent ? C.accPale : C.indPale),
+                  boxShadow: on ? `0 0 12px ${isAccent ? 'rgba(234,88,12,.55)' : 'rgba(79,70,229,.5)'}` : 'none',
+                  opacity: on ? 1 : 0.7, transform: on ? 'scale(1.08)' : 'scale(1)',
                   transition: 'all .1s ease-out',
                 }} />
               )
@@ -312,16 +320,16 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         </div>
 
         {/* ── Tốc độ ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           <button onPointerDown={() => changeBpm(-1)} style={roundBtn}>−</button>
           <input type="range" min={MIN_BPM} max={MAX_BPM} value={bpm}
             onChange={e => setBpm(parseInt(e.target.value, 10))}
-            style={{ flex: 1, accentColor: L.p1, height: 6 }} />
+            style={{ flex: 1, accentColor: C.ind, height: 5 }} />
           <button onPointerDown={() => changeBpm(1)} style={roundBtn}>+</button>
         </div>
 
         {/* ── Loại nhịp ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={rowLabel}>Nhịp</span>
           {TIME_SIGS.map((s, i) => (
             <button key={s.label} onClick={() => setSigIdx(i)} style={chip(i === sigIdx)}>{s.label}</button>
@@ -329,7 +337,7 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         </div>
 
         {/* ── Chia phách ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={rowLabel}>Chia</span>
           {SUBDIVS.map(s => (
             <button key={s.n} onClick={() => setSubdiv(s.n)} style={{ ...chip(s.n === subdiv), fontSize: 20 }}>{s.label}</button>
@@ -337,43 +345,43 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         </div>
 
         {/* ── Nhấn phách đầu + Âm lượng ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 46 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 48, flexShrink: 0 }}>
           <button onClick={() => setAccentOn(v => !v)} style={{
-            display: 'flex', alignItems: 'center', gap: 8, height: 46, padding: '0 14px', flexShrink: 0,
-            border: `1.5px solid ${accentOn ? L.p1 : L.border}`, borderRadius: 14,
-            background: accentOn ? L.p2 : L.surface, color: accentOn ? L.p1 : L.t3,
+            display: 'flex', alignItems: 'center', gap: 8, height: 48, padding: '0 14px', flexShrink: 0,
+            border: `1px solid ${accentOn ? C.ind : C.line}`, borderRadius: 15,
+            background: accentOn ? C.indSoft : C.card, color: accentOn ? C.ind : C.sub,
             fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', WebkitTapHighlightColor: 'transparent',
-            boxShadow: L.shadow,
+            boxShadow: C.shadow,
           }}>
-            <span style={{ fontSize: 16 }}>{accentOn ? '🔔' : '🔕'}</span> Nhấn phách 1
+            <span style={{ fontSize: 15 }}>{accentOn ? '🔔' : '🔕'}</span> Phách 1
           </button>
-          <span style={{ fontSize: 16, flexShrink: 0 }}>🔊</span>
+          <span style={{ fontSize: 15, flexShrink: 0, opacity: 0.7 }}>🔊</span>
           <input type="range" min={0} max={1} step={0.01} value={volume}
             onChange={e => setVolume(parseFloat(e.target.value))}
-            style={{ flex: 1, accentColor: L.p1, height: 6 }} />
+            style={{ flex: 1, accentColor: C.ind, height: 5 }} />
         </div>
       </div>
 
       {/* ── Thanh nút cố định dưới ── */}
-      <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 16px max(12px, env(safe-area-inset-bottom))', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderTop: `1px solid ${L.border}`, maxWidth: 460, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 16px max(12px, env(safe-area-inset-bottom))', background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: `1px solid ${C.line}`, maxWidth: 440, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <button onPointerDown={tap} style={{
-          width: 78, flexShrink: 0, height: 58, borderRadius: 18, border: `1.5px solid ${L.border}`,
-          background: L.surface, color: L.t2, cursor: 'pointer', fontFamily: 'inherit',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
-          WebkitTapHighlightColor: 'transparent', boxShadow: L.shadow,
+          width: 76, flexShrink: 0, height: 56, borderRadius: 18, border: `1px solid ${C.line}`,
+          background: C.card, color: C.sub, cursor: 'pointer', fontFamily: 'inherit',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+          WebkitTapHighlightColor: 'transparent', boxShadow: C.shadow,
         }}>
-          <span style={{ fontSize: 18 }}>👆</span>
+          <span style={{ fontSize: 17 }}>👆</span>
           <span style={{ fontSize: 12, fontWeight: 700 }}>Tap dò</span>
         </button>
         <button onClick={toggle} style={{
-          flex: 1, height: 58, border: 'none', borderRadius: 18,
-          background: playing ? 'linear-gradient(135deg, #F97316, #EA580C)' : 'linear-gradient(135deg, #6366F1, #4338CA)',
-          color: '#fff', fontSize: 19, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-          boxShadow: playing ? '0 8px 22px rgba(234,88,12,0.4)' : '0 8px 22px rgba(67,56,202,0.42)',
+          flex: 1, height: 56, border: 'none', borderRadius: 18,
+          background: playing ? `linear-gradient(135deg, #FB923C 0%, ${C.acc} 100%)` : `linear-gradient(135deg, #6D66EC 0%, ${C.indDeep} 100%)`,
+          color: '#fff', fontSize: 18, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+          boxShadow: playing ? '0 8px 22px rgba(234,88,12,0.36)' : '0 8px 22px rgba(79,70,229,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, WebkitTapHighlightColor: 'transparent',
-          transition: 'background .2s',
+          transition: 'background .2s', letterSpacing: '.01em',
         }}>
-          <span style={{ fontSize: 20 }}>{playing ? '⏸' : '▶'}</span>
+          <span style={{ fontSize: 19 }}>{playing ? '⏸' : '▶'}</span>
           {playing ? 'Dừng' : 'Bắt đầu'}
         </button>
       </div>
