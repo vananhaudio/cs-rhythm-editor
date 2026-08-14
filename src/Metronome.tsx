@@ -106,6 +106,21 @@ function SubdivGlyph({ kind, color, h = 30 }: { kind: number; color: string; h?:
   )
 }
 
+// Logo "M." — ô vuông bo góc + chữ M + chấm cam ở góc (khuôn giống logo BMS)
+function Logo({ size = 34 }: { size?: number }) {
+  return (
+    <div style={{ position: 'relative', width: size, height: size, borderRadius: size * 0.3,
+      background: 'linear-gradient(140deg, #6A5EEC 0%, #4A40D4 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      boxShadow: '0 4px 12px rgba(81,70,229,.32)' }}>
+      <span style={{ fontSize: size * 0.62, fontWeight: 900, color: '#FFFFFF', lineHeight: 1,
+        letterSpacing: -1, fontFamily: '"SF Pro Display", system-ui, sans-serif', marginLeft: -0.5 }}>M</span>
+      <span style={{ position: 'absolute', top: size * 0.19, right: size * 0.16,
+        width: size * 0.15, height: size * 0.15, borderRadius: '50%', background: '#FF8A2A' }} />
+    </div>
+  )
+}
+
 const PlayIcon  = ({ s = 17 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24"><path d="M8 5.2 L18.5 12 L8 18.8 Z" fill="#fff" /></svg>
 )
@@ -326,7 +341,7 @@ export default function Metronome({ onClose, initialBpm }: Props) {
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.01em' }}>Máy đập nhịp</div>
         </div>
-        <div style={{ fontSize: 21, opacity: 0.8 }}>🎼</div>
+        <Logo />
       </div>
 
       {/* Thân — 1 màn, không cuộn */}
