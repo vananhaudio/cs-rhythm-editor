@@ -410,16 +410,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [lessonActions, setLessonActions] = useState<Set<string>>(new Set())
   const [actionBusy, setActionBusy] = useState<string | null>(null)
 
-  const startTimer = (exerciseId: string) => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    setActiveTimer(exerciseId); setTimerStart(Date.now()); setTimerSeconds(0)
-    timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000)
-  }
-  const stopTimer = async (lessonToolId?: string) => {
-    if (!activeTimer || !timerStart) return
-    if (timerRef.current) clearInterval(timerRef.current)
-    const minutes = Math.max(1, Math.round((Date.now() - timerStart) / 60000))
-    const exId = activeTimer
+  // Refs phục vụ ghi giờ tăng dần (không phụ thuộc closure của state trong setInterval / event nền)
+  const activeTimerRef = useRef<string | null>(null)
+  const lastFlushRef   = useRef<number | null>(null)   // mốc thời điểm lần lưu gần nhất
+  const flushRef       = useRef<() => void>(() => {})
+
+  // Ghi thời gian luyện + XP vào DB và cập nhật hiển thị ngay (1 XP / phút)
+  const persistMinutes = async (exId: string, minutes: number) => {
+    if (minutes < 1) return
     const { error: plErr } = await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: exId, minutes })
     if (plErr) console.error('Ghi nhật ký luyện tập lỗi:', plErr)
     // Ghi XP — 1 XP/phút
@@ -429,6 +427,38 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     setWeekXP(prev  => prev + minutes)
     setPracticeTotals(prev => ({ ...prev, [exId]: (prev[exId] ?? 0) + minutes }))
     setPracticeToday(prev  => ({ ...prev, [exId]: (prev[exId] ?? 0) + minutes }))
+  }
+
+  // Flush định kỳ: lưu số PHÚT TRỌN đã tích luỹ từ lần flush trước, giữ lại phần lẻ <1'.
+  // Nhờ vậy dù app iOS bị khoá màn hình / kill / reload thì tối đa chỉ mất <1 phút,
+  // và "Còn X' để mở" + progress cập nhật trực tiếp trong lúc tập (totalMinutes tăng theo practiceTotals).
+  const flushPractice = () => {
+    const exId = activeTimerRef.current
+    if (!exId || lastFlushRef.current == null) return
+    const minutes = Math.floor((Date.now() - lastFlushRef.current) / 60000)
+    if (minutes < 1) return
+    lastFlushRef.current += minutes * 60000   // chỉ tiêu thụ phần phút trọn, giữ phần lẻ
+    void persistMinutes(exId, minutes)
+  }
+  flushRef.current = flushPractice   // luôn trỏ tới closure mới nhất cho các listener nền
+
+  const startTimer = (exerciseId: string) => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    const t0 = Date.now()
+    activeTimerRef.current = exerciseId
+    lastFlushRef.current   = t0
+    setActiveTimer(exerciseId); setTimerStart(t0); setTimerSeconds(0)
+    timerRef.current = setInterval(() => { setTimerSeconds(s => s + 1); flushPractice() }, 1000)
+  }
+  const stopTimer = async (lessonToolId?: string) => {
+    const exId = activeTimerRef.current
+    if (!exId || lastFlushRef.current == null) { setActiveTimer(null); setTimerStart(null); setTimerSeconds(0); return }
+    if (timerRef.current) clearInterval(timerRef.current)
+    // Phần đuôi còn lại: làm tròn; nếu cả buổi chưa từng flush (<1') vẫn tính tối thiểu 1'
+    let minutes = Math.round((Date.now() - lastFlushRef.current) / 60000)
+    if (minutes < 1 && timerStart != null && lastFlushRef.current === timerStart) minutes = 1
+    await persistMinutes(exId, minutes)
+    activeTimerRef.current = null; lastFlushRef.current = null
     setActiveTimer(null); setTimerStart(null); setTimerSeconds(0)
     // Mark lesson tool done nếu gọi từ bài học
     if (lessonToolId && activeLesson) {
@@ -439,6 +469,22 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       })
     }
   }
+
+  // iOS WKWebView: lưu giờ khi app xuống nền / đóng trang; khi quay lại thì đặt lại mốc
+  // để KHÔNG cộng oan khoảng thời gian app bị treo (màn hình khoá không phải là đang tập).
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) flushRef.current()
+      else if (activeTimerRef.current) lastFlushRef.current = Date.now()
+    }
+    const onHidePage = () => flushRef.current()
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('pagehide', onHidePage)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('pagehide', onHidePage)
+    }
+  }, [])
   const fmtTimer = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   // Khoá lưu trạng thái tool đã thực hành theo từng học sinh + bài học
