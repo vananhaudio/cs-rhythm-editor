@@ -6,6 +6,7 @@ const env = Deno.env
 const SERVICE_KEY = env.get(SRK)!
 const RPT = 'REPLICATE' + '_API_' + 'TOKEN'
 const REPLICATE_TOKEN = env.get(RPT)!
+const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')
 
 const BUCKET = 'story-photos'
 const FLUX_MODEL = 'black-forest-labs/flux-1.1-pro'
@@ -23,12 +24,40 @@ function slugify(text: string): string {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
+// FLUX hiểu tiếng Việt rất kém (chỉ bắt được từ khoá lẻ) — dịch prompt tiếng Việt
+// sang tiếng Anh chi tiết bằng Claude trước khi gọi FLUX.
+async function toEnglishImagePrompt(prompt: string): Promise<string> {
+  const hasVietnamese = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(prompt)
+  if (!hasVietnamese || !ANTHROPIC_API_KEY) return prompt
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        system: 'You translate Vietnamese image descriptions into English prompts for FLUX image generation. Output ONLY the English prompt, no explanation. Keep all details: subject, setting, lighting, mood, style. End the prompt with: photorealistic, natural lighting, high detail.',
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+    const data = await res.json()
+    const text = data?.content?.[0]?.text?.trim()
+    if (text) return text
+  } catch (e) { console.error('translate prompt failed:', e) }
+  return prompt
+}
+
 async function generateFluxImage(prompt: string): Promise<string | null> {
   try {
+    const finalPrompt = await toEnglishImagePrompt(prompt)
     const res = await fetch(`${REPLICATE_API}/models/${FLUX_MODEL}/predictions`, {
       method: 'POST',
       headers: { 'Authorization': `Token ${REPLICATE_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: { prompt, aspect_ratio: '3:2', output_format: 'png' } }),
+      body: JSON.stringify({ input: { prompt: finalPrompt, aspect_ratio: '3:2', output_format: 'png' } }),
     })
     const data = await res.json()
     if (data.error) { console.error('FLUX error:', data.error); return null }
