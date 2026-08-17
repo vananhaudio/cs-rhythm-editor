@@ -54,14 +54,32 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
     const body = await req.json()
-    const { action, story_id, prompt, image_base64, use_existing_photo } = body
+    const { action, story_id, prompt, image_base64, use_existing_photo, photo_url } = body
     const db = createClient(SUPABASE_URL, SERVICE_KEY)
 
     if (action === 'generate_image') {
       if (!prompt) return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
       const imageUrl = await generateFluxImage(prompt)
       if (!imageUrl) return new Response(JSON.stringify({ error: 'FLUX generation failed' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
-      return new Response(JSON.stringify({ ok: true, url: imageUrl }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+
+      // Lưu ngay vào storage để trả URL vĩnh viễn (link Replicate chỉ sống ~1h, dễ vỡ preview)
+      let finalUrl = imageUrl
+      try {
+        const imgRes = await fetch(imageUrl)
+        if (imgRes.ok) {
+          const imgBytes = new Uint8Array(await imgRes.arrayBuffer())
+          const filename = story_id
+            ? `story-${String(story_id).slice(0, 8)}-gen-${Date.now()}.png`
+            : `story-preview-${Date.now()}.png`
+          const path = `stories/${filename}`
+          const { error: uploadErr } = await db.storage.from(BUCKET).upload(path, imgBytes, { contentType: 'image/png' })
+          if (!uploadErr) {
+            const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(path)
+            finalUrl = publicUrl
+          }
+        }
+      } catch (e) { console.error('generate_image upload failed:', e) }
+      return new Response(JSON.stringify({ ok: true, url: finalUrl }), { headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'publish') {
@@ -90,6 +108,21 @@ Deno.serve(async (req) => {
           const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(path)
           photoUrl = publicUrl
         }
+      }
+
+      // Ảnh đã tạo ở bước trước (URL vĩnh viễn từ storage) — tải lại đúng ảnh đó, không tạo mới
+      if (!photoUrl && photo_url) {
+        try {
+          const imgRes = await fetch(photo_url)
+          if (imgRes.ok) {
+            const imgBytes = new Uint8Array(await imgRes.arrayBuffer())
+            const filename = `story-${story_id.slice(0, 8)}.png`
+            const path = `stories/${filename}`
+            await db.storage.from(BUCKET).upload(path, imgBytes, { contentType: 'image/png', upsert: true })
+            const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(path)
+            photoUrl = publicUrl
+          }
+        } catch (e) { console.error('photo_url download failed:', e) }
       }
 
       if (!photoUrl && prompt) {

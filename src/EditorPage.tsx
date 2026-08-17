@@ -566,7 +566,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
     try {
       const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_image', prompt: replacePhotoPrompt }),
+        body: JSON.stringify({ action: 'generate_image', prompt: replacePhotoPrompt, story_id: story.id }),
       })
       const data = await res.json()
       if (data.ok && data.url) { setReplacePhotoPreview(data.url); setReplacePhotoUpload(null); setStatusMsg('Ảnh đã tạo! Nhấn "Thay ảnh" để lưu.') }
@@ -750,7 +750,7 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
       const res = await fetch('https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/publish-story', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'generate_image', prompt: fluxPrompt }),
+        body: JSON.stringify({ action: 'generate_image', prompt: fluxPrompt, story_id: story.id }),
       })
       const data = await res.json()
       if (data.ok && data.url) {
@@ -793,7 +793,9 @@ function DetailPanel({ story, onClose, onUpdate }: { story: Story; onClose: () =
         })
         payload.image_base64 = b64
       } else if (previewUrl && !previewUrl.startsWith('data:')) {
-        // Replicate URL - need to re-download in edge function via prompt
+        // Gửi đúng URL ảnh đã tạo để edge function tải lại CHÍNH XÁC ảnh đó (không tạo mới)
+        payload.photo_url = previewUrl
+        // Fallback: nếu URL lỗi/hết hạn thì edge function mới tạo lại bằng prompt
         payload.prompt = fluxPrompt || 'Warm editorial photo of a person with acoustic guitar, natural lighting, photorealistic'
       }
 
