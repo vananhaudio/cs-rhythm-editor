@@ -45,12 +45,12 @@ interface TeacherNote {
 }
 
 const T = {
-  bg: '#EAD7B8', bgCard: '#F5EDD8', bgCardHover: '#FBF5EA',
-  header: '#1B6B3A', gold: '#A07820', goldLight: '#C8A84B',
-  green: '#1B6B3A', greenLight: '#E8F2EC',
-  text: '#2C1F0E', textMuted: '#7A6548', textDim: '#A08B6A',
-  border: '#C8B090', borderLight: '#DDD0B0',
-  danger: '#8B3A1E', warn: '#A07820',
+  bg: '#F4F4F5', bgCard: '#FFFFFF', bgCardHover: '#FAFAFA',
+  header: '#2D6A4F', gold: '#B45309', goldLight: '#FCD34D',
+  green: '#2D6A4F', greenLight: '#E9F3EC',
+  text: '#18181B', textMuted: '#52525B', textDim: '#A1A1AA',
+  border: '#E4E4E7', borderLight: '#F0F0F2',
+  danger: '#DC2626', warn: '#B45309',
 }
 const LEVEL_LABEL: Record<string, string> = { beginner: 'Mới bắt đầu', elementary: 'Cơ bản', intermediate: 'Trung cấp', advanced: 'Nâng cao' }
 const LEVEL_COLOR: Record<string, string> = { beginner: '#2E6B40', elementary: '#5A8A2A', intermediate: '#A07820', advanced: '#8B3A1E' }
@@ -345,7 +345,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
 
   return (
     <div style={{ minHeight: '100vh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
-      <div style={{ background: T.header, borderBottom: `1px solid ${T.border}` }}>
+      <div style={{ background: T.bgCard, borderBottom: `1px solid ${T.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={onBack} style={{ background: 'none', border: `1px solid ${'#4A8A60'}`, borderRadius: 8, color: T.green, cursor: 'pointer', padding: '6px 14px', fontSize: 14, fontWeight: 600 }}>← Quay lại</button>
           <span style={{ color: T.textMuted, fontSize: 14 }}>Hồ sơ học sinh</span>
@@ -406,7 +406,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: T.bgCard, borderRadius: 10, padding: 4, border: `1px solid ${T.border}` }}>
           {(['overview', 'app', 'lessons', 'assignments', 'timeline', 'courses'] as const).map(tab => {
             const labels: Record<'overview'|'app'|'lessons'|'assignments'|'timeline'|'courses', string> = { overview: '📊 Tổng quan', app: '📱 Hoạt động app', lessons: '📚 Buổi học', assignments: '📝 Bài tập', timeline: '⚡ Timeline AI', courses: '📚 Khoá học' }
-            return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 13, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? T.text : T.textMuted }}>{labels[tab]}</button>
+            return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 13, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? '#fff' : T.textMuted }}>{labels[tab]}</button>
           })}
         </div>
 
@@ -511,7 +511,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
                 <SectionTitle>Lớp tham gia ({myGroups.length})</SectionTitle>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {myGroups.map((g, i) => (
-                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.greenLight, border: `1px solid #90C4A0`, borderRadius: 20, padding: '5px 12px', fontSize: 13, color: T.header, fontWeight: 600 }}>
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: T.greenLight, border: `1px solid #BFDCC8`, borderRadius: 20, padding: '5px 12px', fontSize: 13, color: T.header, fontWeight: 600 }}>
                       💬 {g.name}{g.zalo_url ? <a href={g.zalo_url} target="_blank" rel="noreferrer" style={{ color: T.header, textDecoration: 'underline' }}>↗</a> : null}
                     </span>
                   ))}

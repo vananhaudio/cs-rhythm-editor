@@ -13,7 +13,7 @@ const C = {
   bg: '#F7F7F8', surface: '#FFFFFF', surfaceHover: '#FAFAFA',
   border: '#E4E4E7', borderLight: '#F0F0F2',
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA',
-  accent: '#4F46E5', accentLight: '#EEF2FF',
+  accent: '#2D6A4F', accentLight: '#E9F3EC',
   success: '#16A34A', successBg: '#F0FDF4',
   danger: '#DC2626', dangerBg: '#FEF2F2',
   shadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
@@ -835,7 +835,7 @@ export default function CourseEditorContent() {
                   onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                   placeholder="Mã: DH1"
                   title="Mã năng lực Hành trình 2027 — ổn định, dùng cho mở khoá/hiển thị (NM, DH1-3, DHNC, TN1-3, NL1-3, SOLO)"
-                  style={{ width: 96, padding: '4px 8px', fontSize: 12, fontWeight: 700, letterSpacing: '.03em', border: `1px solid ${selectedCourse.code ? '#4F46E5' : C.border}`, borderRadius: 8, fontFamily: 'inherit', textTransform: 'uppercase', color: '#4F46E5', flexShrink: 0 }} />
+                  style={{ width: 96, padding: '4px 8px', fontSize: 12, fontWeight: 700, letterSpacing: '.03em', border: `1px solid ${selectedCourse.code ? '#2D6A4F' : C.border}`, borderRadius: 8, fontFamily: 'inherit', textTransform: 'uppercase', color: '#2D6A4F', flexShrink: 0 }} />
               </div>
               <div style={{ fontSize: 12, color: C.text3 }}>
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học
@@ -938,7 +938,7 @@ export default function CourseEditorContent() {
                             display: 'flex', alignItems: 'center', gap: 8,
                             padding: '8px 10px', borderRadius: 7,
                             cursor: isDragging ? 'grabbing' : 'grab',
-                            background: isOver ? '#E0E7FF' : isSelected ? C.accentLight : C.surface,
+                            background: isOver ? '#D3E7DA' : isSelected ? C.accentLight : C.surface,
                             border: `1px solid ${isOver ? C.accent : isSelected ? C.accent : C.border}`,
                             marginBottom: 4, userSelect: 'none',
                             opacity: isDragging ? 0.4 : 1,

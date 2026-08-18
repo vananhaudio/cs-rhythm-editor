@@ -13,7 +13,7 @@ import MiraPlanner from './journey/MiraPlanner'
 import AiAssistant from './AiAssistant'
 
 const S = {
-  accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
+  accent: '#2D6A4F', accentLight: '#E9F3EC', surface: '#FFFFFF', bg: '#F4F4F5',
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', border: '#E4E4E7',
   ok: '#16A34A', okBg: '#F0FDF4', err: '#DC2626',
 }
@@ -326,7 +326,7 @@ export default function ScheduleManager() {
                     return (
                       <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 12px', fontSize: 13.5, borderTop: i ? `1px solid ${S.border}` : 'none', background: on ? S.accentLight : 'transparent' }}>
                         <input type="checkbox" checked={on} onChange={() => toggleCourse(c.id)} style={{ cursor: 'pointer' }} />
-                        {c.code && <span style={{ fontSize: 11, fontWeight: 800, color: '#4F46E5', background: S.accentLight, borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>{c.code}</span>}
+                        {c.code && <span style={{ fontSize: 11, fontWeight: 800, color: '#2D6A4F', background: S.accentLight, borderRadius: 5, padding: '1px 6px', flexShrink: 0 }}>{c.code}</span>}
                         <span style={{ flex: 1, color: c.code ? S.text1 : S.text3 }}>{c.name}{!c.code && ' (ngoài hành trình)'}</span>
                         {on && (
                           <button type="button" onClick={() => set({ main_course_id: c.id })}

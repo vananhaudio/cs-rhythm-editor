@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 
 // ── Design tokens (khớp TeacherAdminPage) ──
 const S = {
-  accent: '#4F46E5', accentLight: '#EEF2FF', border: '#E4E4E7',
+  accent: '#2D6A4F', accentLight: '#E9F3EC', border: '#E4E4E7',
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', bg: '#F4F4F5', surface: '#FFFFFF',
   green: '#16A34A', greenBg: '#F0FDF4', danger: '#DC2626', dangerBg: '#FEF2F2',
   zalo: '#0068FF', fb: '#1877F2',

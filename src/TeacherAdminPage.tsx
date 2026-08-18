@@ -15,7 +15,7 @@ import ChatMailPage from './admin/ChatMailPage'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
-  accent: '#4F46E5', accentLight: '#EEF2FF',
+  accent: '#2D6A4F', accentLight: '#E9F3EC',
   border: '#E4E4E7', text1: '#18181B', text2: '#52525B', text3: '#A1A1AA',
   bg: '#F4F4F5', surface: '#FFFFFF',
 }

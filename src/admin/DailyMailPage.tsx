@@ -28,7 +28,7 @@ interface DailyMailWithStats extends DailyMail {
 
 // ── Styles ──
 const S = {
-  bg: '#F4F4F5', surface: '#FFFFFF', accent: '#4F46E5', accentLight: '#EEF2FF',
+  bg: '#F4F4F5', surface: '#FFFFFF', accent: '#2D6A4F', accentLight: '#E9F3EC',
   border: '#E4E4E7', text1: '#18181B', text2: '#52525B', text3: '#A1A1AA',
   red: '#EF4444', green: '#22C55E', amber: '#F59E0B',
 }
@@ -165,8 +165,8 @@ export default function DailyMailPage() {
   const buildPreviewHtml = () => {
     const BASE_URL = window.location.origin
     const ctaBlock = form.cta_text && form.cta_url
-      ? `<div style="text-align:center;margin:24px 0"><a href="${form.cta_url}" target="_blank" style="display:inline-block;background:#4F46E5;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:600">${form.cta_text}</a></div>` : ''
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#F4F4F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F4F5;padding:24px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden"><tr><td style="background:#4F46E5;padding:24px 32px;text-align:center"><h1 style="color:#fff;margin:0;font-size:20px">🎸 TVA Guitar</h1></td></tr><tr><td style="padding:32px">${form.content || '<em style="color:#999">Nội dung email...</em>'}${ctaBlock}</td></tr><tr><td style="background:#FAFAFA;padding:16px 32px;border-top:1px solid #E4E4E7"><p style="font-size:12px;color:#71717A;margin:0;text-align:center">© TVA Guitar — Học · Tập · Sống cùng Âm nhạc</p><p style="font-size:12px;color:#999;margin-top:16px;text-align:center">Bạn nhận email này vì là học viên của TVA Guitar.<br><a href="${BASE_URL}/unsubscribe?token=***" style="color:#999;text-decoration:underline">Huỷ nhận Daily Mail</a></p></td></tr></table></td></tr></table></body></html>`
+      ? `<div style="text-align:center;margin:24px 0"><a href="${form.cta_url}" target="_blank" style="display:inline-block;background:#2D6A4F;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:600">${form.cta_text}</a></div>` : ''
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#F4F4F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F4F5;padding:24px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden"><tr><td style="background:#2D6A4F;padding:24px 32px;text-align:center"><h1 style="color:#fff;margin:0;font-size:20px">🎸 TVA Guitar</h1></td></tr><tr><td style="padding:32px">${form.content || '<em style="color:#999">Nội dung email...</em>'}${ctaBlock}</td></tr><tr><td style="background:#FAFAFA;padding:16px 32px;border-top:1px solid #E4E4E7"><p style="font-size:12px;color:#71717A;margin:0;text-align:center">© TVA Guitar — Học · Tập · Sống cùng Âm nhạc</p><p style="font-size:12px;color:#999;margin-top:16px;text-align:center">Bạn nhận email này vì là học viên của TVA Guitar.<br><a href="${BASE_URL}/unsubscribe?token=***" style="color:#999;text-decoration:underline">Huỷ nhận Daily Mail</a></p></td></tr></table></td></tr></table></body></html>`
   }
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
 
 const S = {
-  accent: '#4F46E5', accentLight: '#EEF2FF', surface: '#FFFFFF', bg: '#F4F4F5',
+  accent: '#2D6A4F', accentLight: '#E9F3EC', surface: '#FFFFFF', bg: '#F4F4F5',
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', border: '#E4E4E7',
   ok: '#16A34A', okBg: '#F0FDF4', err: '#DC2626', errBg: '#FEF2F2',
 }

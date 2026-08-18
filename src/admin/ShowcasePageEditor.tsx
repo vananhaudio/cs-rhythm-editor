@@ -527,20 +527,20 @@ function CalloutFields({ data, onChange }: { data: { icon?: string; text?: strin
 
 // ── Styles ──
 const CSS = `
-.spe-root { font-family: 'Be Vietnam Pro', system-ui, sans-serif; background: #F2EEE7; min-height: 100dvh; }
-.spe-loading { text-align: center; padding: 60px; color: #8A8499; }
+.spe-root { font-family: 'Be Vietnam Pro', system-ui, sans-serif; background: #F4F4F5; min-height: 100dvh; }
+.spe-loading { text-align: center; padding: 60px; color: #71717A; }
 
 .spe-header {
   position: sticky; top: 0; z-index: 30; background: rgba(242,238,231,0.95);
-  backdrop-filter: blur(10px); border-bottom: 1px solid #E4DED4;
+  backdrop-filter: blur(10px); border-bottom: 1px solid #E4E4E7;
   display: flex; align-items: center; gap: 16px; padding: 12px 20px;
   padding-top: max(env(safe-area-inset-top, 0px), 12px);
 }
-.spe-back { background: none; border: none; color: #4338CA; font-size: 14px; font-weight: 500; cursor: pointer; padding: 0; }
+.spe-back { background: none; border: none; color: #2D6A4F; font-size: 14px; font-weight: 500; cursor: pointer; padding: 0; }
 .spe-back:hover { text-decoration: underline; }
-.spe-title { font-size: 18px; font-weight: 700; color: #211C32; margin: 0; flex: 1; }
-.spe-save-btn { padding: 8px 18px; background: #4338CA; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
-.spe-save-btn:hover { background: #352BA3; }
+.spe-title { font-size: 18px; font-weight: 700; color: #18181B; margin: 0; flex: 1; }
+.spe-save-btn { padding: 8px 18px; background: #2D6A4F; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.spe-save-btn:hover { background: #245A42; }
 .spe-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .spe-error { margin: 12px 20px 0; padding: 10px 14px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 8px; font-size: 13px; }
@@ -548,62 +548,62 @@ const CSS = `
 .spe-body { max-width: 800px; margin: 0 auto; padding: 24px 20px 100px; }
 
 .spe-section {
-  background: #fff; border: 1px solid #E4DED4; border-radius: 12px; padding: 24px; margin-bottom: 20px;
+  background: #fff; border: 1px solid #E4E4E7; border-radius: 12px; padding: 24px; margin-bottom: 20px;
 }
-.spe-section-title { font-size: 15px; font-weight: 700; color: #211C32; margin: 0 0 16px; }
-.spe-hint { font-size: 13px; color: #8A8499; margin: 0 0 16px; }
+.spe-section-title { font-size: 15px; font-weight: 700; color: #18181B; margin: 0 0 16px; }
+.spe-hint { font-size: 13px; color: #71717A; margin: 0 0 16px; }
 
 .spe-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
 .spe-field:last-child { margin-bottom: 0; }
 .spe-field-grow { flex: 1; }
-.spe-label { font-size: 12px; font-weight: 600; color: #5A5470; }
+.spe-label { font-size: 12px; font-weight: 600; color: #52525B; }
 .spe-field input[type="text"],
 .spe-field input[type="number"],
 .spe-field textarea,
 .spe-field select {
-  padding: 9px 12px; border: 1px solid #E4DED4; border-radius: 8px;
+  padding: 9px 12px; border: 1px solid #E4E4E7; border-radius: 8px;
   font-size: 14px; font-family: inherit; box-sizing: border-box;
 }
 .spe-field input:focus, .spe-field textarea:focus, .spe-field select:focus {
-  outline: none; border-color: #4338CA;
+  outline: none; border-color: #2D6A4F;
 }
 .spe-field textarea { resize: vertical; min-height: 60px; }
 .spe-field select { background: #fff; cursor: pointer; }
 
 .spe-field-row { display: flex; gap: 14px; }
 .spe-toggles { gap: 20px; }
-.spe-check-label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #211C32; cursor: pointer; }
+.spe-check-label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #18181B; cursor: pointer; }
 .spe-check-label input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 
 /* ── Blocks ── */
 .spe-blocks { display: flex; flex-direction: column; gap: 4px; }
 
 .spe-block {
-  border: 1px solid #E4DED4; border-radius: 10px; overflow: hidden;
+  border: 1px solid #E4E4E7; border-radius: 10px; overflow: hidden;
   transition: border-color .15s;
 }
-.spe-block:hover { border-color: #C4BED4; }
-.spe-block-active { border-color: #4338CA; }
+.spe-block:hover { border-color: #D4D4D8; }
+.spe-block-active { border-color: #2D6A4F; }
 
 .spe-block-toolbar {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 10px; background: #FAF9F7; gap: 8px;
 }
 .spe-block-left { display: flex; align-items: center; gap: 8px; }
-.spe-block-icon { font-size: 14px; color: #8A8499; }
+.spe-block-icon { font-size: 14px; color: #71717A; }
 .spe-block-type-select {
-  padding: 4px 8px; border: 1px solid #E4DED4; border-radius: 6px;
+  padding: 4px 8px; border: 1px solid #E4E4E7; border-radius: 6px;
   font-size: 12px; font-family: inherit; background: #fff; cursor: pointer;
-  color: #5A5470;
+  color: #52525B;
 }
 
 .spe-block-right { display: flex; gap: 4px; }
 .spe-block-move {
   width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
-  background: none; border: 1px solid #E4DED4; border-radius: 6px;
-  font-size: 10px; cursor: pointer; color: #8A8499; padding: 0;
+  background: none; border: 1px solid #E4E4E7; border-radius: 6px;
+  font-size: 10px; cursor: pointer; color: #71717A; padding: 0;
 }
-.spe-block-move:hover:not(:disabled) { background: #F2EEE7; color: #5A5470; }
+.spe-block-move:hover:not(:disabled) { background: #F4F4F5; color: #52525B; }
 .spe-block-move:disabled { opacity: 0.4; cursor: not-allowed; }
 .spe-block-del {
   width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
@@ -617,35 +617,35 @@ const CSS = `
 .spe-block-add-row { display: flex; justify-content: center; padding: 8px 0; }
 .spe-add-block-btn {
   width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  background: #fff; border: 1px dashed #C4BED4; border-radius: 50%;
-  font-size: 16px; cursor: pointer; color: #8A8499; padding: 0; line-height: 1;
+  background: #fff; border: 1px dashed #D4D4D8; border-radius: 50%;
+  font-size: 16px; cursor: pointer; color: #71717A; padding: 0; line-height: 1;
   transition: all .15s;
 }
-.spe-add-block-btn:hover { border-color: #4338CA; color: #4338CA; background: #EEEBFB; }
+.spe-add-block-btn:hover { border-color: #2D6A4F; color: #2D6A4F; background: #E9F3EC; }
 
 /* Block field sub-form */
 .spe-bf { display: flex; flex-direction: column; gap: 10px; }
 .spe-bf-row { display: flex; gap: 10px; align-items: center; }
 .spe-bf-input {
-  flex: 1; padding: 8px 10px; border: 1px solid #E4DED4; border-radius: 6px;
+  flex: 1; padding: 8px 10px; border: 1px solid #E4E4E7; border-radius: 6px;
   font-size: 13px; font-family: inherit; box-sizing: border-box;
 }
-.spe-bf-input:focus { outline: none; border-color: #4338CA; }
+.spe-bf-input:focus { outline: none; border-color: #2D6A4F; }
 .spe-bf-textarea {
-  padding: 8px 10px; border: 1px solid #E4DED4; border-radius: 6px;
+  padding: 8px 10px; border: 1px solid #E4E4E7; border-radius: 6px;
   font-size: 13px; font-family: inherit; resize: vertical; min-height: 60px;
 }
-.spe-bf-textarea:focus { outline: none; border-color: #4338CA; }
+.spe-bf-textarea:focus { outline: none; border-color: #2D6A4F; }
 .spe-bf-small {
-  padding: 8px 10px; border: 1px solid #E4DED4; border-radius: 6px;
+  padding: 8px 10px; border: 1px solid #E4E4E7; border-radius: 6px;
   font-size: 13px; font-family: inherit; background: #fff; cursor: pointer;
 }
-.spe-bf-hint { font-size: 13px; color: #8A8499; font-style: italic; }
+.spe-bf-hint { font-size: 13px; color: #71717A; font-style: italic; }
 .spe-bf-add-btn {
-  padding: 6px 12px; background: none; border: 1px dashed #C4BED4; border-radius: 6px;
-  font-size: 12px; cursor: pointer; color: #4338CA; font-family: inherit;
+  padding: 6px 12px; background: none; border: 1px dashed #D4D4D8; border-radius: 6px;
+  font-size: 12px; cursor: pointer; color: #2D6A4F; font-family: inherit;
 }
-.spe-bf-add-btn:hover { background: #EEEBFB; border-color: #4338CA; }
+.spe-bf-add-btn:hover { background: #E9F3EC; border-color: #2D6A4F; }
 .spe-bf-gallery-item { display: flex; gap: 8px; align-items: center; }
 .spe-bf-remove-sm {
   width: 26px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
@@ -658,12 +658,12 @@ const CSS = `
 /* Bottom bar */
 .spe-bottom-bar {
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: #fff; border-top: 1px solid #E4DED4;
+  background: #fff; border-top: 1px solid #E4E4E7;
   padding: 12px 20px; display: flex; gap: 12px; justify-content: flex-end;
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
   z-index: 30;
 }
-.spe-cancel-btn { padding: 10px 20px; background: none; border: 1px solid #E4DED4; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: inherit; color: #5A5470; }
+.spe-cancel-btn { padding: 10px 20px; background: none; border: 1px solid #E4E4E7; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: inherit; color: #52525B; }
 .spe-save-btn-lg { padding: 10px 24px; font-size: 14px; }
 
 @media (max-width: 640px) {

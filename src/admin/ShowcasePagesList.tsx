@@ -157,40 +157,40 @@ export default function ShowcasePagesList({ onBack, onNew, onEdit }: Props) {
 
 const CSS = `
 .spl-root { max-width: 1100px; margin: 0 auto; padding: 32px 20px; font-family: 'Be Vietnam Pro', system-ui, sans-serif; }
-.spl-loading { text-align: center; padding: 60px; color: #8A8499; }
+.spl-loading { text-align: center; padding: 60px; color: #71717A; }
 .spl-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
-.spl-back { background: none; border: none; color: #4338CA; font-size: 14px; font-weight: 500; cursor: pointer; padding: 0; }
+.spl-back { background: none; border: none; color: #2D6A4F; font-size: 14px; font-weight: 500; cursor: pointer; padding: 0; }
 .spl-back:hover { text-decoration: underline; }
-.spl-title { font-size: 22px; font-weight: 700; color: #211C32; margin: 0; flex: 1; }
-.spl-new-btn { padding: 8px 16px; background: #4338CA; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
-.spl-new-btn:hover { background: #352BA3; }
+.spl-title { font-size: 22px; font-weight: 700; color: #18181B; margin: 0; flex: 1; }
+.spl-new-btn { padding: 8px 16px; background: #2D6A4F; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.spl-new-btn:hover { background: #245A42; }
 
 .spl-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-.spl-search { flex: 1; min-width: 180px; padding: 9px 12px; border: 1px solid #E4DED4; border-radius: 8px; font-size: 13px; font-family: inherit; }
-.spl-search:focus { outline: none; border-color: #4338CA; }
-.spl-select { padding: 9px 12px; border: 1px solid #E4DED4; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; cursor: pointer; min-width: 140px; }
+.spl-search { flex: 1; min-width: 180px; padding: 9px 12px; border: 1px solid #E4E4E7; border-radius: 8px; font-size: 13px; font-family: inherit; }
+.spl-search:focus { outline: none; border-color: #2D6A4F; }
+.spl-select { padding: 9px 12px; border: 1px solid #E4E4E7; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; cursor: pointer; min-width: 140px; }
 
 .spl-table-wrap { overflow-x: auto; }
 .spl-table { width: 100%; border-collapse: collapse; }
-.spl-table th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: #8A8499; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #E4DED4; white-space: nowrap; }
-.spl-table td { padding: 12px; border-bottom: 1px solid #F2EEE7; vertical-align: middle; }
+.spl-table th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: #71717A; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #E4E4E7; white-space: nowrap; }
+.spl-table td { padding: 12px; border-bottom: 1px solid #F4F4F5; vertical-align: middle; }
 .spl-table tr:hover td { background: #FAF9F7; }
-.spl-page-title { font-weight: 600; color: #211C32; font-size: 14px; }
-.spl-page-slug { font-size: 12px; color: #8A8499; font-family: monospace; margin-top: 2px; }
-.spl-cat-cell { font-size: 13px; color: #5A5470; white-space: nowrap; }
-.spl-order-cell { font-size: 13px; color: #8A8499; }
-.spl-empty { text-align: center; color: #8A8499; padding: 32px; font-size: 14px; }
-.spl-count { font-size: 12px; color: #8A8499; margin-top: 12px; text-align: right; }
+.spl-page-title { font-weight: 600; color: #18181B; font-size: 14px; }
+.spl-page-slug { font-size: 12px; color: #71717A; font-family: monospace; margin-top: 2px; }
+.spl-cat-cell { font-size: 13px; color: #52525B; white-space: nowrap; }
+.spl-order-cell { font-size: 13px; color: #71717A; }
+.spl-empty { text-align: center; color: #71717A; padding: 32px; font-size: 14px; }
+.spl-count { font-size: 12px; color: #71717A; margin-top: 12px; text-align: right; }
 
 .spl-badges { display: flex; gap: 6px; flex-wrap: wrap; }
 .spl-badge-pub { font-size: 11px; padding: 2px 8px; background: #F0FDF4; color: #16A34A; border-radius: 4px; font-weight: 600; }
-.spl-badge-draft { font-size: 11px; padding: 2px 8px; background: #F2EEE7; color: #8A8499; border-radius: 4px; font-weight: 600; }
+.spl-badge-draft { font-size: 11px; padding: 2px 8px; background: #F4F4F5; color: #71717A; border-radius: 4px; font-weight: 600; }
 .spl-badge-feat { font-size: 11px; padding: 2px 8px; background: #FFFBF5; color: #C9711E; border-radius: 4px; font-weight: 600; }
 
 .spl-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.spl-action-btn { padding: 5px 10px; background: none; border: 1px solid #D3CEE8; border-radius: 6px; color: #4338CA; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; }
-.spl-action-btn:hover { background: #EEEBFB; }
-.spl-action-sm { border-color: #E4DED4; color: #5A5470; }
+.spl-action-btn { padding: 5px 10px; background: none; border: 1px solid #CFE3D6; border-radius: 6px; color: #2D6A4F; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.spl-action-btn:hover { background: #E9F3EC; }
+.spl-action-sm { border-color: #E4E4E7; color: #52525B; }
 .spl-action-del { border-color: #FECACA; color: #DC2626; }
 .spl-action-del:hover { background: #FEF2F2; }
 `

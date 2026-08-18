@@ -5,7 +5,7 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF', surface2: '#FAFAFA',
   border: '#E4E4E7', borderLight: '#F0F0F2',
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA',
-  accent: '#4F46E5', accentLight: '#EEF2FF',
+  accent: '#2D6A4F', accentLight: '#E9F3EC',
   success: '#16A34A',
   shadow: '0 1px 3px rgba(0,0,0,0.06)',
 }

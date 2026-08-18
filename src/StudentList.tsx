@@ -14,16 +14,16 @@ interface Student {
 interface Grp { id: string; name: string; zalo_url: string | null }
 
 const T = {
-  bg: '#EAD7B8', bgCard: '#F5EDD8', bgCardHover: '#FBF5EA',
-  header: '#1B6B3A', gold: '#A07820', goldLight: '#C8A84B',
-  green: '#1B6B3A', greenLight: '#E8F2EC',
-  text: '#2C1F0E', textMuted: '#7A6548', textDim: '#A08B6A',
-  border: '#C8B090', borderLight: '#DDD0B0',
-  danger: '#8B3A1E', warn: '#A07820',
+  bg: '#F4F4F5', bgCard: '#FFFFFF', bgCardHover: '#FAFAFA',
+  header: '#2D6A4F', gold: '#B45309', goldLight: '#FCD34D',
+  green: '#2D6A4F', greenLight: '#E9F3EC',
+  text: '#18181B', textMuted: '#52525B', textDim: '#A1A1AA',
+  border: '#E4E4E7', borderLight: '#F0F0F2',
+  danger: '#DC2626', warn: '#B45309',
 }
 const LEVEL_COLOR: Record<string, string> = {
-  beginner: '#2E6B40', elementary: '#5A8A2A',
-  intermediate: '#A07820', advanced: '#8B3A1E',
+  beginner: '#2D6A4F', elementary: '#4D7C0F',
+  intermediate: '#B45309', advanced: '#B91C1C',
 }
 const LEVEL_LABEL: Record<string, string> = {
   beginner: 'Mới bắt đầu', elementary: 'Cơ bản',
@@ -145,7 +145,7 @@ export default function StudentList({ onSelect }: Props) {
   return (
     <div style={{ minHeight: '100vh', background: T.bg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
       {/* Header */}
-      <div style={{ background: T.header, borderBottom: `1px solid ${T.border}`, padding: '14px 24px' }}>
+      <div style={{ background: T.bgCard, borderBottom: `1px solid ${T.border}`, padding: '14px 24px' }}>
         <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 700 }}>🎸 Danh sách học sinh</div>
@@ -153,7 +153,7 @@ export default function StudentList({ onSelect }: Props) {
               {activeCount} đang học · {students.length} tổng
             </div>
           </div>
-          <button onClick={() => setShowReport(v => !v)} style={{ background: showReport ? '#fff' : T.gold, color: showReport ? T.header : '#fff', border: `1px solid ${showReport ? T.border : T.gold}`, borderRadius: 8, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={() => setShowReport(v => !v)} style={{ background: showReport ? '#fff' : T.header, color: showReport ? T.header : '#fff', border: `1px solid ${showReport ? T.border : T.header}`, borderRadius: 8, padding: '9px 16px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             {showReport ? '📇 Danh sách' : '📊 Báo cáo'}
           </button>
         </div>

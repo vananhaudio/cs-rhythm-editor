@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 
 const C = {
-  accent: '#4F46E5', accentLight: '#EEF2FF', border: '#E4E4E7',
+  accent: '#2D6A4F', accentLight: '#E9F3EC', border: '#E4E4E7',
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
@@ -12,7 +12,7 @@ const STATUSES = ['Chờ duyệt', 'Đã duyệt', 'Mới đăng ký', 'Cần g�
 const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
   'Chờ duyệt':    { bg: '#FEF9C3', fg: '#854D0E' },
   'Đã duyệt':     { bg: '#DCFCE7', fg: '#166534' },
-  'Mới đăng ký':  { bg: '#EEF2FF', fg: '#4338CA' },
+  'Mới đăng ký':  { bg: '#E9F3EC', fg: '#2D6A4F' },
   'Cần gọi':      { bg: '#FEF3C7', fg: '#92400E' },
   'Đã tư vấn':    { bg: '#E0F2FE', fg: '#075985' },
   'Học thử':      { bg: '#F3E8FF', fg: '#6B21A8' },
