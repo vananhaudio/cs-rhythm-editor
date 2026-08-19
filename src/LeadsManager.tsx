@@ -285,8 +285,11 @@ Gửi thông tin đăng nhập + link app + nhóm Zalo cho học viên nhé.`)
                   <td style={td}>
                     {l.class_name && <div>{l.class_name}</div>}
                     <span style={{ fontSize: 11.5, color: C.accent, background: C.accentLight, borderRadius: 5, padding: '1px 7px' }}>{INTENT_LABEL[l.intent ?? ''] ?? l.intent ?? '—'}</span>
-                    {/* ⚡ Duyệt nhanh đăng ký thường: tạo tài khoản + vào đúng lớp đã đăng ký */}
-                    {!l.is_hanhtrinh && l.intent === 'dang_ky' && l.status !== 'Đã duyệt' && (
+                    {/* ⚡ Duyệt nhanh đăng ký thường: tạo tài khoản + vào đúng lớp đã đăng ký.
+                        KHÔNG hiện khi: lead đã có student_id (đã tạo tài khoản), hoặc trạng thái
+                        đã chốt (Đã duyệt / Đã đóng phí) — tránh bấm nhầm flow cũ. */}
+                    {!l.is_hanhtrinh && l.intent === 'dang_ky' && !l.student_id
+                      && l.status !== 'Đã duyệt' && l.status !== 'Đã đóng phí' && (
                       <div style={{ marginTop: 8, background: C.accentLight, border: '1px solid #C7D2FE', borderRadius: 8, padding: '8px 9px' }}>
                         <div style={{ fontSize: 11.5, fontWeight: 800, color: '#3730A3', marginBottom: 6 }}>⚡ Duyệt nhanh — tạo tài khoản + vào lớp</div>
                         {l.email ? (
