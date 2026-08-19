@@ -62,6 +62,8 @@ DECLARE
     -- Lịch lớp: anon ĐƯỢC ĐỌC (trang tuyển sinh /class) — policy cs_anon_read + cs_auth_all
     -- do db/class_schedule_setup.sql đặt. ĐỪNG để vòng lặp xoá cs_anon_read (mất lịch công khai).
     'class_schedule',
+    -- Gói đăng ký (Đợt 1 — db/packages_setup.sql): policy hẹp riêng (authenticated đọc, thầy ghi)
+    'packages', 'student_packages',
     -- Buổi học: dữ liệu vận hành nội bộ, chỉ authenticated (policy cses_auth_all
     -- do db/journey_os_stage1.sql đặt) — giữ nguyên, anon không đọc.
     'class_sessions',

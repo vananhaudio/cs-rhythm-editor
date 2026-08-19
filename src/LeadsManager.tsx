@@ -30,7 +30,7 @@ interface Lead {
   source: string | null; status: string; created_at: string
   is_hanhtrinh?: boolean | null; student_id?: string | null
 }
-interface CourseOpt { id: string; name: string }
+interface CourseOpt { id: string; name: string; code?: string | null }
 interface ClassOpt { id: string; code: string | null; name: string }
 
 // Mật khẩu mặc định khi tạo tài khoản từ duyệt đăng ký — học viên đổi sau trong app (đồng bộ AiAssistant)
@@ -48,6 +48,7 @@ export default function LeadsManager() {
   const [classes, setClasses] = useState<ClassOpt[]>([])          // lịch lớp — để duyệt nhanh vào đúng lớp
   const [pickClass, setPickClass] = useState<Record<number, string>>({})  // leadId → class id đã chọn
   const [approving, setApproving] = useState<number | null>(null)
+  const [activatingPkg, setActivatingPkg] = useState<number | null>(null)
 
   const load = async () => {
     setLoading(true); setErr(null)
@@ -58,7 +59,7 @@ export default function LeadsManager() {
   }
   useEffect(() => { load() }, [])
   useEffect(() => {
-    supabase.from('edu_courses').select('id,name').order('sort_order')
+    supabase.from('edu_courses').select('id,name,code').order('sort_order')
       .then(({ data }) => setCourses((data ?? []) as CourseOpt[]))
     supabase.from('class_schedule').select('id,code,name').eq('is_active', true).order('sort_order')
       .then(({ data }) => setClasses((data ?? []) as ClassOpt[]))
@@ -140,6 +141,63 @@ export default function LeadsManager() {
     } catch (e) {
       alert('Duyệt lỗi: ' + ((e as Error)?.message || e))
     } finally { setApproving(null) }
+  }
+
+  // 🎸 KÍCH HOẠT GÓI ĐỒNG HÀNH 396K — mã khoá theo hướng đã chọn ở placement
+  const pkgCodes = (l: Lead): string[] | null => {
+    const p = (l.path ?? '').toLowerCase()
+    if (p.includes('dem')) return ['NM', 'DH1']
+    if (p.includes('tia')) return ['NM', 'TN1']
+    return null // mặc định config gói (NM) — solo/chưa biết cần Thầy xác nhận trước
+  }
+  const pkgNames = (codes: string[] | null) =>
+    (codes ?? ['NM']).map(c => courses.find(x => x.code === c)?.name ?? c).join(' + ')
+
+  const activatePkg = async (l: Lead) => {
+    const email = (l.email ?? '').trim().toLowerCase()
+    if (!email && !l.student_id) { alert('Đăng ký này chưa có email/tài khoản — cần email để kích hoạt gói.'); return }
+    setActivatingPkg(l.id)
+    try {
+      let studentId = l.student_id
+      let password: string | null = null
+      let existed = false
+      if (!studentId) {
+        // Tạo tài khoản theo cơ chế signup hiện tại (admin-ai create) — không tạo hệ thống account mới
+        try {
+          const { data: cr, error: crErr } = await supabase.functions.invoke('admin-ai',
+            { body: { action: 'create', students: [{ email, full_name: l.name, password: DEFAULT_PW }] } })
+          if (crErr) throw crErr
+          const r0 = cr?.results?.[0]
+          if (r0?.ok) password = r0.password
+          else if (/đã có tài khoản/i.test(r0?.error ?? '')) existed = true
+          else throw new Error(r0?.error || 'không tạo được tài khoản')
+        } catch (e) {
+          throw new Error(
+            e && typeof e === 'object' && 'context' in e ? await fnErr(e) : e instanceof Error ? e.message : String(e),
+            { cause: e },
+          )
+        }
+        const { data: stu, error: sErr } = await supabase.from('edu_students').select('id').eq('email', email).limit(1).maybeSingle()
+        if (sErr || !stu?.id) throw new Error('Tạo tài khoản xong nhưng không tìm thấy hồ sơ học viên')
+        studentId = stu.id
+        await supabase.from('leads').update({ student_id: studentId }).eq('id', l.id)
+      }
+      const codes = pkgCodes(l)
+      const { data: rp, error: rpErr } = await supabase.rpc('activate_student_package',
+        { p_student: studentId, p_package_code: 'DONG_HANH_396K', p_course_codes: codes ?? null })
+      if (rpErr) throw new Error(rpErr.message)
+      const names = ((rp?.granted_codes ?? []) as string[])
+        .map(c => courses.find(x => x.code === c)?.name ?? c).join(', ')
+      setStatus(l.id, 'Đã đóng phí')
+      alert(`✅ Đã kích hoạt gói ĐỒNG HÀNH 396K cho ${l.name}:
+• Tài khoản: ${email || 'đã có sẵn'}${existed ? ' (đã có — giữ mật khẩu cũ)' : password ? ` · mật khẩu: ${password}` : ''}
+• Mở khoá: ${names || '—'}
+• Gói đến: ${rp?.renews_at ? fmtDate(rp.renews_at) : '—'}
+
+Gửi thông tin đăng nhập + link app + nhóm Zalo cho học viên nhé.`)
+    } catch (e) {
+      alert('Kích hoạt lỗi: ' + ((e as Error)?.message || e))
+    } finally { setActivatingPkg(null) }
   }
 
   const counts = useMemo(() => {
@@ -267,6 +325,17 @@ export default function LeadsManager() {
                         )}
                       </div>
                     )}
+                    {/* 🎸 Kích hoạt gói ĐỒNG HÀNH 396K (Đợt 1) — lead → tài khoản → gói → quyền */}
+                    <div style={{ marginTop: 8, background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: '8px 9px' }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>🎸 Gói ĐỒNG HÀNH 396K</div>
+                      <div style={{ fontSize: 11.5, color: '#047857', marginBottom: 6 }}>
+                        Sẽ mở: {pkgNames(pkgCodes(l))}
+                      </div>
+                      <button onClick={() => activatePkg(l)} disabled={activatingPkg === l.id}
+                        style={{ background: activatingPkg === l.id ? C.text3 : '#059669', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {activatingPkg === l.id ? 'Đang kích hoạt…' : 'Kích hoạt gói'}
+                      </button>
+                    </div>
                   </td>
                   <td style={{ ...td, maxWidth: 220, color: C.text2 }}>{l.note || <span style={{ color: C.text3 }}>—</span>}</td>
                   <td style={td}>
