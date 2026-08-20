@@ -32,6 +32,25 @@ interface Lead {
 }
 interface CourseOpt { id: string; name: string; code?: string | null }
 interface ClassOpt { id: string; code: string | null; name: string }
+interface PkgRow { student_id: string | null; renews_at: string | null; packages: { name: string } | { name: string }[] | null }
+interface PkgInfo { name: string; renews_at: string }
+
+// PostgREST embed (packages(name)) có thể trả object hoặc mảng — lấy tên gói an toàn
+const pkgName = (p: PkgRow['packages']): string | null =>
+  Array.isArray(p) ? (p[0]?.name ?? null) : (p?.name ?? null)
+
+const buildPkgMap = (data: PkgRow[]): Record<string, PkgInfo> => {
+  const m: Record<string, PkgInfo> = {}
+  data.forEach((r) => {
+    const n = pkgName(r.packages)
+    if (r.student_id && n) m[r.student_id] = { name: n, renews_at: r.renews_at ?? '' }
+  })
+  return m
+}
+
+// Query gói active của học viên (Đợt 2) — dùng chung cho nạp đầu + refresh sau kích hoạt
+const fetchActivePkgs = () =>
+  supabase.from('student_packages').select('student_id, renews_at, packages(name)').eq('status', 'active')
 
 // Mật khẩu mặc định khi tạo tài khoản từ duyệt đăng ký — học viên đổi sau trong app (đồng bộ AiAssistant)
 const DEFAULT_PW = '12345678'
@@ -49,6 +68,8 @@ export default function LeadsManager() {
   const [pickClass, setPickClass] = useState<Record<number, string>>({})  // leadId → class id đã chọn
   const [approving, setApproving] = useState<number | null>(null)
   const [activatingPkg, setActivatingPkg] = useState<number | null>(null)
+  // student_id → gói đang active (Đợt 2: hiển thị trạng thái gói + renews_at cho Thầy)
+  const [pkgInfo, setPkgInfo] = useState<Record<string, PkgInfo>>({})
 
   const load = async () => {
     setLoading(true); setErr(null)
@@ -58,11 +79,22 @@ export default function LeadsManager() {
     setLoading(false)
   }
   useEffect(() => { load() }, [])
+
+  // Đợt 2: refresh gói active sau khi kích hoạt
+  const loadPkgInfo = async () => {
+    const { data, error } = await fetchActivePkgs()
+    if (!error && data) setPkgInfo(buildPkgMap(data as PkgRow[]))
+  }
+
   useEffect(() => {
     supabase.from('edu_courses').select('id,name,code').order('sort_order')
       .then(({ data }) => setCourses((data ?? []) as CourseOpt[]))
     supabase.from('class_schedule').select('id,code,name').eq('is_active', true).order('sort_order')
       .then(({ data }) => setClasses((data ?? []) as ClassOpt[]))
+    // nạp gói active trong .then() — không setState đồng bộ trong effect
+    fetchActivePkgs().then(({ data, error }) => {
+      if (!error && data) setPkgInfo(buildPkgMap(data as PkgRow[]))
+    })
   }, [])
 
   // Gợi ý khoá khớp nhất với tên lớp đăng ký
@@ -188,13 +220,20 @@ export default function LeadsManager() {
       if (rpErr) throw new Error(rpErr.message)
       const names = ((rp?.granted_codes ?? []) as string[])
         .map(c => courses.find(x => x.code === c)?.name ?? c).join(', ')
+      const zaloUrl = (rp?.zalo_url as string) || ''
+      const teacherZalo = (rp?.zalo_teacher_url as string) || ''
+      const practice = (rp?.practice_schedule as string) || ''
       setStatus(l.id, 'Đã đóng phí')
+      loadPkgInfo()
       alert(`✅ Đã kích hoạt gói ĐỒNG HÀNH 396K cho ${l.name}:
 • Tài khoản: ${email || 'đã có sẵn'}${existed ? ' (đã có — giữ mật khẩu cũ)' : password ? ` · mật khẩu: ${password}` : ''}
 • Mở khoá: ${names || '—'}
 • Gói đến: ${rp?.renews_at ? fmtDate(rp.renews_at) : '—'}
-
-Gửi thông tin đăng nhập + link app + nhóm Zalo cho học viên nhé.`)
+${zaloUrl ? `• Nhóm Zalo chung: ${zaloUrl}
+` : ''}${teacherZalo ? `• Hỏi Thầy: ${teacherZalo}
+` : ''}${practice ? `• Lịch thực hành: ${practice}
+` : ''}
+Gửi thông tin đăng nhập + link app cho học viên nhé.`)
     } catch (e) {
       alert('Kích hoạt lỗi: ' + ((e as Error)?.message || e))
     } finally { setActivatingPkg(null) }
@@ -285,6 +324,12 @@ Gửi thông tin đăng nhập + link app + nhóm Zalo cho học viên nhé.`)
                   <td style={td}>
                     {l.class_name && <div>{l.class_name}</div>}
                     <span style={{ fontSize: 11.5, color: C.accent, background: C.accentLight, borderRadius: 5, padding: '1px 7px' }}>{INTENT_LABEL[l.intent ?? ''] ?? l.intent ?? '—'}</span>
+                    {/* Đợt 2: trạng thái gói đang active của học viên */}
+                    {pkgInfo[l.student_id ?? ''] && (
+                      <div style={{ marginTop: 4, fontSize: 11.5, color: '#065F46', background: '#D1FAE5', borderRadius: 5, padding: '1px 7px', display: 'inline-block' }}>
+                        🎸 {pkgInfo[l.student_id ?? ''].name} · đến {fmtDate(pkgInfo[l.student_id ?? ''].renews_at)}
+                      </div>
+                    )}
                     {/* ⚡ Duyệt nhanh đăng ký thường: tạo tài khoản + vào đúng lớp đã đăng ký.
                         KHÔNG hiện khi: lead đã có student_id (đã tạo tài khoản), hoặc trạng thái
                         đã chốt (Đã duyệt / Đã đóng phí) — tránh bấm nhầm flow cũ. */}
