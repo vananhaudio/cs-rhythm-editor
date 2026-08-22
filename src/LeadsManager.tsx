@@ -384,7 +384,8 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
         <div style={{ color: C.text3, fontSize: 14, padding: 20 }}>Chưa có đăng ký nào{filter !== 'all' ? ' ở trạng thái này' : ''}.</div>
       ) : (
         <div style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+          <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5, minWidth: 1060 }}>
             <thead>
               <tr style={{ background: '#FAFAFA', textAlign: 'left', color: C.text2 }}>
                 <th style={th}>Ngày</th>
@@ -527,6 +528,7 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
