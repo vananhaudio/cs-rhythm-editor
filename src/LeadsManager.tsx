@@ -97,6 +97,9 @@ export default function LeadsManager() {
   const [pickClass, setPickClass] = useState<Record<number, string>>({})  // leadId → class id đã chọn
   const [approving, setApproving] = useState<number | null>(null)
   const [activatingPkg, setActivatingPkg] = useState<number | null>(null)
+  // BƯỚC 7 — lỗi thao tác hiển thị INLINE (không nuốt lỗi, không chỉ dựa optimistic UI)
+  const [opErr, setOpErr] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<number | null>(null)
   // student_id → gói đang active (Đợt 2: hiển thị trạng thái gói + renews_at cho Thầy)
   const [pkgInfo, setPkgInfo] = useState<Record<string, PkgInfo>>({})
 
@@ -282,19 +285,54 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
     )
   }, [leads, filter, q])
 
-  const setStatus = async (id: number, status: string) => {
-    setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l))  // optimistic
-    const { error } = await supabase.from('leads').update({ status }).eq('id', id)
-    if (error) { alert('Đổi trạng thái lỗi: ' + error.message); load() }
+  /**
+   * SERVER LÀ NGUỒN SỰ THẬT: gửi UPDATE → chờ DB → select verify row trả về
+   * → chỉ khi DB xác nhận status mới cập UI. Thất bại → giữ UI cũ + hiện lỗi inline.
+   */
+  const setStatus = async (id: number, status: string): Promise<boolean> => {
+    setOpErr(null)
+    setBusyId(id)
+    try {
+      const { data, error } = await supabase
+        .from('leads').update({ status }).eq('id', id)
+        .select('id,status').maybeSingle()
+      if (error) throw error
+      if (!data) throw new Error('máy chủ không xác nhận được cập nhật (0 row) — thử lại')
+      setLeads(prev => prev.map(l => l.id === id ? { ...l, status: data!.status } : l))
+      return true
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setOpErr(`Không cập nhật được trạng thái lead #${id}: ${msg}. Dữ liệu giữ nguyên — hãy kiểm tra đăng nhập rồi thử lại.`)
+      await load() // đồng bộ lại đúng theo DB
+      return false
+    } finally {
+      setBusyId(null)
+    }
   }
 
   /** BƯỚC 7 — Bắt đầu trải nghiệm: status → Đang trải nghiệm + ghi trial_started_at NẾU chưa có.
-   *  Idempotent: nếu trial_started_at đã có giá trị → GIỮ NGUYÊN (không ghi đè ngày bắt đầu cũ). */
-  const startTrial = async (l: Lead) => {
+   *  Idempotent: nếu trial_started_at đã có giá trị → GIỮ NGUYÊN (không ghi đè ngày bắt đầu cũ).
+   *  SERVER LÀ NGUỒN SỰ THẬT: chỉ cập UI sau khi DB verify trả về row đúng. */
+  const startTrial = async (l: Lead): Promise<boolean> => {
     const now = new Date().toISOString()
-    setLeads(prev => prev.map(x => x.id === l.id ? { ...x, status: 'Đang trải nghiệm', trial_started_at: x.trial_started_at ?? now } : x))
-    const { error } = await supabase.from('leads').update({ status: 'Đang trải nghiệm', trial_started_at: l.trial_started_at ?? now }).eq('id', l.id)
-    if (error) { alert('Bắt đầu trải nghiệm lỗi: ' + error.message); load() }
+    setOpErr(null)
+    setBusyId(l.id)
+    try {
+      const { data, error } = await supabase
+        .from('leads').update({ status: 'Đang trải nghiệm', trial_started_at: l.trial_started_at ?? now }).eq('id', l.id)
+        .select('id,status,trial_started_at').maybeSingle()
+      if (error) throw error
+      if (!data) throw new Error('máy chủ không xác nhận được cập nhật (0 row) — thử lại')
+      setLeads(prev => prev.map(x => x.id === l.id ? { ...x, status: data!.status, trial_started_at: data!.trial_started_at } : x))
+      return true
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setOpErr(`Không bắt đầu được trải nghiệm cho lead #${l.id}: ${msg}. Dữ liệu giữ nguyên — hãy kiểm tra đăng nhập rồi thử lại.`)
+      await load()
+      return false
+    } finally {
+      setBusyId(null)
+    }
   }
 
   const fmtDate = (s: string) => {
@@ -326,6 +364,14 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
           </button>
         ))}
       </div>
+
+      {/* BƯỚC 7 — lỗi thao tác hiển thị rõ ràng (server là nguồn sự thật) */}
+      {opErr && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, color: '#B91C1C', fontSize: 13.5, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ flex: 1, lineHeight: 1.5 }}>⚠ {opErr}</span>
+          <button onClick={() => setOpErr(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B91C1C', fontSize: 15, fontWeight: 700, fontFamily: 'inherit' }} aria-label="Đóng thông báo lỗi">✕</button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ color: C.text3, fontSize: 14, padding: 20 }}>Đang tải...</div>
@@ -451,7 +497,7 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                   </td>
                   <td style={{ ...td, maxWidth: 220, color: C.text2 }}>{l.note || <span style={{ color: C.text3 }}>—</span>}</td>
                   <td style={td}>
-                    <select value={l.status} onChange={e => setStatus(l.id, e.target.value)}
+                    <select value={l.status} disabled={busyId === l.id} onChange={e => { void setStatus(l.id, e.target.value) }}
                       style={{
                         padding: '5px 8px', borderRadius: 7, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                         border: 'none', appearance: 'auto',
@@ -463,15 +509,15 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                     {/* BƯỚC 7 — vòng đời tối thiểu cho lead Class 2.0: Mới đăng ký → Đã xác nhận → Đang trải nghiệm.
                         "Bắt đầu trải nghiệm" CHỈ cho 3 gói tháng (99/396/499) — Hành trình 9.990K không có tháng miễn phí. */}
                     {isNewClass2 && l.status === 'Mới đăng ký' && (
-                      <button onClick={() => setStatus(l.id, 'Đã xác nhận')}
-                        style={{ marginTop: 6, width: '100%', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        ✅ Xác nhận
+                      <button onClick={() => { void setStatus(l.id, 'Đã xác nhận') }} disabled={busyId === l.id}
+                        style={{ marginTop: 6, width: '100%', background: busyId === l.id ? C.text3 : '#2563EB', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: busyId === l.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+                        {busyId === l.id ? 'Đang ghi…' : '✅ Xác nhận'}
                       </button>
                     )}
                     {isNewClass2 && TRIAL_PACKAGE_CHOICES.includes(l.package_choice ?? '') && l.status === 'Đã xác nhận' && (
-                      <button onClick={() => startTrial(l)}
-                        style={{ marginTop: 6, width: '100%', background: '#D97706', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        ▶ Bắt đầu trải nghiệm
+                      <button onClick={() => { void startTrial(l) }} disabled={busyId === l.id}
+                        style={{ marginTop: 6, width: '100%', background: busyId === l.id ? C.text3 : '#D97706', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: busyId === l.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+                        {busyId === l.id ? 'Đang ghi…' : '▶ Bắt đầu trải nghiệm'}
                       </button>
                     )}
                   </td>
