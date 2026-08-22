@@ -427,6 +427,21 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                         Dự kiến hết tháng miễn phí: {fmtDMY(addCalendarMonth(l.trial_started_at))}
                       </div>
                     )}
+                    {/* BƯỚC 7 — nút thao tác đặt ở cột Gói đã chọn (luôn nhìn thấy,
+                        cột Trạng thái cuối bảng dễ bị cắt ngoài màn hình).
+                        Mới đăng ký → Xác nhận → Đã xác nhận → Bắt đầu trải nghiệm → Đang trải nghiệm. */}
+                    {isNewClass2 && l.status === 'Mới đăng ký' && (
+                      <button onClick={() => { void setStatus(l.id, 'Đã xác nhận') }} disabled={busyId === l.id}
+                        style={{ marginTop: 8, width: '100%', background: busyId === l.id ? C.text3 : '#2563EB', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 8px', fontSize: 12.5, fontWeight: 700, cursor: busyId === l.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+                        {busyId === l.id ? 'Đang ghi…' : '✅ Xác nhận'}
+                      </button>
+                    )}
+                    {isNewClass2 && TRIAL_PACKAGE_CHOICES.includes(l.package_choice ?? '') && l.status === 'Đã xác nhận' && (
+                      <button onClick={() => { void startTrial(l) }} disabled={busyId === l.id}
+                        style={{ marginTop: 8, width: '100%', background: busyId === l.id ? C.text3 : '#D97706', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 8px', fontSize: 12.5, fontWeight: 700, cursor: busyId === l.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+                        {busyId === l.id ? 'Đang ghi…' : '▶ Bắt đầu trải nghiệm'}
+                      </button>
+                    )}
                   </td>
                   <td style={td}>
                     {l.class_name && <div>{l.class_name}</div>}
@@ -506,20 +521,6 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                       }}>
                       {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    {/* BƯỚC 7 — vòng đời tối thiểu cho lead Class 2.0: Mới đăng ký → Đã xác nhận → Đang trải nghiệm.
-                        "Bắt đầu trải nghiệm" CHỈ cho 3 gói tháng (99/396/499) — Hành trình 9.990K không có tháng miễn phí. */}
-                    {isNewClass2 && l.status === 'Mới đăng ký' && (
-                      <button onClick={() => { void setStatus(l.id, 'Đã xác nhận') }} disabled={busyId === l.id}
-                        style={{ marginTop: 6, width: '100%', background: busyId === l.id ? C.text3 : '#2563EB', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: busyId === l.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
-                        {busyId === l.id ? 'Đang ghi…' : '✅ Xác nhận'}
-                      </button>
-                    )}
-                    {isNewClass2 && TRIAL_PACKAGE_CHOICES.includes(l.package_choice ?? '') && l.status === 'Đã xác nhận' && (
-                      <button onClick={() => { void startTrial(l) }} disabled={busyId === l.id}
-                        style={{ marginTop: 6, width: '100%', background: busyId === l.id ? C.text3 : '#D97706', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: busyId === l.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
-                        {busyId === l.id ? 'Đang ghi…' : '▶ Bắt đầu trải nghiệm'}
-                      </button>
-                    )}
                   </td>
                 </tr>
                 )
