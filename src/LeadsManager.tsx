@@ -8,27 +8,56 @@ const C = {
   text1: '#18181B', text2: '#52525B', text3: '#A1A1AA', bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-const STATUSES = ['Chờ duyệt', 'Đã duyệt', 'Mới đăng ký', 'Cần gọi', 'Đã tư vấn', 'Học thử', 'Dùng thử app', 'Đã đóng phí', 'Chưa phù hợp']
+const STATUSES = ['Chờ duyệt', 'Đã duyệt', 'Mới đăng ký', 'Đã xác nhận', 'Đang trải nghiệm', 'Cần gọi', 'Đã tư vấn', 'Học thử', 'Dùng thử app', 'Đã đóng phí', 'Chưa phù hợp']
 const STATUS_COLOR: Record<string, { bg: string; fg: string }> = {
-  'Chờ duyệt':    { bg: '#FEF9C3', fg: '#854D0E' },
-  'Đã duyệt':     { bg: '#DCFCE7', fg: '#166534' },
-  'Mới đăng ký':  { bg: '#E9F3EC', fg: '#2D6A4F' },
-  'Cần gọi':      { bg: '#FEF3C7', fg: '#92400E' },
-  'Đã tư vấn':    { bg: '#E0F2FE', fg: '#075985' },
-  'Học thử':      { bg: '#F3E8FF', fg: '#6B21A8' },
-  'Dùng thử app': { bg: '#FAE8FF', fg: '#86198F' },
-  'Đã đóng phí':  { bg: '#DCFCE7', fg: '#166534' },
-  'Chưa phù hợp': { bg: '#F4F4F5', fg: '#71717A' },
+  'Chờ duyệt':       { bg: '#FEF9C3', fg: '#854D0E' },
+  'Đã duyệt':        { bg: '#DCFCE7', fg: '#166534' },
+  'Mới đăng ký':     { bg: '#E9F3EC', fg: '#2D6A4F' },
+  'Đã xác nhận':     { bg: '#DBEAFE', fg: '#1E40AF' },
+  'Đang trải nghiệm': { bg: '#FEF3C7', fg: '#92400E' },
+  'Cần gọi':         { bg: '#FEF3C7', fg: '#92400E' },
+  'Đã tư vấn':       { bg: '#E0F2FE', fg: '#075985' },
+  'Học thử':         { bg: '#F3E8FF', fg: '#6B21A8' },
+  'Dùng thử app':    { bg: '#FAE8FF', fg: '#86198F' },
+  'Đã đóng phí':     { bg: '#DCFCE7', fg: '#166534' },
+  'Chưa phù hợp':    { bg: '#F4F4F5', fg: '#71717A' },
 }
 const INTENT_LABEL: Record<string, string> = {
   dang_ky: 'Đăng ký lớp', hoc_thu_lop: 'Học thử lớp', dung_thu_app: 'Dùng thử app',
 }
+
+/**
+ * BƯỚC 7 — Gói khách đã chọn (leads.package_choice) là NGUỒN SỰ THẬT.
+ * Admin đọc field này trực tiếp — KHÔNG parse note.
+ */
+const PACKAGE_CHOICE_LABEL: Record<string, { label: string; bg: string; fg: string }> = {
+  khoi_dau_99:   { label: 'Khởi đầu · 99K/tháng', bg: '#E0F2FE', fg: '#075985' },
+  can_ban_396:   { label: 'Căn bản · 396K/tháng', bg: '#E9F3EC', fg: '#2D6A4F' },
+  nang_cao_499:  { label: 'Nâng cao · 499K/tháng', bg: '#F3E8FF', fg: '#6B21A8' },
+  hanh_trinh_9990: { label: 'Hành trình cùng Thầy · 9.990K/năm', bg: '#FEF3C7', fg: '#92400E' },
+}
+
+/** Các gói tháng có tháng đầu miễn phí (flow "Bắt đầu trải nghiệm"). */
+const TRIAL_PACKAGE_CHOICES = ['khoi_dau_99', 'can_ban_396', 'nang_cao_499']
+
+/** Cộng 1 THÁNG LỊCH (calendar month) — 31/01 + 1 tháng → cuối tháng 2. */
+const addCalendarMonth = (iso: string): Date => {
+  const d = new Date(iso)
+  const day = d.getDate()
+  d.setMonth(d.getMonth() + 1)
+  if (d.getDate() < day) d.setDate(0)
+  return d
+}
+const fmtDMY = (d: Date): string =>
+  `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 
 interface Lead {
   id: number; name: string; phone: string; zalo: string | null; email: string | null
   class_name: string | null; path: string | null; intent: string | null; note: string | null
   source: string | null; status: string; created_at: string
   is_hanhtrinh?: boolean | null; student_id?: string | null
+  package_choice?: string | null
+  trial_started_at?: string | null
 }
 interface CourseOpt { id: string; name: string; code?: string | null }
 interface ClassOpt { id: string; code: string | null; name: string }
@@ -259,6 +288,15 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
     if (error) { alert('Đổi trạng thái lỗi: ' + error.message); load() }
   }
 
+  /** BƯỚC 7 — Bắt đầu trải nghiệm: status → Đang trải nghiệm + ghi trial_started_at NẾU chưa có.
+   *  Idempotent: nếu trial_started_at đã có giá trị → GIỮ NGUYÊN (không ghi đè ngày bắt đầu cũ). */
+  const startTrial = async (l: Lead) => {
+    const now = new Date().toISOString()
+    setLeads(prev => prev.map(x => x.id === l.id ? { ...x, status: 'Đang trải nghiệm', trial_started_at: x.trial_started_at ?? now } : x))
+    const { error } = await supabase.from('leads').update({ status: 'Đang trải nghiệm', trial_started_at: l.trial_started_at ?? now }).eq('id', l.id)
+    if (error) { alert('Bắt đầu trải nghiệm lỗi: ' + error.message); load() }
+  }
+
   const fmtDate = (s: string) => {
     const d = new Date(s)
     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
@@ -306,13 +344,17 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                 <th style={th}>Ngày</th>
                 <th style={th}>Họ tên</th>
                 <th style={th}>Liên hệ</th>
+                <th style={th}>Gói đã chọn</th>
                 <th style={th}>Lớp / Ý định</th>
                 <th style={th}>Ghi chú</th>
                 <th style={th}>Trạng thái</th>
               </tr>
             </thead>
             <tbody>
-              {shown.map(l => (
+              {shown.map(l => {
+                const pkg = PACKAGE_CHOICE_LABEL[l.package_choice ?? '']
+                const isNewClass2 = !!l.package_choice // lead từ flow chọn gói mới (BƯỚC 6)
+                return (
                 <tr key={l.id} style={{ borderTop: `1px solid ${C.border}` }}>
                   <td style={td}><span style={{ color: C.text3, whiteSpace: 'nowrap' }}>{fmtDate(l.created_at)}</span></td>
                   <td style={td}><b style={{ color: C.text1 }}>{l.name}</b></td>
@@ -320,6 +362,25 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                     <div style={{ whiteSpace: 'nowrap' }}>{l.phone}</div>
                     {l.zalo && <div style={{ color: C.text3, fontSize: 12 }}>Zalo: {l.zalo}</div>}
                     {l.email && <div style={{ color: C.text3, fontSize: 12 }}>{l.email}</div>}
+                  </td>
+                  <td style={td}>
+                    {pkg ? (
+                      <span style={{ fontSize: 12, fontWeight: 800, color: pkg.fg, background: pkg.bg, borderRadius: 6, padding: '3px 9px', display: 'inline-block' }}>
+                        {pkg.label}
+                      </span>
+                    ) : (
+                      <span style={{ color: C.text3 }}>—</span>
+                    )}
+                    {l.source === 'class2' && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: '#2D6A4F', fontWeight: 700 }}>Class 2.0</div>
+                    )}
+                    {/* BƯỚC 7 — tháng trải nghiệm: ngày bắt đầu + dự kiến hết (+1 tháng lịch) */}
+                    {l.trial_started_at && (
+                      <div style={{ marginTop: 6, fontSize: 11.5, color: '#92400E', background: '#FEF3C7', borderRadius: 6, padding: '5px 8px', lineHeight: 1.6 }}>
+                        Bắt đầu: {fmtDMY(new Date(l.trial_started_at))}<br />
+                        Dự kiến hết tháng miễn phí: {fmtDMY(addCalendarMonth(l.trial_started_at))}
+                      </div>
+                    )}
                   </td>
                   <td style={td}>
                     {l.class_name && <div>{l.class_name}</div>}
@@ -333,7 +394,7 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                     {/* ⚡ Duyệt nhanh đăng ký thường: tạo tài khoản + vào đúng lớp đã đăng ký.
                         KHÔNG hiện khi: lead đã có student_id (đã tạo tài khoản), hoặc trạng thái
                         đã chốt (Đã duyệt / Đã đóng phí) — tránh bấm nhầm flow cũ. */}
-                    {!l.is_hanhtrinh && l.intent === 'dang_ky' && !l.student_id
+                    {!l.is_hanhtrinh && !l.package_choice && l.intent === 'dang_ky' && !l.student_id
                       && l.status !== 'Đã duyệt' && l.status !== 'Đã đóng phí' && (
                       <div style={{ marginTop: 8, background: C.accentLight, border: '1px solid #C7D2FE', borderRadius: 8, padding: '8px 9px' }}>
                         <div style={{ fontSize: 11.5, fontWeight: 800, color: '#3730A3', marginBottom: 6 }}>⚡ Duyệt nhanh — tạo tài khoản + vào lớp</div>
@@ -354,7 +415,7 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                         )}
                       </div>
                     )}
-                    {l.is_hanhtrinh && (
+                    {l.is_hanhtrinh && !l.package_choice && (
                       <div style={{ marginTop: 8, background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '8px 9px' }}>
                         <div style={{ fontSize: 11.5, fontWeight: 800, color: '#166534', marginBottom: 6 }}>🎁 Lớp Hành trình — xin mở miễn phí</div>
                         {l.student_id ? (
@@ -373,7 +434,9 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                         )}
                       </div>
                     )}
-                    {/* 🎸 Kích hoạt gói ĐỒNG HÀNH 396K (Đợt 1) — lead → tài khoản → gói → quyền */}
+                    {/* 🎸 Kích hoạt gói ĐỒNG HÀNH 396K (Đợt 1) — lead → tài khoản → gói → quyền.
+                        CHỈ cho lead cũ (chưa có package_choice) — lead mới Class 2.0 xử lý theo gói đã chọn. */}
+                    {!l.package_choice && (
                     <div style={{ marginTop: 8, background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: '8px 9px' }}>
                       <div style={{ fontSize: 11.5, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>🎸 Gói ĐỒNG HÀNH 396K</div>
                       <div style={{ fontSize: 11.5, color: '#047857', marginBottom: 6 }}>
@@ -384,6 +447,7 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                         {activatingPkg === l.id ? 'Đang kích hoạt…' : 'Kích hoạt gói'}
                       </button>
                     </div>
+                    )}
                   </td>
                   <td style={{ ...td, maxWidth: 220, color: C.text2 }}>{l.note || <span style={{ color: C.text3 }}>—</span>}</td>
                   <td style={td}>
@@ -396,9 +460,24 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                       }}>
                       {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
+                    {/* BƯỚC 7 — vòng đời tối thiểu cho lead Class 2.0: Mới đăng ký → Đã xác nhận → Đang trải nghiệm.
+                        "Bắt đầu trải nghiệm" CHỈ cho 3 gói tháng (99/396/499) — Hành trình 9.990K không có tháng miễn phí. */}
+                    {isNewClass2 && l.status === 'Mới đăng ký' && (
+                      <button onClick={() => setStatus(l.id, 'Đã xác nhận')}
+                        style={{ marginTop: 6, width: '100%', background: '#2563EB', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        ✅ Xác nhận
+                      </button>
+                    )}
+                    {isNewClass2 && TRIAL_PACKAGE_CHOICES.includes(l.package_choice ?? '') && l.status === 'Đã xác nhận' && (
+                      <button onClick={() => startTrial(l)}
+                        style={{ marginTop: 6, width: '100%', background: '#D97706', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        ▶ Bắt đầu trải nghiệm
+                      </button>
+                    )}
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
