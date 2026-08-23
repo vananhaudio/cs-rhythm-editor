@@ -127,15 +127,18 @@ Event không nhận dạng được → 200 nhận nhưng không xử lý (khôn
 
 ## 9. Trạng thái hiện tại
 
+> Cập nhật 23/08/2026 — RELEASE BILLING FOUNDATION (commit `bb2d652` + migration production PASS).
+
 | Phần | Trạng thái |
 |---|---|
-| Schema + Billing Core + tests (db/billing_setup.sql, db/billing_test.sql) | ✅ code xong — **CHƯA chạy production** |
-| Provider adapter (interface) | ✅ contract — `getProviderAdapter()` = null |
-| billing-webhook | ✅ foundation — từ chối an toàn (503) |
-| Payment provider thật | ⛔ CHƯA CHỐT (đang liên hệ) |
-| Checkout production | ⛔ CHƯA tồn tại (không form thẻ giả) |
-| Entitlement / tạo student / email tự động | ⛔ CHƯA làm (đúng giới hạn) |
-| Admin Billing UI | ⛔ chưa — đề xuất bước riêng sau duyệt |
+| **BILLING FOUNDATION (data model + Billing Core + security + provider boundary)** | ✅ **PRODUCTION SCHEMA READY** (6 bảng + 4 products + 5 functions trên `wojmdilyflffvdtpovmq`) |
+| **PAYMENT PROVIDER** | ⛔ **NOT CONFIGURED** (`getProviderAdapter()` = null; chưa chọn provider) |
+| **CHECKOUT** | ⛔ **NOT ACTIVE** (không tồn tại; không form thẻ giả) |
+| **WEBHOOK** | ⛔ **NOT DEPLOYED** (`billing-webhook` chưa deploy; URL 404) |
+| **ENTITLEMENT AUTOMATION** | ⛔ **NOT CONNECTED** (không gọi activate_student_package) |
+| **STUDENT/EMAIL AUTOMATION** | ⛔ **NOT CONNECTED** |
+
+Billing state production đang **“ngủ”**: chỉ có data model + core + security, không có đường nào để khách thật thanh toán. Không có UI giả. `leads.trial_started_at` (vd lead 152 “Trần A”) giữ nguyên — chưa backfill.
 
 ## 10. Bước tiếp theo khi có provider (cần duyệt riêng)
 
