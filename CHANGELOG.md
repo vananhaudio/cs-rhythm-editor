@@ -2,6 +2,10 @@
 
 Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
+## 23/08/2026
+
+- **Billing Foundation Class 2.0 (BƯỚC 8A — PHA B, code xong chưa chạy production)**: 6 bảng billing provider-neutral (`billing_customers`, `billing_provider_customers`, `billing_products`, `billing_subscriptions`, `billing_payments`, `billing_events`) + Billing Core (SECURITY DEFINER: `billing_ingest_event`, `billing_apply_event_internal`, `billing_record_manual_payment`, `billing_sanitize_payload`). Idempotency qua `UNIQUE(provider, external_event_id)`; manual fallback đi qua CÙNG business transition với webhook tương lai. RLS: anon không policy nào, authenticated chỉ teacher SELECT, mọi write qua trusted function. KHÔNG lưu card/CVV/PCI. Provider boundary chỉ là interface (`_shared/billing/provider.ts`, `getProviderAdapter()` = null); `billing-webhook` từ chối an toàn 503. CHƯA chạy migration production, CHƯA commit/deploy. Chi tiết: `docs/BILLING.md`.
+
 ## 29/07/2026
 
 - **Thiết kế lại tab "Sống"** phục vụ chiến dịch 1001 Câu chuyện: bỏ dashboard (thống kê, bảng xếp hạng, quote, thẻ sự kiện) → còn **Band của tôi** (hero, trạng thái "chưa tham gia Band" + nút tìm hiểu) và 4 entry điều hướng: Cộng đồng Hành trình · 1001 Câu chuyện cùng Guitar (→ `/story`) · Đại hội Guitar · Nhóm lớp của tôi. Trang đích ở `src/live/LivePages.tsx` — nội dung tĩnh, không feed. Giữ hàng tài khoản (đổi hồ sơ / đăng xuất) vì đây là lối vào duy nhất trên điện thoại. Kiến trúc: Lớp = đơn vị đào tạo, Band = đơn vị cộng đồng lập sau các khoá nâng cao.

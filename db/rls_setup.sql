@@ -74,7 +74,12 @@ DECLARE
     'stories', 'story_comments',
     -- Báo cáo nội dung (Guideline 1.2): ai cũng GHI được (kể cả anon),
     -- CHỈ thầy đọc/xử lý. Policy hẹp do db/story_reports.sql đặt.
-    'story_reports'
+    'story_reports',
+    -- Billing Foundation (BƯỚC 8A — db/billing_setup.sql): anon KHÔNG policy nào;
+    -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
+    -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).
+    'billing_customers', 'billing_provider_customers', 'billing_products',
+    'billing_subscriptions', 'billing_payments', 'billing_events'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];

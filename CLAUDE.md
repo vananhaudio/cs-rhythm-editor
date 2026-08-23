@@ -94,3 +94,13 @@ Màn đầu của Piano Journey là **hội thoại 2 chiều với Cô Piano** 
 - Hoàn thiện Tuner (đang làm ở Bolt).
 - Thêm chord finger guide Em/C/G theo mẫu `ChordAmGuide`/Am.
 - Fix `guitarNotes.ts` dòng 51 (octave): `2 + octaveOffset + (semitone >= 8 ? 1 : 0)`.
+
+## Billing Foundation (BƯỚC 8A) — KHÔNG đụng khi chưa hiểu
+- **Billing ≠ Entitlement.** Billing Core (`db/billing_setup.sql`) KHÔNG gọi `activate_student_package`/`apply_package_permissions`, KHÔNG tạo `edu_students`/`edu_enrollments`/`edu_course_access`. Entitlement vẫn do `packages`/`student_packages` lo.
+- **Mọi write billing qua SECURITY DEFINER functions** (`billing_ingest_event`, `billing_record_manual_payment`...). Frontend/PostgREST KHÔNG được tự UPDATE `billing_subscriptions.status`/`billing_payments.status`. RLS: anon không policy nào; authenticated chỉ teacher SELECT.
+- **Idempotency**: `UNIQUE(provider, external_event_id)` trong `billing_events` — KHÔNG apply transition 2 lần, KHÔNG overwrite event cũ.
+- **Payment lịch sử**: mỗi attempt mới = `billing_payments` record MỚI. KHÔNG đổi `failed → succeeded` trên cùng record.
+- **Trial source of truth**: `billing_subscriptions.trial_started_at/ends_at`. `leads.trial_started_at` là legacy (sync 1 chiều, không DROP). KHÔNG dùng `edu_students.trial_expires_at` cho Class 2.0.
+- **Provider boundary**: `supabase/functions/_shared/billing/provider.ts` — `getProviderAdapter()` trả null khi chưa chốt provider; `billing-webhook` từ chối an toàn (503). KHÔNG giả Stripe/provider.
+- **Giá**: chỉ trong `billing_products` (4 mã chuẩn). KHÔNG hardcode giá rải rác.
+- Chi tiết: `docs/BILLING.md`.
