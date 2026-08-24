@@ -79,7 +79,10 @@ DECLARE
     -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
     -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).
     'billing_customers', 'billing_provider_customers', 'billing_products',
-    'billing_subscriptions', 'billing_payments', 'billing_events'
+    'billing_subscriptions', 'billing_payments', 'billing_events',
+    -- App Subscription entitlement (db/entitlements_setup.sql): học viên chỉ đọc
+    -- effective entitlement qua RPC; source records chỉ teacher/admin xem/ghi.
+    'student_entitlements'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];
