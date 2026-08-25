@@ -64,10 +64,12 @@ export function hasTier(effectiveTier: EntitlementTier, requiredTier: Entitlemen
 }
 
 export function resolveCourseAccess(
-  course: CourseAccessPolicyFields,
+  courseInput: CourseAccessPolicyFields | null | undefined,
   effectiveTier: EntitlementTier,
   options: { legacyUnlocked?: boolean; preview?: boolean } = {},
 ): ResolvedContentAccess {
+  // Dữ liệu legacy có thể có enrollment mồ côi (khoá đã xoá → join null). Null = khoá legacy mặc định.
+  const course: CourseAccessPolicyFields = courseInput ?? {}
   const policyEnabled = course.access_policy_enabled === true
   const legacyHidden = (course.status ?? 'on') === 'off'
   const legacyComingSoon = (course.status ?? 'on') === 'coming_soon'
@@ -93,11 +95,13 @@ export function resolveCourseAccess(
 }
 
 export function resolveLessonAccess(
-  lesson: LessonAccessPolicyFields,
-  course: CourseAccessPolicyFields,
+  lessonInput: LessonAccessPolicyFields | null | undefined,
+  courseInput: CourseAccessPolicyFields | null | undefined,
   effectiveTier: EntitlementTier,
   options: { courseLegacyUnlocked?: boolean; preview?: boolean } = {},
 ): ResolvedContentAccess {
+  const lesson: LessonAccessPolicyFields = lessonInput ?? {}
+  const course: CourseAccessPolicyFields = courseInput ?? {}
   const courseAccess = resolveCourseAccess(course, effectiveTier, {
     legacyUnlocked: options.courseLegacyUnlocked,
     preview: options.preview,
