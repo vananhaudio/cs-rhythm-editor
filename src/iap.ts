@@ -78,10 +78,6 @@ export async function purchaseProduct(productId: string): Promise<IAPPurchaseRes
   return IAPPlugin.purchase({ productId })
 }
 
-export async function purchaseMonthly(): Promise<IAPPurchaseResult> {
-  return purchaseProduct('com.vananhaudio.guitar.monthly')
-}
-
 export async function restorePurchases(): Promise<{ status: string }> {
   if (!IAPPlugin) throw new Error('Chỉ có trên app iOS.')
   return IAPPlugin.restore()

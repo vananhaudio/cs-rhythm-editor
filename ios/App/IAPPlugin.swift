@@ -35,34 +35,44 @@ public class IAPPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func purchase(_ call: CAPPluginCall) {
         let requestedId = call.getString("productId") ?? ""
+        NSLog("[IAP] purchase_requested product_id=%@", requestedId)
         guard productIds.contains(requestedId) else {
-            call.reject("Gói đăng ký không hợp lệ.")
+            NSLog("[IAP] purchase_rejected product_id=%@ error=invalid_product_id", requestedId)
+            call.reject("Gói đăng ký không hợp lệ.", "invalid_product_id")
             return
         }
 
-        Task {
+        Task { @MainActor in
             do {
                 guard let product = try await Product.products(for: [requestedId]).first else {
-                    call.reject("Không tìm thấy gói đăng ký trên App Store.")
+                    NSLog("[IAP] product_found product_id=%@ found=false", requestedId)
+                    call.reject("Không tìm thấy gói đăng ký trên App Store.", "product_not_found")
                     return
                 }
+                NSLog("[IAP] product_found product_id=%@ found=true", requestedId)
 
+                NSLog("[IAP] purchase_started product_id=%@", requestedId)
                 let result = try await product.purchase()
                 switch result {
                 case .success(let verification):
+                    NSLog("[IAP] purchase_result product_id=%@ state=success", requestedId)
                     let signedTransactionInfo = verification.jwsRepresentation
                     let transaction = try checkVerified(verification)
                     await transaction.finish()
                     call.resolve(transactionPayload(transaction, status: "purchased", signedTransactionInfo: signedTransactionInfo))
                 case .userCancelled:
+                    NSLog("[IAP] purchase_result product_id=%@ state=userCancelled", requestedId)
                     call.resolve(["productId": requestedId, "status": "cancelled"])
                 case .pending:
+                    NSLog("[IAP] purchase_result product_id=%@ state=pending", requestedId)
                     call.resolve(["productId": requestedId, "status": "pending"])
                 @unknown default:
-                    call.reject("Trạng thái mua hàng chưa được hỗ trợ.")
+                    NSLog("[IAP] purchase_result product_id=%@ state=unknown", requestedId)
+                    call.reject("Trạng thái mua hàng chưa được hỗ trợ.", "unknown_purchase_state")
                 }
-            } catch {
-                call.reject(error.localizedDescription)
+            } catch let error as NSError {
+                NSLog("[IAP] purchase_error product_id=%@ domain=%@ code=%ld", requestedId, error.domain, error.code)
+                call.reject(error.localizedDescription, "\(error.domain):\(error.code)")
             }
         }
     }

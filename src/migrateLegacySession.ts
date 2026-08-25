@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL } from './supabase'
+import { IS_NATIVE_CAPACITOR, supabase, SUPABASE_AUTH_STORAGE_KEY } from './supabase'
 
 // DI TRÚ MỘT LẦN: session cũ nằm trong localStorage (client createClient cũ).
 // Khi chuyển sang cookie domain cha, nếu không di trú thì CẢ CỘNG ĐỒNG bị đăng
@@ -7,11 +7,11 @@ import { supabase, SUPABASE_URL } from './supabase'
 //
 // Sau vài tuần, khi mọi người đã mở lại app ít nhất một lần, có thể gỡ bỏ file
 // này và lời gọi trong main.tsx.
-const PROJECT_REF = new URL(SUPABASE_URL).hostname.split('.')[0]
-const LEGACY_KEY = `sb-${PROJECT_REF}-auth-token`
+const LEGACY_KEY = SUPABASE_AUTH_STORAGE_KEY
 
 export async function migrateLegacySession(): Promise<void> {
   if (typeof window === 'undefined') return
+  if (IS_NATIVE_CAPACITOR) return
 
   // Đã có phiên (từ cookie, kể cả cookie do shop ghi) → không cần di trú.
   const { data } = await supabase.auth.getSession()

@@ -1,7 +1,12 @@
+import { Capacitor } from '@capacitor/core'
 import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 export const SUPABASE_URL = 'https://wojmdilyflffvdtpovmq.supabase.co'
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvam1kaWx5ZmxmZnZkdHBvdm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjk0OTYsImV4cCI6MjA5NDg0NTQ5Nn0.JxlY5iqBTK3q5BYnF1MgY8A5zS3R5okrD8uddsEFavY'
+export const SUPABASE_PROJECT_REF = new URL(SUPABASE_URL).hostname.split('.')[0]
+export const SUPABASE_AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`
+export const IS_NATIVE_CAPACITOR = typeof window !== 'undefined' && Capacitor.isNativePlatform()
 
 // ── SSO cross-subdomain ─────────────────────────────────────────────────────
 // Session lưu bằng COOKIE trên domain cha `.vananhaudio.com` (thay vì
@@ -32,13 +37,26 @@ function parentCookieDomain(h: string): string | undefined {
 const cookieDomain = parentCookieDomain(host)
 const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
 
-export const supabase = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  cookieOptions: {
-    domain: cookieDomain,
-    path: '/',
-    sameSite: 'lax', // mọi subdomain là same-site → lax là đủ
-    secure: isHttps, // trang http (dev) mà bật secure là cookie bị bỏ
-    // maxAge do @supabase/ssr quyết định (400 ngày) — truyền vào cũng bị ghi đè.
-  },
-  // Token dài sẽ được @supabase/ssr tự chunk (…-auth-token.0/.1) — không tự nhồi.
-})
+export const supabase = IS_NATIVE_CAPACITOR
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: {
+      headers: { 'X-Client-Info': 'tva-guitar-capacitor' },
+    },
+    auth: {
+      storageKey: SUPABASE_AUTH_STORAGE_KEY,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      flowType: 'pkce',
+    },
+  })
+  : createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookieOptions: {
+      domain: cookieDomain,
+      path: '/',
+      sameSite: 'lax', // mọi subdomain là same-site → lax là đủ
+      secure: isHttps, // trang http (dev) mà bật secure là cookie bị bỏ
+      // maxAge do @supabase/ssr quyết định (400 ngày) — truyền vào cũng bị ghi đè.
+    },
+    // Token dài sẽ được @supabase/ssr tự chunk (…-auth-token.0/.1) — không tự nhồi.
+  })

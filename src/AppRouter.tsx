@@ -47,6 +47,7 @@ import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
 import PianoJourney from './PianoJourney'
 import MusicPlayer from './piano/MusicPlayer'
+import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
 type AppUser = {
   id: string
@@ -148,6 +149,11 @@ export default function AppRouter() {
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+
+  // ── Route /app-v2-preview — Prototype UI/UX App Class 2.0 (mock local, không production) ──
+  if (path === '/app-v2-preview' || path.startsWith('/app-v2-preview')) {
+    return <AppV2Preview />
+  }
 
   // ── Route /subscribe — production subscription paywall for iOS review ──
   if (path === '/subscribe' || path.startsWith('/subscribe')) {

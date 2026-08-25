@@ -194,6 +194,8 @@ interface Props { student: Student; onLogout: () => void; preview?: boolean; gue
 export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired }: Props) {
   const [tab, setTab]             = useState<Tab>('hoc')
   const [me, setMe]               = useState<Student>(student)
+  // Đồng bộ lại khi student đổi (guest → đăng nhập, khôi phục phiên) — không thì header chào sai tên
+  useEffect(() => { setMe(student) }, [student.id])
   const [showSettings, setShowSettings] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
