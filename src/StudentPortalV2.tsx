@@ -78,7 +78,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
     supabase.from('edu_enrollments')
       .select('id,course_id,is_active,course:edu_courses(id,name,slug,type)')
       .eq('student_id', student.id).eq('is_active', true)
-      .then(({ data }) => setEnrollments((data ?? []) as unknown as Enrollment[]))
+      .then(({ data }) => setEnrollments(((data ?? []) as unknown as Enrollment[]).filter(e => e && e.course)))
     supabase.from('edu_tools').select('*').eq('enabled', true).order('order_index')
       .then(({ data }) => { if (data?.length) setDbTools(data as DBTool[]) })
     supabase.from('student_songs').select('id,title,artist,tempo,status')

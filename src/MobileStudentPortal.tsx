@@ -145,7 +145,9 @@ function getYearBadge(enrolledAt?: string | null): string | null {
   return years === 1 ? '1-Year Member' : `${years}-Year Member`
 }
 
-function CourseLogo({ course, size = 44, radius = 12, bg }: { course: { type: string; icon?: string | null; image_url?: string | null }; size?: number; radius?: number; bg?: string }) {
+function CourseLogo({ course: courseInput, size = 44, radius = 12, bg }: { course?: { type?: string | null; icon?: string | null; image_url?: string | null } | null; size?: number; radius?: number; bg?: string }) {
+  // Dữ liệu legacy/localStorage có thể trỏ tới khoá không còn tồn tại → course null. Không bao giờ crash vì logo.
+  const course = courseInput ?? { type: '', icon: null, image_url: null }
   const fallback = course.icon || (course.type === 'canh_cua' ? '🔑' : '🎸')
   return (
     <div style={{ width: size, height: size, borderRadius: radius, background: bg ?? (course.type === 'canh_cua' ? '#FFF7ED' : '#EEF2FF'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.45, flexShrink: 0, overflow: 'hidden' }}>
@@ -687,7 +689,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       supabase.from('edu_courses')
         .select(COURSE_SELECT)
         .then(({ data }) => {
-          const courses = ((data ?? []) as any[]).filter(c => (c.status ?? 'on') !== 'off')
+          const courses = ((data ?? []) as any[]).filter(c => c && (c.status ?? 'on') !== 'off')
           setEnrollments(courses.map((course: any) => ({
             id: `public-${course.id}`,
             course_id: course.id,
@@ -736,14 +738,15 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       .select(`id,course_id,enrolled_at,is_active,course:edu_courses(${COURSE_REL_SELECT})`)
       .eq('student_id', student.id).eq('is_active', true)
       .then(async ({ data }) => {
-        const enr = (data ?? []) as unknown as Enrollment[]
+        // Lọc null NGAY TẠI NGUỒN: enrollment thiếu course (join null) không được vào state — mọi UI phía dưới tin dữ liệu sạch
+        const enr = ((data ?? []) as unknown as Enrollment[]).filter(e => e && e.course)
         setOwnedCourseIds(new Set(enr.map(e => e.course_id)))
         const { data: publicCourses } = await supabase
           .from('edu_courses')
           .select(COURSE_SELECT)
         const enrolledById = new Map(enr.map(e => [e.course_id, e]))
         const discovery = ((publicCourses ?? []) as any[])
-          .filter(c => (c.status ?? 'on') !== 'off' && !enrolledById.has(c.id))
+          .filter(c => c && (c.status ?? 'on') !== 'off' && !enrolledById.has(c.id))
           .map(course => ({
             id: `public-${course.id}`,
             course_id: course.id,
@@ -764,7 +767,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           supabase.from('edu_courses').select(COURSE_SELECT)
             .in('code', [...gapCodes])
             .then(({ data: gc }) => setFoundationGaps(((gc ?? []) as any[])
-              .filter(c => (c.status ?? 'on') !== 'off' && !ownedCodes.has((c.code || '').trim().toUpperCase()))))
+              .filter(c => c && (c.status ?? 'on') !== 'off' && !ownedCodes.has((c.code || '').trim().toUpperCase()))))
         } else setFoundationGaps([])
         // Tiến độ KỸ NĂNG (đỏ/vàng/xanh) theo số phiên luyện
         supabase.from('edu_skill_progress').select('lesson_id,sessions').eq('student_id', student.id)
