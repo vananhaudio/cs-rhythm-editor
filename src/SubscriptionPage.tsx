@@ -52,7 +52,7 @@ const planCopy: Record<SubscriptionTier, { tag: string; description: string }> =
   },
 }
 
-const BUILD_DIAGNOSTIC = 'TVA 1.2.0 (10) · bundled'
+const BUILD_DIAGNOSTIC = 'TVA 1.2.0'
 
 export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true)
@@ -325,9 +325,9 @@ export default function SubscriptionPage() {
                     Gói Nâng cao đang được giữ lại để hoàn thiện kiểm thử App Store. Bạn chưa thể mua gói này trong phiên bản hiện tại.
                   </p>
                 )}
-                {!advancedPending && trialLabel(product) && (
+                {!advancedPending && (
                   <p style={{ margin: '8px 0 0', color: COLORS.muted, fontSize: 13, lineHeight: 1.5 }}>
-                    {trialLabel(product)}. Sau thời gian dùng thử, gói tự động gia hạn theo giá App Store. Bạn có thể hủy trong Apple ID.
+                    {trialLabel(product) ? `${trialLabel(product)}. Sau thời gian dùng thử, gói` : 'Gói đăng ký'} tự động gia hạn {periodLabel(product) ? `theo chu kỳ ${periodLabel(product).replace('/ ', '')}` : ''} theo giá App Store cho đến khi bạn hủy. Hủy bất kỳ lúc nào trong cài đặt Apple ID (nút Quản lý đăng ký bên dưới).
                   </p>
                 )}
               </div>
