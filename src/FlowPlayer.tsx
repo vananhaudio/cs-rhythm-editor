@@ -70,7 +70,7 @@ interface Flow {
 
 interface Props {
   lessonId: string
-  studentId: string
+  studentId?: string
   onComplete: () => void
   onBack: () => void
   fullScreen?: boolean   // true → tự dùng position:fixed, không cần wrapper ngoài

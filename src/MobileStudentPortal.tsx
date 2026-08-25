@@ -107,6 +107,12 @@ const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
 const LEVEL_TIER: Record<string, string> = {
   beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro'
 }
+const ENTITLEMENT_TIER_TO_LEGACY: Record<string, string> = {
+  free: 'free',
+  khoi_dau_99: 'basic',
+  can_ban_396: 'standard',
+  nang_cao_499: 'pro',
+}
 const TIER_VI: Record<string, string> = {
   free: 'Miễn phí', basic: 'Cơ bản', standard: 'Nâng cao', pro: 'Pro'
 }
@@ -173,9 +179,9 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
   ear:           { label: 'Luyện tai',    icon: '👂', color: '#0891B2', route: '/tap'    },
 }
 
-interface Props { student: Student; onLogout: () => void; preview?: boolean }
+interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void }
 
-export default function MobileStudentPortal({ student, onLogout, preview = false }: Props) {
+export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired }: Props) {
   const [tab, setTab]             = useState<Tab>('hoc')
   const [me, setMe]               = useState<Student>(student)
   const [showSettings, setShowSettings] = useState(false)
@@ -196,6 +202,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [skillMap, setSkillMap]         = useState<Record<string, number>>({})  // lessonId → số phiên luyện (đỏ/vàng/xanh)
   const [freeCourses, setFreeCourses]   = useState<Set<string>>(new Set())  // khoá miễn phí (is_free)
   const [accessCourses, setAccessCourses] = useState<Set<string>>(new Set()) // khoá đã được thầy cấp quyền
+  const [ownedCourseIds, setOwnedCourseIds] = useState<Set<string>>(new Set()) // khoá đang theo học thật
+  const [effectiveEntitlement, setEffectiveEntitlement] = useState('free')
   const [foundationGaps, setFoundationGaps] = useState<Enrollment['course'][]>([]) // khoá NỀN còn thiếu (đặc cách vượt cấp) — §6 bộ luật
   const [htMember, setHtMember] = useState(false) // học viên Hành trình 2026/27: full khoá NHƯNG học tuần tự
   const [courseLessonIds, setCourseLessonIds] = useState<Record<string, string[]>>({}) // courseId → mọi lesson id (tính hoàn thành khoá)
@@ -331,6 +339,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   const handleAddSong = async () => {
+    if (guest) { requireLogin(); return }
     if (!newSongTitle.trim()) return
     setAddingSong(true)
     // Chụp lại trước khi reset state
@@ -415,9 +424,31 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const lastFlushRef   = useRef<number | null>(null)   // mốc thời điểm lần lưu gần nhất
   const flushRef       = useRef<() => void>(() => {})
 
+  const requireLogin = () => {
+    if (onLoginRequired) onLoginRequired()
+    else window.location.href = '/start'
+  }
+
+  const openUpgrade = () => {
+    window.location.href = '/subscribe'
+  }
+
+  const explainUpgrade = () => {
+    if (isNativeIOS) {
+      window.location.href = '/subscribe'
+      return
+    }
+    window.location.href = '/class'
+  }
+
   // Ghi thời gian luyện + XP vào DB và cập nhật hiển thị ngay (1 XP / phút)
   const persistMinutes = async (exId: string, minutes: number) => {
     if (minutes < 1) return
+    if (guest) {
+      setPracticeTotals(prev => ({ ...prev, [exId]: (prev[exId] ?? 0) + minutes }))
+      setPracticeToday(prev => ({ ...prev, [exId]: (prev[exId] ?? 0) + minutes }))
+      return
+    }
     const { error: plErr } = await supabase.from('student_practice_log').insert({ student_id: student.id, exercise_id: exId, minutes })
     if (plErr) console.error('Ghi nhật ký luyện tập lỗi:', plErr)
     // Ghi XP — 1 XP/phút
@@ -561,7 +592,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     }
   }
 
-  const studentTierIdx = TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
+  const entitlementLegacyTier = ENTITLEMENT_TIER_TO_LEGACY[effectiveEntitlement] ?? 'free'
+  const studentTierIdx = Math.max(
+    TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free'),
+    TIER_ORDER.indexOf(entitlementLegacyTier),
+  )
   const isTierUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
 
   // ── Chặn tuần tự cho học viên Hành trình (HT): khoá cấp trên chỉ mở khi HOÀN THÀNH hết bài cấp dưới ──
@@ -592,8 +627,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
   // Quyền MỞ KHOÁ THEO TỪNG KHOÁ: khoá đang xem mở nếu là khoá free hoặc đã được cấp quyền.
   // Bài tier='free' = học thử → luôn mở (kể cả khoá trả phí chưa cấp quyền).
-  const activeCourseUnlocked = preview || !activeCourseId || freeCourses.has(activeCourseId) || accessCourses.has(activeCourseId)
-  const isLessonCourseUnlocked = (l: Lesson) => l.tier === 'free' || activeCourseUnlocked
+  const activeCourseUnlocked = preview || !activeCourseId || freeCourses.has(activeCourseId) || accessCourses.has(activeCourseId) || ownedCourseIds.has(activeCourseId)
+  const isLessonCourseUnlocked = (l: Lesson) => l.tier === 'free' || activeCourseUnlocked || isTierUnlocked(l.tier)
 
   const isUnlocked = (l: Lesson) =>
     isLessonCourseUnlocked(l) && isSequentiallyUnlocked(l.id)
@@ -625,14 +660,77 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   useEffect(() => {
+    if (guest) {
+      supabase.from('edu_courses')
+        .select('id,name,type,track,icon,image_url,status,sort_order,is_free,code')
+        .then(({ data }) => {
+          const courses = ((data ?? []) as any[]).filter(c => (c.status ?? 'on') !== 'off')
+          setEnrollments(courses.map((course: any) => ({
+            id: `public-${course.id}`,
+            course_id: course.id,
+            enrolled_at: '',
+            course,
+          })))
+          setFreeCourses(new Set(courses.filter((course: any) => course.is_free !== false).map((course: any) => course.id)))
+          setAccessCourses(new Set())
+          setOwnedCourseIds(new Set())
+          setFoundationGaps([])
+        })
+      supabase.from('edu_tools').select('*').order('order_index')
+        .then(({ data }) => {
+          const all = (data ?? []).map((t: any) => ({
+            ...t, status: t.status ?? (t.enabled ? 'on' : 'off'),
+          }))
+          setDbTools(all.filter((t: any) => t.status !== 'off' && t.category !== 'Bài luyện') as DBTool[])
+          const exMap: Record<string, string> = {}
+          Object.entries(EX_TOOL_ID).forEach(([exId, toolId]) => {
+            const tool = all.find((t: any) => t.id === toolId)
+            exMap[exId] = tool?.status ?? 'on'
+          })
+          setExerciseStatuses(exMap)
+        })
+      setMasterPath([])
+      setCourseLessonIds({})
+      setSkillMap({})
+      setTotalXP(0)
+      setWeekXP(0)
+      setLastWeekXP(0)
+      setClassRank(null)
+      setCommunityGroups([])
+      setPracticeTotals({})
+      setPracticeToday({})
+      setPracticeStats({ streak: 0, daysWeek: 0, weekMin: 0, weekDays: [] })
+      setMySongs([])
+      setCompletedIds(new Set())
+      setHtMember(false)
+      setEffectiveEntitlement('free')
+      setLastOpenedCourse(null)
+      setLastDoneLesson(null)
+      return
+    }
+
     const loadCourses = () => supabase.from('edu_enrollments')
       .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order,is_free,code)')
       .eq('student_id', student.id).eq('is_active', true)
       .then(async ({ data }) => {
         const enr = (data ?? []) as unknown as Enrollment[]
-        setEnrollments(enr)
+        setOwnedCourseIds(new Set(enr.map(e => e.course_id)))
+        const { data: publicCourses } = await supabase
+          .from('edu_courses')
+          .select('id,name,type,track,icon,image_url,status,sort_order,is_free,code')
+        const enrolledById = new Map(enr.map(e => [e.course_id, e]))
+        const discovery = ((publicCourses ?? []) as any[])
+          .filter(c => (c.status ?? 'on') !== 'off' && !enrolledById.has(c.id))
+          .map(course => ({
+            id: `public-${course.id}`,
+            course_id: course.id,
+            enrolled_at: '',
+            course,
+          } as Enrollment))
+        const mergedEnrollments = [...enr, ...discovery]
+        setEnrollments(mergedEnrollments)
         // Khoá miễn phí + khoá đã được cấp quyền → dùng để mở/khoá bài theo từng khoá
-        setFreeCourses(new Set(enr.filter(e => (e.course as any)?.is_free !== false).map(e => e.course_id)))
+        setFreeCourses(new Set(mergedEnrollments.filter(e => (e.course as any)?.is_free !== false).map(e => e.course_id)))
         supabase.from('edu_course_access').select('course_id').eq('student_id', student.id).eq('active', true)
           .then(({ data: acc }) => setAccessCourses(new Set((acc ?? []).map((a: any) => a.course_id))))
         // ── Khoá NỀN còn thiếu (§6): gom mã tiên quyết chưa sở hữu, nạp thẻ mờ để nhắc học bổ sung ──
@@ -764,12 +862,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       })
     supabase.from('edu_students').select('ht_member').eq('id', student.id).single()
       .then(({ data }) => setHtMember(!!(data as any)?.ht_member))
+    supabase.rpc('get_effective_student_entitlement', { p_student_id: student.id })
+      .then(({ data }) => {
+        const row = Array.isArray(data) ? data[0] : data
+        setEffectiveEntitlement(row?.effective_tier ?? 'free')
+      })
     try { setLastOpenedCourse(localStorage.getItem('lastCourse:' + student.id)) } catch { /**/ }
     // Khoá có bài hoàn thành GẦN NHẤT → fallback cho "Học ngay" khi chưa có lastOpened
     supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('completed', true)
       .order('completed_at', { ascending: false }).limit(1)
       .then(({ data }) => { const lid = (data ?? [])[0]?.lesson_id; if (lid) setLastDoneLesson(lid) })
-  }, [student.id])
+  }, [student.id, guest])
 
   const openCourse = async (courseId: string, targetLessonId?: string) => {
     // HT: chặn mở khoá cấp trên khi chưa hoàn thành cấp dưới (lưới an toàn cho mọi lối vào)
@@ -787,7 +890,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
       const parsed = (lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] }))
       setLessons(parsed)
-      const ownedNow = preview || freeCourses.has(courseId) || accessCourses.has(courseId) || enrollments.some(e => e.course_id === courseId)
+      const ownedNow = preview || freeCourses.has(courseId) || accessCourses.has(courseId) || ownedCourseIds.has(courseId)
       // Mở THẲNG vào 1 bài cụ thể (nút Học tiếp / Học ngay) — nếu bài mở được
       if (targetLessonId && ownedNow) {
         const t = parsed.find(l => l.id === targetLessonId)
@@ -835,6 +938,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const logAction = async (actionType: string) => {
     if (!activeLesson || lessonActions.has(actionType) || actionBusy) return
     setActionBusy(actionType)
+    if (guest) { requireLogin(); setActionBusy(null); return }
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setActionBusy(null); return }
     const { error } = await supabase.from('student_action_logs')
@@ -854,7 +958,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   const markComplete = async (lessonId: string) => {
-    if (preview) return   // tài khoản thầy xem khoá → không ghi tiến độ
+    if (preview || guest) return   // tài khoản thầy xem khoá / khách free → không ghi tiến độ
     if (completedIds.has(lessonId) || markingDone) return
     setMarkingDone(true)
     // Kiểm tra đã có record chưa trước khi insert
@@ -890,6 +994,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     await markComplete(lessonId)
     const acts = lessonActionMap[lessonId]
     if (!acts?.has('practiced_lesson')) {
+      if (guest) return
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { error } = await supabase.from('student_action_logs')
@@ -1146,7 +1251,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                         )}
                       </div>
                     </div>
-                    <div onClick={() => { setTab('song'); setTimeout(openSettings, 50) }}
+                    <div onClick={() => { if (guest) { setTab('song'); return }; setTab('song'); setTimeout(openSettings, 50) }}
                       style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', overflow: 'hidden', cursor: 'pointer', border: '2px solid rgba(255,255,255,.35)' }}>
                       {me.avatar_url
                         ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1313,8 +1418,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               {!mainCourse && (
                 <div style={{ background: L.surface, borderRadius: 20, padding: '32px 20px', textAlign: 'center', boxShadow: L.shadow }}>
                   <div style={{ fontSize: 40, marginBottom: 12 }}>🌱</div>
-                  <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>Hành trình chưa bắt đầu</div>
-                  <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.7 }}>Thầy sẽ thêm bạn vào khoá học sau buổi học đầu tiên.</div>
+                  <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{guest ? 'Bắt đầu miễn phí' : 'Hành trình chưa bắt đầu'}</div>
+                  <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.7 }}>{guest ? 'Bạn có thể xem hệ sinh thái và dùng các phần miễn phí trước khi đăng nhập hoặc nâng gói.' : 'Thầy sẽ thêm bạn vào khoá học sau buổi học đầu tiên.'}</div>
                 </div>
               )}
 
@@ -1538,8 +1643,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     const locked     = tierLocked || seqLocked
                     const isCurrent  = !done && !locked
                     return (
-                      <div key={l.id} id={'ls-' + l.id} onClick={() => { if (tierLocked) { if (!isNativeIOS) window.location.href = '/class' } else if (!seqLocked) openLesson(l) }}
-                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: (tierLocked && !isNativeIOS) || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
+                      <div key={l.id} id={'ls-' + l.id} onClick={() => { if (tierLocked) explainUpgrade(); else if (!seqLocked) openLesson(l) }}
+                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: tierLocked || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : isCurrent ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
@@ -1549,7 +1654,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
                           )}
                           {tierLocked && (
-                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>{isNativeIOS ? '🔒 Mở khi bạn đăng ký học với thầy' : '🔒 Đăng ký học để mở khoá →'}</div>
+                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>{isNativeIOS ? '🔒 Cần nâng gói để mở bài này →' : '🔒 Đăng ký học để mở khoá →'}</div>
                           )}
                           {isCurrent && !skillMap[l.id] && (
                             <div style={{ fontSize: 11, color: L.p1, fontWeight: 600, marginTop: 2 }}>▶ Học tiếp theo</div>
@@ -1585,14 +1690,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 const entry = NATIVE_LESSONS[key]
                 if (!entry) return <div style={{ padding: 24, color: L.t2 }}>Bài học chưa cấu hình đúng (native: {key || '—'}).<br /><button onClick={goBack} style={{ marginTop: 12 }}>‹ Quay lại</button></div>
                 const C = entry.Component
-                return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={preview ? undefined : student.id} lessonId={activeLesson.id} />
+                return <C onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={preview || guest ? undefined : student.id} lessonId={activeLesson.id} />
               })()
             ) : activeLesson.lesson_type === 'strum' ? (
-              <ChordStrumPlayer song={configToSong(parseStrumConfig(activeLesson.content), activeLesson.title)} onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={preview ? undefined : student.id} lessonId={activeLesson.id} />
+              <ChordStrumPlayer song={configToSong(parseStrumConfig(activeLesson.content), activeLesson.title)} onClose={goBack} onComplete={() => markComplete(activeLesson.id)} studentId={preview || guest ? undefined : student.id} lessonId={activeLesson.id} />
             ) : activeLesson.lesson_type === 'flow' ? (
               <FlowPlayer
                 lessonId={activeLesson.id}
-                studentId={student.id}
+                studentId={guest ? undefined : student.id}
                 onComplete={() => markComplete(activeLesson.id)}
                 onBack={goBack}
                 fullScreen
@@ -2332,11 +2437,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.35, ...clamp2 }}>{name}</div>
-                <div style={{ fontSize: 12.5, color: L.t2 }}>{LEVEL_VI[me.level ?? ''] ?? 'Học viên'}</div>
+                <div style={{ fontSize: 12.5, color: L.t2 }}>{guest ? 'Miễn phí' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
               </div>
-              <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>
-              <button onClick={onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 12px', color: L.t2, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                Đăng xuất
+              {isNativeIOS && (
+                <button onClick={openUpgrade} style={{ background: L.p1, border: 'none', borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                  Nâng gói
+                </button>
+              )}
+              {!guest && <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>}
+              <button onClick={guest ? requireLogin : onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 12px', color: L.t2, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                {guest ? 'Đăng nhập' : 'Đăng xuất'}
               </button>
             </div>
           </div>

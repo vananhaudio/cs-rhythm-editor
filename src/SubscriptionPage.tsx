@@ -18,6 +18,8 @@ import {
 type SyncResult = {
   ok?: boolean
   error?: string
+  reason?: string
+  request_id?: string
   tier?: SubscriptionTier
   effective?: { effective_tier?: string; source?: string }
 }
@@ -49,6 +51,8 @@ const planCopy: Record<SubscriptionTier, { tag: string; description: string }> =
     description: 'Mở quyền nâng cao cho học viên muốn đào sâu kỹ năng và lộ trình.',
   },
 }
+
+const BUILD_DIAGNOSTIC = 'TVA 1.2.0 (10) · bundled'
 
 export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true)
@@ -128,25 +132,58 @@ export default function SubscriptionPage() {
     if (!entitlement.signedTransactionInfo && !entitlement.transactionId) {
       return { error: 'missing_transaction' }
     }
+    const accessToken = await getValidAccessToken()
+    if (!accessToken) {
+      setSessionReady(false)
+      return { error: 'invalid_local_session' }
+    }
+    const clientRequestId = crypto.randomUUID()
+    console.info('[subscription] sync_request', {
+      requestId: clientRequestId,
+      productId: entitlement.productId,
+      hasSignedTransactionInfo: Boolean(entitlement.signedTransactionInfo),
+      hasTransactionId: Boolean(entitlement.transactionId),
+      hasAccessToken: true,
+    })
     const { data, error } = await supabase.functions.invoke('apple-subscription-sync', {
+      headers: { Authorization: `Bearer ${accessToken}` },
       body: {
         signedTransactionInfo: entitlement.signedTransactionInfo,
         transactionId: entitlement.transactionId,
+        clientRequestId,
       },
     })
-    if (error) return { error: error.message }
-    return data as SyncResult
+    if (error) {
+      const details = await readFunctionError(error)
+      console.info('[subscription] sync_error', {
+        requestId: clientRequestId,
+        productId: entitlement.productId,
+        error: details.error,
+        reason: details.reason,
+      })
+      return { ...details, request_id: clientRequestId }
+    }
+    console.info('[subscription] sync_result', {
+      requestId: clientRequestId,
+      productId: entitlement.productId,
+      ok: Boolean((data as SyncResult)?.ok),
+      tier: (data as SyncResult)?.tier ?? null,
+    })
+    return { ...(data as SyncResult), request_id: clientRequestId }
   }
 
   async function buy(product: IAPProduct) {
+    console.info('[subscription] purchase_button_clicked', { productId: product.productId, loggedIn: sessionReady })
     if (!sessionReady) {
       setMessage({ type: 'err', text: 'Đăng nhập trước để gói mua được gắn đúng vào tài khoản của bạn.' })
       return
     }
     setBusyProduct(product.productId)
-    setMessage(null)
+    setMessage({ type: 'info', text: 'Đang mở giao dịch App Store...' })
     try {
+      console.info('[subscription] purchase_native_call', { productId: product.productId })
       const result = await purchaseProduct(product.productId)
+      console.info('[subscription] purchase_native_result', { productId: product.productId, status: result.status })
       if (result.status === 'cancelled') {
         setMessage({ type: 'info', text: 'Bạn đã hủy giao dịch. Chưa có gói nào được kích hoạt.' })
         return
@@ -157,15 +194,17 @@ export default function SubscriptionPage() {
       }
       const synced = await syncTransaction(result)
       if (!synced.ok) {
-        setMessage({ type: 'err', text: 'Đã mua trên App Store nhưng server chưa xác minh được. Bấm Khôi phục giao dịch sau khi hệ thống xác minh sẵn sàng.' })
+        setMessage({ type: 'err', text: syncFailureMessage(synced) })
         return
       }
       setEffectiveTier(synced.effective?.effective_tier ?? synced.tier ?? 'free')
       setMessage({ type: 'ok', text: `Gói ${TIER_LABEL[synced.tier as SubscriptionTier] ?? 'đăng ký'} đã được kích hoạt.` })
     } catch (e: any) {
       const text = String(e?.message ?? '')
+      const code = e?.code ? ` (${String(e.code)})` : ''
+      console.info('[subscription] purchase_native_error', { productId: product.productId, code: e?.code ?? null, message: text })
       if (!text.toLowerCase().includes('cancel')) {
-        setMessage({ type: 'err', text: text || 'Không hoàn tất được giao dịch.' })
+        setMessage({ type: 'err', text: `Không thể mở giao dịch App Store${code}: ${text || 'Không hoàn tất được giao dịch.'}` })
       }
     } finally {
       setBusyProduct(null)
@@ -178,14 +217,22 @@ export default function SubscriptionPage() {
       return
     }
     setBusyProduct('restore')
-    setMessage(null)
+    setMessage({ type: 'info', text: 'Đang kiểm tra giao dịch App Store trên thiết bị...' })
     try {
-      await restorePurchases()
-      const entitlements = await getCurrentEntitlements()
+      let entitlements = await getCurrentEntitlements()
+      if (!entitlements.length) {
+        setMessage({ type: 'info', text: 'Chưa thấy giao dịch trên thiết bị. Đang hỏi lại App Store...' })
+        await restorePurchases()
+        entitlements = await getCurrentEntitlements()
+      }
       const results = await Promise.all(entitlements.map(syncTransaction))
       const ok = results.filter((r) => r.ok)
       if (!ok.length) {
-        setMessage({ type: 'info', text: 'Chưa tìm thấy gói App Store còn hiệu lực để khôi phục.' })
+        const failed = results.find((r) => r.error)
+        setMessage({
+          type: failed ? 'err' : 'info',
+          text: failed ? syncFailureMessage(failed) : 'Chưa tìm thấy gói App Store còn hiệu lực để khôi phục.',
+        })
         return
       }
       await loadEffective()
@@ -260,6 +307,7 @@ export default function SubscriptionPage() {
 
         {sortedProducts.map((product) => {
           const tier = APPLE_PRODUCT_TIER[product.productId]
+          const advancedPending = tier === 'nang_cao_499'
           return (
             <section key={product.productId} style={planCard(effectiveTier === tier)}>
               <div>
@@ -269,17 +317,22 @@ export default function SubscriptionPage() {
                 </div>
                 <p style={planDesc()}>{planCopy[tier].description}</p>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 12 }}>
-                  <span style={{ fontSize: 24, fontWeight: 850 }}>{product.price}</span>
-                  <span style={{ fontSize: 13, color: COLORS.muted }}>{periodLabel(product)}</span>
+                  <span style={{ fontSize: 24, fontWeight: 850 }}>{advancedPending ? 'Sắp có' : product.price}</span>
+                  {!advancedPending && <span style={{ fontSize: 13, color: COLORS.muted }}>{periodLabel(product)}</span>}
                 </div>
-                {trialLabel(product) && (
+                {advancedPending && (
+                  <p style={{ margin: '8px 0 0', color: COLORS.muted, fontSize: 13, lineHeight: 1.5 }}>
+                    Gói Nâng cao đang được giữ lại để hoàn thiện kiểm thử App Store. Bạn chưa thể mua gói này trong phiên bản hiện tại.
+                  </p>
+                )}
+                {!advancedPending && trialLabel(product) && (
                   <p style={{ margin: '8px 0 0', color: COLORS.muted, fontSize: 13, lineHeight: 1.5 }}>
                     {trialLabel(product)}. Sau thời gian dùng thử, gói tự động gia hạn theo giá App Store. Bạn có thể hủy trong Apple ID.
                   </p>
                 )}
               </div>
-              <button onClick={() => buy(product)} disabled={!sessionReady || busyProduct === product.productId} style={primaryButton()}>
-                {busyProduct === product.productId ? 'Đang xử lý...' : effectiveTier === tier ? 'Gói hiện tại' : 'Mua gói này'}
+              <button onClick={() => advancedPending ? undefined : buy(product)} disabled={advancedPending || busyProduct === product.productId} style={advancedPending ? disabledButton() : primaryButton(!sessionReady)}>
+                {advancedPending ? 'Sắp có' : busyProduct === product.productId ? 'Đang xử lý...' : effectiveTier === tier ? 'Gói hiện tại' : 'Mua gói này'}
               </button>
             </section>
           )
@@ -301,6 +354,7 @@ export default function SubscriptionPage() {
           {' '}<a href="https://timming.vananhaudio.com/tvaprivacy" target="_blank" rel="noreferrer" style={{ color: COLORS.primary }}>Chính sách bảo mật</a>
           {' · '}
           <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noreferrer" style={{ color: COLORS.primary }}>Điều khoản sử dụng</a>
+          <div style={{ marginTop: 8, fontSize: 11, color: COLORS.muted }}>{BUILD_DIAGNOSTIC}</div>
         </footer>
       </main>
     </div>
@@ -346,12 +400,16 @@ function input(): CSSProperties {
   return { width: '100%', boxSizing: 'border-box', border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: '12px 13px', fontSize: 16, fontFamily: 'inherit', outline: 'none', background: '#fff' }
 }
 
-function primaryButton(): CSSProperties {
-  return { marginTop: 14, width: '100%', border: 'none', borderRadius: 12, background: COLORS.primary, color: '#fff', fontSize: 15, fontWeight: 800, padding: '13px 14px', fontFamily: 'inherit', cursor: 'pointer' }
+function primaryButton(needsLogin = false): CSSProperties {
+  return { marginTop: 14, width: '100%', border: 'none', borderRadius: 12, background: needsLogin ? COLORS.primaryDark : COLORS.primary, color: '#fff', fontSize: 15, fontWeight: 800, padding: '13px 14px', fontFamily: 'inherit', cursor: 'pointer' }
 }
 
 function secondaryButton(): CSSProperties {
   return { width: '100%', border: `1px solid ${COLORS.border}`, borderRadius: 12, background: COLORS.surface, color: COLORS.text, fontSize: 15, fontWeight: 800, padding: '13px 14px', fontFamily: 'inherit', cursor: 'pointer' }
+}
+
+function disabledButton(): CSSProperties {
+  return { marginTop: 14, width: '100%', border: `1px solid ${COLORS.border}`, borderRadius: 12, background: COLORS.soft, color: COLORS.muted, fontSize: 15, fontWeight: 800, padding: '13px 14px', fontFamily: 'inherit', cursor: 'not-allowed' }
 }
 
 function linkButton(): CSSProperties {
@@ -361,4 +419,47 @@ function linkButton(): CSSProperties {
 function notice(type: 'ok' | 'err' | 'info'): CSSProperties {
   const color = type === 'ok' ? COLORS.ok : type === 'err' ? COLORS.danger : COLORS.muted
   return { background: COLORS.surface, border: `1px solid ${COLORS.border}`, color, borderRadius: 12, padding: 13, fontSize: 14, lineHeight: 1.5, marginTop: 12 }
+}
+
+async function readFunctionError(error: any): Promise<SyncResult> {
+  const fallback = String(error?.message ?? 'sync_failed')
+  const context = error?.context
+  if (!context?.clone) return { error: fallback }
+  try {
+    const body = await context.clone().json()
+    return {
+      error: safeText(body?.error) || fallback,
+      reason: safeText(body?.reason),
+    }
+  } catch {
+    return { error: fallback }
+  }
+}
+
+async function getValidAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) return null
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(session.access_token)
+  if (!userError && userData.user) return session.access_token
+
+  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+  if (refreshError || !refreshed.session?.access_token) return null
+
+  const { data: refreshedUser, error: refreshedUserError } = await supabase.auth.getUser(refreshed.session.access_token)
+  if (refreshedUserError || !refreshedUser.user) return null
+
+  return refreshed.session.access_token
+}
+
+function syncFailureMessage(result: SyncResult): string {
+  const code = result.error ? ` (${result.error})` : ''
+  const reason = result.reason ? ` Chi tiết: ${result.reason}` : ''
+  const request = result.request_id ? ` Mã kiểm tra: ${result.request_id}` : ''
+  return `Giao dịch đã hoàn tất trên App Store nhưng quyền học chưa được đồng bộ${code}.${reason}${request} Bấm Khôi phục giao dịch để thử đồng bộ lại.`
+}
+
+function safeText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  return value.replace(/[A-Za-z0-9_-]{80,}/g, '[hidden]').slice(0, 240)
 }

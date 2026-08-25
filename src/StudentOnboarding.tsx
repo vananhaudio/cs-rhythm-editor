@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import MobileStudentPortal from './MobileStudentPortal'
 import ChordDiagramIcon from './ChordDiagramIcon'
-import { checkEmail } from './logic/emailCheck'
 import { supabase } from './supabase'
-import { isNativeIOS, purchaseMonthly, restorePurchases } from './iap'
+import { isNativeIOS } from './iap'
 
 // Đồng bộ tông mobile app: primary indigo #4338CA, accent cam #EA580C, nền xám #F0F2F5
 const T = {
@@ -15,6 +14,8 @@ const T = {
   green: '#16A34A', greenLight: '#DCFCE7', greenMid: '#15803D',
   danger: '#B91C1C', dangerBg: '#FEE2E2',
 }
+
+const BUILD_DIAGNOSTIC = 'TVA 1.2.0 (10) · bundled'
 
 const LEVEL_LABEL: Record<string, string> = {
   beginner: 'Mới bắt đầu', elementary: 'Cơ bản',
@@ -69,11 +70,22 @@ function displayName(s: Student) {
   return name
 }
 
+const GUEST_STUDENT: Student = {
+  id: 'guest-free',
+  full_name: 'Bạn',
+  phone: null,
+  email: null,
+  level: 'beginner',
+  is_active: true,
+  enrolled_at: null,
+  display_name: 'Bạn',
+}
+
 type Step = 'welcome' | 'login' | 'portal'
 
 export default function StudentOnboarding() {
-  const [step, setStep]           = useState<Step>('welcome')
-  const [student, setStudent]     = useState<Student | null>(null)
+  const [step, setStep]           = useState<Step>('portal')
+  const [student, setStudent]     = useState<Student | null>(GUEST_STUDENT)
   const [preview, setPreview]     = useState(false)   // tài khoản thầy xem khoá (mở khoá hết, không ghi tiến độ)
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
@@ -82,13 +94,6 @@ export default function StudentOnboarding() {
   const [showPass, setShowPass]   = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
-  const [iapLoading, setIapLoading]   = useState(false)
-  const [iapMsg, setIapMsg]           = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
-  const [iapPurchased, setIapPurchased] = useState(false)
-  const [iapRegEmail, setIapRegEmail]   = useState('')
-  const [iapRegPass, setIapRegPass]     = useState('')
-  const [iapRegLoading, setIapRegLoading] = useState(false)
-  const [iapRegError, setIapRegError]   = useState('')
   const passRef  = useRef<HTMLInputElement>(null)
 
   // Xác nhận nhóm đang chờ (học viên bấm link /join-group/<token> rồi mới đăng nhập)
@@ -171,94 +176,9 @@ export default function StudentOnboarding() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    setStudent(null)
+    setStudent(GUEST_STUDENT)
     setEmail(''); setPassword('')
-    setStep('welcome')
-  }
-
-  const handleIAPPurchase = async () => {
-    setIapMsg(null)
-    setIapLoading(true)
-    try {
-      await purchaseMonthly()
-      setIapPurchased(true)
-    } catch (e: any) {
-      const msg: string = e?.message ?? ''
-      if (!msg.toLowerCase().includes('cancel') && !msg.includes('SKErrorDomain error 2')) {
-        setIapMsg({ type: 'err', text: msg || 'Không thể hoàn tất. Thử lại sau.' })
-      }
-    } finally {
-      setIapLoading(false)
-    }
-  }
-
-  const handleIAPRestore = async () => {
-    setIapMsg(null)
-    setIapLoading(true)
-    try {
-      await restorePurchases()
-      setIapPurchased(true)
-    } catch {
-      setIapMsg({ type: 'err', text: 'Không tìm thấy giao dịch cần khôi phục.' })
-    } finally {
-      setIapLoading(false)
-    }
-  }
-
-  const handleIAPRegister = async () => {
-    if (!iapRegEmail || !iapRegPass) return
-    const ec = checkEmail(iapRegEmail)
-    if (!ec.ok) { setIapRegError(ec.error || 'Email chưa đúng.'); return }
-    setIapRegLoading(true)
-    setIapRegError('')
-    try {
-      // Thử sign up (nếu đã có tài khoản thì bỏ qua lỗi duplicate)
-      await supabase.auth.signUp({ email: iapRegEmail, password: iapRegPass })
-
-      // Sign in để lấy session (quan trọng: đảm bảo có session dù Supabase có bật email confirm hay không)
-      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email: iapRegEmail, password: iapRegPass })
-      if (signInErr) throw new Error('Đăng nhập thất bại: ' + signInErr.message)
-
-      const userId = signInData.user.id
-
-      // Tạo hoặc cập nhật hồ sơ học sinh
-      const { error: upsertErr } = await supabase.from('edu_students').upsert({
-        user_id: userId,
-        full_name: iapRegEmail.split('@')[0],
-        email: iapRegEmail,
-        is_active: true,
-        level: 'beginner',
-        enrolled_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-      if (upsertErr) throw new Error('Tạo hồ sơ thất bại: ' + upsertErr.message)
-
-      const { data: studentData } = await supabase
-        .from('edu_students')
-        .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
-        .eq('user_id', userId)
-        .single()
-      if (!studentData) throw new Error('Không tải được hồ sơ. Thử đăng nhập lại.')
-
-      // Auto-enroll vào tất cả khoá học đang có
-      const { data: courses } = await supabase.from('edu_courses').select('id')
-      if (courses && courses.length > 0) {
-        const enrollments = courses.map((c: { id: string }) => ({
-          student_id: studentData.id,
-          course_id: c.id,
-          enrolled_by: userId,
-          is_active: true,
-        }))
-        const { error: enrollError } = await supabase.from('edu_enrollments').upsert(enrollments, { onConflict: 'student_id,course_id', ignoreDuplicates: true })
-        if (enrollError) console.error('Auto-enroll thất bại:', enrollError.message)
-      }
-
-      setStudent(studentData)
-      setStep('portal')
-    } catch (e: any) {
-      setIapRegError(e.message || 'Không thể tạo tài khoản. Thử lại sau.')
-    } finally {
-      setIapRegLoading(false)
-    }
+    setStep('portal')
   }
 
   const Btn = ({ style, ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
@@ -349,6 +269,9 @@ export default function StudentOnboarding() {
               </Btn>
             </div>
           )}
+          <div style={{ marginTop: 18, fontSize: 11, color: T.textDim }}>
+            {BUILD_DIAGNOSTIC}
+          </div>
         </div>
       )}
 
@@ -420,7 +343,13 @@ export default function StudentOnboarding() {
       {/* Tạm thời: web DÙNG CHUNG giao diện mobile (cột giữa 430px) để đồng bộ hết cải tiến với app. Desktop riêng để cải tiến sau. */}
       {step === 'portal' && student && (
         <div style={{ minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
-          <MobileStudentPortal student={student} onLogout={handleLogout} preview={preview} />
+          <MobileStudentPortal
+            student={student}
+            onLogout={handleLogout}
+            preview={preview}
+            guest={student.id === GUEST_STUDENT.id}
+            onLoginRequired={() => setStep('login')}
+          />
         </div>
       )}
     </div>
