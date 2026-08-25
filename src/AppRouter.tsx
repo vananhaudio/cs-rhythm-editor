@@ -47,6 +47,7 @@ import GrooveExercise from './groove/GrooveExercise'
 import StrumWorkshop from './StrumWorkshop'
 import PianoJourney from './PianoJourney'
 import MusicPlayer from './piano/MusicPlayer'
+import SubscriptionPage from './SubscriptionPage'
 type AppUser = {
   id: string
   role: string
@@ -147,6 +148,11 @@ export default function AppRouter() {
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+
+  // ── Route /subscribe — production subscription paywall for iOS review ──
+  if (path === '/subscribe' || path.startsWith('/subscribe')) {
+    return <SubscriptionPage />
+  }
 
   // ── Domain class.vananhaudio.com ──
   //  /class*  → tuyển sinh ; /  → tuyển sinh (khách) hoặc cổng học (học sinh đã đăng nhập)

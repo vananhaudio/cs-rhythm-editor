@@ -3,7 +3,7 @@ import Capacitor
 import StoreKit
 
 @objc(IAPPlugin)
-public class IAPPlugin: CAPPlugin, CAPBridgedPlugin, SKProductsRequestDelegate, SKPaymentTransactionObserver {
+public class IAPPlugin: CAPPlugin, CAPBridgedPlugin {
 
     public let identifier = "IAPPlugin"
     public let jsName = "IAP"
@@ -11,114 +11,190 @@ public class IAPPlugin: CAPPlugin, CAPBridgedPlugin, SKProductsRequestDelegate, 
         CAPPluginMethod(name: "getProducts", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "currentEntitlements", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "manageSubscriptions", returnType: CAPPluginReturnPromise),
     ]
 
-    private let PRODUCT_ID = "com.vananhaudio.guitar.monthly"
-    private var products: [SKProduct] = []
-    private var pendingCall: CAPPluginCall?
-
-    override public func load() {
-        SKPaymentQueue.default().add(self)
-        fetchProducts()
-    }
-
-    private func fetchProducts() {
-        let request = SKProductsRequest(productIdentifiers: [PRODUCT_ID])
-        request.delegate = self
-        request.start()
-    }
-
-    // MARK: - Plugin Methods
+    private let productIds = [
+        "com.vananhaudio.guitar.subscription.khoi_dau",
+        "com.vananhaudio.guitar.subscription.can_ban",
+        "com.vananhaudio.guitar.monthly",
+    ]
 
     @objc func getProducts(_ call: CAPPluginCall) {
-        if products.isEmpty {
-            fetchProducts()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                self?.returnProducts(call)
+        Task {
+            do {
+                let products = try await Product.products(for: productIds)
+                let sorted = products.sorted { productIds.firstIndex(of: $0.id) ?? 999 < productIds.firstIndex(of: $1.id) ?? 999 }
+                call.resolve(["products": sorted.map(productPayload)])
+            } catch {
+                call.reject("Không tải được gói đăng ký từ App Store.")
             }
-        } else {
-            returnProducts(call)
         }
-    }
-
-    private func returnProducts(_ call: CAPPluginCall) {
-        let list = products.map { p -> [String: Any] in
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .currency
-            formatter.locale = p.priceLocale
-            let price = formatter.string(from: p.price) ?? "\(p.price)"
-            return [
-                "productId": p.productIdentifier,
-                "title": p.localizedTitle,
-                "description": p.localizedDescription,
-                "price": price,
-            ]
-        }
-        call.resolve(["products": list])
     }
 
     @objc func purchase(_ call: CAPPluginCall) {
-        guard SKPaymentQueue.canMakePayments() else {
-            call.reject("Purchases are disabled on this device")
+        let requestedId = call.getString("productId") ?? ""
+        guard productIds.contains(requestedId) else {
+            call.reject("Gói đăng ký không hợp lệ.")
             return
         }
-        guard let product = products.first(where: { $0.productIdentifier == PRODUCT_ID })
-              ?? products.first else {
-            // Fetch lại rồi thử
-            pendingCall = call
-            fetchProducts()
-            return
-        }
-        pendingCall = call
-        let payment = SKPayment(product: product)
-        SKPaymentQueue.default().add(payment)
-    }
 
-    @objc func restore(_ call: CAPPluginCall) {
-        pendingCall = call
-        SKPaymentQueue.default().restoreCompletedTransactions()
-    }
-
-    // MARK: - SKProductsRequestDelegate
-
-    public func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
-        products = response.products
-        // Nếu đang chờ purchase thì tiếp tục
-        if let call = pendingCall, !products.isEmpty {
-            pendingCall = nil
-            purchase(call)
-        }
-    }
-
-    // MARK: - SKPaymentTransactionObserver
-
-    public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        for transaction in transactions {
-            switch transaction.transactionState {
-            case .purchased, .restored:
-                SKPaymentQueue.default().finishTransaction(transaction)
-                if let call = pendingCall {
-                    pendingCall = nil
-                    call.resolve(["productId": transaction.payment.productIdentifier, "status": "purchased"])
+        Task {
+            do {
+                guard let product = try await Product.products(for: [requestedId]).first else {
+                    call.reject("Không tìm thấy gói đăng ký trên App Store.")
+                    return
                 }
-                notifyListeners("purchaseCompleted", data: ["productId": transaction.payment.productIdentifier])
-            case .failed:
-                SKPaymentQueue.default().finishTransaction(transaction)
-                if let call = pendingCall {
-                    pendingCall = nil
-                    let msg = transaction.error?.localizedDescription ?? "Purchase failed"
-                    call.reject(msg)
+
+                let result = try await product.purchase()
+                switch result {
+                case .success(let verification):
+                    let signedTransactionInfo = verification.jwsRepresentation
+                    let transaction = try checkVerified(verification)
+                    await transaction.finish()
+                    call.resolve(transactionPayload(transaction, status: "purchased", signedTransactionInfo: signedTransactionInfo))
+                case .userCancelled:
+                    call.resolve(["productId": requestedId, "status": "cancelled"])
+                case .pending:
+                    call.resolve(["productId": requestedId, "status": "pending"])
+                @unknown default:
+                    call.reject("Trạng thái mua hàng chưa được hỗ trợ.")
                 }
-            default:
-                break
+            } catch {
+                call.reject(error.localizedDescription)
             }
         }
     }
 
-    public func paymentQueueRestoreCompletedTransactionsFinished(_ queue: SKPaymentQueue) {
-        if let call = pendingCall {
-            pendingCall = nil
-            call.resolve(["status": "restored"])
+    @objc func restore(_ call: CAPPluginCall) {
+        Task {
+            do {
+                try await AppStore.sync()
+                let entitlements = await currentEntitlementPayloads()
+                call.resolve(["status": "restored", "entitlements": entitlements])
+            } catch {
+                call.reject("Không khôi phục được giao dịch.")
+            }
+        }
+    }
+
+    @objc func currentEntitlements(_ call: CAPPluginCall) {
+        Task {
+            let entitlements = await currentEntitlementPayloads()
+            call.resolve(["entitlements": entitlements])
+        }
+    }
+
+    @objc func manageSubscriptions(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            do {
+                guard let scene = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive }) else {
+                    call.reject("Không mở được màn quản lý đăng ký.")
+                    return
+                }
+                try await AppStore.showManageSubscriptions(in: scene)
+                call.resolve(["status": "opened"])
+            } catch {
+                call.reject("Không mở được màn quản lý đăng ký.")
+            }
+        }
+    }
+
+    private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
+        switch result {
+        case .unverified:
+            throw NSError(domain: "IAPPlugin", code: 1, userInfo: [NSLocalizedDescriptionKey: "Giao dịch chưa được App Store xác minh."])
+        case .verified(let safe):
+            return safe
+        }
+    }
+
+    private func currentEntitlementPayloads() async -> [[String: Any]] {
+        var payloads: [[String: Any]] = []
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result, productIds.contains(transaction.productID) {
+                payloads.append(transactionPayload(transaction, status: "restored", signedTransactionInfo: result.jwsRepresentation))
+            }
+        }
+        return payloads
+    }
+
+    private func productPayload(_ product: Product) -> [String: Any] {
+        var payload: [String: Any] = [
+            "productId": product.id,
+            "title": product.displayName,
+            "description": product.description,
+            "price": product.displayPrice,
+            "isAvailable": true,
+        ]
+
+        if let subscription = product.subscription {
+            payload["subscriptionPeriod"] = periodPayload(subscription.subscriptionPeriod)
+            payload["subscriptionPeriodValue"] = subscription.subscriptionPeriod.value
+            payload["subscriptionPeriodUnit"] = unitName(subscription.subscriptionPeriod.unit)
+
+            if let offer = subscription.introductoryOffer {
+                payload["introOfferPaymentMode"] = paymentModeName(offer.paymentMode)
+                payload["introOfferPeriod"] = periodPayload(offer.period)
+                payload["introOfferPeriodValue"] = offer.period.value
+                payload["introOfferPeriodUnit"] = unitName(offer.period.unit)
+            }
+        }
+
+        return payload
+    }
+
+    private func transactionPayload(_ transaction: Transaction, status: String, signedTransactionInfo: String) -> [String: Any] {
+        var payload: [String: Any] = [
+            "productId": transaction.productID,
+            "transactionId": String(transaction.id),
+            "originalTransactionId": String(transaction.originalID),
+            "signedTransactionInfo": signedTransactionInfo,
+            "status": status,
+        ]
+
+        if #available(iOS 16.0, *) {
+            payload["environment"] = "\(transaction.environment)"
+        }
+
+        if let expiresDate = transaction.expirationDate {
+            payload["expiresDate"] = isoString(expiresDate)
+        }
+        if let revocationDate = transaction.revocationDate {
+            payload["revocationDate"] = isoString(revocationDate)
+        }
+        return payload
+    }
+
+    private func isoString(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
+    private func periodPayload(_ period: Product.SubscriptionPeriod) -> String {
+        "\(period.value) \(unitName(period.unit))"
+    }
+
+    private func unitName(_ unit: Product.SubscriptionPeriod.Unit) -> String {
+        switch unit {
+        case .day: return "day"
+        case .week: return "week"
+        case .month: return "month"
+        case .year: return "year"
+        @unknown default: return "unknown"
+        }
+    }
+
+    private func paymentModeName(_ mode: Product.SubscriptionOffer.PaymentMode) -> String {
+        switch mode {
+        case .freeTrial: return "freeTrial"
+        case .payAsYouGo: return "payAsYouGo"
+        case .payUpFront: return "payUpFront"
+        default: return "unknown"
         }
     }
 }

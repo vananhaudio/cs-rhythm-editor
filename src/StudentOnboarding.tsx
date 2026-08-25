@@ -332,102 +332,21 @@ export default function StudentOnboarding() {
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIOS && (
             <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360, width: '100%' }}>
-              {!iapPurchased ? (
-                <>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 3 }}>
-                    Chưa có tài khoản?
-                  </div>
-                  <div style={{ fontSize: 13.5, color: T.textMuted, marginBottom: 14, lineHeight: 1.55 }}>
-                    Bạn có thể đăng ký học trực tiếp qua App Store.
-                  </div>
-                  <Btn
-                    onClick={handleIAPPurchase}
-                    disabled={iapLoading}
-                    style={{
-                      background: '#1B4332', color: '#fff', border: 'none', borderRadius: 12,
-                      padding: '12px 24px', fontSize: 15, fontWeight: 600, width: '100%',
-                      opacity: iapLoading ? 0.6 : 1,
-                    }}
-                  >
-                    {iapLoading ? 'Đang xử lý...' : 'Đăng ký học — $49.99 / tháng'}
-                  </Btn>
-
-                  {iapMsg && (
-                    <div style={{
-                      marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 14,
-                      background: '#F0D8D0', color: '#8B3A1E', border: '1px solid #E4B8A8',
-                    }}>{iapMsg.text}</div>
-                  )}
-
-                  <Btn
-                    onClick={handleIAPRestore}
-                    disabled={iapLoading}
-                    style={{
-                      marginTop: 10, background: 'none', border: 'none',
-                      color: T.textDim, fontSize: 13, cursor: 'pointer',
-                      textDecoration: 'underline', padding: '4px 0',
-                    }}
-                  >Khôi phục giao dịch đã mua</Btn>
-
-                  <div style={{ fontSize: 12, color: T.textDim, marginTop: 10, lineHeight: 1.7 }}>
-                    Đăng ký tự động gia hạn mỗi tháng với giá $49.99/tháng. Tài khoản Apple ID của bạn sẽ bị tính phí khi xác nhận mua hàng. Đăng ký tự động gia hạn trừ khi tắt ít nhất 24 giờ trước khi hết kỳ thanh toán hiện tại.<br />
-                    Huỷ bất kỳ lúc nào trong Cài đặt &gt; Apple ID &gt; Đăng ký.<br />
-                    <a href="https://timming.vananhaudio.com/tvaprivacy"
-                       target="_blank" rel="noreferrer"
-                       style={{ color: T.textDim }}>Chính sách bảo mật</a>
-                    {' · '}
-                    <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
-                       target="_blank" rel="noreferrer"
-                       style={{ color: T.textDim }}>Điều khoản sử dụng (EULA)</a>
-                  </div>
-                </>
-              ) : (
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ fontWeight: 700, fontSize: 17, textAlign: 'center', marginBottom: 4 }}>Thanh toán thành công!</div>
-                  <div style={{ fontSize: 14, color: T.textMuted, textAlign: 'center', marginBottom: 20 }}>Tạo tài khoản để bắt đầu học ngay.</div>
-
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Email</label>
-                    <input
-                      value={iapRegEmail}
-                      onChange={e => setIapRegEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      type="email"
-                      autoFocus
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
-                    />
-                  </div>
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 5, fontWeight: 500 }}>Mật khẩu</label>
-                    <input
-                      value={iapRegPass}
-                      onChange={e => setIapRegPass(e.target.value)}
-                      placeholder="Tối thiểu 6 ký tự"
-                      type="password"
-                      onKeyDown={e => e.key === 'Enter' && handleIAPRegister()}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
-                    />
-                  </div>
-
-                  {iapRegError && (
-                    <div style={{ background: '#F0D8D0', border: '1px solid #E4B8A8', borderRadius: 8, padding: '10px 14px', fontSize: 14, color: '#8B3A1E', marginBottom: 12 }}>
-                      {iapRegError}
-                    </div>
-                  )}
-
-                  <Btn
-                    onClick={handleIAPRegister}
-                    disabled={iapRegLoading || !iapRegEmail || !iapRegPass}
-                    style={{
-                      width: '100%', background: T.header, color: '#fff', border: 'none',
-                      borderRadius: 12, padding: '13px', fontSize: 16, fontWeight: 700,
-                      opacity: (!iapRegEmail || !iapRegPass) ? 0.6 : 1,
-                    }}
-                  >
-                    {iapRegLoading ? 'Đang tạo tài khoản...' : 'Bắt đầu học ngay →'}
-                  </Btn>
-                </div>
-              )}
+              <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 3 }}>
+                Đăng ký học qua App Store
+              </div>
+              <div style={{ fontSize: 13.5, color: T.textMuted, marginBottom: 14, lineHeight: 1.55 }}>
+                Chọn Free, Khởi đầu, Căn bản hoặc Nâng cao. Giá và ưu đãi được lấy trực tiếp từ App Store.
+              </div>
+              <Btn
+                onClick={() => { window.location.href = '/subscribe' }}
+                style={{
+                  background: '#1B4332', color: '#fff', border: 'none', borderRadius: 12,
+                  padding: '12px 24px', fontSize: 15, fontWeight: 600, width: '100%',
+                }}
+              >
+                Xem các gói học
+              </Btn>
             </div>
           )}
         </div>
