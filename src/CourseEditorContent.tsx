@@ -7,6 +7,7 @@ import { QuizViewer } from './components/QuizViewer'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import StrumConfigEditor, { StrumPreviewCard } from './StrumConfigEditor'
 import FlowPlayer from './FlowPlayer'
+import { ENTITLEMENT_TIER_LABEL, type EntitlementTier } from './contentAccess'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -21,7 +22,16 @@ const C = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type CourseStatus = 'on' | 'off' | 'coming_soon'
-interface Course { id: string; name: string; slug: string; type: string; track: string | null; status: CourseStatus; icon?: string | null; image_url?: string | null; code?: string | null }
+type ContentVisibility = 'visible' | 'hidden'
+type ContentAvailability = 'available' | 'coming_soon'
+type LessonPolicyMode = 'inherit' | 'override'
+const ENTITLEMENT_TIERS: EntitlementTier[] = ['free', 'khoi_dau_99', 'can_ban_396', 'nang_cao_499']
+interface Course {
+  id: string; name: string; slug: string; type: string; track: string | null; status: CourseStatus
+  icon?: string | null; image_url?: string | null; code?: string | null; is_free?: boolean | null
+  access_policy_enabled?: boolean | null; required_tier?: EntitlementTier | null
+  visibility?: ContentVisibility | null; availability?: ContentAvailability | null; allow_preview?: boolean | null
+}
 const STATUS_CFG: Record<CourseStatus, { label: string; dot: string; color: string; bg: string; border: string }> = {
   on:          { label: '● Bật',         dot: '#16A34A', color: '#16A34A', bg: '#F0FDF4', border: '#86EFAC' },
   coming_soon: { label: '🔜 Sắp ra mắt', dot: '#D97706', color: '#D97706', bg: '#FFFBEB', border: '#FCD34D' },
@@ -32,6 +42,8 @@ interface Lesson  {
   id: string; module_id: string; title: string; lesson_type: string
   content_url: string | null; description: string | null; content: string | null
   tools: string[]; order_index: number; duration_min: number | null
+  tier?: string | null; access_policy_mode?: LessonPolicyMode | null; required_tier?: EntitlementTier | null
+  visibility?: ContentVisibility | null; availability?: ContentAvailability | null; allow_preview?: boolean | null
 }
 
 const LESSON_TYPES = [
@@ -271,6 +283,11 @@ export default function CourseEditorContent() {
   const [fContent, setFContent] = useState('')
   const [fTools,   setFTools]   = useState<string[]>([])
   const [fTier,    setFTier]    = useState('free')
+  const [fPolicyMode, setFPolicyMode] = useState<LessonPolicyMode>('inherit')
+  const [fRequiredTier, setFRequiredTier] = useState<EntitlementTier>('free')
+  const [fVisibility, setFVisibility] = useState<ContentVisibility>('visible')
+  const [fAvailability, setFAvailability] = useState<ContentAvailability>('available')
+  const [fAllowPreview, setFAllowPreview] = useState(false)
   const [dbTools,  setDbTools]  = useState<{ id: string; name: string; icon: string; status?: string; category?: string }[]>([])
 
   // Nhãn/icon công cụ: ưu tiên edu_tools (DB), fallback TOOLS cứng cho tool cũ
@@ -281,12 +298,25 @@ export default function CourseEditorContent() {
   }, [dbTools])
 
   const previewLesson: Lesson | null = selectedLesson
-    ? { ...selectedLesson, title: fTitle, lesson_type: fType, content_url: fUrl || null, description: fDesc || null, content: fContent || null, tools: fTools }
+    ? {
+      ...selectedLesson,
+      title: fTitle,
+      lesson_type: fType,
+      content_url: fUrl || null,
+      description: fDesc || null,
+      content: fContent || null,
+      tools: fTools,
+      access_policy_mode: fPolicyMode,
+      required_tier: fRequiredTier,
+      visibility: fVisibility,
+      availability: fAvailability,
+      allow_preview: fAllowPreview,
+    }
     : null
 
   // ── Load ──
   useEffect(() => {
-    supabase.from('edu_courses').select('id,name,slug,type,track,status,icon,image_url,is_free,code')
+    supabase.from('edu_courses').select('id,name,slug,type,track,status,icon,image_url,is_free,code,access_policy_enabled,required_tier,visibility,availability,allow_preview')
       .order('track').order('level_order')
       .then(({ data }) => setCourses((data ?? []).map((c: any) => ({ ...c, status: c.status ?? 'on' }))))
     // Lấy TẤT CẢ tools (kể cả coming_soon/disabled) để admin thấy và bỏ tick được
@@ -318,6 +348,11 @@ export default function CourseEditorContent() {
     setFContent(lesson.content ?? '')
     setFTools(Array.isArray(lesson.tools) ? lesson.tools : [])
     setFTier((lesson as Lesson & { tier?: string }).tier ?? 'free')
+    setFPolicyMode(lesson.access_policy_mode ?? 'inherit')
+    setFRequiredTier(lesson.required_tier ?? (selectedCourse?.required_tier ?? 'free'))
+    setFVisibility(lesson.visibility ?? 'visible')
+    setFAvailability(lesson.availability ?? 'available')
+    setFAllowPreview(lesson.allow_preview === true)
     setRightMode('edit')
   }
 
@@ -325,10 +360,22 @@ export default function CourseEditorContent() {
     if (!selectedLesson) return
     setSaving(true)
     const saveUrl = fType === 'slide' && fUrl ? normalizeCanvaUrl(fUrl) : (fUrl || null)
-    const { error } = await supabase.from('edu_course_lessons').update({ title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc || null, content: fContent || null, tools: fTools, tier: fTier }).eq('id', selectedLesson.id)
+    const policyPatch = fPolicyMode === 'inherit'
+      ? { access_policy_mode: 'inherit' as LessonPolicyMode, required_tier: null, visibility: null, availability: null, allow_preview: null }
+      : { access_policy_mode: 'override' as LessonPolicyMode, required_tier: fRequiredTier, visibility: fVisibility, availability: fAvailability, allow_preview: fAllowPreview }
+    const { error } = await supabase.from('edu_course_lessons').update({
+      title: fTitle,
+      lesson_type: fType,
+      content_url: saveUrl,
+      description: fDesc || null,
+      content: fContent || null,
+      tools: fTools,
+      tier: fTier,
+      ...policyPatch,
+    }).eq('id', selectedLesson.id)
     setSaving(false)
     if (error) { alert('Lưu bài học thất bại: ' + error.message); return }
-    const patch = { title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc, content: fContent, tools: fTools, tier: fTier }
+    const patch = { title: fTitle, lesson_type: fType, content_url: saveUrl, description: fDesc, content: fContent, tools: fTools, tier: fTier, ...policyPatch }
     setLessons(prev => prev.map(l => l.id === selectedLesson.id ? { ...l, ...patch } : l))
     setSelectedLesson(prev => prev ? { ...prev, ...patch } : prev)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
@@ -611,6 +658,21 @@ export default function CourseEditorContent() {
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, is_free: val } as Course : c))
   }
 
+  const saveCourseAccessPolicy = async (patch: Partial<Course>) => {
+    if (!selectedCourse) return
+    const normalized = {
+      access_policy_enabled: patch.access_policy_enabled ?? selectedCourse.access_policy_enabled ?? false,
+      required_tier: patch.required_tier ?? selectedCourse.required_tier ?? 'free',
+      visibility: patch.visibility ?? selectedCourse.visibility ?? 'visible',
+      availability: patch.availability ?? selectedCourse.availability ?? 'available',
+      allow_preview: patch.allow_preview ?? selectedCourse.allow_preview ?? false,
+    }
+    const { error } = await supabase.from('edu_courses').update(normalized).eq('id', selectedCourse.id)
+    if (error) { alert('Cập nhật quyền truy cập thất bại: ' + error.message); return }
+    setSelectedCourse(prev => prev ? { ...prev, ...normalized } : prev)
+    setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, ...normalized } : c))
+  }
+
   const publishAll = async () => {
     const offCount = courses.filter(c => c.status !== 'on').length
     if (!confirm(`Bật TẤT CẢ ${offCount} khoá chưa hiển thị? Học sinh sẽ nhìn thấy ngay.`)) return
@@ -841,6 +903,44 @@ export default function CourseEditorContent() {
                 {selectedCourse.type === 'canh_cua' ? '🔑 Cánh Cửa' : '🎸 Hành Trình'} · {lessons.length} bài học
                 {(selectedCourse as Course & { is_free?: boolean }).is_free === false && ' · 💰 Trả phí (cấp quyền trong Hồ sơ học viên)'}
               </div>
+              <div style={{ marginTop: 12, padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, background: C.surface }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: C.text1 }}>QUYỀN TRUY CẬP</div>
+                    <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
+                      {(selectedCourse.access_policy_enabled ?? false) ? 'Đang dùng policy mới' : 'Đang giữ logic cũ: status / is_free / lesson tier'}
+                    </div>
+                  </div>
+                  <button onClick={() => saveCourseAccessPolicy({ access_policy_enabled: !(selectedCourse.access_policy_enabled ?? false) })}
+                    style={{ border: `1px solid ${(selectedCourse.access_policy_enabled ?? false) ? C.accent : C.border}`, background: (selectedCourse.access_policy_enabled ?? false) ? C.accentLight : C.bg, color: (selectedCourse.access_policy_enabled ?? false) ? C.accent : C.text2, borderRadius: 999, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {(selectedCourse.access_policy_enabled ?? false) ? 'Bật' : 'Chưa bật'}
+                  </button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <select value={selectedCourse.required_tier ?? 'free'} disabled={!(selectedCourse.access_policy_enabled ?? false)}
+                    onChange={e => saveCourseAccessPolicy({ required_tier: e.target.value as EntitlementTier })}
+                    style={{ padding: '7px 9px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, background: C.surface, color: C.text1, fontFamily: 'inherit', opacity: (selectedCourse.access_policy_enabled ?? false) ? 1 : .55 }}>
+                    {ENTITLEMENT_TIERS.map(t => <option key={t} value={t}>{ENTITLEMENT_TIER_LABEL[t]}</option>)}
+                  </select>
+                  <select value={selectedCourse.visibility ?? 'visible'} disabled={!(selectedCourse.access_policy_enabled ?? false)}
+                    onChange={e => saveCourseAccessPolicy({ visibility: e.target.value as ContentVisibility })}
+                    style={{ padding: '7px 9px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, background: C.surface, color: C.text1, fontFamily: 'inherit', opacity: (selectedCourse.access_policy_enabled ?? false) ? 1 : .55 }}>
+                    <option value="visible">Hiện</option>
+                    <option value="hidden">Ẩn</option>
+                  </select>
+                  <select value={selectedCourse.availability ?? 'available'} disabled={!(selectedCourse.access_policy_enabled ?? false)}
+                    onChange={e => saveCourseAccessPolicy({ availability: e.target.value as ContentAvailability })}
+                    style={{ padding: '7px 9px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, background: C.surface, color: C.text1, fontFamily: 'inherit', opacity: (selectedCourse.access_policy_enabled ?? false) ? 1 : .55 }}>
+                    <option value="available">Đang mở</option>
+                    <option value="coming_soon">Sắp có</option>
+                  </select>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 9px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.text2, opacity: (selectedCourse.access_policy_enabled ?? false) ? 1 : .55 }}>
+                    <input type="checkbox" checked={selectedCourse.allow_preview === true} disabled={!(selectedCourse.access_policy_enabled ?? false)}
+                      onChange={e => saveCourseAccessPolicy({ allow_preview: e.target.checked })} style={{ accentColor: C.accent }} />
+                    Cho xem thử
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* ── Modal chọn logo khoá học ── */}
@@ -1052,6 +1152,56 @@ export default function CourseEditorContent() {
                     })}
                   </div>
                   <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài "Học thử" luôn mở cho mọi người (kể cả khoá trả phí) — dùng cho 1-2 bài đầu. Bài "Trong khoá" chỉ mở khi học viên được cấp quyền khoá đó.</div>
+                </div>
+
+                <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, background: C.surface }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: C.text1 }}>Quyền truy cập bài học</div>
+                      <div style={{ fontSize: 12, color: C.text3, marginTop: 3 }}>
+                        {selectedCourse?.access_policy_enabled ? 'Policy mới chỉ áp dụng khi bài override, mặc định theo khóa học.' : 'Khóa chưa bật policy mới, phần này được lưu nhưng chưa tác động học viên.'}
+                      </div>
+                    </div>
+                    <select value={fPolicyMode} onChange={e => setFPolicyMode(e.target.value as LessonPolicyMode)}
+                      style={{ padding: '7px 9px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.surface, color: C.text1, fontFamily: 'inherit' }}>
+                      <option value="inherit">Theo khóa học</option>
+                      <option value="override">Override bài này</option>
+                    </select>
+                  </div>
+                  {fPolicyMode === 'override' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>
+                      <div>
+                        <Label>Gói cần có</Label>
+                        <select value={fRequiredTier} onChange={e => setFRequiredTier(e.target.value as EntitlementTier)}
+                          style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.surface, color: C.text1, fontFamily: 'inherit' }}>
+                          {ENTITLEMENT_TIERS.map(t => <option key={t} value={t}>{ENTITLEMENT_TIER_LABEL[t]}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Hiển thị</Label>
+                        <select value={fVisibility} onChange={e => setFVisibility(e.target.value as ContentVisibility)}
+                          style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.surface, color: C.text1, fontFamily: 'inherit' }}>
+                          <option value="visible">Hiện</option>
+                          <option value="hidden">Ẩn</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Trạng thái</Label>
+                        <select value={fAvailability} onChange={e => setFAvailability(e.target.value as ContentAvailability)}
+                          style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, background: C.surface, color: C.text1, fontFamily: 'inherit' }}>
+                          <option value="available">Đang mở</option>
+                          <option value="coming_soon">Sắp có</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Xem thử</Label>
+                        <label style={{ minHeight: 36, display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${C.border}`, borderRadius: 8, padding: '0 10px', fontSize: 13, color: C.text2 }}>
+                          <input type="checkbox" checked={fAllowPreview} onChange={e => setFAllowPreview(e.target.checked)} style={{ accentColor: C.accent }} />
+                          Cho xem thử
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {fType === 'native' && (

@@ -7,6 +7,7 @@ import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { parseStrumConfig, configToSong } from './StrumConfigEditor'
 import { missingPrereqs, tenNangLuc, PREREQ } from './hanhtrinh'
+import { ENTITLEMENT_TIER_LABEL, type EntitlementTier, normalizeEntitlementTier, resolveCourseAccess, resolveLessonAccess } from './contentAccess'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -21,9 +22,15 @@ interface Module { id: string; name: string; order_index: number }
 interface Lesson {
   id: string; module_id: string; title: string; lesson_type: string
   content_url: string | null; description: string | null; content: string | null
-  tools: string[]; order_index: number; is_published: boolean
+  tools: string[]; order_index: number; is_published: boolean; tier?: string | null
+  access_policy_mode?: string | null; required_tier?: string | null
+  visibility?: string | null; availability?: string | null; allow_preview?: boolean | null
 }
-interface Course { id: string; name: string; type: string; code?: string | null }
+interface Course {
+  id: string; name: string; type: string; code?: string | null; status?: string | null; is_free?: boolean | null
+  access_policy_enabled?: boolean | null; required_tier?: string | null
+  visibility?: string | null; availability?: string | null; allow_preview?: boolean | null
+}
 
 const TOOL_LABELS: Record<string, { label: string; icon: string; route: string }> = {
   tap:           { label: 'Tap nhịp',      icon: '🥁', route: '/tap'         },
@@ -70,6 +77,8 @@ export default function LessonViewerPage() {
   const [studentName, setStudentName] = useState('')
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [ownedCodes, setOwnedCodes] = useState<Set<string>>(new Set()) // mã năng lực học viên đã sở hữu (tính thiếu nền)
+  const [effectiveTier, setEffectiveTier] = useState<EntitlementTier>('free')
+  const [courseLegacyUnlocked, setCourseLegacyUnlocked] = useState(false)
   const [htMember, setHtMember] = useState(false) // học viên Hành trình: chặn tuần tự
   const [seqLockNames, setSeqLockNames] = useState<string[]>([]) // tên khoá cấp dưới CHƯA hoàn thành → khoá này bị chặn
   // Trên điện thoại (QR từ sách hay mở /course trực tiếp): sidebar thành ngăn kéo, nội dung chiếm trọn bề rộng
@@ -135,6 +144,9 @@ export default function LessonViewerPage() {
           const { data: enr } = await supabase.from('edu_enrollments')
             .select('course:edu_courses(code)').eq('student_id', st.id).eq('is_active', true)
           setOwnedCodes(new Set(((enr ?? []) as any[]).map(e => (e.course?.code || '').trim().toUpperCase()).filter(Boolean)))
+          const { data: ent } = await supabase.rpc('get_effective_student_entitlement', { p_student_id: st.id })
+          const row = Array.isArray(ent) ? ent[0] : ent
+          setEffectiveTier(normalizeEntitlementTier(row?.effective_tier))
           const { data: stRow } = await supabase.from('edu_students').select('ht_member').eq('id', st.id).single()
           setHtMember(!!(stRow as any)?.ht_member)
         }
@@ -151,7 +163,8 @@ export default function LessonViewerPage() {
       // và mở thẳng đúng bài đó. Giữ tương thích ngược cho link /course?id=<courseId>.
       let resolvedCourseId = courseId
       let wantLessonId = lessonParam
-      let { data: c } = await supabase.from('edu_courses').select('id,name,type,code').eq('id', courseId).maybeSingle()
+      const courseSelect = 'id,name,type,code,status,is_free,access_policy_enabled,required_tier,visibility,availability,allow_preview'
+      let { data: c } = await supabase.from('edu_courses').select(courseSelect).eq('id', courseId).maybeSingle()
       if (!c) {
         const { data: lrow } = await supabase.from('edu_course_lessons').select('id,module_id').eq('id', courseId).maybeSingle()
         const { data: mrow } = lrow?.module_id
@@ -160,7 +173,7 @@ export default function LessonViewerPage() {
         if (mrow?.course_id) {
           resolvedCourseId = mrow.course_id
           wantLessonId = wantLessonId || courseId
-          const r = await supabase.from('edu_courses').select('id,name,type,code').eq('id', resolvedCourseId).maybeSingle()
+          const r = await supabase.from('edu_courses').select(courseSelect).eq('id', resolvedCourseId).maybeSingle()
           c = r.data
         }
       }
@@ -187,6 +200,12 @@ export default function LessonViewerPage() {
     }
     load()
   }, [courseId])
+
+  useEffect(() => {
+    if (!studentId || !course?.id) { setCourseLegacyUnlocked(false); return }
+    supabase.from('edu_course_access').select('course_id').eq('student_id', studentId).eq('course_id', course.id).eq('active', true).maybeSingle()
+      .then(({ data }) => setCourseLegacyUnlocked(!!data || course.is_free !== false))
+  }, [studentId, course?.id, course?.is_free])
 
   // HT: chặn tuần tự — khoá này bị khoá nếu còn mã tiên quyết CHƯA hoàn thành (khoá chưa dựng thì bỏ qua)
   useEffect(() => {
@@ -248,6 +267,12 @@ export default function LessonViewerPage() {
   // Bài phủ toàn màn (overlay/flow) → không cần nút ☰ nổi (đã có nút back riêng)
   const overlayActive = !!active && (elearnNumOf(active) != null || active.lesson_type === 'native' || active.lesson_type === 'strum')
   const flowActive = active?.lesson_type === 'flow'
+  const activeAccess = active && course
+    ? resolveLessonAccess(active, course, effectiveTier, { courseLegacyUnlocked: courseLegacyUnlocked || course.is_free !== false })
+    : null
+  const courseAccess = course
+    ? resolveCourseAccess(course, effectiveTier, { legacyUnlocked: courseLegacyUnlocked || course.is_free !== false })
+    : null
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: D.bg, fontFamily: '"Inter", system-ui, sans-serif', color: D.text1, fontSize: 15 }}>
@@ -306,14 +331,16 @@ export default function LessonViewerPage() {
                   {mod.name}
                 </div>
                 {modLessons.map((l, i) => {
+                  const access = course ? resolveLessonAccess(l, course, effectiveTier, { courseLegacyUnlocked: courseLegacyUnlocked || course.is_free !== false }) : null
+                  if (access && !access.visible) return null
                   const isActive = active?.id === l.id
                   const typeIcon: Record<string, string> = { video: '▶', text: '📄', slide: '🖼', quiz: '❓', game: '🎮', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹', discussion: '💬', link: '🔗' }
                   return (
                     <div key={l.id} onClick={() => { setActive(l); if (isMobile) setDrawerOpen(false) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', background: isActive ? D.accentLight : 'transparent', borderLeft: `3px solid ${isActive ? D.accent : 'transparent'}`, transition: 'background .1s' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', background: isActive ? D.accentLight : 'transparent', borderLeft: `3px solid ${isActive ? D.accent : 'transparent'}`, transition: 'background .1s', opacity: access?.canAccess === false ? .55 : 1 }}
                       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = D.bg }}
                       onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
-                      <span style={{ fontSize: 13, flexShrink: 0, width: 18, textAlign: 'center' }}>{typeIcon[l.lesson_type] ?? '📄'}</span>
+                      <span style={{ fontSize: 13, flexShrink: 0, width: 18, textAlign: 'center' }}>{access?.canAccess === false ? '🔒' : typeIcon[l.lesson_type] ?? '📄'}</span>
                       <span style={{ fontSize: 14, flex: 1, color: isActive ? D.accent : D.text1, fontWeight: isActive ? 600 : 400, lineHeight: 1.4 }}>
                         {l.title}
                       </span>
@@ -334,7 +361,7 @@ export default function LessonViewerPage() {
       </aside>
 
       {/* ── ELEARN: trình chiếu bài native (fullscreen overlay) ──────── */}
-      {active && elearnNumOf(active) != null && (() => {
+      {active && activeAccess?.canAccess && elearnNumOf(active) != null && (() => {
         const lesson = active
         const n = elearnNumOf(active)!
         return (
@@ -354,19 +381,36 @@ export default function LessonViewerPage() {
       })()}
 
       {/* ── BÀI NATIVE (chord, slide…) — overlay full màn, dùng chung với app ── */}
-      {active && active.lesson_type === 'native' && NATIVE_LESSONS[active.content_url ?? ''] && (() => {
+      {active && activeAccess?.canAccess && active.lesson_type === 'native' && NATIVE_LESSONS[active.content_url ?? ''] && (() => {
         const C = NATIVE_LESSONS[active.content_url!].Component
         return <C onClose={() => setActive(null)} onComplete={() => completeNative(active)} studentId={studentId} lessonId={active.id} />
       })()}
 
       {/* ── BÀI STRUM SCORE — overlay full màn ── */}
-      {active && active.lesson_type === 'strum' && (
+      {active && activeAccess?.canAccess && active.lesson_type === 'strum' && (
         <ChordStrumPlayer song={configToSong(parseStrumConfig(active.content), active.title)} onClose={() => setActive(null)} onComplete={() => completeNative(active)} studentId={studentId} lessonId={active.id} />
       )}
 
       {/* ── MAIN: lesson content (ẩn khi bài elearn/native — overlay đã phủ kín) ─ */}
       <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
-        {active && (elearnNumOf(active) != null || active.lesson_type === 'native' || active.lesson_type === 'strum') ? null : !active ? (
+        {active && activeAccess?.canAccess === false ? (
+          <div style={{ display: 'flex', minHeight: '100%', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <div style={{ maxWidth: 440, textAlign: 'center', background: D.surface, border: `1px solid ${D.border}`, borderRadius: 16, padding: '30px 24px', boxShadow: D.shadow }}>
+              <div style={{ fontSize: 34, marginBottom: 10 }}>{activeAccess.reason === 'coming_soon' || courseAccess?.available === false ? '⏳' : '🔒'}</div>
+              <div style={{ fontWeight: 800, fontSize: 19, color: D.text1, marginBottom: 8 }}>
+                {activeAccess.reason === 'coming_soon' || courseAccess?.available === false ? 'Bài học sắp có' : 'Cần nâng gói để học bài này'}
+              </div>
+              <div style={{ fontSize: 14.5, color: D.text2, lineHeight: 1.6 }}>
+                {activeAccess.reason === 'coming_soon' || courseAccess?.available === false
+                  ? 'Nội dung này đang được chuẩn bị.'
+                  : `Bài này cần gói ${ENTITLEMENT_TIER_LABEL[activeAccess.requiredTier]}.`}
+              </div>
+              {activeAccess.reason === 'requires_upgrade' && (
+                <a href="/subscribe" style={{ display: 'inline-block', marginTop: 18, background: D.accent, color: '#fff', textDecoration: 'none', borderRadius: 10, padding: '11px 22px', fontSize: 14.5, fontWeight: 700 }}>Nâng gói</a>
+              )}
+            </div>
+          </div>
+        ) : active && (elearnNumOf(active) != null || active.lesson_type === 'native' || active.lesson_type === 'strum') ? null : !active ? (
           <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: D.text3, flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 40 }}>👈</span>
             <div>Chọn bài học từ danh sách</div>

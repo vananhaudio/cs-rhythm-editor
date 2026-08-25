@@ -18,6 +18,13 @@ import ElearnLessonView from './elearn/ElearnLessonView'
 import { missingPrereqs, tenNangLuc } from './hanhtrinh'
 import { NavIcon } from './navIcons'
 import LivePageView, { type LivePage } from './live/LivePages'
+import {
+  ENTITLEMENT_TIER_LABEL,
+  type EntitlementTier,
+  normalizeEntitlementTier,
+  resolveCourseAccess,
+  resolveLessonAccess,
+} from './contentAccess'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
 const L = {
@@ -68,15 +75,24 @@ const EX_TOOL_ID: Record<string, string> = {
 const TOOL_TO_EX: Record<string, string> = Object.fromEntries(
   Object.entries(EX_TOOL_ID).map(([exId, toolId]) => [toolId, exId])
 )
+const COURSE_SELECT = 'id,name,type,track,icon,image_url,status,sort_order,is_free,code,access_policy_enabled,required_tier,visibility,availability,allow_preview'
+const COURSE_REL_SELECT = `id,name,type,track,icon,image_url,status,sort_order,is_free,code,access_policy_enabled,required_tier,visibility,availability,allow_preview`
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
-  course: { id: string; name: string; type: string; track: string | null; icon?: string | null; image_url?: string | null; status?: string; sort_order?: number; code?: string | null }
+  course: {
+    id: string; name: string; type: string; track: string | null
+    icon?: string | null; image_url?: string | null; status?: string; sort_order?: number; code?: string | null
+    is_free?: boolean | null; access_policy_enabled?: boolean | null; required_tier?: string | null
+    visibility?: string | null; availability?: string | null; allow_preview?: boolean | null
+  }
 }
 interface Module { id: string; name: string; order_index: number }
 interface Lesson {
   id: string; module_id: string; title: string; lesson_type: string
   content_url: string | null; description: string | null; content: string | null
   tools: string[]; order_index: number; tier?: string
+  access_policy_mode?: string | null; required_tier?: string | null
+  visibility?: string | null; availability?: string | null; allow_preview?: boolean | null
 }
 
 function uname(s: Student) {
@@ -106,12 +122,6 @@ const LEVEL_VI: Record<string, string> = {
 const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
 const LEVEL_TIER: Record<string, string> = {
   beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro'
-}
-const ENTITLEMENT_TIER_TO_LEGACY: Record<string, string> = {
-  free: 'free',
-  khoi_dau_99: 'basic',
-  can_ban_396: 'standard',
-  nang_cao_499: 'pro',
 }
 const TIER_VI: Record<string, string> = {
   free: 'Miễn phí', basic: 'Cơ bản', standard: 'Nâng cao', pro: 'Pro'
@@ -592,7 +602,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     }
   }
 
-  const entitlementLegacyTier = ENTITLEMENT_TIER_TO_LEGACY[effectiveEntitlement] ?? 'free'
+  const effectiveTier = normalizeEntitlementTier(effectiveEntitlement)
+  const entitlementLegacyTier = effectiveTier === 'nang_cao_499' ? 'pro'
+    : effectiveTier === 'can_ban_396' ? 'standard'
+    : effectiveTier === 'khoi_dau_99' ? 'basic'
+    : 'free'
   const studentTierIdx = Math.max(
     TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free'),
     TIER_ORDER.indexOf(entitlementLegacyTier),
@@ -625,10 +639,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     return completedIds.has(sortedLessons[idx - 1].id) || completedIds.has(lessonId)
   }
 
-  // Quyền MỞ KHOÁ THEO TỪNG KHOÁ: khoá đang xem mở nếu là khoá free hoặc đã được cấp quyền.
-  // Bài tier='free' = học thử → luôn mở (kể cả khoá trả phí chưa cấp quyền).
+  const courseById = new Map(enrollments.map(e => [e.course_id, e.course]))
+  const activeCourse = activeCourseId ? courseById.get(activeCourseId) : null
+
+  // Quyền MỞ KHOÁ THEO TỪNG KHOÁ: policy mới ưu tiên khi Admin bật.
+  // Chưa bật policy mới => giữ behavior cũ bằng is_free / edu_course_access / enrollment / lesson.tier.
   const activeCourseUnlocked = preview || !activeCourseId || freeCourses.has(activeCourseId) || accessCourses.has(activeCourseId) || ownedCourseIds.has(activeCourseId)
-  const isLessonCourseUnlocked = (l: Lesson) => l.tier === 'free' || activeCourseUnlocked || isTierUnlocked(l.tier)
+  const resolveLesson = (l: Lesson) => resolveLessonAccess(l, activeCourse ?? { is_free: true, status: 'on' }, effectiveTier, {
+    courseLegacyUnlocked: activeCourseUnlocked,
+    preview,
+  })
+  const isLessonCourseUnlocked = (l: Lesson) => resolveLesson(l).canAccess
 
   const isUnlocked = (l: Lesson) =>
     isLessonCourseUnlocked(l) && isSequentiallyUnlocked(l.id)
@@ -662,7 +683,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   useEffect(() => {
     if (guest) {
       supabase.from('edu_courses')
-        .select('id,name,type,track,icon,image_url,status,sort_order,is_free,code')
+        .select(COURSE_SELECT)
         .then(({ data }) => {
           const courses = ((data ?? []) as any[]).filter(c => (c.status ?? 'on') !== 'off')
           setEnrollments(courses.map((course: any) => ({
@@ -710,14 +731,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     }
 
     const loadCourses = () => supabase.from('edu_enrollments')
-      .select('id,course_id,enrolled_at,is_active,course:edu_courses(id,name,type,track,icon,image_url,status,sort_order,is_free,code)')
+      .select(`id,course_id,enrolled_at,is_active,course:edu_courses(${COURSE_REL_SELECT})`)
       .eq('student_id', student.id).eq('is_active', true)
       .then(async ({ data }) => {
         const enr = (data ?? []) as unknown as Enrollment[]
         setOwnedCourseIds(new Set(enr.map(e => e.course_id)))
         const { data: publicCourses } = await supabase
           .from('edu_courses')
-          .select('id,name,type,track,icon,image_url,status,sort_order,is_free,code')
+          .select(COURSE_SELECT)
         const enrolledById = new Map(enr.map(e => [e.course_id, e]))
         const discovery = ((publicCourses ?? []) as any[])
           .filter(c => (c.status ?? 'on') !== 'off' && !enrolledById.has(c.id))
@@ -738,7 +759,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const gapCodes = new Set<string>()
         enr.forEach(e => missingPrereqs(e.course?.code, ownedCodes).forEach(c => gapCodes.add(c)))
         if (gapCodes.size > 0) {
-          supabase.from('edu_courses').select('id,name,type,track,icon,image_url,status,sort_order,is_free,code')
+          supabase.from('edu_courses').select(COURSE_SELECT)
             .in('code', [...gapCodes])
             .then(({ data: gc }) => setFoundationGaps(((gc ?? []) as any[])
               .filter(c => (c.status ?? 'on') !== 'off' && !ownedCodes.has((c.code || '').trim().toUpperCase()))))
@@ -878,6 +899,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     // HT: chặn mở khoá cấp trên khi chưa hoàn thành cấp dưới (lưới an toàn cho mọi lối vào)
     const code = enrollments.find(e => e.course_id === courseId)?.course?.code
     if (isSeqLocked(code)) return
+    const courseForAccess = enrollments.find(e => e.course_id === courseId)?.course
+    const courseAccess = resolveCourseAccess(courseForAccess ?? { is_free: true, status: 'on' }, effectiveTier, {
+      legacyUnlocked: preview || freeCourses.has(courseId) || accessCourses.has(courseId) || ownedCourseIds.has(courseId),
+      preview,
+    })
+    if (!courseAccess.visible) return
+    if (!courseAccess.available) return
     setActiveCourseId(courseId)
     setReturnLessonId(null)   // vào khoá mới → bắt đầu từ đầu (chỉ cuộn-giữ-chỗ khi quay lại từ 1 bài)
     try { localStorage.setItem('lastCourse:' + student.id, courseId) } catch { /**/ }  // ghi khoá vừa mở → "Học ngay" resume đúng chỗ
@@ -892,12 +920,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       setLessons(parsed)
       const ownedNow = preview || freeCourses.has(courseId) || accessCourses.has(courseId) || ownedCourseIds.has(courseId)
       // Mở THẲNG vào 1 bài cụ thể (nút Học tiếp / Học ngay) — nếu bài mở được
-      if (targetLessonId && ownedNow) {
+      if (targetLessonId) {
         const t = parsed.find(l => l.id === targetLessonId)
-        if (t) { setReturnLessonId(t.id); setActiveLesson(t); setLessonTab('content'); try { setUsedToolIds(new Set(JSON.parse(localStorage.getItem(usedToolsKey(t.id)) || '[]'))) } catch { /**/ } setScreen('lesson'); return }
+        const tAccess = t ? resolveLessonAccess(t, courseForAccess ?? { is_free: true, status: 'on' }, effectiveTier, { courseLegacyUnlocked: ownedNow, preview }) : null
+        if (t && tAccess?.canAccess) { setReturnLessonId(t.id); setActiveLesson(t); setLessonTab('content'); try { setUsedToolIds(new Set(JSON.parse(localStorage.getItem(usedToolsKey(t.id)) || '[]'))) } catch { /**/ } setScreen('lesson'); return }
       }
       // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách (CHỈ khi đã sở hữu — khoá nền thiếu thì luôn dừng ở mục lục)
-      if (ownedNow && parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')) {
+      if (parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')
+        && resolveLessonAccess(parsed[0], courseForAccess ?? { is_free: true, status: 'on' }, effectiveTier, { courseLegacyUnlocked: ownedNow, preview }).canAccess) {
         setActiveLesson(parsed[0])
         setScreen('lesson')
         return
@@ -1089,17 +1119,21 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     setSavingProfile(false)
   }
 
-  // Sắp xếp theo sort_order, published trước unpublished
-  // Lọc bỏ khoá status = 'off' (hoàn toàn ẩn với học sinh)
-  const visibleEnrollments = enrollments.filter(e => (e.course?.status ?? 'on') !== 'off')
+  // Sắp xếp theo sort_order; policy mới ẩn khóa khi Admin set hidden.
+  const visibleEnrollments = enrollments.filter(e => resolveCourseAccess(e.course, effectiveTier, {
+    legacyUnlocked: preview || freeCourses.has(e.course_id) || accessCourses.has(e.course_id) || ownedCourseIds.has(e.course_id),
+    preview,
+  }).visible)
   const sortedEnrollments = [...visibleEnrollments].sort((a, b) => {
-    const ap = (a.course?.status ?? 'on') === 'on' ? 0 : 1
-    const bp = (b.course?.status ?? 'on') === 'on' ? 0 : 1
+    const aa = resolveCourseAccess(a.course, effectiveTier, { legacyUnlocked: preview || freeCourses.has(a.course_id) || accessCourses.has(a.course_id) || ownedCourseIds.has(a.course_id), preview })
+    const ba = resolveCourseAccess(b.course, effectiveTier, { legacyUnlocked: preview || freeCourses.has(b.course_id) || accessCourses.has(b.course_id) || ownedCourseIds.has(b.course_id), preview })
+    const ap = aa.available ? 0 : 1
+    const bp = ba.available ? 0 : 1
     if (ap !== bp) return ap - bp
     return (a.course?.sort_order ?? 99) - (b.course?.sort_order ?? 99)
   })
-  // Khoá "Học ngay": published (status = 'on') ưu tiên
-  const mainCourse = sortedEnrollments.find(e => (e.course?.status ?? 'on') === 'on')
+  // Khoá "Học ngay": available ưu tiên, coming soon nằm sau.
+  const mainCourse = sortedEnrollments.find(e => resolveCourseAccess(e.course, effectiveTier, { legacyUnlocked: preview || freeCourses.has(e.course_id) || accessCourses.has(e.course_id) || ownedCourseIds.has(e.course_id), preview }).available)
     ?? sortedEnrollments[0]
   const name = uname(me)
 
@@ -1637,24 +1671,29 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ fontSize: 12, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.08em', padding: '0 4px 10px' }}>{mod.name}</div>
                   {lessons.filter(l => l.module_id === mod.id).sort((a, b) => a.order_index - b.order_index).map((l) => {
                     const icons: Record<string, string> = { video: '▶️', text: '📄', slide: '🖼', quiz: '❓', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹' }
+                    const access = resolveLesson(l)
+                    if (!access.visible) return null
                     const done       = completedIds.has(l.id)
-                    const tierLocked = !isLessonCourseUnlocked(l)
+                    const policyLocked = !access.canAccess
                     const seqLocked  = !isSequentiallyUnlocked(l.id)
-                    const locked     = tierLocked || seqLocked
+                    const locked     = policyLocked || seqLocked
                     const isCurrent  = !done && !locked
                     return (
-                      <div key={l.id} id={'ls-' + l.id} onClick={() => { if (tierLocked) explainUpgrade(); else if (!seqLocked) openLesson(l) }}
-                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: tierLocked || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
+                      <div key={l.id} id={'ls-' + l.id} onClick={() => { if (access.reason === 'requires_upgrade') explainUpgrade(); else if (!seqLocked && access.canAccess) openLesson(l) }}
+                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: access.reason === 'requires_upgrade' || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : isCurrent ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: done ? L.green : locked ? L.t3 : L.t1 }}>{l.title}</div>
-                          {seqLocked && !tierLocked && (
+                          {seqLocked && !policyLocked && (
                             <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
                           )}
-                          {tierLocked && (
-                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>{isNativeIOS ? '🔒 Cần nâng gói để mở bài này →' : '🔒 Đăng ký học để mở khoá →'}</div>
+                          {access.reason === 'requires_upgrade' && (
+                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>🔒 Cần {ENTITLEMENT_TIER_LABEL[access.requiredTier]} để mở bài này →</div>
+                          )}
+                          {access.reason === 'coming_soon' && (
+                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>Sắp có</div>
                           )}
                           {isCurrent && !skillMap[l.id] && (
                             <div style={{ fontSize: 11, color: L.p1, fontWeight: 600, marginTop: 2 }}>▶ Học tiếp theo</div>
