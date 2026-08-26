@@ -5,7 +5,8 @@ import {
   APPLE_SUBSCRIPTION_PRODUCTS,
   getCurrentEntitlements,
   getIAPProducts,
-  isNativeIOS,
+  IAP_PROVIDER,
+  isNativeIAP,
   manageSubscriptions,
   purchaseProduct,
   restorePurchases,
@@ -85,7 +86,7 @@ export default function SubscriptionPage() {
   }
 
   async function loadProducts() {
-    if (!isNativeIOS) {
+    if (!isNativeIAP) {
       setProducts([])
       return
     }
@@ -133,7 +134,7 @@ export default function SubscriptionPage() {
   }
 
   async function syncTransaction(entitlement: IAPEntitlement): Promise<SyncResult> {
-    if (!entitlement.signedTransactionInfo && !entitlement.transactionId) {
+    if (IAP_PROVIDER === 'google' ? !entitlement.purchaseToken : (!entitlement.signedTransactionInfo && !entitlement.transactionId)) {
       return { error: 'missing_transaction' }
     }
     const accessToken = await getValidAccessToken()
@@ -144,18 +145,20 @@ export default function SubscriptionPage() {
     const clientRequestId = crypto.randomUUID()
     console.info('[subscription] sync_request', {
       requestId: clientRequestId,
+      provider: IAP_PROVIDER,
       productId: entitlement.productId,
       hasSignedTransactionInfo: Boolean(entitlement.signedTransactionInfo),
       hasTransactionId: Boolean(entitlement.transactionId),
+      hasPurchaseToken: Boolean(entitlement.purchaseToken),
       hasAccessToken: true,
     })
-    const { data, error } = await supabase.functions.invoke('apple-subscription-sync', {
+    const syncFunction = IAP_PROVIDER === 'google' ? 'google-subscription-sync' : 'apple-subscription-sync'
+    const syncBody = IAP_PROVIDER === 'google'
+      ? { purchaseToken: entitlement.purchaseToken, productId: entitlement.productId, clientRequestId }
+      : { signedTransactionInfo: entitlement.signedTransactionInfo, transactionId: entitlement.transactionId, clientRequestId }
+    const { data, error } = await supabase.functions.invoke(syncFunction, {
       headers: { Authorization: `Bearer ${accessToken}` },
-      body: {
-        signedTransactionInfo: entitlement.signedTransactionInfo,
-        transactionId: entitlement.transactionId,
-        clientRequestId,
-      },
+      body: syncBody,
     })
     if (error) {
       const details = await readFunctionError(error)
@@ -296,11 +299,11 @@ export default function SubscriptionPage() {
         </p>
 
         {loading && <div style={notice('info')}>Đang tải gói từ App Store...</div>}
-        {!loading && isNativeIOS && sortedProducts.length === 0 && (
+        {!loading && isNativeIAP && sortedProducts.length === 0 && (
           <div style={notice('err')}>Chưa tải được gói đăng ký từ App Store. Thử lại sau.</div>
         )}
-        {!isNativeIOS && (
-          <div style={notice('info')}>Mua gói qua App Store chỉ hiển thị trong app iOS TVA Guitar.</div>
+        {!isNativeIAP && (
+          <div style={notice('info')}>Mua gói chỉ hiển thị trong app TVA Guitar (iOS/Android).</div>
         )}
 
         {/* Options — radio compact */}
@@ -371,7 +374,9 @@ export default function SubscriptionPage() {
 
         {/* Footer legal — đẩy xuống đáy */}
         <footer style={{ marginTop: 'auto', paddingTop: 12, color: COLORS.faint, fontSize: 11, lineHeight: 1.55, textAlign: 'center' }}>
-          Đăng ký tự động gia hạn theo giá App Store; thanh toán tính vào Apple ID. Quản lý hoặc hủy trong cài đặt App Store.
+          {IAP_PROVIDER === 'google'
+            ? 'Đăng ký tự động gia hạn theo giá Google Play; thanh toán tính vào tài khoản Google. Quản lý hoặc hủy trong Google Play → Đăng ký.'
+            : 'Đăng ký tự động gia hạn theo giá App Store; thanh toán tính vào Apple ID. Quản lý hoặc hủy trong cài đặt App Store.'}
           {selectedTrial ? ' Sau thời gian dùng thử, gói tự chuyển sang trả phí nếu không hủy.' : ''}
           <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 10px' }}>
             <button onClick={restore} disabled={busy === 'restore'} style={footLink()}>{busy === 'restore' ? 'Đang khôi phục...' : 'Khôi phục giao dịch'}</button>

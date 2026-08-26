@@ -10,7 +10,7 @@ import SongBuilderPage from './SongBuilderPage'
 import PianoJourney from './PianoJourney'
 import Metronome from './Metronome'
 import { QuizViewer } from './components/QuizViewer'
-import { isNativeIOS } from './iap'
+import { isNativeIAP } from './iap'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { parseStrumConfig, configToSong } from './StrumConfigEditor'
@@ -448,7 +448,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   const explainUpgrade = () => {
-    if (isNativeIOS) {
+    if (isNativeIAP) {
       window.location.href = '/subscribe'
       return
     }
@@ -2483,7 +2483,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.35, ...clamp2 }}>{name}</div>
                 <div style={{ fontSize: 12.5, color: L.t2 }}>{guest ? 'Miễn phí' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
               </div>
-              {isNativeIOS && (
+              {isNativeIAP && (
                 <button onClick={openUpgrade} style={{ background: L.p1, border: 'none', borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                   Nâng gói
                 </button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import MobileStudentPortal from './MobileStudentPortal'
 import ChordDiagramIcon from './ChordDiagramIcon'
 import { supabase } from './supabase'
-import { isNativeIOS } from './iap'
+import { isNativeIAP } from './iap'
 
 // Đồng bộ tông mobile app: primary indigo #4338CA, accent cam #EA580C, nền xám #F0F2F5
 const T = {
@@ -250,7 +250,7 @@ export default function StudentOnboarding() {
           <p style={{ color: T.textDim, fontSize: 13, marginTop: 10 }}>Dành cho học viên đã có tài khoản.</p>
 
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
-          {isNativeIOS && (
+          {isNativeIAP && (
             <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360, width: '100%' }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 3 }}>
                 Đăng ký học qua App Store

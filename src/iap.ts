@@ -5,9 +5,14 @@
 import { registerPlugin, Capacitor } from '@capacitor/core'
 
 export const isNativeIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'
+export const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+// Có in-app purchase native (iOS StoreKit hoặc Android Google Play Billing)
+export const isNativeIAP = isNativeIOS || isNativeAndroid
+// Provider hiện tại — quyết định edge function verify nào được gọi
+export const IAP_PROVIDER: 'apple' | 'google' | null = isNativeIOS ? 'apple' : isNativeAndroid ? 'google' : null
 
-// Chỉ khởi tạo một lần
-const IAPPlugin: any | null = isNativeIOS ? registerPlugin('IAP') : null
+// Chỉ khởi tạo một lần — Android dùng IAPPlugin.java, iOS dùng IAPPlugin.swift (cùng tên "IAP")
+const IAPPlugin: any | null = isNativeIAP ? registerPlugin('IAP') : null
 
 export interface IAPProduct {
   productId: string
@@ -30,6 +35,7 @@ export interface IAPPurchaseResult {
   transactionId?: string
   originalTransactionId?: string
   signedTransactionInfo?: string
+  purchaseToken?: string
   expiresDate?: string | null
   environment?: string
 }
@@ -39,6 +45,7 @@ export interface IAPEntitlement {
   transactionId?: string
   originalTransactionId?: string
   signedTransactionInfo?: string
+  purchaseToken?: string
   expiresDate?: string | null
   environment?: string
 }
