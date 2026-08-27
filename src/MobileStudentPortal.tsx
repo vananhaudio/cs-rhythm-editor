@@ -352,7 +352,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [activeSubject, setActiveSubject]   = useState<string | null>(null)  // môn đang mở màn journey
   const [companionTab, setCompanionTab]     = useState<'thay' | 'note' | 'ask'>('thay')  // nửa dưới màn journey
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)  // bài đang chọn trong journey (gắn companion)
+  const [activeLevel, setActiveLevel]       = useState<number | null>(null)  // vùng Level đang xem (navigator) — tách khỏi current/selected
   const journeyRailRef = useRef<HTMLDivElement | null>(null)  // auto-scroll tới bài hiện tại
+  const railRafRef = useRef(0)  // throttle scroll → cập nhật activeLevel
+  const suppressRailScrollRef = useRef(false)  // chặn onRailScroll ghi đè khi đang animate goToLevel
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [returnLessonId, setReturnLessonId] = useState<string | null>(null) // bài vừa mở → khi quay lại danh sách cuộn về đúng chỗ
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
@@ -1638,7 +1641,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     : 'Sắp có'
                   return (
                     <button key={sub.key}
-                      onClick={() => { setActiveSubject(sub.key); setSelectedLessonId(null); setCompanionTab('thay'); setScreen('journey') }}
+                      onClick={() => { setActiveSubject(sub.key); setSelectedLessonId(null); setActiveLevel(null); setCompanionTab('thay'); setScreen('journey') }}
                       style={{ position: 'relative', width: '100%', height: 150, border: 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', boxShadow: L.shadowLg, textAlign: 'left' }}>
                       {cover
                         ? <img src={cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -2698,7 +2701,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             if (lastLevelGroup !== null || jl.moduleLevel != null) {
               // ── MỐC LEVEL (mạnh) — panel tone, badge lớn, cột mốc ──
               nodes.push(
-                <div key={'lv-' + jl.moduleId} style={{ flex: '0 0 auto', alignSelf: 'stretch', minWidth: 124, scrollSnapAlign: 'center', borderRadius: 18, background: `${tone}12`, border: `1.5px dashed ${tone}66`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '0 12px', zIndex: 1 }}>
+                <div key={'lv-' + jl.moduleId} id={jl.moduleLevel != null ? 'jl-level-' + jl.moduleLevel : undefined} data-level={jl.moduleLevel ?? undefined} style={{ flex: '0 0 auto', alignSelf: 'stretch', minWidth: 124, scrollSnapAlign: 'center', borderRadius: 18, background: `${tone}12`, border: `1.5px dashed ${tone}66`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '0 12px', zIndex: 1 }}>
                   <div style={{ width: 60, height: 60, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 28, boxShadow: `0 8px 20px ${tone}55` }}>🎖️</div>
                   <div style={{ fontSize: 14, fontWeight: 900, color: tone, textTransform: 'uppercase', letterSpacing: '.06em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
                   <div style={{ fontSize: 10.5, fontWeight: 700, color: L.t2 }}>cột mốc mới</div>
@@ -2728,7 +2731,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             const thumb = jl.ytId ? `https://img.youtube.com/vi/${jl.ytId}/hqdefault.jpg` : null
             const stateLabel = completed ? '✓ Đã học' : comingSoon ? '🔜 Sắp có' : (locked || seqLocked) ? '🔒 Mở khoá' : isCurrent ? '▶ Học tiếp' : 'Vào học'
             nodes.push(
-              <div key={jl.id} id={'jl-' + jl.id} data-jlcur={isCurrent ? '1' : undefined} role="button" tabIndex={0}
+              <div key={jl.id} id={'jl-' + jl.id} data-jlcur={isCurrent ? '1' : undefined} data-level={jl.moduleLevel ?? undefined} role="button" tabIndex={0}
                 onClick={() => selectLesson(jl)}
                 style={{ flex: '0 0 62vw', maxWidth: 250, minWidth: 198, scrollSnapAlign: 'center', position: 'relative', display: 'flex', flexDirection: 'column', border: isSelected ? `2px solid ${tone}` : `1px solid ${L.border}`, borderRadius: 18, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', background: L.surface, boxShadow: isSelected ? `0 8px 22px ${tone}33` : L.shadow, textAlign: 'left', alignSelf: 'stretch', zIndex: isSelected ? 2 : 1 }}>
                 {thumb ? (
@@ -2758,11 +2761,55 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const headerLine = selected
           ? (selected.moduleLevel != null ? `Level ${selected.moduleLevel} · bài đang chọn` : 'Bài đang chọn')
           : `Hành trình ${subject?.title ?? ''}`.trim()
+        // ── Level navigator: chỉ các Level THẬT có trong journey (từ edu_modules.level) ──
+        const levels = [...new Set(items.map(j => j.moduleLevel).filter((l): l is number => l != null))].sort((a, b) => a - b)
+        const currentLevel = items.find(j => j.id === currentId)?.moduleLevel ?? levels[0] ?? null
+        const shownActiveLevel = activeLevel ?? currentLevel  // active = vùng đang xem, mặc định = level của current
+        // Nhảy tới vùng Level: tự animate scrollLeft (easeOut) — chạy mọi trình duyệt/WebView, mượt như smooth
+        const goToLevel = (n: number) => {
+          setActiveLevel(n)
+          const rail = journeyRailRef.current
+          const marker = document.getElementById('jl-level-' + n)
+          if (!rail || !marker) return
+          const mr = marker.getBoundingClientRect(), rr = rail.getBoundingClientRect()
+          const start = rail.scrollLeft
+          const dist = (mr.left + mr.width / 2) - (rr.left + rr.width / 2)
+          if (Math.abs(dist) < 2) return
+          suppressRailScrollRef.current = true
+          const dur = 420, t0 = performance.now()
+          const step = (now: number) => {
+            const p = Math.min(1, (now - t0) / dur)
+            rail.scrollLeft = start + dist * (1 - Math.pow(1 - p, 3))
+            if (p < 1) window.requestAnimationFrame(step)
+            else suppressRailScrollRef.current = false
+          }
+          window.requestAnimationFrame(step)
+          // an toàn: nếu rAF bị pause (WebView nền), vẫn nhảy đúng vị trí + gỡ suppress
+          window.setTimeout(() => { if (suppressRailScrollRef.current) { rail.scrollLeft = start + dist; suppressRailScrollRef.current = false } }, dur + 140)
+        }
+        // Vuốt rail → cập nhật activeLevel theo phần tử có level gần center nhất (debounce setTimeout — bền hơn rAF trong WebView)
+        const onRailScroll = () => {
+          if (suppressRailScrollRef.current) return
+          if (railRafRef.current) window.clearTimeout(railRafRef.current)
+          railRafRef.current = window.setTimeout(() => {
+            railRafRef.current = 0
+            const rail = journeyRailRef.current
+            if (!rail) return
+            const centerX = rail.getBoundingClientRect().left + rail.clientWidth / 2
+            let best: string | null = null, bestDist = Infinity
+            rail.querySelectorAll('[data-level]').forEach(el => {
+              const r = (el as HTMLElement).getBoundingClientRect()
+              const d = Math.abs((r.left + r.width / 2) - centerX)
+              if (d < bestDist) { bestDist = d; best = (el as HTMLElement).getAttribute('data-level') }
+            })
+            if (best != null) setActiveLevel(Number(best))
+          }, 90)
+        }
         return (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 'calc(62px + env(safe-area-inset-bottom))', background: L.bg, display: 'flex', flexDirection: 'column', zIndex: 8 }}>
             {/* Header — gọn, ngữ cảnh, KHÔNG nhấn tổng bài */}
             <div style={{ background: L.surface, padding: 'max(46px, calc(env(safe-area-inset-top, 0px) + 10px)) 16px 10px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button onClick={() => { setScreen('home'); setActiveSubject(null) }} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
+              <button onClick={() => { setScreen('home'); setActiveSubject(null); setActiveLevel(null) }} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 900, fontSize: 19, color: L.t1, lineHeight: 1.1, ...clamp1 }}>{subject?.title ?? 'Hành trình'}</div>
                 <div style={{ fontSize: 12, color: L.t2, marginTop: 1, ...clamp1 }}>{headerLine}</div>
@@ -2770,7 +2817,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             </div>
             {/* NỬA TRÊN — MỘT rail ngang duy nhất (lesson + mốc chương/level) */}
             {items.length > 0 ? (
-              <div ref={journeyRailRef} style={{ flexShrink: 0, overflowX: 'auto', overflowY: 'hidden', scrollSnapType: 'x proximity', scrollbarWidth: 'none', padding: '14px 0 8px' }}>
+              <div ref={journeyRailRef} onScroll={onRailScroll} style={{ flexShrink: 0, overflowX: 'auto', overflowY: 'hidden', scrollSnapType: 'x proximity', scrollbarWidth: 'none', padding: '14px 0 8px' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'stretch', gap: 10, padding: '0 18px', height: 288 }}>
                   {/* Đường path liên tục (nhẹ) — chạy sau card, hiện ở khe & sau mốc */}
                   <div style={{ position: 'absolute', left: 18, right: 18, top: '54%', height: 2, background: `${L.p1}22`, zIndex: 0 }} />
@@ -2784,6 +2831,19 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ fontWeight: 800, color: L.t1, marginBottom: 4 }}>Hành trình đang được soạn</div>
                   <div style={{ fontSize: 13, lineHeight: 1.5 }}>Các bài học của môn này sẽ xuất hiện ở đây.</div>
                 </div>
+              </div>
+            )}
+            {/* ── LEVEL NAVIGATOR (nhẹ) — nhảy nhanh tới vùng Level; KHÔNG mục lục, không đổi current/selected/progress ── */}
+            {items.length > 0 && levels.length > 1 && (
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '2px 18px 10px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', flexShrink: 0 }}>Level</span>
+                {levels.map(n => {
+                  const on = shownActiveLevel === n
+                  return (
+                    <button key={n} onClick={() => goToLevel(n)}
+                      style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: on ? 900 : 700, display: 'grid', placeItems: 'center', transition: 'all .15s', background: on ? L.p2 : 'transparent', color: on ? L.p1 : L.t2, border: on ? `2px solid ${L.p1}` : `1.5px solid ${L.border}` }}>{n}</button>
+                  )
+                })}
               </div>
             )}
             {/* NỬA DƯỚI — Không gian đồng hành, GẮN với bài đang chọn (không fake data) */}
