@@ -181,6 +181,27 @@ const LEARN_TRACKS: { key: string; title: string; hint: string }[] = [
   { key: 'nhac_ly', title: 'Nhạc lý / Cảm âm', hint: 'Notation · lắng nghe · khoảng cách' },
 ]
 
+// ── Curriculum mapping: course cũ = Level của MÔN (nguồn thứ tự + gộp Nhập Môn vào Tỉa nốt) ──
+// Stable key = course_id (KHÔNG so tên runtime). Level đồng bộ với edu_modules.level đã backfill.
+// Course trong đây được coi như Level của subject tương ứng; tên course KHÔNG hiện cho học viên.
+const JOURNEY_CURRICULUM: { subject: string; courseId: string; level: number }[] = [
+  // Đệm hát
+  { subject: 'dem_hat', courseId: '65bccb3e-4740-4103-b1fa-c2009fe67921', level: 1 }, // Đệm hát cơ bản
+  { subject: 'dem_hat', courseId: 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', level: 2 }, // Trình Độ 2
+  { subject: 'dem_hat', courseId: 'd5f963ac-bcd7-45e2-b002-7970ba33e710', level: 3 }, // Trình Độ 3
+  // Tỉa nốt (Nhập Môn là Level 1 dù canonical track khác — gộp qua config, không sửa track)
+  { subject: 'tia_not', courseId: 'fd23a7a2-bfce-44c6-8bde-6d76289a3625', level: 1 }, // Nhập Môn
+  { subject: 'tia_not', courseId: '4e80d7ec-3b99-426a-a090-990d37eb24c0', level: 2 }, // Tỉa nốt 1
+  { subject: 'tia_not', courseId: '41e08930-d8ca-4519-9ca5-f4c0aaf62662', level: 3 }, // Tỉa Nốt 2
+  { subject: 'tia_not', courseId: 'efeababa-fdad-4eab-a88a-a80dab1da2af', level: 4 }, // Tỉa Nốt 3
+]
+const CURRICULUM_BY_COURSE = new Map(JOURNEY_CURRICULUM.map((e, i) => [e.courseId, { subject: e.subject, level: e.level, order: i }]))
+// Môn của 1 course cho student journey: config (nếu có) ưu tiên, ngược lại theo track canonical.
+function journeySubjectKey(course?: CourseSummary | null) {
+  const id = course?.id
+  return (id && CURRICULUM_BY_COURSE.get(id)?.subject) || learnTrackKey(course)
+}
+
 function learnTrackKey(course?: CourseSummary | null) {
   const track = (course?.track ?? '').trim()
   if (track) return track
@@ -843,15 +864,15 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       .in('module_id', modIds)
     const ranked = (lsns ?? []).map((l: any) => {
       const m = modMap[l.module_id]; const cid = m?.course_id ?? ''
-      return { l, m, cid, cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
+      return { l, m, cid, cs: CURRICULUM_BY_COURSE.get(cid)?.order ?? order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
     }).sort((a: any, b: any) => a.cs - b.cs || a.mo - b.mo || a.lo - b.lo)
     setJourneyLessons(ranked.map((p: any) => {
       const c = cobj[p.cid]
       return {
         id: p.l.id, title: p.l.title,
         courseId: p.cid, courseName: cname[p.cid] ?? '', courseCode: c?.code ?? null,
-        moduleId: p.l.module_id, moduleName: p.m?.name ?? '', moduleLevel: p.m?.level ?? null,
-        subjectKey: learnTrackKey(c), ytId: getYtId(p.l.content_url ?? null),
+        moduleId: p.l.module_id, moduleName: p.m?.name ?? '', moduleLevel: CURRICULUM_BY_COURSE.get(p.cid)?.level ?? p.m?.level ?? null,
+        subjectKey: journeySubjectKey(c), ytId: getYtId(p.l.content_url ?? null),
         lesson_type: p.l.lesson_type ?? null, content_url: p.l.content_url ?? null, tier: p.l.tier ?? null,
         access_policy_mode: p.l.access_policy_mode ?? null, required_tier: p.l.required_tier ?? null,
         visibility: p.l.visibility ?? null, availability: p.l.availability ?? null, allow_preview: p.l.allow_preview ?? null,
@@ -973,7 +994,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         setCourseLessonIds(prev => ({ ...prev, ...cli }))
         const ranked = (lsns ?? []).map((l: any) => {
           const m = modMap[l.module_id]; const cid = m?.course_id ?? ''
-          return { l, m, cid, cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
+          return { l, m, cid, cs: CURRICULUM_BY_COURSE.get(cid)?.order ?? order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
         }).sort((a: any, b: any) => a.cs - b.cs || a.mo - b.mo || a.lo - b.lo)
         setMasterPath(ranked.map((p: any) => ({ id: p.l.id, title: p.l.title, courseId: p.cid, courseName: cname[p.cid] ?? '' })))
         // View-model hành trình ngang: giữ module (chương) + course (level) + trường access + ytId
@@ -982,8 +1003,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           return {
             id: p.l.id, title: p.l.title,
             courseId: p.cid, courseName: cname[p.cid] ?? '', courseCode: c?.code ?? null,
-            moduleId: p.l.module_id, moduleName: p.m?.name ?? '', moduleLevel: p.m?.level ?? null,
-            subjectKey: learnTrackKey(c),
+            moduleId: p.l.module_id, moduleName: p.m?.name ?? '', moduleLevel: CURRICULUM_BY_COURSE.get(p.cid)?.level ?? p.m?.level ?? null,
+            subjectKey: journeySubjectKey(c),
             ytId: getYtId(p.l.content_url ?? null),
             lesson_type: p.l.lesson_type ?? null, content_url: p.l.content_url ?? null, tier: p.l.tier ?? null,
             access_policy_mode: p.l.access_policy_mode ?? null, required_tier: p.l.required_tier ?? null,
@@ -1395,8 +1416,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   // ── HÀNH TRÌNH NGANG theo MÔN (aggregation, không đổi canonical) ──
   // Danh sách môn cho màn chọn: 4 môn chuẩn + "Khác" nếu có khoá lệch track (không để mất nội dung).
   const SUBJECTS = [...LEARN_TRACKS, { key: 'khac', title: 'Khác', hint: 'Các khoá còn lại' }]
-    .filter(s => sortedEnrollments.some(e => learnTrackKey(e.course) === s.key))
-  const subjectCourseFor = (key: string) => sortedEnrollments.find(e => learnTrackKey(e.course) === key)?.course ?? null
+    .filter(s => sortedEnrollments.some(e => journeySubjectKey(e.course) === s.key))
+  const subjectCourseFor = (key: string) => sortedEnrollments.find(e => journeySubjectKey(e.course) === key)?.course ?? null
   const journeyOf = (key: string) => journeyLessons.filter(j => j.subjectKey === key)  // đã sort course→module→lesson
   // Access THẬT cho 1 bài trong hành trình — reuse resolver production (KHÔNG rule riêng)
   const lessonAccessOf = (jl: JourneyLesson) => resolveLessonAccess(jl, courseById.get(jl.courseId) ?? { is_free: true, status: 'on' }, effectiveTier, {
@@ -2674,12 +2695,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           const levelGroup = jl.moduleLevel != null ? `${jl.courseId}#${jl.moduleLevel}` : jl.courseId
           const newModule = jl.moduleId !== lastModule
           if (levelGroup !== lastLevelGroup) {
-            if (lastLevelGroup !== null) {
+            if (lastLevelGroup !== null || jl.moduleLevel != null) {
               nodes.push(
                 <div key={'lv-' + jl.moduleId} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 6, padding: '0 8px', minWidth: 100 }}>
                   <div style={{ width: 54, height: 54, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 24, boxShadow: `0 6px 18px ${tone}66` }}>🎖️</div>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: tone, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '.04em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: L.t2, textAlign: 'center', lineHeight: 1.25, maxWidth: 96, ...clamp2 }}>{jl.courseName}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 900, color: tone, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '.05em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
                 </div>
               )
             }
@@ -2709,7 +2729,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', background: `linear-gradient(150deg, ${tone}, ${tone}99)` }}><span style={{ fontSize: 40 }}>🎸</span></div>}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,.05) 30%, rgba(17,24,39,.86) 100%)' }} />
                 <div style={{ position: 'absolute', left: 14, right: 14, bottom: 14, color: '#fff' }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 900, opacity: .85, textTransform: 'uppercase', letterSpacing: '.02em', ...clamp1 }}>{jl.moduleName || jl.courseName}</div>
+                  <div style={{ fontSize: 10.5, fontWeight: 900, opacity: .85, textTransform: 'uppercase', letterSpacing: '.02em', ...clamp1 }}>{jl.moduleName}</div>
                   <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.2, marginTop: 4, ...clamp3 }}>{jl.title}</div>
                   <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 850, opacity: .95 }}>
                     {completed ? '✓ Đã học' : comingSoon ? '🔜 Sắp có' : (locked || seqLocked) ? '🔒 Cần mở khoá' : isCurrent ? '▶ Học tiếp' : 'Vào học'}
