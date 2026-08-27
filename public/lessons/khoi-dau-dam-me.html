@@ -159,7 +159,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 async function fetchMedia() {
   try {
     const res = await fetch(
-      `${SB_URL}/rest/v1/elearn_media?course_slug=eq.khoi-dau-dam-me&select=lesson_num,youtube_id,video_url`,
+      `${SB_URL}/rest/v1/elearn_lessons?course_slug=eq.khoi-dau-dam-me&select=lesson_num,youtube_id,video_url`,
       { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } }
     );
     if (!res.ok) return {};
@@ -453,10 +453,11 @@ class KhoiDauDamMe extends React.Component {
     if (m && m.youtube_id) {
       return R('div', { style: { marginTop: 16, borderRadius: 16, overflow: 'hidden', background: '#000', position: 'relative', paddingBottom: '56.25%' } },
         R('iframe', {
-          src: `https://www.youtube.com/embed/${m.youtube_id}`,
+          src: `https://www.youtube.com/embed/${m.youtube_id}?rel=0&playsinline=1&modestbranding=1`,
           style: { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' },
           allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture',
           allowFullScreen: true,
+          referrerPolicy: 'strict-origin-when-cross-origin',
         })
       );
     }
