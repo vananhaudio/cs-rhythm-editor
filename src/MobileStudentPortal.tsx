@@ -55,10 +55,25 @@ const openExternal = (u: string) => { try { window.open(u, '_system') } catch { 
 
 // Tên khoá/bài tiếng Việt thường dài hơn bề ngang điện thoại. Cắt cụt 1 dòng ("Đệm Hát Trình …")
 // làm học viên không đọc được tên đầy đủ → cho xuống tối đa 2 dòng, chỉ cắt khi thật sự quá dài.
+const clamp1: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 1, overflow: 'hidden' }
 const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }
+const clamp3: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 3, overflow: 'hidden' }
 
 type Tab    = 'home' | 'hoc' | 'tap' | 'teacher' | 'me'
-type Screen = 'home' | 'courses' | 'lesson'
+type Screen = 'home' | 'courses' | 'lesson' | 'journey'
+// View-model bài học phẳng cho MỘT HÀNH TRÌNH NGANG (aggregation layer, KHÔNG đổi canonical DB).
+// Level = course trong môn (sort_order); Chương = module (order_index); Bài = lesson (order_index).
+interface JourneyLesson {
+  id: string; title: string
+  courseId: string; courseName: string; courseCode: string | null
+  moduleId: string; moduleName: string
+  subjectKey: string
+  ytId: string | null
+  // các trường access để resolveLessonAccess hoạt động (mode/tier/visibility/availability/allow_preview)
+  lesson_type?: string | null; content_url?: string | null; tier?: string | null
+  access_policy_mode?: string | null; required_tier?: string | null
+  visibility?: string | null; availability?: string | null; allow_preview?: boolean | null
+}
 
 interface Student    { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null; honor?: string | null; enrolled_at?: string | null }
 interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean; status?: string; order_index?: number }
@@ -312,6 +327,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [lessons, setLessons]     = useState<Lesson[]>([])
   const [lessonActionMap, setLessonActionMap] = useState<Record<string, Set<string>>>({})  // lessonId → set action_type (cho màu mốc)
   const [masterPath, setMasterPath] = useState<{ id: string; title: string; courseId: string; courseName: string }[]>([])  // đường mốc xuyên suốt mọi khóa
+  const [journeyLessons, setJourneyLessons] = useState<JourneyLesson[]>([])  // view-model bài học phẳng theo môn (cho hành trình ngang)
+  const [activeSubject, setActiveSubject]   = useState<string | null>(null)  // môn đang mở màn journey
+  const [companionTab, setCompanionTab]     = useState<'thay' | 'note' | 'ask'>('thay')  // nửa dưới màn journey
+  const journeyRailRef = useRef<HTMLDivElement | null>(null)  // auto-scroll tới bài hiện tại
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [returnLessonId, setReturnLessonId] = useState<string | null>(null) // bài vừa mở → khi quay lại danh sách cuộn về đúng chỗ
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
@@ -807,6 +826,39 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     setCourseLessonIds(prev => ({ ...prev, ...nextMap }))
   }
 
+  // Dựng view-model hành trình ngang (dùng cho GUEST — logged-in build inline cùng masterPath)
+  const loadJourneyLessons = async (courseObjs: (Enrollment['course'] | null | undefined)[]) => {
+    const list = courseObjs.filter(Boolean) as Enrollment['course'][]
+    const cids = list.map(c => c.id)
+    if (cids.length === 0) { setJourneyLessons([]); return }
+    const order: Record<string, number> = {}; const cname: Record<string, string> = {}; const cobj: Record<string, Enrollment['course']> = {}
+    ;[...list].sort((a, b) => (a.sort_order ?? 99) - (b.sort_order ?? 99)).forEach((c, i) => { order[c.id] = i; cname[c.id] = c.name ?? 'Khóa học'; cobj[c.id] = c })
+    const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index,name').in('course_id', cids)
+    const modMap: Record<string, { course_id: string; order_index: number; name?: string }> = {}
+    ;(mods ?? []).forEach((m: any) => { modMap[m.id] = m })
+    const modIds = (mods ?? []).map((m: any) => m.id)
+    if (modIds.length === 0) { setJourneyLessons([]); return }
+    const { data: lsns } = await supabase.from('edu_course_lessons')
+      .select('id,module_id,title,order_index,lesson_type,content_url,tier,access_policy_mode,required_tier,visibility,availability,allow_preview')
+      .in('module_id', modIds)
+    const ranked = (lsns ?? []).map((l: any) => {
+      const m = modMap[l.module_id]; const cid = m?.course_id ?? ''
+      return { l, m, cid, cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
+    }).sort((a: any, b: any) => a.cs - b.cs || a.mo - b.mo || a.lo - b.lo)
+    setJourneyLessons(ranked.map((p: any) => {
+      const c = cobj[p.cid]
+      return {
+        id: p.l.id, title: p.l.title,
+        courseId: p.cid, courseName: cname[p.cid] ?? '', courseCode: c?.code ?? null,
+        moduleId: p.l.module_id, moduleName: p.m?.name ?? '',
+        subjectKey: learnTrackKey(c), ytId: getYtId(p.l.content_url ?? null),
+        lesson_type: p.l.lesson_type ?? null, content_url: p.l.content_url ?? null, tier: p.l.tier ?? null,
+        access_policy_mode: p.l.access_policy_mode ?? null, required_tier: p.l.required_tier ?? null,
+        visibility: p.l.visibility ?? null, availability: p.l.availability ?? null, allow_preview: p.l.allow_preview ?? null,
+      }
+    }))
+  }
+
   useEffect(() => {
     if (guest) {
       supabase.from('edu_courses')
@@ -824,6 +876,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           setOwnedCourseIds(new Set())
           setFoundationGaps([])
           loadCourseLessonMap(courses.map((course: any) => course.id))
+          loadJourneyLessons(courses as Enrollment['course'][])  // guest vẫn xem được hành trình (free-first)
         })
       supabase.from('edu_tools').select('*').order('order_index')
         .then(({ data }) => {
@@ -903,24 +956,40 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         if (courseIds.length === 0) { setMasterPath([]); return }
         const order: Record<string, number> = {}
         const cname: Record<string, string> = {}
+        const cobj: Record<string, Enrollment['course']> = {}
         ;[...courses].sort((a, b) => (a.course?.sort_order ?? 99) - (b.course?.sort_order ?? 99))
-          .forEach((e, i) => { order[e.course_id] = i; cname[e.course_id] = e.course?.name ?? 'Khóa học' })
-        const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index').in('course_id', courseIds)
-        const modMap: Record<string, { course_id: string; order_index: number }> = {}
+          .forEach((e, i) => { order[e.course_id] = i; cname[e.course_id] = e.course?.name ?? 'Khóa học'; if (e.course) cobj[e.course_id] = e.course })
+        const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index,name').in('course_id', courseIds)
+        const modMap: Record<string, { course_id: string; order_index: number; name?: string }> = {}
         ;(mods ?? []).forEach((m: any) => { modMap[m.id] = m })
         const modIds = (mods ?? []).map((m: any) => m.id)
-        if (modIds.length === 0) { setMasterPath([]); return }
-        const { data: lsns } = await supabase.from('edu_course_lessons').select('id,module_id,title,order_index').in('module_id', modIds)
+        if (modIds.length === 0) { setMasterPath([]); setJourneyLessons([]); return }
+        const { data: lsns } = await supabase.from('edu_course_lessons')
+          .select('id,module_id,title,order_index,lesson_type,content_url,tier,access_policy_mode,required_tier,visibility,availability,allow_preview')
+          .in('module_id', modIds)
         // Gom lesson id theo khoá → tính khoá đã hoàn thành (chặn tuần tự HT)
         const cli: Record<string, string[]> = {}
         ;(lsns ?? []).forEach((l: any) => { const cid = modMap[l.module_id]?.course_id; if (cid) (cli[cid] ??= []).push(l.id) })
         setCourseLessonIds(prev => ({ ...prev, ...cli }))
-        const path = (lsns ?? []).map((l: any) => {
+        const ranked = (lsns ?? []).map((l: any) => {
           const m = modMap[l.module_id]; const cid = m?.course_id ?? ''
-          return { id: l.id, title: l.title, courseId: cid, courseName: cname[cid] ?? '', cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
+          return { l, m, cid, cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
         }).sort((a: any, b: any) => a.cs - b.cs || a.mo - b.mo || a.lo - b.lo)
-          .map((p: any) => ({ id: p.id, title: p.title, courseId: p.courseId, courseName: p.courseName }))
-        setMasterPath(path)
+        setMasterPath(ranked.map((p: any) => ({ id: p.l.id, title: p.l.title, courseId: p.cid, courseName: cname[p.cid] ?? '' })))
+        // View-model hành trình ngang: giữ module (chương) + course (level) + trường access + ytId
+        setJourneyLessons(ranked.map((p: any) => {
+          const c = cobj[p.cid]
+          return {
+            id: p.l.id, title: p.l.title,
+            courseId: p.cid, courseName: cname[p.cid] ?? '', courseCode: c?.code ?? null,
+            moduleId: p.l.module_id, moduleName: p.m?.name ?? '',
+            subjectKey: learnTrackKey(c),
+            ytId: getYtId(p.l.content_url ?? null),
+            lesson_type: p.l.lesson_type ?? null, content_url: p.l.content_url ?? null, tier: p.l.tier ?? null,
+            access_policy_mode: p.l.access_policy_mode ?? null, required_tier: p.l.required_tier ?? null,
+            visibility: p.l.visibility ?? null, availability: p.l.availability ?? null, allow_preview: p.l.allow_preview ?? null,
+          }
+        }))
       })
     loadCourses()
     supabase.from('edu_tools').select('*').order('order_index')
@@ -1173,7 +1242,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     goBack()
   }
 
-  const goBack = () => screen === 'lesson' ? setScreen('courses') : (setScreen('home'), setActiveCourseId(null))
+  const goBack = () => screen === 'lesson' ? setScreen(activeSubject ? 'journey' : 'courses') : (setScreen('home'), setActiveCourseId(null))
 
   // Quay lại danh sách bài → cuộn về ĐÚNG bài vừa học (không nhảy về đầu khoá)
   useEffect(() => {
@@ -1185,6 +1254,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     }, 60)
     return () => window.clearTimeout(t)
   }, [screen, returnLessonId])
+
+  // Journey: tự cuộn ngang tới bài hiện tại (không bắt vuốt từ Bài 1 mỗi lần)
+  useEffect(() => {
+    if (screen !== 'journey' || !activeSubject) return
+    const t = window.setTimeout(() => {
+      const el = document.getElementById('jl-current')
+      if (el) el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' })
+    }, 80)
+    return () => window.clearTimeout(t)
+  }, [screen, activeSubject, journeyLessons.length])
 
   // % hoàn thành của 1 khoá
   const courseProgress = (courseId: string) => {
@@ -1311,6 +1390,34 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const otherLearnItems = sortedEnrollments.filter(e => !LEARN_TRACKS.some(row => row.key === learnTrackKey(e.course)))
   if (otherLearnItems.length > 0) {
     learnRows.push({ key: 'khac', title: 'Khác', hint: 'Các khóa còn lại', items: otherLearnItems })
+  }
+
+  // ── HÀNH TRÌNH NGANG theo MÔN (aggregation, không đổi canonical) ──
+  // Danh sách môn cho màn chọn: 4 môn chuẩn + "Khác" nếu có khoá lệch track (không để mất nội dung).
+  const SUBJECTS = [...LEARN_TRACKS, { key: 'khac', title: 'Khác', hint: 'Các khoá còn lại' }]
+    .filter(s => sortedEnrollments.some(e => learnTrackKey(e.course) === s.key))
+  const subjectCourseFor = (key: string) => sortedEnrollments.find(e => learnTrackKey(e.course) === key)?.course ?? null
+  const journeyOf = (key: string) => journeyLessons.filter(j => j.subjectKey === key)  // đã sort course→module→lesson
+  // Access THẬT cho 1 bài trong hành trình — reuse resolver production (KHÔNG rule riêng)
+  const lessonAccessOf = (jl: JourneyLesson) => resolveLessonAccess(jl, courseById.get(jl.courseId) ?? { is_free: true, status: 'on' }, effectiveTier, {
+    courseLegacyUnlocked: preview || freeCourses.has(jl.courseId) || accessCourses.has(jl.courseId) || ownedCourseIds.has(jl.courseId),
+    preview,
+  })
+  const subjectProgress = (key: string) => {
+    const items = journeyOf(key)
+    if (items.length === 0) return null
+    const done = items.filter(j => completedIds.has(j.id)).length
+    return { done, total: items.length, pct: Math.round((done / items.length) * 100) }
+  }
+  // Tone nhận diện theo Level (index course trong môn) — Level đổi màu tạo cảm giác "vùng mới"
+  const LEVEL_TONES = ['#4338CA', '#0891B2', '#15803D', '#D97706', '#7C3AED', '#BE185D']
+  const openJourneyLesson = (jl: JourneyLesson) => {
+    const a = lessonAccessOf(jl)
+    if (!a.visible) return
+    if (!a.available) return                    // sắp có → không mở
+    if (!a.canAccess) { openUpgrade(); return } // khoá theo gói → nâng gói (flow hiện tại)
+    if (isSeqLocked(jl.courseCode)) return       // khoá tuần tự HT → không mở
+    openCourse(jl.courseId, jl.id)               // available → mở thẳng player production
   }
 
   return (
@@ -1496,74 +1603,38 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ fontSize: 28, lineHeight: 1.1, fontWeight: 900, color: L.t1, letterSpacing: 0 }}>Học</div>
                 </div>
               </div>
-              <div style={{ marginTop: 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Nhìn thumbnail, vuốt ngang, bấm một khóa rồi học.</div>
+              <div style={{ marginTop: 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Chọn một môn để vào hành trình học — vuốt ngang, học từng bài.</div>
             </div>
 
-            {learnRows.length > 0 ? (
-              <div style={{ paddingBottom: 16 }}>
-                {learnRows.map(row => (
-                  <section key={row.key} style={{ marginTop: 22 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 18px 10px' }}>
-                      <h2 style={{ margin: 0, fontSize: 18, lineHeight: 1.2, fontWeight: 900, color: L.t1 }}>{row.title}</h2>
-                      <span style={{ color: L.p1, fontSize: 13, lineHeight: 1.3, fontWeight: 850, textAlign: 'right' }}>{row.hint}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 18px 4px', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
-                      {row.items.map(e => {
-                        const access = courseAccessOf(e)
-                        const seqMiss = seqLockMissing(e.course?.code)
-                        const seqLocked = access.available && seqMiss.length > 0
-                        const locked = !access.available || !access.canAccess || seqLocked
-                        const stats = courseProgressStats(e.course_id)
-                        const progressText = stats
-                          ? stats.done >= stats.total ? 'Đã học' : stats.done > 0 ? `Đang học · ${stats.done}/${stats.total}` : null
-                          : null
-                        const statusText = !access.available
-                          ? 'Sắp có'
-                          : seqLocked
-                          ? `Cần ${seqMiss.join(' · ')}`
-                          : !access.canAccess
-                          ? `Cần ${ENTITLEMENT_TIER_LABEL[access.requiredTier]}`
-                          : progressText ?? 'Học ngay'
-                        return (
-                          <CourseThumbCard
-                            key={e.id}
-                            course={e.course}
-                            locked={locked}
-                            statusText={statusText}
-                            progressText={progressText}
-                            onClick={() => {
-                              if (!access.visible) return
-                              if (!access.available) return
-                              if (!access.canAccess) { openUpgrade(); return }
-                              if (seqLocked) return
-                              openCourse(e.course_id, resumeCourseId === e.course_id ? resumeLesson?.id : undefined)
-                            }}
-                          />
-                        )
-                      })}
-                    </div>
-                  </section>
-                ))}
-
-                {foundationGaps.length > 0 && (
-                  <section style={{ marginTop: 22 }}>
-                    <div style={{ padding: '0 18px 10px' }}>
-                      <h2 style={{ margin: 0, fontSize: 18, lineHeight: 1.2, fontWeight: 900, color: '#991B1B' }}>Nền tảng còn thiếu</h2>
-                      <div style={{ marginTop: 4, fontSize: 12.5, color: L.t2, lineHeight: 1.45 }}>Xem trước mục lục và học bổ sung để chắc gốc.</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 18px 4px', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
-                      {foundationGaps.map(course => (
-                        <CourseThumbCard
-                          key={course!.id}
-                          course={course!}
-                          locked={true}
-                          statusText="Thiếu nền tảng"
-                          onClick={() => openCourse(course!.id)}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
+            {SUBJECTS.length > 0 ? (
+              <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {SUBJECTS.map(sub => {
+                  const cover = subjectCourseFor(sub.key)?.image_url?.trim()
+                  const prog = subjectProgress(sub.key)
+                  const progText = prog
+                    ? prog.done >= prog.total ? 'Đã học xong' : prog.done > 0 ? `Đang học · ${prog.done}/${prog.total} bài` : `${prog.total} bài`
+                    : 'Sắp có'
+                  return (
+                    <button key={sub.key}
+                      onClick={() => { setActiveSubject(sub.key); setScreen('journey') }}
+                      style={{ position: 'relative', width: '100%', height: 150, border: 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', boxShadow: L.shadowLg, textAlign: 'left' }}>
+                      {cover
+                        ? <img src={cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        : <div style={{ width: '100%', height: '100%', ...courseFallbackStyle({ track: sub.key } as CourseSummary) }} />}
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,.10) 0%, rgba(17,24,39,.82) 100%)' }} />
+                      <div style={{ position: 'absolute', left: 18, right: 18, bottom: 16, color: '#fff' }}>
+                        <div style={{ fontSize: 11, fontWeight: 900, opacity: .85, letterSpacing: '.04em', textTransform: 'uppercase' }}>Hành trình</div>
+                        <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.12, marginTop: 2 }}>{sub.title}</div>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, opacity: .92, marginTop: 6 }}>{sub.hint} · {progText}</div>
+                      </div>
+                      {prog && prog.total > 0 && (
+                        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 5, background: 'rgba(255,255,255,.25)' }}>
+                          <div style={{ width: `${prog.pct}%`, height: '100%', background: '#fff' }} />
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             ) : (
               <div style={{ margin: '24px 18px', background: L.surface, borderRadius: 20, padding: '32px 20px', textAlign: 'center', boxShadow: L.shadow }}>
@@ -2580,6 +2651,138 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           </div>
         )}
       </div>
+
+      {/* ══ JOURNEY — MỘT HÀNH TRÌNH NGANG DUY NHẤT (nửa trên rail · nửa dưới đồng hành) ══ */}
+      {tab === 'hoc' && screen === 'journey' && activeSubject && (() => {
+        const items = journeyOf(activeSubject)
+        const subject = SUBJECTS.find(s => s.key === activeSubject)
+        // hoàn thành theo chương (module) — cho marker chương
+        const modLessonIds: Record<string, string[]> = {}
+        items.forEach(j => { (modLessonIds[j.moduleId] ??= []).push(j.id) })
+        const moduleDone = (mid: string) => (modLessonIds[mid] ?? []).length > 0 && (modLessonIds[mid] ?? []).every(id => completedIds.has(id))
+        // bài "hiện tại" = bài mở được đầu tiên chưa hoàn thành
+        const currentId = items.find(j => { const a = lessonAccessOf(j); return a.canAccess && !completedIds.has(j.id) })?.id
+        // dựng chuỗi node: lesson + mốc chương (nhẹ) + mốc level (mạnh, đổi tone)
+        const nodes: React.ReactNode[] = []
+        let lastCourse: string | null = null, lastModule: string | null = null, levelIdx = -1
+        items.forEach((jl) => {
+          const newCourse = jl.courseId !== lastCourse
+          const newModule = jl.moduleId !== lastModule
+          if (newCourse) {
+            levelIdx++
+            if (lastCourse !== null) {
+              const tone = LEVEL_TONES[levelIdx % LEVEL_TONES.length]
+              nodes.push(
+                <div key={'lv-' + jl.courseId} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 6, padding: '0 6px', minWidth: 96 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 24, boxShadow: `0 6px 18px ${tone}55` }}>🎖️</div>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: tone, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '.03em' }}>Chặng mới</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: L.t2, textAlign: 'center', lineHeight: 1.25, maxWidth: 92, ...clamp2 }}>{jl.courseName}</div>
+                </div>
+              )
+            }
+          } else if (newModule && lastModule !== null) {
+            const done = moduleDone(lastModule)
+            nodes.push(
+              <div key={'ch-' + lastModule} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 5, padding: '0 2px', minWidth: 62 }}>
+                <div style={{ width: 34, height: 34, borderRadius: '50%', background: done ? '#16A34A18' : L.surface2, color: done ? '#16A34A' : L.t3, display: 'grid', placeItems: 'center', fontSize: 16, border: `1.5px solid ${done ? '#16A34A' : L.border}` }}>{done ? '✓' : '♪'}</div>
+                <div style={{ fontSize: 9.5, fontWeight: 800, color: L.t3, textAlign: 'center' }}>hết chương</div>
+              </div>
+            )
+          }
+          const tone = LEVEL_TONES[levelIdx % LEVEL_TONES.length]
+          const a = lessonAccessOf(jl)
+          if (a.visible) {
+            const completed = completedIds.has(jl.id)
+            const comingSoon = !a.available
+            const locked = a.available && !a.canAccess
+            const seqLocked = isSeqLocked(jl.courseCode)
+            const isCurrent = jl.id === currentId
+            const thumb = jl.ytId ? `https://img.youtube.com/vi/${jl.ytId}/hqdefault.jpg` : (courseById.get(jl.courseId)?.image_url?.trim() || null)
+            nodes.push(
+              <button key={jl.id} id={isCurrent ? 'jl-current' : undefined}
+                onClick={() => openJourneyLesson(jl)}
+                style={{ flex: '0 0 60vw', maxWidth: 230, scrollSnapAlign: 'center', position: 'relative', border: isCurrent ? `2.5px solid ${tone}` : 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', background: L.surface, boxShadow: isCurrent ? `0 10px 26px ${tone}44` : L.shadowLg, textAlign: 'left', alignSelf: 'stretch' }}>
+                {thumb
+                  ? <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: (locked || comingSoon || seqLocked) ? 'grayscale(.5) brightness(.9)' : undefined }} />
+                  : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', background: `linear-gradient(150deg, ${tone}, ${tone}99)` }}><span style={{ fontSize: 40 }}>🎸</span></div>}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,.05) 30%, rgba(17,24,39,.86) 100%)' }} />
+                <div style={{ position: 'absolute', left: 14, right: 14, bottom: 14, color: '#fff' }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 900, opacity: .85, textTransform: 'uppercase', letterSpacing: '.02em', ...clamp1 }}>{jl.moduleName || jl.courseName}</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.2, marginTop: 4, ...clamp3 }}>{jl.title}</div>
+                  <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 850, opacity: .95 }}>
+                    {completed ? '✓ Đã học' : comingSoon ? '🔜 Sắp có' : (locked || seqLocked) ? '🔒 Cần mở khoá' : isCurrent ? '▶ Học tiếp' : 'Vào học'}
+                  </div>
+                </div>
+                {completed && <span style={{ position: 'absolute', top: 12, right: 12, width: 30, height: 30, borderRadius: '50%', background: '#16A34A', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 900 }}>✓</span>}
+                {(locked || comingSoon || seqLocked) && !completed && <span style={{ position: 'absolute', top: 12, right: 12, width: 30, height: 30, borderRadius: 11, background: 'rgba(17,24,39,.72)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 14 }}>{comingSoon ? '🔜' : '🔒'}</span>}
+              </button>
+            )
+          }
+          lastCourse = jl.courseId; lastModule = jl.moduleId
+        })
+        const prog = subjectProgress(activeSubject)
+        return (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 'calc(62px + env(safe-area-inset-bottom))', background: L.bg, display: 'flex', flexDirection: 'column', zIndex: 8 }}>
+            {/* Header */}
+            <div style={{ background: L.surface, padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 12px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0 }}>
+              <button onClick={() => { setScreen('home'); setActiveSubject(null) }} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, marginBottom: 10 }}>‹</button>
+              <div style={{ fontWeight: 900, fontSize: 22, color: L.t1 }}>{subject?.title ?? 'Hành trình'}</div>
+              <div style={{ fontSize: 13, color: L.t2, marginTop: 2 }}>
+                {prog ? (prog.done >= prog.total ? 'Đã hoàn thành hành trình' : `${prog.done}/${prog.total} bài · ${prog.pct}%`) : 'Vuốt ngang để đi suốt hành trình'}
+              </div>
+            </div>
+            {/* NỬA TRÊN — MỘT rail ngang duy nhất (lesson + mốc chương/level) */}
+            <div style={{ flex: '0 0 auto', height: '54%', minHeight: 300, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              {items.length > 0 ? (
+                <div ref={journeyRailRef} style={{ display: 'flex', alignItems: 'stretch', gap: 12, overflowX: 'auto', overflowY: 'hidden', padding: '16px 18px', height: '76%', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
+                  {nodes}
+                  <div style={{ flex: '0 0 6px' }} />
+                </div>
+              ) : (
+                <div style={{ padding: '0 24px', textAlign: 'center', color: L.t2 }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>🎼</div>
+                  <div style={{ fontWeight: 800, color: L.t1, marginBottom: 4 }}>Hành trình đang được soạn</div>
+                  <div style={{ fontSize: 13, lineHeight: 1.5 }}>Các bài học của môn này sẽ xuất hiện ở đây.</div>
+                </div>
+              )}
+            </div>
+            {/* NỬA DƯỚI — Không gian đồng hành (shell; chưa có data thì empty sạch, không fake) */}
+            <div style={{ flex: 1, minHeight: 0, background: L.surface, borderTop: `1px solid ${L.border}`, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', gap: 6, padding: '12px 16px 0' }}>
+                {([['thay', 'Thầy dặn'], ['note', 'Ghi chú'], ['ask', 'Hỏi Thầy']] as const).map(([k, label]) => (
+                  <button key={k} onClick={() => setCompanionTab(k)}
+                    style={{ flex: 1, background: companionTab === k ? L.p2 : 'transparent', color: companionTab === k ? L.p1 : L.t3, border: 'none', borderRadius: 12, padding: '9px 4px', fontSize: 13, fontWeight: companionTab === k ? 800 : 600, cursor: 'pointer', fontFamily: 'inherit' }}>{label}</button>
+                ))}
+              </div>
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 18px' }}>
+                {companionTab === 'thay' && (
+                  <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: L.t1, marginBottom: 6 }}>Lời dặn của Thầy</div>
+                    Mở một bài trong hành trình để xem lời dặn của Thầy cho bài đó.
+                  </div>
+                )}
+                {companionTab === 'note' && (
+                  <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: L.t1, marginBottom: 6 }}>Ghi chú của tôi</div>
+                    Ghi chú gắn theo từng bài — mở một bài để viết và xem lại ghi chú của bài đó.
+                  </div>
+                )}
+                {companionTab === 'ask' && (
+                  <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: L.t1, marginBottom: 6 }}>Hỏi Thầy</div>
+                    <div style={{ marginBottom: 12 }}>Nhắn Thầy và hỏi bài trong nhóm lớp của bạn.</div>
+                    <button onClick={() => setTab('teacher')} style={{ background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Vào Thầy · nhóm lớp</button>
+                  </div>
+                )}
+                {/* Chừa chỗ "Trả bài cho Thầy" (§12) — chưa mở, không dựng UI nộp bài giả */}
+                <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, opacity: .55 }}>
+                  <span style={{ background: L.surface2, color: L.t3, borderRadius: 8, padding: '4px 10px', fontSize: 11.5, fontWeight: 700 }}>Trả bài cho Thầy · sắp có</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ══ BOTTOM NAV ════════════════════════════════════════════════════ */}
       <div style={{
