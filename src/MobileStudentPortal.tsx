@@ -57,7 +57,7 @@ const openExternal = (u: string) => { try { window.open(u, '_system') } catch { 
 // làm học viên không đọc được tên đầy đủ → cho xuống tối đa 2 dòng, chỉ cắt khi thật sự quá dài.
 const clamp2: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }
 
-type Tab    = 'hoc' | 'tap' | 'song'
+type Tab    = 'home' | 'hoc' | 'tap' | 'teacher' | 'me'
 type Screen = 'home' | 'courses' | 'lesson'
 
 interface Student    { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null; honor?: string | null; enrolled_at?: string | null }
@@ -277,9 +277,11 @@ const TOOL_ROUTES: Record<string, string> = {
 }
 
 const TABS = [
-  { id: 'hoc'  as Tab, icon: '📖', label: 'Học'  },
-  { id: 'tap'  as Tab, icon: '🎯', label: 'Tập'  },
-  { id: 'song' as Tab, icon: '✨', label: 'Sống' },
+  { id: 'home'    as Tab, icon: '🏠', label: 'Trang chủ' },
+  { id: 'hoc'     as Tab, icon: '📖', label: 'Học'       },
+  { id: 'tap'     as Tab, icon: '🎯', label: 'Tập'       },
+  { id: 'teacher' as Tab, icon: '💬', label: 'Thầy'      },
+  { id: 'me'      as Tab, icon: '🙂', label: 'Tôi'       },
 ]
 const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; route: string }> = {
   tap:           { label: 'Tap nhịp',     icon: '🥁', color: L.p1,      route: '/tempo'  },
@@ -294,7 +296,7 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
 interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void }
 
 export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired }: Props) {
-  const [tab, setTab]             = useState<Tab>('hoc')
+  const [tab, setTab]             = useState<Tab>('home')
   const [me, setMe]               = useState<Student>(student)
   // Đồng bộ lại khi student đổi (guest → đăng nhập, khôi phục phiên) — không thì header chào sai tên
   useEffect(() => { setMe(student) }, [student.id])
@@ -1395,9 +1397,76 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       background: L.bg, fontFamily: '"SF Pro Display", "DM Sans", system-ui, sans-serif',
       color: L.t1, position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 84 }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
 
-        {/* ── HOME ────────────────────────────────────────────────────── */}
+        {/* ── TRANG CHỦ ───────────────────────────────────────────────── */}
+        {tab === 'home' && (
+          <>
+            <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 14, background: L.p1, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: L.shadow }}>
+                  <NavIcon name="home" color="#fff" size={22} />
+                </div>
+                <div style={{ textAlign: 'left', minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: L.t3, fontWeight: 800, letterSpacing: '.04em' }}>THẦY VĂN ANH GUITAR</div>
+                  <div style={{ fontSize: 24, lineHeight: 1.12, fontWeight: 900, color: L.t1 }}>Chào {name.split(' ').slice(-1)[0]}</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 8, color: L.t2, fontSize: 13.5, lineHeight: 1.5 }}>Mở app là có thứ để học và luyện ngay. Bắt đầu từ chỗ bạn đang dở.</div>
+            </div>
+
+            {/* Tiếp tục hành trình — dùng resume course THẬT; nếu chưa có thì mời vào Học */}
+            <section style={{ margin: '18px 18px 0' }}>
+              <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 10, textAlign: 'left' }}>Tiếp tục hành trình</div>
+              {resumeCourse ? (
+                <button
+                  onClick={() => openCourse(resumeCourse.course_id, resumeLesson?.id)}
+                  style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 20, boxShadow: L.shadow, padding: 14, display: 'flex', gap: 14, alignItems: 'center', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <CourseLogo course={resumeCourse.course} size={72} radius={16} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 12, fontWeight: 800, color: L.p1 }}>{resumeCourse.course?.name ?? 'Khoá học'}</span>
+                    <span style={{ display: 'block', fontSize: 15.5, fontWeight: 900, color: L.t1, lineHeight: 1.3, marginTop: 3, ...clamp2 }}>{resumeLesson ? `Học: ${resumeLesson.title}` : 'Vào học tiếp'}</span>
+                    <span style={{ display: 'inline-block', marginTop: 10, background: L.p1, color: '#fff', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 850 }}>Tiếp tục</span>
+                  </span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setTab('hoc'); setScreen('home') }}
+                  style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 20, boxShadow: L.shadow, padding: '20px 16px', display: 'flex', gap: 14, alignItems: 'center', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <span style={{ width: 56, height: 56, borderRadius: 16, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 26, flexShrink: 0 }}>🌱</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 15.5, fontWeight: 900, color: L.t1 }}>Bắt đầu học</span>
+                    <span style={{ display: 'block', fontSize: 13, color: L.t2, marginTop: 3, lineHeight: 1.4 }}>Chọn một khoá ở tab Học và học bài đầu tiên.</span>
+                  </span>
+                  <span style={{ color: L.t3, fontSize: 20, flexShrink: 0 }}>›</span>
+                </button>
+              )}
+            </section>
+
+            {/* Lối tắt — điều hướng vào các tab thật, không tạo dữ liệu mới */}
+            <section style={{ margin: '22px 18px 0' }}>
+              <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 10, textAlign: 'left' }}>Làm gì hôm nay</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {([
+                  ['hoc',     '📖', 'Học',  'Khoá & bài giảng'],
+                  ['tap',     '🎯', 'Tập',  'Công cụ luyện tập'],
+                  ['teacher', '💬', 'Thầy', 'Nhóm & đồng hành'],
+                  ['me',      '🙂', 'Tôi',  'Hồ sơ & gói học'],
+                ] as const).map(([id, icon, label, sub]) => (
+                  <button key={id}
+                    onClick={() => { setTab(id as Tab); if (id === 'hoc') setScreen('home') }}
+                    style={{ background: L.surface, border: 'none', borderRadius: 18, boxShadow: L.shadow, padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 20 }}>{icon}</span>
+                    <span style={{ fontSize: 15, fontWeight: 900, color: L.t1 }}>{label}</span>
+                    <span style={{ fontSize: 12, color: L.t2, lineHeight: 1.35 }}>{sub}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ── HOME (tab Học) ──────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'home' && (
           <>
             <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
@@ -2378,13 +2447,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ── SỐNG ────────────────────────────────────────────────────── */}
         {/* ══ SỐNG ══ Lớp = đơn vị đào tạo · Band = đơn vị cộng đồng.
             Mỗi mục là 1 entry điều hướng (không feed, không dashboard). ═══════ */}
-        {tab === 'song' && (
-          <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 110px' }}>{/* chừa chỗ cho thanh điều hướng dưới */}
-            <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Sống cùng âm nhạc</div>
-            <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>Kết nối · Trải nghiệm · Truyền cảm hứng</div>
+        {/* ── THẦY ────────────────────────────────────────────────────── */}
+        {/* Tái dùng các capability đồng hành THẬT (setLivePage/Zalo/FB), không tạo lịch/tin nhắn giả. */}
+        {tab === 'teacher' && (
+          <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 8px' }}>
+            <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Thầy</div>
+            <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>Nhóm lớp, đồng hành và cộng đồng cùng Thầy.</div>
 
-            {/* 1. BAND CỦA TÔI — hero. Đa số học viên chưa có Band: hiện trạng thái + lối tìm hiểu.
-                Khi đã có Band, chỗ này sẽ đổi thành logo · tên · thành viên · shortcut vào Band. */}
+            {/* BAND CỦA TÔI — hero. Đa số học viên chưa có Band: hiện trạng thái + lối tìm hiểu. */}
             <div style={{ background: L.surface, borderRadius: 18, padding: '18px', boxShadow: L.shadow, marginBottom: 14 }}>
               <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>🎸 Band của tôi</div>
               <div style={{ fontSize: 15, color: L.t1, fontWeight: 600 }}>Bạn chưa tham gia Band nào.</div>
@@ -2398,13 +2468,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </button>
             </div>
 
-            {/* 2–5. Các entry điều hướng — cùng kiểu nút, không preview */}
+            {/* Các entry điều hướng THẬT — cùng kiểu nút, không preview */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {([
+                ['classgroup', '💬', 'Nhóm lớp của tôi'],
                 ['community',  '👥', 'Cộng đồng Hành trình'],
                 ['story',      '📖', '1001 Câu chuyện cùng Guitar'],
                 ['festival',   '🎸', 'Đại hội Guitar'],
-                ['classgroup', '💬', 'Nhóm lớp của tôi'],
               ] as const).map(([key, icon, label]) => (
                 <button key={key}
                   onClick={() => {
@@ -2424,23 +2494,67 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 </button>
               ))}
             </div>
+          </div>
+        )}
 
-            {/* Tài khoản — lối vào duy nhất để đổi hồ sơ / đăng xuất trên điện thoại, giữ gọn 1 hàng */}
-            <div style={{ background: L.surface, borderRadius: 16, padding: '12px 14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, marginTop: 22 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
-                {me.avatar_url
-                  ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : name.charAt(0).toUpperCase()}
+        {/* ── TÔI ─────────────────────────────────────────────────────── */}
+        {/* Hồ sơ/gói/tiến độ THẬT. Guest có trạng thái riêng, KHÔNG ép login khi mở tab. */}
+        {tab === 'me' && (
+          <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 8px' }}>
+            <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Tôi</div>
+            <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>Hồ sơ, gói học và tài khoản.</div>
+
+            {/* Hồ sơ + tiến độ THẬT (masterPath/completedIds) */}
+            <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: 18, marginBottom: 14 }}>
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                <div style={{ width: 60, height: 60, borderRadius: 20, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: L.p1, fontWeight: 800, overflow: 'hidden', flexShrink: 0 }}>
+                  {me.avatar_url
+                    ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : name.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <div style={{ fontWeight: 900, fontSize: 18, lineHeight: 1.3, ...clamp2 }}>{name}</div>
+                  <div style={{ fontSize: 13, color: L.t2, marginTop: 2 }}>{guest ? 'Khách · Miễn phí' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.35, ...clamp2 }}>{name}</div>
-                <div style={{ fontSize: 12.5, color: L.t2 }}>{guest ? 'Miễn phí' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
+              {(() => {
+                const total = masterPath.length
+                const done = masterPath.filter(m => completedIds.has(m.id)).length
+                if (total === 0) return null
+                const pct = Math.round((done / total) * 100)
+                return (
+                  <div style={{ marginTop: 16, textAlign: 'left' }}>
+                    <div style={{ height: 9, background: L.p2, borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: L.p1 }} />
+                    </div>
+                    <div style={{ marginTop: 8, color: L.t2, fontSize: 13 }}>{done}/{total} bài trong hành trình · {pct}%</div>
+                  </div>
+                )
+              })()}
+            </div>
+
+            {/* Gói của tôi + nâng cấp (chỉ hiện nâng gói khi IAP native, giữ nguyên flow billing) */}
+            <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: 16, marginBottom: 14, textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 20, flexShrink: 0 }}>👑</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, color: L.t2, fontWeight: 750 }}>Gói của tôi</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: L.t1 }}>{guest ? 'Miễn phí' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
+                </div>
+                {isNativeIAP && (
+                  <button onClick={openUpgrade} style={{ background: L.p1, border: 'none', borderRadius: 12, padding: '9px 14px', color: '#fff', fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                    Nâng cấp
+                  </button>
+                )}
               </div>
-              {isNativeIAP && (
-                <button onClick={openUpgrade} style={{ background: L.p1, border: 'none', borderRadius: 10, padding: '8px 12px', color: '#fff', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                  Nâng gói
-                </button>
-              )}
+            </div>
+
+            {/* Tài khoản — cài đặt hồ sơ / đăng nhập / đăng xuất */}
+            <div style={{ background: L.surface, borderRadius: 16, padding: '12px 14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <div style={{ fontWeight: 800, fontSize: 14.5, color: L.t1 }}>Tài khoản</div>
+                <div style={{ fontSize: 12.5, color: L.t2 }}>{guest ? 'Đăng nhập để lưu tiến trình' : 'Đổi hồ sơ · đăng xuất'}</div>
+              </div>
               {!guest && <button onClick={openSettings} title="Cài đặt hồ sơ" style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>⚙️</button>}
               <button onClick={guest ? requireLogin : onLogout} style={{ background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 10, padding: '8px 12px', color: L.t2, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                 {guest ? 'Đăng nhập' : 'Đăng xuất'}
@@ -2456,7 +2570,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         background: 'rgba(255,255,255,0.92)',
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         borderTop: `1px solid ${L.border}`,
-        display: 'flex', padding: '10px 8px max(10px, env(safe-area-inset-bottom)) 8px',
+        display: 'flex', padding: '9px 5px max(10px, env(safe-area-inset-bottom)) 5px',
         zIndex: 20,
       }}>
         {TABS.map(t => {
@@ -2465,13 +2579,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             <button key={t.id}
               onClick={() => { setTab(t.id); if (t.id === 'hoc') setScreen('home') }}
               style={{
-                flex: 1, background: active ? L.p2 : 'transparent', border: 'none',
-                borderRadius: 14, cursor: 'pointer', padding: '8px 4px',
+                flex: 1, minWidth: 0, background: active ? L.p2 : 'transparent', border: 'none',
+                borderRadius: 14, cursor: 'pointer', padding: '7px 2px',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                 fontFamily: 'inherit', transition: 'background .15s',
               }}>
-              <NavIcon name={t.id} color={active ? L.p1 : L.t3} size={24} />
-              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? L.p1 : L.t3, letterSpacing: '.04em' }}>
+              <NavIcon name={t.id} color={active ? L.p1 : L.t3} size={23} />
+              <span style={{ fontSize: 10.5, fontWeight: active ? 800 : 500, color: active ? L.p1 : L.t3, letterSpacing: '.01em', whiteSpace: 'nowrap' }}>
                 {t.label}
               </span>
             </button>

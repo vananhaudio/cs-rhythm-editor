@@ -8,6 +8,32 @@ export function NavIcon({ name, color = 'currentColor', size = 24, strokeWidth =
     strokeWidth, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
   }
 
+  // TRANG CHỦ — ngôi nhà
+  if (name === 'home') return (
+    <svg {...p}>
+      <path d="M3.4 11.3 12 4.2l8.6 7.1" />
+      <path d="M5.4 9.9V19.4h13.2V9.9" />
+      <path d="M9.8 19.4v-5.1h4.4v5.1" />
+    </svg>
+  )
+
+  // THẦY — bong bóng trò chuyện (nhắn Thầy / nhóm)
+  if (name === 'teacher') return (
+    <svg {...p}>
+      <path d="M20 11.4a7.6 7.6 0 0 1-10.9 6.85L4.2 19.6l1.45-4.1A7.6 7.6 0 1 1 20 11.4Z" />
+      <path d="M8.6 11.4h.01M12 11.4h.01M15.4 11.4h.01" />
+    </svg>
+  )
+
+  // TÔI — người trong vòng tròn (tài khoản)
+  if (name === 'me') return (
+    <svg {...p}>
+      <circle cx="12" cy="12" r="8.4" />
+      <circle cx="12" cy="10.1" r="2.9" />
+      <path d="M6.9 18.2a5.6 5.6 0 0 1 10.2 0" />
+    </svg>
+  )
+
   // HỌC — sách mở + nốt nhạc + dòng nhạc
   if (name === 'hoc') return (
     <svg {...p}>
