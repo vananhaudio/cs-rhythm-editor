@@ -37,7 +37,7 @@ const STATUS_CFG: Record<CourseStatus, { label: string; dot: string; color: stri
   coming_soon: { label: '🔜 Sắp ra mắt', dot: '#D97706', color: '#D97706', bg: '#FFFBEB', border: '#FCD34D' },
   off:         { label: '✕ Tắt',         dot: '#A1A1AA', color: '#71717A', bg: '#F4F4F5', border: '#D4D4D8' },
 }
-interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null }
+interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null; level: number | null }
 interface Lesson  {
   id: string; module_id: string; title: string; lesson_type: string
   content_url: string | null; description: string | null; content: string | null
@@ -441,6 +441,14 @@ export default function CourseEditorContent() {
     if (data) { setCourses(prev => [...prev, data]); setShowNewCourse(false); setNcName(''); loadCourse(data) }
   }
 
+  // Level chương (metadata sư phạm — dùng cho mốc Level trong journey; KHÔNG dính access/tier)
+  const saveModuleLevel = async (moduleId: string, raw: string) => {
+    const n = raw.trim() === '' ? null : Math.max(1, Math.floor(Number(raw)))
+    const level = Number.isFinite(n as number) ? n : null
+    const { error } = await supabase.from('edu_modules').update({ level }).eq('id', moduleId)
+    if (error) { alert('Lưu Level lỗi: ' + error.message); return }
+    setModules(prev => prev.map(m => m.id === moduleId ? { ...m, level } : m))
+  }
   const saveModuleName = async (moduleId: string) => {
     if (!editingModuleName.trim()) return
     const { error } = await supabase.from('edu_modules').update({ name: editingModuleName }).eq('id', moduleId)
@@ -1018,6 +1026,15 @@ export default function CourseEditorContent() {
                           {mod.name}
                         </span>
                       )}
+                      <input
+                        type="number" min={1}
+                        value={mod.level ?? ''}
+                        placeholder="Lv"
+                        title="Level (chương này thuộc Level mấy) — để trống nếu chưa xác định. Chỉ là mốc sư phạm, không ảnh hưởng quyền truy cập."
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => { const v = e.target.value; setModules(prev => prev.map(m => m.id === mod.id ? { ...m, level: v === '' ? null : Math.max(1, Math.floor(Number(v))) } : m)) }}
+                        onBlur={e => saveModuleLevel(mod.id, e.target.value)}
+                        style={{ width: 44, flexShrink: 0, border: `1px solid ${C.border}`, borderRadius: 5, padding: '2px 4px', fontSize: 11, fontFamily: 'inherit', outline: 'none', color: C.text1, background: C.bg, textAlign: 'center' }} />
                       <span style={{ color: C.text3, fontWeight: 400, flexShrink: 0 }}>{modLessons.length} bài</span>
                       <button onClick={e => { e.stopPropagation(); deleteModule(mod.id, mod.name) }}
                         title="Xoá chương này"

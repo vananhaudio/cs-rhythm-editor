@@ -66,7 +66,7 @@ type Screen = 'home' | 'courses' | 'lesson' | 'journey'
 interface JourneyLesson {
   id: string; title: string
   courseId: string; courseName: string; courseCode: string | null
-  moduleId: string; moduleName: string
+  moduleId: string; moduleName: string; moduleLevel: number | null
   subjectKey: string
   ytId: string | null
   // các trường access để resolveLessonAccess hoạt động (mode/tier/visibility/availability/allow_preview)
@@ -833,8 +833,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     if (cids.length === 0) { setJourneyLessons([]); return }
     const order: Record<string, number> = {}; const cname: Record<string, string> = {}; const cobj: Record<string, Enrollment['course']> = {}
     ;[...list].sort((a, b) => (a.sort_order ?? 99) - (b.sort_order ?? 99)).forEach((c, i) => { order[c.id] = i; cname[c.id] = c.name ?? 'Khóa học'; cobj[c.id] = c })
-    const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index,name').in('course_id', cids)
-    const modMap: Record<string, { course_id: string; order_index: number; name?: string }> = {}
+    const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index,name,level').in('course_id', cids)
+    const modMap: Record<string, { course_id: string; order_index: number; name?: string; level?: number | null }> = {}
     ;(mods ?? []).forEach((m: any) => { modMap[m.id] = m })
     const modIds = (mods ?? []).map((m: any) => m.id)
     if (modIds.length === 0) { setJourneyLessons([]); return }
@@ -850,7 +850,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       return {
         id: p.l.id, title: p.l.title,
         courseId: p.cid, courseName: cname[p.cid] ?? '', courseCode: c?.code ?? null,
-        moduleId: p.l.module_id, moduleName: p.m?.name ?? '',
+        moduleId: p.l.module_id, moduleName: p.m?.name ?? '', moduleLevel: p.m?.level ?? null,
         subjectKey: learnTrackKey(c), ytId: getYtId(p.l.content_url ?? null),
         lesson_type: p.l.lesson_type ?? null, content_url: p.l.content_url ?? null, tier: p.l.tier ?? null,
         access_policy_mode: p.l.access_policy_mode ?? null, required_tier: p.l.required_tier ?? null,
@@ -959,8 +959,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const cobj: Record<string, Enrollment['course']> = {}
         ;[...courses].sort((a, b) => (a.course?.sort_order ?? 99) - (b.course?.sort_order ?? 99))
           .forEach((e, i) => { order[e.course_id] = i; cname[e.course_id] = e.course?.name ?? 'Khóa học'; if (e.course) cobj[e.course_id] = e.course })
-        const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index,name').in('course_id', courseIds)
-        const modMap: Record<string, { course_id: string; order_index: number; name?: string }> = {}
+        const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index,name,level').in('course_id', courseIds)
+        const modMap: Record<string, { course_id: string; order_index: number; name?: string; level?: number | null }> = {}
         ;(mods ?? []).forEach((m: any) => { modMap[m.id] = m })
         const modIds = (mods ?? []).map((m: any) => m.id)
         if (modIds.length === 0) { setMasterPath([]); setJourneyLessons([]); return }
@@ -982,7 +982,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           return {
             id: p.l.id, title: p.l.title,
             courseId: p.cid, courseName: cname[p.cid] ?? '', courseCode: c?.code ?? null,
-            moduleId: p.l.module_id, moduleName: p.m?.name ?? '',
+            moduleId: p.l.module_id, moduleName: p.m?.name ?? '', moduleLevel: p.m?.level ?? null,
             subjectKey: learnTrackKey(c),
             ytId: getYtId(p.l.content_url ?? null),
             lesson_type: p.l.lesson_type ?? null, content_url: p.l.content_url ?? null, tier: p.l.tier ?? null,
@@ -2664,19 +2664,22 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const currentId = items.find(j => { const a = lessonAccessOf(j); return a.canAccess && !completedIds.has(j.id) })?.id
         // dựng chuỗi node: lesson + mốc chương (nhẹ) + mốc level (mạnh, đổi tone)
         const nodes: React.ReactNode[] = []
-        let lastCourse: string | null = null, lastModule: string | null = null, levelIdx = -1
+        let lastLevelGroup: string | null = null, lastModule: string | null = null, lastCourse: string | null = null, courseIdx = -1
         items.forEach((jl) => {
-          const newCourse = jl.courseId !== lastCourse
+          if (jl.courseId !== lastCourse) courseIdx++
+          // Tone theo Level (edu_modules.level) khi có; fallback course-index khi level null (backward-compat)
+          const toneIdx = jl.moduleLevel != null ? (jl.moduleLevel - 1) : courseIdx
+          const tone = LEVEL_TONES[((toneIdx % LEVEL_TONES.length) + LEVEL_TONES.length) % LEVEL_TONES.length]
+          // Nhóm Level: level metadata khi có, ngược lại theo course. Đổi nhóm → mốc LEVEL mạnh; cùng nhóm mà đổi module → mốc chương nhẹ.
+          const levelGroup = jl.moduleLevel != null ? `${jl.courseId}#${jl.moduleLevel}` : jl.courseId
           const newModule = jl.moduleId !== lastModule
-          if (newCourse) {
-            levelIdx++
-            if (lastCourse !== null) {
-              const tone = LEVEL_TONES[levelIdx % LEVEL_TONES.length]
+          if (levelGroup !== lastLevelGroup) {
+            if (lastLevelGroup !== null) {
               nodes.push(
-                <div key={'lv-' + jl.courseId} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 6, padding: '0 6px', minWidth: 96 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 24, boxShadow: `0 6px 18px ${tone}55` }}>🎖️</div>
-                  <div style={{ fontSize: 11, fontWeight: 900, color: tone, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '.03em' }}>Chặng mới</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: L.t2, textAlign: 'center', lineHeight: 1.25, maxWidth: 92, ...clamp2 }}>{jl.courseName}</div>
+                <div key={'lv-' + jl.moduleId} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 6, padding: '0 8px', minWidth: 100 }}>
+                  <div style={{ width: 54, height: 54, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 24, boxShadow: `0 6px 18px ${tone}66` }}>🎖️</div>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: tone, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '.04em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: L.t2, textAlign: 'center', lineHeight: 1.25, maxWidth: 96, ...clamp2 }}>{jl.courseName}</div>
                 </div>
               )
             }
@@ -2689,7 +2692,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
             )
           }
-          const tone = LEVEL_TONES[levelIdx % LEVEL_TONES.length]
           const a = lessonAccessOf(jl)
           if (a.visible) {
             const completed = completedIds.has(jl.id)
@@ -2718,7 +2720,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </button>
             )
           }
-          lastCourse = jl.courseId; lastModule = jl.moduleId
+          lastCourse = jl.courseId; lastModule = jl.moduleId; lastLevelGroup = levelGroup
         })
         const prog = subjectProgress(activeSubject)
         return (
