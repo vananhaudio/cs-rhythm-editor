@@ -351,6 +351,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [journeyLessons, setJourneyLessons] = useState<JourneyLesson[]>([])  // view-model bài học phẳng theo môn (cho hành trình ngang)
   const [activeSubject, setActiveSubject]   = useState<string | null>(null)  // môn đang mở màn journey
   const [companionTab, setCompanionTab]     = useState<'thay' | 'note' | 'ask'>('thay')  // nửa dưới màn journey
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)  // bài đang chọn trong journey (gắn companion)
   const journeyRailRef = useRef<HTMLDivElement | null>(null)  // auto-scroll tới bài hiện tại
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null)
   const [returnLessonId, setReturnLessonId] = useState<string | null>(null) // bài vừa mở → khi quay lại danh sách cuộn về đúng chỗ
@@ -1280,7 +1281,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   useEffect(() => {
     if (screen !== 'journey' || !activeSubject) return
     const t = window.setTimeout(() => {
-      const el = document.getElementById('jl-current')
+      const el = document.querySelector('[data-jlcur="1"]') as HTMLElement | null
       if (el) el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' })
     }, 80)
     return () => window.clearTimeout(t)
@@ -1637,7 +1638,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     : 'Sắp có'
                   return (
                     <button key={sub.key}
-                      onClick={() => { setActiveSubject(sub.key); setScreen('journey') }}
+                      onClick={() => { setActiveSubject(sub.key); setSelectedLessonId(null); setCompanionTab('thay'); setScreen('journey') }}
                       style={{ position: 'relative', width: '100%', height: 150, border: 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', boxShadow: L.shadowLg, textAlign: 'left' }}>
                       {cover
                         ? <img src={cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -2677,38 +2678,40 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       {tab === 'hoc' && screen === 'journey' && activeSubject && (() => {
         const items = journeyOf(activeSubject)
         const subject = SUBJECTS.find(s => s.key === activeSubject)
-        // hoàn thành theo chương (module) — cho marker chương
         const modLessonIds: Record<string, string[]> = {}
         items.forEach(j => { (modLessonIds[j.moduleId] ??= []).push(j.id) })
         const moduleDone = (mid: string) => (modLessonIds[mid] ?? []).length > 0 && (modLessonIds[mid] ?? []).every(id => completedIds.has(id))
-        // bài "hiện tại" = bài mở được đầu tiên chưa hoàn thành
         const currentId = items.find(j => { const a = lessonAccessOf(j); return a.canAccess && !completedIds.has(j.id) })?.id
-        // dựng chuỗi node: lesson + mốc chương (nhẹ) + mốc level (mạnh, đổi tone)
+        const selectedId = selectedLessonId ?? currentId ?? items[0]?.id
+        const selected = items.find(j => j.id === selectedId) ?? null
+        const selectLesson = (jl: JourneyLesson) => { setSelectedLessonId(jl.id); window.setTimeout(() => document.getElementById('jl-' + jl.id)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }), 0) }
+
         const nodes: React.ReactNode[] = []
         let lastLevelGroup: string | null = null, lastModule: string | null = null, lastCourse: string | null = null, courseIdx = -1
         items.forEach((jl) => {
           if (jl.courseId !== lastCourse) courseIdx++
-          // Tone theo Level (edu_modules.level) khi có; fallback course-index khi level null (backward-compat)
           const toneIdx = jl.moduleLevel != null ? (jl.moduleLevel - 1) : courseIdx
           const tone = LEVEL_TONES[((toneIdx % LEVEL_TONES.length) + LEVEL_TONES.length) % LEVEL_TONES.length]
-          // Nhóm Level: level metadata khi có, ngược lại theo course. Đổi nhóm → mốc LEVEL mạnh; cùng nhóm mà đổi module → mốc chương nhẹ.
           const levelGroup = jl.moduleLevel != null ? `${jl.courseId}#${jl.moduleLevel}` : jl.courseId
           const newModule = jl.moduleId !== lastModule
           if (levelGroup !== lastLevelGroup) {
             if (lastLevelGroup !== null || jl.moduleLevel != null) {
+              // ── MỐC LEVEL (mạnh) — panel tone, badge lớn, cột mốc ──
               nodes.push(
-                <div key={'lv-' + jl.moduleId} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 6, padding: '0 8px', minWidth: 100 }}>
-                  <div style={{ width: 54, height: 54, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 24, boxShadow: `0 6px 18px ${tone}66` }}>🎖️</div>
-                  <div style={{ fontSize: 12.5, fontWeight: 900, color: tone, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '.05em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
+                <div key={'lv-' + jl.moduleId} style={{ flex: '0 0 auto', alignSelf: 'stretch', minWidth: 124, scrollSnapAlign: 'center', borderRadius: 18, background: `${tone}12`, border: `1.5px dashed ${tone}66`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '0 12px', zIndex: 1 }}>
+                  <div style={{ width: 60, height: 60, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 28, boxShadow: `0 8px 20px ${tone}55` }}>🎖️</div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: tone, textTransform: 'uppercase', letterSpacing: '.06em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: L.t2 }}>cột mốc mới</div>
                 </div>
               )
             }
           } else if (newModule && lastModule !== null) {
             const done = moduleDone(lastModule)
+            // ── MỐC CHƯƠNG (nhẹ) ──
             nodes.push(
-              <div key={'ch-' + lastModule} style={{ flex: '0 0 auto', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 5, padding: '0 2px', minWidth: 62 }}>
-                <div style={{ width: 34, height: 34, borderRadius: '50%', background: done ? '#16A34A18' : L.surface2, color: done ? '#16A34A' : L.t3, display: 'grid', placeItems: 'center', fontSize: 16, border: `1.5px solid ${done ? '#16A34A' : L.border}` }}>{done ? '✓' : '♪'}</div>
-                <div style={{ fontSize: 9.5, fontWeight: 800, color: L.t3, textAlign: 'center' }}>hết chương</div>
+              <div key={'ch-' + lastModule} style={{ flex: '0 0 auto', alignSelf: 'stretch', minWidth: 66, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 6, padding: '0 2px', zIndex: 1 }}>
+                <div style={{ width: 50, height: 50, borderRadius: '50%', background: done ? '#16A34A18' : L.surface, color: done ? '#16A34A' : L.t3, display: 'grid', placeItems: 'center', fontSize: 20, border: `2px solid ${done ? '#16A34A' : L.border}` }}>{done ? '✓' : '♪'}</div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: done ? '#16A34A' : L.t3, textAlign: 'center' }}>Hết chương</div>
               </div>
             )
           }
@@ -2719,85 +2722,106 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             const locked = a.available && !a.canAccess
             const seqLocked = isSeqLocked(jl.courseCode)
             const isCurrent = jl.id === currentId
-            const thumb = jl.ytId ? `https://img.youtube.com/vi/${jl.ytId}/hqdefault.jpg` : (courseById.get(jl.courseId)?.image_url?.trim() || null)
+            const isSelected = jl.id === selectedId
+            const dim = locked || comingSoon || seqLocked
+            // Chỉ dùng MEDIA THẬT (YouTube thumb); không lấy course cover → tránh mọi card giống nhau "ĐH"
+            const thumb = jl.ytId ? `https://img.youtube.com/vi/${jl.ytId}/hqdefault.jpg` : null
+            const stateLabel = completed ? '✓ Đã học' : comingSoon ? '🔜 Sắp có' : (locked || seqLocked) ? '🔒 Mở khoá' : isCurrent ? '▶ Học tiếp' : 'Vào học'
             nodes.push(
-              <button key={jl.id} id={isCurrent ? 'jl-current' : undefined}
-                onClick={() => openJourneyLesson(jl)}
-                style={{ flex: '0 0 60vw', maxWidth: 230, scrollSnapAlign: 'center', position: 'relative', border: isCurrent ? `2.5px solid ${tone}` : 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', background: L.surface, boxShadow: isCurrent ? `0 10px 26px ${tone}44` : L.shadowLg, textAlign: 'left', alignSelf: 'stretch' }}>
-                {thumb
-                  ? <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: (locked || comingSoon || seqLocked) ? 'grayscale(.5) brightness(.9)' : undefined }} />
-                  : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', background: `linear-gradient(150deg, ${tone}, ${tone}99)` }}><span style={{ fontSize: 40 }}>🎸</span></div>}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,.05) 30%, rgba(17,24,39,.86) 100%)' }} />
-                <div style={{ position: 'absolute', left: 14, right: 14, bottom: 14, color: '#fff' }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 900, opacity: .85, textTransform: 'uppercase', letterSpacing: '.02em', ...clamp1 }}>{jl.moduleName}</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.2, marginTop: 4, ...clamp3 }}>{jl.title}</div>
-                  <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 850, opacity: .95 }}>
-                    {completed ? '✓ Đã học' : comingSoon ? '🔜 Sắp có' : (locked || seqLocked) ? '🔒 Cần mở khoá' : isCurrent ? '▶ Học tiếp' : 'Vào học'}
+              <div key={jl.id} id={'jl-' + jl.id} data-jlcur={isCurrent ? '1' : undefined} role="button" tabIndex={0}
+                onClick={() => selectLesson(jl)}
+                style={{ flex: '0 0 62vw', maxWidth: 250, minWidth: 198, scrollSnapAlign: 'center', position: 'relative', display: 'flex', flexDirection: 'column', border: isSelected ? `2px solid ${tone}` : `1px solid ${L.border}`, borderRadius: 18, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', background: L.surface, boxShadow: isSelected ? `0 8px 22px ${tone}33` : L.shadow, textAlign: 'left', alignSelf: 'stretch', zIndex: isSelected ? 2 : 1 }}>
+                {thumb ? (
+                  <div style={{ width: '100%', height: '44%', flexShrink: 0, background: `${tone}18` }}>
+                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: dim ? 'grayscale(.5)' : undefined }} />
                   </div>
+                ) : (
+                  <div style={{ width: '100%', height: '38%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: `linear-gradient(135deg, ${tone}, ${tone}bb)`, display: 'grid', placeItems: 'center' }}>
+                    <span style={{ fontSize: 24, filter: 'saturate(0) brightness(2)', opacity: .9 }}>🎸</span>
+                    <span style={{ position: 'absolute', right: -6, bottom: -18, fontSize: 74, fontWeight: 900, color: '#ffffff1f', lineHeight: 1 }}>♪</span>
+                  </div>
+                )}
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '9px 12px 11px' }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 900, color: tone, textTransform: 'uppercase', letterSpacing: '.02em', ...clamp1 }}>{jl.moduleName}</div>
+                  <div style={{ marginTop: 3, fontSize: 14, fontWeight: 900, color: L.t1, lineHeight: 1.22, ...clamp2 }}>{jl.title}</div>
+                  <div style={{ flex: 1 }} />
+                  <button onClick={e => { e.stopPropagation(); openJourneyLesson(jl) }} disabled={comingSoon}
+                    style={{ marginTop: 8, alignSelf: 'flex-start', border: 'none', borderRadius: 10, padding: '7px 13px', fontSize: 12, fontWeight: 850, cursor: comingSoon ? 'default' : 'pointer', fontFamily: 'inherit', background: comingSoon ? L.surface2 : (locked || seqLocked) ? '#FFF7ED' : isCurrent ? tone : L.p2, color: comingSoon ? L.t3 : (locked || seqLocked) ? '#C2410C' : isCurrent ? '#fff' : L.p1 }}>{stateLabel}</button>
                 </div>
-                {completed && <span style={{ position: 'absolute', top: 12, right: 12, width: 30, height: 30, borderRadius: '50%', background: '#16A34A', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 900 }}>✓</span>}
-                {(locked || comingSoon || seqLocked) && !completed && <span style={{ position: 'absolute', top: 12, right: 12, width: 30, height: 30, borderRadius: 11, background: 'rgba(17,24,39,.72)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 14 }}>{comingSoon ? '🔜' : '🔒'}</span>}
-              </button>
+                <div style={{ height: 4, background: dim ? L.border : tone }} />
+                {completed && <span style={{ position: 'absolute', top: 8, right: 8, width: 25, height: 25, borderRadius: '50%', background: '#16A34A', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 900 }}>✓</span>}
+              </div>
             )
           }
           lastCourse = jl.courseId; lastModule = jl.moduleId; lastLevelGroup = levelGroup
         })
-        const prog = subjectProgress(activeSubject)
+        const headerLine = selected
+          ? (selected.moduleLevel != null ? `Level ${selected.moduleLevel} · bài đang chọn` : 'Bài đang chọn')
+          : `Hành trình ${subject?.title ?? ''}`.trim()
         return (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 'calc(62px + env(safe-area-inset-bottom))', background: L.bg, display: 'flex', flexDirection: 'column', zIndex: 8 }}>
-            {/* Header */}
-            <div style={{ background: L.surface, padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 12px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0 }}>
-              <button onClick={() => { setScreen('home'); setActiveSubject(null) }} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, marginBottom: 10 }}>‹</button>
-              <div style={{ fontWeight: 900, fontSize: 22, color: L.t1 }}>{subject?.title ?? 'Hành trình'}</div>
-              <div style={{ fontSize: 13, color: L.t2, marginTop: 2 }}>
-                {prog ? (prog.done >= prog.total ? 'Đã hoàn thành hành trình' : `${prog.done}/${prog.total} bài · ${prog.pct}%`) : 'Vuốt ngang để đi suốt hành trình'}
+            {/* Header — gọn, ngữ cảnh, KHÔNG nhấn tổng bài */}
+            <div style={{ background: L.surface, padding: 'max(46px, calc(env(safe-area-inset-top, 0px) + 10px)) 16px 10px', boxShadow: '0 1px 0 ' + L.border, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button onClick={() => { setScreen('home'); setActiveSubject(null) }} style={{ background: L.p2, border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: L.p1, flexShrink: 0 }}>‹</button>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 900, fontSize: 19, color: L.t1, lineHeight: 1.1, ...clamp1 }}>{subject?.title ?? 'Hành trình'}</div>
+                <div style={{ fontSize: 12, color: L.t2, marginTop: 1, ...clamp1 }}>{headerLine}</div>
               </div>
             </div>
             {/* NỬA TRÊN — MỘT rail ngang duy nhất (lesson + mốc chương/level) */}
-            <div style={{ flex: '0 0 auto', height: '54%', minHeight: 300, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              {items.length > 0 ? (
-                <div ref={journeyRailRef} style={{ display: 'flex', alignItems: 'stretch', gap: 12, overflowX: 'auto', overflowY: 'hidden', padding: '16px 18px', height: '76%', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
+            {items.length > 0 ? (
+              <div ref={journeyRailRef} style={{ flexShrink: 0, overflowX: 'auto', overflowY: 'hidden', scrollSnapType: 'x proximity', scrollbarWidth: 'none', padding: '14px 0 8px' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'stretch', gap: 10, padding: '0 18px', height: 288 }}>
+                  {/* Đường path liên tục (nhẹ) — chạy sau card, hiện ở khe & sau mốc */}
+                  <div style={{ position: 'absolute', left: 18, right: 18, top: '54%', height: 2, background: `${L.p1}22`, zIndex: 0 }} />
                   {nodes}
-                  <div style={{ flex: '0 0 6px' }} />
                 </div>
-              ) : (
-                <div style={{ padding: '0 24px', textAlign: 'center', color: L.t2 }}>
+              </div>
+            ) : (
+              <div style={{ flexShrink: 0, height: 260, display: 'grid', placeItems: 'center', padding: '0 24px', textAlign: 'center', color: L.t2 }}>
+                <div>
                   <div style={{ fontSize: 36, marginBottom: 8 }}>🎼</div>
                   <div style={{ fontWeight: 800, color: L.t1, marginBottom: 4 }}>Hành trình đang được soạn</div>
                   <div style={{ fontSize: 13, lineHeight: 1.5 }}>Các bài học của môn này sẽ xuất hiện ở đây.</div>
                 </div>
-              )}
-            </div>
-            {/* NỬA DƯỚI — Không gian đồng hành (shell; chưa có data thì empty sạch, không fake) */}
+              </div>
+            )}
+            {/* NỬA DƯỚI — Không gian đồng hành, GẮN với bài đang chọn (không fake data) */}
             <div style={{ flex: 1, minHeight: 0, background: L.surface, borderTop: `1px solid ${L.border}`, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', gap: 6, padding: '12px 16px 0' }}>
+              <div style={{ display: 'flex', gap: 6, padding: '10px 16px 0' }}>
                 {([['thay', 'Thầy dặn'], ['note', 'Ghi chú'], ['ask', 'Hỏi Thầy']] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setCompanionTab(k)}
                     style={{ flex: 1, background: companionTab === k ? L.p2 : 'transparent', color: companionTab === k ? L.p1 : L.t3, border: 'none', borderRadius: 12, padding: '9px 4px', fontSize: 13, fontWeight: companionTab === k ? 800 : 600, cursor: 'pointer', fontFamily: 'inherit' }}>{label}</button>
                 ))}
               </div>
-              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 18px' }}>
+              {/* Tên bài đang chọn */}
+              <div style={{ padding: '10px 18px 0', fontSize: 13, fontWeight: 800, color: L.t1, ...clamp1 }}>{selected ? selected.title : 'Chọn một bài trong hành trình'}</div>
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 18px calc(16px + env(safe-area-inset-bottom))' }}>
                 {companionTab === 'thay' && (
                   <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: L.t1, marginBottom: 6 }}>Lời dặn của Thầy</div>
-                    Mở một bài trong hành trình để xem lời dặn của Thầy cho bài đó.
+                    {selected ? 'Chưa có lời dặn của Thầy cho bài này.' : 'Chọn một bài để xem lời dặn của Thầy.'}
                   </div>
                 )}
                 {companionTab === 'note' && (
-                  <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: L.t1, marginBottom: 6 }}>Ghi chú của tôi</div>
-                    Ghi chú gắn theo từng bài — mở một bài để viết và xem lại ghi chú của bài đó.
-                  </div>
+                  selected ? (
+                    <textarea
+                      key={selected.id}
+                      defaultValue={(() => { try { return localStorage.getItem(noteKey(selected.id)) ?? '' } catch { return '' } })()}
+                      onBlur={e => { try { localStorage.setItem(noteKey(selected.id), e.target.value) } catch { /**/ } }}
+                      placeholder="Viết ghi chú của bạn cho bài này…"
+                      style={{ width: '100%', minHeight: 90, resize: 'vertical', border: `1px solid ${L.border}`, borderRadius: 12, padding: '10px 12px', fontSize: 13.5, fontFamily: 'inherit', color: L.t1, background: L.bg, outline: 'none', lineHeight: 1.5, boxSizing: 'border-box' }} />
+                  ) : (
+                    <div style={{ color: L.t2, fontSize: 13.5 }}>Chọn một bài để viết ghi chú.</div>
+                  )
                 )}
                 {companionTab === 'ask' && (
                   <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: L.t1, marginBottom: 6 }}>Hỏi Thầy</div>
-                    <div style={{ marginBottom: 12 }}>Nhắn Thầy và hỏi bài trong nhóm lớp của bạn.</div>
-                    <button onClick={() => setTab('teacher')} style={{ background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Vào Thầy · nhóm lớp</button>
+                    <div style={{ marginBottom: 12 }}>Nhắn Thầy hỏi về bài này trong nhóm lớp của bạn.</div>
+                    <button onClick={() => setTab('teacher')} style={{ background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Hỏi Thầy về bài này</button>
                   </div>
                 )}
                 {/* Chừa chỗ "Trả bài cho Thầy" (§12) — chưa mở, không dựng UI nộp bài giả */}
-                <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, opacity: .55 }}>
+                <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, opacity: .5 }}>
                   <span style={{ background: L.surface2, color: L.t3, borderRadius: 8, padding: '4px 10px', fontSize: 11.5, fontWeight: 700 }}>Trả bài cho Thầy · sắp có</span>
                 </div>
               </div>
