@@ -77,6 +77,7 @@ const TOOL_TO_EX: Record<string, string> = Object.fromEntries(
 )
 const COURSE_SELECT = 'id,name,type,track,icon,image_url,status,sort_order,is_free,code,access_policy_enabled,required_tier,visibility,availability,allow_preview'
 const COURSE_REL_SELECT = `id,name,type,track,icon,image_url,status,sort_order,is_free,code,access_policy_enabled,required_tier,visibility,availability,allow_preview`
+type CourseSummary = Enrollment['course']
 interface Enrollment {
   id: string; course_id: string; enrolled_at: string
   course: {
@@ -155,6 +156,105 @@ function CourseLogo({ course: courseInput, size = 44, radius = 12, bg }: { cours
         ? <img src={course.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         : fallback}
     </div>
+  )
+}
+
+const LEARN_TRACKS: { key: string; title: string; hint: string }[] = [
+  { key: 'dem_hat', title: 'Đệm hát', hint: 'Acoustic · rhythm · biểu diễn' },
+  { key: 'tia_not', title: 'Tỉa nốt', hint: 'Melody · fretboard · bản nhạc' },
+  { key: 'solo', title: 'Solo', hint: 'Fretboard · stage · năng lượng' },
+  { key: 'nhac_ly', title: 'Nhạc lý / Cảm âm', hint: 'Notation · lắng nghe · khoảng cách' },
+]
+
+function learnTrackKey(course?: CourseSummary | null) {
+  const track = (course?.track ?? '').trim()
+  if (track) return track
+  if (course?.type === 'final') return 'solo'
+  if (course?.type === 'canh_cua') return 'nhac_ly'
+  return 'khac'
+}
+
+function learnSeriesLabel(course?: CourseSummary | null) {
+  return LEARN_TRACKS.find(t => t.key === learnTrackKey(course))?.title ?? (course?.type === 'canh_cua' ? 'Cánh cửa' : 'Hành trình')
+}
+
+function courseFallbackStyle(course?: CourseSummary | null): React.CSSProperties {
+  const key = learnTrackKey(course)
+  const gradients: Record<string, string> = {
+    dem_hat: 'linear-gradient(135deg, #4338CA, #EA580C)',
+    tia_not: 'linear-gradient(135deg, #15803D, #0F766E)',
+    solo: 'linear-gradient(135deg, #211C32, #4338CA)',
+    nhac_ly: 'linear-gradient(135deg, #7C3AED, #2563EB)',
+    khac: 'linear-gradient(135deg, #4338CA, #64748B)',
+  }
+  return { background: gradients[key] ?? gradients.khac }
+}
+
+function CourseThumbCard({
+  course,
+  locked,
+  statusText,
+  progressText,
+  onClick,
+}: {
+  course: CourseSummary
+  locked: boolean
+  statusText: string
+  progressText?: string | null
+  onClick: () => void
+}) {
+  const image = course.image_url?.trim()
+  return (
+    <button onClick={onClick} style={{
+      flex: '0 0 156px',
+      aspectRatio: '3 / 2',
+      border: 'none',
+      borderRadius: 20,
+      overflow: 'hidden',
+      position: 'relative',
+      padding: 0,
+      background: L.surface,
+      boxShadow: L.shadowLg,
+      scrollSnapAlign: 'start',
+      fontFamily: 'inherit',
+      textAlign: 'left',
+      cursor: 'pointer',
+    }}>
+      {image ? (
+        <img src={image} alt="" style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          display: 'block',
+          filter: locked ? 'grayscale(.2)' : undefined,
+          transform: 'scale(1.02)',
+        }} />
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: '#fff', ...courseFallbackStyle(course) }}>
+          <span style={{ fontSize: 34, lineHeight: 1 }}>{course.icon || (course.type === 'canh_cua' ? '🔑' : '🎸')}</span>
+        </div>
+      )}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,0) 18%, rgba(17,24,39,.84) 100%)' }} />
+      <div style={{ position: 'absolute', left: 12, right: 12, bottom: 11, color: '#fff' }}>
+        <div style={{ fontSize: 10.5, fontWeight: 900, opacity: .82, textTransform: 'uppercase', letterSpacing: '.02em' }}>{learnSeriesLabel(course)}</div>
+        <div style={{
+          marginTop: 3,
+          fontSize: 14.5,
+          lineHeight: 1.18,
+          fontWeight: 900,
+          display: '-webkit-box',
+          WebkitBoxOrient: 'vertical',
+          WebkitLineClamp: 3,
+          overflow: 'hidden',
+        }}>{course.name}</div>
+        <div style={{ marginTop: 6, fontSize: 10.5, fontWeight: 850, opacity: .9 }}>{progressText ?? statusText}</div>
+      </div>
+      {locked ? (
+        <span style={{ position: 'absolute', top: 10, right: 10, width: 31, height: 31, borderRadius: 12, background: 'rgba(17,24,39,.72)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 15 }}>🔒</span>
+      ) : (
+        <span style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,.90)', color: L.p1, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 900 }}>▶</span>
+      )}
+    </button>
   )
 }
 
@@ -448,11 +548,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   const explainUpgrade = () => {
-    if (isNativeIAP) {
-      window.location.href = '/subscribe'
-      return
-    }
-    window.location.href = '/class'
+    window.location.href = '/subscribe'
   }
 
   // Ghi thời gian luyện + XP vào DB và cập nhật hiển thị ngay (1 XP / phút)
@@ -684,6 +780,31 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     return `rgb(${stops[stops.length - 1][1].join(',')})`
   }
 
+  const loadCourseLessonMap = async (courseIds: string[]) => {
+    const ids = [...new Set(courseIds.filter(Boolean))]
+    if (ids.length === 0) return
+    const { data: mods } = await supabase.from('edu_modules').select('id,course_id').in('course_id', ids)
+    const modIds = (mods ?? []).map((m: any) => m.id)
+    if (modIds.length === 0) {
+      setCourseLessonIds(prev => {
+        const next = { ...prev }
+        ids.forEach(id => { if (!next[id]) next[id] = [] })
+        return next
+      })
+      return
+    }
+    const { data: lsns } = await supabase.from('edu_course_lessons').select('id,module_id').in('module_id', modIds)
+    const modCourse: Record<string, string> = {}
+    ;(mods ?? []).forEach((m: any) => { modCourse[m.id] = m.course_id })
+    const nextMap: Record<string, string[]> = {}
+    ids.forEach(id => { nextMap[id] = [] })
+    ;(lsns ?? []).forEach((l: any) => {
+      const cid = modCourse[l.module_id]
+      if (cid) (nextMap[cid] ??= []).push(l.id)
+    })
+    setCourseLessonIds(prev => ({ ...prev, ...nextMap }))
+  }
+
   useEffect(() => {
     if (guest) {
       supabase.from('edu_courses')
@@ -700,6 +821,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           setAccessCourses(new Set())
           setOwnedCourseIds(new Set())
           setFoundationGaps([])
+          loadCourseLessonMap(courses.map((course: any) => course.id))
         })
       supabase.from('edu_tools').select('*').order('order_index')
         .then(({ data }) => {
@@ -755,6 +877,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           } as Enrollment))
         const mergedEnrollments = [...enr, ...discovery]
         setEnrollments(mergedEnrollments)
+        loadCourseLessonMap(mergedEnrollments.map(e => e.course_id))
         // Khoá miễn phí + khoá đã được cấp quyền → dùng để mở/khoá bài theo từng khoá
         setFreeCourses(new Set(mergedEnrollments.filter(e => (e.course as any)?.is_free !== false).map(e => e.course_id)))
         supabase.from('edu_course_access').select('course_id').eq('student_id', student.id).eq('active', true)
@@ -789,7 +912,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         // Gom lesson id theo khoá → tính khoá đã hoàn thành (chặn tuần tự HT)
         const cli: Record<string, string[]> = {}
         ;(lsns ?? []).forEach((l: any) => { const cid = modMap[l.module_id]?.course_id; if (cid) (cli[cid] ??= []).push(l.id) })
-        setCourseLessonIds(cli)
+        setCourseLessonIds(prev => ({ ...prev, ...cli }))
         const path = (lsns ?? []).map((l: any) => {
           const m = modMap[l.module_id]; const cid = m?.course_id ?? ''
           return { id: l.id, title: l.title, courseId: cid, courseName: cname[cid] ?? '', cs: order[cid] ?? 99, mo: m?.order_index ?? 0, lo: l.order_index ?? 0 }
@@ -1169,6 +1292,24 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const resumeCourseId = [lastOpenedCourse, masterPath.find(m => m.id === lastDoneLesson)?.courseId, journeyNext?.courseId, mainCourse?.course_id].find(canResume) ?? undefined
   const resumeLesson = nextLessonOf(resumeCourseId)
   const resumeCourse = sortedEnrollments.find(e => e.course_id === resumeCourseId)
+  const courseProgressStats = (courseId: string) => {
+    const ids = courseLessonIds[courseId]
+    if (!ids || ids.length === 0) return null
+    const done = ids.filter(id => completedIds.has(id)).length
+    return { done, total: ids.length, pct: Math.round((done / ids.length) * 100) }
+  }
+  const courseAccessOf = (e: Enrollment) => resolveCourseAccess(e.course, effectiveTier, {
+    legacyUnlocked: preview || freeCourses.has(e.course_id) || accessCourses.has(e.course_id) || ownedCourseIds.has(e.course_id),
+    preview,
+  })
+  const learnRows = LEARN_TRACKS.map(row => ({
+    ...row,
+    items: sortedEnrollments.filter(e => learnTrackKey(e.course) === row.key),
+  })).filter(row => row.items.length > 0)
+  const otherLearnItems = sortedEnrollments.filter(e => !LEARN_TRACKS.some(row => row.key === learnTrackKey(e.course)))
+  if (otherLearnItems.length > 0) {
+    learnRows.push({ key: 'khac', title: 'Khác', hint: 'Các khóa còn lại', items: otherLearnItems })
+  }
 
   return (
     <>
@@ -1259,280 +1400,92 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ── HOME ────────────────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'home' && (
           <>
-            {(() => {
-              const honor = HONOR_CONFIG[me.honor ?? 'none'] ?? HONOR_CONFIG.none
-              const yearBadge = getYearBadge(me.enrolled_at)
-              const headerBg = honor.bg
-              return (
-                <div style={{ background: headerBg, padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 20px 24px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,.06)' }} />
-                  <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,.04)' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: 14, color: 'rgba(255,255,255,.65)', marginBottom: 4 }}>Xin chào</div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: L.tinv, letterSpacing: '-.02em' }}>{name}</div>
-                      {/* 2 badge song song */}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                        {yearBadge && (
-                          <span style={{ background: 'rgba(255,255,255,.2)', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700, backdropFilter: 'blur(4px)' }}>
-                            📅 {yearBadge}
-                          </span>
-                        )}
-                        {(me.honor && me.honor !== 'none') && (
-                          <span style={{ background: 'rgba(255,255,255,.25)', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700, backdropFilter: 'blur(4px)' }}>
-                            {honor.icon} {honor.label}
-                          </span>
-                        )}
-                        {!yearBadge && (!me.honor || me.honor === 'none') && (
-                          <span style={{ background: 'rgba(255,255,255,.15)', color: 'rgba(255,255,255,.8)', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>
-                            🎸 Member
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div onClick={() => { if (guest) { setTab('song'); return }; setTab('song'); setTimeout(openSettings, 50) }}
-                      style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#fff', overflow: 'hidden', cursor: 'pointer', border: '2px solid rgba(255,255,255,.35)' }}>
-                      {me.avatar_url
-                        ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : name.charAt(0).toUpperCase()}
-                    </div>
-                  </div>
+            <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 14, background: L.p1, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: L.shadow }}>
+                  <NavIcon name="hoc" color="#fff" size={22} />
                 </div>
-              )
-            })()}
-
-            <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-            {/* 🗺️ Hành trình của bạn — con đường xuyên suốt giáo trình */}
-            {masterPath.length > 0 && (() => {
-              const total = masterPath.length
-              const doneCount = masterPath.filter(m => completedIds.has(m.id)).length
-              let curIdx = masterPath.findIndex(m => !completedIds.has(m.id))
-              if (curIdx < 0) curIdx = total - 1
-              const cur = masterPath[curIdx]
-              const posLabel = Math.min(doneCount + 1, total)
-              const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0
-              // điểm chất lượng trung bình mỗi chặng (khóa) → màu cờ
-              const cSum: Record<string, number> = {}; const cCnt: Record<string, number> = {}
-              masterPath.forEach(m => { if (completedIds.has(m.id)) { cSum[m.courseId] = (cSum[m.courseId] ?? 0) + scoreById(m.id); cCnt[m.courseId] = (cCnt[m.courseId] ?? 0) + 1 } })
-              // hình học con đường (sóng sin — tính được mọi điểm)
-              const Wd = 320, midY = 46, amp = 19, N = 60
-              const wave = (x: number) => midY + amp * Math.sin((x / Wd) * Math.PI * 2.2)
-              const pts: [number, number][] = []
-              for (let i = 0; i <= N; i++) { const x = (i / N) * Wd; pts.push([x, wave(x)]) }
-              const dPath = 'M ' + pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ')
-              const progress = total > 0 ? doneCount / total : 0
-              const [mx, my] = pts[Math.min(N, Math.round(progress * N))]
-              const seen = new Set<string>()
-              const flags: { x: number; y: number; id: string; cur: boolean; col: string }[] = []
-              masterPath.forEach((m, idx) => {
-                if (!seen.has(m.courseId)) {
-                  seen.add(m.courseId)
-                  const [fx, fy] = pts[Math.min(N, Math.round((idx / total) * N))]
-                  const col = cCnt[m.courseId] ? scoreColor(cSum[m.courseId] / cCnt[m.courseId]) : '#D1D5DB'
-                  flags.push({ x: fx, y: fy, id: m.courseId, cur: m.courseId === cur?.courseId, col })
-                }
-              })
-              return (
-                <div style={{ background: L.surface, borderRadius: 20, padding: 18, boxShadow: L.shadowLg }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                    <span style={{ fontWeight: 800, fontSize: 17 }}>Hành trình của bạn</span>
-                    <span style={{ fontSize: 13, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total} · {pct}%</span>
-                  </div>
-                  <div style={{ fontSize: 13, color: L.t2, marginBottom: 6 }}>Chặng: <b style={{ color: L.t1 }}>{cur?.courseName}</b></div>
-                  {/* CON ĐƯỜNG */}
-                  <svg viewBox={`0 0 ${Wd} 92`} style={{ width: '100%', display: 'block', overflow: 'visible' }}>
-                    <defs>
-                      <linearGradient id="tvaRoad" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#EF4444" />
-                        <stop offset="50%" stopColor="#F59E0B" />
-                        <stop offset="100%" stopColor="#22C55E" />
-                      </linearGradient>
-                    </defs>
-                    <path d={dPath} fill="none" stroke="#E5E7EB" strokeWidth={11} strokeLinecap="round" />
-                    <path d={dPath} fill="none" stroke="url(#tvaRoad)" strokeWidth={11} strokeLinecap="round" pathLength={100} strokeDasharray={`${Math.max(progress * 100, 0.6)} 100`} />
-                    <path d={dPath} fill="none" stroke="#fff" strokeWidth={1.6} strokeDasharray="2 7" strokeLinecap="round" opacity={0.65} />
-                    {flags.map(f => (
-                      <circle key={f.id} cx={f.x} cy={f.y} r={f.cur ? 4.8 : 3.4} fill={f.col} stroke="#fff" strokeWidth={f.cur ? 2.4 : 1.6} />
-                    ))}
-                    <circle cx={mx} cy={my} r={13} fill={L.p1} opacity={0.18} />
-                    <circle cx={mx} cy={my} r={9} fill="#fff" stroke={L.p1} strokeWidth={3} />
-                    <text x={mx} y={my + 0.5} textAnchor="middle" dominantBaseline="central" fontSize="9">🎸</text>
-                  </svg>
-                  {/* điểm hành trình + hạng lớp */}
-                  <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 10, textAlign: 'center' }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: L.p1 }}>{totalXP.toLocaleString()}</div>
-                      <div style={{ fontSize: 11, color: L.t3 }}>Điểm hành trình</div>
-                    </div>
-                    <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 10, textAlign: 'center' }}>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: L.t1 }}>{classRank ? `#${classRank.rank}` : '—'}<span style={{ fontSize: 12, color: L.t3, fontWeight: 600 }}>{classRank ? `/${classRank.total}` : ''}</span></div>
-                      <div style={{ fontSize: 11, color: L.t3 }}>Hạng trong lớp</div>
-                    </div>
-                  </div>
-                  {/* HỌC TIẾP — bài kế theo thứ tự bản đồ hành trình (bỏ qua khoá đang khoá) */}
-                  {journeyNext ? (
-                    <button onClick={() => openCourse(journeyNext.courseId, journeyNext.id)} style={{ width: '100%', textAlign: 'left', background: L.p2, border: 'none', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: 11, color: L.t3, fontWeight: 600, lineHeight: 1.4, ...clamp2 }}>Học tiếp theo hành trình · {journeyNext.courseName}</span>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: L.p1, lineHeight: 1.35, ...clamp2 }}>Học: {journeyNext.title}</span>
-                      </span>
-                      <span style={{ color: L.p1 }}>›</span>
-                    </button>
-                  ) : (
-                    <div style={{ fontSize: 15, fontWeight: 700, color: L.green, marginTop: 10, textAlign: 'center' }}>Bạn đã hoàn thành toàn bộ giáo trình!</div>
-                  )}
-                </div>
-              )
-            })()}
-
-            {/* Nhịp luyện tập tuần này */}
-            <div style={{ background: L.surface, borderRadius: 18, padding: 16, boxShadow: L.shadow, marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 16 }}>Nhịp luyện tập tuần này</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: practiceStats.streak > 0 ? L.a1 : L.t3 }}>{practiceStats.streak} ngày</span>
-              </div>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 12, textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: L.p1 }}>{practiceStats.daysWeek}<span style={{ fontSize: 13, color: L.t3, fontWeight: 600 }}>/7</span></div>
-                  <div style={{ fontSize: 12, color: L.t2, marginTop: 2 }}>Ngày đồng hành</div>
-                </div>
-                <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 12, textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: L.green }}>{practiceStats.weekMin}<span style={{ fontSize: 13, color: L.t3, fontWeight: 600 }}> phút</span></div>
-                  <div style={{ fontSize: 12, color: L.t2, marginTop: 2 }}>Luyện trong tuần</div>
+                <div style={{ textAlign: 'left', minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: L.t3, fontWeight: 800, letterSpacing: '.04em' }}>THẦY VĂN ANH GUITAR</div>
+                  <div style={{ fontSize: 28, lineHeight: 1.1, fontWeight: 900, color: L.t1, letterSpacing: 0 }}>Học</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                {practiceStats.weekDays.map((on, i) => {
-                  const d = new Date(); d.setDate(d.getDate() - (6 - i))
-                  const wd = ['CN','T2','T3','T4','T5','T6','T7'][d.getDay()]
-                  const isToday = i === 6
-                  return (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
-                        background: on ? L.green : L.surface2, color: on ? '#fff' : L.t3, border: isToday && !on ? `2px solid ${L.a1}` : `1px solid ${L.border}` }}>
-                        {on ? '✓' : ''}
-                      </div>
-                      <span style={{ fontSize: 9, color: isToday ? L.a1 : L.t3, fontWeight: isToday ? 700 : 400 }}>{wd}</span>
-                    </div>
-                  )
-                })}
-              </div>
+              <div style={{ marginTop: 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Nhìn thumbnail, vuốt ngang, bấm một khóa rồi học.</div>
             </div>
 
-            {/* Học ngay — TIẾP NỐI chỗ đang dang dở (khoá vừa học gần nhất) */}
-              {(() => { const rc = resumeCourse ?? mainCourse; if (!rc) return null; const rl = resumeLesson
-              return (
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Học ngay</div>
-                <div onClick={() => openCourse(rc.course_id, rl?.id)}
-                  style={{ background: L.surface, borderRadius: 20, padding: '20px', boxShadow: L.shadowLg, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    <CourseLogo course={rc.course} size={48} radius={14} bg={L.p2} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: L.t3, marginBottom: 3 }}>{rl ? 'Học tiếp chỗ dang dở' : 'Đang theo học'}</div>
-                      <div style={{ fontWeight: 700, fontSize: 16, color: L.p1, lineHeight: 1.3, ...clamp2 }}>{rc.course?.name}</div>
-                      {rl && <div style={{ fontSize: 13, color: L.t2, marginTop: 2, lineHeight: 1.4, ...clamp2 }}>Bài: {rl.title}</div>}
+            {learnRows.length > 0 ? (
+              <div style={{ paddingBottom: 16 }}>
+                {learnRows.map(row => (
+                  <section key={row.key} style={{ marginTop: 22 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 18px 10px' }}>
+                      <h2 style={{ margin: 0, fontSize: 18, lineHeight: 1.2, fontWeight: 900, color: L.t1 }}>{row.title}</h2>
+                      <span style={{ color: L.p1, fontSize: 13, lineHeight: 1.3, fontWeight: 850, textAlign: 'right' }}>{row.hint}</span>
                     </div>
-                  </div>
-                  {mainProgress !== null && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, color: L.t2 }}>Tiến độ</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: L.p1 }}>{mainProgress}%</span>
-                      </div>
-                      <div style={{ height: 6, borderRadius: 99, background: L.p2, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', borderRadius: 99, background: `linear-gradient(90deg, ${L.p1}, #6366F1)`, width: `${mainProgress}%`, transition: 'width .4s' }} />
-                      </div>
+                    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 18px 4px', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
+                      {row.items.map(e => {
+                        const access = courseAccessOf(e)
+                        const seqMiss = seqLockMissing(e.course?.code)
+                        const seqLocked = access.available && seqMiss.length > 0
+                        const locked = !access.available || !access.canAccess || seqLocked
+                        const stats = courseProgressStats(e.course_id)
+                        const progressText = stats
+                          ? stats.done >= stats.total ? 'Đã học' : stats.done > 0 ? `Đang học · ${stats.done}/${stats.total}` : null
+                          : null
+                        const statusText = !access.available
+                          ? 'Sắp có'
+                          : seqLocked
+                          ? `Cần ${seqMiss.join(' · ')}`
+                          : !access.canAccess
+                          ? `Cần ${ENTITLEMENT_TIER_LABEL[access.requiredTier]}`
+                          : progressText ?? 'Học ngay'
+                        return (
+                          <CourseThumbCard
+                            key={e.id}
+                            course={e.course}
+                            locked={locked}
+                            statusText={statusText}
+                            progressText={progressText}
+                            onClick={() => {
+                              if (!access.visible) return
+                              if (!access.available) return
+                              if (!access.canAccess) { openUpgrade(); return }
+                              if (seqLocked) return
+                              openCourse(e.course_id, resumeCourseId === e.course_id ? resumeLesson?.id : undefined)
+                            }}
+                          />
+                        )
+                      })}
                     </div>
-                  )}
-                  <button
-                    style={{ width: '100%', background: `linear-gradient(135deg, ${L.p1}, #6366F1)`, color: L.tinv, border: 'none', borderRadius: 14, padding: '15px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '.02em', boxShadow: '0 4px 16px rgba(67,56,202,.35)' }}>
-                    HỌC NGAY →
-                  </button>
-                </div>
+                  </section>
+                ))}
+
+                {foundationGaps.length > 0 && (
+                  <section style={{ marginTop: 22 }}>
+                    <div style={{ padding: '0 18px 10px' }}>
+                      <h2 style={{ margin: 0, fontSize: 18, lineHeight: 1.2, fontWeight: 900, color: '#991B1B' }}>Nền tảng còn thiếu</h2>
+                      <div style={{ marginTop: 4, fontSize: 12.5, color: L.t2, lineHeight: 1.45 }}>Xem trước mục lục và học bổ sung để chắc gốc.</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 18px 4px', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
+                      {foundationGaps.map(course => (
+                        <CourseThumbCard
+                          key={course!.id}
+                          course={course!}
+                          locked={true}
+                          statusText="Thiếu nền tảng"
+                          onClick={() => openCourse(course!.id)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
-              ) })()}
-
-              {!mainCourse && (
-                <div style={{ background: L.surface, borderRadius: 20, padding: '32px 20px', textAlign: 'center', boxShadow: L.shadow }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>🌱</div>
-                  <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>{guest ? 'Bắt đầu miễn phí' : 'Hành trình chưa bắt đầu'}</div>
-                  <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.7 }}>{guest ? 'Bạn có thể xem hệ sinh thái và dùng các phần miễn phí trước khi đăng nhập hoặc nâng gói.' : 'Thầy sẽ thêm bạn vào khoá học sau buổi học đầu tiên.'}</div>
-                </div>
-              )}
-
-              {/* Tất cả khoá học */}
-              {sortedEnrollments.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Tất cả khoá học</div>
-                  {sortedEnrollments.map(e => {
-                    const isPublished = (e.course?.status ?? 'on') === 'on'
-                    const seqMiss = seqLockMissing(e.course?.code)  // HT: khoá cấp dưới chưa xong → khoá lại
-                    const seqLocked = isPublished && seqMiss.length > 0
-                    const canOpen = isPublished && !seqLocked
-                    return (
-                      <div key={e.id}
-                        onClick={() => canOpen ? openCourse(e.course_id) : undefined}
-                        style={{
-                          background: L.surface, borderRadius: 16, padding: '14px 16px',
-                          boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12,
-                          marginBottom: 8,
-                          cursor: canOpen ? 'pointer' : 'default',
-                          opacity: !isPublished ? 0.45 : seqLocked ? 0.6 : 1,
-                        }}>
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                          <CourseLogo course={e.course} size={42} radius={12} />
-                          {seqLocked && <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.35)', borderRadius: 12, color: '#fff', fontSize: 16 }}>🔒</span>}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: isPublished ? (seqLocked ? L.t2 : L.t1) : L.t2 }}>
-                            {e.course?.name}
-                          </div>
-                          <div style={{ fontSize: 12, color: seqLocked ? '#B91C1C' : L.t3, marginTop: 2 }}>
-                            {!isPublished ? '🔜 Sắp ra mắt'
-                              : seqLocked ? `Hoàn thành ${seqMiss.join(' · ')} để mở`
-                              : (e.course?.type === 'canh_cua' ? 'Cánh Cửa' : 'Hành Trình')}
-                          </div>
-                        </div>
-                        {!isPublished
-                          ? <span style={{ fontSize: 11, color: L.t3, background: L.surface2, borderRadius: 8, padding: '3px 8px', fontWeight: 600, flexShrink: 0 }}>Sắp ra mắt</span>
-                          : seqLocked ? null
-                          : <span style={{ color: L.t3, fontSize: 18 }}>›</span>
-                        }
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* ── Nền tảng còn thiếu (§6): khoá tiên quyết chưa học, hiện mờ · chỉ lộ mục lục · khuyến khích học bổ sung ── */}
-              {foundationGaps.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 4, color: '#991B1B' }}>Nền tảng còn thiếu</div>
-                  <div style={{ fontSize: 12.5, color: L.t2, marginBottom: 12, lineHeight: 1.5 }}>Bạn được vào khoá cao hơn, nhưng chưa học các khoá nền dưới đây. Xem trước mục lục và học bổ sung để chắc gốc.</div>
-                  {foundationGaps.map(g => (
-                    <div key={g!.id}
-                      onClick={() => openCourse(g!.id)}
-                      style={{
-                        background: L.surface, borderRadius: 16, padding: '14px 16px',
-                        boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12,
-                        marginBottom: 8, cursor: 'pointer',
-                        border: '1px solid #FECACA',
-                      }}>
-                      <div style={{ position: 'relative', flexShrink: 0, opacity: .55 }}>
-                        <CourseLogo course={g} size={42} radius={12} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: L.t2 }}>{g!.name}</div>
-                        <div style={{ fontSize: 11.5, color: '#B91C1C', marginTop: 3, fontWeight: 700, letterSpacing: '.02em', display: 'inline-block', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 7, padding: '2px 7px' }}>Thiếu nền tảng</div>
-                      </div>
-                      <span style={{ color: L.t3, fontSize: 18 }}>›</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            ) : (
+              <div style={{ margin: '24px 18px', background: L.surface, borderRadius: 20, padding: '32px 20px', textAlign: 'center', boxShadow: L.shadow }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🌱</div>
+                <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 8 }}>{guest ? 'Bắt đầu miễn phí' : 'Hành trình chưa bắt đầu'}</div>
+                <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.7 }}>{guest ? 'Bạn có thể xem các phần miễn phí trước khi đăng nhập hoặc nâng gói.' : 'Thầy sẽ thêm bạn vào khoá học sau buổi học đầu tiên.'}</div>
+              </div>
+            )}
           </>
         )}
 

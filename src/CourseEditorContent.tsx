@@ -402,11 +402,11 @@ export default function CourseEditorContent() {
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, code } as Course : c))
   }
 
-  // ── Logo khoá học ──
+  // ── Thumbnail khoá học ──
   const setCourseLogo = async (patch: { icon?: string | null; image_url?: string | null }) => {
     if (!selectedCourse) return
     const { error } = await supabase.from('edu_courses').update(patch).eq('id', selectedCourse.id)
-    if (error) { alert('Cập nhật logo thất bại: ' + error.message); return }
+    if (error) { alert('Cập nhật thumbnail thất bại: ' + error.message); return }
     const updated = { ...selectedCourse, ...patch }
     setSelectedCourse(updated)
     setCourses(prev => prev.map(c => c.id === selectedCourse.id ? { ...c, ...patch } : c))
@@ -846,8 +846,8 @@ export default function CourseEditorContent() {
           <>
             <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 10 }}>
-                {/* Logo khoá học */}
-                <button onClick={() => setShowLogoPicker(true)} title="Đổi logo khoá học"
+                {/* Thumbnail khoá học */}
+                <button onClick={() => setShowLogoPicker(true)} title="Đổi thumbnail khoá học"
                   style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg, cursor: 'pointer', flexShrink: 0, padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
                   {selectedCourse.image_url
                     ? <img src={selectedCourse.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -943,14 +943,14 @@ export default function CourseEditorContent() {
               </div>
             </div>
 
-            {/* ── Modal chọn logo khoá học ── */}
+            {/* ── Modal chọn thumbnail khoá học ── */}
             {showLogoPicker && (
               <div onClick={() => setShowLogoPicker(false)}
                 style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
                 <div onClick={e => e.stopPropagation()}
                   style={{ background: C.surface, borderRadius: 16, padding: 20, width: '100%', maxWidth: 360, boxShadow: '0 12px 48px rgba(0,0,0,0.25)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <span style={{ fontWeight: 700, fontSize: 16, color: C.text1 }}>Logo khoá học</span>
+                  <span style={{ fontWeight: 700, fontSize: 16, color: C.text1 }}>Thumbnail khoá học</span>
                     <button onClick={() => setShowLogoPicker(false)} style={{ background: 'none', border: 'none', fontSize: 18, color: C.text3, cursor: 'pointer' }}>✕</button>
                   </div>
 
@@ -961,7 +961,7 @@ export default function CourseEditorContent() {
                         ? <img src={selectedCourse.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : courseLogoEmoji(selectedCourse)}
                     </div>
-                    <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.5 }}>Logo hiện tại. Chọn emoji bên dưới hoặc tải ảnh lên.</div>
+                    <div style={{ fontSize: 13, color: C.text3, lineHeight: 1.5 }}>Ảnh hiện tại dùng cho card Tab Học. Chọn emoji fallback hoặc tải ảnh lên.</div>
                   </div>
 
                   {/* Tải ảnh */}
@@ -969,8 +969,14 @@ export default function CourseEditorContent() {
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.currentTarget.value = '' }} />
                   <button onClick={() => logoFileRef.current?.click()} disabled={uploadingLogo}
                     style={{ width: '100%', padding: '10px', borderRadius: 10, border: `1px dashed ${C.accent}`, background: C.bg, color: C.accent, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}>
-                    {uploadingLogo ? '⏳ Đang tải...' : '📤 Tải ảnh logo lên'}
+                    {uploadingLogo ? '⏳ Đang tải...' : selectedCourse.image_url ? '📤 Thay ảnh thumbnail' : '📤 Tải ảnh thumbnail lên'}
                   </button>
+                  {selectedCourse.image_url && (
+                    <button onClick={() => setCourseLogo({ image_url: null })} disabled={uploadingLogo}
+                      style={{ width: '100%', padding: '10px', borderRadius: 10, border: '1px solid #FECACA', background: '#FEF2F2', color: '#B91C1C', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}>
+                      Xoá thumbnail
+                    </button>
+                  )}
 
                   {/* Emoji có sẵn */}
                   <div style={{ fontSize: 12, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Hoặc chọn emoji</div>
