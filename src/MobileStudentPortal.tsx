@@ -1400,23 +1400,31 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
 
         {/* ── TRANG CHỦ ───────────────────────────────────────────────── */}
+        {/* Khớp bố cục demo (AppV2Preview): greeting → Tiếp tục hành trình → Luyện ngay.
+            "Xem cùng Thầy" của demo ĐÃ ẨN: chưa có nguồn featured-content canonical trong production
+            (chỉ có YouTube search tool ở tab Tập, không phải content model) → không hardcode video (§6). */}
         {tab === 'home' && (
           <>
             <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 14, background: L.p1, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: L.shadow }}>
-                  <NavIcon name="home" color="#fff" size={22} />
+                <div style={{ width: 38, height: 38, borderRadius: 14, background: L.p1, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: L.shadow, flexShrink: 0 }}>
+                  <NavIcon name="home" color="#fff" size={21} />
                 </div>
                 <div style={{ textAlign: 'left', minWidth: 0 }}>
                   <div style={{ fontSize: 12, color: L.t3, fontWeight: 800, letterSpacing: '.04em' }}>THẦY VĂN ANH GUITAR</div>
-                  <div style={{ fontSize: 24, lineHeight: 1.12, fontWeight: 900, color: L.t1 }}>Chào {name.split(' ').slice(-1)[0]}</div>
+                  <div style={{ fontSize: 15, fontWeight: 900, color: L.t1 }}>App Class 2.0</div>
                 </div>
               </div>
-              <div style={{ marginTop: 8, color: L.t2, fontSize: 13.5, lineHeight: 1.5 }}>Mở app là có thứ để học và luyện ngay. Bắt đầu từ chỗ bạn đang dở.</div>
+              <div style={{ marginTop: 18, textAlign: 'left' }}>
+                <div style={{ fontSize: 27, lineHeight: 1.18, fontWeight: 900, color: L.t1, letterSpacing: 0 }}>
+                  Chào {name.split(' ').slice(-1)[0]},<br />hôm nay chơi Guitar một chút nhé.
+                </div>
+                <div style={{ marginTop: 10, fontSize: 14, color: L.t2, lineHeight: 1.55 }}>Mở app là có thứ để luyện và học ngay. Học vẫn ở phía sau, rất chặt.</div>
+              </div>
             </div>
 
-            {/* Tiếp tục hành trình — dùng resume course THẬT; nếu chưa có thì mời vào Học */}
-            <section style={{ margin: '18px 18px 0' }}>
+            {/* Tiếp tục hành trình — resume course THẬT; chưa có thì degrade sang lời mời vào Học (§4) */}
+            <section style={{ margin: '22px 18px 0' }}>
               <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 10, textAlign: 'left' }}>Tiếp tục hành trình</div>
               {resumeCourse ? (
                 <button
@@ -1443,26 +1451,35 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               )}
             </section>
 
-            {/* Lối tắt — điều hướng vào các tab thật, không tạo dữ liệu mới */}
-            <section style={{ margin: '22px 18px 0' }}>
-              <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 10, textAlign: 'left' }}>Làm gì hôm nay</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {([
-                  ['hoc',     '📖', 'Học',  'Khoá & bài giảng'],
-                  ['tap',     '🎯', 'Tập',  'Công cụ luyện tập'],
-                  ['teacher', '💬', 'Thầy', 'Nhóm & đồng hành'],
-                  ['me',      '🙂', 'Tôi',  'Hồ sơ & gói học'],
-                ] as const).map(([id, icon, label, sub]) => (
-                  <button key={id}
-                    onClick={() => { setTab(id as Tab); if (id === 'hoc') setScreen('home') }}
-                    style={{ background: L.surface, border: 'none', borderRadius: 18, boxShadow: L.shadow, padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
-                    <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 20 }}>{icon}</span>
-                    <span style={{ fontSize: 15, fontWeight: 900, color: L.t1 }}>{label}</span>
-                    <span style={{ fontSize: 12, color: L.t2, lineHeight: 1.35 }}>{sub}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
+            {/* Luyện ngay — rail EXERCISES THẬT (lọc theo exerciseStatuses); card mở tab Tập (đúng như demo route sang practice) */}
+            {(() => {
+              const items = EXERCISES.filter(ex => (exerciseStatuses[ex.id] ?? 'on') !== 'off')
+              if (items.length === 0) return null
+              return (
+                <section style={{ marginTop: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 18px 10px' }}>
+                    <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: L.t1 }}>Luyện ngay</h2>
+                    <button onClick={() => setTab('tap')} style={{ border: 'none', background: 'transparent', color: L.p1, fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit' }}>Mở tab Tập ›</button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 18px 4px', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
+                    {items.map(ex => {
+                      const comingSoon = (exerciseStatuses[ex.id] ?? 'on') === 'coming_soon'
+                      const totalMin = practiceTotals[ex.id] ?? 0
+                      const sub = comingSoon ? 'Sắp ra mắt' : totalMin > 0 ? `Tích lũy ${(totalMin / 60).toFixed(1)}h` : 'Vào luyện'
+                      return (
+                        <button key={ex.id}
+                          onClick={() => setTab('tap')}
+                          style={{ flex: '0 0 132px', scrollSnapAlign: 'start', background: L.surface, border: 'none', borderRadius: 18, boxShadow: L.shadow, padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', opacity: comingSoon ? 0.6 : 1 }}>
+                          <span style={{ width: 44, height: 44, borderRadius: 13, background: ex.color + '18', display: 'grid', placeItems: 'center', fontSize: 22 }}>{ex.icon}</span>
+                          <span style={{ fontSize: 14.5, fontWeight: 900, color: L.t1 }}>{ex.name}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: comingSoon ? '#D97706' : (totalMin > 0 ? ex.color : L.t2) }}>{sub}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              )
+            })()}
           </>
         )}
 
