@@ -350,7 +350,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [masterPath, setMasterPath] = useState<{ id: string; title: string; courseId: string; courseName: string }[]>([])  // đường mốc xuyên suốt mọi khóa
   const [journeyLessons, setJourneyLessons] = useState<JourneyLesson[]>([])  // view-model bài học phẳng theo môn (cho hành trình ngang)
   const [activeSubject, setActiveSubject]   = useState<string | null>(null)  // môn đang mở màn journey
-  const [companionTab, setCompanionTab]     = useState<'thay' | 'note' | 'ask'>('thay')  // nửa dưới màn journey
+  const [noteSaved, setNoteSaved]           = useState(false)  // feedback "Đã lưu" cho ghi chú journey
+  const noteSaveTimerRef = useRef(0)  // debounce auto-save ghi chú
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null)  // bài đang chọn trong journey (gắn companion)
   const [activeLevel, setActiveLevel]       = useState<number | null>(null)  // vùng Level đang xem (navigator) — tách khỏi current/selected
   const journeyRailRef = useRef<HTMLDivElement | null>(null)  // auto-scroll tới bài hiện tại
@@ -1641,7 +1642,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     : 'Sắp có'
                   return (
                     <button key={sub.key}
-                      onClick={() => { setActiveSubject(sub.key); setSelectedLessonId(null); setActiveLevel(null); setCompanionTab('thay'); setScreen('journey') }}
+                      onClick={() => { setActiveSubject(sub.key); setSelectedLessonId(null); setActiveLevel(null); setNoteSaved(false); setScreen('journey') }}
                       style={{ position: 'relative', width: '100%', height: 150, border: 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', boxShadow: L.shadowLg, textAlign: 'left' }}>
                       {cover
                         ? <img src={cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -2687,7 +2688,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const currentId = items.find(j => { const a = lessonAccessOf(j); return a.canAccess && !completedIds.has(j.id) })?.id
         const selectedId = selectedLessonId ?? currentId ?? items[0]?.id
         const selected = items.find(j => j.id === selectedId) ?? null
-        const selectLesson = (jl: JourneyLesson) => { setSelectedLessonId(jl.id); window.setTimeout(() => document.getElementById('jl-' + jl.id)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }), 0) }
+        const selectLesson = (jl: JourneyLesson) => { setSelectedLessonId(jl.id); setNoteSaved(false); window.setTimeout(() => document.getElementById('jl-' + jl.id)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }), 0) }
+        const saveNote = (id: string, val: string) => { try { localStorage.setItem(noteKey(id), val) } catch { /**/ } setNoteSaved(true) }
 
         const nodes: React.ReactNode[] = []
         let lastLevelGroup: string | null = null, lastModule: string | null = null, lastCourse: string | null = null, courseIdx = -1
@@ -2846,44 +2848,28 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 })}
               </div>
             )}
-            {/* NỬA DƯỚI — Không gian đồng hành, GẮN với bài đang chọn (không fake data) */}
-            <div style={{ flex: 1, minHeight: 0, background: L.surface, borderTop: `1px solid ${L.border}`, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', gap: 6, padding: '10px 16px 0' }}>
-                {([['thay', 'Thầy dặn'], ['note', 'Ghi chú'], ['ask', 'Hỏi Thầy']] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setCompanionTab(k)}
-                    style={{ flex: 1, background: companionTab === k ? L.p2 : 'transparent', color: companionTab === k ? L.p1 : L.t3, border: 'none', borderRadius: 12, padding: '9px 4px', fontSize: 13, fontWeight: companionTab === k ? 800 : 600, cursor: 'pointer', fontFamily: 'inherit' }}>{label}</button>
-                ))}
+            {/* NỬA DƯỚI — SỔ TAY: "Ghi chú của bạn" là trung tâm, gắn selectedLesson (reuse localStorage note) */}
+            <div style={{ flex: 1, minHeight: 0, background: L.surface, borderTop: `1px solid ${L.border}`, display: 'flex', flexDirection: 'column', padding: '12px 18px calc(14px + env(safe-area-inset-bottom))' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ fontSize: 16, fontWeight: 900, color: L.t1 }}>Ghi chú của bạn</div>
+                {selected && <span style={{ fontSize: 11.5, fontWeight: 700, color: noteSaved ? L.green : L.t3, transition: 'color .2s' }}>{noteSaved ? '✓ Đã lưu' : ''}</span>}
               </div>
-              {/* Tên bài đang chọn */}
-              <div style={{ padding: '10px 18px 0', fontSize: 13, fontWeight: 800, color: L.t1, ...clamp1 }}>{selected ? selected.title : 'Chọn một bài trong hành trình'}</div>
-              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 18px calc(16px + env(safe-area-inset-bottom))' }}>
-                {companionTab === 'thay' && (
-                  <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
-                    {selected ? 'Chưa có lời dặn của Thầy cho bài này.' : 'Chọn một bài để xem lời dặn của Thầy.'}
-                  </div>
-                )}
-                {companionTab === 'note' && (
-                  selected ? (
-                    <textarea
-                      key={selected.id}
-                      defaultValue={(() => { try { return localStorage.getItem(noteKey(selected.id)) ?? '' } catch { return '' } })()}
-                      onBlur={e => { try { localStorage.setItem(noteKey(selected.id), e.target.value) } catch { /**/ } }}
-                      placeholder="Viết ghi chú của bạn cho bài này…"
-                      style={{ width: '100%', minHeight: 90, resize: 'vertical', border: `1px solid ${L.border}`, borderRadius: 12, padding: '10px 12px', fontSize: 13.5, fontFamily: 'inherit', color: L.t1, background: L.bg, outline: 'none', lineHeight: 1.5, boxSizing: 'border-box' }} />
-                  ) : (
-                    <div style={{ color: L.t2, fontSize: 13.5 }}>Chọn một bài để viết ghi chú.</div>
-                  )
-                )}
-                {companionTab === 'ask' && (
-                  <div style={{ color: L.t2, fontSize: 13.5, lineHeight: 1.6 }}>
-                    <div style={{ marginBottom: 12 }}>Nhắn Thầy hỏi về bài này trong nhóm lớp của bạn.</div>
-                    <button onClick={() => setTab('teacher')} style={{ background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Hỏi Thầy về bài này</button>
-                  </div>
-                )}
-                {/* Chừa chỗ "Trả bài cho Thầy" (§12) — chưa mở, không dựng UI nộp bài giả */}
-                <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, opacity: .5 }}>
-                  <span style={{ background: L.surface2, color: L.t3, borderRadius: 8, padding: '4px 10px', fontSize: 11.5, fontWeight: 700 }}>Trả bài cho Thầy · sắp có</span>
-                </div>
+              <div style={{ fontSize: 12.5, color: L.t2, marginTop: 2, ...clamp1 }}>{selected ? selected.title : 'Chọn một bài để ghi chú'}</div>
+              {selected ? (
+                <textarea
+                  key={selected.id}
+                  defaultValue={(() => { try { return localStorage.getItem(noteKey(selected.id)) ?? '' } catch { return '' } })()}
+                  onChange={e => { const v = e.target.value; setNoteSaved(false); if (noteSaveTimerRef.current) window.clearTimeout(noteSaveTimerRef.current); noteSaveTimerRef.current = window.setTimeout(() => saveNote(selected.id, v), 500) }}
+                  onBlur={e => { if (noteSaveTimerRef.current) window.clearTimeout(noteSaveTimerRef.current); saveNote(selected.id, e.target.value) }}
+                  placeholder="Ghi lại điều bạn muốn nhớ về bài này…"
+                  style={{ flex: 1, minHeight: 90, marginTop: 10, resize: 'none', width: '100%', border: `1px solid ${L.border}`, borderRadius: 14, padding: '12px 14px', fontSize: 14, fontFamily: 'inherit', color: L.t1, background: L.bg, outline: 'none', lineHeight: 1.55, boxSizing: 'border-box' }} />
+              ) : (
+                <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: L.t3, fontSize: 13.5 }}>Chọn một bài để ghi chú.</div>
+              )}
+              {/* CTA phụ — Hỏi Thầy (route thật). Chừa chỗ "Trả bài" cạnh đây, chưa mở. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                <button onClick={() => setTab('teacher')} style={{ background: 'transparent', color: L.p1, border: `1.5px solid ${L.p1}`, borderRadius: 12, padding: '8px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>💬 Hỏi Thầy về bài này</button>
+                <span style={{ color: L.t3, fontSize: 11.5, fontWeight: 700, opacity: .7 }}>Trả bài cho Thầy · sắp có</span>
               </div>
             </div>
           </div>
