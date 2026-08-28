@@ -2659,19 +2659,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               })()}
             </div>
 
-            {/* Gói của tôi + nâng cấp (chỉ hiện nâng gói khi IAP native, giữ nguyên flow billing) */}
+            {/* Gói của tôi — tên gói từ ENTITLEMENT THẬT; CTA reuse paywall đã duyệt (openUpgrade → /subscribe) */}
             <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: 16, marginBottom: 14, textAlign: 'left' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 20, flexShrink: 0 }}>👑</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, color: L.t2, fontWeight: 750 }}>Gói của tôi</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: L.t1 }}>{guest ? 'Miễn phí' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: L.t1 }}>{ENTITLEMENT_TIER_LABEL[effectiveTier]}</div>
                 </div>
-                {isNativeIAP && (
-                  <button onClick={openUpgrade} style={{ background: L.p1, border: 'none', borderRadius: 12, padding: '9px 14px', color: '#fff', fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                    Nâng cấp
-                  </button>
-                )}
+                <button onClick={openUpgrade} style={{ background: effectiveTier === 'free' ? L.p1 : L.p2, border: 'none', borderRadius: 12, padding: '9px 14px', color: effectiveTier === 'free' ? '#fff' : L.p1, fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                  {effectiveTier === 'free' ? 'Nâng gói' : 'Quản lý gói'}
+                </button>
               </div>
             </div>
 
