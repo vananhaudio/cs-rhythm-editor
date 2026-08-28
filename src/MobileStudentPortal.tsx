@@ -2563,39 +2563,49 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ══ SỐNG ══ Lớp = đơn vị đào tạo · Band = đơn vị cộng đồng.
             Mỗi mục là 1 entry điều hướng (không feed, không dashboard). ═══════ */}
         {/* ── THẦY ────────────────────────────────────────────────────── */}
-        {/* Tái dùng các capability đồng hành THẬT (setLivePage/Zalo/FB), không tạo lịch/tin nhắn giả. */}
-        {tab === 'teacher' && (
+        {/* Gặp/hỏi/thực hành cùng Thầy. Zalo/nhóm/cộng đồng dùng capability THẬT; buổi thực hành chưa có data canonical → empty state (không fake lịch/Zoom). */}
+        {tab === 'teacher' && (() => {
+          const zaloUrl = communityGroups.find(g => g.group_type === 'zalo' && g.zalo_url)?.zalo_url ?? null
+          return (
           <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 8px' }}>
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Thầy</div>
-            <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>Nhóm lớp, đồng hành và cộng đồng cùng Thầy.</div>
+            <div style={{ fontSize: 14, color: L.t2, marginBottom: 20 }}>Gặp, hỏi và thực hành trực tiếp cùng Thầy.</div>
 
-            {/* BAND CỦA TÔI — hero. Đa số học viên chưa có Band: hiện trạng thái + lối tìm hiểu. */}
+            {/* A. GẶP THẦY — hero, CTA Zalo nổi nhất (link THẬT; chưa có Zalo → vào Nhóm lớp) */}
             <div style={{ background: L.surface, borderRadius: 18, padding: '18px', boxShadow: L.shadow, marginBottom: 14 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>🎸 Band của tôi</div>
-              <div style={{ fontSize: 15, color: L.t1, fontWeight: 600 }}>Bạn chưa tham gia Band nào.</div>
-              <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.7, marginTop: 6 }}>
-                Sau khi hoàn thành các khoá nâng cao, bạn sẽ được tư vấn ghép Band phù hợp để cùng luyện tập,
-                biểu diễn và gắn bó lâu dài.
-              </div>
-              <button onClick={() => setLivePage('band')}
-                style={{ width: '100%', marginTop: 14, background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 14.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Tìm hiểu về Band
-              </button>
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>💬 Gặp Thầy</div>
+              <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.6 }}>Có câu hỏi về bài đang học? Nhắn Thầy.</div>
+              {zaloUrl ? (
+                <button onClick={() => openExternal(zaloUrl)}
+                  style={{ width: '100%', marginTop: 14, background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Nhắn Thầy qua Zalo
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => setLivePage('classgroup')}
+                    style={{ width: '100%', marginTop: 14, background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Vào Nhóm lớp để nhắn Thầy
+                  </button>
+                  <div style={{ fontSize: 12, color: L.t3, marginTop: 8 }}>Zalo lớp nằm trong “Nhóm lớp của tôi”.</div>
+                </>
+              )}
             </div>
 
-            {/* Các entry điều hướng THẬT — cùng kiểu nút, không preview */}
+            {/* B. BUỔI THỰC HÀNH CÙNG THẦY — chưa có lịch canonical → empty state sạch (§7) */}
+            <div style={{ background: L.surface, borderRadius: 18, padding: '18px', boxShadow: L.shadow, marginBottom: 14 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>📅 Buổi thực hành cùng Thầy</div>
+              <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.6 }}>Chưa có buổi thực hành sắp tới.</div>
+              <div style={{ fontSize: 12.5, color: L.t3, marginTop: 6, lineHeight: 1.5 }}>Lịch buổi thực hành sẽ hiện ở đây khi Thầy mở. Lịch hiển thị cho mọi người; quyền tham gia theo lớp/gói của bạn.</div>
+            </div>
+
+            {/* C. Nhóm lớp · D. Cộng đồng — capability THẬT, giữ nguyên behavior */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {([
                 ['classgroup', '💬', 'Nhóm lớp của tôi'],
                 ['community',  '👥', 'Cộng đồng Hành trình'],
-                ['story',      '📖', '1001 Câu chuyện cùng Guitar'],
-                ['festival',   '🎸', 'Đại hội Guitar'],
               ] as const).map(([key, icon, label]) => (
                 <button key={key}
                   onClick={() => {
-                    if (key === 'story') { window.location.href = '/story'; return }
-                    // Cộng đồng → mở thẳng NHÓM FACEBOOK cộng đồng (nhóm cũ, đã có sẵn người sinh hoạt).
-                    // Chưa cấu hình nhóm FB thì mới rơi về trang giới thiệu.
                     if (key === 'community') {
                       const fb = communityGroups.find(g => g.group_type === 'facebook' && g.facebook_url)
                       if (fb?.facebook_url) { openExternal(fb.facebook_url); return }
@@ -2610,7 +2620,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               ))}
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {/* ── TÔI ─────────────────────────────────────────────────────── */}
         {/* Hồ sơ/gói/tiến độ THẬT. Guest có trạng thái riêng, KHÔNG ép login khi mở tab. */}
@@ -2662,6 +2673,24 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* Hành trình của tôi — Band · 1001 Câu chuyện · Đại hội (chuyển từ Thầy; reuse handler thật) */}
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: L.t3, textTransform: 'uppercase', letterSpacing: '.04em', margin: '4px 2px 8px' }}>Hành trình của tôi</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+              {([
+                ['band',     '🎸', 'Band của tôi'],
+                ['story',    '📖', '1001 Câu chuyện cùng Guitar'],
+                ['festival', '🎪', 'Đại hội Guitar'],
+              ] as const).map(([key, icon, label]) => (
+                <button key={key}
+                  onClick={() => { if (key === 'story') { window.location.href = '/story'; return } setLivePage(key) }}
+                  style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 16, boxShadow: L.shadow, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>{icon}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: L.t1, lineHeight: 1.35 }}>{label}</span>
+                  <span style={{ color: L.t3, fontSize: 18, flexShrink: 0 }}>›</span>
+                </button>
+              ))}
             </div>
 
             {/* Tài khoản — cài đặt hồ sơ / đăng nhập / đăng xuất */}
