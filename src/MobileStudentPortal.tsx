@@ -174,6 +174,17 @@ function CourseLogo({ course: courseInput, size = 44, radius = 12, bg }: { cours
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TEMP HOME FEED MOCK — replace with canonical feed source (Phase 2: community_feed_items).
+// CHỈ để chốt UI "Bản tin hôm nay". KHÔNG phải production data, KHÔNG ghi DB,
+// KHÔNG tên người thật, KHÔNG link thật. Component đọc mảng này để Phase 2 chỉ thay data source.
+// ─────────────────────────────────────────────────────────────────────────────
+const HOME_FEED_MOCK: { type: string; kicker: string; title: string; summary: string; icon: string; tone: string }[] = [
+  { type: 'story',         kicker: 'Câu chuyện',      title: 'Từ chàng nhân viên văn phòng đến sân khấu', summary: 'Hành trình một năm cầm đàn của một học viên.', icon: '📖', tone: '#7C3AED' },
+  { type: 'class_start',   kicker: 'Lớp học',         title: 'Lớp Đệm hát K3 vừa khai giảng',             summary: 'Một chặng mới bắt đầu cùng nhau.',            icon: '🎓', tone: '#0891B2' },
+  { type: 'student_video', kicker: 'Video học viên',  title: 'Một màn biểu diễn mới từ cộng đồng',         summary: 'Xem cộng đồng đang sống cùng âm nhạc.',       icon: '🎥', tone: '#EA580C' },
+]
+
 const LEARN_TRACKS: { key: string; title: string; hint: string }[] = [
   { key: 'dem_hat', title: 'Đệm hát', hint: 'Acoustic · rhythm · biểu diễn' },
   { key: 'tia_not', title: 'Tỉa nốt', hint: 'Melody · fretboard · bản nhạc' },
@@ -1532,89 +1543,92 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
 
-        {/* ── TRANG CHỦ ───────────────────────────────────────────────── */}
-        {/* Khớp bố cục demo (AppV2Preview): greeting → Tiếp tục hành trình → Luyện ngay.
-            "Xem cùng Thầy" của demo ĐÃ ẨN: chưa có nguồn featured-content canonical trong production
-            (chỉ có YouTube search tool ở tab Tập, không phải content model) → không hardcode video (§6). */}
-        {tab === 'home' && (
-          <>
-            <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 14, background: L.p1, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: L.shadow, flexShrink: 0 }}>
-                  <NavIcon name="home" color="#fff" size={21} />
-                </div>
-                <div style={{ textAlign: 'left', minWidth: 0 }}>
-                  <div style={{ fontSize: 12, color: L.t3, fontWeight: 800, letterSpacing: '.04em' }}>THẦY VĂN ANH GUITAR</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: L.t1 }}>App Class 2.0</div>
-                </div>
+        {/* ── TRANG CHỦ — trang cá nhân "sống" (read-only: XEM · CẢM NHẬN · KẾT NỐI). Không CTA học/luyện, không chuông, không dashboard. */}
+        {tab === 'home' && (() => {
+          const trinhDo = guest ? 'Khách' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')
+          const goiLabel = ENTITLEMENT_TIER_LABEL[effectiveTier]
+          const journeySubjects = SUBJECTS.filter(s => journeyOf(s.key).length > 0)
+          const rhythm = practiceStats
+          const hasRhythm = rhythm.daysWeek > 0 || rhythm.weekMin > 0
+          return (
+          <div style={{ paddingBottom: 8 }}>
+            {/* HomeProfileHero — COVER + HỒ SƠ (profile-first; cover fallback gradient, chưa có canonical cover) */}
+            <div style={{ position: 'relative' }}>
+              <div style={{ height: 'calc(150px + env(safe-area-inset-top, 0px))', background: 'linear-gradient(135deg, #4338CA 0%, #7C3AED 55%, #EA580C 120%)', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', right: -18, top: 8, fontSize: 150, opacity: .1, color: '#fff', transform: 'rotate(-14deg)', lineHeight: 1 }}>🎸</div>
               </div>
-              <div style={{ marginTop: 18, textAlign: 'left' }}>
-                <div style={{ fontSize: 27, lineHeight: 1.18, fontWeight: 900, color: L.t1, letterSpacing: 0 }}>
-                  Chào {name.split(' ').slice(-1)[0]},<br />hôm nay chơi Guitar một chút nhé.
+              <div style={{ padding: '0 18px', marginTop: -44, textAlign: 'center', position: 'relative' }}>
+                <div style={{ width: 88, height: 88, borderRadius: '50%', margin: '0 auto', background: L.p2, border: `4px solid ${L.bg}`, display: 'grid', placeItems: 'center', fontSize: 34, fontWeight: 900, color: L.p1, overflow: 'hidden', boxShadow: L.shadow }}>
+                  {me.avatar_url ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.charAt(0).toUpperCase()}
                 </div>
-                <div style={{ marginTop: 10, fontSize: 14, color: L.t2, lineHeight: 1.55 }}>Mở app là có thứ để luyện và học ngay. Học vẫn ở phía sau, rất chặt.</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: L.t1, marginTop: 10, ...clamp1 }}>{name}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: L.t2, marginTop: 3 }}>{trinhDo} · {goiLabel}</div>
               </div>
             </div>
 
-            {/* Tiếp tục hành trình — resume course THẬT; chưa có thì degrade sang lời mời vào Học (§4) */}
-            <section style={{ margin: '22px 18px 0' }}>
-              <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 10, textAlign: 'left' }}>Tiếp tục hành trình</div>
-              {resumeCourse ? (
-                <button
-                  onClick={() => openCourse(resumeCourse.course_id, resumeLesson?.id)}
-                  style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 20, boxShadow: L.shadow, padding: 14, display: 'flex', gap: 14, alignItems: 'center', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <CourseLogo course={resumeCourse.course} size={72} radius={16} />
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 12, fontWeight: 800, color: L.p1 }}>{resumeCourse.course?.name ?? 'Khoá học'}</span>
-                    <span style={{ display: 'block', fontSize: 15.5, fontWeight: 900, color: L.t1, lineHeight: 1.3, marginTop: 3, ...clamp2 }}>{resumeLesson ? `Học: ${resumeLesson.title}` : 'Vào học tiếp'}</span>
-                    <span style={{ display: 'inline-block', marginTop: 10, background: L.p1, color: '#fff', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 850 }}>Tiếp tục</span>
-                  </span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setTab('hoc'); setScreen('home') }}
-                  style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 20, boxShadow: L.shadow, padding: '20px 16px', display: 'flex', gap: 14, alignItems: 'center', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <span style={{ width: 56, height: 56, borderRadius: 16, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 26, flexShrink: 0 }}>🌱</span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 15.5, fontWeight: 900, color: L.t1 }}>Bắt đầu học</span>
-                    <span style={{ display: 'block', fontSize: 13, color: L.t2, marginTop: 3, lineHeight: 1.4 }}>Chọn một khoá ở tab Học và học bài đầu tiên.</span>
-                  </span>
-                  <span style={{ color: L.t3, fontSize: 20, flexShrink: 0 }}>›</span>
-                </button>
-              )}
+            {/* HomeJourneyCard — HÀNH TRÌNH CỦA BẠN (read-only "con đường"; KHÔNG CTA học) */}
+            {journeySubjects.length > 0 && (
+              <section style={{ margin: '26px 18px 0' }}>
+                <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Hành trình của bạn</div>
+                <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: '8px 16px' }}>
+                  {journeySubjects.map((s, i) => {
+                    const p = subjectProgress(s.key)
+                    const pct = p ? p.pct : 0
+                    const started = !!(p && p.done > 0)
+                    const done = !!(p && p.done >= p.total)
+                    const status = done ? 'Đã đi hết' : started ? 'Đang đi' : 'Chưa bắt đầu'
+                    const tone = LEVEL_TONES[i % LEVEL_TONES.length]
+                    return (
+                      <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: i === 0 ? 'none' : `1px solid ${L.border}` }}>
+                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: started ? tone : L.surface2, border: `2px solid ${started ? tone : L.border}`, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                          <div style={{ fontSize: 14.5, fontWeight: 800, color: L.t1, ...clamp1 }}>{s.title}</div>
+                          <div style={{ marginTop: 6, height: 6, background: L.p2, borderRadius: 999, overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: tone }} />
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 11.5, fontWeight: 800, color: started ? tone : L.t3, flexShrink: 0 }}>{status}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* HomeNewsFeed — BẢN TIN HÔM NAY (UI-only; mock tách riêng HOME_FEED_MOCK, Phase 2 thay data source) */}
+            <section style={{ margin: '26px 18px 0' }}>
+              <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Bản tin hôm nay</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {HOME_FEED_MOCK.map((it, i) => (
+                  <div key={i} style={{ background: L.surface, borderRadius: 18, boxShadow: L.shadow, overflow: 'hidden', display: 'flex', alignItems: 'stretch', textAlign: 'left' }}>
+                    <div style={{ width: 92, flexShrink: 0, background: `linear-gradient(135deg, ${it.tone}, ${it.tone}bb)`, display: 'grid', placeItems: 'center', fontSize: 30 }}>{it.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 900, color: it.tone, textTransform: 'uppercase', letterSpacing: '.04em' }}>{it.kicker}</div>
+                      <div style={{ fontSize: 14.5, fontWeight: 900, color: L.t1, lineHeight: 1.25, marginTop: 3, ...clamp2 }}>{it.title}</div>
+                      <div style={{ fontSize: 12.5, color: L.t2, marginTop: 4, ...clamp1 }}>{it.summary}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
 
-            {/* Luyện ngay — rail EXERCISES THẬT (lọc theo exerciseStatuses); card mở tab Tập (đúng như demo route sang practice) */}
-            {(() => {
-              const items = EXERCISES.filter(ex => (exerciseStatuses[ex.id] ?? 'on') !== 'off')
-              if (items.length === 0) return null
-              return (
-                <section style={{ marginTop: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 18px 10px' }}>
-                    <h2 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: L.t1 }}>Luyện ngay</h2>
-                    <button onClick={() => setTab('tap')} style={{ border: 'none', background: 'transparent', color: L.p1, fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit' }}>Mở tab Tập ›</button>
+            {/* HomeMusicRhythm — NHỊP SỐNG (chỉ khi có data THẬT từ practiceStats; không fake số) */}
+            {hasRhythm && (
+              <section style={{ margin: '26px 18px 0' }}>
+                <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Nhịp sống âm nhạc</div>
+                <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: 16, textAlign: 'left' }}>
+                  <div style={{ fontSize: 14, color: L.t1, fontWeight: 800 }}>{rhythm.daysWeek} ngày chơi đàn tuần này{rhythm.weekMin > 0 ? ` · ${rhythm.weekMin} phút` : ''}</div>
+                  <div style={{ display: 'flex', gap: 7, marginTop: 12 }}>
+                    {(rhythm.weekDays.length === 7 ? rhythm.weekDays : [false, false, false, false, false, false, false]).map((on, i) => (
+                      <div key={i} style={{ flex: 1, height: 30, borderRadius: 8, background: on ? L.p1 : L.p2 }} />
+                    ))}
                   </div>
-                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 18px 4px', scrollSnapType: 'x proximity', scrollbarWidth: 'none' }}>
-                    {items.map(ex => {
-                      const comingSoon = (exerciseStatuses[ex.id] ?? 'on') === 'coming_soon'
-                      const totalMin = practiceTotals[ex.id] ?? 0
-                      const sub = comingSoon ? 'Sắp ra mắt' : totalMin > 0 ? `Tích lũy ${(totalMin / 60).toFixed(1)}h` : 'Vào luyện'
-                      return (
-                        <button key={ex.id}
-                          onClick={() => setTab('tap')}
-                          style={{ flex: '0 0 132px', scrollSnapAlign: 'start', background: L.surface, border: 'none', borderRadius: 18, boxShadow: L.shadow, padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', opacity: comingSoon ? 0.6 : 1 }}>
-                          <span style={{ width: 44, height: 44, borderRadius: 13, background: ex.color + '18', display: 'grid', placeItems: 'center', fontSize: 22 }}>{ex.icon}</span>
-                          <span style={{ fontSize: 14.5, fontWeight: 900, color: L.t1 }}>{ex.name}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: comingSoon ? '#D97706' : (totalMin > 0 ? ex.color : L.t2) }}>{sub}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </section>
-              )
-            })()}
-          </>
-        )}
+                </div>
+              </section>
+            )}
+          </div>
+          )
+        })()}
 
         {/* ── HOME (tab Học) ──────────────────────────────────────────── */}
         {tab === 'hoc' && screen === 'home' && (
