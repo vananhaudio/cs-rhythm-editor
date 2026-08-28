@@ -1547,7 +1547,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {tab === 'home' && (() => {
           const trinhDo = guest ? 'Khách' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')
           const goiLabel = ENTITLEMENT_TIER_LABEL[effectiveTier]
-          const journeySubjects = SUBJECTS.filter(s => journeyOf(s.key).length > 0)
           const rhythm = practiceStats
           const hasRhythm = rhythm.daysWeek > 0 || rhythm.weekMin > 0
           return (
@@ -1566,34 +1565,54 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
             </div>
 
-            {/* HomeJourneyCard — HÀNH TRÌNH CỦA BẠN (read-only "con đường"; KHÔNG CTA học) */}
-            {journeySubjects.length > 0 && (
-              <section style={{ margin: '26px 18px 0' }}>
-                <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Hành trình của bạn</div>
-                <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: '8px 16px' }}>
-                  {journeySubjects.map((s, i) => {
-                    const p = subjectProgress(s.key)
-                    const pct = p ? p.pct : 0
-                    const started = !!(p && p.done > 0)
-                    const done = !!(p && p.done >= p.total)
-                    const status = done ? 'Đã đi hết' : started ? 'Đang đi' : 'Chưa bắt đầu'
-                    const tone = LEVEL_TONES[i % LEVEL_TONES.length]
-                    return (
-                      <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: i === 0 ? 'none' : `1px solid ${L.border}` }}>
-                        <div style={{ width: 14, height: 14, borderRadius: '50%', background: started ? tone : L.surface2, border: `2px solid ${started ? tone : L.border}`, flexShrink: 0 }} />
-                        <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                          <div style={{ fontSize: 14.5, fontWeight: 800, color: L.t1, ...clamp1 }}>{s.title}</div>
-                          <div style={{ marginTop: 6, height: 6, background: L.p2, borderRadius: 999, overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: tone }} />
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 11.5, fontWeight: 800, color: started ? tone : L.t3, flexShrink: 0 }}>{status}</div>
+            {/* HomeJourneyCard — CON ĐƯỜNG "HÀNH TRÌNH CỦA BẠN" (REUSE road cũ: masterPath + scoreById/scoreColor/totalXP/classRank; READ-ONLY, không CTA) */}
+            {(() => {
+              const roadPath = masterPath.length > 0 ? masterPath : journeyLessons  // logged-in dùng masterPath, guest fallback journeyLessons
+              if (roadPath.length === 0) return null
+              const total = roadPath.length
+              const completedCount = roadPath.filter(m => completedIds.has(m.id)).length
+              let curIdx = roadPath.findIndex(m => !completedIds.has(m.id)); if (curIdx < 0) curIdx = total - 1
+              const posLabel = Math.min(completedCount + 1, total)
+              const W = 11
+              let start = Math.max(0, curIdx - Math.floor(W / 2)); const end = Math.min(total, start + W); start = Math.max(0, end - W)
+              const win = roadPath.slice(start, end)
+              const curId = roadPath[curIdx]?.id
+              return (
+                <section style={{ margin: '26px 18px 0' }}>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Hành trình của bạn</div>
+                  <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: 18 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: totalXP > 0 || classRank ? 10 : 4 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 800, color: L.t1 }}>Bạn đang ở đây</span>
+                      <span style={{ fontSize: 13, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total}</span>
+                    </div>
+                    {(totalXP > 0 || classRank) && (
+                      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 12.5, color: L.t2 }}>
+                        {totalXP > 0 && <span>🔥 Điểm hành trình <b style={{ color: L.t1 }}>{totalXP.toLocaleString()}</b></span>}
+                        {classRank && <span>🏅 Hạng lớp <b style={{ color: L.t1 }}>{classRank.rank}/{classRank.total}</b></span>}
                       </div>
-                    )
-                  })}
-                </div>
-              </section>
-            )}
+                    )}
+                    {/* con đường mốc + path gradient — READ-ONLY (không mở bài) */}
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px' }}>
+                      <div style={{ position: 'absolute', left: 10, right: 10, top: '50%', height: 4, borderRadius: 99, background: 'linear-gradient(90deg,#EF4444,#F59E0B,#22C55E)', opacity: .25, transform: 'translateY(-50%)' }} />
+                      {win.map(m => {
+                        const col = scoreColor(scoreById(m.id))
+                        const isCur = m.id === curId
+                        return (
+                          <div key={m.id} style={{ position: 'relative', zIndex: 1 }}>
+                            <div style={{ width: isCur ? 22 : 15, height: isCur ? 22 : 15, borderRadius: '50%', background: col, border: isCur ? `3px solid ${L.p1}` : '2px solid #fff', boxShadow: isCur ? `0 0 0 3px ${col}55` : '0 1px 3px rgba(0,0,0,.18)' }} />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 10, fontSize: 11, color: L.t3 }}>
+                      <span><span style={{ color: '#EF4444' }}>●</span> Mới học</span>
+                      <span><span style={{ color: '#F59E0B' }}>●</span> Đã luyện</span>
+                      <span><span style={{ color: '#22C55E' }}>●</span> Chắc</span>
+                    </div>
+                  </div>
+                </section>
+              )
+            })()}
 
             {/* HomeNewsFeed — BẢN TIN HÔM NAY (UI-only; mock tách riêng HOME_FEED_MOCK, Phase 2 thay data source) */}
             <section style={{ margin: '26px 18px 0' }}>
