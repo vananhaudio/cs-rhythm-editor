@@ -1635,26 +1635,27 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             {SUBJECTS.length > 0 ? (
               <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {SUBJECTS.map(sub => {
-                  const cover = subjectCourseFor(sub.key)?.image_url?.trim()
                   const prog = subjectProgress(sub.key)
-                  const progText = prog
-                    ? prog.done >= prog.total ? 'Đã học xong' : prog.done > 0 ? `Đang học · ${prog.done}/${prog.total} bài` : `${prog.total} bài`
+                  // State NGẮN — không tổng bài, không keyword marketing
+                  const state = prog
+                    ? prog.done >= prog.total ? 'Đã học xong' : prog.done > 0 ? 'Tiếp tục hành trình' : 'Bắt đầu hành trình'
                     : 'Sắp có'
                   return (
                     <button key={sub.key}
                       onClick={() => { setActiveSubject(sub.key); setSelectedLessonId(null); setActiveLevel(null); setNoteSaved(false); setScreen('journey') }}
-                      style={{ position: 'relative', width: '100%', height: 150, border: 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', boxShadow: L.shadowLg, textAlign: 'left' }}>
-                      {cover
-                        ? <img src={cover} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        : <div style={{ width: '100%', height: '100%', ...courseFallbackStyle({ track: sub.key } as CourseSummary) }} />}
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,.10) 0%, rgba(17,24,39,.82) 100%)' }} />
+                      style={{ position: 'relative', width: '100%', height: 136, border: 'none', borderRadius: 22, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', boxShadow: L.shadowLg, textAlign: 'left' }}>
+                      {/* Nền gradient SẠCH theo môn — KHÔNG dùng ảnh course (bỏ giant ĐH/TN) */}
+                      <div style={{ position: 'absolute', inset: 0, ...courseFallbackStyle({ track: sub.key } as CourseSummary) }} />
+                      {/* icon nhỏ tinh tế góc phải */}
+                      <div style={{ position: 'absolute', top: 14, right: 16, width: 42, height: 42, borderRadius: 14, background: 'rgba(255,255,255,.16)', display: 'grid', placeItems: 'center', fontSize: 21 }}>🎸</div>
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,0) 30%, rgba(17,24,39,.55) 100%)' }} />
                       <div style={{ position: 'absolute', left: 18, right: 18, bottom: 16, color: '#fff' }}>
-                        <div style={{ fontSize: 11, fontWeight: 900, opacity: .85, letterSpacing: '.04em', textTransform: 'uppercase' }}>Hành trình</div>
-                        <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.12, marginTop: 2 }}>{sub.title}</div>
-                        <div style={{ fontSize: 12.5, fontWeight: 800, opacity: .92, marginTop: 6 }}>{sub.hint} · {progText}</div>
+                        <div style={{ fontSize: 10.5, fontWeight: 900, opacity: .8, letterSpacing: '.06em', textTransform: 'uppercase' }}>Hành trình</div>
+                        <div style={{ fontSize: 25, fontWeight: 900, lineHeight: 1.1, marginTop: 3 }}>{sub.title}</div>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, opacity: .95, marginTop: 5 }}>{state}</div>
                       </div>
-                      {prog && prog.total > 0 && (
-                        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 5, background: 'rgba(255,255,255,.25)' }}>
+                      {prog && prog.total > 0 && prog.done > 0 && (
+                        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 5, background: 'rgba(255,255,255,.22)' }}>
                           <div style={{ width: `${prog.pct}%`, height: '100%', background: '#fff' }} />
                         </div>
                       )}
@@ -2692,21 +2693,23 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const saveNote = (id: string, val: string) => { try { localStorage.setItem(noteKey(id), val) } catch { /**/ } setNoteSaved(true) }
 
         const nodes: React.ReactNode[] = []
-        let lastLevelGroup: string | null = null, lastModule: string | null = null, lastCourse: string | null = null, courseIdx = -1
+        let lastLevelGroup: string | null = null, lastModule: string | null = null, lastCourse: string | null = null, courseIdx = -1, chapterNum = 0
         items.forEach((jl) => {
           if (jl.courseId !== lastCourse) courseIdx++
           const toneIdx = jl.moduleLevel != null ? (jl.moduleLevel - 1) : courseIdx
           const tone = LEVEL_TONES[((toneIdx % LEVEL_TONES.length) + LEVEL_TONES.length) % LEVEL_TONES.length]
           const levelGroup = jl.moduleLevel != null ? `${jl.courseId}#${jl.moduleLevel}` : jl.courseId
           const newModule = jl.moduleId !== lastModule
+          // Đếm chương trong Level (structure, không parse title) → context line ngắn
+          if (levelGroup !== lastLevelGroup) chapterNum = 1
+          else if (newModule) chapterNum++
           if (levelGroup !== lastLevelGroup) {
             if (lastLevelGroup !== null || jl.moduleLevel != null) {
               // ── MỐC LEVEL (mạnh) — panel tone, badge lớn, cột mốc ──
               nodes.push(
                 <div key={'lv-' + jl.moduleId} id={jl.moduleLevel != null ? 'jl-level-' + jl.moduleLevel : undefined} data-level={jl.moduleLevel ?? undefined} style={{ flex: '0 0 auto', alignSelf: 'stretch', minWidth: 124, scrollSnapAlign: 'center', borderRadius: 18, background: `${tone}12`, border: `1.5px dashed ${tone}66`, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '0 12px', zIndex: 1 }}>
                   <div style={{ width: 60, height: 60, borderRadius: '50%', background: tone, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 28, boxShadow: `0 8px 20px ${tone}55` }}>🎖️</div>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: tone, textTransform: 'uppercase', letterSpacing: '.06em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: L.t2 }}>cột mốc mới</div>
+                  <div style={{ fontSize: 14.5, fontWeight: 900, color: tone, textTransform: 'uppercase', letterSpacing: '.07em' }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel}` : 'Chặng mới'}</div>
                 </div>
               )
             }
@@ -2749,7 +2752,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   </div>
                 )}
                 <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '10px 13px 12px' }}>
-                  <div style={{ fontSize: 9.5, fontWeight: 800, color: tone, textTransform: 'uppercase', letterSpacing: '.03em', opacity: .95, ...clamp1 }}>{jl.moduleName}</div>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, color: tone, textTransform: 'uppercase', letterSpacing: '.03em', opacity: .95, ...clamp1 }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel} · Chương ${chapterNum}` : `Chương ${chapterNum}`}</div>
                   <div style={{ marginTop: 4, fontSize: 15.5, fontWeight: 900, color: L.t1, lineHeight: 1.2, letterSpacing: '-.01em', ...clamp2 }}>{jl.title}</div>
                   <div style={{ flex: 1 }} />
                   <button onClick={e => { e.stopPropagation(); openJourneyLesson(jl) }} disabled={comingSoon}
