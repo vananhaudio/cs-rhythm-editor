@@ -2636,7 +2636,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* ── THẦY ────────────────────────────────────────────────────── */}
         {/* Gặp/hỏi/thực hành cùng Thầy. Zalo/nhóm/cộng đồng dùng capability THẬT; buổi thực hành chưa có data canonical → empty state (không fake lịch/Zoom). */}
         {tab === 'teacher' && (() => {
-          const zaloUrl = communityGroups.find(g => g.group_type === 'zalo' && g.zalo_url)?.zalo_url ?? null
+          const zaloUrl = 'https://zalo.me/vananhguitarist' // Zalo cá nhân của Thầy — nhắn trực tiếp
           return (
           <div style={{ padding: 'max(52px, calc(env(safe-area-inset-top, 0px) + 12px)) 16px 8px' }}>
             <div style={{ fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Thầy</div>
@@ -2646,20 +2646,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             <div style={{ background: L.surface, borderRadius: 18, padding: '18px', boxShadow: L.shadow, marginBottom: 14 }}>
               <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>💬 Gặp Thầy</div>
               <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.6 }}>Có câu hỏi về bài đang học? Nhắn Thầy.</div>
-              {zaloUrl ? (
-                <button onClick={() => openExternal(zaloUrl)}
-                  style={{ width: '100%', marginTop: 14, background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Nhắn Thầy qua Zalo
-                </button>
-              ) : (
-                <>
-                  <button onClick={() => setLivePage('classgroup')}
-                    style={{ width: '100%', marginTop: 14, background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Vào Nhóm lớp để nhắn Thầy
-                  </button>
-                  <div style={{ fontSize: 12, color: L.t3, marginTop: 8 }}>Zalo lớp nằm trong “Nhóm lớp của tôi”.</div>
-                </>
-              )}
+              <button onClick={() => openExternal(zaloUrl)}
+                style={{ width: '100%', marginTop: 14, background: L.p1, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Nhắn Thầy qua Zalo
+              </button>
             </div>
 
             {/* B. BUỔI THỰC HÀNH CÙNG THẦY — chưa có lịch canonical → empty state sạch (§7) */}
