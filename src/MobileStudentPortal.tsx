@@ -1548,7 +1548,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           const trinhDo = guest ? 'Khách' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')
           const goiLabel = ENTITLEMENT_TIER_LABEL[effectiveTier]
           const rhythm = practiceStats
-          const hasRhythm = rhythm.daysWeek > 0 || rhythm.weekMin > 0
           return (
           <div style={{ paddingBottom: 8 }}>
             {/* HomeProfileHero — COVER + HỒ SƠ (profile-first; cover fallback gradient, chưa có canonical cover) */}
@@ -1565,49 +1564,73 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
             </div>
 
-            {/* HomeJourneyCard — CON ĐƯỜNG "HÀNH TRÌNH CỦA BẠN" (REUSE road cũ: masterPath + scoreById/scoreColor/totalXP/classRank; READ-ONLY, không CTA) */}
+            {/* HomeJourneyCard — CON ĐƯỜNG CONG "HÀNH TRÌNH CỦA BẠN" (REUSE nguyên bản cũ d410385^: SVG sóng sin + cờ chặng theo màu skill + marker 🎸; nối data thật masterPath/scoreById/totalXP/classRank). READ-ONLY: đã bỏ CTA "Học tiếp". */}
             {(() => {
-              const roadPath = masterPath.length > 0 ? masterPath : journeyLessons  // logged-in dùng masterPath, guest fallback journeyLessons
+              const roadPath = masterPath.length > 0 ? masterPath : journeyLessons  // logged-in: masterPath; guest fallback: journeyLessons
               if (roadPath.length === 0) return null
               const total = roadPath.length
-              const completedCount = roadPath.filter(m => completedIds.has(m.id)).length
+              const doneCount = roadPath.filter(m => completedIds.has(m.id)).length
               let curIdx = roadPath.findIndex(m => !completedIds.has(m.id)); if (curIdx < 0) curIdx = total - 1
-              const posLabel = Math.min(completedCount + 1, total)
-              const W = 11
-              let start = Math.max(0, curIdx - Math.floor(W / 2)); const end = Math.min(total, start + W); start = Math.max(0, end - W)
-              const win = roadPath.slice(start, end)
-              const curId = roadPath[curIdx]?.id
+              const cur = roadPath[curIdx]
+              const posLabel = Math.min(doneCount + 1, total)
+              const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0
+              const cSum: Record<string, number> = {}; const cCnt: Record<string, number> = {}
+              roadPath.forEach(m => { if (completedIds.has(m.id)) { cSum[m.courseId] = (cSum[m.courseId] ?? 0) + scoreById(m.id); cCnt[m.courseId] = (cCnt[m.courseId] ?? 0) + 1 } })
+              const Wd = 320, midY = 46, amp = 19, N = 60
+              const wave = (x: number) => midY + amp * Math.sin((x / Wd) * Math.PI * 2.2)
+              const pts: [number, number][] = []
+              for (let i = 0; i <= N; i++) { const x = (i / N) * Wd; pts.push([x, wave(x)]) }
+              const dPath = 'M ' + pts.map(p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L ')
+              const progress = total > 0 ? doneCount / total : 0
+              const [mx, my] = pts[Math.min(N, Math.round(progress * N))]
+              const seen = new Set<string>()
+              const flags: { x: number; y: number; id: string; cur: boolean; col: string }[] = []
+              roadPath.forEach((m, idx) => {
+                if (!seen.has(m.courseId)) {
+                  seen.add(m.courseId)
+                  const [fx, fy] = pts[Math.min(N, Math.round((idx / total) * N))]
+                  const col = cCnt[m.courseId] ? scoreColor(cSum[m.courseId] / cCnt[m.courseId]) : '#D1D5DB'
+                  flags.push({ x: fx, y: fy, id: m.courseId, cur: m.courseId === cur?.courseId, col })
+                }
+              })
               return (
                 <section style={{ margin: '26px 18px 0' }}>
                   <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Hành trình của bạn</div>
-                  <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: 18 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: totalXP > 0 || classRank ? 10 : 4 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 800, color: L.t1 }}>Bạn đang ở đây</span>
-                      <span style={{ fontSize: 13, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total}</span>
+                  <div style={{ background: L.surface, borderRadius: 20, padding: 18, boxShadow: L.shadowLg }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                      <span style={{ fontWeight: 800, fontSize: 15.5, color: L.t1 }}>Bạn đang ở đây</span>
+                      <span style={{ fontSize: 13, color: L.t2 }}>Mốc <b style={{ color: L.p1 }}>{posLabel}</b>/{total} · {pct}%</span>
                     </div>
-                    {(totalXP > 0 || classRank) && (
-                      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 12.5, color: L.t2 }}>
-                        {totalXP > 0 && <span>🔥 Điểm hành trình <b style={{ color: L.t1 }}>{totalXP.toLocaleString()}</b></span>}
-                        {classRank && <span>🏅 Hạng lớp <b style={{ color: L.t1 }}>{classRank.rank}/{classRank.total}</b></span>}
+                    {cur?.courseName && <div style={{ fontSize: 13, color: L.t2, marginBottom: 6, textAlign: 'left' }}>Chặng: <b style={{ color: L.t1 }}>{cur.courseName}</b></div>}
+                    {/* CON ĐƯỜNG (SVG sóng sin) */}
+                    <svg viewBox={`0 0 ${Wd} 92`} style={{ width: '100%', display: 'block', overflow: 'visible' }}>
+                      <defs>
+                        <linearGradient id="tvaRoad" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#EF4444" />
+                          <stop offset="50%" stopColor="#F59E0B" />
+                          <stop offset="100%" stopColor="#22C55E" />
+                        </linearGradient>
+                      </defs>
+                      <path d={dPath} fill="none" stroke="#E5E7EB" strokeWidth={11} strokeLinecap="round" />
+                      <path d={dPath} fill="none" stroke="url(#tvaRoad)" strokeWidth={11} strokeLinecap="round" pathLength={100} strokeDasharray={`${Math.max(progress * 100, 0.6)} 100`} />
+                      <path d={dPath} fill="none" stroke="#fff" strokeWidth={1.6} strokeDasharray="2 7" strokeLinecap="round" opacity={0.65} />
+                      {flags.map(f => (
+                        <circle key={f.id} cx={f.x} cy={f.y} r={f.cur ? 4.8 : 3.4} fill={f.col} stroke="#fff" strokeWidth={f.cur ? 2.4 : 1.6} />
+                      ))}
+                      <circle cx={mx} cy={my} r={13} fill={L.p1} opacity={0.18} />
+                      <circle cx={mx} cy={my} r={9} fill="#fff" stroke={L.p1} strokeWidth={3} />
+                      <text x={mx} y={my + 0.5} textAnchor="middle" dominantBaseline="central" fontSize="9">🎸</text>
+                    </svg>
+                    {/* Điểm hành trình + Hạng lớp (data thật; guest = 0 / —) */}
+                    <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                      <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 10, textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: L.p1 }}>{totalXP.toLocaleString()}</div>
+                        <div style={{ fontSize: 11, color: L.t3 }}>Điểm hành trình</div>
                       </div>
-                    )}
-                    {/* con đường mốc + path gradient — READ-ONLY (không mở bài) */}
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 2px' }}>
-                      <div style={{ position: 'absolute', left: 10, right: 10, top: '50%', height: 4, borderRadius: 99, background: 'linear-gradient(90deg,#EF4444,#F59E0B,#22C55E)', opacity: .25, transform: 'translateY(-50%)' }} />
-                      {win.map(m => {
-                        const col = scoreColor(scoreById(m.id))
-                        const isCur = m.id === curId
-                        return (
-                          <div key={m.id} style={{ position: 'relative', zIndex: 1 }}>
-                            <div style={{ width: isCur ? 22 : 15, height: isCur ? 22 : 15, borderRadius: '50%', background: col, border: isCur ? `3px solid ${L.p1}` : '2px solid #fff', boxShadow: isCur ? `0 0 0 3px ${col}55` : '0 1px 3px rgba(0,0,0,.18)' }} />
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div style={{ display: 'flex', gap: 14, justifyContent: 'center', marginTop: 10, fontSize: 11, color: L.t3 }}>
-                      <span><span style={{ color: '#EF4444' }}>●</span> Mới học</span>
-                      <span><span style={{ color: '#F59E0B' }}>●</span> Đã luyện</span>
-                      <span><span style={{ color: '#22C55E' }}>●</span> Chắc</span>
+                      <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 10, textAlign: 'center' }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: L.t1 }}>{classRank ? `#${classRank.rank}` : '—'}<span style={{ fontSize: 12, color: L.t3, fontWeight: 600 }}>{classRank ? `/${classRank.total}` : ''}</span></div>
+                        <div style={{ fontSize: 11, color: L.t3 }}>Hạng trong lớp</div>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -1631,20 +1654,38 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
             </section>
 
-            {/* HomeMusicRhythm — NHỊP SỐNG (chỉ khi có data THẬT từ practiceStats; không fake số) */}
-            {hasRhythm && (
-              <section style={{ margin: '26px 18px 0' }}>
-                <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Nhịp sống âm nhạc</div>
-                <div style={{ background: L.surface, borderRadius: 20, boxShadow: L.shadow, padding: 16, textAlign: 'left' }}>
-                  <div style={{ fontSize: 14, color: L.t1, fontWeight: 800 }}>{rhythm.daysWeek} ngày chơi đàn tuần này{rhythm.weekMin > 0 ? ` · ${rhythm.weekMin} phút` : ''}</div>
-                  <div style={{ display: 'flex', gap: 7, marginTop: 12 }}>
-                    {(rhythm.weekDays.length === 7 ? rhythm.weekDays : [false, false, false, false, false, false, false]).map((on, i) => (
-                      <div key={i} style={{ flex: 1, height: 30, borderRadius: 8, background: on ? L.p1 : L.p2 }} />
-                    ))}
+            {/* HomeMusicRhythm — NHỊP LUYỆN TẬP TUẦN NÀY (REUSE nguyên bản cũ; practiceStats THẬT: streak/daysWeek/weekMin/weekDays) */}
+            <section style={{ margin: '26px 18px 0', textAlign: 'left' }}>
+              <div style={{ background: L.surface, borderRadius: 20, padding: 16, boxShadow: L.shadow }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span style={{ fontWeight: 800, fontSize: 16, color: L.t1 }}>Nhịp luyện tập tuần này</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: rhythm.streak > 0 ? L.a1 : L.t3 }}>{rhythm.streak} ngày</span>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                  <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: L.p1 }}>{rhythm.daysWeek}<span style={{ fontSize: 13, color: L.t3, fontWeight: 600 }}>/7</span></div>
+                    <div style={{ fontSize: 12, color: L.t2, marginTop: 2 }}>Ngày đồng hành</div>
+                  </div>
+                  <div style={{ flex: 1, background: L.surface2, borderRadius: 12, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: L.green }}>{rhythm.weekMin}<span style={{ fontSize: 13, color: L.t3, fontWeight: 600 }}> phút</span></div>
+                    <div style={{ fontSize: 12, color: L.t2, marginTop: 2 }}>Luyện trong tuần</div>
                   </div>
                 </div>
-              </section>
-            )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  {(rhythm.weekDays.length === 7 ? rhythm.weekDays : [false, false, false, false, false, false, false]).map((on, i) => {
+                    const d = new Date(); d.setDate(d.getDate() - (6 - i))
+                    const wd = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.getDay()]
+                    const isToday = i === 6
+                    return (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: on ? L.green : L.surface2, color: on ? '#fff' : L.t3, border: isToday && !on ? `2px solid ${L.a1}` : `1px solid ${L.border}` }}>{on ? '✓' : ''}</div>
+                        <span style={{ fontSize: 9, color: isToday ? L.a1 : L.t3, fontWeight: isToday ? 700 : 400 }}>{wd}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
           </div>
           )
         })()}
