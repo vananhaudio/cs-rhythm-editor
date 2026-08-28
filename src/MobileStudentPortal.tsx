@@ -1550,17 +1550,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           const rhythm = practiceStats
           return (
           <div style={{ paddingBottom: 8 }}>
-            {/* HomeProfileHero — COVER + HỒ SƠ (profile-first; cover fallback gradient, chưa có canonical cover) */}
-            <div style={{ position: 'relative' }}>
-              <div style={{ height: 'calc(150px + env(safe-area-inset-top, 0px))', background: 'linear-gradient(135deg, #4338CA 0%, #7C3AED 55%, #EA580C 120%)', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', right: -18, top: 8, fontSize: 150, opacity: .1, color: '#fff', transform: 'rotate(-14deg)', lineHeight: 1 }}>🎸</div>
+            {/* HomeProfileHeader — HỒ SƠ GỌN (avatar + tên + trình độ·gói nằm ngang, không cover to) */}
+            <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 4px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 18, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 900, color: L.p1, overflow: 'hidden', flexShrink: 0, boxShadow: L.shadow }}>
+                {me.avatar_url ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.charAt(0).toUpperCase()}
               </div>
-              <div style={{ padding: '0 18px', marginTop: -44, textAlign: 'center', position: 'relative' }}>
-                <div style={{ width: 88, height: 88, borderRadius: '50%', margin: '0 auto', background: L.p2, border: `4px solid ${L.bg}`, display: 'grid', placeItems: 'center', fontSize: 34, fontWeight: 900, color: L.p1, overflow: 'hidden', boxShadow: L.shadow }}>
-                  {me.avatar_url ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.charAt(0).toUpperCase()}
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: L.t1, marginTop: 10, ...clamp1 }}>{name}</div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: L.t2, marginTop: 3 }}>{trinhDo} · {goiLabel}</div>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color: L.t1, ...clamp1 }}>{name}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: L.t2, marginTop: 2 }}>{trinhDo} · {goiLabel}</div>
               </div>
             </div>
 
