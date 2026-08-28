@@ -2737,18 +2737,20 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 onClick={() => selectLesson(jl)}
                 style={{ flex: '0 0 62vw', maxWidth: 250, minWidth: 198, scrollSnapAlign: 'center', position: 'relative', display: 'flex', flexDirection: 'column', border: isSelected ? `2px solid ${tone}` : `1px solid ${L.border}`, borderRadius: 18, overflow: 'hidden', padding: 0, cursor: 'pointer', fontFamily: 'inherit', background: L.surface, boxShadow: isSelected ? `0 8px 22px ${tone}33` : L.shadow, textAlign: 'left', alignSelf: 'stretch', zIndex: isSelected ? 2 : 1 }}>
                 {thumb ? (
-                  <div style={{ width: '100%', height: '44%', flexShrink: 0, background: `${tone}18` }}>
-                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: dim ? 'grayscale(.5)' : undefined }} />
+                  /* Thumbnail thật — overlay nhẹ để tách khỏi phần chữ, không quá sáng/loạn */
+                  <div style={{ position: 'relative', width: '100%', height: '40%', flexShrink: 0, overflow: 'hidden', background: `${tone}12` }}>
+                    <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: dim ? 'grayscale(.55)' : undefined }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(17,24,39,.10) 0%, rgba(17,24,39,0) 42%, rgba(17,24,39,.26) 100%)' }} />
                   </div>
                 ) : (
-                  <div style={{ width: '100%', height: '38%', flexShrink: 0, position: 'relative', overflow: 'hidden', background: `linear-gradient(135deg, ${tone}, ${tone}bb)`, display: 'grid', placeItems: 'center' }}>
-                    <span style={{ fontSize: 24, filter: 'saturate(0) brightness(2)', opacity: .9 }}>🎸</span>
-                    <span style={{ position: 'absolute', right: -6, bottom: -18, fontSize: 74, fontWeight: 900, color: '#ffffff1f', lineHeight: 1 }}>♪</span>
+                  /* Fallback SẠCH — dải gradient tone + icon nhỏ trong badge trắng mờ; KHÔNG watermark/chữ lớn */
+                  <div style={{ width: '100%', height: '32%', flexShrink: 0, background: `linear-gradient(135deg, ${tone}, ${tone}cc)`, display: 'grid', placeItems: 'center' }}>
+                    <span style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,.18)', display: 'grid', placeItems: 'center', fontSize: 18 }}>🎸</span>
                   </div>
                 )}
-                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '9px 12px 11px' }}>
-                  <div style={{ fontSize: 9.5, fontWeight: 900, color: tone, textTransform: 'uppercase', letterSpacing: '.02em', ...clamp1 }}>{jl.moduleName}</div>
-                  <div style={{ marginTop: 3, fontSize: 14, fontWeight: 900, color: L.t1, lineHeight: 1.22, ...clamp2 }}>{jl.title}</div>
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '10px 13px 12px' }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, color: tone, textTransform: 'uppercase', letterSpacing: '.03em', opacity: .95, ...clamp1 }}>{jl.moduleName}</div>
+                  <div style={{ marginTop: 4, fontSize: 15.5, fontWeight: 900, color: L.t1, lineHeight: 1.2, letterSpacing: '-.01em', ...clamp2 }}>{jl.title}</div>
                   <div style={{ flex: 1 }} />
                   <button onClick={e => { e.stopPropagation(); openJourneyLesson(jl) }} disabled={comingSoon}
                     style={{ marginTop: 8, alignSelf: 'flex-start', border: 'none', borderRadius: 10, padding: '7px 13px', fontSize: 12, fontWeight: 850, cursor: comingSoon ? 'default' : 'pointer', fontFamily: 'inherit', background: comingSoon ? L.surface2 : (locked || seqLocked) ? '#FFF7ED' : isCurrent ? tone : L.p2, color: comingSoon ? L.t3 : (locked || seqLocked) ? '#C2410C' : isCurrent ? '#fff' : L.p1 }}>{stateLabel}</button>
