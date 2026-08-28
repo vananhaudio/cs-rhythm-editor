@@ -70,7 +70,7 @@ Màn đầu của Piano Journey là **hội thoại 2 chiều với Cô Piano** 
 - Cần đăng nhập (Realtime tốn tiền). Chưa đăng nhập → báo rõ, không im lặng.
 
 ## Mic trong app (phần tạo bài tập) — CÁI BẪY ĐÃ LÀM MẤT 1 NGÀY
-**Trong WKWebView (app iOS), `webkitSpeechRecognition` CÓ MẶT nhưng CHẾT.** Đây là điểm khiến chẩn đoán sai: kiểm `if (!SpeechRecognition)` sẽ THẤY CÓ và tưởng ổn, nhưng `start()` chạy xong rồi **không bao giờ bắn `onstart`/`onresult`/`onerror`/`onend`** ⇒ treo ở "Đang nghe..." vĩnh viễn, không một lỗi nào. Vì `server.url` trỏ web live nên app là WebView, còn **test trên Chrome desktop thì luôn thấy chạy tốt**. Đừng chẩn đoán bằng desktop, và đừng tin phép kiểm "API có tồn tại".
+**Trong WKWebView (app iOS), `webkitSpeechRecognition` CÓ MẶT nhưng CHẾT.** Đây là điểm khiến chẩn đoán sai: kiểm `if (!SpeechRecognition)` sẽ THẤY CÓ và tưởng ổn, nhưng `start()` chạy xong rồi **không bao giờ bắn `onstart`/`onresult`/`onerror`/`onend`** ⇒ treo ở "Đang nghe..." vĩnh viễn, không một lỗi nào. App Capacitor luôn chạy trong WKWebView (dù bundled hay live), còn **test trên Chrome desktop thì luôn thấy chạy tốt**. Đừng chẩn đoán bằng desktop, và đừng tin phép kiểm "API có tồn tại".
 - Cách phát hiện duy nhất đáng tin: **watchdog dựa trên `onstart`/`onaudiostart`** (browser thật bắn gần như tức thì) — không thấy dấu hiệu sống trong ~3s thì coi là chết và tụt tầng. ĐỪNG dùng watchdog trên `onresult`, vì trẻ nói chậm là tụt tầng oan.
 - Dùng `src/piano/useVoiceInput.ts` (3 tầng tự tụt: Web Speech → `MediaRecorder` + Whisper qua edge function `piano-stt` → gõ text). Cần mic ở đâu thì tái sử dụng hook này, đừng gọi `SpeechRecognition` trực tiếp.
 - **`SpeechRecognition.start()` phải gọi ĐỒNG BỘ trong user gesture.** `await getUserMedia()` trước `start()` làm mất user-activation → iOS chặn (đây là lý do commit `05adc37` hỏng rồi bị revert).
@@ -80,11 +80,11 @@ Màn đầu của Piano Journey là **hội thoại 2 chiều với Cô Piano** 
 
 ## App iOS (Capacitor) — ĐÃ PHÁT HÀNH TRÊN APP STORE
 - Vỏ Capacitor. `appId` `com.vananhaudio.guitar`, app name "TVA Guitar". Dự án iOS: `ios/App/App.xcworkspace`.
-- `capacitor.config.json`: `server.url = https://timming.vananhaudio.com` → app chỉ tải web live ⇒ **deploy web là app tự cập nhật**, KHÔNG cần build lại Xcode. Chỉ khi đổi vỏ native (icon/plugin) hay bỏ `server.url` mới phải build lại.
+- **KIẾN TRÚC (từ 1.2): BUNDLED WEB ASSETS.** `capacitor.config.json` **KHÔNG bật `server.url`** (chỉ `appId`/`appName`/`webDir: dist`). App production iOS **và** Android chạy bản web **đóng gói trong native**, KHÔNG tải web live. ⇒ **Deploy web KHÔNG tự cập nhật app đã cài.** Mọi thay đổi UI muốn tới người dùng store phải: `npm run build` → `npx cap copy ios/android` (bake `dist` vào native) → tăng version/build → build lại native → nộp lại store. ĐỪNG bật lại `server.url`.
 - Podfile `platform :ios, '15.0'`. App target **Minimum Deployment iOS 15.0** (Capacitor 8 cần ≥15; trước để 14.0 gây lỗi compile).
 - Team: VAN ANH AUDIO COMPANY LIMITED (Team ID `S6ASX8GP62`). App Store Connect app id `6776205968`. Nhóm internal TestFlight: "Thầy Văn Anh v1".
 - **Cập nhật vỏ native** (đổi Info.plist/quyền/icon/plugin): tăng số **Build** (và Version nếu phát hành) trong Xcode → Archive → Upload → App Store Connect → gửi duyệt bản mới → học viên Update từ App Store. TestFlight chỉ là bước thử TRƯỚC khi gửi duyệt, không bắt buộc.
-- Thay đổi CHỈ ở web thì KHÔNG cần đụng Xcode (xem `server.url` ở trên).
+- ⚠️ Vì app BUNDLED (không `server.url`), thay đổi web KHÔNG tự tới app đã cài — phải bake + build lại native + nộp store (xem dòng KIẾN TRÚC ở trên). Web deploy chỉ cập nhật bản chạy trên trình duyệt `timming.vananhaudio.com`.
 - (Cũ, đã qua: từng chỉ ở TestFlight và vướng Guideline 4.2 — nay đã phát hành công khai. Nhóm internal TestFlight "Thầy Văn Anh v1" vẫn dùng để thử bản mới.)
 
 ## Đang làm dở / cần làm
