@@ -141,9 +141,12 @@ export default function ScheduleManager() {
     })
     const rec: any = {
       code, name: form.name.trim(), section: form.section,
-      schedule: (form.schedule?.trim() || scheduleText(form.weekday, form.start_time)) || null,
-      start_text: (form.start_text?.trim() || fmtDMY(realStartDate(sessions))).replace(/^—$/, '') || null,
-      duration: form.duration?.trim() || null, price: form.price?.trim() || null,
+      // 3 field HIỂN THỊ tự derive từ CANONICAL schedule — KHÔNG nhập tay, KHÔNG lấy từ sessions
+      // (sessions là dữ liệu DERIVED — không dùng quay ngược làm nguồn cho legacy fields)
+      schedule: scheduleText(form.weekday, form.start_time) || form.schedule || null,
+      start_text: form.start_date ? fmtDMY(form.start_date) : (form.start_text || null),
+      duration: `${form.total_sessions || 8} buổi · mỗi buổi ${form.duration_minutes || 90} phút`,
+      price: form.price?.trim() || null,
       course_ids: form.course_ids, main_course_id: form.main_course_id || nonNM || form.course_ids[0] || null,
       group_id, zoom_url: form.zoom_url?.trim() || null,
       sort_order: form.sort_order || 0, is_active: form.is_active,
@@ -301,10 +304,8 @@ export default function ScheduleManager() {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / 3' }}><label style={lbl}>Tên lớp *</label><input style={inp} value={form.name} onChange={e => set({ name: e.target.value })} placeholder="Khởi đầu đam mê – Đệm hát TĐ1" /></div>
-              <div><label style={lbl}>Lịch (thứ · giờ)</label><input style={inp} value={form.schedule ?? ''} onChange={e => set({ schedule: e.target.value })} placeholder="Thứ 3 · 19h00" /></div>
-              <div><label style={lbl}>Khai giảng</label><input style={inp} value={form.start_text ?? ''} onChange={e => set({ start_text: e.target.value })} placeholder="07/07/2026" /></div>
-              <div><label style={lbl}>Thời lượng</label><input style={inp} value={form.duration ?? ''} onChange={e => set({ duration: e.target.value })} placeholder="8 buổi · 90 phút" /></div>
               <div><label style={lbl}>Học phí</label><input style={inp} value={form.price ?? ''} onChange={e => set({ price: e.target.value })} placeholder="990k / Combo" /></div>
+              <div><label style={lbl}>Link Zoom (tuỳ chọn)</label><input style={inp} value={form.zoom_url ?? ''} onChange={e => set({ zoom_url: e.target.value })} placeholder="https://zoom.us/j/..." /></div>
 
               {/* ── NHÓM THỰC HÀNH Class 2.0 (hiện trên /azz) ── */}
               <div style={{ gridColumn: '1 / 3', border: `1px solid ${S.border}`, borderRadius: 10, padding: 12, background: '#FAFAFA' }}>
@@ -334,11 +335,11 @@ export default function ScheduleManager() {
                 <div style={{ fontSize: 12, color: S.text3, marginTop: 8 }}>Thứ trong tuần, bậc và cờ hiển thị là các khái niệm ĐỘC LẬP. Nhóm chương trình (vd HT2027) muốn dùng chung cho Class: chỉ cần bật cờ này + chọn bậc — KHÔNG tạo nhóm/buổi trùng.</div>
               </div>
 
-              {/* ── LỊCH THẬT — tự sinh buổi ── */}
+              {/* ── LỊCH HỌC — source of truth duy nhất (tự sinh buổi, tự derive hiển thị) ── */}
               <div style={{ gridColumn: '1 / 3', border: `1px solid ${S.border}`, borderRadius: 10, padding: 12, background: '#FAFAFA' }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: S.text2, marginBottom: 10 }}>📅 Lịch thật (tự sinh buổi · tính ngày kết thúc)</div>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: S.text2, marginBottom: 10 }}>📅 Lịch học <span style={{ fontWeight: 500, color: S.text3 }}>(nhập 1 lần — hiển thị trên /class và các trang khác tự đồng bộ)</span></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                  <div><label style={lbl}>Ngày khai giảng</label><input type="date" style={inp} value={form.start_date ?? ''} onChange={e => set({ start_date: e.target.value || null })} /></div>
+                  <div><label style={lbl}>Ngày bắt đầu</label><input type="date" style={inp} value={form.start_date ?? ''} onChange={e => set({ start_date: e.target.value || null })} /></div>
                   <div><label style={lbl}>Thứ (buổi/tuần)</label>
                     <select style={inp} value={form.weekday ?? ''} onChange={e => set({ weekday: e.target.value === '' ? null : +e.target.value })}>
                       <option value="">— chọn —</option>
@@ -362,22 +363,20 @@ export default function ScheduleManager() {
                 </div>
                 {(() => {
                   const ss = generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions, { breaksAfter: form.breaks_after ?? undefined })
-                  if (!ss.length) return <div style={{ fontSize: 12.5, color: S.text3, marginTop: 10 }}>Nhập ngày + thứ + giờ để xem lịch sinh ra.</div>
+                  if (!ss.length) return <div style={{ fontSize: 12.5, color: S.text3, marginTop: 10 }}>Nhập ngày bắt đầu + thứ + giờ để xem lịch sinh ra.</div>
                   const breaks = ss.filter(x => x.event_type === 'break').length
                   return (
                     <div style={{ fontSize: 13, color: S.text2, marginTop: 10 }}>
-                      <b style={{ color: S.accent }}>{scheduleText(form.weekday, form.start_time)}</b> · {form.total_sessions} buổi{breaks ? ` + ${breaks} tuần nghỉ giữa chặng` : ''} · Khai giảng <b>{fmtDMY(realStartDate(ss))}</b> → Kết thúc <b>{fmtDMY(realEndDate(ss))}</b>
+                      <b style={{ color: S.accent }}>{scheduleText(form.weekday, form.start_time)}</b> · {form.total_sessions} buổi · {form.duration_minutes} phút · từ <b>{fmtDMY(realStartDate(ss))}</b> → kết thúc <b>{fmtDMY(realEndDate(ss))}</b>{breaks ? ` · nghỉ giữa chặng ${breaks} tuần` : ''}
                       <div style={{ fontSize: 12, color: S.text3, marginTop: 4 }}>
-                        Buổi 1: {fmtDMY(realStartDate(ss))} · Buổi cuối: {fmtDMY(realEndDate(ss))}
+                        Buổi 1: {fmtDMY(realStartDate(ss))} · Buổi cuối: {fmtDMY(realEndDate(ss))} — giá trị hiển thị (Lịch / Khai giảng / Thời lượng) tự đồng bộ từ đây.
                       </div>
                     </div>
                   )
                 })()}
               </div>
 
-              <div style={{ gridColumn: '1 / 3' }}><label style={lbl}>Link Zoom (tuỳ chọn)</label><input style={inp} value={form.zoom_url ?? ''} onChange={e => set({ zoom_url: e.target.value })} placeholder="https://zoom.us/j/..." /></div>
-
-              <div><label style={lbl}>💬 Link nhóm Zalo (nhóm ≡ mã lớp, tự khớp)</label>
+              <div style={{ gridColumn: '1 / 3' }}><label style={lbl}>💬 Link nhóm Zalo (nhóm ≡ mã lớp, tự khớp)</label>
                 <input style={inp} value={zaloUrl} onChange={e => setZaloUrl(e.target.value)} placeholder="https://zalo.me/g/..." />
               </div>
               <div><label style={lbl}>Thứ tự · Hiển thị</label>
