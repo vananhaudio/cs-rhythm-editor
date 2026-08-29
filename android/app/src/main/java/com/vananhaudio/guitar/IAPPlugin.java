@@ -11,6 +11,7 @@ import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesUpdatedListener;
@@ -56,7 +57,8 @@ public class IAPPlugin extends Plugin implements PurchasesUpdatedListener {
         }
         billingClient = BillingClient.newBuilder(getContext())
             .setListener(this)
-            .enablePendingPurchases()
+            // Billing v8: bắt buộc truyền PendingPurchasesParams (bản no-arg đã bị xoá)
+            .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
             .build();
         billingClient.startConnection(new BillingClientStateListener() {
             @Override public void onBillingSetupFinished(@NonNull BillingResult result) {
@@ -86,13 +88,13 @@ public class IAPPlugin extends Plugin implements PurchasesUpdatedListener {
             }
             client.queryProductDetailsAsync(
                 QueryProductDetailsParams.newBuilder().setProductList(query).build(),
-                (result, details) -> {
+                (result, queryResult) -> {
                     if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
                         call.reject("Không tải được gói từ Google Play.", "query_failed:" + result.getResponseCode());
                         return;
                     }
                     JSArray products = new JSArray();
-                    for (ProductDetails d : details) {
+                    for (ProductDetails d : queryResult.getProductDetailsList()) {
                         JSObject p = productJson(d);
                         if (p != null) products.put(p);
                     }
@@ -177,12 +179,13 @@ public class IAPPlugin extends Plugin implements PurchasesUpdatedListener {
                     .setProductId(productId)
                     .setProductType(BillingClient.ProductType.SUBS)
                     .build())).build(),
-            (result, details) -> {
-                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK || details.isEmpty()) {
+            (result, queryResult) -> {
+                List<ProductDetails> found = queryResult == null ? List.of() : queryResult.getProductDetailsList();
+                if (result.getResponseCode() != BillingClient.BillingResponseCode.OK || found.isEmpty()) {
                     call.reject("Không tìm thấy gói đăng ký trên Google Play.", "product_not_found");
                     return;
                 }
-                ProductDetails d = details.get(0);
+                ProductDetails d = found.get(0);
                 ProductDetails.SubscriptionOfferDetails offer = pickOffer(d);
                 if (offer == null) {
                     call.reject("Gói chưa có base plan trên Google Play.", "offer_not_found");
