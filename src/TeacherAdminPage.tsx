@@ -9,6 +9,7 @@ import LeadsManager from './LeadsManager'
 import ArticlesManager from './ArticlesManager'
 import ClassAiAdmin from './ClassAiAdmin'
 import ScheduleManager from './ScheduleManager'
+import Ht2027ScheduleAdmin from './admin/Ht2027ScheduleAdmin'
 import ShowcaseAdmin from './admin/ShowcaseAdmin'
 import DailyMailPage from './admin/DailyMailPage'
 import ChatMailPage from './admin/ChatMailPage'
@@ -20,12 +21,13 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
   { id: 'schedule'  as Section, icon: '🗓', label: 'Lịch lớp'       },
+  { id: 'ht2027'    as Section, icon: '🎸', label: 'Thực hành HT2027' },
   { id: 'aichat'    as Section, icon: '💬', label: 'AI khách'       },
   { id: 'showcase'  as Section, icon: '📄', label: 'Showcase'      },
   { id: 'dailymail' as Section, icon: '📧', label: 'Daily Mail'     },
@@ -187,6 +189,13 @@ export default function TeacherAdminPage() {
         {section === 'schedule' && (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <ScheduleManager />
+          </div>
+        )}
+
+        {/* Lịch thực hành Hành trình 2027 */}
+        {section === 'ht2027' && (
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <Ht2027ScheduleAdmin onOpenSchedule={() => setSection('schedule')} />
           </div>
         )}
 
