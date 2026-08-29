@@ -3,6 +3,7 @@
 /tvaprivacy /tvaprivacy/index.html 200
 /tvaprivacy/ /tvaprivacy/index.html 200
 # ── Site Class 2.0 chạy dưới đường dẫn con /azz (proxy sang class2-site.netlify.app) ──
-/azz /azz/ 301
+/azz https://class2-site.netlify.app/ 200
+/azz/ https://class2-site.netlify.app/ 200
 /azz/* https://class2-site.netlify.app/:splat 200
 /* /index.html 200
