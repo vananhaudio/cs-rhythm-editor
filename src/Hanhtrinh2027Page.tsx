@@ -4,29 +4,29 @@
 //   + class_sessions (40 buổi + 8 tuần nghỉ) + class_off_days (ngày bỏ qua).
 // KHÔNG hardcode ngày trong component; admin đổi lịch ở /admin → trang tự cập nhật.
 // Accent: tím Class (#4338CA) — KHÔNG dùng forest green.
+// Bố cục: accordion theo chặng (trang ngắn, mobile-first), contrast cao.
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { HT2027, HT2027_STAGES, HT2027_PROGRESSION, HT2027_ELIGIBLE_CODES } from './data/ht2027Program'
 import { generateSessions, type SessionRow } from './journey/sessions'
 
 const P = {
-  bg: '#F7F5FC', surface: '#FFFFFF', ink: '#201C33', inkSoft: '#4C4763', inkFaint: '#8A85A3',
-  purple: '#4338CA', purpleDark: '#352BA3', purpleDeep: '#1F1A56', purpleTint: '#EDEBFB',
-  line: '#E5E1F1', honey: '#C9711E', honeyTint: '#FBF1E4', ok: '#15803D',
+  bg: '#F7F5FC', surface: '#FFFFFF', ink: '#1D1930', inkSoft: '#3E3952', inkFaint: '#6A6580',
+  purple: '#4338CA', purpleDark: '#352BA3', purpleDeep: '#201A52', purpleTint: '#EDEBFB',
+  line: '#E4E0F0', honey: '#A85F0E', honeyTint: '#FBF3E6', ok: '#15803D',
 }
-// 5 sắc tím cho 5 chặng (cùng hệ tím Class)
+// 5 sắc tím cho 5 chặng — dùng cho BADGE/SỐ/VIỀN (không tô cả tiêu đề)
 const STAGE_COLORS = ['#4338CA', '#6D28D9', '#7C3AED', '#8B5CF6', '#A78BFA']
-const STAGE_TINTS = ['#EDEBFB', '#F3EDFC', '#F5F0FD', '#F6F2FE', '#F8F5FF']
 const ZALO_LINK = 'https://zalo.me/vananhguitarist'
 
 const SESS_STATUS: Record<string, { l: string; c: string }> = {
-  scheduled: { l: 'Dự kiến', c: '#64748B' },
+  scheduled: { l: 'Dự kiến', c: '#475569' },
   confirmed: { l: 'Đã xác nhận', c: '#6D28D9' },
-  rescheduled: { l: 'Đổi lịch', c: '#D97706' },
-  completed: { l: 'Đã hoàn thành', c: '#16A34A' },
-  cancelled: { l: 'Đã hủy', c: '#DC2626' },
-  holiday: { l: 'Nghỉ lễ', c: '#94A3B8' },
-  makeup: { l: 'Buổi bù', c: '#0284C7' },
+  rescheduled: { l: 'Đổi lịch', c: '#C2410C' },
+  completed: { l: 'Đã hoàn thành', c: '#15803D' },
+  cancelled: { l: 'Đã hủy', c: '#B91C1C' },
+  holiday: { l: 'Nghỉ lễ', c: '#6B7280' },
+  makeup: { l: 'Buổi bù', c: '#0369A1' },
 }
 const p2 = (n: number) => String(n).padStart(2, '0')
 const ymdOf = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
@@ -41,7 +41,7 @@ interface TimelineEntry {
   date: Date
   session?: SessionRow
   offReason?: string
-  stageNo: number | null   // chặng của buổi học (break/off = chặng đang diễn ra)
+  stageNo: number | null
 }
 
 // Dựng timeline: mỗi thứ trong khoảng [buổi 1 → buổi cuối] là buổi học / nghỉ chặng / ngày bỏ qua.
@@ -74,8 +74,7 @@ const buildTimeline = (cls: ProgClass, sessions: SessionRow[], offDays: OffDay[]
   return out
 }
 
-// Fixture CHỈ DÙNG KHI CHẠY DEV (import.meta.env.DEV) — sinh từ CÙNG engine + giáo trình,
-// KHÔNG phải nguồn dữ liệu thứ hai; build production sẽ không bao gồm nhánh này.
+// Fixture CHỈ DÙNG KHI CHẠY DEV (import.meta.env.DEV) — sinh từ CÙNG engine + giáo trình.
 function devFixture(): { cls: ProgClass; sessions: SessionRow[]; offDays: OffDay[] } | null {
   if (!import.meta.env.DEV) return null
   const offDates = ['2027-02-04', '2027-02-11', '2027-09-02']
@@ -96,7 +95,9 @@ export default function Hanhtrinh2027Page() {
   const [offDays, setOffDays] = useState<OffDay[]>([])
   const [loading, setLoading] = useState(true)
   const [isDevFixture, setIsDevFixture] = useState(false)
-  const [me, setMe] = useState<{ htMember: boolean; eligible: string[] } | null>(null)   // null = chưa đăng nhập
+  const [me, setMe] = useState<{ htMember: boolean; eligible: string[] } | null>(null)
+  const [openStage, setOpenStage] = useState(1)        // chặng đang mở (phần giáo trình)
+  const [openSched, setOpenSched] = useState(1)        // chặng đang mở (phần lịch)
 
   useEffect(() => { document.title = '40 Buổi Thực Hành · Hành Trình 2027' }, [])
 
@@ -110,7 +111,6 @@ export default function Hanhtrinh2027Page() {
         const clsData: ProgClass | null = clsRow
           ?? (await supabase.from('class_schedule').select('id,code,name,start_date,start_time,timezone,total_sessions,status')
             .eq('code', HT2027.classCode).maybeSingle()).data
-        // Nếu chưa seed (chưa có lớp) → dev: dùng fixture để xem giao diện; prod: hiện trạng thái chờ
         let sessionsData: SessionRow[] = []
         let offData: OffDay[] = []
         if (clsData) {
@@ -128,7 +128,6 @@ export default function Hanhtrinh2027Page() {
         }
         if (cancelled) return
         setCls(finalCls); setSessions(finalSess); setOffDays(finalOff)
-        // Quyền tham gia: đọc MÃ NĂNG LỰC chuẩn (không theo tên khoá)
         if (session?.user) {
           const stuRes = await supabase.from('edu_students').select('id,ht_member').eq('user_id', session.user.id).maybeSingle()
           const stu = stuRes.data as { id: string; ht_member: boolean } | null
@@ -154,11 +153,26 @@ export default function Hanhtrinh2027Page() {
   const cta = !me ? 'anon' : me.htMember ? 'member' : me.eligible.length ? 'eligible' : 'other'
   const eligibleName = me?.eligible.map(c => c === 'DH2' ? 'Đệm hát 2' : c === 'TN2' ? 'Tỉa nốt 2' : c).join(' / ')
 
+  // Nhóm timeline theo chặng (cho phần lịch accordion)
+  const byStage = useMemo(() => {
+    const map = new Map<number, TimelineEntry[]>()
+    for (const t of timeline) {
+      const k = t.stageNo ?? Math.max(1, ...map.keys())
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(t)
+    }
+    return HT2027_STAGES.map(s => map.get(s.no) ?? [])
+  }, [timeline])
+  const stageRange = (entries: TimelineEntry[]) => {
+    const lessons = entries.filter(e => e.kind === 'lesson')
+    if (!lessons.length) return ''
+    return `${fmtDM(lessons[0].date)} – ${fmtDM(lessons[lessons.length - 1].date)}`
+  }
+
   return (
     <div className="ht2027">
       <style>{CSS}</style>
 
-      {/* ── Thanh trên ── */}
       <header className="ht2027-top">
         <a className="ht2027-brand" href="/">
           <img src="/logo.png" alt="Thầy Văn Anh Guitar" />
@@ -175,20 +189,17 @@ export default function Hanhtrinh2027Page() {
             <h1>40 BUỔI THỰC HÀNH <span>GUITAR</span></h1>
             <p className="ht2027-sub">Đồng hành cùng <b>Hành trình 2027</b></p>
             <p className="ht2027-lead">
-              Học Guitar không chỉ là xem hết bài giảng hay hoàn thành một khóa học.
-              Điều quan trọng hơn là biến những kiến thức đã học thành khả năng chơi đàn thực tế:
-              hiểu hợp âm, làm chủ tiết tấu, tìm được giai điệu, biết hòa âm và từng bước hoàn thiện một tác phẩm Solo Guitar.
-            </p>
-            <p className="ht2027-lead">
-              Vì vậy, trong Hành trình 2027, Thầy Văn Anh tổ chức <b>40 buổi thực hành trực tuyến</b>, diễn ra cố định vào:
+              Học Guitar không chỉ là xem hết bài giảng — điều quan trọng hơn là biến kiến thức thành khả năng
+              chơi đàn thực tế: hiểu hợp âm, làm chủ tiết tấu, tìm giai điệu, biết hòa âm và hoàn thiện
+              một tác phẩm Solo Guitar.
             </p>
             <div className="ht2027-timechip">
               <span className="ht2027-timechip-big">20h30</span>
               <span className="ht2027-timechip-sub">tối <b>thứ Năm</b> hằng tuần · Giờ Việt Nam (GMT+7)</span>
             </div>
-            <p className="ht2027-lead">
-              Đây là không gian để học sinh cùng luyện đàn, ứng dụng kiến thức vào bài hát thật,
-              được Thầy hướng dẫn, sửa bài và hoàn thiện sản phẩm qua từng chặng.
+            <p className="ht2027-lead tight">
+              Không gian học sinh cùng luyện đàn, ứng dụng kiến thức vào bài hát thật — được Thầy hướng dẫn,
+              sửa bài và hoàn thiện sản phẩm qua từng chặng.
             </p>
           </div>
         </section>
@@ -197,16 +208,15 @@ export default function Hanhtrinh2027Page() {
         <section className="ht2027-band">
           <div className="ht2027-wrap">
             <div className="ht2027-eyebrow">Cấu trúc chương trình</div>
-            <h2>5 chặng · 40 buổi · một hành trình hoàn thiện</h2>
             <div className="ht2027-stats">
-              {[['40', 'buổi thực hành'], ['5', 'chặng'], ['8', 'buổi mỗi chặng'], ['2', 'tuần nghỉ giữa chặng'], ['01', 'sản phẩm cuối mỗi chặng']].map(([n, l]) => (
+              {[['40', 'buổi thực hành'], ['5', 'chặng'], ['8', 'buổi mỗi chặng'], ['2', 'tuần nghỉ giữa chặng']].map(([n, l]) => (
                 <div key={l}><b>{n}</b><span>{l}</span></div>
               ))}
             </div>
             <div className="ht2027-progress">
               {HT2027_PROGRESSION.map((p, i) => (
                 <div className="ht2027-progress-item" key={p}>
-                  <span className="ht2027-progress-dot" style={{ background: STAGE_COLORS[i], borderColor: STAGE_COLORS[i] }} />
+                  <span className="ht2027-progress-dot" style={{ background: STAGE_COLORS[i] }} />
                   <span className="ht2027-progress-label">{p}</span>
                   {i < HT2027_PROGRESSION.length - 1 && <span className="ht2027-progress-arrow">→</span>}
                 </div>
@@ -216,43 +226,49 @@ export default function Hanhtrinh2027Page() {
         </section>
 
         {/* ── MỤC LỤC NHANH ── */}
-        <section className="ht2027-wrap">
-          <nav className="ht2027-toc">
-            {HT2027_STAGES.map(s => (
-              <a key={s.no} href={`#chang-${s.no}`} style={{ borderColor: STAGE_COLORS[s.no - 1], color: STAGE_COLORS[s.no - 1] }}>
-                Chặng {s.no}
-              </a>
-            ))}
-            <a href="#lich" className="ht2027-toc-schedule">Lịch dự kiến 2027</a>
-          </nav>
+        <nav className="ht2027-wrap ht2027-toc">
+          {HT2027_STAGES.map(s => (
+            <a key={s.no} href={`#chang-${s.no}`} style={{ borderColor: STAGE_COLORS[s.no - 1], color: STAGE_COLORS[s.no - 1] }}>Chặng {s.no}</a>
+          ))}
+          <a href="#lich" className="ht2027-toc-schedule">Lịch dự kiến 2027</a>
+        </nav>
+
+        {/* ── 5 CHẶNG (accordion) ── */}
+        <section className="ht2027-wrap ht2027-stages">
+          <div className="ht2027-eyebrow">Nội dung 5 chặng</div>
+          {HT2027_STAGES.map(st => {
+            const open = openStage === st.no
+            const stColor = STAGE_COLORS[st.no - 1]
+            return (
+              <div key={st.no} id={`chang-${st.no}`} className="ht2027-acc" style={{ borderColor: stColor }}>
+                <button className="ht2027-acc-head" onClick={() => setOpenStage(open ? 0 : st.no)} aria-expanded={open}>
+                  <span className="ht2027-acc-no" style={{ background: stColor }}>Chặng {st.no}</span>
+                  <span className="ht2027-acc-title">{st.title}</span>
+                  <span className="ht2027-acc-caret" style={{ color: stColor }}>{open ? '−' : '+'}</span>
+                </button>
+                {open && (
+                  <div className="ht2027-acc-body">
+                    <p className="ht2027-stage-goal"><b>Mục tiêu:</b> {st.goal}</p>
+                    <ol className="ht2027-stage-lessons">
+                      {st.lessons.map((l, i) => (
+                        <li key={l}>
+                          <span className="ht2027-lesson-no" style={{ color: stColor, borderColor: stColor }}>{p2((st.no - 1) * 8 + i + 1)}</span>
+                          <span>{l}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <div className="ht2027-stage-results">
+                      <div className="ht2027-results-title">Kết quả cuối chặng</div>
+                      <ul>{st.results.map(r => <li key={r}>✓ {r}</li>)}</ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </section>
 
-        {/* ── 5 CHẶNG ── */}
-        {HT2027_STAGES.map(st => (
-          <section key={st.no} id={`chang-${st.no}`} className="ht2027-band" style={{ background: STAGE_TINTS[st.no - 1] }}>
-            <div className="ht2027-wrap">
-              <div className="ht2027-stage-head">
-                <div className="ht2027-stage-no" style={{ background: STAGE_COLORS[st.no - 1] }}>Chặng {st.no}</div>
-                <h2 style={{ color: STAGE_COLORS[st.no - 1] }}>{st.title}</h2>
-              </div>
-              <p className="ht2027-stage-goal"><b>Mục tiêu:</b> {st.goal}</p>
-              <ol className="ht2027-stage-lessons">
-                {st.lessons.map((l, i) => (
-                  <li key={l}>
-                    <span className="ht2027-lesson-no" style={{ color: STAGE_COLORS[st.no - 1], borderColor: STAGE_COLORS[st.no - 1] }}>{p2((st.no - 1) * 8 + i + 1)}</span>
-                    <span>{l}</span>
-                  </li>
-                ))}
-              </ol>
-              <div className="ht2027-stage-results">
-                <div className="ht2027-results-title">Kết quả cuối chặng</div>
-                <ul>{st.results.map(r => <li key={r}>✓ {r}</li>)}</ul>
-              </div>
-            </div>
-          </section>
-        ))}
-
-        {/* ── LỊCH THỰC HÀNH DỰ KIẾN 2027 ── */}
+        {/* ── LỊCH THỰC HÀNH DỰ KIẾN 2027 (accordion theo chặng) ── */}
         <section id="lich" className="ht2027-wrap ht2027-schedule">
           <div className="ht2027-eyebrow">Khu vực lịch</div>
           <h2>LỊCH THỰC HÀNH DỰ KIẾN 2027</h2>
@@ -264,9 +280,7 @@ export default function Hanhtrinh2027Page() {
           {loading ? (
             <div className="ht2027-empty">Đang tải lịch…</div>
           ) : !cls ? (
-            <div className="ht2027-empty">
-              Lịch dự kiến sẽ được công bố tại đây khi chương trình được mở.
-            </div>
+            <div className="ht2027-empty">Lịch dự kiến sẽ được công bố tại đây khi chương trình được mở.</div>
           ) : (
             <>
               <div className="ht2027-sched-meta">
@@ -278,62 +292,76 @@ export default function Hanhtrinh2027Page() {
               <div className="ht2027-legend">
                 <span><i className="dot lesson" />Buổi học</span>
                 <span><i className="dot brk" />Nghỉ giữa chặng</span>
-                <span><i className="dot off" />Bỏ qua (nghỉ lễ / lịch chung)</span>
+                <span><i className="dot off" />Bỏ qua (nghỉ lễ)</span>
               </div>
 
               <div className="ht2027-timeline">
-                {timeline.map((t, idx) => {
-                  const showStage = t.kind === 'lesson' && t.stageNo && (idx === 0 || timeline[idx - 1].stageNo !== t.stageNo)
-                  const st = t.kind === 'lesson' && t.stageNo ? HT2027_STAGES[t.stageNo - 1] : null
-                  const stColor = t.stageNo ? STAGE_COLORS[t.stageNo - 1] : P.purple
-                  const stTint = t.stageNo ? STAGE_TINTS[t.stageNo - 1] : P.purpleTint
-                  if (t.kind === 'lesson') {
-                    const num = t.session?.session_number ?? 0
-                    const stt = SESS_STATUS[t.session?.status ?? 'scheduled']
-                    return (
-                      <div key={idx}>
-                        {showStage && (
-                          <div className="ht2027-tl-stage" style={{ color: stColor, borderColor: stColor }}>
-                            Chặng {t.stageNo} · {st?.title}
-                          </div>
-                        )}
-                        <div className="ht2027-tl-row" style={{ borderLeftColor: stColor }}>
-                          <div className="ht2027-tl-date">
-                            <b>{fmtDM(t.date)}</b>
-                            <span>{WEEKDAY_VI[t.date.getDay()]}</span>
-                          </div>
-                          <div className="ht2027-tl-body">
-                            <div className="ht2027-tl-title">
-                              <span className="ht2027-tl-num" style={{ background: stTint, color: stColor }}>Buổi {p2(num)}</span>
-                              <span className="ht2027-tl-name">{t.session?.title ? t.session.title.replace(/^Buổi \d+ · /, '') : st?.lessons[(num - 1) % 8]}</span>
-                            </div>
-                            <div className="ht2027-tl-foot">
-                              <span className="ht2027-tl-time">{startTime}</span>
-                              <span className="ht2027-tl-status" style={{ color: stt.c, background: `${stt.c}14` }}>{stt.l}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  }
-                  if (t.kind === 'break') {
-                    return (
-                      <div key={idx} className="ht2027-tl-row ht2027-tl-break">
-                        <div className="ht2027-tl-date"><b>{fmtDM(t.date)}</b><span>{WEEKDAY_VI[t.date.getDay()]}</span></div>
-                        <div className="ht2027-tl-body">
-                          <div className="ht2027-tl-title"><span className="ht2027-tl-brk">✕ Nghỉ giữa chặng</span></div>
-                          <div className="ht2027-tl-foot"><span className="ht2027-tl-breaknote">thời gian tự luyện và hoàn thiện sản phẩm</span></div>
-                        </div>
-                      </div>
-                    )
-                  }
+                {HT2027_STAGES.map((st, si) => {
+                  const entries = byStage[si]
+                  if (!entries?.length) return null
+                  const open = openSched === st.no
+                  const stColor = STAGE_COLORS[si]
+                  const lessons = entries.filter(e => e.kind === 'lesson')
+                  const breaks = entries.filter(e => e.kind === 'break')
+                  const offs = entries.filter(e => e.kind === 'off')
                   return (
-                    <div key={idx} className="ht2027-tl-row ht2027-tl-off">
-                      <div className="ht2027-tl-date"><b>{fmtDM(t.date)}</b><span>{WEEKDAY_VI[t.date.getDay()]}</span></div>
-                      <div className="ht2027-tl-body">
-                        <div className="ht2027-tl-title"><span className="ht2027-tl-offtag">Bỏ qua</span><span className="ht2027-tl-name">{t.offReason}</span></div>
-                        <div className="ht2027-tl-foot"><span className="ht2027-tl-breaknote">không tổ chức buổi học · buổi dời sang tuần phù hợp tiếp theo</span></div>
-                      </div>
+                    <div key={st.no} className="ht2027-sched-stage">
+                      <button className="ht2027-sched-head" onClick={() => setOpenSched(open ? 0 : st.no)} aria-expanded={open}>
+                        <span className="ht2027-sched-no" style={{ background: stColor }}>Chặng {st.no}</span>
+                        <span className="ht2027-sched-range">
+                          <b>{stageRange(entries)}</b>
+                          <span>{lessons.length} buổi{breaks.length ? ` · nghỉ ${breaks.length} tuần` : ''}{offs.length ? ` · bỏ qua ${offs.length} ngày` : ''}</span>
+                        </span>
+                        <span className="ht2027-acc-caret" style={{ color: stColor }}>{open ? '−' : '+'}</span>
+                      </button>
+                      {open && (
+                        <div className="ht2027-sched-body">
+                          {entries.map((t, idx) => {
+                            if (t.kind === 'lesson') {
+                              const num = t.session?.session_number ?? 0
+                              const stt = SESS_STATUS[t.session?.status ?? 'scheduled']
+                              return (
+                                <div key={idx} className="ht2027-tl-row" style={{ borderLeftColor: stColor }}>
+                                  <div className="ht2027-tl-date">
+                                    <b>{fmtDM(t.date)}</b>
+                                    <span>{WEEKDAY_VI[t.date.getDay()]}</span>
+                                  </div>
+                                  <div className="ht2027-tl-body">
+                                    <div className="ht2027-tl-title">
+                                      <span className="ht2027-tl-num" style={{ background: `${stColor}18`, color: stColor }}>Buổi {p2(num)}</span>
+                                      <span className="ht2027-tl-name">{t.session?.title ? t.session.title.replace(/^Buổi \d+ · /, '') : st.lessons[(num - 1) % 8]}</span>
+                                    </div>
+                                    <div className="ht2027-tl-foot">
+                                      <span className="ht2027-tl-time">{startTime}</span>
+                                      <span className="ht2027-tl-status" style={{ color: stt.c, background: `${stt.c}14` }}>{stt.l}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            }
+                            if (t.kind === 'break') {
+                              return (
+                                <div key={idx} className="ht2027-tl-row ht2027-tl-break">
+                                  <div className="ht2027-tl-date"><b>{fmtDM(t.date)}</b><span>{WEEKDAY_VI[t.date.getDay()]}</span></div>
+                                  <div className="ht2027-tl-body">
+                                    <div className="ht2027-tl-title"><span className="ht2027-tl-brk">✕ Nghỉ giữa chặng</span></div>
+                                    <div className="ht2027-tl-foot"><span className="ht2027-tl-breaknote">tự luyện và hoàn thiện sản phẩm</span></div>
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return (
+                              <div key={idx} className="ht2027-tl-row ht2027-tl-off">
+                                <div className="ht2027-tl-date"><b>{fmtDM(t.date)}</b><span>{WEEKDAY_VI[t.date.getDay()]}</span></div>
+                                <div className="ht2027-tl-body">
+                                  <div className="ht2027-tl-title"><span className="ht2027-tl-offtag">Bỏ qua</span><span className="ht2027-tl-name">{t.offReason}</span></div>
+                                  <div className="ht2027-tl-foot"><span className="ht2027-tl-breaknote">buổi dời sang tuần phù hợp tiếp theo</span></div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -346,17 +374,15 @@ export default function Hanhtrinh2027Page() {
         <section className="ht2027-band">
           <div className="ht2027-wrap">
             <div className="ht2027-eyebrow">Ai được tham gia</div>
-            <h2>Chương trình dành cho</h2>
             <ul className="ht2027-who">
               <li>🎓 Học sinh đã đăng ký <b>Hành trình 2027</b></li>
               <li>🎸 Học sinh đã tốt nghiệp <b>Đệm hát 2</b></li>
               <li>🎼 Học sinh đã tốt nghiệp <b>Tỉa nốt 2</b></li>
             </ul>
             <div className="ht2027-note">
-              Đây <b>không phải</b> lớp dành cho người mới bắt đầu.
-              Bấm hợp âm, chuyển hợp âm, giữ nhịp và chơi giai điệu đơn giản là năng lực đầu vào
-              — chương trình tập trung đưa bạn đến sự chủ động: chọn hòa âm, phát triển giai điệu,
-              điều khiển tiết tấu và hoàn thiện tác phẩm Solo Guitar.
+              Đây <b>không phải</b> lớp dành cho người mới bắt đầu — bấm hợp âm, chuyển hợp âm, giữ nhịp,
+              chơi giai điệu đơn giản là năng lực đầu vào. Chương trình đưa bạn đến sự chủ động:
+              chọn hòa âm, phát triển giai điệu, điều khiển tiết tấu và hoàn thiện tác phẩm Solo Guitar.
             </div>
           </div>
         </section>
@@ -404,7 +430,6 @@ export default function Hanhtrinh2027Page() {
           )}
         </section>
 
-        {/* ── FOOTER ── */}
         <footer className="ht2027-foot">
           <div className="ht2027-wrap">
             <p>Hành Trình 2027 không dạy bạn chơi đàn theo cách thông thường — mà giúp bạn làm chủ cây đàn từ bên trong.</p>
@@ -429,7 +454,7 @@ const CSS = `
 .ht2027 a{color:${P.purple};}
 
 /* thanh trên */
-.ht2027-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(247,245,252,.94);backdrop-filter:blur(10px);border-bottom:1px solid ${P.line};}
+.ht2027-top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(247,245,252,.95);backdrop-filter:blur(10px);border-bottom:1px solid ${P.line};}
 .ht2027-brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:${P.ink};font-size:13.5px;font-weight:700;}
 .ht2027-brand img{width:26px;height:26px;display:block;}
 .ht2027-brand i{color:${P.purple};font-style:normal;}
@@ -437,112 +462,124 @@ const CSS = `
 .ht2027-topback:hover{color:${P.purple};border-color:${P.purple};}
 
 /* hero */
-.ht2027-hero{padding:64px 0 56px;background:linear-gradient(180deg,#F0EDFB 0%,${P.bg} 100%);}
-.ht2027-kicker{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:${P.honey};margin-bottom:22px;}
+.ht2027-hero{padding:52px 0 44px;background:linear-gradient(180deg,#F0EDFB 0%,${P.bg} 100%);}
+.ht2027-kicker{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:${P.honey};margin-bottom:18px;}
 .ht2027-kicker span{width:26px;height:2px;background:${P.honey};}
-.ht2027-hero h1{font-size:clamp(30px,7vw,52px);line-height:1.08;letter-spacing:-.02em;color:${P.ink};font-weight:900;margin-bottom:10px;}
+.ht2027-hero h1{font-size:clamp(30px,7vw,52px);line-height:1.08;letter-spacing:-.02em;color:${P.ink};font-weight:900;margin-bottom:8px;}
 .ht2027-hero h1 span{color:${P.purple};}
-.ht2027-sub{font-size:clamp(17px,2.6vw,22px);font-weight:700;color:${P.inkSoft};margin-bottom:22px;}
-.ht2027-lead{font-size:15.5px;color:${P.inkSoft};line-height:1.75;margin-bottom:14px;text-wrap:pretty;}
-.ht2027-timechip{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;background:${P.purpleDeep};color:#fff;border-radius:16px;padding:16px 22px;margin:22px 0;}
-.ht2027-timechip-big{font-size:clamp(30px,5.5vw,42px);font-weight:900;letter-spacing:-.02em;line-height:1;}
-.ht2027-timechip-sub{font-size:14px;color:rgba(255,255,255,.85);}
+.ht2027-sub{font-size:clamp(17px,2.6vw,22px);font-weight:700;color:${P.inkSoft};margin-bottom:16px;}
+.ht2027-lead{font-size:15px;color:${P.inkSoft};line-height:1.7;margin-bottom:12px;text-wrap:pretty;}
+.ht2027-lead.tight{margin-bottom:0;}
+.ht2027-timechip{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;background:${P.purpleDeep};color:#fff;border-radius:16px;padding:15px 22px;margin:18px 0;}
+.ht2027-timechip-big{font-size:clamp(28px,5.5vw,40px);font-weight:900;letter-spacing:-.02em;line-height:1;}
+.ht2027-timechip-sub{font-size:14px;color:rgba(255,255,255,.88);}
 .ht2027-timechip-sub b{color:#fff;}
 
 /* band chung */
-.ht2027-band{padding:52px 0;background:#fff;border-top:1px solid ${P.line};border-bottom:1px solid ${P.line};}
+.ht2027-band{padding:44px 0;background:#fff;border-top:1px solid ${P.line};border-bottom:1px solid ${P.line};}
 .ht2027-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:${P.honey};margin-bottom:12px;}
-.ht2027 h2{font-size:clamp(21px,3.6vw,30px);font-weight:800;line-height:1.22;letter-spacing:-.015em;color:${P.ink};margin-bottom:18px;}
+.ht2027 h2{font-size:clamp(21px,3.6vw,30px);font-weight:800;line-height:1.22;letter-spacing:-.015em;color:${P.ink};margin-bottom:16px;}
 
 /* cấu trúc chương trình */
-.ht2027-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:${P.line};border:1px solid ${P.line};border-radius:14px;overflow:hidden;margin:26px 0;}
-.ht2027-stats>div{background:#fff;padding:18px 10px;text-align:center;}
-.ht2027-stats b{display:block;font-size:clamp(22px,3.4vw,32px);font-weight:900;color:${P.purple};line-height:1;}
+.ht2027-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:${P.line};border:1px solid ${P.line};border-radius:14px;overflow:hidden;margin:20px 0;}
+.ht2027-stats>div{background:#fff;padding:16px 10px;text-align:center;}
+.ht2027-stats b{display:block;font-size:clamp(22px,3.4vw,30px);font-weight:900;color:${P.purple};line-height:1;}
 .ht2027-stats span{display:block;font-size:12px;color:${P.inkFaint};margin-top:6px;line-height:1.35;}
-@media(max-width:600px){.ht2027-stats{grid-template-columns:repeat(3,1fr);}.ht2027-stats>div:nth-child(4),.ht2027-stats>div:nth-child(5){display:none;}}
-.ht2027-progress{display:flex;flex-wrap:wrap;align-items:center;gap:8px 6px;margin-top:8px;}
+@media(max-width:480px){.ht2027-stats{grid-template-columns:repeat(2,1fr);}}
+.ht2027-progress{display:flex;flex-wrap:wrap;align-items:center;gap:8px 6px;}
 .ht2027-progress-item{display:flex;align-items:center;gap:7px;}
 .ht2027-progress-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.ht2027-progress-label{font-size:13.5px;font-weight:600;color:${P.inkSoft};}
-.ht2027-progress-arrow{color:${P.line};font-size:13px;}
+.ht2027-progress-label{font-size:13px;font-weight:600;color:${P.inkSoft};}
+.ht2027-progress-arrow{color:#C9C3DE;font-size:13px;}
 
 /* mục lục nhanh */
-.ht2027-toc{display:flex;flex-wrap:wrap;gap:8px;padding:26px 0 8px;}
-.ht2027-toc a{text-decoration:none;font-size:13.5px;font-weight:700;border:1.5px solid;border-radius:999px;padding:8px 16px;background:#fff;}
+.ht2027-toc{display:flex;flex-wrap:wrap;gap:8px;padding:24px 20px 4px;}
+.ht2027-toc a{text-decoration:none;font-size:13px;font-weight:700;border:1.5px solid;border-radius:999px;padding:7px 15px;background:#fff;}
 .ht2027-toc .ht2027-toc-schedule{background:${P.purple};color:#fff !important;border-color:${P.purple} !important;}
 
-/* 5 chặng */
-.ht2027-stage-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
-.ht2027-stage-no{flex-shrink:0;color:#fff;font-size:12.5px;font-weight:800;letter-spacing:.06em;border-radius:9px;padding:7px 13px;margin-top:4px;}
-.ht2027-stage-head h2{margin-bottom:0;}
-.ht2027-stage-goal{font-size:15px;color:${P.inkSoft};line-height:1.7;margin-bottom:20px;text-wrap:pretty;}
+/* 5 chặng — accordion */
+.ht2027-stages{padding:30px 20px 10px;}
+.ht2027-acc{border:1px solid;border-left-width:4px;border-radius:14px;background:#fff;margin-bottom:10px;overflow:hidden;}
+.ht2027-acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:#fff;border:none;cursor:pointer;font-family:inherit;text-align:left;}
+.ht2027-acc-no{flex-shrink:0;color:#fff;font-size:11.5px;font-weight:800;border-radius:8px;padding:5px 10px;}
+.ht2027-acc-title{flex:1;min-width:0;font-size:15px;font-weight:700;color:${P.ink};line-height:1.4;}
+.ht2027-acc-caret{flex-shrink:0;font-size:20px;font-weight:700;line-height:1;}
+.ht2027-acc-body{padding:4px 16px 16px;border-top:1px solid ${P.line};}
+.ht2027-stage-goal{font-size:14px;color:${P.inkSoft};line-height:1.65;margin:12px 0 6px;text-wrap:pretty;}
 .ht2027-stage-goal b{color:${P.ink};}
 .ht2027-stage-lessons{list-style:none;display:flex;flex-direction:column;}
-.ht2027-stage-lessons li{display:flex;gap:12px;align-items:baseline;padding:11px 0;border-bottom:1px dashed ${P.line};font-size:15px;color:${P.ink};}
+.ht2027-stage-lessons li{display:flex;gap:11px;align-items:baseline;padding:9px 0;border-bottom:1px dashed ${P.line};font-size:14.5px;color:${P.ink};}
 .ht2027-stage-lessons li:last-child{border-bottom:none;}
-.ht2027-lesson-no{flex-shrink:0;font-size:11.5px;font-weight:800;border:1.5px solid;border-radius:7px;padding:2px 7px;letter-spacing:.04em;}
-.ht2027-stage-results{margin-top:18px;background:#fff;border:1px solid ${P.line};border-radius:14px;padding:16px 18px;}
-.ht2027-results-title{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${P.honey};margin-bottom:10px;}
-.ht2027-stage-results ul{list-style:none;display:flex;flex-direction:column;gap:7px;}
-.ht2027-stage-results li{font-size:14px;color:${P.inkSoft};line-height:1.55;}
+.ht2027-lesson-no{flex-shrink:0;font-size:11px;font-weight:800;border:1.5px solid;border-radius:6px;padding:1px 6px;letter-spacing:.04em;}
+.ht2027-stage-results{margin-top:12px;background:${P.bg};border:1px solid ${P.line};border-radius:12px;padding:13px 15px;}
+.ht2027-results-title{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${P.honey};margin-bottom:8px;}
+.ht2027-stage-results ul{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.ht2027-stage-results li{font-size:13.5px;color:${P.inkSoft};line-height:1.5;}
 
-/* lịch */
-.ht2027-schedule{padding:56px 0 20px;}
-.ht2027-notice{background:${P.honeyTint};border:1px solid #F3D9B8;border-left:4px solid ${P.honey};border-radius:12px;padding:13px 16px;font-size:13.5px;color:#7A4A12;line-height:1.65;margin-bottom:18px;}
-.ht2027-empty{padding:44px 20px;text-align:center;color:${P.inkFaint};font-size:15px;background:#fff;border:1px dashed ${P.line};border-radius:14px;}
-.ht2027-sched-meta{display:flex;flex-direction:column;gap:5px;font-size:13.5px;color:${P.inkSoft};background:#fff;border:1px solid ${P.line};border-radius:12px;padding:12px 16px;margin-bottom:12px;}
+/* lịch — accordion theo chặng */
+.ht2027-schedule{padding:44px 0 16px;}
+.ht2027-notice{background:${P.honeyTint};border:1px solid #EFD9B3;border-left:4px solid ${P.honey};border-radius:12px;padding:12px 15px;font-size:13.5px;color:#6B4A12;line-height:1.65;margin-bottom:16px;}
+.ht2027-empty{padding:40px 20px;text-align:center;color:${P.inkFaint};font-size:15px;background:#fff;border:1px dashed ${P.line};border-radius:14px;}
+.ht2027-sched-meta{display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:${P.inkSoft};background:#fff;border:1px solid ${P.line};border-radius:12px;padding:11px 15px;margin-bottom:10px;}
 .ht2027-devnote{font-size:12.5px;color:#92400E;background:#FEF3C7;border-radius:8px;padding:7px 12px;margin-bottom:10px;}
-.ht2027-legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:${P.inkFaint};margin:14px 0;}
+.ht2027-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:12.5px;color:${P.inkFaint};margin:12px 0;}
 .ht2027-legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;}
 .ht2027-legend .dot.lesson{background:${P.purple};}
 .ht2027-legend .dot.brk{background:#fff;border:2px solid ${P.honey};}
-.ht2027-legend .dot.off{background:#E5E7EB;}
+.ht2027-legend .dot.off{background:#D1D5DB;}
 
-.ht2027-timeline{display:flex;flex-direction:column;gap:0;position:relative;}
-.ht2027-tl-stage{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border-bottom:2px solid;padding:18px 0 8px;margin-top:6px;}
-.ht2027-tl-row{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid ${P.line};border-left:3px solid ${P.purple};padding-left:14px;background:#fff;border-radius:0 12px 12px 0;margin-bottom:8px;}
-.ht2027-tl-date{flex-shrink:0;width:74px;text-align:left;}
-.ht2027-tl-date b{display:block;font-size:15px;font-weight:800;color:${P.ink};letter-spacing:.01em;}
-.ht2027-tl-date span{font-size:11.5px;color:${P.inkFaint};}
+.ht2027-sched-stage{border:1px solid ${P.line};border-radius:14px;background:#fff;margin-bottom:10px;overflow:hidden;}
+.ht2027-sched-head{display:flex;align-items:center;gap:12px;width:100%;padding:13px 15px;background:#fff;border:none;cursor:pointer;font-family:inherit;text-align:left;}
+.ht2027-sched-no{flex-shrink:0;color:#fff;font-size:11.5px;font-weight:800;border-radius:8px;padding:5px 10px;}
+.ht2027-sched-range{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3;}
+.ht2027-sched-range b{font-size:14.5px;color:${P.ink};font-weight:700;}
+.ht2027-sched-range span{font-size:12px;color:${P.inkFaint};}
+.ht2027-sched-body{border-top:1px solid ${P.line};padding:4px 14px 10px;}
+
+.ht2027-tl-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid ${P.line};border-left:3px solid ${P.purple};padding-left:12px;}
+.ht2027-tl-row:last-child{border-bottom:none;}
+.ht2027-tl-date{flex-shrink:0;width:66px;text-align:left;}
+.ht2027-tl-date b{display:block;font-size:14.5px;font-weight:800;color:${P.ink};letter-spacing:.01em;}
+.ht2027-tl-date span{font-size:11px;color:${P.inkFaint};}
 .ht2027-tl-body{flex:1;min-width:0;}
-.ht2027-tl-title{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;}
-.ht2027-tl-num{font-size:11.5px;font-weight:800;border-radius:7px;padding:2px 8px;flex-shrink:0;}
-.ht2027-tl-name{font-size:14.5px;font-weight:600;color:${P.ink};line-height:1.45;}
-.ht2027-tl-foot{display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap;}
-.ht2027-tl-time{font-size:12px;color:${P.inkFaint};}
-.ht2027-tl-status{font-size:11px;font-weight:800;border-radius:999px;padding:2px 9px;}
-.ht2027-tl-break{background:${P.honeyTint};border-left-color:${P.honey};}
-.ht2027-tl-brk{font-size:12.5px;font-weight:800;color:#9A5B13;letter-spacing:.02em;}
-.ht2027-tl-breaknote{font-size:12px;color:#8A6A3D;font-style:italic;}
-.ht2027-tl-off{background:#FAFAFA;border-left-color:#C9CBD6;opacity:.92;}
-.ht2027-tl-offtag{font-size:11px;font-weight:800;color:#6B7280;background:#E5E7EB;border-radius:7px;padding:2px 8px;flex-shrink:0;}
+.ht2027-tl-title{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;}
+.ht2027-tl-num{font-size:11px;font-weight:800;border-radius:6px;padding:2px 7px;flex-shrink:0;}
+.ht2027-tl-name{font-size:14px;font-weight:600;color:${P.ink};line-height:1.45;}
+.ht2027-tl-foot{display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap;}
+.ht2027-tl-time{font-size:11.5px;color:${P.inkFaint};}
+.ht2027-tl-status{font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;}
+.ht2027-tl-break{background:${P.honeyTint};border-left-color:${P.honey};border-radius:0 8px 8px 0;margin:6px 0;padding:8px 12px;}
+.ht2027-tl-brk{font-size:12px;font-weight:800;color:#8A4B06;letter-spacing:.02em;}
+.ht2027-tl-breaknote{font-size:11.5px;color:#7A5A28;font-style:italic;}
+.ht2027-tl-off{background:#F7F7F9;border-left-color:#C9CBD6;border-radius:0 8px 8px 0;margin:6px 0;padding:8px 12px;}
+.ht2027-tl-offtag{font-size:10.5px;font-weight:800;color:#4B5563;background:#E5E7EB;border-radius:6px;padding:2px 7px;flex-shrink:0;}
 .ht2027-tl-off .ht2027-tl-name{color:${P.inkFaint};font-weight:500;}
 
 /* đối tượng */
-.ht2027-who{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
-.ht2027-who li{font-size:15.5px;color:${P.ink};background:#fff;border:1px solid ${P.line};border-left:4px solid ${P.purple};border-radius:12px;padding:13px 16px;}
+.ht2027-who{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.ht2027-who li{font-size:15px;color:${P.ink};background:#fff;border:1px solid ${P.line};border-left:4px solid ${P.purple};border-radius:12px;padding:11px 15px;}
 .ht2027-who li b{color:${P.purple};}
-.ht2027-note{font-size:14px;color:${P.inkSoft};background:${P.purpleTint};border-radius:12px;padding:14px 16px;line-height:1.7;}
+.ht2027-note{font-size:13.5px;color:${P.inkSoft};background:${P.purpleTint};border-radius:12px;padding:13px 15px;line-height:1.7;}
 
 /* CTA */
-.ht2027-cta{padding:52px 0;}
-.ht2027-cta-card{background:${P.purpleDeep};color:#fff;border-radius:20px;padding:30px 26px;text-align:center;}
-.ht2027-cta-title{font-size:clamp(18px,3vw,24px);font-weight:800;letter-spacing:-.01em;margin-bottom:12px;}
-.ht2027-cta-card p{font-size:14.5px;color:rgba(255,255,255,.82);line-height:1.7;max-width:560px;margin:0 auto 20px;}
+.ht2027-cta{padding:44px 0;}
+.ht2027-cta-card{background:${P.purpleDeep};color:#fff;border-radius:20px;padding:28px 24px;text-align:center;}
+.ht2027-cta-title{font-size:clamp(18px,3vw,24px);font-weight:800;letter-spacing:-.01em;margin-bottom:10px;}
+.ht2027-cta-card p{font-size:14px;color:rgba(255,255,255,.85);line-height:1.7;max-width:540px;margin:0 auto 18px;}
 .ht2027-cta-card p b{color:#fff;}
 .ht2027-cta-btns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
-.ht2027-btn{display:inline-block;text-decoration:none;font-size:14.5px;font-weight:700;border-radius:999px;padding:13px 24px;cursor:pointer;font-family:inherit;}
+.ht2027-btn{display:inline-block;text-decoration:none;font-size:14.5px;font-weight:700;border-radius:999px;padding:12px 22px;cursor:pointer;font-family:inherit;}
 .ht2027-btn.primary{background:${P.purple};color:#fff;border:1.5px solid ${P.purple};}
 .ht2027-btn.primary:hover{background:#4F46E5;}
-.ht2027-btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.45);}
+.ht2027-btn.ghost{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.5);}
 .ht2027-btn.ghost:hover{border-color:#fff;}
 
 /* footer */
-.ht2027-foot{background:${P.purpleDeep};color:rgba(255,255,255,.72);padding:46px 0 40px;}
-.ht2027-foot p{font-size:clamp(16px,2.4vw,20px);line-height:1.5;color:#fff;margin-bottom:28px;max-width:640px;text-wrap:pretty;}
-.ht2027-foot-row{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding-top:20px;border-top:1px solid rgba(255,255,255,.16);font-size:13px;}
+.ht2027-foot{background:${P.purpleDeep};color:rgba(255,255,255,.75);padding:38px 0 34px;}
+.ht2027-foot p{font-size:clamp(15px,2.2vw,19px);line-height:1.5;color:#fff;margin-bottom:24px;max-width:620px;text-wrap:pretty;}
+.ht2027-foot-row{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding-top:18px;border-top:1px solid rgba(255,255,255,.16);font-size:13px;}
 .ht2027-foot-row img{width:26px;height:26px;filter:brightness(0) invert(1);opacity:.85;}
 .ht2027-foot-right{margin-left:auto;color:rgba(255,255,255,.55);}
 
-@media(max-width:480px){.ht2027-tl-date{width:62px;}.ht2027-topback{font-size:12px;padding:6px 11px;}}
+@media(max-width:480px){.ht2027-tl-date{width:58px;}.ht2027-topback{font-size:12px;padding:6px 11px;}}
 `
