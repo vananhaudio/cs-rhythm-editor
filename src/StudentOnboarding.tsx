@@ -115,7 +115,7 @@ export default function StudentOnboarding() {
         .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
         .eq('user_id', session.user.id)
         .maybeSingle()
-      if (data) { setStudent(data); setStep('portal'); claimPendingGroup(); return }
+      if (data) { setPreview(false); setStudent(data); setStep('portal'); claimPendingGroup(); return }
       // Không có hồ sơ học sinh → tài khoản thầy: khôi phục CHẾ ĐỘ XEM (giữ phiên khi F5)
       const { data: appUser } = await supabase.from('app_users').select('role').eq('id', session.user.id).maybeSingle()
       if (appUser?.role === 'teacher' || appUser?.role === 'admin') {
@@ -133,6 +133,7 @@ export default function StudentOnboarding() {
     if (!email || !password) return
     setLoggingIn(true)
     setLoginError('')
+    setPreview(false)
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setLoginError('Sai mật khẩu hoặc tài khoản không tồn tại.')
@@ -144,7 +145,7 @@ export default function StudentOnboarding() {
       .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
       .eq('user_id', authData.user.id)
       .single()
-    if (data) { setStudent(data); setStep('portal'); claimPendingGroup() }
+    if (data) { setPreview(false); setStudent(data); setStep('portal'); claimPendingGroup() }
     else {
       // Kiểm tra xem có phải tài khoản thầy không
       const { data: appUser } = await supabase
@@ -175,9 +176,16 @@ export default function StudentOnboarding() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error('Đăng xuất lỗi:', error)
+    }
+    setPreview(false)
     setStudent(GUEST_STUDENT)
     setEmail(''); setPassword('')
+    setLoginError('')
+    setLoggingIn(false)
     setStep('portal')
   }
 
@@ -344,6 +352,7 @@ export default function StudentOnboarding() {
       {step === 'portal' && student && (
         <div style={{ minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
           <MobileStudentPortal
+            key={`${student.id}:${preview ? 'preview' : 'normal'}`}
             student={student}
             onLogout={handleLogout}
             preview={preview}

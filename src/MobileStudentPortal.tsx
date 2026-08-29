@@ -78,6 +78,10 @@ interface JourneyLesson {
 
 interface Student    { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null; honor?: string | null; enrolled_at?: string | null }
 interface DBTool     { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean; status?: string; order_index?: number }
+type EntitlementState =
+  | { status: 'loading'; tier: null; error: null }
+  | { status: 'ready'; tier: EntitlementTier; error: null }
+  | { status: 'error'; tier: null; error: string }
 
 // Mapping: exercise timer id → edu_tools id (category 'Bài luyện')
 const EX_TOOL_ID: Record<string, string> = {
@@ -353,6 +357,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [savingProfile, setSavingProfile] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const avatarFileRef = useRef<HTMLInputElement>(null)
   const [screen, setScreen]       = useState<Screen>('home')
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
@@ -376,7 +381,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [freeCourses, setFreeCourses]   = useState<Set<string>>(new Set())  // khoá miễn phí (is_free)
   const [accessCourses, setAccessCourses] = useState<Set<string>>(new Set()) // khoá đã được thầy cấp quyền
   const [ownedCourseIds, setOwnedCourseIds] = useState<Set<string>>(new Set()) // khoá đang theo học thật
-  const [effectiveEntitlement, setEffectiveEntitlement] = useState('free')
+  const [entitlementState, setEntitlementState] = useState<EntitlementState>(() =>
+    guest ? { status: 'ready', tier: 'free', error: null } : { status: 'loading', tier: null, error: null }
+  )
+  const entitlementRequestRef = useRef(0)
   const [foundationGaps, setFoundationGaps] = useState<Enrollment['course'][]>([]) // khoá NỀN còn thiếu (đặc cách vượt cấp) — §6 bộ luật
   const [htMember, setHtMember] = useState(false) // học viên Hành trình 2026/27: full khoá NHƯNG học tuần tự
   const [courseLessonIds, setCourseLessonIds] = useState<Record<string, string[]>>({}) // courseId → mọi lesson id (tính hoàn thành khoá)
@@ -610,6 +618,82 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     window.location.href = '/subscribe'
   }
 
+  const resetUserScopedState = () => {
+    setShowSettings(false)
+    setShowDeleteConfirm(false)
+    setDeletingAccount(false)
+    setDeleteError('')
+    setScreen('home')
+    setActiveLesson(null)
+    setReturnLessonId(null)
+    setActiveCourseId(null)
+    setActiveSubject(null)
+    setSelectedLessonId(null)
+    setActiveTool(null)
+    setShowFingerExercise(false)
+    setShowScaleExercise(false)
+    setShowArpExercise(false)
+    setShowGroove(false)
+    setShowBMS(false)
+    setShowPiano(false)
+    setShowMetronome(false)
+    setPendingJourney(null)
+    setUsedToolIds(new Set())
+    setLessonActions(new Set())
+    setActionBusy(null)
+    setEnrollments([])
+    setModules([])
+    setLessons([])
+    setLessonActionMap({})
+    setMasterPath([])
+    setJourneyLessons([])
+    setSkillMap({})
+    setFreeCourses(new Set())
+    setAccessCourses(new Set())
+    setOwnedCourseIds(new Set())
+    setFoundationGaps([])
+    setHtMember(false)
+    setCourseLessonIds({})
+    setLastOpenedCourse(null)
+    setLastDoneLesson(null)
+    setDbTools([])
+    setExerciseStatuses({})
+    setTotalXP(0)
+    setWeekXP(0)
+    setLastWeekXP(0)
+    setClassRank(null)
+    setCommunityGroups([])
+    setPracticeTotals({})
+    setPracticeToday({})
+    setPracticeStats({ streak: 0, daysWeek: 0, weekMin: 0, weekDays: [] })
+    setMySongs([])
+    setCompletedIds(new Set())
+  }
+
+  const loadEntitlement = async (studentId = student.id, isGuest = guest) => {
+    const requestId = ++entitlementRequestRef.current
+    if (isGuest || preview) {
+      setEntitlementState({ status: 'ready', tier: preview ? 'nang_cao_499' : 'free', error: null })
+      return
+    }
+    setEntitlementState({ status: 'loading', tier: null, error: null })
+    try {
+      const { data, error } = await supabase.rpc('get_effective_student_entitlement', { p_student_id: studentId })
+      if (requestId !== entitlementRequestRef.current || studentId !== student.id) return
+      if (error) {
+        console.error('Tải entitlement lỗi:', error.message)
+        setEntitlementState({ status: 'error', tier: null, error: 'Không tải được quyền truy cập.' })
+        return
+      }
+      const row = Array.isArray(data) ? data[0] : data
+      setEntitlementState({ status: 'ready', tier: normalizeEntitlementTier(row?.effective_tier), error: null })
+    } catch (error: any) {
+      if (requestId !== entitlementRequestRef.current || studentId !== student.id) return
+      console.error('Tải entitlement lỗi:', error?.message ?? error)
+      setEntitlementState({ status: 'error', tier: null, error: 'Không tải được quyền truy cập.' })
+    }
+  }
+
   // Ghi thời gian luyện + XP vào DB và cập nhật hiển thị ngay (1 XP / phút)
   const persistMinutes = async (exId: string, minutes: number) => {
     if (minutes < 1) return
@@ -761,7 +845,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     }
   }
 
-  const effectiveTier = normalizeEntitlementTier(effectiveEntitlement)
+  const entitlementLoading = entitlementState.status === 'loading'
+  const entitlementError = entitlementState.status === 'error' ? entitlementState.error : null
+  const effectiveTier = entitlementState.status === 'ready' ? entitlementState.tier : 'free'
+  const accessPending = !guest && !preview && entitlementState.status !== 'ready'
   const entitlementLegacyTier = effectiveTier === 'nang_cao_499' ? 'pro'
     : effectiveTier === 'can_ban_396' ? 'standard'
     : effectiveTier === 'khoi_dau_99' ? 'basic'
@@ -898,6 +985,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   useEffect(() => {
+    entitlementRequestRef.current += 1
+    resetUserScopedState()
+    void loadEntitlement(student.id, guest)
+
     if (guest) {
       supabase.from('edu_courses')
         .select(COURSE_SELECT)
@@ -929,23 +1020,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           })
           setExerciseStatuses(exMap)
         })
-      setMasterPath([])
-      setCourseLessonIds({})
-      setSkillMap({})
-      setTotalXP(0)
-      setWeekXP(0)
-      setLastWeekXP(0)
-      setClassRank(null)
-      setCommunityGroups([])
-      setPracticeTotals({})
-      setPracticeToday({})
-      setPracticeStats({ streak: 0, daysWeek: 0, weekMin: 0, weekDays: [] })
-      setMySongs([])
-      setCompletedIds(new Set())
-      setHtMember(false)
-      setEffectiveEntitlement('free')
-      setLastOpenedCourse(null)
-      setLastDoneLesson(null)
       return
     }
 
@@ -1121,11 +1195,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       })
     supabase.from('edu_students').select('ht_member').eq('id', student.id).single()
       .then(({ data }) => setHtMember(!!(data as any)?.ht_member))
-    supabase.rpc('get_effective_student_entitlement', { p_student_id: student.id })
-      .then(({ data }) => {
-        const row = Array.isArray(data) ? data[0] : data
-        setEffectiveEntitlement(row?.effective_tier ?? 'free')
-      })
     try { setLastOpenedCourse(localStorage.getItem('lastCourse:' + student.id)) } catch { /**/ }
     // Khoá có bài hoàn thành GẦN NHẤT → fallback cho "Học ngay" khi chưa có lastOpened
     supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('status', 'completed')
@@ -1134,6 +1203,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }, [student.id, guest])
 
   const openCourse = async (courseId: string, targetLessonId?: string) => {
+    if (accessPending) return
     // HT: chặn mở khoá cấp trên khi chưa hoàn thành cấp dưới (lưới an toàn cho mọi lối vào)
     const code = enrollments.find(e => e.course_id === courseId)?.course?.code
     if (isSeqLocked(code)) return
@@ -1449,6 +1519,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   // Tone nhận diện theo Level (index course trong môn) — Level đổi màu tạo cảm giác "vùng mới"
   const LEVEL_TONES = ['#4338CA', '#0891B2', '#15803D', '#D97706', '#7C3AED', '#BE185D']
   const openJourneyLesson = (jl: JourneyLesson) => {
+    if (accessPending) return
     const a = lessonAccessOf(jl)
     if (!a.visible) return
     if (!a.available) return                    // sắp có → không mở
@@ -1542,11 +1613,17 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       color: L.t1, position: 'relative', overflow: 'hidden',
     }}>
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
+        {entitlementError && (
+          <div style={{ margin: 'max(14px, env(safe-area-inset-top, 0px)) 16px 0', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 14, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, color: '#991B1B', fontSize: 13, fontWeight: 700 }}>
+            <span style={{ flex: 1 }}>Không tải được quyền truy cập.</span>
+            <button onClick={() => loadEntitlement()} style={{ background: '#fff', border: '1px solid #FECACA', borderRadius: 10, padding: '7px 10px', color: '#B91C1C', fontSize: 12, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>Thử lại</button>
+          </div>
+        )}
 
         {/* ── TRANG CHỦ — trang cá nhân "sống" (read-only: XEM · CẢM NHẬN · KẾT NỐI). Không CTA học/luyện, không chuông, không dashboard. */}
         {tab === 'home' && (() => {
           const trinhDo = guest ? 'Khách' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')
-          const goiLabel = ENTITLEMENT_TIER_LABEL[effectiveTier]
+          const goiLabel = entitlementLoading ? 'Đang tải gói...' : entitlementError ? 'Chưa tải được gói' : ENTITLEMENT_TIER_LABEL[effectiveTier]
           const rhythm = practiceStats
           return (
           <div style={{ paddingBottom: 8 }}>
@@ -1892,8 +1969,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                     const locked     = policyLocked || seqLocked
                     const isCurrent  = !done && !locked
                     return (
-                      <div key={l.id} id={'ls-' + l.id} onClick={() => { if (access.reason === 'requires_upgrade') explainUpgrade(); else if (!seqLocked && access.canAccess) openLesson(l) }}
-                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: access.reason === 'requires_upgrade' || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked ? .5 : 1, position: 'relative' }}>
+                      <div key={l.id} id={'ls-' + l.id} onClick={() => { if (accessPending) return; if (access.reason === 'requires_upgrade') explainUpgrade(); else if (!seqLocked && access.canAccess) openLesson(l) }}
+                        style={{ background: L.surface, borderRadius: 14, padding: '14px', boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 12, cursor: accessPending ? 'wait' : access.reason === 'requires_upgrade' || !locked ? 'pointer' : 'default', marginBottom: 8, border: `2px solid ${isCurrent ? L.p1 : 'transparent'}`, opacity: locked && !accessPending ? .5 : 1, position: 'relative' }}>
                         <div style={{ width: 36, height: 36, borderRadius: 10, background: done ? L.greenBg : isCurrent ? L.p2 : L.surface2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
@@ -1902,7 +1979,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                           {seqLocked && !policyLocked && (
                             <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
                           )}
-                          {access.reason === 'requires_upgrade' && (
+                          {accessPending && (
+                            <div style={{ fontSize: 11, color: L.t3, fontWeight: 600, marginTop: 2 }}>Đang tải quyền truy cập...</div>
+                          )}
+                          {!accessPending && access.reason === 'requires_upgrade' && (
                             <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>🔒 Cần {ENTITLEMENT_TIER_LABEL[access.requiredTier]} để mở bài này →</div>
                           )}
                           {access.reason === 'coming_soon' && (
@@ -2573,12 +2653,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   {/* Tools grid — chỉ active */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: comingTools.length ? 10 : 0 }}>
                     {activeTools.map((t) => {
-                      const unlocked = isTierUnlocked(t.tier)
+                      const unlocked = !accessPending && isTierUnlocked(t.tier)
                       const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
                       return (
                         <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name, t.id) }}
-                          style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5, position: 'relative' }}>
-                          {!unlocked && (
+                          style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: accessPending ? 'wait' : unlocked ? 'pointer' : 'default', opacity: unlocked || accessPending ? 1 : .5, position: 'relative' }}>
+                          {!unlocked && !accessPending && (
                             <div style={{ position: 'absolute', top: 8, right: 8 }}>
                               <span style={{ fontSize: 11, background: L.goldBg, color: L.gold, borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>{TIER_VI[t.tier] ?? t.tier}</span>
                             </div>
@@ -2592,7 +2672,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                               : t.icon}
                           </div>
                           <div style={{ fontSize: 15, fontWeight: 700, color: unlocked ? L.p1 : L.t3, marginBottom: 4 }}>{t.name}</div>
-                          <div style={{ fontSize: 12, color: L.t3, lineHeight: 1.4 }}>{t.description}</div>
+                          <div style={{ fontSize: 12, color: L.t3, lineHeight: 1.4 }}>{accessPending ? 'Đang tải quyền truy cập...' : t.description}</div>
                         </div>
                       )
                     })}
@@ -2729,10 +2809,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 20, flexShrink: 0 }}>👑</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, color: L.t2, fontWeight: 750 }}>Gói của tôi</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: L.t1 }}>{ENTITLEMENT_TIER_LABEL[effectiveTier]}</div>
+                  <div style={{ fontSize: 16, fontWeight: 900, color: L.t1 }}>
+                    {entitlementLoading ? 'Đang tải...' : entitlementError ? 'Chưa tải được' : ENTITLEMENT_TIER_LABEL[effectiveTier]}
+                  </div>
                 </div>
-                <button onClick={openUpgrade} style={{ background: effectiveTier === 'free' ? L.p1 : L.p2, border: 'none', borderRadius: 12, padding: '9px 14px', color: effectiveTier === 'free' ? '#fff' : L.p1, fontSize: 13, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                  {effectiveTier === 'free' ? 'Nâng gói' : 'Quản lý gói'}
+                <button onClick={() => entitlementError ? loadEntitlement() : !entitlementLoading && openUpgrade()} disabled={entitlementLoading} style={{ background: entitlementError ? '#FEF2F2' : effectiveTier === 'free' ? L.p1 : L.p2, border: 'none', borderRadius: 12, padding: '9px 14px', color: entitlementError ? '#B91C1C' : effectiveTier === 'free' ? '#fff' : L.p1, fontSize: 13, fontWeight: 850, cursor: entitlementLoading ? 'wait' : 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: entitlementLoading ? 0.7 : 1 }}>
+                  {entitlementLoading ? '...' : entitlementError ? 'Thử lại' : effectiveTier === 'free' ? 'Nâng gói' : 'Quản lý gói'}
                 </button>
               </div>
             </div>
@@ -3056,11 +3138,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             Xong
           </button>
           <button
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={() => { setDeleteError(''); setShowDeleteConfirm(true) }}
             disabled={deletingAccount}
             style={{ width: '100%', background: 'none', border: 'none', marginTop: 12, padding: '10px', fontSize: 14, color: '#E53E3E', cursor: 'pointer', fontFamily: 'inherit', opacity: deletingAccount ? 0.5 : 1 }}>
             {deletingAccount ? 'Đang xóa tài khoản...' : 'Xóa tài khoản'}
           </button>
+          {deleteError && (
+            <div style={{ marginTop: 8, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '9px 10px', fontSize: 12.5, color: '#B91C1C', lineHeight: 1.45 }}>
+              {deleteError}
+            </div>
+          )}
           <div style={{ textAlign: 'center', marginTop: 16, paddingBottom: 4 }}>
             <a href="https://timming.vananhaudio.com/tvaprivacy" target="_blank" rel="noreferrer"
               style={{ fontSize: 13, color: '#6B7280', textDecoration: 'underline' }}>
@@ -3080,33 +3167,42 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           <p style={{ margin: '0 0 24px', fontSize: 15, color: L.t2, textAlign: 'center', lineHeight: 1.6 }}>
             Toàn bộ dữ liệu học tập, tiến độ và lịch sử luyện tập của bạn sẽ bị <strong>xóa vĩnh viễn</strong> và không thể khôi phục.
           </p>
+          {deleteError && (
+            <div style={{ margin: '0 0 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '10px 12px', fontSize: 13, color: '#B91C1C', lineHeight: 1.45 }}>
+              {deleteError}
+            </div>
+          )}
           <button
             onClick={async () => {
-              setShowDeleteConfirm(false)
               setDeletingAccount(true)
+              setDeleteError('')
               try {
                 const { error } = await supabase.rpc('delete_my_account')
                 if (error) {
-                  // Lỗi Postgres (FK chặn / chưa đăng nhập) trả về ở đây, KHÔNG vào catch.
-                  // Phải dừng lại — KHÔNG được signOut/logout giả vờ như đã xóa.
+                  console.error('Xóa tài khoản lỗi:', error.message)
                   setDeletingAccount(false)
-                  alert('Không xóa được tài khoản. Vui lòng thử lại hoặc liên hệ vananhaudio@gmail.com.')
+                  setDeleteError('Không xóa được tài khoản. Vui lòng thử lại hoặc liên hệ vananhaudio@gmail.com.')
                   return
                 }
-                // Đã xóa thành công ở server -> đăng xuất. Token mồ côi 401 là vô hại.
-                try { await supabase.auth.signOut() } catch { /* token đã mồ côi sau khi xóa */ }
-                onLogout()
-              } catch {
+                try { await supabase.auth.signOut() } catch (signOutError) { console.error('Đăng xuất sau xóa tài khoản lỗi:', signOutError) }
+                setShowDeleteConfirm(false)
+                setShowSettings(false)
                 setDeletingAccount(false)
-                alert('Không xóa được tài khoản. Vui lòng kiểm tra mạng và thử lại.')
+                onLogout()
+              } catch (error: any) {
+                console.error('Xóa tài khoản lỗi:', error?.message ?? error)
+                setDeletingAccount(false)
+                setDeleteError('Không xóa được tài khoản. Vui lòng kiểm tra mạng và thử lại.')
               }
             }}
-            style={{ width: '100%', background: '#E53E3E', border: 'none', borderRadius: 14, padding: '15px', fontSize: 17, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>
-            Xóa tài khoản vĩnh viễn
+            disabled={deletingAccount}
+            style={{ width: '100%', background: '#E53E3E', border: 'none', borderRadius: 14, padding: '15px', fontSize: 17, fontWeight: 700, color: '#fff', cursor: deletingAccount ? 'wait' : 'pointer', fontFamily: 'inherit', marginBottom: 10, opacity: deletingAccount ? 0.65 : 1 }}>
+            {deletingAccount ? 'Đang xóa tài khoản...' : 'Xóa tài khoản vĩnh viễn'}
           </button>
           <button
-            onClick={() => setShowDeleteConfirm(false)}
-            style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '15px', fontSize: 17, fontWeight: 600, color: L.t1, cursor: 'pointer', fontFamily: 'inherit' }}>
+            onClick={() => { setShowDeleteConfirm(false); setDeleteError('') }}
+            disabled={deletingAccount}
+            style={{ width: '100%', background: L.surface2, border: `1px solid ${L.border}`, borderRadius: 14, padding: '15px', fontSize: 17, fontWeight: 600, color: L.t1, cursor: deletingAccount ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: deletingAccount ? 0.6 : 1 }}>
             Hủy bỏ
           </button>
         </div>

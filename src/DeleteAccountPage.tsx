@@ -8,36 +8,50 @@ export default function DeleteAccountPage() {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    let alive = true
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!alive) return
+        setUser(session?.user ?? null)
+      })
+      .catch((err: any) => {
+        console.error('Tải session xóa tài khoản lỗi:', err?.message ?? err)
+        if (alive) setError('Không tải được phiên đăng nhập. Vui lòng thử lại.')
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => { alive = false }
   }, [])
 
   const handleDeleteAccount = async () => {
-    if (!confirm('Bạn chắc chắn muốn xóa tài khoản? Hành động này không thể hoàn tác.')) {
-      return
-    }
-
     setDeleting(true)
     setError('')
-
     try {
       const { error: rpcError } = await supabase.rpc('delete_my_account')
       if (rpcError) {
-        setError(rpcError.message || 'Lỗi khi xóa tài khoản')
+        console.error('Xóa tài khoản lỗi:', rpcError.message)
+        setError('Không xóa được tài khoản. Vui lòng thử lại hoặc liên hệ vananhaudio@gmail.com.')
+        setDeleting(false)
         return
       }
 
+      try {
+        await supabase.auth.signOut()
+      } catch (signOutError) {
+        console.error('Đăng xuất sau xóa tài khoản lỗi:', signOutError)
+      }
+      setShowConfirm(false)
+      setDeleting(false)
+      setUser(null)
       setSuccess(true)
-      setTimeout(() => {
-        window.location.href = '/'
-      }, 2000)
+      window.setTimeout(() => { window.location.href = '/' }, 1200)
     } catch (err: any) {
-      setError(err?.message || 'Lỗi không xác định')
-    } finally {
+      console.error('Xóa tài khoản lỗi:', err?.message ?? err)
+      setError('Không xóa được tài khoản. Vui lòng kiểm tra mạng và thử lại.')
       setDeleting(false)
     }
   }
@@ -96,10 +110,10 @@ export default function DeleteAccountPage() {
               fontSize: 15,
               color: '#92400E',
             }}>
-              <strong>⚠️ Cảnh báo:</strong> Hành động này sẽ:
+              <strong>Cảnh báo:</strong> Hành động này sẽ:
               <ul style={{ margin: '8px 0 0 0', paddingLeft: 24 }}>
                 <li>Xóa tài khoản đăng nhập</li>
-                <li>Xóa tất cả dữ liệu học tập</li>
+                <li>Xóa dữ liệu cá nhân và dữ liệu học tập theo backend hiện tại</li>
                 <li>Không thể hoàn tác</li>
               </ul>
             </div>
@@ -128,11 +142,11 @@ export default function DeleteAccountPage() {
                 fontSize: 15,
                 marginBottom: 16,
               }}>
-                ✓ Tài khoản đã xóa thành công. Đang chuyển hướng...
+                Tài khoản đã xóa thành công. Đang chuyển hướng...
               </div>
             ) : (
               <button
-                onClick={handleDeleteAccount}
+                onClick={() => { setError(''); setShowConfirm(true) }}
                 disabled={deleting}
                 style={{
                   background: '#DC2626',
@@ -160,10 +174,11 @@ export default function DeleteAccountPage() {
                 borderRadius: 8,
                 padding: '12px 24px',
                 fontSize: 16,
-                cursor: 'pointer',
+                cursor: deleting ? 'not-allowed' : 'pointer',
                 marginTop: 12,
                 width: '100%',
                 color: '#6B7280',
+                opacity: deleting ? 0.6 : 1,
               }}
             >
               Quay lại
@@ -209,6 +224,32 @@ export default function DeleteAccountPage() {
           </>
         )}
       </div>
+
+      {showConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 50 }}>
+          <div style={{ width: '100%', maxWidth: 380, background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,.28)', textAlign: 'center' }}>
+            <h2 style={{ margin: '0 0 10px', fontSize: 20, color: '#111827' }}>Xác nhận xóa tài khoản?</h2>
+            <p style={{ margin: '0 0 18px', fontSize: 15, color: '#6B7280', lineHeight: 1.6 }}>
+              Tài khoản và dữ liệu cá nhân của bạn sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
+            </p>
+            {error && <div style={{ marginBottom: 12, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: 10, fontSize: 13 }}>{error}</div>}
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleting}
+              style={{ width: '100%', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 16px', fontSize: 16, fontWeight: 700, cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? .65 : 1 }}
+            >
+              {deleting ? 'Đang xóa tài khoản...' : 'Xóa tài khoản'}
+            </button>
+            <button
+              onClick={() => { setShowConfirm(false); setError('') }}
+              disabled={deleting}
+              style={{ width: '100%', marginTop: 10, background: '#F9FAFB', color: '#374151', border: '1px solid #D1D5DB', borderRadius: 10, padding: '13px 16px', fontSize: 16, fontWeight: 600, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? .6 : 1 }}
+            >
+              Hủy bỏ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
