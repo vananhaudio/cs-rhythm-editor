@@ -84,7 +84,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
     supabase.from('student_songs').select('id,title,artist,tempo,status')
       .eq('student_id', student.id).order('created_at', { ascending: false }).limit(5)
       .then(({ data }) => setMySongs(data ?? []))
-    supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id)
+    supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('status', 'completed')
       .then(({ data }) => { if (data) setCompletedIds(new Set(data.map((r: any) => r.lesson_id))) })
 
     const weekAgo     = new Date(Date.now() - 7  * 24 * 3600 * 1000).toISOString()

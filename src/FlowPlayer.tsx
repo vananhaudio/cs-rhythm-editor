@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
+import YouTubeLesson, { getYouTubeId, buildEmbedUrl } from './video/YouTubeLesson'
 import { NeckPick, NoteChart, Checklist, Strum, Ear, NotePractice, NoteShow, ChordView, ChordDrone, ListenChoice, StrumScore, Backing, Metronome, BarSplit } from './elearn/guitarRenderers'
 import type { NeckCfg, ChecklistCfg, NoteChartCfg, StrumCfg, EarCfg, NotePracticeCfg, NoteShowCfg, ChordCfg, DroneCfg, ListenCfg, StrumScoreCfg, BackingCfg, MetronomeCfg, BarSplitCfg } from './elearn/guitarRenderers'
 import { NarratedSlideshow } from './elearn/NarratedSlideshow'
@@ -20,16 +21,8 @@ function richText(s: string): string {
 // Nhận MỌI dạng link YouTube → URL embed cho iframe.
 // Bắt ID 11 ký tự bất kể thứ tự tham số (watch?v=, watch?app=desktop&v=, m.youtube, youtu.be, shorts, live, embed, hoặc ID trần).
 export function toYouTubeEmbed(url: string): string {
-  if (!url) return url
-  const u = url.trim()
-  if (/youtube\.com\/embed\/[\w-]{11}/.test(u)) return u // đã là embed hợp lệ
-  let id: string | null = null
-  let m: RegExpMatchArray | null
-  if ((m = u.match(/[?&]v=([\w-]{11})/)))               id = m[1] // …watch?…v=ID (mọi thứ tự tham số)
-  else if ((m = u.match(/youtu\.be\/([\w-]{11})/)))      id = m[1]
-  else if ((m = u.match(/\/(?:embed|shorts|live|v)\/([\w-]{11})/))) id = m[1]
-  else if (/^[\w-]{11}$/.test(u))                        id = u    // ID trần
-  return id ? `https://www.youtube.com/embed/${id}?rel=0` : u
+  const id = getYouTubeId(url)
+  return id ? buildEmbedUrl(id) : url
 }
 
 // ── Logic labels & colors ──────────────────────────────────────────────────
@@ -391,10 +384,17 @@ export default function FlowPlayer({ lessonId, studentId, onComplete, onBack, fu
         {/* VIDEO */}
         {slide.type === 'video' && slide.mediaUrl && (
           <>
-            <div style={{ borderRadius: 12, overflow: 'hidden', aspectRatio: '16/9', background: '#000', marginBottom: 8 }}>
-              <iframe src={toYouTubeEmbed(slide.mediaUrl)} style={{ width: '100%', height: '100%', border: 'none' }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen title={slide.title} />
+            <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 8 }}>
+              {getYouTubeId(slide.mediaUrl) ? (
+                <YouTubeLesson url={slide.mediaUrl} title={slide.title} />
+              ) : (
+                // media không phải YouTube (video tự host…) → giữ iframe như cũ
+                <div style={{ aspectRatio: '16/9', background: '#000' }}>
+                  <iframe src={slide.mediaUrl} style={{ width: '100%', height: '100%', border: 'none' }}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen title={slide.title} />
+                </div>
+              )}
             </div>
             {slide.content && (
               <div style={{ fontSize: 16, color: '#333', lineHeight: 1.85, marginTop: 6 }}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
+import YouTubeLesson, { getYouTubeId } from './video/YouTubeLesson'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import ArpeggioExercise from './ArpeggioExercise'
@@ -117,7 +118,7 @@ function uname(s: Student) {
   return (n.includes('@') ? n.split('@')[0] : n.split(' ').pop() ?? n)
 }
 function getYtId(url: string | null) {
-  return url?.match(/(?:v=|youtu\.be\/|shorts\/)([^&?\s]+)/)?.[1] ?? null
+  return getYouTubeId(url)
 }
 
 // Chuẩn hóa URL Canva → dạng .../view?embed (dùng cho iframe)
@@ -1113,8 +1114,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         journey: s.journey?.length ? s.journey : JOURNEY_STEPS.map((step: any) => ({ id: step.id, done: false }))
       }))))
     supabase.from('edu_lesson_progress')
-      .select('lesson_id').eq('student_id', student.id)
-      .then(({ data }) => {
+      .select('lesson_id').eq('student_id', student.id).eq('status', 'completed')
+      .then(({ data, error }) => {
+        if (error) { console.error('Lỗi tải tiến độ bài học:', error); return }
         if (data) setCompletedIds(new Set(data.map((r: any) => r.lesson_id)))
       })
     supabase.from('edu_students').select('ht_member').eq('id', student.id).single()
@@ -1126,7 +1128,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       })
     try { setLastOpenedCourse(localStorage.getItem('lastCourse:' + student.id)) } catch { /**/ }
     // Khoá có bài hoàn thành GẦN NHẤT → fallback cho "Học ngay" khi chưa có lastOpened
-    supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('completed', true)
+    supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('status', 'completed')
       .order('completed_at', { ascending: false }).limit(1)
       .then(({ data }) => { const lid = (data ?? [])[0]?.lesson_id; if (lid) setLastDoneLesson(lid) })
   }, [student.id, guest])
@@ -1227,15 +1229,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     if (preview || guest) return   // tài khoản thầy xem khoá / khách free → không ghi tiến độ
     if (completedIds.has(lessonId) || markingDone) return
     setMarkingDone(true)
-    // Kiểm tra đã có record chưa trước khi insert
+    // Kiểm tra record hiện có (để không thưởng XP lần 2); ghi bằng upsert theo
+    // unique(student_id, lesson_id) — không race, không duplicate, không downgrade.
     const { data: existing } = await supabase.from('edu_lesson_progress')
-      .select('id,status').eq('student_id', student.id).eq('lesson_id', lessonId).maybeSingle()
-    const { error } = existing
-      ? await supabase.from('edu_lesson_progress')
-          .update({ status: 'completed', completed_at: new Date().toISOString() })
-          .eq('id', existing.id)
-      : await supabase.from('edu_lesson_progress')
-          .insert({ student_id: student.id, lesson_id: lessonId, status: 'completed', completed_at: new Date().toISOString() })
+      .select('id,status').eq('student_id', student.id).eq('lesson_id', lessonId).limit(1).maybeSingle()
+    const { error } = await supabase.from('edu_lesson_progress')
+      .upsert({ student_id: student.id, lesson_id: lessonId, status: 'completed', completed_at: new Date().toISOString() },
+        { onConflict: 'student_id,lesson_id' })
     if (error) {
       console.error('Lỗi lưu tiến độ:', error)
       alert('Không lưu được tiến độ: ' + error.message)
@@ -1990,11 +1990,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             </div>
 
             {/* Video */}
-            {activeLesson.lesson_type !== 'flow' && activeLesson.lesson_type === 'video' && getYtId(activeLesson.content_url) && (
-              <div style={{ aspectRatio: '16/9', background: '#000' }}>
-                <iframe src={`https://www.youtube.com/embed/${getYtId(activeLesson.content_url)}?rel=0`}
-                  style={{ width: '100%', height: '100%', border: 'none' }} allowFullScreen />
-              </div>
+            {activeLesson.lesson_type === 'video' && (
+              <YouTubeLesson url={activeLesson.content_url} title={activeLesson.title}
+                onEnded={() => {
+                  // Xem hết video = hoàn thành bài (rule canonical), nhưng vẫn tôn trọng
+                  // điều kiện tool: bài yêu cầu bài tập thực hành thì phải dùng đủ tool đã.
+                  const req = (activeLesson.tools ?? []).filter(tid => !!resolveTool(tid))
+                  if (req.length === 0 || req.every(tid => usedToolIds.has(tid))) markComplete(activeLesson.id)
+                }} />
             )}
 
             {/* Slide Canva — nút mở trình duyệt ngoài (không dùng iframe vì cross-origin) */}

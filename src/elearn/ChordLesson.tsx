@@ -3,6 +3,7 @@
 // Mỗi bài mới chỉ cần khai 1 object cfg (xem chordLessons.ts) — không code lại.
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
+import { getYouTubeId, buildEmbedUrl } from '../video/YouTubeLesson'
 import { ChordPractice } from './ChordPractice'
 import { MiniDiagram } from './ChordChangeTrainer'
 import ChordSeqTrainer, { type Exercise } from './ChordSeqTrainer'
@@ -34,12 +35,8 @@ export interface ChordLessonCfg {
 
 // Đổi link YouTube (watch / youtu.be) sang dạng nhúng để mở trong app
 function toEmbed(url: string): string {
-  try {
-    const u = new URL(url)
-    if (u.hostname.includes('youtu.be')) return `https://www.youtube.com/embed/${u.pathname.slice(1)}`
-    if (u.searchParams.get('v')) return `https://www.youtube.com/embed/${u.searchParams.get('v')}`
-    return url
-  } catch { return url }
+  const id = getYouTubeId(url)
+  return id ? buildEmbedUrl(id) : url
 }
 
 function Btn({ children, onClick, primary }: { children: React.ReactNode; onClick: () => void; primary?: boolean }) {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import { QuizViewer } from './components/QuizViewer'
 import FlowPlayer from './FlowPlayer'
+import YouTubeLesson, { getYouTubeId as ytIdShared } from './video/YouTubeLesson'
 import ElearnLessonView from './elearn/ElearnLessonView'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
@@ -60,7 +61,7 @@ function normalizeCanvaUrl(raw: string): string {
 
 
 function getYouTubeId(url: string) {
-  return url.match(/(?:v=|youtu\.be\/|shorts\/)([^&?\s]+)/)?.[1] ?? null
+  return ytIdShared(url)
 }
 
 export default function LessonViewerPage() {
@@ -105,8 +106,10 @@ export default function LessonViewerPage() {
     if (completedIds.has(lesson.id)) return
     setCompletedIds(prev => new Set(prev).add(lesson.id))
     if (!studentId) return
-    supabase.from('edu_lesson_progress').upsert({ student_id: studentId, lesson_id: lesson.id, completed: true, completed_at: new Date().toISOString() }, { onConflict: 'student_id,lesson_id' }).then(() => {})
-    supabase.from('student_xp_log').insert({ student_id: studentId, xp: 15, reason: 'native:' + (lesson.content_url || '') }).then(() => {})
+    supabase.from('edu_lesson_progress').upsert({ student_id: studentId, lesson_id: lesson.id, status: 'completed', completed_at: new Date().toISOString() }, { onConflict: 'student_id,lesson_id' })
+      .then(({ error }) => { if (error) console.error('Lỗi lưu tiến độ:', error) })
+    supabase.from('student_xp_log').insert({ student_id: studentId, xp: 15, source: 'lesson', ref_id: lesson.id })
+      .then(({ error }) => { if (error) console.error('Ghi XP lỗi:', error) })
   }
 
   const completeElearn = async (lesson: Lesson, lessonNum: number) => {
@@ -115,11 +118,11 @@ export default function LessonViewerPage() {
     if (!studentId) return
     supabase.from('edu_lesson_progress').upsert({
       student_id: studentId, lesson_id: lesson.id,
-      completed: true, completed_at: new Date().toISOString(),
-    }, { onConflict: 'student_id,lesson_id' }).then(() => {})
+      status: 'completed', completed_at: new Date().toISOString(),
+    }, { onConflict: 'student_id,lesson_id' }).then(({ error }) => { if (error) console.error('Lỗi lưu tiến độ:', error) })
     supabase.from('student_xp_log').insert({
-      student_id: studentId, xp: 10, reason: `elearn:bai${lessonNum}`,
-    }).then(() => {})
+      student_id: studentId, xp: 10, source: 'lesson', ref_id: lesson.id,
+    }).then(({ error }) => { if (error) console.error('Ghi XP lỗi:', error) })
     // Widget tương tác = đã thực hành → cộng điểm hành trình
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
@@ -138,7 +141,7 @@ export default function LessonViewerPage() {
         if (st?.id) {
           setStudentId(st.id)
           const { data: prog } = await supabase.from('edu_lesson_progress')
-            .select('lesson_id').eq('student_id', st.id).eq('completed', true)
+            .select('lesson_id').eq('student_id', st.id).eq('status', 'completed')
           if (prog) setCompletedIds(new Set(prog.map((r: { lesson_id: string }) => r.lesson_id)))
           // Mã năng lực đã sở hữu → tính khoá nền còn thiếu (§6)
           const { data: enr } = await supabase.from('edu_enrollments')
@@ -227,7 +230,7 @@ export default function LessonViewerPage() {
         : { data: [] as any[] }
       const lessonsByCourse: Record<string, string[]> = {}
       ;(lsns ?? []).forEach((l: any) => { const cid = modCourse[l.module_id]; if (cid) (lessonsByCourse[cid] ??= []).push(l.id) })
-      const { data: prog } = await supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', studentId).eq('completed', true)
+      const { data: prog } = await supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', studentId).eq('status', 'completed')
       const done = new Set((prog ?? []).map((r: any) => r.lesson_id))
       const codeDone = (cc: string) => (idsByCode[cc] || []).some(cid => { const ls = lessonsByCourse[cid]; return ls && ls.length > 0 && ls.every(id => done.has(id)) })
       const missing = need.filter(cc => (idsByCode[cc]?.length) && !codeDone(cc))
@@ -442,13 +445,9 @@ export default function LessonViewerPage() {
 
             {/* YouTube embed */}
             {ytId && (
-              <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', marginBottom: 24, aspectRatio: '16/9' }}>
-                <iframe
-                  src={`https://www.youtube.com/embed/${ytId}?rel=0`}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                />
+              <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}>
+                <YouTubeLesson videoId={ytId} title={active.title}
+                  onEnded={() => { if (active.lesson_type === 'video') completeNative(active) }} />
               </div>
             )}
 

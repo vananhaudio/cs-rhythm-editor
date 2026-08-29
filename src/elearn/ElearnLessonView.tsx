@@ -3,6 +3,7 @@
 // Hoàn thành → gọi onComplete (app ghi tiến độ + quay lại danh sách).
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import { getYouTubeId, buildEmbedUrl } from '../video/YouTubeLesson'
 import { ACCENT, STR, PSEQ, FREQ, strColor, getLesson, type PlayStyle, type ThaoType } from './data'
 import { playTone } from './audio'
 
@@ -347,9 +348,11 @@ export default function ElearnLessonView({ num, title, courseSlug = 'khoi-dau-da
   // ── Media: youtube / video upload, fallback bảng nốt cho bài 4 ───────────────
   const Media = () => {
     if (cfg?.youtube_id) {
+      // youtube_id có thể là ID trần hoặc bị dán nhầm cả URL → normalize về ID
+      const ytid = getYouTubeId(cfg.youtube_id) ?? cfg.youtube_id
       return (
         <div style={{ marginTop: 16, borderRadius: 16, overflow: 'hidden', background: '#000', position: 'relative', paddingBottom: '56.25%' }}>
-          <iframe src={`https://www.youtube.com/embed/${cfg.youtube_id}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowFullScreen title="Video bài học" />
+          <iframe src={buildEmbedUrl(ytid)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowFullScreen title="Video bài học" />
         </div>
       )
     }
