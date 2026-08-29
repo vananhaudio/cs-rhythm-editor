@@ -419,25 +419,22 @@ export default function ClassLandingPage() {
         </div>
       </nav>
 
-      {/* HERO */}
+      {/* HERO — trang tổng Hành trình Guitar: text trái + card giá phải (không ảnh Thầy) */}
       <header className="hero">
         <div className="wrap hero-grid">
           <div>
-            <h1>Bắt đầu học Guitar bằng <span className="hl">một khóa nhỏ phù hợp với bạn</span></h1>
-            <p>Thích hát, thích chơi giai điệu, hay đã chơi nhưng muốn tiến xa hơn — mỗi người một cửa vào. Bạn không cần học cả hành trình ngay từ đầu, chỉ cần chọn đúng khóa nhỏ đầu tiên. Khi sẵn sàng, bản đồ dài hạn luôn ở đó để bạn đi tiếp.</p>
-            <div className="hero-cta">
-              <button className="btn btn-primary" onClick={() => goto('cuavao')}>Chọn cửa vào của tôi →</button>
-              <button className="btn btn-ghost" onClick={() => goto('chat')}>Trò chuyện với Mira</button>
-            </div>
+            <h1>Một Hành trình giúp bạn <span className="hl">chơi Guitar tốt hơn mỗi ngày.</span></h1>
+            <p>Học, luyện tập và tiến bộ cùng Thầy Văn Anh.</p>
+            <a className="hero-scroll" onClick={() => goto('cuavao')}>Khám phá bên dưới ↓</a>
           </div>
-          <div className="hero-art">
-            <h3>Bắt đầu bằng đúng một bước</h3>
-            <p>Chọn một khóa nhỏ phù hợp với bạn. Học theo lớp Zoom, luyện thêm trên app và có lộ trình đi tiếp khi sẵn sàng.</p>
-            <div className="hero-stats">
-              <div><b>3</b><span>cửa vào để chọn</span></div>
-              <div><b>8 buổi Zoom</b><span>trực tiếp cùng thầy</span></div>
-              <div><b>24/24</b><span>tự luyện trên app</span></div>
-            </div>
+          <div className="hero-card">
+            <div className="hc-kicker">Tham gia Hành trình</div>
+            <div className="hc-price">396.000đ <span>/ tháng</span></div>
+            <p className="hc-body">Học theo năng lực hiện tại, luyện tập trên App và tham gia các buổi thực hành cùng Thầy.</p>
+            <ul className="hc-items">
+              {['Kho bài giảng', 'App luyện tập', 'Thực hành hàng tuần', 'Hỏi Thầy', 'Sách', 'Cộng đồng'].map(x => <li key={x}>{x}</li>)}
+            </ul>
+            <div className="hc-note">Học gói <b>Free</b> trước. Thấy phù hợp rồi hãy tham gia.</div>
           </div>
         </div>
       </header>
@@ -445,8 +442,8 @@ export default function ClassLandingPage() {
       {/* 3 CỬA VÀO */}
       <section id="cuavao" className="band">
         <div className="wrap">
-          <div className="eyebrow">Chọn điểm bắt đầu</div>
-          <h2>Chọn cửa vào phù hợp với bạn</h2>
+          <div className="eyebrow">Có giống bạn không?</div>
+          <h2>Bạn đang muốn điều gì với Guitar?</h2>
           <p className="lead">Nếu bạn mới bắt đầu, hãy chọn một trong hai hướng: <b>Đệm hát</b> hoặc <b>Guitar căn bản theo giai điệu</b>. Nếu bạn đã học rồi, trợ lý sẽ giúp bạn xếp đúng trình độ để đi tiếp.</p>
           <div className="doors">
             {DOORS.map((d, i) => {
@@ -1085,19 +1082,25 @@ const CSS = `
 .tva-class .story-cta{padding:7px 11px;font-size:13px;}
 .tva-class .story-cta-full{display:none;}
 .tva-class .story-cta-short{display:inline;}}
-.tva-class .hero{padding:60px 0 46px;}
-.tva-class .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center;}
-.tva-class .hero h1{font-size:42px;font-weight:800;line-height:1.1;letter-spacing:-1px;}
+.tva-class .hero{padding:56px 0 44px;}
+.tva-class .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;}
+.tva-class .hero h1{font-size:40px;font-weight:800;line-height:1.12;letter-spacing:-1px;}
 .tva-class .hero h1 .hl{color:var(--indigo);}
-.tva-class .hero p{margin-top:18px;color:var(--ink-soft);font-size:17px;max-width:500px;}
-.tva-class .hero-cta{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap;}
-.tva-class .hero-art{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 20px 50px -24px rgba(33,28,50,.25);}
-.tva-class .hero-art h3{margin:0 0 6px;font-size:18px;font-weight:700;}
-.tva-class .hero-art p{font-size:14px;color:var(--ink-soft);}
-.tva-class .hero-stats{display:flex;gap:22px;margin-top:18px;border-top:1px solid var(--line);padding-top:16px;}
-.tva-class .hero-stats div b{display:block;font-size:22px;font-weight:800;color:var(--indigo);}
-.tva-class .hero-stats div span{font-size:12px;color:var(--ink-faint);}
-@media(max-width:860px){.tva-class .hero-grid{grid-template-columns:1fr;gap:28px;}.tva-class .hero h1{font-size:32px;}}
+.tva-class .hero p{margin-top:18px;color:var(--ink-soft);font-size:17px;max-width:460px;}
+.tva-class .hero-scroll{display:inline-block;margin-top:22px;font-size:14px;font-weight:600;color:var(--ink-faint);cursor:pointer;text-decoration:none;border-bottom:1px solid transparent;transition:color .15s ease,border-color .15s ease;}
+.tva-class .hero-scroll:hover{color:var(--indigo);border-color:var(--indigo);}
+/* Card giá — tinh thần card Hero cũ: card chữ nhật, thông tin cụ thể, sản phẩm là nhân vật chính */
+.tva-class .hero-card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 26px 22px;box-shadow:0 20px 50px -24px rgba(33,28,50,.25);}
+.tva-class .hero-card .hc-kicker{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--honey);}
+.tva-class .hero-card .hc-price{margin-top:8px;font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--indigo);line-height:1;}
+.tva-class .hero-card .hc-price span{font-size:16px;font-weight:600;color:var(--ink-faint);letter-spacing:0;}
+.tva-class .hero-card .hc-body{margin-top:12px;font-size:14px;line-height:1.6;color:var(--ink-soft);max-width:none;}
+.tva-class .hero-card .hc-items{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:16px;padding:16px 0 0;border-top:1px solid var(--line);list-style:none;}
+.tva-class .hero-card .hc-items li{font-size:13px;font-weight:600;color:var(--ink);padding-left:18px;position:relative;}
+.tva-class .hero-card .hc-items li::before{content:'';position:absolute;left:0;top:6px;width:8px;height:8px;border-radius:50%;background:var(--indigo);opacity:.85;}
+.tva-class .hero-card .hc-note{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-soft);}
+.tva-class .hero-card .hc-note b{color:var(--honey);}
+@media(max-width:860px){.tva-class .hero-grid{grid-template-columns:1fr;gap:26px;}.tva-class .hero h1{font-size:32px;}.tva-class .hero-card{padding:22px 20px 20px;}.tva-class .hero-card .hc-price{font-size:32px;}}
 .tva-class .doors{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
 .tva-class .door{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;}
 .tva-class .door .dq{font-size:16.5px;font-weight:700;line-height:1.3;}
