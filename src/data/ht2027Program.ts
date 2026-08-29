@@ -16,7 +16,7 @@ export const HT2027 = {
   durationMinutes: 90,            // 20:30 → 22:00
   timezone: 'Asia/Ho_Chi_Minh',   // múi giờ chuẩn hệ thống
   // Ngày khai giảng dự kiến — chỉ dùng cho seed & dev fixture; landing page ĐỌC TỪ DB.
-  proposedStartDate: '2027-01-07',
+  proposedStartDate: '2026-09-10',
 }
 
 // Tiến trình chung của chương trình

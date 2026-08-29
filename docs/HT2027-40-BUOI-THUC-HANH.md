@@ -35,52 +35,52 @@ Hệ thống Class **đã có sẵn cơ chế chuỗi sự kiện** — KHÔNG c
 
 ## 4. Đề xuất lịch dự kiến (CHỜ DUYỆT)
 
-### 4.1. Ngày bắt đầu: **Thứ Năm 07/01/2027 — 20:30 (giờ Việt Nam, Asia/Ho_Chi_Minh)**
-Sau khi mọi lớp 2026 kết thúc (muộn nhất 05/11/2026); chương trình nằm gọn trong năm 2027.
+### 4.1. Ngày bắt đầu: **Thứ Năm 10/09/2026 — 20:30 (giờ Việt Nam, Asia/Ho_Chi_Minh)**
+(Thầy duyệt đổi từ 07/01/2027 → **10/09/2026** lúc 13:54 ngày 29/08/2026.)
 
-### 4.2. Toàn bộ 48 tuần (40 buổi + 8 tuần nghỉ)
+### 4.2. Toàn bộ 48 tuần (40 buổi + 8 tuần nghỉ) — lịch ĐÃ TRIỂN KHAI
 
 **CHẶNG 1 — Làm chủ bộ hợp âm, vòng hòa âm và màu sắc hòa âm**
 | Buổi | Ngày (thứ Năm) | Ghi chú |
 |---|---|---|
-| 01–04 | 07/01 · 14/01 · 21/01 · 28/01/2027 | |
-| ~~05–06~~ | ~~04/02 · 11/02~~ | **BỎ QUA — Tết Nguyên Đán** (dự kiến, chờ công bố chính thức) |
-| 05–08 | 18/02 · 25/02 · 04/03 · 11/03/2027 | lịch dời sang sau Tết |
-| Nghỉ | 18/03 · 25/03/2027 | Nghỉ giữa chặng — tự luyện & hoàn thiện sản phẩm |
+| 01–08 | 10/09 · 17/09 · 24/09 · 01/10 · 08/10 · 15/10 · 22/10 · 29/10/2026 | |
+| Nghỉ | 05/11 · 12/11/2026 | Nghỉ giữa chặng — tự luyện & hoàn thiện sản phẩm |
 
 **CHẶNG 2 — Làm chủ khuôn hình và phát triển giai điệu**
 | Buổi | Ngày |
 |---|---|
-| 09–16 | 01/04 · 08/04 · 15/04 · 22/04 · 29/04 · 06/05 · 13/05 · 20/05/2027 |
-| Nghỉ | 27/05 · 03/06/2027 |
+| 09–16 | 19/11 · 26/11 · 03/12 · 10/12 · 17/12 · 24/12 · 31/12/2026 · 07/01/2027 |
+| Nghỉ | 14/01 · 21/01/2027 |
 
 **CHẶNG 3 — Làm chủ điệu đệm, tiết tấu và phát triển bài hát**
-| Buổi | Ngày |
-|---|---|
-| 17–24 | 10/06 · 17/06 · 24/06 · 01/07 · 08/07 · 15/07 · 22/07 · 29/07/2027 |
-| Nghỉ | 05/08 · 12/08/2027 |
-
-**CHẶNG 4 — Solo Guitar: kết hợp giai điệu, bass và hòa âm**
 | Buổi | Ngày | Ghi chú |
 |---|---|---|
-| 25–26 | 19/08 · 26/08/2027 | |
-| ~~27~~ | ~~02/09~~ | **BỎ QUA — Quốc khánh 2/9** (thứ Năm) |
-| 27–32 | 09/09 · 16/09 · 23/09 · 30/09 · 07/10 · 14/10/2027 | dời sang tuần sau |
-| Nghỉ | 21/10 · 28/10/2027 | |
+| 17 | 28/01/2027 | |
+| ~~18–19~~ | ~~04/02 · 11/02~~ | **BỎ QUA — Tết Nguyên Đán** (Mùng 1 = 06/02/2027, dự kiến) |
+| 18–24 | 18/02 · 25/02 · 04/03 · 11/03 · 18/03 · 25/03 · 01/04/2027 | lịch dời sang sau Tết |
+| Nghỉ | 08/04 · 15/04/2027 | |
+
+**CHẶNG 4 — Solo Guitar: kết hợp giai điệu, bass và hòa âm**
+| Buổi | Ngày |
+|---|---|
+| 25–32 | 22/04 · 29/04 · 06/05 · 13/05 · 20/05 · 27/05 · 03/06 · 10/06/2027 |
+| Nghỉ | 17/06 · 24/06/2027 |
 
 **CHẶNG 5 — Solo Guitar: xây dựng và hoàn thiện tác phẩm**
 | Buổi | Ngày |
 |---|---|
-| 33–40 | 04/11 · 11/11 · 18/11 · 25/11 · 02/12 · 09/12 · 16/12 · 23/12/2027 |
+| 33–40 | 01/07 · 08/07 · 15/07 · 22/07 · 29/07 · 05/08 · 12/08 · **19/08/2027** |
 
-**Ngày kết thúc dự kiến: Thứ Năm 23/12/2027.** (Không có nghỉ sau chặng 5.)
+**Ngày kết thúc: Thứ Năm 19/08/2027.** (Không có nghỉ sau chặng 5.)
 
-### 4.3. Ngày lễ/ngày khóa sẽ ghi vào lịch chung (`class_off_days`, dự kiến 2027)
-- 01/01/2027 — Tết Dương lịch (thứ Sáu, không trùng thứ Năm).
-- **01/02 – 14/02/2027 — Tết Nguyên Đán** (Mùng 1 = 06/02/2027, thứ Bảy; chặn cả 2 thứ Năm 04/02 & 11/02. *Dự kiến — chờ công bố chính thức, admin chỉnh được.*)
-- 16/04/2027 — Giỗ Tổ Hùng Vương (10/3 AL = thứ Sáu, không trùng).
-- 30/04 & 01/05/2027 — Giải phóng + Quốc tế Lao động (T6/T7, không trùng).
-- **02/09/2027 — Quốc khánh (thứ Năm → bỏ qua buổi 27).**
+### 4.3. Ngày lễ/ngày khóa trong lịch chung (`class_off_days`)
+- **2026 (đã qua, không ảnh hưởng lịch từ 10/09):** Tết Nguyên Đán 2026 (Mùng 1 = 17/02/2026), Giỗ Tổ 26/04, 30/04, 01/05, 02/09/2026.
+- **2027:**
+  - 01/01/2027 — Tết Dương lịch (thứ Sáu, không trùng thứ Năm).
+  - **01/02 – 14/02/2027 — Tết Nguyên Đán** (Mùng 1 = 06/02/2027, thứ Bảy; chặn cả 2 thứ Năm 04/02 & 11/02. *Dự kiến — chờ công bố chính thức, admin chỉnh được.*)
+  - 16/04/2027 — Giỗ Tổ Hùng Vương (10/3 AL = thứ Sáu, không trùng).
+  - 30/04 & 01/05/2027 — Giải phóng + Quốc tế Lao động (T6/T7, không trùng).
+  - 02/09/2027 — Quốc khánh (thứ Năm, NHƯNG ngoài phạm vi lịch — kết thúc 19/08/2027).
 
 ## 5. Giải pháp kỹ thuật (dùng đúng hệ lịch hiện tại)
 
@@ -137,4 +137,4 @@ Mở rộng `generateSessions()` với tham số tuỳ chọn `breaksAfter` + `s
 
 **Còn chờ Thầy:** duyệt lịch (mục 4) → chạy migration → chạy seed → deploy Netlify.
 
-⚠️ Ghi chú: trong lúc làm, máy có một số file bị sửa bởi tiến trình khác (Claude Code?): `GuitarBoard/GuitarTuner/MobileStudentPortal/SongBuilderPage/TapTempoTool` — KHÔNG liên quan task này, em không đụng vào; khi commit chỉ lấy các file của task.
+⚠️ **Lưu ý vận hành:** 8 buổi đầu (17/09 → 29/10/2026) trùng khung thứ Năm 20h30 với lớp **TN3.GL13** (17/09 → 05/11/2026) đang chạy — Thầy xử lý lịch lớp đó riêng nếu cần.
