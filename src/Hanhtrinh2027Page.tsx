@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { HT2027, HT2027_STAGES, HT2027_PROGRESSION, HT2027_ELIGIBLE_CODES } from './data/ht2027Program'
-import { generateSessions, type SessionRow } from './journey/sessions'
+import { generateSessions, fmtDMY, type SessionRow } from './journey/sessions'
 
 const P = {
   bg: '#F7F5FC', surface: '#FFFFFF', ink: '#1D1930', inkSoft: '#3E3952', inkFaint: '#6A6580',
@@ -33,8 +33,19 @@ const ymdOf = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.ge
 const fmtDM = (d: Date) => `${p2(d.getDate())}/${p2(d.getMonth() + 1)}`
 const WEEKDAY_VI = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
 
-interface ProgClass { id: string; code: string | null; name: string; start_date: string | null; start_time: string | null; timezone: string | null; total_sessions: number; status: string | null }
+interface ProgClass { id: string; code: string | null; name: string; start_date: string | null; start_time: string | null; timezone: string | null; duration_minutes: number | null; total_sessions: number; status: string | null }
 interface OffDay { off_date: string; reason: string | null; source: string | null }
+interface Pkg { package_code: string; name: string; description: string | null; config: { price_vnd?: number; unit?: string; total_sessions?: number | null; min_commit_months?: number | null; highlight?: boolean } | null }
+
+// Thứ tự hiển thị 3 cách học (đọc từ bảng packages — nguồn chuẩn giá của Class)
+const PACKAGE_ORDER = ['HT2027_MONTHLY', 'HT2027_STAGE', 'HT2027_SIXMONTH']
+
+// Cộng phút vào 'HH:MM' → 'HH:MM' (giờ địa phương, không đổi timezone)
+const addMinutes = (hm: string, mins: number): string => {
+  const [hh, mm] = (hm || '0:0').split(':').map(Number)
+  const t = (hh || 0) * 60 + (mm || 0) + (mins || 0)
+  return `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
+}
 
 interface TimelineEntry {
   kind: 'lesson' | 'break' | 'off'
@@ -83,7 +94,7 @@ function devFixture(): { cls: ProgClass; sessions: SessionRow[]; offDays: OffDay
     { breaksAfter: HT2027.breaksAfter, skipDates: offDates },
   ).map(s => ({ session_number: s.session_number, start_at: s.start_at, status: s.event_type === 'break' ? 'holiday' : 'scheduled', event_type: s.event_type }))
   return {
-    cls: { id: 'dev', code: HT2027.classCode, name: HT2027.name, start_date: HT2027.proposedStartDate, start_time: HT2027.startTime, timezone: HT2027.timezone, total_sessions: HT2027.totalSessions, status: 'scheduled' },
+    cls: { id: 'dev', code: HT2027.classCode, name: HT2027.name, start_date: HT2027.proposedStartDate, start_time: HT2027.startTime, timezone: HT2027.timezone, duration_minutes: HT2027.durationMinutes, total_sessions: HT2027.totalSessions, status: 'scheduled' },
     sessions,
     offDays: offDates.map(d => ({ off_date: d, reason: d === '2027-09-02' ? 'Quốc khánh 2/9' : 'Tết Nguyên Đán (dự kiến)', source: d === '2027-09-02' ? 'official' : 'tet' })),
   }
@@ -93,6 +104,7 @@ export default function Hanhtrinh2027Page() {
   const [cls, setCls] = useState<ProgClass | null>(null)
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [offDays, setOffDays] = useState<OffDay[]>([])
+  const [pkgs, setPkgs] = useState<Pkg[]>([])
   const [loading, setLoading] = useState(true)
   const [isDevFixture, setIsDevFixture] = useState(false)
   const [me, setMe] = useState<{ htMember: boolean; eligible: string[] } | null>(null)
@@ -106,13 +118,14 @@ export default function Hanhtrinh2027Page() {
     ;(async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        const { data: clsRow } = await supabase.from('class_schedule').select('id,code,name,start_date,start_time,timezone,total_sessions,status')
+        const { data: clsRow } = await supabase.from('class_schedule').select('id,code,name,start_date,start_time,timezone,duration_minutes,total_sessions,status')
           .eq('program_code', HT2027.programCode).maybeSingle()
         const clsData: ProgClass | null = clsRow
-          ?? (await supabase.from('class_schedule').select('id,code,name,start_date,start_time,timezone,total_sessions,status')
+          ?? (await supabase.from('class_schedule').select('id,code,name,start_date,start_time,timezone,duration_minutes,total_sessions,status')
             .eq('code', HT2027.classCode).maybeSingle()).data
         let sessionsData: SessionRow[] = []
         let offData: OffDay[] = []
+        let pkgData: Pkg[] = []
         if (clsData) {
           const [sessRes, offRes] = await Promise.all([
             supabase.from('class_sessions').select('session_number,start_at,status,event_type,title').eq('class_id', clsData.id).order('start_at'),
@@ -121,13 +134,16 @@ export default function Hanhtrinh2027Page() {
           sessionsData = (sessRes.data ?? []) as SessionRow[]
           offData = (offRes.data ?? []) as OffDay[]
         }
+        // Học phí / cách tham gia — đọc từ bảng packages (nguồn chuẩn giá của Class)
+        const pkgRes = await supabase.from('packages').select('package_code,name,description,config').in('package_code', PACKAGE_ORDER)
+        pkgData = ((pkgRes.data ?? []) as Pkg[]).sort((a, b) => PACKAGE_ORDER.indexOf(a.package_code) - PACKAGE_ORDER.indexOf(b.package_code))
         let finalCls = clsData, finalSess = sessionsData, finalOff = offData
         if (!finalCls || !finalSess.length) {
           const fx = devFixture()
           if (fx) { finalCls = fx.cls; finalSess = fx.sessions; finalOff = fx.offDays; setIsDevFixture(true) }
         }
         if (cancelled) return
-        setCls(finalCls); setSessions(finalSess); setOffDays(finalOff)
+        setCls(finalCls); setSessions(finalSess); setOffDays(finalOff); setPkgs(pkgData)
         if (session?.user) {
           const stuRes = await supabase.from('edu_students').select('id,ht_member').eq('user_id', session.user.id).maybeSingle()
           const stu = stuRes.data as { id: string; ht_member: boolean } | null
@@ -147,8 +163,13 @@ export default function Hanhtrinh2027Page() {
   }, [])
 
   const timeline = useMemo(() => buildTimeline(cls ?? ({} as ProgClass), sessions, offDays), [cls, sessions, offDays])
+  // Buổi học thật (không tính nghỉ) — nguồn: class_sessions, sort theo start_at
+  const lessons = useMemo(() => [...sessions].filter(s => s.event_type !== 'break').sort((a, b) => a.start_at.localeCompare(b.start_at)), [sessions])
+  const firstLesson = lessons[0]
+  const lastLesson = lessons[lessons.length - 1]
   const startTime = cls?.start_time?.slice(0, 5) ?? '20:30'
-  const lastLesson = [...sessions].filter(s => s.event_type !== 'break').sort((a, b) => a.start_at.localeCompare(b.start_at)).pop()
+  const endTime = addMinutes(startTime, cls?.duration_minutes ?? 90)
+  const startDateLabel = cls?.start_date ? fmtDMY(cls.start_date) : 'ngày sắp công bố'
 
   const cta = !me ? 'anon' : me.htMember ? 'member' : me.eligible.length ? 'eligible' : 'other'
   const eligibleName = me?.eligible.map(c => c === 'DH2' ? 'Đệm hát 2' : c === 'TN2' ? 'Tỉa nốt 2' : c).join(' / ')
@@ -194,8 +215,8 @@ export default function Hanhtrinh2027Page() {
               một tác phẩm Solo Guitar.
             </p>
             <div className="ht2027-timechip">
-              <span className="ht2027-timechip-big">20h30</span>
-              <span className="ht2027-timechip-sub">tối <b>thứ Năm</b> hằng tuần · Giờ Việt Nam (GMT+7)</span>
+              <span className="ht2027-timechip-big">{startTime} – {endTime}</span>
+              <span className="ht2027-timechip-sub">tối <b>thứ Năm</b> hằng tuần · Bắt đầu từ <b>{startDateLabel}</b></span>
             </div>
             <p className="ht2027-lead tight">
               Không gian học sinh cùng luyện đàn, ứng dụng kiến thức vào bài hát thật — được Thầy hướng dẫn,
@@ -284,8 +305,8 @@ export default function Hanhtrinh2027Page() {
           ) : (
             <>
               <div className="ht2027-sched-meta">
-                <span>🕗 {startTime} · tối thứ Năm hằng tuần · Giờ Việt Nam (GMT+7)</span>
-                {lastLesson && <span>🗓 Buổi 1: {fmtDM(new Date(sessions[0].start_at))} → Buổi {HT2027.totalSessions}: {fmtDM(new Date(lastLesson.start_at))}</span>}
+                <span>🕗 {startTime} – {endTime} · tối thứ Năm hằng tuần · Giờ Việt Nam (GMT+7)</span>
+                {firstLesson && lastLesson && <span>🗓 Buổi 1: {fmtDMY(ymdOf(new Date(firstLesson.start_at)))} → Buổi {lastLesson.session_number}: {fmtDMY(ymdOf(new Date(lastLesson.start_at)))}</span>}
               </div>
               {isDevFixture && <div className="ht2027-devnote">⚙ Dữ liệu mẫu chế độ dev — chưa phải lịch thật trên hệ thống.</div>}
 
@@ -373,58 +394,99 @@ export default function Hanhtrinh2027Page() {
         {/* ── ĐỐI TƯỢNG THAM GIA ── */}
         <section className="ht2027-band">
           <div className="ht2027-wrap">
-            <div className="ht2027-eyebrow">Ai được tham gia</div>
+            <div className="ht2027-eyebrow">Lớp này phù hợp với ai?</div>
+            <h2>Dành cho người đã có nền tảng guitar</h2>
             <ul className="ht2027-who">
-              <li>🎓 Học sinh đã đăng ký <b>Hành trình 2027</b></li>
-              <li>🎸 Học sinh đã tốt nghiệp <b>Đệm hát 2</b></li>
-              <li>🎼 Học sinh đã tốt nghiệp <b>Tỉa nốt 2</b></li>
+              <li>🎓 <b>Học viên Hành trình 2027</b> — 40 buổi thực hành này đã nằm trong quyền lợi của bạn.</li>
+              <li>🎸 Học viên đã học xong khoảng <b>Đệm hát 2</b> trở lên.</li>
+              <li>🎼 Học viên đã học xong khoảng <b>Tỉa nốt 2</b> trở lên.</li>
             </ul>
             <div className="ht2027-note">
-              Đây <b>không phải</b> lớp dành cho người mới bắt đầu — bấm hợp âm, chuyển hợp âm, giữ nhịp,
-              chơi giai điệu đơn giản là năng lực đầu vào. Chương trình đưa bạn đến sự chủ động:
-              chọn hòa âm, phát triển giai điệu, điều khiển tiết tấu và hoàn thiện tác phẩm Solo Guitar.
+              Chương trình được thiết kế cho người đã biết bấm hợp âm, chuyển hợp âm, giữ nhịp và chơi
+              giai điệu đơn giản — từ đó đưa bạn đến sự chủ động: chọn hòa âm, phát triển giai điệu,
+              điều khiển tiết tấu và hoàn thiện tác phẩm Solo Guitar.
+              Nếu bạn chưa chắc trình độ của mình, cứ nhắn Thầy — Thầy sẽ tư vấn lớp phù hợp nhất.
             </div>
           </div>
         </section>
+
+        {/* ── HỌC PHÍ / CÁCH THAM GIA — đọc từ bảng packages (ẩn với học viên HT đã có quyền) ── */}
+        {cta !== 'member' && (
+          <section id="pricing" className="ht2027-wrap ht2027-pricing">
+            <div className="ht2027-eyebrow">Học phí &amp; cách tham gia</div>
+            <h2>CHỌN CÁCH HỌC PHÙ HỢP VỚI BẠN</h2>
+            <p className="ht2027-pricing-intro">
+              Chương trình 40 buổi thực hành mở cho học viên các lớp — bạn có thể linh hoạt chọn cách học của mình.
+            </p>
+            {pkgs.length === 0 ? (
+              <div className="ht2027-empty">Học phí sẽ được công bố tại đây — nhắn Thầy qua Zalo để được tư vấn.</div>
+            ) : (
+              <div className="ht2027-price-grid">
+                {pkgs.map(pkg => {
+                  const cfg = pkg.config ?? {}
+                  const price = cfg.price_vnd ?? 0
+                  const priceLabel = price >= 1000000
+                    ? `${(price / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 3 })}.000đ`
+                    : `${price.toLocaleString('vi-VN')}đ`
+                  return (
+                    <div key={pkg.package_code} className={`ht2027-price-card${cfg.highlight ? ' hot' : ''}`}>
+                      {cfg.highlight && <span className="ht2027-price-badge">Phổ biến</span>}
+                      <div className="ht2027-price-name">{pkg.name}</div>
+                      <div className="ht2027-price-amount">{priceLabel}<span className="ht2027-price-unit"> / {cfg.unit}</span></div>
+                      <div className="ht2027-price-desc">{pkg.description}</div>
+                      <a className="ht2027-btn primary ht2027-price-cta" href={ZALO_LINK} target="_blank" rel="noreferrer">
+                        Đăng ký qua Zalo
+                      </a>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div className="ht2027-pricing-foot">
+              Học viên <b>Hành trình 2027</b> không cần đăng ký thêm — 40 buổi thực hành đã có sẵn trong chương trình của bạn.
+            </div>
+          </section>
+        )}
 
         {/* ── CTA theo quyền tham gia thật ── */}
         <section className="ht2027-wrap ht2027-cta">
           {cta === 'anon' && (
             <div className="ht2027-cta-card">
-              <div className="ht2027-cta-title">Bạn là học viên của Thầy?</div>
-              <p>Đăng nhập để xem quyền tham gia chương trình của bạn. Lịch hiển thị cho mọi người; quyền tham gia theo lớp/gói của bạn.</p>
+              <div className="ht2027-cta-title">Đăng ký tham gia</div>
+              <p>Nhắn Thầy qua Zalo để chọn cách học phù hợp — Thầy sẽ hướng dẫn bạn từng bước. Nếu bạn đã là học viên của Thầy, hãy đăng nhập để xem quyền lợi của mình.</p>
               <div className="ht2027-cta-btns">
-                <a className="ht2027-btn primary" href="/start">Đăng nhập / Vào cổng học →</a>
-                <a className="ht2027-btn ghost" href={ZALO_LINK} target="_blank" rel="noreferrer">Hỏi Thầy qua Zalo</a>
+                <a className="ht2027-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">Đăng ký tham gia →</a>
+                <a className="ht2027-btn ghost" href="/start">Đăng nhập nếu bạn đã là học viên</a>
               </div>
             </div>
           )}
           {cta === 'member' && (
             <div className="ht2027-cta-card">
-              <div className="ht2027-cta-title">🎓 Bạn là học viên Hành trình 2027</div>
-              <p>40 buổi thực hành nằm trong chương trình của bạn. Lịch chi tiết ở phía trên — mọi cập nhật chính thức đều hiển thị trực tiếp trên hệ thống Class.</p>
+              <div className="ht2027-cta-title">🎓 Bạn đã có quyền tham gia 40 buổi thực hành này trong Hành trình 2027.</div>
+              <p>Không cần đăng ký thêm — lịch chi tiết ở phía trên, mọi cập nhật chính thức đều hiển thị trực tiếp trên hệ thống Class.</p>
               <div className="ht2027-cta-btns">
-                <a className="ht2027-btn primary" href="/start">Vào cổng học →</a>
-                <a className="ht2027-btn ghost" href={ZALO_LINK} target="_blank" rel="noreferrer">Nhắn Thầy qua Zalo</a>
+                <a className="ht2027-btn primary" href="/start">Vào Class →</a>
+                <a className="ht2027-btn ghost" href="#lich">Xem lịch học</a>
               </div>
             </div>
           )}
           {cta === 'eligible' && (
             <div className="ht2027-cta-card">
-              <div className="ht2027-cta-title">✓ Bạn đủ điều kiện tham gia</div>
-              <p>Bạn đã có quyền học <b>{eligibleName}</b> — thuộc nhóm học viên tốt nghiệp được mời vào chương trình thực hành. Nhắn Thầy để được ghi danh buổi thực hành.</p>
+              <div className="ht2027-cta-title">✓ Bạn đã đủ điều kiện tham gia</div>
+              <p>Bạn đã có quyền học <b>{eligibleName}</b> — thuộc nhóm nền tảng phù hợp với chương trình thực hành này. Chọn cách học ở phía trên và nhắn Thầy để được ghi danh.</p>
               <div className="ht2027-cta-btns">
-                <a className="ht2027-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">Nhắn Thầy để ghi danh</a>
+                <a className="ht2027-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">Đăng ký tham gia →</a>
+                <a className="ht2027-btn ghost" href="#pricing">Xem học phí</a>
               </div>
             </div>
           )}
           {cta === 'other' && (
             <div className="ht2027-cta-card">
-              <div className="ht2027-cta-title">Chương trình dành cho ai?</div>
-              <p>40 buổi thực hành dành cho học viên <b>Hành trình 2027</b> và học viên tốt nghiệp <b>Đệm hát 2</b> hoặc <b>Tỉa nốt 2</b>. Nếu bạn chưa thuộc nhóm này, hãy hỏi Thầy để chọn lộ trình phù hợp.</p>
+              <div className="ht2027-cta-title">Đăng ký tham gia</div>
+              <p>40 buổi thực hành dành cho học viên đã có nền tảng (Hành trình 2027, Đệm hát 2 hoặc Tỉa nốt 2 trở lên). Nếu bạn chưa thuộc nhóm này, nhắn Thầy để được tư vấn lộ trình phù hợp.</p>
               <div className="ht2027-cta-btns">
                 <a className="ht2027-btn primary" href={ZALO_LINK} target="_blank" rel="noreferrer">Hỏi Thầy qua Zalo</a>
-                <a className="ht2027-btn ghost" href="/class#hanh-trinh">Tìm hiểu Hành trình 2027</a>
+                <a className="ht2027-btn ghost" href="#pricing">Xem học phí</a>
               </div>
             </div>
           )}
@@ -560,6 +622,22 @@ const CSS = `
 .ht2027-who li{font-size:15px;color:${P.ink};background:#fff;border:1px solid ${P.line};border-left:4px solid ${P.purple};border-radius:12px;padding:11px 15px;}
 .ht2027-who li b{color:${P.purple};}
 .ht2027-note{font-size:13.5px;color:${P.inkSoft};background:${P.purpleTint};border-radius:12px;padding:13px 15px;line-height:1.7;}
+
+/* học phí / cách tham gia */
+.ht2027-pricing{padding:44px 0 8px;}
+.ht2027-pricing-intro{font-size:14.5px;color:${P.inkSoft};line-height:1.7;margin-bottom:18px;max-width:600px;}
+.ht2027-price-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.ht2027-price-card{position:relative;background:#fff;border:1.5px solid ${P.line};border-radius:16px;padding:20px 18px;display:flex;flex-direction:column;}
+.ht2027-price-card.hot{border-color:${P.purple};box-shadow:0 6px 22px rgba(67,56,202,.12);}
+.ht2027-price-badge{position:absolute;top:-10px;right:14px;background:${P.purple};color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 10px;}
+.ht2027-price-name{font-size:14.5px;font-weight:700;color:${P.ink};margin-bottom:6px;}
+.ht2027-price-amount{font-size:clamp(22px,3.4vw,30px);font-weight:900;color:${P.purple};line-height:1.1;letter-spacing:-.02em;white-space:nowrap;}
+.ht2027-price-unit{font-size:14px;font-weight:600;color:${P.inkFaint};letter-spacing:0;}
+.ht2027-price-desc{font-size:13px;color:${P.inkSoft};line-height:1.6;margin:10px 0 16px;flex:1;}
+.ht2027-price-cta{display:block;text-align:center;padding:11px 14px;font-size:13.5px;}
+.ht2027-pricing-foot{margin-top:16px;font-size:13px;color:${P.inkFaint};text-align:center;}
+.ht2027-pricing-foot b{color:${P.inkSoft};}
+@media(max-width:700px){.ht2027-price-grid{grid-template-columns:1fr;}.ht2027-price-card{padding:18px 16px;}}
 
 /* CTA */
 .ht2027-cta{padding:44px 0;}
