@@ -209,7 +209,7 @@ export default function ClassLandingPage() {
   useEffect(() => {
     const TRACK_VI: Record<string, string> = { dem_hat: 'Đệm hát', tia_not: 'Tỉa nốt', nhac_ly: 'Nhạc lý', nhap_mon: 'Nhập môn', solo: 'Solo', cam_am: 'Cảm âm' }
     Promise.all([
-      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,main_course_id,is_active,sort_order,start_date,end_date,status').eq('is_active', true).order('sort_order').order('created_at'),
+      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,course_ids,main_course_id,is_active,sort_order,start_date,end_date,status').eq('is_active', true).eq('show_on_practice_schedule', false).order('sort_order').order('created_at'),
       supabase.from('edu_courses').select('id,name,track,code'),
     ]).then(([{ data: rows }, { data: cs }]) => {
       const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })

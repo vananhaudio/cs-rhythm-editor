@@ -11,6 +11,14 @@ import DemandsBoard from './journey/DemandsBoard'
 import OffersBoard from './journey/OffersBoard'
 import MiraPlanner from './journey/MiraPlanner'
 import AiAssistant from './AiAssistant'
+import TopicBoard from './journey/TopicBoard'
+
+// Nhãn bậc thực hành Class 2.0 (hiển thị)
+const STAGE_LABEL: Record<string, string> = {
+  co_ban: 'Cơ bản',
+  phat_trien: 'Phát triển',
+  nang_cao: 'Nâng cao',
+}
 
 const S = {
   accent: '#2D6A4F', accentLight: '#E9F3EC', surface: '#FFFFFF', bg: '#F4F4F5',
@@ -34,6 +42,8 @@ interface Cls {
   duration_minutes: number; total_sessions: number; end_date: string | null; status: string
   // ── HT2027: chương trình (nghỉ giữa chặng + mã chương trình + múi giờ) ──
   program_code: string | null; breaks_after: number[] | null; timezone: string | null
+  // ── Class 2.0: nhóm THỰC HÀNH (hiện trên /azz) ──
+  show_on_practice_schedule: boolean; stage: string | null; practice_type: string | null; metadata: Record<string, unknown>
 }
 interface Course { id: string; name: string; code: string | null }
 interface Grp { id: string; name: string; code: string | null; zalo_url: string | null }
@@ -43,6 +53,8 @@ const blank = (): Cls => ({
   price: '990k', course_ids: [], main_course_id: null, group_id: null, zoom_url: '', sort_order: 0, is_active: true,
   start_date: null, weekday: null, start_time: '19:00', duration_minutes: 90, total_sessions: 8, end_date: null, status: 'upcoming',
   program_code: null, breaks_after: null, timezone: 'Asia/Ho_Chi_Minh',
+  stage: null, practice_type: null, metadata: {},
+  show_on_practice_schedule: false,
 })
 
 export default function ScheduleManager() {
@@ -55,8 +67,9 @@ export default function ScheduleManager() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [sessById, setSessById] = useState<Record<string, SessionRow[]>>({})  // buổi theo lớp
-  const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'demands' | 'offers' | 'mira' | 'dashboard'>('list')
+  const [view, setView] = useState<'list' | 'calendar' | 'journey' | 'demands' | 'offers' | 'mira' | 'dashboard' | 'topics'>('list')
   const [demandCount, setDemandCount] = useState(0)  // nhu cầu đang chờ (badge tab)
+  const [topicCount, setTopicCount] = useState(0)    // chủ đề hỗ trợ đang chờ (badge tab)
 
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
@@ -74,6 +87,7 @@ export default function ScheduleManager() {
   // đếm nhu cầu đang chờ (badge tab) — làm mới khi đổi tab để phản ánh thay đổi
   useEffect(() => {
     supabase.from('class_demands').select('id', { count: 'exact', head: true }).eq('status', 'waiting').then(({ count }) => setDemandCount(count ?? 0))
+    supabase.from('practice_topic_interests').select('id', { count: 'exact', head: true }).eq('status', 'new').then(({ count }) => setTopicCount(count ?? 0))
   }, [view])
 
   const mainCode = () => courses.find(c => c.id === form?.main_course_id)?.code ?? null   // mã năng lực khoá chính
@@ -140,6 +154,12 @@ export default function ScheduleManager() {
       program_code: form.program_code?.trim() || null,
       breaks_after: form.breaks_after?.length ? form.breaks_after : null,
       timezone: form.timezone || 'Asia/Ho_Chi_Minh',
+      // Nhóm thực hành Class 2.0 — show_on_practice_schedule là CỜ hiển thị (public /azz);
+      // stage/practice_type chỉ là mô tả sư phạm, ĐỘC LẬP với cờ.
+      show_on_practice_schedule: form.show_on_practice_schedule,
+      stage: form.stage || null,
+      practice_type: form.practice_type?.trim() || null,
+      metadata: form.metadata || {},
     }
     let classId = form.id
     if (form.id) {
@@ -191,6 +211,7 @@ export default function ScheduleManager() {
   const TABS: { v: typeof view; l: string }[] = [
     { v: 'list', l: '📋 Danh sách' }, { v: 'calendar', l: '📅 Lịch' },
     { v: 'journey', l: '🗺 Bản đồ' }, { v: 'demands', l: '📥 Nhu cầu' },
+    { v: 'topics', l: '🧩 Chủ đề hỗ trợ' },
     { v: 'offers', l: '🎁 Ưu đãi' }, { v: 'mira', l: '🧭 Mira' }, { v: 'dashboard', l: '📊 Chỉ số' },
   ]
 
@@ -222,6 +243,9 @@ export default function ScheduleManager() {
               {t.v === 'demands' && demandCount > 0 && (
                 <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#fff', background: S.accent, borderRadius: 9, padding: '1px 7px' }}>{demandCount}</span>
               )}
+              {t.v === 'topics' && topicCount > 0 && (
+                <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 800, color: '#fff', background: '#7C3AED', borderRadius: 9, padding: '1px 7px' }}>{topicCount}</span>
+              )}
             </button>
           ))}
         </div>
@@ -232,6 +256,7 @@ export default function ScheduleManager() {
         {!form && view === 'calendar' && <CalendarWeek classes={classLite} sessById={sessById} onChanged={load} />}
         {!form && view === 'journey' && <JourneyMap courses={courses} classes={classLite} sessById={sessById} />}
         {!form && view === 'demands' && <DemandsBoard courses={courses} onCreateDraft={createDraftFor} />}
+        {!form && view === 'topics' && <TopicBoard />}
         {!form && view === 'offers' && <OffersBoard courses={courses} />}
         {!form && view === 'mira' && (<>
           {/* Chat với Mira — nói chuyện là xếp được lịch: Mira đề xuất lớp → thầy duyệt → tự tạo lớp + buổi + nhóm Zalo */}
@@ -280,6 +305,34 @@ export default function ScheduleManager() {
               <div><label style={lbl}>Khai giảng</label><input style={inp} value={form.start_text ?? ''} onChange={e => set({ start_text: e.target.value })} placeholder="07/07/2026" /></div>
               <div><label style={lbl}>Thời lượng</label><input style={inp} value={form.duration ?? ''} onChange={e => set({ duration: e.target.value })} placeholder="8 buổi · 90 phút" /></div>
               <div><label style={lbl}>Học phí</label><input style={inp} value={form.price ?? ''} onChange={e => set({ price: e.target.value })} placeholder="990k / Combo" /></div>
+
+              {/* ── NHÓM THỰC HÀNH Class 2.0 (hiện trên /azz) ── */}
+              <div style={{ gridColumn: '1 / 3', border: `1px solid ${S.border}`, borderRadius: 10, padding: 12, background: '#FAFAFA' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13.5, fontWeight: 800, color: S.text1 }}>
+                  <input type="checkbox" checked={form.show_on_practice_schedule} onChange={e => set({ show_on_practice_schedule: e.target.checked })} style={{ cursor: 'pointer' }} />
+                  🎸 Hiển thị trong lịch thực hành Class
+                </label>
+                <div style={{ fontSize: 12, color: S.text3, marginTop: 3 }}>Bật → nhóm này xuất hiện trên /azz (lịch thực hành công khai). KHÔNG seed lịch — Admin tự bật/tạo.</div>
+                {form.show_on_practice_schedule && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                    <div><label style={lbl}>Bậc (stage — sư phạm)</label>
+                      <select style={inp} value={form.stage ?? ''} onChange={e => set({ stage: e.target.value || null })}>
+                        <option value="">— chọn bậc —</option>
+                        <option value="co_ban">Cơ bản</option>
+                        <option value="phat_trien">Phát triển</option>
+                        <option value="nang_cao">Nâng cao</option>
+                      </select>
+                    </div>
+                    <div><label style={lbl}>Loại thực hành (practice type)</label>
+                      <input style={inp} value={form.practice_type ?? ''} onChange={e => set({ practice_type: e.target.value })} list="practice-types" placeholder="tia_not / dem_hat / nang_cao…" />
+                      <datalist id="practice-types">
+                        <option value="tia_not" /><option value="dem_hat" /><option value="cam_am" /><option value="solo" /><option value="nhac_ly" /><option value="tong_hop" /><option value="nang_cao" />
+                      </datalist>
+                    </div>
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: S.text3, marginTop: 8 }}>Thứ trong tuần, bậc và cờ hiển thị là các khái niệm ĐỘC LẬP. Nhóm chương trình (vd HT2027) muốn dùng chung cho Class: chỉ cần bật cờ này + chọn bậc — KHÔNG tạo nhóm/buổi trùng.</div>
+              </div>
 
               {/* ── LỊCH THẬT — tự sinh buổi ── */}
               <div style={{ gridColumn: '1 / 3', border: `1px solid ${S.border}`, borderRadius: 10, padding: 12, background: '#FAFAFA' }}>
@@ -386,6 +439,9 @@ export default function ScheduleManager() {
                       })()}
                       <span style={{ fontSize: 11, fontWeight: 600, color: statusInfo(r.status).c }}>{statusInfo(r.status).l}</span>
                       {!r.is_active && <span style={{ fontSize: 11, color: S.text3, fontWeight: 500 }}>· ẩn</span>}
+                      {r.show_on_practice_schedule && (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#7C3AED', background: '#F3E8FF', borderRadius: 5, padding: '1px 7px' }}>🎸 Lịch thực hành{r.stage ? ` · ${STAGE_LABEL[r.stage]}` : ''}{r.practice_type ? ` · ${r.practice_type}` : ''}</span>
+                      )}
                     </div>
                     <div style={{ fontSize: 13, color: S.text2, marginTop: 3 }}>
                       {SECTIONS.find(s => s.v === r.section)?.l}{r.schedule ? ` · ${r.schedule}` : ''}{r.start_text ? ` · KG ${r.start_text}` : ''}{r.end_date ? ` → KT ${fmtDMY(r.end_date)}` : ''}{r.price ? ` · ${r.price}` : ''}
