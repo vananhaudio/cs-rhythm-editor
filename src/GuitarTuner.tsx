@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useAudioContextResume } from './useAudioContextResume';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,7 @@ function usePitchDetection() {
   const freqBufRef  = useRef<number[]>([]);
   const silenceRef  = useRef(0);
   const frameRef    = useRef(0);
+  useAudioContextResume(audioCtxRef);
 
   const stopListening = useCallback(() => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
@@ -262,7 +264,7 @@ function Gauge({ cents, note, octave, active, isInTune }: {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function GuitarTuner({ embedded = false }: { embedded?: boolean }) {
+export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { embedded?: boolean; onMeaningfulUse?: () => void }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [autoMode, setAutoMode]           = useState(false);
   const [tuneStatus, setTuneStatus]       = useState<TuneStatus>('waiting');
@@ -272,6 +274,7 @@ export default function GuitarTuner({ embedded = false }: { embedded?: boolean }
 
   const { pitch, isActive, error, startListening } = usePitchDetection();
   const selectedString = STRINGS[selectedIndex];
+  const meaningfulUseRef = useRef(false);
 
   const reset = () => { setTuneStatus('waiting'); setCents(null); setDetectedString(null); setDisplayFreq(null); };
 
@@ -281,6 +284,10 @@ export default function GuitarTuner({ embedded = false }: { embedded?: boolean }
   useEffect(() => {
     if (!isActive) return;
     if (pitch.frequency === null) { setTuneStatus('waiting'); setCents(null); setDisplayFreq(null); setDetectedString(null); return; }
+    if (!meaningfulUseRef.current) {
+      meaningfulUseRef.current = true;
+      onMeaningfulUse?.();
+    }
     const freq = pitch.frequency;
     setDisplayFreq(freq);
     const matched = identifyString(freq);
@@ -293,7 +300,7 @@ export default function GuitarTuner({ embedded = false }: { embedded?: boolean }
     const c = getCents(freq, target.freq);
     setCents(c);
     setTuneStatus(Math.abs(c) <= THRESHOLD ? 'inTune' : c < 0 ? 'tooLow' : 'tooHigh');
-  }, [pitch, isActive, selectedString, autoMode]);
+  }, [pitch, isActive, selectedString, autoMode, onMeaningfulUse]);
 
   // rung nhẹ khi vừa đạt chuẩn
   const prevStatus = useRef<TuneStatus>('waiting');

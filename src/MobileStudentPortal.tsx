@@ -10,6 +10,8 @@ import ChordDiagramIcon from './ChordDiagramIcon'
 import SongBuilderPage from './SongBuilderPage'
 import PianoJourney from './PianoJourney'
 import Metronome from './Metronome'
+import GuitarTuner from './GuitarTuner'
+import { TapWithSong } from './TapWithSong'
 import { QuizViewer } from './components/QuizViewer'
 import { isNativeIAP } from './iap'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
@@ -310,8 +312,8 @@ function CourseThumbCard({
   )
 }
 
-// ── Tool route map — dẫn đến đúng route theo id ──
-const TOOL_ROUTES: Record<string, string> = {
+// Fallback route chỉ dùng khi DB/admin chưa cấu hình route.
+const TOOL_ROUTE_FALLBACKS: Record<string, string> = {
   tap:           '/tempo',
   'tap-tempo':   '/tempo',
   'tap-beat':    '/tap',
@@ -323,6 +325,8 @@ const TOOL_ROUTES: Record<string, string> = {
   backing_track: '/tap',
   chord:         '/chords',
   tuner:         '/tuner',
+  guitarboard:   '/guitarboard',
+  'guitar-board': '/guitarboard',
   submit_video:  '/tap',
   ear:           '/tap',
   'piano-journey': '/piano-journey',
@@ -584,6 +588,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [showBMS, setShowBMS] = useState(false)
   const [showPiano, setShowPiano] = useState(false)
   const [showMetronome, setShowMetronome] = useState(false)
+  const [showTuner, setShowTuner] = useState(false)
+  const [showTapSong, setShowTapSong] = useState(false)
   const [metronomeBpm, setMetronomeBpm]   = useState<number | null>(null)
   const [bmsInit, setBmsInit] = useState<{ title?: string | null; youtube?: string | null; tempo?: string | null } | undefined>(undefined)
   // Tool ID của bài học đang mở exercise (để mark done khi đóng)
@@ -593,6 +599,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
   // ── Tool overlay — mở tool ngay trong app, không navigate ra ngoài ──
   const [activeTool, setActiveTool] = useState<{ name: string; url: string } | null>(null)
+  const [toolFrameState, setToolFrameState] = useState<'loading' | 'ready' | 'error'>('ready')
+  const [directToolId, setDirectToolId] = useState<string | null>(null)
   // Bước journey đang chờ xác nhận khi đóng tool (vd mở Tempo cho 1 bài → đóng xong đánh dấu bước 'tempo')
   const [pendingJourney, setPendingJourney] = useState<{ songId: string; stepId: string } | null>(null)
   // ── Track tool đã dùng trong bài hiện tại ──
@@ -637,10 +645,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     setShowBMS(false)
     setShowPiano(false)
     setShowMetronome(false)
+    setShowTuner(false)
+    setShowTapSong(false)
     setPendingJourney(null)
     setUsedToolIds(new Set())
     setLessonActions(new Set())
     setActionBusy(null)
+    setDirectToolId(null)
     setEnrollments([])
     setModules([])
     setLessons([])
@@ -741,8 +752,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     // Phần đuôi còn lại: làm tròn; nếu cả buổi chưa từng flush (<1') vẫn tính tối thiểu 1'
     let minutes = Math.round((Date.now() - lastFlushRef.current) / 60000)
     if (minutes < 1 && timerStart != null && lastFlushRef.current === timerStart) minutes = 1
-    await persistMinutes(exId, minutes)
     activeTimerRef.current = null; lastFlushRef.current = null
+    await persistMinutes(exId, minutes)
     setActiveTimer(null); setTimerStart(null); setTimerSeconds(0)
     // Mark lesson tool done nếu gọi từ bài học
     if (lessonToolId && activeLesson) {
@@ -774,6 +785,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   // Khoá lưu trạng thái tool đã thực hành theo từng học sinh + bài học
   const usedToolsKey = (lessonId: string) => `usedTools:${student.id}:${lessonId}`
 
+  const normalizeToolStatus = (tool: Partial<DBTool>) => tool.status ?? (tool.enabled ? 'on' : 'off')
+  const isToolVisible = (tool: Partial<DBTool>) => normalizeToolStatus(tool) !== 'off'
+  const resolveToolRoute = (tool: Pick<DBTool, 'id' | 'route'>) => {
+    const dbRoute = (tool.route ?? '').trim()
+    return dbRoute && dbRoute !== '#' ? dbRoute : (TOOL_ROUTE_FALLBACKS[tool.id] ?? '/tap')
+  }
+
   // Gộp tool bảng cứng (TOOLS_MAP) + bài luyện nội bộ + tool DB → mọi tool hợp lệ đều có thẻ thực hành
   const resolveTool = (tid: string): { label: string; icon: string; color: string; route: string } | null => {
     if (TOOLS_MAP[tid]) return TOOLS_MAP[tid]
@@ -784,7 +802,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       if (ex) return { label: ex.name, icon: ex.icon, color: ex.color, route: '#exercise:' + exId }
     }
     const db = dbTools.find(t => t.id === tid)
-    if (db) return { label: db.name, icon: db.icon, color: L.p1, route: db.route }
+    if (db) return { label: db.name, icon: db.icon, color: L.p1, route: resolveToolRoute(db) }
     return null
   }
 
@@ -794,12 +812,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     return next
   })
 
+  const markDirectToolMeaningfulUse = () => {
+    if (directToolId) markToolUsed(directToolId)
+  }
+
   const openTool = (route: string, name: string, toolId?: string) => {
+    setDirectToolId(toolId ?? null)
     // Piano Journey: render THẲNG như BMS. Bắt buộc phải thẳng, không iframe —
     // getUserMedia trong iframe của WKWebView (app iOS) hay bị chặn ⇒ mic chết.
     if (route.includes('/piano-journey')) {   // includes: bắt cả khi route là URL tuyệt đối
       setShowPiano(true)
-      if (toolId) markToolUsed(toolId)
       return
     }
     // Máy đập nhịp: render THẲNG (không iframe) → chỉ 1 header, hết "app chồng app".
@@ -808,7 +830,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       const t = parseInt(p.get('tempo') ?? '', 10)
       setMetronomeBpm(Number.isFinite(t) ? t : null)
       setShowMetronome(true)
-      if (toolId) markToolUsed(toolId)
+      return
+    }
+    if (route.includes('/tuner')) {
+      setShowTuner(true)
+      return
+    }
+    if (route.includes('/tap')) {
+      setShowTapSong(true)
       return
     }
     // BMS: render THẲNG (không iframe) → hết "app chồng app". Tham số truyền qua prop, không qua URL iframe.
@@ -816,7 +845,6 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       const p = new URLSearchParams(route.split('?')[1] ?? '')
       setBmsInit({ title: p.get('title'), youtube: p.get('youtube'), tempo: p.get('tempo') })
       setShowBMS(true)
-      if (toolId) markToolUsed(toolId)
       return
     }
     // Thêm embedded=1 để tool bên trong ẩn nút ✕ của mình (tránh 2 nút đóng)
@@ -824,12 +852,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     const embeddedRoute = route.startsWith('http') ? route : route + sep + 'embedded=1'
     const url = embeddedRoute.startsWith('http') ? embeddedRoute : window.location.origin + embeddedRoute
     setActiveTool({ name, url })
-    if (toolId) markToolUsed(toolId)
+    setDirectToolId(null)
+    setToolFrameState('loading')
   }
 
   // Đóng tool — nếu có bước journey đang chờ, đọc lại bài & đánh dấu bước nếu DỮ LIỆU xác nhận
   const closeTool = async () => {
     setActiveTool(null)
+    setToolFrameState('ready')
     const pj = pendingJourney
     setPendingJourney(null)
     if (!pj) return
@@ -844,6 +874,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       markStepDone(pj.songId, pj.stepId)
     }
   }
+
+  useEffect(() => {
+    if (!activeTool || toolFrameState !== 'loading') return
+    const t = window.setTimeout(() => setToolFrameState('error'), 12000)
+    return () => window.clearTimeout(t)
+  }, [activeTool, toolFrameState])
 
   const entitlementLoading = entitlementState.status === 'loading'
   const entitlementError = entitlementState.status === 'error' ? entitlementState.error : null
@@ -1010,13 +1046,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       supabase.from('edu_tools').select('*').order('order_index')
         .then(({ data }) => {
           const all = (data ?? []).map((t: any) => ({
-            ...t, status: t.status ?? (t.enabled ? 'on' : 'off'),
+            ...t, status: normalizeToolStatus(t),
           }))
-          setDbTools(all.filter((t: any) => t.status !== 'off' && t.category !== 'Bài luyện') as DBTool[])
+          setDbTools(all.filter((t: any) => isToolVisible(t) && t.category !== 'Bài luyện') as DBTool[])
           const exMap: Record<string, string> = {}
           Object.entries(EX_TOOL_ID).forEach(([exId, toolId]) => {
             const tool = all.find((t: any) => t.id === toolId)
-            exMap[exId] = tool?.status ?? 'on'
+            exMap[exId] = tool ? normalizeToolStatus(tool) : 'on'
           })
           setExerciseStatuses(exMap)
         })
@@ -1107,16 +1143,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     supabase.from('edu_tools').select('*').order('order_index')
       .then(({ data }) => {
         const all = (data ?? []).map((t: any) => ({
-          ...t, status: t.status ?? (t.enabled ? 'on' : 'off'),
+          ...t, status: normalizeToolStatus(t),
         }))
         // Công cụ thông thường: không phải 'off', không phải bài luyện
-        const regularTools = all.filter((t: any) => t.status !== 'off' && t.category !== 'Bài luyện')
+        const regularTools = all.filter((t: any) => isToolVisible(t) && t.category !== 'Bài luyện')
         setDbTools(regularTools as DBTool[])   // luôn gọi — kể cả khi rỗng (không dùng fallback)
         // Trạng thái bài luyện
         const exMap: Record<string, string> = {}
         Object.entries(EX_TOOL_ID).forEach(([exId, toolId]) => {
           const tool = all.find((t: any) => t.id === toolId)
-          exMap[exId] = tool?.status ?? 'on'
+          exMap[exId] = tool ? normalizeToolStatus(tool) : 'on'
         })
         setExerciseStatuses(exMap)
       })
@@ -1575,11 +1611,32 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     )}
 
     {showBMS && (
-      <SongBuilderPage embedded initial={bmsInit} onClose={() => setShowBMS(false)} />
+      <SongBuilderPage embedded initial={bmsInit} onClose={() => { setShowBMS(false); setDirectToolId(null) }} onMeaningfulUse={markDirectToolMeaningfulUse} />
     )}
 
     {showMetronome && (
-      <Metronome initialBpm={metronomeBpm} onClose={() => setShowMetronome(false)} />
+      <Metronome initialBpm={metronomeBpm} onClose={() => { setShowMetronome(false); setDirectToolId(null) }} onStart={markDirectToolMeaningfulUse} />
+    )}
+
+    {showTuner && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: L.bg, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top))', background: L.p1, flexShrink: 0 }}>
+          <button onClick={() => { setShowTuner(false); setDirectToolId(null) }}
+            style={{ background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 12, minWidth: 72, minHeight: 44, padding: '0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 16, color: '#fff', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', fontWeight: 600 }}>
+            ✕ <span style={{ fontSize: 14 }}>Đóng</span>
+          </button>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 16, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Tuner — Lên dây</span>
+        </div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 12px calc(24px + env(safe-area-inset-bottom))', boxSizing: 'border-box' }}>
+          <GuitarTuner embedded onMeaningfulUse={markDirectToolMeaningfulUse} />
+        </div>
+      </div>
+    )}
+
+    {showTapSong && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+        <TapWithSong onClose={() => { setShowTapSong(false); setDirectToolId(null) }} userRole={guest ? 'guest' : 'student'} onMeaningfulUse={markDirectToolMeaningfulUse} />
+      </div>
     )}
 
     {/* Trang con của tab Sống (Band · Cộng đồng · Đại hội · Nhóm lớp) */}
@@ -2654,7 +2711,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: comingTools.length ? 10 : 0 }}>
                     {activeTools.map((t) => {
                       const unlocked = !accessPending && isTierUnlocked(t.tier)
-                      const route = TOOL_ROUTES[t.id] ?? t.route ?? '/tap'
+                      const route = resolveToolRoute(t)
                       return (
                         <div key={t.id} onClick={() => { if (unlocked) openTool(route, t.name, t.id) }}
                           style={{ background: L.surface, borderRadius: 18, padding: '18px 14px', boxShadow: L.shadow, cursor: accessPending ? 'wait' : unlocked ? 'pointer' : 'default', opacity: unlocked || accessPending ? 1 : .5, position: 'relative' }}>
@@ -3215,17 +3272,32 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         {/* Thanh tiêu đề */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top))', background: L.p1, flexShrink: 0 }}>
           <button onClick={closeTool}
-            style={{ background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 12, minWidth: 72, height: 38, padding: '0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 16, color: '#fff', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', fontWeight: 600 }}>
+            style={{ background: 'rgba(255,255,255,.2)', border: 'none', borderRadius: 12, minWidth: 72, minHeight: 44, padding: '0 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 16, color: '#fff', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', fontWeight: 600 }}>
             ✕ <span style={{ fontSize: 14 }}>Đóng</span>
           </button>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 16, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeTool.name}</span>
         </div>
+        {toolFrameState !== 'ready' && (
+          <div style={{ position: 'absolute', inset: '68px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: toolFrameState === 'error' ? '#111827' : '#000', color: '#fff', zIndex: 1, padding: 24, textAlign: 'center' }}>
+            {toolFrameState === 'error' ? (
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Không mở được công cụ.</div>
+                <button onClick={() => setToolFrameState('loading')} style={{ background: '#fff', color: '#111827', border: 'none', borderRadius: 12, padding: '10px 16px', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>Thử lại</button>
+              </div>
+            ) : (
+              <div style={{ fontSize: 15, fontWeight: 700 }}>Đang mở công cụ...</div>
+            )}
+          </div>
+        )}
         {/* Tool chạy trong iframe — session Supabase được chia sẻ qua localStorage */}
         <iframe
+          key={toolFrameState === 'loading' ? activeTool.url + ':retry' : activeTool.url}
           src={activeTool.url}
           style={{ flex: 1, border: 'none', width: '100%' }}
           allow="microphone; camera"
           title={activeTool.name}
+          onLoad={() => setToolFrameState('ready')}
+          onError={() => setToolFrameState('error')}
         />
       </div>
     )}

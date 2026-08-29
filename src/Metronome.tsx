@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useAudioContextResume } from './useAudioContextResume'
 
 // ─── Palette (Rhythm Lab · visual system) ───────────────────────────────────────
 // Vai trò màu: TÍM = đang chọn/đang hoạt động · LAVENDER = vùng âm nhạc/chiều sâu/
@@ -131,9 +132,9 @@ const PauseIcon = ({ s = 17 }: { s?: number }) => (
   </svg>
 )
 
-interface Props { onClose?: () => void; initialBpm?: number | null }
+interface Props { onClose?: () => void; initialBpm?: number | null; onStart?: () => void }
 
-export default function Metronome({ onClose, initialBpm }: Props) {
+export default function Metronome({ onClose, initialBpm, onStart }: Props) {
   const startBpm = (() => {
     if (initialBpm && initialBpm >= MIN_BPM && initialBpm <= MAX_BPM) return initialBpm
     const p = new URLSearchParams(window.location.search).get('tempo')
@@ -152,11 +153,13 @@ export default function Metronome({ onClose, initialBpm }: Props) {
   const sig = TIME_SIGS[sigIdx]
 
   const ctxRef      = useRef<AudioContext | null>(null)
+  useAudioContextResume(ctxRef)
   const nextTickRef = useRef(0)
   const tickRef     = useRef(0)
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null)
   const queueRef    = useRef<{ beat: number; time: number }[]>([])
   const rafRef      = useRef<number>(0)
+  const startedRef  = useRef(false)
 
   const armRef        = useRef<SVGGElement | null>(null)
   const glowRef       = useRef<HTMLDivElement | null>(null)
@@ -253,7 +256,11 @@ export default function Metronome({ onClose, initialBpm }: Props) {
     timerRef.current = setInterval(scheduler, 25)
     rafRef.current   = requestAnimationFrame(visualLoop)
     setPlaying(true)
-  }, [scheduler, visualLoop])
+    if (!startedRef.current) {
+      startedRef.current = true
+      onStart?.()
+    }
+  }, [scheduler, visualLoop, onStart])
 
   const stop = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }

@@ -44,6 +44,7 @@ interface Props {
 export default function TapTempoTool({ onClose, onSaved }: Props) {
   // Đọc params từ URL (truyền từ carousel bài hát)
   const urlParams  = new URLSearchParams(window.location.search)
+  const embedded = urlParams.get('embedded') === '1'
   const preTitle   = urlParams.get('title') ?? ''
   const preYoutube = urlParams.get('youtube') ?? ''
   const preSongId  = urlParams.get('songId') ?? ''   // có → journey mode: UPDATE thay vì INSERT
@@ -159,7 +160,7 @@ export default function TapTempoTool({ onClose, onSaved }: Props) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: L.bg, color: L.t1, fontFamily: '"SF Pro Display", system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: embedded ? 0 : '100dvh', height: embedded ? '100%' : undefined, background: L.bg, color: L.t1, fontFamily: '"SF Pro Display", system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
       <div style={{ background: L.surface, borderBottom: `1px solid ${L.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>

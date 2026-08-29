@@ -125,9 +125,10 @@ function App() {
     : 'linear-gradient(160deg, #f4f1eb 0%, #ede9e0 40%, #f0ece3 100%)';
 
   const isMobile = window.innerWidth < 768;
+  const embedded = new URLSearchParams(window.location.search).get('embedded') === '1';
 
   return (
-    <div style={{ background: bg, transition: 'background 0.35s', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: bg, transition: 'background 0.35s', minHeight: embedded ? 0 : '100dvh', height: embedded ? '100%' : undefined, display: 'flex', flexDirection: 'column' }}>
 
       {/* Header */}
       <header style={{ background:'#14532D', borderBottom:'1px solid rgba(255,255,255,0.1)', padding:'0 16px', height: isMobile ? 44 : 48, display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>

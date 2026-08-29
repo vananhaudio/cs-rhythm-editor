@@ -7,6 +7,7 @@ import { parseLyricsWithChords, hasChordMarkup } from './logic/lyricsChordParser
 import { CHORD_LIBRARY, chordShape } from './logic/chordLibrary'
 import ChordDiagram from './ChordDiagram'
 import PracticePlayer from './PracticePlayer'
+import { useAudioContextResume } from './useAudioContextResume'
 import {
   newDraftId, saveDraft, saveScratch, loadScratch, clearScratch, loadDraft as loadDraftById,
   listDrafts, deleteDraft, renameDraft, duplicateDraft, migrateLegacyDraft, hasContent, progressOf,
@@ -148,10 +149,11 @@ function LyricBlock({ words, mapping, activeIndex, onTap, picker, chords }: {
 }
 
 /* ============================ PAGE ============================ */
-export default function SongBuilderPage({ onClose, embedded = false, initial }: {
+export default function SongBuilderPage({ onClose, embedded = false, initial, onMeaningfulUse }: {
   onClose?: () => void
   embedded?: boolean                                   // render THẲNG trong app (không iframe) → overlay fullscreen
   initial?: { title?: string | null; youtube?: string | null; tempo?: string | null }  // tham số qua prop thay cho URL
+  onMeaningfulUse?: () => void
 }) {
   const [draftId, setDraftId] = useState<string>(() => newDraftId())
   const [songTitle, setSongTitle] = useState('')
@@ -244,6 +246,7 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const playingRef = useRef(false)
+  const meaningfulUseRef = useRef(false)
   const anchorWallRef = useRef(0)   // performance.now() ms tại mốc đồng bộ
   const anchorVideoRef = useRef(0)  // giây video tại mốc đồng bộ
 
@@ -319,17 +322,22 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
 
   /* ---- tap nhịp (video-time) ---- */
   const tap = useCallback(() => {
+    if (!meaningfulUseRef.current) {
+      meaningfulUseRef.current = true
+      onMeaningfulUse?.()
+    }
     const t = videoClock()
     setTapTimes(prev => {
       const next = [...prev, t]
       setFit(next.length >= 2 ? fitTempo(next) : null)
       return next
     })
-  }, [videoClock])
+  }, [videoClock, onMeaningfulUse])
   const resetTaps = () => { setTapTimes([]); setFit(null) }
 
   /* ---- metronome (Web Audio) ---- */
   const audioRef = useRef<AudioContext | null>(null)
+  useAudioContextResume(audioRef)
   const lastBeatRef = useRef(-1)
   const ensureAudio = () => {
     if (!audioRef.current) {
@@ -488,8 +496,8 @@ export default function SongBuilderPage({ onClose, embedded = false, initial }: 
 
   /* ===================== RENDER ===================== */
   return (
-    <div style={{ minHeight: '100dvh', background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column',
-      ...(embedded ? { position: 'fixed' as const, inset: 0, zIndex: 600, minHeight: 0, height: '100dvh' } : null) }}>
+    <div style={{ minHeight: embedded ? 0 : '100dvh', background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column',
+      ...(embedded ? { position: 'fixed' as const, inset: 0, zIndex: 600, height: '100%' } : null) }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
         *{box-sizing:border-box} button:active:not(:disabled){transform:scale(0.97)}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
@@ -1279,4 +1287,3 @@ function DraftsModal({ currentId, onClose, onOpen, onPractice, onNew }: {
     </div>
   )
 }
-

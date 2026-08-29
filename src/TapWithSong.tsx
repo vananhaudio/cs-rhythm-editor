@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import type { RhythmSong } from './types'
 import { supabase } from './supabase'
 import { SongList } from './SongList'
+import { useAudioContextResume } from './useAudioContextResume'
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 640)
@@ -166,7 +167,7 @@ function ScoreRing({ score, size = 72 }: { score: number; size?: number }) {
   )
 }
 
-export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userRole?: string }) {
+export function TapWithSong({ onClose, userRole, onMeaningfulUse }: { onClose?: () => void; userRole?: string; onMeaningfulUse?: () => void }) {
   const isTeacher = userRole === 'teacher' || userRole === 'admin'
   const isGuest   = userRole === 'guest'
   const isMobile  = useIsMobile()
@@ -315,9 +316,11 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
   }, [isPlaying])
 
   const audioCtxRef    = useRef<AudioContext | null>(null)
+  useAudioContextResume(audioCtxRef)
   const schedulerRef   = useRef<ReturnType<typeof setInterval> | null>(null)
   const nextBeatRef    = useRef(0)
   const beatIdxRef     = useRef(0)
+  const meaningfulUseRef = useRef(false)
 
   const stopMetronome = () => { if (schedulerRef.current) { clearInterval(schedulerRef.current); schedulerRef.current = null } }
 
@@ -366,10 +369,14 @@ export function TapWithSong({ onClose, userRole }: { onClose?: () => void; userR
 
   const handleTap = useCallback(() => {
     if (!isPlayingRef.current) return
+    if (!meaningfulUseRef.current) {
+      meaningfulUseRef.current = true
+      onMeaningfulUse?.()
+    }
     setCurrentDots(prev => [...prev, { time: songTimeRef.current }])
     setTapPulse(true)
     setTimeout(() => setTapPulse(false), 100)
-  }, [])
+  }, [onMeaningfulUse])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
