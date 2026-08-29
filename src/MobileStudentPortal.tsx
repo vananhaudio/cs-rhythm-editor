@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import YouTubeLesson, { getYouTubeId } from './video/YouTubeLesson'
+import SubscriptionPage from './SubscriptionPage'
 import FingerExercise from './FingerExercise'
 import ScaleExercise from './ScaleExercise'
 import ArpeggioExercise from './ArpeggioExercise'
@@ -352,7 +353,27 @@ const TOOLS_MAP: Record<string, { label: string; icon: string; color: string; ro
 interface Props { student: Student; onLogout: () => void; preview?: boolean; guest?: boolean; onLoginRequired?: () => void }
 
 export default function MobileStudentPortal({ student, onLogout, preview = false, guest = false, onLoginRequired }: Props) {
-  const [tab, setTab]             = useState<Tab>('home')
+  const [tab, setTab]             = useState<Tab>(() => {
+    // Vào từ /me hoặc ?tab= → mở đúng tab (đường về sau story/route ngoài)
+    try {
+      if (window.location.pathname.startsWith('/me')) return 'me'
+      const t = new URLSearchParams(window.location.search).get('tab')
+      if (t === 'hoc' || t === 'tap' || t === 'teacher' || t === 'me') return t as Tab
+    } catch { /**/ }
+    return 'home'
+  })
+  // ── P1.6: loading/error tổng cho dữ liệu portal + guard điều hướng ──
+  const [portalLoading, setPortalLoading] = useState(true)
+  const [loadError, setLoadError]         = useState(false)
+  const [reloadTick, setReloadTick]       = useState(0)
+  const [openingLessonId, setOpeningLessonId] = useState<string | null>(null)
+  const [navNotice, setNavNotice]         = useState('')
+  const [showPaywall, setShowPaywall]     = useState(false)
+  useEffect(() => {   // toast điều hướng tự ẩn
+    if (!navNotice) return
+    const t = window.setTimeout(() => setNavNotice(''), 2600)
+    return () => window.clearTimeout(t)
+  }, [navNotice])
   const [me, setMe]               = useState<Student>(student)
   // Đồng bộ lại khi student đổi (guest → đăng nhập, khôi phục phiên) — không thì header chào sai tên
   useEffect(() => { setMe(student) }, [student.id])
@@ -618,15 +639,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     else window.location.href = '/start'
   }
 
-  const openUpgrade = () => {
-    window.location.href = '/subscribe'
-  }
-
-  const explainUpgrade = () => {
-    window.location.href = '/subscribe'
-  }
+  // Paywall mở dạng overlay in-app (không full reload) → Back trả về ĐÚNG chỗ đang đứng
+  const openUpgrade = () => setShowPaywall(true)
+  const explainUpgrade = () => setShowPaywall(true)
 
   const resetUserScopedState = () => {
+    setShowPaywall(false)
+    setOpeningLessonId(null)
+    setNavNotice('')
     setShowSettings(false)
     setShowDeleteConfirm(false)
     setDeletingAccount(false)
@@ -1024,11 +1044,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     entitlementRequestRef.current += 1
     resetUserScopedState()
     void loadEntitlement(student.id, guest)
+    setPortalLoading(true)
+    setLoadError(false)
 
     if (guest) {
       supabase.from('edu_courses')
         .select(COURSE_SELECT)
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (error) { console.error('Lỗi tải khoá học:', error); setLoadError(true); setPortalLoading(false); return }
           const courses = ((data ?? []) as any[]).filter(c => c && (c.status ?? 'on') !== 'off')
           setEnrollments(courses.map((course: any) => ({
             id: `public-${course.id}`,
@@ -1041,7 +1064,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           setOwnedCourseIds(new Set())
           setFoundationGaps([])
           loadCourseLessonMap(courses.map((course: any) => course.id))
-          loadJourneyLessons(courses as Enrollment['course'][])  // guest vẫn xem được hành trình (free-first)
+          Promise.resolve(loadJourneyLessons(courses as Enrollment['course'][]))  // guest vẫn xem được hành trình (free-first)
+            .catch(e => { console.error('Lỗi tải hành trình:', e); setLoadError(true) })
+            .finally(() => setPortalLoading(false))
         })
       supabase.from('edu_tools').select('*').order('order_index')
         .then(({ data }) => {
@@ -1059,16 +1084,22 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       return
     }
 
-    const loadCourses = () => supabase.from('edu_enrollments')
-      .select(`id,course_id,enrolled_at,is_active,course:edu_courses(${COURSE_REL_SELECT})`)
-      .eq('student_id', student.id).eq('is_active', true)
-      .then(async ({ data }) => {
+    // Enrollments + danh mục khoá là 2 query ĐỘC LẬP → chạy song song (trước đây tuần tự)
+    const loadCourses = async () => {
+      const [enrRes, pubRes] = await Promise.all([
+        supabase.from('edu_enrollments')
+          .select(`id,course_id,enrolled_at,is_active,course:edu_courses(${COURSE_REL_SELECT})`)
+          .eq('student_id', student.id).eq('is_active', true),
+        supabase.from('edu_courses').select(COURSE_SELECT),
+      ])
+      if (enrRes.error) throw enrRes.error
+      if (pubRes.error) throw pubRes.error
+      {
+        const data = enrRes.data
+        const publicCourses = pubRes.data
         // Lọc null NGAY TẠI NGUỒN: enrollment thiếu course (join null) không được vào state — mọi UI phía dưới tin dữ liệu sạch
         const enr = ((data ?? []) as unknown as Enrollment[]).filter(e => e && e.course)
         setOwnedCourseIds(new Set(enr.map(e => e.course_id)))
-        const { data: publicCourses } = await supabase
-          .from('edu_courses')
-          .select(COURSE_SELECT)
         const enrolledById = new Map(enr.map(e => [e.course_id, e]))
         const discovery = ((publicCourses ?? []) as any[])
           .filter(c => c && (c.status ?? 'on') !== 'off' && !enrolledById.has(c.id))
@@ -1080,7 +1111,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           } as Enrollment))
         const mergedEnrollments = [...enr, ...discovery]
         setEnrollments(mergedEnrollments)
-        loadCourseLessonMap(mergedEnrollments.map(e => e.course_id))
+        // Chỉ nạp lesson-map cho khoá DISCOVERY — khoá đã ghi danh được chính effect này
+        // tính (cli) từ modules/lessons tải bên dưới → bỏ fetch trùng lặp
+        loadCourseLessonMap(discovery.map(e => e.course_id))
         // Khoá miễn phí + khoá đã được cấp quyền → dùng để mở/khoá bài theo từng khoá
         setFreeCourses(new Set(mergedEnrollments.filter(e => (e.course as any)?.is_free !== false).map(e => e.course_id)))
         supabase.from('edu_course_access').select('course_id').eq('student_id', student.id).eq('active', true)
@@ -1107,14 +1140,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         const cobj: Record<string, Enrollment['course']> = {}
         ;[...courses].sort((a, b) => (a.course?.sort_order ?? 99) - (b.course?.sort_order ?? 99))
           .forEach((e, i) => { order[e.course_id] = i; cname[e.course_id] = e.course?.name ?? 'Khóa học'; if (e.course) cobj[e.course_id] = e.course })
-        const { data: mods } = await supabase.from('edu_modules').select('id,course_id,order_index,name,level').in('course_id', courseIds)
+        const { data: mods, error: modErr } = await supabase.from('edu_modules').select('id,course_id,order_index,name,level').in('course_id', courseIds)
+        if (modErr) throw modErr
         const modMap: Record<string, { course_id: string; order_index: number; name?: string; level?: number | null }> = {}
         ;(mods ?? []).forEach((m: any) => { modMap[m.id] = m })
         const modIds = (mods ?? []).map((m: any) => m.id)
         if (modIds.length === 0) { setMasterPath([]); setJourneyLessons([]); return }
-        const { data: lsns } = await supabase.from('edu_course_lessons')
+        const { data: lsns, error: lsnErr } = await supabase.from('edu_course_lessons')
           .select('id,module_id,title,order_index,lesson_type,content_url,tier,access_policy_mode,required_tier,visibility,availability,allow_preview')
           .in('module_id', modIds)
+        if (lsnErr) throw lsnErr
         // Gom lesson id theo khoá → tính khoá đã hoàn thành (chặn tuần tự HT)
         const cli: Record<string, string[]> = {}
         ;(lsns ?? []).forEach((l: any) => { const cid = modMap[l.module_id]?.course_id; if (cid) (cli[cid] ??= []).push(l.id) })
@@ -1138,8 +1173,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             visibility: p.l.visibility ?? null, availability: p.l.availability ?? null, allow_preview: p.l.allow_preview ?? null,
           }
         }))
-      })
+      }
+    }
     loadCourses()
+      .catch(e => { console.error('Lỗi tải dữ liệu học tập:', e); setLoadError(true) })
+      .finally(() => setPortalLoading(false))
     supabase.from('edu_tools').select('*').order('order_index')
       .then(({ data }) => {
         const all = (data ?? []).map((t: any) => ({
@@ -1236,30 +1274,35 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('status', 'completed')
       .order('completed_at', { ascending: false }).limit(1)
       .then(({ data }) => { const lid = (data ?? [])[0]?.lesson_id; if (lid) setLastDoneLesson(lid) })
-  }, [student.id, guest])
+  }, [student.id, guest, reloadTick])
 
   const openCourse = async (courseId: string, targetLessonId?: string) => {
     if (accessPending) return
+    if (openingLessonId) return   // đang mở 1 bài khác → chặn double-tap / fetch đôi
     // HT: chặn mở khoá cấp trên khi chưa hoàn thành cấp dưới (lưới an toàn cho mọi lối vào)
     const code = enrollments.find(e => e.course_id === courseId)?.course?.code
-    if (isSeqLocked(code)) return
+    if (isSeqLocked(code)) { setNavNotice('Hãy hoàn thành khoá trước để tiếp tục hành trình.'); return }
     const courseForAccess = enrollments.find(e => e.course_id === courseId)?.course
     const courseAccess = resolveCourseAccess(courseForAccess ?? { is_free: true, status: 'on' }, effectiveTier, {
       legacyUnlocked: preview || freeCourses.has(courseId) || accessCourses.has(courseId) || ownedCourseIds.has(courseId),
       preview,
     })
     if (!courseAccess.visible) return
-    if (!courseAccess.available) return
+    if (!courseAccess.available) { setNavNotice('Khoá này sắp ra mắt.'); return }
+    setOpeningLessonId(targetLessonId ?? courseId)
     setActiveCourseId(courseId)
     setReturnLessonId(null)   // vào khoá mới → bắt đầu từ đầu (chỉ cuộn-giữ-chỗ khi quay lại từ 1 bài)
     try { localStorage.setItem('lastCourse:' + student.id, courseId) } catch { /**/ }  // ghi khoá vừa mở → "Học ngay" resume đúng chỗ
     setLastOpenedCourse(courseId)
-    const { data: mods } = await supabase.from('edu_modules')
+    try {
+    const { data: mods, error: modErr } = await supabase.from('edu_modules')
       .select('*').eq('course_id', courseId).order('order_index')
+    if (modErr) { console.error('Lỗi tải khoá:', modErr); setNavNotice('Không tải được bài học. Thử lại nhé.'); return }
     setModules(mods ?? [])
     if (mods?.length) {
-      const { data: lsns } = await supabase.from('edu_course_lessons')
+      const { data: lsns, error: lsnErr } = await supabase.from('edu_course_lessons')
         .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
+      if (lsnErr) { console.error('Lỗi tải bài học:', lsnErr); setNavNotice('Không tải được bài học. Thử lại nhé.'); return }
       const parsed = (lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] }))
       setLessons(parsed)
       const ownedNow = preview || freeCourses.has(courseId) || accessCourses.has(courseId) || ownedCourseIds.has(courseId)
@@ -1284,6 +1327,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       ;(data ?? []).forEach((r: any) => { if (r.lesson_id) { if (!m[r.lesson_id]) m[r.lesson_id] = new Set(); m[r.lesson_id].add(r.action_type) } })
       setLessonActionMap(m)
     })
+    } finally { setOpeningLessonId(null) }
   }
 
   const noteKey = (lessonId: string) => `note:${student.id}:${lessonId}`
@@ -1398,14 +1442,18 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     return () => window.clearTimeout(t)
   }, [screen, returnLessonId])
 
-  // Journey: tự cuộn ngang tới bài hiện tại (không bắt vuốt từ Bài 1 mỗi lần)
+  // Journey: tự cuộn ngang tới đúng bài — quay lại từ player thì về BÀI VỪA MỞ
+  // (returnLessonId/selectedLessonId), lần đầu vào môn thì về bài hiện tại.
   useEffect(() => {
     if (screen !== 'journey' || !activeSubject) return
     const t = window.setTimeout(() => {
-      const el = document.querySelector('[data-jlcur="1"]') as HTMLElement | null
+      const backId = returnLessonId ?? selectedLessonId
+      const el = (backId && document.getElementById('jl-' + backId))
+        || document.querySelector('[data-jlcur="1"]') as HTMLElement | null
       if (el) el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' })
     }, 80)
     return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, activeSubject, journeyLessons.length])
 
   // % hoàn thành của 1 khoá
@@ -1558,14 +1606,36 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     if (accessPending) return
     const a = lessonAccessOf(jl)
     if (!a.visible) return
-    if (!a.available) return                    // sắp có → không mở
+    if (!a.available) { setNavNotice('Bài này sắp ra mắt.'); return }
     if (!a.canAccess) { openUpgrade(); return } // khoá theo gói → nâng gói (flow hiện tại)
-    if (isSeqLocked(jl.courseCode)) return       // khoá tuần tự HT → không mở
+    if (isSeqLocked(jl.courseCode)) { setNavNotice('Hãy hoàn thành bài trước để tiếp tục.'); return } // khoá tuần tự HT
     openCourse(jl.courseId, jl.id)               // available → mở thẳng player production
   }
 
   return (
     <>
+    {/* ── Banner lỗi tải dữ liệu (dùng chung) — không silent fail thành 0 dữ liệu ── */}
+    {loadError && !portalLoading && (
+      <div style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 8px)', left: 12, right: 12, zIndex: 220, background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 14, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 18px rgba(0,0,0,0.12)' }}>
+        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#B91C1C', flex: 1 }}>Không tải được dữ liệu.</span>
+        <button onClick={() => setReloadTick(t => t + 1)}
+          style={{ background: '#B91C1C', color: '#fff', border: 'none', borderRadius: 10, padding: '7px 14px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Thử lại
+        </button>
+      </div>
+    )}
+    {/* ── Toast điều hướng (sequence lock / sắp ra mắt / lỗi mở bài) ── */}
+    {navNotice && (
+      <div style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 86px)', left: '50%', transform: 'translateX(-50%)', zIndex: 220, background: 'rgba(17,24,39,0.92)', color: '#fff', borderRadius: 14, padding: '11px 18px', fontSize: 13.5, fontWeight: 700, maxWidth: '86vw', textAlign: 'center', boxShadow: '0 8px 22px rgba(0,0,0,0.25)' }}>
+        {navNotice}
+      </div>
+    )}
+    {/* ── Paywall overlay in-app: reuse SubscriptionPage, Back trả về đúng chỗ (không full reload) ── */}
+    {showPaywall && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 210, background: '#fff', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <SubscriptionPage onBack={() => setShowPaywall(false)} />
+      </div>
+    )}
     {/* ── Finger Exercise overlay (fullscreen, position:fixed) ── */}
     {showFingerExercise && (
       <FingerExercise
@@ -1698,7 +1768,20 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             {/* HomeJourneyCard — CON ĐƯỜNG CONG "HÀNH TRÌNH CỦA BẠN" (REUSE nguyên bản cũ d410385^: SVG sóng sin + cờ chặng theo màu skill + marker 🎸; nối data thật masterPath/scoreById/totalXP/classRank). READ-ONLY: đã bỏ CTA "Học tiếp". */}
             {(() => {
               const roadPath = masterPath.length > 0 ? masterPath : journeyLessons  // logged-in: masterPath; guest fallback: journeyLessons
-              if (roadPath.length === 0) return null
+              if (roadPath.length === 0) {
+                // Đang tải → skeleton CÙNG chiều cao (không layout shift); tải xong mà rỗng → ẩn như cũ
+                if (!portalLoading) return null
+                return (
+                  <div style={{ margin: '0 18px', background: L.surface, borderRadius: 22, padding: '18px 16px', boxShadow: L.shadowLg }}>
+                    <div style={{ height: 16, width: '55%', borderRadius: 8, background: L.surface2 }} />
+                    <div style={{ height: 92, marginTop: 14, borderRadius: 14, background: L.surface2 }} />
+                    <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                      <div style={{ flex: 1, height: 64, borderRadius: 14, background: L.surface2 }} />
+                      <div style={{ flex: 1, height: 64, borderRadius: 14, background: L.surface2 }} />
+                    </div>
+                  </div>
+                )
+              }
               const total = roadPath.length
               const doneCount = roadPath.filter(m => completedIds.has(m.id)).length
               let curIdx = roadPath.findIndex(m => !completedIds.has(m.id)); if (curIdx < 0) curIdx = total - 1
@@ -1837,7 +1920,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               <div style={{ marginTop: 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Chọn một môn để vào hành trình học — vuốt ngang, học từng bài.</div>
             </div>
 
-            {SUBJECTS.length > 0 ? (
+            {portalLoading && SUBJECTS.length === 0 ? (
+              // Đang tải danh sách môn → skeleton, KHÔNG hiện empty-state sai
+              <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {[0, 1].map(i => <div key={i} style={{ height: 136, borderRadius: 22, background: L.surface, boxShadow: L.shadow, opacity: 0.65 }} />)}
+              </div>
+            ) : SUBJECTS.length > 0 ? (
               <div style={{ padding: '4px 18px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {SUBJECTS.map(sub => {
                   const prog = subjectProgress(sub.key)
@@ -2885,7 +2973,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 ['festival', '🎪', 'Đại hội Guitar'],
               ] as const).map(([key, icon, label]) => (
                 <button key={key}
-                  onClick={() => { if (key === 'story') { window.location.href = '/story'; return } setLivePage(key) }}
+                  onClick={() => { if (key === 'story') { window.location.href = '/story?return=' + encodeURIComponent(guest ? '/start?tab=me' : '/me'); return } setLivePage(key) }}
                   style={{ width: '100%', background: L.surface, border: 'none', borderRadius: 16, boxShadow: L.shadow, padding: '15px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
                   <span style={{ width: 40, height: 40, borderRadius: 12, background: L.p2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 19, flexShrink: 0 }}>{icon}</span>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: L.t1, lineHeight: 1.35 }}>{label}</span>
@@ -2985,8 +3073,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                   <div style={{ fontSize: 9.5, fontWeight: 800, color: tone, textTransform: 'uppercase', letterSpacing: '.03em', opacity: .95, ...clamp1 }}>{jl.moduleLevel != null ? `Level ${jl.moduleLevel} · Chương ${chapterNum}` : `Chương ${chapterNum}`}</div>
                   <div style={{ marginTop: 4, fontSize: 15.5, fontWeight: 900, color: L.t1, lineHeight: 1.2, letterSpacing: '-.01em', ...clamp2 }}>{jl.title}</div>
                   <div style={{ flex: 1 }} />
-                  <button onClick={e => { e.stopPropagation(); openJourneyLesson(jl) }} disabled={comingSoon}
-                    style={{ marginTop: 8, alignSelf: 'flex-start', border: 'none', borderRadius: 10, padding: '7px 13px', fontSize: 12, fontWeight: 850, cursor: comingSoon ? 'default' : 'pointer', fontFamily: 'inherit', background: comingSoon ? L.surface2 : (locked || seqLocked) ? '#FFF7ED' : isCurrent ? tone : L.p2, color: comingSoon ? L.t3 : (locked || seqLocked) ? '#C2410C' : isCurrent ? '#fff' : L.p1 }}>{stateLabel}</button>
+                  <button onClick={e => { e.stopPropagation(); openJourneyLesson(jl) }} disabled={comingSoon || !!openingLessonId}
+                    style={{ marginTop: 8, alignSelf: 'flex-start', border: 'none', borderRadius: 10, padding: '7px 13px', fontSize: 12, fontWeight: 850, cursor: comingSoon ? 'default' : 'pointer', fontFamily: 'inherit', opacity: openingLessonId && openingLessonId !== jl.id ? 0.6 : 1, background: comingSoon ? L.surface2 : (locked || seqLocked) ? '#FFF7ED' : isCurrent ? tone : L.p2, color: comingSoon ? L.t3 : (locked || seqLocked) ? '#C2410C' : isCurrent ? '#fff' : L.p1 }}>{openingLessonId === jl.id ? 'Đang mở…' : stateLabel}</button>
                 </div>
                 <div style={{ height: 4, background: dim ? L.border : tone }} />
                 {completed && <span style={{ position: 'absolute', top: 8, right: 8, width: 25, height: 25, borderRadius: '50%', background: '#16A34A', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 900 }}>✓</span>}
@@ -3063,11 +3151,15 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
             ) : (
               <div style={{ flexShrink: 0, height: 260, display: 'grid', placeItems: 'center', padding: '0 24px', textAlign: 'center', color: L.t2 }}>
+                {portalLoading ? (
+                  <div style={{ width: 260, height: 170, borderRadius: 18, background: L.surface, boxShadow: L.shadow, opacity: 0.65 }} />
+                ) : (
                 <div>
                   <div style={{ fontSize: 36, marginBottom: 8 }}>🎼</div>
                   <div style={{ fontWeight: 800, color: L.t1, marginBottom: 4 }}>Hành trình đang được soạn</div>
                   <div style={{ fontSize: 13, lineHeight: 1.5 }}>Các bài học của môn này sẽ xuất hiện ở đây.</div>
                 </div>
+                )}
               </div>
             )}
             {/* ── LEVEL NAVIGATOR (nhẹ) — nhảy nhanh tới vùng Level; KHÔNG mục lục, không đổi current/selected/progress ── */}
@@ -3124,7 +3216,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           const active = tab === t.id
           return (
             <button key={t.id}
-              onClick={() => { setTab(t.id); if (t.id === 'hoc') setScreen('home') }}
+              onClick={() => {
+                // Đổi từ tab khác sang Học → GIỮ context (môn/level/bài đang xem).
+                // Đang ở Học mà bấm Học lần nữa → về màn chọn môn (root) — hành vi nhất quán.
+                if (t.id === 'hoc' && tab === 'hoc') setScreen('home')
+                setTab(t.id)
+              }}
               style={{
                 flex: 1, minWidth: 0, background: active ? L.p2 : 'transparent', border: 'none',
                 borderRadius: 14, cursor: 'pointer', padding: '7px 2px',

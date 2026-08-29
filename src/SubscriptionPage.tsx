@@ -45,7 +45,10 @@ const PLAN_TAGLINE: Record<SubscriptionTier, string> = {
   nang_cao_499: 'Sắp có',
 }
 
-export default function SubscriptionPage() {
+// onBack: khi nhúng overlay trong portal → đóng overlay (giữ nguyên context);
+// khi chạy như route /subscribe độc lập → về /start như cũ.
+export default function SubscriptionPage({ onBack }: { onBack?: () => void } = {}) {
+  const goBack = () => { if (onBack) onBack(); else window.location.href = '/start' }
   const [loading, setLoading] = useState(true)
   const [products, setProducts] = useState<IAPProduct[]>([])
   const [sessionReady, setSessionReady] = useState(false)
@@ -287,7 +290,7 @@ export default function SubscriptionPage() {
 
         {/* Header gọn */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button onClick={() => { window.location.href = '/start' }} style={linkButton()}>‹ Quay lại</button>
+          <button onClick={goBack} style={linkButton()}>‹ Quay lại</button>
           <span style={{ fontSize: 12, color: COLORS.faint, fontWeight: 700 }}>Thầy Văn Anh Guitar</span>
         </div>
         <h1 style={{ margin: '6px 0 2px', fontSize: 24, lineHeight: 1.15, fontWeight: 850 }}>Chọn gói học</h1>
@@ -369,7 +372,7 @@ export default function SubscriptionPage() {
         </button>
 
         <div style={{ textAlign: 'center', fontSize: 12.5, color: COLORS.muted, marginTop: 8 }}>
-          Bạn đang dùng Free — <button onClick={() => { window.location.href = '/start' }} style={{ ...linkButton(), padding: 0, fontSize: 12.5 }}>tiếp tục dùng Free bất cứ lúc nào</button>.
+          Bạn đang dùng Free — <button onClick={goBack} style={{ ...linkButton(), padding: 0, fontSize: 12.5 }}>tiếp tục dùng Free bất cứ lúc nào</button>.
         </div>
 
         {/* Footer legal — đẩy xuống đáy */}

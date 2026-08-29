@@ -181,7 +181,9 @@ export default function StoryHomePage() {
             <span className="sh-brand-short">1001 Câu chuyện</span>
           </a>
           <div className="sh-nav-actions">
-            {dangNhap && <a href="/me" className="sh-nav-back">← <span className="sh-nav-back-full">Về app</span><span className="sh-nav-back-short">App</span></a>}
+            {/* Đường về app luôn hiện — GUEST cũng phải thoát được (native không có nút back).
+                ?return= cho phép quay đúng ngữ cảnh đã mở story (Home hay Tôi). */}
+            <a href={(() => { try { const r = new URLSearchParams(window.location.search).get('return'); if (r && r.startsWith('/')) return r } catch { /**/ } return dangNhap ? '/me' : '/start' })()} className="sh-nav-back">← <span className="sh-nav-back-full">Về app</span><span className="sh-nav-back-short">App</span></a>
             <a href="/story/write" className="sh-nav-cta">Kể chuyện</a>
           </div>
         </div>

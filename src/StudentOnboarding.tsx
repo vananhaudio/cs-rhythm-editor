@@ -86,6 +86,9 @@ type Step = 'welcome' | 'login' | 'portal'
 export default function StudentOnboarding() {
   const [step, setStep]           = useState<Step>('portal')
   const [student, setStudent]     = useState<Student | null>(GUEST_STUDENT)
+  // Chưa biết đã đăng nhập hay chưa → hiện splash, KHÔNG mount portal guest giả
+  // (tránh nháy "Khách · Miễn phí" rồi mới đổi sang user thật + load data 2 lần)
+  const [authChecked, setAuthChecked] = useState(false)
   const [preview, setPreview]     = useState(false)   // tài khoản thầy xem khoá (mở khoá hết, không ghi tiến độ)
   const [email, setEmail]         = useState('')
   const [password, setPassword]   = useState('')
@@ -122,7 +125,7 @@ export default function StudentOnboarding() {
         setStudent({ id: session.user.id, full_name: 'Thầy Văn Anh (xem khoá)', email: session.user.email ?? null, level: 'advanced' } as Student)
         setPreview(true); setStep('portal')
       }
-    })
+    }).finally(() => setAuthChecked(true))
   }, [])
 
   useEffect(() => {
@@ -349,7 +352,16 @@ export default function StudentOnboarding() {
 
       {/* PORTAL */}
       {/* Tạm thời: web DÙNG CHUNG giao diện mobile (cột giữa 430px) để đồng bộ hết cải tiến với app. Desktop riêng để cải tiến sau. */}
-      {step === 'portal' && student && (
+      {step === 'portal' && student && !authChecked && (
+        // Splash trong lúc chờ getSession — layout ổn định, không nháy nội dung guest
+        <div style={{ minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', color: '#6B7280' }}>
+            <div style={{ fontSize: 34, marginBottom: 10 }}>🎸</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Đang mở lớp học…</div>
+          </div>
+        </div>
+      )}
+      {step === 'portal' && student && authChecked && (
         <div style={{ minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, #EDEAFB 0%, #F0F2F5 55%)' }}>
           <MobileStudentPortal
             key={`${student.id}:${preview ? 'preview' : 'normal'}`}
