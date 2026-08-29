@@ -15,7 +15,7 @@ const sameDay = (a: Date, b: Date) => startOfDay(a).getTime() === startOfDay(b).
 const hm = (iso: string) => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
 
 const SESS_STATUS: { v: string; l: string }[] = [
-  { v: 'scheduled', l: 'Theo lịch' }, { v: 'completed', l: '✓ Đã dạy' }, { v: 'cancelled', l: 'Huỷ buổi' },
+  { v: 'scheduled', l: 'Theo lịch' }, { v: 'confirmed', l: '✓ Xác nhận' }, { v: 'completed', l: '✓ Đã dạy' }, { v: 'cancelled', l: 'Huỷ buổi' },
   { v: 'rescheduled', l: 'Dời buổi' }, { v: 'makeup', l: 'Buổi bù' }, { v: 'holiday', l: 'Nghỉ lễ' },
 ]
 
@@ -68,15 +68,16 @@ export default function CalendarWeek({ classes, sessById, onChanged }: {
   const sessBlock = (s: FlatSess, compact: boolean) => {
     const cls = clsById[s.class_id]; const si = statusInfo(cls?.status)
     const done = s.status === 'completed', cancelled = s.status === 'cancelled', draft = cls?.status === 'draft'
+    const isBreak = s.event_type === 'break'
     return (
       <button key={s.class_id + s.session_number} onClick={() => setSel({ cid: s.class_id, s })} title={cls?.name}
-        style={{ textAlign: 'left', borderRadius: 6, cursor: 'pointer', border: draft ? `1px dashed ${si.c}` : 'none', borderLeft: `3px solid ${si.c}`,
-          padding: compact ? '2px 5px' : '5px 7px', background: cancelled ? '#FEF2F2' : done ? '#F0FDF4' : draft ? '#FAFAFA' : `${si.c}14`,
+        style={{ textAlign: 'left', borderRadius: 6, cursor: 'pointer', border: draft ? `1px dashed ${si.c}` : 'none', borderLeft: `3px solid ${isBreak ? '#C9711E' : si.c}`,
+          padding: compact ? '2px 5px' : '5px 7px', background: isBreak ? '#FBF1E4' : cancelled ? '#FEF2F2' : done ? '#F0FDF4' : draft ? '#FAFAFA' : `${si.c}14`,
           opacity: cancelled ? 0.6 : draft ? 0.85 : 1, fontFamily: 'inherit', width: '100%', textDecoration: cancelled ? 'line-through' : 'none' }}>
         <div style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: S.text1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hm(s.start_at)} · {cls?.code || cls?.name || '—'}</div>
         {!compact && <>
           <div style={{ fontSize: 10.5, color: S.text2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cls?.mainCourseName || cls?.name}</div>
-          <div style={{ fontSize: 10, color: S.text3, marginTop: 1 }}>buổi {s.session_number}/{cls?.total_sessions ?? '?'}{done ? ' · ✓' : cancelled ? ' · huỷ' : ''}</div>
+          <div style={{ fontSize: 10, color: S.text3, marginTop: 1 }}>{isBreak ? 'Nghỉ giữa chặng' : `buổi ${s.session_number ?? '?'}/${cls?.total_sessions ?? '?'}`}{done ? ' · ✓' : cancelled ? ' · huỷ' : ''}</div>
         </>}
       </button>
     )
@@ -104,7 +105,7 @@ export default function CalendarWeek({ classes, sessById, onChanged }: {
         <div onClick={() => setSel(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: S.surface, borderRadius: 14, padding: 20, width: 320, boxShadow: '0 10px 40px rgba(0,0,0,.2)' }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: S.text1 }}>{clsById[sel.cid]?.code || clsById[sel.cid]?.name}</div>
-            <div style={{ fontSize: 13, color: S.text2, marginTop: 2 }}>Buổi {sel.s.session_number}/{clsById[sel.cid]?.total_sessions} · {hm(sel.s.start_at)}</div>
+            <div style={{ fontSize: 13, color: S.text2, marginTop: 2 }}>{sel.s.event_type === 'break' ? 'Nghỉ giữa chặng' : `Buổi ${sel.s.session_number ?? '?'}/${clsById[sel.cid]?.total_sessions}`} · {hm(sel.s.start_at)}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
               {SESS_STATUS.map(ss => (
                 <button key={ss.v} disabled={busy} onClick={() => setSessStatus(ss.v)}

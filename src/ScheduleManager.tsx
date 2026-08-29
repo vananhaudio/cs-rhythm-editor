@@ -32,6 +32,8 @@ interface Cls {
   // ── Journey OS: lịch thật ──
   start_date: string | null; weekday: number | null; start_time: string | null
   duration_minutes: number; total_sessions: number; end_date: string | null; status: string
+  // ── HT2027: chương trình (nghỉ giữa chặng + mã chương trình + múi giờ) ──
+  program_code: string | null; breaks_after: number[] | null; timezone: string | null
 }
 interface Course { id: string; name: string; code: string | null }
 interface Grp { id: string; name: string; code: string | null; zalo_url: string | null }
@@ -40,6 +42,7 @@ const blank = (): Cls => ({
   id: '', code: '', name: '', section: 'upcoming', schedule: '', start_text: '', duration: '8 buổi · mỗi buổi 90 phút',
   price: '990k', course_ids: [], main_course_id: null, group_id: null, zoom_url: '', sort_order: 0, is_active: true,
   start_date: null, weekday: null, start_time: '19:00', duration_minutes: 90, total_sessions: 8, end_date: null, status: 'upcoming',
+  program_code: null, breaks_after: null, timezone: 'Asia/Ho_Chi_Minh',
 })
 
 export default function ScheduleManager() {
@@ -58,7 +61,7 @@ export default function ScheduleManager() {
   const load = async () => {
     const { data } = await supabase.from('class_schedule').select('*').order('sort_order').order('created_at')
     setRows((data ?? []) as Cls[])
-    const { data: sess } = await supabase.from('class_sessions').select('class_id,session_number,start_at,status')
+    const { data: sess } = await supabase.from('class_sessions').select('class_id,session_number,start_at,status,event_type')
     const map: Record<string, SessionRow[]> = {}
     for (const s of (sess ?? []) as any[]) (map[s.class_id] ??= []).push(s)
     setSessById(map)
@@ -114,8 +117,14 @@ export default function ScheduleManager() {
     }
     // Khoá chính: ưu tiên ★ đã chọn; nếu chưa, lấy khoá đầu KHÔNG PHẢI NM (NM không làm khoá chính)
     const nonNM = form.course_ids.find(id => courses.find(c => c.id === id)?.code !== 'NM')
+    // Lịch nghỉ/lock chung → engine bỏ qua các ngày này (nghỉ lễ, Tết, ngày admin khóa)
+    const { data: offRows } = await supabase.from('class_off_days').select('off_date').eq('is_active', true)
+    const skipDates = ((offRows ?? []) as { off_date: string }[]).map(r => r.off_date)
     // Sinh buổi từ ngày/giờ thật → tính ngày kết thúc; gợi ý text lịch cũ nếu thầy chưa nhập tay
-    const sessions = generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions)
+    const sessions = generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions, {
+      breaksAfter: form.breaks_after ?? undefined,
+      skipDates,
+    })
     const rec: any = {
       code, name: form.name.trim(), section: form.section,
       schedule: (form.schedule?.trim() || scheduleText(form.weekday, form.start_time)) || null,
@@ -128,6 +137,9 @@ export default function ScheduleManager() {
       weekday: form.weekday, start_time: form.start_time || null,
       duration_minutes: form.duration_minutes || 90, total_sessions: form.total_sessions || 8,
       end_date: realEndDate(sessions), status: form.status || 'upcoming',
+      program_code: form.program_code?.trim() || null,
+      breaks_after: form.breaks_after?.length ? form.breaks_after : null,
+      timezone: form.timezone || 'Asia/Ho_Chi_Minh',
     }
     let classId = form.id
     if (form.id) {
@@ -144,8 +156,8 @@ export default function ScheduleManager() {
       const doneNums = new Set(old.filter(s => s.status === 'completed').map(s => s.session_number))
       await supabase.from('class_sessions').delete().eq('class_id', classId).not('status', 'eq', 'completed')
       const toInsert = sessions
-        .filter(s => !doneNums.has(s.session_number))
-        .map(s => ({ class_id: classId, session_number: s.session_number, start_at: s.start_at, end_at: s.end_at, status: 'scheduled' }))
+        .filter(s => !(s.event_type === 'lesson' && doneNums.has(s.session_number)))
+        .map(s => ({ class_id: classId, session_number: s.session_number, start_at: s.start_at, end_at: s.end_at, event_type: s.event_type, status: s.event_type === 'break' ? 'holiday' : 'scheduled' }))
       if (toInsert.length) {
         const { error: sErr } = await supabase.from('class_sessions').insert(toInsert)
         if (sErr) { setBusy(false); setMsg('Lưu buổi lỗi: ' + sErr.message); return }
@@ -288,13 +300,20 @@ export default function ScheduleManager() {
                       {STATUS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
                     </select>
                   </div>
+                  <div><label style={lbl}>Nghỉ sau buổi (vd 8,16,24,32)</label>
+                    <input style={inp} value={form.breaks_after?.join(',') ?? ''} onChange={e => set({ breaks_after: e.target.value.split(',').map(x => parseInt(x.trim(), 10)).filter(n => Number.isFinite(n) && n > 0) })} placeholder="8,16,24,32 — trống = không nghỉ" />
+                  </div>
+                  <div><label style={lbl}>Mã chương trình</label>
+                    <input style={inp} value={form.program_code ?? ''} onChange={e => set({ program_code: e.target.value.trim() || null })} placeholder="HT2027 — trống = lớp thường" />
+                  </div>
                 </div>
                 {(() => {
-                  const ss = generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions)
+                  const ss = generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions, { breaksAfter: form.breaks_after ?? undefined })
                   if (!ss.length) return <div style={{ fontSize: 12.5, color: S.text3, marginTop: 10 }}>Nhập ngày + thứ + giờ để xem lịch sinh ra.</div>
+                  const breaks = ss.filter(x => x.event_type === 'break').length
                   return (
                     <div style={{ fontSize: 13, color: S.text2, marginTop: 10 }}>
-                      <b style={{ color: S.accent }}>{scheduleText(form.weekday, form.start_time)}</b> · {form.total_sessions} buổi · Khai giảng <b>{fmtDMY(realStartDate(ss))}</b> → Kết thúc <b>{fmtDMY(realEndDate(ss))}</b>
+                      <b style={{ color: S.accent }}>{scheduleText(form.weekday, form.start_time)}</b> · {form.total_sessions} buổi{breaks ? ` + ${breaks} tuần nghỉ giữa chặng` : ''} · Khai giảng <b>{fmtDMY(realStartDate(ss))}</b> → Kết thúc <b>{fmtDMY(realEndDate(ss))}</b>
                       <div style={{ fontSize: 12, color: S.text3, marginTop: 4 }}>
                         Buổi 1: {fmtDMY(realStartDate(ss))} · Buổi cuối: {fmtDMY(realEndDate(ss))}
                       </div>

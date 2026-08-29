@@ -49,6 +49,7 @@ import PianoJourney from './PianoJourney'
 import MusicPlayer from './piano/MusicPlayer'
 import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
+import Hanhtrinh2027Page from './Hanhtrinh2027Page'
 type AppUser = {
   id: string
   role: string
@@ -158,6 +159,12 @@ export default function AppRouter() {
   // ── Route /subscribe — production subscription paywall for iOS review ──
   if (path === '/subscribe' || path.startsWith('/subscribe')) {
     return <SubscriptionPage />
+  }
+
+  // ── Route /hanhtrinh2027 — 40 Buổi Thực hành Hành trình 2027 (công khai) ──
+  // Landing chính thức + lịch dự kiến đọc từ class_schedule/class_sessions/class_off_days.
+  if (path === '/hanhtrinh2027' || path.startsWith('/hanhtrinh2027')) {
+    return <Hanhtrinh2027Page />
   }
 
   // ── Domain class.vananhaudio.com ──
