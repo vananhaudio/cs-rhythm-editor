@@ -13,6 +13,7 @@ import ClassAppGuide from './ClassAppGuide'
 import ClassNangCao from './ClassNangCao'
 import { FAQS } from './classFaq'
 import { tenNangLuc } from './hanhtrinh'
+import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
 
 // ─── Combo Hành trình — sản phẩm bán quanh năm, KHÔNG nằm trong class_schedule ───
 // (Lịch lớp thật đọc từ bảng class_schedule; tuyệt đối không hardcode lớp ở đây.)
@@ -72,6 +73,7 @@ export default function ClassLandingPage() {
   const [showQuiz, setShowQuiz] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const [showPractice, setShowPractice] = useState(false)   // modal xem một buổi thực hành (video thật)
+  const [benefit, setBenefit] = useState<BenefitKey | null>(null)   // chiều sâu 6 quyền lợi (reuse từ /azz)
   const [showNangCao, setShowNangCao] = useState(false)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
@@ -302,6 +304,10 @@ export default function ClassLandingPage() {
       quiz: () => setShowQuiz(true),
       dangky: () => setTimeout(() => goto('dangky'), 350),
       cuavao: () => setTimeout(() => goto('cuavao'), 350),
+      baigiang: () => setBenefit('bai-giang'),
+      sach: () => setBenefit('sach'),
+      thay: () => setBenefit('thay'),
+      congdong: () => setBenefit('cong-dong'),
     }
     actions[xem]?.()
   }, [])
@@ -553,12 +559,12 @@ export default function ClassLandingPage() {
           <p className="lead" style={{ maxWidth: 640 }}>Không chỉ là những bài học. Bạn có những công cụ, tài liệu, các buổi thực hành và sự đồng hành cần thiết để tiếp tục chơi Guitar tốt hơn.</p>
           <div className="pl-grid">
             {[
-              { ic: '🎬', name: 'Kho bài giảng', desc: 'Hàng trăm bài học để bạn học Guitar từ những bước đầu tiên và tiếp tục khám phá ngày càng sâu hơn.', cta: null },
+              { ic: '🎬', name: 'Kho bài giảng', desc: 'Hàng trăm bài học để bạn học Guitar từ những bước đầu tiên và tiếp tục khám phá ngày càng sâu hơn.', cta: 'Xem bên trong →', act: () => setBenefit('bai-giang') },
               { ic: '📱', name: 'App luyện tập', desc: 'Bài tập và những công cụ Guitar được thiết kế để bạn luyện tập mỗi ngày.', cta: 'Xem App →', act: () => goto('app') },
-              { ic: '📖', name: 'Sách giáo trình', desc: 'Những cuốn sách được biên soạn để đồng hành cùng quá trình học của bạn.', cta: null },
-              { ic: '🧭', name: 'Hỏi đáp cùng Thầy qua Zalo', desc: 'Gặp chỗ vướng trong lúc học — bạn hỏi Thầy qua Zalo và nhận hướng dẫn để tiếp tục.', cta: null },
+              { ic: '📖', name: 'Sách giáo trình', desc: 'Những cuốn sách được biên soạn để đồng hành cùng quá trình học của bạn.', cta: 'Xem sách →', act: () => setBenefit('sach') },
+              { ic: '🧭', name: 'Hỏi đáp cùng Thầy qua Zalo', desc: 'Gặp chỗ vướng trong lúc học — bạn hỏi Thầy qua Zalo và nhận hướng dẫn để tiếp tục.', cta: 'Xem cách hỏi Thầy →', act: () => setBenefit('thay') },
               { ic: '🎥', name: 'Buổi thực hành cùng Thầy', desc: 'Tham gia những buổi thực hành online để cùng Thầy luyện tập và đưa những gì đã học vào chơi Guitar thực tế.', cta: 'Xem một buổi thực hành', act: () => setShowPractice(true) },
-              { ic: '👥', name: 'Cộng đồng học viên', desc: 'Những người cùng yêu Guitar, cùng học, chia sẻ và chơi đàn với nhau.', cta: null },
+              { ic: '👥', name: 'Cộng đồng học viên', desc: 'Những người cùng yêu Guitar, cùng học, chia sẻ và chơi đàn với nhau.', cta: 'Xem cộng đồng →', act: () => setBenefit('cong-dong') },
             ].map((c: any) => (
               <div className="pl-card" key={c.name}>
                 <span className="pl-ic" aria-hidden>{c.ic}</span>
@@ -896,6 +902,11 @@ export default function ClassLandingPage() {
           onJourney={() => { setShowNangCao(false); setShowJourney(true) }}
           onQuiz={() => { setShowNangCao(false); setShowQuiz(true) }}
         />
+      )}
+
+      {/* CHIỀU SÂU 6 QUYỀN LỢI — reuse nội dung /azz (class-benefits.ts) */}
+      {benefit && (
+        <ClassBenefitDetail benefit={benefit} onClose={() => setBenefit(null)} />
       )}
 
       {showPractice && (
