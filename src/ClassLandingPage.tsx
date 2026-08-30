@@ -44,7 +44,7 @@ const schedToCard = (it: { name: string; code?: string; schedule: string; start:
   price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
 })
 
-import { DOORS, STARTERS, CHAT_FAQ, MODALS } from './class-content'
+import { DOORS, CHAT_FAQ, MODALS } from './class-content'
 
 
 const ZALO = '0983 259 893'
@@ -71,7 +71,7 @@ export default function ClassLandingPage() {
   const [showTiaNot, setShowTiaNot] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
-  const [showDemo, setShowDemo] = useState(false)
+  const [showPractice, setShowPractice] = useState(false)   // modal xem một buổi thực hành (video thật)
   const [showNangCao, setShowNangCao] = useState(false)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
@@ -391,7 +391,7 @@ export default function ClassLandingPage() {
           <div className="nav-links">
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
             <a onClick={() => goto('chat')}>Tư vấn</a>
-            <a onClick={() => goto('batdau')}>Bắt đầu</a>
+            <a onClick={() => goto('quyenloi')}>Quyền lợi</a>
             <a onClick={() => goto('lichlop')}>Lịch lớp</a>
             {/* Bỏ mục chữ "Đăng ký" — trùng đích với nút "Đăng ký lớp" bên phải, mà hàng
                 nav cần chỗ cho nút Shop. */}
@@ -473,36 +473,8 @@ export default function ClassLandingPage() {
         </div>
       </section>
 
-      {/* SHOWCASE HÀNH ĐỘNG */}
-      <section id="batdau" className="band">
-        <div className="wrap">
-          <div className="eyebrow">Chọn một bước nhỏ</div>
-          <h2>Bắt đầu theo cách phù hợp với bạn</h2>
-          <p className="lead">Mỗi người có một điểm bắt đầu khác nhau. Làm bài test, xem thử cách học, đọc một bài ngắn — hoặc hỏi trợ lý, trước khi đăng ký.</p>
-          <div className="worries">
-            {STARTERS.map((x, i) => {
-              const art = x.slot ? articles[x.slot] : undefined
-              const live = x.ready || !!art
-              return (
-              <div className="worry" key={i}>
-                <h3>{x.t}</h3>
-                <p>{x.d}</p>
-                {x.native === 'quiz'
-                  ? <button className="btn btn-primary" onClick={() => setShowQuiz(true)}>{x.cta} →</button>
-                  : x.native === 'demo'
-                  ? <button className="btn btn-primary" onClick={() => setShowDemo(true)}>{x.cta} →</button>
-                  : art
-                  ? <button className="btn btn-primary" onClick={() => setModal('art:' + x.slot)}>{x.articleCta ?? 'Đọc bài viết'} →</button>
-                  : x.modal
-                  ? <button className="btn btn-ghost" onClick={() => setModal(x.modal!)}>{x.cta} →</button>
-                  : <button className={`btn ${x.ready ? 'btn-primary' : 'btn-ghost'}`} onClick={() => goto((x.href ?? '#chat').replace('#', ''))}>{x.cta} →</button>}
-                <a className="askline" onClick={() => goto('chat')}>Hỏi trợ lý về bước này →</a>
-                {!live && <div className="soon">Sắp có · {x.note}</div>}
-              </div>
-            )})}
-          </div>
-        </div>
-      </section>
+      {/* SHOWCASE HÀNH ĐỘNG — ĐÃ BỎ KHỎI LANDING (vòng 'trang tổng'): quiz/app-free/video/cam-kết
+          vẫn GIỮ capability phía dưới (deep-link ?xem=quiz… vẫn hoạt động). */}
 
       {/* CHAT */}
       <section className="chat-sec" id="chat">
@@ -573,21 +545,29 @@ export default function ClassLandingPage() {
         </div>
       </section>
 
-      {/* QUYỀN LỢI */}
+      {/* QUYỀN LỢI — 6 thành phần của Hành trình (thay 'Một khóa học gồm những gì?') */}
       <section id="quyenloi" className="band">
         <div className="wrap">
-          <div className="eyebrow">Quyền lợi</div>
-          <h2>Một khóa học gồm những gì?</h2>
-          <div className="zoom-callout">
-            <div className="zoom-callout-h">🎥 Lớp Online trực tiếp cùng Thầy Văn Anh</div>
-            <p>Bạn <b>không học một mình qua video quay sẵn</b>. Bạn học <b>online trực tiếp qua Zoom</b> (8 buổi / 2 tháng, mỗi buổi 90 phút), luyện thêm trên app TVA Guitar và được theo dõi, hỗ trợ trong nhóm lớp.</p>
-          </div>
-          <div className="benefits">
-            {[['🎥', '<b>8 buổi Zoom trực tiếp</b> cùng thầy, mỗi buổi 90 phút'], ['📱', '<b>App TVA Guitar</b> luyện tập 24/24'], ['✍️', '<b>Bài tập</b> rõ ràng sau mỗi buổi'], ['👥', '<b>Nhóm lớp</b> nhận thông báo & hỗ trợ'], ['🎯', '<b>Tư vấn chọn đúng trình độ</b> trước khi vào lớp'], ['🗺️', '<b>Lộ trình học tiếp</b> rõ ràng khi sẵn sàng']].map(([ic, t], i) => (
-              <div className="bf" key={i}><span className="bi">{ic}</span><div dangerouslySetInnerHTML={{ __html: t }} /></div>
+          <div className="eyebrow">Khi tham gia Hành trình</div>
+          <h2>Đây là những gì bạn có khi tham gia.</h2>
+          <p className="lead" style={{ maxWidth: 640 }}>Không chỉ là những bài học. Bạn có những công cụ, tài liệu, các buổi thực hành và sự đồng hành cần thiết để tiếp tục chơi Guitar tốt hơn.</p>
+          <div className="pl-grid">
+            {[
+              { ic: '🎬', name: 'Kho bài giảng', desc: 'Hàng trăm bài học để bạn học Guitar từ những bước đầu tiên và tiếp tục khám phá ngày càng sâu hơn.', cta: null },
+              { ic: '📱', name: 'App luyện tập', desc: 'Bài tập và những công cụ Guitar được thiết kế để bạn luyện tập mỗi ngày.', cta: 'Xem App →', act: () => goto('app') },
+              { ic: '📖', name: 'Sách giáo trình', desc: 'Những cuốn sách được biên soạn để đồng hành cùng quá trình học của bạn.', cta: null },
+              { ic: '🧭', name: 'Hỏi đáp cùng Thầy qua Zalo', desc: 'Gặp chỗ vướng trong lúc học — bạn hỏi Thầy qua Zalo và nhận hướng dẫn để tiếp tục.', cta: null },
+              { ic: '🎥', name: 'Buổi thực hành cùng Thầy', desc: 'Tham gia những buổi thực hành online để cùng Thầy luyện tập và đưa những gì đã học vào chơi Guitar thực tế.', cta: 'Xem một buổi thực hành', act: () => setShowPractice(true) },
+              { ic: '👥', name: 'Cộng đồng học viên', desc: 'Những người cùng yêu Guitar, cùng học, chia sẻ và chơi đàn với nhau.', cta: null },
+            ].map((c: any) => (
+              <div className="pl-card" key={c.name}>
+                <span className="pl-ic" aria-hidden>{c.ic}</span>
+                <h3>{c.name}</h3>
+                <p>{c.desc}</p>
+                {c.cta && <button className="pl-cta" onClick={c.act}>{c.cta}</button>}
+              </div>
             ))}
           </div>
-          <div className="tuition">Học phí khóa học: <b>990.000đ</b></div>
         </div>
       </section>
 
@@ -918,31 +898,31 @@ export default function ClassLandingPage() {
         />
       )}
 
-      {showDemo && (
+      {showPractice && (
         <div className="demo-page">
           <div className="demo-top">
-            <button className="demo-back" onClick={() => setShowDemo(false)}>← Quay lại</button>
-            <button className="demo-cta" onClick={() => { setShowDemo(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+            <button className="demo-back" onClick={() => setShowPractice(false)}>← Quay lại</button>
+            <button className="demo-cta" onClick={() => { setShowPractice(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
           </div>
           <div className="demo-scroll">
             <div className="demo-inner">
-              <div className="demo-eyebrow">Mô hình học</div>
-              <h2 className="demo-h2">Một buổi học vận hành thế nào?</h2>
-              <p className="demo-lead">Xem trực tiếp một buổi học thật: thầy giảng trên Zoom, hướng dẫn từng bước, học viên thực hành và được sửa ngay. Học online ở đây không phải tự bơi.</p>
+              <div className="demo-eyebrow">Thực hành cùng Thầy</div>
+              <h2 className="demo-h2">Một buổi thực hành cùng Thầy</h2>
+              <p className="demo-lead">Xem một buổi thực hành online thật — cùng học, cùng luyện và chơi Guitar với Thầy cùng những người học khác.</p>
               <div className="demo-video">
                 <iframe
-                  src="https://www.youtube.com/embed/1PtetZ2VYms?start=6420&rel=0"
-                  title="Một buổi học TVA Guitar"
+                  src="https://www.youtube-nocookie.com/embed/i28oaOErUEQ?rel=0&modestbranding=1"
+                  title="Buổi thực hành online cùng Thầy Văn Anh"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
               </div>
               <div className="demo-points">
-                {[['🎥', 'Lớp Zoom có người dẫn — thầy giảng trực tiếp theo lịch cố định'], ['💬', 'Nhóm Zalo lớp — nhắc lịch, giao bài, hỏi đáp sau buổi học'], ['📱', 'App TVA Guitar — bài học, bài tập, tiến độ lưu lại để ôn'], ['✍️', 'Trả bài có góp ý — gửi bài để thầy xem và sửa cho bạn']].map(([ic, t], i) => (
+                {[['🎸', 'Thầy hướng dẫn — nghe giải thích, xem mẫu và được chỉ ra những điểm cần chú ý'], ['🎼', 'Cùng luyện tập — cầm đàn lên và thực hành ngay những gì đang học'], ['🎶', 'Cùng chơi Guitar — nghe mọi người chơi và cảm nhận âm nhạc trong một buổi thật']].map(([ic, t], i) => (
                   <div className="demo-point" key={i}><span>{ic}</span>{t}</div>
                 ))}
               </div>
-              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowDemo(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowPractice(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
             </div>
           </div>
         </div>
@@ -1108,6 +1088,15 @@ const CSS = `
 .tva-class .door p{font-size:13.5px;color:var(--ink-soft);flex:1;margin-bottom:14px;line-height:1.45;}
 .tva-class .door .btn{font-size:13.5px;padding:10px;}
 .tva-class .map-hint{margin-top:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#FAF8F4;border:1px dashed var(--line);border-radius:14px;padding:16px 18px;font-size:14px;color:var(--ink-soft);}
+/* 6 thành phần Hành trình (quyền lợi mới) — grid 3×2, card gọn */
+.tva-class .pl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
+.tva-class .pl-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;}
+.tva-class .pl-card .pl-ic{font-size:24px;line-height:1;}
+.tva-class .pl-card h3{font-size:15.5px;font-weight:700;margin:12px 0 6px;}
+.tva-class .pl-card p{font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin:0 0 14px;flex:1;}
+.tva-class .pl-card .pl-cta{font-size:13px;font-weight:600;color:var(--indigo);background:none;border:none;padding:0;cursor:pointer;font-family:inherit;align-self:flex-start;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--indigo);}
+.tva-class .pl-card .pl-cta:hover{color:var(--indigo-dark);}
+@media(max-width:860px){.tva-class .pl-grid{grid-template-columns:1fr;}}
 @media(max-width:860px){.tva-class .doors{grid-template-columns:1fr;}}
 .tva-class .worries{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px;}
 .tva-class .worry{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;}
