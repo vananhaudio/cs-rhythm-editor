@@ -114,7 +114,7 @@ export default function YouTubeLesson({ url, videoId, title, onEnded, style, noW
     <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000', ...style }}>
       <iframe key={gen} ref={iframeRef} src={playerSrc(id)} title={title || 'Video bài học'}
         style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-        allow={YT_ALLOW} allowFullScreen onLoad={armWatchdog} />
+        allow={NATIVE ? 'fullscreen; autoplay; encrypted-media' : YT_ALLOW} allowFullScreen onLoad={armWatchdog} />
       {failed && !ready && (
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
           <div style={{ fontSize: 15, fontWeight: 600 }}>Không tải được video.</div>

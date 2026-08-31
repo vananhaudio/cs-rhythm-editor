@@ -26,7 +26,21 @@ export default function YtPlayerPage() {
   if (!id) return <div style={{ minHeight: '100vh', background: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>Thiếu mã video (?v=)</div>
   return (
     <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center' }}>
-      <YouTubeLesson videoId={id} noWatchdog={noFail} style={{ width: '100%' }} />
+      {noFail ? (
+        // Vỏ native: nhúng qua youtube-nocookie (privacy-enhanced) — bộ kiểm ancestor/referer
+        // của player thường ít gắt hơn khi tổ tiên trên cùng là scheme app (capacitor://).
+        <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000', width: '100%' }}>
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${id}?playsinline=1&rel=0`}
+            title="Video"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            allow="fullscreen; autoplay; encrypted-media"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <YouTubeLesson videoId={id} style={{ width: '100%' }} />
+      )}
     </div>
   )
 }
