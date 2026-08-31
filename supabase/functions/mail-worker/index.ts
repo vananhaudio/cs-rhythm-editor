@@ -137,40 +137,128 @@ ${lines.join('<br><br>')}
   return { subject: 'Thầy đã nhận được đăng ký của anh/chị', content }
 }
 
-// ─── EMAIL 2 — learning_access_ready ────────────────────────────────────
+// ─── EMAIL 2 — learning_access_ready (START-HERE: "Hôm nay tôi nên làm gì?") ───
+interface StartAction { kind: string; title: string; url: string; source: string }
+
+/** Buổi học tiếp theo của lớp (thật từ class_sessions) — null nếu chưa resolve chắc */
+async function nextClassSession(className: string | null) {
+  if (!className) return null
+  const code = (className.match(/·\s*([A-Z0-9.]+)\s*$/) ?? [])[1]
+  if (!code) return null
+  const { data: cls } = await supabase.from('class_schedule')
+    .select('id,name,timezone').eq('code', code).maybeSingle()
+  if (!cls) return null
+  const { data: sess } = await supabase.from('class_sessions')
+    .select('start_at,status,event_type')
+    .eq('class_id', cls.id)
+    .gte('start_at', new Date().toISOString())
+    .order('start_at', { ascending: true })
+    .limit(3)
+  const next = (sess ?? []).find(x => x.event_type !== 'break' && x.status !== 'cancelled' && x.status !== 'holiday')
+  if (!next) return null
+  const d = new Date(next.start_at)
+  const fmt = new Intl.DateTimeFormat('vi-VN', { timeZone: cls.timezone || 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', weekday: 'long' })
+  const fmtT = new Intl.DateTimeFormat('vi-VN', { timeZone: cls.timezone || 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
+  return { name: cls.name, label: `${fmt.format(d)} · ${fmtT.format(d)}` }
+}
+
+/** "Hôm nay bắt đầu từ đây" — block action theo mode (resolver deterministic, không AI) */
+async function buildStartHere(lead: LeadInfo, cfg: Record<string, string>) {
+  const note = parseNote(lead.note)
+  const mode = note['reg-mode'] ?? 'class'
+  const path = note['practice-path'] ?? ''
+  const { data: actions } = await supabase.rpc('resolve_student_start_action', { p_lead: lead.id })
+  const acts = (actions ?? []) as StartAction[]
+  const homeUrl = cfg['class_site_url'] + '/me'
+  const practiceLink = (cfg['class_site_url'] ?? '') + '/class?xem=thuchanh'
+
+  let html = ''
+  const block = (title: string, steps: string[], cta: { label: string; url: string }[], extra = '') => `
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FDF0E7;border:1px solid #F5CFB6;border-radius:12px;margin:18px 0"><tr><td style="padding:16px 18px">
+<div style="font-size:12px;font-weight:800;letter-spacing:1.2px;color:#EA580C;text-transform:uppercase;margin-bottom:8px">Hôm nay, hãy bắt đầu từ đây</div>
+<div style="font-size:16px;font-weight:800;color:#211C32;margin-bottom:8px">${title}</div>
+<ol style="margin:0 0 10px;padding-left:18px;color:#5A5470;font-size:14px;line-height:1.7">${steps.map(x => `<li>${x}</li>`).join('')}</ol>
+${cta.map(c => `<a href="${c.url}" style="display:inline-block;background:#EA580C;color:#fff;text-decoration:none;border-radius:8px;padding:10px 18px;font-weight:700;margin:2px 6px 2px 0">${c.label}</a>`).join('')}
+${extra}
+</td></tr></table>`
+
+  if (mode === 'practice') {
+    const main = acts.find(a => a.kind === 'practice_path') ?? acts.find(a => a.kind === 'learning_home')
+    if (path === 'dem_hat' || path === 'tia_not' || path === 'solo') {
+      const pathLabel = PATH_LABEL[path] ?? path
+      html += block(`Bắt đầu học ${pathLabel} ngay hôm nay`, [
+        'Mở App Thầy Văn Anh Guitar.',
+        `Chọn hướng ${pathLabel}.`,
+        'Bắt đầu nội dung được hệ thống mở cho bạn.',
+        'Học và luyện ít nhất một nội dung đầu tiên.',
+        'Sau đó xem Lịch Thực hành và chọn buổi phù hợp.',
+      ], main ? [{ label: main.title, url: main.url }] : [])
+    } else {
+      // unsure — không ép tự chọn hướng
+      html += block('Anh/chị chưa cần tự quyết định hướng học ngay', [
+        'Hãy đăng nhập hệ thống trước.',
+        'Thầy sẽ giúp xác định điểm bắt đầu phù hợp.',
+      ], [{ label: 'Mở hệ thống học tập →', url: homeUrl }])
+    }
+    html += `<p style="color:#5A5470;font-size:14px;line-height:1.7">Anh/chị không cần đợi đến buổi thực hành đầu tiên mới bắt đầu học. Ngay từ hôm nay, anh/chị đã có thể học và luyện tập trên hệ thống. Buổi thực hành là lúc hỏi đáp, sửa bài và luyện sâu hơn những điều đang học.</p>`
+    html += `<p><a href="${practiceLink}" style="display:inline-block;background:#211C32;color:#fff;text-decoration:none;border-radius:8px;padding:10px 18px;font-weight:700">Xem lịch thực hành →</a></p>`
+    html += `<p style="color:#5A5470;font-size:13.5px">Thầy sẽ giúp anh/chị xác định nhóm Cơ bản / Trung cấp / Nâng cao phù hợp.</p>`
+  }
+
+  if (mode === 'class') {
+    const main = acts.find(a => a.kind === 'class_prep') ?? acts.find(a => a.kind === 'learning_home')
+    const clsName = lead.class_name ?? 'lớp của anh/chị'
+    const sess = await nextClassSession(lead.class_name)
+    html += block(`Hôm nay, hãy làm 2 việc`, [
+      `Đăng nhập hệ thống và làm quen với nội dung của <b>${escapeHtml(clsName)}</b>.`,
+      'Xem lịch lớp và chuẩn bị trước cho buổi đầu tiên.',
+    ], main ? [{ label: main.title, url: main.url }] : [])
+    if (sess) {
+      html += `<p style="color:#211C32;font-size:14.5px;font-weight:700">Buổi học tiếp theo:<br><span style="color:#5A5470;font-weight:400">${escapeHtml(sess.name)}</span><br>${escapeHtml(sess.label)}</p>`
+    } else {
+      html += `<p style="color:#5A5470;font-size:14px">Lịch lớp của anh/chị đã được xác nhận trong hệ thống/nhóm học.</p>`
+    }
+    html += `<p style="color:#5A5470;font-size:14px;line-height:1.7">Trước buổi đầu tiên, anh/chị hãy làm quen với nội dung đã được mở và ghi lại những chỗ chưa hiểu.</p>`
+  }
+
+  if (mode === 'both') {
+    const clsAct = acts.find(a => a.kind === 'class_prep')
+    const pracAct = acts.find(a => a.kind === 'practice_path' || a.kind === 'learning_home')
+    html += block(`Hôm nay, anh/chị có 2 việc`, [
+      `<b>Gói Học theo lớp:</b> xem trước nội dung của <b>${escapeHtml(lead.class_name ?? 'lớp')}</b>.`,
+      `<b>Gói Thực hành:</b> chọn hướng học trên App và bắt đầu luyện.`,
+    ], [
+      ...(clsAct ? [{ label: 'Chuẩn bị cho lớp →', url: clsAct.url }] : []),
+      ...(pracAct ? [{ label: 'Bắt đầu thực hành →', url: pracAct.url }] : []),
+    ])
+    html += `<p style="color:#211C32;font-size:14.5px;font-weight:700;line-height:1.7">Học theo lớp để đi lên.<br>Thực hành để đi sâu.</p>`
+  }
+  return html
+}
+
 async function buildEmail2(lead: LeadInfo, cfg: Record<string, string>): Promise<BuiltMail> {
   const note = parseNote(lead.note)
   const mode = note['reg-mode'] ?? 'class'
-  const cls = await classInfo(lead.class_name)
-
-  let branchHtml = ''
-  if (mode === 'class' || mode === 'both') {
-    branchHtml += `<p style="margin:6px 0 0"><b>Gói Học theo lớp</b> · ${escapeHtml(lead.class_name ?? '—')}${cls?.schedule ? `<br>Lịch cố định: ${escapeHtml(cls.schedule)}` : ''}</p>`
-  }
-  if (mode === 'practice' || mode === 'both') {
-    const dur = note['practice-duration'] ?? '1_month'
-    branchHtml += `<p style="margin:6px 0 0"><b>Gói Thực hành</b> · ${PRACTICE_SUM[dur]?.label ?? dur}</p>`
-    branchHtml += `<p style="margin:4px 0 0;color:#5A5470">Chọn hướng học trên App, tham gia nhóm thực hành phù hợp và chọn buổi theo lịch. Nếu chưa rõ nhóm nào phù hợp, Thầy sẽ giúp anh/chị phân nhóm.</p>`
-  }
 
   const content = `
 <p>Chào anh/chị <b>${escapeHtml(lead.name)}</b>,</p>
-<p>Tài khoản học của anh/chị đã được kích hoạt — anh/chị có thể bắt đầu học ngay bây giờ.</p>
+<p>Đăng ký của anh/chị đã được xác nhận và quyền học đã được kích hoạt.</p>
+${await buildStartHere(lead, cfg)}
 <p style="background:#F7F5F0;border:1px solid #E4DED4;border-radius:10px;padding:14px 16px;">
 <b>Thông tin đăng nhập</b><br>
 Tài khoản: <b>${escapeHtml(lead.email ?? 'email đã đăng ký')}</b><br>
-Hệ thống: <a href="${escapeHtml(cfg['site_url'] ?? '')}">${escapeHtml(cfg['site_url'] ?? '')}</a><br>
-App: <a href="${escapeHtml(cfg['appstore_url'] ?? '')}">App Store</a> · <a href="${escapeHtml(cfg['playstore_url'] ?? '')}">Google Play</a><br>
+Hệ thống: <a href="${escapeHtml(cfg['class_site_url'] ?? '')}">${escapeHtml(cfg['class_site_url'] ?? '')}</a><br>
+App: <a href="${escapeHtml(cfg['app_ios_url'] ?? '')}">App Store</a> · <a href="${escapeHtml(cfg['app_android_url'] ?? '')}">Google Play</a><br>
 <span style="color:#5A5470;font-size:13px">Mật khẩu đăng nhập được Thầy gửi riêng qua Zalo. Sau khi đăng nhập, anh/chị nên đổi mật khẩu riêng để bảo mật.</span>
 </p>
-${branchHtml}
 <p style="background:#FDF0E7;border:1px solid #F5CFB6;border-radius:10px;padding:14px 16px;">
 <b>Đừng đợi đến buổi đầu tiên mới bắt đầu học.</b><br>
 Ngay khi tài khoản được kích hoạt, anh/chị đã có thể vào hệ thống xem bài và luyện tập trước.<br>
 Những chỗ chưa hiểu hãy ghi lại để khi gặp Thầy có thể hỏi và sửa trực tiếp.
 </p>
-<p>Cần hỗ trợ? <a href="${escapeHtml(cfg['zalo_url'] ?? '')}">Nhắn Thầy qua Zalo</a></p>`
-  return { subject: 'Tài khoản học của anh/chị đã được kích hoạt', content }
+<p>Cần hỗ trợ? <a href="${escapeHtml(cfg['zalo_url'] ?? '')}">Nhắn Thầy qua Zalo</a></p>
+<p style="color:#5A5470;font-size:13px">Từ bây giờ, các hướng dẫn học tập và thông tin quan trọng sẽ được gửi qua email. Anh/chị nhớ kiểm tra email thường xuyên nhé.</p>`
+  return { subject: 'Anh/chị đã có thể bắt đầu học', content }
 }
 
 // ─── EMAIL 3 — first_session_reminder (template sẵn — CHƯA trigger: GAP) ─
@@ -260,9 +348,16 @@ Deno.serve(async (req) => {
         await supabase.from('mail_log').update({ status: 'failed', error: 'template: ' + String((e as Error)?.message ?? e) }).eq('id', job.id)
         failed++; continue
       }
+      // Audit start-here: lưu resolved action (mail_log metadata — không log token)
+      let resolved: Record<string, string> = {}
+      if (job.mail_type === 'learning_access_ready') {
+        const { data: acts } = await supabase.rpc('resolve_student_start_action', { p_lead: job.lead_id })
+        const a = (acts ?? [])[0]
+        if (a) resolved = { resolved_start_kind: a.kind, resolved_start_title: a.title, resolved_start_url: a.url }
+      }
       const r = await sendViaMailSystem(mail.subject, mail.content, lead.email)
       if (r.ok) {
-        await supabase.from('mail_log').update({ status: 'sent', subject: mail.subject, to_email: lead.email, sent_at: new Date().toISOString(), error: null }).eq('id', job.id)
+        await supabase.from('mail_log').update({ status: 'sent', subject: mail.subject, to_email: lead.email, sent_at: new Date().toISOString(), error: null, ...resolved }).eq('id', job.id)
         sent++
       } else {
         await supabase.from('mail_log').update({ status: 'failed', error: r.error, to_email: lead.email }).eq('id', job.id)
