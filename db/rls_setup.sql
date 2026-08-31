@@ -51,6 +51,8 @@ DECLARE
   -- Bảng tự quản RLS riêng (policy hẹp do migration tính năng đặt) — BỎ QUA:
   self_managed text[] := ARRAY[
     'edu_groups', 'edu_group_members', 'edu_group_claim_tokens',
+    -- Bản tin hôm nay (db/home_feed_v2.sql): anon/auth chỉ ĐỌC item published; teacher mới ghi.
+    'home_feed_items',
     -- Content Access Policy (db/content_access_policy_setup.sql): anon/auth đọc
     -- nội dung visible; teacher/admin mới ghi. ĐỪNG áp policy rộng lên các bảng này,
     -- nếu không học viên authenticated có thể tự sửa required_tier/visibility.
