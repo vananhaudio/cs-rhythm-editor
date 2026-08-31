@@ -55,7 +55,8 @@ insert into public.app_config (key, value, note) values
   ('app_url',       'https://timming.vananhaudio.com/start', 'cổng đăng nhập app'),
   ('appstore_url',  'https://apps.apple.com/vn/app/id6776205968', ''),
   ('playstore_url', 'https://play.google.com/store/apps/details?id=com.vananhaudio.guitar', ''),
-  ('zalo_url',      'https://zalo.me/vananhguitarist', '')
+  ('zalo_url',      'https://zalo.me/vananhguitarist', ''),
+  ('functions_url', 'https://wojmdilyflffvdtpovmq.supabase.co', 'host gọi edge function (KHÔNG phải site web)')
 on conflict (key) do nothing;
 
 -- ── 3) APP SECRETS — chỉ service_role (definer) đọc; trigger/cron lấy x-internal-secret ──
@@ -93,7 +94,7 @@ begin
     return;
   end if;
   perform net.http_post(
-    url := (select value from public.app_config where key = 'site_url') || '/functions/v1/mail-worker',
+    url := (select value from public.app_config where key = 'functions_url') || '/functions/v1/mail-worker',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || v_jwt,
@@ -194,7 +195,7 @@ begin
           (select id from public.mail_log where lead_id = p_lead and mail_type = p_type order by id limit 1))
   returning id into v_new_id;
   perform net.http_post(
-    url := (select value from public.app_config where key = 'site_url') || '/functions/v1/mail-worker',
+    url := (select value from public.app_config where key = 'functions_url') || '/functions/v1/mail-worker',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || v_jwt,
@@ -215,7 +216,7 @@ select cron.schedule(
   '* * * * *',
   $$
   select net.http_post(
-    url := (select value from public.app_config where key = 'site_url') || '/functions/v1/mail-worker',
+    url := (select value from public.app_config where key = 'functions_url') || '/functions/v1/mail-worker',
     headers := jsonb_build_object('Content-Type', 'application/json',
       'Authorization', 'Bearer ' || (select value from public.app_secrets where name = 'service_role_jwt'),
       'x-internal-secret', (select value from public.app_secrets where name = 'mail_worker_secret')),
