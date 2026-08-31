@@ -63,6 +63,9 @@ interface CourseOpt { id: string; name: string; code?: string | null }
 interface ClassOpt { id: string; code: string | null; name: string }
 interface PkgRow { student_id: string | null; renews_at: string | null; packages: { name: string } | { name: string }[] | null }
 interface PkgInfo { name: string; renews_at: string }
+interface MailLogRow { id: number; lead_id: number; mail_type: string; attempt: number; status: string; subject: string | null; sent_at: string | null; error: string | null; resent_of: number | null }
+const fmtTime = (iso: string | null): string =>
+  iso ? new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''
 
 // PostgREST embed (packages(name)) có thể trả object hoặc mảng — lấy tên gói an toàn
 const pkgName = (p: PkgRow['packages']): string | null =>
@@ -102,6 +105,38 @@ export default function LeadsManager() {
   const [busyId, setBusyId] = useState<number | null>(null)
   // student_id → gói đang active (Đợt 2: hiển thị trạng thái gói + renews_at cho Thầy)
   const [pkgInfo, setPkgInfo] = useState<Record<string, PkgInfo>>({})
+  // EMAIL TIMELINE — audit mail_log (Email 1/2/3) cho từng lead
+  const [mailLogs, setMailLogs] = useState<Record<number, MailLogRow[]>>({})
+
+  const loadMailLogs = async () => {
+    const { data, error } = await supabase.from('mail_log').select('id,lead_id,mail_type,attempt,status,subject,sent_at,error,resent_of').order('id', { ascending: true })
+    if (error) return
+    const m: Record<number, MailLogRow[]> = {}
+    for (const r of (data ?? []) as MailLogRow[]) (m[r.lead_id] ??= []).push(r)
+    setMailLogs(m)
+  }
+  const resendMail = async (l: Lead, type: string) => {
+    setBusyId(l.id); setOpErr(null)
+    const { error } = await supabase.rpc('mail_resend', { p_lead: l.id, p_type: type })
+    setBusyId(null)
+    if (error) { setOpErr('Gửi lại email lỗi: ' + error.message); return }
+    await loadMailLogs()
+  }
+  const mailBadge = (l: Lead, type: string, label: string) => {
+    const rows = (mailLogs[l.id] ?? []).filter(r => r.mail_type === type).sort((a, b) => a.attempt - b.attempt)
+    const last = rows[rows.length - 1]
+    const base = { fontSize: 11.5, marginTop: 5, lineHeight: 1.5 }
+    if (!last) return <div style={{ ...base, color: C.text3 }}>⏳ {label}: chưa gửi</div>
+    if (last.status === 'sent') return <div style={{ ...base, color: '#065F46' }}>✅ {label} · {fmtTime(last.sent_at)}</div>
+    if (last.status === 'failed') return (
+      <div style={{ ...base, color: '#B91C1C' }}>
+        ❌ {label} · <button onClick={() => { void resendMail(l, type) }} disabled={busyId === l.id}
+          style={{ background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, color: '#B91C1C', cursor: busyId === l.id ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+          Gửi lại
+        </button>
+      </div>)
+    return <div style={{ ...base, color: C.text3 }}>🕓 {label}: đang gửi…</div>
+  }
 
   const load = async () => {
     setLoading(true); setErr(null)
@@ -109,6 +144,7 @@ export default function LeadsManager() {
     if (error) { setErr(error.message); setLoading(false); return }
     setLeads((data ?? []) as Lead[])
     setLoading(false)
+    void loadMailLogs()
   }
   useEffect(() => { load() }, [])
 
@@ -395,6 +431,7 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                 <th style={th}>Lớp / Ý định</th>
                 <th style={th}>Ghi chú</th>
                 <th style={th}>Trạng thái</th>
+                <th style={th}>Email</th>
               </tr>
             </thead>
             <tbody>
@@ -522,6 +559,12 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                       }}>
                       {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
+                  </td>
+                  <td style={{ ...td, minWidth: 170 }}>
+                    {/* EMAIL TIMELINE — vòng 8: Email 1 sau đăng ký, Email 2 sau khi kích hoạt (Đã đóng phí) */}
+                    {mailBadge(l, 'registration_received', '📧 Hướng dẫn đăng ký')}
+                    {mailBadge(l, 'learning_access_ready', '🚀 Bắt đầu học')}
+                    {!mailLogs[l.id] && <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>—</div>}
                   </td>
                 </tr>
                 )
