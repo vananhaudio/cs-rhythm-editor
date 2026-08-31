@@ -46,15 +46,13 @@ drop policy if exists rls_anon_read on public.home_feed_items;
 drop policy if exists home_feed_read_published on public.home_feed_items;
 drop policy if exists home_feed_teacher_all on public.home_feed_items;
 
--- Policy đọc gọi is_teacher() → anon cũng cần quyền EXECUTE (hàm chỉ đọc role, anon luôn ra false)
-grant execute on function public.is_teacher() to anon;
+-- Least privilege: policy ĐỌC (anon+student) không dính is_teacher() — anon không cần
+-- EXECUTE hàm này. Teacher xem cả draft/hết hạn qua policy FOR ALL riêng (đã bao SELECT).
+revoke execute on function public.is_teacher() from anon;
 
 create policy home_feed_read_published on public.home_feed_items
   for select to anon, authenticated
-  using (
-    (published and published_at <= now() and (expires_at is null or expires_at > now()))
-    or public.is_teacher()
-  );
+  using (published and published_at <= now() and (expires_at is null or expires_at > now()));
 
 create policy home_feed_teacher_all on public.home_feed_items
   for all to authenticated

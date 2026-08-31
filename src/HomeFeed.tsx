@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
+import YouTubeLesson, { getYouTubeId } from './video/YouTubeLesson'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Bản tin hôm nay — content feed SERVER-DRIVEN (bảng home_feed_items, db/home_feed_v2.sql).
@@ -34,11 +35,9 @@ export const FEED_TYPE_META: Record<HomeFeedItem['type'], { label: string; icon:
   event:        { label: 'Sự kiện',    icon: '🗓️', tone: '#B45309' },
 }
 
-// YouTube URL → embed URL (video in_app). Không phải YouTube → giữ nguyên.
-export function toEmbedUrl(url: string): string {
-  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/)
-  return m ? `https://www.youtube.com/embed/${m[1]}?playsinline=1` : url
-}
+// Origin web production của chính app — capability config cho renderer hosted (/ytplayer)
+// khi chạy trong vỏ native (bundled, origin capacitor:// không nhúng YouTube được).
+const HOSTED_WEB_ORIGIN = 'https://timming.vananhaudio.com'
 
 // ── Fetch + cache (localStorage) ─────────────────────────────────────────────
 const CACHE_KEY = 'tva_home_feed_cache_v2'
@@ -92,7 +91,12 @@ function FeedOverlay({ item, primary, onClose }: { item: HomeFeedItem; primary: 
   const [frameState, setFrameState] = useState<'loading' | 'ready' | 'error'>('loading')
   const url = item.content_url ?? ''
   const isImage = item.type === 'image'
-  const src = item.type === 'video' ? toEmbedUrl(url) : url
+  // Video YouTube: origin capacitor:// bị YouTube chặn embed (Error 153, referer không phải https)
+  // → native nhúng trang player hosted /ytplayer của web app; web render trực tiếp YouTubeLesson.
+  const ytId = item.type === 'video' ? getYouTubeId(url) : null
+  const isNative = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+  const src = ytId && isNative ? `${HOSTED_WEB_ORIGIN}/ytplayer?v=${ytId}` : url
+  const useDirectYt = !!ytId && !isNative
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top))', background: primary, flexShrink: 0 }}>
@@ -105,6 +109,10 @@ function FeedOverlay({ item, primary, onClose }: { item: HomeFeedItem; primary: 
       {isImage ? (
         <div style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img src={url} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+        </div>
+      ) : useDirectYt ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#000' }}>
+          <YouTubeLesson videoId={ytId!} title={item.title} style={{ width: '100%' }} />
         </div>
       ) : (
         <>

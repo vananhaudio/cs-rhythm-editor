@@ -20,6 +20,7 @@ import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { HBD_CHUM2, HBD_TD1, STRUM_BALLAD, STRUM_JINGLE, STRUM_ODE, STRUM_SCARBOROUGH, STRUM_AMAZING } from './elearn/strumSongs'
 import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
+import YtPlayerPage from './video/YtPlayerPage'
 import Metronome from './Metronome'
 import SongBuilderPage from './SongBuilderPage'
 import TeacherAdminPage from './TeacherAdminPage'
@@ -424,6 +425,13 @@ if (path === '/students') {
 
   // embedded=1 → tool mở trong iframe overlay của MobileStudentPortal → ẩn nút ✕ bên trong tool
   const embedded = new URLSearchParams(window.location.search).get('embedded') === '1'
+
+  // ── Route /ytplayer?v=<id> — trang player YouTube hosted (origin https hợp lệ).
+  // WKWebView (capacitor://) bị YouTube chặn embed trực tiếp (Error 153, thiếu referer https)
+  // → app native nhúng trang này qua iframe. Public, không cần đăng nhập.
+  if (path === '/ytplayer') {
+    return <YtPlayerPage />
+  }
 
   // ── Route /tempo — Tap Tempo Tool ──
   if (path === '/tempo' || path.startsWith('/tempo')) {
