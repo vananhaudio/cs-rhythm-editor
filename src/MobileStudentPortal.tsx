@@ -187,10 +187,11 @@ function CourseLogo({ course: courseInput, size = 44, radius = 12, bg }: { cours
 // CHỈ để chốt UI "Bản tin hôm nay". KHÔNG phải production data, KHÔNG ghi DB,
 // KHÔNG tên người thật, KHÔNG link thật. Component đọc mảng này để Phase 2 chỉ thay data source.
 // ─────────────────────────────────────────────────────────────────────────────
-const HOME_FEED_MOCK: { type: string; kicker: string; title: string; summary: string; icon: string; tone: string }[] = [
-  { type: 'story',         kicker: 'Câu chuyện',      title: 'Từ chàng nhân viên văn phòng đến sân khấu', summary: 'Hành trình một năm cầm đàn của một học viên.', icon: '📖', tone: '#7C3AED' },
-  { type: 'class_start',   kicker: 'Lớp học',         title: 'Lớp Đệm hát K3 vừa khai giảng',             summary: 'Một chặng mới bắt đầu cùng nhau.',            icon: '🎓', tone: '#0891B2' },
-  { type: 'student_video', kicker: 'Video học viên',  title: 'Một màn biểu diễn mới từ cộng đồng',         summary: 'Xem cộng đồng đang sống cùng âm nhạc.',       icon: '🎥', tone: '#EA580C' },
+type HomeFeedItem = { kicker: string; title: string; summary: string; icon: string; tone: string; link_url?: string | null }
+const HOME_FEED_MOCK: HomeFeedItem[] = [
+  { kicker: 'Câu chuyện',      title: 'Từ chàng nhân viên văn phòng đến sân khấu', summary: 'Hành trình một năm cầm đàn của một học viên.', icon: '📖', tone: '#7C3AED' },
+  { kicker: 'Lớp học',         title: 'Lớp Đệm hát K3 vừa khai giảng',             summary: 'Một chặng mới bắt đầu cùng nhau.',            icon: '🎓', tone: '#0891B2' },
+  { kicker: 'Video học viên',  title: 'Một màn biểu diễn mới từ cộng đồng',         summary: 'Xem cộng đồng đang sống cùng âm nhạc.',       icon: '🎥', tone: '#EA580C' },
 ]
 
 const LEARN_TRACKS: { key: string; title: string; hint: string }[] = [
@@ -385,6 +386,15 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [deleteError, setDeleteError] = useState('')
   const avatarFileRef = useRef<HTMLInputElement>(null)
   const [screen, setScreen]       = useState<Screen>('home')
+  // Bản tin hôm nay: đọc từ bảng home_feed_items (db/home_feed_setup.sql); bảng trống/lỗi → mock cũ
+  const [homeFeed, setHomeFeed]   = useState<HomeFeedItem[]>(HOME_FEED_MOCK)
+  useEffect(() => {
+    supabase.from('home_feed_items')
+      .select('kicker,title,summary,icon,tone,link_url')
+      .eq('published', true)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => { if (data && data.length > 0) setHomeFeed(data) })
+  }, [])
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [modules, setModules]     = useState<Module[]>([])
   const [lessons, setLessons]     = useState<Lesson[]>([])
@@ -1855,8 +1865,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
             <section style={{ margin: '26px 18px 0' }}>
               <div style={{ fontSize: 17, fontWeight: 900, color: L.t1, marginBottom: 12, textAlign: 'left' }}>Bản tin hôm nay</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {HOME_FEED_MOCK.map((it, i) => (
-                  <div key={i} style={{ background: L.surface, borderRadius: 18, boxShadow: L.shadow, overflow: 'hidden', display: 'flex', alignItems: 'stretch', textAlign: 'left' }}>
+                {homeFeed.map((it, i) => (
+                  <div key={i} onClick={() => { if (it.link_url) window.open(it.link_url, '_blank') }} style={{ background: L.surface, borderRadius: 18, boxShadow: L.shadow, overflow: 'hidden', display: 'flex', alignItems: 'stretch', textAlign: 'left', cursor: it.link_url ? 'pointer' : 'default' }}>
                     <div style={{ width: 92, flexShrink: 0, background: `linear-gradient(135deg, ${it.tone}, ${it.tone}bb)`, display: 'grid', placeItems: 'center', fontSize: 30 }}>{it.icon}</div>
                     <div style={{ flex: 1, minWidth: 0, padding: '12px 14px' }}>
                       <div style={{ fontSize: 10, fontWeight: 900, color: it.tone, textTransform: 'uppercase', letterSpacing: '.04em' }}>{it.kicker}</div>

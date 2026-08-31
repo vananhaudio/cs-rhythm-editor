@@ -40,15 +40,14 @@ export default function ClassPracticeSchedule() {
   const [showUpcoming, setShowUpcoming] = useState(false)  // mặc định ĐÓNG
 
   return (
-    <section id="thuchanh" className="band cps-sec">
-      <div className="wrap">
+    <div className="cps-sec">
       <div className="cps-kicker">
         <span className="eyebrow">{COPY.kicker}</span>
         <span className="cps-pill">{COPY.branchLabel}</span>
       </div>
-        <h2>{COPY.title}</h2>
-        <p className="lead">{COPY.sub}</p>
-        <p className="cps-note">{COPY.note}</p>
+      <h2>{COPY.title}</h2>
+      <p className="lead">{COPY.sub}</p>
+      <p className="cps-note">{COPY.note}</p>
 
         {loading && (
           <div className="cps-state">Đang tải lịch thực hành…</div>
@@ -77,9 +76,8 @@ export default function ClassPracticeSchedule() {
             onToggleUpcoming={() => setShowUpcoming(v => !v)}
           />
         )}
+        <style>{CSS}</style>
       </div>
-      <style>{CSS}</style>
-    </section>
   )
 }
 
@@ -179,7 +177,7 @@ function ScheduleGrid({ groups, sessions, showUpcoming, onToggleUpcoming }: {
 /* ─── Style scoped — dùng đúng design token của .tva-class ─── */
 const CSS = `
 .tva-class{--mem:#EA580C;--mem-soft:#FDF0E7;--mem-line:#F5CFB6;}
-.tva-class .cps-sec{padding:58px 0;}
+.tva-class .cps-sec{padding:34px 0 0;}
 /* Nhánh Gói Thực hành — CAM (nối với card CAM ở section '2 cách học' phía trên) */
 .tva-class .cps-sec .eyebrow{color:var(--mem);}
 .tva-class .cps-kicker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
