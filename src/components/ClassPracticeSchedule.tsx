@@ -26,6 +26,7 @@ import {
 
 const COPY = {
   kicker: 'Lịch thực hành thành viên',
+  branchLabel: 'Gói thành viên',
   title: 'Mỗi tuần đều có nơi để bạn thực hành.',
   sub: 'Bạn học đến đâu, tham gia nhóm phù hợp đến đó.',
   note: 'Các nhóm thực hành dành cho thành viên Hành trình.',
@@ -41,7 +42,10 @@ export default function ClassPracticeSchedule() {
   return (
     <section id="thuchanh" className="band cps-sec">
       <div className="wrap">
-        <div className="eyebrow">{COPY.kicker}</div>
+      <div className="cps-kicker">
+        <span className="eyebrow">{COPY.kicker}</span>
+        <span className="cps-pill">{COPY.branchLabel}</span>
+      </div>
         <h2>{COPY.title}</h2>
         <p className="lead">{COPY.sub}</p>
         <p className="cps-note">{COPY.note}</p>
@@ -174,31 +178,37 @@ function ScheduleGrid({ groups, sessions, showUpcoming, onToggleUpcoming }: {
 
 /* ─── Style scoped — dùng đúng design token của .tva-class ─── */
 const CSS = `
+.tva-class{--mem:#EA580C;--mem-soft:#FDF0E7;--mem-line:#F5CFB6;}
 .tva-class .cps-sec{padding:58px 0;}
-.tva-class .cps-note{margin:8px 0 0;font-size:13.5px;font-weight:600;color:var(--honey);}
+/* Nhánh Gói thành viên — CAM (nối với card CAM ở section '2 cách học' phía trên) */
+.tva-class .cps-sec .eyebrow{color:var(--mem);}
+.tva-class .cps-kicker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.tva-class .cps-kicker .eyebrow{margin-bottom:0;}
+.tva-class .cps-pill{font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--mem);background:var(--mem-soft);border:1px solid var(--mem-line);border-radius:999px;padding:4px 12px;}
+.tva-class .cps-note{margin:8px 0 0;font-size:13.5px;font-weight:600;color:var(--mem);}
 .tva-class .cps-state{margin-top:26px;border:1.5px dashed var(--line);border-radius:16px;background:var(--surface);padding:36px 22px;text-align:center;}
 .tva-class .cps-week{display:grid;gap:14px;margin-top:28px;grid-template-columns:1fr;}
 @media(min-width:640px){.tva-class .cps-week{grid-template-columns:repeat(2,1fr);}}
 @media(min-width:900px){.tva-class .cps-week{grid-template-columns:repeat(3,1fr);}}
-.tva-class .cps-day{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden;box-shadow:0 14px 40px -24px rgba(33,28,50,.25);}
+.tva-class .cps-day{border:1px solid var(--line);border-top:3px solid var(--mem);border-radius:14px;background:var(--surface);overflow:hidden;box-shadow:0 14px 40px -24px rgba(33,28,50,.25);}
 .tva-class .cps-day-head{padding:11px 16px;border-bottom:1px solid var(--line);background:var(--bg);font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-soft);}
 .tva-class .cps-day-body{display:flex;flex-direction:column;}
 .tva-class .cps-group{padding:14px 16px;border-bottom:1px solid var(--line);}
 .tva-class .cps-group:last-child{border-bottom:none;}
 .tva-class .cps-badge{display:inline-block;border-radius:999px;padding:3px 11px;font-size:11px;font-weight:800;line-height:1.6;}
 .tva-class .cps-group-name{margin-top:7px;font-size:15px;font-weight:800;line-height:1.35;color:var(--ink);}
-.tva-class .cps-group-time{margin-top:3px;font-size:13.5px;font-weight:600;color:var(--ink-soft);}
+.tva-class .cps-group-time{margin-top:3px;font-size:13.5px;font-weight:700;color:var(--mem);}
 .tva-class .cps-upcoming{margin-top:24px;}
-.tva-class .cps-up-toggle{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--indigo);background:transparent;color:var(--indigo);border-radius:999px;padding:10px 18px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;transition:all .15s;}
-.tva-class .cps-up-toggle:hover{background:var(--indigo-tint);}
-.tva-class .cps-up-count{background:var(--indigo-tint);color:var(--indigo);border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:800;}
+.tva-class .cps-up-toggle{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--mem);background:transparent;color:var(--mem);border-radius:999px;padding:10px 18px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;transition:all .15s;}
+.tva-class .cps-up-toggle:hover{background:var(--mem-soft);}
+.tva-class .cps-up-count{background:var(--mem-soft);color:var(--mem);border-radius:999px;padding:1px 9px;font-size:11.5px;font-weight:800;}
 .tva-class .cps-up-list{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden;box-shadow:0 14px 40px -24px rgba(33,28,50,.25);}
 .tva-class .cps-up-title{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--bg);font-size:14px;font-weight:800;color:var(--ink);}
 .tva-class .cps-up-rows{margin:0;padding:0;list-style:none;}
 .tva-class .cps-up-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:13px 16px;border-bottom:1px solid var(--line);}
 .tva-class .cps-up-row:last-child{border-bottom:none;}
 .tva-class .cps-up-day{min-width:118px;font-size:13px;font-weight:800;color:var(--ink);}
-.tva-class .cps-up-time{min-width:50px;font-size:13px;font-weight:700;color:var(--honey);}
+.tva-class .cps-up-time{min-width:50px;font-size:13px;font-weight:700;color:var(--mem);}
 .tva-class .cps-up-name{flex:1;min-width:160px;font-size:14px;color:var(--ink);}
 .tva-class .cps-up-title-sub{color:var(--ink-soft);}
 `

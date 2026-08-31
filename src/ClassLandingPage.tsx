@@ -504,10 +504,41 @@ export default function ClassLandingPage() {
         </div>
       </section>
 
-      {/* LỚP SẮP KHAI GIẢNG — Học theo lớp (giữ riêng, KHÔNG trộn với lịch thực hành) */}
-      <section id="lichlop">
+      {/* QUYỀN LỢI — 6 thành phần của Hành trình (thay 'Một khóa học gồm những gì?') */}
+      <section id="quyenloi" className="band">
         <div className="wrap">
-          <div className="eyebrow">Lịch khai giảng</div>
+          <div className="eyebrow">Khi tham gia Hành trình</div>
+          <h2>Đây là những gì bạn có khi tham gia.</h2>
+          <p className="lead" style={{ maxWidth: 640 }}>Không chỉ là những bài học. Bạn có những công cụ, tài liệu, các buổi thực hành và sự đồng hành cần thiết để tiếp tục chơi Guitar tốt hơn.</p>
+          <div className="pl-grid">
+            {[
+              { ic: '🎬', name: 'Kho bài giảng', desc: 'Hàng trăm bài học để bạn học Guitar từ những bước đầu tiên và tiếp tục khám phá ngày càng sâu hơn.', cta: 'Xem bên trong →', act: () => setBenefit('bai-giang') },
+              { ic: '📱', name: 'App luyện tập', desc: 'Bài tập và những công cụ Guitar được thiết kế để bạn luyện tập mỗi ngày.', cta: 'Xem App →', act: () => goto('app') },
+              { ic: '📖', name: 'Sách giáo trình', desc: 'Những cuốn sách được biên soạn để đồng hành cùng quá trình học của bạn.', cta: 'Xem sách →', act: () => setBenefit('sach') },
+              { ic: '🧭', name: 'Hỏi đáp cùng Thầy qua Zalo', desc: 'Gặp chỗ vướng trong lúc học — bạn hỏi Thầy qua Zalo và nhận hướng dẫn để tiếp tục.', cta: 'Xem cách hỏi Thầy →', act: () => setBenefit('thay') },
+              { ic: '🎥', name: 'Buổi thực hành cùng Thầy', desc: 'Tham gia những buổi thực hành online để cùng Thầy luyện tập và đưa những gì đã học vào chơi Guitar thực tế.', cta: 'Xem một buổi thực hành', act: () => setShowPractice(true) },
+              { ic: '👥', name: 'Cộng đồng học viên', desc: 'Những người cùng yêu Guitar, cùng học, chia sẻ và chơi đàn với nhau.', cta: 'Xem cộng đồng →', act: () => setBenefit('cong-dong') },
+            ].map((c: any) => (
+              <div className="pl-card" key={c.name}>
+                <span className="pl-ic" aria-hidden>{c.ic}</span>
+                <h3>{c.name}</h3>
+                <p>{c.desc}</p>
+                {c.cta && <button className="pl-cta" onClick={c.act}>{c.cta}</button>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 2 CÁCH HỌC — Gói thành viên (linh hoạt) vs Học theo lớp (cố định) + bài giải thích ẩn */}
+      <ClassLearningWays />
+
+      {/* LỊCH THỰC HÀNH THÀNH VIÊN — section RIÊNG, data thật từ Admin (cờ show_on_practice_schedule) */}
+      <ClassPracticeSchedule />
+      {/* CÁC LỚP SẮP KHAI GIẢNG — nhánh Học theo lớp (TÍM), đứng ngay sau Lịch thực hành thành viên (CAM) */}
+      <section id="lichlop" className="cls-sec">
+        <div className="wrap">
+          <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Học theo lớp</span></div>
           <h2>Các lớp sắp khai giảng</h2>
           <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
           {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
@@ -555,37 +586,6 @@ export default function ClassLandingPage() {
         </div>
       </section>
 
-      {/* QUYỀN LỢI — 6 thành phần của Hành trình (thay 'Một khóa học gồm những gì?') */}
-      <section id="quyenloi" className="band">
-        <div className="wrap">
-          <div className="eyebrow">Khi tham gia Hành trình</div>
-          <h2>Đây là những gì bạn có khi tham gia.</h2>
-          <p className="lead" style={{ maxWidth: 640 }}>Không chỉ là những bài học. Bạn có những công cụ, tài liệu, các buổi thực hành và sự đồng hành cần thiết để tiếp tục chơi Guitar tốt hơn.</p>
-          <div className="pl-grid">
-            {[
-              { ic: '🎬', name: 'Kho bài giảng', desc: 'Hàng trăm bài học để bạn học Guitar từ những bước đầu tiên và tiếp tục khám phá ngày càng sâu hơn.', cta: 'Xem bên trong →', act: () => setBenefit('bai-giang') },
-              { ic: '📱', name: 'App luyện tập', desc: 'Bài tập và những công cụ Guitar được thiết kế để bạn luyện tập mỗi ngày.', cta: 'Xem App →', act: () => goto('app') },
-              { ic: '📖', name: 'Sách giáo trình', desc: 'Những cuốn sách được biên soạn để đồng hành cùng quá trình học của bạn.', cta: 'Xem sách →', act: () => setBenefit('sach') },
-              { ic: '🧭', name: 'Hỏi đáp cùng Thầy qua Zalo', desc: 'Gặp chỗ vướng trong lúc học — bạn hỏi Thầy qua Zalo và nhận hướng dẫn để tiếp tục.', cta: 'Xem cách hỏi Thầy →', act: () => setBenefit('thay') },
-              { ic: '🎥', name: 'Buổi thực hành cùng Thầy', desc: 'Tham gia những buổi thực hành online để cùng Thầy luyện tập và đưa những gì đã học vào chơi Guitar thực tế.', cta: 'Xem một buổi thực hành', act: () => setShowPractice(true) },
-              { ic: '👥', name: 'Cộng đồng học viên', desc: 'Những người cùng yêu Guitar, cùng học, chia sẻ và chơi đàn với nhau.', cta: 'Xem cộng đồng →', act: () => setBenefit('cong-dong') },
-            ].map((c: any) => (
-              <div className="pl-card" key={c.name}>
-                <span className="pl-ic" aria-hidden>{c.ic}</span>
-                <h3>{c.name}</h3>
-                <p>{c.desc}</p>
-                {c.cta && <button className="pl-cta" onClick={c.act}>{c.cta}</button>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 2 CÁCH HỌC — Gói thành viên (linh hoạt) vs Học theo lớp (cố định) + bài giải thích ẩn */}
-      <ClassLearningWays />
-
-      {/* LỊCH THỰC HÀNH THÀNH VIÊN — section RIÊNG, data thật từ Admin (cờ show_on_practice_schedule) */}
-      <ClassPracticeSchedule />
 
       {/* ĐĂNG KÝ */}
       <section id="dangky" className="band">
@@ -1173,6 +1173,15 @@ const CSS = `
 .tva-class .cls-item .acts{margin-top:auto;display:flex;gap:8px;}
 .tva-class .cls-item .acts .btn{flex:1;font-size:13.5px;padding:10px;}
 @media(max-width:860px){.tva-class .cls-list{grid-template-columns:1fr;}}
+
+/* Nhánh Học theo lớp — TÍM (nối với card TÍM ở section '2 cách học' phía trên) */
+.tva-class .cls-sec{padding-top:44px;}
+.tva-class .cls-sec .eyebrow{color:var(--indigo);}
+.tva-class .cls-kicker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.tva-class .cls-kicker .eyebrow{margin-bottom:0;}
+.tva-class .cls-pill{font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--indigo);background:var(--indigo-tint);border:1px solid #D3CEE8;border-radius:999px;padding:4px 12px;}
+.tva-class .cls-sec .cls-item{border-top:3px solid var(--indigo);}
+.tva-class .cls-sec .cls-item .tag{color:var(--indigo);background:var(--indigo-tint);}
 .tva-class .benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
 .tva-class .bf{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;gap:12px;align-items:flex-start;font-size:14.5px;line-height:1.4;}
 .tva-class .bf .bi{font-size:20px;flex-shrink:0;}

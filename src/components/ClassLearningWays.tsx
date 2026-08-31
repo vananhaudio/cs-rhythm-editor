@@ -40,7 +40,7 @@ export default function ClassLearningWays() {
         <p className="lead">{COPY.sub}</p>
 
         <div className="lw-grid">
-          <div className="lw-card">
+          <div className="lw-card lw-card-mem">
             <span className="lw-label">{COPY.card1.label}</span>
             <h3>{COPY.card1.title}</h3>
             <p className="lw-body">{COPY.card1.body}</p>
@@ -48,7 +48,7 @@ export default function ClassLearningWays() {
               {COPY.card1.points.map(p => <li key={p}>✓ {p}</li>)}
             </ul>
           </div>
-          <div className="lw-card lw-card-alt">
+          <div className="lw-card lw-card-cls">
             <span className="lw-label">{COPY.card2.label}</span>
             <h3>{COPY.card2.title}</h3>
             <p className="lw-body">{COPY.card2.body}</p>
@@ -226,13 +226,21 @@ function LearningWaysArticle({ onClose }: { onClose: () => void }) {
 
 /* ─── Style scoped — dùng đúng design token của .tva-class ─── */
 const CSS = `
+.tva-class{--mem:#EA580C;--mem-soft:#FDF0E7;--mem-line:#F5CFB6;}
 .tva-class .lw-sec{padding:58px 0;}
 .tva-class .lw-grid{display:grid;gap:16px;margin-top:28px;grid-template-columns:1fr;}
 @media(min-width:860px){.tva-class .lw-grid{grid-template-columns:1fr 1fr;gap:20px;}}
-.tva-class .lw-card{border:1.5px solid var(--line);border-radius:16px;background:var(--surface);padding:26px 24px;box-shadow:0 1px 3px rgba(33,28,50,.05);display:flex;flex-direction:column;}
-.tva-class .lw-card-alt{border-color:#D8CBE8;background:linear-gradient(180deg,#FFFFFF 0%,#F7F4FE 100%);}
-.tva-class .lw-label{display:inline-flex;align-self:flex-start;font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--honey);background:var(--honey-tint);border-radius:999px;padding:5px 12px;}
-.tva-class .lw-card-alt .lw-label{color:var(--indigo);background:var(--indigo-tint);}
+.tva-class .lw-card{border:1.5px solid var(--line);border-radius:16px;background:var(--surface);padding:26px 24px;box-shadow:0 1px 3px rgba(33,28,50,.05);display:flex;flex-direction:column;position:relative;overflow:hidden;}
+.tva-class .lw-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+/* Nhánh Gói thành viên — CAM */
+.tva-class .lw-card-mem{background:linear-gradient(180deg,#FFFBF6 0%,var(--surface) 46%);}
+.tva-class .lw-card-mem::before{background:var(--mem);}
+.tva-class .lw-card-mem .lw-label{color:var(--mem);background:var(--mem-soft);border:1px solid var(--mem-line);}
+/* Nhánh Học theo lớp — TÍM */
+.tva-class .lw-card-cls{background:linear-gradient(180deg,#F9F7FE 0%,var(--surface) 46%);}
+.tva-class .lw-card-cls::before{background:var(--indigo);}
+.tva-class .lw-card-cls .lw-label{color:var(--indigo);background:var(--indigo-tint);border:1px solid #D3CEE8;}
+.tva-class .lw-label{display:inline-flex;align-self:flex-start;font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;border-radius:999px;padding:5px 12px;}
 .tva-class .lw-card h3{font-size:20px;font-weight:800;letter-spacing:-.3px;color:var(--ink);margin:14px 0 0;}
 .tva-class .lw-body{margin:10px 0 0;font-size:14.5px;line-height:1.65;color:var(--ink-soft);}
 .tva-class .lw-points{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;}
