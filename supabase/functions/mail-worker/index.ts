@@ -18,6 +18,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const WORKER_SECRET = Deno.env.get('MAIL_WORKER_SECRET') ?? ''
+const MAIL_SEND_SECRET = Deno.env.get('MAIL_INTERNAL_SECRET') ?? ''   // secret dùng chung để gọi send-mail (đã khóa)
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -190,7 +191,7 @@ async function sendViaMailSystem(subject: string, content: string, toEmail: stri
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-mail`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_KEY}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SERVICE_KEY}`, 'x-internal-secret': MAIL_SEND_SECRET },
       body: JSON.stringify({ subject, content, recipients: [toEmail] }),
     })
     const j = await res.json().catch(() => ({}))
@@ -239,6 +240,14 @@ Deno.serve(async (req) => {
       if (!lead.email) {
         await supabase.from('mail_log').update({ status: 'failed', error: 'no email on lead' }).eq('id', job.id)
         failed++; continue
+      }
+      // HARDEN v9: Email 2 chỉ gửi khi entitlement thật đã active (DB guard là chính; đây là lớp 2)
+      if (job.mail_type === 'learning_access_ready') {
+        const { data: ent } = await supabase.rpc('lead_entitlement_ok', { p_lead: job.lead_id })
+        if (ent !== true) {
+          await supabase.from('mail_log').update({ status: 'failed', error: 'entitlement not verified (status-only?)' }).eq('id', job.id)
+          failed++; continue
+        }
       }
       let mail: BuiltMail
       try {

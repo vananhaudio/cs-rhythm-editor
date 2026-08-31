@@ -24,6 +24,12 @@ function buildHtml(content: string, subject: string): string {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
+  // HARDEN v9: KHÔNG còn public-sendable — phải có x-internal-secret đúng (server-side only)
+  const INTERNAL_SECRET = Deno.env.get('MAIL_INTERNAL_SECRET') ?? ''
+  if (!INTERNAL_SECRET || req.headers.get('x-internal-secret') !== INTERNAL_SECRET) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...cors, 'Content-Type': 'application/json' } })
+  }
+
   try {
     const body = await req.json()
     const { subject, content, recipients, from_email, thread_id } = body as {

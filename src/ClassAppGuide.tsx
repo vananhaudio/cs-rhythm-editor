@@ -13,7 +13,12 @@ const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
 const Chip = ({ children, kind = 'plain' }: { children: React.ReactNode; kind?: 'plain' | 'green' | 'indigo' }) =>
   <span className={`ag-chip ag-chip-${kind}`}>{children}</span>
 
-export default function ClassAppGuide({ onClose, onRegister }: { onClose: () => void; onRegister: () => void }) {
+export default function ClassAppGuide({ onClose, onRegister, appIos, appAndroid }: {
+  onClose: () => void; onRegister: () => void
+  appIos?: string; appAndroid?: string
+}) {
+  const iosUrl = appIos || APPSTORE
+  const andUrl = appAndroid || CHPLAY
   return (
     <div className="tva-ag">
       <style>{CSS}</style>
@@ -41,8 +46,8 @@ export default function ClassAppGuide({ onClose, onRegister }: { onClose: () => 
 
           {/* TẢI NHANH */}
           <div className="ag-stores">
-            <a className="ag-store ag-store-ios" href={APPSTORE} target="_blank" rel="noreferrer"> Tải trên App Store</a>
-            <a className="ag-store ag-store-and" href={CHPLAY} target="_blank" rel="noreferrer">▶ Tải trên CH Play</a>
+            <a className="ag-store ag-store-ios" href={iosUrl} target="_blank" rel="noreferrer"> Tải trên App Store</a>
+            <a className="ag-store ag-store-and" href={andUrl} target="_blank" rel="noreferrer">▶ Tải trên CH Play</a>
           </div>
 
           {/* iPhone / iPad */}

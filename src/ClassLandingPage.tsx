@@ -71,6 +71,19 @@ export default function ClassLandingPage() {
   const [benefit, setBenefit] = useState<BenefitKey | null>(null)   // chiều sâu 6 quyền lợi (reuse từ /azz)
   const [showNangCao, setShowNangCao] = useState(false)
   const [showAfterSignup, setShowAfterSignup] = useState(false)   // modal 'Sau khi đăng ký — chi tiết từng bước'
+  // CANONICAL PUBLIC CONFIG — app_config qua view public_app_config (anon chỉ đọc allowlist):
+  // bank/Zalo/App links dùng chung với email (KHÔNG hardcode payment data ở đây nữa).
+  const [pubCfg, setPubCfg] = useState<Record<string, string> | null>(null)
+  const [pubCfgErr, setPubCfgErr] = useState(false)
+  useEffect(() => {
+    supabase.from('public_app_config').select('key,value').then(({ data, error }) => {
+      if (error || !data) { setPubCfgErr(true); return }
+      const m: Record<string, string> = {}
+      data.forEach((r: { key: string; value: string | null }) => { m[r.key] = r.value ?? '' })
+      setPubCfg(m)
+    })
+  }, [])
+  const zalo = pubCfg?.zalo_url || ZALO_LINK
   const [waysTab, setWaysTab] = useState<'practice' | 'class'>('practice')   // tab 2 cách học: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
@@ -717,7 +730,7 @@ export default function ClassLandingPage() {
                 <h4>✓ Cảm ơn bạn!</h4>
                 <p>Trong lúc chờ, bạn cứ học các khoá đã mở. Có thắc mắc thì nhắn Zalo thầy nhé.</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                  <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
+                  <a className="zalo-btn" href={zalo} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
                   <button className="ok-guide" onClick={() => { window.location.href = '/me' }}>🎸 Về Hành trình của tôi →</button>
                 </div>
               </div>
@@ -734,25 +747,33 @@ export default function ClassLandingPage() {
             <h2>Hoàn tất học phí để giữ chỗ</h2>
             <p className="lead">Sau khi thanh toán, tài khoản app TVA Guitar sẽ được kích hoạt và bạn được thêm vào nhóm lớp.</p>
             <div className="panel">
+              {pubCfg === null && !pubCfgErr && (
+                <div className="pay-err">Đang tải thông tin thanh toán…</div>
+              )}
+              {pubCfgErr && (
+                <div className="pay-err">Chưa tải được thông tin thanh toán. Vui lòng thử lại hoặc liên hệ Thầy.</div>
+              )}
+              {pubCfg !== null && !pubCfgErr && (
               <div className="pay-grid">
-                <img className="qr-img" src="/qr-thanhtoan.png" alt="QR chuyển khoản TPBank – CTY TNHH Văn Anh Audio" />
+                <img className="qr-img" src={pubCfg.payment_qr || '/qr-thanhtoan.png'} alt={`QR chuyển khoản ${pubCfg.bank_name || ''}`} />
                 <div className="pay-info">
-                  <div><span>Ngân hàng</span><span>TPBank</span></div>
-                  <div><span>Số tài khoản</span><span>06496099801</span></div>
-                  <div><span>Chủ tài khoản</span><span>Công ty TNHH Văn Anh Audio</span></div>
-                  <div><span>Số tiền</span><span className="price">990.000đ</span></div>
+                  <div><span>Ngân hàng</span><span>{pubCfg.bank_name || '—'}</span></div>
+                  <div><span>Số tài khoản</span><span>{pubCfg.bank_account_number || '—'}</span></div>
+                  <div><span>Chủ tài khoản</span><span>{pubCfg.bank_account_name || '—'}</span></div>
+                  <div><span>Số tiền</span><span className="price">{pubCfg.class_fee ? new Intl.NumberFormat('vi-VN').format(Number(pubCfg.class_fee)) + 'đ' : '—'}</span></div>
                   <div><span>Nội dung CK</span><span>{form.name.trim() || 'Họ tên của bạn'}</span></div>
                 </div>
               </div>
+              )}
               <div className="pay-note">💡 Nội dung chuyển khoản chỉ cần ghi <b>họ tên của bạn</b>. Chuyển xong, bấm nút bên dưới gửi <b>ảnh bill qua Zalo thầy</b> để được kích hoạt tài khoản &amp; thêm vào nhóm lớp nhanh nhất.</div>
-              <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Gửi bill qua Zalo thầy Văn Anh →</a>
+              <a className="zalo-btn" href={zalo} target="_blank" rel="noreferrer">💬 Gửi bill qua Zalo thầy Văn Anh →</a>
               {!okBox
                 ? <button className="btn btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={() => setOkBox(true)}>Tôi đã chuyển khoản</button>
                 : <div className="ok-box">
                     <h4>✓ Cảm ơn bạn đã đăng ký!</h4>
                     <p>Đừng quên <b>gửi ảnh bill qua Zalo thầy</b> để được kích hoạt tài khoản app &amp; thêm vào nhóm lớp nhanh nhất.</p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                      <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
+                      <a className="zalo-btn" href={zalo} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
                       <button className="ok-guide" onClick={() => setShowGuide(true)}>📲 Xem hướng dẫn cài app →</button>
                     </div>
                   </div>}
@@ -778,7 +799,7 @@ export default function ClassLandingPage() {
                   ? 'Gói Thực hành của bạn đã được ghi nhận. Thầy sẽ liên hệ qua Zalo để trao đổi hướng học và nhóm thực hành phù hợp với bạn.'
                   : 'Thông tin đăng ký của bạn đã được ghi nhận. Thầy sẽ liên hệ qua Zalo để xác nhận lớp học và sắp xếp nhóm thực hành phù hợp.'}</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-                  <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
+                  <a className="zalo-btn" href={zalo} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
                   <button className="ok-guide" onClick={() => { window.location.href = '/me' }}>🎸 Về Hành trình của tôi →</button>
                 </div>
               </div>
@@ -884,7 +905,7 @@ export default function ClassLandingPage() {
       <footer>
         <div className="wrap foot-in">
           <div><b>VAN ANH AUDIO</b> · TVA Guitar · vananhaudio.com</div>
-          <div>Đăng ký qua Zalo thầy: <a className="foot-zalo" href={ZALO_LINK} target="_blank" rel="noreferrer">{ZALO}</a></div>
+          <div>Đăng ký qua Zalo thầy: <a className="foot-zalo" href={zalo} target="_blank" rel="noreferrer">{ZALO}</a></div>
         </div>
       </footer>
 
@@ -996,7 +1017,7 @@ export default function ClassLandingPage() {
       )}
 
       {showGuide && (
-        <ClassAppGuide
+        <ClassAppGuide appIos={pubCfg?.app_ios_url} appAndroid={pubCfg?.app_android_url}
           onClose={() => setShowGuide(false)}
           onRegister={() => { setShowGuide(false); setTimeout(() => gotoLich('class'), 60) }}
         />
