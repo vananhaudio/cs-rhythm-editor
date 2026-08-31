@@ -1,9 +1,10 @@
 /**
  * ClassLearningWays — section "Bạn muốn học theo cách nào?" trên /class.
  *
- * 2 hướng học KHÔNG thay thế nhau (Gói thành viên = linh hoạt · Học theo lớp =
- * cố định) + link mở bài viết giải thích sâu (modal full-screen, không kéo dài
- * landing). KHÔNG có giá/pricing trong vòng này.
+ * 2 sản phẩm KHÔNG thay thế nhau (GÓI THỰC HÀNH = CAM · linh hoạt · đi sâu /
+ * GÓI HỌC THEO LỚP = TÍM · cố định · đi lên) + link mở bài viết giải thích sâu
+ * (modal full-screen, không kéo dài landing). Có thể chọn MỘT hoặc kết hợp CẢ HAI.
+ * Giá Gói Thực hành: 499.000đ/tháng · đăng ký dài hạn 396.000đ/tháng (không invent thời hạn).
  *
  * Bài viết ẩn: modal đè lên landing (không đổi URL, không mất vị trí cuộn),
  * đóng bằng ✕ hoặc Escape, khóa cuộn nền, focus quay lại nút mở — cùng pattern
@@ -14,18 +15,20 @@ import { useEffect, useRef, useState } from 'react'
 const COPY = {
   kicker: 'Chọn cách học phù hợp',
   title: 'Bạn muốn học theo cách nào?',
-  sub: 'Bạn có thể chọn theo quỹ thời gian của mình — hoặc kết hợp cả hai.',
+  sub: 'Bạn có thể chọn một cách phù hợp với mình — hoặc kết hợp cả hai.',
   card1: {
-    label: 'Gói thành viên',
+    label: 'Gói Thực hành',
     title: 'Linh hoạt theo thời gian của bạn',
-    body: 'Phù hợp nếu bạn bận hoặc lịch sinh hoạt thường xuyên thay đổi. Bạn học qua hệ thống theo tiến độ của mình và tham gia các buổi thực hành cùng Thầy khi phù hợp.',
-    points: ['Học qua hệ thống', 'Thực hành theo năng lực', 'Không cần cố định một lớp từ đầu đến cuối'],
+    body: 'Phù hợp nếu bạn bận hoặc lịch sinh hoạt thường xuyên thay đổi. Bạn học qua hệ thống theo tiến độ của mình và tham gia các buổi thực hành khi phù hợp.',
+    points: ['Học qua hệ thống', 'Thực hành theo năng lực', 'Không cần theo một lớp cố định'],
+    price: '499.000đ/tháng',
+    priceSub: 'Đăng ký dài hạn: 396.000đ/tháng',
   },
   card2: {
-    label: 'Học theo lớp',
+    label: 'Gói Học theo lớp',
     title: 'Cố định để đi cùng nhau',
-    body: 'Phù hợp nếu bạn có thể dành một khung giờ cố định mỗi tuần và muốn theo một chương trình cụ thể từ đầu đến cuối.',
-    points: ['Có lịch khai giảng', 'Học theo chương trình', 'Cả lớp cùng đi qua từng nội dung'],
+    body: 'Phù hợp nếu bạn có thể dành một khung giờ cố định mỗi tuần và muốn học theo một chương trình cụ thể từ đầu đến cuối.',
+    points: ['Có lịch khai giảng', 'Học theo chương trình', 'Bài học tiếp nối nhau'],
   },
   articleLink: 'Hai cách học khác nhau thế nào?',
 }
@@ -47,6 +50,8 @@ export default function ClassLearningWays() {
             <ul className="lw-points">
               {COPY.card1.points.map(p => <li key={p}>✓ {p}</li>)}
             </ul>
+            <div className="lw-price">{COPY.card1.price}</div>
+            <div className="lw-price-sub">{COPY.card1.priceSub}</div>
           </div>
           <div className="lw-card lw-card-cls">
             <span className="lw-label">{COPY.card2.label}</span>
@@ -96,10 +101,10 @@ function LearningWaysArticle({ onClose }: { onClose: () => void }) {
   }, [onClose])
 
   return (
-    <div className="lwa-overlay" role="dialog" aria-modal="true" aria-label="Nên học theo lớp hay tham gia gói thành viên?">
+    <div className="lwa-overlay" role="dialog" aria-modal="true" aria-label="Gói Thực hành và Gói Học theo lớp khác nhau thế nào?">
       <div className="lwa-card">
         <div className="lwa-head">
-          <h2 className="lwa-title">Nên học theo lớp hay tham gia gói thành viên?</h2>
+          <h2 className="lwa-title">Gói Thực hành và Gói Học theo lớp khác nhau thế nào?</h2>
           <button
             ref={closeRef}
             type="button"
@@ -119,7 +124,7 @@ function LearningWaysArticle({ onClose }: { onClose: () => void }) {
             Hai cách học này không thay thế nhau. Chúng giải quyết hai phần khác nhau của việc học Guitar.
           </p>
           <p className="lwa-intro">
-            Bạn có thể chọn một cách phù hợp với thời gian của mình — hoặc kết hợp cả hai nếu muốn tiến bộ tốt hơn.
+            Bạn có thể chọn một trong hai — hoặc kết hợp cả hai để học hiệu quả hơn.
           </p>
 
           {/* Phần 1 — Học theo lớp: đi lên */}
@@ -192,14 +197,45 @@ function LearningWaysArticle({ onClose }: { onClose: () => void }) {
             </p>
           </section>
 
+          {/* Phân luồng sau một khoá — Class → Practice / Next Class / cả hai */}
+          <section className="lwa-sec">
+            <h3 className="lwa-h3">Đi tiếp thế nào sau một khoá?</h3>
+            <p className="lwa-p">
+              Sau khi hoàn thành một khoá, bạn có mấy lựa chọn — tuỳ theo kỹ năng của mình:
+            </p>
+            <div className="lwa-flow">
+              <div className="lwa-flow-row">
+                <span className="lwa-flow-opt">A</span>
+                <p className="lwa-p"><b>Vào nhóm thực hành phù hợp</b> nếu kỹ năng chưa đủ chắc — để luyện sâu hơn.</p>
+              </div>
+              <div className="lwa-flow-row">
+                <span className="lwa-flow-opt">B</span>
+                <p className="lwa-p"><b>Học tiếp khoá mới</b> nếu đã sẵn sàng tiếp nhận kiến thức mới — để tiếp tục đi lên.</p>
+              </div>
+              <div className="lwa-flow-row">
+                <span className="lwa-flow-opt">C</span>
+                <p className="lwa-p"><b>Làm cả hai</b>: vừa học khoá tiếp theo, vừa tham gia thực hành — vừa đi lên vừa đi sâu.</p>
+              </div>
+            </div>
+            <div className="lwa-example">
+              <p className="lwa-example-title">Ví dụ</p>
+              <p className="lwa-p">
+                Sau khoá <b>Đệm hát cơ bản</b>, bạn có thể vào nhóm thực hành cơ bản, hoặc học tiếp <b>Đệm hát 2</b>, hoặc kết hợp cả hai.
+              </p>
+            </div>
+          </section>
+
           {/* Phần 4 — Có thể học cả hai */}
           <section className="lwa-sec">
             <h3 className="lwa-h3">Bạn hoàn toàn có thể học cả hai</h3>
             <p className="lwa-p">
-              Lớp học và gói thành viên không loại trừ nhau.
+              Bạn có thể chọn một trong hai — hoặc kết hợp cả hai để học hiệu quả hơn.
             </p>
             <p className="lwa-p">
-              Bạn có thể vừa học theo lớp, vừa tham gia gói thành viên.
+              Gói Học theo lớp và Gói Thực hành không loại trừ nhau.
+            </p>
+            <p className="lwa-p">
+              Bạn có thể vừa học theo lớp, vừa tham gia Gói Thực hành.
             </p>
             <p className="lwa-p">
               Lớp học giúp bạn tiếp tục <b>đi lên</b> — tiếp nhận kiến thức và kỹ năng mới.
@@ -232,11 +268,11 @@ const CSS = `
 @media(min-width:860px){.tva-class .lw-grid{grid-template-columns:1fr 1fr;gap:20px;}}
 .tva-class .lw-card{border:1.5px solid var(--line);border-radius:16px;background:var(--surface);padding:26px 24px;box-shadow:0 1px 3px rgba(33,28,50,.05);display:flex;flex-direction:column;position:relative;overflow:hidden;}
 .tva-class .lw-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
-/* Nhánh Gói thành viên — CAM */
+/* Nhánh Gói Thực hành — CAM */
 .tva-class .lw-card-mem{background:linear-gradient(180deg,#FFFBF6 0%,var(--surface) 46%);}
 .tva-class .lw-card-mem::before{background:var(--mem);}
 .tva-class .lw-card-mem .lw-label{color:var(--mem);background:var(--mem-soft);border:1px solid var(--mem-line);}
-/* Nhánh Học theo lớp — TÍM */
+/* Nhánh Gói Học theo lớp — TÍM */
 .tva-class .lw-card-cls{background:linear-gradient(180deg,#F9F7FE 0%,var(--surface) 46%);}
 .tva-class .lw-card-cls::before{background:var(--indigo);}
 .tva-class .lw-card-cls .lw-label{color:var(--indigo);background:var(--indigo-tint);border:1px solid #D3CEE8;}
@@ -246,6 +282,8 @@ const CSS = `
 .tva-class .lw-points{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;}
 .tva-class .lw-points li{font-size:13.5px;font-weight:600;color:var(--ink);}
 .tva-class .lw-points li::before{content:'✓ ';color:var(--online);font-weight:800;}
+.tva-class .lw-price{margin-top:16px;font-size:19px;font-weight:800;letter-spacing:-.3px;color:var(--mem);}
+.tva-class .lw-price-sub{margin-top:2px;font-size:12.5px;font-weight:600;color:var(--ink-soft);}
 .tva-class .lw-link{margin-top:22px;text-align:center;}
 .tva-class .lw-article-btn{background:none;border:none;padding:8px 14px;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--indigo);cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(67,56,202,.35);transition:color .15s;}
 .tva-class .lw-article-btn:hover{color:var(--indigo-dark);text-decoration-color:var(--indigo);}
@@ -274,6 +312,10 @@ const CSS = `
 .tva-class .lwa-example{margin-top:18px;border:1px solid var(--line);border-radius:14px;background:var(--bg);padding:16px 18px;}
 .tva-class .lwa-example-title{margin:0 0 4px;font-size:11.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--honey);}
 .tva-class .lwa-qa{margin-top:14px;border-left:3px solid var(--honey);padding:4px 0 4px 16px;}
+.tva-class .lwa-flow{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+.tva-class .lwa-flow-row{display:flex;align-items:flex-start;gap:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:12px 14px;}
+.tva-class .lwa-flow-opt{flex-shrink:0;width:26px;height:26px;border-radius:999px;background:var(--indigo);color:#fff;display:grid;place-items:center;font-size:12.5px;font-weight:800;margin-top:1px;}
+.tva-class .lwa-flow-row .lwa-p{margin-top:0;font-size:13.5px;}
 .tva-class .lwa-closer{margin-top:30px;background:var(--indigo);border-radius:14px;padding:24px 20px;text-align:center;}
 .tva-class .lwa-closer-line{margin:0;font-size:16.5px;font-weight:700;line-height:1.6;color:#fff;}
 `

@@ -1,5 +1,5 @@
 /**
- * ClassPracticeSchedule — section "Lịch thực hành thành viên" trên /class.
+ * ClassPracticeSchedule — section "Lịch thực hành" (nhánh Gói Thực hành — CAM) trên /class.
  *
  * PORT từ class2-site/src/components/SectionPractice.tsx (/azz) — cùng nguồn
  * dữ liệu thật từ Admin (class_schedule + class_sessions, cờ
@@ -25,11 +25,11 @@ import {
 } from '../lib/classPractice'
 
 const COPY = {
-  kicker: 'Lịch thực hành thành viên',
-  branchLabel: 'Gói thành viên',
+  kicker: 'Lịch thực hành',
+  branchLabel: 'Gói Thực hành',
   title: 'Mỗi tuần đều có nơi để bạn thực hành.',
   sub: 'Bạn học đến đâu, tham gia nhóm phù hợp đến đó.',
-  note: 'Các nhóm thực hành dành cho thành viên Hành trình.',
+  note: 'Các nhóm thực hành dành cho học viên Gói Thực hành.',
   emptyTitle: 'Lịch thực hành đang được cập nhật',
   emptySub: 'Thầy đang sắp xếp lịch cho các nhóm thực hành. Bạn quay lại sau nhé — hoặc hỏi trợ lý Mira bên dưới để biết thêm.',
   upcomingTitle: 'Các buổi sắp tới',
@@ -180,7 +180,7 @@ function ScheduleGrid({ groups, sessions, showUpcoming, onToggleUpcoming }: {
 const CSS = `
 .tva-class{--mem:#EA580C;--mem-soft:#FDF0E7;--mem-line:#F5CFB6;}
 .tva-class .cps-sec{padding:58px 0;}
-/* Nhánh Gói thành viên — CAM (nối với card CAM ở section '2 cách học' phía trên) */
+/* Nhánh Gói Thực hành — CAM (nối với card CAM ở section '2 cách học' phía trên) */
 .tva-class .cps-sec .eyebrow{color:var(--mem);}
 .tva-class .cps-kicker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .tva-class .cps-kicker .eyebrow{margin-bottom:0;}

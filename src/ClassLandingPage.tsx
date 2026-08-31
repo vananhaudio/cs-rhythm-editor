@@ -16,6 +16,7 @@ import { tenNangLuc } from './hanhtrinh'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
 import ClassLearningWays from './components/ClassLearningWays'
 import ClassPracticeSchedule from './components/ClassPracticeSchedule'
+import ClassWeekJourney from './components/ClassWeekJourney'
 
 // ─── Combo Hành trình — sản phẩm bán quanh năm, KHÔNG nằm trong class_schedule ───
 // (Lịch lớp thật đọc từ bảng class_schedule; tuyệt đối không hardcode lớp ở đây.)
@@ -439,7 +440,8 @@ export default function ClassLandingPage() {
           </div>
           <div className="hero-card">
             <div className="hc-kicker">Tham gia Hành trình</div>
-            <div className="hc-price">396.000đ <span>/ tháng</span></div>
+            <div className="hc-price">499.000đ <span>/ tháng</span></div>
+            <div className="hc-price-sub">Đăng ký dài hạn: 396.000đ/tháng</div>
             <p className="hc-body">Học theo năng lực hiện tại, luyện tập trên App và tham gia các buổi thực hành cùng Thầy.</p>
             <ul className="hc-items">
               {['Kho bài giảng', 'App luyện tập', 'Thực hành hàng tuần', 'Hỏi Thầy', 'Sách', 'Cộng đồng'].map(x => <li key={x}>{x}</li>)}
@@ -530,15 +532,18 @@ export default function ClassLandingPage() {
         </div>
       </section>
 
-      {/* 2 CÁCH HỌC — Gói thành viên (linh hoạt) vs Học theo lớp (cố định) + bài giải thích ẩn */}
+      {/* MỘT TUẦN HỌC — cách dùng 6 quyền lợi trong một tuần bình thường (trước 2 cách học) */}
+      <ClassWeekJourney />
+
+      {/* 2 CÁCH HỌC — Gói Thực hành (CAM, linh hoạt) vs Gói Học theo lớp (TÍM, cố định) + bài giải thích ẩn */}
       <ClassLearningWays />
 
       {/* LỊCH THỰC HÀNH THÀNH VIÊN — section RIÊNG, data thật từ Admin (cờ show_on_practice_schedule) */}
       <ClassPracticeSchedule />
-      {/* CÁC LỚP SẮP KHAI GIẢNG — nhánh Học theo lớp (TÍM), đứng ngay sau Lịch thực hành thành viên (CAM) */}
+      {/* CÁC LỚP SẮP KHAI GIẢNG — nhánh Gói Học theo lớp (TÍM), đứng ngay sau Lịch thực hành (CAM) */}
       <section id="lichlop" className="cls-sec">
         <div className="wrap">
-          <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Học theo lớp</span></div>
+          <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Gói Học theo lớp</span></div>
           <h2>Các lớp sắp khai giảng</h2>
           <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
           {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
@@ -1095,6 +1100,7 @@ const CSS = `
 .tva-class .hero-card .hc-kicker{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--honey);}
 .tva-class .hero-card .hc-price{margin-top:8px;font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--indigo);line-height:1;}
 .tva-class .hero-card .hc-price span{font-size:16px;font-weight:600;color:var(--ink-faint);letter-spacing:0;}
+.tva-class .hero-card .hc-price-sub{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--ink-soft);}
 .tva-class .hero-card .hc-body{margin-top:12px;font-size:14px;line-height:1.6;color:var(--ink-soft);max-width:none;}
 .tva-class .hero-card .hc-items{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:16px;padding:16px 0 0;border-top:1px solid var(--line);list-style:none;}
 .tva-class .hero-card .hc-items li{font-size:13px;font-weight:600;color:var(--ink);padding-left:18px;position:relative;}
