@@ -78,6 +78,7 @@ export default function ClassLandingPage() {
   const [showPractice, setShowPractice] = useState(false)   // modal xem một buổi thực hành (video thật)
   const [benefit, setBenefit] = useState<BenefitKey | null>(null)   // chiều sâu 6 quyền lợi (reuse từ /azz)
   const [showNangCao, setShowNangCao] = useState(false)
+  const [lichTab, setLichTab] = useState<'practice' | 'class'>('practice')   // tab lịch: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
   const [msgs, setMsgs] = useState<Msg[]>([
@@ -291,14 +292,20 @@ export default function ClassLandingPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Chuyển tab lịch + cuộn tới khối lịch gom (dùng cho nav/deep-link/nút 'Xem lớp & đăng ký')
+  const gotoLich = (tab: 'practice' | 'class') => {
+    setLichTab(tab)
+    setTimeout(() => document.getElementById('lich')?.scrollIntoView({ behavior: 'smooth' }), 60)
+  }
+
   // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — vd ?xem=hanhtrinh, ?xem=lich, ?xem=app
   useEffect(() => {
     const xem = (new URLSearchParams(window.location.search).get('xem') || window.location.hash.replace('#', '') || '').toLowerCase()
     if (!xem) return
     const actions: Record<string, () => void> = {
       hanhtrinh: () => setShowJourney(true),
-      lich: () => setTimeout(() => goto('lichlop'), 350),
-      lichlop: () => setTimeout(() => goto('lichlop'), 350),
+      lich: () => gotoLich('class'),
+      lichlop: () => gotoLich('class'),
       app: () => setTimeout(() => goto('app'), 350),
       caidat: () => setShowGuide(true),
       demhat: () => setShowDemHat(true),
@@ -311,7 +318,7 @@ export default function ClassLandingPage() {
       sach: () => setBenefit('sach'),
       thay: () => setBenefit('thay'),
       congdong: () => setBenefit('cong-dong'),
-      thuchanh: () => setTimeout(() => goto('thuchanh'), 350),
+      thuchanh: () => gotoLich('practice'),
       cachhoc: () => setTimeout(() => goto('cach-hoc'), 350),
     }
     actions[xem]?.()
@@ -403,7 +410,7 @@ export default function ClassLandingPage() {
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
             <a onClick={() => goto('chat')}>Tư vấn</a>
             <a onClick={() => goto('quyenloi')}>Quyền lợi</a>
-            <a onClick={() => goto('lichlop')}>Lịch lớp</a>
+            <a onClick={() => gotoLich('class')}>Lịch lớp</a>
             {/* Bỏ mục chữ "Đăng ký" — trùng đích với nút "Đăng ký lớp" bên phải, mà hàng
                 nav cần chỗ cho nút Shop. */}
             {!me && <a onClick={() => setShowLogin(true)}>Đăng nhập</a>}
@@ -538,54 +545,77 @@ export default function ClassLandingPage() {
       {/* 2 CÁCH HỌC — Gói Thực hành (CAM, linh hoạt) vs Gói Học theo lớp (TÍM, cố định) + bài giải thích ẩn */}
       <ClassLearningWays />
 
-      {/* LỊCH THỰC HÀNH THÀNH VIÊN — section RIÊNG, data thật từ Admin (cờ show_on_practice_schedule) */}
-      <ClassPracticeSchedule />
-      {/* CÁC LỚP SẮP KHAI GIẢNG — nhánh Gói Học theo lớp (TÍM), đứng ngay sau Lịch thực hành (CAM) */}
-      <section id="lichlop" className="cls-sec">
+      {/* LỊCH — 1 khối gom 2 nhánh: tab Gói Thực hành (CAM) / Gói Học theo lớp (TÍM).
+          Data riêng, KHÔNG merge: practice = class_schedule cờ show_on_practice_schedule=true;
+          class = query cũ (cờ false). Bấm tab để xem từng lịch. */}
+      <section id="lich" className="sch-sec band">
         <div className="wrap">
-          <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Gói Học theo lớp</span></div>
-          <h2>Các lớp sắp khai giảng</h2>
-          <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
-          {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
-          {sched === null && <div style={{ textAlign: 'center', color: '#8A8A93', padding: '28px 0', fontSize: 15 }}>Đang tải lịch lớp…</div>}
-          {/* Hết lớp sắp khai giảng → nói thật + mời giữ chỗ, thay vì hiện lớp cũ */}
-          {sched !== null && sched.upcoming.length === 0 && (
-            <div className="panel" style={{ textAlign: 'center', padding: '30px 22px' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>📅</div>
-              <h3 style={{ margin: '0 0 8px' }}>Các khoá hiện tại đã khai giảng — lớp mới đang được xếp lịch</h3>
-              <p style={{ color: '#52525B', margin: '0 auto 18px', maxWidth: 520 }}>Để lại thông tin bên dưới, thầy sẽ giữ chỗ và báo bạn ngay khi mở lớp mới. Bạn cũng có thể hỏi Mira xem lớp nào phù hợp với mình.</p>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                <button className="btn btn-primary" onClick={() => goto('dangky')}>Để lại thông tin giữ chỗ →</button>
-                <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi Mira</button>
-              </div>
-            </div>
-          )}
-          <div className="cls-list">
-            {(sched?.upcoming?.length
-              ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
-              : []
-            ).map((raw, i) => {
-              const c: any = raw
-              const title = c.title ?? c.name
-              const reg = c.regName ?? c.name
-              return (
-              <div className="cls-item" key={i}>
-                <span className="tag">{c.tag}</span>
-                <h3>{title}</h3>
-                {c.className && <div style={{ fontSize: 13.5, color: '#8A5A2B', fontWeight: 700, margin: '-2px 0 8px' }}>🎓 Lớp: {c.className}</div>}
-                <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : '8 buổi · mỗi buổi 90 phút'}</div>
-                <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
-                <div className="acts">
-                  <button className="btn btn-primary" onClick={() => pickClass(reg)}>Đăng ký lớp này</button>
-                  <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi thêm</button>
-                </div>
-              </div>
-              )
-            })}
+          <div className="sch-tabs" role="tablist" aria-label="Lịch">
+            <button type="button" role="tab" aria-selected={lichTab === 'practice'}
+              className={'sch-tab sch-tab-mem' + (lichTab === 'practice' ? ' on' : '')}
+              onClick={() => setLichTab('practice')}>
+              <span className="sch-tab-name">Lịch thực hành</span>
+              <span className="sch-tab-sub">Gói Thực hành</span>
+            </button>
+            <button type="button" role="tab" aria-selected={lichTab === 'class'}
+              className={'sch-tab sch-tab-cls' + (lichTab === 'class' ? ' on' : '')}
+              onClick={() => setLichTab('class')}>
+              <span className="sch-tab-name">Các lớp sắp khai giảng</span>
+              <span className="sch-tab-sub">Gói Học theo lớp</span>
+            </button>
           </div>
-          {sched && sched.activeCount > 0 && (
-            <div style={{ textAlign: 'center', marginTop: 26 }}>
-              <button className="btn btn-ghost" onClick={() => setShowActive(true)}>👀 Xem thêm {sched.activeCount} lớp đang học →</button>
+
+          {/* Tab CAM — Lịch thực hành (data thật Admin) */}
+          {lichTab === 'practice' && <ClassPracticeSchedule />}
+
+          {/* Tab TÍM — Các lớp sắp khai giảng (query/data cũ, giữ nguyên) */}
+          {lichTab === 'class' && (
+            <div className="cls-sec">
+              <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Gói Học theo lớp</span></div>
+              <h2>Các lớp sắp khai giảng</h2>
+              <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
+              {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
+              {sched === null && <div style={{ textAlign: 'center', color: '#8A8A93', padding: '28px 0', fontSize: 15 }}>Đang tải lịch lớp…</div>}
+              {/* Hết lớp sắp khai giảng → nói thật + mời giữ chỗ, thay vì hiện lớp cũ */}
+              {sched !== null && sched.upcoming.length === 0 && (
+                <div className="panel" style={{ textAlign: 'center', padding: '30px 22px' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📅</div>
+                  <h3 style={{ margin: '0 0 8px' }}>Các khoá hiện tại đã khai giảng — lớp mới đang được xếp lịch</h3>
+                  <p style={{ color: '#52525B', margin: '0 auto 18px', maxWidth: 520 }}>Để lại thông tin bên dưới, thầy sẽ giữ chỗ và báo bạn ngay khi mở lớp mới. Bạn cũng có thể hỏi Mira xem lớp nào phù hợp với mình.</p>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn btn-primary" onClick={() => goto('dangky')}>Để lại thông tin giữ chỗ →</button>
+                    <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi Mira</button>
+                  </div>
+                </div>
+              )}
+              <div className="cls-list">
+                {(sched?.upcoming?.length
+                  ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
+                  : []
+                ).map((raw, i) => {
+                  const c: any = raw
+                  const title = c.title ?? c.name
+                  const reg = c.regName ?? c.name
+                  return (
+                  <div className="cls-item" key={i}>
+                    <span className="tag">{c.tag}</span>
+                    <h3>{title}</h3>
+                    {c.className && <div style={{ fontSize: 13.5, color: '#8A5A2B', fontWeight: 700, margin: '-2px 0 8px' }}>🎓 Lớp: {c.className}</div>}
+                    <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : '8 buổi · mỗi buổi 90 phút'}</div>
+                    <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
+                    <div className="acts">
+                      <button className="btn btn-primary" onClick={() => pickClass(reg)}>Đăng ký lớp này</button>
+                      <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi thêm</button>
+                    </div>
+                  </div>
+                  )
+                })}
+              </div>
+              {sched && sched.activeCount > 0 && (
+                <div style={{ textAlign: 'center', marginTop: 26 }}>
+                  <button className="btn btn-ghost" onClick={() => setShowActive(true)}>👀 Xem thêm {sched.activeCount} lớp đang học →</button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -779,7 +809,7 @@ export default function ClassLandingPage() {
             <h2>Bắt đầu hành trình guitar của bạn hôm nay</h2>
             <p>Chọn lớp phù hợp và giữ chỗ ngay — thầy sẽ đồng hành cùng bạn từ buổi đầu tiên.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button className="btn btn-primary" onClick={() => goto('lichlop')}>Xem lớp &amp; đăng ký</button>
+              <button className="btn btn-primary" onClick={() => gotoLich('class')}>Xem lớp &amp; đăng ký</button>
               <button className="btn" onClick={() => setShowJourney(true)} style={{ background: 'rgba(255,255,255,.14)', color: '#fff', border: '1.5px solid rgba(255,255,255,.6)', backdropFilter: 'blur(4px)' }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>
                 Tìm hiểu Bản đồ hành trình
@@ -875,14 +905,14 @@ export default function ClassLandingPage() {
       {showJourney && (
         <ClassJourney2027
           onClose={() => setShowJourney(false)}
-          onRegister={() => { setShowJourney(false); setTimeout(() => goto('lichlop'), 60) }}
+          onRegister={() => { setShowJourney(false); setTimeout(() => gotoLich('class'), 60) }}
         />
       )}
 
       {showDemHat && (
         <ClassDemHat
           onClose={() => setShowDemHat(false)}
-          onRegister={() => { setShowDemHat(false); setTimeout(() => goto('lichlop'), 60) }}
+          onRegister={() => { setShowDemHat(false); setTimeout(() => gotoLich('class'), 60) }}
           onChat={() => { setShowDemHat(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
@@ -890,7 +920,7 @@ export default function ClassLandingPage() {
       {showTiaNot && (
         <ClassTiaNot
           onClose={() => setShowTiaNot(false)}
-          onRegister={() => { setShowTiaNot(false); setTimeout(() => goto('lichlop'), 60) }}
+          onRegister={() => { setShowTiaNot(false); setTimeout(() => gotoLich('class'), 60) }}
           onChat={() => { setShowTiaNot(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
@@ -898,7 +928,7 @@ export default function ClassLandingPage() {
       {showQuiz && (
         <ClassQuiz
           onClose={() => setShowQuiz(false)}
-          onRegister={() => { setShowQuiz(false); setTimeout(() => goto('lichlop'), 60) }}
+          onRegister={() => { setShowQuiz(false); setTimeout(() => gotoLich('class'), 60) }}
           onChat={() => { setShowQuiz(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
@@ -906,7 +936,7 @@ export default function ClassLandingPage() {
       {showGuide && (
         <ClassAppGuide
           onClose={() => setShowGuide(false)}
-          onRegister={() => { setShowGuide(false); setTimeout(() => goto('lichlop'), 60) }}
+          onRegister={() => { setShowGuide(false); setTimeout(() => gotoLich('class'), 60) }}
         />
       )}
 
@@ -928,7 +958,7 @@ export default function ClassLandingPage() {
         <div className="demo-page">
           <div className="demo-top">
             <button className="demo-back" onClick={() => setShowPractice(false)}>← Quay lại</button>
-            <button className="demo-cta" onClick={() => { setShowPractice(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+            <button className="demo-cta" onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
           </div>
           <div className="demo-scroll">
             <div className="demo-inner">
@@ -948,7 +978,7 @@ export default function ClassLandingPage() {
                   <div className="demo-point" key={i}><span>{ic}</span>{t}</div>
                 ))}
               </div>
-              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowPractice(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
             </div>
           </div>
         </div>
@@ -961,14 +991,14 @@ export default function ClassLandingPage() {
           <div className="art-page">
             <div className="art-top">
               <button className="art-close" onClick={() => setModal(null)}>← Quay lại</button>
-              <button className="btn btn-primary art-top-cta" onClick={() => { setModal(null); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+              <button className="btn btn-primary art-top-cta" onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
             </div>
             <div className="art-scroll">
               <div className="art-inner">
                 {a ? <>
                   <h1 className="art-h1">{a.title}</h1>
                   <div className="art-body" dangerouslySetInnerHTML={{ __html: a.body }} />
-                  <button className="btn btn-primary" style={{ marginTop: 28 }} onClick={() => { setModal(null); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp &amp; đăng ký →</button>
+                  <button className="btn btn-primary" style={{ marginTop: 28 }} onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
                 </> : <div>Bài viết không còn.</div>}
               </div>
             </div>
@@ -1003,7 +1033,7 @@ export default function ClassLandingPage() {
                 </div>
               )}
             </div>
-            <button className="btn btn-primary" style={{ marginTop: 18, width: '100%' }} onClick={() => { setShowActive(false); setTimeout(() => goto('lichlop'), 60) }}>Xem lớp sắp khai giảng &amp; đăng ký →</button>
+            <button className="btn btn-primary" style={{ marginTop: 18, width: '100%' }} onClick={() => { setShowActive(false); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp sắp khai giảng &amp; đăng ký →</button>
           </div>
         </div>
       )}
@@ -1041,7 +1071,7 @@ export default function ClassLandingPage() {
 }
 
 const CSS = `
-.tva-class{--bg:#F2EEE7;--surface:#FFFFFF;--ink:#211C32;--ink-soft:#5A5470;--ink-faint:#8A8499;--indigo:#4338CA;--indigo-dark:#352BA3;--indigo-tint:#EEEBFB;--honey:#C9711E;--honey-tint:#FBF1E4;--line:#E4DED4;--online:#16A34A;--orange:#EE7D3C;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px;min-height:100vh;text-align:left;color-scheme:light;}
+.tva-class{--bg:#F2EEE7;--surface:#FFFFFF;--ink:#211C32;--ink-soft:#5A5470;--ink-faint:#8A8499;--indigo:#4338CA;--indigo-dark:#352BA3;--indigo-tint:#EEEBFB;--honey:#C9711E;--honey-tint:#FBF1E4;--line:#E4DED4;--online:#16A34A;--orange:#EE7D3C;--mem:#EA580C;--mem-soft:#FDF0E7;--mem-line:#F5CFB6;font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px;min-height:100vh;text-align:left;color-scheme:light;}
 .tva-class *{box-sizing:border-box;}
 .tva-class .wrap{max-width:1080px;margin:0 auto;padding:0 20px;}
 .tva-class section{padding:58px 0;}
@@ -1181,13 +1211,28 @@ const CSS = `
 @media(max-width:860px){.tva-class .cls-list{grid-template-columns:1fr;}}
 
 /* Nhánh Học theo lớp — TÍM (nối với card TÍM ở section '2 cách học' phía trên) */
-.tva-class .cls-sec{padding-top:44px;}
+.tva-class .cls-sec{padding-top:34px;}
 .tva-class .cls-sec .eyebrow{color:var(--indigo);}
 .tva-class .cls-kicker{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .tva-class .cls-kicker .eyebrow{margin-bottom:0;}
 .tva-class .cls-pill{font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--indigo);background:var(--indigo-tint);border:1px solid #D3CEE8;border-radius:999px;padding:4px 12px;}
 .tva-class .cls-sec .cls-item{border-top:3px solid var(--indigo);}
 .tva-class .cls-sec .cls-item .tag{color:var(--indigo);background:var(--indigo-tint);}
+
+/* LỊCH GOM — tab bar CAM (Gói Thực hành) / TÍM (Gói Học theo lớp) */
+.tva-class .sch-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}
+@media(min-width:860px){.tva-class .sch-tabs{display:inline-flex;gap:10px;}}
+.tva-class .sch-tab{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1.5px solid var(--line);border-radius:14px;background:rgba(255,255,255,.6);padding:12px 16px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.tva-class .sch-tab:hover{border-color:#CFC9DA;}
+.tva-class .sch-tab.on{background:var(--surface);box-shadow:0 12px 30px -18px rgba(33,28,50,.35);}
+.tva-class .sch-tab-mem.on{border-color:var(--mem);}
+.tva-class .sch-tab-cls.on{border-color:var(--indigo);}
+.tva-class .sch-tab-name{font-size:14.5px;font-weight:800;color:var(--ink);line-height:1.3;}
+.tva-class .sch-tab-sub{font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+.tva-class .sch-tab-mem .sch-tab-sub{color:var(--mem);}
+.tva-class .sch-tab-cls .sch-tab-sub{color:var(--indigo);}
+.tva-class .sch-tab-mem.on .sch-tab-name,.tva-class .sch-tab-mem.on .sch-tab-sub{color:var(--mem);}
+.tva-class .sch-tab-cls.on .sch-tab-name,.tva-class .sch-tab-cls.on .sch-tab-sub{color:var(--indigo);}
 .tva-class .benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
 .tva-class .bf{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;gap:12px;align-items:flex-start;font-size:14.5px;line-height:1.4;}
 .tva-class .bf .bi{font-size:20px;flex-shrink:0;}
