@@ -14,6 +14,8 @@ import ClassNangCao from './ClassNangCao'
 import { FAQS } from './classFaq'
 import { tenNangLuc } from './hanhtrinh'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
+import ClassLearningWays from './components/ClassLearningWays'
+import ClassPracticeSchedule from './components/ClassPracticeSchedule'
 
 // ─── Combo Hành trình — sản phẩm bán quanh năm, KHÔNG nằm trong class_schedule ───
 // (Lịch lớp thật đọc từ bảng class_schedule; tuyệt đối không hardcode lớp ở đây.)
@@ -308,6 +310,8 @@ export default function ClassLandingPage() {
       sach: () => setBenefit('sach'),
       thay: () => setBenefit('thay'),
       congdong: () => setBenefit('cong-dong'),
+      thuchanh: () => setTimeout(() => goto('thuchanh'), 350),
+      cachhoc: () => setTimeout(() => goto('cach-hoc'), 350),
     }
     actions[xem]?.()
   }, [])
@@ -500,12 +504,12 @@ export default function ClassLandingPage() {
         </div>
       </section>
 
-      {/* LỚP SẮP KHAI GIẢNG */}
+      {/* LỚP SẮP KHAI GIẢNG — Học theo lớp (giữ riêng, KHÔNG trộn với lịch thực hành) */}
       <section id="lichlop">
         <div className="wrap">
           <div className="eyebrow">Lịch khai giảng</div>
-          <h2>Lớp sắp khai giảng</h2>
-          <p className="lead">Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
+          <h2>Các lớp sắp khai giảng</h2>
+          <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
           {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
           {sched === null && <div style={{ textAlign: 'center', color: '#8A8A93', padding: '28px 0', fontSize: 15 }}>Đang tải lịch lớp…</div>}
           {/* Hết lớp sắp khai giảng → nói thật + mời giữ chỗ, thay vì hiện lớp cũ */}
@@ -576,6 +580,12 @@ export default function ClassLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* 2 CÁCH HỌC — Gói thành viên (linh hoạt) vs Học theo lớp (cố định) + bài giải thích ẩn */}
+      <ClassLearningWays />
+
+      {/* LỊCH THỰC HÀNH THÀNH VIÊN — section RIÊNG, data thật từ Admin (cờ show_on_practice_schedule) */}
+      <ClassPracticeSchedule />
 
       {/* ĐĂNG KÝ */}
       <section id="dangky" className="band">
