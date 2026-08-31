@@ -44,6 +44,7 @@ interface Props {
   onTabChange: (t: 'practice' | 'class') => void
   sched: SchedState | null
   onRegister: (name: string) => void
+  onRegisterPractice: () => void
   onShowActive: () => void
   onChat: () => void
 }
@@ -107,7 +108,7 @@ const schedToCard = (it: ClassSchedItem) => ({
   price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
 })
 
-export default function ClassLearningWays({ tab, onTabChange, sched, onRegister, onShowActive, onChat }: Props) {
+export default function ClassLearningWays({ tab, onTabChange, sched, onRegister, onRegisterPractice, onShowActive, onChat }: Props) {
   const [open, setOpen] = useState(false)
 
   const onTabsKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -173,6 +174,11 @@ export default function ClassLearningWays({ tab, onTabChange, sched, onRegister,
 
             {/* Lịch thực hành thật — nằm TRONG tab Gói Thực hành (không duplicate) */}
             <ClassPracticeSchedule />
+
+            {/* CTA đăng ký Gói Thực hành — preselect mode practice ở form cuối trang */}
+            <div className="lw-reg-cta">
+              <button type="button" className="btn lw-reg-btn" onClick={onRegisterPractice}>Đăng ký Gói Thực hành →</button>
+            </div>
           </div>
         )}
 
@@ -466,6 +472,9 @@ const CSS = `
 .tva-class .lw-price-sub{font-size:13px;font-weight:600;color:var(--ink-soft);}
 /* Lịch thực hành + lịch lớp embedded trong tab */
 .tva-class .lw-panel .cps-sec{padding:24px 0 0;}
+.tva-class .lw-reg-cta{margin-top:26px;border-top:1px solid var(--line);padding-top:22px;text-align:center;}
+.tva-class .lw-reg-btn{background:var(--mem);color:#fff;}
+.tva-class .lw-reg-btn:hover{background:#C94F08;}
 .tva-class .lw-cls-sched{margin-top:26px;border-top:1px solid var(--line);padding-top:24px;}
 .tva-class .lw-panel .cls-sec{padding-top:0;}
 .tva-class .lw-cls-h{font-size:20px;font-weight:800;letter-spacing:-.3px;color:var(--ink);margin:10px 0 0;}

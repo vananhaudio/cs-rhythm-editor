@@ -49,6 +49,10 @@ export default function ClassLandingPage() {
   const [showPending, setShowPending] = useState(false)   // học sinh HT gửi yêu cầu miễn phí → chờ duyệt
   const [formErr, setFormErr] = useState(false)
   const [showPay, setShowPay] = useState(false)
+  const [regMode, setRegMode] = useState<'class' | 'practice' | 'both'>('class')   // hình thức đăng ký
+  const [practiceDur, setPracticeDur] = useState<'1_month' | '6_month'>('1_month') // gói Thực hành
+  const [practicePath, setPracticePath] = useState('')                             // hướng học ưu tiên ('' = chưa biết)
+  const [regOk, setRegOk] = useState<'practice' | 'both' | null>(null)             // success không qua thanh toán
   const [sent, setSent] = useState(false)
   const [okBox, setOkBox] = useState(false)
   const [modal, setModal] = useState<string | null>(null)
@@ -311,7 +315,8 @@ export default function ClassLandingPage() {
     actions[xem]?.()
   }, [])
 
-  const pickClass = (name: string) => { set('className', name); goto('dangky') }
+  const pickClass = (name: string) => { setRegMode('class'); set('className', name); goto('dangky') }
+  const pickPractice = () => { setRegMode('practice'); goto('dangky') }
 
   // Lớp có thể đăng ký = lớp THẬT từ class_schedule (sắp khai giảng + đang học) + combo Hành trình.
   // name (giá trị ghi vào leads) KÈM MÃ LỚP — vì có thể 2 lớp trùng tên (vd TN3.GL12 và TN3.GL13).
@@ -353,10 +358,38 @@ export default function ClassLandingPage() {
   }
   const chatSend = () => chatSendText(chatInput)
 
+  // Hỗ trợ summary động
+  const PRACTICE_SUM = { '1_month': { label: '1 tháng', vnd: 499000, line: '499.000đ' }, '6_month': { label: '6 tháng', vnd: 2376000, line: '2.376.000đ' } }
+  const fmtVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+  const classPriceVnd = (price?: string): number | null => {
+    if (price === 'Combo') return null
+    if (!price || /miễn phí|free/i.test(price || '')) return /miễn phí|free/i.test(price || '') ? 0 : 990000
+    return 990000
+  }
+  const classPriceLabel = (price?: string) => {
+    if (price === 'Combo') return 'Combo trọn gói'
+    if (/miễn phí|free/i.test(price || '')) return 'Miễn phí'
+    return '990.000đ'
+  }
+  const clsSel = regClasses.find(c => c.name === form.className)
+  const practiceSum = PRACTICE_SUM[practiceDur]
+  const bothTotal = regMode === 'both' && form.className && classPriceVnd(clsSel?.price) !== null
+    ? (classPriceVnd(clsSel?.price) ?? 0) + practiceSum.vnd
+    : null
+  // Ghi nhận mode có cấu trúc vào note (key ổn định — backend chưa có cột riêng, xem báo cáo)
+  const regNote = () => {
+    if (regMode === 'class') return form.note.trim() || null
+    const mode = regMode === 'both' ? 'both' : 'practice'
+    let s = `[reg-mode:${mode}][practice-duration:${practiceDur}]`
+    if (practicePath) s += `[practice-path:${practicePath}]`
+    s += ' '
+    return (s + (form.note.trim() || '')).trim() || null
+  }
   const submitReg = async () => {
     const cls = regClasses.find(c => c.name === form.className) ?? { path: inferPath(form.className) }
-    // HỌC SINH LỚP HÀNH TRÌNH (đã đăng nhập + tick miễn phí): gửi YÊU CẦU chờ thầy duyệt, KHÔNG qua thanh toán.
-    if (me && form.isHanhtrinh) {
+    // HỌC SINH LỚP HÀNH TRÌNH (đã đăng nhập + tick miễn phí — chỉ áp dụng phần LỚP, KHÔNG miễn Gói Thực hành):
+    // gửi YÊU CẦU chờ thầy duyệt, KHÔNG qua thanh toán.
+    if (me && form.isHanhtrinh && regMode !== 'practice') {
       let studentId: string | null = null, phone = form.phone.trim()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -365,25 +398,28 @@ export default function ClassLandingPage() {
       }
       const { error } = await supabase.from('leads').insert({
         name: me.name, phone, zalo: form.zalo.trim() || null, email: form.email.trim() || null,
-        class_name: form.className, path: cls?.path ?? null, intent: 'dang_ky',
-        note: form.note.trim() || null, source: 'app', status: 'Chờ duyệt',
+        class_name: regMode === 'class' ? form.className : form.className, path: cls?.path ?? null, intent: 'dang_ky',
+        note: regNote(), source: 'app', status: 'Chờ duyệt',
         is_hanhtrinh: true, student_id: studentId,
       })
       if (error) { setFormErr(true); console.error('Gửi yêu cầu lỗi:', error); return }
       setFormErr(false); setShowPending(true); setTimeout(() => goto('thanhtoan'), 60)
       return
     }
-    // Đăng ký thường: cần tên + SĐT → leads → thanh toán
-    if (!form.name.trim() || !form.phone.trim() || !form.className) { setFormErr(true); return }
+    // Đăng ký thường: validation theo mode (practice KHÔNG bắt chọn lớp)
+    if (!form.name.trim() || !form.phone.trim()) { setFormErr(true); return }
+    if (regMode !== 'practice' && !form.className) { setFormErr(true); return }
     setFormErr(false)
     const { error } = await supabase.from('leads').insert({
       name: form.name.trim(), phone: form.phone.trim(), zalo: form.zalo.trim() || null,
-      email: form.email.trim() || null, class_name: form.className, path: cls?.path ?? null,
-      intent: 'dang_ky', note: form.note.trim() || null, source: 'landing', status: 'Mới đăng ký',
+      email: form.email.trim() || null,
+      class_name: regMode === 'practice' ? null : form.className,
+      path: regMode === 'practice' ? (practicePath || null) : cls?.path ?? null,
+      intent: 'dang_ky', note: regNote(), source: 'landing', status: 'Mới đăng ký',
     })
-    if (error) console.error('Ghi leads lỗi (vẫn cho sang thanh toán):', error)
-    setShowPay(true)
-    setTimeout(() => goto('thanhtoan'), 60)
+    if (error) console.error('Ghi leads lỗi (vẫn tiếp tục):', error)
+    if (regMode === 'class') { setShowPay(true); setTimeout(() => goto('thanhtoan'), 60) }
+    else { setRegOk(regMode); setTimeout(() => goto('thanhtoan'), 60) }
   }
 
   return (
@@ -535,41 +571,132 @@ export default function ClassLandingPage() {
         onTabChange={setWaysTab}
         sched={sched}
         onRegister={pickClass}
+        onRegisterPractice={pickPractice}
         onShowActive={() => setShowActive(true)}
         onChat={() => goto('chat')}
       />
 
-      {/* ĐĂNG KÝ */}
+      {/* ĐĂNG KÝ HỌC — 3 hình thức: Học theo lớp / Gói Thực hành / Học cả hai */}
       <section id="dangky" className="band">
         <div className="wrap">
           <div className="eyebrow">Đăng ký</div>
-          <h2>Xác nhận đăng ký lớp</h2>
-          <p className="lead">Điền vài thông tin, thầy sẽ giữ chỗ và kích hoạt tài khoản app cho bạn.</p>
+          <h2>Đăng ký học</h2>
+          <p className="lead">Chọn hình thức phù hợp với bạn.</p>
           <div className="panel">
+            {/* 3 lựa chọn hình thức — chỉ chọn 1 mode tại một thời điểm */}
+            <div className="reg-modes" role="radiogroup" aria-label="Hình thức đăng ký">
+              {([
+                { key: 'class', title: 'Học theo lớp', sub: 'Lịch cố định · chương trình đi lên', cls: 'reg-mode-cls' },
+                { key: 'practice', title: 'Gói Thực hành', sub: 'Linh hoạt · học mỗi ngày', cls: 'reg-mode-mem' },
+                { key: 'both', title: 'Học cả hai', sub: 'Lớp + Gói Thực hành', cls: 'reg-mode-both' },
+              ] as const).map(m => (
+                <button key={m.key} type="button" role="radio" aria-checked={regMode === m.key}
+                  className={'reg-mode ' + m.cls + (regMode === m.key ? ' on' : '')}
+                  onClick={() => setRegMode(m.key)}>
+                  <span className="reg-mode-title">{m.title}</span>
+                  <span className="reg-mode-sub">{m.sub}</span>
+                </button>
+              ))}
+            </div>
+
             <div className="frm">
               <div><label>Họ và tên</label><input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Nguyễn Văn A" /></div>
               <div><label>Số điện thoại</label><input value={form.phone} onChange={e => set('phone', e.target.value)} type="tel" inputMode="tel" placeholder="09xx xxx xxx" /></div>
               <div><label>Zalo / Facebook đang dùng</label><input value={form.zalo} onChange={e => set('zalo', e.target.value)} placeholder="Số Zalo hoặc link FB" /></div>
               <div><label>Email (tạo tài khoản app)</label><input value={form.email} onChange={e => set('email', e.target.value)} type="email" placeholder="email@..." /></div>
-              <div className="full"><label>Lớp muốn đăng ký</label>
-                <select value={form.className} onChange={e => set('className', e.target.value)}>
-                  <option value="">— Chọn lớp —</option>
-                  {regClasses.map(c => <option key={c.name} value={c.name}>{c.label}</option>)}
-                </select>
-              </div>
+
+              {/* Phần LỚP — chỉ khi mode class / both */}
+              {regMode !== 'practice' && (
+                <>
+                  <div className="full"><label>Lớp muốn đăng ký</label>
+                    <select value={form.className} onChange={e => set('className', e.target.value)}>
+                      <option value="">— Chọn lớp —</option>
+                      {regClasses.map(c => <option key={c.name} value={c.name}>{c.label}</option>)}
+                    </select>
+                  </div>
+                  {/* Checkbox Hành trình: CHỈ áp dụng phần LỚP — không miễn Gói Thực hành */}
+                  {me && (
+                    <div className="full" style={{ background: '#F4F4F5', borderRadius: 10, padding: '12px 14px' }}>
+                      <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', fontSize: 14.5 }}>
+                        <input type="checkbox" checked={form.isHanhtrinh} onChange={e => setForm(f => ({ ...f, isHanhtrinh: e.target.checked }))} style={{ marginTop: 3, width: 18, height: 18 }} />
+                        <span>Tôi là <b>học sinh lớp Hành trình</b> — được <b>miễn phí</b> khoá học (gửi yêu cầu để thầy duyệt mở khoá).</span>
+                      </label>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Phần GÓI THỰC HÀNH — chỉ khi mode practice / both */}
+              {regMode !== 'class' && (
+                <>
+                  <div className="full">
+                    <label>Chọn gói Thực hành</label>
+                    <div className="reg-pills" role="radiogroup" aria-label="Gói Thực hành">
+                      <button type="button" role="radio" aria-checked={practiceDur === '1_month'}
+                        className={'reg-pill' + (practiceDur === '1_month' ? ' on' : '')} onClick={() => setPracticeDur('1_month')}>
+                        <b>1 tháng</b><span>499.000đ/tháng</span>
+                      </button>
+                      <button type="button" role="radio" aria-checked={practiceDur === '6_month'}
+                        className={'reg-pill' + (practiceDur === '6_month' ? ' on' : '')} onClick={() => setPracticeDur('6_month')}>
+                        <b>6 tháng — 2.376.000đ</b><span>tương đương 396.000đ/tháng</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="full">
+                    <label>Bạn đang muốn tập trung vào hướng nào?</label>
+                    <div className="reg-pills reg-pills-4" role="radiogroup" aria-label="Hướng học">
+                      {([{ key: 'dem_hat', label: 'Đệm hát' }, { key: 'tia_not', label: 'Tỉa nốt' }, { key: 'solo', label: 'Solo' }, { key: '', label: 'Chưa biết / muốn Thầy tư vấn' }] as const).map(p => (
+                        <button key={p.key || 'unsure'} type="button" role="radio" aria-checked={practicePath === p.key}
+                          className={'reg-pill reg-pill-4' + (practicePath === p.key ? ' on' : '')} onClick={() => setPracticePath(p.key)}>
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="reg-helper">Sau khi đăng ký, Thầy sẽ giúp bạn chọn hướng học và nhóm thực hành phù hợp.</div>
+                  </div>
+                </>
+              )}
+
+              {regMode === 'both' && (
+                <div className="full reg-both-line">Học theo lớp để <b>đi lên</b> · Thực hành để <b>đi sâu</b>.</div>
+              )}
+
               <div className="full"><label>Ghi chú thêm (không bắt buộc)</label><textarea value={form.note} onChange={e => set('note', e.target.value)} rows={2} placeholder="Khung giờ rảnh, câu muốn hỏi thầy..." /></div>
-              {/* Học phí + tick miễn phí cho học sinh lớp Hành trình (chỉ khi đã đăng nhập) */}
-              <div className="full" style={{ background: '#F4F4F5', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={{ fontSize: 15 }}>Học phí khoá này: <b style={{ color: '#EA580C' }}>{(regClasses.find(c => c.name === form.className)?.price === 'Combo') ? 'Combo trọn gói' : '990.000đ'}</b></div>
-                {me && (
-                  <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 10, cursor: 'pointer', fontSize: 14.5 }}>
-                    <input type="checkbox" checked={form.isHanhtrinh} onChange={e => setForm(f => ({ ...f, isHanhtrinh: e.target.checked }))} style={{ marginTop: 3, width: 18, height: 18 }} />
-                    <span>Tôi là <b>học sinh lớp Hành trình</b> — được <b>miễn phí</b> khoá này (gửi yêu cầu để thầy duyệt mở khoá).</span>
-                  </label>
+
+              {/* TÓM TẮT ĐĂNG KÝ — động theo mode */}
+              <div className="full reg-summary">
+                <div className="reg-summary-title">Tóm tắt đăng ký</div>
+                {regMode === 'class' && (
+                  <div className="reg-sum-row"><span>Gói Học theo lớp{form.className ? ` · ${form.className}` : ''}</span><b>{form.className ? classPriceLabel(clsSel?.price) : '—'}</b></div>
+                )}
+                {regMode === 'practice' && (
+                  <>
+                    <div className="reg-sum-row"><span>Gói Thực hành · {practiceSum.label}</span><b>{practiceSum.line}</b></div>
+                    {practiceDur === '6_month' && <div className="reg-sum-note">tương đương 396.000đ/tháng</div>}
+                  </>
+                )}
+                {regMode === 'both' && (
+                  <>
+                    <div className="reg-sum-row"><span>Gói Học theo lớp{form.className ? ` · ${form.className}` : ''}</span><b>{form.className ? classPriceLabel(clsSel?.price) : '—'}</b></div>
+                    <div className="reg-sum-row"><span>Gói Thực hành · {practiceSum.label}</span><b>{practiceSum.line}</b></div>
+                    {bothTotal !== null
+                      ? <div className="reg-sum-total"><span>Tổng đăng ký</span><b>{fmtVnd(bothTotal)}</b></div>
+                      : <div className="reg-sum-note">{form.className ? 'Giá combo Hành trình sẽ được Thầy tư vấn trực tiếp.' : 'Chọn lớp để xem tổng đăng ký.'}</div>}
+                  </>
                 )}
               </div>
-              {formErr && <div className="full err">{me && form.isHanhtrinh ? 'Gửi yêu cầu thất bại, thử lại giúp thầy nhé.' : 'Bạn vui lòng nhập Họ tên, Số điện thoại và chọn lớp nhé.'}</div>}
-              <div className="full"><button className="btn btn-primary" style={{ width: '100%' }} onClick={submitReg}>{me && form.isHanhtrinh ? 'Gửi yêu cầu miễn phí (chờ duyệt) →' : 'Xác nhận đăng ký lớp →'}</button></div>
+
+              {formErr && <div className="full err">
+                {me && form.isHanhtrinh && regMode !== 'practice' ? 'Gửi yêu cầu thất bại, thử lại giúp thầy nhé.'
+                  : regMode === 'practice' ? 'Bạn vui lòng nhập Họ tên và Số điện thoại nhé.'
+                  : 'Bạn vui lòng nhập Họ tên, Số điện thoại và chọn lớp nhé.'}
+              </div>}
+              <div className="full"><button className="btn btn-primary" style={{ width: '100%' }} onClick={submitReg}>
+                {me && form.isHanhtrinh && regMode !== 'practice' ? 'Gửi yêu cầu miễn phí (chờ duyệt) →'
+                  : regMode === 'class' ? 'Xác nhận đăng ký lớp →'
+                  : regMode === 'practice' ? 'Đăng ký Gói Thực hành →'
+                  : 'Đăng ký cả hai →'}
+              </button></div>
             </div>
           </div>
         </div>
@@ -631,6 +758,31 @@ export default function ClassLandingPage() {
         </section>
       )}
       {sent && null}
+
+      {/* ĐĂNG KÝ GÓI THỰC HÀNH / CẢ HAI — ghi nhận, không hứa kích hoạt/payment tự động */}
+      {!showPending && !showPay && regOk && (
+        <section id="thanhtoan">
+          <div className="wrap">
+            <div className="eyebrow">Đã ghi nhận</div>
+            <h2>{regOk === 'practice' ? 'Đăng ký Gói Thực hành đã được ghi nhận 🎸' : 'Đăng ký đã được ghi nhận 🎸'}</h2>
+            <p className="lead">{regOk === 'practice'
+              ? 'Thầy sẽ liên hệ để giúp bạn chọn hướng học và nhóm thực hành phù hợp.'
+              : 'Thầy sẽ liên hệ để xác nhận lớp học và sắp xếp nhóm thực hành phù hợp.'}</p>
+            <div className="panel">
+              <div className="ok-box">
+                <h4>✓ Cảm ơn bạn!</h4>
+                <p>{regOk === 'practice'
+                  ? 'Gói Thực hành của bạn đã được ghi nhận. Thầy sẽ liên hệ qua Zalo để trao đổi hướng học và nhóm thực hành phù hợp với bạn.'
+                  : 'Thông tin đăng ký của bạn đã được ghi nhận. Thầy sẽ liên hệ qua Zalo để xác nhận lớp học và sắp xếp nhóm thực hành phù hợp.'}</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                  <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Nhắn Zalo thầy →</a>
+                  <button className="ok-guide" onClick={() => { window.location.href = '/me' }}>🎸 Về Hành trình của tôi →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* SAU KHI THANH TOÁN */}
       <section className="band">
@@ -1146,6 +1298,39 @@ const CSS = `
 .tva-class .frm{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .tva-class .frm .full{grid-column:1/-1;}
 .tva-class .frm label{font-size:12.5px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:5px;}
+
+/* ĐĂNG KÝ HỌC — 3 hình thức + gói + hướng + tóm tắt động */
+.tva-class .reg-modes{display:grid;gap:10px;grid-template-columns:1fr;margin-bottom:22px;}
+@media(min-width:640px){.tva-class .reg-modes{grid-template-columns:repeat(3,1fr);gap:12px;}}
+.tva-class .reg-mode{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);padding:13px 16px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.tva-class .reg-mode:hover{border-color:#CFC9DA;}
+.tva-class .reg-mode.on{box-shadow:0 12px 30px -18px rgba(33,28,50,.35);}
+.tva-class .reg-mode-cls.on{border-color:var(--indigo);background:var(--indigo-tint);}
+.tva-class .reg-mode-mem.on{border-color:var(--mem);background:var(--mem-soft);}
+.tva-class .reg-mode-both.on{border-color:var(--indigo);background:linear-gradient(90deg,var(--mem-soft) 0%,var(--indigo-tint) 100%);}
+.tva-class .reg-mode-title{font-size:15px;font-weight:800;color:var(--ink);}
+.tva-class .reg-mode-sub{font-size:11.5px;color:var(--ink-soft);}
+.tva-class .reg-pills{display:grid;gap:10px;grid-template-columns:1fr;margin-top:4px;}
+@media(min-width:640px){.tva-class .reg-pills{grid-template-columns:1fr 1fr;}}
+.tva-class .reg-pills-4{grid-template-columns:1fr 1fr;}
+@media(min-width:640px){.tva-class .reg-pills-4{grid-template-columns:repeat(4,1fr);}}
+.tva-class .reg-pill{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);padding:11px 14px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.tva-class .reg-pill b{color:var(--ink);font-size:14px;}
+.tva-class .reg-pill span{color:var(--ink-soft);font-size:12px;}
+.tva-class .reg-pill:hover{border-color:#CFC9DA;}
+.tva-class .reg-pill.on{border-color:var(--mem);background:var(--mem-soft);}
+.tva-class .reg-pill.on b{color:var(--mem);}
+.tva-class .reg-pill-4{justify-content:center;align-items:center;font-size:13.5px;font-weight:600;color:var(--ink);}
+.tva-class .reg-helper{margin-top:8px;font-size:12.5px;color:var(--ink-soft);font-style:italic;}
+.tva-class .reg-both-line{margin-top:2px;font-size:13.5px;color:var(--ink-soft);}
+.tva-class .reg-both-line b{color:var(--ink);}
+.tva-class .reg-summary{margin-top:6px;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);padding:14px 16px;}
+.tva-class .reg-summary-title{font-size:11.5px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;}
+.tva-class .reg-sum-row{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:var(--ink);padding:5px 0;}
+.tva-class .reg-sum-row b{font-weight:800;}
+.tva-class .reg-sum-note{margin-top:4px;font-size:12px;color:var(--ink-soft);}
+.tva-class .reg-sum-total{display:flex;justify-content:space-between;gap:12px;border-top:1.5px solid var(--line);margin-top:8px;padding-top:10px;font-size:15px;font-weight:800;color:var(--ink);}
+.tva-class .reg-sum-total b{color:var(--honey);font-size:17px;}
 .tva-class .frm input,.tva-class .frm select,.tva-class .frm textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);background:#F7F5F1;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;resize:none;}
 .tva-class .frm input:focus,.tva-class .frm select:focus,.tva-class .frm textarea:focus{outline:none;border-color:var(--indigo);background:#fff;}
 .tva-class .frm .err{color:#B91C1C;font-size:13px;font-weight:600;}
