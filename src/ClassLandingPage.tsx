@@ -16,6 +16,7 @@ import { tenNangLuc } from './hanhtrinh'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
 import ClassLearningWays from './components/ClassLearningWays'
 import ClassWeekJourney from './components/ClassWeekJourney'
+import ClassAfterSignup from './components/ClassAfterSignup'
 
 // ─── Combo Hành trình — sản phẩm bán quanh năm, KHÔNG nằm trong class_schedule ───
 // (Lịch lớp thật đọc từ bảng class_schedule; tuyệt đối không hardcode lớp ở đây.)
@@ -69,6 +70,7 @@ export default function ClassLandingPage() {
   const [showPractice, setShowPractice] = useState(false)   // modal xem một buổi thực hành (video thật)
   const [benefit, setBenefit] = useState<BenefitKey | null>(null)   // chiều sâu 6 quyền lợi (reuse từ /azz)
   const [showNangCao, setShowNangCao] = useState(false)
+  const [showAfterSignup, setShowAfterSignup] = useState(false)   // modal 'Sau khi đăng ký — chi tiết từng bước'
   const [waysTab, setWaysTab] = useState<'practice' | 'class'>('practice')   // tab 2 cách học: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
@@ -311,6 +313,7 @@ export default function ClassLandingPage() {
       congdong: () => setBenefit('cong-dong'),
       thuchanh: () => gotoLich('practice'),
       cachhoc: () => setTimeout(() => goto('cach-hoc'), 350),
+      batdau: () => setShowAfterSignup(true),
     }
     actions[xem]?.()
   }, [])
@@ -784,18 +787,8 @@ export default function ClassLandingPage() {
         </section>
       )}
 
-      {/* SAU KHI THANH TOÁN */}
-      <section className="band">
-        <div className="wrap">
-          <div className="eyebrow">Sau khi thanh toán</div>
-          <h2>Bạn đã chính thức bước vào hành trình</h2>
-          <div className="steps">
-            {[['1', 'Giữ chỗ lớp', 'Chọn lớp & xác nhận thông tin.'], ['2', 'Hoàn tất học phí', 'Hệ thống kích hoạt tài khoản.'], ['3', 'Tải app TVA Guitar', 'Mở bài định hướng đầu tiên.'], ['4', 'Vào nhóm lớp', 'Chuẩn bị buổi học đầu cùng thầy.']].map(([n, h, p]) => (
-              <div className="step" key={n}><div className="num">{n}</div><h4>{h}</h4><p>{p}</p></div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* SAU KHI ĐĂNG KÝ — 4 bước gọn + modal hướng dẫn chi tiết (deep-link ?xem=batdau) */}
+      <ClassAfterSignup open={showAfterSignup} onOpen={() => setShowAfterSignup(true)} onClose={() => setShowAfterSignup(false)} />
 
       {/* APP */}
       <section>
