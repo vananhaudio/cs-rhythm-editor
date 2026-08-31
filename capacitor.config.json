@@ -1,5 +1,8 @@
 {
   "appId": "com.vananhaudio.guitar",
   "appName": "TVA Guitar",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "iosScheme": "https"
+  }
 }
