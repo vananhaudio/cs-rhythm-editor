@@ -1,40 +1,124 @@
 /**
  * ClassLearningWays — section "Bạn muốn học theo cách nào?" trên /class.
  *
- * 2 sản phẩm KHÔNG thay thế nhau (GÓI THỰC HÀNH = CAM · linh hoạt · đi sâu /
- * GÓI HỌC THEO LỚP = TÍM · cố định · đi lên) + link mở bài viết giải thích sâu
- * (modal full-screen, không kéo dài landing). Có thể chọn MỘT hoặc kết hợp CẢ HAI.
- * Giá Gói Thực hành: 499.000đ/tháng · đăng ký dài hạn 396.000đ/tháng (không invent thời hạn).
+ * 2 TAB sản phẩm: GÓI THỰC HÀNH (CAM · linh hoạt · đi sâu) / GÓI HỌC THEO LỚP
+ * (TÍM · cố định · đi lên). Mỗi tab chứa: giải thích ngắn + giá (CAM) +
+ * LỊCH tương ứng (lịch thực hành thật trong tab CAM · các lớp sắp khai giảng
+ * trong tab TÍM) — KHÔNG còn 2 card lớn / không còn lịch riêng phía dưới.
  *
- * Bài viết ẩn: modal đè lên landing (không đổi URL, không mất vị trí cuộn),
- * đóng bằng ✕ hoặc Escape, khóa cuộn nền, focus quay lại nút mở — cùng pattern
- * ClassBenefitDetail.
+ * - Không reload khi đổi tab, aria-selected/role tab + phím mũi tên.
+ * - Link "Hai cách học khác nhau thế nào?" mở modal bài viết (không đổi).
+ * - Query/data 2 lịch KHÔNG đổi (classPractice tự fetch; lịch lớp nhận qua props
+ *   từ ClassLandingPage — nguồn query cũ).
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import ClassPracticeSchedule from './ClassPracticeSchedule'
+
+/** 1 lớp sắp khai giảng (shape từ ClassLandingPage schedToCard — không đổi query). */
+export interface ClassSchedItem {
+  name: string
+  code: string
+  schedule: string
+  start: string
+  price?: string
+  courseTitle?: string
+  tag?: string
+  dateLabel?: string
+  title?: string
+  className?: string
+  regName?: string
+  path?: string
+  day?: string
+  date?: string
+}
+export interface SchedState {
+  upcoming: ClassSchedItem[]
+  active: ClassSchedItem[]
+  smallGroup: { schedule: string }[]
+  oneOnOneCount: number
+  activeCount: number
+}
+
+interface Props {
+  tab: 'practice' | 'class'
+  onTabChange: (t: 'practice' | 'class') => void
+  sched: SchedState | null
+  onRegister: (name: string) => void
+  onShowActive: () => void
+  onChat: () => void
+}
 
 const COPY = {
   kicker: 'Chọn cách học phù hợp',
   title: 'Bạn muốn học theo cách nào?',
-  sub: 'Bạn có thể chọn một cách phù hợp với mình — hoặc kết hợp cả hai.',
-  card1: {
-    label: 'Gói Thực hành',
-    title: 'Linh hoạt theo thời gian của bạn',
-    body: 'Phù hợp nếu bạn bận hoặc lịch sinh hoạt thường xuyên thay đổi. Bạn học qua hệ thống theo tiến độ của mình và tham gia các buổi thực hành khi phù hợp.',
-    points: ['Học qua hệ thống', 'Thực hành theo năng lực', 'Không cần theo một lớp cố định'],
+  sub: 'Bạn có thể chọn một gói hoặc kết hợp cả hai.',
+  caption: 'Học theo lớp để đi lên. Thực hành để đi sâu.',
+  articleLink: 'Hai cách học khác nhau thế nào?',
+  tab1: { label: 'Gói Thực hành', sub: 'Linh hoạt · đi sâu' },
+  tab2: { label: 'Gói Học theo lớp', sub: 'Cố định · đi lên' },
+  practice: {
+    title: 'Linh hoạt theo thời gian và hướng học của bạn',
     price: '499.000đ/tháng',
     priceSub: 'Đăng ký dài hạn: 396.000đ/tháng',
+    flex3: [
+      { label: 'Học gì', body: 'Chọn hướng học trên App: <b>Đệm hát · Tỉa nốt · Solo...</b>' },
+      { label: 'Học ở mức nào', body: 'Tham gia nhóm thực hành phù hợp: <b>Cơ bản · Trung cấp · Nâng cao</b>' },
+      { label: 'Học buổi nào', body: 'Chủ động chọn buổi thực hành theo lịch — không cần cố định một ngày hàng tuần.' },
+    ],
+    points: ['Học và luyện theo tiến độ riêng.', 'Gặp chỗ vướng thì hỏi Thầy.'],
   },
-  card2: {
-    label: 'Gói Học theo lớp',
+  cls: {
     title: 'Cố định để đi cùng nhau',
-    body: 'Phù hợp nếu bạn có thể dành một khung giờ cố định mỗi tuần và muốn học theo một chương trình cụ thể từ đầu đến cuối.',
-    points: ['Có lịch khai giảng', 'Học theo chương trình', 'Bài học tiếp nối nhau'],
+    points: [
+      'Chọn một lớp cụ thể.',
+      'Có ngày khai giảng.',
+      'Học theo lịch cố định.',
+      'Bài học tiếp nối nhau theo chương trình.',
+      'Cả lớp đi cùng một nhịp từ đầu đến cuối.',
+    ],
   },
-  articleLink: 'Hai cách học khác nhau thế nào?',
 }
 
-export default function ClassLearningWays() {
+const parseVNDate = (s: string): number | null => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null }
+
+// Suy ra nhãn/lộ trình từ tên khoá (display — giữ nguyên hành vi lịch lớp cũ)
+const inferTag = (n: string) => { const s = n.toLowerCase()
+  if (s.includes('nhập môn')) return 'Nhập môn · Miễn phí'
+  if (s.includes('hành trình')) return 'Toàn diện · Combo'
+  if (s.includes('đệm hát')) return 'Đệm hát'
+  if (s.includes('tỉa nốt') || s.includes('guitar cho') || s.includes('guitar căn')) return 'Tỉa nốt / Guitar'
+  if (s.includes('cảm nhận') || s.includes('cảm âm') || s.includes('nhạc lý')) return 'Cảm âm / Nhạc lý'
+  if (s.includes('bolero')) return 'Chuyên đề'
+  return 'Guitar' }
+const inferPath = (n: string) => { const s = n.toLowerCase()
+  if (s.includes('đệm hát')) return 'dem_hat'
+  if (s.includes('tỉa nốt') || s.includes('guitar')) return 'tia_not'
+  if (s.includes('hành trình')) return 'combo'
+  return '' }
+// Map item thô (từ ClassLandingPage sched) → card hiển thị (giữ nguyên regName KÈM MÃ — form đăng ký khớp option)
+const schedToCard = (it: ClassSchedItem) => ({
+  tag: it.tag || inferTag(it.courseTitle || it.name),
+  title: it.courseTitle || it.name,
+  className: it.code ? `${it.name} · ${it.code}` : it.name,
+  regName: it.code ? `${it.name} · ${it.code}` : it.name,
+  path: inferPath(it.courseTitle || it.name),
+  day: it.schedule || 'Đang cập nhật',
+  date: it.dateLabel || (it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch'),
+  price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
+})
+
+export default function ClassLearningWays({ tab, onTabChange, sched, onRegister, onShowActive, onChat }: Props) {
   const [open, setOpen] = useState(false)
+
+  const onTabsKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+    e.preventDefault()
+    const next: 'practice' | 'class' = tab === 'practice' ? 'class' : 'practice'
+    onTabChange(next)
+    const btns = e.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="tab"]')
+    btns[next === 'practice' ? 0 : 1]?.focus()
+  }
+
   return (
     <section id="cach-hoc" className="lw-sec">
       <div className="wrap">
@@ -42,33 +126,114 @@ export default function ClassLearningWays() {
         <h2>{COPY.title}</h2>
         <p className="lead">{COPY.sub}</p>
 
-        <div className="lw-grid">
-          <div className="lw-card lw-card-mem">
-            <span className="lw-label">{COPY.card1.label}</span>
-            <h3>{COPY.card1.title}</h3>
-            <p className="lw-body">{COPY.card1.body}</p>
-            <ul className="lw-points">
-              {COPY.card1.points.map(p => <li key={p}>✓ {p}</li>)}
-            </ul>
-            <div className="lw-price">{COPY.card1.price}</div>
-            <div className="lw-price-sub">{COPY.card1.priceSub}</div>
-          </div>
-          <div className="lw-card lw-card-cls">
-            <span className="lw-label">{COPY.card2.label}</span>
-            <h3>{COPY.card2.title}</h3>
-            <p className="lw-body">{COPY.card2.body}</p>
-            <ul className="lw-points">
-              {COPY.card2.points.map(p => <li key={p}>✓ {p}</li>)}
-            </ul>
-          </div>
+        {/* 2 TAB sản phẩm — CAM / TÍM */}
+        <div className="lw-tabs" role="tablist" aria-label="Cách học" onKeyDown={onTabsKey}>
+          <button type="button" role="tab" id="lw-tab-practice" aria-selected={tab === 'practice'} aria-controls="lw-panel-practice"
+            className={'lw-tab lw-tab-mem' + (tab === 'practice' ? ' on' : '')}
+            onClick={() => onTabChange('practice')}>
+            <span className="lw-tab-name">{COPY.tab1.label}</span>
+            <span className="lw-tab-sub">{COPY.tab1.sub}</span>
+          </button>
+          <button type="button" role="tab" id="lw-tab-class" aria-selected={tab === 'class'} aria-controls="lw-panel-class"
+            className={'lw-tab lw-tab-cls' + (tab === 'class' ? ' on' : '')}
+            onClick={() => onTabChange('class')}>
+            <span className="lw-tab-name">{COPY.tab2.label}</span>
+            <span className="lw-tab-sub">{COPY.tab2.sub}</span>
+          </button>
         </div>
 
-        <div className="lw-link">
+        {/* Câu giải thích ngắn + link bài viết */}
+        <div className="lw-tabnote">
+          <p className="lw-caption"><b>{COPY.caption}</b></p>
           <button type="button" className="lw-article-btn" onClick={() => setOpen(true)}>
             {COPY.articleLink}
             <span aria-hidden> →</span>
           </button>
         </div>
+
+        {/* TAB CAM — Gói Thực hành: cách học + giá + LỊCH THỰC HÀNH */}
+        {tab === 'practice' && (
+          <div className="lw-panel lw-panel-mem" id="lw-panel-practice" role="tabpanel" aria-labelledby="lw-tab-practice">
+            <h3 className="lw-panel-title">{COPY.practice.title}</h3>
+            <div className="lw-flex3">
+              {COPY.practice.flex3.map(f => (
+                <div className="lw-f3" key={f.label}>
+                  <span className="lw-f3-label">{f.label}</span>
+                  <p dangerouslySetInnerHTML={{ __html: f.body }} />
+                </div>
+              ))}
+            </div>
+            <ul className="lw-bullets">
+              {COPY.practice.points.map(p => <li key={p}>{p}</li>)}
+            </ul>
+            <div className="lw-price-row">
+              <span className="lw-price">{COPY.practice.price}</span>
+              <span className="lw-price-sub">{COPY.practice.priceSub}</span>
+            </div>
+
+            {/* Lịch thực hành thật — nằm TRONG tab Gói Thực hành (không duplicate) */}
+            <ClassPracticeSchedule />
+          </div>
+        )}
+
+        {/* TAB TÍM — Gói Học theo lớp: cách học + CÁC LỚP SẮP KHAI GIẢNG */}
+        {tab === 'class' && (
+          <div className="lw-panel lw-panel-cls" id="lw-panel-class" role="tabpanel" aria-labelledby="lw-tab-class">
+            <h3 className="lw-panel-title">{COPY.cls.title}</h3>
+            <ul className="lw-bullets">
+              {COPY.cls.points.map(p => <li key={p}>{p}</li>)}
+            </ul>
+
+            {/* Lịch lớp thật — nằm TRONG tab Gói Học theo lớp (query/CTA/registration cũ) */}
+            <div className="lw-cls-sched cls-sec">
+              <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Gói Học theo lớp</span></div>
+              <h3 className="lw-cls-h">Các lớp sắp khai giảng</h3>
+              <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
+              {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
+              {sched === null && <div style={{ textAlign: 'center', color: '#8A8A93', padding: '28px 0', fontSize: 15 }}>Đang tải lịch lớp…</div>}
+              {/* Hết lớp sắp khai giảng → nói thật + mời giữ chỗ, thay vì hiện lớp cũ */}
+              {sched !== null && sched.upcoming.length === 0 && (
+                <div className="panel" style={{ textAlign: 'center', padding: '30px 22px' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>📅</div>
+                  <h3 style={{ margin: '0 0 8px' }}>Các khoá hiện tại đã khai giảng — lớp mới đang được xếp lịch</h3>
+                  <p style={{ color: '#52525B', margin: '0 auto 18px', maxWidth: 520 }}>Để lại thông tin bên dưới, thầy sẽ giữ chỗ và báo bạn ngay khi mở lớp mới. Bạn cũng có thể hỏi Mira xem lớp nào phù hợp với mình.</p>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn btn-primary" onClick={() => onRegister('')}>Để lại thông tin giữ chỗ →</button>
+                    <button className="btn btn-ghost" onClick={onChat}>Hỏi Mira</button>
+                  </div>
+                </div>
+              )}
+              <div className="cls-list">
+                {(sched?.upcoming?.length
+                  ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
+                  : []
+                ).map((raw, i) => {
+                  const c = raw
+                  const title = c.title
+                  const reg = c.regName
+                  return (
+                  <div className="cls-item" key={i}>
+                    <span className="tag">{c.tag}</span>
+                    <h3>{title}</h3>
+                    {c.className && <div style={{ fontSize: 13.5, color: '#8A5A2B', fontWeight: 700, margin: '-2px 0 8px' }}>🎓 Lớp: {c.className}</div>}
+                    <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : '8 buổi · mỗi buổi 90 phút'}</div>
+                    <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
+                    <div className="acts">
+                      <button className="btn btn-primary" onClick={() => onRegister(reg)}>Đăng ký lớp này</button>
+                      <button className="btn btn-ghost" onClick={onChat}>Hỏi thêm</button>
+                    </div>
+                  </div>
+                  )
+                })}
+              </div>
+              {sched && sched.activeCount > 0 && (
+                <div style={{ textAlign: 'center', marginTop: 26 }}>
+                  <button className="btn btn-ghost" onClick={onShowActive}>👀 Xem thêm {sched.activeCount} lớp đang học →</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {open && <LearningWaysArticle onClose={() => setOpen(false)} />}
@@ -264,29 +429,46 @@ function LearningWaysArticle({ onClose }: { onClose: () => void }) {
 const CSS = `
 .tva-class{--mem:#EA580C;--mem-soft:#FDF0E7;--mem-line:#F5CFB6;}
 .tva-class .lw-sec{padding:58px 0;}
-.tva-class .lw-grid{display:grid;gap:16px;margin-top:28px;grid-template-columns:1fr;}
-@media(min-width:860px){.tva-class .lw-grid{grid-template-columns:1fr 1fr;gap:20px;}}
-.tva-class .lw-card{border:1.5px solid var(--line);border-radius:16px;background:var(--surface);padding:26px 24px;box-shadow:0 1px 3px rgba(33,28,50,.05);display:flex;flex-direction:column;position:relative;overflow:hidden;}
-.tva-class .lw-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
-/* Nhánh Gói Thực hành — CAM */
-.tva-class .lw-card-mem{background:linear-gradient(180deg,#FFFBF6 0%,var(--surface) 46%);}
-.tva-class .lw-card-mem::before{background:var(--mem);}
-.tva-class .lw-card-mem .lw-label{color:var(--mem);background:var(--mem-soft);border:1px solid var(--mem-line);}
-/* Nhánh Gói Học theo lớp — TÍM */
-.tva-class .lw-card-cls{background:linear-gradient(180deg,#F9F7FE 0%,var(--surface) 46%);}
-.tva-class .lw-card-cls::before{background:var(--indigo);}
-.tva-class .lw-card-cls .lw-label{color:var(--indigo);background:var(--indigo-tint);border:1px solid #D3CEE8;}
-.tva-class .lw-label{display:inline-flex;align-self:flex-start;font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;border-radius:999px;padding:5px 12px;}
-.tva-class .lw-card h3{font-size:20px;font-weight:800;letter-spacing:-.3px;color:var(--ink);margin:14px 0 0;}
-.tva-class .lw-body{margin:10px 0 0;font-size:14.5px;line-height:1.65;color:var(--ink-soft);}
-.tva-class .lw-points{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;}
-.tva-class .lw-points li{font-size:13.5px;font-weight:600;color:var(--ink);}
-.tva-class .lw-points li::before{content:'✓ ';color:var(--online);font-weight:800;}
-.tva-class .lw-price{margin-top:16px;font-size:19px;font-weight:800;letter-spacing:-.3px;color:var(--mem);}
-.tva-class .lw-price-sub{margin-top:2px;font-size:12.5px;font-weight:600;color:var(--ink-soft);}
-.tva-class .lw-link{margin-top:22px;text-align:center;}
-.tva-class .lw-article-btn{background:none;border:none;padding:8px 14px;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--indigo);cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(67,56,202,.35);transition:color .15s;}
+/* 2 TAB sản phẩm */
+.tva-class .lw-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:26px;}
+@media(min-width:860px){.tva-class .lw-tabs{display:inline-flex;gap:10px;}}
+.tva-class .lw-tab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1.5px solid var(--line);border-radius:14px;background:rgba(255,255,255,.6);padding:12px 18px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.tva-class .lw-tab:hover{border-color:#CFC9DA;}
+.tva-class .lw-tab.on{background:var(--surface);box-shadow:0 12px 30px -18px rgba(33,28,50,.35);}
+.tva-class .lw-tab-mem.on{border-color:var(--mem);}
+.tva-class .lw-tab-cls.on{border-color:var(--indigo);}
+.tva-class .lw-tab-name{font-size:15px;font-weight:800;color:var(--ink);line-height:1.3;}
+.tva-class .lw-tab-sub{font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
+.tva-class .lw-tab-mem .lw-tab-sub{color:var(--mem);}
+.tva-class .lw-tab-cls .lw-tab-sub{color:var(--indigo);}
+.tva-class .lw-tab-mem.on .lw-tab-name,.tva-class .lw-tab-mem.on .lw-tab-sub{color:var(--mem);}
+.tva-class .lw-tab-cls.on .lw-tab-name,.tva-class .lw-tab-cls.on .lw-tab-sub{color:var(--indigo);}
+.tva-class .lw-tabnote{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-top:16px;}
+.tva-class .lw-caption{margin:0;font-size:14.5px;font-weight:600;color:var(--ink-soft);}
+.tva-class .lw-caption b{color:var(--ink);}
+.tva-class .lw-article-btn{background:none;border:none;padding:6px 4px;font-family:inherit;font-size:14px;font-weight:700;color:var(--indigo);cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(67,56,202,.35);transition:color .15s;}
 .tva-class .lw-article-btn:hover{color:var(--indigo-dark);text-decoration-color:var(--indigo);}
+/* Panel nội dung tab */
+.tva-class .lw-panel{margin-top:20px;border:1.5px solid var(--line);border-top:4px solid var(--mem);border-radius:16px;background:var(--surface);padding:24px 22px;box-shadow:0 1px 3px rgba(33,28,50,.05);}
+.tva-class .lw-panel-cls{border-top-color:var(--indigo);}
+.tva-class .lw-panel-title{font-size:20px;font-weight:800;letter-spacing:-.3px;color:var(--ink);margin:0;}
+.tva-class .lw-flex3{display:grid;gap:12px;margin-top:18px;grid-template-columns:1fr;}
+@media(min-width:640px){.tva-class .lw-flex3{grid-template-columns:repeat(3,1fr);gap:14px;}}
+.tva-class .lw-f3{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:14px 16px;}
+.tva-class .lw-f3-label{display:inline-block;font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--mem);background:var(--mem-soft);border-radius:999px;padding:3px 10px;}
+.tva-class .lw-f3 p{margin:9px 0 0;font-size:13.5px;line-height:1.6;color:var(--ink-soft);}
+.tva-class .lw-f3 p b{color:var(--ink);}
+.tva-class .lw-bullets{margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px;}
+.tva-class .lw-bullets li{font-size:14px;font-weight:600;color:var(--ink);}
+.tva-class .lw-bullets li::before{content:'✓ ';color:var(--online);font-weight:800;}
+.tva-class .lw-price-row{margin-top:16px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.tva-class .lw-price{font-size:21px;font-weight:800;letter-spacing:-.3px;color:var(--mem);}
+.tva-class .lw-price-sub{font-size:13px;font-weight:600;color:var(--ink-soft);}
+/* Lịch thực hành + lịch lớp embedded trong tab */
+.tva-class .lw-panel .cps-sec{padding:24px 0 0;}
+.tva-class .lw-cls-sched{margin-top:26px;border-top:1px solid var(--line);padding-top:24px;}
+.tva-class .lw-panel .cls-sec{padding-top:0;}
+.tva-class .lw-cls-h{font-size:20px;font-weight:800;letter-spacing:-.3px;color:var(--ink);margin:10px 0 0;}
 
 /* Bài viết ẩn — full-screen, đọc thoải mái */
 .tva-class .lwa-overlay{position:fixed;inset:0;z-index:130;background:rgba(33,28,50,.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:0;}

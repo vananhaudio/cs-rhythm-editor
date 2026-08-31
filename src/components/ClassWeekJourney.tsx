@@ -52,11 +52,10 @@ export default function ClassWeekJourney() {
           ))}
         </div>
 
-        {/* Linh hoạt — bận thì nghỉ */}
+        {/* Học mỗi ngày — không phải chờ cả tuần */}
         <div className="cwj-note">
-          <div className="cwj-note-title">Không cần phải có mặt mỗi tuần</div>
-          <p className="cwj-note-main"><b>Bận thì nghỉ. Tuần nào phù hợp thì tham gia.</b></p>
-          <p className="cwj-note-sub">Bạn vẫn có thể tiếp tục học trên hệ thống và quay lại buổi thực hành khi sắp xếp được thời gian.</p>
+          <p className="cwj-note-line"><b>Bạn không phải chờ cả tuần mới được học một bài mới.</b></p>
+          <p className="cwj-note-line">Ngày nào bạn cũng có thể học, luyện tập và tương tác với Thầy.</p>
         </div>
       </div>
       <style>{CSS}</style>
@@ -75,9 +74,7 @@ const CSS = `
 .tva-class .cwj-ic{display:block;font-size:26px;line-height:1;}
 .tva-class .cwj-body h3{margin:12px 0 0;font-size:15.5px;font-weight:800;color:var(--ink);line-height:1.3;}
 .tva-class .cwj-body p{margin:7px 0 0;font-size:13.5px;line-height:1.6;color:var(--ink-soft);}
-.tva-class .cwj-note{margin-top:22px;border:1.5px dashed var(--mem-line,#F5CFB6);border-radius:14px;background:var(--mem-soft,#FDF0E7);padding:16px 20px;}
-.tva-class .cwj-note-title{font-size:11.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--mem,#EA580C);}
-.tva-class .cwj-note-main{margin:6px 0 0;font-size:15px;line-height:1.5;color:var(--ink);}
-.tva-class .cwj-note-main b{color:var(--mem,#EA580C);}
-.tva-class .cwj-note-sub{margin:6px 0 0;font-size:13.5px;line-height:1.6;color:var(--ink-soft);}
+.tva-class .cwj-note{margin-top:22px;border:1.5px dashed var(--mem-line,#F5CFB6);border-radius:14px;background:var(--mem-soft,#FDF0E7);padding:18px 22px;}
+.tva-class .cwj-note-line{margin:0;font-size:15.5px;line-height:1.6;color:var(--ink);}
+.tva-class .cwj-note-line b{color:var(--mem,#EA580C);}
 `

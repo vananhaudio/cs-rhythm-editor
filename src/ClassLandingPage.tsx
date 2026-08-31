@@ -15,7 +15,6 @@ import { FAQS } from './classFaq'
 import { tenNangLuc } from './hanhtrinh'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
 import ClassLearningWays from './components/ClassLearningWays'
-import ClassPracticeSchedule from './components/ClassPracticeSchedule'
 import ClassWeekJourney from './components/ClassWeekJourney'
 
 // ─── Combo Hành trình — sản phẩm bán quanh năm, KHÔNG nằm trong class_schedule ───
@@ -36,18 +35,6 @@ const inferPath = (n: string) => { const s = n.toLowerCase()
   if (s.includes('tỉa nốt') || s.includes('guitar')) return 'tia_not'
   if (s.includes('hành trình')) return 'combo'
   return '' }
-const parseVNDate = (s: string): number | null => { const m = (s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null }
-const schedToCard = (it: { name: string; code?: string; schedule: string; start: string; price?: string; courseTitle?: string; tag?: string; dateLabel?: string }) => ({
-  tag: it.tag || inferTag(it.courseTitle || it.name),
-  title: it.courseTitle || it.name,                                   // TÊN KHOÁ/CẤP ĐỘ (tiêu đề to)
-  className: it.code ? `${it.name} · ${it.code}` : it.name,           // TÊN LỚP (dòng phụ)
-  regName: it.code ? `${it.name} · ${it.code}` : it.name,   // ghi vào leads KÈM MÃ — 2 lớp có thể trùng tên
-  path: inferPath(it.courseTitle || it.name),
-  day: it.schedule || 'Đang cập nhật',
-  date: it.dateLabel || (it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch'),   // nhãn ngày thật (đếm ngược) nếu có
-  price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
-})
-
 import { DOORS, CHAT_FAQ, MODALS } from './class-content'
 
 
@@ -78,7 +65,7 @@ export default function ClassLandingPage() {
   const [showPractice, setShowPractice] = useState(false)   // modal xem một buổi thực hành (video thật)
   const [benefit, setBenefit] = useState<BenefitKey | null>(null)   // chiều sâu 6 quyền lợi (reuse từ /azz)
   const [showNangCao, setShowNangCao] = useState(false)
-  const [lichTab, setLichTab] = useState<'practice' | 'class'>('practice')   // tab lịch: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM)
+  const [waysTab, setWaysTab] = useState<'practice' | 'class'>('practice')   // tab 2 cách học: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
   const [msgs, setMsgs] = useState<Msg[]>([
@@ -292,10 +279,10 @@ export default function ClassLandingPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Chuyển tab lịch + cuộn tới khối lịch gom (dùng cho nav/deep-link/nút 'Xem lớp & đăng ký')
+  // Chuyển tab 2 cách học + cuộn tới section (dùng cho nav/deep-link/nút 'Xem lớp & đăng ký')
   const gotoLich = (tab: 'practice' | 'class') => {
-    setLichTab(tab)
-    setTimeout(() => document.getElementById('lich')?.scrollIntoView({ behavior: 'smooth' }), 60)
+    setWaysTab(tab)
+    setTimeout(() => document.getElementById('cach-hoc')?.scrollIntoView({ behavior: 'smooth' }), 60)
   }
 
   // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — vd ?xem=hanhtrinh, ?xem=lich, ?xem=app
@@ -542,85 +529,15 @@ export default function ClassLandingPage() {
       {/* MỘT TUẦN HỌC — cách dùng 6 quyền lợi trong một tuần bình thường (trước 2 cách học) */}
       <ClassWeekJourney />
 
-      {/* 2 CÁCH HỌC — Gói Thực hành (CAM, linh hoạt) vs Gói Học theo lớp (TÍM, cố định) + bài giải thích ẩn */}
-      <ClassLearningWays />
-
-      {/* LỊCH — 1 khối gom 2 nhánh: tab Gói Thực hành (CAM) / Gói Học theo lớp (TÍM).
-          Data riêng, KHÔNG merge: practice = class_schedule cờ show_on_practice_schedule=true;
-          class = query cũ (cờ false). Bấm tab để xem từng lịch. */}
-      <section id="lich" className="sch-sec band">
-        <div className="wrap">
-          <div className="sch-tabs" role="tablist" aria-label="Lịch">
-            <button type="button" role="tab" aria-selected={lichTab === 'practice'}
-              className={'sch-tab sch-tab-mem' + (lichTab === 'practice' ? ' on' : '')}
-              onClick={() => setLichTab('practice')}>
-              <span className="sch-tab-name">Lịch thực hành</span>
-              <span className="sch-tab-sub">Gói Thực hành</span>
-            </button>
-            <button type="button" role="tab" aria-selected={lichTab === 'class'}
-              className={'sch-tab sch-tab-cls' + (lichTab === 'class' ? ' on' : '')}
-              onClick={() => setLichTab('class')}>
-              <span className="sch-tab-name">Các lớp sắp khai giảng</span>
-              <span className="sch-tab-sub">Gói Học theo lớp</span>
-            </button>
-          </div>
-
-          {/* Tab CAM — Lịch thực hành (data thật Admin) */}
-          {lichTab === 'practice' && <ClassPracticeSchedule />}
-
-          {/* Tab TÍM — Các lớp sắp khai giảng (query/data cũ, giữ nguyên) */}
-          {lichTab === 'class' && (
-            <div className="cls-sec">
-              <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Gói Học theo lớp</span></div>
-              <h2>Các lớp sắp khai giảng</h2>
-              <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
-              {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
-              {sched === null && <div style={{ textAlign: 'center', color: '#8A8A93', padding: '28px 0', fontSize: 15 }}>Đang tải lịch lớp…</div>}
-              {/* Hết lớp sắp khai giảng → nói thật + mời giữ chỗ, thay vì hiện lớp cũ */}
-              {sched !== null && sched.upcoming.length === 0 && (
-                <div className="panel" style={{ textAlign: 'center', padding: '30px 22px' }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>📅</div>
-                  <h3 style={{ margin: '0 0 8px' }}>Các khoá hiện tại đã khai giảng — lớp mới đang được xếp lịch</h3>
-                  <p style={{ color: '#52525B', margin: '0 auto 18px', maxWidth: 520 }}>Để lại thông tin bên dưới, thầy sẽ giữ chỗ và báo bạn ngay khi mở lớp mới. Bạn cũng có thể hỏi Mira xem lớp nào phù hợp với mình.</p>
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button className="btn btn-primary" onClick={() => goto('dangky')}>Để lại thông tin giữ chỗ →</button>
-                    <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi Mira</button>
-                  </div>
-                </div>
-              )}
-              <div className="cls-list">
-                {(sched?.upcoming?.length
-                  ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
-                  : []
-                ).map((raw, i) => {
-                  const c: any = raw
-                  const title = c.title ?? c.name
-                  const reg = c.regName ?? c.name
-                  return (
-                  <div className="cls-item" key={i}>
-                    <span className="tag">{c.tag}</span>
-                    <h3>{title}</h3>
-                    {c.className && <div style={{ fontSize: 13.5, color: '#8A5A2B', fontWeight: 700, margin: '-2px 0 8px' }}>🎓 Lớp: {c.className}</div>}
-                    <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : '8 buổi · mỗi buổi 90 phút'}</div>
-                    <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
-                    <div className="acts">
-                      <button className="btn btn-primary" onClick={() => pickClass(reg)}>Đăng ký lớp này</button>
-                      <button className="btn btn-ghost" onClick={() => goto('chat')}>Hỏi thêm</button>
-                    </div>
-                  </div>
-                  )
-                })}
-              </div>
-              {sched && sched.activeCount > 0 && (
-                <div style={{ textAlign: 'center', marginTop: 26 }}>
-                  <button className="btn btn-ghost" onClick={() => setShowActive(true)}>👀 Xem thêm {sched.activeCount} lớp đang học →</button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
+      {/* 2 CÁCH HỌC — 2 TAB: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM); lịch + giá nằm trong từng tab */}
+      <ClassLearningWays
+        tab={waysTab}
+        onTabChange={setWaysTab}
+        sched={sched}
+        onRegister={pickClass}
+        onShowActive={() => setShowActive(true)}
+        onChat={() => goto('chat')}
+      />
 
       {/* ĐĂNG KÝ */}
       <section id="dangky" className="band">
@@ -1219,20 +1136,6 @@ const CSS = `
 .tva-class .cls-sec .cls-item{border-top:3px solid var(--indigo);}
 .tva-class .cls-sec .cls-item .tag{color:var(--indigo);background:var(--indigo-tint);}
 
-/* LỊCH GOM — tab bar CAM (Gói Thực hành) / TÍM (Gói Học theo lớp) */
-.tva-class .sch-tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}
-@media(min-width:860px){.tva-class .sch-tabs{display:inline-flex;gap:10px;}}
-.tva-class .sch-tab{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1.5px solid var(--line);border-radius:14px;background:rgba(255,255,255,.6);padding:12px 16px;cursor:pointer;font-family:inherit;transition:all .15s;}
-.tva-class .sch-tab:hover{border-color:#CFC9DA;}
-.tva-class .sch-tab.on{background:var(--surface);box-shadow:0 12px 30px -18px rgba(33,28,50,.35);}
-.tva-class .sch-tab-mem.on{border-color:var(--mem);}
-.tva-class .sch-tab-cls.on{border-color:var(--indigo);}
-.tva-class .sch-tab-name{font-size:14.5px;font-weight:800;color:var(--ink);line-height:1.3;}
-.tva-class .sch-tab-sub{font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;}
-.tva-class .sch-tab-mem .sch-tab-sub{color:var(--mem);}
-.tva-class .sch-tab-cls .sch-tab-sub{color:var(--indigo);}
-.tva-class .sch-tab-mem.on .sch-tab-name,.tva-class .sch-tab-mem.on .sch-tab-sub{color:var(--mem);}
-.tva-class .sch-tab-cls.on .sch-tab-name,.tva-class .sch-tab-cls.on .sch-tab-sub{color:var(--indigo);}
 .tva-class .benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
 .tva-class .bf{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;gap:12px;align-items:flex-start;font-size:14.5px;line-height:1.4;}
 .tva-class .bf .bi{font-size:20px;flex-shrink:0;}
