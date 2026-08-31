@@ -7,7 +7,9 @@ import YouTubeLesson from './YouTubeLesson'
 // Mọi sự kiện YouTube widget API (onReady/infoDelivery/onError) được FORWARD NGUYÊN VẸN
 // lên window cha, nên YouTubeLesson phía native nhận ready/ended/error y như embed trực tiếp.
 export default function YtPlayerPage() {
-  const id = new URLSearchParams(window.location.search).get('v') ?? ''
+  const params = new URLSearchParams(window.location.search)
+  const id = params.get('v') ?? ''
+  const noFail = params.get('nofail') === '1'
 
   useEffect(() => {
     if (window.parent === window) return  // mở trực tiếp, không ai để forward
@@ -24,7 +26,7 @@ export default function YtPlayerPage() {
   if (!id) return <div style={{ minHeight: '100vh', background: '#000', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>Thiếu mã video (?v=)</div>
   return (
     <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center' }}>
-      <YouTubeLesson videoId={id} style={{ width: '100%' }} />
+      <YouTubeLesson videoId={id} noWatchdog={noFail} style={{ width: '100%' }} />
     </div>
   )
 }

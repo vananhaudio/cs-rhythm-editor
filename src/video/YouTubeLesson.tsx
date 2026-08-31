@@ -34,7 +34,9 @@ const YT_ALLOW = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyr
 const NATIVE = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
 const HOSTED_PLAYER_ORIGIN = 'https://timming.vananhaudio.com'
 function playerSrc(id: string): string {
-  return NATIVE ? `${HOSTED_PLAYER_ORIGIN}/ytplayer?v=${id}` : buildEmbedUrl(id)
+  // nofail=1: trong WKWebView, sự kiện widget postMessage không truyền tin cậy giữa các tầng
+  // iframe → trang hosted cũng phải tắt watchdog (YouTube tự hiện lỗi của nó nếu có).
+  return NATIVE ? `${HOSTED_PLAYER_ORIGIN}/ytplayer?v=${id}&nofail=1` : buildEmbedUrl(id)
 }
 
 type Props = {
@@ -43,12 +45,13 @@ type Props = {
   title?: string
   onEnded?: () => void       // gọi ĐÚNG 1 lần khi video phát tới hết (state ENDED thật của YouTube)
   style?: React.CSSProperties
+  noWatchdog?: boolean       // trang /ytplayer nhúng trong vỏ native: sự kiện không tin cậy → tắt màn lỗi
 }
 
 // Player bài học: iframe + widget API postMessage.
 // - onEnded chỉ bắn khi YouTube trả playerState === 0 (ENDED) — không phải mở bài, play, hay 50%.
 // - Lỗi tải (mạng/video bị chặn nhúng) → thông báo rõ + nút "Thử lại", không ô đen câm.
-export default function YouTubeLesson({ url, videoId, title, onEnded, style }: Props) {
+export default function YouTubeLesson({ url, videoId, title, onEnded, style, noWatchdog }: Props) {
   const id = videoId && /^[\w-]{11}$/.test(videoId) ? videoId : getYouTubeId(videoId ?? url)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [gen, setGen] = useState(0)            // đổi key để reload iframe khi "Thử lại"
@@ -87,8 +90,12 @@ export default function YouTubeLesson({ url, videoId, title, onEnded, style }: P
     return () => window.removeEventListener('message', h)
   }, [id, gen])
 
-  // Watchdog: iframe load xong mà player không lên tiếng trong 8s → coi là lỗi, cho thử lại
+  // Watchdog: iframe load xong mà player không lên tiếng trong 8s → coi là lỗi, cho thử lại.
+  // NATIVE: WKWebView không chuyển postMessage từ iframe https về parent capacitor:// →
+  // không có sự kiện để canh. Trang /ytplayer load xong = coi như sẵn sàng (không màn lỗi oan);
+  // onEnded trở thành best-effort trên native (bản store cũ video còn không phát được).
   const armWatchdog = () => {
+    if (NATIVE || noWatchdog) { setReady(true); return }
     const w = iframeRef.current?.contentWindow
     const listen = () => w?.postMessage(JSON.stringify({ event: 'listening' }), '*')
     setTimeout(listen, 400); setTimeout(listen, 1200)
