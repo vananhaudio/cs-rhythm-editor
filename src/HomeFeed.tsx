@@ -35,10 +35,6 @@ export const FEED_TYPE_META: Record<HomeFeedItem['type'], { label: string; icon:
   event:        { label: 'Sự kiện',    icon: '🗓️', tone: '#B45309' },
 }
 
-// Origin web production của chính app — capability config cho renderer hosted (/ytplayer)
-// khi chạy trong vỏ native (bundled, origin capacitor:// không nhúng YouTube được).
-const HOSTED_WEB_ORIGIN = 'https://timming.vananhaudio.com'
-
 // ── Fetch + cache (localStorage) ─────────────────────────────────────────────
 const CACHE_KEY = 'tva_home_feed_cache_v2'
 const STALE_MS = 5 * 60 * 1000
@@ -91,12 +87,9 @@ function FeedOverlay({ item, primary, onClose }: { item: HomeFeedItem; primary: 
   const [frameState, setFrameState] = useState<'loading' | 'ready' | 'error'>('loading')
   const url = item.content_url ?? ''
   const isImage = item.type === 'image'
-  // Video YouTube: origin capacitor:// bị YouTube chặn embed (Error 153, referer không phải https)
-  // → native nhúng trang player hosted /ytplayer của web app; web render trực tiếp YouTubeLesson.
+  // Video YouTube → renderer chung YouTubeLesson (tự xử lý vỏ native qua /ytplayer hosted).
   const ytId = item.type === 'video' ? getYouTubeId(url) : null
-  const isNative = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
-  const src = ytId && isNative ? `${HOSTED_WEB_ORIGIN}/ytplayer?v=${ytId}` : url
-  const useDirectYt = !!ytId && !isNative
+  const src = url
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', paddingTop: 'max(12px, env(safe-area-inset-top))', background: primary, flexShrink: 0 }}>
@@ -110,9 +103,9 @@ function FeedOverlay({ item, primary, onClose }: { item: HomeFeedItem; primary: 
         <div style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img src={url} alt={item.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
         </div>
-      ) : useDirectYt ? (
+      ) : ytId ? (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#000' }}>
-          <YouTubeLesson videoId={ytId!} title={item.title} style={{ width: '100%' }} />
+          <YouTubeLesson videoId={ytId} title={item.title} style={{ width: '100%' }} />
         </div>
       ) : (
         <>

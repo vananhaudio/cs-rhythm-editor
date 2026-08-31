@@ -27,6 +27,16 @@ export function buildEmbedUrl(id: string): string {
 
 const YT_ALLOW = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
 
+// Vỏ native (origin capacitor://) bị YouTube từ chối embed trực tiếp (Error 153 — referer
+// không phải https). Giải pháp chung: nhúng trang player hosted /ytplayer của web app
+// (origin https hợp lệ); trang đó forward nguyên sự kiện YouTube lên parent nên
+// onReady/onEnded/watchdog phía dưới chạy y hệt. Trên web thường → embed trực tiếp.
+const NATIVE = !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+const HOSTED_PLAYER_ORIGIN = 'https://timming.vananhaudio.com'
+function playerSrc(id: string): string {
+  return NATIVE ? `${HOSTED_PLAYER_ORIGIN}/ytplayer?v=${id}` : buildEmbedUrl(id)
+}
+
 type Props = {
   url?: string | null        // link bất kỳ (được normalize) …
   videoId?: string | null    // … hoặc ID sẵn
@@ -95,7 +105,7 @@ export default function YouTubeLesson({ url, videoId, title, onEnded, style }: P
 
   return (
     <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000', ...style }}>
-      <iframe key={gen} ref={iframeRef} src={buildEmbedUrl(id)} title={title || 'Video bài học'}
+      <iframe key={gen} ref={iframeRef} src={playerSrc(id)} title={title || 'Video bài học'}
         style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
         allow={YT_ALLOW} allowFullScreen onLoad={armWatchdog} />
       {failed && !ready && (
