@@ -6,11 +6,4 @@
 /azz https://class2-site.netlify.app/ 200
 /azz/ https://class2-site.netlify.app/ 200
 /azz/* https://class2-site.netlify.app/:splat 200
-# ── Kho Bài Giảng học sinh chạy dưới /khobaigiang (proxy sang app Kho Tri Thức - khotrithuc.netlify.app) ──
-# App Kho là Next.js nên cần proxy thêm /login, /api/hocsinh và assets /_next (app class không dùng các path này)
-/khobaigiang https://khotrithuc.netlify.app/khobaigiang 200
-/khobaigiang/* https://khotrithuc.netlify.app/khobaigiang/:splat 200
-/login https://khotrithuc.netlify.app/login 200
-/api/hocsinh/* https://khotrithuc.netlify.app/api/hocsinh/:splat 200
-/_next/* https://khotrithuc.netlify.app/_next/:splat 200
 /* /index.html 200
