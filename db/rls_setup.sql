@@ -53,6 +53,11 @@ DECLARE
     'edu_groups', 'edu_group_members', 'edu_group_claim_tokens',
     -- Bản tin hôm nay (db/home_feed_v2.sql): anon/auth chỉ ĐỌC item published; teacher mới ghi.
     'home_feed_items',
+    -- Server-driven learning state (db/learning_state_setup.sql): cấu hình hành trình/tiên quyết —
+    -- mọi người đọc, chỉ teacher ghi. ĐỪNG áp policy rộng (học viên sẽ sửa được hành trình).
+    'journey_tracks', 'journey_curriculum', 'course_prereqs',
+    -- Kho tri thức (db/kho_tri_thuc_setup.sql): CHỈ authenticated đọc published; teacher mới ghi.
+    'knowledge_videos',
     -- Content Access Policy (db/content_access_policy_setup.sql): anon/auth đọc
     -- nội dung visible; teacher/admin mới ghi. ĐỪNG áp policy rộng lên các bảng này,
     -- nếu không học viên authenticated có thể tự sửa required_tier/visibility.

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import FlowPlayer from './FlowPlayer'
 import { HomeFeedSection } from './HomeFeed'
+import { fetchLearningState, cachedLearningState, LEARNING_STATE_TTL_MS, type LearningState, type SrvCourse, type SrvAccess } from './learningState'
 import YouTubeLesson, { getYouTubeId } from './video/YouTubeLesson'
 import SubscriptionPage from './SubscriptionPage'
 import FingerExercise from './FingerExercise'
@@ -29,6 +30,7 @@ import {
   normalizeEntitlementTier,
   resolveCourseAccess,
   resolveLessonAccess,
+  type ResolvedContentAccess,
 } from './contentAccess'
 
 // ─── Light theme tokens ────────────────────────────────────────────────────────
@@ -639,6 +641,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const explainUpgrade = () => setShowPaywall(true)
 
   const resetUserScopedState = () => {
+    setSrvActive(false); srvLessonAccess.current = new Map(); srvCourseByCode.current = new Map(); srvFetchedAt.current = 0
     setShowPaywall(false)
     setOpeningLessonId(null)
     setNavNotice('')
@@ -918,7 +921,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     const ids = courseLessonIds[e.course_id]
     if (code && ids && ids.length > 0 && ids.every(id => completedIds.has(id))) completedCodes.add(code)
   })
-  const seqLockMissing = (code?: string | null) => htMember ? missingPrereqs(code, completedCodes).map(c => tenNangLuc(c) || c) : []
+  const seqLockMissing = (code?: string | null) => {
+    // Server-driven: RPC đã tính missing_prereqs (bảng course_prereqs) — client chỉ dịch tên
+    if (srvActive) {
+      const c = code ? srvCourseByCode.current.get(code.trim().toUpperCase()) : null
+      return (c?.missing_prereqs ?? []).map(x => tenNangLuc(x) || x)
+    }
+    return htMember ? missingPrereqs(code, completedCodes).map(c => tenNangLuc(c) || c) : []
+  }
   const isSeqLocked = (code?: string | null) => seqLockMissing(code).length > 0
 
   // Tất cả bài đã sắp xếp đúng thứ tự: module order_index → lesson order_index
@@ -942,10 +952,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   // Quyền MỞ KHOÁ THEO TỪNG KHOÁ: policy mới ưu tiên khi Admin bật.
   // Chưa bật policy mới => giữ behavior cũ bằng is_free / edu_course_access / enrollment / lesson.tier.
   const activeCourseUnlocked = preview || !activeCourseId || freeCourses.has(activeCourseId) || accessCourses.has(activeCourseId) || ownedCourseIds.has(activeCourseId)
-  const resolveLesson = (l: Lesson) => resolveLessonAccess(l, activeCourse ?? { is_free: true, status: 'on' }, effectiveTier, {
-    courseLegacyUnlocked: activeCourseUnlocked,
-    preview,
-  })
+  const resolveLesson = (l: Lesson) =>
+    srvResolveLesson(l.id) ?? resolveLessonAccess(l, activeCourse ?? { is_free: true, status: 'on' }, effectiveTier, {
+      courseLegacyUnlocked: activeCourseUnlocked,
+      preview,
+    })
   const isLessonCourseUnlocked = (l: Lesson) => resolveLesson(l).canAccess
 
   const isUnlocked = (l: Lesson) =>
@@ -1002,7 +1013,66 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     setCourseLessonIds(prev => ({ ...prev, ...nextMap }))
   }
 
-  // Dựng view-model hành trình ngang (dùng cho GUEST — logged-in build inline cùng masterPath)
+  // ── SERVER-DRIVEN LEARNING STATE (canonical) ───────────────────────────────
+  // RPC my_learning_state() là nguồn quyết định quyền duy nhất. Khi active,
+  // client CHỈ map kết quả vào view-model; mọi resolver client bên dưới trở
+  // thành fallback legacy (learning_state_mode='client' hoặc RPC lỗi).
+  const [srvActive, setSrvActive] = useState(false)
+  const srvLessonAccess = useRef<Map<string, SrvAccess>>(new Map())
+  const srvCourseByCode = useRef<Map<string, SrvCourse>>(new Map())
+  const srvFetchedAt = useRef(0)
+
+  const applyServerState = (state: LearningState) => {
+    srvFetchedAt.current = Date.now()
+    const la = new Map<string, SrvAccess>(); const cbc = new Map<string, SrvCourse>()
+    state.courses.forEach(c => {
+      c.lessons.forEach(l => la.set(l.id, c.access === 'prereq' ? 'open' : l.access)) // prereq xử lý ở seqLock (notice riêng)
+      if (c.code) cbc.set(c.code.trim().toUpperCase(), c)
+    })
+    srvLessonAccess.current = la; srvCourseByCode.current = cbc
+    // View-model danh sách khoá (Enrollment-like — id 'srv-*' để phân biệt nguồn)
+    setEnrollments(state.courses.map(c => ({
+      id: (c.enrolled ? 'enr-' : 'public-') + c.id, course_id: c.id, enrolled_at: '',
+      course: { id: c.id, name: c.name, type: c.type, track: c.track, icon: c.icon, image_url: c.image_url,
+        status: c.status, sort_order: c.sort_order, is_free: c.is_free, code: c.code } as Enrollment['course'],
+    } as Enrollment)))
+    setOwnedCourseIds(new Set(state.courses.filter(c => c.enrolled).map(c => c.id)))
+    setFreeCourses(new Set(state.courses.filter(c => c.is_free !== false).map(c => c.id)))
+    setAccessCourses(new Set(state.courses.filter(c => c.granted).map(c => c.id)))
+    setCourseLessonIds(Object.fromEntries(state.courses.map(c => [c.id, c.lessons.map(l => l.id)])))
+    setFoundationGaps([])
+    // Hành trình: course có subject (bảng journey_curriculum server) — thứ tự server đã sort
+    const jls: JourneyLesson[] = []
+    state.courses.filter(c => c.subject).forEach(c => {
+      const modName = new Map(c.modules.map(m => [m.id, m]))
+      c.lessons.forEach(l => jls.push({
+        id: l.id, title: l.title, courseId: c.id, courseName: c.name, courseCode: c.code,
+        moduleId: l.module_id, moduleName: modName.get(l.module_id)?.name ?? '',
+        moduleLevel: c.level ?? modName.get(l.module_id)?.level ?? null,
+        subjectKey: c.subject!, ytId: getYtId(l.content_url),
+        lesson_type: l.lesson_type, content_url: l.content_url, tier: null,
+        access_policy_mode: null, required_tier: null, visibility: null, availability: null, allow_preview: null,
+      }))
+    })
+    setJourneyLessons(jls)
+    setMasterPath(jls.map(j => ({ id: j.id, title: j.title, courseId: j.courseId, courseName: j.courseName })))
+    if (state.mode !== 'guest') setCompletedIds(new Set(state.completed_lesson_ids))
+    setSrvActive(true)
+  }
+
+  // Access 1 bài theo server (null = chưa có state server → dùng resolver legacy)
+  const srvResolveLesson = (lessonId: string): ResolvedContentAccess | null => {
+    if (!srvActive) return null
+    const a = srvLessonAccess.current.get(lessonId)
+    if (!a) return null
+    return {
+      policySource: 'content_policy', visible: a !== 'hidden', available: a !== 'coming_soon',
+      requiredTier: 'free', effectiveTier, canAccess: preview || a === 'open', canPreview: false,
+      reason: a === 'open' ? 'ok' : a === 'hidden' ? 'hidden' : a === 'coming_soon' ? 'coming_soon' : 'requires_upgrade',
+    }
+  }
+
+  // Dựng view-model hành trình ngang (LEGACY fallback — canonical là applyServerState)
   const loadJourneyLessons = async (courseObjs: (Enrollment['course'] | null | undefined)[]) => {
     const list = courseObjs.filter(Boolean) as Enrollment['course'][]
     const cids = list.map(c => c.id)
@@ -1042,6 +1112,33 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     setPortalLoading(true)
     setLoadError(false)
 
+    // ── CANONICAL: thử server learning-state trước. Cache gần nhất vẽ ngay (mạng
+    // yếu không trắng màn hình), fetch mới quyết định quyền. RPC lỗi/tắt → legacy. ──
+    const userKey = guest ? 'guest' : student.id
+    let cancelled = false
+    const cached = cachedLearningState(userKey)
+    if (cached) applyServerState(cached)
+    fetchLearningState(userKey).then(state => {
+      if (cancelled) return
+      if (state) { applyServerState(state); setPortalLoading(false); return }
+      setSrvActive(false)
+      runLegacy()
+    }).catch(() => { if (!cancelled) { setSrvActive(false); runLegacy() } })
+
+    // Tools (feature flags edu_tools) — độc lập nguồn học, luôn tải
+    supabase.from('edu_tools').select('*').order('order_index')
+      .then(({ data }) => {
+        const all = (data ?? []).map((t: any) => ({ ...t, status: normalizeToolStatus(t) }))
+        setDbTools(all.filter((t: any) => isToolVisible(t) && t.category !== 'Bài luyện') as DBTool[])
+        const exMap: Record<string, string> = {}
+        Object.entries(EX_TOOL_ID).forEach(([exId, toolId]) => {
+          const tool = all.find((t: any) => t.id === toolId)
+          exMap[exId] = tool ? normalizeToolStatus(tool) : 'on'
+        })
+        setExerciseStatuses(exMap)
+      })
+
+    function runLegacy() {
     if (guest) {
       supabase.from('edu_courses')
         .select(COURSE_SELECT)
@@ -1173,23 +1270,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     loadCourses()
       .catch(e => { console.error('Lỗi tải dữ liệu học tập:', e); setLoadError(true) })
       .finally(() => setPortalLoading(false))
-    supabase.from('edu_tools').select('*').order('order_index')
-      .then(({ data }) => {
-        const all = (data ?? []).map((t: any) => ({
-          ...t, status: normalizeToolStatus(t),
-        }))
-        // Công cụ thông thường: không phải 'off', không phải bài luyện
-        const regularTools = all.filter((t: any) => isToolVisible(t) && t.category !== 'Bài luyện')
-        setDbTools(regularTools as DBTool[])   // luôn gọi — kể cả khi rỗng (không dùng fallback)
-        // Trạng thái bài luyện
-        const exMap: Record<string, string> = {}
-        Object.entries(EX_TOOL_ID).forEach(([exId, toolId]) => {
-          const tool = all.find((t: any) => t.id === toolId)
-          exMap[exId] = tool ? normalizeToolStatus(tool) : 'on'
-        })
-        setExerciseStatuses(exMap)
-      })
-    // Load progress
+    } // hết runLegacy()
+
+    if (guest) return () => { cancelled = true }
+    // ── Stats cá nhân (XP/luyện tập/bài hát/tiến độ) — chạy cho MỌI mode logged-in ──
     // Load XP
     const weekAgo     = new Date(Date.now() - 7  * 24 * 3600 * 1000).toISOString()
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString()
@@ -1269,7 +1353,21 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', student.id).eq('status', 'completed')
       .order('completed_at', { ascending: false }).limit(1)
       .then(({ data }) => { const lid = (data ?? [])[0]?.lesson_id; if (lid) setLastDoneLesson(lid) })
+    return () => { cancelled = true }
   }, [student.id, guest, reloadTick])
+
+  // Server state cũ quá TTL → refresh khi quay lại app / mở tab (Admin đổi quyền là thấy)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      if (srvFetchedAt.current && Date.now() - srvFetchedAt.current > LEARNING_STATE_TTL_MS) {
+        fetchLearningState(guest ? 'guest' : student.id).then(s => { if (s) applyServerState(s) })
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.id, guest])
 
   const openCourse = async (courseId: string, targetLessonId?: string) => {
     if (accessPending) return
@@ -1397,6 +1495,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     }
     setCompletedIds(prev => new Set([...prev, lessonId]))
     setMarkingDone(false)
+    // Hoàn thành bài có thể đổi trạng thái mở khoá (prereq/tuần tự) → xin server quyết lại
+    if (srvActive) fetchLearningState(student.id).then(s => { if (s) applyServerState(s) })
   }
 
   // Hoàn thành bài elearn: đánh dấu xong + ghi nhận "đã thực hành" (widget tương tác = thực hành)
@@ -1585,10 +1685,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const subjectCourseFor = (key: string) => sortedEnrollments.find(e => journeySubjectKey(e.course) === key)?.course ?? null
   const journeyOf = (key: string) => journeyLessons.filter(j => j.subjectKey === key)  // đã sort course→module→lesson
   // Access THẬT cho 1 bài trong hành trình — reuse resolver production (KHÔNG rule riêng)
-  const lessonAccessOf = (jl: JourneyLesson) => resolveLessonAccess(jl, courseById.get(jl.courseId) ?? { is_free: true, status: 'on' }, effectiveTier, {
-    courseLegacyUnlocked: preview || freeCourses.has(jl.courseId) || accessCourses.has(jl.courseId) || ownedCourseIds.has(jl.courseId),
-    preview,
-  })
+  const lessonAccessOf = (jl: JourneyLesson) =>
+    srvResolveLesson(jl.id) ?? resolveLessonAccess(jl, courseById.get(jl.courseId) ?? { is_free: true, status: 'on' }, effectiveTier, {
+      courseLegacyUnlocked: preview || freeCourses.has(jl.courseId) || accessCourses.has(jl.courseId) || ownedCourseIds.has(jl.courseId),
+      preview,
+    })
   const subjectProgress = (key: string) => {
     const items = journeyOf(key)
     if (items.length === 0) return null

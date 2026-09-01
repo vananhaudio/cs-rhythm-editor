@@ -14,6 +14,7 @@ import ShowcaseAdmin from './admin/ShowcaseAdmin'
 import DailyMailPage from './admin/DailyMailPage'
 import ChatMailPage from './admin/ChatMailPage'
 import NewsFeedAdmin from './admin/NewsFeedAdmin'
+import JourneyAdmin from './admin/JourneyAdmin'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -22,7 +23,7 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027' | 'newsfeed'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027' | 'newsfeed' | 'journey'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
@@ -34,6 +35,7 @@ const NAV = [
   { id: 'dailymail' as Section, icon: '📧', label: 'Daily Mail'     },
   { id: 'chatmail'  as Section, icon: '💬', label: 'Chat Mail'       },
   { id: 'newsfeed'  as Section, icon: '🗞', label: 'Bản tin'        },
+  { id: 'journey'   as Section, icon: '🗺', label: 'Hành trình'     },
   { id: 'articles'  as Section, icon: '📰', label: 'Bài viết'       },
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
@@ -233,6 +235,12 @@ export default function TeacherAdminPage() {
         {section === 'newsfeed' && (
           <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
             <NewsFeedAdmin />
+          </div>
+        )}
+
+        {section === 'journey' && (
+          <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+            <JourneyAdmin />
           </div>
         )}
 
