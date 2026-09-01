@@ -98,6 +98,12 @@ export default function StudentOnboarding() {
   const [resetSent, setResetSent] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const passRef  = useRef<HTMLInputElement>(null)
+  // ── Tạo tài khoản miễn phí TRONG APP (vòng 13: Free → App) ──
+  // Reuse edge function `signup-free` (đã có: tạo auth user + edu_students beginner
+  // + ghi danh khoá is_free). KHÔNG tạo backend mới; story page vẫn dùng chung.
+  const [authMode, setAuthMode]   = useState<'login' | 'signup'>('login')
+  const [signupName, setSignupName] = useState('')
+  const nameRef = useRef<HTMLInputElement>(null)
 
   // Xác nhận nhóm đang chờ (học viên bấm link /join-group/<token> rồi mới đăng nhập)
   const claimPendingGroup = async () => {
@@ -129,8 +135,8 @@ export default function StudentOnboarding() {
   }, [])
 
   useEffect(() => {
-    if (step === 'login')  setTimeout(() => passRef.current?.focus(), 100)
-  }, [step])
+    if (step === 'login')  setTimeout(() => (authMode === 'signup' ? nameRef.current : passRef.current)?.focus(), 100)
+  }, [step, authMode])
 
   const handleLogin = async () => {
     if (!email || !password) return
@@ -166,6 +172,34 @@ export default function StudentOnboarding() {
       }
       setLoginError('Tài khoản chưa được liên kết với hồ sơ học sinh. Liên hệ thầy.')
     }
+    setLoggingIn(false)
+  }
+
+  const handleSignup = async () => {
+    if (!signupName.trim() || !email.trim() || !password.trim()) { setLoginError('Bạn điền đủ tên, email và mật khẩu nhé.'); return }
+    if (password.length < 6) { setLoginError('Mật khẩu cần ít nhất 6 ký tự.'); return }
+    setLoggingIn(true)
+    setLoginError('')
+    try {
+      const { data, error } = await supabase.functions.invoke('signup-free', {
+        body: { name: signupName.trim(), email: email.trim(), password: password.trim() },
+      })
+      if (error || (data as { error?: string })?.error) {
+        setLoginError((data as { error?: string })?.error || 'Không tạo được tài khoản, thử lại nhé.')
+        setLoggingIn(false)
+        return
+      }
+      // Tự đăng nhập luôn sau khi tạo (cùng flow handleLogin)
+      const { data: authData, error: liErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password: password.trim() })
+      if (liErr || !authData.user) { setLoginError('Đã tạo tài khoản. Bạn hãy bấm Đăng nhập để vào nhé.'); setLoggingIn(false); return }
+      const { data: stuData } = await supabase
+        .from('edu_students')
+        .select('id,full_name,phone,email,level,is_active,enrolled_at,display_name,avatar_url')
+        .eq('user_id', authData.user.id)
+        .single()
+      if (stuData) { setPreview(false); setStudent(stuData); setStep('portal'); claimPendingGroup() }
+      else { setLoginError('Tài khoản chưa được liên kết với hồ sơ học sinh. Liên hệ thầy.') }
+    } catch { setLoginError('Có lỗi kết nối, bạn thử lại nhé.') }
     setLoggingIn(false)
   }
 
@@ -260,6 +294,15 @@ export default function StudentOnboarding() {
           }}>Đăng nhập →</Btn>
           <p style={{ color: T.textDim, fontSize: 13, marginTop: 10 }}>Dành cho học viên đã có tài khoản.</p>
 
+          {/* Cửa vào FREE — tạo tài khoản ngay trong App (vòng 13) */}
+          <Btn onClick={() => { setAuthMode('signup'); setStep('login') }} style={{
+            marginTop: 10, background: 'none', border: '1.5px solid #C7D2FE', color: T.header,
+            borderRadius: 14, padding: '13px 30px', fontSize: 15, fontWeight: 700, width: '100%', maxWidth: 360,
+          }}>Tạo tài khoản miễn phí →</Btn>
+          <p style={{ color: T.textDim, fontSize: 12.5, marginTop: 8, maxWidth: 360, lineHeight: 1.5 }}>
+            Học thử miễn phí: khoá Nhập Môn và Nhạc lý cơ bản.
+          </p>
+
           {/* ── IAP subscription (chỉ hiện trên native iOS) ── */}
           {isNativeIAP && (
             <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${T.borderLight}`, textAlign: 'center', maxWidth: 360, width: '100%' }}>
@@ -291,7 +334,19 @@ export default function StudentOnboarding() {
         <div style={{ maxWidth: 420, margin: '0 auto', padding: '40px 24px', minHeight: 'calc(100vh - 56px)' }}>
           <Btn onClick={() => setStep('welcome')} style={{ background: 'none', border: 'none', color: T.textMuted, fontSize: 14, padding: '0 0 20px', display: 'flex', alignItems: 'center', gap: 6 }}>← Quay lại</Btn>
 
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px' }}>Đăng nhập</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px' }}>{authMode === 'signup' ? 'Tạo tài khoản miễn phí' : 'Đăng nhập'}</h2>
+
+          {authMode === 'signup' && (
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 14, color: T.textMuted, marginBottom: 6, fontWeight: 500 }}>Họ và tên</label>
+              <input ref={nameRef} value={signupName} onChange={e => setSignupName(e.target.value)}
+                placeholder="Nguyễn Văn A" type="text"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
+                onFocus={e => (e.currentTarget.style.borderColor = T.header)}
+                onBlur={e => (e.currentTarget.style.borderColor = T.border)}
+              />
+            </div>
+          )}
 
           {/* Email */}
           <div style={{ marginBottom: 14 }}>
@@ -310,7 +365,7 @@ export default function StudentOnboarding() {
             <div style={{ position: 'relative' }}>
               <input ref={passRef} value={password} onChange={e => setPassword(e.target.value)}
                 type={showPass ? 'text' : 'password'} placeholder="••••••••"
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                onKeyDown={e => e.key === 'Enter' && (authMode === 'signup' ? handleSignup() : handleLogin())}
                 style={{ width: '100%', boxSizing: 'border-box', padding: '12px 44px 12px 14px', background: T.bgLight, border: `1.5px solid ${T.border}`, borderRadius: 10, fontSize: 16, color: T.text, outline: 'none', fontFamily: 'inherit' }}
                 onFocus={e => (e.currentTarget.style.borderColor = T.header)}
                 onBlur={e => (e.currentTarget.style.borderColor = T.border)}
@@ -327,12 +382,20 @@ export default function StudentOnboarding() {
             </div>
           )}
 
-          <Btn onClick={handleLogin} disabled={loggingIn || !email || !password} style={{
+          <Btn onClick={authMode === 'signup' ? handleSignup : handleLogin} disabled={loggingIn || !email || !password} style={{
             width: '100%', background: loggingIn ? T.textDim : T.header, color: '#fff',
             border: 'none', borderRadius: 12, padding: '14px', fontSize: 16, fontWeight: 700,
             opacity: (!email || !password) ? 0.6 : 1,
           }}>
-            {loggingIn ? 'Đang đăng nhập...' : 'Đăng nhập →'}
+            {loggingIn ? 'Đang xử lý...' : authMode === 'signup' ? 'Tạo tài khoản & vào học →' : 'Đăng nhập →'}
+          </Btn>
+
+          {/* Chuyển login ↔ signup */}
+          <Btn onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setLoginError('') }} style={{
+            marginTop: 14, width: '100%', background: 'none', border: 'none',
+            color: T.textMuted, fontSize: 14, cursor: 'pointer',
+          }}>
+            {authMode === 'signup' ? 'Đã có tài khoản? Đăng nhập' : 'Chưa có tài khoản? Tạo tài khoản miễn phí'}
           </Btn>
 
           {resetSent ? (

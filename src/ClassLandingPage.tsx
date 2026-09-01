@@ -4,7 +4,6 @@
 // Quy ước: dùng chung Supabase (anon ghi leads). Style: scoped CSS .tva-class (responsive/hover).
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
-import { checkEmail } from './logic/emailCheck'
 import ClassJourney2027 from './ClassJourney2027'
 import ClassDemHat from './ClassDemHat'
 import ClassTiaNot from './ClassTiaNot'
@@ -84,6 +83,10 @@ export default function ClassLandingPage() {
     })
   }, [])
   const zalo = pubCfg?.zalo_url || ZALO_LINK
+  // Platform detection nhẹ cho modal tải App (vòng 13): nổi bật đúng store, không sniff phức tạp
+  const _ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+  const isIOS = /iPhone|iPad|iPod/i.test(_ua)
+  const isAndroid = /Android/i.test(_ua)
   const [waysTab, setWaysTab] = useState<'practice' | 'class'>('practice')   // tab 2 cách học: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
@@ -98,15 +101,9 @@ export default function ClassLandingPage() {
   const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
   const [showActive, setShowActive] = useState(false)
   const [faqAll, setFaqAll] = useState(false)
-  // Tạo tài khoản miễn phí (gọi Edge Function signup-free)
-  const [showSignup, setShowSignup] = useState(false)
-  const [suName, setSuName] = useState('')
-  const [suEmail, setSuEmail] = useState('')
-  const [suPass, setSuPass] = useState('')
-  const [suLoading, setSuLoading] = useState(false)
-  const [suErr, setSuErr] = useState('')
-  const [suSuggest, setSuSuggest] = useState('')   // email gợi ý sửa khi gõ nhầm tên miền
-  const [suDone, setSuDone] = useState(false)
+  // Cửa vào FREE = APP (vòng 13): modal hướng dẫn tải App + tạo tài khoản trong App.
+  // KHÔNG còn form signup web — signup-free function vẫn giữ (story page + App dùng).
+  const [showAppModal, setShowAppModal] = useState(false)
 
   // ── Đăng nhập học viên ngay trên trang tuyển sinh ──
   const [me, setMe] = useState<{ name: string; email?: string | null; phone?: string | null } | null>(null)   // null = chưa đăng nhập
@@ -168,20 +165,6 @@ export default function ClassLandingPage() {
     setShowLogin(false)
   }
 
-  const submitSignup = async () => {
-    setSuErr(''); setSuSuggest('')
-    const ec = checkEmail(suEmail)
-    if (!ec.ok) { setSuErr(ec.error || 'Email chưa đúng.'); setSuSuggest(ec.suggestion || ''); return }
-    if (suPass.trim().length < 6) { setSuErr('Mật khẩu cần ít nhất 6 ký tự.'); return }
-    setSuLoading(true)
-    try {
-      const { data, error } = await supabase.functions.invoke('signup-free', { body: { name: suName.trim(), email: suEmail.trim(), password: suPass.trim() } })
-      const res = (data || {}) as { ok?: boolean; error?: string }
-      if (error || res.error) { setSuErr(res.error || 'Tạo tài khoản chưa được, thử lại hoặc nhắn Zalo thầy nhé.'); setSuLoading(false); return }
-      setSuDone(true)
-    } catch { setSuErr('Lỗi kết nối, thử lại nhé.') }
-    setSuLoading(false)
-  }
   const chatBodyRef = useRef<HTMLDivElement>(null)
   const miraRef = useRef<HTMLIFrameElement>(null) // iframe Mira mới
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
@@ -327,7 +310,8 @@ export default function ClassLandingPage() {
       cachhoc: () => setTimeout(() => goto('cach-hoc'), 350),
       batdau: () => setShowAfterSignup(true),
       chat: () => openMira(),
-      signup: () => setShowSignup(true),
+      signup: () => setShowAppModal(true),
+      free: () => setShowAppModal(true),
     }
     actions[xem]?.()
   }
@@ -519,7 +503,7 @@ export default function ClassLandingPage() {
             <ul className="hc-items">
               {['Kho bài giảng', 'App luyện tập', 'Thực hành hàng tuần', 'Hỏi Thầy', 'Sách', 'Cộng đồng'].map(x => <li key={x}>{x}</li>)}
             </ul>
-            <div className="hc-note">Học gói <b>Free</b> trước. Thấy phù hợp rồi hãy tham gia.</div>
+            <div className="hc-note">Học thử miễn phí trên App trước. Thấy phù hợp rồi hãy tham gia.</div>
           </div>
         </div>
       </header>
@@ -854,7 +838,9 @@ export default function ClassLandingPage() {
                 <div className="eyebrow" style={{ color: '#A89FF0' }}>App TVA Guitar</div>
                 <h2>Muốn xem App?</h2>
                 <p className="lead">Đây là nơi bạn học bài, luyện tập và theo dõi tiến độ trong suốt Hành trình.</p>
+                <p style={{ color: '#E6E2F2', fontSize: 14, margin: '0 0 4px' }}>Học thử miễn phí: tải App, tạo tài khoản ngay trong App và bắt đầu với khoá Nhập Môn + Nhạc lý cơ bản.</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                  <button className="app-guide-btn" onClick={() => setShowAppModal(true)}>⬇ Tải App & học thử miễn phí →</button>
                   <button className="app-guide-btn" onClick={() => setShowGuide(true)}>📲 Hướng dẫn cài đặt app →</button>
                 </div>
               </div>
@@ -927,7 +913,7 @@ export default function ClassLandingPage() {
               <button className="btn btn-primary" onClick={pickPractice}>Đăng ký Gói Thực hành →</button>
               <button className="btn btn-ghost" onClick={() => gotoLich('class')}>Chọn lớp muốn học →</button>
             </div>
-            <p className="final-free">Chưa muốn đăng ký ngay? Bạn có thể <button className="final-free-link" onClick={() => setShowSignup(true)}>tạo tài khoản miễn phí →</button> và bắt đầu với App.</p>
+            <p className="final-free">Chưa muốn đăng ký ngay? Bạn có thể <button className="final-free-link" onClick={() => setShowAppModal(true)}>học thử miễn phí trên App →</button></p>
           </div>
         </div>
       </section>
@@ -942,57 +928,42 @@ export default function ClassLandingPage() {
       {/* Ẩn nút khi khung chat đang mở — để khung ngồi đúng góc, không bị "kê" lên nút. */}
       {!miraOpen && <button className="fab" onClick={() => goto('chat')}>💬 Hỏi Mira</button>}
 
-      {/* HÀNH TRÌNH 2027 — bài viết thiết kế native, full màn hình */}
-      {showSignup && (
-        <div onClick={() => setShowSignup(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, padding: 24, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,.3)', fontFamily: 'system-ui, sans-serif' }}>
-            {!suDone ? (
-              <>
-                <div style={{ fontSize: 19, fontWeight: 800, color: '#111827', marginBottom: 4 }}>Tạo tài khoản miễn phí</div>
-                <div style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 1.55, marginBottom: 16 }}>
-                  Học thử miễn phí trên app: khoá <b>Nhập Môn</b> và <b>Nhạc lý cơ bản</b>. Đăng ký học với thầy để mở các khoá còn lại.
-                </div>
-                {[['Họ tên', suName, setSuName, 'text', 'Nguyễn Văn A'], ['Email', suEmail, setSuEmail, 'email', 'email@example.com'], ['Mật khẩu (≥ 6 ký tự)', suPass, setSuPass, 'password', '••••••']].map(([lbl, val, set, type, ph]: any) => (
-                  <div key={lbl} style={{ marginBottom: 12 }}>
-                    <label style={{ display: 'block', fontSize: 13, color: '#6B7280', marginBottom: 5, fontWeight: 500 }}>{lbl}</label>
-                    <input value={val} onChange={e => set(e.target.value)} type={type} placeholder={ph}
-                      onKeyDown={e => { if (e.key === 'Enter') submitSignup() }}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 13px', background: '#F9FAFB', border: '1.5px solid #E5E7EB', borderRadius: 10, fontSize: 15, color: '#111827', outline: 'none', fontFamily: 'inherit' }} />
-                  </div>
-                ))}
-                {suErr && (
-                  <div style={{ background: '#FEE2E2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 9, padding: '9px 12px', fontSize: 13.5, marginBottom: 12 }}>
-                    {suErr}
-                    {suSuggest && (
-                      <button onClick={() => { setSuEmail(suSuggest); setSuErr(''); setSuSuggest('') }}
-                        style={{ display: 'block', marginTop: 7, background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Sửa thành {suSuggest}
-                      </button>
-                    )}
-                  </div>
-                )}
-                <button onClick={submitSignup} disabled={suLoading} style={{ width: '100%', background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: suLoading ? .65 : 1 }}>
-                  {suLoading ? 'Đang tạo...' : 'Tạo tài khoản & học thử →'}
-                </button>
-                <button onClick={() => setShowSignup(false)} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, marginTop: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Để sau</button>
-              </>
+            {/* CỬA VÀO FREE = APP (vòng 13): tải App + tạo tài khoản trong App — KHÔNG còn form web */}
+      {showAppModal && (
+        <div onClick={() => setShowAppModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, padding: 26, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,.3)', fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
+            <div style={{ fontSize: 42, marginBottom: 8 }}>🎸</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Học thử miễn phí trên App</div>
+            <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, marginBottom: 18 }}>
+              Tải App Thầy Văn Anh Guitar, sau đó tạo tài khoản trực tiếp trên App để bắt đầu.
+            </div>
+            {(pubCfgErr || (!pubCfg?.app_ios_url && !pubCfg?.app_android_url)) ? (
+              <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', borderRadius: 10, padding: '11px 14px', fontSize: 13.5, marginBottom: 16 }}>
+                Chưa tải được liên kết App. Vui lòng thử lại hoặc liên hệ Thầy.
+              </div>
             ) : (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 42 }}>🎉</div>
-                <div style={{ fontSize: 19, fontWeight: 800, color: '#111827', margin: '6px 0' }}>Tạo tài khoản thành công!</div>
-                <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, marginBottom: 18 }}>
-                  Bạn đã có thể đăng nhập trên app để học thử khoá Nhập Môn và Nhạc lý cơ bản.
-                </div>
-                <a href="https://timming.vananhaudio.com/start" target="_blank" rel="noreferrer"
-                  style={{ display: 'block', background: '#4F46E5', color: '#fff', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>Mở app & đăng nhập →</a>
-                <button onClick={() => { setShowSignup(false); setSuDone(false); setSuName(''); setSuEmail(''); setSuPass('') }} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, marginTop: 10, cursor: 'pointer', fontFamily: 'inherit' }}>Đóng</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                {((isIOS ? [['app_ios_url', 'Tải trên App Store →', '#111827'], ['app_android_url', 'Tải trên Google Play →', '#3B82F6']]
+                     : isAndroid ? [['app_android_url', 'Tải trên Google Play →', '#3B82F6'], ['app_ios_url', 'Tải trên App Store →', '#111827']]
+                     : [['app_ios_url', 'Tải trên App Store →', '#111827'], ['app_android_url', 'Tải trên Google Play →', '#3B82F6']]) as [string, string, string][])
+                  .filter(([k]) => pubCfg?.[k])
+                  .map(([k, label, bg]) => (
+                  <a key={k} href={pubCfg?.[k]} target="_blank" rel="noreferrer" style={{ display: 'block', background: bg, color: '#fff', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>{label}</a>
+                ))}
               </div>
             )}
+            <div style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 1.55, marginBottom: 10 }}>
+              Sau khi cài App, mở ứng dụng và chọn <b>Tạo tài khoản</b>.
+            </div>
+            <div style={{ fontSize: 12.5, color: '#9CA3AF', marginBottom: 14 }}>
+              Đã có tài khoản? Mở App và đăng nhập.
+            </div>
+            <button onClick={() => setShowAppModal(false)} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Đóng</button>
           </div>
         </div>
       )}
 
-      {showLogin && (
+{showLogin && (
         <div onClick={() => setShowLogin(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, padding: 24, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,.3)', fontFamily: 'system-ui, sans-serif' }}>
             <div style={{ fontSize: 19, fontWeight: 800, color: '#111827', marginBottom: 4 }}>Đăng nhập học viên</div>
@@ -1009,7 +980,7 @@ export default function ClassLandingPage() {
             <button onClick={submitLogin} disabled={liLoading} style={{ width: '100%', background: '#4F46E5', color: '#fff', border: 'none', borderRadius: 12, padding: 13, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: liLoading ? .65 : 1 }}>
               {liLoading ? 'Đang đăng nhập...' : 'Đăng nhập →'}
             </button>
-            <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 12 }}>Chưa có tài khoản? <a onClick={() => { setShowLogin(false); setShowSignup(true) }} style={{ color: '#4F46E5', fontWeight: 600, cursor: 'pointer' }}>Tạo tài khoản miễn phí</a></div>
+            <div style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 12 }}>Chưa có tài khoản? <a onClick={() => { setShowLogin(false); setShowAppModal(true) }} style={{ color: '#4F46E5', fontWeight: 600, cursor: 'pointer' }}>Học thử miễn phí trên App</a></div>
             <button onClick={() => setShowLogin(false)} style={{ width: '100%', background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, marginTop: 8, cursor: 'pointer', fontFamily: 'inherit' }}>Để sau</button>
           </div>
         </div>
@@ -1019,6 +990,7 @@ export default function ClassLandingPage() {
         <ClassJourney2027
           onClose={() => setShowJourney(false)}
           onRegister={() => { setShowJourney(false); setTimeout(() => gotoLich('class'), 60) }}
+          onFreeTrial={() => { setShowJourney(false); setShowAppModal(true) }}
         />
       )}
 

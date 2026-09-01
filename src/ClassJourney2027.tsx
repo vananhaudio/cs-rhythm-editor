@@ -35,7 +35,7 @@ const NANG_CAO = [
 const Eyebrow = ({ children, gold = false }: { children: React.ReactNode; gold?: boolean }) =>
   <div className={'jny-eyebrow' + (gold ? ' gold' : '')}>{children}</div>
 
-export default function ClassJourney2027({ onClose, onRegister }: { onClose: () => void; onRegister: () => void }) {
+export default function ClassJourney2027({ onClose, onRegister, onFreeTrial }: { onClose: () => void; onRegister: () => void; onFreeTrial?: () => void }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<HTMLElement>(null)
 
@@ -373,7 +373,7 @@ export default function ClassJourney2027({ onClose, onRegister }: { onClose: () 
                 <p className="jny-lead onDark">Nếu bạn vẫn còn phân vân, hãy bắt đầu từ khoá Nhập môn miễn phí. Đúng nền tảng trước, rồi mới bước vào lộ trình.</p>
                 <div className="jny-hero-btns">
                   <button className="jny-btn-gold" onClick={onRegister}>Xem lớp &amp; đăng ký ngay</button>
-                  <button className="jny-btn-ghost onDark" onClick={onRegister}>Học thử Nhập môn — miễn phí</button>
+                  <button className="jny-btn-ghost onDark" onClick={onFreeTrial || onRegister}>Học thử miễn phí trên App</button>
                 </div>
               </div>
               <div className="jny-regcard">

@@ -33,8 +33,8 @@ export const FAQS: Faq[] = [
     { link: 'thay', label: 'Xem cách hỏi Thầy →' },
   ] },
   { q: 'Có thể học thử / bắt đầu Free không?', a: [
-    'Có. Bạn tạo tài khoản miễn phí để dùng thử App với khoá Nhập Môn và Nhạc lý cơ bản. Học phí chỉ khi bạn quyết định học cùng Thầy.',
-    { link: 'signup', label: 'Tạo tài khoản miễn phí →' },
+    'Có. Bạn tải App Thầy Văn Anh Guitar và tự tạo tài khoản miễn phí trực tiếp trên App để bắt đầu — khoá Nhập Môn và Nhạc lý cơ bản mở ngay. Học phí chỉ khi bạn quyết định học cùng Thầy.',
+    { link: 'signup', label: 'Tải App →' },
   ] },
 
   // ─── PHẦN CÒN LẠI (sau "Xem tất cả câu hỏi →") ───
