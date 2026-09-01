@@ -261,16 +261,17 @@ Những chỗ chưa hiểu hãy ghi lại để khi gặp Thầy có thể hỏi
   return { subject: 'Anh/chị đã có thể bắt đầu học', content }
 }
 
-// ─── EMAIL 3 — first_session_reminder (template sẵn — CHƯA trigger: GAP) ─
-async function buildEmail3(lead: LeadInfo, cfg: Record<string, string>, sessionInfo: { date: string; time: string; label: string } | null): Promise<BuiltMail> {
+// ─── EMAIL 3 — first_session_reminder (vòng 11: trigger cron daily, session thật) ─
+async function buildEmail3(lead: LeadInfo, cfg: Record<string, string>, sessionInfo: { name: string; label: string } | null): Promise<BuiltMail> {
   const when = sessionInfo
-    ? `${sessionInfo.date} · ${sessionInfo.time}`
+    ? `${escapeHtml(sessionInfo.name)} — ${escapeHtml(sessionInfo.label)}`
     : 'theo lịch đã thông báo'
   const content = `
 <p>Chào anh/chị <b>${escapeHtml(lead.name)}</b>,</p>
-<p>Buổi học đầu tiên của anh/chị: <b>${escapeHtml(when)}</b></p>
+<p>Buổi học đầu tiên của anh/chị: <b>${when}</b></p>
 <p>Chuẩn bị trước: vào hệ thống xem nội dung được hướng dẫn, cài App và Zoom sẵn sàng, ghi lại câu hỏi muốn hỏi Thầy.</p>
-<p>Cần hỗ trợ? <a href="${escapeHtml(cfg['zalo_url'] ?? '')}">Nhắn Thầy qua Zalo</a></p>`
+<p>Nếu chưa thể tham gia đúng buổi này, anh/chị nhắn Thầy qua Zalo để sắp xếp phù hợp:</p>
+<p><a href="${escapeHtml(cfg['zalo_url'] ?? '')}" style="display:inline-block;background:#0068FF;color:#fff;text-decoration:none;border-radius:8px;padding:10px 18px;font-weight:700">Nhắn Thầy qua Zalo</a></p>`
   return { subject: 'Buổi học đầu tiên của anh/chị sắp diễn ra', content }
 }
 
@@ -311,7 +312,7 @@ Deno.serve(async (req) => {
       const mail = body.type === 'learning_access_ready'
         ? await buildEmail2(lead as LeadInfo, cfg)
         : body.type === 'first_session_reminder'
-        ? await buildEmail3(lead as LeadInfo, cfg, null)
+        ? await buildEmail3(lead as LeadInfo, cfg, await nextClassSession(lead.class_name))
         : await buildEmail1(lead as LeadInfo, cfg)
       return new Response(JSON.stringify({ subject: mail.subject, content: mail.content }), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
@@ -337,23 +338,30 @@ Deno.serve(async (req) => {
           failed++; continue
         }
       }
+      // Email 3: resolve buổi thật (cron chỉ queue khi có buổi trong 1–4 ngày)
+      let sessionInfo: { name: string; label: string } | null = null
+      if (job.mail_type === 'first_session_reminder') {
+        sessionInfo = await nextClassSession(lead.class_name)
+      }
       let mail: BuiltMail
       try {
         mail = job.mail_type === 'learning_access_ready'
           ? await buildEmail2(lead as LeadInfo, cfg)
           : job.mail_type === 'first_session_reminder'
-          ? await buildEmail3(lead as LeadInfo, cfg, null)
+          ? await buildEmail3(lead as LeadInfo, cfg, sessionInfo)
           : await buildEmail1(lead as LeadInfo, cfg)
       } catch (e) {
         await supabase.from('mail_log').update({ status: 'failed', error: 'template: ' + String((e as Error)?.message ?? e) }).eq('id', job.id)
         failed++; continue
       }
-      // Audit start-here: lưu resolved action (mail_log metadata — không log token)
+      // Audit: lưu resolved action/session (mail_log metadata — không log token)
       let resolved: Record<string, string> = {}
       if (job.mail_type === 'learning_access_ready') {
         const { data: acts } = await supabase.rpc('resolve_student_start_action', { p_lead: job.lead_id })
         const a = (acts ?? [])[0]
         if (a) resolved = { resolved_start_kind: a.kind, resolved_start_title: a.title, resolved_start_url: a.url }
+      } else if (job.mail_type === 'first_session_reminder' && sessionInfo) {
+        resolved = { resolved_session_name: sessionInfo.name, resolved_session_label: sessionInfo.label }
       }
       const r = await sendViaMailSystem(mail.subject, mail.content, lead.email)
       if (r.ok) {
