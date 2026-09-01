@@ -47,6 +47,9 @@ interface Props {
   onRegisterPractice: () => void
   onShowActive: () => void
   onChat: () => void
+  /** PRICING CANONICAL (v12) — từ public_app_config, không hardcode. Null = fail-safe ẩn giá. */
+  practicePrice?: { monthly: string | null; monthlySub: string | null }
+  classFeeLabel?: string | null
 }
 
 const COPY = {
@@ -59,8 +62,6 @@ const COPY = {
   tab2: { label: 'Gói Học theo lớp', sub: 'Cố định · đi lên' },
   practice: {
     title: 'Linh hoạt theo thời gian và hướng học của bạn',
-    price: '499.000đ/tháng',
-    priceSub: 'Đăng ký dài hạn: 396.000đ/tháng',
     flex3: [
       { label: 'Học gì', body: 'Chọn hướng học trên App: <b>Đệm hát · Tỉa nốt · Solo...</b>' },
       { label: 'Học ở mức nào', body: 'Tham gia nhóm thực hành phù hợp: <b>Cơ bản · Trung cấp · Nâng cao</b>' },
@@ -97,7 +98,7 @@ const inferPath = (n: string) => { const s = n.toLowerCase()
   if (s.includes('hành trình')) return 'combo'
   return '' }
 // Map item thô (từ ClassLandingPage sched) → card hiển thị (giữ nguyên regName KÈM MÃ — form đăng ký khớp option)
-const schedToCard = (it: ClassSchedItem) => ({
+const schedToCard = (it: ClassSchedItem, classFeeLabel: string | null) => ({
   tag: it.tag || inferTag(it.courseTitle || it.name),
   title: it.courseTitle || it.name,
   className: it.code ? `${it.name} · ${it.code}` : it.name,
@@ -105,10 +106,10 @@ const schedToCard = (it: ClassSchedItem) => ({
   path: inferPath(it.courseTitle || it.name),
   day: it.schedule || 'Đang cập nhật',
   date: it.dateLabel || (it.start ? 'Khai giảng ' + it.start : 'Đang xếp lịch'),
-  price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : '990k'),
+  price: it.price || (/nhập môn|miễn phí/i.test(it.name) ? 'Free' : (classFeeLabel ?? '990k')),
 })
 
-export default function ClassLearningWays({ tab, onTabChange, sched, onRegister, onRegisterPractice, onShowActive, onChat }: Props) {
+export default function ClassLearningWays({ tab, onTabChange, sched, onRegister, onRegisterPractice, onShowActive, onChat, practicePrice, classFeeLabel }: Props) {
   const [open, setOpen] = useState(false)
 
   const onTabsKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -168,8 +169,8 @@ export default function ClassLearningWays({ tab, onTabChange, sched, onRegister,
               {COPY.practice.points.map(p => <li key={p}>{p}</li>)}
             </ul>
             <div className="lw-price-row">
-              <span className="lw-price">{COPY.practice.price}</span>
-              <span className="lw-price-sub">{COPY.practice.priceSub}</span>
+              <span className="lw-price">{practicePrice?.monthly ? practicePrice.monthly + '/tháng' : '—'}</span>
+              {practicePrice?.monthlySub && <span className="lw-price-sub">Đăng ký dài hạn: {practicePrice.monthlySub}/tháng</span>}
             </div>
 
             {/* Lịch thực hành thật — nằm TRONG tab Gói Thực hành (không duplicate) */}
@@ -194,7 +195,7 @@ export default function ClassLearningWays({ tab, onTabChange, sched, onRegister,
             <div className="lw-cls-sched cls-sec">
               <div className="cls-kicker"><span className="eyebrow">Lịch khai giảng</span><span className="cls-pill">Gói Học theo lớp</span></div>
               <h3 className="lw-cls-h">Các lớp sắp khai giảng</h3>
-              <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b> — 990k/khoá · 2 tháng · 8 buổi. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
+              <p className="lead">Dành cho bạn muốn học theo một chương trình và khung giờ cố định. Tất cả lớp đều <b>học online trực tiếp qua Zoom</b>{classFeeLabel ? ` — ${classFeeLabel}/khoá · 2 tháng · 8 buổi` : ''}. Chọn lớp phù hợp với bạn bên dưới, hoặc để thầy tư vấn giúp bạn đúng cửa vào.</p>
               {/* Chưa tải xong lịch → chờ; KHÔNG hiện dữ liệu cứng (dễ thành lớp ma ngày cũ) */}
               {sched === null && <div style={{ textAlign: 'center', color: '#8A8A93', padding: '28px 0', fontSize: 15 }}>Đang tải lịch lớp…</div>}
               {/* Hết lớp sắp khai giảng → nói thật + mời giữ chỗ, thay vì hiện lớp cũ */}
@@ -211,7 +212,7 @@ export default function ClassLearningWays({ tab, onTabChange, sched, onRegister,
               )}
               <div className="cls-list">
                 {(sched?.upcoming?.length
-                  ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(schedToCard)
+                  ? [...sched.upcoming].sort((a, b) => { const da = parseVNDate(a.start), db = parseVNDate(b.start); if (da == null && db == null) return 0; if (da == null) return 1; if (db == null) return -1; return da - db }).map(it => schedToCard(it, classFeeLabel ?? null))
                   : []
                 ).map((raw, i) => {
                   const c = raw

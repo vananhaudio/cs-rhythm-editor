@@ -381,23 +381,38 @@ export default function ClassLandingPage() {
   }
   const chatSend = () => chatSendText(chatInput)
 
-  // Hỗ trợ summary động
-  const PRACTICE_SUM = { '1_month': { label: '1 tháng', vnd: 499000, line: '499.000đ' }, '6_month': { label: '6 tháng', vnd: 2376000, line: '2.376.000đ' } }
+  // PRICING CANONICAL — từ public_app_config (view anon allowlist), KHÔNG hardcode.
+  // Fail-safe (spec VII): thiếu key → không render số stale — Hero hiện "Xem gói học →",
+  // form hiện "—" / ẩn dòng tương đương; submit KHÔNG phụ thuộc số tiền.
+  const cfgNum = (k: string): number | null => {
+    const v = pubCfg?.[k]
+    if (v === undefined || v === null || v === '') return null
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0 ? n : null
+  }
+  const practiceMonthly = cfgNum('practice_monthly_fee')   // 499000
+  const practice6mTotal = cfgNum('practice_6m_total')      // 2376000
+  const practice6mMonthly = cfgNum('practice_6m_monthly')  // 396000
+  const classFeeVnd = cfgNum('class_fee')                  // 990000
   const fmtVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+  const PRACTICE_SUM = {
+    '1_month': { label: '1 tháng', vnd: practiceMonthly, line: practiceMonthly ? fmtVnd(practiceMonthly) : null },
+    '6_month': { label: '6 tháng', vnd: practice6mTotal, line: practice6mTotal ? fmtVnd(practice6mTotal) : null },
+  }
   const classPriceVnd = (price?: string): number | null => {
     if (price === 'Combo') return null
-    if (!price || /miễn phí|free/i.test(price || '')) return /miễn phí|free/i.test(price || '') ? 0 : 990000
-    return 990000
+    if (/miễn phí|free/i.test(price || '')) return 0
+    return classFeeVnd
   }
   const classPriceLabel = (price?: string) => {
     if (price === 'Combo') return 'Combo trọn gói'
     if (/miễn phí|free/i.test(price || '')) return 'Miễn phí'
-    return '990.000đ'
+    return classFeeVnd ? fmtVnd(classFeeVnd) : '—'
   }
   const clsSel = regClasses.find(c => c.name === form.className)
   const practiceSum = PRACTICE_SUM[practiceDur]
-  const bothTotal = regMode === 'both' && form.className && classPriceVnd(clsSel?.price) !== null
-    ? (classPriceVnd(clsSel?.price) ?? 0) + practiceSum.vnd
+  const bothTotal = regMode === 'both' && form.className && classPriceVnd(clsSel?.price) !== null && practiceSum.vnd !== null
+    ? (classPriceVnd(clsSel?.price) ?? 0) + (practiceSum.vnd ?? 0)
     : null
   // Ghi nhận mode có cấu trúc vào note (key ổn định — backend chưa có cột riêng, xem báo cáo)
   const regNote = () => {
@@ -494,8 +509,12 @@ export default function ClassLandingPage() {
           </div>
           <div className="hero-card">
             <div className="hc-kicker">Tham gia Hành trình</div>
-            <div className="hc-price">499.000đ <span>/ tháng</span></div>
-            <div className="hc-price-sub">Đăng ký dài hạn: 396.000đ/tháng</div>
+            {practiceMonthly
+              ? <>
+                  <div className="hc-price">{fmtVnd(practiceMonthly)} <span>/ tháng</span></div>
+                  {practice6mMonthly && <div className="hc-price-sub">Đăng ký dài hạn: {fmtVnd(practice6mMonthly)}/tháng</div>}
+                </>
+              : <div className="hc-price-fallback"><button className="btn btn-ghost" onClick={() => gotoLich('practice')}>Xem gói học →</button></div>}
             <p className="hc-body">Học theo năng lực hiện tại, luyện tập trên App và tham gia các buổi thực hành cùng Thầy.</p>
             <ul className="hc-items">
               {['Kho bài giảng', 'App luyện tập', 'Thực hành hàng tuần', 'Hỏi Thầy', 'Sách', 'Cộng đồng'].map(x => <li key={x}>{x}</li>)}
@@ -598,6 +617,11 @@ export default function ClassLandingPage() {
         onRegisterPractice={pickPractice}
         onShowActive={() => setShowActive(true)}
         onChat={() => goto('chat')}
+        practicePrice={{
+          monthly: practiceMonthly ? fmtVnd(practiceMonthly) : null,
+          monthlySub: practice6mMonthly ? fmtVnd(practice6mMonthly) : null,
+        }}
+        classFeeLabel={classFeeVnd ? fmtVnd(classFeeVnd) : null}
       />
 
       {/* ĐĂNG KÝ HỌC — 3 hình thức: Học theo lớp / Gói Thực hành / Học cả hai */}
@@ -658,11 +682,11 @@ export default function ClassLandingPage() {
                     <div className="reg-pills" role="radiogroup" aria-label="Gói Thực hành">
                       <button type="button" role="radio" aria-checked={practiceDur === '1_month'}
                         className={'reg-pill' + (practiceDur === '1_month' ? ' on' : '')} onClick={() => setPracticeDur('1_month')}>
-                        <b>1 tháng</b><span>499.000đ/tháng</span>
+                        <b>1 tháng</b><span>{PRACTICE_SUM['1_month'].line ? PRACTICE_SUM['1_month'].line + '/tháng' : '—'}</span>
                       </button>
                       <button type="button" role="radio" aria-checked={practiceDur === '6_month'}
                         className={'reg-pill' + (practiceDur === '6_month' ? ' on' : '')} onClick={() => setPracticeDur('6_month')}>
-                        <b>6 tháng — 2.376.000đ</b><span>tương đương 396.000đ/tháng</span>
+                        <b>6 tháng{PRACTICE_SUM['6_month'].line ? ' — ' + PRACTICE_SUM['6_month'].line : ''}</b><span>{practice6mMonthly ? 'tương đương ' + fmtVnd(practice6mMonthly) + '/tháng' : ''}</span>
                       </button>
                     </div>
                   </div>
@@ -695,8 +719,8 @@ export default function ClassLandingPage() {
                 )}
                 {regMode === 'practice' && (
                   <>
-                    <div className="reg-sum-row"><span>Gói Thực hành · {practiceSum.label}</span><b>{practiceSum.line}</b></div>
-                    {practiceDur === '6_month' && <div className="reg-sum-note">tương đương 396.000đ/tháng</div>}
+                    <div className="reg-sum-row"><span>Gói Thực hành · {practiceSum.label}</span><b>{practiceSum.line ?? '—'}</b></div>
+                    {practiceDur === '6_month' && practice6mMonthly && <div className="reg-sum-note">tương đương {fmtVnd(practice6mMonthly)}/tháng</div>}
                   </>
                 )}
                 {regMode === 'both' && (
@@ -1220,6 +1244,8 @@ const CSS = `
 .tva-class .hero-card .hc-price{margin-top:8px;font-size:36px;font-weight:800;letter-spacing:-1px;color:var(--indigo);line-height:1;}
 .tva-class .hero-card .hc-price span{font-size:16px;font-weight:600;color:var(--ink-faint);letter-spacing:0;}
 .tva-class .hero-card .hc-price-sub{margin-top:6px;font-size:12.5px;font-weight:600;color:var(--ink-soft);}
+.tva-class .hero-card .hc-price-fallback{margin-top:8px;}
+.tva-class .hero-card .hc-price-fallback .btn{font-size:13.5px;padding:9px 16px;}
 .tva-class .hero-card .hc-body{margin-top:12px;font-size:14px;line-height:1.6;color:var(--ink-soft);max-width:none;}
 .tva-class .hero-card .hc-items{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:16px;padding:16px 0 0;border-top:1px solid var(--line);list-style:none;}
 .tva-class .hero-card .hc-items li{font-size:13px;font-weight:600;color:var(--ink);padding-left:18px;position:relative;}
