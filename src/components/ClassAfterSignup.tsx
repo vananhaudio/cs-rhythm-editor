@@ -174,11 +174,9 @@ function AfterSignupDetail({ onClose }: { onClose: () => void }) {
             <p className="asu-callout-line"><b>Buổi gặp Thầy là một điểm trong quá trình học — việc học đã bắt đầu từ trước đó.</b></p>
           </div>
 
-          {/* Reinforcement */}
-          <div className="asu-reinforce">
-            <p className="asu-p">Bạn không phải chờ cả tuần mới được học một bài mới.</p>
-            <p className="asu-p">Ngày nào bạn cũng có thể học, luyện tập và tương tác với Thầy.</p>
-          </div>
+          {/* Reinforcement — ĐÃ BỎ: 2 dòng "không phải chờ cả tuần" trùng nguyên văn
+              với note section "Một tuần học" phía trên (mỗi ý chỉ một nơi nói mạnh nhất).
+              Callout "Đừng đợi đến buổi đầu tiên" phía trên đã giữ vai trò khích lệ. */}
 
           {/* 8 — Gặp vấn đề */}
           <section className="asu-sec">
@@ -251,8 +249,6 @@ const CSS = `
 .tva-class .asu-callout{margin-top:26px;border:1.5px solid var(--mem-line);border-radius:16px;background:var(--mem-soft);padding:20px 20px 18px;}
 .tva-class .asu-callout-h{font-size:17.5px;font-weight:800;color:var(--mem);margin:0;}
 .tva-class .asu-callout-line{margin-top:10px;font-size:14.5px;color:var(--ink);}
-.tva-class .asu-reinforce{margin-top:20px;border-left:3px solid var(--honey);padding:2px 0 2px 16px;}
-.tva-class .asu-reinforce .asu-p{margin-top:6px;font-weight:600;color:var(--ink);}
 .tva-class .asu-help-line{margin-top:12px;}
 .tva-class .asu-check{margin-top:26px;border:1.5px dashed var(--line);border-radius:16px;padding:18px 20px;}
 .tva-class .asu-check-list{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:8px;grid-template-columns:1fr;}

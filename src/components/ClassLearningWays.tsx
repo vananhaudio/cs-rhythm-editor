@@ -226,7 +226,7 @@ export default function ClassLearningWays({ tab, onTabChange, sched, onRegister,
                     <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
                     <div className="acts">
                       <button className="btn btn-primary" onClick={() => onRegister(reg)}>Đăng ký lớp này</button>
-                      <button className="btn btn-ghost" onClick={onChat}>Hỏi thêm</button>
+                      <button className="btn btn-ghost" onClick={onChat}>Hỏi Mira</button>
                     </div>
                   </div>
                   )

@@ -304,10 +304,9 @@ export default function ClassLandingPage() {
     setTimeout(() => document.getElementById('cach-hoc')?.scrollIntoView({ behavior: 'smooth' }), 60)
   }
 
-  // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — vd ?xem=hanhtrinh, ?xem=lich, ?xem=app
-  useEffect(() => {
-    const xem = (new URLSearchParams(window.location.search).get('xem') || window.location.hash.replace('#', '') || '').toLowerCase()
-    if (!xem) return
+  // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — dùng chung cho URL lúc mở trang
+  // và cho nút link trong FAQ (vd ?xem=hanhtrinh, ?xem=lich, ?xem=batdau, ?xem=signup).
+  const runXem = (xem: string) => {
     const actions: Record<string, () => void> = {
       hanhtrinh: () => setShowJourney(true),
       lich: () => gotoLich('class'),
@@ -327,8 +326,16 @@ export default function ClassLandingPage() {
       thuchanh: () => gotoLich('practice'),
       cachhoc: () => setTimeout(() => goto('cach-hoc'), 350),
       batdau: () => setShowAfterSignup(true),
+      chat: () => openMira(),
+      signup: () => setShowSignup(true),
     }
     actions[xem]?.()
+  }
+  useEffect(() => {
+    const xem = (new URLSearchParams(window.location.search).get('xem') || window.location.hash.replace('#', '') || '').toLowerCase()
+    if (!xem) return
+    runXem(xem)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const pickClass = (name: string) => { setRegMode('class'); set('className', name); goto('dangky') }
@@ -447,9 +454,10 @@ export default function ClassLandingPage() {
           <div className="brand"><img className="mark" src="/logo-green.svg" alt="Thầy Văn Anh Guitar" /> Thầy Văn Anh Guitar</div>
           <div className="nav-links">
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
-            <a onClick={() => goto('chat')}>Tư vấn</a>
             <a onClick={() => goto('quyenloi')}>Quyền lợi</a>
+            <a onClick={() => goto('cach-hoc')}>Cách học</a>
             <a onClick={() => gotoLich('class')}>Lịch lớp</a>
+            <a onClick={() => goto('faq')}>FAQ</a>
             {/* Bỏ mục chữ "Đăng ký" — trùng đích với nút "Đăng ký lớp" bên phải, mà hàng
                 nav cần chỗ cho nút Shop. */}
             {!me && <a onClick={() => setShowLogin(true)}>Đăng nhập</a>}
@@ -564,7 +572,7 @@ export default function ClassLandingPage() {
               { ic: '📱', name: 'App luyện tập', desc: 'Bài tập và những công cụ Guitar được thiết kế để bạn luyện tập mỗi ngày.', cta: 'Xem App →', act: () => goto('app') },
               { ic: '📖', name: 'Sách giáo trình', desc: 'Những cuốn sách được biên soạn để đồng hành cùng quá trình học của bạn.', cta: 'Xem sách →', act: () => setBenefit('sach') },
               { ic: '🧭', name: 'Hỏi đáp cùng Thầy qua Zalo', desc: 'Gặp chỗ vướng trong lúc học — bạn hỏi Thầy qua Zalo và nhận hướng dẫn để tiếp tục.', cta: 'Xem cách hỏi Thầy →', act: () => setBenefit('thay') },
-              { ic: '🎥', name: 'Buổi thực hành cùng Thầy', desc: 'Tham gia những buổi thực hành online để cùng Thầy luyện tập và đưa những gì đã học vào chơi Guitar thực tế.', cta: 'Xem một buổi thực hành', act: () => setShowPractice(true) },
+              { ic: '🎥', name: 'Buổi thực hành cùng Thầy', desc: 'Tham gia những buổi thực hành online để cùng Thầy luyện tập và đưa những gì đã học vào chơi Guitar thực tế.', cta: 'Xem một buổi thực hành →', act: () => setShowPractice(true) },
               { ic: '👥', name: 'Cộng đồng học viên', desc: 'Những người cùng yêu Guitar, cùng học, chia sẻ và chơi đàn với nhau.', cta: 'Xem cộng đồng →', act: () => setBenefit('cong-dong') },
             ].map((c: any) => (
               <div className="pl-card" key={c.name}>
@@ -811,23 +819,19 @@ export default function ClassLandingPage() {
       {/* SAU KHI ĐĂNG KÝ — 4 bước gọn + modal hướng dẫn chi tiết (deep-link ?xem=batdau) */}
       <ClassAfterSignup open={showAfterSignup} onOpen={() => setShowAfterSignup(true)} onClose={() => setShowAfterSignup(false)} />
 
-      {/* APP */}
+      {/* APP — chỉ giữ vai trò độc nhất: xem App thật + cài đặt.
+          Giải thích "App để học/luyện/tiến độ" đã nằm ở 6 quyền lợi + một tuần học;
+          Free signup chuyển về CTA cuối (không cạnh tranh 2 gói chính). */}
       <section>
         <div className="wrap">
           <div className="app-sec" id="app">
             <div className="app-grid">
               <div>
                 <div className="eyebrow" style={{ color: '#A89FF0' }}>App TVA Guitar</div>
-                <h2>Học, tập và theo dõi tiến độ — suốt hành trình</h2>
-                <p className="lead">Không chỉ là nơi xem video. Đây là cổng học tập cá nhân đi cùng bạn từ buổi đầu.</p>
-                <div className="app-feats">
-                  {[['📚', 'Bài học chia nhỏ, có bài tập sau mỗi nội dung'], ['🎚️', 'Công cụ luyện tập: nhịp, tỉa nốt, chỉnh dây, karaoke'], ['📈', 'Nhật ký học tập & theo dõi tiến bộ của riêng bạn']].map(([ic, t], i) => (
-                    <div className="app-feat" key={i}><span className="ic">{ic}</span><div>{t}</div></div>
-                  ))}
-                </div>
+                <h2>Muốn xem App?</h2>
+                <p className="lead">Đây là nơi bạn học bài, luyện tập và theo dõi tiến độ trong suốt Hành trình.</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
                   <button className="app-guide-btn" onClick={() => setShowGuide(true)}>📲 Hướng dẫn cài đặt app →</button>
-                  <button className="app-guide-btn" onClick={() => setShowSignup(true)} style={{ background: '#4F46E5', color: '#fff', borderColor: '#4F46E5' }}>🎁 Tạo tài khoản miễn phí — học thử</button>
                 </div>
               </div>
               <div className="app-shots">
@@ -849,7 +853,6 @@ export default function ClassLandingPage() {
             <h2>Học cùng Thầy Văn Anh</h2>
             <p className="lead">Nhiều năm giảng dạy guitar, xây dựng hệ thống bài học cho người mới và cộng đồng học viên online. Phương pháp: dễ hiểu, dễ làm theo, chia nhỏ, luyện đều, theo dõi tiến độ, sửa lỗi từng bước.</p>
             <div className="quote">"Tôi không dạy bạn trở nên cao siêu. Tôi giúp bạn làm chủ cây đàn một cách đơn giản nhất."</div>
-            <p className="lead" style={{ marginTop: 14 }}>Hệ thống bài học được chia nhỏ để người mới dễ theo, dễ luyện và biết mình đang tiến bộ ở đâu.</p>
           </div>
         </div>
       </section>
@@ -865,9 +868,14 @@ export default function ClassLandingPage() {
               <details key={i}>
                 <summary>{f.q}</summary>
                 <div className="faq-a">
-                  {f.a.map((b, j) => Array.isArray(b)
-                    ? <ul key={j}>{b.map((li, k) => <li key={k}>{li}</li>)}</ul>
-                    : <p key={j}>{b}</p>)}
+                  {f.a.map((b, j) => {
+                    if (Array.isArray(b)) return <ul key={j}>{b.map((li, k) => <li key={k}>{li}</li>)}</ul>
+                    if (typeof b === 'object' && b !== null && 'link' in b) {
+                      const lnk = b as { link: string; label: string }
+                      return <button key={j} type="button" className="faq-link" onClick={() => runXem(lnk.link)}>{lnk.label}</button>
+                    }
+                    return <p key={j}>{b as string}</p>
+                  })}
                 </div>
               </details>
             ))}
@@ -885,19 +893,17 @@ export default function ClassLandingPage() {
         </div>
       </section>
 
-      {/* CTA cuối */}
+      {/* CTA cuối — gọn: 2 hành động chính + Free nhẹ (không mở thêm câu chuyện mới) */}
       <section>
         <div className="wrap">
           <div className="final">
-            <h2>Bắt đầu hành trình guitar của bạn hôm nay</h2>
-            <p>Chọn lớp phù hợp và giữ chỗ ngay — thầy sẽ đồng hành cùng bạn từ buổi đầu tiên.</p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button className="btn btn-primary" onClick={() => gotoLich('class')}>Xem lớp &amp; đăng ký</button>
-              <button className="btn" onClick={() => setShowJourney(true)} style={{ background: 'rgba(255,255,255,.14)', color: '#fff', border: '1.5px solid rgba(255,255,255,.6)', backdropFilter: 'blur(4px)' }}>
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>
-                Tìm hiểu Bản đồ hành trình
-              </button>
+            <h2>Bạn đã sẵn sàng bắt đầu?</h2>
+            <p>Chọn cách học phù hợp với bạn.</p>
+            <div className="final-acts">
+              <button className="btn btn-primary" onClick={pickPractice}>Đăng ký Gói Thực hành →</button>
+              <button className="btn btn-ghost" onClick={() => gotoLich('class')}>Chọn lớp muốn học →</button>
             </div>
+            <p className="final-free">Chưa muốn đăng ký ngay? Bạn có thể <button className="final-free-link" onClick={() => setShowSignup(true)}>tạo tài khoản miễn phí →</button> và bắt đầu với App.</p>
           </div>
         </div>
       </section>
@@ -1041,7 +1047,7 @@ export default function ClassLandingPage() {
         <div className="demo-page">
           <div className="demo-top">
             <button className="demo-back" onClick={() => setShowPractice(false)}>← Quay lại</button>
-            <button className="demo-cta" onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
+            <button className="demo-cta" onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
           </div>
           <div className="demo-scroll">
             <div className="demo-inner">
@@ -1061,7 +1067,7 @@ export default function ClassLandingPage() {
                   <div className="demo-point" key={i}><span>{ic}</span>{t}</div>
                 ))}
               </div>
-              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
+              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
             </div>
           </div>
         </div>
@@ -1074,14 +1080,14 @@ export default function ClassLandingPage() {
           <div className="art-page">
             <div className="art-top">
               <button className="art-close" onClick={() => setModal(null)}>← Quay lại</button>
-              <button className="btn btn-primary art-top-cta" onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
+              <button className="btn btn-primary art-top-cta" onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
             </div>
             <div className="art-scroll">
               <div className="art-inner">
                 {a ? <>
                   <h1 className="art-h1">{a.title}</h1>
                   <div className="art-body" dangerouslySetInnerHTML={{ __html: a.body }} />
-                  <button className="btn btn-primary" style={{ marginTop: 28 }} onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp &amp; đăng ký →</button>
+                  <button className="btn btn-primary" style={{ marginTop: 28 }} onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
                 </> : <div>Bài viết không còn.</div>}
               </div>
             </div>
@@ -1116,7 +1122,7 @@ export default function ClassLandingPage() {
                 </div>
               )}
             </div>
-            <button className="btn btn-primary" style={{ marginTop: 18, width: '100%' }} onClick={() => { setShowActive(false); setTimeout(() => gotoLich('class'), 60) }}>Xem lớp sắp khai giảng &amp; đăng ký →</button>
+            <button className="btn btn-primary" style={{ marginTop: 18, width: '100%' }} onClick={() => { setShowActive(false); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
           </div>
         </div>
       )}
@@ -1398,16 +1404,23 @@ const CSS = `
 .tva-class .faq-a p{margin:0 0 10px;font-size:14.5px;color:var(--ink-soft);line-height:1.7;}
 .tva-class .faq-a p:last-child{margin-bottom:0;}
 .tva-class .faq-a ul{margin:0 0 10px;padding-left:20px;}
+.tva-class .faq-link{display:inline-flex;align-items:center;background:none;border:none;padding:0;margin:6px 0 0;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--indigo);cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:rgba(67,56,202,.35);}
+.tva-class .faq-link:hover{color:var(--indigo-dark);text-decoration-color:var(--indigo);}
 .tva-class .faq-a li{font-size:14.5px;color:var(--ink-soft);line-height:1.6;margin-bottom:4px;}
 .tva-class .final{background:linear-gradient(150deg,var(--indigo),#6D63E6);border-radius:22px;padding:44px;text-align:center;color:#fff;}
 .tva-class .final h2{color:#fff;}
 .tva-class .final p{margin:12px auto 22px;max-width:480px;color:#E6E2F2;}
+.tva-class .final-acts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.tva-class .final-free{margin:20px auto 0 !important;font-size:14px;color:#E6E2F2;max-width:none;}
+.tva-class .final-free-link{background:none;border:none;padding:0;color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-family:inherit;font-size:14px;}
+.tva-class .final-free-link:hover{color:#E6E2F2;}
 .tva-class .final .btn-primary{background:#fff;color:var(--indigo);box-shadow:0 10px 24px -10px rgba(0,0,0,.35);}
 .tva-class .final .btn-primary:hover{background:#fff;transform:translateY(-1px);box-shadow:0 14px 30px -10px rgba(0,0,0,.4);}
 .tva-class .final .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.55);backdrop-filter:blur(4px);}
 .tva-class .final .btn-ghost:hover{background:rgba(255,255,255,.22);border-color:#fff;transform:translateY(-1px);}
 .tva-class .final .btn-ghost svg{opacity:.9;}
-.tva-class footer{background:#211C32;color:#C9C3DE;padding:26px 0;font-size:13.5px;}
+.tva-class footer{background:#211C32;color:#C9C3DE;padding:26px 0 84px;font-size:13.5px;}
+/* padding-bottom 84px: chừa chỗ cho FAB "Hỏi Mira" nổi góc phải — tránh che số Zalo khi cuộn hết trang */
 .tva-class .foot-in{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;}
 .tva-class .foot-in b{color:#fff;}
 .tva-class .fab{position:fixed;right:18px;bottom:18px;z-index:50;background:var(--indigo);color:#fff;border:none;border-radius:999px;padding:13px 18px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 10px 26px -8px rgba(67,56,202,.6);}
