@@ -169,8 +169,18 @@ begin
                     else 'free' end), 1) - 1, 0)
            else case when cs.is_free = false then 1 else 0 end end as req_idx,
       (v_is_teacher or cs.enrolled or cs.granted or coalesce(cs.is_free, true) is not false) as legacy_unlocked,
-      -- prereq hành trình (chỉ áp cho học viên HT — y hệt isSeqLocked cũ)
-      case when v_ht_member and cs.code is not null then
+      -- prereq hành trình (chỉ áp cho học viên HT). QUAN TRỌNG: tiên quyết chỉ chặn
+      -- BƯỚC VÀO khoá mới — KHÔNG chặn khoá học viên đã ghi danh / được cấp quyền /
+      -- ĐÃ HỌC DỞ (có bài hoàn thành trong khoá). Fix bug "đã học xong bài trước
+      -- vẫn bị đòi hoàn thành" (học viên lớp HT học DH2 trực tiếp khi DH1 chưa xong).
+      case when v_ht_member and cs.code is not null
+                and not (cs.enrolled or cs.granted)
+                and not exists (
+                  select 1 from edu_lesson_progress p
+                  join edu_course_lessons l2 on l2.id = p.lesson_id
+                  join edu_modules m2 on m2.id = l2.module_id
+                  where m2.course_id = cs.id and p.student_id = v_student_id and p.status = 'completed')
+           then
         coalesce((select array(select r from unnest(p.requires) r where r <> 'NM' and not (r = any(v_completed_codes)))
                   from course_prereqs p where p.code = upper(trim(cs.code))), '{}')
       else '{}' end as missing_prereqs
