@@ -1,3 +1,6 @@
+// ⚠️ LEGACY ACCESS (desktop): màn này còn tự suy luận quyền từ enrollment/policy client-side.
+// Do not add new access logic here — canonical là RPC my_learning_state()
+// (docs/SERVER_DRIVEN_ARCHITECTURE.md). TODO(cleanup): chuyển sang src/learningState.ts.
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import { QuizViewer } from './components/QuizViewer'

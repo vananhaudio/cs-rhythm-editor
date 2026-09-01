@@ -1,3 +1,13 @@
+// ════════════════════════════════════════════════════════════════════════════
+// LEGACY FALLBACK — DO NOT ADD NEW ACCESS LOGIC HERE.
+// Canonical access = server RPC my_learning_state() (db/learning_state_setup.sql,
+// docs/SERVER_DRIVEN_ARCHITECTURE.md). File này chỉ còn phục vụ:
+//   1. EMERGENCY fallback khi app_config.learning_state_mode = 'client';
+//   2. hai màn desktop legacy (LessonViewerPage, StudentPortalV2) chưa chuyển.
+// TODO(cleanup): sau khi build 18 ổn định production đủ lâu (không cần rollback),
+// chuyển 2 màn desktop sang learningState rồi XOÁ resolver này trong release bảo trì.
+// Muốn đổi luật quyền → sửa RPC + chạy db/tests/learning_state_test.sql.
+// ════════════════════════════════════════════════════════════════════════════
 export type EntitlementTier = 'free' | 'khoi_dau_99' | 'can_ban_396' | 'nang_cao_499'
 export type LegacyTier = 'free' | 'basic' | 'standard' | 'pro'
 export type ContentVisibility = 'visible' | 'hidden'

@@ -1356,13 +1356,16 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     return () => { cancelled = true }
   }, [student.id, guest, reloadTick])
 
-  // Server state cũ quá TTL → refresh khi quay lại app / mở tab (Admin đổi quyền là thấy)
+  // Server state cũ quá TTL → refresh khi quay lại app / mở tab Học (Admin đổi quyền là thấy)
+  const refreshLearningStateIfStale = () => {
+    if (srvFetchedAt.current && Date.now() - srvFetchedAt.current > LEARNING_STATE_TTL_MS) {
+      fetchLearningState(guest ? 'guest' : student.id).then(s => { if (s) applyServerState(s) })
+    }
+  }
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return
-      if (srvFetchedAt.current && Date.now() - srvFetchedAt.current > LEARNING_STATE_TTL_MS) {
-        fetchLearningState(guest ? 'guest' : student.id).then(s => { if (s) applyServerState(s) })
-      }
+      refreshLearningStateIfStale()
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
@@ -3305,6 +3308,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 // Đổi từ tab khác sang Học → GIỮ context (môn/level/bài đang xem).
                 // Đang ở Học mà bấm Học lần nữa → về màn chọn môn (root) — hành vi nhất quán.
                 if (t.id === 'hoc' && tab === 'hoc') setScreen('home')
+                if (t.id === 'hoc') refreshLearningStateIfStale()  // Admin vừa grant/revoke → mở tab Học là thấy
                 setTab(t.id)
               }}
               style={{

@@ -1,4 +1,7 @@
 // ── BỘ LUẬT HÀNH TRÌNH 2027 — mã hoá phần CỐ ĐỊNH (xem docs/HANHTRINH-2027-BO-LUAT.md) ──
+// ⚠️ PREREQ/missingPrereqs dưới đây là LEGACY FALLBACK cho quyền học.
+// Canonical: bảng course_prereqs + RPC my_learning_state() (Admin → Hành trình sửa được).
+// Do not add new access logic here. Các map tên/mã lớp (DANG_LOP, TEN_NANG_LUC...) vẫn dùng để HIỂN THỊ.
 // Quản lý theo MÃ NĂNG LỰC. Từ mã suy ra: dạng lớp, nhánh, tiên quyết, mã lớp.
 
 // Mã năng lực → mã dạng lớp (mục 8). Chưa cần mã lớp: NM, NL*, DHNC, SOLO.

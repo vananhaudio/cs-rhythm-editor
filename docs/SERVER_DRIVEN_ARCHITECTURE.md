@@ -35,8 +35,28 @@ Mọi quyết định mở/khoá đọc từ `my_learning_state()`. Muốn đổ
 `app_config.learning_state_mode = 'client'` hoặc RPC lỗi — không mở rộng thêm.
 
 ### Công tắc & rollback (không cần build)
-- `app_config.learning_state_mode`: `'server'` (mặc định) / `'client'` (fallback legacy).
+- `app_config.learning_state_mode`: **`'server'` = production canonical** / **`'client'` = EMERGENCY LEGACY FALLBACK ONLY**.
 - Bug ở resolver → đổi key này là toàn bộ app quay về logic cũ ngay.
+- Nhánh client là cơ chế migration TẠM THỜI: **cấm phát triển thêm tính năng trên nhánh này**.
+- TODO(cleanup): khi build 18 đã ổn định production đủ lâu và không còn cần rollback —
+  chuyển 2 màn desktop legacy (`LessonViewerPage`, `StudentPortalV2`) sang `learningState.ts`
+  rồi XOÁ hẳn nhánh client (`contentAccess.ts` resolver + PREREQ trong `hanhtrinh.ts`)
+  trong một release bảo trì. Không build mới chỉ để xoá sớm.
+
+## RELEASE BOUNDARY — cái gì được phép kéo theo build store
+
+**KHÔNG BUILD** (vận hành hằng ngày — Admin/Server): course, lesson, content, visibility,
+open/locked, grant/revoke từng học sinh, enrollment, package, expiry, prerequisite, journey,
+thứ tự, public/trial, banner, notification, video, PDF, audio, link, feature flag của
+capability đã có, và công tắc `learning_state_mode`.
+
+**CẦN BUILD** (đổi engine/capability thật): native plugin, microphone, audio engine, MIDI,
+Bluetooth, camera, authentication shell, Capacitor, SDK requirement, crash/client bug,
+renderer LOẠI MỚI app chưa biết, native UX capability mới.
+
+> **Operational change is never a reason for an App Store release.**
+> **WEB/BACKEND DEPLOY ≠ MOBILE BUILD.** Repo có thay đổi không có nghĩa phải build app —
+> chỉ build khi thay đổi thực sự ảnh hưởng binary/native/client bundle cần phát hành.
 
 ## Bảng phân loại: sửa Ở ĐÂU
 
