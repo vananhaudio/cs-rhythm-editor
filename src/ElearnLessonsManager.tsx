@@ -60,10 +60,20 @@ export default function ElearnLessonsManager() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const [{ data: lsns }, { data: cfgs }] = await Promise.all([
-      supabase.from('edu_course_lessons').select('id,title,content').eq('content_url', ELEARN_URL),
+    // Metadata đọc trực tiếp; NỘI DUNG lấy qua RPC teacher-only get_lessons_content_admin()
+    // (không phụ thuộc quyền SELECT cột content sắp bị revoke).
+    const [{ data: lsnMeta }, { data: cfgs }] = await Promise.all([
+      supabase.from('edu_course_lessons').select('id,title').eq('content_url', ELEARN_URL),
       supabase.from('elearn_lessons').select('*').eq('course_slug', COURSE_SLUG),
     ])
+    const ids = (lsnMeta ?? []).map((l: any) => l.id)
+    const { data: contents, error: cErr } = ids.length
+      ? await supabase.rpc('get_lessons_content_admin', { p_lesson_ids: ids })
+      : { data: [], error: null }
+    if (cErr) { console.error('Tải nội dung bài lỗi:', cErr.message); return }
+    const contentById: Record<string, string | null> = {}
+    ;(contents ?? []).forEach((r: any) => { contentById[r.id] = r.content })
+    const lsns = (lsnMeta ?? []).map((l: any) => ({ ...l, content: contentById[l.id] ?? null }))
     const lm: Record<number, CourseLesson> = {}
     ;(lsns ?? []).forEach((l: any) => {
       try {

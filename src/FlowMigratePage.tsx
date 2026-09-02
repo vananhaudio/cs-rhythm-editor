@@ -61,11 +61,21 @@ export default function FlowMigratePage() {
 
   async function load() {
     setLoading(true)
-    const [{ data: lsns }, { data: cfgs }, { data: flows }] = await Promise.all([
-      supabase.from('edu_course_lessons').select('id,title,content').eq('content_url', ELEARN_URL),
+    // Metadata đọc trực tiếp; NỘI DUNG lấy qua RPC teacher-only get_lessons_content_admin()
+    // (không phụ thuộc quyền SELECT cột content sắp bị revoke).
+    const [{ data: lsnMeta }, { data: cfgs }, { data: flows }] = await Promise.all([
+      supabase.from('edu_course_lessons').select('id,title').eq('content_url', ELEARN_URL),
       supabase.from('elearn_lessons').select('*').eq('course_slug', COURSE_SLUG),
       supabase.from('flows').select('id,lesson_id'),
     ])
+    const ids = (lsnMeta ?? []).map((l: { id: string }) => l.id)
+    const { data: contents, error: cErr } = ids.length
+      ? await supabase.rpc('get_lessons_content_admin', { p_lesson_ids: ids })
+      : { data: [], error: null }
+    if (cErr) { console.error('Tải nội dung bài lỗi:', cErr.message); setLoading(false); return }
+    const contentById: Record<string, string | null> = {}
+    ;(contents ?? []).forEach((r: { id: string; content: string | null }) => { contentById[r.id] = r.content })
+    const lsns = (lsnMeta ?? []).map((l: { id: string; title: string }) => ({ ...l, content: contentById[l.id] ?? null }))
     const cfgMap: Record<number, Record<string, unknown>> = {}
     ;(cfgs ?? []).forEach((r: Record<string, unknown>) => { cfgMap[r.lesson_num as number] = r })
     const flowLessonIds = new Set((flows ?? []).map((f: { lesson_id: string }) => f.lesson_id))

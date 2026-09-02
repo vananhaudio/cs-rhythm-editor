@@ -38,6 +38,11 @@ const STATUS_CFG: Record<CourseStatus, { label: string; dot: string; color: stri
   off:         { label: '✕ Tắt',         dot: '#A1A1AA', color: '#71717A', bg: '#F4F4F5', border: '#D4D4D8' },
 }
 interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null; level: number | null; is_free?: boolean }
+// Cột metadata đọc trực tiếp được. `content` KHÔNG có ở đây — nội dung bài lấy qua
+// RPC get_lessons_content_admin() (teacher-only, db/secure_lesson_content_setup.sql),
+// để khi vòng native sau revoke quyền SELECT cột content thì Admin không gãy.
+const LESSON_COLS = 'id,module_id,title,lesson_type,content_url,description,tools,order_index,duration_min,tier,access_policy_mode,required_tier,visibility,availability,allow_preview'
+
 interface Lesson  {
   id: string; module_id: string; title: string; lesson_type: string
   content_url: string | null; description: string | null; content: string | null
@@ -240,6 +245,9 @@ export default function CourseEditorContent() {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
   const [saving, setSaving]               = useState(false)
   const [saved, setSaved]                 = useState(false)
+  // Đang nạp nội dung bài qua RPC → khoá nút Lưu (chống ghi đè rỗng lên bài thật)
+  const [contentLoading, setContentLoading] = useState(false)
+  const selectReqRef = useRef(0)   // chống race khi bấm nhanh sang bài khác
   const [newModuleName, setNewModuleName] = useState('')
   const [addingModule, setAddingModule]   = useState(false)
   const [popupModuleId, setPopupModuleId] = useState<string | null>(null)
@@ -334,18 +342,35 @@ export default function CourseEditorContent() {
     setModules(mods ?? [])
     if (mods && mods.length > 0) {
       const { data: lsns } = await supabase.from('edu_course_lessons')
-        .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
-      setLessons((lsns ?? []).map((l: Lesson & { tools?: unknown }) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] })))
+        .select(LESSON_COLS).in('module_id', mods.map((m: Module) => m.id)).order('order_index')
+      // content = null ở danh sách; nạp khi chọn bài để sửa (selectLesson)
+      setLessons((lsns ?? []).map((l: any) => ({ ...l, content: null, tools: Array.isArray(l.tools) ? l.tools : [] })))
     } else setLessons([])
   }, [])
 
-  const selectLesson = (lesson: Lesson) => {
+  // Nạp NỘI DUNG bài qua RPC teacher-only (không đọc thẳng cột content — cột đó
+  // sẽ bị revoke ở vòng native sau). Trả null khi lỗi để caller biết mà KHÔNG lưu đè.
+  const fetchAdminContent = async (lessonId: string): Promise<string | null> => {
+    const { data, error } = await supabase.rpc('get_lessons_content_admin', { p_lesson_ids: [lessonId] })
+    if (error) { console.error('Tải nội dung bài lỗi:', error.message); return null }
+    const row = Array.isArray(data) ? data[0] : data
+    return row?.content ?? ''
+  }
+
+  const selectLesson = async (lesson: Lesson) => {
+    const req = ++selectReqRef.current
     setSelectedLesson(lesson)
     setFTitle(lesson.title ?? '')
     setFType(lesson.lesson_type ?? 'video')
     setFUrl(lesson.content_url ?? '')
     setFDesc(lesson.description ?? '')
-    setFContent(lesson.content ?? '')
+    // Nội dung: nạp qua RPC. Trong lúc chờ KHÓA nút Lưu để không ghi đè rỗng lên bài thật.
+    setFContent('')
+    setContentLoading(true)
+    const c = await fetchAdminContent(lesson.id)
+    if (req !== selectReqRef.current) return       // đã bấm sang bài khác → bỏ kết quả cũ
+    setFContent(c ?? '')
+    setContentLoading(c === null)                  // lỗi tải → vẫn khoá Lưu, tránh mất nội dung
     setFTools(Array.isArray(lesson.tools) ? lesson.tools : [])
     setFTier((lesson as Lesson & { tier?: string }).tier ?? 'free')
     setFPolicyMode(lesson.access_policy_mode ?? 'inherit')
@@ -358,6 +383,8 @@ export default function CourseEditorContent() {
 
   const saveLesson = async () => {
     if (!selectedLesson) return
+    // Nội dung chưa nạp xong (hoặc nạp lỗi) → KHÔNG lưu, tránh ghi rỗng đè bài thật
+    if (contentLoading) { alert('Đang tải nội dung bài — thử lại sau giây lát.'); return }
     setSaving(true)
     const saveUrl = fType === 'slide' && fUrl ? normalizeCanvaUrl(fUrl) : (fUrl || null)
     const policyPatch = fPolicyMode === 'inherit'
@@ -466,9 +493,9 @@ export default function CourseEditorContent() {
 
   const addLesson = async (moduleId: string, type: string) => {
     const count = lessons.filter(l => l.module_id === moduleId).length
-    const { data, error } = await supabase.from('edu_course_lessons').insert({ module_id: moduleId, title: `Bài ${count + 1}: (Chưa đặt tên)`, lesson_type: type, order_index: count, tools: [] }).select('*').single()
+    const { data, error } = await supabase.from('edu_course_lessons').insert({ module_id: moduleId, title: `Bài ${count + 1}: (Chưa đặt tên)`, lesson_type: type, order_index: count, tools: [] }).select(LESSON_COLS).single()
     if (error) { alert('Lỗi: ' + error.message); return }
-    if (data) { const nl = { ...data, tools: [] }; setLessons(prev => [...prev, nl]); selectLesson(nl) }
+    if (data) { const nl = { ...(data as any), content: null, tools: [] }; setLessons(prev => [...prev, nl]); selectLesson(nl) }
   }
 
   const addModule = async () => {
@@ -521,9 +548,9 @@ export default function CourseEditorContent() {
             module_id: mod.id, title: l.title, lesson_type: l.lesson_type,
             content_url: l.content_url, order_index: i, tools: [],
           }))
-          const { data: lsns, error: le } = await supabase.from('edu_course_lessons').insert(rows).select('*')
+          const { data: lsns, error: le } = await supabase.from('edu_course_lessons').insert(rows).select(LESSON_COLS)
           if (le) throw new Error(le.message)
-          newLsns.push(...(lsns ?? []).map((l: Lesson & { tools?: unknown }) => ({ ...l, tools: [] })))
+          newLsns.push(...(lsns ?? []).map((l: any) => ({ ...l, content: null, tools: [] })))
         }
       }
       setModules(prev => [...prev, ...newMods])
@@ -596,7 +623,7 @@ export default function CourseEditorContent() {
           } else {
             const { data: nl, error: le } = await supabase.from('edu_course_lessons')
               .insert({ module_id: mod!.id, title, lesson_type: 'flow', order_index: orderIdx++, tools: [] })
-              .select('*').single()
+              .select(LESSON_COLS).single()
             if (le || !nl) throw le ?? new Error('Lỗi tạo bài')
             lessonId = nl.id
             allLsns.push(nl as Lesson)
@@ -1153,7 +1180,7 @@ export default function CourseEditorContent() {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                 {saved && <span style={{ fontSize: 13, color: C.success }}>✓ Đã lưu</span>}
                 <Btn variant="secondary" onClick={() => setSelectedLesson(null)}>Đóng</Btn>
-                <Btn variant="primary" onClick={saveLesson}>{saving ? 'Đang lưu...' : '💾 Lưu'}</Btn>
+                <Btn variant="primary" onClick={saveLesson}>{saving ? 'Đang lưu...' : contentLoading ? 'Đang tải nội dung...' : '💾 Lưu'}</Btn>
               </div>
             </div>
 

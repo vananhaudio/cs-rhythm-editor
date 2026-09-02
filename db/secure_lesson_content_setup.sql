@@ -71,6 +71,31 @@ end $$;
 revoke all on function public.get_lesson_content(uuid) from public;
 grant execute on function public.get_lesson_content(uuid) to anon, authenticated;
 
+-- ── 3. ĐỌC NỘI DUNG HÀNG LOẠT CHO ADMIN (Course Editor, Flow, Elearn) ────────
+-- Màn soạn bài cần content THẬT của nhiều bài cùng lúc (danh sách elearn, migrate).
+-- Không dùng get_lesson_content() N lần, và KHÔNG dựa vào quyền SELECT cột content
+-- trực tiếp (quyền đó sẽ bị revoke ở vòng native sau).
+-- Chỉ teacher/admin: is_teacher() — học viên gọi bị từ chối 42501.
+create or replace function public.get_lessons_content_admin(p_lesson_ids uuid[])
+returns table (id uuid, content text, content_url text)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if not coalesce(public.is_teacher(), false) then
+    raise exception 'Chỉ giáo viên được đọc nội dung hàng loạt' using errcode = '42501';
+  end if;
+  return query
+    select l.id, l.content, l.content_url
+    from public.edu_course_lessons l
+    where l.id = any(coalesce(p_lesson_ids, '{}'::uuid[]));
+end $$;
+
+revoke all on function public.get_lessons_content_admin(uuid[]) from public;
+grant execute on function public.get_lessons_content_admin(uuid[]) to authenticated;
+
 -- ── CHƯA REVOKE QUYỀN ĐỌC TRỰC TIẾP (có chủ đích) ────────────────────────────
 -- KHÔNG chạy revoke dưới đây cho tới khi bản native MỚI đã phát hành và số
 -- lượng bản cũ còn lại đủ nhỏ. Bundle iOS/Android đang phát hành gọi
