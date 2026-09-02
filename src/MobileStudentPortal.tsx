@@ -122,6 +122,11 @@ interface Lesson {
   visibility?: string | null; availability?: string | null; allow_preview?: boolean | null
 }
 
+// Cột được phép lấy trực tiếp ở DANH SÁCH bài (metadata để vẽ mục lục).
+// `content` KHÔNG nằm ở đây: nội dung thật đi qua RPC get_lesson_content() có
+// kiểm quyền server. Xem db/secure_lesson_content_setup.sql.
+const LESSON_LIST_COLS = 'id,module_id,title,lesson_type,content_url,description,tools,order_index,tier,access_policy_mode,required_tier,visibility,availability,allow_preview'
+
 function uname(s: Student) {
   if (s.display_name?.trim()) return s.display_name.trim()
   const n = s.full_name ?? ''
@@ -1411,24 +1416,31 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     if (modErr) { console.error('Lỗi tải khoá:', modErr); setNavNotice('Không tải được bài học. Thử lại nhé.'); return }
     setModules(mods ?? [])
     if (mods?.length) {
+      // KHÔNG lấy cột `content` ở danh sách — nội dung thật chỉ đọc qua RPC
+      // get_lesson_content() có kiểm quyền server (db/secure_lesson_content_setup.sql).
       const { data: lsns, error: lsnErr } = await supabase.from('edu_course_lessons')
-        .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
+        .select(LESSON_LIST_COLS).in('module_id', mods.map((m: Module) => m.id)).order('order_index')
       if (lsnErr) { console.error('Lỗi tải bài học:', lsnErr); setNavNotice('Không tải được bài học. Thử lại nhé.'); return }
-      const parsed = (lsns ?? []).map((l: Lesson & {tools?: unknown}) => ({ ...l, tools: Array.isArray(l.tools) ? l.tools : [] }))
+      // content = null ở danh sách: chỉ nạp khi MỞ bài, qua RPC có kiểm quyền
+      const parsed: Lesson[] = (lsns ?? []).map((l: any) => ({ ...l, content: null, tools: Array.isArray(l.tools) ? l.tools : [] }))
       setLessons(parsed)
       const ownedNow = preview || freeCourses.has(courseId) || accessCourses.has(courseId) || ownedCourseIds.has(courseId)
       // Mở THẲNG vào 1 bài cụ thể (nút Học tiếp / Học ngay) — nếu bài mở được
       if (targetLessonId) {
         const t = parsed.find(l => l.id === targetLessonId)
         const tAccess = t ? resolveLessonAccess(t, courseForAccess ?? { is_free: true, status: 'on' }, effectiveTier, { courseLegacyUnlocked: ownedNow, preview }) : null
-        if (t && tAccess?.canAccess) { setReturnLessonId(t.id); setActiveLesson(t); setLessonTab('content'); try { setUsedToolIds(new Set(JSON.parse(localStorage.getItem(usedToolsKey(t.id)) || '[]'))) } catch { /**/ } setScreen('lesson'); return }
+        if (t && tAccess?.canAccess) {
+          const full = await fetchLessonContent(t)
+          if (full) { setReturnLessonId(t.id); setActiveLesson(full); setLessonTab('content'); try { setUsedToolIds(new Set(JSON.parse(localStorage.getItem(usedToolsKey(t.id)) || '[]'))) } catch { /**/ } setScreen('lesson'); return }
+          setNavNotice('Không tải được nội dung bài. Thử lại nhé.')
+        }
       }
       // Khoá elearn 1 bài → mở thẳng không qua màn hình danh sách (CHỈ khi đã sở hữu — khoá nền thiếu thì luôn dừng ở mục lục)
       if (parsed.length === 1 && parsed[0].lesson_type === 'link' && parsed[0].content_url?.startsWith('/lessons/')
         && resolveLessonAccess(parsed[0], courseForAccess ?? { is_free: true, status: 'on' }, effectiveTier, { courseLegacyUnlocked: ownedNow, preview }).canAccess) {
-        setActiveLesson(parsed[0])
-        setScreen('lesson')
-        return
+        const full = await fetchLessonContent(parsed[0])
+        if (full) { setActiveLesson(full); setScreen('lesson'); return }
+        setNavNotice('Không tải được nội dung bài. Thử lại nhé.')
       }
     }
     setScreen('courses')
@@ -1443,10 +1455,26 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
   const noteKey = (lessonId: string) => `note:${student.id}:${lessonId}`
 
-  const openLesson = (l: Lesson) => {
+  // Nạp NỘI DUNG THẬT của bài qua đường an toàn: RPC get_lesson_content() kiểm
+  // quyền ở server bằng chính my_learning_state (db/secure_lesson_content_setup.sql).
+  // Server từ chối (42501) hoặc lỗi mạng → trả null, KHÔNG mở bài rỗng im lặng.
+  const fetchLessonContent = async (l: Lesson): Promise<Lesson | null> => {
+    const { data, error } = await supabase.rpc('get_lesson_content', { p_lesson_id: l.id })
+    if (error) { console.error('Tải nội dung bài lỗi:', error.message); return null }
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return null
+    return { ...l, content: row.content ?? null, content_url: row.content_url ?? l.content_url }
+  }
+
+  const openLesson = async (l: Lesson) => {
     if (!isUnlocked(l)) return // khoá, không mở
+    if (openingLessonId) return
+    setOpeningLessonId(l.id)
+    const full = await fetchLessonContent(l)
+    setOpeningLessonId(null)
+    if (!full) { setNavNotice('Không tải được nội dung bài. Thử lại nhé.'); return }
     setReturnLessonId(l.id)   // nhớ để khi quay lại danh sách cuộn về đúng bài
-    setActiveLesson(l)
+    setActiveLesson(full)
     setLessonTab('content')
     // Khôi phục tool đã thực hành của bài này (nếu có) → không bị "khoá lại" khi mở lại
     try {

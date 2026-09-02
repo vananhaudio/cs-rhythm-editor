@@ -30,6 +30,10 @@ interface Lesson {
   access_policy_mode?: string | null; required_tier?: string | null
   visibility?: string | null; availability?: string | null; allow_preview?: boolean | null
 }
+// Cột metadata được phép đọc trực tiếp ở danh sách bài. `content` KHÔNG có ở đây:
+// nội dung thật đi qua RPC get_lesson_content() (db/secure_lesson_content_setup.sql).
+const LESSON_LIST_COLS = 'id,module_id,title,lesson_type,content_url,description,tools,order_index,is_published,tier,access_policy_mode,required_tier,visibility,availability,allow_preview'
+
 interface Course {
   id: string; name: string; type: string; code?: string | null; status?: string | null; is_free?: boolean | null
   access_policy_enabled?: boolean | null; required_tier?: string | null
@@ -75,6 +79,8 @@ export default function LessonViewerPage() {
   const [modules, setModules] = useState<Module[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [active, setActive]   = useState<Lesson | null>(null)
+  // Nội dung bài đã nạp xong qua đường an toàn chưa (false = đang tải / bị từ chối)
+  const [contentReady, setContentReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [toolMap, setToolMap] = useState<Record<string, { label: string; icon: string; route: string }>>(TOOL_LABELS)
   const [studentId, setStudentId] = useState('')
@@ -187,10 +193,13 @@ export default function LessonViewerPage() {
       setCourse(c)
       setModules(mods ?? [])
       if (mods && mods.length > 0) {
+        // KHÔNG lấy cột `content` ở danh sách — nội dung thật đọc qua RPC
+        // get_lesson_content() có kiểm quyền server (db/secure_lesson_content_setup.sql).
         const { data: lsns } = await supabase.from('edu_course_lessons')
-          .select('*').in('module_id', mods.map((m: Module) => m.id)).order('order_index')
-        const parsed = (lsns ?? []).map((l: Lesson & { tools?: unknown }) => ({
-          ...l, tools: Array.isArray(l.tools) ? l.tools : [],
+          .select(LESSON_LIST_COLS).in('module_id', mods.map((m: Module) => m.id)).order('order_index')
+        // content = null ở danh sách: chỉ nạp khi MỞ bài, qua RPC có kiểm quyền
+        const parsed: Lesson[] = (lsns ?? []).map((l: any) => ({
+          ...l, content: null, tools: Array.isArray(l.tools) ? l.tools : [],
         }))
         setLessons(parsed)
         if (parsed.length > 0) setActive(parsed.find((l: Lesson) => l.id === wantLessonId) ?? parsed[0])
@@ -206,6 +215,25 @@ export default function LessonViewerPage() {
     }
     load()
   }, [courseId])
+
+  // ── Nạp NỘI DUNG THẬT của bài đang mở qua RPC có kiểm quyền server ──
+  // (db/secure_lesson_content_setup.sql — cùng luật với my_learning_state).
+  useEffect(() => {
+    const id = active?.id
+    if (!id) { setContentReady(false); return }
+    let cancelled = false
+    setContentReady(false)
+    supabase.rpc('get_lesson_content', { p_lesson_id: id }).then(({ data, error }) => {
+      if (cancelled) return
+      if (error) { console.error('Tải nội dung bài lỗi:', error.message); return }
+      const row = Array.isArray(data) ? data[0] : data
+      setActive(prev => prev && prev.id === id
+        ? { ...prev, content: row?.content ?? null, content_url: row?.content_url ?? prev.content_url }
+        : prev)
+      setContentReady(true)
+    })
+    return () => { cancelled = true }
+  }, [active?.id])
 
   useEffect(() => {
     if (!studentId || !course?.id) { setCourseLegacyUnlocked(false); return }
@@ -393,7 +421,7 @@ export default function LessonViewerPage() {
       })()}
 
       {/* ── BÀI STRUM SCORE — overlay full màn ── */}
-      {active && activeAccess?.canAccess && active.lesson_type === 'strum' && (
+      {active && activeAccess?.canAccess && contentReady && active.lesson_type === 'strum' && (
         <ChordStrumPlayer song={configToSong(parseStrumConfig(active.content), active.title)} onClose={() => setActive(null)} onComplete={() => completeNative(active)} studentId={studentId} lessonId={active.id} />
       )}
 
@@ -519,7 +547,7 @@ export default function LessonViewerPage() {
                 />
               </div>
             )}
-{active.lesson_type === 'quiz' && (
+{active.lesson_type === 'quiz' && contentReady && (
               <QuizViewer
                 lessonId={active.id}
                 studentId={studentId}
