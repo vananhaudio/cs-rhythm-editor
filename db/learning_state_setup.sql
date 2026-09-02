@@ -205,7 +205,8 @@ begin
       'missing_prereqs', to_jsonb(cr.missing_prereqs),
       'completed', (cr.code is not null and upper(trim(cr.code)) = any(v_completed_codes)),
       'modules', coalesce((
-        select jsonb_agg(jsonb_build_object('id', m.id, 'name', m.name, 'order_index', m.order_index, 'level', m.level)
+        select jsonb_agg(jsonb_build_object('id', m.id, 'name', m.name, 'order_index', m.order_index, 'level', m.level,
+                                            'is_free', coalesce(m.is_free, false))
                order by m.order_index)
         from edu_modules m where m.course_id = cr.id), '[]'::jsonb),
       'lessons', coalesce((
@@ -215,11 +216,28 @@ begin
             'visible', case when coalesce(cr.access_policy_enabled, false) and coalesce(l.access_policy_mode, 'inherit') = 'override'
                             then coalesce(l.visibility, 'visible') = 'visible' else cr.r_visible end,
             'completed', (l.id = any(v_completed)),
+            -- Cờ FREE cho UI badge "MIỄN PHÍ" (chương free / bài free / khoá free)
+            'free', (coalesce(m.is_free, false)
+              or case when coalesce(cr.access_policy_enabled, false)
+                   then case when coalesce(l.access_policy_mode, 'inherit') = 'override'
+                          then coalesce(l.required_tier, 'free') = 'free'
+                               and coalesce(l.visibility, 'visible') = 'visible'
+                               and coalesce(l.availability, 'available') = 'available'
+                          else coalesce(cr.required_tier, 'free') = 'free' end
+                   else coalesce(cr.is_free, true) or coalesce(l.tier, 'free') = 'free' end),
             'access', case
               when not cr.r_visible then 'hidden'
               when not cr.r_available then 'coming_soon'
               when array_length(cr.missing_prereqs, 1) > 0 then 'prereq'
               when v_is_teacher then 'open'
+              -- CHƯƠNG FREE (edu_modules.is_free) → mở mọi bài trong chương (Admin quyết,
+              -- db/free_content_setup.sql) — TRỪ bài Admin đã override ẩn/sắp có.
+              when coalesce(m.is_free, false)
+                   and not (coalesce(cr.access_policy_enabled, false)
+                            and coalesce(l.access_policy_mode, 'inherit') = 'override'
+                            and (coalesce(l.visibility, 'visible') <> 'visible'
+                                 or coalesce(l.availability, 'available') <> 'available'))
+                then 'open'
               -- lesson override policy
               when coalesce(cr.access_policy_enabled, false) and coalesce(l.access_policy_mode, 'inherit') = 'override' then
                 case when coalesce(l.visibility, 'visible') <> 'visible' then 'hidden'

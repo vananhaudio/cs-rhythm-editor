@@ -15,8 +15,9 @@ export type SrvLesson = {
   id: string; module_id: string; title: string; order_index: number
   lesson_type: string | null; content_url: string | null
   visible: boolean; access: SrvAccess; completed: boolean
+  free?: boolean          // chương free / bài free / khoá free — chỉ để UI badge "MIỄN PHÍ"
 }
-export type SrvModule = { id: string; name: string; order_index: number; level: number | null }
+export type SrvModule = { id: string; name: string; order_index: number; level: number | null; is_free?: boolean }
 export type SrvCourse = {
   id: string; name: string; code: string | null; track: string | null; type: string
   icon: string | null; image_url: string | null; sort_order: number | null

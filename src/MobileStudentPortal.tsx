@@ -366,6 +366,14 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [openingLessonId, setOpeningLessonId] = useState<string | null>(null)
   const [navNotice, setNavNotice]         = useState('')
   const [showPaywall, setShowPaywall]     = useState(false)
+  // Bottom sheet chung cho MỌI nội dung khoá (một CTA đăng ký duy nhất — không recommendation)
+  const [showLockSheet, setShowLockSheet] = useState(false)
+  // Liên hệ Thầy — zalo_url canonical từ public_app_config (server-driven, không hardcode)
+  const [contactZaloUrl, setContactZaloUrl] = useState<string | null>(null)
+  useEffect(() => {
+    supabase.from('public_app_config').select('key,value').eq('key', 'zalo_url')
+      .then(({ data }) => { const v = (data ?? [])[0]?.value; if (v) setContactZaloUrl(String(v)) })
+  }, [])
   useEffect(() => {   // toast điều hướng tự ẩn
     if (!navNotice) return
     const t = window.setTimeout(() => setNavNotice(''), 2600)
@@ -638,11 +646,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
   // Paywall mở dạng overlay in-app (không full reload) → Back trả về ĐÚNG chỗ đang đứng
   const openUpgrade = () => setShowPaywall(true)
-  const explainUpgrade = () => setShowPaywall(true)
+  // Bấm BÀI KHOÁ → bottom sheet chung (copy đơn giản) → CTA dẫn vào cùng upgrade flow
+  const explainUpgrade = () => setShowLockSheet(true)
 
   const resetUserScopedState = () => {
-    setSrvActive(false); srvLessonAccess.current = new Map(); srvCourseByCode.current = new Map(); srvFetchedAt.current = 0
+    setSrvActive(false); srvLessonAccess.current = new Map(); srvCourseByCode.current = new Map(); srvLessonFree.current = new Set(); srvFetchedAt.current = 0
     setShowPaywall(false)
+    setShowLockSheet(false)
     setOpeningLessonId(null)
     setNavNotice('')
     setShowSettings(false)
@@ -1019,17 +1029,22 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   // thành fallback legacy (learning_state_mode='client' hoặc RPC lỗi).
   const [srvActive, setSrvActive] = useState(false)
   const srvLessonAccess = useRef<Map<string, SrvAccess>>(new Map())
+  const srvLessonFree = useRef<Set<string>>(new Set())   // bài free theo server (badge "MIỄN PHÍ")
   const srvCourseByCode = useRef<Map<string, SrvCourse>>(new Map())
   const srvFetchedAt = useRef(0)
 
   const applyServerState = (state: LearningState) => {
     srvFetchedAt.current = Date.now()
     const la = new Map<string, SrvAccess>(); const cbc = new Map<string, SrvCourse>()
+    const lf = new Set<string>()
     state.courses.forEach(c => {
-      c.lessons.forEach(l => la.set(l.id, c.access === 'prereq' ? 'open' : l.access)) // prereq xử lý ở seqLock (notice riêng)
+      c.lessons.forEach(l => {
+        la.set(l.id, c.access === 'prereq' ? 'open' : l.access) // prereq xử lý ở seqLock (notice riêng)
+        if (l.free) lf.add(l.id)
+      })
       if (c.code) cbc.set(c.code.trim().toUpperCase(), c)
     })
-    srvLessonAccess.current = la; srvCourseByCode.current = cbc
+    srvLessonAccess.current = la; srvCourseByCode.current = cbc; srvLessonFree.current = lf
     // View-model danh sách khoá (Enrollment-like — id 'srv-*' để phân biệt nguồn)
     setEnrollments(state.courses.map(c => ({
       id: (c.enrolled ? 'enr-' : 'public-') + c.id, course_id: c.id, enrolled_at: '',
@@ -1706,7 +1721,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     const a = lessonAccessOf(jl)
     if (!a.visible) return
     if (!a.available) { setNavNotice('Bài này sắp ra mắt.'); return }
-    if (!a.canAccess) { openUpgrade(); return } // khoá theo gói → nâng gói (flow hiện tại)
+    if (!a.canAccess) { explainUpgrade(); return } // khoá theo gói → paywall chung
     if (isSeqLocked(jl.courseCode)) { setNavNotice('Hãy hoàn thành bài trước để tiếp tục.'); return } // khoá tuần tự HT
     openCourse(jl.courseId, jl.id)               // available → mở thẳng player production
   }
@@ -1733,6 +1748,28 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     {showPaywall && (
       <div style={{ position: 'fixed', inset: 0, zIndex: 210, background: '#fff', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <SubscriptionPage onBack={() => setShowPaywall(false)} />
+      </div>
+    )}
+    {/* ── Bottom sheet BÀI KHOÁ (paywall chung) — 1 CTA đăng ký duy nhất, không recommendation ── */}
+    {showLockSheet && (
+      <div onClick={() => setShowLockSheet(false)} style={{ position: 'fixed', inset: 0, zIndex: 205, background: 'rgba(17,24,39,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 430, background: L.surface, borderRadius: '22px 22px 0 0', padding: '22px 20px calc(18px + env(safe-area-inset-bottom, 0px))', boxShadow: '0 -10px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 99, background: L.border, margin: '0 auto 16px' }} />
+          <div style={{ fontSize: 40, marginBottom: 10 }}>🔒</div>
+          <div style={{ fontSize: 17.5, fontWeight: 900, color: L.t1, marginBottom: 6 }}>Nội dung này chưa được mở khóa</div>
+          <div style={{ fontSize: 14, color: L.t2, lineHeight: 1.5, marginBottom: 18 }}>Đăng ký gói học để tiếp tục học toàn bộ nội dung.</div>
+          <button onClick={() => { setShowLockSheet(false); if (guest) requireLogin(); else openUpgrade() }}
+            style={{ width: '100%', background: L.p1, color: '#fff', border: 'none', borderRadius: 14, padding: '15px 16px', fontSize: 15.5, fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {guest ? 'Đăng nhập để tiếp tục' : 'Đăng ký để mở khóa'}
+          </button>
+          {contactZaloUrl && !guest && (
+            <div style={{ marginTop: 14, fontSize: 13, color: L.t3 }}>
+              Đã đăng ký nhưng vẫn thấy khóa?{' '}
+              <a href={contactZaloUrl} target="_blank" rel="noreferrer" style={{ color: L.p1, fontWeight: 800, textDecoration: 'none' }}>Liên hệ Thầy</a>
+            </div>
+          )}
+          <button onClick={() => setShowLockSheet(false)} style={{ marginTop: 12, background: 'none', border: 'none', color: L.t3, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Để sau</button>
+        </div>
       </div>
     )}
     {/* ── Finger Exercise overlay (fullscreen, position:fixed) ── */}
@@ -1848,20 +1885,40 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
 
         {/* ── TRANG CHỦ — trang cá nhân "sống" (read-only: XEM · CẢM NHẬN · KẾT NỐI). Không CTA học/luyện, không chuông, không dashboard. */}
         {tab === 'home' && (() => {
-          const trinhDo = guest ? 'Khách' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')
-          const goiLabel = entitlementLoading ? 'Đang tải gói...' : entitlementError ? 'Chưa tải được gói' : ENTITLEMENT_TIER_LABEL[effectiveTier]
+          const trinhDo = guest ? null : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')
           const rhythm = practiceStats
+          // ── MEMBERSHIP CARD — trạng thái gói từ ENTITLEMENT THẬT (ht_member > tier ladder).
+          // KHÔNG suy luận từ course access, KHÔNG tạo gói mới. Guest KHÔNG gọi là "Gói miễn phí".
+          const pkgKey = guest ? 'guest' : htMember ? 'journey' : effectiveTier
+          const PKG_UI: Record<string, { label: string; sub: string; bg: string; border: string; pillBg: string; pillFg: string; nameFg: string; subFg: string }> = {
+            guest:        { label: 'Chưa đăng nhập', sub: 'Đăng nhập để lưu tiến trình và mở nội dung của bạn.', bg: L.surface, border: L.border, pillBg: L.surface2, pillFg: L.t2, nameFg: L.t1, subFg: L.t2 },
+            free:         { label: 'Gói miễn phí', sub: 'Bạn đang học các nội dung miễn phí trên hệ thống.', bg: L.surface, border: '#E4E2F5', pillBg: '#EEF0FB', pillFg: '#4338CA', nameFg: L.t1, subFg: L.t2 },
+            khoi_dau_99:  { label: 'Gói Khởi đầu', sub: 'Gói học của bạn đang hoạt động.', bg: '#F5F6FF', border: '#C7CBF4', pillBg: '#4338CA', pillFg: '#fff', nameFg: L.t1, subFg: L.t2 },
+            can_ban_396:  { label: 'Gói Căn bản', sub: 'Gói học của bạn đang hoạt động.', bg: '#F4F1FE', border: '#C4B5FD', pillBg: '#6D28D9', pillFg: '#fff', nameFg: L.t1, subFg: L.t2 },
+            nang_cao_499: { label: 'Gói Nâng cao', sub: 'Gói học của bạn đang hoạt động.', bg: '#FFF6EF', border: '#FDBA74', pillBg: '#EA580C', pillFg: '#fff', nameFg: L.t1, subFg: L.t2 },
+            journey:      { label: 'Hành trình', sub: 'Đồng hành trọn lộ trình cùng Thầy.', bg: 'linear-gradient(135deg, #3730A3 0%, #6D28D9 60%, #7C3AED 100%)', border: 'transparent', pillBg: 'rgba(255,255,255,0.18)', pillFg: '#fff', nameFg: '#fff', subFg: 'rgba(255,255,255,0.82)' },
+          }
+          const ui = PKG_UI[pkgKey] ?? PKG_UI.free
+          const pillText = guest ? ui.label : entitlementLoading ? 'Đang tải gói...' : entitlementError ? 'Chưa tải được gói' : ui.label
           return (
           <div style={{ paddingBottom: 8 }}>
-            {/* HomeProfileHeader — HỒ SƠ GỌN (avatar + tên + trình độ·gói nằm ngang, không cover to) */}
-            <div style={{ padding: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 4px', display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 56, height: 56, borderRadius: 18, background: L.p2, display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 900, color: L.p1, overflow: 'hidden', flexShrink: 0, boxShadow: L.shadow }}>
+            {/* HomeMembershipCard — THẺ TRẠNG THÁI GÓI (tap = mở gói/nâng gói; guest = đăng nhập) */}
+            <div role="button" onClick={() => { if (guest) { requireLogin(); return } if (entitlementError) { loadEntitlement(); return } if (!entitlementLoading) openUpgrade() }}
+              style={{ margin: 'max(26px, calc(env(safe-area-inset-top, 0px) + 12px)) 18px 4px', padding: '16px 16px', borderRadius: 20, background: ui.bg, border: `1.5px solid ${ui.border}`, boxShadow: L.shadow, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left' }}>
+              <div style={{ width: 56, height: 56, borderRadius: 18, background: pkgKey === 'journey' ? 'rgba(255,255,255,0.16)' : L.p2, display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 900, color: pkgKey === 'journey' ? '#fff' : L.p1, overflow: 'hidden', flexShrink: 0 }}>
                 {me.avatar_url ? <img src={me.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name.charAt(0).toUpperCase()}
               </div>
-              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: L.t1, ...clamp1 }}>{name}</div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: L.t2, marginTop: 2 }}>{trinhDo} · {goiLabel}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 19, fontWeight: 900, color: ui.nameFg, ...clamp1 }}>{name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: ui.pillBg, color: ui.pillFg, fontSize: 12.5, fontWeight: 850, borderRadius: 99, padding: '5px 11px', whiteSpace: 'nowrap' }}>
+                    {pillText} <span style={{ fontSize: 10, opacity: 0.8 }}>▾</span>
+                  </span>
+                  {trinhDo && <span style={{ fontSize: 12.5, fontWeight: 700, color: ui.subFg }}>{trinhDo}</span>}
+                </div>
+                <div style={{ fontSize: 12.5, color: ui.subFg, marginTop: 6, lineHeight: 1.45 }}>{ui.sub}</div>
               </div>
+              {guest && <span style={{ background: L.p1, color: '#fff', fontSize: 12.5, fontWeight: 850, borderRadius: 12, padding: '9px 13px', flexShrink: 0 }}>Đăng nhập</span>}
             </div>
 
             {/* HomeJourneyCard — CON ĐƯỜNG CONG "HÀNH TRÌNH CỦA BẠN" (REUSE nguyên bản cũ d410385^: SVG sóng sin + cờ chặng theo màu skill + marker 🎸; nối data thật masterPath/scoreById/totalXP/classRank). READ-ONLY: đã bỏ CTA "Học tiếp". */}
@@ -2208,7 +2265,13 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                           {done ? '✅' : locked ? '🔒' : (icons[l.lesson_type] ?? '📄')}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: done ? L.green : locked ? L.t3 : L.t1 }}>{l.title}</div>
+                          <div style={{ fontSize: 14, fontWeight: 600, ...clamp2, lineHeight: 1.35, color: done ? L.green : locked ? L.t3 : L.t1 }}>
+                            {l.title}
+                            {/* Badge MIỄN PHÍ — chỉ cho người chưa có gói, bài đang mở nhờ Free (Admin quyết) */}
+                            {effectiveTier === 'free' && !done && !locked && srvLessonFree.current.has(l.id) && (
+                              <span style={{ marginLeft: 6, verticalAlign: 'middle', display: 'inline-block', background: '#DCFCE7', color: '#15803D', fontSize: 10, fontWeight: 850, letterSpacing: '.03em', borderRadius: 6, padding: '2px 6px' }}>MIỄN PHÍ</span>
+                            )}
+                          </div>
                           {seqLocked && !policyLocked && (
                             <div style={{ fontSize: 11, color: L.t3, marginTop: 2 }}>Hoàn thành bài trước để mở khoá</div>
                           )}
@@ -2216,7 +2279,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                             <div style={{ fontSize: 11, color: L.t3, fontWeight: 600, marginTop: 2 }}>Đang tải quyền truy cập...</div>
                           )}
                           {!accessPending && access.reason === 'requires_upgrade' && (
-                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>🔒 Cần {ENTITLEMENT_TIER_LABEL[access.requiredTier]} để mở bài này →</div>
+                            <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>🔒 Đăng ký gói học để mở bài này →</div>
                           )}
                           {access.reason === 'coming_soon' && (
                             <div style={{ fontSize: 11, color: L.gold, fontWeight: 600, marginTop: 2 }}>Sắp có</div>
@@ -3017,7 +3080,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 </div>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <div style={{ fontWeight: 900, fontSize: 18, lineHeight: 1.3, ...clamp2 }}>{name}</div>
-                  <div style={{ fontSize: 13, color: L.t2, marginTop: 2 }}>{guest ? 'Khách · Miễn phí' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
+                  <div style={{ fontSize: 13, color: L.t2, marginTop: 2 }}>{guest ? 'Chưa đăng nhập' : (LEVEL_VI[me.level ?? ''] ?? 'Học viên')}</div>
                 </div>
               </div>
               {(() => {
@@ -3043,11 +3106,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, color: L.t2, fontWeight: 750 }}>Gói của tôi</div>
                   <div style={{ fontSize: 16, fontWeight: 900, color: L.t1 }}>
-                    {entitlementLoading ? 'Đang tải...' : entitlementError ? 'Chưa tải được' : ENTITLEMENT_TIER_LABEL[effectiveTier]}
+                    {guest ? 'Chưa đăng nhập' : entitlementLoading ? 'Đang tải...' : entitlementError ? 'Chưa tải được' : htMember ? 'Hành trình' : effectiveTier === 'free' ? 'Gói miễn phí' : ENTITLEMENT_TIER_LABEL[effectiveTier]}
                   </div>
                 </div>
-                <button onClick={() => entitlementError ? loadEntitlement() : !entitlementLoading && openUpgrade()} disabled={entitlementLoading} style={{ background: entitlementError ? '#FEF2F2' : effectiveTier === 'free' ? L.p1 : L.p2, border: 'none', borderRadius: 12, padding: '9px 14px', color: entitlementError ? '#B91C1C' : effectiveTier === 'free' ? '#fff' : L.p1, fontSize: 13, fontWeight: 850, cursor: entitlementLoading ? 'wait' : 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: entitlementLoading ? 0.7 : 1 }}>
-                  {entitlementLoading ? '...' : entitlementError ? 'Thử lại' : effectiveTier === 'free' ? 'Nâng gói' : 'Quản lý gói'}
+                <button onClick={() => guest ? requireLogin() : entitlementError ? loadEntitlement() : !entitlementLoading && openUpgrade()} disabled={entitlementLoading} style={{ background: entitlementError ? '#FEF2F2' : effectiveTier === 'free' ? L.p1 : L.p2, border: 'none', borderRadius: 12, padding: '9px 14px', color: entitlementError ? '#B91C1C' : effectiveTier === 'free' ? '#fff' : L.p1, fontSize: 13, fontWeight: 850, cursor: entitlementLoading ? 'wait' : 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: entitlementLoading ? 0.7 : 1 }}>
+                  {guest ? 'Đăng nhập' : entitlementLoading ? '...' : entitlementError ? 'Thử lại' : effectiveTier === 'free' ? 'Nâng gói' : 'Quản lý gói'}
                 </button>
               </div>
             </div>

@@ -37,7 +37,7 @@ const STATUS_CFG: Record<CourseStatus, { label: string; dot: string; color: stri
   coming_soon: { label: '🔜 Sắp ra mắt', dot: '#D97706', color: '#D97706', bg: '#FFFBEB', border: '#FCD34D' },
   off:         { label: '✕ Tắt',         dot: '#A1A1AA', color: '#71717A', bg: '#F4F4F5', border: '#D4D4D8' },
 }
-interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null; level: number | null }
+interface Module  { id: string; course_id: string; name: string; order_index: number; description: string | null; level: number | null; is_free?: boolean }
 interface Lesson  {
   id: string; module_id: string; title: string; lesson_type: string
   content_url: string | null; description: string | null; content: string | null
@@ -448,6 +448,13 @@ export default function CourseEditorContent() {
     const { error } = await supabase.from('edu_modules').update({ level }).eq('id', moduleId)
     if (error) { alert('Lưu Level lỗi: ' + error.message); return }
     setModules(prev => prev.map(m => m.id === moduleId ? { ...m, level } : m))
+  }
+  // Chương MIỄN PHÍ — Admin quyết: bật = mọi bài trong chương mở cho tài khoản miễn phí
+  // (db/free_content_setup.sql + nhánh module-free trong my_learning_state)
+  const toggleModuleFree = async (moduleId: string, isFree: boolean) => {
+    const { error } = await supabase.from('edu_modules').update({ is_free: isFree }).eq('id', moduleId)
+    if (error) { alert('Lưu Miễn phí chương lỗi: ' + error.message); return }
+    setModules(prev => prev.map(m => m.id === moduleId ? { ...m, is_free: isFree } : m))
   }
   const saveModuleName = async (moduleId: string) => {
     if (!editingModuleName.trim()) return
@@ -1035,6 +1042,11 @@ export default function CourseEditorContent() {
                         onChange={e => { const v = e.target.value; setModules(prev => prev.map(m => m.id === mod.id ? { ...m, level: v === '' ? null : Math.max(1, Math.floor(Number(v))) } : m)) }}
                         onBlur={e => saveModuleLevel(mod.id, e.target.value)}
                         style={{ width: 44, flexShrink: 0, border: `1px solid ${C.border}`, borderRadius: 5, padding: '2px 4px', fontSize: 11, fontFamily: 'inherit', outline: 'none', color: C.text1, background: C.bg, textAlign: 'center' }} />
+                      <button onClick={e => { e.stopPropagation(); toggleModuleFree(mod.id, !(mod.is_free === true)) }}
+                        title="Cho phép học miễn phí — Khi bật, tất cả bài trong chương này đều được mở cho tài khoản miễn phí."
+                        style={{ background: mod.is_free ? '#DCFCE7' : C.bg, border: `1px solid ${mod.is_free ? '#86EFAC' : C.border}`, borderRadius: 5, padding: '2px 6px', fontSize: 10.5, fontWeight: 700, color: mod.is_free ? '#15803D' : C.text3, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit', lineHeight: 1.4 }}>
+                        {mod.is_free ? '🆓 Miễn phí' : '🆓'}
+                      </button>
                       <span style={{ color: C.text3, fontWeight: 400, flexShrink: 0 }}>{modLessons.length} bài</span>
                       <button onClick={e => { e.stopPropagation(); deleteModule(mod.id, mod.name) }}
                         title="Xoá chương này"
@@ -1165,7 +1177,7 @@ export default function CourseEditorContent() {
                 <div>
                   <Label>Mở khoá bài học</Label>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {[['free', '🆓 Học thử (ai cũng xem)'], ['basic', '🔒 Trong khoá (cần đăng ký)']].map(([v, lbl]) => {
+                    {[['free', '🆓 Miễn phí'], ['basic', '🔒 Trong khoá (cần đăng ký)']].map(([v, lbl]) => {
                       const on = (v === 'free') === (fTier === 'free')
                       return (
                         <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '7px 12px', borderRadius: 8, border: `1px solid ${on ? C.accent : C.border}`, background: on ? C.accentLight : C.surface, fontSize: 13, color: on ? C.accent : C.text2, fontWeight: on ? 600 : 400 }}>
@@ -1174,7 +1186,7 @@ export default function CourseEditorContent() {
                       )
                     })}
                   </div>
-                  <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài "Học thử" luôn mở cho mọi người (kể cả khoá trả phí) — dùng cho 1-2 bài đầu. Bài "Trong khoá" chỉ mở khi học viên được cấp quyền khoá đó.</div>
+                  <div style={{ fontSize: 12, color: C.text3, marginTop: 5 }}>Bài "Miễn phí" được mở ngay cả khi chương/khoá chưa được đặt miễn phí. Bài "Trong khoá" chỉ mở khi học viên có gói học hoặc được cấp quyền khoá đó. Muốn mở cả chương: bật 🆓 ở tên chương bên trái.</div>
                 </div>
 
                 <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, background: C.surface }}>
