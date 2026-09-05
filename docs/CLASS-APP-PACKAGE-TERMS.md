@@ -84,7 +84,7 @@ Enrollment cũ được giữ quyền bằng access_granted; enrollment mới do
 URL cần cấu hình trong App Store Connect / Google Pub/Sub push:
 `https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/store-subscription-notifications`
 
-**Chưa xác nhận URL notification đã được gắn trong hai console Store.** Hiện đường đối soát mỗi phút đã hoạt động; vì vậy không cam kết thu hồi ngay tức thì từ Store khi chưa hoàn tất cấu hình notification. Thời hạn đã lưu luôn được kiểm ngay ở backend, không chờ cron để hết quyền.
+**Đã kiểm tra console: Google Play RTDN đang tắt và chưa khai báo Cloud Pub/Sub topic; App Store Connect đang yêu cầu đăng nhập lại. Chưa hoàn tất cấu hình notification.** Hiện đường đối soát mỗi phút đã hoạt động; vì vậy không cam kết thu hồi ngay tức thì từ Store khi chưa hoàn tất cấu hình notification. Thời hạn đã lưu luôn được kiểm ngay ở backend, không chờ cron để hết quyền.
 
 Nguồn API: [Apple Subscription Status](https://developer.apple.com/documentation/appstoreserverapi/statusresponse), [Google subscriptionsv2](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2), [Google RTDN](https://developer.android.com/google/play/billing/rtdn-reference).
 
@@ -102,9 +102,13 @@ Nguồn API: [Apple Subscription Status](https://developer.apple.com/documentati
 
 ## 7. Giới hạn và việc tiếp theo
 
-- Hoàn tất gắn notification URL ở Apple/Google console, rồi gửi test notification và chạy sandbox renewal/refund. Cron đang là đường đối soát dự phòng.
+- Đăng nhập lại App Store Connect; xác định Google Cloud project và tạo/kết nối Pub/Sub topic (Google Play RTDN hiện đang tắt). Hoàn tất gắn notification URL, rồi gửi test notification và chạy sandbox renewal/refund. Cron đang là đường đối soát dự phòng.
 - Không thể bảo đảm phản ánh ngay thay đổi chưa nhận được từ Store khi API Store lỗi/mất kết nối. Lỗi xác minh không tự gia hạn hay tự đặt hạn mới.
 - Luồng Google thay purchase token do thay gói cần app sync token mới; notification token chưa có chủ được bỏ qua để không đoán học sinh. Chưa tự chuyển chủ qua linkedPurchaseToken.
 - App hiện tại là bundle (`capacitor.config.json` không có server.url). Quyền server áp dụng ngay cho app đã dùng my_learning_state; cải tiến refresh/fail-closed trong client cần phát hành bundle mới để đến máy cũ. Không tự build/upload Store trong đợt này.
 - Bản app cũ đọc trực tiếp danh sách bài chỉ nhận bài được phép học; app mới lấy metadata khóa/mở qua resolver. Không xóa dữ liệu học.
 - Cron xử lý 100 nguồn/lượt; khi số subscription lớn cần batch/concurrency có giới hạn và ưu tiên thông báo trực tiếp.
+
+## Bản web đã xuất bản
+
+Commit `a25fbdf` (Admin/quyền theo hạn), `d1d333d` (gộp route công cụ). Đã xác nhận cả `timming.vananhaudio.com` và `class.vananhaudio.com` tải bundle chứa quản trị gói và route guard mới. Các thay đổi dở không liên quan của trang tuyển sinh/billing được giữ ngoài commit.
