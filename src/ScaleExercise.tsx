@@ -1,102 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { playGuitarNote } from './audioEngine'
 import { STRING_COLORS, stringLabels, fretMarkers } from './guitarNotes'
+import { supabase } from './supabase'
+import { parseScaleWarmups } from './lib/scaleWarmups'
+import type { ScaleWarmup as Lesson } from './lib/scaleWarmups'
 
 // ── Hằng số ─────────────────────────────────────────────────────────────────
 const OPEN_FREQ = [82.41, 110, 146.83, 196, 246.94, 329.63]   // dây 6→1
-const NM = ['Đô','Đô#','Rê','Rê#','Mi','Fa','Fa#','Sol','Sol#','La','La#','Si']
 const OPC = [4, 9, 2, 7, 11, 4]   // pitch class dây buông, index 0=dây6 Mi trầm
-const WINDOW_START = 4             // phím đầu cửa sổ hiển thị
-const FRET_COUNT   = 5             // phím 4–8
-
-// ── Thế bấm ──────────────────────────────────────────────────────────────────
-// frets[stringIdx][]: mảng phím tuyệt đối trên từng dây (index 0=dây6)
-// roots: [{s,f}] — vị trí các nốt chủ âm (cam)
-interface PositionDef {
-  frets: number[][]
-  roots: { s: number; f: number }[]
-}
-
-const POS_6: PositionDef = {
-  frets: [
-    [5,7,8], // dây6
-    [5,7,8], // dây5
-    [5,7],   // dây4
-    [4,5,7], // dây3
-    [5,6,8], // dây2
-    [5,7,8], // dây1
-  ],
-  roots: [],  // điền theo bài
-}
-
-const POS_5: PositionDef = {
-  frets: [
-    [5,6,8], // dây6
-    [5,7,8], // dây5
-    [5,7,8], // dây4
-    [5,7],   // dây3
-    [5,6,8], // dây2
-    [5,6,8], // dây1
-  ],
-  roots: [],
-}
-
-// ── 4 Bài luyện ─────────────────────────────────────────────────────────────
-interface Lesson {
-  id: string
-  name: string
-  subtitle: string
-  pos: PositionDef
-  roots: { s: number; f: number }[]
-  unlockMin: number
-}
-
-const LESSONS: Lesson[] = [
-  {
-    id: 'major6',
-    name: 'Âm giai Trưởng',
-    subtitle: 'Đô trưởng · Thế dây 6',
-    pos: POS_6,
-    roots: [{ s: 0, f: 8 }, { s: 3, f: 5 }, { s: 5, f: 8 }],
-    unlockMin: 0,
-  },
-  {
-    id: 'major5',
-    name: 'Âm giai Trưởng',
-    subtitle: 'Fa trưởng · Thế dây 5',
-    pos: POS_5,
-    roots: [{ s: 1, f: 8 }, { s: 4, f: 6 }],
-    unlockMin: 60,
-  },
-  {
-    id: 'minor6',
-    name: 'Âm giai thứ',
-    subtitle: 'La thứ · Thế dây 6',
-    pos: POS_6,
-    roots: [{ s: 0, f: 5 }, { s: 3, f: 7 }, { s: 5, f: 5 }],
-    unlockMin: 120,
-  },
-  {
-    id: 'minor5',
-    name: 'Âm giai thứ',
-    subtitle: 'Rê thứ · Thế dây 5',
-    pos: POS_5,
-    roots: [{ s: 1, f: 5 }, { s: 2, f: 7 }],
-    unlockMin: 180,
-  },
-]
-
-// Bài khoá nâng cao (chỉ hiển thị)
-const LOCKED_LESSONS = [
-  { name: 'Ngũ cung', subtitle: 'Pentatonic · Thế dây 6' },
-  { name: 'Ngũ cung', subtitle: 'Pentatonic · Thế dây 5' },
-  { name: 'Âm giai Trưởng', subtitle: 'Vị trí 2 · Thế dây 4' },
-  { name: 'Âm giai thứ', subtitle: 'Vị trí 2 · Thế dây 4' },
-]
-
 // ── Tên nốt tại (string, fret) ───────────────────────────────────────────────
-function noteName(stringIdx: number, fret: number): string {
-  return NM[(OPC[stringIdx] + fret) % 12]
+function noteName(lesson: Lesson, stringIdx: number, fret: number): string {
+  return lesson.noteNames[(OPC[stringIdx] + fret) % 12] ?? '—'
 }
 
 // ── Xây chuỗi step (lên rồi xuống) ─────────────────────────────────────────
@@ -130,7 +44,7 @@ function playClick(accent: boolean) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Fretboard 5 phím (cửa sổ WINDOW_START .. WINDOW_START+FRET_COUNT-1)
+// Fretboard tự khớp cửa sổ phím của từng mẫu
 // Nốt trong thế = chấm mờ trắng; chủ âm = cam; đang chơi = tím + tên nốt
 // ═══════════════════════════════════════════════════════════════════════════════
 function ScaleFretboard({
@@ -140,6 +54,8 @@ function ScaleFretboard({
   lesson: Lesson
   activeStep: Step | null
 }) {
+  const WINDOW_START = Math.min(...lesson.pos.frets.flat())
+  const FRET_COUNT = Math.max(...lesson.pos.frets.flat()) - WINDOW_START + 1
   const BOARD_H = 180
   const STRING_CNT = 6
   const rowY  = (row: number) => ((row + 0.5) / STRING_CNT) * 100
@@ -183,7 +99,7 @@ function ScaleFretboard({
         }}>
 
           {/* Fret wires */}
-          {[1,2,3,4].map(i => (
+          {Array.from({ length: FRET_COUNT - 1 }, (_, i) => i + 1).map(i => (
             <div key={i} style={{
               position: 'absolute',
               left: `${(i / FRET_COUNT) * 100}%`,
@@ -194,8 +110,8 @@ function ScaleFretboard({
             }} />
           ))}
 
-          {/* Inlay dots (phím 5, 7 nằm trong cửa sổ 4–8) */}
-          {[4,5,6,7,8].map(fret => {
+          {/* Inlay dots trong cửa sổ phím của mẫu */}
+          {Array.from({ length: FRET_COUNT }, (_, i) => WINDOW_START + i).map(fret => {
             if (!fretMarkers.includes(fret)) return null
             const slot = fret - WINDOW_START
             return (
@@ -265,7 +181,7 @@ function ScaleFretboard({
                 }}>
                   {isActive && (
                     <span style={{ fontSize: 8, lineHeight: 1, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      {noteName(si, fret)}
+                      {noteName(lesson, si, fret)}
                     </span>
                   )}
                 </div>
@@ -304,16 +220,40 @@ interface Props {
   onClose: () => void
 }
 
-export default function ScaleExercise({ totalMinutes, onClose }: Props) {
-  const P1 = '#4338CA', A1 = '#EA580C', BG = '#F0F2F5'
-
-  // Danh sách bài đã mở
-  const unlockedLessons = useMemo(
-    () => LESSONS.filter(l => totalMinutes >= l.unlockMin),
-    [totalMinutes]
+export default function ScaleExercise(props: Props) {
+  const [lessons, setLessons] = useState<Lesson[] | null>(null)
+  const [error, setError] = useState(false)
+  const [retry, setRetry] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    setError(false)
+    async function load() {
+      try {
+        const { data, error } = await supabase.from('edu_tools').select('config')
+          .eq('id', 'bai-luyen-am-giai').single()
+        if (error) throw error
+        const parsed = parseScaleWarmups(data?.config?.scale_warmups)
+        if (!cancelled) setLessons(parsed)
+      } catch {
+        if (!cancelled) setError(true)
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [retry])
+  if (!lessons) return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#F0F2F5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, fontFamily: 'inherit' }}>
+      <div role={error ? 'alert' : 'status'}>{error ? 'Chưa tải được mẫu âm giai. Vui lòng thử lại.' : 'Đang tải mẫu âm giai…'}</div>
+      {error && <button onClick={() => setRetry(n => n + 1)} style={{ padding: '12px 20px', border: 0, borderRadius: 12, background: '#4338CA', color: '#fff', fontFamily: 'inherit' }}>Thử lại</button>}
+      <button onClick={props.onClose} style={{ padding: '12px 20px', border: 0, borderRadius: 12, fontFamily: 'inherit' }}>← Đóng</button>
+    </div>
   )
-  // Nếu chưa mở bài nào thì vẫn mở bài 1 (unlockMin=0)
-  const availableLessons = unlockedLessons.length > 0 ? unlockedLessons : [LESSONS[0]]
+  return <ScaleExercisePlayer {...props} lessons={lessons} />
+}
+
+function ScaleExercisePlayer({ totalMinutes, onClose, lessons }: Props & { lessons: Lesson[] }) {
+  const P1 = '#4338CA', A1 = '#EA580C', BG = '#F0F2F5'
+  const availableLessons = lessons
 
   const [lessonIdx, setLessonIdx] = useState(0)
   const [bpm,       setBpm]       = useState(60)
@@ -393,13 +333,7 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
   }, [])
 
   // Tên nốt đang chơi
-  const activeNoteName = activeStep ? noteName(activeStep.s, activeStep.f) : null
-
-  // Phần trăm mở khoá bài tiếp theo
-  const nextLocked = LESSONS.find(l => totalMinutes < l.unlockMin)
-  const progressPct = nextLocked
-    ? Math.min(100, (totalMinutes / nextLocked.unlockMin) * 100)
-    : 100
+  const activeNoteName = activeStep ? noteName(curLesson, activeStep.s, activeStep.f) : null
 
   return (
     <div style={{
@@ -430,19 +364,9 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
         <div style={{ background: 'rgba(255,255,255,.14)', borderRadius: 12, padding: '10px 14px' }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{curLesson.name}</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.8)', marginTop: 2 }}>{curLesson.subtitle}</div>
-          {nextLocked && (
-            <>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', marginTop: 6 }}>
-                Còn {nextLocked.unlockMin - totalMinutes}′ để mở "{nextLocked.name} · {nextLocked.subtitle}"
-              </div>
-              <div style={{ marginTop: 6, height: 4, borderRadius: 99, background: 'rgba(255,255,255,.2)' }}>
-                <div style={{ height: '100%', borderRadius: 99, background: '#fff', width: `${progressPct}%`, transition: 'width .4s' }} />
-              </div>
-            </>
-          )}
-          {!nextLocked && (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 4 }}>✓ Đã mở tất cả bài</div>
-          )}
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 6 }}>
+            Warmup hằng ngày · Đã tập {totalMinutes} phút
+          </div>
         </div>
       </div>
 
@@ -506,60 +430,31 @@ export default function ScaleExercise({ totalMinutes, onClose }: Props) {
         <div style={{ background: '#fff', borderRadius: 16, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
           <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>Chọn bài</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {LESSONS.map((l, i) => {
-              const locked   = totalMinutes < l.unlockMin
-              const isActive = !locked && availableLessons[lessonIdx % availableLessons.length]?.id === l.id
+            {lessons.map((l, i) => {
+              const isActive = curLesson.id === l.id
               return (
                 <button key={l.id}
-                  disabled={locked}
-                  onClick={() => {
-                    if (!locked) {
-                      const idx = availableLessons.findIndex(al => al.id === l.id)
-                      if (idx >= 0) setLessonIdx(idx)
-                    } else {
-                      alert(`Cần luyện thêm ${l.unlockMin - totalMinutes} phút để mở bài này.`)
-                    }
-                  }}
+                  onClick={() => setLessonIdx(i)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: isActive ? `${P1}14` : locked ? '#F9FAFB' : '#F3F4F6',
+                    background: isActive ? `${P1}14` : '#F3F4F6',
                     border: `1.5px solid ${isActive ? P1 : 'transparent'}`,
                     borderRadius: 12, padding: '10px 14px',
-                    cursor: locked ? 'default' : 'pointer',
-                    fontFamily: 'inherit', textAlign: 'left', opacity: locked ? 0.55 : 1,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit', textAlign: 'left',
                   }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: isActive ? P1 : '#374151' }}>
-                      {locked ? '🔒 ' : ''}{l.name}
+                      {l.name}
                     </div>
                     <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
                   </div>
-                  {locked
-                    ? <div style={{ fontSize: 12, color: '#9CA3AF', flexShrink: 0 }}>{l.unlockMin}′</div>
-                    : isActive
-                      ? <div style={{ fontSize: 12, fontWeight: 700, color: P1, flexShrink: 0 }}>● Đang dùng</div>
-                      : null
-                  }
+                  {isActive && <div style={{ fontSize: 12, fontWeight: 700, color: P1, flexShrink: 0 }}>● Đang dùng</div>}
                 </button>
               )
             })}
 
-            {/* Bài nâng cao khoá */}
-            {LOCKED_LESSONS.map((l, i) => (
-              <button key={`adv-${i}`}
-                onClick={() => alert('Dành cho học sinh nâng cao.')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  background: '#F9FAFB', border: '1.5px solid transparent',
-                  borderRadius: 12, padding: '10px 14px',
-                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', opacity: 0.45,
-                }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#374151' }}>🔒 Nâng cao · {l.name}</div>
-                  <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{l.subtitle}</div>
-                </div>
-              </button>
-            ))}
+
           </div>
         </div>
 
