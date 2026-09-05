@@ -10,5 +10,8 @@
 - Archive: `build/TVA-1.4.1-20.xcarchive`.
 - Bundle web đã đối chiếu khớp build phát hành (`index-CpQ5cZi8.js`).
 - Chưa kiểm thử trực tiếp trên iPhone trong lần phát hành này.
-- Upload thành công ngày 05/09/2026 lúc 14:34 (giờ Việt Nam); Apple đang xử lý build.
-- App Review: đã tạo phiên bản và lưu release notes; đang chờ gắn build để gửi duyệt.
+- Upload thành công ngày 05/09/2026 lúc 14:34 (giờ Việt Nam); Apple đã xử lý thành công.
+- App Review: **Waiting for Review**, đã gửi ngày 05/09/2026 lúc 14:39 (giờ Việt Nam).
+- Submission ID: `cda8edd9-17f6-4180-96be-afd6ab26a10d`; đúng phiên bản 1.4.1 (20).
+- Đã khai báo export compliance; giữ chế độ tự phát hành sau khi Apple duyệt.
+- Hồ sơ: https://appstoreconnect.apple.com/apps/6776205968/distribution/reviewsubmissions/details/cda8edd9-17f6-4180-96be-afd6ab26a10d
