@@ -84,7 +84,7 @@ Enrollment cũ được giữ quyền bằng access_granted; enrollment mới do
 URL cần cấu hình trong App Store Connect / Google Pub/Sub push:
 `https://wojmdilyflffvdtpovmq.supabase.co/functions/v1/store-subscription-notifications`
 
-**Đã kiểm tra console: Google Play RTDN đang tắt và chưa khai báo Cloud Pub/Sub topic; App Store Connect đang yêu cầu đăng nhập lại. Chưa hoàn tất cấu hình notification.** Hiện đường đối soát mỗi phút đã hoạt động; vì vậy không cam kết thu hồi ngay tức thì từ Store khi chưa hoàn tất cấu hình notification. Thời hạn đã lưu luôn được kiểm ngay ở backend, không chờ cron để hết quyền.
+**Ngày 05/09/2026: đã lưu Production Server URL và Sandbox Server URL trên App Store Connect cho app 6776205968, cùng trỏ endpoint trên; tải lại trang xác nhận cả hai được giữ nguyên.** Giao diện Apple hiện chỉ có ô URL, không có lựa chọn phiên bản hoặc nút gửi test; chưa xác minh delivery từ Apple bằng sự kiện thật/test notification. Google Play RTDN vẫn đang tắt và chưa khai báo Cloud Pub/Sub topic. Hiện đường đối soát mỗi phút đã hoạt động; vì vậy không cam kết thu hồi ngay tức thì từ Store khi chưa hoàn tất cấu hình notification. Thời hạn đã lưu luôn được kiểm ngay ở backend, không chờ cron để hết quyền.
 
 Nguồn API: [Apple Subscription Status](https://developer.apple.com/documentation/appstoreserverapi/statusresponse), [Google subscriptionsv2](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2), [Google RTDN](https://developer.android.com/google/play/billing/rtdn-reference).
 
@@ -102,7 +102,7 @@ Nguồn API: [Apple Subscription Status](https://developer.apple.com/documentati
 
 ## 7. Giới hạn và việc tiếp theo
 
-- Đăng nhập lại App Store Connect; xác định Google Cloud project và tạo/kết nối Pub/Sub topic (Google Play RTDN hiện đang tắt). Hoàn tất gắn notification URL, rồi gửi test notification và chạy sandbox renewal/refund. Cron đang là đường đối soát dự phòng.
+- Apple đã gắn cả hai URL; tiếp theo gửi test notification qua App Store Server API và chạy sandbox renewal/refund. Xác định Google Cloud project và tạo/kết nối Pub/Sub topic (Google Play RTDN hiện đang tắt). Cron đang là đường đối soát dự phòng.
 - Không thể bảo đảm phản ánh ngay thay đổi chưa nhận được từ Store khi API Store lỗi/mất kết nối. Lỗi xác minh không tự gia hạn hay tự đặt hạn mới.
 - Luồng Google thay purchase token do thay gói cần app sync token mới; notification token chưa có chủ được bỏ qua để không đoán học sinh. Chưa tự chuyển chủ qua linkedPurchaseToken.
 - App hiện tại là bundle (`capacitor.config.json` không có server.url). Quyền server áp dụng ngay cho app đã dùng my_learning_state; cải tiến refresh/fail-closed trong client cần phát hành bundle mới để đến máy cũ. Không tự build/upload Store trong đợt này.
