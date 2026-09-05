@@ -1,3 +1,4 @@
+import StudentPackagePanel from './StudentPackagePanel'
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
@@ -409,6 +410,8 @@ export default function StudentProfile({ studentId, onBack }: Props) {
             return <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, border: 'none', borderRadius: 7, cursor: 'pointer', padding: '8px 4px', fontSize: 13, fontWeight: 600, background: activeTab === tab ? T.header : 'none', color: activeTab === tab ? '#fff' : T.textMuted }}>{labels[tab]}</button>
           })}
         </div>
+
+        <StudentPackagePanel key={student.id} studentId={student.id} />
 
         {activeTab === 'overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

@@ -850,6 +850,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   }
 
   const openTool = (route: string, name: string, toolId?: string) => {
+    if (!preview && toolId && srvTools.current[toolId] !== true) { openUpgrade(); return }
     setDirectToolId(toolId ?? null)
     // Piano Journey: render THẲNG như BMS. Bắt buộc phải thẳng, không iframe —
     // getUserMedia trong iframe của WKWebView (app iOS) hay bị chặn ⇒ mic chết.
@@ -922,10 +923,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     : effectiveTier === 'can_ban_396' ? 'standard'
     : effectiveTier === 'khoi_dau_99' ? 'basic'
     : 'free'
-  const studentTierIdx = Math.max(
-    TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free'),
-    TIER_ORDER.indexOf(entitlementLegacyTier),
-  )
+  const studentTierIdx = TIER_ORDER.indexOf(entitlementLegacyTier)
   const isTierUnlocked = (tier?: string) => TIER_ORDER.indexOf(tier ?? 'free') <= studentTierIdx
 
   // ── Chặn tuần tự cho học viên Hành trình (HT): khoá cấp trên chỉ mở khi HOÀN THÀNH hết bài cấp dưới ──
@@ -1037,14 +1035,19 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const srvLessonFree = useRef<Set<string>>(new Set())   // bài free theo server (badge "MIỄN PHÍ")
   const srvCourseByCode = useRef<Map<string, SrvCourse>>(new Map())
   const srvFetchedAt = useRef(0)
+  const srvValidUntil = useRef<number>(Infinity)
+  const srvTools = useRef<Record<string, boolean>>({})
 
   const applyServerState = (state: LearningState) => {
     srvFetchedAt.current = Date.now()
+    srvValidUntil.current = state.valid_until ? Date.parse(state.valid_until) : Infinity
+    srvTools.current = state.flags.tools
+    setEntitlementState({ status: 'ready', tier: state.effective_tier, error: null })
     const la = new Map<string, SrvAccess>(); const cbc = new Map<string, SrvCourse>()
     const lf = new Set<string>()
     state.courses.forEach(c => {
       c.lessons.forEach(l => {
-        la.set(l.id, c.access === 'prereq' ? 'open' : l.access) // prereq xử lý ở seqLock (notice riêng)
+        la.set(l.id, l.access)
         if (l.free) lf.add(l.id)
       })
       if (c.code) cbc.set(c.code.trim().toUpperCase(), c)
@@ -1080,11 +1083,29 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     setSrvActive(true)
   }
 
+  useEffect(() => {
+    if (!srvActive) return
+    let live = true
+    let pending = false
+    const timer = window.setInterval(async () => {
+      if (pending || (Date.now() < srvValidUntil.current && Date.now()-srvFetchedAt.current < 60000)) return
+      pending = true
+      if (Date.now() >= srvValidUntil.current) {
+        srvLessonAccess.current = new Map([...srvLessonAccess.current.keys()].map(id => [id, 'upgrade' as SrvAccess]))
+        srvTools.current = {}
+        setLoadError(true)
+      }
+      const state = await fetchLearningState(guest ? 'guest' : student.id)
+      if (live && state) { applyServerState(state); setLoadError(false) }
+      pending = false
+    }, 1000)
+    return () => { live = false; clearInterval(timer) }
+  }, [srvActive, student.id, guest])
+
   // Access 1 bài theo server (null = chưa có state server → dùng resolver legacy)
   const srvResolveLesson = (lessonId: string): ResolvedContentAccess | null => {
-    if (!srvActive) return null
-    const a = srvLessonAccess.current.get(lessonId)
-    if (!a) return null
+    if (!srvActive && (guest || preview)) return null
+    const a = srvActive ? (srvLessonAccess.current.get(lessonId) ?? 'hidden') : 'upgrade'
     return {
       policySource: 'content_policy', visible: a !== 'hidden', available: a !== 'coming_soon',
       requiredTier: 'free', effectiveTier, canAccess: preview || a === 'open', canPreview: false,
@@ -1142,8 +1163,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
       if (cancelled) return
       if (state) { applyServerState(state); setPortalLoading(false); return }
       setSrvActive(false)
-      runLegacy()
-    }).catch(() => { if (!cancelled) { setSrvActive(false); runLegacy() } })
+      if (guest || preview) runLegacy(); else { setLoadError(true); setPortalLoading(false) }
+    }).catch(() => { if (!cancelled) { setSrvActive(false); if (guest || preview) runLegacy(); else { setLoadError(true); setPortalLoading(false) } } })
 
     // Tools (feature flags edu_tools) — độc lập nguồn học, luôn tải
     supabase.from('edu_tools').select('*').order('order_index')

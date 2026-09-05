@@ -74,7 +74,7 @@ DECLARE
     -- do db/class_schedule_setup.sql đặt. ĐỪNG để vòng lặp xoá cs_anon_read (mất lịch công khai).
     'class_schedule',
     -- Gói đăng ký (Đợt 1 — db/packages_setup.sql): policy hẹp riêng (authenticated đọc, thầy ghi)
-    'packages', 'student_packages',
+    'packages', 'student_packages', 'student_package_history',
     -- Buổi học: dữ liệu vận hành nội bộ, chỉ authenticated (policy cses_auth_all
     -- do db/journey_os_stage1.sql đặt) — giữ nguyên, anon không đọc.
     'class_sessions',
@@ -93,7 +93,7 @@ DECLARE
     'billing_subscriptions', 'billing_payments', 'billing_events',
     -- App Subscription entitlement (db/entitlements_setup.sql): học viên chỉ đọc
     -- effective entitlement qua RPC; source records chỉ teacher/admin xem/ghi.
-    'student_entitlements'
+    'student_entitlements', 'edu_enrollments', 'edu_course_lessons', 'edu_courses'
   ];
   -- Bảng authenticated CHỈ ĐƯỢC ĐỌC, không ghi (chặn tự leo quyền qua role):
   read_only_auth text[] := ARRAY['app_users'];

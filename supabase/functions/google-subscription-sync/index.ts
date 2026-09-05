@@ -49,8 +49,9 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('authorization') ?? ''
   const token = authHeader.replace(/^Bearer\s+/i, '').trim()
   if (!token) return json({ error: 'login_required' }, 401)
-  const { data: userData, error: userError } = await admin.auth.getUser(token)
-  if (userError || !userData.user) return json({ error: 'invalid_session' }, 401)
+  const internal = token === SERVICE_KEY
+  const { data: userData, error: userError } = internal ? { data: { user: null }, error: null } : await admin.auth.getUser(token)
+  if (!internal && (userError || !userData.user)) return json({ error: 'invalid_session' }, 401)
 
   if (!GOOGLE_SA_EMAIL || !GOOGLE_SA_PRIVATE_KEY) {
     return json({ error: 'google_server_api_not_configured' }, 503)
@@ -95,11 +96,11 @@ Deno.serve(async (req) => {
     startTime?: string
     latestOrderId?: string
     acknowledgementState?: string
-    lineItems?: { productId?: string; expiryTime?: string }[]
+    lineItems?: { productId?: string; expiryTime?: string; autoRenewingPlan?: { autoRenewEnabled?: boolean } }[]
     testPurchase?: unknown
   }
 
-  const line = sub.lineItems?.[0]
+  const line = sub.lineItems?.filter(l => l.productId && PRODUCT_TIER[l.productId]).sort((a,b) => Date.parse(b.expiryTime ?? '') - Date.parse(a.expiryTime ?? ''))[0]
   const productId = line?.productId ?? ''
   const tier = PRODUCT_TIER[productId]
   if (!tier) return json({ error: 'unknown_product_id' }, 400)
@@ -122,16 +123,19 @@ Deno.serve(async (req) => {
       ? 'active'
       : 'expired'
 
-  const { data: student, error: studentError } = await admin
-    .from('edu_students')
-    .select('id')
-    .eq('user_id', userData.user.id)
-    .single()
+  const { data: owner, error: ownerError } = await admin.from('student_entitlements').select('student_id').eq('source', 'google_subscription').eq('source_ref', `google:${purchaseToken}`).maybeSingle()
+  if (ownerError) return json({ error: 'owner_lookup_failed' }, 500)
+  const { data: student, error: studentError } = internal
+    ? { data: owner ? { id: owner.student_id } : null, error: null }
+    : await admin.from('edu_students').select('id').eq('user_id', userData.user!.id).single()
   if (studentError || !student?.id) return json({ error: 'student_not_found' }, 404)
+  if (owner && owner.student_id !== student.id) return json({ error: 'transaction_owned_by_another_student' }, 409)
+
 
   const sourceRef = `google:${purchaseToken}` // idempotent — retry không cấp trùng
   const metadata = {
     provider: 'google',
+    auto_renew: line?.autoRenewingPlan?.autoRenewEnabled ?? false,
     product_id: productId,
     order_id: sub.latestOrderId ?? null,
     subscription_state: state,
@@ -174,6 +178,8 @@ Deno.serve(async (req) => {
 
   // Effective tier qua resolver canonical, bằng token CỦA USER (RLS đúng vai).
   const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
+  if (internal) return json({ ok: true, entitlement_id: write.data.id, status, tier })
+
   const userClient = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
   })

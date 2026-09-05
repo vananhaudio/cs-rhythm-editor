@@ -1,3 +1,4 @@
+import ToolRouteGate from './ToolRouteGate'
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
@@ -108,6 +109,10 @@ function TapLandingPage({ onGuest }: { onGuest: () => void }) {
 }
 
 export default function AppRouter() {
+  return <ToolRouteGate><AppRouterContent /></ToolRouteGate>
+}
+
+function AppRouterContent() {
   const [user, setUser] = useState<User | null>(null)
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)

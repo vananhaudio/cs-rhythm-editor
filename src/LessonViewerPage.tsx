@@ -1,6 +1,5 @@
-// ⚠️ LEGACY ACCESS (desktop): màn này còn tự suy luận quyền từ enrollment/policy client-side.
-// Do not add new access logic here — canonical là RPC my_learning_state()
-// (docs/SERVER_DRIVEN_ARCHITECTURE.md). TODO(cleanup): chuyển sang src/learningState.ts.
+import { useLearningAccess } from './useLearningAccess'
+// Quyền bài học do my_learning_state() quyết định; dùng chung với app.
 import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 import { QuizViewer } from './components/QuizViewer'
@@ -10,8 +9,8 @@ import ElearnLessonView from './elearn/ElearnLessonView'
 import { NATIVE_LESSONS } from './elearn/nativeLessons'
 import ChordStrumPlayer from './elearn/ChordStrumPlayer'
 import { parseStrumConfig, configToSong } from './StrumConfigEditor'
-import { missingPrereqs, tenNangLuc, PREREQ } from './hanhtrinh'
-import { ENTITLEMENT_TIER_LABEL, type EntitlementTier, normalizeEntitlementTier, resolveCourseAccess, resolveLessonAccess } from './contentAccess'
+import { missingPrereqs, tenNangLuc } from './hanhtrinh'
+import { type EntitlementTier, normalizeEntitlementTier } from './contentAccess'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -87,10 +86,9 @@ export default function LessonViewerPage() {
   const [studentName, setStudentName] = useState('')
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [ownedCodes, setOwnedCodes] = useState<Set<string>>(new Set()) // mã năng lực học viên đã sở hữu (tính thiếu nền)
+  const learningAccess = useLearningAccess(studentId ?? 'guest')
   const [effectiveTier, setEffectiveTier] = useState<EntitlementTier>('free')
-  const [courseLegacyUnlocked, setCourseLegacyUnlocked] = useState(false)
-  const [htMember, setHtMember] = useState(false) // học viên Hành trình: chặn tuần tự
-  const [seqLockNames, setSeqLockNames] = useState<string[]>([]) // tên khoá cấp dưới CHƯA hoàn thành → khoá này bị chặn
+  const seqLockNames = learningAccess?.courses.find(c => c.id === course?.id)?.missing_prereqs.map(code => tenNangLuc(code) || code) ?? []
   // Trên điện thoại (QR từ sách hay mở /course trực tiếp): sidebar thành ngăn kéo, nội dung chiếm trọn bề rộng
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 1024)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -159,8 +157,6 @@ export default function LessonViewerPage() {
           const { data: ent } = await supabase.rpc('get_effective_student_entitlement', { p_student_id: st.id })
           const row = Array.isArray(ent) ? ent[0] : ent
           setEffectiveTier(normalizeEntitlementTier(row?.effective_tier))
-          const { data: stRow } = await supabase.from('edu_students').select('ht_member').eq('id', st.id).single()
-          setHtMember(!!(stRow as any)?.ht_member)
         }
         if (au?.name) setStudentName(au.name)
       }
@@ -233,41 +229,7 @@ export default function LessonViewerPage() {
       setContentReady(true)
     })
     return () => { cancelled = true }
-  }, [active?.id])
-
-  useEffect(() => {
-    if (!studentId || !course?.id) { setCourseLegacyUnlocked(false); return }
-    supabase.from('edu_course_access').select('course_id').eq('student_id', studentId).eq('course_id', course.id).eq('active', true).maybeSingle()
-      .then(({ data }) => setCourseLegacyUnlocked(!!data || course.is_free !== false))
-  }, [studentId, course?.id, course?.is_free])
-
-  // HT: chặn tuần tự — khoá này bị khoá nếu còn mã tiên quyết CHƯA hoàn thành (khoá chưa dựng thì bỏ qua)
-  useEffect(() => {
-    const code = (course?.code || '').trim().toUpperCase()
-    if (!htMember || !studentId || !code || !PREREQ[code]) { setSeqLockNames([]); return }
-    const need = PREREQ[code].filter(c => c !== 'NM')
-    if (need.length === 0) { setSeqLockNames([]); return }
-    ;(async () => {
-      const { data: cs } = await supabase.from('edu_courses').select('id,code').in('code', need)
-      const idsByCode: Record<string, string[]> = {}
-      ;(cs ?? []).forEach((c: any) => { const cc = (c.code || '').trim().toUpperCase(); (idsByCode[cc] ??= []).push(c.id) })
-      const courseIds = (cs ?? []).map((c: any) => c.id)
-      if (courseIds.length === 0) { setSeqLockNames([]); return }  // chưa dựng khoá nền → không chặn
-      const { data: mods } = await supabase.from('edu_modules').select('id,course_id').in('course_id', courseIds)
-      const modCourse: Record<string, string> = {}; (mods ?? []).forEach((m: any) => { modCourse[m.id] = m.course_id })
-      const modIds = (mods ?? []).map((m: any) => m.id)
-      const { data: lsns } = modIds.length
-        ? await supabase.from('edu_course_lessons').select('id,module_id').in('module_id', modIds)
-        : { data: [] as any[] }
-      const lessonsByCourse: Record<string, string[]> = {}
-      ;(lsns ?? []).forEach((l: any) => { const cid = modCourse[l.module_id]; if (cid) (lessonsByCourse[cid] ??= []).push(l.id) })
-      const { data: prog } = await supabase.from('edu_lesson_progress').select('lesson_id').eq('student_id', studentId).eq('status', 'completed')
-      const done = new Set((prog ?? []).map((r: any) => r.lesson_id))
-      const codeDone = (cc: string) => (idsByCode[cc] || []).some(cid => { const ls = lessonsByCourse[cid]; return ls && ls.length > 0 && ls.every(id => done.has(id)) })
-      const missing = need.filter(cc => (idsByCode[cc]?.length) && !codeDone(cc))
-      setSeqLockNames(missing.map(c => tenNangLuc(c) || c))
-    })()
-  }, [course, htMember, studentId])
+  }, [active?.id, learningAccess?.courses.find(c => c.id === course?.id)?.lessons.find(l => l.id === active?.id)?.access])
 
   if (!courseId) return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: D.bg, color: D.text3 }}>
@@ -301,12 +263,15 @@ export default function LessonViewerPage() {
   // Bài phủ toàn màn (overlay/flow) → không cần nút ☰ nổi (đã có nút back riêng)
   const overlayActive = !!active && (elearnNumOf(active) != null || active.lesson_type === 'native' || active.lesson_type === 'strum')
   const flowActive = active?.lesson_type === 'flow'
-  const activeAccess = active && course
-    ? resolveLessonAccess(active, course, effectiveTier, { courseLegacyUnlocked: courseLegacyUnlocked || course.is_free !== false })
-    : null
-  const courseAccess = course
-    ? resolveCourseAccess(course, effectiveTier, { legacyUnlocked: courseLegacyUnlocked || course.is_free !== false })
-    : null
+  const serverCourse = learningAccess?.courses.find(c => c.id === course?.id)
+  const accessFor = (lessonId?: string) => {
+    const resolved = lessonId ? serverCourse?.lessons.find(l => l.id === lessonId) : serverCourse
+    const access = resolved?.access
+    return { visible: resolved?.visible === true, available: access !== 'coming_soon', canAccess: access === 'open',
+      reason: access === 'coming_soon' ? 'coming_soon' : 'requires_upgrade', requiredTier: effectiveTier }
+  }
+  const activeAccess = active ? accessFor(active.id) : null
+  const courseAccess = accessFor()
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: D.bg, fontFamily: '"Inter", system-ui, sans-serif', color: D.text1, fontSize: 15 }}>
@@ -365,7 +330,7 @@ export default function LessonViewerPage() {
                   {mod.name}
                 </div>
                 {modLessons.map((l, i) => {
-                  const access = course ? resolveLessonAccess(l, course, effectiveTier, { courseLegacyUnlocked: courseLegacyUnlocked || course.is_free !== false }) : null
+                  const access = accessFor(l.id)
                   if (access && !access.visible) return null
                   const isActive = active?.id === l.id
                   const typeIcon: Record<string, string> = { video: '▶', text: '📄', slide: '🖼', quiz: '❓', game: '🎮', tap: '🥁', metronome: '🎵', backing_track: '🎧', submit_video: '📹', discussion: '💬', link: '🔗' }
@@ -437,7 +402,7 @@ export default function LessonViewerPage() {
               <div style={{ fontSize: 14.5, color: D.text2, lineHeight: 1.6 }}>
                 {activeAccess.reason === 'coming_soon' || courseAccess?.available === false
                   ? 'Nội dung này đang được chuẩn bị.'
-                  : `Bài này cần gói ${ENTITLEMENT_TIER_LABEL[activeAccess.requiredTier]}.`}
+                  : 'Gói hiện tại chưa mở bài này. Vui lòng kiểm tra quyền học.'}
               </div>
               {activeAccess.reason === 'requires_upgrade' && (
                 <a href="/subscribe" style={{ display: 'inline-block', marginTop: 18, background: D.accent, color: '#fff', textDecoration: 'none', borderRadius: 10, padding: '11px 22px', fontSize: 14.5, fontWeight: 700 }}>Nâng gói</a>

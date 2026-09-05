@@ -1,3 +1,4 @@
+import { useLearningAccess } from './useLearningAccess'
 // ⚠️ LEGACY ACCESS (desktop): màn này còn tự suy luận quyền từ enrollment/policy client-side.
 // Do not add new access logic here — canonical là RPC my_learning_state()
 // (docs/SERVER_DRIVEN_ARCHITECTURE.md). TODO(cleanup): chuyển sang src/learningState.ts.
@@ -33,8 +34,6 @@ const ARTIST_LEVELS = [
 ]
 
 
-const TIER_ORDER = ['free', 'basic', 'standard', 'pro']
-const LEVEL_TIER: Record<string, string> = { beginner: 'free', elementary: 'basic', intermediate: 'standard', advanced: 'pro' }
 
 interface Student { id: string; full_name: string; email: string | null; level: string | null; display_name?: string | null; avatar_url?: string | null }
 interface DBTool { id: string; icon: string; name: string; description: string | null; category: string; route: string; tier: string; enabled: boolean }
@@ -57,6 +56,7 @@ function Bar({ pct, color = D.accent, h = 4 }: { pct: number; color?: string; h?
 interface Props { student: Student; onLogout: () => void }
 
 export default function StudentPortalV2({ student, onLogout }: Props) {
+  const learningAccess = useLearningAccess(student.id)
   const [collapsed, setCollapsed] = useState(false)
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [dbTools, setDbTools]         = useState<DBTool[]>([])
@@ -144,7 +144,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
   const fmtTimer = (s: number) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`
 
   const name = uname(student)
-  const isUnlocked = (tier: string) => TIER_ORDER.indexOf(tier) <= TIER_ORDER.indexOf(LEVEL_TIER[student.level ?? 'beginner'] ?? 'free')
+  const isUnlocked = (toolId: string) => learningAccess?.flags.tools[toolId] === true
   const mainCourse = enrollments.find(e => e.course?.type === 'hanh_trinh')
 
   const artistLevel  = ARTIST_LEVELS.find(l => totalXP >= l.min && totalXP < l.max) ?? ARTIST_LEVELS[0]
@@ -343,7 +343,7 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
               <div style={{ padding: '10px 14px', borderTop: `1px solid ${D.border}` }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
                   {dbTools.slice(0, 6).map(t => {
-                    const unlocked = isUnlocked(t.tier)
+                    const unlocked = isUnlocked(t.id)
                     return (
                       <div key={t.id} onClick={() => { if (unlocked && t.route) window.location.href = t.route }}
                         style={{ background: unlocked ? D.accentLight : D.bg, border: `1px solid ${D.border}`, borderRadius: 7, padding: '7px 6px', textAlign: 'center', cursor: unlocked ? 'pointer' : 'default', opacity: unlocked ? 1 : .5 }}>

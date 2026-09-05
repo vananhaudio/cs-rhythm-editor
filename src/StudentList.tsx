@@ -1,3 +1,4 @@
+import { loadStudentPackages, packageSummary, packageDate, PACKAGE_STATUS, PACKAGE_SOURCE, type StudentPackage } from './studentPackages'
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { supabase } from './supabase'
 
@@ -213,6 +214,11 @@ function CreateClassModal({ courses, onClose, onDone }: { courses: { id: string;
 }
 
 export default function StudentList({ onSelect }: Props) {
+  const [packageRows, setPackageRows] = useState<StudentPackage[]>([])
+  const [packageLoaded, setPackageLoaded] = useState(false)
+  const [packageError, setPackageError] = useState('')
+  const [packageFilter, setPackageFilter] = useState('all')
+  useEffect(() => { let live = true; const refresh = () => loadStudentPackages().then(d => { if (live) { setPackageRows(d.records); setPackageLoaded(true); setPackageError('') } }).catch(e => { if (live) setPackageError(e.message) }); refresh(); const timer = window.setInterval(refresh, 60000); return () => { live = false; clearInterval(timer) } }, [])
   const [students, setStudents] = useState<Student[]>([])
   const [filtered, setFiltered] = useState<Student[]>([])
   const [search, setSearch] = useState('')
@@ -306,8 +312,9 @@ export default function StudentList({ onSelect }: Props) {
     if (levelFilter !== 'all') result = result.filter(s => s.level === levelFilter)
     if (statusFilter === 'active') result = result.filter(s => s.is_active)
     if (statusFilter === 'inactive') result = result.filter(s => !s.is_active)
+    if (packageFilter !== 'all') result = result.filter(s => { const rows = packageRows.filter(r => r.student_id === s.id); if (packageFilter === 'none') return !rows.length; if (packageFilter === 'expired') return !rows.some(r => r.is_active) && rows.some(r => ['expired','cancelled','revoked','past_due'].includes(r.display_status)); return rows.some(r => packageFilter === 'active' ? r.is_active : packageFilter === 'expiring' ? r.display_status === 'expiring' : r.source === packageFilter) })
     setFiltered(result)
-  }, [search, levelFilter, statusFilter, classFilter, courseFilter, students, memberByGroup, studentsByCourse])
+  }, [search, levelFilter, statusFilter, classFilter, courseFilter, students, memberByGroup, studentsByCourse, packageRows, packageFilter])
 
   const activeCount = students.filter(s => s.is_active).length
   const chip = (on: boolean): CSSProperties => ({ background: on ? T.header : T.bgCard, color: on ? '#fff' : T.text, border: `1px solid ${on ? T.header : T.border}`, borderRadius: 20, padding: '6px 14px', fontSize: 13, fontWeight: on ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit' })
@@ -429,6 +436,10 @@ export default function StudentList({ onSelect }: Props) {
           </select>
         </div>
 
+        {packageError && <div role="alert" style={{ color: T.danger }}>Chưa tải được gói học: {packageError}</div>}
+        <select aria-label="Lọc gói học" value={packageFilter} onChange={e => setPackageFilter(e.target.value)} style={{ ...inpS, width: 'auto', marginBottom: 12 }}>
+          {Object.entries({all:'Tất cả gói',active:'Đang hiệu lực',expiring:'Sắp hết hạn 7 ngày',expired:'Đã hết hạn / kết thúc',none:'Không có gói',apple:'Apple',google_play:'Google Play',web:'Web',admin:'Admin'}).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
         {/* Count */}
         <div style={{ fontSize: 14, color: T.textMuted, marginBottom: 12 }}>
           Hiển thị {filtered.length} / {students.length} học sinh
@@ -505,7 +516,7 @@ export default function StudentList({ onSelect }: Props) {
                   <th style={rTh}>Lớp</th>
                   <th style={rTh}>Trình độ</th>
                   <th style={rTh}>Trạng thái</th>
-                  <th style={rTh}>Ngày vào</th>
+                  <th style={rTh}>Gói · Hết hạn · Nguồn</th>
                   <th style={{ ...rTh, textAlign: 'center' }}>Mật khẩu</th>
                 </tr>
               </thead>
@@ -528,7 +539,7 @@ export default function StudentList({ onSelect }: Props) {
                         {s.is_active ? 'Đang học' : 'Ngừng'}
                       </span>
                     </td>
-                    <td style={{ ...rTd, color: T.textMuted }}>{fmtDate(s.enrolled_at ?? undefined)}</td>
+                    <td style={{ ...rTd, color: T.textMuted }}>{packageError ? 'Chưa tải được' : !packageLoaded ? 'Đang tải gói…' : packageSummary(packageRows.filter(r => r.student_id === s.id)).map(r => <div key={r.id} style={{ whiteSpace: 'normal', minWidth: 180, marginBottom: 6 }}><b>{r.name}</b><div>{packageDate(r.renews_at)}</div><div style={{ color: r.display_status === 'expiring' ? T.warn : r.is_active ? T.green : T.textMuted }}>{PACKAGE_STATUS[r.display_status] ?? r.display_status} · {PACKAGE_SOURCE[r.source] ?? r.source}</div></div>)}{packageLoaded && !packageError && !packageRows.some(r => r.student_id === s.id) && 'Không có gói'}</td>
                     <td style={{ ...rTd, textAlign: 'center' }}>
                       <button title="Đặt lại mật khẩu" onClick={e => { e.stopPropagation(); setResetTarget(s) }} style={{
                         border: `1px solid ${T.border}`, background: T.bgCard, borderRadius: 6,

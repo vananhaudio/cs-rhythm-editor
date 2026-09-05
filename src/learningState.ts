@@ -37,6 +37,7 @@ export type LearningState = {
   courses: SrvCourse[]
   completed_lesson_ids: string[]
   flags: { tools: Record<string, boolean> }
+  valid_until?: string | null
   generated_at: string
 }
 
@@ -50,7 +51,7 @@ function readCache(userKey: string): LearningState | null {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     const c = JSON.parse(raw) as CacheShape
-    return c.userKey === userKey && c.state?.courses ? c.state : null
+    return c.userKey === userKey && c.state?.courses && Date.now()-c.at<LEARNING_STATE_TTL_MS && (!c.state.valid_until || Date.parse(c.state.valid_until)>Date.now()) ? c.state : null
   } catch { return null }
 }
 
