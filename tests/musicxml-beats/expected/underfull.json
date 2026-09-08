@@ -1,0 +1,23 @@
+[
+  {
+    "partId": "P1",
+    "measureId": "/score-partwise/part[1]/measure[1]",
+    "measureNumber": "1",
+    "meter": {
+      "beats": 4,
+      "beatType": 4
+    },
+    "actualDuration": "1/1",
+    "expectedDuration": "4/1",
+    "pickup": false,
+    "pickupOffset": "0/1",
+    "beatsMap": [],
+    "diagnostics": [
+      {
+        "code": "UNDERFULL_MEASURE_UNCLASSIFIED",
+        "sourceId": "/score-partwise/part[1]/measure[1]",
+        "message": "Short measure is not a confirmed initial implicit pickup"
+      }
+    ]
+  }
+]

@@ -8,7 +8,15 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "mira:content": "node scripts/mira-content.mjs"
+    "mira:content": "node scripts/mira-content.mjs",
+    "test:musicxml-beats": "tsc -p tests/musicxml-beats/tsconfig.json && node --experimental-strip-types --test tests/musicxml-beats/*.test.ts",
+    "spike:musicxml-renderer": "tsc -p tests/musicxml-renderer/tsconfig.json && node --experimental-strip-types tests/musicxml-renderer/spike.ts",
+    "test:musicxml-renderer": "tsc -p tests/musicxml-renderer/tsconfig.json && node --experimental-strip-types --test tests/musicxml-renderer/renderer.test.ts",
+    "test:musicxml-mvp": "tsc -p tests/musicxml-mvp/tsconfig.json && node --experimental-strip-types --test tests/musicxml-mvp/mvp.test.ts",
+    "test:musicxml-export": "tsc -p tests/musicxml-export/tsconfig.json && node --experimental-strip-types --test tests/musicxml-export/export.test.ts",
+    "test:musicxml-subdivision": "tsc -p tests/musicxml-subdivision/tsconfig.json && node --experimental-strip-types --test tests/musicxml-subdivision/subdivision.test.ts",
+    "test:musicxml-compound": "tsc -p tests/musicxml-compound/tsconfig.json && node --experimental-strip-types --test tests/musicxml-compound/compound.test.ts",
+    "test:musicxml-generalized": "tsc -p tests/musicxml-generalized/tsconfig.json && node --experimental-strip-types --test tests/musicxml-generalized/generalized.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -38,9 +46,14 @@
     "@tiptap/pm": "^3.23.6",
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
+    "@xmldom/xmldom": "0.9.12",
+    "fflate": "^0.8.3",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "svg2pdf.js": "^2.8.1",
+    "verovio": "6.3.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",

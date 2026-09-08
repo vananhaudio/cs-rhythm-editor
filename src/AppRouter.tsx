@@ -1,5 +1,5 @@
 import ToolRouteGate from './ToolRouteGate'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 import { PlayerView } from './PlayerView'
@@ -52,6 +52,7 @@ import MusicPlayer from './piano/MusicPlayer'
 import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
 import Hanhtrinh2027Page from './Hanhtrinh2027Page'
+const MusicXmlBeatsPage = lazy(() => import('./pages/MusicXmlBeatsPage'))
 type AppUser = {
   id: string
   role: string
@@ -156,6 +157,10 @@ function AppRouterContent() {
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+
+  if (path === '/musicxml-beats' || path === '/musicxml-beats/') {
+    return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở công cụ bản nhạc…</div>}><MusicXmlBeatsPage /></Suspense>
+  }
 
   // ── Route /app-v2-preview — Prototype UI/UX App Class 2.0 (mock local, không production) ──
   if (path === '/app-v2-preview' || path.startsWith('/app-v2-preview')) {

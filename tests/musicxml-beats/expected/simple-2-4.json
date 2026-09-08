@@ -1,0 +1,26 @@
+[
+  {
+    "partId": "P1",
+    "measureId": "/score-partwise/part[1]/measure[1]",
+    "measureNumber": "1",
+    "meter": {
+      "beats": 2,
+      "beatType": 4
+    },
+    "actualDuration": "2/1",
+    "expectedDuration": "2/1",
+    "pickup": false,
+    "pickupOffset": "0/1",
+    "beatsMap": [
+      {
+        "label": "1",
+        "offset": "0/1"
+      },
+      {
+        "label": "2",
+        "offset": "1/1"
+      }
+    ],
+    "diagnostics": []
+  }
+]

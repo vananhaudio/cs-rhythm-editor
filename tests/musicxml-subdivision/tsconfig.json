@@ -1,0 +1,4 @@
+{
+  "extends": "../musicxml-renderer/tsconfig.json",
+  "include": ["../../src/musicxml-beats/**/*.ts", "./*.ts"]
+}
