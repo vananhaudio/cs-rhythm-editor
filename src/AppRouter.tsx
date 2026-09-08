@@ -52,6 +52,7 @@ import MusicPlayer from './piano/MusicPlayer'
 import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
 import Hanhtrinh2027Page from './Hanhtrinh2027Page'
+import { teacherRouteAccess } from './teacherRouteAccess'
 const MusicXmlBeatsPage = lazy(() => import('./pages/MusicXmlBeatsPage'))
 type AppUser = {
   id: string
@@ -158,7 +159,11 @@ function AppRouterContent() {
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
+  // ── Route /musicxml-beats — công cụ khắc bản nhạc, CHỈ teacher/admin ──
   if (path === '/musicxml-beats' || path === '/musicxml-beats/') {
+    const access = teacherRouteAccess({ loading, signedIn: !!user, role: appUser?.role })
+    if (access === 'wait') return null
+    if (access === 'redirect') { window.location.href = '/start'; return null }
     return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở công cụ bản nhạc…</div>}><MusicXmlBeatsPage /></Suspense>
   }
 

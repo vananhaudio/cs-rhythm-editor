@@ -41,6 +41,13 @@ docs/musicxml-*/output/
 *.musicxml-acceptance.zip
 musicxml-*-acceptance.zip
 
+# Ngoại lệ DUY NHẤT: 3 ảnh chụp UI Giai đoạn 3 — chụp tay, KHÔNG có script sinh lại,
+# nên phải nằm trong repo. Vẫn chặn mọi thứ khác trong thư mục đó
+# (PDF, SVG, PNG do harness sinh, ZIP, .source.musicxml).
+!docs/musicxml-beats-mvp/output/
+docs/musicxml-beats-mvp/output/*
+!docs/musicxml-beats-mvp/output/ui-*.png
+
 # Python bytecode của các verifier artifact
 __pycache__/
 *.py[cod]
