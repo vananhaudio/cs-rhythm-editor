@@ -92,9 +92,25 @@ test("dùng đúng luật isTeacher sẵn có của AppRouter", () => {
   assert.equal(isTeacherRole("student"), false);
 });
 
-test("route /musicxml-beats thực sự đi qua guard và đá về /start", () => {
+test("URL chính thức là /nhipphach, đường cũ vẫn giữ", () => {
+  assert.match(
+    router,
+    /NHIPPHACH_PATHS: readonly string\[\] = \['\/nhipphach', '\/musicxml-beats'\]/,
+    "phần tử đầu phải là URL chính thức /nhipphach"
+  );
+  // Đường cũ chưa được bỏ trong giai đoạn chuyển đổi.
+  assert.ok(router.includes("'/musicxml-beats'"));
+  // Không route nào khác chiếm /nhipphach.
+  assert.equal(
+    (router.match(/'\/nhipphach'/g) || []).length,
+    1,
+    "chỉ một nơi khai /nhipphach"
+  );
+});
+
+test("công cụ Nhịp Phách đi qua guard và đá về /start", () => {
   const block = router.slice(
-    router.indexOf("if (path === '/musicxml-beats'"),
+    router.indexOf("if (NHIPPHACH_PATHS.includes"),
     router.indexOf("/app-v2-preview")
   );
   assert.match(block, /teacherRouteAccess\(\{\s*loading,\s*signedIn: !!user/);
@@ -107,6 +123,11 @@ test("route /musicxml-beats thực sự đi qua guard và đá về /start", () 
   );
 });
 
+test("cả hai đường đều được guard, kể cả khi có dấu / ở cuối", () => {
+  // Router bỏ dấu / cuối trước khi so, nên /nhipphach/ không lọt qua guard.
+  assert.match(router, /path\.replace\(\/\\\/\$\/, ''\)/);
+});
+
 test("đích redirect là route công khai, không tạo vòng lặp", () => {
   // /start phải là route KHÔNG có guard thầy, nếu không sẽ đá qua đá lại.
   const start = router.slice(
@@ -115,8 +136,8 @@ test("đích redirect là route công khai, không tạo vòng lặp", () => {
   );
   assert.doesNotMatch(start, /window\.location\.href = '\/musicxml-beats'/);
   assert.equal(
-    router.split("window.location.href = '/musicxml-beats'").length - 1,
+    router.split("window.location.href = '/nhipphach'").length - 1,
     0,
-    "không route nào đá ngược về /musicxml-beats"
+    "không route nào đá ngược về /nhipphach"
   );
 });

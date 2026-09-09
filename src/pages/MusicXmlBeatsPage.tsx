@@ -265,10 +265,10 @@ export default function MusicXmlBeatsPage() {
               letterSpacing: -1,
             }}
           >
-            Đọc bản nhạc theo phách
+            Đọc nhịp – phách
           </h1>
           <p style={{ color: "#52525b", lineHeight: 1.6, margin: 0 }}>
-            Đưa bản MusicXML vào, thêm số phách và lưu bản nhạc để giảng dạy.
+            Đưa bản nhạc vào, thêm số phách và lưu lại để giảng dạy.
           </p>
         </header>
         <section

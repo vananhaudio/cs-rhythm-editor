@@ -53,6 +53,8 @@ import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
 import Hanhtrinh2027Page from './Hanhtrinh2027Page'
 import { teacherRouteAccess } from './teacherRouteAccess'
+/** Đường dẫn của công cụ Nhịp Phách. Phần tử ĐẦU là URL chính thức. */
+export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beats']
 const MusicXmlBeatsPage = lazy(() => import('./pages/MusicXmlBeatsPage'))
 type AppUser = {
   id: string
@@ -159,8 +161,10 @@ function AppRouterContent() {
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
-  // ── Route /musicxml-beats — công cụ khắc bản nhạc, CHỈ teacher/admin ──
-  if (path === '/musicxml-beats' || path === '/musicxml-beats/') {
+  // ── Công cụ Nhịp Phách — CHỈ teacher/admin ──
+  // URL chính thức: class.vananhaudio.com/nhipphach.
+  // /musicxml-beats là đường cũ, giữ chạy trong giai đoạn chuyển đổi.
+  if (NHIPPHACH_PATHS.includes(path.replace(/\/$/, '') || '/')) {
     const access = teacherRouteAccess({ loading, signedIn: !!user, role: appUser?.role })
     if (access === 'wait') return null
     if (access === 'redirect') { window.location.href = '/start'; return null }
