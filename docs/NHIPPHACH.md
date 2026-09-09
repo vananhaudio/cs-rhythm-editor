@@ -75,7 +75,9 @@ Bài lỗi và bài đang chờ chọn cách chia không có mặt trong ZIP.
 | 50 file · song song 1 | 17.753 ms | 355 | 1.209 ms |
 | 50 file · song song 2 | **10.809 ms** | 216 | 1.385 ms |
 
-Song song mặc định **2**, trần cứng **4**. Tiến độ cập nhật 101 lần trong lượt 50 file → UI vẫn nhận lượt suốt quá trình. **Chưa dùng Web Worker** — đo trước rồi mới quyết, và số liệu cho thấy chưa cần.
+Song song mặc định **2**, trần cứng **4**. **Chưa dùng Web Worker** — đo trước rồi mới quyết, và số liệu cho thấy chưa cần.
+
+Giữa hai bài có một nhịp **nhường lượt cho trình duyệt vẽ lại** (`setTimeout(…, 0)`). Không có nó thì cả vòng lặp chạy trong microtask: React gộp mọi cập nhật, trình duyệt không vẽ lần nào, và thầy thấy bộ đếm đứng im ở `0 / 50` rồi nhảy phắt sang `50 / 50`. Có nó thì bộ đếm bước đều — đo thật trên trang: `0 → 2 → 4 → 6 → 8 → 10`.
 
 ## Chạy test
 

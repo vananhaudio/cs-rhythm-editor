@@ -151,6 +151,30 @@ test("huỷ giữa chừng: phần chưa chạy quay về hàng đợi", async (
   assert.ok(items.some((i) => i.status === "queued"));
 });
 
+test("nhường lượt cho trình duyệt vẽ giữa các bài", async () => {
+  // Không có nhịp nhường này thì cả vòng lặp chạy trong microtask, trình duyệt
+  // không vẽ lần nào và thầy thấy bộ đếm đứng im tới lúc xong.
+  const code = readFileSync(
+    new URL("../../src/nhipphach/batch.ts", import.meta.url),
+    "utf8"
+  ).replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
+  assert.match(code, /setTimeout\(r, 0\)/, "phải nhường bằng macrotask");
+  assert.equal((code.match(/await nhuongLuot\(\)/g) || []).length >= 2, true);
+  // và thực sự có macrotask xen vào giữa các bài
+  let macrotask = 0;
+  const tick = () => {
+    macrotask++;
+    if (macrotask < 50) setTimeout(tick, 0);
+  };
+  setTimeout(tick, 0);
+  await runBatch(files(6), fake(), {
+    settings: settings(),
+    format: "pdf",
+    onUpdate: () => {},
+  });
+  assert.ok(macrotask >= 6, `trình duyệt có ${macrotask} nhịp xen giữa 6 bài`);
+});
+
 test("onUpdate báo tiến độ và trả bản sao, không lộ mảng gốc", async () => {
   const mocs: number[] = [];
   let snapshot: readonly BatchItem[] | null = null;

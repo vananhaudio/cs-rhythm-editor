@@ -127,6 +127,16 @@ export async function runBatch(
 ): Promise<BatchItem[]> {
   const items = makeItems(files, options.format);
   const emit = () => options.onUpdate?.(items.map((i) => ({ ...i })));
+  /**
+   * Nhường lượt cho trình duyệt VẼ LẠI giữa hai bài.
+   *
+   * `await` giữa các bài chỉ tạo microtask — vòng lặp chạy hết mà trình duyệt
+   * không kịp vẽ lần nào, nên React gộp mọi cập nhật và thầy chỉ thấy "0 / 50"
+   * đứng im rồi nhảy phắt sang "50 / 50". setTimeout(0) là macrotask, đủ để
+   * chèn một nhịp vẽ vào giữa.
+   */
+  const nhuongLuot = () =>
+    options.onUpdate ? new Promise<void>((r) => setTimeout(r, 0)) : Promise.resolve();
   emit();
   const limit = Math.max(1, Math.min(options.concurrency ?? 2, 4));
   let cursor = 0;
@@ -141,6 +151,7 @@ export async function runBatch(
       }
       item.status = "processing";
       emit();
+      await nhuongLuot();
       try {
         const settings: ScoreSettings = {
           ...options.settings,
@@ -160,6 +171,7 @@ export async function runBatch(
         item.error = e instanceof Error ? e.message : String(e);
       }
       emit();
+      await nhuongLuot();
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, files.length) }, worker));
