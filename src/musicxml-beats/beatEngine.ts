@@ -1,10 +1,21 @@
 import {
   meterGrouping,
   groupStarts,
+  resolveGrouping,
+  isIrregularMeter,
+  allowedPartitions,
+  partitionCode,
+  meterCode,
   SUPPORTED_COMPOUND,
+  SUPPORTED_IRREGULAR,
   SUPPORTED_SIMPLE,
 } from "./meterGrouping.ts";
-import type { BeatGrouping, MeterProfile } from "./meterGrouping.ts";
+import type {
+  BeatGrouping,
+  GroupingSelection,
+  GroupingSource,
+  MeterProfile,
+} from "./meterGrouping.ts";
 import { ZERO, rational, sub, compare } from "./rational.ts";
 import type { Rational } from "./rational.ts";
 import type {
@@ -19,6 +30,19 @@ export interface MeasureBeatMap {
   measureNumber: string;
   meter: Meter | null;
   grouping?: BeatGrouping;
+  /**
+   * CHỈ có ở nhịp lẻ (5/8, 7/8) — nơi cách chia không suy được từ tử số.
+   * Nhịp đơn và nhịp kép không có hai trường này, nên beat-map của chúng
+   * giữ nguyên từng byte như các giai đoạn đã nghiệm thu.
+   */
+  groupingSource?: GroupingSource;
+  groups?: readonly number[] | null;
+  /**
+   * Cảnh báo KHÔNG chặn: ô vẫn khắc bình thường và phách nhỏ vẫn chạy,
+   * chỉ riêng phách lớn là chưa dùng được. Khác hẳn `diagnostics` (chặn cả ô).
+   * Chỉ xuất hiện khi thật sự có cảnh báo.
+   */
+  notices?: Diagnostic[];
   actualDuration: Rational;
   expectedDuration: Rational | null;
   pickup: boolean;
@@ -29,7 +53,8 @@ export interface MeasureBeatMap {
 export function measureBeatMap(
   partId: string,
   m: NormalizedMeasure,
-  profile: MeterProfile = "simple"
+  profile: MeterProfile = "simple",
+  selection?: GroupingSelection
 ): MeasureBeatMap {
   const out: MeasureBeatMap = {
     partId,
@@ -50,17 +75,44 @@ export function measureBeatMap(
     BigInt(m.meter.beats) * 4n,
     BigInt(m.meter.beatType)
   );
-  const grouping = meterGrouping(m.meter, profile);
-  if (!grouping) {
+  // Nhịp lẻ đi đường riêng: cách chia phải do nguồn khai báo hoặc người dùng chọn.
+  const irregular =
+    profile === "simple-and-compound" && isIrregularMeter(m.meter);
+  const resolved = irregular
+    ? resolveGrouping(m.meter, m.source.id, selection)
+    : null;
+  const grouping = resolved?.grouping ?? meterGrouping(m.meter, profile);
+  if (!grouping && !irregular) {
     issue(
       "UNSUPPORTED_METER",
       profile === "simple"
         ? `Phase 1 supports only ${SUPPORTED_SIMPLE.join(", ")}`
-        : `Supported meters: ${[...SUPPORTED_SIMPLE, ...SUPPORTED_COMPOUND].join(", ")}`
+        : `Supported meters: ${[...SUPPORTED_SIMPLE, ...SUPPORTED_COMPOUND, ...SUPPORTED_IRREGULAR].join(", ")}`
     );
     return out;
   }
-  if (grouping.type === "compound") out.grouping = grouping;
+  if (grouping && grouping.type !== "simple") out.grouping = grouping;
+  if (resolved) {
+    const notices: Diagnostic[] = [];
+    out.groupingSource = resolved.source;
+    out.groups = grouping?.type === "irregular" ? grouping.groups : null;
+    if (resolved.rejected)
+      notices.push({
+        code: "INVALID_GROUPING",
+        sourceId: m.source.id,
+        message: `${partitionCode(resolved.rejected)} không phải cách chia hợp lệ của ${meterCode(m.meter)}.`,
+      });
+    if (!grouping)
+      notices.push({
+        code: "IRREGULAR_GROUPING_REQUIRED",
+        sourceId: m.source.id,
+        message: `${meterCode(m.meter)} requires an explicit grouping such as ${(allowedPartitions(m.meter) ?? [])
+          .slice(0, 2)
+          .map(partitionCode)
+          .join(" or ")} for large-beat counting.`,
+      });
+    if (notices.length) out.notices = notices;
+  }
   if (out.diagnostics.length) return out;
   const relation = compare(m.actualDuration, out.expectedDuration);
   if (relation > 0) {
@@ -81,6 +133,8 @@ export function measureBeatMap(
       return out;
     }
   }
+  // Chưa có cách chia → không có phách lớn cấu trúc. KHÔNG đoán bừa.
+  if (!grouping) return out;
   for (const [i, start] of groupStarts(grouping).entries()) {
     const offset = sub(start, out.pickupOffset);
     if (compare(offset, ZERO) >= 0 && compare(offset, m.actualDuration) < 0)
@@ -90,9 +144,10 @@ export function measureBeatMap(
 }
 export function buildBeatMap(
   score: NormalizedScore,
-  profile: MeterProfile = "simple"
+  profile: MeterProfile = "simple",
+  selection?: GroupingSelection
 ): MeasureBeatMap[] {
   return score.parts.flatMap((p) =>
-    p.measures.map((m) => measureBeatMap(p.id, m, profile))
+    p.measures.map((m) => measureBeatMap(p.id, m, profile, selection))
   );
 }

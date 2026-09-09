@@ -5,8 +5,11 @@ import type {
   CountingLevel,
   CompoundCountingMode,
 } from "../annotations.ts";
+import type { GroupingSelection } from "../meterGrouping.ts";
 export interface ScoreSettings {
   compoundCountingMode?: CompoundCountingMode;
+  /** Cách chia nhịp lẻ do người dùng chọn. Renderer chỉ chuyển tiếp, không tự quyết. */
+  grouping?: GroupingSelection;
   countingLevel?: CountingLevel;
   orientation?: "portrait" | "landscape";
   showBeats: boolean;
@@ -34,6 +37,8 @@ export interface ScorePage {
 export interface AnnotatedScore {
   pages: ScorePage[];
   diagnostics: Diagnostic[];
+  /** Cảnh báo không chặn (ví dụ nhịp lẻ chưa chọn cách chia). Bản nhạc vẫn khắc bình thường. */
+  notices: Diagnostic[];
   beatMap: BeatMapDocument;
   anchors: TemporalAnchor[];
   version: string;

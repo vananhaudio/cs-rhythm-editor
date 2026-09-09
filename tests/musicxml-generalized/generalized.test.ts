@@ -156,8 +156,9 @@ test("mixed meter label counts", () => {
 });
 
 // ── Still out of scope ──────────────────────────────────────────────────────────
-test("5/8 and 7/8 stay unsupported; divisibility alone enables nothing", () => {
-  for (const beats of [5, 7, 10, 15]) {
+// 5/8 và 7/8 được bật ở Giai đoạn 8; 10/8, 11/8, 15/8 vẫn ngoài phạm vi.
+test("meters outside the registry stay unsupported; divisibility alone enables nothing", () => {
+  for (const beats of [10, 11, 15]) {
     assert.equal(meterGrouping({ beats, beatType: 8 }), null);
     const m = musicXMLToBeatMap(
       fixture("basic-9-8").replace("<beats>9</beats>", `<beats>${beats}</beats>`)

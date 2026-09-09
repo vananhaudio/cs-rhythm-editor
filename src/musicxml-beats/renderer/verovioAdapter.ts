@@ -156,6 +156,7 @@ export async function createAnnotatedScoreRenderer() {
   let cached:
     | {
         xml: string;
+        groupingKey: string;
         mei: string;
         map: ReturnType<typeof musicXMLToBeatMap>;
         log: string;
@@ -179,8 +180,12 @@ export async function createAnnotatedScoreRenderer() {
         !Number.isFinite(settings.distance)
       )
         throw new Error("Thiết lập số phách không hợp lệ.");
-      const sourceMap =
-        cached?.xml === xml ? cached.map : musicXMLToBeatMap(xml);
+      // Cách chia nhịp lẻ đổi thì beat-map đổi theo, nên nó phải nằm trong khóa cache.
+      const groupingKey = JSON.stringify(settings.grouping ?? null);
+      const fresh = cached?.xml === xml && cached.groupingKey === groupingKey;
+      const sourceMap = fresh
+        ? cached!.map
+        : musicXMLToBeatMap(xml, settings.grouping);
       const hasSubbeats = createAnnotations(
         sourceMap,
         settings.countingLevel,
@@ -214,22 +219,26 @@ export async function createAnnotatedScoreRenderer() {
             }
           : {}),
       });
-      if (!cached || cached.xml !== xml) {
+      if (!fresh) {
         const map = sourceMap;
         toolkit.resetXmlIdSeed(1);
         if (!toolkit.loadData(xml))
           throw new Error("Verovio không đọc được bản nhạc.");
-        cached = { xml, mei: toolkit.getMEI(), map, log: toolkit.getLog() };
+        cached = {
+          xml,
+          groupingKey,
+          mei: toolkit.getMEI(),
+          map,
+          log: toolkit.getLog(),
+        };
       }
-      const applied = applyTemporalAnnotations(
-        cached.mei,
-        cached.map,
-        settings
-      );
+      const active = cached!;
+      const applied = applyTemporalAnnotations(active.mei, active.map, settings);
       if (!toolkit.loadData(applied.mei))
         throw new Error("Không render được bản nhạc đã đánh dấu phách.");
       const diagnostics = [...applied.diagnostics];
-      for (const message of [cached.log, toolkit.getLog()].filter(Boolean))
+      const notices = active.map.measures.flatMap((m) => m.notices ?? []);
+      for (const message of [active.log, toolkit.getLog()].filter(Boolean))
         diagnostics.push({
           sourceId: "score",
           code: "RENDERER_WARNING",
@@ -270,10 +279,11 @@ export async function createAnnotatedScoreRenderer() {
       return {
         pages,
         diagnostics,
-        beatMap: cached.map,
+        notices,
+        beatMap: active.map,
         anchors: applied.anchors.filter((a) => resolved.has(a.id)),
         version: toolkit.getVersion(),
-        originalMEI: cached.mei,
+        originalMEI: active.mei,
         renderedMEI: toolkit.getMEI(),
       };
     },

@@ -1,6 +1,11 @@
 import {
   meterGrouping,
+  allowedPartitions,
+  isIrregularMeter,
+  meterCode,
+  partitionCode,
   SUPPORTED_COMPOUND,
+  SUPPORTED_IRREGULAR,
   SUPPORTED_SIMPLE,
 } from "../musicxml-beats/meterGrouping";
 import {
@@ -169,18 +174,53 @@ export default function MusicXmlBeatsPage() {
     ),
   ];
   const hasCompound = compoundMeters.length > 0;
+  // ── Nhịp lẻ: cách chia KHÔNG suy được từ tử số nên người dùng phải chọn ──
+  const irregularMeters = [
+    ...new Map(
+      (score?.beatMap.measures ?? [])
+        .filter((m) => isIrregularMeter(m.meter))
+        .map((m) => [meterCode(m.meter!), m.meter!])
+    ),
+  ];
+  const fromSource = new Map(
+    (score?.beatMap.measures ?? [])
+      .filter((m) => m.groupingSource === "musicxml" && m.groups)
+      .map((m) => [meterCode(m.meter!), partitionCode(m.groups!)])
+  );
+  const pickGrouping = (code: string, groups: readonly number[] | null) =>
+    update({
+      grouping: {
+        ...settings.grouping,
+        byMeter: Object.fromEntries(
+          Object.entries({
+            ...(settings.grouping?.byMeter ?? {}),
+            [code]: groups,
+          }).filter(([, v]) => !!v)
+        ) as Record<string, readonly number[]>,
+      },
+    });
   const only = compoundMeters.length === 1 ? compoundMeters[0][1] : null;
   const series = (n: number) =>
     Array.from({ length: n }, (_, i) => i + 1).join(" ");
-  const compoundLegend = only
-    ? `Nhịp ${only.beats}/${only.beatType}`
-    : `Nhịp kép (${compoundMeters.map(([k]) => k).join(", ")})`;
-  const pulseLabel = only
-    ? `Theo ${only.beats} phách nhỏ: ${series(only.beats)}`
+  const countingMeters = [...compoundMeters, ...irregularMeters];
+  const soloCounting = countingMeters.length === 1 ? countingMeters[0][1] : null;
+  const compoundLegend = soloCounting
+    ? `Nhịp ${meterCode(soloCounting)}`
+    : `Nhịp kép và nhịp lẻ (${countingMeters.map(([k]) => k).join(", ")})`;
+  const pulseLabel = soloCounting
+    ? `Theo ${soloCounting.beats} phách nhỏ: ${series(soloCounting.beats)}`
     : "Theo phách nhỏ (mỗi móc đơn)";
-  const beatLabel = only
-    ? `Theo ${only.beats / 3} phách lớn: ${series(only.beats / 3)}`
-    : "Theo phách lớn (mỗi nốt đen chấm dôi)";
+  const largeCount = soloCounting
+    ? isIrregularMeter(soloCounting)
+      ? (settings.grouping?.byMeter?.[meterCode(soloCounting)] ??
+          (score?.beatMap.measures.find(
+            (m) => m.meter && meterCode(m.meter) === meterCode(soloCounting)
+          )?.groups ?? null))?.length ?? null
+      : soloCounting.beats / 3
+    : null;
+  const beatLabel = largeCount
+    ? `Theo ${largeCount} phách lớn: ${series(largeCount)}`
+    : "Theo phách lớn (theo cách chia nhịp)";
   const hasSimple =
     !score ||
     score.beatMap.measures.some(
@@ -352,7 +392,86 @@ export default function MusicXmlBeatsPage() {
                 ))}
               </fieldset>
             )}
-            {hasCompound && (
+            {irregularMeters.map(([code, meter]) => {
+              const chosen = settings.grouping?.byMeter?.[code];
+              const source = fromSource.get(code);
+              const active = chosen ? partitionCode(chosen) : source ?? null;
+              return (
+                <fieldset
+                  key={code}
+                  style={{
+                    border: 0,
+                    padding: 0,
+                    margin: 0,
+                    display: "flex",
+                    gap: 14,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <legend
+                    style={{ fontWeight: 600, fontSize: 14, marginBottom: 10 }}
+                  >
+                    Cách chia nhịp {code}
+                  </legend>
+                  {(allowedPartitions(meter) ?? []).map((groups) => {
+                    const key = partitionCode(groups);
+                    return (
+                      <label
+                        key={key}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
+                          minHeight: 44,
+                          fontSize: 14,
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name={`grouping-${code}`}
+                          checked={active === key}
+                          onChange={() => pickGrouping(code, groups)}
+                          style={{ accentColor: "#4338ca" }}
+                        />
+                        {groups.join(" + ")}
+                        {source === key && !chosen && (
+                          <span style={{ fontSize: 12, color: "#16a34a" }}>
+                            · theo bản nhạc
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                  {chosen && source && partitionCode(chosen) !== source && (
+                    <span style={{ fontSize: 12, color: "#b45309" }}>
+                      Đang đè cách chia {source} ghi trong bản nhạc.{" "}
+                      <button
+                        type="button"
+                        onClick={() => pickGrouping(code, null)}
+                        style={{
+                          border: 0,
+                          background: "none",
+                          padding: 0,
+                          color: "#4338ca",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          font: "inherit",
+                        }}
+                      >
+                        Dùng lại bản nhạc
+                      </button>
+                    </span>
+                  )}
+                  {!active && (
+                    <span style={{ fontSize: 12, color: "#b45309" }}>
+                      Bản nhạc không ghi cách chia. Phách nhỏ dùng được ngay;
+                      chọn một cách chia để đếm phách lớn.
+                    </span>
+                  )}
+                </fieldset>
+              );
+            })}
+            {(hasCompound || irregularMeters.length > 0) && (
               <fieldset
                 style={{
                   border: 0,
@@ -678,8 +797,9 @@ export default function MusicXmlBeatsPage() {
                 <div style={{ fontSize: 40, marginBottom: 16 }}>𝄞</div>
                 <p>Chọn bản nhạc để bắt đầu.</p>
                 <p style={{ fontSize: 13 }}>
-                  Hỗ trợ {SUPPORTED_SIMPLE.join(", ")} và hai cách đếm nhịp
-                  kép {SUPPORTED_COMPOUND.join(", ")}.
+                  Hỗ trợ {SUPPORTED_SIMPLE.join(", ")}, nhịp kép{" "}
+                  {SUPPORTED_COMPOUND.join(", ")} và nhịp lẻ{" "}
+                  {SUPPORTED_IRREGULAR.join(", ")}.
                 </p>
               </div>
             )}

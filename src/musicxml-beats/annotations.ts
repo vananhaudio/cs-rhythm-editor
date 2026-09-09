@@ -1,4 +1,4 @@
-import { meterGrouping, groupStarts } from "./meterGrouping.ts";
+import { groupStartsOf, pulseMeter } from "./meterGrouping.ts";
 import type { BeatMapDocument } from "./beatMap.ts";
 import { add, compare, rational, sub, ZERO } from "./rational.ts";
 import type { Rational } from "./rational.ts";
@@ -30,24 +30,37 @@ export function createAnnotations(
       label: string;
       offset: Rational;
     }[] = [];
-    const grouping = meterGrouping(m.meter);
-    if (grouping?.type === "compound") {
-      const starts = groupStarts(grouping);
-      const points: Rational[] = [];
-      if (compoundMode === "compound") points.push(...starts);
-      else {
+    // MỘT đường chung cho mọi nhịp mà một nhãn = một móc đơn, cả nhịp kép lẫn nhịp lẻ.
+    // Phách nhỏ chỉ cần (số phách, đơn vị) nên chạy được cả khi chưa biết cách chia;
+    // phách lớn bắt buộc phải có cách chia, không có thì KHÔNG hiện nhãn nào.
+    const pulse = pulseMeter(m.meter);
+    if (pulse) {
+      const g = m.grouping;
+      const groups = g && g.type !== "simple" ? g.groups : null;
+      const starts = groups ? groupStartsOf(groups, pulse.unit) : [];
+      let points: Rational[];
+      if (compoundMode === "compound") {
+        if (!groups) return [];
+        points = starts;
+      } else {
+        points = [];
         let position = ZERO;
-        for (const size of grouping.groups)
-          for (let i = 0; i < size; i++) {
-            points.push(position);
-            position = add(position, grouping.unit);
-          }
+        for (let i = 0; i < pulse.count; i++) {
+          points.push(position);
+          position = add(position, pulse.unit);
+        }
       }
       points.forEach((position, index) => {
         const offset = sub(position, m.pickup ? m.pickupOffset : ZERO);
         if (compare(offset, ZERO) >= 0 && compare(offset, m.actualDuration) < 0)
           values.push({
-            kind: starts.includes(position) ? "beat" : "subbeat",
+            kind: starts.length
+              ? starts.includes(position)
+                ? "beat"
+                : "subbeat"
+              : compare(position, ZERO) === 0
+              ? "beat"
+              : "subbeat",
             label: String(index + 1),
             offset,
           });

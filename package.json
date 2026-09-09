@@ -17,6 +17,7 @@
     "test:musicxml-subdivision": "tsc -p tests/musicxml-subdivision/tsconfig.json && node --experimental-strip-types --test tests/musicxml-subdivision/subdivision.test.ts",
     "test:musicxml-compound": "tsc -p tests/musicxml-compound/tsconfig.json && node --experimental-strip-types --test tests/musicxml-compound/compound.test.ts",
     "test:musicxml-generalized": "tsc -p tests/musicxml-generalized/tsconfig.json && node --experimental-strip-types --test tests/musicxml-generalized/generalized.test.ts",
+    "test:musicxml-irregular": "tsc -p tests/musicxml-irregular/tsconfig.json && node --experimental-strip-types --test tests/musicxml-irregular/irregular.test.ts",
     "test:route-guard": "tsc -p tests/route-guard/tsconfig.json && node --experimental-strip-types --test tests/route-guard/teacherRoute.test.ts"
   },
   "dependencies": {

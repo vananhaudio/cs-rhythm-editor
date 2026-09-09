@@ -84,14 +84,17 @@ export function parseMusicXML(xml: string): NormalizedScore {
           for (const t of children(el, "time")) {
             const bs = text(t, "beats"),
               bt = text(t, "beat-type");
+            // `<beats>2+3</beats>` là cách MusicXML ghi RÕ nhịp cộng. Chỉ đọc nguyên
+            // văn ở đây; việc cách chia đó có được hỗ trợ hay không do meterGrouping
+            // quyết, nên nhịp cộng ngoài phạm vi vẫn ra UNSUPPORTED_METER như cũ.
+            const parts = /^\d+(\+\d+)*$/.test(bs) ? bs.split("+").map(Number) : null;
             if (
               t.hasAttribute("number") ||
               children(t, "beats").length !== 1 ||
-              !/^\d+$/.test(bs) ||
+              !parts ||
+              !parts.every((n) => Number.isSafeInteger(n) && n > 0) ||
               !/^\d+$/.test(bt) ||
-              !Number.isSafeInteger(Number(bs)) ||
               !Number.isSafeInteger(Number(bt)) ||
-              Number(bs) <= 0 ||
               Number(bt) <= 0
             ) {
               issue(
@@ -99,7 +102,15 @@ export function parseMusicXML(xml: string): NormalizedScore {
                 "Composite, staff-specific or missing meter"
               );
               meter = null;
-            } else meter = { beats: Number(bs), beatType: Number(bt) };
+            } else
+              meter =
+                parts.length > 1
+                  ? {
+                      beats: parts.reduce((a, b) => a + b, 0),
+                      beatType: Number(bt),
+                      additive: parts,
+                    }
+                  : { beats: parts[0], beatType: Number(bt) };
             if (
               compare(cursor, ZERO) !== 0 ||
               measure.events.some((e) => e.kind === "note" || e.kind === "rest")

@@ -121,9 +121,10 @@ test("simple subdivision level does not leak into compound modes", () => {
       createAnnotations(m, "beats", mode)
     );
 });
-// 9/8 and 12/8 became supported in Phase 7; 5/8 and 7/8 stay deliberately out.
+// 9/8 và 12/8 được bật ở Giai đoạn 7, 5/8 và 7/8 ở Giai đoạn 8;
+// 10/8 và 11/8 vẫn cố ý nằm ngoài.
 test("unsupported meters stay unsupported, not inferred from divisibility or beams", () => {
-  for (const beats of [5, 7]) {
+  for (const beats of [10, 11]) {
     assert.equal(meterGrouping({ beats, beatType: 8 }), null);
     const m = musicXMLToBeatMap(
       fixture("sustained").replace(

@@ -13,6 +13,11 @@ export interface Diagnostic {
 export interface Meter {
   beats: number;
   beatType: number;
+  /**
+   * Cách chia ghi RÕ trong nguồn (MusicXML `<beats>2+3</beats>`), giữ nguyên thứ tự.
+   * null = nguồn không nói gì. KHÔNG BAO GIỜ được suy ra từ beam hay nốt.
+   */
+  additive?: readonly number[] | null;
 }
 export interface TimedEvent {
   source: SourceIdentity;
