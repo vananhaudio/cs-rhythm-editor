@@ -2,8 +2,17 @@ import { Capacitor } from '@capacitor/core'
 import { createBrowserClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 
-export const SUPABASE_URL = 'https://wojmdilyflffvdtpovmq.supabase.co'
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvam1kaWx5ZmxmZnZkdHBvdm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjk0OTYsImV4cCI6MjA5NDg0NTQ5Nn0.JxlY5iqBTK3q5BYnF1MgY8A5zS3R5okrD8uddsEFavY'
+const PROD_URL = 'https://wojmdilyflffvdtpovmq.supabase.co'
+const PROD_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indvam1kaWx5ZmxmZnZkdHBvdm1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjk0OTYsImV4cCI6MjA5NDg0NTQ5Nn0.JxlY5iqBTK3q5BYnF1MgY8A5zS3R5okrD8uddsEFavY'
+
+// Cho phép trỏ sang Supabase local KHI VÀ CHỈ KHI đang chạy bản dev (`npm run dev`).
+// Bản production build luôn dùng project thật — biến môi trường không đổi được,
+// nên không có đường nào lỡ tay đẩy dữ liệu học viên sang máy chủ khác.
+const devOverride = <T,>(value: unknown, fallback: T): T =>
+  import.meta.env.DEV && typeof value === 'string' && value ? (value as T) : fallback
+
+export const SUPABASE_URL = devOverride(import.meta.env.VITE_SUPABASE_URL, PROD_URL)
+export const SUPABASE_ANON_KEY = devOverride(import.meta.env.VITE_SUPABASE_ANON_KEY, PROD_ANON_KEY)
 export const SUPABASE_PROJECT_REF = new URL(SUPABASE_URL).hostname.split('.')[0]
 export const SUPABASE_AUTH_STORAGE_KEY = `sb-${SUPABASE_PROJECT_REF}-auth-token`
 export const IS_NATIVE_CAPACITOR = typeof window !== 'undefined' && Capacitor.isNativePlatform()

@@ -10,6 +10,12 @@ import type { NhipPhachPreset } from "./presets.ts";
 export interface PresetStore {
   presets: NhipPhachPreset[];
   defaultId: string | null;
+  /** "system" | "custom" — mặc định trỏ tới preset hệ thống hay preset cá nhân. */
+  defaultSource?: "system" | "custom" | null;
+  /** Dấu thời gian máy chủ của từng preset, dùng để phát hiện ghi chồng. */
+  versions?: Record<string, string>;
+  /** Nguồn dữ liệu đang dùng — UI hiện trạng thái đồng bộ từ đây. */
+  origin?: "local" | "cloud" | "cloud-fallback";
   /** Đọc được nhưng có phần hỏng đã bỏ qua — UI báo nhẹ, công cụ vẫn chạy. */
   recovered: boolean;
 }
@@ -21,14 +27,24 @@ export interface PresetStore {
  */
 export interface PresetRepository {
   load(): Promise<PresetStore>;
-  save(preset: NhipPhachPreset): Promise<void>;
+  /** `expectedUpdatedAt` là dấu thời gian client đã đọc; lệch → PRESET_CONFLICT. */
+  save(preset: NhipPhachPreset, expectedUpdatedAt?: string): Promise<void>;
   rename(id: string, name: string): Promise<void>;
   duplicate(id: string, name?: string): Promise<NhipPhachPreset>;
   remove(id: string): Promise<void>;
-  setDefault(id: string | null): Promise<void>;
+  setDefault(id: string | null, source?: "system" | "custom" | null): Promise<void>;
 }
 
-const KEY = "nhipphach-presets-v1";
+/**
+ * Khoá cũ từ Giai đoạn 9A, KHÔNG mang danh tính người dùng. Từ 10A nó chỉ còn là
+ * NGUỒN DỮ LIỆU CŨ để đưa lên tài khoản đúng một lần, tuyệt đối không dùng làm
+ * bộ nhớ đệm chung — nếu không, thầy A đăng xuất rồi thầy B đăng nhập lúc mất
+ * mạng sẽ thấy preset của thầy A.
+ */
+export const LEGACY_KEY = "nhipphach-presets-v1";
+/** Bộ nhớ đệm của từng tài khoản. */
+export const keyFor = (namespace?: string | null) =>
+  namespace ? `nhipphach:presets:${namespace}` : LEGACY_KEY;
 type Persisted = { schemaVersion?: number; presets?: unknown[]; defaultId?: unknown };
 
 /** Trộn preset hệ thống (luôn là bản trong mã) với preset cá nhân đã lưu. */
@@ -38,20 +54,28 @@ function merge(custom: NhipPhachPreset[]): NhipPhachPreset[] {
 
 export class LocalPresetRepository implements PresetRepository {
   private storage: Storage | null;
-  constructor(storage: Storage | null = safeLocalStorage()) {
+  private key: string;
+  /** `namespace` là auth uid. Bỏ trống = kho cũ chưa gắn danh tính (chỉ để đọc lần đầu). */
+  constructor(
+    storage: Storage | null = safeLocalStorage(),
+    namespace?: string | null
+  ) {
     this.storage = storage;
+    this.key = keyFor(namespace);
   }
 
   async load(): Promise<PresetStore> {
     const empty: PresetStore = {
       presets: merge([]),
       defaultId: null,
+      defaultSource: null,
       recovered: false,
+      origin: "local",
     };
     if (!this.storage) return empty;
     let raw: string | null = null;
     try {
-      raw = this.storage.getItem(KEY);
+      raw = this.storage.getItem(this.key);
     } catch {
       return { ...empty, recovered: true };
     }
@@ -78,7 +102,12 @@ export class LocalPresetRepository implements PresetRepository {
         ? (parsed.defaultId as string)
         : null;
     if (typeof parsed?.defaultId === "string" && !defaultId) recovered = true;
-    return { presets, defaultId, recovered };
+    const defaultSource = defaultId
+      ? isSystemPreset(defaultId)
+        ? ("system" as const)
+        : ("custom" as const)
+      : null;
+    return { presets, defaultId, defaultSource, recovered, origin: "local" };
   }
 
   private async write(store: {
@@ -87,7 +116,7 @@ export class LocalPresetRepository implements PresetRepository {
   }) {
     if (!this.storage) throw new Error("Trình duyệt không cho lưu preset.");
     this.storage.setItem(
-      KEY,
+      this.key,
       JSON.stringify({
         schemaVersion: PRESET_SCHEMA_VERSION,
         presets: store.presets.filter((p) => !p.system),
@@ -142,7 +171,7 @@ export class LocalPresetRepository implements PresetRepository {
     });
   }
 
-  async setDefault(id: string | null): Promise<void> {
+  async setDefault(id: string | null, _source?: "system" | "custom" | null): Promise<void> {
     const { presets } = await this.load();
     if (id !== null && !presets.some((p) => p.id === id))
       throw new Error("Không tìm thấy preset.");

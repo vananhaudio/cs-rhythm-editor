@@ -63,6 +63,10 @@ DECLARE
     -- nếu không học viên authenticated có thể tự sửa required_tier/visibility.
     'edu_courses', 'edu_modules', 'edu_course_lessons',
     'student_action_logs',
+    -- Preset công cụ Nhịp Phách (db/nhipphach_presets_setup.sql): dữ liệu THEO
+    -- TÀI KHOẢN, policy hẹp `user_id = auth.uid() AND is_teacher()`. ĐỪNG áp
+    -- policy rộng lên hai bảng này — làm thế là mọi người đọc preset của nhau.
+    'nhipphach_presets', 'nhipphach_prefs',
     -- Trang tuyển sinh class.vananhaudio.com — policy HẸP riêng (xem db/class_tuyensinh_setup.sql).
     -- articles: anon đọc bài published. leads: anon CHỈ ghi (không đọc). ĐỪNG để vòng lặp áp policy rộng.
     'articles', 'leads',

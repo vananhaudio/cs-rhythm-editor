@@ -141,3 +141,34 @@ test("đích redirect là route công khai, không tạo vòng lặp", () => {
     "không route nào đá ngược về /nhipphach"
   );
 });
+
+
+// ── Mất mạng không được thu hồi quyền đã cấp ────────────────────────────────────
+test("ToolRouteGate giữ quyền khi một lần kiểm tra bị lỗi mạng", () => {
+  const gate = readFileSync(
+    new URL("../../src/ToolRouteGate.tsx", import.meta.url),
+    "utf8"
+  );
+  // Lỗi tạm thời: KHÔNG được setAllowed(null) — làm thế là gỡ cả công cụ khỏi DOM,
+  // mất bản nhạc đang mở và mẻ nhiều bài đang chạy.
+  assert.doesNotMatch(gate, /setAllowed\(error\?null/, "không hạ quyền khi lỗi");
+  assert.match(gate, /const keep=lastGood\.current && lastGood\.current\.uid===uid/);
+  assert.match(gate, /if\(keep\)setAllowed\(lastGood\.current!\.allowed\)/);
+  // Chưa từng xác định được quyền thì vẫn báo lỗi
+  assert.match(gate, /else\{lastGood\.current=null;setAllowed\(null\);setError\(true\)\}/);
+  // …và quyền tốt gần nhất phải gắn với ĐÚNG tài khoản
+  assert.match(gate, /lastGood=useRef<\{uid:string\|null;allowed:boolean\}\|null>\(null\)/);
+  assert.match(gate, /lastGood\.current=\{uid,allowed:data===true\}/);
+});
+
+
+test("chỉ bản DEV mới được trỏ Supabase đi nơi khác", () => {
+  const sb = readFileSync(new URL("../../src/supabase.ts", import.meta.url), "utf8");
+  // Giá trị production là hằng trong mã, không phải biến môi trường.
+  assert.match(sb, /const PROD_URL = 'https:\/\/wojmdilyflffvdtpovmq\.supabase\.co'/);
+  // Ghi đè chỉ có hiệu lực khi import.meta.env.DEV — bản build production luôn
+  // dùng project thật dù biến môi trường có được đặt hay không.
+  assert.match(sb, /import\.meta\.env\.DEV && typeof value === 'string'/);
+  assert.match(sb, /devOverride\(import\.meta\.env\.VITE_SUPABASE_URL, PROD_URL\)/);
+  assert.match(sb, /devOverride\(import\.meta\.env\.VITE_SUPABASE_ANON_KEY, PROD_ANON_KEY\)/);
+});

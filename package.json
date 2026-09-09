@@ -20,6 +20,7 @@
     "test:musicxml-irregular": "tsc -p tests/musicxml-irregular/tsconfig.json && node --experimental-strip-types --test tests/musicxml-irregular/irregular.test.ts",
     "test:nhipphach-presets": "tsc -p tests/nhipphach-presets/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-presets/presets.test.ts",
     "test:nhipphach-batch": "tsc -p tests/nhipphach-batch/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-batch/batch.test.ts",
+    "test:nhipphach-cloud": "tsc -p tests/nhipphach-cloud/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-cloud/cloud.test.ts",
     "test:route-guard": "tsc -p tests/route-guard/tsconfig.json && node --experimental-strip-types --test tests/route-guard/teacherRoute.test.ts"
   },
   "dependencies": {

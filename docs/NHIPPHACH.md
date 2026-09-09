@@ -79,6 +79,30 @@ Song song mặc định **2**, trần cứng **4**. **Chưa dùng Web Worker** �
 
 Giữa hai bài có một nhịp **nhường lượt cho trình duyệt vẽ lại** (`setTimeout(…, 0)`). Không có nó thì cả vòng lặp chạy trong microtask: React gộp mọi cập nhật, trình duyệt không vẽ lần nào, và thầy thấy bộ đếm đứng im ở `0 / 50` rồi nhảy phắt sang `50 / 50`. Có nó thì bộ đếm bước đều — đo thật trên trang: `0 → 2 → 4 → 6 → 8 → 10`.
 
+## Preset theo tài khoản (Giai đoạn 10A)
+
+Preset cá nhân đi theo tài khoản teacher/admin, không phụ thuộc máy hay trình duyệt.
+
+```
+nhipphach_presets(user_id, id)  ← khoá chính GHÉP
+nhipphach_prefs(user_id)        ← preset mặc định, kèm nguồn system|custom
+```
+
+- **RLS:** `user_id = auth.uid() AND public.is_teacher()` cho cả bốn thao tác; `anon` không có policy nào. Chặn nằm ở **database**, không phải ở bộ lọc phía client.
+- **Khoá chính ghép** vì id do client sinh: hai thầy có thể trùng id, và không truy vấn nào chạm được dòng của người khác chỉ bằng `id`. Mọi update/delete ghim `user_id` trước, rồi `id`, rồi `updated_at`.
+- **Ghi chồng:** last-write-wins **có phát hiện stale** — sai `updated_at` thì trả `PRESET_CONFLICT`, không đè âm thầm. Không CRDT, không realtime.
+- **Preset hệ thống** không bao giờ xuống DB; mặc định trỏ tới chúng được lưu ở `nhipphach_prefs` với `source = 'system'`.
+- **Bộ nhớ đệm gắn với tài khoản:** `nhipphach:presets:<uid>`. Người khác đăng nhập trên cùng máy không đọc được đệm của người trước, kể cả khi mất mạng. Khoá cũ `nhipphach-presets-v1` của Giai đoạn 9A chỉ còn là **nguồn dữ liệu cũ**, được đúng một tài khoản nhận (`nhipphach:legacyClaimedBy`), không dùng làm fallback chung.
+- **Mất mạng:** đọc lùi về đệm và nói rõ "Đang dùng bản lưu trên máy"; ghi thì **báo lỗi**, không giả báo thành công. Công cụ vẫn preview, xuất SVG/PDF và chạy batch bình thường.
+- **`ToolRouteGate`:** quyền đã cấp gắn với `auth.uid()`. Lỗi mạng tạm thời giữ nguyên quyền tốt gần nhất (nếu không, một lần poll hỏng là mất cả bản nhạc đang mở và mẻ đang chạy); nhưng đăng xuất, đổi tài khoản, hay một câu trả lời **hợp lệ** là "không cho" đều thu hồi ngay.
+
+### Giới hạn đã biết
+
+> **Production Supabase schema is not fully reproducible from `supabase/migrations` yet.**
+> `supabase start` chỉ dựng được một phần: nhiều bảng của production (`app_users`, các RPC như `my_learning_state`, `my_tool_route_access`) được tạo tay và không nằm trong repo. Muốn test local phải tự dựng các phụ thuộc đó. Chuẩn hoá toàn bộ DB thành migration đầy đủ là việc của một mốc khác.
+>
+> Vì lý do đó `supabase/config.toml` **không được commit** — giữ nó trong repo sẽ tạo cảm giác sai rằng `supabase start` dựng được schema production.
+
 ## Chạy test
 
 ```bash

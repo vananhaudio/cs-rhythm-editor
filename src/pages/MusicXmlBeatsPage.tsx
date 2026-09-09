@@ -33,6 +33,12 @@ import {
 import type { NhipPhachPreset } from "../nhipphach/presets";
 import { LocalPresetRepository } from "../nhipphach/presetRepository";
 import {
+  openPresetRepository,
+  stateFromStore,
+  SYNC_LABEL,
+} from "../nhipphach/presetGateway";
+import type { SyncState } from "../nhipphach/presetGateway";
+import {
   runBatch,
   batchProgress,
   EXTENSION,
@@ -82,6 +88,7 @@ export default function MusicXmlBeatsPage() {
   const [defaultPresetId, setDefaultPresetId] = useState<string | null>(null);
   const [presetNote, setPresetNote] = useState("");
   const [managing, setManaging] = useState(false);
+  const [syncState, setSyncState] = useState<SyncState>("local");
   // ── Chế độ nhiều bài. Dùng LẠI đúng pipeline một bài, không có engine thứ hai ──
   const [tab, setTab] = useState<"one" | "many">("one");
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
@@ -113,24 +120,34 @@ export default function MusicXmlBeatsPage() {
   // cấu hình cũ của công cụ, để thầy đang quen không thấy kết quả khác đi.
   useEffect(() => {
     let cancelled = false;
-    presets.current
-      .load()
-      .then((store) => {
+    // Đã đăng nhập thì preset đi theo TÀI KHOẢN; chưa thì dùng kho trên máy như cũ.
+    // Trang không gọi Supabase trực tiếp — mọi thứ qua PresetRepository.
+    (async () => {
+      const gate = await openPresetRepository();
+      if (cancelled) return;
+      presets.current = gate.repo;
+      setSyncState(gate.state);
+      if (gate.note) setPresetNote(gate.note);
+      try {
+        const store = await presets.current.load();
         if (cancelled) return;
         setPresetList(store.presets);
         setDefaultPresetId(store.defaultId);
-        if (store.recovered)
+        setSyncState(gate.state === "failed" ? "failed" : stateFromStore(store));
+        if (store.recovered && !gate.note)
           setPresetNote("Có preset lưu bị hỏng, đã bỏ qua. Công cụ vẫn dùng bình thường.");
         const preferred = store.presets.find((p) => p.id === store.defaultId);
         if (preferred) {
           setPresetId(preferred.id);
           setSettings((current) => applyPreset(preferred, current));
         }
-      })
-      .catch(() => {
-        if (!cancelled)
+      } catch {
+        if (!cancelled) {
+          setSyncState("failed");
           setPresetNote("Không đọc được preset đã lưu. Đang dùng cấu hình mặc định.");
-      });
+        }
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -207,6 +224,7 @@ export default function MusicXmlBeatsPage() {
     const store = await presets.current.load();
     setPresetList(store.presets);
     setDefaultPresetId(store.defaultId);
+    setSyncState(stateFromStore(store));
     setPresetNote(note);
   };
   const choosePreset = (id: string) => {
@@ -224,6 +242,7 @@ export default function MusicXmlBeatsPage() {
       setPresetNote(await action());
     } catch (e) {
       // Lưu hỏng thì KHÔNG báo thành công giả; cấu hình trên UI giữ nguyên.
+      setSyncState("failed");
       setPresetNote(e instanceof Error ? e.message : "Không lưu được preset.");
     }
   }
@@ -559,6 +578,19 @@ export default function MusicXmlBeatsPage() {
             <button style={button} onClick={() => setManaging((v) => !v)}>
               {managing ? "Đóng quản lý" : "Quản lý"}
             </button>
+            <span
+              style={{
+                fontSize: 12,
+                color:
+                  syncState === "synced"
+                    ? "#16a34a"
+                    : syncState === "failed"
+                    ? "#b91c1c"
+                    : "#71717a",
+              }}
+            >
+              {SYNC_LABEL[syncState]}
+            </span>
             {presetNote && (
               <span style={{ fontSize: 12, color: "#b45309" }}>{presetNote}</span>
             )}
