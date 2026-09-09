@@ -11,8 +11,11 @@ export default function ToolRouteGate({children}:{children:ReactNode}) {
   const forget=()=>{lastGood.current=null;setAllowed(null);setError(false)}
   const refresh=async()=>{
    const current=++request
-   const {data:{user}}=await supabase.auth.getUser().catch(()=>({data:{user:null}}))
-   const uid=user?.id??null
+   // getSession() đọc phiên TỪ MÁY, không gọi mạng. Dùng getUser() ở đây là sai:
+   // nó gọi mạng, nên mất mạng sẽ bị hiểu nhầm thành "đã đổi sang không ai",
+   // xoá quyền và gỡ mất cả công cụ đang dùng.
+   const {data:{session}}=await supabase.auth.getSession().catch(()=>({data:{session:null}}))
+   const uid=session?.user?.id??null
    // Phiên đã đổi so với lần xác định thành công gần nhất → bỏ quyền cũ trước khi hỏi lại.
    if(lastGood.current && lastGood.current.uid!==uid){lastGood.current=null;setAllowed(null)}
    const {data,error}=await supabase.rpc('my_tool_route_access',{p_path:window.location.pathname.replace(/\/$/,'')||'/'})

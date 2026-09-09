@@ -159,6 +159,10 @@ test("ToolRouteGate giữ quyền khi một lần kiểm tra bị lỗi mạng",
   // …và quyền tốt gần nhất phải gắn với ĐÚNG tài khoản
   assert.match(gate, /lastGood=useRef<\{uid:string\|null;allowed:boolean\}\|null>\(null\)/);
   assert.match(gate, /lastGood\.current=\{uid,allowed:data===true\}/);
+  // Danh tính phải lấy từ phiên CỤC BỘ. getUser() gọi mạng nên mất mạng sẽ bị
+  // hiểu nhầm là đổi tài khoản, xoá quyền và gỡ mất công cụ đang dùng.
+  assert.match(gate, /supabase\.auth\.getSession\(\)/);
+  assert.doesNotMatch(gate, /supabase\.auth\.getUser\(\)/);
 });
 
 
