@@ -23,6 +23,16 @@ import type {
   ScoreSettings,
 } from "../musicxml-beats/renderer/types";
 import { downloadText } from "../musicxml-beats/renderer/svgExport";
+import {
+  SYSTEM_PRESETS,
+  applyPreset,
+  isSystemPreset,
+  presetFromSettings,
+  MAX_PRESET_NAME,
+} from "../nhipphach/presets";
+import type { NhipPhachPreset } from "../nhipphach/presets";
+import { LocalPresetRepository } from "../nhipphach/presetRepository";
+import type { PresetRepository } from "../nhipphach/presetRepository";
 
 const button: CSSProperties = {
   border: "1px solid #d4d4d8",
@@ -51,6 +61,15 @@ export default function MusicXmlBeatsPage() {
     DEFAULT_SCORE_SETTINGS
   );
   const [exporting, setExporting] = useState(false);
+  // ── Preset: chỉ thiết lập trình bày, không giữ bản nhạc, không giữ cách chia ──
+  const presets = useRef<PresetRepository>(new LocalPresetRepository());
+  const [presetList, setPresetList] = useState<NhipPhachPreset[]>([
+    ...SYSTEM_PRESETS,
+  ]);
+  const [presetId, setPresetId] = useState<string>("");
+  const [defaultPresetId, setDefaultPresetId] = useState<string | null>(null);
+  const [presetNote, setPresetNote] = useState("");
+  const [managing, setManaging] = useState(false);
   const [pngScale, setPngScale] = useState<1 | 2>(2);
   const [score, setScore] = useState<AnnotatedScore | null>(null);
   const [busy, setBusy] = useState(false),
@@ -68,6 +87,66 @@ export default function MusicXmlBeatsPage() {
     },
     []
   );
+  // Nạp preset khi mở trang. Có preset mặc định thì áp; KHÔNG có thì giữ nguyên
+  // cấu hình cũ của công cụ, để thầy đang quen không thấy kết quả khác đi.
+  useEffect(() => {
+    let cancelled = false;
+    presets.current
+      .load()
+      .then((store) => {
+        if (cancelled) return;
+        setPresetList(store.presets);
+        setDefaultPresetId(store.defaultId);
+        if (store.recovered)
+          setPresetNote("Có preset lưu bị hỏng, đã bỏ qua. Công cụ vẫn dùng bình thường.");
+        const preferred = store.presets.find((p) => p.id === store.defaultId);
+        if (preferred) {
+          setPresetId(preferred.id);
+          setSettings((current) => applyPreset(preferred, current));
+        }
+      })
+      .catch(() => {
+        if (!cancelled)
+          setPresetNote("Không đọc được preset đã lưu. Đang dùng cấu hình mặc định.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const refreshPresets = async (note = "") => {
+    const store = await presets.current.load();
+    setPresetList(store.presets);
+    setDefaultPresetId(store.defaultId);
+    setPresetNote(note);
+  };
+  const choosePreset = (id: string) => {
+    setPresetId(id);
+    setPresetNote("");
+    const preset = presetList.find((p) => p.id === id);
+    if (!preset) return;
+    setBusy(!!source);
+    setSettings((current) => applyPreset(preset, current));
+    if (preset.exportFormat === "png" || preset.exportFormat === "pdf") return;
+  };
+  const currentPreset = presetList.find((p) => p.id === presetId) ?? null;
+  async function guard(action: () => Promise<string>) {
+    try {
+      setPresetNote(await action());
+    } catch (e) {
+      // Lưu hỏng thì KHÔNG báo thành công giả; cấu hình trên UI giữ nguyên.
+      setPresetNote(e instanceof Error ? e.message : "Không lưu được preset.");
+    }
+  }
+  const saveAsPreset = () =>
+    guard(async () => {
+      const name = window.prompt("Tên preset:", "Preset của tôi")?.trim();
+      if (!name) return "";
+      const preset = presetFromSettings(name, settings);
+      await presets.current.save(preset);
+      await refreshPresets();
+      setPresetId(preset.id);
+      return `Đã lưu preset “${preset.name}”.`;
+    });
   useEffect(() => {
     if (!source) return;
     let cancelled = false;
@@ -323,6 +402,127 @@ export default function MusicXmlBeatsPage() {
               {source?.name || ".xml / .musicxml · tối đa 5 MB"}
             </span>
           </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 12,
+              alignItems: "center",
+              marginTop: 18,
+              paddingTop: 16,
+              borderTop: "1px solid #e4e4e7",
+            }}
+          >
+            <label style={{ fontWeight: 600, fontSize: 14 }} htmlFor="preset">
+              Preset
+            </label>
+            <select
+              id="preset"
+              value={presetId}
+              onChange={(e) => choosePreset(e.target.value)}
+              style={{ ...button, fontWeight: 500, minWidth: 190 }}
+            >
+              <option value="">Cấu hình hiện tại</option>
+              {presetList.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.id === defaultPresetId ? " ★" : ""}
+                </option>
+              ))}
+            </select>
+            <button style={button} onClick={() => void saveAsPreset()}>
+              Lưu thành preset
+            </button>
+            <button style={button} onClick={() => setManaging((v) => !v)}>
+              {managing ? "Đóng quản lý" : "Quản lý"}
+            </button>
+            {presetNote && (
+              <span style={{ fontSize: 12, color: "#b45309" }}>{presetNote}</span>
+            )}
+          </div>
+          {managing && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 10,
+                alignItems: "center",
+                marginTop: 12,
+                fontSize: 13,
+              }}
+            >
+              <span style={{ color: "#71717a" }}>
+                {currentPreset
+                  ? `“${currentPreset.name}”${currentPreset.system ? " · preset hệ thống" : ""}`
+                  : "Chưa chọn preset nào"}
+              </span>
+              <button
+                style={button}
+                disabled={!currentPreset}
+                onClick={() =>
+                  void guard(async () => {
+                    const copy = await presets.current.duplicate(presetId);
+                    await refreshPresets();
+                    setPresetId(copy.id);
+                    return `Đã nhân bản thành “${copy.name}”.`;
+                  })
+                }
+              >
+                Nhân bản
+              </button>
+              <button
+                style={button}
+                disabled={!currentPreset || currentPreset.system}
+                onClick={() =>
+                  void guard(async () => {
+                    const next = window
+                      .prompt("Tên mới:", currentPreset?.name ?? "")
+                      ?.trim();
+                    if (!next) return "";
+                    await presets.current.rename(presetId, next.slice(0, MAX_PRESET_NAME));
+                    await refreshPresets();
+                    return `Đã đổi tên thành “${next}”.`;
+                  })
+                }
+              >
+                Đổi tên
+              </button>
+              <button
+                style={button}
+                disabled={!currentPreset}
+                onClick={() =>
+                  void guard(async () => {
+                    const next = defaultPresetId === presetId ? null : presetId;
+                    await presets.current.setDefault(next);
+                    await refreshPresets();
+                    return next
+                      ? "Đã đặt làm preset mặc định."
+                      : "Đã bỏ preset mặc định.";
+                  })
+                }
+              >
+                {defaultPresetId === presetId ? "Bỏ mặc định" : "Đặt làm mặc định"}
+              </button>
+              <button
+                style={{ ...button, color: "#b91c1c" }}
+                disabled={!currentPreset || isSystemPreset(presetId)}
+                onClick={() =>
+                  void guard(async () => {
+                    const gone = currentPreset?.name ?? "";
+                    await presets.current.remove(presetId);
+                    await refreshPresets();
+                    setPresetId("");
+                    return `Đã xoá preset “${gone}”.`;
+                  })
+                }
+              >
+                Xoá
+              </button>
+              <span style={{ color: "#a1a1aa" }}>
+                Preset hệ thống không xoá và không đổi tên được — hãy nhân bản.
+              </span>
+            </div>
+          )}
           <div
             style={{
               display: "flex",
