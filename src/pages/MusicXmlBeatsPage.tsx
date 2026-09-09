@@ -32,6 +32,18 @@ import {
 } from "../nhipphach/presets";
 import type { NhipPhachPreset } from "../nhipphach/presets";
 import { LocalPresetRepository } from "../nhipphach/presetRepository";
+import {
+  runBatch,
+  batchProgress,
+  EXTENSION,
+} from "../nhipphach/batch";
+import type {
+  BatchFile,
+  BatchFormat,
+  BatchItem,
+  BatchProcessor,
+} from "../nhipphach/batch";
+import { zipBatch } from "../nhipphach/batchZip";
 import type { PresetRepository } from "../nhipphach/presetRepository";
 
 const button: CSSProperties = {
@@ -70,6 +82,16 @@ export default function MusicXmlBeatsPage() {
   const [defaultPresetId, setDefaultPresetId] = useState<string | null>(null);
   const [presetNote, setPresetNote] = useState("");
   const [managing, setManaging] = useState(false);
+  // ── Chế độ nhiều bài. Dùng LẠI đúng pipeline một bài, không có engine thứ hai ──
+  const [tab, setTab] = useState<"one" | "many">("one");
+  const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
+  const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
+  const [batchFormat, setBatchFormat] = useState<BatchFormat>("pdf");
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchNote, setBatchNote] = useState("");
+  const [batchGrouping, setBatchGrouping] = useState<Record<string, ScoreSettings["grouping"]>>({});
+  const batchAbort = useRef<{ aborted: boolean }>({ aborted: false });
+  const batchInput = useRef<HTMLInputElement>(null);
   const [pngScale, setPngScale] = useState<1 | 2>(2);
   const [score, setScore] = useState<AnnotatedScore | null>(null);
   const [busy, setBusy] = useState(false),
@@ -113,6 +135,74 @@ export default function MusicXmlBeatsPage() {
       cancelled = true;
     };
   }, []);
+  // Processor của batch = ĐÚNG pipeline một bài: cùng renderer, cùng bộ xuất.
+  const batchProcessor: BatchProcessor = {
+    async render(xml, s) {
+      renderer.current ??= createAnnotatedScoreRenderer().catch((e) => {
+        renderer.current = null;
+        throw e;
+      });
+      return (await renderer.current).render(xml, s);
+    },
+    async toBlob(scoreOut, format) {
+      if (format === "pdf") return exportScorePDF(scoreOut);
+      if (format === "svg") return (await exportSVGPages(scoreOut)).blob;
+      return (await exportScorePNG(scoreOut, pngScale)).blob;
+    },
+  };
+  async function readBatchFiles(list: FileList | null) {
+    if (!list?.length) return;
+    const wanted = [...list].filter((f) => /\.(xml|musicxml)$/i.test(f.name));
+    const bo = list.length - wanted.length;
+    const files: BatchFile[] = [];
+    for (const f of wanted) files.push({ name: f.name, xml: await f.text() });
+    setBatchFiles(files);
+    setBatchItems([]);
+    setBatchGrouping({});
+    setBatchNote(bo ? `Đã bỏ qua ${bo} file không phải .xml/.musicxml.` : "");
+  }
+  async function runBatchNow() {
+    if (!batchFiles.length || batchRunning) return;
+    setBatchRunning(true);
+    setBatchNote("");
+    batchAbort.current = { aborted: false };
+    try {
+      const items = await runBatch(batchFiles, batchProcessor, {
+        settings,
+        format: batchFormat,
+        groupingByItem: batchGrouping,
+        concurrency: 2,
+        signal: batchAbort.current,
+        onUpdate: (items) => setBatchItems([...items]),
+      });
+      setBatchItems(items);
+      const p = batchProgress(items);
+      setBatchNote(
+        `Xong ${p.xong}/${p.tong}` +
+          (p.canChon ? ` · ${p.canChon} bài cần chọn cách chia` : "") +
+          (p.loi ? ` · ${p.loi} bài lỗi` : "")
+      );
+    } finally {
+      setBatchRunning(false);
+    }
+  }
+  async function downloadZip() {
+    try {
+      const out = await zipBatch(batchItems);
+      downloadBlob(out.blob, out.name);
+      setBatchNote(`Đã đóng gói ${out.count} bài vào ${out.name}.`);
+    } catch (e) {
+      setBatchNote(e instanceof Error ? e.message : "Không đóng gói được.");
+    }
+  }
+  const pickBatchGrouping = (item: BatchItem, meter: string, groups: readonly number[]) =>
+    setBatchGrouping((g) => ({
+      ...g,
+      [item.id]: {
+        ...g[item.id],
+        byMeter: { ...(g[item.id]?.byMeter ?? {}), [meter]: groups },
+      },
+    }));
   const refreshPresets = async (note = "") => {
     const store = await presets.current.load();
     setPresetList(store.presets);
@@ -378,6 +468,21 @@ export default function MusicXmlBeatsPage() {
                 e.target.value = "";
               }}
             />
+            {(["one", "many"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{
+                  ...button,
+                  background: tab === t ? "#4338ca" : "#fff",
+                  color: tab === t ? "#fff" : "#18181b",
+                  borderColor: tab === t ? "#4338ca" : "#d4d4d8",
+                }}
+              >
+                {t === "one" ? "Một bài" : "Nhiều bài"}
+              </button>
+            ))}
+            <span style={{ width: 12 }} />
             <button
               style={{
                 ...button,
@@ -392,6 +497,24 @@ export default function MusicXmlBeatsPage() {
             <button style={button} onClick={() => void sample()}>
               Dùng file mẫu
             </button>
+            {tab === "many" && (
+              <>
+                <input
+                  ref={batchInput}
+                  type="file"
+                  accept=".xml,.musicxml,text/xml,application/xml"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={(e) => void readBatchFiles(e.target.files)}
+                />
+                <button
+                  style={{ ...button, borderColor: "#4338ca", color: "#4338ca" }}
+                  onClick={() => batchInput.current?.click()}
+                >
+                  Chọn nhiều file
+                </button>
+              </>
+            )}
             <span
               style={{
                 fontSize: 13,
@@ -440,6 +563,169 @@ export default function MusicXmlBeatsPage() {
               <span style={{ fontSize: 12, color: "#b45309" }}>{presetNote}</span>
             )}
           </div>
+          {tab === "many" && (
+            <div
+              style={{
+                marginTop: 18,
+                paddingTop: 16,
+                borderTop: "1px solid #e4e4e7",
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                void readBatchFiles(e.dataTransfer.files);
+              }}
+            >
+              <div
+                style={{
+                  border: "2px dashed #d4d4d8",
+                  borderRadius: 12,
+                  padding: "18px 16px",
+                  textAlign: "center",
+                  color: "#71717a",
+                  fontSize: 14,
+                }}
+              >
+                Thả file MusicXML vào đây
+                <div style={{ fontWeight: 600, color: "#18181b", marginTop: 6 }}>
+                  {batchFiles.length
+                    ? `${batchFiles.length} file đã chọn`
+                    : "Chưa chọn file nào"}
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  alignItems: "center",
+                  marginTop: 14,
+                }}
+              >
+                <label style={{ fontSize: 14, fontWeight: 600 }}>Định dạng</label>
+                <select
+                  value={batchFormat}
+                  onChange={(e) => setBatchFormat(e.target.value as BatchFormat)}
+                  style={{ ...button, fontWeight: 500 }}
+                >
+                  <option value="pdf">PDF</option>
+                  <option value="svg">SVG</option>
+                  <option value="png">PNG</option>
+                </select>
+                <button
+                  style={{
+                    ...button,
+                    background: "#4338ca",
+                    color: "#fff",
+                    borderColor: "#4338ca",
+                  }}
+                  disabled={!batchFiles.length || batchRunning}
+                  onClick={() => void runBatchNow()}
+                >
+                  {batchRunning ? "Đang xử lý…" : "Xử lý tất cả"}
+                </button>
+                {batchRunning && (
+                  <button
+                    style={button}
+                    onClick={() => {
+                      batchAbort.current.aborted = true;
+                    }}
+                  >
+                    Dừng
+                  </button>
+                )}
+                {!!batchItems.length && (
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>
+                    {batchProgress(batchItems).xong} / {batchItems.length}
+                  </span>
+                )}
+                <button
+                  style={button}
+                  disabled={!batchItems.some((i) => i.status === "done")}
+                  onClick={() => void downloadZip()}
+                >
+                  Xuất ZIP
+                </button>
+                {batchNote && (
+                  <span style={{ fontSize: 12, color: "#b45309" }}>{batchNote}</span>
+                )}
+              </div>
+              {!!batchItems.length && (
+                <ul
+                  style={{
+                    listStyle: "none",
+                    padding: 0,
+                    margin: "14px 0 0",
+                    fontSize: 13,
+                    maxHeight: 320,
+                    overflowY: "auto",
+                  }}
+                >
+                  {batchItems.map((item) => (
+                    <li
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 10,
+                        alignItems: "center",
+                        padding: "7px 0",
+                        borderBottom: "1px solid #f4f4f5",
+                      }}
+                    >
+                      <span style={{ minWidth: 230, overflowWrap: "anywhere" }}>
+                        {item.fileName}
+                      </span>
+                      <span
+                        style={{
+                          color:
+                            item.status === "done"
+                              ? "#16a34a"
+                              : item.status === "error"
+                              ? "#b91c1c"
+                              : item.status === "needs-grouping"
+                              ? "#b45309"
+                              : "#71717a",
+                        }}
+                      >
+                        {item.status === "done"
+                          ? `✓ Hoàn tất · ${item.outputName}`
+                          : item.status === "error"
+                          ? `✕ ${item.error ?? "Lỗi"}`
+                          : item.status === "needs-grouping"
+                          ? `⚠ Cần chọn cách chia ${item.needs?.map((n) => n.meter).join(", ")}`
+                          : item.status === "processing"
+                          ? "… đang xử lý"
+                          : "· chờ"}
+                      </span>
+                      {item.status === "needs-grouping" &&
+                        item.needs?.map((need) =>
+                          need.options.map((groups) => (
+                            <button
+                              key={`${item.id}-${need.meter}-${groups.join("+")}`}
+                              style={{ ...button, padding: "5px 10px", minHeight: 32 }}
+                              onClick={() => pickBatchGrouping(item, need.meter, groups)}
+                            >
+                              {groups.join(" + ")}
+                              {batchGrouping[item.id]?.byMeter?.[need.meter]?.join("+") ===
+                              groups.join("+")
+                                ? " ✓"
+                                : ""}
+                            </button>
+                          ))
+                        )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {batchItems.some((i) => i.status === "needs-grouping") && (
+                <p style={{ fontSize: 12, color: "#71717a", marginTop: 10 }}>
+                  Chọn cách chia cho từng bài ở trên rồi bấm “Xử lý tất cả” lần nữa.
+                  Công cụ không tự đoán cách chia.
+                </p>
+              )}
+            </div>
+          )}
           {managing && (
             <div
               style={{
@@ -671,7 +957,9 @@ export default function MusicXmlBeatsPage() {
                 </fieldset>
               );
             })}
-            {(hasCompound || irregularMeters.length > 0) && (
+            {/* Ở chế độ nhiều bài chưa có bản nhạc nào để suy ra nhịp, nhưng mẻ file
+                vẫn có thể chứa nhịp kép/lẻ — nên luôn cho chọn cách đếm ở đó. */}
+            {(hasCompound || irregularMeters.length > 0 || tab === "many") && (
               <fieldset
                 style={{
                   border: 0,
