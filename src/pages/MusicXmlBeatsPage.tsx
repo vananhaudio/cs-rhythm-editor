@@ -15,7 +15,6 @@ import {
   exportSVGPages,
 } from "../musicxml-beats/renderer/printExport";
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
 import { createAnnotatedScoreRenderer } from "../musicxml-beats/renderer/verovioAdapter";
 import { DEFAULT_SCORE_SETTINGS } from "../musicxml-beats/renderer/types";
 import type {
@@ -58,6 +57,8 @@ import {
 } from "../nhipphach/jobs";
 import type { JobRecord } from "../nhipphach/jobs";
 import { giuLuot, traLuot } from "../nhipphach/motLuot";
+import type { CSSProperties } from "react";
+import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
 import type { NhipPhachJobRepository, JobSummary, JobDetail } from "../nhipphach/jobRepository";
 import type { PresetRepository } from "../nhipphach/presetRepository";
 
@@ -84,25 +85,45 @@ function khiNao(iso: string) {
   const homNay = new Date().toDateString() === d.toDateString();
   return homNay ? `Hôm nay ${gio}` : `${d.toLocaleDateString("vi-VN")} ${gio}`;
 }
-const button: CSSProperties = {
-  border: "1px solid #d4d4d8",
-  background: "#fff",
-  borderRadius: 10,
-  padding: "11px 16px",
-  fontSize: 14,
-  fontWeight: 600,
-  cursor: "pointer",
-  minHeight: 44,
+/**
+ * Mức giao diện. CHỈ là chuyện trình bày: không vào preset, không vào lịch sử,
+ * không đụng tới thiết lập nhạc nên đổi qua lại không bao giờ làm khác file xuất ra.
+ */
+const KHOA_MUC = "nhipphach:giao-dien";
+function mucDaLuu(): boolean {
+  try {
+    return localStorage.getItem(KHOA_MUC) === "nang-cao";
+  } catch {
+    // Trình duyệt chặn localStorage thì cứ mở ở mức Cơ bản, không phải lỗi.
+    return false;
+  }
+}
+function nhoMuc(nangCao: boolean) {
+  try {
+    localStorage.setItem(KHOA_MUC, nangCao ? "nang-cao" : "co-ban");
+  } catch {
+    /* không nhớ được thì thôi */
+  }
+}
+
+/**
+ * `rong` = vừa chiều rộng khung · `khung` = trọn một trang trong khung ·
+ * `tay` = mức phóng thầy tự chỉnh.
+ */
+type CheXem = "rong" | "khung" | "tay";
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 300;
+const ZOOM_BUOC = 25;
+
+/** Một dòng thông báo: loại quyết định màu và biểu tượng. */
+type Note = { kind: "ok" | "info" | "warn" | "error"; text: string } | null;
+const NOTE_ICON: Record<"ok" | "info" | "warn" | "error", string> = {
+  ok: "✓",
+  info: "ℹ",
+  warn: "⚠",
+  error: "✕",
 };
-const control: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-  fontSize: 13,
-  color: "#52525b",
-  minWidth: 130,
-  flex: "1 1 140px",
-};
+
 export default function MusicXmlBeatsPage() {
   const [source, setSource] = useState<{ xml: string; name: string } | null>(
     null
@@ -111,6 +132,18 @@ export default function MusicXmlBeatsPage() {
     DEFAULT_SCORE_SETTINGS
   );
   const [exporting, setExporting] = useState(false);
+  const [keoVao, setKeoVao] = useState(false);
+  /**
+   * Cách xem bản nhạc. CHỈ ảnh hưởng màn hình — file xuất ra luôn là A4 thật,
+   * dựng từ cùng một SVG, không dính gì tới mức phóng đang xem.
+   */
+  const [xem, setXem] = useState<{ che: CheXem; pct: number }>({
+    che: "rong",
+    pct: 100,
+  });
+  const [thuGon, setThuGon] = useState(false);
+  // Người mở trang lần đầu luôn thấy mức Cơ bản; thầy dùng quen thì máy nhớ hộ.
+  const [nangCao, setNangCao] = useState(mucDaLuu);
   // Chốt đồng bộ: xem src/nhipphach/motLuot.ts.
   const dangXuat = useRef(false);
   // ── Preset: chỉ thiết lập trình bày, không giữ bản nhạc, không giữ cách chia ──
@@ -120,14 +153,18 @@ export default function MusicXmlBeatsPage() {
   ]);
   const [presetId, setPresetId] = useState<string>("");
   const [defaultPresetId, setDefaultPresetId] = useState<string | null>(null);
-  const [presetNote, setPresetNote] = useState("");
+  /**
+   * Thông báo mang theo LOẠI, không chỉ chữ: cùng một dòng chữ mà lúc là việc
+   * tốt lúc là việc hỏng thì không được vẽ giống nhau (mục 15 của đặc tả).
+   */
+  const [presetNote, setPresetNote] = useState<Note>(null);
   const [managing, setManaging] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>("local");
   // ── Lịch sử xử lý. CHỈ metadata; ghi hỏng KHÔNG được làm hỏng việc xuất file ──
   const jobsRepo = useRef<NhipPhachJobRepository | null>(null);
   const [recent, setRecent] = useState<JobSummary[]>([]);
   const [openJob, setOpenJob] = useState<JobDetail | null>(null);
-  const [historyNote, setHistoryNote] = useState("");
+  const [historyNote, setHistoryNote] = useState<Note>(null);
   // ── Chế độ nhiều bài. Dùng LẠI đúng pipeline một bài, không có engine thứ hai ──
   const [tab, setTab] = useState<"one" | "many">("one");
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
@@ -169,7 +206,7 @@ export default function MusicXmlBeatsPage() {
       jobsRepo.current = gate.jobs;
       setSyncState(gate.state);
       void refreshHistory();
-      if (gate.note) setPresetNote(gate.note);
+      if (gate.note) setPresetNote({ kind: "warn", text: gate.note });
       try {
         const store = await presets.current.load();
         if (cancelled) return;
@@ -177,7 +214,10 @@ export default function MusicXmlBeatsPage() {
         setDefaultPresetId(store.defaultId);
         setSyncState(gate.state === "failed" ? "failed" : stateFromStore(store));
         if (store.recovered && !gate.note)
-          setPresetNote("Có preset lưu bị hỏng, đã bỏ qua. Công cụ vẫn dùng bình thường.");
+          setPresetNote({
+            kind: "warn",
+            text: "Có preset lưu bị hỏng, đã bỏ qua. Công cụ vẫn dùng bình thường.",
+          });
         const preferred = store.presets.find((p) => p.id === store.defaultId);
         if (preferred) {
           setPresetId(preferred.id);
@@ -186,7 +226,10 @@ export default function MusicXmlBeatsPage() {
       } catch {
         if (!cancelled) {
           setSyncState("failed");
-          setPresetNote("Không đọc được preset đã lưu. Đang dùng cấu hình mặc định.");
+          setPresetNote({
+            kind: "error",
+            text: "Không đọc được preset đã lưu. Đang dùng cấu hình mặc định.",
+          });
         }
       }
     })();
@@ -291,22 +334,25 @@ export default function MusicXmlBeatsPage() {
     try {
       setRecent(await jobsRepo.current.listRecent(5));
     } catch {
-      setHistoryNote("Chưa tải được lịch sử.");
+      setHistoryNote({ kind: "warn", text: "Chưa tải được lịch sử." });
     }
   }
   async function ghiLichSu(build: () => JobRecord) {
     if (!jobsRepo.current) return;
     try {
       await jobsRepo.current.create(build());
-      setHistoryNote("");
+      setHistoryNote(null);
       await refreshHistory();
     } catch {
       // File đã tải xong rồi. Lịch sử hỏng thì nói thật, nhưng KHÔNG được
       // biến nó thành "xuất thất bại".
-      setHistoryNote("Đã xuất file, nhưng chưa lưu được lịch sử.");
+      setHistoryNote({
+        kind: "warn",
+        text: "Đã xuất file, nhưng chưa lưu được lịch sử.",
+      });
     }
   }
-  const refreshPresets = async (note = "") => {
+  const refreshPresets = async (note: Note = null) => {
     const store = await presets.current.load();
     setPresetList(store.presets);
     setDefaultPresetId(store.defaultId);
@@ -315,7 +361,7 @@ export default function MusicXmlBeatsPage() {
   };
   const choosePreset = (id: string) => {
     setPresetId(id);
-    setPresetNote("");
+    setPresetNote(null);
     const preset = presetList.find((p) => p.id === id);
     if (!preset) return;
     setBusy(!!source);
@@ -325,11 +371,15 @@ export default function MusicXmlBeatsPage() {
   const currentPreset = presetList.find((p) => p.id === presetId) ?? null;
   async function guard(action: () => Promise<string>) {
     try {
-      setPresetNote(await action());
+      const text = await action();
+      setPresetNote(text ? { kind: "ok", text } : null);
     } catch (e) {
       // Lưu hỏng thì KHÔNG báo thành công giả; cấu hình trên UI giữ nguyên.
       setSyncState("failed");
-      setPresetNote(e instanceof Error ? e.message : "Không lưu được preset.");
+      setPresetNote({
+        kind: "error",
+        text: e instanceof Error ? e.message : "Không lưu được preset.",
+      });
     }
   }
   const saveAsPreset = () =>
@@ -394,7 +444,10 @@ export default function MusicXmlBeatsPage() {
     }
     try {
       const xml = await file.text();
-      if (request === fileRequest.current) setSource({ xml, name: file.name });
+      if (request === fileRequest.current) {
+        setSource({ xml, name: file.name });
+        setXem({ che: "rong", pct: 100 });
+      }
     } catch {
       if (request === fileRequest.current)
         setError("Không đọc được file đã chọn.");
@@ -410,8 +463,10 @@ export default function MusicXmlBeatsPage() {
       const response = await fetch("/musicxml-beats/sample.musicxml");
       if (!response.ok) throw new Error("Không tải được file mẫu.");
       const xml = await response.text();
-      if (request === fileRequest.current)
+      if (request === fileRequest.current) {
         setSource({ xml, name: "bai-mau.musicxml" });
+        setXem({ che: "rong", pct: 100 });
+      }
     } catch (e) {
       if (request === fileRequest.current) {
         setError(String(e));
@@ -499,11 +554,15 @@ export default function MusicXmlBeatsPage() {
   const countingMeters = [...compoundMeters, ...irregularMeters];
   const soloCounting = countingMeters.length === 1 ? countingMeters[0][1] : null;
   const compoundLegend = soloCounting
-    ? `Nhịp ${meterCode(soloCounting)}`
-    : `Nhịp kép và nhịp lẻ (${countingMeters.map(([k]) => k).join(", ")})`;
-  const pulseLabel = soloCounting
-    ? `Theo ${soloCounting.beats} phách nhỏ: ${series(soloCounting.beats)}`
-    : "Theo phách nhỏ (mỗi móc đơn)";
+    ? `Cách đếm nhịp ${meterCode(soloCounting)}`
+    : countingMeters.length
+    ? `Cách đếm nhịp kép và nhịp lẻ (${countingMeters.map(([k]) => k).join(", ")})`
+    : "Cách đếm nhịp kép và nhịp lẻ";
+  // Tên trên màn hình phải là tiếng thầy dùng khi dạy, chi tiết kỹ thuật lùi
+  // xuống dòng chú thích nhỏ.
+  const pulseHint = soloCounting
+    ? `${soloCounting.beats} phách · ${series(soloCounting.beats)}`
+    : "mỗi móc đơn";
   const largeCount = soloCounting
     ? isIrregularMeter(soloCounting)
       ? (settings.grouping?.byMeter?.[meterCode(soloCounting)] ??
@@ -512,985 +571,1041 @@ export default function MusicXmlBeatsPage() {
           )?.groups ?? null))?.length ?? null
       : soloCounting.beats / 3
     : null;
-  const beatLabel = largeCount
-    ? `Theo ${largeCount} phách lớn: ${series(largeCount)}`
-    : "Theo phách lớn (theo cách chia nhịp)";
+  const beatHint = largeCount
+    ? `${largeCount} phách · ${series(largeCount)}`
+    : "theo cách chia nhịp";
   const hasSimple =
     !score ||
     score.beatMap.measures.some(
       (m) => meterGrouping(m.meter)?.type === "simple"
     );
   const name = (source?.name || "ban-nhac").replace(/\.(xml|musicxml)$/i, "");
-  return (
-    <main
-      style={{
-        minHeight: "100dvh",
-        textAlign: "left",
-        background: "#f4f4f5",
-        color: "#18181b",
-        fontFamily: "Arial, sans-serif",
-        padding: "clamp(16px, 4vw, 40px)",
-        boxSizing: "border-box",
+  const p = batchProgress(batchItems);
+  const dangCanChon = batchItems.filter((i) => i.status === "needs-grouping");
+  const trangThaiXuat = busy
+    ? "Đang khắc bản nhạc…"
+    : score
+    ? `${score.pages.length} trang · ${score.anchors.length} nhãn đếm`
+    : "Chưa có bản nhạc";
+
+  /** Khu thả file — dùng chung cho một bài và nhiều bài. */
+  const khuThaFile = (
+    <div
+      className={`np-drop${keoVao ? " over" : ""}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setKeoVao(true);
+      }}
+      onDragLeave={() => setKeoVao(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setKeoVao(false);
+        if (tab === "many") void readBatchFiles(e.dataTransfer.files);
+        else void readFile(e.dataTransfer.files?.[0]);
       }}
     >
-      <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-        <a
-          href="/start"
-          style={{ color: "#52525b", fontSize: 13, textDecoration: "none" }}
-        >
-          ← Về trang chính
-        </a>
-        <header style={{ margin: "24px 0" }}>
-          <div
-            style={{
-              color: "#4338ca",
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: 1.2,
-              marginBottom: 10,
-            }}
+      {tab === "one" && source ? (
+        <div className="np-picked">
+          <span className="np-tick" aria-hidden="true">
+            ✓
+          </span>
+          <span>{source.name}</span>
+        </div>
+      ) : tab === "many" && batchFiles.length ? (
+        <div className="np-picked">
+          <span className="np-tick" aria-hidden="true">
+            ✓
+          </span>
+          <span>{batchFiles.length} bài đã chọn</span>
+        </div>
+      ) : (
+        <div className="np-drop-t">Thả file MusicXML vào đây</div>
+      )}
+      <div className="np-row" style={{ justifyContent: "center", marginTop: 12 }}>
+        {tab === "one" ? (
+          <>
+            <button
+              className="np-btn np-btn-primary"
+              onClick={() => fileInput.current?.click()}
+            >
+              {source ? "Chọn file khác" : "Chọn file"}
+            </button>
+            <button className="np-btn np-btn-quiet" onClick={() => void sample()}>
+              Dùng file mẫu
+            </button>
+          </>
+        ) : (
+          <button
+            className="np-btn np-btn-primary"
+            onClick={() => batchInput.current?.click()}
           >
-            THẦY VĂN ANH · CÔNG CỤ GIẢNG DẠY
-          </div>
-          <h1
-            style={{
-              fontSize: "clamp(26px, 4vw, 38px)",
-              margin: "0 0 12px",
-              letterSpacing: -1,
-            }}
-          >
-            Đọc nhịp – phách
-          </h1>
-          <p style={{ color: "#52525b", lineHeight: 1.6, margin: 0 }}>
-            Đưa bản nhạc vào, thêm số phách và lưu lại để giảng dạy.
-          </p>
+            {batchFiles.length ? "Chọn lại" : "Chọn nhiều file"}
+          </button>
+        )}
+      </div>
+      <div className="np-drop-s">Hỗ trợ .xml và .musicxml · tối đa 5 MB mỗi file</div>
+    </div>
+  );
+
+  return (
+    <main
+      className={`${NP_SCOPE}${score || batchItems.length ? " np-has" : ""}`}
+    >
+      <style>{NP_CSS}</style>
+      <div className="np-wrap">
+        <div className="np-top">
+          <a className="np-brand" href="/">
+            <img className="np-mark" src="/logo-green.svg" alt="" />
+            <span>Thầy Văn Anh Guitar</span>
+          </a>
+          <a className="np-back" href="/">
+            ← Trang chính
+          </a>
+        </div>
+
+        <header className="np-head">
+          <div className="np-eyebrow">Công cụ giảng dạy</div>
+          <h1>Đọc nhịp – phách</h1>
+          <p className="np-lead">Tạo bản nhạc có đánh dấu phách.</p>
         </header>
-        <section
-          style={{
-            background: "white",
-            border: "1px solid #e4e4e7",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <input
-              ref={fileInput}
-              aria-label="Chọn file MusicXML"
-              type="file"
-              accept=".xml,.musicxml"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                void readFile(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
+
+        {/* Chọn một bài hay nhiều bài là việc của người đã quen tay —
+            mức Cơ bản chỉ có một luồng duy nhất. */}
+        {nangCao && (
+          <div className="np-seg" role="tablist" aria-label="Chế độ xử lý">
             {(["one", "many"] as const).map((t) => (
               <button
                 key={t}
+                role="tab"
+                type="button"
+                aria-selected={tab === t}
                 onClick={() => setTab(t)}
-                style={{
-                  ...button,
-                  background: tab === t ? "#4338ca" : "#fff",
-                  color: tab === t ? "#fff" : "#18181b",
-                  borderColor: tab === t ? "#4338ca" : "#d4d4d8",
-                }}
               >
                 {t === "one" ? "Một bài" : "Nhiều bài"}
               </button>
             ))}
-            <span style={{ width: 12 }} />
-            <button
-              style={{
-                ...button,
-                background: "#4338ca",
-                color: "white",
-                borderColor: "#4338ca",
-              }}
-              onClick={() => fileInput.current?.click()}
-            >
-              Chọn MusicXML
-            </button>
-            <button style={button} onClick={() => void sample()}>
-              Dùng file mẫu
-            </button>
-            {tab === "many" && (
-              <>
-                <input
-                  ref={batchInput}
-                  type="file"
-                  accept=".xml,.musicxml,text/xml,application/xml"
-                  multiple
-                  style={{ display: "none" }}
-                  onChange={(e) => void readBatchFiles(e.target.files)}
-                />
-                <button
-                  style={{ ...button, borderColor: "#4338ca", color: "#4338ca" }}
-                  onClick={() => batchInput.current?.click()}
-                >
-                  Chọn nhiều file
-                </button>
-              </>
-            )}
-            <span
-              style={{
-                fontSize: 13,
-                color: "#71717a",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {source?.name || ".xml / .musicxml · tối đa 5 MB"}
-            </span>
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 12,
-              alignItems: "center",
-              marginTop: 18,
-              paddingTop: 16,
-              borderTop: "1px solid #e4e4e7",
-            }}
-          >
-            <label style={{ fontWeight: 600, fontSize: 14 }} htmlFor="preset">
-              Preset
-            </label>
-            <select
-              id="preset"
-              value={presetId}
-              onChange={(e) => choosePreset(e.target.value)}
-              style={{ ...button, fontWeight: 500, minWidth: 190 }}
-            >
-              <option value="">Cấu hình hiện tại</option>
-              {presetList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                  {p.id === defaultPresetId ? " ★" : ""}
-                </option>
-              ))}
-            </select>
-            <button style={button} onClick={() => void saveAsPreset()}>
-              Lưu thành preset
-            </button>
-            <button style={button} onClick={() => setManaging((v) => !v)}>
-              {managing ? "Đóng quản lý" : "Quản lý"}
-            </button>
-            <span
-              style={{
-                fontSize: 12,
-                color:
-                  syncState === "synced"
-                    ? "#16a34a"
-                    : syncState === "failed"
-                    ? "#b91c1c"
-                    : "#71717a",
-              }}
-            >
-              {SYNC_LABEL[syncState]}
-            </span>
-            {presetNote && (
-              <span style={{ fontSize: 12, color: "#b45309" }}>{presetNote}</span>
-            )}
-          </div>
-          {tab === "many" && (
-            <div
-              style={{
-                marginTop: 18,
-                paddingTop: 16,
-                borderTop: "1px solid #e4e4e7",
-              }}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                void readBatchFiles(e.dataTransfer.files);
-              }}
-            >
-              <div
-                style={{
-                  border: "2px dashed #d4d4d8",
-                  borderRadius: 12,
-                  padding: "18px 16px",
-                  textAlign: "center",
-                  color: "#71717a",
-                  fontSize: 14,
-                }}
+        )}
+
+        <input
+          ref={fileInput}
+          aria-label="Chọn file MusicXML"
+          type="file"
+          accept=".xml,.musicxml"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            void readFile(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={batchInput}
+          aria-label="Chọn nhiều file MusicXML"
+          type="file"
+          accept=".xml,.musicxml,text/xml,application/xml"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => void readBatchFiles(e.target.files)}
+        />
+
+        <div
+          className={`np-grid${score || batchItems.length ? " np-loaded" : ""}${
+            thuGon && score ? " np-focus" : ""
+          }`}
+        >
+          {/* ── Cột trái: nguồn → mẫu → thiết lập → xuất ────────────────── */}
+          <div className="np-col">
+            <section className="np-card np-o-source" aria-label="Bản nhạc">
+              <h2>{nangCao ? "Bản nhạc" : "1. Chọn bản nhạc"}</h2>
+              {khuThaFile}
+            </section>
+
+            {nangCao && (
+            <section className="np-card np-o-preset" aria-label="Mẫu trình bày">
+              <h2>Mẫu trình bày</h2>
+              <select
+                id="preset"
+                aria-label="Mẫu trình bày"
+                className="np-select"
+                value={presetId}
+                onChange={(e) => choosePreset(e.target.value)}
               >
-                Thả file MusicXML vào đây
-                <div style={{ fontWeight: 600, color: "#18181b", marginTop: 6 }}>
-                  {batchFiles.length
-                    ? `${batchFiles.length} file đã chọn`
-                    : "Chưa chọn file nào"}
-                </div>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 12,
-                  alignItems: "center",
-                  marginTop: 14,
-                }}
-              >
-                <label style={{ fontSize: 14, fontWeight: 600 }}>Định dạng</label>
-                <select
-                  value={batchFormat}
-                  onChange={(e) => setBatchFormat(e.target.value as BatchFormat)}
-                  style={{ ...button, fontWeight: 500 }}
-                >
-                  <option value="pdf">PDF</option>
-                  <option value="svg">SVG</option>
-                  <option value="png">PNG</option>
-                </select>
-                <button
-                  style={{
-                    ...button,
-                    background: "#4338ca",
-                    color: "#fff",
-                    borderColor: "#4338ca",
-                  }}
-                  disabled={!batchFiles.length || batchRunning}
-                  onClick={() => void runBatchNow()}
-                >
-                  {batchRunning ? "Đang xử lý…" : "Xử lý tất cả"}
-                </button>
-                {batchRunning && (
-                  <button
-                    style={button}
-                    onClick={() => {
-                      batchAbort.current.aborted = true;
-                    }}
-                  >
-                    Dừng
-                  </button>
-                )}
-                {!!batchItems.length && (
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>
-                    {batchProgress(batchItems).xong} / {batchItems.length}
-                  </span>
-                )}
-                <button
-                  style={button}
-                  disabled={!batchItems.some((i) => i.status === "done")}
-                  onClick={() => void downloadZip()}
-                >
-                  Xuất ZIP
-                </button>
-                {batchNote && (
-                  <span style={{ fontSize: 12, color: "#b45309" }}>{batchNote}</span>
-                )}
-              </div>
-              {!!batchItems.length && (
-                <ul
-                  style={{
-                    listStyle: "none",
-                    padding: 0,
-                    margin: "14px 0 0",
-                    fontSize: 13,
-                    maxHeight: 320,
-                    overflowY: "auto",
-                  }}
-                >
-                  {batchItems.map((item) => (
-                    <li
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 10,
-                        alignItems: "center",
-                        padding: "7px 0",
-                        borderBottom: "1px solid #f4f4f5",
-                      }}
-                    >
-                      <span style={{ minWidth: 230, overflowWrap: "anywhere" }}>
-                        {item.fileName}
-                      </span>
-                      <span
-                        style={{
-                          color:
-                            item.status === "done"
-                              ? "#16a34a"
-                              : item.status === "error"
-                              ? "#b91c1c"
-                              : item.status === "needs-grouping"
-                              ? "#b45309"
-                              : "#71717a",
-                        }}
-                      >
-                        {item.status === "done"
-                          ? `✓ Hoàn tất · ${item.outputName}`
-                          : item.status === "error"
-                          ? `✕ ${item.error ?? "Lỗi"}`
-                          : item.status === "needs-grouping"
-                          ? `⚠ Cần chọn cách chia ${item.needs?.map((n) => n.meter).join(", ")}`
-                          : item.status === "processing"
-                          ? "… đang xử lý"
-                          : "· chờ"}
-                      </span>
-                      {item.status === "needs-grouping" &&
-                        item.needs?.map((need) =>
-                          need.options.map((groups) => (
-                            <button
-                              key={`${item.id}-${need.meter}-${groups.join("+")}`}
-                              style={{ ...button, padding: "5px 10px", minHeight: 32 }}
-                              onClick={() => pickBatchGrouping(item, need.meter, groups)}
-                            >
-                              {groups.join(" + ")}
-                              {batchGrouping[item.id]?.byMeter?.[need.meter]?.join("+") ===
-                              groups.join("+")
-                                ? " ✓"
-                                : ""}
-                            </button>
-                          ))
-                        )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {batchItems.some((i) => i.status === "needs-grouping") && (
-                <p style={{ fontSize: 12, color: "#71717a", marginTop: 10 }}>
-                  Chọn cách chia cho từng bài ở trên rồi bấm “Xử lý tất cả” lần nữa.
-                  Công cụ không tự đoán cách chia.
-                </p>
-              )}
-            </div>
-          )}
-          {managing && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 10,
-                alignItems: "center",
-                marginTop: 12,
-                fontSize: 13,
-              }}
-            >
-              <span style={{ color: "#71717a" }}>
-                {currentPreset
-                  ? `“${currentPreset.name}”${currentPreset.system ? " · preset hệ thống" : ""}`
-                  : "Chưa chọn preset nào"}
-              </span>
-              <button
-                style={button}
-                disabled={!currentPreset}
-                onClick={() =>
-                  void guard(async () => {
-                    const copy = await presets.current.duplicate(presetId);
-                    await refreshPresets();
-                    setPresetId(copy.id);
-                    return `Đã nhân bản thành “${copy.name}”.`;
-                  })
-                }
-              >
-                Nhân bản
-              </button>
-              <button
-                style={button}
-                disabled={!currentPreset || currentPreset.system}
-                onClick={() =>
-                  void guard(async () => {
-                    const next = window
-                      .prompt("Tên mới:", currentPreset?.name ?? "")
-                      ?.trim();
-                    if (!next) return "";
-                    await presets.current.rename(presetId, next.slice(0, MAX_PRESET_NAME));
-                    await refreshPresets();
-                    return `Đã đổi tên thành “${next}”.`;
-                  })
-                }
-              >
-                Đổi tên
-              </button>
-              <button
-                style={button}
-                disabled={!currentPreset}
-                onClick={() =>
-                  void guard(async () => {
-                    const next = defaultPresetId === presetId ? null : presetId;
-                    await presets.current.setDefault(next);
-                    await refreshPresets();
-                    return next
-                      ? "Đã đặt làm preset mặc định."
-                      : "Đã bỏ preset mặc định.";
-                  })
-                }
-              >
-                {defaultPresetId === presetId ? "Bỏ mặc định" : "Đặt làm mặc định"}
-              </button>
-              <button
-                style={{ ...button, color: "#b91c1c" }}
-                disabled={!currentPreset || isSystemPreset(presetId)}
-                onClick={() =>
-                  void guard(async () => {
-                    const gone = currentPreset?.name ?? "";
-                    await presets.current.remove(presetId);
-                    await refreshPresets();
-                    setPresetId("");
-                    return `Đã xoá preset “${gone}”.`;
-                  })
-                }
-              >
-                Xoá
-              </button>
-              <span style={{ color: "#a1a1aa" }}>
-                Preset hệ thống không xoá và không đổi tên được — hãy nhân bản.
-              </span>
-            </div>
-          )}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 24,
-              alignItems: "center",
-              marginTop: 22,
-              paddingTop: 20,
-              borderTop: "1px solid #f0f0f2",
-            }}
-          >
-            {hasSimple && (
-              <fieldset
-                style={{
-                  border: 0,
-                  padding: 0,
-                  margin: 0,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 12,
-                }}
-              >
-                <legend
-                  style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}
-                >
-                  Hiển thị nhịp
-                </legend>
-                {(
-                  [
-                    ["off", "Không hiện"],
-                    ["beats", "1 2 3 4"],
-                    ["eighths", "1 & 2 & 3 & 4 &"],
-                    ["sixteenths", "1 e & a"],
-                  ] as const
-                ).map(([level, label]) => (
-                  <label
-                    key={level}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      minHeight: 44,
-                      fontSize: 14,
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="counting-level"
-                      value={level}
-                      checked={
-                        level === "off"
-                          ? !settings.showBeats
-                          : settings.showBeats &&
-                            (settings.countingLevel || "beats") === level
-                      }
-                      onChange={() =>
-                        update(
-                          level === "off"
-                            ? { showBeats: false }
-                            : { showBeats: true, countingLevel: level }
-                        )
-                      }
-                      style={{ accentColor: "#4338ca" }}
-                    />
-                    {label}
-                  </label>
+                <option value="">Cấu hình hiện tại</option>
+                {presetList.map((pr) => (
+                  <option key={pr.id} value={pr.id}>
+                    {pr.name}
+                    {pr.id === defaultPresetId ? " ★" : ""}
+                  </option>
                 ))}
-              </fieldset>
-            )}
-            {irregularMeters.map(([code, meter]) => {
-              const chosen = settings.grouping?.byMeter?.[code];
-              const source = fromSource.get(code);
-              const active = chosen ? partitionCode(chosen) : source ?? null;
-              return (
-                <fieldset
-                  key={code}
-                  style={{
-                    border: 0,
-                    padding: 0,
-                    margin: 0,
-                    display: "flex",
-                    gap: 14,
-                    flexWrap: "wrap",
-                  }}
+              </select>
+              <div className="np-row" style={{ marginTop: 10 }}>
+                <button className="np-btn sm" onClick={() => void saveAsPreset()}>
+                  Lưu mới
+                </button>
+                <button
+                  className="np-btn sm np-btn-quiet"
+                  aria-expanded={managing}
+                  onClick={() => setManaging((v) => !v)}
                 >
-                  <legend
-                    style={{ fontWeight: 600, fontSize: 14, marginBottom: 10 }}
-                  >
-                    Cách chia nhịp {code}
-                  </legend>
-                  {(allowedPartitions(meter) ?? []).map((groups) => {
-                    const key = partitionCode(groups);
-                    return (
-                      <label
-                        key={key}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 7,
-                          minHeight: 44,
-                          fontSize: 14,
-                        }}
-                      >
+                  {managing ? "Đóng" : "Quản lý ⋯"}
+                </button>
+                <span
+                  className={`np-sync ${
+                    syncState === "synced"
+                      ? "ok"
+                      : syncState === "failed"
+                      ? "bad"
+                      : "wait"
+                  }`}
+                  style={{ marginLeft: "auto" }}
+                >
+                  {SYNC_LABEL[syncState]}
+                </span>
+              </div>
+              {managing && (
+                <div style={{ marginTop: 12 }}>
+                  <div className="np-muted" style={{ marginBottom: 8 }}>
+                    {currentPreset
+                      ? `“${currentPreset.name}”${
+                          currentPreset.system ? " · mẫu hệ thống" : ""
+                        }`
+                      : "Chưa chọn mẫu nào"}
+                  </div>
+                  <div className="np-row">
+                    <button
+                      className="np-btn sm np-btn-quiet"
+                      disabled={!currentPreset}
+                      onClick={() =>
+                        void guard(async () => {
+                          const copy = await presets.current.duplicate(presetId);
+                          await refreshPresets();
+                          setPresetId(copy.id);
+                          return `Đã nhân bản thành “${copy.name}”.`;
+                        })
+                      }
+                    >
+                      Nhân bản
+                    </button>
+                    <button
+                      className="np-btn sm np-btn-quiet"
+                      disabled={!currentPreset || currentPreset.system}
+                      onClick={() =>
+                        void guard(async () => {
+                          const next = window
+                            .prompt("Tên mới:", currentPreset?.name ?? "")
+                            ?.trim();
+                          if (!next) return "";
+                          await presets.current.rename(
+                            presetId,
+                            next.slice(0, MAX_PRESET_NAME)
+                          );
+                          await refreshPresets();
+                          return `Đã đổi tên thành “${next}”.`;
+                        })
+                      }
+                    >
+                      Đổi tên
+                    </button>
+                    <button
+                      className="np-btn sm np-btn-quiet"
+                      disabled={!currentPreset}
+                      onClick={() =>
+                        void guard(async () => {
+                          const next =
+                            defaultPresetId === presetId ? null : presetId;
+                          await presets.current.setDefault(next);
+                          await refreshPresets();
+                          return next
+                            ? "Đã đặt làm mẫu mặc định."
+                            : "Đã bỏ mẫu mặc định.";
+                        })
+                      }
+                    >
+                      {defaultPresetId === presetId
+                        ? "Bỏ mặc định"
+                        : "Đặt mặc định"}
+                    </button>
+                    <button
+                      className="np-btn sm np-btn-danger"
+                      disabled={!currentPreset || isSystemPreset(presetId)}
+                      onClick={() =>
+                        void guard(async () => {
+                          const gone = currentPreset?.name ?? "";
+                          await presets.current.remove(presetId);
+                          await refreshPresets();
+                          setPresetId("");
+                          return `Đã xoá mẫu “${gone}”.`;
+                        })
+                      }
+                    >
+                      Xoá
+                    </button>
+                  </div>
+                  <p className="np-muted" style={{ margin: "10px 0 0" }}>
+                    Mẫu hệ thống không xoá và không đổi tên được — hãy nhân bản.
+                  </p>
+                </div>
+              )}
+              {presetNote && (
+                <div
+                  role={presetNote.kind === "error" ? "alert" : "status"}
+                  className={`np-note np-note-${presetNote.kind}`}
+                  style={{ marginTop: 12 }}
+                >
+                  <span className="np-ico" aria-hidden="true">
+                    {NOTE_ICON[presetNote.kind]}
+                  </span>
+                  <span>{presetNote.text}</span>
+                </div>
+              )}
+            </section>
+            )}
+
+            {/* Cách đọc là việc nhạc, KHÔNG phải thiết lập nâng cao — luôn hiện. */}
+            <section className="np-card np-o-settings" aria-label="Cách đọc">
+              <h2>{nangCao ? "Cách đọc" : "2. Cách đọc"}</h2>
+
+              {hasSimple && (
+                <fieldset className="np-set" style={{ marginBottom: 16 }}>
+                  <legend>Cách đếm nhịp đơn</legend>
+                  <div className="np-opts">
+                    {(
+                      [
+                        ["off", "Không hiện", ""],
+                        ["beats", "Phách", "1 2 3 4"],
+                        ["eighths", "Chia đôi", "1 & 2 & 3 & 4 &"],
+                        ["sixteenths", "Chia tư", "1 e & a"],
+                      ] as const
+                    ).map(([level, label, hint]) => (
+                      <label className="np-opt" key={level}>
                         <input
                           type="radio"
-                          name={`grouping-${code}`}
-                          checked={active === key}
-                          onChange={() => pickGrouping(code, groups)}
-                          style={{ accentColor: "#4338ca" }}
+                          name="counting-level"
+                          value={level}
+                          checked={
+                            level === "off"
+                              ? !settings.showBeats
+                              : settings.showBeats &&
+                                (settings.countingLevel || "beats") === level
+                          }
+                          onChange={() =>
+                            update(
+                              level === "off"
+                                ? { showBeats: false }
+                                : { showBeats: true, countingLevel: level }
+                            )
+                          }
                         />
-                        {groups.join(" + ")}
-                        {source === key && !chosen && (
-                          <span style={{ fontSize: 12, color: "#16a34a" }}>
-                            · theo bản nhạc
-                          </span>
-                        )}
+                        <span>{label}</span>
+                        {hint && <span className="np-opt-hint">{hint}</span>}
                       </label>
-                    );
-                  })}
-                  {chosen && source && partitionCode(chosen) !== source && (
-                    <span style={{ fontSize: 12, color: "#b45309" }}>
-                      Đang đè cách chia {source} ghi trong bản nhạc.{" "}
-                      <button
-                        type="button"
-                        onClick={() => pickGrouping(code, null)}
-                        style={{
-                          border: 0,
-                          background: "none",
-                          padding: 0,
-                          color: "#4338ca",
-                          textDecoration: "underline",
-                          cursor: "pointer",
-                          font: "inherit",
-                        }}
-                      >
-                        Dùng lại bản nhạc
-                      </button>
-                    </span>
-                  )}
-                  {!active && (
-                    <span style={{ fontSize: 12, color: "#b45309" }}>
-                      Bản nhạc không ghi cách chia. Phách nhỏ dùng được ngay;
-                      chọn một cách chia để đếm phách lớn.
-                    </span>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              {(hasCompound || irregularMeters.length > 0 || tab === "many") && (
+                <fieldset className="np-set" style={{ marginBottom: 14 }}>
+                  <legend>{compoundLegend}</legend>
+                  <div className="np-opts">
+                    {(
+                      [
+                        ["off", "Không hiện", ""],
+                        ["pulses", "Phách nhỏ", pulseHint],
+                        ["compound", "Phách lớn", beatHint],
+                      ] as const
+                    ).map(([mode, label, hint]) => (
+                      <label className="np-opt" key={mode}>
+                        <input
+                          type="radio"
+                          name="compound-counting"
+                          checked={
+                            mode === "off"
+                              ? !settings.showBeats
+                              : settings.showBeats &&
+                                (settings.compoundCountingMode || "pulses") ===
+                                  mode
+                          }
+                          onChange={() =>
+                            update(
+                              mode === "off"
+                                ? { showBeats: false }
+                                : { showBeats: true, compoundCountingMode: mode }
+                            )
+                          }
+                        />
+                        <span>{label}</span>
+                        {hint && <span className="np-opt-hint">{hint}</span>}
+                      </label>
+                    ))}
+                  </div>
+                  {hasSimple && (
+                    <p className="np-muted" style={{ margin: "8px 0 0" }}>
+                      Bản đổi nhịp: mỗi ô dùng nhóm đếm tương ứng. “Không hiện”
+                      tắt toàn bản.
+                    </p>
                   )}
                 </fieldset>
-              );
-            })}
-            {/* Ở chế độ nhiều bài chưa có bản nhạc nào để suy ra nhịp, nhưng mẻ file
-                vẫn có thể chứa nhịp kép/lẻ — nên luôn cho chọn cách đếm ở đó. */}
-            {(hasCompound || irregularMeters.length > 0 || tab === "many") && (
-              <fieldset
-                style={{
-                  border: 0,
-                  padding: 0,
-                  margin: 0,
-                  display: "flex",
-                  gap: 14,
-                  flexWrap: "wrap",
-                }}
-              >
-                <legend
-                  style={{ fontWeight: 600, fontSize: 14, marginBottom: 10 }}
-                >
-                  {compoundLegend}
-                </legend>
-                {(
-                  [
-                    ["off", "Không hiện"],
-                    ["pulses", pulseLabel],
-                    ["compound", beatLabel],
-                  ] as const
-                ).map(([mode, label]) => (
-                  <label
-                    key={mode}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      minHeight: 44,
-                      fontSize: 14,
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="compound-counting"
-                      checked={
-                        mode === "off"
-                          ? !settings.showBeats
-                          : settings.showBeats &&
-                            (settings.compoundCountingMode || "pulses") === mode
-                      }
-                      onChange={() =>
-                        update(
-                          mode === "off"
-                            ? { showBeats: false }
-                            : { showBeats: true, compoundCountingMode: mode }
-                        )
-                      }
-                      style={{ accentColor: "#4338ca" }}
-                    />
-                    {label}
-                  </label>
-                ))}
-                {hasSimple && (
-                  <span style={{ fontSize: 12, color: "#71717a" }}>
-                    Bản đổi nhịp: mỗi ô dùng nhóm đếm tương ứng. “Không hiện”
-                    tắt toàn bản.
-                  </span>
-                )}
-              </fieldset>
-            )}
-            <label style={control}>
-              Màu số phách
-              <input
-                aria-label="Màu số phách"
-                type="color"
-                value={settings.color}
-                onChange={(e) => update({ color: e.target.value })}
-                style={{
-                  width: 64,
-                  height: 36,
-                  border: "1px solid #d4d4d8",
-                  borderRadius: 6,
-                  background: "white",
-                }}
-              />
-            </label>
-            <label style={control}>
-              Cỡ chữ · {settings.sizePt} pt
-              <input
-                aria-label="Cỡ chữ"
-                type="range"
-                min={5}
-                max={14}
-                step={1}
-                value={settings.sizePt}
-                onChange={(e) => update({ sizePt: Number(e.target.value) })}
-                style={{ accentColor: "#4338ca", width: "100%" }}
-              />
-            </label>
-            <label style={control}>
-              Khoảng cách dưới khuông · {settings.distance}
-              <input
-                aria-label="Khoảng cách dưới khuông"
-                type="range"
-                min={0}
-                max={8}
-                step={1}
-                value={settings.distance}
-                onChange={(e) => update({ distance: Number(e.target.value) })}
-                style={{ accentColor: "#4338ca", width: "100%" }}
-              />
-            </label>
-          </div>
-        </section>
-        {error && (
-          <div
-            role="alert"
-            style={{
-              padding: 16,
-              background: "#fef2f2",
-              color: "#991b1b",
-              borderRadius: 12,
-              marginBottom: 16,
-              overflowWrap: "anywhere",
-            }}
-          >
-            {error}
-          </div>
-        )}
-        {score && score.diagnostics.length > 0 && (
-          <aside
-            aria-label="Chẩn đoán bản nhạc"
-            style={{
-              background: "#fffbeb",
-              border: "1px solid #fde68a",
-              borderRadius: 12,
-              padding: 18,
-              marginBottom: 18,
-            }}
-          >
-            <strong>Có {score.diagnostics.length} điểm cần kiểm tra</strong>
-            <p style={{ fontSize: 13, lineHeight: 1.6 }}>
-              Ô chưa xác định đúng sẽ không gắn số phách. Phần bản nhạc còn lại
-              vẫn hiển thị.
-            </p>
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: 20,
-                maxHeight: 220,
-                overflow: "auto",
-              }}
-            >
-              {score.diagnostics.map((d, i) => (
-                <li
-                  key={i}
-                  style={{
-                    fontSize: 13,
-                    marginTop: 10,
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  <strong>{d.code}</strong> · {d.sourceId}
-                  <br />
-                  {d.message}
-                </li>
-              ))}
-            </ul>
-          </aside>
-        )}
-        <section
-          aria-label="Xem trước bản nhạc"
-          style={{
-            border: "1px solid #e4e4e7",
-            borderRadius: 16,
-            overflow: "hidden",
-            background: "white",
-          }}
-        >
-          <div
-            style={{
-              padding: "16px 20px",
-              borderBottom: "1px solid #e4e4e7",
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 12,
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <strong>Xuất bản nhạc · A4</strong>
-              <label style={{ marginLeft: 12, fontSize: 13 }}>
-                Hướng{" "}
+              )}
+
+              {/*
+                Đếm phách nhỏ thì cách chia KHÔNG ảnh hưởng gì tới lưới số, nên
+                hỏi lúc đó là hỏi thừa (mục 7). Chỉ hiện khi thầy đang đếm phách
+                lớn — lúc đó thiếu cách chia là mất số phách — hoặc khi thầy đã
+                mở mức nâng cao và muốn đặt sẵn.
+              */}
+              {(nangCao ||
+                (settings.showBeats &&
+                  (settings.compoundCountingMode || "pulses") === "compound")) &&
+                irregularMeters.map(([code, meter]) => {
+                const chosen = settings.grouping?.byMeter?.[code];
+                const tuBanNhac = fromSource.get(code);
+                const active = chosen ? partitionCode(chosen) : tuBanNhac ?? null;
+                return (
+                  <fieldset className="np-set" key={code} style={{ marginBottom: 14 }}>
+                    <legend>Chọn cách chia nhịp {code}</legend>
+                    <div className="np-opts">
+                      {(allowedPartitions(meter) ?? []).map((groups) => {
+                        const key = partitionCode(groups);
+                        return (
+                          <label className="np-opt" key={key}>
+                            <input
+                              type="radio"
+                              name={`grouping-${code}`}
+                              checked={active === key}
+                              onChange={() => pickGrouping(code, groups)}
+                            />
+                            <span>{groups.join(" + ")}</span>
+                            {tuBanNhac === key && !chosen && (
+                              <span
+                                className="np-opt-hint"
+                                style={{ color: "var(--online-ink)" }}
+                              >
+                                theo bản nhạc
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {!active && (
+                      <div className="np-note np-note-warn" style={{ marginTop: 8 }}>
+                        <span className="np-ico" aria-hidden="true">
+                          ⚠
+                        </span>
+                        <span>
+                          <b>Bản nhạc {code} chưa ghi cách chia.</b> Phách nhỏ
+                          dùng được ngay; chọn một cách chia để đếm phách lớn.
+                        </span>
+                      </div>
+                    )}
+                    {chosen && tuBanNhac && partitionCode(chosen) !== tuBanNhac && (
+                      <div className="np-note np-note-info" style={{ marginTop: 8 }}>
+                        <span className="np-ico" aria-hidden="true">
+                          ℹ
+                        </span>
+                        <span>
+                          Đang đè cách chia {tuBanNhac} ghi trong bản nhạc.{" "}
+                          <button
+                            type="button"
+                            className="np-link"
+                            onClick={() => pickGrouping(code, null)}
+                          >
+                            Dùng lại bản nhạc
+                          </button>
+                        </span>
+                      </div>
+                    )}
+                  </fieldset>
+                );
+              })}
+
+            </section>
+
+            {nangCao && (
+            <section className="np-card np-o-look" aria-label="Trình bày">
+              <h2>Trình bày</h2>
+              <label className="np-field np-field-row">
+                <span>Màu số phách</span>
+                <input
+                  aria-label="Màu số phách"
+                  type="color"
+                  value={settings.color}
+                  onChange={(e) => update({ color: e.target.value })}
+                />
+              </label>
+              <div className="np-row" style={{ gap: 14, marginTop: 12 }}>
+                <label className="np-field">
+                  <span>Cỡ số · {settings.sizePt} pt</span>
+                  <input
+                    aria-label="Cỡ số phách"
+                    type="range"
+                    min={5}
+                    max={14}
+                    step={1}
+                    value={settings.sizePt}
+                    onChange={(e) => update({ sizePt: Number(e.target.value) })}
+                  />
+                </label>
+                <label className="np-field">
+                  <span>Khoảng cách · {settings.distance}</span>
+                  <input
+                    aria-label="Khoảng cách dưới khuông"
+                    type="range"
+                    min={0}
+                    max={8}
+                    step={1}
+                    value={settings.distance}
+                    onChange={(e) => update({ distance: Number(e.target.value) })}
+                  />
+                </label>
+              </div>
+
+              <div className="np-sub">Trang giấy</div>
+              <label className="np-field">
+                <span>Khổ A4 · hướng giấy</span>
                 <select
                   aria-label="Hướng giấy"
+                  className="np-select"
                   value={settings.orientation || "portrait"}
                   onChange={(e) =>
                     update({
                       orientation: e.target.value as "portrait" | "landscape",
                     })
                   }
-                  style={{ padding: 8 }}
                 >
-                  <option value="portrait">Dọc</option>
-                  <option value="landscape">Ngang</option>
+                  <option value="portrait">A4 dọc</option>
+                  <option value="landscape">A4 ngang</option>
                 </select>
               </label>
-              <span style={{ fontSize: 12, marginLeft: 12 }}>
-                Lề mặc định · 15 mm (dưới 18 mm)
-              </span>
-              <span
-                role="status"
-                style={{ fontSize: 13, color: "#71717a", marginLeft: 12 }}
-              >
-                {busy
-                  ? "Đang khắc bản nhạc…"
-                  : score
-                  ? `${score.pages.length} trang · ${score.anchors.length} nhãn đếm`
-                  : "Sẵn sàng"}
-              </span>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <button
-                style={{
-                  ...button,
-                  color: "#52525b",
-                  opacity: !score || busy ? 0.5 : 1,
-                }}
-                disabled={!score || busy || exporting}
-                onClick={() =>
-                  score &&
-                  downloadText(
-                    JSON.stringify(score.beatMap, null, 2),
-                    `${name}.beat-map.json`,
-                    "application/json"
-                  )
-                }
-              >
-                Tải beat-map JSON
-              </button>
-              <button
-                style={{
-                  ...button,
-                  background: "#18181b",
-                  color: "white",
-                  opacity: !score || busy ? 0.5 : 1,
-                }}
-                disabled={!score || busy || exporting}
-                onClick={() => void exportPrint("svg")}
-              >
-                Xuất SVG
-              </button>
-              <button
-                style={button}
-                disabled={!score || busy || exporting}
-                onClick={() => void exportPrint("pdf")}
-              >
-                Xuất PDF
-              </button>
-              <select
-                aria-label="Độ phân giải PNG"
-                value={pngScale}
-                onChange={(e) => setPngScale(Number(e.target.value) as 1 | 2)}
-                style={{ ...button }}
-              >
-                <option value={1}>PNG 1x</option>
-                <option value={2}>PNG 2x</option>
-              </select>
-              <button
-                style={button}
-                disabled={!score || busy || exporting}
-                onClick={() => void exportPrint("png")}
-              >
-                Xuất PNG
-              </button>
-              {exporting && <span role="status">Đang xuất bản nhạc…</span>}
-            </div>
-          </div>
-          <div
-            aria-busy={busy}
-            style={{
-              padding: 16,
-              minHeight: 300,
-              maxHeight: "75vh",
-              overflow: "auto",
-              background: score ? "#eaeaee" : "white",
-              opacity: busy ? 0.55 : 1,
-            }}
-          >
-            {score ? (
-              score.pages.map((p) => (
-                <figure
-                  key={p.number}
-                  style={{
-                    margin: "0 auto 20px",
-                    background: "white",
-                    maxWidth: Math.min(940, Math.max(560, p.width * 2)),
-                    minWidth: 560,
-                    boxShadow: "0 2px 8px #0000000d",
-                  }}
-                >
-                  <img
-                    alt={`Trang ${p.number} bản nhạc${
-                      settings.showBeats ? " có số phách" : ""
-                    }`}
-                    src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-                      p.svg
-                    )}`}
-                    style={{ display: "block", width: "100%", height: "auto" }}
-                  />
-                  <figcaption
-                    style={{
-                      padding: 12,
-                      textAlign: "center",
-                      fontSize: 12,
-                      color: "#71717a",
-                    }}
-                  >
-                    Trang {p.number}
-                  </figcaption>
-                </figure>
-              ))
-            ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "75px 16px",
-                  color: "#71717a",
-                }}
-              >
-                <div style={{ fontSize: 40, marginBottom: 16 }}>𝄞</div>
-                <p>Chọn bản nhạc để bắt đầu.</p>
-                <p style={{ fontSize: 13 }}>
-                  Hỗ trợ {SUPPORTED_SIMPLE.join(", ")}, nhịp kép{" "}
-                  {SUPPORTED_COMPOUND.join(", ")} và nhịp lẻ{" "}
-                  {SUPPORTED_IRREGULAR.join(", ")}.
-                </p>
-              </div>
+              <p className="np-muted" style={{ margin: "8px 0 0" }}>
+                Lề 15 mm, riêng lề dưới 18 mm.
+              </p>
+            </section>
             )}
-          </div>
-        </section>
-        {!!jobsRepo.current && !!recent.length && (
-          <section
-            style={{
-              background: "#fff",
-              borderRadius: 14,
-              padding: "18px 20px",
-              marginTop: 22,
-              boxShadow: "0 1px 2px rgba(0,0,0,.05)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              <h2 style={{ fontSize: 15, margin: 0 }}>Gần đây</h2>
-              {historyNote && (
-                <span style={{ fontSize: 12, color: "#b45309" }}>{historyNote}</span>
+
+            <section className="np-card np-o-export" aria-label="Xuất tài liệu">
+              <h2>{nangCao ? "Xuất tài liệu" : "3. Xuất tài liệu"}</h2>
+              {tab === "one" ? (
+                <>
+                  <button
+                    className="np-btn np-btn-primary np-btn-wide"
+                    disabled={!score || busy || exporting}
+                    onClick={() => void exportPrint("pdf")}
+                  >
+                    Xuất PDF
+                  </button>
+                  {/* PDF là thứ thầy in ra dạy. PNG, SVG, beat-map là việc của
+                      người cần đưa file sang chỗ khác — để ở mức nâng cao. */}
+                  {nangCao && (
+                    <>
+                      <div className="np-row" style={{ marginTop: 10 }}>
+                        <button
+                          className="np-btn sm np-btn-quiet"
+                          disabled={!score || busy || exporting}
+                          onClick={() => void exportPrint("png")}
+                        >
+                          Xuất PNG
+                        </button>
+                        <select
+                          aria-label="Độ phân giải PNG"
+                          className="np-select"
+                          style={{
+                            width: "auto",
+                            minHeight: 34,
+                            padding: "6px 10px",
+                            fontSize: 13,
+                          }}
+                          value={pngScale}
+                          onChange={(e) =>
+                            setPngScale(Number(e.target.value) as 1 | 2)
+                          }
+                        >
+                          <option value={1}>1x</option>
+                          <option value={2}>2x</option>
+                        </select>
+                        <button
+                          className="np-btn sm np-btn-quiet"
+                          disabled={!score || busy || exporting}
+                          onClick={() => void exportPrint("svg")}
+                        >
+                          Xuất SVG
+                        </button>
+                      </div>
+                      <div className="np-row" style={{ marginTop: 12 }}>
+                        <button
+                          type="button"
+                          className="np-link"
+                          disabled={!score || busy || exporting}
+                          onClick={() =>
+                            score &&
+                            downloadText(
+                              JSON.stringify(score.beatMap, null, 2),
+                              `${name}.beat-map.json`,
+                              "application/json"
+                            )
+                          }
+                        >
+                          Tải beat-map JSON
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  <div className="np-row" style={{ marginTop: 12 }}>
+                    <span role="status" className="np-muted">
+                      {exporting ? "Đang xuất…" : trangThaiXuat}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label className="np-field" style={{ marginBottom: 10 }}>
+                    <span>Định dạng</span>
+                    <select
+                      aria-label="Định dạng xuất"
+                      className="np-select"
+                      value={batchFormat}
+                      onChange={(e) =>
+                        setBatchFormat(e.target.value as BatchFormat)
+                      }
+                    >
+                      <option value="pdf">PDF</option>
+                      <option value="svg">SVG</option>
+                      <option value="png">PNG</option>
+                    </select>
+                  </label>
+                  <button
+                    className="np-btn np-btn-primary np-btn-wide"
+                    disabled={!batchFiles.length || batchRunning}
+                    onClick={() => void runBatchNow()}
+                  >
+                    {batchRunning ? "Đang xử lý…" : "Xử lý tất cả"}
+                  </button>
+                  {batchRunning && (
+                    <>
+                      <div
+                        className="np-bar"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={p.tong}
+                        aria-valuenow={p.xong + p.loi + p.canChon}
+                      >
+                        <i
+                          style={{
+                            width: `${
+                              p.tong
+                                ? Math.round(
+                                    ((p.xong + p.loi + p.canChon) / p.tong) * 100
+                                  )
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
+                      <div className="np-row" style={{ marginTop: 10 }}>
+                        <span role="status" className="np-muted">
+                          Đang xử lý {p.xong + p.loi + p.canChon} / {p.tong}
+                        </span>
+                        <button
+                          className="np-btn sm np-btn-quiet"
+                          style={{ marginLeft: "auto" }}
+                          onClick={() => {
+                            batchAbort.current.aborted = true;
+                          }}
+                        >
+                          Dừng
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  <button
+                    className="np-btn np-btn-wide"
+                    style={{ marginTop: 10 }}
+                    disabled={!batchItems.some((i) => i.status === "done")}
+                    onClick={() => void downloadZip()}
+                  >
+                    Xuất ZIP
+                  </button>
+                </>
+              )}
+            </section>
+
+            <div className="np-o-more">
+              <button
+                type="button"
+                className="np-more"
+                aria-expanded={nangCao}
+                onClick={() => {
+                  const bat = !nangCao;
+                  // Tắt mức nâng cao thì quay về luồng một bài; mẻ đang có
+                  // vẫn nằm nguyên trong state, bật lại là thấy y như cũ.
+                  if (!bat) setTab("one");
+                  setNangCao(bat);
+                  nhoMuc(bat);
+                }}
+              >
+                <span className="np-more-caret" aria-hidden="true">
+                  {nangCao ? "▴" : "▾"}
+                </span>
+                {nangCao ? "Ẩn thiết lập nâng cao" : "Thiết lập nâng cao"}
+              </button>
+              {!nangCao && (
+                <p className="np-muted" style={{ margin: "6px 0 0" }}>
+                  Màu và cỡ số phách, khổ giấy, xuất PNG/SVG, mẫu trình bày,
+                  xử lý nhiều bài.
+                </p>
               )}
             </div>
-            <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
-              {recent.map((job) => (
-                <li
-                  key={job.id}
+          </div>
+
+          {/* ── Cột phải: xem trước hoặc danh sách mẻ ───────────────────── */}
+          <div className="np-col">
+            {error && (
+              <div role="alert" className="np-note np-note-error np-o-note">
+                <span className="np-ico" aria-hidden="true">
+                  ✕
+                </span>
+                <span>{error}</span>
+              </div>
+            )}
+            {historyNote && (
+              <div
+                role="status"
+                className={`np-note np-note-${historyNote.kind} np-o-note`}
+              >
+                <span className="np-ico" aria-hidden="true">
+                  {NOTE_ICON[historyNote.kind]}
+                </span>
+                <span>{historyNote.text}</span>
+              </div>
+            )}
+
+            {tab === "many" && !!batchNote && (
+              <div role="status" className="np-note np-note-info np-o-note">
+                <span className="np-ico" aria-hidden="true">
+                  ℹ
+                </span>
+                <span>{batchNote}</span>
+              </div>
+            )}
+            {tab === "many" ? (
+              <section className="np-prev np-o-list" aria-label="Danh sách bài">
+                <div className="np-prev-bar">
+                  <h2>Danh sách bài</h2>
+                  <span role="status" className="np-muted">
+                    {batchItems.length
+                      ? `✓ ${p.xong}${p.canChon ? ` · ⚠ ${p.canChon}` : ""}${
+                          p.loi ? ` · ✕ ${p.loi}` : ""
+                        } / ${p.tong}`
+                      : `${batchFiles.length} bài đã chọn`}
+                  </span>
+                </div>
+                <div style={{ padding: 18 }}>
+                  {batchItems.length ? (
+                    <>
+                      <ul className="np-list">
+                        {batchItems.map((item) => (
+                          <li key={item.id}>
+                            <div className="np-item-top">
+                              <span className="np-name">{item.fileName}</span>
+                              {item.status === "done" ? (
+                                <span className="np-state done">
+                                  <span aria-hidden="true">✓</span> Hoàn tất{" "}
+                                  <span className="np-out">{item.outputName}</span>
+                                </span>
+                              ) : item.status === "error" ? (
+                                <span className="np-state err">
+                                  <span aria-hidden="true">✕</span> File lỗi
+                                </span>
+                              ) : item.status === "needs-grouping" ? (
+                                <span className="np-state warn">
+                                  <span aria-hidden="true">⚠</span> Chọn cách chia{" "}
+                                  {item.needs?.map((n) => n.meter).join(", ")}
+                                </span>
+                              ) : item.status === "processing" ? (
+                                <span className="np-state idle">
+                                  <span aria-hidden="true">◔</span> Đang xử lý
+                                </span>
+                              ) : (
+                                <span className="np-state idle">
+                                  <span aria-hidden="true">○</span> Đang chờ
+                                </span>
+                              )}
+                            </div>
+                            {item.status === "error" && item.error && (
+                              <p className="np-muted" style={{ margin: "6px 0 0" }}>
+                                {item.error}
+                              </p>
+                            )}
+                            {item.status === "needs-grouping" &&
+                              item.needs?.map((need) => (
+                                <div
+                                  className="np-chips"
+                                  key={`${item.id}-${need.meter}`}
+                                  style={{ marginTop: 8 }}
+                                >
+                                  {need.options.map((groups) => {
+                                    const dangChon =
+                                      batchGrouping[item.id]?.byMeter?.[
+                                        need.meter
+                                      ]?.join("+") === groups.join("+");
+                                    return (
+                                      <button
+                                        key={`${item.id}-${need.meter}-${groups.join("+")}`}
+                                        className={`np-btn sm${
+                                          dangChon ? " np-btn-primary" : ""
+                                        }`}
+                                        aria-pressed={dangChon}
+                                        onClick={() =>
+                                          pickBatchGrouping(
+                                            item,
+                                            need.meter,
+                                            groups
+                                          )
+                                        }
+                                      >
+                                        {groups.join(" + ")}
+                                        {dangChon ? " ✓" : ""}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ))}
+                          </li>
+                        ))}
+                      </ul>
+                      {!!dangCanChon.length && (
+                        <div className="np-note np-note-warn" style={{ marginTop: 14 }}>
+                          <span className="np-ico" aria-hidden="true">
+                            ⚠
+                          </span>
+                          <span>
+                            <b>
+                              {dangCanChon.length} bài cần chọn cách chia nhịp.
+                            </b>{" "}
+                            Chọn ngay cạnh từng bài rồi bấm “Xử lý tất cả” lần
+                            nữa. Công cụ không tự đoán cách chia.
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : batchFiles.length ? (
+                    <ul className="np-list">
+                      {batchFiles.map((f) => (
+                        <li key={f.name}>
+                          <div className="np-item-top">
+                            <span className="np-name">{f.name}</span>
+                            <span className="np-state idle">
+                              <span aria-hidden="true">○</span> Đang chờ
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="np-empty">
+                      <div className="np-glyph" aria-hidden="true">
+                        𝄞
+                      </div>
+                      <p style={{ margin: 0 }}>Chọn nhiều bản nhạc để bắt đầu.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : (
+              <section className="np-prev np-o-preview" aria-label="Xem trước bản nhạc">
+                <div className="np-prev-bar">
+                  <div className="np-prev-tit">
+                    <h2>Xem trước</h2>
+                    <span role="status" className="np-muted">
+                      {trangThaiXuat}
+                    </span>
+                  </div>
+                  {!!score && (
+                    <div className="np-zoom" role="group" aria-label="Mức phóng bản nhạc">
+                      <span className="np-zstep">
+                      <button
+                        type="button"
+                        className="np-zbtn"
+                        aria-label="Thu nhỏ"
+                        disabled={xem.che !== "khung" && xem.pct <= ZOOM_MIN}
+                        onClick={() =>
+                          setXem((v) => ({
+                            che: "tay",
+                            pct: Math.max(ZOOM_MIN, v.pct - ZOOM_BUOC),
+                          }))
+                        }
+                      >
+                        −
+                      </button>
+                      <span className="np-zval" role="status">
+                        {xem.che === "khung" ? "Vừa khung" : `${xem.pct}%`}
+                      </span>
+                      <button
+                        type="button"
+                        className="np-zbtn"
+                        aria-label="Phóng to"
+                        disabled={xem.che !== "khung" && xem.pct >= ZOOM_MAX}
+                        onClick={() =>
+                          setXem((v) => ({
+                            che: "tay",
+                            pct: Math.min(ZOOM_MAX, v.pct + ZOOM_BUOC),
+                          }))
+                        }
+                      >
+                        +
+                      </button>
+                      </span>
+                      <button
+                        type="button"
+                        className="np-zbtn np-zwide"
+                        aria-pressed={xem.che === "khung"}
+                        onClick={() => setXem({ che: "khung", pct: 100 })}
+                      >
+                        Vừa khung
+                      </button>
+                      <button
+                        type="button"
+                        className="np-zbtn np-zwide"
+                        aria-pressed={xem.che === "rong"}
+                        onClick={() => setXem({ che: "rong", pct: 100 })}
+                      >
+                        Vừa chiều rộng
+                      </button>
+                      <button
+                        type="button"
+                        className="np-zbtn np-zwide np-zfocus"
+                        aria-pressed={thuGon}
+                        onClick={() => setThuGon((v) => !v)}
+                      >
+                        {thuGon ? "Hiện thiết lập" : "Thu gọn thiết lập"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className={`np-prev-body${
+                    xem.che === "khung" ? " np-fit-page" : ""
+                  }`}
+                  aria-busy={busy}
+                  style={
+                    {
+                      background: score ? "var(--np-paper)" : "var(--surface)",
+                      opacity: busy ? 0.55 : 1,
+                      padding: score ? 20 : 0,
+                      "--np-zoom": xem.che === "rong" ? 100 : xem.pct,
+                    } as CSSProperties
+                  }
+                >
+                  {score ? (
+                    score.pages.map((pg) => (
+                      <figure className="np-page" key={pg.number}>
+                        <img
+                          alt={`Trang ${pg.number} bản nhạc${
+                            settings.showBeats ? " có số phách" : ""
+                          }`}
+                          src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+                            pg.svg
+                          )}`}
+                          style={{ aspectRatio: `${pg.width} / ${pg.height}` }}
+                        />
+                        <figcaption>Trang {pg.number}</figcaption>
+                      </figure>
+                    ))
+                  ) : (
+                    <div className="np-empty">
+                      <div className="np-glyph" aria-hidden="true">
+                        𝄞
+                      </div>
+                      <p style={{ margin: 0 }}>Chọn bản nhạc để bắt đầu.</p>
+                      <p className="np-muted" style={{ margin: "8px 0 0" }}>
+                        Hỗ trợ {SUPPORTED_SIMPLE.join(", ")}, nhịp kép{" "}
+                        {SUPPORTED_COMPOUND.join(", ")} và nhịp lẻ{" "}
+                        {SUPPORTED_IRREGULAR.join(", ")}.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {score && score.diagnostics.length > 0 && !nangCao && (
+              <div className="np-note np-note-warn np-o-diag">
+                <span className="np-ico" aria-hidden="true">
+                  ⚠
+                </span>
+                <span>
+                  Có một phần của bản nhạc chưa đánh dấu được chính xác. Phần
+                  còn lại vẫn hiện đầy đủ.
+                </span>
+              </div>
+            )}
+            {score && score.diagnostics.length > 0 && nangCao && (
+              <details className="np-card np-o-diag" style={{ padding: "14px 18px" }}>
+                <summary
                   style={{
-                    padding: "10px 0",
-                    borderTop: "1px solid #f4f4f5",
-                    fontSize: 13,
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: 14,
+                    color: "var(--honey-ink)",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 10,
-                      alignItems: "center",
-                    }}
-                  >
-                    <span style={{ color: "#71717a", minWidth: 128 }}>
-                      {khiNao(job.createdAt)}
-                    </span>
-                    <span style={{ fontWeight: 600 }}>
+                  ⚠ Có {score.diagnostics.length} điểm cần kiểm tra
+                </summary>
+                <p className="np-muted" style={{ margin: "10px 0" }}>
+                  Ô chưa xác định đúng sẽ không gắn số phách. Phần bản nhạc còn
+                  lại vẫn hiển thị.
+                </p>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 20,
+                    maxHeight: 220,
+                    overflow: "auto",
+                    fontSize: 12.5,
+                    color: "var(--ink-soft)",
+                  }}
+                >
+                  {score.diagnostics.map((d, i) => (
+                    <li key={i} style={{ marginTop: 8, overflowWrap: "anywhere" }}>
+                      <b>{d.code}</b> · {d.sourceId}
+                      <br />
+                      {d.message}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        </div>
+
+        {/* ── Gần đây ──────────────────────────────────────────────────── */}
+        {!!jobsRepo.current && !!recent.length && (
+          <section className="np-recent" aria-label="Lịch sử xử lý gần đây">
+            <h2>Gần đây</h2>
+            <ul className="np-list">
+              {recent.map((job) => (
+                <li key={job.id}>
+                  <div className="np-job">
+                    <span className="np-when">{khiNao(job.createdAt)}</span>
+                    <span className="np-what">
                       {job.totalItems} bài · {job.exportFormat.toUpperCase()}
                     </span>
                     {job.presetName && (
-                      <span style={{ color: "#71717a" }}>{job.presetName}</span>
+                      <span className="np-preset">{job.presetName}</span>
                     )}
                     <span
-                      style={{
-                        color: job.errorItems || job.needsGroupingItems ? "#b45309" : "#16a34a",
-                      }}
+                      className={`np-state ${
+                        job.errorItems
+                          ? "err"
+                          : job.needsGroupingItems
+                          ? "warn"
+                          : "done"
+                      }`}
                     >
                       {job.errorItems || job.needsGroupingItems
                         ? [
                             `✓ ${job.doneItems}`,
-                            // Cần chọn cách chia KHÔNG phải lỗi: bài vẫn đúng,
-                            // chỉ đang chờ thầy quyết cách chia.
                             job.needsGroupingItems
                               ? `⚠ ${job.needsGroupingItems} cần chọn cách chia`
                               : "",
@@ -1498,95 +1613,109 @@ export default function MusicXmlBeatsPage() {
                           ]
                             .filter(Boolean)
                             .join(" · ")
-                        : `✓ ${job.doneItems}/${job.totalItems} hoàn tất`}
+                        : `✓ ${job.doneItems}/${job.totalItems}`}
                     </span>
-                    <button
-                      style={{ ...button, padding: "5px 10px", minHeight: 32 }}
-                      onClick={() =>
-                        void (async () => {
-                          try {
-                            setOpenJob(
-                              openJob?.id === job.id
-                                ? null
-                                : await jobsRepo.current!.getJob(job.id)
-                            );
-                          } catch {
-                            setHistoryNote("Chưa mở được chi tiết.");
-                          }
-                        })()
-                      }
-                    >
-                      {openJob?.id === job.id ? "Đóng" : "Xem chi tiết"}
-                    </button>
-                    <button
-                      style={{ ...button, padding: "5px 10px", minHeight: 32 }}
-                      onClick={() => {
-                        setBusy(!!source);
-                        setSettings((cur) => applyJobSettings(job.settingsSnapshot, cur));
-                        setPresetId("");
-                        setHistoryNote("Đã dùng lại thiết lập của lần xử lý đó.");
-                      }}
-                    >
-                      Dùng lại thiết lập
-                    </button>
-                    <button
-                      style={{ ...button, padding: "5px 10px", minHeight: 32, color: "#b91c1c" }}
-                      onClick={() =>
-                        void (async () => {
-                          try {
-                            await jobsRepo.current!.remove(job.id);
-                            if (openJob?.id === job.id) setOpenJob(null);
-                            await refreshHistory();
-                          } catch {
-                            setHistoryNote("Chưa xoá được mục này.");
-                          }
-                        })()
-                      }
-                    >
-                      Xoá
-                    </button>
+                    <span className="np-job-acts">
+                      <button
+                        type="button"
+                        className="np-link"
+                        aria-expanded={openJob?.id === job.id}
+                        onClick={() =>
+                          void (async () => {
+                            try {
+                              setOpenJob(
+                                openJob?.id === job.id
+                                  ? null
+                                  : await jobsRepo.current!.getJob(job.id)
+                              );
+                            } catch {
+                              setHistoryNote({ kind: "warn", text: "Chưa mở được chi tiết." });
+                            }
+                          })()
+                        }
+                      >
+                        {openJob?.id === job.id ? "Đóng" : "Xem chi tiết"}
+                      </button>
+                      {nangCao && (
+                      <button
+                        type="button"
+                        className="np-link"
+                        onClick={() => {
+                          setBusy(!!source);
+                          setSettings((cur) =>
+                            applyJobSettings(job.settingsSnapshot, cur)
+                          );
+                          setPresetId("");
+                          setHistoryNote({
+                            kind: "ok",
+                            text: "Đã dùng lại thiết lập của lần xử lý đó.",
+                          });
+                        }}
+                      >
+                        Dùng lại thiết lập
+                      </button>
+                      )}
+                      {nangCao && (
+                      <button
+                        type="button"
+                        className="np-link danger"
+                        aria-label={`Xoá lịch sử ${khiNao(job.createdAt)}`}
+                        onClick={() =>
+                          void (async () => {
+                            try {
+                              await jobsRepo.current!.remove(job.id);
+                              if (openJob?.id === job.id) setOpenJob(null);
+                              await refreshHistory();
+                            } catch {
+                              setHistoryNote({ kind: "warn", text: "Chưa xoá được mục này." });
+                            }
+                          })()
+                        }
+                      >
+                        Xoá
+                      </button>
+                      )}
+                    </span>
                   </div>
                   {openJob?.id === job.id && (
-                    <div style={{ marginTop: 10, paddingLeft: 4, color: "#3f3f46" }}>
-                      <div style={{ color: "#71717a", marginBottom: 6 }}>
+                    <div className="np-detail">
+                      <div className="np-meta">
                         {cachDem(job.countingMode)} ·{" "}
-                        {job.orientation === "portrait" ? "A4 dọc" : "A4 ngang"} ·{" "}
-                        {job.settingsSnapshot.sizePt} pt · khoảng cách{" "}
+                        {job.orientation === "portrait" ? "A4 dọc" : "A4 ngang"}{" "}
+                        · {job.settingsSnapshot.sizePt} pt · khoảng cách{" "}
                         {job.settingsSnapshot.distance} ·{" "}
                         {Math.round(job.durationMs / 100) / 10}s
-                        {job.presetName ? ` · preset ${job.presetName}` : ""}
+                        {job.presetName ? ` · mẫu ${job.presetName}` : ""}
                       </div>
-                      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                      <ul className="np-list">
                         {openJob.items.map((item) => (
-                          <li
-                            key={item.itemId}
-                            style={{ display: "flex", gap: 10, flexWrap: "wrap", padding: "3px 0" }}
-                          >
-                            <span style={{ minWidth: 210, overflowWrap: "anywhere" }}>
-                              {item.sourceName}
-                            </span>
-                            <span
-                              style={{
-                                color:
+                          <li key={item.itemId} style={{ padding: "6px 0" }}>
+                            <div className="np-item-top">
+                              <span className="np-name">{item.sourceName}</span>
+                              <span
+                                className={`np-state ${
                                   item.status === "done"
-                                    ? "#16a34a"
+                                    ? "done"
                                     : item.status === "error"
-                                    ? "#b91c1c"
-                                    : "#b45309",
-                              }}
-                            >
-                              {item.status === "done"
-                                ? `✓ ${item.outputName ?? ""}`
-                                : item.status === "error"
-                                ? `✕ ${item.errorMessage ?? "Lỗi"}`
-                                : "⚠ Cần chọn cách chia"}
-                            </span>
-                            {item.groupingSnapshot &&
-                              Object.entries(item.groupingSnapshot).map(([m, g]) => (
-                                <span key={m} style={{ color: "#71717a" }}>
-                                  {m} · {(g as number[]).join("+")}
-                                </span>
-                              ))}
+                                    ? "err"
+                                    : "warn"
+                                }`}
+                              >
+                                {item.status === "done"
+                                  ? `✓ ${item.outputName ?? ""}`
+                                  : item.status === "error"
+                                  ? `✕ ${item.errorMessage ?? "Lỗi"}`
+                                  : "⚠ Cần chọn cách chia"}
+                              </span>
+                              {item.groupingSnapshot &&
+                                Object.entries(item.groupingSnapshot).map(
+                                  ([m, g]) => (
+                                    <span className="np-muted" key={m}>
+                                      {m} · {(g as number[]).join("+")}
+                                    </span>
+                                  )
+                                )}
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -1597,7 +1726,8 @@ export default function MusicXmlBeatsPage() {
             </ul>
           </section>
         )}
-        <p style={{ fontSize: 12, color: "#71717a", lineHeight: 1.7 }}>
+
+        <p className="np-foot">
           File được xử lý trên thiết bị. SVG giữ đường nét khi phóng to và là
           bản nguồn chung cho PDF vector và PNG. PNG 1x: 96 dpi; 2x: 192 dpi.
           Nhiều trang PNG được đóng ZIP.
@@ -1605,4 +1735,5 @@ export default function MusicXmlBeatsPage() {
       </div>
     </main>
   );
+
 }

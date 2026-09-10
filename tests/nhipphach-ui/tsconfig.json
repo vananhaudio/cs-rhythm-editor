@@ -1,0 +1,5 @@
+{
+  "extends": "../musicxml-renderer/tsconfig.json",
+  "include": ["../../src/nhipphach/**/*.ts", "./*.ts"],
+  "exclude": ["../../src/nhipphach/presetGateway.ts"]
+}
