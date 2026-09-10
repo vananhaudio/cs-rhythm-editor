@@ -42,7 +42,11 @@ as $$
     where au.id = auth.uid() and au.role = 'admin'
   );
 $$;
+-- `revoke from public` KHÔNG gỡ được quyền mà Supabase cấp thẳng cho `anon`
+-- qua ALTER DEFAULT PRIVILEGES, nên phải revoke đích danh. Hàm này trả false
+-- cho khách nên không lộ gì, nhưng đã siết thì siết cho đều.
 revoke all on function public.is_admin() from public;
+revoke all on function public.is_admin() from anon;
 grant execute on function public.is_admin() to authenticated;
 
 -- ── 1) Nhịp Phách trở thành một công cụ CHÍNH THỨC trong sổ chung ──────────

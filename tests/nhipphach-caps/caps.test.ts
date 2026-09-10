@@ -637,6 +637,18 @@ test("my_nhipphach_caps không nhận tham số và không cho anon chạy", () 
   // is_admin() là vị từ RIÊNG, không dùng is_teacher() cho quyền ghi.
   assert.match(sql, /create or replace function public\.is_admin\(\)/);
   assert.match(sql, /au\.role = 'admin'/);
+  // `revoke from public` không gỡ nổi quyền Supabase cấp thẳng cho anon.
+  for (const fn of [
+    "is_admin",
+    "my_nhipphach_caps",
+    "nhipphach_capability_list",
+    "nhipphach_advanced_only",
+  ])
+    assert.match(
+      sql,
+      new RegExp(`revoke all on function public\\.${fn}\\(\\) from anon`),
+      `${fn} chưa revoke đích danh khỏi anon`
+    );
   const rls = sql.slice(
     sql.indexOf("create policy tool_capabilities_admin_select"),
     sql.indexOf("revoke all on public.tool_capabilities from anon")
