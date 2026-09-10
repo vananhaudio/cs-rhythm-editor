@@ -1287,6 +1287,10 @@ export default function MusicXmlBeatsPage({
               )}
             </section>
 
+            {/* Không có quyền `advanced` thì KHÔNG bày nút này: bấm vào cũng
+                không mở được gì, mà lời mô tả lại hứa PNG/SVG/mẫu trình bày/
+                nhiều bài — hứa rồi không làm còn tệ hơn là không hứa. */}
+            {choNangCao && (
             <div className="np-o-more">
               <button
                 type="button"
@@ -1313,6 +1317,7 @@ export default function MusicXmlBeatsPage({
                 </p>
               )}
             </div>
+            )}
           </div>
 
           {/* ── Cột phải: xem trước hoặc danh sách mẻ ───────────────────── */}

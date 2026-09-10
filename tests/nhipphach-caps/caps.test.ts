@@ -144,6 +144,27 @@ test("chốt nằm ở ĐẦU handler, trước mọi việc khác", () => {
   }
 });
 
+test("mất quyền nâng cao thì nút mở nâng cao cũng biến mất", () => {
+  // Bắt trên production: cờ `advanced` tắt nhưng nút "Thiết lập nâng cao" vẫn
+  // hiện, bấm vào không mở gì — vì `nangCao = muonNangCao && choNangCao` chỉ
+  // chặn nội dung chứ không chặn nút. Người dùng đọc lời mô tả rồi bấm vào hư
+  // không. Nút phải nằm trong điều kiện `choNangCao`.
+  const page = sach("../../src/pages/MusicXmlBeatsPage.tsx");
+  const i = page.indexOf('<div className="np-o-more">');
+  assert.notEqual(i, -1, "không còn khối nút mở nâng cao?");
+  const truoc = page.slice(0, i);
+  const dong = truoc.split("\n");
+  // Điều kiện gần nhất bao ngoài khối phải là choNangCao.
+  const mo = dong.map((d, k) => [d, k] as [string, number])
+    .filter(([d]) => d.includes("{choNangCao && ("))
+    .pop();
+  assert.ok(mo, "nút mở nâng cao phải được bọc trong {choNangCao && (...)}");
+  assert.ok(
+    dong.length - 1 - mo![1] <= 5,
+    "điều kiện choNangCao phải bọc SÁT khối nút, không phải ở đâu đó xa"
+  );
+});
+
 // ══ 4. Quyền không bao giờ đến từ localStorage ══════════════════════════════
 
 test("localStorage chỉ nhớ mức giao diện, không phải quyền", () => {
