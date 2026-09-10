@@ -574,3 +574,32 @@ test("đầu khung xem trước gọn, tiêu đề và số liệu cùng một d
   assert.match(NP_CSS, /\.np-prev-bar\{[^}]*padding:9px 14px/);
   assert.match(NP_CSS, /\.np-prev-bar h2\{font-size:14\.5px/);
 });
+
+// ── 18. Thứ tự luật CSS ─────────────────────────────────────────────────────
+
+test("khối mobile nằm CUỐI, không bị luật gốc phía sau đè chết", () => {
+  // Đây là lỗi thật đã gặp: khối @media viết ở giữa file nên
+  // .np-prev-body{max-height:62vh} bị luật gốc 78vh phía sau ghi đè, và mọi
+  // override cùng độ ưu tiên khác cũng chết theo mà không báo gì.
+  const mob = NP_CSS.indexOf("@media(max-width:1023px)");
+  assert.ok(mob > 0);
+  const sau = NP_CSS.slice(NP_CSS.indexOf("}", NP_CSS.lastIndexOf("}", NP_CSS.length - 3)));
+  const conLuat = NP_CSS.slice(mob)
+    .replace(/@media\(max-width:1023px\)\{[\s\S]*?\n\}/, "")
+    .split("\n")
+    .map((d) => d.trim())
+    .filter((d) => d.startsWith(`.${NP_SCOPE}`));
+  assert.deepEqual(conLuat, [], `còn luật gốc sau khối mobile: ${conLuat.slice(0, 3).join(" · ")}`);
+  // Và những override hay va chạm phải thật sự thắng.
+  for (const luat of [
+    ".np-prev-body{max-height:62vh;}",
+    ".np-zbtn{font-size:12.5px;padding:0 8px;min-height:34px;}",
+    ".np-prev-bar{padding:10px 12px;}",
+  ]) {
+    const iMob = NP_CSS.indexOf(luat, mob);
+    assert.ok(iMob > 0, `thiếu override ${luat}`);
+    const ten = luat.slice(0, luat.indexOf("{"));
+    const iGoc = NP_CSS.lastIndexOf(`.${NP_SCOPE} ${ten}{`, mob);
+    assert.ok(iGoc < iMob, `${ten}: luật gốc phải đứng TRƯỚC override mobile`);
+  }
+});

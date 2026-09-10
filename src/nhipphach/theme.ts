@@ -74,36 +74,7 @@ export const NP_CSS = `
   .${NP_SCOPE} .np-loaded .np-zfocus{display:inline-flex;align-items:center;}
 }
 .${NP_SCOPE} .np-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
-/* Một cột: thứ tự đọc phải là nguồn → mẫu → thiết lập → xem trước → xuất,
-   nên hai cột "tan ra" thành các thẻ rời rồi xếp lại bằng order. */
-@media(max-width:1023px){
-  .${NP_SCOPE} .np-grid{display:flex;flex-direction:column;gap:16px;align-items:stretch;}
-  .${NP_SCOPE} .np-col{display:contents;}
-  .${NP_SCOPE} h1{font-size:26px;}
-  .${NP_SCOPE} .np-o-note{order:5;}
-  .${NP_SCOPE} .np-o-source{order:10;}
-  .${NP_SCOPE} .np-o-list{order:15;}
-  .${NP_SCOPE} .np-o-preset{order:20;}
-  .${NP_SCOPE} .np-o-settings{order:30;}
-  .${NP_SCOPE} .np-o-preview{order:40;}
-  .${NP_SCOPE} .np-o-export{order:50;}
-  .${NP_SCOPE} .np-o-diag{order:60;}
-  .${NP_SCOPE} .np-o-look{order:35;}
-  .${NP_SCOPE} .np-o-more{order:70;}
-  .${NP_SCOPE} .np-prev-body{max-height:62vh;}
-  .${NP_SCOPE} .np-fit-page .np-page img{height:calc(62vh - 118px);}
-  .${NP_SCOPE} .np-loaded{grid-template-columns:1fr;}
-  .${NP_SCOPE} .np-focus{grid-template-columns:1fr;}
-  .${NP_SCOPE} .np-focus .np-col:first-child{display:contents;}
-  .${NP_SCOPE} .np-prev-bar{padding:10px 12px;}
-  /* Hẹp thì xuống hai hàng cho ra dáng có chủ ý: hàng trên là mức phóng,
-     hàng dưới là hai kiểu xem chia đôi đều nhau. */
-  .${NP_SCOPE} .np-zoom{width:100%;gap:6px;}
-  .${NP_SCOPE} .np-zstep{flex:1 1 100%;}
-  .${NP_SCOPE} .np-zstep .np-zval{flex:1;}
-  .${NP_SCOPE} .np-zwide{flex:1 1 0;min-width:0;}
-  .${NP_SCOPE} .np-zbtn{font-size:12.5px;padding:0 8px;min-height:34px;}
-}
+
 
 /* ── Thẻ ─────────────────────────────────────────────────────────────────── */
 .${NP_SCOPE} .np-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;}
@@ -232,4 +203,35 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-detail{margin-top:10px;padding:12px 14px;background:#FBFAF7;border-radius:12px;}
 .${NP_SCOPE} .np-detail .np-meta{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;}
 .${NP_SCOPE} .np-foot{font-size:12.5px;color:var(--ink-hint);line-height:1.7;margin-top:26px;}
+
+/* Một cột: thứ tự đọc phải là nguồn → mẫu → thiết lập → xem trước → xuất,
+   nên hai cột "tan ra" thành các thẻ rời rồi xếp lại bằng order. */
+@media(max-width:1023px){
+  .${NP_SCOPE} .np-grid{display:flex;flex-direction:column;gap:16px;align-items:stretch;}
+  .${NP_SCOPE} .np-col{display:contents;}
+  .${NP_SCOPE} h1{font-size:26px;}
+  .${NP_SCOPE} .np-o-note{order:5;}
+  .${NP_SCOPE} .np-o-source{order:10;}
+  .${NP_SCOPE} .np-o-list{order:15;}
+  .${NP_SCOPE} .np-o-preset{order:20;}
+  .${NP_SCOPE} .np-o-settings{order:30;}
+  .${NP_SCOPE} .np-o-preview{order:40;}
+  .${NP_SCOPE} .np-o-export{order:50;}
+  .${NP_SCOPE} .np-o-diag{order:60;}
+  .${NP_SCOPE} .np-o-look{order:35;}
+  .${NP_SCOPE} .np-o-more{order:70;}
+  .${NP_SCOPE} .np-prev-body{max-height:62vh;}
+  .${NP_SCOPE} .np-fit-page .np-page img{height:calc(62vh - 118px);}
+  .${NP_SCOPE} .np-loaded{grid-template-columns:1fr;}
+  .${NP_SCOPE} .np-focus{grid-template-columns:1fr;}
+  .${NP_SCOPE} .np-focus .np-col:first-child{display:contents;}
+  .${NP_SCOPE} .np-prev-bar{padding:10px 12px;}
+  /* Hẹp thì xuống hai hàng cho ra dáng có chủ ý: hàng trên là mức phóng,
+     hàng dưới là hai kiểu xem chia đôi đều nhau. */
+  .${NP_SCOPE} .np-zoom{width:100%;gap:6px;}
+  .${NP_SCOPE} .np-zstep{flex:1 1 100%;}
+  .${NP_SCOPE} .np-zstep .np-zval{flex:1;}
+  .${NP_SCOPE} .np-zwide{flex:1 1 0;min-width:0;}
+  .${NP_SCOPE} .np-zbtn{font-size:12.5px;padding:0 8px;min-height:34px;}
+}
 `;
