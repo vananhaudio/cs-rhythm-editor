@@ -1,4 +1,4 @@
 {
   "extends": "../musicxml-renderer/tsconfig.json",
-  "include": ["../../src/teacherRouteAccess.ts", "./*.ts"]
+  "include": ["./*.ts"]
 }

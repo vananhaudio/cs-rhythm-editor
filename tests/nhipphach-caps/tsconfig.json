@@ -1,0 +1,4 @@
+{
+  "extends": "../musicxml-renderer/tsconfig.json",
+  "include": ["../../src/nhipphach/capabilities.ts", "./*.ts"]
+}

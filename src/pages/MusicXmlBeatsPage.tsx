@@ -59,6 +59,7 @@ import type { JobRecord } from "../nhipphach/jobs";
 import { giuLuot, traLuot } from "../nhipphach/motLuot";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
+import { can, NO_CAPS, type CapState } from "../nhipphach/capabilities";
 import type { NhipPhachJobRepository, JobSummary, JobDetail } from "../nhipphach/jobRepository";
 import type { PresetRepository } from "../nhipphach/presetRepository";
 
@@ -124,7 +125,12 @@ const NOTE_ICON: Record<"ok" | "info" | "warn" | "error", string> = {
   error: "✕",
 };
 
-export default function MusicXmlBeatsPage() {
+export default function MusicXmlBeatsPage({
+  caps = NO_CAPS,
+}: {
+  /** Quyền tính năng, do cổng phía ngoài đọc từ máy chủ rồi truyền xuống. */
+  caps?: CapState;
+}) {
   const [source, setSource] = useState<{ xml: string; name: string } | null>(
     null
   );
@@ -143,7 +149,19 @@ export default function MusicXmlBeatsPage() {
   });
   const [thuGon, setThuGon] = useState(false);
   // Người mở trang lần đầu luôn thấy mức Cơ bản; thầy dùng quen thì máy nhớ hộ.
-  const [nangCao, setNangCao] = useState(mucDaLuu);
+  const [muonNangCao, setMuonNangCao] = useState(mucDaLuu);
+  // Không có quyền `advanced` thì không có mức Nâng cao, dù máy có nhớ gì đi nữa.
+  const choNangCao = can(caps, "advanced");
+  const nangCao = muonNangCao && choNangCao;
+  const choBatch = can(caps, "batch");
+  const choPreset = can(caps, "presets");
+  const choHistory = can(caps, "history");
+  const choXuat = {
+    pdf: can(caps, "export.pdf"),
+    png: can(caps, "export.png"),
+    svg: can(caps, "export.svg"),
+    beatmap: can(caps, "export.beatmap"),
+  } as const;
   // Chốt đồng bộ: xem src/nhipphach/motLuot.ts.
   const dangXuat = useRef(false);
   // ── Preset: chỉ thiết lập trình bày, không giữ bản nhạc, không giữ cách chia ──
@@ -200,7 +218,7 @@ export default function MusicXmlBeatsPage() {
     // Đã đăng nhập thì preset đi theo TÀI KHOẢN; chưa thì dùng kho trên máy như cũ.
     // Trang không gọi Supabase trực tiếp — mọi thứ qua PresetRepository.
     (async () => {
-      const gate = await openPresetRepository();
+      const gate = await openPresetRepository({ presets: choPreset, history: choHistory });
       if (cancelled) return;
       presets.current = gate.repo;
       jobsRepo.current = gate.jobs;
@@ -265,6 +283,7 @@ export default function MusicXmlBeatsPage() {
     setBatchNote(bo ? `Đã bỏ qua ${bo} file không phải .xml/.musicxml.` : "");
   }
   async function runBatchNow() {
+    if (!can(caps, "batch")) return;
     if (!batchFiles.length || batchRunning) return;
     if (!giuLuot(dangChayMe)) return;
     setBatchRunning(true);
@@ -311,7 +330,16 @@ export default function MusicXmlBeatsPage() {
         })
       );
   }
+  function taiBeatMap() {
+    if (!can(caps, "export.beatmap") || !score) return;
+    downloadText(
+      JSON.stringify(score.beatMap, null, 2),
+      `${name}.beat-map.json`,
+      "application/json"
+    );
+  }
   async function downloadZip() {
+    if (!can(caps, "batch")) return;
     try {
       const out = await zipBatch(batchItems);
       downloadBlob(out.blob, out.name);
@@ -330,7 +358,7 @@ export default function MusicXmlBeatsPage() {
     }));
   /** Lịch sử là việc phụ: hỏng thì báo nhẹ, không bao giờ ném ra ngoài. */
   async function refreshHistory() {
-    if (!jobsRepo.current) return;
+    if (!can(caps, "history") || !jobsRepo.current) return;
     try {
       setRecent(await jobsRepo.current.listRecent(5));
     } catch {
@@ -338,7 +366,7 @@ export default function MusicXmlBeatsPage() {
     }
   }
   async function ghiLichSu(build: () => JobRecord) {
-    if (!jobsRepo.current) return;
+    if (!can(caps, "history") || !jobsRepo.current) return;
     try {
       await jobsRepo.current.create(build());
       setHistoryNote(null);
@@ -370,6 +398,7 @@ export default function MusicXmlBeatsPage() {
   };
   const currentPreset = presetList.find((p) => p.id === presetId) ?? null;
   async function guard(action: () => Promise<string>) {
+    if (!can(caps, "presets")) return;
     try {
       const text = await action();
       setPresetNote(text ? { kind: "ok", text } : null);
@@ -475,6 +504,9 @@ export default function MusicXmlBeatsPage() {
     }
   }
   async function exportPrint(format: "pdf" | "png" | "svg") {
+    // Chặn LẠI ở đây, không chỉ ẩn nút: state cũ, một cú đua render hay một
+    // lệnh gọi từ console đều không được vượt qua quyền.
+    if (!can(caps, `export.${format}` as const)) return;
     if (!score || busy || exporting) return;
     if (!giuLuot(dangXuat)) return;
     setExporting(true);
@@ -671,7 +703,7 @@ export default function MusicXmlBeatsPage() {
 
         {/* Chọn một bài hay nhiều bài là việc của người đã quen tay —
             mức Cơ bản chỉ có một luồng duy nhất. */}
-        {nangCao && (
+        {nangCao && choBatch && (
           <div className="np-seg" role="tablist" aria-label="Chế độ xử lý">
             {(["one", "many"] as const).map((t) => (
               <button
@@ -720,7 +752,7 @@ export default function MusicXmlBeatsPage() {
               {khuThaFile}
             </section>
 
-            {nangCao && (
+            {nangCao && choPreset && (
             <section className="np-card np-o-preset" aria-label="Mẫu trình bày">
               <h2>Mẫu trình bày</h2>
               <select
@@ -1088,67 +1120,92 @@ export default function MusicXmlBeatsPage() {
               <h2>{nangCao ? "Xuất tài liệu" : "3. Xuất tài liệu"}</h2>
               {tab === "one" ? (
                 <>
-                  <button
-                    className="np-btn np-btn-primary np-btn-wide"
-                    disabled={!score || busy || exporting}
-                    onClick={() => void exportPrint("pdf")}
-                  >
-                    Xuất PDF
-                  </button>
+                  {choXuat.pdf && (
+                    <button
+                      className="np-btn np-btn-primary np-btn-wide"
+                      disabled={!score || busy || exporting}
+                      onClick={() => void exportPrint("pdf")}
+                    >
+                      Xuất PDF
+                    </button>
+                  )}
+                  {/* Không có PDF thì PNG lên làm nút chính — đừng giả định
+                      PDF lúc nào cũng có mặt. */}
+                  {!choXuat.pdf && choXuat.png && (
+                    <button
+                      className="np-btn np-btn-primary np-btn-wide"
+                      disabled={!score || busy || exporting}
+                      onClick={() => void exportPrint("png")}
+                    >
+                      Xuất PNG
+                    </button>
+                  )}
+                  {!choXuat.pdf && !choXuat.png && choXuat.svg && (
+                    <button
+                      className="np-btn np-btn-primary np-btn-wide"
+                      disabled={!score || busy || exporting}
+                      onClick={() => void exportPrint("svg")}
+                    >
+                      Xuất SVG
+                    </button>
+                  )}
                   {/* PDF là thứ thầy in ra dạy. PNG, SVG, beat-map là việc của
                       người cần đưa file sang chỗ khác — để ở mức nâng cao. */}
                   {nangCao && (
                     <>
-                      <div className="np-row" style={{ marginTop: 10 }}>
-                        <button
-                          className="np-btn sm np-btn-quiet"
-                          disabled={!score || busy || exporting}
-                          onClick={() => void exportPrint("png")}
-                        >
-                          Xuất PNG
-                        </button>
-                        <select
-                          aria-label="Độ phân giải PNG"
-                          className="np-select"
-                          style={{
-                            width: "auto",
-                            minHeight: 34,
-                            padding: "6px 10px",
-                            fontSize: 13,
-                          }}
-                          value={pngScale}
-                          onChange={(e) =>
-                            setPngScale(Number(e.target.value) as 1 | 2)
-                          }
-                        >
-                          <option value={1}>1x</option>
-                          <option value={2}>2x</option>
-                        </select>
-                        <button
-                          className="np-btn sm np-btn-quiet"
-                          disabled={!score || busy || exporting}
-                          onClick={() => void exportPrint("svg")}
-                        >
-                          Xuất SVG
-                        </button>
-                      </div>
-                      <div className="np-row" style={{ marginTop: 12 }}>
-                        <button
-                          type="button"
-                          className="np-link"
-                          disabled={!score || busy || exporting}
-                          onClick={() =>
-                            score &&
-                            downloadText(
-                              JSON.stringify(score.beatMap, null, 2),
-                              `${name}.beat-map.json`,
-                              "application/json"
-                            )
-                          }
-                        >
-                          Tải beat-map JSON
-                        </button>
-                      </div>
+                      {(choXuat.png || choXuat.svg) && (
+                        <div className="np-row" style={{ marginTop: 10 }}>
+                          {choXuat.pdf && choXuat.png && (
+                            <>
+                              <button
+                                className="np-btn sm np-btn-quiet"
+                                disabled={!score || busy || exporting}
+                                onClick={() => void exportPrint("png")}
+                              >
+                                Xuất PNG
+                              </button>
+                              <select
+                                aria-label="Độ phân giải PNG"
+                                className="np-select"
+                                style={{
+                                  width: "auto",
+                                  minHeight: 34,
+                                  padding: "6px 10px",
+                                  fontSize: 13,
+                                }}
+                                value={pngScale}
+                                onChange={(e) =>
+                                  setPngScale(Number(e.target.value) as 1 | 2)
+                                }
+                              >
+                                <option value={1}>1x</option>
+                                <option value={2}>2x</option>
+                              </select>
+                            </>
+                          )}
+                          {choXuat.svg && (choXuat.pdf || choXuat.png) && (
+                            <button
+                              className="np-btn sm np-btn-quiet"
+                              disabled={!score || busy || exporting}
+                              onClick={() => void exportPrint("svg")}
+                            >
+                              Xuất SVG
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {choXuat.beatmap && (
+                        <div className="np-row" style={{ marginTop: 12 }}>
+                          <button
+                            type="button"
+                            className="np-link"
+                            disabled={!score || busy || exporting}
+                            onClick={() => taiBeatMap()}
+                          >
+                            Tải beat-map JSON
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                   <div className="np-row" style={{ marginTop: 12 }}>
@@ -1240,7 +1297,7 @@ export default function MusicXmlBeatsPage() {
                   // Tắt mức nâng cao thì quay về luồng một bài; mẻ đang có
                   // vẫn nằm nguyên trong state, bật lại là thấy y như cũ.
                   if (!bat) setTab("one");
-                  setNangCao(bat);
+                  setMuonNangCao(bat);
                   nhoMuc(bat);
                 }}
               >
@@ -1580,7 +1637,7 @@ export default function MusicXmlBeatsPage() {
         </div>
 
         {/* ── Gần đây ──────────────────────────────────────────────────── */}
-        {!!jobsRepo.current && !!recent.length && (
+        {choHistory && !!jobsRepo.current && !!recent.length && (
           <section className="np-recent" aria-label="Lịch sử xử lý gần đây">
             <h2>Gần đây</h2>
             <ul className="np-list">

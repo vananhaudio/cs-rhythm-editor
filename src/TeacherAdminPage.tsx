@@ -15,6 +15,7 @@ import DailyMailPage from './admin/DailyMailPage'
 import ChatMailPage from './admin/ChatMailPage'
 import NewsFeedAdmin from './admin/NewsFeedAdmin'
 import JourneyAdmin from './admin/JourneyAdmin'
+import NhipPhachAdmin from './admin/NhipPhachAdmin'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -23,7 +24,7 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027' | 'newsfeed' | 'journey'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027' | 'newsfeed' | 'journey' | 'nhipphach'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
@@ -40,12 +41,18 @@ const NAV = [
   { id: 'students'  as Section, icon: '👥', label: 'Học viên'       },
   { id: 'courses'   as Section, icon: '📚', label: 'Khoá học'       },
   { id: 'tools'     as Section, icon: '🛠', label: 'Công cụ'        },
+  { id: 'nhipphach' as Section, icon: '🎼', label: 'Nhịp phách'     },
   { id: 'community' as Section, icon: '🌱', label: 'Cộng đồng'      },
   { id: 'assistant' as Section, icon: '🤖', label: 'Trợ lý AI'      },
 ]
 
 export default function TeacherAdminPage() {
-  const [section, setSection]       = useState<Section>('dashboard')
+  // Mục mở sẵn lấy từ URL để /admin/nhipphach vào thẳng đúng trang, nhưng vẫn
+  // nằm trong CÙNG một Admin shell chứ không phải một app quản trị riêng.
+  const [section, setSection]       = useState<Section>(() => {
+    const sub = window.location.pathname.replace(/^\/admin\/?/, '').replace(/\/$/, '')
+    return (NAV.some(n => n.id === sub) ? sub : 'dashboard') as Section
+  })
   const [studentId, setStudentId]   = useState<string | null>(null)
   const [collapsed, setCollapsed]   = useState(false)
   const [isMobile, setIsMobile]     = useState(typeof window !== 'undefined' && window.innerWidth < 768)
@@ -261,6 +268,12 @@ export default function TeacherAdminPage() {
         {section === 'tools' && (
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <ToolsManager />
+          </div>
+        )}
+
+        {section === 'nhipphach' && (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <NhipPhachAdmin />
           </div>
         )}
 

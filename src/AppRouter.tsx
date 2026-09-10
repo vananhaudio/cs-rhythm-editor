@@ -52,10 +52,9 @@ import MusicPlayer from './piano/MusicPlayer'
 import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
 import Hanhtrinh2027Page from './Hanhtrinh2027Page'
-import { teacherRouteAccess } from './teacherRouteAccess'
 /** Đường dẫn của công cụ Nhịp Phách. Phần tử ĐẦU là URL chính thức. */
 export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beats']
-const MusicXmlBeatsPage = lazy(() => import('./pages/MusicXmlBeatsPage'))
+const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
 type AppUser = {
   id: string
   role: string
@@ -161,14 +160,14 @@ function AppRouterContent() {
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
 
-  // ── Công cụ Nhịp Phách — CHỈ teacher/admin ──
+  // ── Công cụ Nhịp Phách ──
+  // KHÔNG còn teacher-only cứng. Ai vào được là do Admin cấu hình quyền
+  // `nhipphach.access` (bảng tool_capabilities) — xem NhipPhachGate.
   // URL chính thức: class.vananhaudio.com/nhipphach.
   // /musicxml-beats là đường cũ, giữ chạy trong giai đoạn chuyển đổi.
   if (NHIPPHACH_PATHS.includes(path.replace(/\/$/, '') || '/')) {
-    const access = teacherRouteAccess({ loading, signedIn: !!user, role: appUser?.role })
-    if (access === 'wait') return null
-    if (access === 'redirect') { window.location.href = '/start'; return null }
-    return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở công cụ bản nhạc…</div>}><MusicXmlBeatsPage /></Suspense>
+    if (loading) return null
+    return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở công cụ bản nhạc…</div>}><NhipPhachGate /></Suspense>
   }
 
   // ── Route /app-v2-preview — Prototype UI/UX App Class 2.0 (mock local, không production) ──

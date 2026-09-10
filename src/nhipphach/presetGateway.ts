@@ -32,7 +32,14 @@ function storage(): Storage | null {
  * Trang KHÔNG gọi Supabase trực tiếp — mọi thứ đi qua `PresetRepository`. Chưa
  * đăng nhập thì dùng kho trên máy như trước, không có gì đổi.
  */
-export async function openPresetRepository(): Promise<{
+export async function openPresetRepository(
+  /**
+   * Quyền tính năng của người đang dùng. Không có quyền `presets` thì KHÔNG mở
+   * kho đám mây: mở ra rồi để RLS trả lỗi chỉ tạo ra một dòng báo lỗi vô nghĩa
+   * cho người vốn không được dùng tính năng đó.
+   */
+  cho: { presets: boolean; history: boolean } = { presets: true, history: true }
+): Promise<{
   repo: PresetRepository;
   jobs: NhipPhachJobRepository | null;
   state: SyncState;
@@ -46,11 +53,15 @@ export async function openPresetRepository(): Promise<{
     userId = null;
   }
   const store = storage();
-  // Chưa đăng nhập: dùng đúng kho cũ như trước, không có gì đổi.
-  if (!userId)
+  // Lịch sử và mẫu trình bày là HAI quyền riêng: mất quyền này không được kéo
+  // theo quyền kia.
+  const jobs =
+    userId && cho.history ? new SupabaseJobRepository(supabase, userId) : null;
+  // Chưa đăng nhập, hoặc không được cấp quyền mẫu trình bày: dùng kho trên máy.
+  if (!userId || !cho.presets)
     return {
       repo: new LocalPresetRepository(store),
-      jobs: null,
+      jobs,
       state: "local",
       note: "",
     };
@@ -60,7 +71,6 @@ export async function openPresetRepository(): Promise<{
   // được đệm của người trước, kể cả khi mất mạng.
   const cache = new LocalPresetRepository(store, userId);
   const repo = new ResilientPresetRepository(cloud, cache, (s) => cacheLocally(cache, s));
-  const jobs = new SupabaseJobRepository(supabase, userId);
 
   // Đưa preset trên máy lên tài khoản, đúng MỘT lần cho mỗi người dùng, và chỉ
   // đánh dấu xong khi máy chủ đã xác nhận ghi.

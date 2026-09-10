@@ -6,6 +6,8 @@
     "./*.ts"
   ],
   "exclude": [
-    "../../src/nhipphach/presetGateway.ts"
+    "../../src/nhipphach/NhipPhachGate.tsx",
+    "../../src/nhipphach/presetGateway.ts",
+    "../../src/nhipphach/useCapabilities.ts"
   ]
 }

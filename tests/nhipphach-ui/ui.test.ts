@@ -205,16 +205,29 @@ test("nút chạy lâu bị vô hiệu hoá khi đang chạy, và chốt một l
 test("PDF là nút chính, PNG và SVG là phụ", () => {
   const xuat = sach.slice(sach.indexOf('aria-label="Xuất tài liệu"'));
   const than = xuat.slice(0, xuat.indexOf("</section>"));
+  // Nút chính đầu tiên là PDF, và nó chiếm hết bề ngang.
   const pdf = than.indexOf("Xuất PDF");
-  const png = than.indexOf("Xuất PNG");
-  const svg = than.indexOf("Xuất SVG");
-  assert.ok(pdf > 0 && pdf < png && png < svg, "PDF phải đứng trước và nổi hơn");
-  assert.match(
-    than.slice(0, pdf),
-    /np-btn np-btn-primary np-btn-wide/,
-    "PDF phải là nút chính chiếm hết bề ngang"
-  );
-  assert.match(than.slice(pdf, svg + 40), /np-btn sm np-btn-quiet/);
+  assert.ok(pdf > 0);
+  assert.match(than.slice(0, pdf), /np-btn np-btn-primary np-btn-wide/);
+  assert.match(than.slice(0, pdf), /\{choXuat\.pdf && \(/);
+  // PNG và SVG ở mức nâng cao là nút nhỏ, không tranh chỗ với PDF.
+  const phu = than.slice(than.indexOf("{nangCao && ("));
+  assert.match(phu, /np-btn sm np-btn-quiet[\s\S]{0,340}Xuất PNG/);
+  assert.match(phu, /np-btn sm np-btn-quiet[\s\S]{0,340}Xuất SVG/);
+  // Beat-map chỉ là một link chữ.
+  assert.match(phu, /className="np-link"[\s\S]{0,300}Tải beat-map JSON/);
+  // Và mỗi thứ đều khoá sau quyền của nó.
+  assert.match(phu, /\{choXuat\.svg && \(choXuat\.pdf \|\| choXuat\.png\) && \(/);
+  assert.match(phu, /\{choXuat\.beatmap && \(/);
+});
+
+test("mất quyền PDF thì nút chính chuyển sang thứ còn được phép", () => {
+  const xuat = sach.slice(sach.indexOf('aria-label="Xuất tài liệu"'));
+  const than = xuat.slice(0, xuat.indexOf("</section>"));
+  // Không giả định PDF lúc nào cũng có: Admin tắt PDF mà bật PNG thì PNG lên
+  // làm nút chính, chứ không để trống chỗ hành động.
+  assert.match(than, /\{!choXuat\.pdf && choXuat\.png && \(/);
+  assert.match(than, /\{!choXuat\.pdf && !choXuat\.png && choXuat\.svg && \(/);
 });
 
 // ── 8. Gần đây: gọn, không tranh chỗ với công cụ chính ───────────────────────
@@ -236,7 +249,7 @@ test("Gần đây nằm cuối trang, mặc định 5 mục, xoá là hành đ�
 });
 
 test("chưa có lịch sử thì không dựng khung rỗng", () => {
-  assert.match(sach, /\{!!jobsRepo\.current && !!recent\.length && \(/);
+  assert.match(sach, /\{choHistory && !!jobsRepo\.current && !!recent\.length && \(/);
 });
 
 // ── 9. Trợ năng tối thiểu ───────────────────────────────────────────────────
@@ -354,14 +367,19 @@ const chiNangCao = (moc: string) => {
   const i = sach.indexOf(moc);
   if (i < 0) return null;
   const truoc = sach.slice(0, i);
-  const mo = truoc.lastIndexOf("{nangCao && (");
+  // Điều kiện có thể là `{nangCao && (` hoặc `{nangCao && choBatch && (` —
+  // cái nào cũng là "khoá sau mức nâng cao".
+  const mo = truoc.lastIndexOf("{nangCao &&");
   if (mo < 0) return false;
   return !truoc.slice(mo).includes(")}");
 };
 
 test("mở trang lần đầu là mức Cơ bản", () => {
   // Không có gì trong localStorage thì mucDaLuu() trả false.
-  assert.match(sach, /const \[nangCao, setNangCao\] = useState\(mucDaLuu\)/);
+  assert.match(sach, /const \[muonNangCao, setMuonNangCao\] = useState\(mucDaLuu\)/);
+  // Nhớ ở máy là SỞ THÍCH; có được xem mức Nâng cao hay không vẫn là quyền.
+  assert.match(sach, /const nangCao = muonNangCao && choNangCao;/);
+  assert.match(sach, /const choNangCao = can\(caps, "advanced"\);/);
   assert.match(sach, /return localStorage\.getItem\(KHOA_MUC\) === "nang-cao"/);
   assert.match(sach, /catch \{[\s\S]{0,180}return false;/, "localStorage hỏng vẫn phải về Cơ bản");
 });
@@ -391,11 +409,21 @@ test("mức Cơ bản giấu đúng những thứ đã liệt kê", () => {
     ["trình bày + trang giấy", 'className="np-card np-o-look"'],
   ] as [string, string][])
     assert.equal(chiNangCao(moc), true, `${ten} phải nằm trong {nangCao && (`);
-  // PNG / SVG / beat-map bọc chung một khối nâng cao.
+  // Hai khối này khoá sau CẢ mức nâng cao LẪN quyền tương ứng.
+  assert.match(sach, /\{nangCao && choBatch && \(\s*\n?\s*<div className="np-seg"/);
+  assert.match(sach, /\{nangCao && choPreset && \(\s*\n?\s*<section className="np-card np-o-preset"/);
+  // PNG / SVG / beat-map ở mức nâng cao bọc chung một khối.
   const xuat = sach.slice(sach.indexOf('aria-label="Xuất tài liệu"'));
-  const truocPng = xuat.slice(0, xuat.indexOf("Xuất PNG"));
-  assert.match(truocPng, /\{nangCao && \(/);
-  assert.ok(truocPng.indexOf("Xuất PDF") < truocPng.lastIndexOf("{nangCao && ("));
+  const than = xuat.slice(0, xuat.indexOf("</section>"));
+  const moNangCao = than.indexOf("{nangCao && (");
+  assert.ok(moNangCao > 0, "phải có khối nâng cao trong thẻ Xuất");
+  // Nút PDF chính đứng TRƯỚC khối nâng cao — mức Cơ bản vẫn xuất được.
+  assert.ok(than.indexOf("Xuất PDF") < moNangCao);
+  // Còn PNG/SVG dạng nút nhỏ và beat-map thì nằm TRONG khối đó.
+  const phu = than.slice(moNangCao);
+  assert.match(phu, /np-btn sm np-btn-quiet[\s\S]{0,340}Xuất PNG/);
+  assert.match(phu, /np-btn sm np-btn-quiet[\s\S]{0,340}Xuất SVG/);
+  assert.match(phu, /Tải beat-map JSON/);
 });
 
 test("mức Cơ bản vẫn thấy PDF, và PDF là nút chính", () => {

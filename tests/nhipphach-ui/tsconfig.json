@@ -1,5 +1,12 @@
 {
   "extends": "../musicxml-renderer/tsconfig.json",
-  "include": ["../../src/nhipphach/**/*.ts", "./*.ts"],
-  "exclude": ["../../src/nhipphach/presetGateway.ts"]
+  "include": [
+    "../../src/nhipphach/**/*.ts",
+    "./*.ts"
+  ],
+  "exclude": [
+    "../../src/nhipphach/NhipPhachGate.tsx",
+    "../../src/nhipphach/presetGateway.ts",
+    "../../src/nhipphach/useCapabilities.ts"
+  ]
 }

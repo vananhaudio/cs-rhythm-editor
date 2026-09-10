@@ -566,7 +566,12 @@ test("trang KHÔNG gọi Supabase trực tiếp — chỉ qua PresetRepository",
   ).replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
   for (const cam of [/from ["'].*supabase["']/, /createClient/, /supabase\./, /\.from\(["']nhipphach/])
     assert.equal(cam.test(page), false, String(cam));
-  assert.match(page, /openPresetRepository\(\)/, "đi qua gateway");
+  // Gateway giờ nhận quyền tính năng: không có quyền thì không mở kho đám mây.
+  assert.match(
+    page,
+    /openPresetRepository\(\{ presets: choPreset, history: choHistory \}\)/,
+    "đi qua gateway, kèm quyền"
+  );
   assert.match(page, /presets\.current = gate\.repo/, "thay repository theo phiên");
   assert.match(page, /setSyncState\(/);
 });
@@ -578,12 +583,17 @@ test("gateway: chưa đăng nhập thì dùng kho trên máy, không đổi hàn
   ).replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
   // Nhánh chưa đăng nhập: kho trên máy KHÔNG gắn uid, KHÔNG có kho lịch sử đám
   // mây, và trạng thái là "local" — kiểm cả ba trong đúng nhánh đó.
-  const chuaDangNhap = gate.slice(gate.indexOf("if (!userId)"));
+  const chuaDangNhap = gate.slice(gate.indexOf("if (!userId || !cho.presets)"));
   const than = chuaDangNhap.slice(0, chuaDangNhap.indexOf("};") + 2);
   assert.match(than, /new LocalPresetRepository\(store\)/);
   assert.equal(/new LocalPresetRepository\(store, /.test(than), false);
-  assert.match(than, /jobs: null/, "chưa đăng nhập thì không có lịch sử đám mây");
   assert.match(than, /state: "local"/);
+  // Lịch sử là quyền RIÊNG: mất quyền mẫu trình bày không được kéo theo nó,
+  // nhưng chưa đăng nhập thì vẫn không có kho đám mây nào.
+  assert.match(
+    gate,
+    /const jobs =\s*\n?\s*userId && cho\.history \? new SupabaseJobRepository\(supabase, userId\) : null;/
+  );
   // Chỉ đánh dấu đã đưa lên khi máy chủ xác nhận xong
   // Chỉ đánh dấu "đã đưa lên" SAU khi máy chủ xác nhận xong — cả markMigrated
   // lẫn claimLegacy đều nằm trong nhánh report.complete.

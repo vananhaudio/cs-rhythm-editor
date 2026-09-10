@@ -69,6 +69,9 @@ DECLARE
     'nhipphach_presets', 'nhipphach_prefs',
     -- Lịch sử xử lý Nhịp Phách (db/nhipphach_jobs_setup.sql): cũng theo tài khoản.
     'nhipphach_jobs', 'nhipphach_job_items',
+    -- Ma trận quyền tính năng (db/nhipphach_capabilities_setup.sql): CHỈ thầy
+    -- đọc và sửa. Áp policy rộng lên đây là học viên tự bật quyền cho mình.
+    'tool_capabilities',
     -- Trang tuyển sinh class.vananhaudio.com — policy HẸP riêng (xem db/class_tuyensinh_setup.sql).
     -- articles: anon đọc bài published. leads: anon CHỈ ghi (không đọc). ĐỪNG để vòng lặp áp policy rộng.
     'articles', 'leads',
