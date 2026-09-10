@@ -67,6 +67,8 @@ DECLARE
     -- TÀI KHOẢN, policy hẹp `user_id = auth.uid() AND is_teacher()`. ĐỪNG áp
     -- policy rộng lên hai bảng này — làm thế là mọi người đọc preset của nhau.
     'nhipphach_presets', 'nhipphach_prefs',
+    -- Lịch sử xử lý Nhịp Phách (db/nhipphach_jobs_setup.sql): cũng theo tài khoản.
+    'nhipphach_jobs', 'nhipphach_job_items',
     -- Trang tuyển sinh class.vananhaudio.com — policy HẸP riêng (xem db/class_tuyensinh_setup.sql).
     -- articles: anon đọc bài published. leads: anon CHỈ ghi (không đọc). ĐỪNG để vòng lặp áp policy rộng.
     'articles', 'leads',

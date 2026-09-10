@@ -10,6 +10,8 @@ import {
   claimLegacy,
   legacyClaimedBy,
 } from "./presetSync.ts";
+import { SupabaseJobRepository } from "./jobRepository.ts";
+import type { NhipPhachJobRepository } from "./jobRepository.ts";
 import { SYNC_LABEL, stateFromStore } from "./syncState.ts";
 import type { SyncState } from "./syncState.ts";
 export { SYNC_LABEL, stateFromStore };
@@ -32,6 +34,7 @@ function storage(): Storage | null {
  */
 export async function openPresetRepository(): Promise<{
   repo: PresetRepository;
+  jobs: NhipPhachJobRepository | null;
   state: SyncState;
   note: string;
 }> {
@@ -45,13 +48,19 @@ export async function openPresetRepository(): Promise<{
   const store = storage();
   // Chưa đăng nhập: dùng đúng kho cũ như trước, không có gì đổi.
   if (!userId)
-    return { repo: new LocalPresetRepository(store), state: "local", note: "" };
+    return {
+      repo: new LocalPresetRepository(store),
+      jobs: null,
+      state: "local",
+      note: "",
+    };
 
   const cloud = new SupabasePresetRepository(supabase, userId);
   // Bộ nhớ đệm GẮN VỚI TÀI KHOẢN. Người khác đăng nhập trên cùng máy không đọc
   // được đệm của người trước, kể cả khi mất mạng.
   const cache = new LocalPresetRepository(store, userId);
   const repo = new ResilientPresetRepository(cloud, cache, (s) => cacheLocally(cache, s));
+  const jobs = new SupabaseJobRepository(supabase, userId);
 
   // Đưa preset trên máy lên tài khoản, đúng MỘT lần cho mỗi người dùng, và chỉ
   // đánh dấu xong khi máy chủ đã xác nhận ghi.
@@ -73,6 +82,7 @@ export async function openPresetRepository(): Promise<{
         } else
           return {
             repo,
+            jobs,
             state: "failed",
             note: `Chưa đưa hết preset lên tài khoản (${report.failed.length} lỗi), sẽ thử lại lần sau.`,
           };
@@ -82,13 +92,14 @@ export async function openPresetRepository(): Promise<{
       }
     } catch {
       return {
-        repo,
-        state: "failed",
+            repo,
+            jobs,
+            state: "failed",
         note: "Chưa đưa được preset lên tài khoản, sẽ thử lại lần sau.",
       };
     }
   }
-  return { repo, state: "syncing", note: "" };
+  return { repo, jobs, state: "syncing", note: "" };
 }
 
 /** Ghi bản đọc được từ máy chủ xuống máy làm bộ nhớ đệm cho lúc mất mạng. */

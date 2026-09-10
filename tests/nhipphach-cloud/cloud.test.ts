@@ -576,7 +576,14 @@ test("gateway: chưa đăng nhập thì dùng kho trên máy, không đổi hàn
     new URL("../../src/nhipphach/presetGateway.ts", import.meta.url),
     "utf8"
   ).replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
-  assert.match(gate, /if \(!userId\)\s*\n?\s*return \{ repo: new LocalPresetRepository\(store\), state: "local"/);
+  // Nhánh chưa đăng nhập: kho trên máy KHÔNG gắn uid, KHÔNG có kho lịch sử đám
+  // mây, và trạng thái là "local" — kiểm cả ba trong đúng nhánh đó.
+  const chuaDangNhap = gate.slice(gate.indexOf("if (!userId)"));
+  const than = chuaDangNhap.slice(0, chuaDangNhap.indexOf("};") + 2);
+  assert.match(than, /new LocalPresetRepository\(store\)/);
+  assert.equal(/new LocalPresetRepository\(store, /.test(than), false);
+  assert.match(than, /jobs: null/, "chưa đăng nhập thì không có lịch sử đám mây");
+  assert.match(than, /state: "local"/);
   // Chỉ đánh dấu đã đưa lên khi máy chủ xác nhận xong
   // Chỉ đánh dấu "đã đưa lên" SAU khi máy chủ xác nhận xong — cả markMigrated
   // lẫn claimLegacy đều nằm trong nhánh report.complete.

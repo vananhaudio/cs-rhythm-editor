@@ -91,7 +91,11 @@ export function groupingRequests(
  * Batch không parse, không khắc, không xuất — nó chỉ gọi lại lớp này.
  */
 export interface BatchProcessor {
-  render(xml: string, settings: ScoreSettings): Promise<AnnotatedScore>;
+  /**
+   * `itemId` để người gọi gắn số liệu vào ĐÚNG bài. Chạy song song thì thứ tự
+   * gọi không còn bằng thứ tự đầu vào, nên đếm tay theo lượt gọi là sai.
+   */
+  render(xml: string, settings: ScoreSettings, itemId: string): Promise<AnnotatedScore>;
   toBlob(score: AnnotatedScore, format: BatchFormat): Promise<Blob>;
 }
 
@@ -157,7 +161,7 @@ export async function runBatch(
           ...options.settings,
           grouping: options.groupingByItem?.[item.id] ?? options.settings.grouping,
         };
-        const score = await processor.render(files[index].xml, settings);
+        const score = await processor.render(files[index].xml, settings, item.id);
         const needs = groupingRequests(score, settings);
         if (needs.length) {
           item.status = "needs-grouping";

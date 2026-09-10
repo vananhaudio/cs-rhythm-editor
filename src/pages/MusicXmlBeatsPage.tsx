@@ -50,8 +50,40 @@ import type {
   BatchProcessor,
 } from "../nhipphach/batch";
 import { zipBatch } from "../nhipphach/batchZip";
+import {
+  buildSingleJob,
+  buildBatchJob,
+  applyJobSettings,
+  collectItemMeta,
+} from "../nhipphach/jobs";
+import type { JobRecord } from "../nhipphach/jobs";
+import { giuLuot, traLuot } from "../nhipphach/motLuot";
+import type { NhipPhachJobRepository, JobSummary, JobDetail } from "../nhipphach/jobRepository";
 import type { PresetRepository } from "../nhipphach/presetRepository";
 
+/** `beats/pulses` là chữ máy. Lịch sử phải nói bằng thứ tiếng thầy dùng trên màn hình. */
+function cachDem(ma: string) {
+  const [muc, kep] = ma.split("/");
+  const mucViet: Record<string, string> = {
+    off: "Không hiện",
+    beats: "1 2 3 4",
+    eighths: "1 & 2 & 3 & 4 &",
+    sixteenths: "1 e & a",
+  };
+  const kepViet: Record<string, string> = {
+    pulses: "phách nhỏ",
+    compound: "phách lớn",
+  };
+  return [mucViet[muc] ?? muc, kepViet[kep] ?? kep].filter(Boolean).join(" · ");
+}
+
+/** "Hôm nay 18:30" cho job trong ngày, ngày tháng cho job cũ hơn. */
+function khiNao(iso: string) {
+  const d = new Date(iso);
+  const gio = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  const homNay = new Date().toDateString() === d.toDateString();
+  return homNay ? `Hôm nay ${gio}` : `${d.toLocaleDateString("vi-VN")} ${gio}`;
+}
 const button: CSSProperties = {
   border: "1px solid #d4d4d8",
   background: "#fff",
@@ -79,6 +111,8 @@ export default function MusicXmlBeatsPage() {
     DEFAULT_SCORE_SETTINGS
   );
   const [exporting, setExporting] = useState(false);
+  // Chốt đồng bộ: xem src/nhipphach/motLuot.ts.
+  const dangXuat = useRef(false);
   // ── Preset: chỉ thiết lập trình bày, không giữ bản nhạc, không giữ cách chia ──
   const presets = useRef<PresetRepository>(new LocalPresetRepository());
   const [presetList, setPresetList] = useState<NhipPhachPreset[]>([
@@ -89,12 +123,18 @@ export default function MusicXmlBeatsPage() {
   const [presetNote, setPresetNote] = useState("");
   const [managing, setManaging] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>("local");
+  // ── Lịch sử xử lý. CHỈ metadata; ghi hỏng KHÔNG được làm hỏng việc xuất file ──
+  const jobsRepo = useRef<NhipPhachJobRepository | null>(null);
+  const [recent, setRecent] = useState<JobSummary[]>([]);
+  const [openJob, setOpenJob] = useState<JobDetail | null>(null);
+  const [historyNote, setHistoryNote] = useState("");
   // ── Chế độ nhiều bài. Dùng LẠI đúng pipeline một bài, không có engine thứ hai ──
   const [tab, setTab] = useState<"one" | "many">("one");
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
   const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
   const [batchFormat, setBatchFormat] = useState<BatchFormat>("pdf");
   const [batchRunning, setBatchRunning] = useState(false);
+  const dangChayMe = useRef(false);
   const [batchNote, setBatchNote] = useState("");
   const [batchGrouping, setBatchGrouping] = useState<Record<string, ScoreSettings["grouping"]>>({});
   const batchAbort = useRef<{ aborted: boolean }>({ aborted: false });
@@ -126,7 +166,9 @@ export default function MusicXmlBeatsPage() {
       const gate = await openPresetRepository();
       if (cancelled) return;
       presets.current = gate.repo;
+      jobsRepo.current = gate.jobs;
       setSyncState(gate.state);
+      void refreshHistory();
       if (gate.note) setPresetNote(gate.note);
       try {
         const store = await presets.current.load();
@@ -161,6 +203,7 @@ export default function MusicXmlBeatsPage() {
       });
       return (await renderer.current).render(xml, s);
     },
+    // Chỉ số liệu, không giữ bản nhạc: mã nhịp, cách chia đã dùng, số trang, số nhãn.
     async toBlob(scoreOut, format) {
       if (format === "pdf") return exportScorePDF(scoreOut);
       if (format === "svg") return (await exportSVGPages(scoreOut)).blob;
@@ -180,11 +223,16 @@ export default function MusicXmlBeatsPage() {
   }
   async function runBatchNow() {
     if (!batchFiles.length || batchRunning) return;
+    if (!giuLuot(dangChayMe)) return;
     setBatchRunning(true);
     setBatchNote("");
     batchAbort.current = { aborted: false };
+    const batDau = Date.now();
+    // Số liệu từng bài, thu trong lúc chạy. KHÔNG giữ bản nhạc, chỉ đếm.
+    const { proc, meta } = collectItemMeta(batchProcessor);
+    let xongMe: BatchItem[] | null = null;
     try {
-      const items = await runBatch(batchFiles, batchProcessor, {
+      const items = await runBatch(batchFiles, proc, {
         settings,
         format: batchFormat,
         groupingByItem: batchGrouping,
@@ -199,9 +247,26 @@ export default function MusicXmlBeatsPage() {
           (p.canChon ? ` · ${p.canChon} bài cần chọn cách chia` : "") +
           (p.loi ? ` · ${p.loi} bài lỗi` : "")
       );
+      xongMe = items;
     } finally {
+      traLuot(dangChayMe);
       setBatchRunning(false);
     }
+    // Ghi lịch sử MỘT LẦN sau khi mẻ kết thúc — một job, một insert gộp item.
+    // Nằm ngoài vòng chạy mẻ: hỏng lịch sử không đụng tới kết quả và nút Tải ZIP.
+    if (xongMe)
+      void ghiLichSu(() =>
+        buildBatchJob({
+          items: xongMe!,
+          meta,
+          settings,
+          format: batchFormat,
+          presetId: presetId || null,
+          presetName: currentPreset?.name ?? null,
+          startedAt: batDau,
+          finishedAt: Date.now(),
+        })
+      );
   }
   async function downloadZip() {
     try {
@@ -220,6 +285,27 @@ export default function MusicXmlBeatsPage() {
         byMeter: { ...(g[item.id]?.byMeter ?? {}), [meter]: groups },
       },
     }));
+  /** Lịch sử là việc phụ: hỏng thì báo nhẹ, không bao giờ ném ra ngoài. */
+  async function refreshHistory() {
+    if (!jobsRepo.current) return;
+    try {
+      setRecent(await jobsRepo.current.listRecent(5));
+    } catch {
+      setHistoryNote("Chưa tải được lịch sử.");
+    }
+  }
+  async function ghiLichSu(build: () => JobRecord) {
+    if (!jobsRepo.current) return;
+    try {
+      await jobsRepo.current.create(build());
+      setHistoryNote("");
+      await refreshHistory();
+    } catch {
+      // File đã tải xong rồi. Lịch sử hỏng thì nói thật, nhưng KHÔNG được
+      // biến nó thành "xuất thất bại".
+      setHistoryNote("Đã xuất file, nhưng chưa lưu được lịch sử.");
+    }
+  }
   const refreshPresets = async (note = "") => {
     const store = await presets.current.load();
     setPresetList(store.presets);
@@ -335,8 +421,11 @@ export default function MusicXmlBeatsPage() {
   }
   async function exportPrint(format: "pdf" | "png" | "svg") {
     if (!score || busy || exporting) return;
+    if (!giuLuot(dangXuat)) return;
     setExporting(true);
     setError("");
+    const batDau = Date.now();
+    let daXuat = false;
     try {
       if (format === "pdf")
         downloadBlob(await exportScorePDF(score), `${name}.pdf`);
@@ -347,11 +436,28 @@ export default function MusicXmlBeatsPage() {
         const output = await exportScorePNG(score, pngScale);
         downloadBlob(output.blob, `${name}-${pngScale}x.${output.extension}`);
       }
+      daXuat = true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không xuất được bản nhạc.");
     } finally {
+      traLuot(dangXuat);
       setExporting(false);
     }
+    // Ghi lịch sử NẰM NGOÀI khối bảo vệ lỗi xuất, và chỉ chạy khi file đã thật
+    // sự tải xong. Hỏng ở đây không được đụng tới `error` của việc xuất.
+    if (daXuat)
+      void ghiLichSu(() =>
+        buildSingleJob({
+          sourceName: source?.name ?? `${name}.musicxml`,
+          score,
+          settings,
+          format,
+          presetId: presetId || null,
+          presetName: currentPreset?.name ?? null,
+          startedAt: batDau,
+          finishedAt: Date.now(),
+        })
+      );
   }
   // Describe the compound group from the meters actually in the score; never hard-code one meter.
   const compoundMeters = [
@@ -1325,6 +1431,172 @@ export default function MusicXmlBeatsPage() {
             )}
           </div>
         </section>
+        {!!jobsRepo.current && !!recent.length && (
+          <section
+            style={{
+              background: "#fff",
+              borderRadius: 14,
+              padding: "18px 20px",
+              marginTop: 22,
+              boxShadow: "0 1px 2px rgba(0,0,0,.05)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <h2 style={{ fontSize: 15, margin: 0 }}>Gần đây</h2>
+              {historyNote && (
+                <span style={{ fontSize: 12, color: "#b45309" }}>{historyNote}</span>
+              )}
+            </div>
+            <ul style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
+              {recent.map((job) => (
+                <li
+                  key={job.id}
+                  style={{
+                    padding: "10px 0",
+                    borderTop: "1px solid #f4f4f5",
+                    fontSize: 13,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 10,
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ color: "#71717a", minWidth: 128 }}>
+                      {khiNao(job.createdAt)}
+                    </span>
+                    <span style={{ fontWeight: 600 }}>
+                      {job.totalItems} bài · {job.exportFormat.toUpperCase()}
+                    </span>
+                    {job.presetName && (
+                      <span style={{ color: "#71717a" }}>{job.presetName}</span>
+                    )}
+                    <span
+                      style={{
+                        color: job.errorItems || job.needsGroupingItems ? "#b45309" : "#16a34a",
+                      }}
+                    >
+                      {job.errorItems || job.needsGroupingItems
+                        ? [
+                            `✓ ${job.doneItems}`,
+                            // Cần chọn cách chia KHÔNG phải lỗi: bài vẫn đúng,
+                            // chỉ đang chờ thầy quyết cách chia.
+                            job.needsGroupingItems
+                              ? `⚠ ${job.needsGroupingItems} cần chọn cách chia`
+                              : "",
+                            job.errorItems ? `✕ ${job.errorItems} lỗi` : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : `✓ ${job.doneItems}/${job.totalItems} hoàn tất`}
+                    </span>
+                    <button
+                      style={{ ...button, padding: "5px 10px", minHeight: 32 }}
+                      onClick={() =>
+                        void (async () => {
+                          try {
+                            setOpenJob(
+                              openJob?.id === job.id
+                                ? null
+                                : await jobsRepo.current!.getJob(job.id)
+                            );
+                          } catch {
+                            setHistoryNote("Chưa mở được chi tiết.");
+                          }
+                        })()
+                      }
+                    >
+                      {openJob?.id === job.id ? "Đóng" : "Xem chi tiết"}
+                    </button>
+                    <button
+                      style={{ ...button, padding: "5px 10px", minHeight: 32 }}
+                      onClick={() => {
+                        setBusy(!!source);
+                        setSettings((cur) => applyJobSettings(job.settingsSnapshot, cur));
+                        setPresetId("");
+                        setHistoryNote("Đã dùng lại thiết lập của lần xử lý đó.");
+                      }}
+                    >
+                      Dùng lại thiết lập
+                    </button>
+                    <button
+                      style={{ ...button, padding: "5px 10px", minHeight: 32, color: "#b91c1c" }}
+                      onClick={() =>
+                        void (async () => {
+                          try {
+                            await jobsRepo.current!.remove(job.id);
+                            if (openJob?.id === job.id) setOpenJob(null);
+                            await refreshHistory();
+                          } catch {
+                            setHistoryNote("Chưa xoá được mục này.");
+                          }
+                        })()
+                      }
+                    >
+                      Xoá
+                    </button>
+                  </div>
+                  {openJob?.id === job.id && (
+                    <div style={{ marginTop: 10, paddingLeft: 4, color: "#3f3f46" }}>
+                      <div style={{ color: "#71717a", marginBottom: 6 }}>
+                        {cachDem(job.countingMode)} ·{" "}
+                        {job.orientation === "portrait" ? "A4 dọc" : "A4 ngang"} ·{" "}
+                        {job.settingsSnapshot.sizePt} pt · khoảng cách{" "}
+                        {job.settingsSnapshot.distance} ·{" "}
+                        {Math.round(job.durationMs / 100) / 10}s
+                        {job.presetName ? ` · preset ${job.presetName}` : ""}
+                      </div>
+                      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                        {openJob.items.map((item) => (
+                          <li
+                            key={item.itemId}
+                            style={{ display: "flex", gap: 10, flexWrap: "wrap", padding: "3px 0" }}
+                          >
+                            <span style={{ minWidth: 210, overflowWrap: "anywhere" }}>
+                              {item.sourceName}
+                            </span>
+                            <span
+                              style={{
+                                color:
+                                  item.status === "done"
+                                    ? "#16a34a"
+                                    : item.status === "error"
+                                    ? "#b91c1c"
+                                    : "#b45309",
+                              }}
+                            >
+                              {item.status === "done"
+                                ? `✓ ${item.outputName ?? ""}`
+                                : item.status === "error"
+                                ? `✕ ${item.errorMessage ?? "Lỗi"}`
+                                : "⚠ Cần chọn cách chia"}
+                            </span>
+                            {item.groupingSnapshot &&
+                              Object.entries(item.groupingSnapshot).map(([m, g]) => (
+                                <span key={m} style={{ color: "#71717a" }}>
+                                  {m} · {(g as number[]).join("+")}
+                                </span>
+                              ))}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         <p style={{ fontSize: 12, color: "#71717a", lineHeight: 1.7 }}>
           File được xử lý trên thiết bị. SVG giữ đường nét khi phóng to và là
           bản nguồn chung cho PDF vector và PNG. PNG 1x: 96 dpi; 2x: 192 dpi.
