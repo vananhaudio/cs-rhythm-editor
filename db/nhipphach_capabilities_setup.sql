@@ -162,7 +162,9 @@ returns text[] language sql immutable set search_path = '' as $$
     -- Thư viện bài hát (db/nhipphach_library_setup.sql): kho chung của thầy.
     'library.read',
     'library.save',
-    'library.manage'
+    'library.manage',
+    -- Chọn/sửa nốt trên bản nhạc (Giai đoạn Nội dung 2). Chỉ có ở mức Nâng cao.
+    'score.edit'
   ];
 $$;
 
@@ -173,7 +175,7 @@ $$;
 -- `history` cũng không: khu "Gần đây" có mặt ở cả mức Cơ bản.
 create or replace function public.nhipphach_advanced_only()
 returns text[] language sql immutable set search_path = '' as $$
-  select array['batch', 'presets', 'export.svg', 'export.beatmap'];
+  select array['batch', 'presets', 'export.svg', 'export.beatmap', 'score.edit'];
 $$;
 
 -- ── 5) Seed ban đầu ───────────────────────────────────────────────────────
@@ -207,7 +209,10 @@ insert into public.tool_capabilities (tool_id, role, capability, allowed) values
   ('nhipphach', 'student', 'library.manage', false),
   ('nhipphach', 'teacher', 'library.read',   true),
   ('nhipphach', 'teacher', 'library.save',   true),
-  ('nhipphach', 'teacher', 'library.manage', true)
+  ('nhipphach', 'teacher', 'library.manage', true),
+  -- Chọn nốt là chức năng biên tập: học viên đọc kho nên mặc định không có.
+  ('nhipphach', 'student', 'score.edit',     false),
+  ('nhipphach', 'teacher', 'score.edit',     true)
 on conflict (tool_id, role, capability) do nothing;
 
 -- ── 6) Quyền HIỆU LỰC của CHÍNH người đang gọi ────────────────────────────

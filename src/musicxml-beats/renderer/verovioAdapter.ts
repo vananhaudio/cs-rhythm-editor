@@ -1,6 +1,7 @@
 import createVerovioModule from "verovio/wasm";
 import { VerovioToolkit } from "verovio/esm";
 import { musicXMLToBeatMap } from "../beatMap.ts";
+import { tagSourceIds } from "../sourceTags.ts";
 import type { Diagnostic } from "../model.ts";
 import { applyAnchorLattice } from "./anchorLattice.ts";
 import { resolveLabels } from "./labelResolution.ts";
@@ -26,6 +27,9 @@ export async function createAnnotatedScoreRenderer() {
         log: string;
         renderedMEI: string;
         sourceMEI: string;
+        tagged: ReturnType<typeof tagSourceIds>;
+        /** Nốt nguồn mà SVG không có phần tử tương ứng — không bao giờ chọn đại. */
+        unresolved: string[];
       }
     | undefined;
   // Đếm thật, không phải suy đoán: mỗi lần Verovio khắc lại bản nhạc và mỗi lần chỉ
@@ -84,8 +88,13 @@ export async function createAnnotatedScoreRenderer() {
         });
         counters.engravings++;
         const map = musicXMLToBeatMap(xml, settings.grouping);
+        // Tiêm id nguồn vào từng <note> TRƯỚC khi Verovio đọc: Verovio giữ nguyên
+        // nó thành xml:id rồi thành id của <g class="note"> trong SVG. Đây là đường
+        // duy nhất để click trên bản nhạc biết đích danh nốt nguồn. Không đổi bố
+        // cục — id không tham gia khắc nhạc (bất biến layout vẫn được test).
+        const tagged = tagSourceIds(xml);
         toolkit.resetXmlIdSeed(1);
-        if (!toolkit.loadData(xml))
+        if (!toolkit.loadData(tagged.xml))
           throw new Error("Verovio không đọc được bản nhạc.");
         const sourceMEI = toolkit.getMEI();
         const loadLog = toolkit.getLog();
@@ -95,12 +104,19 @@ export async function createAnnotatedScoreRenderer() {
         const base: string[] = [];
         for (let number = 1; number <= toolkit.getPageCount(); number++)
           base.push(toolkit.renderToSVG(number));
+        // Nốt nguồn nào không xuất hiện trong SVG nào thì KHÔNG resolve — báo rõ.
+        const svgAll = base.join("\n");
+        const unresolved = tagged.notes
+          .filter((n) => !svgAll.includes(`id="${n.svgId}"`))
+          .map((n) => n.svgId);
         cached = {
           xml,
           layoutKey,
           map,
           lattice,
           base,
+          tagged,
+          unresolved,
           log: [loadLog, toolkit.getLog()].filter(Boolean).join("\n"),
           renderedMEI: toolkit.getMEI(),
           sourceMEI,
@@ -119,6 +135,12 @@ export async function createAnnotatedScoreRenderer() {
       const notices: Diagnostic[] = active.map.measures.flatMap(
         (m) => m.notices ?? []
       );
+      for (const svgId of active.unresolved)
+        diagnostics.push({
+          sourceId: active.tagged.byId.get(svgId)?.path ?? svgId,
+          code: "NOTE_SOURCE_NOT_RESOLVED",
+          message: `Nốt ${svgId} không có phần tử tương ứng trong bản khắc; không thể chọn.`,
+        });
       if (active.log)
         diagnostics.push({
           sourceId: "score",
@@ -176,6 +198,8 @@ export async function createAnnotatedScoreRenderer() {
         version: toolkit.getVersion(),
         originalMEI: active.sourceMEI,
         renderedMEI: active.renderedMEI,
+        sourceNotes: active.tagged.notes,
+        noteIndex: active.tagged.byId,
       };
     },
   };

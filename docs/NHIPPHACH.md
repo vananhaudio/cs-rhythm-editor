@@ -290,6 +290,37 @@ Học viên thấy *Thư viện bài hát*, mở được bài, không thấy n�
 
 `test:nhipphach-library` (18, đọc mã nguồn và SQL: bất biến, không XML trong DB, bucket private, thứ tự upload→DB, dọn rác, dò trùng có hỏi, không import Verovio/Beat Engine) và `test:nhipphach-library-db` (18, Supabase local với JWT thật ba vai: thầy/học viên/khách; nguyên tử hai chiều; path isolation; trùng lặp; tìm kiếm có dấu). Mười đột biến tương ứng đều làm test đỏ.
 
+## Chọn nốt — mapping SVG ↔ MusicXML (Giai đoạn Nội dung 2)
+
+Click một nốt trên bản nhạc → biết đích danh `<note>` nào trong MusicXML nguồn. Chưa sửa gì, chưa ghi gì.
+
+### Không có hình học, không "nốt gần nhất"
+
+Verovio **giữ nguyên thuộc tính `id` của `<note>`** MusicXML thành `xml:id` MEI rồi thành `id` của `<g class="note">` trong SVG — đo được trên từng nốt của hợp âm, nốt hoa mỹ, từng đoạn của dấu nối, bè 2, lặng, và nốt TAB. Vì thế `sourceTags.ts` tiêm vào mỗi `<note>` một id sinh từ **vị trí**:
+
+```
+tva-src-p1-m12-c4   ⇔   /score-partwise/part[1]/measure[12]/*[4]   (= SourceIdentity.path của parser)
+```
+
+Cao độ **cố ý** không tham gia id — mai sau chính cao độ là thứ sẽ bị sửa. `noteSelection.ts` chỉ đi ngược `parentNode` từ chỗ click tới phần tử có id trong `noteIndex` (một `Map` lập lúc khắc, click không quét gì). Gặp `g.note` mà id không có trong bảng → `NOTE_SOURCE_NOT_RESOLVED`, không chọn đại. Toạ độ chỉ dùng để tô sáng.
+
+MusicXML gốc trong thư viện không bị đụng: id chỉ tiêm vào bản đưa cho Verovio. Bố cục không đổi (bộ bất biến 22/22 vẫn xanh).
+
+### Cấu trúc thật đã đo
+
+- **Hợp âm**: mỗi đầu nốt một `<g id>` riêng, thứ tự C4 E4 G4 đúng như nguồn.
+- **Dấu nối**: hai đoạn là hai nốt nguồn riêng — không gộp; editor sau này mới quyết sửa một đoạn hay cả chuỗi.
+- **Guitar + TAB**: khuông nhạc (staff 1) và TAB (staff 2) là **hai `<note>` nguồn riêng biệt**, TAB mang `<technical><string>/<fret>` thật. Chưa ghép hai biểu diễn bằng cao độ/thời điểm — không đoán.
+- **Lặng cả ô**: Verovio không giữ id cho `mRest` → báo `NOTE_SOURCE_NOT_RESOLVED` tường minh (16 ô trong Jingle Bells). Nốt thì không bao giờ rơi vào đây.
+
+### Giao diện
+
+Nút **Chọn nốt** chỉ có ở mức Nâng cao và khi có quyền `score.edit` (thuộc `nhipphach_advanced_only`; học viên mặc định không có). Bật chế độ thì trang chuyển từ `<img>` sang SVG thật trong DOM để click tới được từng `<g id>`; tô sáng bằng class `np-note-selected`, không khắc lại (`renderer.stats().engravings` không tăng). Panel "Nốt đang chọn": ô nhịp, phách (lấy từ chính lưới đếm mức Chia tư), cao độ, trường độ, bè, khuông, và dây/phím nếu là TAB.
+
+### Kiểm chứng
+
+`test:nhipphach-select` — round-trip `nguồn → SVG → resolve → nguồn` trên 12 fixture (nốt tròn, hợp âm C–E–G, dấu nối qua vạch, hoa mỹ, hai bè, hai khuông, guitar+TAB, lời+hợp âm, lấy đà, 6/8, 5/8, 7/8), mô tả panel, 1.000 lần resolve không khắc lại, và luật đọc mã nguồn (không Supabase/Storage/Verovio/ghi phiên bản, không toạ độ/nốt gần nhất, id không dính cao độ) mỗi luật tự thử ngược.
+
 ## Chạy test
 
 ```bash

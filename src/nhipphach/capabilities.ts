@@ -24,6 +24,7 @@ export const NHIPPHACH_CAPS = [
   "library.read",
   "library.save",
   "library.manage",
+  "score.edit",
 ] as const;
 
 export type Capability = (typeof NHIPPHACH_CAPS)[number];
@@ -95,4 +96,5 @@ export const CAP_LABEL: Record<Capability, string> = {
   "library.read": "Xem thư viện bài hát",
   "library.save": "Lưu bài vào thư viện",
   "library.manage": "Quản lý thư viện",
+  "score.edit": "Chọn và sửa nốt",
 };

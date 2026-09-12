@@ -48,7 +48,9 @@ returns text[] language sql immutable set search_path = '' as $$
     'history',
     'library.read',
     'library.save',
-    'library.manage'
+    'library.manage',
+    -- Chọn/sửa nốt trên bản nhạc (Giai đoạn Nội dung 2). Chỉ có ở mức Nâng cao.
+    'score.edit'
   ];
 $$;
 

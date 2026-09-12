@@ -1,0 +1,8 @@
+{
+  "extends": "../musicxml-renderer/tsconfig.json",
+  "include": [
+    "../../src/musicxml-beats/**/*.ts",
+    "../../src/nhipphach/noteSelection.ts",
+    "./*.ts"
+  ]
+}

@@ -6,6 +6,7 @@ import type {
   CompoundCountingMode,
 } from "../annotations.ts";
 import type { GroupingSelection } from "../meterGrouping.ts";
+import type { SourceNote } from "../sourceTags.ts";
 export interface ScoreSettings {
   compoundCountingMode?: CompoundCountingMode;
   /** Cách chia nhịp lẻ do người dùng chọn. Renderer chỉ chuyển tiếp, không tự quyết. */
@@ -46,6 +47,10 @@ export interface AnnotatedScore {
   version: string;
   originalMEI: string;
   renderedMEI: string;
+  /** Mọi nốt/lặng nguồn, id đã có mặt y nguyên trong SVG. Tra bằng `noteIndex`. */
+  sourceNotes: SourceNote[];
+  /** svgId → nốt nguồn. Lập một lần lúc khắc, click không phải quét gì. */
+  noteIndex: ReadonlyMap<string, SourceNote>;
 }
 /** Future PDF/PNG converters consume these SAME SVG pages, never rerender the source. */
 export interface ScoreExportSource {

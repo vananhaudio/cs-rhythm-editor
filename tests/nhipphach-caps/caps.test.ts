@@ -673,7 +673,7 @@ test("nhóm 'chỉ có ở Nâng cao' được khai ở DB, khớp với cái UI
   const { data } = await AD.client.rpc("nhipphach_advanced_only");
   assert.deepEqual(
     [...(data as string[])].sort(),
-    ["batch", "export.beatmap", "export.svg", "presets"]
+    ["batch", "export.beatmap", "export.svg", "presets", "score.edit"]
   );
 });
 

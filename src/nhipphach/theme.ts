@@ -164,6 +164,14 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-prev-body{padding:20px;background:var(--np-paper);max-height:78vh;overflow:auto;--np-zoom:100;}
 .${NP_SCOPE} .np-page{margin:0 auto 18px;background:#fff;width:calc(var(--np-zoom) * 1%);max-width:none;border:1px solid #D3CBBD;border-radius:2px;box-shadow:0 14px 32px -14px rgba(33,28,50,.5),0 2px 6px -2px rgba(33,28,50,.18);}
 .${NP_SCOPE} .np-page img{display:block;width:100%;height:auto;}
+.${NP_SCOPE} .np-page .np-svg{display:block;width:100%;}
+.${NP_SCOPE} .np-page .np-svg svg{display:block;width:100%;height:auto;}
+.${NP_SCOPE} .np-fit-page .np-page .np-svg svg{width:auto;height:calc(78vh - 132px);max-width:100%;}
+.${NP_SCOPE} .np-select-mode .np-page g.note,.${NP_SCOPE} .np-select-mode .np-page g.rest{cursor:pointer;}
+.${NP_SCOPE} .np-select-mode .np-page g.note:hover use,.${NP_SCOPE} .np-select-mode .np-page g.rest:hover use{fill:var(--indigo-dark);}
+.${NP_SCOPE} .np-page g.np-note-selected use,.${NP_SCOPE} .np-page g.np-note-selected path,.${NP_SCOPE} .np-page g.np-note-selected text{fill:var(--indigo);stroke:var(--indigo);}
+.${NP_SCOPE} .np-note-panel{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
+.${NP_SCOPE} .np-note-panel strong{margin-right:4px;}
 /* Vừa khung: cao vừa đúng khung nhìn, bề ngang tự theo tỉ lệ trang. */
 .${NP_SCOPE} .np-fit-page .np-page{width:fit-content;max-width:100%;}
 .${NP_SCOPE} .np-fit-page .np-page img{width:auto;height:calc(78vh - 132px);max-width:100%;}

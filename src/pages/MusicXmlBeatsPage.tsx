@@ -14,7 +14,7 @@ import {
   exportScorePNG,
   exportSVGPages,
 } from "../musicxml-beats/renderer/printExport";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { createAnnotatedScoreRenderer } from "../musicxml-beats/renderer/verovioAdapter";
 import { DEFAULT_SCORE_SETTINGS } from "../musicxml-beats/renderer/types";
 import type {
@@ -57,11 +57,37 @@ import {
 } from "../nhipphach/jobs";
 import type { JobRecord } from "../nhipphach/jobs";
 import { giuLuot, traLuot } from "../nhipphach/motLuot";
+
+/**
+ * Một trang SVG thật trong DOM (chế độ chọn nốt). Memo theo CHUỖI svg: chọn nốt
+ * chỉ đổi class trên phần tử đang có, React không dựng lại cây SVG — bản 14
+ * trang cũng tô sáng tức thì. Chuỗi đã qua cleanSVG (không script/handler).
+ */
+const SvgPage = memo(function SvgPage({
+  svg,
+  width,
+  height,
+}: {
+  svg: string;
+  width: number;
+  height: number;
+}) {
+  return (
+    <div
+      className="np-svg"
+      style={{ aspectRatio: `${width} / ${height}` }}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+});
 import { openScoreLibrary } from "../nhipphach/libraryGateway";
 import type { ScoreLibrary } from "../nhipphach/libraryRepository";
 import { ScoreLibraryPanel } from "../nhipphach/ScoreLibraryPanel";
 import type { LibraryOpenEvent } from "../nhipphach/ScoreLibraryPanel";
 import { readScoreMetadata, readPrimaryMeter } from "../nhipphach/scoreMetadata";
+import { resolveNoteElement, describeNote } from "../nhipphach/noteSelection";
+import type { SourceNote } from "../musicxml-beats/sourceTags";
+import { parseMusicXML } from "../musicxml-beats/parser";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
 import { can, NO_CAPS, type CapState } from "../nhipphach/capabilities";
@@ -144,6 +170,14 @@ export default function MusicXmlBeatsPage({
   );
   const [exporting, setExporting] = useState(false);
   const [keoVao, setKeoVao] = useState(false);
+  // ── Chọn nốt (Giai đoạn Nội dung 2) — chỉ là selection, KHÔNG ghi gì ─────
+  const [chonNot, setChonNot] = useState(false);
+  const [notChon, setNotChon] = useState<
+    | { kind: "note"; note: SourceNote }
+    | { kind: "unresolved"; svgId: string }
+    | null
+  >(null);
+  const prevBody = useRef<HTMLDivElement>(null);
   // ── Thư viện bài hát ────────────────────────────────────────────────────
   const thuVien = useRef<ScoreLibrary | null>(null);
   const [coThuVien, setCoThuVien] = useState(false);
@@ -186,6 +220,8 @@ export default function MusicXmlBeatsPage({
   const choThuVien = can(caps, "library.read");
   const choLuuThuVien = can(caps, "library.save");
   const choQuanLyThuVien = can(caps, "library.manage");
+  // Chọn nốt là chức năng biên tập: chỉ ở mức Nâng cao và chỉ khi Admin cấp quyền.
+  const choChonNot = nangCao && can(caps, "score.edit");
   const choXuat = {
     pdf: can(caps, "export.pdf"),
     png: can(caps, "export.png"),
@@ -314,6 +350,46 @@ export default function MusicXmlBeatsPage({
       setDangLuuBai(false);
     }
   }
+
+  /** Thời điểm bắt đầu của từng nốt nguồn, lấy từ chính parser — để hiện "Phách". */
+  const onsetTheoPath = useMemo(() => {
+    const m = new Map<string, Parameters<typeof describeNote>[2]>();
+    if (!source) return m;
+    try {
+      for (const p of parseMusicXML(source.xml).parts)
+        for (const ms of p.measures)
+          for (const ev of ms.events) m.set(ev.source.path, ev.onset);
+    } catch {
+      /* nguồn hỏng thì panel chỉ thiếu ô Phách */
+    }
+    return m;
+  }, [source]);
+
+  /**
+   * Click trên bản nhạc → nốt nguồn, qua ID mà Verovio đã giữ nguyên. Không có
+   * toạ độ nào ở đây; toạ độ chỉ để vẽ. Không khắc lại, không ghi gì.
+   */
+  function onClickBanNhac(e: React.MouseEvent<HTMLDivElement>) {
+    if (!chonNot || !score) return;
+    const r = resolveNoteElement(e.target as unknown as Parameters<typeof resolveNoteElement>[0], score.noteIndex);
+    if (r.kind === "note") setNotChon({ kind: "note", note: r.note });
+    else if (r.kind === "unresolved") setNotChon({ kind: "unresolved", svgId: r.svgId });
+    else setNotChon(null);
+  }
+  // Tô sáng là lớp trình bày: chỉ thêm/bớt class trên SVG đang hiện.
+  useEffect(() => {
+    const root = prevBody.current;
+    if (!root) return;
+    for (const el of Array.from(root.querySelectorAll(".np-note-selected")))
+      el.classList.remove("np-note-selected");
+    if (chonNot && notChon?.kind === "note")
+      for (const el of Array.from(root.querySelectorAll(`[id="${notChon.note.svgId}"]`)))
+        el.classList.add("np-note-selected");
+  }, [chonNot, notChon, score]);
+  // Đổi bản nhạc là bỏ chọn.
+  useEffect(() => {
+    setNotChon(null);
+  }, [source]);
 
   /** Mở bài đã có trong kho theo id, dùng khi phát hiện trùng nội dung. */
   async function moBaiDaCo(scoreId: string, title: string) {
@@ -1787,13 +1863,63 @@ export default function MusicXmlBeatsPage({
                       >
                         {thuGon ? "Hiện thiết lập" : "Thu gọn thiết lập"}
                       </button>
+                      {choChonNot && (
+                        <button
+                          type="button"
+                          className="np-zbtn np-zwide"
+                          aria-pressed={chonNot}
+                          onClick={() => {
+                            setChonNot((v) => !v);
+                            setNotChon(null);
+                          }}
+                        >
+                          {chonNot ? "Thoát chọn nốt" : "Chọn nốt"}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
+                {choChonNot && chonNot && (
+                  <div
+                    className="np-note-panel"
+                    role="status"
+                    aria-label="Nốt đang chọn"
+                  >
+                    {notChon?.kind === "note" ? (
+                      (() => {
+                        const d = describeNote(
+                          notChon.note,
+                          score!.beatMap,
+                          onsetTheoPath.get(notChon.note.path) ?? null
+                        );
+                        return (
+                          <>
+                            <strong>Nốt đang chọn</strong>
+                            <span>Ô nhịp: {d.measure}</span>
+                            <span>Phách: {d.beat}</span>
+                            <span>Cao độ: {d.pitch}</span>
+                            <span>Trường độ: {d.duration}</span>
+                            <span>Bè: {d.voice}</span>
+                            <span>Khuông: {d.staff}</span>
+                            {d.tab && <span>TAB: {d.tab}</span>}
+                          </>
+                        );
+                      })()
+                    ) : notChon?.kind === "unresolved" ? (
+                      <span>
+                        Nốt này chưa gắn được với bản nhạc nguồn nên không chọn được — xem chi tiết ở khối chẩn đoán.
+                      </span>
+                    ) : (
+                      <span className="np-muted">Bấm vào một nốt trên bản nhạc để xem nó là nốt nào trong MusicXML.</span>
+                    )}
+                  </div>
+                )}
                 <div
+                  ref={prevBody}
+                  onClick={onClickBanNhac}
                   className={`np-prev-body${
                     xem.che === "khung" ? " np-fit-page" : ""
-                  }`}
+                  }${chonNot ? " np-select-mode" : ""}`}
                   aria-busy={busy}
                   style={
                     {
@@ -1807,6 +1933,10 @@ export default function MusicXmlBeatsPage({
                   {score ? (
                     score.pages.map((pg) => (
                       <figure className="np-page" key={pg.number}>
+                        {chonNot ? (
+                          // SVG thật trong DOM để click tới được từng <g id> nốt.
+                          <SvgPage svg={pg.svg} width={pg.width} height={pg.height} />
+                        ) : (
                         <img
                           alt={`Trang ${pg.number} bản nhạc${
                             settings.showBeats ? " có số phách" : ""
@@ -1816,6 +1946,7 @@ export default function MusicXmlBeatsPage({
                           )}`}
                           style={{ aspectRatio: `${pg.width} / ${pg.height}` }}
                         />
+                        )}
                         <figcaption>Trang {pg.number}</figcaption>
                       </figure>
                     ))
