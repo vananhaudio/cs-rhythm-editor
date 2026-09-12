@@ -21,6 +21,9 @@ export const NHIPPHACH_CAPS = [
   "batch",
   "presets",
   "history",
+  "library.read",
+  "library.save",
+  "library.manage",
 ] as const;
 
 export type Capability = (typeof NHIPPHACH_CAPS)[number];
@@ -89,4 +92,7 @@ export const CAP_LABEL: Record<Capability, string> = {
   batch: "Xử lý nhiều bài",
   presets: "Mẫu trình bày",
   history: "Lịch sử xử lý",
+  "library.read": "Xem thư viện bài hát",
+  "library.save": "Lưu bài vào thư viện",
+  "library.manage": "Quản lý thư viện",
 };

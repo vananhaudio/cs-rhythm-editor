@@ -63,6 +63,10 @@ DECLARE
     -- nếu không học viên authenticated có thể tự sửa required_tier/visibility.
     'edu_courses', 'edu_modules', 'edu_course_lessons',
     'student_action_logs',
+    -- Thư viện bài hát Nhịp Phách (db/nhipphach_library_setup.sql): đọc theo
+    -- capability library.read, ghi theo library.save; phiên bản BẤT BIẾN (trigger
+    -- chặn UPDATE/DELETE). Áp policy rộng lên đây là cho học viên sửa kho của thầy.
+    'nhipphach_scores', 'nhipphach_score_versions',
     -- Preset công cụ Nhịp Phách (db/nhipphach_presets_setup.sql): dữ liệu THEO
     -- TÀI KHOẢN, policy hẹp `user_id = auth.uid() AND is_teacher()`. ĐỪNG áp
     -- policy rộng lên hai bảng này — làm thế là mọi người đọc preset của nhau.

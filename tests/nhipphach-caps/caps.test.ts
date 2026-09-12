@@ -343,6 +343,8 @@ test("seed đúng như đã chốt", async () => {
     advanced: true,
     "export.pdf": true,
     "export.png": true,
+    // Thư viện bài hát là kho chung của thầy: học viên ĐỌC được, không lưu.
+    "library.read": true,
   });
   const gv = await capsCua(A.client);
   assert.equal(gv.role, "teacher");

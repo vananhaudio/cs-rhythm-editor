@@ -236,6 +236,60 @@ Mỗi luật tự thử ngược: nó phải bắt được một đột biến 
 
 Bản khắc nền chỉ phụ thuộc bản nhạc, cách chia nhịp lẻ và khổ giấy. Đổi mức đếm, màu hay cỡ chữ **chỉ vẽ lại lớp phủ** — không gọi Verovio lần nào. Trước đây mỗi lần đổi mức là một lần khắc lại toàn bộ.
 
+## Thư viện bài hát (Giai đoạn Nội dung 1)
+
+Bản nhạc đang mở → **Lưu vào thư viện** → xuất hiện trong *Thư viện bài hát* → mở lại bất cứ lúc nào. Chưa có editor: giai đoạn này chỉ lưu, tìm, mở và giữ phiên bản.
+
+```
+STORAGE   bucket nhipphach-scores  (RIÊNG TƯ — bucket private đầu tiên của repo)
+          <score_id>/<thời điểm>-<12 ký tự sha256>.musicxml
+DATABASE  nhipphach_scores          một bài: tên, tác giả, con trỏ current_version_id
+          nhipphach_score_versions  mỗi phiên bản: storage_path, sha256, size, parent
+```
+
+Không có XML trong database — không cột text chứa bản nhạc, không base64 trong jsonb. Tải về đi qua `storage.download()` mang JWT; **không có `getPublicUrl`**, không ai đoán được đường dẫn để lấy bản nhạc mình không có quyền đọc.
+
+### Bản gốc bất biến
+
+`v1` là file thầy nạp lần đầu và không bao giờ bị ghi đè. Mọi sửa đổi về sau là phiên bản **mới**: `v1 → v2 → v3`, `current_version_id` chỉ **tiến**. Mở một phiên bản cũ chỉ để xem/xuất — nó không trở thành bản hiện hành; muốn "khôi phục" thì tạo phiên bản mới từ nội dung cũ.
+
+Điều này chặn ở **database**, không chỉ ở mã: trigger `nhipphach_versions_immutable` từ chối `UPDATE`/`DELETE` trên bảng phiên bản, kể cả khi chạy bằng superuser. Hệ quả đã kiểm chứng: **xoá cứng một bài đã có phiên bản cũng bị chặn** (cascade đi qua trigger). Đúng ý mục 15 — giai đoạn này xoá là `archived_at`, không purge; policy `nhipphach_scores_delete` (`library.manage`) chỉ có tác dụng với bài chưa có phiên bản nào.
+
+### Lưu là MỘT giao dịch, hỏng ở đâu cũng không để lại rác
+
+```
+upload object  →  nhipphach_save_version (SECURITY INVOKER, một giao dịch)
+                  ├─ tạo bài nếu chưa có (id do client sinh để biết trước thư mục)
+                  ├─ chèn phiên bản, version_number = max + 1, parent = bản trước
+                  └─ dời current_version_id
+              →  DB hỏng? xoá đúng object vừa tải
+```
+
+Thứ tự cố ý: một object mồ côi chỉ tốn chỗ, còn một dòng database trỏ vào file không tồn tại thì làm hỏng cả bài. Storage mở đúng **một** khe `DELETE`: chính chủ, và **chỉ object chưa được ghi thành phiên bản** — đã thành phiên bản thì không ai xoá được, kể cả người tải lên. Đã dựng lỗi thật cả hai chiều (ghi chú >300 ký tự làm `CHECK` từ chối; file 11 MB làm Storage từ chối): không phiên bản mới, con trỏ không đổi, không object thừa, phiên bản cũ nguyên.
+
+### Trùng lặp: hỏi, không tự quyết
+
+SHA-256 (Web Crypto, không thêm thư viện) tính trên byte thật. Nạp lại đúng file cũ dù tên khác → *"Bản nhạc này đã có trong thư viện: … (v1)"* với **Mở bài đã có** / **Vẫn lưu thành bài mới** / Huỷ. Lưu thành bài mới là quyền của thầy — hai bài có thể cùng hash.
+
+### Quyền
+
+Ba capability đi đúng khuôn Giai đoạn 12, chỉnh ở Admin → Nhịp phách, policy gọi `nhipphach_can()` — không `is_teacher()` rải trong policy:
+
+| | `library.read` | `library.save` | `library.manage` |
+|---|---|---|---|
+| Học viên | ✓ (kho chung, đọc tất cả) | – | – |
+| Giáo viên | ✓ | ✓ | ✓ |
+
+Học viên thấy *Thư viện bài hát*, mở được bài, không thấy nút lưu; RLS và Storage policy chặn thật ở máy chủ, giao diện chỉ phản ánh. Muốn mai này cho học viên tự lưu chỉ cần bật cờ — RLS đã theo capability. Hai bảng nằm trong `self_managed` của `db/rls_setup.sql`; chạy lại script đó không làm mất policy hẹp (đã thử).
+
+### Metadata
+
+`work-title` → `movement-title` → tên file. `creator type="composer"/"lyricist"` (`poet` đỡ cho lyricist). Không đoán, không AI. Đổi tên trong thư viện **không** sửa `<work-title>` trong file. Đọc bằng `@xmldom/xmldom` — cùng bộ đọc ở trình duyệt, WKWebView và test Node.
+
+### Kiểm chứng
+
+`test:nhipphach-library` (18, đọc mã nguồn và SQL: bất biến, không XML trong DB, bucket private, thứ tự upload→DB, dọn rác, dò trùng có hỏi, không import Verovio/Beat Engine) và `test:nhipphach-library-db` (18, Supabase local với JWT thật ba vai: thầy/học viên/khách; nguyên tử hai chiều; path isolation; trùng lặp; tìm kiếm có dấu). Mười đột biến tương ứng đều làm test đỏ.
+
 ## Chạy test
 
 ```bash
@@ -245,7 +299,7 @@ npm run test:nhipphach-layout && npm run test:nhipphach-presets \
 
 `test:nhipphach-layout` là phép kiểm quan trọng nhất: nó dựng 12 bản nhạc (nốt tròn, lặng cả ô, đảo phách, chấm dôi, dấu nối, chùm ba, lấy đà, lời + hợp âm, 6/8, 5/8, 7/8, guitar + TAB) ở cả bốn mức và đối chiếu từng toạ độ.
 
-`test:nhipphach-cloud` và `test:nhipphach-history` cần Supabase local đang chạy và ba tài khoản `teacher-a@` / `teacher-b@` / `student-c@test.local`.
+`test:nhipphach-cloud`, `test:nhipphach-history` và `test:nhipphach-library-db` cần Supabase local đang chạy và ba tài khoản `teacher-a@` / `teacher-b@` / `student-c@test.local`.
 
 Harness trình duyệt (cần `npm run dev`): `/tests/nhipphach-batch/browser.html?auto=1` — chạy 1/10/50 file với PDF thật, kiểm ZIP, A4 vector, trùng tên, file lỗi, nhịp lẻ và resume.
 

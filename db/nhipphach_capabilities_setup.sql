@@ -158,7 +158,11 @@ returns text[] language sql immutable set search_path = '' as $$
     'export.beatmap',
     'batch',
     'presets',
-    'history'
+    'history',
+    -- Thư viện bài hát (db/nhipphach_library_setup.sql): kho chung của thầy.
+    'library.read',
+    'library.save',
+    'library.manage'
   ];
 $$;
 
@@ -196,7 +200,14 @@ insert into public.tool_capabilities (tool_id, role, capability, allowed) values
   ('nhipphach', 'teacher', 'export.beatmap', true),
   ('nhipphach', 'teacher', 'batch',          true),
   ('nhipphach', 'teacher', 'presets',        true),
-  ('nhipphach', 'teacher', 'history',        true)
+  ('nhipphach', 'teacher', 'history',        true),
+  -- Thư viện: học viên ĐỌC kho chung, thầy lưu và quản lý.
+  ('nhipphach', 'student', 'library.read',   true),
+  ('nhipphach', 'student', 'library.save',   false),
+  ('nhipphach', 'student', 'library.manage', false),
+  ('nhipphach', 'teacher', 'library.read',   true),
+  ('nhipphach', 'teacher', 'library.save',   true),
+  ('nhipphach', 'teacher', 'library.manage', true)
 on conflict (tool_id, role, capability) do nothing;
 
 -- ── 6) Quyền HIỆU LỰC của CHÍNH người đang gọi ────────────────────────────

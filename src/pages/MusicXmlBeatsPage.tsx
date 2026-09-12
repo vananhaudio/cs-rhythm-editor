@@ -57,6 +57,11 @@ import {
 } from "../nhipphach/jobs";
 import type { JobRecord } from "../nhipphach/jobs";
 import { giuLuot, traLuot } from "../nhipphach/motLuot";
+import { openScoreLibrary } from "../nhipphach/libraryGateway";
+import type { ScoreLibrary } from "../nhipphach/libraryRepository";
+import { ScoreLibraryPanel } from "../nhipphach/ScoreLibraryPanel";
+import type { LibraryOpenEvent } from "../nhipphach/ScoreLibraryPanel";
+import { readScoreMetadata, readPrimaryMeter } from "../nhipphach/scoreMetadata";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
 import { can, NO_CAPS, type CapState } from "../nhipphach/capabilities";
@@ -139,6 +144,28 @@ export default function MusicXmlBeatsPage({
   );
   const [exporting, setExporting] = useState(false);
   const [keoVao, setKeoVao] = useState(false);
+  // ── Thư viện bài hát ────────────────────────────────────────────────────
+  const thuVien = useRef<ScoreLibrary | null>(null);
+  const [coThuVien, setCoThuVien] = useState(false);
+  const [moThuVien, setMoThuVien] = useState(false);
+  const [dangLuuBai, setDangLuuBai] = useState(false);
+  const [thuVienNote, setThuVienNote] = useState("");
+  /** Đã có bản nhạc giống hệt trong kho: hỏi rõ, không tự quyết thay thầy. */
+  const [trungLap, setTrungLap] = useState<{
+    scoreId: string;
+    title: string;
+    versionNumber: number;
+  } | null>(null);
+  /**
+   * Bản nhạc đang mở đến từ thư viện nào. `null` nghĩa là file cục bộ chưa lưu.
+   * Mở một phiên bản cũ KHÔNG biến nó thành bản hiện hành — cờ `laHienHanh`
+   * giữ đúng sự thật đó để giao diện không nói dối.
+   */
+  const [baiTrongKho, setBaiTrongKho] = useState<{
+    scoreId: string;
+    versionNumber: number;
+    laHienHanh: boolean;
+  } | null>(null);
   /**
    * Cách xem bản nhạc. CHỈ ảnh hưởng màn hình — file xuất ra luôn là A4 thật,
    * dựng từ cùng một SVG, không dính gì tới mức phóng đang xem.
@@ -156,6 +183,9 @@ export default function MusicXmlBeatsPage({
   const choBatch = can(caps, "batch");
   const choPreset = can(caps, "presets");
   const choHistory = can(caps, "history");
+  const choThuVien = can(caps, "library.read");
+  const choLuuThuVien = can(caps, "library.save");
+  const choQuanLyThuVien = can(caps, "library.manage");
   const choXuat = {
     pdf: can(caps, "export.pdf"),
     png: can(caps, "export.png"),
@@ -226,6 +256,106 @@ export default function MusicXmlBeatsPage({
     },
     []
   );
+  // Mở kho bài hát khi người dùng có quyền đọc. Không quyền thì không mở kết nối.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const lib = await openScoreLibrary({ read: choThuVien });
+      if (cancelled) return;
+      thuVien.current = lib;
+      setCoThuVien(lib !== null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [choThuVien]);
+
+  /** Lưu bản nhạc đang mở thành một phiên bản mới trong kho. */
+  async function luuVaoThuVien(boQuaTrung = false) {
+    const lib = thuVien.current;
+    if (!lib || !source || dangLuuBai) return;
+    setDangLuuBai(true);
+    setThuVienNote("");
+    setTrungLap(null);
+    try {
+      // Nạp lại đúng file cũ thì nói thẳng và HỎI, không lặng lẽ tạo bài trùng
+      // mà cũng không tự ý từ chối: lưu thành bài mới là quyền của thầy.
+      if (!baiTrongKho && !boQuaTrung) {
+        const trung = await lib.findDuplicate(source.xml);
+        if (trung) {
+          setTrungLap(trung);
+          return;
+        }
+      }
+      const meta = readScoreMetadata(source.xml, source.name);
+      const ketQua = await lib.save({
+        scoreId: baiTrongKho?.scoreId,
+        title: meta.title,
+        composer: meta.composer,
+        lyricist: meta.lyricist,
+        sourceFilename: source.name,
+        primaryMeter: readPrimaryMeter(source.xml),
+        pageCount: score?.pages.length ?? null,
+        xml: source.xml,
+      });
+      setBaiTrongKho({
+        scoreId: ketQua.scoreId,
+        versionNumber: ketQua.versionNumber,
+        laHienHanh: true,
+      });
+      setThuVienNote(
+        ketQua.createdScore
+          ? `Đã lưu “${meta.title}” vào thư viện.`
+          : `Đã lưu phiên bản v${ketQua.versionNumber}.`
+      );
+    } catch (e) {
+      setThuVienNote(e instanceof Error ? e.message : "Chưa lưu được vào thư viện.");
+    } finally {
+      setDangLuuBai(false);
+    }
+  }
+
+  /** Mở bài đã có trong kho theo id, dùng khi phát hiện trùng nội dung. */
+  async function moBaiDaCo(scoreId: string, title: string) {
+    const lib = thuVien.current;
+    if (!lib) return;
+    setTrungLap(null);
+    setDangLuuBai(true);
+    try {
+      const ds = await lib.versions(scoreId);
+      const hienHanh = ds[0];
+      if (!hienHanh) throw new Error("Bài này chưa có phiên bản nào.");
+      moTuThuVien({
+        xml: await lib.readVersion(hienHanh),
+        name: title,
+        scoreId,
+        versionId: hienHanh.id,
+        versionNumber: hienHanh.versionNumber,
+        isCurrent: true,
+      });
+    } catch (e) {
+      setThuVienNote(e instanceof Error ? e.message : "Không mở được bài đã có.");
+    } finally {
+      setDangLuuBai(false);
+    }
+  }
+
+  /** Mở một bài từ kho: đưa MusicXML về đúng pipeline đang chạy. */
+  function moTuThuVien(event: LibraryOpenEvent) {
+    ++fileRequest.current;
+    setScore(null);
+    setError("");
+    setThuVienNote("");
+    setSource({ xml: event.xml, name: `${event.name}.musicxml` });
+    setBaiTrongKho({
+      scoreId: event.scoreId,
+      versionNumber: event.versionNumber,
+      laHienHanh: event.isCurrent,
+    });
+    setXem({ che: "rong", pct: 100 });
+    setMoThuVien(false);
+  }
+
   // Nạp preset khi mở trang. Có preset mặc định thì áp; KHÔNG có thì giữ nguyên
   // cấu hình cũ của công cụ, để thầy đang quen không thấy kết quả khác đi.
   useEffect(() => {
@@ -491,6 +621,8 @@ export default function MusicXmlBeatsPage({
     try {
       const xml = await file.text();
       if (request === fileRequest.current) {
+        setBaiTrongKho(null);
+        setThuVienNote("");
         setSource({ xml, name: file.name });
         setXem({ che: "rong", pct: 100 });
       }
@@ -510,6 +642,8 @@ export default function MusicXmlBeatsPage({
       if (!response.ok) throw new Error("Không tải được file mẫu.");
       const xml = await response.text();
       if (request === fileRequest.current) {
+        setBaiTrongKho(null);
+        setThuVienNote("");
         setSource({ xml, name: "bai-mau.musicxml" });
         setXem({ che: "rong", pct: 100 });
       }
@@ -682,6 +816,14 @@ export default function MusicXmlBeatsPage({
             <button className="np-btn np-btn-quiet" onClick={() => void sample()}>
               Dùng file mẫu
             </button>
+            {coThuVien && (
+              <button
+                className="np-btn np-btn-quiet"
+                onClick={() => setMoThuVien(true)}
+              >
+                Thư viện bài hát
+              </button>
+            )}
           </>
         ) : (
           <button
@@ -692,6 +834,90 @@ export default function MusicXmlBeatsPage({
           </button>
         )}
       </div>
+      {tab === "one" && source && coThuVien && (
+        <div
+          className="np-row"
+          style={{ justifyContent: "center", marginTop: 8, gap: 8 }}
+        >
+          {baiTrongKho ? (
+            <>
+              <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+                {baiTrongKho.laHienHanh
+                  ? `Đã lưu · v${baiTrongKho.versionNumber}`
+                  : `Đang xem bản cũ · v${baiTrongKho.versionNumber}`}
+              </span>
+              {choLuuThuVien && (
+                <button
+                  className="np-btn np-btn-quiet"
+                  disabled={dangLuuBai}
+                  onClick={() => void luuVaoThuVien()}
+                >
+                  {dangLuuBai ? "Đang lưu…" : "Lưu phiên bản mới"}
+                </button>
+              )}
+            </>
+          ) : (
+            choLuuThuVien && (
+              <button
+                className="np-btn np-btn-quiet"
+                disabled={dangLuuBai}
+                onClick={() => void luuVaoThuVien()}
+              >
+                {dangLuuBai ? "Đang lưu…" : "Lưu vào thư viện"}
+              </button>
+            )
+          )}
+        </div>
+      )}
+      {trungLap && (
+        <div
+          style={{
+            margin: "10px auto 0",
+            maxWidth: 420,
+            padding: "10px 12px",
+            border: "1px solid var(--line)",
+            borderRadius: 10,
+            background: "var(--surface)",
+            textAlign: "left",
+          }}
+        >
+          <div style={{ fontSize: 13.5, marginBottom: 8 }}>
+            Bản nhạc này đã có trong thư viện:{" "}
+            <strong>{trungLap.title}</strong> (v{trungLap.versionNumber}).
+          </div>
+          <div className="np-row" style={{ gap: 8, flexWrap: "wrap" }}>
+            <button
+              className="np-btn np-btn-primary"
+              disabled={dangLuuBai}
+              onClick={() => void moBaiDaCo(trungLap.scoreId, trungLap.title)}
+            >
+              Mở bài đã có
+            </button>
+            <button
+              className="np-btn np-btn-quiet"
+              disabled={dangLuuBai}
+              onClick={() => void luuVaoThuVien(true)}
+            >
+              Vẫn lưu thành bài mới
+            </button>
+            <button className="np-btn np-btn-quiet" onClick={() => setTrungLap(null)}>
+              Huỷ
+            </button>
+          </div>
+        </div>
+      )}
+      {thuVienNote && (
+        <div
+          className="np-drop-s"
+          style={{
+            color: thuVienNote.startsWith("Đã lưu")
+              ? "var(--online-ink)"
+              : "var(--honey-ink)",
+          }}
+        >
+          {thuVienNote}
+        </div>
+      )}
       <div className="np-drop-s">Hỗ trợ .xml và .musicxml · tối đa 5 MB mỗi file</div>
     </div>
   );
@@ -1814,6 +2040,14 @@ export default function MusicXmlBeatsPage({
           Nhiều trang PNG được đóng ZIP.
         </p>
       </div>
+      {moThuVien && thuVien.current && (
+        <ScoreLibraryPanel
+          library={thuVien.current}
+          canManage={choQuanLyThuVien}
+          onOpen={moTuThuVien}
+          onClose={() => setMoThuVien(false)}
+        />
+      )}
     </main>
   );
 
