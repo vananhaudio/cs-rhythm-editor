@@ -162,6 +162,16 @@ export default function MusicXmlBeatsPage({
     svg: can(caps, "export.svg"),
     beatmap: can(caps, "export.beatmap"),
   } as const;
+  // Chế độ nhiều bài dùng chung quyền xuất với chế độ một bài: mẻ KHÔNG phải
+  // một cửa hậu để lấy định dạng bị tắt. Thiếu dòng này thì học viên bị tắt SVG
+  // vẫn chọn SVG trong ô Định dạng rồi tải ZIP đầy .svg — đã xảy ra thật.
+  const DINH_DANG_ME: readonly { id: BatchFormat; ten: string }[] = [
+    { id: "pdf", ten: "PDF" },
+    { id: "svg", ten: "SVG" },
+    { id: "png", ten: "PNG" },
+  ];
+  const dinhDangChoPhep = DINH_DANG_ME.filter((d) => choXuat[d.id]);
+  const choDinhDangMe = (f: BatchFormat) => choXuat[f];
   // Chốt đồng bộ: xem src/nhipphach/motLuot.ts.
   const dangXuat = useRef(false);
   // ── Preset: chỉ thiết lập trình bày, không giữ bản nhạc, không giữ cách chia ──
@@ -188,6 +198,11 @@ export default function MusicXmlBeatsPage({
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
   const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
   const [batchFormat, setBatchFormat] = useState<BatchFormat>("pdf");
+  // Định dạng ĐANG CÓ HIỆU LỰC. Nếu cái đang chọn vừa bị Admin tắt thì lùi về
+  // cái còn được phép, để ô chọn và việc chạy không nói hai chuyện khác nhau.
+  const dinhDangMe: BatchFormat = choDinhDangMe(batchFormat)
+    ? batchFormat
+    : dinhDangChoPhep[0]?.id ?? batchFormat;
   const [batchRunning, setBatchRunning] = useState(false);
   const dangChayMe = useRef(false);
   const [batchNote, setBatchNote] = useState("");
@@ -284,6 +299,7 @@ export default function MusicXmlBeatsPage({
   }
   async function runBatchNow() {
     if (!can(caps, "batch")) return;
+    if (!choDinhDangMe(dinhDangMe)) return;
     if (!batchFiles.length || batchRunning) return;
     if (!giuLuot(dangChayMe)) return;
     setBatchRunning(true);
@@ -296,7 +312,7 @@ export default function MusicXmlBeatsPage({
     try {
       const items = await runBatch(batchFiles, proc, {
         settings,
-        format: batchFormat,
+        format: dinhDangMe,
         groupingByItem: batchGrouping,
         concurrency: 2,
         signal: batchAbort.current,
@@ -322,7 +338,7 @@ export default function MusicXmlBeatsPage({
           items: xongMe!,
           meta,
           settings,
-          format: batchFormat,
+          format: dinhDangMe,
           presetId: presetId || null,
           presetName: currentPreset?.name ?? null,
           startedAt: batDau,
@@ -340,6 +356,7 @@ export default function MusicXmlBeatsPage({
   }
   async function downloadZip() {
     if (!can(caps, "batch")) return;
+    if (!choDinhDangMe(dinhDangMe)) return;
     try {
       const out = await zipBatch(batchItems);
       downloadBlob(out.blob, out.name);
@@ -703,7 +720,7 @@ export default function MusicXmlBeatsPage({
 
         {/* Chọn một bài hay nhiều bài là việc của người đã quen tay —
             mức Cơ bản chỉ có một luồng duy nhất. */}
-        {nangCao && choBatch && (
+        {nangCao && choBatch && dinhDangChoPhep.length > 0 && (
           <div className="np-seg" role="tablist" aria-label="Chế độ xử lý">
             {(["one", "many"] as const).map((t) => (
               <button
@@ -1221,14 +1238,16 @@ export default function MusicXmlBeatsPage({
                     <select
                       aria-label="Định dạng xuất"
                       className="np-select"
-                      value={batchFormat}
+                      value={dinhDangMe}
                       onChange={(e) =>
                         setBatchFormat(e.target.value as BatchFormat)
                       }
                     >
-                      <option value="pdf">PDF</option>
-                      <option value="svg">SVG</option>
-                      <option value="png">PNG</option>
+                      {dinhDangChoPhep.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.ten}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <button

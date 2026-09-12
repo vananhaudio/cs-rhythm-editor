@@ -165,6 +165,41 @@ test("mất quyền nâng cao thì nút mở nâng cao cũng biến mất", () =
   );
 });
 
+test("mẻ không phải cửa hậu để lấy định dạng bị tắt", () => {
+  // Bắt được trên production bằng chính phiên học viên: `export.svg` = false,
+  // chế độ một bài ẩn nút "Xuất SVG" đúng — nhưng ô "Định dạng" của chế độ
+  // nhiều bài vẫn chào <option value="svg">, chọn vào rồi bấm "Xử lý tất cả"
+  // là tải về ZIP chứa 01-bon-bon.svg + 02-sau-tam.svg. Ẩn một đường mà bỏ ngỏ
+  // đường kia thì quyền chỉ là trang trí.
+  const page = sach("../../src/pages/MusicXmlBeatsPage.tsx");
+
+  // a) Danh sách định dạng phải lọc theo quyền, KHÔNG được viết cứng.
+  assert.equal(
+    /<option value="svg">/.test(page),
+    false,
+    "ô Định dạng còn viết cứng option — phải dựng từ quyền xuất"
+  );
+  assert.match(page, /const dinhDangChoPhep = DINH_DANG_ME\.filter\(\(d\) => choXuat\[d\.id\]\)/);
+
+  // b) Hai handler phải tự chặn — ẩn giao diện không bao giờ là đủ.
+  const than = (ten: string) => {
+    const t = page.slice(page.indexOf(ten));
+    return t.slice(0, t.indexOf("\n  }\n") + 4);
+  };
+  for (const ten of ["async function runBatchNow", "async function downloadZip"]) {
+    const dong = than(ten).split("\n");
+    const i = dong.findIndex((d) => d.includes("choDinhDangMe("));
+    assert.ok(i > 0 && i <= 2, `${ten}: phải chốt định dạng ngay đầu thân hàm`);
+  }
+
+  // c) Chạy mẻ phải dùng định dạng ĐÃ LỌC, không dùng thẳng state thô.
+  assert.equal(
+    /format: batchFormat,/.test(page),
+    false,
+    "còn truyền batchFormat thô xuống runBatch/buildBatchJob"
+  );
+});
+
 // ══ 4. Quyền không bao giờ đến từ localStorage ══════════════════════════════
 
 test("localStorage chỉ nhớ mức giao diện, không phải quyền", () => {

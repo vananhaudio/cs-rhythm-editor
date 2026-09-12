@@ -410,7 +410,9 @@ test("mức Cơ bản giấu đúng những thứ đã liệt kê", () => {
   ] as [string, string][])
     assert.equal(chiNangCao(moc), true, `${ten} phải nằm trong {nangCao && (`);
   // Hai khối này khoá sau CẢ mức nâng cao LẪN quyền tương ứng.
-  assert.match(sach, /\{nangCao && choBatch && \(\s*\n?\s*<div className="np-seg"/);
+  // `nangCao && choBatch` là điều kiện TỐI THIỂU; được phép siết thêm (hiện có
+  // thêm `dinhDangChoPhep.length > 0` — mẻ không xuất được gì thì không mở).
+  assert.match(sach, /\{nangCao && choBatch &&[^\n]*\(\s*\n?\s*<div className="np-seg"/);
   assert.match(sach, /\{nangCao && choPreset && \(\s*\n?\s*<section className="np-card np-o-preset"/);
   // PNG / SVG / beat-map ở mức nâng cao bọc chung một khối.
   const xuat = sach.slice(sach.indexOf('aria-label="Xuất tài liệu"'));
