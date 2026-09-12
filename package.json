@@ -24,7 +24,8 @@
     "test:nhipphach-ui": "tsc -p tests/nhipphach-ui/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-ui/ui.test.ts",
     "test:nhipphach-history": "tsc -p tests/nhipphach-history/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-history/history.test.ts",
     "test:nhipphach-cloud": "tsc -p tests/nhipphach-cloud/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-cloud/cloud.test.ts",
-    "test:route-guard": "tsc -p tests/route-guard/tsconfig.json && node --experimental-strip-types --test tests/route-guard/teacherRoute.test.ts"
+    "test:route-guard": "tsc -p tests/route-guard/tsconfig.json && node --experimental-strip-types --test tests/route-guard/teacherRoute.test.ts",
+    "test:nhipphach-layout": "tsc -p tests/nhipphach-layout/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-layout/layout.test.ts tests/nhipphach-layout/architecture.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",

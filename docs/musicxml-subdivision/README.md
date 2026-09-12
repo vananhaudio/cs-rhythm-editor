@@ -34,7 +34,9 @@ Không tạo số `4` trước đầu fragment. Expected trong `tests/musicxml-s
 
 ## Layout và overlap
 
-Lần kiểm tra đầu phát hiện overlap ở 9 phép kiểm tra trang/cấp: các ô thưa nốt/nghỉ chưa dành đủ chiều ngang cho subdivision. Đã giải quyết bằng tham số engraving Verovio `spacingLinear`, `spacingNonLinear`, `measureMinWidth`, có điều chỉnh theo cỡ chữ. Verovio tự phân dòng/trang và tiếp tục resolve x từ **tstamp**. Không chia đều width bằng code ứng dụng và không gắn nhãn vào note gần nhất. Các cấp có thể khác system/page breaks; **trong cùng một cấp**, preview/SVG/PDF/PNG dùng chung layout.
+Lần kiểm tra đầu phát hiện overlap ở 9 phép kiểm tra trang/cấp: các ô thưa nốt/nghỉ chưa dành đủ chiều ngang cho subdivision. Giai đoạn 5 xử lý bằng tham số engraving Verovio `spacingLinear`, `spacingNonLinear`, `measureMinWidth`, và chấp nhận rằng **các cấp có thể khác system/page breaks**.
+
+> **ĐÃ THAY (Giai đoạn 13).** Cách đó nới rộng chính bản nhạc để lấy chỗ cho con chữ: đo trên file guitar thật, bật Chia đôi làm một trang thành sáu. Nay ba tham số đó **không còn**, và bố cục bản nhạc giống hệt nhau ở cả bốn mức. Khi nhãn dày thì thứ nhường là cỡ chữ, không phải ô nhịp — xem [NHIPPHACH.md](../NHIPPHACH.md#bất-biến-bố-cục-giai-đoạn-13).
 
 Tham chiếu engraving: https://book.verovio.org/advanced-topics/layout-options.html và https://book.verovio.org/toolkit-reference/toolkit-options.html. Các giá trị cuối đã được kiểm chứng bằng fixture, không chỉ chọn theo tài liệu.
 

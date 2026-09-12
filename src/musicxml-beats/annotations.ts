@@ -4,6 +4,20 @@ import { add, compare, rational, sub, ZERO } from "./rational.ts";
 import type { Rational } from "./rational.ts";
 export type CompoundCountingMode = "pulses" | "compound";
 export type CountingLevel = "beats" | "eighths" | "sixteenths";
+/**
+ * Danh sách đầy đủ các mức đếm và cách đếm. Khai ở đây — cạnh chính định nghĩa kiểu —
+ * để tầng dựng lưới neo lấy được HỢP của mọi mức mà không phải viết tên mức nào.
+ * Thêm một mức mới là lưới tự bao gồm, không có chỗ thứ hai phải nhớ sửa.
+ */
+export const COUNTING_LEVELS: readonly CountingLevel[] = [
+  "beats",
+  "eighths",
+  "sixteenths",
+];
+export const COMPOUND_COUNTING_MODES: readonly CompoundCountingMode[] = [
+  "pulses",
+  "compound",
+];
 export interface ScoreAnnotation {
   id: string;
   kind: "beat" | "subbeat";
@@ -19,9 +33,9 @@ export function createAnnotations(
   level: CountingLevel = "beats",
   compoundMode: CompoundCountingMode = "pulses"
 ): ScoreAnnotation[] {
-  if (!["beats", "eighths", "sixteenths"].includes(level))
+  if (!COUNTING_LEVELS.includes(level))
     throw new Error("Cấp độ đếm không hợp lệ.");
-  if (!["pulses", "compound"].includes(compoundMode))
+  if (!COMPOUND_COUNTING_MODES.includes(compoundMode))
     throw new Error("Cách đếm compound không hợp lệ.");
   return map.measures.flatMap((m, mi) => {
     if (m.diagnostics.length) return [];

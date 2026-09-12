@@ -58,7 +58,8 @@ test("6/8 has no dedicated code path: no meter literal branches downstream", () 
     "annotations.ts",
     "beatEngine.ts",
     "beatMap.ts",
-    "renderer/temporalAnnotations.ts",
+    "renderer/anchorLattice.ts",
+    "renderer/labelOverlay.ts",
     "renderer/verovioAdapter.ts",
   ])
     assert.equal(

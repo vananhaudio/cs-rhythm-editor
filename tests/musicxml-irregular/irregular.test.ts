@@ -367,7 +367,8 @@ test("C. stress 100 ô 7/8: không drift, không carry cách chia của ô trư�
 // ── 9. Renderer không chứa logic nhịp lẻ ────────────────────────────────────────
 test("renderer chỉ nhận annotation cuối cùng, không tự giải cách chia", () => {
   for (const f of [
-    "renderer/temporalAnnotations.ts",
+    "renderer/anchorLattice.ts",
+    "renderer/labelOverlay.ts",
     "renderer/verovioAdapter.ts",
     "renderer/svgExport.ts",
   ]) {
@@ -486,7 +487,8 @@ test("GIỚI HẠN VEROVIO: ô chỉ có lặng-cả-ô + nhịp ghi dạng cộ
   const s = renderer.render(fixture("five-2-3-whole-rest"), DEFAULT_SCORE_SETTINGS);
   assert.equal(s.anchors.length, 0, "nhãn bị ẩn");
   assert.ok(
-    s.diagnostics.every((d) => d.code === "ANNOTATION_DENSITY_COLLISION"),
+    s.diagnostics.length > 0 &&
+      s.diagnostics.every((d) => d.code === "TEMPORAL_ANCHOR_NOT_RESOLVED"),
     "và nói rõ vì sao"
   );
   // Cùng ô đó, nhịp ghi thường + người dùng chọn cách chia thì khắc được bình thường.

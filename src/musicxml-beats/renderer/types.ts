@@ -27,6 +27,8 @@ export interface TemporalAnchor extends ScoreAnnotation {
   measureId: string;
   staff: string;
   timestamp: string;
+  /** xml:id của neo rỗng trong lưới (pass 1) mà nhãn này bám vào. */
+  anchorId?: string;
 }
 export interface ScorePage {
   number: number;

@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.app.json",
+  "include": ["**/*.ts", "../../src/musicxml-beats/**/*.ts"],
+  "compilerOptions": { "noEmit": true, "types": ["node"] }
+}

@@ -173,11 +173,77 @@ Khoảng rộng vì máy đang bận khác nhau giữa hai lần chạy; con s�
 
 Một job = **một** insert cho job + **một** insert gộp cho toàn bộ item, không N request. So với mẻ 50 file mất 10.809 ms, lịch sử thêm khoảng **0,3 %**.
 
+## Bất biến bố cục (Giai đoạn 13)
+
+Cùng một MusicXML, bốn mức đếm — **Không hiện · Phách · Chia đôi · Chia tư** — cho **đúng một bản khắc**. Số trang, số hệ, hoành độ từng nốt, từng vạch nhịp, bề rộng từng ô và cả tung độ các dòng kẻ đều bằng nhau tuyệt đối. Chỉ số lượng nhãn được phép khác.
+
+### Cái đã sai, đo trên file guitar thật (Jingle Bells, khuông nhạc + TAB)
+
+| Mức đếm | Trang — trước | Trang — sau |
+|---|---:|---:|
+| Không hiện | 1 | 1 |
+| Phách | 2 | 1 |
+| Chia đôi | **6** | 1 |
+| Chia tư | **6** | 1 |
+
+Bề rộng ô nhịp trung bình nhảy từ 3.101 lên **16.221** đơn vị (5,2 lần), số hệ từ 3 lên 16.
+
+Phép đo tách bạch hai nghi phạm: bỏ hết `<dir>` mà giữ nguyên option thì vẫn 6 trang; giữ `<dir>` mà dùng chung một bộ option thì về 2 trang. **Thủ phạm chính là ba tham số engraving bật theo mức đếm** trong `verovioAdapter.ts` (`spacingLinear`, `spacingNonLinear`, `measureMinWidth`) — di sản Giai đoạn 5, dùng để lấy chỗ cho con chữ bằng cách nới rộng chính bản nhạc. Phần còn lại do bản thân `<dir>` có nội dung: chữ có bề rộng, và Verovio nới ô ra để tránh đè.
+
+### Kiến trúc ba lượt
+
+```
+Lượt 1 — khắc nhạc nền     : MEI + LƯỚI NEO RỖNG, option KHÔNG phụ thuộc mức đếm
+                             anchorLattice.ts  →  verovioAdapter.ts
+Lượt 2 — neo thời gian     : tstamp chính xác (Strategy A) → xml:id của neo
+                             labelResolution.ts
+Lượt 3 — phủ nhãn lên SVG  : thay neo rỗng bằng <text>, không đụng bản khắc
+                             labelOverlay.ts
+```
+
+- **Lưới neo rỗng** (`anchorLattice.ts`): `<dir>` **không có nội dung**, đặt theo `tstamp`. Verovio vẫn resolve hoành độ cho chúng, nhưng vì không có chữ nào để tránh đè, nó không nới rộng ô nhịp. Lưới là **hợp của mọi mức đếm** nên MEI — và do đó toàn bộ bố cục — không đổi khi thầy chuyển mức.
+- **Temporal truth không đổi.** Vẫn `tstamp` tính từ beat-map, vẫn nốt tròn / lặng cả ô / đảo phách / lấy đà resolve đúng. Không chia đều bề rộng ô, không bám nốt gần nhất, không nội suy.
+- **Tung độ hàng nhãn** tính từ dòng kẻ cuối cộng khoảng cách thầy chọn, chỉ lùi thêm khi ô nào đó trong hệ có mực chạm xuống — đúng luật Verovio vẫn dùng cho `dir`, nên nhãn vẫn nằm giữa khuông và ký hiệu sắc thái như trước (đo được: 3.716 so với 3.708 của bản cũ). Khoảng cách khuông nhạc ↔ TAB **không đổi một đơn vị nào**.
+
+### Hết chỗ thì chữ nhường, không phải bản nhạc
+
+Bản nhạc đã khắc xong và không được nới ra, nên chỗ cho nhãn là hữu hạn. Theo thứ tự:
+
+1. **Cỡ chữ tự thu** cho vừa khe hẹp nhất — một phép chia trên khoảng cách hai nhãn liền nhau, không phải phép thử. Có báo: *"Nhãn đếm dày nên đã giảm cỡ số xuống …pt"*.
+2. **Ẩn chọn lọc** khi đã chạm sàn 4pt: phách chính `1 2 3 4` được đặt trước và giữ nguyên, chỉ nhãn phụ `e & a` mới bị ẩn, và chỉ đúng cái không còn chỗ — không ẩn oan cả ô như luật cũ.
+3. Nhãn đè lời hát hoặc vượt mép trang vẫn bị ẩn kèm chẩn đoán như cũ.
+
+Nhãn căn giữa dưới nốt (trước đây căn trái), vừa đúng chỗ hơn vừa đỡ tốn bề ngang.
+
+**Một ca an toàn đáng nhớ:** nếu Verovio trả **cùng một hoành độ cho nhiều thời điểm khác nhau** trong một ô (ô `mRest` với nhịp ghi dạng cộng `2+3`), thì giữ lại nhãn nào cũng là đặt sai chỗ. Cả ô bị bỏ nhãn kèm `TEMPORAL_ANCHOR_NOT_RESOLVED`.
+
+### Ranh giới ba tầng được khoá bằng test đọc mã nguồn
+
+Bất biến toạ độ chứng minh hôm nay đúng; `architecture.test.ts` chặn ngày mai. Nó đọc thẳng mã nguồn và cấm:
+
+| Tầng | Điều bị cấm |
+|---|---|
+| `anchorLattice.ts` | mọi dấu vết của lựa chọn hiển thị — `countingLevel`, tên mức đếm viết thẳng, `showBeats`, `color`, `sizePt`, và **neo mang chữ** |
+| `labelOverlay.ts` | Verovio, `toolkit`, `loadData`/`renderToSVG`, Beat Engine, tự dựng lại lưới |
+| `verovioAdapter.ts` | `spacingLinear`/`spacingNonLinear`/`measureMinWidth`, `hasSubbeats`, `countingLevel` trong option khắc nhạc |
+| khoá cache bản khắc | chỉ được chứa thứ thật sự đổi bản nhạc (cách chia, khổ giấy) — không `countingLevel`/`color`/`sizePt` |
+
+Vì lưới phải là **hợp** của mọi mức, danh sách mức đếm nay nằm ở `COUNTING_LEVELS` trong `annotations.ts` — cạnh chính định nghĩa kiểu. Lưới lặp qua hằng đó nên không phải viết tên mức nào; thêm mức mới là lưới tự bao gồm.
+
+Mỗi luật tự thử ngược: nó phải bắt được một đột biến thật của chính nó, nên một luật hỏng cũng lộ ra thay vì âm thầm cho qua. Ngoài ra `renderer.stats()` đếm số lần khắc nhạc thật — đổi mức đếm, màu, cỡ chữ giữ nguyên **1 lần khắc**; đổi khổ giấy hoặc cách chia nhịp lẻ mới khắc lại.
+
+### Vì sao bản khắc nền được dùng lại
+
+Bản khắc nền chỉ phụ thuộc bản nhạc, cách chia nhịp lẻ và khổ giấy. Đổi mức đếm, màu hay cỡ chữ **chỉ vẽ lại lớp phủ** — không gọi Verovio lần nào. Trước đây mỗi lần đổi mức là một lần khắc lại toàn bộ.
+
 ## Chạy test
 
 ```bash
-npm run test:nhipphach-presets && npm run test:nhipphach-batch && npm run test:route-guard
+npm run test:nhipphach-layout && npm run test:nhipphach-presets \
+  && npm run test:nhipphach-batch && npm run test:route-guard
 ```
+
+`test:nhipphach-layout` là phép kiểm quan trọng nhất: nó dựng 12 bản nhạc (nốt tròn, lặng cả ô, đảo phách, chấm dôi, dấu nối, chùm ba, lấy đà, lời + hợp âm, 6/8, 5/8, 7/8, guitar + TAB) ở cả bốn mức và đối chiếu từng toạ độ.
 
 `test:nhipphach-cloud` và `test:nhipphach-history` cần Supabase local đang chạy và ba tài khoản `teacher-a@` / `teacher-b@` / `student-c@test.local`.
 
@@ -185,4 +251,4 @@ Harness trình duyệt (cần `npm run dev`): `/tests/nhipphach-batch/browser.ht
 
 ## Chưa làm
 
-Web Worker · gộp PDF · lưu batch trên server · phân trang lịch sử quá 50 job · "Xoá toàn bộ lịch sử" trên giao diện · chia sẻ link · học viên truy cập · thư mục đệ quy · additive meter tuỳ ý.
+Nghiệm thu trên file thật 14 trang · 656 nhãn của thầy (chưa có file trong repo) · Web Worker · gộp PDF · lưu batch trên server · phân trang lịch sử quá 50 job · "Xoá toàn bộ lịch sử" trên giao diện · chia sẻ link · học viên truy cập · thư mục đệ quy · additive meter tuỳ ý.

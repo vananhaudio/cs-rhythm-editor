@@ -25,8 +25,23 @@ const cases: [string, CountingLevel][] = [
   ["page-bottom", "sixteenths"],
 ];
 const results = document.querySelector("#results")!;
-const intersects = (a: DOMRect, b: DOMRect) =>
+interface Box {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+const intersects = (a: Box, b: Box) =>
   a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+/**
+ * Toạ độ SVG thật, KHÔNG phải getBoundingClientRect: trong shadow DOM, client rect
+ * của phần tử SVG trả số không đáng tin — hai nhãn nằm cùng một hàng vẫn cho hai
+ * client-top lệch nhau, đủ để báo đè nhầm. getBBox đọc thẳng hệ toạ độ bản nhạc.
+ */
+const bbox = (el: SVGGraphicsElement): Box => {
+  const b = el.getBBox();
+  return { left: b.x, right: b.x + b.width, top: b.y, bottom: b.y + b.height };
+};
 document.querySelector("#run")!.addEventListener("click", async () => {
   const logs: string[] = [];
   let pass = 0,
@@ -67,25 +82,60 @@ document.querySelector("#run")!.addEventListener("click", async () => {
         ).documentElement;
         shadow.append(svg);
         const nodes = [...svg.querySelectorAll('g[id^="tva-beat-"]')];
-        const boxes = nodes.map((g) => g.getBoundingClientRect());
-        const boundary = svg.getBoundingClientRect();
+        const boxes = nodes.map((g) => bbox(g as SVGGraphicsElement));
+        // Mép trang cũng phải đọc trong hệ toạ độ bản nhạc: viewBox của
+        // definition-scale, dời đi đúng translate của page-margin.
+        const view = (
+          svg
+            .querySelector("svg.definition-scale")
+            ?.getAttribute("viewBox") || "0 0 0 0"
+        )
+          .split(/\s+/)
+          .map(Number);
+        const shift = /translate\(\s*([\d.]+)[ ,]+([\d.]+)/.exec(
+          svg.querySelector("g.page-margin")?.getAttribute("transform") || ""
+        );
+        const boundary = {
+          left: -Number(shift?.[1] ?? 0),
+          top: -Number(shift?.[2] ?? 0),
+          right: view[2] - Number(shift?.[1] ?? 0),
+          bottom: view[3] - Number(shift?.[2] ?? 0),
+        };
         check(
           boxes.every((b, i) =>
             boxes.slice(i + 1).every((other) => !intersects(b, other))
           ),
           `${key}/${page.number}: annotation pairs never overlap`
         );
-        const lyrics = [...svg.querySelectorAll("g.syl")].map((g) =>
-          g.getBoundingClientRect()
+        const lyricNodes = [...svg.querySelectorAll("g.syl")];
+        const lyrics = lyricNodes.map((g) => bbox(g as SVGGraphicsElement));
+        const lyricHit = boxes.flatMap((b, i) =>
+          lyrics.flatMap((l) =>
+            intersects(b, l)
+              ? [
+                  `${nodes[i].id} y=${nodes[i]
+                    .querySelector("text")
+                    ?.getAttribute("y")} size=${nodes[i]
+                    .querySelector("text")
+                    ?.getAttribute("font-size")} [${b.top.toFixed(
+                    1
+                  )}–${b.bottom.toFixed(1)}] × lời y=${lyricNodes[lyrics.indexOf(l)]?.querySelector("text")?.getAttribute("y")} [${l.top.toFixed(
+                    1
+                  )}–${l.bottom.toFixed(1)}]`,
+                ]
+              : []
+          )
         );
         check(
-          boxes.every((b) => lyrics.every((l) => !intersects(b, l))),
-          `${key}/${page.number}: no lyric collision`
+          lyricHit.length === 0,
+          `${key}/${page.number}: no lyric collision${
+            lyricHit.length ? " — " + lyricHit[0] : ""
+          }`
         );
         check(
           boxes.every(
             (b) =>
-              b.width > 0 &&
+              b.right > b.left &&
               b.left >= boundary.left &&
               b.right <= boundary.right &&
               b.top >= boundary.top &&

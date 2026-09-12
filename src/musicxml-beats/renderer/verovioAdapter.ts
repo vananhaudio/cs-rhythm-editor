@@ -1,152 +1,14 @@
-import { createAnnotations } from "../annotations.ts";
 import createVerovioModule from "verovio/wasm";
 import { VerovioToolkit } from "verovio/esm";
 import { musicXMLToBeatMap } from "../beatMap.ts";
 import type { Diagnostic } from "../model.ts";
-import { applyTemporalAnnotations } from "./temporalAnnotations.ts";
+import { applyAnchorLattice } from "./anchorLattice.ts";
+import { resolveLabels } from "./labelResolution.ts";
+import { fitLabelPt, paintPage, preparePage } from "./labelOverlay.ts";
 import { DEFAULT_SCORE_SETTINGS } from "./types.ts";
-import type {
-  AnnotatedScore,
-  ScorePage,
-  ScoreSettings,
-  TemporalAnchor,
-} from "./types.ts";
-import { all, byId, classes, direct, parse, serialize } from "./xml.ts";
-import type { Element } from "@xmldom/xmldom";
-import { cleanSVG } from "./svgExport.ts";
+import type { AnnotatedScore, ScorePage, ScoreSettings } from "./types.ts";
+import { parse } from "./xml.ts";
 let wasm: Promise<unknown> | undefined;
-interface Box {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-function boxes(e: Element): Box[] {
-  return all(e, "rect")
-    .map((r) => ({
-      x: Number(r.getAttribute("x")),
-      y: Number(r.getAttribute("y")),
-      width: Number(r.getAttribute("width")),
-      height: Number(r.getAttribute("height")),
-    }))
-    .filter((b) => b.width > 0 && b.height > 0);
-}
-const intersects = (a: Box, b: Box) =>
-  a.x < b.x + b.width &&
-  a.x + a.width > b.x &&
-  a.y < b.y + b.height &&
-  a.y + a.height > b.y;
-function verifyPage(
-  svg: string,
-  anchors: TemporalAnchor[],
-  diagnostics: Diagnostic[],
-  resolved: Set<string>
-) {
-  const doc = parse(svg);
-  const definition = all(doc, "svg").find((e) =>
-    classes(e).includes("definition-scale")
-  );
-  const view = definition?.getAttribute("viewBox")?.split(/\s+/).map(Number);
-  const margin = all(doc, "g")
-    .find((e) => classes(e).includes("page-margin"))
-    ?.getAttribute("transform")
-    ?.match(/translate\(\s*([\d.]+)[ ,]+([\d.]+)/);
-  const clipped = (b: Box) =>
-    view && margin
-      ? b.x + Number(margin[1]) < 0 ||
-        b.y + Number(margin[2]) < 0 ||
-        b.x + b.width + Number(margin[1]) > view[2] ||
-        b.y + b.height + Number(margin[2]) > view[3]
-      : false;
-  const lyrics = all(doc, "g")
-    .filter(
-      (g) => classes(g).includes("syl") && !classes(g).includes("bounding-box")
-    )
-    .flatMap(boxes);
-  const staffs = all(doc, "g")
-    .filter(
-      (g) =>
-        classes(g).includes("staff") && !classes(g).includes("bounding-box")
-    )
-    .map((g) => {
-      const lines = direct(g, "path")
-        .map((p) =>
-          p
-            .getAttribute("d")
-            ?.match(/^M\s*([-\d.]+)\s+([-\d.]+)\s+L\s*([-\d.]+)\s+([-\d.]+)/)
-        )
-        .filter((m) => m !== undefined && m !== null);
-      if (!lines.length) return null;
-      const ys = lines.map((m) => Number(m![2]));
-      return {
-        g,
-        box: {
-          x: Number(lines[0]![1]),
-          y: Math.min(...ys),
-          width: Number(lines[0]![3]) - Number(lines[0]![1]),
-          height: Math.max(...ys) - Math.min(...ys),
-        },
-      };
-    })
-    .filter((s) => s !== null);
-  const candidates = anchors.flatMap((a) => {
-    const g = byId(doc, a.id);
-    return g ? [{ a, g, bounds: boxes(g) }] : [];
-  });
-  const crowded = new Set<string>();
-  for (let i = 0; i < candidates.length; i++)
-    for (let j = i + 1; j < candidates.length; j++)
-      if (
-        candidates[i].bounds.some((b) =>
-          candidates[j].bounds.some((other) => intersects(b, other))
-        )
-      ) {
-        crowded.add(candidates[i].a.sourceMeasureId);
-        crowded.add(candidates[j].a.sourceMeasureId);
-      }
-  for (const a of anchors) {
-    const g = byId(doc, a.id);
-    if (!g) continue;
-    const text = all(g, "text")[0];
-    const valid =
-      text?.hasAttribute("x") &&
-      text.hasAttribute("y") &&
-      text.textContent?.trim() === a.label &&
-      Number.isFinite(Number(text.getAttribute("x"))) &&
-      Number.isFinite(Number(text.getAttribute("y")));
-    const annotationBoxes = boxes(g);
-    const collision = annotationBoxes.some(
-      (b) =>
-        lyrics.some((l) => intersects(b, l)) ||
-        staffs.some((s) => intersects(b, s.box))
-    );
-    const outside = annotationBoxes.some(clipped);
-    const densityCollision = crowded.has(a.sourceMeasureId);
-    if (!valid || collision || outside || densityCollision) {
-      g.parentNode?.removeChild(g);
-      diagnostics.push({
-        sourceId: a.sourceMeasureId,
-        code: densityCollision
-          ? "ANNOTATION_DENSITY_COLLISION"
-          : outside
-          ? "ANNOTATION_PAGE_CLIPPING"
-          : collision
-          ? "ANNOTATION_LAYOUT_COLLISION"
-          : "TEMPORAL_ANCHOR_NOT_RESOLVED",
-        message: `Phách ${a.label}, staff ${a.staff}: ${
-          densityCollision
-            ? "nhãn đếm quá sát nhau; đã ẩn nhãn của ô này. Hãy giảm cỡ chữ hoặc chọn khổ ngang."
-            : outside
-            ? "vượt mép trang; đã ẩn số và cần kiểm tra bố cục."
-            : collision
-            ? "chưa đủ khoảng trống; đã ẩn số để tránh đè lời/khuông."
-            : "không resolve được tọa độ; đã ẩn số."
-        }`,
-      });
-    } else resolved.add(a.id);
-  }
-  return cleanSVG(serialize(doc));
-}
 export async function createAnnotatedScoreRenderer() {
   wasm ??= createVerovioModule().catch((error) => {
     wasm = undefined;
@@ -156,13 +18,21 @@ export async function createAnnotatedScoreRenderer() {
   let cached:
     | {
         xml: string;
-        groupingKey: string;
-        mei: string;
+        layoutKey: string;
         map: ReturnType<typeof musicXMLToBeatMap>;
+        lattice: ReturnType<typeof applyAnchorLattice>;
+        /** SVG nền chưa phủ nhãn — dùng lại cho mọi mức đếm. */
+        base: string[];
         log: string;
+        renderedMEI: string;
+        sourceMEI: string;
       }
     | undefined;
+  // Đếm thật, không phải suy đoán: mỗi lần Verovio khắc lại bản nhạc và mỗi lần chỉ
+  // phủ lại nhãn. Đây là cách duy nhất chứng minh đổi mức đếm KHÔNG khắc lại gì.
+  const counters = { engravings: 0, overlays: 0 };
   return {
+    stats: () => ({ ...counters }),
     destroy() {
       toolkit.destroy();
     },
@@ -182,86 +52,107 @@ export async function createAnnotatedScoreRenderer() {
         throw new Error("Thiết lập số phách không hợp lệ.");
       // Cách chia nhịp lẻ đổi thì beat-map đổi theo, nên nó phải nằm trong khóa cache.
       const groupingKey = JSON.stringify(settings.grouping ?? null);
-      const fresh = cached?.xml === xml && cached.groupingKey === groupingKey;
-      const sourceMap = fresh
-        ? cached!.map
-        : musicXMLToBeatMap(xml, settings.grouping);
-      const hasSubbeats = createAnnotations(
-        sourceMap,
-        settings.countingLevel,
-        settings.compoundCountingMode
-      ).some((a) => a.kind === "subbeat");
-      toolkit.resetOptions();
-      toolkit.setOptions({
-        pageWidth: settings.orientation === "landscape" ? 2970 : 2100,
-        pageHeight: settings.orientation === "landscape" ? 2100 : 2970,
-        pageMarginTop: 150,
-        pageMarginBottom: 180,
-        pageMarginLeft: 150,
-        pageMarginRight: 150,
-        scale: 50,
-        adjustPageHeight: false,
-        adjustPageWidth: false,
-        breaks: "auto",
-        footer: "none",
-        svgBoundingBoxes: true,
-        svgContentBoundingBoxes: true,
-        svgAdditionalAttribute: ["staff@n"],
-        spacingStaff: 18 + settings.distance,
-        spacingSystem: 12 + settings.distance,
-        lyricTopMinMargin: 4,
-        ...(settings.showBeats && hasSubbeats
-          ? {
-              // Engraving spacing only: Verovio still resolves all x positions via tstamp.
-              spacingLinear: 1,
-              spacingNonLinear: 0.6 + Math.max(0, settings.sizePt - 7) * 0.015,
-              measureMinWidth: 30,
-            }
-          : {}),
+      // Bản khắc nền CHỈ phụ thuộc bản nhạc và khổ giấy. Mức đếm, màu, cỡ chữ đổi
+      // thì chỉ lớp phủ vẽ lại — bản nhạc bên dưới không khắc lại lần nào.
+      const layoutKey = JSON.stringify({
+        groupingKey,
+        distance: settings.distance,
+        orientation: settings.orientation ?? "portrait",
       });
-      if (!fresh) {
-        const map = sourceMap;
+      if (!(cached?.xml === xml && cached.layoutKey === layoutKey)) {
+        toolkit.resetOptions();
+        toolkit.setOptions({
+          pageWidth: settings.orientation === "landscape" ? 2970 : 2100,
+          pageHeight: settings.orientation === "landscape" ? 2100 : 2970,
+          pageMarginTop: 150,
+          pageMarginBottom: 180,
+          pageMarginLeft: 150,
+          pageMarginRight: 150,
+          scale: 50,
+          adjustPageHeight: false,
+          adjustPageWidth: false,
+          breaks: "auto",
+          footer: "none",
+          svgBoundingBoxes: true,
+          svgContentBoundingBoxes: true,
+          svgAdditionalAttribute: ["staff@n"],
+          spacingStaff: 18 + settings.distance,
+          spacingSystem: 12 + settings.distance,
+          lyricTopMinMargin: 4,
+          // KHÔNG có option spacing nào phụ thuộc mức đếm. Giãn bản nhạc để nhét
+          // chữ vào là đổi chính bản khắc; chỗ cho chữ là việc của lớp phủ.
+        });
+        counters.engravings++;
+        const map = musicXMLToBeatMap(xml, settings.grouping);
         toolkit.resetXmlIdSeed(1);
         if (!toolkit.loadData(xml))
           throw new Error("Verovio không đọc được bản nhạc.");
+        const sourceMEI = toolkit.getMEI();
+        const loadLog = toolkit.getLog();
+        const lattice = applyAnchorLattice(sourceMEI, map, settings);
+        if (!toolkit.loadData(lattice.mei))
+          throw new Error("Không render được bản nhạc đã đánh dấu phách.");
+        const base: string[] = [];
+        for (let number = 1; number <= toolkit.getPageCount(); number++)
+          base.push(toolkit.renderToSVG(number));
         cached = {
           xml,
-          groupingKey,
-          mei: toolkit.getMEI(),
+          layoutKey,
           map,
-          log: toolkit.getLog(),
+          lattice,
+          base,
+          log: [loadLog, toolkit.getLog()].filter(Boolean).join("\n"),
+          renderedMEI: toolkit.getMEI(),
+          sourceMEI,
         };
       }
       const active = cached!;
-      const applied = applyTemporalAnnotations(active.mei, active.map, settings);
-      if (!toolkit.loadData(applied.mei))
-        throw new Error("Không render được bản nhạc đã đánh dấu phách.");
-      const diagnostics = [...applied.diagnostics];
-      const notices = active.map.measures.flatMap((m) => m.notices ?? []);
-      for (const message of [active.log, toolkit.getLog()].filter(Boolean))
+      const { labels, diagnostics: labelDiagnostics } = resolveLabels(
+        active.map,
+        settings,
+        active.lattice
+      );
+      const diagnostics: Diagnostic[] = [
+        ...active.lattice.diagnostics,
+        ...labelDiagnostics,
+      ];
+      const notices: Diagnostic[] = active.map.measures.flatMap(
+        (m) => m.notices ?? []
+      );
+      if (active.log)
         diagnostics.push({
           sourceId: "score",
           code: "RENDERER_WARNING",
-          message,
+          message: active.log,
         });
       const pages: ScorePage[] = [],
         resolved = new Set<string>();
-      for (let number = 1; number <= toolkit.getPageCount(); number++) {
-        const svg = verifyPage(
-            toolkit.renderToSVG(number),
-            applied.anchors,
-            diagnostics,
-            resolved
-          ),
+      const prepared = active.base.map((raw) =>
+        preparePage(raw, labels, settings)
+      );
+      // Chữ nhường chỗ cho bản nhạc, không bao giờ ngược lại.
+      const fit = fitLabelPt(prepared, settings);
+      if (fit.shrunk && labels.length)
+        notices.push({
+          sourceId: "score",
+          code: "ANNOTATION_FONT_REDUCED",
+          message: `Nhãn đếm dày nên đã giảm cỡ số xuống ${fit.pt
+            .toFixed(2)
+            .replace(/\.?0+$/, "")
+            .replace(".", ",")}pt cho vừa bản nhạc. Bản nhạc giữ nguyên bố cục.`,
+        });
+      counters.overlays++;
+      for (const [index, page] of prepared.entries()) {
+        const svg = paintPage(page, fit.pt, settings, diagnostics, resolved),
           root = parse(svg).documentElement!;
         pages.push({
-          number,
+          number: index + 1,
           svg,
           width: parseFloat(root.getAttribute("width")!),
           height: parseFloat(root.getAttribute("height")!),
         });
       }
-      for (const a of applied.anchors)
+      for (const a of labels)
         if (
           !resolved.has(a.id) &&
           !diagnostics.some(
@@ -281,10 +172,10 @@ export async function createAnnotatedScoreRenderer() {
         diagnostics,
         notices,
         beatMap: active.map,
-        anchors: applied.anchors.filter((a) => resolved.has(a.id)),
+        anchors: labels.filter((a) => resolved.has(a.id)),
         version: toolkit.getVersion(),
-        originalMEI: active.mei,
-        renderedMEI: toolkit.getMEI(),
+        originalMEI: active.sourceMEI,
+        renderedMEI: active.renderedMEI,
       };
     },
   };
