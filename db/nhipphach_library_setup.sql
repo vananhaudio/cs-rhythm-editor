@@ -276,6 +276,11 @@ grant select, insert, update, delete on public.nhipphach_scores to authenticated
 -- Bảng phiên bản CỐ Ý không cấp update/delete: bản gốc là bằng chứng, không
 -- phải bản nháp. Trigger ở mục 4 chặn lần nữa nếu ai đó cấp nhầm về sau.
 grant select, insert on public.nhipphach_score_versions to authenticated;
+-- Supabase cấp sẵn ALL cho authenticated qua default privileges khi tạo bảng —
+-- rộng hơn ý ở trên. RLS và trigger vẫn chặn, nhưng quyền bảng phải nói đúng
+-- điều mình muốn: phiên bản không sửa, không xoá.
+revoke update, delete, truncate, references, trigger on public.nhipphach_score_versions from authenticated;
+revoke truncate, references, trigger on public.nhipphach_scores from authenticated;
 -- `service_role` đi vòng qua RLS nhưng vẫn cần quyền bảng. Nó dùng cho việc
 -- quản trị và dọn dẹp phía máy chủ, KHÔNG phải cho ứng dụng.
 grant all on public.nhipphach_scores to service_role;
