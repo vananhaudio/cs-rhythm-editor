@@ -12,8 +12,15 @@ import { elementChildren, parseStrict, resolveSourcePath } from "./xmlPatch.ts";
  * Chỉ đọc; không đụng gì. Panel không tự suy luận nhạc lý — nó hỏi ở đây.
  */
 export interface NoteLyric {
+  /** Thứ tự `<lyric>` trong nốt, 1-based — ĐÂY là địa chỉ của lệnh sửa lời. */
+  index: number;
+  /** Thuộc tính `number` nguyên văn; rỗng khi nguồn không ghi. Chỉ để hiện. */
   number: string;
   text: string;
+  /** `single`/`begin`/`middle`/`end`; null khi nguồn không ghi. Sửa chữ KHÔNG đụng nó. */
+  syllabic: string | null;
+  /** Có `<extend>` (ngân dài qua nhiều nốt). Sửa chữ KHÔNG đụng nó. */
+  extend: boolean;
   /** Âm tiết ghép (nhiều phần chữ) — chưa sửa trực tiếp được. */
   compound: boolean;
 }
@@ -93,15 +100,18 @@ export function readNoteFields(xml: string, path: string): NoteFields | null {
     // Chỉ mời những cách ghi người ta thật sự dùng: một dấu hoá là cùng.
     // `enharmonics` vẫn trả về đủ, lệnh vẫn nhận dấu kép nếu thầy cần.
     respell: ngu.pitch ? enharmonics(ngu.pitch).filter((p) => Math.abs(p.alter) <= 1) : [],
-    lyrics: elementChildren(note, "lyric").map((l) => {
+    lyrics: elementChildren(note, "lyric").map((l, i) => {
       const texts = elementChildren(l, "text");
       return {
-        number: l.getAttribute("number") || "1",
+        index: i + 1,
+        number: l.getAttribute("number") || "",
         // Âm tiết ghép hiện cả phần nối (<elision>) để thầy đọc được như trên bản nhạc.
         text: elementChildren(l)
           .filter((x) => x.localName === "text" || x.localName === "elision")
           .map((x) => x.textContent ?? "")
           .join(""),
+        syllabic: elementChildren(l, "syllabic")[0]?.textContent?.trim() || null,
+        extend: elementChildren(l, "extend").length > 0,
         compound: texts.length !== 1,
       };
     }),

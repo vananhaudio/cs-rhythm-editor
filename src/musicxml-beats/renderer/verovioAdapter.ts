@@ -4,11 +4,40 @@ import { musicXMLToBeatMap } from "../beatMap.ts";
 import { tagSourceIds } from "../sourceTags.ts";
 import type { Diagnostic } from "../model.ts";
 import { applyAnchorLattice } from "./anchorLattice.ts";
+import { applySourceIdentity } from "./meiIdentity.ts";
 import { resolveLabels } from "./labelResolution.ts";
 import { fitLabelPt, paintPage, preparePage } from "./labelOverlay.ts";
 import { DEFAULT_SCORE_SETTINGS } from "./types.ts";
 import type { AnnotatedScore, ScorePage, ScoreSettings } from "./types.ts";
 import { parse } from "./xml.ts";
+/**
+ * Tuỳ chọn khắc nhạc — MỘT chỗ khai báo duy nhất.
+ *
+ * Xuất ra ngoài để phép kiểm bất biến dựng lại đúng lượt khắc của sản phẩm, chứ
+ * không phải để gọi nơi khác: bản khắc chỉ được sinh ra từ `render()`.
+ * KHÔNG có tuỳ chọn spacing nào phụ thuộc mức đếm — giãn bản nhạc để nhét chữ
+ * vào là đổi chính bản khắc; chỗ cho chữ là việc của lớp phủ.
+ */
+export const layoutOptions = (settings: ScoreSettings) => ({
+  pageWidth: settings.orientation === "landscape" ? 2970 : 2100,
+  pageHeight: settings.orientation === "landscape" ? 2100 : 2970,
+  pageMarginTop: 150,
+  pageMarginBottom: 180,
+  pageMarginLeft: 150,
+  pageMarginRight: 150,
+  scale: 50,
+  adjustPageHeight: false,
+  adjustPageWidth: false,
+  breaks: "auto",
+  footer: "none",
+  svgBoundingBoxes: true,
+  svgContentBoundingBoxes: true,
+  svgAdditionalAttribute: ["staff@n"],
+  spacingStaff: 18 + settings.distance,
+  spacingSystem: 12 + settings.distance,
+  lyricTopMinMargin: 4,
+});
+
 let wasm: Promise<unknown> | undefined;
 export async function createAnnotatedScoreRenderer() {
   wasm ??= createVerovioModule().catch((error) => {
@@ -28,6 +57,7 @@ export async function createAnnotatedScoreRenderer() {
         renderedMEI: string;
         sourceMEI: string;
         tagged: ReturnType<typeof tagSourceIds>;
+        identity: ReturnType<typeof applySourceIdentity>;
         /** Nốt nguồn mà SVG không có phần tử tương ứng — không bao giờ chọn đại. */
         unresolved: string[];
       }
@@ -65,27 +95,7 @@ export async function createAnnotatedScoreRenderer() {
       });
       if (!(cached?.xml === xml && cached.layoutKey === layoutKey)) {
         toolkit.resetOptions();
-        toolkit.setOptions({
-          pageWidth: settings.orientation === "landscape" ? 2970 : 2100,
-          pageHeight: settings.orientation === "landscape" ? 2100 : 2970,
-          pageMarginTop: 150,
-          pageMarginBottom: 180,
-          pageMarginLeft: 150,
-          pageMarginRight: 150,
-          scale: 50,
-          adjustPageHeight: false,
-          adjustPageWidth: false,
-          breaks: "auto",
-          footer: "none",
-          svgBoundingBoxes: true,
-          svgContentBoundingBoxes: true,
-          svgAdditionalAttribute: ["staff@n"],
-          spacingStaff: 18 + settings.distance,
-          spacingSystem: 12 + settings.distance,
-          lyricTopMinMargin: 4,
-          // KHÔNG có option spacing nào phụ thuộc mức đếm. Giãn bản nhạc để nhét
-          // chữ vào là đổi chính bản khắc; chỗ cho chữ là việc của lớp phủ.
-        });
+        toolkit.setOptions(layoutOptions(settings));
         counters.engravings++;
         const map = musicXMLToBeatMap(xml, settings.grouping);
         // Tiêm id nguồn vào từng <note> TRƯỚC khi Verovio đọc: Verovio giữ nguyên
@@ -96,7 +106,10 @@ export async function createAnnotatedScoreRenderer() {
         toolkit.resetXmlIdSeed(1);
         if (!toolkit.loadData(tagged.xml))
           throw new Error("Verovio không đọc được bản nhạc.");
-        const sourceMEI = toolkit.getMEI();
+        // Lời và hợp âm mất id khi qua Verovio, nên danh tính của chúng được gắn
+        // ở MEI ngay đây — trước lượt khắc, cùng chỗ với lưới neo. Xem meiIdentity.ts.
+        const identity = applySourceIdentity(toolkit.getMEI(), tagged);
+        const sourceMEI = identity.mei;
         const loadLog = toolkit.getLog();
         const lattice = applyAnchorLattice(sourceMEI, map, settings);
         if (!toolkit.loadData(lattice.mei))
@@ -117,6 +130,7 @@ export async function createAnnotatedScoreRenderer() {
           base,
           tagged,
           unresolved,
+          identity,
           log: [loadLog, toolkit.getLog()].filter(Boolean).join("\n"),
           renderedMEI: toolkit.getMEI(),
           sourceMEI,
@@ -135,6 +149,7 @@ export async function createAnnotatedScoreRenderer() {
       const notices: Diagnostic[] = active.map.measures.flatMap(
         (m) => m.notices ?? []
       );
+      diagnostics.push(...active.identity.diagnostics);
       for (const svgId of active.unresolved)
         diagnostics.push({
           sourceId: active.tagged.byId.get(svgId)?.path ?? svgId,
@@ -200,6 +215,9 @@ export async function createAnnotatedScoreRenderer() {
         renderedMEI: active.renderedMEI,
         sourceNotes: active.tagged.notes,
         noteIndex: active.tagged.byId,
+        lyricIndex: active.tagged.lyricById,
+        harmonyIndex: active.tagged.harmonyById,
+        unresolvedIdentity: new Set(active.identity.unresolved),
       };
     },
   };

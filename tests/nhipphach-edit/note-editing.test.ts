@@ -106,7 +106,7 @@ test("ChangePitch: đổi được cả bậc, dấu hoá và quãng tám; các 
     const f = fields(r.xml, dich);
     assert.equal(f.noteType, "quarter");
     assert.equal(f.dots, 0);
-    assert.deepEqual(f.lyrics, [{ number: "1", text: "Đô", compound: false }]);
+    assert.deepEqual(f.lyrics, [{ index: 1, number: "1", text: "Đô", syllabic: "single", extend: false, compound: false }]);
     assert.match(noteText(r.xml, dich), /<duration>4<\/duration>/);
     assert.match(noteText(r.xml, dich), /<voice>1<\/voice>/);
   }
@@ -278,7 +278,7 @@ test("ChangeDuration: ghi lại cả <duration>, <type> và <dot> theo divisions
     assertScoped(FX, r.xml, dich);
     // Cao độ và lời không đụng.
     assert.deepEqual(f.pitch, { step: "C", alter: 0, octave: 4 });
-    assert.deepEqual(f.lyrics, [{ number: "1", text: "Đô", compound: false }]);
+    assert.deepEqual(f.lyrics, [{ index: 1, number: "1", text: "Đô", syllabic: "single", extend: false, compound: false }]);
   }
   assert.equal(dotFactor(0), 1);
   assert.equal(dotFactor(1), 1.5);
@@ -445,7 +445,7 @@ test("hoàn tác / làm lại: đủ bốn loại lệnh, dựng lại đúng t�
     { type: "ChangePitch", path: P(1, 2), pitch: { step: "E", alter: -1, octave: 4 } },
     { type: "ChangeDuration", path: P(1, 2), noteType: "eighth", dots: 1 },
     { type: "RespellNote", path: P(1, 3), pitch: { step: "D", alter: -1, octave: 4 } },
-    { type: "ChangeLyricText", path: P(1, 2), lyricNumber: "1", text: "Rề" },
+    { type: "ChangeLyricText", path: P(1, 2), lyricIndex: 1, text: "Rề" },
   ];
   let d = createDraft(FX);
   for (const c of lenh) d = applyToDraft(d, c);

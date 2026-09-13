@@ -7,6 +7,8 @@
     "../../src/nhipphach/scoreHash.ts",
     "../../src/nhipphach/libraryRepository.ts",
     "../../src/nhipphach/edit/*.ts",
+    "../../src/nhipphach/noteSelection.ts",
+    "../nhipphach-layout/geometry.ts",
     "./*.ts"
   ]
 }

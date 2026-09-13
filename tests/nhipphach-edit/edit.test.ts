@@ -182,25 +182,25 @@ test("ChangePitch: lệnh trùng trạng thái là lệnh rỗng — không đ�
 // ── ChangeLyricText ───────────────────────────────────────────────────────────
 test("ChangeLyricText: tiếng Việt giữ nguyên văn, kể cả dạng tổ hợp dấu (NFD) và khoảng trắng", () => {
   const nfd = "Đường xưa ơi ạ".normalize("NFD");
-  const r = applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricNumber: "1", text: nfd });
+  const r = applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricIndex: 1, text: nfd });
   assert.equal(readNoteFields(r.xml, P(2, 2))!.lyrics[0].text, nfd);
   assert.ok(r.xml.includes(`<text>${nfd}</text>`));
   assertScoped(FX, r.xml, P(2, 2));
   const cach = "  hai  cách  ";
-  const r2 = applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricNumber: "1", text: cach });
+  const r2 = applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricIndex: 1, text: cach });
   assert.equal(readNoteFields(r2.xml, P(2, 2))!.lyrics[0].text, cach);
 });
 
 test("ChangeLyricText: ký tự đặc biệt được thoát đúng chuẩn, đọc lại vẫn là chữ gốc", () => {
   const text = "đường & <xưa> \"em\" 'đi'";
-  const r = applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricNumber: "1", text });
+  const r = applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricIndex: 1, text });
   assert.equal(readNoteFields(r.xml, P(2, 2))!.lyrics[0].text, text);
   assert.ok(r.xml.includes("&amp; &lt;xưa&gt;"));
   assertScoped(FX, r.xml, P(2, 2));
 });
 
 test("ChangeLyricText: đúng dòng lời theo số — sửa lời 2, lời 1 y nguyên", () => {
-  const r = applyCommand(FX, { type: "ChangeLyricText", path: P(4, 4), lyricNumber: "2", text: "Ừm" });
+  const r = applyCommand(FX, { type: "ChangeLyricText", path: P(4, 4), lyricIndex: 2, text: "Ừm" });
   const ls = readNoteFields(r.xml, P(4, 4))!.lyrics;
   assert.deepEqual(ls.map((l) => [l.number, l.text]), [["1", "ngườ"], ["2", "Ừm"]]);
   assertScoped(FX, r.xml, P(4, 4));
@@ -208,15 +208,15 @@ test("ChangeLyricText: đúng dòng lời theo số — sửa lời 2, lời 1 y
 
 test("ChangeLyricText: giữ nguyên thuộc tính của <text> khi vá (file thật có font-family)", () => {
   const xml = FX.replace("<text>đường</text>", '<text font-family="Times New Roman">đường</text>');
-  const r = applyCommand(xml, { type: "ChangeLyricText", path: P(2, 2), lyricNumber: "1", text: "Đường" });
+  const r = applyCommand(xml, { type: "ChangeLyricText", path: P(2, 2), lyricIndex: 1, text: "Đường" });
   assert.ok(r.xml.includes('<text font-family="Times New Roman">Đường</text>'));
 });
 
 test("ChangeLyricText: từ chối âm tiết ghép, lời không có, lời rỗng, dấu lặng", () => {
-  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(4, 6), lyricNumber: "1", text: "x" })), "EDIT_LYRIC_COMPOUND");
-  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricNumber: "3", text: "x" })), "EDIT_LYRIC_NOT_FOUND");
-  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricNumber: "1", text: "   " })), "EDIT_LYRIC_EMPTY");
-  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(3, 7), lyricNumber: "1", text: "x" })), "EDIT_LYRIC_NOT_FOUND");
+  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(4, 6), lyricIndex: 1, text: "x" })), "EDIT_LYRIC_COMPOUND");
+  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricIndex: 3, text: "x" })), "EDIT_LYRIC_NOT_FOUND");
+  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(2, 2), lyricIndex: 1, text: "   " })), "EDIT_LYRIC_EMPTY");
+  assert.equal(code(() => applyCommand(FX, { type: "ChangeLyricText", path: P(3, 7), lyricIndex: 1, text: "x" })), "EDIT_LYRIC_NOT_FOUND");
 });
 
 // ── Bất biến diff cho mọi lệnh mẫu ────────────────────────────────────────────
@@ -226,8 +226,8 @@ test("XML diff: mọi lệnh chỉ chạm đúng <note> đích, mọi nốt khá
     { type: "ChangePitch", path: P(2, 3), pitch: { step: "G", alter: 0, octave: 4 } },
     { type: "ChangePitch", path: P(3, 2), pitch: { step: "A", alter: 0, octave: 5 } },
     { type: "ChangePitch", path: P(1, 2, 2), pitch: { step: "D", alter: 1, octave: 4 } },
-    { type: "ChangeLyricText", path: P(3, 4), lyricNumber: "1", text: "về đâu" },
-    { type: "ChangeLyricText", path: P(5, 2), lyricNumber: "1", text: "Đêm" },
+    { type: "ChangeLyricText", path: P(3, 4), lyricIndex: 1, text: "về đâu" },
+    { type: "ChangeLyricText", path: P(5, 2), lyricIndex: 1, text: "Đêm" },
   ];
   for (const cmd of lenh) {
     const r = applyCommand(FX, cmd);
@@ -244,7 +244,7 @@ test("XML diff: mọi lệnh chỉ chạm đúng <note> đích, mọi nốt khá
 
 // ── Nháp: gốc + ngăn xếp lệnh ─────────────────────────────────────────────────
 const L1: MusicXmlEditCommand = { type: "ChangePitch", path: P(2, 2), pitch: { step: "F", alter: 1, octave: 4 } };
-const L2: MusicXmlEditCommand = { type: "ChangeLyricText", path: P(2, 2), lyricNumber: "1", text: "mới" };
+const L2: MusicXmlEditCommand = { type: "ChangeLyricText", path: P(2, 2), lyricIndex: 1, text: "mới" };
 const L3: MusicXmlEditCommand = { type: "ChangePitch", path: P(2, 2), pitch: { step: "G", alter: 0, octave: 4 } };
 
 test("nháp: áp lệnh → có thay đổi; hoàn tác dựng lại từ gốc; làm lại áp lại lệnh", () => {
@@ -420,10 +420,10 @@ test("readNoteFields: nốt, lặng, hợp âm, âm tiết ghép, đường dẫ
   assert.equal(f.dots, 0);
   assert.equal(f.chord, "none");
   assert.equal(f.duongTruongDo, null);
-  assert.deepEqual(f.lyrics, [{ number: "1", text: "xưa", compound: false }]);
+  assert.deepEqual(f.lyrics, [{ index: 1, number: "1", text: "xưa", syllabic: "single", extend: false, compound: false }]);
   assert.equal(readNoteFields(FX, P(3, 7))!.kind, "rest");
   assert.equal(readNoteFields(FX, P(3, 7))!.pitch, null);
-  assert.deepEqual(readNoteFields(FX, P(4, 6))!.lyrics, [{ number: "1", text: "đã xa", compound: true }]);
+  assert.deepEqual(readNoteFields(FX, P(4, 6))!.lyrics, [{ index: 1, number: "1", text: "đã xa", syllabic: "single", extend: false, compound: true }]);
   assert.equal(readNoteFields(FX, P(2, 1)), null);
   assert.equal(readNoteFields("<hỏng", P(1, 1)), null);
 });
@@ -458,7 +458,7 @@ test("file thật (14 trang): mỗi lệnh vá đúng một chỗ, dưới 500 m
   const coPitch = notes.find((n) => n.kind === "note" && n.pitch)!;
   const pitchMoi = { step: coPitch.pitch!.step as Step, alter: coPitch.pitch!.alter === 0 ? 1 : 0, octave: coPitch.pitch!.octave };
   let t = performance.now();
-  const a = applyCommand(xml, { type: "ChangeLyricText", path: coLoi.path, lyricNumber: "1", text: "Cơn" });
+  const a = applyCommand(xml, { type: "ChangeLyricText", path: coLoi.path, lyricIndex: 1, text: "Cơn" });
   assert.ok(performance.now() - t < 500);
   assertScoped(xml, a.xml, coLoi.path);
   t = performance.now();
@@ -468,7 +468,7 @@ test("file thật (14 trang): mỗi lệnh vá đúng một chỗ, dưới 500 m
   const r = await createAnnotatedScoreRenderer();
   try {
     const v = await validateDraft(xml, rebuildDraft(xml, [
-      { type: "ChangeLyricText", path: coLoi.path, lyricNumber: "1", text: "Cơn" },
+      { type: "ChangeLyricText", path: coLoi.path, lyricIndex: 1, text: "Cơn" },
       { type: "ChangePitch", path: coPitch.path, pitch: pitchMoi },
     ]), { render: (x) => r.render(x) });
     assert.equal(v.ok, true, JSON.stringify(v.stages));

@@ -167,8 +167,12 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-page .np-svg{display:block;width:100%;}
 .${NP_SCOPE} .np-page .np-svg svg{display:block;width:100%;height:auto;}
 .${NP_SCOPE} .np-fit-page .np-page .np-svg svg{width:auto;height:calc(78vh - 132px);max-width:100%;}
-.${NP_SCOPE} .np-select-mode .np-page g.note,.${NP_SCOPE} .np-select-mode .np-page g.rest{cursor:pointer;}
+.${NP_SCOPE} .np-select-mode .np-page g.note,.${NP_SCOPE} .np-select-mode .np-page g.rest,.${NP_SCOPE} .np-select-mode .np-page g.verse,.${NP_SCOPE} .np-select-mode .np-page g.harm{cursor:pointer;}
 .${NP_SCOPE} .np-select-mode .np-page g.note:hover use,.${NP_SCOPE} .np-select-mode .np-page g.rest:hover use{fill:var(--indigo-dark);}
+.${NP_SCOPE} .np-select-mode .np-page g.verse:hover text,.${NP_SCOPE} .np-select-mode .np-page g.harm:hover text{fill:var(--indigo-dark);}
+/* Chữ hát nằm TRONG nhóm nốt, nên rê chuột lên chữ cũng là rê lên nốt. Trả đầu
+   nốt về màu mực để con trỏ chỉ tô sáng đúng thứ sắp chọn được. */
+.${NP_SCOPE} .np-select-mode .np-page g.note:has(g.verse:hover) use{fill:#000;}
 .${NP_SCOPE} .np-page g.np-note-selected use,.${NP_SCOPE} .np-page g.np-note-selected path,.${NP_SCOPE} .np-page g.np-note-selected text{fill:var(--indigo);stroke:var(--indigo);}
 .${NP_SCOPE} .np-note-panel{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
 .${NP_SCOPE} .np-note-panel strong{margin-right:4px;}

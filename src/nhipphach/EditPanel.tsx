@@ -1,5 +1,9 @@
 import { useState } from "react";
-import type { SourceNote } from "../musicxml-beats/sourceTags.ts";
+import type {
+  SourceHarmony,
+  SourceLyric,
+  SourceNote,
+} from "../musicxml-beats/sourceTags.ts";
 import type { MusicXmlEditCommand, Pitch, Step } from "./edit/commands.ts";
 import { STEPS, describeCommands } from "./edit/commands.ts";
 import type { AccidentalChoice } from "./edit/accidentals.ts";
@@ -11,16 +15,34 @@ import { DOT_LABEL, NOTE_TYPES, TYPE_LABEL } from "./edit/durationModel.ts";
 import type { NoteType } from "./edit/durationModel.ts";
 import type { NoteWarning } from "./edit/noteWarnings.ts";
 import type { ValidationReport } from "./edit/validation.ts";
+import type { HarmonyFields } from "./edit/harmonyFields.ts";
+import type { HarmonyRoot, HarmonyValue } from "./edit/harmonyModel.ts";
+import {
+  ALTER_KY_HIEU,
+  HARMONY_KINDS,
+  harmonySymbol,
+  sameHarmony,
+} from "./edit/harmonyModel.ts";
 
 /**
  * Panel biên tập theo ngữ cảnh: chỉ hiện công cụ của thứ đang chọn, và chỉ hiện
  * những gì sửa được thật. Panel KHÔNG biết XML và KHÔNG suy luận nhạc lý — nó
- * phát lệnh, còn `edit/` trả lời "sửa được không, dấu hoá nào, trường độ nào".
+ * phát lệnh, còn `edit/` trả lời "sửa được không, dấu hoá nào, loại hợp âm nào".
  */
+
+/**
+ * Đang chọn cái gì. Panel chỉ hiện công cụ của ĐÚNG thứ này — bấm vào chữ hát
+ * thì không có ô cao độ, bấm vào hợp âm thì không có ô lời (mục 12 của đặc tả).
+ */
+export type EditSelection =
+  | { kind: "note"; note: SourceNote; fields: NoteFields }
+  | { kind: "lyric"; lyric: SourceLyric; note: SourceNote; field: NoteLyric | null }
+  | { kind: "harmony"; harmony: SourceHarmony; fields: HarmonyFields | null }
+  | { kind: "unresolved"; what: "note" | "lyric" | "harmony" };
+
 export interface EditPanelProps {
   draft: DraftState | null;
-  selected: SourceNote | null;
-  fields: NoteFields | null;
+  selection: EditSelection | null;
   saving: boolean;
   /** Vì sao chưa lưu được — để nút nói thật thay vì im lặng vô hiệu. */
   saveBlocked: string | null;
@@ -211,37 +233,179 @@ function LyricEditor({
 }) {
   const [text, setText] = useState(lyric.text);
   const khac = text !== lyric.text && text.trim() !== "";
+  const nhan = `Lời ${lyric.number || lyric.index}`;
+  const phat = () =>
+    onCommand({ type: "ChangeLyricText", path, lyricIndex: lyric.index, text });
   return (
-    <div className="np-edit-row">
-      <span className="np-edit-label">Lời {lyric.number}</span>
-      {lyric.compound ? (
-        <span className="np-muted">
-          “{lyric.text}” là âm tiết ghép — chưa sửa được ở bước này.
-        </span>
-      ) : (
-        <>
-          <input
-            aria-label={`Lời ${lyric.number}`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && khac)
-                onCommand({ type: "ChangeLyricText", path, lyricNumber: lyric.number, text });
-            }}
-          />
-          <button
-            type="button"
-            className="np-zbtn"
-            disabled={!khac}
-            onClick={() =>
-              onCommand({ type: "ChangeLyricText", path, lyricNumber: lyric.number, text })
-            }
-          >
-            Đổi lời
-          </button>
-        </>
+    <>
+      <div className="np-edit-row">
+        <span className="np-edit-label">{nhan}</span>
+        {lyric.compound ? (
+          <span className="np-muted">
+            “{lyric.text}” là âm tiết ghép — chưa sửa được ở bước này.
+          </span>
+        ) : (
+          <>
+            <input
+              aria-label={nhan}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && khac) phat();
+              }}
+            />
+            <button type="button" className="np-zbtn" disabled={!khac} onClick={phat}>
+              Đổi lời
+            </button>
+          </>
+        )}
+      </div>
+      {lyric.extend && (
+        <div className="np-edit-row">
+          <span className="np-edit-canhbao">
+            Chữ này ngân dài sang nốt sau — sửa chữ không làm mất chỗ ngân.
+          </span>
+        </div>
       )}
-    </div>
+    </>
+  );
+}
+
+const BAC_ALTER = [-1, 0, 1];
+
+function BacChon({
+  nhan,
+  value,
+  onChange,
+}: {
+  nhan: string;
+  value: HarmonyRoot;
+  onChange(v: HarmonyRoot): void;
+}) {
+  return (
+    <>
+      <select
+        aria-label={`${nhan} — bậc`}
+        value={value.step}
+        onChange={(e) => onChange({ ...value, step: e.target.value as Step })}
+      >
+        {STEPS.map((x) => (
+          <option key={x} value={x}>
+            {x}
+          </option>
+        ))}
+      </select>
+      <select
+        aria-label={`${nhan} — dấu hoá`}
+        value={value.alter}
+        onChange={(e) => onChange({ ...value, alter: Number(e.target.value) })}
+      >
+        {BAC_ALTER.map((a) => (
+          <option key={a} value={a}>
+            {a === 0 ? "♮" : ALTER_KY_HIEU[a]}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+}
+
+/**
+ * Ba ô: Bậc gốc · Loại · Bậc trầm. KHÔNG có ô gõ tên hợp âm: `<kind>` của
+ * MusicXML là từ vựng đóng nên chọn trong bảng là ánh xạ chắc chắn, còn đọc
+ * chuỗi "F#m7b5" thì chỉ là đoán. Ký hiệu xem trước lấy từ `harmonyModel`, tức
+ * từ chính thứ bộ khắc vẽ ra.
+ */
+function HarmonyEditor({
+  path,
+  fields,
+  onCommand,
+}: {
+  path: string;
+  fields: HarmonyFields;
+  onCommand: EditPanelProps["onCommand"];
+}) {
+  const [value, setValue] = useState<HarmonyValue>(fields.value);
+  if (fields.duong)
+    return (
+      <div className="np-edit-row">
+        <span className="np-edit-label">Hợp âm</span>
+        <span className="np-muted">{fields.duong}</span>
+      </div>
+    );
+  // Đổi loại thì bỏ `text` cũ, nên ký hiệu xem trước cũng phải bỏ theo — panel
+  // và bản nhạc nói cùng một chuyện.
+  const doiLoai = value.kind !== fields.value.kind;
+  const khac = !sameHarmony(value, fields.value) || (doiLoai && fields.kindText !== null);
+  return (
+    <>
+      <div className="np-edit-row">
+        <span className="np-edit-label">Hợp âm</span>
+        <BacChon nhan="Bậc gốc" value={value.root} onChange={(root) => setValue({ ...value, root })} />
+        <select
+          aria-label="Loại hợp âm"
+          value={value.kind}
+          onChange={(e) => setValue({ ...value, kind: e.target.value })}
+        >
+          {HARMONY_KINDS.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.ten}
+              {k.hau ? ` (${k.hau})` : ""}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="np-zbtn"
+          disabled={!khac}
+          onClick={() => onCommand({ type: "ChangeHarmony", path, value })}
+        >
+          {khac
+            ? `Đổi ${fields.symbol} → ${harmonySymbol(value, doiLoai ? null : fields.kindText)}`
+            : "Đổi hợp âm"}
+        </button>
+      </div>
+      <div className="np-edit-row">
+        <span className="np-edit-label">Bậc trầm</span>
+        <select
+          aria-label="Có bậc trầm"
+          value={value.bass ? "co" : "khong"}
+          onChange={(e) =>
+            setValue({
+              ...value,
+              bass: e.target.value === "co" ? (value.bass ?? { ...value.root }) : null,
+            })
+          }
+        >
+          <option value="khong">Không</option>
+          <option value="co">Có</option>
+        </select>
+        {value.bass && (
+          <BacChon
+            nhan="Bậc trầm"
+            value={value.bass}
+            onChange={(bass) => setValue({ ...value, bass })}
+          />
+        )}
+        <span className="np-muted">Bậc trầm khác gốc thì ký hiệu có gạch chéo, ví dụ C/E.</span>
+      </div>
+      {fields.rawKind && (
+        <div className="np-edit-row">
+          <span className="np-edit-canhbao">
+            Nguồn đang ghi loại “{fields.rawKind}” — bản nhạc chỉ vẽ trơ bậc gốc. Chọn một
+            loại trong danh sách để ký hiệu hiện đúng.
+          </span>
+        </div>
+      )}
+      {fields.kindText && !doiLoai && (
+        <div className="np-edit-row">
+          <span className="np-muted">
+            Nguồn ghi sẵn ký hiệu “{fields.kindText}”; đổi loại sẽ bỏ nó để ký hiệu về đúng
+            loại mới.
+          </span>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -261,10 +425,109 @@ function noteNotes(fields: NoteFields): string[] {
   return out;
 }
 
+const CHUA_RO: Record<"note" | "lyric" | "harmony", string> = {
+  note: "Bản khắc vẽ nốt này mà không lần được về nguồn, nên chưa sửa được.",
+  lyric: "Bản khắc vẽ chữ hát này mà không lần được về nguồn, nên chưa sửa được.",
+  harmony: "Bản khắc vẽ hợp âm này mà không lần được về nguồn, nên chưa sửa được.",
+};
+
+/** Đúng MỘT bộ công cụ cho đúng thứ đang chọn. Không bày cả ba cùng lúc. */
+function ScoreTools({
+  selection,
+  onCommand,
+}: {
+  selection: EditSelection;
+  onCommand: EditPanelProps["onCommand"];
+}) {
+  if (selection.kind === "unresolved")
+    return (
+      <div className="np-edit-row">
+        <span className="np-edit-canhbao">{CHUA_RO[selection.what]}</span>
+      </div>
+    );
+
+  if (selection.kind === "harmony") {
+    const { harmony, fields } = selection;
+    return fields ? (
+      <HarmonyEditor
+        key={`${harmony.path}|${fields.value.kind}|${fields.symbol}`}
+        path={harmony.path}
+        fields={fields}
+        onCommand={onCommand}
+      />
+    ) : (
+      <div className="np-edit-row">
+        <span className="np-muted">Không đọc được ký hiệu hợp âm này.</span>
+      </div>
+    );
+  }
+
+  if (selection.kind === "lyric") {
+    const { lyric, note, field } = selection;
+    return field ? (
+      <LyricEditor
+        key={`${note.path}|${field.index}|${field.text}`}
+        path={note.path}
+        lyric={field}
+        onCommand={onCommand}
+      />
+    ) : (
+      <div className="np-edit-row">
+        <span className="np-muted">
+          Dòng lời {lyric.number || lyric.lyricIndex} không còn trong bản nháp.
+        </span>
+      </div>
+    );
+  }
+
+  const { note, fields } = selection;
+  if (fields.kind === "rest")
+    return (
+      <>
+        <div className="np-edit-row">
+          <span className="np-muted">Dấu lặng không có cao độ để sửa.</span>
+        </div>
+        <DurationEditor path={note.path} fields={fields} onCommand={onCommand} />
+      </>
+    );
+  return (
+    <>
+      {fields.pitch && (
+        <PitchEditor
+          key={`${note.path}|${pitchName(fields.pitch)}|${fields.accidental ?? ""}`}
+          path={note.path}
+          current={fields.pitch}
+          fields={fields}
+          onCommand={onCommand}
+        />
+      )}
+      <DurationEditor
+        key={`${note.path}|${fields.noteType ?? ""}|${fields.dots}`}
+        path={note.path}
+        fields={fields}
+        onCommand={onCommand}
+      />
+      {fields.lyrics.length > 0 && (
+        <div className="np-edit-row">
+          <span className="np-edit-label">Lời</span>
+          <span className="np-muted">
+            {fields.lyrics.map((l) => l.text).join(" · ")} — bấm thẳng vào chữ hát trên bản
+            nhạc để sửa.
+          </span>
+        </div>
+      )}
+      {noteNotes(fields).map((t) => (
+        <div className="np-edit-row" key={t}>
+          <span className="np-edit-canhbao">{t}</span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function EditPanel({
   draft,
-  selected,
-  fields,
+  selection,
   saving,
   saveBlocked,
   rhythmIssues,
@@ -310,49 +573,14 @@ export function EditPanel({
         </span>
       </div>
 
-      {selected && fields ? (
-        fields.kind === "rest" ? (
-          <>
-            <div className="np-edit-row">
-              <span className="np-muted">Dấu lặng không có cao độ hay lời để sửa.</span>
-            </div>
-            <DurationEditor path={selected.path} fields={fields} onCommand={onCommand} />
-          </>
-        ) : (
-          <>
-            {fields.pitch && (
-              <PitchEditor
-                key={`${selected.path}|${pitchName(fields.pitch)}|${fields.accidental ?? ""}`}
-                path={selected.path}
-                current={fields.pitch}
-                fields={fields}
-                onCommand={onCommand}
-              />
-            )}
-            <DurationEditor
-              key={`${selected.path}|${fields.noteType ?? ""}|${fields.dots}`}
-              path={selected.path}
-              fields={fields}
-              onCommand={onCommand}
-            />
-            {fields.lyrics.map((l) => (
-              <LyricEditor
-                key={`${selected.path}|${l.number}|${l.text}`}
-                path={selected.path}
-                lyric={l}
-                onCommand={onCommand}
-              />
-            ))}
-            {noteNotes(fields).map((t) => (
-              <div className="np-edit-row" key={t}>
-                <span className="np-edit-canhbao">{t}</span>
-              </div>
-            ))}
-          </>
-        )
+      {selection ? (
+        <ScoreTools selection={selection} onCommand={onCommand} />
       ) : (
         <div className="np-edit-row">
-          <span className="np-muted">Bấm một nốt trên bản nhạc để thấy công cụ sửa của nó.</span>
+          <span className="np-muted">
+            Bấm một nốt, một chữ hát hay một ký hiệu hợp âm trên bản nhạc để thấy công cụ
+            sửa của nó.
+          </span>
         </div>
       )}
 

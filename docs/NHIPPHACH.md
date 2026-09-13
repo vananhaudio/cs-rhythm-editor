@@ -406,9 +406,54 @@ Cả hai chỉ tính những chỗ **MỚI** so với bản gốc — lỗi vố
 
 `test:nhipphach-edit` (52) gồm 23 phép kiểm riêng cho 3B. Fixture `fixtures/note-editing.musicxml` (Đô/Sol/Fa trưởng · thăng, giáng, bình · enharmonic · hợp âm · dấu nối · chấm dôi · hai giá trị `divisions` (4 và 12) · hai bè · TAB có cách lên dây · lời · chùm ba · nốt hoa mỹ · 6/8, 5/8, 7/8) — và fixture ấy **sạch**: không một lỗi nhịp hay ký âm sẵn có, nên mọi cảnh báo trong test đều là do chính lệnh sửa gây ra.
 
-### Chưa làm (3C–3F)
+## Sửa lời và hợp âm (Giai đoạn Nội dung 3C)
 
-Lời đầy đủ (syllabic/extend) · hợp âm ký hiệu · TAB dây/phím · sửa cả chuỗi dấu nối · luyến · gợi ý sửa ô thiếu/thừa phách · ẩn/hiện lớp hiển thị · dịch giọng cả bài · sửa trên bài chưa có trong thư viện (nút Lưu nói rõ phải lưu bài trước).
+### Danh tính: Verovio KHÔNG giữ id của `<lyric>` và `<harmony>`
+
+Nốt thì giữ (xem Nội dung 2), nên `sourceTags.ts` tiêm id thẳng vào MusicXML đưa cho Verovio. **Đo được** rằng lời và hợp âm không được như vậy: `id` của `<lyric>`/`<harmony>` bị bỏ, Verovio sinh `xml:id` mới cho `<verse>`/`<syl>`/`<harm>`. Nhưng MEI để lộ hai tương ứng **cấu trúc**, không phải hình học:
+
+| Nguồn | MEI | Vì sao là identity |
+|---|---|---|
+| `<lyric>` thứ *i* của một `<note>` | `<verse>` thứ *i* **bên trong** chính `<note>` mang id nguồn | Verse là con của nốt đã có id của ta, và thứ tự các `<lyric>` được giữ nguyên |
+| `<harmony>` của một ô nhịp | `<harm>` ở cuối `<measure>` MEI, part này nối tiếp part kia, mỗi part theo thứ tự tài liệu | Đo trên cả part hai khuông (hợp âm ở khuông dưới) và hai hợp âm cùng một `tstamp` — thứ tự vẫn khớp |
+
+Vì thế `renderer/meiIdentity.ts` tiêm id **vào MEI**, ngay trước lượt khắc (cùng chỗ với lưới neo), rồi Verovio giữ nó tới SVG. MusicXML nguồn **không bị đụng một byte** — test đọc mã nguồn khoá luật này (`sourceTags` chỉ được `setAttribute("id", svgId)` đúng một chỗ, cho `<note>`).
+
+Trước khi gán, mỗi chỗ đều **đếm**: số `<verse>` phải bằng số `<lyric>`, số `<harm>` phải bằng số `<harmony>`, và ô nhịp MEI phải tự xác nhận bằng chính id nốt bên trong nó. Lệch một cái thì **không gán id nào** cho chỗ đó và báo `SOURCE_IDENTITY_NOT_RESOLVED` — y như `mRest` ở Nội dung 2, không bao giờ chọn đại.
+
+**Cái bẫy `number`:** hai `<lyric>` cùng một nốt mà không ghi `number` đều ra `<verse n="1">` (đo được). Nên địa chỉ của lệnh sửa lời là **thứ tự trong nốt**, không phải `number` — lấy `number` làm khoá thì sửa dòng 2 hoá ra đổi dòng 1.
+
+### Hai lệnh mới
+
+`ChangeLyricText { path, lyricIndex, text }` chỉ ghi lại phần chữ: `<syllabic>`, `<extend>` (ngân dài), thuộc tính của `<text>` và mọi dòng lời khác của cùng nốt đều **không bị đụng**. Đổi cấu trúc melisma là việc của một lệnh khác, chưa làm.
+
+`ChangeHarmony { path, value: { root, kind, bass } }` sửa đúng một `<harmony>` (nó là con của `<measure>` nên đã có sẵn đường dẫn cấu trúc như nốt). **Chỉ sửa, không thêm không bớt**: thêm/xoá một `<harmony>` sẽ dời chỉ số con của ô nhịp, tức là dời đường dẫn của mọi nốt sau nó.
+
+**Không có bộ đọc tên hợp âm.** `<kind>` của MusicXML là một từ vựng đóng, nên panel hỏi ba ô — Bậc gốc · Loại · Bậc trầm — thay vì đoán chuỗi `F#m7b5`. Bảng ký hiệu trong `harmonyModel.ts` **đo từ bộ khắc**: khắc thử cả 33 giá trị của từ vựng rồi chép lại đúng thứ Verovio vẽ ra. Đo ấy cũng cho thấy `pedal`, `Neapolitan`, `Italian`, `French`, `German`, `Tristan`, `other`, `none` chỉ vẽ trơ bậc gốc ("C") — nên **không mời thầy chọn** 8 loại đó; nguồn có sẵn thì panel nói rõ và vẫn cho đổi sang loại vẽ được.
+
+Thuộc tính `text` của `<kind>` là thứ bộ khắc **vẽ ra** khi có. Nên đổi LOẠI thì lệnh **bỏ `text` cũ** — giữ lại là để bản nhạc hiện một đằng nội dung một nẻo, đúng cái bẫy `<accidental>` ở 3B. Đổi bậc gốc hay bậc trầm thì `text` (chỉ là phần hậu tố) được giữ nguyên.
+
+### Panel theo ngữ cảnh
+
+Bấm vào nốt → Cao độ · Dấu hiển thị · Trường độ (và một dòng chỉ *đọc* liệt kê lời của nốt kèm lời nhắc bấm thẳng vào chữ hát). Bấm vào chữ hát → chỉ ô Lời. Bấm vào ký hiệu hợp âm → chỉ Bậc gốc · Loại · Bậc trầm. **Không bày cả ba cùng lúc** — có test đọc mã nguồn khoá luật ấy.
+
+Thứ tự lồng nhau của Verovio tự quyết thứ tự ưu tiên: `g.syl` ⊂ `g.verse` ⊂ `g.note`, nên bấm vào chữ hát gặp id của dòng lời trước, bấm vào đầu nốt gặp id của nốt. Chỉ những mức **mang danh tính** (`verse`, `harm`, `note`/`rest`) mới được quyền kết luận; `g.syl` là một phần của verse nên leo tiếp.
+
+### Quyền và lưu
+
+Dùng lại đúng `score.edit`, **không thêm capability mới** (có test khoá). Cả ba cửa xử lý (`onClickBanNhac`, `apLenh`, `luuNhap`) vẫn tự hỏi lại quyền như bản vá `6e85c9f`.
+
+Lời, hợp âm và nốt đi chung **một ngăn xếp lệnh**: hoàn tác/làm lại dựng lại từ bản gốc như cũ. Ghi chú phiên bản tự sinh gọi tên cả ba loại việc: `Sửa cao độ 1 nốt · sửa trường độ 1 nốt · sửa lời 2 chỗ · sửa hợp âm 1 chỗ`. Cổng bốn tầng giữ nguyên nguyên tắc delta: bài vốn đã hỏng nhịp thì vẫn sửa lời/hợp âm được, chỉ lỗi **mới** mới chặn lưu. Tầng cấu trúc nay kiểm cả hợp âm (bậc gốc, dấu hoá, bậc trầm, loại có trong chuẩn MusicXML).
+
+### Kiểm chứng
+
+`test:nhipphach-edit` (89, gồm 35 phép kiểm riêng cho 3C) + `test:nhipphach-edit-db` (4, cần Supabase local — có một bài E2E 3C: lưu v1 → sửa lời + hợp âm → xem trước → hoàn tác/làm lại → lưu v2; mở v1 vẫn nguyên lời/hợp âm cũ, ghi đè object hay dòng phiên bản cũ đều bị chặn).
+
+Fixture `fixtures/lyric-harmony.musicxml` **sạch** (không lỗi nhịp, không lỗi cấu trúc, 20 dòng lời và 11 hợp âm đều gắn được danh tính): lời tiếng Việt 2 dòng · `syllabic` begin/end · `<extend>` · hai dòng lời **không ghi `number`** · C, Cm, C7, CMaj7 · hợp âm gạch chéo C/E · bậc gốc và bậc trầm có dấu hoá (F♯m7♭5/A♭, kèm `text="m7b5"`) · ba hợp âm trong một ô · 6/8, 5/8, 7/8. Thêm `harmony-multipart.musicxml` (part hai khuông + hai part + hai hợp âm cùng một `tstamp`), `harmony-function.musicxml` (ghi bằng bậc công năng — từ chối tường minh) và `lyric-unresolvable.musicxml` (lời trên lặng cả ô — báo không gắn được, không gán nhầm).
+
+### Chưa làm (3D–3F)
+
+TAB dây/phím · sửa cả chuỗi dấu nối · luyến · thêm/xoá hợp âm hay dòng lời (dời đường dẫn cấu trúc) · đổi cấu trúc melisma (`syllabic`/`extend`) · âm tiết ghép (`<elision>`) · nhận diện hợp âm từ nốt · dịch giọng cả bài · gợi ý sửa ô thiếu/thừa phách · ẩn/hiện lớp hiển thị · sửa trên bài chưa có trong thư viện (nút Lưu nói rõ phải lưu bài trước).
 
 ## Chạy test
 

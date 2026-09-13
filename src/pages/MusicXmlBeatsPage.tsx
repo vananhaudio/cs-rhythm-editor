@@ -58,6 +58,7 @@ import {
 import type { JobRecord } from "../nhipphach/jobs";
 import { giuLuot, traLuot } from "../nhipphach/motLuot";
 import { EditPanel } from "../nhipphach/EditPanel";
+import type { EditSelection } from "../nhipphach/EditPanel";
 import {
   applyToDraft,
   createDraft,
@@ -68,6 +69,7 @@ import {
 import type { DraftState } from "../nhipphach/edit/draftEngine";
 import type { MusicXmlEditCommand } from "../nhipphach/edit/commands";
 import { readNoteFields } from "../nhipphach/edit/noteFields";
+import { readHarmonyFields } from "../nhipphach/edit/harmonyFields";
 import { saveDraftAsVersion } from "../nhipphach/edit/versionSave";
 import type { ValidationReport } from "../nhipphach/edit/validation";
 import { newRhythmIssues } from "../nhipphach/edit/validation";
@@ -100,8 +102,12 @@ import type { ScoreLibrary } from "../nhipphach/libraryRepository";
 import { ScoreLibraryPanel } from "../nhipphach/ScoreLibraryPanel";
 import type { LibraryOpenEvent } from "../nhipphach/ScoreLibraryPanel";
 import { readScoreMetadata, readPrimaryMeter } from "../nhipphach/scoreMetadata";
-import { resolveNoteElement, describeNote } from "../nhipphach/noteSelection";
-import type { SourceNote } from "../musicxml-beats/sourceTags";
+import { resolveScoreElement, describeNote } from "../nhipphach/noteSelection";
+import type {
+  SourceHarmony,
+  SourceLyric,
+  SourceNote,
+} from "../musicxml-beats/sourceTags";
 import { parseMusicXML } from "../musicxml-beats/parser";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
@@ -189,7 +195,9 @@ export default function MusicXmlBeatsPage({
   const [chonNot, setChonNot] = useState(false);
   const [notChon, setNotChon] = useState<
     | { kind: "note"; note: SourceNote }
-    | { kind: "unresolved"; svgId: string }
+    | { kind: "lyric"; lyric: SourceLyric }
+    | { kind: "harmony"; harmony: SourceHarmony }
+    | { kind: "unresolved"; svgId: string; what: "note" | "lyric" | "harmony" }
     | null
   >(null);
   const prevBody = useRef<HTMLDivElement>(null);
@@ -398,9 +406,15 @@ export default function MusicXmlBeatsPage({
     // trạng thái cũ vẫn còn, hoặc người ta gọi thẳng bằng DOM. Mọi cửa vào của
     // biên tập đều phải tự hỏi lại quyền, không tin vào việc "nút không hiện".
     if (!choChonNot || !chonNot || !score) return;
-    const r = resolveNoteElement(e.target as unknown as Parameters<typeof resolveNoteElement>[0], score.noteIndex);
+    const r = resolveScoreElement(
+      e.target as unknown as Parameters<typeof resolveScoreElement>[0],
+      { notes: score.noteIndex, lyrics: score.lyricIndex, harmonies: score.harmonyIndex }
+    );
     if (r.kind === "note") setNotChon({ kind: "note", note: r.note });
-    else if (r.kind === "unresolved") setNotChon({ kind: "unresolved", svgId: r.svgId });
+    else if (r.kind === "lyric") setNotChon({ kind: "lyric", lyric: r.lyric });
+    else if (r.kind === "harmony") setNotChon({ kind: "harmony", harmony: r.harmony });
+    else if (r.kind === "unresolved")
+      setNotChon({ kind: "unresolved", svgId: r.svgId, what: r.what });
     else setNotChon(null);
   }
   // Tô sáng là lớp trình bày: chỉ thêm/bớt class trên SVG đang hiện.
@@ -409,8 +423,16 @@ export default function MusicXmlBeatsPage({
     if (!root) return;
     for (const el of Array.from(root.querySelectorAll(".np-note-selected")))
       el.classList.remove("np-note-selected");
-    if (chonNot && notChon?.kind === "note")
-      for (const el of Array.from(root.querySelectorAll(`[id="${notChon.note.svgId}"]`)))
+    const svgId =
+      notChon?.kind === "note"
+        ? notChon.note.svgId
+        : notChon?.kind === "lyric"
+          ? notChon.lyric.svgId
+          : notChon?.kind === "harmony"
+            ? notChon.harmony.svgId
+            : null;
+    if (chonNot && svgId)
+      for (const el of Array.from(root.querySelectorAll(`[id="${svgId}"]`)))
         el.classList.add("np-note-selected");
   }, [chonNot, notChon, score]);
   // Đổi bản nhạc là bỏ chọn và bỏ nháp.
@@ -421,14 +443,35 @@ export default function MusicXmlBeatsPage({
     setNhapNote("");
   }, [source]);
 
-  /** Các ô của nốt đang chọn, đọc từ đúng bản đang hiện (nháp đã sửa thì thấy giá trị mới). */
-  const truongNot = useMemo(
-    () =>
-      notChon?.kind === "note" && xmlHienThi
-        ? readNoteFields(xmlHienThi, notChon.note.path)
-        : null,
-    [notChon, xmlHienThi]
-  );
+  /**
+   * Thứ đang chọn + đúng những ô panel cần, đọc từ bản ĐANG HIỆN (nháp đã sửa thì
+   * thấy giá trị mới). Trang chỉ ghép lại; mọi câu hỏi về nhạc do `edit/` trả lời.
+   */
+  const luaChon: EditSelection | null = useMemo(() => {
+    if (!notChon || !xmlHienThi) return null;
+    if (notChon.kind === "unresolved")
+      return { kind: "unresolved", what: notChon.what };
+    if (notChon.kind === "harmony")
+      return {
+        kind: "harmony",
+        harmony: notChon.harmony,
+        fields: readHarmonyFields(xmlHienThi, notChon.harmony.path),
+      };
+    if (notChon.kind === "lyric") {
+      const note = score?.noteIndex.get(notChon.lyric.noteSvgId) ?? null;
+      const fields = readNoteFields(xmlHienThi, notChon.lyric.notePath);
+      return note
+        ? {
+            kind: "lyric",
+            lyric: notChon.lyric,
+            note,
+            field: fields?.lyrics[notChon.lyric.lyricIndex - 1] ?? null,
+          }
+        : null;
+    }
+    const fields = readNoteFields(xmlHienThi, notChon.note.path);
+    return fields ? { kind: "note", note: notChon.note, fields } : null;
+  }, [notChon, xmlHienThi, score]);
   /**
    * Hai lớp cảnh báo chạy ngay trên bản nháp, không đợi tới lúc lưu: nhịp hỏng
    * (chặn lưu) và ký âm "nhìn một đằng vang một nẻo" (chỉ nói). Cả hai chỉ tính
@@ -1999,7 +2042,7 @@ export default function MusicXmlBeatsPage({
                             setNotChon(null);
                           }}
                         >
-                          {chonNot ? "Thoát chọn nốt" : "Chọn nốt"}
+                          {chonNot ? "Thoát chế độ sửa" : "Chọn để sửa"}
                         </button>
                       )}
                     </div>
@@ -2009,7 +2052,7 @@ export default function MusicXmlBeatsPage({
                   <div
                     className="np-note-panel"
                     role="status"
-                    aria-label="Nốt đang chọn"
+                    aria-label="Đang chọn"
                   >
                     {notChon?.kind === "note" ? (
                       (() => {
@@ -2034,20 +2077,50 @@ export default function MusicXmlBeatsPage({
                           </>
                         );
                       })()
+                    ) : notChon?.kind === "lyric" ? (
+                      (() => {
+                        // Như với nốt: nháp đã khắc lại thì đọc từ bản khắc MỚI
+                        // (cùng id nguồn), để ô "Chữ" nói đúng thứ đang hiện.
+                        const l =
+                          score!.lyricIndex.get(notChon.lyric.svgId) ?? notChon.lyric;
+                        return (
+                          <>
+                            <strong>Chữ hát đang chọn</strong>
+                            <span>Ô nhịp: {l.measureNumber}</span>
+                            <span>Dòng lời: {l.number || l.lyricIndex}</span>
+                            <span>Chữ: {l.text}</span>
+                            {l.extend && <span>Có ngân dài</span>}
+                          </>
+                        );
+                      })()
+                    ) : notChon?.kind === "harmony" ? (
+                      (() => {
+                        const h =
+                          score!.harmonyIndex.get(notChon.harmony.svgId) ?? notChon.harmony;
+                        return (
+                          <>
+                            <strong>Hợp âm đang chọn</strong>
+                            <span>Ô nhịp: {h.measureNumber}</span>
+                            <span>Bè: {h.partId}</span>
+                            <span>Thứ tự trong ô: {h.harmonyIndex}</span>
+                          </>
+                        );
+                      })()
                     ) : notChon?.kind === "unresolved" ? (
                       <span>
-                        Nốt này chưa gắn được với bản nhạc nguồn nên không chọn được — xem chi tiết ở khối chẩn đoán.
+                        Chỗ này chưa gắn được với bản nhạc nguồn nên không chọn được — xem chi tiết ở khối chẩn đoán.
                       </span>
                     ) : (
-                      <span className="np-muted">Bấm vào một nốt trên bản nhạc để xem nó là nốt nào trong MusicXML.</span>
+                      <span className="np-muted">
+                        Bấm vào một nốt, một chữ hát hay một ký hiệu hợp âm trên bản nhạc.
+                      </span>
                     )}
                   </div>
                 )}
                 {choChonNot && chonNot && (
                   <EditPanel
                     draft={nhap}
-                    selected={notChon?.kind === "note" ? notChon.note : null}
-                    fields={truongNot}
+                    selection={luaChon}
                     saving={dangLuuNhap}
                     saveBlocked={luuNhapBiChan}
                     rhythmIssues={loiNhipNhap}

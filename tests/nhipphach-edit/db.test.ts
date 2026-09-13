@@ -18,6 +18,8 @@ import { sha256Hex } from "../../src/nhipphach/scoreHash.ts";
 import { appliedCommands, applyToDraft, cancelDraft, createDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
 import { describeCommands } from "../../src/nhipphach/edit/commands.ts";
 import { saveDraftAsVersion } from "../../src/nhipphach/edit/versionSave.ts";
+import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
+import { readHarmonyFields } from "../../src/nhipphach/edit/harmonyFields.ts";
 import { createAnnotatedScoreRenderer } from "../../src/musicxml-beats/renderer/verovioAdapter.ts";
 
 const API = "http://127.0.0.1:54321";
@@ -32,10 +34,12 @@ const FX = readFileSync(new URL("./fixtures/edit-toolkit.musicxml", import.meta.
   .replace("<work-title>Bộ công cụ biên tập — fixture</work-title>", `<work-title>${DAU}${RUN}</work-title>`);
 const P22 = "/score-partwise/part[1]/measure[2]/*[2]";
 const P23 = "/score-partwise/part[1]/measure[2]/*[3]";
+/** `<harmony>` đứng đầu ô nhịp thứ 2 của fixture (ô đầu là ô lấy đà): Sol trưởng. */
+const HARM = "/score-partwise/part[1]/measure[2]/*[1]";
 
 let admin: SupabaseClient, thay: SupabaseClient, kho: SupabaseScoreLibrary;
 let renderer: Awaited<ReturnType<typeof createAnnotatedScoreRenderer>>;
-let scoreId = "", v1Id = "", v1Path = "";
+let scoreId = "", v1Id = "", v1Path = "", truocVerNote: string | null = null;
 
 const objects = async (folder: string) => {
   const { data, error } = await admin.storage.from(BUCKET).list(folder, { limit: 1000 });
@@ -64,6 +68,7 @@ before(async () => {
   const [row] = await versions();
   v1Id = row.id as string;
   v1Path = row.storage_path as string;
+  truocVerNote = (row.change_note as string | null) ?? null;
 });
 
 after(async () => {
@@ -82,7 +87,7 @@ test("áp / hoàn tác / làm lại / huỷ: không một object, không một d
   assert.equal(truocVer.length, 1);
   let d = createDraft(FX);
   d = applyToDraft(d, { type: "ChangePitch", path: P22, pitch: { step: "F", alter: 1, octave: 4 } });
-  d = applyToDraft(d, { type: "ChangeLyricText", path: P22, lyricNumber: "1", text: "Đường" });
+  d = applyToDraft(d, { type: "ChangeLyricText", path: P22, lyricIndex: 1, text: "Đường" });
   d = redo(undo(d));
   d = cancelDraft(d);
   assert.equal(d.xml, FX);
@@ -114,7 +119,7 @@ test("Lưu → v2 trỏ về v1, loại 'edit', đúng nội dung nháp; object 
   // lưu (đúng như nó phải làm) và ta không kiểm được bước tạo phiên bản.
   d = applyToDraft(d, { type: "ChangeDuration", path: P22, noteType: "eighth", dots: 0 });
   d = applyToDraft(d, { type: "ChangeDuration", path: P23, noteType: "quarter", dots: 1 });
-  d = applyToDraft(d, { type: "ChangeLyricText", path: P22, lyricNumber: "1", text: "Đường" });
+  d = applyToDraft(d, { type: "ChangeLyricText", path: P22, lyricIndex: 1, text: "Đường" });
   const out = await saveDraftAsVersion({
     library: kho, scoreId, sourceFilename: "fixture.musicxml", original: d.original, draft: d.xml,
     changeNote: describeCommands(appliedCommands(d)), pageCount: 1, render: (x) => renderer.render(x),
@@ -142,4 +147,61 @@ test("Lưu → v2 trỏ về v1, loại 'edit', đúng nội dung nháp; object 
   // Phiên bản cũ bất biến: đổi nội dung v1 bị chặn, kể cả bằng service role.
   const { error } = await admin.from("nhipphach_score_versions").update({ change_note: "x" }).eq("id", v1Id);
   assert.ok(error, "trigger bất biến phải chặn UPDATE");
+});
+
+/**
+ * Giai đoạn Nội dung 3C trên Supabase thật: sửa LỜI và HỢP ÂM rồi lưu thành một
+ * phiên bản mới. Điều phải thấy: mở v2 ra là lời/hợp âm mới, mở lại bản cũ vẫn
+ * đúng lời/hợp âm cũ từng byte, và không có đường nào sửa được bản cũ.
+ */
+test("3C: sửa lời + hợp âm → phiên bản mới; bản cũ mở ra vẫn nguyên lời/hợp âm cũ", async () => {
+  const truocVer = (await versions()).length;
+  const goc = await kho.readVersion({ storagePath: v1Path });
+  const loiGoc = readNoteFields(goc, P22)!.lyrics[0].text;
+  const hopAmGoc = readHarmonyFields(goc, HARM)!;
+  assert.equal(hopAmGoc.symbol, "G");
+
+  let d = createDraft(goc);
+  d = applyToDraft(d, { type: "ChangeLyricText", path: P22, lyricIndex: 1, text: "Lối" });
+  d = applyToDraft(d, {
+    type: "ChangeHarmony",
+    path: HARM,
+    value: { root: { step: "E", alter: 0 }, kind: "minor-seventh", bass: { step: "B", alter: 0 } },
+  });
+  // Xem trước bằng chính bộ khắc đang chạy, rồi lùi/tiến — không được ghi gì.
+  assert.ok(renderer.render(d.xml).pages.length > 0);
+  const truocObj = await objects(scoreId);
+  d = redo(undo(d));
+  assert.deepEqual(await objects(scoreId), truocObj);
+  assert.equal((await versions()).length, truocVer);
+
+  const out = await saveDraftAsVersion({
+    library: kho, scoreId, sourceFilename: "fixture.musicxml", original: d.original, draft: d.xml,
+    changeNote: describeCommands(appliedCommands(d)), pageCount: 1, render: (x) => renderer.render(x),
+  });
+  assert.equal(out.report.ok, true, JSON.stringify(out.report.stages));
+  const vs = await versions();
+  const moi = vs[vs.length - 1];
+  assert.equal(moi.change_type, "edit");
+  assert.equal(moi.change_note, "Sửa lời 1 chỗ · sửa hợp âm 1 chỗ");
+
+  // Mở bản MỚI: lời và hợp âm mới.
+  const banMoi = await kho.readVersion({ storagePath: moi.storage_path as string });
+  assert.equal(readNoteFields(banMoi, P22)!.lyrics[0].text, "Lối");
+  assert.equal(readHarmonyFields(banMoi, HARM)!.symbol, "Em7/B");
+  // Mở bản CŨ: y nguyên từng byte.
+  assert.equal(await kho.readVersion({ storagePath: v1Path }), goc);
+  assert.equal(readNoteFields(goc, P22)!.lyrics[0].text, loiGoc);
+  assert.equal(readHarmonyFields(goc, HARM)!.symbol, "G");
+
+  // Bản cũ là bất biến: sửa đè object hay dòng phiên bản đều phải bị chặn.
+  const deObject = await thay.storage.from(BUCKET).update(v1Path, new Blob([banMoi]));
+  assert.ok(deObject.error, "ghi đè object của bản cũ mà không bị chặn");
+  const deDong = await thay
+    .from("nhipphach_score_versions")
+    .update({ change_note: "sửa trộm" })
+    .eq("id", v1Id)
+    .select();
+  assert.ok(deDong.error || (deDong.data ?? []).length === 0, "sửa được dòng phiên bản cũ");
+  assert.equal((await versions())[0].change_note, truocVerNote);
 });

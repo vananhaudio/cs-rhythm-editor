@@ -9,6 +9,7 @@
  */
 import type { AccidentalChoice } from "./accidentals.ts";
 import type { NoteType } from "./durationModel.ts";
+import type { HarmonyValue } from "./harmonyModel.ts";
 
 export type Step = "A" | "B" | "C" | "D" | "E" | "F" | "G";
 export const STEPS: readonly Step[] = ["C", "D", "E", "F", "G", "A", "B"];
@@ -57,27 +58,53 @@ export interface ChangeDuration {
   dots: number;
 }
 
+/**
+ * Sửa chữ của MỘT dòng lời. Địa chỉ là (nốt, THỨ TỰ dòng lời trong nốt) chứ
+ * không phải thuộc tính `number`: đo được rằng nhiều `<lyric>` trên cùng một nốt
+ * có thể cùng thiếu `number`, lúc ấy lấy `number` làm khoá là sửa dòng 2 thành
+ * ra đổi dòng 1. Lệnh KHÔNG đụng `<syllabic>` hay `<extend>` — đổi cấu trúc
+ * melisma là việc của một lệnh khác.
+ */
 export interface ChangeLyricText {
   type: "ChangeLyricText";
   path: string;
-  /** Thuộc tính `number` của `<lyric>`; không có thì là "1". */
-  lyricNumber: string;
+  /** Thứ tự `<lyric>` trong nốt, 1-based. */
+  lyricIndex: number;
   /** Giữ nguyên văn, kể cả Unicode tiếng Việt và khoảng trắng. */
   text: string;
+}
+
+/**
+ * Sửa một ký hiệu hợp âm. `path` trỏ thẳng `<harmony>` (nó là con của
+ * `<measure>` nên đã có sẵn đường dẫn cấu trúc như nốt).
+ *
+ * Chỉ SỬA, không thêm không bớt: thêm/xoá một `<harmony>` sẽ dời chỉ số con của
+ * ô nhịp, tức là dời đường dẫn của mọi nốt sau nó — việc đó cần một lệnh riêng
+ * biết cách dời cả bản đồ danh tính.
+ */
+export interface ChangeHarmony {
+  type: "ChangeHarmony";
+  path: string;
+  value: HarmonyValue;
 }
 
 export type MusicXmlEditCommand =
   | ChangePitch
   | RespellNote
   | ChangeDuration
-  | ChangeLyricText;
+  | ChangeLyricText
+  | ChangeHarmony;
 
 /** Nhóm công cụ (mục 2 của spec) — để panel biết lệnh thuộc nhóm nào. */
-export const COMMAND_GROUP: Record<MusicXmlEditCommand["type"], "note" | "lyric"> = {
+export const COMMAND_GROUP: Record<
+  MusicXmlEditCommand["type"],
+  "note" | "lyric" | "harmony"
+> = {
   ChangePitch: "note",
   RespellNote: "note",
   ChangeDuration: "note",
   ChangeLyricText: "lyric",
+  ChangeHarmony: "harmony",
 };
 
 export const CHANGE_NOTE_MAX = 300;
@@ -88,9 +115,10 @@ const MO_TA: Record<MusicXmlEditCommand["type"], (n: number) => string> = {
   RespellNote: (n) => `đổi cách ghi ${n} nốt`,
   ChangeDuration: (n) => `sửa trường độ ${n} nốt`,
   ChangeLyricText: (n) => `sửa lời ${n} chỗ`,
+  ChangeHarmony: (n) => `sửa hợp âm ${n} chỗ`,
 };
 const KHOA = (c: MusicXmlEditCommand) =>
-  c.type === "ChangeLyricText" ? `${c.path}#${c.lyricNumber}` : c.path;
+  c.type === "ChangeLyricText" ? `${c.path}#${c.lyricIndex}` : c.path;
 
 export function describeCommands(commands: readonly MusicXmlEditCommand[]): string {
   const dem = new Map<MusicXmlEditCommand["type"], Set<string>>();

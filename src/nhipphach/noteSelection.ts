@@ -1,4 +1,8 @@
-import type { SourceNote } from "../musicxml-beats/sourceTags.ts";
+import type {
+  SourceHarmony,
+  SourceLyric,
+  SourceNote,
+} from "../musicxml-beats/sourceTags.ts";
 import { createAnnotations } from "../musicxml-beats/annotations.ts";
 import type { BeatMapDocument } from "../musicxml-beats/beatMap.ts";
 import { compare } from "../musicxml-beats/rational.ts";
@@ -30,33 +34,88 @@ export type Resolution =
   | { kind: "unresolved"; code: typeof NOTE_SOURCE_NOT_RESOLVED; svgId: string }
   | { kind: "none" };
 
+/** Chọn được cái gì trên bản nhạc — Giai đoạn Nội dung 3C thêm lời và hợp âm. */
+export type ScoreSelection =
+  | { kind: "note"; note: SourceNote; element: ElementLike }
+  | { kind: "lyric"; lyric: SourceLyric; element: ElementLike }
+  | { kind: "harmony"; harmony: SourceHarmony; element: ElementLike }
+  | {
+      kind: "unresolved";
+      code: typeof NOTE_SOURCE_NOT_RESOLVED;
+      svgId: string;
+      what: "note" | "lyric" | "harmony";
+    }
+  | { kind: "none" };
+
+export interface SelectionIndex {
+  notes: ReadonlyMap<string, SourceNote>;
+  lyrics: ReadonlyMap<string, SourceLyric>;
+  harmonies: ReadonlyMap<string, SourceHarmony>;
+}
+
 const classesOf = (el: ElementLike) =>
   (el.getAttribute("class") || "").split(/\s+/);
 
 /**
- * Đi ngược từ chỗ click lên tới `<g>` nốt/lặng. Gặp id có trong bảng → nốt nguồn.
- * Gặp một `g.note`/`g.rest` mà id KHÔNG có trong bảng → báo rõ, không chọn đại.
+ * Đi ngược từ chỗ click lên, dừng ở thứ CỤ THỂ NHẤT có danh tính nguồn.
+ *
+ * Thứ tự lồng nhau của Verovio quyết định thứ tự ưu tiên, không cần luật riêng:
+ * `g.syl` nằm trong `g.verse` nằm trong `g.note` — nên bấm vào chữ hát thì gặp
+ * id của dòng lời trước, bấm vào đầu nốt thì gặp id của nốt. `g.harm` đứng riêng
+ * ở mức ô nhịp. Gặp một `g` thuộc loại đang quan tâm mà id KHÔNG có trong bảng
+ * tra thì báo rõ, không leo tiếp để chọn đại thứ bao ngoài.
  */
-export function resolveNoteElement(
+export function resolveScoreElement(
   target: ElementLike | null,
-  index: ReadonlyMap<string, SourceNote>
-): Resolution {
+  index: SelectionIndex,
+  /** Những loại được phép DỪNG lại ở đó. Loại không quan tâm thì leo tiếp. */
+  quanTam: readonly ("note" | "lyric" | "harmony")[] = ["note", "lyric", "harmony"]
+): ScoreSelection {
   for (let cur: unknown = target; laPhanTu(cur); cur = cur.parentNode) {
     const el: ElementLike = cur;
     if (el.nodeType !== undefined && el.nodeType !== 1) continue;
     const id = el.getAttribute("id");
     if (id) {
-      const note = index.get(id);
+      const lyric = index.lyrics.get(id);
+      if (lyric) return { kind: "lyric", lyric, element: el };
+      const harmony = index.harmonies.get(id);
+      if (harmony) return { kind: "harmony", harmony, element: el };
+      const note = index.notes.get(id);
       if (note) return { kind: "note", note, element: el };
     }
     const cls = classesOf(el);
-    if (cls.includes("note") || cls.includes("rest")) {
-      // Một nốt Verovio vẽ ra mà không có gốc: KHÔNG đoán.
-      return { kind: "unresolved", code: NOTE_SOURCE_NOT_RESOLVED, svgId: id || "" };
-    }
+    // Chỉ những mức MANG danh tính mới được quyền kết luận. `g.syl` là một phần
+    // của `g.verse` (id nằm ở verse), đầu nốt và đuôi nốt là phần của `g.note` —
+    // gặp chúng thì leo tiếp, không dừng lại báo "không rõ".
+    const what = cls.includes("harm")
+      ? "harmony"
+      : cls.includes("verse")
+        ? "lyric"
+        : cls.includes("note") || cls.includes("rest")
+          ? "note"
+          : null;
+    if (what && quanTam.includes(what))
+      // Bản khắc vẽ ra mà không có gốc: KHÔNG đoán.
+      return { kind: "unresolved", code: NOTE_SOURCE_NOT_RESOLVED, svgId: id || "", what };
     // Ra khỏi khuông là bỏ chọn.
     if (cls.includes("system") || cls.includes("page-margin")) break;
   }
+  return { kind: "none" };
+}
+
+/** Cửa cũ của Nội dung 2 — chỉ nốt. Giữ nguyên nghĩa, dùng chung một bộ máy. */
+export function resolveNoteElement(
+  target: ElementLike | null,
+  index: ReadonlyMap<string, SourceNote>
+): Resolution {
+  const r = resolveScoreElement(
+    target,
+    { notes: index, lyrics: new Map(), harmonies: new Map() },
+    ["note"]
+  );
+  if (r.kind === "note") return r;
+  if (r.kind === "unresolved")
+    return { kind: "unresolved", code: r.code, svgId: r.svgId };
   return { kind: "none" };
 }
 

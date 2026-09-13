@@ -1,12 +1,15 @@
 import type { Document, Element } from "@xmldom/xmldom";
 import type {
   ChangeDuration,
+  ChangeHarmony,
   ChangeLyricText,
   ChangePitch,
   MusicXmlEditCommand,
   Pitch,
   RespellNote,
 } from "./commands.ts";
+import type { HarmonyRoot } from "./harmonyModel.ts";
+import { isHarmonyKind } from "./harmonyModel.ts";
 import { STEPS } from "./commands.ts";
 import { decideAccidental } from "./accidentals.ts";
 import { coTheChum, durationFor, isNoteType } from "./durationModel.ts";
@@ -21,6 +24,7 @@ import {
   escapeXmlText,
   locate,
   openTagOf,
+  parseStrict,
   resolveSourcePath,
   serialize,
 } from "./xmlPatch.ts";
@@ -88,9 +92,9 @@ function insertLeafAfter(ctx: Ctx, after: Element, name: string, value: string) 
   if (indent !== null) parent.insertBefore(ctx.doc.createTextNode(`\n${indent}`), el);
 }
 
-/** Bỏ một nút lá cùng khoảng trắng đầu dòng của nó, để không để lại dòng trống. */
+/** Bỏ một phần tử cùng khoảng trắng đầu dòng của nó, để không để lại dòng trống. */
 function removeLeaf(ctx: Ctx, el: Element) {
-  const range = ctx.located.leafRange(el);
+  const range = ctx.located.range(el);
   let start = range.start;
   while (start > 0 && /[ \t]/.test(ctx.located.xml[start - 1])) start--;
   const prev = el.previousSibling;
@@ -123,16 +127,37 @@ const NOTE_CHILD_ORDER = [
   "notations", "lyric", "play", "listen",
 ];
 
-/** Chèn một nút con vào ĐÚNG vị trí chuẩn trong `<note>`. `value === null` → thẻ rỗng tự đóng. */
-function insertNoteChild(ctx: Ctx, note: Element, name: string, value: string | null, count = 1) {
-  const bac = NOTE_CHILD_ORDER.indexOf(name);
-  const kids = elementChildren(note);
+/**
+ * Thứ tự con của `<harmony>` theo chuẩn MusicXML: (root|numeral|function), kind,
+ * inversion?, bass?, degree*, rồi frame/offset/footnote/level/staff.
+ */
+const HARMONY_CHILD_ORDER = [
+  "root", "numeral", "function", "kind", "inversion", "bass", "degree",
+  "frame", "offset", "footnote", "level", "staff",
+];
+
+/** Thứ tự con của `<root>`/`<bass>`: bậc rồi mới tới dấu hoá. */
+const BAC_CHILD_ORDER = (prefix: string) => [
+  `${prefix}-separator`, `${prefix}-step`, `${prefix}-alter`,
+];
+
+/** Chèn một nút con vào ĐÚNG vị trí chuẩn. `value === null` → thẻ rỗng tự đóng. */
+function insertOrderedChild(
+  ctx: Ctx,
+  parent: Element,
+  order: readonly string[],
+  name: string,
+  value: string | null,
+  count = 1
+) {
+  const bac = order.indexOf(name);
+  const kids = elementChildren(parent);
   const sau = kids.find((k) => {
-    const i = NOTE_CHILD_ORDER.indexOf(k.localName ?? "");
+    const i = order.indexOf(k.localName ?? "");
     return i >= 0 && i > bac;
   });
   const moc = sau ?? kids[kids.length - 1];
-  if (!moc) throw new EditError("EDIT_NOTE_EMPTY", "Nốt này không có nội dung.");
+  if (!moc) throw new EditError("EDIT_NOTE_EMPTY", "Phần tử này không có nội dung.");
   const indent = ctx.located.indentOf(moc);
   const mot = value === null ? `<${name}/>` : `<${name}>${escapeXmlText(value)}</${name}>`;
   const markup = Array.from({ length: count }, () => mot).join(
@@ -152,14 +177,68 @@ function insertNoteChild(ctx: Ctx, note: Element, name: string, value: string | 
   // Nối vào cuối = chèn ngay sau `moc`, KHÔNG phải cuối danh sách con: sau `moc`
   // thường còn một nút chữ xuống dòng trước `</note>`.
   const moc2 = sau ?? moc.nextSibling;
-  const cach = indent === null ? null : `${ctx.located.eol}${indent}`;
+  // Phía DOM luôn dùng "\n": bộ đọc XML chuẩn hoá CRLF thành LF khi đọc lại, nên
+  // nhét "\r\n" vào cây sẽ làm sổ kép lệch trên chính file CRLF (đã xảy ra thật).
+  const cach = indent === null ? null : `\n${indent}`;
   for (let i = 0; i < count; i++) {
-    if (!sau && cach) note.insertBefore(ctx.doc.createTextNode(cach), moc2);
+    if (!sau && cach) parent.insertBefore(ctx.doc.createTextNode(cach), moc2);
     const el = ctx.doc.createElement(name);
     if (value !== null) el.appendChild(ctx.doc.createTextNode(value));
-    note.insertBefore(el, moc2);
-    if (sau && cach) note.insertBefore(ctx.doc.createTextNode(cach), moc2);
+    parent.insertBefore(el, moc2);
+    if (sau && cach) parent.insertBefore(ctx.doc.createTextNode(cach), moc2);
   }
+}
+
+/** Như trên, nhưng chèn cả một khối có con (ví dụ `<bass>`), nguyên văn markup. */
+function insertOrderedMarkup(
+  ctx: Ctx,
+  parent: Element,
+  order: readonly string[],
+  name: string,
+  markup: string
+) {
+  const bac = order.indexOf(name);
+  const kids = elementChildren(parent);
+  const sau = kids.find((k) => {
+    const i = order.indexOf(k.localName ?? "");
+    return i >= 0 && i > bac;
+  });
+  const moc = sau ?? kids[kids.length - 1];
+  if (!moc) throw new EditError("EDIT_NOTE_EMPTY", "Phần tử này không có nội dung.");
+  const indent = ctx.located.indentOf(moc);
+  const cach = indent === null ? null : `${ctx.located.eol}${indent}`;
+  const at = sau ? ctx.located.range(moc).start : ctx.located.range(moc).end;
+  ctx.patches.push({
+    start: at,
+    end: at,
+    text: sau
+      ? cach === null ? markup : `${markup}${cach}`
+      : cach === null ? markup : `${cach}${markup}`,
+  });
+  // Như trên: cây DOM dùng "\n"; markup được đọc lại nên tự chuẩn hoá.
+  const cachDom = indent === null ? null : `\n${indent}`;
+  // Phía DOM dựng lại ĐÚNG chuỗi vừa viết bằng cách đọc chính chuỗi ấy: cây con
+  // và mọi nút chữ xuống dòng bên trong khớp từng ký tự, nên sổ kép so được.
+  const khoi = ctx.doc.importNode(parseStrict(markup).documentElement!, true);
+  const moc2 = sau ?? moc.nextSibling;
+  if (!sau && cachDom) parent.insertBefore(ctx.doc.createTextNode(cachDom), moc2);
+  parent.insertBefore(khoi, moc2);
+  if (sau && cachDom) parent.insertBefore(ctx.doc.createTextNode(cachDom), moc2);
+}
+
+/** Bỏ một thuộc tính khỏi thẻ mở, chỉ đụng đúng thẻ ấy. */
+function dropAttribute(ctx: Ctx, el: Element, name: string) {
+  if (!el.hasAttribute(name)) return;
+  const range = ctx.located.range(el);
+  const re = new RegExp(`\\s+${name}\\s*=\\s*("[^"]*"|'[^']*')`);
+  if (!re.test(range.openTag))
+    throw new EditError("EDIT_PATCH_MISMATCH", `Không đọc được thuộc tính ${name}.`);
+  ctx.patches.push({
+    start: range.start,
+    end: range.openEnd,
+    text: range.openTag.replace(re, ""),
+  });
+  el.removeAttribute(name);
 }
 
 /** Ghi dấu hoá hiển thị: thêm, sửa, hoặc bỏ hẳn. `want === null` = không vẽ dấu nào. */
@@ -169,7 +248,7 @@ function setAccidental(ctx: Ctx, note: Element, want: string | null) {
   if (cu === want) return;
   if (want === null) removeLeaf(ctx, hien!);
   else if (hien) patchLeafText(ctx, hien, want);
-  else insertNoteChild(ctx, note, "accidental", want);
+  else insertOrderedChild(ctx, note, NOTE_CHILD_ORDER, "accidental", want);
 }
 
 /**
@@ -234,11 +313,11 @@ function changeDuration(ctx: Ctx, note: Element, cmd: ChangeDuration, ngu: NoteC
   const typeEl = child(note, "type");
   if (textOf(typeEl) !== cmd.noteType) {
     if (typeEl) patchLeafText(ctx, typeEl, cmd.noteType);
-    else insertNoteChild(ctx, note, "type", cmd.noteType);
+    else insertOrderedChild(ctx, note, NOTE_CHILD_ORDER, "type", cmd.noteType);
   }
   if (ngu.dots !== cmd.dots) {
     for (const d of elementChildren(note, "dot")) removeLeaf(ctx, d);
-    if (cmd.dots > 0) insertNoteChild(ctx, note, "dot", null, cmd.dots);
+    if (cmd.dots > 0) insertOrderedChild(ctx, note, NOTE_CHILD_ORDER, "dot", null, cmd.dots);
   }
   // Nốt hoa mỹ không có `<duration>` — đó là chuẩn, không phải thiếu sót.
   const durationEl = child(note, "duration");
@@ -268,10 +347,9 @@ function validPitch(p: Pitch) {
 function changeLyricText(ctx: Ctx, note: Element, cmd: ChangeLyricText) {
   if (cmd.text.trim() === "")
     throw new EditError("EDIT_LYRIC_EMPTY", "Lời không được để trống — xoá lời là một thao tác khác.");
-  const lyric = elementChildren(note, "lyric").find(
-    (l) => (l.getAttribute("number") || "1") === cmd.lyricNumber
-  );
-  if (!lyric)
+  // Địa chỉ là THỨ TỰ, không phải `number`: xem chú thích của lệnh.
+  const lyric = elementChildren(note, "lyric")[cmd.lyricIndex - 1];
+  if (!lyric || cmd.lyricIndex < 1)
     throw new EditError("EDIT_LYRIC_NOT_FOUND", "Nốt này không có dòng lời đó.");
   const texts = elementChildren(lyric, "text");
   if (texts.length !== 1)
@@ -280,8 +358,79 @@ function changeLyricText(ctx: Ctx, note: Element, cmd: ChangeLyricText) {
       texts.length ? "Âm tiết ghép (nhiều phần chữ) chưa sửa được ở bước này." : "Dòng lời không có chữ."
     );
   if (textOf(texts[0]) === cmd.text) return;
+  // CHỈ phần chữ đổi: `<syllabic>`, `<extend>`, thuộc tính của `<text>` và mọi
+  // dòng lời khác của chính nốt này đều không bị đụng tới.
   patchLeafText(ctx, texts[0], cmd.text);
-  ctx.touched.push(`${cmd.path}/lyric[${cmd.lyricNumber}]/text`);
+  ctx.touched.push(`${cmd.path}/lyric[${cmd.lyricIndex}]/text`);
+}
+
+/** Ghi `<root>`/`<bass>`: bậc, rồi dấu hoá (thêm/sửa/bỏ). Không đụng gì khác. */
+function writeBac(ctx: Ctx, container: Element, prefix: string, value: HarmonyRoot) {
+  const order = BAC_CHILD_ORDER(prefix);
+  const stepEl = child(container, `${prefix}-step`);
+  if (!stepEl)
+    throw new EditError("EDIT_HARMONY_MALFORMED", `Hợp âm thiếu <${prefix}-step> trong nguồn.`);
+  if (textOf(stepEl) !== value.step) patchLeafText(ctx, stepEl, value.step);
+  const alterEl = child(container, `${prefix}-alter`);
+  const alterCu = alterEl ? Number(textOf(alterEl) || "0") : 0;
+  if (alterCu === value.alter) return;
+  if (value.alter === 0 && alterEl) removeLeaf(ctx, alterEl);
+  else if (alterEl) patchLeafText(ctx, alterEl, String(value.alter));
+  else insertOrderedChild(ctx, container, order, `${prefix}-alter`, String(value.alter));
+}
+
+const bacHopLe = (r: HarmonyRoot) =>
+  STEPS.includes(r.step) && Number.isInteger(r.alter) && r.alter >= -2 && r.alter <= 2;
+
+function changeHarmony(ctx: Ctx, harmony: Element, cmd: ChangeHarmony) {
+  const { root, kind, bass } = cmd.value;
+  if (!bacHopLe(root) || (bass && !bacHopLe(bass)))
+    throw new EditError("EDIT_HARMONY_ROOT_INVALID", "Bậc của hợp âm không hợp lệ.");
+  if (!isHarmonyKind(kind))
+    throw new EditError(
+      "EDIT_HARMONY_KIND_UNSUPPORTED",
+      `Loại hợp âm “${kind}” chưa hỗ trợ — bản nhạc sẽ không hiện đúng ký hiệu.`
+    );
+  const rootEl = child(harmony, "root");
+  if (!rootEl)
+    throw new EditError(
+      "EDIT_HARMONY_NOT_ROOT_BASED",
+      "Hợp âm này ghi bằng bậc công năng (function/numeral) — chưa sửa được ở bước này."
+    );
+  writeBac(ctx, rootEl, "root", root);
+
+  const kindEl = child(harmony, "kind");
+  const kindCu = kindEl ? textOf(kindEl).trim() : null;
+  if (kindCu !== kind) {
+    if (kindEl) {
+      // Thuộc tính `text` là thứ bộ khắc VẼ RA. Giữ lại `text` cũ sau khi đổi loại
+      // là để bản nhạc hiện một đằng, nội dung một nẻo — đúng cái bẫy `<accidental>`
+      // ở 3B. Nên đổi loại thì bỏ `text`, để ký hiệu về đúng loại mới.
+      dropAttribute(ctx, kindEl, "text");
+      patchLeafText(ctx, kindEl, kind);
+    } else insertOrderedChild(ctx, harmony, HARMONY_CHILD_ORDER, "kind", kind);
+  }
+
+  const bassEl = child(harmony, "bass");
+  if (!bass && bassEl) removeLeaf(ctx, bassEl);
+  else if (bass && bassEl) writeBac(ctx, bassEl, "bass", bass);
+  else if (bass && !bassEl) {
+    // Thụt lề của khối mới lấy từ chính `<root-step>` — con của một khối cùng bậc.
+    const trong = ctx.located.indentOf(child(rootEl, "root-step")!);
+    const ngoai = ctx.located.indentOf(rootEl);
+    const eol = ctx.located.eol;
+    const dong = (t: string) => (trong === null ? t : `${eol}${trong}${t}`);
+    const markup =
+      trong === null || ngoai === null
+        ? `<bass><bass-step>${bass.step}</bass-step>${
+            bass.alter ? `<bass-alter>${bass.alter}</bass-alter>` : ""
+          }</bass>`
+        : `<bass>${dong(`<bass-step>${bass.step}</bass-step>`)}${
+            bass.alter ? dong(`<bass-alter>${bass.alter}</bass-alter>`) : ""
+          }${eol}${ngoai}</bass>`;
+    insertOrderedMarkup(ctx, harmony, HARMONY_CHILD_ORDER, "bass", markup);
+  }
+  if (ctx.patches.length) ctx.touched.push(`${cmd.path}/harmony`);
 }
 
 export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedCommand {
@@ -289,9 +438,18 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
   const target = resolveSourcePath(located.doc, cmd.path);
   if (!target)
     throw new EditError("EDIT_TARGET_NOT_FOUND", "Không tìm thấy nốt này trong bản nhạc.");
+  const ctx: Ctx = { located, doc: located.doc, patches: [], touched: [] };
+  if (cmd.type === "ChangeHarmony") {
+    if (target.localName !== "harmony")
+      throw new EditError(
+        "EDIT_TARGET_NOT_HARMONY",
+        "Phần tử được chọn không phải là ký hiệu hợp âm."
+      );
+    changeHarmony(ctx, target, cmd);
+    return ketThuc(xml, located, ctx);
+  }
   if (target.localName !== "note")
     throw new EditError("EDIT_TARGET_NOT_NOTE", "Phần tử được chọn không phải là nốt.");
-  const ctx: Ctx = { located, doc: located.doc, patches: [], touched: [] };
   const ngu = readNoteContext(located.doc, cmd.path);
   if (!ngu)
     throw new EditError("EDIT_CONTEXT_UNKNOWN", "Không đọc được ngữ cảnh của nốt này.");
@@ -320,6 +478,11 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
       throw new EditError("EDIT_UNKNOWN_COMMAND", `Lệnh lạ: ${JSON.stringify(never)}`);
     }
   }
+  return ketThuc(xml, located, ctx);
+}
+
+/** Vá chuỗi rồi ĐỐI CHIẾU SỔ KÉP. Mọi lệnh đều đi qua đúng cửa này. */
+function ketThuc(xml: string, located: LocatedXml, ctx: Ctx): AppliedCommand {
   if (!ctx.patches.length) return { xml, changed: false, touched: [] };
   const patched = applyPatches(xml, ctx.patches);
   // Sổ kép: chuỗi đã vá phải đọc ra đúng DOM đã sửa. Không khớp là không dùng.

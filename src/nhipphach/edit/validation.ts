@@ -1,5 +1,6 @@
 import { musicXMLToBeatMap } from "../../musicxml-beats/beatMap.ts";
 import { parseMusicXML } from "../../musicxml-beats/parser.ts";
+import { laKindMusicXml } from "./harmonyModel.ts";
 import { EditError, elementChildren, parseStrict } from "./xmlPatch.ts";
 import type { Document } from "@xmldom/xmldom";
 
@@ -92,8 +93,33 @@ export function structuralIssues(doc: Document): string[] {
         if (!elementChildren(note, "grace").length && !elementChildren(note, "duration").length)
           issues.push(`${where}: một nốt không có trường độ.`);
         for (const lyric of elementChildren(note, "lyric"))
-          if (!elementChildren(lyric, "text").length)
+          if (!elementChildren(lyric, "text").length && !elementChildren(lyric, "extend").length)
             issues.push(`${where}: một dòng lời không có chữ.`);
+      }
+      // Hợp âm: mỗi ký hiệu phải nói được nó là hợp âm gì, nếu không bản nhạc sẽ
+      // in ra một chỗ trống mà không ai biết vì sao.
+      for (const harmony of elementChildren(measure, "harmony")) {
+        const where = `Ô nhịp thứ ${mi + 1}, bè ${id ?? pi + 1}`;
+        const root = elementChildren(harmony, "root")[0];
+        const congNang =
+          elementChildren(harmony, "function")[0] ?? elementChildren(harmony, "numeral")[0];
+        if (!root && !congNang) issues.push(`${where}: một hợp âm không có bậc gốc.`);
+        if (root) {
+          const step = elementChildren(root, "root-step")[0]?.textContent?.trim() ?? "";
+          const alter = elementChildren(root, "root-alter")[0]?.textContent?.trim();
+          if (!/^[A-G]$/.test(step)) issues.push(`${where}: bậc gốc “${step}” không hợp lệ.`);
+          if (alter !== undefined && !/^-?\d+(\.\d+)?$/.test(alter))
+            issues.push(`${where}: dấu hoá của bậc gốc “${alter}” không hợp lệ.`);
+        }
+        const bass = elementChildren(harmony, "bass")[0];
+        if (bass) {
+          const step = elementChildren(bass, "bass-step")[0]?.textContent?.trim() ?? "";
+          if (!/^[A-G]$/.test(step)) issues.push(`${where}: bậc trầm “${step}” không hợp lệ.`);
+        }
+        const kind = elementChildren(harmony, "kind")[0]?.textContent?.trim();
+        if (kind === undefined) issues.push(`${where}: một hợp âm không ghi loại.`);
+        else if (!laKindMusicXml(kind))
+          issues.push(`${where}: loại hợp âm “${kind}” không có trong chuẩn MusicXML.`);
       }
     });
   });
