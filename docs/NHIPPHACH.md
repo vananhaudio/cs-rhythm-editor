@@ -321,6 +321,55 @@ Nút **Chọn nốt** chỉ có ở mức Nâng cao và khi có quyền `score.e
 
 `test:nhipphach-select` — round-trip `nguồn → SVG → resolve → nguồn` trên 12 fixture (nốt tròn, hợp âm C–E–G, dấu nối qua vạch, hoa mỹ, hai bè, hai khuông, guitar+TAB, lời+hợp âm, lấy đà, 6/8, 5/8, 7/8), mô tả panel, 1.000 lần resolve không khắc lại, và luật đọc mã nguồn (không Supabase/Storage/Verovio/ghi phiên bản, không toạ độ/nốt gần nhất, id không dính cao độ) mỗi luật tự thử ngược.
 
+## Bộ công cụ biên tập MusicXML (Giai đoạn Nội dung 3 — 3A)
+
+Chọn phần tử → chọn thao tác → **vá đúng nút XML nguồn** → xem trước nháp → Lưu → phiên bản mới. Không phải notation editor tổng quát: mỗi thao tác là một lệnh độc lập, trang chỉ chuyển lệnh.
+
+### Audit "dùng cái thế giới đã có" (13/09/2026)
+
+| Việc | Đã có sẵn | Kết luận |
+|---|---|---|
+| Đọc/ghi DOM MusicXML | `@xmldom/xmldom` 0.9 (đã dùng trong `sourceTags.ts`) — có `lineNumber/columnNumber` cho cả phần tử lẫn nút chữ | Dùng để **tìm nút và tính vị trí**; không dùng để ghi lại cả tài liệu (đo trên file thật 8.281 dòng: serialize lại đổi 2 dòng vô nghĩa — `<x></x>`→`<x/>`, dòng cuối) |
+| Tìm nốt | `SourceNote.path` của Nội dung 2 (`/part[i]/measure[j]/*[k]`) | Dùng nguyên; **không** tìm theo cao độ cũ |
+| Chẩn đoán nhịp | `musicXMLToBeatMap` → `measure.diagnostics` (OVERFULL/UNDERFULL/…) | Dùng nguyên làm tầng 3 của cổng kiểm tra |
+| Khắc thử | `createAnnotatedScoreRenderer().render()` (Verovio, cùng cache với xem trước) | Dùng nguyên làm tầng 4 |
+| Băm / tải lên / phiên bản | `ScoreLibrary.save` (SHA-256, Storage riêng tư, RPC `nhipphach_save_version`) | Dùng nguyên; lớp biên tập chỉ gọi sau khi cổng kiểm tra mở |
+| Vá đúng nút, giữ nguyên mọi byte khác | Không có thư viện nào trong repo/npm làm việc này cho MusicXML | **Tự viết** `xmlPatch.ts` (~140 dòng), có sổ kép tự kiểm |
+| MuseScore CLI | Không cài trên máy | Chưa dùng (chỉ làm oracle offline khi cần) |
+| music21 | Không cài | Chưa dùng |
+| XSD MusicXML | Không có trong repo | Chưa dùng; tầng cấu trúc kiểm những gì kiểm chắc được |
+
+### Kiến trúc (`src/nhipphach/edit/`)
+
+```
+commands.ts      MusicXmlEditCommand = ChangePitch | ChangeLyricText   (thêm công cụ = thêm nhánh + handler)
+xmlPatch.ts      parse chặt + locator → vị trí nút → cắt-dán từng mảnh trên CHUỖI GỐC
+applyCommand.ts  một lệnh → XML mới; "sổ kép": vá chuỗi và sửa DOM song song, đọc lại phải khớp, lệch là từ chối
+draftEngine.ts   nháp = gốc + ngăn xếp lệnh; hoàn tác = dựng lại từ gốc; làm lại = áp lại; huỷ = về gốc
+validation.ts    XML đọc được → cấu trúc → nhịp (chỉ lỗi MỚI so với gốc mới chặn) → khắc thử
+versionSave.ts   kiểm tra → ScoreLibrary.save(change_type = edit, change_note tự sinh, thầy sửa được)
+noteFields.ts    đọc ô cho panel từ đúng bản nháp đang hiện
+EditPanel.tsx    panel theo ngữ cảnh — không biết XML, chỉ phát lệnh
+```
+
+Trang `MusicXmlBeatsPage` chỉ giữ `nhap: DraftState | null`, khắc `nhap?.xml ?? source.xml`, và chuyển lệnh; luật kiến trúc cấm trang nhập `xmlPatch`/`applyCommand`/xmldom.
+
+### Bất biến diff XML
+
+Mỗi lệnh chỉ chạm đúng `<note>` đích: hunk diff nằm trong khoảng dòng của nốt (tối đa 3 dòng), tài liệu bỏ đúng nút đó phải giống hệt giữa gốc và nháp, mọi `SourceNote` khác bằng nhau từng trường. Giữ CRLF, giữ thụt lề, giữ nguyên thuộc tính của `<text>`, thoát `& < >` đúng chuẩn, Unicode tiếng Việt (kể cả NFD) nguyên văn. `ChangePitch` **không** đụng `<accidental>` — dấu hoá hiển thị là công cụ riêng (3B); `alter` và `<accidental>` không được coi là một thứ.
+
+Đã đo trên file thật 14 trang: một lệnh ≈ 70–80 ms, diff 1–2 dòng; dựng lại 10 lệnh ≈ 0,8 s; cổng bốn tầng (có khắc thử) ≈ 4 s ở Node — trên trang thì khắc thử trúng cache của xem trước.
+
+### Kiểm chứng
+
+`test:nhipphach-edit` (30) — hai lệnh mẫu, bất biến diff, hoàn tác/làm lại/huỷ đúng định nghĩa `rebuildDraft`, cổng bốn tầng, lưu chỉ khi cổng mở (thư viện giả đếm số lần gọi), xem trước bằng bộ khắc thật, file thật của thầy, và luật mã nguồn tự thử ngược (không tìm-thay chuỗi, không I/O trong lớp biên tập, không tìm nốt theo nội dung, trang không đụng XML, panel không màu hex/từ kỹ thuật). `test:nhipphach-edit-db` (3, cần Supabase local) — áp/hoàn tác/làm lại/huỷ không tạo object hay dòng nào; nháp hỏng không ghi gì; Lưu → v2 trỏ v1, loại `edit`, object v1 không đổi một byte, trigger bất biến vẫn chặn.
+
+Fixture `tests/nhipphach-edit/fixtures/edit-toolkit.musicxml`: lấy đà, dấu hoá, hợp âm, lời tiếng Việt (2 dòng lời, âm tiết ghép), hợp âm ký hiệu, dấu nối, luyến, chấm dôi, hai bè, TAB, 6/8, 5/8, 7/8, ô thiếu và ô thừa phách.
+
+### Chưa làm (3B–3F)
+
+Dấu hoá hiển thị / enharmonic · trường độ (tách duration/type/dot/time-modification) · syllabic/extend · hợp âm ký hiệu · TAB dây/phím · dấu nối (validator TIE_START_WITHOUT_STOP…) · gợi ý sửa ô thiếu/thừa phách · ẩn/hiện lớp hiển thị · sửa trên bài chưa có trong thư viện (hiện nút Lưu nói rõ phải lưu bài trước).
+
 ## Chạy test
 
 ```bash
@@ -330,7 +379,7 @@ npm run test:nhipphach-layout && npm run test:nhipphach-presets \
 
 `test:nhipphach-layout` là phép kiểm quan trọng nhất: nó dựng 12 bản nhạc (nốt tròn, lặng cả ô, đảo phách, chấm dôi, dấu nối, chùm ba, lấy đà, lời + hợp âm, 6/8, 5/8, 7/8, guitar + TAB) ở cả bốn mức và đối chiếu từng toạ độ.
 
-`test:nhipphach-cloud`, `test:nhipphach-history` và `test:nhipphach-library-db` cần Supabase local đang chạy và ba tài khoản `teacher-a@` / `teacher-b@` / `student-c@test.local`.
+`test:nhipphach-cloud`, `test:nhipphach-history`, `test:nhipphach-library-db` và `test:nhipphach-edit-db` cần Supabase local đang chạy và ba tài khoản `teacher-a@` / `teacher-b@` / `student-c@test.local`.
 
 Harness trình duyệt (cần `npm run dev`): `/tests/nhipphach-batch/browser.html?auto=1` — chạy 1/10/50 file với PDF thật, kiểm ZIP, A4 vector, trùng tên, file lỗi, nhịp lẻ và resume.
 

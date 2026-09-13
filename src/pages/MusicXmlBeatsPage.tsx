@@ -57,6 +57,19 @@ import {
 } from "../nhipphach/jobs";
 import type { JobRecord } from "../nhipphach/jobs";
 import { giuLuot, traLuot } from "../nhipphach/motLuot";
+import { EditPanel } from "../nhipphach/EditPanel";
+import {
+  applyToDraft,
+  createDraft,
+  isDirty,
+  redo as lamLaiNhap,
+  undo as hoanTacNhap,
+} from "../nhipphach/edit/draftEngine";
+import type { DraftState } from "../nhipphach/edit/draftEngine";
+import type { MusicXmlEditCommand } from "../nhipphach/edit/commands";
+import { readNoteFields } from "../nhipphach/edit/noteFields";
+import { saveDraftAsVersion } from "../nhipphach/edit/versionSave";
+import type { ValidationReport } from "../nhipphach/edit/validation";
 
 /**
  * Một trang SVG thật trong DOM (chế độ chọn nốt). Memo theo CHUỖI svg: chọn nốt
@@ -178,6 +191,15 @@ export default function MusicXmlBeatsPage({
     | null
   >(null);
   const prevBody = useRef<HTMLDivElement>(null);
+  // ── Bản nháp biên tập (Giai đoạn Nội dung 3) — chỉ trong bộ nhớ ──────────
+  // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
+  // trạng thái và chuyển lệnh; không có dòng nào ở đây đụng vào XML.
+  const [nhap, setNhap] = useState<DraftState | null>(null);
+  const [dangLuuNhap, setDangLuuNhap] = useState(false);
+  const [nhapNote, setNhapNote] = useState("");
+  const [kiemTra, setKiemTra] = useState<ValidationReport | null>(null);
+  /** Bản nhạc đang HIỆN: nháp nếu đang sửa, không thì bản nguồn. */
+  const xmlHienThi = nhap?.xml ?? source?.xml ?? null;
   // ── Thư viện bài hát ────────────────────────────────────────────────────
   const thuVien = useRef<ScoreLibrary | null>(null);
   const [coThuVien, setCoThuVien] = useState(false);
@@ -354,16 +376,16 @@ export default function MusicXmlBeatsPage({
   /** Thời điểm bắt đầu của từng nốt nguồn, lấy từ chính parser — để hiện "Phách". */
   const onsetTheoPath = useMemo(() => {
     const m = new Map<string, Parameters<typeof describeNote>[2]>();
-    if (!source) return m;
+    if (!xmlHienThi) return m;
     try {
-      for (const p of parseMusicXML(source.xml).parts)
+      for (const p of parseMusicXML(xmlHienThi).parts)
         for (const ms of p.measures)
           for (const ev of ms.events) m.set(ev.source.path, ev.onset);
     } catch {
       /* nguồn hỏng thì panel chỉ thiếu ô Phách */
     }
     return m;
-  }, [source]);
+  }, [xmlHienThi]);
 
   /**
    * Click trên bản nhạc → nốt nguồn, qua ID mà Verovio đã giữ nguyên. Không có
@@ -386,10 +408,90 @@ export default function MusicXmlBeatsPage({
       for (const el of Array.from(root.querySelectorAll(`[id="${notChon.note.svgId}"]`)))
         el.classList.add("np-note-selected");
   }, [chonNot, notChon, score]);
-  // Đổi bản nhạc là bỏ chọn.
+  // Đổi bản nhạc là bỏ chọn và bỏ nháp.
   useEffect(() => {
     setNotChon(null);
+    setNhap(null);
+    setKiemTra(null);
+    setNhapNote("");
   }, [source]);
+
+  /** Các ô của nốt đang chọn, đọc từ đúng bản đang hiện (nháp đã sửa thì thấy giá trị mới). */
+  const truongNot = useMemo(
+    () =>
+      notChon?.kind === "note" && xmlHienThi
+        ? readNoteFields(xmlHienThi, notChon.note.path)
+        : null,
+    [notChon, xmlHienThi]
+  );
+  /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
+  function apLenh(cmd: MusicXmlEditCommand) {
+    if (!source) return;
+    setKiemTra(null);
+    try {
+      setNhap(applyToDraft(nhap ?? createDraft(source.xml), cmd));
+      setNhapNote("");
+    } catch (e) {
+      setNhapNote(e instanceof Error ? e.message : "Chưa sửa được chỗ này.");
+    }
+  }
+  function boNhap() {
+    setNhap(null);
+    setKiemTra(null);
+    setNhapNote("");
+  }
+  /** Hỏi trước khi vứt nháp có thay đổi; trả về true nếu được phép đi tiếp. */
+  const duocBoNhap = () =>
+    !nhap || !isDirty(nhap) || window.confirm("Bỏ mọi thay đổi chưa lưu?");
+  const luuNhapBiChan: string | null =
+    !nhap || !isDirty(nhap)
+      ? "Chưa có thay đổi."
+      : !coThuVien || !choLuuThuVien
+        ? "Tài khoản này chưa có quyền lưu vào thư viện."
+        : !baiTrongKho
+          ? "Lưu bài vào thư viện trước, rồi thay đổi mới thành phiên bản mới được."
+          : !baiTrongKho.laHienHanh
+            ? "Đang xem bản cũ — mở bản hiện hành rồi mới sửa."
+            : null;
+  /** Lưu nháp = phiên bản mới. Kiểm tra bốn tầng trước; không qua thì không ghi gì. */
+  async function luuNhap(ghiChu: string) {
+    const lib = thuVien.current;
+    if (!lib || !nhap || !baiTrongKho || !source || dangLuuNhap || luuNhapBiChan) return;
+    setDangLuuNhap(true);
+    setNhapNote("");
+    try {
+      renderer.current ??= createAnnotatedScoreRenderer();
+      const r = await renderer.current;
+      const ketQua = await saveDraftAsVersion({
+        library: lib,
+        scoreId: baiTrongKho.scoreId,
+        sourceFilename: source.name,
+        original: nhap.original,
+        draft: nhap.xml,
+        changeNote: ghiChu,
+        pageCount: score?.pages.length ?? null,
+        render: (xml) => r.render(xml, settings),
+      });
+      setKiemTra(ketQua.report);
+      if (!ketQua.result) {
+        setNhapNote("Bản nháp chưa qua kiểm tra nên chưa lưu.");
+        return;
+      }
+      const daLuu = nhap.xml;
+      boNhap();
+      setSource({ xml: daLuu, name: source.name });
+      setBaiTrongKho({
+        scoreId: ketQua.result.scoreId,
+        versionNumber: ketQua.result.versionNumber,
+        laHienHanh: true,
+      });
+      setThuVienNote(`Đã lưu phiên bản v${ketQua.result.versionNumber}.`);
+    } catch (e) {
+      setNhapNote(e instanceof Error ? e.message : "Chưa lưu được thay đổi.");
+    } finally {
+      setDangLuuNhap(false);
+    }
+  }
 
   /** Mở bài đã có trong kho theo id, dùng khi phát hiện trùng nội dung. */
   async function moBaiDaCo(scoreId: string, title: string) {
@@ -645,7 +747,7 @@ export default function MusicXmlBeatsPage({
       return `Đã lưu preset “${preset.name}”.`;
     });
   useEffect(() => {
-    if (!source) return;
+    if (!source || !xmlHienThi) return;
     let cancelled = false;
     setBusy(true);
     setError("");
@@ -657,7 +759,8 @@ export default function MusicXmlBeatsPage({
         });
         const r = await renderer.current;
         if (cancelled) return;
-        const rendered = r.render(source.xml, settings);
+        // Xem trước bản nháp = khắc đúng bản nháp, cùng một bộ khắc, cùng cache.
+        const rendered = r.render(xmlHienThi, settings);
         if (!cancelled) {
           setScore(rendered);
           setBusy(false);
@@ -674,7 +777,7 @@ export default function MusicXmlBeatsPage({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [source, settings]);
+  }, [source, xmlHienThi, settings]);
   const update = (value: Partial<ScoreSettings>) => {
     setBusy(!!source);
     setSettings((s) => ({ ...s, ...value }));
@@ -925,7 +1028,8 @@ export default function MusicXmlBeatsPage({
               {choLuuThuVien && (
                 <button
                   className="np-btn np-btn-quiet"
-                  disabled={dangLuuBai}
+                  disabled={dangLuuBai || (nhap !== null && isDirty(nhap))}
+                  title={nhap && isDirty(nhap) ? "Đang có thay đổi chưa lưu — dùng nút Lưu thay đổi ở panel Chỉnh sửa." : undefined}
                   onClick={() => void luuVaoThuVien()}
                 >
                   {dangLuuBai ? "Đang lưu…" : "Lưu phiên bản mới"}
@@ -1869,6 +1973,8 @@ export default function MusicXmlBeatsPage({
                           className="np-zbtn np-zwide"
                           aria-pressed={chonNot}
                           onClick={() => {
+                            if (chonNot && !duocBoNhap()) return;
+                            if (chonNot) boNhap();
                             setChonNot((v) => !v);
                             setNotChon(null);
                           }}
@@ -1887,10 +1993,13 @@ export default function MusicXmlBeatsPage({
                   >
                     {notChon?.kind === "note" ? (
                       (() => {
+                        // Nháp đã khắc lại thì đọc nốt từ bản khắc MỚI (cùng id nguồn),
+                        // để ô "Cao độ" nói đúng giá trị đang hiện chứ không phải lúc click.
+                        const notHienTai = score!.noteIndex.get(notChon.note.svgId) ?? notChon.note;
                         const d = describeNote(
-                          notChon.note,
+                          notHienTai,
                           score!.beatMap,
-                          onsetTheoPath.get(notChon.note.path) ?? null
+                          onsetTheoPath.get(notHienTai.path) ?? null
                         );
                         return (
                           <>
@@ -1913,6 +2022,24 @@ export default function MusicXmlBeatsPage({
                       <span className="np-muted">Bấm vào một nốt trên bản nhạc để xem nó là nốt nào trong MusicXML.</span>
                     )}
                   </div>
+                )}
+                {choChonNot && chonNot && (
+                  <EditPanel
+                    draft={nhap}
+                    selected={notChon?.kind === "note" ? notChon.note : null}
+                    fields={truongNot}
+                    saving={dangLuuNhap}
+                    saveBlocked={luuNhapBiChan}
+                    report={kiemTra}
+                    note={nhapNote}
+                    onCommand={apLenh}
+                    onUndo={() => nhap && setNhap(hoanTacNhap(nhap))}
+                    onRedo={() => nhap && setNhap(lamLaiNhap(nhap))}
+                    onCancel={() => {
+                      if (duocBoNhap()) boNhap();
+                    }}
+                    onSave={(ghiChu) => void luuNhap(ghiChu)}
+                  />
                 )}
                 <div
                   ref={prevBody}

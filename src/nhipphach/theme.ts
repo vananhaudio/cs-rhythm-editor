@@ -172,6 +172,21 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-page g.np-note-selected use,.${NP_SCOPE} .np-page g.np-note-selected path,.${NP_SCOPE} .np-page g.np-note-selected text{fill:var(--indigo);stroke:var(--indigo);}
 .${NP_SCOPE} .np-note-panel{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
 .${NP_SCOPE} .np-note-panel strong{margin-right:4px;}
+/* Panel biên tập (Nội dung 3): cùng khung với panel chọn nốt, xếp theo hàng. */
+.${NP_SCOPE} .np-edit-panel{display:flex;flex-direction:column;gap:6px;padding:8px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
+.${NP_SCOPE} .np-edit-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;}
+.${NP_SCOPE} .np-edit-actions{display:flex;gap:6px;margin-left:auto;}
+.${NP_SCOPE} .np-edit-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
+.${NP_SCOPE} .np-edit-label{min-width:64px;color:var(--ink-soft);}
+.${NP_SCOPE} .np-edit-row select,.${NP_SCOPE} .np-edit-row input{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:inherit;}
+.${NP_SCOPE} .np-edit-row input{min-width:180px;flex:1 1 180px;}
+.${NP_SCOPE} .np-edit-save{padding-top:6px;border-top:1px dashed var(--line);}
+.${NP_SCOPE} .np-edit-dirty{color:var(--honey-ink);font-weight:600;}
+.${NP_SCOPE} .np-edit-ok{color:var(--online-ink);}
+.${NP_SCOPE} .np-edit-err{color:var(--honey-ink);}
+.${NP_SCOPE} .np-edit-report{margin:0;padding:0 0 0 4px;list-style:none;display:flex;flex-direction:column;gap:2px;}
+.${NP_SCOPE} .np-edit-report li[data-ok="no"]{color:var(--honey-ink);}
+.${NP_SCOPE} .np-edit-report li[data-ok="skip"]{color:var(--ink-faint);}
 /* Vừa khung: cao vừa đúng khung nhìn, bề ngang tự theo tỉ lệ trang. */
 .${NP_SCOPE} .np-fit-page .np-page{width:fit-content;max-width:100%;}
 .${NP_SCOPE} .np-fit-page .np-page img{width:auto;height:calc(78vh - 132px);max-width:100%;}
