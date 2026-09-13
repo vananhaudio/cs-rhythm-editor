@@ -110,6 +110,21 @@ export function rhythmIssues(xml: string): Map<string, string> {
   return out;
 }
 
+/** Những ô nhịp mà bản nháp MỚI làm hỏng — dùng cho cảnh báo trực tiếp lẫn cổng lưu. */
+export function newRhythmIssues(original: string, draft: string): string[] {
+  let cu: Map<string, string>;
+  try {
+    cu = rhythmIssues(original);
+  } catch {
+    cu = new Map();
+  }
+  try {
+    return [...rhythmIssues(draft)].filter(([k]) => !cu.has(k)).map(([, msg]) => msg);
+  } catch (e) {
+    return [e instanceof Error ? e.message : "Không đọc được nhịp."];
+  }
+}
+
 export async function validateDraft(
   original: string,
   draft: string,
@@ -152,20 +167,14 @@ export async function validateDraft(
   if (issues.length) return fail("structural", issues);
   pass("structural");
 
-  let cu: Map<string, string>;
-  try {
-    cu = rhythmIssues(original);
-  } catch {
-    cu = new Map();
-  }
+  const phatSinh = newRhythmIssues(original, draft);
+  if (phatSinh.length) return fail("rhythm", phatSinh);
   let moi: Map<string, string>;
   try {
     moi = rhythmIssues(draft);
-  } catch (e) {
-    return fail("rhythm", [e instanceof Error ? e.message : "Không đọc được nhịp."]);
+  } catch {
+    moi = new Map();
   }
-  const phatSinh = [...moi].filter(([k]) => !cu.has(k)).map(([, msg]) => msg);
-  if (phatSinh.length) return fail("rhythm", phatSinh);
   pass(
     "rhythm",
     [...moi].map(([, msg]) => `${msg} (đã có sẵn trong bản gốc)`)

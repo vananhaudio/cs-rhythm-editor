@@ -15,7 +15,8 @@ import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SupabaseScoreLibrary, BUCKET } from "../../src/nhipphach/libraryRepository.ts";
 import { sha256Hex } from "../../src/nhipphach/scoreHash.ts";
-import { applyToDraft, cancelDraft, createDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
+import { appliedCommands, applyToDraft, cancelDraft, createDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
+import { describeCommands } from "../../src/nhipphach/edit/commands.ts";
 import { saveDraftAsVersion } from "../../src/nhipphach/edit/versionSave.ts";
 import { createAnnotatedScoreRenderer } from "../../src/musicxml-beats/renderer/verovioAdapter.ts";
 
@@ -30,6 +31,7 @@ const RUN = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const FX = readFileSync(new URL("./fixtures/edit-toolkit.musicxml", import.meta.url), "utf8")
   .replace("<work-title>Bộ công cụ biên tập — fixture</work-title>", `<work-title>${DAU}${RUN}</work-title>`);
 const P22 = "/score-partwise/part[1]/measure[2]/*[2]";
+const P23 = "/score-partwise/part[1]/measure[2]/*[3]";
 
 let admin: SupabaseClient, thay: SupabaseClient, kho: SupabaseScoreLibrary;
 let renderer: Awaited<ReturnType<typeof createAnnotatedScoreRenderer>>;
@@ -107,10 +109,15 @@ test("Lưu → v2 trỏ về v1, loại 'edit', đúng nội dung nháp; object 
   const shaGoc = await sha256Hex(goc);
   let d = createDraft(FX);
   d = applyToDraft(d, { type: "ChangePitch", path: P22, pitch: { step: "F", alter: 1, octave: 4 } });
+  d = applyToDraft(d, { type: "RespellNote", path: P22, pitch: { step: "G", alter: -1, octave: 4 } });
+  // Đổi trường độ theo CẶP để ô nhịp vẫn đủ phách — nếu không, cổng nhịp chặn
+  // lưu (đúng như nó phải làm) và ta không kiểm được bước tạo phiên bản.
+  d = applyToDraft(d, { type: "ChangeDuration", path: P22, noteType: "eighth", dots: 0 });
+  d = applyToDraft(d, { type: "ChangeDuration", path: P23, noteType: "quarter", dots: 1 });
   d = applyToDraft(d, { type: "ChangeLyricText", path: P22, lyricNumber: "1", text: "Đường" });
   const out = await saveDraftAsVersion({
     library: kho, scoreId, sourceFilename: "fixture.musicxml", original: d.original, draft: d.xml,
-    changeNote: "Sửa cao độ 1 nốt · sửa lời 1 chỗ", pageCount: 1, render: (x) => renderer.render(x),
+    changeNote: describeCommands(appliedCommands(d)), pageCount: 1, render: (x) => renderer.render(x),
   });
   assert.equal(out.report.ok, true, JSON.stringify(out.report.stages));
   assert.equal(out.result?.versionNumber, 2);
@@ -122,7 +129,7 @@ test("Lưu → v2 trỏ về v1, loại 'edit', đúng nội dung nháp; object 
   assert.equal(v1.sha256, shaGoc);
   assert.equal(v2.parent_version_id, v1Id);
   assert.equal(v2.change_type, "edit");
-  assert.equal(v2.change_note, "Sửa cao độ 1 nốt · sửa lời 1 chỗ");
+  assert.equal(v2.change_note, "Sửa cao độ 1 nốt · đổi cách ghi 1 nốt · sửa trường độ 2 nốt · sửa lời 1 chỗ");
   assert.equal(v2.sha256, await sha256Hex(d.xml));
   assert.notEqual(v2.storage_path, v1.storage_path);
   // Đọc lại từ Storage: v1 vẫn là bản gốc, v2 đúng là nháp — cùng byte, cùng hash.

@@ -80,14 +80,19 @@ function withoutNode(xml: string, path: string) {
   return serialize(doc);
 }
 /** Bất biến diff: khác biệt nằm trọn trong <note> đích, phần còn lại giống hệt. */
-function assertScoped(original: string, draft: string, path: string, maxLines = 3) {
+function assertScoped(original: string, draft: string, path: string, maxLines = 4) {
   const h = hunk(original, draft);
   const n = noteLines(original, path);
   assert.ok(
     h.from >= n.from && h.to <= n.to,
     `diff dòng ${h.from}–${h.to} vượt ra ngoài nốt (dòng ${n.from}–${n.to}): ${JSON.stringify(h)}`
   );
-  assert.ok(Math.max(h.cu.length, h.moi.length) <= maxLines, `diff quá lớn: ${JSON.stringify(h)}`);
+  // Đếm những DÒNG THẬT SỰ khác nhau, không đếm khoảng cách giữa hai chỗ sửa:
+  // một lệnh có thể chạm hai dòng cách xa nhau trong cùng một nốt (ví dụ <alter>
+  // và <accidental>), và giữa chúng là các dòng y nguyên.
+  const doi =
+    h.cu.filter((l) => !h.moi.includes(l)).length + h.moi.filter((l) => !h.cu.includes(l)).length;
+  assert.ok(doi <= maxLines, `sửa quá nhiều dòng (${doi}): ${JSON.stringify(h)}`);
   assert.equal(withoutNode(draft, path), withoutNode(original, path), "phần ngoài nốt đã bị đổi");
 }
 
@@ -108,8 +113,10 @@ test("ChangePitch: F#4 → F4 bỏ đúng dòng <alter>, không để lại dòn
   assert.deepEqual(pitchOf(r.xml, P(2, 3)), { step: "F", alter: 0, octave: 4 });
   assertScoped(FX, r.xml, P(2, 3));
   assert.equal(FX.split("\n").length - r.xml.split("\n").length, 1);
-  // <accidental> hiển thị KHÔNG bị đụng: đó là công cụ Dấu hoá (3B), không phải cao độ.
-  assert.match(r.xml.slice(...noteSpan(r.xml, P(2, 3))), /<accidental>sharp<\/accidental>/);
+  // Dấu hoá hiển thị được quyết lại theo bộ khoá (Giai đoạn 3B): Sol trưởng vốn
+  // đã có F♯, nên F bình ở đây phải mang dấu bình — KHÔNG để lại dấu thăng cũ.
+  assert.match(r.xml.slice(...noteSpan(r.xml, P(2, 3))), /<accidental>natural<\/accidental>/);
+  assert.doesNotMatch(r.xml.slice(...noteSpan(r.xml, P(2, 3))), /<accidental>sharp<\/accidental>/);
 });
 const noteSpan = (xml: string, path: string): [number, number] => {
   const l = locate(xml);
@@ -405,10 +412,15 @@ test("lưu: nháp giống gốc thì từ chối; nháp hợp lệ → một l�
 
 // ── Đọc ô cho panel ───────────────────────────────────────────────────────────
 test("readNoteFields: nốt, lặng, hợp âm, âm tiết ghép, đường dẫn lạ", () => {
-  assert.deepEqual(readNoteFields(FX, P(2, 3)), {
-    kind: "note", pitch: { step: "F", alter: 1, octave: 4 },
-    lyrics: [{ number: "1", text: "xưa", compound: false }],
-  });
+  const f = readNoteFields(FX, P(2, 3))!;
+  assert.equal(f.kind, "note");
+  assert.deepEqual(f.pitch, { step: "F", alter: 1, octave: 4 });
+  assert.equal(f.accidental, "sharp");
+  assert.equal(f.noteType, "quarter");
+  assert.equal(f.dots, 0);
+  assert.equal(f.chord, "none");
+  assert.equal(f.duongTruongDo, null);
+  assert.deepEqual(f.lyrics, [{ number: "1", text: "xưa", compound: false }]);
   assert.equal(readNoteFields(FX, P(3, 7))!.kind, "rest");
   assert.equal(readNoteFields(FX, P(3, 7))!.pitch, null);
   assert.deepEqual(readNoteFields(FX, P(4, 6))!.lyrics, [{ number: "1", text: "đã xa", compound: true }]);
@@ -487,9 +499,21 @@ const KHONG_IO: Rule[] = [
   { what: "ghi bộ nhớ trình duyệt từ lớp biên tập", pattern: /localStorage|sessionStorage|indexedDB/, mutation: `localStorage.setItem("a", "b");` },
 ];
 test("kiến trúc: lớp biên tập không tìm-thay chuỗi, không I/O, không tìm nốt theo nội dung", () => {
-  for (const f of ["edit/commands.ts", "edit/xmlPatch.ts", "edit/applyCommand.ts", "edit/draftEngine.ts", "edit/noteFields.ts", "edit/validation.ts"])
+  for (const f of [
+    "edit/commands.ts", "edit/xmlPatch.ts", "edit/applyCommand.ts", "edit/draftEngine.ts",
+    "edit/noteFields.ts", "edit/validation.ts", "edit/accidentals.ts", "edit/pitchModel.ts",
+    "edit/durationModel.ts", "edit/noteContext.ts", "edit/noteWarnings.ts",
+  ])
     enforce(`nhipphach/${f}`, [KHONG_STRING_REPLACE, ...KHONG_IO]);
   enforce("nhipphach/edit/versionSave.ts", [KHONG_STRING_REPLACE, ...KHONG_IO.filter((r) => !/Supabase/.test(r.what))]);
+  // Luật nhạc lý phải nằm ở một chỗ: bảng bộ khoá và cách tính dấu chỉ ở accidentals.ts.
+  enforce("nhipphach/edit/applyCommand.ts", [
+    {
+      what: "tự tính luật dấu hoá thay vì hỏi accidentals.ts",
+      pattern: /fifths\s*(?:>|<|===)\s*\d|"sharp"|"flat"/,
+      mutation: `const dau = ngu.fifths > 0 ? "sharp" : "flat";`,
+    },
+  ]);
   enforce("nhipphach/edit/applyCommand.ts", [
     { what: "tìm nốt bằng duyệt toàn tài liệu thay vì đường dẫn", pattern: /getElementsByTagName|querySelector/, mutation: `doc.getElementsByTagName("pitch")[0];` },
     { what: "so cao độ cũ để chọn nốt", pattern: /pitch\.step\s*===\s*(?:cmd|old|cu)\b/, mutation: `if (pitch.step === cmd.step) target = note;` },

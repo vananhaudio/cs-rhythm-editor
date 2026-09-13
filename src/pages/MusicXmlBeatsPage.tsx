@@ -70,6 +70,8 @@ import type { MusicXmlEditCommand } from "../nhipphach/edit/commands";
 import { readNoteFields } from "../nhipphach/edit/noteFields";
 import { saveDraftAsVersion } from "../nhipphach/edit/versionSave";
 import type { ValidationReport } from "../nhipphach/edit/validation";
+import { newRhythmIssues } from "../nhipphach/edit/validation";
+import { newWarnings } from "../nhipphach/edit/noteWarnings";
 
 /**
  * Một trang SVG thật trong DOM (chế độ chọn nốt). Memo theo CHUỖI svg: chọn nốt
@@ -424,6 +426,19 @@ export default function MusicXmlBeatsPage({
         : null,
     [notChon, xmlHienThi]
   );
+  /**
+   * Hai lớp cảnh báo chạy ngay trên bản nháp, không đợi tới lúc lưu: nhịp hỏng
+   * (chặn lưu) và ký âm "nhìn một đằng vang một nẻo" (chỉ nói). Cả hai chỉ tính
+   * những chỗ MỚI so với bản gốc — lỗi vốn có của bài không phải việc của lần sửa.
+   */
+  const loiNhipNhap = useMemo(
+    () => (nhap && isDirty(nhap) ? newRhythmIssues(nhap.original, nhap.xml) : []),
+    [nhap]
+  );
+  const canhBaoNhap = useMemo(
+    () => (nhap && isDirty(nhap) ? newWarnings(nhap.original, nhap.xml) : []),
+    [nhap]
+  );
   /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
   function apLenh(cmd: MusicXmlEditCommand) {
     if (!source) return;
@@ -452,7 +467,9 @@ export default function MusicXmlBeatsPage({
           ? "Lưu bài vào thư viện trước, rồi thay đổi mới thành phiên bản mới được."
           : !baiTrongKho.laHienHanh
             ? "Đang xem bản cũ — mở bản hiện hành rồi mới sửa."
-            : null;
+            : loiNhipNhap.length
+              ? "Bản nháp đang làm hỏng nhịp — sửa xong mới lưu được."
+              : null;
   /** Lưu nháp = phiên bản mới. Kiểm tra bốn tầng trước; không qua thì không ghi gì. */
   async function luuNhap(ghiChu: string) {
     const lib = thuVien.current;
@@ -2030,6 +2047,8 @@ export default function MusicXmlBeatsPage({
                     fields={truongNot}
                     saving={dangLuuNhap}
                     saveBlocked={luuNhapBiChan}
+                    rhythmIssues={loiNhipNhap}
+                    warnings={canhBaoNhap}
                     report={kiemTra}
                     note={nhapNote}
                     onCommand={apLenh}

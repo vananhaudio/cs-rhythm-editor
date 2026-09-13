@@ -187,6 +187,8 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-edit-report{margin:0;padding:0 0 0 4px;list-style:none;display:flex;flex-direction:column;gap:2px;}
 .${NP_SCOPE} .np-edit-report li[data-ok="no"]{color:var(--honey-ink);}
 .${NP_SCOPE} .np-edit-report li[data-ok="skip"]{color:var(--ink-faint);}
+.${NP_SCOPE} .np-edit-report li[data-ok="warn"]{color:var(--honey-ink);}
+.${NP_SCOPE} .np-edit-canhbao{color:var(--honey-ink);}
 /* Vừa khung: cao vừa đúng khung nhìn, bề ngang tự theo tỉ lệ trang. */
 .${NP_SCOPE} .np-fit-page .np-page{width:fit-content;max-width:100%;}
 .${NP_SCOPE} .np-fit-page .np-page img{width:auto;height:calc(78vh - 132px);max-width:100%;}

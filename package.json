@@ -29,7 +29,7 @@
     "test:nhipphach-library": "tsc -p tests/nhipphach-library/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-library/library.test.ts",
     "test:nhipphach-library-db": "tsc -p tests/nhipphach-library/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-library/db.test.ts",
     "test:nhipphach-select": "tsc -p tests/nhipphach-select/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-select/select.test.ts",
-    "test:nhipphach-edit": "tsc -p tests/nhipphach-edit/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-edit/edit.test.ts",
+    "test:nhipphach-edit": "tsc -p tests/nhipphach-edit/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-edit/edit.test.ts tests/nhipphach-edit/note-editing.test.ts",
     "test:nhipphach-edit-db": "tsc -p tests/nhipphach-edit/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-edit/db.test.ts"
   },
   "dependencies": {

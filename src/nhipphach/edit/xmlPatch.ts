@@ -32,15 +32,22 @@ interface Located {
   columnNumber?: number;
 }
 
-export interface LeafRange {
+export interface ElementRange {
   /** Vị trí `<` mở thẻ. */
   start: number;
-  /** Ngay sau `>` đóng thẻ (hoặc sau `/>`). */
+  /** Ngay sau `>` của thẻ mở. */
+  openEnd: number;
+  /** Vị trí `<` của thẻ đóng; `null` khi thẻ tự đóng. */
+  closeStart: number | null;
+  /** Ngay sau `>` cuối cùng của phần tử. */
   end: number;
-  /** Nội dung chữ bên trong; `null` khi thẻ tự đóng. */
-  content: { start: number; end: number } | null;
   /** Thẻ mở nguyên văn, để giữ nguyên thuộc tính khi phải viết lại. */
   openTag: string;
+}
+
+export interface LeafRange extends ElementRange {
+  /** Nội dung chữ bên trong; `null` khi thẻ tự đóng. */
+  content: { start: number; end: number } | null;
 }
 
 export interface LocatedXml {
@@ -49,6 +56,8 @@ export interface LocatedXml {
   /** Kiểu xuống dòng của file — dòng chèn thêm phải giống hàng xóm, kể cả CRLF. */
   readonly eol: "\n" | "\r\n";
   offsetOf(node: Node): number;
+  /** Khoảng của một phần tử bất kỳ, kể cả phần tử có con. */
+  range(el: Element): ElementRange;
   leafRange(el: Element): LeafRange;
   /** Khoảng trắng đầu dòng trước phần tử, hoặc `null` nếu phần tử không đứng đầu dòng. */
   indentOf(el: Element): string | null;
@@ -100,6 +109,60 @@ export function locate(xml: string): LocatedXml {
     return lineStarts[lineNumber - 1] + columnNumber - 1;
   };
 
+  /**
+   * Quét từ `<` mở tới `>` đóng, đếm độ sâu và bỏ qua chú thích/CDATA/chỉ thị.
+   * Không dùng biểu thức tìm kiếm trên nội dung: vị trí luôn đi từ nút DOM.
+   */
+  const scan = (start: number): ElementRange => {
+    if (xml[start] !== "<")
+      throw new EditError("XML_NO_LOCATOR", "Vị trí phần tử không khớp nội dung file.");
+    const openEnd = ketThucThe(start);
+    const openTag = xml.slice(start, openEnd);
+    if (openTag.endsWith("/>"))
+      return { start, openEnd, closeStart: null, end: openEnd, openTag };
+    let depth = 1;
+    let i = openEnd;
+    while (i < xml.length) {
+      if (xml[i] !== "<") {
+        i++;
+        continue;
+      }
+      if (xml.startsWith("<!--", i)) {
+        const j = xml.indexOf("-->", i);
+        i = j < 0 ? xml.length : j + 3;
+      } else if (xml.startsWith("<![CDATA[", i)) {
+        const j = xml.indexOf("]]>", i);
+        i = j < 0 ? xml.length : j + 3;
+      } else if (xml.startsWith("<?", i)) {
+        const j = xml.indexOf("?>", i);
+        i = j < 0 ? xml.length : j + 2;
+      } else if (xml.startsWith("</", i)) {
+        const end = ketThucThe(i);
+        if (--depth === 0) return { start, openEnd, closeStart: i, end, openTag };
+        i = end;
+      } else {
+        const end = ketThucThe(i);
+        if (!xml.slice(i, end).endsWith("/>")) depth++;
+        i = end;
+      }
+    }
+    throw new EditError("XML_NOT_WELL_FORMED", "Thẻ không đóng.");
+  };
+  /** Vị trí ngay sau `>` của thẻ bắt đầu ở `start`, bỏ qua `>` nằm trong thuộc tính. */
+  function ketThucThe(start: number): number {
+    let quote: string | null = null;
+    for (let i = start + 1; i < xml.length; i++) {
+      const c = xml[i];
+      if (quote) {
+        if (c === quote) quote = null;
+      } else if (c === '"' || c === "'") quote = c;
+      else if (c === ">") return i + 1;
+    }
+    throw new EditError("XML_NOT_WELL_FORMED", "Thẻ mở không đóng.");
+  }
+
+  const range = (el: Element): ElementRange => scan(offsetOf(el));
+
   const leafRange = (el: Element): LeafRange => {
     for (const child of Array.from(el.childNodes))
       if (child.nodeType !== 3)
@@ -107,28 +170,11 @@ export function locate(xml: string): LocatedXml {
           "XML_LEAF_EXPECTED",
           `<${el.tagName}> không phải nút lá đơn giản.`
         );
-    const start = offsetOf(el);
-    if (xml[start] !== "<")
-      throw new EditError("XML_NO_LOCATOR", `Vị trí <${el.tagName}> không khớp nội dung file.`);
-    let i = start + 1;
-    let quote: string | null = null;
-    for (; i < xml.length; i++) {
-      const c = xml[i];
-      if (quote) {
-        if (c === quote) quote = null;
-      } else if (c === '"' || c === "'") quote = c;
-      else if (c === ">") break;
-    }
-    if (i >= xml.length) throw new EditError("XML_NOT_WELL_FORMED", "Thẻ mở không đóng.");
-    const openTag = xml.slice(start, i + 1);
-    if (xml[i - 1] === "/") return { start, end: i + 1, content: null, openTag };
-    const contentStart = i + 1;
-    const contentEnd = xml.indexOf("</", contentStart);
-    if (contentEnd < 0) throw new EditError("XML_NOT_WELL_FORMED", "Thiếu thẻ đóng.");
-    const close = xml.indexOf(">", contentEnd);
-    if (close < 0 || xml.slice(contentEnd + 2, close).trim() !== el.tagName)
-      throw new EditError("XML_NO_LOCATOR", `Thẻ đóng của <${el.tagName}> không ở chỗ mong đợi.`);
-    return { start, end: close + 1, content: { start: contentStart, end: contentEnd }, openTag };
+    const r = range(el);
+    return {
+      ...r,
+      content: r.closeStart === null ? null : { start: r.openEnd, end: r.closeStart },
+    };
   };
 
   const indentOf = (el: Element): string | null => {
@@ -139,12 +185,18 @@ export function locate(xml: string): LocatedXml {
     return xml.slice(i, start);
   };
 
-  return { xml, doc, eol: xml.includes("\r\n") ? "\r\n" : "\n", offsetOf, leafRange, indentOf };
+  return { xml, doc, eol: xml.includes("\r\n") ? "\r\n" : "\n", offsetOf, range, leafRange, indentOf };
 }
 
 /** Cắt-dán các mảnh; mảnh không được chồng lên nhau. Áp từ cuối lên để vị trí không trôi. */
 export function applyPatches(xml: string, patches: readonly TextPatch[]): string {
-  const sorted = [...patches].sort((a, b) => b.start - a.start);
+  // Áp từ cuối lên để vị trí không trôi. Hai mảnh CHÈN vào cùng một chỗ thì mảnh
+  // nào được yêu cầu trước phải nằm trước trong kết quả — nên ở cùng vị trí, áp
+  // mảnh sau trước. (Thiếu luật này thì `<type>` và `<dot>` đảo chỗ nhau.)
+  const sorted = patches
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => b.p.start - a.p.start || b.i - a.i)
+    .map((x) => x.p);
   let out = xml;
   let limit = Infinity;
   for (const p of sorted) {

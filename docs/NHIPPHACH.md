@@ -334,9 +334,10 @@ Chọn phần tử → chọn thao tác → **vá đúng nút XML nguồn** → 
 | Chẩn đoán nhịp | `musicXMLToBeatMap` → `measure.diagnostics` (OVERFULL/UNDERFULL/…) | Dùng nguyên làm tầng 3 của cổng kiểm tra |
 | Khắc thử | `createAnnotatedScoreRenderer().render()` (Verovio, cùng cache với xem trước) | Dùng nguyên làm tầng 4 |
 | Băm / tải lên / phiên bản | `ScoreLibrary.save` (SHA-256, Storage riêng tư, RPC `nhipphach_save_version`) | Dùng nguyên; lớp biên tập chỉ gọi sau khi cổng kiểm tra mở |
-| Vá đúng nút, giữ nguyên mọi byte khác | Không có thư viện nào trong repo/npm làm việc này cho MusicXML | **Tự viết** `xmlPatch.ts` (~140 dòng), có sổ kép tự kiểm |
+| Vá đúng nút, giữ nguyên mọi byte khác | Không có thư viện nào trong repo/npm làm việc này cho MusicXML | **Tự viết** `xmlPatch.ts` (~190 dòng), có sổ kép tự kiểm |
+| Luật dấu hoá (bộ khoá + dấu trong ô nhịp) | Verovio KHÔNG làm đúng chuẩn chỗ này (xem 3B); music21 có nhưng không đưa vào bundle | **Tự viết** `accidentals.ts`, đối chiếu bằng music21 offline |
 | MuseScore CLI | Không cài trên máy | Chưa dùng (chỉ làm oracle offline khi cần) |
-| music21 | Không cài | Chưa dùng |
+| music21 | Không cài sẵn; cài được vào venv riêng, ~30 MB | Dùng **ngoài luồng** làm oracle cho test 3B; không vào bundle |
 | XSD MusicXML | Không có trong repo | Chưa dùng; tầng cấu trúc kiểm những gì kiểm chắc được |
 
 ### Kiến trúc (`src/nhipphach/edit/`)
@@ -362,13 +363,52 @@ Mỗi lệnh chỉ chạm đúng `<note>` đích: hunk diff nằm trong khoảng
 
 ### Kiểm chứng
 
-`test:nhipphach-edit` (30) — hai lệnh mẫu, bất biến diff, hoàn tác/làm lại/huỷ đúng định nghĩa `rebuildDraft`, cổng bốn tầng, lưu chỉ khi cổng mở (thư viện giả đếm số lần gọi), xem trước bằng bộ khắc thật, file thật của thầy, và luật mã nguồn tự thử ngược (không tìm-thay chuỗi, không I/O trong lớp biên tập, không tìm nốt theo nội dung, trang không đụng XML, panel không màu hex/từ kỹ thuật). `test:nhipphach-edit-db` (3, cần Supabase local) — áp/hoàn tác/làm lại/huỷ không tạo object hay dòng nào; nháp hỏng không ghi gì; Lưu → v2 trỏ v1, loại `edit`, object v1 không đổi một byte, trigger bất biến vẫn chặn.
+`test:nhipphach-edit` (52, gồm cả 3B) — hai lệnh mẫu, bất biến diff, hoàn tác/làm lại/huỷ đúng định nghĩa `rebuildDraft`, cổng bốn tầng, lưu chỉ khi cổng mở (thư viện giả đếm số lần gọi), xem trước bằng bộ khắc thật, file thật của thầy, và luật mã nguồn tự thử ngược (không tìm-thay chuỗi, không I/O trong lớp biên tập, không tìm nốt theo nội dung, trang không đụng XML, panel không màu hex/từ kỹ thuật). `test:nhipphach-edit-db` (3, cần Supabase local) — áp/hoàn tác/làm lại/huỷ không tạo object hay dòng nào; nháp hỏng không ghi gì; Lưu → v2 trỏ v1, loại `edit`, object v1 không đổi một byte, trigger bất biến vẫn chặn.
 
 Fixture `tests/nhipphach-edit/fixtures/edit-toolkit.musicxml`: lấy đà, dấu hoá, hợp âm, lời tiếng Việt (2 dòng lời, âm tiết ghép), hợp âm ký hiệu, dấu nối, luyến, chấm dôi, hai bè, TAB, 6/8, 5/8, 7/8, ô thiếu và ô thừa phách.
 
-### Chưa làm (3B–3F)
+## Sửa nốt trọn vẹn (Giai đoạn Nội dung 3B)
 
-Dấu hoá hiển thị / enharmonic · trường độ (tách duration/type/dot/time-modification) · syllabic/extend · hợp âm ký hiệu · TAB dây/phím · dấu nối (validator TIE_START_WITHOUT_STOP…) · gợi ý sửa ô thiếu/thừa phách · ẩn/hiện lớp hiển thị · sửa trên bài chưa có trong thư viện (hiện nút Lưu nói rõ phải lưu bài trước).
+Sau 3B, sửa một nốt phải cho ra MusicXML **hợp lệ** và ký âm **nhìn đúng** — không chỉ đúng tiếng.
+
+### Ba thứ MusicXML cố ý để riêng
+
+```
+cao độ VANG LÊN   = <step> + <alter> + <octave>     (MEI @accid.ges)
+CÁCH GHI          = chọn bậc nào để viết            (G♯ hay A♭ — cùng tiếng, khác mặt chữ)
+DẤU HOÁ HIỂN THỊ  = <accidental>                     (MEI @accid — thứ người đọc nhìn thấy)
+```
+
+Vì thế có ba lệnh riêng: `ChangePitch` (đổi tiếng), `RespellNote` (giữ tiếng, đổi mặt chữ — **không phải** dịch giọng, có phép kiểm chặn nếu tiếng đổi), `ChangeDuration`.
+
+**Luật dấu hoá tự động** (`accidentals.ts`): vẽ dấu khi và chỉ khi tiếng của nốt khác với điều người đọc chờ đợi — tức bộ khoá của **đúng ô nhịp đó**, cộng các dấu **đã viết** trước đó trong **cùng ô nhịp, cùng khuông, cùng quãng tám**. Mọi lệnh sửa cao độ đều quyết lại `<accidental>`: để nguyên dấu cũ sau khi đổi `<alter>` chính là cách tạo ra bản nhạc nhìn một đằng vang một nẻo. Thầy vẫn chọn tay được: **Tự động · Hiện rõ** (dấu nhắc) **· Ẩn**; ba lựa chọn này không bao giờ tạo được dấu sai tiếng vì ký hiệu luôn sinh từ `alter`.
+
+> **Đã đo trên bộ khắc:** khi `<accidental>` vắng mặt, Verovio vẫn tự vẽ dấu theo `<alter>` và **không** xét bộ khoá (file thật thì không lộ ra, vì các chỗ ấy đều đã có dấu viết sẵn trong ô). Nên "Ẩn" chỉ có tác dụng trong **file** — music21 và các phần mềm khác đọc đúng — còn bản xem trước vẫn hiện dấu. Sự thật này được khoá bằng test để đổi là biết.
+
+### Trường độ
+
+`<duration>`, `<type>`, `<dot>` luôn được ghi lại **cùng nhau**, tính theo `divisions` của chính bản nhạc (file thật của thầy: 12). Hình nốt nào chia không hết `divisions` thì nói thẳng `Bản nhạc này chưa chia đủ nhỏ…`, **không làm tròn**. Dấu chùm (`<beam>`) bị bỏ khi hình nốt không còn chùm được. Chưa cho sửa: nốt trong **hợp âm** (phải cùng trường độ), nốt trong **chùm nghịch phách** (`time-modification`), **lặng cả ô nhịp** — mỗi trường hợp panel nói rõ lý do, và **cao độ thì vẫn sửa được**.
+
+### Hai lớp cảnh báo, chạy ngay trên bản nháp
+
+| Loại | Ví dụ | Hậu quả |
+|---|---|---|
+| Nhịp (`newRhythmIssues`) | “Ô nhịp thứ 1: thừa phách.” | **Chặn lưu**; xem trước vẫn xem được |
+| Ký âm (`noteWarnings`) | thế bấm TAB không còn khớp cao độ · nốt sau trong ô bị đọc khác tiếng thật | Chỉ báo, không chặn |
+
+Cả hai chỉ tính những chỗ **MỚI** so với bản gốc — lỗi vốn có của bài không phải việc của lần sửa này (cùng nguyên tắc với tầng nhịp ở 3A). Và **không tự sửa hộ**: đổi cao độ không tự tìm thế bấm mới, không tự sửa cả chuỗi dấu nối, không tự thêm dấu cho nốt khác.
+
+### Oracle độc lập
+
+`tests/nhipphach-edit/oracle/read_score.py` đọc lại file bằng **music21** — một thư viện hoàn toàn khác — và đối chiếu cao độ, `accidental.displayStatus` (dấu nào *phải* hiện) và trường độ. Bật bằng `NHIPPHACH_MUSIC21=<python có music21> npm run test:nhipphach-edit`; máy không có thì test tự bỏ qua. **MuseScore CLI không có trên máy** và chưa dùng (cài là thêm một app GUI ~700 MB); **không có XSD MusicXML** trong repo. music21/MuseScore chỉ là trợ lý ngoài luồng — sản phẩm vẫn chỉ dựa trên MusicXML + Verovio.
+
+### Kiểm chứng
+
+`test:nhipphach-edit` (52) gồm 23 phép kiểm riêng cho 3B. Fixture `fixtures/note-editing.musicxml` (Đô/Sol/Fa trưởng · thăng, giáng, bình · enharmonic · hợp âm · dấu nối · chấm dôi · hai giá trị `divisions` (4 và 12) · hai bè · TAB có cách lên dây · lời · chùm ba · nốt hoa mỹ · 6/8, 5/8, 7/8) — và fixture ấy **sạch**: không một lỗi nhịp hay ký âm sẵn có, nên mọi cảnh báo trong test đều là do chính lệnh sửa gây ra.
+
+### Chưa làm (3C–3F)
+
+Lời đầy đủ (syllabic/extend) · hợp âm ký hiệu · TAB dây/phím · sửa cả chuỗi dấu nối · luyến · gợi ý sửa ô thiếu/thừa phách · ẩn/hiện lớp hiển thị · dịch giọng cả bài · sửa trên bài chưa có trong thư viện (nút Lưu nói rõ phải lưu bài trước).
 
 ## Chạy test
 
