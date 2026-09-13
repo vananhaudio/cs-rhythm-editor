@@ -394,7 +394,10 @@ export default function MusicXmlBeatsPage({
    * toạ độ nào ở đây; toạ độ chỉ để vẽ. Không khắc lại, không ghi gì.
    */
   function onClickBanNhac(e: React.MouseEvent<HTMLDivElement>) {
-    if (!chonNot || !score) return;
+    // Cổng quyền `choChonNot` lặp lại ở đây có chủ ý: nút bấm có thể bị ẩn đi mà
+    // trạng thái cũ vẫn còn, hoặc người ta gọi thẳng bằng DOM. Mọi cửa vào của
+    // biên tập đều phải tự hỏi lại quyền, không tin vào việc "nút không hiện".
+    if (!choChonNot || !chonNot || !score) return;
     const r = resolveNoteElement(e.target as unknown as Parameters<typeof resolveNoteElement>[0], score.noteIndex);
     if (r.kind === "note") setNotChon({ kind: "note", note: r.note });
     else if (r.kind === "unresolved") setNotChon({ kind: "unresolved", svgId: r.svgId });
@@ -441,7 +444,7 @@ export default function MusicXmlBeatsPage({
   );
   /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
   function apLenh(cmd: MusicXmlEditCommand) {
-    if (!source) return;
+    if (!choChonNot || !source) return;
     setKiemTra(null);
     try {
       setNhap(applyToDraft(nhap ?? createDraft(source.xml), cmd));
@@ -473,7 +476,7 @@ export default function MusicXmlBeatsPage({
   /** Lưu nháp = phiên bản mới. Kiểm tra bốn tầng trước; không qua thì không ghi gì. */
   async function luuNhap(ghiChu: string) {
     const lib = thuVien.current;
-    if (!lib || !nhap || !baiTrongKho || !source || dangLuuNhap || luuNhapBiChan) return;
+    if (!choChonNot || !lib || !nhap || !baiTrongKho || !source || dangLuuNhap || luuNhapBiChan) return;
     setDangLuuNhap(true);
     setNhapNote("");
     try {
@@ -2062,7 +2065,7 @@ export default function MusicXmlBeatsPage({
                 )}
                 <div
                   ref={prevBody}
-                  onClick={onClickBanNhac}
+                  onClick={choChonNot ? onClickBanNhac : undefined}
                   className={`np-prev-body${
                     xem.che === "khung" ? " np-fit-page" : ""
                   }${chonNot ? " np-select-mode" : ""}`}

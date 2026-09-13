@@ -519,6 +519,47 @@ test("kiến trúc: lớp biên tập không tìm-thay chuỗi, không I/O, khô
     { what: "so cao độ cũ để chọn nốt", pattern: /pitch\.step\s*===\s*(?:cmd|old|cu)\b/, mutation: `if (pitch.step === cmd.step) target = note;` },
   ]);
 });
+/**
+ * Cổng quyền của editor. Học viên không có `score.edit` thì KHÔNG được thấy bất
+ * cứ thứ gì của biên tập — và điều đó phải đúng vì mã nguồn không có đường nào
+ * khác, chứ không phải vì hôm nay bấm thử thấy ổn.
+ */
+test("kiến trúc: mọi thứ của biên tập đều nằm sau đúng một cổng quyền score.edit", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Cổng duy nhất: mức Nâng cao VÀ quyền score.edit do máy chủ cấp.
+  assert.match(
+    page,
+    /const\s+choChonNot\s*=\s*nangCao\s*&&\s*can\(caps,\s*"score\.edit"\)/,
+    "cổng quyền phải là nangCao && can(caps, \"score.edit\")"
+  );
+  // Mọi chỗ mở ra thứ gì của biên tập đều phải đứng sau cổng ấy.
+  const canhCong = (text: string) => {
+    // Mỗi cửa vào của biên tập: chỗ VẼ ra, và chỗ XỬ LÝ khi bị gọi thẳng.
+    const moc = ['<EditPanel', 'aria-pressed={chonNot}', 'np-note-panel', 'function onClickBanNhac', 'function apLenh', 'onClick={choChonNot ? onClickBanNhac : undefined}'];
+    const hong: string[] = [];
+    for (const m of moc) {
+      let i = text.indexOf(m);
+      if (i < 0) hong.push(`${m}: không tìm thấy`);
+      while (i >= 0) {
+        // Cổng phải nằm ngay trước chỗ đó (chỗ vẽ) hoặc ngay trong đó (chỗ xử lý).
+        const quanh = text.slice(Math.max(0, i - 300), i + 300);
+        if (!quanh.includes("choChonNot")) hong.push(m);
+        i = text.indexOf(m, i + 1);
+      }
+    }
+    return hong;
+  };
+  assert.deepEqual(canhCong(page), [], "có chỗ biên tập không nằm sau cổng quyền");
+  // Thử ngược: thêm một panel không có cổng thì luật phải bắt được.
+  assert.notDeepEqual(
+    canhCong(page + "\n{true && <EditPanel draft={null} />}\n"),
+    [],
+    "luật cổng quyền không bắt được đột biến của chính nó"
+  );
+  // Và quyền ấy phải là quyền chỉ dành cho mức Nâng cao, khai báo ở một chỗ.
+  assert.match(stripComments(src("nhipphach/capabilities.ts")), /"score\.edit"/);
+});
+
 test("kiến trúc: trang không đụng XML; panel không biết XML; lưu phải kiểm tra trước", () => {
   enforce("pages/MusicXmlBeatsPage.tsx", [
     { what: "trang nhập bộ vá XML hay xmldom", pattern: /from ["'][^"']*(?:xmlPatch|applyCommand|@xmldom)/, mutation: `import { applyCommand } from "../nhipphach/edit/applyCommand";` },
