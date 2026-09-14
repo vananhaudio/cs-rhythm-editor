@@ -12,9 +12,13 @@ export const SOLO01 = {
   sessionsPerStage: 8,
   months: 6,
   weekdayLabel: 'Thứ Năm',
+  weekday: 4,                     // thứ Năm (0=CN … 6=T7)
   startTime: '19:00',
-  durationMinutes: 90,
+  durationMinutes: 90,            // 19:00 → 20:30
+  breaksAfter: [8, 16],           // nghỉ 2 tuần sau buổi 8 và 16 (không nghỉ sau buổi 24)
   timezone: 'Asia/Ho_Chi_Minh',
+  // Ngày khai giảng dự kiến — chỉ dùng cho seed & dev fixture; landing page ĐỌC TỪ DB.
+  proposedStartDate: '2026-09-17',
 }
 
 // Tiến trình mỗi buổi học
@@ -94,3 +98,10 @@ export const SOLO01_METHOD = [
 
 // Cách ghi bản dựng — kỹ năng "bàn giấy"
 export const SOLO01_NOTATION = ['Lời bài hát + hợp âm', 'Lời + tên nốt', 'TAB', 'Sheet nhạc', 'Sheet + TAB', 'Cách ghi chú riêng mà bản thân đọc lại được']
+
+// Tiêu đề ngắn của buổi thứ n (1..24) — dùng cho seed class_sessions.title
+export const solo01LessonTitle = (n: number): string => {
+  const st = SOLO01_STAGES.find(s => s.no === Math.ceil(n / 8))
+  if (!st) return `Buổi ${n}`
+  return st.lessons[(n - 1) % 8].title.replace(/\.$/, '')
+}
