@@ -1882,7 +1882,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
           </button>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 16, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Tuner — Lên dây</span>
         </div>
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 12px calc(24px + env(safe-area-inset-bottom))', boxSizing: 'border-box' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 12px calc(24px + env(safe-area-inset-bottom))', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
           <GuitarTuner embedded onMeaningfulUse={markDirectToolMeaningfulUse} />
         </div>
       </div>

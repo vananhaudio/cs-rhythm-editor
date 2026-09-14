@@ -300,8 +300,8 @@ const COL = {
   green: '#22C55E', greenSoft: '#4ADE80', amber: '#FB923C', zoneOff: '#2A4C39',
 };
 
-function Gauge({ cents, note, octave, active, isInTune, stale }: {
-  cents: number | null; note: string; octave: string | null; active: boolean; isInTune: boolean; stale?: boolean;
+function Gauge({ cents, note, octave, active, isInTune, stale, maxW = GA_W }: {
+  cents: number | null; note: string; octave: string | null; active: boolean; isInTune: boolean; stale?: boolean; maxW?: number;
 }) {
   const hasCents = cents !== null;
   const stateColor = !active ? COL.dim : isInTune ? COL.green : hasCents ? COL.amber : COL.mute;
@@ -310,7 +310,7 @@ function Gauge({ cents, note, octave, active, isInTune, stale }: {
   const zone = arc(-THRESHOLD, THRESHOLD, GA_R);
 
   return (
-    <svg width="100%" viewBox={`0 0 ${GA_W} ${GA_H}`} style={{ display: 'block', maxWidth: GA_W, margin: '0 auto' }}>
+    <svg width="100%" viewBox={`0 0 ${GA_W} ${GA_H}`} style={{ display: 'block', maxWidth: maxW, margin: '0 auto' }}>
       {/* vành nền */}
       <path d={arc(-50, 50, GA_R)} stroke={COL.track} strokeWidth={3} fill="none" strokeLinecap="round" />
       {/* vùng "chuẩn" ở giữa */}
@@ -347,6 +347,19 @@ function Gauge({ cents, note, octave, active, isInTune, stale }: {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// Trên laptop, một cột 420px đứng giữa màn rộng trông như "app nhét trong app".
+// Từ 900px trở lên thì bày hai cột: đồng hồ một bên, phần điều khiển một bên.
+const WIDE_AT = 900;
+function useWideScreen() {
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.innerWidth >= WIDE_AT);
+  useEffect(() => {
+    const onResize = () => setWide(window.innerWidth >= WIDE_AT);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return wide;
+}
+
 export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { embedded?: boolean; onMeaningfulUse?: () => void }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [autoMode, setAutoMode]           = useState(true);   // người mới chỉ cần gảy, máy tự biết dây
@@ -359,6 +372,7 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
   const [sampling, setSampling]           = useState(false);  // đang phát nốt mẫu qua loa
   const [live, setLive]                   = useState(false);  // false = tiếng đã tắt, kim đang GIỮ kết quả lần gảy trước
 
+  const wide = useWideScreen();
   const { pitch, roomNoisy, isActive, error, startListening } = usePitchDetection();
   const selectedString = STRINGS[selectedIndex];
   const meaningfulUseRef = useRef(false);
@@ -513,168 +527,193 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
     border: `1px solid ${T.primaryBd}`, background: T.primarySoft, color: T.primary, ...extra,
   });
 
+  // ── Các mảng giao diện, lắp theo bố cục dọc (điện thoại) hoặc hai cột (laptop) ──
+
+  const modeToggle = (
+    <div style={{ display: 'flex', background: T.bg, borderRadius: 12, padding: 4, gap: 4 }}>
+      {([[true, 'Tự động (dễ nhất)'], [false, 'Chọn từng dây']] as const).map(([v, lbl]) => {
+        const on = autoMode === v;
+        return (
+          <button key={String(v)} onClick={() => setAutoMode(v)}
+            style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 13.5, fontWeight: 700, transition: 'all .18s',
+              background: on ? T.card : 'transparent', color: on ? T.primary : T.sub,
+              boxShadow: on ? '0 1px 2px rgba(0,0,0,0.08)' : 'none' }}>
+            {lbl}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const progressBlock = (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: allDone ? T.green : T.sub }}>
+          {allDone ? 'Cả 6 dây đã chuẩn' : `Đã chuẩn ${doneCount}/6 dây`}
+        </span>
+        {doneCount > 0 && (
+          <button onClick={restart}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: T.faint, padding: '2px 4px' }}>
+            <IconRefresh size={14} /> Lên lại từ đầu
+          </button>
+        )}
+      </div>
+      <div style={{ height: 5, borderRadius: 4, background: T.bg, overflow: 'hidden' }}>
+        <div style={{ width: `${(doneCount / STRINGS.length) * 100}%`, height: '100%', background: allDone ? T.green : T.primary, transition: 'width .3s' }} />
+      </div>
+    </div>
+  );
+
+  const stringGrid = (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
+      {STRINGS.map((s, i) => {
+        const isSel = !autoMode && i === selectedIndex;
+        const isDet = isActive && detectedString?.number === s.number;
+        const hl = isSel || isDet;
+        const ok = !!done[s.number];
+        return (
+          <button key={s.number}
+            onClick={() => { setAutoMode(false); setSelectedIndex(i); }}
+            style={{ position: 'relative', padding: wide ? '12px 2px' : '9px 2px', borderRadius: 11, cursor: 'pointer',
+              border: `1.5px solid ${hl ? s.color : ok ? T.greenBd : T.border}`,
+              background: hl ? s.color + '1e' : ok ? T.greenBg : T.panel,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'all .15s' }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: hl ? s.color : ok ? T.green : T.sub }}>{s.number}</span>
+            <span style={{ fontSize: 8.5, fontWeight: 700, color: hl ? s.color : ok ? T.green : T.faint, whiteSpace: 'nowrap' }}>{s.vn}</span>
+            {ok && (
+              <span style={{ position: 'absolute', top: -6, right: -4, width: 16, height: 16, borderRadius: 8,
+                background: T.green, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.18)' }}>
+                <IconCheck size={11} color="#fff" sw={3} />
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const gaugeCard = (
+    <div style={{ background: T.gaugeBg, borderRadius: 18, padding: wide ? '22px 14px 16px' : '16px 10px 12px', border: `1px solid ${isInTune ? '#22C55E' : 'transparent'}`, boxShadow: '0 6px 18px rgba(49,46,129,0.28)', transition: 'border-color .25s' }}>
+      <Gauge cents={isActive ? cents : null} note={noteName} octave={noteOct} active={isActive} isInTune={isInTune} stale={holding} maxW={wide ? 340 : GA_W} />
+      <div style={{ textAlign: 'center', fontSize: 11.5, color: holding ? '#C7D2FE' : '#8B8BC0', marginTop: 2, transition: 'color .25s' }}>
+        {holding ? 'Kết quả lần gảy vừa rồi — gảy lại dây để kiểm tra' : 'Kim lệch trái = dây chùng · lệch phải = dây căng'}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, padding: '0 12px' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, opacity: holding ? 0.65 : 1, color: displayFreq && isActive ? '#C7D2FE' : '#6B6BA0', fontVariantNumeric: 'tabular-nums' }}>
+          {displayFreq && isActive ? `${displayFreq.toFixed(1)} Hz` : '— Hz'}
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', opacity: holding ? 0.65 : 1,
+          color: isInTune ? '#4ADE80' : cents !== null && isActive ? '#FB923C' : '#6B6BA0' }}>
+          {cents !== null && isActive ? `${Math.round(cents) > 0 ? '+' : ''}${Math.round(cents) === 0 ? 0 : Math.round(cents)} ¢` : '— ¢'}
+        </span>
+      </div>
+    </div>
+  );
+
+  const feedbackCard = (allDone && tuneStatus === 'waiting' && !sampling) ? null : (() => {
+    const off = isActive && !sampling && (tuneStatus === 'tooLow' || tuneStatus === 'tooHigh' || tuneStatus === 'wrongString');
+    const bg = isInTune ? T.greenBg : off ? T.amberBg : sampling ? T.primarySoft : T.panel;
+    const bd = isInTune ? T.greenBd : off ? T.amberBd : sampling ? T.primaryBd : T.border;
+    return (
+      <div style={{ borderRadius: 14, padding: '13px 16px', backgroundColor: bg, border: `1px solid ${bd}`, minHeight: 62, display: 'flex', alignItems: 'center', gap: 11, transition: 'all .25s' }}>
+        {fbView.icon && <span style={{ display: 'flex', flexShrink: 0 }}>{fbView.icon}</span>}
+        <div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: fbView.fg, letterSpacing: 0.2 }}>{fbView.text}</div>
+          {fbView.sub && <div style={{ fontSize: 12.5, color: T.sub, marginTop: 3, lineHeight: 1.45 }}>{fbView.sub}</div>}
+        </div>
+      </div>
+    );
+  })();
+
+  const doneBanner = allDone ? (
+    <div style={{ borderRadius: 14, padding: '14px 16px', background: T.greenBg, border: `1px solid ${T.greenBd}`, textAlign: 'center' }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>Xong! Đàn đã lên dây chuẩn</div>
+      <div style={{ fontSize: 12.5, color: T.sub, marginTop: 3 }}>Gảy thử một hợp âm xem đã êm tai chưa nhé.</div>
+    </div>
+  ) : null;
+
+  const actionRow = (
+    <div style={{ display: 'grid', gridTemplateColumns: autoMode || allDone ? '1fr' : '1fr 1fr', gap: 8 }}>
+      <button onClick={playSample} disabled={sampling}
+        style={btn({ opacity: sampling ? 0.6 : 1, cursor: sampling ? 'default' : 'pointer' })}>
+        <IconSpeaker size={17} /> {autoMode || allDone ? `Nghe mẫu dây ${sampleString.vn}` : 'Nghe mẫu'}
+      </button>
+      {!autoMode && !allDone && (
+        <button onClick={goNextString} style={btn()}>
+          Dây tiếp theo <IconArrowRight size={17} />
+        </button>
+      )}
+    </div>
+  );
+
+  const errorBox = error ? (
+    <div style={{ backgroundColor: '#FEF2F2', borderRadius: 12, padding: '13px 16px', border: '1px solid #FECACA' }}>
+      <div style={{ fontSize: 13.5, color: '#B91C1C', lineHeight: 1.5, marginBottom: 10 }}>{error}</div>
+      <button onClick={(e) => { e.stopPropagation(); startListening(); }}
+        style={btn({ background: '#fff', border: '1px solid #FECACA', color: '#B91C1C' })}>
+        <IconMic size={16} /> Cho phép &amp; nghe lại
+      </button>
+    </div>
+  ) : (
+    <div style={{ fontSize: 11.5, color: roomNoisy && isActive ? T.amber : T.faint, textAlign: 'center', lineHeight: 1.5 }}>
+      {roomNoisy && isActive
+        ? 'Chỗ này hơi ồn — đưa đàn lại gần điện thoại và gảy chắc tay hơn nhé.'
+        : 'Mẹo: để đàn gần điện thoại, gảy nhẹ MỘT dây rồi vặn khoá thật chậm.'}
+    </div>
+  );
+
+  const col: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 12 };
+
   return (
     <div
       onClick={() => { if (!isActive) startListening(); }}
       style={{
-      width: '100%', maxWidth: 420, margin: '0 auto',
+      width: '100%', maxWidth: wide ? 820 : 420, margin: wide ? 'auto' : '0 auto',   // laptop: nằm giữa màn, không dán lên đỉnh
       backgroundColor: T.card, color: T.ink,
       fontFamily: "'Inter', system-ui, sans-serif",
       borderRadius: 22, overflow: 'hidden',
-      border: `1px solid ${T.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.05)',
+      border: `1px solid ${T.border}`,
+      boxShadow: embedded ? '0 1px 3px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.05)',
     }}>
-      {/* Header — thương hiệu Tune Lab */}
-      {!embedded ? (
+      {/* Header — chỉ khi mở thẳng /tuner; trong app đã có thanh tiêu đề riêng nên không lặp lại */}
+      {!embedded && (
         <div style={{ padding: '20px 20px 18px', textAlign: 'center', background: T.headerBg }}>
           <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 46, height: 46, borderRadius: 12, marginBottom: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.22)' }} />
           <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -0.4 }}>Lên dây đàn</div>
           <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.8)', marginTop: 3 }}>Tune Lab · Chuẩn EADGBE tiêu chuẩn</div>
         </div>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 0 0' }}>
-          <img src="/tune-lab.png" alt="Tune Lab" style={{ width: 26, height: 26, borderRadius: 7 }} />
-          <span style={{ fontSize: 15, fontWeight: 800, color: T.primary, letterSpacing: 0.2 }}>Tune Lab</span>
-        </div>
       )}
 
-      <div style={{ padding: embedded ? '12px 18px 22px' : '16px 18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-        {/* Auto / Manual toggle */}
-        <div style={{ display: 'flex', background: T.bg, borderRadius: 12, padding: 4, gap: 4 }}>
-          {([[true, 'Tự động (dễ nhất)'], [false, 'Chọn từng dây']] as const).map(([v, lbl]) => {
-            const on = autoMode === v;
-            return (
-              <button key={String(v)} onClick={() => setAutoMode(v)}
-                style={{ flex: 1, padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  fontSize: 13.5, fontWeight: 700, transition: 'all .18s',
-                  background: on ? T.card : 'transparent', color: on ? T.primary : T.sub,
-                  boxShadow: on ? '0 1px 2px rgba(0,0,0,0.08)' : 'none' }}>
-                {lbl}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tiến trình 6 dây */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: allDone ? T.green : T.sub }}>
-              {allDone ? 'Cả 6 dây đã chuẩn' : `Đã chuẩn ${doneCount}/6 dây`}
-            </span>
-            {doneCount > 0 && (
-              <button onClick={restart}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: T.faint, padding: '2px 4px' }}>
-                <IconRefresh size={14} /> Lên lại từ đầu
-              </button>
-            )}
+      {wide ? (
+        // Laptop: đồng hồ bên trái, mọi thứ cần bấm bên phải — một màn hình liền mạch
+        <div style={{ padding: embedded ? '18px 20px 22px' : '20px 22px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+          <div style={col}>
+            {gaugeCard}
+            {feedbackCard}
           </div>
-          <div style={{ height: 5, borderRadius: 4, background: T.bg, overflow: 'hidden' }}>
-            <div style={{ width: `${(doneCount / STRINGS.length) * 100}%`, height: '100%', background: allDone ? T.green : T.primary, transition: 'width .3s' }} />
+          <div style={col}>
+            {modeToggle}
+            {progressBlock}
+            {stringGrid}
+            {doneBanner}
+            {actionRow}
+            {errorBox}
           </div>
         </div>
-
-        {/* String selector */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>
-          {STRINGS.map((s, i) => {
-            const isSel = !autoMode && i === selectedIndex;
-            const isDet = isActive && detectedString?.number === s.number;
-            const hl = isSel || isDet;
-            const ok = !!done[s.number];
-            return (
-              <button key={s.number}
-                onClick={() => { setAutoMode(false); setSelectedIndex(i); }}
-                style={{ position: 'relative', padding: '9px 2px', borderRadius: 11, cursor: 'pointer',
-                  border: `1.5px solid ${hl ? s.color : ok ? T.greenBd : T.border}`,
-                  background: hl ? s.color + '1e' : ok ? T.greenBg : T.panel,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'all .15s' }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: hl ? s.color : ok ? T.green : T.sub }}>{s.number}</span>
-                <span style={{ fontSize: 8.5, fontWeight: 700, color: hl ? s.color : ok ? T.green : T.faint, whiteSpace: 'nowrap' }}>{s.vn}</span>
-                {ok && (
-                  <span style={{ position: 'absolute', top: -6, right: -4, width: 16, height: 16, borderRadius: 8,
-                    background: T.green, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.18)' }}>
-                    <IconCheck size={11} color="#fff" sw={3} />
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      ) : (
+        <div style={{ padding: embedded ? '12px 18px 22px' : '16px 18px 22px', ...col }}>
+          {modeToggle}
+          {progressBlock}
+          {stringGrid}
+          {gaugeCard}
+          {feedbackCard}
+          {doneBanner}
+          {actionRow}
+          {errorBox}
         </div>
-
-        {/* Gauge — mặt đồng hồ nền tối (nốt trắng nổi bật) */}
-        <div style={{ background: T.gaugeBg, borderRadius: 18, padding: '16px 10px 12px', border: `1px solid ${isInTune ? '#22C55E' : 'transparent'}`, boxShadow: '0 6px 18px rgba(49,46,129,0.28)', transition: 'border-color .25s' }}>
-          <Gauge cents={isActive ? cents : null} note={noteName} octave={noteOct} active={isActive} isInTune={isInTune} stale={holding} />
-          <div style={{ textAlign: 'center', fontSize: 11.5, color: holding ? '#C7D2FE' : '#8B8BC0', marginTop: 2, transition: 'color .25s' }}>
-            {holding ? 'Kết quả lần gảy vừa rồi — gảy lại dây để kiểm tra' : 'Kim lệch trái = dây chùng · lệch phải = dây căng'}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, padding: '0 12px' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, opacity: holding ? 0.65 : 1, color: displayFreq && isActive ? '#C7D2FE' : '#6B6BA0', fontVariantNumeric: 'tabular-nums' }}>
-              {displayFreq && isActive ? `${displayFreq.toFixed(1)} Hz` : '— Hz'}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', opacity: holding ? 0.65 : 1,
-              color: isInTune ? '#4ADE80' : cents !== null && isActive ? '#FB923C' : '#6B6BA0' }}>
-              {cents !== null && isActive ? `${Math.round(cents) > 0 ? '+' : ''}${Math.round(cents) === 0 ? 0 : Math.round(cents)} ¢` : '— ¢'}
-            </span>
-          </div>
-        </div>
-
-        {/* Feedback — nền đổi theo trạng thái (xong cả 6 dây thì nhường chỗ cho lời chúc) */}
-        {!(allDone && tuneStatus === 'waiting' && !sampling) && (() => {
-          const off = isActive && !sampling && (tuneStatus === 'tooLow' || tuneStatus === 'tooHigh' || tuneStatus === 'wrongString');
-          const bg = isInTune ? T.greenBg : off ? T.amberBg : sampling ? T.primarySoft : T.panel;
-          const bd = isInTune ? T.greenBd : off ? T.amberBd : sampling ? T.primaryBd : T.border;
-          return (
-            <div style={{ borderRadius: 14, padding: '13px 16px', backgroundColor: bg, border: `1px solid ${bd}`, minHeight: 62, display: 'flex', alignItems: 'center', gap: 11, transition: 'all .25s' }}>
-              {fbView.icon && <span style={{ display: 'flex', flexShrink: 0 }}>{fbView.icon}</span>}
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: fbView.fg, letterSpacing: 0.2 }}>{fbView.text}</div>
-                {fbView.sub && <div style={{ fontSize: 12.5, color: T.sub, marginTop: 3, lineHeight: 1.45 }}>{fbView.sub}</div>}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Xong cả 6 dây */}
-        {allDone && (
-          <div style={{ borderRadius: 14, padding: '14px 16px', background: T.greenBg, border: `1px solid ${T.greenBd}`, textAlign: 'center' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>Xong! Đàn đã lên dây chuẩn</div>
-            <div style={{ fontSize: 12.5, color: T.sub, marginTop: 3 }}>Gảy thử một hợp âm xem đã êm tai chưa nhé.</div>
-          </div>
-        )}
-
-        {/* Hàng nút: nghe mẫu + dây tiếp theo */}
-        <div style={{ display: 'grid', gridTemplateColumns: autoMode || allDone ? '1fr' : '1fr 1fr', gap: 8 }}>
-          <button onClick={playSample} disabled={sampling}
-            style={btn({ opacity: sampling ? 0.6 : 1, cursor: sampling ? 'default' : 'pointer' })}>
-            <IconSpeaker size={17} /> {autoMode || allDone ? `Nghe mẫu dây ${sampleString.vn}` : 'Nghe mẫu'}
-          </button>
-          {!autoMode && !allDone && (
-            <button onClick={goNextString} style={btn()}>
-              Dây tiếp theo <IconArrowRight size={17} />
-            </button>
-          )}
-        </div>
-
-        {/* Error + bật lại mic */}
-        {error && (
-          <div style={{ backgroundColor: '#FEF2F2', borderRadius: 12, padding: '13px 16px', border: '1px solid #FECACA' }}>
-            <div style={{ fontSize: 13.5, color: '#B91C1C', lineHeight: 1.5, marginBottom: 10 }}>{error}</div>
-            <button onClick={(e) => { e.stopPropagation(); startListening(); }}
-              style={btn({ background: '#fff', border: '1px solid #FECACA', color: '#B91C1C' })}>
-              <IconMic size={16} /> Cho phép &amp; nghe lại
-            </button>
-          </div>
-        )}
-
-        {!error && (
-          <div style={{ fontSize: 11.5, color: roomNoisy && isActive ? T.amber : T.faint, textAlign: 'center', lineHeight: 1.5 }}>
-            {roomNoisy && isActive
-              ? 'Chỗ này hơi ồn — đưa đàn lại gần điện thoại và gảy chắc tay hơn nhé.'
-              : 'Mẹo: để đàn gần điện thoại, gảy nhẹ MỘT dây rồi vặn khoá thật chậm.'}
-          </div>
-        )}
-      </div>
-
+      )}
     </div>
   );
 }
