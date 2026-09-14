@@ -66,6 +66,7 @@ export default function NewsFeedAdmin() {
       type: editing.type, kicker: editing.kicker ?? '', title: editing.title.trim(),
       summary: editing.summary ?? '', icon: editing.icon ?? '', tone: editing.tone ?? '',
       thumbnail_url: editing.thumbnail_url || null, content_url: editing.content_url?.trim() || null,
+      content_data: editing.content_data ?? {},
       open_mode: editing.open_mode, published: editing.published ?? true,
       published_at: editing.published_at ? new Date(editing.published_at).toISOString() : new Date().toISOString(),
       expires_at: editing.expires_at ? new Date(editing.expires_at).toISOString() : null,
@@ -169,6 +170,16 @@ export default function NewsFeedAdmin() {
               <label style={labelStyle}>URL nội dung (link bài viết / video / ảnh / PDF; hoặc route trong app nếu chọn Native)</label>
               <input style={inputStyle} placeholder="https://..." value={editing.content_url ?? ''} onChange={e => setEditing(v => v ? { ...v, content_url: e.target.value } : v)} />
             </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={labelStyle}>Nội dung chữ (không cần URL — app tự mở trang đọc trong app)</label>
+              <textarea rows={6} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                placeholder={'Gõ thẳng nội dung thông báo / bài viết ở đây.\n\nCách nhau 1 dòng trống để sang đoạn mới.'}
+                value={typeof editing.content_data?.body === 'string' ? editing.content_data.body : ''}
+                onChange={e => setEditing(v => v ? { ...v, content_data: { ...(v.content_data ?? {}), body: e.target.value } } : v)} />
+              <div style={{ fontSize: 11.5, color: C.text3, marginTop: 4 }}>
+                Có cả URL và nội dung chữ thì URL được ưu tiên. Chỉ có nội dung chữ thì để "Cách mở = Trong app".
+              </div>
+            </div>
             <div>
               <label style={labelStyle}>Cách mở</label>
               <select style={inputStyle} value={editing.open_mode ?? 'in_app'} onChange={e => setEditing(v => v ? { ...v, open_mode: e.target.value as Row['open_mode'] } : v)}>
@@ -251,7 +262,7 @@ export default function NewsFeedAdmin() {
                   <div style={{ fontSize: 14, fontWeight: 700, color: C.text1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
                   <div style={{ fontSize: 12, color: C.text3 }}>
                     {m.label} · {r.open_mode === 'in_app' ? 'trong app' : r.open_mode === 'native' ? 'native' : 'ngoài'}
-                    {!r.published && ' · ĐANG ẨN'}{expired && ' · HẾT HẠN'}{scheduled && ` · hẹn ${new Date(r.published_at).toLocaleString('vi-VN')}`}
+                    {!r.published && ' · ĐANG ẨN'}{expired && ' · HẾT HẠN'}{!r.content_url && !(typeof r.content_data?.body === 'string' && r.content_data.body.trim()) && r.open_mode !== 'native' && ' · CHƯA CÓ NỘI DUNG ĐỂ MỞ'}{scheduled && ` · hẹn ${new Date(r.published_at).toLocaleString('vi-VN')}`}
                   </div>
                 </div>
                 <button onClick={() => move(i, -1)} title="Lên" style={{ border: `1px solid ${C.border}`, background: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer' }}>↑</button>

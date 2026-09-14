@@ -5,6 +5,7 @@ import { useLearningAccess } from './useLearningAccess'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import ChordDiagramIcon from './ChordDiagramIcon'
+import { HomeFeedSection } from './HomeFeed'
 
 const D = {
   bg: '#F4F4F5', surface: '#FFFFFF',
@@ -256,6 +257,12 @@ export default function StudentPortalV2({ student, onLogout }: Props) {
               {classRank && <div style={{ fontSize: 12, color: D.text3, marginTop: 4 }}>#{classRank.rank} / {classRank.total} học sinh</div>}
             </div>
           </div>
+
+          {/* BẢN TIN HÔM NAY — cùng feed server-driven với mobile (src/HomeFeed.tsx) */}
+          <HomeFeedSection
+            palette={{ surface: D.surface, surface2: D.bg, t1: D.text1, t2: D.text2, t3: D.text3, p1: D.accent, shadow: D.shadow }}
+            style={{ margin: '0 0 16px' }}
+          />
 
           {/* 3 columns */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
