@@ -6,7 +6,7 @@
 // Chạy:  npx tsx scripts/seed-solo01.ts
 // Yêu cầu: SUPABASE_ACCESS_TOKEN (hoặc tự đọc Keychain "Supabase CLI").
 import { execSync } from 'node:child_process'
-import { generateSessions, realEndDate, realStartDate } from '../src/journey/sessions'
+import { fmtDMY, generateSessions, realEndDate, realStartDate } from '../src/journey/sessions'
 import { SOLO01, solo01LessonTitle } from '../src/data/solo01Program'
 
 const PROJECT = 'wojmdilyflffvdtpovmq'
@@ -52,7 +52,7 @@ async function main() {
   let cid: string | null = clsRow?.id ?? null
   const common = `
     code = '${SOLO01.classCode}', name = ${sq(SOLO01.name)},
-    schedule = 'Thứ 5 · 19h00', start_text = ${sq(realStartDate(sessions)!)},
+    schedule = 'Thứ 5 · 19h00', start_text = ${sq(fmtDMY(realStartDate(sessions)!))},
     duration = '24 buổi · 90 phút/buổi · khoảng 6 tháng',
     start_date = ${sq(realStartDate(sessions)!)}, weekday = ${SOLO01.weekday},
     start_time = ${sq(SOLO01.startTime)}, duration_minutes = ${SOLO01.durationMinutes},
