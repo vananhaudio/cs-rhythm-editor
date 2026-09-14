@@ -644,6 +644,30 @@ test("kiến trúc: mọi cửa vào bàn phím vẫn nằm sau cổng quyền s
   assert.doesNotMatch(caps, /score\.(keyboard|caret|toolbar)/);
 });
 
+/**
+ * Regression: nạp bản nhạc KHÁC trong lúc đang chọn một nốt từng làm sập trang.
+ *
+ * `readFile` đặt `score = null` ngay, còn `notChon` tới effect sau mới xoá — có
+ * đúng một lượt vẽ mà cái này null cái kia còn. Panel "Đang chọn" hồi đó dùng
+ * `score!` nên lượt ấy ném `Cannot read properties of null (reading 'noteIndex')`
+ * và cả trang rơi vào màn báo lỗi. Bắt được trên production ngày 14/09/2026;
+ * lỗi có từ `ef419ee` (Nội dung 3A), không phải do 4A.
+ */
+test("kiến trúc: panel 'Đang chọn' không được dựa vào `score!`", () => {
+  const page = src("pages/MusicXmlBeatsPage.tsx");
+  assert.doesNotMatch(page, /score!\./, "còn chỗ khẳng định `score!` — nạp file khác là sập");
+  // Và panel phải có `score` ngay trong điều kiện hiện, không chỉ `chonNot`.
+  const i = page.indexOf('className="np-note-panel"');
+  assert.ok(i > 0);
+  assert.match(
+    page.slice(Math.max(0, i - 260), i),
+    /choChonNot && chonNot && score &&/,
+    "panel phải tắt khi chưa có bản khắc"
+  );
+  // Thử ngược: luật phải bắt được chính đột biến của nó.
+  assert.match(page + "\nconst x = score!.noteIndex;\n", /score!\./);
+});
+
 test("kiến trúc: bộ khắc không hề biết tới tầng tương tác", () => {
   for (const f of ["musicxml-beats/renderer/verovioAdapter.ts", "musicxml-beats/sourceTags.ts"]) {
     const text = stripComments(src(f));

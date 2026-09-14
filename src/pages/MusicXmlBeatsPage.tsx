@@ -2162,7 +2162,11 @@ export default function MusicXmlBeatsPage({
                     </div>
                   )}
                 </div>
-                {choChonNot && chonNot && (
+                {/* `score` phải nằm trong điều kiện, không chỉ `chonNot`: nạp bản nhạc
+                    khác đặt `score = null` NGAY, còn `notChon` thì tới effect sau mới
+                    xoá — có đúng một lượt vẽ mà cái này null cái kia còn. Trước đây
+                    panel dùng `score!` nên lượt ấy làm sập cả trang. */}
+                {choChonNot && chonNot && score && (
                   <div
                     className="np-note-panel"
                     role="status"
@@ -2172,10 +2176,10 @@ export default function MusicXmlBeatsPage({
                       (() => {
                         // Nháp đã khắc lại thì đọc nốt từ bản khắc MỚI (cùng id nguồn),
                         // để ô "Cao độ" nói đúng giá trị đang hiện chứ không phải lúc click.
-                        const notHienTai = score!.noteIndex.get(notChon.note.svgId) ?? notChon.note;
+                        const notHienTai = score.noteIndex.get(notChon.note.svgId) ?? notChon.note;
                         const d = describeNote(
                           notHienTai,
-                          score!.beatMap,
+                          score.beatMap,
                           onsetTheoPath.get(notHienTai.path) ?? null
                         );
                         return (
@@ -2196,7 +2200,7 @@ export default function MusicXmlBeatsPage({
                         // Như với nốt: nháp đã khắc lại thì đọc từ bản khắc MỚI
                         // (cùng id nguồn), để ô "Chữ" nói đúng thứ đang hiện.
                         const l =
-                          score!.lyricIndex.get(notChon.lyric.svgId) ?? notChon.lyric;
+                          score.lyricIndex.get(notChon.lyric.svgId) ?? notChon.lyric;
                         return (
                           <>
                             <strong>Chữ hát đang chọn</strong>
@@ -2210,7 +2214,7 @@ export default function MusicXmlBeatsPage({
                     ) : notChon?.kind === "harmony" ? (
                       (() => {
                         const h =
-                          score!.harmonyIndex.get(notChon.harmony.svgId) ?? notChon.harmony;
+                          score.harmonyIndex.get(notChon.harmony.svgId) ?? notChon.harmony;
                         return (
                           <>
                             <strong>Hợp âm đang chọn</strong>
