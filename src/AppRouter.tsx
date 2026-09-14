@@ -52,6 +52,7 @@ import MusicPlayer from './piano/MusicPlayer'
 import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
 import Hanhtrinh2027Page from './Hanhtrinh2027Page'
+import Solo01Page from './Solo01Page'
 /** Đường dẫn của công cụ Nhịp Phách. Phần tử ĐẦU là URL chính thức. */
 export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beats']
 const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
@@ -184,6 +185,11 @@ function AppRouterContent() {
   // Landing chính thức + lịch dự kiến đọc từ class_schedule/class_sessions/class_off_days.
   if (path === '/hanhtrinh2027' || path.startsWith('/hanhtrinh2027')) {
     return <Hanhtrinh2027Page />
+  }
+
+  // ── Route /solo01 — SOLO GUITAR CĂN BẢN (SOLO-01), landing công khai ──
+  if (path === '/solo01' || path.startsWith('/solo01')) {
+    return <Solo01Page />
   }
 
   // ── Domain class.vananhaudio.com ──
