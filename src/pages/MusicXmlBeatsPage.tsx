@@ -61,6 +61,8 @@ import { EditPanel } from "../nhipphach/EditPanel";
 import type { EditSelection } from "../nhipphach/EditPanel";
 import {
   applyToDraft,
+  canRedo as coTheLamLai,
+  canUndo as coTheHoanTac,
   createDraft,
   isDirty,
   redo as lamLaiNhap,
@@ -70,6 +72,12 @@ import type { DraftState } from "../nhipphach/edit/draftEngine";
 import type { MusicXmlEditCommand } from "../nhipphach/edit/commands";
 import { readNoteFields } from "../nhipphach/edit/noteFields";
 import { readHarmonyFields } from "../nhipphach/edit/harmonyFields";
+import { EditorToolbar, KeymapHelp } from "../nhipphach/editor/EditorToolbar";
+import type { EditorAction } from "../nhipphach/editor/actions";
+import { dispatch } from "../nhipphach/editor/dispatcher";
+import { toCommand } from "../nhipphach/editor/commandFacade";
+import { caretTaiId, chonMot, diChuyen, dsDiDuoc, RONG } from "../nhipphach/editor/caret";
+import type { ScoreSelection } from "../nhipphach/editor/caret";
 import { saveDraftAsVersion } from "../nhipphach/edit/versionSave";
 import type { ValidationReport } from "../nhipphach/edit/validation";
 import { newRhythmIssues } from "../nhipphach/edit/validation";
@@ -201,6 +209,11 @@ export default function MusicXmlBeatsPage({
     | null
   >(null);
   const prevBody = useRef<HTMLDivElement>(null);
+  // ── Con trỏ bàn phím (Giai đoạn 4A) ─────────────────────────────────────
+  // Vùng chọn tách khỏi con trỏ ngay từ bây giờ dù 4A chỉ dùng một nốt: 4C mở
+  // Shift+←/→ chỉ cần cho `anchor` khác `caret`, không phải viết lại gì.
+  const [vungChon, setVungChon] = useState<ScoreSelection>(RONG);
+  const [hienPhimTat, setHienPhimTat] = useState(false);
   // ── Bản nháp biên tập (Giai đoạn Nội dung 3) — chỉ trong bộ nhớ ──────────
   // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
   // trạng thái và chuyển lệnh; không có dòng nào ở đây đụng vào XML.
@@ -410,12 +423,20 @@ export default function MusicXmlBeatsPage({
       e.target as unknown as Parameters<typeof resolveScoreElement>[0],
       { notes: score.noteIndex, lyrics: score.lyricIndex, harmonies: score.harmonyIndex }
     );
-    if (r.kind === "note") setNotChon({ kind: "note", note: r.note });
-    else if (r.kind === "lyric") setNotChon({ kind: "lyric", lyric: r.lyric });
+    if (r.kind === "note") {
+      setNotChon({ kind: "note", note: r.note });
+      // Cú bấm chuột là chỗ DUY NHẤT con trỏ sinh ra từ SVG; từ đây trở đi nó
+      // chỉ chạy theo thứ tự tài liệu. Kéo tiêu điểm về khung bản nhạc để bàn
+      // phím lái được ngay, không bắt thầy bấm thêm lần nữa.
+      const caret = caretTaiId(notDiDuoc, r.note.svgId);
+      setVungChon(caret ? chonMot(caret) : RONG);
+      prevBody.current?.focus({ preventScroll: true });
+    } else if (r.kind === "lyric") setNotChon({ kind: "lyric", lyric: r.lyric });
     else if (r.kind === "harmony") setNotChon({ kind: "harmony", harmony: r.harmony });
     else if (r.kind === "unresolved")
       setNotChon({ kind: "unresolved", svgId: r.svgId, what: r.what });
     else setNotChon(null);
+    if (r.kind !== "note") setVungChon(RONG);
   }
   // Tô sáng là lớp trình bày: chỉ thêm/bớt class trên SVG đang hiện.
   useEffect(() => {
@@ -431,13 +452,18 @@ export default function MusicXmlBeatsPage({
           : notChon?.kind === "harmony"
             ? notChon.harmony.svgId
             : null;
-    if (chonNot && svgId)
-      for (const el of Array.from(root.querySelectorAll(`[id="${svgId}"]`)))
-        el.classList.add("np-note-selected");
+    if (chonNot && svgId) {
+      const els = Array.from(root.querySelectorAll(`[id="${svgId}"]`));
+      for (const el of els) el.classList.add("np-note-selected");
+      // Con trỏ chạy ra ngoài khung thì kéo nó vào — "nearest" để trang không
+      // giật lên giật xuống mỗi lần bấm mũi tên.
+      els[0]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    }
   }, [chonNot, notChon, score]);
   // Đổi bản nhạc là bỏ chọn và bỏ nháp.
   useEffect(() => {
     setNotChon(null);
+    setVungChon(RONG);
     setNhap(null);
     setKiemTra(null);
     setNhapNote("");
@@ -485,6 +511,93 @@ export default function MusicXmlBeatsPage({
     () => (nhap && isDirty(nhap) ? newWarnings(nhap.original, nhap.xml) : []),
     [nhap]
   );
+  /**
+   * Nốt đi được bằng bàn phím: theo thứ tự tài liệu, bỏ những nốt mà bản khắc
+   * không vẽ ra (lặng cả ô). Con trỏ không nhảy tới chỗ không nhìn thấy.
+   */
+  const notDiDuoc = useMemo(
+    () => (score ? dsDiDuoc(score.sourceNotes, score.unresolvedNotes) : []),
+    [score]
+  );
+  /** Ô của nốt dưới con trỏ — thanh công cụ và mặt tiền lệnh cùng đọc từ đây. */
+  const truongCaret = useMemo(() => {
+    const id = vungChon.caret?.sourceId;
+    if (!id || !xmlHienThi) return null;
+    const note = notDiDuoc.find((n) => n.svgId === id);
+    return note ? readNoteFields(xmlHienThi, note.path) : null;
+  }, [vungChon, notDiDuoc, xmlHienThi]);
+
+  /**
+   * CỬA DUY NHẤT của tầng tương tác: bàn phím và thanh công cụ đều đổ vào đây.
+   *
+   * Chỉ có ba nhánh — dời con trỏ, đụng ngăn xếp nháp, hoặc phát ĐÚNG MỘT lệnh
+   * đã có sẵn. Trang không tự dịch nhạc lý; `commandFacade` trả lời hộ.
+   */
+  function apHanhDong(action: EditorAction) {
+    // Cổng quyền lặp lại ở đây có chủ ý, đúng khuôn bản vá 6e85c9f.
+    if (!choChonNot || !chonNot) return;
+    if (action.type === "MOVE") {
+      const caret = diChuyen(notDiDuoc, vungChon.caret, action.where);
+      if (!caret) return;
+      setVungChon(chonMot(caret));
+      const note = notDiDuoc[caret.sourceIndex];
+      if (note) setNotChon({ kind: "note", note });
+      return;
+    }
+    if (action.type === "UNDO") {
+      if (nhap) setNhap(hoanTacNhap(nhap));
+      return;
+    }
+    if (action.type === "REDO") {
+      if (nhap) setNhap(lamLaiNhap(nhap));
+      return;
+    }
+    const note = vungChon.caret ? notDiDuoc.find((n) => n.svgId === vungChon.caret!.sourceId) : null;
+    if (!note) {
+      setNhapNote("Bấm một nốt trên bản nhạc trước đã.");
+      return;
+    }
+    const ra = toCommand(action, note.path, truongCaret);
+    if (ra.kind === "refused") {
+      setNhapNote(ra.message);
+      return;
+    }
+    if (ra.kind === "noop") return;
+    apLenh(ra.command);
+  }
+
+  /**
+   * Bàn phím trên khung bản nhạc. Bộ phân phối quyết định cú bấm có phải của
+   * bản nhạc không — trang chỉ chuyển tiếp. Không `preventDefault` khi bộ phân
+   * phối nói không, để Ctrl+Z của ô nhập chữ và phím tắt trình duyệt còn sống.
+   */
+  function onKeyDownBanNhac(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!choChonNot || !chonNot) return;
+    if (e.key === "?") {
+      setHienPhimTat((v) => !v);
+      e.preventDefault();
+      return;
+    }
+    const ra = dispatch(
+      {
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        target: e.target as unknown as Parameters<typeof dispatch>[0]["target"],
+      },
+      {
+        choSua: choChonNot,
+        dangMoModal: moThuVien || !!trungLap,
+        focused: (typeof document === "undefined" ? null : document.activeElement) as never,
+      }
+    );
+    if (ra.kind !== "action") return;
+    e.preventDefault();
+    apHanhDong(ra.action);
+  }
+
   /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
   function apLenh(cmd: MusicXmlEditCommand) {
     if (!choChonNot || !source) return;
@@ -2040,6 +2153,7 @@ export default function MusicXmlBeatsPage({
                             if (chonNot) boNhap();
                             setChonNot((v) => !v);
                             setNotChon(null);
+                            setVungChon(RONG);
                           }}
                         >
                           {chonNot ? "Thoát chế độ sửa" : "Chọn để sửa"}
@@ -2118,6 +2232,17 @@ export default function MusicXmlBeatsPage({
                   </div>
                 )}
                 {choChonNot && chonNot && (
+                  <EditorToolbar
+                    fields={truongCaret}
+                    canUndo={!!nhap && coTheHoanTac(nhap)}
+                    canRedo={!!nhap && coTheLamLai(nhap)}
+                    onAction={apHanhDong}
+                  />
+                )}
+                {choChonNot && chonNot && hienPhimTat && (
+                  <KeymapHelp onClose={() => setHienPhimTat(false)} />
+                )}
+                {choChonNot && chonNot && (
                   <EditPanel
                     draft={nhap}
                     selection={luaChon}
@@ -2139,6 +2264,8 @@ export default function MusicXmlBeatsPage({
                 <div
                   ref={prevBody}
                   onClick={choChonNot ? onClickBanNhac : undefined}
+                  onKeyDown={choChonNot ? onKeyDownBanNhac : undefined}
+                  tabIndex={choChonNot && chonNot ? 0 : undefined}
                   className={`np-prev-body${
                     xem.che === "khung" ? " np-fit-page" : ""
                   }${chonNot ? " np-select-mode" : ""}`}

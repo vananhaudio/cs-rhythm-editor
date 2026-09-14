@@ -174,6 +174,22 @@ export const NP_CSS = `
    nốt về màu mực để con trỏ chỉ tô sáng đúng thứ sắp chọn được. */
 .${NP_SCOPE} .np-select-mode .np-page g.note:has(g.verse:hover) use{fill:#000;}
 .${NP_SCOPE} .np-page g.np-note-selected use,.${NP_SCOPE} .np-page g.np-note-selected path,.${NP_SCOPE} .np-page g.np-note-selected text{fill:var(--indigo);stroke:var(--indigo);}
+/* ── Thanh công cụ biên tập (Giai đoạn 4A) ───────────────────────────────── */
+.${NP_SCOPE} .np-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 10px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);}
+.${NP_SCOPE} .np-toolbar-group{display:inline-flex;gap:4px;align-items:center;}
+.${NP_SCOPE} .np-toolbar-group + .np-toolbar-group{padding-left:12px;border-left:1px solid var(--line);}
+.${NP_SCOPE} .np-tbtn{font:inherit;font-size:12.5px;line-height:1;min-height:30px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer;}
+.${NP_SCOPE} .np-tbtn:hover:not(:disabled){background:var(--indigo-tint);border-color:#D3CEE8;}
+.${NP_SCOPE} .np-tbtn[aria-pressed="true"]{background:var(--indigo);border-color:var(--indigo);color:#fff;}
+.${NP_SCOPE} .np-tbtn:disabled{opacity:.4;cursor:not-allowed;}
+.${NP_SCOPE} .np-toolbar-hint{margin-left:auto;font-size:12px;color:var(--ink-hint);}
+.${NP_SCOPE} .np-keyhelp{padding:10px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
+.${NP_SCOPE} .np-keyhelp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.${NP_SCOPE} .np-keyhelp ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 14px;}
+.${NP_SCOPE} .np-keyhelp li{display:flex;gap:8px;align-items:baseline;}
+.${NP_SCOPE} .np-keyhelp kbd{flex:0 0 82px;font:inherit;font-size:12px;text-align:center;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:#FAF8F4;}
+/* Bản nhạc nhận phím: viền hội tụ để thầy biết bàn phím đang lái bản nhạc. */
+.${NP_SCOPE} .np-select-mode:focus-visible{outline:2.5px solid var(--indigo);outline-offset:3px;}
 .${NP_SCOPE} .np-note-panel{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:8px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
 .${NP_SCOPE} .np-note-panel strong{margin-right:4px;}
 /* Panel biên tập (Nội dung 3): cùng khung với panel chọn nốt, xếp theo hàng. */

@@ -57,6 +57,11 @@ export interface AnnotatedScore {
   harmonyIndex: ReadonlyMap<string, SourceHarmony>;
   /** Lời/hợp âm nguồn KHÔNG gắn được danh tính — panel phải nói thật, không đoán. */
   unresolvedIdentity: ReadonlySet<string>;
+  /**
+   * Nốt nguồn mà bản khắc KHÔNG vẽ ra (lặng cả ô — Verovio không giữ id, đã đo
+   * ở Nội dung 2). Con trỏ bàn phím bỏ qua chúng: không nhảy tới chỗ vô hình.
+   */
+  unresolvedNotes: ReadonlySet<string>;
 }
 /** Future PDF/PNG converters consume these SAME SVG pages, never rerender the source. */
 export interface ScoreExportSource {

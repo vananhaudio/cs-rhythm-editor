@@ -218,6 +218,7 @@ export async function createAnnotatedScoreRenderer() {
         lyricIndex: active.tagged.lyricById,
         harmonyIndex: active.tagged.harmonyById,
         unresolvedIdentity: new Set(active.identity.unresolved),
+        unresolvedNotes: new Set(active.unresolved),
       };
     },
   };

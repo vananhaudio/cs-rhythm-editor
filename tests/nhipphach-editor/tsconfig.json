@@ -1,0 +1,11 @@
+{
+  "extends": "../musicxml-renderer/tsconfig.json",
+  "include": [
+    "../../src/musicxml-beats/**/*.ts",
+    "../../src/nhipphach/capabilities.ts",
+    "../../src/nhipphach/noteSelection.ts",
+    "../../src/nhipphach/edit/*.ts",
+    "../../src/nhipphach/editor/*.ts",
+    "./*.ts"
+  ]
+}

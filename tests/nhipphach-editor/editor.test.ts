@@ -1,0 +1,652 @@
+/**
+ * TẦNG TƯƠNG TÁC BÀN PHÍM — Giai đoạn 4A.
+ *
+ * Điều phải chứng minh: bấm một nốt rồi lái bằng bàn phím cho ra ĐÚNG những
+ * lệnh mà panel cũ vẫn phát, không hơn không kém — và con trỏ đi theo THỨ TỰ
+ * TÀI LIỆU chứ không theo toạ độ.
+ *
+ * Ba lằn ranh được khoá bằng test ở đây:
+ *   1. tầng bàn phím không biết XML / Verovio / Supabase
+ *   2. con trỏ không có một dòng hình học nào
+ *   3. không có model bản nhạc thứ hai — mọi thay đổi là `MusicXmlEditCommand`
+ */
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dispatch, dangGoChu } from "../../src/nhipphach/editor/dispatcher.ts";
+import { KEYMAP, traPhim } from "../../src/nhipphach/editor/keymap.ts";
+import { toCommand } from "../../src/nhipphach/editor/commandFacade.ts";
+import {
+  RONG,
+  caretTaiId,
+  chonMot,
+  diChuyen,
+  dsDiDuoc,
+  idDangChon,
+} from "../../src/nhipphach/editor/caret.ts";
+import type { ScoreCaret } from "../../src/nhipphach/editor/caret.ts";
+import type { EditorAction } from "../../src/nhipphach/editor/actions.ts";
+import { laDieuHuong, laNganXep } from "../../src/nhipphach/editor/actions.ts";
+import { tagSourceIds } from "../../src/musicxml-beats/sourceTags.ts";
+import type { SourceNote } from "../../src/musicxml-beats/sourceTags.ts";
+import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
+import { applyToDraft, createDraft, rebuildDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
+import type { DraftState } from "../../src/nhipphach/edit/draftEngine.ts";
+import { pitchName, transposeSemitone } from "../../src/nhipphach/edit/pitchModel.ts";
+import { createAnnotatedScoreRenderer } from "../../src/musicxml-beats/renderer/verovioAdapter.ts";
+import { DEFAULT_SCORE_SETTINGS } from "../../src/musicxml-beats/renderer/types.ts";
+import type { AnnotatedScore, ScoreSettings } from "../../src/musicxml-beats/renderer/types.ts";
+import { byId, parse } from "../../src/musicxml-beats/renderer/xml.ts";
+import { resolveScoreElement } from "../../src/nhipphach/noteSelection.ts";
+
+const read = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
+const E = "../nhipphach-edit/fixtures/";
+
+/** Bộ fixture của mục 14: đủ mọi hình thù mà điều hướng phải sống sót. */
+const FIXTURES: { ten: string; xml: string; grouping?: unknown }[] = [
+  { ten: "nốt nối tiếp · lời · hợp âm · 6/8 · 5/8 · 7/8", xml: read(E + "lyric-harmony.musicxml"),
+    grouping: { byMeter: { "5/8": [2, 3], "7/8": [2, 2, 3] } } },
+  { ten: "hợp âm · dấu nối · hai bè · TAB · hoa mỹ", xml: read(E + "note-editing.musicxml") },
+  { ten: "hợp âm 3 nốt · hoa mỹ · dấu nối · bè 2", xml: read("../nhipphach-select/fixtures/chord-grace-tie-voices.musicxml") },
+  { ten: "hai khuông", xml: read("../musicxml-mvp/fixtures/two-staves.musicxml") },
+  { ten: "guitar + TAB", xml: read("../nhipphach-layout/fixtures/guitar-tab.musicxml") },
+  { ten: "lấy đà", xml: read("../musicxml-subdivision/fixtures/pickup-quarter.musicxml") },
+  { ten: "lặng cả ô (không vẽ id)", xml: read(E + "lyric-unresolvable.musicxml") },
+];
+const FX = FIXTURES[0].xml;
+const notesOf = (xml: string) => tagSourceIds(xml).notes;
+
+const renderer = await createAnnotatedScoreRenderer();
+const SETTINGS = {
+  ...DEFAULT_SCORE_SETTINGS,
+  grouping: FIXTURES[0].grouping as never,
+} as ScoreSettings;
+test.after(() => renderer.destroy());
+
+// ══ 1. Bảng phím ═══════════════════════════════════════════════════════════
+
+test("keymap: mỗi phím của mục 2 ra đúng hành động, không phím nào mang hai nghĩa", () => {
+  const S = (key: string, ctrl = false, shift = false, alt = false) => ({ key, ctrl, shift, alt });
+  assert.deepEqual(traPhim(S("ArrowRight")), { type: "MOVE", where: "next" });
+  assert.deepEqual(traPhim(S("ArrowLeft")), { type: "MOVE", where: "prev" });
+  assert.deepEqual(traPhim(S("ArrowRight", true)), { type: "MOVE", where: "nextMeasure" });
+  assert.deepEqual(traPhim(S("ArrowLeft", true)), { type: "MOVE", where: "prevMeasure" });
+  assert.deepEqual(traPhim(S("Home")), { type: "MOVE", where: "first" });
+  assert.deepEqual(traPhim(S("End")), { type: "MOVE", where: "last" });
+  assert.deepEqual(traPhim(S("ArrowUp")), { type: "TRANSPOSE", semitones: 1 });
+  assert.deepEqual(traPhim(S("ArrowDown")), { type: "TRANSPOSE", semitones: -1 });
+  assert.deepEqual(traPhim(S("ArrowUp", true)), { type: "TRANSPOSE", semitones: 12 });
+  assert.deepEqual(traPhim(S("ArrowDown", true)), { type: "TRANSPOSE", semitones: -12 });
+  assert.deepEqual(traPhim(S("3")), { type: "SET_DURATION", noteType: "16th" });
+  assert.deepEqual(traPhim(S("4")), { type: "SET_DURATION", noteType: "eighth" });
+  assert.deepEqual(traPhim(S("5")), { type: "SET_DURATION", noteType: "quarter" });
+  assert.deepEqual(traPhim(S("6")), { type: "SET_DURATION", noteType: "half" });
+  assert.deepEqual(traPhim(S("7")), { type: "SET_DURATION", noteType: "whole" });
+  assert.deepEqual(traPhim(S(".")), { type: "TOGGLE_DOT" });
+  assert.deepEqual(traPhim(S("E", false, true)), { type: "RESPELL" });
+  assert.deepEqual(traPhim(S("z", true)), { type: "UNDO" });
+  assert.deepEqual(traPhim(S("z", true, true)), { type: "REDO" });
+  // Chưa có nghĩa ở 4A → phải im, không được đoán.
+  for (const k of ["Delete", "Backspace", "r", "0", "a", "c", "T", "Insert", ","])
+    assert.equal(traPhim(S(k)), null, `phím ${k} chưa được phép có nghĩa ở 4A`);
+  // Một phím KHÔNG được mang hai nghĩa: `.` là chấm dôi, không phải gấp đôi.
+  const trung = new Map<string, number>();
+  for (const b of KEYMAP) {
+    const khoa = `${b.key}|${!!b.ctrl}|${!!b.shift}|${!!b.alt}`;
+    trung.set(khoa, (trung.get(khoa) ?? 0) + 1);
+  }
+  assert.deepEqual([...trung].filter(([, n]) => n > 1), [], "có phím trùng trong bảng");
+  // Đo được trên bộ tự động hoá: giữ Shift có nơi gửi `key:"E"`, có nơi gửi
+  // `key:"e"` kèm `shiftKey:true`. Phím tắt phải chạy ở CẢ HAI đường.
+  assert.deepEqual(traPhim(S("e", false, true)), { type: "RESPELL" });
+  assert.deepEqual(traPhim(S("E", false, true)), { type: "RESPELL" });
+  assert.deepEqual(traPhim(S("Z", true, true)), { type: "REDO" });
+  assert.deepEqual(traPhim(S("z", true, true)), { type: "REDO" });
+  assert.deepEqual(traPhim(S("Z", true)), { type: "UNDO" });
+  // Nhưng có Shift hay không vẫn là hai nghĩa khác nhau.
+  assert.equal(traPhim(S("e")), null, "e trơ chưa có nghĩa");
+});
+
+test("keymap: ghi công Smoosic có mặt trong mã nguồn và trong THIRD_PARTY_NOTICES", () => {
+  const km = src("nhipphach/editor/keymap.ts");
+  assert.match(km, /Smoosic/);
+  assert.match(km, /MIT/);
+  assert.match(km, /Aaron David Newman/);
+  assert.match(km, /trackerKeys|editorKeys/);
+  const notices = readFileSync(new URL("../../THIRD_PARTY_NOTICES.md", import.meta.url), "utf8");
+  assert.match(notices, /Smoosic/);
+  assert.match(notices, /MIT License/);
+  assert.match(notices, /Copyright \(c\) 2021 Aaron David Newman/);
+  // Và KHÔNG kéo Smoosic vào bundle.
+  const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+  for (const ten of Object.keys(deps))
+    assert.doesNotMatch(ten, /smoosic|vexflow/i, `${ten} không được vào bundle`);
+});
+
+// ══ 2. Bộ phân phối — an toàn tiêu điểm ════════════════════════════════════
+
+test("phân phối: đang gõ chữ thì bản nhạc KHÔNG được ăn phím", () => {
+  const OK = { choSua: true };
+  const go = (tagName: string) => ({ tagName });
+  // Gõ "a" vào ô Lời không được biến nốt thành La — mà "a" cũng chưa có nghĩa.
+  for (const tag of ["input", "textarea", "select", "button"]) {
+    const r = dispatch({ key: "ArrowRight", target: go(tag) }, OK);
+    assert.deepEqual(r, { kind: "blocked", why: "typing" }, `${tag} phải chặn`);
+  }
+  assert.equal(dangGoChu({ isContentEditable: true }), true);
+  assert.equal(dangGoChu({ tagName: "DIV", getAttribute: () => "true" }), true);
+  assert.equal(dangGoChu({ tagName: "div", getAttribute: () => null }), false);
+  assert.equal(dangGoChu(null), false);
+  // Ctrl+Z trong ô nhập phải để cho trình duyệt hoàn tác CHỮ, không hoàn tác nháp.
+  assert.deepEqual(dispatch({ key: "z", ctrlKey: true, target: go("input") }, OK), {
+    kind: "blocked",
+    why: "typing",
+  });
+  // Tiêu điểm nằm ở ô nhập dù phím rơi chỗ khác thì cũng chặn.
+  assert.deepEqual(dispatch({ key: "ArrowRight" }, { choSua: true, focused: go("textarea") }), {
+    kind: "blocked",
+    why: "typing",
+  });
+});
+
+test("phân phối: modal, quyền, và phím lạ", () => {
+  const div = { tagName: "div" };
+  assert.deepEqual(dispatch({ key: "ArrowRight", target: div }, { choSua: true, dangMoModal: true }), {
+    kind: "blocked",
+    why: "modal",
+  });
+  // Học viên không có score.edit: bấm phím KHÔNG tạo hành động nào.
+  assert.deepEqual(dispatch({ key: "ArrowUp", target: div }, { choSua: false }), {
+    kind: "blocked",
+    why: "capability",
+  });
+  assert.deepEqual(dispatch({ key: "5", target: div }, { choSua: false }), {
+    kind: "blocked",
+    why: "capability",
+  });
+  // Phím không có trong bảng thì im lặng, kể cả khi có quyền.
+  assert.deepEqual(dispatch({ key: "Delete", target: div }, { choSua: true }), { kind: "none" });
+  assert.deepEqual(dispatch({ key: "q", target: div }, { choSua: true }), { kind: "none" });
+  // Alt để dành cho phase sau — không nuốt oan.
+  assert.deepEqual(dispatch({ key: "ArrowRight", altKey: true, target: div }, { choSua: true }), {
+    kind: "none",
+  });
+  // ⌘ trên Mac đi cùng đường với Ctrl.
+  assert.deepEqual(dispatch({ key: "z", metaKey: true, target: div }, { choSua: true }), {
+    kind: "action",
+    action: { type: "UNDO" },
+  });
+  assert.deepEqual(dispatch({ key: "ArrowRight", target: div }, { choSua: true }), {
+    kind: "action",
+    action: { type: "MOVE", where: "next" },
+  });
+});
+
+// ══ 3. Con trỏ — thứ tự tài liệu, không hình học ═══════════════════════════
+
+for (const f of FIXTURES)
+  test(`con trỏ: đi hết bài rồi lùi hết bài về đúng chỗ cũ — ${f.ten}`, () => {
+    const notes = dsDiDuoc(notesOf(f.xml));
+    assert.ok(notes.length > 0);
+    let caret = caretTaiId(notes, notes[0].svgId)!;
+    const xuoi: string[] = [caret.sourceId];
+    for (;;) {
+      const tiep = diChuyen(notes, caret, "next");
+      if (!tiep) break;
+      caret = tiep;
+      xuoi.push(caret.sourceId);
+    }
+    assert.deepEqual(xuoi, notes.map((n) => n.svgId), "đi xuôi phải đúng thứ tự tài liệu");
+    const nguoc: string[] = [caret.sourceId];
+    for (;;) {
+      const lui = diChuyen(notes, caret, "prev");
+      if (!lui) break;
+      caret = lui;
+      nguoc.push(caret.sourceId);
+    }
+    assert.deepEqual(nguoc.reverse(), xuoi, "đi ngược phải là đảo của đi xuôi");
+    // Không cuộn vòng: đứng ở hai đầu thì đứng yên.
+    assert.equal(diChuyen(notes, caretTaiId(notes, notes[0].svgId), "prev"), null);
+    assert.equal(diChuyen(notes, caretTaiId(notes, notes[notes.length - 1].svgId), "next"), null);
+    assert.equal(diChuyen(notes, caret, "first")!.sourceId, notes[0].svgId);
+    assert.equal(diChuyen(notes, caret, "last")!.sourceId, notes[notes.length - 1].svgId);
+  });
+
+test("con trỏ: Ctrl+←/→ nhảy sang ĐẦU ô nhịp, không phải nốt liền kề", () => {
+  const notes = dsDiDuoc(notesOf(FX));
+  const dau = (m: number) => notes.find((n) => n.measureIndex === m)!.svgId;
+  let caret = caretTaiId(notes, dau(1))!;
+  for (const m of [2, 3, 4, 5, 6, 7]) {
+    caret = diChuyen(notes, caret, "nextMeasure")!;
+    assert.equal(caret.sourceId, dau(m), `Ctrl+→ phải tới đầu ô ${m}`);
+  }
+  assert.equal(diChuyen(notes, caret, "nextMeasure"), null, "hết bài thì đứng yên");
+  // Đứng ở nốt THỨ HAI của ô 3 mà bấm Ctrl+← thì về đầu ô 2, không về nốt trước.
+  const trongO3 = notes.filter((n) => n.measureIndex === 3);
+  assert.ok(trongO3.length > 1);
+  const lui = diChuyen(notes, caretTaiId(notes, trongO3[1].svgId), "prevMeasure")!;
+  assert.equal(lui.sourceId, dau(2));
+  assert.equal(diChuyen(notes, caretTaiId(notes, dau(1)), "prevMeasure"), null);
+});
+
+test("con trỏ: từng nốt của HỢP ÂM là một chặng riêng (ghi rõ hành vi)", () => {
+  const xml = read("../nhipphach-select/fixtures/chord-grace-tie-voices.musicxml");
+  const notes = dsDiDuoc(notesOf(xml));
+  const hopAm = notes.filter((n) => n.chord);
+  assert.ok(hopAm.length >= 2, "fixture phải có hợp âm nhiều nốt");
+  // Nốt neo + các nốt mang <chord/> nằm liền nhau trong thứ tự tài liệu, và
+  // ←/→ đi qua TỪNG nốt — không gộp hợp âm thành một chặng, vì danh tính nguồn
+  // đang là từng nốt và ta cần chọn riêng được một nốt trong hợp âm.
+  const neo = notes[notes.indexOf(hopAm[0]) - 1];
+  assert.ok(neo && !neo.chord);
+  let caret = caretTaiId(notes, neo.svgId)!;
+  const đi: string[] = [];
+  for (let i = 0; i < hopAm.length; i++) {
+    caret = diChuyen(notes, caret, "next")!;
+    đi.push(caret.sourceId);
+  }
+  assert.deepEqual(đi, hopAm.slice(0, hopAm.length).map((n) => n.svgId));
+});
+
+test("con trỏ: hai bè / hai khuông đi theo THỨ TỰ TÀI LIỆU, không tự thông minh", () => {
+  const notes = dsDiDuoc(notesOf(read("../musicxml-mvp/fixtures/two-staves.musicxml")));
+  const theoTaiLieu = notes.map((n) => `${n.partIndex}:${n.measureIndex}:${n.childIndex}`);
+  const daSapXep = [...theoTaiLieu].sort((a, b) => {
+    const [p1, m1, c1] = a.split(":").map(Number);
+    const [p2, m2, c2] = b.split(":").map(Number);
+    return p1 - p2 || m1 - m2 || c1 - c2;
+  });
+  assert.deepEqual(theoTaiLieu, daSapXep, "thứ tự đi phải là thứ tự tài liệu");
+  // 4A cố ý KHÔNG có "nốt gần nhất theo thời gian" giữa hai bè — chưa phát minh.
+  const src4A = src("nhipphach/editor/caret.ts");
+  assert.doesNotMatch(src4A, /onset|tstamp|byTime|nearestTime/i);
+});
+
+test("con trỏ: bỏ qua nốt mà bản khắc không vẽ ra", () => {
+  const tatCa = notesOf(FX);
+  // Luật lọc: nốt nào bộ khắc không vẽ ra thì con trỏ KHÔNG nhảy tới — không
+  // để thầy tô sáng vào hư không. Kiểm bằng một tập giả để luật đứng độc lập
+  // với việc hôm nay Verovio có bỏ id của nốt nào hay không.
+  const mat = new Set([tatCa[2].svgId, tatCa[5].svgId]);
+  const diDuoc = dsDiDuoc(tatCa, mat);
+  assert.equal(diDuoc.length, tatCa.length - 2);
+  for (const n of diDuoc) assert.equal(mat.has(n.svgId), false);
+  // Và đi qua chỗ bị bỏ thì nhảy thẳng sang nốt kế tiếp còn vẽ được.
+  const truoc = caretTaiId(diDuoc, tatCa[1].svgId)!;
+  assert.equal(diChuyen(diDuoc, truoc, "next")!.sourceId, tatCa[3].svgId);
+  // Dây nối thật: bộ khắc có báo tập ấy ra ngoài cho trang dùng.
+  const score = renderer.render(read(E + "lyric-unresolvable.musicxml"), DEFAULT_SCORE_SETTINGS);
+  assert.ok(score.unresolvedNotes instanceof Set, "bộ khắc phải báo nốt không vẽ được");
+  for (const n of dsDiDuoc(score.sourceNotes, score.unresolvedNotes))
+    assert.equal(score.unresolvedNotes.has(n.svgId), false);
+});
+
+test("con trỏ: `sourceId` mới là sự thật, chỗ ngồi trôi thì tìm lại theo id", () => {
+  const notes = dsDiDuoc(notesOf(FX));
+  // Giả bộ chỗ ngồi sai (như sau một lần khắc lại): vẫn phải đi đúng.
+  const lech: ScoreCaret = { sourceId: notes[3].svgId, sourceIndex: 999 };
+  assert.equal(diChuyen(notes, lech, "next")!.sourceId, notes[4].svgId);
+  assert.equal(diChuyen(notes, lech, "prev")!.sourceId, notes[2].svgId);
+  // Id không còn trong bài (đổi bản nhạc): rơi về chỗ gần nhất còn hợp lệ.
+  const la: ScoreCaret = { sourceId: "khong-co-that", sourceIndex: 2 };
+  assert.equal(diChuyen(notes, la, "next")!.sourceId, notes[2].svgId);
+});
+
+test("vùng chọn: tách khỏi con trỏ ngay từ 4A, mở sẵn đường cho Shift+←/→", () => {
+  const notes = dsDiDuoc(notesOf(FX));
+  assert.deepEqual(idDangChon(RONG, notes), []);
+  const c = caretTaiId(notes, notes[2].svgId)!;
+  assert.deepEqual(idDangChon(chonMot(c), notes), [notes[2].svgId], "4A luôn đúng một nốt");
+  // Cấu trúc đã sẵn sàng: neo khác đầu chạy là ra một vùng, không phải viết lại.
+  const vung = { anchor: caretTaiId(notes, notes[1].svgId), caret: caretTaiId(notes, notes[4].svgId) };
+  assert.deepEqual(idDangChon(vung, notes), notes.slice(1, 5).map((n) => n.svgId));
+  // Kéo ngược cũng ra đúng vùng ấy.
+  const nguoc = { anchor: vung.caret, caret: vung.anchor };
+  assert.deepEqual(idDangChon(nguoc, notes), idDangChon(vung, notes));
+});
+
+// ══ 4. Mặt tiền lệnh ═══════════════════════════════════════════════════════
+
+const P = (m: number, c: number, part = 1) =>
+  `/score-partwise/part[${part}]/measure[${m}]/*[${c}]`;
+const F = (xml: string, path: string) => readNoteFields(xml, path);
+
+test("mặt tiền: mỗi hành động đổi lấy ĐÚNG một lệnh đã có", () => {
+  const path = P(1, 3); // Đô 4 nốt đen
+  const f = F(FX, path)!;
+  assert.deepEqual(f.pitch, { step: "C", alter: 0, octave: 4 });
+
+  const len = (a: EditorAction) => toCommand(a, path, f);
+  assert.deepEqual(len({ type: "TRANSPOSE", semitones: 1 }), {
+    kind: "command",
+    command: { type: "ChangePitch", path, pitch: { step: "C", alter: 1, octave: 4 }, accidental: "auto" },
+  });
+  assert.deepEqual(len({ type: "TRANSPOSE", semitones: 12 }), {
+    kind: "command",
+    command: { type: "ChangePitch", path, pitch: { step: "C", alter: 0, octave: 5 }, accidental: "auto" },
+  });
+  // Nhảy quãng tám GIỮ NGUYÊN mặt chữ: Mi♭ lên quãng tám vẫn là Mi♭, không hoá Rê♯.
+  const miGiang = { ...f, pitch: { step: "E" as const, alter: -1, octave: 4 } };
+  assert.deepEqual(
+    (toCommand({ type: "TRANSPOSE", semitones: 12 }, path, miGiang) as { command: { pitch: unknown } }).command.pitch,
+    { step: "E", alter: -1, octave: 5 }
+  );
+  assert.deepEqual(len({ type: "SET_ALTER", alter: -1 }), {
+    kind: "command",
+    command: { type: "ChangePitch", path, pitch: { step: "C", alter: -1, octave: 4 }, accidental: "auto" },
+  });
+  assert.deepEqual(len({ type: "SET_DURATION", noteType: "eighth" }), {
+    kind: "command",
+    command: { type: "ChangeDuration", path, noteType: "eighth", dots: 0 },
+  });
+  assert.deepEqual(len({ type: "TOGGLE_DOT" }), {
+    kind: "command",
+    command: { type: "ChangeDuration", path, noteType: "quarter", dots: 1 },
+  });
+  // Điều hướng và ngăn xếp KHÔNG sinh lệnh nào.
+  for (const a of [
+    { type: "MOVE", where: "next" },
+    { type: "UNDO" },
+    { type: "REDO" },
+  ] as EditorAction[])
+    assert.deepEqual(len(a), { kind: "noop" }, `${a.type} không được sinh lệnh`);
+  // Đặt lại đúng giá trị đang có = không có gì để làm.
+  assert.deepEqual(len({ type: "SET_ALTER", alter: 0 }), { kind: "noop" });
+  assert.deepEqual(len({ type: "SET_DURATION", noteType: "quarter" }), { kind: "noop" });
+});
+
+test("mặt tiền: đổi hình nốt thì BỎ chấm dôi cũ", () => {
+  const path = P(5, 3); // Sol 4 nốt đen CHẤM (6/8)
+  const f = F(FX, path)!;
+  assert.equal(f.noteType, "quarter");
+  assert.equal(f.dots, 1);
+  assert.deepEqual(toCommand({ type: "SET_DURATION", noteType: "quarter" }, path, f), {
+    kind: "command",
+    command: { type: "ChangeDuration", path, noteType: "quarter", dots: 0 },
+  });
+  assert.deepEqual(toCommand({ type: "TOGGLE_DOT" }, path, f), {
+    kind: "command",
+    command: { type: "ChangeDuration", path, noteType: "quarter", dots: 0 },
+  });
+});
+
+test("mặt tiền: từ chối thì NÓI RÕ, không im lặng", () => {
+  const noi = (r: ReturnType<typeof toCommand>) => (r.kind === "refused" ? r.message : null);
+  assert.match(noi(toCommand({ type: "TRANSPOSE", semitones: 1 }, P(1, 3), null))!, /Chưa chọn nốt/);
+  // Dấu lặng: không có cao độ.
+  const lang = F(read(E + "note-editing.musicxml"), P(6, 10))!;
+  assert.equal(lang.kind, "rest");
+  assert.match(noi(toCommand({ type: "TRANSPOSE", semitones: 1 }, P(6, 10), lang))!, /lặng|cao độ/i);
+  // Nốt trong hợp âm: trường độ chưa sửa được — thông điệp lấy từ chính `edit/`.
+  const trongHopAm = F(read(E + "note-editing.musicxml"), P(2, 5))!;
+  assert.equal(trongHopAm.chord, "member");
+  assert.equal(noi(toCommand({ type: "SET_DURATION", noteType: "half" }, P(2, 5), trongHopAm)), trongHopAm.duongTruongDo);
+  assert.equal(noi(toCommand({ type: "TOGGLE_DOT" }, P(2, 5), trongHopAm)), trongHopAm.duongTruongDo);
+  // …nhưng CAO ĐỘ của nốt trong hợp âm thì vẫn sửa được.
+  assert.equal(toCommand({ type: "TRANSPOSE", semitones: 1 }, P(2, 5), trongHopAm).kind, "command");
+  // Hết tầm ghi được.
+  const day = { ...F(FX, P(1, 3))!, pitch: { step: "C" as const, alter: 0, octave: 0 } };
+  assert.match(noi(toCommand({ type: "TRANSPOSE", semitones: -12 }, P(1, 3), day))!, /hết tầm/i);
+});
+
+test("mặt tiền: RESPELL giữ nguyên tiếng, và nói thật khi không có cách ghi khác", () => {
+  const path = P(1, 3);
+  const doThang = { ...F(FX, path)!, pitch: { step: "C" as const, alter: 1, octave: 4 } };
+  doThang.respell = [{ step: "D", alter: -1, octave: 4 }];
+  const r = toCommand({ type: "RESPELL" }, path, doThang);
+  assert.equal(r.kind, "command");
+  if (r.kind === "command") {
+    assert.equal(r.command.type, "RespellNote");
+    assert.deepEqual((r.command as { pitch: unknown }).pitch, { step: "D", alter: -1, octave: 4 });
+  }
+  const khongCo = { ...F(FX, path)!, respell: [] };
+  const t = toCommand({ type: "RESPELL" }, path, khongCo);
+  assert.equal(t.kind, "refused");
+});
+
+// ══ 5. Bàn phím → nháp: đi trọn vòng ═══════════════════════════════════════
+
+/** Mô phỏng trang: phím → hành động → (dời con trỏ | lệnh) → nháp. */
+function goPhim(
+  state: { draft: DraftState; caret: ScoreCaret | null; notes: SourceNote[] },
+  key: string,
+  mod: { ctrl?: boolean; shift?: boolean } = {}
+) {
+  const r = dispatch({ key, ctrlKey: mod.ctrl, shiftKey: mod.shift, target: { tagName: "div" } }, { choSua: true });
+  if (r.kind !== "action") return state;
+  const a = r.action;
+  if (laDieuHuong(a)) return { ...state, caret: diChuyen(state.notes, state.caret, a.where) ?? state.caret };
+  if (laNganXep(a))
+    return { ...state, draft: a.type === "UNDO" ? undo(state.draft) : redo(state.draft) };
+  const note = state.caret ? state.notes.find((n) => n.svgId === state.caret!.sourceId) : null;
+  if (!note) return state;
+  const ra = toCommand(a, note.path, readNoteFields(state.draft.xml, note.path));
+  return ra.kind === "command" ? { ...state, draft: applyToDraft(state.draft, ra.command) } : state;
+}
+
+test("bàn phím → nháp: cả chuỗi thao tác dùng đúng ngăn xếp đang có", () => {
+  const notes = dsDiDuoc(notesOf(FX));
+  let st = { draft: createDraft(FX), caret: caretTaiId(notes, notes[0].svgId), notes };
+  const doc = () => {
+    const n = st.notes.find((x) => x.svgId === st.caret!.sourceId)!;
+    const f = readNoteFields(st.draft.xml, n.path)!;
+    return `${f.pitch ? pitchName(f.pitch) : "lặng"} ${f.noteType}${"·".repeat(f.dots)}`;
+  };
+  assert.equal(doc(), "C4 quarter");
+  st = goPhim(st, "ArrowRight");
+  assert.equal(doc(), "D4 quarter");
+  st = goPhim(st, "ArrowUp");
+  assert.equal(doc(), "D♯4 quarter");
+  st = goPhim(st, "ArrowUp");
+  assert.equal(doc(), "E4 quarter");
+  st = goPhim(st, "ArrowDown");
+  // Đi XUỐNG ưu tiên dấu giáng (E♭4), đi LÊN ưu tiên dấu thăng (D♯4) — cùng một
+  // tiếng, khác cách ghi, đúng như MuseScore. Đây là luật, không phải tuỳ hứng.
+  assert.equal(doc(), "E♭4 quarter");
+  st = goPhim(st, "ArrowUp", { ctrl: true });
+  assert.equal(doc(), "E♭5 quarter");
+  st = goPhim(st, "4");
+  assert.equal(doc(), "E♭5 eighth");
+  st = goPhim(st, ".");
+  assert.equal(doc(), "E♭5 eighth·");
+  assert.equal(st.draft.commands.length, 6);
+
+  // Hoàn tác / làm lại dùng ĐÚNG DraftEngine: nháp = dựng lại từ bản gốc.
+  const cuoi = st.draft.xml;
+  for (let i = 6; i > 0; i--) {
+    st = goPhim(st, "z", { ctrl: true });
+    assert.equal(st.draft.xml, rebuildDraft(FX, st.draft.commands.slice(0, i - 1)), `hoàn tác ${i}`);
+  }
+  assert.equal(st.draft.xml, FX);
+  for (let i = 1; i <= 6; i++) {
+    st = goPhim(st, "z", { ctrl: true, shift: true });
+    assert.equal(st.draft.xml, rebuildDraft(FX, st.draft.commands.slice(0, i)), `làm lại ${i}`);
+  }
+  assert.equal(st.draft.xml, cuoi);
+  assert.equal(st.draft.original, FX, "bản gốc không được đổi");
+  assert.deepEqual(
+    st.draft.commands.map((c) => c.type),
+    ["ChangePitch", "ChangePitch", "ChangePitch", "ChangePitch", "ChangeDuration", "ChangeDuration"]
+  );
+});
+
+test("bàn phím: học viên không có score.edit thì gõ cả bàn phím cũng không ra lệnh nào", () => {
+  const notes = dsDiDuoc(notesOf(FX));
+  let draft = createDraft(FX);
+  const caret = caretTaiId(notes, notes[1].svgId)!;
+  for (const key of ["ArrowUp", "ArrowDown", "3", "4", "5", "6", "7", ".", "E", "z"]) {
+    const r = dispatch({ key, ctrlKey: key === "z", shiftKey: key === "E", target: { tagName: "div" } }, { choSua: false });
+    assert.equal(r.kind, "blocked", `${key} phải bị chặn`);
+    assert.equal(r.kind === "blocked" && r.why, "capability");
+  }
+  assert.equal(draft.commands.length, 0);
+  assert.equal(draft.xml, FX);
+  assert.ok(caret);
+});
+
+// ══ 6. Bấm chuột → con trỏ đích danh, rồi bàn phím tiếp quản ═══════════════
+
+test("bấm chuột đặt con trỏ đích danh, sau đó ←/→ chỉ chạy theo danh tính", () => {
+  const score = renderer.render(FX, SETTINGS);
+  const notes = dsDiDuoc(score.sourceNotes, score.unresolvedNotes);
+  const dich = notes[5];
+  // Đúng đường của Nội dung 2: từ phần tử SVG → nốt nguồn, bằng id.
+  let el: ReturnType<typeof byId> = undefined;
+  for (const page of score.pages) {
+    el = byId(parse(page.svg), dich.svgId);
+    if (el) break;
+  }
+  assert.ok(el, "phải tìm được phần tử SVG của nốt");
+  const r = resolveScoreElement(el as never, {
+    notes: score.noteIndex,
+    lyrics: score.lyricIndex,
+    harmonies: score.harmonyIndex,
+  });
+  assert.equal(r.kind, "note");
+  const caret = caretTaiId(notes, r.kind === "note" ? r.note.svgId : "")!;
+  assert.equal(caret.sourceId, dich.svgId);
+  // Từ đây trở đi KHÔNG còn dính SVG nữa.
+  assert.equal(diChuyen(notes, caret, "next")!.sourceId, notes[6].svgId);
+});
+
+// ══ 7. Hiệu năng ═══════════════════════════════════════════════════════════
+
+test("hiệu năng: 100 lần ←/→ không khắc lại lần nào; 20 lần ↑ thì có", () => {
+  const score = renderer.render(FX, SETTINGS);
+  const notes = dsDiDuoc(score.sourceNotes, score.unresolvedNotes);
+  const truoc = renderer.stats().engravings;
+  let caret = caretTaiId(notes, notes[0].svgId);
+  const t0 = performance.now();
+  for (let i = 0; i < 100; i++)
+    caret = diChuyen(notes, caret, i % 2 ? "prev" : "next") ?? diChuyen(notes, caret, "first");
+  const dt = performance.now() - t0;
+  assert.equal(renderer.stats().engravings, truoc, "điều hướng KHÔNG được khắc lại");
+  assert.ok(dt < 200, `100 lần điều hướng mất ${dt.toFixed(1)}ms`);
+  console.log(`    · điều hướng: ${(dt / 100).toFixed(3)} ms/lần (trung vị ~${(dt / 100).toFixed(3)})`);
+
+  // 20 lần đổi cao độ: mỗi lần là một lệnh thật đi qua đúng pipeline có sẵn.
+  let draft = createDraft(FX);
+  const note = notes.find((n) => n.path.includes("measure[1]"))!;
+  const t1 = performance.now();
+  for (let i = 0; i < 20; i++) {
+    const f = readNoteFields(draft.xml, note.path);
+    const ra = toCommand({ type: "TRANSPOSE", semitones: i % 2 ? -1 : 1 }, note.path, f);
+    if (ra.kind === "command") draft = applyToDraft(draft, ra.command);
+  }
+  const dt1 = performance.now() - t1;
+  assert.equal(draft.commands.length, 20);
+  console.log(`    · sửa (không kể khắc): ${(dt1 / 20).toFixed(2)} ms/lệnh`);
+  const t2 = performance.now();
+  renderer.render(draft.xml, SETTINGS);
+  console.log(`    · khắc lại một lần    : ${(performance.now() - t2).toFixed(0)} ms`);
+});
+
+// ══ 8. Luật mã nguồn (tự thử ngược) ════════════════════════════════════════
+
+const src = (p: string) => readFileSync(new URL(`../../src/${p}`, import.meta.url), "utf8");
+const stripComments = (s: string) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+const TUONG_TAC = [
+  "nhipphach/editor/actions.ts",
+  "nhipphach/editor/keymap.ts",
+  "nhipphach/editor/dispatcher.ts",
+  "nhipphach/editor/caret.ts",
+];
+
+test("kiến trúc: tầng tương tác không biết XML, Verovio, Supabase", () => {
+  const CAM = [
+    { ten: "xmldom / bộ vá XML", mau: /@xmldom|xmlPatch|DOMParser|XMLSerializer/, dot: 'import { parseStrict } from "../edit/xmlPatch.ts";' },
+    { ten: "Verovio", mau: /verovio|Verovio/, dot: "const tk = new VerovioToolkit(m);" },
+    { ten: "Supabase / mạng", mau: /supabase|fetch\(|localStorage/i, dot: "await fetch('/x');" },
+    { ten: "React", mau: /\breact\b|useState|useEffect/i, dot: "const [a] = useState(1);" },
+  ];
+  for (const f of [...TUONG_TAC, "nhipphach/editor/commandFacade.ts"]) {
+    const text = stripComments(src(f));
+    for (const c of CAM) {
+      assert.doesNotMatch(text, c.mau, `${f}: ${c.ten}`);
+      assert.match(text + "\n" + c.dot + "\n", c.mau, `luật “${c.ten}” không bắt được đột biến`);
+    }
+  }
+  // Mặt tiền chỉ được NHẬP KIỂU từ noteFields (bị xoá lúc biên dịch), không giá trị.
+  const facade = stripComments(src("nhipphach/editor/commandFacade.ts"));
+  assert.match(facade, /import type \{ NoteFields \}/);
+  assert.doesNotMatch(facade, /^import \{[^}]*\} from "\.\.\/edit\/noteFields/m);
+});
+
+test("kiến trúc: con trỏ không có một dòng hình học nào", () => {
+  const CAM = [
+    { ten: "toạ độ", mau: /clientX|clientY|getBBox|getBoundingClientRect|\bbbox\b/i, dot: "const b = el.getBBox();" },
+    { ten: "gần nhất", mau: /nearest|closest|Math\.hypot|distance/i, dot: "const n = nearest(x, y);" },
+    { ten: "đoán theo cao độ", mau: /soundingPitch|pitch\s*===/, dot: "if (soundingPitch(a) === b) return a;" },
+  ];
+  const text = stripComments(src("nhipphach/editor/caret.ts"));
+  for (const c of CAM) {
+    assert.doesNotMatch(text, c.mau, `caret: ${c.ten}`);
+    assert.match(text + "\n" + c.dot + "\n", c.mau, `luật “${c.ten}” không bắt được đột biến`);
+  }
+});
+
+test("kiến trúc: không có model bản nhạc thứ hai; EditorAction không mang XML", () => {
+  // Mọi thay đổi phải là một `MusicXmlEditCommand` — mặt tiền là chỗ DUY NHẤT
+  // sinh ra chúng trong cả tầng tương tác.
+  const facade = stripComments(src("nhipphach/editor/commandFacade.ts"));
+  const loai = [...facade.matchAll(/type:\s*"(Change\w+|Respell\w+)"/g)].map((m) => m[1]);
+  assert.deepEqual(
+    [...new Set(loai)].sort(),
+    ["ChangeDuration", "ChangePitch", "RespellNote"],
+    "mặt tiền phát ra lệnh lạ"
+  );
+  for (const f of TUONG_TAC) {
+    const text = stripComments(src(f));
+    assert.doesNotMatch(text, /<note|<pitch|score-partwise|"\s*<\?xml/, `${f} mang XML thô`);
+  }
+  // `EditorAction` là dữ liệu thuần: không trường nào tên xml/element/node.
+  const actions = stripComments(src("nhipphach/editor/actions.ts"));
+  assert.doesNotMatch(actions, /\b(xml|element|node|svg)\b\s*[?:]/i);
+  assert.match(actions + "\n  | { type: 'X'; xml: string }\n", /\bxml\b\s*[?:]/i);
+});
+
+test("kiến trúc: thanh công cụ và bàn phím hội tụ tại EditorAction, không vá XML", () => {
+  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  assert.doesNotMatch(tb, /@xmldom|xmlPatch|applyCommand|applyToDraft|ChangePitch|ChangeDuration/);
+  // Mọi nút đều đi qua đúng một cửa.
+  // MỌI onClick của thanh công cụ đều đi qua đúng một cửa: `onAction`. Nút Đóng
+  // của bảng trợ giúp là ngoại lệ duy nhất, và nó không đụng tới bản nhạc.
+  const onClicks = [...tb.matchAll(/onClick=\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g)].map((m) => m[1].trim());
+  assert.ok(onClicks.length >= 6, `chỉ thấy ${onClicks.length} nút`);
+  for (const c of onClicks)
+    assert.match(c, /^\(\)\s*=>\s*onAction\(|^onClose$/, `nút đi cửa khác: ${c}`);
+  // Đúng một nút cho mỗi hành động của 4A, không thiếu không thừa.
+  const hanhDong = [...tb.matchAll(/type:\s*"(SET_DURATION|TOGGLE_DOT|SET_ALTER|RESPELL|UNDO|REDO)"/g)].map((m) => m[1]);
+  assert.deepEqual(
+    [...new Set(hanhDong)].sort(),
+    ["REDO", "RESPELL", "SET_ALTER", "SET_DURATION", "TOGGLE_DOT", "UNDO"]
+  );
+});
+
+test("kiến trúc: mọi cửa vào bàn phím vẫn nằm sau cổng quyền score.edit", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  assert.match(page, /const\s+choChonNot\s*=\s*nangCao\s*&&\s*can\(caps,\s*"score\.edit"\)/);
+  for (const moc of [
+    "function onKeyDownBanNhac",
+    "function apHanhDong",
+    "<EditorToolbar",
+    "onKeyDown={choChonNot ? onKeyDownBanNhac : undefined}",
+  ]) {
+    const i = page.indexOf(moc);
+    assert.ok(i > 0, `không tìm thấy ${moc}`);
+    assert.match(page.slice(Math.max(0, i - 320), i + 320), /choChonNot/, `${moc} không có cổng quyền`);
+  }
+  // Không capability mới nào được lén thêm cho 4A.
+  const caps = stripComments(src("nhipphach/capabilities.ts"));
+  assert.doesNotMatch(caps, /score\.(keyboard|caret|toolbar)/);
+});
+
+test("kiến trúc: bộ khắc không hề biết tới tầng tương tác", () => {
+  for (const f of ["musicxml-beats/renderer/verovioAdapter.ts", "musicxml-beats/sourceTags.ts"]) {
+    const text = stripComments(src(f));
+    assert.doesNotMatch(text, /nhipphach\/editor|EditorAction|caret/i, `${f} bị kéo ngược vào tầng tương tác`);
+  }
+});
