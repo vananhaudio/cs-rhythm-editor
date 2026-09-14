@@ -218,6 +218,20 @@ export default function MusicXmlBeatsPage({
   // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
   // trạng thái và chuyển lệnh; không có dòng nào ở đây đụng vào XML.
   const [nhap, setNhap] = useState<DraftState | null>(null);
+  /**
+   * Bản sao ĐỒNG BỘ của nháp.
+   *
+   * Vì sao cần: giữ ↑ cho bàn phím tự lặp thì hàng chục phím rơi vào CÙNG một
+   * lượt việc; React gộp `setNhap` lại, nên mọi lệnh đều dựng trên cái nháp cũ
+   * của lần vẽ trước và chỉ lệnh cuối sống sót — đo được: 10 phím ra 1 lệnh.
+   * Ref này được ghi ngay lập tức nên lệnh thứ n luôn dựng trên kết quả của
+   * lệnh thứ n−1. `datNhap` là cửa DUY NHẤT đặt nháp, để hai thứ không lệch nhau.
+   */
+  const nhapRef = useRef<DraftState | null>(null);
+  const datNhap = (next: DraftState | null) => {
+    nhapRef.current = next;
+    setNhap(next);
+  };
   const [dangLuuNhap, setDangLuuNhap] = useState(false);
   const [nhapNote, setNhapNote] = useState("");
   const [kiemTra, setKiemTra] = useState<ValidationReport | null>(null);
@@ -464,7 +478,7 @@ export default function MusicXmlBeatsPage({
   useEffect(() => {
     setNotChon(null);
     setVungChon(RONG);
-    setNhap(null);
+    datNhap(null);
     setKiemTra(null);
     setNhapNote("");
   }, [source]);
@@ -545,11 +559,11 @@ export default function MusicXmlBeatsPage({
       return;
     }
     if (action.type === "UNDO") {
-      if (nhap) setNhap(hoanTacNhap(nhap));
+      if (nhapRef.current) datNhap(hoanTacNhap(nhapRef.current));
       return;
     }
     if (action.type === "REDO") {
-      if (nhap) setNhap(lamLaiNhap(nhap));
+      if (nhapRef.current) datNhap(lamLaiNhap(nhapRef.current));
       return;
     }
     const note = vungChon.caret ? notDiDuoc.find((n) => n.svgId === vungChon.caret!.sourceId) : null;
@@ -557,7 +571,12 @@ export default function MusicXmlBeatsPage({
       setNhapNote("Bấm một nốt trên bản nhạc trước đã.");
       return;
     }
-    const ra = toCommand(action, note.path, truongCaret);
+    // Ô của nốt phải đọc từ NHÁP ĐỒNG BỘ, không từ `truongCaret` của lần vẽ
+    // trước: trong một tràng phím, lần vẽ chưa kịp chạy nên `truongCaret` còn là
+    // cao độ cũ, và lệnh thứ hai sẽ tính lại từ đúng chỗ cũ ấy.
+    const xmlBayGio = nhapRef.current?.xml ?? source?.xml ?? null;
+    const truong = xmlBayGio ? readNoteFields(xmlBayGio, note.path) : truongCaret;
+    const ra = toCommand(action, note.path, truong);
     if (ra.kind === "refused") {
       setNhapNote(ra.message);
       return;
@@ -603,14 +622,15 @@ export default function MusicXmlBeatsPage({
     if (!choChonNot || !source) return;
     setKiemTra(null);
     try {
-      setNhap(applyToDraft(nhap ?? createDraft(source.xml), cmd));
+      // Đọc từ ref, KHÔNG từ state: xem chú thích của `nhapRef`.
+      datNhap(applyToDraft(nhapRef.current ?? createDraft(source.xml), cmd));
       setNhapNote("");
     } catch (e) {
       setNhapNote(e instanceof Error ? e.message : "Chưa sửa được chỗ này.");
     }
   }
   function boNhap() {
-    setNhap(null);
+    datNhap(null);
     setKiemTra(null);
     setNhapNote("");
   }
@@ -632,7 +652,11 @@ export default function MusicXmlBeatsPage({
   /** Lưu nháp = phiên bản mới. Kiểm tra bốn tầng trước; không qua thì không ghi gì. */
   async function luuNhap(ghiChu: string) {
     const lib = thuVien.current;
-    if (!choChonNot || !lib || !nhap || !baiTrongKho || !source || dangLuuNhap || luuNhapBiChan) return;
+    // Đọc nháp từ ref, không từ state: lưu là việc đi ngay sau một chuỗi sửa,
+    // và ref mới là bản đồng bộ. Xem chú thích của `nhapRef`.
+    const nhapBayGio = nhapRef.current;
+    if (!choChonNot || !lib || !nhapBayGio || !baiTrongKho || !source || dangLuuNhap || luuNhapBiChan)
+      return;
     setDangLuuNhap(true);
     setNhapNote("");
     try {
@@ -642,8 +666,8 @@ export default function MusicXmlBeatsPage({
         library: lib,
         scoreId: baiTrongKho.scoreId,
         sourceFilename: source.name,
-        original: nhap.original,
-        draft: nhap.xml,
+        original: nhapBayGio.original,
+        draft: nhapBayGio.xml,
         changeNote: ghiChu,
         pageCount: score?.pages.length ?? null,
         render: (xml) => r.render(xml, settings),
@@ -653,7 +677,7 @@ export default function MusicXmlBeatsPage({
         setNhapNote("Bản nháp chưa qua kiểm tra nên chưa lưu.");
         return;
       }
-      const daLuu = nhap.xml;
+      const daLuu = nhapBayGio.xml;
       boNhap();
       setSource({ xml: daLuu, name: source.name });
       setBaiTrongKho({
@@ -922,12 +946,35 @@ export default function MusicXmlBeatsPage({
       setPresetId(preset.id);
       return `Đã lưu preset “${preset.name}”.`;
     });
+  /**
+   * Mốc của lượt khắc trước — để biết lần này ĐỔI CÁI GÌ.
+   * Không phải tối ưu: hai việc khác nhau cần hai chính sách chờ khác nhau.
+   */
+  const mocKhac = useRef<{ source: unknown; settings: ScoreSettings } | null>(null);
   useEffect(() => {
     if (!source || !xmlHienThi) return;
     let cancelled = false;
+    /**
+     * TÁCH CHÍNH SÁCH CHỜ (Giai đoạn 4A.1).
+     *
+     * Cái chờ 180 ms có từ `c7911b0` — từ trước khi có biên tập — và nó sinh ra
+     * để đỡ cho việc KÉO THANH TRƯỢT: màu, cỡ số, khoảng cách đều là `input`
+     * bắn liên tục, không gom lại thì mỗi pixel kéo là một lượt khắc.
+     *
+     * Sửa bản nhạc bằng bàn phím thì khác hẳn: mỗi phím là MỘT ý định rời rạc,
+     * chờ 180 ms chỉ tổ làm nhớt tay. Nên khi chỉ có bản nháp đổi, xếp lượt khắc
+     * vào khung hình kế tiếp — giữ nguyên nhịp bấm mà vẫn gom được một tràng
+     * giữ phím thành một lượt khắc. KHÔNG bỏ bất cứ lệnh nào: lệnh đã nằm trong
+     * `DraftEngine` từ trước, đây chỉ là lúc VẼ.
+     */
+    const chiNhapDoi =
+      mocKhac.current !== null &&
+      mocKhac.current.source === source &&
+      mocKhac.current.settings === settings;
+    mocKhac.current = { source, settings };
     setBusy(true);
     setError("");
-    const timer = setTimeout(async () => {
+    const chay = async () => {
       try {
         renderer.current ??= createAnnotatedScoreRenderer().catch((e) => {
           renderer.current = null;
@@ -948,10 +995,18 @@ export default function MusicXmlBeatsPage({
           setBusy(false);
         }
       }
-    }, 180);
+    };
+    let huy: () => void;
+    if (chiNhapDoi) {
+      const id = requestAnimationFrame(() => void chay());
+      huy = () => cancelAnimationFrame(id);
+    } else {
+      const id = setTimeout(() => void chay(), 180);
+      huy = () => clearTimeout(id);
+    }
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      huy();
     };
   }, [source, xmlHienThi, settings]);
   const update = (value: Partial<ScoreSettings>) => {
@@ -2257,8 +2312,8 @@ export default function MusicXmlBeatsPage({
                     report={kiemTra}
                     note={nhapNote}
                     onCommand={apLenh}
-                    onUndo={() => nhap && setNhap(hoanTacNhap(nhap))}
-                    onRedo={() => nhap && setNhap(lamLaiNhap(nhap))}
+                    onUndo={() => nhapRef.current && datNhap(hoanTacNhap(nhapRef.current))}
+                    onRedo={() => nhapRef.current && datNhap(lamLaiNhap(nhapRef.current))}
                     onCancel={() => {
                       if (duocBoNhap()) boNhap();
                     }}

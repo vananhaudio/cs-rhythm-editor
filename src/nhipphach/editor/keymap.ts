@@ -100,8 +100,38 @@ export function traPhim(s: Shortcut): EditorAction | null {
   return hit ? hit.action : null;
 }
 
+/** Cách viết một phím cho người đọc: `Ctrl+ArrowRight`, `Shift+E`, `5`. */
+export const nhanPhim = (b: KeyBinding) =>
+  `${b.ctrl ? "Ctrl+" : ""}${b.shift ? "Shift+" : ""}${b.key.length === 1 ? b.key.toUpperCase() : b.key}`;
+
+/** Hai hành động có cùng ý nghĩa không? So từng trường, không so chuỗi JSON. */
+function cungHanhDong(a: EditorAction, b: EditorAction): boolean {
+  if (a.type !== b.type) return false;
+  switch (a.type) {
+    case "MOVE":
+      return a.where === (b as typeof a).where;
+    case "TRANSPOSE":
+      return a.semitones === (b as typeof a).semitones;
+    case "SET_DURATION":
+      return a.noteType === (b as typeof a).noteType;
+    case "SET_ALTER":
+      return a.alter === (b as typeof a).alter;
+    default:
+      return true;
+  }
+}
+
+/**
+ * Phím tắt của một hành động — MỘT NGUỒN SỰ THẬT.
+ *
+ * Thanh công cụ hỏi ở đây thay vì tự gõ lại chuỗi phím vào JSX; đổi bảng phím
+ * là nhãn trên nút đổi theo, không có chuyện hai chỗ nói hai đằng. Hành động
+ * chưa có phím (ví dụ ba nút ♭ ♮ ♯) trả `null` — nút KHÔNG hiện nhãn giả.
+ */
+export function phimCua(action: EditorAction): string | null {
+  const hit = KEYMAP.find((b) => cungHanhDong(b.action, action));
+  return hit ? nhanPhim(hit) : null;
+}
+
 /** Danh sách để hiện bảng trợ giúp; gộp các phím trùng hành động. */
-export const BANG_TRO_GIUP = KEYMAP.map((b) => ({
-  phim: `${b.ctrl ? "Ctrl+" : ""}${b.shift ? "Shift+" : ""}${b.key.length === 1 ? b.key.toUpperCase() : b.key}`,
-  mo: b.mo,
-}));
+export const BANG_TRO_GIUP = KEYMAP.map((b) => ({ phim: nhanPhim(b), mo: b.mo }));

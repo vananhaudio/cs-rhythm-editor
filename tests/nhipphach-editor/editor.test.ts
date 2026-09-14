@@ -14,7 +14,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dispatch, dangGoChu } from "../../src/nhipphach/editor/dispatcher.ts";
-import { KEYMAP, traPhim } from "../../src/nhipphach/editor/keymap.ts";
+import { KEYMAP, nhanPhim, phimCua, traPhim } from "../../src/nhipphach/editor/keymap.ts";
+import { NP_CSS } from "../../src/nhipphach/theme.ts";
 import { toCommand } from "../../src/nhipphach/editor/commandFacade.ts";
 import {
   RONG,
@@ -32,7 +33,7 @@ import type { SourceNote } from "../../src/musicxml-beats/sourceTags.ts";
 import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
 import { applyToDraft, createDraft, rebuildDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
 import type { DraftState } from "../../src/nhipphach/edit/draftEngine.ts";
-import { pitchName, transposeSemitone } from "../../src/nhipphach/edit/pitchModel.ts";
+import { pitchName, soundingPitch, transposeSemitone } from "../../src/nhipphach/edit/pitchModel.ts";
 import { createAnnotatedScoreRenderer } from "../../src/musicxml-beats/renderer/verovioAdapter.ts";
 import { DEFAULT_SCORE_SETTINGS } from "../../src/musicxml-beats/renderer/types.ts";
 import type { AnnotatedScore, ScoreSettings } from "../../src/musicxml-beats/renderer/types.ts";
@@ -615,9 +616,18 @@ test("kiến trúc: thanh công cụ và bàn phím hội tụ tại EditorActio
   // MỌI onClick của thanh công cụ đều đi qua đúng một cửa: `onAction`. Nút Đóng
   // của bảng trợ giúp là ngoại lệ duy nhất, và nó không đụng tới bản nhạc.
   const onClicks = [...tb.matchAll(/onClick=\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g)].map((m) => m[1].trim());
-  assert.ok(onClicks.length >= 6, `chỉ thấy ${onClicks.length} nút`);
+  assert.ok(onClicks.length >= 2, `chỉ thấy ${onClicks.length} onClick`);
   for (const c of onClicks)
-    assert.match(c, /^\(\)\s*=>\s*onAction\(|^onClose$/, `nút đi cửa khác: ${c}`);
+    assert.match(c, /^\(\)\s*=>\s*onAction\(action\)$|^onClose$/, `nút đi cửa khác: ${c}`);
+  // Và mọi nút của thanh công cụ đều là cùng MỘT component, không có nút lẻ nào
+  // tự dựng `<button>` riêng rồi tự gọi thẳng thứ khác.
+  const soButton = (tb.match(/<button\b/g) ?? []).length;
+  assert.equal(soButton, 2, `có ${soButton} thẻ <button> — chỉ được có TBtn và nút Đóng`);
+  // 6 chỗ viết `<TBtn>`, hai trong số đó nằm trong `.map` nên hiện ra 11 nút:
+  // 5 hình nốt · chấm dôi · 3 dấu hoá · đổi cách ghi · hoàn tác · làm lại.
+  assert.equal((tb.match(/<TBtn\b/g) ?? []).length, 6, "thiếu hoặc thừa nút trên thanh công cụ");
+  assert.match(tb, /HINH_NOT\.map/);
+  assert.match(tb, /DAU_HOA\.map/);
   // Đúng một nút cho mỗi hành động của 4A, không thiếu không thừa.
   const hanhDong = [...tb.matchAll(/type:\s*"(SET_DURATION|TOGGLE_DOT|SET_ALTER|RESPELL|UNDO|REDO)"/g)].map((m) => m[1]);
   assert.deepEqual(
@@ -673,4 +683,251 @@ test("kiến trúc: bộ khắc không hề biết tới tầng tương tác", (
     const text = stripComments(src(f));
     assert.doesNotMatch(text, /nhipphach\/editor|EditorAction|caret/i, `${f} bị kéo ngược vào tầng tương tác`);
   }
+});
+
+// ══ 4A.1 — chuốt lại ba chỗ đo được trên production ════════════════════════
+
+/**
+ * 1. Tô sáng nốt KHÔNG được lan sang chữ hát.
+ *
+ * Cấu trúc Verovio đã đo: `g.note > g.verse > g.syl > text` — chữ hát nằm TRONG
+ * nhóm nốt. Luật cũ tô mọi `text` con cháu nên chọn nốt là chữ hát cũng đổi màu,
+ * nhìn tưởng đang chọn lời. Bắt được khi dùng thật trên production 14/09/2026.
+ */
+test("4A.1 tô sáng: chọn nốt không được đụng tới chữ hát hay hợp âm", () => {
+  const css = NP_CSS;
+  const luat = css
+    .split("\n")
+    .filter((d) => d.includes("np-note-selected") && !d.trimStart().startsWith("/*") && !d.includes("*"))
+    .join("\n");
+  // Không còn luật quét mọi `text` con cháu của một thứ đang chọn.
+  assert.doesNotMatch(
+    css,
+    /g\.np-note-selected text/,
+    "luật cũ `g.np-note-selected text` tô cả chữ hát dưới nốt"
+  );
+  // Nốt/lặng: chỉ nét vẽ.
+  for (const hinh of ["use", "path", "polygon", "ellipse"])
+    assert.match(css, new RegExp(`g\\.note\\.np-note-selected ${hinh}`), `nốt phải tô ${hinh}`);
+  // …nhưng KHÔNG tô `text` con cháu (chữ hát), và không tô `rect` (vệt ngân dài).
+  assert.doesNotMatch(css, /g\.note\.np-note-selected text\b/, "nốt không được tô chữ hát");
+  assert.doesNotMatch(css, /g\.note\.np-note-selected rect/, "nốt không được tô vệt ngân dài");
+  // Số phím TAB là `text` con TRỰC TIẾP — được tô, nhưng đúng một cấp.
+  assert.match(css, /g\.note\.np-note-selected > text/);
+  // Lời và hợp âm chỉ đổi màu khi CHÍNH nó được chọn.
+  assert.match(css, /g\.verse\.np-note-selected text/);
+  assert.match(css, /g\.harm\.np-note-selected text/);
+  assert.ok(luat.length > 0);
+});
+
+test("4A.1 tô sáng: nốt khuông nhạc và nốt TAB là hai danh tính, không sáng kèm nhau", () => {
+  // Guitar+TAB: cùng một tiếng nhưng là HAI `<note>` nguồn khác nhau. Trang tô
+  // sáng theo đúng một `svgId`, nên không có đường nào làm sáng cả hai.
+  const notes = notesOf(read("../nhipphach-layout/fixtures/guitar-tab.musicxml"));
+  const theoKhuong = new Map<string, string[]>();
+  for (const n of notes) theoKhuong.set(n.staff, [...(theoKhuong.get(n.staff) ?? []), n.svgId]);
+  assert.ok(theoKhuong.size >= 2, "fixture phải có cả khuông nhạc lẫn TAB");
+  const tatCa = notes.map((n) => n.svgId);
+  assert.equal(new Set(tatCa).size, tatCa.length, "mỗi nốt một id riêng");
+  // Trang chỉ tra đúng một id — luật này khoá ở mã nguồn.
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  assert.match(page, /querySelectorAll\(`\[id="\$\{svgId\}"\]`\)/, "phải tô theo đúng MỘT id");
+});
+
+/** 2. Nhãn phím trên nút phải đến từ chính bảng phím, không gõ tay lần hai. */
+test("4A.1 thanh công cụ: nhãn phím lấy từ keymap, không hard-code trong JSX", () => {
+  assert.equal(phimCua({ type: "SET_DURATION", noteType: "quarter" }), "5");
+  assert.equal(phimCua({ type: "SET_DURATION", noteType: "16th" }), "3");
+  assert.equal(phimCua({ type: "TOGGLE_DOT" }), ".");
+  assert.equal(phimCua({ type: "RESPELL" }), "Shift+E");
+  assert.equal(phimCua({ type: "UNDO" }), "Ctrl+Z");
+  assert.equal(phimCua({ type: "REDO" }), "Ctrl+Shift+Z");
+  assert.equal(phimCua({ type: "TRANSPOSE", semitones: 12 }), "Ctrl+ArrowUp");
+  // Chưa có phím thì KHÔNG bịa ra nhãn.
+  assert.equal(phimCua({ type: "SET_ALTER", alter: 1 }), null);
+  assert.equal(phimCua({ type: "SET_ALTER", alter: 0 }), null);
+  // Đổi bảng phím thì nhãn đổi theo — tra ngược từ chính KEYMAP, không từ hằng số.
+  for (const b of KEYMAP) assert.equal(phimCua(b.action), nhanPhim(b));
+
+  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  assert.match(tb, /phimCua/, "thanh công cụ phải hỏi keymap");
+  // Không một chuỗi phím nào được gõ tay trong JSX.
+  // Cấm GIÁ TRỊ phím gõ tay. Chữ "phím" trong câu mô tả thì được — giá trị của
+  // nó vẫn nội suy từ `phimCua`.
+  assert.doesNotMatch(tb, /ph[íi]m [0-9A-Z]"|Ctrl\+|Shift\+|Arrow/, "còn chuỗi phím gõ tay");
+  assert.doesNotMatch(tb, /phim:\s*"/, "còn bảng phím thứ hai trong thanh công cụ");
+  // Thử ngược: luật phải bắt được chính đột biến của nó.
+  assert.match(tb + '\ntitle="Hoàn tác (phím Ctrl+Z)"\n', /Ctrl\+Z/);
+});
+
+/**
+ * 3. Giữ phím: gom lượt VẼ thì được, mất LỆNH thì không.
+ *
+ * Đây là điều kiện của việc rút chờ khắc xuống một khung hình — nếu tràng phím
+ * làm rơi mất lệnh thì đổi chính sách chờ là sai.
+ */
+test("4A.1 giữ phím: 10 lần ↑ ra đúng 10 lệnh, đúng thứ tự, hoàn tác về đúng gốc", () => {
+  const notes = dsDiDuoc(notesOf(FX));
+  let st = { draft: createDraft(FX), caret: caretTaiId(notes, notes[1].svgId), notes };
+  const caoDo = () => {
+    const n = st.notes.find((x) => x.svgId === st.caret!.sourceId)!;
+    return pitchName(readNoteFields(st.draft.xml, n.path)!.pitch!);
+  };
+  assert.equal(caoDo(), "D4");
+  // Một tràng liên tiếp, không nghỉ giữa chừng.
+  for (let i = 0; i < 10; i++) st = goPhim(st, "ArrowUp");
+  assert.equal(st.draft.commands.length, 10, "mất lệnh khi giữ phím");
+  assert.equal(st.draft.cursor, 10);
+  assert.deepEqual(
+    st.draft.commands.map((c) => c.type),
+    Array(10).fill("ChangePitch"),
+    "lệnh bị đảo hoặc lẫn loại"
+  );
+  // Lên 10 nửa cung từ Rê4 là Đô5 — cao độ cuối phải đúng, không rơi bước nào.
+  assert.equal(caoDo(), "C5");
+  // …và từng bước một phải khớp với dựng lại từ gốc: không đảo thứ tự.
+  for (let i = 1; i <= 10; i++)
+    assert.equal(
+      rebuildDraft(FX, st.draft.commands.slice(0, i)),
+      rebuildDraft(FX, st.draft.commands.slice(0, i)),
+      `bước ${i}`
+    );
+  for (let i = 10; i > 0; i--) {
+    st = goPhim(st, "z", { ctrl: true });
+    assert.equal(st.draft.xml, rebuildDraft(FX, st.draft.commands.slice(0, i - 1)), `hoàn tác ${i}`);
+  }
+  assert.equal(st.draft.xml, FX, "hoàn tác 10 lần phải về đúng bản gốc");
+  assert.equal(caoDo(), "D4");
+});
+
+/** 4. Hai việc khác nhau, hai chính sách chờ khác nhau. */
+test("4A.1 chính sách chờ: kéo thanh trượt vẫn gom 180 ms, sửa nháp thì khắc ngay khung sau", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Vẫn còn đúng một chỗ chờ 180 ms — cho `source`/`settings`.
+  assert.equal((page.match(/180\)/g) ?? []).length, 1, "phải còn đúng một chỗ chờ 180 ms");
+  assert.match(page, /setTimeout\(\(\) => void chay\(\), 180\)/);
+  // Và đường sửa nháp đi bằng khung hình, không bằng đồng hồ.
+  assert.match(page, /requestAnimationFrame\(\(\) => void chay\(\)\)/);
+  assert.match(page, /const chiNhapDoi\s*=/);
+  // Chọn nhánh bằng CÁI GÌ ĐỔI, không bằng cờ do người gọi truyền.
+  assert.match(page, /mocKhac\.current\.source === source/);
+  assert.match(page, /mocKhac\.current\.settings === settings/);
+  // Và không ai được vẽ SVG giả để làm bộ nhanh.
+  assert.doesNotMatch(page, /innerHTML\s*=|setAttribute\("d"|createElementNS/, "có chỗ vẽ tay lên SVG");
+});
+
+/**
+ * Regression: giữ phím làm MẤT LỆNH.
+ *
+ * Đo được trên bài 60 ô: bắn 10 `ArrowUp` trong cùng một lượt việc thì chỉ còn
+ * ĐÚNG MỘT lệnh. React gộp `setNhap`, nên cả mười lệnh đều dựng trên cái nháp
+ * của lần vẽ trước và chỉ lệnh cuối sống sót. Cùng lý do, `truongCaret` (memo
+ * theo lần vẽ) cũng còn là cao độ cũ nên lệnh thứ hai tính lại từ đúng chỗ cũ.
+ *
+ * Cách chữa: một bản sao ĐỒNG BỘ của nháp (`nhapRef`) và một cửa đặt nháp duy
+ * nhất (`datNhap`). Luật dưới đây khoá cả hai để không ai vô tình quay lại.
+ */
+test("4A.1 giữ phím: trang phải đọc nháp ĐỒNG BỘ, không đọc state của lần vẽ trước", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Chỉ một chỗ được gọi `setNhap` — chính trong `datNhap`.
+  const datNhapAt = page.indexOf("const datNhap");
+  assert.ok(datNhapAt > 0, "phải có cửa đặt nháp duy nhất `datNhap`");
+  const goiSetNhap = [...page.matchAll(/setNhap\(/g)].map((m) => m.index!);
+  assert.equal(goiSetNhap.length, 1, "setNhap chỉ được gọi đúng một lần, trong datNhap");
+  assert.ok(
+    goiSetNhap[0] > datNhapAt && goiSetNhap[0] < datNhapAt + 200,
+    "lần gọi setNhap duy nhất phải nằm trong datNhap"
+  );
+  // Đường sinh lệnh dựng trên ref, không dựng trên state.
+  assert.match(page, /applyToDraft\(nhapRef\.current \?\? createDraft/);
+  assert.doesNotMatch(page, /applyToDraft\(nhap \?\?/, "còn dựng lệnh trên state cũ");
+  // Hoàn tác / làm lại cũng vậy — giữ Ctrl+Z cũng là một tràng phím.
+  assert.doesNotMatch(page, /setNhap\(hoanTacNhap|setNhap\(lamLaiNhap/);
+  assert.match(page, /datNhap\(hoanTacNhap\(nhapRef\.current\)\)/);
+  assert.match(page, /datNhap\(lamLaiNhap\(nhapRef\.current\)\)/);
+  // Và ô của nốt đọc từ nháp đồng bộ trước khi dịch thành lệnh.
+  assert.match(page, /const xmlBayGio = nhapRef\.current\?\.xml/);
+  assert.match(page, /toCommand\(action, note\.path, truong\)/);
+  // Thử ngược: luật phải bắt được chính đột biến của nó.
+  assert.match(
+    page + "\n  setNhap(applyToDraft(nhap ?? createDraft(source.xml), cmd));\n",
+    /applyToDraft\(nhap \?\?/
+  );
+});
+
+/**
+ * 4A.1 — CỔNG SỐ MỘT: giữ phím không được mất lệnh.
+ *
+ * Kịch bản đúng như đã đo trên production: một nốt Fa4, bấm ↑ mười lần LIÊN
+ * TIẾP trong cùng một lượt việc (bàn phím tự lặp), rồi hoàn tác mười lần và làm
+ * lại mười lần.
+ *
+ * Phép kiểm này CỐ Ý không đợi bất cứ lượt vẽ nào: mỗi lệnh phải dựng trên kết
+ * quả của lệnh trước, đọc thẳng từ nháp vừa sinh ra. Nếu ai đó lại đi đọc trạng
+ * thái của lần vẽ trước thì mười phím sẽ ra một lệnh, và test này đỏ.
+ */
+test("4A.1 cổng số 1: Fa4 + ↑×10 đồng bộ ra đủ 10 lệnh, hoàn tác và làm lại 10/10", () => {
+  const notes = dsDiDuoc(notesOf(FX));
+  const fa4 = notes.find((n) => {
+    const f = readNoteFields(FX, n.path);
+    return f?.pitch && pitchName(f.pitch) === "F4";
+  })!;
+  assert.ok(fa4, "fixture phải có một nốt Fa4");
+  assert.equal(pitchName(readNoteFields(FX, fa4.path)!.pitch!), "F4");
+
+  // ── Mười phím, không nghỉ, không vẽ lại giữa chừng ──────────────────────
+  let draft = createDraft(FX);
+  for (let i = 0; i < 10; i++) {
+    // Đọc ô từ CHÍNH bản nháp vừa sinh — không từ ảnh chụp của lần trước.
+    const f = readNoteFields(draft.xml, fa4.path);
+    const ra = toCommand({ type: "TRANSPOSE", semitones: 1 }, fa4.path, f);
+    assert.equal(ra.kind, "command", `phím thứ ${i + 1} không sinh lệnh`);
+    if (ra.kind === "command") draft = applyToDraft(draft, ra.command);
+    assert.equal(draft.commands.length, i + 1, `sau phím ${i + 1} phải có ${i + 1} lệnh`);
+  }
+  assert.equal(draft.cursor, 10);
+  assert.deepEqual(draft.commands.map((c) => c.type), Array(10).fill("ChangePitch"));
+
+  // Fa4 lên 10 nửa cung = Rê♯5. Sai một bước là sai cả kết quả.
+  const cuoi = readNoteFields(draft.xml, fa4.path)!.pitch!;
+  assert.equal(pitchName(cuoi), "D♯5");
+  assert.equal(soundingPitch(cuoi) - soundingPitch(readNoteFields(FX, fa4.path)!.pitch!), 10);
+  const xmlCuoi = draft.xml;
+
+  // ── Hoàn tác mười lần: từng bước phải khớp dựng lại từ gốc ──────────────
+  for (let i = 10; i > 0; i--) {
+    draft = undo(draft);
+    assert.equal(draft.cursor, i - 1);
+    assert.equal(draft.xml, rebuildDraft(FX, draft.commands.slice(0, i - 1)), `hoàn tác bước ${i}`);
+  }
+  assert.equal(draft.xml, FX, "hoàn tác 10 lần phải về đúng bản gốc");
+  assert.equal(pitchName(readNoteFields(draft.xml, fa4.path)!.pitch!), "F4");
+
+  // ── Làm lại mười lần: về đúng chỗ vừa rời ───────────────────────────────
+  for (let i = 1; i <= 10; i++) {
+    draft = redo(draft);
+    assert.equal(draft.cursor, i);
+    assert.equal(draft.xml, rebuildDraft(FX, draft.commands.slice(0, i)), `làm lại bước ${i}`);
+  }
+  assert.equal(draft.xml, xmlCuoi);
+  assert.equal(pitchName(readNoteFields(draft.xml, fa4.path)!.pitch!), "D♯5");
+  assert.equal(draft.original, FX, "bản gốc không được đổi");
+});
+
+test("4A.1 chính sách chờ: điều hướng không khắc, sửa dùng khung hình, thanh trượt vẫn 180 ms", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Ba chính sách, đúng ba nhánh — và nhánh được chọn bằng CÁI GÌ ĐỔI.
+  assert.match(page, /const chiNhapDoi\s*=[\s\S]{0,220}?mocKhac\.current\.settings === settings/);
+  assert.match(page, /if \(chiNhapDoi\) \{[\s\S]{0,120}?requestAnimationFrame/);
+  assert.match(page, /\} else \{[\s\S]{0,120}?setTimeout\(\(\) => void chay\(\), 180\)/);
+  // Điều hướng không đi qua đây chút nào: MOVE không đổi `xmlHienThi`.
+  assert.match(page, /if \(action\.type === "MOVE"\)/);
+  const iMove = page.indexOf('if (action.type === "MOVE")');
+  // Cắt đúng thân nhánh MOVE, không lấn sang nhánh UNDO ngay bên dưới.
+  const thanMove = page.slice(iMove, page.indexOf("\n    }", iMove));
+  assert.ok(thanMove.length > 60 && thanMove.length < 400, `thân MOVE dài bất thường: ${thanMove.length}`);
+  assert.doesNotMatch(thanMove, /apLenh|datNhap|applyToDraft/, "điều hướng không được đụng nháp");
+  assert.match(thanMove, /diChuyen\(notDiDuoc/, "điều hướng phải đi qua caret");
+  // Và không ai được chọn nhánh bằng cờ do người gọi truyền vào.
+  assert.doesNotMatch(page, /chay\((?:true|false)\)|render(?:Ngay|Now)\s*[:=]\s*(?:true|false)/);
 });

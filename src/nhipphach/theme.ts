@@ -173,12 +173,30 @@ export const NP_CSS = `
 /* Chữ hát nằm TRONG nhóm nốt, nên rê chuột lên chữ cũng là rê lên nốt. Trả đầu
    nốt về màu mực để con trỏ chỉ tô sáng đúng thứ sắp chọn được. */
 .${NP_SCOPE} .np-select-mode .np-page g.note:has(g.verse:hover) use{fill:#000;}
-.${NP_SCOPE} .np-page g.np-note-selected use,.${NP_SCOPE} .np-page g.np-note-selected path,.${NP_SCOPE} .np-page g.np-note-selected text{fill:var(--indigo);stroke:var(--indigo);}
+/* Tô sáng CHỈ đúng thứ đang chọn. Cấu trúc Verovio đã đo:
+     nốt  = g.note   > g.notehead>use · g.stem>path · g.accid>use · g.dots>ellipse
+                     và (nếu có lời) g.verse>g.syl>text — CHỖ NÀY KHÔNG ĐƯỢC TÔ
+     lặng = g.rest   > use · g.ledgerLines>path
+     TAB  = g.note   > text  (số phím là chữ, nằm ngay dưới nốt)
+     lời  = g.verse  > g.syl>text        hợp âm = g.harm > text
+   Vì thế nốt chỉ tô NÉT VẼ (use/path/polygon/ellipse) — không đụng "text" con
+   cháu, nên chữ hát dưới nốt giữ nguyên màu mực. "rect" cũng bị loại: vệt ngân
+   dài của melisma là một "rect" nằm trong g.syl. */
+.${NP_SCOPE} .np-page g.note.np-note-selected use,.${NP_SCOPE} .np-page g.note.np-note-selected path,.${NP_SCOPE} .np-page g.note.np-note-selected polygon,.${NP_SCOPE} .np-page g.note.np-note-selected ellipse,
+.${NP_SCOPE} .np-page g.rest.np-note-selected use,.${NP_SCOPE} .np-page g.rest.np-note-selected path,.${NP_SCOPE} .np-page g.rest.np-note-selected polygon,.${NP_SCOPE} .np-page g.rest.np-note-selected ellipse{fill:var(--indigo);stroke:var(--indigo);}
+/* Số phím TAB là "text" con TRỰC TIẾP của nốt — tô, nhưng chỉ đúng một cấp. */
+.${NP_SCOPE} .np-page g.note.np-note-selected > text{fill:var(--indigo);}
+/* Lời và hợp âm chỉ đổi màu khi CHÍNH nó được chọn. */
+.${NP_SCOPE} .np-page g.verse.np-note-selected text,.${NP_SCOPE} .np-page g.harm.np-note-selected text{fill:var(--indigo);stroke:var(--indigo);}
 /* ── Thanh công cụ biên tập (Giai đoạn 4A) ───────────────────────────────── */
 .${NP_SCOPE} .np-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 10px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);}
 .${NP_SCOPE} .np-toolbar-group{display:inline-flex;gap:4px;align-items:center;}
 .${NP_SCOPE} .np-toolbar-group + .np-toolbar-group{padding-left:12px;border-left:1px solid var(--line);}
-.${NP_SCOPE} .np-tbtn{font:inherit;font-size:12.5px;line-height:1;min-height:30px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer;}
+.${NP_SCOPE} .np-tbtn{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12.5px;line-height:1;min-height:30px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer;}
+/* Nhãn phím tắt ngay trên nút, lấy từ chính bảng phím — không gõ tay lần hai. */
+.${NP_SCOPE} .np-tkey{font-size:10.5px;font-weight:700;padding:1px 4px;border-radius:4px;background:#EFECE5;color:var(--ink-hint);}
+.${NP_SCOPE} .np-tbtn[aria-pressed="true"] .np-tkey{background:rgba(255,255,255,.24);color:#fff;}
+.${NP_SCOPE} .np-tbtn:disabled .np-tkey{background:#EFECE5;}
 .${NP_SCOPE} .np-tbtn:hover:not(:disabled){background:var(--indigo-tint);border-color:#D3CEE8;}
 .${NP_SCOPE} .np-tbtn[aria-pressed="true"]{background:var(--indigo);border-color:var(--indigo);color:#fff;}
 .${NP_SCOPE} .np-tbtn:disabled{opacity:.4;cursor:not-allowed;}

@@ -1,6 +1,6 @@
 import { NOTE_TYPES, TYPE_LABEL } from "../edit/durationModel.ts";
 import type { NoteType } from "../edit/durationModel.ts";
-import { BANG_TRO_GIUP } from "./keymap.ts";
+import { BANG_TRO_GIUP, phimCua } from "./keymap.ts";
 import type { EditorAction } from "./actions.ts";
 import type { NoteFields } from "../edit/noteFields.ts";
 
@@ -22,14 +22,47 @@ export interface EditorToolbarProps {
   onAction(action: EditorAction): void;
 }
 
-/** Thứ tự trên thanh: từ ngắn tới dài, đúng như phím 3 → 7. */
-const HINH_NOT: readonly { type: NoteType; phim: string }[] = [
-  { type: "16th", phim: "3" },
-  { type: "eighth", phim: "4" },
-  { type: "quarter", phim: "5" },
-  { type: "half", phim: "6" },
-  { type: "whole", phim: "7" },
-];
+/** Thứ tự trên thanh: từ ngắn tới dài. Phím tắt KHÔNG khai ở đây — hỏi keymap. */
+const HINH_NOT: readonly NoteType[] = ["16th", "eighth", "quarter", "half", "whole"];
+
+/**
+ * Một nút = một `EditorAction` + nhãn phím lấy từ CHÍNH bảng phím.
+ *
+ * Không có chuỗi phím nào được gõ tay trong JSX: `phimCua` là nguồn sự thật duy
+ * nhất, nên đổi bảng phím là nhãn trên nút đổi theo. Hành động chưa có phím thì
+ * không hiện nhãn — thà trống còn hơn hiện một phím không tồn tại.
+ */
+function TBtn({
+  action,
+  ten,
+  mo,
+  pressed,
+  disabled,
+  onAction,
+}: {
+  action: EditorAction;
+  ten: string;
+  mo: string;
+  pressed?: boolean;
+  disabled?: boolean;
+  onAction: EditorToolbarProps["onAction"];
+}) {
+  const phim = phimCua(action);
+  return (
+    <button
+      type="button"
+      className="np-tbtn"
+      disabled={disabled}
+      aria-pressed={pressed}
+      aria-keyshortcuts={phim ?? undefined}
+      title={phim ? `${mo} (phím ${phim})` : mo}
+      onClick={() => onAction(action)}
+    >
+      <span>{ten}</span>
+      {phim && <span className="np-tkey" aria-hidden="true">{phim}</span>}
+    </button>
+  );
+}
 
 const DAU_HOA: readonly { alter: number; ky: string; ten: string }[] = [
   { alter: -1, ky: "♭", ten: "Giáng" },
@@ -44,75 +77,53 @@ export function EditorToolbar({ fields, canUndo, canRedo, onAction }: EditorTool
   return (
     <div className="np-toolbar" role="toolbar" aria-label="Công cụ biên tập">
       <span className="np-toolbar-group" role="group" aria-label="Hình nốt">
-        {HINH_NOT.map((h) => (
-          <button
-            key={h.type}
-            type="button"
-            className="np-tbtn"
+        {HINH_NOT.map((type) => (
+          <TBtn
+            key={type}
+            action={{ type: "SET_DURATION", noteType: type }}
+            ten={TYPE_LABEL[type]}
+            mo={TYPE_LABEL[type]}
+            pressed={fields?.noteType === type}
             disabled={!suaDuocTruongDo}
-            aria-pressed={fields?.noteType === h.type}
-            title={`${TYPE_LABEL[h.type]} (phím ${h.phim})`}
-            onClick={() => onAction({ type: "SET_DURATION", noteType: h.type })}
-          >
-            {TYPE_LABEL[h.type]}
-          </button>
+            onAction={onAction}
+          />
         ))}
-        <button
-          type="button"
-          className="np-tbtn"
+        <TBtn
+          action={{ type: "TOGGLE_DOT" }}
+          ten="·"
+          mo="Thêm / bỏ chấm dôi"
+          pressed={!!fields && fields.dots > 0}
           disabled={!suaDuocTruongDo}
-          aria-pressed={!!fields && fields.dots > 0}
-          title="Chấm dôi (phím .)"
-          onClick={() => onAction({ type: "TOGGLE_DOT" })}
-        >
-          ·
-        </button>
+          onAction={onAction}
+        />
       </span>
 
       <span className="np-toolbar-group" role="group" aria-label="Dấu hoá">
         {DAU_HOA.map((d) => (
-          <button
+          // Ba nút này CHƯA có phím tắt ở 4A — `phimCua` trả null nên nút không
+          // hiện nhãn, thay vì bịa ra một phím không bấm được.
+          <TBtn
             key={d.ky}
-            type="button"
-            className="np-tbtn"
+            action={{ type: "SET_ALTER", alter: d.alter }}
+            ten={d.ky}
+            mo={`${d.ten} — đổi dấu hoá của chính bậc này`}
+            pressed={fields?.pitch?.alter === d.alter}
             disabled={!suaDuocCaoDo}
-            aria-pressed={fields?.pitch?.alter === d.alter}
-            title={`${d.ten} — đổi dấu hoá của chính bậc này`}
-            onClick={() => onAction({ type: "SET_ALTER", alter: d.alter })}
-          >
-            {d.ky}
-          </button>
+            onAction={onAction}
+          />
         ))}
-        <button
-          type="button"
-          className="np-tbtn"
+        <TBtn
+          action={{ type: "RESPELL" }}
+          ten="♯↔♭"
+          mo="Đổi cách ghi, giữ nguyên tiếng"
           disabled={!suaDuocCaoDo || !fields?.respell.length}
-          title="Đổi cách ghi, giữ nguyên tiếng (Shift+E)"
-          onClick={() => onAction({ type: "RESPELL" })}
-        >
-          ♯↔♭
-        </button>
+          onAction={onAction}
+        />
       </span>
 
       <span className="np-toolbar-group" role="group" aria-label="Ngăn xếp">
-        <button
-          type="button"
-          className="np-tbtn"
-          disabled={!canUndo}
-          title="Hoàn tác (Ctrl+Z)"
-          onClick={() => onAction({ type: "UNDO" })}
-        >
-          ↶
-        </button>
-        <button
-          type="button"
-          className="np-tbtn"
-          disabled={!canRedo}
-          title="Làm lại (Ctrl+Shift+Z)"
-          onClick={() => onAction({ type: "REDO" })}
-        >
-          ↷
-        </button>
+        <TBtn action={{ type: "UNDO" }} ten="↶" mo="Hoàn tác" disabled={!canUndo} onAction={onAction} />
+        <TBtn action={{ type: "REDO" }} ten="↷" mo="Làm lại" disabled={!canRedo} onAction={onAction} />
       </span>
 
       <span className="np-toolbar-hint" title={troGiup}>
