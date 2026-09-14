@@ -20,11 +20,12 @@ const STRINGS = [
 
 // ─── Pitch detection (ACF2+) ──────────────────────────────────────────────────
 
-function detectPitch(buf: Float32Array, sampleRate: number): { freq: number; clarity: number } {
+function detectPitch(buf: Float32Array, sampleRate: number): { freq: number; clarity: number; rms: number } {
   const SIZE = buf.length;
   let sum = 0;
   for (let i = 0; i < SIZE; i++) sum += buf[i] * buf[i];
-  if (Math.sqrt(sum / SIZE) < 0.01) return { freq: -1, clarity: 0 };
+  const rms = Math.sqrt(sum / SIZE);
+  if (rms < 0.01) return { freq: -1, clarity: 0, rms };
 
   const HALF = Math.floor(SIZE / 2);
   const r = new Float32Array(HALF);
@@ -43,21 +44,42 @@ function detectPitch(buf: Float32Array, sampleRate: number): { freq: number; cla
   const maxLag = Math.floor(sampleRate / 60);
   const searchFrom = Math.max(firstMin, minLag);
 
+  const until = Math.min(HALF - 1, maxLag);
   let bestLag = -1, bestVal = -Infinity;
-  for (let i = searchFrom; i < Math.min(HALF - 1, maxLag); i++) {
+  for (let i = searchFrom; i < until; i++) {
     if (r[i] > bestVal) { bestVal = r[i]; bestLag = i; }
   }
 
-  if (bestLag < 2) return { freq: -1, clarity: 0 };
+  // Tự tương quan có đỉnh gần bằng nhau ở MỌI bội số chu kỳ, nên lấy đỉnh cao nhất
+  // dễ ra 1/2 hoặc 1/3 cao độ thật (đo được: 193,6 Hz bị đọc thành 64,5 Hz) — kim nhảy
+  // sang dây khác vì thế. Lấy đỉnh SỚM NHẤT gần cao bằng đỉnh cao nhất mới là chu kỳ cơ bản.
+  for (let i = searchFrom + 1; i < until - 1; i++) {
+    if (r[i] >= bestVal * 0.92 && r[i] >= r[i - 1] && r[i] >= r[i + 1]) { bestLag = i; bestVal = r[i]; break; }
+  }
+
+  if (bestLag < 2) return { freq: -1, clarity: 0, rms };
   const clarity = r[0] > 0 ? bestVal / r[0] : 0;
-  if (clarity < 0.55) return { freq: -1, clarity: 0 };
+  if (clarity < 0.55) return { freq: -1, clarity: 0, rms };
 
   const y0 = r[bestLag - 1], y1 = r[bestLag], y2 = r[bestLag + 1] ?? y1;
   const denom = 2 * (2 * y1 - y0 - y2);
   const refined = denom !== 0 ? bestLag - (y0 - y2) / denom : bestLag;
 
-  return { freq: sampleRate / refined, clarity };
+  return { freq: sampleRate / refined, clarity, rms };
 }
+
+// Chỉ tin một phép đo khi nó THẬT SỰ là tiếng dây đàn, không phải tiếng ồn phòng.
+// Đo bằng mic thật: ồn nền (quạt, điều hoà, ù điện) cho rms ~0,008 và clarity tối đa ~0,61;
+// tiếng gảy dây cho rms > 0,05 và clarity > 0,95. Nhiễu lọt lưới chính là thứ trước đây
+// ghi đè kim bằng một cao độ rác và làm kim nhảy/tụt sau khi học viên ngừng gảy.
+const MIN_RMS = 0.012;       // biên độ tối thiểu tuyệt đối
+const ONSET_FACTOR = 3;      // tiếng gảy phải BẬT LÊN gấp chừng này lần mức nền đang có
+const SUSTAIN_FACTOR = 1.2;  // và còn được tin chừng nào chưa chìm lại xuống mức nền
+const ARM_MS = 2500;         // sau một cú gảy, tin các phép đo trong chừng này
+const MAX_ENV = 0.04;        // trần của mức nền: phòng có ồn tới đâu cũng không đòi gảy to quá mức
+const MIN_CLARITY = 0.85;    // độ rõ của cao độ
+const STABLE_SAMPLES = 4;    // số mẫu liên tiếp phải trùng nhau
+const MAX_SPREAD = 0.015;    // 4 mẫu đó lệch nhau dưới 1,5% (~26 cents) — nhiễu thì nhảy loạn
 
 function median(arr: number[]): number {
   const s = [...arr].sort((a, b) => a - b);
@@ -82,6 +104,7 @@ function getCents(detected: number, target: number): number {
 
 function usePitchDetection() {
   const [pitch, setPitch] = useState<PitchResult>({ frequency: null, clarity: 0 });
+  const [roomNoisy, setRoomNoisy] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +116,8 @@ function usePitchDetection() {
   const freqBufRef  = useRef<number[]>([]);
   const silenceRef  = useRef(0);
   const frameRef    = useRef(0);
+  const envRef      = useRef(-1);      // mức ồn nền của phòng (-1 = chưa đo, lấy ngay khung đầu)
+  const armedRef    = useRef(0);       // đến lúc nào thì còn tin phép đo (mở ra bởi một cú gảy)
   useAudioContextResume(audioCtxRef);
 
   const stopListening = useCallback(() => {
@@ -105,7 +130,10 @@ function usePitchDetection() {
     freqBufRef.current = [];
     silenceRef.current = 0;
     frameRef.current = 0;
+    envRef.current = -1;
+    armedRef.current = 0;
     setPitch({ frequency: null, clarity: 0 });
+    setRoomNoisy(false);
     setIsActive(false);
   }, []);
 
@@ -135,11 +163,41 @@ function usePitchDetection() {
         analyserRef.current.getFloatTimeDomainData(buf);
         const result = detectPitch(buf, ctx.sampleRate);
 
-        if (result.freq > 0) {
+        // Mức nền của phòng, học liên tục và chậm (~0,8 giây). Tiếng quạt, điều hoà hay ù điện
+        // tuy có cao độ rõ nhưng CHẠY ĐỀU nên bị mức nền đuổi kịp; tiếng gảy dây thì bật vọt lên
+        // rồi tắt dần, nên chỉ nó mới mở được "cửa sổ tin cậy". Đây là thứ chặn được các cao độ
+        // rác từng làm kim tự nhảy về giữa sau khi học viên ngừng gảy.
+        // Khung đầu tiên coi như chính là mức nền — mở tuner giữa phòng đang ù thì biết ngay
+        // phòng ù cỡ nào, khỏi hiểu nhầm tiếng ù đó là một cú gảy.
+        // Nửa giây đầu chỉ để "nghe phòng": lấy mức YÊN NHẤT làm nền, chưa tin phép đo nào.
+        // (Mở tuner đúng lúc có tiếng động lớn mà lấy ngay khung đầu làm nền thì nền sai, cao quá.)
+        const warmingUp = frameRef.current <= 30;
+        if (warmingUp) envRef.current = envRef.current < 0 ? result.rms : Math.min(envRef.current, result.rms);
+        else if (envRef.current < 0) envRef.current = result.rms;
+        const env = Math.min(envRef.current, MAX_ENV);
+        // Phòng yên hơn mức đang nhớ → hạ nền nhanh (~0,5 giây); to hơn → dâng rất chậm,
+        // để tiếng đàn đang ngân không tự kéo mức nền lên rồi cắt mất phép đo của chính nó.
+        envRef.current = result.rms < envRef.current
+          ? envRef.current * 0.97 + result.rms * 0.03
+          : envRef.current * 0.999 + result.rms * 0.001;
+        const now = performance.now();
+        if (!warmingUp && result.rms >= Math.max(MIN_RMS, env * ONSET_FACTOR)) armedRef.current = now + ARM_MS;
+        const armed = now < armedRef.current && result.rms >= Math.max(MIN_RMS * 0.7, env * SUSTAIN_FACTOR);
+        const trusted = armed && result.freq > 0 && result.clarity >= MIN_CLARITY;
+        if (frameRef.current % 30 === 0) setRoomNoisy(envRef.current > MAX_ENV);
+
+        if (trusted) {
           silenceRef.current = 0;
           freqBufRef.current.push(result.freq);
           if (freqBufRef.current.length > 7) freqBufRef.current.shift();
-          if (frameRef.current % 4 === 0 && freqBufRef.current.length >= 3) {
+          const recent = freqBufRef.current.slice(-STABLE_SAMPLES);
+          const spread = recent.length >= STABLE_SAMPLES
+            ? (Math.max(...recent) - Math.min(...recent)) / Math.min(...recent)
+            : Infinity;
+          // Cao độ phải đứng yên qua vài khung mới cho ra kim — tiếng đàn thì ổn định,
+          // tiếng động trong phòng thì mỗi khung một kiểu nên bị loại ở đây.
+          if (frameRef.current % 4 === 0 && spread <= MAX_SPREAD) {
+            // lấy trung vị cả đệm (7 mẫu ≈ 0,12 giây) cho số đọc đỡ rung, nhất là dây trầm
             setPitch({ frequency: median(freqBufRef.current), clarity: result.clarity });
           }
         } else {
@@ -163,7 +221,7 @@ function usePitchDetection() {
 
   useEffect(() => () => stopListening(), [stopListening]);
 
-  return { pitch, isActive, hasPermission, error, startListening, stopListening };
+  return { pitch, roomNoisy, isActive, hasPermission, error, startListening, stopListening };
 }
 
 // ─── Line icons (thay emoji) ────────────────────────────────────────────────────
@@ -301,7 +359,7 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
   const [sampling, setSampling]           = useState(false);  // đang phát nốt mẫu qua loa
   const [live, setLive]                   = useState(false);  // false = tiếng đã tắt, kim đang GIỮ kết quả lần gảy trước
 
-  const { pitch, isActive, error, startListening } = usePitchDetection();
+  const { pitch, roomNoisy, isActive, error, startListening } = usePitchDetection();
   const selectedString = STRINGS[selectedIndex];
   const meaningfulUseRef = useRef(false);
   const doneRef  = useRef<Record<number, boolean>>({});
@@ -328,12 +386,13 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
       onMeaningfulUse?.();
     }
     const freq = pitch.frequency;
-    setDisplayFreq(freq);
     const matched = identifyString(freq);
-    setDetectedString(matched);
 
     const target = autoMode ? matched : selectedString;
-    if (!target) { setLive(false); return; }   // âm lạ (không phải dây guitar) → giữ kết quả cũ
+    // Âm lạ (không rơi vào dây guitar nào) → bỏ hẳn phép đo, đừng để nó ghi đè cả số Hz
+    if (!target) { setLive(false); return; }
+    setDisplayFreq(freq);
+    setDetectedString(matched);
     if (!autoMode && matched && matched.number !== selectedString.number) { setTuneStatus('wrongString'); setLive(false); return; }
 
     const c = getCents(freq, target.freq);
@@ -608,8 +667,10 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
         )}
 
         {!error && (
-          <div style={{ fontSize: 11.5, color: T.faint, textAlign: 'center', lineHeight: 1.5 }}>
-            Mẹo: để đàn gần điện thoại, gảy nhẹ MỘT dây rồi vặn khoá thật chậm.
+          <div style={{ fontSize: 11.5, color: roomNoisy && isActive ? T.amber : T.faint, textAlign: 'center', lineHeight: 1.5 }}>
+            {roomNoisy && isActive
+              ? 'Chỗ này hơi ồn — đưa đàn lại gần điện thoại và gảy chắc tay hơn nhé.'
+              : 'Mẹo: để đàn gần điện thoại, gảy nhẹ MỘT dây rồi vặn khoá thật chậm.'}
           </div>
         )}
       </div>
