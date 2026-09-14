@@ -21,6 +21,7 @@ export interface ClassSchedItem {
   schedule: string
   start: string
   price?: string
+  duration?: string
   courseTitle?: string
   tag?: string
   dateLabel?: string
@@ -99,6 +100,9 @@ const inferPath = (n: string) => { const s = n.toLowerCase()
   return '' }
 // Map item thô (từ ClassLandingPage sched) → card hiển thị (giữ nguyên regName KÈM MÃ — form đăng ký khớp option)
 const schedToCard = (it: ClassSchedItem, classFeeLabel: string | null) => ({
+  // Số buổi/thời lượng LẤY TỪ class_schedule.duration (lớp 8 buổi, 24 buổi, 40 buổi… đều đúng);
+  // thiếu dữ liệu mới dùng câu mặc định cũ.
+  format: it.duration?.trim() || null,
   tag: it.tag || inferTag(it.courseTitle || it.name),
   title: it.courseTitle || it.name,
   className: it.code ? `${it.name} · ${it.code}` : it.name,
@@ -223,7 +227,7 @@ export default function ClassLearningWays({ tab, onTabChange, sched, onRegister,
                     <span className="tag">{c.tag}</span>
                     <h3>{title}</h3>
                     {c.className && <div style={{ fontSize: 13.5, color: '#8A5A2B', fontWeight: 700, margin: '-2px 0 8px' }}>🎓 Lớp: {c.className}</div>}
-                    <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : '8 buổi · mỗi buổi 90 phút'}</div>
+                    <div className="cls-format">🎥 Online qua Zoom · {c.path === 'combo' ? 'combo 10 khoá' : (c.format || '8 buổi · mỗi buổi 90 phút')}</div>
                     <div className="meta"><span><b>{c.day}</b></span><span>{c.date}</span><span className="price">{c.price}</span></div>
                     <div className="acts">
                       <button className="btn btn-primary" onClick={() => onRegister(reg)}>Đăng ký lớp này</button>

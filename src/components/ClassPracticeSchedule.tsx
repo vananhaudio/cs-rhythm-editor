@@ -20,6 +20,7 @@ import {
   fmtSessionDay,
   fmtSessionTime,
   publicTitle,
+  landingUrl,
   type PracticeGroup,
   type PracticeSession,
 } from '../lib/classPractice'
@@ -114,17 +115,22 @@ function ScheduleGrid({ groups, sessions, showUpcoming, onToggleUpcoming }: {
             <div className="cps-day-body">
               {(byWeekday.get(wd) ?? []).map(g => {
                 const st = stageInfo(g.stage)
-                return (
-                  <div className="cps-group" key={g.id}>
+                const href = landingUrl(g)   // metadata.landing_url — nhóm có trang giới thiệu riêng
+                const inner = (
+                  <>
                     {st && (
                       <span className="cps-badge" style={{ color: st.color, background: st.soft }}>{st.l}</span>
                     )}
-                    <div className="cps-group-name">{publicTitle(g)}</div>
+                    <div className="cps-group-name">{publicTitle(g)}{href && <span className="cps-group-arrow">→</span>}</div>
                     <div className="cps-group-time">
                       {timeRange(g.start_time, g.duration_minutes)}
                     </div>
-                  </div>
+                    {href && <div className="cps-group-link">Xem khoá học</div>}
+                  </>
                 )
+                return href
+                  ? <a className="cps-group cps-group-a" key={g.id} href={href}>{inner}</a>
+                  : <div className="cps-group" key={g.id}>{inner}</div>
               })}
             </div>
           </div>
@@ -193,6 +199,10 @@ const CSS = `
 .tva-class .cps-day-body{display:flex;flex-direction:column;}
 .tva-class .cps-group{padding:14px 16px;border-bottom:1px solid var(--line);}
 .tva-class .cps-group:last-child{border-bottom:none;}
+.tva-class .cps-group-a{display:block;text-decoration:none;color:inherit;cursor:pointer;}
+.tva-class .cps-group-a:hover{background:#FFF7ED;}
+.tva-class .cps-group-arrow{margin-left:6px;color:var(--mem);font-weight:800;}
+.tva-class .cps-group-link{margin-top:4px;font-size:12px;font-weight:700;color:var(--mem);text-decoration:underline;}
 .tva-class .cps-badge{display:inline-block;border-radius:999px;padding:3px 11px;font-size:11px;font-weight:800;line-height:1.6;}
 .tva-class .cps-group-name{margin-top:7px;font-size:15px;font-weight:800;line-height:1.35;color:var(--ink);}
 .tva-class .cps-group-time{margin-top:3px;font-size:13.5px;font-weight:700;color:var(--mem);}

@@ -80,6 +80,18 @@ export const practiceTypeLabel = (v?: string | null): string | null =>
  *   3. practice_type hoặc stage đơn lẻ
  *   4. name gốc (fallback cuối — hiếm, chỉ khi Admin chưa khai báo gì)
  */
+/**
+ * Landing riêng của nhóm (nếu có) — NGUỒN DỮ LIỆU: class_schedule.metadata.landing_url.
+ * Không có → thẻ nhóm chỉ là text như cũ. KHÔNG hardcode mã lớp trong code.
+ * Chỉ nhận đường dẫn nội bộ dạng '/xxx' (chặn javascript:, //host, http://…).
+ */
+export function landingUrl(g: PracticeGroup): string | null {
+  const v = g.metadata?.landing_url
+  if (typeof v !== 'string') return null
+  const u = v.trim()
+  return /^\/[A-Za-z0-9._~\-/]*$/.test(u) ? u : null
+}
+
 export function publicTitle(g: PracticeGroup): string {
   const metaTitle = typeof g.metadata?.public_title === 'string' && g.metadata.public_title.trim()
     ? g.metadata.public_title.trim()
@@ -126,7 +138,7 @@ export async function fetchPractice(): Promise<{ ok: true; data: PracticeData } 
     //    stage/practice_type chỉ là mô tả sư phạm — KHÔNG dùng làm điều kiện hiển thị.
     const gRes = await supabase
       .from('class_schedule')
-      .select('id,name,code,stage,practice_type,weekday,start_time,duration_minutes,start_date,end_date,status,is_active,program_code,timezone,show_on_practice_schedule')
+      .select('id,name,code,stage,practice_type,weekday,start_time,duration_minutes,start_date,end_date,status,is_active,program_code,timezone,show_on_practice_schedule,metadata')
       .eq('show_on_practice_schedule', true)
       .eq('is_active', true)
       .order('weekday', { ascending: true })
