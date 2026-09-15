@@ -28,20 +28,21 @@ function detectPitch(buf: Float32Array, sampleRate: number): { freq: number; cla
   if (rms < 0.01) return { freq: -1, clarity: 0, rms };
 
   const HALF = Math.floor(SIZE / 2);
-  const r = new Float32Array(HALF);
-  for (let lag = 0; lag < HALF; lag++) {
+  const maxLag = Math.floor(sampleRate / 60);
+  // Chỉ tính miền cao độ guitar cần dùng, vẫn giữ nguyên cửa sổ cộng HALF mẫu.
+  const r = new Float32Array(Math.min(HALF, maxLag + 2));
+  for (let lag = 0; lag < r.length; lag++) {
     let s = 0;
     for (let i = 0; i < HALF; i++) s += buf[i] * buf[i + lag];
     r[lag] = s;
   }
 
   let firstMin = 1;
-  for (let i = 1; i < HALF - 1; i++) {
+  for (let i = 1; i < r.length - 1; i++) {
     if (r[i] <= r[i - 1] && r[i] <= r[i + 1]) { firstMin = i; break; }
   }
 
   const minLag = Math.floor(sampleRate / 380);
-  const maxLag = Math.floor(sampleRate / 60);
   const searchFrom = Math.max(firstMin, minLag);
 
   const until = Math.min(HALF - 1, maxLag);
@@ -118,13 +119,17 @@ function usePitchDetection() {
   const frameRef    = useRef(0);
   const envRef      = useRef(-1);      // mức ồn nền của phòng (-1 = chưa đo, lấy ngay khung đầu)
   const armedRef    = useRef(0);       // đến lúc nào thì còn tin phép đo (mở ra bởi một cú gảy)
+  const requestRef  = useRef(0);
+  const startingRef = useRef(false);
   useAudioContextResume(audioCtxRef);
 
   const stopListening = useCallback(() => {
+    requestRef.current++;
+    startingRef.current = false;
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
-    if (audioCtxRef.current?.state !== 'closed') audioCtxRef.current?.close();
+    if (audioCtxRef.current?.state !== 'closed') void audioCtxRef.current?.close().catch(() => {});
     audioCtxRef.current = null;
     analyserRef.current = null;
     freqBufRef.current = [];
@@ -138,16 +143,25 @@ function usePitchDetection() {
   }, []);
 
   const startListening = useCallback(async () => {
+    if (startingRef.current || streamRef.current) return;
+    startingRef.current = true;
+    const request = ++requestRef.current;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
       });
+      // Người dùng có thể đã đóng màn hình trong lúc hộp thoại xin mic còn mở.
+      if (request !== requestRef.current) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
       setHasPermission(true);
       streamRef.current = stream;
 
       const ctx = new AudioContext({ sampleRate: 44100 });
-      if (ctx.state === 'suspended') await ctx.resume();
       audioCtxRef.current = ctx;
+      if (ctx.state === 'suspended') await ctx.resume();
+      if (request !== requestRef.current) return;
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 8192;
@@ -158,7 +172,7 @@ function usePitchDetection() {
       const buf = new Float32Array(analyser.fftSize);
 
       const tick = () => {
-        if (!analyserRef.current) return;
+        if (request !== requestRef.current || !analyserRef.current) return;
         frameRef.current++;
         analyserRef.current.getFloatTimeDomainData(buf);
         const result = detectPitch(buf, ctx.sampleRate);
@@ -202,7 +216,7 @@ function usePitchDetection() {
           }
         } else {
           silenceRef.current++;
-          if (silenceRef.current > 20) {
+          if (silenceRef.current === 1) {
             freqBufRef.current = [];
             setPitch({ frequency: null, clarity: 0 });
           }
@@ -214,10 +228,14 @@ function usePitchDetection() {
       setIsActive(true);
       setError(null);
     } catch {
+      if (request !== requestRef.current) return;
+      stopListening();
       setHasPermission(false);
       setError('Không thể truy cập microphone. Vui lòng cho phép quyền mic trong trình duyệt.');
+    } finally {
+      if (request === requestRef.current) startingRef.current = false;
     }
-  }, []);
+  }, [stopListening]);
 
   useEffect(() => () => stopListening(), [stopListening]);
 
@@ -272,7 +290,7 @@ const TICKS = [-50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50];
 const THRESHOLD = 8;
 const HOLD_MS = 900;      // giữ chuẩn bao lâu thì tính là "xong dây"
 const ADVANCE_MS = 950;   // xong rồi thì bao lâu tự sang dây kế
-const SAMPLE_MS = 2200;   // thời gian tạm ngưng nghe khi phát nốt mẫu
+const SAMPLE_MS = 4000;   // mẫu dây trầm ngân tới 3,5s; chờ tắt hẳn để không đo tiếng loa
 
 const clampC = (c: number) => Math.max(-50, Math.min(50, c));
 function centXY(c: number, r: number) {
@@ -378,12 +396,15 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
   const meaningfulUseRef = useRef(false);
   const doneRef  = useRef<Record<number, boolean>>({});
   const muteUntil = useRef(0);
+  const sampleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdRef = useRef<{ number: number; since: number; last: number } | null>(null);
+  useEffect(() => () => { if (sampleTimer.current) clearTimeout(sampleTimer.current); }, []);
   useEffect(() => { doneRef.current = done; }, [done]);
 
   const doneCount = STRINGS.filter(s => done[s.number]).length;
   const allDone = doneCount === STRINGS.length;
 
-  const reset = () => { setTuneStatus('waiting'); setCents(null); setDetectedString(null); setDisplayFreq(null); setLive(false); };
+  const reset = () => { holdRef.current = null; setTuneStatus('waiting'); setCents(null); setDetectedString(null); setDisplayFreq(null); setLive(false); };
 
   useEffect(() => { reset(); }, [selectedIndex, autoMode]);
   useEffect(() => { if (!isActive) reset(); }, [isActive]);
@@ -423,18 +444,31 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
     prevStatus.current = tuneStatus;
   }, [tuneStatus]);
 
-  // Giữ chuẩn đủ lâu → đánh dấu dây đó XONG
-  const targetString = autoMode ? detectedString : selectedString;
-  const targetNumber = targetString?.number ?? null;
+  // Chỉ hoàn tất bằng các phép đo MỚI liên tục. Kim giữ kết quả không phải tín hiệu sống.
+  // Khoảng ngắt dài (đưa app xuống nền, rớt khung hình) cũng phải bắt đầu đo lại.
   useEffect(() => {
-    if (tuneStatus !== 'inTune' || targetNumber === null) return;
-    const id = setTimeout(() => {
-      setDone(d => (d[targetNumber] ? d : { ...d, [targetNumber]: true }));
-      setJustDone({ num: targetNumber, at: Date.now() });
+    const matched = pitch.frequency === null ? null : identifyString(pitch.frequency);
+    const target = autoMode ? matched : selectedString;
+    if (!isActive || sampling || Date.now() < muteUntil.current || pitch.frequency === null
+      || !target || (matched && matched.number !== target.number)
+      || Math.abs(getCents(pitch.frequency, target.freq)) > THRESHOLD) {
+      holdRef.current = null;
+      return;
+    }
+    const now = performance.now();
+    const hold = holdRef.current;
+    if (!hold || hold.number !== target.number || now - hold.last > 250) {
+      holdRef.current = { number: target.number, since: now, last: now };
+      return;
+    }
+    hold.last = now;
+    if (now - hold.since >= HOLD_MS && !doneRef.current[target.number]) {
+      doneRef.current = { ...doneRef.current, [target.number]: true };
+      setDone(doneRef.current);
+      setJustDone({ num: target.number, at: Date.now() });
       try { navigator.vibrate?.([20, 60, 20]); } catch (_) {}
-    }, HOLD_MS);
-    return () => clearTimeout(id);
-  }, [tuneStatus, targetNumber]);
+    }
+  }, [pitch, isActive, sampling, autoMode, selectedString]);
 
   // Xong một dây → ở chế độ "Chọn dây" thì tự nhảy sang dây kế CHƯA xong
   useEffect(() => {
@@ -475,7 +509,8 @@ export default function GuitarTuner({ embedded = false, onMeaningfulUse }: { emb
     setSampling(true);
     setLive(false);
     try { playGuitarNote(sampleString.freq, idx); } catch (_) {}
-    setTimeout(() => setSampling(false), SAMPLE_MS);
+    if (sampleTimer.current) clearTimeout(sampleTimer.current);
+    sampleTimer.current = setTimeout(() => setSampling(false), SAMPLE_MS);
   };
 
   const goNextString = () => {
