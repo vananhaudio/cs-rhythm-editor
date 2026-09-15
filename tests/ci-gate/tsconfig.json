@@ -1,0 +1,4 @@
+{
+  "extends": "../nhipphach-editor/tsconfig.json",
+  "include": ["./*.ts"]
+}

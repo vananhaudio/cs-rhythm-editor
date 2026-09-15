@@ -2,6 +2,8 @@ import type { MusicXmlEditCommand } from "../edit/commands.ts";
 import type { NoteFields } from "../edit/noteFields.ts";
 import { transposeSemitone, pitchName, samePitch, withAlter } from "../edit/pitchModel.ts";
 import type { EditorAction } from "./actions.ts";
+import { capDoNhap } from "./noteEntry.ts";
+import type { NoteEntryState } from "./noteEntry.ts";
 
 /**
  * Ý ĐỊNH → LỆNH — Giai đoạn 4A.
@@ -15,6 +17,8 @@ import type { EditorAction } from "./actions.ts";
  *   SET_DURATION  → ChangeDuration
  *   TOGGLE_DOT    → ChangeDuration
  *   RESPELL       → RespellNote
+ *   MAKE_REST     → MakeRest            (4B.1)
+ *   ENTER_PITCH   → ReplaceRestWithNote (4B.1)
  *
  * Facade đọc trạng thái hiện tại qua `NoteFields` — thứ trang đã tính sẵn cho
  * panel — nên nó KHÔNG cần đụng XML, không parse, không serialize. Đó cũng là
@@ -34,7 +38,8 @@ const tuChoi = (message: string): FacadeResult => ({ kind: "refused", message })
 export function toCommand(
   action: EditorAction,
   path: string,
-  fields: NoteFields | null
+  fields: NoteFields | null,
+  nhap?: NoteEntryState
 ): FacadeResult {
   if (action.type === "MOVE" || action.type === "UNDO" || action.type === "REDO")
     return { kind: "noop" };
@@ -87,6 +92,41 @@ export function toCommand(
           path,
           noteType: fields.noteType,
           dots: fields.dots ? 0 : 1,
+        },
+      };
+    }
+    case "MAKE_REST": {
+      if (fields.kind === "rest") return { kind: "noop" };
+      if (fields.chord !== "none")
+        return tuChoi(
+          fields.chord === "member"
+            ? "Chưa hỗ trợ xoá riêng một nốt trong hợp âm."
+            : "Đây là nốt gốc của một hợp âm — chưa hỗ trợ xoá."
+        );
+      if (fields.ties.length)
+        return tuChoi("Nốt này nằm trong một dấu nối — chưa hỗ trợ xoá.");
+      if (fields.grace) return tuChoi("Nốt hoa mỹ không có dấu lặng tương ứng.");
+      return { kind: "command", command: { type: "MakeRest", path } };
+    }
+    case "ENTER_PITCH": {
+      // 4B.1 KHÔNG ghi đè một nốt đã có chỉ vì người dùng gõ một chữ cái. Gõ
+      // nhanh mà nuốt mất nốt thật là thứ không hoàn tác lại được trong đầu
+      // người dùng, kể cả khi Ctrl+Z hoàn tác được trong máy.
+      if (fields.kind !== "rest")
+        return tuChoi("Chỗ này đã có nốt — bấm 0 để chuyển thành lặng trước, rồi nhập.");
+      if (fields.laLangCaO)
+        return tuChoi(
+          "Đây là dấu lặng cả ô nhịp — biến nó thành nốt phải viết lại trường độ của cả ô, chưa hỗ trợ ở bước này."
+        );
+      if (fields.duongTruongDo) return tuChoi(fields.duongTruongDo);
+      if (!nhap) return tuChoi("Chưa sẵn sàng nhập nốt.");
+      return {
+        kind: "command",
+        command: {
+          type: "ReplaceRestWithNote",
+          path,
+          pitch: capDoNhap(nhap, action.step),
+          accidental: "auto",
         },
       };
     }

@@ -4,8 +4,10 @@ import type {
   ChangeHarmony,
   ChangeLyricText,
   ChangePitch,
+  MakeRest,
   MusicXmlEditCommand,
   Pitch,
+  ReplaceRestWithNote,
   RespellNote,
 } from "./commands.ts";
 import type { HarmonyRoot } from "./harmonyModel.ts";
@@ -433,6 +435,101 @@ function changeHarmony(ctx: Ctx, harmony: Element, cmd: ChangeHarmony) {
   if (ctx.patches.length) ctx.touched.push(`${cmd.path}/harmony`);
 }
 
+/**
+ * Những con của `<note>` chỉ có nghĩa khi nốt CÓ CAO ĐỘ. Giữ lại trên một dấu
+ * lặng là ghi ra file nói dối: `<accidental>` vẽ dấu thăng cạnh dấu lặng,
+ * `<notehead>` tả hình đầu nốt không tồn tại, `<stem>` tả đuôi không tồn tại.
+ *
+ * `<stem>` nằm trong danh sách này là một quyết định có chủ ý, rộng hơn bốn thứ
+ * spec liệt kê: chuẩn cho phép `<stem>` trên mọi `<note>`, nhưng không phần mềm
+ * nào ghi đuôi cho dấu lặng, và để lại thì bộ khắc có thể vẽ ra một cái đuôi cụt.
+ */
+const CON_CHI_CUA_NOT_CO_CAO_DO = ["pitch", "unpitched", "accidental", "notehead", "notehead-text", "stem"];
+
+/** `<technical>` tả thế bấm trên dây — không còn nghĩa gì khi không còn tiếng nào. */
+function boTechnical(ctx: Ctx, note: Element) {
+  for (const notations of elementChildren(note, "notations")) {
+    const con = elementChildren(notations);
+    const tech = con.filter((c) => c.localName === "technical");
+    if (!tech.length) continue;
+    // Bỏ cả `<notations>` khi trong đó CHỈ có technical — chuẩn đòi `<notations>`
+    // phải có ít nhất một con. Một mảnh vá phủ trọn khối, KHÔNG vá lồng vào
+    // nhau: vá `<technical>` rồi vá tiếp `<notations>` bao ngoài là hai vùng
+    // chồng lên nhau, và `applyPatches` từ chối đúng như nó phải thế.
+    if (tech.length === con.length) removeLeaf(ctx, notations);
+    else for (const t of tech) removeLeaf(ctx, t);
+  }
+}
+
+/**
+ * Nốt → lặng. Không đụng `<duration>`, `<type>`, `<dot>`, `<voice>`, `<staff>`,
+ * `<time-modification>`, `<beam>`, `<lyric>` — và tuyệt đối không đụng nốt nào
+ * khác, kể cả nốt đối ứng trên khuông TAB: Nội dung 2 đã chứng minh chúng là hai
+ * nốt nguồn riêng biệt, tự ý sửa nốt thứ hai là sửa thứ thầy không hề chọn.
+ */
+function makeRest(ctx: Ctx, note: Element, cmd: MakeRest, ngu: NoteContext) {
+  if (ngu.kind === "rest") return; // đã là lặng rồi: lệnh rỗng, không phải lỗi
+  if (ngu.chord !== "none")
+    throw new EditError(
+      "EDIT_MAKE_REST_CHORD",
+      ngu.chord === "member"
+        ? "Chưa hỗ trợ xoá riêng một nốt trong hợp âm."
+        : "Đây là nốt gốc của một hợp âm — xoá nó sẽ bỏ rơi các nốt còn lại. Chưa hỗ trợ."
+    );
+  if (ngu.ties.length)
+    throw new EditError(
+      "EDIT_MAKE_REST_TIED",
+      "Nốt này nằm trong một dấu nối — xoá nó sẽ để dấu nối treo lơ lửng. Chưa hỗ trợ."
+    );
+  if (ngu.grace)
+    throw new EditError(
+      "EDIT_MAKE_REST_GRACE",
+      "Nốt hoa mỹ không có trường độ riêng nên không có dấu lặng tương ứng."
+    );
+  for (const ten of CON_CHI_CUA_NOT_CO_CAO_DO)
+    for (const el of elementChildren(note, ten)) removeLeaf(ctx, el);
+  boTechnical(ctx, note);
+  // `<rest/>` đứng đúng chỗ `<pitch>` vừa rời đi, theo thứ tự con của chuẩn.
+  insertOrderedChild(ctx, note, NOTE_CHILD_ORDER, "rest", null);
+  ctx.touched.push(`${cmd.path}/rest`);
+}
+
+/** Lặng → nốt. Đối xứng với `makeRest`; cũng không thêm bớt con nào của ô nhịp. */
+function replaceRestWithNote(
+  ctx: Ctx,
+  note: Element,
+  cmd: ReplaceRestWithNote,
+  ngu: NoteContext
+) {
+  if (!validPitch(cmd.pitch))
+    throw new EditError("EDIT_PITCH_INVALID", "Cao độ không hợp lệ.");
+  const rest = child(note, "rest");
+  if (!rest)
+    throw new EditError("EDIT_NOT_A_REST", "Chỗ này đã là một nốt có cao độ rồi.");
+  if (rest.getAttribute("measure") === "yes")
+    throw new EditError(
+      "EDIT_REST_WHOLE_MEASURE",
+      "Đây là dấu lặng cả ô nhịp — biến nó thành nốt phải viết lại trường độ của cả ô, chưa hỗ trợ ở bước này."
+    );
+  if (!child(note, "duration"))
+    throw new EditError("EDIT_REST_NO_DURATION", "Dấu lặng này không ghi trường độ trong nguồn.");
+  removeLeaf(ctx, rest);
+  const { step, alter, octave } = cmd.pitch;
+  const trong = ctx.located.indentOf(child(note, "duration")!);
+  const eol = ctx.located.eol;
+  const dong = (t: string) => (trong === null ? t : `${eol}${trong}  ${t}`);
+  const markup =
+    trong === null
+      ? `<pitch><step>${step}</step>${alter ? `<alter>${alter}</alter>` : ""}<octave>${octave}</octave></pitch>`
+      : `<pitch>${dong(`<step>${step}</step>`)}${
+          alter ? dong(`<alter>${alter}</alter>`) : ""
+        }${dong(`<octave>${octave}</octave>`)}${eol}${trong}</pitch>`;
+  insertOrderedMarkup(ctx, note, NOTE_CHILD_ORDER, "pitch", markup);
+  // Dấu hoá hiển thị đi qua ĐÚNG luật ký âm của 3B — không có bộ luật thứ hai.
+  setAccidental(ctx, note, decideAccidental(cmd.pitch, ngu.fifths, ngu.written, cmd.accidental));
+  ctx.touched.push(`${cmd.path}/pitch`);
+}
+
 export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedCommand {
   const located = locate(xml);
   const target = resolveSourcePath(located.doc, cmd.path);
@@ -472,6 +569,12 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
       break;
     case "ChangeLyricText":
       changeLyricText(ctx, target, cmd);
+      break;
+    case "MakeRest":
+      makeRest(ctx, target, cmd, ngu);
+      break;
+    case "ReplaceRestWithNote":
+      replaceRestWithNote(ctx, target, cmd, ngu);
       break;
     default: {
       const never: never = cmd;

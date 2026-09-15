@@ -88,12 +88,42 @@ export interface ChangeHarmony {
   value: HarmonyValue;
 }
 
+/**
+ * Nốt → dấu lặng, GIỮ NGUYÊN chỗ trong dòng thời gian — Giai đoạn 4B.1.
+ *
+ * Đây không phải "xoá". Xoá thật sẽ bỏ một `<note>` khỏi ô nhịp, làm ô thiếu
+ * phách và dời chỉ số con của mọi phần tử đứng sau — tức là dời đường dẫn của
+ * cả bản đồ danh tính. Chuyển thành lặng giữ `<duration>`, `<type>`, `<dot>`,
+ * `<voice>`, `<staff>` và ĐÚNG vị trí con, nên số con của ô nhịp không đổi một
+ * đơn vị nào và nhịp vẫn đủ.
+ */
+export interface MakeRest {
+  type: "MakeRest";
+  path: string;
+}
+
+/**
+ * Dấu lặng → nốt có cao độ, cũng giữ nguyên trường độ và chỗ ngồi — 4B.1.
+ *
+ * Cặp đối xứng của `MakeRest`. Cùng một luật: không thêm không bớt con của ô
+ * nhịp, chỉ đổi ruột của đúng một `<note>`.
+ */
+export interface ReplaceRestWithNote {
+  type: "ReplaceRestWithNote";
+  path: string;
+  pitch: Pitch;
+  /** Như `ChangePitch`: dấu hoá hiển thị do luật ký âm 3B quyết, không tự đoán. */
+  accidental?: AccidentalChoice;
+}
+
 export type MusicXmlEditCommand =
   | ChangePitch
   | RespellNote
   | ChangeDuration
   | ChangeLyricText
-  | ChangeHarmony;
+  | ChangeHarmony
+  | MakeRest
+  | ReplaceRestWithNote;
 
 /** Nhóm công cụ (mục 2 của spec) — để panel biết lệnh thuộc nhóm nào. */
 export const COMMAND_GROUP: Record<
@@ -105,6 +135,8 @@ export const COMMAND_GROUP: Record<
   ChangeDuration: "note",
   ChangeLyricText: "lyric",
   ChangeHarmony: "harmony",
+  MakeRest: "note",
+  ReplaceRestWithNote: "note",
 };
 
 export const CHANGE_NOTE_MAX = 300;
@@ -116,6 +148,8 @@ const MO_TA: Record<MusicXmlEditCommand["type"], (n: number) => string> = {
   ChangeDuration: (n) => `sửa trường độ ${n} nốt`,
   ChangeLyricText: (n) => `sửa lời ${n} chỗ`,
   ChangeHarmony: (n) => `sửa hợp âm ${n} chỗ`,
+  MakeRest: (n) => `chuyển ${n} nốt thành lặng`,
+  ReplaceRestWithNote: (n) => `nhập ${n} nốt vào chỗ lặng`,
 };
 const KHOA = (c: MusicXmlEditCommand) =>
   c.type === "ChangeLyricText" ? `${c.path}#${c.lyricIndex}` : c.path;

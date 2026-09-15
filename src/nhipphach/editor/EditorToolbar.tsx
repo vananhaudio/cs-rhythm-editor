@@ -121,13 +121,26 @@ export function EditorToolbar({ fields, canUndo, canRedo, onAction }: EditorTool
         />
       </span>
 
+      <span className="np-toolbar-group" role="group" aria-label="Dấu lặng">
+        {/* Nhãn phím do keymap trả — 4B.1 gắn bốn phím vào MAKE_REST, nút hiện
+            phím ĐẦU TIÊN trong bảng. Không gõ tay chuỗi phím lần thứ hai. */}
+        <TBtn
+          action={{ type: "MAKE_REST" }}
+          ten="Lặng"
+          mo="Xoá nốt → chuyển thành lặng để giữ nhịp"
+          pressed={fields?.kind === "rest"}
+          disabled={!fields || fields.kind === "rest" || fields.chord !== "none" || !!fields.ties.length || fields.grace}
+          onAction={onAction}
+        />
+      </span>
+
       <span className="np-toolbar-group" role="group" aria-label="Ngăn xếp">
         <TBtn action={{ type: "UNDO" }} ten="↶" mo="Hoàn tác" disabled={!canUndo} onAction={onAction} />
         <TBtn action={{ type: "REDO" }} ten="↷" mo="Làm lại" disabled={!canRedo} onAction={onAction} />
       </span>
 
       <span className="np-toolbar-hint" title={troGiup}>
-        ← → đi nốt · ↑ ↓ đổi cao độ · 3–7 hình nốt · phím ? xem đủ
+        ← → đi nốt · ↑ ↓ đổi cao độ · 3–7 hình nốt · A–G nhập nốt · phím ? xem đủ
       </span>
     </div>
   );

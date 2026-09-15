@@ -27,6 +27,8 @@ export interface NoteLyric {
 
 export interface NoteFields {
   kind: "note" | "rest";
+  /** `<rest measure="yes"/>` — lặng cả ô nhịp, trường độ đi theo ô chứ không tự có. */
+  laLangCaO: boolean;
   pitch: Pitch | null;
   /** Dấu hoá đang được VẼ ra, nếu nguồn có ghi. */
   accidental: string | null;
@@ -65,6 +67,7 @@ export function readNoteFields(xml: string, path: string): NoteFields | null {
   const ngu = readNoteContext(doc, path);
   if (!ngu) return null;
 
+  const laLangCaO = elementChildren(note, "rest")[0]?.getAttribute("measure") === "yes";
   const duongTruongDo =
     ngu.tuplet
       ? "Nốt này nằm trong chùm nghịch phách — trường độ chưa hỗ trợ sửa trực tiếp."
@@ -78,6 +81,7 @@ export function readNoteFields(xml: string, path: string): NoteFields | null {
 
   return {
     kind: ngu.kind,
+    laLangCaO,
     pitch: ngu.pitch,
     accidental: ngu.accidental,
     accidentalTarget: {

@@ -1,4 +1,5 @@
 import type { NoteType } from "../edit/durationModel.ts";
+import type { Step } from "../edit/commands.ts";
 
 /**
  * Ý ĐỊNH của một thao tác biên tập — Giai đoạn 4A.
@@ -23,6 +24,13 @@ export type EditorAction =
   | { type: "RESPELL" }
   /** Ba nút ♭ ♮ ♯: đổi dấu hoá của chính bậc đang có, không dịch giọng. */
   | { type: "SET_ALTER"; alter: number }
+  /**
+   * Nốt → dấu lặng. CỐ Ý không đặt tên là DELETE: nó không xoá gì khỏi bản
+   * nhạc, nó giữ chỗ và giữ nhịp. Tên đúng thì người đọc mã không hiểu nhầm.
+   */
+  | { type: "MAKE_REST" }
+  /** Gõ một chữ cái A–G để nhập nốt vào chỗ lặng. Quãng tám do `noteEntry` quyết. */
+  | { type: "ENTER_PITCH"; step: Step }
   | { type: "UNDO" }
   | { type: "REDO" };
 
@@ -41,6 +49,8 @@ export const TEN_HANH_DONG: Record<EditorAction["type"], string> = {
   TOGGLE_DOT: "Chấm dôi",
   RESPELL: "Đổi cách ghi",
   SET_ALTER: "Đổi dấu hoá",
+  MAKE_REST: "Chuyển thành lặng",
+  ENTER_PITCH: "Nhập nốt",
   UNDO: "Hoàn tác",
   REDO: "Làm lại",
 };

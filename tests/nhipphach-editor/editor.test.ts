@@ -31,6 +31,7 @@ import { laDieuHuong, laNganXep } from "../../src/nhipphach/editor/actions.ts";
 import { tagSourceIds } from "../../src/musicxml-beats/sourceTags.ts";
 import type { SourceNote } from "../../src/musicxml-beats/sourceTags.ts";
 import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
+import { NHAP_BAN_DAU, ghiNhoThamChieu } from "../../src/nhipphach/editor/noteEntry.ts";
 import { applyToDraft, createDraft, rebuildDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
 import type { DraftState } from "../../src/nhipphach/edit/draftEngine.ts";
 import { pitchName, soundingPitch, transposeSemitone } from "../../src/nhipphach/edit/pitchModel.ts";
@@ -87,9 +88,9 @@ test("keymap: mỗi phím của mục 2 ra đúng hành động, không phím n�
   assert.deepEqual(traPhim(S("E", false, true)), { type: "RESPELL" });
   assert.deepEqual(traPhim(S("z", true)), { type: "UNDO" });
   assert.deepEqual(traPhim(S("z", true, true)), { type: "REDO" });
-  // Chưa có nghĩa ở 4A → phải im, không được đoán.
-  for (const k of ["Delete", "Backspace", "r", "0", "a", "c", "T", "Insert", ","])
-    assert.equal(traPhim(S(k)), null, `phím ${k} chưa được phép có nghĩa ở 4A`);
+  // 4B.1 nhận thêm Delete/Backspace/0/R và A–G; những phím sau vẫn phải im.
+  for (const k of ["T", "Insert", ",", "Tab", "1", "2", "8", "9", "h", "q"])
+    assert.equal(traPhim(S(k)), null, `phím ${k} chưa được phép có nghĩa`);
   // Một phím KHÔNG được mang hai nghĩa: `.` là chấm dôi, không phải gấp đôi.
   const trung = new Map<string, number>();
   for (const b of KEYMAP) {
@@ -105,7 +106,10 @@ test("keymap: mỗi phím của mục 2 ra đúng hành động, không phím n�
   assert.deepEqual(traPhim(S("z", true, true)), { type: "REDO" });
   assert.deepEqual(traPhim(S("Z", true)), { type: "UNDO" });
   // Nhưng có Shift hay không vẫn là hai nghĩa khác nhau.
-  assert.equal(traPhim(S("e")), null, "e trơ chưa có nghĩa");
+  // 4B.1: `e` trơ là NHẬP nốt Mi, còn Shift+E vẫn là đổi cách ghi — hai nghĩa
+  // khác nhau cho cùng một chữ, phân biệt bằng đúng cờ Shift.
+  assert.deepEqual(traPhim(S("e")), { type: "ENTER_PITCH", step: "E" });
+  assert.deepEqual(traPhim(S("E", false, true)), { type: "RESPELL" });
 });
 
 test("keymap: ghi công Smoosic có mặt trong mã nguồn và trong THIRD_PARTY_NOTICES", () => {
@@ -167,8 +171,13 @@ test("phân phối: modal, quyền, và phím lạ", () => {
     why: "capability",
   });
   // Phím không có trong bảng thì im lặng, kể cả khi có quyền.
-  assert.deepEqual(dispatch({ key: "Delete", target: div }, { choSua: true }), { kind: "none" });
+  assert.deepEqual(dispatch({ key: "Insert", target: div }, { choSua: true }), { kind: "none" });
   assert.deepEqual(dispatch({ key: "q", target: div }, { choSua: true }), { kind: "none" });
+  // 4B.1: Delete giờ CÓ nghĩa — chuyển thành lặng.
+  assert.deepEqual(dispatch({ key: "Delete", target: div }, { choSua: true }), {
+    kind: "action",
+    action: { type: "MAKE_REST" },
+  });
   // Alt để dành cho phase sau — không nuốt oan.
   assert.deepEqual(dispatch({ key: "ArrowRight", altKey: true, target: div }, { choSua: true }), {
     kind: "none",
@@ -623,16 +632,16 @@ test("kiến trúc: thanh công cụ và bàn phím hội tụ tại EditorActio
   // tự dựng `<button>` riêng rồi tự gọi thẳng thứ khác.
   const soButton = (tb.match(/<button\b/g) ?? []).length;
   assert.equal(soButton, 2, `có ${soButton} thẻ <button> — chỉ được có TBtn và nút Đóng`);
-  // 6 chỗ viết `<TBtn>`, hai trong số đó nằm trong `.map` nên hiện ra 11 nút:
-  // 5 hình nốt · chấm dôi · 3 dấu hoá · đổi cách ghi · hoàn tác · làm lại.
-  assert.equal((tb.match(/<TBtn\b/g) ?? []).length, 6, "thiếu hoặc thừa nút trên thanh công cụ");
+  // 7 chỗ viết `<TBtn>`, hai trong số đó nằm trong `.map` nên hiện ra 12 nút:
+  // 5 hình nốt · chấm dôi · 3 dấu hoá · đổi cách ghi · LẶNG · hoàn tác · làm lại.
+  assert.equal((tb.match(/<TBtn\b/g) ?? []).length, 7, "thiếu hoặc thừa nút trên thanh công cụ");
   assert.match(tb, /HINH_NOT\.map/);
   assert.match(tb, /DAU_HOA\.map/);
   // Đúng một nút cho mỗi hành động của 4A, không thiếu không thừa.
-  const hanhDong = [...tb.matchAll(/type:\s*"(SET_DURATION|TOGGLE_DOT|SET_ALTER|RESPELL|UNDO|REDO)"/g)].map((m) => m[1]);
+  const hanhDong = [...tb.matchAll(/type:\s*"(SET_DURATION|TOGGLE_DOT|SET_ALTER|RESPELL|MAKE_REST|UNDO|REDO)"/g)].map((m) => m[1]);
   assert.deepEqual(
     [...new Set(hanhDong)].sort(),
-    ["REDO", "RESPELL", "SET_ALTER", "SET_DURATION", "TOGGLE_DOT", "UNDO"]
+    ["MAKE_REST", "REDO", "RESPELL", "SET_ALTER", "SET_DURATION", "TOGGLE_DOT", "UNDO"]
   );
 });
 
@@ -747,7 +756,12 @@ test("4A.1 thanh công cụ: nhãn phím lấy từ keymap, không hard-code tro
   assert.equal(phimCua({ type: "SET_ALTER", alter: 1 }), null);
   assert.equal(phimCua({ type: "SET_ALTER", alter: 0 }), null);
   // Đổi bảng phím thì nhãn đổi theo — tra ngược từ chính KEYMAP, không từ hằng số.
-  for (const b of KEYMAP) assert.equal(phimCua(b.action), nhanPhim(b));
+  // Hành động có NHIỀU phím (4B.1: Delete/Backspace/0/R cùng ra lặng) thì nhãn
+  // là phím ĐẦU TIÊN trong bảng — một nút chỉ hiện được một nhãn.
+  for (const b of KEYMAP) {
+    const dau = KEYMAP.find((x) => JSON.stringify(x.action) === JSON.stringify(b.action))!;
+    assert.equal(phimCua(b.action), nhanPhim(dau));
+  }
 
   const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
   assert.match(tb, /phimCua/, "thanh công cụ phải hỏi keymap");
@@ -848,7 +862,16 @@ test("4A.1 giữ phím: trang phải đọc nháp ĐỒNG BỘ, không đọc st
   assert.match(page, /datNhap\(lamLaiNhap\(nhapRef\.current\)\)/);
   // Và ô của nốt đọc từ nháp đồng bộ trước khi dịch thành lệnh.
   assert.match(page, /const xmlBayGio = nhapRef\.current\?\.xml/);
-  assert.match(page, /toCommand\(action, note\.path, truong\)/);
+  assert.match(page, /toCommand\(action, note\.path, truong, nhapNotRef\.current\)/);
+  // 4B.1: con trỏ cũng phải đồng bộ — nhập liên tục làm caret tự chạy sau mỗi
+  // nốt, nên đọc `vungChon` từ state là cả tràng chữ cái đâm vào MỘT chỗ.
+  const datVungChonAt = page.indexOf("const datVungChon");
+  assert.ok(datVungChonAt > 0, "phải có cửa đặt vùng chọn duy nhất `datVungChon`");
+  const goiSetVungChon = [...page.matchAll(/setVungChon\(/g)].map((m) => m.index!);
+  assert.equal(goiSetVungChon.length, 1, "setVungChon chỉ được gọi trong datVungChon");
+  assert.ok(goiSetVungChon[0] > datVungChonAt && goiSetVungChon[0] < datVungChonAt + 200);
+  assert.match(page, /diChuyen\(notDiDuoc, vungChonRef\.current\.caret/);
+  assert.doesNotMatch(page, /diChuyen\(notDiDuoc, vungChon\.caret/, "còn dời con trỏ từ state cũ");
   // Thử ngược: luật phải bắt được chính đột biến của nó.
   assert.match(
     page + "\n  setNhap(applyToDraft(nhap ?? createDraft(source.xml), cmd));\n",
@@ -936,4 +959,174 @@ test("4A.1 chính sách chờ: điều hướng không khắc, sửa dùng khung
   assert.match(thanMove, /diChuyen\(notDiDuoc/, "điều hướng phải đi qua caret");
   // Và không ai được chọn nhánh bằng cờ do người gọi truyền vào.
   assert.doesNotMatch(page, /chay\((?:true|false)\)|render(?:Ngay|Now)\s*[:=]\s*(?:true|false)/);
+});
+
+// ══ 9. Xoá thành lặng · nhập nốt bằng chữ cái (Giai đoạn 4B.1) ═════════════
+
+const FIX_4B = readFileSync(
+  new URL("../nhipphach-edit/fixtures/rest-entry.musicxml", import.meta.url),
+  "utf8"
+);
+const P4B = {
+  notC4: "/score-partwise/part[1]/measure[1]/*[2]",
+  langDen: "/score-partwise/part[1]/measure[1]/*[3]",
+};
+
+test("4B.1 phím: bốn lối vào cùng ra MAKE_REST, không lối nào lệch nghĩa", () => {
+  for (const key of ["Delete", "Backspace", "0", "r", "R"])
+    assert.deepEqual(
+      traPhim({ key, ctrl: false, shift: false, alt: false }),
+      { type: "MAKE_REST" },
+      key
+    );
+  // Kèm Ctrl thì KHÔNG phải lệnh của bản nhạc — Ctrl+0 là phóng to của trình duyệt.
+  assert.equal(traPhim({ key: "0", ctrl: true, shift: false, alt: false }), null);
+});
+
+test("4B.1 phím: A–G ra ENTER_PITCH đúng bậc, hoa thường như nhau", () => {
+  for (const step of ["C", "D", "E", "F", "G", "A", "B"] as const) {
+    assert.deepEqual(traPhim({ key: step, ctrl: false, shift: false, alt: false }), {
+      type: "ENTER_PITCH",
+      step,
+    });
+    assert.deepEqual(traPhim({ key: step.toLowerCase(), ctrl: false, shift: false, alt: false }), {
+      type: "ENTER_PITCH",
+      step,
+    });
+  }
+  // Shift+E vẫn là ĐỔI CÁCH GHI, không bị chữ E nuốt mất.
+  assert.deepEqual(traPhim({ key: "E", ctrl: false, shift: true, alt: false }), { type: "RESPELL" });
+  // Ctrl+B là chữ đậm của trình duyệt, không phải nhập nốt Si.
+  assert.equal(traPhim({ key: "b", ctrl: true, shift: false, alt: false }), null);
+});
+
+test("4B.1 phím: không một cú bấm nào mang hai nghĩa", () => {
+  const thay = new Map<string, string>();
+  for (const b of KEYMAP) {
+    const k = `${b.ctrl ? "C" : ""}${b.shift ? "S" : ""}${b.alt ? "A" : ""}|${b.key.length === 1 ? b.key.toLowerCase() : b.key}`;
+    const nghia = JSON.stringify(b.action);
+    const cu = thay.get(k);
+    assert.ok(cu === undefined || cu === nghia, `${k}: ${cu} ≠ ${nghia}`);
+    thay.set(k, nghia);
+  }
+});
+
+test("4B.1 AN TOÀN Ô CHỮ: a–g, r, 0, Delete, Backspace trong ô nhập đều KHÔNG sinh lệnh", () => {
+  const oChu = [
+    { tagName: "INPUT" },
+    { tagName: "TEXTAREA" },
+    { tagName: "SELECT" },
+    { tagName: "DIV", isContentEditable: true },
+  ];
+  const phim = ["a", "b", "c", "d", "e", "f", "g", "r", "0", "Delete", "Backspace", "."];
+  for (const el of oChu)
+    for (const key of phim) {
+      const ra = dispatch({ key, target: el }, { choSua: true });
+      assert.equal(ra.kind, "blocked", `${el.tagName} ${key}`);
+      assert.equal((ra as { why: string }).why, "typing");
+    }
+  // Và khi đang mở hộp thoại thì cũng không phím nào lọt.
+  for (const key of phim)
+    assert.equal(dispatch({ key, target: null }, { choSua: true, dangMoModal: true }).kind, "blocked");
+  // Không có quyền `score.edit` thì chữ cái cũng vô nghĩa.
+  for (const key of phim) {
+    const ra = dispatch({ key, target: null }, { choSua: false });
+    if (ra.kind === "none") continue; // phím không nằm trong bảng
+    assert.equal((ra as { why: string }).why, "capability", key);
+  }
+});
+
+test("4B.1 GÕ NHANH: 10 chữ cái liên tiếp ra 10 lệnh, không mất, không đảo", () => {
+  // Dựng một bản nhạc toàn dấu lặng để nhập liên tục, rồi gõ không chờ vẽ lại.
+  const tagged = tagSourceIds(FIX_4B);
+  const langs = tagged.notes.filter((n) => n.kind === "rest" && n.noteType).map((n) => n.path);
+  // Chuyển thêm vài nốt thành lặng cho đủ mười chỗ.
+  let draft: DraftState = createDraft(FIX_4B);
+  for (const n of tagged.notes)
+    if (n.kind === "note" && !n.chord && !n.ties.length)
+      try {
+        draft = applyToDraft(draft, { type: "MakeRest", path: n.path });
+      } catch {
+        /* chỗ bị chặn: bỏ qua, đã có test riêng */
+      }
+  const chos = tagSourceIds(draft.xml)
+    .notes.filter((n) => n.kind === "rest" && n.noteType)
+    .map((n) => n.path)
+    .slice(0, 10);
+  assert.equal(chos.length, 10, "phải có đủ mười chỗ lặng để nhập");
+  assert.ok(langs.length > 0);
+
+  const gõ = ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E"] as const;
+  const truocKhiGo = draft.commands.length;
+  let nhapState = NHAP_BAN_DAU;
+  // KHÔNG có lần vẽ lại nào ở giữa: mọi lệnh đọc từ chính bản nháp vừa rồi,
+  // đúng như `nhapRef` của trang làm trong một tràng phím tự lặp.
+  chos.forEach((path, i) => {
+    const r = toCommand({ type: "ENTER_PITCH", step: gõ[i] }, path, readNoteFields(draft.xml, path), nhapState);
+    assert.equal(r.kind, "command", `${gõ[i]} tại ${path}`);
+    const cmd = (r as { command: { type: string; pitch: { step: string; octave: number } } }).command;
+    assert.equal(cmd.type, "ReplaceRestWithNote");
+    draft = applyToDraft(draft, cmd as never);
+    nhapState = ghiNhoThamChieu(nhapState, cmd.pitch as never);
+  });
+  assert.equal(draft.commands.length - truocKhiGo, 10, "đủ mười lệnh, không mất cái nào");
+  // Mười chỗ ra đúng mười bậc đã gõ, đúng thứ tự.
+  assert.deepEqual(
+    chos.map((p) => readNoteFields(draft.xml, p)!.pitch!.step),
+    [...gõ]
+  );
+  // Và bản nháp bằng đúng bản gốc dựng lại từ ngăn xếp lệnh.
+  assert.equal(draft.xml, rebuildDraft(draft.original, draft.commands));
+});
+
+test("4B.1 HOÀN TÁC: C4 → lặng → E4 → hoàn tác ×2 → làm lại ×2", () => {
+  let d = createDraft(FIX_4B);
+  d = applyToDraft(d, { type: "MakeRest", path: P4B.notC4 });
+  d = applyToDraft(d, { type: "ReplaceRestWithNote", path: P4B.notC4, pitch: { step: "E", alter: 0, octave: 4 } });
+  assert.equal(readNoteFields(d.xml, P4B.notC4)!.pitch!.step, "E");
+  d = undo(d);
+  assert.equal(readNoteFields(d.xml, P4B.notC4)!.kind, "rest");
+  d = undo(d);
+  assert.equal(readNoteFields(d.xml, P4B.notC4)!.pitch!.step, "C");
+  d = redo(d);
+  d = redo(d);
+  assert.equal(readNoteFields(d.xml, P4B.notC4)!.pitch!.step, "E");
+  assert.equal(d.xml, rebuildDraft(d.original, d.commands));
+});
+
+test("4B.1 BẢN KHẮC: nốt thành lặng thì id nguồn vẫn xuyên tới SVG, đổi note→rest", () => {
+  const veRa = (xml: string) => {
+    const t = tagSourceIds(xml);
+    const out = renderer.render(t.xml, SETTINGS);
+    const svg = parse(out.pages.map((p) => p.svg).join(""));
+    return new Map(t.notes.map((n) => [n.svgId, byId(svg, n.svgId)?.getAttribute("class") ?? null]));
+  };
+  const truoc = veRa(FIX_4B);
+  const sau = veRa(applyToDraft(createDraft(FIX_4B), { type: "MakeRest", path: P4B.notC4 }).xml);
+  const id = "tva-src-p1-m1-c2";
+  assert.equal(truoc.get(id), "note");
+  assert.equal(sau.get(id), "rest", "id sống sót, chỉ đổi loại phần tử");
+  // Mọi id khác giữ nguyên cả danh tính lẫn loại.
+  for (const [k, v] of truoc) if (k !== id) assert.equal(sau.get(k), v, k);
+});
+
+test("4B.1 thanh công cụ: nút Lặng lấy phím từ CHÍNH bảng phím, không gõ tay", () => {
+  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  assert.match(tb, /action=\{\{ type: "MAKE_REST" \}\}/);
+  // Không một chuỗi phím nào được viết thẳng vào JSX.
+  assert.doesNotMatch(tb, /"Delete"|"Backspace"|aria-keyshortcuts="/);
+  assert.equal(phimCua({ type: "MAKE_REST" }), "Delete");
+  assert.equal(phimCua({ type: "ENTER_PITCH", step: "G" }), "G");
+  // Hành động chưa có phím vẫn phải trả null — không bịa nhãn.
+  assert.equal(phimCua({ type: "SET_ALTER", alter: 1 }), null);
+});
+
+test("4B.1 kiến trúc: trạng thái nhập nốt KHÔNG chứa mô hình bản nhạc thứ hai", () => {
+  const ne = stripComments(src("nhipphach/editor/noteEntry.ts"));
+  for (const cam of [/measure/i, /\bnotes\b/, /timing/i, /beatMap/i, /xml/i])
+    assert.doesNotMatch(ne, cam, String(cam));
+  assert.match(ne + "\nconst measures = [];\n", /measure/i, "luật không bắt được đột biến");
+  // Và nó cũng nằm dưới cùng những lằn ranh của 4A.
+  for (const c of [/@xmldom|xmlPatch|DOMParser/, /verovio/i, /supabase|fetch\(/i, /useState|useEffect/])
+    assert.doesNotMatch(ne, c, String(c));
 });

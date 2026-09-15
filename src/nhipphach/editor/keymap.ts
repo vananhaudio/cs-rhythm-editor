@@ -1,4 +1,5 @@
 import type { EditorAction } from "./actions.ts";
+import type { Step } from "../edit/commands.ts";
 
 /**
  * Bảng phím tắt — Giai đoạn 4A.
@@ -71,6 +72,20 @@ export const KEYMAP: readonly KeyBinding[] = [
   // ── Cách ghi (Smoosic editorKeys: Shift+E toggleEnharmonic) ──────────────
   { key: "E", shift: true, action: { type: "RESPELL" }, mo: "Đổi cách ghi (G♯ ↔ A♭)" },
 
+  // ── Xoá thành lặng (4B.1) ────────────────────────────────────────────────
+  // Delete/Backspace là phản xạ của mọi người; `0` là quy ước MuseScore cho dấu
+  // lặng; `R` là quy ước Smoosic. Bốn lối vào cùng MỘT nghĩa, và nghĩa ấy là
+  // "giữ chỗ, giữ nhịp" chứ không phải "bỏ đi".
+  { key: "Delete", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
+  { key: "Backspace", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
+  { key: "0", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
+  { key: "r", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
+
+  // ── Nhập nốt bằng chữ cái (MuseScore, Smoosic đều vậy) ───────────────────
+  ...(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map(
+    (step): KeyBinding => ({ key: step.toLowerCase(), action: { type: "ENTER_PITCH", step }, mo: `Nhập nốt ${step}` })
+  ),
+
   // ── Ngăn xếp nháp (cả ba editor lớn đều giống nhau) ──────────────────────
   { key: "z", ctrl: true, action: { type: "UNDO" }, mo: "Hoàn tác" },
   { key: "z", ctrl: true, shift: true, action: { type: "REDO" }, mo: "Làm lại" },
@@ -116,6 +131,8 @@ function cungHanhDong(a: EditorAction, b: EditorAction): boolean {
       return a.noteType === (b as typeof a).noteType;
     case "SET_ALTER":
       return a.alter === (b as typeof a).alter;
+    case "ENTER_PITCH":
+      return a.step === (b as typeof a).step;
     default:
       return true;
   }
@@ -133,5 +150,14 @@ export function phimCua(action: EditorAction): string | null {
   return hit ? nhanPhim(hit) : null;
 }
 
-/** Danh sách để hiện bảng trợ giúp; gộp các phím trùng hành động. */
-export const BANG_TRO_GIUP = KEYMAP.map((b) => ({ phim: nhanPhim(b), mo: b.mo }));
+/**
+ * Danh sách để hiện bảng trợ giúp; GỘP các phím cùng một lời mô tả.
+ *
+ * Bốn phím cùng chuyển nốt thành lặng, và bảy chữ cái cùng là "nhập nốt" — liệt
+ * kê rời ra thì bảng dài gấp đôi mà không nói thêm được gì.
+ */
+export const BANG_TRO_GIUP = (() => {
+  const gop = new Map<string, string[]>();
+  for (const b of KEYMAP) gop.set(b.mo, [...(gop.get(b.mo) ?? []), nhanPhim(b)]);
+  return [...gop].map(([mo, phims]) => ({ phim: phims.join(" / "), mo }));
+})();

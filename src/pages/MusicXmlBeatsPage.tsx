@@ -76,6 +76,10 @@ import { EditorToolbar, KeymapHelp } from "../nhipphach/editor/EditorToolbar";
 import type { EditorAction } from "../nhipphach/editor/actions";
 import { dispatch } from "../nhipphach/editor/dispatcher";
 import { toCommand } from "../nhipphach/editor/commandFacade";
+import { NHAP_BAN_DAU, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
+import type { NoteEntryState } from "../nhipphach/editor/noteEntry";
+import { STEPS } from "../nhipphach/edit/commands";
+import type { Step } from "../nhipphach/edit/commands";
 import { caretTaiId, chonMot, diChuyen, dsDiDuoc, RONG } from "../nhipphach/editor/caret";
 import type { ScoreSelection } from "../nhipphach/editor/caret";
 import { saveDraftAsVersion } from "../nhipphach/edit/versionSave";
@@ -213,6 +217,24 @@ export default function MusicXmlBeatsPage({
   // Vùng chọn tách khỏi con trỏ ngay từ bây giờ dù 4A chỉ dùng một nốt: 4C mở
   // Shift+←/→ chỉ cần cho `anchor` khác `caret`, không phải viết lại gì.
   const [vungChon, setVungChon] = useState<ScoreSelection>(RONG);
+  /**
+   * Bản sao ĐỒNG BỘ của vùng chọn — cùng một lý do như `nhapRef`.
+   *
+   * 4B.1 cho caret TỰ CHẠY sau mỗi nốt nhập, nên gõ nhanh `C D E F G` là năm
+   * phím rơi vào cùng một lượt việc. Đọc `vungChon` từ state thì cả năm chữ đều
+   * thấy caret ở chỗ cũ và cùng đâm vào MỘT dấu lặng. `datVungChon` là cửa duy
+   * nhất đặt vùng chọn, để ref và state không bao giờ lệch nhau.
+   */
+  const vungChonRef = useRef<ScoreSelection>(RONG);
+  const datVungChon = (next: ScoreSelection) => {
+    vungChonRef.current = next;
+    setVungChon(next);
+  };
+  /**
+   * Công cụ đang cầm trên tay (4B.1): gõ chữ `C` lúc này thì ra Đô mấy. Là ref
+   * chứ không phải state vì nó không vẽ ra gì, và vì cùng lý do đồng bộ ở trên.
+   */
+  const nhapNotRef = useRef<NoteEntryState>(NHAP_BAN_DAU);
   const [hienPhimTat, setHienPhimTat] = useState(false);
   // ── Bản nháp biên tập (Giai đoạn Nội dung 3) — chỉ trong bộ nhớ ──────────
   // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
@@ -443,14 +465,15 @@ export default function MusicXmlBeatsPage({
       // chỉ chạy theo thứ tự tài liệu. Kéo tiêu điểm về khung bản nhạc để bàn
       // phím lái được ngay, không bắt thầy bấm thêm lần nữa.
       const caret = caretTaiId(notDiDuoc, r.note.svgId);
-      setVungChon(caret ? chonMot(caret) : RONG);
+      datVungChon(caret ? chonMot(caret) : RONG);
+      ghiNhoNot(r.note);
       prevBody.current?.focus({ preventScroll: true });
     } else if (r.kind === "lyric") setNotChon({ kind: "lyric", lyric: r.lyric });
     else if (r.kind === "harmony") setNotChon({ kind: "harmony", harmony: r.harmony });
     else if (r.kind === "unresolved")
       setNotChon({ kind: "unresolved", svgId: r.svgId, what: r.what });
     else setNotChon(null);
-    if (r.kind !== "note") setVungChon(RONG);
+    if (r.kind !== "note") datVungChon(RONG);
   }
   // Tô sáng là lớp trình bày: chỉ thêm/bớt class trên SVG đang hiện.
   useEffect(() => {
@@ -477,7 +500,10 @@ export default function MusicXmlBeatsPage({
   // Đổi bản nhạc là bỏ chọn và bỏ nháp.
   useEffect(() => {
     setNotChon(null);
-    setVungChon(RONG);
+    datVungChon(RONG);
+    // Bài mới thì công cụ trong tay cũng về mặc định: quãng tám của bài cũ
+    // không nói gì về bài này.
+    nhapNotRef.current = NHAP_BAN_DAU;
     datNhap(null);
     setKiemTra(null);
     setNhapNote("");
@@ -551,11 +577,14 @@ export default function MusicXmlBeatsPage({
     // Cổng quyền lặp lại ở đây có chủ ý, đúng khuôn bản vá 6e85c9f.
     if (!choChonNot || !chonNot) return;
     if (action.type === "MOVE") {
-      const caret = diChuyen(notDiDuoc, vungChon.caret, action.where);
+      const caret = diChuyen(notDiDuoc, vungChonRef.current.caret, action.where);
       if (!caret) return;
-      setVungChon(chonMot(caret));
+      datVungChon(chonMot(caret));
       const note = notDiDuoc[caret.sourceIndex];
-      if (note) setNotChon({ kind: "note", note });
+      if (note) {
+        setNotChon({ kind: "note", note });
+        ghiNhoNot(note);
+      }
       return;
     }
     if (action.type === "UNDO") {
@@ -566,7 +595,8 @@ export default function MusicXmlBeatsPage({
       if (nhapRef.current) datNhap(lamLaiNhap(nhapRef.current));
       return;
     }
-    const note = vungChon.caret ? notDiDuoc.find((n) => n.svgId === vungChon.caret!.sourceId) : null;
+    const caretBayGio = vungChonRef.current.caret;
+    const note = caretBayGio ? notDiDuoc.find((n) => n.svgId === caretBayGio.sourceId) : null;
     if (!note) {
       setNhapNote("Bấm một nốt trên bản nhạc trước đã.");
       return;
@@ -576,13 +606,39 @@ export default function MusicXmlBeatsPage({
     // cao độ cũ, và lệnh thứ hai sẽ tính lại từ đúng chỗ cũ ấy.
     const xmlBayGio = nhapRef.current?.xml ?? source?.xml ?? null;
     const truong = xmlBayGio ? readNoteFields(xmlBayGio, note.path) : truongCaret;
-    const ra = toCommand(action, note.path, truong);
+    const ra = toCommand(action, note.path, truong, nhapNotRef.current);
     if (ra.kind === "refused") {
       setNhapNote(ra.message);
       return;
     }
     if (ra.kind === "noop") return;
-    apLenh(ra.command);
+    if (!apLenh(ra.command)) return;
+    // Cao độ vừa GHI RA là tham chiếu chắc chắn nhất cho chữ cái tiếp theo.
+    const cmd = ra.command;
+    if (cmd.type === "ReplaceRestWithNote" || cmd.type === "ChangePitch" || cmd.type === "RespellNote")
+      nhapNotRef.current = ghiNhoThamChieu(nhapNotRef.current, cmd.pitch);
+    // NHẬP LIÊN TỤC: nhập xong một nốt thì con trỏ tự sang phần tử kế tiếp, để
+    // gõ `C D E F G` là ra năm nốt. Chỉ ENTER_PITCH mới tự chạy — sửa cao độ hay
+    // trường độ thì người ta còn muốn sửa tiếp chính nốt ấy.
+    if (action.type === "ENTER_PITCH") {
+      const tiep = diChuyen(notDiDuoc, vungChonRef.current.caret, "next");
+      if (tiep) {
+        datVungChon(chonMot(tiep));
+        const nt = notDiDuoc[tiep.sourceIndex];
+        if (nt) setNotChon({ kind: "note", note: nt });
+      }
+    }
+  }
+
+  /** Nhớ cao độ của một nốt nguồn làm mốc cho lần gõ chữ cái tiếp theo. */
+  function ghiNhoNot(note: SourceNote) {
+    const p = note.pitch;
+    if (!p || !STEPS.includes(p.step as Step)) return;
+    nhapNotRef.current = ghiNhoThamChieu(nhapNotRef.current, {
+      step: p.step as Step,
+      alter: p.alter,
+      octave: p.octave,
+    });
   }
 
   /**
@@ -618,15 +674,17 @@ export default function MusicXmlBeatsPage({
   }
 
   /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
-  function apLenh(cmd: MusicXmlEditCommand) {
-    if (!choChonNot || !source) return;
+  function apLenh(cmd: MusicXmlEditCommand): boolean {
+    if (!choChonNot || !source) return false;
     setKiemTra(null);
     try {
       // Đọc từ ref, KHÔNG từ state: xem chú thích của `nhapRef`.
       datNhap(applyToDraft(nhapRef.current ?? createDraft(source.xml), cmd));
       setNhapNote("");
+      return true;
     } catch (e) {
       setNhapNote(e instanceof Error ? e.message : "Chưa sửa được chỗ này.");
+      return false;
     }
   }
   function boNhap() {
@@ -2224,7 +2282,7 @@ export default function MusicXmlBeatsPage({
                             if (chonNot) boNhap();
                             setChonNot((v) => !v);
                             setNotChon(null);
-                            setVungChon(RONG);
+                            datVungChon(RONG);
                           }}
                         >
                           {chonNot ? "Thoát chế độ sửa" : "Chọn để sửa"}
