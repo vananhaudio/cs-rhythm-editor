@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import type { LessonDoc, LessonSection } from './lessonTypes'
 import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
+import ZoomFrame from './ZoomFrame'
 import LessonScore from './LessonScore'
 
 const P = {
@@ -49,7 +50,9 @@ function renderSection(s: LessonSection, i: number) {
     case 'fretboard':
       return (
         <Block key={i} label="Bản đồ" title={s.title} sub={s.lead}>
-          <FretboardMap frets={s.frets} zones={s.zones} dots={s.dots} />
+          <ZoomFrame hint="Vuốt ngang để xem hết cần đàn, hoặc bấm “Xem lớn”.">
+            <FretboardMap frets={s.frets} zones={s.zones} dots={s.dots} />
+          </ZoomFrame>
           <div className="lsn-zone-legend">
             {s.zones.map(z => (
               <div key={z.no} className="lsn-zone-item">
@@ -232,6 +235,8 @@ const CSS = `
   background:${P.honeyTint};border:1px solid #EFD9B3;border-radius:10px;color:#6B4A12;}
 
 .lsn-paper{max-width:900px;margin:0 auto;padding:22px 16px 60px;}
+/* trạng thái đang xuất PDF: ẩn mọi thứ chỉ dành cho màn hình */
+.lsn-paper.is-printing .no-print{display:none !important;}
 
 .lsn-head{background:${P.surface};border:1px solid ${P.line};border-radius:16px;padding:20px;
   margin-bottom:18px;border-top:4px solid ${P.purple};}
@@ -265,6 +270,27 @@ const CSS = `
 .lsn-zone-chip{width:14px;height:14px;border-radius:4px;flex:none;margin-top:4px;}
 .lsn-legend{margin:10px 0 0;font-size:13px;color:${P.inkFaint};}
 
+/* ── Khung xem / phóng toàn màn hình ── */
+.lsn-zoom-frame{position:relative;}
+.lsn-zoom-btn{position:absolute;right:8px;top:8px;z-index:2;border:1px solid ${P.line};background:#fff;
+  color:${P.purple};font-size:12.5px;font-weight:600;border-radius:8px;padding:5px 10px;cursor:pointer;
+  font-family:inherit;box-shadow:0 1px 3px rgba(29,25,48,.08);}
+.lsn-zoom-hint{margin:8px 0 0;font-size:12.5px;color:${P.inkFaint};}
+.lsn-zoom-frame.is-big{position:fixed;inset:0;z-index:140;background:#fff;margin:0;
+  padding:56px 12px 24px;overflow:auto;-webkit-overflow-scrolling:touch;}
+.lsn-zoom-rotate{position:fixed;left:12px;bottom:10px;margin:0;font-size:12.5px;color:${P.inkFaint};}
+@media (orientation:landscape){.lsn-zoom-rotate{display:none;}}
+.lsn-zoom-frame.is-big .lsn-zoom-btn{position:fixed;right:12px;top:12px;font-size:15px;padding:9px 16px;
+  background:${P.purple};color:#fff;border-color:${P.purple};}
+.lsn-zoom-frame.is-big .lsn-score,.lsn-zoom-frame.is-big .lsn-fb{border:none;max-width:none;}
+.lsn-zoom-frame.is-big .lsn-score-host{overflow:visible;}
+/* Phóng phải áp lên KHUNG CHỨA, không lên từng <svg>: alphaTab xếp mỗi hệ thống
+   nhạc là một <svg> riêng trong khung có chiều cao riêng — phóng từng cái thì các
+   dòng nhạc chồng đè lên nhau. */
+.lsn-zoom-frame.is-big .lsn-fb{zoom:1.7;}
+.lsn-zoom-frame.is-big .lsn-score-host svg,.lsn-zoom-frame.is-big .lsn-fb svg{max-width:none;}
+.lsn-zoom-frame.is-big .lsn-fb{overflow:visible;}
+
 /* ── Bản nhạc ── */
 .lsn-tempo{font-size:14px;font-weight:700;color:${P.purple};margin-bottom:8px;}
 .lsn-score{position:relative;border:1px solid ${P.line};border-radius:12px;background:#fff;padding:6px 4px;}
@@ -274,8 +300,6 @@ const CSS = `
 .lsn-score.is-big .lsn-score-host svg{max-width:none;transform:scale(1.5);transform-origin:top left;}
 .lsn-score-msg{font-size:13.5px;color:${P.inkFaint};padding:10px;}
 .lsn-score-msg.err{color:#B91C1C;}
-.lsn-zoom{position:absolute;right:8px;top:8px;border:1px solid ${P.line};background:#fff;color:${P.purple};
-  font-size:12.5px;font-weight:600;border-radius:8px;padding:4px 9px;cursor:pointer;font-family:inherit;}
 .lsn-marks{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
 .lsn-mark{font-size:12.5px;color:${P.inkSoft};background:${P.purpleTint};border-radius:8px;padding:4px 9px;}
 .lsn-mark b{color:${P.purple};}
@@ -316,6 +340,16 @@ const CSS = `
 
 @media (max-width:640px){
   .lsn-paper{padding:14px 10px 40px;}
+  .lsn-bar a{font-size:13px;max-width:52%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lsn-fb{position:relative;}
+  /* màn hẹp: nút "Xem lớn" đặt thành hàng riêng phía trên, không đè lên bản nhạc/sơ đồ */
+  .lsn-zoom-frame:not(.is-big){display:flex;flex-direction:column-reverse;}
+  .lsn-zoom-frame:not(.is-big) .lsn-zoom-btn{position:static;align-self:flex-end;margin:0 0 8px;
+    font-size:13px;padding:7px 12px;}
+  .lsn-zoom-frame:not(.is-big) .lsn-zoom-hint{margin:8px 0 0;}
+  /* vệt mờ mép phải: báo cho biết sơ đồ còn nội dung bên ngoài màn hình */
+  .lsn-zoom-frame:not(.is-big) .lsn-fb:after{content:'';position:absolute;top:0;right:0;bottom:0;width:26px;
+    pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);}
   .lsn-head h1{font-size:25px;}
   .lsn-block{padding:14px 12px;}
   .lsn{font-size:15.5px;}

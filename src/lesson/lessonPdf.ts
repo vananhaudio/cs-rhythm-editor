@@ -27,23 +27,31 @@ async function bravuraCss(): Promise<string> {
 // html2canvas KHÔNG vẽ dấu đầu dòng của <ol>/<ul> (và cũng không hiểu counter()
 // trong ::before) ⇒ phải chèn thẳng "1." / "•" thành chữ vào bản sao.
 // Đồng thời bỏ mọi thứ chỉ dành cho màn hình (nút "Xem lớn"…).
+// ⚠️ CSS ở đây TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM ĐỔI BỐ CỤC bản sao: mốc ngắt trang đã đo
+// trên trang thật, bản sao xê dịch một chút là mọi nhát cắt lệch theo (đã từng làm
+// nhát cắt rơi vào giữa khối kế tiếp).
 const PDF_CSS = `
-.no-print{display:none !important;}
-ol,ul{list-style:none !important;padding-left:6px !important;}
+ol,ul{list-style:none !important;}
+li{position:relative;}
+.pdf-mk{position:absolute;right:100%;margin-right:6px;white-space:nowrap;}
 `
 
 function inlineListMarkers(el: HTMLElement) {
+  const mark = (li: HTMLElement, text: string) => {
+    const span = el.ownerDocument.createElement('span')
+    span.className = 'pdf-mk'
+    span.textContent = text
+    li.insertBefore(span, li.firstChild)     // absolute ⇒ không chiếm chỗ, không xô dòng
+  }
   el.querySelectorAll('ol').forEach(ol => {
     [...ol.children].forEach((li, i) => {
-      if (li instanceof HTMLElement && li.tagName === 'LI')
-        li.insertBefore(el.ownerDocument.createTextNode(`${i + 1}.\u00A0`), li.firstChild)
+      if (li instanceof HTMLElement && li.tagName === 'LI') mark(li, `${i + 1}.`)
     })
   })
   el.querySelectorAll('ul').forEach(ul => {
     if (ul.classList.contains('lsn-check')) return      // checklist đã có ô vuông riêng
     for (const li of [...ul.children]) {
-      if (li instanceof HTMLElement && li.tagName === 'LI')
-        li.insertBefore(el.ownerDocument.createTextNode('•\u00A0'), li.firstChild)
+      if (li instanceof HTMLElement && li.tagName === 'LI') mark(li, '•')
     }
   })
 }
@@ -72,20 +80,27 @@ const MAX_EDGE = 15800
 function collectCuts(root: HTMLElement, pageHcss: number): number[] {
   const top = root.getBoundingClientRect().top
   const cuts: number[] = []
-  // Đừng bao giờ ngắt trang ngay sau tiêu đề hay dòng tempo — bản nhạc phải nằm
-  // cùng trang với cái tên của nó.
-  const NO_CUT_AFTER = ['lsn-block-h', 'lsn-tempo', 'lsn-piece-h', 'lsn-piece-note', 'lsn-sub']
+  // CHỈ những chỗ này được phép ngắt trang (danh sách trắng — chặn hẳn kiểu cắt
+  // ngay dưới tiêu đề): đáy một khối lớn của tài liệu, đáy một tác phẩm, hoặc khe
+  // giữa hai hệ thống nhạc (mỗi hệ thống alphaTab vẽ là một <svg> riêng).
+  const canCut = (el: HTMLElement) =>
+    el.parentElement === root ||
+    el.classList.contains('lsn-piece') ||
+    el.tagName.toLowerCase() === 'svg' ||
+    !!el.parentElement?.classList.contains('lsn-score-host')
+
   const walk = (el: HTMLElement) => {
     if (el.classList.contains('no-print')) return
-    if (NO_CUT_AFTER.some(c => el.classList.contains(c))) return
     const r = el.getBoundingClientRect()
     const kids = [...el.children].filter(
       (c): c is HTMLElement => c instanceof HTMLElement && !c.classList.contains('no-print'),
     )
-    if (r.height > pageHcss && kids.length) { for (const k of kids) walk(k) }
-    cuts.push(r.bottom - top)
+    // Khối vừa một trang thì giữ nguyên khối; cao hơn mới cần tìm chỗ ngắt bên trong.
+    if (r.height > pageHcss && kids.length) for (const k of kids) walk(k)
+    if (canCut(el)) cuts.push(r.bottom - top)
   }
   for (const c of [...root.children]) if (c instanceof HTMLElement) walk(c)
+
   return [...new Set(cuts)].sort((a, b) => a - b)
 }
 
@@ -127,7 +142,13 @@ export async function exportLessonPdf(root: HTMLElement, fileName: string) {
     bravuraCss(),
   ])
 
+  // Ẩn những thứ chỉ dành cho màn hình NGAY TRÊN TRANG THẬT, trước khi đo mốc ngắt
+  // trang. Nếu chỉ ẩn trong bản sao (như trước), bản sao sẽ thấp hơn trang thật
+  // đúng bằng chiều cao những dòng đó và mọi nhát cắt trôi đi chừng ấy.
+  root.classList.add('is-printing')
+  try {
   await withPaperWidth(root, async () => {
+  await new Promise(r => setTimeout(r, 60))
   const rect = root.getBoundingClientRect()
   const pageHcss = (rect.width * BOX_H) / BOX_W        // một trang A4 cao bao nhiêu px trên màn
   const cuts = collectCuts(root, pageHcss)
@@ -137,6 +158,9 @@ export async function exportLessonPdf(root: HTMLElement, fileName: string) {
   const scale = Math.min(2, MAX_EDGE / rect.height, MAX_EDGE / rect.width)
   const canvas = await html2canvas(root, {
     scale,
+    // KHÔNG khai windowWidth: bản sao phải ở ĐÚNG điều kiện @media như trang thật
+    // (trang thật đang bị ép rộng 794px nhưng cửa sổ vẫn là cửa sổ điện thoại).
+    // Khai khác đi là bản sao đổi bố cục và mọi mốc ngắt trang lệch theo.
     backgroundColor: '#FFFFFF',
     useCORS: true,
     logging: false,
@@ -178,4 +202,7 @@ export async function exportLessonPdf(root: HTMLElement, fileName: string) {
   }
   pdf.save(fileName)
   })
+  } finally {
+    root.classList.remove('is-printing')
+  }
 }

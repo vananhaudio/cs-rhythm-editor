@@ -3,6 +3,7 @@
 // ở public/font/, nạp nội dung bằng alphaTex (giống src/components/ScoreTabViewerAlpha.tsx).
 // KHÔNG thêm thư viện notation mới. Nội dung nhạc đi vào từ props dưới dạng chuỗi alphaTex.
 import { useEffect, useRef, useState } from 'react'
+import ZoomFrame from './ZoomFrame'
 
 interface Props {
   tex: string
@@ -17,9 +18,9 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const apiRef = useRef<any>(null)
   const moRef = useRef<MutationObserver | null>(null)
+  const bigRef = useRef(false)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [err, setErr] = useState('')
-  const [big, setBig] = useState(false)
 
   // Số ô nhịp mỗi dòng theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF
   // khung được kéo về khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
@@ -44,7 +45,7 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         s.core.fontDirectory = '/font/'
         s.display.layoutMode = LayoutMode.Page        // tự xuống dòng → không tràn ngang
         s.display.staveProfile = StaveProfile.ScoreTab
-        s.display.scale = narrow ? 0.82 : 0.95
+        s.display.scale = narrow ? 1 : 0.95
         s.display.barsPerRow = rows
         // Ẩn chữ thừa — tiêu đề/nhịp độ do tài liệu tự trình bày
         const hide = [
@@ -86,13 +87,14 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     if (!host || typeof ResizeObserver === 'undefined') return
     let applied = rows
     const ro = new ResizeObserver(() => {
+      if (bigRef.current) return                    // đang xem toàn màn hình: giữ nguyên cách khắc
       const want = narrowNow() ? Math.min(2, barsPerRow) : barsPerRow
       const api = apiRef.current
       if (!api || want === applied) return
       applied = want
       try {
         api.settings.display.barsPerRow = want
-        api.settings.display.scale = narrowNow() ? 0.82 : 0.95
+        api.settings.display.scale = narrowNow() ? 1 : 0.95
         api.updateSettings()
         api.render()
       } catch { /* */ }
@@ -102,16 +104,28 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [barsPerRow])
 
+  // Xem toàn màn hình = khắc lại MỘT ô nhịp mỗi dòng với nốt to, cuộn dọc mà đọc.
+  // (Đừng phóng bằng CSS: alphaTab đo bề ngang khung để dàn nốt, phóng xong nốt dồn cục.)
+  const onZoom = (big: boolean) => {
+    bigRef.current = big
+    const api = apiRef.current
+    if (!api) return
+    try {
+      api.settings.display.barsPerRow = big ? 1 : (narrowNow() ? Math.min(2, barsPerRow) : barsPerRow)
+      api.settings.display.scale = big ? 1.25 : (narrowNow() ? 1 : 0.95)
+      api.updateSettings()
+      api.render()
+    } catch { /* */ }
+  }
+
   return (
-    <div className={`lsn-score${big ? ' is-big' : ''}`}>
-      {state === 'loading' && <div className="lsn-score-msg">Đang dựng bản nhạc…</div>}
-      {state === 'error' && <div className="lsn-score-msg err">Chưa hiển thị được bản nhạc ({err})</div>}
-      <div ref={hostRef} className="lsn-score-host" />
-      {zoomable && (
-        <button type="button" className="lsn-zoom no-print" onClick={() => setBig(v => !v)}>
-          {big ? '↙ Thu nhỏ' : '↗ Xem lớn'}
-        </button>
-      )}
-    </div>
+    <ZoomFrame onZoom={onZoom}
+               hint={zoomable ? 'Bản nhạc dài — bấm “Xem lớn” để đọc toàn màn hình.' : undefined}>
+      <div className="lsn-score">
+        {state === 'loading' && <div className="lsn-score-msg">Đang dựng bản nhạc…</div>}
+        {state === 'error' && <div className="lsn-score-msg err">Chưa hiển thị được bản nhạc ({err})</div>}
+        <div ref={hostRef} className="lsn-score-host" />
+      </div>
+    </ZoomFrame>
   )
 }
