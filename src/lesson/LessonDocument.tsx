@@ -2,7 +2,9 @@
 // Nhận một LessonDoc (dữ liệu) → dựng trang giáo trình: web/app + in A4.
 // Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
+import { useRef, useState } from 'react'
 import type { LessonDoc, LessonSection } from './lessonTypes'
+import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
 import LessonScore from './LessonScore'
 
@@ -163,16 +165,41 @@ function renderSection(s: LessonSection, i: number) {
 
 export default function LessonDocument({ doc }: { doc: LessonDoc }) {
   const m = doc.meta
+  const paperRef = useRef<HTMLElement>(null)
+  const [pdf, setPdf] = useState<'idle' | 'working' | 'error'>('idle')
+
+  const fileName = `${m.programCode}-Buoi-${String(m.sessionNo).padStart(2, '0')}.pdf`
+
+  const savePdf = async () => {
+    if (!paperRef.current || pdf === 'working') return
+    setPdf('working')
+    try {
+      await exportLessonPdf(paperRef.current, fileName)
+      setPdf('idle')
+    } catch {
+      // Máy nào chặn tải file (app trong WebView) thì lùi về hộp thoại in của hệ thống.
+      setPdf('error')
+      window.print()
+    }
+  }
+
   return (
     <div className="lsn">
       <style>{CSS}</style>
 
       <div className="lsn-bar no-print">
         <a href={m.backHref ?? '/solo01'}>← {m.programName}</a>
-        <button type="button" onClick={() => window.print()}>🖨 In giáo trình</button>
+        <button type="button" onClick={savePdf} disabled={pdf === 'working'}>
+          {pdf === 'working' ? 'Đang tạo PDF…' : '⬇ Lưu PDF'}
+        </button>
       </div>
+      {pdf === 'error' && (
+        <p className="lsn-pdf-note no-print">
+          Máy này không tải được file. Trong cửa sổ in vừa mở, chọn <b>Lưu thành PDF</b>.
+        </p>
+      )}
 
-      <article className="lsn-paper">
+      <article className="lsn-paper" ref={paperRef}>
         <header className="lsn-head">
           <div className="lsn-head-top">{m.programCode} · {m.programName}</div>
           <h1>BUỔI {String(m.sessionNo).padStart(2, '0')}</h1>
@@ -200,6 +227,9 @@ const CSS = `
 .lsn-bar a{color:${P.purple};font-weight:600;text-decoration:none;font-size:14px;}
 .lsn-bar button{border:1px solid ${P.purple};background:${P.purple};color:#fff;font-weight:600;
   font-size:14px;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:inherit;}
+.lsn-bar button:disabled{opacity:.65;cursor:progress;}
+.lsn-pdf-note{max-width:900px;margin:10px auto 0;padding:10px 14px;font-size:13.5px;
+  background:${P.honeyTint};border:1px solid #EFD9B3;border-radius:10px;color:#6B4A12;}
 
 .lsn-paper{max-width:900px;margin:0 auto;padding:22px 16px 60px;}
 

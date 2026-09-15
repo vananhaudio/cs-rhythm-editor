@@ -21,7 +21,9 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   const [err, setErr] = useState('')
   const [big, setBig] = useState(false)
 
-  // Mobile → ít ô nhịp mỗi dòng để nốt không bị bóp nhỏ
+  // Số ô nhịp mỗi dòng theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF
+  // khung được kéo về khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
+  const narrowNow = () => (hostRef.current?.clientWidth ?? window.innerWidth) < 620
   const narrow = typeof window !== 'undefined' && window.innerWidth < 640
   const rows = narrow ? Math.min(2, barsPerRow) : barsPerRow
 
@@ -77,6 +79,28 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   }, [])
 
   useEffect(() => { if (apiRef.current) { try { apiRef.current.tex(tex) } catch { /* */ } } }, [tex])
+
+  // Khung đổi bề rộng (xoay máy, hoặc lúc tạo PDF) → khắc lại với số ô nhịp phù hợp
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host || typeof ResizeObserver === 'undefined') return
+    let applied = rows
+    const ro = new ResizeObserver(() => {
+      const want = narrowNow() ? Math.min(2, barsPerRow) : barsPerRow
+      const api = apiRef.current
+      if (!api || want === applied) return
+      applied = want
+      try {
+        api.settings.display.barsPerRow = want
+        api.settings.display.scale = narrowNow() ? 0.82 : 0.95
+        api.updateSettings()
+        api.render()
+      } catch { /* */ }
+    })
+    ro.observe(host)
+    return () => ro.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barsPerRow])
 
   return (
     <div className={`lsn-score${big ? ' is-big' : ''}`}>
