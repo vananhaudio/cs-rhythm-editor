@@ -1,0 +1,310 @@
+// ── LessonDocument — khuôn tài liệu học dùng chung cho CẢ 24 buổi SOLO-01 ──
+// Nhận một LessonDoc (dữ liệu) → dựng trang giáo trình: web/app + in A4.
+// Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
+// Section nào không có trong doc.sections thì đơn giản là không hiện.
+import type { LessonDoc, LessonSection } from './lessonTypes'
+import FretboardMap from './FretboardMap'
+import LessonScore from './LessonScore'
+
+const P = {
+  bg: '#F7F5FC', surface: '#FFFFFF', ink: '#1D1930', inkSoft: '#3E3952', inkFaint: '#6A6580',
+  purple: '#4338CA', purpleDark: '#352BA3', purpleTint: '#EDEBFB',
+  line: '#E4E0F0', honey: '#A85F0E', honeyTint: '#FBF3E6',
+}
+
+function Block({ label, title, children, sub }:
+  { label?: string; title: string; sub?: string; children: React.ReactNode }) {
+  return (
+    <section className="lsn-block">
+      <header className="lsn-block-h">
+        {label && <span className="lsn-tag">{label}</span>}
+        <h2>{title}</h2>
+        {sub && <p className="lsn-sub">{sub}</p>}
+      </header>
+      {children}
+    </section>
+  )
+}
+
+function renderSection(s: LessonSection, i: number) {
+  switch (s.kind) {
+    case 'objectives':
+      return (
+        <section key={i} className="lsn-goals lsn-block">
+          <h2>{s.title ?? 'Sau buổi này học viên làm được'}</h2>
+          <ol>{s.items.map((t, k) => <li key={k}>{t}</li>)}</ol>
+        </section>
+      )
+
+    case 'note':
+      return (
+        <aside key={i} className="lsn-note lsn-block">
+          {s.title && <strong>{s.title}</strong>}
+          <p>{s.text}</p>
+        </aside>
+      )
+
+    case 'fretboard':
+      return (
+        <Block key={i} label="Bản đồ" title={s.title} sub={s.lead}>
+          <FretboardMap frets={s.frets} zones={s.zones} dots={s.dots} />
+          <div className="lsn-zone-legend">
+            {s.zones.map(z => (
+              <div key={z.no} className="lsn-zone-item">
+                <span className="lsn-zone-chip" style={{ background: z.color }} />
+                <div>
+                  <b>{z.label}</b>
+                  {z.hint && <span> — {z.hint}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          {s.legend && <p className="lsn-legend">{s.legend.join('  ·  ')}</p>}
+        </Block>
+      )
+
+    case 'score':
+      return (
+        <Block key={i} label={s.subtitle} title={s.title} sub={s.lead}>
+          {s.tempo && <div className="lsn-tempo">{s.tempo}</div>}
+          <LessonScore tex={s.tex} />
+          {s.marks && s.marks.length > 0 && (
+            <div className="lsn-marks">
+              {s.marks.map((m, k) => (
+                <span key={k} className="lsn-mark"><b>{m.at}</b> {m.text}</span>
+              ))}
+            </div>
+          )}
+          {s.guidance && <ul className="lsn-guide">{s.guidance.map((g, k) => <li key={k}>{g}</li>)}</ul>}
+        </Block>
+      )
+
+    case 'repertoire':
+      return (
+        <Block key={i} label="Tác phẩm" title={s.title}>
+          <div className="lsn-rep">
+            <div className="lsn-rep-list">
+              <b>Dự kiến:</b> {s.candidates.join(' · ')}
+            </div>
+            {s.pieces?.map((w, k) => (
+              <div key={k} className="lsn-piece">
+                <div className="lsn-piece-h">
+                  <h3>{w.title}</h3>
+                  {w.composer && <span className="lsn-piece-by">{w.composer}</span>}
+                </div>
+                {w.note && <p className="lsn-piece-note">{w.note}</p>}
+                {w.tempo && <div className="lsn-tempo">{w.tempo}</div>}
+                <LessonScore tex={w.tex} barsPerRow={w.barsPerRow ?? 4} />
+                {w.marks && w.marks.length > 0 && (
+                  <div className="lsn-marks">
+                    {w.marks.map((mk, j) => <span key={j} className="lsn-mark"><b>{mk.at}</b> {mk.text}</span>)}
+                  </div>
+                )}
+                {w.guidance && <ul className="lsn-guide">{w.guidance.map((g, j) => <li key={j}>{g}</li>)}</ul>}
+              </div>
+            ))}
+            {s.status === 'pending' ? (
+              <div className="lsn-pending">
+                {s.pendingText ?? 'Tác phẩm Buổi 01 – chờ giáo viên cung cấp MusicXML/PDF/TAB.'}
+              </div>
+            ) : (
+              <div className="lsn-assets">
+                {s.assets?.map((a, k) => (
+                  <a key={k} className="lsn-asset" href={a.href}>{a.label}</a>
+                ))}
+              </div>
+            )}
+            {s.annotationTypes && (
+              <div className="lsn-annot">
+                <b>Khi có bản nhạc, đánh dấu trực tiếp trên bản:</b>
+                <div className="lsn-annot-chips">
+                  {s.annotationTypes.map((t, k) => <span key={k}>{t}</span>)}
+                </div>
+              </div>
+            )}
+          </div>
+        </Block>
+      )
+
+    case 'assignment':
+      return (
+        <Block key={i} title={s.title ?? 'Bài tập về nhà'}>
+          <ul className="lsn-hw">
+            {s.items.map((it, k) => (
+              <li key={k}><b>{it.label}</b> {it.text}</li>
+            ))}
+          </ul>
+          {s.message && <p className="lsn-msg">{s.message}</p>}
+        </Block>
+      )
+
+    case 'checklist':
+      return (
+        <Block key={i} title={s.title ?? 'Checklist cuối bài'}>
+          <ul className="lsn-check">
+            {s.items.map((t, k) => <li key={k}><span className="lsn-box" />{t}</li>)}
+          </ul>
+        </Block>
+      )
+
+    case 'studentNotes':
+      return (
+        <Block key={i} title={s.title ?? 'Ghi chú / câu hỏi cho thầy'}>
+          <div className="lsn-notes" style={{ minHeight: (s.lines ?? 7) * 30 }}>
+            {Array.from({ length: s.lines ?? 7 }, (_, k) => <span key={k} />)}
+          </div>
+        </Block>
+      )
+
+    default:
+      return null
+  }
+}
+
+export default function LessonDocument({ doc }: { doc: LessonDoc }) {
+  const m = doc.meta
+  return (
+    <div className="lsn">
+      <style>{CSS}</style>
+
+      <div className="lsn-bar no-print">
+        <a href={m.backHref ?? '/solo01'}>← {m.programName}</a>
+        <button type="button" onClick={() => window.print()}>🖨 In giáo trình</button>
+      </div>
+
+      <article className="lsn-paper">
+        <header className="lsn-head">
+          <div className="lsn-head-top">{m.programCode} · {m.programName}</div>
+          <h1>BUỔI {String(m.sessionNo).padStart(2, '0')}</h1>
+          <p className="lsn-head-title">{m.title}</p>
+          {m.stageLabel && <p className="lsn-head-stage">{m.stageLabel}</p>}
+        </header>
+
+        {doc.sections.map(renderSection)}
+
+        <footer className="lsn-foot">
+          {m.programCode} · Buổi {String(m.sessionNo).padStart(2, '0')} — Thầy Văn Anh Guitar
+        </footer>
+      </article>
+    </div>
+  )
+}
+
+const CSS = `
+.lsn{background:${P.bg};color:${P.ink};font-family:'Be Vietnam Pro',system-ui,sans-serif;
+  line-height:1.6;font-size:16px;min-height:100vh;text-align:left;color-scheme:light;overflow-x:hidden;}
+.lsn *{box-sizing:border-box;}
+.lsn-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:10px 16px;background:rgba(247,245,252,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid ${P.line};}
+.lsn-bar a{color:${P.purple};font-weight:600;text-decoration:none;font-size:14px;}
+.lsn-bar button{border:1px solid ${P.purple};background:${P.purple};color:#fff;font-weight:600;
+  font-size:14px;border-radius:10px;padding:8px 14px;cursor:pointer;font-family:inherit;}
+
+.lsn-paper{max-width:900px;margin:0 auto;padding:22px 16px 60px;}
+
+.lsn-head{background:${P.surface};border:1px solid ${P.line};border-radius:16px;padding:20px;
+  margin-bottom:18px;border-top:4px solid ${P.purple};}
+.lsn-head-top{font-size:12.5px;font-weight:700;letter-spacing:.09em;color:${P.purple};text-transform:uppercase;}
+.lsn-head h1{margin:6px 0 2px;font-size:30px;font-weight:800;letter-spacing:.02em;}
+.lsn-head-title{margin:0;font-size:18px;font-weight:600;color:${P.inkSoft};}
+.lsn-head-stage{margin:8px 0 0;font-size:13px;color:${P.inkFaint};}
+
+.lsn-block{background:${P.surface};border:1px solid ${P.line};border-radius:16px;padding:18px;margin:0 0 16px;}
+.lsn-block-h{margin-bottom:12px;}
+.lsn-tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:${P.purple};background:${P.purpleTint};border-radius:999px;padding:3px 10px;margin-bottom:6px;}
+.lsn-block h2{margin:0;font-size:19px;font-weight:700;}
+.lsn-sub{margin:6px 0 0;font-size:14.5px;color:${P.inkFaint};}
+
+.lsn-goals{border-left:4px solid ${P.purple};}
+.lsn-goals h2{margin:0 0 8px;font-size:17px;}
+.lsn-goals ol{margin:0;padding-left:20px;}
+.lsn-goals li{margin:3px 0;font-size:15px;}
+
+.lsn-note{background:${P.honeyTint};border-color:#F0DFC2;}
+.lsn-note strong{display:block;font-size:14px;color:${P.honey};margin-bottom:4px;}
+.lsn-note p{margin:0;font-size:14.5px;color:${P.inkSoft};}
+
+/* ── Sơ đồ cần đàn ── */
+.lsn-fb{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.lsn-fb svg{min-width:620px;display:block;}
+.lsn-fb.is-compact svg{min-width:0;}
+.lsn-zone-legend{display:grid;gap:6px;margin-top:12px;}
+.lsn-zone-item{display:flex;gap:9px;align-items:flex-start;font-size:14px;color:${P.inkSoft};}
+.lsn-zone-chip{width:14px;height:14px;border-radius:4px;flex:none;margin-top:4px;}
+.lsn-legend{margin:10px 0 0;font-size:13px;color:${P.inkFaint};}
+
+/* ── Bản nhạc ── */
+.lsn-tempo{font-size:14px;font-weight:700;color:${P.purple};margin-bottom:8px;}
+.lsn-score{position:relative;border:1px solid ${P.line};border-radius:12px;background:#fff;padding:6px 4px;}
+.lsn-score-host{overflow-x:auto;}
+.lsn-score-host svg{max-width:100%;height:auto;}
+.lsn-score.is-big .lsn-score-host{overflow-x:auto;}
+.lsn-score.is-big .lsn-score-host svg{max-width:none;transform:scale(1.5);transform-origin:top left;}
+.lsn-score-msg{font-size:13.5px;color:${P.inkFaint};padding:10px;}
+.lsn-score-msg.err{color:#B91C1C;}
+.lsn-zoom{position:absolute;right:8px;top:8px;border:1px solid ${P.line};background:#fff;color:${P.purple};
+  font-size:12.5px;font-weight:600;border-radius:8px;padding:4px 9px;cursor:pointer;font-family:inherit;}
+.lsn-marks{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.lsn-mark{font-size:12.5px;color:${P.inkSoft};background:${P.purpleTint};border-radius:8px;padding:4px 9px;}
+.lsn-mark b{color:${P.purple};}
+.lsn-guide{margin:10px 0 0;padding-left:20px;font-size:14.5px;color:${P.inkSoft};}
+.lsn-guide li{margin:3px 0;}
+
+/* ── Tác phẩm ── */
+.lsn-rep-list{font-size:15px;}
+.lsn-pending{margin-top:10px;border:1.5px dashed ${P.line};border-radius:12px;padding:22px 16px;
+  text-align:center;font-size:14.5px;color:${P.inkFaint};background:#FBFAFE;}
+.lsn-assets{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.lsn-asset{font-size:13.5px;font-weight:600;color:${P.purple};border:1px solid ${P.line};
+  border-radius:9px;padding:6px 11px;text-decoration:none;}
+.lsn-piece{margin-top:14px;padding-top:14px;border-top:1px solid ${P.line};break-inside:avoid;}
+.lsn-piece:first-of-type{border-top:none;padding-top:4px;}
+.lsn-piece-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.lsn-piece-h h3{margin:0;font-size:17px;font-weight:700;}
+.lsn-piece-by{font-size:13.5px;color:${P.inkFaint};}
+.lsn-piece-note{margin:4px 0 10px;font-size:14px;color:${P.inkSoft};}
+.lsn-annot{margin-top:12px;font-size:13.5px;color:${P.inkSoft};}
+.lsn-annot-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.lsn-annot-chips span{font-size:12.5px;background:${P.purpleTint};color:${P.purpleDark};
+  border-radius:999px;padding:3px 10px;}
+
+/* ── Bài tập / checklist / ghi chú ── */
+.lsn-hw{margin:0;padding-left:20px;font-size:15px;}
+.lsn-hw li{margin:5px 0;}
+.lsn-msg{margin:12px 0 0;font-size:14px;color:${P.honey};background:${P.honeyTint};
+  border-radius:10px;padding:10px 12px;}
+.lsn-check{list-style:none;margin:0;padding:0;font-size:15px;}
+.lsn-check li{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed ${P.line};}
+.lsn-check li:last-child{border-bottom:none;}
+.lsn-box{width:17px;height:17px;border:1.6px solid ${P.purple};border-radius:5px;flex:none;}
+.lsn-notes{display:grid;gap:29px;padding-top:12px;}
+.lsn-notes span{display:block;border-bottom:1px solid ${P.line};}
+
+.lsn-foot{text-align:center;font-size:12.5px;color:${P.inkFaint};padding-top:6px;}
+
+@media (max-width:640px){
+  .lsn-paper{padding:14px 10px 40px;}
+  .lsn-head h1{font-size:25px;}
+  .lsn-block{padding:14px 12px;}
+  .lsn{font-size:15.5px;}
+}
+
+/* ── IN GIÁO TRÌNH A4 ── */
+@media print{
+  @page{size:A4 portrait;margin:14mm 12mm;}
+  .no-print{display:none !important;}
+  .lsn{background:#fff;font-size:11.5pt;}
+  .lsn-paper{max-width:none;margin:0;padding:0;}
+  .lsn-block,.lsn-head,.lsn-score,.lsn-fb{break-inside:avoid;page-break-inside:avoid;}
+  .lsn-block{box-shadow:none;margin-bottom:10mm;border-color:#C9C4DA;}
+  .lsn-head{border-top-width:3px;}
+  .lsn-fb{overflow:visible;}
+  .lsn-fb svg{min-width:0;width:100%;}
+  .lsn-score-host{overflow:visible;}
+  .lsn-score-host svg{max-width:100%;height:auto;}
+  .lsn-notes{gap:34px;}
+  .lsn-foot{position:running(footer);}
+}
+`

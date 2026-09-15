@@ -30,7 +30,8 @@ export interface SoloStage {
   goal: string
   works?: string[]                                   // tác phẩm mẫu (nếu có)
   note?: string                                      // ghi chú riêng của chặng
-  lessons: { title: string; points?: string[] }[]    // 8 buổi
+  /** doc = đường dẫn tài liệu học của buổi đó (nếu đã soạn), vd '/solo01/buoi-01' */
+  lessons: { title: string; points?: string[]; doc?: string }[]    // 8 buổi
 }
 
 export const SOLO01_STAGES: SoloStage[] = [
@@ -39,7 +40,7 @@ export const SOLO01_STAGES: SoloStage[] = [
     title: 'TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR',
     goal: 'Làm chủ melody cơ bản trên cần đàn và bắt đầu kết hợp Bass + kỹ thuật ngay từ những buổi đầu.',
     lessons: [
-      { title: 'Bản đồ nốt giản lược C–Am', points: ['Bản đồ nốt trên cần đàn.', 'Chạy ngón liên thông.', 'Ứng dụng vào bài hát.', 'Bài mẫu: Diễm xưa / Thành phố buồn.'] },
+      { title: 'Bản đồ nốt giản lược C–Am', points: ['Bản đồ nốt trên cần đàn.', 'Chạy ngón liên thông.', 'Ứng dụng vào bài hát.', 'Bài mẫu: Diễm Xưa / Thành Phố Buồn.'], doc: '/solo01/buoi-01' },
       { title: 'Ép ngón tay phải & Bass đầu tiên', points: ['Ép ngón i–m.', 'Làm tiếng melody chắc, rõ.', 'Thêm Bass đơn giản vào giai điệu.'] },
       { title: 'Cao độ – quãng tám & Slide', points: ['Đúng tên nốt chưa đủ, phải đúng cao độ.', 'Làm quen Slide.', 'Ứng dụng trực tiếp vào câu nhạc.'] },
       { title: 'Nốt ♯/♭ & Hammer-on', points: ['Nhận diện nốt ngoài âm giai.', 'Hammer-on.', 'Melody + Bass.'] },

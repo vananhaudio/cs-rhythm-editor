@@ -53,6 +53,7 @@ import AppV2Preview from './prototype/AppV2Preview'
 import SubscriptionPage from './SubscriptionPage'
 import Hanhtrinh2027Page from './Hanhtrinh2027Page'
 import Solo01Page from './Solo01Page'
+import Solo01LessonPage from './lesson/Solo01LessonPage'
 /** Đường dẫn của công cụ Nhịp Phách. Phần tử ĐẦU là URL chính thức. */
 export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beats']
 const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
@@ -185,6 +186,13 @@ function AppRouterContent() {
   // Landing chính thức + lịch dự kiến đọc từ class_schedule/class_sessions/class_off_days.
   if (path === '/hanhtrinh2027' || path.startsWith('/hanhtrinh2027')) {
     return <Hanhtrinh2027Page />
+  }
+
+  // ── Route /solo01/buoi-NN — tài liệu học từng buổi (khuôn dùng chung 24 buổi) ──
+  // PHẢI đứng trước nhánh startsWith('/solo01') bên dưới, nếu không sẽ bị landing nuốt mất.
+  {
+    const mBuoi = path.match(/^\/solo01\/buoi-(\d{1,2})\/?$/)
+    if (mBuoi) return <Solo01LessonPage sessionNo={parseInt(mBuoi[1], 10)} />
   }
 
   // ── Route /solo01 — SOLO GUITAR CĂN BẢN (SOLO-01), landing công khai ──
