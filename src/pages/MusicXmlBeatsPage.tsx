@@ -998,8 +998,24 @@ export default function MusicXmlBeatsPage({
     };
     let huy: () => void;
     if (chiNhapDoi) {
-      const id = requestAnimationFrame(() => void chay());
-      huy = () => cancelAnimationFrame(id);
+      // HẸN KÉP, cái nào tới trước thì chạy. Khung hình cho cảm giác tức thì khi
+      // thầy đang nhìn; đồng hồ là lưới an toàn vì ĐO ĐƯỢC: tab chạy nền thì
+      // trình duyệt KHÔNG gọi requestAnimationFrame lần nào, và nếu chỉ trông
+      // vào nó thì bản xem trước đứng ở trạng thái "đang bận" cho tới lúc quay
+      // lại tab. Đồng hồ khi ấy bị bóp về ~1 s — vẫn đúng bằng cách cũ.
+      let xong = false;
+      const motLan = () => {
+        if (xong) return;
+        xong = true;
+        void chay();
+      };
+      const khung = requestAnimationFrame(motLan);
+      const dongHo = setTimeout(motLan, 250);
+      huy = () => {
+        xong = true;
+        cancelAnimationFrame(khung);
+        clearTimeout(dongHo);
+      };
     } else {
       const id = setTimeout(() => void chay(), 180);
       huy = () => clearTimeout(id);

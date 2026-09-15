@@ -805,9 +805,10 @@ test("4A.1 chính sách chờ: kéo thanh trượt vẫn gom 180 ms, sửa nháp
   const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
   // Vẫn còn đúng một chỗ chờ 180 ms — cho `source`/`settings`.
   assert.equal((page.match(/180\)/g) ?? []).length, 1, "phải còn đúng một chỗ chờ 180 ms");
+  assert.equal((page.match(/, 250\)/g) ?? []).length, 1, "lưới an toàn chỉ có một chỗ");
   assert.match(page, /setTimeout\(\(\) => void chay\(\), 180\)/);
   // Và đường sửa nháp đi bằng khung hình, không bằng đồng hồ.
-  assert.match(page, /requestAnimationFrame\(\(\) => void chay\(\)\)/);
+  assert.match(page, /requestAnimationFrame\(motLan\)/);
   assert.match(page, /const chiNhapDoi\s*=/);
   // Chọn nhánh bằng CÁI GÌ ĐỔI, không bằng cờ do người gọi truyền.
   assert.match(page, /mocKhac\.current\.source === source/);
@@ -918,7 +919,12 @@ test("4A.1 chính sách chờ: điều hướng không khắc, sửa dùng khung
   const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
   // Ba chính sách, đúng ba nhánh — và nhánh được chọn bằng CÁI GÌ ĐỔI.
   assert.match(page, /const chiNhapDoi\s*=[\s\S]{0,220}?mocKhac\.current\.settings === settings/);
-  assert.match(page, /if \(chiNhapDoi\) \{[\s\S]{0,120}?requestAnimationFrame/);
+  assert.match(page, /if \(chiNhapDoi\) \{[\s\S]{0,700}?requestAnimationFrame/);
+  // Hẹn KÉP: khung hình cho cảm giác tức thì, đồng hồ là lưới an toàn — đo được
+  // rằng tab chạy nền không gọi rAF lần nào, chỉ trông vào nó là xem trước đứng.
+  assert.match(page, /const khung = requestAnimationFrame\(motLan\)/);
+  assert.match(page, /const dongHo = setTimeout\(motLan, 250\)/);
+  assert.match(page, /cancelAnimationFrame\(khung\)[\s\S]{0,60}clearTimeout\(dongHo\)/);
   assert.match(page, /\} else \{[\s\S]{0,120}?setTimeout\(\(\) => void chay\(\), 180\)/);
   // Điều hướng không đi qua đây chút nào: MOVE không đổi `xmlHienThi`.
   assert.match(page, /if \(action\.type === "MOVE"\)/);
