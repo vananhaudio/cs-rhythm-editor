@@ -31,6 +31,7 @@ import { laDieuHuong, laNganXep } from "../../src/nhipphach/editor/actions.ts";
 import { tagSourceIds } from "../../src/musicxml-beats/sourceTags.ts";
 import type { SourceNote } from "../../src/musicxml-beats/sourceTags.ts";
 import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
+import { idTaiCho } from "../../src/nhipphach/edit/draftIdentity.ts";
 import { NHAP_BAN_DAU, ghiNhoThamChieu } from "../../src/nhipphach/editor/noteEntry.ts";
 import { applyToDraft, createDraft, rebuildDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
 import type { DraftState } from "../../src/nhipphach/edit/draftEngine.ts";
@@ -348,11 +349,11 @@ test("mặt tiền: mỗi hành động đổi lấy ĐÚNG một lệnh đã c�
   });
   assert.deepEqual(len({ type: "SET_DURATION", noteType: "eighth" }), {
     kind: "command",
-    command: { type: "ChangeDuration", path, noteType: "eighth", dots: 0 },
+    command: { type: "ChangeDurationAndRebalance", path, noteType: "eighth", dots: 0 },
   });
   assert.deepEqual(len({ type: "TOGGLE_DOT" }), {
     kind: "command",
-    command: { type: "ChangeDuration", path, noteType: "quarter", dots: 1 },
+    command: { type: "ChangeDurationAndRebalance", path, noteType: "quarter", dots: 1 },
   });
   // Điều hướng và ngăn xếp KHÔNG sinh lệnh nào.
   for (const a of [
@@ -373,11 +374,11 @@ test("mặt tiền: đổi hình nốt thì BỎ chấm dôi cũ", () => {
   assert.equal(f.dots, 1);
   assert.deepEqual(toCommand({ type: "SET_DURATION", noteType: "quarter" }, path, f), {
     kind: "command",
-    command: { type: "ChangeDuration", path, noteType: "quarter", dots: 0 },
+    command: { type: "ChangeDurationAndRebalance", path, noteType: "quarter", dots: 0 },
   });
   assert.deepEqual(toCommand({ type: "TOGGLE_DOT" }, path, f), {
     kind: "command",
-    command: { type: "ChangeDuration", path, noteType: "quarter", dots: 0 },
+    command: { type: "ChangeDurationAndRebalance", path, noteType: "quarter", dots: 0 },
   });
 });
 
@@ -477,7 +478,15 @@ test("bàn phím → nháp: cả chuỗi thao tác dùng đúng ngăn xếp đan
   assert.equal(st.draft.original, FX, "bản gốc không được đổi");
   assert.deepEqual(
     st.draft.commands.map((c) => c.type),
-    ["ChangePitch", "ChangePitch", "ChangePitch", "ChangePitch", "ChangeDuration", "ChangeDuration"]
+    [
+      "ChangePitch",
+      "ChangePitch",
+      "ChangePitch",
+      "ChangePitch",
+      // 4B.2: phím trường độ đi đường CÂN LẠI Ô NHỊP, không còn lệnh trần.
+      "ChangeDurationAndRebalance",
+      "ChangeDurationAndRebalance",
+    ]
   );
 });
 
@@ -605,7 +614,7 @@ test("kiến trúc: không có model bản nhạc thứ hai; EditorAction không
   const loai = [...facade.matchAll(/type:\s*"(Change\w+|Respell\w+)"/g)].map((m) => m[1]);
   assert.deepEqual(
     [...new Set(loai)].sort(),
-    ["ChangeDuration", "ChangePitch", "RespellNote"],
+    ["ChangeDurationAndRebalance", "ChangePitch", "RespellNote"],
     "mặt tiền phát ra lệnh lạ"
   );
   for (const f of TUONG_TAC) {
@@ -854,12 +863,16 @@ test("4A.1 giữ phím: trang phải đọc nháp ĐỒNG BỘ, không đọc st
     "lần gọi setNhap duy nhất phải nằm trong datNhap"
   );
   // Đường sinh lệnh dựng trên ref, không dựng trên state.
-  assert.match(page, /applyToDraft\(nhapRef\.current \?\? createDraft/);
-  assert.doesNotMatch(page, /applyToDraft\(nhap \?\?/, "còn dựng lệnh trên state cũ");
-  // Hoàn tác / làm lại cũng vậy — giữ Ctrl+Z cũng là một tràng phím.
+  assert.match(page, /const truoc = nhapRef\.current \?\? createDraft/);
+  assert.match(page, /applyToDraft\(truoc, cmd\)/);
+  assert.doesNotMatch(page, /applyToDraft\(nhap[,)]|applyToDraft\(nhap \?\?/, "còn dựng lệnh trên state cũ");
+  // Hoàn tác / làm lại cũng vậy — giữ Ctrl+Z cũng là một tràng phím. Từ 4B.2 cả
+  // hai đi qua `datNganXep`, và chính nó mới là chỗ đọc ref.
   assert.doesNotMatch(page, /setNhap\(hoanTacNhap|setNhap\(lamLaiNhap/);
-  assert.match(page, /datNhap\(hoanTacNhap\(nhapRef\.current\)\)/);
-  assert.match(page, /datNhap\(lamLaiNhap\(nhapRef\.current\)\)/);
+  const nx = page.slice(page.indexOf("function datNganXep")).slice(0, 600);
+  assert.match(nx, /const truoc = nhapRef\.current/);
+  assert.match(page, /datNganXep\(hoanTacNhap\)/);
+  assert.match(page, /datNganXep\(lamLaiNhap\)/);
   // Và ô của nốt đọc từ nháp đồng bộ trước khi dịch thành lệnh.
   assert.match(page, /const xmlBayGio = nhapRef\.current\?\.xml/);
   assert.match(page, /toCommand\(action, note\.path, truong, nhapNotRef\.current\)/);
@@ -874,8 +887,8 @@ test("4A.1 giữ phím: trang phải đọc nháp ĐỒNG BỘ, không đọc st
   assert.doesNotMatch(page, /diChuyen\(notDiDuoc, vungChon\.caret/, "còn dời con trỏ từ state cũ");
   // Thử ngược: luật phải bắt được chính đột biến của nó.
   assert.match(
-    page + "\n  setNhap(applyToDraft(nhap ?? createDraft(source.xml), cmd));\n",
-    /applyToDraft\(nhap \?\?/
+    page + "\n  setNhap(applyToDraft(nhap, cmd));\n",
+    /applyToDraft\(nhap[,)]/
   );
 });
 
@@ -1129,4 +1142,106 @@ test("4B.1 kiến trúc: trạng thái nhập nốt KHÔNG chứa mô hình bả
   // Và nó cũng nằm dưới cùng những lằn ranh của 4A.
   for (const c of [/@xmldom|xmlPatch|DOMParser/, /verovio/i, /supabase|fetch\(/i, /useState|useEffect/])
     assert.doesNotMatch(ne, c, String(c));
+});
+
+// ══ 10. Cân lại ô nhịp (Giai đoạn 4B.2) ════════════════════════════════════
+
+test("4B.2 bản khắc: cân lại ô nhịp xong Verovio vẫn khắc được, id vẫn xuyên", () => {
+  const cmd = {
+    type: "ChangeDurationAndRebalance",
+    path: "/score-partwise/part[1]/measure[1]/*[2]",
+    noteType: "eighth",
+    dots: 0,
+  } as const;
+  const sau = applyToDraft(createDraft(FIX_4B), cmd as never);
+  const t = tagSourceIds(sau.xml);
+  const out = renderer.render(t.xml, SETTINGS);
+  assert.ok(out.pages.length >= 1);
+  const svg = parse(out.pages.map((p) => p.svg).join(""));
+  // Dấu lặng vừa sinh ra có mặt trên bản khắc, mang đúng id vị trí của nó.
+  assert.equal(byId(svg, "tva-src-p1-m1-c3")?.getAttribute("class"), "rest");
+  // Nốt đích vẫn là nốt, và mọi sự kiện nguồn khác đều vẽ ra được.
+  assert.equal(byId(svg, "tva-src-p1-m1-c2")?.getAttribute("class"), "note");
+  const thieu = t.notes.filter((n) => !byId(svg, n.svgId) && n.noteType);
+  assert.deepEqual(
+    thieu.map((n) => n.svgId).filter((id) => !id.startsWith("tva-src-p2-")),
+    [],
+    "không sự kiện nào của khuông nhạc biến mất khỏi bản khắc"
+  );
+});
+
+test("4B.2 trang: con trỏ đi theo DANH TÍNH LOGIC, không giữ id cũ", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Sau một lệnh đổi cấu trúc, trang phải dịch con trỏ qua bản đồ danh tính.
+  assert.match(page, /theoDoi\(/, "trang phải hỏi bản đồ danh tính");
+  assert.match(page, /sau\.identity !== truoc\.identity/);
+  assert.match(page, /doiChoCaret\(truoc\.identity, sau\.identity\)/);
+  // Sự kiện bị bỏ đi thì BỎ CHỌN, tuyệt đối không nhảy sang cái gần nhất.
+  assert.match(page, /if \(!moi\) \{[\s\S]{0,120}datVungChon\(RONG\)/);
+  // Thử ngược: luật phải bắt được chính đột biến của nó.
+  // Chỉ soi CHÍNH hàm dịch con trỏ — `scrollIntoView({block:"nearest"})` ở chỗ
+  // khác là chuyện cuộn màn hình, không dính gì tới việc chọn sự kiện nào.
+  const ham = page.slice(page.indexOf("function doiChoCaret"));
+  const than = ham.slice(0, ham.indexOf("\n  }") + 4);
+  assert.ok(than.length > 100 && than.length < 1200, `không cắt đúng thân hàm (${than.length})`);
+  for (const cam of [/nearest/i, /Math\.abs/, /getBoundingClientRect/, /pitch/i])
+    assert.doesNotMatch(than, cam, `đường dịch con trỏ không được dùng ${cam}`);
+  assert.match(than + "\n const g = Math.abs(1);\n", /Math\.abs/, "luật không bắt được đột biến");
+});
+
+test("4B.2 kiến trúc: bản đồ danh tính không biết XML, không biết toạ độ", () => {
+  const di = stripComments(src("nhipphach/edit/draftIdentity.ts"));
+  for (const cam of [/@xmldom|DOMParser|parseStrict/, /verovio/i, /getBoundingClientRect|clientX|\bx\b *: *number/])
+    assert.doesNotMatch(di, cam, String(cam));
+  assert.match(di + "\nconst d = new DOMParser();\n", /DOMParser/, "luật không bắt được đột biến");
+  // Và bộ lấp dấu lặng cũng vậy: thuần phân số, không một số thực nào.
+  const rf = stripComments(src("nhipphach/edit/restFill.ts"));
+  assert.doesNotMatch(rf, /Math\.round|Math\.floor|parseFloat|toFixed/, "không được làm tròn");
+  assert.match(rf, /Rational/);
+});
+
+test("4B.2 HOÀN TÁC cũng dời con trỏ — lỗi đo được trên trình duyệt thật", () => {
+  // Chạy thật mới lộ ra: hoàn tác một lệnh cân lại ô nhịp cũng BỎ một dấu lặng,
+  // nên mọi sự kiện sau nó lùi một chỗ. Lúc đầu undo/redo không đi qua cửa dịch
+  // con trỏ, và sau Ctrl+Z con trỏ lặng lẽ trỏ sang một DẤU LẶNG thay vì nốt
+  // thầy đang chọn. Luật này giữ cho cả hai đường dùng chung một cửa.
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  assert.match(page, /function datNganXep\(/, "phải có cửa chung cho hoàn tác / làm lại");
+  assert.match(page, /datNganXep\(hoanTacNhap\)/);
+  assert.match(page, /datNganXep\(lamLaiNhap\)/);
+  // Và KHÔNG còn đường tắt nào gọi thẳng hoàn tác/làm lại rồi tự đặt nháp.
+  assert.doesNotMatch(
+    page,
+    /datNhap\((?:hoanTacNhap|lamLaiNhap)\(/,
+    "còn đường bỏ qua việc dời con trỏ"
+  );
+  assert.match(
+    page + "\n datNhap(hoanTacNhap(nhapRef.current));\n",
+    /datNhap\(hoanTacNhap\(/,
+    "luật không bắt được chính đột biến của nó"
+  );
+  // Cửa ấy phải dịch con trỏ khi và chỉ khi bản đồ danh tính đổi.
+  const than = page.slice(page.indexOf("function datNganXep"));
+  assert.match(than.slice(0, 600), /sau\.identity !== truoc\.identity[\s\S]{0,80}doiChoCaret/);
+});
+
+test("4B.2 hoàn tác: danh tính logic sống qua cả vòng đi–về", () => {
+  const cmd = {
+    type: "ChangeDurationAndRebalance",
+    path: "/score-partwise/part[1]/measure[1]/*[2]",
+    noteType: "eighth",
+    dots: 0,
+  } as const;
+  const cho = (c: number) => ({ partIndex: 1, measureIndex: 1, childIndex: c });
+  const d0 = createDraft(FIX_4B);
+  const idE4 = idTaiCho(d0.identity, cho(4))!;
+  const d1 = applyToDraft(d0, cmd as never);
+  // Nốt E4 tụt xuống con thứ 5 …
+  assert.deepEqual(d1.identity.slots.get(idE4), cho(5));
+  // … và hoàn tác đưa nó về đúng con thứ 4, cùng một danh tính logic.
+  const d2 = undo(d1);
+  assert.deepEqual(d2.identity.slots.get(idE4), cho(4));
+  assert.equal(readNoteFields(d2.xml, "/score-partwise/part[1]/measure[1]/*[4]")!.dots, 1);
+  // Làm lại thì trở lại chỗ cũ, không lệch một ô.
+  assert.deepEqual(redo(d2).identity.slots.get(idE4), cho(5));
 });

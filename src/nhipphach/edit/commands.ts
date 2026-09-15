@@ -116,6 +116,26 @@ export interface ReplaceRestWithNote {
   accidental?: AccidentalChoice;
 }
 
+/**
+ * Đổi trường độ VÀ cân lại ô nhịp — Giai đoạn 4B.2.
+ *
+ * Khác `ChangeDuration` ở chỗ nó là một GIAO DỊCH: đổi hình nốt của nốt đích và
+ * đồng thời tạo / ăn / cắt nhỏ dấu lặng để tổng thời gian của ô nhịp không đổi
+ * một li. `ChangeDuration` cũ giữ nguyên nghĩa (chỉ đổi đúng nốt ấy, để lại ô
+ * thiếu hoặc thừa phách) — panel thủ công vẫn cần nó.
+ *
+ * Phạm vi an toàn, cố ý hẹp:
+ *   · NGẮN LẠI → sinh dấu lặng ngay sau, cùng bè, cùng khuông, cùng ô nhịp.
+ *   · DÀI RA   → chỉ ăn vào dấu lặng đứng liền sau; gặp nốt thật thì DỪNG.
+ * Không bao giờ đẩy, xoá hay viết đè một nốt có cao độ.
+ */
+export interface ChangeDurationAndRebalance {
+  type: "ChangeDurationAndRebalance";
+  path: string;
+  noteType: NoteType;
+  dots: number;
+}
+
 export type MusicXmlEditCommand =
   | ChangePitch
   | RespellNote
@@ -123,7 +143,8 @@ export type MusicXmlEditCommand =
   | ChangeLyricText
   | ChangeHarmony
   | MakeRest
-  | ReplaceRestWithNote;
+  | ReplaceRestWithNote
+  | ChangeDurationAndRebalance;
 
 /** Nhóm công cụ (mục 2 của spec) — để panel biết lệnh thuộc nhóm nào. */
 export const COMMAND_GROUP: Record<
@@ -137,6 +158,7 @@ export const COMMAND_GROUP: Record<
   ChangeHarmony: "harmony",
   MakeRest: "note",
   ReplaceRestWithNote: "note",
+  ChangeDurationAndRebalance: "note",
 };
 
 export const CHANGE_NOTE_MAX = 300;
@@ -150,6 +172,7 @@ const MO_TA: Record<MusicXmlEditCommand["type"], (n: number) => string> = {
   ChangeHarmony: (n) => `sửa hợp âm ${n} chỗ`,
   MakeRest: (n) => `chuyển ${n} nốt thành lặng`,
   ReplaceRestWithNote: (n) => `nhập ${n} nốt vào chỗ lặng`,
+  ChangeDurationAndRebalance: (n) => `sửa trường độ ${n} nốt (cân lại ô nhịp)`,
 };
 const KHOA = (c: MusicXmlEditCommand) =>
   c.type === "ChangeLyricText" ? `${c.path}#${c.lyricIndex}` : c.path;

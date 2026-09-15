@@ -1,6 +1,7 @@
 import type { Document, Element } from "@xmldom/xmldom";
 import type {
   ChangeDuration,
+  ChangeDurationAndRebalance,
   ChangeHarmony,
   ChangeLyricText,
   ChangePitch,
@@ -14,7 +15,13 @@ import type { HarmonyRoot } from "./harmonyModel.ts";
 import { isHarmonyKind } from "./harmonyModel.ts";
 import { STEPS } from "./commands.ts";
 import { decideAccidental } from "./accidentals.ts";
-import { coTheChum, durationFor, isNoteType } from "./durationModel.ts";
+import { coTheChum, durationFor, isNoteType, NOTE_TYPES } from "./durationModel.ts";
+import { lapKhoangTrong, quartersOf, RestFillError } from "./restFill.ts";
+import { musicXMLToBeatMap } from "../../musicxml-beats/beatMap.ts";
+import { parseMusicXML } from "../../musicxml-beats/parser.ts";
+import { ZERO, add, compare, rational, sub } from "../../musicxml-beats/rational.ts";
+import type { Rational } from "../../musicxml-beats/rational.ts";
+import type { StructuralDelta } from "./draftIdentity.ts";
 import { readNoteContext } from "./noteContext.ts";
 import type { NoteContext } from "./noteContext.ts";
 import { pitchName, soundingPitch } from "./pitchModel.ts";
@@ -29,6 +36,7 @@ import {
   parseStrict,
   resolveSourcePath,
   serialize,
+  SOURCE_PATH,
 } from "./xmlPatch.ts";
 import type { LocatedXml, TextPatch } from "./xmlPatch.ts";
 
@@ -46,6 +54,12 @@ export interface AppliedCommand {
   changed: boolean;
   /** Đường dẫn các nút đã đụng tới — để test diff và để panel nói thật. */
   touched: string[];
+  /**
+   * Lệnh này làm đổi SỐ con của ô nhịp ở đâu, bao nhiêu — Giai đoạn 4B.2.
+   * Rỗng với mọi lệnh chỉ sửa tại chỗ. `draftIdentity.ts` cộng dồn cái này để
+   * con trỏ và vùng chọn không trỏ nhầm sang sự kiện khác sau khi chèn/bỏ.
+   */
+  structural: StructuralDelta[];
 }
 
 interface Ctx {
@@ -53,6 +67,7 @@ interface Ctx {
   doc: Document;
   patches: TextPatch[];
   touched: string[];
+  structural: StructuralDelta[];
 }
 
 const child = (e: Element, name: string) => elementChildren(e, name)[0];
@@ -530,12 +545,310 @@ function replaceRestWithNote(
   ctx.touched.push(`${cmd.path}/pitch`);
 }
 
+// ══ 4B.2: đổi trường độ + cân lại ô nhịp ══════════════════════════════════
+
+/** Phần tử không chiếm thời gian — đứng xen giữa nốt và lặng thì bỏ qua được. */
+const KHONG_CHIEM_THOI_GIAN = new Set(["harmony", "direction", "print", "barline", "sound", "bookmark", "link"]);
+
+/** Chèn nguyên một `<note>` mới làm EM của `sau`, cùng thụt lề. */
+function insertNoteSauKhi(ctx: Ctx, sau: Element, markups: readonly string[]) {
+  if (!markups.length) return;
+  const range = ctx.located.range(sau);
+  const indent = ctx.located.indentOf(sau);
+  const cach = indent === null ? "" : `${ctx.located.eol}${indent}`;
+  ctx.patches.push({
+    start: range.end,
+    end: range.end,
+    text: markups.map((m) => `${cach}${m}`).join(""),
+  });
+  // Phía DOM dựng lại ĐÚNG chuỗi ấy bằng cách đọc chính nó, nên sổ kép so được.
+  // Luôn dùng "\n": bộ đọc chuẩn hoá CRLF khi đọc lại (đã vấp ở 3C).
+  const cachDom = indent === null ? null : `\n${indent}`;
+  let moc = sau.nextSibling;
+  const parent = sau.parentNode!;
+  for (const m of markups) {
+    if (cachDom) parent.insertBefore(ctx.doc.createTextNode(cachDom), moc);
+    parent.insertBefore(ctx.doc.importNode(parseStrict(m).documentElement!, true), moc);
+  }
+}
+
+/**
+ * Thay nguyên một DÃY phần tử liền nhau bằng một dãy markup mới — MỘT mảnh vá.
+ *
+ * Không tách thành "xoá từng cái rồi chèn vào chỗ cũ": chỗ chèn nằm ngay biên
+ * của vùng bị xoá, và `applyPatches` từ chối hai vùng chồng nhau — đúng như nó
+ * phải thế. Một mảnh vá phủ trọn vùng thì vừa không chồng, vừa giữ diff gọn.
+ */
+function thayTheDay(ctx: Ctx, els: readonly Element[], markups: readonly string[]) {
+  if (!els.length) return;
+  const dau = ctx.located.range(els[0]);
+  const cuoi = ctx.located.range(els[els.length - 1]);
+  const indent = ctx.located.indentOf(els[0]);
+  // Nuốt cả khoảng trắng đầu dòng của phần tử đầu, để không để lại dòng trống.
+  let start = dau.start;
+  while (start > 0 && /[ \t]/.test(ctx.located.xml[start - 1])) start--;
+  const anDauDong = start > 0 && ctx.located.xml[start - 1] === "\n";
+  if (anDauDong) {
+    start--;
+    if (start > 0 && ctx.located.xml[start - 1] === "\r") start--;
+  } else start = dau.start;
+  const cach = indent === null || !anDauDong ? "" : `${ctx.located.eol}${indent}`;
+  ctx.patches.push({
+    start,
+    end: cuoi.end,
+    text: markups.map((m) => `${cach}${m}`).join(""),
+  });
+  // Phía DOM làm y hệt: bỏ đúng những nút ấy (kèm nút chữ xuống dòng đứng
+  // trước), rồi dựng lại dãy mới từ chính markup vừa viết.
+  const parent = els[0].parentNode!;
+  const moc = els[els.length - 1].nextSibling;
+  const cachDom = indent === null || !anDauDong ? null : `\n${indent}`;
+  for (const el of els) {
+    const truoc = el.previousSibling;
+    if (truoc && truoc.nodeType === 3 && /^\s*$/.test(truoc.textContent ?? "")) parent.removeChild(truoc);
+    parent.removeChild(el);
+  }
+  for (const m of markups) {
+    if (cachDom) parent.insertBefore(ctx.doc.createTextNode(cachDom), moc);
+    parent.insertBefore(ctx.doc.importNode(parseStrict(m).documentElement!, true), moc);
+  }
+}
+
+/** Markup một dấu lặng, thụt lề bên trong theo hàng xóm. */
+function markupLang(
+  trong: string | null,
+  ngoai: string | null,
+  eol: string,
+  noteType: string,
+  dots: number,
+  duration: number,
+  voice: string | null,
+  staff: string | null
+) {
+  const dong = (t: string) => (trong === null ? t : `${eol}${trong}${t}`);
+  const than = [
+    "<rest/>",
+    `<duration>${duration}</duration>`,
+    ...(voice ? [`<voice>${voice}</voice>`] : []),
+    `<type>${noteType}</type>`,
+    ...Array.from({ length: dots }, () => "<dot/>"),
+    ...(staff ? [`<staff>${staff}</staff>`] : []),
+  ];
+  return trong === null || ngoai === null
+    ? `<note>${than.join("")}</note>`
+    : `<note>${than.map(dong).join("")}${eol}${ngoai}</note>`;
+}
+
+/** Mốc đầu mỗi nhóm phách của ô nhịp chứa `path` — lấy từ CHÍNH engine đếm phách. */
+function mocPhachCua(xml: string, partIndex: number, measureIndex: number): Rational[] {
+  // `buildBeatMap` trải part theo thứ tự, mỗi part trải measure theo thứ tự —
+  // nên chỗ ngồi của một ô nhịp trong danh sách là tổng số ô của các part trước.
+  const parts = parseMusicXML(xml).parts;
+  let base = 0;
+  for (let k = 0; k < partIndex - 1 && k < parts.length; k++) base += parts[k].measures.length;
+  const m = musicXMLToBeatMap(xml).measures[base + measureIndex - 1];
+  // Đây ĐÚNG là lưới mà số phách đang được vẽ lên — không có lưới thứ hai.
+  return m ? m.beatsMap.map((b) => b.offset) : [];
+}
+
+/** Thời điểm bắt đầu của sự kiện tại `path`, tính từ đầu ô nhịp. */
+function onsetCua(xml: string, path: string): Rational | null {
+  for (const p of parseMusicXML(xml).parts)
+    for (const m of p.measures)
+      for (const e of m.events) if (e.source.path === path) return e.onset;
+  return null;
+}
+
+const nhanRational = (a: Rational, b: Rational): Rational => {
+  const [n, d] = a.split("/").map(BigInt);
+  const [m, e] = b.split("/").map(BigInt);
+  return rational(n * m, d * e);
+};
+
+/** Số `<duration>` cho một độ dài tính bằng nốt đen; null khi chia không hết. */
+function donViCua(quarters: Rational, divisions: number): number | null {
+  const [n, d] = quarters.split("/").map(BigInt);
+  const tu = n * BigInt(divisions);
+  return tu % d === 0n ? Number(tu / d) : null;
+}
+
+function changeDurationAndRebalance(
+  ctx: Ctx,
+  note: Element,
+  cmd: ChangeDurationAndRebalance,
+  ngu: NoteContext,
+  xml: string
+) {
+  if (!isNoteType(cmd.noteType))
+    throw new EditError("EDIT_DURATION_TYPE_INVALID", "Hình nốt không hợp lệ.");
+  // ── Cổng chặn: TẤT CẢ đều phải nổ TRƯỚC khi chạm một mảnh vá nào ──────────
+  if (ngu.chord !== "none")
+    throw new EditError(
+      "EDIT_REBALANCE_CHORD",
+      "Cả hợp âm phải cùng trường độ — sửa trường độ hợp âm cần một lệnh riêng, chưa hỗ trợ."
+    );
+  if (ngu.ties.length)
+    throw new EditError(
+      "EDIT_REBALANCE_TIED",
+      "Nốt này nằm trong một dấu nối — đổi trường độ sẽ đổi cả nghĩa của dấu nối. Chưa hỗ trợ."
+    );
+  if (ngu.grace)
+    throw new EditError("EDIT_REBALANCE_GRACE", "Nốt hoa mỹ không có trường độ riêng để cân.");
+  if (ngu.tuplet)
+    throw new EditError(
+      "EDIT_REBALANCE_TUPLET",
+      "Nốt này nằm trong chùm nghịch phách — chưa hỗ trợ cân lại."
+    );
+  const rest = child(note, "rest");
+  if (rest?.getAttribute("measure") === "yes")
+    throw new EditError(
+      "EDIT_REBALANCE_MEASURE_REST",
+      "Đây là dấu lặng cả ô nhịp — trường độ đi theo ô, chưa hỗ trợ cân lại."
+    );
+  const durEl = child(note, "duration");
+  if (!durEl) throw new EditError("EDIT_DURATION_MISSING", "Nốt này không ghi trường độ trong nguồn.");
+  if (!ngu.divisions)
+    throw new EditError("EDIT_DIVISIONS_UNKNOWN", "Bản nhạc không ghi rõ cách chia trường độ.");
+
+  const m = SOURCE_PATH.exec(cmd.path)!;
+  const partIndex = +m[1];
+  const measureIndex = +m[2];
+  const childIndex = +m[3];
+
+  const cu = rational(Number(textOf(durEl)), ngu.divisions);
+  const moi = quartersOf(cmd.noteType, cmd.dots);
+  if (compare(cu, moi) === 0 && ngu.noteType === cmd.noteType && ngu.dots === cmd.dots) return;
+  const donViMoi = donViCua(moi, ngu.divisions);
+  if (donViMoi === null)
+    throw new EditError(
+      "EDIT_DURATION_NOT_REPRESENTABLE",
+      "Bản nhạc này chưa chia đủ nhỏ để ghi trường độ ấy."
+    );
+
+  const onset = onsetCua(xml, cmd.path);
+  if (onset === null)
+    throw new EditError("EDIT_REBALANCE_NO_ONSET", "Không xác định được nốt này nằm ở phách nào.");
+  const mocPhach = mocPhachCua(xml, partIndex, measureIndex);
+
+  const anhEm = elementChildren(note.parentNode as Element);
+  const voice = textOf(child(note, "voice")) || null;
+  const staff = textOf(child(note, "staff")) || null;
+  const trong = ctx.located.indentOf(durEl);
+  const ngoai = ctx.located.indentOf(note);
+  const eol = ctx.located.eol;
+  const veLang = (pieces: { noteType: string; dots: number; quarters: Rational }[]) =>
+    pieces.map((p) => {
+      const dv = donViCua(p.quarters, ngu.divisions);
+      if (dv === null)
+        throw new EditError(
+          "RHYTHM_REBALANCE_NOT_REPRESENTABLE",
+          "Bản nhạc này chưa chia đủ nhỏ để ghi dấu lặng cần thiết."
+        );
+      return markupLang(trong, ngoai, eol, p.noteType, p.dots, dv, voice, staff);
+    });
+
+  let phanRa: { noteType: string; dots: number; quarters: Rational }[];
+  try {
+    phanRa =
+      compare(moi, cu) < 0
+        ? lapKhoangTrong(add(onset, moi), add(onset, cu), mocPhach)
+        : [];
+  } catch (e) {
+    if (e instanceof RestFillError)
+      throw new EditError("RHYTHM_REBALANCE_NOT_REPRESENTABLE", e.message);
+    throw e;
+  }
+
+  // ── Viết trường độ mới lên chính nốt đích (dùng lại đúng đường của 3B) ────
+  const ghiTruongDo = () => {
+    const typeEl = child(note, "type");
+    if (textOf(typeEl) !== cmd.noteType) {
+      if (typeEl) patchLeafText(ctx, typeEl, cmd.noteType);
+      else insertOrderedChild(ctx, note, NOTE_CHILD_ORDER, "type", cmd.noteType);
+    }
+    if (ngu.dots !== cmd.dots) {
+      for (const d of elementChildren(note, "dot")) removeLeaf(ctx, d);
+      if (cmd.dots > 0) insertOrderedChild(ctx, note, NOTE_CHILD_ORDER, "dot", null, cmd.dots);
+    }
+    if (Number(textOf(durEl)) !== donViMoi) patchLeafText(ctx, durEl, String(donViMoi));
+    if (!coTheChum(cmd.noteType)) for (const b of elementChildren(note, "beam")) removeLeaf(ctx, b);
+  };
+
+  if (compare(moi, cu) < 0) {
+    // ── NGẮN LẠI: sinh dấu lặng bù, ngay sau nốt, cùng bè cùng khuông ───────
+    ghiTruongDo();
+    insertNoteSauKhi(ctx, note, veLang(phanRa));
+    if (phanRa.length)
+      ctx.structural.push({ partIndex, measureIndex, atChildIndex: childIndex + 1, delta: phanRa.length });
+    ctx.touched.push(`${cmd.path}/duration`, `${cmd.path}/+rest`);
+    return;
+  }
+
+  // ── DÀI RA: CHỈ được ăn vào dấu lặng đứng liền sau ────────────────────────
+  const can = sub(moi, cu);
+  const an: Element[] = [];
+  let co: Rational = ZERO;
+  let i = childIndex; // 0-based chỉ số của phần tử ngay sau nốt đích
+  let dauTien = -1;
+  while (i < anhEm.length && compare(co, can) < 0) {
+    const el = anhEm[i];
+    const ten = el.localName ?? "";
+    if (KHONG_CHIEM_THOI_GIAN.has(ten)) {
+      i++;
+      continue;
+    }
+    if (ten !== "note") break;
+    const r = child(el, "rest");
+    if (!r || r.getAttribute("measure") === "yes") break;
+    if (child(el, "chord") || child(el, "grace")) break;
+    if ((textOf(child(el, "voice")) || null) !== voice) break;
+    if ((textOf(child(el, "staff")) || null) !== staff) break;
+    const d = child(el, "duration");
+    if (!d) break;
+    if (dauTien < 0) dauTien = i;
+    an.push(el);
+    co = add(co, rational(Number(textOf(d)), ngu.divisions));
+    i++;
+  }
+  if (compare(co, can) < 0)
+    throw new EditError("EDIT_REBALANCE_NO_SPACE", "Không đủ khoảng trống để kéo dài nốt.");
+
+  const thua = sub(co, can);
+  let buLai: { noteType: string; dots: number; quarters: Rational }[] = [];
+  if (compare(thua, ZERO) > 0) {
+    try {
+      buLai = lapKhoangTrong(add(onset, moi), add(add(onset, moi), thua), mocPhach);
+    } catch (e) {
+      if (e instanceof RestFillError)
+        throw new EditError("RHYTHM_REBALANCE_NOT_REPRESENTABLE", e.message);
+      throw e;
+    }
+  }
+  const markups = veLang(buLai);
+
+  ghiTruongDo();
+  // Vùng dấu lặng bị ăn và chỗ đặt phần thừa là CÙNG một chỗ, nên phải đi bằng
+  // đúng một mảnh vá (xem `thayTheDay`).
+  thayTheDay(ctx, an, markups);
+  // Hai bước: bỏ `an.length` con kể từ chỗ dấu lặng đầu tiên, rồi chèn lại
+  // `markups.length` con vào đúng chỗ ấy. `draftIdentity` cộng dồn theo thứ tự.
+  // Bỏ `an.length` con kể từ chỗ dấu lặng đầu tiên, rồi chèn lại `markups.length`
+  // con vào đúng chỗ ấy. Phần dịch chuyển bằng 0 thì không ghi — bản đồ danh
+  // tính chỉ nên chứa những thay đổi có thật.
+  for (const d of [
+    { partIndex, measureIndex, atChildIndex: dauTien + 1, delta: -an.length },
+    { partIndex, measureIndex, atChildIndex: dauTien + 1, delta: markups.length },
+  ])
+    if (d.delta !== 0) ctx.structural.push(d);
+  ctx.touched.push(`${cmd.path}/duration`, `${cmd.path}/-rest`);
+}
+
 export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedCommand {
   const located = locate(xml);
   const target = resolveSourcePath(located.doc, cmd.path);
   if (!target)
     throw new EditError("EDIT_TARGET_NOT_FOUND", "Không tìm thấy nốt này trong bản nhạc.");
-  const ctx: Ctx = { located, doc: located.doc, patches: [], touched: [] };
+  const ctx: Ctx = { located, doc: located.doc, patches: [], touched: [], structural: [] };
   if (cmd.type === "ChangeHarmony") {
     if (target.localName !== "harmony")
       throw new EditError(
@@ -576,6 +889,9 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
     case "ReplaceRestWithNote":
       replaceRestWithNote(ctx, target, cmd, ngu);
       break;
+    case "ChangeDurationAndRebalance":
+      changeDurationAndRebalance(ctx, target, cmd, ngu, xml);
+      break;
     default: {
       const never: never = cmd;
       throw new EditError("EDIT_UNKNOWN_COMMAND", `Lệnh lạ: ${JSON.stringify(never)}`);
@@ -586,7 +902,7 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
 
 /** Vá chuỗi rồi ĐỐI CHIẾU SỔ KÉP. Mọi lệnh đều đi qua đúng cửa này. */
 function ketThuc(xml: string, located: LocatedXml, ctx: Ctx): AppliedCommand {
-  if (!ctx.patches.length) return { xml, changed: false, touched: [] };
+  if (!ctx.patches.length) return { xml, changed: false, touched: [], structural: [] };
   const patched = applyPatches(xml, ctx.patches);
   // Sổ kép: chuỗi đã vá phải đọc ra đúng DOM đã sửa. Không khớp là không dùng.
   let doc2: string;
@@ -600,5 +916,5 @@ function ketThuc(xml: string, located: LocatedXml, ctx: Ctx): AppliedCommand {
   }
   if (doc2 !== serialize(located.doc))
     throw new EditError("EDIT_PATCH_MISMATCH", "Chỗ vá không khớp với thay đổi dự kiến.");
-  return { xml: patched, changed: true, touched: ctx.touched };
+  return { xml: patched, changed: true, touched: ctx.touched, structural: ctx.structural };
 }

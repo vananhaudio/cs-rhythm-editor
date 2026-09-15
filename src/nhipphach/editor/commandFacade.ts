@@ -14,8 +14,8 @@ import type { NoteEntryState } from "./noteEntry.ts";
  *
  *   TRANSPOSE     → ChangePitch      (kèm dấu hoá "auto", như panel vẫn làm)
  *   SET_ALTER     → ChangePitch
- *   SET_DURATION  → ChangeDuration
- *   TOGGLE_DOT    → ChangeDuration
+ *   SET_DURATION  → ChangeDurationAndRebalance (4B.2)
+ *   TOGGLE_DOT    → ChangeDurationAndRebalance (4B.2)
  *   RESPELL       → RespellNote
  *   MAKE_REST     → MakeRest            (4B.1)
  *   ENTER_PITCH   → ReplaceRestWithNote (4B.1)
@@ -72,9 +72,14 @@ export function toCommand(
       if (fields.noteType === action.noteType && fields.dots === 0) return { kind: "noop" };
       // Đổi hình nốt thì bỏ chấm dôi cũ — giữ lại là ra một trường độ thầy
       // không hề chọn (móc đơn chấm ≠ móc đơn).
+      //
+      // 4B.2: bàn phím và thanh công cụ LUÔN đi đường cân lại ô nhịp. Không có
+      // chuyện cùng một phím lúc thì cân lúc thì không — cân được thì cân, không
+      // cân được thì từ chối và nói rõ, chứ không lặng lẽ tụt về lệnh cũ để lại
+      // một ô nhịp thiếu phách. Panel thủ công vẫn giữ `ChangeDuration`.
       return {
         kind: "command",
-        command: { type: "ChangeDuration", path, noteType: action.noteType, dots: 0 },
+        command: { type: "ChangeDurationAndRebalance", path, noteType: action.noteType, dots: 0 },
       };
     }
     case "TOGGLE_DOT": {
@@ -88,7 +93,7 @@ export function toCommand(
       return {
         kind: "command",
         command: {
-          type: "ChangeDuration",
+          type: "ChangeDurationAndRebalance",
           path,
           noteType: fields.noteType,
           dots: fields.dots ? 0 : 1,

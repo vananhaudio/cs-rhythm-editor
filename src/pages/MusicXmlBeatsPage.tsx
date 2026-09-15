@@ -78,6 +78,8 @@ import { dispatch } from "../nhipphach/editor/dispatcher";
 import { toCommand } from "../nhipphach/editor/commandFacade";
 import { NHAP_BAN_DAU, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
 import type { NoteEntryState } from "../nhipphach/editor/noteEntry";
+import { theoDoi } from "../nhipphach/edit/draftIdentity";
+import type { DraftIdentity } from "../nhipphach/edit/draftIdentity";
 import { STEPS } from "../nhipphach/edit/commands";
 import type { Step } from "../nhipphach/edit/commands";
 import { caretTaiId, chonMot, diChuyen, dsDiDuoc, RONG } from "../nhipphach/editor/caret";
@@ -120,6 +122,7 @@ import type {
   SourceLyric,
   SourceNote,
 } from "../musicxml-beats/sourceTags";
+import { parseSourceSvgId, sourceSvgId } from "../musicxml-beats/sourceTags";
 import { parseMusicXML } from "../musicxml-beats/parser";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
@@ -588,11 +591,11 @@ export default function MusicXmlBeatsPage({
       return;
     }
     if (action.type === "UNDO") {
-      if (nhapRef.current) datNhap(hoanTacNhap(nhapRef.current));
+      datNganXep(hoanTacNhap);
       return;
     }
     if (action.type === "REDO") {
-      if (nhapRef.current) datNhap(lamLaiNhap(nhapRef.current));
+      datNganXep(lamLaiNhap);
       return;
     }
     const caretBayGio = vungChonRef.current.caret;
@@ -628,6 +631,48 @@ export default function MusicXmlBeatsPage({
         if (nt) setNotChon({ kind: "note", note: nt });
       }
     }
+  }
+
+  /**
+   * Hoàn tác / làm lại — CÙNG MỘT CỬA với việc áp lệnh.
+   *
+   * Hoàn tác một lệnh cân lại ô nhịp cũng bỏ đi một dấu lặng, tức là cũng dời
+   * chỗ ngồi của mọi sự kiện sau nó. Đo được trên trình duyệt thật: không dịch
+   * con trỏ ở đây thì sau Ctrl+Z, con trỏ vẫn ôm cái id cũ và lặng lẽ trỏ sang
+   * một DẤU LẶNG thay vì nốt thầy đang chọn.
+   */
+  function datNganXep(buoc: (d: DraftState) => DraftState) {
+    const truoc = nhapRef.current;
+    if (!truoc) return;
+    const sau = buoc(truoc);
+    if (sau === truoc) return;
+    datNhap(sau);
+    if (sau.identity !== truoc.identity) doiChoCaret(truoc.identity, sau.identity);
+  }
+
+  /** Con trỏ bám theo sự kiện cũ sau khi cấu trúc ô nhịp đổi. */
+  function doiChoCaret(truoc: DraftIdentity, sau: DraftIdentity) {
+    const id = vungChonRef.current.caret?.sourceId;
+    const cho = id ? parseSourceSvgId(id) : null;
+    if (!cho) return;
+    const moi = theoDoi(
+      truoc,
+      sau,
+      { partIndex: cho.partIndex, measureIndex: cho.measureIndex, childIndex: cho.childIndex }
+    );
+    // Sự kiện bị bỏ đi thì nói thật là mất chỗ, KHÔNG nhảy sang cái gần nhất.
+    if (!moi) {
+      datVungChon(RONG);
+      setNotChon(null);
+      return;
+    }
+    const idMoi = sourceSvgId(moi.partIndex, moi.measureIndex, moi.childIndex);
+    if (idMoi === id) return;
+    datVungChon(chonMot({ sourceId: idMoi, sourceIndex: -1 }));
+    // Ô thông tin đọc từ `notChon`, nên nó phải đi cùng — để hai chỗ không nói
+    // hai đằng về cùng một sự kiện.
+    const nt = notDiDuoc.find((n) => n.svgId === idMoi);
+    setNotChon(nt ? { kind: "note", note: nt } : null);
   }
 
   /** Nhớ cao độ của một nốt nguồn làm mốc cho lần gõ chữ cái tiếp theo. */
@@ -679,7 +724,14 @@ export default function MusicXmlBeatsPage({
     setKiemTra(null);
     try {
       // Đọc từ ref, KHÔNG từ state: xem chú thích của `nhapRef`.
-      datNhap(applyToDraft(nhapRef.current ?? createDraft(source.xml), cmd));
+      const truoc = nhapRef.current ?? createDraft(source.xml);
+      const sau = applyToDraft(truoc, cmd);
+      datNhap(sau);
+      // 4B.2: lệnh cân lại ô nhịp có thể chèn/bỏ dấu lặng, làm mọi sự kiện đứng
+      // sau tụt chỉ số — tức là đổi `tva-src-…`. Con trỏ phải đi theo DANH TÍNH
+      // LOGIC, không phải theo cái id cũ: giữ id cũ là im lặng trỏ sang một sự
+      // kiện khác, kiểu hỏng tệ nhất.
+      if (sau.identity !== truoc.identity) doiChoCaret(truoc.identity, sau.identity);
       setNhapNote("");
       return true;
     } catch (e) {
@@ -2386,8 +2438,8 @@ export default function MusicXmlBeatsPage({
                     report={kiemTra}
                     note={nhapNote}
                     onCommand={apLenh}
-                    onUndo={() => nhapRef.current && datNhap(hoanTacNhap(nhapRef.current))}
-                    onRedo={() => nhapRef.current && datNhap(lamLaiNhap(nhapRef.current))}
+                    onUndo={() => datNganXep(hoanTacNhap)}
+                    onRedo={() => datNganXep(lamLaiNhap)}
                     onCancel={() => {
                       if (duocBoNhap()) boNhap();
                     }}
