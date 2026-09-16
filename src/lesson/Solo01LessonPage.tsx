@@ -3,9 +3,10 @@
 import LessonDocument from './LessonDocument'
 import type { LessonDoc } from './lessonTypes'
 import { SOLO01_BUOI01 } from '../data/solo01/buoi01'
+import { SOLO01_BUOI02 } from '../data/solo01/buoi02'
 
 // Đăng ký buổi học ở đây khi soạn thêm (Buổi 02 → 24 dùng CHUNG khuôn LessonDocument).
-const LESSONS: Record<number, LessonDoc> = { 1: SOLO01_BUOI01 }
+const LESSONS: Record<number, LessonDoc> = { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02 }
 
 export default function Solo01LessonPage({ sessionNo }: { sessionNo: number }) {
   const doc = LESSONS[sessionNo]

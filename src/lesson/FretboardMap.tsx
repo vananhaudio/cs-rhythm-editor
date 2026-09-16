@@ -24,7 +24,7 @@ export default function FretboardMap({ frets, zones, dots }: Props) {
   const compact = frets <= 7
 
   return (
-    <div className={`lsn-fb${compact ? ' is-compact' : ''}`} style={compact ? { maxWidth: 430 } : undefined}>
+    <div className={`lsn-fb${compact ? ' is-compact' : ''}`}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img"
            aria-label="Bản đồ nốt giản lược C–Am trên cần đàn">
         {/* nền vùng */}

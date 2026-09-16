@@ -99,6 +99,7 @@ for (const m of measures) {
   }
 
   let pendingChord = null
+  let barPos = 0                      // vị trí trong ô nhịp, tính bằng phách (nốt đen = 1)
   for (const node of Array.from(m.childNodes)) {
     if (node.nodeName === 'harmony') {
       const step = txt(node, 'root-step')
@@ -141,7 +142,9 @@ for (const m of measures) {
       if (last && midi != null && (last.midi == null || midi > last.midi)) last.midi = midi
       continue
     }
-    bar.items.push({ midi: rest ? null : midi, beats: beatsVal, tuplet, tieStop, lyric, chord: pendingChord })
+    bar.items.push({ midi: rest ? null : midi, beats: beatsVal, tuplet, tieStop, lyric,
+                     chord: pendingChord, at: barPos })
+    barPos += beatsVal
     pendingChord = null
   }
   bars.push(bar)
@@ -255,13 +258,12 @@ for (const m of melody) {
 // ── Bass theo hợp âm: nốt gốc trên dây trầm, trong thế I (ngăn 0–3) ──
 // Dùng cho các buổi đã học "Melody + Bass": mỗi lần ĐỔI hợp âm thì ngón cái p
 // chơi nốt gốc cùng lúc với nốt giai điệu.
-function bassFor(chordName, melString) {
+function bassFor(chordName) {
   const m = /^([A-G])([#b]?)/.exec(chordName)
   if (!m) return null
   const pc = (STEP[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + 120) % 12
   let best = null
   for (const str of [6, 5, 4]) {
-    if (str === melString) continue                 // trùng dây với giai điệu thì thôi
     for (let fret = 0; fret <= 3; fret++) {
       if ((OPEN[str - 1] + fret) % 12 !== pc) continue
       const cost = fret + (str === 4 ? 0.5 : 0)     // ưu tiên dây buông, dây trầm hơn
@@ -269,6 +271,63 @@ function bassFor(chordName, melString) {
     }
   }
   return best
+}
+
+// ── Bè BASS riêng (--bass) ──────────────────────────────────────────────────
+// Nhạc lý: hợp âm đổi ở PHÁCH MẠNH (phách 1, hoặc phách 3 của nhịp 4/4), không
+// rơi vào phách 2/4 chỉ vì âm tiết của lời nằm ở đó. Nên vị trí hợp âm được NẮN
+// về phách mạnh gần nhất.
+// Khắc nhạc: bass là một BÈ RIÊNG (\voice) — alphaTab tự quay đuôi nốt xuống, và
+// bè bass có nốt ở phách 1 kể cả khi giai điệu đang là dấu lặng.
+const STRONG = beats >= 4 ? [0, Math.floor(beats / 2)] : [0]     // 4/4 → phách 1 và 3
+
+function buildBassVoice() {
+  // gom hợp âm theo ô nhịp, đã nắn về phách mạnh
+  const perBar = bars.map(() => new Map())                       // bar → Map(phách → tên hợp âm)
+  for (let bi = 0; bi < bars.length; bi++) {
+    for (const it of bars[bi].items) {
+      if (!it.sheetChord) continue
+      let slot = STRONG.reduce((a, b) => (Math.abs(b - it.at) < Math.abs(a - it.at) ? b : a), STRONG[0])
+      if (perBar[bi].has(slot)) {                                // phách đó đã có hợp âm khác
+        const free = STRONG.find(x => !perBar[bi].has(x))
+        if (free === undefined) continue                         // ô đã đủ hợp âm → bỏ
+        slot = free
+      }
+      perBar[bi].set(slot, it.sheetChord)
+    }
+  }
+
+  const out = []
+  // Hợp âm đầu tiên của bài thường được neo vào giữa câu hát (vd "…tháp cổ[Am]"),
+  // nhưng người đệm đã chơi nó từ ô nhịp đầu ⇒ lấy nó làm hợp âm mở đầu để bè bass
+  // có nốt ngay từ phách 1, kể cả khi giai điệu bắt đầu bằng dấu lặng.
+  let current = null
+  for (const m of perBar) { const first = [...m.values()][0]; if (first) { current = first; break } }
+  let shownNone = true                      // hợp âm đầu bài thì luôn phải ghi tên
+  for (let bi = 0; bi < bars.length; bi++) {
+    const slots = [...perBar[bi].entries()].sort((a, b) => a[0] - b[0])
+    if (!current && slots.length === 0) { out.push(`r.${DUR_TEX[beats >= 4 ? 4 : 2] ?? 1}`); continue }
+
+    // mỗi đoạn kéo dài từ phách này tới phách có hợp âm tiếp theo (hoặc hết ô nhịp)
+    const marks = slots.length ? slots : [[0, current]]
+    if (marks[0][0] > 0) marks.unshift([0, current])              // đầu ô vẫn giữ hợp âm cũ
+    const toks = []
+    for (let k = 0; k < marks.length; k++) {
+      const [from, name] = marks[k]
+      const to = k + 1 < marks.length ? marks[k + 1][0] : beats
+      const lenBeats = to - from
+      if (!name) { toks.push(`r.${DUR_TEX[lenBeats] ?? 4}`); continue }
+      const changed = name !== current      // chỉ ghi TÊN hợp âm ở chỗ nó đổi
+      current = name
+      const pos = bassFor(name)
+      const dur = DUR_TEX[lenBeats] ?? 4
+      const fx = ['rf 1']                   // rf 1 = ngón cái p
+      if (changed || shownNone) { fx.unshift(`ch "${name}"`); shownNone = false }
+      toks.push(pos ? `${pos.fret}.${pos.string}{${fx.join(' ')}}.${dur}` : `r.${dur}`)
+    }
+    out.push(toks.join(' '))
+  }
+  return out
 }
 
 // ── 3. Xuất alphaTex ──
@@ -300,8 +359,9 @@ for (let i = b0 - 1; i < Math.min(b1, bars.length); i++) {
     if (it.tuplet > 1) fx.push(`tu ${it.tuplet}`)
     // Hợp âm là HIỆU ỨNG CỦA NỐT: `12.1{ch "E7"}.8`. alphaTex KHÔNG nhận `\\ch` đứng riêng,
     // và cũng không gắn được hợp âm lên dấu lặng ⇒ dồn sang nốt thật kế tiếp.
-    if (it.sheetChord) carryChord = { text: it.sheetChord }
-    else if (it.chord && !flag('no-chords')) carryChord = it.chord
+    // Có bè bass riêng thì hợp âm nằm ở bè đó, bè giai điệu để trống cho sạch.
+    if (it.sheetChord && !flag('bass')) carryChord = { text: it.sheetChord }
+    else if (it.chord && !flag('no-chords') && !flag('bass')) carryChord = it.chord
     let body
     if (it.midi == null) {
       body = `r.${dur}`   // alphaTab BỎ QUA dấu lặng khi rải lời ⇒ không đẩy âm tiết nào
@@ -310,17 +370,12 @@ for (let i = b0 - 1; i < Math.min(b1, bars.length); i++) {
       if (!pos) { body = `r.${dur}` } else {
         const nfx = []
         if (it.tieStop) nfx.push('t')
-        let bass = null
         if (carryChord) {
           const name = carryChord.text ?? `${noteName(carryChord.pc)}${carryChord.suffix}`
           nfx.push(`ch "${name}"`)
-          if (flag('bass')) bass = bassFor(name, pos.string)
           carryChord = null
         }
-        const melTok = `${pos.fret}.${pos.string}${nfx.length ? `{${nfx.join(' ')}}` : ''}`
-        body = bass
-          ? `(${bass.fret}.${bass.string}{rf 1} ${melTok}).${dur}`   // rf 1 = ngón cái p
-          : `${melTok}.${dur}`
+        body = `${pos.fret}.${pos.string}${nfx.length ? `{${nfx.join(' ')}}` : ''}.${dur}`
       }
       // Nốt KHÔNG có âm tiết (dấu nối, luyến, melisma) phải sinh "-" = ô lời RỖNG.
       // Bỏ trống sẽ làm alphaTab dồn âm tiết kế tiếp lên nốt này ⇒ lệch lời cả bài.
@@ -343,7 +398,9 @@ const header = [
 if (!flag('no-lyrics')) header.push(`\\lyrics "${lyricWords.join(' ').trim()}"`)
 header.push('.')
 
-process.stdout.write(header.join('\n') + '\n' + out.join(' |\n') + '\n')
+const melodyTex = header.join('\n') + '\n' + out.join(' |\n')
+const bassTex = flag('bass') ? '\n\\voice\n' + buildBassVoice().join(' |\n') : ''
+process.stdout.write(melodyTex + bassTex + '\n')
 process.stderr.write(`\n[i] ${bars.length} ô nhịp · fifths gốc ${keyFifths} · dịch ${transpose} nửa cung\n`)
 process.stderr.write('[i] vùng: ' + zoneReport.map(r => `ô ${r.bar}→V${r.zone || '?'}`).join('  ') + '\n')
 const usedFrets = melody.map(m => m.it.pos?.fret).filter(f => f != null)

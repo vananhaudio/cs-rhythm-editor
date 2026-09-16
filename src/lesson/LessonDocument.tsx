@@ -264,7 +264,9 @@ const CSS = `
 /* ── Sơ đồ cần đàn ── */
 .lsn-fb{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .lsn-fb svg{min-width:620px;display:block;}
+.lsn-fb.is-compact{max-width:430px;}
 .lsn-fb.is-compact svg{min-width:0;}
+.lsn-zoom-frame.is-big .lsn-fb.is-compact{max-width:none;}
 .lsn-zone-legend{display:grid;gap:6px;margin-top:12px;}
 .lsn-zone-item{display:flex;gap:9px;align-items:flex-start;font-size:14px;color:${P.inkSoft};}
 .lsn-zone-chip{width:14px;height:14px;border-radius:4px;flex:none;margin-top:4px;}
@@ -277,19 +279,27 @@ const CSS = `
   font-family:inherit;box-shadow:0 1px 3px rgba(29,25,48,.08);}
 .lsn-zoom-hint{margin:8px 0 0;font-size:12.5px;color:${P.inkFaint};}
 .lsn-zoom-frame.is-big{position:fixed;inset:0;z-index:140;background:#fff;margin:0;
-  padding:56px 12px 24px;overflow:auto;-webkit-overflow-scrolling:touch;}
+  padding:58px 12px 28px;overflow:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;touch-action:pan-x pan-y;}
+.lsn-zoom-tools{position:fixed;top:10px;right:12px;left:12px;z-index:2;display:flex;align-items:center;
+  justify-content:flex-end;gap:8px;}
+.lsn-zoom-tools button{border:1px solid ${P.line};background:#fff;color:${P.ink};font-family:inherit;
+  font-size:17px;font-weight:700;width:38px;height:38px;border-radius:10px;cursor:pointer;line-height:1;}
+.lsn-zoom-tools button:disabled{opacity:.4;cursor:default;}
+.lsn-zoom-tools span{font-size:13px;font-weight:600;color:${P.inkFaint};min-width:46px;text-align:center;}
+.lsn-zoom-tools .lsn-zoom-close{width:auto;padding:0 14px;font-size:14.5px;background:${P.purple};
+  color:#fff;border-color:${P.purple};}
 .lsn-zoom-rotate{position:fixed;left:12px;bottom:10px;margin:0;font-size:12.5px;color:${P.inkFaint};}
 @media (orientation:landscape){.lsn-zoom-rotate{display:none;}}
 .lsn-zoom-frame.is-big .lsn-zoom-btn{position:fixed;right:12px;top:12px;font-size:15px;padding:9px 16px;
   background:${P.purple};color:#fff;border-color:${P.purple};}
-.lsn-zoom-frame.is-big .lsn-score,.lsn-zoom-frame.is-big .lsn-fb{border:none;max-width:none;}
+.lsn-zoom-frame.is-big .lsn-score,.lsn-zoom-frame.is-big .lsn-fb{border:none;max-width:none;overflow:visible;}
 .lsn-zoom-frame.is-big .lsn-score-host{overflow:visible;}
-/* Phóng phải áp lên KHUNG CHỨA, không lên từng <svg>: alphaTab xếp mỗi hệ thống
-   nhạc là một <svg> riêng trong khung có chiều cao riêng — phóng từng cái thì các
-   dòng nhạc chồng đè lên nhau. */
-.lsn-zoom-frame.is-big .lsn-fb{zoom:1.7;}
-.lsn-zoom-frame.is-big .lsn-score-host svg,.lsn-zoom-frame.is-big .lsn-fb svg{max-width:none;}
-.lsn-zoom-frame.is-big .lsn-fb{overflow:visible;}
+.lsn-zoom-frame.is-big .lsn-score-host svg{max-width:none;}
+/* Sơ đồ phóng bằng chính bề rộng của SVG (vector, vẫn nét) — KHÔNG dùng CSS zoom:
+   zoom làm kẹt thao tác kéo trên máy cảm ứng và làm alphaTab đo sai bề ngang khung. */
+.lsn-zoom-frame.is-big .lsn-fb svg{min-width:0 !important;max-width:none;
+  width:calc(100% * var(--zoom,1.4));}
 
 /* ── Bản nhạc ── */
 .lsn-tempo{font-size:14px;font-weight:700;color:${P.purple};margin-bottom:8px;}

@@ -47,6 +47,9 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         s.display.staveProfile = StaveProfile.ScoreTab
         s.display.scale = narrow ? 1 : 0.95
         s.display.barsPerRow = rows
+        // alphaTab tô bè phụ (bè Bass) bằng màu xám mờ — in ra giấy gần như không
+        // thấy. Kéo về đúng màu đen của bè chính.
+        s.display.resources.secondaryGlyphColor = s.display.resources.mainGlyphColor
         // Ẩn chữ thừa — tiêu đề/nhịp độ do tài liệu tự trình bày
         const hide = [
           NotationElement.ScoreTitle, NotationElement.ScoreSubTitle, NotationElement.ScoreArtist,
@@ -104,15 +107,22 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [barsPerRow])
 
-  // Xem toàn màn hình = khắc lại MỘT ô nhịp mỗi dòng với nốt to, cuộn dọc mà đọc.
+  // Xem toàn màn hình: KHẮC LẠI bản nhạc theo hệ số phóng, số ô nhịp mỗi dòng tính
+  // theo bề ngang thật của khung — máy tính vẫn 3–4 ô/dòng, điện thoại còn 1 ô.
   // (Đừng phóng bằng CSS: alphaTab đo bề ngang khung để dàn nốt, phóng xong nốt dồn cục.)
-  const onZoom = (big: boolean) => {
+  const onZoom = (big: boolean, factor: number) => {
     bigRef.current = big
     const api = apiRef.current
     if (!api) return
+    const w = hostRef.current?.clientWidth || window.innerWidth
     try {
-      api.settings.display.barsPerRow = big ? 1 : (narrowNow() ? Math.min(2, barsPerRow) : barsPerRow)
-      api.settings.display.scale = big ? 1.25 : (narrowNow() ? 1 : 0.95)
+      if (big) {
+        api.settings.display.scale = factor
+        api.settings.display.barsPerRow = Math.max(1, Math.floor(w / (factor * 250)))
+      } else {
+        api.settings.display.scale = narrowNow() ? 1 : 0.95
+        api.settings.display.barsPerRow = narrowNow() ? Math.min(2, barsPerRow) : barsPerRow
+      }
       api.updateSettings()
       api.render()
     } catch { /* */ }
