@@ -32,7 +32,7 @@ import { tagSourceIds } from "../../src/musicxml-beats/sourceTags.ts";
 import type { SourceNote } from "../../src/musicxml-beats/sourceTags.ts";
 import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
 import { idTaiCho } from "../../src/nhipphach/edit/draftIdentity.ts";
-import { NHAP_BAN_DAU, ghiNhoThamChieu } from "../../src/nhipphach/editor/noteEntry.ts";
+import { NHAP_BAN_DAU, datTruongDo, ghiNhoThamChieu } from "../../src/nhipphach/editor/noteEntry.ts";
 import { applyToDraft, createDraft, rebuildDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
 import type { DraftState } from "../../src/nhipphach/edit/draftEngine.ts";
 import { pitchName, soundingPitch, transposeSemitone } from "../../src/nhipphach/edit/pitchModel.ts";
@@ -1049,7 +1049,7 @@ test("4B.1 AN TOÀN Ô CHỮ: a–g, r, 0, Delete, Backspace trong ô nhập đ�
   }
 });
 
-test("4B.1 GÕ NHANH: 10 chữ cái liên tiếp ra 10 lệnh, không mất, không đảo", () => {
+test("4B.1 GÕ NHANH: một tràng chữ cái ra đủ chừng ấy lệnh, không mất, không đảo", () => {
   // Dựng một bản nhạc toàn dấu lặng để nhập liên tục, rồi gõ không chờ vẽ lại.
   const tagged = tagSourceIds(FIX_4B);
   const langs = tagged.notes.filter((n) => n.kind === "rest" && n.noteType).map((n) => n.path);
@@ -1062,27 +1062,36 @@ test("4B.1 GÕ NHANH: 10 chữ cái liên tiếp ra 10 lệnh, không mất, kh�
       } catch {
         /* chỗ bị chặn: bỏ qua, đã có test riêng */
       }
+  // CHỈ khuông nhạc thường: từ 4B.3, nhập trực tiếp trên khuông TAB bị chặn
+  // hẳn (part 2 của fixture này là TAB), vì chọn dây/phím là quyết định ngón tay.
   const chos = tagSourceIds(draft.xml)
-    .notes.filter((n) => n.kind === "rest" && n.noteType)
-    .map((n) => n.path)
-    .slice(0, 10);
-  assert.equal(chos.length, 10, "phải có đủ mười chỗ lặng để nhập");
+    .notes.filter((n) => n.kind === "rest" && n.noteType && n.partIndex === 1)
+    .map((n) => n.path);
+  assert.ok(chos.length >= 6, `chỉ có ${chos.length} chỗ lặng — quá ít để thử tràng phím`);
   assert.ok(langs.length > 0);
 
-  const gõ = ["C", "D", "E", "F", "G", "A", "B", "C", "D", "E"] as const;
+  const gõ = (["C", "D", "E", "F", "G", "A", "B", "C", "D", "E"] as const).slice(
+    0,
+    chos.length
+  );
   const truocKhiGo = draft.commands.length;
   let nhapState = NHAP_BAN_DAU;
   // KHÔNG có lần vẽ lại nào ở giữa: mọi lệnh đọc từ chính bản nháp vừa rồi,
   // đúng như `nhapRef` của trang làm trong một tràng phím tự lặp.
   chos.forEach((path, i) => {
-    const r = toCommand({ type: "ENTER_PITCH", step: gõ[i] }, path, readNoteFields(draft.xml, path), nhapState);
+    const truong = readNoteFields(draft.xml, path)!;
+    // 4B.3: cây bút phải khớp chính dấu lặng ấy thì mới là phép THAY TẠI CHỖ —
+    // phép mà bài kiểm này quan tâm. Khác trường độ là sang đường cân lại, đã
+    // có bộ kiểm riêng của 4B.3 lo.
+    nhapState = datTruongDo(nhapState, { noteType: truong.noteType!, dots: truong.dots });
+    const r = toCommand({ type: "ENTER_PITCH", step: gõ[i] }, path, truong, nhapState);
     assert.equal(r.kind, "command", `${gõ[i]} tại ${path}`);
     const cmd = (r as { command: { type: string; pitch: { step: string; octave: number } } }).command;
     assert.equal(cmd.type, "ReplaceRestWithNote");
     draft = applyToDraft(draft, cmd as never);
     nhapState = ghiNhoThamChieu(nhapState, cmd.pitch as never);
   });
-  assert.equal(draft.commands.length - truocKhiGo, 10, "đủ mười lệnh, không mất cái nào");
+  assert.equal(draft.commands.length - truocKhiGo, chos.length, "đủ lệnh, không mất cái nào");
   // Mười chỗ ra đúng mười bậc đã gõ, đúng thứ tự.
   assert.deepEqual(
     chos.map((p) => readNoteFields(draft.xml, p)!.pitch!.step),
@@ -1244,4 +1253,97 @@ test("4B.2 hoàn tác: danh tính logic sống qua cả vòng đi–về", () =>
   assert.equal(readNoteFields(d2.xml, "/score-partwise/part[1]/measure[1]/*[4]")!.dots, 1);
   // Làm lại thì trở lại chỗ cũ, không lệch một ô.
   assert.deepEqual(redo(d2).identity.slots.get(idE4), cho(5));
+});
+
+// ══ 11. Nhập nốt vào chỗ lặng (Giai đoạn 4B.3) ═════════════════════════════
+
+const FIX_4B3 = readFileSync(
+  new URL("../nhipphach-edit/fixtures/note-entry.musicxml", import.meta.url),
+  "utf8"
+);
+
+test("4B.3 bản khắc: nốt vừa nhập vẽ ra được, CHỌN được, và ←→ đi tới được", () => {
+  const cmd = {
+    type: "InsertNoteIntoRest",
+    insertedLogicalId: `insert:${globalThis.crypto.randomUUID()}`,
+    path: "/score-partwise/part[1]/measure[1]/*[2]",
+    pitch: { step: "C", alter: 0, octave: 5 },
+    noteType: "eighth",
+    dots: 0,
+    accidental: "auto",
+  } as const;
+  const sau = applyToDraft(createDraft(FIX_4B3), cmd as never);
+  const t = tagSourceIds(sau.xml);
+  const svg = parse(renderer.render(t.xml, SETTINGS).pages.map((p) => p.svg).join(""));
+
+  // Nốt mới ngồi đúng chỗ dấu lặng cũ và mang đúng id vị trí ấy.
+  assert.equal(byId(svg, "tva-src-p1-m1-c2")?.getAttribute("class"), "note");
+  // Dấu lặng dôi ra cũng có mặt, cũng có danh tính — không phải bóng ma.
+  assert.equal(byId(svg, "tva-src-p1-m1-c3")?.getAttribute("class"), "rest");
+  // Mọi sự kiện nguồn đều vẽ ra được: không cái nào rơi vào "unresolved".
+  const thieu = t.notes.filter((n) => n.noteType && !byId(svg, n.svgId)).map((n) => n.svgId);
+  assert.deepEqual(thieu, []);
+
+  // Và bàn phím đi tới được nốt mới bằng THỨ TỰ TÀI LIỆU, không bằng toạ độ.
+  const ds = dsDiDuoc(t.notes);
+  const dau = caretTaiId(ds, "tva-src-p1-m1-c2")!;
+  assert.equal(diChuyen(ds, dau, "next")!.sourceId, "tva-src-p1-m1-c3");
+  assert.equal(diChuyen(ds, caretTaiId(ds, "tva-src-p1-m1-c3")!, "prev")!.sourceId, "tva-src-p1-m1-c2");
+});
+
+test("4B.3 thanh công cụ: một hàng nút, hai ngữ cảnh, và nói rõ đang ở cái nào", () => {
+  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  // Ngữ cảnh suy từ chính dữ liệu, không từ một cờ do nơi gọi truyền vào.
+  assert.match(tb, /const dangNhap = fields\?\.kind === "rest"/);
+  assert.match(tb, /pressed=\{dangNhap \? truongDoNhap\.noteType === type/);
+  assert.match(tb, /pressed=\{dangNhap \? truongDoNhap\.dots > 0/);
+  // Và có một câu nói thẳng ra rằng đang nhập nốt, để thầy không phải đoán vì
+  // sao bấm 4 mà dấu lặng không đổi.
+  assert.match(tb, /Đang nhập nốt/);
+  assert.doesNotMatch(tb, /applyCommand|applyToDraft|InsertNoteIntoRest/, "thanh công cụ không phát lệnh");
+});
+
+test("4B.3 trang: phím trường độ ở dấu lặng KHÔNG vào ngăn xếp hoàn tác", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Nhánh `toolState` phải thoát TRƯỚC khi chạm `apLenh`.
+  const i = page.indexOf('ra.kind === "toolState"');
+  const j = page.indexOf("apLenh(ra.command)");
+  assert.ok(i > 0 && j > 0 && i < j, "nhánh đổi cây bút phải nằm trước lúc áp lệnh");
+  assert.match(page, /nhapNotRef\.current = datTruongDo\(nhapNotRef\.current, ra\.truongDo\)/);
+  // Con trỏ chạy tiếp phải đọc từ NHÁP ĐỒNG BỘ: chèn thêm dấu lặng thì danh
+  // sách của bản đã khắc còn thiếu đúng cái chỗ thầy sắp gõ vào.
+  assert.match(page, /function dsSauLenh\(\)/);
+  assert.match(page, /const ds = dsSauLenh\(\)/);
+  assert.doesNotMatch(
+    page,
+    /diChuyen\(notDiDuoc, vungChonRef\.current\.caret, "next"\)/,
+    "còn dời con trỏ bằng danh sách của bản đã khắc"
+  );
+  // Và việc TRA NỐT dưới con trỏ cũng phải đọc từ nháp đồng bộ. Đo được trên
+  // trình duyệt: để nguyên `notDiDuoc` thì tràng `c d e f g a b c` chỉ ra BỐN
+  // lệnh — bốn phím sau rơi vào một sự kiện mà bản khắc chưa kịp biết tới.
+  assert.match(page, /const dsBayGio = dsSauLenh\(\)/);
+  assert.match(page, /dsBayGio\.find\(\(n\) => n\.svgId === caretBayGio\.sourceId\)/);
+  assert.doesNotMatch(
+    page,
+    /notDiDuoc\.find\(\(n\) => n\.svgId === caretBayGio\.sourceId\)/,
+    "còn tra nốt bằng danh sách của bản đã khắc"
+  );
+  assert.match(
+    page + "\n const note = notDiDuoc.find((n) => n.svgId === caretBayGio.sourceId);\n",
+    /notDiDuoc\.find\(\(n\) => n\.svgId === caretBayGio\.sourceId\)/,
+    "luật không bắt được chính đột biến của nó"
+  );
+});
+
+test("4B.3 kiến trúc: trường độ đang cầm là TRẠNG THÁI CÔNG CỤ, không phải bản nhạc", () => {
+  const ne = stripComments(src("nhipphach/editor/noteEntry.ts"));
+  assert.match(ne, /currentDuration: EntryDuration/);
+  // Vẫn dưới đúng những lằn ranh của 4A: không XML, không Verovio, không React.
+  for (const cam of [/@xmldom|xmlPatch|DOMParser/, /verovio/i, /supabase|fetch\(/i, /useState|useEffect/, /measure/i])
+    assert.doesNotMatch(ne, cam, String(cam));
+  assert.match(ne + "\nconst m = measures[0];\n", /measure/i, "luật không bắt được đột biến");
+  // Mặt tiền là chỗ DUY NHẤT quyết định giữa hai chế độ.
+  const facade = stripComments(src("nhipphach/editor/commandFacade.ts"));
+  assert.match(facade, /if \(fields\.kind === "rest"\)\s*\n?\s*return \{ kind: "toolState"/);
 });

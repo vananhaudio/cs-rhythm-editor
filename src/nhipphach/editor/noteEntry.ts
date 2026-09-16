@@ -1,4 +1,5 @@
 import type { Pitch, Step } from "../edit/commands.ts";
+import type { NoteType } from "../edit/durationModel.ts";
 import { STEP_SEMITONE } from "../edit/pitchModel.ts";
 
 /**
@@ -32,18 +33,42 @@ import { STEP_SEMITONE } from "../edit/pitchModel.ts";
  * `QUANG_TAM_MAC_DINH` — nói thẳng ra một con số thay vì đoán.
  */
 export const QUANG_TAM_MAC_DINH = 4;
+export const TRUONG_DO_MAC_DINH: EntryDuration = { noteType: "quarter", dots: 0 };
+
+/** Trường độ đang CẦM TRÊN TAY — thứ sẽ được ghi ra khi gõ một chữ cái. */
+export interface EntryDuration {
+  noteType: NoteType;
+  dots: number;
+}
 
 export interface NoteEntryState {
   /** Quãng tám dùng khi CHƯA có cao độ tham chiếu nào. */
   entryOctave: number;
   /** Cao độ tham chiếu: nốt vừa nhập hoặc vừa đi qua. `null` = chưa có. */
   thamChieu: Pitch | null;
+  /**
+   * Trường độ nhập — Giai đoạn 4B.3.
+   *
+   * Đây là chỗ tách bạch hai chế độ mà trước 4B.3 còn lẫn vào nhau:
+   *   · con trỏ đang ở NỐT   → phím 3–7 SỬA trường độ của chính nốt ấy
+   *   · con trỏ đang ở LẶNG  → phím 3–7 chỉ ĐỔI CÂY BÚT, không đụng bản nhạc
+   * Nhờ vậy "bấm 4 rồi gõ C D E F" mới ra một chuỗi móc đơn, thay vì biến dấu
+   * lặng đang chọn thành móc đơn rồi nhập đè lên nó.
+   */
+  currentDuration: EntryDuration;
 }
 
 export const NHAP_BAN_DAU: NoteEntryState = {
   entryOctave: QUANG_TAM_MAC_DINH,
   thamChieu: null,
+  currentDuration: TRUONG_DO_MAC_DINH,
 };
+
+/** Cầm một cây bút khác. Không đụng tới bản nhạc, chỉ đổi thứ trên tay. */
+export const datTruongDo = (state: NoteEntryState, truongDo: EntryDuration): NoteEntryState =>
+  state.currentDuration.noteType === truongDo.noteType && state.currentDuration.dots === truongDo.dots
+    ? state
+    : { ...state, currentDuration: truongDo };
 
 /** Bậc diatonic tuyệt đối: C4 = 4×7 + 0. Dùng để đo "gần" theo mặt chữ. */
 const BAC_DIATONIC = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 } as const;

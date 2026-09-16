@@ -3,6 +3,7 @@ import type { NoteType } from "../edit/durationModel.ts";
 import { BANG_TRO_GIUP, phimCua } from "./keymap.ts";
 import type { EditorAction } from "./actions.ts";
 import type { NoteFields } from "../edit/noteFields.ts";
+import type { EntryDuration } from "./noteEntry.ts";
 
 /**
  * Thanh công cụ tối thiểu — Giai đoạn 4A.
@@ -17,6 +18,14 @@ import type { NoteFields } from "../edit/noteFields.ts";
 export interface EditorToolbarProps {
   /** Ô của nốt đang chọn; `null` = chưa chọn gì → mọi nút tắt. */
   fields: NoteFields | null;
+  /**
+   * Trường độ đang CẦM TRÊN TAY — Giai đoạn 4B.3.
+   *
+   * Khi con trỏ đứng trên một dấu lặng, hàng hình nốt không còn tả trạng thái
+   * của dấu lặng nữa mà tả CÂY BÚT sắp dùng. Cùng một hàng nút, hai nghĩa, và
+   * nghĩa nào đang chạy thì nhìn là biết.
+   */
+  truongDoNhap: EntryDuration;
   canUndo: boolean;
   canRedo: boolean;
   onAction(action: EditorAction): void;
@@ -70,8 +79,17 @@ const DAU_HOA: readonly { alter: number; ky: string; ten: string }[] = [
   { alter: 1, ky: "♯", ten: "Thăng" },
 ];
 
-export function EditorToolbar({ fields, canUndo, canRedo, onAction }: EditorToolbarProps) {
-  const suaDuocTruongDo = !!fields && !fields.duongTruongDo;
+export function EditorToolbar({
+  fields,
+  truongDoNhap,
+  canUndo,
+  canRedo,
+  onAction,
+}: EditorToolbarProps) {
+  // Con trỏ ở dấu lặng = đang NHẬP NỐT: hàng hình nốt chọn cây bút, và luôn bấm
+  // được (kể cả trên dấu lặng cả ô nhịp — chọn bút có hại gì đâu).
+  const dangNhap = fields?.kind === "rest";
+  const suaDuocTruongDo = !!fields && (dangNhap || !fields.duongTruongDo);
   const suaDuocCaoDo = !!fields?.pitch;
   const troGiup = BANG_TRO_GIUP.map((b) => `${b.phim} — ${b.mo}`).join("\n");
   return (
@@ -82,8 +100,8 @@ export function EditorToolbar({ fields, canUndo, canRedo, onAction }: EditorTool
             key={type}
             action={{ type: "SET_DURATION", noteType: type }}
             ten={TYPE_LABEL[type]}
-            mo={TYPE_LABEL[type]}
-            pressed={fields?.noteType === type}
+            mo={dangNhap ? `Nhập bằng ${TYPE_LABEL[type]}` : TYPE_LABEL[type]}
+            pressed={dangNhap ? truongDoNhap.noteType === type : fields?.noteType === type}
             disabled={!suaDuocTruongDo}
             onAction={onAction}
           />
@@ -91,8 +109,8 @@ export function EditorToolbar({ fields, canUndo, canRedo, onAction }: EditorTool
         <TBtn
           action={{ type: "TOGGLE_DOT" }}
           ten="·"
-          mo="Thêm / bỏ chấm dôi"
-          pressed={!!fields && fields.dots > 0}
+          mo={dangNhap ? "Nhập có chấm dôi" : "Thêm / bỏ chấm dôi"}
+          pressed={dangNhap ? truongDoNhap.dots > 0 : !!fields && fields.dots > 0}
           disabled={!suaDuocTruongDo}
           onAction={onAction}
         />
@@ -139,6 +157,11 @@ export function EditorToolbar({ fields, canUndo, canRedo, onAction }: EditorTool
         <TBtn action={{ type: "REDO" }} ten="↷" mo="Làm lại" disabled={!canRedo} onAction={onAction} />
       </span>
 
+      {dangNhap && (
+        <span className="np-toolbar-mode" role="status">
+          Đang nhập nốt — gõ A–G
+        </span>
+      )}
       <span className="np-toolbar-hint" title={troGiup}>
         ← → đi nốt · ↑ ↓ đổi cao độ · 3–7 hình nốt · A–G nhập nốt · phím ? xem đủ
       </span>

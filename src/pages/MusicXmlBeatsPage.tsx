@@ -76,8 +76,8 @@ import { EditorToolbar, KeymapHelp } from "../nhipphach/editor/EditorToolbar";
 import type { EditorAction } from "../nhipphach/editor/actions";
 import { dispatch } from "../nhipphach/editor/dispatcher";
 import { toCommand } from "../nhipphach/editor/commandFacade";
-import { NHAP_BAN_DAU, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
-import type { NoteEntryState } from "../nhipphach/editor/noteEntry";
+import { NHAP_BAN_DAU, datTruongDo, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
+import type { EntryDuration, NoteEntryState } from "../nhipphach/editor/noteEntry";
 import { theoDoi } from "../nhipphach/edit/draftIdentity";
 import type { DraftIdentity } from "../nhipphach/edit/draftIdentity";
 import { STEPS } from "../nhipphach/edit/commands";
@@ -122,7 +122,7 @@ import type {
   SourceLyric,
   SourceNote,
 } from "../musicxml-beats/sourceTags";
-import { parseSourceSvgId, sourceSvgId } from "../musicxml-beats/sourceTags";
+import { parseSourceSvgId, sourceSvgId, tagSourceIds } from "../musicxml-beats/sourceTags";
 import { parseMusicXML } from "../musicxml-beats/parser";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
@@ -238,6 +238,8 @@ export default function MusicXmlBeatsPage({
    * chứ không phải state vì nó không vẽ ra gì, và vì cùng lý do đồng bộ ở trên.
    */
   const nhapNotRef = useRef<NoteEntryState>(NHAP_BAN_DAU);
+  /** Bản hiện ra của trường độ đang cầm — chỉ để thanh công cụ vẽ, không phải nguồn sự thật. */
+  const [truongDoNhap, setTruongDoNhap] = useState<EntryDuration>(NHAP_BAN_DAU.currentDuration);
   const [hienPhimTat, setHienPhimTat] = useState(false);
   // ── Bản nháp biên tập (Giai đoạn Nội dung 3) — chỉ trong bộ nhớ ──────────
   // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
@@ -507,6 +509,7 @@ export default function MusicXmlBeatsPage({
     // Bài mới thì công cụ trong tay cũng về mặc định: quãng tám của bài cũ
     // không nói gì về bài này.
     nhapNotRef.current = NHAP_BAN_DAU;
+    setTruongDoNhap(NHAP_BAN_DAU.currentDuration);
     datNhap(null);
     setKiemTra(null);
     setNhapNote("");
@@ -599,7 +602,12 @@ export default function MusicXmlBeatsPage({
       return;
     }
     const caretBayGio = vungChonRef.current.caret;
-    const note = caretBayGio ? notDiDuoc.find((n) => n.svgId === caretBayGio.sourceId) : null;
+    // Danh sách phải đọc từ NHÁP ĐỒNG BỘ, không từ bản đã khắc: nhập một nốt
+    // có thể sinh thêm dấu lặng, và con trỏ nhảy sang chính nó ngay lập tức.
+    // Đo được trên trình duyệt: dùng danh sách cũ thì tràng `c d e f g a b c`
+    // chỉ ra bốn lệnh — bốn phím sau rơi vào một sự kiện mà bản khắc chưa biết.
+    const dsBayGio = dsSauLenh();
+    const note = caretBayGio ? dsBayGio.find((n) => n.svgId === caretBayGio.sourceId) : null;
     if (!note) {
       setNhapNote("Bấm một nốt trên bản nhạc trước đã.");
       return;
@@ -615,22 +623,56 @@ export default function MusicXmlBeatsPage({
       return;
     }
     if (ra.kind === "noop") return;
+    // 4B.3: phím trường độ khi con trỏ ở dấu lặng chỉ ĐỔI CÂY BÚT. Không lệnh,
+    // không chạm bản nhạc, không vào ngăn xếp hoàn tác.
+    if (ra.kind === "toolState") {
+      nhapNotRef.current = datTruongDo(nhapNotRef.current, ra.truongDo);
+      setTruongDoNhap(ra.truongDo);
+      setNhapNote("");
+      return;
+    }
     if (!apLenh(ra.command)) return;
     // Cao độ vừa GHI RA là tham chiếu chắc chắn nhất cho chữ cái tiếp theo.
     const cmd = ra.command;
-    if (cmd.type === "ReplaceRestWithNote" || cmd.type === "ChangePitch" || cmd.type === "RespellNote")
+    if (
+      cmd.type === "ReplaceRestWithNote" ||
+      cmd.type === "InsertNoteIntoRest" ||
+      cmd.type === "ChangePitch" ||
+      cmd.type === "RespellNote"
+    )
       nhapNotRef.current = ghiNhoThamChieu(nhapNotRef.current, cmd.pitch);
     // NHẬP LIÊN TỤC: nhập xong một nốt thì con trỏ tự sang phần tử kế tiếp, để
     // gõ `C D E F G` là ra năm nốt. Chỉ ENTER_PITCH mới tự chạy — sửa cao độ hay
     // trường độ thì người ta còn muốn sửa tiếp chính nốt ấy.
     if (action.type === "ENTER_PITCH") {
-      const tiep = diChuyen(notDiDuoc, vungChonRef.current.caret, "next");
+      // Đọc LẠI sau khi áp lệnh: chính lệnh vừa rồi có thể vừa thêm dấu lặng.
+      const ds = dsSauLenh();
+      const tiep = diChuyen(ds, caretBayGio, "next");
       if (tiep) {
         datVungChon(chonMot(tiep));
-        const nt = notDiDuoc[tiep.sourceIndex];
+        const nt = ds[tiep.sourceIndex];
         if (nt) setNotChon({ kind: "note", note: nt });
       }
     }
+  }
+
+  /**
+   * Danh sách sự kiện để dời con trỏ NGAY SAU một lệnh.
+   *
+   * `notDiDuoc` sinh từ bản ĐÃ KHẮC. Nhập nốt vào chỗ lặng thì sinh thêm dấu
+   * lặng bù, mà bản khắc chưa kịp chạy — dùng danh sách cũ là con trỏ nhảy vọt
+   * qua đúng cái dấu lặng thầy sắp gõ tiếp vào. Nên khi nháp có thay đổi cấu
+   * trúc, đọc thẳng từ nháp đồng bộ.
+   *
+   * Vẫn loại những sự kiện mà bản khắc trước đó không vẽ ra được (lặng cả ô
+   * Verovio tự gộp): con trỏ không được tới chỗ không nhìn thấy.
+   */
+  function dsSauLenh(): SourceNote[] {
+    const xml = nhapRef.current?.xml;
+    if (!xml || !score) return notDiDuoc;
+    const khongVe = score.unresolvedNotes;
+    const moi = tagSourceIds(xml).notes;
+    return khongVe?.size ? moi.filter((n) => !khongVe.has(n.svgId)) : moi;
   }
 
   /**
@@ -731,7 +773,7 @@ export default function MusicXmlBeatsPage({
       // sau tụt chỉ số — tức là đổi `tva-src-…`. Con trỏ phải đi theo DANH TÍNH
       // LOGIC, không phải theo cái id cũ: giữ id cũ là im lặng trỏ sang một sự
       // kiện khác, kiểu hỏng tệ nhất.
-      if (sau.identity !== truoc.identity) doiChoCaret(truoc.identity, sau.identity);
+      if (sau.identity !== truoc.identity && cmd.type !== "InsertNoteIntoRest") doiChoCaret(truoc.identity, sau.identity);
       setNhapNote("");
       return true;
     } catch (e) {
@@ -2419,6 +2461,7 @@ export default function MusicXmlBeatsPage({
                 {choChonNot && chonNot && (
                   <EditorToolbar
                     fields={truongCaret}
+                    truongDoNhap={truongDoNhap}
                     canUndo={!!nhap && coTheHoanTac(nhap)}
                     canRedo={!!nhap && coTheLamLai(nhap)}
                     onAction={apHanhDong}

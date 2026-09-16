@@ -136,6 +136,32 @@ export interface ChangeDurationAndRebalance {
   dots: number;
 }
 
+/**
+ * Nhập một nốt VÀO CHỖ LẶNG, đúng trường độ đang cầm — Giai đoạn 4B.3.
+ *
+ * Đây là giao dịch nhập nốt thật sự: dấu lặng đích trở thành nốt có cao độ với
+ * trường độ yêu cầu, và phần thời gian dôi ra (hoặc thiếu) được cân lại y hệt
+ * `ChangeDurationAndRebalance` — cùng một bộ phân rã dấu lặng, cùng một lưới
+ * phách, cùng một luật "chỉ ăn vào dấu lặng, không bao giờ đụng nốt thật".
+ *
+ * Ba trường hợp, một lệnh:
+ *   · bằng đúng   → chỉ đổi ruột dấu lặng thành nốt (không đụng số con ô nhịp)
+ *   · ngắn hơn    → nốt + dấu lặng bù phía sau
+ *   · dài hơn     → ăn vào chuỗi dấu lặng liền sau; gặp nốt thật thì DỪNG
+ *
+ * Danh tính nốt sinh một lần khi tạo lệnh, giữ nguyên khi phát lại.
+ */
+export interface InsertNoteIntoRest {
+  type: "InsertNoteIntoRest";
+  /** Dấu lặng đích. Như mọi lệnh khác: toạ độ đã giải ra tại lúc ghi lệnh. */
+  path: string;
+  pitch: Pitch;
+  noteType: NoteType;
+  dots: number;
+  /** Dấu hoá hiển thị do luật ký âm 3B quyết. */
+  accidental?: AccidentalChoice;
+}
+
 export type MusicXmlEditCommand =
   | ChangePitch
   | RespellNote
@@ -144,7 +170,8 @@ export type MusicXmlEditCommand =
   | ChangeHarmony
   | MakeRest
   | ReplaceRestWithNote
-  | ChangeDurationAndRebalance;
+  | ChangeDurationAndRebalance
+  | InsertNoteIntoRest;
 
 /** Nhóm công cụ (mục 2 của spec) — để panel biết lệnh thuộc nhóm nào. */
 export const COMMAND_GROUP: Record<
@@ -159,6 +186,7 @@ export const COMMAND_GROUP: Record<
   MakeRest: "note",
   ReplaceRestWithNote: "note",
   ChangeDurationAndRebalance: "note",
+  InsertNoteIntoRest: "note",
 };
 
 export const CHANGE_NOTE_MAX = 300;
@@ -173,6 +201,7 @@ const MO_TA: Record<MusicXmlEditCommand["type"], (n: number) => string> = {
   MakeRest: (n) => `chuyển ${n} nốt thành lặng`,
   ReplaceRestWithNote: (n) => `nhập ${n} nốt vào chỗ lặng`,
   ChangeDurationAndRebalance: (n) => `sửa trường độ ${n} nốt (cân lại ô nhịp)`,
+  InsertNoteIntoRest: (n) => `nhập ${n} nốt (cân lại chỗ lặng)`,
 };
 const KHOA = (c: MusicXmlEditCommand) =>
   c.type === "ChangeLyricText" ? `${c.path}#${c.lyricIndex}` : c.path;
@@ -193,3 +222,4 @@ export function describeCommands(commands: readonly MusicXmlEditCommand[]): stri
     CHANGE_NOTE_MAX
   );
 }
+

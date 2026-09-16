@@ -31,6 +31,7 @@ export interface NoteContext {
   tab: { string: number; fret: number } | null;
   /** Cao độ mà dây + phím TAB thật sự phát ra, nếu bản nhạc ghi cách lên dây. */
   tabSounding: number | null;
+  isTabStaff: boolean;
   beams: number;
 }
 
@@ -135,7 +136,14 @@ export function readNoteContext(doc: Document, path: string): NoteContext | null
   const tuning = tab ? tuningOf(attributes, staff) : null;
   const day = tab && tuning ? tuning.get(tab.string) : undefined;
 
+  let isTabStaff = false;
+  for (const attr of attributes)
+    for (const clef of elementChildren(attr, "clef"))
+      if ((clef.getAttribute("number") || "1") === staff)
+        isTabStaff = text(clef, "sign") === "TAB";
+
   return {
+    isTabStaff,
     staff,
     voice: text(note, "voice") || "1",
     divisions,

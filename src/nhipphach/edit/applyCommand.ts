@@ -2,6 +2,7 @@ import type { Document, Element } from "@xmldom/xmldom";
 import type {
   ChangeDuration,
   ChangeDurationAndRebalance,
+  InsertNoteIntoRest,
   ChangeHarmony,
   ChangeLyricText,
   ChangePitch,
@@ -16,6 +17,7 @@ import { isHarmonyKind } from "./harmonyModel.ts";
 import { STEPS } from "./commands.ts";
 import { decideAccidental } from "./accidentals.ts";
 import { coTheChum, durationFor, isNoteType, NOTE_TYPES } from "./durationModel.ts";
+import type { NoteType } from "./durationModel.ts";
 import { lapKhoangTrong, quartersOf, RestFillError } from "./restFill.ts";
 import { musicXMLToBeatMap } from "../../musicxml-beats/beatMap.ts";
 import { parseMusicXML } from "../../musicxml-beats/parser.ts";
@@ -521,6 +523,14 @@ function replaceRestWithNote(
   const rest = child(note, "rest");
   if (!rest)
     throw new EditError("EDIT_NOT_A_REST", "Chỗ này đã là một nốt có cao độ rồi.");
+  // Cổng TAB nằm ở CẢ đây, không chỉ ở `InsertNoteIntoRest`: khi trường độ cây
+  // bút trùng đúng dấu lặng thì mặt tiền đi đường này, và nếu không chặn thì
+  // một nốt TAB thiếu <string>/<fret> vẫn lọt ra file.
+  if (ngu.isTabStaff)
+    throw new EditError(
+      "TAB_NOTE_ENTRY_UNSUPPORTED",
+      "Chưa hỗ trợ nhập nốt trực tiếp trên khuông TAB. Hãy nhập trên khuông nhạc; công cụ nhập dây/phím TAB sẽ được làm riêng."
+    );
   if (rest.getAttribute("measure") === "yes")
     throw new EditError(
       "EDIT_REST_WHOLE_MEASURE",
@@ -672,12 +682,21 @@ function donViCua(quarters: Rational, divisions: number): number | null {
   return tu % d === 0n ? Number(tu / d) : null;
 }
 
+/**
+ * Lõi CÂN LẠI Ô NHỊP — dùng chung cho 4B.2 (đổi trường độ) và 4B.3 (nhập nốt).
+ *
+ * `themViec` chạy ngay sau khi trường độ mới được ghi, để 4B.3 biến dấu lặng
+ * đích thành nốt trong CÙNG một giao dịch. Một lõi, không hai bản sao: bộ phân
+ * rã dấu lặng, lưới phách, luật "chỉ ăn vào dấu lặng" chỉ tồn tại ở đây.
+ */
 function changeDurationAndRebalance(
   ctx: Ctx,
   note: Element,
-  cmd: ChangeDurationAndRebalance,
+  cmd: { path: string; noteType: NoteType; dots: number },
   ngu: NoteContext,
-  xml: string
+  xml: string,
+  themViec?: () => void,
+  thieuCho = "Không đủ khoảng trống để kéo dài nốt."
 ) {
   if (!isNoteType(cmd.noteType))
     throw new EditError("EDIT_DURATION_TYPE_INVALID", "Hình nốt không hợp lệ.");
@@ -717,7 +736,12 @@ function changeDurationAndRebalance(
 
   const cu = rational(Number(textOf(durEl)), ngu.divisions);
   const moi = quartersOf(cmd.noteType, cmd.dots);
-  if (compare(cu, moi) === 0 && ngu.noteType === cmd.noteType && ngu.dots === cmd.dots) return;
+  if (compare(cu, moi) === 0 && ngu.noteType === cmd.noteType && ngu.dots === cmd.dots) {
+    // Trường độ đã đúng rồi: không có gì để cân, nhưng việc phụ (4B.3 biến dấu
+    // lặng thành nốt) vẫn phải chạy — và KHÔNG sinh thay đổi cấu trúc nào.
+    themViec?.();
+    return;
+  }
   const donViMoi = donViCua(moi, ngu.divisions);
   if (donViMoi === null)
     throw new EditError(
@@ -777,6 +801,7 @@ function changeDurationAndRebalance(
   if (compare(moi, cu) < 0) {
     // ── NGẮN LẠI: sinh dấu lặng bù, ngay sau nốt, cùng bè cùng khuông ───────
     ghiTruongDo();
+    themViec?.();
     insertNoteSauKhi(ctx, note, veLang(phanRa));
     if (phanRa.length)
       ctx.structural.push({ partIndex, measureIndex, atChildIndex: childIndex + 1, delta: phanRa.length });
@@ -800,7 +825,9 @@ function changeDurationAndRebalance(
     if (ten !== "note") break;
     const r = child(el, "rest");
     if (!r || r.getAttribute("measure") === "yes") break;
-    if (child(el, "chord") || child(el, "grace")) break;
+    if (child(el, "chord") || child(el, "grace") || child(el, "tie") || child(el, "time-modification")) break;
+    if (elementChildren(el, "notations").some((n) => elementChildren(n, "tied").length)) break;
+    if (anhEm[i + 1]?.localName === "note" && child(anhEm[i + 1], "chord")) break;
     if ((textOf(child(el, "voice")) || null) !== voice) break;
     if ((textOf(child(el, "staff")) || null) !== staff) break;
     const d = child(el, "duration");
@@ -810,8 +837,7 @@ function changeDurationAndRebalance(
     co = add(co, rational(Number(textOf(d)), ngu.divisions));
     i++;
   }
-  if (compare(co, can) < 0)
-    throw new EditError("EDIT_REBALANCE_NO_SPACE", "Không đủ khoảng trống để kéo dài nốt.");
+  if (compare(co, can) < 0) throw new EditError("EDIT_REBALANCE_NO_SPACE", thieuCho);
 
   const thua = sub(co, can);
   let buLai: { noteType: string; dots: number; quarters: Rational }[] = [];
@@ -827,6 +853,7 @@ function changeDurationAndRebalance(
   const markups = veLang(buLai);
 
   ghiTruongDo();
+  themViec?.();
   // Vùng dấu lặng bị ăn và chỗ đặt phần thừa là CÙNG một chỗ, nên phải đi bằng
   // đúng một mảnh vá (xem `thayTheDay`).
   thayTheDay(ctx, an, markups);
@@ -841,6 +868,57 @@ function changeDurationAndRebalance(
   ])
     if (d.delta !== 0) ctx.structural.push(d);
   ctx.touched.push(`${cmd.path}/duration`, `${cmd.path}/-rest`);
+}
+
+/**
+ * Nhập một nốt vào chỗ lặng — Giai đoạn 4B.3.
+ *
+ * Không có bộ máy thời gian nào mới ở đây: toàn bộ phần "cân lại" đi qua đúng
+ * cái lõi mà 4B.2 đã chạy trên production. Việc riêng của 4B.3 chỉ là biến dấu
+ * lặng đích thành nốt — và đó lại chính là việc mà `ReplaceRestWithNote` của
+ * 4B.1 đã làm, nên nó cũng được gọi lại chứ không viết lại.
+ */
+function insertNoteIntoRest(
+  ctx: Ctx,
+  note: Element,
+  cmd: InsertNoteIntoRest,
+  ngu: NoteContext,
+  xml: string
+) {
+  if (ngu.kind !== "rest")
+    throw new EditError(
+      "EDIT_INSERT_NOT_A_REST",
+      "Chỗ này đã có nốt — xoá thành lặng (phím 0) trước rồi hãy nhập."
+    );
+  if (!isNoteType(cmd.noteType))
+    throw new EditError("EDIT_DURATION_TYPE_INVALID", "Hình nốt không hợp lệ.");
+  // ── Khuông TAB: CHẶN HẲN ở 4B.3 ──────────────────────────────────────────
+  // Một nốt trên khuông TAB phải có `<string>` và `<fret>` thì mới đọc được —
+  // thiếu chúng thì bộ khắc vẽ ra một con số trống hoặc không vẽ gì. Mà chọn
+  // dây/phím nào lại là một quyết định ngón tay: cùng một cao độ có tới năm sáu
+  // thế bấm, và thế đúng phụ thuộc vào nốt trước, nốt sau, thế tay đang giữ.
+  // Đoán hộ là đoán sai. Nên bước này nói thẳng là chưa hỗ trợ, thay vì ghi ra
+  // một nốt TAB khuyết tật rồi để thầy tự sửa.
+  if (ngu.isTabStaff)
+    throw new EditError(
+      "TAB_NOTE_ENTRY_UNSUPPORTED",
+      "Chưa hỗ trợ nhập nốt trực tiếp trên khuông TAB. Hãy nhập trên khuông nhạc; công cụ nhập dây/phím TAB sẽ được làm riêng."
+    );
+  changeDurationAndRebalance(
+    ctx,
+    note,
+    { path: cmd.path, noteType: cmd.noteType, dots: cmd.dots },
+    ngu,
+    xml,
+    () =>
+      replaceRestWithNote(
+        ctx,
+        note,
+        { type: "ReplaceRestWithNote", path: cmd.path, pitch: cmd.pitch, accidental: cmd.accidental },
+        ngu
+      ),
+    "Không đủ khoảng trống để nhập nốt này."
+  );
 }
 
 export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedCommand {
@@ -891,6 +969,9 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
       break;
     case "ChangeDurationAndRebalance":
       changeDurationAndRebalance(ctx, target, cmd, ngu, xml);
+      break;
+    case "InsertNoteIntoRest":
+      insertNoteIntoRest(ctx, target, cmd, ngu, xml);
       break;
     default: {
       const never: never = cmd;

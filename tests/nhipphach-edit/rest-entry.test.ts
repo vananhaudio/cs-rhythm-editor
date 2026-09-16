@@ -28,7 +28,7 @@ import { rhythmIssues, structuralIssues } from "../../src/nhipphach/edit/validat
 import { EditError, elementChildren, parseStrict, resolveSourcePath } from "../../src/nhipphach/edit/xmlPatch.ts";
 import { tagSourceIds } from "../../src/musicxml-beats/sourceTags.ts";
 import { toCommand } from "../../src/nhipphach/editor/commandFacade.ts";
-import { capDoNhap, ghiNhoThamChieu, NHAP_BAN_DAU, nuaCung } from "../../src/nhipphach/editor/noteEntry.ts";
+import { capDoNhap, datTruongDo, ghiNhoThamChieu, NHAP_BAN_DAU, nuaCung } from "../../src/nhipphach/editor/noteEntry.ts";
 import type { NoteEntryState } from "../../src/nhipphach/editor/noteEntry.ts";
 
 const doc = (p: string) => readFileSync(new URL(p, import.meta.url), "utf8");
@@ -375,13 +375,17 @@ test("quãng tám nhập: gõ chữ cái luôn ra nốt TỰ NHIÊN, không đo�
 });
 
 test("nhập liên tục: năm chữ cái vào năm dấu lặng ra đúng năm nốt, mốc chạy theo", () => {
-  // Bốn ô lặng liền nhau của part 2 (ô 2,3,4) + lặng ô 1 → đủ chỗ nhập liên tục.
-  const paths = [E.langTab, "/score-partwise/part[2]/measure[2]/*[1]"];
+  // Hai dấu lặng của khuông NHẠC THƯỜNG. Không dùng khuông TAB: từ 4B.3 nhập
+  // trực tiếp trên TAB bị chặn hẳn, vì chọn dây/phím là quyết định ngón tay.
+  const paths = [E.langDen, E.langMoc];
   let d = createDraft(FIX);
   let nhapState = NHAP_BAN_DAU;
   const gõ = ["A", "C"] as const;
   paths.forEach((path, i) => {
-    const r = toCommand({ type: "ENTER_PITCH", step: gõ[i] }, path, readNoteFields(d.xml, path), nhapState);
+    const truong = readNoteFields(d.xml, path)!;
+    // Cây bút khớp đúng dấu lặng → phép thay tại chỗ, đúng phạm vi bài kiểm này.
+    nhapState = datTruongDo(nhapState, { noteType: truong.noteType!, dots: truong.dots });
+    const r = toCommand({ type: "ENTER_PITCH", step: gõ[i] }, path, truong, nhapState);
     assert.equal(r.kind, "command", path);
     const cmd = (r as { command: MusicXmlEditCommand }).command;
     d = applyToDraft(d, cmd);

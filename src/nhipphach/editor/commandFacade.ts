@@ -3,7 +3,7 @@ import type { NoteFields } from "../edit/noteFields.ts";
 import { transposeSemitone, pitchName, samePitch, withAlter } from "../edit/pitchModel.ts";
 import type { EditorAction } from "./actions.ts";
 import { capDoNhap } from "./noteEntry.ts";
-import type { NoteEntryState } from "./noteEntry.ts";
+import type { EntryDuration, NoteEntryState } from "./noteEntry.ts";
 
 /**
  * Ý ĐỊNH → LỆNH — Giai đoạn 4A.
@@ -18,7 +18,13 @@ import type { NoteEntryState } from "./noteEntry.ts";
  *   TOGGLE_DOT    → ChangeDurationAndRebalance (4B.2)
  *   RESPELL       → RespellNote
  *   MAKE_REST     → MakeRest            (4B.1)
- *   ENTER_PITCH   → ReplaceRestWithNote (4B.1)
+ *   ENTER_PITCH   → ReplaceRestWithNote  khi trường độ đang cầm bằng đúng dấu
+ *                                        lặng đích (4B.1, không đụng cấu trúc)
+ *                 → InsertNoteIntoRest   mọi trường hợp còn lại (4B.3)
+ *
+ * 4B.3 thêm một loại kết quả thứ tư: `toolState`. Khi con trỏ đứng trên một dấu
+ * lặng, phím trường độ KHÔNG sinh lệnh nào — nó chỉ đổi cây bút đang cầm. Đó là
+ * ranh giới giữa SỬA NỐT CÓ SẴN và NHẬP NỐT MỚI, và nó phải hiện rõ trong mã.
  *
  * Facade đọc trạng thái hiện tại qua `NoteFields` — thứ trang đã tính sẵn cho
  * panel — nên nó KHÔNG cần đụng XML, không parse, không serialize. Đó cũng là
@@ -29,6 +35,8 @@ import type { NoteEntryState } from "./noteEntry.ts";
  */
 export type FacadeResult =
   | { kind: "command"; command: MusicXmlEditCommand }
+  /** Đổi thứ đang cầm trên tay, KHÔNG đụng bản nhạc — 4B.3. */
+  | { kind: "toolState"; truongDo: EntryDuration }
   /** Không có gì để làm (giá trị mới trùng giá trị cũ). Không phải lỗi. */
   | { kind: "noop" }
   | { kind: "refused"; message: string };
@@ -68,6 +76,10 @@ export function toCommand(
       };
     }
     case "SET_DURATION": {
+      // Con trỏ ở DẤU LẶNG → chỉ đổi cây bút. Dấu lặng không bị đụng tới: thầy
+      // đang chuẩn bị nhập, chưa sửa gì cả.
+      if (fields.kind === "rest")
+        return { kind: "toolState", truongDo: { noteType: action.noteType, dots: 0 } };
       if (fields.duongTruongDo) return tuChoi(fields.duongTruongDo);
       if (fields.noteType === action.noteType && fields.dots === 0) return { kind: "noop" };
       // Đổi hình nốt thì bỏ chấm dôi cũ — giữ lại là ra một trường độ thầy
@@ -83,6 +95,13 @@ export function toCommand(
       };
     }
     case "TOGGLE_DOT": {
+      if (fields.kind === "rest") {
+        if (!nhap) return tuChoi("Chưa sẵn sàng nhập nốt.");
+        return {
+          kind: "toolState",
+          truongDo: { noteType: nhap.currentDuration.noteType, dots: nhap.currentDuration.dots ? 0 : 1 },
+        };
+      }
       if (fields.duongTruongDo) return tuChoi(fields.duongTruongDo);
       if (!fields.noteType)
         return tuChoi(
@@ -123,17 +142,25 @@ export function toCommand(
         return tuChoi(
           "Đây là dấu lặng cả ô nhịp — biến nó thành nốt phải viết lại trường độ của cả ô, chưa hỗ trợ ở bước này."
         );
+      // Khuông TAB: chặn ở đây, TRƯỚC khi chọn đường nào. Nếu chỉ chặn trong
+      // `InsertNoteIntoRest` thì trường hợp "bằng đúng trường độ" sẽ lách qua
+      // `ReplaceRestWithNote` và ghi ra một nốt TAB thiếu dây/phím.
+      if (fields.khuongTab)
+        return tuChoi(
+          "Chưa hỗ trợ nhập nốt trực tiếp trên khuông TAB. Hãy nhập trên khuông nhạc; công cụ nhập dây/phím TAB sẽ được làm riêng."
+        );
       if (fields.duongTruongDo) return tuChoi(fields.duongTruongDo);
       if (!nhap) return tuChoi("Chưa sẵn sàng nhập nốt.");
-      return {
-        kind: "command",
-        command: {
-          type: "ReplaceRestWithNote",
-          path,
-          pitch: capDoNhap(nhap, action.step),
-          accidental: "auto",
-        },
-      };
+      const pitch = capDoNhap(nhap, action.step);
+      const { noteType, dots } = nhap.currentDuration;
+      // Bằng đúng trường độ dấu lặng thì đi đường 4B.1: chỉ đổi ruột, không
+      // đụng một con nào của ô nhịp. Khác thì mới cần giao dịch cân lại 4B.3.
+      return fields.noteType === noteType && fields.dots === dots
+        ? { kind: "command", command: { type: "ReplaceRestWithNote", path, pitch, accidental: "auto" } }
+        : {
+            kind: "command",
+            command: { type: "InsertNoteIntoRest", path, pitch, noteType, dots, accidental: "auto" },
+          };
     }
     case "RESPELL": {
       if (!fields.pitch) return tuChoi("Chỗ này không có cao độ để đổi cách ghi.");

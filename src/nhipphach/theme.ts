@@ -201,6 +201,9 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-tbtn[aria-pressed="true"]{background:var(--indigo);border-color:var(--indigo);color:#fff;}
 .${NP_SCOPE} .np-tbtn:disabled{opacity:.4;cursor:not-allowed;}
 .${NP_SCOPE} .np-toolbar-hint{margin-left:auto;font-size:12px;color:var(--ink-hint);}
+/* Con trỏ đứng trên dấu lặng: hàng hình nốt đang chọn CÂY BÚT, không sửa bản
+   nhạc. Nói thẳng ra một câu còn hơn để thầy đoán vì sao bấm 4 mà nốt không đổi. */
+.${NP_SCOPE} .np-toolbar-mode{margin-left:12px;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap;}
 .${NP_SCOPE} .np-keyhelp{padding:10px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
 .${NP_SCOPE} .np-keyhelp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .${NP_SCOPE} .np-keyhelp ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 14px;}

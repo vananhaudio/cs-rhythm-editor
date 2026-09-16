@@ -29,6 +29,8 @@ export interface NoteFields {
   kind: "note" | "rest";
   /** `<rest measure="yes"/>` — lặng cả ô nhịp, trường độ đi theo ô chứ không tự có. */
   laLangCaO: boolean;
+  /** Khuông này là TAB (`<clef><sign>TAB</sign>`) — 4B.3 chưa nhập nốt vào đây. */
+  khuongTab: boolean;
   pitch: Pitch | null;
   /** Dấu hoá đang được VẼ ra, nếu nguồn có ghi. */
   accidental: string | null;
@@ -82,6 +84,7 @@ export function readNoteFields(xml: string, path: string): NoteFields | null {
   return {
     kind: ngu.kind,
     laLangCaO,
+    khuongTab: ngu.isTabStaff,
     pitch: ngu.pitch,
     accidental: ngu.accidental,
     accidentalTarget: {
