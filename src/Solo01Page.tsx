@@ -6,7 +6,7 @@
 // KHÔNG đụng DB: khoá này chưa có lớp trong class_schedule, học phí nằm trong file data.
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
-import { SOLO01, SOLO01_STAGES, SOLO01_PROGRESSION, SOLO01_PRICES, SOLO01_METHOD, SOLO01_NOTATION } from './data/solo01Program'
+import { SOLO01, SOLO01_STAGES, SOLO01_PROGRESSION, SOLO01_PRICES, SOLO01_METHOD, SOLO01_NOTATION, soloLessonOpen, soloUnlockLabel } from './data/solo01Program'
 import { generateSessions, fmtDMY, type SessionRow } from './journey/sessions'
 
 const P = {
@@ -329,11 +329,17 @@ export default function Solo01Page() {
                           <span className="solo01-lesson-body">
                             <b>{l.title}</b>
                             {l.points && <span className="solo01-lesson-points">{l.points.map(p => <i key={p}>{p}</i>)}</span>}
-                            {l.doc && (
-                              <a className="solo01-lesson-doc" href={l.doc} style={{ color: stColor, borderColor: stColor }}>
-                                Giáo trình buổi học →
-                              </a>
-                            )}
+                            {l.doc && (() => {
+                              // Buổi chưa tới giờ vẫn hiện và vẫn bấm được — vào sẽ thấy màn khoá.
+                              const no = (st.no - 1) * 8 + i + 1
+                              const open = soloLessonOpen(no)
+                              return (
+                                <a className={`solo01-lesson-doc${open ? '' : ' is-locked'}`} href={l.doc}
+                                   style={open ? { color: stColor, borderColor: stColor } : undefined}>
+                                  {open ? 'Giáo trình buổi học →' : `🔒 Mở ${soloUnlockLabel(l.unlockAt!)}`}
+                                </a>
+                              )
+                            })()}
                           </span>
                         </li>
                       ))}
@@ -654,6 +660,7 @@ const CSS = `
 .solo01-lesson-doc{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;
   text-decoration:none;border:1.5px solid;border-radius:999px;padding:4px 12px;background:#fff;}
 .solo01-lesson-doc:hover{background:${P.purpleTint};}
+.solo01-lesson-doc.is-locked{color:${P.inkFaint};border-color:${P.line};background:#F6F5FA;font-weight:600;}
 .solo01-lesson-points{display:flex;flex-direction:column;gap:3px;margin-top:5px;}
 .solo01-lesson-points i{font-style:normal;font-size:13.5px;color:${P.inkSoft};line-height:1.5;padding-left:13px;position:relative;}
 .solo01-lesson-points i:before{content:'';position:absolute;left:0;top:8px;width:5px;height:5px;border-radius:50%;background:#C9C3DE;}

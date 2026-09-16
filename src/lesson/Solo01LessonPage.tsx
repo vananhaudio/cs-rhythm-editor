@@ -1,6 +1,8 @@
 // ── Trang bài học SOLO-01 — route /solo01/buoi-NN ──
 // Chỉ làm nhiệm vụ chọn dữ liệu buổi học; giao diện do LessonDocument dựng.
 import LessonDocument from './LessonDocument'
+import LessonLocked from './LessonLocked'
+import { soloLessonUnlock, soloLessonOpen } from '../data/solo01Program'
 import type { LessonDoc } from './lessonTypes'
 import { SOLO01_BUOI01 } from '../data/solo01/buoi01'
 import { SOLO01_BUOI02 } from '../data/solo01/buoi02'
@@ -18,5 +20,19 @@ export default function Solo01LessonPage({ sessionNo }: { sessionNo: number }) {
       </div>
     )
   }
+  // Buổi chưa tới giờ mở: vẫn vào được, nhưng thấy màn khoá thay vì tài liệu.
+  const unlockAt = soloLessonUnlock(sessionNo)
+  if (unlockAt && !soloLessonOpen(sessionNo)) {
+    return (
+      <LessonLocked
+        sessionNo={sessionNo}
+        title={doc.meta.title}
+        unlockAt={unlockAt}
+        prevHref={LESSONS[sessionNo - 1] ? `/solo01/buoi-${String(sessionNo - 1).padStart(2, '0')}` : undefined}
+        backHref={doc.meta.backHref ?? '/solo01'}
+      />
+    )
+  }
+
   return <LessonDocument doc={doc} />
 }

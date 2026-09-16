@@ -30,8 +30,13 @@ export interface SoloStage {
   goal: string
   works?: string[]                                   // tác phẩm mẫu (nếu có)
   note?: string                                      // ghi chú riêng của chặng
-  /** doc = đường dẫn tài liệu học của buổi đó (nếu đã soạn), vd '/solo01/buoi-01' */
-  lessons: { title: string; points?: string[]; doc?: string }[]    // 8 buổi
+  /**
+   * doc      = đường dẫn tài liệu học của buổi đó (nếu đã soạn), vd '/solo01/buoi-01'
+   * unlockAt = mốc MỞ BÀI (ISO kèm múi giờ, vd '2026-09-17T20:00:00+07:00').
+   *            Chưa tới giờ thì bài vẫn hiện trên chương trình nhưng đánh dấu khoá;
+   *            tới giờ là tự mở, KHÔNG cần deploy lại. Bỏ trống = mở sẵn.
+   */
+  lessons: { title: string; points?: string[]; doc?: string; unlockAt?: string }[]    // 8 buổi
 }
 
 export const SOLO01_STAGES: SoloStage[] = [
@@ -41,7 +46,7 @@ export const SOLO01_STAGES: SoloStage[] = [
     goal: 'Làm chủ melody cơ bản trên cần đàn và bắt đầu kết hợp Bass + kỹ thuật ngay từ những buổi đầu.',
     lessons: [
       { title: 'Bản đồ nốt giản lược C–Am', points: ['Bản đồ nốt trên cần đàn.', 'Chạy ngón liên thông.', 'Ứng dụng vào bài hát.', 'Bài mẫu: Diễm Xưa / Thành Phố Buồn.'], doc: '/solo01/buoi-01' },
-      { title: 'Ép ngón tay phải & Bass đầu tiên', points: ['Ép ngón i–m.', 'Làm tiếng melody chắc, rõ.', 'Thêm Bass đơn giản vào giai điệu.'], doc: '/solo01/buoi-02' },
+      { title: 'Ép ngón tay phải & Bass đầu tiên', points: ['Ép ngón i–m.', 'Làm tiếng melody chắc, rõ.', 'Thêm Bass đơn giản vào giai điệu.'], doc: '/solo01/buoi-02', unlockAt: '2026-09-17T20:00:00+07:00' },
       { title: 'Cao độ – quãng tám & Slide', points: ['Đúng tên nốt chưa đủ, phải đúng cao độ.', 'Làm quen Slide.', 'Ứng dụng trực tiếp vào câu nhạc.'] },
       { title: 'Nốt ♯/♭ & Hammer-on', points: ['Nhận diện nốt ngoài âm giai.', 'Hammer-on.', 'Melody + Bass.'] },
       { title: 'Bass theo hợp âm & Pull-off', points: ['Hợp âm nào → Bass nào.', 'Bass gốc.', 'Pull-off.'] },
@@ -105,4 +110,33 @@ export const solo01LessonTitle = (n: number): string => {
   const st = SOLO01_STAGES.find(s => s.no === Math.ceil(n / 8))
   if (!st) return `Buổi ${n}`
   return st.lessons[(n - 1) % 8].title.replace(/\.$/, '')
+}
+
+// ── Mở bài theo lịch ──
+// Nguồn DUY NHẤT của mốc mở bài là SOLO01_STAGES ở trên; landing và trang tài liệu
+// học cùng hỏi hàm này, không ai tự giữ ngày riêng.
+export function soloLessonUnlock(sessionNo: number): string | null {
+  const st = SOLO01_STAGES[Math.floor((sessionNo - 1) / SOLO01.sessionsPerStage)]
+  const l = st?.lessons[(sessionNo - 1) % SOLO01.sessionsPerStage]
+  return l?.unlockAt ?? null
+}
+
+/** Buổi học đã tới giờ mở chưa (dùng giờ máy của người xem). */
+export function soloLessonOpen(sessionNo: number, now: Date = new Date()): boolean {
+  const at = soloLessonUnlock(sessionNo)
+  return !at || now.getTime() >= new Date(at).getTime()
+}
+
+/** 'Thứ Năm 17/09/2026 · 20:00' — nhãn giờ mở, luôn quy về giờ Việt Nam. */
+export function soloUnlockLabel(iso: string): string {
+  const d = new Date(iso)
+  const tz = 'Asia/Ho_Chi_Minh'
+  const wd = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy']
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d)
+  const g = (t: string) => parts.find(p => p.type === t)?.value ?? ''
+  const wdIndex = new Date(`${g('year')}-${g('month')}-${g('day')}T12:00:00+07:00`).getUTCDay()
+  return `${wd[wdIndex]} ${g('day')}/${g('month')}/${g('year')} · ${g('hour')}:${g('minute')}`
 }
