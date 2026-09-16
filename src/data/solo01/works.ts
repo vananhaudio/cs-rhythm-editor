@@ -133,81 +133,86 @@ r.8 2.4.8 1.3.8 0.2.8 3.2.8 0.2.8 1.3.8 0.2.8 |
 0.5{rf 1}.2 0.6{ch "E" rf 1}.2 |
 0.5{ch "Am" rf 1}.1`
 
-// ── Lý Cây Bông (dân ca Nam Bộ) — tác phẩm Buổi 03 ──
-// Nguồn: "Thư viên Musecore/ly-cay-bong-dan-ca-mien-nam-a.zip" (bản đàn bầu của thầy).
-// Dân ca nên không vướng bản quyền. Nhịp 2/4, giọng Đô, 32 ô.
-// Cùng một giai điệu dựng ở HAI QUÃNG TÁM để học viên nghe ra khác biệt cao độ:
-
-// Bản THẤP — hạ một quãng tám (--transpose -12): trọn vẹn trong Vùng 1 (ngăn 0–3).
-export const WORK_LY_CAY_BONG_THAP = `\\ts 2 4
-\\lyrics "Bông i\` xanh bông i\` i trắng rồi lại vàng bông Ơ ơ rường _ ơ _ bông lê cho bằng bông lựu _ Ơ ơ rường _ ơ _ là đố í a _ đố nàng _ bông rồi lại _ mấy _ bông _ Là đố í a _ đố nàng _ bông rồi lại _ mấy _ bông _"
+// ── Diễm Xưa — BẢN BUỔI 03: Melody + Bass + Slide ──
+// CÙNG nguồn, CÙNG giai điệu, CÙNG bè bass của Buổi 02; chỉ chồng thêm một lớp:
+// các chỗ đổi vùng trên cùng một dây được đánh dấu TRƯỢT NGÓN (--slide) — đúng 2 chỗ
+// (ô 11 và ô 12), không lạm dụng.
+export const WORK_DIEM_XUA_B3 = `\\ts 4 4
+\\lyrics "Mưa vẫn mưa bay trên tầng tháp cổ Dài tay em mấy thuở mắt xanh xao Nghe lá thu mưa reo mòn gót nhỏ Đường dài hun hút cho mắt thêm sâu Chợt hồn xanh buốt cho mình xót xa Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau vùi làm sao có nhau hằn lên nỗi đau Bước chân em xin về mau Mưa vẫn hay mưa cho đời biển động Làm sao em biết bia đã không đau Xin hãy cho mưa qua miền đất rộng Để người phiêu lãng quên mình lãng du Ngày sau sỏi đã cũng cần có nhau"
 .
-r.2 |
-2.3.4 0.3.4 |
-2.3.2 |
-2.3.4 0.3.8 2.3.8 |
-1.2.4 2.4.4 |
-0.3.4 2.4.4 |
-0.3.2 |
-2.3.8 0.3.8 2.4.8 0.3.8 |
-2.3.2 |
-2.3{t}.4 2.3.4 |
-2.3.4 0.3.4 |
-3.5.4 0.3.4 |
-2.4.4 0.3.4 |
-2.3.8 0.3.8 2.4.8 0.3.8 |
-2.3.2 |
-2.3{t}.4 3.2.4 |
-0.1.4 3.1.4 |
-0.1.8 3.2.8 1.2.4 |
-2.3.2 |
-2.3.2 |
-1.2.4 0.3.4 |
-2.3.8 1.2.8 3.2.8 0.1.8 |
-3.2.2 |
-3.2{t}.4 3.2.4 |
-0.1.4 3.1.4 |
-0.1.8 3.2.8 1.2.4 |
-2.3.2 |
-2.3.2 |
-1.2.4 0.3.4 |
-2.3.8 1.2.8 3.2.8 0.1.8 |
-3.2.2 |
-3.2{t}.2`
+\\ro r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3.8 1.2.8 |
+2.4.1 |
+r.8 2.3.8 1.2.8 0.1.8 3.1.8 3.1.8 5.1.8 0.1.8 |
+3.2.1 |
+r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3.8 1.2.8 |
+2.4.1 |
+r.8 2.4.8 1.3.8 0.2.8 3.2.8 3.2.8 0.1.8 3.2.8 |
+\\rc 2 1.2.1 |
+r.8 2.4.8 1.3.8 0.2.8 3.2.8 0.2.8 1.3.8 0.2.8 |
+2.3.1 |
+r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1{ss}.8{tu 3} 5.1.8 5.1.8 5.1.8 5.1.8 |
+6.2.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1{ss}.8 |
+0.1.4 2.3.8{tu 3} 1.2.8{tu 3} 0.1.8{tu 3} 3.2.4 3.2.8{tu 3} 1.1.8{tu 3} 5.1.8{tu 3} |
+4.1.4{d} 0.1.8 3.2.8 1.2.8 0.2.8 2.3.8 |
+0.2.1 |
+r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3.8 1.2.8 |
+2.4.1 |
+r.8 2.3.8 1.2.8 0.1.8 3.1.8 3.1.8 5.1.8 0.1.8 |
+3.2.1 |
+r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3.8 1.2.8 |
+2.4.1 |
+r.8 2.4.8 1.3.8 0.2.8 3.2.8 0.2.8 1.3.8 0.2.8 |
+2.3.1 |
+r.8 2.4.8 1.3.8 0.2.8 3.2.8 0.2.8 1.3.8 0.2.8 |
+2.3.1
+\\voice
+0.5{ch "Am" rf 1}.1 |
+0.5{rf 1}.1 |
+0.5{rf 1}.2 0.5{ch "A7" rf 1}.2 |
+0.4{ch "Dm" rf 1}.1 |
+0.4{rf 1}.2 0.5{ch "Am" rf 1}.2 |
+0.6{ch "E" rf 1}.1 |
+0.6{rf 1}.1 |
+0.5{ch "Am" rf 1}.1 |
+0.6{ch "E" rf 1}.1 |
+0.5{ch "Am" rf 1}.1 |
+0.5{rf 1}.2 0.5{ch "A7" rf 1}.2 |
+0.4{ch "Dm" rf 1}.1 |
+0.5{ch "Am" rf 1}.2 0.4{ch "Dm" rf 1}.2 |
+0.6{ch "E" rf 1}.1 |
+0.6{rf 1}.1 |
+0.6{rf 1}.1 |
+0.5{ch "Am" rf 1}.1 |
+0.5{rf 1}.2 0.5{ch "A7" rf 1}.2 |
+0.4{ch "Dm" rf 1}.1 |
+0.4{rf 1}.2 0.5{ch "Am" rf 1}.2 |
+0.6{ch "E" rf 1}.1 |
+0.6{rf 1}.1 |
+0.5{ch "Am" rf 1}.1 |
+0.5{rf 1}.2 0.6{ch "E" rf 1}.2 |
+0.5{ch "Am" rf 1}.1`
 
-// Bản CAO — giữ nguyên quãng tám: rơi vào Vùng 2 và Vùng 3 (ngăn 5–15), và chỗ đổi
-// vùng trên cùng một dây được đánh dấu TRƯỢT NGÓN (--slide) — đúng kỹ thuật Buổi 03.
-export const WORK_LY_CAY_BONG_CAO = `\\ts 2 4
+// ── Ba cấp độ của CÙNG hai ô nhịp (ô 11–12 của Diễm Xưa) ──
+// Dùng cho khối "chồng lớp": học viên nhìn thấy chính đoạn mình đang chơi lớn lên
+// qua từng buổi. Cả ba đều sinh từ một nguồn, chỉ khác tham số.
+export const DX_LOP1_MELODY = `\\ts 4 4
+\\lyrics "Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau"
 .
-r.2 |
-5.1.4 8.2.4 |
-5.1.2 |
-5.1.4 8.2.8 5.1.8 |
-8.1.4 5.2.4 |
-8.2.4 5.2.4 |
-8.2.2 |
-5.1.8 8.2.8 5.2.8 8.2.8 |
-5.1.2 |
-5.1{t}.4 5.1.4 |
-5.1.4 8.2.4 |
-5.3.4 8.2.4 |
-5.2.4 8.2.4 |
-5.1.8 8.2.8 5.2.8 8.2.8 |
-5.1.2 |
-5.1{t ss}.4 10.1.4 |
-12.1.4 15.1.4 |
-12.1.8 10.1{ss}.8 8.1.4 |
-5.1.2 |
-5.1.2 |
-8.1.4 8.2.4 |
-5.1.8 8.1{ss}.8 10.1.8 12.1.8 |
-10.1.2 |
-10.1{t}.4 10.1.4 |
-12.1.4 15.1.4 |
-12.1.8 10.1{ss}.8 8.1.4 |
-5.1.2 |
-5.1.2 |
-8.1.4 8.2.4 |
-5.1.8 8.1{ss}.8 10.1.8 12.1.8 |
-10.1.2 |
-10.1{t}.2`
+r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1.8{tu 3} 5.1{ch "A7"}.8 5.1.8 5.1.8 5.1.8 |
+6.2{ch "Dm"}.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1.8`
+export const DX_LOP2_BASS = `\\ts 4 4
+\\lyrics "Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau"
+.
+r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1.8{tu 3} 5.1.8 5.1.8 5.1.8 5.1.8 |
+6.2.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1.8
+\\voice
+0.5{ch "Am" rf 1}.2 0.5{ch "A7" rf 1}.2 |
+0.4{ch "Dm" rf 1}.1`
+export const DX_LOP3_SLIDE = `\\ts 4 4
+\\lyrics "Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau"
+.
+r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1{ss}.8{tu 3} 5.1.8 5.1.8 5.1.8 5.1.8 |
+6.2.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1{ss}.8
+\\voice
+0.5{ch "Am" rf 1}.2 0.5{ch "A7" rf 1}.2 |
+0.4{ch "Dm" rf 1}.1`

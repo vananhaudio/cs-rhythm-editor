@@ -38,6 +38,21 @@ export interface FretZone {
 
 export type LessonSection =
   | { kind: 'objectives'; title?: string; items: string[] }
+  /** Ôn lại: buổi trước đã có gì, buổi này chồng thêm gì */
+  | {
+      kind: 'recap'
+      title: string
+      steps: { label: string; items: string[] }[]
+      message?: string
+    }
+  /** Cùng một đoạn nhạc qua nhiều buổi — mỗi tầng một bản nhạc ngắn để nhìn ra tiến bộ */
+  | {
+      kind: 'layers'
+      title: string
+      lead?: string
+      layers: { label: string; what: string; tex: string; current?: boolean }[]
+      note?: string
+    }
   | { kind: 'note'; title?: string; text: string }
   | {
       kind: 'fretboard'

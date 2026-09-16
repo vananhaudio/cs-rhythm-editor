@@ -86,6 +86,7 @@ function collectCuts(root: HTMLElement, pageHcss: number): number[] {
   const canCut = (el: HTMLElement) =>
     el.parentElement === root ||
     el.classList.contains('lsn-piece') ||
+    el.classList.contains('lsn-layer') ||
     el.tagName.toLowerCase() === 'svg' ||
     !!el.parentElement?.classList.contains('lsn-score-host')
 

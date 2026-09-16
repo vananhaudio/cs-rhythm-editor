@@ -11,7 +11,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 const STEPS = [1, 1.4, 1.8, 2.4]
 
 export default function ZoomFrame(
-  { children, hint, onZoom }: { children: ReactNode; hint?: string; onZoom?: (big: boolean, factor: number) => void },
+  { children, hint, onZoom, enabled = true }:
+  { children: ReactNode; hint?: string; onZoom?: (big: boolean, factor: number) => void; enabled?: boolean },
 ) {
   const [big, setBig] = useState(false)
   const [step, setStep] = useState(1)
@@ -44,7 +45,7 @@ export default function ZoomFrame(
           <button type="button" className="lsn-zoom-close" onClick={() => setBig(false)}>✕ Đóng</button>
         </div>
       )}
-      {!big && (
+      {!big && enabled && (
         <button type="button" className="lsn-zoom-btn no-print" onClick={() => setBig(true)}>↗ Xem lớn</button>
       )}
     </div>

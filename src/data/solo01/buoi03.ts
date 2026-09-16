@@ -1,78 +1,69 @@
 // ── SOLO-01 · BUỔI 03 — nội dung giáo trình ──
+// Mạch của Chặng 1: CÙNG MỘT TÁC PHẨM, mỗi tuần chồng thêm một lớp.
+//   Buổi 01: Melody → Buổi 02: Melody rõ hơn + Bass đầu tiên → Buổi 03: + Slide.
+// KHÔNG đổi tác phẩm, KHÔNG mở chủ đề lý thuyết mới ở buổi này.
 // ⚠️ NGÓN TAY TRONG alphaTex LỆCH 1: tay trái `lf 2`=ngón 1 … `lf 5`=ngón 4
 //    (lf 1 = ngón cái, in ra chữ "T"); tay phải `rf 1`=p · `rf 2`=i · `rf 3`=m.
-//    `{ss}` = trượt ngón đổi thế, đặt ở nốt TRƯỚC khi trượt.
-import type { LessonDoc, FretDot, FretZone } from '../../lesson/lessonTypes'
-import { WORK_LY_CAY_BONG_THAP, WORK_LY_CAY_BONG_CAO } from './works'
+//    `{ss}` = trượt ngón, đặt ở nốt TRƯỚC khi trượt.
+import type { LessonDoc } from '../../lesson/lessonTypes'
+import { WORK_DIEM_XUA_B3, DX_LOP1_MELODY, DX_LOP2_BASS, DX_LOP3_SLIDE } from './works'
 
-// Ba quãng tám = ba MÀU, không phải ba khung vùng: các nốt cùng quãng tám nằm rải
-// trên cần đàn chứ không gọn trong một ô chữ nhật (nên zone đặt hidden).
-const OCTAVES: FretZone[] = [
-  { no: 1, label: 'Quãng tám 1 — trầm', tag: '', fromFret: 0, toFret: 3, strings: [1, 6],
-    color: '#4338CA', hidden: true, hint: 'dây trầm buông và ba ngăn đầu.' },
-  { no: 2, label: 'Quãng tám 2 — giữa', tag: '', fromFret: 0, toFret: 3, strings: [1, 6],
-    color: '#7C3AED', hidden: true, hint: 'vẫn ở thế I nhưng trên dây 2 – 3.' },
-  { no: 3, label: 'Quãng tám 3 — cao', tag: '', fromFret: 5, toFret: 8, strings: [1, 2],
-    color: '#A855F7', hidden: true, hint: 'dây 1, vùng giữa cần đàn.' },
-]
-
-const d = (string: number, fret: number, name: string, zone: number, root = false): FretDot =>
-  ({ string, fret, name, zone, root })
-
-// Chỉ lấy hai nốt LA và ĐÔ — đủ để nghe ra quãng tám mà sơ đồ không rối.
-const OCT_DOTS: FretDot[] = [
-  d(5, 0, 'A', 1, true), d(5, 3, 'C', 1),
-  d(3, 2, 'A', 2, true), d(2, 1, 'C', 2),
-  d(1, 5, 'A', 3, true), d(1, 8, 'C', 3),
-]
-
-// ── Bài tập 01 — nghe quãng tám ──
+// ── Bài tập 01 — Bass + Melody luân phiên ──
+// Bass và melody CHƯA chồng lên nhau: ngón cái p đi trước, i–m trả lời. Học viên
+// quen việc phân vai hai tay phải trước khi phải làm hai việc cùng lúc.
 const EX1 = `
 \\tempo 60
 \\ts 4 4
 .
-0.5{rf 1}.2 2.3{lf 3 rf 3}.2 |
-2.3{lf 3}.2 5.1{lf 2}.2 |
-3.5{lf 4 rf 1}.2 1.2{lf 2 rf 3}.2 |
-1.2{lf 2}.2 8.1{lf 5}.2 |
-2.3{lf 3}.1
+0.5{ch "Am" rf 1}.4 2.3{rf 2}.4 0.2{rf 3}.4 1.2{rf 2}.4 |
+0.5{rf 1}.4 0.2{rf 3}.4 2.3{rf 2}.4 0.3{rf 3}.4 |
+0.4{ch "Dm" rf 1}.4 3.2{rf 2}.4 1.2{rf 3}.4 0.2{rf 2}.4 |
+0.4{rf 1}.4 1.2{rf 3}.4 3.2{rf 2}.4 1.1{rf 3}.4 |
+0.6{ch "E" rf 1}.4 0.1{rf 2}.4 3.2{rf 3}.4 0.2{rf 2}.4 |
+0.6{rf 1}.4 3.2{rf 3}.4 0.2{rf 2}.4 1.2{rf 3}.4 |
+0.5{ch "Am" rf 1}.4 2.3{rf 2}.4 1.2{rf 3}.4 0.2{rf 2}.4 |
+0.5{rf 1}.4 2.3{rf 2}.2{d}
 `.trim()
 
-// ── Bài tập 02 — trượt ngón (slide) ──
-// Trượt chỉ có nghĩa khi đi DỌC MỘT DÂY: ngón giữ nguyên áp lực, không nhấc lên.
+// ── Bài tập 02 — Slide trong câu melody ──
+// Không phải bài trượt ngón máy móc: đây là một CÂU NHẠC, slide chỉ nằm ở ba chỗ
+// mà nó làm câu liền hơn.
 const EX2 = `
 \\tempo 60
 \\ts 4 4
 .
-2.3{lf 3 ss}.2 4.3{lf 3}.2 |
-4.3{lf 3 ss}.2 5.3{lf 3}.2 |
-1.2{lf 2 ss}.2 3.2{lf 2}.2 |
-3.2{lf 2 ss}.2 5.2{lf 2}.2 |
-3.1{lf 2 ss}.2 5.1{lf 2}.2 |
-5.1{lf 2 ss}.2 7.1{lf 2}.2 |
-7.1{lf 4 ss}.2 5.1{lf 2}.2 |
-5.1{lf 2 ss}.2 3.1{lf 2}.2
+2.3{lf 3 rf 2}.4 0.2{rf 3}.4 1.2{lf 2 rf 2}.2 |
+0.2{rf 3}.4 2.3{lf 3 ss rf 2}.4 4.3{lf 3}.2 |
+5.3{lf 2 rf 3}.4 4.3{lf 5 rf 2}.4 2.3{lf 3 rf 3}.2 |
+5.1{lf 2 ss rf 2}.4 7.1{lf 4}.4 5.1{lf 2 rf 3}.2 |
+3.2{lf 4 ss rf 2}.4 1.2{lf 2}.4 0.2{rf 3}.2 |
+2.3{lf 3 rf 2}.1
 `.trim()
 
-// ── Etude 03 — Đường trượt ──
-// Câu nhạc đi từ Vùng 1 lên Vùng 2 bằng một cú trượt trên dây 3, rồi trượt về đúng
-// đường cũ — không nhảy vùng ngang qua dây khác.
+// ── Etude 03 — Melody có Bass & Slide ──
+// Bản thu nhỏ của cách Solo Guitar đang được dựng: bass ở bè dưới ngân trọn ô,
+// melody bè trên, và hai cú trượt đặt đúng chỗ câu nhạc cần liền.
 const ETUDE3 = `
 \\tempo 66
 \\ts 4 4
 .
-0.3.4 2.3{lf 3}.4 0.2.2 |
-1.2{lf 2}.4 0.2.4 2.3{lf 3}.2 |
-2.3{lf 3}.4 4.3{lf 5 ss}.4 5.3{lf 2}.2 |
-7.3{lf 4}.4 5.2{lf 2}.4 6.2{lf 3}.2 |
-8.2{lf 5}.4 5.1{lf 2}.4 7.1{lf 4}.2 |
-8.1{lf 5}.2 7.1{lf 4}.2 |
-5.1{lf 2}.4 8.2{lf 5}.4 6.2{lf 3}.2 |
-5.2{lf 2}.4 7.3{lf 4}.4 5.3{lf 2 ss}.2 |
-4.3{lf 5}.4 2.3{lf 3}.4 0.3.2 |
-3.4{lf 4}.4 2.4{lf 3}.4 0.4.2 |
-0.2.4 1.2{lf 2}.4 2.3{lf 3}.2 |
+2.3{lf 3 rf 2}.4 0.2{rf 3}.4 1.2{lf 2 rf 2}.2 |
+0.2{rf 3}.4 2.3{lf 3 rf 2}.4 0.3{rf 3}.2 |
+2.3{lf 3 ss}.4 4.3{lf 3}.4 5.3{lf 2}.2 |
+7.3{lf 4}.4 5.3{lf 2}.4 4.3{lf 5}.2 |
+2.3{lf 3}.4 0.2.4 1.2{lf 2}.2 |
+3.2{lf 4 ss}.4 1.2{lf 2}.4 0.2.2 |
+0.1.4 1.1{lf 2}.4 0.1.2 |
 2.3{lf 3}.1
+\\voice
+0.5{ch "Am" rf 1}.1 |
+0.5{rf 1}.1 |
+0.5{rf 1}.1 |
+0.4{ch "Dm" rf 1}.1 |
+0.5{ch "Am" rf 1}.1 |
+0.4{ch "Dm" rf 1}.1 |
+0.6{ch "E" rf 1}.1 |
+0.5{ch "Am" rf 1}.1
 `.trim()
 
 export const SOLO01_BUOI03: LessonDoc = {
@@ -80,136 +71,148 @@ export const SOLO01_BUOI03: LessonDoc = {
     programCode: 'SOLO-01',
     programName: 'SOLO GUITAR CĂN BẢN',
     sessionNo: 3,
-    title: 'Cao độ – quãng tám & Slide',
+    title: 'Melody + Bass và kỹ thuật Slide',
     stageLabel: 'Chặng 1 · Từ giai điệu đến Solo Guitar',
     backHref: '/solo01',
   },
   sections: [
     {
+      kind: 'recap',
+      title: 'Từ Buổi 02 sang Buổi 03',
+      steps: [
+        { label: 'Buổi 02 đã có', items: ['Melody rõ tiếng nhờ ép ngón.', 'Bass đơn giản bắt đầu xuất hiện.'] },
+        { label: 'Buổi 03 thêm', items: ['Vẫn giữ melody là chính.', 'Bass hoạt động rõ hơn.', 'Thêm Slide cho câu nhạc mượt.'] },
+      ],
+      message: 'Không học bài mới từ đầu — tuần này ta nâng cấp chính bài đang chơi.',
+    },
+    {
       kind: 'objectives',
       items: [
-        'Hiểu đúng tên nốt chưa đủ — phải đúng cao độ.',
-        'Tìm được cùng một nốt ở ba quãng tám trên cần đàn.',
-        'Trượt ngón (slide) sạch tiếng, không đứt.',
-        'Dùng slide để đổi vùng thay vì nhấc tay nhảy cóc.',
-        'Chơi được một giai điệu ở hai quãng tám khác nhau.',
+        'Giữ được melody rõ khi bắt đầu thêm bass.',
+        'Phân vai tay phải: p chơi bass, i – m chơi melody.',
+        'Chơi được mẫu bass + melody đơn giản.',
+        'Thực hiện Slide sạch, liền tiếng.',
+        'Đưa Slide vào vài vị trí hợp trong chính tác phẩm đang học.',
+        'Nâng đoạn Diễm Xưa từ melody đơn thành một đoạn Solo Guitar sơ khai.',
       ],
     },
     {
-      kind: 'note',
-      title: 'Đúng tên nốt chưa đủ',
-      text: 'La ở dây 5 buông và La ở dây 1 ngăn 5 cùng tên là LA, nhưng cách nhau hai quãng tám — nghe ra hai giọng khác hẳn. Chơi đúng tên nốt mà sai quãng tám thì câu nhạc vẫn sai. Khi đọc bản nhạc, nhìn nốt nằm ở dòng/khe nào trên khuông để biết quãng tám, đừng chỉ nhớ tên.',
-    },
-    {
-      kind: 'fretboard',
-      title: 'Một nốt – ba quãng tám',
-      lead: 'Lấy LA và ĐÔ làm ví dụ. Cùng một tên nốt, ba chỗ khác nhau trên cần đàn, ba độ cao khác nhau. Màu đậm dần theo quãng tám cao dần.',
-      frets: 9,
-      zones: OCTAVES,
-      dots: OCT_DOTS,
-      legend: ['LA: dây 5 buông → dây 3 ngăn 2 → dây 1 ngăn 5',
-        'ĐÔ: dây 5 ngăn 3 → dây 2 ngăn 1 → dây 1 ngăn 8',
-        'mỗi bước sang phải là cao thêm một quãng tám'],
+      kind: 'layers',
+      title: 'Cùng một đoạn nhạc — ba cấp độ',
+      lead: 'Đây là ô nhịp 11–12 của Diễm Xưa, đúng đoạn đang học, qua ba tuần.',
+      layers: [
+        { label: 'Buổi 01', what: 'Melody', tex: DX_LOP1_MELODY },
+        { label: 'Buổi 02', what: 'Melody + tiếng rõ hơn + Bass đầu tiên', tex: DX_LOP2_BASS },
+        { label: 'Buổi 03', what: 'Melody + Bass + Slide', tex: DX_LOP3_SLIDE, current: true },
+      ],
+      note: 'Cùng một bản nhạc, cùng một nguồn — chỉ chồng thêm lớp. Học viên phải NGHE ra bài của mình đang lớn lên.',
     },
     {
       kind: 'score',
       subtitle: 'Bài tập kỹ thuật 01',
-      title: 'Nghe quãng tám',
-      lead: 'Mỗi ô nhịp là một cặp cùng tên nốt, cách nhau đúng một quãng tám. Chơi chậm, nghe kỹ trước khi sang cặp sau.',
+      title: 'Bass + Melody luân phiên',
+      lead: '8 ô nhịp. Ngón cái p chơi bass ở phách 1, rồi i – m trả lời bằng câu melody. Chưa chồng hai việc lên nhau.',
       tempo: 'Tempo: ♩ = 60',
       tex: EX1,
+      marks: [
+        { at: 'Am', text: 'Bass A — dây 5 buông' },
+        { at: 'Dm', text: 'Bass D — dây 4 buông' },
+        { at: 'E', text: 'Bass E — dây 6 buông' },
+      ],
       guidance: [
-        'Hát theo nốt thấp rồi hát theo nốt cao — tai phải nhận ra hai độ cao, không chỉ hai vị trí.',
-        'Ngón cái p chơi nốt trầm ở dây 5, i – m lo dây 1 – 3.',
+        'Bass là phần nền. Melody vẫn phải được nghe rõ nhất.',
+        'p đi xuống, i – m đi lên; hai ngón melody luân phiên, không dùng một ngón hai nốt liền.',
+        'Nghe ra câu nhạc trong phần melody — đừng biến nó thành bài chạy ngón.',
       ],
     },
     {
       kind: 'score',
       subtitle: 'Bài tập kỹ thuật 02',
-      title: 'Trượt ngón',
-      lead: 'Trượt trên từng dây một: dây 3, rồi dây 2, rồi dây 1 — lên và xuống.',
+      title: 'Slide trong câu melody',
+      lead: 'Một câu nhạc ngắn 6 ô nhịp, có ba chỗ trượt: lên trên dây 3, lên trên dây 1, và xuống trên dây 2.',
       tempo: 'Tempo: ♩ = 60',
       tex: EX2,
+      marks: [
+        { at: 'Ô 2', text: 'dây 3: ngăn 2 → 4' },
+        { at: 'Ô 4', text: 'dây 1: ngăn 5 → 7' },
+        { at: 'Ô 5', text: 'dây 2: ngăn 3 → 1 (trượt xuống)' },
+      ],
       guidance: [
-        'Ngón giữ nguyên áp lực trong lúc trượt, KHÔNG nhấc khỏi dây — nhấc lên là mất tiếng.',
-        'Chỉ gảy nốt đầu; nốt sau vang bằng chính cú trượt.',
-        'Trượt chỉ đi dọc MỘT dây. Muốn sang dây khác thì gảy lại, không gọi là trượt.',
+        'Gảy nốt đầu — giữ lực tay trái — trượt sang nốt sau. Không nhấc tay giữa hai nốt.',
+        'Nhịp KHÔNG được dừng lại vì slide.',
+        'Slide ở đây để câu melody liền và có chất guitar hơn, không phải để khoe kỹ thuật.',
       ],
     },
     {
       kind: 'score',
       subtitle: 'Etude 03',
-      title: 'Đường trượt',
-      lead: '12 ô nhịp: câu nhạc lên Vùng 2 bằng một cú trượt trên dây 3, rồi trượt về đúng đường cũ.',
+      title: 'Melody có Bass & Slide',
+      lead: '8 ô nhịp gom lại tất cả những gì đã tích luỹ: bản đồ C–Am, ép ngón, bass đơn, melody và slide.',
       tempo: 'Tempo: ♩ = 66',
       tex: ETUDE3,
       marks: [
-        { at: 'Ô 3', text: 'trượt trên DÂY 3 lên Vùng 2 (ngón 4 ngăn 4 → ngón 1 ngăn 5)' },
-        { at: 'Ô 8', text: 'trượt về Vùng 1, vẫn trên dây 3' },
+        { at: 'Ô 3', text: 'trượt trên dây 3 (ngăn 2 → 4)' },
+        { at: 'Ô 6', text: 'trượt xuống trên dây 2 (ngăn 3 → 1)' },
       ],
       guidance: [
-        'Giữ nhịp đều ở chỗ trượt — đừng dừng lại nghe ngóng rồi mới đi tiếp.',
-        'So với Buổi 01: cùng đường đi, nhưng nay nối bằng tiếng trượt chứ không nhấc tay.',
+        'Bass ở bè dưới ngân trọn ô nhịp, melody ở bè trên — đây là hình thu nhỏ của bản Solo đang dựng.',
+        'Tập trước phần melody trơn, rồi mới thả bass vào, cuối cùng mới thêm slide.',
       ],
+    },
+    {
+      kind: 'note',
+      title: 'Ghi chú nhỏ về cao độ',
+      text: 'Cùng một tên nốt có thể xuất hiện ở nhiều cao độ khác nhau trên cần đàn. Khi đọc bản nhạc, bám cả khuông nhạc lẫn TAB để chơi đúng vị trí — đừng chỉ nhớ tên nốt.',
     },
     {
       kind: 'repertoire',
       title: 'Tác phẩm thực hành',
-      candidates: ['Lý Cây Bông — dân ca Nam Bộ'],
+      candidates: ['Diễm Xưa — Trịnh Công Sơn (tiếp tục từ Buổi 01–02)'],
       status: 'ready',
       pieces: [
         {
-          title: 'Lý Cây Bông — quãng tám thấp',
-          composer: 'Dân ca Nam Bộ · giọng Đô',
-          note: 'Bản hạ một quãng tám: trọn vẹn trong Vùng 1 (ngăn 0–3). Tập bản này cho thuộc giai điệu và lời trước.',
-          tempo: 'Nhịp 2/4 · thong thả, đúng chất dân ca',
-          barsPerRow: 4,
-          tex: WORK_LY_CAY_BONG_THAP,
-          guidance: [
-            'Hát lời trong lúc chơi — dân ca mà chơi cứng nhịp thì mất duyên.',
-            'Nốt ngân cuối câu phải đủ, đừng cắt ngắn để chạy sang câu sau.',
-          ],
-        },
-        {
-          title: 'Lý Cây Bông — quãng tám cao',
-          composer: 'Dân ca Nam Bộ · cùng giai điệu, cao hơn một quãng tám',
-          note: 'Đúng giai điệu vừa tập nhưng dựng ở Vùng 2 – Vùng 3 (ngăn 5–15). Chỗ đổi vùng trên cùng một dây đã đánh dấu TRƯỢT NGÓN — đây là chỗ dùng kỹ thuật của buổi hôm nay.',
-          tempo: 'Chậm hơn bản thấp cho tới khi các cú trượt sạch tiếng',
-          barsPerRow: 4,
-          tex: WORK_LY_CAY_BONG_CAO,
+          title: 'Diễm Xưa — Melody + Bass + Slide',
+          composer: 'Trịnh Công Sơn · giọng Am',
+          note: 'Vẫn đúng bản nhạc của Buổi 01–02, không dựng lại từ đầu: giai điệu giữ nguyên, bè Bass giữ nguyên, tuần này chỉ chồng thêm hai cú trượt ở ô 11 và ô 12 — chỗ câu nhạc lên vùng cao rồi về.',
+          tempo: 'Chậm, giữ Bass ngân · melody vẫn phải nổi hơn Bass',
+          barsPerRow: 3,
+          tex: WORK_DIEM_XUA_B3,
           marks: [
-            { at: 'Vùng 2', text: 'ngăn 5–8, dây 1–3' },
-            { at: 'Vùng 3', text: 'các câu lên ngăn 10–15, dây 1' },
+            { at: 'Lớp 1', text: 'Bass ở phách mạnh — dây buông E · A · D' },
+            { at: 'Lớp 2', text: 'Slide ô 11 và ô 12, trên cùng dây 1' },
+            { at: 'Lớp 3', text: 'Tay phải: p cho Bass, i – m cho melody' },
           ],
           guidance: [
-            'So hai bản: cùng một bài, cùng tên nốt, chỉ khác cao độ — đó chính là bài học hôm nay.',
-            'Mỗi chỗ có dấu trượt: nghe xem tiếng có liền không, đứt là tay đã nhấc.',
+            'Chơi lại y như tuần trước trước đã; chỉ khi trơn mới thêm hai cú trượt.',
+            'Chỗ nào Bass làm melody yếu đi thì bỏ Bass ô đó — melody quan trọng hơn.',
           ],
         },
       ],
-      annotationTypes: ['Vị trí trượt ngón', 'Quãng tám', 'Số ngón', 'Câu melody',
+      annotationTypes: ['Vị trí Bass', 'Vị trí Slide', 'Ngón tay phải p – i – m', 'Câu melody',
         'Điểm lấy hơi / ngắt câu', 'Ghi chú của giáo viên'],
     },
     {
       kind: 'assignment',
       items: [
-        { label: 'Bài 1.', text: 'Bài tập quãng tám: chơi và HÁT theo cả nốt thấp lẫn nốt cao.' },
-        { label: 'Bài 2.', text: 'Trượt ngón trên cả ba dây, lên và xuống, tiếng phải liền.' },
+        { label: 'Bài 1.', text: 'Tập Bass + Melody luân phiên (Bài tập 01).' },
+        { label: 'Bài 2.', text: 'Tập câu Slide trong Bài tập 02.' },
         { label: 'Bài 3.', text: 'Chơi hoàn chỉnh Etude 03.' },
-        { label: 'Bài 4.', text: 'Lý Cây Bông bản thấp: thuộc giai điệu và lời.' },
-        { label: 'Bài 5.', text: 'Lý Cây Bông bản cao: chơi chậm, khoanh những cú trượt còn đứt tiếng.' },
+        { label: 'Bài 4.', text: 'Chơi lại đoạn tác phẩm đã học từ Buổi 01–02.' },
+        { label: 'Bài 5.', text: 'Nâng cấp đoạn đó: thêm Bass, thêm Slide tại vị trí đã đánh dấu.' },
+        { label: 'Bài 6.', text: 'Khoanh trên bản nhạc: chỗ Bass làm melody yếu, chỗ Slide đứt tiếng, chỗ tay phải bị rối.' },
       ],
-      message: 'Không cần tập hoàn hảo. Hãy mang đúng những chỗ chưa làm được đến buổi học.',
+      message: 'Mang đúng những vị trí đã khoanh đến buổi học — đó là phần thầy trò sẽ gỡ cùng nhau.',
     },
     {
       kind: 'checklist',
       items: [
-        'Tôi phân biệt được cùng tên nốt ở hai quãng tám.',
-        'Tôi tìm được LA và ĐÔ ở ba quãng tám trên cần đàn.',
-        'Tôi trượt ngón không bị đứt tiếng.',
+        'Tôi giữ được melody khi thêm bass.',
+        'Ngón cái p chơi được bass độc lập hơn.',
+        'Tôi dùng i – m cho melody.',
+        'Tôi thực hiện được Slide liền tiếng.',
         'Tôi chơi được Etude 03.',
-        'Tôi chơi được Lý Cây Bông ở quãng tám thấp.',
-        'Tôi đã thử bản quãng tám cao.',
+        'Tôi nâng cấp được đoạn Diễm Xưa của tuần trước.',
+        'Tôi đã đánh dấu chỗ chưa làm được.',
       ],
     },
     { kind: 'studentNotes', lines: 8 },

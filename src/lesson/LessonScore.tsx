@@ -129,7 +129,7 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   }
 
   return (
-    <ZoomFrame onZoom={onZoom}
+    <ZoomFrame onZoom={onZoom} enabled={zoomable}
                hint={zoomable ? 'Bản nhạc dài — bấm “Xem lớn” để đọc toàn màn hình.' : undefined}>
       <div className="lsn-score">
         {state === 'loading' && <div className="lsn-score-msg">Đang dựng bản nhạc…</div>}

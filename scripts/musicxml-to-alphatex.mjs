@@ -309,6 +309,8 @@ function buildBassVoice() {
   }
 
   const out = []
+  // --bars cắt đoạn nào thì bè bass cắt đúng đoạn ấy, nếu không hai bè lệch số ô nhịp.
+  const [bb0, bb1] = barRange ? barRange.split('-').map(n => parseInt(n, 10)) : [1, bars.length]
   // Hợp âm đầu tiên của bài thường được neo vào giữa câu hát (vd "…tháp cổ[Am]"),
   // nhưng người đệm đã chơi nó từ ô nhịp đầu ⇒ lấy nó làm hợp âm mở đầu để bè bass
   // có nốt ngay từ phách 1, kể cả khi giai điệu bắt đầu bằng dấu lặng.
@@ -316,7 +318,13 @@ function buildBassVoice() {
   for (const m of perBar) { const first = [...m.values()][0]; if (first) { current = first; break } }
   let shownNone = true                      // hợp âm đầu bài thì luôn phải ghi tên
   for (let bi = 0; bi < bars.length; bi++) {
+    const inRange = bi >= bb0 - 1 && bi <= bb1 - 1
     const slots = [...perBar[bi].entries()].sort((a, b) => a[0] - b[0])
+    if (!inRange) {                       // ngoài đoạn: chỉ cập nhật hợp âm đang hiệu lực
+      const last = [...perBar[bi].values()].pop()
+      if (last) current = last
+      continue
+    }
     if (!current && slots.length === 0) { out.push(`r.${DUR_TEX[beats >= 4 ? 4 : 2] ?? 1}`); continue }
 
     // mỗi đoạn kéo dài từ phách này tới phách có hợp âm tiếp theo (hoặc hết ô nhịp)

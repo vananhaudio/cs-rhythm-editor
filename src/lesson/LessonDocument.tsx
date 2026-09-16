@@ -39,6 +39,40 @@ function renderSection(s: LessonSection, i: number) {
         </section>
       )
 
+    case 'recap':
+      return (
+        <section key={i} className="lsn-recap lsn-block">
+          <h2>{s.title}</h2>
+          <div className="lsn-recap-grid">
+            {s.steps.map((st, k) => (
+              <div key={k} className="lsn-recap-step">
+                <b>{st.label}</b>
+                <ul>{st.items.map((t, j) => <li key={j}>{t}</li>)}</ul>
+              </div>
+            ))}
+          </div>
+          {s.message && <p className="lsn-recap-msg">{s.message}</p>}
+        </section>
+      )
+
+    case 'layers':
+      return (
+        <Block key={i} label="Chồng lớp" title={s.title} sub={s.lead}>
+          <div className="lsn-layers">
+            {s.layers.map((ly, k) => (
+              <div key={k} className={`lsn-layer${ly.current ? ' is-current' : ''}`}>
+                <div className="lsn-layer-h">
+                  <span className="lsn-layer-no">{ly.label}</span>
+                  <b>{ly.what}</b>
+                </div>
+                <LessonScore tex={ly.tex} barsPerRow={2} zoomable={false} />
+              </div>
+            ))}
+          </div>
+          {s.note && <p className="lsn-legend">{s.note}</p>}
+        </Block>
+      )
+
     case 'note':
       return (
         <aside key={i} className="lsn-note lsn-block">
@@ -315,6 +349,25 @@ const CSS = `
 .lsn-mark b{color:${P.purple};}
 .lsn-guide{margin:10px 0 0;padding-left:20px;font-size:14.5px;color:${P.inkSoft};}
 .lsn-guide li{margin:3px 0;}
+
+/* ── Ôn lại & chồng lớp ── */
+.lsn-recap{border-left:4px solid ${P.honey};}
+.lsn-recap h2{margin:0 0 12px;font-size:17px;}
+.lsn-recap-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));}
+.lsn-recap-step{background:${P.bg};border:1px solid ${P.line};border-radius:12px;padding:12px 14px;}
+.lsn-recap-step b{display:block;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:${P.purple};margin-bottom:6px;}
+.lsn-recap-step ul{margin:0;padding-left:18px;font-size:14.5px;color:${P.inkSoft};}
+.lsn-recap-step li{margin:3px 0;}
+.lsn-recap-msg{margin:12px 0 0;font-size:14.5px;font-weight:600;color:${P.honey};
+  background:${P.honeyTint};border-radius:10px;padding:10px 12px;}
+.lsn-layers{display:grid;gap:14px;}
+.lsn-layer{border:1px solid ${P.line};border-radius:13px;padding:12px;background:#FCFBFE;break-inside:avoid;}
+.lsn-layer.is-current{border-color:${P.purple};background:${P.purpleTint};}
+.lsn-layer-h{display:flex;align-items:baseline;gap:9px;margin-bottom:8px;flex-wrap:wrap;}
+.lsn-layer-no{font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:#fff;background:${P.purple};border-radius:999px;padding:3px 10px;}
+.lsn-layer-h b{font-size:14.5px;}
 
 /* ── Tác phẩm ── */
 .lsn-rep-list{font-size:15px;}
