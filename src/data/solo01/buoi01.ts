@@ -62,9 +62,9 @@ const EX2 = `
 .
 3.5{lf 4}.4 0.4.4 2.4{lf 3}.4 3.4{lf 4}.4 |
 0.3.4 2.3{lf 3}.4 0.2.4 1.2{lf 2}.4 |
-2.3{lf 2}.4 4.3{lf 4}.4 5.3{lf 5 ss}.4 7.3{lf 5}.4 |
+2.3{lf 3}.4 4.3{lf 5 ss}.4 5.3{lf 5 ss}.4 7.3{lf 5}.4 |
 5.2{lf 2}.4 6.2{lf 3}.4 8.2{lf 5}.4 5.1{lf 2}.4 |
-7.1{lf 2}.4 8.1{lf 3}.4 10.1{lf 5 ss}.4 12.1{lf 5}.4 |
+7.1{lf 4}.4 8.1{lf 5 ss}.4 10.1{lf 5}.4 12.1{lf 4}.4 |
 13.1{lf 5}.2 12.1{lf 4}.2 |
 10.1{lf 5}.4 8.1{lf 3}.4 7.1{lf 2 ss}.4 5.1{lf 2}.4 |
 8.2{lf 5}.4 6.2{lf 3}.4 5.2{lf 2}.4 7.3{lf 4}.4 |
@@ -82,10 +82,10 @@ const ETUDE1 = `
 2.3{lf 3}.4 1.2{lf 2}.4 0.2.2 |
 0.3.4 2.3{lf 3}.4 3.4{lf 4}.2 |
 2.4{lf 3}.4 3.4{lf 4}.4 0.3.4 2.3{lf 3}.4 |
-1.2{lf 2}.4 3.2{lf 2 ss}.4 5.2{lf 2}.2 |
+1.2{lf 2 ss}.4 3.2{lf 2 ss}.4 5.2{lf 2}.2 |
 6.2{lf 3}.4 8.2{lf 5}.4 5.1{lf 2}.2 |
 8.2{lf 5}.4 6.2{lf 3}.4 5.2{lf 2 ss}.2 |
-3.2{lf 2}.4 1.2{lf 2}.4 0.2.2 |
+3.2{lf 2 ss}.4 1.2{lf 2}.4 0.2.2 |
 2.3{lf 3}.1 |
 0.2.4 1.2{lf 2}.4 0.2.4 2.3{lf 3}.4 |
 0.3.4 2.3{lf 3}.4 0.2.2 |
@@ -150,8 +150,8 @@ export const SOLO01_BUOI01: LessonDoc = {
       tex: EX2,
       marks: [
         { at: 'Ô 1–2', text: 'Vùng 1 — đầu cần' },
-        { at: 'Ô 3', text: 'cầu nối DÂY 3: ngón 4 trượt từ ngăn 5 lên ngăn 7 (sang Vùng 2)' },
-        { at: 'Ô 5', text: 'cầu nối DÂY 1: ngón 4 trượt từ ngăn 10 lên ngăn 12 (sang Vùng 3)' },
+        { at: 'Ô 3', text: 'cầu nối DÂY 3: ngón 4 trượt liền từ ngăn 4 → 5 → 7 (sang Vùng 2)' },
+        { at: 'Ô 5', text: 'cầu nối DÂY 1: ngón 4 trượt từ ngăn 8 lên ngăn 10 (sang Vùng 3)' },
         { at: 'Ô 7', text: 'về Vùng 2 — ngón 1 trượt từ ngăn 7 xuống ngăn 5' },
         { at: 'Ô 9', text: 'về Vùng 1 — ngón 4 trượt từ ngăn 5 xuống ngăn 4' },
       ],
@@ -159,6 +159,7 @@ export const SOLO01_BUOI01: LessonDoc = {
         'Đây là bài tập quan trọng nhất của Buổi 01 — học tư duy ĐƯỜNG ĐI, không phải học nốt lẻ.',
         'Mỗi lần đổi vùng đều đi dọc MỘT sợi dây: dây 3 nối Vùng 1 với Vùng 2, dây 1 nối Vùng 2 với Vùng 3. Không nhảy vùng ngang qua dây khác.',
         'Trượt thì HAI NỐT CÙNG MỘT NGÓN: ngón đó giữ nguyên trên dây và đi dọc, không đổi sang ngón khác giữa chừng.',
+        'Ngược lại, KHÔNG dùng một ngón bấm liên tiếp hai nốt khác chỗ mà không trượt — nhất là khi đổi dây: ngón phải nhấc lên nhảy là nốt trước bị cắt tiếng.',
         'Chậm – đều – không đứt tiếng.',
       ],
     },
@@ -170,8 +171,8 @@ export const SOLO01_BUOI01: LessonDoc = {
       tempo: 'Tempo: ♩ = 66',
       tex: ETUDE1,
       marks: [
-        { at: 'Ô 4', text: 'ngón 1 trượt trên DÂY 2 từ ngăn 3 lên ngăn 5 (sang Vùng 2)' },
-        { at: 'Ô 6', text: 'ngón 1 trượt ngược từ ngăn 5 xuống ngăn 3' },
+        { at: 'Ô 4', text: 'ngón 1 trượt liền trên DÂY 2: ngăn 1 → 3 → 5 (sang Vùng 2)' },
+        { at: 'Ô 6–7', text: 'ngón 1 trượt ngược liền: ngăn 5 → 3 → 1' },
       ],
       guidance: [
         'Hát thầm câu nhạc trước khi chơi — Etude này là một melody, không phải bài chạy âm giai.',

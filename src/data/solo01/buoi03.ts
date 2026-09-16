@@ -35,7 +35,7 @@ const EX2 = `
 2.3{lf 3 rf 2}.4 0.2{rf 3}.4 1.2{lf 2 rf 2}.2 |
 0.2{rf 3}.4 2.3{lf 3 ss rf 2}.4 4.3{lf 3}.2 |
 5.3{lf 2 rf 3}.4 4.3{lf 5 rf 2}.4 2.3{lf 3 rf 3}.2 |
-5.1{lf 2 ss rf 2}.4 7.1{lf 2}.4 5.1{lf 2 rf 3}.2 |
+5.1{lf 2 ss rf 2}.4 7.1{lf 2}.4 0.1{rf 3}.2 |
 3.2{lf 2 ss rf 2}.4 1.2{lf 2}.4 0.2{rf 3}.2 |
 2.3{lf 3 rf 2}.1
 `.trim()
@@ -49,9 +49,9 @@ const ETUDE3 = `
 .
 2.3{lf 3 rf 2}.4 0.2{rf 3}.4 1.2{lf 2 rf 2}.2 |
 0.2{rf 3}.4 2.3{lf 3 rf 2}.4 0.3{rf 3}.2 |
-2.3{lf 3 ss}.4 4.3{lf 3}.4 5.3{lf 4}.2 |
-7.3{lf 4}.4 5.3{lf 2}.4 4.3{lf 4}.2 |
-2.3{lf 3}.4 0.2.4 1.2{lf 2}.2 |
+2.3{lf 2 ss}.4 4.3{lf 2}.4 5.3{lf 3}.2 |
+7.3{lf 5}.4 5.3{lf 3}.4 4.3{lf 2}.2 |
+2.3{lf 3}.4 1.2{lf 2}.4 0.2.2 |
 3.2{lf 2 ss}.4 1.2{lf 2}.4 0.2.2 |
 0.1.4 1.1{lf 2}.4 0.1.2 |
 2.3{lf 3}.1
@@ -140,6 +140,7 @@ export const SOLO01_BUOI03: LessonDoc = {
       guidance: [
         'Gảy nốt đầu — giữ lực tay trái — trượt sang nốt sau. Không nhấc tay giữa hai nốt.',
         'Trượt thì HAI NỐT CÙNG MỘT NGÓN. Trượt từ dây buông là vô nghĩa: không bấm gì thì không có ngón nào để trượt.',
+        'Không trượt thì đổi ngón: một ngón không bấm liên tiếp hai nốt khác chỗ, nhất là khi sang dây khác.',
         'Nhịp KHÔNG được dừng lại vì slide.',
         'Slide ở đây để câu melody liền và có chất guitar hơn, không phải để khoe kỹ thuật.',
       ],
@@ -152,7 +153,7 @@ export const SOLO01_BUOI03: LessonDoc = {
       tempo: 'Tempo: ♩ = 66',
       tex: ETUDE3,
       marks: [
-        { at: 'Ô 3', text: 'ngón 2 trượt trên dây 3 (ngăn 2 → 4)' },
+        { at: 'Ô 3', text: 'ngón 1 trượt trên dây 3 (ngăn 2 → 4), cả ô 3–4 ở thế IV' },
         { at: 'Ô 6', text: 'ngón 1 trượt xuống trên dây 2 (ngăn 3 → 1)' },
       ],
       guidance: [
