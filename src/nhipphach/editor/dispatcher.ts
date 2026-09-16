@@ -1,4 +1,5 @@
 import { traPhim } from "./keymap.ts";
+import type { CheDo } from "./keymap.ts";
 import type { EditorAction } from "./actions.ts";
 
 /**
@@ -54,6 +55,11 @@ export interface DispatchContext {
   dangMoModal?: boolean;
   /** Phần tử đang giữ con trỏ chữ, nếu trang biết. */
   focused?: ElementLike | null;
+  /**
+   * Ngữ cảnh bàn phím (4D). Trang suy từ nốt dưới con trỏ: nốt trên khuông
+   * TAB thì chữ số là PHÍM, không phải hình nốt. Không ghi = khuông nhạc.
+   */
+  cheDo?: CheDo;
 }
 
 export type DispatchResult =
@@ -73,13 +79,16 @@ export function dispatch(ev: KeyLike, ctx: DispatchContext): DispatchResult {
   const target = ev.target ?? ctx.focused ?? null;
   if (dangGoChu(target) || dangGoChu(ctx.focused)) return { kind: "blocked", why: "typing" };
   if (ctx.dangMoModal) return { kind: "blocked", why: "modal" };
-  const action = traPhim({
-    key: ev.key,
-    // ⌘ trên máy Mac đi cùng đường với Ctrl.
-    ctrl: !!(ev.ctrlKey || ev.metaKey),
-    shift: !!ev.shiftKey,
-    alt: !!ev.altKey,
-  });
+  const action = traPhim(
+    {
+      key: ev.key,
+      // ⌘ trên máy Mac đi cùng đường với Ctrl.
+      ctrl: !!(ev.ctrlKey || ev.metaKey),
+      shift: !!ev.shiftKey,
+      alt: !!ev.altKey,
+    },
+    ctx.cheDo ?? "notation"
+  );
   if (!action) return { kind: "none" };
   // Cổng quyền lặp lại ở đây có chủ ý: nút có thể bị ẩn mà bàn phím thì không.
   if (!ctx.choSua) return { kind: "blocked", why: "capability" };

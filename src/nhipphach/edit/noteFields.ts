@@ -31,6 +31,8 @@ export interface NoteFields {
   laLangCaO: boolean;
   /** Khuông này là TAB (`<clef><sign>TAB</sign>`) — 4B.3 chưa nhập nốt vào đây. */
   khuongTab: boolean;
+  /** Cách lên dây của khuông này (4D). `null` = bài không ghi. */
+  tabTuning: ReadonlyMap<number, number> | null;
   pitch: Pitch | null;
   /** Dấu hoá đang được VẼ ra, nếu nguồn có ghi. */
   accidental: string | null;
@@ -85,6 +87,7 @@ export function readNoteFields(xml: string, path: string): NoteFields | null {
     kind: ngu.kind,
     laLangCaO,
     khuongTab: ngu.isTabStaff,
+    tabTuning: ngu.tabTuning,
     pitch: ngu.pitch,
     accidental: ngu.accidental,
     accidentalTarget: {

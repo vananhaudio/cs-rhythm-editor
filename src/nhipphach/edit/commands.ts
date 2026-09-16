@@ -182,6 +182,26 @@ export interface PasteSequence {
   items: readonly ClipboardItem[];
 }
 
+/**
+ * Đặt vị trí của một nốt TAB có sẵn: dây nào, phím nào — Giai đoạn 4D.
+ *
+ * Lệnh mang vị trí TUYỆT ĐỐI (dây + phím), không mang "chế độ". Hai ý định
+ * khác nhau — "đổi phím trên dây này" và "đổi dây mà giữ cao độ" — được tách ở
+ * tầng mặt tiền, còn lệnh chỉ ghi ra đúng thứ đã quyết. Cao độ luôn được TÍNH
+ * LẠI từ cách lên dây của bài, nên bất biến "dây buông + phím = cao độ" không
+ * bao giờ bị phá.
+ *
+ * Chỉ sửa đúng nốt TAB được chọn. Nốt tương ứng trên khuông nhạc (nếu có) là
+ * một `<note>` khác, và MusicXML không ghi quan hệ nào giữa hai nốt ấy — nên nó
+ * KHÔNG được tự sửa theo.
+ */
+export interface ChangeTabPosition {
+  type: "ChangeTabPosition";
+  path: string;
+  string: number;
+  fret: number;
+}
+
 export type MusicXmlEditCommand =
   | ChangePitch
   | RespellNote
@@ -192,7 +212,8 @@ export type MusicXmlEditCommand =
   | ReplaceRestWithNote
   | ChangeDurationAndRebalance
   | InsertNoteIntoRest
-  | PasteSequence;
+  | PasteSequence
+  | ChangeTabPosition;
 
 /** Nhóm công cụ (mục 2 của spec) — để panel biết lệnh thuộc nhóm nào. */
 export const COMMAND_GROUP: Record<
@@ -209,6 +230,7 @@ export const COMMAND_GROUP: Record<
   ChangeDurationAndRebalance: "note",
   InsertNoteIntoRest: "note",
   PasteSequence: "note",
+  ChangeTabPosition: "note",
 };
 
 export const CHANGE_NOTE_MAX = 300;
@@ -225,6 +247,7 @@ const MO_TA: Record<MusicXmlEditCommand["type"], (n: number) => string> = {
   ChangeDurationAndRebalance: (n) => `sửa trường độ ${n} nốt (cân lại ô nhịp)`,
   InsertNoteIntoRest: (n) => `nhập ${n} nốt (cân lại chỗ lặng)`,
   PasteSequence: (n) => `dán ${n} đoạn nhạc`,
+  ChangeTabPosition: (n) => `sửa dây/phím ${n} nốt TAB`,
 };
 const KHOA = (c: MusicXmlEditCommand) =>
   c.type === "ChangeLyricText" ? `${c.path}#${c.lyricIndex}` : c.path;

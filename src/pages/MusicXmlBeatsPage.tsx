@@ -78,6 +78,9 @@ import { dispatch } from "../nhipphach/editor/dispatcher";
 import { toCommand } from "../nhipphach/editor/commandFacade";
 import { NHAP_BAN_DAU, datTruongDo, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
 import { chepDoan } from "../nhipphach/edit/clipboard";
+import { goSo, TAB_TRONG } from "../nhipphach/editor/tabEntry";
+import type { TabEntryState } from "../nhipphach/editor/tabEntry";
+import type { CheDo } from "../nhipphach/editor/keymap";
 import type { Clipboard } from "../nhipphach/edit/clipboard";
 import type { EntryDuration, NoteEntryState } from "../nhipphach/editor/noteEntry";
 import { theoDoi } from "../nhipphach/edit/draftIdentity";
@@ -245,6 +248,15 @@ export default function MusicXmlBeatsPage({
    * để hiện ra. Nó KHÔNG phải một bản nhạc thứ hai: chỉ có cao độ và trường độ.
    */
   const ghiTamRef = useRef<Clipboard | null>(null);
+  /**
+   * Dãy chữ số đang gõ trên khuông TAB (4D) và bản nháp NGAY TRƯỚC chữ số đầu
+   * tiên — để "1" rồi "2" thay lệnh cũ bằng "phím 12" thay vì chồng hai lệnh.
+   */
+  const tabNhapRef = useRef<TabEntryState>(TAB_TRONG);
+  // Bọc trong một hộp: "chưa có nháp" (null bên trong) khác hẳn "chưa gõ số nào"
+  // (hộp null). Không bọc thì chữ số đầu gõ lên một bài sạch sẽ không quay lui
+  // được, và "1" rồi "2" ra HAI lệnh.
+  const tabTruocSoRef = useRef<{ nhap: DraftState | null } | null>(null);
   const [ghiTam, setGhiTam] = useState<Clipboard | null>(null);
   /** Bản hiện ra của trường độ đang cầm — chỉ để thanh công cụ vẽ, không phải nguồn sự thật. */
   const [truongDoNhap, setTruongDoNhap] = useState<EntryDuration>(NHAP_BAN_DAU.currentDuration);
@@ -596,7 +608,7 @@ export default function MusicXmlBeatsPage({
    * Chỉ có ba nhánh — dời con trỏ, đụng ngăn xếp nháp, hoặc phát ĐÚNG MỘT lệnh
    * đã có sẵn. Trang không tự dịch nhạc lý; `commandFacade` trả lời hộ.
    */
-  function apHanhDong(action: EditorAction) {
+  function apHanhDong(action: EditorAction, lucBam?: number) {
     // Cổng quyền lặp lại ở đây có chủ ý, đúng khuôn bản vá 6e85c9f.
     if (!choChonNot || !chonNot) return;
     if (action.type === "MOVE") {
@@ -610,6 +622,38 @@ export default function MusicXmlBeatsPage({
       }
       return;
     }
+    // ── 4D: chữ số trên khuông TAB → gom thành số phím rồi mới thành lệnh ──
+    if (action.type === "TAB_DIGIT") {
+      const id = vungChonRef.current.caret?.sourceId;
+      if (!id) return;
+      // Giờ LÚC BẤM, không phải giờ lúc handler chạy. Đo được trên bài thật 4
+      // trang: phím đầu kéo theo một lượt khắc nặng, phím thứ hai xếp hàng sau
+      // nó và chạy trễ 8 giây — lấy `Date.now()` thì "1" rồi "2" không bao giờ
+      // ghép được thành 12, dù thầy gõ liền tay.
+      const go = goSo(tabNhapRef.current, id, action.digit, lucBam ?? performance.now());
+      // Gõ nối tiếp ("1" rồi "2") thì THAY lệnh vừa rồi, không chồng thêm: ngăn
+      // xếp hoàn tác chỉ giữ MỘT bước "đặt phím 12", đúng như thầy vừa gõ.
+      let truocSo: { nhap: DraftState | null };
+      if (go.noiTiep && tabTruocSoRef.current) {
+        truocSo = tabTruocSoRef.current;
+        // Quay về bản nháp trước chữ số đầu — qua ĐÚNG cửa `datNhap`, không gán
+        // thẳng vào ref (bất biến 4A.1: chỉ một cửa đặt nháp).
+        datNhap(truocSo.nhap);
+      } else {
+        truocSo = { nhap: nhapRef.current };
+      }
+      apHanhDong({ type: "SET_TAB_FRET", fret: go.phim });
+      // Đặt bộ đệm SAU lời gọi lồng. Lời gọi ấy đi qua dòng "mọi hành động khác
+      // cắt dãy chữ số" bên dưới — đặt trước là bị chính nó xoá mất. Đo được trên
+      // trình duyệt: đặt trước thì `1` rồi `2` ra phím 2 và BA lệnh, không phải 12.
+      tabNhapRef.current = go.state;
+      tabTruocSoRef.current = truocSo;
+      return;
+    }
+    // Mọi hành động KHÁC cắt dãy chữ số đang gõ — gõ số sau đó là số mới.
+    tabNhapRef.current = TAB_TRONG;
+    tabTruocSoRef.current = null;
+
     // ── 4C: vùng chọn và bảng ghi tạm — không lệnh nào, không chạm bản nhạc ──
     if (action.type === "EXTEND_SELECTION") {
       const ds = dsSauLenh();
@@ -681,6 +725,13 @@ export default function MusicXmlBeatsPage({
     if (!apLenh(ra.command)) return;
     // Cao độ vừa GHI RA là tham chiếu chắc chắn nhất cho chữ cái tiếp theo.
     const cmd = ra.command;
+    // 4D: đổi phím làm đổi cao độ của nốt TAB. Nốt tương ứng trên khuông nhạc là
+    // một <note> khác và MusicXML không ghi quan hệ giữa hai nốt — nên KHÔNG tự
+    // sửa theo, mà nói thẳng ra (STAFF_TAB_MAY_NOT_MATCH).
+    if (cmd.type === "ChangeTabPosition" && action.type === "SET_TAB_FRET")
+      setNhapNote(
+        "Đã đổi phím trên TAB. Khuông nhạc tương ứng không được tự sửa theo."
+      );
     if (
       cmd.type === "ReplaceRestWithNote" ||
       cmd.type === "InsertNoteIntoRest" ||
@@ -803,6 +854,15 @@ export default function MusicXmlBeatsPage({
     setNotChon(nt ? { kind: "note", note: nt } : null);
   }
 
+  /** Ngữ cảnh bàn phím ngay lúc này — đọc từ nháp đồng bộ, không từ lần vẽ trước. */
+  function cheDoBanPhim(): CheDo {
+    const id = vungChonRef.current.caret?.sourceId;
+    const xml = nhapRef.current?.xml ?? source?.xml;
+    if (!id || !xml) return "notation";
+    const n = dsSauLenh().find((x) => x.svgId === id);
+    return n && readNoteFields(xml, n.path)?.khuongTab ? "tab" : "notation";
+  }
+
   /** Nhớ cao độ của một nốt nguồn làm mốc cho lần gõ chữ cái tiếp theo. */
   function ghiNhoNot(note: SourceNote) {
     const p = note.pitch;
@@ -839,11 +899,16 @@ export default function MusicXmlBeatsPage({
         choSua: choChonNot,
         dangMoModal: moThuVien || !!trungLap,
         focused: (typeof document === "undefined" ? null : document.activeElement) as never,
+        // 4D: ngữ cảnh suy từ CHÍNH nốt dưới con trỏ — nốt trên khuông TAB thì
+        // chữ số là phím, ↑/↓ là đổi dây. Không có nút bật/tắt nào để quên.
+        cheDo: cheDoBanPhim(),
       }
     );
     if (ra.kind !== "action") return;
     e.preventDefault();
-    apHanhDong(ra.action);
+    // `timeStamp` là giờ trình duyệt ghi khi phím được BẤM (cùng gốc với
+    // `performance.now()`), kể cả khi handler phải chờ sau một lượt khắc.
+    apHanhDong(ra.action, e.timeStamp);
   }
 
   /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
