@@ -1,3 +1,4 @@
+import { nhoTheoNguon } from "../../musicxml-beats/sourceCache.ts";
 import type { Pitch } from "./commands.ts";
 import { readNoteContext } from "./noteContext.ts";
 import { decideAccidental } from "./accidentals.ts";
@@ -59,10 +60,20 @@ export interface NoteFields {
   lyrics: NoteLyric[];
 }
 
+/**
+ * Tài liệu đã đọc của một chuỗi nguồn, dùng chung cho mọi lần hỏi ô của nốt
+ * (4D.P): một phím từng làm trang đọc lại cùng bản nháp sáu lần chỉ để hỏi ô.
+ * CHỈ ĐỌC — hàm dưới đây và `readNoteContext` không sửa cây; lệnh sửa luôn đọc
+ * tài liệu riêng của nó trong `applyCommand`. Mỗi lần hỏi vẫn dựng `NoteFields`
+ * mới, nên không có đối tượng nào bị chia sẻ ra ngoài.
+ */
+const boNhoTaiLieu = nhoTheoNguon<ReturnType<typeof parseStrict>>();
+const taiLieuChiDoc = (xml: string) => boNhoTaiLieu.lay(xml, () => parseStrict(xml));
+
 export function readNoteFields(xml: string, path: string): NoteFields | null {
   let doc;
   try {
-    doc = parseStrict(xml);
+    doc = taiLieuChiDoc(xml);
   } catch {
     return null;
   }

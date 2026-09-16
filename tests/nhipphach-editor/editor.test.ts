@@ -1504,8 +1504,9 @@ test("4D kiến trúc: ChangeTabPosition KHÔNG đi tìm nốt khuông nhạc t�
   const a = stripComments(src("nhipphach/edit/applyCommand.ts"));
   const than = (m: string) => {
     const i = m.indexOf("function changeTabPosition(");
-    const j = m.indexOf("\nfunction ", i + 10) > 0 ? Math.min(m.indexOf("\nfunction ", i + 10), m.indexOf("\nexport function ", i + 10)) : m.length;
-    return m.slice(i, j);
+    // Thân hàm kết thúc ở dòng `}` đầu tiên sát lề trái.
+    const j = m.indexOf("\n}", i);
+    return m.slice(i, j < 0 ? m.length : j);
   };
   // Không dò theo cao độ / thời điểm / thứ tự nguồn / toạ độ, không bước sang nốt khác.
   const CAM = /onset|tstamp|timeStamp|sourceOrder|sourceIndex|nearest|getBBox|getBoundingClientRect|previousSibling|nextSibling|parentNode|querySelector|getElementsByTagName|resolveSourcePath|readNoteContext|staff\s*[!=]==|elementChildren\(\s*(measure|note\.parentNode)/;
