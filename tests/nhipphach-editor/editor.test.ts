@@ -32,6 +32,7 @@ import { tagSourceIds } from "../../src/musicxml-beats/sourceTags.ts";
 import type { SourceNote } from "../../src/musicxml-beats/sourceTags.ts";
 import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
 import { idTaiCho } from "../../src/nhipphach/edit/draftIdentity.ts";
+import { chepDoan } from "../../src/nhipphach/edit/clipboard.ts";
 import { NHAP_BAN_DAU, datTruongDo, ghiNhoThamChieu } from "../../src/nhipphach/editor/noteEntry.ts";
 import { applyToDraft, createDraft, rebuildDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
 import type { DraftState } from "../../src/nhipphach/edit/draftEngine.ts";
@@ -747,9 +748,13 @@ test("4A.1 tô sáng: nốt khuông nhạc và nốt TAB là hai danh tính, kh�
   assert.ok(theoKhuong.size >= 2, "fixture phải có cả khuông nhạc lẫn TAB");
   const tatCa = notes.map((n) => n.svgId);
   assert.equal(new Set(tatCa).size, tatCa.length, "mỗi nốt một id riêng");
-  // Trang chỉ tra đúng một id — luật này khoá ở mã nguồn.
+  // Trang tô theo DANH SÁCH ID của vùng chọn — từ 4C vùng chọn có thể nhiều
+  // nốt — nhưng vẫn là tra theo id đích danh, không bao giờ theo cao độ hay
+  // toạ độ. Nốt TAB mang id khác nên không bao giờ sáng kèm.
   const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
-  assert.match(page, /querySelectorAll\(`\[id="\$\{svgId\}"\]`\)/, "phải tô theo đúng MỘT id");
+  assert.match(page, /querySelectorAll\(`\[id="\$\{id\}"\]`\)/, "phải tô theo id đích danh");
+  assert.match(page, /const canTo = ids\.length \? ids : svgId \? \[svgId\] : \[\]/);
+  assert.doesNotMatch(page, /querySelectorAll\(`g\.note`\)|\[class\*=note\]/, "không tô theo loại phần tử");
 });
 
 /** 2. Nhãn phím trên nút phải đến từ chính bảng phím, không gõ tay lần hai. */
@@ -875,7 +880,7 @@ test("4A.1 giữ phím: trang phải đọc nháp ĐỒNG BỘ, không đọc st
   assert.match(page, /datNganXep\(lamLaiNhap\)/);
   // Và ô của nốt đọc từ nháp đồng bộ trước khi dịch thành lệnh.
   assert.match(page, /const xmlBayGio = nhapRef\.current\?\.xml/);
-  assert.match(page, /toCommand\(action, note\.path, truong, nhapNotRef\.current\)/);
+  assert.match(page, /toCommand\(action, note\.path, truong, nhapNotRef\.current, ghiTamRef\.current\)/);
   // 4B.1: con trỏ cũng phải đồng bộ — nhập liên tục làm caret tự chạy sau mỗi
   // nốt, nên đọc `vungChon` từ state là cả tràng chữ cái đâm vào MỘT chỗ.
   const datVungChonAt = page.indexOf("const datVungChon");
@@ -1186,13 +1191,17 @@ test("4B.2 trang: con trỏ đi theo DANH TÍNH LOGIC, không giữ id cũ", () 
   assert.match(page, /sau\.identity !== truoc\.identity/);
   assert.match(page, /doiChoCaret\(truoc\.identity, sau\.identity\)/);
   // Sự kiện bị bỏ đi thì BỎ CHỌN, tuyệt đối không nhảy sang cái gần nhất.
-  assert.match(page, /if \(!moi\) \{[\s\S]{0,120}datVungChon\(RONG\)/);
+  // 4C dịch CẢ hai đầu (neo và đầu chạy); mất đầu nào cũng là mất vùng chọn.
+  assert.match(page, /if \(!idMoi \|\| !idNeoMoi\) \{[\s\S]{0,140}datVungChon\(RONG\)/);
+  assert.match(page, /const idNeo = vungChonRef\.current\.anchor\?\.sourceId/);
   // Thử ngược: luật phải bắt được chính đột biến của nó.
   // Chỉ soi CHÍNH hàm dịch con trỏ — `scrollIntoView({block:"nearest"})` ở chỗ
   // khác là chuyện cuộn màn hình, không dính gì tới việc chọn sự kiện nào.
   const ham = page.slice(page.indexOf("function doiChoCaret"));
   const than = ham.slice(0, ham.indexOf("\n  }") + 4);
-  assert.ok(than.length > 100 && than.length < 1200, `không cắt đúng thân hàm (${than.length})`);
+  // Nới trần vì 4C dịch cả neo lẫn đầu chạy; phần soi cấm kỵ bên dưới mới là
+  // thứ có giá trị, còn con số này chỉ để chắc mình cắt đúng một hàm.
+  assert.ok(than.length > 100 && than.length < 2200, `không cắt đúng thân hàm (${than.length})`);
   for (const cam of [/nearest/i, /Math\.abs/, /getBoundingClientRect/, /pitch/i])
     assert.doesNotMatch(than, cam, `đường dịch con trỏ không được dùng ${cam}`);
   assert.match(than + "\n const g = Math.abs(1);\n", /Math\.abs/, "luật không bắt được đột biến");
@@ -1346,4 +1355,72 @@ test("4B.3 kiến trúc: trường độ đang cầm là TRẠNG THÁI CÔNG C�
   // Mặt tiền là chỗ DUY NHẤT quyết định giữa hai chế độ.
   const facade = stripComments(src("nhipphach/editor/commandFacade.ts"));
   assert.match(facade, /if \(fields\.kind === "rest"\)\s*\n?\s*return \{ kind: "toolState"/);
+});
+
+// ══ 12. Chọn nhiều · chép · dán (Giai đoạn 4C) ═════════════════════════════
+
+test("4C bản khắc: đoạn vừa dán vẽ ra được, có danh tính, ←→ đi tới được", () => {
+  const FIX = readFileSync(
+    new URL("../nhipphach-edit/fixtures/note-entry.musicxml", import.meta.url),
+    "utf8"
+  );
+  const P = (m: number, c: number) => `/score-partwise/part[1]/measure[${m}]/*[${c}]`;
+  // Dựng câu bốn móc đơn rồi dán lại vào lặng trắng ngay sau nó.
+  let d = createDraft(FIX);
+  let path = P(1, 2);
+  for (const step of ["C", "D", "E", "F"]) {
+    d = applyToDraft(d, {
+      type: "InsertNoteIntoRest",
+      path,
+      pitch: { step, alter: 0, octave: 5 },
+      noteType: "eighth",
+      dots: 0,
+      accidental: "auto",
+    } as never);
+    const ds = tagSourceIds(d.xml).notes;
+    path = ds[ds.findIndex((n) => n.path === path) + 1].path;
+  }
+  const cb = chepDoan(d.xml, [P(1, 2), P(1, 3), P(1, 4), P(1, 5)]);
+  d = applyToDraft(d, { type: "PasteSequence", path: P(1, 6), items: cb.items } as never);
+
+  const t = tagSourceIds(d.xml);
+  const svg = parse(renderer.render(t.xml, SETTINGS).pages.map((p) => p.svg).join(""));
+  // Tám móc đơn đều có mặt trên bản khắc, mang đúng id vị trí.
+  for (let c = 2; c <= 9; c++)
+    assert.equal(byId(svg, `tva-src-p1-m1-c${c}`)?.getAttribute("class"), "note", `con ${c}`);
+  const thieu = t.notes.filter((n) => n.noteType && !byId(svg, n.svgId)).map((n) => n.svgId);
+  assert.deepEqual(thieu, []);
+  // Và bàn phím đi qua cả tám bằng THỨ TỰ TÀI LIỆU.
+  const ds = dsDiDuoc(t.notes);
+  let caret = caretTaiId(ds, "tva-src-p1-m1-c2")!;
+  for (let c = 3; c <= 9; c++) {
+    caret = diChuyen(ds, caret, "next")!;
+    assert.equal(caret.sourceId, `tva-src-p1-m1-c${c}`);
+  }
+});
+
+test("4C kiến trúc: bảng ghi tạm không biết XML thô, không biết Verovio, không biết React", () => {
+  const cb = stripComments(src("nhipphach/edit/clipboard.ts"));
+  for (const cam of [/verovio/i, /supabase|fetch\(/i, /useState|useEffect/, /getBoundingClientRect|clientX/])
+    assert.doesNotMatch(cb, cam, String(cam));
+  // Nó ĐƯỢC phép đọc XML (chép là đọc), nhưng tuyệt đối không ghi.
+  for (const cam of [/applyPatches/, /TextPatch/, /serialize\(/])
+    assert.doesNotMatch(cb, cam, `chép không được ghi: ${cam}`);
+  assert.match(cb + "\nconst p = applyPatches(x, []);\n", /applyPatches/, "luật không bắt được đột biến");
+});
+
+test("4C trang: chọn vùng và chép KHÔNG đi qua đường áp lệnh", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Hai nhánh này phải thoát TRƯỚC khi chạm `apLenh`.
+  const iChon = page.indexOf('action.type === "EXTEND_SELECTION"');
+  const iChep = page.indexOf('action.type === "COPY"');
+  const iLenh = page.indexOf("apLenh(ra.command)");
+  assert.ok(iChon > 0 && iChep > 0 && iLenh > 0);
+  assert.ok(iChon < iLenh && iChep < iLenh, "chọn/chép phải nằm trước lúc áp lệnh");
+  // Vùng chọn mở rộng bằng `moRong`, và danh sách đọc từ nháp đồng bộ.
+  assert.match(page, /moRong\(ds, vungChonRef\.current, action\.where\)/);
+  assert.match(page, /const ds = dsSauLenh\(\);\s*\n\s*const moi = moRong/);
+  // Đường chép dùng CHÍNH hàm mà tô sáng dùng — nhìn thấy gì thì chép cái đó.
+  assert.match(page, /idDangChon\(vungChonRef\.current, ds\)/);
+  assert.match(page, /const ids = idDangChon\(vungChon, notDiDuoc\)/);
 });

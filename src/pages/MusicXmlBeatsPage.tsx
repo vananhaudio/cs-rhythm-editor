@@ -77,12 +77,14 @@ import type { EditorAction } from "../nhipphach/editor/actions";
 import { dispatch } from "../nhipphach/editor/dispatcher";
 import { toCommand } from "../nhipphach/editor/commandFacade";
 import { NHAP_BAN_DAU, datTruongDo, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
+import { chepDoan } from "../nhipphach/edit/clipboard";
+import type { Clipboard } from "../nhipphach/edit/clipboard";
 import type { EntryDuration, NoteEntryState } from "../nhipphach/editor/noteEntry";
 import { theoDoi } from "../nhipphach/edit/draftIdentity";
 import type { DraftIdentity } from "../nhipphach/edit/draftIdentity";
 import { STEPS } from "../nhipphach/edit/commands";
 import type { Step } from "../nhipphach/edit/commands";
-import { caretTaiId, chonMot, diChuyen, dsDiDuoc, RONG } from "../nhipphach/editor/caret";
+import { caretTaiId, chonMot, diChuyen, dsDiDuoc, idDangChon, moRong, RONG } from "../nhipphach/editor/caret";
 import type { ScoreSelection } from "../nhipphach/editor/caret";
 import { saveDraftAsVersion } from "../nhipphach/edit/versionSave";
 import type { ValidationReport } from "../nhipphach/edit/validation";
@@ -238,6 +240,12 @@ export default function MusicXmlBeatsPage({
    * chứ không phải state vì nó không vẽ ra gì, và vì cùng lý do đồng bộ ở trên.
    */
   const nhapNotRef = useRef<NoteEntryState>(NHAP_BAN_DAU);
+  /**
+   * Bảng ghi tạm — Giai đoạn 4C. Ref để một tràng phím đọc được ngay, state chỉ
+   * để hiện ra. Nó KHÔNG phải một bản nhạc thứ hai: chỉ có cao độ và trường độ.
+   */
+  const ghiTamRef = useRef<Clipboard | null>(null);
+  const [ghiTam, setGhiTam] = useState<Clipboard | null>(null);
   /** Bản hiện ra của trường độ đang cầm — chỉ để thanh công cụ vẽ, không phải nguồn sự thật. */
   const [truongDoNhap, setTruongDoNhap] = useState<EntryDuration>(NHAP_BAN_DAU.currentDuration);
   const [hienPhimTat, setHienPhimTat] = useState(false);
@@ -480,28 +488,6 @@ export default function MusicXmlBeatsPage({
     else setNotChon(null);
     if (r.kind !== "note") datVungChon(RONG);
   }
-  // Tô sáng là lớp trình bày: chỉ thêm/bớt class trên SVG đang hiện.
-  useEffect(() => {
-    const root = prevBody.current;
-    if (!root) return;
-    for (const el of Array.from(root.querySelectorAll(".np-note-selected")))
-      el.classList.remove("np-note-selected");
-    const svgId =
-      notChon?.kind === "note"
-        ? notChon.note.svgId
-        : notChon?.kind === "lyric"
-          ? notChon.lyric.svgId
-          : notChon?.kind === "harmony"
-            ? notChon.harmony.svgId
-            : null;
-    if (chonNot && svgId) {
-      const els = Array.from(root.querySelectorAll(`[id="${svgId}"]`));
-      for (const el of els) el.classList.add("np-note-selected");
-      // Con trỏ chạy ra ngoài khung thì kéo nó vào — "nearest" để trang không
-      // giật lên giật xuống mỗi lần bấm mũi tên.
-      els[0]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-    }
-  }, [chonNot, notChon, score]);
   // Đổi bản nhạc là bỏ chọn và bỏ nháp.
   useEffect(() => {
     setNotChon(null);
@@ -565,6 +551,37 @@ export default function MusicXmlBeatsPage({
     () => (score ? dsDiDuoc(score.sourceNotes, score.unresolvedNotes) : []),
     [score]
   );
+  // Tô sáng là lớp trình bày: chỉ thêm/bớt class trên SVG đang hiện.
+  useEffect(() => {
+    const root = prevBody.current;
+    if (!root) return;
+    for (const el of Array.from(root.querySelectorAll(".np-note-selected")))
+      el.classList.remove("np-note-selected");
+    const svgId =
+      notChon?.kind === "note"
+        ? notChon.note.svgId
+        : notChon?.kind === "lyric"
+          ? notChon.lyric.svgId
+          : notChon?.kind === "harmony"
+            ? notChon.harmony.svgId
+            : null;
+    if (!chonNot) return;
+    // 4C: tô sáng CẢ VÙNG, không chỉ đầu chạy. Danh sách id lấy từ chính
+    // `idDangChon` — cùng một hàm mà lệnh chép dùng, nên thứ thầy nhìn thấy
+    // đúng bằng thứ sẽ được chép.
+    const ids = idDangChon(vungChon, notDiDuoc);
+    const canTo = ids.length ? ids : svgId ? [svgId] : [];
+    let dauTien: Element | null = null;
+    for (const id of canTo)
+      for (const el of Array.from(root.querySelectorAll(`[id="${id}"]`))) {
+        el.classList.add("np-note-selected");
+        dauTien ??= el;
+      }
+    // Con trỏ chạy ra ngoài khung thì kéo nó vào — "nearest" để trang không
+    // giật lên giật xuống mỗi lần bấm mũi tên.
+    (dauTien as HTMLElement | null)?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [chonNot, notChon, score, vungChon, notDiDuoc]);
+
   /** Ô của nốt dưới con trỏ — thanh công cụ và mặt tiền lệnh cùng đọc từ đây. */
   const truongCaret = useMemo(() => {
     const id = vungChon.caret?.sourceId;
@@ -593,6 +610,36 @@ export default function MusicXmlBeatsPage({
       }
       return;
     }
+    // ── 4C: vùng chọn và bảng ghi tạm — không lệnh nào, không chạm bản nhạc ──
+    if (action.type === "EXTEND_SELECTION") {
+      const ds = dsSauLenh();
+      const moi = moRong(ds, vungChonRef.current, action.where);
+      if (moi === vungChonRef.current) return;
+      datVungChon(moi);
+      const nt = ds[moi.caret!.sourceIndex];
+      if (nt) setNotChon({ kind: "note", note: nt });
+      return;
+    }
+    if (action.type === "COPY") {
+      const xml = nhapRef.current?.xml ?? source?.xml;
+      const ds = dsSauLenh();
+      const paths = idDangChon(vungChonRef.current, ds)
+        .map((id) => ds.find((n) => n.svgId === id)?.path)
+        .filter((p): p is string => !!p);
+      if (!xml || !paths.length) {
+        setNhapNote("Chưa chọn đoạn nào để chép.");
+        return;
+      }
+      try {
+        const cb = chepDoan(xml, paths);
+        ghiTamRef.current = cb;
+        setGhiTam(cb);
+        setNhapNote(`Đã chép ${cb.mo}.`);
+      } catch (e) {
+        setNhapNote(e instanceof Error ? e.message : "Chưa chép được đoạn này.");
+      }
+      return;
+    }
     if (action.type === "UNDO") {
       datNganXep(hoanTacNhap);
       return;
@@ -617,7 +664,7 @@ export default function MusicXmlBeatsPage({
     // cao độ cũ, và lệnh thứ hai sẽ tính lại từ đúng chỗ cũ ấy.
     const xmlBayGio = nhapRef.current?.xml ?? source?.xml ?? null;
     const truong = xmlBayGio ? readNoteFields(xmlBayGio, note.path) : truongCaret;
-    const ra = toCommand(action, note.path, truong, nhapNotRef.current);
+    const ra = toCommand(action, note.path, truong, nhapNotRef.current, ghiTamRef.current);
     if (ra.kind === "refused") {
       setNhapNote(ra.message);
       return;
@@ -644,6 +691,20 @@ export default function MusicXmlBeatsPage({
     // NHẬP LIÊN TỤC: nhập xong một nốt thì con trỏ tự sang phần tử kế tiếp, để
     // gõ `C D E F G` là ra năm nốt. Chỉ ENTER_PITCH mới tự chạy — sửa cao độ hay
     // trường độ thì người ta còn muốn sửa tiếp chính nốt ấy.
+    if (action.type === "PASTE") {
+      // Vùng chọn chuyển sang chính đoạn vừa dán — thầy thấy ngay mình vừa đặt
+      // cái gì xuống đâu, và gõ tiếp được luôn.
+      const ds = dsSauLenh();
+      const dau = ds.findIndex((n) => n.svgId === vungChonRef.current.caret?.sourceId);
+      const so = (cmd as { items?: readonly unknown[] }).items?.length ?? 0;
+      const cuoi = Math.min(dau + so - 1, ds.length - 1);
+      if (dau >= 0 && cuoi > dau)
+        datVungChon({
+          anchor: { sourceId: ds[dau].svgId, sourceIndex: dau },
+          caret: { sourceId: ds[cuoi].svgId, sourceIndex: cuoi },
+        });
+      return;
+    }
     if (action.type === "ENTER_PITCH") {
       // Đọc LẠI sau khi áp lệnh: chính lệnh vừa rồi có thể vừa thêm dấu lặng.
       const ds = dsSauLenh();
@@ -692,23 +753,48 @@ export default function MusicXmlBeatsPage({
     if (sau.identity !== truoc.identity) doiChoCaret(truoc.identity, sau.identity);
   }
 
-  /** Con trỏ bám theo sự kiện cũ sau khi cấu trúc ô nhịp đổi. */
+  /**
+   * Con trỏ VÀ NEO bám theo sự kiện cũ sau khi cấu trúc ô nhịp đổi.
+   *
+   * Phải dịch cả hai đầu: 4C cho chọn nhiều nốt, và nếu chỉ dịch đầu chạy thì
+   * sau một lần hoàn tác, neo còn trỏ vào chỗ ngồi cũ và vùng chọn loang sang
+   * những sự kiện thầy không hề chọn — đo được trên trình duyệt.
+   */
   function doiChoCaret(truoc: DraftIdentity, sau: DraftIdentity) {
+    const theo = (id: string | undefined) => {
+      const cho = id ? parseSourceSvgId(id) : null;
+      if (!cho) return null;
+      const moi = theoDoi(truoc, sau, {
+        partIndex: cho.partIndex,
+        measureIndex: cho.measureIndex,
+        childIndex: cho.childIndex,
+      });
+      return moi ? sourceSvgId(moi.partIndex, moi.measureIndex, moi.childIndex) : null;
+    };
     const id = vungChonRef.current.caret?.sourceId;
-    const cho = id ? parseSourceSvgId(id) : null;
-    if (!cho) return;
-    const moi = theoDoi(
-      truoc,
-      sau,
-      { partIndex: cho.partIndex, measureIndex: cho.measureIndex, childIndex: cho.childIndex }
-    );
+    const idNeo = vungChonRef.current.anchor?.sourceId;
+    const idMoi = theo(id);
+    const idNeoMoi = theo(idNeo);
     // Sự kiện bị bỏ đi thì nói thật là mất chỗ, KHÔNG nhảy sang cái gần nhất.
-    if (!moi) {
+    if (!idMoi || !idNeoMoi) {
       datVungChon(RONG);
       setNotChon(null);
       return;
     }
-    const idMoi = sourceSvgId(moi.partIndex, moi.measureIndex, moi.childIndex);
+    if (idMoi !== id || idNeoMoi !== idNeo) {
+      const ds = dsSauLenh();
+      const iNeo = ds.findIndex((n) => n.svgId === idNeoMoi);
+      const iDau = ds.findIndex((n) => n.svgId === idMoi);
+      if (iNeo >= 0 && iDau >= 0 && iNeo !== iDau) {
+        datVungChon({
+          anchor: { sourceId: idNeoMoi, sourceIndex: iNeo },
+          caret: { sourceId: idMoi, sourceIndex: iDau },
+        });
+        const nt = ds[iDau];
+        if (nt) setNotChon({ kind: "note", note: nt });
+        return;
+      }
+    }
     if (idMoi === id) return;
     datVungChon(chonMot({ sourceId: idMoi, sourceIndex: -1 }));
     // Ô thông tin đọc từ `notChon`, nên nó phải đi cùng — để hai chỗ không nói

@@ -451,7 +451,29 @@ test("xem trước: nháp khắc bằng cùng bộ khắc; id nguồn giữ nguy
 });
 
 // ── File thật của Thầy ────────────────────────────────────────────────────────
-test("file thật (14 trang): mỗi lệnh vá đúng một chỗ, dưới 500 ms, qua đủ bốn tầng", { skip: !existsSync(REAL) && "không có file thật trên máy này" }, async () => {
+/**
+ * PERFORMANCE-FLAKY-001 — ngưỡng 500 ms KHÔNG còn là cổng đúng-sai.
+ *
+ * Đo được ngày 16/09/2026: chính bài này đỏ 2/3 lần trên một bản checkout SẠCH
+ * của HEAD, trong khi máy đang chạy Supabase local, Chrome và các lượt build
+ * nối nhau. Tức là nó không đo mã, nó đo máy đang bận tới đâu — và một cổng
+ * phát hành như thế thì hoặc chặn oan, hoặc bị bỏ qua cho quen.
+ *
+ * Nên phần ĐÚNG-SAI của bài này giữ nguyên (mỗi lệnh chỉ vá đúng một chỗ, đi
+ * đủ bốn tầng); phần thời gian chuyển thành GHI NHẬN: in con số ra để còn thấy
+ * xu hướng, và chỉ còn một trần rộng để bắt hồi quy thật sự (chậm gấp hàng
+ * chục lần), không bắt cái máy đang bận.
+ */
+const TRAN_CHAM = 10_000;
+const ghiNhanDo = (ten: string, ms: number) => {
+  console.log(`    · ${ten}: ${ms.toFixed(0)} ms (PERFORMANCE-FLAKY-001 — ghi nhận, không chặn)`);
+  assert.ok(
+    ms < TRAN_CHAM,
+    `${ten} mất ${ms.toFixed(0)} ms — chậm tới mức này là hồi quy thật, không phải máy bận`
+  );
+};
+
+test("file thật (14 trang): mỗi lệnh vá đúng một chỗ, qua đủ bốn tầng", { skip: !existsSync(REAL) && "không có file thật trên máy này" }, async () => {
   const xml = readFileSync(REAL, "utf8");
   const notes = tagSourceIds(xml).notes;
   const coLoi = notes.find((n) => (readNoteFields(xml, n.path)?.lyrics.length ?? 0) > 0)!;
@@ -459,11 +481,11 @@ test("file thật (14 trang): mỗi lệnh vá đúng một chỗ, dưới 500 m
   const pitchMoi = { step: coPitch.pitch!.step as Step, alter: coPitch.pitch!.alter === 0 ? 1 : 0, octave: coPitch.pitch!.octave };
   let t = performance.now();
   const a = applyCommand(xml, { type: "ChangeLyricText", path: coLoi.path, lyricIndex: 1, text: "Cơn" });
-  assert.ok(performance.now() - t < 500);
+  ghiNhanDo("sửa lời", performance.now() - t);
   assertScoped(xml, a.xml, coLoi.path);
   t = performance.now();
   const b = applyCommand(xml, { type: "ChangePitch", path: coPitch.path, pitch: pitchMoi });
-  assert.ok(performance.now() - t < 500);
+  ghiNhanDo("sửa cao độ", performance.now() - t);
   assertScoped(xml, b.xml, coPitch.path);
   const r = await createAnnotatedScoreRenderer();
   try {

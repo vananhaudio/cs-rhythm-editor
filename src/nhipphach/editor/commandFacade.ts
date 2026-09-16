@@ -4,6 +4,7 @@ import { transposeSemitone, pitchName, samePitch, withAlter } from "../edit/pitc
 import type { EditorAction } from "./actions.ts";
 import { capDoNhap } from "./noteEntry.ts";
 import type { EntryDuration, NoteEntryState } from "./noteEntry.ts";
+import type { Clipboard } from "../edit/clipboard.ts";
 
 /**
  * Ý ĐỊNH → LỆNH — Giai đoạn 4A.
@@ -18,6 +19,7 @@ import type { EntryDuration, NoteEntryState } from "./noteEntry.ts";
  *   TOGGLE_DOT    → ChangeDurationAndRebalance (4B.2)
  *   RESPELL       → RespellNote
  *   MAKE_REST     → MakeRest            (4B.1)
+ *   PASTE         → PasteSequence       (4C, một lệnh = một lần hoàn tác)
  *   ENTER_PITCH   → ReplaceRestWithNote  khi trường độ đang cầm bằng đúng dấu
  *                                        lặng đích (4B.1, không đụng cấu trúc)
  *                 → InsertNoteIntoRest   mọi trường hợp còn lại (4B.3)
@@ -47,9 +49,19 @@ export function toCommand(
   action: EditorAction,
   path: string,
   fields: NoteFields | null,
-  nhap?: NoteEntryState
+  nhap?: NoteEntryState,
+  /** Bảng ghi tạm — chỉ `PASTE` cần. 4C. */
+  ghiTam?: Clipboard | null
 ): FacadeResult {
-  if (action.type === "MOVE" || action.type === "UNDO" || action.type === "REDO")
+  // Ba hành động này chỉ đụng con trỏ hoặc ngăn xếp, không phải bản nhạc; và
+  // hai hành động 4C dưới đây chỉ đụng vùng chọn / bảng ghi tạm. Trang tự lo.
+  if (
+    action.type === "MOVE" ||
+    action.type === "UNDO" ||
+    action.type === "REDO" ||
+    action.type === "EXTEND_SELECTION" ||
+    action.type === "COPY"
+  )
     return { kind: "noop" };
   if (!fields) return tuChoi("Chưa chọn nốt nào trên bản nhạc.");
 
@@ -161,6 +173,15 @@ export function toCommand(
             kind: "command",
             command: { type: "InsertNoteIntoRest", path, pitch, noteType, dots, accidental: "auto" },
           };
+    }
+    case "PASTE": {
+      if (!ghiTam?.items.length) return tuChoi("Chưa chép đoạn nào.");
+      if (fields.kind !== "rest")
+        return tuChoi("Chỗ dán phải là một dấu lặng — xoá thành lặng (phím 0) trước đã.");
+      if (fields.khuongTab) return tuChoi("Chưa hỗ trợ dán vào khuông TAB.");
+      if (fields.laLangCaO)
+        return tuChoi("Đây là dấu lặng cả ô nhịp — chưa hỗ trợ dán vào đây.");
+      return { kind: "command", command: { type: "PasteSequence", path, items: ghiTam.items } };
     }
     case "RESPELL": {
       if (!fields.pitch) return tuChoi("Chỗ này không có cao độ để đổi cách ghi.");

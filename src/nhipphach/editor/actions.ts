@@ -31,6 +31,15 @@ export type EditorAction =
   | { type: "MAKE_REST" }
   /** Gõ một chữ cái A–G để nhập nốt vào chỗ lặng. Quãng tám do `noteEntry` quyết. */
   | { type: "ENTER_PITCH"; step: Step }
+  /**
+   * Mở rộng vùng chọn về một phía — Giai đoạn 4C. Neo đứng yên, đầu chạy đi.
+   * KHÔNG sinh lệnh: chọn nhiều nốt chưa phải là sửa gì cả.
+   */
+  | { type: "EXTEND_SELECTION"; where: "next" | "prev" }
+  /** Chép vùng chọn vào bảng ghi tạm. Tuyệt đối không đụng bản nhạc. */
+  | { type: "COPY" }
+  /** Dán vào chỗ lặng dưới con trỏ. */
+  | { type: "PASTE" }
   | { type: "UNDO" }
   | { type: "REDO" };
 
@@ -41,6 +50,10 @@ export const laDieuHuong = (a: EditorAction): a is { type: "MOVE"; where: MoveWh
 /** Hành động thuộc về ngăn xếp nháp, không phải về một nốt cụ thể. */
 export const laNganXep = (a: EditorAction) => a.type === "UNDO" || a.type === "REDO";
 
+/** Hành động chỉ đụng VÙNG CHỌN hoặc bảng ghi tạm — không bao giờ sửa bản nhạc. */
+export const laChonHoacChep = (a: EditorAction) =>
+  a.type === "EXTEND_SELECTION" || a.type === "COPY";
+
 /** Tên tiếng Việt để hiện trên nút và trong thông báo. */
 export const TEN_HANH_DONG: Record<EditorAction["type"], string> = {
   MOVE: "Di chuyển",
@@ -50,6 +63,9 @@ export const TEN_HANH_DONG: Record<EditorAction["type"], string> = {
   RESPELL: "Đổi cách ghi",
   SET_ALTER: "Đổi dấu hoá",
   MAKE_REST: "Chuyển thành lặng",
+  EXTEND_SELECTION: "Mở rộng vùng chọn",
+  COPY: "Chép",
+  PASTE: "Dán",
   ENTER_PITCH: "Nhập nốt",
   UNDO: "Hoàn tác",
   REDO: "Làm lại",

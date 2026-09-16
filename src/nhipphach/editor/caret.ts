@@ -36,13 +36,49 @@ export const RONG: ScoreSelection = { caret: null, anchor: null };
 /** Chọn đúng một nốt: neo trùng đầu chạy. */
 export const chonMot = (caret: ScoreCaret): ScoreSelection => ({ caret, anchor: caret });
 
-/** Danh sách nốt đang được chọn, theo thứ tự tài liệu. 4A luôn trả 0 hoặc 1. */
+/**
+ * Danh sách nốt đang được chọn, theo thứ tự tài liệu.
+ *
+ * Tra lại vị trí TỪ ID, không tin `sourceIndex`. Lý do đo được trên trình
+ * duyệt: sửa cấu trúc (dán, hoàn tác một lệnh dán) làm số sự kiện đổi, nên chỗ
+ * ngồi cũ trỏ sang chỗ khác — và vùng chọn lặng lẽ loang sang những sự kiện
+ * thầy không hề chọn. `sourceIndex` chỉ còn là đường tắt để đi tới/lui cho
+ * nhanh; ID mới là sự thật, đúng như chú thích của `ScoreCaret` đã nói.
+ *
+ * Một đầu biến mất (sự kiện bị hoàn tác đi) thì trả về rỗng: nói thật là mất
+ * vùng chọn, chứ không đoán lấy phần còn lại.
+ */
 export function idDangChon(sel: ScoreSelection, notes: readonly SourceNote[]): string[] {
   if (!sel.caret || !sel.anchor) return [];
-  const a = Math.min(sel.anchor.sourceIndex, sel.caret.sourceIndex);
-  const b = Math.max(sel.anchor.sourceIndex, sel.caret.sourceIndex);
-  return notes.slice(a, b + 1).map((n) => n.svgId);
+  const i = notes.findIndex((n) => n.svgId === sel.anchor!.sourceId);
+  const j = notes.findIndex((n) => n.svgId === sel.caret!.sourceId);
+  if (i < 0 || j < 0) return [];
+  return notes.slice(Math.min(i, j), Math.max(i, j) + 1).map((n) => n.svgId);
 }
+
+/**
+ * Mở rộng / co vùng chọn — Giai đoạn 4C.
+ *
+ * NEO đứng yên, chỉ ĐẦU CHẠY nhúc nhích: đó là quy ước của mọi trình soạn thảo
+ * và là lý do `anchor` đã được tách khỏi `caret` từ 4A. Đi theo THỨ TỰ TÀI LIỆU,
+ * không một dòng hình học nào.
+ *
+ * Hết đường thì đứng im, KHÔNG cuộn vòng: cuộn vòng làm người ta mất dấu vùng
+ * mình đang chọn.
+ */
+export function moRong(
+  notes: readonly SourceNote[],
+  sel: ScoreSelection,
+  where: "next" | "prev"
+): ScoreSelection {
+  if (!sel.caret || !sel.anchor) return sel;
+  const dau = diChuyen(notes, sel.caret, where);
+  return dau ? { anchor: sel.anchor, caret: dau } : sel;
+}
+
+/** Vùng chọn có nhiều hơn một sự kiện không. */
+export const nhieuHonMot = (sel: ScoreSelection) =>
+  !!sel.caret && !!sel.anchor && sel.caret.sourceIndex !== sel.anchor.sourceIndex;
 
 /**
  * Nốt nào đi được. Nốt nguồn mà bản khắc không vẽ ra (lặng cả ô — Verovio không

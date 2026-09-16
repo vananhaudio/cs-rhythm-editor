@@ -10,6 +10,7 @@
 import type { AccidentalChoice } from "./accidentals.ts";
 import type { NoteType } from "./durationModel.ts";
 import type { HarmonyValue } from "./harmonyModel.ts";
+import type { ClipboardItem } from "./clipboard.ts";
 
 export type Step = "A" | "B" | "C" | "D" | "E" | "F" | "G";
 export const STEPS: readonly Step[] = ["C", "D", "E", "F", "G", "A", "B"];
@@ -162,6 +163,25 @@ export interface InsertNoteIntoRest {
   accidental?: AccidentalChoice;
 }
 
+/**
+ * Dán một đoạn vào chuỗi dấu lặng — Giai đoạn 4C.
+ *
+ * MỘT lệnh, nên MỘT ô trong ngăn xếp: thầy bấm Ctrl+Z một lần là cả đoạn vừa
+ * dán biến đi, không phải gỡ từng nốt. Bên trong nó chạy lần lượt đúng những
+ * lệnh đã có — `InsertNoteIntoRest` (4B.3) cho từng nốt và
+ * `ChangeDurationAndRebalance` (4B.2) cho từng dấu lặng — nên không có bộ máy
+ * thời gian, bộ phân rã dấu lặng hay lược đồ danh tính nào mới.
+ *
+ * Hỏng ở bất kỳ bước nào thì KHÔNG một byte nào được ghi: cả chuỗi chạy trên
+ * bản nháp tạm, chỉ khi xong hết mới trả về.
+ */
+export interface PasteSequence {
+  type: "PasteSequence";
+  /** Dấu lặng đầu tiên của vùng đích. Các sự kiện sau đi tiếp theo thứ tự tài liệu. */
+  path: string;
+  items: readonly ClipboardItem[];
+}
+
 export type MusicXmlEditCommand =
   | ChangePitch
   | RespellNote
@@ -171,7 +191,8 @@ export type MusicXmlEditCommand =
   | MakeRest
   | ReplaceRestWithNote
   | ChangeDurationAndRebalance
-  | InsertNoteIntoRest;
+  | InsertNoteIntoRest
+  | PasteSequence;
 
 /** Nhóm công cụ (mục 2 của spec) — để panel biết lệnh thuộc nhóm nào. */
 export const COMMAND_GROUP: Record<
@@ -187,6 +208,7 @@ export const COMMAND_GROUP: Record<
   ReplaceRestWithNote: "note",
   ChangeDurationAndRebalance: "note",
   InsertNoteIntoRest: "note",
+  PasteSequence: "note",
 };
 
 export const CHANGE_NOTE_MAX = 300;
@@ -202,6 +224,7 @@ const MO_TA: Record<MusicXmlEditCommand["type"], (n: number) => string> = {
   ReplaceRestWithNote: (n) => `nhập ${n} nốt vào chỗ lặng`,
   ChangeDurationAndRebalance: (n) => `sửa trường độ ${n} nốt (cân lại ô nhịp)`,
   InsertNoteIntoRest: (n) => `nhập ${n} nốt (cân lại chỗ lặng)`,
+  PasteSequence: (n) => `dán ${n} đoạn nhạc`,
 };
 const KHOA = (c: MusicXmlEditCommand) =>
   c.type === "ChangeLyricText" ? `${c.path}#${c.lyricIndex}` : c.path;

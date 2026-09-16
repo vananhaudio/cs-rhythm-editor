@@ -72,6 +72,13 @@ export const KEYMAP: readonly KeyBinding[] = [
   // ── Cách ghi (Smoosic editorKeys: Shift+E toggleEnharmonic) ──────────────
   { key: "E", shift: true, action: { type: "RESPELL" }, mo: "Đổi cách ghi (G♯ ↔ A♭)" },
 
+  // ── Vùng chọn và bảng ghi tạm (4C) ──────────────────────────────────────
+  // Shift+mũi tên là quy ước chung của mọi trình soạn thảo, Smoosic cũng vậy.
+  { key: "ArrowRight", shift: true, action: { type: "EXTEND_SELECTION", where: "next" }, mo: "Mở rộng vùng chọn sang phải" },
+  { key: "ArrowLeft", shift: true, action: { type: "EXTEND_SELECTION", where: "prev" }, mo: "Mở rộng vùng chọn sang trái" },
+  { key: "c", ctrl: true, action: { type: "COPY" }, mo: "Chép đoạn đang chọn" },
+  { key: "v", ctrl: true, action: { type: "PASTE" }, mo: "Dán vào chỗ lặng" },
+
   // ── Xoá thành lặng (4B.1) ────────────────────────────────────────────────
   // Delete/Backspace là phản xạ của mọi người; `0` là quy ước MuseScore cho dấu
   // lặng; `R` là quy ước Smoosic. Bốn lối vào cùng MỘT nghĩa, và nghĩa ấy là
@@ -133,6 +140,8 @@ function cungHanhDong(a: EditorAction, b: EditorAction): boolean {
       return a.alter === (b as typeof a).alter;
     case "ENTER_PITCH":
       return a.step === (b as typeof a).step;
+    case "EXTEND_SELECTION":
+      return a.where === (b as typeof a).where;
     default:
       return true;
   }

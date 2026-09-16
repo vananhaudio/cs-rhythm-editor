@@ -8,6 +8,7 @@ import type {
   ChangePitch,
   MakeRest,
   MusicXmlEditCommand,
+  PasteSequence,
   Pitch,
   ReplaceRestWithNote,
   RespellNote,
@@ -19,6 +20,7 @@ import { decideAccidental } from "./accidentals.ts";
 import { coTheChum, durationFor, isNoteType, NOTE_TYPES } from "./durationModel.ts";
 import type { NoteType } from "./durationModel.ts";
 import { lapKhoangTrong, quartersOf, RestFillError } from "./restFill.ts";
+import type { ClipboardItem } from "./clipboard.ts";
 import { musicXMLToBeatMap } from "../../musicxml-beats/beatMap.ts";
 import { parseMusicXML } from "../../musicxml-beats/parser.ts";
 import { ZERO, add, compare, rational, sub } from "../../musicxml-beats/rational.ts";
@@ -921,7 +923,100 @@ function insertNoteIntoRest(
   );
 }
 
+/**
+ * Sự kiện đứng NGAY SAU `path` trong cùng ô nhịp, bỏ qua những phần tử không
+ * chiếm thời gian. `null` khi hết ô — dán không bao giờ tràn qua vạch nhịp.
+ */
+function sauDo(xml: string, path: string): string | null {
+  const m = SOURCE_PATH.exec(path);
+  if (!m) return null;
+  const doc = parseStrict(xml);
+  const note = resolveSourcePath(doc, path);
+  if (!note) return null;
+  const anhEm = elementChildren(note.parentNode as Element);
+  for (let i = +m[3]; i < anhEm.length; i++) {
+    const ten = anhEm[i].localName ?? "";
+    if (KHONG_CHIEM_THOI_GIAN.has(ten)) continue;
+    if (ten !== "note") return null;
+    return `/score-partwise/part[${m[1]}]/measure[${m[2]}]/*[${i + 1}]`;
+  }
+  return null;
+}
+
+/** Một món trong bảng ghi tạm → đúng lệnh đã có sẵn để ghi nó ra. */
+const lenhChoMon = (path: string, mon: ClipboardItem): MusicXmlEditCommand =>
+  mon.kind === "note"
+    ? {
+        type: "InsertNoteIntoRest",
+        path,
+        pitch: mon.pitch,
+        noteType: mon.noteType,
+        dots: mon.dots,
+        accidental: "auto",
+      }
+    : { type: "ChangeDurationAndRebalance", path, noteType: mon.noteType, dots: mon.dots };
+
+/**
+ * Dán cả đoạn — Giai đoạn 4C.
+ *
+ * Chạy lần lượt trên MỘT bản nháp tạm; chỉ khi cả chuỗi xong mới trả về. Hỏng
+ * giữa chừng thì ném ra và người gọi không nhận được gì — không có nửa vời.
+ *
+ * Mỗi bước tự định vị lại tài liệu (chèn dấu lặng làm chỉ số con dịch), rồi đi
+ * tới sự kiện kế bằng THỨ TỰ TÀI LIỆU. Không toạ độ, không đoán.
+ */
+function pasteSequence(xml: string, cmd: PasteSequence): AppliedCommand {
+  if (!cmd.items.length)
+    throw new EditError("PASTE_EMPTY", "Bảng ghi tạm đang trống.");
+  let hienTai = xml;
+  let path: string | null = cmd.path;
+  const structural: StructuralDelta[] = [];
+  const touched: string[] = [];
+  for (const [i, mon] of cmd.items.entries()) {
+    if (!path)
+      throw new EditError(
+        "PASTE_INSUFFICIENT_SPACE",
+        "Không đủ khoảng trống để dán trọn đoạn này."
+      );
+    const truoc = readNoteContext(parseStrict(hienTai), path);
+    if (!truoc)
+      throw new EditError("PASTE_INSUFFICIENT_SPACE", "Không đủ khoảng trống để dán trọn đoạn này.");
+    if (truoc.kind !== "rest")
+      // Gặp nốt thật ở ngay chỗ bắt đầu là chọn nhầm đích; gặp ở giữa chừng là
+      // đoạn dài hơn khoảng trống có sẵn. Hai chuyện khác nhau, hai câu khác nhau.
+      throw i === 0
+        ? new EditError(
+            "PASTE_NOT_A_REST",
+            "Chỗ dán phải là một dấu lặng — xoá thành lặng (phím 0) trước đã."
+          )
+        : new EditError(
+            "PASTE_INSUFFICIENT_SPACE",
+            "Không đủ khoảng trống để dán trọn đoạn này."
+          );
+    let r: AppliedCommand;
+    try {
+      r = applyCommand(hienTai, lenhChoMon(path, mon));
+    } catch (e) {
+      // Câu của lệnh con nói về "nhập một nốt"; ở đây phải nói về việc DÁN.
+      if (e instanceof EditError && e.code === "EDIT_REBALANCE_NO_SPACE")
+        throw new EditError(
+          "PASTE_INSUFFICIENT_SPACE",
+          "Không đủ khoảng trống để dán trọn đoạn này."
+        );
+      throw e;
+    }
+    hienTai = r.xml;
+    structural.push(...r.structural);
+    touched.push(...r.touched);
+    path = sauDo(hienTai, path);
+  }
+  return { xml: hienTai, changed: hienTai !== xml, touched, structural };
+}
+
 export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedCommand {
+  // Lệnh ghép chạy trên nhiều lượt định vị nên đi đường riêng, TRƯỚC khi tài
+  // liệu được `locate` một lần cho các lệnh đơn.
+  if (cmd.type === "PasteSequence") return pasteSequence(xml, cmd);
   const located = locate(xml);
   const target = resolveSourcePath(located.doc, cmd.path);
   if (!target)
