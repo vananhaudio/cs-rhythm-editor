@@ -65,7 +65,9 @@ function renderSection(s: LessonSection, i: number) {
                   <span className="lsn-layer-no">{ly.label}</span>
                   <b>{ly.what}</b>
                 </div>
-                <LessonScore tex={ly.tex} barsPerRow={2} zoomable={false} />
+                {/* mỗi dòng MỘT ô nhịp: ba tầng xếp thẳng hàng nhau, và ô nhịp dày nốt
+                    cũng không bị bóp đến mức lời chồng lên chữ */}
+                <LessonScore tex={ly.tex} barsPerRow={1} zoomable={false} />
               </div>
             ))}
           </div>

@@ -135,23 +135,24 @@ r.8 2.4.8 1.3.8 0.2.8 3.2.8 0.2.8 1.3.8 0.2.8 |
 
 // ── Diễm Xưa — BẢN BUỔI 03: Melody + Bass + Slide ──
 // CÙNG nguồn, CÙNG giai điệu, CÙNG bè bass của Buổi 02; chỉ chồng thêm một lớp:
-// các chỗ đổi vùng trên cùng một dây được đánh dấu TRƯỢT NGÓN (--slide) — đúng 2 chỗ
-// (ô 11 và ô 12), không lạm dụng.
+// hai cú trượt ở ô 3 và ô 7 (--slide-at "3,7").
+// Chọn tay chứ không để máy tự rải: trong bài chỉ có 5 chỗ mà hai nốt liền nhau
+// cùng nằm trên một dây và CẢ HAI ĐỀU BẤM — trượt từ/vào dây buông là vô nghĩa.
 export const WORK_DIEM_XUA_B3 = `\\ts 4 4
 \\lyrics "Mưa vẫn mưa bay trên tầng tháp cổ Dài tay em mấy thuở mắt xanh xao Nghe lá thu mưa reo mòn gót nhỏ Đường dài hun hút cho mắt thêm sâu Chợt hồn xanh buốt cho mình xót xa Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau vùi làm sao có nhau hằn lên nỗi đau Bước chân em xin về mau Mưa vẫn hay mưa cho đời biển động Làm sao em biết bia đã không đau Xin hãy cho mưa qua miền đất rộng Để người phiêu lãng quên mình lãng du Ngày sau sỏi đã cũng cần có nhau"
 .
 \\ro r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3.8 1.2.8 |
 2.4.1 |
-r.8 2.3.8 1.2.8 0.1.8 3.1.8 3.1.8 5.1.8 0.1.8 |
+r.8 2.3.8 1.2.8 0.1.8 3.1.8 3.1{ss}.8 5.1.8 0.1.8 |
 3.2.1 |
 r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3.8 1.2.8 |
 2.4.1 |
-r.8 2.4.8 1.3.8 0.2.8 3.2.8 3.2.8 0.1.8 3.2.8 |
+r.8 2.4.8 1.3.8 0.2.8 3.2.8 3.2.8 0.1.8 3.2{ss}.8 |
 \\rc 2 1.2.1 |
 r.8 2.4.8 1.3.8 0.2.8 3.2.8 0.2.8 1.3.8 0.2.8 |
 2.3.1 |
-r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1{ss}.8{tu 3} 5.1.8 5.1.8 5.1.8 5.1.8 |
-6.2.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1{ss}.8 |
+r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1.8{tu 3} 5.1.8 5.1.8 5.1.8 5.1.8 |
+6.2.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1.8 |
 0.1.4 2.3.8{tu 3} 1.2.8{tu 3} 0.1.8{tu 3} 3.2.4 3.2.8{tu 3} 1.1.8{tu 3} 5.1.8{tu 3} |
 4.1.4{d} 0.1.8 3.2.8 1.2.8 0.2.8 2.3.8 |
 0.2.1 |
@@ -192,27 +193,28 @@ r.8 2.4.8 1.3.8 0.2.8 3.2.8 0.2.8 1.3.8 0.2.8 |
 0.5{rf 1}.2 0.6{ch "E" rf 1}.2 |
 0.5{ch "Am" rf 1}.1`
 
-// ── Ba cấp độ của CÙNG hai ô nhịp (ô 11–12 của Diễm Xưa) ──
+// ── Ba cấp độ của CÙNG hai ô nhịp (ô 3–4 của Diễm Xưa) ──
 // Dùng cho khối "chồng lớp": học viên nhìn thấy chính đoạn mình đang chơi lớn lên
 // qua từng buổi. Cả ba đều sinh từ một nguồn, chỉ khác tham số.
+// BỎ LỜI (--no-lyrics): ô nhịp này có 8 nốt móc đơn, mỗi nốt một âm tiết — trong
+// khung so sánh hẹp thì chữ chồng lên nhau. Ở đây chỉ cần so NỐT.
 export const DX_LOP1_MELODY = `\\ts 4 4
-\\lyrics "Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau"
 .
-r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1.8{tu 3} 5.1{ch "A7"}.8 5.1.8 5.1.8 5.1.8 |
-6.2{ch "Dm"}.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1.8`
+r.8 2.3.8 1.2.8 0.1.8 3.1{ch "A7"}.8 3.1.8 5.1.8 0.1.8 |
+3.2{ch "Dm"}.1`
+
 export const DX_LOP2_BASS = `\\ts 4 4
-\\lyrics "Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau"
 .
-r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1.8{tu 3} 5.1.8 5.1.8 5.1.8 5.1.8 |
-6.2.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1.8
+r.8 2.3.8 1.2.8 0.1.8 3.1.8 3.1.8 5.1.8 0.1.8 |
+3.2.1
 \\voice
 0.5{ch "Am" rf 1}.2 0.5{ch "A7" rf 1}.2 |
 0.4{ch "Dm" rf 1}.1`
+
 export const DX_LOP3_SLIDE = `\\ts 4 4
-\\lyrics "Chiều nay còn mưa sao em không lại Nhớ mãi trong cơn đau"
 .
-r.4 0.1.8{tu 3} 1.1.8{tu 3} 0.1{ss}.8{tu 3} 5.1.8 5.1.8 5.1.8 5.1.8 |
-6.2.4{d} 5.1.8 5.1.8 5.1.8 5.1.8 5.1{ss}.8
+r.8 2.3.8 1.2.8 0.1.8 3.1.8 3.1{ss}.8 5.1.8 0.1.8 |
+3.2.1
 \\voice
 0.5{ch "Am" rf 1}.2 0.5{ch "A7" rf 1}.2 |
 0.4{ch "Dm" rf 1}.1`

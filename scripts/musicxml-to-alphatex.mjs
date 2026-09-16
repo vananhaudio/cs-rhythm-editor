@@ -8,6 +8,7 @@
 //        [--chord-sheet <file.txt>]   ← dùng bộ hợp âm do THẦY viết thay cho hợp âm trong XML
 //        [--bass]                     ← chèn nốt Bass (gốc hợp âm, dây 4–6, thế I) tại mỗi lần đổi hợp âm
 //        [--slide]                    ← đánh dấu trượt ngón ở chỗ ĐỔI VÙNG trên cùng một dây
+//        [--slide-at "3,7"]           ← chỉ định thẳng những ô nhịp muốn có trượt ngón
 //
 // Guitar ghi cao hơn tiếng thật 1 quãng tám (chuẩn ký âm guitar) ⇒ giữ nguyên
 // cao độ viết trong MusicXML, chỉ dịch giọng theo --transpose.
@@ -250,11 +251,23 @@ if (chordSheet) {
 
 // Trượt ngón ở chỗ đổi vùng: chỉ đánh dấu khi hai nốt liền nhau nằm TRÊN CÙNG MỘT
 // DÂY (trượt chỉ có nghĩa khi ngón đi dọc dây) và thật sự đổi vùng.
-if (flag('slide')) {
+// Điều kiện BẮT BUỘC của một cú trượt: hai nốt liền nhau, CÙNG MỘT DÂY, và CẢ HAI
+// ĐỀU BẤM. Dây buông thì không có ngón nào trên dây để mà trượt — đánh dấu trượt
+// từ/vào ngăn 0 là sai kỹ thuật.
+const slidable = (a, b) => a && b && a.string === b.string && a.fret > 0 && b.fret > 0 &&
+  Math.abs(a.fret - b.fret) >= 2
+const slideBars = opt('slide-at') ? new Set(opt('slide-at').split(',').map(n => parseInt(n, 10))) : null
+if (flag('slide') || slideBars) {
+  const done = new Set()
   for (let i = 0; i + 1 < melody.length; i++) {
     const a = melody[i].it.pos, b = melody[i + 1].it.pos
-    if (!a || !b) continue
-    if (a.string === b.string && a.zone !== b.zone && Math.abs(a.fret - b.fret) >= 2) melody[i].it.slide = true
+    if (!slidable(a, b)) continue
+    const bar = melody[i].bar + 1
+    if (slideBars) {
+      if (!slideBars.has(bar) || done.has(bar)) continue   // mỗi ô nhịp chỉ một cú trượt
+      done.add(bar)
+    } else if (a.zone === b.zone) continue                 // tự động: chỉ ở chỗ đổi vùng
+    melody[i].it.slide = true
   }
 }
 

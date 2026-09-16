@@ -35,8 +35,8 @@ const EX2 = `
 2.3{lf 3 rf 2}.4 0.2{rf 3}.4 1.2{lf 2 rf 2}.2 |
 0.2{rf 3}.4 2.3{lf 3 ss rf 2}.4 4.3{lf 3}.2 |
 5.3{lf 2 rf 3}.4 4.3{lf 5 rf 2}.4 2.3{lf 3 rf 3}.2 |
-5.1{lf 2 ss rf 2}.4 7.1{lf 4}.4 5.1{lf 2 rf 3}.2 |
-3.2{lf 4 ss rf 2}.4 1.2{lf 2}.4 0.2{rf 3}.2 |
+5.1{lf 2 ss rf 2}.4 7.1{lf 2}.4 5.1{lf 2 rf 3}.2 |
+3.2{lf 2 ss rf 2}.4 1.2{lf 2}.4 0.2{rf 3}.2 |
 2.3{lf 3 rf 2}.1
 `.trim()
 
@@ -49,10 +49,10 @@ const ETUDE3 = `
 .
 2.3{lf 3 rf 2}.4 0.2{rf 3}.4 1.2{lf 2 rf 2}.2 |
 0.2{rf 3}.4 2.3{lf 3 rf 2}.4 0.3{rf 3}.2 |
-2.3{lf 3 ss}.4 4.3{lf 3}.4 5.3{lf 2}.2 |
-7.3{lf 4}.4 5.3{lf 2}.4 4.3{lf 5}.2 |
+2.3{lf 3 ss}.4 4.3{lf 3}.4 5.3{lf 4}.2 |
+7.3{lf 4}.4 5.3{lf 2}.4 4.3{lf 4}.2 |
 2.3{lf 3}.4 0.2.4 1.2{lf 2}.2 |
-3.2{lf 4 ss}.4 1.2{lf 2}.4 0.2.2 |
+3.2{lf 2 ss}.4 1.2{lf 2}.4 0.2.2 |
 0.1.4 1.1{lf 2}.4 0.1.2 |
 2.3{lf 3}.1
 \\voice
@@ -99,7 +99,7 @@ export const SOLO01_BUOI03: LessonDoc = {
     {
       kind: 'layers',
       title: 'Cùng một đoạn nhạc — ba cấp độ',
-      lead: 'Đây là ô nhịp 11–12 của Diễm Xưa, đúng đoạn đang học, qua ba tuần.',
+      lead: 'Đây là ô nhịp 3–4 của Diễm Xưa, đúng đoạn đang học, qua ba tuần.',
       layers: [
         { label: 'Buổi 01', what: 'Melody', tex: DX_LOP1_MELODY },
         { label: 'Buổi 02', what: 'Melody + tiếng rõ hơn + Bass đầu tiên', tex: DX_LOP2_BASS },
@@ -133,12 +133,13 @@ export const SOLO01_BUOI03: LessonDoc = {
       tempo: 'Tempo: ♩ = 60',
       tex: EX2,
       marks: [
-        { at: 'Ô 2', text: 'dây 3: ngăn 2 → 4' },
-        { at: 'Ô 4', text: 'dây 1: ngăn 5 → 7' },
-        { at: 'Ô 5', text: 'dây 2: ngăn 3 → 1 (trượt xuống)' },
+        { at: 'Ô 2', text: 'dây 3: ngón 2 trượt ngăn 2 → 4' },
+        { at: 'Ô 4', text: 'dây 1: ngón 1 trượt ngăn 5 → 7' },
+        { at: 'Ô 5', text: 'dây 2: ngón 1 trượt ngược ngăn 3 → 1' },
       ],
       guidance: [
         'Gảy nốt đầu — giữ lực tay trái — trượt sang nốt sau. Không nhấc tay giữa hai nốt.',
+        'Trượt thì HAI NỐT CÙNG MỘT NGÓN. Trượt từ dây buông là vô nghĩa: không bấm gì thì không có ngón nào để trượt.',
         'Nhịp KHÔNG được dừng lại vì slide.',
         'Slide ở đây để câu melody liền và có chất guitar hơn, không phải để khoe kỹ thuật.',
       ],
@@ -151,8 +152,8 @@ export const SOLO01_BUOI03: LessonDoc = {
       tempo: 'Tempo: ♩ = 66',
       tex: ETUDE3,
       marks: [
-        { at: 'Ô 3', text: 'trượt trên dây 3 (ngăn 2 → 4)' },
-        { at: 'Ô 6', text: 'trượt xuống trên dây 2 (ngăn 3 → 1)' },
+        { at: 'Ô 3', text: 'ngón 2 trượt trên dây 3 (ngăn 2 → 4)' },
+        { at: 'Ô 6', text: 'ngón 1 trượt xuống trên dây 2 (ngăn 3 → 1)' },
       ],
       guidance: [
         'Bass ở bè dưới ngân trọn ô nhịp, melody ở bè trên — đây là hình thu nhỏ của bản Solo đang dựng.',
@@ -173,13 +174,13 @@ export const SOLO01_BUOI03: LessonDoc = {
         {
           title: 'Diễm Xưa — Melody + Bass + Slide',
           composer: 'Trịnh Công Sơn · giọng Am',
-          note: 'Vẫn đúng bản nhạc của Buổi 01–02, không dựng lại từ đầu: giai điệu giữ nguyên, bè Bass giữ nguyên, tuần này chỉ chồng thêm hai cú trượt ở ô 11 và ô 12 — chỗ câu nhạc lên vùng cao rồi về.',
+          note: 'Vẫn đúng bản nhạc của Buổi 01–02, không dựng lại từ đầu: giai điệu giữ nguyên, bè Bass giữ nguyên, tuần này chỉ chồng thêm hai cú trượt ở ô 3 và ô 7 — hai chỗ hiếm hoi mà hai nốt liền nhau cùng nằm trên một dây và đều là nốt bấm.',
           tempo: 'Chậm, giữ Bass ngân · melody vẫn phải nổi hơn Bass',
           barsPerRow: 3,
           tex: WORK_DIEM_XUA_B3,
           marks: [
             { at: 'Lớp 1', text: 'Bass ở phách mạnh — dây buông E · A · D' },
-            { at: 'Lớp 2', text: 'Slide ô 11 và ô 12, trên cùng dây 1' },
+            { at: 'Lớp 2', text: 'Slide ô 3 (dây 1, ngăn 3 → 5) và ô 7 (dây 2, ngăn 3 → 1)' },
             { at: 'Lớp 3', text: 'Tay phải: p cho Bass, i – m cho melody' },
           ],
           guidance: [
