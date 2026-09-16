@@ -7,7 +7,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { nhoTheoNguon } from "../../src/musicxml-beats/sourceCache.ts";
+import { dongBangSau, nhoTheoNguon } from "../../src/musicxml-beats/sourceCache.ts";
+import { parseMusicXML } from "../../src/musicxml-beats/parser.ts";
+import { musicXMLToBeatMap } from "../../src/musicxml-beats/beatMap.ts";
 import { tagSourceIds } from "../../src/musicxml-beats/sourceTags.ts";
 import { applyCommand } from "../../src/nhipphach/edit/applyCommand.ts";
 import type { MusicXmlEditCommand } from "../../src/nhipphach/edit/commands.ts";
@@ -117,4 +119,32 @@ test("khoá là CHÍNH chuỗi XML: y hệt → trúng; lệch đúng 1 byte →
   assert.deepEqual(readNoteFields(FIX, A3)!.tab, { string: 3, fret: 2 });
   // Lệnh sửa vẫn đọc tài liệu RIÊNG: đã có tài liệu của FIX trong bộ đệm mà lệnh vẫn ra đúng.
   assert.deepEqual(readNoteFields(applyCommand(FIX, dat(5)).xml, A3)!.tab, { string: 3, fret: 5 });
+});
+
+test("4D.P2 — đọc bài và BeatMap: một chuỗi tính một lần, đóng băng sâu, lệch 1 byte là tính lại", () => {
+  const a = parseMusicXML(FIX);
+  assert.equal(parseMusicXML(FIX.slice(0, 5) + FIX.slice(5)), a);
+  assert.ok(Object.isFrozen(a.parts[0].measures[0].events[0]));
+  assert.throws(() => (a.parts[0].measures as unknown[]).push({}), TypeError);
+  const b = musicXMLToBeatMap(FIX);
+  assert.equal(musicXMLToBeatMap(FIX), b);
+  assert.equal(musicXMLToBeatMap(FIX, undefined), b, "không chọn cách chia = cùng một khoá");
+  assert.throws(() => (b.measures[0].diagnostics as unknown[]).push({}), TypeError);
+  // Lệch 1 byte (đổi phím) → đọc lại, và kết quả phản ánh đúng bản mới.
+  const moi = applyCommand(FIX, dat(4)).xml;
+  assert.notEqual(parseMusicXML(moi), a);
+  assert.notEqual(musicXMLToBeatMap(moi), b);
+  // Đổi phím TAB không đổi thời gian: bản đồ phách mới bằng bản cũ về nội dung.
+  assert.deepEqual(JSON.parse(JSON.stringify(musicXMLToBeatMap(moi))), JSON.parse(JSON.stringify(b)));
+  // Cách chia khác là khoá khác — không bao giờ trả nhầm bản đồ của cách chia kia.
+  const chia = { byMeter: { "6/8": "3+3" } } as never;
+  assert.notEqual(musicXMLToBeatMap(FIX, chia), b);
+  // Nguồn hỏng: vẫn ném lỗi, và không ghi nhớ lỗi.
+  assert.throws(() => parseMusicXML("<hong"));
+  assert.throws(() => parseMusicXML("<hong"));
+});
+
+test("đóng băng sâu: cả Map, Set và mảng lồng", () => {
+  const v = dongBangSau({ a: [{ b: 1 }], m: new Map([["k", { c: 2 }]]), s: new Set([{ d: 3 }]) });
+  assert.ok(Object.isFrozen(v.a[0]) && Object.isFrozen(v.m.get("k")) && Object.isFrozen([...v.s][0]));
 });

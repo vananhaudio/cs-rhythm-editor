@@ -33,3 +33,23 @@ export function nhoTheoNguon<T>(soToiDa = 4) {
     },
   };
 }
+
+/**
+ * Đóng băng sâu một cây dữ liệu thuần (đối tượng, mảng, Map/Set chỉ được đóng
+ * phần vỏ). Dùng cho kết quả dẫn xuất dùng chung: ai lỡ sửa là lỗi ngay.
+ */
+export function dongBangSau<T>(v: T): T {
+  if (v === null || typeof v !== "object" || Object.isFrozen(v)) return v;
+  Object.freeze(v);
+  if (v instanceof Map) {
+    for (const [k, x] of v) {
+      dongBangSau(k);
+      dongBangSau(x);
+    }
+  } else if (v instanceof Set) {
+    for (const x of v) dongBangSau(x);
+  } else {
+    for (const x of Object.values(v as object)) dongBangSau(x);
+  }
+  return v;
+}
