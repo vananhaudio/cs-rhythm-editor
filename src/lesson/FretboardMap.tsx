@@ -28,7 +28,7 @@ export default function FretboardMap({ frets, zones, dots }: Props) {
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img"
            aria-label="Bản đồ nốt giản lược C–Am trên cần đàn">
         {/* nền vùng */}
-        {zones.map(z => {
+        {zones.filter(z => !z.hidden).map(z => {
           const x0 = z.fromFret === 0 ? PAD_L - 40 : fretLineX(z.fromFret - 1)
           const x1 = fretLineX(z.toFret)
           const y0 = strY(z.strings[0]) - SG * 0.6

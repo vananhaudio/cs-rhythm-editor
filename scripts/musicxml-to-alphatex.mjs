@@ -7,6 +7,7 @@
 //        [--max-fret 17] [--no-lyrics] [--no-chords] [--bars 1-16]
 //        [--chord-sheet <file.txt>]   ← dùng bộ hợp âm do THẦY viết thay cho hợp âm trong XML
 //        [--bass]                     ← chèn nốt Bass (gốc hợp âm, dây 4–6, thế I) tại mỗi lần đổi hợp âm
+//        [--slide]                    ← đánh dấu trượt ngón ở chỗ ĐỔI VÙNG trên cùng một dây
 //
 // Guitar ghi cao hơn tiếng thật 1 quãng tám (chuẩn ký âm guitar) ⇒ giữ nguyên
 // cao độ viết trong MusicXML, chỉ dịch giọng theo --transpose.
@@ -247,6 +248,16 @@ if (chordSheet) {
   process.stderr.write('[i] hợp âm từ chord sheet:\n' + report.join('\n') + '\n')
 }
 
+// Trượt ngón ở chỗ đổi vùng: chỉ đánh dấu khi hai nốt liền nhau nằm TRÊN CÙNG MỘT
+// DÂY (trượt chỉ có nghĩa khi ngón đi dọc dây) và thật sự đổi vùng.
+if (flag('slide')) {
+  for (let i = 0; i + 1 < melody.length; i++) {
+    const a = melody[i].it.pos, b = melody[i + 1].it.pos
+    if (!a || !b) continue
+    if (a.string === b.string && a.zone !== b.zone && Math.abs(a.fret - b.fret) >= 2) melody[i].it.slide = true
+  }
+}
+
 // Báo cáo: dùng những vùng nào, chuyển vùng ở ô nhịp nào
 const zoneReport = []
 let lastZone = null
@@ -370,6 +381,7 @@ for (let i = b0 - 1; i < Math.min(b1, bars.length); i++) {
       if (!pos) { body = `r.${dur}` } else {
         const nfx = []
         if (it.tieStop) nfx.push('t')
+        if (it.slide) nfx.push('ss')          // ss = trượt ngón đổi thế
         if (carryChord) {
           const name = carryChord.text ?? `${noteName(carryChord.pc)}${carryChord.suffix}`
           nfx.push(`ch "${name}"`)
@@ -377,9 +389,11 @@ for (let i = b0 - 1; i < Math.min(b1, bars.length); i++) {
         }
         body = `${pos.fret}.${pos.string}${nfx.length ? `{${nfx.join(' ')}}` : ''}.${dur}`
       }
-      // Nốt KHÔNG có âm tiết (dấu nối, luyến, melisma) phải sinh "-" = ô lời RỖNG.
-      // Bỏ trống sẽ làm alphaTab dồn âm tiết kế tiếp lên nốt này ⇒ lệch lời cả bài.
-      if (!flag('no-lyrics')) lyricWords.push((it.lyric || '').replace(/["\s]+/g, '') || '-')
+      // Nốt KHÔNG có âm tiết (dấu nối, luyến, melisma) phải sinh một ô lời RỖNG,
+      // nếu không alphaTab sẽ dồn âm tiết kế tiếp lên nốt này ⇒ lệch lời cả bài.
+      // Token đúng là "_" (alphaTab cắt dấu _ ở cuối chunk ⇒ chunk rỗng, không in gì).
+      // ĐỪNG dùng "-": alphaTab IN NGUYÊN dấu gạch ngang xuống dưới nốt.
+      if (!flag('no-lyrics')) lyricWords.push((it.lyric || '').replace(/["\s]+/g, '') || '_')
     }
     if (fx.length) body += `{${fx.join(' ')}}`
     toks.push(body)

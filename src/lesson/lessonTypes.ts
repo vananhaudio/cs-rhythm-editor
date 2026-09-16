@@ -31,6 +31,9 @@ export interface FretZone {
   strings: [number, number]  // [dây cao nhất, dây thấp nhất] theo số dây (1..6)
   hint?: string
   color: string
+  /** true = chỉ dùng để phân MÀU + chú thích, không vẽ khung vùng trên sơ đồ
+   *  (vd nhóm theo quãng tám — các nốt cùng quãng tám không nằm gọn một ô chữ nhật) */
+  hidden?: boolean
 }
 
 export type LessonSection =

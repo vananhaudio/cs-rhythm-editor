@@ -6,9 +6,10 @@ import { soloLessonUnlock, soloLessonOpen } from '../data/solo01Program'
 import type { LessonDoc } from './lessonTypes'
 import { SOLO01_BUOI01 } from '../data/solo01/buoi01'
 import { SOLO01_BUOI02 } from '../data/solo01/buoi02'
+import { SOLO01_BUOI03 } from '../data/solo01/buoi03'
 
 // Đăng ký buổi học ở đây khi soạn thêm (Buổi 02 → 24 dùng CHUNG khuôn LessonDocument).
-const LESSONS: Record<number, LessonDoc> = { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02 }
+const LESSONS: Record<number, LessonDoc> = { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02, 3: SOLO01_BUOI03 }
 
 export default function Solo01LessonPage({ sessionNo }: { sessionNo: number }) {
   const doc = LESSONS[sessionNo]
@@ -21,13 +22,17 @@ export default function Solo01LessonPage({ sessionNo }: { sessionNo: number }) {
     )
   }
   // Buổi chưa tới giờ mở: vẫn vào được, nhưng thấy màn khoá thay vì tài liệu.
+  // Thêm ?xem vào địa chỉ để BỎ QUA khoá — lối xem trước cho thầy soát nội dung.
+  // (Khoá này vốn là khoá mềm theo lịch, không phải quyền học.)
+  const preview = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('xem')
   const unlockAt = soloLessonUnlock(sessionNo)
-  if (unlockAt && !soloLessonOpen(sessionNo)) {
+  if (unlockAt && !soloLessonOpen(sessionNo) && !preview) {
     return (
       <LessonLocked
         sessionNo={sessionNo}
         title={doc.meta.title}
         unlockAt={unlockAt}
+        prevNo={LESSONS[sessionNo - 1] ? sessionNo - 1 : undefined}
         prevHref={LESSONS[sessionNo - 1] ? `/solo01/buoi-${String(sessionNo - 1).padStart(2, '0')}` : undefined}
         backHref={doc.meta.backHref ?? '/solo01'}
       />

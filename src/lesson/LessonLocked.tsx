@@ -18,8 +18,8 @@ function remain(ms: number): string {
 }
 
 export default function LessonLocked(
-  { sessionNo, title, unlockAt, prevHref, backHref }:
-  { sessionNo: number; title: string; unlockAt: string; prevHref?: string; backHref: string },
+  { sessionNo, title, unlockAt, prevNo, prevHref, backHref }:
+  { sessionNo: number; title: string; unlockAt: string; prevNo?: number; prevHref?: string; backHref: string },
 ) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -46,12 +46,15 @@ export default function LessonLocked(
         </div>
 
         <p className="lsnlock-why">
-          Buổi này mở sau khi lớp học xong Buổi 01. Tập cho chắc phần Buổi 01 đã —
-          ép ngón và Bass của Buổi 02 dựng thẳng trên bài cũ.
+          {prevNo
+            ? `Buổi này mở sau khi lớp học xong Buổi ${String(prevNo).padStart(2, '0')}. Buổi nào cũng dựng thẳng trên bài của buổi trước, nên tập cho chắc phần cũ đã.`
+            : 'Buổi này mở theo lịch lớp. Trong lúc chờ, tập cho chắc phần đã học.'}
         </p>
 
         <div className="lsnlock-actions">
-          {prevHref && <a className="lsnlock-go" href={prevHref}>Học Buổi 01 →</a>}
+          {prevHref && prevNo && (
+            <a className="lsnlock-go" href={prevHref}>Học Buổi {String(prevNo).padStart(2, '0')} →</a>
+          )}
           <a className="lsnlock-back" href={backHref}>Xem chương trình</a>
         </div>
       </main>
