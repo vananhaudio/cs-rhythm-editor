@@ -19,7 +19,8 @@ import {
   createAnnotatedScoreRenderer,
   renderCanonicalForExport,
 } from "../musicxml-beats/renderer/verovioAdapter";
-import { keHoachXemTruoc } from "../nhipphach/editor/previewPlan";
+import { PreviewScheduler } from "../nhipphach/preview/previewScheduler";
+import { taoBoVeTrinhDuyet } from "../nhipphach/preview/previewTransports";
 import { DEFAULT_SCORE_SETTINGS } from "../musicxml-beats/renderer/types";
 import type {
   AnnotatedScore,
@@ -1273,9 +1274,40 @@ export default function MusicXmlBeatsPage({
    * Không phải tối ưu: hai việc khác nhau cần hai chính sách chờ khác nhau.
    */
   const mocKhac = useRef<{ source: unknown; settings: ScoreSettings } | null>(null);
+  /** Bản đang HIỆN theo nháp đồng bộ — kết quả vẽ cho bản khác bị bỏ. */
+  const xmlHienThiRef = useRef<string | null>(null);
+  xmlHienThiRef.current = xmlHienThi;
+  const yeuCauMoiNhat = useRef<{ revision: number; xml: string } | null>(null);
+  const lapLich = useRef<PreviewScheduler | null>(null);
+  const layRendererMain = () =>
+    (renderer.current ??= createAnnotatedScoreRenderer().catch((e) => {
+      renderer.current = null;
+      throw e;
+    }));
+  function layLapLich() {
+    lapLich.current ??= new PreviewScheduler({
+      taoBoVe: taoBoVeTrinhDuyet(layRendererMain),
+      hien(res) {
+        const moi = yeuCauMoiNhat.current;
+        // Bất biến số 1: đúng số hiệu mới nhất VÀ đúng bản đang hiện.
+        if (!moi || res.revision !== moi.revision || moi.xml !== xmlHienThiRef.current) return;
+        setScore(res.score);
+        setError("");
+        setBusy(false);
+      },
+      baoLoi(message, revision) {
+        const moi = yeuCauMoiNhat.current;
+        if (!moi || revision !== moi.revision || moi.xml !== xmlHienThiRef.current) return;
+        setScore(null);
+        setError(message || "Không đọc được bản nhạc.");
+        setBusy(false);
+      },
+    });
+    return lapLich.current;
+  }
+  useEffect(() => () => lapLich.current?.destroy(), []);
   useEffect(() => {
     if (!source || !xmlHienThi) return;
-    let cancelled = false;
     /**
      * TÁCH CHÍNH SÁCH CHỜ (Giai đoạn 4A.1).
      *
@@ -1296,39 +1328,21 @@ export default function MusicXmlBeatsPage({
     mocKhac.current = { source, settings };
     setBusy(true);
     setError("");
-    const chay = async () => {
-      try {
-        renderer.current ??= createAnnotatedScoreRenderer().catch((e) => {
-          renderer.current = null;
-          throw e;
-        });
-        const r = await renderer.current;
-        if (cancelled) return;
-        // Xem trước bản nháp = khắc đúng bản nháp, cùng một bộ khắc, cùng cache.
-        // 4D.P3: sửa phím TAB cùng dây chỉ vẽ lại trang chứa nốt đó — khi và chỉ
-        // khi phân loại (so với bản renderer ĐANG xem) cho phép; renderer tự kiểm
-        // lại mọi chốt và tự vẽ đầy đủ khi có gì lệch.
-        const goiY = goiYXemTruoc.current;
-        const keHoach =
-          goiY && goiY.xml === xmlHienThi
-            ? keHoachXemTruoc(goiY.cmd, r.previewXml(), xmlHienThi)
-            : null;
-        const rendered = r.renderPreview(
-          xmlHienThi,
-          settings,
-          keHoach?.kind === "partial" ? { sourceId: keHoach.sourceId } : null
-        );
-        if (!cancelled) {
-          setScore(rendered);
-          setBusy(false);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setScore(null);
-          setError(e instanceof Error ? e.message : "Không đọc được bản nhạc.");
-          setBusy(false);
-        }
-      }
+    // 4D.P4: bản xem trước vẽ ở Web Worker. Main thread chỉ gửi yêu cầu có SỐ
+    // HIỆU và nhận kết quả; bàn phím, con trỏ, thanh công cụ, hoàn tác không phải
+    // chờ bản khắc. Chỉ kết quả của số hiệu mới nhất — và đúng bản đang hiện —
+    // được đưa lên màn hình (xem `PreviewScheduler`).
+    const chay = () => {
+      const lap = layLapLich();
+      const goiY = goiYXemTruoc.current;
+      const revision = lap.soHieuMoiNhat + 1;
+      yeuCauMoiNhat.current = { revision, xml: xmlHienThi };
+      lap.request({
+        revision,
+        xml: xmlHienThi,
+        settings,
+        cmd: goiY && goiY.xml === xmlHienThi ? goiY.cmd : null,
+      });
     };
     let huy: () => void;
     if (chiNhapDoi) {
@@ -1355,7 +1369,6 @@ export default function MusicXmlBeatsPage({
       huy = () => clearTimeout(id);
     }
     return () => {
-      cancelled = true;
       huy();
     };
   }, [source, xmlHienThi, settings]);
@@ -1531,7 +1544,9 @@ export default function MusicXmlBeatsPage({
   const p = batchProgress(batchItems);
   const dangCanChon = batchItems.filter((i) => i.status === "needs-grouping");
   const trangThaiXuat = busy
-    ? "Đang khắc bản nhạc…"
+    ? score
+      ? "Đang cập nhật bản nhạc…"
+      : "Đang khắc bản nhạc…"
     : score
     ? `${score.pages.length} trang · ${score.anchors.length} nhãn đếm`
     : "Chưa có bản nhạc";
@@ -2688,7 +2703,8 @@ export default function MusicXmlBeatsPage({
                   style={
                     {
                       background: score ? "var(--np-paper)" : "var(--surface)",
-                      opacity: busy ? 0.55 : 1,
+                      // Đang cập nhật: chỉ nhạt đi một chút, KHÔNG chặn bàn phím hay chuột.
+                      opacity: busy ? (score ? 0.85 : 0.55) : 1,
                       padding: score ? 20 : 0,
                       "--np-zoom": xem.che === "rong" ? 100 : xem.pct,
                     } as CSSProperties

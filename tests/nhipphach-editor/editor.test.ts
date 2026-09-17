@@ -1540,9 +1540,11 @@ test("4D.P3 trang: chỉ ChangeTabPosition được gợi ý; xuất file khắc
   const plan = stripComments(src("nhipphach/editor/previewPlan.ts"));
   assert.match(plan, /cmd\.type !== "ChangeTabPosition"\) return full\("NOT_TAB_POSITION"\)/);
   // Gợi ý chỉ đi qua bộ phân loại, so với bản renderer ĐANG xem.
-  assert.match(page, /keHoachXemTruoc\(goiY\.cmd, r\.previewXml\(\), xmlHienThi\)/);
-  assert.match(page, /r\.renderPreview\(\s*xmlHienThi,/);
-  assert.equal((page.match(/renderPreview\(/g) ?? []).length, 1, "chỉ lượt vẽ xem trước dùng đường ghép trang");
+  // 4D.P4: phân loại + vẽ ghép trang chạy trong bộ vẽ (Worker), qua `xuLyYeuCau`.
+  const core = stripComments(src("nhipphach/preview/previewCore.ts"));
+  assert.match(core, /keHoachXemTruoc\(req\.cmd, renderer\.previewXml\(\), req\.xml\)/);
+  assert.equal((core.match(/renderPreview\(/g) ?? []).length, 1, "chỉ lượt vẽ xem trước dùng đường ghép trang");
+  assert.match(page, /cmd: goiY && goiY\.xml === xmlHienThi \? goiY\.cmd : null/);
   // Xuất: mọi định dạng nhận CÙNG bản khắc chuẩn, không nhận `score` xem trước.
   const xuat = (m: string) => m.slice(m.indexOf("async function exportPrint("), m.indexOf("daXuat = true;", m.indexOf("async function exportPrint(")));
   const dungChuan = (m: string) =>
@@ -1554,5 +1556,35 @@ test("4D.P3 trang: chỉ ChangeTabPosition được gợi ý; xuất file khắc
   assert.ok(dungChuan(page), "xuất file phải khắc chuẩn riêng");
   assert.equal(dungChuan(page.replace("exportScorePNG(chuan, pngScale)", "exportScorePNG(score, pngScale)")), false, "luật không bắt được đột biến");
   // Lưu kiểm bằng bản khắc chuẩn, không phải bản xem trước.
+  assert.match(page, /render: \(xml\) => r\.render\(xml, settings\)/);
+});
+
+// ══ 15. Web Worker xem trước (Giai đoạn 4D.P4) ══════════════════════════════
+test("4D.P4 kiến trúc: Worker chỉ vẽ — không Supabase, React, DraftEngine, lưu hay hoàn tác", () => {
+  const w = stripComments(src("nhipphach/preview/previewWorker.ts"));
+  const core = stripComments(src("nhipphach/preview/previewCore.ts"));
+  const lap = stripComments(src("nhipphach/preview/previewScheduler.ts"));
+  const cam = /supabase|from "react"|draftEngine|applyCommand|versionSave|clipboard|localStorage|document\./;
+  for (const [ten, m] of [["worker", w], ["core", core], ["scheduler", lap]] as const)
+    assert.doesNotMatch(m, cam, `${ten} không được đụng tới trạng thái có thẩm quyền`);
+  assert.match(core + "\nimport { undo } from '../edit/draftEngine.ts';", cam, "luật không bắt được đột biến");
+  // Bộ đệm chữ số vẫn ở main thread, đo bằng giờ bấm phím.
+  assert.doesNotMatch(w + core + lap, /goSo|TabEntryState|timeStamp/);
+});
+
+test("4D.P4 trang: Worker theo mẫu Vite; chỉ kết quả đúng số hiệu + đúng bản đang hiện được đưa lên", () => {
+  const tr = stripComments(src("nhipphach/preview/previewTransports.ts"));
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  assert.match(tr, /new Worker\(new URL\("\.\/previewWorker\.ts", import\.meta\.url\), \{\s*type: "module",?\s*\}\)/);
+  assert.doesNotMatch(tr, /new Worker\(\s*["'`]/, "không viết cứng URL Worker");
+  const chot = (m: string) =>
+    /hien\(res\) \{[\s\S]*?if \(!moi \|\| res\.revision !== moi\.revision \|\| moi\.xml !== xmlHienThiRef\.current\) return;/.test(m);
+  assert.ok(chot(page));
+  assert.equal(chot(page.replace("res.revision !== moi.revision || ", "")), false, "luật không bắt được đột biến");
+  // Vẽ qua bộ lập lịch; trang không còn tự gọi renderPreview trên main thread.
+  assert.match(page, /lap\.request\(\{/);
+  assert.doesNotMatch(page, /renderPreview\(/);
+  // Xuất file và lưu giữ nguyên đường chuẩn của P3.
+  assert.match(page, /renderCanonicalForExport\(xmlXuat, settings\)/);
   assert.match(page, /render: \(xml\) => r\.render\(xml, settings\)/);
 });
