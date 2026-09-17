@@ -19,7 +19,8 @@ import { saveDraftAsVersion } from "../../src/nhipphach/edit/versionSave.ts";
 import type { SaveRequest, SaveResult } from "../../src/nhipphach/libraryRepository.ts";
 import { toCommand } from "../../src/nhipphach/editor/commandFacade.ts";
 import { goSo, TAB_TRONG } from "../../src/nhipphach/editor/tabEntry.ts";
-import { ketQuaHopLe, xuLyYeuCau } from "../../src/nhipphach/preview/previewCore.ts";
+import { demOnset, ketQuaHopLe, xuLyYeuCau } from "../../src/nhipphach/preview/previewCore.ts";
+import { parseMusicXML } from "../../src/musicxml-beats/parser.ts";
 import type { PreviewRequest, PreviewResponse } from "../../src/nhipphach/preview/previewCore.ts";
 import { PreviewScheduler } from "../../src/nhipphach/preview/previewScheduler.ts";
 import type { LoaiBoVe, PreviewTransport } from "../../src/nhipphach/preview/previewScheduler.ts";
@@ -325,7 +326,47 @@ test("STRESS 100 lệnh TAB, trễ 10–500 ms: đủ 100 lệnh, không bản c
   await choXong(lap);
   assert.equal(hien.at(-1)!.revision, lap.soHieuMoiNhat);
   giongChuan(d.xml, hien.at(-1)!.score);
+  // 4D.P5B: dữ liệu dẫn xuất đi kèm cũng đúng bản cuối.
+  assert.deepEqual(hien.at(-1)!.onsets, onsetChuan(d.xml));
+  const { newRhythmIssues } = await import("../../src/nhipphach/edit/validation.ts");
+  const { musicXMLToBeatMap } = await import("../../src/musicxml-beats/beatMap.ts");
+  const coLoi = musicXMLToBeatMap(d.xml).measures.some((m) => m.diagnostics.length > 0);
+  assert.equal(newRhythmIssues(HAI, d.xml).length > 0, coLoi);
   const s = [...doLau].sort((x, y) => x - y);
   console.log(`# main-thread lệnh (file 2 trang): trung vị ${s[50].toFixed(1)} ms, p95 ${s[95].toFixed(1)} ms; gộp ${lap.stats.coalesced}, bỏ ${lap.stats.dropped}, gửi ${lap.stats.sent}`);
   lap.destroy();
+});
+
+const onsetChuan = (xml: string) => {
+  const m = new Map<string, unknown>();
+  for (const p of parseMusicXML(xml).parts) for (const ms of p.measures) for (const ev of ms.events) m.set(ev.source.path, ev.onset);
+  return m;
+};
+
+test("4D.P5B ONSET đi cùng bản khắc: đúng như đọc chuẩn; sửa phím ghép trang ×20 không đọc lại bài", async () => {
+  const r = await createAnnotatedScoreRenderer();
+  let d = createDraft(HAI);
+  let res = xuLyYeuCau(r, { revision: 1, xml: d.xml, settings: S, cmd: null });
+  assert.ok(res.ok);
+  assert.deepEqual(res.onsets, onsetChuan(d.xml));
+  const truoc = demOnset.tinh;
+  let ghep = 0;
+  for (let i = 0; i < 20; i++) {
+    const cmd = dat(P(3, 7), 3, [4, 5, 7, 9, 12][i % 5]);
+    d = applyToDraft(d, cmd);
+    res = xuLyYeuCau(r, { revision: i + 2, xml: d.xml, settings: S, cmd });
+    assert.ok(res.ok);
+    if (res.path === "partial") ghep++;
+    assert.deepEqual(res.onsets, onsetChuan(d.xml), `lần ${i}`);
+  }
+  assert.equal(ghep, 20);
+  assert.equal(demOnset.tinh - truoc, 0, "ghép trang không đọc lại bài để lấy onset");
+  // Vẽ đầy đủ (đổi dây) → tính onset đúng MỘT lần cho bản mới.
+  const doiDay = dat(P(3, 6), 2, 5);
+  d = applyToDraft(d, doiDay);
+  res = xuLyYeuCau(r, { revision: 30, xml: d.xml, settings: S, cmd: doiDay });
+  assert.ok(res.ok && res.path === "full");
+  assert.equal(demOnset.tinh - truoc, 1);
+  assert.deepEqual(res.onsets, onsetChuan(d.xml));
+  r.destroy();
 });

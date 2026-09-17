@@ -261,7 +261,7 @@ test("TƯƠNG THÍCH cổng số hiệu P4: bộ vẽ đang vẽ lệnh 40, hoà
     taoBoVe: (_l, onMessage) => ({
       send(req) {
         guiDi.push(req);
-        setTimeout(() => onMessage({ revision: req.revision, ok: true, path: "full", renderMs: 1, score: { pages: [{ number: 1, svg: req.xml, width: 1, height: 1 }], noteIndex: new Map() } }), 50);
+        setTimeout(() => onMessage({ revision: req.revision, ok: true, path: "full", renderMs: 1, score: { pages: [{ number: 1, svg: req.xml, width: 1, height: 1 }], noteIndex: new Map() }, onsets: new Map() }), 50);
       },
       terminate() {},
     }),
@@ -306,4 +306,41 @@ test("LỊCH SỬ LỆNH vẫn là nguồn sự thật: DraftState không mang m
   const d = createDraft(TAB);
   assert.deepEqual(Object.keys(d).sort(), ["commands", "cursor", "identity", "original", "xml"]);
   assert.equal(JSON.stringify(d).includes("moc"), false);
+});
+
+test("4D.P5B HÌNH CHIẾU NHỊP: cùng hình chiếu ⇒ cùng lỗi nhịp; sửa TAB giữ hình chiếu, đổi trường độ thì không", async () => {
+  const { khoaNhip, rhythmIssues } = await import("../../src/nhipphach/edit/validation.ts");
+  const { musicXMLToBeatMap } = await import("../../src/musicxml-beats/beatMap.ts");
+  const truc = (xml: string) =>
+    JSON.stringify(musicXMLToBeatMap(xml).measures.map((m) => m.diagnostics.map((d) => `${d.code}@${d.sourceId}`)));
+  let giu = 0, doi = 0, tab = 0;
+  for (const goc of [ENTRY, TAB]) {
+  const tao = taoTronLan(goc === ENTRY ? 123 : 321);
+  let d = createDraft(goc);
+  for (let i = 0; i < 300 && d.commands.length < 80; i++) {
+    const cmd = tao(d);
+    if (!cmd) continue;
+    let sau: DraftState;
+    try { sau = applyToDraft(d, cmd); } catch { continue; }
+    if (sau === d) continue;
+    const cung = khoaNhip(d.xml) === khoaNhip(sau.xml);
+    if (cung) {
+      giu++;
+      // Hợp đồng: cùng hình chiếu thì bộ tính phách cho đúng cùng chẩn đoán.
+      assert.equal(truc(sau.xml), truc(d.xml), `${cmd.type} giữ hình chiếu nhưng đổi nhịp`);
+      assert.deepEqual([...rhythmIssues(sau.xml)], [...rhythmIssues(d.xml)]);
+    } else doi++;
+    if (cmd.type === "ChangeDurationAndRebalance" || cmd.type === "InsertNoteIntoRest" || cmd.type === "PasteSequence")
+      assert.equal(cung, false, `${cmd.type} phải đổi hình chiếu`);
+    d = sau;
+  }
+  }
+  // TAB: đổi phím / đổi dây luôn giữ hình chiếu.
+  const t = createDraft(TAB);
+  for (const [s, f] of [[3, 4], [3, 9], [4, 5]] as const) {
+    const sau = applyToDraft(t, { type: "ChangeTabPosition", path: "/score-partwise/part[1]/measure[1]/*[8]", string: s, fret: f } as never);
+    assert.equal(khoaNhip(sau.xml), khoaNhip(TAB));
+    tab++;
+  }
+  assert.ok(giu > 10 && doi > 5 && tab === 3, `giữ ${giu}, đổi ${doi}`);
 });

@@ -1337,8 +1337,13 @@ test("4B.3 trang: phím trường độ ở dấu lặng KHÔNG vào ngăn xếp
   // Và việc TRA NỐT dưới con trỏ cũng phải đọc từ nháp đồng bộ. Đo được trên
   // trình duyệt: để nguyên `notDiDuoc` thì tràng `c d e f g a b c` chỉ ra BỐN
   // lệnh — bốn phím sau rơi vào một sự kiện mà bản khắc chưa kịp biết tới.
-  assert.match(page, /const dsBayGio = dsSauLenh\(\)/);
-  assert.match(page, /dsBayGio\.find\(\(n\) => n\.svgId === caretBayGio\.sourceId\)/);
+  // 4D.P5B: tra qua khung `duongCuaId` — khung DỰNG TỪ `dsSauLenh()` (nháp đồng
+  // bộ) và khoá theo đối tượng danh tính của NHÁP, nên lệnh đổi cấu trúc (chèn
+  // dấu lặng) làm khung dựng lại ngay trong cùng tràng phím.
+  assert.match(page, /const duongBayGio = caretBayGio \? duongCuaId\(caretBayGio\.sourceId\) : null;/);
+  assert.match(page, /new Map\(dsSauLenh\(\)\.map\(\(n\) => \[n\.svgId, n\.path\] as const\)\)/);
+  assert.match(page, /const danhTinh: object \| null = nhapRef\.current\?\.identity \?\? null;/);
+  assert.match(page, /k\.danhTinh !== danhTinh \|\| k\.banKhac !== banKhac/);
   assert.doesNotMatch(
     page,
     /notDiDuoc\.find\(\(n\) => n\.svgId === caretBayGio\.sourceId\)/,
@@ -1486,7 +1491,7 @@ test("4D kiến trúc: mô hình TAB và bộ gom chữ số không biết XML, 
 test("4D trang: ngữ cảnh TAB suy từ dữ liệu; gom chữ số đi qua cửa `datNhap`", () => {
   const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
   assert.match(page, /cheDo: cheDoBanPhim\(\)/);
-  assert.match(page, /readNoteFields\(xml, n\.path\)\?\.khuongTab \? "tab" : "notation"/);
+  assert.match(page, /readNoteFields\(xml, duong\)\?\.khuongTab \? "tab" : "notation"/);
   // Quay lui trước khi ghép chữ số thứ hai: qua ĐÚNG một cửa đặt nháp.
   assert.match(page, /truocSo = tabTruocSoRef\.current;\s*datNhap\(truocSo\.nhap\);/);
   assert.doesNotMatch(page, /nhapRef\.current = tabTruocSoRef/, "gán thẳng nháp, đi vòng cửa datNhap");

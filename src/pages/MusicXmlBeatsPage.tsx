@@ -468,19 +468,14 @@ export default function MusicXmlBeatsPage({
     }
   }
 
-  /** Thời điểm bắt đầu của từng nốt nguồn, lấy từ chính parser — để hiện "Phách". */
-  const onsetTheoPath = useMemo(() => {
-    const m = new Map<string, Parameters<typeof describeNote>[2]>();
-    if (!xmlHienThi) return m;
-    try {
-      for (const p of parseMusicXML(xmlHienThi).parts)
-        for (const ms of p.measures)
-          for (const ev of ms.events) m.set(ev.source.path, ev.onset);
-    } catch {
-      /* nguồn hỏng thì panel chỉ thiếu ô Phách */
-    }
-    return m;
-  }, [xmlHienThi]);
+  /**
+   * Thời điểm bắt đầu của từng nốt nguồn — để hiện "Phách". 4D.P5B: do bộ vẽ
+   * (Worker) tính cùng lượt khắc và gửi kèm, nên luôn CÙNG phiên bản với bản khắc
+   * `score` đang hiện, và main thread không phải đọc lại cả bài mỗi phím.
+   */
+  const [onsetTheoPath, setOnsetTheoPath] = useState<
+    Map<string, Parameters<typeof describeNote>[2]>
+  >(() => new Map());
 
   /**
    * Click trên bản nhạc → nốt nguồn, qua ID mà Verovio đã giữ nguyên. Không có
@@ -708,8 +703,10 @@ export default function MusicXmlBeatsPage({
     // có thể sinh thêm dấu lặng, và con trỏ nhảy sang chính nó ngay lập tức.
     // Đo được trên trình duyệt: dùng danh sách cũ thì tràng `c d e f g a b c`
     // chỉ ra bốn lệnh — bốn phím sau rơi vào một sự kiện mà bản khắc chưa biết.
-    const dsBayGio = dsSauLenh();
-    const note = caretBayGio ? dsBayGio.find((n) => n.svgId === caretBayGio.sourceId) : null;
+    // 4D.P5B: chỉ cần ĐƯỜNG DẪN — tra khung theo danh tính (khung tự dựng lại khi
+    // cấu trúc đổi), không đọc lại cả bài mỗi phím.
+    const duongBayGio = caretBayGio ? duongCuaId(caretBayGio.sourceId) : null;
+    const note = duongBayGio ? { path: duongBayGio } : null;
     if (!note) {
       setNhapNote("Bấm một nốt trên bản nhạc trước đã.");
       return;
@@ -790,6 +787,31 @@ export default function MusicXmlBeatsPage({
    * Vẫn loại những sự kiện mà bản khắc trước đó không vẽ ra được (lặng cả ô
    * Verovio tự gộp): con trỏ không được tới chỗ không nhìn thấy.
    */
+  /**
+   * 4D.P5B: tra đường dẫn của một nốt theo id nguồn mà không đọc lại cả bài.
+   *
+   * id nguồn sinh từ CHỖ NGỒI (bè, ô, số con). Chỗ ngồi chỉ đổi khi lệnh đổi cấu
+   * trúc — và khi đó DraftEngine tạo đối tượng danh tính MỚI. Nên cùng đối tượng
+   * danh tính ⇒ cùng bảng id → đường dẫn. Bảng này KHÔNG mang cao độ: ai cần cao
+   * độ phải đọc từ nháp (`readNoteFields`).
+   */
+  const khungNot = useRef<{
+    danhTinh: object | null;
+    banKhac: object | null;
+    theoId: Map<string, string>;
+  } | null>(null);
+  function duongCuaId(id: string): string | null {
+    // Danh sách còn phụ thuộc bản khắc (bỏ sự kiện không vẽ ra) — nên khoá gồm cả hai.
+    const danhTinh: object | null = nhapRef.current?.identity ?? null;
+    const banKhac: object | null = score;
+    const k = khungNot.current;
+    if (!k || k.danhTinh !== danhTinh || k.banKhac !== banKhac) {
+      const theoId = new Map(dsSauLenh().map((n) => [n.svgId, n.path] as const));
+      khungNot.current = { danhTinh, banKhac, theoId };
+    }
+    return khungNot.current!.theoId.get(id) ?? null;
+  }
+
   function dsSauLenh(): SourceNote[] {
     const xml = nhapRef.current?.xml;
     if (!xml || !score) return notDiDuoc;
@@ -878,8 +900,8 @@ export default function MusicXmlBeatsPage({
     const id = vungChonRef.current.caret?.sourceId;
     const xml = nhapRef.current?.xml ?? source?.xml;
     if (!id || !xml) return "notation";
-    const n = dsSauLenh().find((x) => x.svgId === id);
-    return n && readNoteFields(xml, n.path)?.khuongTab ? "tab" : "notation";
+    const duong = duongCuaId(id);
+    return duong && readNoteFields(xml, duong)?.khuongTab ? "tab" : "notation";
   }
 
   /** Nhớ cao độ của một nốt nguồn làm mốc cho lần gõ chữ cái tiếp theo. */
@@ -1292,6 +1314,7 @@ export default function MusicXmlBeatsPage({
         // Bất biến số 1: đúng số hiệu mới nhất VÀ đúng bản đang hiện.
         if (!moi || res.revision !== moi.revision || moi.xml !== xmlHienThiRef.current) return;
         setScore(res.score);
+        setOnsetTheoPath(res.onsets);
         setError("");
         setBusy(false);
       },

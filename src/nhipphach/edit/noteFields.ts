@@ -63,12 +63,13 @@ export interface NoteFields {
 /**
  * Tài liệu đã đọc của một chuỗi nguồn, dùng chung cho mọi lần hỏi ô của nốt
  * (4D.P): một phím từng làm trang đọc lại cùng bản nháp sáu lần chỉ để hỏi ô.
- * CHỈ ĐỌC — hàm dưới đây và `readNoteContext` không sửa cây; lệnh sửa luôn đọc
+ * 4D.P5B: `newWarnings` cũng đọc từ đây — một bản nháp chỉ đọc MỘT lần cho cả
+ * hai việc. CHỈ ĐỌC — các nơi dùng và `readNoteContext` không sửa cây; lệnh sửa luôn đọc
  * tài liệu riêng của nó trong `applyCommand`. Mỗi lần hỏi vẫn dựng `NoteFields`
  * mới, nên không có đối tượng nào bị chia sẻ ra ngoài.
  */
 const boNhoTaiLieu = nhoTheoNguon<ReturnType<typeof parseStrict>>();
-const taiLieuChiDoc = (xml: string) => boNhoTaiLieu.lay(xml, () => parseStrict(xml));
+export const taiLieuChiDoc = (xml: string) => boNhoTaiLieu.lay(xml, () => parseStrict(xml));
 
 export function readNoteFields(xml: string, path: string): NoteFields | null {
   let doc;

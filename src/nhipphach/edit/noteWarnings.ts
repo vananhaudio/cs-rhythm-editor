@@ -1,9 +1,10 @@
 import { nhoTheoNguon } from "../../musicxml-beats/sourceCache.ts";
+import { taiLieuChiDoc } from "./noteFields.ts";
 import type { Document, Element } from "@xmldom/xmldom";
 import type { Step } from "./commands.ts";
 import { accidentalKey, ALTER_FOR_ACCIDENTAL, keyAlter } from "./accidentals.ts";
 import { STEP_SEMITONE } from "./pitchModel.ts";
-import { elementChildren, parseStrict } from "./xmlPatch.ts";
+import { elementChildren } from "./xmlPatch.ts";
 
 /**
  * Những chỗ bản nhạc "nhìn một đằng, vang một nẻo" — thứ mà sửa một nốt rất dễ
@@ -121,7 +122,7 @@ export function scoreProblems(doc: Document): NoteWarning[] {
 const boNhoVanDe = nhoTheoNguon<readonly NoteWarning[]>();
 const vanDeCua = (xml: string): readonly NoteWarning[] =>
   boNhoVanDe.lay(xml, () =>
-    Object.freeze(scoreProblems(parseStrict(xml)).map((w) => Object.freeze(w)))
+    Object.freeze(scoreProblems(taiLieuChiDoc(xml)).map((w) => Object.freeze(w)))
   );
 
 const khoaCanh = (w: NoteWarning) => `${w.code}@${w.path}`;
