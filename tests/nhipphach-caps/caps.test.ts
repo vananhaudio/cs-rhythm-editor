@@ -220,12 +220,14 @@ test("cổng quyền theo đúng khuôn ToolRouteGate đã nghiệm thu", () => 
   // Danh tính đọc từ phiên cục bộ, không gọi mạng.
   assert.match(hook, /getSession\(\)/);
   assert.equal(/supabase\.auth\.getUser\(\)/.test(hook), false);
-  // Quyền tốt gần nhất gắn với một tài khoản cụ thể.
-  assert.match(hook, /totNhat\.current\.uid !== uid/);
-  // Đăng xuất / đổi người: quên ngay.
-  assert.match(hook, /event === "SIGNED_OUT"[\s\S]{0,120}quen\(\)/);
-  // Chỉ lỗi mạng mới giữ quyền cũ; trả lời hợp lệ dù là "không cho" cũng theo.
-  assert.match(hook, /const giu = totNhat\.current && totNhat\.current\.uid === uid;/);
+  // Quyền tốt gần nhất gắn với một tài khoản; đăng xuất / đổi người quên ngay;
+  // chỉ lỗi mạng mới giữ quyền cũ — tất cả nằm ở bộ theo dõi dùng chung.
+  assert.match(hook, /taoBoTheoDoiQuyen<CapState>/);
+  assert.match(hook, /bo\.suKien\(event, session\?\.user\?\.id \?\? null\)/);
+  const bo = readFileSync(new URL("../../src/authCapabilityGate.ts", import.meta.url), "utf8");
+  assert.match(bo, /if \(tot && tot\.uid !== uid\) quen\(\);/);
+  assert.match(bo, /if \(event === "SIGNED_OUT"\) return "QUEN";/);
+  assert.match(bo, /if \(tot && tot\.uid === uid\) o\.dat/);
 });
 
 // ══ 5. Kho preset / lịch sử tôn trọng quyền ════════════════════════════════
@@ -362,7 +364,11 @@ test("khách thậm chí không được CHẠY hàm đọc quyền", async () =
     new URL("../../src/nhipphach/useCapabilities.ts", import.meta.url),
     "utf8"
   );
-  assert.match(hook, /if \(!uid\) \{[\s\S]{0,200}setState\(NO_CAPS\);[\s\S]{0,80}setPhase\("ready"\);/);
+  // (bộ theo dõi dùng chung: có `khiKhach` thì khách nhận ngay giá trị đó, không hỏi máy chủ —
+  // hành vi kiểm ở tests/route-guard/authSession.test.ts)
+  assert.match(hook, /khiKhach: NO_CAPS,/);
+  const bo = readFileSync(new URL("../../src/authCapabilityGate.ts", import.meta.url), "utf8");
+  assert.match(bo, /if \(uid === null && o\.khiKhach !== undefined\) \{[\s\S]{0,80}o\.dat\(\{ phase: "ready", value: o\.khiKhach \}\);/);
   for (const c of NHIPPHACH_CAPS) assert.equal(can(NO_CAPS, c), false);
 });
 
