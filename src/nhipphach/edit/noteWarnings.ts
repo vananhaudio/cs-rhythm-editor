@@ -1,8 +1,10 @@
+import { nhoTheoNguon } from "../../musicxml-beats/sourceCache.ts";
+import { taiLieuChiDoc } from "./noteFields.ts";
 import type { Document, Element } from "@xmldom/xmldom";
 import type { Step } from "./commands.ts";
 import { accidentalKey, ALTER_FOR_ACCIDENTAL, keyAlter } from "./accidentals.ts";
 import { STEP_SEMITONE } from "./pitchModel.ts";
-import { elementChildren, parseStrict } from "./xmlPatch.ts";
+import { elementChildren } from "./xmlPatch.ts";
 
 /**
  * Những chỗ bản nhạc "nhìn một đằng, vang một nẻo" — thứ mà sửa một nốt rất dễ
@@ -113,18 +115,28 @@ export function scoreProblems(doc: Document): NoteWarning[] {
   return out;
 }
 
+/**
+ * Vấn đề của một chuỗi nguồn, tính MỘT lần (4D.P). Bản gốc không bao giờ đổi,
+ * vậy mà trước đây mỗi phím lại đọc lại nó. Kết quả dùng chung nên đóng băng.
+ */
+const boNhoVanDe = nhoTheoNguon<readonly NoteWarning[]>();
+const vanDeCua = (xml: string): readonly NoteWarning[] =>
+  boNhoVanDe.lay(xml, () =>
+    Object.freeze(scoreProblems(taiLieuChiDoc(xml)).map((w) => Object.freeze(w)))
+  );
+
 const khoaCanh = (w: NoteWarning) => `${w.code}@${w.path}`;
 
 /** Chỉ những chỗ bản nháp MỚI gây ra. Bản gốc vốn đã vậy thì không phải việc của lần sửa này. */
 export function newWarnings(original: string, draft: string): NoteWarning[] {
   let cu: Set<string>;
   try {
-    cu = new Set(scoreProblems(parseStrict(original)).map(khoaCanh));
+    cu = new Set(vanDeCua(original).map(khoaCanh));
   } catch {
     cu = new Set();
   }
   try {
-    return scoreProblems(parseStrict(draft)).filter((w) => !cu.has(khoaCanh(w)));
+    return vanDeCua(draft).filter((w) => !cu.has(khoaCanh(w)));
   } catch {
     return [];
   }

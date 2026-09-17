@@ -6,6 +6,7 @@ import type {
   ChangeHarmony,
   ChangeLyricText,
   ChangePitch,
+  ChangeTabPosition,
   MakeRest,
   MusicXmlEditCommand,
   PasteSequence,
@@ -28,7 +29,8 @@ import type { Rational } from "../../musicxml-beats/rational.ts";
 import type { StructuralDelta } from "./draftIdentity.ts";
 import { readNoteContext } from "./noteContext.ts";
 import type { NoteContext } from "./noteContext.ts";
-import { pitchName, soundingPitch } from "./pitchModel.ts";
+import { pitchName, soundingPitch, transposeSemitone } from "./pitchModel.ts";
+import { viTri } from "./tabModel.ts";
 import {
   EditError,
   applyPatches,
@@ -1013,6 +1015,56 @@ function pasteSequence(xml: string, cmd: PasteSequence): AppliedCommand {
   return { xml: hienTai, changed: hienTai !== xml, touched, structural };
 }
 
+/**
+ * Ghi dây + phím cho một nốt TAB có sẵn — Giai đoạn 4D.
+ *
+ * Mọi cổng chặn nổ TRƯỚC mảnh vá đầu tiên. Cao độ mới được tính từ cách lên dây
+ * của CHÍNH bài; đổi cao độ thì đi qua đúng `writePitch` của 3B để chính tả và
+ * dấu hoá hiển thị theo bộ khoá, không có bộ luật thứ hai.
+ */
+function changeTabPosition(ctx: Ctx, note: Element, cmd: ChangeTabPosition, ngu: NoteContext) {
+  if (!ngu.isTabStaff)
+    throw new EditError("TAB_NOT_A_TAB_STAFF", "Nốt này không nằm trên khuông TAB.");
+  if (ngu.kind !== "note" || !ngu.pitch)
+    throw new EditError(
+      "TAB_NOTE_ENTRY_UNSUPPORTED",
+      "Chưa hỗ trợ nhập nốt trực tiếp trên khuông TAB. Hãy nhập trên khuông nhạc; công cụ nhập dây/phím TAB sẽ được làm riêng."
+    );
+  if (!ngu.tab)
+    throw new EditError(
+      "TAB_POSITION_MISSING",
+      "Nốt TAB này không ghi dây/phím trong nguồn — chưa sửa được."
+    );
+  if (ngu.chord !== "none")
+    throw new EditError(
+      "TAB_CHORD_UNSUPPORTED",
+      "Nốt này thuộc một hợp âm trên TAB — đổi dây có thể đè lên nốt khác, chưa hỗ trợ."
+    );
+  const vt = viTri(ngu.tabTuning, cmd.string, cmd.fret);
+  if (!vt.ok) throw new EditError(vt.code, vt.message);
+  // Nguồn phải đang nhất quán thì mới được sửa tiếp trên nền ấy.
+  if (ngu.tabSounding !== null && ngu.tabSounding !== soundingPitch(ngu.pitch))
+    throw new EditError(
+      "TAB_SOURCE_INCONSISTENT",
+      "Dây/phím của nốt này không khớp cao độ ghi trong nguồn — chưa sửa được."
+    );
+
+  const tech = elementChildren(child(note, "notations")!, "technical")[0]!;
+  const stringEl = child(tech, "string")!;
+  const fretEl = child(tech, "fret")!;
+  if (Number(textOf(stringEl).trim()) !== cmd.string) patchLeafText(ctx, stringEl, String(cmd.string));
+  if (Number(textOf(fretEl).trim()) !== cmd.fret) patchLeafText(ctx, fretEl, String(cmd.fret));
+
+  const cu = soundingPitch(ngu.pitch);
+  if (vt.midi !== cu) {
+    // Chính tả của cao độ mới: đi đúng đường dịch giọng của 3B, không tự đặt tên.
+    const moi = transposeSemitone(ngu.pitch, vt.midi - cu);
+    if (!moi) throw new EditError("TAB_PITCH_OUT_OF_RANGE", "Cao độ mới vượt tầm ghi được.");
+    writePitch(ctx, note, { type: "ChangePitch", path: cmd.path, pitch: moi, accidental: "auto" }, ngu);
+  }
+  if (ctx.patches.length) ctx.touched.push(`${cmd.path}/technical`);
+}
+
 export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedCommand {
   // Lệnh ghép chạy trên nhiều lượt định vị nên đi đường riêng, TRƯỚC khi tài
   // liệu được `locate` một lần cho các lệnh đơn.
@@ -1067,6 +1119,9 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
       break;
     case "InsertNoteIntoRest":
       insertNoteIntoRest(ctx, target, cmd, ngu, xml);
+      break;
+    case "ChangeTabPosition":
+      changeTabPosition(ctx, target, cmd, ngu);
       break;
     default: {
       const never: never = cmd;

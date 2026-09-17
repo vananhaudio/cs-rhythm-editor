@@ -1,3 +1,4 @@
+import { nhoTheoNguon } from "../../musicxml-beats/sourceCache.ts";
 import type { Pitch } from "./commands.ts";
 import { readNoteContext } from "./noteContext.ts";
 import { decideAccidental } from "./accidentals.ts";
@@ -31,6 +32,8 @@ export interface NoteFields {
   laLangCaO: boolean;
   /** Khuông này là TAB (`<clef><sign>TAB</sign>`) — 4B.3 chưa nhập nốt vào đây. */
   khuongTab: boolean;
+  /** Cách lên dây của khuông này (4D). `null` = bài không ghi. */
+  tabTuning: ReadonlyMap<number, number> | null;
   pitch: Pitch | null;
   /** Dấu hoá đang được VẼ ra, nếu nguồn có ghi. */
   accidental: string | null;
@@ -57,10 +60,21 @@ export interface NoteFields {
   lyrics: NoteLyric[];
 }
 
+/**
+ * Tài liệu đã đọc của một chuỗi nguồn, dùng chung cho mọi lần hỏi ô của nốt
+ * (4D.P): một phím từng làm trang đọc lại cùng bản nháp sáu lần chỉ để hỏi ô.
+ * 4D.P5B: `newWarnings` cũng đọc từ đây — một bản nháp chỉ đọc MỘT lần cho cả
+ * hai việc. CHỈ ĐỌC — các nơi dùng và `readNoteContext` không sửa cây; lệnh sửa luôn đọc
+ * tài liệu riêng của nó trong `applyCommand`. Mỗi lần hỏi vẫn dựng `NoteFields`
+ * mới, nên không có đối tượng nào bị chia sẻ ra ngoài.
+ */
+const boNhoTaiLieu = nhoTheoNguon<ReturnType<typeof parseStrict>>();
+export const taiLieuChiDoc = (xml: string) => boNhoTaiLieu.lay(xml, () => parseStrict(xml));
+
 export function readNoteFields(xml: string, path: string): NoteFields | null {
   let doc;
   try {
-    doc = parseStrict(xml);
+    doc = taiLieuChiDoc(xml);
   } catch {
     return null;
   }
@@ -85,6 +99,7 @@ export function readNoteFields(xml: string, path: string): NoteFields | null {
     kind: ngu.kind,
     laLangCaO,
     khuongTab: ngu.isTabStaff,
+    tabTuning: ngu.tabTuning,
     pitch: ngu.pitch,
     accidental: ngu.accidental,
     accidentalTarget: {

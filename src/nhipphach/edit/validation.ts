@@ -1,3 +1,4 @@
+import { nhoTheoNguon } from "../../musicxml-beats/sourceCache.ts";
 import { musicXMLToBeatMap } from "../../musicxml-beats/beatMap.ts";
 import { parseMusicXML } from "../../musicxml-beats/parser.ts";
 import { laKindMusicXml } from "./harmonyModel.ts";
@@ -126,8 +127,66 @@ export function structuralIssues(doc: Document): string[] {
   return issues;
 }
 
-/** Tập chẩn đoán nhịp của một bản: "mã@ô" — để so bản nháp với bản gốc. */
+const boNhoNhip = nhoTheoNguon<ReadonlyMap<string, string>>();
+/**
+ * Tập chẩn đoán nhịp của một bản: "mã@ô" — để so bản nháp với bản gốc.
+ * Tính MỘT lần cho mỗi chuỗi nguồn (4D.P); mỗi nơi gọi nhận bản sao của riêng mình.
+ */
 export function rhythmIssues(xml: string): Map<string, string> {
+  return new Map(
+    boNhoNhip.lay(xml, () => boNhoTheoNhip.lay(khoaNhip(xml), () => tinhRhythmIssues(xml)))
+  );
+}
+
+/**
+ * HÌNH CHIẾU NHỊP (4D.P5B): bản MusicXML với NỘI DUNG cao độ, dây/phím và dấu
+ * hoá bị làm rỗng (thẻ vẫn giữ để sự có mặt của chúng không lẫn). Nhịp và phách
+ * chỉ phụ thuộc trường độ, hình nốt, chấm, bè, ô nhịp, khoá nhịp — không phụ
+ * thuộc cao độ hay thế bấm (đã soát: bộ tính phách không đọc `pitch`).
+ *
+ * Nên sửa phím TAB, đổi cao độ… cho CÙNG một hình chiếu → dùng lại lỗi nhịp đã
+ * tính, không đọc lại cả bài. Đổi trường độ thì hình chiếu khác → tính lại.
+ */
+const LAM_RONG: readonly (readonly [mo: string, dong: string, thay: string])[] = [
+  ["<pitch>", "</pitch>", "<pitch/>"],
+  ["<technical>", "</technical>", "<technical/>"],
+  ["<accidental", "</accidental>", "<accidental/>"],
+];
+/**
+ * Chỉ dựng KHOÁ bộ đệm — không bao giờ ghi ra bản nhạc (việc sửa XML chỉ đi qua
+ * vá theo vị trí ở `xmlPatch`). Quét tuần tự, cắt ghép từng đoạn.
+ */
+export function khoaNhip(xml: string): string {
+  const timTu = (l: (typeof LAM_RONG)[number], tu: number) => {
+    let k = xml.indexOf(l[0], tu);
+    // `<accidental` không được khớp nhầm `<accidental-mark`.
+    while (k >= 0 && l[0] === "<accidental") {
+      const c = xml.charCodeAt(k + l[0].length);
+      if (c === 62 || c === 32 || c === 47 || c === 9 || c === 10 || c === 13) break; // > dấu cách / tab xuống dòng
+      k = xml.indexOf(l[0], k + 1);
+    }
+    return k;
+  };
+  const ke = LAM_RONG.map((l) => timTu(l, 0));
+  const out: string[] = [];
+  let i = 0;
+  for (;;) {
+    let chon = -1;
+    for (let n = 0; n < ke.length; n++)
+      if (ke[n] >= 0 && (chon < 0 || ke[n] < ke[chon])) chon = n;
+    if (chon < 0) break;
+    const luat = LAM_RONG[chon];
+    const ket = xml.indexOf(luat[1], ke[chon]);
+    if (ket < 0) break;
+    out.push(xml.slice(i, ke[chon]), luat[2]);
+    i = ket + luat[1].length;
+    for (let n = 0; n < ke.length; n++) if (ke[n] >= 0 && ke[n] < i) ke[n] = timTu(LAM_RONG[n], i);
+  }
+  out.push(xml.slice(i));
+  return out.join("");
+}
+const boNhoTheoNhip = nhoTheoNguon<ReadonlyMap<string, string>>();
+function tinhRhythmIssues(xml: string): Map<string, string> {
   const out = new Map<string, string>();
   const map = musicXMLToBeatMap(xml);
   for (const m of map.measures)

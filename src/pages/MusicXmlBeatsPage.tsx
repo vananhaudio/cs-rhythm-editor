@@ -15,7 +15,12 @@ import {
   exportSVGPages,
 } from "../musicxml-beats/renderer/printExport";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { createAnnotatedScoreRenderer } from "../musicxml-beats/renderer/verovioAdapter";
+import {
+  createAnnotatedScoreRenderer,
+  renderCanonicalForExport,
+} from "../musicxml-beats/renderer/verovioAdapter";
+import { PreviewScheduler } from "../nhipphach/preview/previewScheduler";
+import { taoBoVeTrinhDuyet } from "../nhipphach/preview/previewTransports";
 import { DEFAULT_SCORE_SETTINGS } from "../musicxml-beats/renderer/types";
 import type {
   AnnotatedScore,
@@ -78,6 +83,9 @@ import { dispatch } from "../nhipphach/editor/dispatcher";
 import { toCommand } from "../nhipphach/editor/commandFacade";
 import { NHAP_BAN_DAU, datTruongDo, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
 import { chepDoan } from "../nhipphach/edit/clipboard";
+import { goSo, TAB_TRONG } from "../nhipphach/editor/tabEntry";
+import type { TabEntryState } from "../nhipphach/editor/tabEntry";
+import type { CheDo } from "../nhipphach/editor/keymap";
 import type { Clipboard } from "../nhipphach/edit/clipboard";
 import type { EntryDuration, NoteEntryState } from "../nhipphach/editor/noteEntry";
 import { theoDoi } from "../nhipphach/edit/draftIdentity";
@@ -245,6 +253,15 @@ export default function MusicXmlBeatsPage({
    * để hiện ra. Nó KHÔNG phải một bản nhạc thứ hai: chỉ có cao độ và trường độ.
    */
   const ghiTamRef = useRef<Clipboard | null>(null);
+  /**
+   * Dãy chữ số đang gõ trên khuông TAB (4D) và bản nháp NGAY TRƯỚC chữ số đầu
+   * tiên — để "1" rồi "2" thay lệnh cũ bằng "phím 12" thay vì chồng hai lệnh.
+   */
+  const tabNhapRef = useRef<TabEntryState>(TAB_TRONG);
+  // Bọc trong một hộp: "chưa có nháp" (null bên trong) khác hẳn "chưa gõ số nào"
+  // (hộp null). Không bọc thì chữ số đầu gõ lên một bài sạch sẽ không quay lui
+  // được, và "1" rồi "2" ra HAI lệnh.
+  const tabTruocSoRef = useRef<{ nhap: DraftState | null } | null>(null);
   const [ghiTam, setGhiTam] = useState<Clipboard | null>(null);
   /** Bản hiện ra của trường độ đang cầm — chỉ để thanh công cụ vẽ, không phải nguồn sự thật. */
   const [truongDoNhap, setTruongDoNhap] = useState<EntryDuration>(NHAP_BAN_DAU.currentDuration);
@@ -267,6 +284,12 @@ export default function MusicXmlBeatsPage({
     nhapRef.current = next;
     setNhap(next);
   };
+  /**
+   * 4D.P3: lệnh vừa làm ra bản nháp đang có — gợi ý cho lượt vẽ xem trước. Chỉ là
+   * gợi ý: lượt vẽ tự phân loại lại so với bản xem trước THẬT của renderer, và chỉ
+   * dùng khi `xml` khớp đúng bản nó đang vẽ.
+   */
+  const goiYXemTruoc = useRef<{ xml: string; cmd: MusicXmlEditCommand } | null>(null);
   const [dangLuuNhap, setDangLuuNhap] = useState(false);
   const [nhapNote, setNhapNote] = useState("");
   const [kiemTra, setKiemTra] = useState<ValidationReport | null>(null);
@@ -445,19 +468,14 @@ export default function MusicXmlBeatsPage({
     }
   }
 
-  /** Thời điểm bắt đầu của từng nốt nguồn, lấy từ chính parser — để hiện "Phách". */
-  const onsetTheoPath = useMemo(() => {
-    const m = new Map<string, Parameters<typeof describeNote>[2]>();
-    if (!xmlHienThi) return m;
-    try {
-      for (const p of parseMusicXML(xmlHienThi).parts)
-        for (const ms of p.measures)
-          for (const ev of ms.events) m.set(ev.source.path, ev.onset);
-    } catch {
-      /* nguồn hỏng thì panel chỉ thiếu ô Phách */
-    }
-    return m;
-  }, [xmlHienThi]);
+  /**
+   * Thời điểm bắt đầu của từng nốt nguồn — để hiện "Phách". 4D.P5B: do bộ vẽ
+   * (Worker) tính cùng lượt khắc và gửi kèm, nên luôn CÙNG phiên bản với bản khắc
+   * `score` đang hiện, và main thread không phải đọc lại cả bài mỗi phím.
+   */
+  const [onsetTheoPath, setOnsetTheoPath] = useState<
+    Map<string, Parameters<typeof describeNote>[2]>
+  >(() => new Map());
 
   /**
    * Click trên bản nhạc → nốt nguồn, qua ID mà Verovio đã giữ nguyên. Không có
@@ -596,7 +614,7 @@ export default function MusicXmlBeatsPage({
    * Chỉ có ba nhánh — dời con trỏ, đụng ngăn xếp nháp, hoặc phát ĐÚNG MỘT lệnh
    * đã có sẵn. Trang không tự dịch nhạc lý; `commandFacade` trả lời hộ.
    */
-  function apHanhDong(action: EditorAction) {
+  function apHanhDong(action: EditorAction, lucBam?: number) {
     // Cổng quyền lặp lại ở đây có chủ ý, đúng khuôn bản vá 6e85c9f.
     if (!choChonNot || !chonNot) return;
     if (action.type === "MOVE") {
@@ -610,6 +628,38 @@ export default function MusicXmlBeatsPage({
       }
       return;
     }
+    // ── 4D: chữ số trên khuông TAB → gom thành số phím rồi mới thành lệnh ──
+    if (action.type === "TAB_DIGIT") {
+      const id = vungChonRef.current.caret?.sourceId;
+      if (!id) return;
+      // Giờ LÚC BẤM, không phải giờ lúc handler chạy. Đo được trên bài thật 4
+      // trang: phím đầu kéo theo một lượt khắc nặng, phím thứ hai xếp hàng sau
+      // nó và chạy trễ 8 giây — lấy `Date.now()` thì "1" rồi "2" không bao giờ
+      // ghép được thành 12, dù thầy gõ liền tay.
+      const go = goSo(tabNhapRef.current, id, action.digit, lucBam ?? performance.now());
+      // Gõ nối tiếp ("1" rồi "2") thì THAY lệnh vừa rồi, không chồng thêm: ngăn
+      // xếp hoàn tác chỉ giữ MỘT bước "đặt phím 12", đúng như thầy vừa gõ.
+      let truocSo: { nhap: DraftState | null };
+      if (go.noiTiep && tabTruocSoRef.current) {
+        truocSo = tabTruocSoRef.current;
+        // Quay về bản nháp trước chữ số đầu — qua ĐÚNG cửa `datNhap`, không gán
+        // thẳng vào ref (bất biến 4A.1: chỉ một cửa đặt nháp).
+        datNhap(truocSo.nhap);
+      } else {
+        truocSo = { nhap: nhapRef.current };
+      }
+      apHanhDong({ type: "SET_TAB_FRET", fret: go.phim });
+      // Đặt bộ đệm SAU lời gọi lồng. Lời gọi ấy đi qua dòng "mọi hành động khác
+      // cắt dãy chữ số" bên dưới — đặt trước là bị chính nó xoá mất. Đo được trên
+      // trình duyệt: đặt trước thì `1` rồi `2` ra phím 2 và BA lệnh, không phải 12.
+      tabNhapRef.current = go.state;
+      tabTruocSoRef.current = truocSo;
+      return;
+    }
+    // Mọi hành động KHÁC cắt dãy chữ số đang gõ — gõ số sau đó là số mới.
+    tabNhapRef.current = TAB_TRONG;
+    tabTruocSoRef.current = null;
+
     // ── 4C: vùng chọn và bảng ghi tạm — không lệnh nào, không chạm bản nhạc ──
     if (action.type === "EXTEND_SELECTION") {
       const ds = dsSauLenh();
@@ -653,8 +703,10 @@ export default function MusicXmlBeatsPage({
     // có thể sinh thêm dấu lặng, và con trỏ nhảy sang chính nó ngay lập tức.
     // Đo được trên trình duyệt: dùng danh sách cũ thì tràng `c d e f g a b c`
     // chỉ ra bốn lệnh — bốn phím sau rơi vào một sự kiện mà bản khắc chưa biết.
-    const dsBayGio = dsSauLenh();
-    const note = caretBayGio ? dsBayGio.find((n) => n.svgId === caretBayGio.sourceId) : null;
+    // 4D.P5B: chỉ cần ĐƯỜNG DẪN — tra khung theo danh tính (khung tự dựng lại khi
+    // cấu trúc đổi), không đọc lại cả bài mỗi phím.
+    const duongBayGio = caretBayGio ? duongCuaId(caretBayGio.sourceId) : null;
+    const note = duongBayGio ? { path: duongBayGio } : null;
     if (!note) {
       setNhapNote("Bấm một nốt trên bản nhạc trước đã.");
       return;
@@ -681,6 +733,13 @@ export default function MusicXmlBeatsPage({
     if (!apLenh(ra.command)) return;
     // Cao độ vừa GHI RA là tham chiếu chắc chắn nhất cho chữ cái tiếp theo.
     const cmd = ra.command;
+    // 4D: đổi phím làm đổi cao độ của nốt TAB. Nốt tương ứng trên khuông nhạc là
+    // một <note> khác và MusicXML không ghi quan hệ giữa hai nốt — nên KHÔNG tự
+    // sửa theo, mà nói thẳng ra (STAFF_TAB_MAY_NOT_MATCH).
+    if (cmd.type === "ChangeTabPosition" && action.type === "SET_TAB_FRET")
+      setNhapNote(
+        "Đã đổi phím trên TAB. Khuông nhạc tương ứng không được tự sửa theo."
+      );
     if (
       cmd.type === "ReplaceRestWithNote" ||
       cmd.type === "InsertNoteIntoRest" ||
@@ -728,6 +787,31 @@ export default function MusicXmlBeatsPage({
    * Vẫn loại những sự kiện mà bản khắc trước đó không vẽ ra được (lặng cả ô
    * Verovio tự gộp): con trỏ không được tới chỗ không nhìn thấy.
    */
+  /**
+   * 4D.P5B: tra đường dẫn của một nốt theo id nguồn mà không đọc lại cả bài.
+   *
+   * id nguồn sinh từ CHỖ NGỒI (bè, ô, số con). Chỗ ngồi chỉ đổi khi lệnh đổi cấu
+   * trúc — và khi đó DraftEngine tạo đối tượng danh tính MỚI. Nên cùng đối tượng
+   * danh tính ⇒ cùng bảng id → đường dẫn. Bảng này KHÔNG mang cao độ: ai cần cao
+   * độ phải đọc từ nháp (`readNoteFields`).
+   */
+  const khungNot = useRef<{
+    danhTinh: object | null;
+    banKhac: object | null;
+    theoId: Map<string, string>;
+  } | null>(null);
+  function duongCuaId(id: string): string | null {
+    // Danh sách còn phụ thuộc bản khắc (bỏ sự kiện không vẽ ra) — nên khoá gồm cả hai.
+    const danhTinh: object | null = nhapRef.current?.identity ?? null;
+    const banKhac: object | null = score;
+    const k = khungNot.current;
+    if (!k || k.danhTinh !== danhTinh || k.banKhac !== banKhac) {
+      const theoId = new Map(dsSauLenh().map((n) => [n.svgId, n.path] as const));
+      khungNot.current = { danhTinh, banKhac, theoId };
+    }
+    return khungNot.current!.theoId.get(id) ?? null;
+  }
+
   function dsSauLenh(): SourceNote[] {
     const xml = nhapRef.current?.xml;
     if (!xml || !score) return notDiDuoc;
@@ -750,6 +834,14 @@ export default function MusicXmlBeatsPage({
     const sau = buoc(truoc);
     if (sau === truoc) return;
     datNhap(sau);
+    // Hoàn tác đi ngược lệnh ở vị trí cũ; làm lại đi xuôi lệnh ở vị trí mới.
+    const lenh =
+      sau.cursor === truoc.cursor - 1
+        ? truoc.commands[truoc.cursor - 1]
+        : sau.cursor === truoc.cursor + 1
+          ? sau.commands[sau.cursor - 1]
+          : undefined;
+    goiYXemTruoc.current = lenh ? { xml: sau.xml, cmd: lenh } : null;
     if (sau.identity !== truoc.identity) doiChoCaret(truoc.identity, sau.identity);
   }
 
@@ -803,6 +895,15 @@ export default function MusicXmlBeatsPage({
     setNotChon(nt ? { kind: "note", note: nt } : null);
   }
 
+  /** Ngữ cảnh bàn phím ngay lúc này — đọc từ nháp đồng bộ, không từ lần vẽ trước. */
+  function cheDoBanPhim(): CheDo {
+    const id = vungChonRef.current.caret?.sourceId;
+    const xml = nhapRef.current?.xml ?? source?.xml;
+    if (!id || !xml) return "notation";
+    const duong = duongCuaId(id);
+    return duong && readNoteFields(xml, duong)?.khuongTab ? "tab" : "notation";
+  }
+
   /** Nhớ cao độ của một nốt nguồn làm mốc cho lần gõ chữ cái tiếp theo. */
   function ghiNhoNot(note: SourceNote) {
     const p = note.pitch;
@@ -839,11 +940,16 @@ export default function MusicXmlBeatsPage({
         choSua: choChonNot,
         dangMoModal: moThuVien || !!trungLap,
         focused: (typeof document === "undefined" ? null : document.activeElement) as never,
+        // 4D: ngữ cảnh suy từ CHÍNH nốt dưới con trỏ — nốt trên khuông TAB thì
+        // chữ số là phím, ↑/↓ là đổi dây. Không có nút bật/tắt nào để quên.
+        cheDo: cheDoBanPhim(),
       }
     );
     if (ra.kind !== "action") return;
     e.preventDefault();
-    apHanhDong(ra.action);
+    // `timeStamp` là giờ trình duyệt ghi khi phím được BẤM (cùng gốc với
+    // `performance.now()`), kể cả khi handler phải chờ sau một lượt khắc.
+    apHanhDong(ra.action, e.timeStamp);
   }
 
   /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
@@ -855,6 +961,7 @@ export default function MusicXmlBeatsPage({
       const truoc = nhapRef.current ?? createDraft(source.xml);
       const sau = applyToDraft(truoc, cmd);
       datNhap(sau);
+      goiYXemTruoc.current = { xml: sau.xml, cmd };
       // 4B.2: lệnh cân lại ô nhịp có thể chèn/bỏ dấu lặng, làm mọi sự kiện đứng
       // sau tụt chỉ số — tức là đổi `tva-src-…`. Con trỏ phải đi theo DANH TÍNH
       // LOGIC, không phải theo cái id cũ: giữ id cũ là im lặng trỏ sang một sự
@@ -1189,9 +1296,41 @@ export default function MusicXmlBeatsPage({
    * Không phải tối ưu: hai việc khác nhau cần hai chính sách chờ khác nhau.
    */
   const mocKhac = useRef<{ source: unknown; settings: ScoreSettings } | null>(null);
+  /** Bản đang HIỆN theo nháp đồng bộ — kết quả vẽ cho bản khác bị bỏ. */
+  const xmlHienThiRef = useRef<string | null>(null);
+  xmlHienThiRef.current = xmlHienThi;
+  const yeuCauMoiNhat = useRef<{ revision: number; xml: string } | null>(null);
+  const lapLich = useRef<PreviewScheduler | null>(null);
+  const layRendererMain = () =>
+    (renderer.current ??= createAnnotatedScoreRenderer().catch((e) => {
+      renderer.current = null;
+      throw e;
+    }));
+  function layLapLich() {
+    lapLich.current ??= new PreviewScheduler({
+      taoBoVe: taoBoVeTrinhDuyet(layRendererMain),
+      hien(res) {
+        const moi = yeuCauMoiNhat.current;
+        // Bất biến số 1: đúng số hiệu mới nhất VÀ đúng bản đang hiện.
+        if (!moi || res.revision !== moi.revision || moi.xml !== xmlHienThiRef.current) return;
+        setScore(res.score);
+        setOnsetTheoPath(res.onsets);
+        setError("");
+        setBusy(false);
+      },
+      baoLoi(message, revision) {
+        const moi = yeuCauMoiNhat.current;
+        if (!moi || revision !== moi.revision || moi.xml !== xmlHienThiRef.current) return;
+        setScore(null);
+        setError(message || "Không đọc được bản nhạc.");
+        setBusy(false);
+      },
+    });
+    return lapLich.current;
+  }
+  useEffect(() => () => lapLich.current?.destroy(), []);
   useEffect(() => {
     if (!source || !xmlHienThi) return;
-    let cancelled = false;
     /**
      * TÁCH CHÍNH SÁCH CHỜ (Giai đoạn 4A.1).
      *
@@ -1212,27 +1351,21 @@ export default function MusicXmlBeatsPage({
     mocKhac.current = { source, settings };
     setBusy(true);
     setError("");
-    const chay = async () => {
-      try {
-        renderer.current ??= createAnnotatedScoreRenderer().catch((e) => {
-          renderer.current = null;
-          throw e;
-        });
-        const r = await renderer.current;
-        if (cancelled) return;
-        // Xem trước bản nháp = khắc đúng bản nháp, cùng một bộ khắc, cùng cache.
-        const rendered = r.render(xmlHienThi, settings);
-        if (!cancelled) {
-          setScore(rendered);
-          setBusy(false);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setScore(null);
-          setError(e instanceof Error ? e.message : "Không đọc được bản nhạc.");
-          setBusy(false);
-        }
-      }
+    // 4D.P4: bản xem trước vẽ ở Web Worker. Main thread chỉ gửi yêu cầu có SỐ
+    // HIỆU và nhận kết quả; bàn phím, con trỏ, thanh công cụ, hoàn tác không phải
+    // chờ bản khắc. Chỉ kết quả của số hiệu mới nhất — và đúng bản đang hiện —
+    // được đưa lên màn hình (xem `PreviewScheduler`).
+    const chay = () => {
+      const lap = layLapLich();
+      const goiY = goiYXemTruoc.current;
+      const revision = lap.soHieuMoiNhat + 1;
+      yeuCauMoiNhat.current = { revision, xml: xmlHienThi };
+      lap.request({
+        revision,
+        xml: xmlHienThi,
+        settings,
+        cmd: goiY && goiY.xml === xmlHienThi ? goiY.cmd : null,
+      });
     };
     let huy: () => void;
     if (chiNhapDoi) {
@@ -1259,7 +1392,6 @@ export default function MusicXmlBeatsPage({
       huy = () => clearTimeout(id);
     }
     return () => {
-      cancelled = true;
       huy();
     };
   }, [source, xmlHienThi, settings]);
@@ -1329,13 +1461,18 @@ export default function MusicXmlBeatsPage({
     const batDau = Date.now();
     let daXuat = false;
     try {
+      // Xuất file KHÔNG lấy bản xem trước: khắc chuẩn lại từ đúng bản đang hiện,
+      // trên một bộ khắc riêng. Bản xem trước có thể được ghép từng trang (4D.P3).
+      const xmlXuat = nhapRef.current?.xml ?? source?.xml;
+      if (!xmlXuat) return;
+      const chuan = await renderCanonicalForExport(xmlXuat, settings);
       if (format === "pdf")
-        downloadBlob(await exportScorePDF(score), `${name}.pdf`);
+        downloadBlob(await exportScorePDF(chuan), `${name}.pdf`);
       else if (format === "svg") {
-        const output = await exportSVGPages(score);
+        const output = await exportSVGPages(chuan);
         downloadBlob(output.blob, `${name}-svg.${output.extension}`);
       } else {
-        const output = await exportScorePNG(score, pngScale);
+        const output = await exportScorePNG(chuan, pngScale);
         downloadBlob(output.blob, `${name}-${pngScale}x.${output.extension}`);
       }
       daXuat = true;
@@ -1430,7 +1567,9 @@ export default function MusicXmlBeatsPage({
   const p = batchProgress(batchItems);
   const dangCanChon = batchItems.filter((i) => i.status === "needs-grouping");
   const trangThaiXuat = busy
-    ? "Đang khắc bản nhạc…"
+    ? score
+      ? "Đang cập nhật bản nhạc…"
+      : "Đang khắc bản nhạc…"
     : score
     ? `${score.pages.length} trang · ${score.anchors.length} nhãn đếm`
     : "Chưa có bản nhạc";
@@ -2587,7 +2726,8 @@ export default function MusicXmlBeatsPage({
                   style={
                     {
                       background: score ? "var(--np-paper)" : "var(--surface)",
-                      opacity: busy ? 0.55 : 1,
+                      // Đang cập nhật: chỉ nhạt đi một chút, KHÔNG chặn bàn phím hay chuột.
+                      opacity: busy ? (score ? 0.85 : 0.55) : 1,
                       padding: score ? 20 : 0,
                       "--np-zoom": xem.che === "rong" ? 100 : xem.pct,
                     } as CSSProperties

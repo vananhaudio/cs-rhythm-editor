@@ -2,6 +2,7 @@
   "extends": "../musicxml-renderer/tsconfig.json",
   "include": [
     "../../src/nhipphach/**/*.ts",
+    "../../src/musicxml-beats/renderer/verovio.d.ts",
     "./*.ts"
   ],
   "exclude": [

@@ -2,6 +2,7 @@ import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import type { Element } from "@xmldom/xmldom";
 import { ZERO, add, sub, div, decimal, compare } from "./rational.ts";
 import type { Rational } from "./rational.ts";
+import { dongBangSau, nhoTheoNguon } from "./sourceCache.ts";
 import type {
   NormalizedScore,
   NormalizedMeasure,
@@ -23,8 +24,18 @@ const source = (e: Element, path: string): SourceIdentity => ({
   xmlId: e.getAttribute("id") || e.getAttribute("xml:id") || null,
   xml: serializer.serializeToString(e),
 });
-/** Structural source paths remain unique even when MusicXML repeats measure numbers. */
+/**
+ * Structural source paths remain unique even when MusicXML repeats measure numbers.
+ *
+ * 4D.P2: panel "Phách", kiểm tra nhịp và bản khắc cùng đọc MỘT chuỗi nháp — tính
+ * một lần cho mỗi chuỗi, kết quả đóng băng sâu. Nguồn hỏng thì ném lỗi như cũ
+ * (lỗi không được ghi nhớ).
+ */
+const boNhoDoc = nhoTheoNguon<NormalizedScore>();
 export function parseMusicXML(xml: string): NormalizedScore {
+  return boNhoDoc.lay(xml, () => dongBangSau(tinhParseMusicXML(xml)));
+}
+function tinhParseMusicXML(xml: string): NormalizedScore {
   const errors: string[] = [];
   const doc = new DOMParser({
     onError: (level, message) => {
