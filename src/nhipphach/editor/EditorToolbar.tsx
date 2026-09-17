@@ -1,7 +1,6 @@
 import { NOTE_TYPES, TYPE_LABEL } from "../edit/durationModel.ts";
 import type { NoteType } from "../edit/durationModel.ts";
 import { BANG_TRO_GIUP, phimCua } from "./keymap.ts";
-import type { CheDo } from "./keymap.ts";
 import type { EditorAction } from "./actions.ts";
 import type { NoteFields } from "../edit/noteFields.ts";
 import type { EntryDuration } from "./noteEntry.ts";
@@ -49,7 +48,6 @@ function TBtn({
   pressed,
   disabled,
   onAction,
-  cheDo = "notation",
 }: {
   action: EditorAction;
   ten: string;
@@ -57,10 +55,8 @@ function TBtn({
   pressed?: boolean;
   disabled?: boolean;
   onAction: EditorToolbarProps["onAction"];
-  /** Ngữ cảnh bàn phím — để nhãn phím nói đúng thứ phím ấy làm ở đây (4D). */
-  cheDo?: CheDo;
 }) {
-  const phim = phimCua(action, cheDo);
+  const phim = phimCua(action);
   return (
     <button
       type="button"
@@ -93,11 +89,6 @@ export function EditorToolbar({
   // Con trỏ ở dấu lặng = đang NHẬP NỐT: hàng hình nốt chọn cây bút, và luôn bấm
   // được (kể cả trên dấu lặng cả ô nhịp — chọn bút có hại gì đâu).
   const dangNhap = fields?.kind === "rest";
-  // 4D: con trỏ ở một nốt TAB đọc được dây/phím và có cách lên dây.
-  const dangTab = !!fields?.khuongTab && !!fields.tab && !!fields.tabTuning?.size;
-  const cheDo: CheDo = fields?.khuongTab ? "tab" : "notation";
-  const sangDayCao = dangTab && !!fields!.tabTuning!.has(fields!.tab!.string - 1);
-  const sangDayThap = dangTab && !!fields!.tabTuning!.has(fields!.tab!.string + 1);
   const suaDuocTruongDo = !!fields && (dangNhap || !fields.duongTruongDo);
   const suaDuocCaoDo = !!fields?.pitch;
   const troGiup = BANG_TRO_GIUP.map((b) => `${b.phim} — ${b.mo}`).join("\n");
@@ -111,7 +102,6 @@ export function EditorToolbar({
             ten={TYPE_LABEL[type]}
             mo={dangNhap ? `Nhập bằng ${TYPE_LABEL[type]}` : TYPE_LABEL[type]}
             pressed={dangNhap ? truongDoNhap.noteType === type : fields?.noteType === type}
-            cheDo={cheDo}
             disabled={!suaDuocTruongDo}
             onAction={onAction}
           />
@@ -121,7 +111,6 @@ export function EditorToolbar({
           ten="·"
           mo={dangNhap ? "Nhập có chấm dôi" : "Thêm / bỏ chấm dôi"}
           pressed={dangNhap ? truongDoNhap.dots > 0 : !!fields && fields.dots > 0}
-          cheDo={cheDo}
           disabled={!suaDuocTruongDo}
           onAction={onAction}
         />
@@ -150,32 +139,6 @@ export function EditorToolbar({
         />
       </span>
 
-      {dangTab && (
-        // 4D: nốt TAB — chỉ hiện đúng thứ cần: dây, phím, và hai nút đổi dây.
-        // Phím tắt đọc từ bảng phím như mọi nút khác; chữ số gõ thẳng là phím.
-        <span className="np-toolbar-group np-tab-panel" role="group" aria-label="Vị trí trên TAB">
-          <span className="np-tab-pos" role="status">
-            Dây <strong>{fields!.tab!.string}</strong> · Phím <strong>{fields!.tab!.fret}</strong>
-          </span>
-          <TBtn
-            action={{ type: "MOVE_TAB_STRING", delta: -1 }}
-            ten="↑ dây"
-            mo="Sang dây cao hơn, giữ nguyên cao độ"
-            disabled={!sangDayCao}
-            onAction={onAction}
-            cheDo={cheDo}
-          />
-          <TBtn
-            action={{ type: "MOVE_TAB_STRING", delta: 1 }}
-            ten="↓ dây"
-            mo="Sang dây thấp hơn, giữ nguyên cao độ"
-            disabled={!sangDayThap}
-            onAction={onAction}
-            cheDo={cheDo}
-          />
-        </span>
-      )}
-
       <span className="np-toolbar-group" role="group" aria-label="Dấu lặng">
         {/* Nhãn phím do keymap trả — 4B.1 gắn bốn phím vào MAKE_REST, nút hiện
             phím ĐẦU TIÊN trong bảng. Không gõ tay chuỗi phím lần thứ hai. */}
@@ -186,7 +149,6 @@ export function EditorToolbar({
           pressed={fields?.kind === "rest"}
           disabled={!fields || fields.kind === "rest" || fields.chord !== "none" || !!fields.ties.length || fields.grace}
           onAction={onAction}
-          cheDo={cheDo}
         />
       </span>
 

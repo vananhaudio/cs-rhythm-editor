@@ -1,7 +1,6 @@
 import type { MusicXmlEditCommand } from "../edit/commands.ts";
 import type { NoteFields } from "../edit/noteFields.ts";
-import { transposeSemitone, pitchName, samePitch, soundingPitch, withAlter } from "../edit/pitchModel.ts";
-import { doiDayGiuCaoDo, viTri } from "../edit/tabModel.ts";
+import { transposeSemitone, pitchName, samePitch, withAlter } from "../edit/pitchModel.ts";
 import type { EditorAction } from "./actions.ts";
 import { capDoNhap } from "./noteEntry.ts";
 import type { EntryDuration, NoteEntryState } from "./noteEntry.ts";
@@ -20,8 +19,6 @@ import type { Clipboard } from "../edit/clipboard.ts";
  *   TOGGLE_DOT    → ChangeDurationAndRebalance (4B.2)
  *   RESPELL       → RespellNote
  *   MAKE_REST     → MakeRest            (4B.1)
- *   SET_TAB_FRET    → ChangeTabPosition  giữ dây, đổi phím (cao độ đổi theo) — 4D
- *   MOVE_TAB_STRING → ChangeTabPosition  giữ cao độ, đổi dây (phím tính lại) — 4D
  *   PASTE         → PasteSequence       (4C, một lệnh = một lần hoàn tác)
  *   ENTER_PITCH   → ReplaceRestWithNote  khi trường độ đang cầm bằng đúng dấu
  *                                        lặng đích (4B.1, không đụng cấu trúc)
@@ -44,22 +41,9 @@ export type FacadeResult =
   | { kind: "toolState"; truongDo: EntryDuration }
   /** Không có gì để làm (giá trị mới trùng giá trị cũ). Không phải lỗi. */
   | { kind: "noop" }
-  | { kind: "refused"; message: string; code?: string };
+  | { kind: "refused"; message: string };
 
-const tuChoi = (message: string, code?: string): FacadeResult => ({ kind: "refused", message, code });
-
-/** Nốt dưới con trỏ có phải một nốt TAB sửa được không. Trả câu từ chối, hoặc vị trí hiện tại. */
-function kiemTab(fields: NoteFields): string | { string: number; fret: number } {
-  if (!fields.khuongTab) return "Nốt này không nằm trên khuông TAB.";
-  if (fields.kind !== "note" || !fields.pitch)
-    return "Chưa hỗ trợ nhập nốt trực tiếp trên khuông TAB. Hãy nhập trên khuông nhạc; công cụ nhập dây/phím TAB sẽ được làm riêng.";
-  if (!fields.tab) return "Nốt TAB này không ghi dây/phím trong nguồn — chưa sửa được.";
-  if (!fields.tabTuning?.size)
-    return "Bài này không ghi cách lên dây cho khuông TAB — chưa tính được phím và cao độ.";
-  if (fields.chord !== "none")
-    return "Nốt này thuộc một hợp âm trên TAB — chưa hỗ trợ đổi dây/phím.";
-  return fields.tab;
-}
+const tuChoi = (message: string): FacadeResult => ({ kind: "refused", message });
 
 export function toCommand(
   action: EditorAction,
@@ -76,9 +60,7 @@ export function toCommand(
     action.type === "UNDO" ||
     action.type === "REDO" ||
     action.type === "EXTEND_SELECTION" ||
-    action.type === "COPY" ||
-    // Chữ số TAB chưa phải lệnh: trang gom chúng thành SET_TAB_FRET trước.
-    action.type === "TAB_DIGIT"
+    action.type === "COPY"
   )
     return { kind: "noop" };
   if (!fields) return tuChoi("Chưa chọn nốt nào trên bản nhạc.");
@@ -200,37 +182,6 @@ export function toCommand(
       if (fields.laLangCaO)
         return tuChoi("Đây là dấu lặng cả ô nhịp — chưa hỗ trợ dán vào đây.");
       return { kind: "command", command: { type: "PasteSequence", path, items: ghiTam.items } };
-    }
-    // ── 4D: khuông TAB — hai ý định, một lệnh tuyệt đối ────────────────────
-    case "SET_TAB_FRET": {
-      const tab = kiemTab(fields);
-      if (typeof tab === "string") return tuChoi(tab);
-      // Giữ DÂY, đổi PHÍM → cao độ đổi theo cách lên dây.
-      const vt = viTri(fields.tabTuning, tab.string, action.fret);
-      if (!vt.ok) return tuChoi(vt.message, vt.code);
-      if (vt.fret === tab.fret) return { kind: "noop" };
-      return {
-        kind: "command",
-        command: { type: "ChangeTabPosition", path, string: vt.string, fret: vt.fret },
-      };
-    }
-    case "MOVE_TAB_STRING": {
-      const tab = kiemTab(fields);
-      if (typeof tab === "string") return tuChoi(tab);
-      // Giữ CAO ĐỘ, đổi DÂY → phím tính lại cho đúng tiếng cũ.
-      const dayMoi = tab.string + action.delta;
-      if (!fields.tabTuning?.has(dayMoi))
-        return tuChoi(
-          action.delta < 0 ? "Đã ở dây cao nhất." : "Đã ở dây thấp nhất.",
-          "TAB_STRING_INVALID"
-        );
-      const midi = soundingPitch(fields.pitch!);
-      const vt = doiDayGiuCaoDo(fields.tabTuning, midi, dayMoi);
-      if (!vt.ok) return tuChoi(vt.message, vt.code);
-      return {
-        kind: "command",
-        command: { type: "ChangeTabPosition", path, string: vt.string, fret: vt.fret },
-      };
     }
     case "RESPELL": {
       if (!fields.pitch) return tuChoi("Chỗ này không có cao độ để đổi cách ghi.");

@@ -38,19 +38,7 @@ export interface KeyBinding {
   action: EditorAction;
   /** Hiện trong bảng trợ giúp. */
   mo: string;
-  /**
-   * Ngữ cảnh mà phím này mang nghĩa — Giai đoạn 4D.
-   *
-   * Không ghi = khuông nhạc thường. `"tab"` = con trỏ đang ở một nốt trên khuông
-   * TAB. Một phím có thể có nghĩa khác ở mỗi ngữ cảnh, nhưng TRONG một ngữ cảnh
-   * thì chỉ một nghĩa — đó là cách giữ cho `3` vừa là "móc kép" ở khuông nhạc,
-   * vừa là "phím 3" ở TAB, mà không bao giờ mơ hồ.
-   */
-  cheDo?: CheDo;
 }
-
-/** Ngữ cảnh bàn phím. Suy từ nốt dưới con trỏ, không phải một nút bật/tắt. */
-export type CheDo = "notation" | "tab";
 
 const D = (noteType: "16th" | "eighth" | "quarter" | "half" | "whole", key: string, ten: string): KeyBinding => ({
   key,
@@ -58,30 +46,7 @@ const D = (noteType: "16th" | "eighth" | "quarter" | "half" | "whole", key: stri
   mo: `Hình nốt: ${ten}`,
 });
 
-/**
- * ═══ KHUÔNG TAB (4D) — quy ước đã khảo sát ═══
- *   Guitar Pro — gõ chữ số là nhập PHÍM trên dây đang đứng; gõ hai chữ số liền
- *     nhau là phím hai chữ số (1 rồi 2 ra 12). ↑/↓ chuyển sang dây trên/dưới.
- *   MuseScore 4 (chế độ nhập TAB) — chữ số cũng là phím; hình nốt chuyển sang
- *     Shift+chữ số.
- * Nên ở ngữ cảnh TAB, chữ số là PHÍM và ↑/↓ là ĐỔI DÂY. Hình nốt lấy từ thanh
- * công cụ: phím tắt Shift+chữ số của MuseScore trả về `#`, `$`, `%` … tuỳ bố
- * cục bàn phím (kể cả bàn phím tiếng Việt), bắt theo `key` là lúc được lúc
- * không — thà chưa làm còn hơn làm chập chờn.
- */
-const TAB: KeyBinding[] = [
-  ...Array.from({ length: 10 }, (_, d): KeyBinding => ({
-    key: String(d),
-    cheDo: "tab",
-    action: { type: "TAB_DIGIT", digit: d },
-    mo: "Nhập số phím (gõ liền hai chữ số cho phím 10 trở lên)",
-  })),
-  { key: "ArrowUp", cheDo: "tab", action: { type: "MOVE_TAB_STRING", delta: -1 }, mo: "Sang dây cao hơn, giữ cao độ" },
-  { key: "ArrowDown", cheDo: "tab", action: { type: "MOVE_TAB_STRING", delta: 1 }, mo: "Sang dây thấp hơn, giữ cao độ" },
-];
-
 export const KEYMAP: readonly KeyBinding[] = [
-  ...TAB,
   // ── Điều hướng (Smoosic trackerKeys) ─────────────────────────────────────
   { key: "ArrowRight", action: { type: "MOVE", where: "next" }, mo: "Nốt sau" },
   { key: "ArrowLeft", action: { type: "MOVE", where: "prev" }, mo: "Nốt trước" },
@@ -148,18 +113,12 @@ export interface Shortcut {
  */
 const chuan = (key: string) => (key.length === 1 ? key.toLowerCase() : key);
 
-export function traPhim(s: Shortcut, cheDo: CheDo = "notation"): EditorAction | null {
+export function traPhim(s: Shortcut): EditorAction | null {
   if (s.alt) return null;
   const key = chuan(s.key);
-  const khop = (b: KeyBinding) =>
-    chuan(b.key) === key && !!b.ctrl === s.ctrl && !!b.shift === s.shift && !!b.alt === s.alt;
-  // Ngữ cảnh TAB được hỏi TRƯỚC; phím không có nghĩa riêng ở TAB (Delete,
-  // Ctrl+Z, ←/→ …) rơi xuống nghĩa chung của khuông nhạc.
-  if (cheDo === "tab") {
-    const rieng = KEYMAP.find((b) => b.cheDo === "tab" && khop(b));
-    if (rieng) return rieng.action;
-  }
-  const hit = KEYMAP.find((b) => !b.cheDo && khop(b));
+  const hit = KEYMAP.find(
+    (b) => chuan(b.key) === key && !!b.ctrl === s.ctrl && !!b.shift === s.shift && !!b.alt === s.alt
+  );
   return hit ? hit.action : null;
 }
 
@@ -183,10 +142,6 @@ function cungHanhDong(a: EditorAction, b: EditorAction): boolean {
       return a.step === (b as typeof a).step;
     case "EXTEND_SELECTION":
       return a.where === (b as typeof a).where;
-    case "TAB_DIGIT":
-      return a.digit === (b as typeof a).digit;
-    case "MOVE_TAB_STRING":
-      return a.delta === (b as typeof a).delta;
     default:
       return true;
   }
@@ -199,26 +154,8 @@ function cungHanhDong(a: EditorAction, b: EditorAction): boolean {
  * là nhãn trên nút đổi theo, không có chuyện hai chỗ nói hai đằng. Hành động
  * chưa có phím (ví dụ ba nút ♭ ♮ ♯) trả `null` — nút KHÔNG hiện nhãn giả.
  */
-export function phimCua(action: EditorAction, cheDo: CheDo = "notation"): string | null {
-  // Một phím chỉ được hiện làm nhãn ở ngữ cảnh mà nó THẬT SỰ làm việc ấy. Ở TAB,
-  // `3` là phím đàn — nút "móc kép" mà vẫn đeo nhãn `3` là nói sai với thầy.
-  const biChe = (b: KeyBinding) =>
-    cheDo === "tab" &&
-    !b.cheDo &&
-    KEYMAP.some(
-      (t) =>
-        t.cheDo === "tab" &&
-        chuan(t.key) === chuan(b.key) &&
-        !!t.ctrl === !!b.ctrl &&
-        !!t.shift === !!b.shift &&
-        !!t.alt === !!b.alt
-    );
-  const hit = KEYMAP.find(
-    (b) =>
-      cungHanhDong(b.action, action) &&
-      (b.cheDo === undefined || b.cheDo === cheDo) &&
-      !biChe(b)
-  );
+export function phimCua(action: EditorAction): string | null {
+  const hit = KEYMAP.find((b) => cungHanhDong(b.action, action));
   return hit ? nhanPhim(hit) : null;
 }
 

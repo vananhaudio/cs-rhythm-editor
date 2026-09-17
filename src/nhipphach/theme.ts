@@ -203,8 +203,6 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-toolbar-hint{margin-left:auto;font-size:12px;color:var(--ink-hint);}
 /* Con trỏ đứng trên dấu lặng: hàng hình nốt đang chọn CÂY BÚT, không sửa bản
    nhạc. Nói thẳng ra một câu còn hơn để thầy đoán vì sao bấm 4 mà nốt không đổi. */
-.${NP_SCOPE} .np-tab-pos{font-size:12.5px;color:var(--ink-soft);white-space:nowrap;padding:0 6px;}
-.${NP_SCOPE} .np-tab-pos strong{color:var(--ink);font-variant-numeric:tabular-nums;}
 .${NP_SCOPE} .np-toolbar-mode{margin-left:12px;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap;}
 .${NP_SCOPE} .np-keyhelp{padding:10px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
 .${NP_SCOPE} .np-keyhelp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}

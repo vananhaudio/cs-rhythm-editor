@@ -40,16 +40,6 @@ export type EditorAction =
   | { type: "COPY" }
   /** Dán vào chỗ lặng dưới con trỏ. */
   | { type: "PASTE" }
-  /**
-   * Một chữ số gõ trên KHUÔNG TAB — Giai đoạn 4D. Chưa phải lệnh: trang gom
-   * chữ số lại (`tabEntry`) để "1" rồi "2" ra phím 12, rồi mới đổi thành
-   * `SET_TAB_FRET`.
-   */
-  | { type: "TAB_DIGIT"; digit: number }
-  /** Đặt phím trên CHÍNH dây đang có. Cao độ đổi theo cách lên dây. */
-  | { type: "SET_TAB_FRET"; fret: number }
-  /** Sang dây bên cạnh mà GIỮ NGUYÊN cao độ. −1 = dây cao hơn, +1 = dây thấp hơn. */
-  | { type: "MOVE_TAB_STRING"; delta: -1 | 1 }
   | { type: "UNDO" }
   | { type: "REDO" };
 
@@ -76,9 +66,6 @@ export const TEN_HANH_DONG: Record<EditorAction["type"], string> = {
   EXTEND_SELECTION: "Mở rộng vùng chọn",
   COPY: "Chép",
   PASTE: "Dán",
-  TAB_DIGIT: "Gõ số phím",
-  SET_TAB_FRET: "Đặt phím",
-  MOVE_TAB_STRING: "Đổi dây",
   ENTER_PITCH: "Nhập nốt",
   UNDO: "Hoàn tác",
   REDO: "Làm lại",

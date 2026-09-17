@@ -162,8 +162,7 @@ test("đổi mức đếm, màu và cỡ chữ: khắc nhạc đúng MỘT lần
   const xml = fixture("./fixtures/guitar-tab.musicxml");
   const base = { ...DEFAULT_SCORE_SETTINGS };
   renderer.render(xml, base);
-  const haiSo = () => { const { engravings, overlays } = renderer.stats(); return { engravings, overlays }; };
-  assert.deepEqual(haiSo(), { engravings: 1, overlays: 1 });
+  assert.deepEqual(renderer.stats(), { engravings: 1, overlays: 1 });
 
   renderer.render(xml, { ...base, countingLevel: "beats" });
   renderer.render(xml, { ...base, countingLevel: "eighths" });
@@ -172,7 +171,7 @@ test("đổi mức đếm, màu và cỡ chữ: khắc nhạc đúng MỘT lần
   renderer.render(xml, { ...base, color: "#1d4ed8" });
   renderer.render(xml, { ...base, sizePt: 11 });
   assert.deepEqual(
-    haiSo(),
+    renderer.stats(),
     { engravings: 1, overlays: 7 },
     "chỉ lớp phủ được vẽ lại"
   );

@@ -96,9 +96,7 @@ test("keymap: mỗi phím của mục 2 ra đúng hành động, không phím n�
   // Một phím KHÔNG được mang hai nghĩa: `.` là chấm dôi, không phải gấp đôi.
   const trung = new Map<string, number>();
   for (const b of KEYMAP) {
-    // 4D: một phím được mang nghĩa khác ở ngữ cảnh khác (3 là móc kép ở khuông
-    // nhạc, là phím 3 ở TAB) — nhưng trong CÙNG một ngữ cảnh thì chỉ một nghĩa.
-    const khoa = `${b.cheDo ?? "notation"}|${b.key}|${!!b.ctrl}|${!!b.shift}|${!!b.alt}`;
+    const khoa = `${b.key}|${!!b.ctrl}|${!!b.shift}|${!!b.alt}`;
     trung.set(khoa, (trung.get(khoa) ?? 0) + 1);
   }
   assert.deepEqual([...trung].filter(([, n]) => n > 1), [], "có phím trùng trong bảng");
@@ -617,7 +615,7 @@ test("kiến trúc: không có model bản nhạc thứ hai; EditorAction không
   const loai = [...facade.matchAll(/type:\s*"(Change\w+|Respell\w+)"/g)].map((m) => m[1]);
   assert.deepEqual(
     [...new Set(loai)].sort(),
-    ["ChangeDurationAndRebalance", "ChangePitch", "ChangeTabPosition", "RespellNote"],
+    ["ChangeDurationAndRebalance", "ChangePitch", "RespellNote"],
     "mặt tiền phát ra lệnh lạ"
   );
   for (const f of TUONG_TAC) {
@@ -644,17 +642,16 @@ test("kiến trúc: thanh công cụ và bàn phím hội tụ tại EditorActio
   // tự dựng `<button>` riêng rồi tự gọi thẳng thứ khác.
   const soButton = (tb.match(/<button\b/g) ?? []).length;
   assert.equal(soButton, 2, `có ${soButton} thẻ <button> — chỉ được có TBtn và nút Đóng`);
-  // 9 chỗ viết `<TBtn>`, hai trong số đó nằm trong `.map`: 5 hình nốt · chấm dôi ·
-  // 3 dấu hoá · đổi cách ghi · LẶNG · hoàn tác · làm lại, cộng HAI nút đổi dây
-  // chỉ hiện khi con trỏ ở nốt TAB (4D).
-  assert.equal((tb.match(/<TBtn\b/g) ?? []).length, 9, "thiếu hoặc thừa nút trên thanh công cụ");
+  // 7 chỗ viết `<TBtn>`, hai trong số đó nằm trong `.map` nên hiện ra 12 nút:
+  // 5 hình nốt · chấm dôi · 3 dấu hoá · đổi cách ghi · LẶNG · hoàn tác · làm lại.
+  assert.equal((tb.match(/<TBtn\b/g) ?? []).length, 7, "thiếu hoặc thừa nút trên thanh công cụ");
   assert.match(tb, /HINH_NOT\.map/);
   assert.match(tb, /DAU_HOA\.map/);
   // Đúng một nút cho mỗi hành động của 4A, không thiếu không thừa.
-  const hanhDong = [...tb.matchAll(/type:\s*"(SET_DURATION|TOGGLE_DOT|SET_ALTER|RESPELL|MAKE_REST|MOVE_TAB_STRING|UNDO|REDO)"/g)].map((m) => m[1]);
+  const hanhDong = [...tb.matchAll(/type:\s*"(SET_DURATION|TOGGLE_DOT|SET_ALTER|RESPELL|MAKE_REST|UNDO|REDO)"/g)].map((m) => m[1]);
   assert.deepEqual(
     [...new Set(hanhDong)].sort(),
-    ["MAKE_REST", "MOVE_TAB_STRING", "REDO", "RESPELL", "SET_ALTER", "SET_DURATION", "TOGGLE_DOT", "UNDO"]
+    ["MAKE_REST", "REDO", "RESPELL", "SET_ALTER", "SET_DURATION", "TOGGLE_DOT", "UNDO"]
   );
 });
 
@@ -776,11 +773,8 @@ test("4A.1 thanh công cụ: nhãn phím lấy từ keymap, không hard-code tro
   // Hành động có NHIỀU phím (4B.1: Delete/Backspace/0/R cùng ra lặng) thì nhãn
   // là phím ĐẦU TIÊN trong bảng — một nút chỉ hiện được một nhãn.
   for (const b of KEYMAP) {
-    const cheDo = b.cheDo ?? "notation";
-    const dau = KEYMAP.find(
-      (x) => JSON.stringify(x.action) === JSON.stringify(b.action) && (x.cheDo ?? "notation") === cheDo
-    )!;
-    assert.equal(phimCua(b.action, cheDo), nhanPhim(dau), JSON.stringify(b));
+    const dau = KEYMAP.find((x) => JSON.stringify(x.action) === JSON.stringify(b.action))!;
+    assert.equal(phimCua(b.action), nhanPhim(dau));
   }
 
   const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
@@ -1027,7 +1021,7 @@ test("4B.1 phím: A–G ra ENTER_PITCH đúng bậc, hoa thường như nhau", (
 test("4B.1 phím: không một cú bấm nào mang hai nghĩa", () => {
   const thay = new Map<string, string>();
   for (const b of KEYMAP) {
-    const k = `${b.cheDo ?? "notation"}|${b.ctrl ? "C" : ""}${b.shift ? "S" : ""}${b.alt ? "A" : ""}|${b.key.length === 1 ? b.key.toLowerCase() : b.key}`;
+    const k = `${b.ctrl ? "C" : ""}${b.shift ? "S" : ""}${b.alt ? "A" : ""}|${b.key.length === 1 ? b.key.toLowerCase() : b.key}`;
     const nghia = JSON.stringify(b.action);
     const cu = thay.get(k);
     assert.ok(cu === undefined || cu === nghia, `${k}: ${cu} ≠ ${nghia}`);
@@ -1429,130 +1423,4 @@ test("4C trang: chọn vùng và chép KHÔNG đi qua đường áp lệnh", () 
   // Đường chép dùng CHÍNH hàm mà tô sáng dùng — nhìn thấy gì thì chép cái đó.
   assert.match(page, /idDangChon\(vungChonRef\.current, ds\)/);
   assert.match(page, /const ids = idDangChon\(vungChon, notDiDuoc\)/);
-});
-
-// ══ 13. Khuông TAB (Giai đoạn 4D.1) ════════════════════════════════════════
-
-test("4D bản khắc: số phím MỚI vẽ ra đúng trên TAB, nốt vẫn giữ id, ←→ đi tới được", () => {
-  const FIX = readFileSync(
-    new URL("../nhipphach-edit/fixtures/tab-edit.musicxml", import.meta.url),
-    "utf8"
-  );
-  const id = "tva-src-p1-m1-c10"; // dây 1 phím 10
-  const soPhim = (xml: string) => {
-    const t = tagSourceIds(xml);
-    const svg = parse(renderer.render(t.xml, SETTINGS).pages.map((p) => p.svg).join(""));
-    const g = byId(svg, id);
-    assert.ok(g, "nốt TAB phải có mặt trên bản khắc");
-    // Số phím là chữ nằm ngay trong nhóm của nốt.
-    return Array.from(g!.getElementsByTagName("text"))
-      .map((x) => (x.textContent ?? "").trim())
-      .filter(Boolean)
-      .join("");
-  };
-  assert.equal(soPhim(FIX), "10");
-  const sau = applyToDraft(createDraft(FIX), {
-    type: "ChangeTabPosition",
-    path: "/score-partwise/part[1]/measure[1]/*[10]",
-    string: 1,
-    fret: 12,
-  } as never);
-  assert.equal(soPhim(sau.xml), "12", "bản khắc phải hiện đúng phím 12");
-
-  // Điều hướng theo thứ tự tài liệu vẫn đi qua nốt ấy.
-  const ds = dsDiDuoc(tagSourceIds(sau.xml).notes);
-  const truoc = caretTaiId(ds, "tva-src-p1-m1-c9")!;
-  assert.equal(diChuyen(ds, truoc, "next")!.sourceId, id);
-});
-
-test("4D kiến trúc: mô hình TAB và bộ gom chữ số không biết XML, Verovio, React, alphaTab", () => {
-  for (const f of ["nhipphach/edit/tabModel.ts", "nhipphach/editor/tabEntry.ts"]) {
-    const t = stripComments(src(f));
-    for (const cam of [/@xmldom|DOMParser|parseStrict/, /verovio/i, /useState|useEffect/, /@coderline|alphatab/i, /getBoundingClientRect|clientX/])
-      assert.doesNotMatch(t, cam, `${f}: ${cam}`);
-  }
-  // Đặc biệt: không một chỗ nào mặc định cách lên dây "chuẩn".
-  for (const f of ["nhipphach/edit/tabModel.ts", "nhipphach/edit/applyCommand.ts", "nhipphach/editor/commandFacade.ts"]) {
-    const t = stripComments(src(f));
-    assert.doesNotMatch(t, /\[\s*40\s*,\s*45\s*,\s*50\s*,\s*55\s*,\s*59\s*,\s*64\s*\]|E2.*A2.*D3.*G3.*B3.*E4/, `${f} tự mặc định lên dây`);
-  }
-  assert.match(
-    "const d = [40, 45, 50, 55, 59, 64];",
-    /\[\s*40\s*,\s*45\s*,\s*50\s*,\s*55\s*,\s*59\s*,\s*64\s*\]/,
-    "luật không bắt được đột biến"
-  );
-});
-
-test("4D trang: ngữ cảnh TAB suy từ dữ liệu; gom chữ số đi qua cửa `datNhap`", () => {
-  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
-  assert.match(page, /cheDo: cheDoBanPhim\(\)/);
-  assert.match(page, /readNoteFields\(xml, n\.path\)\?\.khuongTab \? "tab" : "notation"/);
-  // Quay lui trước khi ghép chữ số thứ hai: qua ĐÚNG một cửa đặt nháp.
-  assert.match(page, /truocSo = tabTruocSoRef\.current;\s*datNhap\(truocSo\.nhap\);/);
-  assert.doesNotMatch(page, /nhapRef\.current = tabTruocSoRef/, "gán thẳng nháp, đi vòng cửa datNhap");
-  // Giờ gom chữ số là giờ LÚC BẤM (e.timeStamp), không phải lúc handler chạy.
-  const luat = (m: string) => /apHanhDong\(ra\.action, e\.timeStamp\)/.test(m) &&
-    /goSo\([^)]*lucBam \?\? performance\.now\(\)\)/.test(m) && !/Date\.now\(\)/.test(m.slice(m.indexOf('"TAB_DIGIT"'), m.indexOf('"TAB_DIGIT"') + 1500));
-  assert.ok(luat(page), "gom chữ số phải dùng e.timeStamp");
-  assert.ok(!luat(page.replace("apHanhDong(ra.action, e.timeStamp)", "apHanhDong(ra.action)")), "luật không bắt được đột biến");
-  assert.ok(!luat(page.replace("lucBam ?? performance.now()", "Date.now()")), "luật không bắt được đột biến Date.now");
-  // Và nói thẳng rằng nốt khuông nhạc không được tự sửa theo.
-  assert.ok(page.includes("Khuông nhạc tương ứng không được tự sửa theo."));
-});
-
-test("4D kiến trúc: ChangeTabPosition KHÔNG đi tìm nốt khuông nhạc tương ứng", () => {
-  const a = stripComments(src("nhipphach/edit/applyCommand.ts"));
-  const than = (m: string) => {
-    const i = m.indexOf("function changeTabPosition(");
-    // Thân hàm kết thúc ở dòng `}` đầu tiên sát lề trái.
-    const j = m.indexOf("\n}", i);
-    return m.slice(i, j < 0 ? m.length : j);
-  };
-  // Không dò theo cao độ / thời điểm / thứ tự nguồn / toạ độ, không bước sang nốt khác.
-  const CAM = /onset|tstamp|timeStamp|sourceOrder|sourceIndex|nearest|getBBox|getBoundingClientRect|previousSibling|nextSibling|parentNode|querySelector|getElementsByTagName|resolveSourcePath|readNoteContext|staff\s*[!=]==|elementChildren\(\s*(measure|note\.parentNode)/;
-  const b = than(a);
-  assert.ok(b.length > 200, "không tìm thấy thân hàm");
-  assert.doesNotMatch(b, CAM);
-  assert.match(than(a.replace("const tech = elementChildren", "const ban = note.nextSibling; const tech = elementChildren")), CAM, "luật không bắt được đột biến");
-  assert.match(than(a.replace("const tech = elementChildren", "const x = ngu.onset; const tech = elementChildren")), CAM, "luật không bắt được đột biến");
-});
-
-// ══ 14. Xem trước từng trang (Giai đoạn 4D.P3) ══════════════════════════════
-test("4D.P3 kiến trúc: không dùng Verovio.edit(); render() chuẩn không đọc ảnh chụp xem trước", () => {
-  const a = stripComments(src("musicxml-beats/renderer/verovioAdapter.ts"));
-  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
-  const plan = stripComments(src("nhipphach/editor/previewPlan.ts"));
-  const coEdit = (m: string) => /\.edit\s*\(|editInfo|editStatus/.test(m);
-  for (const m of [a, page, plan]) assert.equal(coEdit(m), false, "không dùng toolkit.edit()");
-  assert.ok(coEdit(a + "\ntoolkit.edit({ action: 'set' });"), "luật không bắt được đột biến");
-  // Thân render() chuẩn: không một chữ `preview`.
-  const than = (m: string) => {
-    const i = m.indexOf("    render(\n");
-    return m.slice(i, m.indexOf("\n    },", i));
-  };
-  assert.ok(than(a).length > 50);
-  assert.doesNotMatch(than(a), /preview/);
-  assert.match(than(a.replace("hopLe(settings);\n      const layoutKey", "hopLe(settings); void preview;\n      const layoutKey")), /preview/, "luật không bắt được đột biến");
-});
-
-test("4D.P3 trang: chỉ ChangeTabPosition được gợi ý; xuất file khắc chuẩn riêng; lưu dùng render() chuẩn", () => {
-  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
-  const plan = stripComments(src("nhipphach/editor/previewPlan.ts"));
-  assert.match(plan, /cmd\.type !== "ChangeTabPosition"\) return full\("NOT_TAB_POSITION"\)/);
-  // Gợi ý chỉ đi qua bộ phân loại, so với bản renderer ĐANG xem.
-  assert.match(page, /keHoachXemTruoc\(goiY\.cmd, r\.previewXml\(\), xmlHienThi\)/);
-  assert.match(page, /r\.renderPreview\(\s*xmlHienThi,/);
-  assert.equal((page.match(/renderPreview\(/g) ?? []).length, 1, "chỉ lượt vẽ xem trước dùng đường ghép trang");
-  // Xuất: mọi định dạng nhận CÙNG bản khắc chuẩn, không nhận `score` xem trước.
-  const xuat = (m: string) => m.slice(m.indexOf("async function exportPrint("), m.indexOf("daXuat = true;", m.indexOf("async function exportPrint(")));
-  const dungChuan = (m: string) =>
-    /renderCanonicalForExport\(xmlXuat, settings\)/.test(xuat(m)) &&
-    /exportScorePDF\(chuan\)/.test(xuat(m)) &&
-    /exportSVGPages\(chuan\)/.test(xuat(m)) &&
-    /exportScorePNG\(chuan, pngScale\)/.test(xuat(m)) &&
-    !/export(ScorePDF|SVGPages|ScorePNG)\(score\b/.test(xuat(m));
-  assert.ok(dungChuan(page), "xuất file phải khắc chuẩn riêng");
-  assert.equal(dungChuan(page.replace("exportScorePNG(chuan, pngScale)", "exportScorePNG(score, pngScale)")), false, "luật không bắt được đột biến");
-  // Lưu kiểm bằng bản khắc chuẩn, không phải bản xem trước.
-  assert.match(page, /render: \(xml\) => r\.render\(xml, settings\)/);
 });

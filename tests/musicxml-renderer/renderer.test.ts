@@ -148,10 +148,7 @@ test("B reports missing exact temporal anchors instead of fabricating positions"
 });
 test("renderer refuses a beat-map with diagnostics", () => {
   const xml = fixture("whole-note"),
-    // Bản đồ trả về được dùng chung và đóng băng (4D.P2) — muốn làm hỏng thì
-    // làm hỏng trên bản sao của riêng mình.
-    map = structuredClone(musicXMLToBeatMap(xml));
-  assert.throws(() => musicXMLToBeatMap(xml).measures[0].diagnostics.push({ code: "X", sourceId: "x", message: "x" }), TypeError);
+    map = musicXMLToBeatMap(xml);
   map.measures[0].diagnostics.push({
     code: "TEST",
     sourceId: "test",

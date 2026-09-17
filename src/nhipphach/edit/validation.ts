@@ -1,4 +1,3 @@
-import { nhoTheoNguon } from "../../musicxml-beats/sourceCache.ts";
 import { musicXMLToBeatMap } from "../../musicxml-beats/beatMap.ts";
 import { parseMusicXML } from "../../musicxml-beats/parser.ts";
 import { laKindMusicXml } from "./harmonyModel.ts";
@@ -127,15 +126,8 @@ export function structuralIssues(doc: Document): string[] {
   return issues;
 }
 
-const boNhoNhip = nhoTheoNguon<ReadonlyMap<string, string>>();
-/**
- * Tập chẩn đoán nhịp của một bản: "mã@ô" — để so bản nháp với bản gốc.
- * Tính MỘT lần cho mỗi chuỗi nguồn (4D.P); mỗi nơi gọi nhận bản sao của riêng mình.
- */
+/** Tập chẩn đoán nhịp của một bản: "mã@ô" — để so bản nháp với bản gốc. */
 export function rhythmIssues(xml: string): Map<string, string> {
-  return new Map(boNhoNhip.lay(xml, () => tinhRhythmIssues(xml)));
-}
-function tinhRhythmIssues(xml: string): Map<string, string> {
   const out = new Map<string, string>();
   const map = musicXMLToBeatMap(xml);
   for (const m of map.measures)

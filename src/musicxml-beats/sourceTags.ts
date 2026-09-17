@@ -1,6 +1,5 @@
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import type { Element } from "@xmldom/xmldom";
-import { nhoTheoNguon } from "./sourceCache.ts";
 
 /**
  * Danh tính nguồn của một nốt/lặng — thuần CẤU TRÚC, không dính cao độ.
@@ -181,7 +180,7 @@ export function parseSourceSvgId(id: string) {
  * Gắn id nguồn vào mọi <note> (kể cả lặng). Chuỗi trả về là thứ đưa cho Verovio;
  * MusicXML gốc trong thư viện không bị đụng tới.
  */
-function tinhTagSourceIds(xml: string): TaggedScore {
+export function tagSourceIds(xml: string): TaggedScore {
   const notes: SourceNote[] = [];
   const byId = new Map<string, SourceNote>();
   const lyrics: SourceLyric[] = [];
@@ -319,21 +318,4 @@ function tinhTagSourceIds(xml: string): TaggedScore {
     });
   });
   return { xml: new XMLSerializer().serializeToString(doc), ...empty() };
-}
-
-/**
- * Cùng một chuỗi nguồn → cùng một kết quả, tính MỘT lần (4D.P). Kết quả dùng
- * chung nên bị ĐÓNG BĂNG: ai lỡ sửa một nốt trong danh sách là lỗi ngay, không
- * lặng lẽ làm bẩn lần đọc sau.
- */
-const boNhoTag = nhoTheoNguon<TaggedScore>();
-export function tagSourceIds(xml: string): TaggedScore {
-  return boNhoTag.lay(xml, () => {
-    const t = tinhTagSourceIds(xml);
-    for (const ds of [t.notes, t.lyrics, t.harmonies]) {
-      for (const x of ds) Object.freeze(x);
-      Object.freeze(ds);
-    }
-    return Object.freeze(t);
-  });
 }

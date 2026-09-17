@@ -31,11 +31,6 @@ export interface NoteContext {
   tab: { string: number; fret: number } | null;
   /** Cao độ mà dây + phím TAB thật sự phát ra, nếu bản nhạc ghi cách lên dây. */
   tabSounding: number | null;
-  /**
-   * Cách lên dây của CHÍNH khuông này (4D): số dây → cao độ dây buông.
-   * `null` khi bài không ghi — lúc ấy mọi phép cao độ ↔ phím bị chặn.
-   */
-  tabTuning: Map<number, number> | null;
   isTabStaff: boolean;
   beams: number;
 }
@@ -138,8 +133,7 @@ export function readNoteContext(doc: Document, path: string): NoteContext | null
     /^\d+$/.test(str) && /^\d+$/.test(fret)
       ? { string: Number(str), fret: Number(fret) }
       : null;
-  // 4D: đọc cách lên dây cho MỌI nốt trên khuông TAB, không chỉ nốt đã có phím.
-  const tuning = tuningOf(attributes, staff);
+  const tuning = tab ? tuningOf(attributes, staff) : null;
   const day = tab && tuning ? tuning.get(tab.string) : undefined;
 
   let isTabStaff = false;
@@ -175,7 +169,6 @@ export function readNoteContext(doc: Document, path: string): NoteContext | null
     ].filter(Boolean),
     tab,
     tabSounding: day === undefined ? null : day + tab!.fret,
-    tabTuning: tuning,
     beams: elementChildren(note, "beam").length,
   };
 }
