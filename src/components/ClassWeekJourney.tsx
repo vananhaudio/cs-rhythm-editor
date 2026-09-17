@@ -2,10 +2,8 @@
  * ClassWeekJourney — section "Một tuần học của bạn có thể diễn ra như thế này" trên /class.
  *
  * Trả lời câu hỏi "Tôi sử dụng những quyền lợi đó như thế nào?" sau section 6 quyền lợi.
- * 4 bước compact (học bài giảng → luyện App → hỏi Thầy → thực hành hàng tuần) + note
- * linh hoạt "Bận thì nghỉ. Tuần nào phù hợp thì tham gia."
- *
- * KHÔNG nói đây là lớp lý thuyết mới: buổi thực hành = thực hành, hỏi đáp, sửa, lặp lại.
+ * 4 bước compact (học bài giảng → luyện App → hỏi Thầy → đến lớp học cùng Thầy).
+ * Từ 09/2026 thực hành KHÔNG còn là sản phẩm riêng — bước 4 là buổi lớp hàng tuần.
  * Không thêm sales copy/scarcity — section ngắn, đi thẳng vào việc.
  */
 const STEPS = [
@@ -26,8 +24,8 @@ const STEPS = [
   },
   {
     ic: '🤝',
-    title: 'Đến buổi thực hành hàng tuần',
-    body: 'Cùng Thầy thực hành, hỏi đáp, sửa bài và luyện kỹ những điều bạn đang học.',
+    title: 'Đến lớp học cùng Thầy',
+    body: 'Mỗi tuần gặp Thầy theo lịch lớp để học nội dung mới, thực hành, sửa bài và biết mình cần làm gì tiếp theo.',
   },
 ]
 

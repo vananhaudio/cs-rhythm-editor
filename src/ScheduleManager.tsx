@@ -1,6 +1,7 @@
 // Tab "🗓 Lịch lớp" trong /admin — quản lý lịch lớp học (thay Google Sheet).
 // Mỗi lớp gắn NHIỀU khoá (tick) + 1 nhóm Zalo → nền tảng cho đăng ký 1-chạm.
 import { useEffect, useState, type CSSProperties } from 'react'
+import { PRODUCTS, type PublicProductKey } from './class-content'
 import { supabase } from './supabase'
 import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
 import { generateSessions, realEndDate, realStartDate, scheduleText, fmtDMY, progressInfo, WEEKDAYS, STATUS, statusInfo, type SessionRow } from './journey/sessions'
@@ -44,6 +45,8 @@ interface Cls {
   program_code: string | null; breaks_after: number[] | null; timezone: string | null
   // ── Class 2.0: nhóm THỰC HÀNH (hiện trên /azz) ──
   show_on_practice_schedule: boolean; stage: string | null; practice_type: string | null; metadata: Record<string, unknown>
+  // ── Tuyển sinh public (09/2026): cohort thuộc sản phẩm nào + đang tuyển không ──
+  public_product: PublicProductKey | null; public_enroll: boolean
 }
 interface Course { id: string; name: string; code: string | null }
 interface Grp { id: string; name: string; code: string | null; zalo_url: string | null }
@@ -55,6 +58,7 @@ const blank = (): Cls => ({
   program_code: null, breaks_after: null, timezone: 'Asia/Ho_Chi_Minh',
   stage: null, practice_type: null, metadata: {},
   show_on_practice_schedule: false,
+  public_product: null, public_enroll: false,
 })
 
 export default function ScheduleManager() {
@@ -163,6 +167,9 @@ export default function ScheduleManager() {
       stage: form.stage || null,
       practice_type: form.practice_type?.trim() || null,
       metadata: form.metadata || {},
+      // Tuyển sinh public: không có sản phẩm thì không thể đang tuyển
+      public_product: form.public_product || null,
+      public_enroll: !!form.public_product && !!form.public_enroll,
     }
     let classId = form.id
     if (form.id) {
@@ -307,6 +314,30 @@ export default function ScheduleManager() {
               <div><label style={lbl}>Học phí</label><input style={inp} value={form.price ?? ''} onChange={e => set({ price: e.target.value })} placeholder="990k / Combo" /></div>
               <div><label style={lbl}>Link Zoom (tuỳ chọn)</label><input style={inp} value={form.zoom_url ?? ''} onChange={e => set({ zoom_url: e.target.value })} placeholder="https://zoom.us/j/..." /></div>
 
+              {/* ── TUYỂN SINH PUBLIC (class.vananhaudio.com) — tách khỏi lịch vận hành ── */}
+              <div style={{ gridColumn: '1 / 3', border: `1px solid ${S.border}`, borderRadius: 10, padding: 12, background: '#F5F3FF' }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: S.text1 }}>📣 Tuyển sinh trên trang Class</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8, alignItems: 'end' }}>
+                  <div><label style={lbl}>Sản phẩm public</label>
+                    <select style={inp} value={form.public_product ?? ''} onChange={e => {
+                      const v = (e.target.value || null) as PublicProductKey | null
+                      set(v ? { public_product: v } : { public_product: null, public_enroll: false })
+                    }}>
+                      <option value="">— không thuộc sản phẩm public —</option>
+                      {(Object.keys(PRODUCTS) as PublicProductKey[]).map(k => (
+                        <option key={k} value={k}>{PRODUCTS[k].title} · {PRODUCTS[k].length}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: form.public_product ? 'pointer' : 'not-allowed', fontSize: 13.5, fontWeight: 700, color: form.public_product ? S.text1 : S.text3, paddingBottom: 9 }}>
+                    <input type="checkbox" disabled={!form.public_product} checked={!!form.public_product && form.public_enroll}
+                      onChange={e => set({ public_enroll: e.target.checked })} style={{ cursor: 'inherit' }} />
+                    Đang tuyển (hiện trên trang Class)
+                  </label>
+                </div>
+                <div style={{ fontSize: 12, color: S.text3, marginTop: 6 }}>Trang Class chỉ hiện cohort có tick "Đang tuyển"; mỗi sản phẩm lấy cohort khai giảng gần nhất chưa kết thúc. Hết vòng 4 buổi → tạo cohort mới, tick "Đang tuyển"; cohort cũ tự rơi khỏi trang khi hết hạn. Lớp đang học không bị ảnh hưởng.</div>
+              </div>
+
               {/* ── NHÓM THỰC HÀNH Class 2.0 (hiện trên /azz) ── */}
               <div style={{ gridColumn: '1 / 3', border: `1px solid ${S.border}`, borderRadius: 10, padding: 12, background: '#FAFAFA' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13.5, fontWeight: 800, color: S.text1 }}>
@@ -438,6 +469,9 @@ export default function ScheduleManager() {
                       })()}
                       <span style={{ fontSize: 11, fontWeight: 600, color: statusInfo(r.status).c }}>{statusInfo(r.status).l}</span>
                       {!r.is_active && <span style={{ fontSize: 11, color: S.text3, fontWeight: 500 }}>· ẩn</span>}
+                      {r.public_enroll && r.public_product && (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#4338CA', background: '#E0E7FF', borderRadius: 5, padding: '1px 7px' }}>📣 Đang tuyển · {PRODUCTS[r.public_product]?.title ?? r.public_product}</span>
+                      )}
                       {r.show_on_practice_schedule && (
                         <span style={{ fontSize: 11, fontWeight: 800, color: '#7C3AED', background: '#F3E8FF', borderRadius: 5, padding: '1px 7px' }}>🎸 Lịch thực hành{r.stage ? ` · ${STAGE_LABEL[r.stage]}` : ''}{r.practice_type ? ` · ${r.practice_type}` : ''}</span>
                       )}

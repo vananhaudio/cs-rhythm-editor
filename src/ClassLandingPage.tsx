@@ -11,29 +11,12 @@ import ClassQuiz from './ClassQuiz'
 import ClassAppGuide from './ClassAppGuide'
 import ClassNangCao from './ClassNangCao'
 import { FAQS } from './classFaq'
-import { tenNangLuc } from './hanhtrinh'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
-import ClassLearningWays from './components/ClassLearningWays'
 import ClassWeekJourney from './components/ClassWeekJourney'
 import ClassAfterSignup from './components/ClassAfterSignup'
-import ClassOfferCompare, { type ClassOption, type RegistrationPayload } from './components/ClassOfferCompare'
-import { offerQtyFromCfg, type OfferMode, type PracticeDuration } from './classOffer'
+import ClassPublicTracks, { type PublicCohort } from './components/ClassPublicTracks'
 
-// Suy ra nhãn/lộ trình/giá từ tên lớp (dữ liệu sheet không có sẵn các cột này)
-const inferTag = (n: string) => { const s = n.toLowerCase()
-  if (s.includes('nhập môn')) return 'Nhập môn · Miễn phí'
-  if (s.includes('hành trình')) return 'Toàn diện · Combo'
-  if (s.includes('đệm hát')) return 'Đệm hát'
-  if (s.includes('tỉa nốt') || s.includes('guitar cho') || s.includes('guitar căn')) return 'Tỉa nốt / Guitar'
-  if (s.includes('cảm nhận') || s.includes('cảm âm') || s.includes('nhạc lý')) return 'Cảm âm / Nhạc lý'
-  if (s.includes('bolero')) return 'Chuyên đề'
-  return 'Guitar' }
-const inferPath = (n: string) => { const s = n.toLowerCase()
-  if (s.includes('đệm hát')) return 'dem_hat'
-  if (s.includes('tỉa nốt') || s.includes('guitar')) return 'tia_not'
-  if (s.includes('hành trình')) return 'combo'
-  return '' }
-import { DOORS, CHAT_FAQ, MODALS } from './class-content'
+import { DOORS, MODALS, PRODUCTS, type PublicProductKey } from './class-content'
 
 
 const ZALO = '0983 259 893'
@@ -43,8 +26,8 @@ const SHOP_URL = 'https://shop.vananhaudio.com'
 type Msg = { who: 'ai' | 'me'; html: string }
 
 export default function ClassLandingPage() {
-  // ── FLOW ĐĂNG KÝ MỚI (preview 2/9): 1 bảng so sánh → xác nhận → tên+email → thanh toán ──
-  const [preselect, setPreselect] = useState<{ mode: OfferMode | null; className: string; at: number }>({ mode: null, className: '', at: 0 })
+  // ── ĐĂNG KÝ (Phase 1, 09/2026): chọn 1 trong 4 sản phẩm public → tên+email → thanh toán ──
+  const [selProduct, setSelProduct] = useState<PublicProductKey | null>(null)
   const [regDone, setRegDone] = useState<{ name: string; className: string } | null>(null)  // tên/lớp vừa submit → text thanh toán/chờ duyệt
   const [showPay, setShowPay] = useState(false)
   const [paySummary, setPaySummary] = useState<{ lines: string[]; amount: number | null } | null>(null)  // offer summary + tổng (hiện trước QR)
@@ -81,7 +64,6 @@ export default function ClassLandingPage() {
   const _ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
   const isIOS = /iPhone|iPad|iPod/i.test(_ua)
   const isAndroid = /Android/i.test(_ua)
-  const [waysTab, setWaysTab] = useState<'practice' | 'class'>('practice')   // tab 2 cách học: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM)
   const [miraOpen, setMiraOpen] = useState(false)   // bong bóng Mira nổi góc phải
   const [miraEver, setMiraEver] = useState(false)   // đã mở lần nào chưa (giữ iframe, không tải lại)
   const [msgs, setMsgs] = useState<Msg[]>([
@@ -91,9 +73,8 @@ export default function ClassLandingPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatSessionRef = useRef<string | null>(null)
   const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
-  type SchedItem = { name: string; code: string; schedule: string; start: string; price?: string; duration?: string; courseTitle?: string; tag?: string; dateLabel?: string }
-  const [sched, setSched] = useState<{ upcoming: SchedItem[]; active: SchedItem[]; smallGroup: { schedule: string }[]; oneOnOneCount: number; activeCount: number } | null>(null)
-  const [showActive, setShowActive] = useState(false)
+  // LỊCH TUYỂN SINH PUBLIC — chỉ cohort public_enroll=true, gom theo sản phẩm (null = đang tải)
+  const [cohorts, setCohorts] = useState<Partial<Record<PublicProductKey, PublicCohort>> | null>(null)
   const [faqAll, setFaqAll] = useState(false)
   // Cửa vào FREE = APP (vòng 13): modal hướng dẫn tải App + tạo tài khoản trong App.
   // KHÔNG còn form signup web — signup-free function vẫn giữ (story page + App dùng).
@@ -182,72 +163,38 @@ export default function ClassLandingPage() {
     })
   }, [])
 
-  // Đọc lịch lớp từ bảng class_schedule + gắn TÊN KHOÁ/CẤP ĐỘ (từ khoá đã liên kết)
+  // LỊCH TUYỂN SINH PUBLIC ≠ lịch vận hành: chỉ đọc cohort Admin đánh dấu public_enroll=true
+  // và đã gắn public_product. Lớp legacy (HT2026/HT2027/Solo/KD/GL…) mặc định false → không hiện.
+  // Mỗi sản phẩm lấy cohort khai giảng gần nhất chưa kết thúc. KHÔNG hardcode mã lớp.
   useEffect(() => {
-    const TRACK_VI: Record<string, string> = { dem_hat: 'Đệm hát', tia_not: 'Tỉa nốt', nhac_ly: 'Nhạc lý', nhap_mon: 'Nhập môn', solo: 'Solo', cam_am: 'Cảm âm' }
-    Promise.all([
-      supabase.from('class_schedule').select('code,name,section,schedule,start_text,price,duration,course_ids,main_course_id,is_active,sort_order,start_date,end_date,status,show_on_practice_schedule,metadata').eq('is_active', true).order('sort_order').order('created_at'),
-      supabase.from('edu_courses').select('id,name,track,code'),
-    ]).then(([{ data: rows }, { data: cs }]) => {
-      const byId: Record<string, any> = {}; (cs ?? []).forEach((c: any) => { byId[c.id] = c })
-      const DAY = 86400000
-      const today = new Date(); today.setHours(0, 0, 0, 0)
-      const HIDDEN = ['draft', 'cancelled', 'merged', 'completed', 'paused']   // status KHÔNG hiện công khai
-      const dmy = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
-      const dayStart = (s: string) => new Date(s + 'T00:00:00').setHours(0, 0, 0, 0)
-
-      // Nhóm hiển thị suy từ status + ngày thật; lớp cũ chưa có ngày → theo section (không phá)
-      const bucketOf = (r: any): 'hidden' | 'upcoming' | 'active' | 'smallgroup' | 'oneonone' => {
-        if (HIDDEN.includes(r.status)) return 'hidden'                    // tự ẩn nháp/huỷ/xong/gộp/dừng
-        if (r.section === 'smallgroup') return 'smallgroup'
-        if (r.section === 'oneonone') return 'oneonone'
-        if (!r.start_date) return r.section === 'active' ? 'active' : 'upcoming'   // dữ liệu cũ
-        const start = dayStart(r.start_date)
-        const end = r.end_date ? dayStart(r.end_date) : null
-        if (r.status === 'active' || r.status === 'ending_soon') return 'active'
-        if (start > today.getTime()) return 'upcoming'
-        if (end === null || end >= today.getTime()) return 'active'
-        return 'hidden'                                                   // đã quá ngày kết thúc
-      }
-
-      const toItem = (r: any): SchedItem => {
-        // Tiêu đề = khoá chính CÓ MÃ HÀNH TRÌNH (không phải NM). Không có khoá mã → dùng tên lớp.
-        const linked = (r.course_ids ?? []).map((id: string) => byId[id]).filter(Boolean)
-        const coded = linked.filter((c: any) => c.code && c.code !== 'NM')   // khoá có mã năng lực, bỏ NM
-        let main = byId[r.main_course_id]
-        if (!main || !main.code || main.code === 'NM') main = coded[0] ?? null
-        const courseTitle = main?.name ?? r.name
-        const tag = tenNangLuc(main?.code) ?? TRACK_VI[main?.track] ?? 'Guitar'   // hiển thị năng lực rõ: "Đệm hát 2"
-        // Nhãn ngày động từ lịch thật (đếm ngược / kết thúc)
-        let dateLabel: string | undefined
-        if (r.start_date) {
-          const start = dayStart(r.start_date)
-          if (start > today.getTime()) {
-            const days = Math.ceil((start - today.getTime()) / DAY)
-            dateLabel = `Khai giảng ${dmy(r.start_date)}` + (days > 0 ? ` · còn ${days} ngày` : ' · hôm nay')
-          } else {
-            dateLabel = r.end_date ? `Đang học · kết thúc ${dmy(r.end_date)}` : 'Đang học'
+    const HIDDEN = ['draft', 'cancelled', 'merged', 'completed', 'paused']
+    const dmy = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
+    const todayIso = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10)   // ngày theo giờ VN
+    supabase.from('class_schedule')
+      .select('code,name,schedule,start_date,end_date,status,public_product')
+      .eq('is_active', true).eq('public_enroll', true).not('public_product', 'is', null)
+      .order('start_date', { ascending: true, nullsFirst: false })
+      .then(({ data, error }) => {
+        if (error) { console.error('Lịch tuyển sinh lỗi:', error); setCohorts({}); return }
+        const out: Partial<Record<PublicProductKey, PublicCohort>> = {}
+        type Row = { code: string | null; name: string | null; schedule: string | null; start_date: string | null; end_date: string | null; status: string | null; public_product: string }
+        const rows = ((data ?? []) as Row[]).filter(r =>
+          !HIDDEN.includes(r.status ?? '') && r.public_product in PRODUCTS && !(r.end_date && r.end_date < todayIso))
+        // Ưu tiên cohort sắp khai giảng; nếu không có thì cohort đang chạy vẫn nhận người
+        const pick = (k: string) => rows.find(r => r.public_product === k && (!r.start_date || r.start_date >= todayIso))
+          ?? rows.find(r => r.public_product === k)
+        for (const k of Object.keys(PRODUCTS) as PublicProductKey[]) {
+          const r = pick(k); if (!r) continue
+          let dateLabel = 'Đang nhận học viên'
+          if (r.start_date) {
+            const days = Math.round((Date.parse(r.start_date) - Date.parse(todayIso)) / 86400000)
+            dateLabel = days > 0 ? `Khai giảng ${dmy(r.start_date)} · còn ${days} ngày`
+              : days === 0 ? `Khai giảng hôm nay` : `Đang học · vẫn nhận học viên`
           }
+          out[k] = { code: r.code ?? '', name: r.name ?? '', schedule: r.schedule ?? '', dateLabel }
         }
-        return { name: r.name, code: r.code ?? '', schedule: r.schedule ?? '', start: r.start_text ?? '', price: r.price ?? '', duration: r.duration ?? '', courseTitle, tag, dateLabel }
-      }
-
-      // Nhóm thực hành (show_on_practice_schedule=true) mặc định KHÔNG nằm trong lịch lớp
-      // tuyển sinh — TRỪ khi Admin bật cờ dữ liệu metadata.show_on_class_list = true
-      // (vd lớp chương trình có landing riêng). KHÔNG hardcode mã lớp ở đây.
-      const inClassList = (r: any) => !r.show_on_practice_schedule || r.metadata?.show_on_class_list === true
-      const all = ((rows ?? []) as any[]).filter(inClassList)
-      const upcoming: SchedItem[] = [], active: SchedItem[] = [], smallGroup: { schedule: string }[] = []
-      let oneOnOneCount = 0
-      for (const r of all) {
-        const b = bucketOf(r)
-        if (b === 'hidden') continue
-        if (b === 'smallgroup') { smallGroup.push({ schedule: r.schedule ?? '' }); continue }
-        if (b === 'oneonone') { oneOnOneCount++; continue }
-        ;(b === 'active' ? active : upcoming).push(toItem(r))
-      }
-      setSched({ upcoming, active, smallGroup, oneOnOneCount, activeCount: active.length + smallGroup.length + oneOnOneCount })
-    })
+        setCohorts(out)
+      })
   }, [])
 
   useEffect(() => {
@@ -267,10 +214,14 @@ export default function ClassLandingPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Chuyển tab 2 cách học + cuộn tới section (dùng cho nav/deep-link/nút 'Xem lớp & đăng ký')
-  const gotoLich = (tab: 'practice' | 'class') => {
-    setWaysTab(tab)
-    setTimeout(() => document.getElementById('cach-hoc')?.scrollIntoView({ behavior: 'smooth' }), 60)
+  // Cuộn tới "Hai tuyến học" (thay cho 2 tab lịch cũ); có sản phẩm → sáng thẻ đó
+  const gotoTracks = (k?: PublicProductKey) => {
+    if (k) setSelProduct(cohorts?.[k] ? k : null)
+    setTimeout(() => document.getElementById(k ? 'sp-' + k : 'tuyen-hoc')?.scrollIntoView({ behavior: 'smooth', block: k ? 'center' : 'start' }), 60)
+  }
+  const pickProduct = (k: PublicProductKey) => {
+    setSelProduct(k)
+    setTimeout(() => document.getElementById('dangky')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
   }
 
   // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — dùng chung cho URL lúc mở trang
@@ -278,22 +229,23 @@ export default function ClassLandingPage() {
   const runXem = (xem: string) => {
     const actions: Record<string, () => void> = {
       hanhtrinh: () => setShowJourney(true),
-      lich: () => gotoLich('class'),
-      lichlop: () => gotoLich('class'),
+      lich: () => gotoTracks(),
+      lichlop: () => gotoTracks(),
+      tuyenhoc: () => gotoTracks(),
       app: () => setTimeout(() => goto('app'), 350),
       caidat: () => setShowGuide(true),
       demhat: () => setShowDemHat(true),
       tianot: () => setShowTiaNot(true),
       nangcao: () => setShowNangCao(true),
       quiz: () => setShowQuiz(true),
-      dangky: () => setTimeout(() => goto('dangky'), 350),
+      dangky: () => setTimeout(() => gotoTracks(), 350),
       cuavao: () => setTimeout(() => goto('cuavao'), 350),
       baigiang: () => setBenefit('bai-giang'),
       sach: () => setBenefit('sach'),
       thay: () => setBenefit('thay'),
       congdong: () => setBenefit('cong-dong'),
-      thuchanh: () => gotoLich('practice'),
-      cachhoc: () => setTimeout(() => goto('cach-hoc'), 350),
+      thuchanh: () => gotoTracks(),   // link cũ: lịch thực hành không còn là sản phẩm riêng
+      cachhoc: () => setTimeout(() => gotoTracks(), 350),
       batdau: () => setShowAfterSignup(true),
       chat: () => openMira(),
       signup: () => setShowAppModal(true),
@@ -307,19 +259,6 @@ export default function ClassLandingPage() {
     runXem(xem)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // CTA 'Đăng ký...' → mở FLOW MỚI: preselect hình thức (và lớp nếu có) ở Step 1 bảng so sánh.
-  // KHÔNG còn nhảy thẳng vào form hồ sơ.
-  const openReg = (mode: OfferMode, className = '') => {
-    setPreselect({ mode, className, at: Date.now() })
-    setTimeout(() => goto('dangky'), 60)
-  }
-  const pickClass = (name: string) => openReg('class', name)
-  const pickPractice = () => openReg('practice')
-
-  // Lớp có thể đăng ký = lớp THẬT từ class_schedule (sắp khai giảng + đang học) + combo Hành trình.
-  // name (giá trị ghi vào leads) KÈM MÃ LỚP — vì có thể 2 lớp trùng tên (vd TN3.GL12 và TN3.GL13).
-  const regName = (it: { name: string; code?: string }) => it.code ? `${it.name} · ${it.code}` : it.name
 
   const chatPush = (m: Msg) => setMsgs(prev => [...prev, m])
   // text thuần → HTML an toàn: escape, markdown link [text](url) + URL trần + đậm + xuống dòng
@@ -362,90 +301,27 @@ export default function ClassLandingPage() {
     return Number.isFinite(n) && n > 0 ? n : null
   }
   const practiceMonthly = cfgNum('practice_monthly_fee')   // 499000
-  const practice6mTotal = cfgNum('practice_6m_total')      // 2376000
   const practice6mMonthly = cfgNum('practice_6m_monthly')  // 396000
-  const classFeeVnd = cfgNum('class_fee')                  // 990000
   const fmtVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
-  const classPriceLabel = (price?: string) => {
-    if (price === 'Combo') return 'Combo trọn gói'
-    if (/miễn phí|free/i.test(price || '')) return 'Miễn phí'
-    return classFeeVnd ? fmtVnd(classFeeVnd) : '—'
-  }
 
-  // ── FLOW MỚI (preview 2/9) ─────────────────────────────────────────────
-  // Số buổi/phút là DATA: đọc public_app_config nếu Admin thêm key (xem
-  // db/class_offer_quantities_config.sql), thiếu thì dùng default 4/8/90.
-  const qty = offerQtyFromCfg(pubCfg)
-
-  // Lớp chọn được trong bảng = lớp THẬT (class_schedule) + combo Hành trình.
-  // key = regName KÈM MÃ — giá trị ghi thẳng vào leads.class_name (Email 1 dùng classInfo).
-  const classOptions: ClassOption[] = [
-    ...(sched?.upcoming ?? []).map(it => {
-      const price = it.price || ''
-      const free = /miễn phí|free/i.test(price) || (!price && /nhập môn|nhạc lý/i.test(it.name))
-      const combo = price === 'Combo'
-      return { key: regName(it), title: it.courseTitle || it.name, tag: it.tag,
-        schedule: it.schedule, date: it.dateLabel || (it.start ? `Khai giảng ${it.start}` : ''),
-        priceLabel: combo ? 'Combo trọn gói' : free ? 'Miễn phí' : classFeeVnd ? fmtVnd(classFeeVnd) : null,
-        feeKind: (combo ? 'combo' : free ? 'free' : 'standard') as ClassOption['feeKind'] }
-    }),
-    ...(sched?.active ?? []).map(it => {
-      const price = it.price || ''
-      const free = /miễn phí|free/i.test(price) || (!price && /nhập môn|nhạc lý/i.test(it.name))
-      const combo = price === 'Combo'
-      return { key: regName(it), title: it.courseTitle || it.name, tag: it.tag,
-        schedule: it.schedule, date: it.dateLabel || 'Đang học',
-        priceLabel: combo ? 'Combo trọn gói' : free ? 'Miễn phí' : classFeeVnd ? fmtVnd(classFeeVnd) : null,
-        feeKind: (combo ? 'combo' : free ? 'free' : 'standard') as ClassOption['feeKind'],
-        active: true }
-    }),
-  ]
-
-  // Tổng thanh toán CANONICAL theo offer (đọc app_config qua cfgNum — không hardcode)
-  const payAmountOf = (p: RegistrationPayload, cls: ClassOption | null): number | null => {
-    const pracVnd = p.duration === '1_month' ? practiceMonthly : practice6mTotal
-    const clsVnd = cls ? (cls.feeKind === 'combo' ? null : cls.feeKind === 'free' ? 0 : classFeeVnd) : null
-    if (p.mode === 'practice') return pracVnd
-    if (p.mode === 'class') return clsVnd
-    if (clsVnd === null || pracVnd === null) return null
-    return clsVnd + pracVnd
-  }
-
-  // Dòng tóm tắt đơn hiện trước QR (offer đã chọn — không hỏi lại)
-  const paySummaryLines = (p: RegistrationPayload, cls: ClassOption | null): string[] => {
-    const pracLine = `Gói Thực hành · ${p.duration === '1_month' ? '1 tháng' : '6 tháng'}`
-    if (p.mode === 'practice') return [pracLine]
-    const clsLine = `${cls?.title ?? p.className}${cls?.priceLabel ? ` · ${cls.priceLabel}` : ''}`
-    if (p.mode === 'class') return [clsLine]
-    return [clsLine, pracLine]
-  }
-
-  // Note có cấu trúc — Email 1/2 parse (giữ nguyên key [reg-mode][practice-duration])
-  const regNoteNew = (mode: OfferMode, duration: PracticeDuration) => {
-    if (mode === 'class') return null
-    return `[reg-mode:${mode === 'both' ? 'both' : 'practice'}][practice-duration:${duration}]`
-  }
-
-  // Submit FLOW MỚI — mapping leads GIỮ NGUYÊN so với form cũ (chỉ bỏ phone/zalo/ghi chú:
-  // không hỏi trước thanh toán; phone nullable chờ migration db/leads_phone_nullable.sql).
-  // PREVIEW: import.meta.env.DEV = không insert production — log payload rồi mô phỏng UI.
-  // MỌI hình thức (practice/class/both) → THANH TOÁN NGAY (không còn "Thầy liên hệ").
-  const submitRegistration = async (p: RegistrationPayload) => {
-    const cls = classOptions.find(c => c.key === p.className) ?? null
-    const modeNote = regNoteNew(p.mode, p.duration)
+  // Submit đăng ký — mapping leads giữ tương thích Email 1/2 (class_name kèm mã cohort, path).
+  // Chưa có chọn Theo tháng/6 tháng (Phase 2) → số tiền "Theo thông tin Thầy gửi".
+  // PREVIEW: import.meta.env.DEV = không insert production.
+  const submitRegistration = async ({ product, name, email }: { product: PublicProductKey; name: string; email: string }) => {
+    const p = PRODUCTS[product]
+    const c = cohorts?.[product]
+    const className = c?.code ? `${p.title} · ${c.code}` : p.title
     const payload = {
-      name: p.name, email: p.email,
-      class_name: p.mode === 'practice' ? null : p.className,
-      path: p.mode === 'practice' ? null : (inferPath(cls?.title || p.className) || null),
-      intent: 'dang_ky', note: modeNote, source: 'landing', status: 'Mới đăng ký',
+      name, email, class_name: className, path: p.path,
+      intent: 'dang_ky', note: `[public-product:${product}]`, source: 'landing', status: 'Mới đăng ký',
     }
     if (import.meta.env.DEV) console.info('[preview-reg] lead payload (mock, không insert):', payload)
     else {
       const { error } = await supabase.from('leads').insert(payload)
       if (error) console.error('Ghi leads lỗi (vẫn tiếp tục):', error)
     }
-    setRegDone({ name: p.name, className: p.className })
-    setPaySummary({ lines: paySummaryLines(p, cls), amount: payAmountOf(p, cls) })
+    setRegDone({ name, className })
+    setPaySummary({ lines: [`${p.title} · ${p.length}` + (c?.dateLabel ? ` — ${c.dateLabel}` : '')], amount: null })
     setOkBox(false)
     setShowPay(true); setTimeout(() => goto('thanhtoan'), 60)
   }
@@ -461,7 +337,7 @@ export default function ClassLandingPage() {
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
             <a onClick={() => goto('quyenloi')}>Quyền lợi</a>
             <a onClick={() => goto('cach-hoc')}>Cách học</a>
-            <a onClick={() => gotoLich('class')}>Lịch lớp</a>
+            <a onClick={() => gotoTracks()}>Lịch lớp</a>
             <a onClick={() => goto('faq')}>FAQ</a>
             {/* Bỏ mục chữ "Đăng ký" — trùng đích với nút "Đăng ký lớp" bên phải, mà hàng
                 nav cần chỗ cho nút Shop. */}
@@ -484,7 +360,7 @@ export default function ClassLandingPage() {
             </button>
             {me
               ? <button className="btn btn-primary nav-cta" onClick={() => { window.location.href = '/me' }}>🎸 Hành trình của tôi</button>
-              : <button className="btn btn-primary nav-cta" onClick={() => openReg('class')}>Đăng ký lớp</button>}
+              : <button className="btn btn-primary nav-cta" onClick={() => goto('cuavao')}>Bắt đầu học</button>}
           </div>
         </div>
       </nav>
@@ -504,10 +380,10 @@ export default function ClassLandingPage() {
                   <div className="hc-price">{fmtVnd(practiceMonthly)} <span>/ tháng</span></div>
                   {practice6mMonthly && <div className="hc-price-sub">Đăng ký dài hạn: {fmtVnd(practice6mMonthly)}/tháng</div>}
                 </>
-              : <div className="hc-price-fallback"><button className="btn btn-ghost" onClick={() => gotoLich('practice')}>Xem gói học →</button></div>}
-            <p className="hc-body">Học theo năng lực hiện tại, luyện tập trên App và tham gia các buổi thực hành cùng Thầy.</p>
+              : <div className="hc-price-fallback"><button className="btn btn-ghost" onClick={() => gotoTracks()}>Xem lớp học →</button></div>}
+            <p className="hc-body">Học cùng Thầy mỗi tuần theo lịch lớp, luyện tập trên App và được đồng hành trong suốt hành trình.</p>
             <ul className="hc-items">
-              {['Kho bài giảng', 'App luyện tập', 'Thực hành hàng tuần', 'Hỏi Thầy', 'Sách', 'Cộng đồng'].map(x => <li key={x}>{x}</li>)}
+              {['Lớp học hàng tuần', 'Kho bài giảng', 'App luyện tập', 'Hỏi Thầy', 'Sách', 'Cộng đồng'].map(x => <li key={x}>{x}</li>)}
             </ul>
             <div className="hc-note">Học thử miễn phí trên App trước. Thấy phù hợp rồi hãy tham gia.</div>
           </div>
@@ -519,31 +395,25 @@ export default function ClassLandingPage() {
         <div className="wrap">
           <div className="eyebrow">Có giống bạn không?</div>
           <h2>Bạn đang muốn điều gì với Guitar?</h2>
-          <p className="lead">Nếu bạn mới bắt đầu, hãy chọn một trong hai hướng: <b>Đệm hát</b> hoặc <b>Guitar căn bản theo giai điệu</b>. Nếu bạn đã học rồi, trợ lý sẽ giúp bạn xếp đúng trình độ để đi tiếp.</p>
+          <p className="lead">Mới bắt đầu? Chọn một trong hai lớp căn bản. Đã biết chơi? Vào thẳng bước tiếp theo.</p>
           <div className="doors">
-            {DOORS.map((d, i) => {
-              const art = articles[d.slot]
-              return (
-                <div className="door" key={i}>
-                  <div className="dq">{d.dq}</div>
-                  <span className="dbadge">{d.badge}</span>
-                  <p>{d.desc}</p>
-                  {d.native === 'demhat'
-                    ? <button className="btn btn-primary" onClick={() => setShowDemHat(true)}>{d.cta} →</button>
-                    : d.native === 'tianot'
-                    ? <button className="btn btn-primary" onClick={() => setShowTiaNot(true)}>{d.cta} →</button>
-                    : d.native === 'nangcao'
-                    ? <button className="btn btn-primary" onClick={() => setShowNangCao(true)}>{d.cta} →</button>
-                    : art
-                    ? <button className="btn btn-primary" onClick={() => setModal('art:' + d.slot)}>{d.cta} →</button>
-                    : <button className="btn btn-primary" onClick={() => goto(d.fallback)}>{d.cta} →</button>}
-                </div>
-              )
-            })}
-          </div>
-          <div className="map-hint">
-            Sau khóa đầu tiên, bạn có thể đi tiếp theo bản đồ hành trình dài hạn khi sẵn sàng.
-            <button className="btn btn-ghost" onClick={() => setShowJourney(true)}>Xem bản đồ hành trình đầy đủ</button>
+            {DOORS.map((d, i) => (
+              <div className="door" key={i}>
+                <div className="dq">{d.dq}</div>
+                <span className="dbadge">{d.badge}</span>
+                <p>{d.desc}</p>
+                {d.product
+                  ? <button className="btn btn-primary" onClick={() => gotoTracks(d.product)}>{d.cta} →</button>
+                  : <>
+                      <div className="door-adv">
+                        {(d.advanced ?? []).map(k => (
+                          <button key={k} className="btn btn-ghost" onClick={() => gotoTracks(k)}>{PRODUCTS[k].title} · {PRODUCTS[k].length} →</button>
+                        ))}
+                      </div>
+                      <button className="btn btn-primary" onClick={openMira}>{d.cta} →</button>
+                    </>}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -598,48 +468,9 @@ export default function ClassLandingPage() {
       {/* MỘT TUẦN HỌC — cách dùng 6 quyền lợi trong một tuần bình thường (trước 2 cách học) */}
       <ClassWeekJourney />
 
-      {/* 2 CÁCH HỌC — 2 TAB: Gói Thực hành (CAM) / Gói Học theo lớp (TÍM); lịch + giá nằm trong từng tab */}
-      <ClassLearningWays
-        tab={waysTab}
-        onTabChange={setWaysTab}
-        sched={sched}
-        onRegister={pickClass}
-        onRegisterPractice={pickPractice}
-        onShowActive={() => setShowActive(true)}
-        onChat={() => goto('chat')}
-        practicePrice={{
-          monthly: practiceMonthly ? fmtVnd(practiceMonthly) : null,
-          monthlySub: practice6mMonthly ? fmtVnd(practice6mMonthly) : null,
-        }}
-        classFeeLabel={classFeeVnd ? fmtVnd(classFeeVnd) : null}
-      />
-
-      {/* ĐĂNG KÝ HỌC — FLOW MỚI: 1 bảng so sánh (Step 1) → tên+email (Step 2) → thanh toán.
-          KHÔNG còn form dài hỏi lại gói/lớp/thời hạn/hướng học trước thanh toán. */}
-      <section id="dangky" className="band">
-        <div className="wrap">
-          <div className="eyebrow">Đăng ký</div>
-          <h2>Đăng ký học</h2>
-          <p className="lead">So sánh rõ quyền lợi, chọn hình thức phù hợp — chỉ cần họ tên và email để bắt đầu. Thông tin học tập sẽ được hỏi sau khi thanh toán.</p>
-          <ClassOfferCompare
-            key={preselect.at}
-            qty={qty}
-            classFeeVnd={classFeeVnd}
-            classFeeLabel={classFeeVnd ? fmtVnd(classFeeVnd) : null}
-            plans={{
-              '1_month': { vnd: practiceMonthly, line: practiceMonthly ? fmtVnd(practiceMonthly) : null },
-              '6_month': { vnd: practice6mTotal, line: practice6mTotal ? fmtVnd(practice6mTotal) : null },
-            }}
-            sixMonthlyLine={practice6mMonthly ? `tương đương ${fmtVnd(practice6mMonthly)}/tháng` : null}
-            classOptions={classOptions}
-            preselect={preselect}
-            me={!!me}
-            onLogin={() => setShowLogin(true)}
-            onBrowseClasses={() => gotoLich('class')}
-            onSubmit={submitRegistration}
-          />
-        </div>
-      </section>
+      {/* HAI TUYẾN HỌC + ĐĂNG KÝ — lịch = cohort public_enroll (không phải toàn bộ class_schedule) */}
+      <ClassPublicTracks cohorts={cohorts} selected={selProduct} onSelect={pickProduct}
+        onMira={openMira} zaloUrl={zalo} onSubmit={submitRegistration} />
 
       {/* THANH TOÁN — MỌI hình thức (practice/class/both) đều vào đây ngay sau tên+email */}
       {showPay && (
@@ -786,10 +617,11 @@ export default function ClassLandingPage() {
         <div className="wrap">
           <div className="final">
             <h2>Bạn đã sẵn sàng bắt đầu?</h2>
-            <p>Chọn cách học phù hợp với bạn.</p>
+            <p>Chọn lớp phù hợp — hoặc hỏi Mira nếu bạn chưa chắc.</p>
             <div className="final-acts">
-              <button className="btn btn-primary" onClick={pickPractice}>Đăng ký Gói Thực hành →</button>
-              <button className="btn btn-ghost" onClick={() => gotoLich('class')}>Chọn lớp muốn học →</button>
+              <button className="btn btn-primary" onClick={() => gotoTracks('dem_hat_can_ban')}>Bắt đầu Đệm hát →</button>
+              <button className="btn btn-primary" onClick={() => gotoTracks('guitar_can_ban')}>Bắt đầu Guitar căn bản →</button>
+              <button className="btn btn-ghost" onClick={openMira}>Hỏi Mira →</button>
             </div>
             <p className="final-free">Chưa muốn đăng ký ngay? Bạn có thể <button className="final-free-link" onClick={() => setShowAppModal(true)}>học thử miễn phí trên App →</button></p>
           </div>
@@ -867,7 +699,7 @@ export default function ClassLandingPage() {
       {showJourney && (
         <ClassJourney2027
           onClose={() => setShowJourney(false)}
-          onRegister={() => { setShowJourney(false); setTimeout(() => gotoLich('class'), 60) }}
+          onRegister={() => { setShowJourney(false); setTimeout(() => gotoTracks(), 60) }}
           onFreeTrial={() => { setShowJourney(false); setShowAppModal(true) }}
         />
       )}
@@ -875,7 +707,7 @@ export default function ClassLandingPage() {
       {showDemHat && (
         <ClassDemHat
           onClose={() => setShowDemHat(false)}
-          onRegister={() => { setShowDemHat(false); setTimeout(() => gotoLich('class'), 60) }}
+          onRegister={() => { setShowDemHat(false); setTimeout(() => gotoTracks(), 60) }}
           onChat={() => { setShowDemHat(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
@@ -883,7 +715,7 @@ export default function ClassLandingPage() {
       {showTiaNot && (
         <ClassTiaNot
           onClose={() => setShowTiaNot(false)}
-          onRegister={() => { setShowTiaNot(false); setTimeout(() => gotoLich('class'), 60) }}
+          onRegister={() => { setShowTiaNot(false); setTimeout(() => gotoTracks(), 60) }}
           onChat={() => { setShowTiaNot(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
@@ -891,7 +723,7 @@ export default function ClassLandingPage() {
       {showQuiz && (
         <ClassQuiz
           onClose={() => setShowQuiz(false)}
-          onRegister={() => { setShowQuiz(false); setTimeout(() => gotoLich('class'), 60) }}
+          onRegister={() => { setShowQuiz(false); setTimeout(() => gotoTracks(), 60) }}
           onChat={() => { setShowQuiz(false); setTimeout(() => goto('chat'), 60) }}
         />
       )}
@@ -899,7 +731,7 @@ export default function ClassLandingPage() {
       {showGuide && (
         <ClassAppGuide appIos={pubCfg?.app_ios_url} appAndroid={pubCfg?.app_android_url}
           onClose={() => setShowGuide(false)}
-          onRegister={() => { setShowGuide(false); setTimeout(() => gotoLich('class'), 60) }}
+          onRegister={() => { setShowGuide(false); setTimeout(() => gotoTracks(), 60) }}
         />
       )}
 
@@ -921,7 +753,7 @@ export default function ClassLandingPage() {
         <div className="demo-page">
           <div className="demo-top">
             <button className="demo-back" onClick={() => setShowPractice(false)}>← Quay lại</button>
-            <button className="demo-cta" onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
+            <button className="demo-cta" onClick={() => { setShowPractice(false); setTimeout(() => gotoTracks(), 60) }}>Chọn lớp muốn học →</button>
           </div>
           <div className="demo-scroll">
             <div className="demo-inner">
@@ -941,7 +773,7 @@ export default function ClassLandingPage() {
                   <div className="demo-point" key={i}><span>{ic}</span>{t}</div>
                 ))}
               </div>
-              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowPractice(false); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
+              <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={() => { setShowPractice(false); setTimeout(() => gotoTracks(), 60) }}>Chọn lớp muốn học →</button>
             </div>
           </div>
         </div>
@@ -954,52 +786,20 @@ export default function ClassLandingPage() {
           <div className="art-page">
             <div className="art-top">
               <button className="art-close" onClick={() => setModal(null)}>← Quay lại</button>
-              <button className="btn btn-primary art-top-cta" onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
+              <button className="btn btn-primary art-top-cta" onClick={() => { setModal(null); setTimeout(() => gotoTracks(), 60) }}>Chọn lớp muốn học →</button>
             </div>
             <div className="art-scroll">
               <div className="art-inner">
                 {a ? <>
                   <h1 className="art-h1">{a.title}</h1>
                   <div className="art-body" dangerouslySetInnerHTML={{ __html: a.body }} />
-                  <button className="btn btn-primary" style={{ marginTop: 28 }} onClick={() => { setModal(null); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
+                  <button className="btn btn-primary" style={{ marginTop: 28 }} onClick={() => { setModal(null); setTimeout(() => gotoTracks(), 60) }}>Chọn lớp muốn học →</button>
                 </> : <div>Bài viết không còn.</div>}
               </div>
             </div>
           </div>
         )
       })()}
-
-      {/* XEM THÊM CÁC LỚP ĐANG HỌC (bằng chứng xã hội) */}
-      {showActive && sched && (
-        <div className="modal open" onClick={e => { if (e.target === e.currentTarget) setShowActive(false) }}>
-          <div className="modal-box">
-            <button className="x" onClick={() => setShowActive(false)}>×</button>
-            <h3>Các lớp đang hoạt động</h3>
-            <p className="lead" style={{ marginTop: 6 }}>Hệ thống đang có <b>nhiều lớp diễn ra song song</b> — bạn không học một mình. Tất cả đều online trực tiếp qua Zoom.</p>
-            <div className="active-list">
-              {sched.active.map((c, i) => (
-                <div className="active-row" key={'a' + i}>
-                  <div className="active-name">{c.name}</div>
-                  <div className="active-sch">{c.schedule || 'Đang cập nhật'}</div>
-                </div>
-              ))}
-              {sched.smallGroup.map((c, i) => (
-                <div className="active-row" key={'g' + i}>
-                  <div className="active-name">Lớp nhóm nhỏ</div>
-                  <div className="active-sch">{c.schedule || 'Lịch linh động'}</div>
-                </div>
-              ))}
-              {sched.oneOnOneCount > 0 && (
-                <div className="active-row active-1v1">
-                  <div className="active-name">🎯 {sched.oneOnOneCount} học viên đang học 1 kèm 1</div>
-                  <div className="active-sch">Lịch linh động</div>
-                </div>
-              )}
-            </div>
-            <button className="btn btn-primary" style={{ marginTop: 18, width: '100%' }} onClick={() => { setShowActive(false); setTimeout(() => gotoLich('class'), 60) }}>Chọn lớp muốn học →</button>
-          </div>
-        </div>
-      )}
 
       {/* POPUP NGẮN dùng chung (mô hình học / cam kết / bản đồ rút gọn) */}
       {modal && !modal.startsWith('art:') && (
@@ -1104,7 +904,8 @@ const CSS = `
 .tva-class .hero-card .hc-note b{color:var(--honey);}
 @media(max-width:860px){.tva-class .hero-grid{grid-template-columns:1fr;gap:26px;}.tva-class .hero h1{font-size:32px;}.tva-class .hero-card{padding:22px 20px 20px;}.tva-class .hero-card .hc-price{font-size:32px;}}
 .tva-class .doors{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px;}
-.tva-class .door{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;}
+.tva-class .door-adv{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}.door-adv .btn{width:100%;text-align:left}
+.door{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;}
 .tva-class .door .dq{font-size:16.5px;font-weight:700;line-height:1.3;}
 .tva-class .door .dbadge{font-size:11.5px;font-weight:700;color:var(--honey);background:var(--honey-tint);padding:3px 9px;border-radius:6px;align-self:flex-start;margin:9px 0 10px;}
 .tva-class .door p{font-size:13.5px;color:var(--ink-soft);flex:1;margin-bottom:14px;line-height:1.45;}

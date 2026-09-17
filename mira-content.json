@@ -1,28 +1,28 @@
 {
   "generatedFrom": "cs-rhythm-editor · scripts/mira-content.mjs",
   "doors": [
-    "Cửa vào \"Tôi muốn vừa đàn vừa hát\" → Guitar căn bản theo hướng Đệm hát. Dành cho người mới thích hát, hay hát karaoke, muốn học hợp âm, nhịp phách và tự đệm các bài yêu thích. (nút: Xem lớp Đệm hát căn bản)",
-    "Cửa vào \"Tôi muốn học Guitar từ gốc\" → Guitar căn bản theo hướng Giai điệu. Dành cho người mới muốn làm quen với nốt nhạc, vị trí trên cần đàn và chơi những giai điệu đầu tiên. (nút: Xem lớp Guitar căn bản)",
-    "Cửa vào \"Tôi đã biết chơi và muốn tiến xa hơn\" → Xếp trình độ nâng cao. Dành cho người đã học một thời gian nhưng còn bí nhịp, tông, nốt, âm giai, cảm âm hoặc cách xử lý bài hát. (nút: Xem mình đang ở đâu)"
+    "Cửa vào \"Tôi muốn vừa đàn vừa hát\" → Đệm hát căn bản · 4 buổi. Dành cho người mới thích hát và muốn tự đệm những bài mình yêu thích. (nút: Bắt đầu Đệm hát)",
+    "Cửa vào \"Tôi muốn học Guitar từ gốc, chơi theo giai điệu\" → Guitar căn bản · 4 buổi. Dành cho người muốn làm quen với nốt nhạc, cần đàn và chơi những giai điệu đầu tiên. (nút: Bắt đầu Guitar căn bản)",
+    "Cửa vào \"Tôi đã biết chơi Guitar\" → Bạn đã có nền tảng?. Bạn có thể vào thẳng Đệm hát nâng cao hoặc Solo Guitar. Nếu chưa biết mình phù hợp lớp nào, hỏi Mira nhé. (nút: Hỏi Mira)"
   ],
   "starters": [
     "\"Tìm điểm bắt đầu của tôi\": Bài test 2 phút. Không cần biết trình độ — trả lời vài câu để biết mình phù hợp lớp nào. (nút: Làm bài test)",
     "\"Mở bài học thử trên app\": Dùng thử app TVA Guitar 7 ngày: trải nghiệm bài học đầu tiên, cách luyện tập và theo dõi tiến độ. (nút: Dùng thử miễn phí)",
     "\"Xem một buổi học vận hành thế nào\": Lớp Zoom có thầy dẫn, nhóm Zalo nhắc lịch & giao bài, app lưu bài, có trả bài. Học online không phải tự bơi. (nút: Xem một buổi học)",
-    "\"90 phút mỗi tuần cho cây đàn của bạn\": Một tuần chỉ 90 phút, lộ trình 8 buổi. Nếu không đặt lịch cho ước mơ, nó sẽ bị việc khác chen vào. (nút: Đọc bài viết)",
+    "\"90 phút mỗi tuần cho cây đàn của bạn\": Mỗi tuần một buổi cùng Thầy. Nếu không đặt lịch cho ước mơ, nó sẽ bị việc khác chen vào. (nút: Đọc bài viết)",
     "\"Những học viên lớn tuổi bắt đầu thế nào\": Nhiều người bắt đầu khi đã 40, 50, 60. Quan trọng không phải tuổi — mà là đi chậm và đúng cách. (nút: Xem video lớp học)",
     "\"Bạn được hỗ trợ gì sau khi đăng ký\": Chọn sai lớp? Không theo kịp? Bận một buổi? Mỗi lo lắng đều có cách hệ thống hỗ trợ bạn. (nút: Xem cam kết)"
   ],
   "faq": [
-    "Hỏi: Tôi nên bắt đầu từ đâu?\nĐáp: Người mới hoàn toàn nên bắt đầu từ Nhập môn (miễn phí) , rồi chọn nhánh Đệm hát hoặc Tỉa nốt. Bạn đang ở mức nào?",
-    "Hỏi: Học phí thế nào?\nĐáp: Mỗi khoá 990k , học 2 tháng (8 buổi). Nhập môn & Nhạc lý căn bản miễn phí.",
-    "Hỏi: Đệm hát hay tỉa nốt?\nĐáp: Muốn tự đàn hát → Đệm hát . Muốn chơi giai điệu, đọc nốt → Tỉa nốt . Bạn thiên về cái nào?",
-    "Hỏi: Lịch học ra sao?\nĐáp: Các lớp sắp mở chủ yếu tối trong tuần (19h–20h30) . Xem mục \"Lớp sắp khai giảng\", hoặc cho mình biết khung giờ bạn rảnh."
+    "Hỏi: Tôi nên bắt đầu từ đâu?\nĐáp: Người mới có 2 cửa: thích hát → Đệm hát căn bản (4 buổi) ; muốn học từ gốc, chơi giai điệu → Guitar căn bản (4 buổi) . Đã biết chơi → Đệm hát nâng cao hoặc Solo Guitar (6 tháng).",
+    "Hỏi: Học phí thế nào?\nĐáp: Cùng một lớp, có 2 cách đồng hành: Theo tháng 499.000đ/tháng , hoặc Đồng hành 6 tháng 396.000đ/tháng (2.376.000đ/6 tháng) với đầy đủ quyền lợi.",
+    "Hỏi: Đệm hát hay Guitar căn bản?\nĐáp: Muốn tự đàn hát → Đệm hát . Muốn đọc nốt, chơi giai điệu → Guitar căn bản . Bạn thiên về cái nào?",
+    "Hỏi: Lịch học ra sao?\nĐáp: Hai lớp căn bản mở vòng liên tục (mỗi vòng 4 buổi) để bạn luôn có cửa vào. Xem lịch khai giảng ở mục \"Hai tuyến học\", hoặc hỏi Mira/nhắn Thầy."
   ],
   "modals": [
     "[mohinh] Một buổi học vận hành thế nào?\n\nHọc ở đây không phải tự xem video rồi tự bơi — có cả một mô hình hỗ trợ quanh bạn.\n\nẢnh lớp Zoom thật\nLớp Zoom có người dẫn\nHọc theo lịch cố định, thầy giảng trực tiếp.\n\nẢnh nhóm Zalo lớp\nNhóm Zalo lớp\nNhắc lịch, giao bài, hỏi đáp sau buổi học.\n\nẢnh màn hình app\nApp TVA Guitar\nBài học, bài tập, tiến độ được lưu để ôn lại.\n\nẢnh hướng dẫn trả bài\nTrả bài có góp ý\nGửi bài để thầy/trợ lý xem và sửa cho bạn.",
     "[camket] Bạn được hỗ trợ gì sau khi đăng ký?\n\nBạn không bị ném vào một khoá học rồi tự xoay xở.\n\nChọn sai lớp Được tư vấn trước khi vào lớp\n\nKhông theo kịp App xem lại bài + bài tập sau buổi\n\nBận một buổi Có nội dung ôn lại trong app / nhóm lớp\n\nKhông biết tập gì Có bài tập rõ sau mỗi buổi học\n\nVào lớp chưa phù hợp Thầy/trợ lý sẽ định hướng lại",
-    "[banDo] Bản đồ hành trình dài hạn\n\nBạn không cần học hết ngay — chỉ cần bắt đầu bằng khóa đầu tiên phù hợp. Đây là con đường nếu bạn muốn đi xa.\n\nNhập môn (miễn phí)\n\nNhạc lý 1 → 2 → 3 (hoà âm cảm âm)\n\nĐệm hát 1 → 2 → 3\n\nTỉa nốt 1 → 2 → 3\n\n↓ hội tụ: Đệm hát nâng cao → Solo Guitar\n\nHọc có điều kiện : mỗi khoá chỉ mở khi đủ nền — ví dụ Đệm hát 2 cần xong Đệm hát 1 + Nhạc lý 1. Không nhảy cóc, không hổng gốc."
+    "[banDo] Bản đồ hành trình dài hạn\n\nBạn không cần học hết ngay — chỉ cần bắt đầu bằng khóa đầu tiên phù hợp. Đây là con đường nếu bạn muốn đi xa.\n\nĐệm hát Đệm hát căn bản (4 buổi) → Đệm hát nâng cao (6 tháng)\n\nGuitar & Solo Guitar căn bản (4 buổi) → Solo Guitar (6 tháng)\n\nĐã biết chơi? Bạn có thể vào thẳng bước dài hạn — hỏi Mira nếu chưa chắc."
   ],
   "pages": [
     {
