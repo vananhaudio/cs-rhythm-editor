@@ -22,7 +22,7 @@ const ZALO_LINK = 'https://zalo.me/vananhguitarist'
 const STEPS = [
   { ic: '📘', name: 'Kích hoạt tài khoản', desc: 'Bạn được cấp quyền truy cập hệ thống và App.' },
   { ic: '📧', name: 'Nhận hướng dẫn cài đặt', desc: 'Hướng dẫn đăng nhập, App, Zoom và những bước cần thiết được gửi qua email/Zalo.' },
-  { ic: '📅', name: 'Nhận lịch & vào nhóm học', desc: 'Tùy hình thức đăng ký, bạn được thêm vào lớp hoặc nhóm thực hành phù hợp.' },
+  { ic: '📅', name: 'Nhận lịch & vào nhóm học', desc: 'Bạn được thêm vào nhóm lớp và nhận lịch buổi học hàng tuần.' },
   { ic: '🎸', name: 'Học trước buổi đầu tiên', desc: 'Bạn có thể vào hệ thống xem bài và chuẩn bị trước khi gặp Thầy.' },
 ]
 

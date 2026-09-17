@@ -321,7 +321,11 @@ export default function ClassLandingPage() {
       if (error) console.error('Ghi leads lỗi (vẫn tiếp tục):', error)
     }
     setRegDone({ name, className })
-    setPaySummary({ lines: [`${p.title} · ${p.length}` + (c?.dateLabel ? ` — ${c.dateLabel}` : '')], amount: null })
+    // Phase 1: học phí khởi điểm = mức theo tháng (app_config). Chọn "Đồng hành 6 tháng"
+    // là việc của Phase 2 — ở đây chỉ nói rõ để học viên nhắn Thầy nếu muốn.
+    const lines = [`${p.title} · ${p.length}` + (c?.dateLabel ? ` — ${c.dateLabel}` : ''), 'Học theo tháng' + (practiceMonthly ? ` · ${fmtVnd(practiceMonthly)}/tháng` : '')]
+    if (practice6mMonthly) lines.push(`Muốn Đồng hành 6 tháng (${fmtVnd(practice6mMonthly)}/tháng)? Nhắn Thầy qua Zalo khi gửi bill.`)
+    setPaySummary({ lines, amount: practiceMonthly })
     setOkBox(false)
     setShowPay(true); setTimeout(() => goto('thanhtoan'), 60)
   }
