@@ -727,14 +727,18 @@ test("ToolRouteGate: quyền cache gắn với auth uid, đổi phiên là quên
     new URL("../../src/ToolRouteGate.tsx", import.meta.url),
     "utf8"
   );
-  assert.match(gate, /lastGood=useRef<\{uid:string\|null;allowed:boolean\}\|null>/);
+  const bo = readFileSync(new URL("../../src/authCapabilityGate.ts", import.meta.url), "utf8");
+  // Cổng dùng bộ theo dõi dùng chung, đưa đủ (event, uid) cho nó.
+  assert.match(gate, /taoBoTheoDoiQuyen<boolean>/);
+  assert.match(gate, /bo\.suKien\(event,session\?\.user\?\.id\?\?null\)/);
   // so uid trước khi dùng lại quyền cũ
-  assert.match(gate, /lastGood\.current\.uid!==uid/);
-  assert.match(gate, /lastGood\.current\.uid===uid/);
-  // đăng xuất / đổi người dùng thì quên NGAY, không chờ poll
-  assert.match(gate, /event==='SIGNED_OUT'\|\|event==='SIGNED_IN'\|\|event==='USER_UPDATED'/);
-  assert.match(gate, /const forget=\(\)=>\{lastGood\.current=null/);
+  assert.match(bo, /if \(tot && tot\.uid !== uid\) quen\(\);/);
+  assert.match(bo, /if \(tot && tot\.uid === uid\)/);
+  // đăng xuất / ĐỔI người dùng thì quên NGAY, không chờ poll; cùng người thì giữ
+  assert.match(bo, /if \(event === "SIGNED_OUT"\) return "QUEN";/);
+  assert.match(bo, /if \(uidDangCo !== undefined && uidMoi !== uidDangCo\) return "QUEN";/);
   // câu trả lời hợp lệ "không cho" phải chặn ngay, không giữ quyền cũ
-  assert.match(gate, /setError\(false\);lastGood\.current=\{uid,allowed:data===true\}/);
-  assert.equal(/if\(error\)[\s\S]{0,120}data===true/.test(gate), false);
+  assert.match(gate, /return error\?\{ok:false\}:\{ok:true,value:data===true\}/);
+  assert.match(bo, /tot = \{ uid, value: r\.value \};\s*o\.dat\(\{ phase: "ready", value: r\.value \}\);/);
 });
+

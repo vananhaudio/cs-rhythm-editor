@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { taoBoTheoDoiQuyen } from "../authCapabilityGate";
 import { supabase } from "../supabase";
 import { NO_CAPS, parseCaps, type CapState } from "./capabilities";
 
@@ -21,63 +22,37 @@ export type CapPhase = "loading" | "ready" | "error";
 export function useCapabilities(): { state: CapState; phase: CapPhase } {
   const [state, setState] = useState<CapState>(NO_CAPS);
   const [phase, setPhase] = useState<CapPhase>("loading");
-  const totNhat = useRef<{ uid: string | null; state: CapState } | null>(null);
 
   useEffect(() => {
-    let live = true;
-    let luot = 0;
-    const quen = () => {
-      totNhat.current = null;
-      setState(NO_CAPS);
-      setPhase("loading");
-    };
-    const doc = async () => {
-      const hienTai = ++luot;
-      const { data } = await supabase.auth
-        .getSession()
-        .catch(() => ({ data: { session: null } }));
-      const uid = data.session?.user?.id ?? null;
-      if (totNhat.current && totNhat.current.uid !== uid) {
-        totNhat.current = null;
-        setState(NO_CAPS);
-      }
+    // Giữ/quên quyền theo phiên: xem `authCapabilityGate`. Cùng người mà Supabase
+    // phát lại SIGNED_IN (tab lấy lại focus) thì GIỮ quyền — trình soạn nhạc
+    // không bị gỡ, bản nháp chưa lưu không mất.
+    const bo = taoBoTheoDoiQuyen<CapState>({
+      docUid: async () => {
+        const { data } = await supabase.auth.getSession();
+        return data.session?.user?.id ?? null;
+      },
+      hoi: async () => {
+        const { data: raw, error } = await supabase.rpc("my_nhipphach_caps");
+        return error ? { ok: false } : { ok: true, value: parseCaps(raw) };
+      },
       // Chưa đăng nhập thì không gọi RPC: `anon` đã bị thu hồi quyền chạy, gọi
       // vào chỉ nhận lỗi quyền rồi hiện nhầm thành "chưa tải được". Khách là
       // một câu trả lời dứt khoát, không phải một sự cố.
-      if (!uid) {
-        totNhat.current = null;
-        setState(NO_CAPS);
-        setPhase("ready");
-        return;
-      }
-      const { data: raw, error } = await supabase.rpc("my_nhipphach_caps");
-      if (!live || hienTai !== luot) return;
-      if (error) {
-        const giu = totNhat.current && totNhat.current.uid === uid;
-        if (giu) {
-          setState(totNhat.current!.state);
-          setPhase("ready");
-        } else {
-          setState(NO_CAPS);
-          setPhase("error");
-        }
-        return;
-      }
-      const sach = parseCaps(raw);
-      totNhat.current = { uid, state: sach };
-      setState(sach);
-      setPhase("ready");
-    };
-    void doc();
+      khiKhach: NO_CAPS,
+      dat: (s) => {
+        setState(s.value ?? NO_CAPS);
+        setPhase(s.phase);
+      },
+    });
+    void bo.lamMoi();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT" || event === "SIGNED_IN" || event === "USER_UPDATED")
-        quen();
-      void doc();
-    });
+    } = supabase.auth.onAuthStateChange((event, session) =>
+      bo.suKien(event, session?.user?.id ?? null)
+    );
     return () => {
-      live = false;
+      bo.huy();
       subscription.unsubscribe();
     };
   }, []);

@@ -76,21 +76,23 @@ test("ToolRouteGate giữ quyền khi một lần kiểm tra bị lỗi mạng",
     new URL("../../src/ToolRouteGate.tsx", import.meta.url),
     "utf8"
   );
-  // Lỗi tạm thời: KHÔNG được setAllowed(null) — làm thế là gỡ cả công cụ khỏi DOM,
-  // mất bản nhạc đang mở và mẻ nhiều bài đang chạy.
-  assert.doesNotMatch(gate, /setAllowed\(error\?null/, "không hạ quyền khi lỗi");
-  assert.match(gate, /const keep=lastGood\.current && lastGood\.current\.uid===uid/);
-  assert.match(gate, /if\(keep\)setAllowed\(lastGood\.current!\.allowed\)/);
-  // Chưa từng xác định được quyền thì vẫn báo lỗi
-  assert.match(gate, /else\{lastGood\.current=null;setAllowed\(null\);setError\(true\)\}/);
-  // …và quyền tốt gần nhất phải gắn với ĐÚNG tài khoản
-  assert.match(gate, /lastGood=useRef<\{uid:string\|null;allowed:boolean\}\|null>\(null\)/);
-  assert.match(gate, /lastGood\.current=\{uid,allowed:data===true\}/);
+  const bo = readFileSync(new URL("../../src/authCapabilityGate.ts", import.meta.url), "utf8");
+  // Lỗi tạm thời: KHÔNG được hạ quyền — làm thế là gỡ cả công cụ khỏi DOM, mất
+  // bản nhạc đang mở và mẻ nhiều bài đang chạy. Luật nằm ở bộ theo dõi dùng chung
+  // (hành vi được kiểm trong authSession.test.ts).
+  assert.match(gate, /return error\?\{ok:false\}:\{ok:true,value:data===true\}/);
+  assert.match(bo, /if \(tot && tot\.uid === uid\) o\.dat\(\{ phase: "ready", value: tot\.value \}\);/);
+  // Chưa từng xác định được quyền thì vẫn báo lỗi.
+  assert.match(bo, /o\.dat\(\{ phase: "error", value: null \}\);/);
+  assert.match(gate, /setAllowed\(s\.phase==='ready'\?s\.value:null\);setError\(s\.phase==='error'\)/);
+  // …và quyền tốt gần nhất phải gắn với ĐÚNG tài khoản.
+  assert.match(bo, /tot = \{ uid, value: r\.value \};/);
   // Danh tính phải lấy từ phiên CỤC BỘ. getUser() gọi mạng nên mất mạng sẽ bị
   // hiểu nhầm là đổi tài khoản, xoá quyền và gỡ mất công cụ đang dùng.
   assert.match(gate, /supabase\.auth\.getSession\(\)/);
-  assert.doesNotMatch(gate, /supabase\.auth\.getUser\(\)/);
+  assert.doesNotMatch(gate.replace(/\/\/.*$/gm, ""), /supabase\.auth\.getUser\(\)/);
 });
+
 
 
 test("chỉ bản DEV mới được trỏ Supabase đi nơi khác", () => {
