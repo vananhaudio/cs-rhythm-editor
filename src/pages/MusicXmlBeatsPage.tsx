@@ -15,7 +15,11 @@ import {
   exportSVGPages,
 } from "../musicxml-beats/renderer/printExport";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { createAnnotatedScoreRenderer } from "../musicxml-beats/renderer/verovioAdapter";
+import {
+  createAnnotatedScoreRenderer,
+  renderCanonicalForExport,
+} from "../musicxml-beats/renderer/verovioAdapter";
+import { keHoachXemTruoc } from "../nhipphach/editor/previewPlan";
 import { DEFAULT_SCORE_SETTINGS } from "../musicxml-beats/renderer/types";
 import type {
   AnnotatedScore,
@@ -279,6 +283,12 @@ export default function MusicXmlBeatsPage({
     nhapRef.current = next;
     setNhap(next);
   };
+  /**
+   * 4D.P3: lệnh vừa làm ra bản nháp đang có — gợi ý cho lượt vẽ xem trước. Chỉ là
+   * gợi ý: lượt vẽ tự phân loại lại so với bản xem trước THẬT của renderer, và chỉ
+   * dùng khi `xml` khớp đúng bản nó đang vẽ.
+   */
+  const goiYXemTruoc = useRef<{ xml: string; cmd: MusicXmlEditCommand } | null>(null);
   const [dangLuuNhap, setDangLuuNhap] = useState(false);
   const [nhapNote, setNhapNote] = useState("");
   const [kiemTra, setKiemTra] = useState<ValidationReport | null>(null);
@@ -801,6 +811,14 @@ export default function MusicXmlBeatsPage({
     const sau = buoc(truoc);
     if (sau === truoc) return;
     datNhap(sau);
+    // Hoàn tác đi ngược lệnh ở vị trí cũ; làm lại đi xuôi lệnh ở vị trí mới.
+    const lenh =
+      sau.cursor === truoc.cursor - 1
+        ? truoc.commands[truoc.cursor - 1]
+        : sau.cursor === truoc.cursor + 1
+          ? sau.commands[sau.cursor - 1]
+          : undefined;
+    goiYXemTruoc.current = lenh ? { xml: sau.xml, cmd: lenh } : null;
     if (sau.identity !== truoc.identity) doiChoCaret(truoc.identity, sau.identity);
   }
 
@@ -920,6 +938,7 @@ export default function MusicXmlBeatsPage({
       const truoc = nhapRef.current ?? createDraft(source.xml);
       const sau = applyToDraft(truoc, cmd);
       datNhap(sau);
+      goiYXemTruoc.current = { xml: sau.xml, cmd };
       // 4B.2: lệnh cân lại ô nhịp có thể chèn/bỏ dấu lặng, làm mọi sự kiện đứng
       // sau tụt chỉ số — tức là đổi `tva-src-…`. Con trỏ phải đi theo DANH TÍNH
       // LOGIC, không phải theo cái id cũ: giữ id cũ là im lặng trỏ sang một sự
@@ -1286,7 +1305,19 @@ export default function MusicXmlBeatsPage({
         const r = await renderer.current;
         if (cancelled) return;
         // Xem trước bản nháp = khắc đúng bản nháp, cùng một bộ khắc, cùng cache.
-        const rendered = r.render(xmlHienThi, settings);
+        // 4D.P3: sửa phím TAB cùng dây chỉ vẽ lại trang chứa nốt đó — khi và chỉ
+        // khi phân loại (so với bản renderer ĐANG xem) cho phép; renderer tự kiểm
+        // lại mọi chốt và tự vẽ đầy đủ khi có gì lệch.
+        const goiY = goiYXemTruoc.current;
+        const keHoach =
+          goiY && goiY.xml === xmlHienThi
+            ? keHoachXemTruoc(goiY.cmd, r.previewXml(), xmlHienThi)
+            : null;
+        const rendered = r.renderPreview(
+          xmlHienThi,
+          settings,
+          keHoach?.kind === "partial" ? { sourceId: keHoach.sourceId } : null
+        );
         if (!cancelled) {
           setScore(rendered);
           setBusy(false);
@@ -1394,13 +1425,18 @@ export default function MusicXmlBeatsPage({
     const batDau = Date.now();
     let daXuat = false;
     try {
+      // Xuất file KHÔNG lấy bản xem trước: khắc chuẩn lại từ đúng bản đang hiện,
+      // trên một bộ khắc riêng. Bản xem trước có thể được ghép từng trang (4D.P3).
+      const xmlXuat = nhapRef.current?.xml ?? source?.xml;
+      if (!xmlXuat) return;
+      const chuan = await renderCanonicalForExport(xmlXuat, settings);
       if (format === "pdf")
-        downloadBlob(await exportScorePDF(score), `${name}.pdf`);
+        downloadBlob(await exportScorePDF(chuan), `${name}.pdf`);
       else if (format === "svg") {
-        const output = await exportSVGPages(score);
+        const output = await exportSVGPages(chuan);
         downloadBlob(output.blob, `${name}-svg.${output.extension}`);
       } else {
-        const output = await exportScorePNG(score, pngScale);
+        const output = await exportScorePNG(chuan, pngScale);
         downloadBlob(output.blob, `${name}-${pngScale}x.${output.extension}`);
       }
       daXuat = true;

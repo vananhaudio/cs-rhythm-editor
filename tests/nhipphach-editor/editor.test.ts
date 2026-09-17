@@ -1516,3 +1516,43 @@ test("4D kiến trúc: ChangeTabPosition KHÔNG đi tìm nốt khuông nhạc t�
   assert.match(than(a.replace("const tech = elementChildren", "const ban = note.nextSibling; const tech = elementChildren")), CAM, "luật không bắt được đột biến");
   assert.match(than(a.replace("const tech = elementChildren", "const x = ngu.onset; const tech = elementChildren")), CAM, "luật không bắt được đột biến");
 });
+
+// ══ 14. Xem trước từng trang (Giai đoạn 4D.P3) ══════════════════════════════
+test("4D.P3 kiến trúc: không dùng Verovio.edit(); render() chuẩn không đọc ảnh chụp xem trước", () => {
+  const a = stripComments(src("musicxml-beats/renderer/verovioAdapter.ts"));
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  const plan = stripComments(src("nhipphach/editor/previewPlan.ts"));
+  const coEdit = (m: string) => /\.edit\s*\(|editInfo|editStatus/.test(m);
+  for (const m of [a, page, plan]) assert.equal(coEdit(m), false, "không dùng toolkit.edit()");
+  assert.ok(coEdit(a + "\ntoolkit.edit({ action: 'set' });"), "luật không bắt được đột biến");
+  // Thân render() chuẩn: không một chữ `preview`.
+  const than = (m: string) => {
+    const i = m.indexOf("    render(\n");
+    return m.slice(i, m.indexOf("\n    },", i));
+  };
+  assert.ok(than(a).length > 50);
+  assert.doesNotMatch(than(a), /preview/);
+  assert.match(than(a.replace("hopLe(settings);\n      const layoutKey", "hopLe(settings); void preview;\n      const layoutKey")), /preview/, "luật không bắt được đột biến");
+});
+
+test("4D.P3 trang: chỉ ChangeTabPosition được gợi ý; xuất file khắc chuẩn riêng; lưu dùng render() chuẩn", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  const plan = stripComments(src("nhipphach/editor/previewPlan.ts"));
+  assert.match(plan, /cmd\.type !== "ChangeTabPosition"\) return full\("NOT_TAB_POSITION"\)/);
+  // Gợi ý chỉ đi qua bộ phân loại, so với bản renderer ĐANG xem.
+  assert.match(page, /keHoachXemTruoc\(goiY\.cmd, r\.previewXml\(\), xmlHienThi\)/);
+  assert.match(page, /r\.renderPreview\(\s*xmlHienThi,/);
+  assert.equal((page.match(/renderPreview\(/g) ?? []).length, 1, "chỉ lượt vẽ xem trước dùng đường ghép trang");
+  // Xuất: mọi định dạng nhận CÙNG bản khắc chuẩn, không nhận `score` xem trước.
+  const xuat = (m: string) => m.slice(m.indexOf("async function exportPrint("), m.indexOf("daXuat = true;", m.indexOf("async function exportPrint(")));
+  const dungChuan = (m: string) =>
+    /renderCanonicalForExport\(xmlXuat, settings\)/.test(xuat(m)) &&
+    /exportScorePDF\(chuan\)/.test(xuat(m)) &&
+    /exportSVGPages\(chuan\)/.test(xuat(m)) &&
+    /exportScorePNG\(chuan, pngScale\)/.test(xuat(m)) &&
+    !/export(ScorePDF|SVGPages|ScorePNG)\(score\b/.test(xuat(m));
+  assert.ok(dungChuan(page), "xuất file phải khắc chuẩn riêng");
+  assert.equal(dungChuan(page.replace("exportScorePNG(chuan, pngScale)", "exportScorePNG(score, pngScale)")), false, "luật không bắt được đột biến");
+  // Lưu kiểm bằng bản khắc chuẩn, không phải bản xem trước.
+  assert.match(page, /render: \(xml\) => r\.render\(xml, settings\)/);
+});
