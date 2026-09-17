@@ -343,4 +343,10 @@ test("4D.P5B HÌNH CHIẾU NHỊP: cùng hình chiếu ⇒ cùng lỗi nhịp; s
     tab++;
   }
   assert.ok(giu > 10 && doi > 5 && tab === 3, `giữ ${giu}, đổi ${doi}`);
+  // Chỉ đổi <duration> (không đụng <type>): nhịp đổi ⇒ hình chiếu PHẢI khác.
+  const i = ENTRY.indexOf("<duration>");
+  const j = ENTRY.indexOf("</duration>", i);
+  const lech = ENTRY.slice(0, i) + "<duration>" + (Number(ENTRY.slice(i + 10, j)) + 1) + ENTRY.slice(j);
+  assert.notEqual(truc(lech), truc(ENTRY), "mẫu thử phải thật sự làm hỏng nhịp");
+  assert.notEqual(khoaNhip(lech), khoaNhip(ENTRY), "hình chiếu bỏ mất trường độ");
 });

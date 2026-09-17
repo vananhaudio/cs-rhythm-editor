@@ -1593,3 +1593,25 @@ test("4D.P4 trang: Worker theo mẫu Vite; chỉ kết quả đúng số hiệu 
   assert.match(page, /renderCanonicalForExport\(xmlXuat, settings\)/);
   assert.match(page, /render: \(xml\) => r\.render\(xml, settings\)/);
 });
+
+// ══ 16. Dẫn xuất đồng bộ tối thiểu (Giai đoạn 4D.P5B) ══════════════════════
+test("4D.P5B kiến trúc: ô Phách không tự đọc cả bài; cảnh báo cao độ/TAB không dùng lại theo hình chiếu nhịp", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  const docCaBai = (m: string) => /parseMusicXML\(/.test(m);
+  assert.equal(docCaBai(page), false, "trang không được đọc cả bài trên main thread cho ô Phách");
+  assert.ok(docCaBai(page + "\nparseMusicXML(xmlHienThi);"), "luật không bắt được đột biến");
+  assert.match(page, /setOnsetTheoPath\(res\.onsets\)/);
+  // Cảnh báo phụ thuộc cao độ/thế bấm → tuyệt đối không khoá theo hình chiếu nhịp.
+  const canh = stripComments(src("nhipphach/edit/noteWarnings.ts"));
+  const dungNhip = (m: string) => /khoaNhip/.test(m);
+  assert.equal(dungNhip(canh), false);
+  assert.ok(dungNhip(canh + "\nkhoaNhip(xml);"), "luật không bắt được đột biến");
+  // Hình chiếu chỉ làm rỗng đúng ba thứ không ảnh hưởng nhịp.
+  const val = stripComments(src("nhipphach/edit/validation.ts"));
+  const khoi = val.slice(val.indexOf("const LAM_RONG"), val.indexOf("];", val.indexOf("const LAM_RONG")));
+  const the = [...khoi.matchAll(/\["(<[\w-]+>?)"/g)].map((m) => m[1]);
+  assert.deepEqual(the, ["<pitch>", "<technical>", "<accidental"]);
+  // Worker không có đường nào quyết định lệnh.
+  const core = stripComments(src("nhipphach/preview/previewCore.ts"));
+  assert.doesNotMatch(core, /applyCommand|applyToDraft|toCommand/);
+});
