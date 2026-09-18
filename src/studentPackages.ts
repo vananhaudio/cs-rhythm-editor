@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-export interface PackageDefinition { id: string; name: string; package_code: string; config: { renew_months?: number; store_only?: boolean; default_course_codes?: string[] } }
+export interface PackageDefinition { id: string; name: string; package_code: string; config: { renew_months?: number; store_only?: boolean; default_course_codes?: string[]; plan?: string; plan_label?: string } }
 export interface StudentPackage {
  id: number; student_id: string; package_id: string | null; name: string; package_code: string
  starts_at: string; renews_at: string | null; source: string; status: string; display_status: string

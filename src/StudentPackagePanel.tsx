@@ -37,7 +37,7 @@ export default function StudentPackagePanel({studentId}:{studentId:string}) {
    const store=r.source==='apple'||r.source==='google_play';const managed=r.id>0&&!store&&r.entitlement_id===null
    const days=r.renews_at?Math.max(0,Math.ceil((Date.parse(r.renews_at)-Date.parse(snapshot.now))/86400000)):null
    return <article key={r.id} style={{borderTop:'1px solid #E4E4E7',padding:'14px 0'}}>
-    <div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}><b>{r.name}</b><span style={{color:r.display_status==='expiring'?'#B45309':r.is_active?'#2D6A4F':'#71717A'}}>{PACKAGE_STATUS[r.display_status]??r.display_status}</span></div>
+    <div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}><b>{r.name}{(()=>{const c=snapshot.packages.find(p=>p.id===r.package_id)?.config;return c?.plan?<span style={{marginLeft:8,fontSize:12,fontWeight:700,color:'#3730A3',background:'#E0E7FF',borderRadius:5,padding:'1px 7px'}}>{c.plan_label??c.plan}</span>:null})()}</b><span style={{color:r.display_status==='expiring'?'#B45309':r.is_active?'#2D6A4F':'#71717A'}}>{PACKAGE_STATUS[r.display_status]??r.display_status}</span></div>
     <div style={{display:'flex',gap:'8px 24px',flexWrap:'wrap',fontSize:13,lineHeight:1.8,marginTop:6}}>
      <span>Bắt đầu: {packageDate(r.starts_at)}</span><span>Hết hạn: <b>{packageDate(r.renews_at)}</b></span>
      {days!==null&&<span>Còn {days} ngày</span>}<span>Nguồn: {PACKAGE_SOURCE[r.source]??r.source}</span>

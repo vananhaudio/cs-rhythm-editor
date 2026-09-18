@@ -83,6 +83,15 @@ const buildPkgMap = (data: PkgRow[]): Record<string, PkgInfo> => {
 // Query gói active của học viên (Đợt 2) — dùng chung cho nạp đầu + refresh sau kích hoạt
 const fetchActivePkgs = () =>
   supabase.from('student_packages').select('student_id, renews_at, packages(name)').eq('status', 'active')
+    .or(`renews_at.is.null,renews_at.gt.${new Date().toISOString()}`)
+
+// Tag có cấu trúc trong leads.note (landing Class ghi [public-product:…][plan:…])
+const noteTag = (note: string | null | undefined, key: string): string | null =>
+  (note ?? '').match(new RegExp('\\[' + key + ':([a-z_]+)\\]'))?.[1] ?? null
+const PLAN_LABEL: Record<string, string> = { monthly: 'Học theo tháng', six_month: 'Đồng hành 6 tháng' }
+// Mã lớp nằm sau dấu "·" cuối trong class_name (vd "Đệm hát căn bản · DH1.KD20")
+const leadClassCode = (l: { class_name?: string | null }): string | null =>
+  (l.class_name ?? '').match(/·\s*([A-Za-z0-9]+\.[A-Za-z0-9]+)\s*$/)?.[1]?.toUpperCase() ?? null
 
 // Mật khẩu mặc định khi tạo tài khoản từ duyệt đăng ký — học viên đổi sau trong app (đồng bộ AiAssistant)
 const DEFAULT_PW = '12345678'
@@ -243,65 +252,55 @@ export default function LeadsManager() {
     } finally { setApproving(null) }
   }
 
-  // 🎸 KÍCH HOẠT GÓI ĐỒNG HÀNH 396K — mã khoá theo hướng đã chọn ở placement
-  const pkgCodes = (l: Lead): string[] | null => {
-    const p = (l.path ?? '').toLowerCase()
-    if (p.includes('dem')) return ['NM', 'DH1']
-    if (p.includes('tia')) return ['NM', 'TN1']
-    return null // mặc định config gói (NM) — solo/chưa biết cần Thầy xác nhận trước
-  }
-  const pkgNames = (codes: string[] | null) =>
-    (codes ?? ['NM']).map(c => courses.find(x => x.code === c)?.name ?? c).join(' + ')
-
-  const activatePkg = async (l: Lead) => {
+  // Đảm bảo lead có tài khoản học viên (admin-ai create — cơ chế signup hiện có), gắn leads.student_id
+  const ensureStudent = async (l: Lead): Promise<{ studentId: string; password: string | null; existed: boolean }> => {
+    if (l.student_id) return { studentId: l.student_id, password: null, existed: true }
     const email = (l.email ?? '').trim().toLowerCase()
-    if (!email && !l.student_id) { alert('Đăng ký này chưa có email/tài khoản — cần email để kích hoạt gói.'); return }
+    if (!email) throw new Error('Đăng ký này chưa có email — cần email để tạo tài khoản.')
+    let password: string | null = null
+    let existed = false
+    try {
+      const { data: cr, error: crErr } = await supabase.functions.invoke('admin-ai',
+        { body: { action: 'create', students: [{ email, full_name: l.name, password: DEFAULT_PW }] } })
+      if (crErr) throw crErr
+      const r0 = cr?.results?.[0]
+      if (r0?.ok) password = r0.password
+      else if (/đã có tài khoản/i.test(r0?.error ?? '')) existed = true
+      else throw new Error(r0?.error || 'không tạo được tài khoản')
+    } catch (e) {
+      throw new Error(
+        e && typeof e === 'object' && 'context' in e ? await fnErr(e) : e instanceof Error ? e.message : String(e),
+        { cause: e },
+      )
+    }
+    const { data: stu, error: sErr } = await supabase.from('edu_students').select('id').eq('email', email).limit(1).maybeSingle()
+    if (sErr || !stu?.id) throw new Error('Tạo tài khoản xong nhưng không tìm thấy hồ sơ học viên')
+    const { error: uErr } = await supabase.from('leads').update({ student_id: stu.id }).eq('id', l.id)
+    if (uErr) throw new Error('Không gắn được tài khoản vào đăng ký: ' + uErr.message)
+    return { studentId: stu.id, password, existed }
+  }
+
+  // 💳 KÍCH HOẠT MEMBERSHIP (mô hình Class mới): Thầy đã nhận tiền → server đọc [plan] + mã lớp
+  // của lead, vào nhóm lớp + cấp/gia hạn CLASS_MONTHLY / CLASS_SIXMONTH (có hạn).
+  // Idempotent theo lead: bấm lại / retry không cấp thêm kỳ. Không ghi quyền vĩnh viễn.
+  const activateMembership = async (l: Lead) => {
+    const plan = noteTag(l.note, 'plan')
+    if (!confirm(`Xác nhận đã NHẬN TIỀN của ${l.name}?\n${PLAN_LABEL[plan ?? ''] ?? plan} · lớp ${leadClassCode(l) ?? '?'}`)) return
     setActivatingPkg(l.id)
     try {
-      let studentId = l.student_id
-      let password: string | null = null
-      let existed = false
-      if (!studentId) {
-        // Tạo tài khoản theo cơ chế signup hiện tại (admin-ai create) — không tạo hệ thống account mới
-        try {
-          const { data: cr, error: crErr } = await supabase.functions.invoke('admin-ai',
-            { body: { action: 'create', students: [{ email, full_name: l.name, password: DEFAULT_PW }] } })
-          if (crErr) throw crErr
-          const r0 = cr?.results?.[0]
-          if (r0?.ok) password = r0.password
-          else if (/đã có tài khoản/i.test(r0?.error ?? '')) existed = true
-          else throw new Error(r0?.error || 'không tạo được tài khoản')
-        } catch (e) {
-          throw new Error(
-            e && typeof e === 'object' && 'context' in e ? await fnErr(e) : e instanceof Error ? e.message : String(e),
-            { cause: e },
-          )
-        }
-        const { data: stu, error: sErr } = await supabase.from('edu_students').select('id').eq('email', email).limit(1).maybeSingle()
-        if (sErr || !stu?.id) throw new Error('Tạo tài khoản xong nhưng không tìm thấy hồ sơ học viên')
-        studentId = stu.id
-        await supabase.from('leads').update({ student_id: studentId }).eq('id', l.id)
-      }
-      const codes = pkgCodes(l)
-      const { data: rp, error: rpErr } = await supabase.rpc('activate_student_package',
-        { p_student: studentId, p_package_code: 'DONG_HANH_396K', p_course_codes: codes ?? null })
+      const acc = await ensureStudent(l)
+      const { data: rp, error: rpErr } = await supabase.rpc('activate_class_membership', { p_lead: l.id })
       if (rpErr) throw new Error(rpErr.message)
-      const names = ((rp?.granted_codes ?? []) as string[])
-        .map(c => courses.find(x => x.code === c)?.name ?? c).join(', ')
-      const zaloUrl = (rp?.zalo_url as string) || ''
-      const teacherZalo = (rp?.zalo_teacher_url as string) || ''
-      const practice = (rp?.practice_schedule as string) || ''
-      setStatus(l.id, 'Đã đóng phí')
+      setLeads(prev => prev.map(x => x.id === l.id ? { ...x, student_id: acc.studentId, status: 'Đã đóng phí' } : x))
       loadPkgInfo()
-      alert(`✅ Đã kích hoạt gói ĐỒNG HÀNH 396K cho ${l.name}:
-• Tài khoản: ${email || 'đã có sẵn'}${existed ? ' (đã có — giữ mật khẩu cũ)' : password ? ` · mật khẩu: ${password}` : ''}
-• Mở khoá: ${names || '—'}
-• Gói đến: ${rp?.renews_at ? fmtDate(rp.renews_at) : '—'}
-${zaloUrl ? `• Nhóm Zalo chung: ${zaloUrl}
-` : ''}${teacherZalo ? `• Hỏi Thầy: ${teacherZalo}
-` : ''}${practice ? `• Lịch thực hành: ${practice}
-` : ''}
-Gửi thông tin đăng nhập + link app cho học viên nhé.`)
+      const courseNames = ((rp?.granted_codes ?? []) as string[]).map(c => courses.find(x => x.code === c)?.name ?? c).join(', ')
+      alert(`✅ ${rp?.already_done ? 'Đã kích hoạt từ trước (không cấp thêm kỳ)' : 'Đã kích hoạt'} cho ${l.name}:
+• Tài khoản: ${l.email || 'đã có sẵn'}${acc.password ? ` · mật khẩu: ${acc.password}` : ' (giữ mật khẩu cũ)'}
+• ${PLAN_LABEL[rp?.plan] ?? rp?.plan} (${rp?.package_code})
+• Lớp: ${rp?.class_code} · Bài giảng: ${courseNames || '—'}
+• Hiệu lực đến: ${rp?.renews_at ? fmtDate(rp.renews_at) : '—'}
+${rp?.zalo_url ? `• Nhóm Zalo lớp: ${rp.zalo_url}\n` : '• Nhóm Zalo lớp: chưa có link — dán ở Admin → Lịch lớp\n'}
+Gửi thông tin đăng nhập + link nhóm cho học viên nhé.`)
     } catch (e) {
       alert('Kích hoạt lỗi: ' + ((e as Error)?.message || e))
     } finally { setActivatingPkg(null) }
@@ -493,7 +492,7 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                     {/* ⚡ Duyệt nhanh đăng ký thường: tạo tài khoản + vào đúng lớp đã đăng ký.
                         KHÔNG hiện khi: lead đã có student_id (đã tạo tài khoản), hoặc trạng thái
                         đã chốt (Đã duyệt / Đã đóng phí) — tránh bấm nhầm flow cũ. */}
-                    {!l.is_hanhtrinh && !l.package_choice && l.intent === 'dang_ky' && !l.student_id
+                    {!l.is_hanhtrinh && !l.package_choice && !noteTag(l.note, 'plan') && l.intent === 'dang_ky' && !l.student_id
                       && l.status !== 'Đã duyệt' && l.status !== 'Đã đóng phí' && (
                       <div style={{ marginTop: 8, background: C.accentLight, border: '1px solid #C7D2FE', borderRadius: 8, padding: '8px 9px' }}>
                         <div style={{ fontSize: 11.5, fontWeight: 800, color: '#3730A3', marginBottom: 6 }}>⚡ Duyệt nhanh — tạo tài khoản + vào lớp</div>
@@ -533,17 +532,15 @@ Gửi thông tin đăng nhập + link app cho học viên nhé.`)
                         )}
                       </div>
                     )}
-                    {/* 🎸 Kích hoạt gói ĐỒNG HÀNH 396K (Đợt 1) — lead → tài khoản → gói → quyền.
-                        CHỈ cho lead cũ (chưa có package_choice) — lead mới Class 2.0 xử lý theo gói đã chọn. */}
-                    {!l.package_choice && (
+                    {/* 💳 Membership mô hình Class mới — chỉ lead có [plan:…] từ landing.
+                        Lead cũ (không có plan): cấp gói ở Hồ sơ học viên → Gói học. */}
+                    {noteTag(l.note, 'plan') && (
                     <div style={{ marginTop: 8, background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: 8, padding: '8px 9px' }}>
-                      <div style={{ fontSize: 11.5, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>🎸 Gói ĐỒNG HÀNH 396K</div>
-                      <div style={{ fontSize: 11.5, color: '#047857', marginBottom: 6 }}>
-                        Sẽ mở: {pkgNames(pkgCodes(l))}
-                      </div>
-                      <button onClick={() => activatePkg(l)} disabled={activatingPkg === l.id}
+                      <div style={{ fontSize: 11.5, fontWeight: 800, color: '#065F46', marginBottom: 4 }}>💳 {PLAN_LABEL[noteTag(l.note, 'plan') ?? ''] ?? noteTag(l.note, 'plan')}</div>
+                      <div style={{ fontSize: 11.5, color: '#047857', marginBottom: 6 }}>Lớp: {leadClassCode(l) ?? '— (thiếu mã lớp)'}</div>
+                      <button onClick={() => { void activateMembership(l) }} disabled={activatingPkg === l.id || !leadClassCode(l)}
                         style={{ background: activatingPkg === l.id ? C.text3 : '#059669', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 11px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {activatingPkg === l.id ? 'Đang kích hoạt…' : 'Kích hoạt gói'}
+                        {activatingPkg === l.id ? 'Đang kích hoạt…' : l.status === 'Đã đóng phí' ? 'Kích hoạt lại (an toàn)' : 'Đã nhận tiền → Kích hoạt'}
                       </button>
                     </div>
                     )}
