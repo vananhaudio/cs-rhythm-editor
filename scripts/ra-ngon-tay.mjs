@@ -12,7 +12,7 @@
 // Quy đổi alphaTex: lf 2 = ngón 1 … lf 5 = ngón 4  ⇒  ngón Việt = lf - 1.
 import { readFileSync } from 'node:fs'
 
-const FILES = ['src/data/solo01/buoi01.ts','src/data/solo01/buoi02.ts','src/data/solo01/buoi03.ts','src/data/solo01/works.ts']
+const FILES = ['src/data/solo01/buoi01.ts','src/data/solo01/buoi02.ts','src/data/solo01/buoi03.ts','src/data/solo01/buoi04.ts','src/data/solo01/works.ts']
 const NOTE = /(\d+)\.([1-6])(\{[^}]*\})?\.(\d+)(\{[^}]*\})?/g
 
 function parseBlocks(src) {

@@ -121,7 +121,7 @@ export const SOLO01_BUOI03: LessonDoc = {
       ],
       guidance: [
         'Bass là phần nền. Melody vẫn phải được nghe rõ nhất.',
-        'p đi xuống, i – m đi lên; hai ngón melody luân phiên, không dùng một ngón hai nốt liền.',
+        'p đi xuống, i – m đi lên. Melody: giữ nếp i – m thay phiên như Buổi 02 — để tay đều, không ngón nào làm quá nhiều.',
         'Nghe ra câu nhạc trong phần melody — đừng biến nó thành bài chạy ngón.',
       ],
     },
@@ -140,9 +140,10 @@ export const SOLO01_BUOI03: LessonDoc = {
       guidance: [
         'Gảy nốt đầu — giữ lực tay trái — trượt sang nốt sau. Không nhấc tay giữa hai nốt.',
         'Trượt thì HAI NỐT CÙNG MỘT NGÓN. Trượt từ dây buông là vô nghĩa: không bấm gì thì không có ngón nào để trượt.',
-        'Không trượt thì đổi ngón: một ngón không bấm liên tiếp hai nốt khác chỗ, nhất là khi sang dây khác.',
+        'Không trượt thì đổi ngón — vì một ngón muốn sang chỗ khác phải nhấc lên, nốt trước sẽ bị cắt tiếng, nhất là khi sang dây khác.',
         'Nhịp KHÔNG được dừng lại vì slide.',
         'Slide ở đây để câu melody liền và có chất guitar hơn, không phải để khoe kỹ thuật.',
+        'Số ngón trên bản là một cách thuận Thầy gợi ý. Bạn có cách khác cũng được, miễn là trượt vẫn cùng dây, cùng ngón và câu vẫn liền.',
       ],
     },
     {
@@ -159,6 +160,7 @@ export const SOLO01_BUOI03: LessonDoc = {
       guidance: [
         'Bass ở bè dưới ngân trọn ô nhịp, melody ở bè trên — đây là hình thu nhỏ của bản Solo đang dựng.',
         'Tập trước phần melody trơn, rồi mới thả bass vào, cuối cùng mới thêm slide.',
+        'Ngón trên bản là gợi ý. Chỗ nào tay bạn thấy bí, thử hỏi: nốt tiếp theo nằm ở đâu, có phải đổi thế không — rồi chọn ngón thuận hơn.',
       ],
     },
     {
@@ -202,7 +204,7 @@ export const SOLO01_BUOI03: LessonDoc = {
         { label: 'Bài 4.', text: 'Chơi lại đoạn tác phẩm đã học từ Buổi 01–02.' },
         { label: 'Bài 5.', text: 'Nâng cấp đoạn đó: thêm Bass, thêm Slide tại vị trí đã đánh dấu.' },
         { label: 'Bài 6.', text: 'Khoanh trên bản nhạc: chỗ Bass làm melody yếu, chỗ Slide đứt tiếng, chỗ tay phải bị rối.' },
-        { label: 'Bài 7 — tự thiết kế.', text: 'Tự đặt thêm Slide vào Diễm Xưa theo cảm nhận của mình — KHÔNG có đúng sai. Đánh dấu thẳng lên bản nhạc chỗ muốn trượt và ghi ngắn lý do (câu nhạc liền hơn, gần giọng hát hơn, nghe buồn hơn…). Mang đến lớp tuần sau để trao đổi, biện luận và bảo vệ lựa chọn của mình.' },
+        { label: 'Bài 7 — tự thiết kế.', text: 'Tự đặt thêm Slide vào Diễm Xưa theo cảm nhận của mình — KHÔNG có đúng sai. Đánh dấu thẳng lên bản nhạc chỗ muốn trượt và ghi ngắn lý do (câu nhạc liền hơn, gần giọng hát hơn, nghe buồn hơn…). Mang đến lớp tuần sau để trao đổi, biện luận và bảo vệ lựa chọn của mình. Không cần giống Thầy — chỉ cần bạn nói được vì sao.' },
         { label: 'Gợi ý cho Bài 7.', text: 'Trượt được khi hai nốt liền nhau cùng nằm trên MỘT dây, cả hai đều là nốt bấm, và dùng CÙNG một ngón. Chỗ nào chưa đủ điều kiện (nốt là dây buông, hoặc hai nốt nằm ở hai dây) thì thử ĐỔI DÂY: bấm nốt đó ở dây khác để hai nốt về chung một dây. Ví dụ Mi dây 1 buông cũng chính là Mi ở dây 2 ngăn 5.' },
       ],
       message: 'Mang đúng những vị trí đã khoanh đến buổi học — đó là phần thầy trò sẽ gỡ cùng nhau.',
