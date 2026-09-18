@@ -28,11 +28,19 @@ export const HT2027_PROGRESSION = ['Hòa âm', 'Giai điệu', 'Tiết tấu', '
 //   • tốt nghiệp Tỉa nốt 2                 → mã TN2 (edu_course_access active)
 export const HT2027_ELIGIBLE_CODES = ['DH2', 'TN2']
 
+export interface HtLesson { title: string; points?: string[]; doc?: string; unlockAt?: string }
+
 export interface HtStage {
   no: number
   title: string
   goal: string
-  lessons: string[]          // 8 buổi (title ngắn gọn cho lịch)
+  /**
+   * 8 buổi — cùng khuôn SOLO01_STAGES:
+   * doc      = đường dẫn giáo trình buổi đó (khi đã soạn), vd '/hanhtrinh2027/buoi-01'
+   * unlockAt = mốc MỞ BÀI (ISO kèm múi giờ). Chưa tới giờ → hiện 🔒 kèm giờ mở,
+   *            tới giờ tự mở, KHÔNG cần deploy lại. Bỏ trống = mở sẵn.
+   */
+  lessons: HtLesson[]
   results: string[]          // kết quả cuối chặng
 }
 
@@ -42,14 +50,14 @@ export const HT2027_STAGES: HtStage[] = [
     title: 'Làm chủ bộ hợp âm, vòng hòa âm và màu sắc hòa âm',
     goal: 'Chuyển từ việc đánh lại hợp âm có sẵn sang hiểu và chủ động lựa chọn hòa âm cho bài hát.',
     lessons: [
-      'Xây dựng bộ hợp âm trong một giọng',
-      'Chức năng của hợp âm',
-      'Phân tích vòng hòa âm',
-      'Dịch chuyển vòng hòa âm',
-      'Thay thế hợp âm',
-      'Hợp âm đảo và đường bass',
-      'Phối lại hòa âm cho bài hát',
-      'Trình bày sản phẩm cuối chặng',
+      { title: 'Xây dựng bộ hợp âm trong một giọng', doc: '/hanhtrinh2027/buoi-01' },
+      { title: 'Chức năng của hợp âm', doc: '/hanhtrinh2027/buoi-02' },
+      { title: 'Phân tích vòng hòa âm', doc: '/hanhtrinh2027/buoi-03' },
+      { title: 'Dịch chuyển vòng hòa âm' },
+      { title: 'Thay thế hợp âm' },
+      { title: 'Hợp âm đảo và đường bass' },
+      { title: 'Phối lại hòa âm cho bài hát' },
+      { title: 'Trình bày sản phẩm cuối chặng' },
     ],
     results: [
       'Xây dựng được bộ hợp âm của một giọng',
@@ -64,14 +72,14 @@ export const HT2027_STAGES: HtStage[] = [
     title: 'Làm chủ khuôn hình và phát triển giai điệu trên cần đàn',
     goal: 'Nhìn thấy mối quan hệ giữa âm chủ, khuôn hình và giai điệu; không phụ thuộc hoàn toàn vào tab hoặc một vị trí cố định.',
     lessons: [
-      'Âm chủ và cấu trúc khuôn hình',
-      'Khuôn hình trong giọng trưởng',
-      'Khuôn hình trong giọng thứ',
-      'Kết nối các khuôn hình',
-      'Xây dựng câu nhạc',
-      'Tìm giai điệu bằng tai',
-      'Biến đổi và phát triển giai điệu',
-      'Trình bày sản phẩm cuối chặng',
+      { title: 'Âm chủ và cấu trúc khuôn hình' },
+      { title: 'Khuôn hình trong giọng trưởng' },
+      { title: 'Khuôn hình trong giọng thứ' },
+      { title: 'Kết nối các khuôn hình' },
+      { title: 'Xây dựng câu nhạc' },
+      { title: 'Tìm giai điệu bằng tai' },
+      { title: 'Biến đổi và phát triển giai điệu' },
+      { title: 'Trình bày sản phẩm cuối chặng' },
     ],
     results: [
       'Nhận diện âm chủ và cấu trúc khuôn hình trên cần đàn',
@@ -85,14 +93,14 @@ export const HT2027_STAGES: HtStage[] = [
     title: 'Làm chủ điệu đệm, tiết tấu và cách phát triển bài hát',
     goal: 'Thoát khỏi cách sử dụng một mẫu đệm từ đầu đến cuối; biết điều khiển tiết tấu, sắc thái và cao trào theo cấu trúc bài hát.',
     lessons: [
-      'Phân tích tiết tấu của bài hát',
-      'Biến đổi mẫu đệm',
-      'Nhấn phách và đảo phách',
-      'Dồn nhịp và chuyển câu',
-      'Ngắt tiếng và kiểm soát âm thanh',
-      'Xây dựng sắc thái và cao trào',
-      'Kết hợp nhiều phương pháp đệm',
-      'Trình bày sản phẩm cuối chặng',
+      { title: 'Phân tích tiết tấu của bài hát' },
+      { title: 'Biến đổi mẫu đệm' },
+      { title: 'Nhấn phách và đảo phách' },
+      { title: 'Dồn nhịp và chuyển câu' },
+      { title: 'Ngắt tiếng và kiểm soát âm thanh' },
+      { title: 'Xây dựng sắc thái và cao trào' },
+      { title: 'Kết hợp nhiều phương pháp đệm' },
+      { title: 'Trình bày sản phẩm cuối chặng' },
     ],
     results: [
       'Phân tích được tiết tấu của bài hát',
@@ -106,14 +114,14 @@ export const HT2027_STAGES: HtStage[] = [
     title: 'Solo Guitar: Kết hợp giai điệu, bass và hòa âm',
     goal: 'Solo Guitar là sự kết hợp giữa năng lực Đệm hát và Tỉa nốt — làm chủ ba lớp âm thanh trên cây đàn.',
     lessons: [
-      'Phân tích ba lớp âm thanh',
-      'Đặt hợp âm dưới giai điệu',
-      'Làm nổi bật giai điệu',
-      'Xây dựng đường bass',
-      'Kết hợp giai điệu, bass và hợp âm',
-      'Kỹ thuật tay phải trong Solo Guitar',
-      'Nối câu và chuyển vị trí',
-      'Trình bày sản phẩm cuối chặng',
+      { title: 'Phân tích ba lớp âm thanh' },
+      { title: 'Đặt hợp âm dưới giai điệu' },
+      { title: 'Làm nổi bật giai điệu' },
+      { title: 'Xây dựng đường bass' },
+      { title: 'Kết hợp giai điệu, bass và hợp âm' },
+      { title: 'Kỹ thuật tay phải trong Solo Guitar' },
+      { title: 'Nối câu và chuyển vị trí' },
+      { title: 'Trình bày sản phẩm cuối chặng' },
     ],
     results: [
       'Phân tích được ba lớp âm thanh: giai điệu, bass, hòa âm',
@@ -127,14 +135,14 @@ export const HT2027_STAGES: HtStage[] = [
     title: 'Solo Guitar: Xây dựng và hoàn thiện tác phẩm',
     goal: 'Đi từ một bản nhạc hoặc giai điệu có sẵn đến một tác phẩm Solo Guitar hoàn chỉnh, có bố cục, sắc thái và khả năng biểu diễn.',
     lessons: [
-      'Phân tích và lựa chọn tác phẩm',
-      'Xây dựng phần mở đầu',
-      'Phát triển và trang trí giai điệu',
-      'Phát triển hòa âm và đường bass',
-      'Xử lý điệp khúc và cao trào',
-      'Xây dựng phần kết',
-      'Chỉnh sửa và hoàn thiện phần trình diễn',
-      'Biểu diễn tổng kết Hành trình 2027',
+      { title: 'Phân tích và lựa chọn tác phẩm' },
+      { title: 'Xây dựng phần mở đầu' },
+      { title: 'Phát triển và trang trí giai điệu' },
+      { title: 'Phát triển hòa âm và đường bass' },
+      { title: 'Xử lý điệp khúc và cao trào' },
+      { title: 'Xây dựng phần kết' },
+      { title: 'Chỉnh sửa và hoàn thiện phần trình diễn' },
+      { title: 'Biểu diễn tổng kết Hành trình 2027' },
     ],
     results: [
       'Lựa chọn và phân tích được tác phẩm phù hợp',
@@ -149,5 +157,16 @@ export const HT2027_STAGES: HtStage[] = [
 export const ht2027LessonTitle = (n: number): string => {
   const st = HT2027_STAGES.find(s => s.no === Math.ceil(n / 8))
   if (!st) return `Buổi ${n}`
-  return st.lessons[(n - 1) % 8]
+  return st.lessons[(n - 1) % 8].title
+}
+
+// ── Mở bài theo lịch — nguồn DUY NHẤT là HT2027_STAGES (landing + trang giáo trình cùng hỏi) ──
+const htLesson = (n: number): HtLesson | undefined =>
+  HT2027_STAGES[Math.floor((n - 1) / HT2027.sessionsPerStage)]?.lessons[(n - 1) % HT2027.sessionsPerStage]
+
+export const ht2027LessonUnlock = (n: number): string | null => htLesson(n)?.unlockAt ?? null
+
+export function ht2027LessonOpen(n: number, now: Date = new Date()): boolean {
+  const at = ht2027LessonUnlock(n)
+  return !at || now.getTime() >= new Date(at).getTime()
 }

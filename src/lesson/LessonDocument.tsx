@@ -3,7 +3,7 @@
 // Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
 import { useRef, useState } from 'react'
-import type { LessonDoc, LessonSection } from './lessonTypes'
+import type { LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
 import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
 import ZoomFrame from './ZoomFrame'
@@ -197,8 +197,51 @@ function renderSection(s: LessonSection, i: number) {
         </Block>
       )
 
+    case 'study':
+      return (
+        <section key={i} className="lsn-block lsn-study">
+          <div className="lsn-block-h">
+            {s.tag && <span className="lsn-tag">{s.tag}</span>}
+            <h2>{s.title}</h2>
+          </div>
+          {s.blocks.map((bl, j) => renderStudyBlock(bl, j))}
+        </section>
+      )
     default:
       return null
+  }
+}
+
+const isBlank = (c: string) => /^_{2,}$/.test(c.trim())
+
+function renderStudyBlock(bl: StudyBlock, j: number) {
+  switch (bl.b) {
+    case 'h': return <h3 key={j} className="lsn-st-h">{bl.text}</h3>
+    case 'p': return <p key={j} className="lsn-st-p">{bl.text}</p>
+    case 'ul': return <ul key={j} className="lsn-st-list">{bl.items.map(t => <li key={t}>{t}</li>)}</ul>
+    case 'ol': return <ol key={j} className="lsn-st-list">{bl.items.map(t => <li key={t}>{t}</li>)}</ol>
+    case 'callout':
+      return <div key={j} className="lsn-st-callout"><strong>{bl.label}</strong><p>{bl.text}</p></div>
+    case 'write':
+      return (
+        <div key={j} className="lsn-st-write">
+          {bl.label && <span>{bl.label}</span>}
+          {Array.from({ length: bl.lines }, (_, k) => <i key={k} />)}
+        </div>
+      )
+    case 'table':
+      return (
+        <div key={j} className="lsn-st-tablewrap">
+          <table className="lsn-st-table">
+            <thead><tr>{bl.rows[0].map((c, k) => <th key={k}>{c}</th>)}</tr></thead>
+            <tbody>
+              {bl.rows.slice(1).map((r, ri) => (
+                <tr key={ri}>{r.map((c, k) => <td key={k} className={isBlank(c) ? 'is-blank' : undefined}>{isBlank(c) ? '' : c}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
   }
 }
 
@@ -289,6 +332,23 @@ const CSS = `
 .lsn-sub{margin:6px 0 0;font-size:14.5px;color:${P.inkFaint};}
 
 .lsn-goals{border-left:4px solid ${P.purple};}
+
+/* ── Tài liệu dạng văn bản (section 'study') ── */
+.lsn-st-h{margin:18px 0 8px;font-size:16px;font-weight:700;color:${P.ink};}
+.lsn-st-p{margin:0 0 10px;font-size:15px;color:${P.inkSoft};white-space:pre-line;}
+.lsn-st-list{margin:0 0 12px;padding-left:22px;font-size:15px;color:${P.inkSoft};}
+.lsn-st-list li{margin:3px 0;}
+.lsn-st-callout{margin:12px 0;padding:12px 14px;border-radius:12px;background:${P.purpleTint};border-left:4px solid ${P.purple};}
+.lsn-st-callout strong{display:block;font-size:12.5px;letter-spacing:.07em;color:${P.purple};margin-bottom:3px;}
+.lsn-st-callout p{margin:0;font-size:15px;color:${P.ink};white-space:pre-line;}
+.lsn-st-write{margin:4px 0 12px;}
+.lsn-st-write span{display:block;font-size:14.5px;color:${P.inkSoft};margin-bottom:2px;}
+.lsn-st-write i{display:block;height:30px;border-bottom:1.5px dotted #B9B3CF;}
+.lsn-st-tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:8px 0 14px;}
+.lsn-st-table{border-collapse:collapse;min-width:100%;font-size:14px;}
+.lsn-st-table th,.lsn-st-table td{border:1px solid ${P.line};padding:7px 9px;text-align:left;vertical-align:top;white-space:pre-line;}
+.lsn-st-table th{background:${P.purpleTint};color:${P.ink};font-weight:700;}
+.lsn-st-table td.is-blank{min-width:52px;height:34px;background:#FCFBFF;}
 .lsn-goals h2{margin:0 0 8px;font-size:17px;}
 .lsn-goals ol{margin:0;padding-left:20px;}
 .lsn-goals li{margin:3px 0;font-size:15px;}

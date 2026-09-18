@@ -54,6 +54,7 @@ import SubscriptionPage from './SubscriptionPage'
 import Hanhtrinh2027Page from './Hanhtrinh2027Page'
 import Solo01Page from './Solo01Page'
 import Solo01LessonPage from './lesson/Solo01LessonPage'
+import Ht2027LessonPage from './lesson/Ht2027LessonPage'
 /** Đường dẫn của công cụ Nhịp Phách. Phần tử ĐẦU là URL chính thức. */
 export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beats']
 const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
@@ -184,6 +185,11 @@ function AppRouterContent() {
 
   // ── Route /hanhtrinh2027 — 40 Buổi Thực hành Hành trình 2027 (công khai) ──
   // Landing chính thức + lịch dự kiến đọc từ class_schedule/class_sessions/class_off_days.
+  // /hanhtrinh2027/buoi-NN — giáo trình từng buổi (PHẢI đứng trước nhánh landing).
+  {
+    const mHt = path.match(/^\/hanhtrinh2027\/buoi-(\d{1,2})\/?$/)
+    if (mHt) return <Ht2027LessonPage sessionNo={parseInt(mHt[1], 10)} />
+  }
   if (path === '/hanhtrinh2027' || path.startsWith('/hanhtrinh2027')) {
     return <Hanhtrinh2027Page />
   }

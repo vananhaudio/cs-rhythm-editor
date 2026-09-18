@@ -63,9 +63,9 @@ export default function Ht2027ScheduleAdmin({ onOpenSchedule }: { onOpenSchedule
     let cancelled = false
     ;(async () => {
       const { data: c } = await supabase.from('class_schedule').select('id,code,name,start_date,start_time,end_date,total_sessions,is_active')
-        .eq('program_code', HT2027.programCode).maybeSingle()
+        .eq('code', HT2027.classCode).maybeSingle()
       const clsData = c ?? (await supabase.from('class_schedule').select('id,code,name,start_date,start_time,end_date,total_sessions,is_active')
-        .eq('code', HT2027.classCode).maybeSingle()).data
+        .eq('program_code', HT2027.programCode).maybeSingle()).data
       if (cancelled) return
       setCls(clsData as never)
       if (clsData) {
@@ -181,7 +181,7 @@ export default function Ht2027ScheduleAdmin({ onOpenSchedule }: { onOpenSchedule
                               <div style={{ fontSize: 10.5, color: S.text3 }}>{startTime}</div>
                             </div>
                             <span style={{ background: `${stColor}18`, color: stColor, borderRadius: 6, padding: '2px 7px', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>B{String(num).padStart(2, '0')}</span>
-                            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: S.text1, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title ? s.title.replace(/^Buổi \d+ · /, '') : st.lessons[(num - 1) % 8]}</span>
+                            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: S.text1, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title ? s.title.replace(/^Buổi \d+ · /, '') : st.lessons[(num - 1) % 8].title}</span>
                             <select value={s.status} disabled={busyId === s.id} onChange={e => setStatus(s.id, e.target.value)} style={inp}>
                               {STATUSES.map(x => <option key={x.v} value={x.v}>{x.l}</option>)}
                             </select>

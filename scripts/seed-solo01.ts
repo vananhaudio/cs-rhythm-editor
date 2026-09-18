@@ -47,8 +47,8 @@ async function main() {
   console.log(`  Khai giảng: ${realStartDate(sessions)} → Kết thúc: ${realEndDate(sessions)}`)
 
   console.log('→ Upsert lớp SOLO01.TH01…')
-  const cls = await sql(`select id from public.class_schedule where program_code = '${SOLO01.programCode}' limit 1`)
-  const clsRow = cls[0] ?? (await sql(`select id from public.class_schedule where code = '${SOLO01.classCode}' limit 1`))[0]
+  // Tìm theo MÃ LỚP, không theo program_code (bài học từ seed HT2027 ghi đè nhầm lớp khác, 18/09/2026).
+  const clsRow = (await sql(`select id from public.class_schedule where code = '${SOLO01.classCode}' limit 1`))[0]
   let cid: string | null = clsRow?.id ?? null
   const common = `
     code = '${SOLO01.classCode}', name = ${sq(SOLO01.name)},

@@ -7,7 +7,8 @@
 // Bố cục: accordion theo chặng (trang ngắn, mobile-first), contrast cao.
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
-import { HT2027, HT2027_STAGES, HT2027_PROGRESSION, HT2027_ELIGIBLE_CODES } from './data/ht2027Program'
+import { HT2027, HT2027_STAGES, HT2027_PROGRESSION, HT2027_ELIGIBLE_CODES, ht2027LessonOpen } from './data/ht2027Program'
+import { soloUnlockLabel } from './data/solo01Program'
 import { generateSessions, fmtDMY, type SessionRow } from './journey/sessions'
 
 const P = {
@@ -119,10 +120,10 @@ export default function Hanhtrinh2027Page() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         const { data: clsRow } = await supabase.from('class_schedule').select('id,code,name,start_date,start_time,timezone,duration_minutes,total_sessions,status')
-          .eq('program_code', HT2027.programCode).maybeSingle()
+          .eq('code', HT2027.classCode).maybeSingle()
         const clsData: ProgClass | null = clsRow
           ?? (await supabase.from('class_schedule').select('id,code,name,start_date,start_time,timezone,duration_minutes,total_sessions,status')
-            .eq('code', HT2027.classCode).maybeSingle()).data
+            .eq('program_code', HT2027.programCode).maybeSingle()).data
         let sessionsData: SessionRow[] = []
         let offData: OffDay[] = []
         let pkgData: Pkg[] = []
@@ -272,9 +273,22 @@ export default function Hanhtrinh2027Page() {
                     <p className="ht2027-stage-goal"><b>Mục tiêu:</b> {st.goal}</p>
                     <ol className="ht2027-stage-lessons">
                       {st.lessons.map((l, i) => (
-                        <li key={l}>
+                        <li key={l.title}>
                           <span className="ht2027-lesson-no" style={{ color: stColor, borderColor: stColor }}>{p2((st.no - 1) * 8 + i + 1)}</span>
-                          <span>{l}</span>
+                          <span className="ht2027-lesson-body">
+                            <b>{l.title}</b>
+                            {l.points && <span className="ht2027-lesson-points">{l.points.map(p => <i key={p}>{p}</i>)}</span>}
+                            {l.doc && (() => {
+                              // Buổi chưa tới giờ vẫn hiện và vẫn bấm được — vào sẽ thấy màn khoá.
+                              const isOpen = ht2027LessonOpen((st.no - 1) * 8 + i + 1)
+                              return (
+                                <a className={`ht2027-lesson-doc${isOpen ? '' : ' is-locked'}`} href={l.doc}
+                                   style={isOpen ? { color: stColor, borderColor: stColor } : undefined}>
+                                  {isOpen ? 'Giáo trình buổi học →' : `🔒 Mở ${soloUnlockLabel(l.unlockAt!)}`}
+                                </a>
+                              )
+                            })()}
+                          </span>
                         </li>
                       ))}
                     </ol>
@@ -350,7 +364,7 @@ export default function Hanhtrinh2027Page() {
                                   <div className="ht2027-tl-body">
                                     <div className="ht2027-tl-title">
                                       <span className="ht2027-tl-num" style={{ background: `${stColor}18`, color: stColor }}>Buổi {p2(num)}</span>
-                                      <span className="ht2027-tl-name">{t.session?.title ? t.session.title.replace(/^Buổi \d+ · /, '') : st.lessons[(num - 1) % 8]}</span>
+                                      <span className="ht2027-tl-name">{t.session?.title ? t.session.title.replace(/^Buổi \d+ · /, '') : st.lessons[(num - 1) % 8].title}</span>
                                     </div>
                                     <div className="ht2027-tl-foot">
                                       <span className="ht2027-tl-time">{startTime}</span>
@@ -572,6 +586,14 @@ const CSS = `
 .ht2027-stage-lessons{list-style:none;display:flex;flex-direction:column;}
 .ht2027-stage-lessons li{display:flex;gap:11px;align-items:baseline;padding:9px 0;border-bottom:1px dashed ${P.line};font-size:14.5px;color:${P.ink};}
 .ht2027-stage-lessons li:last-child{border-bottom:none;}
+.ht2027-lesson-body{flex:1;min-width:0;}
+.ht2027-lesson-body>b{font-weight:600;line-height:1.45;}
+.ht2027-lesson-doc{display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;text-decoration:none;border:1.5px solid;border-radius:8px;padding:5px 11px;background:#fff;}
+.ht2027-lesson-doc:hover{background:${P.purpleTint};}
+.ht2027-lesson-doc.is-locked{color:${P.inkFaint};border-color:${P.line};background:#F6F5FA;font-weight:600;}
+.ht2027-lesson-points{display:flex;flex-direction:column;gap:3px;margin-top:5px;}
+.ht2027-lesson-points i{font-style:normal;font-size:13.5px;color:${P.inkSoft};line-height:1.5;padding-left:13px;position:relative;}
+.ht2027-lesson-points i:before{content:'';position:absolute;left:0;top:8px;width:5px;height:5px;border-radius:50%;background:#C9C3DE;}
 .ht2027-lesson-no{flex-shrink:0;font-size:11px;font-weight:800;border:1.5px solid;border-radius:6px;padding:1px 6px;letter-spacing:.04em;}
 .ht2027-stage-results{margin-top:12px;background:${P.bg};border:1px solid ${P.line};border-radius:12px;padding:13px 15px;}
 .ht2027-results-title{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:${P.honey};margin-bottom:8px;}

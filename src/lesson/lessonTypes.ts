@@ -96,6 +96,18 @@ export type LessonSection =
   | { kind: 'assignment'; title?: string; items: { label: string; text: string }[]; message?: string }
   | { kind: 'checklist'; title?: string; items: string[] }
   | { kind: 'studentNotes'; title?: string; lines?: number }
+  /** Tài liệu dạng văn bản (vd "Ôn tập 7 ngày" của Hành trình 2027) — chuỗi khối tự do */
+  | { kind: 'study'; tag?: string; title: string; blocks: StudyBlock[] }
+
+/** Khối nội dung trong section 'study'. Ô '___' trong bảng = chỗ học viên tự điền. */
+export type StudyBlock =
+  | { b: 'h'; text: string }
+  | { b: 'p'; text: string }
+  | { b: 'ul'; items: string[] }
+  | { b: 'ol'; items: string[] }
+  | { b: 'table'; rows: string[][] }                 // hàng đầu = tiêu đề cột
+  | { b: 'callout'; label: string; text: string }   // hộp nhấn (MỤC TIÊU, LỖI DỄ MẮC…)
+  | { b: 'write'; label?: string; lines: number }   // chỗ trống để viết
 
 export interface LessonDoc {
   meta: LessonMeta

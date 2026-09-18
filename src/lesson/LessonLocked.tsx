@@ -18,8 +18,8 @@ function remain(ms: number): string {
 }
 
 export default function LessonLocked(
-  { sessionNo, title, unlockAt, prevNo, prevHref, backHref }:
-  { sessionNo: number; title: string; unlockAt: string; prevNo?: number; prevHref?: string; backHref: string },
+  { sessionNo, title, unlockAt, prevNo, prevHref, backHref, backLabel = 'SOLO GUITAR CĂN BẢN' }:
+  { sessionNo: number; title: string; unlockAt: string; prevNo?: number; prevHref?: string; backHref: string; backLabel?: string },
 ) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function LessonLocked(
     <div className="lsnlock">
       <style>{CSS}</style>
       <div className="lsnlock-bar">
-        <a href={backHref}>← SOLO GUITAR CĂN BẢN</a>
+        <a href={backHref}>← {backLabel}</a>
       </div>
       <main className="lsnlock-card">
         <div className="lsnlock-icon">🔒</div>

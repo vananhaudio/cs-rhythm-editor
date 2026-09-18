@@ -35,6 +35,8 @@ async function sql(query: string): Promise<any[]> {
 
 // ── Lịch nghỉ/lock chung 2027 (DỰ KIẾN — chỉnh sửa được trong class_off_days) ──
 const OFF_DAYS_2027: { off_date: string; reason: string; source: 'official' | 'tet' | 'admin' }[] = [
+  { off_date: '2026-12-24', reason: 'Nghỉ Giáng sinh (Thầy chốt 18/09/2026)', source: 'admin' },
+  { off_date: '2026-12-31', reason: 'Nghỉ đón Tết Dương lịch (Thầy chốt 18/09/2026)', source: 'admin' },
   { off_date: '2027-01-01', reason: 'Tết Dương lịch 1/1', source: 'official' },
   { off_date: '2027-02-01', reason: 'Tết Nguyên Đán (dự kiến — chờ công bố chính thức)', source: 'tet' },
   { off_date: '2027-02-02', reason: 'Tết Nguyên Đán (dự kiến — chờ công bố chính thức)', source: 'tet' },
@@ -80,8 +82,9 @@ async function main() {
   console.log(`  Khai giảng: ${realStartDate(sessions)} → Kết thúc: ${realEndDate(sessions)}`)
 
   console.log('→ Upsert lớp HT2027.TH01…')
-  const cls = await sql(`select id from public.class_schedule where program_code = '${HT2027.programCode}' limit 1`)
-  const clsRow = cls[0] ?? (await sql(`select id from public.class_schedule where code = '${HT2027.classCode}' limit 1`))[0]
+  // Tìm theo MÃ LỚP, KHÔNG theo program_code: program_code HT2027 còn gắn lớp khác
+  // (lớp 8 buổi "Đệm hát nâng cao") — tìm theo program_code từng ghi đè nhầm lớp đó (18/09/2026).
+  const clsRow = (await sql(`select id from public.class_schedule where code = '${HT2027.classCode}' limit 1`))[0]
   let cid: string | null = clsRow?.id ?? null
   if (!cid) {
     const ins = await sql(`insert into public.class_schedule (
