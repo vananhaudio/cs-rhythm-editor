@@ -56,6 +56,9 @@ DECLARE
     -- Server-driven learning state (db/learning_state_setup.sql): cấu hình hành trình/tiên quyết —
     -- mọi người đọc, chỉ teacher ghi. ĐỪNG áp policy rộng (học viên sẽ sửa được hành trình).
     'journey_tracks', 'journey_curriculum', 'course_prereqs',
+    -- Class membership (db/class_membership_setup.sql): catalog nhãn quyền lợi — mọi người đọc,
+    -- chỉ teacher ghi. Chỉ để hiển thị, KHÔNG phải bảng quyền.
+    'membership_benefits',
     -- Kho tri thức (db/kho_tri_thuc_setup.sql): CHỈ authenticated đọc published; teacher mới ghi.
     'knowledge_videos',
     -- Content Access Policy (db/content_access_policy_setup.sql): anon/auth đọc
