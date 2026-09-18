@@ -12,7 +12,8 @@
 import { useState } from 'react'
 import { PRODUCTS, TRACKS, type PublicProductKey } from '../class-content'
 
-export type PublicCohort = { code: string; name: string; schedule: string; dateLabel: string }
+// dateLabel: nhãn có đếm ngược (thẻ tuyển sinh) · when: 'Thứ 3 · 19:00–20:30' · startLabel: 'Khai giảng 06/10/2026' (checkout)
+export type PublicCohort = { code: string; name: string; schedule: string; dateLabel: string; when: string; startLabel: string }
 export type PlanKey = 'monthly' | 'six_month'
 export type PublicPlan = { key: PlanKey; label: string; priceVnd: number; totalVnd: number | null; benefits: { key: string; label: string }[] }
 
@@ -61,7 +62,8 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
           <div className="cpt-form" id="dangky">
             <div className="cpt-form-k">Đăng ký</div>
             <div className="cpt-form-t">{sel.title} · {sel.length}</div>
-            <div className="cpt-form-s">{selCohort.dateLabel}{selCohort.schedule && ` · ${selCohort.schedule}`}</div>
+            {selCohort.when && <div className="cpt-form-s">{selCohort.when}</div>}
+            <div className="cpt-form-s cpt-form-s2">{selCohort.startLabel}</div>
             <div className="cpt-plan-lead">Cùng một lớp học. Bạn chỉ chọn cách đồng hành.</div>
             <div className="cpt-plan-shared">✓ Cả hai lựa chọn đều học cùng Thầy hàng tuần.</div>
             {plans === null && <div className="cpt-note">Đang tải học phí…</div>}
@@ -85,7 +87,6 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
               onKeyDown={e => { if (e.key === 'Enter') void submit() }} /></label>
             {err && <div className="cpt-err">{err}</div>}
             <button className="btn btn-primary cpt-submit" disabled={busy} onClick={() => void submit()}>{busy ? 'Đang gửi…' : 'Tiếp tục thanh toán →'}</button>
-            <div className="cpt-note">Thông tin học tập sẽ được hỏi sau khi thanh toán.</div>
           </div>
   )
 
@@ -154,7 +155,8 @@ const CSS = `
 .cpt-form{margin:14px auto 0;max-width:460px;background:#fff;border:1.5px solid #4338CA;border-radius:18px;padding:20px}
 .cpt-form-k{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#4338CA}
 .cpt-form-t{font-size:19px;font-weight:800;color:#111827;margin-top:4px}
-.cpt-form-s{font-size:13.5px;color:#6B7280;margin:2px 0 14px}
+.cpt-form-s{font-size:14.5px;font-weight:600;color:#374151;margin:4px 0 0}
+.cpt-form-s2{font-weight:500;color:#6B7280;margin-bottom:14px}
 .cpt-form label{display:block;font-size:13px;color:#6B7280;font-weight:600;margin-bottom:12px}
 .cpt-form input{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:11px 13px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:16px;background:#F9FAFB;font-family:inherit;color:#111827}
 .cpt-err{background:#FEE2E2;color:#B91C1C;border-radius:9px;padding:8px 12px;font-size:13.5px;margin-bottom:12px}

@@ -97,6 +97,8 @@ export default function ClassLandingPage() {
 
   // LỊCH TUYỂN SINH PUBLIC — chỉ cohort public_enroll=true, gom theo sản phẩm (null = đang tải)
   const [cohorts, setCohorts] = useState<Partial<Record<PublicProductKey, PublicCohort>> | null>(null)
+  // Khách bấm chọn lớp khi lịch CHƯA tải xong → nhớ lại, tải xong mở form lớp đó
+  const pendingProductRef = useRef<PublicProductKey | null>(null)
   const [faqAll, setFaqAll] = useState(false)
   // Cửa vào FREE = APP (vòng 13): modal hướng dẫn tải App + tạo tài khoản trong App.
   // KHÔNG còn form signup web — signup-free function vẫn giữ (story page + App dùng).
@@ -193,13 +195,13 @@ export default function ClassLandingPage() {
     const dmy = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
     const todayIso = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10)   // ngày theo giờ VN
     supabase.from('class_schedule')
-      .select('code,name,schedule,start_date,end_date,status,public_product')
+      .select('code,name,schedule,start_date,end_date,status,public_product,weekday,start_time,duration_minutes')
       .eq('is_active', true).eq('public_enroll', true).not('public_product', 'is', null)
       .order('start_date', { ascending: true, nullsFirst: false })
       .then(({ data, error }) => {
         if (error) { console.error('Lịch tuyển sinh lỗi:', error); setCohorts({}); return }
         const out: Partial<Record<PublicProductKey, PublicCohort>> = {}
-        type Row = { code: string | null; name: string | null; schedule: string | null; start_date: string | null; end_date: string | null; status: string | null; public_product: string }
+        type Row = { code: string | null; name: string | null; schedule: string | null; start_date: string | null; end_date: string | null; status: string | null; public_product: string; weekday: number | null; start_time: string | null; duration_minutes: number | null }
         const rows = ((data ?? []) as Row[]).filter(r =>
           !HIDDEN.includes(r.status ?? '') && r.public_product in PRODUCTS && !(r.end_date && r.end_date < todayIso))
         // Ưu tiên cohort sắp khai giảng; nếu không có thì cohort đang chạy vẫn nhận người
@@ -213,9 +215,25 @@ export default function ClassLandingPage() {
             dateLabel = days > 0 ? `Khai giảng ${dmy(r.start_date)} · còn ${days} ngày`
               : days === 0 ? `Khai giảng hôm nay` : `Đang học · vẫn nhận học viên`
           }
-          out[k] = { code: r.code ?? '', name: r.name ?? '', schedule: r.schedule ?? '', dateLabel }
+          // Giờ học đầy đủ cho checkout: 'Thứ 3 · 19:00–20:30' (tính từ start_time + duration_minutes)
+          let when = r.schedule ?? ''
+          if (r.weekday !== null && r.start_time) {
+            const [hh, mm] = r.start_time.split(':').map(Number)
+            const end = hh * 60 + mm + (r.duration_minutes || 90)
+            const hm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+            when = `${r.weekday === 0 ? 'Chủ nhật' : `Thứ ${r.weekday + 1}`} · ${hm(hh * 60 + mm)}–${hm(end)}`
+          }
+          const startLabel = !r.start_date ? 'Đang nhận học viên'
+            : r.start_date >= todayIso ? `Khai giảng ${dmy(r.start_date)}` : 'Đang học · vẫn nhận học viên'
+          out[k] = { code: r.code ?? '', name: r.name ?? '', schedule: r.schedule ?? '', dateLabel, when, startLabel }
         }
         setCohorts(out)
+        const pend = pendingProductRef.current
+        pendingProductRef.current = null
+        if (pend && out[pend]) {
+          setSelProduct(pend)
+          setTimeout(() => document.getElementById('dangky')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+        }
       })
   }, [])
 
@@ -239,6 +257,7 @@ export default function ClassLandingPage() {
   // Cuộn tới "Hai tuyến học" (thay cho 2 tab lịch cũ); có sản phẩm → sáng thẻ đó
   const gotoTracks = (k?: PublicProductKey) => {
     if (k && cohorts?.[k]) { pickProduct(k); return }   // lớp đang tuyển → mở thẳng khung đăng ký của lớp đó
+    if (k && cohorts === null) pendingProductRef.current = k   // lịch chưa tải xong → mở form khi tải xong
     if (k) setSelProduct(null)
     setTimeout(() => document.getElementById(k ? 'sp-' + k : 'tuyen-hoc')?.scrollIntoView({ behavior: 'smooth', block: k ? 'center' : 'start' }), 60)
   }
@@ -346,8 +365,9 @@ export default function ClassLandingPage() {
     }
     setRegDone({ name, className })
     const amount = pl ? (plan === 'six_month' ? (pl.totalVnd ?? pl.priceVnd * 6) : pl.priceVnd) : null
-    const lines = [`${p.title} · ${p.length}` + (c?.dateLabel ? ` — ${c.dateLabel}` : '')]
-    if (pl) lines.push(plan === 'six_month' ? `${pl.label} · ${fmtVnd(pl.priceVnd)}/tháng × 6` : `${pl.label} · ${fmtVnd(pl.priceVnd)}/tháng`)
+    // Tóm tắt theo thứ bậc: lớp → giờ học → ngày khai giảng → cách đồng hành (không ghép câu dài)
+    const lines = [`${p.title} · ${p.length}`, c?.when ?? '', c?.startLabel ?? ''].filter(Boolean)
+    if (pl) lines.push(pl.label)   // chỉ tên gói — số tiền hiện đúng một lần ở khối 'Số tiền cần chuyển'
     setPaySummary({ lines, amount })
     setOkBox(false)
     setShowPay(true); setTimeout(() => goto('thanhtoan'), 60)
@@ -511,9 +531,10 @@ export default function ClassLandingPage() {
               {paySummary && (
                 <div className="pay-order">
                   <div className="pay-order-title">Đơn đăng ký của bạn</div>
-                  {paySummary.lines.map((l, i) => <div className="pay-order-line" key={i}>{l}</div>)}
-                  <div className="pay-order-total">
-                    <span>Tổng thanh toán</span>
+                  {paySummary.lines.map((l, i) => <div className={i === 0 ? 'pay-order-line' : 'pay-order-sub'} key={i}>{l}</div>)}
+                  {/* Số tiền chỉ hiện MỘT lần, nổi bật */}
+                  <div className="pay-amount">
+                    <span>Số tiền cần chuyển</span>
                     <b>{paySummary.amount !== null ? fmtVnd(paySummary.amount) : 'Theo thông tin Thầy gửi'}</b>
                   </div>
                 </div>
@@ -532,7 +553,6 @@ export default function ClassLandingPage() {
                   <div><span>Ngân hàng</span><span>{pubCfg.bank_name || '—'}</span></div>
                   <div><span>Số tài khoản</span><span>{pubCfg.bank_account_number || '—'}</span></div>
                   <div><span>Chủ tài khoản</span><span>{pubCfg.bank_account_name || '—'}</span></div>
-                  <div><span>Số tiền</span><span className="price">{paySummary.amount !== null ? fmtVnd(paySummary.amount) : '—'}</span></div>
                   <div><span>Nội dung CK</span><span>{regDone?.name || 'Họ tên của bạn'}</span></div>
                 </div>
               </div>
@@ -1064,6 +1084,10 @@ const CSS = `
 .tva-class .pay-order{background:var(--bg);border:1.5px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;flex-direction:column;gap:3px;}
 .tva-class .pay-order-title{font-size:11px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-faint);margin-bottom:2px;}
 .tva-class .pay-order-line{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.45;}
+.tva-class .pay-order-sub{font-size:14px;color:var(--ink-soft);line-height:1.45;}
+.tva-class .pay-amount{border-top:1.5px solid var(--line);margin-top:10px;padding-top:10px;display:flex;flex-direction:column;gap:2px;}
+.tva-class .pay-amount span{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--ink-faint);}
+.tva-class .pay-amount b{font-size:28px;font-weight:800;color:var(--honey);line-height:1.2;}
 .tva-class .pay-order-total{display:flex;justify-content:space-between;gap:12px;border-top:1.5px solid var(--line);margin-top:8px;padding-top:10px;font-size:15px;font-weight:800;color:var(--ink);}
 .tva-class .pay-order-total b{color:var(--honey);font-size:18px;}
 .tva-class .qr-ph{height:180px;}
