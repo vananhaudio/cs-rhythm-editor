@@ -4,12 +4,8 @@
 // Quy ước: dùng chung Supabase (anon ghi leads). Style: scoped CSS .tva-class (responsive/hover).
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from './supabase'
-import ClassJourney2027 from './ClassJourney2027'
-import ClassDemHat from './ClassDemHat'
-import ClassTiaNot from './ClassTiaNot'
 import ClassQuiz from './ClassQuiz'
 import ClassAppGuide from './ClassAppGuide'
-import ClassNangCao from './ClassNangCao'
 import { FAQS } from './classFaq'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
 import ClassWeekJourney from './components/ClassWeekJourney'
@@ -34,19 +30,14 @@ export default function ClassLandingPage() {
   const [paySummary, setPaySummary] = useState<{ lines: string[]; amount: number | null } | null>(null)  // offer summary + tổng (hiện trước QR)
   const [okBox, setOkBox] = useState(false)
   const [modal, setModal] = useState<string | null>(null)
-  const [showJourney, setShowJourney] = useState(false)
-
-  // Deep-link: /class#hanh-trinh mở thẳng Bản đồ hành trình (chia sẻ được qua Zalo)
+  // Link cũ /class#hanh-trinh (bản đồ lộ trình — đã gỡ khỏi public) → đưa tới các lớp đang tuyển
   useEffect(() => {
-    if (window.location.hash === '#hanh-trinh') setShowJourney(true)
+    if (window.location.hash === '#hanh-trinh') setTimeout(() => document.getElementById('lop-tuyen-sinh')?.scrollIntoView({ behavior: 'smooth' }), 400)
   }, [])
-  const [showDemHat, setShowDemHat] = useState(false)
-  const [showTiaNot, setShowTiaNot] = useState(false)
   const [showQuiz, setShowQuiz] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const [showPractice, setShowPractice] = useState(false)   // modal xem một buổi thực hành (video thật)
   const [benefit, setBenefit] = useState<BenefitKey | null>(null)   // chiều sâu 6 quyền lợi (reuse từ /azz)
-  const [showNangCao, setShowNangCao] = useState(false)
   const [showAfterSignup, setShowAfterSignup] = useState(false)   // modal 'Sau khi đăng ký — chi tiết từng bước'
   // CANONICAL PUBLIC CONFIG — app_config qua view public_app_config (anon chỉ đọc allowlist):
   // bank/Zalo/App links dùng chung với email (KHÔNG hardcode payment data ở đây nữa).
@@ -259,7 +250,7 @@ export default function ClassLandingPage() {
     if (k && cohorts?.[k]) { pickProduct(k); return }   // lớp đang tuyển → mở thẳng khung đăng ký của lớp đó
     if (k && cohorts === null) pendingProductRef.current = k   // lịch chưa tải xong → mở form khi tải xong
     if (k) setSelProduct(null)
-    setTimeout(() => document.getElementById(k ? 'sp-' + k : 'tuyen-hoc')?.scrollIntoView({ behavior: 'smooth', block: k ? 'center' : 'start' }), 60)
+    setTimeout(() => document.getElementById(k ? 'sp-' + k : 'lop-tuyen-sinh')?.scrollIntoView({ behavior: 'smooth', block: k ? 'center' : 'start' }), 60)
   }
   const pickProduct = (k: PublicProductKey) => {
     setSelProduct(k)
@@ -271,15 +262,16 @@ export default function ClassLandingPage() {
   // và cho nút link trong FAQ (vd ?xem=hanhtrinh, ?xem=lich, ?xem=batdau, ?xem=signup).
   const runXem = (xem: string) => {
     const actions: Record<string, () => void> = {
-      hanhtrinh: () => setShowJourney(true),
+      hanhtrinh: () => setTimeout(() => gotoTracks(), 350),   // bản đồ lộ trình đã gỡ khỏi public
       lich: () => gotoTracks(),
       lichlop: () => gotoTracks(),
       tuyenhoc: () => gotoTracks(),
+      lopdangtuyen: () => gotoTracks(),
       app: () => setTimeout(() => goto('app'), 350),
       caidat: () => setShowGuide(true),
-      demhat: () => setShowDemHat(true),
-      tianot: () => setShowTiaNot(true),
-      nangcao: () => setShowNangCao(true),
+      demhat: () => setTimeout(() => gotoTracks('dem_hat_can_ban'), 350),
+      tianot: () => setTimeout(() => gotoTracks('guitar_can_ban'), 350),
+      nangcao: () => setTimeout(() => gotoTracks(), 350),
       quiz: () => setShowQuiz(true),
       dangky: () => setTimeout(() => gotoTracks(), 350),
       cuavao: () => setTimeout(() => goto('cuavao'), 350),
@@ -366,7 +358,7 @@ export default function ClassLandingPage() {
     setRegDone({ name, className })
     const amount = pl ? (plan === 'six_month' ? (pl.totalVnd ?? pl.priceVnd * 6) : pl.priceVnd) : null
     // Tóm tắt theo thứ bậc: lớp → giờ học → ngày khai giảng → cách đồng hành (không ghép câu dài)
-    const lines = [`${p.title} · ${p.length}`, c?.when ?? '', c?.startLabel ?? ''].filter(Boolean)
+    const lines = [p.title, c?.when ?? '', c?.startLabel ?? ''].filter(Boolean)
     if (pl) lines.push(pl.label)   // chỉ tên gói — số tiền hiện đúng một lần ở khối 'Số tiền cần chuyển'
     setPaySummary({ lines, amount })
     setOkBox(false)
@@ -384,7 +376,7 @@ export default function ClassLandingPage() {
             <a onClick={() => goto('cuavao')}>Cửa vào</a>
             <a onClick={() => goto('quyenloi')}>Quyền lợi</a>
             <a onClick={() => goto('cach-hoc')}>Cách học</a>
-            <a onClick={() => gotoTracks()}>Lịch lớp</a>
+            <a onClick={() => gotoTracks()}>Lớp đang tuyển</a>
             <a onClick={() => goto('faq')}>FAQ</a>
             {/* Bỏ mục chữ "Đăng ký" — trùng đích với nút "Đăng ký lớp" bên phải, mà hàng
                 nav cần chỗ cho nút Shop. */}
@@ -442,7 +434,7 @@ export default function ClassLandingPage() {
         <div className="wrap">
           <div className="eyebrow">Có giống bạn không?</div>
           <h2>Bạn đang muốn điều gì với Guitar?</h2>
-          <p className="lead">Mới bắt đầu? Chọn một trong hai lớp căn bản. Đã biết chơi? Vào thẳng bước tiếp theo.</p>
+          <p className="lead">Chọn điều giống bạn nhất — mình chỉ bạn tới lớp phù hợp.</p>
           <div className="doors">
             {DOORS.map((d, i) => (
               <div className="door" key={i}>
@@ -452,12 +444,13 @@ export default function ClassLandingPage() {
                 {d.product
                   ? <button className="btn btn-primary" onClick={() => gotoTracks(d.product)}>{d.cta} →</button>
                   : <>
-                      <div className="door-adv">
-                        {(d.advanced ?? []).map(k => (
-                          <button key={k} className="btn btn-ghost" onClick={() => gotoTracks(k)}>{PRODUCTS[k].title} · {PRODUCTS[k].length} →</button>
-                        ))}
-                      </div>
-                      <button className="btn btn-primary" onClick={openMira}>{d.cta} →</button>
+                      {/* Đưa tới khu vực lớp đang tuyển, dừng ở lớp trung cấp đầu tiên đang mở */}
+                      <button className="btn btn-primary" onClick={() => {
+                        const first = (d.options ?? []).find(k => cohorts?.[k])
+                        setSelProduct(null)
+                        setTimeout(() => document.getElementById(first ? 'sp-' + first : 'lop-tuyen-sinh')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+                      }}>{d.cta} →</button>
+                      <button className="btn btn-ghost" onClick={openMira}>Hỏi Mira</button>
                     </>}
               </div>
             ))}
@@ -474,7 +467,7 @@ export default function ClassLandingPage() {
           <div>
             <div className="eyebrow">Trợ lý Mira</div>
             <h2>Còn câu hỏi riêng? Hỏi Mira nhé</h2>
-            <p className="lead">Mira giúp bạn tìm đúng cửa vào phù hợp và trả lời mọi thắc mắc riêng của bạn — trước khi quyết định đăng ký.</p>
+            <p className="lead">Mira giúp bạn tìm đúng lớp phù hợp và trả lời mọi thắc mắc riêng của bạn — trước khi quyết định đăng ký.</p>
           </div>
           {/* CTA mở Mira ở GÓC (không nhúng giữa trang). Chat thật là bong bóng nổi. */}
           <div className="mira-cta">
@@ -666,8 +659,7 @@ export default function ClassLandingPage() {
             <h2>Bạn đã sẵn sàng bắt đầu?</h2>
             <p>Chọn lớp phù hợp — hoặc hỏi Mira nếu bạn chưa chắc.</p>
             <div className="final-acts">
-              <button className="btn btn-primary" onClick={() => gotoTracks('dem_hat_can_ban')}>Bắt đầu Đệm hát →</button>
-              <button className="btn btn-primary" onClick={() => gotoTracks('guitar_can_ban')}>Bắt đầu Guitar căn bản →</button>
+              <button className="btn btn-primary" onClick={() => gotoTracks()}>Xem các lớp đang tuyển sinh →</button>
               <button className="btn btn-ghost" onClick={openMira}>Hỏi Mira →</button>
             </div>
             <p className="final-free">Chưa muốn đăng ký ngay? Bạn có thể <button className="final-free-link" onClick={() => setShowAppModal(true)}>học thử miễn phí trên App →</button></p>
@@ -743,29 +735,8 @@ export default function ClassLandingPage() {
         </div>
       )}
 
-      {showJourney && (
-        <ClassJourney2027
-          onClose={() => setShowJourney(false)}
-          onRegister={() => { setShowJourney(false); setTimeout(() => gotoTracks(), 60) }}
-          onFreeTrial={() => { setShowJourney(false); setShowAppModal(true) }}
-        />
-      )}
 
-      {showDemHat && (
-        <ClassDemHat
-          onClose={() => setShowDemHat(false)}
-          onRegister={() => { setShowDemHat(false); setTimeout(() => gotoTracks(), 60) }}
-          onChat={() => { setShowDemHat(false); setTimeout(() => goto('chat'), 60) }}
-        />
-      )}
 
-      {showTiaNot && (
-        <ClassTiaNot
-          onClose={() => setShowTiaNot(false)}
-          onRegister={() => { setShowTiaNot(false); setTimeout(() => gotoTracks(), 60) }}
-          onChat={() => { setShowTiaNot(false); setTimeout(() => goto('chat'), 60) }}
-        />
-      )}
 
       {showQuiz && (
         <ClassQuiz
@@ -782,14 +753,6 @@ export default function ClassLandingPage() {
         />
       )}
 
-      {showNangCao && (
-        <ClassNangCao
-          onClose={() => setShowNangCao(false)}
-          onChat={() => { setShowNangCao(false); setTimeout(() => goto('chat'), 60) }}
-          onJourney={() => { setShowNangCao(false); setShowJourney(true) }}
-          onQuiz={() => { setShowNangCao(false); setShowQuiz(true) }}
-        />
-      )}
 
       {/* CHIỀU SÂU 6 QUYỀN LỢI — reuse nội dung /azz (class-benefits.ts) */}
       {benefit && (

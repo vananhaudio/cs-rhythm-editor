@@ -1,16 +1,14 @@
 /**
- * ClassPublicTracks — "Hai tuyến học" + đăng ký trên class.vananhaudio.com (Phase 1, 09/2026).
+ * ClassPublicTracks — "Các lớp đang tuyển sinh" trên class.vananhaudio.com (09/2026).
  *
- * Thay cho ClassLearningWays (2 tab Thực hành / Học theo lớp) + ClassOfferCompare (bảng 3 cột).
- * - Luôn hiện đủ 4 sản phẩm public (PRODUCTS) trên 2 tuyến.
- * - Lịch mỗi sản phẩm = cohort ĐANG TUYỂN (class_schedule.public_enroll=true) do trang cha truyền vào;
- *   không có cohort → "Lịch khai giảng đang cập nhật" + Hỏi Mira / Nhắn Thầy. KHÔNG bịa lịch.
- * - Đăng ký (Phase 2): chọn lớp → chọn cách đồng hành (2 card: Theo tháng / 6 tháng) → họ tên + email
- *   → trang cha ghi leads [public-product][plan] + mở khối thanh toán đúng số tiền.
- *   Giá + quyền lợi của 2 card đọc từ DB (packages CLASS_* + membership_benefits) do trang cha truyền.
+ * - Chỉ hiện lớp THẬT đang tuyển: cohort class_schedule.public_enroll=true do trang cha truyền vào
+ *   (gom theo public_product). Không hard-code lịch; không nói số buổi/thời hạn/lộ trình.
+ * - Card: tên lớp · dành cho ai · lịch (Thứ · giờ) · ngày khai giảng · "Đăng ký lớp →".
+ * - Bấm → khung đăng ký của chính lớp đó mở ngay dưới card: chọn cách đồng hành (2 card gói,
+ *   giá + quyền lợi từ DB) → họ tên + email → trang cha ghi lead + mở bước chuyển khoản.
  */
 import { useState } from 'react'
-import { PRODUCTS, TRACKS, type PublicProductKey } from '../class-content'
+import { PRODUCTS, PUBLIC_ORDER, type PublicProductKey } from '../class-content'
 
 // dateLabel: nhãn có đếm ngược (thẻ tuyển sinh) · when: 'Thứ 3 · 19:00–20:30' · startLabel: 'Khai giảng 06/10/2026' (checkout)
 export type PublicCohort = { code: string; name: string; schedule: string; dateLabel: string; when: string; startLabel: string }
@@ -61,7 +59,7 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
   const form = sel && selCohort && (
           <div className="cpt-form" id="dangky">
             <div className="cpt-form-k">Đăng ký</div>
-            <div className="cpt-form-t">{sel.title} · {sel.length}</div>
+            <div className="cpt-form-t">{sel.title}</div>
             {selCohort.when && <div className="cpt-form-s">{selCohort.when}</div>}
             <div className="cpt-form-s cpt-form-s2">{selCohort.startLabel}</div>
             <div className="cpt-plan-lead">Cùng một lớp học. Bạn chỉ chọn cách đồng hành.</div>
@@ -90,69 +88,68 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
           </div>
   )
 
+  const open = cohorts ? PUBLIC_ORDER.filter(k => cohorts[k]) : []
+
   return (
-    <section id="tuyen-hoc" className="band cpt">
+    <section id="lop-tuyen-sinh" className="band cpt">
       <style>{CSS}</style>
       <div className="wrap">
-        <div className="eyebrow">Lộ trình</div>
-        <h2>Hai tuyến học</h2>
-        <p className="lead">Người mới bắt đầu bằng một lớp căn bản 4 buổi — mở vòng liên tục quanh năm. Học xong, đi tiếp 6 tháng cùng Thầy.</p>
+        <h2>Các lớp đang tuyển sinh</h2>
+        <p className="lead">Chọn lớp phù hợp với điều bạn muốn chơi Guitar.</p>
 
-        <div className="cpt-tracks">
-          {TRACKS.map(t => (
-            <div className="cpt-track" key={t.name}>
-              <div className="cpt-tname">{t.name}</div>
-              {t.steps.map((k, i) => {
-                const p = PRODUCTS[k]
-                const c = cohorts?.[k]
-                return (
-                  <div key={k}>
-                    {i > 0 && <div className="cpt-arrow" aria-hidden>↓</div>}
-                    <div className={'cpt-step' + (selected === k ? ' on' : '')} id={'sp-' + k}>
-                      <div className="cpt-title">{p.title} <span>· {p.length}</span></div>
-                      <p>{p.desc}</p>
-                      <div className="cpt-sched">
-                        {cohorts === null ? 'Đang tải lịch…'
-                          : c ? <><b>{c.dateLabel}</b>{c.schedule && <> · {c.schedule}</>}</>
-                          : 'Lịch khai giảng đang cập nhật'}
-                      </div>
-                      <div className="cpt-acts">
-                        {c
-                          ? <button className="btn btn-primary" onClick={() => onSelect(k)}>{p.kind === 'funnel' ? p.cta : 'Đăng ký'} →</button>
-                          : <>
-                              <button className="btn btn-primary" onClick={onMira}>Hỏi Mira →</button>
-                              <a className="btn btn-ghost" href={zaloUrl} target="_blank" rel="noreferrer">Nhắn Thầy</a>
-                            </>}
-                      </div>
-                    </div>
-                    {selected === k && form}
-                  </div>
-                )
-              })}
+        {cohorts === null && <div className="cpt-empty">Đang tải lịch khai giảng…</div>}
+        {cohorts !== null && open.length === 0 && (
+          <div className="cpt-empty">
+            Lịch khai giảng đang được cập nhật.
+            <div className="cpt-acts">
+              <button className="btn btn-primary" onClick={onMira}>Hỏi Mira →</button>
+              <a className="btn btn-ghost" href={zaloUrl} target="_blank" rel="noreferrer">Nhắn Thầy</a>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
+        <div className="cpt-grid">
+          {open.map(k => {
+            const p = PRODUCTS[k]
+            const c = cohorts![k]!
+            return [
+              <div className={'cpt-step' + (selected === k ? ' on' : '')} id={'sp-' + k} key={k}>
+                <div className="cpt-title">{p.title}</div>
+                <p>{p.desc}</p>
+                <div className="cpt-sched">
+                  {c.when && <b>{c.when}</b>}
+                  <span>{c.startLabel}</span>
+                </div>
+                <div className="cpt-acts">
+                  <button className="btn btn-primary" onClick={() => onSelect(k)}>Đăng ký lớp →</button>
+                </div>
+              </div>,
+              selected === k ? <div className="cpt-form-row" key={k + '-form'}>{form}</div> : null,
+            ]
+          })}
+        </div>
       </div>
     </section>
   )
 }
 
 const CSS = `
-.cpt-tracks{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
-.cpt-track{background:#fff;border:1px solid #E7E2D8;border-radius:18px;padding:18px}
-.cpt-tname{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#4338CA;margin-bottom:12px}
-.cpt-arrow{text-align:center;color:#9CA3AF;font-size:18px;line-height:1;margin:8px 0}
-.cpt-step{border:1.5px solid #EEE9DF;border-radius:14px;padding:14px;transition:border-color .15s}
+.cpt-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
+.cpt-form-row{grid-column:1/-1}
+.cpt-empty{margin-top:18px;background:#fff;border:1px solid #E7E2D8;border-radius:14px;padding:16px;color:#4B5563;font-size:14.5px}
+.cpt-empty .cpt-acts{margin-top:10px}
+.cpt-step{scroll-margin-top:76px;background:#fff;border:1.5px solid #EEE9DF;border-radius:16px;padding:16px;transition:border-color .15s;display:flex;flex-direction:column}
+.cpt-step .cpt-acts{margin-top:auto}
 .cpt-step.on{border-color:#4338CA;box-shadow:0 0 0 3px rgba(67,56,202,.12)}
 .cpt-title{font-size:18px;font-weight:800;color:#111827}
 .cpt-title span{font-weight:600;color:#6B7280;font-size:15px}
 .cpt-step p{margin:6px 0 10px;color:#4B5563;font-size:14.5px;line-height:1.55}
 .cpt-sched{font-size:13.5px;color:#6B7280;background:#F7F5F0;border-radius:9px;padding:8px 10px;margin-bottom:12px}
-.cpt-sched b{color:#111827}
+.cpt-sched b{color:#111827;display:block}
+.cpt-sched span{display:block;margin-top:2px}
 .cpt-acts{display:flex;gap:8px;flex-wrap:wrap}
 .cpt-acts .btn{text-decoration:none}
-.cpt-form{margin:14px auto 0;max-width:460px;background:#fff;border:1.5px solid #4338CA;border-radius:18px;padding:20px}
+.cpt-form{margin:0 auto;max-width:520px;background:#fff;border:1.5px solid #4338CA;border-radius:18px;padding:20px}
 .cpt-form-k{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#4338CA}
 .cpt-form-t{font-size:19px;font-weight:800;color:#111827;margin-top:4px}
 .cpt-form-s{font-size:14.5px;font-weight:600;color:#374151;margin:4px 0 0}
@@ -179,5 +176,5 @@ const CSS = `
 .cpt-form{scroll-margin-top:76px}
 .cpt-err a{color:#B91C1C;font-weight:700}
 .cpt-note{font-size:12.5px;color:#9CA3AF;text-align:center;margin-top:10px}
-@media (max-width:760px){.cpt-tracks{grid-template-columns:1fr}.cpt-track{padding:14px}}
+@media (max-width:760px){.cpt-grid{grid-template-columns:1fr}}
 `

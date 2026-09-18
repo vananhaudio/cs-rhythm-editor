@@ -1,37 +1,44 @@
 // NỘI DUNG CHỮ của trang tuyển sinh — tách khỏi component để:
 //   1) sửa nội dung không phải lục trong mã giao diện;
-//   2) Mira đọc được (script scripts/mira-content.mjs bóc file này + các trang
-//      Đệm hát / Tỉa nốt / Nâng cao thành JSON cho Mira).
+//   2) Mira đọc được (script scripts/mira-content.mjs bóc file này thành JSON cho Mira).
 // Sửa xong nhớ chạy: npm run mira:content
+//
+// NGUYÊN TẮC PUBLIC (09/2026): khách chỉ cần biết lớp nào hợp với mình, học lúc nào, khai giảng
+// khi nào, đăng ký ở đâu. KHÔNG đưa ra ngoài: số buổi/thời hạn trên tên lớp, tuyến/lộ trình,
+// cách Thầy xếp lớp sau đó, chặng/module, mã nội bộ (DH/TN…). Thời hạn chỉ xuất hiện ở checkout.
 
-// ─── KIẾN TRÚC ĐÀO TẠO PUBLIC (09/2026) ───
-// Khách chỉ thấy 4 SẢN PHẨM trên 2 tuyến. Mã chương trình nội bộ (DH1, TN1, Tỉa nốt,
-// Cảm âm…) KHÔNG xuất hiện ở đây. Cohort thật nằm ở class_schedule và được gắn vào
-// sản phẩm qua cột public_product (+ public_enroll=true khi đang tuyển) — xem
-// db/class_public_enroll.sql. Key phải khớp CHECK constraint của cột đó.
-export type PublicProductKey = 'dem_hat_can_ban' | 'guitar_can_ban' | 'dem_hat_nang_cao' | 'solo_guitar'
-export type PublicProduct = { key: PublicProductKey; title: string; length: string; kind: 'funnel' | 'long'; desc: string; cta: string; path: 'dem_hat' | 'tia_not' }
+// ─── SẢN PHẨM (lớp) — key khớp CHECK class_schedule.public_product (db/class_public_products_trung_cap.sql).
+// Lớp nào hiện trên landing do DỮ LIỆU quyết (class_schedule.public_enroll=true), không do danh sách này.
+// Solo / Đệm hát nâng cao vẫn là sản phẩm (Admin + kích hoạt gói dùng) nhưng hiện không tuyển công khai.
+export type PublicProductKey =
+  | 'dem_hat_can_ban' | 'guitar_can_ban' | 'dem_hat_trung_cap' | 'guitar_trung_cap'
+  | 'dem_hat_nang_cao' | 'solo_guitar'
+export type PublicProduct = { key: PublicProductKey; title: string; desc: string; path: 'dem_hat' | 'tia_not' }
 export const PRODUCTS: Record<PublicProductKey, PublicProduct> = {
-  dem_hat_can_ban: { key: 'dem_hat_can_ban', title: 'Đệm hát căn bản', length: '4 buổi', kind: 'funnel', path: 'dem_hat',
-    desc: 'Dành cho người mới thích hát và muốn tự đệm những bài mình yêu thích.', cta: 'Bắt đầu Đệm hát' },
-  guitar_can_ban: { key: 'guitar_can_ban', title: 'Guitar căn bản', length: '4 buổi', kind: 'funnel', path: 'tia_not',
-    desc: 'Dành cho người muốn làm quen với nốt nhạc, cần đàn và chơi những giai điệu đầu tiên.', cta: 'Bắt đầu Guitar căn bản' },
-  dem_hat_nang_cao: { key: 'dem_hat_nang_cao', title: 'Đệm hát nâng cao', length: '6 tháng', kind: 'long', path: 'dem_hat',
-    desc: 'Cho người đã đệm được vài bài: phát triển điệu, tiết tấu, bố cục và cách xử lý một bài hát trọn vẹn.', cta: 'Tìm hiểu Đệm hát nâng cao' },
-  solo_guitar: { key: 'solo_guitar', title: 'Solo Guitar', length: '6 tháng', kind: 'long', path: 'tia_not',
-    desc: 'Cho người đã có nền nốt nhạc: chơi giai điệu, cảm âm và dựng những bản solo guitar của riêng mình.', cta: 'Tìm hiểu Solo Guitar' },
+  dem_hat_can_ban: { key: 'dem_hat_can_ban', title: 'Đệm hát căn bản', path: 'dem_hat',
+    desc: 'Dành cho người mới muốn vừa đàn vừa hát những bài mình yêu thích.' },
+  guitar_can_ban: { key: 'guitar_can_ban', title: 'Guitar căn bản', path: 'tia_not',
+    desc: 'Dành cho người mới muốn bắt đầu từ những điều cơ bản và chơi những giai điệu đầu tiên.' },
+  dem_hat_trung_cap: { key: 'dem_hat_trung_cap', title: 'Đệm hát trung cấp', path: 'dem_hat',
+    desc: 'Dành cho người đã biết hợp âm, đã đệm được một số bài và muốn chơi chắc hơn.' },
+  guitar_trung_cap: { key: 'guitar_trung_cap', title: 'Guitar trung cấp', path: 'tia_not',
+    desc: 'Dành cho người đã biết chơi Guitar một thời gian và muốn phát triển kỹ năng, giai điệu tốt hơn.' },
+  dem_hat_nang_cao: { key: 'dem_hat_nang_cao', title: 'Đệm hát nâng cao', path: 'dem_hat',
+    desc: 'Dành cho người đã đệm hát vững và muốn xử lý bài hát trọn vẹn, có màu sắc riêng.' },
+  solo_guitar: { key: 'solo_guitar', title: 'Solo Guitar', path: 'tia_not',
+    desc: 'Dành cho người muốn tự chơi trọn một bài hát bằng tiếng đàn Guitar.' },
 }
-// 2 tuyến học: bước căn bản (cửa vào quanh năm) → bước dài hạn
-export const TRACKS: { name: string; steps: [PublicProductKey, PublicProductKey] }[] = [
-  { name: 'Tuyến Đệm hát', steps: ['dem_hat_can_ban', 'dem_hat_nang_cao'] },
-  { name: 'Tuyến Guitar & Solo', steps: ['guitar_can_ban', 'solo_guitar'] },
-]
+// Thứ tự hiện các lớp đang tuyển (lớp khác nếu được bật tuyển thì xếp sau)
+// Các lớp Mira được giới thiệu (lớp đang mở cửa tuyển). Lịch/ngày khai giảng Mira KHÔNG lấy ở đây —
+// dữ liệu đó sống trong class_schedule; Mira hướng khách tới mục "Các lớp đang tuyển sinh".
+export const MIRA_CLASSES: PublicProductKey[] = ['dem_hat_can_ban', 'guitar_can_ban', 'dem_hat_trung_cap', 'guitar_trung_cap']
+export const PUBLIC_ORDER: PublicProductKey[] = ['dem_hat_can_ban', 'guitar_can_ban', 'dem_hat_trung_cap', 'guitar_trung_cap', 'dem_hat_nang_cao', 'solo_guitar']
 
-// ─── 3 cửa vào — 2 cửa cho người mới trỏ thẳng vào sản phẩm phễu; cửa 3 cho người đã biết chơi ───
-export const DOORS: { dq: string; badge: string; desc: string; cta: string; product?: PublicProductKey; advanced?: PublicProductKey[] }[] = [
-  { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Đệm hát căn bản · 4 buổi', desc: PRODUCTS.dem_hat_can_ban.desc, cta: 'Bắt đầu Đệm hát', product: 'dem_hat_can_ban' },
-  { dq: 'Tôi muốn học Guitar từ gốc, chơi theo giai điệu', badge: 'Guitar căn bản · 4 buổi', desc: PRODUCTS.guitar_can_ban.desc, cta: 'Bắt đầu Guitar căn bản', product: 'guitar_can_ban' },
-  { dq: 'Tôi đã biết chơi Guitar', badge: 'Bạn đã có nền tảng?', desc: 'Bạn có thể vào thẳng Đệm hát nâng cao hoặc Solo Guitar. Nếu chưa biết mình phù hợp lớp nào, hỏi Mira nhé.', cta: 'Hỏi Mira', advanced: ['dem_hat_nang_cao', 'solo_guitar'] },
+// ─── 3 cửa vào — theo nhu cầu của khách; nút đưa tới đúng lớp đang tuyển ───
+export const DOORS: { dq: string; badge: string; desc: string; cta: string; product?: PublicProductKey; options?: PublicProductKey[] }[] = [
+  { dq: 'Tôi muốn vừa đàn vừa hát', badge: 'Đệm hát căn bản', desc: PRODUCTS.dem_hat_can_ban.desc, cta: 'Bắt đầu Đệm hát', product: 'dem_hat_can_ban' },
+  { dq: 'Tôi muốn học Guitar từ gốc', badge: 'Guitar căn bản', desc: PRODUCTS.guitar_can_ban.desc, cta: 'Bắt đầu Guitar căn bản', product: 'guitar_can_ban' },
+  { dq: 'Tôi đã biết chơi và muốn tiến xa hơn', badge: 'Lớp trung cấp', desc: 'Chọn lớp trung cấp theo điều bạn muốn chơi tốt hơn. Chưa chắc lớp nào hợp với mình? Hỏi Mira nhé.', cta: 'Xem lớp trung cấp', options: ['dem_hat_trung_cap', 'guitar_trung_cap'] },
 ]
 
 // ─── Showcase hành động (tâm lý → 1 hành động nhỏ) ───
@@ -46,10 +53,10 @@ export const STARTERS: { t: string; d: string; cta: string; href?: string; modal
 ]
 
 export const CHAT_FAQ: Record<string, string> = {
-  'Tôi nên bắt đầu từ đâu?': 'Người mới có 2 cửa: thích hát → <b>Đệm hát căn bản (4 buổi)</b>; muốn học từ gốc, chơi giai điệu → <b>Guitar căn bản (4 buổi)</b>. Đã biết chơi → <b>Đệm hát nâng cao</b> hoặc <b>Solo Guitar</b> (6 tháng).',
-  'Học phí thế nào?': 'Cùng một lớp, có 2 cách đồng hành: <b>Theo tháng 499.000đ/tháng</b>, hoặc <b>Đồng hành 6 tháng 396.000đ/tháng</b> (2.376.000đ/6 tháng) với đầy đủ quyền lợi.',
-  'Đệm hát hay Guitar căn bản?': 'Muốn tự đàn hát → <b>Đệm hát</b>. Muốn đọc nốt, chơi giai điệu → <b>Guitar căn bản</b>. Bạn thiên về cái nào?',
-  'Lịch học ra sao?': 'Hai lớp căn bản mở vòng liên tục (mỗi vòng 4 buổi) để bạn luôn có cửa vào. Xem lịch khai giảng ở mục "Hai tuyến học", hoặc hỏi Mira/nhắn Thầy.',
+  'Tôi nên học lớp nào?': 'Mới bắt đầu: thích hát thì chọn <b>Đệm hát căn bản</b>, muốn học từ gốc và chơi giai điệu thì chọn <b>Guitar căn bản</b>. Đã biết chơi rồi: chọn <b>Đệm hát trung cấp</b> hoặc <b>Guitar trung cấp</b>.',
+  'Học phí thế nào?': 'Cùng một lớp, bạn chọn cách đồng hành: <b>Theo tháng 499.000đ/tháng</b>, hoặc <b>Đồng hành 6 tháng 396.000đ/tháng</b> (2.376.000đ) với đầy đủ quyền lợi.',
+  'Đệm hát hay Guitar?': 'Muốn tự đàn hát → <b>Đệm hát</b>. Muốn chơi giai điệu bằng tiếng đàn → <b>Guitar</b>. Bạn thiên về cái nào?',
+  'Lịch học ra sao?': 'Mỗi lớp học một buổi mỗi tuần, buổi tối. Lịch và ngày khai giảng của từng lớp có ở mục <b>Các lớp đang tuyển sinh</b>.',
 }
 
 export const MODALS: Record<string, string> = {
@@ -70,12 +77,4 @@ export const MODALS: Record<string, string> = {
       <tr><td>Không biết tập gì</td><td>Có bài tập rõ sau mỗi buổi học</td></tr>
       <tr><td>Vào lớp chưa phù hợp</td><td>Thầy/trợ lý sẽ định hướng lại</td></tr>
     </tbody></table>`,
-  banDo: `<h3>Bản đồ hành trình dài hạn</h3>
-    <p class="lead" style="margin-top:6px">Bạn không cần học hết ngay — chỉ cần bắt đầu bằng khóa đầu tiên phù hợp. Đây là con đường nếu bạn muốn đi xa.</p>
-    <div class="bando">
-      <div class="b-row"><span class="b-branch">Đệm hát</span> Đệm hát căn bản (4 buổi) → Đệm hát nâng cao (6 tháng)</div>
-      <div class="b-row"><span class="b-branch">Guitar &amp; Solo</span> Guitar căn bản (4 buổi) → Solo Guitar (6 tháng)</div>
-    </div>
-    <p class="lead" style="margin-top:10px">Đã biết chơi? Bạn có thể vào thẳng bước dài hạn — hỏi Mira nếu chưa chắc.</p>
-  `,
 }

@@ -100,8 +100,7 @@ function AfterSignupDetail({ onClose }: { onClose: () => void }) {
           <section className="asu-sec">
             <h3 className="asu-h3">1. Xác nhận đăng ký</h3>
             <p className="asu-p">Sau khi hoàn tất đăng ký và thanh toán theo hướng dẫn, hệ thống/Thầy xác nhận đăng ký của bạn.</p>
-            <p className="asu-p">Nếu bạn đăng ký <b>Học theo lớp</b>: chuyển khoản theo QR/ thông tin tài khoản hiển thị sau khi đăng ký, rồi <b>gửi bill qua Zalo Thầy</b> để được xác nhận và kích hoạt nhanh nhất.</p>
-            <p className="asu-p">Nếu bạn đăng ký <b>Gói Thực hành</b> hoặc <b>Cả hai</b>: đăng ký được ghi nhận và Thầy sẽ liên hệ xác nhận trực tiếp.</p>
+            <p className="asu-p">Chuyển khoản theo QR / thông tin tài khoản hiển thị sau khi đăng ký, rồi <b>gửi bill qua Zalo Thầy</b> để được xác nhận và kích hoạt nhanh nhất.</p>
           </section>
 
           {/* 2 — Kích hoạt tài khoản */}
@@ -132,37 +131,21 @@ function AfterSignupDetail({ onClose }: { onClose: () => void }) {
 
           {/* 5 — 3 nhánh */}
           <section className="asu-sec">
-            <h3 className="asu-h3">5. Bạn được đưa vào đúng hình thức học</h3>
+            <h3 className="asu-h3">5. Bạn nhận thông tin lớp của mình</h3>
+            <p className="asu-p">Tên lớp · lịch học hàng tuần · ngày khai giảng · nhóm lớp · link Zoom hoặc cách vào buổi học · nội dung nên xem trước.</p>
 
-            <div className="asu-branch asu-branch-cls">
-              <span className="asu-branch-tag">Học theo lớp</span>
-              <p className="asu-p">Bạn nhận: tên lớp · lịch học cố định · ngày khai giảng/buổi tiếp theo · nhóm lớp · link Zoom hoặc cách vào buổi học · nội dung nên xem trước.</p>
-              <p className="asu-p asu-branch-line"><b>Bạn đi theo nhịp của lớp từ đầu đến cuối.</b></p>
-            </div>
-
-            <div className="asu-branch asu-branch-mem">
-              <span className="asu-branch-tag">Gói Thực hành</span>
-              <p className="asu-p">Bạn được hướng dẫn: chọn hướng học trên App (<b>Đệm hát / Tỉa nốt / Solo...</b>) · xác định nhóm thực hành phù hợp (<b>Cơ bản / Trung cấp / Nâng cao</b>) · xem lịch thực hành · biết cách sử dụng số buổi trong gói · chọn buổi phù hợp với lịch của mình.</p>
-              <p className="asu-p asu-branch-line"><b>Bạn chủ động học theo hướng của mình và chọn buổi thực hành phù hợp.</b></p>
-            </div>
-
-            <div className="asu-branch asu-branch-both">
-              <span className="asu-branch-tag">Học cả hai</span>
-              <p className="asu-p">Bạn nhận cả hai luồng: lớp cố định + Gói Thực hành linh hoạt.</p>
-              <p className="asu-p asu-branch-line"><b>Học theo lớp để đi lên · Thực hành để đi sâu.</b></p>
-            </div>
           </section>
 
           {/* 6 — Nhóm học */}
           <section className="asu-sec">
             <h3 className="asu-h3">6. Vào nhóm học</h3>
-            <p className="asu-p">Tùy đăng ký, bạn được thêm vào nhóm lớp, nhóm thực hành hoặc cả hai. Nhóm học dùng để nhận thông báo, cập nhật lịch, nhận link và trao đổi các nội dung liên quan.</p>
+            <p className="asu-p">Bạn được thêm vào nhóm lớp. Nhóm học dùng để nhận thông báo, cập nhật lịch, nhận link và trao đổi các nội dung liên quan.</p>
           </section>
 
           {/* 7 — Buổi đầu tiên */}
           <section className="asu-sec">
             <h3 className="asu-h3">7. Biết rõ buổi đầu tiên của mình</h3>
-            <p className="asu-p">Bạn sẽ biết rõ buổi học hoặc buổi thực hành đầu tiên của mình: ngày, giờ, cách tham gia và những gì nên chuẩn bị.</p>
+            <p className="asu-p">Bạn sẽ biết rõ buổi học đầu tiên của mình: ngày, giờ, cách tham gia và những gì nên chuẩn bị.</p>
           </section>
 
           {/* Callout — học trước buổi đầu tiên */}
@@ -170,7 +153,7 @@ function AfterSignupDetail({ onClose }: { onClose: () => void }) {
             <h3 className="asu-callout-h">Đừng đợi đến buổi đầu tiên mới bắt đầu học</h3>
             <p className="asu-p">Ngay khi tài khoản được kích hoạt, bạn đã có thể vào hệ thống xem bài, làm quen nội dung và luyện tập trước.</p>
             <p className="asu-p">Trước khi gặp Thầy, hãy xem trước nội dung được hướng dẫn và ghi lại những chỗ bạn chưa hiểu.</p>
-            <p className="asu-p">Nhờ vậy, khi vào buổi học hoặc buổi thực hành, thời gian với Thầy được dùng nhiều hơn cho hỏi đáp, sửa bài và giải quyết đúng chỗ bạn đang vướng.</p>
+            <p className="asu-p">Nhờ vậy, khi vào buổi học, thời gian với Thầy được dùng nhiều hơn cho hỏi đáp, sửa bài và giải quyết đúng chỗ bạn đang vướng.</p>
             <p className="asu-callout-line"><b>Buổi gặp Thầy là một điểm trong quá trình học — việc học đã bắt đầu từ trước đó.</b></p>
           </div>
 
@@ -181,7 +164,7 @@ function AfterSignupDetail({ onClose }: { onClose: () => void }) {
           {/* 8 — Gặp vấn đề */}
           <section className="asu-sec">
             <h3 className="asu-h3">8. Nếu có chỗ nào chưa rõ</h3>
-            <p className="asu-p">Gặp bất kỳ tình huống nào dưới đây — không đăng nhập được, không thấy bài học, chưa biết nên học bài nào, chưa cài được App hoặc Zoom, chưa vào được nhóm, chưa biết lịch, không biết mình thuộc nhóm thực hành nào:</p>
+            <p className="asu-p">Gặp bất kỳ tình huống nào dưới đây — không đăng nhập được, không thấy bài học, chưa biết nên học bài nào, chưa cài được App hoặc Zoom, chưa vào được nhóm, chưa biết lịch:</p>
             <p className="asu-p asu-help-line"><b>Bạn không cần tự xử lý một mình. Hãy liên hệ Thầy để được hướng dẫn.</b></p>
             <a className="zalo-btn" href={ZALO_LINK} target="_blank" rel="noreferrer">💬 Liên hệ Thầy qua Zalo →</a>
           </section>
