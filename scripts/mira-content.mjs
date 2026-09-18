@@ -13,8 +13,6 @@
 // ⚠️ Sửa nội dung trang tuyển sinh xong thì phải chạy lại, không Mira nói theo bản cũ.
 
 import { build } from "vite";
-import { renderToStaticMarkup } from "react-dom/server";
-import { createElement } from "react";
 import { writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -23,10 +21,8 @@ const TMP = resolve(ROOT, ".mira-build");
 
 // Gom những thứ cần bóc vào một đầu vào tạm, rồi để Vite dịch TSX giúp.
 const ENTRY = `
-export { DOORS, STARTERS, CHAT_FAQ, MODALS } from "./src/class-content";
-export { default as DemHat } from "./src/ClassDemHat";
-export { default as TiaNot } from "./src/ClassTiaNot";
-export { default as NangCao } from "./src/ClassNangCao";
+export { DOORS, STARTERS, CHAT_FAQ, MODALS, PRODUCTS, MIRA_CLASSES } from "./src/class-content";
+export { FAQS } from "./src/classFaq";
 `;
 
 // HTML → chữ. Giữ xuống dòng ở chỗ ngắt khối để bài đọc còn ra hình hài.
@@ -48,8 +44,6 @@ function toText(html) {
     .trim();
 }
 
-const noop = () => {};
-
 async function main() {
   mkdirSync(TMP, { recursive: true });
   writeFileSync(resolve(ROOT, ".mira-entry.tsx"), ENTRY);
@@ -66,22 +60,12 @@ async function main() {
   });
 
   const m = await import(resolve(TMP, ".mira-entry.js"));
-  const pages = [];
-
-  for (const [title, Comp] of [
-    ["Lớp Đệm Hát Căn Bản (cửa vào: Tôi muốn vừa đàn vừa hát)", m.DemHat],
-    ["Lớp Guitar Căn Bản / Tỉa Nốt (cửa vào: Tôi muốn học Guitar từ gốc)", m.TiaNot],
-    ["Xếp trình độ nâng cao (cửa vào: Tôi đã biết chơi, muốn tiến xa hơn)", m.NangCao],
-  ]) {
-    if (!Comp) continue;
-    const html = renderToStaticMarkup(
-      createElement(Comp, { onClose: noop, onRegister: noop, onChat: noop }),
-    );
-    pages.push({ title, kind: "trang lớp học", text: toText(html) });
-  }
-
+  // 09/2026: KHÔNG bóc chữ từ các modal Đệm hát / Tỉa nốt / Nâng cao nữa — chúng mô tả lộ trình nội bộ.
+  // Mira chỉ giới thiệu các lớp đang tuyển (tên + dành cho ai) và bộ hỏi đáp public.
+  const classes = m.MIRA_CLASSES.map((k) => `Lớp ${m.PRODUCTS[k].title}: ${m.PRODUCTS[k].desc}`);
+  const faqPublic = m.FAQS.map((f) => `Hỏi: ${f.q}\nĐáp: ${f.a.map((b) => (typeof b === "string" ? b : Array.isArray(b) ? b.join("; ") : "")).filter(Boolean).join(" ")}`);
   const doors = m.DOORS.map(
-    (d) => `Cửa vào "${d.dq}" → ${d.badge}. ${d.desc} (nút: ${d.cta})`,
+    (d) => `Cửa vào "${d.dq}" → ${d.badge}. ${d.desc}`,
   );
   const starters = m.STARTERS.map((s) => `"${s.t}": ${s.d} (nút: ${s.cta})`);
   const faq = Object.entries(m.CHAT_FAQ).map(([q, a]) => `Hỏi: ${q}\nĐáp: ${toText(a)}`);
@@ -89,21 +73,21 @@ async function main() {
 
   const out = {
     generatedFrom: "cs-rhythm-editor · scripts/mira-content.mjs",
+    classes,
     doors,
     starters,
+    faqPublic,
     faq,
     modals,
-    pages,
   };
 
   writeFileSync(resolve(ROOT, "mira-content.json"), JSON.stringify(out, null, 2));
   rmSync(resolve(ROOT, ".mira-entry.tsx"), { force: true });
   rmSync(TMP, { recursive: true, force: true });
 
-  const chars = pages.reduce((a, p) => a + p.text.length, 0);
   console.log(
-    `Đã bóc: ${doors.length} cửa vào · ${starters.length} thẻ bắt đầu · ${faq.length} hỏi đáp · ` +
-      `${modals.length} hộp nội dung · ${pages.length} trang lớp (${chars} ký tự) → mira-content.json`,
+    `Đã bóc: ${classes.length} lớp · ${doors.length} cửa vào · ${starters.length} thẻ bắt đầu · ${faq.length}+${faqPublic.length} hỏi đáp · ` +
+      `${modals.length} hộp nội dung → mira-content.json`,
   );
 }
 
