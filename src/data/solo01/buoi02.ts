@@ -120,7 +120,7 @@ export const SOLO01_BUOI02: LessonDoc = {
     {
       kind: 'note',
       title: 'Ép ngón là gì',
-      text: 'Ép ngón = hai ngón i (trỏ) và m (giữa) thay phiên nhau, KHÔNG bao giờ dùng một ngón đánh hai nốt liền nhau. Ngón vào dây rồi mới đẩy, tiếng mới chắc; đánh hất từ ngoài vào sẽ ra tiếng mỏng. Ngón cái p làm việc riêng ở ba dây trầm.',
+      text: 'Ép ngón = hai ngón i (trỏ) và m (giữa) thay phiên nhau. Đây là quy tắc NỀN: thay phiên thì tay đều và không ngón nào phải làm quá nhiều — ở buổi này ta luyện cho thật quen. Sau này có những câu sẽ cần linh hoạt hơn. Ngón vào dây rồi mới đẩy, tiếng mới chắc; đánh hất từ ngoài vào sẽ ra tiếng mỏng. Ngón cái p làm việc riêng ở ba dây trầm.',
     },
     {
       kind: 'fretboard',
@@ -162,7 +162,7 @@ export const SOLO01_BUOI02: LessonDoc = {
         'Bass là bè riêng — đuôi nốt quay xuống, ngân trọn ô nhịp; giai điệu là bè đuôi quay lên.',
         'Bass và nốt giai điệu đầu ô vang CÙNG LÚC: p và i bật ra một nhịp, không so le.',
         'Ngón cái p đi xuống, i – m đi lên — hai tay phải không vướng nhau.',
-        'Ô 1–2 đã ghi sẵn ngón tay phải; từ ô 3 tự giữ nếp i – m luân phiên. Ngón tay trái lấy theo Buổi 01.',
+        'Ô 1–2 đã ghi sẵn ngón tay phải; từ ô 3 tự giữ nếp i – m luân phiên. Ngón tay trái: dùng lại cách của Buổi 01 là một cách thuận — tay đã quen thì tập trung được vào tay phải.',
       ],
     },
     {

@@ -44,7 +44,9 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         s.core.enableLazyLoading = false
         s.core.fontDirectory = '/font/'
         s.display.layoutMode = LayoutMode.Page        // tự xuống dòng → không tràn ngang
-        s.display.staveProfile = StaveProfile.ScoreTab
+        // Bản nhạc tự khai \staff {score} (chỉ khuông, không TAB — vd bài để học viên TỰ
+        // chọn vị trí) thì tôn trọng nó; còn lại mặc định khuông + TAB.
+        s.display.staveProfile = tex.includes('\\staff') ? StaveProfile.Default : StaveProfile.ScoreTab
         s.display.scale = narrow ? 1 : 0.95
         s.display.barsPerRow = rows
         // alphaTab tô bè phụ (bè Bass) bằng màu xám mờ — in ra giấy gần như không

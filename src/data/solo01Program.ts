@@ -48,7 +48,7 @@ export const SOLO01_STAGES: SoloStage[] = [
       { title: 'Bản đồ nốt giản lược C–Am', points: ['Bản đồ nốt trên cần đàn.', 'Chạy ngón liên thông.', 'Ứng dụng vào bài hát.', 'Bài mẫu: Diễm Xưa / Thành Phố Buồn.'], doc: '/solo01/buoi-01' },
       { title: 'Ép ngón tay phải & Bass đầu tiên', points: ['Ép ngón i–m.', 'Làm tiếng melody chắc, rõ.', 'Thêm Bass đơn giản vào giai điệu.'], doc: '/solo01/buoi-02', unlockAt: '2026-09-17T20:00:00+07:00' },
       { title: 'Melody + Bass và kỹ thuật Slide', points: ['Bass + melody luân phiên, phân vai p và i–m.', 'Slide làm câu melody liền tiếng.', 'Nâng chính tác phẩm cũ thành đoạn Solo sơ khai.'], doc: '/solo01/buoi-03', unlockAt: '2026-09-24T20:00:00+07:00' },
-      { title: 'Nốt ♯/♭ & Hammer-on', points: ['Nhận diện nốt ngoài âm giai.', 'Hammer-on.', 'Melody + Bass.'] },
+      { title: 'Xếp ngón giai điệu & nốt ngoài âm giai', points: ['Nhìn cả câu để chọn vị trí và ngón.', 'Ngón hôm nay chuẩn bị cho nốt tiếp theo.', 'Tay phải i – m – a cho giai điệu.', 'Nốt ♯/♭: dịch nửa cung từ nốt đã biết.'], doc: '/solo01/buoi-04', unlockAt: '2026-10-01T20:00:00+07:00' },
       { title: 'Bass theo hợp âm & Pull-off', points: ['Hợp âm nào → Bass nào.', 'Bass gốc.', 'Pull-off.'] },
       { title: 'Melody + Bass cùng lúc', points: ['Phối hợp ngón cái p với i–m.', 'Bắt đầu xử lý xếp ngón tay trái.', 'Kết hợp các kỹ thuật đã học.'] },
       { title: 'Bản đồ G–Em', points: ['Mở rộng sang giọng mới.', 'C–Am → G–Em.', 'Nhận diện F♯.', 'Melody + Bass + kỹ thuật.'] },
