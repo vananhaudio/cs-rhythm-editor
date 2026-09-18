@@ -899,16 +899,44 @@ export default function MusicXmlBeatsPage({
    * bản nhạc không — trang chỉ chuyển tiếp. Không `preventDefault` khi bộ phân
    * phối nói không, để Ctrl+Z của ô nhập chữ và phím tắt trình duyệt còn sống.
    */
+  /**
+   * Phím THẬT dưới ngón tay, kể cả khi bộ gõ tiếng Việt (Telex/VNI) đang bật.
+   *
+   * Bộ gõ nuốt phím chữ để ghép dấu — trình duyệt báo `key: "Process"` (hoặc
+   * một chữ có dấu), nên `S` = dấu sắc, không bao giờ tới được bảng phím. Khi
+   * đó đọc `code` (vị trí phím vật lý, không phụ thuộc bộ gõ).
+   */
+  function phimThat(e: { key: string; code?: string; shiftKey: boolean }): string {
+    const k = e.key;
+    if (k.length > 1 && k !== "Process" && k !== "Unidentified") return k; // ArrowRight, Delete…
+    if (/^[\x20-\x7e]$/.test(k)) return k; // ASCII bình thường
+    const c = e.code ?? "";
+    const chu = /^Key([A-Z])$/.exec(c);
+    if (chu) return e.shiftKey ? chu[1] : chu[1].toLowerCase();
+    const so = /^(?:Digit|Numpad)(\d)$/.exec(c);
+    if (so) return so[1];
+    const kyTu: Record<string, [string, string]> = {
+      Minus: ["-", "_"],
+      Equal: ["=", "+"],
+      Period: [".", ">"],
+      NumpadSubtract: ["-", "-"],
+      NumpadAdd: ["+", "+"],
+      NumpadDecimal: [".", "."],
+      Slash: ["/", "?"],
+    };
+    return kyTu[c]?.[e.shiftKey ? 1 : 0] ?? k;
+  }
+
   function onKeyDownBanNhac(e: React.KeyboardEvent<HTMLDivElement>) {
     if (!choChonNot || !chonNot) return;
-    if (e.key === "?") {
+    if (phimThat(e) === "?") {
       setHienPhimTat((v) => !v);
       e.preventDefault();
       return;
     }
     const ra = dispatch(
       {
-        key: e.key,
+        key: phimThat(e),
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
         shiftKey: e.shiftKey,
@@ -949,6 +977,7 @@ export default function MusicXmlBeatsPage({
       if (t?.tagName === "BUTTON" && (e.key === "Enter" || e.key === " ")) return;
       phimNongRef.current({
         key: e.key,
+        code: e.code,
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
         shiftKey: e.shiftKey,
@@ -2671,6 +2700,7 @@ export default function MusicXmlBeatsPage({
                     truongDoNhap={truongDoNhap}
                     coVung={idDangChon(vungChon, notDiDuoc).length > 1}
                     moThuocTinh={moThuocTinh}
+                    thongBao={nhapNote}
                     canUndo={!!nhap && coTheHoanTac(nhap)}
                     canRedo={!!nhap && coTheLamLai(nhap)}
                     onAction={apHanhDong}

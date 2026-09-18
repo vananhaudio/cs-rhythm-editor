@@ -34,6 +34,8 @@ export interface ScoreToolPaletteProps {
   /** Bảng Thuộc tính đang mở. */
   moThuocTinh: boolean;
   onAction(action: EditorAction): void;
+  /** Lời báo của lệnh vừa rồi (bị chặn / vì sao) — hiện ngay trên hàng ký hiệu. */
+  thongBao?: string;
 }
 
 /** Glyph SMuFL (Bravura). Mã điểm theo SMuFL 1.4 — không vẽ tay ký hiệu nhạc. */
@@ -147,6 +149,7 @@ export function ScoreToolPalette({
   canRedo,
   moThuocTinh,
   onAction,
+  thongBao,
 }: ScoreToolPaletteProps) {
   // Con trỏ ở dấu lặng = đang NHẬP NỐT: hàng hình nốt chọn cây bút.
   const dangNhap = fields?.kind === "rest";
@@ -251,6 +254,9 @@ export function ScoreToolPalette({
         </PBtn>
       </span>
 
+      <span className="np-pal-msg" role="status" title={thongBao || undefined}>
+        {thongBao}
+      </span>
       <span className="np-pal-group np-pal-end" role="group" aria-label="Khác">
         <PBtn action={{ type: "TOGGLE_INSPECTOR" }} ten="Thuộc tính" pressed={moThuocTinh} onAction={onAction}>
           {Icon.thuocTinh}

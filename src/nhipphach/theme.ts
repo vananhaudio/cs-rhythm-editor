@@ -204,6 +204,7 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-pal-group{display:inline-flex;align-items:center;gap:2px;padding:0 6px;}
 .${NP_SCOPE} .np-pal-group + .np-pal-group{border-left:1px solid var(--line);}
 .${NP_SCOPE} .np-pal-end{margin-left:auto;}
+.${NP_SCOPE} .np-pal-msg{flex:1 1 120px;min-width:0;padding:0 8px;font-size:12px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .${NP_SCOPE} .np-pbtn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:32px;height:32px;padding:0;font:inherit;font-size:13px;line-height:1;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--ink);cursor:pointer;}
 .${NP_SCOPE} .np-pbtn-glyph{font-family:Bravura,serif;font-size:20px;}
 .${NP_SCOPE} .np-pbtn:hover:not(:disabled){background:var(--indigo-tint);border-color:#D3CEE8;}

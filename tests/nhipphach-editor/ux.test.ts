@@ -328,3 +328,15 @@ test("vòng 2: phím nóng nghe ở cấp cửa sổ — focus ở nút/ô chọ
   // Nút đang giữ focus không chặn phím nóng trên đường cửa sổ.
   assert.deepEqual(dispatch({ key: "s", target: null }, { choSua: true, focused: null }), { kind: "action", action: { type: "TOGGLE_SLUR" } });
 });
+
+test("vòng 2: bộ gõ tiếng Việt (key=Process) vẫn ra đúng phím nhờ `code`; lời báo hiện trên hàng ký hiệu", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  assert.match(page, /key: phimThat\(e\)/);
+  assert.match(page, /Minus: \["-", "_"\]/);
+  assert.match(page, /Equal: \["=", "\+"\]/);
+  assert.match(page, /\/\^Key\(\[A-Z\]\)\$\//);
+  assert.match(page, /code: e\.code/);
+  assert.match(page, /thongBao=\{nhapNote\}/);
+  const pal = stripComments(src("nhipphach/editor/ScoreToolPalette.tsx"));
+  assert.match(pal, /className="np-pal-msg" role="status"/);
+});
