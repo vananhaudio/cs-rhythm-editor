@@ -294,11 +294,11 @@ test("ChangeDuration: cùng hình nốt cho số đo KHÁC NHAU khi divisions kh
   assert.equal(durationFor("eighth", 0, 4), 2);
   assert.equal(durationFor("eighth", 0, 12), 6);
   assert.equal(durationFor("16th", 0, 12), 3);
-  // divisions = 4 không ghi nổi móc kép chấm: nói thẳng, không làm tròn.
-  assert.equal(
-    code(() => applyCommand(FX, { type: "ChangeDuration", path: P(1, 2), noteType: "16th", dots: 1 })),
-    "EDIT_DURATION_NOT_REPRESENTABLE"
-  );
+  // divisions = 4 không ghi nổi móc kép chấm → Editor UX: tự NÂNG phần chia của
+  // part (×2), không làm tròn. Số đo cũ nhân theo, tiếng nhạc giữ nguyên.
+  const c = applyCommand(FX, { type: "ChangeDuration", path: P(1, 2), noteType: "16th", dots: 1 });
+  assert.match(noteText(c.xml, P(1, 2)), /<duration>3<\/duration>/);
+  assert.match(c.xml, /<divisions>8<\/divisions>/);
   assert.equal(code(() => durationFor("16th", 2, 4)), "EDIT_DURATION_NOT_REPRESENTABLE");
 });
 

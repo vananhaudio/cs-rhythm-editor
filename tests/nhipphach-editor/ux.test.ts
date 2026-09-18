@@ -8,7 +8,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { applyCommand } from "../../src/nhipphach/edit/applyCommand.ts";
+import { applyCommand, nangPhanChia } from "../../src/nhipphach/edit/applyCommand.ts";
 import { applyToDraft, createDraft, redo, undo } from "../../src/nhipphach/edit/draftEngine.ts";
 import { readNoteFields } from "../../src/nhipphach/edit/noteFields.ts";
 import { toCommand, toCommandVung } from "../../src/nhipphach/editor/commandFacade.ts";
@@ -339,4 +339,38 @@ test("vòng 2: bộ gõ tiếng Việt (key=Process) vẫn ra đúng phím nhờ
   assert.match(page, /thongBao=\{nhapNote\}/);
   const pal = stripComments(src("nhipphach/editor/ScoreToolPalette.tsx"));
   assert.match(pal, /className="np-pal-msg" role="status"/);
+});
+
+test("nâng phần chia: `=` xuống móc đơn/móc kép trên bài chia thô → tự nâng, MỘT lần hoàn tác", () => {
+  // BON chia 1 phần mỗi nốt đen — không ghi nổi móc đơn.
+  let d = createDraft(BON);
+  const buoc = () => {
+    const ra = toCommand({ type: "STEP_DURATION", dir: -1 }, P(2), readNoteFields(d.xml, P(2)), undefined as never, null);
+    assert.equal(ra.kind, "command");
+    if (ra.kind === "command") d = applyToDraft(d, ra.command);
+  };
+  buoc();
+  assert.equal(readNoteFields(d.xml, P(2))!.noteType, "eighth");
+  assert.match(d.xml, /<divisions>2<\/divisions>/);
+  buoc();
+  assert.equal(readNoteFields(d.xml, P(2))!.noteType, "16th");
+  assert.match(d.xml, /<divisions>4<\/divisions>/);
+  // Các nốt khác: trường độ nhân theo, hình nốt giữ nguyên → tiếng nhạc giữ nguyên.
+  // 3 nốt đen D E F còn nguyên hình nốt, trường độ ×4.
+  assert.equal((d.xml.match(/<duration>4<\/duration><voice>1<\/voice><type>quarter<\/type>/g) ?? []).length, 3);
+  assert.equal(d.cursor, 2, "mỗi phím một lệnh — nâng phần chia không thành lệnh riêng");
+  d = undo(d);
+  assert.match(d.xml, /<divisions>2<\/divisions>/);
+  d = undo(d);
+  assert.equal(d.xml, BON);
+});
+
+test("nâng phần chia: chỉ nhân số đo, không đụng byte nào khác; part khác đứng yên", () => {
+  const X = BON.replace("<backup>", "<backup>");
+  const ra = nangPhanChia(X, 1, 3);
+  const bo = ra.xml.replace(/<(divisions|duration)>(\d+)<\/\1>/g, (_m, t, n) => `<${t}>${Number(n) / 3}</${t}>`);
+  assert.equal(bo, X);
+  const HAI = doc(n("C") + `<backup><duration>1</duration></backup>` + n("G", "", 2) + n("D") + n("E") + n("F"));
+  const r2 = nangPhanChia(HAI, 1, 2);
+  assert.match(r2.xml, /<backup><duration>2<\/duration><\/backup>/);
 });
