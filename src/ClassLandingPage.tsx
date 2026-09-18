@@ -17,6 +17,7 @@ import ClassAfterSignup from './components/ClassAfterSignup'
 import ClassPublicTracks, { type PublicCohort, type PublicPlan, type PlanKey } from './components/ClassPublicTracks'
 
 import { DOORS, MODALS, PRODUCTS, type PublicProductKey } from './class-content'
+import { buildClassLead, saveClassLead } from './lib/classLead'
 
 
 const ZALO = '0983 259 893'
@@ -334,14 +335,12 @@ export default function ClassLandingPage() {
     const c = cohorts?.[product]
     const pl = plans?.find(x => x.key === plan) ?? null
     const className = c?.code ? `${p.title} · ${c.code}` : p.title
-    const payload = {
-      name, email, class_name: className, path: p.path,
-      intent: 'dang_ky', note: `[public-product:${product}][plan:${plan}]`, source: 'landing', status: 'Mới đăng ký',
-    }
+    const payload = buildClassLead({ name, email, className, path: p.path, product, plan })
     if (import.meta.env.DEV) console.info('[preview-reg] lead payload (mock, không insert):', payload)
     else {
-      const { error } = await supabase.from('leads').insert(payload)
-      if (error) console.error('Ghi leads lỗi (vẫn tiếp tục):', error)
+      // Không lưu được → KHÔNG sang thanh toán; lỗi hiện ngay trong form (ClassPublicTracks).
+      const err = await saveClassLead(x => supabase.from('leads').insert(x), payload)
+      if (err) throw new Error(err)
     }
     setRegDone({ name, className })
     const amount = pl ? (plan === 'six_month' ? (pl.totalVnd ?? pl.priceVnd * 6) : pl.priceVnd) : null

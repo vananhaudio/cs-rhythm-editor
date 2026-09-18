@@ -42,7 +42,9 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
     if (!n) { setErr('Nhập họ tên của bạn.'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setErr('Email chưa đúng.'); return }
     setBusy(true)
-    try { await onSubmit({ product: selected, plan, name: n, email: e }) } finally { setBusy(false) }
+    try { await onSubmit({ product: selected, plan, name: n, email: e }) }
+    catch (x) { setErr(x instanceof Error ? x.message : 'Chưa gửi được đăng ký — vui lòng thử lại.') }
+    finally { setBusy(false) }
   }
 
   const sel = selected ? PRODUCTS[selected] : null

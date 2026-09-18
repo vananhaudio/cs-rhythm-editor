@@ -34,7 +34,8 @@
     "test:nhipphach-edit-db": "tsc -p tests/nhipphach-edit/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-edit/db.test.ts",
     "check:imports": "node scripts/check-tracked-imports.mjs",
     "test:ci-gate": "tsc -p tests/ci-gate/tsconfig.json && node --experimental-strip-types --test tests/ci-gate/import-gate.test.ts",
-    "test:tuner": "tsx --tsconfig tsconfig.app.json --test tests/tuner/*.test.tsx"
+    "test:tuner": "tsx --tsconfig tsconfig.app.json --test tests/tuner/*.test.tsx",
+    "test:class-lead": "tsc -p tests/class-lead/tsconfig.json && node --experimental-strip-types --test tests/class-lead/lead.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
