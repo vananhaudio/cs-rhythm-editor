@@ -5,13 +5,16 @@
  * - Luôn hiện đủ 4 sản phẩm public (PRODUCTS) trên 2 tuyến.
  * - Lịch mỗi sản phẩm = cohort ĐANG TUYỂN (class_schedule.public_enroll=true) do trang cha truyền vào;
  *   không có cohort → "Lịch khai giảng đang cập nhật" + Hỏi Mira / Nhắn Thầy. KHÔNG bịa lịch.
- * - Đăng ký: chọn sản phẩm → họ tên + email → trang cha ghi leads + mở khối thanh toán cũ.
- *   Chọn "Theo tháng / Đồng hành 6 tháng" để sang Phase 2.
+ * - Đăng ký (Phase 2): chọn lớp → chọn cách đồng hành (2 card: Theo tháng / 6 tháng) → họ tên + email
+ *   → trang cha ghi leads [public-product][plan] + mở khối thanh toán đúng số tiền.
+ *   Giá + quyền lợi của 2 card đọc từ DB (packages CLASS_* + membership_benefits) do trang cha truyền.
  */
 import { useState } from 'react'
 import { PRODUCTS, TRACKS, type PublicProductKey } from '../class-content'
 
 export type PublicCohort = { code: string; name: string; schedule: string; dateLabel: string }
+export type PlanKey = 'monthly' | 'six_month'
+export type PublicPlan = { key: PlanKey; label: string; priceVnd: number; totalVnd: number | null; benefits: string[] }
 
 type Props = {
   cohorts: Partial<Record<PublicProductKey, PublicCohort>> | null   // null = đang tải
@@ -19,10 +22,14 @@ type Props = {
   onSelect: (k: PublicProductKey) => void
   onMira: () => void
   zaloUrl: string
-  onSubmit: (p: { product: PublicProductKey; name: string; email: string }) => Promise<void>
+  plans: PublicPlan[] | null     // null = đang tải; [] = chưa tải được
+  onSubmit: (p: { product: PublicProductKey; plan: PlanKey; name: string; email: string }) => Promise<void>
 }
 
-export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira, zaloUrl, onSubmit }: Props) {
+const vnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
+
+export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira, zaloUrl, plans, onSubmit }: Props) {
+  const [plan, setPlan] = useState<PlanKey | null>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [err, setErr] = useState('')
@@ -30,11 +37,12 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
 
   const submit = async () => {
     if (!selected) return
+    if (!plan) { setErr('Chọn một cách đồng hành phía trên.'); return }
     const n = name.trim(), e = email.trim()
     if (!n) { setErr('Nhập họ tên của bạn.'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setErr('Email chưa đúng.'); return }
     setBusy(true)
-    try { await onSubmit({ product: selected, name: n, email: e }) } finally { setBusy(false) }
+    try { await onSubmit({ product: selected, plan, name: n, email: e }) } finally { setBusy(false) }
   }
 
   const sel = selected ? PRODUCTS[selected] : null
@@ -87,6 +95,23 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
             <div className="cpt-form-k">Đăng ký</div>
             <div className="cpt-form-t">{sel.title} · {sel.length}</div>
             <div className="cpt-form-s">{selCohort.dateLabel}{selCohort.schedule && ` · ${selCohort.schedule}`}</div>
+            <div className="cpt-plan-lead">Cùng một lớp học. Bạn chỉ chọn cách đồng hành.</div>
+            {plans === null && <div className="cpt-note">Đang tải học phí…</div>}
+            {plans !== null && plans.length === 0 && (
+              <div className="cpt-err">Chưa tải được học phí. <a href={zaloUrl} target="_blank" rel="noreferrer">Nhắn Thầy qua Zalo</a> để đăng ký nhé.</div>
+            )}
+            <div className="cpt-plans" role="radiogroup" aria-label="Cách đồng hành">
+              {(plans ?? []).map(pl => (
+                <button type="button" key={pl.key} role="radio" aria-checked={plan === pl.key}
+                  className={'cpt-plan' + (plan === pl.key ? ' on' : '')} onClick={() => { setPlan(pl.key); setErr('') }}>
+                  <div className="cpt-plan-name">{pl.label}</div>
+                  <div className="cpt-plan-price">{vnd(pl.priceVnd)}<span>/tháng</span></div>
+                  {pl.totalVnd && <div className="cpt-plan-total">{vnd(pl.totalVnd)} / 6 tháng</div>}
+                  <ul>{pl.benefits.map(b => <li key={b}>{b}</li>)}</ul>
+                  <div className="cpt-plan-cta">{plan === pl.key ? '✓ Đã chọn' : pl.key === 'monthly' ? 'Đăng ký 1 tháng' : 'Đăng ký 6 tháng'}</div>
+                </button>
+              ))}
+            </div>
             <label>Họ tên<input value={name} onChange={e => setName(e.target.value)} placeholder="Nguyễn Văn A" autoComplete="name" /></label>
             <label>Email<input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" type="email" autoComplete="email"
               onKeyDown={e => { if (e.key === 'Enter') void submit() }} /></label>
@@ -122,6 +147,19 @@ const CSS = `
 .cpt-form input{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:11px 13px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:16px;background:#F9FAFB;font-family:inherit;color:#111827}
 .cpt-err{background:#FEE2E2;color:#B91C1C;border-radius:9px;padding:8px 12px;font-size:13.5px;margin-bottom:12px}
 .cpt-submit{width:100%}
+.cpt-plan-lead{font-size:14.5px;font-weight:700;color:#111827;margin:0 0 10px}
+.cpt-plans{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:16px}
+.cpt-plan{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #E5E7EB;border-radius:14px;padding:14px;cursor:pointer;font-family:inherit;color:#111827}
+.cpt-plan.on{border-color:#4338CA;box-shadow:0 0 0 3px rgba(67,56,202,.12);background:#FAFAFF}
+.cpt-plan-name{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#4338CA}
+.cpt-plan-price{font-size:22px;font-weight:800;margin-top:4px}
+.cpt-plan-price span{font-size:14px;font-weight:600;color:#6B7280;margin-left:2px}
+.cpt-plan-total{font-size:13px;color:#6B7280;margin-top:2px}
+.cpt-plan ul{margin:10px 0 0;padding:0;list-style:none}
+.cpt-plan li{font-size:13.5px;line-height:1.5;padding-left:20px;position:relative;margin-top:3px;color:#374151}
+.cpt-plan li::before{content:'✓';position:absolute;left:0;color:#059669;font-weight:800}
+.cpt-plan-cta{margin-top:10px;font-size:13.5px;font-weight:700;color:#4338CA}
+.cpt-err a{color:#B91C1C;font-weight:700}
 .cpt-note{font-size:12.5px;color:#9CA3AF;text-align:center;margin-top:10px}
 @media (max-width:760px){.cpt-tracks{grid-template-columns:1fr}.cpt-track{padding:14px}}
 `

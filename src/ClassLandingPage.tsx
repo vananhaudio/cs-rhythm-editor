@@ -14,7 +14,7 @@ import { FAQS } from './classFaq'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
 import ClassWeekJourney from './components/ClassWeekJourney'
 import ClassAfterSignup from './components/ClassAfterSignup'
-import ClassPublicTracks, { type PublicCohort } from './components/ClassPublicTracks'
+import ClassPublicTracks, { type PublicCohort, type PublicPlan, type PlanKey } from './components/ClassPublicTracks'
 
 import { DOORS, MODALS, PRODUCTS, type PublicProductKey } from './class-content'
 
@@ -73,6 +73,27 @@ export default function ClassLandingPage() {
   const [chatLoading, setChatLoading] = useState(false)
   const chatSessionRef = useRef<string | null>(null)
   const [articles, setArticles] = useState<Record<string, { title: string; body: string }>>({})
+  // 2 CÁCH ĐỒNG HÀNH (Phase 2) — giá + quyền lợi từ packages CLASS_* + membership_benefits (anon đọc)
+  const [plans, setPlans] = useState<PublicPlan[] | null>(null)
+  useEffect(() => {
+    Promise.all([
+      supabase.from('packages').select('package_code,name,config').in('package_code', ['CLASS_MONTHLY', 'CLASS_SIXMONTH']).eq('status', 'active'),
+      supabase.from('membership_benefits').select('key,label,sort_order').order('sort_order'),
+    ]).then(([pk, mb]) => {
+      if (pk.error || mb.error || !pk.data || !mb.data) { console.error('Học phí lỗi:', pk.error ?? mb.error); setPlans([]); return }
+      const label: Record<string, string> = {}
+      ;(mb.data as { key: string; label: string }[]).forEach(b => { label[b.key] = b.label })
+      type Cfg = { plan?: string; plan_label?: string; price_vnd?: number; total_vnd?: number; benefits?: string[] }
+      const out = (pk.data as { name: string; config: Cfg }[])
+        .filter(r => (r.config.plan === 'monthly' || r.config.plan === 'six_month') && Number(r.config.price_vnd) > 0)
+        .map(r => ({ key: r.config.plan as PlanKey, label: r.config.plan_label ?? r.name, priceVnd: Number(r.config.price_vnd),
+          totalVnd: r.config.total_vnd ? Number(r.config.total_vnd) : null,
+          benefits: (r.config.benefits ?? []).map(k => label[k]).filter(Boolean) }))
+        .sort((a, b) => (a.key === 'monthly' ? 0 : 1) - (b.key === 'monthly' ? 0 : 1))
+      setPlans(out)
+    })
+  }, [])
+
   // LỊCH TUYỂN SINH PUBLIC — chỉ cohort public_enroll=true, gom theo sản phẩm (null = đang tải)
   const [cohorts, setCohorts] = useState<Partial<Record<PublicProductKey, PublicCohort>> | null>(null)
   const [faqAll, setFaqAll] = useState(false)
@@ -305,15 +326,17 @@ export default function ClassLandingPage() {
   const fmtVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 
   // Submit đăng ký — mapping leads giữ tương thích Email 1/2 (class_name kèm mã cohort, path).
-  // Chưa có chọn Theo tháng/6 tháng (Phase 2) → số tiền "Theo thông tin Thầy gửi".
+  // note mang tag [public-product][plan] để Admin kích hoạt đúng gói (activate_class_membership).
+  // Số tiền: theo tháng = price_vnd; 6 tháng = total_vnd (đều từ DB).
   // PREVIEW: import.meta.env.DEV = không insert production.
-  const submitRegistration = async ({ product, name, email }: { product: PublicProductKey; name: string; email: string }) => {
+  const submitRegistration = async ({ product, plan, name, email }: { product: PublicProductKey; plan: PlanKey; name: string; email: string }) => {
     const p = PRODUCTS[product]
     const c = cohorts?.[product]
+    const pl = plans?.find(x => x.key === plan) ?? null
     const className = c?.code ? `${p.title} · ${c.code}` : p.title
     const payload = {
       name, email, class_name: className, path: p.path,
-      intent: 'dang_ky', note: `[public-product:${product}]`, source: 'landing', status: 'Mới đăng ký',
+      intent: 'dang_ky', note: `[public-product:${product}][plan:${plan}]`, source: 'landing', status: 'Mới đăng ký',
     }
     if (import.meta.env.DEV) console.info('[preview-reg] lead payload (mock, không insert):', payload)
     else {
@@ -321,11 +344,10 @@ export default function ClassLandingPage() {
       if (error) console.error('Ghi leads lỗi (vẫn tiếp tục):', error)
     }
     setRegDone({ name, className })
-    // Phase 1: học phí khởi điểm = mức theo tháng (app_config). Chọn "Đồng hành 6 tháng"
-    // là việc của Phase 2 — ở đây chỉ nói rõ để học viên nhắn Thầy nếu muốn.
-    const lines = [`${p.title} · ${p.length}` + (c?.dateLabel ? ` — ${c.dateLabel}` : ''), 'Học theo tháng' + (practiceMonthly ? ` · ${fmtVnd(practiceMonthly)}/tháng` : '')]
-    if (practice6mMonthly) lines.push(`Muốn Đồng hành 6 tháng (${fmtVnd(practice6mMonthly)}/tháng)? Nhắn Thầy qua Zalo khi gửi bill.`)
-    setPaySummary({ lines, amount: practiceMonthly })
+    const amount = pl ? (plan === 'six_month' ? (pl.totalVnd ?? pl.priceVnd * 6) : pl.priceVnd) : null
+    const lines = [`${p.title} · ${p.length}` + (c?.dateLabel ? ` — ${c.dateLabel}` : '')]
+    if (pl) lines.push(plan === 'six_month' ? `${pl.label} · ${fmtVnd(pl.priceVnd)}/tháng × 6` : `${pl.label} · ${fmtVnd(pl.priceVnd)}/tháng`)
+    setPaySummary({ lines, amount })
     setOkBox(false)
     setShowPay(true); setTimeout(() => goto('thanhtoan'), 60)
   }
@@ -474,7 +496,7 @@ export default function ClassLandingPage() {
 
       {/* HAI TUYẾN HỌC + ĐĂNG KÝ — lịch = cohort public_enroll (không phải toàn bộ class_schedule) */}
       <ClassPublicTracks cohorts={cohorts} selected={selProduct} onSelect={pickProduct}
-        onMira={openMira} zaloUrl={zalo} onSubmit={submitRegistration} />
+        onMira={openMira} zaloUrl={zalo} plans={plans} onSubmit={submitRegistration} />
 
       {/* THANH TOÁN — MỌI hình thức (practice/class/both) đều vào đây ngay sau tên+email */}
       {showPay && (
