@@ -6,6 +6,7 @@ import { laGiaoDien } from "./actions.ts";
 import { capDoNhap } from "./noteEntry.ts";
 import type { EntryDuration, NoteEntryState } from "./noteEntry.ts";
 import type { Clipboard } from "../edit/clipboard.ts";
+import { NOTE_TYPES, isNoteType } from "../edit/durationModel.ts";
 
 /**
  * Ý ĐỊNH → LỆNH — Giai đoạn 4A.
@@ -109,6 +110,23 @@ export function toCommand(
       return {
         kind: "command",
         command: { type: "ChangeDurationAndRebalance", path, noteType: action.noteType, dots: 0 },
+      };
+    }
+    case "STEP_DURATION": {
+      // `-` dài ra một bậc, `=` ngắn lại một bậc, trong chuỗi tròn…móc kép.
+      // Tới biên thì đứng yên (noop) — không vòng lại. Chấm dôi GIỮ nguyên.
+      const dangNhap = fields.kind === "rest";
+      if (!dangNhap && fields.duongTruongDo) return tuChoi(fields.duongTruongDo);
+      const goc = dangNhap ? nhap?.currentDuration : fields.noteType ? { noteType: fields.noteType, dots: fields.dots } : null;
+      if (!goc || !isNoteType(goc.noteType))
+        return tuChoi(dangNhap ? "Chưa sẵn sàng nhập nốt." : "Nốt này không ghi hình nốt.");
+      const i = NOTE_TYPES.indexOf(goc.noteType) - action.dir; // NOTE_TYPES: dài → ngắn
+      if (i < 0 || i >= NOTE_TYPES.length) return { kind: "noop" };
+      const noteType = NOTE_TYPES[i];
+      if (dangNhap) return { kind: "toolState", truongDo: { noteType, dots: goc.dots } };
+      return {
+        kind: "command",
+        command: { type: "ChangeDurationAndRebalance", path, noteType, dots: goc.dots },
       };
     }
     case "TOGGLE_DOT": {

@@ -19,6 +19,8 @@ export type EditorAction =
   /** Dịch cao độ theo nửa cung (±1) hoặc quãng tám (±12). */
   | { type: "TRANSPOSE"; semitones: number }
   | { type: "SET_DURATION"; noteType: NoteType }
+  /** Đổi trường độ MỘT bậc: `dir` +1 = dài ra (`-`), −1 = ngắn lại (`=`). */
+  | { type: "STEP_DURATION"; dir: 1 | -1 }
   | { type: "TOGGLE_DOT" }
   /** Đổi cách ghi, giữ nguyên tiếng (G♯ → A♭). */
   | { type: "RESPELL" }
@@ -79,6 +81,7 @@ export const TEN_HANH_DONG: Record<EditorAction["type"], string> = {
   MOVE: "Di chuyển",
   TRANSPOSE: "Đổi cao độ",
   SET_DURATION: "Đổi trường độ",
+  STEP_DURATION: "Tăng / giảm trường độ",
   TOGGLE_DOT: "Chấm dôi",
   RESPELL: "Đổi cách ghi",
   SET_ALTER: "Đổi dấu hoá",

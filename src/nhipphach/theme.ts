@@ -145,7 +145,7 @@ export const NP_CSS = `
 .${NP_SCOPE} .np-more-caret{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--indigo-tint);font-size:10px;line-height:1;}
 
 /* ── Xem trước ───────────────────────────────────────────────────────────── */
-.${NP_SCOPE} .np-prev{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
+.${NP_SCOPE} .np-prev{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;overflow:clip;}
 .${NP_SCOPE} .np-loaded .np-prev{border-color:#D5CCBE;box-shadow:0 2px 10px -6px rgba(33,28,50,.22);}
 .${NP_SCOPE} .np-prev-bar{display:flex;justify-content:space-between;align-items:center;gap:10px 16px;flex-wrap:wrap;padding:9px 14px;border-bottom:1px solid var(--line);}
 .${NP_SCOPE} .np-prev-tit{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0;}
@@ -192,6 +192,14 @@ export const NP_CSS = `
 /* Nhãn phím tắt ngay trên nút, lấy từ chính bảng phím — không gõ tay lần hai. */
 /* Con trỏ đứng trên dấu lặng: hàng hình nốt đang chọn CÂY BÚT, không sửa bản
    nhạc. Nói thẳng ra một câu còn hơn để thầy đoán vì sao bấm 4 mà nốt không đổi. */
+/* Editor UX vòng 2: khoang sửa cao CỐ ĐỊNH — nội dung đổi chỉ cuộn bên trong, bản nhạc không nhảy. */
+.${NP_SCOPE} .np-editor-dock{position:sticky;top:0;z-index:6;display:flex;flex-direction:column;height:clamp(150px,34vh,236px);overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;margin:0 0 8px;background:var(--surface);border-radius:10px;}
+.${NP_SCOPE} .np-editor-dock > *{flex:none;}
+.${NP_SCOPE} .np-editor-dock .np-palette{order:-1;position:sticky;top:0;z-index:1;}
+.${NP_SCOPE} .np-editor-dock .np-note-panel,.${NP_SCOPE} .np-editor-dock .np-edit-panel{font-size:12.5px;padding:6px 10px;margin:0 0 6px;}
+/* Chữ nhãn / gợi ý / thông tin chỉ-đọc KHÔNG bôi chọn được; chỉ ô nhập mới được. */
+.${NP_SCOPE} .np-editor-dock,.${NP_SCOPE} .np-select-mode{-webkit-user-select:none;user-select:none;}
+.${NP_SCOPE} .np-editor-dock input,.${NP_SCOPE} .np-editor-dock textarea,.${NP_SCOPE} .np-editor-dock select,.${NP_SCOPE} .np-editor-dock [contenteditable="true"]{-webkit-user-select:text;user-select:text;}
 .${NP_SCOPE} .np-palette{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;padding:4px 6px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);}
 .${NP_SCOPE} .np-pal-group{display:inline-flex;align-items:center;gap:2px;padding:0 6px;}
 .${NP_SCOPE} .np-pal-group + .np-pal-group{border-left:1px solid var(--line);}

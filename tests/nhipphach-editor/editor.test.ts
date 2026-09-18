@@ -81,17 +81,16 @@ test("keymap: mỗi phím của mục 2 ra đúng hành động, không phím n�
   assert.deepEqual(traPhim(S("ArrowDown")), { type: "TRANSPOSE", semitones: -1 });
   assert.deepEqual(traPhim(S("ArrowUp", true)), { type: "TRANSPOSE", semitones: 12 });
   assert.deepEqual(traPhim(S("ArrowDown", true)), { type: "TRANSPOSE", semitones: -12 });
-  assert.deepEqual(traPhim(S("3")), { type: "SET_DURATION", noteType: "16th" });
-  assert.deepEqual(traPhim(S("4")), { type: "SET_DURATION", noteType: "eighth" });
-  assert.deepEqual(traPhim(S("5")), { type: "SET_DURATION", noteType: "quarter" });
-  assert.deepEqual(traPhim(S("6")), { type: "SET_DURATION", noteType: "half" });
-  assert.deepEqual(traPhim(S("7")), { type: "SET_DURATION", noteType: "whole" });
+  // Vòng 2: trường độ theo Guitar Pro — `-` dài ra, `=` ngắn lại; bỏ 3–7.
+  assert.deepEqual(traPhim(S("-")), { type: "STEP_DURATION", dir: 1 });
+  assert.deepEqual(traPhim(S("=")), { type: "STEP_DURATION", dir: -1 });
+  for (const k of ["3", "4", "5", "6", "7"]) assert.equal(traPhim(S(k)), null, k);
   assert.deepEqual(traPhim(S(".")), { type: "TOGGLE_DOT" });
   assert.deepEqual(traPhim(S("E", false, true)), { type: "RESPELL" });
   assert.deepEqual(traPhim(S("z", true)), { type: "UNDO" });
   assert.deepEqual(traPhim(S("z", true, true)), { type: "REDO" });
   // 4B.1 nhận thêm Delete/Backspace/0/R và A–G; những phím sau vẫn phải im.
-  for (const k of ["T", "Insert", ",", "Tab", "1", "2", "8", "9", "h", "q"])
+  for (const k of ["T", "Insert", ",", "Tab", "1", "2", "8", "9", "q"])
     assert.equal(traPhim(S(k)), null, `phím ${k} chưa được phép có nghĩa`);
   // Một phím KHÔNG được mang hai nghĩa: `.` là chấm dôi, không phải gấp đôi.
   const trung = new Map<string, number>();
@@ -168,7 +167,7 @@ test("phân phối: modal, quyền, và phím lạ", () => {
     kind: "blocked",
     why: "capability",
   });
-  assert.deepEqual(dispatch({ key: "5", target: div }, { choSua: false }), {
+  assert.deepEqual(dispatch({ key: "-", target: div }, { choSua: false }), {
     kind: "blocked",
     why: "capability",
   });
@@ -209,7 +208,9 @@ for (const f of FIXTURES)
       caret = tiep;
       xuoi.push(caret.sourceId);
     }
-    assert.deepEqual(xuoi, notes.map((n) => n.svgId), "đi xuôi phải đúng thứ tự tài liệu");
+    // Vòng 2: đi trong CÙNG DÒNG (part + khuông + bè) của nốt đầu, theo thứ tự tài liệu.
+    const dong = notes.filter((n) => n.partIndex === notes[0].partIndex && n.staff === notes[0].staff && n.voice === notes[0].voice);
+    assert.deepEqual(xuoi, dong.map((n) => n.svgId), "đi xuôi phải đúng thứ tự tài liệu trong dòng");
     const nguoc: string[] = [caret.sourceId];
     for (;;) {
       const lui = diChuyen(notes, caret, "prev");
@@ -220,7 +221,7 @@ for (const f of FIXTURES)
     assert.deepEqual(nguoc.reverse(), xuoi, "đi ngược phải là đảo của đi xuôi");
     // Không cuộn vòng: đứng ở hai đầu thì đứng yên.
     assert.equal(diChuyen(notes, caretTaiId(notes, notes[0].svgId), "prev"), null);
-    assert.equal(diChuyen(notes, caretTaiId(notes, notes[notes.length - 1].svgId), "next"), null);
+    assert.equal(diChuyen(notes, caretTaiId(notes, xuoi[xuoi.length - 1]), "next"), null);
     assert.equal(diChuyen(notes, caret, "first")!.sourceId, notes[0].svgId);
     assert.equal(diChuyen(notes, caret, "last")!.sourceId, notes[notes.length - 1].svgId);
   });
@@ -458,7 +459,7 @@ test("bàn phím → nháp: cả chuỗi thao tác dùng đúng ngăn xếp đan
   assert.equal(doc(), "E♭4 quarter");
   st = goPhim(st, "ArrowUp", { ctrl: true });
   assert.equal(doc(), "E♭5 quarter");
-  st = goPhim(st, "4");
+  st = goPhim(st, "=");
   assert.equal(doc(), "E♭5 eighth");
   st = goPhim(st, ".");
   assert.equal(doc(), "E♭5 eighth·");
@@ -495,7 +496,7 @@ test("bàn phím: học viên không có score.edit thì gõ cả bàn phím cũ
   const notes = dsDiDuoc(notesOf(FX));
   let draft = createDraft(FX);
   const caret = caretTaiId(notes, notes[1].svgId)!;
-  for (const key of ["ArrowUp", "ArrowDown", "3", "4", "5", "6", "7", ".", "E", "z"]) {
+  for (const key of ["ArrowUp", "ArrowDown", "-", "=", ".", "E", "z"]) {
     const r = dispatch({ key, ctrlKey: key === "z", shiftKey: key === "E", target: { tagName: "div" } }, { choSua: false });
     assert.equal(r.kind, "blocked", `${key} phải bị chặn`);
     assert.equal(r.kind === "blocked" && r.why, "capability");
@@ -757,8 +758,9 @@ test("4A.1 tô sáng: nốt khuông nhạc và nốt TAB là hai danh tính, kh�
 
 /** 2. Nhãn phím trên nút phải đến từ chính bảng phím, không gõ tay lần hai. */
 test("4A.1 thanh công cụ: nhãn phím lấy từ keymap, không hard-code trong JSX", () => {
-  assert.equal(phimCua({ type: "SET_DURATION", noteType: "quarter" }), "5");
-  assert.equal(phimCua({ type: "SET_DURATION", noteType: "16th" }), "3");
+  assert.equal(phimCua({ type: "STEP_DURATION", dir: 1 }), "-");
+  assert.equal(phimCua({ type: "STEP_DURATION", dir: -1 }), "=");
+  assert.equal(phimCua({ type: "SET_DURATION", noteType: "quarter" }), null);
   assert.equal(phimCua({ type: "TOGGLE_DOT" }), ".");
   assert.equal(phimCua({ type: "RESPELL" }), "Shift+E");
   assert.equal(phimCua({ type: "UNDO" }), "Ctrl+Z");

@@ -520,15 +520,15 @@ test("KHÔNG ĐỦ CHỖ là GIAO DỊCH: không byte nào, không lệnh nào, 
 });
 
 test("QUYỀN: không có score.edit thì phím trường độ không sinh lệnh cân lại nào", () => {
-  for (const key of ["3", "4", "5", "6", "7", "."]) {
+  for (const key of ["-", "=", "."]) {
     const ra = dispatch({ key, target: null }, { choSua: false });
     assert.equal(ra.kind, "blocked", key);
     assert.equal((ra as { why: string }).why, "capability", key);
   }
   // Có quyền thì mới ra hành động — để luật trên không xanh vì lý do khác.
-  assert.deepEqual(dispatch({ key: "4", target: null }, { choSua: true }), {
+  assert.deepEqual(dispatch({ key: "=", target: null }, { choSua: true }), {
     kind: "action",
-    action: { type: "SET_DURATION", noteType: "eighth" },
+    action: { type: "STEP_DURATION", dir: -1 },
   });
 });
 

@@ -53,8 +53,21 @@ export function idDangChon(sel: ScoreSelection, notes: readonly SourceNote[]): s
   const i = notes.findIndex((n) => n.svgId === sel.anchor!.sourceId);
   const j = notes.findIndex((n) => n.svgId === sel.caret!.sourceId);
   if (i < 0 || j < 0) return [];
-  return notes.slice(Math.min(i, j), Math.max(i, j) + 1).map((n) => n.svgId);
+  // Editor UX vòng 2: vùng chọn nằm trên MỘT dòng (part + khuông + bè) — dòng
+  // của NEO. Sự kiện của khuông/bè khác xen giữa trong tài liệu không lọt vào.
+  const neo = notes[i];
+  return notes
+    .slice(Math.min(i, j), Math.max(i, j) + 1)
+    .filter((n) => cungDong(n, neo))
+    .map((n) => n.svgId);
 }
+
+/**
+ * Cùng một DÒNG nhạc: cùng part, cùng khuông, cùng bè — như một "track" của
+ * Guitar Pro. So bằng dữ liệu nguồn, không hình học.
+ */
+export const cungDong = (a: SourceNote, b: SourceNote) =>
+  a.partIndex === b.partIndex && a.staff === b.staff && a.voice === b.voice;
 
 /**
  * Mở rộng / co vùng chọn — Giai đoạn 4C.
@@ -122,29 +135,41 @@ export function diChuyen(
   // Chỗ ngồi có thể trôi sau khi khắc lại; luôn tìm lại theo id trước.
   const i = notes.findIndex((n) => n.svgId === caret.sourceId);
   if (i < 0) return tai(notes, Math.min(caret.sourceIndex, notes.length - 1));
-  if (where === "next") return i + 1 < notes.length ? tai(notes, i + 1) : null;
-  if (where === "prev") return i > 0 ? tai(notes, i - 1) : null;
-
   const ns = notes[i];
+  // Editor UX vòng 2 (kiểu Guitar Pro): ←/→ đi trong CÙNG DÒNG. Trước đây đi
+  // theo thứ tự tài liệu thuần, nên hết khuông 1 của ô nhịp là rơi sang khuông
+  // TAB của chính ô đó. Vẫn là thứ tự tài liệu — chỉ lọc theo dòng.
+  if (where === "next") {
+    for (let k = i + 1; k < notes.length; k++) if (cungDong(notes[k], ns)) return tai(notes, k);
+    return null;
+  }
+  if (where === "prev") {
+    for (let k = i - 1; k >= 0; k--) if (cungDong(notes[k], ns)) return tai(notes, k);
+    return null;
+  }
+
   if (where === "nextMeasure") {
     const j = notes.findIndex(
-      (n, k) =>
-        k > i && (n.partIndex > ns.partIndex || (n.partIndex === ns.partIndex && n.measureIndex > ns.measureIndex))
+      (n, k) => k > i && cungDong(n, ns) && n.measureIndex > ns.measureIndex
     );
     return j < 0 ? null : tai(notes, j);
   }
-  // prevMeasure: về ĐẦU ô nhịp trước đó, không phải về nốt liền trước.
+  // prevMeasure: về ĐẦU ô nhịp trước đó (của cùng dòng), không phải về nốt liền trước.
   let j = -1;
   for (let k = i - 1; k >= 0; k--) {
     const n = notes[k];
-    if (n.partIndex !== ns.partIndex || n.measureIndex !== ns.measureIndex) {
+    if (cungDong(n, ns) && n.measureIndex !== ns.measureIndex) {
       j = k;
       break;
     }
   }
   if (j < 0) return null;
   const dich = notes[j];
-  while (j > 0 && notes[j - 1].partIndex === dich.partIndex && notes[j - 1].measureIndex === dich.measureIndex)
-    j--;
+  for (let k = j - 1; k >= 0; k--) {
+    const n = notes[k];
+    if (!cungDong(n, dich)) continue;
+    if (n.measureIndex !== dich.measureIndex) break;
+    j = k;
+  }
   return tai(notes, j);
 }

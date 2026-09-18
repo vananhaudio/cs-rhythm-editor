@@ -585,8 +585,7 @@ export function EditPanel({
       ) : (
         <div className="np-edit-row">
           <span className="np-muted">
-            Bấm một nốt, một chữ hát hay một ký hiệu hợp âm trên bản nhạc để thấy công cụ
-            sửa của nó.
+            Bấm một nốt, chữ hát hay hợp âm.
           </span>
         </div>
       )}

@@ -190,7 +190,7 @@ test("bảng ký hiệu: điện thoại cuộn ngang, desktop gói hàng", () =
 test("trang: bảng ký hiệu thay thanh cũ, Thuộc tính gập mặc định, vùng đi qua toCommandVung", () => {
   const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
   assert.doesNotMatch(page, /EditorToolbar/);
-  assert.match(page, /\[moThuocTinh, setMoThuocTinh\] = useState\(false\)/);
+  assert.match(page, /\[moThuocTinh, setMoThuocTinh\] = useState\(true\)/);
   assert.match(page, /moChiTiet=\{moThuocTinh\}/);
   assert.match(page, /onDoubleClick=\{choChonNot && chonNot/);
   assert.match(page, /toCommandVung\(action, vung\)/);
@@ -219,4 +219,97 @@ test("điều hướng bỏ qua sự kiện không vẽ được — theo id, t�
   const c = diChuyen(ds, caretTaiId(ds, all[0].svgId)!, "next")!;
   assert.equal(c.sourceId, all[2].svgId);
   assert.deepEqual(dsDiDuoc(all, new Set([all[1].svgId])).map((x) => x.svgId), ds.map((x) => x.svgId));
+});
+
+// ══ Vòng 2 ══════════════════════════════════════════════════════════════════
+
+test("vòng 2: `-` dài ra, `=` ngắn lại, đứng yên ở biên, giữ chấm dôi", () => {
+  const f = (xml: string) => readNoteFields(xml, P(2));
+  const buoc = (xml: string, dir: 1 | -1) => toCommand({ type: "STEP_DURATION", dir }, P(2), f(xml), undefined as never, null);
+  const den = buoc(BON, 1);
+  assert.deepEqual(den, { kind: "command", command: { type: "ChangeDurationAndRebalance", path: P(2), noteType: "half", dots: 0 } });
+  const ngan = buoc(BON, -1);
+  assert.equal(ngan.kind === "command" && ngan.command.type === "ChangeDurationAndRebalance" && ngan.command.noteType, "eighth");
+  const TRON = doc(n("C", "", 1, "whole", 4));
+  assert.deepEqual(buoc(TRON, 1), { kind: "noop" }, "tròn bấm - đứng yên");
+  const KEP = doc(n("C", "<beam number=\"1\">begin</beam>", 1, "16th", 1));
+  const kep = buoc(KEP.replace("<divisions>1</divisions>", "<divisions>4</divisions>"), -1);
+  assert.equal(kep.kind === "refused" || kep.kind === "noop", true, "móc kép bấm = không đi tiếp");
+  // Chấm dôi đi theo khi đổi bậc.
+  const CHAM = doc(n("C", "<dot/>", 1, "quarter", 1).replace("<duration>1</duration>", "<duration>3</duration>").replace("<divisions>1</divisions>", "<divisions>2</divisions>"));
+  const ch = toCommand({ type: "STEP_DURATION", dir: -1 }, P(2), readNoteFields(CHAM, P(2)), undefined as never, null);
+  assert.equal(ch.kind === "command" && ch.command.type === "ChangeDurationAndRebalance" && ch.command.dots, 1);
+});
+
+test("vòng 2: ở dấu lặng, `-`/`=` chỉ đổi cây bút (không lệnh)", () => {
+  const LANG = doc(r() + n("D") + n("E") + n("F"));
+  const nhap = { currentDuration: { noteType: "quarter", dots: 0 } } as never;
+  const ra = toCommand({ type: "STEP_DURATION", dir: -1 }, P(2), readNoteFields(LANG, P(2)), nhap, null);
+  assert.deepEqual(ra, { kind: "toolState", truongDo: { noteType: "eighth", dots: 0 } });
+});
+
+test("vòng 2: `-`/`=` hoàn tác từng bước", () => {
+  const GOC = doc(n("C") + r() + r() + r());
+  let d = createDraft(GOC);
+  for (const dir of [1, 1] as const) {
+    const ra = toCommand({ type: "STEP_DURATION", dir }, P(2), readNoteFields(d.xml, P(2)), undefined as never, null);
+    if (ra.kind === "command") d = applyToDraft(d, ra.command);
+  }
+  assert.equal(readNoteFields(d.xml, P(2))!.noteType, "whole");
+  d = undo(d);
+  assert.equal(readNoteFields(d.xml, P(2))!.noteType, "half");
+  d = undo(d);
+  assert.equal(d.xml, GOC);
+});
+
+test("vòng 2: phím kiểu Guitar Pro — H luyến, Ctrl+Y làm lại, Ctrl+→ ô nhịp, Backspace xoá", () => {
+  const k = (key: string, ctrl = false, shift = false) => ({ key, ctrl, shift, alt: false });
+  assert.deepEqual(traPhim(k("h")), { type: "TOGGLE_SLUR" });
+  assert.deepEqual(traPhim(k("y", true)), { type: "REDO" });
+  assert.deepEqual(traPhim(k("+", false, true)), { type: "STEP_DURATION", dir: -1 });
+  assert.deepEqual(traPhim(k("ArrowRight", true)), { type: "MOVE", where: "nextMeasure" });
+  assert.deepEqual(traPhim(k("ArrowLeft", true)), { type: "MOVE", where: "prevMeasure" });
+  assert.deepEqual(traPhim(k("Backspace")), { type: "MAKE_REST" });
+  assert.deepEqual(traPhim(k("ArrowRight", false, true)), { type: "EXTEND_SELECTION", where: "next" });
+  // Ô nhập đang có focus thì Backspace/-/= là của ô nhập.
+  for (const key of ["Backspace", "-", "="])
+    assert.deepEqual(dispatch({ key, target: GO_INPUT }, { choSua: true }), { kind: "blocked", why: "typing" }, key);
+});
+
+test("vòng 2: khoang sửa cao CỐ ĐỊNH, cuộn bên trong, không bôi chọn chữ giao diện", () => {
+  assert.match(NP_CSS, /\.np-editor-dock\{[^}]*position:sticky[^}]*height:clamp\([^}]*overflow-y:auto[^}]*overflow-anchor:none/);
+  assert.match(NP_CSS, /\.np-editor-dock,[^{]*\.np-select-mode\{-webkit-user-select:none;user-select:none;\}/);
+  assert.match(NP_CSS, /\.np-editor-dock input,[^{]*textarea,[^{]*\{-webkit-user-select:text;user-select:text;\}/);
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  // Palette, "Đang chọn", trợ giúp, Thuộc tính đều nằm TRONG khoang.
+  const a = page.indexOf('className="np-editor-dock"');
+  const b = page.indexOf("ref={prevBody}");
+  assert.ok(a > 0 && b > a);
+  for (const moc of ['className="np-note-panel"', "<ScoreToolPalette", "<KeymapHelp", "<EditPanel"]) {
+    const i = page.indexOf(moc);
+    assert.ok(i > a && i < b, `${moc} phải nằm trong khoang cố định`);
+  }
+});
+
+test("vòng 2: ← → và Shift+→ ở LẠI trong dòng — không rơi sang khuông TAB", () => {
+  const TAB = readFileSync(new URL("../nhipphach-layout/fixtures/guitar-tab.musicxml", import.meta.url), "utf8");
+  const ds = dsDiDuoc(tagSourceIds(TAB).notes);
+  const dau = ds[0];
+  let c = caretTaiId(ds, dau.svgId)!;
+  let v = chonMot(c);
+  for (;;) {
+    const t = diChuyen(ds, c, "next");
+    if (!t) break;
+    c = t;
+    const n = ds[t.sourceIndex];
+    assert.equal(`${n.partIndex}/${n.staff}/${n.voice}`, `${dau.partIndex}/${dau.staff}/${dau.voice}`);
+  }
+  for (let k = 0; k < 6; k++) v = moRong(ds, v, "next");
+  for (const id of idDangChon(v, ds)) {
+    const n = ds.find((x) => x.svgId === id)!;
+    assert.equal(n.staff, dau.staff, "vùng chọn không lẫn khuông khác");
+  }
+  // Ctrl+→ cũng giữ dòng.
+  const m = diChuyen(ds, caretTaiId(ds, dau.svgId), "nextMeasure");
+  if (m) assert.equal(ds[m.sourceIndex].staff, dau.staff);
 });

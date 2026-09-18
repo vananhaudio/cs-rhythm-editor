@@ -46,12 +46,6 @@ export interface KeyBinding {
 export const NHOM_PHIM = ["Di chuyển", "Chọn vùng", "Nhập nốt", "Trường độ", "Chỉnh sửa"] as const;
 export type NhomPhim = (typeof NHOM_PHIM)[number];
 
-const D = (noteType: "16th" | "eighth" | "quarter" | "half" | "whole", key: string, ten: string): KeyBinding => ({
-  key,
-  action: { type: "SET_DURATION", noteType },
-  mo: `Hình nốt: ${ten}`,
-  nhom: "Trường độ",
-});
 
 export const KEYMAP: readonly KeyBinding[] = [
   // ── Điều hướng (Smoosic trackerKeys) ─────────────────────────────────────
@@ -68,12 +62,13 @@ export const KEYMAP: readonly KeyBinding[] = [
   { key: "ArrowUp", ctrl: true, action: { type: "TRANSPOSE", semitones: 12 }, mo: "Lên một quãng tám" , nhom: "Chỉnh sửa" },
   { key: "ArrowDown", ctrl: true, action: { type: "TRANSPOSE", semitones: -12 }, mo: "Xuống một quãng tám" , nhom: "Chỉnh sửa" },
 
-  // ── Trường độ (MuseScore 3–7) ────────────────────────────────────────────
-  D("16th", "3", "móc kép"),
-  D("eighth", "4", "móc đơn"),
-  D("quarter", "5", "nốt đen"),
-  D("half", "6", "nốt trắng"),
-  D("whole", "7", "nốt tròn"),
+  // ── Trường độ — theo tinh thần Guitar Pro (Numpad − / + đổi một bậc) ─────
+  // Thầy chốt: `-` = DÀI ra, `=` = NGẮN lại (phím `=` là `+` không cần Shift).
+  // Bỏ hàng số 3–7 kiểu MuseScore khỏi luồng chính; nút trên bảng ký hiệu vẫn
+  // chọn thẳng từng hình nốt.
+  { key: "-", action: { type: "STEP_DURATION", dir: 1 }, mo: "Trường độ dài ra một bậc (đen → trắng)", nhom: "Trường độ" },
+  { key: "=", action: { type: "STEP_DURATION", dir: -1 }, mo: "Trường độ ngắn lại một bậc (đen → móc đơn)", nhom: "Trường độ" },
+  { key: "+", shift: true, action: { type: "STEP_DURATION", dir: -1 }, mo: "Trường độ ngắn lại một bậc (đen → móc đơn)", nhom: "Trường độ" },
   { key: ".", action: { type: "TOGGLE_DOT" }, mo: "Thêm / bỏ chấm dôi" , nhom: "Trường độ" },
 
   // ── Cách ghi (Smoosic editorKeys: Shift+E toggleEnharmonic) ──────────────
@@ -98,6 +93,7 @@ export const KEYMAP: readonly KeyBinding[] = [
   // ── Luyến (MuseScore 4: S = slur; Guitar Pro không có một phím chung cho
   //    luyến nên theo MuseScore). Dấu nối (tie, MuseScore "+") CHƯA có lệnh. ──
   { key: "s", action: { type: "TOGGLE_SLUR" }, mo: "Luyến / bỏ luyến vùng đang chọn", nhom: "Chỉnh sửa" },
+  { key: "h", action: { type: "TOGGLE_SLUR" }, mo: "Luyến / bỏ luyến vùng đang chọn", nhom: "Chỉnh sửa" },
 
   // ── Nhập nốt bằng chữ cái (MuseScore, Smoosic đều vậy) ───────────────────
   ...(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map(
@@ -107,6 +103,7 @@ export const KEYMAP: readonly KeyBinding[] = [
   // ── Ngăn xếp nháp (cả ba editor lớn đều giống nhau) ──────────────────────
   { key: "z", ctrl: true, action: { type: "UNDO" }, mo: "Hoàn tác" , nhom: "Chỉnh sửa" },
   { key: "z", ctrl: true, shift: true, action: { type: "REDO" }, mo: "Làm lại" , nhom: "Chỉnh sửa" },
+  { key: "y", ctrl: true, action: { type: "REDO" }, mo: "Làm lại" , nhom: "Chỉnh sửa" },
 ];
 
 /** Dạng chuẩn hoá của một cú bấm — không phụ thuộc DOM, để test được. */
@@ -147,6 +144,8 @@ function cungHanhDong(a: EditorAction, b: EditorAction): boolean {
       return a.semitones === (b as typeof a).semitones;
     case "SET_DURATION":
       return a.noteType === (b as typeof a).noteType;
+    case "STEP_DURATION":
+      return a.dir === (b as typeof a).dir;
     case "SET_ALTER":
       return a.alter === (b as typeof a).alter;
     case "ENTER_PITCH":

@@ -249,8 +249,8 @@ export default function MusicXmlBeatsPage({
   /** Bản hiện ra của trường độ đang cầm — chỉ để thanh công cụ vẽ, không phải nguồn sự thật. */
   const [truongDoNhap, setTruongDoNhap] = useState<EntryDuration>(NHAP_BAN_DAU.currentDuration);
   const [hienPhimTat, setHienPhimTat] = useState(false);
-  // Editor UX: Thuộc tính của nốt gập mặc định — bản nhạc là chính.
-  const [moThuocTinh, setMoThuocTinh] = useState(false);
+  // Editor UX: Thuộc tính mở sẵn (thầy cần ô sửa); nút ⚙ gập lại được.
+  const [moThuocTinh, setMoThuocTinh] = useState(true);
   // ── Bản nháp biên tập (Giai đoạn Nội dung 3) — chỉ trong bộ nhớ ──────────
   // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
   // trạng thái và chuyển lệnh; không có dòng nào ở đây đụng vào XML.
@@ -2548,6 +2548,12 @@ export default function MusicXmlBeatsPage({
                     </div>
                   )}
                 </div>
+                {/* Editor UX vòng 2: mọi thứ của chế độ sửa nằm trong MỘT khoang cao
+                    CỐ ĐỊNH, dính ở mép trên. Panel đổi nội dung (chọn nốt/lời/hợp âm,
+                    lời nhắn, cảnh báo) chỉ cuộn BÊN TRONG khoang — bản nhạc bên dưới
+                    không bao giờ bị đẩy lên xuống. */}
+                {choChonNot && chonNot && (
+                <div className="np-editor-dock">
                 {/* `score` phải nằm trong điều kiện, không chỉ `chonNot`: nạp bản nhạc
                     khác đặt `score = null` NGAY, còn `notChon` thì tới effect sau mới
                     xoá — có đúng một lượt vẽ mà cái này null cái kia còn. Trước đây
@@ -2616,7 +2622,7 @@ export default function MusicXmlBeatsPage({
                       </span>
                     ) : (
                       <span className="np-muted">
-                        Bấm vào một nốt, một chữ hát hay một ký hiệu hợp âm trên bản nhạc.
+                        Bấm một nốt · ← → di chuyển · ? phím tắt
                       </span>
                     )}
                   </div>
@@ -2654,6 +2660,8 @@ export default function MusicXmlBeatsPage({
                     onSave={(ghiChu) => void luuNhap(ghiChu)}
                     moChiTiet={moThuocTinh}
                   />
+                )}
+                </div>
                 )}
                 <div
                   ref={prevBody}
