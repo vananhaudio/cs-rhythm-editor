@@ -89,7 +89,7 @@ export default function ClassLandingPage() {
         .filter(r => (r.config.plan === 'monthly' || r.config.plan === 'six_month') && Number(r.config.price_vnd) > 0)
         .map(r => ({ key: r.config.plan as PlanKey, label: r.config.plan_label ?? r.name, priceVnd: Number(r.config.price_vnd),
           totalVnd: r.config.total_vnd ? Number(r.config.total_vnd) : null,
-          benefits: (r.config.benefits ?? []).map(k => label[k]).filter(Boolean) }))
+          benefits: (r.config.benefits ?? []).filter(k => label[k]).map(k => ({ key: k, label: label[k] })) }))
         .sort((a, b) => (a.key === 'monthly' ? 0 : 1) - (b.key === 'monthly' ? 0 : 1))
       setPlans(out)
     })
@@ -238,12 +238,14 @@ export default function ClassLandingPage() {
 
   // Cuộn tới "Hai tuyến học" (thay cho 2 tab lịch cũ); có sản phẩm → sáng thẻ đó
   const gotoTracks = (k?: PublicProductKey) => {
-    if (k) setSelProduct(cohorts?.[k] ? k : null)
+    if (k && cohorts?.[k]) { pickProduct(k); return }   // lớp đang tuyển → mở thẳng khung đăng ký của lớp đó
+    if (k) setSelProduct(null)
     setTimeout(() => document.getElementById(k ? 'sp-' + k : 'tuyen-hoc')?.scrollIntoView({ behavior: 'smooth', block: k ? 'center' : 'start' }), 60)
   }
   const pickProduct = (k: PublicProductKey) => {
     setSelProduct(k)
-    setTimeout(() => document.getElementById('dangky')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+    // Form nằm ngay dưới lớp đã chọn; cuộn để thấy tên lớp ở đầu khung (scroll-margin trừ thanh nav)
+    setTimeout(() => document.getElementById('dangky')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
   }
 
   // Deep-link chia sẻ: ?xem=... (mở đúng nội dung) — dùng chung cho URL lúc mở trang

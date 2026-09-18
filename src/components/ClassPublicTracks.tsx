@@ -14,7 +14,14 @@ import { PRODUCTS, TRACKS, type PublicProductKey } from '../class-content'
 
 export type PublicCohort = { code: string; name: string; schedule: string; dateLabel: string }
 export type PlanKey = 'monthly' | 'six_month'
-export type PublicPlan = { key: PlanKey; label: string; priceVnd: number; totalVnd: number | null; benefits: string[] }
+export type PublicPlan = { key: PlanKey; label: string; priceVnd: number; totalVnd: number | null; benefits: { key: string; label: string }[] }
+
+// Card chỉ hiện phần KHÁC NHAU giữa 2 gói (chỉ là trình bày — dữ liệu quyền lợi/entitlement giữ nguyên):
+// "lớp hàng tuần" chung cho cả hai → đưa lên dòng dùng chung; vài nhãn rút gọn / gộp cho gọn trên mobile.
+const CARD_SKIP = new Set(['lop_hang_tuan', 'khoa_cua_lop'])
+const CARD_LABEL: Record<string, string> = { pdf_thang: 'PDF theo tháng', hoi_thay: 'Hỏi Thầy', thuc_hanh: 'Thực hành & cộng đồng', cong_dong: 'Thực hành & cộng đồng' }
+const cardBenefits = (bs: PublicPlan['benefits']) =>
+  [...new Set(bs.filter(b => !CARD_SKIP.has(b.key)).map(b => CARD_LABEL[b.key] ?? b.label))]
 
 type Props = {
   cohorts: Partial<Record<PublicProductKey, PublicCohort>> | null   // null = đang tải
@@ -49,6 +56,38 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
 
   const sel = selected ? PRODUCTS[selected] : null
   const selCohort = selected ? cohorts?.[selected] : undefined
+  // Khung đăng ký hiện NGAY dưới lớp vừa chọn (không phải cuối cả hai tuyến)
+  const form = sel && selCohort && (
+          <div className="cpt-form" id="dangky">
+            <div className="cpt-form-k">Đăng ký</div>
+            <div className="cpt-form-t">{sel.title} · {sel.length}</div>
+            <div className="cpt-form-s">{selCohort.dateLabel}{selCohort.schedule && ` · ${selCohort.schedule}`}</div>
+            <div className="cpt-plan-lead">Cùng một lớp học. Bạn chỉ chọn cách đồng hành.</div>
+            <div className="cpt-plan-shared">✓ Cả hai lựa chọn đều học cùng Thầy hàng tuần.</div>
+            {plans === null && <div className="cpt-note">Đang tải học phí…</div>}
+            {plans !== null && plans.length === 0 && (
+              <div className="cpt-err">Chưa tải được học phí. <a href={zaloUrl} target="_blank" rel="noreferrer">Nhắn Thầy qua Zalo</a> để đăng ký nhé.</div>
+            )}
+            <div className="cpt-plans" role="radiogroup" aria-label="Cách đồng hành">
+              {(plans ?? []).map(pl => (
+                <button type="button" key={pl.key} role="radio" aria-checked={plan === pl.key} aria-label={`${pl.label}, ${vnd(pl.priceVnd)} mỗi tháng`}
+                  className={'cpt-plan' + (plan === pl.key ? ' on' : '')} onClick={() => { setPlan(pl.key); setErr('') }}>
+                  <div className="cpt-plan-name">{pl.label}</div>
+                  <div className="cpt-plan-price">{vnd(pl.priceVnd)}<span>/tháng</span></div>
+                  {pl.totalVnd && <div className="cpt-plan-total">{vnd(pl.totalVnd)} / 6 tháng</div>}
+                  <ul>{cardBenefits(pl.benefits).map(b => <li key={b}>{b}</li>)}</ul>
+                  <span className="cpt-plan-cta" aria-hidden>{plan === pl.key ? '✓ Đã chọn' : 'Chọn gói này'}</span>
+                </button>
+              ))}
+            </div>
+            <label>Họ tên<input value={name} onChange={e => setName(e.target.value)} placeholder="Nguyễn Văn A" autoComplete="name" /></label>
+            <label>Email<input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" type="email" autoComplete="email"
+              onKeyDown={e => { if (e.key === 'Enter') void submit() }} /></label>
+            {err && <div className="cpt-err">{err}</div>}
+            <button className="btn btn-primary cpt-submit" disabled={busy} onClick={() => void submit()}>{busy ? 'Đang gửi…' : 'Tiếp tục thanh toán →'}</button>
+            <div className="cpt-note">Thông tin học tập sẽ được hỏi sau khi thanh toán.</div>
+          </div>
+  )
 
   return (
     <section id="tuyen-hoc" className="band cpt">
@@ -85,6 +124,7 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
                             </>}
                       </div>
                     </div>
+                    {selected === k && form}
                   </div>
                 )
               })}
@@ -92,36 +132,6 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
           ))}
         </div>
 
-        {sel && selCohort && (
-          <div className="cpt-form" id="dangky">
-            <div className="cpt-form-k">Đăng ký</div>
-            <div className="cpt-form-t">{sel.title} · {sel.length}</div>
-            <div className="cpt-form-s">{selCohort.dateLabel}{selCohort.schedule && ` · ${selCohort.schedule}`}</div>
-            <div className="cpt-plan-lead">Cùng một lớp học. Bạn chỉ chọn cách đồng hành.</div>
-            {plans === null && <div className="cpt-note">Đang tải học phí…</div>}
-            {plans !== null && plans.length === 0 && (
-              <div className="cpt-err">Chưa tải được học phí. <a href={zaloUrl} target="_blank" rel="noreferrer">Nhắn Thầy qua Zalo</a> để đăng ký nhé.</div>
-            )}
-            <div className="cpt-plans" role="radiogroup" aria-label="Cách đồng hành">
-              {(plans ?? []).map(pl => (
-                <button type="button" key={pl.key} role="radio" aria-checked={plan === pl.key}
-                  className={'cpt-plan' + (plan === pl.key ? ' on' : '')} onClick={() => { setPlan(pl.key); setErr('') }}>
-                  <div className="cpt-plan-name">{pl.label}</div>
-                  <div className="cpt-plan-price">{vnd(pl.priceVnd)}<span>/tháng</span></div>
-                  {pl.totalVnd && <div className="cpt-plan-total">{vnd(pl.totalVnd)} / 6 tháng</div>}
-                  <ul>{pl.benefits.map(b => <li key={b}>{b}</li>)}</ul>
-                  <div className="cpt-plan-cta">{plan === pl.key ? '✓ Đã chọn' : pl.key === 'monthly' ? 'Đăng ký 1 tháng' : 'Đăng ký 6 tháng'}</div>
-                </button>
-              ))}
-            </div>
-            <label>Họ tên<input value={name} onChange={e => setName(e.target.value)} placeholder="Nguyễn Văn A" autoComplete="name" /></label>
-            <label>Email<input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" type="email" autoComplete="email"
-              onKeyDown={e => { if (e.key === 'Enter') void submit() }} /></label>
-            {err && <div className="cpt-err">{err}</div>}
-            <button className="btn btn-primary cpt-submit" disabled={busy} onClick={() => void submit()}>{busy ? 'Đang gửi…' : 'Tiếp tục thanh toán →'}</button>
-            <div className="cpt-note">Thông tin học tập sẽ được hỏi sau khi thanh toán.</div>
-          </div>
-        )}
       </div>
     </section>
   )
@@ -141,7 +151,7 @@ const CSS = `
 .cpt-sched b{color:#111827}
 .cpt-acts{display:flex;gap:8px;flex-wrap:wrap}
 .cpt-acts .btn{text-decoration:none}
-.cpt-form{margin:22px auto 0;max-width:460px;background:#fff;border:1.5px solid #4338CA;border-radius:18px;padding:20px}
+.cpt-form{margin:14px auto 0;max-width:460px;background:#fff;border:1.5px solid #4338CA;border-radius:18px;padding:20px}
 .cpt-form-k{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#4338CA}
 .cpt-form-t{font-size:19px;font-weight:800;color:#111827;margin-top:4px}
 .cpt-form-s{font-size:13.5px;color:#6B7280;margin:2px 0 14px}
@@ -160,7 +170,11 @@ const CSS = `
 .cpt-plan ul{margin:10px 0 0;padding:0;list-style:none}
 .cpt-plan li{font-size:13.5px;line-height:1.5;padding-left:20px;position:relative;margin-top:3px;color:#374151}
 .cpt-plan li::before{content:'✓';position:absolute;left:0;color:#059669;font-weight:800}
-.cpt-plan-cta{margin-top:10px;font-size:13.5px;font-weight:700;color:#4338CA}
+.cpt-plan-cta{display:inline-block;margin-top:12px;font-size:13.5px;font-weight:700;color:#4338CA;border:1.5px solid #C7D2FE;border-radius:999px;padding:6px 14px;background:#fff}
+.cpt-plan.on .cpt-plan-cta{background:#4338CA;border-color:#4338CA;color:#fff}
+.cpt-plan:focus-visible{outline:3px solid #A5B4FC;outline-offset:2px}
+.cpt-plan-shared{font-size:13.5px;color:#065F46;background:#ECFDF5;border-radius:9px;padding:8px 10px;margin:0 0 12px}
+.cpt-form{scroll-margin-top:76px}
 .cpt-err a{color:#B91C1C;font-weight:700}
 .cpt-note{font-size:12.5px;color:#9CA3AF;text-align:center;margin-top:10px}
 @media (max-width:760px){.cpt-tracks{grid-template-columns:1fr}.cpt-track{padding:14px}}
