@@ -41,7 +41,27 @@ export type EditorAction =
   /** Dán vào chỗ lặng dưới con trỏ. */
   | { type: "PASTE" }
   | { type: "UNDO" }
-  | { type: "REDO" };
+  | { type: "REDO" }
+  /**
+   * Bật / tắt vòng luyến trên VÙNG CHỌN (từ nốt đầu tới nốt cuối) — Editor UX.
+   * Luyến ≠ dấu nối: hai hành động, hai lệnh riêng.
+   */
+  | { type: "TOGGLE_SLUR" }
+  /** Mở ô sửa lời của nốt đang chọn. Chỉ đụng giao diện. */
+  | { type: "OPEN_LYRIC" }
+  /** Mở ô sửa hợp âm gắn với nốt đang chọn. Chỉ đụng giao diện. */
+  | { type: "OPEN_HARMONY" }
+  /** Mở / đóng bảng Thuộc tính chi tiết. Chỉ đụng giao diện. */
+  | { type: "TOGGLE_INSPECTOR" }
+  /** Mở bảng phím tắt. Chỉ đụng giao diện. */
+  | { type: "SHOW_HELP" };
+
+/** Hành động CHỈ đụng giao diện — không bao giờ sinh lệnh sửa bản nhạc. */
+export const laGiaoDien = (a: EditorAction) =>
+  a.type === "OPEN_LYRIC" ||
+  a.type === "OPEN_HARMONY" ||
+  a.type === "TOGGLE_INSPECTOR" ||
+  a.type === "SHOW_HELP";
 
 /** Hành động chỉ dời con trỏ — trang dùng để biết lúc nào KHÔNG cần khắc lại. */
 export const laDieuHuong = (a: EditorAction): a is { type: "MOVE"; where: MoveWhere } =>
@@ -62,11 +82,16 @@ export const TEN_HANH_DONG: Record<EditorAction["type"], string> = {
   TOGGLE_DOT: "Chấm dôi",
   RESPELL: "Đổi cách ghi",
   SET_ALTER: "Đổi dấu hoá",
-  MAKE_REST: "Chuyển thành lặng",
+  MAKE_REST: "Xoá nốt",
   EXTEND_SELECTION: "Mở rộng vùng chọn",
   COPY: "Chép",
   PASTE: "Dán",
   ENTER_PITCH: "Nhập nốt",
   UNDO: "Hoàn tác",
   REDO: "Làm lại",
+  TOGGLE_SLUR: "Luyến",
+  OPEN_LYRIC: "Lời",
+  OPEN_HARMONY: "Hợp âm",
+  TOGGLE_INSPECTOR: "Thuộc tính",
+  SHOW_HELP: "Phím tắt",
 };

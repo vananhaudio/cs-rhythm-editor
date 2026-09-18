@@ -7,11 +7,13 @@ import type {
   ChangeLyricText,
   ChangePitch,
   MakeRest,
+  MakeRestSequence,
   MusicXmlEditCommand,
   PasteSequence,
   Pitch,
   ReplaceRestWithNote,
   RespellNote,
+  ToggleSlur,
 } from "./commands.ts";
 import type { HarmonyRoot } from "./harmonyModel.ts";
 import { isHarmonyKind } from "./harmonyModel.ts";
@@ -465,18 +467,214 @@ function changeHarmony(ctx: Ctx, harmony: Element, cmd: ChangeHarmony) {
  */
 const CON_CHI_CUA_NOT_CO_CAO_DO = ["pitch", "unpitched", "accidental", "notehead", "notehead-text", "stem"];
 
-/** `<technical>` tả thế bấm trên dây — không còn nghĩa gì khi không còn tiếng nào. */
-function boTechnical(ctx: Ctx, note: Element) {
+/**
+ * Bỏ những con của `<notations>` thoả `bo` — MỘT lượt cho mỗi `<notations>`.
+ *
+ * Bỏ cả `<notations>` khi mọi con của nó đều bị bỏ — chuẩn đòi `<notations>`
+ * phải có ít nhất một con. Một mảnh vá phủ trọn khối, KHÔNG vá lồng vào nhau:
+ * vá `<technical>` (hay `<slur>`) rồi vá tiếp `<notations>` bao ngoài là hai
+ * vùng chồng lên nhau, và `applyPatches` từ chối đúng như nó phải thế. Vì vậy
+ * mọi thứ cần bỏ trong một `<notations>` phải được quyết trong cùng một lượt.
+ */
+function boTrongNotations(ctx: Ctx, note: Element, bo: (c: Element) => boolean) {
   for (const notations of elementChildren(note, "notations")) {
     const con = elementChildren(notations);
-    const tech = con.filter((c) => c.localName === "technical");
-    if (!tech.length) continue;
-    // Bỏ cả `<notations>` khi trong đó CHỈ có technical — chuẩn đòi `<notations>`
-    // phải có ít nhất một con. Một mảnh vá phủ trọn khối, KHÔNG vá lồng vào
-    // nhau: vá `<technical>` rồi vá tiếp `<notations>` bao ngoài là hai vùng
-    // chồng lên nhau, và `applyPatches` từ chối đúng như nó phải thế.
-    if (tech.length === con.length) removeLeaf(ctx, notations);
-    else for (const t of tech) removeLeaf(ctx, t);
+    const chon = con.filter(bo);
+    if (!chon.length) continue;
+    if (chon.length === con.length) removeLeaf(ctx, notations);
+    else for (const t of chon) removeLeaf(ctx, t);
+  }
+}
+
+/** `<technical>` tả thế bấm trên dây — không còn nghĩa gì khi không còn tiếng nào. */
+function boTechnical(ctx: Ctx, note: Element) {
+  boTrongNotations(ctx, note, (c) => c.localName === "technical");
+}
+
+// ── Luyến (slur) — Editor UX ──────────────────────────────────────────────────
+
+interface SlurEl {
+  el: Element;
+  type: string;
+  number: string;
+}
+/** Mọi `<slur>` của một nốt, theo thứ tự nguồn. `number` mặc định "1" như chuẩn. */
+function slurCua(note: Element): SlurEl[] {
+  return elementChildren(note, "notations").flatMap((n) =>
+    elementChildren(n, "slur").map((el) => ({
+      el,
+      type: el.getAttribute("type") ?? "",
+      number: el.getAttribute("number") || "1",
+    }))
+  );
+}
+const kheBe = (note: Element) => ({
+  staff: textOf(child(note, "staff")).trim() || "1",
+  voice: textOf(child(note, "voice")).trim() || "1",
+});
+const TOA_DO = /^\/score-partwise\/part\[(\d+)\]\/measure\[(\d+)\]\/\*\[(\d+)\]$/;
+function toaDo(path: string) {
+  const m = TOA_DO.exec(path);
+  if (!m) throw new EditError("EDIT_TARGET_NOT_FOUND", "Đường dẫn nốt không hợp lệ.");
+  return { part: +m[1], measure: +m[2], child: +m[3] };
+}
+const truocSau = (a: { measure: number; child: number }, b: { measure: number; child: number }) =>
+  a.measure !== b.measure ? a.measure - b.measure : a.child - b.child;
+
+/**
+ * Các `<note>` (trừ nốt hợp âm phụ) của cùng part/khuông/bè, theo thứ tự bài, từ
+ * đầu part tới hết `den` (tính cả). Luyến nối các nốt NỐI TIẾP của một bè, nên
+ * đây là dãy duy nhất cần xét — không toạ độ, không đoán.
+ */
+function dayBe(doc: Document, part: number, staff: string, voice: string, den: { measure: number; child: number }) {
+  const partEl = elementChildren(doc.documentElement!, "part")[part - 1];
+  const out: { note: Element; measure: number; child: number }[] = [];
+  elementChildren(partEl, "measure").forEach((m, mi) => {
+    if (mi + 1 > den.measure) return;
+    elementChildren(m).forEach((c, ci) => {
+      if (c.localName !== "note") return;
+      if (mi + 1 === den.measure && ci + 1 > den.child) return;
+      if (child(c, "chord")) return;
+      const k = kheBe(c);
+      if (k.staff === staff && k.voice === voice) out.push({ note: c, measure: mi + 1, child: ci + 1 });
+    });
+  });
+  return out;
+}
+
+function themSlur(ctx: Ctx, note: Element, markup: string) {
+  const notations = child(note, "notations");
+  if (notations) insertOrderedMarkup(ctx, notations, [], "slur", markup);
+  else insertOrderedMarkup(ctx, note, NOTE_CHILD_ORDER, "notations", `<notations>${markup}</notations>`);
+}
+
+function toggleSlur(ctx: Ctx, doc: Document, cmd: ToggleSlur) {
+  const a = resolveSourcePath(doc, cmd.path);
+  const b = resolveSourcePath(doc, cmd.denPath);
+  if (!a || !b || a.localName !== "note" || b.localName !== "note")
+    throw new EditError("SLUR_TARGET_NOT_NOTE", "Luyến phải bắt đầu và kết thúc ở nốt.");
+  const ta = toaDo(cmd.path);
+  const tb = toaDo(cmd.denPath);
+  if (ta.part !== tb.part)
+    throw new EditError("SLUR_CROSS_PART", "Hai đầu luyến phải cùng một bè nhạc cụ.");
+  if (truocSau(ta, tb) >= 0)
+    throw new EditError("SLUR_NEED_TWO_NOTES", "Chọn ít nhất hai nốt liên tiếp để luyến (Shift+→).");
+  for (const p of [cmd.path, cmd.denPath]) {
+    const ngu = readNoteContext(doc, p);
+    if (!ngu || ngu.kind === "rest" || !ngu.pitch)
+      throw new EditError("SLUR_ENDPOINT_REST", "Hai đầu luyến phải là nốt có cao độ, không phải dấu lặng.");
+    if (ngu.chord !== "none")
+      throw new EditError("SLUR_CHORD_UNSUPPORTED", "Chưa hỗ trợ luyến bắt đầu hay kết thúc ở hợp âm.");
+    if (ngu.grace) throw new EditError("SLUR_GRACE_UNSUPPORTED", "Chưa hỗ trợ luyến với nốt hoa mỹ.");
+  }
+  const ka = kheBe(a);
+  const kb = kheBe(b);
+  if (ka.staff !== kb.staff)
+    throw new EditError("SLUR_CROSS_STAFF", "Hai đầu luyến phải cùng một khuông — luyến vắt khuông chưa hỗ trợ.");
+  if (ka.voice !== kb.voice)
+    throw new EditError("SLUR_CROSS_VOICE", "Hai đầu luyến phải cùng một bè (voice) — luyến vắt bè chưa hỗ trợ.");
+
+  const day = dayBe(doc, ta.part, ka.staff, ka.voice, tb);
+  const iA = day.findIndex((x) => x.note === a);
+  const iB = day.findIndex((x) => x.note === b);
+  if (iA < 0 || iB < 0 || iA >= iB)
+    throw new EditError("SLUR_CROSS_VOICE", "Hai đầu luyến phải cùng một bè (voice).");
+  const giua = day.slice(iA + 1, iB);
+  const sA = slurCua(a);
+  const sB = slurCua(b);
+
+  // Đã có ĐÚNG vòng luyến này (bắt đầu ở a, kết thúc ở b, cùng số, không số đó
+  // nào xen giữa) → bấm lại là bỏ nó.
+  for (const st of sA.filter((x) => x.type === "start")) {
+    const sp = sB.find((x) => x.type === "stop" && x.number === st.number);
+    const xen = giua.some((g) => slurCua(g.note).some((x) => x.number === st.number));
+    if (sp && !xen) {
+      boTrongNotations(ctx, a, (c) => c === st.el);
+      boTrongNotations(ctx, b, (c) => c === sp.el);
+      ctx.touched.push(`${cmd.path}/slur`, `${cmd.denPath}/slur`);
+      return;
+    }
+  }
+  // Thêm mới: vùng phải sạch. Đầu vùng được phép KẾT THÚC một luyến trước đó, cuối
+  // vùng được phép BẮT ĐẦU luyến sau (chuỗi legato nối đuôi) — ngoài ra, bất kỳ
+  // luyến nào chạm vào vùng đều là lồng / chéo nhau: chưa hỗ trợ.
+  // Luyến đang MỞ qua nốt đầu (bắt đầu trước, chưa kết thúc) = vùng mới nằm LỒNG
+  // trong một luyến lớn: cũng chặn. Nốt đầu tự kết thúc luyến trước thì không tính.
+  const dangMo = new Set<string>();
+  for (const x of day.slice(0, iA + 1))
+    for (const sl of slurCua(x.note)) {
+      if (sl.type === "start") dangMo.add(sl.number);
+      else if (sl.type === "stop") dangMo.delete(sl.number);
+    }
+  const ban =
+    dangMo.size > 0 ||
+    sA.some((x) => x.type !== "stop") ||
+    sB.some((x) => x.type !== "start") ||
+    giua.some((g) => slurCua(g.note).length > 0);
+  if (ban)
+    throw new EditError(
+      "SLUR_AMBIGUOUS",
+      "Trong vùng này đã có vòng luyến khác — luyến lồng hoặc chéo nhau chưa hỗ trợ. Bỏ luyến cũ trước (S)."
+    );
+  let so = 1;
+  while (dangMo.has(String(so))) so++;
+  if (so > 16) throw new EditError("SLUR_TOO_MANY", "Quá nhiều vòng luyến đang mở cùng lúc.");
+  themSlur(ctx, a, `<slur type="start" number="${so}"/>`);
+  themSlur(ctx, b, `<slur type="stop" number="${so}"/>`);
+  ctx.touched.push(`${cmd.path}/slur`, `${cmd.denPath}/slur`);
+}
+
+/**
+ * Xoá cả vùng = từng nốt thành lặng, trong MỘT lệnh, trên MỘT tài liệu. Vòng
+ * luyến nằm TRỌN trong vùng thì bỏ theo; luyến chỉ có một đầu trong vùng thì
+ * chặn (xoá một đầu là để lại luyến treo).
+ */
+function makeRestSequence(ctx: Ctx, doc: Document, cmd: MakeRestSequence) {
+  if (!cmd.paths.length) throw new EditError("DELETE_EMPTY", "Chưa chọn nốt nào để xoá.");
+  const cac = cmd.paths.map((p) => {
+    const note = resolveSourcePath(doc, p);
+    if (!note || note.localName !== "note")
+      throw new EditError("EDIT_TARGET_NOT_NOTE", "Vùng chọn có phần tử không phải là nốt.");
+    const ngu = readNoteContext(doc, p);
+    if (!ngu) throw new EditError("EDIT_CONTEXT_UNKNOWN", "Không đọc được ngữ cảnh của một nốt trong vùng.");
+    if (ngu.isTabStaff && ngu.kind !== "rest")
+      throw new EditError("DELETE_TAB_UNSUPPORTED", "Vùng chọn có nốt trên khuông TAB — xoá vùng trên TAB chưa hỗ trợ.");
+    return { p, note, ngu };
+  });
+  // Ghép cặp luyến theo từng (khuông, bè), đúng thứ tự bài.
+  const boLuyen = new Set<Element>();
+  const theoBe = new Map<string, typeof cac>();
+  for (const x of cac) {
+    const k = kheBe(x.note);
+    const key = `${k.staff}|${k.voice}`;
+    theoBe.set(key, [...(theoBe.get(key) ?? []), x]);
+  }
+  for (const ds of theoBe.values()) {
+    const mo = new Map<string, Element[]>();
+    for (const x of ds)
+      for (const sl of slurCua(x.note)) {
+        if (sl.type === "start") mo.set(sl.number, [...(mo.get(sl.number) ?? []), sl.el]);
+        else if (sl.type === "stop") {
+          const dau = mo.get(sl.number);
+          if (!dau?.length)
+            throw new EditError(
+              "DELETE_SLUR_PARTIAL",
+              "Vùng xoá cắt ngang một vòng luyến (chỉ chứa nốt cuối) — chọn trọn vòng luyến, hoặc bỏ luyến trước (S)."
+            );
+          boLuyen.add(dau.pop()!);
+          boLuyen.add(sl.el);
+        }
+      }
+    for (const con of mo.values())
+      if (con.length)
+        throw new EditError(
+          "DELETE_SLUR_PARTIAL",
+          "Vùng xoá cắt ngang một vòng luyến (chỉ chứa nốt đầu) — chọn trọn vòng luyến, hoặc bỏ luyến trước (S)."
+        );
+  }
+  for (const x of cac) {
+    if (x.ngu.kind === "rest") continue; // lặng sẵn: bỏ qua; cả vùng lặng = lệnh rỗng
+    makeRest(ctx, x.note, { type: "MakeRest", path: x.p }, x.ngu, boLuyen);
   }
 }
 
@@ -486,8 +684,20 @@ function boTechnical(ctx: Ctx, note: Element) {
  * khác, kể cả nốt đối ứng trên khuông TAB: Nội dung 2 đã chứng minh chúng là hai
  * nốt nguồn riêng biệt, tự ý sửa nốt thứ hai là sửa thứ thầy không hề chọn.
  */
-function makeRest(ctx: Ctx, note: Element, cmd: MakeRest, ngu: NoteContext) {
+function makeRest(
+  ctx: Ctx,
+  note: Element,
+  cmd: MakeRest,
+  ngu: NoteContext,
+  /** Những `<slur>` được phép bỏ theo (vòng luyến nằm trọn trong vùng xoá). */
+  boLuyen?: ReadonlySet<Element>
+) {
   if (ngu.kind === "rest") return; // đã là lặng rồi: lệnh rỗng, không phải lỗi
+  if (slurCua(note).some((sl) => !boLuyen?.has(sl.el)))
+    throw new EditError(
+      "EDIT_MAKE_REST_SLUR",
+      "Nốt này là đầu hoặc cuối một vòng luyến — xoá nó sẽ để luyến treo. Bỏ luyến trước (S), hoặc chọn trọn vòng luyến rồi xoá."
+    );
   if (ngu.chord !== "none")
     throw new EditError(
       "EDIT_MAKE_REST_CHORD",
@@ -507,7 +717,8 @@ function makeRest(ctx: Ctx, note: Element, cmd: MakeRest, ngu: NoteContext) {
     );
   for (const ten of CON_CHI_CUA_NOT_CO_CAO_DO)
     for (const el of elementChildren(note, ten)) removeLeaf(ctx, el);
-  boTechnical(ctx, note);
+  // Thế bấm và (nếu được phép) luyến: bỏ trong CÙNG một lượt qua `<notations>`.
+  boTrongNotations(ctx, note, (c) => c.localName === "technical" || !!boLuyen?.has(c));
   // `<rest/>` đứng đúng chỗ `<pitch>` vừa rời đi, theo thứ tự con của chuẩn.
   insertOrderedChild(ctx, note, NOTE_CHILD_ORDER, "rest", null);
   ctx.touched.push(`${cmd.path}/rest`);
@@ -1022,6 +1233,15 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
   if (!target)
     throw new EditError("EDIT_TARGET_NOT_FOUND", "Không tìm thấy nốt này trong bản nhạc.");
   const ctx: Ctx = { located, doc: located.doc, patches: [], touched: [], structural: [] };
+  // Hai lệnh nhiều nốt: tự định vị các đầu của chúng trên cùng một tài liệu.
+  if (cmd.type === "ToggleSlur") {
+    toggleSlur(ctx, located.doc, cmd);
+    return ketThuc(xml, located, ctx);
+  }
+  if (cmd.type === "MakeRestSequence") {
+    makeRestSequence(ctx, located.doc, cmd);
+    return ketThuc(xml, located, ctx);
+  }
   if (cmd.type === "ChangeHarmony") {
     if (target.localName !== "harmony")
       throw new EditError(

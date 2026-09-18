@@ -559,7 +559,7 @@ test("kiến trúc: mọi thứ của biên tập đều nằm sau đúng một 
     // Mỗi cửa vào của biên tập: chỗ VẼ ra, và chỗ XỬ LÝ khi bị gọi thẳng.
     const moc = ['<EditPanel', 'aria-pressed={chonNot}', 'np-note-panel', 'function onClickBanNhac', 'function apLenh', 'onClick={choChonNot ? onClickBanNhac : undefined}',
       // Cửa mới của Giai đoạn 4A: bàn phím và thanh công cụ.
-      '<EditorToolbar', 'function onKeyDownBanNhac', 'function apHanhDong', 'onKeyDown={choChonNot ? onKeyDownBanNhac : undefined}'];
+      '<ScoreToolPalette', 'function onKeyDownBanNhac', 'function apHanhDong', 'onKeyDown={choChonNot ? onKeyDownBanNhac : undefined}'];
     const hong: string[] = [];
     for (const m of moc) {
       let i = text.indexOf(m);

@@ -2,6 +2,7 @@ import type { MusicXmlEditCommand } from "../edit/commands.ts";
 import type { NoteFields } from "../edit/noteFields.ts";
 import { transposeSemitone, pitchName, samePitch, withAlter } from "../edit/pitchModel.ts";
 import type { EditorAction } from "./actions.ts";
+import { laGiaoDien } from "./actions.ts";
 import { capDoNhap } from "./noteEntry.ts";
 import type { EntryDuration, NoteEntryState } from "./noteEntry.ts";
 import type { Clipboard } from "../edit/clipboard.ts";
@@ -60,9 +61,13 @@ export function toCommand(
     action.type === "UNDO" ||
     action.type === "REDO" ||
     action.type === "EXTEND_SELECTION" ||
-    action.type === "COPY"
+    action.type === "COPY" ||
+    laGiaoDien(action)
   )
     return { kind: "noop" };
+  // Luyến cần HAI đầu — luôn đi qua `toCommandVung` với cả vùng chọn.
+  if (action.type === "TOGGLE_SLUR")
+    return tuChoi("Chọn ít nhất hai nốt liên tiếp để luyến (Shift+→).");
   if (!fields) return tuChoi("Chưa chọn nốt nào trên bản nhạc.");
 
   switch (action.type) {
@@ -194,4 +199,53 @@ export function toCommand(
       return tuChoi(`Hành động lạ: ${JSON.stringify(never)}`);
     }
   }
+}
+
+/** Một sự kiện trong vùng chọn, theo thứ tự bài — đủ để facade quyết định. */
+export interface MucVung {
+  path: string;
+  fields: NoteFields | null;
+}
+
+/**
+ * Ý định trên CẢ VÙNG CHỌN → một lệnh — Editor UX.
+ *
+ *   TOGGLE_SLUR → ToggleSlur        (nốt đầu → nốt cuối của vùng)
+ *   MAKE_REST   → MakeRestSequence  (cả vùng thành lặng, MỘT lần hoàn tác)
+ *               → MakeRest          khi vùng chỉ có một nốt (đúng đường cũ)
+ *
+ * Như `toCommand`: không đụng XML, không phát minh lệnh; lệnh tự kiểm lại mọi
+ * luật an toàn (cùng bè, cùng khuông, luyến lồng/chéo…).
+ */
+export function toCommandVung(action: EditorAction, vung: readonly MucVung[]): FacadeResult {
+  if (!vung.length) return tuChoi("Chưa chọn nốt nào trên bản nhạc.");
+  if (action.type === "TOGGLE_SLUR") {
+    if (vung.length < 2) return tuChoi("Chọn ít nhất hai nốt liên tiếp để luyến (Shift+→).");
+    const dau = vung[0];
+    const cuoi = vung[vung.length - 1];
+    for (const m of [dau, cuoi]) {
+      if (!m.fields || m.fields.kind === "rest" || !m.fields.pitch)
+        return tuChoi("Hai đầu luyến phải là nốt có cao độ — vùng chọn đang bắt đầu hoặc kết thúc ở dấu lặng.");
+      if (m.fields.chord !== "none") return tuChoi("Chưa hỗ trợ luyến bắt đầu hay kết thúc ở hợp âm.");
+    }
+    return { kind: "command", command: { type: "ToggleSlur", path: dau.path, denPath: cuoi.path } };
+  }
+  if (action.type === "MAKE_REST") {
+    if (vung.length === 1) return toCommand(action, vung[0].path, vung[0].fields);
+    const not = vung.filter((m) => m.fields?.kind !== "rest");
+    if (!not.length) return { kind: "noop" };
+    for (const m of not) {
+      const f = m.fields;
+      if (!f) return tuChoi("Không đọc được một nốt trong vùng chọn.");
+      if (f.chord !== "none") return tuChoi("Vùng chọn có hợp âm — xoá hợp âm chưa hỗ trợ.");
+      if (f.ties.length) return tuChoi("Vùng chọn có nốt nằm trong dấu nối — chưa hỗ trợ xoá.");
+      if (f.grace) return tuChoi("Vùng chọn có nốt hoa mỹ — chưa hỗ trợ xoá.");
+      if (f.khuongTab) return tuChoi("Vùng chọn có nốt trên khuông TAB — xoá vùng trên TAB chưa hỗ trợ.");
+    }
+    return {
+      kind: "command",
+      command: { type: "MakeRestSequence", path: vung[0].path, paths: vung.map((m) => m.path) },
+    };
+  }
+  return tuChoi("Hành động này không làm trên cả vùng.");
 }

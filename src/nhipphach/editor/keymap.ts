@@ -38,28 +38,35 @@ export interface KeyBinding {
   action: EditorAction;
   /** Hiện trong bảng trợ giúp. */
   mo: string;
+  /** Nhóm trong bảng trợ giúp (`?`). */
+  nhom: NhomPhim;
 }
+
+/** Thứ tự nhóm trong bảng trợ giúp. */
+export const NHOM_PHIM = ["Di chuyển", "Chọn vùng", "Nhập nốt", "Trường độ", "Chỉnh sửa"] as const;
+export type NhomPhim = (typeof NHOM_PHIM)[number];
 
 const D = (noteType: "16th" | "eighth" | "quarter" | "half" | "whole", key: string, ten: string): KeyBinding => ({
   key,
   action: { type: "SET_DURATION", noteType },
   mo: `Hình nốt: ${ten}`,
+  nhom: "Trường độ",
 });
 
 export const KEYMAP: readonly KeyBinding[] = [
   // ── Điều hướng (Smoosic trackerKeys) ─────────────────────────────────────
-  { key: "ArrowRight", action: { type: "MOVE", where: "next" }, mo: "Nốt sau" },
-  { key: "ArrowLeft", action: { type: "MOVE", where: "prev" }, mo: "Nốt trước" },
-  { key: "ArrowRight", ctrl: true, action: { type: "MOVE", where: "nextMeasure" }, mo: "Ô nhịp sau" },
-  { key: "ArrowLeft", ctrl: true, action: { type: "MOVE", where: "prevMeasure" }, mo: "Ô nhịp trước" },
-  { key: "Home", action: { type: "MOVE", where: "first" }, mo: "Nốt đầu bài" },
-  { key: "End", action: { type: "MOVE", where: "last" }, mo: "Nốt cuối bài" },
+  { key: "ArrowRight", action: { type: "MOVE", where: "next" }, mo: "Nốt sau" , nhom: "Di chuyển" },
+  { key: "ArrowLeft", action: { type: "MOVE", where: "prev" }, mo: "Nốt trước" , nhom: "Di chuyển" },
+  { key: "ArrowRight", ctrl: true, action: { type: "MOVE", where: "nextMeasure" }, mo: "Ô nhịp sau" , nhom: "Di chuyển" },
+  { key: "ArrowLeft", ctrl: true, action: { type: "MOVE", where: "prevMeasure" }, mo: "Ô nhịp trước" , nhom: "Di chuyển" },
+  { key: "Home", action: { type: "MOVE", where: "first" }, mo: "Nốt đầu bài" , nhom: "Di chuyển" },
+  { key: "End", action: { type: "MOVE", where: "last" }, mo: "Nốt cuối bài" , nhom: "Di chuyển" },
 
   // ── Cao độ (MuseScore) ───────────────────────────────────────────────────
-  { key: "ArrowUp", action: { type: "TRANSPOSE", semitones: 1 }, mo: "Lên nửa cung" },
-  { key: "ArrowDown", action: { type: "TRANSPOSE", semitones: -1 }, mo: "Xuống nửa cung" },
-  { key: "ArrowUp", ctrl: true, action: { type: "TRANSPOSE", semitones: 12 }, mo: "Lên một quãng tám" },
-  { key: "ArrowDown", ctrl: true, action: { type: "TRANSPOSE", semitones: -12 }, mo: "Xuống một quãng tám" },
+  { key: "ArrowUp", action: { type: "TRANSPOSE", semitones: 1 }, mo: "Lên nửa cung" , nhom: "Chỉnh sửa" },
+  { key: "ArrowDown", action: { type: "TRANSPOSE", semitones: -1 }, mo: "Xuống nửa cung" , nhom: "Chỉnh sửa" },
+  { key: "ArrowUp", ctrl: true, action: { type: "TRANSPOSE", semitones: 12 }, mo: "Lên một quãng tám" , nhom: "Chỉnh sửa" },
+  { key: "ArrowDown", ctrl: true, action: { type: "TRANSPOSE", semitones: -12 }, mo: "Xuống một quãng tám" , nhom: "Chỉnh sửa" },
 
   // ── Trường độ (MuseScore 3–7) ────────────────────────────────────────────
   D("16th", "3", "móc kép"),
@@ -67,35 +74,39 @@ export const KEYMAP: readonly KeyBinding[] = [
   D("quarter", "5", "nốt đen"),
   D("half", "6", "nốt trắng"),
   D("whole", "7", "nốt tròn"),
-  { key: ".", action: { type: "TOGGLE_DOT" }, mo: "Thêm / bỏ chấm dôi" },
+  { key: ".", action: { type: "TOGGLE_DOT" }, mo: "Thêm / bỏ chấm dôi" , nhom: "Trường độ" },
 
   // ── Cách ghi (Smoosic editorKeys: Shift+E toggleEnharmonic) ──────────────
-  { key: "E", shift: true, action: { type: "RESPELL" }, mo: "Đổi cách ghi (G♯ ↔ A♭)" },
+  { key: "E", shift: true, action: { type: "RESPELL" }, mo: "Đổi cách ghi (G♯ ↔ A♭)" , nhom: "Chỉnh sửa" },
 
   // ── Vùng chọn và bảng ghi tạm (4C) ──────────────────────────────────────
   // Shift+mũi tên là quy ước chung của mọi trình soạn thảo, Smoosic cũng vậy.
-  { key: "ArrowRight", shift: true, action: { type: "EXTEND_SELECTION", where: "next" }, mo: "Mở rộng vùng chọn sang phải" },
-  { key: "ArrowLeft", shift: true, action: { type: "EXTEND_SELECTION", where: "prev" }, mo: "Mở rộng vùng chọn sang trái" },
-  { key: "c", ctrl: true, action: { type: "COPY" }, mo: "Chép đoạn đang chọn" },
-  { key: "v", ctrl: true, action: { type: "PASTE" }, mo: "Dán vào chỗ lặng" },
+  { key: "ArrowRight", shift: true, action: { type: "EXTEND_SELECTION", where: "next" }, mo: "Mở rộng vùng chọn sang phải" , nhom: "Chọn vùng" },
+  { key: "ArrowLeft", shift: true, action: { type: "EXTEND_SELECTION", where: "prev" }, mo: "Mở rộng vùng chọn sang trái" , nhom: "Chọn vùng" },
+  { key: "c", ctrl: true, action: { type: "COPY" }, mo: "Chép đoạn đang chọn" , nhom: "Chọn vùng" },
+  { key: "v", ctrl: true, action: { type: "PASTE" }, mo: "Dán vào chỗ lặng" , nhom: "Chọn vùng" },
 
   // ── Xoá thành lặng (4B.1) ────────────────────────────────────────────────
   // Delete/Backspace là phản xạ của mọi người; `0` là quy ước MuseScore cho dấu
   // lặng; `R` là quy ước Smoosic. Bốn lối vào cùng MỘT nghĩa, và nghĩa ấy là
   // "giữ chỗ, giữ nhịp" chứ không phải "bỏ đi".
-  { key: "Delete", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
-  { key: "Backspace", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
-  { key: "0", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
-  { key: "r", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" },
+  { key: "Delete", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" , nhom: "Chỉnh sửa" },
+  { key: "Backspace", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" , nhom: "Chỉnh sửa" },
+  { key: "0", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" , nhom: "Chỉnh sửa" },
+  { key: "r", action: { type: "MAKE_REST" }, mo: "Xoá nốt → chuyển thành lặng để giữ nhịp" , nhom: "Chỉnh sửa" },
+
+  // ── Luyến (MuseScore 4: S = slur; Guitar Pro không có một phím chung cho
+  //    luyến nên theo MuseScore). Dấu nối (tie, MuseScore "+") CHƯA có lệnh. ──
+  { key: "s", action: { type: "TOGGLE_SLUR" }, mo: "Luyến / bỏ luyến vùng đang chọn", nhom: "Chỉnh sửa" },
 
   // ── Nhập nốt bằng chữ cái (MuseScore, Smoosic đều vậy) ───────────────────
   ...(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map(
-    (step): KeyBinding => ({ key: step.toLowerCase(), action: { type: "ENTER_PITCH", step }, mo: `Nhập nốt ${step}` })
+    (step): KeyBinding => ({ key: step.toLowerCase(), action: { type: "ENTER_PITCH", step }, mo: `Nhập nốt ${step}`, nhom: "Nhập nốt" })
   ),
 
   // ── Ngăn xếp nháp (cả ba editor lớn đều giống nhau) ──────────────────────
-  { key: "z", ctrl: true, action: { type: "UNDO" }, mo: "Hoàn tác" },
-  { key: "z", ctrl: true, shift: true, action: { type: "REDO" }, mo: "Làm lại" },
+  { key: "z", ctrl: true, action: { type: "UNDO" }, mo: "Hoàn tác" , nhom: "Chỉnh sửa" },
+  { key: "z", ctrl: true, shift: true, action: { type: "REDO" }, mo: "Làm lại" , nhom: "Chỉnh sửa" },
 ];
 
 /** Dạng chuẩn hoá của một cú bấm — không phụ thuộc DOM, để test được. */
@@ -166,7 +177,10 @@ export function phimCua(action: EditorAction): string | null {
  * kê rời ra thì bảng dài gấp đôi mà không nói thêm được gì.
  */
 export const BANG_TRO_GIUP = (() => {
-  const gop = new Map<string, string[]>();
-  for (const b of KEYMAP) gop.set(b.mo, [...(gop.get(b.mo) ?? []), nhanPhim(b)]);
-  return [...gop].map(([mo, phims]) => ({ phim: phims.join(" / "), mo }));
+  const gop = new Map<string, { phims: string[]; nhom: NhomPhim }>();
+  for (const b of KEYMAP) {
+    const cu = gop.get(b.mo);
+    gop.set(b.mo, { phims: [...(cu?.phims ?? []), nhanPhim(b)], nhom: b.nhom });
+  }
+  return [...gop].map(([mo, g]) => ({ phim: g.phims.join(" / "), mo, nhom: g.nhom }));
 })();

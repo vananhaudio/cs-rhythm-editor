@@ -629,7 +629,7 @@ test("kiến trúc: không có model bản nhạc thứ hai; EditorAction không
 });
 
 test("kiến trúc: thanh công cụ và bàn phím hội tụ tại EditorAction, không vá XML", () => {
-  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  const tb = stripComments(src("nhipphach/editor/ScoreToolPalette.tsx"));
   assert.doesNotMatch(tb, /@xmldom|xmlPatch|applyCommand|applyToDraft|ChangePitch|ChangeDuration/);
   // Mọi nút đều đi qua đúng một cửa.
   // MỌI onClick của thanh công cụ đều đi qua đúng một cửa: `onAction`. Nút Đóng
@@ -641,17 +641,15 @@ test("kiến trúc: thanh công cụ và bàn phím hội tụ tại EditorActio
   // Và mọi nút của thanh công cụ đều là cùng MỘT component, không có nút lẻ nào
   // tự dựng `<button>` riêng rồi tự gọi thẳng thứ khác.
   const soButton = (tb.match(/<button\b/g) ?? []).length;
-  assert.equal(soButton, 2, `có ${soButton} thẻ <button> — chỉ được có TBtn và nút Đóng`);
-  // 7 chỗ viết `<TBtn>`, hai trong số đó nằm trong `.map` nên hiện ra 12 nút:
-  // 5 hình nốt · chấm dôi · 3 dấu hoá · đổi cách ghi · LẶNG · hoàn tác · làm lại.
-  assert.equal((tb.match(/<TBtn\b/g) ?? []).length, 7, "thiếu hoặc thừa nút trên thanh công cụ");
+  assert.equal(soButton, 2, `có ${soButton} thẻ <button> — chỉ được có PBtn và nút Đóng`);
   assert.match(tb, /HINH_NOT\.map/);
   assert.match(tb, /DAU_HOA\.map/);
-  // Đúng một nút cho mỗi hành động của 4A, không thiếu không thừa.
-  const hanhDong = [...tb.matchAll(/type:\s*"(SET_DURATION|TOGGLE_DOT|SET_ALTER|RESPELL|MAKE_REST|UNDO|REDO)"/g)].map((m) => m[1]);
+  // Đúng một nút cho mỗi hành động của bảng ký hiệu, không thiếu không thừa.
+  const hanhDong = [...tb.matchAll(/type:\s*"([A-Z_]+)"/g)].map((m) => m[1]);
   assert.deepEqual(
     [...new Set(hanhDong)].sort(),
-    ["MAKE_REST", "REDO", "RESPELL", "SET_ALTER", "SET_DURATION", "TOGGLE_DOT", "UNDO"]
+    ["MAKE_REST", "OPEN_HARMONY", "OPEN_LYRIC", "REDO", "RESPELL", "SET_ALTER", "SET_DURATION",
+     "SHOW_HELP", "TOGGLE_DOT", "TOGGLE_INSPECTOR", "TOGGLE_SLUR", "UNDO"]
   );
 });
 
@@ -661,7 +659,7 @@ test("kiến trúc: mọi cửa vào bàn phím vẫn nằm sau cổng quyền s
   for (const moc of [
     "function onKeyDownBanNhac",
     "function apHanhDong",
-    "<EditorToolbar",
+    "<ScoreToolPalette",
     "onKeyDown={choChonNot ? onKeyDownBanNhac : undefined}",
   ]) {
     const i = page.indexOf(moc);
@@ -777,7 +775,7 @@ test("4A.1 thanh công cụ: nhãn phím lấy từ keymap, không hard-code tro
     assert.equal(phimCua(b.action), nhanPhim(dau));
   }
 
-  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  const tb = stripComments(src("nhipphach/editor/ScoreToolPalette.tsx"));
   assert.match(tb, /phimCua/, "thanh công cụ phải hỏi keymap");
   // Không một chuỗi phím nào được gõ tay trong JSX.
   // Cấm GIÁ TRỊ phím gõ tay. Chữ "phím" trong câu mô tả thì được — giá trị của
@@ -1138,7 +1136,7 @@ test("4B.1 BẢN KHẮC: nốt thành lặng thì id nguồn vẫn xuyên tới 
 });
 
 test("4B.1 thanh công cụ: nút Lặng lấy phím từ CHÍNH bảng phím, không gõ tay", () => {
-  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  const tb = stripComments(src("nhipphach/editor/ScoreToolPalette.tsx"));
   assert.match(tb, /action=\{\{ type: "MAKE_REST" \}\}/);
   // Không một chuỗi phím nào được viết thẳng vào JSX.
   assert.doesNotMatch(tb, /"Delete"|"Backspace"|aria-keyshortcuts="/);
@@ -1301,7 +1299,7 @@ test("4B.3 bản khắc: nốt vừa nhập vẽ ra được, CHỌN được, v
 });
 
 test("4B.3 thanh công cụ: một hàng nút, hai ngữ cảnh, và nói rõ đang ở cái nào", () => {
-  const tb = stripComments(src("nhipphach/editor/EditorToolbar.tsx"));
+  const tb = stripComments(src("nhipphach/editor/ScoreToolPalette.tsx"));
   // Ngữ cảnh suy từ chính dữ liệu, không từ một cờ do nơi gọi truyền vào.
   assert.match(tb, /const dangNhap = fields\?\.kind === "rest"/);
   assert.match(tb, /pressed=\{dangNhap \? truongDoNhap\.noteType === type/);

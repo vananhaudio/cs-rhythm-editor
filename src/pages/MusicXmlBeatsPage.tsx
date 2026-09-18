@@ -72,10 +72,10 @@ import type { DraftState } from "../nhipphach/edit/draftEngine";
 import type { MusicXmlEditCommand } from "../nhipphach/edit/commands";
 import { readNoteFields } from "../nhipphach/edit/noteFields";
 import { readHarmonyFields } from "../nhipphach/edit/harmonyFields";
-import { EditorToolbar, KeymapHelp } from "../nhipphach/editor/EditorToolbar";
+import { KeymapHelp, ScoreToolPalette } from "../nhipphach/editor/ScoreToolPalette";
 import type { EditorAction } from "../nhipphach/editor/actions";
 import { dispatch } from "../nhipphach/editor/dispatcher";
-import { toCommand } from "../nhipphach/editor/commandFacade";
+import { toCommand, toCommandVung } from "../nhipphach/editor/commandFacade";
 import { NHAP_BAN_DAU, datTruongDo, ghiNhoThamChieu } from "../nhipphach/editor/noteEntry";
 import { chepDoan } from "../nhipphach/edit/clipboard";
 import type { Clipboard } from "../nhipphach/edit/clipboard";
@@ -249,6 +249,8 @@ export default function MusicXmlBeatsPage({
   /** Bản hiện ra của trường độ đang cầm — chỉ để thanh công cụ vẽ, không phải nguồn sự thật. */
   const [truongDoNhap, setTruongDoNhap] = useState<EntryDuration>(NHAP_BAN_DAU.currentDuration);
   const [hienPhimTat, setHienPhimTat] = useState(false);
+  // Editor UX: Thuộc tính của nốt gập mặc định — bản nhạc là chính.
+  const [moThuocTinh, setMoThuocTinh] = useState(false);
   // ── Bản nháp biên tập (Giai đoạn Nội dung 3) — chỉ trong bộ nhớ ──────────
   // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
   // trạng thái và chuyển lệnh; không có dòng nào ở đây đụng vào XML.
@@ -648,6 +650,39 @@ export default function MusicXmlBeatsPage({
       datNganXep(lamLaiNhap);
       return;
     }
+    // ── Editor UX: hành động chỉ của giao diện — không lệnh nào ──
+    if (action.type === "TOGGLE_INSPECTOR") {
+      setMoThuocTinh((v) => !v);
+      return;
+    }
+    if (action.type === "SHOW_HELP") {
+      setHienPhimTat((v) => !v);
+      return;
+    }
+    if (action.type === "OPEN_LYRIC" || action.type === "OPEN_HARMONY") {
+      moChuHoacHopAm(action.type === "OPEN_LYRIC");
+      return;
+    }
+    // ── Lệnh trên VÙNG: luyến, xoá nhiều nốt — một lệnh, một lần hoàn tác ──
+    if (action.type === "TOGGLE_SLUR" || action.type === "MAKE_REST") {
+      const ds = dsSauLenh();
+      const ids = idDangChon(vungChonRef.current, ds);
+      if (action.type === "TOGGLE_SLUR" || ids.length > 1) {
+        const xml = nhapRef.current?.xml ?? source?.xml ?? null;
+        if (!xml) return;
+        const vung = ids
+          .map((id) => ds.find((n) => n.svgId === id))
+          .filter((n): n is NonNullable<typeof n> => !!n)
+          .map((n) => ({ path: n.path, fields: readNoteFields(xml, n.path) }));
+        const lv = toCommandVung(action, vung);
+        if (lv.kind === "refused") {
+          setNhapNote(lv.message);
+          return;
+        }
+        if (lv.kind === "command") apLenh(lv.command);
+        return;
+      }
+    }
     const caretBayGio = vungChonRef.current.caret;
     // Danh sách phải đọc từ NHÁP ĐỒNG BỘ, không từ bản đã khắc: nhập một nốt
     // có thể sinh thêm dấu lặng, và con trỏ nhảy sang chính nó ngay lập tức.
@@ -812,6 +847,48 @@ export default function MusicXmlBeatsPage({
       alter: p.alter,
       octave: p.octave,
     });
+  }
+
+  /**
+   * Mở ô sửa chữ hát / hợp âm của nốt ở con trỏ — tra theo DANH TÍNH nguồn:
+   * lời = dòng lời đầu của chính nốt (`noteSvgId`); hợp âm = `<harmony>` đứng
+   * ngay trước nốt trong cùng part + ô nhịp, không nốt nào (trừ nốt hợp âm) chen
+   * giữa. Không có thì nói rõ, không đoán theo toạ độ.
+   */
+  function moChuHoacHopAm(loi: boolean) {
+    const caret = vungChonRef.current.caret;
+    const not = caret ? dsSauLenh().find((n) => n.svgId === caret.sourceId) : null;
+    if (!score || !not) {
+      setNhapNote("Bấm một nốt trên bản nhạc trước đã.");
+      return;
+    }
+    if (loi) {
+      const l = [...score.lyricIndex.values()]
+        .filter((x) => x.noteSvgId === not.svgId)
+        .sort((a, b) => a.lyricIndex - b.lyricIndex)[0];
+      if (!l) return setNhapNote("Nốt này chưa có lời.");
+      setNotChon({ kind: "lyric", lyric: l });
+      return;
+    }
+    const chen = (c: number) =>
+      [...score.noteIndex.values()].some(
+        (n) =>
+          n.partIndex === not.partIndex &&
+          n.measureIndex === not.measureIndex &&
+          !n.chord &&
+          n.childIndex > c &&
+          n.childIndex < not.childIndex
+      );
+    const h = [...score.harmonyIndex.values()]
+      .filter(
+        (x) =>
+          x.partIndex === not.partIndex &&
+          x.measureIndex === not.measureIndex &&
+          x.childIndex < not.childIndex
+      )
+      .sort((a, b) => b.childIndex - a.childIndex)[0];
+    if (!h || chen(h.childIndex)) return setNhapNote("Nốt này chưa có hợp âm.");
+    setNotChon({ kind: "harmony", harmony: h });
   }
 
   /**
@@ -2545,9 +2622,11 @@ export default function MusicXmlBeatsPage({
                   </div>
                 )}
                 {choChonNot && chonNot && (
-                  <EditorToolbar
+                  <ScoreToolPalette
                     fields={truongCaret}
                     truongDoNhap={truongDoNhap}
+                    coVung={idDangChon(vungChon, notDiDuoc).length > 1}
+                    moThuocTinh={moThuocTinh}
                     canUndo={!!nhap && coTheHoanTac(nhap)}
                     canRedo={!!nhap && coTheLamLai(nhap)}
                     onAction={apHanhDong}
@@ -2573,11 +2652,13 @@ export default function MusicXmlBeatsPage({
                       if (duocBoNhap()) boNhap();
                     }}
                     onSave={(ghiChu) => void luuNhap(ghiChu)}
+                    moChiTiet={moThuocTinh}
                   />
                 )}
                 <div
                   ref={prevBody}
                   onClick={choChonNot ? onClickBanNhac : undefined}
+                  onDoubleClick={choChonNot && chonNot ? () => setMoThuocTinh(true) : undefined}
                   onKeyDown={choChonNot ? onKeyDownBanNhac : undefined}
                   tabIndex={choChonNot && chonNot ? 0 : undefined}
                   className={`np-prev-body${

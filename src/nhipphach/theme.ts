@@ -189,21 +189,24 @@ export const NP_CSS = `
 /* Lời và hợp âm chỉ đổi màu khi CHÍNH nó được chọn. */
 .${NP_SCOPE} .np-page g.verse.np-note-selected text,.${NP_SCOPE} .np-page g.harm.np-note-selected text{fill:var(--indigo);stroke:var(--indigo);}
 /* ── Thanh công cụ biên tập (Giai đoạn 4A) ───────────────────────────────── */
-.${NP_SCOPE} .np-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:6px 10px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);}
-.${NP_SCOPE} .np-toolbar-group{display:inline-flex;gap:4px;align-items:center;}
-.${NP_SCOPE} .np-toolbar-group + .np-toolbar-group{padding-left:12px;border-left:1px solid var(--line);}
-.${NP_SCOPE} .np-tbtn{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12.5px;line-height:1;min-height:30px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);cursor:pointer;}
 /* Nhãn phím tắt ngay trên nút, lấy từ chính bảng phím — không gõ tay lần hai. */
-.${NP_SCOPE} .np-tkey{font-size:10.5px;font-weight:700;padding:1px 4px;border-radius:4px;background:#EFECE5;color:var(--ink-hint);}
-.${NP_SCOPE} .np-tbtn[aria-pressed="true"] .np-tkey{background:rgba(255,255,255,.24);color:#fff;}
-.${NP_SCOPE} .np-tbtn:disabled .np-tkey{background:#EFECE5;}
-.${NP_SCOPE} .np-tbtn:hover:not(:disabled){background:var(--indigo-tint);border-color:#D3CEE8;}
-.${NP_SCOPE} .np-tbtn[aria-pressed="true"]{background:var(--indigo);border-color:var(--indigo);color:#fff;}
-.${NP_SCOPE} .np-tbtn:disabled{opacity:.4;cursor:not-allowed;}
-.${NP_SCOPE} .np-toolbar-hint{margin-left:auto;font-size:12px;color:var(--ink-hint);}
 /* Con trỏ đứng trên dấu lặng: hàng hình nốt đang chọn CÂY BÚT, không sửa bản
    nhạc. Nói thẳng ra một câu còn hơn để thầy đoán vì sao bấm 4 mà nốt không đổi. */
-.${NP_SCOPE} .np-toolbar-mode{margin-left:12px;font-size:12px;font-weight:600;color:var(--accent);white-space:nowrap;}
+.${NP_SCOPE} .np-palette{display:flex;flex-wrap:wrap;align-items:center;gap:4px 0;padding:4px 6px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);}
+.${NP_SCOPE} .np-pal-group{display:inline-flex;align-items:center;gap:2px;padding:0 6px;}
+.${NP_SCOPE} .np-pal-group + .np-pal-group{border-left:1px solid var(--line);}
+.${NP_SCOPE} .np-pal-end{margin-left:auto;}
+.${NP_SCOPE} .np-pbtn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:32px;height:32px;padding:0;font:inherit;font-size:13px;line-height:1;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--ink);cursor:pointer;}
+.${NP_SCOPE} .np-pbtn-glyph{font-family:Bravura,serif;font-size:20px;}
+.${NP_SCOPE} .np-pbtn:hover:not(:disabled){background:var(--indigo-tint);border-color:#D3CEE8;}
+.${NP_SCOPE} .np-pbtn[aria-pressed="true"]{background:var(--indigo);border-color:var(--indigo);color:#fff;}
+.${NP_SCOPE} .np-pbtn:focus-visible{outline:2px solid var(--indigo);outline-offset:1px;}
+.${NP_SCOPE} .np-pbtn:disabled{opacity:.35;cursor:not-allowed;}
+.${NP_SCOPE} .np-pal-small{font-family:system-ui,sans-serif;font-size:10px;margin:0 1px;}
+.${NP_SCOPE} .np-pal-txt{font-size:12px;font-weight:600;}
+.${NP_SCOPE} .np-pal-mode{display:inline-flex;align-items:center;height:24px;padding:0 6px;margin-left:4px;border-radius:6px;background:#FDEBD9;color:var(--accent);font-size:16px;white-space:nowrap;}
+@media (max-width:720px){.${NP_SCOPE} .np-palette{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;}.${NP_SCOPE} .np-pal-end{margin-left:0;}}
+.${NP_SCOPE} .np-keyhelp-group h4{margin:8px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-hint);}
 .${NP_SCOPE} .np-keyhelp{padding:10px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:13px;}
 .${NP_SCOPE} .np-keyhelp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .${NP_SCOPE} .np-keyhelp ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 14px;}

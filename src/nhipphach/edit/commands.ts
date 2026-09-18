@@ -182,7 +182,43 @@ export interface PasteSequence {
   items: readonly ClipboardItem[];
 }
 
+/**
+ * Bật / tắt MỘT vòng luyến (slur) từ nốt `path` tới nốt `denPath` — Editor UX.
+ *
+ * Luyến KHÁC dấu nối (tie): luyến là cách diễn tấu (legato) nối các cao độ khác
+ * nhau, dấu nối cộng trường độ của hai nốt cùng cao độ. Hai lệnh riêng, không
+ * bao giờ dùng chung.
+ *
+ * Chưa có vòng luyến nào đúng từ `path` tới `denPath` → thêm `<slur type="start">`
+ * vào nốt đầu và `<slur type="stop">` vào nốt cuối (cùng `number`). Đã có đúng
+ * vòng đó → bỏ cả hai. Phạm vi an toàn: cùng part, cùng khuông, cùng bè; hai đầu
+ * là nốt có cao độ, không phải nốt hợp âm; trong vùng không có vòng luyến nào
+ * khác chạm vào (lồng / chéo nhau chưa hỗ trợ).
+ */
+export interface ToggleSlur {
+  type: "ToggleSlur";
+  /** Nốt đầu vòng luyến. */
+  path: string;
+  /** Nốt cuối vòng luyến (đứng SAU `path` theo thứ tự bài). */
+  denPath: string;
+}
+
+/**
+ * Xoá cả một vùng nốt = chuyển từng nốt thành lặng, trong MỘT lệnh — Editor UX.
+ * Một lần hoàn tác trả lại cả vùng. Cùng luật với `MakeRest` cho từng nốt; hỏng
+ * một nốt là cả lệnh bị từ chối, không có nửa vời.
+ */
+export interface MakeRestSequence {
+  type: "MakeRestSequence";
+  /** Nốt đầu vùng (để lệnh có địa chỉ như mọi lệnh khác). */
+  path: string;
+  /** Mọi sự kiện trong vùng, theo thứ tự bài; dấu lặng sẵn có được bỏ qua. */
+  paths: readonly string[];
+}
+
 export type MusicXmlEditCommand =
+  | ToggleSlur
+  | MakeRestSequence
   | ChangePitch
   | RespellNote
   | ChangeDuration
@@ -209,6 +245,8 @@ export const COMMAND_GROUP: Record<
   ChangeDurationAndRebalance: "note",
   InsertNoteIntoRest: "note",
   PasteSequence: "note",
+  ToggleSlur: "note",
+  MakeRestSequence: "note",
 };
 
 export const CHANGE_NOTE_MAX = 300;
@@ -225,6 +263,8 @@ const MO_TA: Record<MusicXmlEditCommand["type"], (n: number) => string> = {
   ChangeDurationAndRebalance: (n) => `sửa trường độ ${n} nốt (cân lại ô nhịp)`,
   InsertNoteIntoRest: (n) => `nhập ${n} nốt (cân lại chỗ lặng)`,
   PasteSequence: (n) => `dán ${n} đoạn nhạc`,
+  ToggleSlur: (n) => `sửa luyến ${n} chỗ`,
+  MakeRestSequence: (n) => `xoá ${n} vùng nốt`,
 };
 const KHOA = (c: MusicXmlEditCommand) =>
   c.type === "ChangeLyricText" ? `${c.path}#${c.lyricIndex}` : c.path;

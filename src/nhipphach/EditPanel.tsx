@@ -57,6 +57,12 @@ export interface EditPanelProps {
   onRedo(): void;
   onCancel(): void;
   onSave(changeNote: string): void;
+  /**
+   * Editor UX: bảng Thuộc tính của NỐT là phụ — gập mặc định, mở bằng nút
+   * "Thuộc tính" hay nháy đúp. Chữ hát/hợp âm luôn hiện ô sửa (không có phím tắt).
+   * Bỏ trống = mở (giữ hành vi cũ cho chỗ khác dùng).
+   */
+  moChiTiet?: boolean;
 }
 
 const ACCIDENTAL_CHOICES: { id: AccidentalChoice; ten: string }[] = [
@@ -539,6 +545,7 @@ export function EditPanel({
   onRedo,
   onCancel,
   onSave,
+  moChiTiet = true,
 }: EditPanelProps) {
   const dirty = !!draft && isDirty(draft);
   const soLenh = draft ? appliedCommands(draft).length : 0;
@@ -573,7 +580,7 @@ export function EditPanel({
         </span>
       </div>
 
-      {selection ? (
+      {selection && !moChiTiet && selection.kind === "note" ? null : selection ? (
         <ScoreTools selection={selection} onCommand={onCommand} />
       ) : (
         <div className="np-edit-row">
