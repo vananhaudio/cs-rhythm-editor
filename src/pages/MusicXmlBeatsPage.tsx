@@ -470,6 +470,9 @@ export default function MusicXmlBeatsPage({
     // trạng thái cũ vẫn còn, hoặc người ta gọi thẳng bằng DOM. Mọi cửa vào của
     // biên tập đều phải tự hỏi lại quyền, không tin vào việc "nút không hiện".
     if (!choChonNot || !chonNot || !score) return;
+    // Bấm nốt là trả phím nóng về bản nhạc — kể cả khi trước đó focus đang ở
+    // một ô chọn / nút của panel.
+    prevBody.current?.focus({ preventScroll: true });
     const r = resolveScoreElement(
       e.target as unknown as Parameters<typeof resolveScoreElement>[0],
       { notes: score.noteIndex, lyrics: score.lyricIndex, harmonies: score.harmonyIndex }
@@ -915,13 +918,48 @@ export default function MusicXmlBeatsPage({
       {
         choSua: choChonNot,
         dangMoModal: moThuVien || !!trungLap,
-        focused: (typeof document === "undefined" ? null : document.activeElement) as never,
+        // Đường nghe cấp cửa sổ (target null) đã tự lọc ô nhập; nút đang giữ
+        // focus ở đó KHÔNG được chặn phím nóng.
+        focused: (e.target && typeof document !== "undefined" ? document.activeElement : null) as never,
       }
     );
     if (ra.kind !== "action") return;
     e.preventDefault();
     apHanhDong(ra.action);
   }
+
+  /**
+   * Editor UX vòng 2 — phím nóng không phụ thuộc focus của khung bản nhạc.
+   *
+   * Trước đây chỉ `onKeyDown` của khung nghe phím: bấm một nút / ô chọn của
+   * panel xong là focus nằm lại đó và mọi phím nóng im bặt. Giờ nghe ở cấp cửa
+   * sổ; chỉ nhường khi đang THẬT SỰ gõ chữ (input / textarea / select /
+   * contenteditable). Phím rơi vào chính khung thì để `onKeyDown` của khung lo.
+   */
+  const phimNongRef = useRef(onKeyDownBanNhac);
+  phimNongRef.current = onKeyDownBanNhac;
+  useEffect(() => {
+    if (!choChonNot || !chonNot) return;
+    const nghe = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t && prevBody.current?.contains(t)) return;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      // Nút đang giữ focus: Enter / Space là của nút, còn lại là phím nóng.
+      if (t?.tagName === "BUTTON" && (e.key === "Enter" || e.key === " ")) return;
+      phimNongRef.current({
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        target: null,
+        preventDefault: () => e.preventDefault(),
+      } as unknown as React.KeyboardEvent<HTMLDivElement>);
+    };
+    window.addEventListener("keydown", nghe);
+    return () => window.removeEventListener("keydown", nghe);
+  }, [choChonNot, chonNot]);
 
   /** Panel phát lệnh → áp lên nháp. Lệnh bị từ chối thì nói rõ, nháp giữ nguyên. */
   function apLenh(cmd: MusicXmlEditCommand): boolean {

@@ -313,3 +313,18 @@ test("vòng 2: ← → và Shift+→ ở LẠI trong dòng — không rơi sang 
   const m = diChuyen(ds, caretTaiId(ds, dau.svgId), "nextMeasure");
   if (m) assert.equal(ds[m.sourceIndex].staff, dau.staff);
 });
+
+test("vòng 2: phím nóng nghe ở cấp cửa sổ — focus ở nút/ô chọn panel không làm tắt phím", () => {
+  const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
+  assert.match(page, /window\.addEventListener\("keydown", nghe\)/);
+  assert.match(page, /window\.removeEventListener\("keydown", nghe\)/);
+  // Nhường cho ô nhập thật sự, và cho chính khung bản nhạc (tránh chạy hai lần).
+  assert.match(page, /INPUT\|TEXTAREA\|SELECT/);
+  assert.match(page, /prevBody\.current\?\.contains\(t\)/);
+  // Vẫn sau cổng quyền.
+  assert.match(page, /if \(!choChonNot \|\| !chonNot\) return;\s*const nghe/);
+  // Bấm nốt thì kéo focus về bản nhạc.
+  assert.match(page, /prevBody\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  // Nút đang giữ focus không chặn phím nóng trên đường cửa sổ.
+  assert.deepEqual(dispatch({ key: "s", target: null }, { choSua: true, focused: null }), { kind: "action", action: { type: "TOGGLE_SLUR" } });
+});
