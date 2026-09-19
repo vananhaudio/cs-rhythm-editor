@@ -51,3 +51,4 @@ docs/musicxml-beats-mvp/output/*
 # Python bytecode của các verifier artifact
 __pycache__/
 *.py[cod]
+tests/class-mail/.fixture.json

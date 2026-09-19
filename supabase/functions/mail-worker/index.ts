@@ -14,6 +14,7 @@
  * status='failed' + error, business state giữ nguyên, retry/resend được.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { ENTRY_PRODUCTS, absUrl, buildClassPlanEmail, leadPlan, type ClassRow, type PlanPackage, type StageRow } from './classPlanMail.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -90,7 +91,30 @@ interface LeadInfo {
 interface BuiltMail { subject: string; content: string }
 
 // ─── EMAIL 1 — registration_received ────────────────────────────────────
+/** Lead mô hình mới ([plan:…]) — cùng nguồn giá/lịch với checkout. Lỗi dữ liệu → throw (mail_log failed), KHÔNG rơi về 990k. */
+async function buildClassPlanEmail1(lead: LeadInfo, cfg: Record<string, string>): Promise<BuiltMail> {
+  const code = ((lead.class_name ?? '').match(/·\s*([A-Z0-9.]+)\s*$/) ?? [])[1] ?? null
+  const [pk, mb, cs] = await Promise.all([
+    supabase.from('packages').select('name,config').in('package_code', ['CLASS_MONTHLY', 'CLASS_SIXMONTH']).eq('status', 'active'),
+    supabase.from('membership_benefits').select('key,label'),
+    code ? supabase.from('class_schedule').select('id,code,name,schedule,start_date,weekday,start_time,duration_minutes,public_product').eq('code', code).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ])
+  if (pk.error || mb.error || !pk.data?.length) throw new Error('Không đọc được packages CLASS_* / membership_benefits')
+  const cls = cs.data as (ClassRow & { id: string; public_product: string | null }) | null
+  const { data: st } = cls ? await supabase.from('class_stages').select('stage_no,public_title,starts_on,ends_on').eq('class_id', cls.id).order('stage_no') : { data: [] }
+  const benefitLabels: Record<string, string> = {}
+  for (const b of mb.data ?? []) benefitLabels[b.key] = b.label
+  return buildClassPlanEmail({
+    leadName: lead.name, className: lead.class_name, note: lead.note,
+    plans: pk.data as PlanPackage[], benefitLabels, cls, stages: (st ?? []) as StageRow[],
+    entryClass: ENTRY_PRODUCTS.includes(cls?.public_product ?? ''), cfg,
+    todayIso: new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10),
+  })
+}
+
 async function buildEmail1(lead: LeadInfo, cfg: Record<string, string>): Promise<BuiltMail> {
+  if (leadPlan(lead.note)) return buildClassPlanEmail1(lead, cfg)
   const note = parseNote(lead.note)
   const mode = note['reg-mode'] ?? 'class'
   const cls = await classInfo(lead.class_name)
@@ -115,7 +139,7 @@ async function buildEmail1(lead: LeadInfo, cfg: Record<string, string>): Promise
     amount = clsVnd !== null ? fmtVnd(clsVnd + psum.vnd) : 'theo thông tin Thầy gửi'
   }
 
-  const qrUrl = (cfg['site_url'] ?? '') + (cfg['bank_qr'] ?? '/qr-thanhtoan.png')
+  const qrUrl = absUrl(cfg['payment_qr'] || '/qr-thanhtoan.png', cfg['class_site_url'])
   const content = `
 <p>Chào anh/chị <b>${escapeHtml(lead.name)}</b>,</p>
 <p>Thầy đã nhận được đăng ký của anh/chị. Dưới đây là thông tin đăng ký:</p>
@@ -126,8 +150,8 @@ ${lines.join('<br><br>')}
 <p>Anh/chị chuyển khoản theo thông tin bên dưới (${amount !== '' ? `số tiền <b>${amount}</b>` : 'số tiền theo thông tin Thầy gửi'}):</p>
 <table style="border-collapse:collapse;font-size:14px">
 <tr><td style="padding:4px 12px 4px 0;color:#5A5470">Ngân hàng</td><td style="padding:4px 0;font-weight:700">${escapeHtml(cfg['bank_name'] ?? '')}</td></tr>
-<tr><td style="padding:4px 12px 4px 0;color:#5A5470">Số tài khoản</td><td style="padding:4px 0;font-weight:700">${escapeHtml(cfg['bank_account'] ?? '')}</td></tr>
-<tr><td style="padding:4px 12px 4px 0;color:#5A5470">Chủ tài khoản</td><td style="padding:4px 0;font-weight:700">${escapeHtml(cfg['bank_owner'] ?? '')}</td></tr>
+<tr><td style="padding:4px 12px 4px 0;color:#5A5470">Số tài khoản</td><td style="padding:4px 0;font-weight:700">${escapeHtml(cfg['bank_account_number'] ?? '')}</td></tr>
+<tr><td style="padding:4px 12px 4px 0;color:#5A5470">Chủ tài khoản</td><td style="padding:4px 0;font-weight:700">${escapeHtml(cfg['bank_account_name'] ?? '')}</td></tr>
 <tr><td style="padding:4px 12px 4px 0;color:#5A5470">Nội dung CK</td><td style="padding:4px 0;font-weight:700">${escapeHtml(lead.name)}</td></tr>
 </table>
 <p>Hoặc quét mã QR: <a href="${qrUrl}">xem mã QR thanh toán</a></p>
