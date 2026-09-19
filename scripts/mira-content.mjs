@@ -62,6 +62,8 @@ async function main() {
   const m = await import(resolve(TMP, ".mira-entry.js"));
   // 09/2026: KHÔNG bóc chữ từ các modal Đệm hát / Tỉa nốt / Nâng cao nữa — chúng mô tả lộ trình nội bộ.
   // Mira chỉ giới thiệu các lớp đang tuyển (tên + dành cho ai) và bộ hỏi đáp public.
+  // Tên công khai theo public_product (Mira dùng để gọi đúng tên lớp đang tuyển lấy từ class_schedule)
+  const productTitles = Object.fromEntries(Object.entries(m.PRODUCTS).map(([k, p]) => [k, p.title]));
   const classes = m.MIRA_CLASSES.map((k) => `Lớp ${m.PRODUCTS[k].title}: ${m.PRODUCTS[k].desc}`);
   const faqPublic = m.FAQS.map((f) => `Hỏi: ${f.q}\nĐáp: ${f.a.map((b) => (typeof b === "string" ? b : Array.isArray(b) ? b.join("; ") : "")).filter(Boolean).join(" ")}`);
   const doors = m.DOORS.map(
@@ -73,6 +75,7 @@ async function main() {
 
   const out = {
     generatedFrom: "cs-rhythm-editor · scripts/mira-content.mjs",
+    productTitles,
     classes,
     doors,
     starters,

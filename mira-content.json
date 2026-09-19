@@ -1,5 +1,13 @@
 {
   "generatedFrom": "cs-rhythm-editor · scripts/mira-content.mjs",
+  "productTitles": {
+    "dem_hat_can_ban": "Đệm hát căn bản",
+    "guitar_can_ban": "Guitar căn bản",
+    "dem_hat_trung_cap": "Đệm hát trung cấp",
+    "guitar_trung_cap": "Guitar trung cấp",
+    "dem_hat_nang_cao": "Đệm hát nâng cao",
+    "solo_guitar": "Solo Guitar"
+  },
   "classes": [
     "Lớp Đệm hát căn bản: Dành cho người mới muốn vừa đàn vừa hát những bài mình yêu thích.",
     "Lớp Guitar căn bản: Dành cho người mới muốn bắt đầu từ những điều cơ bản và chơi những giai điệu đầu tiên.",
