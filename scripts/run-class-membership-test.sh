@@ -4,7 +4,14 @@
 set -e
 cd "$(dirname "$0")/.."
 T=db/tests/class_membership_test.sql
-if [ "$1" = "public" ]; then
+if [ "$1" = "model" ]; then
+  M=db/tests/class_model_test.sql
+  sql="begin;
+$(sed -n '/@@SNAPSHOT/,/@@END_SNAPSHOT/p' $M)
+$(sed -e '/^begin;$/d' -e '/^commit;$/d' db/class_model_t3_t4.sql)
+$(sed -n '/@@TEST/,/@@END_TEST/p' $M)
+rollback;"
+elif [ "$1" = "public" ]; then
   mig=$(sed -e '/^begin;$/d' -e '/^commit;$/d' db/class_public_products_trung_cap.sql)
   sql="begin;
 $mig
