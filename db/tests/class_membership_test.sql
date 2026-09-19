@@ -53,16 +53,16 @@ begin
 
   -- ── A. Monthly · Đệm hát căn bản (DH1.KD20) ──
   insert into public.leads (name, email, class_name, path, intent, note, source, status, student_id)
-  values ('T1', 'mb-t1@example.test', 'Đệm hát căn bản · DH1.KD20', 'dem_hat', 'dang_ky',
-          '[public-product:dem_hat_can_ban][plan:monthly]', 'landing', 'Mới đăng ký', s1) returning id into l1;
+  values ('T1', 'mb-t1@example.test', 'Đệm hát 2 · DEM.T4', 'dem_hat', 'dang_ky',
+          '[public-product:dem_hat_nang_cao][plan:monthly]', 'landing', 'Mới đăng ký', s1) returning id into l1;
   r := public.activate_class_membership(l1);
   if r->>'package_code' <> 'CLASS_MONTHLY' or (r->>'already_done')::boolean then raise exception 'A1 %', r; end if;
-  if r->'granted_codes' <> '["DH1"]'::jsonb then raise exception 'A2 codes %', r; end if;
-  if not exists (select 1 from public.edu_group_members m join public.edu_groups g on g.id = m.group_id where m.user_id = u1 and g.code = 'DH1.KD20' and m.status = 'active') then raise exception 'A3 group'; end if;
+  if r->'granted_codes' <> '["DH2"]'::jsonb then raise exception 'A2 codes %', r; end if;
+  if not exists (select 1 from public.edu_group_members m join public.edu_groups g on g.id = m.group_id where m.user_id = u1 and g.code = 'DEM.T4' and m.status = 'active') then raise exception 'A3 group'; end if;
   if (select count(*) from public.edu_course_access where student_id = s1) <> 0 then raise exception 'A4 PERMANENT course access created'; end if;
   if (select count(*) from public.edu_enrollments where student_id = s1) <> 0 then raise exception 'A5 PERMANENT enrollment created'; end if;
-  if not public.has_course_access(s1, dh1) then raise exception 'A6 DH1 via package'; end if;
-  if public.has_course_access(s1, tn1) or public.has_course_access(s1, dh2) then raise exception 'A7 extra course'; end if;
+  if not public.has_course_access(s1, dh2) then raise exception 'A6 DH2 via package'; end if;
+  if public.has_course_access(s1, tn1) or public.has_course_access(s1, dh1) then raise exception 'A7 extra course'; end if;
   if (select effective_tier from public.get_effective_student_entitlement(s1)) <> 'free' then raise exception 'A8 tier not free'; end if;
   v_end := (select renews_at from public.student_packages where id = (r->>'student_package_id')::bigint);
   if v_end <> ((now() at time zone 'Asia/Ho_Chi_Minh') + interval '1 month') at time zone 'Asia/Ho_Chi_Minh' then raise exception 'A9 expiry %', v_end; end if;
@@ -75,12 +75,12 @@ begin
   -- học viên nhìn từ my_learning_state: DH1 mở, DH2 (không policy) KHÔNG mở ⇒ không mở toàn kho
   perform set_config('request.jwt.claims', jsonb_build_object('sub', u1, 'role', 'authenticated')::text, true);
   st := public.my_learning_state();
-  if (select c->>'access' from jsonb_array_elements(st->'courses') c where c->>'code' = 'DH1') <> 'open' then raise exception 'A14 DH1 not open in learning state'; end if;
-  if (select c->>'access' from jsonb_array_elements(st->'courses') c where c->>'code' = 'DH2') = 'open' then raise exception 'A15 library open for monthly'; end if;
+  if (select c->>'access' from jsonb_array_elements(st->'courses') c where c->>'code' = 'DH2') <> 'open' then raise exception 'A14 DH2 not open in learning state'; end if;
+  if (select c->>'access' from jsonb_array_elements(st->'courses') c where c->>'code' = 'DH1') = 'open' then raise exception 'A15 library open for monthly'; end if;
   m := public.my_membership();
   if m->'membership'->>'plan' <> 'monthly' or m->'membership'->>'status' <> 'active' or m->>'app_tier' <> 'free' then raise exception 'A16 %', m->'membership'; end if;
   if (m->'membership'->>'days_left')::int not between 28 and 31 then raise exception 'A17 days_left'; end if;
-  if jsonb_array_length(m->'classes') <> 1 or m->'classes'->0->>'code' <> 'DH1.KD20' or m->'classes'->0->'next_session' = 'null'::jsonb then raise exception 'A18 classes %', m->'classes'; end if;
+  if jsonb_array_length(m->'classes') <> 1 or m->'classes'->0->>'code' <> 'DEM.T4' or m->'classes'->0->'next_session' = 'null'::jsonb then raise exception 'A18 classes %', m->'classes'; end if;
   select b->>'active' into t from jsonb_array_elements(m->'benefits') b where b->>'key' = 'pdf_thang';
   if t <> 'true' then raise exception 'A19 pdf_thang'; end if;
   if (select b->>'reason' from jsonb_array_elements(m->'benefits') b where b->>'key' = 'pdf_thang') <> 'plan' then raise exception 'A20 pdf reason'; end if;
@@ -96,18 +96,18 @@ begin
 
   -- ── B. Monthly · Guitar căn bản (TN1.GL14) ──
   insert into public.leads (name, email, class_name, path, intent, note, source, status, student_id)
-  values ('T2', 'mb-t2@example.test', 'Guitar căn bản · TN1.GL14', 'tia_not', 'dang_ky',
-          '[public-product:guitar_can_ban][plan:monthly]', 'landing', 'Mới đăng ký', s2) returning id into l2;
+  values ('T2', 'mb-t2@example.test', 'Solo Guitar 1 · SOLO.T4', 'solo', 'dang_ky',
+          '[public-product:solo_guitar][plan:monthly]', 'landing', 'Mới đăng ký', s2) returning id into l2;
   r := public.activate_class_membership(l2);
-  if r->'granted_codes' <> '["TN1"]'::jsonb or r->>'class_code' <> 'TN1.GL14' then raise exception 'B1 %', r; end if;
+  if r->'granted_codes' <> '["SOLO"]'::jsonb or r->>'class_code' <> 'SOLO.T4' then raise exception 'B1 %', r; end if;
   if (select count(*) from public.edu_course_access where student_id = s2) + (select count(*) from public.edu_enrollments where student_id = s2) <> 0 then raise exception 'B2 permanent'; end if;
-  if not public.has_course_access(s2, tn1) or public.has_course_access(s2, dh1) then raise exception 'B3'; end if;
+  if not public.has_course_access(s2, solo) or public.has_course_access(s2, dh1) then raise exception 'B3'; end if;
   if (select effective_tier from public.get_effective_student_entitlement(s2)) <> 'free' then raise exception 'B4'; end if;
 
   -- ── C. Six-month (TN1.GL14) ──
   insert into public.leads (name, email, class_name, path, intent, note, source, status, student_id)
-  values ('T3', 'mb-t3@example.test', 'Guitar căn bản · TN1.GL14', 'tia_not', 'dang_ky',
-          '[public-product:guitar_can_ban][plan:six_month]', 'landing', 'Mới đăng ký', s3) returning id into l3;
+  values ('T3', 'mb-t3@example.test', 'Guitar căn bản 2 · CB2.T3', 'guitar', 'dang_ky',
+          '[public-product:guitar_can_ban_2][plan:six_month]', 'landing', 'Mới đăng ký', s3) returning id into l3;
   r := public.activate_class_membership(l3);
   if r->>'package_code' <> 'CLASS_SIXMONTH' then raise exception 'C1 %', r; end if;
   v_end := (r->>'renews_at')::timestamptz;
@@ -124,19 +124,19 @@ begin
   perform set_config('request.jwt.claims', jsonb_build_object('sub', teacher, 'role', 'authenticated')::text, true);
 
   -- ── D. Expiry + renew (monthly T1) ──
-  select id into lesson from public.edu_course_lessons l where l.module_id in (select id from public.edu_modules where course_id = dh1) limit 1;
+  select id into lesson from public.edu_course_lessons l where l.module_id in (select id from public.edu_modules where course_id = dh2) limit 1;
   insert into public.edu_lesson_progress (student_id, lesson_id, status, completed_at) values (s1, lesson, 'completed', now());
   update public.student_packages set starts_at = now() - interval '40 days', renews_at = now() - interval '10 days' where student_id = s1;
-  if public.has_course_access(s1, dh1) then raise exception 'D1 expired package still grants'; end if;
+  if public.has_course_access(s1, dh2) then raise exception 'D1 expired package still grants'; end if;
   m := public.my_membership(s1);
   if m->'membership'->>'status' <> 'expired' or m->'membership'->'days_left' <> 'null'::jsonb then raise exception 'D2 %', m->'membership'; end if;
   if (select (b->>'active')::boolean from jsonb_array_elements(m->'benefits') b where b->>'key' = 'pdf_thang') then raise exception 'D3 plan benefit after expiry'; end if;
   if (select count(*) from public.edu_lesson_progress where student_id = s1) <> 1 then raise exception 'D4 progress lost'; end if;
   insert into public.leads (name, email, class_name, path, intent, note, source, status, student_id)
-  values ('T1 tháng 2', 'mb-t1@example.test', 'Đệm hát căn bản · DH1.KD20', 'dem_hat', 'dang_ky',
-          '[public-product:dem_hat_can_ban][plan:monthly]', 'landing', 'Mới đăng ký', s1) returning id into l1b;
+  values ('T1 tháng 2', 'mb-t1@example.test', 'Đệm hát 2 · DEM.T4', 'dem_hat', 'dang_ky',
+          '[public-product:dem_hat_nang_cao][plan:monthly]', 'landing', 'Mới đăng ký', s1) returning id into l1b;
   r := public.activate_class_membership(l1b);
-  if not public.has_course_access(s1, dh1) then raise exception 'D5 renew did not restore'; end if;
+  if not public.has_course_access(s1, dh2) then raise exception 'D5 renew did not restore'; end if;
   if (r->>'renews_at')::timestamptz < now() + interval '27 days' then raise exception 'D6 late renew must start from now %', r; end if;
   if (select count(*) from public.student_packages where student_id = s1 and status = 'active') <> 1 then raise exception 'D7 active rows'; end if;
   if (select count(*) from public.student_package_history where student_id = s1) < 2 then raise exception 'D8 history'; end if;
