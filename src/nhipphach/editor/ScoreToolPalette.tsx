@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { TYPE_LABEL } from "../edit/durationModel.ts";
 import type { NoteType } from "../edit/durationModel.ts";
-import { BANG_TRO_GIUP, NHOM_PHIM, phimCua } from "./keymap.ts";
+import { BANG_TRO_GIUP, NHOM_PHIM, cacPhimCua, phimCua } from "./keymap.ts";
 import type { EditorAction } from "./actions.ts";
 import type { NoteFields } from "../edit/noteFields.ts";
 import type { EntryDuration } from "./noteEntry.ts";
@@ -112,7 +112,10 @@ function PBtn({
   disabled,
   glyph,
   onAction,
+  phimHien,
 }: {
+  /** Nhãn phím khác mặc định — vẫn phải lấy từ bảng phím (`cacPhimCua`), không gõ tay. */
+  phimHien?: string | null;
   action: EditorAction;
   ten: string;
   children: ReactNode;
@@ -122,7 +125,7 @@ function PBtn({
   glyph?: boolean;
   onAction: ScoreToolPaletteProps["onAction"];
 }) {
-  const phim = phimCua(action);
+  const phim = phimHien === undefined ? phimCua(action) : phimHien;
   const nhan = phim ? `${ten} · ${phim}` : ten;
   return (
     <button
@@ -156,6 +159,14 @@ export function ScoreToolPalette({
   const suaDuocTruongDo = !!fields && (dangNhap || !fields.duongTruongDo);
   const suaDuocCaoDo = !!fields?.pitch;
   const coNot = !!fields && fields.kind !== "rest";
+  // Trường độ đổi bằng `-`/`=` (một bậc) — nút hình nốt chỉ chọn thẳng, nên
+  // chú thích nói luôn hai phím ấy (lấy từ bảng phím).
+  const phimTang = phimCua({ type: "STEP_DURATION", dir: 1 });
+  const phimGiam = phimCua({ type: "STEP_DURATION", dir: -1 });
+  const goiYTruongDo = phimTang && phimGiam ? ` — tăng trường độ: ${phimTang} · giảm: ${phimGiam}` : "";
+  // Nút DẤU LẶNG và nút XOÁ cùng một hành động (nốt → lặng, giữ nhịp) nhưng
+  // mỗi nút nói phím quen tay của nó.
+  const phimXoa = cacPhimCua({ type: "MAKE_REST" });
   return (
     <div className="np-palette" role="toolbar" aria-label="Công cụ biên tập">
       <span className="np-pal-group" role="group" aria-label="Trường độ">
@@ -164,7 +175,8 @@ export function ScoreToolPalette({
             key={type}
             glyph
             action={{ type: "SET_DURATION", noteType: type }}
-            ten={dangNhap ? `Nhập bằng ${TYPE_LABEL[type]}` : TYPE_LABEL[type]}
+            ten={(dangNhap ? `Nhập bằng ${TYPE_LABEL[type]}` : TYPE_LABEL[type]) + goiYTruongDo}
+            phimHien={null}
             pressed={dangNhap ? truongDoNhap.noteType === type : fields?.noteType === type}
             disabled={!suaDuocTruongDo}
             onAction={onAction}
@@ -213,8 +225,19 @@ export function ScoreToolPalette({
 
       <span className="np-pal-group" role="group" aria-label="Cấu trúc">
         <PBtn
+          glyph
+          action={{ type: "MAKE_REST" }}
+          ten="Thành dấu lặng"
+          phimHien={phimXoa.slice(2).join(" / ") || null}
+          disabled={!coNot && !coVung}
+          onAction={onAction}
+        >
+          {G.rest}
+        </PBtn>
+        <PBtn
           action={{ type: "MAKE_REST" }}
           ten={coVung ? "Xoá cả vùng" : "Xoá nốt"}
+          phimHien={phimXoa.slice(0, 2).join(" / ") || null}
           disabled={!coNot && !coVung}
           onAction={onAction}
         >

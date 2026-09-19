@@ -141,10 +141,13 @@ test("facade: vùng → ToggleSlur(đầu, cuối) / MakeRestSequence; một n�
   assert.equal(toCommand({ type: "TOGGLE_SLUR" }, P(2), vung[0].fields, undefined as never, null).kind, "refused");
 });
 
-test("phím: S = luyến (như MuseScore), Delete = xoá nốt; trợ giúp chia nhóm đủ 5", () => {
+test("phím: Shift+H = luyến (Legato của Guitar Pro 8), Delete = xoá nốt; trợ giúp chia nhóm đủ 5", () => {
   const k = (key: string) => ({ key, ctrl: false, shift: false, alt: false });
-  assert.deepEqual(traPhim(k("s")), { type: "TOGGLE_SLUR" });
-  assert.equal(phimCua({ type: "TOGGLE_SLUR" }), "S");
+  assert.deepEqual(traPhim({ key: "H", ctrl: false, shift: true, alt: false }), { type: "TOGGLE_SLUR" });
+  assert.equal(phimCua({ type: "TOGGLE_SLUR" }), "Shift+H");
+  // S (legato slide) và H (hammer-on) của Guitar Pro là hiệu ứng khác — để trống.
+  assert.equal(traPhim(k("s")), null);
+  assert.equal(traPhim(k("h")), null);
   assert.equal(phimCua({ type: "MAKE_REST" }), "Delete");
   // A–G vẫn là nhập nốt; S không đè lên chữ nào của nốt.
   for (const step of "ABCDEFG") assert.equal(traPhim(k(step.toLowerCase()))?.type, "ENTER_PITCH");
@@ -157,7 +160,7 @@ test("ô nhập chữ giữ phím: S/Delete gõ trong input không thành lệnh
   for (const key of ["s", "Delete", "c"])
     assert.deepEqual(dispatch({ key, target: GO_INPUT }, { choSua: true }), { kind: "blocked", why: "typing" }, key);
   // Ngoài ô nhập, S ra đúng lệnh luyến — cùng action mà nút bảng ký hiệu phát.
-  const ra = dispatch({ key: "s" }, { choSua: true });
+  const ra = dispatch({ key: "H", shiftKey: true }, { choSua: true });
   assert.equal(ra.kind === "action" && ra.action.type, "TOGGLE_SLUR");
 });
 
@@ -190,7 +193,7 @@ test("bảng ký hiệu: điện thoại cuộn ngang, desktop gói hàng", () =
 test("trang: bảng ký hiệu thay thanh cũ, Thuộc tính gập mặc định, vùng đi qua toCommandVung", () => {
   const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
   assert.doesNotMatch(page, /EditorToolbar/);
-  assert.match(page, /\[moThuocTinh, setMoThuocTinh\] = useState\(true\)/);
+  assert.match(page, /\[moThuocTinh, setMoThuocTinh\] = useState\(false\)/);
   assert.match(page, /moChiTiet=\{moThuocTinh\}/);
   assert.match(page, /onDoubleClick=\{choChonNot && chonNot/);
   assert.match(page, /toCommandVung\(action, vung\)/);
@@ -262,9 +265,9 @@ test("vòng 2: `-`/`=` hoàn tác từng bước", () => {
   assert.equal(d.xml, GOC);
 });
 
-test("vòng 2: phím kiểu Guitar Pro — H luyến, Ctrl+Y làm lại, Ctrl+→ ô nhịp, Backspace xoá", () => {
+test("vòng 2: phím kiểu Guitar Pro — Shift+H luyến, Ctrl+Y làm lại, Ctrl+→ ô nhịp, Backspace xoá", () => {
   const k = (key: string, ctrl = false, shift = false) => ({ key, ctrl, shift, alt: false });
-  assert.deepEqual(traPhim(k("h")), { type: "TOGGLE_SLUR" });
+  assert.deepEqual(traPhim(k("H", false, true)), { type: "TOGGLE_SLUR" });
   assert.deepEqual(traPhim(k("y", true)), { type: "REDO" });
   assert.deepEqual(traPhim(k("+", false, true)), { type: "STEP_DURATION", dir: -1 });
   assert.deepEqual(traPhim(k("ArrowRight", true)), { type: "MOVE", where: "nextMeasure" });
@@ -277,7 +280,10 @@ test("vòng 2: phím kiểu Guitar Pro — H luyến, Ctrl+Y làm lại, Ctrl+�
 });
 
 test("vòng 2: khoang sửa cao CỐ ĐỊNH, cuộn bên trong, không bôi chọn chữ giao diện", () => {
-  assert.match(NP_CSS, /\.np-editor-dock\{[^}]*position:sticky[^}]*height:clamp\([^}]*overflow-y:auto[^}]*overflow-anchor:none/);
+  assert.match(NP_CSS, /\.np-editor-dock\{[^}]*height:clamp\([^}]*overflow:hidden[^}]*overflow-anchor:none/);
+  assert.match(NP_CSS, /\.np-editor-dock > \.np-note-panel\{flex:none;flex-wrap:nowrap/);
+  assert.match(NP_CSS, /\.np-editor-dock > \.np-edit-panel\{flex:1 1 0;min-height:0;overflow-y:auto/);
+  assert.doesNotMatch(NP_CSS, /transition:[^;}]*height/, "không animate chiều cao");
   assert.match(NP_CSS, /\.np-editor-dock,[^{]*\.np-select-mode\{-webkit-user-select:none;user-select:none;\}/);
   assert.match(NP_CSS, /\.np-editor-dock input,[^{]*textarea,[^{]*\{-webkit-user-select:text;user-select:text;\}/);
   const page = stripComments(src("pages/MusicXmlBeatsPage.tsx"));
@@ -326,7 +332,7 @@ test("vòng 2: phím nóng nghe ở cấp cửa sổ — focus ở nút/ô chọ
   // Bấm nốt thì kéo focus về bản nhạc.
   assert.match(page, /prevBody\.current\?\.focus\(\{ preventScroll: true \}\)/);
   // Nút đang giữ focus không chặn phím nóng trên đường cửa sổ.
-  assert.deepEqual(dispatch({ key: "s", target: null }, { choSua: true, focused: null }), { kind: "action", action: { type: "TOGGLE_SLUR" } });
+  assert.deepEqual(dispatch({ key: "H", shiftKey: true, target: null }, { choSua: true, focused: null }), { kind: "action", action: { type: "TOGGLE_SLUR" } });
 });
 
 test("vòng 2: bộ gõ tiếng Việt (key=Process) vẫn ra đúng phím nhờ `code`; lời báo hiện trên hàng ký hiệu", () => {

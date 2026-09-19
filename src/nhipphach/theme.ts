@@ -193,9 +193,11 @@ export const NP_CSS = `
 /* Con trỏ đứng trên dấu lặng: hàng hình nốt đang chọn CÂY BÚT, không sửa bản
    nhạc. Nói thẳng ra một câu còn hơn để thầy đoán vì sao bấm 4 mà nốt không đổi. */
 /* Editor UX vòng 2: khoang sửa cao CỐ ĐỊNH — nội dung đổi chỉ cuộn bên trong, bản nhạc không nhảy. */
-.${NP_SCOPE} .np-editor-dock{position:sticky;top:0;z-index:6;display:flex;flex-direction:column;height:clamp(150px,34vh,236px);overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;margin:0 0 8px;background:var(--surface);border-radius:10px;}
-.${NP_SCOPE} .np-editor-dock > *{flex:none;}
-.${NP_SCOPE} .np-editor-dock .np-palette{order:-1;position:sticky;top:0;z-index:1;}
+.${NP_SCOPE} .np-editor-dock{display:flex;flex-direction:column;height:clamp(150px,34vh,236px);overflow:hidden;overflow-anchor:none;margin:0 0 8px;background:var(--surface);border-radius:10px;}
+/* Hàng 1 + 2 cao cố định (không xuống dòng); hàng 3 (Inspector / trợ giúp) chiếm phần còn lại và CUỘN BÊN TRONG. */
+.${NP_SCOPE} .np-editor-dock > .np-note-panel{flex:none;flex-wrap:nowrap;overflow:hidden;white-space:nowrap;min-height:34px;box-sizing:border-box;}
+.${NP_SCOPE} .np-editor-dock > .np-palette{flex:none;min-height:42px;box-sizing:border-box;}
+.${NP_SCOPE} .np-editor-dock > .np-keyhelp,.${NP_SCOPE} .np-editor-dock > .np-edit-panel{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
 .${NP_SCOPE} .np-editor-dock .np-note-panel,.${NP_SCOPE} .np-editor-dock .np-edit-panel{font-size:12.5px;padding:6px 10px;margin:0 0 6px;}
 /* Chữ nhãn / gợi ý / thông tin chỉ-đọc KHÔNG bôi chọn được; chỉ ô nhập mới được. */
 .${NP_SCOPE} .np-editor-dock,.${NP_SCOPE} .np-select-mode{-webkit-user-select:none;user-select:none;}

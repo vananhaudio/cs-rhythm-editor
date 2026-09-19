@@ -650,7 +650,7 @@ test("kiến trúc: thanh công cụ và bàn phím hội tụ tại EditorActio
   assert.deepEqual(
     [...new Set(hanhDong)].sort(),
     ["MAKE_REST", "OPEN_HARMONY", "OPEN_LYRIC", "REDO", "RESPELL", "SET_ALTER", "SET_DURATION",
-     "SHOW_HELP", "TOGGLE_DOT", "TOGGLE_INSPECTOR", "TOGGLE_SLUR", "UNDO"]
+     "SHOW_HELP", "STEP_DURATION", "TOGGLE_DOT", "TOGGLE_INSPECTOR", "TOGGLE_SLUR", "UNDO"]
   );
 });
 

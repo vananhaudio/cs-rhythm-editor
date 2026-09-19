@@ -249,8 +249,8 @@ export default function MusicXmlBeatsPage({
   /** Bản hiện ra của trường độ đang cầm — chỉ để thanh công cụ vẽ, không phải nguồn sự thật. */
   const [truongDoNhap, setTruongDoNhap] = useState<EntryDuration>(NHAP_BAN_DAU.currentDuration);
   const [hienPhimTat, setHienPhimTat] = useState(false);
-  // Editor UX: Thuộc tính mở sẵn (thầy cần ô sửa); nút ⚙ gập lại được.
-  const [moThuocTinh, setMoThuocTinh] = useState(true);
+  // Editor UX: Inspector là phụ — gập mặc định; nút ⚙ hoặc nháy đúp nốt để mở.
+  const [moThuocTinh, setMoThuocTinh] = useState(false);
   // ── Bản nháp biên tập (Giai đoạn Nội dung 3) — chỉ trong bộ nhớ ──────────
   // Nháp = bản gốc + ngăn xếp lệnh, sống trong `draftEngine`. Trang chỉ giữ
   // trạng thái và chuyển lệnh; không có dòng nào ở đây đụng vào XML.

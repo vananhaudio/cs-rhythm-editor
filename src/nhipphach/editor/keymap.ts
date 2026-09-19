@@ -92,8 +92,10 @@ export const KEYMAP: readonly KeyBinding[] = [
 
   // ── Luyến (MuseScore 4: S = slur; Guitar Pro không có một phím chung cho
   //    luyến nên theo MuseScore). Dấu nối (tie, MuseScore "+") CHƯA có lệnh. ──
-  { key: "s", action: { type: "TOGGLE_SLUR" }, mo: "Luyến / bỏ luyến vùng đang chọn", nhom: "Chỉnh sửa" },
-  { key: "h", action: { type: "TOGGLE_SLUR" }, mo: "Luyến / bỏ luyến vùng đang chọn", nhom: "Chỉnh sửa" },
+  // Guitar Pro 8: Shift+H = Legato (dấu luyến qua nhiều nốt). H trơn là
+  // hammer-on/pull-off (kỹ thuật, không phải dấu luyến) và S là legato slide —
+  // nên KHÔNG dùng S/H cho luyến để sau này còn chỗ cho hai hiệu ứng ấy.
+  { key: "H", shift: true, action: { type: "TOGGLE_SLUR" }, mo: "Luyến / bỏ luyến vùng đang chọn", nhom: "Chỉnh sửa" },
 
   // ── Nhập nốt bằng chữ cái (MuseScore, Smoosic đều vậy) ───────────────────
   ...(["C", "D", "E", "F", "G", "A", "B"] as Step[]).map(
@@ -164,6 +166,11 @@ function cungHanhDong(a: EditorAction, b: EditorAction): boolean {
  * là nhãn trên nút đổi theo, không có chuyện hai chỗ nói hai đằng. Hành động
  * chưa có phím (ví dụ ba nút ♭ ♮ ♯) trả `null` — nút KHÔNG hiện nhãn giả.
  */
+/** MỌI phím của một hành động, theo thứ tự trong bảng phím (Delete, Backspace, 0, R…). */
+export function cacPhimCua(action: EditorAction): string[] {
+  return KEYMAP.filter((b) => cungHanhDong(b.action, action)).map(nhanPhim);
+}
+
 export function phimCua(action: EditorAction): string | null {
   const hit = KEYMAP.find((b) => cungHanhDong(b.action, action));
   return hit ? nhanPhim(hit) : null;
