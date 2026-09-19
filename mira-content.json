@@ -8,6 +8,191 @@
     "dem_hat_nang_cao": "Đệm hát nâng cao",
     "solo_guitar": "Solo Guitar"
   },
+  "programs": [
+    {
+      "code": "HT2027",
+      "name": "Hành trình 2027 — 40 buổi thực hành",
+      "progression": [
+        "Hòa âm",
+        "Giai điệu",
+        "Tiết tấu",
+        "Kết hợp đệm và tỉa",
+        "Hoàn thiện tác phẩm Solo Guitar"
+      ],
+      "forWho": "Dành cho người đã có nền tảng (đã học DH2 hoặc TN2) hoặc học viên Hành trình.",
+      "sessions": "5 chặng × 8 buổi",
+      "stages": [
+        {
+          "no": 1,
+          "title": "Làm chủ bộ hợp âm, vòng hòa âm và màu sắc hòa âm",
+          "goal": "Chuyển từ việc đánh lại hợp âm có sẵn sang hiểu và chủ động lựa chọn hòa âm cho bài hát.",
+          "lessons": [
+            "Xây dựng bộ hợp âm trong một giọng",
+            "Chức năng của hợp âm",
+            "Phân tích vòng hòa âm",
+            "Dịch chuyển vòng hòa âm",
+            "Thay thế hợp âm",
+            "Hợp âm đảo và đường bass",
+            "Phối lại hòa âm cho bài hát",
+            "Trình bày sản phẩm cuối chặng"
+          ],
+          "results": [
+            "Xây dựng được bộ hợp âm của một giọng",
+            "Hiểu chức năng của từng hợp âm",
+            "Nhận diện và dịch chuyển vòng hòa âm",
+            "Sử dụng hợp âm thay thế và hợp âm đảo",
+            "Chủ động xây dựng phương án hòa âm cho bài hát"
+          ]
+        },
+        {
+          "no": 2,
+          "title": "Làm chủ khuôn hình và phát triển giai điệu trên cần đàn",
+          "goal": "Nhìn thấy mối quan hệ giữa âm chủ, khuôn hình và giai điệu; không phụ thuộc hoàn toàn vào tab hoặc một vị trí cố định.",
+          "lessons": [
+            "Âm chủ và cấu trúc khuôn hình",
+            "Khuôn hình trong giọng trưởng",
+            "Khuôn hình trong giọng thứ",
+            "Kết nối các khuôn hình",
+            "Xây dựng câu nhạc",
+            "Tìm giai điệu bằng tai",
+            "Biến đổi và phát triển giai điệu",
+            "Trình bày sản phẩm cuối chặng"
+          ],
+          "results": [
+            "Nhận diện âm chủ và cấu trúc khuôn hình trên cần đàn",
+            "Chơi giai điệu ở nhiều vị trí, kết nối được các khuôn hình",
+            "Tự tìm giai điệu bằng tai",
+            "Biến đổi và phát triển giai điệu thành câu nhạc có hồn"
+          ]
+        },
+        {
+          "no": 3,
+          "title": "Làm chủ điệu đệm, tiết tấu và cách phát triển bài hát",
+          "goal": "Thoát khỏi cách sử dụng một mẫu đệm từ đầu đến cuối; biết điều khiển tiết tấu, sắc thái và cao trào theo cấu trúc bài hát.",
+          "lessons": [
+            "Phân tích tiết tấu của bài hát",
+            "Biến đổi mẫu đệm",
+            "Nhấn phách và đảo phách",
+            "Dồn nhịp và chuyển câu",
+            "Ngắt tiếng và kiểm soát âm thanh",
+            "Xây dựng sắc thái và cao trào",
+            "Kết hợp nhiều phương pháp đệm",
+            "Trình bày sản phẩm cuối chặng"
+          ],
+          "results": [
+            "Phân tích được tiết tấu của bài hát",
+            "Biến đổi và kết hợp linh hoạt các mẫu đệm",
+            "Điều khiển nhấn phách, đảo phách, dồn nhịp",
+            "Xây dựng sắc thái và cao trào theo cấu trúc bài hát"
+          ]
+        },
+        {
+          "no": 4,
+          "title": "Solo Guitar: Kết hợp giai điệu, bass và hòa âm",
+          "goal": "Solo Guitar là sự kết hợp giữa năng lực Đệm hát và Tỉa nốt — làm chủ ba lớp âm thanh trên cây đàn.",
+          "lessons": [
+            "Phân tích ba lớp âm thanh",
+            "Đặt hợp âm dưới giai điệu",
+            "Làm nổi bật giai điệu",
+            "Xây dựng đường bass",
+            "Kết hợp giai điệu, bass và hợp âm",
+            "Kỹ thuật tay phải trong Solo Guitar",
+            "Nối câu và chuyển vị trí",
+            "Trình bày sản phẩm cuối chặng"
+          ],
+          "results": [
+            "Phân tích được ba lớp âm thanh: giai điệu, bass, hòa âm",
+            "Đặt hợp âm và đường bass dưới giai điệu",
+            "Kết hợp ba lớp âm thanh thành bản Solo Guitar",
+            "Kiểm soát kỹ thuật tay phải, nối câu và chuyển vị trí mượt mà"
+          ]
+        },
+        {
+          "no": 5,
+          "title": "Solo Guitar: Xây dựng và hoàn thiện tác phẩm",
+          "goal": "Đi từ một bản nhạc hoặc giai điệu có sẵn đến một tác phẩm Solo Guitar hoàn chỉnh, có bố cục, sắc thái và khả năng biểu diễn.",
+          "lessons": [
+            "Phân tích và lựa chọn tác phẩm",
+            "Xây dựng phần mở đầu",
+            "Phát triển và trang trí giai điệu",
+            "Phát triển hòa âm và đường bass",
+            "Xử lý điệp khúc và cao trào",
+            "Xây dựng phần kết",
+            "Chỉnh sửa và hoàn thiện phần trình diễn",
+            "Biểu diễn tổng kết Hành trình 2027"
+          ],
+          "results": [
+            "Lựa chọn và phân tích được tác phẩm phù hợp",
+            "Xây dựng đủ bố cục: mở đầu, phát triển, điệp khúc, cao trào, kết",
+            "Hoàn thiện một tác phẩm Solo Guitar có thể biểu diễn",
+            "Trình diễn tổng kết trước lớp — chốt lại toàn bộ hành trình"
+          ]
+        }
+      ]
+    },
+    {
+      "code": "SOLO01",
+      "name": "Solo Guitar Căn Bản",
+      "progression": [
+        "Kiến thức",
+        "Kỹ thuật",
+        "Melody",
+        "Bass / Hòa âm",
+        "Tác phẩm thực tế"
+      ],
+      "sessions": "3 chặng × 8 buổi",
+      "stages": [
+        {
+          "no": 1,
+          "title": "TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR",
+          "goal": "Làm chủ melody cơ bản trên cần đàn và bắt đầu kết hợp Bass + kỹ thuật ngay từ những buổi đầu.",
+          "lessons": [
+            "Bản đồ nốt giản lược C–Am",
+            "Ép ngón tay phải & Bass đầu tiên",
+            "Melody + Bass và kỹ thuật Slide",
+            "Xếp ngón giai điệu & nốt ngoài âm giai",
+            "Bass theo hợp âm & Pull-off",
+            "Melody + Bass cùng lúc",
+            "Bản đồ G–Em",
+            "Hoàn thiện đoạn Solo Guitar đầu tiên"
+          ],
+          "results": []
+        },
+        {
+          "no": 2,
+          "title": "PHÁT TRIỂN SOLO GUITAR & BOLERO",
+          "goal": "Từ Melody + Bass phát triển thành một bản Solo Guitar đầy đặn và có phong cách.",
+          "lessons": [
+            "Bass Bolero căn bản.",
+            "Từ hợp âm đến đường Bass.",
+            "Melody trong thế hợp âm.",
+            "Làm đầy khoảng trống giữa các câu.",
+            "Trang trí Melody",
+            "Melody + Bass + Hòa âm.",
+            "Intro – Fill – chuyển đoạn – Ending.",
+            "Hoàn thiện một bản Bolero Solo Guitar."
+          ],
+          "results": []
+        },
+        {
+          "no": 3,
+          "title": "TỰ DỰNG BÀI SOLO GUITAR",
+          "goal": "Mỗi học viên chọn một bài hát mình thực sự yêu thích và từng bước tự dựng tác phẩm đó.",
+          "lessons": [
+            "Chọn bài & dựng bản đồ tác phẩm",
+            "Tìm và chép Melody",
+            "Đặt hợp âm & Bass",
+            "Xếp ngón & chọn thế đàn",
+            "Kỹ thuật & sắc thái",
+            "Intro – Fill – Ending",
+            "Xưởng biên tập Solo Guitar",
+            "Đồ án: Bài hát yêu thích của tôi"
+          ],
+          "results": []
+        }
+      ]
+    }
+  ],
   "classes": [
     "Lớp Đệm hát căn bản: Dành cho người mới muốn vừa đàn vừa hát những bài mình yêu thích.",
     "Lớp Guitar căn bản: Dành cho người mới muốn bắt đầu từ những điều cơ bản và chơi những giai điệu đầu tiên.",

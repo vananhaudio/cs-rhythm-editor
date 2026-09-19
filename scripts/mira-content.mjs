@@ -23,6 +23,8 @@ const TMP = resolve(ROOT, ".mira-build");
 const ENTRY = `
 export { DOORS, STARTERS, CHAT_FAQ, MODALS, PRODUCTS, MIRA_CLASSES } from "./src/class-content";
 export { FAQS } from "./src/classFaq";
+export { HT2027, HT2027_STAGES, HT2027_PROGRESSION, HT2027_ELIGIBLE_CODES } from "./src/data/ht2027Program";
+export { SOLO01, SOLO01_STAGES, SOLO01_PROGRESSION } from "./src/data/solo01Program";
 `;
 
 // HTML → chữ. Giữ xuống dòng ở chỗ ngắt khối để bài đọc còn ra hình hài.
@@ -64,6 +66,16 @@ async function main() {
   // Mira chỉ giới thiệu các lớp đang tuyển (tên + dành cho ai) và bộ hỏi đáp public.
   // Tên công khai theo public_product (Mira dùng để gọi đúng tên lớp đang tuyển lấy từ class_schedule)
   const productTitles = Object.fromEntries(Object.entries(m.PRODUCTS).map(([k, p]) => [k, p.title]));
+  // Chương trình dài hạn — nội dung HỌC THUẬT (chặng · mục tiêu · tên buổi). Không có ngày/lịch:
+  // lịch là dữ liệu vận hành, không thuộc tri thức đào tạo.
+  const program = (code, meta, stages, progression, extra) => ({
+    code, name: meta.name, progression, ...extra,
+    stages: stages.map((st) => ({ no: st.no, title: st.title, goal: st.goal, lessons: st.lessons.map((l) => l.title), results: st.results ?? [] })),
+  });
+  const programs = [
+    program("HT2027", m.HT2027, m.HT2027_STAGES, m.HT2027_PROGRESSION, { forWho: `Dành cho người đã có nền tảng (đã học ${m.HT2027_ELIGIBLE_CODES.join(" hoặc ")}) hoặc học viên Hành trình.`, sessions: `${m.HT2027.stages} chặng × ${m.HT2027.sessionsPerStage} buổi` }),
+    program("SOLO01", m.SOLO01, m.SOLO01_STAGES, m.SOLO01_PROGRESSION, { sessions: `${m.SOLO01.stages} chặng × ${m.SOLO01.sessionsPerStage} buổi` }),
+  ];
   const classes = m.MIRA_CLASSES.map((k) => `Lớp ${m.PRODUCTS[k].title}: ${m.PRODUCTS[k].desc}`);
   const faqPublic = m.FAQS.map((f) => `Hỏi: ${f.q}\nĐáp: ${f.a.map((b) => (typeof b === "string" ? b : Array.isArray(b) ? b.join("; ") : "")).filter(Boolean).join(" ")}`);
   const doors = m.DOORS.map(
@@ -76,6 +88,7 @@ async function main() {
   const out = {
     generatedFrom: "cs-rhythm-editor · scripts/mira-content.mjs",
     productTitles,
+    programs,
     classes,
     doors,
     starters,
