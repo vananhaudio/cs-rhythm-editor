@@ -8,21 +8,44 @@ export type FaqBlock = string | string[] | { link: string; label: string }
 export interface Faq { q: string; a: FaqBlock[] }
 
 export const FAQS: Faq[] = [
-  // ─── 7 CÂU CÔNG KHAI (hiển thị trước) ───
-  { q: 'Tôi đã biết chơi Guitar một chút rồi, bắt đầu ở đâu?', a: [
-    'Nếu đã học một thời gian mà chưa tiến bộ như mong muốn, Guitar căn bản 2 giúp bạn củng cố phần còn yếu và học thêm kỹ năng mới. Nếu đã có nền rõ và muốn học Solo hoặc Đệm hát chuyên sâu, xem các lớp đang nhận học viên. Chưa chắc thì hỏi Mira hoặc nhắn Thầy.',
-    { link: 'lopdangtuyen', label: 'Xem các lớp đang tuyển sinh →' },
+  // ─── 10 CÂU CÔNG KHAI (hiển thị trước) — trả lời những gì một người mới cần để tự đăng ký ───
+  { q: 'Tôi chưa biết gì về Guitar thì học lớp nào?', a: [
+    'Guitar căn bản 1 — dành cho người chưa biết gì về Guitar. Bạn bắt đầu từ những điều đầu tiên, không cần biết nhạc lý trước.',
+    { link: 'lopdangtuyen', label: 'Xem lớp Guitar căn bản 1 →' },
   ] },
-  { q: 'Tôi nên học lớp nào?', a: [
-    'Chưa biết gì về Guitar → Guitar căn bản 1. Đã học một thời gian nhưng chưa tiến bộ như mong muốn → Guitar căn bản 2. Đã có nền rõ và muốn học Solo hoặc Đệm hát chuyên sâu → các lớp đang nhận học viên.',
-    { link: 'lopdangtuyen', label: 'Xem các lớp đang tuyển sinh →' },
+  { q: 'Tôi đã tự học một thời gian thì học lớp nào?', a: [
+    'Guitar căn bản 2 — dành cho người đã học một thời gian nhưng chưa tiến bộ như mong muốn: củng cố phần còn yếu, học thêm kỹ năng mới và chơi lên một mức cao hơn.',
+    { link: 'lopdangtuyen', label: 'Xem lớp Guitar căn bản 2 →' },
   ] },
-  { q: 'Học phí thế nào?', a: [
-    'Cùng một lớp học, bạn chỉ chọn cách đồng hành: Theo tháng 499.000đ/tháng (lớp và tài liệu của tháng đó), hoặc Đồng hành 6 tháng 396.000đ/tháng — tổng 2.376.000đ — kèm kho bài giảng, App đầy đủ, sách, hỏi Thầy, thực hành và cộng đồng.',
+  { q: 'Tôi chưa biết nên học Đệm hát hay Solo thì sao?', a: [
+    'Không cần chọn ngay. Bắt đầu ở lớp Guitar căn bản phù hợp; trong quá trình học Thầy sẽ tư vấn hướng hợp với bạn.',
   ] },
-  { q: 'Nếu tôi bận, lỡ một buổi thì sao?', a: [
+  { q: 'Tôi đã chơi khá rồi, có cần học lớp Căn bản không?', a: [
+    'Không bắt buộc. Nếu đã có nền rõ, bạn xem các lớp Solo Guitar / Đệm hát đang nhận học viên, hoặc hỏi Mira / nhắn Thầy để được tư vấn lớp phù hợp.',
+    { link: 'lopnhanhocvien', label: 'Xem các lớp đang nhận học viên →' },
+  ] },
+  { q: 'Hiện có lớp nào đang nhận học viên?', a: [
+    'Các lớp đang tuyển và lịch học luôn được cập nhật ngay trên trang này, ở mục “Bắt đầu học Guitar” và “Các lớp đang nhận học viên”.',
+    { link: 'lopdangtuyen', label: 'Xem lịch các lớp →' },
+  ] },
+  { q: 'Học phí bao nhiêu?', a: [
+    'Cùng một lớp, bạn chọn cách đồng hành: Theo tháng 499.000đ/tháng, hoặc Đồng hành 6 tháng 396.000đ/tháng (tổng 2.376.000đ).',
+  ] },
+  { q: '499k và gói 6 tháng khác nhau thế nào?', a: [
+    'Cả hai đều học cùng Thầy hàng tuần trong cùng một lớp. Theo tháng (499.000đ/tháng): PDF theo tháng và App cơ bản. Đồng hành 6 tháng (396.000đ/tháng, tổng 2.376.000đ): thêm kho bài giảng, App luyện tập đầy đủ, sách & giáo trình, hỏi Thầy, thực hành và cộng đồng.',
+  ] },
+  { q: 'Nếu tôi bận một buổi thì sao?', a: [
     'Bạn báo Thầy trong nhóm lớp để được hướng dẫn theo kịp. Có App và nhóm lớp, bạn vẫn ôn lại được nội dung buổi đó.',
   ] },
+  { q: 'Sau khi chuyển khoản tôi làm gì?', a: [
+    'Gửi ảnh bill qua Zalo Thầy (0983 259 893). Thầy xác nhận rồi gửi bạn tài khoản học, lịch học và link nhóm lớp qua Zalo.',
+    { link: 'batdau', label: 'Xem chi tiết từng bước →' },
+  ] },
+  { q: 'Tôi hỏi Thầy ở đâu?', a: [
+    'Nhắn Zalo Thầy: 0983 259 893. Muốn hỏi nhanh bất cứ lúc nào, bấm “Hỏi Mira” ở góc màn hình.',
+    { link: 'chat', label: 'Hỏi Mira →' },
+  ] },
+
   { q: 'Sau khi đăng ký, tôi bắt đầu thế nào?', a: [
     'Bạn nhận hướng dẫn kích hoạt tài khoản, cài App và Zoom, vào nhóm học, và biết rõ buổi đầu tiên của mình. Thầy hỗ trợ bạn trong suốt quá trình bắt đầu.',
     { link: 'batdau', label: 'Xem chi tiết từng bước →' },
@@ -41,9 +64,6 @@ export const FAQS: Faq[] = [
     'Các lớp của Thầy Văn Anh được tổ chức online trực tiếp qua Zoom — học cùng Thầy theo lịch lớp, không phải video quay sẵn. Mỗi tuần một buổi cùng Thầy theo lịch lớp.',
     'Ngoài giờ học, bạn tự luyện trên App TVA Guitar và ôn lại bài bất cứ lúc nào.',
   ] },
-  { q: 'Tôi mới hoàn toàn từ số 0 thì nên bắt đầu từ lớp nào?', a: [
-    'Bắt đầu với Guitar căn bản 1 — dành cho người chưa biết gì về Guitar. Bạn không cần chọn trước Đệm hát hay Solo; trong quá trình học Thầy sẽ tư vấn hướng phù hợp.',
-  ] },
   { q: 'Tôi chưa biết gì về nhạc lý có học được không?', a: [
     'Được. Các lớp căn bản không yêu cầu biết nhạc lý trước — những kiến thức cần thiết được đưa vào từng bước trong quá trình học.',
   ] },
@@ -52,9 +72,6 @@ export const FAQS: Faq[] = [
   ] },
   { q: 'Tôi không có năng khiếu âm nhạc thì có học được không?', a: [
     'Được. Giai đoạn đầu bạn cần cách học rõ ràng, bài tập vừa sức và luyện tập đều đặn hơn là năng khiếu — phương pháp học đúng mới giúp bạn đi bền.',
-  ] },
-  { q: 'Tôi có phải chọn Đệm hát hay Solo ngay từ đầu không?', a: [
-    'Không cần. Người mới cứ bắt đầu ở Guitar căn bản 1. Khi đã có nền, Thầy dựa vào khả năng và mục tiêu của bạn để tư vấn hướng Đệm hát hay Solo.',
   ] },
   { q: 'Guitar căn bản 1 và Guitar căn bản 2 khác nhau thế nào?', a: [
     'Guitar căn bản 1 dành cho người chưa biết gì về Guitar. Guitar căn bản 2 dành cho người đã học một thời gian nhưng chưa tiến bộ như mong muốn — củng cố phần còn yếu, học thêm kỹ năng mới và đưa khả năng chơi lên một mức cao hơn.',
@@ -69,9 +86,6 @@ export const FAQS: Faq[] = [
   { q: 'App TVA Guitar dùng để làm gì?', a: [
     'App là nơi bạn học bài, ôn tập, luyện theo hướng dẫn và theo dõi tiến độ sau mỗi buổi học — như "ba lô học tập" đi cùng bạn.',
     { link: 'app', label: 'Xem App TVA Guitar →' },
-  ] },
-  { q: 'Nếu tôi lỡ nghỉ một buổi thì sao?', a: [
-    'Bạn nên báo lại với lớp hoặc trợ lý để được hướng dẫn theo kịp. Có App và nhóm lớp hỗ trợ, bạn vẫn ôn lại được phần nội dung chính — nhưng nên tham gia đầy đủ vì buổi trực tiếp giúp Thầy quan sát và sửa lỗi cho bạn.',
   ] },
   { q: 'Tôi đăng ký học trong bao lâu?', a: [
     'Tuỳ bạn chọn cách đồng hành khi đăng ký: Theo tháng, hoặc Đồng hành 6 tháng. Mỗi tuần một buổi cùng Thầy, hằng ngày luyện tập cùng App.',

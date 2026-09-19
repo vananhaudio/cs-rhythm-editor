@@ -193,7 +193,8 @@ export default function ClassLandingPage() {
       .then(async ({ data, error }) => {
         if (error) { console.error('Lịch tuyển sinh lỗi:', error); setClasses([]); return }
         const rows = ((data ?? []) as Row[]).filter(r =>
-          !HIDDEN.includes(r.status ?? '') && r.public_product in PRODUCTS && !(r.end_date && r.end_date < todayIso))
+          !HIDDEN.includes(r.status ?? '') && r.public_product in PRODUCTS && !PRODUCTS[r.public_product as PublicProductKey].legacy
+          && !(r.end_date && r.end_date < todayIso))
         // Chặng của các lớp (tên công khai theo thời điểm) — lớp không khai báo chặng thì dùng tên sản phẩm
         const { data: st } = rows.length
           ? await supabase.from('class_stages').select('class_id,stage_no,public_title,starts_on,ends_on').in('class_id', rows.map(r => r.id)).order('stage_no')
@@ -532,7 +533,12 @@ export default function ClassLandingPage() {
           <div className="wrap">
             <div className="eyebrow">Bước hoàn tất</div>
             <h2>Hoàn tất thanh toán để giữ chỗ</h2>
-            <p className="lead">Sau khi chuyển khoản, gửi bill qua Zalo để Thầy xác nhận và kích hoạt tài khoản app TVA Guitar + thêm bạn vào nhóm học.</p>
+            <p className="lead">Đăng ký của bạn đã được ghi nhận. Còn 3 bước:</p>
+            <ol className="pay-steps">
+              <li><b>Chuyển khoản</b> đúng số tiền bên dưới, nội dung ghi <b>họ tên của bạn</b>.</li>
+              <li><b>Gửi ảnh bill qua Zalo Thầy</b> (nút bên dưới).</li>
+              <li><b>Thầy xác nhận</b> và gửi bạn tài khoản học, lịch học và link nhóm lớp qua Zalo.</li>
+            </ol>
             <div className="panel">
               {/* Tóm tắt đơn — offer đã chọn, KHÔNG hỏi lại */}
               {paySummary && (
@@ -570,7 +576,6 @@ export default function ClassLandingPage() {
                   <p>Thầy sẽ kích hoạt tài khoản app và thêm bạn vào nhóm học. Có thắc mắc thì nhắn Zalo Thầy nhé.</p>
                 </div>
               )}
-              <div className="pay-note">💡 Nội dung chuyển khoản chỉ cần ghi <b>họ tên của bạn</b>. Chuyển xong, bấm nút bên dưới gửi <b>ảnh bill qua Zalo thầy</b> để được kích hoạt tài khoản &amp; thêm vào nhóm lớp nhanh nhất.</div>
               <a className="zalo-btn" href={zalo} target="_blank" rel="noreferrer">💬 Gửi bill qua Zalo thầy Văn Anh →</a>
               {!okBox
                 ? <button className="btn btn-primary" style={{ width: '100%', marginTop: 16 }} onClick={() => setOkBox(true)}>Tôi đã chuyển khoản</button>
@@ -637,7 +642,7 @@ export default function ClassLandingPage() {
           <h2>Câu hỏi thường gặp</h2>
           <p className="lead">Những thắc mắc phổ biến nhất khi bắt đầu học guitar cùng Thầy Văn Anh. Còn câu hỏi riêng? <a onClick={() => goto('chat')} style={{ color: '#4338CA', cursor: 'pointer', fontWeight: 600 }}>Hỏi trợ lý →</a></p>
           <div className="faq-list">
-            {(faqAll ? FAQS : FAQS.slice(0, 7)).map((f, i) => (
+            {(faqAll ? FAQS : FAQS.slice(0, 10)).map((f, i) => (
               <details key={i}>
                 <summary>{f.q}</summary>
                 <div className="faq-a">
@@ -653,7 +658,7 @@ export default function ClassLandingPage() {
               </details>
             ))}
           </div>
-          {!faqAll && FAQS.length > 7 && (
+          {!faqAll && FAQS.length > 10 && (
             <div style={{ marginTop: 16 }}>
               <button className="btn btn-ghost" onClick={() => setFaqAll(true)}>Xem tất cả {FAQS.length} câu hỏi →</button>
             </div>
@@ -1062,6 +1067,8 @@ const CSS = `
 .tva-class .pay-order-title{font-size:11px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-faint);margin-bottom:2px;}
 .tva-class .pay-order-line{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.45;}
 .tva-class .pay-order-sub{font-size:14px;color:var(--ink-soft);line-height:1.45;}
+.tva-class .pay-steps{margin:0 0 18px;padding-left:22px;font-size:15px;line-height:1.6;color:var(--ink);}
+.tva-class .pay-steps li{margin-top:4px;}
 .tva-class .pay-amount{border-top:1.5px solid var(--line);margin-top:10px;padding-top:10px;display:flex;flex-direction:column;gap:2px;}
 .tva-class .pay-amount span{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--ink-faint);}
 .tva-class .pay-amount b{font-size:28px;font-weight:800;color:var(--honey);line-height:1.2;}

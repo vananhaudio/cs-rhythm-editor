@@ -469,6 +469,9 @@ export default function ScheduleManager() {
                       })()}
                       <span style={{ fontSize: 11, fontWeight: 600, color: statusInfo(r.status).c }}>{statusInfo(r.status).l}</span>
                       {!r.is_active && <span style={{ fontSize: 11, color: S.text3, fontWeight: 500 }}>· ẩn</span>}
+                      {r.public_enroll && !groups.find(g => g.id === r.group_id)?.zalo_url && (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#B45309', background: '#FEF3C7', borderRadius: 5, padding: '1px 7px' }}>⚠ Nhóm chưa có link Zalo</span>
+                      )}
                       {r.public_enroll && r.public_product && (
                         <span style={{ fontSize: 11, fontWeight: 800, color: '#4338CA', background: '#E0E7FF', borderRadius: 5, padding: '1px 7px' }}>📣 Đang tuyển · {PRODUCTS[r.public_product]?.title ?? r.public_product}</span>
                       )}
