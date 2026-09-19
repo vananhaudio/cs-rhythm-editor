@@ -367,10 +367,10 @@ test("nâng phần chia: `=` xuống móc đơn/móc kép trên bài chia thô �
 
 test("nâng phần chia: chỉ nhân số đo, không đụng byte nào khác; part khác đứng yên", () => {
   const X = BON.replace("<backup>", "<backup>");
-  const ra = nangPhanChia(X, 1, 3);
+  const ra = nangPhanChia(X, P(2), 3);
   const bo = ra.xml.replace(/<(divisions|duration)>(\d+)<\/\1>/g, (_m, t, n) => `<${t}>${Number(n) / 3}</${t}>`);
   assert.equal(bo, X);
   const HAI = doc(n("C") + `<backup><duration>1</duration></backup>` + n("G", "", 2) + n("D") + n("E") + n("F"));
-  const r2 = nangPhanChia(HAI, 1, 2);
+  const r2 = nangPhanChia(HAI, P(2), 2);
   assert.match(r2.xml, /<backup><duration>2<\/duration><\/backup>/);
 });

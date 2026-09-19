@@ -1227,7 +1227,7 @@ function pasteSequence(xml: string, cmd: PasteSequence): AppliedCommand {
 /** Lỗi "chưa chia đủ nhỏ" — những lỗi mà nâng `<divisions>` có thể gỡ được. */
 const CHIA_CHUA_DU = new Set(["EDIT_DURATION_NOT_REPRESENTABLE", "RHYTHM_REBALANCE_NOT_REPRESENTABLE"]);
 /** Hệ số thử, nhỏ trước: giữ số trong file nhỏ nhất có thể. */
-const HE_SO_NANG = [2, 3, 4, 6, 8, 12, 16, 24, 32, 48];
+const HE_SO_NANG = Array.from({ length: 63 }, (_, i) => i + 2); // 2, 3, 4, … 64 — tăng dần, dừng ở hệ số NHỎ NHẤT dùng được
 
 export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedCommand {
   try {
@@ -1238,8 +1238,6 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
       CHIA_CHUA_DU.has(e.code) &&
       (cmd.type === "ChangeDurationAndRebalance" || cmd.type === "InsertNoteIntoRest" || cmd.type === "ChangeDuration");
     if (!nangDuoc) throw e;
-    const m = SOURCE_PATH.exec(cmd.path);
-    if (!m) throw e;
     // NÂNG PHẦN CHIA rồi chạy lại ĐÚNG lệnh ấy. Hai bước là MỘT lệnh trong ngăn
     // xếp (một lần hoàn tác), và bước nào cũng qua sổ kép riêng của nó. Nâng
     // không làm đổi số con của ô nhịp nào → `structural` chỉ là của lệnh sau.
@@ -1248,7 +1246,7 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
     // chia đủ nhỏ" đã được gỡ rồi.
     let cuoi: unknown = e;
     for (const k of HE_SO_NANG) {
-      const nang = nangPhanChia(xml, +m[1], k);
+      const nang = nangPhanChia(xml, cmd.path, k);
       if (!nang.changed) break;
       try {
         const ra = applyCommandMot(nang.xml, cmd);
@@ -1263,33 +1261,71 @@ export function applyCommand(xml: string, cmd: MusicXmlEditCommand): AppliedComm
 }
 
 /**
- * Nhân `<divisions>` của MỘT part với `k`, và nhân theo mọi số đo bằng đơn vị
- * đó trong part (`<duration>` của note/backup/forward/figured-bass, `<offset>`).
- * Tiếng nhạc giữ nguyên từng tích tắc — chỉ đơn vị đếm mịn hơn. Part khác có
- * `<divisions>` riêng nên không đụng tới.
+ * Nhân `k` cho một số thập phân dạng chuỗi — số nguyên chính xác, không float,
+ * không làm tròn (`<offset>` được phép có phần lẻ: "0.5" × 3 = "1.5").
  */
-export function nangPhanChia(xml: string, partIndex: number, k: number): AppliedCommand {
+function nhanThapPhan(chu: string, k: number): string | null {
+  const m = /^\s*(-?)(\d+)(?:\.(\d+))?\s*$/.exec(chu);
+  if (!m) return null;
+  const le = m[3] ?? "";
+  const tich = BigInt(m[2] + le) * BigInt(k);
+  let so = tich.toString().padStart(le.length + 1, "0");
+  if (le.length) {
+    so = `${so.slice(0, so.length - le.length)}.${so.slice(so.length - le.length)}`.replace(/\.?0+$/, "");
+  }
+  return (m[1] && so !== "0" ? "-" : "") + so;
+}
+
+/**
+ * NÂNG PHẦN CHIA — nhân `<divisions>` với `k` trong ĐÚNG PHẠM VI hiệu lực của
+ * nó, và nhân theo mọi số đo bằng đơn vị ấy.
+ *
+ * Theo MusicXML, `<divisions>` áp cho cả part (mọi bè, mọi khuông) KỂ TỪ chỗ
+ * khai báo cho tới khai báo `<divisions>` kế tiếp trong cùng part. Nên phạm vi
+ * nâng = đoạn chứa nốt đang sửa: từ khai báo gần nhất đứng TRƯỚC nốt, tới
+ * trước khai báo sau. Đoạn khác có đơn vị riêng — không đụng.
+ *
+ * Số đo bằng đơn vị divisions: `<duration>` (note, rest, backup, forward,
+ * figured-bass) và `<offset>` (direction, harmony, figured-bass, sound). Không
+ * đụng fret, string, octave, voice, staff, MIDI, số ô nhịp — chúng không mang
+ * tên này. Chỉ sửa chữ số: không thêm/bớt phần tử, nên đường dẫn, danh tính,
+ * con trỏ và vùng chọn giữ nguyên.
+ */
+export function nangPhanChia(xml: string, path: string, k: number): AppliedCommand {
+  if (!Number.isInteger(k) || k < 2) throw new EditError("EDIT_DIVISIONS_FACTOR", "Hệ số nâng phải là số nguyên ≥ 2.");
   const located = locate(xml);
   const ctx: Ctx = { located, doc: located.doc, patches: [], touched: [], structural: [] };
-  const part = elementChildren(located.doc.documentElement!, "part")[partIndex - 1];
+  const m = SOURCE_PATH.exec(path);
+  const dich = resolveSourcePath(located.doc, path);
+  if (!m || !dich) throw new EditError("EDIT_TARGET_NOT_FOUND", "Không tìm thấy nốt này trong bản nhạc.");
+  const part = elementChildren(located.doc.documentElement!, "part")[+m[1] - 1];
   if (!part) throw new EditError("EDIT_TARGET_NOT_FOUND", "Không tìm thấy bè này trong bản nhạc.");
-  let coChia = false;
-  // Duyệt cây theo cấu trúc (không tìm theo nội dung): mọi số đo bằng đơn vị
-  // `<divisions>` đều là nút lá mang một trong ba tên này.
+
+  // Một lượt duyệt THEO THỨ TỰ TÀI LIỆU, đánh số đoạn: mỗi `<divisions>` mở
+  // một đoạn mới. Duyệt theo cấu trúc, không tìm theo nội dung.
   const DON_VI = new Set(["divisions", "duration", "offset"]);
+  const la: { el: Element; doan: number }[] = [];
+  let doan = 0;
+  let doanDich = -1;
   const duyet = (el: Element) => {
     for (const c of elementChildren(el)) {
-      if (DON_VI.has(c.localName ?? "")) {
-        const so = Number(textOf(c).trim());
-        if (!Number.isFinite(so)) throw new EditError("EDIT_DIVISIONS_UNKNOWN", `Số đo lạ trong <${c.localName}>.`);
-        if (c.localName === "divisions") coChia = true;
-        patchLeafText(ctx, c, String(so * k));
+      if (c === dich) doanDich = doan;
+      const ten = c.localName ?? "";
+      if (DON_VI.has(ten)) {
+        if (ten === "divisions") doan++;
+        la.push({ el: c, doan });
       } else duyet(c);
     }
   };
   duyet(part);
-  if (!coChia) throw new EditError("EDIT_DIVISIONS_UNKNOWN", "Bản nhạc không ghi rõ cách chia trường độ.");
-  ctx.touched.push(`/score-partwise/part[${partIndex}]/divisions×${k}`);
+  if (doanDich < 1) throw new EditError("EDIT_DIVISIONS_UNKNOWN", "Bản nhạc không ghi rõ cách chia trường độ.");
+  for (const { el, doan: d } of la) {
+    if (d !== doanDich) continue;
+    const moi = nhanThapPhan(textOf(el), k);
+    if (moi === null) throw new EditError("EDIT_DIVISIONS_UNKNOWN", `Số đo lạ trong <${el.localName}>.`);
+    patchLeafText(ctx, el, moi);
+  }
+  ctx.touched.push(`${path}#divisions×${k}`);
   return ketThuc(xml, located, ctx);
 }
 
