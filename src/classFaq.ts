@@ -10,11 +10,11 @@ export interface Faq { q: string; a: FaqBlock[] }
 export const FAQS: Faq[] = [
   // ─── 7 CÂU CÔNG KHAI (hiển thị trước) ───
   { q: 'Tôi đã biết chơi Guitar một chút rồi, bắt đầu ở đâu?', a: [
-    'Bạn có thể chọn lớp trung cấp phù hợp với hướng muốn học: Đệm hát trung cấp hoặc Guitar trung cấp. Nếu chưa chắc lớp nào phù hợp, hãy hỏi Mira hoặc nhắn Thầy để được tư vấn.',
+    'Nếu đã học một thời gian mà chưa tiến bộ như mong muốn, Guitar căn bản 2 giúp bạn củng cố phần còn yếu và học thêm kỹ năng mới. Nếu đã có nền rõ và muốn học Solo hoặc Đệm hát chuyên sâu, xem các lớp đang nhận học viên. Chưa chắc thì hỏi Mira hoặc nhắn Thầy.',
     { link: 'lopdangtuyen', label: 'Xem các lớp đang tuyển sinh →' },
   ] },
   { q: 'Tôi nên học lớp nào?', a: [
-    'Mới bắt đầu: thích hát thì chọn Đệm hát căn bản, muốn học từ gốc và chơi giai điệu thì chọn Guitar căn bản. Đã biết chơi rồi thì chọn Đệm hát trung cấp hoặc Guitar trung cấp.',
+    'Chưa biết gì về Guitar → Guitar căn bản 1. Đã học một thời gian nhưng chưa tiến bộ như mong muốn → Guitar căn bản 2. Đã có nền rõ và muốn học Solo hoặc Đệm hát chuyên sâu → các lớp đang nhận học viên.',
     { link: 'lopdangtuyen', label: 'Xem các lớp đang tuyển sinh →' },
   ] },
   { q: 'Học phí thế nào?', a: [
@@ -42,9 +42,7 @@ export const FAQS: Faq[] = [
     'Ngoài giờ học, bạn tự luyện trên App TVA Guitar và ôn lại bài bất cứ lúc nào.',
   ] },
   { q: 'Tôi mới hoàn toàn từ số 0 thì nên bắt đầu từ lớp nào?', a: [
-    'Nếu bạn mới hoàn toàn, có 2 cửa vào: thích hát thì bắt đầu với Đệm hát căn bản; muốn học guitar từ gốc — nốt nhạc, cần đàn, giai điệu — thì bắt đầu với Guitar căn bản.',
-    'Chưa chắc hướng nào thì làm bài test hoặc hỏi trợ lý để được gợi ý.',
-    { link: 'quiz', label: 'Làm bài test xếp trình độ →' },
+    'Bắt đầu với Guitar căn bản 1 — dành cho người chưa biết gì về Guitar. Bạn không cần chọn trước Đệm hát hay Solo; trong quá trình học Thầy sẽ tư vấn hướng phù hợp.',
   ] },
   { q: 'Tôi chưa biết gì về nhạc lý có học được không?', a: [
     'Được. Các lớp căn bản không yêu cầu biết nhạc lý trước — những kiến thức cần thiết được đưa vào từng bước trong quá trình học.',
@@ -55,19 +53,14 @@ export const FAQS: Faq[] = [
   { q: 'Tôi không có năng khiếu âm nhạc thì có học được không?', a: [
     'Được. Giai đoạn đầu bạn cần cách học rõ ràng, bài tập vừa sức và luyện tập đều đặn hơn là năng khiếu — phương pháp học đúng mới giúp bạn đi bền.',
   ] },
-  { q: 'Tôi nên học Đệm hát hay Guitar căn bản trước?', a: [
-    'Muốn vừa đàn vừa hát ngay thì bắt đầu với Đệm hát căn bản. Muốn học guitar từ gốc — hiểu nốt nhạc, vị trí trên cần đàn và giai điệu — thì Guitar căn bản là nền tảng rất tốt.',
+  { q: 'Tôi có phải chọn Đệm hát hay Solo ngay từ đầu không?', a: [
+    'Không cần. Người mới cứ bắt đầu ở Guitar căn bản 1. Khi đã có nền, Thầy dựa vào khả năng và mục tiêu của bạn để tư vấn hướng Đệm hát hay Solo.',
   ] },
-  { q: 'Lớp Đệm Hát căn bản học những gì?', a: [
-    'Lớp Đệm Hát căn bản dành cho người mới muốn tự đàn và hát các bài yêu thích. Bạn sẽ học:',
-    ['Hợp âm căn bản', 'Cách chuyển hợp âm', 'Phách và nhịp', 'Cách giữ tay phải ổn định', 'Cách đàn và hát cho khớp tông', 'Cách đưa hợp âm vào bài hát đơn giản'],
-  ] },
-  { q: 'Lớp Guitar căn bản học những gì?', a: [
-    'Lớp này dành cho người mới muốn học guitar từ gốc theo hướng chơi giai điệu. Bạn sẽ học:',
-    ['Nốt nhạc căn bản', 'Vị trí nốt trên cần đàn', 'Cách bấm từng nốt', 'Làm quen với bản nhạc', 'Chơi những giai điệu đơn giản đầu tiên', 'Chủ yếu ở các giọng dễ như C và Am để không bị quá tải'],
+  { q: 'Guitar căn bản 1 và Guitar căn bản 2 khác nhau thế nào?', a: [
+    'Guitar căn bản 1 dành cho người chưa biết gì về Guitar. Guitar căn bản 2 dành cho người đã học một thời gian nhưng chưa tiến bộ như mong muốn — củng cố phần còn yếu, học thêm kỹ năng mới và đưa khả năng chơi lên một mức cao hơn.',
   ] },
   { q: 'Tôi đã học guitar lâu rồi nhưng vẫn bị chững lại, nên học lớp nào?', a: [
-    'Đệm bài nào cũng giống bài nào, nhịp chưa chắc, muốn đệm hay hơn → Đệm hát trung cấp. Đã chơi một thời gian nhưng muốn chơi giai điệu tốt hơn, bài bản hơn → Guitar trung cấp. Chưa chắc thì hỏi Mira để được gợi ý.',
+    'Guitar căn bản 2 giúp bạn củng cố phần còn yếu và học thêm kỹ năng mới. Nếu đã có nền rõ và muốn đi sâu Solo hoặc Đệm hát, xem các lớp đang nhận học viên. Chưa chắc thì hỏi Mira để được gợi ý.',
     { link: 'chat', label: 'Hỏi Mira →' },
   ] },
   { q: 'Học online qua Zoom có hiệu quả không?', a: [

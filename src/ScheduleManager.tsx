@@ -325,7 +325,7 @@ export default function ScheduleManager() {
                     }}>
                       <option value="">— không thuộc sản phẩm public —</option>
                       {(Object.keys(PRODUCTS) as PublicProductKey[]).map(k => (
-                        <option key={k} value={k}>{PRODUCTS[k].title}</option>
+                        <option key={k} value={k}>{PRODUCTS[k].title}{PRODUCTS[k].legacy ? ' (cũ)' : PRODUCTS[k].kind === 'entry' ? ' · lớp cửa vào' : ' · lớp chính'}</option>
                       ))}
                     </select>
                   </div>

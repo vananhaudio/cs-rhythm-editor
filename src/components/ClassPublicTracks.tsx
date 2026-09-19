@@ -1,17 +1,19 @@
 /**
- * ClassPublicTracks — "Các lớp đang tuyển sinh" trên class.vananhaudio.com (09/2026).
+ * ClassPublicTracks — 2 khu tuyển sinh trên class.vananhaudio.com (mô hình lớp 09/2026).
  *
- * - Chỉ hiện lớp THẬT đang tuyển: cohort class_schedule.public_enroll=true do trang cha truyền vào
- *   (gom theo public_product). Không hard-code lịch; không nói số buổi/thời hạn/lộ trình.
- * - Card: tên lớp · dành cho ai · lịch (Thứ · giờ) · ngày khai giảng · "Đăng ký lớp →".
- * - Bấm → khung đăng ký của chính lớp đó mở ngay dưới card: chọn cách đồng hành (2 card gói,
- *   giá + quyền lợi từ DB) → họ tên + email → trang cha ghi lead + mở bước chuyển khoản.
+ *  1. "Bắt đầu học Guitar"          — LỚP CỬA VÀO (kind 'entry'): Guitar căn bản 1 / 2.
+ *  2. "Các lớp đang nhận học viên"   — LỚP CHÍNH (kind 'main'): tên = CHẶNG đang học (class_stages),
+ *     lịch + trạng thái. Không hard-code thứ nào xuất hiện: mọi lớp public_enroll=true đều hiện.
+ * Mỗi lớp định danh bằng MÃ LỚP (một sản phẩm có thể có nhiều lớp). Không nói số buổi/lộ trình.
+ * Bấm "Đăng ký lớp" → khung đăng ký của chính lớp đó mở ngay dưới card (checkout Phase 2 giữ nguyên).
  */
 import { useState } from 'react'
-import { PRODUCTS, PUBLIC_ORDER, type PublicProductKey } from '../class-content'
+import type { PublicProductKey } from '../class-content'
 
-// dateLabel: nhãn có đếm ngược (thẻ tuyển sinh) · when: 'Thứ 3 · 19:00–20:30' · startLabel: 'Khai giảng 06/10/2026' (checkout)
-export type PublicCohort = { code: string; name: string; schedule: string; dateLabel: string; when: string; startLabel: string }
+// Một lớp đang tuyển, đã được trang cha dựng sẵn từ class_schedule + class_stages.
+//   title: tên hiển thị (lớp cửa vào = tên sản phẩm; lớp chính = tên chặng đang học, vd "Solo Guitar 1")
+//   when: 'Thứ 3 · 19:00–20:30' · startLabel: 'Khai giảng 06/10/2026' | 'Đang học · Đang nhận học viên'
+export type OpenClass = { code: string; product: PublicProductKey; kind: 'entry' | 'main'; title: string; desc: string; when: string; startLabel: string }
 export type PlanKey = 'monthly' | 'six_month'
 export type PublicPlan = { key: PlanKey; label: string; priceVnd: number; totalVnd: number | null; benefits: { key: string; label: string }[] }
 
@@ -23,18 +25,18 @@ const cardBenefits = (bs: PublicPlan['benefits']) =>
   [...new Set(bs.filter(b => !CARD_SKIP.has(b.key)).map(b => CARD_LABEL[b.key] ?? b.label))]
 
 type Props = {
-  cohorts: Partial<Record<PublicProductKey, PublicCohort>> | null   // null = đang tải
-  selected: PublicProductKey | null
-  onSelect: (k: PublicProductKey) => void
+  classes: OpenClass[] | null   // null = đang tải
+  selected: string | null       // mã lớp đang mở khung đăng ký
+  onSelect: (code: string) => void
   onMira: () => void
   zaloUrl: string
   plans: PublicPlan[] | null     // null = đang tải; [] = chưa tải được
-  onSubmit: (p: { product: PublicProductKey; plan: PlanKey; name: string; email: string }) => Promise<void>
+  onSubmit: (p: { code: string; plan: PlanKey; name: string; email: string }) => Promise<void>
 }
 
 const vnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + 'đ'
 
-export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira, zaloUrl, plans, onSubmit }: Props) {
+export default function ClassPublicTracks({ classes, selected, onSelect, onMira, zaloUrl, plans, onSubmit }: Props) {
   const [plan, setPlan] = useState<PlanKey | null>(null)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -48,13 +50,13 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
     if (!n) { setErr('Nhập họ tên của bạn.'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { setErr('Email chưa đúng.'); return }
     setBusy(true)
-    try { await onSubmit({ product: selected, plan, name: n, email: e }) }
+    try { await onSubmit({ code: selected, plan, name: n, email: e }) }
     catch (x) { setErr(x instanceof Error ? x.message : 'Chưa gửi được đăng ký — vui lòng thử lại.') }
     finally { setBusy(false) }
   }
 
-  const sel = selected ? PRODUCTS[selected] : null
-  const selCohort = selected ? cohorts?.[selected] : undefined
+  const sel = selected ? classes?.find(c => c.code === selected) ?? null : null
+  const selCohort = sel
   // Khung đăng ký hiện NGAY dưới lớp vừa chọn (không phải cuối cả hai tuyến)
   const form = sel && selCohort && (
           <div className="cpt-form" id="dangky">
@@ -88,48 +90,55 @@ export default function ClassPublicTracks({ cohorts, selected, onSelect, onMira,
           </div>
   )
 
-  const open = cohorts ? PUBLIC_ORDER.filter(k => cohorts[k]) : []
+  const entry = (classes ?? []).filter(c => c.kind === 'entry')
+  const main = (classes ?? []).filter(c => c.kind === 'main')
+
+  const card = (c: OpenClass) => [
+    <div className={'cpt-step' + (selected === c.code ? ' on' : '')} id={'sp-' + c.code} key={c.code}>
+      <div className="cpt-title">{c.title}</div>
+      <p>{c.desc}</p>
+      <div className="cpt-sched">
+        {c.when && <b>{c.when}</b>}
+        <span>{c.startLabel}</span>
+      </div>
+      <div className="cpt-acts">
+        <button className="btn btn-primary" onClick={() => onSelect(c.code)}>Đăng ký lớp →</button>
+      </div>
+    </div>,
+    selected === c.code ? <div className="cpt-form-row" key={c.code + '-form'}>{form}</div> : null,
+  ]
 
   return (
-    <section id="lop-tuyen-sinh" className="band cpt">
-      <style>{CSS}</style>
-      <div className="wrap">
-        <h2>Các lớp đang tuyển sinh</h2>
-        <p className="lead">Chọn lớp phù hợp với điều bạn muốn chơi Guitar.</p>
+    <>
+      <section id="lop-tuyen-sinh" className="band cpt">
+        <style>{CSS}</style>
+        <div className="wrap">
+          <h2>Bắt đầu học Guitar</h2>
 
-        {cohorts === null && <div className="cpt-empty">Đang tải lịch khai giảng…</div>}
-        {cohorts !== null && open.length === 0 && (
-          <div className="cpt-empty">
-            Lịch khai giảng đang được cập nhật.
-            <div className="cpt-acts">
-              <button className="btn btn-primary" onClick={onMira}>Hỏi Mira →</button>
-              <a className="btn btn-ghost" href={zaloUrl} target="_blank" rel="noreferrer">Nhắn Thầy</a>
+          {classes === null && <div className="cpt-empty">Đang tải lịch học…</div>}
+          {classes !== null && entry.length === 0 && (
+            <div className="cpt-empty">
+              Lịch khai giảng đang được cập nhật.
+              <div className="cpt-acts">
+                <button className="btn btn-primary" onClick={onMira}>Hỏi Mira →</button>
+                <a className="btn btn-ghost" href={zaloUrl} target="_blank" rel="noreferrer">Nhắn Thầy</a>
+              </div>
             </div>
-          </div>
-        )}
-
-        <div className="cpt-grid">
-          {open.map(k => {
-            const p = PRODUCTS[k]
-            const c = cohorts![k]!
-            return [
-              <div className={'cpt-step' + (selected === k ? ' on' : '')} id={'sp-' + k} key={k}>
-                <div className="cpt-title">{p.title}</div>
-                <p>{p.desc}</p>
-                <div className="cpt-sched">
-                  {c.when && <b>{c.when}</b>}
-                  <span>{c.startLabel}</span>
-                </div>
-                <div className="cpt-acts">
-                  <button className="btn btn-primary" onClick={() => onSelect(k)}>Đăng ký lớp →</button>
-                </div>
-              </div>,
-              selected === k ? <div className="cpt-form-row" key={k + '-form'}>{form}</div> : null,
-            ]
-          })}
+          )}
+          <div className="cpt-grid">{entry.map(card)}</div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {main.length > 0 && (
+        <section id="lop-nhan-hoc-vien" className="band cpt">
+          <div className="wrap">
+            <h2>Các lớp đang nhận học viên</h2>
+            <p className="lead">Dành cho bạn đã có nền tảng. Chưa chắc lớp nào hợp với mình? Hỏi Mira hoặc nhắn Thầy.</p>
+            <div className="cpt-grid">{main.map(card)}</div>
+          </div>
+        </section>
+      )}
+    </>
   )
 }
 

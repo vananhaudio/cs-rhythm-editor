@@ -10,9 +10,9 @@ import { FAQS } from './classFaq'
 import ClassBenefitDetail, { type BenefitKey } from './components/ClassBenefitDetail'
 import ClassWeekJourney from './components/ClassWeekJourney'
 import ClassAfterSignup from './components/ClassAfterSignup'
-import ClassPublicTracks, { type PublicCohort, type PublicPlan, type PlanKey } from './components/ClassPublicTracks'
+import ClassPublicTracks, { type OpenClass, type PublicPlan, type PlanKey } from './components/ClassPublicTracks'
 
-import { DOORS, MODALS, PRODUCTS, type PublicProductKey } from './class-content'
+import { DOORS, MODALS, PRODUCTS, PUBLIC_ORDER, type PublicProductKey } from './class-content'
 import { buildClassLead, saveClassLead } from './lib/classLead'
 
 
@@ -24,7 +24,7 @@ type Msg = { who: 'ai' | 'me'; html: string }
 
 export default function ClassLandingPage() {
   // ── ĐĂNG KÝ (Phase 1, 09/2026): chọn 1 trong 4 sản phẩm public → tên+email → thanh toán ──
-  const [selProduct, setSelProduct] = useState<PublicProductKey | null>(null)
+  const [selCode, setSelCode] = useState<string | null>(null)   // mã lớp đang mở khung đăng ký
   const [regDone, setRegDone] = useState<{ name: string; className: string } | null>(null)  // tên/lớp vừa submit → text thanh toán/chờ duyệt
   const [showPay, setShowPay] = useState(false)
   const [paySummary, setPaySummary] = useState<{ lines: string[]; amount: number | null } | null>(null)  // offer summary + tổng (hiện trước QR)
@@ -87,7 +87,7 @@ export default function ClassLandingPage() {
   }, [])
 
   // LỊCH TUYỂN SINH PUBLIC — chỉ cohort public_enroll=true, gom theo sản phẩm (null = đang tải)
-  const [cohorts, setCohorts] = useState<Partial<Record<PublicProductKey, PublicCohort>> | null>(null)
+  const [classes, setClasses] = useState<OpenClass[] | null>(null)
   // Khách bấm chọn lớp khi lịch CHƯA tải xong → nhớ lại, tải xong mở form lớp đó
   const pendingProductRef = useRef<PublicProductKey | null>(null)
   const [faqAll, setFaqAll] = useState(false)
@@ -185,28 +185,24 @@ export default function ClassLandingPage() {
     const HIDDEN = ['draft', 'cancelled', 'merged', 'completed', 'paused']
     const dmy = (s: string) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}` }
     const todayIso = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10)   // ngày theo giờ VN
+    type Row = { id: string; code: string | null; name: string | null; schedule: string | null; start_date: string | null; end_date: string | null; status: string | null; public_product: string; weekday: number | null; start_time: string | null; duration_minutes: number | null }
+    type Stage = { class_id: string; stage_no: number; public_title: string; starts_on: string | null; ends_on: string | null }
     supabase.from('class_schedule')
-      .select('code,name,schedule,start_date,end_date,status,public_product,weekday,start_time,duration_minutes')
+      .select('id,code,name,schedule,start_date,end_date,status,public_product,weekday,start_time,duration_minutes')
       .eq('is_active', true).eq('public_enroll', true).not('public_product', 'is', null)
-      .order('start_date', { ascending: true, nullsFirst: false })
-      .then(({ data, error }) => {
-        if (error) { console.error('Lịch tuyển sinh lỗi:', error); setCohorts({}); return }
-        const out: Partial<Record<PublicProductKey, PublicCohort>> = {}
-        type Row = { code: string | null; name: string | null; schedule: string | null; start_date: string | null; end_date: string | null; status: string | null; public_product: string; weekday: number | null; start_time: string | null; duration_minutes: number | null }
+      .then(async ({ data, error }) => {
+        if (error) { console.error('Lịch tuyển sinh lỗi:', error); setClasses([]); return }
         const rows = ((data ?? []) as Row[]).filter(r =>
           !HIDDEN.includes(r.status ?? '') && r.public_product in PRODUCTS && !(r.end_date && r.end_date < todayIso))
-        // Ưu tiên cohort sắp khai giảng; nếu không có thì cohort đang chạy vẫn nhận người
-        const pick = (k: string) => rows.find(r => r.public_product === k && (!r.start_date || r.start_date >= todayIso))
-          ?? rows.find(r => r.public_product === k)
-        for (const k of Object.keys(PRODUCTS) as PublicProductKey[]) {
-          const r = pick(k); if (!r) continue
-          let dateLabel = 'Đang nhận học viên'
-          if (r.start_date) {
-            const days = Math.round((Date.parse(r.start_date) - Date.parse(todayIso)) / 86400000)
-            dateLabel = days > 0 ? `Khai giảng ${dmy(r.start_date)} · còn ${days} ngày`
-              : days === 0 ? `Khai giảng hôm nay` : `Đang học · vẫn nhận học viên`
-          }
-          // Giờ học đầy đủ cho checkout: 'Thứ 3 · 19:00–20:30' (tính từ start_time + duration_minutes)
+        // Chặng của các lớp (tên công khai theo thời điểm) — lớp không khai báo chặng thì dùng tên sản phẩm
+        const { data: st } = rows.length
+          ? await supabase.from('class_stages').select('class_id,stage_no,public_title,starts_on,ends_on').in('class_id', rows.map(r => r.id)).order('stage_no')
+          : { data: [] as Stage[] }
+        const stagesOf = (id: string) => ((st ?? []) as Stage[]).filter(x => x.class_id === id)
+        const out: OpenClass[] = rows.map(r => {
+          const p = PRODUCTS[r.public_product as PublicProductKey]
+          const ss = stagesOf(r.id)
+          // Giờ học đầy đủ: 'Thứ 3 · 19:00–20:30'
           let when = r.schedule ?? ''
           if (r.weekday !== null && r.start_time) {
             const [hh, mm] = r.start_time.split(':').map(Number)
@@ -214,15 +210,29 @@ export default function ClassLandingPage() {
             const hm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
             when = `${r.weekday === 0 ? 'Chủ nhật' : `Thứ ${r.weekday + 1}`} · ${hm(hh * 60 + mm)}–${hm(end)}`
           }
-          const startLabel = !r.start_date ? 'Đang nhận học viên'
-            : r.start_date >= todayIso ? `Khai giảng ${dmy(r.start_date)}` : 'Đang học · vẫn nhận học viên'
-          out[k] = { code: r.code ?? '', name: r.name ?? '', schedule: r.schedule ?? '', dateLabel, when, startLabel }
-        }
-        setCohorts(out)
+          let title = p.title
+          let startLabel: string
+          if (p.kind === 'entry') {
+            // Lớp cửa vào chạy vòng: báo ngày vòng kế tiếp bắt đầu
+            const next = ss.find(x => x.starts_on && x.starts_on >= todayIso)?.starts_on ?? (r.start_date && r.start_date >= todayIso ? r.start_date : null)
+            startLabel = next ? `Khai giảng ${dmy(next)}` : 'Đang nhận học viên'
+          } else {
+            // Lớp chính: tên = chặng đang học (chặng đầu tiên chưa kết thúc)
+            const cur = ss.find(x => !x.ends_on || x.ends_on >= todayIso) ?? ss[ss.length - 1]
+            if (cur?.public_title) title = cur.public_title
+            startLabel = r.start_date && r.start_date > todayIso ? `Khai giảng ${dmy(r.start_date)}` : 'Đang học · Đang nhận học viên'
+          }
+          return { code: r.code ?? '', product: r.public_product as PublicProductKey, kind: p.kind, title, desc: p.desc, when, startLabel }
+        }).filter(c => c.code)
+        const order = (c: OpenClass) => { const i = PUBLIC_ORDER.indexOf(c.product); return i < 0 ? 99 : i }
+        const w = (c: OpenClass) => c.when
+        out.sort((a, b) => order(a) - order(b) || w(a).localeCompare(w(b)))
+        setClasses(out)
         const pend = pendingProductRef.current
         pendingProductRef.current = null
-        if (pend && out[pend]) {
-          setSelProduct(pend)
+        const hit = pend ? out.find(c => c.product === pend) : null
+        if (hit) {
+          setSelCode(hit.code)
           setTimeout(() => document.getElementById('dangky')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
         }
       })
@@ -246,14 +256,20 @@ export default function ClassLandingPage() {
   }
 
   // Cuộn tới "Hai tuyến học" (thay cho 2 tab lịch cũ); có sản phẩm → sáng thẻ đó
+  // Tới khu lớp tuyển sinh; có sản phẩm → mở thẳng khung đăng ký của lớp đầu tiên thuộc sản phẩm đó
   const gotoTracks = (k?: PublicProductKey) => {
-    if (k && cohorts?.[k]) { pickProduct(k); return }   // lớp đang tuyển → mở thẳng khung đăng ký của lớp đó
-    if (k && cohorts === null) pendingProductRef.current = k   // lịch chưa tải xong → mở form khi tải xong
-    if (k) setSelProduct(null)
-    setTimeout(() => document.getElementById(k ? 'sp-' + k : 'lop-tuyen-sinh')?.scrollIntoView({ behavior: 'smooth', block: k ? 'center' : 'start' }), 60)
+    const hit = k ? classes?.find(c => c.product === k) : null
+    if (hit) { pickClass(hit.code); return }
+    if (k && classes === null) pendingProductRef.current = k   // lịch chưa tải xong → mở form khi tải xong
+    if (k) setSelCode(null)
+    setTimeout(() => document.getElementById('lop-tuyen-sinh')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
   }
-  const pickProduct = (k: PublicProductKey) => {
-    setSelProduct(k)
+  const gotoMain = () => {
+    setSelCode(null)
+    setTimeout(() => document.getElementById(classes?.some(c => c.kind === 'main') ? 'lop-nhan-hoc-vien' : 'lop-tuyen-sinh')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+  }
+  const pickClass = (code: string) => {
+    setSelCode(code)
     // Form nằm ngay dưới lớp đã chọn; cuộn để thấy tên lớp ở đầu khung (scroll-margin trừ thanh nav)
     setTimeout(() => document.getElementById('dangky')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
   }
@@ -267,6 +283,7 @@ export default function ClassLandingPage() {
       lichlop: () => gotoTracks(),
       tuyenhoc: () => gotoTracks(),
       lopdangtuyen: () => gotoTracks(),
+      lopnhanhocvien: () => setTimeout(() => gotoMain(), 350),
       app: () => setTimeout(() => goto('app'), 350),
       caidat: () => setShowGuide(true),
       demhat: () => setTimeout(() => gotoTracks('dem_hat_can_ban'), 350),
@@ -343,12 +360,13 @@ export default function ClassLandingPage() {
   // note mang tag [public-product][plan] để Admin kích hoạt đúng gói (activate_class_membership).
   // Số tiền: theo tháng = price_vnd; 6 tháng = total_vnd (đều từ DB).
   // PREVIEW: import.meta.env.DEV = không insert production.
-  const submitRegistration = async ({ product, plan, name, email }: { product: PublicProductKey; plan: PlanKey; name: string; email: string }) => {
-    const p = PRODUCTS[product]
-    const c = cohorts?.[product]
+  const submitRegistration = async ({ code, plan, name, email }: { code: string; plan: PlanKey; name: string; email: string }) => {
+    const c = classes?.find(x => x.code === code)
+    if (!c) throw new Error('Lớp này vừa thay đổi — vui lòng tải lại trang.')
+    const p = PRODUCTS[c.product]
     const pl = plans?.find(x => x.key === plan) ?? null
-    const className = c?.code ? `${p.title} · ${c.code}` : p.title
-    const payload = buildClassLead({ name, email, className, path: p.path, product, plan })
+    const className = `${c.title} · ${c.code}`
+    const payload = buildClassLead({ name, email, className, path: p.path, product: c.product, plan })
     if (import.meta.env.DEV) console.info('[preview-reg] lead payload (mock, không insert):', payload)
     else {
       // Không lưu được → KHÔNG sang thanh toán; lỗi hiện ngay trong form (ClassPublicTracks).
@@ -358,7 +376,7 @@ export default function ClassLandingPage() {
     setRegDone({ name, className })
     const amount = pl ? (plan === 'six_month' ? (pl.totalVnd ?? pl.priceVnd * 6) : pl.priceVnd) : null
     // Tóm tắt theo thứ bậc: lớp → giờ học → ngày khai giảng → cách đồng hành (không ghép câu dài)
-    const lines = [p.title, c?.when ?? '', c?.startLabel ?? ''].filter(Boolean)
+    const lines = [c.title, c.when, c.startLabel].filter(Boolean)
     if (pl) lines.push(pl.label)   // chỉ tên gói — số tiền hiện đúng một lần ở khối 'Số tiền cần chuyển'
     setPaySummary({ lines, amount })
     setOkBox(false)
@@ -444,12 +462,8 @@ export default function ClassLandingPage() {
                 {d.product
                   ? <button className="btn btn-primary" onClick={() => gotoTracks(d.product)}>{d.cta} →</button>
                   : <>
-                      {/* Đưa tới khu vực lớp đang tuyển, dừng ở lớp trung cấp đầu tiên đang mở */}
-                      <button className="btn btn-primary" onClick={() => {
-                        const first = (d.options ?? []).find(k => cohorts?.[k])
-                        setSelProduct(null)
-                        setTimeout(() => document.getElementById(first ? 'sp-' + first : 'lop-tuyen-sinh')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
-                      }}>{d.cta} →</button>
+                      {/* Đưa tới khu 'Các lớp đang nhận học viên' (lớp chính) */}
+                      <button className="btn btn-primary" onClick={gotoMain}>{d.cta} →</button>
                       <button className="btn btn-ghost" onClick={openMira}>Hỏi Mira</button>
                     </>}
               </div>
@@ -508,8 +522,8 @@ export default function ClassLandingPage() {
       {/* MỘT TUẦN HỌC — cách dùng 6 quyền lợi trong một tuần bình thường (trước 2 cách học) */}
       <ClassWeekJourney />
 
-      {/* HAI TUYẾN HỌC + ĐĂNG KÝ — lịch = cohort public_enroll (không phải toàn bộ class_schedule) */}
-      <ClassPublicTracks cohorts={cohorts} selected={selProduct} onSelect={pickProduct}
+      {/* BẮT ĐẦU HỌC + LỚP ĐANG NHẬN HỌC VIÊN — lịch = lớp public_enroll + chặng hiện tại */}
+      <ClassPublicTracks classes={classes} selected={selCode} onSelect={pickClass}
         onMira={openMira} zaloUrl={zalo} plans={plans} onSubmit={submitRegistration} />
 
       {/* THANH TOÁN — MỌI hình thức (practice/class/both) đều vào đây ngay sau tên+email */}

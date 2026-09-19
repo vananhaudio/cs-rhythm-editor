@@ -21,7 +21,7 @@ const TMP = resolve(ROOT, ".mira-build");
 
 // Gom những thứ cần bóc vào một đầu vào tạm, rồi để Vite dịch TSX giúp.
 const ENTRY = `
-export { DOORS, STARTERS, CHAT_FAQ, MODALS, PRODUCTS, MIRA_CLASSES } from "./src/class-content";
+export { DOORS, STARTERS, CHAT_FAQ, MODALS, PRODUCTS, MIRA_CLASSES, CURRICULUM } from "./src/class-content";
 export { FAQS } from "./src/classFaq";
 export { HT2027, HT2027_STAGES, HT2027_PROGRESSION, HT2027_ELIGIBLE_CODES } from "./src/data/ht2027Program";
 export { SOLO01, SOLO01_STAGES, SOLO01_PROGRESSION } from "./src/data/solo01Program";
@@ -66,6 +66,9 @@ async function main() {
   // Mira chỉ giới thiệu các lớp đang tuyển (tên + dành cho ai) và bộ hỏi đáp public.
   // Tên công khai theo public_product (Mira dùng để gọi đúng tên lớp đang tuyển lấy từ class_schedule)
   const productTitles = Object.fromEntries(Object.entries(m.PRODUCTS).map(([k, p]) => [k, p.title]));
+  // Loại lớp theo sản phẩm: entry = lớp cửa vào (Bắt đầu học Guitar), main = lớp chính (tên = chặng đang học)
+  const productKinds = Object.fromEntries(Object.entries(m.PRODUCTS).map(([k, p]) => [k, p.kind]));
+  const curriculum = m.CURRICULUM;
   // Chương trình dài hạn — nội dung HỌC THUẬT (chặng · mục tiêu · tên buổi). Không có ngày/lịch:
   // lịch là dữ liệu vận hành, không thuộc tri thức đào tạo.
   const program = (code, meta, stages, progression, extra) => ({
@@ -88,6 +91,8 @@ async function main() {
   const out = {
     generatedFrom: "cs-rhythm-editor · scripts/mira-content.mjs",
     productTitles,
+    productKinds,
+    curriculum,
     programs,
     classes,
     doors,
