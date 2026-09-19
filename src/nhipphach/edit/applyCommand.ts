@@ -991,8 +991,7 @@ function changeDurationAndRebalance(
         ? lapKhoangTrong(add(onset, moi), add(onset, cu), mocPhach)
         : [];
   } catch (e) {
-    if (e instanceof RestFillError)
-      throw new EditError("RHYTHM_REBALANCE_NOT_REPRESENTABLE", e.message);
+    if (e instanceof RestFillError) throw new EditError(e.code, e.message);
     throw e;
   }
 
@@ -1058,8 +1057,7 @@ function changeDurationAndRebalance(
     try {
       buLai = lapKhoangTrong(add(onset, moi), add(add(onset, moi), thua), mocPhach);
     } catch (e) {
-      if (e instanceof RestFillError)
-        throw new EditError("RHYTHM_REBALANCE_NOT_REPRESENTABLE", e.message);
+      if (e instanceof RestFillError) throw new EditError(e.code, e.message);
       throw e;
     }
   }

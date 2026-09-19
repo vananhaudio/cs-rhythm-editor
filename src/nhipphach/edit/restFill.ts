@@ -37,7 +37,11 @@ export interface RestPiece {
 }
 
 export class RestFillError extends Error {
-  readonly code = "RHYTHM_REBALANCE_NOT_REPRESENTABLE";
+  readonly code: string;
+  constructor(message: string, code = "RHYTHM_REBALANCE_NOT_REPRESENTABLE") {
+    super(message);
+    this.code = code;
+  }
 }
 
 const q = (n: number, d: number): Rational => rational(n, d);
@@ -93,8 +97,11 @@ function lapMotDoan(dai: Rational): RestPiece[] {
   while (compare(con, ZERO) > 0) {
     const h = KHONG_CHAM.find((x) => compare(x.quarters, con) <= 0);
     if (!h)
+      // Nợ RHYTHM-REST-GRANULARITY: dấu lặng nhỏ nhất đang hỗ trợ là móc kép.
+      // KHÔNG phải chuyện phần chia — nâng `<divisions>` không gỡ được.
       throw new RestFillError(
-        "Khoảng trống này ngắn hơn móc kép nên chưa ghi được bằng dấu lặng."
+        "Khoảng trống còn lại nhỏ hơn trường độ dấu lặng hiện đang hỗ trợ.",
+        "RHYTHM_REST_GRANULARITY"
       );
     ra.push({ ...h });
     con = sub(con, h.quarters);

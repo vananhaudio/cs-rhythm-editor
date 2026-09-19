@@ -123,7 +123,7 @@ test("phân rã: KHÔNG có dấu lặng nào bắc qua ranh giới phách", () 
 });
 
 test("phân rã: khoảng ngắn hơn móc kép thì KHÔNG ghi được, nói thẳng", () => {
-  assert.throws(() => lapKhoangTrong("0/1", "1/8", ["0/1"]), /chưa ghi được|RHYTHM/i);
+  assert.throws(() => lapKhoangTrong("0/1", "1/8", ["0/1"]), /nhỏ hơn trường độ dấu lặng hiện đang hỗ trợ/);
 });
 
 // ── Ngắn lại → sinh dấu lặng ──────────────────────────────────────────────

@@ -141,7 +141,13 @@ test("nguyên khối: nâng + đổi trường độ = MỘT lệnh; hoàn tác 
 test("nguyên khối: bước hai hỏng thì bước nâng cũng không để lại dấu vết", () => {
   // Móc đơn → móc kép chấm để lại khoảng trống 1/32 < móc kép: nâng không gỡ được.
   const d0 = createDraft(HAI_BE);
-  assert.equal(code(() => applyToDraft(d0, rebalance(P(2), "16th", 1))), "RHYTHM_REBALANCE_NOT_REPRESENTABLE");
+  assert.equal(code(() => applyToDraft(d0, rebalance(P(2), "16th", 1))), "RHYTHM_REST_GRANULARITY");
+  try {
+    applyToDraft(d0, rebalance(P(2), "16th", 1));
+  } catch (e) {
+    assert.equal((e as Error).message, "Khoảng trống còn lại nhỏ hơn trường độ dấu lặng hiện đang hỗ trợ.");
+    assert.doesNotMatch((e as Error).message, /chia|divisions/i, "không gọi nó là lỗi phần chia");
+  }
   assert.equal(d0.xml, HAI_BE);
   assert.equal(d0.commands.length, 0);
   // Lỗi không phải chuyện phần chia thì KHÔNG thử nâng.
@@ -197,4 +203,22 @@ test("không nhân nhầm: fret, string, octave, voice, staff, MIDI, số ô nh�
   }
   const so = (x: string) => [...x.matchAll(/<measure number="([^"]*)"/g)].map((m) => m[1]);
   assert.deepEqual(so(ra.xml), so(X));
+});
+
+test("cùng một đường: phím -/=, nút hình nốt (SET_DURATION) và Inspector (ChangeDuration) đều tự nâng", () => {
+  const THO = score(ATTR(1) + N("C", 1, "quarter", 1) + R(1, "quarter", 1) + R(1, "quarter", 1) + R(1, "quarter", 1));
+  // Phím `=` và nút móc đơn đều ra ChangeDurationAndRebalance → cùng applyCommand.
+  const phim = applyCommand(THO, rebalance(P(2), "eighth"));
+  const inspector = applyCommand(THO, { type: "ChangeDuration", path: P(2), noteType: "eighth", dots: 0 } as MusicXmlEditCommand);
+  for (const r of [phim, inspector]) {
+    assert.match(r.xml, /<divisions>2<\/divisions>/);
+    assert.equal(readNoteFields(r.xml, P(2))!.noteType, "eighth");
+  }
+  // Lên lại: móc kép → móc đơn → đen (không cần nâng thêm).
+  let d = createDraft(THO);
+  for (const t of ["eighth", "16th", "eighth", "quarter"]) d = applyToDraft(d, rebalance(P(2), t));
+  assert.equal(readNoteFields(d.xml, P(2))!.noteType, "quarter");
+  assert.match(d.xml, /<divisions>4<\/divisions>/);
+  for (let i = 0; i < 4; i++) d = undo(d);
+  assert.equal(d.xml, THO);
 });
