@@ -399,6 +399,12 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [modules, setModules]     = useState<Module[]>([])
   const [lessons, setLessons]     = useState<Lesson[]>([])
   const [lessonActionMap, setLessonActionMap] = useState<Record<string, Set<string>>>({})  // lessonId → set action_type (cho màu mốc)
+  // Chốt chặn chống ghi đúp: React state cập nhật BẤT ĐỒNG BỘ nên nhiều lần gọi trong
+  // cùng một tick đều đọc giá trị cũ và lọt hết qua guard (đã gây 13 bản ghi trùng /100ms).
+  // Ref cập nhật NGAY trong tick → chặn thật. Khoá theo `${lessonId}|${actionType}`.
+  const actionSentRef = useRef<Set<string>>(new Set())
+  // Đổi tài khoản trong cùng phiên trang → nhả chốt, tránh chặn oan học viên kế tiếp
+  useEffect(() => { actionSentRef.current = new Set() }, [student?.id])
   const [masterPath, setMasterPath] = useState<{ id: string; title: string; courseId: string; courseName: string }[]>([])  // đường mốc xuyên suốt mọi khóa
   const [journeyLessons, setJourneyLessons] = useState<JourneyLesson[]>([])  // view-model bài học phẳng theo môn (cho hành trình ngang)
   const [activeSubject, setActiveSubject]   = useState<string | null>(null)  // môn đang mở màn journey
@@ -1515,13 +1521,22 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const XP_ACTION: Record<string, number> = { practiced_lesson: 10, submitted_video_self_report: 50, reviewed_old_lesson: 5 }
   const logAction = async (actionType: string) => {
     if (!activeLesson || lessonActions.has(actionType) || actionBusy) return
+    // Chốt chặn đồng bộ — phải đặt TRƯỚC mọi `await`, vì sau await là tick khác
+    const guardKey = `${activeLesson.id}|${actionType}`
+    if (actionSentRef.current.has(guardKey)) return
+    actionSentRef.current.add(guardKey)
     setActionBusy(actionType)
-    if (guest) { requireLogin(); setActionBusy(null); return }
+    if (guest) { requireLogin(); actionSentRef.current.delete(guardKey); setActionBusy(null); return }
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setActionBusy(null); return }
+    if (!user) { actionSentRef.current.delete(guardKey); setActionBusy(null); return }
     const { error } = await supabase.from('student_action_logs')
       .insert({ user_id: user.id, action_type: actionType, lesson_id: activeLesson.id })
-    if (error) { alert('Ghi nhận thất bại: ' + error.message); setActionBusy(null); return }
+    // 23505 = đã có bản ghi (UNIQUE chặn) → coi như đã ghi nhận, KHÔNG báo lỗi cho học viên
+    if (error && error.code !== '23505') {
+      alert('Ghi nhận thất bại: ' + error.message)
+      actionSentRef.current.delete(guardKey); setActionBusy(null); return
+    }
+    if (error) { setLessonActions(prev => new Set([...prev, actionType])); setActionBusy(null); return }
     const xp = XP_ACTION[actionType] ?? 0
     if (xp > 0) {
       const { error: xpErr } = await supabase.from('student_xp_log')
@@ -1538,6 +1553,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const markComplete = async (lessonId: string) => {
     if (preview || guest) return   // tài khoản thầy xem khoá / khách free → không ghi tiến độ
     if (completedIds.has(lessonId) || markingDone) return
+    // Chốt chặn đồng bộ — state không chặn được 2 lần gọi trong cùng tick (gây cộng đôi XP bài học)
+    const doneKey = `${lessonId}|lesson_xp`
+    if (actionSentRef.current.has(doneKey)) return
+    actionSentRef.current.add(doneKey)
     setMarkingDone(true)
     // Kiểm tra record hiện có (để không thưởng XP lần 2); ghi bằng upsert theo
     // unique(student_id, lesson_id) — không race, không duplicate, không downgrade.
@@ -1549,6 +1568,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     if (error) {
       console.error('Lỗi lưu tiến độ:', error)
       alert('Không lưu được tiến độ: ' + error.message)
+      actionSentRef.current.delete(doneKey)
       setMarkingDone(false)
       return
     }
@@ -1571,8 +1591,10 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const finishElearnLesson = async (lessonId: string) => {
     await markComplete(lessonId)
     const acts = lessonActionMap[lessonId]
-    if (!acts?.has('practiced_lesson')) {
+    const guardKey = `${lessonId}|practiced_lesson`
+    if (!acts?.has('practiced_lesson') && !actionSentRef.current.has(guardKey)) {
       if (guest) return
+      actionSentRef.current.add(guardKey)   // chặn đồng bộ trước await (xem logAction)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { error } = await supabase.from('student_action_logs')
