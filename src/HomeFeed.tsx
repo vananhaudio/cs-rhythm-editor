@@ -38,7 +38,12 @@ export const FEED_TYPE_META: Record<HomeFeedItem['type'], { label: string; icon:
 
 // Mở ra ngoài app: WKWebView KHÔNG mở '_blank' (im lặng không phản ứng) — phải '_system'.
 // Cùng quy ước với openExternal trong MobileStudentPortal / live/LivePages.
-const openExternal = (u: string) => { try { window.open(u, '_system') } catch { window.open(u, '_blank') } }
+const WEB_ORIGIN = 'https://timming.vananhaudio.com'
+// content_url có thể là ĐƯỜNG DẪN TƯƠNG ĐỐI (trang của chính app — mở từ bundle, không
+// tải lại SPA qua mạng). Khi mở RA NGOÀI thì origin của app là https://localhost nên phải
+// đổi sang tên miền web thật, nếu không Safari mở vào hư không.
+const absoluteUrl = (u: string) => (u.startsWith('http') ? u : WEB_ORIGIN + (u.startsWith('/') ? u : '/' + u))
+const openExternal = (u: string) => { const a = absoluteUrl(u); try { window.open(a, '_system') } catch { window.open(a, '_blank') } }
 
 // Nội dung chữ đăng thẳng từ Admin (không cần trang web riêng): content_data.body
 export function feedBody(item: HomeFeedItem): string {

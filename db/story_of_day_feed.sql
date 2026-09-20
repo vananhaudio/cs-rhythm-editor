@@ -47,7 +47,11 @@ begin
   values
     (feed_id, 'article', '1001 CÂU CHUYỆN', s.title, excerpt, '📖', '#B45309',
      s.photos -> 0 ->> 'url',
-     'https://timming.vananhaudio.com/story/' || s.slug,
+     -- ĐƯỜNG DẪN TƯƠNG ĐỐI (bắt buộc): app native bundled mở overlay bằng iframe.
+     -- URL tuyệt đối ⇒ iframe tải LẠI toàn bộ SPA (~4,4MB JS) qua mạng, boot React lần 2
+     -- trong cùng WKWebView ⇒ chờ lâu, màn đen, có khi bị iOS kill. Đường dẫn tương đối
+     -- resolve về origin hiện tại (https://localhost trong app) ⇒ đọc thẳng từ bundle.
+     '/story/' || s.slug,
      jsonb_build_object('source', 'story_of_day', 'story_id', s.id,
                         'story_number', s.story_number, 'day', today),
      'in_app', true, now(), null, 20)
