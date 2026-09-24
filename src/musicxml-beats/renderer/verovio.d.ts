@@ -12,6 +12,8 @@ declare module "verovio/esm" {
     loadData(data: string): boolean;
     getMEI(options?: Record<string, unknown>): string;
     getPageCount(): number;
+    /** Trang (1-based) chứa phần tử có xml:id này; 0 khi không có. */
+    getPageWithElement(xmlId: string): number;
     getLog(): string;
     renderToSVG(page?: number): string;
     renderToTimemap(

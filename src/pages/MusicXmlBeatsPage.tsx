@@ -7,7 +7,7 @@ import {
   SUPPORTED_COMPOUND,
   SUPPORTED_IRREGULAR,
   SUPPORTED_SIMPLE,
-} from "../musicxml-beats/meterGrouping";
+} from "@vananhaudio/musicxml-beats/core";
 import {
   downloadBlob,
   exportScorePDF,
@@ -15,13 +15,12 @@ import {
   exportSVGPages,
 } from "../musicxml-beats/renderer/printExport";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { createAnnotatedScoreRenderer } from "../musicxml-beats/renderer/verovioAdapter";
-import { DEFAULT_SCORE_SETTINGS } from "../musicxml-beats/renderer/types";
+import { createAnnotatedScoreRenderer, DEFAULT_SCORE_SETTINGS } from "@vananhaudio/musicxml-beats/render";
 import type {
   AnnotatedScore,
   ScoreSettings,
-} from "../musicxml-beats/renderer/types";
-import { downloadText } from "../musicxml-beats/renderer/svgExport";
+} from "@vananhaudio/musicxml-beats/render";
+import { downloadText } from "@vananhaudio/musicxml-beats/render";
 import {
   SYSTEM_PRESETS,
   applyPreset,
@@ -123,9 +122,8 @@ import type {
   SourceHarmony,
   SourceLyric,
   SourceNote,
-} from "../musicxml-beats/sourceTags";
-import { parseSourceSvgId, sourceSvgId, tagSourceIds } from "../musicxml-beats/sourceTags";
-import { parseMusicXML } from "../musicxml-beats/parser";
+} from "@vananhaudio/musicxml-beats/core";
+import { parseSourceSvgId, sourceSvgId, tagSourceIds, parseMusicXML } from "@vananhaudio/musicxml-beats/core";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
 import { can, NO_CAPS, type CapState } from "../nhipphach/capabilities";

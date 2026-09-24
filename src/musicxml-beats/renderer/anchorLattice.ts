@@ -3,7 +3,7 @@ import {
   COUNTING_LEVELS,
   createAnnotations,
 } from "../annotations.ts";
-import { add, div, rational } from "../rational.ts";
+import { add, compare, div, rational } from "../rational.ts";
 import type { Rational } from "../rational.ts";
 import type { BeatMapDocument } from "../beatMap.ts";
 import type { Diagnostic } from "../model.ts";
@@ -40,6 +40,8 @@ export interface Lattice {
   mei: string;
   /** chỉ số ô → xml:id của <measure> trong MEI */
   measureIds: Map<number, string>;
+  /** Ô nguồn đại diện cho mỗi measure MEI; multipart chỉ lấy part đầu. */
+  sourceMeasureIds: Map<number, string>;
   /** khoá (ô, khuông, tstamp) → xml:id của neo rỗng trong MEI */
   byKey: Map<string, string>;
   staves: Map<number, string[]>;
@@ -67,25 +69,44 @@ export function applyAnchorLattice(
   const byKey = new Map<string, string>();
   const staves = new Map<number, string[]>();
   const measureIds = new Map<number, string>();
+  const sourceMeasureIds = new Map<number, string>();
   const issue = (sourceId: string, code: string, message: string) =>
     diagnostics.push({ sourceId, code, message });
 
-  // Verovio gộp các part cùng lúc vào một measure MEI. Không đoán ánh xạ.
-  if (new Set(map.measures.map((m) => m.partId)).size !== 1) {
-    issue(
-      "score",
-      "MULTIPART_ANNOTATION_NOT_SUPPORTED",
-      "MVP chưa gắn số cho bản nhiều part; bản nhạc gốc vẫn được hiển thị."
-    );
-    return { mei, measureIds, byKey, staves, diagnostics, annotatable: false };
+  const partIds = [...new Set(map.measures.map((m) => m.partId))];
+  const reference = map.measures.filter((m) => m.partId === partIds[0]);
+  const multipart = partIds.length > 1;
+  const sameTimeline = partIds.every((partId) => {
+    const part = map.measures.filter((m) => m.partId === partId);
+    return part.length === reference.length && part.every((m, index) => {
+      const first = reference[index];
+      return m.measureNumber === first.measureNumber &&
+        m.meter?.beats === first.meter?.beats &&
+        m.meter?.beatType === first.meter?.beatType &&
+        JSON.stringify(m.grouping ?? null) === JSON.stringify(first.grouping ?? null) &&
+        compare(m.actualDuration, first.actualDuration) === 0 &&
+        m.pickup === first.pickup &&
+        compare(m.pickupOffset, first.pickupOffset) === 0 &&
+        m.diagnostics.length === 0 &&
+        JSON.stringify(m.beatsMap) === JSON.stringify(first.beatsMap);
+    });
+  });
+  if (multipart && !sameTimeline) {
+    issue("score", "MULTIPART_TIMELINE_MISMATCH", "Các part không cùng ranh giới ô nhịp/phách; giữ bản nhạc, bỏ số phách.");
+    return { mei, measureIds, sourceMeasureIds, byKey, staves, diagnostics, annotatable: false };
   }
-  if (measures.length !== map.measures.length) {
+  // Verovio gộp các part vào cùng measure MEI; chỉ đối chiếu với part đại diện.
+  if (measures.length !== reference.length) {
     issue(
       "score",
       "MEASURE_MAPPING_MISMATCH",
       "Không khớp ô nhịp giữa MusicXML và MEI; giữ bản nhạc, bỏ số phách."
     );
-    return { mei, measureIds, byKey, staves, diagnostics, annotatable: false };
+    return { mei, measureIds, sourceMeasureIds, byKey, staves, diagnostics, annotatable: false };
+  }
+  if (multipart && measures.some((m, i) => m.getAttribute("n") !== reference[i].measureNumber)) {
+    issue("score", "MEASURE_MAPPING_MISMATCH", "Số ô trong MEI không khớp nguồn; giữ bản nhạc, bỏ số phách.");
+    return { mei, measureIds, sourceMeasureIds, byKey, staves, diagnostics, annotatable: false };
   }
 
   for (const def of all(doc, "staffDef"))
@@ -93,7 +114,7 @@ export function applyAnchorLattice(
 
   let serial = 0;
   measures.forEach((m, mi) => {
-    const bm = map.measures[mi];
+    const bm = reference[mi];
     if (bm.diagnostics.length) return;
     if (m.getAttribute("n") !== bm.measureNumber) {
       issue(
@@ -113,8 +134,12 @@ export function applyAnchorLattice(
       return;
     }
     const staffNumbers = staffElements.map((s) => s.getAttribute("n") || "1");
-    staves.set(mi, staffNumbers);
+    // Một hàng phách đại diện cho timeline chung của các part; một part giữ
+    // hành vi cũ (mọi staff) để không đổi bản khắc đã nghiệm thu.
+    const annotatedStaves = multipart ? staffNumbers.slice(0, 1) : staffNumbers;
+    staves.set(mi, annotatedStaves);
     measureIds.set(mi, id(m));
+    sourceMeasureIds.set(mi, bm.measureId);
     if (!bm.meter) return;
 
     // Hợp của mọi mức đếm: lưới không phụ thuộc lựa chọn hiển thị.
@@ -131,7 +156,7 @@ export function applyAnchorLattice(
             }
           }
 
-    for (const staff of staffNumbers)
+    for (const staff of annotatedStaves)
       for (const stamp of [...stamps].sort((a, b) => Number(a) - Number(b))) {
         const anchorId = `tva-anchor-${++serial}`;
         const dir = doc.createElementNS(MEI, "dir");
@@ -145,5 +170,5 @@ export function applyAnchorLattice(
         byKey.set(anchorKey(mi, staff, stamp), anchorId);
       }
   });
-  return { mei: serialize(doc), measureIds, byKey, staves, diagnostics, annotatable: true };
+  return { mei: serialize(doc), measureIds, sourceMeasureIds, byKey, staves, diagnostics, annotatable: true };
 }

@@ -1,0 +1,34 @@
+{
+  "name": "@vananhaudio/musicxml-beats",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
+    },
+    "./render": {
+      "types": "./dist/render.d.ts",
+      "import": "./dist/render.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.package.json",
+    "test": "npm run build && node --test tests/smoke.test.mjs"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "0.9.12",
+    "verovio": "6.3.0"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2"
+  }
+}

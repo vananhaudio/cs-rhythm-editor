@@ -13,8 +13,9 @@ import type { Element } from "@xmldom/xmldom";
  * mới. Nên danh tính phải gắn ở bản MEI, ngay trước lượt khắc, theo đúng hai
  * tương ứng cấu trúc đã đo:
  *
- *   `<verse>` là con của chính `<note>` mang id nguồn, GIỮ NGUYÊN THỨ TỰ các
- *   `<lyric>` của nốt ấy  ⇒  (nốt, thứ tự) là identity.
+ *   `<verse>` thường là con của `<note>` mang id nguồn. Khi nốt nằm trong
+ *   `<chord>`, Verovio có thể chuyển verse lên chord cha. Chỉ nhận chord cha
+ *   khi đúng một nốt trong chord có lời nguồn; thứ tự verse vẫn phải khớp.
  *
  *   Dãy `<harm>` trong một `<measure>` MEI bằng đúng phép nối các `<harmony>`
  *   của từng part trong ô đó, part này tiếp part kia, mỗi part theo thứ tự tài
@@ -68,7 +69,7 @@ export function applySourceIdentity(mei: string, tagged: TaggedScore): IdentityR
     const meiId = id(el);
     if (!meiId || !parseSourceSvgId(meiId)) continue;
     const nguon = theoNot.get(meiId);
-    const verses = direct(el, "verse");
+    let verses = direct(el, "verse");
     if (!nguon) {
       // Nốt không có lời trong nguồn mà MEI lại có `<verse>`: không đoán chủ nào.
       if (verses.length)
@@ -80,6 +81,15 @@ export function applySourceIdentity(mei: string, tagged: TaggedScore): IdentityR
       continue;
     }
     daGap.add(meiId);
+    // Verovio chuyển verse từ note lên <chord> khi MusicXML ghi hợp âm.
+    // Chỉ dùng verse của chord nếu chính note này là note DUY NHẤT trong chord
+    // mang lời nguồn; nhiều chủ thể thì thứ tự không chứng minh được identity.
+    if (!verses.length && el.parentNode?.localName === "chord") {
+      const chord = el.parentNode as Element;
+      const lyricOwners = direct(chord, "note").filter((note) => theoNot.has(id(note)));
+      if (lyricOwners.length === 1 && lyricOwners[0] === el)
+        verses = direct(chord, "verse");
+    }
     if (verses.length !== nguon.length) {
       for (const l of nguon)
         bo(

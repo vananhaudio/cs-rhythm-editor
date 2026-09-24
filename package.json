@@ -64,6 +64,7 @@
     "@tiptap/pm": "^3.23.6",
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
+    "@vananhaudio/musicxml-beats": "file:vendor/vananhaudio-musicxml-beats-0.2.0.tgz",
     "@xmldom/xmldom": "0.9.12",
     "fflate": "^0.8.3",
     "jspdf": "^4.2.1",

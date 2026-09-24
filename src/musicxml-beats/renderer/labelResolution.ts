@@ -24,10 +24,13 @@ export function resolveLabels(
     settings.countingLevel,
     settings.compoundCountingMode
   );
-  map.measures.forEach((bm, mi) => {
-    if (bm.diagnostics.length) return;
+  const bySourceId = new Map(map.measures.map((measure) => [measure.measureId, measure]));
+  for (const [mi, sourceId] of lattice.sourceMeasureIds) {
+    const bm = bySourceId.get(sourceId);
+    if (!bm) continue;
+    if (bm.diagnostics.length) continue;
     const staffNumbers = lattice.staves.get(mi);
-    if (!staffNumbers) return;
+    if (!staffNumbers) continue;
     for (const a of annotations.filter((x) => x.sourceMeasureId === bm.measureId))
       for (const staff of staffNumbers) {
         let stamp: string;
@@ -60,6 +63,6 @@ export function resolveLabels(
           timestamp: stamp,
         });
       }
-  });
+  }
   return { labels, diagnostics };
 }

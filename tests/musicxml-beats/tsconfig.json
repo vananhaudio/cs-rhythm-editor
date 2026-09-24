@@ -9,5 +9,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["../../src/musicxml-beats/*.ts", "./*.test.ts"]
+  "include": ["../../src/musicxml-beats/*.ts", "../../src/musicxml-beats/renderer/verovio.d.ts", "./*.test.ts"]
 }

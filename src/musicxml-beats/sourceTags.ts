@@ -1,5 +1,6 @@
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import type { Element } from "@xmldom/xmldom";
+import { dongBangSau, nhoTheoNguon } from "./sourceCache.ts";
 
 /**
  * Danh tính nguồn của một nốt/lặng — thuần CẤU TRÚC, không dính cao độ.
@@ -42,10 +43,10 @@ export interface SourceNote {
  * Danh tính nguồn của MỘT dòng lời trên một nốt — Giai đoạn Nội dung 3C.
  *
  * ĐO ĐƯỢC (không suy đoán): Verovio KHÔNG giữ thuộc tính `id` của `<lyric>`; nó
- * sinh `xml:id` mới cho `<verse>`/`<syl>` trong MEI. Nhưng MEI đặt `<verse>` làm
- * CON của chính `<note>` đã mang id nguồn của ta, và giữ nguyên THỨ TỰ các
- * `<lyric>` của nốt đó. Vì vậy danh tính là (nốt nguồn, thứ tự dòng lời trong
- * nốt) — exact, không hình học.
+ * sinh `xml:id` mới cho `<verse>`/`<syl>` trong MEI. Verse thường là con của
+ * `<note>` đã mang id nguồn; với chord có thể nằm ở chord cha. Bộ gắn danh tính
+ * kiểm tra cấu trúc và số lượng trước khi ghép với thứ tự `<lyric>` nguồn.
+ * Vì vậy danh tính là (nốt nguồn, thứ tự dòng lời trong nốt) — không hình học.
  *
  * Khoá là THỨ TỰ chứ không phải thuộc tính `number`: đo được rằng hai `<lyric>`
  * không ghi `number` trên cùng một nốt đều ra `<verse n="1">`. Lấy `number` làm
@@ -180,7 +181,7 @@ export function parseSourceSvgId(id: string) {
  * Gắn id nguồn vào mọi <note> (kể cả lặng). Chuỗi trả về là thứ đưa cho Verovio;
  * MusicXML gốc trong thư viện không bị đụng tới.
  */
-export function tagSourceIds(xml: string): TaggedScore {
+function tinhTagSourceIds(xml: string): TaggedScore {
   const notes: SourceNote[] = [];
   const byId = new Map<string, SourceNote>();
   const lyrics: SourceLyric[] = [];
@@ -318,4 +319,19 @@ export function tagSourceIds(xml: string): TaggedScore {
     });
   });
   return { xml: new XMLSerializer().serializeToString(doc), ...empty() };
+}
+
+/**
+ * Cùng một chuỗi nguồn → chỉ parse MỘT lần (4D.P). Dữ liệu nốt được đóng băng;
+ * ba Map trả cho caller là bản sao để set/delete/clear không làm bẩn cache.
+ */
+const boNhoTag = nhoTheoNguon<TaggedScore>();
+export function tagSourceIds(xml: string): TaggedScore {
+  const cached = boNhoTag.lay(xml, () => dongBangSau(tinhTagSourceIds(xml)));
+  return Object.freeze({
+    ...cached,
+    byId: new Map(cached.byId),
+    lyricById: new Map(cached.lyricById),
+    harmonyById: new Map(cached.harmonyById),
+  });
 }
