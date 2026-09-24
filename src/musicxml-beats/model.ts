@@ -47,6 +47,17 @@ export interface TimedEvent {
     xml: string;
   }[];
 }
+export type NavigationMark =
+  | { kind: "repeat-start" }
+  | { kind: "repeat-end"; times: number | null; afterJump: boolean }
+  | { kind: "ending-start" | "ending-end"; numbers: readonly number[] }
+  | { kind: "segno" | "coda"; label: string }
+  | { kind: "dc"; timeOnly: readonly number[] | null }
+  | { kind: "ds" | "to-coda"; target: string; timeOnly: readonly number[] | null }
+  | { kind: "fine"; timeOnly: readonly number[] | null }
+  | { kind: "expect-fine" | "expect-coda" }
+  | { kind: "visual"; mark: "segno" | "coda" | "dc" | "ds" | "fine" | "to-coda" }
+  | { kind: "unsupported"; reason: string };
 export interface NormalizedMeasure {
   source: SourceIdentity;
   number: string;
@@ -55,6 +66,7 @@ export interface NormalizedMeasure {
   meter: Meter | null;
   actualDuration: Rational;
   events: TimedEvent[];
+  navigation: NavigationMark[];
   diagnostics: Diagnostic[];
 }
 export interface NormalizedPart {

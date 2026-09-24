@@ -1,6 +1,7 @@
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import type { Element } from "@xmldom/xmldom";
 import { ZERO, add, sub, div, decimal, compare } from "./rational.ts";
+import { readNavigationMarks } from "./navigationMarks.ts";
 import type { Rational } from "./rational.ts";
 import type {
   NormalizedScore,
@@ -63,17 +64,25 @@ export function parseMusicXML(xml: string): NormalizedScore {
         meter,
         actualDuration: ZERO,
         events: [],
+        navigation: [],
         diagnostics: [],
       };
       p.measures.push(measure);
       let cursor = ZERO,
         extent = ZERO;
+      const locatedNavigation: { kind: "start" | "end"; onset: Rational }[] = [];
       let previous: TimedEvent | null = null;
       const issue = (code: string, message: string, id = mp) =>
         measure.diagnostics.push({ code, sourceId: id, message });
       for (const [ci, el] of children(m).entries()) {
         const tag = el.localName ?? el.tagName,
           ep = `${mp}/*[${ci + 1}]`;
+        const navigationMarks = readNavigationMarks(el);
+        measure.navigation.push(...navigationMarks);
+        if (tag === "direction" || tag === "sound") for (const mark of navigationMarks) {
+          if (["segno", "coda", "repeat-start"].includes(mark.kind)) locatedNavigation.push({ kind: "start", onset: cursor });
+          if (["dc", "ds", "to-coda", "fine"].includes(mark.kind)) locatedNavigation.push({ kind: "end", onset: cursor });
+        }
         if (tag === "attributes") {
           const dv = text(el, "divisions");
           if (dv) {
@@ -223,6 +232,9 @@ export function parseMusicXML(xml: string): NormalizedScore {
         if (compare(cursor, extent) > 0) extent = cursor;
       }
       measure.actualDuration = extent;
+      if (locatedNavigation.some((mark) => compare(mark.onset, mark.kind === "start" ? ZERO : extent) !== 0)) {
+        measure.navigation.push({ kind: "unsupported", reason: "Navigation giữa ô nhịp chưa được hỗ trợ" });
+      }
       if (!measure.meter)
         issue(
           "MISSING_OR_UNSUPPORTED_METER",
