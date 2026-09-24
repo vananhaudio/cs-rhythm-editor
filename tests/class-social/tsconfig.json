@@ -1,0 +1,5 @@
+{
+  "extends": "../musicxml-beats/tsconfig.json",
+  "compilerOptions": { "lib": ["ES2023", "DOM"], "jsx": "react-jsx", "types": ["node", "vite/client"] },
+  "include": ["./*.test.ts", "./*.test.tsx"]
+}
