@@ -1,7 +1,8 @@
 import ToolRouteGate from './ToolRouteGate'
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { supabase } from './supabase'
+import { supabase, IS_NATIVE_CAPACITOR } from './supabase'
 import type { User } from '@supabase/supabase-js'
+import { resolveMeRoute, isLearnPath } from './class-social/resolveMeRoute'
 import { PlayerView } from './PlayerView'
 import { TapWithSong } from './TapWithSong'
 import { GpEditor } from './GpEditor'
@@ -58,6 +59,8 @@ import Ht2027LessonPage from './lesson/Ht2027LessonPage'
 /** Đường dẫn của công cụ Nhịp Phách. Phần tử ĐẦU là URL chính thức. */
 export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beats']
 const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
+// Class Social (cửa chính /me trên class.*) — chunk riêng, không nặng thêm bundle App học
+const ClassSocialPage = lazy(() => import('./class-social/ClassSocialPage'))
 type AppUser = {
   id: string
   role: string
@@ -208,10 +211,22 @@ function AppRouterContent() {
 
   // ── Domain class.vananhaudio.com ──
   //  /class*  → tuyển sinh ; /  → tuyển sinh (khách) hoặc cổng học (học sinh đã đăng nhập)
-  //  /me và các route app khác (bài/công cụ) → rơi xuống routing thường (chạy bình thường)
+  //  /me      → Class Social (cửa chính mới) ; /me?tab=… → /learn?tab=… (deep link cũ)
+  //  App học  → /learn (và /start như cũ). Native/timming: /me vẫn là App học như trước.
+  //  các route app khác (bài/công cụ) → rơi xuống routing thường (chạy bình thường)
   const onClass = typeof window !== 'undefined' && window.location.hostname.startsWith('class.')
   if (onClass && (path === '/' || path === '/class' || path.startsWith('/class'))) {
     return <ClassLandingPage />   // class./ LUÔN là trang tuyển sinh; vào cổng học qua nút "Hành trình của tôi" → /me
+  }
+  {
+    const me = resolveMeRoute({
+      hostname: window.location.hostname, pathname: path,
+      search: window.location.search, isNative: IS_NATIVE_CAPACITOR,
+    })
+    if (me?.kind === 'redirect') { window.location.replace(me.to); return null }
+    if (me?.kind === 'social') {
+      return <Suspense fallback={null}><ClassSocialPage initialSection={me.section} /></Suspense>
+    }
   }
 
   // ── Route /editorial — Ban biên tập (chỉ teacher/admin) ──
@@ -434,8 +449,10 @@ if (path === '/flow-migrate' || path.startsWith('/flow-migrate')) {
   return <FlowMigratePage />
 }
 
-// ── Route /start — Student onboarding ──
-if (path === '/start' || path.startsWith('/start') || path === '/me' || path.startsWith('/me/')) {
+// ── Route /start, /learn — Student onboarding → App học (MobileStudentPortal) ──
+// /learn là địa chỉ của App học khi /me đã là Class Social (class.*). /me ở đây chỉ còn
+// chạy khi Social không bật (native, timming., localhost…) — giữ nguyên hành vi cũ.
+if (path === '/start' || path.startsWith('/start') || isLearnPath(path) || path === '/me' || path.startsWith('/me/')) {
   return <StudentOnboarding />
 }
 

@@ -225,7 +225,7 @@ export default function PublishPrep({ userId, onBack, onConfirm, busy }: {
       {showAvatar && !profile?.avatar_url && (
         <section className="pp-sec pp-note">
           <p>Bạn chưa có ảnh đại diện. Hãy cập nhật để câu chuyện của bạn gần gũi hơn.</p>
-          <a className="pp-link-btn" href="/me">Cập nhật hồ sơ</a>
+          <a className="pp-link-btn" href="/learn?tab=me">Cập nhật hồ sơ</a>
         </section>
       )}
 
