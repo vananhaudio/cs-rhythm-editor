@@ -61,9 +61,11 @@ export const NHIPPHACH_PATHS: readonly string[] = ['/nhipphach', '/musicxml-beat
 const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
 // Class Social (cửa chính /me trên class.*) — chunk riêng, không nặng thêm bundle App học
 const ClassSocialPage = lazy(() => import('./class-social/ClassSocialPage'))
+const ThuVienPage = lazy(() => import('./thuvien/ThuVienPage'))
 type AppUser = {
   id: string
   role: string
+  status: string
   name: string
   email: string
 }
@@ -165,6 +167,15 @@ function AppRouterContent() {
   }
 
   const isTeacher = appUser?.role === 'teacher' || appUser?.role === 'admin'
+
+  if (path === '/thuvien' || path === '/thuvien/') {
+    if (loading) return null
+    if (!user || appUser?.role !== 'admin' || appUser.status !== 'active') {
+      window.location.href = '/start'
+      return null
+    }
+    return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở thư viện…</div>}><ThuVienPage /></Suspense>
+  }
 
   // ── Công cụ Nhịp Phách ──
   // KHÔNG còn teacher-only cứng. Ai vào được là do Admin cấu hình quyền
