@@ -27,6 +27,7 @@
     "test:route-guard": "tsc -p tests/route-guard/tsconfig.json && node --experimental-strip-types --test tests/route-guard/teacherRoute.test.ts tests/route-guard/authSession.test.ts",
     "test:nhipphach-layout": "tsc -p tests/nhipphach-layout/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-layout/layout.test.ts tests/nhipphach-layout/architecture.test.ts",
     "test:nhipphach-library": "tsc -p tests/nhipphach-library/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-library/library.test.ts",
+    "test:master-musicxml-copy": "tsc -p tests/nhipphach-library/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-library/master-copy.test.ts",
     "test:nhipphach-library-db": "tsc -p tests/nhipphach-library/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-library/db.test.ts",
     "test:nhipphach-select": "tsc -p tests/nhipphach-select/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-select/select.test.ts",
     "test:nhipphach-edit": "tsc -p tests/nhipphach-edit/tsconfig.json && node --experimental-strip-types --test tests/nhipphach-edit/edit.test.ts tests/nhipphach-edit/note-editing.test.ts tests/nhipphach-edit/lyric-harmony.test.ts tests/nhipphach-edit/rest-entry.test.ts tests/nhipphach-edit/rebalance.test.ts tests/nhipphach-edit/note-entry.test.ts tests/nhipphach-edit/clipboard.test.ts",

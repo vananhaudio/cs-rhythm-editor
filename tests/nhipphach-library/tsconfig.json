@@ -1,5 +1,6 @@
 {
   "extends": "../musicxml-renderer/tsconfig.json",
+  "compilerOptions": { "types": ["node", "vite/client"] },
   "include": [
     "../../src/nhipphach/capabilities.ts",
     "../../src/nhipphach/scoreMetadata.ts",

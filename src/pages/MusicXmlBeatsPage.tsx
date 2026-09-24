@@ -116,6 +116,7 @@ const SvgPage = memo(function SvgPage({
 import { openScoreLibrary } from "../nhipphach/libraryGateway";
 import type { ScoreLibrary } from "../nhipphach/libraryRepository";
 import { ScoreLibraryPanel } from "../nhipphach/ScoreLibraryPanel";
+import { MasterImportPrompt } from "../nhipphach/MasterImportPrompt";
 import type { LibraryOpenEvent } from "../nhipphach/ScoreLibraryPanel";
 import { readScoreMetadata, readPrimaryMeter } from "../nhipphach/scoreMetadata";
 import { resolveScoreElement, describeNote } from "../nhipphach/noteSelection";
@@ -275,6 +276,7 @@ export default function MusicXmlBeatsPage({
   // ── Thư viện bài hát ────────────────────────────────────────────────────
   const thuVien = useRef<ScoreLibrary | null>(null);
   const [coThuVien, setCoThuVien] = useState(false);
+  const [masterImportId, setMasterImportId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("master"));
   const [moThuVien, setMoThuVien] = useState(false);
   const [dangLuuBai, setDangLuuBai] = useState(false);
   const [thuVienNote, setThuVienNote] = useState("");
@@ -970,6 +972,13 @@ export default function MusicXmlBeatsPage({
     });
     setXem({ che: "rong", pct: 100 });
     setMoThuVien(false);
+  }
+
+  function dongMasterImport() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("master");
+    window.history.replaceState(window.history.state, "", url);
+    setMasterImportId(null);
   }
 
   // Nạp preset khi mở trang. Có preset mặc định thì áp; KHÔNG có thì giữ nguyên
@@ -2842,6 +2851,13 @@ export default function MusicXmlBeatsPage({
           onClose={() => setMoThuVien(false)}
         />
       )}
+      {masterImportId && <MasterImportPrompt
+        masterId={masterImportId}
+        library={thuVien.current}
+        canSave={choLuuThuVien}
+        onImported={event => { moTuThuVien(event); dongMasterImport(); }}
+        onClose={dongMasterImport}
+      />}
     </main>
   );
 
