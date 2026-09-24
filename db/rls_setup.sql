@@ -104,6 +104,14 @@ DECLARE
     -- Báo cáo nội dung (Guideline 1.2): ai cũng GHI được (kể cả anon),
     -- CHỈ thầy đọc/xử lý. Policy hẹp do db/story_reports.sql đặt.
     'story_reports',
+    -- Class Social — bài đăng cộng đồng (db/class_social_posts_setup.sql): thành viên Class
+    -- đọc; CHỈ tác giả ghi/sửa/xoá bài của mình. Áp policy rộng = học sinh sửa/xoá bài nhau.
+    'class_posts',
+    -- Class Social — bình luận/tag/đính kèm (db/class_social_learning_loop_setup.sql):
+    -- thành viên đọc; tác giả ghi bình luận của mình; CHỈ thầy tạo tag + gắn tag/đính kèm.
+    'class_post_comments', 'class_tags', 'class_comment_tags', 'class_comment_resources',
+    -- Ảnh bìa hồ sơ (db/profile_media_setup.sql): thành viên Class đọc; CHỈ chính chủ ghi.
+    'profile_media',
     -- Billing Foundation (BƯỚC 8A — db/billing_setup.sql): anon KHÔNG policy nào;
     -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
     -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).
