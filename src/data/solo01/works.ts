@@ -218,3 +218,18 @@ r.8 2.3.8 1.2.8 0.1.8 3.1.8 3.1{ss}.8 5.1.8 0.1.8 |
 \\voice
 0.5{ch "Am" rf 1}.2 0.5{ch "A7" rf 1}.2 |
 0.4{ch "Dm" rf 1}.1`
+
+// ── Diễm Xưa ô 1–8 — bản Buổi 05: melody + tên hợp âm, CHƯA có bass ──
+// Bass để trống có chủ ý: học viên nhìn tên hợp âm rồi tự chọn nốt bass và tự điền.
+// Thầy chỉ luyến sẵn một chỗ ở ô 3 (dây 1, ngăn 3 → 5) làm mẫu (--hammer-at 3).
+export const WORK_DIEM_XUA_B5 = `\\ts 4 4
+\\lyrics "Mưa vẫn mưa bay trên tầng tháp cổ Dài tay em mấy thuở mắt xanh xao Nghe lá thu mưa reo mòn gót nhỏ Đường dài hun hút cho mắt thêm sâu"
+.
+\\ro r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3.8 1.2.8 |
+2.4{ch "Am"}.1 |
+r.8 2.3.8 1.2.8 0.1.8 3.1{ch "A7"}.8 3.1{h}.8 5.1.8 0.1.8 |
+3.2{ch "Dm"}.1 |
+r.8 0.1.8 1.1.8 0.1.8 0.1.8 1.2.8 2.3{ch "Am"}.8 1.2.8 |
+2.4{ch "E"}.1 |
+r.8 2.4.8 1.3.8 0.2.8 3.2.8 3.2.8 0.1.8 3.2.8 |
+\\rc 2 1.2{ch "Am"}.1`

@@ -9,6 +9,7 @@
 //        [--bass]                     ← chèn nốt Bass (gốc hợp âm, dây 4–6, thế I) tại mỗi lần đổi hợp âm
 //        [--slide]                    ← đánh dấu trượt ngón ở chỗ ĐỔI VÙNG trên cùng một dây
 //        [--slide-at "3,7"]           ← chỉ định thẳng những ô nhịp muốn có trượt ngón
+//        [--hammer-at "3"]            ← đánh dấu LUYẾN (hammer-on/pull-off) ở ô nhịp chỉ định
 //
 // Guitar ghi cao hơn tiếng thật 1 quãng tám (chuẩn ký âm guitar) ⇒ giữ nguyên
 // cao độ viết trong MusicXML, chỉ dịch giọng theo --transpose.
@@ -271,6 +272,22 @@ if (flag('slide') || slideBars) {
   }
 }
 
+// Luyến (hammer-on / pull-off): cùng dây, cả hai nốt bấm hoặc nốt đầu là dây buông,
+// cách nhau không quá 2 ngăn (xa hơn thì ngón không với kịp). Dấu {h} đặt ở nốt TRƯỚC.
+const hammerBars = opt('hammer-at') ? new Set(opt('hammer-at').split(',').map(n => parseInt(n, 10))) : null
+if (hammerBars) {
+  const done = new Set()
+  for (let i = 0; i + 1 < melody.length; i++) {
+    const a = melody[i].it.pos, b = melody[i + 1].it.pos
+    if (!a || !b || a.string !== b.string || b.fret === 0) continue
+    if (Math.abs(a.fret - b.fret) > 2 || a.fret === b.fret) continue
+    const bar = melody[i].bar + 1
+    if (!hammerBars.has(bar) || done.has(bar)) continue
+    done.add(bar)
+    melody[i].it.hammer = true
+  }
+}
+
 // Báo cáo: dùng những vùng nào, chuyển vùng ở ô nhịp nào
 const zoneReport = []
 let lastZone = null
@@ -403,6 +420,7 @@ for (let i = b0 - 1; i < Math.min(b1, bars.length); i++) {
         const nfx = []
         if (it.tieStop) nfx.push('t')
         if (it.slide) nfx.push('ss')          // ss = trượt ngón đổi thế
+        if (it.hammer) nfx.push('h')          // h  = luyến, đặt ở nốt TRƯỚC
         if (carryChord) {
           const name = carryChord.text ?? `${noteName(carryChord.pc)}${carryChord.suffix}`
           nfx.push(`ch "${name}"`)

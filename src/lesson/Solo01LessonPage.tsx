@@ -8,9 +8,10 @@ import { SOLO01_BUOI01 } from '../data/solo01/buoi01'
 import { SOLO01_BUOI02 } from '../data/solo01/buoi02'
 import { SOLO01_BUOI03 } from '../data/solo01/buoi03'
 import { SOLO01_BUOI04 } from '../data/solo01/buoi04'
+import { SOLO01_BUOI05 } from '../data/solo01/buoi05'
 
 // Đăng ký buổi học ở đây khi soạn thêm (Buổi 02 → 24 dùng CHUNG khuôn LessonDocument).
-const LESSONS: Record<number, LessonDoc> = { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02, 3: SOLO01_BUOI03, 4: SOLO01_BUOI04 }
+const LESSONS: Record<number, LessonDoc> = { 1: SOLO01_BUOI01, 2: SOLO01_BUOI02, 3: SOLO01_BUOI03, 4: SOLO01_BUOI04, 5: SOLO01_BUOI05 }
 
 export default function Solo01LessonPage({ sessionNo }: { sessionNo: number }) {
   const doc = LESSONS[sessionNo]
