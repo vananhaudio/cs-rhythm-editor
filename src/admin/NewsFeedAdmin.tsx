@@ -180,6 +180,30 @@ export default function NewsFeedAdmin() {
                 Có cả URL và nội dung chữ thì URL được ưu tiên. Chỉ có nội dung chữ thì để "Cách mở = Trong app".
               </div>
             </div>
+            {/* Tuỳ chọn trang đọc chữ — lưu trong content_data (show_hero / cta / footer) */}
+            <div>
+              <label style={labelStyle}>Nút hành động — chữ trên nút</label>
+              <input style={inputStyle} placeholder="VD: THAM GIA NHÓM"
+                value={typeof (editing.content_data?.cta as { label?: unknown })?.label === 'string' ? (editing.content_data!.cta as { label: string }).label : ''}
+                onChange={e => setEditing(v => v ? { ...v, content_data: { ...(v.content_data ?? {}), cta: { ...((v.content_data?.cta as object) ?? {}), label: e.target.value } } } : v)} />
+            </div>
+            <div>
+              <label style={labelStyle}>Nút hành động — link (mở ra ngoài app)</label>
+              <input style={inputStyle} placeholder="https://zalo.me/g/..."
+                value={typeof (editing.content_data?.cta as { url?: unknown })?.url === 'string' ? (editing.content_data!.cta as { url: string }).url : ''}
+                onChange={e => setEditing(v => v ? { ...v, content_data: { ...(v.content_data ?? {}), cta: { ...((v.content_data?.cta as object) ?? {}), url: e.target.value } } } : v)} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={labelStyle}>Dòng chốt cuối bài (dưới nút — tuỳ chọn)</label>
+              <textarea rows={2} style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                value={typeof editing.content_data?.footer === 'string' ? editing.content_data.footer : ''}
+                onChange={e => setEditing(v => v ? { ...v, content_data: { ...(v.content_data ?? {}), footer: e.target.value } } : v)} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: C.text2, marginTop: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={editing.content_data?.show_hero === true}
+                  onChange={e => setEditing(v => v ? { ...v, content_data: { ...(v.content_data ?? {}), show_hero: e.target.checked } } : v)} />
+                Hiện ảnh thumbnail ở đầu trang đọc (bài chữ)
+              </label>
+            </div>
             <div>
               <label style={labelStyle}>Cách mở</label>
               <select style={inputStyle} value={editing.open_mode ?? 'in_app'} onChange={e => setEditing(v => v ? { ...v, open_mode: e.target.value as Row['open_mode'] } : v)}>

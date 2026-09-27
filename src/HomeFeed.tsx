@@ -51,6 +51,24 @@ export function feedBody(item: HomeFeedItem): string {
   return typeof b === 'string' ? b.trim() : ''
 }
 
+// Tuỳ chọn của trang đọc chữ (opt-in trong content_data, bài cũ không khai thì y như trước):
+//   show_hero: true      → hiện thumbnail_url làm ảnh đầu bài
+//   cta: {label, url}    → nút hành động (mở ra ngoài app — link nhóm, form...)
+//   footer: string       → dòng chốt nhỏ dưới nút
+export function feedHero(item: HomeFeedItem): string | null {
+  return item.content_data?.show_hero === true && item.thumbnail_url ? item.thumbnail_url : null
+}
+export function feedCta(item: HomeFeedItem): { label: string; url: string } | null {
+  const c = item.content_data?.cta as { label?: unknown; url?: unknown } | undefined
+  const label = typeof c?.label === 'string' ? c.label.trim() : ''
+  const url = typeof c?.url === 'string' ? c.url.trim() : ''
+  return label && url ? { label, url } : null
+}
+function feedFooter(item: HomeFeedItem): string {
+  const f = item.content_data?.footer
+  return typeof f === 'string' ? f.trim() : ''
+}
+
 // ── Fetch + cache (localStorage) ─────────────────────────────────────────────
 const CACHE_KEY = 'tva_home_feed_cache_v2'
 const STALE_MS = 5 * 60 * 1000
@@ -124,6 +142,9 @@ function FeedOverlay({ item, primary, onClose }: { item: HomeFeedItem; primary: 
   const url = item.content_url ?? ''
   const body = feedBody(item)
   const isText = !url && !!body            // thông báo/bài viết đăng chữ thẳng từ Admin
+  const hero = feedHero(item)
+  const cta = feedCta(item)
+  const footer = feedFooter(item)
   const isImage = item.type === 'image'
   // Video YouTube → renderer chung YouTubeLesson (tự xử lý vỏ native qua /ytplayer hosted).
   const ytId = item.type === 'video' ? getYouTubeId(url) : null
@@ -157,11 +178,19 @@ function FeedOverlay({ item, primary, onClose }: { item: HomeFeedItem; primary: 
       <div style={{ flex: 1, position: 'relative', display: 'flex', minHeight: 0, background: '#000' }}>
         {isText ? (
           <div style={{ flex: 1, overflow: 'auto', background: '#fff', padding: '20px 18px', paddingBottom: 'max(20px, env(safe-area-inset-bottom))', textAlign: 'left' }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#111827', lineHeight: 1.3, marginBottom: 6 }}>{item.title}</div>
-            {item.summary && <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 14 }}>{item.summary}</div>}
-            {body.split(/\n{2,}/).map((para, i) => (
-              <p key={i} style={{ fontSize: 15.5, lineHeight: 1.65, color: '#1F2937', margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>{para}</p>
-            ))}
+            {hero && <img src={hero} alt={item.title} style={{ display: 'block', width: '100%', maxWidth: 360, height: 'auto', margin: '0 auto 16px' }} />}
+              <div style={{ fontSize: 20, fontWeight: 900, color: '#111827', lineHeight: 1.3, marginBottom: 6 }}>{item.title}</div>
+              {item.summary && <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 14 }}>{item.summary}</div>}
+              {body.split(/\n{2,}/).map((para, i) => (
+                <p key={i} style={{ fontSize: 15.5, lineHeight: 1.65, color: '#1F2937', margin: '0 0 14px', whiteSpace: 'pre-wrap' }}>{para}</p>
+              ))}
+              {cta && (
+                <button onClick={() => openExternal(cta.url)}
+                  style={{ display: 'block', width: '100%', minHeight: 52, margin: '6px 0 0', padding: '14px 16px', border: 'none', borderRadius: 14, background: item.tone || primary, color: '#fff', fontSize: 15, fontWeight: 900, letterSpacing: '.02em', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {cta.label}
+                </button>
+              )}
+              {footer && <div style={{ fontSize: 13.5, color: '#6B7280', textAlign: 'center', lineHeight: 1.6, margin: '18px 0 6px', whiteSpace: 'pre-wrap' }}>{footer}</div>}
           </div>
         ) : isImage ? (
           <div style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
