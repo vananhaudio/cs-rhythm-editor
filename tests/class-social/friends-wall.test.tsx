@@ -232,12 +232,16 @@ test("Rollback tính năng: một giao dịch, idempotent, KHÔNG đụng edu_st
 
 test("Preflight + generator khôi phục: CHỈ ĐỌC (một câu SELECT, không DDL/DML ngoài chuỗi)", () => {
   for (const f of ["db/class_social_friends_wall_preflight.sql", "db/class_social_friends_wall_edu_students_recovery.sql"]) {
-    const sql = stripStrings(stripComments(read(f))).trim();
+    const sql = stripStrings(stripComments(read(f).replace(/\/\*[\s\S]*?\*\//g, ""))).trim();
     assert.match(sql, /^(with|select)\b/i, f);
     assert.equal(/\b(insert|update|delete|create|drop|alter|grant|revoke|truncate|begin|commit)\b/i.test(sql), false, f);
     assert.equal(sql.replace(/;\s*$/, "").includes(";"), false, `${f}: một câu lệnh`);
   }
   const gen = read("db/class_social_friends_wall_edu_students_recovery.sql");
-  assert.equal(/using \(true\)/i.test(stripComments(gen)), false, "không hard-code policy cũ");
+  assert.equal(/using \(true\)/i.test(stripComments(gen.replace(/\/\*[\s\S]*?\*\//g, ""))), false, "không hard-code policy cũ");
+  // Owner dán vào SQL Editor: copy có thể MẤT xuống dòng → không được có comment '--' ngoài chuỗi
+  for (const f of ["db/class_social_friends_wall_preflight.sql", "db/class_social_friends_wall_edu_students_recovery.sql"]) {
+    assert.equal(stripStrings(read(f).replace(/\/\*[\s\S]*?\*\//g, "")).includes("--"), false, `${f}: không có '--' ngoài chuỗi`);
+  }
   assert.match(gen, /from pg_policies pp where pp\.schemaname = 'public' and pp\.tablename = 'edu_students'/);
 });

@@ -40,7 +40,7 @@ baseline() {
     psqld "$db" -f "$ROOT/db/$f.sql" >/dev/null
   done
 }
-PREFLIGHT_SQL="$(grep -v '^--' "$ROOT/db/class_social_friends_wall_preflight.sql")"
+PREFLIGHT_SQL="$(cat "$ROOT/db/class_social_friends_wall_preflight.sql")"
 gate() { q "$1" "select item from (${PREFLIGHT_SQL%;}) z where section = 'GATE'"; }
 edu_fp() { q "$1" "select md5(coalesce((select string_agg(policyname||cmd||array_to_string(roles,',')||coalesce(qual,'')||coalesce(with_check,''), '|' order by policyname) from pg_policies where tablename='edu_students'),'')
                     ||coalesce((select string_agg(grantee||privilege_type, ',' order by grantee, privilege_type) from information_schema.role_table_grants where table_name='edu_students' and grantee in ('anon','authenticated')),'')
@@ -53,6 +53,13 @@ state() { q "$1" "select (to_regclass('public.friendships') is not null)::text |
 echo "── Baseline (giả lập production) + preflight + generator khôi phục edu_students"
 baseline tva_test "$ROOT/db/tests/local/social_fixture.sql"
 [ "$(gate tva_test)" = "PASS" ] && ok "preflight trên baseline: GATE = PASS" || fail "preflight baseline: $(gate tva_test)"
+# Copy từ trình duyệt/khung chat có thể làm MẤT dấu xuống dòng → file phải chạy y hệt khi dồn thành một dòng
+PREFLIGHT_ONELINE="$(tr '\n' ' ' < "$ROOT/db/class_social_friends_wall_preflight.sql")"
+[ "$(q tva_test "select item from (${PREFLIGHT_ONELINE%;*}) z where section = 'GATE'")" = "PASS" ] \
+  && ok "preflight dồn thành MỘT dòng (mất xuống dòng khi copy) vẫn chạy: GATE = PASS" || fail "preflight một dòng"
+RECOVERY_ONELINE="$(tr '\n' ' ' < "$ROOT/db/class_social_friends_wall_edu_students_recovery.sql")"
+[ "$(q tva_test "$RECOVERY_ONELINE" | sed 1d)" = "$(q tva_test "$(cat "$ROOT/db/class_social_friends_wall_edu_students_recovery.sql")" | sed 1d)" ] \
+  && ok "generator khôi phục dồn thành MỘT dòng vẫn sinh đúng cùng script" || fail "generator một dòng"
 q tva_test "$(cat "$ROOT/db/class_social_friends_wall_edu_students_recovery.sql")" > "$TMP/recovery.sql"
 EDU_BEFORE="$(edu_fp tva_test)"
 grep -q "create policy rls_authenticated_all" "$TMP/recovery.sql" && ok "generator chụp đúng policy edu_students đang có (không đoán)" || fail "generator"
@@ -120,7 +127,7 @@ psqld t_drift -c "create or replace function public.class_feed(p_before timestam
   language sql security definer set search_path = '' stable as \$\$ select null::uuid, ''::text, ''::text, null, null, null, null, now(), now(), null::uuid, '', null, '', false, false, false, 0 where false \$\$;" >/dev/null
 psqld t_drift -c "create policy sua_tay on public.edu_students for select to authenticated using (true);" >/dev/null
 DRIFT_STATE="$(state t_drift)"
-[ "$(gate t_drift)" = "STOP — KHÔNG migration" ] && ok "preflight phát hiện hàm + policy sửa tay: GATE = STOP" || fail "preflight drift: $(gate t_drift)"
+[ "$(gate t_drift)" = "STOP - DO NOT MIGRATE" ] && ok "preflight phát hiện hàm + policy sửa tay: GATE = STOP" || fail "preflight drift: $(gate t_drift)"
 psqld t_drift -f "$ROOT/db/class_social_friends_wall_setup.sql" >/dev/null 2>"$TMP/drift.err" && fail "migration chạy dù production lệch"
 grep -q "DỪNG — production khác repo" "$TMP/drift.err" && [ "$(state t_drift)" = "$DRIFT_STATE" ] \
   && ok "migration tự DỪNG ($(grep -o 'hàm class_feed[^;]*\|policy bảng edu_students[^;]*' "$TMP/drift.err" | head -2 | tr '\n' ' ')) — không ghi đè gì" || fail "gate: $(cat "$TMP/drift.err")"
@@ -128,7 +135,7 @@ grep -q "DỪNG — production khác repo" "$TMP/drift.err" && [ "$(state t_drif
 echo "── Thiếu trigger guard edu_students → migration DỪNG (policy INSERT chính chủ cần trigger)"
 baseline t_trig "$TMP/fixture_noroles.sql"
 psqld t_trig -c "drop trigger student_package_identity_guard on public.edu_students" >/dev/null
-[ "$(gate t_trig)" = "STOP — KHÔNG migration" ] && ok "preflight: thiếu trigger → GATE = STOP" || fail "preflight trigger"
+[ "$(gate t_trig)" = "STOP - DO NOT MIGRATE" ] && ok "preflight: thiếu trigger → GATE = STOP" || fail "preflight trigger"
 psqld t_trig -f "$ROOT/db/class_social_friends_wall_setup.sql" >/dev/null 2>"$TMP/trig.err" && fail "migration chạy dù thiếu trigger"
 grep -q "trigger student_package_identity_guard" "$TMP/trig.err" && [ "$(q t_trig "select to_regclass('public.friendships') is null")" = "t" ] \
   && ok "migration DỪNG khi thiếu trigger, không tạo gì" || fail "trigger gate"

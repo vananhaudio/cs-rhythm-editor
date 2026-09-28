@@ -1,14 +1,18 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- GENERATOR khôi phục edu_students — READ-ONLY (chỉ SELECT, không đổi gì).
---
--- CHẠY TRÊN PRODUCTION *TRƯỚC* db/class_social_friends_wall_setup.sql, LƯU nguyên văn cột
--- `recovery_sql` (vd. dán vào ghi chú release). Đó là script dựng lại ĐÚNG policy + grant + trạng thái
--- RLS của edu_students tại thời điểm chụp — không đoán, không hard-code `FOR ALL USING (true)`.
---
--- Chỉ dùng script đã lưu khi CHỨNG MINH được một luồng thật hỏng vì RLS mới của edu_students.
--- ⚠ Script đó trả edu_students về trạng thái cũ — nếu trạng thái cũ là policy rộng thì MỞ LẠI việc học
---   sinh đọc/sửa email/SĐT của nhau. Rollback tính năng Bạn bè/Tường KHÔNG cần script này.
--- ═══════════════════════════════════════════════════════════════════════════
+/*
+═══════════════════════════════════════════════════════════════════════════
+GENERATOR khôi phục edu_students — READ-ONLY (chỉ SELECT, không đổi gì).
+
+CHẠY TRÊN PRODUCTION *TRƯỚC* db/class_social_friends_wall_setup.sql, LƯU nguyên văn cột
+`recovery_sql` (vd. dán vào ghi chú release). Đó là script dựng lại ĐÚNG policy + grant + trạng thái
+RLS của edu_students tại thời điểm chụp — không đoán, không hard-code `FOR ALL USING (true)`.
+
+Chỉ dùng script đã lưu khi CHỨNG MINH được một luồng thật hỏng vì RLS mới của edu_students.
+⚠ Script đó trả edu_students về trạng thái cũ — nếu trạng thái cũ là policy rộng thì MỞ LẠI việc học
+  sinh đọc/sửa email/SĐT của nhau. Rollback tính năng Bạn bè/Tường KHÔNG cần script này.
+═══════════════════════════════════════════════════════════════════════════
+
+  An toàn khi copy: không có comment '--' ngoài chuỗi → chạy đúng kể cả khi mất dấu xuống dòng.
+*/
 select concat_ws(E'\n',
   '-- KHÔI PHỤC edu_students về trạng thái chụp lúc ' || now()::text || ' (db ' || current_database() || ')',
   'begin;',
