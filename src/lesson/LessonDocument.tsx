@@ -316,6 +316,15 @@ const CSS = `
 .lsn-paper{max-width:900px;margin:0 auto;padding:22px 16px 60px;}
 /* trạng thái đang xuất PDF: ẩn mọi thứ chỉ dành cho màn hình */
 .lsn-paper.is-printing .no-print{display:none !important;}
+/* Lúc chụp PDF trang bị ép về khổ giấy. Ô lưới/flex mặc định KHÔNG chịu co nhỏ hơn
+   nội dung (min-width:auto), nên bản nhạc khắc từ lúc màn còn rộng sẽ thò ra ngoài
+   mép phải và ảnh chụp cắt cụt mất. Cho phép co về 0 để khung hẹp thật, alphaTab
+   thấy khung hẹp sẽ tự khắc lại cho vừa. */
+.lsn-paper.is-printing .lsn-layers,.lsn-paper.is-printing .lsn-layer,
+.lsn-paper.is-printing .lsn-piece,.lsn-paper.is-printing .lsn-score,
+.lsn-paper.is-printing .lsn-score-host{min-width:0;}
+.lsn-paper.is-printing .lsn-score-host{overflow:hidden;}
+.lsn-paper.is-printing .lsn-score-host svg{max-width:100%;height:auto;}
 
 .lsn-head{background:${P.surface};border:1px solid ${P.line};border-radius:16px;padding:20px;
   margin-bottom:18px;border-top:4px solid ${P.purple};}

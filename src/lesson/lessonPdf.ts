@@ -7,7 +7,7 @@
 //     Vì vậy phải NHÚNG font base64 vào trong từng <svg> trước khi chụp.
 //  2) Chụp theo TỪNG KHỐI rồi mới xếp vào trang — không chụp cả trang dài rồi cắt,
 //     vì nhát cắt sẽ rơi vào giữa khuông nhạc.
-const A4_W = 210, A4_H = 297, MARGIN = 12
+const A4_W = 210, A4_H = 297, MARGIN = 10   // lề 10mm: rộng chỗ hơn cho bản nhạc
 const BOX_W = A4_W - MARGIN * 2
 const BOX_H = A4_H - MARGIN * 2
 const GAP = 4
@@ -96,8 +96,10 @@ function collectCuts(root: HTMLElement, pageHcss: number): number[] {
     const kids = [...el.children].filter(
       (c): c is HTMLElement => c instanceof HTMLElement && !c.classList.contains('no-print'),
     )
-    // Khối vừa một trang thì giữ nguyên khối; cao hơn mới cần tìm chỗ ngắt bên trong.
-    if (r.height > pageHcss && kids.length) for (const k of kids) walk(k)
+    // Luôn tìm cả những chỗ ngắt BÊN TRONG khối (khe giữa hai hệ thống nhạc). Trước đây
+    // chỉ tách khi khối cao hơn một trang, nên một khối hơi dài là bị đẩy nguyên sang
+    // trang sau, bỏ trống nửa trang trước đó.
+    if (kids.length) for (const k of kids) walk(k)
     if (canCut(el)) cuts.push(r.bottom - top)
   }
   for (const c of [...root.children]) if (c instanceof HTMLElement) walk(c)
@@ -105,8 +107,14 @@ function collectCuts(root: HTMLElement, pageHcss: number): number[] {
   return [...new Set(cuts)].sort((a, b) => a - b)
 }
 
-/** Bề ngang trang in (px @96dpi) — ép về khổ này để PDF không phụ thuộc màn hình. */
-const PAPER_PX = 794
+/**
+ * Bề ngang (px) dùng để chụp trang. Toàn bộ ảnh chụp ở bề ngang này sẽ được kéo cho
+ * vừa 190mm giấy, nên SỐ CÀNG NHỎ thì chữ và nốt nhạc in ra CÀNG TO.
+ * 794px là đúng khổ A4 ở 96dpi ⇒ in ra bằng đúng cỡ trên màn hình, học viên kêu bé.
+ * 680px phóng mọi thứ lên ~1,17 lần. KHÔNG hạ xuống ≤ 640: dưới ngưỡng đó các luật
+ * @media của điện thoại sẽ áp vào và trang in ra thành bố cục mobile.
+ */
+const PAPER_PX = 700
 
 /**
  * Trên điện thoại, trang đang ở bố cục hẹp: chụp thẳng sẽ ra PDF dài lê thê (27 trang
@@ -114,7 +122,8 @@ const PAPER_PX = 794
  * bản nhạc theo khổ mới, chụp xong mới trả lại như cũ.
  */
 async function withPaperWidth<T>(root: HTMLElement, run: () => Promise<T>): Promise<T> {
-  if (root.getBoundingClientRect().width >= PAPER_PX - 20) return run()
+  // LUÔN ép về khổ giấy, cả trên máy tính: trang trên màn rộng hơn khổ in, chụp thẳng
+  // rồi nhét vừa giấy là mọi thứ bị thu nhỏ — đúng cái học viên kêu "in ra bé".
   const saved = { width: root.style.width, maxWidth: root.style.maxWidth, bodyOv: document.body.style.overflowX }
   root.style.width = `${PAPER_PX}px`
   root.style.maxWidth = 'none'

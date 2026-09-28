@@ -25,6 +25,13 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   // Số ô nhịp mỗi dòng theo bề rộng KHUNG CHỨA (không phải cửa sổ): lúc xuất PDF
   // khung được kéo về khổ A4 nên bản nhạc phải khắc lại cho đủ ô mỗi dòng.
   const narrowNow = () => (hostRef.current?.clientWidth ?? window.innerWidth) < 620
+  // Đang chụp để lưu PDF: trang bị kéo về khổ giấy nên khung hẹp lại, nhưng ĐỪNG
+  // coi đó là điện thoại — vẫn giữ đủ số ô nhịp mỗi dòng. (Bản nhạc in ra to lên là
+  // nhờ ảnh chụp hẹp được kéo cho vừa giấy, KHÔNG phải nhờ tăng display.scale: tăng
+  // scale làm bản nhạc rộng quá khổ và bị cắt mất mép phải.)
+  const printingNow = () => !!document.querySelector('.lsn-paper.is-printing')
+  const restScale = () => (!printingNow() && narrowNow() ? 1 : 0.95)
+  const restRows = () => (printingNow() ? barsPerRow : narrowNow() ? Math.min(2, barsPerRow) : barsPerRow)
   const narrow = typeof window !== 'undefined' && window.innerWidth < 640
   const rows = narrow ? Math.min(2, barsPerRow) : barsPerRow
 
@@ -90,16 +97,19 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
   useEffect(() => {
     const host = hostRef.current
     if (!host || typeof ResizeObserver === 'undefined') return
-    let applied = rows
+    // Khắc lại khi BỀ RỘNG KHUNG đổi, kể cả khi số ô nhịp không đổi: alphaTab dàn nốt
+    // theo bề ngang lúc khắc, giữ nguyên bản khắc cũ trong khung hẹp hơn là bản nhạc
+    // thò ra ngoài mép phải và lúc chụp PDF sẽ bị cắt cụt.
+    let applied = `${host.clientWidth}/${rows}/${0.95}`
     const ro = new ResizeObserver(() => {
       if (bigRef.current) return                    // đang xem toàn màn hình: giữ nguyên cách khắc
-      const want = narrowNow() ? Math.min(2, barsPerRow) : barsPerRow
+      const want = restRows(), wantScale = restScale(), w = host.clientWidth
       const api = apiRef.current
-      if (!api || want === applied) return
-      applied = want
+      if (!api || `${w}/${want}/${wantScale}` === applied) return
+      applied = `${w}/${want}/${wantScale}`
       try {
         api.settings.display.barsPerRow = want
-        api.settings.display.scale = narrowNow() ? 1 : 0.95
+        api.settings.display.scale = wantScale
         api.updateSettings()
         api.render()
       } catch { /* */ }
@@ -122,8 +132,8 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         api.settings.display.scale = factor
         api.settings.display.barsPerRow = Math.max(1, Math.floor(w / (factor * 250)))
       } else {
-        api.settings.display.scale = narrowNow() ? 1 : 0.95
-        api.settings.display.barsPerRow = narrowNow() ? Math.min(2, barsPerRow) : barsPerRow
+        api.settings.display.scale = restScale()
+        api.settings.display.barsPerRow = restRows()
       }
       api.updateSettings()
       api.render()
