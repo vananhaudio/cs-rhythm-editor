@@ -311,14 +311,60 @@ begin
   perform t.as_user('A');
   update public.edu_students set display_name = 'An mới' where user_id = t.u('A');
   perform t.ok((select display_name from public.edu_students where user_id = t.u('A')) = 'An mới', 'A vẫn tự sửa được hồ sơ của mình');
-  perform t.fails($q$insert into public.edu_students (user_id, full_name) values ('aaaaaaaa-0000-4000-8000-00000000000a', 'x')$q$,
-                  'học sinh không tự tạo hồ sơ edu_students');
+  perform t.fails($q$insert into public.edu_students (user_id, full_name) values ('bbbbbbbb-0000-4000-8000-00000000000b', 'x')$q$,
+                  'A không tạo được hồ sơ mang user_id của B (policy INSERT chính chủ)');
+  perform t.fails($q$insert into public.edu_students (user_id, full_name) values (null, 'x')$q$,
+                  'A không tạo được hồ sơ không chủ (user_id null)');
   perform t.fails($q$truncate public.edu_students$q$, 'authenticated không TRUNCATE được edu_students');
   perform t.as_user('T');
   perform t.ok((select count(*) from public.edu_students) = 3, 'Thầy vẫn đọc được mọi hồ sơ (màn Admin)');
   update public.edu_students set level = 'elementary' where user_id = t.u('C');
   perform t.reset();
   perform t.ok((select level from public.edu_students where user_id = t.u('C')) = 'elementary', 'Thầy vẫn sửa được hồ sơ (màn Admin)');
+end $$;
+
+-- ── edu_students INSERT chính chủ (tương thích app native cũ) + trigger guard vẫn chặn ──
+do $$
+declare v_id uuid;
+begin
+  perform t.reset();
+  perform t.ok(exists (select 1 from pg_trigger where tgrelid = 'public.edu_students'::regclass and tgname = 'student_package_identity_guard'),
+               'trigger guard_student_package_identity đang gắn trên edu_students (như production)');
+  -- Luồng đăng ký cũ (app build ≤13): tài khoản MỚI (N, chưa có hồ sơ) tự tạo hồ sơ rồi đọc lại
+  perform t.as_user('N');
+  perform t.ok((select count(*) from public.edu_students) = 0, 'N chưa có hồ sơ');
+  insert into public.edu_students (user_id, full_name, email, is_active, level, enrolled_at)
+    values (t.u('N'), 'n', 'n@test.local', true, 'beginner', now()) returning id into v_id;
+  perform t.ok((select count(*) from public.edu_students where id = v_id and user_id = t.u('N')) = 1,
+               'OLD APP: tài khoản mới tự tạo hồ sơ CHÍNH MÌNH rồi đọc lại được');
+  perform t.ok((select count(*) from public.edu_students) = 1, 'N chỉ thấy đúng hồ sơ của mình');
+  perform t.fails($q$insert into public.edu_students (user_id, full_name, ht_member) values ('eeeeeeee-0000-4000-8000-00000000000e', 'x', true)$q$,
+                  'tự tạo hồ sơ kèm ht_member=true bị trigger chặn (không tự cấp quyền Hành trình)');
+  perform t.fails($q$update public.edu_students set ht_member = true where user_id = 'eeeeeeee-0000-4000-8000-00000000000e'$q$,
+                  'tự bật ht_member trên hồ sơ của mình bị trigger chặn');
+  perform t.fails($q$update public.edu_students set user_id = 'aaaaaaaa-0000-4000-8000-00000000000a' where user_id = 'eeeeeeee-0000-4000-8000-00000000000e'$q$,
+                  'không đổi hồ sơ của mình sang user_id người khác');
+  perform t.fails($q$insert into public.edu_students (user_id, full_name) values ('aaaaaaaa-0000-4000-8000-00000000000a', 'giả An')$q$,
+                  'N không tạo được hồ sơ mang user_id của A');
+  perform t.ok((select count(*) from public.edu_students where email = 'a@test.local' or phone is not null) = 0,
+               'N không đọc được email/SĐT của người khác');
+  -- Phòng thủ 2 lớp: kể cả khi trigger vắng mặt, POLICY vẫn chặn tạo/sửa hồ sơ mang user_id người khác
+  perform t.reset();
+  alter table public.edu_students disable trigger student_package_identity_guard;
+  perform t.as_user('N');
+  perform t.fails($q$insert into public.edu_students (user_id, full_name) values ('aaaaaaaa-0000-4000-8000-00000000000a', 'giả An')$q$,
+                  'KHÔNG trigger: policy INSERT vẫn chặn hồ sơ mang user_id người khác');
+  update public.edu_students set phone = '0000000000' where user_id = t.u('A');
+  perform t.reset();
+  perform t.ok((select phone from public.edu_students where user_id = t.u('A')) = '0900000001', 'KHÔNG trigger: policy UPDATE vẫn chặn sửa hồ sơ người khác');
+  alter table public.edu_students enable trigger student_package_identity_guard;
+  -- Thầy: luồng quản trị (tạo hồ sơ cho học sinh, sửa, bật ht_member)
+  perform t.as_user('T');
+  insert into public.edu_students (user_id, full_name, email) values (null, 'Học sinh thầy tạo', 'moi@test.local');
+  update public.edu_students set ht_member = true where email = 'moi@test.local';
+  perform t.reset();
+  perform t.ok((select ht_member from public.edu_students where email = 'moi@test.local'), 'Thầy tạo hồ sơ + bật ht_member (Admin) vẫn được');
+  delete from public.edu_students where email = 'moi@test.local';
 end $$;
 
 do $$ begin raise notice 'ALL PASS — Bạn bè + Tường'; end $$;

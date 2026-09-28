@@ -1,10 +1,24 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- ROLLBACK db/class_social_friends_wall_setup.sql — đưa Social về như trước Bạn bè/Tường.
--- ⚠ XOÁ mọi quan hệ bạn bè và mọi bài viết trên tường (type='status'). Trả bài giữ nguyên.
--- ⚠ Mục 6 mở lại policy rộng cho edu_students (email/SĐT đọc được lẫn nhau) — chỉ chạy nếu
---   thật sự cần quay về trạng thái cũ; nhớ bỏ 'friendships','edu_students' khỏi self_managed.
--- Idempotent.
+-- ROLLBACK TÍNH NĂNG Bạn bè + Tường (db/class_social_friends_wall_setup.sql). Idempotent, MỘT giao dịch.
+-- Dán NGUYÊN FILE vào SQL Editor. Lỗi bất kỳ bước nào → không thay đổi gì.
+--
+-- ⚠ DỮ LIỆU MẤT VĨNH VIỄN nếu chạy (sao lưu trước nếu cần giữ):
+--   • MỌI quan hệ bạn bè + lời mời (bảng friendships bị xoá)
+--   • MỌI bài viết trên tường (class_posts type='status' / audience='friends')
+--   • MỌI bình luận trên các bài tường đó + tag + đính kèm của các bình luận ấy (xoá dây chuyền)
+--   Trả bài (bài 'class') + bình luận/tag/đính kèm của Trả bài GIỮ NGUYÊN.
+--   Sao lưu tối thiểu trước khi chạy (read-only):
+--     select * from public.friendships;
+--     select * from public.class_posts where type = 'status' or audience = 'friends';
+--
+-- KHÔNG đụng edu_students: RLS "chính chủ + thầy" GIỮ NGUYÊN (không mở lại lỗ hổng email/SĐT).
+-- Chỉ khi thật sự phải trả edu_students về đúng trạng thái production TRƯỚC migration → dùng script
+-- do db/class_social_friends_wall_edu_students_recovery.sql SINH RA từ production (không đoán policy).
 -- ═══════════════════════════════════════════════════════════════════════════
+
+begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
 
 -- 1) RPC + helper mới
 drop function if exists public.get_user_wall(uuid, timestamptz, uuid, int);
@@ -17,7 +31,14 @@ drop function if exists public.send_friend_request(uuid);
 drop function if exists public.friendship_status(uuid);
 
 -- 2) Bài: bỏ bài tường, trả policy/feed/bình luận về bản learning loop
-delete from public.class_posts where type = 'status' or audience = 'friends';
+do $$ begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'class_posts' and column_name = 'audience') then
+    delete from public.class_posts where type = 'status' or audience = 'friends';
+  else
+    delete from public.class_posts where type = 'status';   -- lần chạy lại: cột đã gỡ
+  end if;
+end $$;
 
 drop policy if exists class_posts_member_read on public.class_posts;
 create policy class_posts_member_read on public.class_posts
@@ -41,7 +62,7 @@ begin
   new.author_user_id := old.author_user_id;
   new.created_at     := old.created_at;
   new.updated_at     := now();
-  if not public.is_teacher() then
+  if not public.is_teacher() then          -- chỉ thầy (qua RPC kiểm duyệt) đổi được cờ ẩn
     new.hidden_at := old.hidden_at;
     new.hidden_by := old.hidden_by;
   end if;
@@ -87,8 +108,11 @@ language sql security definer set search_path = '' stable as $$
   cross join lateral public.class_public_identity(p.author_user_id) idn
   where public.is_class_member()
     and (p.hidden_at is null or public.is_teacher())
-    and (p_before is null or p.created_at < p_before
-         or (p.created_at = p_before and p_before_id is not null and p.id < p_before_id))
+    and (
+      p_before is null
+      or p.created_at < p_before
+      or (p.created_at = p_before and p_before_id is not null and p.id < p_before_id)
+    )
   order by p.created_at desc, p.id desc
   limit least(greatest(coalesce(p_limit, 20), 1), 50);
 $$;
@@ -144,13 +168,8 @@ drop function if exists public.is_friend_of(uuid);
 drop function if exists public.is_class_member_user(uuid);
 drop table if exists public.friendships;
 
--- 4) edu_students: về policy rộng cũ của rls_setup.sql (xem cảnh báo đầu file)
-drop policy if exists edu_students_own_or_teacher_read on public.edu_students;
-drop policy if exists edu_students_own_or_teacher_update on public.edu_students;
-drop policy if exists edu_students_teacher_insert on public.edu_students;
-drop policy if exists edu_students_teacher_delete on public.edu_students;
-drop policy if exists rls_authenticated_all on public.edu_students;
-create policy rls_authenticated_all on public.edu_students
-  for all to authenticated using (true) with check (true);
+-- 4) edu_students: CỐ Ý không đổi (xem đầu file).
 
 notify pgrst, 'reload schema';
+
+commit;

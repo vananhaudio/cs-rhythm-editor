@@ -2,6 +2,7 @@
 -- Giả lập đúng phần baseline production mà Social dựa vào: auth.users + auth.uid(), vai trò
 -- anon/authenticated, default privileges RỘNG (production cấp mọi quyền bảng + EXECUTE hàm mới),
 -- app_users (authenticated chỉ đọc), edu_students (policy rộng `rls_authenticated_all` như hiện nay).
+-- Trigger guard_student_package_identity của edu_students nạp từ db/package_student_identity_guard.sql (runner).
 
 create schema auth;
 create role anon nologin;
@@ -19,6 +20,12 @@ create function auth.uid() returns uuid language sql stable as $$
                   nullif(current_setting('request.jwt.claims', true), '')::json->>'sub')::uuid
 $$;
 grant execute on function auth.uid() to anon, authenticated;
+-- auth.jwt()/auth.role() như Supabase — trigger guard_student_package_identity (production) dùng
+create function auth.jwt() returns jsonb language sql stable as $$
+  select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb
+$$;
+create function auth.role() returns text language sql stable as $$ select auth.jwt()->>'role' $$;
+grant execute on function auth.jwt(), auth.role() to anon, authenticated;
 
 create table public.app_users (
   id uuid primary key references auth.users(id), role text, status text default 'active', name text, email text

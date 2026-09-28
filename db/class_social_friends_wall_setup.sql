@@ -17,7 +17,64 @@
 --
 -- ⚠ Production cấp mặc định MỌI quyền bảng + EXECUTE hàm mới cho anon/authenticated
 --   (default privileges) → mọi bảng/hàm dưới đây REVOKE tường minh.
+--
+-- CHẠY: dán NGUYÊN FILE vào Supabase SQL Editor (hoặc psql -f) — file tự mở/đóng MỘT giao dịch.
+--   Lỗi ở bất kỳ bước nào → toàn bộ rollback, không có trạng thái nửa migration.
+--   lock_timeout 5s: không chờ khoá edu_students/class_posts lâu (tránh chặn người dùng đang đăng nhập).
+-- TRƯỚC KHI CHẠY: db/class_social_friends_wall_preflight.sql (read-only) phải báo GATE = PASS, và lưu kết quả
+--   db/class_social_friends_wall_edu_students_recovery.sql (generator). Mục 0 dưới đây là CỔNG DRIFT lặp lại
+--   chính kiểm tra đó: production lệch repo → RAISE → không ghi đè gì.
 -- ═══════════════════════════════════════════════════════════════════════════
+
+begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
+
+-- ── 0) Cổng drift: mọi object sắp bị CREATE OR REPLACE / DROP POLICY phải đúng bản repo ──────
+-- Hàm: md5(prosrc) = thân hàm như đã viết (không phụ thuộc phiên bản PostgreSQL). Mỗi hàm chấp nhận
+-- bản TRƯỚC migration (learning loop) hoặc bản SAU (file này → chạy lại được). Hàm mới: vắng mặt hoặc bản SAU.
+-- Policy: tên + lệnh + role + biểu thức (bỏ khoảng trắng/ngoặc, chữ thường) — đúng bộ TRƯỚC hoặc SAU.
+-- (Giá trị kỳ vọng sinh từ cluster tạm chạy đúng file repo; giữ ĐỒNG BỘ với file preflight — có test.)
+do $gate$
+declare
+  fn_expected constant jsonb := '{"can_view_wall": ["72be0399a709b62fb512bbf0be34294b"], "class_comments_for_posts": ["45df86f32edc6b33d3ab720ffc69816b", "ca979b78d58fc4e4a2b47ddcb6d5a8f1"], "class_feed": ["3c7591e4a805979180b7759f73893e87", "7dfc39dfd2e14df7684c9cc5a1c4a3d1"], "class_post_visible": ["12335e2436f4cea845707dde5c5f924b", "aa09b646d430d8d4e1fdfe10b6acee9d"], "class_posts_before_update": ["12a765f91c8e26575b29e1c0e0e4c3f0", "7c02b8d001174fed8b6d4e1dd16a90ce"], "class_public_identity": ["9bda0938889c533040fb52f3301f3152"], "friendship_status": ["9f653ba0b1fbcb58c69acaba880906fc"], "get_user_profile": ["80b1f46a76e2de6a4e713fc862805451"], "get_user_wall": ["db195b5d49110b16db274dd3ebc37f1d"], "guard_student_package_identity": ["600fcbbc5d7b9eb34948dee498e05ead"], "incoming_friend_requests": ["861e1bd1b3c3086f2b462bc1731b4689"], "is_class_member": ["459786921eb5bbd4ff07c83bdb4db480"], "is_class_member_user": ["09b747d3ec6be35cc8e9f77c5c4e0b8a"], "is_friend_of": ["c5281e64105ae14e008445ba7fb5c354"], "is_teacher": ["19b164504b4ce59b9bbdb4b0b64e48ad"], "my_friends": ["6f637084496eba57c0a1ec3ac31c2c80"], "respond_friend_request": ["a09b7ad5f7f402a2a35a7b262f3dd40a"], "send_friend_request": ["885956b746b8359b9c528f9132c12f6d"], "unfriend": ["40a11c11605014200b3ab9c106d6018e"]}';
+  pol_expected constant jsonb := '{"class_comment_resources": ["74638efc16a0780fb2e4a2fe11fd5270", "ce29d52feb18688a8432c1e5667a4efd"], "class_comment_tags": ["ce320e9506bc1cc83790638fc09049cb", "e448db1205d168ec14acba75f1fac981"], "class_post_comments": ["cc15b6f4e95e8e67c685732c8651929f"], "class_posts": ["61ce912c19e5bba1fd713f9e79ee96fd", "b425b787e3d4cda5066f766b89567aac"], "edu_students": ["39148c749be36581e050ca4b92ad7a5f", "b9d95ff7110c1c36a3cbc8cb28bf8398"], "friendships": ["d41d8cd98f00b204e9800998ecf8427e"]}';
+  k text; allowed jsonb; actual text; drift text[] := '{}';
+begin
+  for k, allowed in select * from jsonb_each(fn_expected) loop
+    for actual in select md5(p.prosrc) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                  where n.nspname = 'public' and p.proname = k loop
+      if not allowed ? actual then drift := drift || format('hàm %s (md5 %s)', k, actual); end if;
+    end loop;
+  end loop;
+  for k, allowed in select * from jsonb_each(pol_expected) loop
+    select md5(coalesce(string_agg(x.fp, '|' order by x.fp), '')) into actual from (
+      select policyname || ':' || cmd || ':' || array_to_string(roles, ',') || ':'
+             || regexp_replace(lower(coalesce(qual, '')), '[[:space:]()]', '', 'g') || ':'
+             || regexp_replace(lower(coalesce(with_check, '')), '[[:space:]()]', '', 'g') as fp
+      from pg_policies where schemaname = 'public' and tablename = k) x;
+    if not allowed ? actual then drift := drift || format('policy bảng %s (md5 %s)', k, actual); end if;
+  end loop;
+  -- Bắt buộc CÓ MẶT: hàm Social đang chạy + trigger guard của edu_students. Policy INSERT chính chủ ở
+  -- mục 6 DỰA VÀO trigger này để chặn tự cấp ht_member / giả user_id — thiếu trigger thì không migration.
+  foreach k in array array['class_feed', 'class_comments_for_posts', 'class_post_visible', 'class_posts_before_update',
+                           'is_class_member', 'is_teacher', 'class_public_identity', 'guard_student_package_identity'] loop
+    if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                   where n.nspname = 'public' and p.proname = k) then
+      drift := drift || format('thiếu hàm %s', k);
+    end if;
+  end loop;
+  if not exists (select 1 from pg_trigger t
+                 where t.tgrelid = 'public.edu_students'::regclass and t.tgname = 'student_package_identity_guard'
+                   and t.tgenabled <> 'D' and not t.tgisinternal) then
+    drift := drift || 'thiếu/tắt trigger student_package_identity_guard trên edu_students'::text;
+  end if;
+  if cardinality(drift) > 0 then
+    raise exception 'DỪNG — production khác repo, KHÔNG migration: %', array_to_string(drift, '; ')
+      using hint = 'Chạy db/class_social_friends_wall_preflight.sql, gửi kết quả cho người review.';
+  end if;
+end $gate$;
+
 
 -- ── 1) Quan hệ bạn bè ──────────────────────────────────────────────────────
 create table if not exists public.friendships (
@@ -431,6 +488,7 @@ grant execute on function public.get_user_wall(uuid, timestamptz, uuid, int) to 
 -- service role); màn Admin (StudentList/StudentProfile/GroupManager/LeadsManager/DailyMail/
 -- ReportsPage) chạy dưới is_teacher(). delete_my_account là SECURITY DEFINER — không bị ảnh hưởng.
 alter table public.edu_students enable row level security;
+-- (Cổng drift ở mục 0 đã bảo đảm chỉ có policy cũ đúng như repo, hoặc bộ policy của file này.)
 do $$
 declare p record;
 begin
@@ -444,8 +502,11 @@ create policy edu_students_own_or_teacher_update on public.edu_students
   for update to authenticated
   using (user_id = auth.uid() or public.is_teacher())
   with check (user_id = auth.uid() or public.is_teacher());
-create policy edu_students_teacher_insert on public.edu_students
-  for insert to authenticated with check (public.is_teacher());
+-- INSERT: chính chủ tạo hồ sơ CỦA MÌNH (giữ tương thích app native cũ build ≤13 — luồng đăng ký
+-- sau IAP tự upsert edu_students) hoặc thầy. Trigger guard_student_package_identity vẫn chặn
+-- tự cấp ht_member / giả user_id; policy chặn tạo hồ sơ mang user_id người khác.
+create policy edu_students_own_or_teacher_insert on public.edu_students
+  for insert to authenticated with check (user_id = auth.uid() or public.is_teacher());
 create policy edu_students_teacher_delete on public.edu_students
   for delete to authenticated using (public.is_teacher());
 revoke all on public.edu_students from anon;
@@ -453,3 +514,5 @@ revoke truncate, trigger, references on public.edu_students from authenticated;
 -- NHỚ: 'edu_students' + 'friendships' đã thêm vào self_managed của db/rls_setup.sql.
 
 notify pgrst, 'reload schema';
+
+commit;

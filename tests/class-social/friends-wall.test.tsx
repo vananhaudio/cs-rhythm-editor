@@ -184,3 +184,60 @@ test("Badge chỉ đếm lời mời ĐẾN (incoming_friend_requests), một ng
   // DB: incoming_friend_requests chỉ lấy pending gửi ĐẾN mình
   assert.match(read("db/class_social_friends_wall_setup.sql"), /f\.addressee_id = auth\.uid\(\) and f\.status = 'pending'/);
 });
+
+// ── Safety patch: giao dịch, cổng drift, rollback an toàn, preflight/recovery chỉ đọc ──────────
+const stripComments = (sql: string) => sql.replace(/^\s*--.*$/gm, "");   // chỉ dòng comment riêng (chuỗi có thể chứa "--")
+const stripStrings = (sql: string) => sql.replace(/'(?:[^']|'')*'/g, "''").replace(/\$(\w*)\$[\s\S]*?\$\1\$/g, "$$");
+
+test("Migration tự chứa MỘT giao dịch + lock/statement timeout; cổng drift trước mọi thay đổi", () => {
+  const sql = stripComments(read("db/class_social_friends_wall_setup.sql")).trim();
+  assert.match(sql, /^begin;\s*set local lock_timeout = '5s';\s*set local statement_timeout = '60s';/);
+  assert.match(sql, /commit;$/);
+  assert.equal((sql.match(/^\s*(begin|commit|rollback);/gim) ?? []).length, 2, "không có begin/commit lồng");
+  const gate = sql.indexOf("do $gate$"), firstDdl = sql.search(/create table if not exists public\.friendships/);
+  assert.ok(gate > 0 && gate < firstDdl, "cổng drift chạy trước DDL đầu tiên");
+  assert.match(sql, /raise exception 'DỪNG — production khác repo/);
+  assert.match(sql, /student_package_identity_guard/, "bắt buộc trigger guard");
+});
+
+test("Hằng kỳ vọng của cổng drift GIỐNG HỆT giữa migration và preflight", () => {
+  const m = read("db/class_social_friends_wall_setup.sql"), p = read("db/class_social_friends_wall_preflight.sql");
+  const fn = m.match(/fn_expected constant jsonb := '(.*?)';/)?.[1], pol = m.match(/pol_expected constant jsonb := '(.*?)';/)?.[1];
+  assert.ok(fn && pol);
+  assert.ok(p.includes(`'${fn}'::jsonb`), "fn_expected");
+  assert.ok(p.includes(`'${pol}'::jsonb`), "pol_expected");
+  for (const k of ["class_feed", "class_comments_for_posts", "class_post_visible", "class_posts_before_update", "guard_student_package_identity"]) {
+    assert.ok(k in JSON.parse(fn), k);
+  }
+  assert.deepEqual(Object.keys(JSON.parse(pol)).sort(),
+    ["class_comment_resources", "class_comment_tags", "class_post_comments", "class_posts", "edu_students", "friendships"]);
+});
+
+test("edu_students: INSERT chính chủ (tương thích app cũ) — không còn policy INSERT chỉ-thầy", () => {
+  const sql = read("db/class_social_friends_wall_setup.sql");
+  assert.match(sql, /create policy edu_students_own_or_teacher_insert on public\.edu_students\s+for insert to authenticated with check \(user_id = auth\.uid\(\) or public\.is_teacher\(\)\);/);
+  assert.equal(/edu_students_teacher_insert/.test(stripComments(sql)), false);
+});
+
+test("Rollback tính năng: một giao dịch, idempotent, KHÔNG đụng edu_students, nêu rõ dữ liệu mất", () => {
+  const raw = read("db/class_social_friends_wall_rollback.sql");
+  const sql = stripComments(raw).trim();
+  assert.match(sql, /^begin;\s*set local lock_timeout = '5s';/);
+  assert.match(sql, /commit;$/);
+  assert.equal(/on public\.edu_students/.test(sql), false, "không tạo/xoá policy edu_students");
+  assert.equal(/using \(true\)/i.test(sql), false, "không mở policy rộng");
+  assert.match(raw, /DỮ LIỆU MẤT VĨNH VIỄN/);
+  assert.match(sql, /if exists \(select 1 from information_schema\.columns[\s\S]*column_name = 'audience'\)/, "chạy lại khi cột đã gỡ");
+});
+
+test("Preflight + generator khôi phục: CHỈ ĐỌC (một câu SELECT, không DDL/DML ngoài chuỗi)", () => {
+  for (const f of ["db/class_social_friends_wall_preflight.sql", "db/class_social_friends_wall_edu_students_recovery.sql"]) {
+    const sql = stripStrings(stripComments(read(f))).trim();
+    assert.match(sql, /^(with|select)\b/i, f);
+    assert.equal(/\b(insert|update|delete|create|drop|alter|grant|revoke|truncate|begin|commit)\b/i.test(sql), false, f);
+    assert.equal(sql.replace(/;\s*$/, "").includes(";"), false, `${f}: một câu lệnh`);
+  }
+  const gen = read("db/class_social_friends_wall_edu_students_recovery.sql");
+  assert.equal(/using \(true\)/i.test(stripComments(gen)), false, "không hard-code policy cũ");
+  assert.match(gen, /from pg_policies pp where pp\.schemaname = 'public' and pp\.tablename = 'edu_students'/);
+});
