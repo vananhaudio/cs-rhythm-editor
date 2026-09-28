@@ -52,6 +52,19 @@ export async function fetchCover(userId: string): Promise<string | null> {
   } catch { return null }
 }
 
+/** Đăng nhập email + mật khẩu bằng Supabase auth sẵn có — cùng cách trang Class (/) đang dùng.
+ *  Trả thông báo lỗi tiếng Việt, hoặc null khi thành công. */
+export async function signInWithPassword(email: string, password: string): Promise<string | null> {
+  if (!email.trim() || !password.trim()) return 'Nhập email và mật khẩu.'
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: password.trim() })
+    if (error || !data.user) return 'Sai email hoặc mật khẩu, thử lại nhé.'
+    return null
+  } catch {
+    return 'Chưa kết nối được, kiểm tra mạng rồi thử lại nhé.'
+  }
+}
+
 /** Đăng xuất bằng Supabase auth sẵn có (App học dùng cùng cơ chế). */
 export async function signOut(): Promise<void> {
   try { await supabase.auth.signOut() } catch { /* vẫn chuyển trang */ }

@@ -5,7 +5,7 @@ import { Lock, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { NAV_GROUPS, type NavItem } from './nav'
 import { SECTION_PATHS, type SocialSection } from './resolveMeRoute'
 import type { ClassIdentity } from './useClassSession'
-import { Avatar, MoreMenu } from './ui'
+import { Avatar, ClassHomeLink, MoreMenu } from './ui'
 import { safeImageUrl } from './media/safeImageUrl'
 import type { ImageKind } from './profile/imageFile'
 
@@ -134,6 +134,7 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
           <span className="cs-brand-text">Thầy Văn Anh Guitar</span>
         </a>
         <div className="cs-topbar-spacer" />
+        <ClassHomeLink />
         <MoreMenu className="cs-account" label={`Tài khoản: ${me.name}`}
           trigger={<Avatar name={me.name} url={safeImageUrl(me.avatarUrl)} size={34} />}
           items={[

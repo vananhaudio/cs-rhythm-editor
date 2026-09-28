@@ -2,7 +2,7 @@
 // Dùng CHUNG client `supabase` (cookie .vananhaudio.com) với App học → không đăng nhập lại.
 // Cùng cách nhận diện như StudentOnboarding (edu_students theo user_id; không có hồ sơ
 // học sinh mà là thầy/admin → chế độ giáo viên). CHỈ ĐỌC — không ghi gì.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { fetchCover } from './profile/profileApi'
 
@@ -24,8 +24,8 @@ export type ClassIdentity = {
 
 export type ClassSession =
   | { status: 'loading' }
-  | { status: 'signed-out' }   // không có phiên → P0: về App học (/learn) như hành vi cũ
-  | { status: 'no-profile' }   // có phiên nhưng không phải học sinh/thầy → cũng về /learn
+  | { status: 'signed-out' }   // không có phiên → /me hiện trạng thái khách (đăng nhập ngay tại /me)
+  | { status: 'no-profile'; userId: string; email: string | null }   // có phiên nhưng không phải học sinh/thầy
   | { status: 'ready'; me: ClassIdentity }
 
 type StudentRow = {
@@ -85,19 +85,48 @@ async function loadSession(): Promise<ClassSession> {
       },
     }
   }
-  return { status: 'no-profile' }
+  return { status: 'no-profile', userId: user.id, email: user.email ?? null }
+}
+
+function userIdOf(s: ClassSession): string | null {
+  if (s.status === 'ready') return s.me.userId
+  if (s.status === 'no-profile') return s.userId
+  return null
 }
 
 export function useClassSession(): ClassSession {
   const [state, setState] = useState<ClassSession>({ status: 'loading' })
+  const loadedUser = useRef<string | null | undefined>(undefined)   // undefined = chưa tải xong lần nào
   useEffect(() => {
     let alive = true
-    loadSession()
-      .then(s => { if (alive) setState(s) })
-      .catch(() => { if (alive) setState({ status: 'signed-out' }) })
-    // Đăng xuất ở tab khác / hết phiên → về lại trạng thái đúng
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
-      if (event === 'SIGNED_OUT' && alive) setState({ status: 'signed-out' })
+    let seq = 0   // chỉ nhận kết quả của lần tải MỚI NHẤT
+    const load = () => {
+      const mine = ++seq
+      loadSession()
+        .catch((): ClassSession => ({ status: 'signed-out' }))
+        .then(s => {
+          if (!alive || mine !== seq) return
+          loadedUser.current = userIdOf(s)
+          setState(s)
+        })
+    }
+    load()
+    // Đăng nhập ngay tại /me (hoặc ở trang Class rồi quay lại) → tải danh tính; đăng xuất → trạng thái khách.
+    // Chỉ tải lại khi ĐỔI người dùng: supabase-js có thể bắn lại SIGNED_IN (khôi phục phiên) cho cùng user.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!alive) return
+      if (event === 'SIGNED_OUT') {
+        seq++
+        loadedUser.current = null
+        setState({ status: 'signed-out' })
+        return
+      }
+      if (event === 'SIGNED_IN' && session?.user?.id && session.user.id !== loadedUser.current) {
+        loadedUser.current = session.user.id
+        setState({ status: 'loading' })
+        // KHÔNG gọi supabase bên trong callback (supabase-js có thể treo) → dời sang lượt sau
+        setTimeout(load, 0)
+      }
     })
     return () => { alive = false; subscription.unsubscribe() }
   }, [])

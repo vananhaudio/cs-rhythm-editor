@@ -87,6 +87,7 @@ const SOCIAL_FILES = [
   "profile/imageFile.ts", "profile/profileApi.ts", "profile/useProfileMediaEditor.tsx", "media/safeImageUrl.ts", "comments/khoAdapter.ts", "comments/useFeedComments.ts",
   "sections/comments/CommentsSection.tsx", "sections/comments/CommentItem.tsx", "sections/comments/CommentComposer.tsx",
   "sections/comments/TagPicker.tsx", "sections/comments/KhoResourcePicker.tsx", "sections/comments/ResourceCard.tsx",
+  "MeGuest.tsx",
 ];
 const read = (f: string) => readFileSync(new URL(`../../src/class-social/${f}`, import.meta.url), "utf8");
 

@@ -1,7 +1,19 @@
 // Mảnh giao diện dùng chung trong Class Social.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { safeImageUrl } from './media/safeImageUrl'
+import { CLASS_HOME_PATH } from './resolveMeRoute'
+
+/** Link về trang Class công khai (/) — cùng tab, tải trang đầy đủ; cùng phiên đăng nhập. */
+export function ClassHomeLink() {
+  return (
+    <a className="cs-classhome" href={CLASS_HOME_PATH} aria-label="Về Trang Class">
+      <ArrowLeft size={17} strokeWidth={2} aria-hidden="true" />
+      <span>Trang Class</span>
+    </a>
+  )
+}
 
 export function Avatar({ name, url, size, className }: { name: string; url: string | null; size: number; className?: string }) {
   const safe = safeImageUrl(url)

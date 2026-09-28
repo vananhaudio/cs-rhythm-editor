@@ -25,6 +25,9 @@ export const SECTION_PATHS: Record<SocialSection, string> = {
 
 export const LEARN_PATH = '/learn'
 
+/** Trang Class công khai (tuyển sinh) — cổng thứ hai, dùng chung phiên đăng nhập với /me. */
+export const CLASS_HOME_PATH = '/'
+
 export function isMePath(pathname: string): boolean {
   return pathname === '/me' || pathname.startsWith('/me/')
 }
