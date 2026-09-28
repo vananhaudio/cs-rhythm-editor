@@ -96,6 +96,10 @@ DECLARE
     -- Buổi học: dữ liệu vận hành nội bộ, chỉ authenticated (policy cses_auth_all
     -- do db/journey_os_stage1.sql đặt) — giữ nguyên, anon không đọc.
     'class_sessions',
+    -- Lớp đang học Step 2C: policy membership + curriculum entitlement riêng.
+    -- Không để script nền áp authenticated ALL lên giáo trình/quyền.
+    -- ('class_stages' đã nằm ở nhóm "Chặng của lớp" phía trên.)
+    'class_lesson_content', 'class_curriculum_access',
     -- 1001 Câu chuyện cùng Guitar (/story): anon CHỈ đọc bài published;
     -- người kể chỉ CRUD bài của mình khi chưa gửi biên tập; thầy toàn quyền.
     -- Policy hẹp do db/story_setup.sql đặt — ĐỪNG để vòng lặp áp policy rộng

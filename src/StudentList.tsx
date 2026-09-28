@@ -249,7 +249,7 @@ export default function StudentList({ onSelect }: Props) {
     supabase.from('edu_students').select('id,user_id,full_name,email,phone,level,is_active,enrolled_at')
       .order('full_name').then(({ data }) => setStudents((data ?? []) as Student[]))
     supabase.from('edu_groups').select('id,name,zalo_url,group_type').eq('is_active', true).order('name')
-      .then(({ data }) => setGroups((data ?? []).filter((g: any) => g.group_type !== 'facebook') as Grp[]))
+      .then(({ data }) => setGroups((data ?? []).filter((g: any) => g.group_type === 'zalo') as Grp[]))
     supabase.from('edu_group_members').select('user_id,group_id').eq('status', 'active')
       .then(({ data }) => {
         const m: Record<string, Set<string>> = {}
@@ -266,7 +266,7 @@ export default function StudentList({ onSelect }: Props) {
         setLoading(false)
       })
     supabase.from('edu_groups').select('id,name,zalo_url,group_type').eq('is_active', true).order('name')
-      .then(({ data }) => setGroups((data ?? []).filter((g: any) => g.group_type !== 'facebook') as Grp[]))
+      .then(({ data }) => setGroups((data ?? []).filter((g: any) => g.group_type === 'zalo') as Grp[]))
     supabase.from('edu_group_members').select('user_id,group_id').eq('status', 'active')
       .then(({ data }) => {
         const m: Record<string, Set<string>> = {}

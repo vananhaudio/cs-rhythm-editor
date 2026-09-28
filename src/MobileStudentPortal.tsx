@@ -1343,7 +1343,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
     })
 
     // Cộng đồng của bạn (Facebook chung + nhóm Zalo đã gán) — qua RPC my_groups
-    supabase.rpc('my_groups').then(({ data }) => setCommunityGroups((data ?? []) as any))
+    supabase.rpc('my_groups').then(({ data }) => setCommunityGroups(((data ?? []) as typeof communityGroups).filter(g => g.group_type !== 'class')))
 
     // Load practice data
     const now2 = new Date()

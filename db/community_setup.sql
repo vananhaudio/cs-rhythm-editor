@@ -66,12 +66,36 @@ alter table public.edu_group_members      enable row level security;
 alter table public.edu_group_claim_tokens enable row level security;
 
 drop policy if exists eg_teacher_all on public.edu_groups;
-create policy eg_teacher_all on public.edu_groups
-  for all to authenticated using (public.is_teacher()) with check (public.is_teacher());
+drop policy if exists eg_teacher_read on public.edu_groups;
+drop policy if exists eg_teacher_nonclass_write on public.edu_groups;
 
 drop policy if exists egm_teacher_all on public.edu_group_members;
-create policy egm_teacher_all on public.edu_group_members
-  for all to authenticated using (public.is_teacher()) with check (public.is_teacher());
+drop policy if exists egm_teacher_read on public.edu_group_members;
+drop policy if exists egm_teacher_nonclass_write on public.edu_group_members;
+do $$
+begin
+  if to_regclass('public.class_curriculum_access') is null then
+    -- Bootstrap cũ, trước migration Lớp đang học.
+    create policy eg_teacher_all on public.edu_groups
+      for all to authenticated using (public.is_teacher()) with check (public.is_teacher());
+    create policy egm_teacher_all on public.edu_group_members
+      for all to authenticated using (public.is_teacher()) with check (public.is_teacher());
+  else
+    -- Sau migration, chỉ Admin RPC được ghi cohort; UI Cộng đồng vẫn quản lý Zalo/Facebook.
+    create policy eg_teacher_read on public.edu_groups for select to authenticated
+      using (public.is_teacher());
+    create policy eg_teacher_nonclass_write on public.edu_groups for all to authenticated
+      using (public.is_teacher() and group_type <> 'class')
+      with check (public.is_teacher() and group_type <> 'class');
+    create policy egm_teacher_read on public.edu_group_members for select to authenticated
+      using (public.is_teacher());
+    create policy egm_teacher_nonclass_write on public.edu_group_members for all to authenticated
+      using (public.is_teacher() and not exists (
+        select 1 from public.edu_groups g where g.id=group_id and g.group_type='class'))
+      with check (public.is_teacher() and not exists (
+        select 1 from public.edu_groups g where g.id=group_id and g.group_type='class'));
+  end if;
+end $$;
 drop policy if exists egm_self_read on public.edu_group_members;
 create policy egm_self_read on public.edu_group_members
   for select to authenticated using (user_id = auth.uid());

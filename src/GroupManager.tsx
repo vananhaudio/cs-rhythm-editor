@@ -44,7 +44,7 @@ export default function GroupManager() {
   const load = async () => {
     setLoading(true)
     const [{ data: gs }, { data: ms }, { data: ts }] = await Promise.all([
-      supabase.from('edu_groups').select('*').order('group_type').order('sort_order').order('created_at'),
+      supabase.from('edu_groups').select('*').neq('group_type', 'class').order('group_type').order('sort_order').order('created_at'),
       supabase.from('edu_group_members').select('group_id').eq('status', 'active'),
       supabase.from('edu_group_claim_tokens').select('*').eq('is_active', true),
     ])

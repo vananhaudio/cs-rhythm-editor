@@ -16,6 +16,7 @@ import ChatMailPage from './admin/ChatMailPage'
 import NewsFeedAdmin from './admin/NewsFeedAdmin'
 import JourneyAdmin from './admin/JourneyAdmin'
 import NhipPhachAdmin from './admin/NhipPhachAdmin'
+import ClassCurriculumAdmin from './admin/ClassCurriculumAdmin'
 
 const S = {
   sidebar: '#18181B', sidebarHover: '#27272A',
@@ -24,12 +25,13 @@ const S = {
   bg: '#F4F4F5', surface: '#FFFFFF',
 }
 
-type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027' | 'newsfeed' | 'journey' | 'nhipphach'
+type Section = 'students' | 'courses' | 'dashboard' | 'tools' | 'community' | 'assistant' | 'leads' | 'articles' | 'aichat' | 'schedule' | 'classes' | 'showcase' | 'dailymail' | 'chatmail' | 'ht2027' | 'newsfeed' | 'journey' | 'nhipphach'
 
 const NAV = [
   { id: 'dashboard' as Section, icon: '⊞', label: 'Tổng quan'      },
   { id: 'leads'     as Section, icon: '📝', label: 'Đăng ký'        },
   { id: 'schedule'  as Section, icon: '🗓', label: 'Lịch lớp'       },
+  { id: 'classes'   as Section, icon: '🎓', label: 'Lớp học'        },
   { id: 'ht2027'    as Section, icon: '🎸', label: 'Thực hành HT2027' },
   { id: 'aichat'    as Section, icon: '💬', label: 'AI khách'       },
   { id: 'showcase'  as Section, icon: '📄', label: 'Showcase'      },
@@ -180,6 +182,8 @@ export default function TeacherAdminPage() {
             <StudentList onSelect={id => setStudentId(id)} />
           </div>
         )}
+
+        {section === 'classes' && <ClassCurriculumAdmin />}
         {section === 'students' && studentId && (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <StudentProfile

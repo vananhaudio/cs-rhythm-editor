@@ -5,6 +5,7 @@ import { PRODUCTS, type PublicProductKey } from './class-content'
 import { supabase } from './supabase'
 import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
 import { generateSessions, realEndDate, realStartDate, scheduleText, fmtDMY, progressInfo, WEEKDAYS, STATUS, statusInfo, type SessionRow } from './journey/sessions'
+import { planSessionSync, type StoredSession } from './journey/sessionSync'
 import CalendarWeek from './journey/CalendarWeek'
 import ScheduleDashboard from './journey/ScheduleDashboard'
 import JourneyMap from './journey/JourneyMap'
@@ -49,7 +50,7 @@ interface Cls {
   public_product: PublicProductKey | null; public_enroll: boolean
 }
 interface Course { id: string; name: string; code: string | null }
-interface Grp { id: string; name: string; code: string | null; zalo_url: string | null }
+interface Grp { id: string; name: string; code: string | null; group_type: string; zalo_url: string | null }
 
 const blank = (): Cls => ({
   id: '', code: '', name: '', section: 'upcoming', schedule: '', start_text: '', duration: '8 buổi · mỗi buổi 90 phút',
@@ -86,7 +87,7 @@ export default function ScheduleManager() {
   useEffect(() => {
     load()
     supabase.from('edu_courses').select('id,name,code').order('sort_order').then(({ data }) => setCourses((data ?? []) as Course[]))
-    supabase.from('edu_groups').select('id,name,code,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
+    supabase.from('edu_groups').select('id,name,code,group_type,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
   }, [])
   // đếm nhu cầu đang chờ (badge tab) — làm mới khi đổi tab để phản ánh thay đổi
   useEffect(() => {
@@ -118,12 +119,25 @@ export default function ScheduleManager() {
     if (nl && dangLop(nl) && !code) {
       setBusy(false); setMsg(`Lớp năng lực ${nl} cần nhập "Số khoá" để sinh mã lớp (nhóm Zalo ≡ mã lớp). Xem docs/QUY-TAC-MA.md.`); return
     }
-    // Nhóm Zalo ≡ mã lớp: khớp nhóm cùng mã (GIỮ tên nhóm sẵn có — code là authoritative, tên để người đọc)
+    // Cohort Giáo trình có code namespace riêng; giữ nguyên FK khi sửa lịch.
+    const linkedGroup = form.group_id ? groups.find(g => g.id === form.group_id) : null
+    if (form.group_id && !linkedGroup) {
+      setBusy(false); setMsg('Không xác minh được nhóm đang gắn với lớp. Tải lại trước khi lưu lịch.'); return
+    }
+    const isCurriculumCohort = linkedGroup?.group_type === 'class'
+    if (isCurriculumCohort && (code !== form.code || linkedGroup.code !== `CLASS.${code}`)) {
+      setBusy(false); setMsg('Không thể đổi mã lớp/nhóm cohort tại màn lịch. Quản lý quyền trong mục Lớp học.'); return
+    }
+    // Lớp thường vẫn khớp nhóm Zalo cùng mã.
     let group_id = form.group_id || null
-    if (code) {
-      const { data: exist } = await supabase.from('edu_groups').select('id').ilike('code', code).limit(1)
+    if (code && !isCurriculumCohort) {
+      const { data: exist, error: groupError } = await supabase.from('edu_groups').select('id,group_type').ilike('code', code).limit(1)
+      if (groupError) { setBusy(false); setMsg('Không kiểm tra được nhóm của lớp: ' + groupError.message); return }
       if (exist?.[0]?.id) {
-        await supabase.from('edu_groups').update({ is_active: true, zalo_url: zaloUrl.trim() || null }).eq('id', exist[0].id)
+        if (exist[0].group_type !== 'class') {
+          const { error: updateGroupError } = await supabase.from('edu_groups').update({ is_active: true, zalo_url: zaloUrl.trim() || null }).eq('id', exist[0].id)
+          if (updateGroupError) { setBusy(false); setMsg('Cập nhật nhóm Zalo lỗi: ' + updateGroupError.message); return }
+        }
         group_id = exist[0].id
       } else {
         const { data: g, error: gErr } = await supabase.from('edu_groups')
@@ -180,22 +194,28 @@ export default function ScheduleManager() {
       if (error) { setBusy(false); setMsg('Lưu lỗi: ' + error.message); return }
       classId = ins!.id
     }
-    // Đồng bộ buổi học: giữ buổi ĐÃ 'completed', làm mới các buổi còn lại theo lịch mới
+    // Đồng bộ theo (class_id, session_number): giữ ID, trạng thái do người quản lý
+    // quyết định, title/note và các trường ngoài lịch. Không xóa để rebuild.
     if (classId && sessions.length) {
-      const old = sessById[classId] ?? []
-      const doneNums = new Set(old.filter(s => s.status === 'completed').map(s => s.session_number))
-      await supabase.from('class_sessions').delete().eq('class_id', classId).not('status', 'eq', 'completed')
-      const toInsert = sessions
-        .filter(s => !(s.event_type === 'lesson' && doneNums.has(s.session_number)))
-        .map(s => ({ class_id: classId, session_number: s.session_number, start_at: s.start_at, end_at: s.end_at, event_type: s.event_type, status: s.event_type === 'break' ? 'holiday' : 'scheduled' }))
-      if (toInsert.length) {
-        const { error: sErr } = await supabase.from('class_sessions').insert(toInsert)
-        if (sErr) { setBusy(false); setMsg('Lưu buổi lỗi: ' + sErr.message); return }
+      const { data: current, error: readError } = await supabase.from('class_sessions')
+        .select('id,session_number,event_type,status,start_at,end_at,title,note').eq('class_id', classId)
+      if (readError) { setBusy(false); setMsg('Đọc buổi lỗi: ' + readError.message); return }
+      let plan
+      try { plan = planSessionSync((current ?? []) as StoredSession[], sessions) }
+      catch (e) { setBusy(false); setMsg('Lịch buổi không hợp lệ: ' + (e instanceof Error ? e.message : String(e))); return }
+      for (const change of plan.updates) {
+        const { error } = await supabase.from('class_sessions').update(change.patch)
+          .eq('id', change.id).eq('status', change.expectedStatus)
+        if (error) { setBusy(false); setMsg('Cập nhật buổi lỗi: ' + error.message); return }
+      }
+      for (const item of plan.inserts) {
+        const { error } = await supabase.from('class_sessions').insert({ class_id: classId, ...item })
+        if (error) { setBusy(false); setMsg('Thêm buổi lỗi: ' + error.message); return }
       }
     }
     setBusy(false)
     setForm(null)
-    supabase.from('edu_groups').select('id,name,code,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
+    supabase.from('edu_groups').select('id,name,code,group_type,zalo_url').order('name').then(({ data }) => setGroups((data ?? []) as Grp[]))
     load()
   }
   const del = async (r: Cls) => {
@@ -407,8 +427,11 @@ export default function ScheduleManager() {
                 })()}
               </div>
 
-              <div style={{ gridColumn: '1 / 3' }}><label style={lbl}>💬 Link nhóm Zalo (nhóm ≡ mã lớp, tự khớp)</label>
-                <input style={inp} value={zaloUrl} onChange={e => setZaloUrl(e.target.value)} placeholder="https://zalo.me/g/..." />
+              <div style={{ gridColumn: '1 / 3' }}>
+                {groups.find(g => g.id === form.group_id)?.group_type === 'class'
+                  ? <span style={{ fontSize: 13, color: S.text3 }}>Nhóm lớp dùng để quản lý học sinh và quyền Giáo trình trong mục Lớp học.</span>
+                  : <><label style={lbl}>💬 Link nhóm Zalo (nhóm ≡ mã lớp, tự khớp)</label>
+                      <input style={inp} value={zaloUrl} onChange={e => setZaloUrl(e.target.value)} placeholder="https://zalo.me/g/..." /></>}
               </div>
               <div><label style={lbl}>Thứ tự · Hiển thị</label>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -483,7 +506,7 @@ export default function ScheduleManager() {
                       {SECTIONS.find(s => s.v === r.section)?.l}{r.schedule ? ` · ${r.schedule}` : ''}{r.start_text ? ` · KG ${r.start_text}` : ''}{r.end_date ? ` → KT ${fmtDMY(r.end_date)}` : ''}{r.price ? ` · ${r.price}` : ''}
                     </div>
                     <div style={{ fontSize: 12.5, color: S.text3, marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
-                      <span>💬 {groupName(r.group_id) ?? <em>chưa gắn nhóm</em>}</span>
+                      <span>{groups.find(g => g.id === r.group_id)?.group_type === 'class' ? '🎓 Nhóm lớp: ' : '💬 '}{groupName(r.group_id) ?? <em>chưa gắn nhóm</em>}</span>
                       <span>🎓 {courseNames(r.course_ids).length ? courseNames(r.course_ids).join(', ') : <em>chưa gắn khoá</em>}</span>
                     </div>
                   </div>

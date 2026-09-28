@@ -300,7 +300,7 @@ export default function StudentProfile({ studentId, onBack }: Props) {
       const gids = (mem ?? []).map((m: any) => m.group_id)
       if (!gids.length) { setMyGroups([]); return }
       const { data: grps } = await supabase.from('edu_groups').select('name,zalo_url,group_type').in('id', gids)
-      setMyGroups((grps ?? []).filter((g: any) => g.group_type !== 'facebook'))
+      setMyGroups((grps ?? []).filter((g: any) => g.group_type === 'zalo'))
     })()
   }, [studentId])
 
