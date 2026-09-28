@@ -2,11 +2,12 @@
 import { parseExternalMedia, MEDIA_ERROR_TEXT, type ExternalMedia, type MediaProvider } from '../media/parseExternalMedia'
 import { safeImageUrl } from '../media/safeImageUrl'
 
-export type PostType = 'assignment' | 'question' | 'practice'
+export type PostType = 'assignment' | 'question' | 'practice' | 'status'
 export const POST_TYPE_LABEL: Record<PostType, string> = {
   assignment: 'Trả bài',
   question: 'Hỏi bài',
   practice: 'Luyện tập',
+  status: 'Bài viết',
 }
 
 export const MAX_BODY = 2000
@@ -50,6 +51,54 @@ export function checkAssignmentDraft(draft: { body: string; url: string }): Draf
   }
 }
 
+// ── Bài viết trên tường: CHỈ bạn bè (+ Thầy kiểm duyệt). Chữ bắt buộc nếu không có link. ──
+export type WallInsert = {
+  type: 'status'
+  audience: 'friends'
+  body: string
+  media_type: 'external_video' | null
+  media_provider: MediaProvider | null
+  media_url: string | null
+  external_media_id: string | null
+}
+
+/** Một kiểu (không phải union) cho mọi bài mới — DB (CHECK + RLS) kiểm cặp loại ↔ quyền xem. */
+export type NewPost = {
+  type: 'assignment' | 'status'
+  audience?: 'friends'
+  body: string
+  media_type: 'external_video' | null
+  media_provider: MediaProvider | null
+  media_url: string | null
+  external_media_id: string | null
+}
+
+export type WallDraftCheck =
+  | { ok: true; insert: WallInsert; media: ExternalMedia | null }
+  | { ok: false; videoError?: string; bodyError?: string }
+
+export function checkWallDraft(draft: { body: string; url: string }): WallDraftCheck {
+  const body = normalizeBody(draft.body)
+  const url = (draft.url ?? '').trim()
+  const parsed = url ? parseExternalMedia(url) : null
+  const videoError = parsed && !parsed.ok ? MEDIA_ERROR_TEXT[parsed.error] : undefined
+  const bodyError = body.length > MAX_BODY ? `Bài viết tối đa ${MAX_BODY} ký tự.`
+    : !body && !url ? 'Hãy viết gì đó hoặc dán một liên kết video.' : undefined
+  if (videoError || bodyError || (parsed && !parsed.ok)) return { ok: false, videoError, bodyError }
+  const m = parsed && parsed.ok ? parsed.media : null
+  return {
+    ok: true,
+    media: m,
+    insert: {
+      type: 'status', audience: 'friends', body,
+      media_type: m ? 'external_video' : null,
+      media_provider: m ? m.provider : null,
+      media_url: m ? m.canonicalUrl : null,
+      external_media_id: m?.externalId ?? null,
+    },
+  }
+}
+
 // ── Lỗi → câu tiếng Việt (không lộ lỗi thô) ─────────────────────────────────
 export type ErrorLike = { message?: string; code?: string; status?: number } | null | undefined
 
@@ -89,6 +138,8 @@ export type FeedRow = {
   is_mine: boolean | null
   is_hidden?: boolean | null
   comment_count?: number | null
+  /** get_user_wall: 'class' (Trả bài) | 'friends' (bài viết trên tường) */
+  audience?: string | null
 }
 
 export type FeedPost = {
@@ -103,9 +154,11 @@ export type FeedPost = {
   /** Bị Thầy ẩn — chỉ Thầy còn thấy */
   isHidden: boolean
   commentCount: number
+  /** Chỉ bạn bè xem (bài viết trên tường) */
+  friendsOnly: boolean
 }
 
-const isPostType = (t: string): t is PostType => t === 'assignment' || t === 'question' || t === 'practice'
+const isPostType = (t: string): t is PostType => t === 'assignment' || t === 'question' || t === 'practice' || t === 'status'
 
 export function toFeedPost(r: FeedRow): FeedPost | null {
   if (!r?.id || !isPostType(r.type)) return null
@@ -130,6 +183,7 @@ export function toFeedPost(r: FeedRow): FeedPost | null {
     isMine: !!r.is_mine,
     isHidden: !!r.is_hidden,
     commentCount: Math.max(0, Number(r.comment_count) || 0),
+    friendsOnly: r.audience === 'friends' || r.type === 'status',
   }
 }
 

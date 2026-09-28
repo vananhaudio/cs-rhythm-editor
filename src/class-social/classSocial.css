@@ -508,6 +508,59 @@
 .cs-spinner { width: 28px; height: 28px; margin: 0 auto 12px; border-radius: 50%; border: 3px solid var(--cs-p-soft); border-top-color: var(--cs-p); animation: cs-spin 0.8s linear infinite; }
 @keyframes cs-spin { to { transform: rotate(360deg); } }
 
+/* ── Bạn bè + trang cá nhân / tường ─────────────────────────────────────── */
+/* Tên/avatar bấm được → trang cá nhân (nút trông như chữ) */
+.cs-person-link {
+  display: inline-flex; align-items: center; gap: 10px; min-width: 0;
+  border: none; background: none; padding: 0; margin: 0; cursor: pointer; text-align: left;
+  color: inherit; font: inherit; border-radius: 8px;
+}
+.cs-person-link.cs-post-author, .cs-person-link.cs-cmt-author { font-weight: 700; }
+.cs-person-link:hover .cs-avatar { box-shadow: 0 0 0 3px var(--cs-p-soft); }
+.cs-person-link.cs-post-author:hover, .cs-person-link.cs-cmt-author:hover { text-decoration: underline; }
+.cs-post-audience {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 12px; font-weight: 600; color: var(--cs-muted);
+}
+
+.cs-profile-back { align-self: flex-start; }
+.cs-profile-skeleton { overflow: hidden; }
+.cs-profile-note {
+  display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--cs-p-softer); color: var(--cs-p-strong); font-size: 14px; font-weight: 600;
+}
+.cs-identity-profile { margin-top: 10px; }
+.cs-rel-status { margin-top: 6px; font-size: 14px; font-weight: 600; color: var(--cs-muted); }
+.cs-rel-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.cs-btn.is-danger { color: #b42318; }
+.cs-wall-locked { padding: 8px 0; }
+
+.cs-wall-composer { padding: 12px 14px; }
+.cs-wall-composer form { display: flex; flex-direction: column; gap: 10px; }
+.cs-wall-composer-row { display: flex; align-items: flex-start; gap: 10px; }
+.cs-wall-input { flex: 1; min-width: 0; min-height: 52px; font-size: 16px; }
+.cs-wall-link { width: 100%; font-size: 16px; }
+.cs-wall-composer-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.cs-wall-audience {
+  display: inline-flex; align-items: center; gap: 5px; margin-right: auto;
+  font-size: 13px; color: var(--cs-muted);
+}
+
+.cs-friends-card { padding: 16px; }
+.cs-friends-card + .cs-friends-card { margin-top: 12px; }
+.cs-friends-title { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 800; margin: 0 0 10px; }
+.cs-count {
+  min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-grid; place-items: center;
+  background: var(--cs-p); color: #fff; font-size: 12px; font-weight: 800;
+}
+.cs-friends-empty { margin: 0; color: var(--cs-muted); font-size: 14.5px; }
+.cs-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cs-person { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 10px 0; }
+.cs-person + .cs-person { border-top: 1px solid var(--cs-border); }
+.cs-person-main { flex: 1 1 180px; min-width: 0; }
+.cs-person-name { font-weight: 700; overflow-wrap: anywhere; }
+.cs-person-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
 /* ── Mobile: menu dạng sheet (mở từ nút ☰) ───────────────────────────────── */
 .cs-only-mobile { display: none; }
 .cs-sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(28, 24, 48, 0.4); }
@@ -560,6 +613,9 @@
   .cs-composer-modal-foot .cs-btn { flex: 1; }
 
   .cs-tools-grid { grid-template-columns: 1fr; }
+  .cs-person-actions { width: 100%; }
+  .cs-person-actions .cs-btn { flex: 1; }
+  .cs-rel-actions .cs-btn { flex: 1 1 auto; }
   .cs-chat { grid-template-columns: 1fr; min-height: 0; }
   .cs-chat-list { border-right: none; border-bottom: 1px solid var(--cs-border); }
 }

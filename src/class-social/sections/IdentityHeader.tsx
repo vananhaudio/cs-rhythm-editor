@@ -2,17 +2,19 @@
 // Là header của HOME, không phải trang profile riêng. Bìa thấp để feed lộ ra sớm.
 // Chưa có / lỗi ảnh bìa → bìa mặc định tím (không bao giờ hiện ảnh vỡ).
 import { useState } from 'react'
-import { Camera, Users } from 'lucide-react'
+import { Camera, UserRound, Users } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
 import { levelLabel, monthYear } from '../format'
 import { safeImageUrl } from '../media/safeImageUrl'
 import type { ImageKind } from '../profile/imageFile'
 import { Avatar } from '../ui'
 
-export default function IdentityHeader({ me, canEditAvatar = false, onEdit }: {
+export default function IdentityHeader({ me, canEditAvatar = false, onEdit, onOpenProfile }: {
   me: ClassIdentity
   canEditAvatar?: boolean
   onEdit?: (kind: ImageKind) => void
+  /** Có → hiện nút "Trang cá nhân" (tường của tôi) */
+  onOpenProfile?: () => void
 }) {
   const level = levelLabel(me.level)
   const since = monthYear(me.enrolledAt)
@@ -55,6 +57,11 @@ export default function IdentityHeader({ me, canEditAvatar = false, onEdit }: {
               {me.htMember && <span className="cs-badge">Lớp Hành trình</span>}
               {facts.map(f => <span key={f}>{f}</span>)}
             </div>
+          )}
+          {onOpenProfile && (
+            <button type="button" className="cs-btn cs-btn-soft cs-btn-sm cs-identity-profile" onClick={onOpenProfile}>
+              <UserRound size={16} aria-hidden="true" /> Trang cá nhân
+            </button>
           )}
         </div>
       </div>

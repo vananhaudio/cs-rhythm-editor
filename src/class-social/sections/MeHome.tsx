@@ -12,11 +12,13 @@ import CommunityFeed from './CommunityFeed'
 import type { PostSocial } from './PostCard'
 import type { ImageKind } from '../profile/imageFile'
 
-export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia }: {
+export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia, onOpenProfile }: {
   me: ClassIdentity
   identityRev?: number
   canEditAvatar?: boolean
   onEditMedia?: (kind: ImageKind) => void
+  /** Bấm tên/avatar trong Cộng đồng → trang cá nhân */
+  onOpenProfile?: (userId: string) => void
 }) {
   const { state, reload, loadMore } = useCommunityFeed()
   const feedRef = useRef<HTMLDivElement>(null)
@@ -50,11 +52,13 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
     onRefreshComments: refresh,
     onExpandComments: expand,
     onModeratePost: (p, h) => void onModeratePost(p, h),
+    onOpenProfile,
   }
 
   return (
     <div className="cs-col cs-home">
-      <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} />
+      <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia}
+        onOpenProfile={onOpenProfile ? () => onOpenProfile(me.userId) : undefined} />
       <TraBaiCta me={me} onPosted={onPosted} />
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}

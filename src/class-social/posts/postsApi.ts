@@ -1,7 +1,7 @@
 // Gọi Supabase cho bài đăng cộng đồng. Tác giả KHÔNG gửi từ client — DB tự lấy auth.uid()
 // (cột author_user_id default auth.uid(), policy INSERT bắt buộc = auth.uid()).
 import { supabase } from '../../supabase'
-import { friendlyError, toFeedPosts, type AssignmentInsert, type FeedPost, type FeedRow } from './postModel'
+import { friendlyError, toFeedPosts, type AssignmentInsert, type FeedPost, type FeedRow, type NewPost, type WallInsert } from './postModel'
 
 export const FEED_PAGE = 20
 
@@ -27,7 +27,8 @@ export async function fetchFeedPage(cursor?: { createdAt: string; id: string }):
   }
 }
 
-export async function createAssignmentPost(insert: AssignmentInsert): Promise<Result<{ id: string }>> {
+/** Trả bài (bài của Class) hoặc bài viết trên tường (chỉ bạn bè) — cùng bảng class_posts, RLS kiểm cặp loại ↔ quyền xem. */
+export async function createPost(insert: NewPost): Promise<Result<{ id: string }>> {
   try {
     const { data, error, status } = await supabase.from('class_posts').insert(insert).select('id').single()
     if (error || !data) {
@@ -39,3 +40,6 @@ export async function createAssignmentPost(insert: AssignmentInsert): Promise<Re
     return { ok: false, message: friendlyError(e as Error, 'post', online()) }
   }
 }
+
+export const createAssignmentPost = (insert: AssignmentInsert) => createPost(insert)
+export const createWallPost = (insert: WallInsert) => createPost(insert)

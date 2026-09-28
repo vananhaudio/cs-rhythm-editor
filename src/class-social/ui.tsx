@@ -28,6 +28,21 @@ export function Avatar({ name, url, size, className }: { name: string; url: stri
   )
 }
 
+/** Tên/avatar của một người: bấm → trang cá nhân (khi có onOpen); không có → chữ thường. */
+export function PersonLink({ userId, onOpen, label, className, children }: {
+  userId: string
+  onOpen?: (userId: string) => void
+  label: string
+  className?: string
+  children: ReactNode
+}) {
+  if (!onOpen) return <span className={className}>{children}</span>
+  return (
+    <button type="button" className={'cs-person-link' + (className ? ' ' + className : '')} aria-label={label}
+      onClick={() => onOpen(userId)}>{children}</button>
+  )
+}
+
 export function EmptyState({ icon: Icon, title, children, action }: {
   icon: LucideIcon
   title: string

@@ -47,6 +47,39 @@ export function sectionFromPath(pathname: string): SocialSection {
   return hit ?? 'home'
 }
 
+// ── Trang cá nhân / tường: /me/u/<auth user id> ────────────────────────────
+// Không có hệ username: định danh trên URL là auth.users.id (UUID). Chỉ nhận UUID hợp lệ.
+export const PROFILE_PREFIX = '/me/u/'
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function profilePath(userId: string): string {
+  return PROFILE_PREFIX + userId
+}
+
+export function profileUserIdFromPath(pathname: string): string | null {
+  const p = pathname.replace(/\/+$/, '')
+  if (!p.startsWith(PROFILE_PREFIX)) return null
+  const id = p.slice(PROFILE_PREFIX.length)
+  return UUID_RE.test(id) ? id.toLowerCase() : null
+}
+
+/** Màn đang mở trong /me: một mục (section) hoặc trang cá nhân của một người. */
+export type MeView = { kind: 'section'; section: SocialSection } | { kind: 'profile'; userId: string }
+
+export function viewFromPath(pathname: string): MeView {
+  const userId = profileUserIdFromPath(pathname)
+  return userId ? { kind: 'profile', userId } : { kind: 'section', section: sectionFromPath(pathname) }
+}
+
+export function sameView(a: MeView, b: MeView): boolean {
+  if (a.kind === 'profile') return b.kind === 'profile' && a.userId === b.userId
+  return b.kind === 'section' && a.section === b.section
+}
+
+export function viewPath(view: MeView): string {
+  return view.kind === 'profile' ? profilePath(view.userId) : SECTION_PATHS[view.section]
+}
+
 export function resolveMeRoute(input: {
   hostname: string
   pathname: string

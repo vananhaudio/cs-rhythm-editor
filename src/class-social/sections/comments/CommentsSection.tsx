@@ -7,7 +7,7 @@ import type { ClassIdentity } from '../../useClassSession'
 import CommentComposer from './CommentComposer'
 import CommentItem from './CommentItem'
 
-export default function CommentsSection({ postId, total, state, me, now, onRefresh, onExpand }: {
+export default function CommentsSection({ postId, total, state, me, now, onRefresh, onExpand, onOpenProfile }: {
   postId: string
   total: number
   state: PostComments | undefined
@@ -15,6 +15,7 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
   now?: Date
   onRefresh: (postId: string) => Promise<unknown>
   onExpand: (postId: string) => Promise<unknown>
+  onOpenProfile?: (userId: string) => void
 }) {
   const [actionError, setActionError] = useState<string | null>(null)
   const items = state?.items ?? []
@@ -44,7 +45,7 @@ export default function CommentsSection({ postId, total, state, me, now, onRefre
       {items.length > 0 && (
         <ul className="cs-cmt-list">
           {items.map(c => (
-            <CommentItem key={c.id} c={c} now={now} canModerate={!!me?.isTeacher}
+            <CommentItem key={c.id} c={c} now={now} canModerate={!!me?.isTeacher} onOpenProfile={onOpenProfile}
               onDelete={c2 => void onDelete(c2)} onModerate={(c2, h) => void onModerate(c2, h)} />
           ))}
         </ul>

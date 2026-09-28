@@ -2,11 +2,12 @@
 // Không đổi thứ tự bình luận theo vai trò. Nội dung plain text (React escape, pre-wrap).
 import type { Comment } from '../../comments/commentModel'
 import { relativeTime } from '../../posts/postModel'
-import { Avatar, MoreMenu } from '../../ui'
+import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ResourceCard from './ResourceCard'
 
-export default function CommentItem({ c, canModerate, now, onDelete, onModerate }: {
+export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile }: {
   c: Comment
+  onOpenProfile?: (userId: string) => void
   canModerate: boolean
   now?: Date
   onDelete: (c: Comment) => void
@@ -19,11 +20,15 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate 
   ]
   return (
     <li className={'cs-cmt' + (teacher ? ' is-teacher' : '') + (c.isHidden ? ' is-hidden' : '')}>
-      <Avatar name={c.author.name} url={c.author.avatarUrl} size={34} />
+      <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`}>
+        <Avatar name={c.author.name} url={c.author.avatarUrl} size={34} />
+      </PersonLink>
       <div className="cs-cmt-main">
         <div className="cs-cmt-bubble">
           <div className="cs-cmt-head">
-            <span className="cs-cmt-author">{c.author.name}</span>
+            <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`} className="cs-cmt-author">
+              {c.author.name}
+            </PersonLink>
             {teacher && <span className="cs-cmt-badge" title="Nhận xét của giáo viên">Thầy</span>}
             {c.isHidden && <span className="cs-cmt-hidden">Đã ẩn · học sinh không thấy</span>}
           </div>

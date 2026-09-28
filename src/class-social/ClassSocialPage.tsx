@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import './classSocial.css'
 import ClassSocialLayout from './ClassSocialLayout'
-import { SECTION_PATHS, sectionFromPath, type SocialSection } from './resolveMeRoute'
+import { SECTION_PATHS, sameView, viewFromPath, viewPath, type MeView, type SocialSection } from './resolveMeRoute'
 import { useClassSession, type ClassIdentity } from './useClassSession'
 import { useProfileMediaEditor, type IdentityPatch } from './profile/useProfileMediaEditor'
 import { signInWithPassword, signOut } from './profile/profileApi'
@@ -17,6 +17,7 @@ import MeHome from './sections/MeHome'
 import Friends from './sections/Friends'
 import Chat from './sections/Chat'
 import ToolsPage from './sections/ToolsPage'
+import ProfilePage from './sections/ProfilePage'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Thầy Văn Anh Guitar',
@@ -37,57 +38,67 @@ function Splash({ text }: { text: string }) {
 
 export default function ClassSocialPage({ initialSection }: { initialSection: SocialSection }) {
   const session = useClassSession()
-  const [section, setSection] = useState<SocialSection>(initialSection)
+  // /me/u/<id> không phải một "mục" của router → đọc thẳng từ URL lúc mở trang
+  const [initialView] = useState<MeView>(() => {
+    const v = viewFromPath(window.location.pathname)
+    return v.kind === 'profile' ? v : { kind: 'section', section: initialSection }
+  })
+  const [view, setView] = useState<MeView>(initialView)
 
-  // Back/Forward của trình duyệt giữa các mục
+  // Back/Forward của trình duyệt giữa các mục / trang cá nhân
   useEffect(() => {
-    const onPop = () => setSection(sectionFromPath(window.location.pathname))
+    const onPop = () => setView(viewFromPath(window.location.pathname))
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  // Chuẩn hoá /me/<lạ> → /me (không thêm mục lịch sử)
+  // Chuẩn hoá /me/<lạ> → /me (không thêm mục lịch sử); /me/u/<id> giữ nguyên
   useEffect(() => {
-    const canonical = SECTION_PATHS[initialSection]
+    const canonical = viewPath(initialView)
     if (window.location.pathname !== canonical) window.history.replaceState(null, '', canonical)
-  }, [initialSection])
+  }, [initialView])
 
   const signedIn = session.status === 'ready'
   useEffect(() => {
-    document.title = signedIn ? TITLES[section] : 'Đăng nhập · ' + TITLES.home
-  }, [section, signedIn])
+    if (!signedIn) document.title = 'Đăng nhập · ' + TITLES.home
+    else if (view.kind === 'section') document.title = TITLES[view.section]
+    // trang cá nhân tự đặt tiêu đề theo tên người
+  }, [view, signedIn])
 
-  // Khách / vừa đăng xuất: chỉ còn trang chủ /me (mục con cần đăng nhập) — không thêm mục lịch sử
+  // Khách / vừa đăng xuất: chỉ còn trang chủ /me (mục con + trang cá nhân cần đăng nhập) — không thêm mục lịch sử
   const guest = session.status === 'signed-out' || session.status === 'no-profile'
   const [wasGuest, setWasGuest] = useState(guest)
   if (guest !== wasGuest) {
     setWasGuest(guest)
-    if (guest) setSection('home')
+    if (guest) setView({ kind: 'section', section: 'home' })
   }
   useEffect(() => {
     if (guest && window.location.pathname !== SECTION_PATHS.home) window.history.replaceState(null, '', SECTION_PATHS.home)
   }, [guest])
 
-  const go = (next: SocialSection) => {
-    if (next !== section) {
-      window.history.pushState(null, '', SECTION_PATHS[next])
-      setSection(next)
+  const navigate = (next: MeView) => {
+    if (!sameView(view, next)) {
+      window.history.pushState(null, '', viewPath(next))
+      setView(next)
     }
     window.scrollTo({ top: 0 })
   }
+  const go = (section: SocialSection) => navigate({ kind: 'section', section })
+  const openProfile = (userId: string) => navigate({ kind: 'profile', userId })
 
   if (session.status === 'signed-out') return <MeGuestGate signIn={signInWithPassword} />
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} section={section} onSection={go} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, section, onSection }: {
+function SignedInShell({ base, view, onSection, onOpenProfile }: {
   base: ClassIdentity
-  section: SocialSection
+  view: MeView
   onSection: (s: SocialSection) => void
+  onOpenProfile: (userId: string) => void
 }) {
   const [patch, setPatch] = useState<IdentityPatch>({})
   const [identityRev, setIdentityRev] = useState(0)   // tăng khi đổi ảnh đại diện → feed tải lại avatar mới
@@ -99,12 +110,17 @@ function SignedInShell({ base, section, onSection }: {
   const editor = useProfileMediaEditor(me, onChanged)
   // Đăng xuất → useClassSession nhận SIGNED_OUT → /me về trạng thái khách (không chuyển trang)
   const onSignOut = useCallback(() => { void signOut() }, [])
+  const section = view.kind === 'section' ? view.section : null
 
   return (
-    <ClassSocialLayout me={me} section={section} onSection={onSection}
+    <ClassSocialLayout me={me} section={section} onSection={onSection} onOpenMyProfile={() => onOpenProfile(me.userId)}
       canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onSignOut={onSignOut}>
-      {section === 'home' && <MeHome me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} />}
-      {section === 'friends' && <Friends />}
+      {view.kind === 'profile' && (
+        <ProfilePage key={view.userId} me={me} userId={view.userId} identityRev={identityRev} canEditAvatar={editor.canEditAvatar}
+          onEditMedia={editor.pick} onSection={onSection} onOpenProfile={onOpenProfile} />
+      )}
+      {section === 'home' && <MeHome me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onOpenProfile={onOpenProfile} />}
+      {section === 'friends' && <Friends onOpenProfile={onOpenProfile} />}
       {section === 'chat' && <Chat />}
       {section === 'tools' && <ToolsPage />}
       {editor.element}

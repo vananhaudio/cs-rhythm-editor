@@ -112,6 +112,10 @@ DECLARE
     'class_post_comments', 'class_tags', 'class_comment_tags', 'class_comment_resources',
     -- Ảnh bìa hồ sơ (db/profile_media_setup.sql): thành viên Class đọc; CHỈ chính chủ ghi.
     'profile_media',
+    -- Bạn bè + tường (db/class_social_friends_wall_setup.sql): friendships KHÔNG ai đọc/ghi thẳng
+    -- (chỉ qua RPC); edu_students chỉ chính chủ + thầy (hết lộ email/SĐT của người khác).
+    -- Áp policy rộng lại = mở lại email/SĐT mọi học sinh cho mọi tài khoản đăng nhập.
+    'friendships', 'edu_students',
     -- Billing Foundation (BƯỚC 8A — db/billing_setup.sql): anon KHÔNG policy nào;
     -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
     -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).

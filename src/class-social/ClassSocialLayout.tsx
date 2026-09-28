@@ -54,7 +54,7 @@ function NavEntry({ item, active, collapsed, onSection }: {
 }
 
 function NavGroups({ section, collapsed, onSection }: {
-  section: SocialSection
+  section: SocialSection | null
   collapsed: boolean
   onSection: (s: SocialSection) => void
 }) {
@@ -74,7 +74,7 @@ function NavGroups({ section, collapsed, onSection }: {
 }
 
 function MobileMenu({ section, onClose, onSection }: {
-  section: SocialSection
+  section: SocialSection | null
   onClose: () => void
   onSection: (s: SocialSection) => void
 }) {
@@ -98,14 +98,16 @@ function MobileMenu({ section, onClose, onSection }: {
   )
 }
 
-export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut }: {
+export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut, onOpenMyProfile }: {
   me: ClassIdentity
-  section: SocialSection
+  /** null = đang ở trang cá nhân (không mục nào trong menu sáng) */
+  section: SocialSection | null
   onSection: (s: SocialSection) => void
   children: ReactNode
   canEditAvatar?: boolean
   onEditMedia?: (kind: ImageKind) => void
   onSignOut?: () => void
+  onOpenMyProfile?: () => void
 }) {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -138,6 +140,7 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
         <MoreMenu className="cs-account" label={`Tài khoản: ${me.name}`}
           trigger={<Avatar name={me.name} url={safeImageUrl(me.avatarUrl)} size={34} />}
           items={[
+            ...(onOpenMyProfile ? [{ label: 'Trang cá nhân của tôi', onSelect: onOpenMyProfile }] : []),
             ...(onEditMedia && canEditAvatar ? [{ label: 'Đổi ảnh đại diện', onSelect: () => onEditMedia('avatar') }] : []),
             ...(onEditMedia ? [{ label: 'Đổi ảnh bìa', onSelect: () => onEditMedia('cover') }] : []),
             ...(onSignOut ? [{ label: 'Đăng xuất', danger: true, onSelect: onSignOut }] : []),
