@@ -77,7 +77,7 @@ const MAX_EDGE = 15800
  * Khối nào cao hơn một trang thì lấy tiếp đáy của các phần bên trong nó — nhờ vậy
  * nhát cắt luôn rơi vào KHE giữa hai khuông nhạc, không cắt ngang bản nhạc.
  */
-function collectCuts(root: HTMLElement, pageHcss: number): number[] {
+function collectCuts(root: HTMLElement): number[] {
   const top = root.getBoundingClientRect().top
   const cuts: number[] = []
   // CHỈ những chỗ này được phép ngắt trang (danh sách trắng — chặn hẳn kiểu cắt
@@ -160,8 +160,7 @@ export async function exportLessonPdf(root: HTMLElement, fileName: string) {
   await withPaperWidth(root, async () => {
   await new Promise(r => setTimeout(r, 60))
   const rect = root.getBoundingClientRect()
-  const pageHcss = (rect.width * BOX_H) / BOX_W        // một trang A4 cao bao nhiêu px trên màn
-  const cuts = collectCuts(root, pageHcss)
+  const cuts = collectCuts(root)
 
   // Chụp MỘT lần cho cả tài liệu: html2canvas nhân bản cả trang mỗi lần gọi, gọi nhiều
   // lần (mỗi khối một lần) làm việc xuất kéo dài hàng phút.
