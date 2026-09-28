@@ -240,8 +240,16 @@ test("Preflight + generator khôi phục: CHỈ ĐỌC (một câu SELECT, khôn
   const gen = read("db/class_social_friends_wall_edu_students_recovery.sql");
   assert.equal(/using \(true\)/i.test(stripComments(gen.replace(/\/\*[\s\S]*?\*\//g, ""))), false, "không hard-code policy cũ");
   // Owner dán vào SQL Editor: copy có thể MẤT xuống dòng → không được có comment '--' ngoài chuỗi
-  for (const f of ["db/class_social_friends_wall_preflight.sql", "db/class_social_friends_wall_edu_students_recovery.sql"]) {
+  for (const f of ["db/class_social_friends_wall_preflight.sql", "db/class_social_friends_wall_edu_students_recovery.sql", "db/tests/class_social_friends_wall_prod_smoke.sql"]) {
     assert.equal(stripStrings(read(f).replace(/\/\*[\s\S]*?\*\//g, "")).includes("--"), false, `${f}: không có '--' ngoài chuỗi`);
   }
   assert.match(gen, /from pg_policies pp where pp\.schemaname = 'public' and pp\.tablename = 'edu_students'/);
+});
+
+test("Smoke production tự huỷ: một khối DO, MỌI nhánh kết thúc bằng RAISE EXCEPTION (rollback bắt buộc)", () => {
+  const sql = read("db/tests/class_social_friends_wall_prod_smoke.sql").replace(/\/\*[\s\S]*?\*\//g, "").trim();
+  assert.match(sql, /^do \$smoke\$[\s\S]*end \$smoke\$;$/);
+  const tail = sql.slice(sql.lastIndexOf("if cardinality(bad) = 0 then"));
+  assert.match(tail, /then\s+raise exception 'SMOKE PASS[\s\S]*else\s+raise exception 'SMOKE FAIL[\s\S]*end if;\s*end \$smoke\$;$/);
+  assert.equal(/\bcommit\b/i.test(sql), false);
 });
