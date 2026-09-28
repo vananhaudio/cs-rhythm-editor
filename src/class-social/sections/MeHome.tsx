@@ -11,14 +11,22 @@ import TraBaiCta from './TraBaiCta'
 import CommunityFeed from './CommunityFeed'
 import type { PostSocial } from './PostCard'
 import type { ImageKind } from '../profile/imageFile'
+import type { FriendRequests } from '../friends/useFriendRequests'
+import FriendRequestList from './FriendRequestList'
 
-export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia, onOpenProfile }: {
+/** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
+const HOME_REQUESTS_MAX = 3
+
+export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia, onOpenProfile, requests, onSeeAllRequests }: {
   me: ClassIdentity
   identityRev?: number
   canEditAvatar?: boolean
   onEditMedia?: (kind: ImageKind) => void
   /** Bấm tên/avatar trong Cộng đồng → trang cá nhân */
   onOpenProfile?: (userId: string) => void
+  /** Lời mời kết bạn đến mình (nguồn chung với badge menu) — có lời mời thì hiện khối ngay dưới header */
+  requests?: FriendRequests
+  onSeeAllRequests?: () => void
 }) {
   const { state, reload, loadMore } = useCommunityFeed()
   const feedRef = useRef<HTMLDivElement>(null)
@@ -59,6 +67,21 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
     <div className="cs-col cs-home">
       <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia}
         onOpenProfile={onOpenProfile ? () => onOpenProfile(me.userId) : undefined} />
+      {requests && requests.count > 0 && onOpenProfile && (
+        <section className="cs-card cs-friends-card cs-home-requests" aria-labelledby="cs-home-req-title">
+          <h2 id="cs-home-req-title" className="cs-friends-title">
+            Lời mời kết bạn<span className="cs-count">{requests.count}</span>
+          </h2>
+          {requests.actionError && <p className="cs-form-error" role="alert">{requests.actionError}</p>}
+          <FriendRequestList items={requests.items.slice(0, HOME_REQUESTS_MAX)} busyId={requests.busyId}
+            onRespond={(id, accept) => void requests.respond(id, accept)} onOpenProfile={onOpenProfile} />
+          {requests.count > HOME_REQUESTS_MAX && onSeeAllRequests && (
+            <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-home-requests-all" onClick={onSeeAllRequests}>
+              Xem tất cả {requests.count} lời mời
+            </button>
+          )}
+        </section>
+      )}
       <TraBaiCta me={me} onPosted={onPosted} />
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}

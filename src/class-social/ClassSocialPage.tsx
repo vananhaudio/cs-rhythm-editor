@@ -18,6 +18,7 @@ import Friends from './sections/Friends'
 import Chat from './sections/Chat'
 import ToolsPage from './sections/ToolsPage'
 import ProfilePage from './sections/ProfilePage'
+import { useFriendRequests } from './friends/useFriendRequests'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Thầy Văn Anh Guitar',
@@ -111,16 +112,20 @@ function SignedInShell({ base, view, onSection, onOpenProfile }: {
   // Đăng xuất → useClassSession nhận SIGNED_OUT → /me về trạng thái khách (không chuyển trang)
   const onSignOut = useCallback(() => { void signOut() }, [])
   const section = view.kind === 'section' ? view.section : null
+  // Lời mời kết bạn đến mình: MỘT nguồn cho badge menu + khối Home + trang Bạn bè
+  const requests = useFriendRequests()
 
   return (
     <ClassSocialLayout me={me} section={section} onSection={onSection} onOpenMyProfile={() => onOpenProfile(me.userId)}
+      badges={{ friends: requests.count }}
       canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onSignOut={onSignOut}>
       {view.kind === 'profile' && (
         <ProfilePage key={view.userId} me={me} userId={view.userId} identityRev={identityRev} canEditAvatar={editor.canEditAvatar}
           onEditMedia={editor.pick} onSection={onSection} onOpenProfile={onOpenProfile} />
       )}
-      {section === 'home' && <MeHome me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onOpenProfile={onOpenProfile} />}
-      {section === 'friends' && <Friends onOpenProfile={onOpenProfile} />}
+      {section === 'home' && <MeHome me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
+        onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')} />}
+      {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} />}
       {section === 'chat' && <Chat />}
       {section === 'tools' && <ToolsPage />}
       {editor.element}

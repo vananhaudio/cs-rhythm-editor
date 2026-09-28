@@ -11,15 +11,26 @@ import type { ImageKind } from './profile/imageFile'
 
 const COLLAPSE_KEY = 'cs-sidebar-collapsed'
 
+/** Số cần chú ý theo mục (vd. lời mời kết bạn chưa xử lý). 0/thiếu = không hiện. */
+export type NavBadges = Partial<Record<SocialSection, number>>
+
+const badgeLabel = (id: SocialSection, n: number) => id === 'friends' ? `${n} lời mời kết bạn` : `${n} mục mới`
+
+function Badge({ id, n, collapsed }: { id: SocialSection; n: number; collapsed?: boolean }) {
+  if (!(n > 0)) return null
+  return <span className={'cs-nav-badge' + (collapsed ? ' is-dot' : '')} aria-label={badgeLabel(id, n)}>{n > 99 ? '99+' : n}</span>
+}
+
 function readCollapsed(): boolean {
   try { return localStorage.getItem(COLLAPSE_KEY) === '1' } catch { return false }
 }
 
-function NavEntry({ item, active, collapsed, onSection }: {
+function NavEntry({ item, active, collapsed, onSection, badges }: {
   item: NavItem
   active: boolean
   collapsed: boolean
   onSection: (s: SocialSection) => void
+  badges?: NavBadges
 }) {
   const Icon = item.icon
   const tip = collapsed ? item.label : undefined
@@ -30,6 +41,7 @@ function NavEntry({ item, active, collapsed, onSection }: {
         onClick={() => onSection(item.id)}>
         <Icon size={21} strokeWidth={active ? 2.2 : 1.9} />
         <span className="cs-nav-text">{item.label}</span>
+        <Badge id={item.id} n={badges?.[item.id] ?? 0} collapsed={collapsed} />
       </button>
     )
   }
@@ -53,10 +65,11 @@ function NavEntry({ item, active, collapsed, onSection }: {
   )
 }
 
-function NavGroups({ section, collapsed, onSection }: {
+function NavGroups({ section, collapsed, onSection, badges }: {
   section: SocialSection | null
   collapsed: boolean
   onSection: (s: SocialSection) => void
+  badges?: NavBadges
 }) {
   return (
     <>
@@ -64,7 +77,7 @@ function NavGroups({ section, collapsed, onSection }: {
         <nav key={g.id} className="cs-nav-group" aria-label={g.title}>
           <div className="cs-nav-title">{g.title}</div>
           {g.items.map(item => (
-            <NavEntry key={item.id} item={item} collapsed={collapsed} onSection={onSection}
+            <NavEntry key={item.id} item={item} collapsed={collapsed} onSection={onSection} badges={badges}
               active={item.kind === 'section' && item.id === section} />
           ))}
         </nav>
@@ -73,10 +86,11 @@ function NavGroups({ section, collapsed, onSection }: {
   )
 }
 
-function MobileMenu({ section, onClose, onSection }: {
+function MobileMenu({ section, onClose, onSection, badges }: {
   section: SocialSection | null
   onClose: () => void
   onSection: (s: SocialSection) => void
+  badges?: NavBadges
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -92,13 +106,13 @@ function MobileMenu({ section, onClose, onSection }: {
           <h2>Menu</h2>
           <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng menu"><X size={22} /></button>
         </div>
-        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} />
+        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} badges={badges} />
       </div>
     </>
   )
 }
 
-export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut, onOpenMyProfile }: {
+export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut, onOpenMyProfile, badges }: {
   me: ClassIdentity
   /** null = đang ở trang cá nhân (không mục nào trong menu sáng) */
   section: SocialSection | null
@@ -108,7 +122,9 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
   onEditMedia?: (kind: ImageKind) => void
   onSignOut?: () => void
   onOpenMyProfile?: () => void
+  badges?: NavBadges
 }) {
+  const totalBadge = Object.values(badges ?? {}).reduce((a, n) => a + (n ?? 0), 0)
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -126,8 +142,11 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
           aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'} aria-expanded={!collapsed}>
           {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
-        <button type="button" className="cs-icon-btn cs-only-mobile" onClick={() => setMenuOpen(true)} aria-label="Mở menu">
+        {/* Mobile: menu nằm sau ☰ → badge phải hiện ngay trên nút ☰ (không cần mở menu mới thấy) */}
+        <button type="button" className="cs-icon-btn cs-only-mobile cs-menu-btn" onClick={() => setMenuOpen(true)}
+          aria-label={totalBadge > 0 ? `Mở menu — ${badges?.friends ? badgeLabel('friends', badges.friends) : totalBadge + ' mục mới'}` : 'Mở menu'}>
           <Menu size={22} />
+          {totalBadge > 0 && <span className="cs-nav-badge is-corner" aria-hidden="true">{totalBadge > 99 ? '99+' : totalBadge}</span>}
         </button>
         {/* Logo chuẩn — cùng cặp logo + chữ mà trang tuyển sinh class.vananhaudio.com đang dùng */}
         <a className="cs-brand" href={SECTION_PATHS.home} aria-label="Thầy Văn Anh Guitar — Trang chủ"
@@ -149,12 +168,12 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
 
       <div className="cs-body">
         <aside className={'cs-sidebar' + (collapsed ? ' is-collapsed' : '')}>
-          <NavGroups section={section} collapsed={collapsed} onSection={onSection} />
+          <NavGroups section={section} collapsed={collapsed} onSection={onSection} badges={badges} />
         </aside>
         <main className="cs-main">{children}</main>
       </div>
 
-      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} />}
+      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} badges={badges} />}
     </div>
   )
 }

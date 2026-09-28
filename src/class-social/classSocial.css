@@ -561,6 +561,22 @@
 .cs-person-name { font-weight: 700; overflow-wrap: anywhere; }
 .cs-person-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Badge số lượng (lời mời kết bạn chưa xử lý) trên menu + nút ☰ */
+.cs-nav-badge {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; flex-shrink: 0;
+  display: inline-grid; place-items: center; margin-left: auto;
+  background: #e0245e; color: #fff; font-size: 12px; font-weight: 800; line-height: 1;
+}
+.cs-sidebar.is-collapsed .cs-nav-item { position: relative; }
+.cs-nav-badge.is-dot { position: absolute; top: 4px; right: 12px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
+.cs-sidebar.is-collapsed .cs-nav-badge.is-dot { display: inline-grid; }
+.cs-menu-btn { position: relative; }
+.cs-nav-badge.is-corner {
+  position: absolute; top: 1px; right: -2px; margin: 0;
+  min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; box-shadow: 0 0 0 2px var(--cs-surface);
+}
+.cs-home-requests-all { margin-top: 8px; }
+
 /* ── Mobile: menu dạng sheet (mở từ nút ☰) ───────────────────────────────── */
 .cs-only-mobile { display: none; }
 .cs-sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(28, 24, 48, 0.4); }

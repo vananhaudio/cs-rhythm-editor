@@ -135,3 +135,52 @@ test("Migration: mọi hàm mới đều REVOKE khỏi public/anon; friendships 
   const rls = read("db/rls_setup.sql");
   assert.match(rls, /'friendships', 'edu_students',/, "rls_setup không áp lại policy rộng");
 });
+
+// ── Badge lời mời kết bạn + khối lời mời ─────────────────────────────────────
+import ClassSocialLayout from "../../src/class-social/ClassSocialLayout";
+import FriendRequestList from "../../src/class-social/sections/FriendRequestList";
+import type { ClassIdentity } from "../../src/class-social/useClassSession";
+
+const meB: ClassIdentity = {
+  role: "student", userId: ID, studentId: "s", name: "Bình", email: null, avatarUrl: null, level: null,
+  enrolledAt: null, htMember: false, isTeacher: false, coverUrl: null,
+};
+const shell = (badges?: { friends?: number }) => renderToStaticMarkup(
+  <ClassSocialLayout me={meB} section="home" onSection={() => {}} badges={badges}><p>x</p></ClassSocialLayout>,
+);
+
+test("Badge 'Bạn bè' = số lời mời đến; 0 → không hiện; hiện cả trên nút ☰ (mobile)", () => {
+  const one = shell({ friends: 1 });
+  assert.match(one, /Bạn bè<\/span><span class="cs-nav-badge" aria-label="1 lời mời kết bạn">1<\/span>/);
+  assert.match(one, /aria-label="Mở menu — 1 lời mời kết bạn"/);
+  assert.match(one, /class="cs-nav-badge is-corner" aria-hidden="true">1</);
+  for (const html of [shell({ friends: 0 }), shell()]) {
+    assert.equal(html.includes("cs-nav-badge"), false);
+    assert.match(html, /aria-label="Mở menu"/);
+  }
+  assert.match(shell({ friends: 120 }), />99\+</);
+});
+
+test("Danh sách lời mời: avatar + tên (mở trang cá nhân) + Chấp nhận / Từ chối; đang xử lý → khoá nút", () => {
+  const items = [{ userId: ID, name: "An", avatarUrl: null, isTeacher: false }];
+  const html = renderToStaticMarkup(<FriendRequestList items={items} busyId={null} onRespond={() => {}} onOpenProfile={() => {}} />);
+  assert.match(html, /aria-label="Trang cá nhân của An"/);
+  assert.match(html, />Chấp nhận<\/button>/);
+  assert.match(html, />Từ chối<\/button>/);
+  const busy = renderToStaticMarkup(<FriendRequestList items={items} busyId={ID} onRespond={() => {}} onOpenProfile={() => {}} />);
+  assert.equal((busy.match(/disabled=""/g) ?? []).length, 2);
+});
+
+test("Badge chỉ đếm lời mời ĐẾN (incoming_friend_requests), một nguồn cho menu + Home + Bạn bè", () => {
+  const hook = code("src/class-social/friends/useFriendRequests.ts");
+  assert.match(hook, /fetchIncomingRequests\(\)/);
+  assert.equal(/my_friends|fetchFriends|outgoing/.test(hook), false, "không tính bạn bè / lời mời đã gửi");
+  assert.match(hook, /count: items\.length/);
+  const page = code("src/class-social/ClassSocialPage.tsx");
+  assert.match(page, /const requests = useFriendRequests\(\)/);
+  assert.match(page, /badges=\{\{ friends: requests\.count \}\}/);
+  assert.match(page, /<Friends requests=\{requests\}/);
+  assert.match(page, /requests=\{requests\}/);
+  // DB: incoming_friend_requests chỉ lấy pending gửi ĐẾN mình
+  assert.match(read("db/class_social_friends_wall_setup.sql"), /f\.addressee_id = auth\.uid\(\) and f\.status = 'pending'/);
+});
