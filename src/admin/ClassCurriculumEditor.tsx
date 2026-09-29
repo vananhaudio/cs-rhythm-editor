@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import LessonDocument from '../lesson/LessonDocument'
 import type { LessonDoc } from '../lesson/lessonTypes'
 import {
-  assignSessionStage, createStage, deleteSessionContent, deleteStage, fetchClassOutline, fetchSessionContent,
+  assignSessionStage, assignSessionsStage, createStage, deleteSessionContent, deleteStage, fetchClassOutline, fetchSessionContent,
   saveSessionContent, updateStage, type ClassOutlineData, type Db,
 } from '../classLearning/api'
 import {
@@ -23,6 +23,10 @@ const input: CSSProperties = { border: `1px solid ${C.border}`, borderRadius: 8,
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit' })
 
 interface Props { client: Db; cls: { id: string; code: string; name: string } }
+
+const lessonIdsInRange = (sessions: ClassOutlineData['sessions'], from: number, to: number) => sessions
+  .filter(s => s.event_type === 'lesson' && s.session_number != null && s.session_number >= from && s.session_number <= to)
+  .map(s => s.id)
 
 function StatusBadge({ status }: { status: OutlineLesson['content'] }) {
   const [label, fg, bg] = status === 'published' ? ['Đã xuất bản', C.green, C.greenBg]
@@ -52,7 +56,7 @@ export default function ClassCurriculumEditor({ client, cls }: Props) {
   }, [client, cls.id])
 
   const run = async (fn: () => Promise<void>, ok: string) => {
-    setBusy(true); setError(''); setNotice('')
+    setBusy(true); setError(''); setNotice('Đang xử lý…')
     try { await fn(); setNotice(ok); await load() }
     catch (e) { setError(e instanceof Error ? e.message : String(e)) }
     setBusy(false)
@@ -68,11 +72,7 @@ export default function ClassCurriculumEditor({ client, cls }: Props) {
     if (!plan.length) throw new Error('Lớp đã có chặng — không khởi tạo lại.')
     for (const p of plan) {
       const st = await createStage(client, cls.id, { ...p, ...stageDates(data.sessions, p.from_session, p.to_session) })
-      for (const s of data.sessions) {
-        if (s.event_type === 'lesson' && s.session_number != null && s.session_number >= p.from_session && s.session_number <= p.to_session) {
-          await assignSessionStage(client, s.id, st.id)
-        }
-      }
+      await assignSessionsStage(client, lessonIdsInRange(data.sessions, p.from_session, p.to_session), st.id)
     }
   }, 'Đã khởi tạo chặng theo chương trình và gắn các buổi.')
 
@@ -115,10 +115,9 @@ function StageCard({ client, group, stages, sessions, busy, run, onEdit }: {
 
   const attachRange = () => run(async () => {
     if (!st) return
-    for (const s of sessions) {
-      if (s.event_type === 'lesson' && s.session_number != null && s.session_number >= st.from_session
-        && s.session_number <= st.to_session && s.stage_id !== st.id) await assignSessionStage(client, s.id, st.id)
-    }
+    const ids = lessonIdsInRange(sessions, st.from_session, st.to_session)
+      .filter(id => sessions.find(s => s.id === id)?.stage_id !== st.id)
+    await assignSessionsStage(client, ids, st.id)
   }, 'Đã gắn các buổi trong khoảng vào chặng.')
 
   return <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, marginBottom: 12, textAlign: 'left' }}>

@@ -74,6 +74,14 @@ export async function assignSessionStage(db: Db, sessionId: string, stageId: num
   if (!r.data?.length) throw new Error('Không gắn được buổi vào chặng.')
 }
 
+/** Gắn nhiều buổi lesson vào một chặng trong một request. */
+export async function assignSessionsStage(db: Db, sessionIds: string[], stageId: number): Promise<void> {
+  if (!sessionIds.length) return
+  const r = await db.from('class_sessions').update({ stage_id: stageId }).in('id', sessionIds).eq('event_type', 'lesson').select('id')
+  fail(r.error)
+  if ((r.data?.length ?? 0) !== sessionIds.length) throw new Error('Không gắn được đủ buổi vào chặng.')
+}
+
 export async function saveSessionContent(db: Db, sessionId: string, sections: LessonSection[],
   status: ContentState['status']): Promise<void> {
   if (status === 'published' && !sections.length) throw new Error('Không thể xuất bản giáo trình trống.')
