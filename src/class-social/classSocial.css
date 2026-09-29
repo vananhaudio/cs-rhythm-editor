@@ -725,3 +725,65 @@
 .cs-class-tile.is-mine { border-color: var(--cs-p-soft); background: var(--cs-p-softer); }
 .cs-classes-discover .cs-class-tile { box-shadow: none; }
 .cs-classes-mine + .cs-classes-discover { margin-top: 10px; }
+
+/* ── UX polish 30/09: bớt hộp, bớt chữ đậm, tăng khoảng thở ─────────────────
+   Thứ bậc bằng typography + khoảng cách thay vì thêm khung. */
+.cs-post-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 0 5px; margin-top: 1px; font-size: 13px; color: var(--cs-faint); }
+.cs-post-sub .cs-post-time { display: inline; }
+.cs-post-sub .cs-post-audience { font-size: 12.5px; font-weight: 500; color: var(--cs-faint); }
+/* Nhãn loại bài (Trả bài / Hỏi bài): nhẹ, chữ thường — không cạnh tranh với tên người */
+.cs-post-type { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 1px 8px; background: var(--cs-p-softer); }
+.cs-post-role { font-weight: 500; }
+/* Tiêu đề Feed: nhãn khu vực nhỏ, không phải một tiêu đề trang thứ hai */
+.cs-feed-title { font-size: 15px; font-weight: 700; color: var(--cs-muted); margin: 4px 4px 10px; }
+.cs-home-feedfirst .cs-feed { margin-top: 6px; }
+
+/* Ô chia sẻ: gợi ý gọn trên một hàng (390px), vùng chạm đủ cao */
+.cs-share-prompts { gap: 2px; }
+.cs-share-chip { min-height: 34px; padding: 6px 9px; }
+.cs-share-legacy { min-height: 30px; }
+
+/* Trạng thái trống NHẸ + chữ đang tải: không khung, không icon lớn */
+.cs-empty.is-quiet { padding: 22px 16px 26px; }
+.cs-empty.is-quiet h3 { font-size: 15px; font-weight: 700; color: var(--cs-text); margin: 0 0 4px; }
+.cs-empty.is-quiet p { font-size: 14px; }
+.cs-loading { margin: 0; padding: 18px 4px; text-align: center; font-size: 14px; color: var(--cs-faint); }
+
+/* Tabs Tường | Hành trình và Hoạt động | Thành viên: gạch chân như mạng xã hội (không nút tím đặc) */
+.cs-root .lt-profile-tabs { gap: 4px; border-bottom: 1px solid var(--cs-border); padding: 0 2px; }
+.cs-root .lt-profile-tabs button {
+  position: relative; border: none; border-radius: 10px 10px 0 0; background: transparent; color: var(--cs-muted);
+  font-size: 15px; font-weight: 700; padding: 10px 14px 12px; min-height: 44px;
+}
+.cs-root .lt-profile-tabs button:hover { background: var(--cs-hover); color: var(--cs-text); }
+.cs-root .lt-profile-tabs button[aria-pressed="true"] { background: transparent; color: var(--cs-p-strong); }
+.cs-root .lt-profile-tabs button[aria-pressed="true"]::after {
+  content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--cs-p);
+}
+
+/* Trang lớp: "căn phòng của lớp" — thẻ đầu gọn, mã lớp rất nhẹ */
+.cs-class-head { gap: 8px; padding: 18px 18px 16px; }
+.cs-class-codes { font-size: 11.5px; }
+.cs-class-viewer { margin: 2px 0 0; }
+
+/* Bạn bè: danh sách gọn, tên là lối vào trang cá nhân */
+.cs-person { min-height: 60px; }
+.cs-person-main { padding: 2px 0; }
+
+/* Trang cá nhân: chữ dưới ảnh bìa thoáng hơn */
+.cs-identity-facts { margin-top: 4px; }
+.cs-rel-status { font-weight: 500; }
+
+/* Menu: mục khoá chỉ cần một dòng ghi chú nhỏ; chữ dài cắt "…" */
+.cs-nav-item .cs-nav-label { max-width: 100%; }
+.cs-nav-item:not(.is-restricted) .cs-nav-text { overflow: hidden; text-overflow: ellipsis; }
+.cs-home > .cs-friends-card + .cs-friends-card { margin-top: 0; }
+.cs-friends-total { font-size: 14px; font-weight: 600; color: var(--cs-faint); }
+@media (max-width: 480px) {
+  /* 4 gợi ý chia sẻ trên MỘT hàng; thiếu chỗ thì vuốt ngang (không xuống dòng lẻ một chip) */
+  .cs-share-prompts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; }
+  .cs-share-prompts::-webkit-scrollbar { display: none; }
+  .cs-share-chip { flex-shrink: 0; padding: 6px 7px; font-size: 12.5px; }
+}
+/* /me/classes: hai nhóm là tiêu đề thật của trang (không phải nhãn nhỏ của Feed) */
+.cs-classes-mine .cs-feed-title, .cs-classes-discover .cs-feed-title { font-size: 17px; font-weight: 800; color: var(--cs-text); }

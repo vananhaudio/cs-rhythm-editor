@@ -27,8 +27,8 @@ const feed = (state: Parameters<typeof CommunityFeed>[0]["state"]) =>
 
 test("Feed rỗng → trạng thái trống nhẹ, KHÔNG có nút mở App học", () => {
   const html = feed({ status: "ready", posts: [], hasMore: false, loadingMore: false, moreError: null });
-  assert.match(html, /Chưa có bài học tập nào/);
-  assert.match(html, /Khi thành viên trả bài, hoạt động sẽ xuất hiện tại đây\./);
+  assert.match(html, /Chưa có hoạt động mới/);
+  assert.match(html, /Bài chia sẻ và câu chuyện học tập của bạn bè, lớp sẽ xuất hiện tại đây\./);
   assert.ok(!/App học|href=/.test(html));
 });
 

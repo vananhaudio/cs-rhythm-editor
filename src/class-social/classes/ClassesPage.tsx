@@ -33,7 +33,7 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
         <Search size={17} aria-hidden="true" />
         <input className="cs-input" type="search" placeholder="Tìm lớp theo tên hoặc mã" value={q} onChange={e => setQ(e.target.value)} aria-label="Tìm lớp" />
       </label>
-      {!classes.loaded && <div className="cs-card" role="status">Đang tải lớp học…</div>}
+      {!classes.loaded && <p className="cs-loading" role="status">Đang tải lớp học…</p>}
       {classes.loaded && classes.error && <p className="cs-form-error" role="alert">{classes.error}</p>}
       {classes.loaded && (
         <>
@@ -41,13 +41,13 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
             <h2 id="cs-mine-title" className="cs-feed-title">Lớp của tôi</h2>
             {mine.length > 0
               ? <div className="cs-class-grid">{mine.map(c => <ClassTile key={c.id} c={c} onOpen={onOpenClass} />)}</div>
-              : <div className="cs-card"><EmptyState icon={GraduationCap} title={q ? 'Không có lớp nào khớp' : 'Bạn chưa ở trong lớp nào'}>
-                  {q ? 'Thử tìm bằng tên khác.' : 'Khi được xếp vào lớp, lớp sẽ hiện ở đây và trên thanh bên.'}
-                </EmptyState></div>}
+              : <EmptyState icon={GraduationCap} title={q ? 'Không có lớp nào khớp' : 'Bạn chưa ở trong lớp nào'} quiet>
+                  {q ? 'Thử tìm bằng tên khác.' : 'Khi được xếp vào lớp, lớp sẽ hiện ở đây.'}
+                </EmptyState>}
           </section>
           <section className="cs-classes-discover" aria-labelledby="cs-discover-title">
             <h2 id="cs-discover-title" className="cs-feed-title">Khám phá lớp</h2>
-            <p className="cs-section-hint">Nhìn vào các lớp khác xem mọi người đang học gì — bài thật, Thầy sửa thật.</p>
+            <p className="cs-section-hint">Xem các lớp khác đang học gì.</p>
             {discover.length > 0
               ? <div className="cs-class-grid">{discover.map(c => <ClassTile key={c.id} c={c} onOpen={onOpenClass} />)}</div>
               : <p className="cs-section-hint">Hiện chưa có lớp nào khác đang mở.</p>}

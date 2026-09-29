@@ -38,13 +38,16 @@ export default function PostCard({ post, now, social }: { post: FeedPost; now?: 
               {author.name}
             </PersonLink>
             {author.isTeacher && <span className="cs-post-role">Giáo viên</span>}
-            <span className={`cs-post-type is-${post.type}`}>{POST_TYPE_LABEL[post.type]}</span>
-            {post.friendsOnly && <span className="cs-post-audience" title="Chỉ bạn bè xem được"><Lock size={12} strokeWidth={2.4} aria-hidden="true" />Bạn bè</span>}
+            {/* Bài viết thường không cần nhãn loại (như mạng xã hội); bài học tập giữ nhãn nhẹ */}
+            {post.type !== 'status' && <span className={`cs-post-type is-${post.type}`}>{POST_TYPE_LABEL[post.type]}</span>}
           </div>
-          <time className="cs-post-time" dateTime={post.createdAt}
-            title={Number.isNaN(when.getTime()) ? undefined : when.toLocaleString('vi-VN')}>
-            {relativeTime(post.createdAt, now)}
-          </time>
+          <div className="cs-post-sub">
+            <time className="cs-post-time" dateTime={post.createdAt}
+              title={Number.isNaN(when.getTime()) ? undefined : when.toLocaleString('vi-VN')}>
+              {relativeTime(post.createdAt, now)}
+            </time>
+            {post.friendsOnly && <><span aria-hidden="true">·</span><span className="cs-post-audience" title="Chỉ bạn bè xem được"><Lock size={11} strokeWidth={2.4} aria-hidden="true" />Bạn bè</span></>}
+          </div>
         </div>
         {canModerate && social && (
           <MoreMenu label="Tuỳ chọn bài" items={[{

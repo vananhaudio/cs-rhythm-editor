@@ -5,7 +5,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Lock, ShieldCheck, UserX } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
-import type { SocialSection } from '../resolveMeRoute'
 import type { ImageKind } from '../profile/imageFile'
 import { safeImageUrl } from '../media/safeImageUrl'
 import { usePostsFeed } from '../posts/useCommunityFeed'
@@ -25,13 +24,14 @@ import JourneyView from '../../learning-thread/JourneyView'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'missing' } | { status: 'ready'; profile: PublicProfile }
 
-export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onSection, onOpenProfile, onOpenThread }: {
+export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onBack, onOpenProfile, onOpenThread }: {
   me: ClassIdentity
   userId: string
   identityRev?: number
   canEditAvatar?: boolean
   onEditMedia?: (kind: ImageKind) => void
-  onSection: (s: SocialSection) => void
+  /** Quay lại màn trước trong /me (vd. Feed, lớp, Bạn bè) */
+  onBack: () => void
   onOpenProfile: (userId: string) => void
   /** Learning Thread (P2): mở /me/t/<id> từ Tường / Hành trình */
   onOpenThread?: (threadId: string) => void
@@ -83,8 +83,8 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   }
 
   const back = (
-    <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={() => onSection('friends')}>
-      <ArrowLeft size={16} /> Bạn bè
+    <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onBack}>
+      <ArrowLeft size={16} /> Quay lại
     </button>
   )
 
@@ -228,9 +228,9 @@ function Wall({ me, userId, isSelf, identityRev, onOpenProfile, onOpenThread }: 
           </div>
         )}
         {state.status === 'ready' && state.posts.length === 0 && (
-          <div className="cs-card"><EmptyState icon={Lock} title="Chưa có bài đăng">
+          <EmptyState icon={Lock} title="Chưa có bài đăng" quiet>
             {isSelf ? 'Bài bạn đăng ở đây chỉ bạn bè và Thầy xem được.' : 'Khi có bài mới, bài sẽ hiện ở đây.'}
-          </EmptyState></div>
+          </EmptyState>
         )}
         {state.status === 'ready' && state.posts.length > 0 && (
           <div className="cs-post-list">

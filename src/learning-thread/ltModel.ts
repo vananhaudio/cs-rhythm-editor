@@ -90,6 +90,16 @@ export const STATUS_UI: Record<ThreadStatus, { label: string; tone: Tone }> = {
   archived: { label: 'Đã lưu trữ', tone: 'muted' },
 }
 
+/** Nhãn trạng thái trên Feed / Tường / Hành trình / trang lớp — người XEM có thể không phải người gửi
+ *  (không "Đã gửi"); App học vẫn dùng STATUS_UI. */
+export const SOCIAL_STATUS_LABEL: Record<ThreadStatus, string> = {
+  waiting_teacher: 'Chờ Thầy phản hồi',
+  teacher_responded: 'Thầy đã phản hồi',
+  needs_retry: 'Cần làm lại',
+  passed: 'Đã đạt',
+  archived: 'Đã lưu trữ',
+}
+
 /** Nhãn ngắn cho hàng đợi của Thầy */
 export const QUEUE_STATUS_LABEL: Record<ThreadStatus, string> = {
   waiting_teacher: 'Chờ Thầy',
@@ -259,8 +269,11 @@ export function lessonLine(id: Identity): string {
   return [id.module.name, id.lesson.title].filter(Boolean).join(' · ')
 }
 
-export function courseLine(id: Identity): string | null {
-  return [id.course.code, id.course.name].filter(Boolean).join(' · ') || null
+/** Tên chương cho dòng phụ: "Chương 4: Điệu Bolero…" → "Chương 4 · Điệu Bolero…" (CHỈ trình bày, không đổi dữ liệu). */
+export function moduleLabel(name: string | null | undefined): string | null {
+  const n = (name ?? '').trim()
+  if (!n) return null
+  return n.replace(/^((?:Chương|Phần|Module|Học phần)\s+[\w.]+)\s*:\s*/iu, '$1 · ')
 }
 
 // ── Event → nhãn giao diện ───────────────────────────────────────────────────
@@ -270,7 +283,7 @@ export function eventLabel(e: Pick<ThreadEvent, 'kind' | 'verdict'>, isFirstSubm
     case 'question': return 'Hỏi bài'
     case 'teacher_answer': return 'Thầy trả lời'
     default:
-      return e.verdict === 'pass' ? 'Thầy nhận xét · ĐẠT' : e.verdict === 'retry' ? 'Thầy nhận xét · Cần làm lại' : 'Thầy nhận xét'
+      return e.verdict === 'pass' ? 'Thầy nhận xét · Đạt' : e.verdict === 'retry' ? 'Thầy nhận xét · Cần làm lại' : 'Thầy nhận xét'
   }
 }
 

@@ -47,7 +47,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
 
   const back = (
     <div className="lt-actions">
-      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onBack}><ArrowLeft size={16} /> Về trang chủ</button>
+      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onBack}><ArrowLeft size={16} /> Quay lại</button>
       {isTeacher && onOpenQueue && (
         <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onOpenQueue}><ListChecks size={16} /> Hàng đợi Trả/Hỏi bài</button>
       )}

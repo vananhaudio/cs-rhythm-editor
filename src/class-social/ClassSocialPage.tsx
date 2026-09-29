@@ -33,6 +33,9 @@ const TITLES: Record<SocialSection, string> = {
   tools: 'Công cụ âm nhạc · Thầy Văn Anh Guitar',
 }
 
+const IN_APP_STATE = { cs: 1 }
+const HOME: MeView = { kind: 'section', section: 'home' }
+
 function Splash({ text }: { text: string }) {
   return (
     <div className="cs-root">
@@ -88,10 +91,15 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
 
   const navigate = (next: MeView) => {
     if (!sameView(view, next)) {
-      window.history.pushState(null, '', viewPath(next))
+      window.history.pushState(IN_APP_STATE, '', viewPath(next))   // đánh dấu: mục lịch sử do /me tạo → "Quay lại" an toàn
       setView(next)
     }
     window.scrollTo({ top: 0 })
+  }
+  // "Quay lại" như mạng xã hội: về đúng màn trước trong /me; mở thẳng bằng link → về màn cha hợp lý (fallback)
+  const back = (fallback: MeView) => {
+    if ((window.history.state as { cs?: number } | null)?.cs === IN_APP_STATE.cs) window.history.back()
+    else navigate(fallback)
   }
   const go = (section: SocialSection) => navigate({ kind: 'section', section })
   const openProfile = (userId: string) => navigate({ kind: 'profile', userId })
@@ -104,11 +112,11 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenClasses={openClasses} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenClasses={openClasses} onBack={back} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenClasses }: {
+function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenClasses, onBack }: {
   base: ClassIdentity
   view: MeView
   onSection: (s: SocialSection) => void
@@ -117,6 +125,8 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   onOpenQueue: () => void
   onOpenClass: (classId: string) => void
   onOpenClasses: () => void
+  /** Quay lại màn trước trong /me (fallback khi mở thẳng bằng link) */
+  onBack: (fallback: MeView) => void
 }) {
   const [patch, setPatch] = useState<IdentityPatch>({})
   const [identityRev, setIdentityRev] = useState(0)   // tăng khi đổi ảnh đại diện → feed tải lại avatar mới
@@ -146,14 +156,14 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onSignOut={onSignOut}>
       {view.kind === 'profile' && (
         <ProfilePage key={view.userId} me={me} userId={view.userId} identityRev={identityRev} canEditAvatar={editor.canEditAvatar}
-          onEditMedia={editor.pick} onSection={onSection} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
+          onEditMedia={editor.pick} onBack={() => onBack(HOME)} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
       )}
       {view.kind === 'thread' && (
-        <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onSection('home')}
+        <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onBack(HOME)}
           onOpenQueue={onOpenQueue} onOpenProfile={onOpenProfile} />
       )}
       {view.kind === 'queue' && (me.isTeacher
-        ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onSection('home')} />
+        ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onBack(HOME)} />
         : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này dành cho giáo viên.</div></div>)}
       {view.kind === 'classes' && <ClassesPage classes={classes} onOpenClass={onOpenClass} />}
       {view.kind === 'class' && (

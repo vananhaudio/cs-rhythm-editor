@@ -4,6 +4,17 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social — UX polish (`/me`) · chỉ trình bày, không migration, không đổi RPC/dữ liệu**
+  - **Feed:** thẻ câu chuyện học tập đọc trong 2–4 giây: tên → thời gian · danh tính ngắn (chữ nhỏ, không còn nhãn tím) → "🎸 Trả bài / ❓ Hỏi bài" (chữ thường) → tên bài → chương dạng "Chương 4 · …" (không đổi dữ liệu). Chỉ kể "Thầy vừa nhận xét…" khi Thầy vừa phản hồi hoặc học sinh trả lại bài. Trạng thái dùng nhãn cho người xem: "Chờ Thầy phản hồi". Nút "Xem cuộc trao đổi" là nút nhạt, không phải một dãy nút tím đặc.
+  - **Bài Social:** bỏ nhãn "BÀI VIẾT" ở bài thường; "Trả bài / Hỏi bài" là nhãn nhẹ; "🔒 Bạn bè" nằm cạnh thời gian.
+  - **Tabs** Tường | Hành trình và Hoạt động | Thành viên: gạch chân như mạng xã hội, thay nút tím đặc.
+  - **Hành trình:** bớt hộp. Mốc là dòng bấm được trên đường thời gian, các bước nối bằng "→". Màu chặng giữ nguyên.
+  - **Cuộc trao đổi:** tên bài là tiêu đề, còn chương và lớp/khoá nhỏ dần. Avatar đứng ở đầu lượt, thời gian cùng hàng tên. "Cần làm lại" dùng vàng ấm nhạt, không mang cảm giác lỗi. Nhãn "ĐẠT" đổi thành "Đạt".
+  - **Điều hướng:** "Quay lại" về đúng màn trước trong `/me` (mở thẳng bằng link thì về Trang chủ). Trang lớp có "← Lớp học".
+  - **Bạn bè:** không dựng khung "Chưa có lời mời". Bỏ nút "Xem trang cá nhân" vì bấm tên là đủ. Danh sách đổi tên thành "Tất cả bạn bè".
+  - **Trạng thái trống / đang tải:** dùng bản nhẹ (không khung, không icon lớn) ở Feed, trang lớp, `/me/classes` và Tường.
+  - Test: class-social 143, E2E 42 (thêm kiểm "Quay lại"). Ảnh 390px/1280px không tràn ngang.
+
 - **Class Social V1/V1.1 — PRODUCTION PASS END-TO-END (đóng)**
   - Học sinh thật (DH2.KD0826) Hỏi bài ở DH2 · Bài 4.4 từ `/learn` → Learning Thread tự đóng dấu DH2.KD0826 → hiện ngay trong Hoạt động của trang lớp; không thành Tự học.
   - Thread tự học cũ (HS03 · Bài 4.3) giữ nguyên danh tính lịch sử. Không migration, không dữ liệu giả.

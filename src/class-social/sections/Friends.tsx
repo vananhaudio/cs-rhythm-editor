@@ -37,29 +37,30 @@ export default function Friends({ requests, onOpenProfile }: {
   }
 
   return (
-    <div className="cs-col">
+    <div className="cs-col cs-home">
       <h1 className="cs-page-title">Bạn bè</h1>
       {requests.actionError && <p className="cs-form-error" role="alert">{requests.actionError}</p>}
 
-      <section className="cs-card cs-friends-card" aria-labelledby="cs-req-title">
-        <h2 id="cs-req-title" className="cs-friends-title">
-          Lời mời kết bạn{requests.count > 0 && <span className="cs-count">{requests.count}</span>}
-        </h2>
-        {!requests.loaded && <div className="cs-skeleton" style={{ width: '50%' }} aria-label="Đang tải" />}
-        {requests.loaded && requests.error && requests.count === 0 && (
-          <p className="cs-friends-empty" role="alert">{requests.error}{' '}
-            <button type="button" className="cs-link-btn" onClick={() => void refreshRequests()}>Thử lại</button></p>
-        )}
-        {requests.loaded && !requests.error && requests.count === 0 && <p className="cs-friends-empty">Chưa có lời mời mới.</p>}
-        {requests.count > 0 && (
-          <FriendRequestList items={requests.items} busyId={requests.busyId}
-            onRespond={(id, accept) => void respond(id, accept)} onOpenProfile={onOpenProfile} />
-        )}
-      </section>
+      {/* Lời mời chỉ hiện khi có (hoặc khi tải lỗi) — không dựng một khung để nói "không có gì" */}
+      {(requests.count > 0 || (requests.loaded && requests.error)) && (
+        <section className="cs-card cs-friends-card" aria-labelledby="cs-req-title">
+          <h2 id="cs-req-title" className="cs-friends-title">
+            Lời mời kết bạn{requests.count > 0 && <span className="cs-count">{requests.count}</span>}
+          </h2>
+          {requests.error && requests.count === 0 && (
+            <p className="cs-friends-empty" role="alert">{requests.error}{' '}
+              <button type="button" className="cs-link-btn" onClick={() => void refreshRequests()}>Thử lại</button></p>
+          )}
+          {requests.count > 0 && (
+            <FriendRequestList items={requests.items} busyId={requests.busyId}
+              onRespond={(id, accept) => void respond(id, accept)} onOpenProfile={onOpenProfile} />
+          )}
+        </section>
+      )}
 
       <section className="cs-card cs-friends-card" aria-labelledby="cs-fr-title">
         <h2 id="cs-fr-title" className="cs-friends-title">
-          Bạn bè{list.status === 'ready' && list.friends.length > 0 && <span className="cs-count">{list.friends.length}</span>}
+          Tất cả bạn bè{list.status === 'ready' && list.friends.length > 0 && <span className="cs-friends-total">{list.friends.length}</span>}
         </h2>
         {list.status === 'loading' && <div className="cs-skeleton" style={{ width: '50%' }} aria-label="Đang tải" />}
         {list.status === 'error' && (
@@ -69,8 +70,8 @@ export default function Friends({ requests, onOpenProfile }: {
           </div>
         )}
         {list.status === 'ready' && list.friends.length === 0 && (
-          <EmptyState icon={Users} title="Bạn chưa có bạn bè.">
-            Bấm vào tên một thành viên trong Cộng đồng để xem trang cá nhân và gửi lời mời kết bạn.
+          <EmptyState icon={Users} title="Chưa có bạn bè" quiet>
+            Bấm vào tên một bạn trong Trang chủ hoặc trong lớp để kết bạn.
           </EmptyState>
         )}
         {list.status === 'ready' && list.friends.length > 0 && (
@@ -81,9 +82,6 @@ export default function Friends({ requests, onOpenProfile }: {
                   <Avatar name={p.name} url={p.avatarUrl} size={48} />
                   <span className="cs-person-name">{p.name}{p.isTeacher && <span className="cs-post-role"> · Giáo viên</span>}</span>
                 </PersonLink>
-                <div className="cs-person-actions">
-                  <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={() => onOpenProfile(p.userId)}>Xem trang cá nhân</button>
-                </div>
               </li>
             ))}
           </ul>

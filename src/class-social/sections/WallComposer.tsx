@@ -42,7 +42,7 @@ export default function WallComposer({ me, onPosted }: { me: ClassIdentity; onPo
         <div className="cs-wall-composer-row">
           <Avatar name={me.name} url={me.avatarUrl} size={40} />
           <textarea className="cs-input cs-textarea cs-wall-input" rows={2} aria-label="Nội dung bài viết"
-            placeholder={`${me.name} ơi, bạn đang nghĩ gì?`} value={body} maxLength={MAX_BODY}
+            placeholder="Chia sẻ điều gì về âm nhạc…" value={body} maxLength={MAX_BODY}
             onChange={e => setBody(e.target.value)} disabled={submitting} />
         </div>
         {showLink && (

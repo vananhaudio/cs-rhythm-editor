@@ -9,13 +9,14 @@ import ResourceCard from '../class-social/sections/comments/ResourceCard'
 import { relativeTime } from '../class-social/posts/postModel'
 import { Avatar, PersonLink } from '../class-social/ui'
 import {
-  STATUS_UI, VISIBILITY_LABEL, courseLine, eventLabels, identityLine, lessonLine,
+  SOCIAL_STATUS_LABEL, STATUS_UI, VISIBILITY_LABEL, eventLabels, identityLine, moduleLabel,
   type ThreadDetail, type ThreadEvent, type ThreadStatus,
 } from './ltModel'
 
-export function StatusChip({ status }: { status: ThreadStatus }) {
+/** social = nhãn cho người XEM trên Feed/Tường/Hành trình ("Chờ Thầy phản hồi", không "Đã gửi"). */
+export function StatusChip({ status, social = false }: { status: ThreadStatus; social?: boolean }) {
   const s = STATUS_UI[status]
-  return <span className={'lt-chip is-' + s.tone}>{s.label}</span>
+  return <span className={'lt-chip is-' + s.tone}>{social ? SOCIAL_STATUS_LABEL[status] : s.label}</span>
 }
 
 function fullTime(iso: string): string {
@@ -23,21 +24,27 @@ function fullTime(iso: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'numeric', year: 'numeric' })
 }
 
+// Đầu thread: NGƯỜI HỌC → BÀI (chính) → chương (phụ) → danh tính lớp/khoá lúc bắt đầu (nhỏ) → trạng thái.
 export function ThreadHeader({ thread, onOpenProfile }: { thread: ThreadDetail; onOpenProfile?: (userId: string) => void }) {
   const id = thread.identity
-  const course = courseLine(id)
+  const module = moduleLabel(id.module.name)
+  const identity = identityLine(id)
+  const context = [identity, id.course.name && !identity.includes(id.course.name) ? id.course.name : null].filter(Boolean).join(' · ')
+  const learner = thread.learner
   return (
     <div className="lt-head">
-      {thread.learner.userId ? (
-        <PersonLink userId={thread.learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${thread.learner.name}`}>
-          <Avatar name={thread.learner.name} url={thread.learner.avatarUrl} size={46} />
+      {learner.userId ? (
+        <PersonLink userId={learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${learner.name}`}>
+          <Avatar name={learner.name} url={learner.avatarUrl} size={46} />
         </PersonLink>
-      ) : <Avatar name={thread.learner.name} url={thread.learner.avatarUrl} size={46} />}
+      ) : <Avatar name={learner.name} url={learner.avatarUrl} size={46} />}
       <div className="lt-head-main">
-        <span className="lt-head-name">{thread.learner.name}</span>
-        <span className="lt-head-identity" title="Danh tính học tập lúc bắt đầu cuộc trao đổi">{identityLine(id)}</span>
-        <span className="lt-head-lesson">{lessonLine(id)}</span>
-        {course && <span className="lt-head-course">{course}</span>}
+        {learner.userId && onOpenProfile
+          ? <PersonLink userId={learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${learner.name}`} className="lt-head-name">{learner.name}</PersonLink>
+          : <span className="lt-head-name">{learner.name}</span>}
+        <span className="lt-head-lesson">{id.lesson.title}</span>
+        {module && <span className="lt-head-module">{module}</span>}
+        <span className="lt-head-identity" title="Lớp / khoá lúc bắt đầu cuộc trao đổi">{context}</span>
         <div className="lt-head-meta">
           <StatusChip status={thread.status} />
           <span className="lt-badge">{VISIBILITY_LABEL[thread.visibility]}</span>
@@ -69,7 +76,7 @@ function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
         <div className="lt-ev-bubble">
           <div className="lt-ev-head">
             <span className="lt-ev-author">{e.author.name}</span>
-            {teacher && <span className="lt-ev-role">Thầy</span>}
+            {teacher && !label.startsWith('Thầy') && <span className="lt-ev-role">Thầy</span>}
             <span className="lt-ev-kind">· {label}</span>
             {e.createdAt && <time className="lt-ev-time" dateTime={e.createdAt} title={fullTime(e.createdAt)}>{relativeTime(e.createdAt, now)}</time>}
           </div>

@@ -46,10 +46,10 @@ export default function TeacherQueue({ onOpenThread, onBack }: { onOpenThread: (
   return (
     <div className="cs-col cs-home lt-page">
       <div className="lt-actions">
-        <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onBack}><ArrowLeft size={16} /> Về trang chủ</button>
+        <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={onBack}><ArrowLeft size={16} /> Quay lại</button>
       </div>
       <section className="lt-card" aria-labelledby="lt-queue-title">
-        <h2 id="lt-queue-title" style={{ margin: '0 0 10px', fontSize: 18 }}>Hàng đợi Trả bài / Hỏi bài</h2>
+        <h2 id="lt-queue-title" style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 800 }}>Hàng đợi Trả bài / Hỏi bài</h2>
         <div className="lt-tabs" role="group" aria-label="Lọc theo trạng thái">
           {TABS.map(t => <button key={t.status} type="button" aria-pressed={tab === t.status} onClick={() => pickTab(t.status)}>{t.label}</button>)}
         </div>

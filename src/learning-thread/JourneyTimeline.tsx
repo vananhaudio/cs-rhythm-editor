@@ -1,7 +1,7 @@
 // HÀNH TRÌNH ÂM NHẠC — timeline các Learning Thread gom theo CHẶNG (lớp/Tự học × khoá) theo DANH TÍNH LỊCH SỬ.
 // Màu chặng xác định theo môn (TRACK_THEMES, cùng bộ màu App học). Mỗi mốc = tóm tắt ngắn; bấm → /me/t/<id>.
 // Component lá (không CSS import, không mạng) — test render được.
-import { lessonLine, STATUS_UI, VISIBILITY_LABEL } from './ltModel'
+import { lessonLine, moduleLabel, SOCIAL_STATUS_LABEL, STATUS_UI, VISIBILITY_LABEL } from './ltModel'
 import { eventSteps, groupJourney, type JourneyItem } from './feedModel'
 
 export default function JourneyTimeline({ items, ownerName, onOpenThread }: {
@@ -33,13 +33,14 @@ export default function JourneyTimeline({ items, ownerName, onOpenThread }: {
                 {ph.items.map(it => {
                   const steps = eventSteps(it.events)
                   const st = STATUS_UI[it.status]
+                  const module = moduleLabel(it.identity.module.name)
                   const body = (
                     <>
                       <span className="lt-ms-lesson">{it.identity.lesson.title}</span>
-                      {it.identity.module.name && <span className="lt-ms-module">{it.identity.module.name}</span>}
+                      {module && <span className="lt-ms-module">{module}</span>}
                       <span className="lt-ms-steps">{steps.map((s, i) => <span key={i} className="lt-ms-step">{s.icon} {s.label}</span>)}</span>
                       <span className="lt-ms-meta">
-                        <span className={'lt-chip is-' + st.tone}>{st.label}</span>
+                        <span className={'lt-chip is-' + st.tone}>{SOCIAL_STATUS_LABEL[it.status]}</span>
                         {it.visibility === 'private' && <span className="lt-badge">{VISIBILITY_LABEL.private}</span>}
                         {it.isHidden && <span className="lt-badge">Đang ẩn</span>}
                       </span>

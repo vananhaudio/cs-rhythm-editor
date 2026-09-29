@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
-  canAsk, canSubmit, ctaTitle, eventLabels, identityLine, isEnabled, lessonLine, ltErrorText, studentActions,
+  canAsk, canSubmit, ctaTitle, eventLabels, identityLine, isEnabled, lessonLine, ltErrorText, moduleLabel, studentActions,
   teacherKind, toLessonState, toQueueItem, toThreadDetail, checkBody,
   type LessonStateRow, type LessonThreadState,
 } from "../../src/learning-thread/ltModel";
@@ -120,7 +120,7 @@ test("thread: timeline đầy đủ theo thứ tự, nhãn đúng (Trả bài �
   const t = toThreadDetail(detail())!;
   assert.equal(t.events.length, 6);
   assert.deepEqual(eventLabels(t.events), [
-    "Trả bài", "Thầy nhận xét · Cần làm lại", "Hỏi bài", "Thầy trả lời", "Trả lại", "Thầy nhận xét · ĐẠT",
+    "Trả bài", "Thầy nhận xét · Cần làm lại", "Hỏi bài", "Thầy trả lời", "Trả lại", "Thầy nhận xét · Đạt",
   ]);
   assert.equal(t.learner.avatarUrl, null, "avatar javascript: bị loại");
 });
@@ -129,6 +129,10 @@ test("danh tính LỊCH SỬ: KD18 · chặng; tự học → 'Tự học'", () 
   const t = toThreadDetail(detail())!;
   assert.equal(identityLine(t.identity), "DH2.KD18 · Đệm hát 2");
   assert.equal(lessonLine(t.identity), "Chương 4: Điệu Bolero & kỹ thuật móc · Bài 4.3 — Bolero móc kiểu 1");
+  assert.equal(moduleLabel("Chương 4: Điệu Bolero & kỹ thuật móc"), "Chương 4 · Điệu Bolero & kỹ thuật móc");
+  assert.equal(moduleLabel("Phần 2.1: Nhạc lý"), "Phần 2.1 · Nhạc lý");
+  assert.equal(moduleLabel("Điệu Slow Rock"), "Điệu Slow Rock", "không có tiền tố chương → giữ nguyên");
+  assert.equal(moduleLabel(null), null);
   const self = toThreadDetail(detail({ identity: { ...detail().identity, class: null } }))!;
   assert.equal(identityLine(self.identity), "Tự học · DH2");
 });

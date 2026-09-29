@@ -39,11 +39,9 @@ export default function CommunityFeed({ state, onRetry, onLoadMore, social }: {
       )}
 
       {state.status === 'ready' && state.posts.length === 0 && (
-        <div className="cs-card">
-          <EmptyState icon={Users} title="Chưa có bài học tập nào">
-            Khi thành viên trả bài, hoạt động sẽ xuất hiện tại đây.
-          </EmptyState>
-        </div>
+        <EmptyState icon={Users} title="Chưa có hoạt động mới" quiet>
+          Bài chia sẻ và câu chuyện học tập của bạn bè, lớp sẽ xuất hiện tại đây.
+        </EmptyState>
       )}
 
       {state.status === 'ready' && state.posts.length > 0 && (

@@ -43,15 +43,17 @@ export function PersonLink({ userId, onOpen, label, className, children }: {
   )
 }
 
-export function EmptyState({ icon: Icon, title, children, action }: {
+/** quiet = trạng thái trống NHẸ (không biểu tượng lớn, không khung): 1 dòng tiêu đề + 1 dòng gợi ý. */
+export function EmptyState({ icon: Icon, title, children, action, quiet = false }: {
   icon: LucideIcon
   title: string
   children: ReactNode
   action?: ReactNode
+  quiet?: boolean
 }) {
   return (
-    <div className="cs-empty">
-      <div className="cs-empty-icon"><Icon size={26} strokeWidth={1.8} /></div>
+    <div className={'cs-empty' + (quiet ? ' is-quiet' : '')}>
+      {!quiet && <div className="cs-empty-icon"><Icon size={26} strokeWidth={1.8} /></div>}
       <h3>{title}</h3>
       <p>{children}</p>
       {action}

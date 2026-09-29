@@ -165,3 +165,57 @@ textarea.lt-input { resize: vertical; min-height: 88px; line-height: 1.5; }
   border: 1.5px solid #e4e4e7; background: #fff; color: #52525b; }
 .lt-profile-tabs button[aria-pressed="true"] { border-color: #4338ca; background: #4338ca; color: #fff; }
 .lt-feed-module { font-size: 12.5px; color: var(--lt-t3); margin-top: -2px; overflow-wrap: anywhere; }
+
+/* ── UX polish 30/09 ─────────────────────────────────────────────────────── */
+/* Thẻ câu chuyện học tập trên Feed/Tường/Lớp: cùng ngôn ngữ với bài Social (tím của /me, không chàm của App) */
+.lt-feed-card { --lt-p: var(--cs-p, #6d28d9); --lt-p2: var(--cs-p-soft, #f1ebff); }
+.lt-feed-identity { font-size: 13px; font-weight: 500; color: var(--cs-faint, #9893ab); background: none; padding: 0; border-radius: 0; overflow-wrap: anywhere; }
+.lt-feed-body { gap: 2px; padding: 12px 0 0; }
+.lt-feed-kind { font-size: 13.5px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--cs-muted, #625d78); margin-bottom: 2px; }
+.lt-feed-lesson { font-size: 16px; font-weight: 700; line-height: 1.35; }
+.lt-feed-module { font-size: 13px; color: var(--lt-t3); margin-top: 0; }
+.lt-feed-story { margin: 8px 0 0; font-size: 14.5px; color: var(--cs-muted, #625d78); }
+.lt-feed-actor { font-weight: 700; color: var(--cs-text, #1c1830); }
+.lt-feed-note { margin-top: 2px; }
+.lt-feed-foot { margin-top: 10px; }
+/* Hành động chính của thẻ, nhưng nhẹ (nhiều thẻ trên Feed không thành một dãy nút tím đặc) */
+.lt-feed-open { border-color: transparent; background: var(--cs-p-soft, #f1ebff); color: var(--cs-p-strong, #5b21b6); border-radius: 10px; }
+.lt-feed-open:hover { background: #e7dcff; }
+
+/* Trang cuộc trao đổi (/me/t/<id>): BÀI là tiêu đề, ngữ cảnh lớp/khoá nhỏ dần */
+.cs-root .lt-page { --lt-p: var(--cs-p); --lt-p2: var(--cs-p-soft); }
+.lt-head-main { gap: 2px; }
+.lt-head-name { font-weight: 700; font-size: 14.5px; color: var(--lt-t2); }
+.lt-head-lesson { font-size: 17px; font-weight: 800; line-height: 1.35; color: var(--lt-t1); }
+.lt-head-module { font-size: 13.5px; color: var(--lt-t2); overflow-wrap: anywhere; }
+.lt-head-identity { font-size: 12.5px; font-weight: 500; color: var(--lt-t3); }
+.lt-head-meta { margin-top: 8px; }
+/* Dòng thời gian: avatar đứng ở ĐẦU lượt (không trôi giữa bong bóng dài); Thầy phân biệt nhẹ bằng nền */
+.lt-ev { align-items: flex-start; }
+.lt-ev > .cs-person-link, .lt-ev > .cs-avatar { align-self: flex-start; }
+.lt-ev::before { top: 42px; }
+.lt-ev-kind { font-weight: 600; }
+.lt-ev.is-teacher .lt-ev-bubble { background: var(--cs-p-softer, #f8f5ff); border-color: #e6dcfb; }
+.lt-ev.is-pass .lt-ev-bubble { background: #f3fbf5; border-color: #cdebd6; }
+/* Cần làm lại: rõ nhưng không mang cảm giác lỗi (vàng ấm nhạt, không cam đậm) */
+.lt-ev.is-retry .lt-ev-bubble { background: #fffaf2; border-color: #f6e0bf; }
+.lt-ev-tools { justify-content: flex-end; padding: 2px 4px 0; }
+.lt-link-btn { text-decoration: none; font-weight: 600; }
+.lt-link-btn:hover { text-decoration: underline; color: var(--lt-t2); }
+
+/* Hành trình: đường thời gian + mốc, bớt hộp — một bề mặt, mốc là dòng bấm được */
+.lt-journey { border: none; box-shadow: var(--cs-shadow, none); padding: 18px 16px 8px; }
+.lt-journey-title { font-size: 16px; margin: 0 0 14px; }
+.lt-phase { padding-bottom: 18px; }
+.lt-phase-head { margin-bottom: 6px; }
+.lt-milestones { gap: 2px; }
+.lt-ms-btn { background: transparent; border: none; border-radius: 10px; padding: 8px 10px; gap: 2px; }
+.lt-ms-btn:hover { background: var(--cs-hover, #f2f0f8); }
+.lt-ms-lesson { font-weight: 700; font-size: 15px; }
+.lt-ms-steps { margin-top: 4px; gap: 2px 6px; }
+.lt-ms-step + .lt-ms-step::before { content: '→'; margin-right: 6px; color: var(--lt-t3, #8a8a93); }
+.lt-ms-meta { margin-top: 6px; }
+@media (max-width: 480px) {
+  /* thời gian nằm cùng hàng tên (không chiếm một dòng riêng) */
+  .lt-ev-time { margin-left: auto; width: auto; }
+}

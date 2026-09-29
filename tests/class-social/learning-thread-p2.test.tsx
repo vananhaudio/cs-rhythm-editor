@@ -73,12 +73,19 @@ test("thẻ Feed: AI · danh tính lịch sử · bài · chuyện vừa xảy r
   const h = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card())!} now={NOW} onOpenThread={() => {}} />);
   assert.match(h, /HS03/);
   assert.match(h, /Tự học · DH2/);
-  assert.match(h, /❓ Hỏi bài/);
+  assert.match(h, /❓<\/span> Hỏi bài/);
   assert.match(h, /lt-feed-lesson">Bài 4\.3 — Bolero móc kiểu 1</);
-  assert.match(h, /lt-feed-module">Chương 4: Điệu Bolero &amp; kỹ thuật móc</, "chương là metadata nhỏ dưới tên bài");
+  assert.match(h, /lt-feed-module">Chương 4 · Điệu Bolero &amp; kỹ thuật móc</, "chương là metadata nhỏ dưới tên bài (trình bày, không đổi dữ liệu)");
+  assert.equal(/Chương 4: Điệu/.test(h), false, "không lặp nguyên văn chương + bài trên Feed");
   const inClass = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card({ identity: identity({ class: { code: "DH2.KD18", stage_title: "Đệm hát 2" } }) }))!} inClass />);
   assert.equal(/lt-feed-identity/.test(inClass), false, "trong trang lớp không lặp nhãn lớp");
-  assert.match(h, /<b>Thầy Minh<\/b> vừa nhận xét · Cần làm lại/);
+  assert.match(h, /lt-feed-actor">Thầy Minh<\/span> vừa nhận xét · Cần làm lại/);
+  assert.match(h, /Chờ Thầy phản hồi|Cần làm lại/);
+  // Lượt đầu của chính học sinh: tên + "❓ Hỏi bài" đã đủ — không kể lại "vừa hỏi bài"
+  const own = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card({ status: "waiting_teacher", last_event: { kind: "question", author_role: "student", author: { name: "HS03" } } }))!} />);
+  assert.equal(/vừa hỏi bài/.test(own), false);
+  assert.match(own, /Chờ Thầy phản hồi/);
+  assert.equal(/Đã gửi/.test(own), false, "người xem Feed không phải người gửi → không 'Đã gửi'");
   assert.match(h, /📘 Thầy đã gửi bài giảng nên xem/);
   assert.match(h, /Cần làm lại/);
   assert.match(h, /Xem cuộc trao đổi/);

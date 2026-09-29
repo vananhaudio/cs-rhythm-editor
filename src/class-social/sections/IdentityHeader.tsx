@@ -2,7 +2,7 @@
 // Là header của HOME, không phải trang profile riêng. Bìa thấp để feed lộ ra sớm.
 // Chưa có / lỗi ảnh bìa → bìa mặc định tím (không bao giờ hiện ảnh vỡ).
 import { useState } from 'react'
-import { Camera, UserRound, Users } from 'lucide-react'
+import { Camera, UserRound } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
 import { levelLabel, monthYear } from '../format'
 import { safeImageUrl } from '../media/safeImageUrl'
@@ -48,10 +48,6 @@ export default function IdentityHeader({ me, canEditAvatar = false, onEdit, onOp
         </div>
         <div className="cs-identity-text">
           <h1 className="cs-identity-name">{me.name}</h1>
-          <div className="cs-identity-community">
-            <Users size={15} strokeWidth={2.2} />
-            <span>Cộng Đồng Hành Trình Guitar</span>
-          </div>
           {(me.htMember || facts.length > 0) && (
             <div className="cs-identity-facts">
               {me.htMember && <span className="cs-badge">Lớp Hành trình</span>}

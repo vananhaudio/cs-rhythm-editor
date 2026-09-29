@@ -2,7 +2,7 @@
 // Người ngoài lớp XEM được phần công khai (Learning Thread community của lớp) — không đăng, không Trả/Hỏi bài
 // từ đây, không xem danh sách thành viên. Quyền do server (RPC social_*) quyết, không chỉ ẩn nút.
 import { useCallback, useEffect, useState } from 'react'
-import { Users } from 'lucide-react'
+import { ArrowLeft, Users } from 'lucide-react'
 import '../../learning-thread/styles'
 import { EmptyState } from '../ui'
 import { usePostsFeed } from '../posts/useCommunityFeed'
@@ -59,8 +59,8 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
       ? { status: 'ready', value: cur.value.map(x => (x.userId === m.userId ? { ...x, relationship: r.value } : x)) } : cur)
   }
 
-  const back = <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}>‹ Lớp học</button>
-  if (detail.status === 'loading') return <div className="cs-col cs-home">{back}<div className="cs-card" role="status">Đang mở lớp…</div></div>
+  const back = <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp học</button>
+  if (detail.status === 'loading') return <div className="cs-col cs-home">{back}<p className="cs-loading" role="status">Đang mở lớp…</p></div>
   if (detail.status === 'error') return <div className="cs-col cs-home">{back}<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div></div>
 
   const c = detail.value
@@ -74,12 +74,12 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
       </div>
       {tab === 'activity' && (
         <section className="cs-feed" aria-label="Hoạt động của lớp" aria-busy={state.status === 'loading'}>
-          {state.status === 'loading' && <div className="cs-card" role="status">Đang tải hoạt động…</div>}
+          {state.status === 'loading' && <p className="cs-loading" role="status">Đang tải hoạt động…</p>}
           {state.status === 'error' && <div className="cs-card cs-feed-error" role="alert"><p>{state.message}</p></div>}
           {state.status === 'ready' && state.posts.length === 0 && (
-            <div className="cs-card"><EmptyState icon={Users} title="Chưa có hoạt động mới">
+            <EmptyState icon={Users} title="Chưa có hoạt động mới" quiet>
               Những bài Trả bài, Hỏi bài của lớp sẽ xuất hiện tại đây.
-            </EmptyState></div>
+            </EmptyState>
           )}
           {state.status === 'ready' && state.posts.length > 0 && (
             <div className="cs-post-list">
@@ -92,8 +92,8 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
       )}
       {tab === 'members' && (
         !canViewMembers
-          ? <div className="cs-card"><EmptyState icon={Users} title={`Lớp có ${c.memberCount} học viên`}>Danh sách thành viên chỉ hiện với thành viên của lớp.</EmptyState></div>
-          : !members || members.status === 'loading' ? <div className="cs-card" role="status">Đang tải thành viên…</div>
+          ? <EmptyState icon={Users} title={`Lớp có ${c.memberCount} học viên`} quiet>Danh sách thành viên chỉ hiện với thành viên của lớp.</EmptyState>
+          : !members || members.status === 'loading' ? <p className="cs-loading" role="status">Đang tải thành viên…</p>
           : members.status === 'error' ? <div className="cs-card cs-feed-error" role="alert"><p>{members.message}</p></div>
           : <>
               {actError && <p className="cs-form-error" role="alert">{actError}</p>}
