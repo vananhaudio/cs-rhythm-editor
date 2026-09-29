@@ -110,6 +110,10 @@ SQL
 }
 baseline t_post "$TMP/fixture_noroles.sql"; dh2_fixture t_post
 psqld t_post -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+psqld t_post -c "create table if not exists public.student_action_logs (id uuid primary key default gen_random_uuid(), user_id uuid, action_type text, lesson_id uuid, created_at timestamptz default now());
+  insert into public.student_action_logs (user_id, action_type, lesson_id) values ('aaaaaaaa-0000-4000-8000-00000000000a', 'submitted_video_self_report', '5f7acacd-9214-48f3-9349-93cc382649fb')" >/dev/null
+DIAG_GATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/learning_threads_p1_diag.sql")) z where section = 'CONFIG_GATE'"; }
+[ "$(DIAG_GATE t_post)" = "STOP - CONFIG MISSING" ] && ok "diag TRƯỚC khi cấu hình: CONFIG_GATE = STOP (0 dòng không thể bị báo là đã cấu hình)" || fail "diag trước: $(DIAG_GATE t_post)"
 POST_OUT="$(psqld t_post -tA -F ' | ' -f "$ROOT/db/learning_threads_p1_post_migration.sql")"
 echo "$POST_OUT" | grep -q "^GATE | PASS" && echo "$POST_OUT" | grep -q "^smoke | SMOKE PASS 23/23" \
   && echo "$POST_OUT" | grep -q "^counts | .* | 3 / 0 / 0" \
@@ -117,6 +121,7 @@ echo "$POST_OUT" | grep -q "^GATE | PASS" && echo "$POST_OUT" | grep -q "^smoke 
 [ "$(q t_post "select string_agg(submission_mode || '/' || question_mode, ',') from public.learning_lesson_settings")" = "allowed/allowed,allowed/allowed,allowed/allowed" ] \
   && [ "$(q t_post "select count(*) from public.learning_lesson_settings s join public.app_users a on a.id = s.updated_by where a.role in ('admin','teacher')")" = "3" ] \
   && ok "3 bài: allowed/allowed (không required), ghi người cấu hình = Thầy/admin" || fail "cấu hình DH2 sai"
+[ "$(DIAG_GATE t_post)" = "PASS" ] && ok "diag SAU khi cấu hình (đọc lại DB + RPC dưới danh tính học sinh): CONFIG_GATE = PASS" || fail "diag sau: $(DIAG_GATE t_post)"
 POST_ONELINE="$(tr '\n' ' ' < "$ROOT/db/learning_threads_p1_post_migration.sql")"
 psqld t_post -c "$POST_ONELINE" >/dev/null 2>"$TMP/post2.err" && fail "chạy lại post-migration lẽ ra phải DỪNG"
 grep -q "SMOKE FAIL" "$TMP/post2.err" && [ "$(q t_post "select count(*) from public.learning_lesson_settings")" = "3" ] \

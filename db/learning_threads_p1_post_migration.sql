@@ -7,6 +7,9 @@ db/learning_threads_p1_setup.sql. FILE SINH TỰ ĐỘNG bởi scripts/build-lt-
 3) Chỉ khi 1+2 PASS: Thầy/admin bật Trả bài + Hỏi bài (allowed/allowed) cho 3 bài DH2 thật, kiểm đúng id + tên bài
    + thuộc khoá DH2. Không bật "required". Không ghi tiến độ.
 Lỗi ở bất kỳ bước nào → RAISE → toàn bộ rollback, không cấu hình gì. Kết quả: bảng (section, item, detail, status).
+⚠ Bảng kết quả này đọc TRONG CÙNG transaction → KHÔNG phải bằng chứng đã lưu. Bằng chứng duy nhất: chạy tiếp
+db/learning_threads_p1_diag.sql (lần chạy RIÊNG) → dòng cuối CONFIG_GATE = PASS. (29/09: lần chạy đầu báo "ok"
+nhưng production có 0 dòng cấu hình → CTA ẩn.)
 Không có comment '--' (an toàn khi copy).
 */
 do $post$
@@ -233,5 +236,5 @@ select section, item, detail, status from (
          (select count(*) from public.learning_lesson_settings)::text || ' / ' || (select count(*) from public.learning_threads)::text
            || ' / ' || (select count(*) from public.learning_thread_events)::text, 'OK'
   union all
-  select 3, 'GATE', 'PASS', 'migration + smoke + cấu hình 3 bài DH2 xong', ''
+  select 3, 'GATE', 'PASS', 'CHƯA là bằng chứng đã lưu — chạy tiếp db/learning_threads_p1_diag.sql → CONFIG_GATE phải = PASS', ''
 ) z order by ord;

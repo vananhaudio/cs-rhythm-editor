@@ -2,6 +2,20 @@
 
 Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
+## 29/09/2026
+
+- **Learning Thread P1 — Trả bài / Hỏi bài theo bài học (PRODUCTION PASS)**
+  - **Mô hình:** một bài học = một thread đang mở cho mỗi học sinh. Trả bài, câu hỏi, Thầy phản hồi, "Cần làm lại", Trả lại và ĐẠT đều là event trong cùng thread. App học (riêng tư) và `/me` (Social) dùng chung dữ liệu, không có hệ Trả bài thứ hai.
+  - **Bảng:** `learning_lesson_settings` (Thầy bật theo từng bài: off / allowed / required; Hỏi bài off / allowed; không suy từ `lesson_type`), `learning_threads`, `learning_thread_events`. Chỉ truy cập qua RPC `lt_*` SECURITY DEFINER; bảng REVOKE hết và nằm trong `self_managed`.
+  - **Danh tính học tập** (lớp / chặng / khoá / chương / bài) được server đóng dấu lúc mở thread, không đổi theo hồ sơ về sau. Người xem ("Cộng đồng học tập" / "Chỉ Thầy") độc lập với lớp.
+  - **Không đổi:** ĐẠT không ghi tiến độ, không mở khoá bài. Nút "Tôi đã gửi bài cho thầy" và XP giữ nguyên. 9 bài Trả bài Social cũ giữ nguyên.
+  - **Giao diện:** khu vực trong bài học + Sổ tay hành trình (App), `/me/t/<id>`, hàng đợi Thầy `/me/queue`, khối "Trả bài / Hỏi bài của tôi".
+  - **Bật cho 3 bài DH2:** 4.3, 4.4 (Bolero móc kiểu 1/2), 6.3 (Dự án cuối khoá).
+  - **Bằng chứng production:** học sinh thật hỏi bài → Thầy "Cần làm lại" + bài giảng → học sinh Trả lại → Thầy ĐẠT, tất cả trong một thread.
+  - **Test:** DB 101, class-social 124, E2E Chrome 23 (stack local).
+  - **Sự cố khi release:** lần chạy script cấu hình đầu tiên để lại 0 dòng trên production, nên CTA ẩn. Từ nay chỉ chấp nhận `db/learning_threads_p1_diag.sql` với `CONFIG_GATE = PASS` làm bằng chứng.
+  - Chi tiết: `docs/LEARNING-THREAD-P1.md`.
+
 ## 23/08/2026
 
 - **Billing Foundation Class 2.0 (BƯỚC 8A — PHA B, code xong chưa chạy production)**: 6 bảng billing provider-neutral (`billing_customers`, `billing_provider_customers`, `billing_products`, `billing_subscriptions`, `billing_payments`, `billing_events`) + Billing Core (SECURITY DEFINER: `billing_ingest_event`, `billing_apply_event_internal`, `billing_record_manual_payment`, `billing_sanitize_payload`). Idempotency qua `UNIQUE(provider, external_event_id)`; manual fallback đi qua CÙNG business transition với webhook tương lai. RLS: anon không policy nào, authenticated chỉ teacher SELECT, mọi write qua trusted function. KHÔNG lưu card/CVV/PCI. Provider boundary chỉ là interface (`_shared/billing/provider.ts`, `getProviderAdapter()` = null); `billing-webhook` từ chối an toàn 503. CHƯA chạy migration production, CHƯA commit/deploy. Chi tiết: `docs/BILLING.md`.

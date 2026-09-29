@@ -54,6 +54,12 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 - `lesson_type`: video, text, slide, quiz, game, tap, metronome, backing_track, submit_video, discussion, link.
 - Mở khoá theo tier: free/basic/standard/pro → beginner/elementary/intermediate/advanced.
 
+## Learning Thread (Trả bài / Hỏi bài) — từ 29/09/2026
+- Trả bài / Hỏi bài = `learning_threads` + `learning_thread_events` (docs/LEARNING-THREAD-P1.md). **KHÔNG** tạo `class_posts` hay hệ Trả bài mới cho việc này. Frontend dùng chung ở `src/learning-thread/` (App + `/me/t/<id>` + `/me/queue`).
+- Bài nào được Trả/Hỏi bài là **CONFIG** ở `learning_lesson_settings` (Thầy bật qua `lt_set_lesson_settings`). Không suy từ `lesson_type`, không hardcode trong bundle.
+- Mọi đọc/ghi qua RPC `lt_*`. Server tự lấy `auth.uid()` và tự đóng dấu danh tính học tập; client không gửi learner / role / identity.
+- Bằng chứng "đã cấu hình" trên production = chạy riêng `db/learning_threads_p1_diag.sql` → `CONFIG_GATE = PASS`. Bảng kết quả của script cấu hình KHÔNG tính (sự cố 29/09).
+
 ## Design tokens
 - Desktop portal: accent `#4F46E5`, bg `#F4F4F5`, surface `#FFFFFF`.
 - Mobile (light): primary `#4338CA`, accent `#EA580C`, bg `#F0F2F5`.

@@ -2,6 +2,9 @@
 CHẨN ĐOÁN LEARNING THREAD P1 — READ-ONLY (một câu SELECT, không ghi gì; set_config chỉ trong câu lệnh này).
 Trả lời: cấu hình 3 bài DH2 có thật không · lesson_id có khớp bài App đang mở không · RPC lt_lessons_state
 trả gì cho CHÍNH học sinh vừa ghi nhận Bài 4.3 (đúng lời gọi của App) · quyền hàm · số thread.
+Dòng cuối CONFIG_GATE: PASS chỉ khi CẢ 3 bài DH2 có cấu hình allowed/allowed trong DB VÀ RPC (dưới danh tính học sinh)
+trả đúng allowed/allowed. Đây là bằng chứng DUY NHẤT được chấp nhận cho "đã cấu hình" — kết quả script sau migration
+(chạy trong transaction) không thay thế được, vì lần đầu 29/09 production thực tế có 0 dòng cấu hình.
 Không xuất email/SĐT/tên học sinh. Chỉ chú thích khối (an toàn khi copy).
 */
 with
@@ -68,9 +71,18 @@ fn as (
 counts as (
   select 70 as ord, 'counts' as section, 'threads / events' as item,
          (select count(*) from public.learning_threads)::text || ' / ' || (select count(*) from public.learning_thread_events)::text as detail
+),
+config_gate as (
+  select 99 as ord, 'CONFIG_GATE' as section,
+         case when (select count(*) from ids i join public.learning_lesson_settings s on s.content_key = 'L:' || i.id::text
+                     where s.submission_mode = 'allowed' and s.question_mode = 'allowed') = 3
+               and (select count(*) from sim where detail like 'sub=allowed · q=allowed%') = 3
+              then 'PASS' else 'STOP - CONFIG MISSING' end as item,
+         'db_rows=' || (select count(*) from ids i join public.learning_lesson_settings s on s.content_key = 'L:' || i.id::text)::text
+           || '/3 · rpc_allowed=' || (select count(*) from sim where detail like 'sub=allowed · q=allowed%')::text || '/3' as detail
 )
 select section, item, detail from (
   select * from settings union all select * from settings_count union all select * from lessons
   union all select * from twins union all select * from logs union all select * from sim
-  union all select * from fn union all select * from counts
+  union all select * from fn union all select * from counts union all select * from config_gate
 ) z order by ord, item;

@@ -4,7 +4,28 @@ App học ("TÔI HỌC", riêng tư) ↔ Social `/me` ("CHÚNG TA SỐNG CÙNG �
 Bài học = đơn vị nội dung · **Thread = đơn vị tương tác đào tạo** · App dẫn từng người học · Feed (sau) chiếu câu chuyện ·
 Hành trình (sau) xâu các thread thành lịch sử trưởng thành.
 
-Trạng thái: DB + frontend P1 xong trên nhánh `feat/learning-thread-p1`; test DB 99/99, frontend 124/124, E2E Chrome 23/23.
+**STATUS = PRODUCTION PASS (29/09/2026).** `main` `56c9960` · Netlify `index-CN0ugz2B.js` · DB migrated · 3 bài DH2 bật.
+
+### Bằng chứng production (Owner kiểm bằng tài khoản thật, 29/09/2026)
+
+Học sinh thật HS03 (tự học) và Thầy thật cùng làm trên bài thật DH2 · Bài 4.3 — Bolero móc kiểu 1:
+
+1. HS03 Hỏi bài → mở thread, trạng thái "Chờ Thầy phản hồi".
+2. Thầy mở thread → "Cần làm lại", có đính kèm bài giảng nên xem.
+3. HS03 thấy phản hồi → Trả lại, trong CÙNG thread.
+4. Thầy → ĐẠT.
+
+Danh tính lịch sử hiển thị đúng: "Tự học · DH2 → Chương 4 → Bài 4.3". "Cộng đồng học tập" hoạt động, App và `/me` cùng một dữ liệu. Thread thật này được giữ nguyên làm bằng chứng: không xoá, không ẩn.
+
+### Sự cố khi release và cách chặn tái diễn
+
+- **Sự cố:** lần chạy `db/learning_threads_p1_post_migration.sql` đầu tiên được báo "ok", nhưng production có **0** dòng `learning_lesson_settings`. RPC trả off/off nên panel ẩn đúng thiết kế, và Owner thấy UI cũ trên Bài 4.3.
+- **Khắc phục:** chạy lại script (GATE PASS, smoke 23/23). `db/learning_threads_p1_diag.sql` xác nhận 3 dòng đã lưu và RPC dưới danh tính học sinh trả allowed/allowed.
+- **Quy tắc từ nay:** bảng kết quả của script cấu hình KHÔNG phải bằng chứng, vì nó đọc trong cùng transaction. Chỉ chấp nhận `db/learning_threads_p1_diag.sql` chạy **riêng** với dòng cuối `CONFIG_GATE = PASS`. `CONFIG_GATE` đọc lại DB và gọi RPC dưới danh tính học sinh; khi có 0 dòng thì báo `STOP - CONFIG MISSING`. `scripts/test-learning-threads-db.sh` kiểm cả hai chiều.
+
+### P1 KHÔNG làm (có chủ đích)
+
+Feed projection · Journey timeline · tự ghi tiến độ · mở khoá bài · HT2027/Solo · build App Store (app native chỉ có P1 khi build lại + nộp store).
 
 ## Quyết định Owner (29/09/2026)
 
@@ -105,7 +126,8 @@ Một bộ component dùng chung cho App (private view) và Social (social view)
      - Bài 4.4 — Bolero móc kiểu 2 (`a85592d5-b519-470d-84d0-4d9182d224b3`)
      - Bài 6.3 — Dự án cuối khoá: tự chọn 1 bài, tự đệm và thu lại nộp (`d2c00805-0000-4000-8000-000000000000`)
    - Lời dặn chung: "Bạn có thể gửi phần thực hành của bài này hoặc đặt câu hỏi cho Thầy."
-4. Merge `main` → Netlify deploy web. App native chỉ nhận khi build lại và nộp store (bundled).
+4. **Chạy riêng `db/learning_threads_p1_diag.sql` → `CONFIG_GATE = PASS`.** Đây là bằng chứng bắt buộc trước khi báo đã cấu hình.
+5. Merge `main` → Netlify deploy web. App native chỉ nhận khi build lại và nộp store (bundled).
 
 Rollback: `db/learning_threads_p1_rollback.sql`. Script này **xoá** mọi thread và cấu hình. Muốn giữ dữ liệu thì chỉ gỡ frontend.
 
@@ -121,7 +143,7 @@ Rollback: `db/learning_threads_p1_rollback.sql`. Script này **xoá** mọi thre
 
 ## Chưa làm (có chủ đích)
 
-- Feed/tường/trang Hành trình; "Cộng đồng đang học bài này".
+- Feed/tường/trang Hành trình → P2; "Cộng đồng đang học bài này".
 - Tự ghi tiến độ và mở khoá khi `required` + ĐẠT (P2).
 - Upload video native (hiện chỉ nhận link ngoài).
 - Thread cho buổi HT2027/Solo: nội dung buổi hiện ở `class_lesson_content` (Step 2C). Sẽ thêm `content_kind` phù hợp khi làm.
