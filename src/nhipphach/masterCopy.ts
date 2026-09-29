@@ -1,6 +1,6 @@
 import { parseMusicXML } from "../musicxml-beats/parser.ts";
 import { byteLength, sha256Hex } from "./scoreHash.ts";
-import type { SaveResult, ScoreLibrary } from "./libraryRepository.ts";
+import type { DuplicateHit, SaveResult, ScoreLibrary } from "./libraryRepository.ts";
 
 /** Source-only handoff. The saved Nhịp Phách version never reads Master again. */
 export interface MasterCopySource {
@@ -41,4 +41,27 @@ export async function copyMasterToNhipPhach(source: MasterCopySource, library: P
     sourceFilename: source.originalFilename, xml: source.musicxmlText,
     changeType: "import", primaryMeter: null, pageCount: null,
   });
+}
+
+/**
+ * Nhịp Phách đã có bản CÙNG SHA-256 với bản gốc chưa? Dùng lại `findDuplicate`
+ * của kho — không có cơ chế dò trùng thứ hai. Tên/tác giả/tên file KHÔNG tham gia.
+ */
+export function findExistingCopy(source: MasterCopySource, library: Pick<ScoreLibrary, "findDuplicate">): Promise<DuplicateHit | null> {
+  return library.findDuplicate(source.musicxmlText);
+}
+
+/**
+ * Mở bài đã có thay vì sao chép thêm: đọc phiên bản HIỆN HÀNH của bài đó (con trỏ
+ * current chỉ tiến, nên là số phiên bản lớn nhất) — cùng đường `versions` +
+ * `readVersion` mà ScoreLibraryPanel dùng. Không tải file, không tạo phiên bản.
+ */
+export async function openExistingCopy(hit: DuplicateHit, library: Pick<ScoreLibrary, "versions" | "readVersion">) {
+  const [current] = await library.versions(hit.scoreId);
+  if (!current) throw new Error("Bài đã có trong Nhịp Phách chưa có phiên bản nào để mở.");
+  const xml = await library.readVersion(current);
+  return {
+    xml, name: hit.title, scoreId: hit.scoreId, versionId: current.id,
+    versionNumber: current.versionNumber, isCurrent: true,
+  };
 }

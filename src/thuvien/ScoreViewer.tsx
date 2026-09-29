@@ -73,8 +73,11 @@ export default function ScoreViewer({ id, initial, onClose, onSaved }: {
         <h1>{heading?.title ?? 'Bản nhạc'}</h1>
         {heading?.composer && <p>{heading.composer}</p>}
       </div>
-      {heading && !editing && state.kind !== 'loading' &&
-        <button type="button" className="tv-edit" onClick={() => setEditing(true)}>Sửa thông tin</button>}
+      {heading && !editing && state.kind !== 'loading' && <div className="tv-actions">
+        <button type="button" className="tv-edit" onClick={() => setEditing(true)}>Sửa thông tin</button>
+        {/* Cùng tab, chỉ mang id: Nhịp Phách tự đọc + kiểm bản gốc và tự sao chép. */}
+        <a className="tv-np" href={`/nhipphach?master=${encodeURIComponent(id)}`}>Đưa vào Nhịp &amp; Phách</a>
+      </div>}
     </header>
     {editing && heading && <MetadataForm id={id} heading={heading} onCancel={() => setEditing(false)}
       onSaved={item => { setHeading({ title: item.title, composer: item.composer }); setEditing(false); onSaved(item) }} />}
