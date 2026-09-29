@@ -63,7 +63,7 @@ export default function TeacherQueue({ onOpenThread, onBack }: { onOpenThread: (
       {load.status === 'ready' && (
         <>
           <QueueList items={load.items} onOpen={onOpenThread}
-            empty={tab === 'waiting_teacher' ? 'Không có bài nào đang chờ Thầy.' : 'Chưa có cuộc trao đổi nào ở mục này.'} />
+            empty={tab === 'waiting_teacher' ? 'Hiện không có bài nào đang chờ phản hồi.' : 'Chưa có cuộc trao đổi nào ở mục này.'} />
           {load.hasMore && <button type="button" className="lt-btn is-ghost" disabled={more} onClick={() => void loadMore()}>{more ? 'Đang tải…' : 'Xem thêm'}</button>}
         </>
       )}

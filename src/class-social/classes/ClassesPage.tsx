@@ -41,8 +41,8 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
             <h2 id="cs-mine-title" className="cs-feed-title">Lớp của tôi</h2>
             {mine.length > 0
               ? <div className="cs-class-grid">{mine.map(c => <ClassTile key={c.id} c={c} onOpen={onOpenClass} />)}</div>
-              : <EmptyState icon={GraduationCap} title={q ? 'Không có lớp nào khớp' : 'Bạn chưa ở trong lớp nào'} quiet>
-                  {q ? 'Thử tìm bằng tên khác.' : 'Khi được xếp vào lớp, lớp sẽ hiện ở đây.'}
+              : <EmptyState icon={GraduationCap} title={q ? 'Không tìm thấy lớp phù hợp.' : 'Bạn chưa ở trong lớp nào'} quiet>
+                  {q ? 'Thử tìm bằng tên lớp khác.' : 'Khi được xếp vào lớp, lớp sẽ hiện ở đây.'}
                 </EmptyState>}
           </section>
           <section className="cs-classes-discover" aria-labelledby="cs-discover-title">
@@ -50,7 +50,7 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
             <p className="cs-section-hint">Xem các lớp khác đang học gì.</p>
             {discover.length > 0
               ? <div className="cs-class-grid">{discover.map(c => <ClassTile key={c.id} c={c} onOpen={onOpenClass} />)}</div>
-              : <p className="cs-section-hint">Hiện chưa có lớp nào khác đang mở.</p>}
+              : <p className="cs-section-hint">{q ? 'Không tìm thấy lớp phù hợp.' : 'Hiện chưa có lớp nào khác đang mở.'}</p>}
           </section>
         </>
       )}

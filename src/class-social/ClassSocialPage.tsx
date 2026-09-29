@@ -27,7 +27,7 @@ import ClassesPage from './classes/ClassesPage'
 import ClassPage from './classes/ClassPage'
 
 const TITLES: Record<SocialSection, string> = {
-  home: 'Thầy Văn Anh Guitar',
+  home: 'Trang chủ · Thầy Văn Anh Guitar',
   friends: 'Bạn bè · Thầy Văn Anh Guitar',
   chat: 'Trò chuyện · Thầy Văn Anh Guitar',
   tools: 'Công cụ âm nhạc · Thầy Văn Anh Guitar',
@@ -70,7 +70,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
 
   const signedIn = session.status === 'ready'
   useEffect(() => {
-    if (!signedIn) document.title = 'Đăng nhập · ' + TITLES.home
+    if (!signedIn) document.title = 'Đăng nhập · Thầy Văn Anh Guitar'
     else if (view.kind === 'section') document.title = TITLES[view.section]
     else if (view.kind === 'classes') document.title = 'Lớp học · Thầy Văn Anh Guitar'
     // trang cá nhân tự đặt tiêu đề theo tên người

@@ -16,7 +16,8 @@ export default function CommunityFeed({ state, onRetry, onLoadMore, social }: {
 }) {
   return (
     <section className="cs-feed" aria-labelledby="cs-feed-title" aria-busy={state.status === 'loading'}>
-      <h2 id="cs-feed-title" className="cs-feed-title">Cộng Đồng Hành Trình Guitar</h2>
+      {/* Home đã là ngữ cảnh cộng đồng → tiêu đề chỉ cho trình đọc màn hình, không lặp chữ "Cộng đồng" */}
+      <h2 id="cs-feed-title" className="cs-sr-only">Hoạt động mới</h2>
 
       {state.status === 'loading' && (
         <div className="cs-card cs-post" aria-label="Đang tải">

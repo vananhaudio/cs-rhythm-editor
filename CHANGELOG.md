@@ -4,6 +4,21 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social — UX polish Phase 2 (`/me`) · chỉ trình bày, không DB/RPC/quyền**
+  - **Ô chia sẻ trên điện thoại:** 4 gợi ý xếp 2 × 2, luôn thấy đủ ở 320–430px. Thay cách vuốt ngang cũ, vốn che mất gợi ý cuối.
+  - **Quay lại giữ tab:** Hành trình → cuộc trao đổi → Quay lại vẫn ở tab Hành trình; lớp giữ tab Hoạt động/Thành viên. Tab được nhớ trong `history.state`, không đổi URL.
+  - **Thầy phản hồi:** một nút chính "Gửi phản hồi". "Cần làm lại" (vàng ấm) và "Đạt" (xanh nhạt) thành nút phụ, đặt tách xa để tránh bấm nhầm. Logic giữ nguyên.
+  - **Bớt chữ, bớt hộp:**
+    - Bỏ tiêu đề lặp "Cộng Đồng Hành Trình Guitar" trên Home; vẫn giữ cho trình đọc màn hình.
+    - Ghi chú "quyền Thầy" trên tường thành một dòng nhỏ.
+    - Tường khoá, Hành trình rỗng ("Chưa có dấu mốc học tập.") và hàng đợi rỗng dùng bản nhẹ.
+    - Nhãn "Thầy" trong bình luận dùng nền nhạt.
+    - Ghi chú mục khoá trên menu ngắn lại.
+  - **Tìm lớp:** không có kết quả → "Không tìm thấy lớp phù hợp." ở cả Lớp của tôi và Khám phá. Tab lọc hàng đợi xuống dòng thay vì bị cắt.
+  - **Tiêu đề tab trình duyệt:** "Trang chủ · Thầy Văn Anh Guitar".
+  - **E2E mới:** composer 320/360/390px; "Quay lại" (Home, Hành trình giữ tab, lớp, link thẳng); đúng một mục menu sáng; không lộ enum thô; menu ☰ đóng sau khi chọn lớp.
+  - Nguyên tắc UX và OPEN ITEMS: `docs/SOCIAL-UX.md`.
+
 - **Class Social — UX polish (`/me`) · chỉ trình bày, không migration, không đổi RPC/dữ liệu**
   - **Feed:** thẻ câu chuyện học tập đọc trong 2–4 giây: tên → thời gian · danh tính ngắn (chữ nhỏ, không còn nhãn tím) → "🎸 Trả bài / ❓ Hỏi bài" (chữ thường) → tên bài → chương dạng "Chương 4 · …" (không đổi dữ liệu). Chỉ kể "Thầy vừa nhận xét…" khi Thầy vừa phản hồi hoặc học sinh trả lại bài. Trạng thái dùng nhãn cho người xem: "Chờ Thầy phản hồi". Nút "Xem cuộc trao đổi" là nút nhạt, không phải một dãy nút tím đặc.
   - **Bài Social:** bỏ nhãn "BÀI VIẾT" ở bài thường; "Trả bài / Hỏi bài" là nhãn nhẹ; "🔒 Bạn bè" nằm cạnh thời gian.

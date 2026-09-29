@@ -16,7 +16,7 @@ export type NavItem =
 
 export type NavGroup = { id: string; title: string; items: NavItem[] }
 
-export const HT_ONLY_NOTE = 'Dành cho học sinh lớp Hành trình'
+export const HT_ONLY_NOTE = 'Dành cho lớp Hành trình'
 
 export const NAV_GROUPS: NavGroup[] = [
   {

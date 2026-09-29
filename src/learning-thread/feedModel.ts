@@ -125,16 +125,30 @@ export function toJourneyItem(r: JourneyRow): JourneyItem | null {
   }
 }
 
-/** Tóm tắt một mốc: chuỗi bước ngắn (không bung nội dung). */
-export function eventSteps(events: JourneyEvent[]): { icon: string; label: string }[] {
+export type JourneyStep = { icon: string; label: string; times?: number }
+
+/** Tóm tắt một mốc: chuỗi bước ngắn (không bung nội dung). Nhiều vòng "Cần làm lại → Trả lại" liên tiếp
+ *  gộp thành MỘT cặp kèm số vòng (×n) — Hành trình kể câu chuyện, không liệt kê từng lượt. */
+export function eventSteps(events: JourneyEvent[]): JourneyStep[] {
   let seenSub = false
-  const out: { icon: string; label: string }[] = []
+  const out: JourneyStep[] = []
   for (const e of events) {
     if (e.kind === 'submission') { out.push({ icon: '🎸', label: seenSub ? 'Trả lại' : 'Trả bài' }); seenSub = true }
     else if (e.kind === 'question') out.push({ icon: '❓', label: 'Hỏi bài' })
     else if (e.kind === 'teacher_answer') out.push({ icon: '💬', label: 'Thầy trả lời' })
     else out.push(e.verdict === 'pass' ? { icon: '✅', label: 'Đạt' } : e.verdict === 'retry' ? { icon: '🔄', label: 'Cần làm lại' } : { icon: '💬', label: 'Thầy nhận xét' })
     if (e.authorRole === 'teacher' && e.hasResources) out.push({ icon: '📘', label: 'Bài giảng nên xem' })
+  }
+  return collapseCycles(out)
+}
+
+function collapseCycles(steps: JourneyStep[]): JourneyStep[] {
+  const out: JourneyStep[] = []
+  for (let i = 0; i < steps.length;) {
+    const a = steps[i], b = steps[i + 1]
+    let n = 1
+    if (b) while (steps[i + 2 * n]?.label === a.label && steps[i + 2 * n + 1]?.label === b.label) n++
+    if (n > 1) { out.push(a, { ...b, times: n }); i += 2 * n } else { out.push(a); i++ }
   }
   return out
 }

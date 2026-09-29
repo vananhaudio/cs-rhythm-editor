@@ -46,7 +46,8 @@ export function ThreadHeader({ thread, onOpenProfile }: { thread: ThreadDetail; 
         {module && <span className="lt-head-module">{module}</span>}
         <span className="lt-head-identity" title="Lớp / khoá lúc bắt đầu cuộc trao đổi">{context}</span>
         <div className="lt-head-meta">
-          <StatusChip status={thread.status} />
+          {/* Chính chủ thấy "Đã gửi · …" như trong App; người khác (Thầy, bạn) thấy nhãn của người xem */}
+          <StatusChip status={thread.status} social={!thread.isMine} />
           <span className="lt-badge">{VISIBILITY_LABEL[thread.visibility]}</span>
           {thread.isHidden && <span className="lt-badge">Đang ẩn</span>}
         </div>
@@ -76,8 +77,9 @@ function EventItem({ e, label, now, canModerate, onModerate, onOpenProfile }: {
         <div className="lt-ev-bubble">
           <div className="lt-ev-head">
             <span className="lt-ev-author">{e.author.name}</span>
-            {teacher && !label.startsWith('Thầy') && <span className="lt-ev-role">Thầy</span>}
-            <span className="lt-ev-kind">· {label}</span>
+            {teacher && <span className="lt-ev-role">Thầy</span>}
+            {/* Bong bóng Thầy đã có nhãn "Thầy" → "nhận xét · Đạt" (không lặp "Thầy … Thầy nhận xét") */}
+            <span className="lt-ev-kind">· {teacher ? label.replace(/^Thầy /, '') : label}</span>
             {e.createdAt && <time className="lt-ev-time" dateTime={e.createdAt} title={fullTime(e.createdAt)}>{relativeTime(e.createdAt, now)}</time>}
           </div>
           {e.body && <p className="lt-ev-body">{e.body}</p>}

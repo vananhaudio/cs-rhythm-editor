@@ -780,10 +780,18 @@
 .cs-home > .cs-friends-card + .cs-friends-card { margin-top: 0; }
 .cs-friends-total { font-size: 14px; font-weight: 600; color: var(--cs-faint); }
 @media (max-width: 480px) {
-  /* 4 gợi ý chia sẻ trên MỘT hàng; thiếu chỗ thì vuốt ngang (không xuống dòng lẻ một chip) */
-  .cs-share-prompts { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; }
-  .cs-share-prompts::-webkit-scrollbar { display: none; }
-  .cs-share-chip { flex-shrink: 0; padding: 6px 7px; font-size: 12.5px; }
+  /* Điện thoại: 4 gợi ý chia sẻ xếp 2 × 2 — luôn thấy đủ cả bốn, không vuốt ngang, không chip bị cắt */
+  .cs-share-prompts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 4px; }
+  .cs-share-chip { justify-content: flex-start; min-width: 0; white-space: nowrap; }
 }
 /* /me/classes: hai nhóm là tiêu đề thật của trang (không phải nhãn nhỏ của Feed) */
 .cs-classes-mine .cs-feed-title, .cs-classes-discover .cs-feed-title { font-size: 17px; font-weight: 800; color: var(--cs-text); }
+
+/* ── UX polish 2 (30/09) ─────────────────────────────────────────────────── */
+/* Ghi chú quyền Thầy trên tường: một dòng chữ nhỏ, không hộp */
+.cs-profile-note { background: none; padding: 0 4px; font-size: 13px; font-weight: 600; color: var(--cs-muted); gap: 6px; }
+/* Nhãn Thầy trong bình luận: nhẹ, chữ thường (không khối tím đặc) */
+.cs-cmt-badge { background: var(--cs-p-soft); color: var(--cs-p-strong); text-transform: none; letter-spacing: 0; font-size: 11.5px; font-weight: 700; }
+.cs-cmt.is-teacher .cs-cmt-bubble { border-color: #ece4fb; }
+/* Menu: mục khoá — ghi chú một dòng ngắn */
+.cs-nav-item.is-restricted .cs-nav-note { font-size: 11px; }

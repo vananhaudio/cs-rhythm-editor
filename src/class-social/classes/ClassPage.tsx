@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Users } from 'lucide-react'
 import '../../learning-thread/styles'
 import { EmptyState } from '../ui'
+import { useHistoryTab } from '../useHistoryTab'
 import { usePostsFeed } from '../posts/useCommunityFeed'
 import type { PostSocial } from '../sections/PostCard'
 import FeedEntryCard from '../sections/FeedEntryCard'
@@ -12,6 +13,8 @@ import { respondFriendRequest, sendFriendRequest } from '../friends/friendsApi'
 import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './classesApi'
 import type { ClassCard, ClassMember } from './classModel'
 import { ClassHeader, MemberList } from './ClassParts'
+
+const CLASS_TABS = ['activity', 'members'] as const
 
 type Load<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
 
@@ -22,7 +25,7 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
   onOpenClasses: () => void
 }) {
   const [detail, setDetail] = useState<Load<ClassCard>>({ status: 'loading' })
-  const [tab, setTab] = useState<'activity' | 'members'>('activity')
+  const [tab, setTab] = useHistoryTab<'activity' | 'members'>('csClassTab', 'activity', CLASS_TABS)
   const [members, setMembers] = useState<Load<ClassMember[]> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actError, setActError] = useState<string | null>(null)

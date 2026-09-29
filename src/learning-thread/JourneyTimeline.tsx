@@ -11,7 +11,12 @@ export default function JourneyTimeline({ items, ownerName, onOpenThread }: {
 }) {
   const phases = groupJourney(items)
   if (phases.length === 0) {
-    return <p className="lt-card lt-empty">Hành trình của {ownerName} sẽ hiện ở đây khi có lượt Trả bài / Hỏi bài đầu tiên.</p>
+    return (
+      <div className="lt-journey-empty" role="status">
+        <b>Chưa có dấu mốc học tập.</b>
+        <span>Những lần Trả bài, Hỏi bài của {ownerName} sẽ dần tạo nên Hành trình tại đây.</span>
+      </div>
+    )
   }
   return (
     <section className="lt-journey" aria-label={`Hành trình âm nhạc của ${ownerName}`}>
@@ -38,7 +43,7 @@ export default function JourneyTimeline({ items, ownerName, onOpenThread }: {
                     <>
                       <span className="lt-ms-lesson">{it.identity.lesson.title}</span>
                       {module && <span className="lt-ms-module">{module}</span>}
-                      <span className="lt-ms-steps">{steps.map((s, i) => <span key={i} className="lt-ms-step">{s.icon} {s.label}</span>)}</span>
+                      <span className="lt-ms-steps">{steps.map((s, i) => <span key={i} className="lt-ms-step">{s.icon} {s.label}{s.times ? <span className="lt-ms-times" aria-label={`${s.times} lần`}> ×{s.times}</span> : null}</span>)}</span>
                       <span className="lt-ms-meta">
                         <span className={'lt-chip is-' + st.tone}>{SOCIAL_STATUS_LABEL[it.status]}</span>
                         {it.visibility === 'private' && <span className="lt-badge">{VISIBILITY_LABEL.private}</span>}

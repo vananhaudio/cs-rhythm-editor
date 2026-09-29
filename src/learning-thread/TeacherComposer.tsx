@@ -90,13 +90,13 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
       )}
       {error && <p className="lt-error" role="alert">{error}</p>}
       <div className="lt-compose-foot">
-        <button type="button" className="lt-btn" disabled={busy || !body.trim()} onClick={() => void send(null)}>
+        <button type="button" className="lt-btn is-primary" disabled={busy || !body.trim()} onClick={() => void send(null)}>
           {sending === 'none' ? 'Đang gửi…' : 'Gửi phản hồi'}
         </button>
-        <button type="button" className="lt-btn is-warn" disabled={busy || !body.trim()} onClick={() => void send('retry')}>
+        <button type="button" className="lt-btn is-warn-soft" disabled={busy || !body.trim()} onClick={() => void send('retry')}>
           {sending === 'retry' ? 'Đang gửi…' : 'Cần làm lại'}
         </button>
-        <button type="button" className="lt-btn is-ok" disabled={busy || !body.trim()} onClick={() => void send('pass')}>
+        <button type="button" className="lt-btn is-ok-soft" disabled={busy || !body.trim()} onClick={() => void send('pass')}>
           {sending === 'pass' ? 'Đang gửi…' : 'Đạt'}
         </button>
       </div>

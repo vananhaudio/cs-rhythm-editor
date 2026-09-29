@@ -16,11 +16,14 @@ import {
 } from '../friends/friendsApi'
 import { lockedWallText, relationshipUi, type FriendAction, type PublicProfile } from '../friends/friendModel'
 import { Avatar, EmptyState } from '../ui'
+import { useHistoryTab } from '../useHistoryTab'
 import IdentityHeader from './IdentityHeader'
 import WallComposer from './WallComposer'
 import type { PostSocial } from './PostCard'
 import FeedEntryCard from './FeedEntryCard'
 import JourneyView from '../../learning-thread/JourneyView'
+
+const PROFILE_TABS = ['wall', 'journey'] as const
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'missing' } | { status: 'ready'; profile: PublicProfile }
 
@@ -40,7 +43,7 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [busy, setBusy] = useState(false)
   // Tab trang cá nhân: Tường (bài + câu chuyện học tập) | Hành trình (timeline Learning Thread theo chặng)
-  const [tab, setTab] = useState<'wall' | 'journey'>('wall')
+  const [tab, setTab] = useHistoryTab<'wall' | 'journey'>('csProfileTab', 'wall', PROFILE_TABS)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const [prevUser, setPrevUser] = useState(userId)
@@ -120,7 +123,7 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
         : <OtherHeader profile={p} status={ui.status} actions={ui.actions} busy={busy} onAct={a => void act(a)} />}
       {actionError && <p className="cs-form-error" role="alert">{actionError}</p>}
       {moderatorView && (
-        <p className="cs-profile-note"><ShieldCheck size={16} aria-hidden="true" />Bạn đang xem tường này với quyền Thầy (kiểm duyệt).</p>
+        <p className="cs-profile-note"><ShieldCheck size={15} aria-hidden="true" />Bạn đang xem với quyền Thầy.</p>
       )}
       <div className="lt-profile-tabs" role="group" aria-label="Trang cá nhân">
         <button type="button" aria-pressed={tab === 'wall'} onClick={() => setTab('wall')}>Tường</button>
@@ -132,8 +135,8 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
       {tab === 'wall' && <>{p.canViewWall
         ? <Wall me={me} userId={userId} isSelf={isSelf} identityRev={identityRev} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
         : (
-          <section className="cs-card cs-wall-locked" aria-label="Tường đang khoá">
-            <EmptyState icon={Lock} title="Chỉ bạn bè mới xem được bài đăng">{lockedWallText(p.relationship, p.name)}</EmptyState>
+          <section className="cs-wall-locked" aria-label="Tường chỉ dành cho bạn bè">
+            <EmptyState icon={Lock} title="Chỉ bạn bè mới xem được bài đăng" quiet>{lockedWallText(p.relationship, p.name)}</EmptyState>
           </section>
         )}</>}
     </div>

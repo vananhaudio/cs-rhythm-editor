@@ -113,7 +113,7 @@ try {
   await waitText(page, /Thầy phản hồi/)
   await page.type('.lt-compose textarea', 'Tay phải móc chưa đều, em tập chậm lại rồi quay lại nhé.')
   await clickText(page, 'Cần làm lại')
-  await waitText(page, /Thầy nhận xét · Cần làm lại/)
+  await waitText(page, /Thầy· nhận xét · Cần làm lại/)
   await waitText(page, /Cần làm lại/)
   ok('Thầy mở /me/t/<id> → phản hồi "Cần làm lại" → timeline cập nhật')
   await ctx.close()
@@ -140,7 +140,7 @@ try {
   ok('Link /me/t/<id> giữ nguyên qua bước đăng nhập')
   await page.type('.lt-compose textarea', 'Lần này đều rồi. Đạt!')
   await clickText(page, 'Đạt')
-  await waitText(page, /Thầy nhận xét · Đạt/)
+  await waitText(page, /Thầy· nhận xét · Đạt/)
   await waitText(page, /Đã đạt/)
   ok('Thầy chấm ĐẠT → Đã đạt')
   await page.screenshot({ path: `${SHOTS}/5-thread-passed.png`, fullPage: true })
@@ -224,7 +224,7 @@ try {
   await page.goto(ME + '/t/' + threadId, { waitUntil: 'networkidle0' })
   await page.waitForSelector('#cs-login-email')
   await page.type('#cs-login-email', 't@test.local'); await page.type('#cs-login-pass', 'e2e'); await page.click('.cs-guest-submit')
-  await waitText(page, /Thầy nhận xét · Đạt/, 15000)
+  await waitText(page, /Thầy· nhận xét · Đạt/, 15000)
   await noHorizontalOverflow(page, '/me/t/<id> desktop 1280px')
   await page.screenshot({ path: `${SHOTS}/8-desktop-thread.png`, fullPage: true })
   await ctx.close()
@@ -260,7 +260,7 @@ try {
   ok('Bấm mốc Hành trình → mở đúng /me/t/<id>')
   await page.goto(`${ME}/u/bbbbbbbb-0000-4000-8000-00000000000b`, { waitUntil: 'networkidle0' })
   await clickText(page, 'Hành trình')
-  await waitText(page, /Hành trình của Bình sẽ hiện ở đây/, 15000)
+  await waitText(page, /Chưa có dấu mốc học tập\./, 15000)
   ok('C xem Hành trình của B: thread "Chỉ Thầy" KHÔNG lộ (server lọc)')
   await ctx.close()
   ;({ ctx, page } = await meAs('b@test.local'))
@@ -351,6 +351,89 @@ try {
   await noHorizontalOverflow(page, 'Home /me (390px)')
   await page.screenshot({ path: `${SHOTS}/14-mobile-menu.png` })
   await ctx.close()
+
+  // ── UX polish 2: composer, Quay lại, mục menu sáng, không lộ enum thô ────────────────────────
+  const RAW = /\b(waiting_teacher|teacher_responded|needs_retry|passed|archived|community|private|ending_soon|ready_to_open|scheduled|upcoming|recruiting|active)\b/
+  const noRaw = async (pg, label) => { const t = await text(pg); const m = RAW.exec(t); assert.equal(m, null, `${label}: lộ giá trị kỹ thuật "${m?.[0]}"`) }
+  const loginAt = async (email, width, path = '') => {
+    const { ctx: c, page: pg } = await ctxPage(width)
+    await pg.goto(ME + path, { waitUntil: 'networkidle0' })
+    await pg.waitForSelector('#cs-login-email', { timeout: 15000 })
+    await pg.type('#cs-login-email', email); await pg.type('#cs-login-pass', 'e2e'); await pg.click('.cs-guest-submit')
+    return { c, pg }
+  }
+  const pathNow = pg => pg.evaluate(() => location.pathname)
+  const pressedTab = pg => pg.evaluate(() => document.querySelector('.lt-profile-tabs [aria-pressed="true"]')?.textContent ?? null)
+  for (const w of [320, 360, 390]) {
+    const { c, pg } = await loginAt('c@test.local', w)
+    await pg.waitForSelector('.cs-share-chip', { timeout: 15000 })
+    const chips = await pg.$$eval('.cs-share-chip', els => els.map(e => { const r = e.getBoundingClientRect(); return { t: e.textContent.trim(), inside: r.left >= 0 && r.right <= innerWidth && r.width > 0 } }))
+    assert.deepEqual(chips.map(x => x.t.replace(/^\S+\s/, '')), ['Đang tập', 'Vừa đàn', 'Nhờ góp ý', 'Chia sẻ'])
+    assert.ok(chips.every(x => x.inside), `${w}px: một gợi ý chia sẻ bị cắt ${JSON.stringify(chips)}`)
+    await noHorizontalOverflow(pg, `Home ${w}px`)
+    await c.close()
+  }
+  ok('Composer 320/360/390px: đủ 4 gợi ý "Đang tập · Vừa đàn · Nhờ góp ý · Chia sẻ", không cái nào bị cắt')
+
+  {
+    const { c, pg } = await loginAt('c@test.local', 390)
+    await pg.waitForSelector('.lt-feed-card .cs-post-author', { timeout: 15000 })
+    await noRaw(pg, 'Home')
+    // Home → trang cá nhân → Quay lại = Home
+    await pg.$eval('.lt-feed-card .cs-post-author', b => b.click())
+    await pg.waitForFunction(() => location.pathname.startsWith('/me/u/'))
+    const profilePath = await pathNow(pg)
+    await clickText(pg, 'Quay lại'); await pg.waitForFunction(() => location.pathname === '/me')
+    // Home → Hành trình → mốc → cuộc trao đổi → Quay lại = đúng trang cá nhân, VẪN ở tab Hành trình
+    await pg.waitForSelector('.lt-feed-card .cs-post-author', { timeout: 15000 })
+    await pg.$eval('.lt-feed-card .cs-post-author', b => b.click())
+    await pg.waitForFunction(p => location.pathname === p, {}, profilePath)
+    await clickText(pg, 'Hành trình'); await pg.waitForSelector('.lt-ms-btn', { timeout: 15000 })
+    await noRaw(pg, 'Hành trình')
+    await pg.$eval('.lt-ms-btn', b => b.click())
+    await pg.waitForSelector('.lt-head', { timeout: 15000 })
+    await noRaw(pg, 'Cuộc trao đổi')
+    await clickText(pg, 'Quay lại')
+    await pg.waitForFunction(p => location.pathname === p, {}, profilePath)
+    await pg.waitForSelector('.lt-ms-btn', { timeout: 15000 })
+    assert.equal(await pressedTab(pg), 'Hành trình', 'Quay lại từ cuộc trao đổi giữ tab Hành trình')
+    // ☰ → lớp (menu đóng) → Hoạt động → cuộc trao đổi → Quay lại = lớp
+    await pg.goto(ME, { waitUntil: 'networkidle0' })
+    await pg.click('.cs-menu-btn'); await pg.waitForSelector('.cs-sheet')
+    await clickText(pg, 'Đệm hát căn bản')
+    await pg.waitForFunction(() => location.pathname.startsWith('/me/classes/'))
+    assert.equal(await pg.$('.cs-sheet'), null, 'bấm lớp trong ☰ → menu đóng')
+    const cls = await pathNow(pg)
+    await pg.waitForSelector('.lt-feed-open', { timeout: 15000 })
+    await noRaw(pg, 'Trang lớp')
+    await pg.$eval('.lt-feed-open', b => b.click())
+    await pg.waitForSelector('.lt-head', { timeout: 15000 })
+    await clickText(pg, 'Quay lại'); await pg.waitForFunction(p => location.pathname === p, {}, cls)
+    await clickText(pg, 'Lớp học'); await pg.waitForFunction(() => location.pathname === '/me/classes')
+    await noRaw(pg, '/me/classes')
+    await c.close()
+    ok('Quay lại: Home→Profile→Home · Hành trình→cuộc trao đổi→Hành trình (giữ tab) · ☰→lớp (menu đóng)→cuộc trao đổi→lớp→Tất cả lớp; không lộ enum')
+  }
+  {
+    // Link thẳng tới cuộc trao đổi (qua đăng nhập) → Quay lại = Trang chủ
+    const { c, pg } = await loginAt('t@test.local', 390, '/t/' + threadId)
+    await pg.waitForSelector('.lt-head', { timeout: 15000 })
+    await clickText(pg, 'Quay lại'); await pg.waitForFunction(() => location.pathname === '/me')
+    await c.close()
+    // Desktop: đúng MỘT mục menu sáng ở từng màn
+    const { c: c2, pg: p2 } = await loginAt('a@test.local', 1280)
+    await p2.waitForSelector('.cs-share', { timeout: 15000 })
+    const active = () => p2.$$eval('.cs-sidebar .cs-nav-item.is-active', els => els.map(e => e.textContent.trim()))
+    assert.deepEqual(await active(), ['Trang chủ'])
+    await p2.goto(ME + '/friends', { waitUntil: 'networkidle0' }); await p2.waitForSelector('.cs-page-title')
+    assert.deepEqual(await active(), ['Bạn bè'])
+    await p2.goto(ME + '/classes', { waitUntil: 'networkidle0' }); await p2.waitForSelector('.cs-class-tile')
+    assert.deepEqual(await active(), ['Tất cả lớp'])
+    await p2.$eval('.cs-class-tile', b => b.click()); await p2.waitForSelector('.cs-class-name')
+    assert.deepEqual(await active(), ['Đệm hát căn bản'])
+    await c2.close()
+    ok('Link thẳng cuộc trao đổi → Quay lại về Trang chủ · desktop: đúng một mục menu sáng (Trang chủ / Bạn bè / Tất cả lớp / lớp)')
+  }
 
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))
   assert.deepEqual(real, [], 'không có lỗi JS trên trang')

@@ -152,6 +152,14 @@ test("tóm tắt mốc: Hỏi bài → Cần làm lại (+bài giảng) → Tr�
   assert.deepEqual(steps.map(s => s.label), ["Hỏi bài", "Cần làm lại", "Bài giảng nên xem", "Trả bài", "Trả lại", "Đạt"]);
 });
 
+test("tóm tắt mốc: nhiều vòng Cần làm lại → Trả lại liên tiếp gộp thành một cặp ×n", () => {
+  const ev = (kind: string, verdict: string | null = null) => ({ kind, verdict, authorRole: kind.startsWith("teacher") ? "teacher" : "student", hasResources: false, createdAt: "" }) as never;
+  const steps = eventSteps([ev("question"), ...Array.from({ length: 6 }, () => [ev("teacher_feedback", "retry"), ev("submission")]).flat(), ev("teacher_feedback", "pass")]);
+  assert.deepEqual(steps.map(s => s.label + (s.times ? " ×" + s.times : "")), ["Hỏi bài", "Cần làm lại", "Trả bài", "Cần làm lại", "Trả lại ×5", "Đạt"]);
+  const h = renderToStaticMarkup(<JourneyTimeline items={[toJourneyItem(jrow("x", "2026-09-29T00:00:00Z", identity(), [{ kind: "submission", author_role: "student" }, { kind: "teacher_feedback", verdict: "retry", author_role: "teacher" }, { kind: "submission", author_role: "student" }, { kind: "teacher_feedback", verdict: "retry", author_role: "teacher" }, { kind: "submission", author_role: "student" }]))!]} ownerName="HS03" />);
+  assert.match(h, /lt-ms-times" aria-label="2 lần"> ×2/);
+});
+
 test("JourneyTimeline render: năm · chặng có màu · mốc bấm được · private có nhãn; rỗng → lời nhắn", () => {
   const items = [
     jrow("b", "2026-09-29T00:00:00Z", identity(), [{ kind: "question", author_role: "student" }, { kind: "teacher_feedback", verdict: "pass", author_role: "teacher" }]),
@@ -166,7 +174,10 @@ test("JourneyTimeline render: năm · chặng có màu · mốc bấm được �
   assert.match(h, /✅ Đạt/);
   assert.match(h, /Chỉ Thầy/);
   assert.equal((h.match(/class="lt-ms-btn"/g) || []).length, 2);
-  assert.match(renderToStaticMarkup(<JourneyTimeline items={[]} ownerName="An" />), /Hành trình của An sẽ hiện ở đây/);
+  const empty = renderToStaticMarkup(<JourneyTimeline items={[]} ownerName="An" />);
+  assert.match(empty, /Chưa có dấu mốc học tập\./);
+  assert.match(empty, /Những lần Trả bài, Hỏi bài của An sẽ dần tạo nên Hành trình tại đây\./);
+  assert.equal(/lt-card/.test(empty), false, "trống → không dựng khung");
 });
 
 // ── Chốt chặn nguồn ──────────────────────────────────────────────────────────

@@ -219,3 +219,18 @@ textarea.lt-input { resize: vertical; min-height: 88px; line-height: 1.5; }
   /* thời gian nằm cùng hàng tên (không chiếm một dòng riêng) */
   .lt-ev-time { margin-left: auto; width: auto; }
 }
+
+/* ── UX polish 2 (30/09) ─────────────────────────────────────────────────── */
+/* Thầy phản hồi: MỘT nút chính (Gửi phản hồi, bên trái); Cần làm lại / Đạt là nút phụ có màu ngữ nghĩa, tách xa nút chính */
+.lt-btn.is-warn-soft { border-color: #f1d3a4; background: #fffaf2; color: #92400e; }
+.lt-btn.is-ok-soft { border-color: #b7e2c4; background: #f3fbf5; color: #166534; }
+.lt-compose-foot { justify-content: flex-start; gap: 10px; }
+.lt-compose-foot .lt-btn.is-primary { margin-right: auto; }
+/* Tab lọc hàng đợi: xuống dòng thay vì bị cắt trên điện thoại */
+.cs-root .lt-tabs { flex-wrap: wrap; overflow: visible; }
+/* Hành trình rỗng: hai dòng nhẹ, không khung */
+.lt-journey-empty { display: flex; flex-direction: column; gap: 4px; text-align: center; padding: 22px 16px 26px; font-size: 14px; color: var(--lt-t3); }
+.lt-journey-empty b { font-size: 15px; color: var(--lt-t1); }
+/* Danh sách trống (hàng đợi): chữ nhẹ, không khung */
+.cs-root .lt-list + .lt-empty, .cs-root p.lt-card.lt-empty { background: transparent; border: none; }
+.lt-ms-times { font-weight: 700; color: var(--lt-t2, #52525b); }
