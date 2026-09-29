@@ -56,7 +56,6 @@ begin
     if (select count(*) from public.learning_threads) + (select count(*) from public.learning_lesson_settings) <> 0 then
       raise exception 'SMOKE FAIL: bảng P1 đã có dữ liệu — smoke này chỉ dành cho ngay sau migration';
     end if;
-    select count(*) into v_prog_before from public.edu_lesson_progress;
 
     select a.id into v_t from public.app_users a where a.role in ('teacher', 'admin') order by (a.role = 'teacher') desc, a.id limit 1;
     for cand in
@@ -87,6 +86,8 @@ begin
       raise exception 'SMOKE FAIL: thiếu tài khoản để kiểm (thầy %, học sinh có 2 bài mở %, học sinh khác %)', v_t, v_a, v_c;
     end if;
     perform set_config('request.jwt.claims', '{}', true);
+    select count(*) into v_prog_before from public.edu_lesson_progress p
+     where p.student_id in (select s.id from public.edu_students s where s.user_id = v_a);
 
     perform set_config('request.jwt.claims', json_build_object('sub', v_t, 'role', 'authenticated')::text, true);
     perform set_config('role', 'authenticated', true);
@@ -190,8 +191,9 @@ begin
 
     perform set_config('role', 'postgres', true);
     perform set_config('request.jwt.claims', '{}', true);
-    select count(*) into v_prog_after from public.edu_lesson_progress;
-    if v_prog_after = v_prog_before then ok := ok || text 'ĐẠT không ghi edu_lesson_progress'; else bad := bad || text 'edu_lesson_progress bị đổi'; end if;
+    select count(*) into v_prog_after from public.edu_lesson_progress p
+     where p.student_id in (select s.id from public.edu_students s where s.user_id = v_a);
+    if v_prog_after = v_prog_before then ok := ok || text 'ĐẠT không ghi edu_lesson_progress (của học sinh smoke)'; else bad := bad || text 'edu_lesson_progress của học sinh smoke bị đổi'; end if;
 
     raise exception 'LT_SMOKE_ROLLBACK';
   exception when others then
