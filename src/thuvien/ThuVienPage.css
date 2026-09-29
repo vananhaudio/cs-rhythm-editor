@@ -73,7 +73,9 @@
 }
 
 /* Sửa Tên bài / Tác giả trong màn xem — gọn, một khối. */
-.thu-vien .tv-edit { flex: none; margin-left: auto; border: 1px solid #ccd5ca; border-radius: 9px; background: white; color: #32664a; padding: 8px 14px; font-weight: 600; }
+.thu-vien .tv-actions { flex: none; display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.thu-vien .tv-np { border-radius: 9px; background: #32664a; color: white; padding: 9px 14px; font-size: 15px; font-weight: 700; text-decoration: none; }
+.thu-vien .tv-edit { flex: none; border: 1px solid #ccd5ca; border-radius: 9px; background: white; color: #32664a; padding: 8px 14px; font-weight: 600; }
 .thu-vien .tv-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 16px; border: 1px solid #ccd5ca; border-radius: 12px; background: white; padding: 16px; }
 .thu-vien .tv-meta label { display: block; font-weight: 600; }
 .thu-vien .tv-meta input { display: block; width: 100%; margin-top: 5px; border: 1px solid #ccd5ca; border-radius: 9px; background: white; color: #26352d; padding: 10px 12px; font: inherit; font-weight: 400; }
@@ -82,6 +84,6 @@
 .thu-vien .tv-meta-actions button { border: 0; border-radius: 9px; background: transparent; color: #26352d; padding: 10px 16px; }
 .thu-vien .tv-meta-actions button[type=submit] { background: #32664a; color: white; padding: 10px 20px; font-weight: 700; }
 @media (max-width: 640px) {
-  .thu-vien .tv-edit { margin-left: 0; align-self: flex-start; }
+  .thu-vien .tv-actions { margin-left: 0; }
   .thu-vien .tv-meta { grid-template-columns: 1fr; }
 }
