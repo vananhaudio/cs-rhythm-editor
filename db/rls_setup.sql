@@ -120,6 +120,9 @@ DECLARE
     -- (chỉ qua RPC); edu_students chỉ chính chủ + thầy (hết lộ email/SĐT của người khác).
     -- Áp policy rộng lại = mở lại email/SĐT mọi học sinh cho mọi tài khoản đăng nhập.
     'friendships', 'edu_students',
+    -- Learning Thread P1 (db/learning_threads_p1_setup.sql): KHÔNG policy nào, REVOKE hết — mọi đọc/ghi
+    -- qua RPC lt_* (SECURITY DEFINER). Áp policy rộng = học sinh đọc/sửa bài Trả/Hỏi + phản hồi của nhau.
+    'learning_lesson_settings', 'learning_threads', 'learning_thread_events',
     -- Billing Foundation (BƯỚC 8A — db/billing_setup.sql): anon KHÔNG policy nào;
     -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
     -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).
