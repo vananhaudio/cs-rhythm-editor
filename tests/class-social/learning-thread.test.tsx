@@ -262,7 +262,7 @@ test("App: khu vực LT đứng CẠNH (không thay) nút 'Tôi đã gửi bài 
 
 test("/me: link thread giữ nguyên khi chưa đăng nhập (đăng nhập xong xem đúng thread)", () => {
   const page = noComments(src("class-social/ClassSocialPage.tsx"));
-  assert.match(page, /if \(guest && view\.kind !== 'thread'\)/);
+  assert.match(page, /if \(guest && !keepsPathForGuest\(view\)\)/);
   assert.match(page, /<ThreadPage key=\{view\.threadId\}/);
   assert.match(page, /me\.isTeacher\s*\n?\s*\? <TeacherQueue/);
 });

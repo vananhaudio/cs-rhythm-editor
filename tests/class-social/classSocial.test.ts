@@ -141,10 +141,15 @@ test("IA: logo đưa về /me (trang chủ)", () => {
   assert.equal(SECTION_PATHS.home, "/me");
 });
 
-test("/me = identity → CTA Trả bài → feed cộng đồng, đúng thứ tự", () => {
+test("/me Trang chủ = CON NGƯỜI + HOẠT ĐỘNG: ô chia sẻ âm nhạc → Feed; không ảnh bìa lớn, không nút Trả bài hero", () => {
   const home = read("sections/MeHome.tsx");
-  const a = home.indexOf("<IdentityHeader"), b = home.indexOf("<TraBaiCta"), c = home.indexOf("<CommunityFeed");
-  assert.ok(a > 0 && a < b && b < c);
+  const a = home.indexOf("<HomeComposer"), c = home.indexOf("<CommunityFeed");
+  assert.ok(a > 0 && a < c);
+  assert.equal(/<IdentityHeader|<TraBaiCta/.test(home), false, "hồ sơ đầy đủ ở Trang cá nhân; Trả bài chỉ còn lối phụ");
+  const composer = read("sections/HomeComposer.tsx");
+  assert.match(composer, /Chia sẻ điều gì về âm nhạc…/);
+  assert.match(composer, /createWallPost\(check\.insert\)/, "dùng lại bài status của tường — không hệ bài đăng thứ hai");
+  assert.match(composer, /Trả bài bằng link video/);
 });
 
 test("V1: MỘT hành động duy nhất 'Trả bài' — không Hỏi bài / Chia sẻ luyện tập, không chuyển hướng ra ngoài", () => {

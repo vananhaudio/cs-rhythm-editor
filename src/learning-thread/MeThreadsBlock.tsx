@@ -1,5 +1,5 @@
-// Khối trên /me: học sinh → "Trả bài / Hỏi bài của tôi" (tiếp tục thread đã có ngữ cảnh bài học);
-// Thầy/admin → lối vào hàng đợi. Không có gì để hiện → không render (không làm rối trang chủ).
+// Thầy/admin: một dòng nhỏ "N bài đang chờ phản hồi ›" trên Home (chỉ khi N > 0).
+// Học sinh: danh sách "Trả bài / Hỏi bài của tôi" (dùng ở nơi cần; Home không còn hiện — xem tab Hành trình).
 // Khởi tạo Trả/Hỏi bài vẫn ở App học (đúng bài đang học) — ở đây chỉ tiếp tục.
 import { useEffect, useState } from 'react'
 import { ListChecks } from 'lucide-react'
@@ -27,16 +27,14 @@ export default function MeThreadsBlock({ isTeacher, onOpenThread, onOpenQueue }:
   }, [isTeacher])
 
   if (isTeacher) {
+    // Home = con người + hoạt động: chỉ hiện MỘT dòng nhỏ khi thật sự có bài chờ; 0 bài → không dựng thẻ.
+    if (!waiting) return null
     return (
-      <section className="cs-card lt-page" style={{ padding: 14 }} aria-label="Hàng đợi Trả bài / Hỏi bài">
-        <button type="button" className="lt-row" onClick={onOpenQueue} style={{ border: 'none', padding: 0 }}>
-          <ListChecks size={22} aria-hidden="true" />
-          <span className="lt-row-main">
-            <span className="lt-row-title">Hàng đợi Trả bài / Hỏi bài</span>
-            <span className="lt-row-sub">{waiting === null ? 'Xem các bài học sinh đang chờ Thầy' : waiting === 0 ? 'Không có bài nào đang chờ' : `${waiting}${waiting >= 30 ? '+' : ''} cuộc trao đổi đang chờ Thầy`}</span>
-          </span>
-        </button>
-      </section>
+      <button type="button" className="cs-queue-entry" onClick={onOpenQueue} aria-label="Hàng đợi Trả bài / Hỏi bài">
+        <ListChecks size={18} aria-hidden="true" />
+        <span>{waiting}{waiting >= 30 ? '+' : ''} bài đang chờ phản hồi</span>
+        <span aria-hidden="true">›</span>
+      </button>
     )
   }
   if (!mine || mine.length === 0) return null

@@ -79,19 +79,39 @@ export function threadIdFromPath(pathname: string): string | null {
   return UUID_RE.test(id) ? id.toLowerCase() : null
 }
 
-/** Màn đang mở trong /me: một mục (section), trang cá nhân, một learning thread, hoặc hàng đợi của Thầy. */
+// ── Lớp học: /me/classes (Lớp của tôi + Khám phá) · /me/classes/<class_schedule.id> (không gian của lớp) ──
+export const CLASSES_PATH = '/me/classes'
+
+export function classPath(classId: string): string {
+  return CLASSES_PATH + '/' + classId
+}
+
+export function classIdFromPath(pathname: string): string | null {
+  const p = pathname.replace(/\/+$/, '')
+  if (!p.startsWith(CLASSES_PATH + '/')) return null
+  const id = p.slice(CLASSES_PATH.length + 1)
+  return UUID_RE.test(id) ? id.toLowerCase() : null
+}
+
+/** Màn đang mở trong /me: mục, trang cá nhân, learning thread, hàng đợi Thầy, danh sách lớp, hoặc một lớp. */
 export type MeView =
   | { kind: 'section'; section: SocialSection }
   | { kind: 'profile'; userId: string }
   | { kind: 'thread'; threadId: string }
   | { kind: 'queue' }
+  | { kind: 'classes' }
+  | { kind: 'class'; classId: string }
 
 export function viewFromPath(pathname: string): MeView {
   const userId = profileUserIdFromPath(pathname)
   if (userId) return { kind: 'profile', userId }
   const threadId = threadIdFromPath(pathname)
   if (threadId) return { kind: 'thread', threadId }
-  if (pathname.replace(/\/+$/, '') === QUEUE_PATH) return { kind: 'queue' }
+  const classId = classIdFromPath(pathname)
+  if (classId) return { kind: 'class', classId }
+  const p = pathname.replace(/\/+$/, '')
+  if (p === QUEUE_PATH) return { kind: 'queue' }
+  if (p === CLASSES_PATH) return { kind: 'classes' }
   return { kind: 'section', section: sectionFromPath(pathname) }
 }
 
@@ -99,7 +119,9 @@ export function sameView(a: MeView, b: MeView): boolean {
   switch (a.kind) {
     case 'profile': return b.kind === 'profile' && a.userId === b.userId
     case 'thread': return b.kind === 'thread' && a.threadId === b.threadId
+    case 'class': return b.kind === 'class' && a.classId === b.classId
     case 'queue': return b.kind === 'queue'
+    case 'classes': return b.kind === 'classes'
     default: return b.kind === 'section' && a.section === b.section
   }
 }
@@ -108,9 +130,16 @@ export function viewPath(view: MeView): string {
   switch (view.kind) {
     case 'profile': return profilePath(view.userId)
     case 'thread': return threadPath(view.threadId)
+    case 'class': return classPath(view.classId)
     case 'queue': return QUEUE_PATH
+    case 'classes': return CLASSES_PATH
     default: return SECTION_PATHS[view.section]
   }
+}
+
+/** Link sâu nên GIỮ qua bước đăng nhập (khách → đăng nhập tại chỗ → đúng trang). */
+export function keepsPathForGuest(view: MeView): boolean {
+  return view.kind === 'thread' || view.kind === 'class' || view.kind === 'classes'
 }
 
 export function resolveMeRoute(input: {

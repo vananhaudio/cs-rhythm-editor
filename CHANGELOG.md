@@ -4,7 +4,15 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 29/09/2026
 
-- **Learning Thread P2 — Feed · Tường · Hành trình (code xong, chờ migration production)**
+- **Social UX + Lớp học V1 (`/me`)**
+  - **Trang chủ:** ô chia sẻ "Chia sẻ điều gì về âm nhạc…" (bài status có sẵn) → Feed ngay. Bỏ ảnh bìa lớn, nút Trả bài hero và khối "của tôi". Thầy thấy một dòng nhỏ khi có bài chờ.
+  - **Menu:** Trang chủ đầu tiên; nhóm **LỚP HỌC** hiện trực tiếp lớp của tôi, 3 lớp khám phá và "Tất cả lớp".
+  - **Trang lớp** `/me/classes/<id>`: tab Hoạt động (Learning Thread community của lớp) và Thành viên (chỉ thành viên lớp + Thầy). Người ngoài xem được phần công khai với nhãn "đang xem lớp… chưa tham gia".
+  - Lớp = `class_schedule` + membership sẵn có, qua 5 RPC chỉ đọc; không bảng mới, không lộ zoom/giá/PII.
+  - Feed thêm bài tường của mình + bạn bè (đúng quyền).
+  - Chi tiết: `docs/SOCIAL-CLASSES-V1.md`.
+
+- **Learning Thread P2 — Feed · Tường · Hành trình (PRODUCTION)**
   - Thread `community` hiện trên Feed `/me` dạng "câu chuyện học tập": một thread = một thẻ, nổi lên khi có hoạt động mới. Thread private / ẩn / lưu trữ không lên Feed.
   - Tường gồm bài Social + thread của người đó theo quyền.
   - Tab **Hành trình** trên trang cá nhân: timeline gom theo danh tính lịch sử ((lớp hoặc Tự học) × khoá), màu theo môn giống App học. Bấm mốc → `/me/t/<id>`.

@@ -1,5 +1,6 @@
-// /me — TÔI + CỘNG ĐỒNG trên một trang cuộn liên tục:
-// identity (tôi) → TRẢ BÀI → dòng hoạt động cộng đồng (bài + bình luận + nhận xét của Thầy).
+// /me — TRANG CHỦ = CON NGƯỜI + HOẠT ĐỘNG. Mở ra là thấy ô chia sẻ âm nhạc rồi tới Feed ngay:
+// [chia sẻ] → (lời mời kết bạn / hàng đợi Thầy — chỉ khi có) → Feed (bài + câu chuyện học tập).
+// Ảnh bìa + hồ sơ đầy đủ + Hành trình thuộc về TRANG CÁ NHÂN (/me/u/<id>), không lặp lại ở đây.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ClassIdentity } from '../useClassSession'
 import { useCommunityFeed } from '../posts/useCommunityFeed'
@@ -7,8 +8,7 @@ import { isPostEntry, type FeedPost } from '../posts/postModel'
 import '../../learning-thread/styles'
 import { useFeedComments } from '../comments/useFeedComments'
 import { loadCommentsApi } from '../comments/lazyApi'
-import IdentityHeader from './IdentityHeader'
-import TraBaiCta from './TraBaiCta'
+import HomeComposer from './HomeComposer'
 import CommunityFeed from './CommunityFeed'
 import type { PostSocial } from './PostCard'
 import type { ImageKind } from '../profile/imageFile'
@@ -19,9 +19,10 @@ import MeThreadsBlock from '../../learning-thread/MeThreadsBlock'
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue }: {
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue }: {
   me: ClassIdentity
   identityRev?: number
+  /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
   canEditAvatar?: boolean
   onEditMedia?: (kind: ImageKind) => void
   /** Bấm tên/avatar trong Cộng đồng → trang cá nhân */
@@ -70,9 +71,9 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
   }
 
   return (
-    <div className="cs-col cs-home">
-      <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia}
-        onOpenProfile={onOpenProfile ? () => onOpenProfile(me.userId) : undefined} />
+    <div className="cs-col cs-home cs-home-feedfirst">
+      <HomeComposer me={me} onPosted={onPosted} onOpenProfile={onOpenProfile} />
+      {me.isTeacher && onOpenThread && onOpenQueue && <MeThreadsBlock isTeacher onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} />}
       {requests && requests.count > 0 && onOpenProfile && (
         <section className="cs-card cs-friends-card cs-home-requests" aria-labelledby="cs-home-req-title">
           <h2 id="cs-home-req-title" className="cs-friends-title">
@@ -88,8 +89,6 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
           )}
         </section>
       )}
-      {onOpenThread && onOpenQueue && <MeThreadsBlock isTeacher={me.isTeacher} onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} />}
-      <TraBaiCta me={me} onPosted={onPosted} />
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}
         <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social} />

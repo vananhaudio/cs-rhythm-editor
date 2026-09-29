@@ -1,5 +1,5 @@
 // Khung (shell) của Class Social: top bar tối giản + sidebar (desktop) / menu sheet (mobile).
-// Logo = Trang chủ (/me). Sidebar chỉ chứa nơi KHÁC để đi, không chứa trang đang đứng.
+// Logo = Trang chủ (/me); "Trang chủ" cũng là mục đầu tiên của menu. Nhóm LỚP HỌC (động) chèn ngay sau CỘNG ĐỒNG.
 import { useEffect, useState, type ReactNode } from 'react'
 import { Lock, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { NAV_GROUPS, type NavItem } from './nav'
@@ -65,32 +65,41 @@ function NavEntry({ item, active, collapsed, onSection, badges }: {
   )
 }
 
-function NavGroups({ section, collapsed, onSection, badges }: {
+/** Nhóm LỚP HỌC động (danh sách lớp thật) — layout chỉ chừa chỗ; dữ liệu do trang cấp. */
+export type ClassNavSlot = (opts: { collapsed: boolean; onNavigate: () => void }) => ReactNode
+
+function NavGroups({ section, collapsed, onSection, badges, classNav, onNavigate }: {
   section: SocialSection | null
   collapsed: boolean
   onSection: (s: SocialSection) => void
   badges?: NavBadges
+  classNav?: ClassNavSlot
+  onNavigate?: () => void
 }) {
   return (
     <>
       {NAV_GROUPS.map(g => (
-        <nav key={g.id} className="cs-nav-group" aria-label={g.title}>
-          <div className="cs-nav-title">{g.title}</div>
-          {g.items.map(item => (
-            <NavEntry key={item.id} item={item} collapsed={collapsed} onSection={onSection} badges={badges}
-              active={item.kind === 'section' && item.id === section} />
-          ))}
-        </nav>
+        <div key={g.id} className="cs-nav-block">
+          <nav className="cs-nav-group" aria-label={g.title}>
+            <div className="cs-nav-title">{g.title}</div>
+            {g.items.map(item => (
+              <NavEntry key={item.id} item={item} collapsed={collapsed} onSection={onSection} badges={badges}
+                active={item.kind === 'section' && item.id === section} />
+            ))}
+          </nav>
+          {g.id === 'community' && classNav?.({ collapsed, onNavigate: onNavigate ?? (() => {}) })}
+        </div>
       ))}
     </>
   )
 }
 
-function MobileMenu({ section, onClose, onSection, badges }: {
+function MobileMenu({ section, onClose, onSection, badges, classNav }: {
   section: SocialSection | null
   onClose: () => void
   onSection: (s: SocialSection) => void
   badges?: NavBadges
+  classNav?: ClassNavSlot
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -106,13 +115,13 @@ function MobileMenu({ section, onClose, onSection, badges }: {
           <h2>Menu</h2>
           <button type="button" className="cs-icon-btn" onClick={onClose} aria-label="Đóng menu"><X size={22} /></button>
         </div>
-        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} badges={badges} />
+        <NavGroups section={section} collapsed={false} onSection={s => { onSection(s); onClose() }} badges={badges} classNav={classNav} onNavigate={onClose} />
       </div>
     </>
   )
 }
 
-export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut, onOpenMyProfile, badges }: {
+export default function ClassSocialLayout({ me, section, onSection, children, canEditAvatar, onEditMedia, onSignOut, onOpenMyProfile, badges, classNav }: {
   me: ClassIdentity
   /** null = đang ở trang cá nhân (không mục nào trong menu sáng) */
   section: SocialSection | null
@@ -123,6 +132,7 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
   onSignOut?: () => void
   onOpenMyProfile?: () => void
   badges?: NavBadges
+  classNav?: ClassNavSlot
 }) {
   const totalBadge = Object.values(badges ?? {}).reduce((a, n) => a + (n ?? 0), 0)
   const [collapsed, setCollapsed] = useState(readCollapsed)
@@ -168,12 +178,12 @@ export default function ClassSocialLayout({ me, section, onSection, children, ca
 
       <div className="cs-body">
         <aside className={'cs-sidebar' + (collapsed ? ' is-collapsed' : '')}>
-          <NavGroups section={section} collapsed={collapsed} onSection={onSection} badges={badges} />
+          <NavGroups section={section} collapsed={collapsed} onSection={onSection} badges={badges} classNav={classNav} />
         </aside>
         <main className="cs-main">{children}</main>
       </div>
 
-      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} badges={badges} />}
+      {menuOpen && <MobileMenu section={section} onClose={() => setMenuOpen(false)} onSection={onSection} badges={badges} classNav={classNav} />}
     </div>
   )
 }

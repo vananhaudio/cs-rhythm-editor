@@ -163,6 +163,30 @@ psqld t_p2 -f "$ROOT/db/learning_threads_p2_rollback.sql" >/dev/null && psqld t_
   && [ "$(q t_p2 "select count(*) from learning_threads")/$(q t_p2 "select count(*) from learning_thread_events")" = "$BEFORE_P2RB" ] \
   && ok "P2 rollback ×2: gỡ 4 hàm, dữ liệu thread P1 giữ nguyên ($BEFORE_P2RB)" || fail "P2 rollback"
 
+echo "── SOCIAL UX + LỚP HỌC V1: md5 cổng = thân hàm repo · preflight → migration ×2 → test → rollback về P2"
+scc() { grep -o "fn_expected constant jsonb := '[^']*'" "$1" | sed "s/.*:= //"; }
+[ "$(grep -o "'{\"class_public_identity[^']*'" "$ROOT/db/social_classes_v1_preflight.sql" | head -1)" = "$(scc "$ROOT/db/social_classes_v1_setup.sql")" ] \
+  && ok "V1: hằng md5 giống hệt giữa preflight và migration" || fail "V1: hằng lệch"
+baseline t_sc "$TMP/fixture_noroles.sql"
+psqld t_sc -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+SCGATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/social_classes_v1_preflight.sql")) z where section = 'GATE'"; }
+[ "$(SCGATE t_sc)" = "STOP - DO NOT MIGRATE" ] && ok "V1 preflight khi CHƯA có P2: STOP" || fail "V1 preflight thiếu P2"
+psqld t_sc -f "$ROOT/db/learning_threads_p2_setup.sql" >/dev/null
+[ "$(q t_sc "select md5(prosrc) from pg_proc where proname = 'social_feed'")/$(q t_sc "select md5(prosrc) from pg_proc where proname = 'lt_thread_card'")" = "0916ccb443782eb7b8070a1bb439ed00/172c1d1d323e637944097493b5bf5344" ] \
+  && ok "V1: md5 social_feed/lt_thread_card (bản P2 đã chạy) = hằng cổng" || fail "md5 P2 lệch hằng cổng"
+[ "$(SCGATE t_sc)" = "PASS" ] && ok "V1 preflight: GATE = PASS" || fail "V1 preflight: $(SCGATE t_sc)"
+psqld t_sc -f "$ROOT/db/social_classes_v1_setup.sql" >/dev/null && psqld t_sc -f "$ROOT/db/social_classes_v1_setup.sql" >/dev/null && ok "V1 migration ×2 (idempotent, cổng nhận bản V1 của social_feed)"
+[ "$(q t_sc "select md5(prosrc) from pg_proc where proname = 'social_feed'")" = "d62b6a78984817b787e7731e46c2a0e5" ] && ok "V1: md5 social_feed mới = hằng cổng" || fail "md5 V1 lệch"
+psqld t_sc -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_sc "select count(*) from information_schema.routine_privileges where routine_name like 'social\_%' and grantee = 'anon'")" = "0" ] \
+  && ok "V1: anon không EXECUTE hàm social_* nào" || fail "V1 anon exec"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_sc -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/social_classes_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL V1"
+psqld t_sc -f "$ROOT/db/social_classes_v1_rollback.sql" >/dev/null && psqld t_sc -f "$ROOT/db/social_classes_v1_rollback.sql" >/dev/null
+[ "$(q t_sc "select count(*) from pg_proc where proname like 'social\_%class%' or proname in ('social_my_classes','social_discover_classes')")/$(q t_sc "select md5(prosrc) from pg_proc where proname = 'social_feed'")" = "0/0916ccb443782eb7b8070a1bb439ed00" ] \
+  && ok "V1 rollback ×2: gỡ hàm lớp, social_feed về ĐÚNG bản P2" || fail "V1 rollback"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

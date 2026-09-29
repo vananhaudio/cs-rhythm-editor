@@ -1,8 +1,9 @@
 // Menu của Class Social — DỮ LIỆU, không chứa logic hiển thị.
-// Trang chủ (/me = Tôi + Cộng đồng) KHÔNG nằm trong menu: logo đưa về /me.
+// Trang chủ (/me) là mục ĐẦU TIÊN (logo cũng về /me, nhưng không phải cách duy nhất).
+// Thứ tự = mô hình: trên CON NGƯỜI / CỘNG ĐỒNG → giữa LỚP HỌC (động, ClassNav) + HỌC TẬP → dưới CÔNG CỤ.
 // Cộng đồng = mục trong chính Social; Học tập / Công cụ = destination ra app hiện có.
 import type { LucideIcon } from 'lucide-react'
-import { BookMarked, BookOpen, GraduationCap, LayoutGrid, Library, MessageCircle, Users } from 'lucide-react'
+import { BookMarked, BookOpen, GraduationCap, House, LayoutGrid, Library, MessageCircle, Users } from 'lucide-react'
 import { LEARN_PATH, type SocialSection } from './resolveMeRoute'
 import { TOOLS } from './tools'
 
@@ -22,6 +23,7 @@ export const NAV_GROUPS: NavGroup[] = [
     id: 'community',
     title: 'Cộng đồng',
     items: [
+      { kind: 'section', id: 'home', label: 'Trang chủ', icon: House },
       { kind: 'section', id: 'friends', label: 'Bạn bè', icon: Users },
       { kind: 'section', id: 'chat', label: 'Trò chuyện', icon: MessageCircle },
     ],
