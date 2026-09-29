@@ -5,7 +5,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { BackingEngine, type MelodyNote } from './backing/backingEngine'
 import { getStyle } from './backing/backingStyles'
-import { resolvePattern, getFigure, type FigureStroke, type BeatGroup } from './strumPatterns'
+import { resolvePattern, getFigure, type BeatGroup } from './strumPatterns'
+import { StrumBeat } from './StrumBeat'
 
 const INDIGO = '#4338CA', ORANGE = '#EA580C', INK = '#1F2430', DIM = '#C0C6D2', SUB = '#6B7280'
 
@@ -31,35 +32,6 @@ export interface StrumSong {
   backing?: { styleId: string; tempo?: number }  // có → NỀN trống+bass synth, bỏ qua audio/video
   melody?: MelodyNote[]                            // (chế độ nền) giai điệu chơi kèm để học sinh theo dõi
   loop?: boolean                                   // (chế độ nền) false = chơi 1 lượt rồi DỪNG (mặc định loop)
-}
-
-// Vẽ MỘT CHÙM (1..4 nốt) trong một phách — đầu nốt slash dày, thân cao, nối chùm + ↓/↑.
-// M=1 nốt đen; M=2 chùm 2; M=3 liên ba (có số "3", CHIA ĐỀU) hoặc đơn kép kép (CHIA LỆCH, không có số 3); M=4 móc kép.
-// Vị trí từng cú quạt tính theo `frac` (tỉ lệ trường độ) — hình chia lệch (vd đơn kép kép 2:1:1) sẽ dãn cách không đều. lit = phách đang chơi.
-function BeatGroup({ strokes, lit }: { strokes: FigureStroke[]; lit: boolean }) {
-  const c = lit ? INDIGO : DIM, ac = lit ? INDIGO : '#9AA0B0'
-  const M = Math.max(1, strokes.length)
-  const SP = 19, pad = 6, W = pad * 2 + (M - 1) * SP + 10   // bề rộng theo số nốt
-  const top = 4, stemBot = 31, base = 40
-  const trackW = (M - 1) * SP
-  const fracLast = strokes[M - 1]?.frac ?? 1 / M
-  const denom = Math.max(0.0001, 1 - fracLast)   // quy đổi vị trí cú CUỐI luôn về đúng mép trackW (giữ nguyên cỡ hình chia đều cũ)
-  let cum = 0
-  const xs = strokes.map((s) => { const x = pad + 5 + trackW * (cum / denom); cum += s.frac; return x })
-  const isTriplet = M === 3 && strokes.every((s) => Math.abs(s.frac - 1 / 3) < 0.01)   // chỉ liên ba (chia đều) mới có số "3"
-  return (
-    <svg viewBox={`0 0 ${W} 60`} style={{ height: 52, width: 'auto', maxWidth: '100%', overflow: 'visible', display: 'block' }}>
-      {M >= 2 && <rect x={xs[0]} y={top} width={xs[M - 1] - xs[0]} height={4} rx={1} fill={c} />}
-      {isTriplet && <text x={(xs[0] + xs[2]) / 2} y={top - 1} fontSize={9} textAnchor="middle" fontWeight={800} fill={ac}>3</text>}
-      {xs.map((x, i) => (
-        <g key={i}>
-          <line x1={x} y1={M >= 2 ? top + 2 : 8} x2={x} y2={stemBot} stroke={c} strokeWidth={3} />
-          <line x1={x - 9.5} y1={base + 7} x2={x + 1} y2={base - 3} stroke={c} strokeWidth={4.6} strokeLinecap="round" />
-          <text x={x - 4} y={57} fontSize={11.5} textAnchor="middle" fontWeight={800} fill={ac}>{strokes[i].dir === 'U' ? '↑' : '↓'}</text>
-        </g>
-      ))}
-    </svg>
-  )
 }
 
 export default function ChordStrumPlayer({ song, onClose, onComplete, studentId, lessonId }: { song: StrumSong; onClose?: () => void; onComplete?: () => void; studentId?: string; lessonId?: string }) {
@@ -349,7 +321,7 @@ export default function ChordStrumPlayer({ song, onClose, onComplete, studentId,
                       ) : (
                         <div style={{ height: 52, display: 'grid', gridTemplateColumns: `repeat(${N},1fr)`, alignItems: 'center', justifyItems: 'center' }}>
                           {Array.from({ length: N }, (_, j) => (
-                            <BeatGroup key={j} strokes={beatStrokes(bar, j)} lit={isCur && beatInBar === j} />
+                            <StrumBeat key={j} strokes={beatStrokes(bar, j)} lit={isCur && beatInBar === j} />
                           ))}
                         </div>
                       )}

@@ -62,6 +62,8 @@ const NhipPhachGate = lazy(() => import('./nhipphach/NhipPhachGate'))
 // Class Social (cửa chính /me trên class.*) — chunk riêng, không nặng thêm bundle App học
 const ClassSocialPage = lazy(() => import('./class-social/ClassSocialPage'))
 const ThuVienPage = lazy(() => import('./thuvien/ThuVienPage'))
+// Điệu đệm hát (/dieudemhat) — chunk riêng, dữ liệu từ src/content/dieudemhat
+const DieuDemHatPage = lazy(() => import('./dieudemhat/DieuDemHatPage'))
 type AppUser = {
   id: string
   role: string
@@ -206,6 +208,11 @@ function AppRouterContent() {
   }
   if (path === '/hanhtrinh2027' || path.startsWith('/hanhtrinh2027')) {
     return <Hanhtrinh2027Page />
+  }
+
+  // ── Route /dieudemhat[/<điệu>] — Điệu đệm hát (công khai, đang biên soạn) ──
+  if (path === '/dieudemhat' || path.startsWith('/dieudemhat/')) {
+    return <Suspense fallback={<div style={{ padding: 32 }}>Đang mở…</div>}><DieuDemHatPage path={path} /></Suspense>
   }
 
   // ── Route /solo01/buoi-NN — tài liệu học từng buổi (khuôn dùng chung 24 buổi) ──

@@ -5,7 +5,18 @@
 // Kiểu quạt (StrumPattern) = 1 hình tiết tấu lặp lại cho CẢ Ô NHỊP — nền tảng để sau này
 // Fill In/Fill Out/Transition trộn nhiều hình khác nhau trong cùng 1 ô (CHƯA làm ở bước này).
 export type Stroke = 'D' | 'U'
-export interface FigureStroke { dir: Stroke; frac: number }   // frac = tỉ lệ trường độ trong phách
+/** Hành động tay phải của một cú (event). Chỉ dùng nhãn Owner đã định nghĩa. */
+export type StrokeAct = 'strum' | 'bass' | 'pick' | 'chord' | 'bum' | 'chat'
+// Một EVENT trong phách: frac = tỉ lệ trường độ trong phách (cộng lại trong 1 phách = 1).
+// dir = hướng quạt (bỏ trống khi chưa có quy ước, vd móc dây). label/act/accent tuỳ chọn —
+// dùng cho giáo trình (Bass, số dây, Chát, Bùm…); màn gảy-theo cũ không dùng, hiển thị không đổi.
+export interface FigureStroke {
+  dir?: Stroke
+  frac: number
+  label?: string       // nhãn in dưới nốt: 'B', '3', '(21)', 'C', 'x', 'Chát', 'Bùm'
+  act?: StrokeAct
+  accent?: boolean     // nhấn (quạt mạnh) → dấu > trên nốt
+}
 export type BeatGroup = FigureStroke[]
 
 export interface RhythmFigure {
