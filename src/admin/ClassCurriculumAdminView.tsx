@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { supabase } from '../supabase'
+import ClassCurriculumEditor from './ClassCurriculumEditor'
 
 const CLASS_CODES = ['SOLO01.TH01', 'HT2027.TH01'] as const
 
@@ -45,6 +46,7 @@ export default function ClassCurriculumAdminView({ client }: Props) {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [students, setStudents] = useState<Record<string, StudentRow>>({})
   const [access, setAccess] = useState<Record<string, AccessRow>>({})
+  const [tab, setTab] = useState<'students' | 'curriculum'>('students')
   const [search, setSearch] = useState('')
   const [matches, setMatches] = useState<StudentRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -167,8 +169,13 @@ export default function ClassCurriculumAdminView({ client }: Props) {
       </div>
       {selected && <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 18 }}>
         <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{selected.name}</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>Trạng thái lớp: {selected.status} · {activeMembers.length} học sinh</div>
-        {!selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa được liên kết cohort. Chờ migration trước khi thêm học sinh.</div> : <>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Trạng thái lớp: {selected.status} · {activeMembers.length} học sinh</div>
+        <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {([['students', 'Học sinh'], ['curriculum', 'Chặng & Giáo trình']] as const).map(([id, label]) =>
+            <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+              style={{ ...button, background: tab === id ? C.text : C.card, color: tab === id ? '#fff' : C.text }}>{label}</button>)}
+        </div>
+        {tab === 'curriculum' ? <ClassCurriculumEditor key={selected.id} client={client} cls={selected} /> : !selected.cohort_group_id ? <div role="alert" style={{ color: C.red }}>Lớp chưa được liên kết cohort. Chờ migration trước khi thêm học sinh.</div> : <>
           <label htmlFor="class-student-search" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Thêm học sinh</label>
           <input id="class-student-search" value={search} onChange={event => setSearch(event.target.value)}
             placeholder="Tìm theo tên hoặc email" style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px', fontSize: 14 }} />
