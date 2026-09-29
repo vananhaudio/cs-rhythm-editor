@@ -1,7 +1,7 @@
 // ── SEED: Hành trình 2027 — 40 buổi thực hành (IDEMPOTENT, chạy lại vô hại) ──
 // Upsert lớp HT2027.TH01 + lịch nghỉ chung class_off_days + 48 dòng class_sessions
-// (40 buổi học + 8 tuần nghỉ giữa chặng). Không tạo sự kiện trùng: giữ buổi
-// 'completed', xoá buổi chưa hoàn thành rồi sinh lại (cùng cơ chế ScheduleManager).
+// (40 buổi học + 8 tuần nghỉ giữa chặng). Giữ ID buổi theo
+// (class_id, session_number); không xóa/tạo lại khi đổi lịch.
 //
 // Chạy:  npx tsx scripts/seed-ht2027.ts
 // Yêu cầu: 1) Migration db/ht2027_practice_setup.sql đã chạy trên Supabase.
@@ -11,6 +11,7 @@
 import { execSync } from 'node:child_process'
 import { generateSessions, realEndDate, realStartDate } from '../src/journey/sessions'
 import { HT2027, ht2027LessonTitle } from '../src/data/ht2027Program'
+import { syncSeedSessions } from './session-sync-sql'
 
 const PROJECT = 'wojmdilyflffvdtpovmq'
 const token = process.env.SUPABASE_ACCESS_TOKEN || (() => {
@@ -116,31 +117,12 @@ async function main() {
       where id = '${cid}'`)
     console.log(`  ✓ Đã có lớp, cập nhật theo lịch mới`)
   }
-  // ── Đồng bộ buổi học (giữ buổi completed, xoá + sinh lại phần còn lại) ──
-  console.log('→ Đồng bộ class_sessions…')
-  const old = await sql(`select session_number from public.class_sessions where class_id = '${cid}' and status = 'completed'`)
-  const doneNums = new Set(old.map((r: any) => r.session_number))
-  await sql(`delete from public.class_sessions where class_id = '${cid}' and status <> 'completed'`)
-  const rows = sessions
-    .filter(s => !(s.event_type === 'lesson' && doneNums.has(s.session_number)))
-    .map(s => {
-      const num = s.session_number === null ? 'null' : s.session_number
-      const title = s.event_type === 'lesson'
-        ? `Buổi ${s.session_number} · ${ht2027LessonTitle(s.session_number as number)}`
-        : 'Nghỉ giữa chặng – thời gian tự luyện và hoàn thiện sản phẩm'
-      const note = s.event_type === 'lesson' ? `Chặng ${Math.ceil((s.session_number as number) / 8)}` : 'nghỉ giữa chặng'
-      const status = s.event_type === 'break' ? 'holiday' : 'scheduled'
-      return `('${cid}', ${num}, ${sq(title)}, '${s.start_at}', '${s.end_at}', '${status}', '${note}', '${s.event_type}')`
-    })
-  if (rows.length) {
-    const chunk = 200
-    for (let i = 0; i < rows.length; i += chunk) {
-      await sql(`insert into public.class_sessions (class_id, session_number, title, start_at, end_at, status, note, event_type)
-        values ${rows.slice(i, i + chunk).join(',')}`)
-    }
-  }
-  const cnt = await sql(`select count(*) as n, count(*) filter (where event_type = 'break') as br from public.class_sessions where class_id = '${cid}'`)
-  console.log(`  ✓ ${cnt[0].n} dòng (${cnt[0].n - cnt[0].br} buổi học + ${cnt[0].br} tuần nghỉ) — giữ ${doneNums.size} buổi đã hoàn thành`)
+  console.log('→ Đồng bộ class_sessions theo ID hiện có…')
+  const result = await syncSeedSessions(sql, cid!, sessions, n => ({
+    title: `Buổi ${n} · ${ht2027LessonTitle(n)}`,
+    note: `Chặng ${Math.ceil(n / 8)}`,
+  }))
+  console.log(`  ✓ ${result.lessons} buổi học + ${result.breaks} tuần nghỉ; cập nhật ${result.updated}, thêm ${result.inserted}; không xóa session`)
   console.log('\n✅ XONG — landing /hanhtrinh2027 sẽ đọc lịch này từ class_sessions/class_off_days.')
 }
 

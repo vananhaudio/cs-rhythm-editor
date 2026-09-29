@@ -25,6 +25,9 @@ import { missingPrereqs, tenNangLuc } from './hanhtrinh'
 import { NavIcon } from './navIcons'
 import LivePageView, { type LivePage } from './live/LivePages'
 import LessonThreadPanel from './learning-thread/LessonThreadPanel'
+import MyClassesSection from './classLearning/MyClassesSection'
+import ClassLearningOverlay from './classLearning/ClassLearningOverlay'
+import type { ClassRow } from './classLearning/outline'
 import {
   ENTITLEMENT_TIER_LABEL,
   type EntitlementTier,
@@ -371,6 +374,7 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
   const [reloadTick, setReloadTick]       = useState(0)
   const [openingLessonId, setOpeningLessonId] = useState<string | null>(null)
   const [navNotice, setNavNotice]         = useState('')
+  const [openClass, setOpenClass]         = useState<ClassRow | null>(null)   // HỌC → Lớp đang học → lớp
   const [showPaywall, setShowPaywall]     = useState(false)
   // Bottom sheet chung cho MỌI nội dung khoá (một CTA đăng ký duy nhất — không recommendation)
   const [showLockSheet, setShowLockSheet] = useState(false)
@@ -1810,6 +1814,8 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
         </button>
       </div>
     )}
+    {/* ── Lớp đang học: Chặng → Buổi → Giáo trình (quyền do RLS) ── */}
+    {openClass && <ClassLearningOverlay cls={openClass} onClose={() => setOpenClass(null)} />}
     {/* ── Toast điều hướng (sequence lock / sắp ra mắt / lỗi mở bài) ── */}
     {navNotice && (
       <div style={{ position: 'fixed', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 86px)', left: '50%', transform: 'translateX(-50%)', zIndex: 220, background: 'rgba(17,24,39,0.92)', color: '#fff', borderRadius: 14, padding: '11px 18px', fontSize: 13.5, fontWeight: 700, maxWidth: '86vw', textAlign: 'center', boxShadow: '0 8px 22px rgba(0,0,0,0.25)' }}>
@@ -2136,6 +2142,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               </div>
               <div style={{ marginTop: 7, color: L.t2, fontSize: 13.5, lineHeight: 1.45 }}>Chọn một môn để vào hành trình học — vuốt ngang, học từng bài.</div>
             </div>
+
+            {/* Lớp đang học (lớp trực tiếp) — tách khỏi Khóa học số; chỉ hiện khi có lớp */}
+            <MyClassesSection guest={guest} onOpen={setOpenClass} />
 
             {portalLoading && SUBJECTS.length === 0 ? (
               // Đang tải danh sách môn → skeleton, KHÔNG hiện empty-state sai

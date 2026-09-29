@@ -208,7 +208,26 @@ function renderSection(s: LessonSection, i: number) {
         </section>
       )
     default:
-      return null
+      // Giáo trình lớp lưu trong DB có thể có loại phần mới hơn bản app đang cài
+      // (app native đóng gói sẵn): báo nhẹ nhàng thay vì bỏ trống hay làm vỡ trang.
+      return <UnsupportedSection key={i} />
+  }
+}
+
+function UnsupportedSection() {
+  return (
+    <section className="lsn-block">
+      <p className="lsn-sub">Phần này cần phiên bản app mới hơn để hiển thị. Hãy cập nhật app để xem đầy đủ.</p>
+    </section>
+  )
+}
+
+// Nội dung từ DB không qua kiểm tra kiểu lúc biên dịch: một phần hỏng không được làm trắng cả buổi.
+function safeRenderSection(s: LessonSection, i: number) {
+  try {
+    return renderSection(s, i)
+  } catch {
+    return <UnsupportedSection key={i} />
   }
 }
 
@@ -245,7 +264,8 @@ function renderStudyBlock(bl: StudyBlock, j: number) {
   }
 }
 
-export default function LessonDocument({ doc }: { doc: LessonDoc }) {
+// onBack: khi nhúng trong app (overlay Lớp đang học) nút quay lại đóng overlay thay vì điều hướng.
+export default function LessonDocument({ doc, onBack }: { doc: LessonDoc; onBack?: () => void }) {
   const m = doc.meta
   const paperRef = useRef<HTMLElement>(null)
   const [pdf, setPdf] = useState<'idle' | 'working' | 'error'>('idle')
@@ -270,7 +290,9 @@ export default function LessonDocument({ doc }: { doc: LessonDoc }) {
       <style>{CSS}</style>
 
       <div className="lsn-bar no-print">
-        <a href={m.backHref ?? '/solo01'}>← {m.programName}</a>
+        {onBack
+          ? <a href="#" onClick={e => { e.preventDefault(); onBack() }}>← {m.programName}</a>
+          : <a href={m.backHref ?? '/solo01'}>← {m.programName}</a>}
         <button type="button" onClick={savePdf} disabled={pdf === 'working'}>
           {pdf === 'working' ? 'Đang tạo PDF…' : '⬇ Lưu PDF'}
         </button>
@@ -289,7 +311,7 @@ export default function LessonDocument({ doc }: { doc: LessonDoc }) {
           {m.stageLabel && <p className="lsn-head-stage">{m.stageLabel}</p>}
         </header>
 
-        {doc.sections.map(renderSection)}
+        {doc.sections.map(safeRenderSection)}
 
         <footer className="lsn-foot">
           {m.programCode} · Buổi {String(m.sessionNo).padStart(2, '0')} — Thầy Văn Anh Guitar
