@@ -8,6 +8,7 @@ import {
   type LessonStateRow, type LessonThreadState, type MyThread, type MyThreadRow, type QueueItem, type QueueRow,
   type StudentKind, type TeacherKind, type ThreadDetail, type ThreadStatus, type Verdict, type Visibility,
 } from './ltModel'
+import { toJourneyItem, type JourneyItem, type JourneyRow } from './feedModel'
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string }
 
@@ -120,6 +121,17 @@ export async function fetchMyThreads(limit = 20): Promise<Result<MyThread[]>> {
     return { ok: true, value: ((data ?? []) as MyThreadRow[]).map(toMyThread).filter((x): x is MyThread => !!x) }
   } catch (e) {
     return fail('my_threads', e as Error)
+  }
+}
+
+/** Hành trình (P2): mọi thread của một người theo quyền server (chính chủ/Thầy: tất cả; người khác: community). */
+export async function fetchJourney(userId: string): Promise<Result<JourneyItem[]>> {
+  try {
+    const { data, error, status } = await (await db()).rpc('learning_journey', { p_user: userId })
+    if (error) return fail('journey', error, status)
+    return { ok: true, value: ((data ?? []) as JourneyRow[]).map(toJourneyItem).filter((x): x is JourneyItem => !!x) }
+  } catch (e) {
+    return fail('journey', e as Error)
   }
 }
 

@@ -1,7 +1,7 @@
 // Supabase cho bạn bè + tường. MỌI thao tác qua RPC (bảng friendships không đọc/ghi thẳng được).
 // Người chưa là bạn gọi get_user_wall nhận MẢNG RỖNG — bài không bao giờ về tới máy.
 import { supabase } from '../../supabase'
-import { friendlyError, toFeedPosts, type FeedPost, type FeedRow } from '../posts/postModel'
+import { friendlyError, toFeedEntries, toFeedPosts, type FeedEntry, type FeedPost, type FeedRow, type MixedRow } from '../posts/postModel'
 import { FEED_PAGE, type Result } from '../posts/postsApi'
 import {
   toPeople, toProfile, toRelationship,
@@ -62,6 +62,19 @@ export async function fetchWallPage(userId: string, cursor?: { createdAt: string
   if (!r.ok) return r
   const rows = r.value ?? []
   return { ok: true, value: { posts: toFeedPosts(rows), hasMore: rows.length === FEED_PAGE } }
+}
+
+/** Tường (P2): bài của người đó (đúng luật get_user_wall) + thread của họ theo quyền — RPC user_wall. */
+export async function fetchWallMixedPage(userId: string, cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
+  const r = await rpc<MixedRow[]>('user_wall', {
+    p_user: userId,
+    p_before: cursor?.createdAt ?? null,
+    p_before_key: cursor?.key ?? null,
+    p_limit: FEED_PAGE,
+  }, 'load')
+  if (!r.ok) return r
+  const rows = r.value ?? []
+  return { ok: true, value: { posts: toFeedEntries(rows), hasMore: rows.length === FEED_PAGE } }
 }
 
 const relResult = (r: Result<unknown>): Result<Relationship> => (r.ok ? { ok: true, value: toRelationship(r.value) } : r)

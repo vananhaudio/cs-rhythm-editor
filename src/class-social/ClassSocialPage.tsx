@@ -129,7 +129,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onSignOut={onSignOut}>
       {view.kind === 'profile' && (
         <ProfilePage key={view.userId} me={me} userId={view.userId} identityRev={identityRev} canEditAvatar={editor.canEditAvatar}
-          onEditMedia={editor.pick} onSection={onSection} onOpenProfile={onOpenProfile} />
+          onEditMedia={editor.pick} onSection={onSection} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
       )}
       {view.kind === 'thread' && (
         <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onSection('home')}

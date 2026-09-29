@@ -1,23 +1,25 @@
 // Trạng thái một dòng bài (feed Cộng đồng / tường cá nhân): trang đầu, "Xem thêm", tải lại sau khi đăng bài.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchFeedPage, type Result } from './postsApi'
-import { mergePosts, type FeedPost } from './postModel'
+import { fetchSocialFeedPage, type Result } from './postsApi'
+import { entryKey, mergePosts, type FeedEntry } from './postModel'
 
 export type FeedState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; posts: FeedPost[]; hasMore: boolean; loadingMore: boolean; moreError: string | null }
+  | { status: 'ready'; posts: FeedEntry[]; hasMore: boolean; loadingMore: boolean; moreError: string | null }
 
-function firstPageState(r: Result<{ posts: FeedPost[]; hasMore: boolean }>): FeedState {
+function firstPageState(r: Result<{ posts: FeedEntry[]; hasMore: boolean }>): FeedState {
   return r.ok
     ? { status: 'ready', posts: r.value.posts, hasMore: r.value.hasMore, loadingMore: false, moreError: null }
     : { status: 'error', message: r.message }
 }
 
-export type PageFetcher = (cursor?: { createdAt: string; id: string }) => Promise<Result<{ posts: FeedPost[]; hasMore: boolean }>>
+/** cursor.key = sort_key của mục cuối ('p:<id>' | 't:<id>') — Feed/Tường trộn dùng; nguồn chỉ-bài bỏ qua. */
+export type PageFetcher = (cursor?: { createdAt: string; id: string; key: string }) => Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>>
 
+/** Feed /me: bài Social + câu chuyện học tập (Learning Thread community) — RPC social_feed. */
 export function useCommunityFeed() {
-  return usePostsFeed(fetchFeedPage)
+  return usePostsFeed(fetchSocialFeedPage)
 }
 
 /** fetchPage phải ỔN ĐỊNH (useCallback) — đổi fetchPage (vd. sang tường người khác) = tải lại từ đầu. */
@@ -38,7 +40,7 @@ export function usePostsFeed(fetchPage: PageFetcher) {
     const last = cur.posts[cur.posts.length - 1]
     const id = req.current
     setState({ ...cur, loadingMore: true, moreError: null })
-    const r = await fetchPage({ createdAt: last.createdAt, id: last.id })
+    const r = await fetchPage({ createdAt: last.createdAt, id: last.id, key: entryKey(last) })
     if (id !== req.current) return
     setState(s => s.status !== 'ready' ? s : r.ok
       ? { ...s, posts: mergePosts(s.posts, r.value.posts), hasMore: r.value.hasMore, loadingMore: false }

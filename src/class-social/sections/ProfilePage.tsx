@@ -9,21 +9,23 @@ import type { SocialSection } from '../resolveMeRoute'
 import type { ImageKind } from '../profile/imageFile'
 import { safeImageUrl } from '../media/safeImageUrl'
 import { usePostsFeed } from '../posts/useCommunityFeed'
-import type { FeedPost } from '../posts/postModel'
+import { isPostEntry, type FeedPost } from '../posts/postModel'
 import { useFeedComments } from '../comments/useFeedComments'
 import { loadCommentsApi } from '../comments/lazyApi'
 import {
-  fetchProfile, fetchWallPage, respondFriendRequest, sendFriendRequest, unfriend,
+  fetchProfile, fetchWallMixedPage, respondFriendRequest, sendFriendRequest, unfriend,
 } from '../friends/friendsApi'
 import { lockedWallText, relationshipUi, type FriendAction, type PublicProfile } from '../friends/friendModel'
 import { Avatar, EmptyState } from '../ui'
 import IdentityHeader from './IdentityHeader'
 import WallComposer from './WallComposer'
-import PostCard, { type PostSocial } from './PostCard'
+import type { PostSocial } from './PostCard'
+import FeedEntryCard from './FeedEntryCard'
+import JourneyView from '../../learning-thread/JourneyView'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'missing' } | { status: 'ready'; profile: PublicProfile }
 
-export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onSection, onOpenProfile }: {
+export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onSection, onOpenProfile, onOpenThread }: {
   me: ClassIdentity
   userId: string
   identityRev?: number
@@ -31,10 +33,14 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   onEditMedia?: (kind: ImageKind) => void
   onSection: (s: SocialSection) => void
   onOpenProfile: (userId: string) => void
+  /** Learning Thread (P2): mở /me/t/<id> từ Tường / Hành trình */
+  onOpenThread?: (threadId: string) => void
 }) {
   const isSelf = userId === me.userId
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [busy, setBusy] = useState(false)
+  // Tab trang cá nhân: Tường (bài + câu chuyện học tập) | Hành trình (timeline Learning Thread theo chặng)
+  const [tab, setTab] = useState<'wall' | 'journey'>('wall')
   const [actionError, setActionError] = useState<string | null>(null)
 
   const [prevUser, setPrevUser] = useState(userId)
@@ -116,13 +122,20 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
       {moderatorView && (
         <p className="cs-profile-note"><ShieldCheck size={16} aria-hidden="true" />Bạn đang xem tường này với quyền Thầy (kiểm duyệt).</p>
       )}
-      {p.canViewWall
-        ? <Wall me={me} userId={userId} isSelf={isSelf} identityRev={identityRev} onOpenProfile={onOpenProfile} />
+      <div className="lt-profile-tabs" role="group" aria-label="Trang cá nhân">
+        <button type="button" aria-pressed={tab === 'wall'} onClick={() => setTab('wall')}>Tường</button>
+        <button type="button" aria-pressed={tab === 'journey'} onClick={() => setTab('journey')}>Hành trình</button>
+      </div>
+      {tab === 'journey' && (
+        <JourneyView userId={userId} ownerName={isSelf ? me.name : p.name} onOpenThread={id => onOpenThread?.(id)} />
+      )}
+      {tab === 'wall' && <>{p.canViewWall
+        ? <Wall me={me} userId={userId} isSelf={isSelf} identityRev={identityRev} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
         : (
           <section className="cs-card cs-wall-locked" aria-label="Tường đang khoá">
             <EmptyState icon={Lock} title="Chỉ bạn bè mới xem được bài đăng">{lockedWallText(p.relationship, p.name)}</EmptyState>
           </section>
-        )}
+        )}</>}
     </div>
   )
 }
@@ -166,16 +179,18 @@ function OtherHeader({ profile, status, actions, busy, onAct }: {
   )
 }
 
-function Wall({ me, userId, isSelf, identityRev, onOpenProfile }: {
+function Wall({ me, userId, isSelf, identityRev, onOpenProfile, onOpenThread }: {
   me: ClassIdentity
   userId: string
   isSelf: boolean
   identityRev: number
   onOpenProfile: (userId: string) => void
+  onOpenThread?: (threadId: string) => void
 }) {
-  const fetchPage = useCallback((c?: { createdAt: string; id: string }) => fetchWallPage(userId, c), [userId])
+  // P2: bài của người đó (luật get_user_wall) + câu chuyện học tập của họ theo quyền server — RPC user_wall
+  const fetchPage = useCallback((c?: { createdAt: string; id: string; key: string }) => fetchWallMixedPage(userId, c), [userId])
   const { state, reload, loadMore } = usePostsFeed(fetchPage)
-  const postIds = useMemo(() => state.status === 'ready' ? state.posts.map(p => p.id) : [], [state])
+  const postIds = useMemo(() => state.status === 'ready' ? state.posts.filter(isPostEntry).map(p => p.id) : [], [state])
   const { comments, refresh, expand, refreshAll } = useFeedComments(postIds)
   const [modError, setModError] = useState<string | null>(null)
 
@@ -196,6 +211,7 @@ function Wall({ me, userId, isSelf, identityRev, onOpenProfile }: {
     onExpandComments: expand,
     onModeratePost: (p, h) => void onModeratePost(p, h),
     onOpenProfile: id => { if (id !== userId) onOpenProfile(id) },
+    onOpenThread,
   }
 
   return (
@@ -218,7 +234,7 @@ function Wall({ me, userId, isSelf, identityRev, onOpenProfile }: {
         )}
         {state.status === 'ready' && state.posts.length > 0 && (
           <div className="cs-post-list">
-            {state.posts.map(p => <PostCard key={p.id} post={p} social={social} />)}
+            {state.posts.map(p => <FeedEntryCard key={p.id} entry={p} social={social} />)}
             {state.moreError && <p className="cs-feed-more-error" role="alert">{state.moreError}</p>}
             {state.hasMore && (
               <button type="button" className="cs-btn cs-btn-ghost cs-feed-more" onClick={() => void loadMore()} disabled={state.loadingMore}>

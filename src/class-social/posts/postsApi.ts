@@ -1,7 +1,7 @@
 // Gọi Supabase cho bài đăng cộng đồng. Tác giả KHÔNG gửi từ client — DB tự lấy auth.uid()
 // (cột author_user_id default auth.uid(), policy INSERT bắt buộc = auth.uid()).
 import { supabase } from '../../supabase'
-import { friendlyError, toFeedPosts, type AssignmentInsert, type FeedPost, type FeedRow, type NewPost, type WallInsert } from './postModel'
+import { friendlyError, toFeedEntries, toFeedPosts, type AssignmentInsert, type FeedEntry, type FeedPost, type FeedRow, type MixedRow, type NewPost, type WallInsert } from './postModel'
 
 export const FEED_PAGE = 20
 
@@ -22,6 +22,25 @@ export async function fetchFeedPage(cursor?: { createdAt: string; id: string }):
     }
     const rows = (data ?? []) as FeedRow[]
     return { ok: true, value: { posts: toFeedPosts(rows), hasMore: rows.length === FEED_PAGE } }
+  } catch (e) {
+    return { ok: false, message: friendlyError(e as Error, 'feed', online()) }
+  }
+}
+
+/** Feed /me (P2): bài Social (đúng luật class_feed) + thread community — một thread = một mục, theo hoạt động mới nhất. */
+export async function fetchSocialFeedPage(cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
+  try {
+    const { data, error, status } = await supabase.rpc('social_feed', {
+      p_before: cursor?.createdAt ?? null,
+      p_before_key: cursor?.key ?? null,
+      p_limit: FEED_PAGE,
+    })
+    if (error) {
+      if (import.meta.env.DEV) console.warn('[class-social] social_feed:', error.code, error.message)
+      return { ok: false, message: friendlyError({ ...error, status }, 'feed', online()) }
+    }
+    const rows = (data ?? []) as MixedRow[]
+    return { ok: true, value: { posts: toFeedEntries(rows), hasMore: rows.length === FEED_PAGE } }
   } catch (e) {
     return { ok: false, message: friendlyError(e as Error, 'feed', online()) }
   }

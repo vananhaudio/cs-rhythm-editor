@@ -16,6 +16,8 @@ export type PostSocial = {
   onModeratePost: (post: FeedPost, hidden: boolean) => void
   /** Bấm tên/avatar → trang cá nhân */
   onOpenProfile?: (userId: string) => void
+  /** Learning Thread (P2): mở /me/t/<id> */
+  onOpenThread?: (threadId: string) => void
 }
 
 export default function PostCard({ post, now, social }: { post: FeedPost; now?: Date; social?: PostSocial }) {

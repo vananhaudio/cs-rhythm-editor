@@ -1,10 +1,12 @@
 // Dòng hoạt động của Cộng Đồng Hành Trình Guitar — phần chính của /me.
-// Dữ liệu THẬT từ class_feed() (bài của mọi thành viên, mới nhất trước). Không bài giả,
+// Dữ liệu THẬT từ social_feed(): bài Social (luật class_feed) + câu chuyện học tập (Learning Thread community),
+// mới nhất trước. Không bài giả,
 // không dùng tiến độ học cá nhân. Chưa có bài → trạng thái trống nhẹ.
 import { Users } from 'lucide-react'
 import type { FeedState } from '../posts/useCommunityFeed'
 import { EmptyState } from '../ui'
-import PostCard, { type PostSocial } from './PostCard'
+import type { PostSocial } from './PostCard'
+import FeedEntryCard from './FeedEntryCard'
 
 export default function CommunityFeed({ state, onRetry, onLoadMore, social }: {
   state: FeedState
@@ -46,7 +48,7 @@ export default function CommunityFeed({ state, onRetry, onLoadMore, social }: {
 
       {state.status === 'ready' && state.posts.length > 0 && (
         <div className="cs-post-list">
-          {state.posts.map(p => <PostCard key={p.id} post={p} social={social} />)}
+          {state.posts.map(p => <FeedEntryCard key={p.id} entry={p} social={social} />)}
           {state.moreError && <p className="cs-feed-more-error" role="alert">{state.moreError}</p>}
           {state.hasMore && (
             <button type="button" className="cs-btn cs-btn-ghost cs-feed-more" onClick={onLoadMore} disabled={state.loadingMore}>

@@ -138,6 +138,31 @@ psqld t_post_nodh2 -f "$ROOT/db/learning_threads_p1_post_migration.sql" >/dev/nu
 grep -q "bài DH2 không khớp" "$TMP/post4.err" && [ "$(q t_post_nodh2 "select count(*) from public.learning_lesson_settings")" = "0" ] \
   && ok "bài DH2 không khớp id/tên/khoá → DỪNG, không cấu hình gì" || fail "post dh2: $(cat "$TMP/post4.err")"
 
+echo "── P2 (Feed · Tường · Hành trình): preflight → migration ×2 → test → rollback"
+p2c() { grep -o '"can_view_wall": \[[^]]*\], "class_public_identity": \[[^]]*\], "is_class_member": \[[^]]*\], "is_teacher": \[[^]]*\]' "$1"; }
+[ -n "$(p2c "$ROOT/db/learning_threads_p2_setup.sql")" ] && [ "$(p2c "$ROOT/db/learning_threads_p2_setup.sql")" = "$(p2c "$ROOT/db/learning_threads_p2_preflight.sql")" ] \
+  && ok "P2: hằng md5 giống hệt giữa preflight và migration" || fail "P2: hằng lệch"
+baseline t_p2 "$TMP/fixture_noroles.sql"
+[ "$(q t_p2 "select md5(prosrc) from pg_proc where proname = 'can_view_wall'")" = "72be0399a709b62fb512bbf0be34294b" ] && ok "P2: md5 can_view_wall (repo) = hằng kỳ vọng" || fail "can_view_wall md5"
+P2GATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/learning_threads_p2_preflight.sql")) z where section = 'GATE'"; }
+[ "$(P2GATE t_p2)" = "STOP - DO NOT MIGRATE" ] && ok "P2 preflight khi CHƯA có P1: STOP" || fail "P2 preflight thiếu P1: $(P2GATE t_p2)"
+psqld t_p2 -f "$ROOT/db/learning_threads_p2_setup.sql" >/dev/null 2>"$TMP/p2a.err" && fail "P2 chạy khi chưa có P1"
+grep -q "thiếu Learning Thread P1" "$TMP/p2a.err" && ok "P2 migration tự DỪNG khi chưa có P1" || fail "p2 gate: $(cat "$TMP/p2a.err")"
+psqld t_p2 -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+[ "$(P2GATE t_p2)" = "PASS" ] && ok "P2 preflight: GATE = PASS" || fail "P2 preflight: $(P2GATE t_p2)"
+psqld t_p2 -f "$ROOT/db/learning_threads_p2_setup.sql" >/dev/null && psqld t_p2 -f "$ROOT/db/learning_threads_p2_setup.sql" >/dev/null && ok "P2 migration ×2 (idempotent)"
+psqld t_p2 -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_p2 "select count(*) from information_schema.routine_privileges where routine_name in ('social_feed','user_wall','learning_journey','lt_thread_card') and grantee = 'anon'")" = "0" ] \
+  && ok "P2: anon không EXECUTE hàm P2 nào" || fail "P2 anon exec"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_p2 -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/learning_threads_p2_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL P2"
+BEFORE_P2RB="$(q t_p2 "select count(*) from learning_threads")/$(q t_p2 "select count(*) from learning_thread_events")"
+psqld t_p2 -f "$ROOT/db/learning_threads_p2_rollback.sql" >/dev/null && psqld t_p2 -f "$ROOT/db/learning_threads_p2_rollback.sql" >/dev/null
+[ "$(q t_p2 "select count(*) from pg_proc where proname in ('social_feed','user_wall','learning_journey','lt_thread_card')")" = "0" ] \
+  && [ "$(q t_p2 "select count(*) from learning_threads")/$(q t_p2 "select count(*) from learning_thread_events")" = "$BEFORE_P2RB" ] \
+  && ok "P2 rollback ×2: gỡ 4 hàm, dữ liệu thread P1 giữ nguyên ($BEFORE_P2RB)" || fail "P2 rollback"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

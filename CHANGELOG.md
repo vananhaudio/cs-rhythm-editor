@@ -4,6 +4,13 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 29/09/2026
 
+- **Learning Thread P2 — Feed · Tường · Hành trình (code xong, chờ migration production)**
+  - Thread `community` hiện trên Feed `/me` dạng "câu chuyện học tập": một thread = một thẻ, nổi lên khi có hoạt động mới. Thread private / ẩn / lưu trữ không lên Feed.
+  - Tường gồm bài Social + thread của người đó theo quyền.
+  - Tab **Hành trình** trên trang cá nhân: timeline gom theo danh tính lịch sử ((lớp hoặc Tự học) × khoá), màu theo môn giống App học. Bấm mốc → `/me/t/<id>`.
+  - Chỉ thêm RPC đọc `social_feed`, `user_wall`, `learning_journey` (+ `lt_thread_card` nội bộ). Không bảng mới, không copy sang `class_posts`; `class_feed` / `get_user_wall` giữ nguyên.
+  - Chi tiết: `docs/LEARNING-THREAD-P2.md`.
+
 - **Learning Thread P1 — Trả bài / Hỏi bài theo bài học (PRODUCTION PASS)**
   - **Mô hình:** một bài học = một thread đang mở cho mỗi học sinh. Trả bài, câu hỏi, Thầy phản hồi, "Cần làm lại", Trả lại và ĐẠT đều là event trong cùng thread. App học (riêng tư) và `/me` (Social) dùng chung dữ liệu, không có hệ Trả bài thứ hai.
   - **Bảng:** `learning_lesson_settings` (Thầy bật theo từng bài: off / allowed / required; Hỏi bài off / allowed; không suy từ `lesson_type`), `learning_threads`, `learning_thread_events`. Chỉ truy cập qua RPC `lt_*` SECURITY DEFINER; bảng REVOKE hết và nằm trong `self_managed`.

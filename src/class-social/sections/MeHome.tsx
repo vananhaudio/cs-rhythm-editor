@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ClassIdentity } from '../useClassSession'
 import { useCommunityFeed } from '../posts/useCommunityFeed'
-import type { FeedPost } from '../posts/postModel'
+import { isPostEntry, type FeedPost } from '../posts/postModel'
+import '../../learning-thread/styles'
 import { useFeedComments } from '../comments/useFeedComments'
 import { loadCommentsApi } from '../comments/lazyApi'
 import IdentityHeader from './IdentityHeader'
@@ -37,7 +38,7 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
   const [modError, setModError] = useState<string | null>(null)
 
   // Bình luận: MỘT request cho mọi bài đang hiện (không N+1)
-  const postIds = useMemo(() => state.status === 'ready' ? state.posts.map(p => p.id) : [], [state])
+  const postIds = useMemo(() => state.status === 'ready' ? state.posts.filter(isPostEntry).map(p => p.id) : [], [state])
   const { comments, refresh, expand, refreshAll } = useFeedComments(postIds)
 
   // Đăng xong: tải lại trang đầu (giữ danh sách cũ trong lúc tải) rồi đưa feed vào tầm nhìn
@@ -65,6 +66,7 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
     onExpandComments: expand,
     onModeratePost: (p, h) => void onModeratePost(p, h),
     onOpenProfile,
+    onOpenThread,
   }
 
   return (

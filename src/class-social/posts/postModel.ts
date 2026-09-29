@@ -1,4 +1,5 @@
 // Domain bài đăng cộng đồng — hàm THUẦN (không đụng mạng/DOM) để test được.
+import { toThreadCard, type ThreadCard } from '../../learning-thread/feedModel'
 import { parseExternalMedia, MEDIA_ERROR_TEXT, type ExternalMedia, type MediaProvider } from '../media/parseExternalMedia'
 import { safeImageUrl } from '../media/safeImageUrl'
 
@@ -195,8 +196,34 @@ export function toFeedPosts(rows: FeedRow[]): FeedPost[] {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0))
 }
 
+// ── Feed trộn (P2): bài Social + thẻ Learning Thread — RPC social_feed / user_wall ──
+// Learning Thread KHÔNG phải class_posts: chỉ là một "mục" khác loại trong cùng dòng hoạt động (không copy dữ liệu).
+export type ThreadEntry = { entry: 'learning_thread'; id: string; createdAt: string; card: ThreadCard }
+export type FeedEntry = FeedPost | ThreadEntry
+export const isThreadEntry = (e: FeedEntry): e is ThreadEntry => (e as ThreadEntry).entry === 'learning_thread'
+export const isPostEntry = (e: FeedEntry): e is FeedPost => !isThreadEntry(e)
+/** Khoá phân trang ổn định (khớp sort_key của server): 'p:<id>' | 't:<id>' */
+export const entryKey = (e: FeedEntry): string => (isThreadEntry(e) ? 't:' : 'p:') + e.id
+
+export type MixedRow = { kind: string; sort_at: string; sort_key: string; post: unknown; thread: unknown }
+
+/** Hàng social_feed / user_wall → mục hiển thị. Thứ tự GIỮ theo server (sort_at, sort_key giảm dần). */
+export function toFeedEntries(rows: MixedRow[]): FeedEntry[] {
+  const out: FeedEntry[] = []
+  for (const r of rows) {
+    if (r.kind === 'post') {
+      const p = r.post ? toFeedPost(r.post as FeedRow) : null
+      if (p) out.push(p)
+    } else if (r.kind === 'learning_thread') {
+      const c = toThreadCard(r.thread)
+      if (c) out.push({ entry: 'learning_thread', id: c.id, createdAt: r.sort_at, card: c })
+    }
+  }
+  return out
+}
+
 /** Gộp trang mới vào danh sách (bỏ trùng id). */
-export function mergePosts(current: FeedPost[], incoming: FeedPost[]): FeedPost[] {
+export function mergePosts<T extends { id: string }>(current: T[], incoming: T[]): T[] {
   const seen = new Set(current.map(p => p.id))
   return [...current, ...incoming.filter(p => !seen.has(p.id))]
 }
