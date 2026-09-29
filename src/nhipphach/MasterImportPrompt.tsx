@@ -61,7 +61,7 @@ export function MasterImportPrompt({ masterId, library, canSave, onImported, onC
   const checking = !!source && !!library && existing === undefined && !checkError;
   return <div role="dialog" aria-modal="true" aria-label="Sao chép bản gốc vào Nhịp Phách" style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
     <div style={{ width: "min(460px,100%)", background: "var(--surface)", color: "var(--ink)", borderRadius: 14, padding: 20, boxShadow: "0 18px 48px rgba(0,0,0,.3)" }}>
-      <h2 style={{ margin: "0 0 10px", fontSize: 18 }}>Đưa bản gốc vào Nhịp Phách</h2>
+      <h2 style={{ margin: "0 0 10px", fontSize: 18, color: "var(--ink)" }}>Đưa bản gốc vào Nhịp Phách</h2>
       {source ? <><strong>{source.title}</strong><p style={{ margin: "5px 0", fontSize: 13 }}>{source.composer || "Chưa ghi tác giả"} · {source.originalFilename} · {(source.sizeBytes / 1024).toFixed(1)} KB</p></> : !error && <p>Đang đọc bản gốc…</p>}
       {existing
         ? <p role="status" style={{ fontSize: 13 }}>Nhịp Phách đã có bài <strong>“{existing.title}”</strong> với nội dung giống hệt bản gốc này (phiên bản {existing.versionNumber}). Mở bài đó để làm tiếp, hoặc chủ động tạo thêm một bản làm việc mới.</p>
