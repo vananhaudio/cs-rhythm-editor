@@ -4,6 +4,11 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social V1/V1.1 — PRODUCTION PASS END-TO-END (đóng)**
+  - Học sinh thật (DH2.KD0826) Hỏi bài ở DH2 · Bài 4.4 từ `/learn` → Learning Thread tự đóng dấu DH2.KD0826 → hiện ngay trong Hoạt động của trang lớp; không thành Tự học.
+  - Thread tự học cũ (HS03 · Bài 4.3) giữ nguyên danh tính lịch sử. Không migration, không dữ liệu giả.
+  - Câu kiểm chỉ đọc: `db/social_classes_v11_kd0826_check.sql`. Chi tiết: `docs/SOCIAL-CLASSES-V1.md` (mục PRODUCTION PASS).
+
 - **Class Social V1.1 — tên lớp thân thiện · hoạt động lớp thật · polish**
   - Menu hiện tên người đọc được ("Hành trình 2027" thay vì HT2027.TH01), chỉ đổi trình bày; một mục sáng duy nhất.
   - Header lớp theo thứ tự tên → Thầy/học viên/lịch → "bạn là thành viên / đang xem"; mã lớp nhỏ ở cuối.

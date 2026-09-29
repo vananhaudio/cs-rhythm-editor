@@ -93,3 +93,22 @@ Rollback: frontend trước, sau đó `db/social_classes_v1_rollback.sql` (khôn
   Không lớp nào khớp thì là "Tự học". Quy tắc xác định, test kiểm trường hợp 2 lớp cùng dạy DH2.
 - **Audit production chỉ đọc:** `db/social_classes_v11_audit.sql`. Liệt kê lớp, membership (số lượng), mọi thread kèm lớp đã đóng dấu, lớp có hoạt động thật, và lớp có thể sinh thread thật tự nhiên (lớp dạy khoá của bài đã bật). Không có PII.
 - **Không migration.** Không tạo dữ liệu giả trên production.
+
+## PRODUCTION PASS END-TO-END (30/09/2026) — V1 + V1.1 ĐÓNG
+
+Bằng chứng trên production, dữ liệu thật (không dữ liệu giả, không tạo thread thay học sinh):
+
+1. Audit chỉ đọc (`db/social_classes_v11_audit.sql`) trước khi kiểm: 1 thread (HS03 · Bài 4.3 · Tự học), 0 thread thuộc lớp.
+2. `db/social_classes_v11_kd0826_check.sql` (chỉ đọc, gọi đúng `lt_identity_snapshot` / `lt_lesson_open_for_me` mà `lt_submit` dùng):
+   - DH2.KD0826 có 2 thành viên, đều là học sinh; cả hai **SẴN SÀNG** → thread mới ở Bài 4.4 sẽ đóng dấu DH2.KD0826.
+   - HS03 không thuộc lớp → sẽ đóng dấu Tự học (không dùng).
+   - Bài 4.4 — Bolero móc kiểu 2: hỏi_bài = allowed, 0 thread trước khi kiểm.
+3. Owner, bằng tài khoản học sinh thật **Trần Tiến Hải** (thành viên DH2.KD0826): `/learn` → DH2 → Bài 4.4 → **Hỏi bài** → Cộng đồng học tập.
+4. Kết quả Owner xác nhận trên UI production:
+   - Learning Thread tự đóng dấu **DH2.KD0826** (không thành Tự học), đúng learner, đúng bài, trạng thái "Chờ Thầy phản hồi".
+   - Thread hiện ngay trong `/me/classes/<DH2.KD0826>` → **Hoạt động**.
+   - Thread HS03 Bài 4.3 giữ nguyên danh tính lịch sử **Tự học** (passed · 4 events).
+
+Hai thread production này là dữ liệu thật: **giữ nguyên, không xoá, không ẩn, không reset.**
+
+Kiểm lại bất cứ lúc nào: chạy `db/social_classes_v11_kd0826_check.sql` → dòng `sau` phải là `PASS` (đóng dấu DH2.KD0826, community, chỉ có trong Hoạt động của DH2.KD0826); dòng `bai43` vẫn Tự học.
