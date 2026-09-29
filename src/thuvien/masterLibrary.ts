@@ -1,5 +1,6 @@
 import { parseMusicXML } from '../musicxml-beats/parser.ts'
 import { readScoreMetadata } from '../nhipphach/scoreMetadata.ts'
+import { foldVi } from '../class-social/comments/khoAdapter.ts'
 
 const TABLE = 'musicxml_library'
 export const MAX_MUSICXML_BYTES = 5 * 1024 * 1024
@@ -22,6 +23,25 @@ export function prepareMusicXml(filename: string, xml: string) {
   return { xml, filename, sizeBytes, metadata: readScoreMetadata(xml, filename) }
 }
 
+/** Bỏ dấu + thường hoá + gộp khoảng trắng: "DIỄM  Xưa" và "diem xua" là một. */
+const fold = (text: string) => foldVi(text).replace(/\s+/g, ' ').trim()
+
+/** Tìm theo tên bài HOẶC tác giả, không phân biệt hoa/thường và dấu. */
+export function matchesQuery(item: Pick<LibraryItem, 'title' | 'composer'>, query: string): boolean {
+  const key = fold(query)
+  return !key || fold(item.title).includes(key) || fold(item.composer ?? '').includes(key)
+}
+
+/**
+ * Chỉ các cột metadata. KHÔNG bao giờ có musicxml_text / content_hash / size_bytes /
+ * original_filename — bản nhạc và mã kiểm tra của nó giữ nguyên tuyệt đối.
+ */
+export function metadataPatch(title: string, composer: string) {
+  const cleanTitle = title.trim()
+  if (!cleanTitle) throw new Error('Vui lòng nhập Tên bài.')
+  return { title: cleanTitle, composer: composer.trim() || null, updated_at: new Date().toISOString() }
+}
+
 async function sha256(xml: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(xml))
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
@@ -33,6 +53,18 @@ export async function listLibrary(): Promise<LibraryItem[]> {
     .select('id,title,composer,created_at').order('created_at', { ascending: false }).limit(1000)
   if (error) throw error
   return data ?? []
+}
+
+export async function updateLibraryMetadata(id: string, title: string, composer: string): Promise<LibraryItem> {
+  const patch = metadataPatch(title, composer)
+  const { supabase } = await import('../supabase.ts')
+  // `.single()`: RLS chặn hoặc id không còn thì báo lỗi, không bao giờ "lưu thành công" giả.
+  const { data, error } = await supabase.from(TABLE).update(patch).eq('id', id)
+    .select('id,title,composer,created_at').single()
+  // 0 dòng được cập nhật (RLS không cho sửa, hoặc bài không còn) → PGRST116.
+  if (error?.code === 'PGRST116') throw new Error('Không lưu được: tài khoản không có quyền sửa, hoặc bản nhạc không còn trong thư viện.')
+  if (error) throw new Error(error.message || 'Không lưu được thông tin bản nhạc.')
+  return data
 }
 
 export async function importMusicXml(input: ReturnType<typeof prepareMusicXml>, title: string, composer: string): Promise<LibraryItem> {

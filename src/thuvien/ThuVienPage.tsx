@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { importMusicXml, listLibrary, prepareMusicXml } from './masterLibrary.ts'
+import { importMusicXml, listLibrary, matchesQuery, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
 import { scoreIdFromSearch } from './viewScore.ts'
 import './ThuVienPage.css'
@@ -94,12 +94,13 @@ export default function ThuVienPage() {
     const item = items.find(entry => entry.id === openId)
     return <main className="thu-vien">
       <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
-        <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} onClose={closeScore} />
+        <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} onClose={closeScore}
+          onSaved={saved => setItems(current => current.map(entry => entry.id === saved.id ? saved : entry))} />
       </Suspense>
     </main>
   }
 
-  const shown = items.filter(item => item.title.toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi')))
+  const shown = items.filter(item => matchesQuery(item, query))
   return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
     <div className="mx-auto max-w-4xl">
       <div className="mb-7 flex items-center justify-between gap-4">
@@ -110,7 +111,7 @@ export default function ThuVienPage() {
         <button type="button" onClick={() => fileInput.current?.click()} disabled={busy}
           className="rounded-lg bg-[#32664a] px-5 py-3 font-semibold text-white disabled:opacity-50">+ Thêm bản nhạc</button>
         <input ref={fileInput} type="file" accept=".musicxml,.xml" onChange={event => void chooseFile(event)} className="sr-only" aria-label="Chọn file MusicXML" />
-        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm tên bài..." aria-label="Tìm tên bài"
+        <input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Tìm tên bài hoặc tác giả..." aria-label="Tìm tên bài hoặc tác giả"
           className="min-w-0 flex-1 rounded-lg border border-[#ccd5ca] bg-white px-4 py-3" />
       </div>
       {message && <p role="status" className="mb-5 rounded-lg bg-white p-3">{message}</p>}
@@ -133,7 +134,7 @@ export default function ThuVienPage() {
         </button>)}
         {listState === 'loading' && <p aria-live="polite">Đang tải thư viện…</p>}
         {listState === 'error' && <p role="alert">{listError} <button type="button" className="tv-retry" onClick={() => { setListState('loading'); setReload(n => n + 1) }}>Thử lại</button></p>}
-        {listState === 'ready' && !shown.length && <p className="px-4 py-8 text-center text-[#526456]">{query ? 'Không tìm thấy bản nhạc.' : 'Thư viện chưa có bản nhạc.'}</p>}
+        {listState === 'ready' && !shown.length && <p className="px-4 py-8 text-center text-[#526456]">{items.length ? 'Không tìm thấy bản nhạc phù hợp.' : 'Thư viện chưa có bản nhạc.'}</p>}
       </div>
     </div>
   </main>

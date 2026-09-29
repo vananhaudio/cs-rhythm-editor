@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ScorePage } from '../musicxml-beats/renderer/types.ts'
+import { updateLibraryMetadata } from './masterLibrary.ts'
+import type { LibraryItem } from './masterLibrary.ts'
 import { pageSrc, renderPagesForView, ZOOM_STEPS } from './viewScore.ts'
 import type { Zoom } from './viewScore.ts'
 
@@ -21,8 +23,14 @@ type State =
  * Xem một bản trong `musicxml_library`. Chỉ đọc: lấy XML qua `getMasterCopySource`
  * (đã kiểm SHA-256 + kích thước + parse) rồi khắc bằng renderer của Nhịp Phách.
  */
-export default function ScoreViewer({ id, initial, onClose }: { id: string; initial: Heading | null; onClose: () => void }) {
+export default function ScoreViewer({ id, initial, onClose, onSaved }: {
+  id: string
+  initial: Heading | null
+  onClose: () => void
+  onSaved: (item: LibraryItem) => void
+}) {
   const [heading, setHeading] = useState<Heading | null>(initial)
+  const [editing, setEditing] = useState(false)
   const [state, setState] = useState<State>({ kind: 'loading', step: 'Đang tải bản nhạc…' })
   const [zoom, setZoom] = useState<Zoom>(100)
   const [attempt, setAttempt] = useState(0)
@@ -65,7 +73,11 @@ export default function ScoreViewer({ id, initial, onClose }: { id: string; init
         <h1>{heading?.title ?? 'Bản nhạc'}</h1>
         {heading?.composer && <p>{heading.composer}</p>}
       </div>
+      {heading && !editing && state.kind !== 'loading' &&
+        <button type="button" className="tv-edit" onClick={() => setEditing(true)}>Sửa thông tin</button>}
     </header>
+    {editing && heading && <MetadataForm id={id} heading={heading} onCancel={() => setEditing(false)}
+      onSaved={item => { setHeading({ title: item.title, composer: item.composer }); setEditing(false); onSaved(item) }} />}
     {state.kind === 'loading' && <p className="tv-view-note" aria-live="polite">{state.step}</p>}
     {state.kind === 'error' && <div className="tv-view-note tv-view-error" role="alert">
       <p>{state.message}</p>
@@ -87,4 +99,36 @@ export default function ScoreViewer({ id, initial, onClose }: { id: string; init
       </div>
     </>}
   </article>
+}
+
+/** Chỉ sửa Tên bài / Tác giả. Bản nhạc (XML + mã kiểm tra) không bao giờ được gửi đi. */
+function MetadataForm({ id, heading, onCancel, onSaved }: {
+  id: string
+  heading: Heading
+  onCancel: () => void
+  onSaved: (item: LibraryItem) => void
+}) {
+  const [title, setTitle] = useState(heading.title)
+  const [composer, setComposer] = useState(heading.composer ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function save() {
+    if (busy || !title.trim()) return
+    setBusy(true)
+    setError('')
+    try { onSaved(await updateLibraryMetadata(id, title, composer)) }
+    catch (err) { setError(err instanceof Error ? err.message : 'Không lưu được thông tin bản nhạc.') }
+    finally { setBusy(false) }
+  }
+
+  return <form className="tv-meta" aria-label="Sửa thông tin bản nhạc" onSubmit={event => { event.preventDefault(); void save() }}>
+    <label>Tên bài<input value={title} onChange={event => setTitle(event.target.value)} required autoFocus /></label>
+    <label>Tác giả<input value={composer} onChange={event => setComposer(event.target.value)} placeholder="Để trống nếu chưa rõ" /></label>
+    {error && <p className="tv-meta-error" role="alert">{error}</p>}
+    <div className="tv-meta-actions">
+      <button type="submit" disabled={busy || !title.trim()}>{busy ? 'Đang lưu…' : 'Lưu'}</button>
+      <button type="button" onClick={onCancel} disabled={busy}>Hủy</button>
+    </div>
+  </form>
 }
