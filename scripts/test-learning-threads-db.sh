@@ -79,6 +79,19 @@ PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$POR
   -f "$ROOT/db/tests/learning_threads_p1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
 [ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL"
 
+echo "── Smoke production tự huỷ (trên DB mới migrate) → PASS và không để lại dữ liệu"
+baseline t_smoke "$TMP/fixture_noroles.sql"
+psqld t_smoke -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+SEQ_BEFORE="$(q t_smoke "select count(*) from public.edu_lesson_progress")"
+psqld t_smoke -f "$ROOT/db/tests/learning_threads_p1_prod_smoke.sql" >/dev/null 2>"$TMP/smoke.err" && fail "smoke không tự huỷ (không RAISE)"
+grep -o "SMOKE PASS [0-9]*/[0-9]*" "$TMP/smoke.err" >/dev/null && ok "smoke: $(grep -o 'SMOKE PASS [0-9]*/[0-9]*' "$TMP/smoke.err")" || fail "smoke: $(cat "$TMP/smoke.err")"
+[ "$(q t_smoke "select (select count(*) from public.learning_threads) + (select count(*) from public.learning_thread_events) + (select count(*) from public.learning_lesson_settings)")" = "0" ] \
+  && [ "$(q t_smoke "select count(*) from public.edu_lesson_progress")" = "$SEQ_BEFORE" ] \
+  && ok "smoke dọn sạch: 0 thread / 0 event / 0 cấu hình bài còn lại" || fail "smoke để lại dữ liệu"
+SMOKE_ONELINE="$(tr '\n' ' ' < "$ROOT/db/tests/learning_threads_p1_prod_smoke.sql")"
+psqld t_smoke -c "$SMOKE_ONELINE" >/dev/null 2>"$TMP/smoke1.err" || true
+grep -q "SMOKE PASS" "$TMP/smoke1.err" && ok "smoke dồn thành MỘT dòng vẫn chạy: PASS" || fail "smoke một dòng: $(cat "$TMP/smoke1.err")"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"
