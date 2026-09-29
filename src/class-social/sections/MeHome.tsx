@@ -13,11 +13,12 @@ import type { PostSocial } from './PostCard'
 import type { ImageKind } from '../profile/imageFile'
 import type { FriendRequests } from '../friends/useFriendRequests'
 import FriendRequestList from './FriendRequestList'
+import MeThreadsBlock from '../../learning-thread/MeThreadsBlock'
 
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia, onOpenProfile, requests, onSeeAllRequests }: {
+export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue }: {
   me: ClassIdentity
   identityRev?: number
   canEditAvatar?: boolean
@@ -27,6 +28,9 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
   /** Lời mời kết bạn đến mình (nguồn chung với badge menu) — có lời mời thì hiện khối ngay dưới header */
   requests?: FriendRequests
   onSeeAllRequests?: () => void
+  /** Learning Thread: mở /me/t/<id> · hàng đợi Thầy /me/queue */
+  onOpenThread?: (threadId: string) => void
+  onOpenQueue?: () => void
 }) {
   const { state, reload, loadMore } = useCommunityFeed()
   const feedRef = useRef<HTMLDivElement>(null)
@@ -82,6 +86,7 @@ export default function MeHome({ me, identityRev = 0, canEditAvatar, onEditMedia
           )}
         </section>
       )}
+      {onOpenThread && onOpenQueue && <MeThreadsBlock isTeacher={me.isTeacher} onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} />}
       <TraBaiCta me={me} onPosted={onPosted} />
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}

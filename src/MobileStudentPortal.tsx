@@ -24,6 +24,7 @@ import ElearnLessonView from './elearn/ElearnLessonView'
 import { missingPrereqs, tenNangLuc } from './hanhtrinh'
 import { NavIcon } from './navIcons'
 import LivePageView, { type LivePage } from './live/LivePages'
+import LessonThreadPanel from './learning-thread/LessonThreadPanel'
 import {
   ENTITLEMENT_TIER_LABEL,
   type EntitlementTier,
@@ -2600,6 +2601,9 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
                       })}
                     </div>
                   )}
+                  {/* Learning Thread P1: Trả bài / Hỏi bài NGAY TẠI BÀI — chỉ hiện khi Thầy bật cho bài này (learning_lesson_settings).
+                      Đứng cạnh, KHÔNG thay nút tự ghi nhận "Tôi đã gửi bài cho thầy" (giữ XP như cũ). */}
+                  <LessonThreadPanel lessonId={activeLesson.id} lessonTitle={activeLesson.title} disabled={preview || guest} />
                   {/* Ghi nhận hành động thật — nền cho màu mốc + Điểm hành trình */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: L.t3, textTransform: 'uppercase', letterSpacing: '.06em', paddingLeft: 4 }}>Ghi nhận thực hành</div>
@@ -3415,10 +3419,11 @@ export default function MobileStudentPortal({ student, onLogout, preview = false
               ) : (
                 <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: L.t3, fontSize: 13.5 }}>Chọn một bài để ghi chú.</div>
               )}
-              {/* CTA phụ — Hỏi Thầy (route thật). Chừa chỗ "Trả bài" cạnh đây, chưa mở. */}
+              {/* CTA phụ — Hỏi Thầy (Zalo, route thật) + Learning Thread P1 cho bài đang chọn (mọi loại bài,
+                  kể cả flow/native/strum toàn màn hình). Chỉ hiện khi Thầy bật Trả/Hỏi bài cho bài này. */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
                 <button onClick={() => setTab('teacher')} style={{ background: 'transparent', color: L.p1, border: `1.5px solid ${L.p1}`, borderRadius: 12, padding: '8px 14px', fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>💬 Hỏi Thầy về bài này</button>
-                <span style={{ color: L.t3, fontSize: 11.5, fontWeight: 700, opacity: .7 }}>Trả bài cho Thầy · sắp có</span>
+                {selected && <LessonThreadPanel key={selected.id} compact lessonId={selected.id} lessonTitle={selected.title} disabled={preview || guest} />}
               </div>
             </div>
           </div>

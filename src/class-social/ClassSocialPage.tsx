@@ -19,6 +19,8 @@ import Chat from './sections/Chat'
 import ToolsPage from './sections/ToolsPage'
 import ProfilePage from './sections/ProfilePage'
 import { useFriendRequests } from './friends/useFriendRequests'
+import ThreadPage from '../learning-thread/ThreadPage'
+import TeacherQueue from '../learning-thread/TeacherQueue'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Thầy Văn Anh Guitar',
@@ -42,7 +44,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   // /me/u/<id> không phải một "mục" của router → đọc thẳng từ URL lúc mở trang
   const [initialView] = useState<MeView>(() => {
     const v = viewFromPath(window.location.pathname)
-    return v.kind === 'profile' ? v : { kind: 'section', section: initialSection }
+    return v.kind === 'section' ? { kind: 'section', section: initialSection } : v
   })
   const [view, setView] = useState<MeView>(initialView)
 
@@ -68,14 +70,16 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
 
   // Khách / vừa đăng xuất: chỉ còn trang chủ /me (mục con + trang cá nhân cần đăng nhập) — không thêm mục lịch sử
   const guest = session.status === 'signed-out' || session.status === 'no-profile'
+  // Ngoại lệ: link một learning thread (/me/t/<id>) GIỮ nguyên → đăng nhập xong xem đúng thread (quyền do server quyết).
   const [wasGuest, setWasGuest] = useState(guest)
   if (guest !== wasGuest) {
     setWasGuest(guest)
-    if (guest) setView({ kind: 'section', section: 'home' })
+    if (guest && view.kind !== 'thread') setView({ kind: 'section', section: 'home' })
   }
+  const keepThread = view.kind === 'thread'
   useEffect(() => {
-    if (guest && window.location.pathname !== SECTION_PATHS.home) window.history.replaceState(null, '', SECTION_PATHS.home)
-  }, [guest])
+    if (guest && !keepThread && window.location.pathname !== SECTION_PATHS.home) window.history.replaceState(null, '', SECTION_PATHS.home)
+  }, [guest, keepThread])
 
   const navigate = (next: MeView) => {
     if (!sameView(view, next)) {
@@ -86,20 +90,24 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   }
   const go = (section: SocialSection) => navigate({ kind: 'section', section })
   const openProfile = (userId: string) => navigate({ kind: 'profile', userId })
+  const openThread = (threadId: string) => navigate({ kind: 'thread', threadId })
+  const openQueue = () => navigate({ kind: 'queue' })
 
   if (session.status === 'signed-out') return <MeGuestGate signIn={signInWithPassword} />
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, view, onSection, onOpenProfile }: {
+function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue }: {
   base: ClassIdentity
   view: MeView
   onSection: (s: SocialSection) => void
   onOpenProfile: (userId: string) => void
+  onOpenThread: (threadId: string) => void
+  onOpenQueue: () => void
 }) {
   const [patch, setPatch] = useState<IdentityPatch>({})
   const [identityRev, setIdentityRev] = useState(0)   // tăng khi đổi ảnh đại diện → feed tải lại avatar mới
@@ -123,8 +131,16 @@ function SignedInShell({ base, view, onSection, onOpenProfile }: {
         <ProfilePage key={view.userId} me={me} userId={view.userId} identityRev={identityRev} canEditAvatar={editor.canEditAvatar}
           onEditMedia={editor.pick} onSection={onSection} onOpenProfile={onOpenProfile} />
       )}
+      {view.kind === 'thread' && (
+        <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onSection('home')}
+          onOpenQueue={onOpenQueue} onOpenProfile={onOpenProfile} />
+      )}
+      {view.kind === 'queue' && (me.isTeacher
+        ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onSection('home')} />
+        : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này dành cho giáo viên.</div></div>)}
       {section === 'home' && <MeHome me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
-        onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')} />}
+        onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
+        onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} />}
       {section === 'chat' && <Chat />}
       {section === 'tools' && <ToolsPage />}

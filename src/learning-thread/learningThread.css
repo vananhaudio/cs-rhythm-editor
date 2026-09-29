@@ -1,0 +1,127 @@
+/* Learning Thread P1 — giao diện DÙNG CHUNG cho App học (/learn, native) và Social (/me/t/<id>).
+   Mọi selector có tiền tố .lt- (không đụng CSS toàn cục). Media/avatar/tài nguyên dùng lại lớp .cs-* của Class Social. */
+.lt-panel, .lt-sheet, .lt-page { --lt-p: #4338ca; --lt-p2: #eef0ff; --lt-t1: #18181b; --lt-t2: #52525b; --lt-t3: #8a8a93;
+  --lt-border: #e4e4e7; --lt-surface: #fff; --lt-bg: #f0f2f5; --lt-ok: #15803d; --lt-okbg: #ecfdf3; --lt-warn: #b45309;
+  --lt-warnbg: #fff7ed; --lt-wait: #1d4ed8; --lt-waitbg: #eff6ff; font-family: inherit; color: var(--lt-t1); }
+.lt-panel *, .lt-sheet *, .lt-page * { box-sizing: border-box; }
+
+/* ── Khu vực trong bài học (App) ── */
+.lt-panel { background: var(--lt-surface); border: 1.5px solid var(--lt-border); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.lt-panel.is-compact { border: none; padding: 0; background: transparent; gap: 8px; }
+.lt-panel-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lt-panel-title { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--lt-t3); }
+.lt-prompt { margin: 0; font-size: 14px; line-height: 1.5; color: var(--lt-t2); background: var(--lt-bg); border-radius: 12px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lt-btn { font: inherit; font-size: 14px; font-weight: 700; border-radius: 12px; padding: 10px 14px; cursor: pointer; border: 1.5px solid var(--lt-p); background: transparent; color: var(--lt-p); min-height: 42px; }
+.lt-btn.is-primary { background: var(--lt-p); color: #fff; }
+.lt-btn.is-ok { border-color: var(--lt-ok); background: var(--lt-ok); color: #fff; }
+.lt-btn.is-warn { border-color: var(--lt-warn); background: var(--lt-warn); color: #fff; }
+.lt-btn.is-ghost { border-color: var(--lt-border); color: var(--lt-t2); }
+.lt-btn:disabled { opacity: .55; cursor: default; }
+.lt-note { font-size: 12.5px; color: var(--lt-t3); margin: 0; }
+.lt-error { margin: 0; font-size: 13.5px; color: #b91c1c; }
+
+/* ── Chip trạng thái / nhãn ── */
+.lt-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 800; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+.lt-chip.is-wait { color: var(--lt-wait); background: var(--lt-waitbg); }
+.lt-chip.is-info { color: var(--lt-p); background: var(--lt-p2); }
+.lt-chip.is-warn { color: var(--lt-warn); background: var(--lt-warnbg); }
+.lt-chip.is-ok { color: var(--lt-ok); background: var(--lt-okbg); }
+.lt-chip.is-muted { color: var(--lt-t2); background: var(--lt-bg); }
+.lt-badge { font-size: 11.5px; font-weight: 800; color: var(--lt-t2); border: 1px solid var(--lt-border); border-radius: 999px; padding: 3px 9px; }
+.lt-badge.is-required { color: #9a3412; border-color: #fed7aa; background: #fff7ed; }
+
+/* ── Sheet toàn màn hình (App) ── */
+.lt-sheet { position: fixed; inset: 0; z-index: 1200; background: var(--lt-bg); display: flex; flex-direction: column; }
+.lt-sheet-head { display: flex; align-items: center; gap: 10px; background: var(--lt-surface); border-bottom: 1px solid var(--lt-border);
+  padding: max(14px, calc(env(safe-area-inset-top, 0px) + 10px)) 14px 12px; }
+.lt-sheet-title { flex: 1; min-width: 0; font-weight: 800; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lt-icon-btn { font: inherit; width: 38px; height: 38px; border-radius: 10px; border: none; background: var(--lt-p2); color: var(--lt-p); font-size: 20px; cursor: pointer; flex-shrink: 0; }
+.lt-sheet-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 14px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Trang /me/t/<id> ── */
+.lt-page { display: flex; flex-direction: column; gap: 14px; }
+.lt-card { background: var(--lt-surface); border: 1px solid var(--lt-border); border-radius: 16px; padding: 14px; }
+
+/* ── Đầu thread: người học + danh tính học tập (lịch sử) ── */
+.lt-head { display: flex; gap: 12px; align-items: flex-start; }
+.lt-head-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lt-head-name { font-weight: 800; font-size: 16px; overflow-wrap: anywhere; }
+.lt-head-identity { font-size: 13px; font-weight: 700; color: var(--lt-p); overflow-wrap: anywhere; }
+.lt-head-lesson { font-size: 14px; color: var(--lt-t1); overflow-wrap: anywhere; }
+.lt-head-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.lt-head-course { font-size: 12.5px; color: var(--lt-t3); overflow-wrap: anywhere; }
+
+/* ── Dòng thời gian ── */
+.lt-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lt-ev { display: flex; gap: 10px; position: relative; padding-bottom: 16px; }
+.lt-ev::before { content: ''; position: absolute; left: 17px; top: 38px; bottom: 0; width: 2px; background: var(--lt-border); }
+.lt-ev:last-child::before { display: none; }
+.lt-ev-main { flex: 1; min-width: 0; }
+.lt-ev-bubble { background: var(--lt-surface); border: 1px solid var(--lt-border); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.lt-ev.is-teacher .lt-ev-bubble { background: #f5f3ff; border-color: #ddd6fe; }
+.lt-ev.is-pass .lt-ev-bubble { background: var(--lt-okbg); border-color: #bbf7d0; }
+.lt-ev.is-retry .lt-ev-bubble { background: var(--lt-warnbg); border-color: #fed7aa; }
+.lt-ev.is-hidden { opacity: .55; }
+.lt-ev-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.lt-ev-author { font-weight: 800; font-size: 14px; }
+.lt-ev-kind { font-size: 12px; font-weight: 800; color: var(--lt-t2); }
+.lt-ev-role { font-size: 11px; font-weight: 800; color: #6d28d9; background: #ede9fe; border-radius: 6px; padding: 1px 6px; }
+.lt-ev-time { font-size: 12px; color: var(--lt-t3); margin-left: auto; }
+.lt-ev-body { margin: 0; font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lt-ev-tools { display: flex; gap: 8px; }
+.lt-link-btn { font: inherit; font-size: 12px; font-weight: 700; color: var(--lt-t3); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; }
+
+/* ── Ô soạn ── */
+.lt-compose { background: var(--lt-surface); border: 1.5px solid var(--lt-border); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.lt-compose h3 { margin: 0; font-size: 15px; font-weight: 800; }
+.lt-seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.lt-seg button { font: inherit; font-size: 13.5px; font-weight: 700; border-radius: 10px; padding: 8px 12px; border: 1.5px solid var(--lt-border); background: var(--lt-surface); color: var(--lt-t2); cursor: pointer; min-height: 38px; }
+.lt-seg button[aria-pressed="true"] { border-color: var(--lt-p); background: var(--lt-p2); color: var(--lt-p); }
+.lt-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; color: var(--lt-t2); }
+.lt-input { font: inherit; font-size: 15px; font-weight: 400; color: var(--lt-t1); width: 100%; border: 1px solid var(--lt-border); border-radius: 12px; padding: 10px 12px; background: var(--lt-bg); outline: none; }
+.lt-input:focus { border-color: var(--lt-p); background: var(--lt-surface); }
+textarea.lt-input { resize: vertical; min-height: 88px; line-height: 1.5; }
+.lt-vis { display: flex; flex-direction: column; gap: 6px; }
+.lt-vis label { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; font-weight: 700; color: var(--lt-t1); cursor: pointer; }
+.lt-vis small { display: block; font-weight: 400; color: var(--lt-t3); font-size: 12.5px; }
+.lt-compose-foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* ── Hàng đợi Thầy / danh sách thread ── */
+.lt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lt-row { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--lt-surface);
+  border: 1px solid var(--lt-border); border-radius: 14px; padding: 12px; cursor: pointer; }
+.lt-row:hover { border-color: #c7d2fe; }
+.lt-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lt-row-title { font-weight: 800; font-size: 14.5px; overflow-wrap: anywhere; }
+.lt-row-sub { font-size: 13px; color: var(--lt-t2); overflow-wrap: anywhere; }
+.lt-row-excerpt { font-size: 13px; color: var(--lt-t3); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lt-row-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.lt-row-time { font-size: 12px; color: var(--lt-t3); }
+.lt-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.lt-tabs button { flex-shrink: 0; font: inherit; font-size: 13.5px; font-weight: 700; border-radius: 999px; padding: 7px 14px; border: 1.5px solid var(--lt-border); background: var(--lt-surface); color: var(--lt-t2); cursor: pointer; }
+.lt-tabs button[aria-pressed="true"] { border-color: var(--lt-p); background: var(--lt-p); color: #fff; }
+.lt-empty { text-align: center; color: var(--lt-t3); font-size: 14px; padding: 24px 12px; }
+
+@media (max-width: 480px) {
+  .lt-ev-time { margin-left: 0; width: 100%; }
+  .lt-row-side { display: none; }
+}
+
+/* Token của Class Social cho media/avatar/tài nguyên (.cs-*) khi Learning Thread chạy NGOÀI /me (App học). */
+.lt-sheet, .lt-panel {
+  --cs-p: #6d28d9;
+  --cs-p-strong: #5b21b6;
+  --cs-p-soft: #f1ebff;
+  --cs-p-softer: #f8f5ff;
+  --cs-bg: #f5f4fa;
+  --cs-surface: #ffffff;
+  --cs-text: #1c1830;
+  --cs-muted: #625d78;
+  --cs-faint: #9893ab;
+  --cs-border: #e9e5f2;
+  --cs-hover: #f2f0f8;
+  --cs-radius: 14px;
+  --cs-shadow: 0 1px 2px rgba(28, 24, 48, 0.05), 0 2px 8px rgba(28, 24, 48, 0.04);
+  --cs-topbar-h: 52px;
+}

@@ -92,6 +92,47 @@ SMOKE_ONELINE="$(tr '\n' ' ' < "$ROOT/db/tests/learning_threads_p1_prod_smoke.sq
 psqld t_smoke -c "$SMOKE_ONELINE" >/dev/null 2>"$TMP/smoke1.err" || true
 grep -q "SMOKE PASS" "$TMP/smoke1.err" && ok "smoke dồn thành MỘT dòng vẫn chạy: PASS" || fail "smoke một dòng: $(cat "$TMP/smoke1.err")"
 
+echo "── Script SAU MIGRATION (cổng + smoke tự huỷ + bật 3 bài DH2 thật) — một lần dán"
+python3 "$ROOT/scripts/build-lt-post-migration.py" >/dev/null
+git -C "$ROOT" diff --quiet -- db/learning_threads_p1_post_migration.sql 2>/dev/null \
+  && ok "db/learning_threads_p1_post_migration.sql đồng bộ với smoke (generator không đổi gì)" || fail "post_migration.sql lệch smoke — chạy lại generator và commit"
+dh2_fixture() {   # 3 bài DH2 THẬT (id + tên như production) để bước cấu hình khớp
+  psqld "$1" >/dev/null <<'SQL'
+insert into public.edu_courses (id, name, code, track) values ('c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Khởi Đầu Đam Mê – Đệm Hát Trình Độ 2 (thật)', 'DH2', 'dem_hat');
+insert into public.edu_modules (id, course_id, name, order_index, level) values
+  ('d2000044-0000-4000-8000-000000000044', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 4: Điệu Bolero & kỹ thuật móc', 3, 2),
+  ('974b0073-61d3-4b76-857a-e4f01c738d42', 'c7ab2fcb-aff1-4485-a381-4edc83e4a62b', 'Chương 6: Áp dụng vào bài hát thực tế', 5, 2);
+insert into public.edu_course_lessons (id, module_id, title, lesson_type, order_index) values
+  ('5f7acacd-9214-48f3-9349-93cc382649fb', 'd2000044-0000-4000-8000-000000000044', 'Bài 4.3 — Bolero móc kiểu 1', 'video', 2),
+  ('a85592d5-b519-470d-84d0-4d9182d224b3', 'd2000044-0000-4000-8000-000000000044', 'Bài 4.4 — Bolero móc kiểu 2', 'video', 3),
+  ('d2c00805-0000-4000-8000-000000000000', '974b0073-61d3-4b76-857a-e4f01c738d42', 'Bài 6.3 — Dự án cuối khoá: tự chọn 1 bài, tự đệm và thu lại nộp', 'text', 2);
+SQL
+}
+baseline t_post "$TMP/fixture_noroles.sql"; dh2_fixture t_post
+psqld t_post -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+POST_OUT="$(psqld t_post -tA -F ' | ' -f "$ROOT/db/learning_threads_p1_post_migration.sql")"
+echo "$POST_OUT" | grep -q "^GATE | PASS" && echo "$POST_OUT" | grep -q "^smoke | SMOKE PASS 23/23" \
+  && echo "$POST_OUT" | grep -q "^counts | .* | 3 / 0 / 0" \
+  && ok "post-migration: cổng OK · $(echo "$POST_OUT" | grep -o 'SMOKE PASS [0-9/]*') · 3 bài DH2 bật · 0 thread/event còn lại" || fail "post-migration: $POST_OUT"
+[ "$(q t_post "select string_agg(submission_mode || '/' || question_mode, ',') from public.learning_lesson_settings")" = "allowed/allowed,allowed/allowed,allowed/allowed" ] \
+  && [ "$(q t_post "select count(*) from public.learning_lesson_settings s join public.app_users a on a.id = s.updated_by where a.role in ('admin','teacher')")" = "3" ] \
+  && ok "3 bài: allowed/allowed (không required), ghi người cấu hình = Thầy/admin" || fail "cấu hình DH2 sai"
+POST_ONELINE="$(tr '\n' ' ' < "$ROOT/db/learning_threads_p1_post_migration.sql")"
+psqld t_post -c "$POST_ONELINE" >/dev/null 2>"$TMP/post2.err" && fail "chạy lại post-migration lẽ ra phải DỪNG"
+grep -q "SMOKE FAIL" "$TMP/post2.err" && [ "$(q t_post "select count(*) from public.learning_lesson_settings")" = "3" ] \
+  && ok "chạy lại (dồn một dòng) → DỪNG an toàn, không đổi gì" || fail "chạy lại post: $(cat "$TMP/post2.err")"
+baseline t_post_bad "$TMP/fixture_noroles.sql"; dh2_fixture t_post_bad
+psqld t_post_bad -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+psqld t_post_bad -c "grant select on public.learning_threads to authenticated" >/dev/null
+psqld t_post_bad -f "$ROOT/db/learning_threads_p1_post_migration.sql" >/dev/null 2>"$TMP/post3.err" && fail "post chạy dù quyền bảng sai"
+grep -q "cổng hậu migration STOP.*quyền bảng learning_threads" "$TMP/post3.err" && [ "$(q t_post_bad "select count(*) from public.learning_lesson_settings")" = "0" ] \
+  && ok "cổng hậu migration bắt quyền bảng sai → DỪNG, không cấu hình gì" || fail "post gate: $(cat "$TMP/post3.err")"
+baseline t_post_nodh2 "$TMP/fixture_noroles.sql"
+psqld t_post_nodh2 -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
+psqld t_post_nodh2 -f "$ROOT/db/learning_threads_p1_post_migration.sql" >/dev/null 2>"$TMP/post4.err" && fail "post chạy dù bài DH2 không khớp"
+grep -q "bài DH2 không khớp" "$TMP/post4.err" && [ "$(q t_post_nodh2 "select count(*) from public.learning_lesson_settings")" = "0" ] \
+  && ok "bài DH2 không khớp id/tên/khoá → DỪNG, không cấu hình gì" || fail "post dh2: $(cat "$TMP/post4.err")"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

@@ -4,7 +4,7 @@ App học ("TÔI HỌC", riêng tư) ↔ Social `/me` ("CHÚNG TA SỐNG CÙNG �
 Bài học = đơn vị nội dung · **Thread = đơn vị tương tác đào tạo** · App dẫn từng người học · Feed (sau) chiếu câu chuyện ·
 Hành trình (sau) xâu các thread thành lịch sử trưởng thành.
 
-Trạng thái: **migration đã viết + test trên cluster tạm, CHƯA chạy production.**
+Trạng thái: DB + frontend P1 xong trên nhánh `feat/learning-thread-p1`; test DB 99/99, frontend 124/124, E2E Chrome 23/23.
 
 ## Quyết định Owner (29/09/2026)
 
@@ -75,12 +75,37 @@ Mọi truy cập qua RPC SECURITY DEFINER (chỉ `authenticated`):
 Mã lỗi `LT_*` (NOT_AUTHENTICATED, NOT_MEMBER, TEACHER_ONLY, TEACHER_CANNOT_SUBMIT, SUBMISSION_NOT_ENABLED, QUESTION_NOT_ENABLED,
 NO_ACCESS, NOT_FOUND, THREAD_HIDDEN, THREAD_ARCHIVED, BAD_*) để frontend dịch sang tiếng Việt.
 
-## Thứ tự chạy production (CHƯA làm, chờ Owner cho phép)
+## Frontend (`src/learning-thread/`)
+
+Một bộ component dùng chung cho App (private view) và Social (social view). Không có hệ Trả bài thứ hai.
+
+- **App học** (`MobileStudentPortal`):
+  - `LessonThreadPanel` nằm trong màn bài học, ngay trên khối "Ghi nhận thực hành". Nút cũ "Tôi đã gửi bài cho thầy" (+50 XP) giữ nguyên.
+  - Bản gọn của panel nằm ở Sổ tay hành trình (mọi loại bài, kể cả flow/native/strum).
+  - Chỉ hiện khi Thầy bật cho bài. Ẩn khi Thầy xem thử hoặc khách chưa đăng nhập.
+  - `LearningThreadSheet` là màn toàn màn hình: timeline + ô Trả bài / Hỏi bài + đổi Cộng đồng học tập ↔ Chỉ Thầy.
+- **Social**:
+  - `/me/t/<id>` (`ThreadPage`): người xem do server quyết.
+  - `/me/queue` (`TeacherQueue`): Chờ Thầy / Cần làm lại / Đã phản hồi / Đã đạt.
+  - Khối "Trả bài / Hỏi bài của tôi" trên `/me` (Thầy thấy lối vào hàng đợi).
+  - Link `/me/t/<id>` giữ nguyên qua bước đăng nhập.
+- **Renderer chung:** `ThreadView` (đầu thread + timeline). Media, avatar, tag và bài giảng Kho dùng lại component của Social.
+- **Test:**
+  - `tests/class-social/learning-thread.test.tsx`
+  - E2E: `PUPPETEER_DIR=<thư mục có puppeteer-core> bash scripts/e2e-learning-thread.sh` (PostgreSQL tạm + PostgREST + auth giả lập + Vite + Chrome).
+
+## Thứ tự chạy production
 
 1. `db/learning_threads_p1_preflight.sql` (read-only) → GATE = PASS.
 2. `db/learning_threads_p1_setup.sql` (tự mở/đóng một giao dịch; cổng phụ thuộc lặp lại preflight).
-3. Thầy bật Trả/Hỏi bài cho các bài DH2 được chọn (`lt_set_lesson_settings`, sau này ở Admin).
-4. Deploy frontend (App: thanh Trả bài/Hỏi bài + chi tiết thread; /me: `/me/t/<id>` + hàng đợi Thầy).
+3. `db/learning_threads_p1_post_migration.sql`: MỘT lần dán, sinh bởi `scripts/build-lt-post-migration.py`.
+   - Kiểm cổng hậu migration, rồi chạy smoke tự huỷ.
+   - Chỉ khi cả hai PASS mới bật allowed/allowed cho 3 bài DH2 thật:
+     - Bài 4.3 — Bolero móc kiểu 1 (`5f7acacd-9214-48f3-9349-93cc382649fb`)
+     - Bài 4.4 — Bolero móc kiểu 2 (`a85592d5-b519-470d-84d0-4d9182d224b3`)
+     - Bài 6.3 — Dự án cuối khoá: tự chọn 1 bài, tự đệm và thu lại nộp (`d2c00805-0000-4000-8000-000000000000`)
+   - Lời dặn chung: "Bạn có thể gửi phần thực hành của bài này hoặc đặt câu hỏi cho Thầy."
+4. Merge `main` → Netlify deploy web. App native chỉ nhận khi build lại và nộp store (bundled).
 
 Rollback: `db/learning_threads_p1_rollback.sql`. Script này **xoá** mọi thread và cấu hình. Muốn giữ dữ liệu thì chỉ gỡ frontend.
 
