@@ -75,8 +75,6 @@ export default function ScoreViewer({ id, initial, onClose, onSaved }: {
       </div>
       {heading && !editing && state.kind !== 'loading' && <div className="tv-actions">
         <button type="button" className="tv-edit" onClick={() => setEditing(true)}>Sửa thông tin</button>
-        {/* Cùng tab, chỉ mang id: Nhịp Phách tự đọc + kiểm bản gốc và tự sao chép. */}
-        <a className="tv-np" href={`/nhipphach?master=${encodeURIComponent(id)}`}>Đưa vào Nhịp &amp; Phách</a>
       </div>}
     </header>
     {editing && heading && <MetadataForm id={id} heading={heading} onCancel={() => setEditing(false)}

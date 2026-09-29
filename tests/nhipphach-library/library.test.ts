@@ -219,7 +219,7 @@ test("trang không lưu trùng trong im lặng: phải dò SHA và hỏi rõ", (
   const page = code(readFileSync(new URL("../../src/pages/MusicXmlBeatsPage.tsx", import.meta.url), "utf8"));
   const luu = /async function luuVaoThuVien[\s\S]*?\n {2}\}\n/.exec(page)?.[0] ?? "";
   assert.match(luu, /findDuplicate\(/, "phải dò trùng trước khi lưu bài mới");
-  assert.match(page, /Bản nhạc này đã có trong thư viện/, "phải nói rõ với người dùng");
+  assert.match(page, /Bản nhạc này đã có trong Bản nhạc của tôi/, "phải nói rõ với người dùng");
   assert.match(page, /Vẫn lưu thành bài mới/, "và để người dùng tự quyết");
   assert.match(page, /Mở bài đã có/, "kèm đường mở bài đã có");
 });
