@@ -35,3 +35,39 @@
   .thu-vien > div > div:last-child > div { grid-template-columns: minmax(0,2fr) minmax(0,1fr); }
   .thu-vien > div > div:last-child time, .thu-vien > div > div:last-child > div:first-child span:last-child { display: none; }
 }
+
+/* Dòng bản nhạc: bấm để mở chế độ xem. */
+.thu-vien .tv-row { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr) 8rem; gap: 12px; width: 100%; padding: 12px 16px; border: 0; border-top: 1px solid #edf0eb; background: transparent; color: inherit; text-align: left; }
+.thu-vien .tv-row:hover, .thu-vien .tv-row:focus-visible { background: #f2f6f0; }
+.thu-vien .tv-row:focus-visible { outline: 2px solid #32664a; outline-offset: -2px; }
+.thu-vien .tv-row span:first-child { font-weight: 600; color: #32664a; }
+.thu-vien .tv-retry { margin-left: 8px; border: 1px solid #ccd5ca; border-radius: 8px; background: white; padding: 4px 12px; }
+
+/* Chế độ xem bản nhạc. */
+.thu-vien .tv-view { max-width: 1100px; margin: 0 auto; }
+.thu-vien .tv-view-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.thu-vien .tv-back { flex: none; border: 1px solid #ccd5ca; border-radius: 9px; background: white; color: #32664a; padding: 8px 14px; font-weight: 600; }
+.thu-vien .tv-view-title { min-width: 0; }
+.thu-vien .tv-view-title h1 { font-size: 26px; overflow-wrap: anywhere; }
+.thu-vien .tv-view-title p { margin: 4px 0 0; color: #526456; overflow-wrap: anywhere; }
+.thu-vien .tv-view-note { max-width: 960px; margin: 24px auto; border-radius: 12px; background: white; padding: 28px 16px; text-align: center; color: #526456; }
+.thu-vien .tv-view-error { color: #9f1d1d; }
+.thu-vien .tv-view-error p { margin: 0 0 12px; overflow-wrap: anywhere; }
+.thu-vien .tv-view-error button { border: 1px solid #ccd5ca; border-radius: 8px; background: white; padding: 6px 14px; }
+.thu-vien .tv-zoom { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; }
+.thu-vien .tv-zoom button { width: 36px; height: 36px; border: 1px solid #ccd5ca; border-radius: 8px; background: white; color: #26352d; font-size: 20px; font-weight: 700; line-height: 1; }
+.thu-vien .tv-zoom span:not(.tv-zoom-pages) { min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; }
+.thu-vien .tv-zoom-pages { margin-left: auto; color: #526456; }
+/* Phóng to chỉ cuộn NGANG trong khung này — trang /thuvien không bao giờ tràn ngang. */
+.thu-vien .tv-pages { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; background: #e6e9e3; padding: 12px; }
+.thu-vien .tv-page { max-width: none; margin: 0 auto 12px; }
+.thu-vien .tv-page:last-child { margin-bottom: 0; }
+.thu-vien .tv-page img { display: block; width: 100%; height: auto; background: white; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.thu-vien .tv-page figcaption { margin-top: 6px; text-align: center; font-size: 13px; color: #526456; }
+@media (max-width: 640px) {
+  .thu-vien .tv-row { grid-template-columns: minmax(0,2fr) minmax(0,1fr); }
+  .thu-vien .tv-row time { display: none; }
+  .thu-vien .tv-view-head { flex-direction: column; gap: 10px; }
+  .thu-vien .tv-view-title h1 { font-size: 21px; }
+  .thu-vien .tv-pages { margin: 0 -16px; border-radius: 0; padding: 8px; }
+}

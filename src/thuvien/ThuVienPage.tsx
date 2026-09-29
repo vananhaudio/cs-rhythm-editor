@@ -1,13 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { importMusicXml, listLibrary, prepareMusicXml } from './masterLibrary.ts'
 import type { LibraryItem } from './masterLibrary.ts'
+import { scoreIdFromSearch } from './viewScore.ts'
 import './ThuVienPage.css'
+
+// Verovio (wasm) chỉ tải khi mở một bản nhạc, không làm chậm danh sách.
+const ScoreViewer = lazy(() => import('./ScoreViewer.tsx'))
 
 type Prepared = ReturnType<typeof prepareMusicXml>
 
 export default function ThuVienPage() {
   const [items, setItems] = useState<LibraryItem[]>([])
+  const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [listError, setListError] = useState('')
+  const [reload, setReload] = useState(0)
+  const [openId, setOpenId] = useState<string | null>(() => scoreIdFromSearch(window.location.search))
   const [query, setQuery] = useState('')
   const [prepared, setPrepared] = useState<Prepared | null>(null)
   const [title, setTitle] = useState('')
@@ -18,10 +26,37 @@ export default function ThuVienPage() {
 
   useEffect(() => {
     let active = true
-    listLibrary().then(data => { if (active) setItems(data) })
-      .catch(error => { if (active) setMessage(error instanceof Error ? error.message : 'Không tải được thư viện.') })
+    listLibrary().then(data => { if (active) { setItems(data); setListState('ready') } })
+      .catch(error => {
+        if (!active) return
+        setListError(error instanceof Error ? error.message : 'Không tải được thư viện.')
+        setListState('error')
+      })
     return () => { active = false }
+  }, [reload])
+
+  // Nút Back của trình duyệt đóng/mở bản nhạc theo `?bai=`.
+  useEffect(() => {
+    const sync = () => setOpenId(scoreIdFromSearch(window.location.search))
+    window.addEventListener('popstate', sync)
+    return () => window.removeEventListener('popstate', sync)
   }, [])
+
+  function openScore(id: string) {
+    const url = new URL(window.location.href)
+    url.searchParams.set('bai', id)
+    window.history.pushState({ thuvienViewer: true }, '', url)
+    setOpenId(id)
+    window.scrollTo(0, 0)
+  }
+
+  function closeScore() {
+    if ((window.history.state as { thuvienViewer?: boolean } | null)?.thuvienViewer) { window.history.back(); return }
+    const url = new URL(window.location.href)
+    url.searchParams.delete('bai')
+    window.history.replaceState(null, '', url)
+    setOpenId(null)
+  }
 
   async function chooseFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -55,6 +90,15 @@ export default function ThuVienPage() {
     } finally { setBusy(false) }
   }
 
+  if (openId) {
+    const item = items.find(entry => entry.id === openId)
+    return <main className="thu-vien">
+      <Suspense fallback={<p className="tv-view-note">Đang mở bản nhạc…</p>}>
+        <ScoreViewer key={openId} id={openId} initial={item ? { title: item.title, composer: item.composer } : null} onClose={closeScore} />
+      </Suspense>
+    </main>
+  }
+
   const shown = items.filter(item => item.title.toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi')))
   return <main className="thu-vien min-h-screen bg-[#f7f5ef] px-4 py-8 text-[#26352d] sm:px-8">
     <div className="mx-auto max-w-4xl">
@@ -84,10 +128,12 @@ export default function ThuVienPage() {
       </section>}
       <div className="overflow-hidden rounded-xl border border-[#d8dfd6] bg-white">
         <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 bg-[#e9eee7] px-4 py-3 text-sm font-semibold sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_8rem]"><span>Tên bài</span><span>Tác giả</span><span className="hidden sm:block">Ngày thêm</span></div>
-        {shown.map(item => <div key={item.id} className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 border-t border-[#edf0eb] px-4 py-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_8rem]">
+        {listState === 'ready' && shown.map(item => <button type="button" key={item.id} className="tv-row" onClick={() => openScore(item.id)} aria-label={`Mở bản nhạc ${item.title}`}>
           <span className="break-words font-medium">{item.title}</span><span className="break-words">{item.composer || '—'}</span><time className="hidden sm:block" dateTime={item.created_at}>{new Date(item.created_at).toLocaleDateString('vi-VN')}</time>
-        </div>)}
-        {!shown.length && <p className="px-4 py-8 text-center text-[#526456]">{query ? 'Không tìm thấy bản nhạc.' : 'Thư viện chưa có bản nhạc.'}</p>}
+        </button>)}
+        {listState === 'loading' && <p aria-live="polite">Đang tải thư viện…</p>}
+        {listState === 'error' && <p role="alert">{listError} <button type="button" className="tv-retry" onClick={() => { setListState('loading'); setReload(n => n + 1) }}>Thử lại</button></p>}
+        {listState === 'ready' && !shown.length && <p className="px-4 py-8 text-center text-[#526456]">{query ? 'Không tìm thấy bản nhạc.' : 'Thư viện chưa có bản nhạc.'}</p>}
       </div>
     </div>
   </main>
