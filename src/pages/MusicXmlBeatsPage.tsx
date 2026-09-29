@@ -116,7 +116,9 @@ const SvgPage = memo(function SvgPage({
 import { openScoreLibrary } from "../nhipphach/libraryGateway";
 import type { ScoreLibrary } from "../nhipphach/libraryRepository";
 import { ScoreLibraryPanel } from "../nhipphach/ScoreLibraryPanel";
-import { MasterImportPrompt } from "../nhipphach/MasterImportPrompt";
+import { MasterLibraryList, MasterLibraryPanel } from "../nhipphach/MasterLibraryList";
+import { copyMasterToNhipPhach, findExistingCopy, getMasterCopySource, openExistingCopy } from "../nhipphach/masterCopy";
+import type { MasterCopySource } from "../nhipphach/masterCopy";
 import type { LibraryOpenEvent } from "../nhipphach/ScoreLibraryPanel";
 import { readScoreMetadata, readPrimaryMeter } from "../nhipphach/scoreMetadata";
 import { resolveScoreElement, describeNote } from "../nhipphach/noteSelection";
@@ -276,7 +278,16 @@ export default function MusicXmlBeatsPage({
   // ── Thư viện bài hát ────────────────────────────────────────────────────
   const thuVien = useRef<ScoreLibrary | null>(null);
   const [coThuVien, setCoThuVien] = useState(false);
-  const [masterImportId, setMasterImportId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("master"));
+  /** Đã thử mở kho bản làm việc xong (có hay không) — mới biết được bài đã từng lưu chưa. */
+  const [thuVienSan, setThuVienSan] = useState(false);
+  // ── Thư viện bản nhạc (kho gốc `musicxml_library`) ─────────────────────
+  // Đọc thẳng bản gốc để mở; KHÔNG bao giờ ghi ngược về kho gốc. Bản làm việc
+  // riêng chỉ được tạo khi người dùng thật sự lưu (xem luuVaoThuVien/luuNhap).
+  const [nguonGoc, setNguonGoc] = useState<MasterCopySource | null>(null);
+  const [moThuVienGoc, setMoThuVienGoc] = useState(false);
+  const [dangMoGoc, setDangMoGoc] = useState<string | null>(null);
+  /** `?master=<id>` (đường cũ, Teamlab còn trỏ tới): mở thẳng bài, không hộp thoại. */
+  const masterParam = useRef(new URLSearchParams(window.location.search).get("master"));
   const [moThuVien, setMoThuVien] = useState(false);
   const [dangLuuBai, setDangLuuBai] = useState(false);
   const [thuVienNote, setThuVienNote] = useState("");
@@ -296,6 +307,12 @@ export default function MusicXmlBeatsPage({
     versionNumber: number;
     laHienHanh: boolean;
   } | null>(null);
+  /**
+   * Bài đang mở là bản gốc từ Thư viện bản nhạc, CHƯA có bản làm việc. Suy ra
+   * chứ không lưu cờ: mở file khác, mở bài khác hay đã lưu thì tự hết hiệu lực.
+   */
+  const gocDangMo =
+    nguonGoc && !baiTrongKho && source?.xml === nguonGoc.musicxmlText ? nguonGoc : null;
   /**
    * Cách xem bản nhạc. CHỈ ảnh hưởng màn hình — file xuất ra luôn là A4 thật,
    * dựng từ cùng một SVG, không dính gì tới mức phóng đang xem.
@@ -396,6 +413,7 @@ export default function MusicXmlBeatsPage({
       if (cancelled) return;
       thuVien.current = lib;
       setCoThuVien(lib !== null);
+      setThuVienSan(true);
     })();
     return () => {
       cancelled = true;
@@ -419,17 +437,21 @@ export default function MusicXmlBeatsPage({
           return;
         }
       }
-      const meta = readScoreMetadata(source.xml, source.name);
-      const ketQua = await lib.save({
-        scoreId: baiTrongKho?.scoreId,
-        title: meta.title,
-        composer: meta.composer,
-        lyricist: meta.lyricist,
-        sourceFilename: source.name,
-        primaryMeter: readPrimaryMeter(source.xml),
-        pageCount: score?.pages.length ?? null,
-        xml: source.xml,
-      });
+      // Bài mở từ Thư viện bản nhạc: bản làm việc mang tên/tác giả của bản gốc,
+      // tạo bằng đúng pipeline sao chép có sẵn (kiểm hash, lưu phiên bản riêng).
+      const meta = gocDangMo ?? readScoreMetadata(source.xml, source.name);
+      const ketQua = gocDangMo
+        ? await copyMasterToNhipPhach(gocDangMo, lib)
+        : await lib.save({
+            scoreId: baiTrongKho?.scoreId,
+            title: meta.title,
+            composer: meta.composer,
+            lyricist: readScoreMetadata(source.xml, source.name).lyricist,
+            sourceFilename: source.name,
+            primaryMeter: readPrimaryMeter(source.xml),
+            pageCount: score?.pages.length ?? null,
+            xml: source.xml,
+          });
       setBaiTrongKho({
         scoreId: ketQua.scoreId,
         versionNumber: ketQua.versionNumber,
@@ -882,9 +904,9 @@ export default function MusicXmlBeatsPage({
       ? "Chưa có thay đổi."
       : !coThuVien || !choLuuThuVien
         ? "Tài khoản này chưa có quyền lưu vào thư viện."
-        : !baiTrongKho
-          ? "Lưu bài vào thư viện trước, rồi thay đổi mới thành phiên bản mới được."
-          : !baiTrongKho.laHienHanh
+        : !baiTrongKho && !gocDangMo
+          ? "Lưu bài vào Bản nhạc của tôi trước, rồi thay đổi mới thành phiên bản mới được."
+          : baiTrongKho && !baiTrongKho.laHienHanh
             ? "Đang xem bản cũ — mở bản hiện hành rồi mới sửa."
             : loiNhipNhap.length
               ? "Bản nháp đang làm hỏng nhịp — sửa xong mới lưu được."
@@ -895,16 +917,25 @@ export default function MusicXmlBeatsPage({
     // Đọc nháp từ ref, không từ state: lưu là việc đi ngay sau một chuỗi sửa,
     // và ref mới là bản đồng bộ. Xem chú thích của `nhapRef`.
     const nhapBayGio = nhapRef.current;
-    if (!choChonNot || !lib || !nhapBayGio || !baiTrongKho || !source || dangLuuNhap || luuNhapBiChan)
+    if (!choChonNot || !lib || !nhapBayGio || (!baiTrongKho && !gocDangMo) || !source || dangLuuNhap || luuNhapBiChan)
       return;
     setDangLuuNhap(true);
     setNhapNote("");
     try {
       renderer.current ??= createAnnotatedScoreRenderer();
       const r = await renderer.current;
+      let scoreId = baiTrongKho?.scoreId;
+      if (!scoreId && gocDangMo) {
+        // Sửa bài mở thẳng từ Thư viện bản nhạc: lần lưu đầu tự tạo bản làm việc
+        // (v1 = đúng bản gốc) rồi thay đổi thành phiên bản kế. Bản gốc không bị đụng.
+        const banLamViec = await copyMasterToNhipPhach(gocDangMo, lib);
+        scoreId = banLamViec.scoreId;
+        setBaiTrongKho({ scoreId, versionNumber: banLamViec.versionNumber, laHienHanh: true });
+      }
+      if (!scoreId) return;
       const ketQua = await saveDraftAsVersion({
         library: lib,
-        scoreId: baiTrongKho.scoreId,
+        scoreId,
         sourceFilename: source.name,
         original: nhapBayGio.original,
         draft: nhapBayGio.xml,
@@ -974,12 +1005,53 @@ export default function MusicXmlBeatsPage({
     setMoThuVien(false);
   }
 
-  function dongMasterImport() {
+  /**
+   * Mở một bài của Thư viện bản nhạc. Đã từng lưu bản làm việc (cùng SHA-256,
+   * `findDuplicate`) thì mở tiếp bản đó; chưa thì mở bản gốc như một bài chưa
+   * lưu. Mở không bao giờ tạo gì — mở bao nhiêu lần cũng không sinh bản trùng.
+   */
+  async function moTuThuVienGoc(id: string) {
+    if (dangMoGoc || !duocBoNhap()) return;
+    setDangMoGoc(id);
+    setThuVienNote("");
+    try {
+      const goc = await getMasterCopySource(id);
+      const lib = thuVien.current;
+      const daLuu = lib ? await findExistingCopy(goc, lib) : null;
+      boNhap();
+      setTab("one");
+      if (lib && daLuu) {
+        moTuThuVien(await openExistingCopy(daLuu, lib));
+        setNguonGoc(null);
+        setThuVienNote(`Đã lưu trước đó — đang mở bản của bạn: “${daLuu.title}”.`);
+      } else {
+        ++fileRequest.current;
+        setScore(null);
+        setError("");
+        setSource({ xml: goc.musicxmlText, name: `${goc.title}.musicxml` });
+        setBaiTrongKho(null);
+        setNguonGoc(goc);
+        setXem({ che: "rong", pct: 100 });
+      }
+      setMoThuVienGoc(false);
+    } catch (e) {
+      setThuVienNote(e instanceof Error ? e.message : "Không mở được bản nhạc.");
+    } finally {
+      setDangMoGoc(null);
+    }
+  }
+
+  // Đường cũ `?master=<id>`: chờ biết kho bản làm việc rồi mở thẳng, dọn URL.
+  useEffect(() => {
+    const id = masterParam.current;
+    if (!id || !thuVienSan) return;
+    masterParam.current = null;
     const url = new URL(window.location.href);
     url.searchParams.delete("master");
     window.history.replaceState(window.history.state, "", url);
-    setMasterImportId(null);
-  }
+    void moTuThuVienGoc(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thuVienSan]);
 
   // Nạp preset khi mở trang. Có preset mặc định thì áp; KHÔNG có thì giữ nguyên
   // cấu hình cũ của công cụ, để thầy đang quen không thấy kết quả khác đi.
@@ -1489,12 +1561,20 @@ export default function MusicXmlBeatsPage({
             <button className="np-btn np-btn-quiet" onClick={() => void sample()}>
               Dùng file mẫu
             </button>
+            {choThuVien && source && (
+              <button
+                className="np-btn np-btn-quiet"
+                onClick={() => setMoThuVienGoc(true)}
+              >
+                Thư viện bản nhạc
+              </button>
+            )}
             {coThuVien && (
               <button
                 className="np-btn np-btn-quiet"
                 onClick={() => setMoThuVien(true)}
               >
-                Thư viện bài hát
+                Bản nhạc của tôi
               </button>
             )}
           </>
@@ -1531,15 +1611,22 @@ export default function MusicXmlBeatsPage({
               )}
             </>
           ) : (
-            choLuuThuVien && (
-              <button
-                className="np-btn np-btn-quiet"
-                disabled={dangLuuBai}
-                onClick={() => void luuVaoThuVien()}
-              >
-                {dangLuuBai ? "Đang lưu…" : "Lưu vào thư viện"}
-              </button>
-            )
+            <>
+              {gocDangMo && (
+                <span style={{ fontSize: 13, color: "var(--ink-soft)" }}>
+                  Từ Thư viện bản nhạc · chưa lưu
+                </span>
+              )}
+              {choLuuThuVien && (
+                <button
+                  className="np-btn np-btn-quiet"
+                  disabled={dangLuuBai}
+                  onClick={() => void luuVaoThuVien()}
+                >
+                  {dangLuuBai ? "Đang lưu…" : "Lưu vào Bản nhạc của tôi"}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -1556,7 +1643,7 @@ export default function MusicXmlBeatsPage({
           }}
         >
           <div style={{ fontSize: 13.5, marginBottom: 8 }}>
-            Bản nhạc này đã có trong thư viện:{" "}
+            Bản nhạc này đã có trong Bản nhạc của tôi:{" "}
             <strong>{trungLap.title}</strong> (v{trungLap.versionNumber}).
           </div>
           <div className="np-row" style={{ gap: 8, flexWrap: "wrap" }}>
@@ -1666,6 +1753,17 @@ export default function MusicXmlBeatsPage({
           <div className="np-col">
             <section className="np-card np-o-source" aria-label="Bản nhạc">
               <h2>{nangCao ? "Bản nhạc" : "1. Chọn bản nhạc"}</h2>
+              {tab === "one" && !source && choThuVien && (
+                <div style={{ marginBottom: 14 }}>
+                  <div className="np-sub" style={{ marginTop: 0 }}>Thư viện bản nhạc</div>
+                  <MasterLibraryList
+                    onOpen={(item) => void moTuThuVienGoc(item.id)}
+                    opening={dangMoGoc}
+                    maxHeight={360}
+                  />
+                  <div className="np-sub" style={{ marginBottom: 8 }}>Hoặc từ máy</div>
+                </div>
+              )}
               {khuThaFile}
             </section>
 
@@ -2851,13 +2949,13 @@ export default function MusicXmlBeatsPage({
           onClose={() => setMoThuVien(false)}
         />
       )}
-      {masterImportId && <MasterImportPrompt
-        masterId={masterImportId}
-        library={thuVien.current}
-        canSave={choLuuThuVien}
-        onImported={event => { moTuThuVien(event); dongMasterImport(); }}
-        onClose={dongMasterImport}
-      />}
+      {moThuVienGoc && (
+        <MasterLibraryPanel
+          onOpen={(item) => void moTuThuVienGoc(item.id)}
+          opening={dangMoGoc}
+          onClose={() => setMoThuVienGoc(false)}
+        />
+      )}
     </main>
   );
 

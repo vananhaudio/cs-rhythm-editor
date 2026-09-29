@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ScoreLibrary, ScoreSummary, ScoreVersion } from "./libraryRepository.ts";
+import { hop, phu } from "./panelStyles.ts";
 
 /**
  * Thư viện bài hát.
@@ -29,26 +30,6 @@ const ngay = (iso: string) => {
   return cungNgay ? `hôm nay ${gio}` : d.toLocaleDateString("vi-VN");
 };
 
-const phu: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(24,24,27,.55)",
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "center",
-  padding: "5vh 16px",
-  zIndex: 60,
-};
-const hop: React.CSSProperties = {
-  background: "var(--surface)",
-  borderRadius: 14,
-  width: "min(680px, 100%)",
-  maxHeight: "90vh",
-  display: "flex",
-  flexDirection: "column",
-  overflow: "hidden",
-  boxShadow: "0 18px 48px rgba(0,0,0,.28)",
-};
 
 export function ScoreLibraryPanel({
   library,
@@ -128,7 +109,7 @@ export function ScoreLibraryPanel({
   }
 
   return (
-    <div style={phu} role="dialog" aria-modal="true" aria-label="Thư viện bài hát">
+    <div style={phu} role="dialog" aria-modal="true" aria-label="Bản nhạc của tôi">
       <div style={hop}>
         <div
           style={{
@@ -140,7 +121,7 @@ export function ScoreLibraryPanel({
           }}
         >
           <strong style={{ fontSize: 16 }}>
-            {moLichSu ? `Phiên bản · ${moLichSu.title}` : "Thư viện bài hát"}
+            {moLichSu ? `Phiên bản · ${moLichSu.title}` : "Bản nhạc của tôi"}
           </strong>
           <button
             className="np-btn np-btn-quiet"
@@ -218,7 +199,7 @@ export function ScoreLibraryPanel({
             <p style={{ margin: "14px 12px", color: "var(--ink-hint)", fontSize: 13 }}>
               {tim
                 ? "Không có bài nào khớp."
-                : "Thư viện còn trống. Mở một bản nhạc rồi bấm “Lưu vào thư viện”."}
+                : "Chưa có bản nhạc nào của bạn. Mở một bài từ Thư viện bản nhạc hoặc từ máy, rồi bấm “Lưu vào Bản nhạc của tôi”."}
             </p>
           ) : (
             danhSach.map((s) => (
@@ -278,7 +259,7 @@ export function ScoreLibraryPanel({
               fontSize: 12,
             }}
           >
-            {danhSach.length} bài trong thư viện
+            {danhSach.length} bài của tôi
           </div>
         )}
       </div>
