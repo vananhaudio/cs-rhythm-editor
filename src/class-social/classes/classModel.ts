@@ -62,14 +62,39 @@ const STATUS_LABEL: Record<string, string> = {
 }
 export const classStatusLabel = (s: string | null): string | null => (s ? STATUS_LABEL[s] ?? null : null)
 
-/** Tên hiển thị ngắn trong sidebar: mã lớp nếu tên dài, ngược lại tên. */
+/**
+ * Tên NGƯỜI ĐỌC ĐƯỢC cho menu (chỉ trình bày — không đổi tên gốc trong DB):
+ *   "Hành trình 2027 — 40 buổi thực hành"   → "Hành trình 2027"
+ *   "Khởi đầu đam mê khóa 17 - KD17"        → "Khởi đầu đam mê khóa 17"
+ *   "Solo Guitar Căn Bản"                    → giữ nguyên
+ * Cắt tại dấu gạch ngăn cách đầu tiên (—, –, " - ") nếu phần đầu đủ nghĩa (≥ 6 ký tự, không phải mã lớp).
+ * Không bao giờ trả MÃ lớp nếu có tên; tên quá dài → CSS tự cắt "…".
+ */
 export function classShortName(c: Pick<ClassCard, 'name' | 'code'>): string {
-  return c.name.length <= 28 ? c.name : (c.code ?? c.name)
+  const name = (c.name ?? '').trim()
+  if (!name) return c.code ?? 'Lớp học'
+  const m = /^(.+?)\s*(?:—|–|\s-\s)\s*(.+)$/.exec(name)
+  if (m) {
+    const head = m[1].trim()
+    const looksLikeCode = !!c.code && head.toUpperCase() === c.code.toUpperCase()
+    if (head.length >= 6 && !looksLikeCode) return head
+  }
+  return name
 }
 
-/** Dòng phụ: "DH2 · Đệm hát 2 · Thứ 3 · 20:00" */
+/** Tooltip / dòng phụ: tên đầy đủ (+ mã lớp) — mã lớp chỉ là metadata nhỏ. */
+export function classFullTitle(c: Pick<ClassCard, 'name' | 'code'>): string {
+  return c.code && !c.name.toUpperCase().includes(c.code.toUpperCase()) ? `${c.name} · ${c.code}` : c.name
+}
+
+/** Dòng phụ CHO NGƯỜI ĐỌC: lịch học · khoá (không đưa mã lớp/mã khoá lên trước). */
 export function classMetaLine(c: ClassCard): string {
-  return [c.code && c.code !== c.name ? c.code : null, c.course?.name, c.schedule].filter(Boolean).join(' · ')
+  return [c.schedule, c.course?.name].filter(Boolean).join(' · ')
+}
+
+/** Metadata kỹ thuật (mã lớp · mã khoá) — hiện nhỏ, cuối cùng. */
+export function classCodeNote(c: ClassCard): string | null {
+  return [c.code, c.course?.code].filter(Boolean).join(' · ') || null
 }
 
 export function filterClasses(list: ClassCard[], q: string): ClassCard[] {

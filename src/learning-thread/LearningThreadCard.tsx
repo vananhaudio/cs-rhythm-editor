@@ -3,15 +3,17 @@
 // Component lá (không import CSS) — CSS .lt-* nạp ở container (MeHome / ProfilePage qua ./styles).
 import { relativeTime } from '../class-social/posts/postModel'
 import { Avatar, PersonLink } from '../class-social/ui'
-import { VISIBILITY_LABEL, identityLine, lessonLine } from './ltModel'
+import { VISIBILITY_LABEL, identityLine } from './ltModel'
 import { originBadge, storyLine, type ThreadCard } from './feedModel'
 import { StatusChip } from './ThreadView'
 
-export default function LearningThreadCard({ card, now, onOpenThread, onOpenProfile }: {
+export default function LearningThreadCard({ card, now, onOpenThread, onOpenProfile, inClass = false }: {
   card: ThreadCard
   now?: Date
   onOpenThread?: (threadId: string) => void
   onOpenProfile?: (userId: string) => void
+  /** Trong trang lớp: bỏ nhãn danh tính (đã rõ lớp) — không lặp mã lớp */
+  inClass?: boolean
 }) {
   const badge = originBadge(card)
   const story = storyLine(card)
@@ -26,7 +28,7 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
             {learner.userId
               ? <PersonLink userId={learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${learner.name}`} className="cs-post-author">{learner.name}</PersonLink>
               : <span className="cs-post-author">{learner.name}</span>}
-            <span className="lt-feed-identity">{identityLine(card.identity)}</span>
+            {!inClass && <span className="lt-feed-identity">{identityLine(card.identity)}</span>}
             {card.visibility === 'private' && <span className="cs-post-audience">{VISIBILITY_LABEL.private}</span>}
           </div>
           <time className="cs-post-time" dateTime={card.lastEventAt}>{relativeTime(card.lastEventAt, now)}</time>
@@ -34,7 +36,8 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
       </header>
       <div className="lt-feed-body">
         <div className="lt-feed-kind">{badge.icon} {badge.label}</div>
-        <div className="lt-feed-lesson">{lessonLine(card.identity)}</div>
+        <div className="lt-feed-lesson">{card.identity.lesson.title}</div>
+        {card.identity.module.name && <div className="lt-feed-module">{card.identity.module.name}</div>}
         {story && (
           <p className="lt-feed-story">
             <b>{story.actor.name}</b> {story.text}

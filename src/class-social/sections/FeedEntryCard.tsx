@@ -7,7 +7,7 @@ import PostCard, { type PostSocial } from './PostCard'
 
 export default function FeedEntryCard({ entry, now, social }: { entry: FeedEntry; now?: Date; social?: PostSocial }) {
   if (isThreadEntry(entry)) {
-    return <LearningThreadCard card={entry.card} now={now} onOpenThread={social?.onOpenThread} onOpenProfile={social?.onOpenProfile} />
+    return <LearningThreadCard card={entry.card} now={now} onOpenThread={social?.onOpenThread} onOpenProfile={social?.onOpenProfile} inClass={social?.threadContext === 'class'} />
   }
   return <PostCard post={entry} now={now} social={social} />
 }

@@ -164,3 +164,4 @@ textarea.lt-input { resize: vertical; min-height: 88px; line-height: 1.5; }
 .lt-profile-tabs button { font: inherit; font-size: 14px; font-weight: 800; border-radius: 999px; padding: 8px 16px; cursor: pointer;
   border: 1.5px solid #e4e4e7; background: #fff; color: #52525b; }
 .lt-profile-tabs button[aria-pressed="true"] { border-color: #4338ca; background: #4338ca; color: #fff; }
+.lt-feed-module { font-size: 12.5px; color: var(--lt-t3); margin-top: -2px; overflow-wrap: anywhere; }

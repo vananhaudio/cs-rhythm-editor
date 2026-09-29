@@ -47,7 +47,7 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
   const { state, loadMore } = usePostsFeed(fetchPage)
   const social: PostSocial = {
     me: null, comments: {}, onRefreshComments: async () => {}, onExpandComments: async () => {}, onModeratePost: () => {},
-    onOpenProfile, onOpenThread,
+    onOpenProfile, onOpenThread, threadContext: 'class',
   }
 
   const act = async (m: ClassMember, action: 'send' | 'accept') => {
@@ -77,8 +77,8 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
           {state.status === 'loading' && <div className="cs-card" role="status">Đang tải hoạt động…</div>}
           {state.status === 'error' && <div className="cs-card cs-feed-error" role="alert"><p>{state.message}</p></div>}
           {state.status === 'ready' && state.posts.length === 0 && (
-            <div className="cs-card"><EmptyState icon={Users} title="Lớp chưa có hoạt động công khai">
-              Khi học viên của lớp Trả bài / Hỏi bài ở chế độ "Cộng đồng học tập", câu chuyện sẽ hiện ở đây.
+            <div className="cs-card"><EmptyState icon={Users} title="Chưa có hoạt động mới">
+              Những bài Trả bài, Hỏi bài của lớp sẽ xuất hiện tại đây.
             </EmptyState></div>
           )}
           {state.status === 'ready' && state.posts.length > 0 && (

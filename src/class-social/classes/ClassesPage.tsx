@@ -7,14 +7,15 @@ import type { SocialClasses } from './useSocialClasses'
 
 export function ClassTile({ c, onOpen }: { c: ClassCard; onOpen: (id: string) => void }) {
   const status = classStatusLabel(c.status)
+  const meta = classMetaLine(c)
   return (
-    <button type="button" className="cs-card cs-class-tile" onClick={() => onOpen(c.id)} aria-label={`Mở lớp ${c.name}`}>
+    <button type="button" className={'cs-card cs-class-tile' + (c.isMember ? ' is-mine' : '')} onClick={() => onOpen(c.id)} aria-label={`Mở lớp ${c.name}`}>
       <span className="cs-class-tile-name">{c.name}</span>
-      {classMetaLine(c) && <span className="cs-class-tile-meta">{classMetaLine(c)}</span>}
+      {meta && <span className="cs-class-tile-meta">{meta}</span>}
       <span className="cs-class-tile-facts">
-        {c.isMember && <span className="cs-badge">Lớp của bạn</span>}
+        {c.isMember && <span className="cs-badge">Bạn đang tham gia</span>}
         {status && <span className="cs-class-status">{status}</span>}
-        <span>{c.memberCount} học viên</span>
+        {!c.isMember && c.memberCount > 0 && <span>{c.memberCount} học viên</span>}
         {c.activityCount > 0 && <span>{c.activityCount} hoạt động</span>}
       </span>
     </button>
@@ -36,7 +37,7 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
       {classes.loaded && classes.error && <p className="cs-form-error" role="alert">{classes.error}</p>}
       {classes.loaded && (
         <>
-          <section aria-labelledby="cs-mine-title">
+          <section className="cs-classes-mine" aria-labelledby="cs-mine-title">
             <h2 id="cs-mine-title" className="cs-feed-title">Lớp của tôi</h2>
             {mine.length > 0
               ? <div className="cs-class-grid">{mine.map(c => <ClassTile key={c.id} c={c} onOpen={onOpenClass} />)}</div>
@@ -44,9 +45,9 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
                   {q ? 'Thử tìm bằng tên khác.' : 'Khi được xếp vào lớp, lớp sẽ hiện ở đây và trên thanh bên.'}
                 </EmptyState></div>}
           </section>
-          <section aria-labelledby="cs-discover-title">
+          <section className="cs-classes-discover" aria-labelledby="cs-discover-title">
             <h2 id="cs-discover-title" className="cs-feed-title">Khám phá lớp</h2>
-            <p className="cs-section-hint">Xem các lớp khác đang học gì — bài thật, Thầy sửa thật.</p>
+            <p className="cs-section-hint">Nhìn vào các lớp khác xem mọi người đang học gì — bài thật, Thầy sửa thật.</p>
             {discover.length > 0
               ? <div className="cs-class-grid">{discover.map(c => <ClassTile key={c.id} c={c} onOpen={onOpenClass} />)}</div>
               : <p className="cs-section-hint">Hiện chưa có lớp nào khác đang mở.</p>}

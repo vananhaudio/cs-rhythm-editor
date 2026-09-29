@@ -146,4 +146,41 @@ do $$ begin
   perform t.reset();
 end $$;
 
+-- ── 6) Danh tính lớp của thread (V1.1): đúng lớp · không lọt lớp khác · giữ lịch sử · nhiều lớp → quy tắc xác định ──
+do $$ begin
+  perform t.as_user('C');
+  perform t.ok((select count(*) from public.social_class_activity('b0000000-0000-4000-8000-0000000000c2')) = 0,
+               'thread lớp KD18 của A KHÔNG lọt sang lớp SOLO (lớp khác)');
+  -- A rời KD18 (membership đổi) → thread lịch sử vẫn thuộc KD18 (snapshot, không suy lại từ membership hiện tại)
+  perform t.reset();
+  update public.edu_group_members set status = 'removed' where user_id = t.u('A') and group_id = 'f0000000-0000-4000-8000-0000000000c1';
+  perform t.as_user('C');
+  perform t.ok((select count(*) from public.social_class_activity('b0000000-0000-4000-8000-0000000000c1')) = 1
+               and (select thread #>> '{identity,class,code}' from public.social_class_activity('b0000000-0000-4000-8000-0000000000c1')) = 'DH2.KD18',
+               'A rời lớp → thread lịch sử VẪN ở hoạt động KD18 (không viết lại lịch sử)');
+  perform t.as_user('A');
+  perform t.ok((select count(*) from public.social_my_classes() x where x ->> 'code' = 'DH2.KD18') = 0, 'A đã rời: KD18 không còn trong Lớp của tôi');
+  perform t.reset();
+  update public.edu_group_members set status = 'active' where user_id = t.u('A') and group_id = 'f0000000-0000-4000-8000-0000000000c1';
+end $$;
+
+-- Nhiều lớp cùng dạy khoá của bài: A ở KD18 (active) và KD19 (upcoming, khai giảng sau) → snapshot chọn lớp ĐANG HỌC
+insert into public.edu_groups (id, name, group_type, code) values ('f0000000-0000-4000-8000-0000000000c5', 'DH2.KD19', 'class', 'DH2.KD19');
+insert into public.class_schedule (id, code, name, status, is_active, start_date, main_course_id, cohort_group_id) values
+  ('b0000000-0000-4000-8000-0000000000c5', 'DH2.KD19', 'Đệm hát căn bản — KD19', 'upcoming', true, current_date + 60,
+   'c0000000-0000-4000-8000-0000000000d2', 'f0000000-0000-4000-8000-0000000000c5');
+insert into public.edu_group_members (user_id, group_id, source, status) values
+  ('aaaaaaaa-0000-4000-8000-00000000000a', 'f0000000-0000-4000-8000-0000000000c5', 'admin', 'active');
+do $$ declare tid uuid; begin
+  perform t.as_user('T');
+  perform public.lt_set_lesson_settings('e0000000-0000-4000-8000-000000000002', 'allowed', 'allowed');
+  perform t.as_user('A');
+  tid := public.lt_submit('e0000000-0000-4000-8000-000000000002', 'submission', 'A nộp bài 2 khi đang ở 2 lớp DH2');
+  perform t.ok((public.lt_detail(tid) #>> '{identity,class,code}') = 'DH2.KD18',
+               'A ở 2 lớp cùng dạy DH2 → snapshot chọn lớp ĐANG HỌC (KD18), không phải lớp sắp khai giảng (quy tắc xác định)');
+  perform t.as_user('C');
+  perform t.ok((select count(*) from public.social_class_activity('b0000000-0000-4000-8000-0000000000c5')) = 0, 'lớp KD19 không nhận thread đã đóng dấu KD18');
+  perform t.reset();
+end $$;
+
 select 'ALL SOCIAL CLASSES V1 SQL TESTS PASS' as result;

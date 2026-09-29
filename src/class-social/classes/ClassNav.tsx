@@ -2,7 +2,7 @@
 // đang học/tuyển sinh, mới nhất), rồi "Tất cả lớp". Không bắt học sinh mở thêm một trang mới thấy lớp mình.
 // Component lá (không mạng, không CSS import) — dữ liệu từ useSocialClasses ở ClassSocialPage.
 import { Compass } from 'lucide-react'
-import { classShortName, type ClassCard } from './classModel'
+import { classFullTitle, classShortName, type ClassCard } from './classModel'
 
 const MY_CLASSES_IN_NAV = 5
 const DISCOVER_IN_NAV = 3
@@ -27,7 +27,7 @@ export default function ClassNav({ mine, discover, loaded, activeClassId, classe
     const active = c.id === activeClassId
     return (
       <button key={c.id} type="button" className={'cs-nav-item cs-class-item' + (active ? ' is-active' : '')}
-        aria-current={active ? 'page' : undefined} title={collapsed ? c.name : c.code && c.code !== c.name ? `${c.name} · ${c.code}` : c.name}
+        aria-current={active ? 'page' : undefined} title={classFullTitle(c)}
         onClick={() => onOpenClass(c.id)}>
         <Dot filled={mineRow} />
         <span className="cs-nav-text">{classShortName(c)}</span>

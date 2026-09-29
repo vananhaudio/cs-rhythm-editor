@@ -15,7 +15,7 @@ import ClassNav from "../../src/class-social/classes/ClassNav";
 import { ClassHeader, MemberList } from "../../src/class-social/classes/ClassParts";
 import { ClassTile } from "../../src/class-social/classes/ClassesPage";
 import {
-  classMetaLine, classShortName, classStatusLabel, filterClasses, memberRelationUi, scErrorText, toClassCard, toClassCards, toClassMembers,
+  classCodeNote, classFullTitle, classMetaLine, classShortName, classStatusLabel, filterClasses, memberRelationUi, scErrorText, toClassCard, toClassCards, toClassMembers,
 } from "../../src/class-social/classes/classModel";
 import { SHARE_PROMPTS } from "../../src/class-social/posts/sharePrompts";
 void React;
@@ -70,14 +70,48 @@ test("ClassNav: lớp CỦA TÔI hiện trực tiếp (bấm được) · Khám 
   assert.match(none, /Bạn chưa ở trong lớp nào\./);
 });
 
+test("tên lớp THÂN THIỆN cho menu (lấy từ tên thật production, không mã nội bộ, không hard-code)", () => {
+  const cases: [string, string, string][] = [
+    ["Hành trình 2027 — 40 buổi thực hành", "HT2027.TH01", "Hành trình 2027"],
+    ["Khởi đầu đam mê khóa 17 - KD17", "DH1.KD17", "Khởi đầu đam mê khóa 17"],
+    ["Hành trình 2026 — thực hành Chủ Nhật", "HT2026.TH01", "Hành trình 2026"],
+    ["Tỉa nốt trình độ 3 - Cảm âm 1", "TN3.GL10", "Tỉa nốt trình độ 3"],
+    ["Solo Guitar Căn Bản", "SOLO01.TH01", "Solo Guitar Căn Bản"],
+    ["Đệm hát nâng cao", "DHNC.K01", "Đệm hát nâng cao"],
+    ["KD18 — Đệm hát", "KD18", "KD18 — Đệm hát"],
+    ["Guitar căn bản 1", "CB1.T3", "Guitar căn bản 1"],
+  ];
+  for (const [name, code, want] of cases) assert.equal(classShortName({ name, code }), want, name);
+  assert.equal(classFullTitle({ name: "Hành trình 2027 — 40 buổi thực hành", code: "HT2027.TH01" }), "Hành trình 2027 — 40 buổi thực hành · HT2027.TH01");
+  const h = renderToStaticMarkup(<ClassNav mine={toClassCards([card({ name: "Hành trình 2027 — 40 buổi thực hành", code: "HT2027.TH01" })])} discover={[]}
+    loaded activeClassId={null} classesActive={false} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
+  assert.match(h, /cs-nav-text">Hành trình 2027</);
+  assert.equal(/cs-nav-text">HT2027/.test(h), false, "menu không hiện mã nội bộ");
+});
+
+test("menu: đúng MỘT mục sáng (lớp đang mở, ở Của tôi hoặc Khám phá; hoặc Tất cả lớp)", () => {
+  const mine = toClassCards([card()]);
+  const discover = toClassCards([card({ id: "b0000000-0000-4000-8000-000000000001", code: "SOLO01", name: "Solo Guitar", is_member: false })]);
+  const count = (h: string) => (h.match(/aria-current="page"/g) || []).length;
+  const r = (active: string | null, all: boolean) => renderToStaticMarkup(<ClassNav mine={mine} discover={discover} loaded activeClassId={active}
+    classesActive={all} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
+  assert.equal(count(r(CID, false)), 1);
+  const disc = r("b0000000-0000-4000-8000-000000000001", false);
+  assert.equal(count(disc), 1);
+  assert.match(disc, /aria-current="page"[^>]*title="Solo Guitar · SOLO01"/);
+  const all = r(null, true);
+  assert.equal(count(all), 1);
+  assert.match(all, /aria-current="page"[^>]*><svg[\s\S]*?Tất cả lớp/);
+});
+
 // ── Thẻ lớp / trang lớp ───────────────────────────────────────────────────────
 test("model lớp: chỉ trường công khai (bỏ zoom/giá), nhãn trạng thái, tìm không dấu", () => {
   const c = toClassCard(card())!;
   assert.equal(JSON.stringify(c).includes("SECRET") || JSON.stringify(c).includes("9.999"), false);
   assert.equal(classStatusLabel("recruiting"), "Đang tuyển sinh");
   assert.equal(classStatusLabel("la_la"), null);
-  assert.equal(classMetaLine(c), "DH2.KD18 · Đệm hát 2 · Thứ 3 · 20:00");
-  assert.equal(classShortName({ name: "Một cái tên lớp học rất rất rất dài quá mức", code: "KD18" }), "KD18");
+  assert.equal(classMetaLine(c), "Thứ 3 · 20:00 · Đệm hát 2", "dòng phụ cho người đọc: lịch · khoá (không mã)");
+  assert.equal(classCodeNote(c), "DH2.KD18 · DH2", "mã lớp/mã khoá chỉ là metadata nhỏ");
   assert.equal(filterClasses([c], "dem hat")[0]?.id, CID);
   assert.equal(filterClasses([c], "solo").length, 0);
   assert.equal(scErrorText("SC_MEMBERS_ONLY"), "Danh sách thành viên chỉ hiện với thành viên của lớp.");
@@ -89,9 +123,18 @@ test("trang lớp: thành viên thấy 'Bạn là thành viên'; người ngoài
   assert.match(member, /Thầy Minh/);
   assert.match(member, /12 học viên/);
   const outsider = renderToStaticMarkup(<ClassHeader c={toClassCard(card({ is_member: false, can_view_members: false }))!} />);
-  assert.match(outsider, /Bạn đang xem lớp DH2\.KD18 — bạn chưa tham gia lớp này\./);
+  assert.match(outsider, /Bạn đang xem lớp này — bạn chưa tham gia\./);
+  assert.ok(outsider.indexOf("cs-class-name") < outsider.indexOf("cs-class-codes"), "tên lớp lên đầu; mã lớp nhỏ ở cuối");
+  assert.equal(/0 học viên/.test(renderToStaticMarkup(<ClassHeader c={toClassCard(card({ member_count: 0 }))!} />)), false, "không nhấn '0 học viên'");
   assert.equal(/Mua|Đăng ký ngay|giá/i.test(outsider), false, "không biến trang lớp thành trang bán hàng");
-  assert.match(renderToStaticMarkup(<ClassTile c={toClassCard(card({ is_member: false }))!} onOpen={() => {}} />), /3 hoạt động/);
+  const disc = renderToStaticMarkup(<ClassTile c={toClassCard(card({ is_member: false }))!} onOpen={() => {}} />);
+  assert.match(disc, /3 hoạt động/);
+  assert.match(disc, /12 học viên/);
+  assert.equal(/Bạn đang tham gia/.test(disc), false);
+  const mineTile = renderToStaticMarkup(<ClassTile c={toClassCard(card())!} onOpen={() => {}} />);
+  assert.match(mineTile, /cs-class-tile is-mine/);
+  assert.match(mineTile, /Bạn đang tham gia/);
+  assert.equal(/0 học viên/.test(renderToStaticMarkup(<ClassTile c={toClassCard(card({ is_member: false, member_count: 0 }))!} onOpen={() => {}} />)), false);
 });
 
 test("thành viên: bấm tên → trang cá nhân; nút theo quan hệ (Kết bạn / Chấp nhận / Đã gửi / Bạn bè / Bạn)", () => {

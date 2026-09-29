@@ -1,31 +1,34 @@
 // Phần hiển thị THUẦN của trang lớp (không mạng, không CSS import) — test render được.
 import { Eye, UserCheck, Users } from 'lucide-react'
 import { Avatar, PersonLink } from '../ui'
-import { classMetaLine, classStatusLabel, memberRelationUi, type ClassCard, type ClassMember } from './classModel'
+import { classCodeNote, classMetaLine, classStatusLabel, memberRelationUi, type ClassCard, type ClassMember } from './classModel'
 
 export function ClassHeader({ c }: { c: ClassCard }) {
   const status = classStatusLabel(c.status)
+  const meta = classMetaLine(c)
+  const codes = classCodeNote(c)
   return (
     <section className="cs-card cs-class-head" aria-label={`Lớp ${c.name}`}>
       <div className="cs-class-head-top">
         <h1 className="cs-class-name">{c.name}</h1>
         {status && <span className="cs-class-status">{status}</span>}
       </div>
-      {classMetaLine(c) && <p className="cs-class-meta">{classMetaLine(c)}</p>}
       <div className="cs-class-facts">
         {c.teachers.length > 0 && (
           <span className="cs-class-teachers">
-            {c.teachers.slice(0, 3).map(t => <Avatar key={t.userId} name={t.name} url={t.avatarUrl} size={24} />)}
+            {c.teachers.slice(0, 3).map(t => <Avatar key={t.userId} name={t.name} url={t.avatarUrl} size={26} />)}
             {c.teachers.map(t => t.name).join(', ')}
           </span>
         )}
-        <span><Users size={15} aria-hidden="true" /> {c.memberCount} học viên</span>
+        {c.memberCount > 0 && <span><Users size={15} aria-hidden="true" /> {c.memberCount} học viên</span>}
+        {meta && <span>{meta}</span>}
       </div>
       <p className={'cs-class-viewer' + (c.isMember ? ' is-member' : '')}>
         {c.isMember
           ? <><UserCheck size={15} aria-hidden="true" /> Bạn là thành viên lớp này</>
-          : <><Eye size={15} aria-hidden="true" /> Bạn đang xem lớp {c.code ?? c.name} — bạn chưa tham gia lớp này.</>}
+          : <><Eye size={15} aria-hidden="true" /> Bạn đang xem lớp này — bạn chưa tham gia.</>}
       </p>
+      {codes && <p className="cs-class-codes">{codes}</p>}
     </section>
   )
 }

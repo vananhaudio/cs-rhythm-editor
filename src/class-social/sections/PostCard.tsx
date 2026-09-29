@@ -18,6 +18,8 @@ export type PostSocial = {
   onOpenProfile?: (userId: string) => void
   /** Learning Thread (P2): mở /me/t/<id> */
   onOpenThread?: (threadId: string) => void
+  /** Đang ở trang lớp → thẻ câu chuyện học tập bỏ nhãn lớp (đã rõ ngữ cảnh) */
+  threadContext?: 'feed' | 'class'
 }
 
 export default function PostCard({ post, now, social }: { post: FeedPost; now?: Date; social?: PostSocial }) {

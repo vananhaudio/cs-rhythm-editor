@@ -718,3 +718,10 @@
   .cs-share-prompts, .cs-share-legacy { padding-left: 0; margin-left: 0; }
   .cs-class-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Lớp học V1.1: tên thân thiện, header "căn phòng của lớp", phân biệt Của tôi / Khám phá ── */
+.cs-class-head { gap: 10px; }
+.cs-class-codes { margin: 0; font-size: 12px; color: var(--cs-faint); letter-spacing: .02em; }
+.cs-class-tile.is-mine { border-color: var(--cs-p-soft); background: var(--cs-p-softer); }
+.cs-classes-discover .cs-class-tile { box-shadow: none; }
+.cs-classes-mine + .cs-classes-discover { margin-top: 10px; }

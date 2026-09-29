@@ -2,6 +2,16 @@
 
 Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
+## 30/09/2026
+
+- **Class Social V1.1 — tên lớp thân thiện · hoạt động lớp thật · polish**
+  - Menu hiện tên người đọc được ("Hành trình 2027" thay vì HT2027.TH01), chỉ đổi trình bày; một mục sáng duy nhất.
+  - Header lớp theo thứ tự tên → Thầy/học viên/lịch → "bạn là thành viên / đang xem"; mã lớp nhỏ ở cuối.
+  - `/me/classes` phân biệt "Của tôi" / "Khám phá"; thẻ câu chuyện học tập gọn hơn (tên bài chính, chương phụ, không lặp nhãn lớp trong trang lớp).
+  - Test DB: thread thuộc đúng lớp theo snapshot, giữ lịch sử khi rời lớp, quy tắc xác định khi ở nhiều lớp.
+  - Có câu audit production chỉ đọc. Không migration, không dữ liệu giả.
+  - Chi tiết: `docs/SOCIAL-CLASSES-V1.md` (mục V1.1).
+
 ## 29/09/2026
 
 - **Social UX + Lớp học V1 (`/me`)**

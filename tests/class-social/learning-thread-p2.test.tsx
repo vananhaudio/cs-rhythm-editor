@@ -74,7 +74,10 @@ test("thẻ Feed: AI · danh tính lịch sử · bài · chuyện vừa xảy r
   assert.match(h, /HS03/);
   assert.match(h, /Tự học · DH2/);
   assert.match(h, /❓ Hỏi bài/);
-  assert.match(h, /Chương 4: Điệu Bolero &amp; kỹ thuật móc · Bài 4\.3 — Bolero móc kiểu 1/);
+  assert.match(h, /lt-feed-lesson">Bài 4\.3 — Bolero móc kiểu 1</);
+  assert.match(h, /lt-feed-module">Chương 4: Điệu Bolero &amp; kỹ thuật móc</, "chương là metadata nhỏ dưới tên bài");
+  const inClass = renderToStaticMarkup(<LearningThreadCard card={toThreadCard(card({ identity: identity({ class: { code: "DH2.KD18", stage_title: "Đệm hát 2" } }) }))!} inClass />);
+  assert.equal(/lt-feed-identity/.test(inClass), false, "trong trang lớp không lặp nhãn lớp");
   assert.match(h, /<b>Thầy Minh<\/b> vừa nhận xét · Cần làm lại/);
   assert.match(h, /📘 Thầy đã gửi bài giảng nên xem/);
   assert.match(h, /Cần làm lại/);
