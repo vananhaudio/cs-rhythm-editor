@@ -27,7 +27,7 @@ const PROFILE_TABS = ['wall', 'journey'] as const
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'missing' } | { status: 'ready'; profile: PublicProfile }
 
-export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onBack, onOpenProfile, onOpenThread }: {
+export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar, onEditMedia, onBack, onOpenProfile, onOpenThread, onEditProfile }: {
   me: ClassIdentity
   userId: string
   identityRev?: number
@@ -38,6 +38,8 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
   onOpenProfile: (userId: string) => void
   /** Learning Thread (P2): mở /me/t/<id> từ Tường / Hành trình */
   onOpenThread?: (threadId: string) => void
+  /** Chỉ trang của CHÍNH MÌNH (có hồ sơ học sinh): "Chỉnh sửa trang cá nhân" */
+  onEditProfile?: () => void
 }) {
   const isSelf = userId === me.userId
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -119,7 +121,7 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
     <div className="cs-col cs-home">
       {back}
       {isSelf
-        ? <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} />
+        ? <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} onEditProfile={onEditProfile} />
         : <OtherHeader profile={p} status={ui.status} actions={ui.actions} busy={busy} onAct={a => void act(a)} />}
       {actionError && <p className="cs-form-error" role="alert">{actionError}</p>}
       {moderatorView && (

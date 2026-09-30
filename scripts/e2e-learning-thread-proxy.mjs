@@ -1,6 +1,7 @@
 // Proxy E2E local (KHÔNG production): giả lập đúng phần Supabase mà frontend Learning Thread dùng.
 //   /rest/v1/*  → PostgREST local (JWT thật ký bằng secret local → RLS/GRANT/RPC chạy thật trên Postgres tạm)
 //   /auth/v1/*  → auth giả lập: đăng nhập bằng email của fixture (@test.local), phát JWT role=authenticated
+//   /storage/v1/object/* → Storage giả lập TRONG BỘ NHỚ (upload cần JWT authenticated · đọc public) — cho luồng đổi ảnh đại diện
 // Dùng bởi scripts/e2e-learning-thread.sh. Không phụ thuộc thư viện ngoài.
 import http from 'node:http'
 import crypto from 'node:crypto'
@@ -9,6 +10,7 @@ const PORT = Number(process.env.PROXY_PORT)
 const PGRST = process.env.PGRST_URL
 const SECRET = process.env.JWT_SECRET
 const USERS = JSON.parse(process.env.E2E_USERS)   // { email: userId }
+const STORE = new Map()   // storage giả lập: 'bucket/path' → { type, body }
 
 const b64u = b => Buffer.from(b).toString('base64url')
 export function sign(payload) {
@@ -72,6 +74,30 @@ http.createServer(async (req, res) => {
     for (const k of ['content-type', 'content-range', 'content-profile', 'preference-applied']) if (r.headers.get(k)) h[k] = r.headers.get(k)
     res.writeHead(r.status, h)
     return res.end(out)
+  }
+  if (url.pathname.startsWith('/storage/v1/object/')) {
+    const rest = url.pathname.slice('/storage/v1/object/'.length)
+    if (req.method === 'GET' && rest.startsWith('public/')) {
+      const f = STORE.get(decodeURIComponent(rest.slice('public/'.length)))
+      if (!f) return send(res, 404, { message: 'Object not found' })
+      res.writeHead(200, { ...cors, 'content-type': f.type }); return res.end(f.body)
+    }
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const claims = verify((req.headers.authorization ?? '').replace(/^Bearer /i, ''))
+      if (claims?.role !== 'authenticated') return send(res, 403, { message: 'new row violates row-level security policy' })
+      const chunks = []; for await (const c of req) chunks.push(c)
+      const key = decodeURIComponent(rest)
+      let type = req.headers['content-type'] ?? 'application/octet-stream', body = Buffer.concat(chunks)
+      const bnd = /boundary=([^;]+)/.exec(type)?.[1]
+      if (bnd) {   // supabase-js gửi Blob dạng multipart: lấy phần tệp (có Content-Type riêng)
+        for (const part of body.toString('latin1').split('--' + bnd)) {
+          const at = part.indexOf('\r\n\r\n'); const m = /content-type:\s*([^\r\n]+)/i.exec(part.slice(0, at))
+          if (at > 0 && m) { type = m[1].trim(); body = Buffer.from(part.slice(at + 4).replace(/\r\n$/, ''), 'latin1'); break }
+        }
+      }
+      STORE.set(key, { type, body })
+      return send(res, 200, { Key: key, Id: crypto.randomUUID() })
+    }
   }
   console.log(`[proxy] 404 ${req.method} ${url.pathname}`)
   send(res, 404, { msg: 'not mocked' })

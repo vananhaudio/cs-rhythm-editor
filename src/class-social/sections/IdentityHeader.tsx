@@ -2,19 +2,21 @@
 // Là header của HOME, không phải trang profile riêng. Bìa thấp để feed lộ ra sớm.
 // Chưa có / lỗi ảnh bìa → bìa mặc định tím (không bao giờ hiện ảnh vỡ).
 import { useState } from 'react'
-import { Camera, UserRound } from 'lucide-react'
+import { Camera, Pencil, UserRound } from 'lucide-react'
 import type { ClassIdentity } from '../useClassSession'
 import { levelLabel, monthYear } from '../format'
 import { safeImageUrl } from '../media/safeImageUrl'
 import type { ImageKind } from '../profile/imageFile'
 import { Avatar } from '../ui'
 
-export default function IdentityHeader({ me, canEditAvatar = false, onEdit, onOpenProfile }: {
+export default function IdentityHeader({ me, canEditAvatar = false, onEdit, onOpenProfile, onEditProfile }: {
   me: ClassIdentity
   canEditAvatar?: boolean
   onEdit?: (kind: ImageKind) => void
   /** Có → hiện nút "Trang cá nhân" (tường của tôi) */
   onOpenProfile?: () => void
+  /** Trang của chính mình: nút "Chỉnh sửa trang cá nhân" (tên + ảnh đại diện) */
+  onEditProfile?: () => void
 }) {
   const level = levelLabel(me.level)
   const since = monthYear(me.enrolledAt)
@@ -53,6 +55,11 @@ export default function IdentityHeader({ me, canEditAvatar = false, onEdit, onOp
               {me.htMember && <span className="cs-badge">Lớp Hành trình</span>}
               {facts.map(f => <span key={f}>{f}</span>)}
             </div>
+          )}
+          {onEditProfile && (
+            <button type="button" className="cs-btn cs-btn-soft cs-btn-sm cs-identity-profile" onClick={onEditProfile}>
+              <Pencil size={15} aria-hidden="true" /> Chỉnh sửa trang cá nhân
+            </button>
           )}
           {onOpenProfile && (
             <button type="button" className="cs-btn cs-btn-soft cs-btn-sm cs-identity-profile" onClick={onOpenProfile}>

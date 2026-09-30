@@ -76,7 +76,19 @@ VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}"
 RC=$?
 set -e
 echo "── proxy log (lỗi REST ≥400 / endpoint chưa giả lập):"; grep -v '→ http' "$TMP/proxy.log" | head -30 || true
-PGOPTIONS="-c client_min_messages=warning" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d e2e -tAc \
+DBSTATE="$(PGOPTIONS="-c client_min_messages=warning" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d e2e -tAc \
   "select 'threads=' || count(*) from learning_threads union all select 'events=' || count(*) from learning_thread_events
-   union all select 'progress=' || count(*) from edu_lesson_progress union all select 'class_posts=' || count(*) from class_posts"
+   union all select 'progress=' || count(*) from edu_lesson_progress union all select 'class_posts=' || count(*) from class_posts
+   union all select 'A_profile=' || coalesce(display_name, '∅') || ' | avatar ' || case when avatar_url like '%/storage/v1/object/public/avatars/%' then 'storage' else coalesce(avatar_url, '∅') end
+             || ' | user_id ' || user_id::text from edu_students where user_id = 'aaaaaaaa-0000-4000-8000-00000000000a'
+   union all select 'A_ownership=' || (select count(*) from learning_threads where learner_user_id = 'aaaaaaaa-0000-4000-8000-00000000000a') || ' thread · '
+             || (select count(*) from edu_group_members where user_id = 'aaaaaaaa-0000-4000-8000-00000000000a' and status = 'active') || ' nhóm lớp'")"
+echo "$DBSTATE"
+# Chỉnh sửa trang cá nhân: tên + ảnh lưu vào hồ sơ dùng chung (edu_students) của đúng user; quyền sở hữu không đổi
+if [ "$RC" = "0" ]; then
+  echo "$DBSTATE" | grep -qx 'A_profile=Ánh Dương Lê | avatar storage | user_id aaaaaaaa-0000-4000-8000-00000000000a' \
+    && echo "$DBSTATE" | grep -qx 'A_ownership=1 thread · 1 nhóm lớp' \
+    && echo "PASS: DB sau Chỉnh sửa trang cá nhân: edu_students.display_name + avatar_url (storage 'avatars') của A; user_id / thread / nhóm lớp giữ nguyên" \
+    || { echo "FAIL: trạng thái DB sau Chỉnh sửa trang cá nhân"; RC=1; }
+fi
 exit $RC

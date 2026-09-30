@@ -543,6 +543,75 @@ try {
     ok('Trang chủ/logo (☰, sidebar, logo; từ Lớp của tôi, Bạn bè, lớp, cuộc trao đổi, trang cá nhân) → /me · Dành cho bạn · đầu trang; Back/Forward đúng tab; deep link ?feed= vẫn giữ')
   }
 
+  // ── CHỈNH SỬA TRANG CÁ NHÂN V1: tên hiển thị + ảnh đại diện (cùng edu_students với App học) ───────────
+  {
+    const A_ID = 'aaaaaaaa-0000-4000-8000-00000000000a'
+    const { c: ce, pg: e } = await loginAt('a@test.local', 390)
+    await e.waitForSelector('.cs-share', { timeout: 15000 })   // khách vào /me/u/… được đưa về /me — đăng nhập xong mới mở trang cá nhân
+    await e.goto(ME + '/u/' + A_ID, { waitUntil: 'networkidle0' })
+    await e.waitForSelector('.cs-identity-name', { timeout: 15000 })
+    const oldName = await e.$eval('.cs-identity-name', x => x.textContent)
+    await clickText(e, 'Chỉnh sửa trang cá nhân')
+    await e.waitForSelector('.cs-profile-edit')
+    await noHorizontalOverflow(e, 'Chỉnh sửa trang cá nhân (390px)')
+    // Tên rỗng → không lưu được
+    const nameInput = await e.$('.cs-profile-edit input[type="text"]')
+    await nameInput.click({ clickCount: 3 }); await e.keyboard.press('Backspace')
+    assert.equal(await e.$eval('.cs-profile-edit button[type="submit"]', b => b.disabled), true, 'tên rỗng → Lưu bị khoá')
+    // Tệp không phải ảnh → báo rõ, GIỮ tên đang nhập
+    await nameInput.type('  Ánh   Dương  Lê  ')
+    const dir = SHOTS + '/files'; mkdirSync(dir, { recursive: true })
+    const { writeFileSync } = await import('node:fs')
+    writeFileSync(dir + '/not-image.jpg', 'day khong phai anh')
+    await (await e.$('.cs-profile-edit input[type="file"]')).uploadFile(dir + '/not-image.jpg')
+    await e.waitForSelector('.cs-profile-edit .cs-form-error')
+    assert.match(await e.$eval('.cs-profile-edit .cs-form-error', x => x.textContent), /ảnh/i)
+    assert.equal(await e.$eval('.cs-profile-edit input[type="text"]', x => x.value), '  Ánh   Dương  Lê  ', 'lỗi ảnh không làm mất tên đang nhập')
+    // Ảnh thật (PNG vẽ bằng canvas) → xem trước → Lưu
+    const png = await e.evaluate(() => { const cv = document.createElement('canvas'); cv.width = cv.height = 96; const g = cv.getContext('2d'); g.fillStyle = '#6d28d9'; g.fillRect(0, 0, 96, 96); g.fillStyle = '#fbbf24'; g.fillRect(24, 24, 48, 48); return cv.toDataURL('image/png').split(',')[1] })
+    writeFileSync(dir + '/avatar.png', Buffer.from(png, 'base64'))
+    await (await e.$('.cs-profile-edit input[type="file"]')).uploadFile(dir + '/avatar.png')
+    await e.waitForSelector('.cs-profile-edit img.cs-preview-avatar', { timeout: 10000 })
+    await e.screenshot({ path: `${SHOTS}/17-profile-edit.png` })
+    await clickText(e, 'Lưu thay đổi')
+    await e.waitForFunction(() => !document.querySelector('.cs-profile-edit'), { timeout: 15000 })
+    // Cập nhật NGAY (không đăng nhập lại): tên trang cá nhân, avatar trên top bar
+    assert.equal(await e.$eval('.cs-identity-name', x => x.textContent), 'Ánh Dương Lê', 'tên gọn khoảng trắng, giữ nguyên hoa/thường + dấu')
+    // Top bar đổi ngay (không đăng nhập lại). Ảnh: stack local phục vụ qua http:// mà safeImageUrl CHỈ nhận https
+    // (production luôn https) → ở đây kiểm chữ cái đầu theo tên mới; việc lưu ảnh vào storage + edu_students.avatar_url
+    // được script e2e-learning-thread.sh kiểm trên DB (A_profile … avatar storage).
+    assert.equal(await e.$eval('.cs-account .cs-avatar', x => x.textContent), 'Á', 'avatar top bar theo tên mới')
+    // Home: ô chia sẻ + Feed dùng danh tính mới (đọc hiện tại, không snapshot)
+    await e.click('.cs-brand'); await e.waitForSelector('.cs-feed-tabs')
+    await e.waitForFunction(() => [...document.querySelectorAll('.cs-feed .cs-post-author')].some(a => a.textContent === 'Ánh Dương Lê'), { timeout: 15000 })
+    assert.ok(await e.$$eval('.cs-feed .cs-post-author', a => a.every(x => x.textContent !== 'An')), 'không còn tên cũ trên Feed')
+    // Cuộc trao đổi cũ của A: cùng người, tên mới; danh tính lớp lịch sử giữ nguyên
+    await clickText(e, 'Lớp của tôi'); await e.waitForSelector('.lt-feed-open', { timeout: 15000 }); await e.$eval('.lt-feed-open', b => b.click())
+    await e.waitForSelector('.lt-head')
+    assert.match(await e.$eval('.lt-head', x => x.textContent), /Ánh Dương Lê[\s\S]*DH2\.KD18 · Đệm hát 2/, 'thread: tên mới + snapshot lớp DH2.KD18 giữ nguyên')
+    // Thành viên lớp
+    await e.goto(ME + '/classes', { waitUntil: 'networkidle0' }); await e.$eval('.cs-class-tile.is-mine', b => b.click())
+    await clickText(e, 'Thành viên'); await e.waitForSelector('.cs-member')
+    assert.ok(await e.$$eval('.cs-member-name', a => a.some(x => x.textContent === 'Ánh Dương Lê')), 'danh sách thành viên lớp có tên mới')
+    await ce.close()
+    // Người khác: KHÔNG có nút chỉnh sửa; thấy tên mới
+    const { c: co, pg: o } = await loginAt('c@test.local', 1280)
+    await o.waitForSelector('.cs-share', { timeout: 15000 })
+    await o.goto(ME + '/u/' + A_ID, { waitUntil: 'networkidle0' })
+    await o.waitForSelector('.cs-identity-name', { timeout: 15000 })
+    assert.equal(await o.$eval('.cs-identity-name', x => x.textContent), 'Ánh Dương Lê')
+    assert.equal(/Chỉnh sửa trang cá nhân/.test(await text(o)), false, 'người khác không thấy "Chỉnh sửa trang cá nhân"')
+    await co.close()
+    // Thầy (không có hồ sơ học sinh) → không có nút (tên Thầy không nằm ở edu_students)
+    const { c: ct, pg: tt } = await loginAt('t@test.local', 1280)
+    await tt.waitForSelector('.cs-share', { timeout: 15000 })
+    await tt.goto(ME + '/u/dddddddd-0000-4000-8000-00000000000d', { waitUntil: 'networkidle0' })
+    await tt.waitForSelector('.cs-identity-name', { timeout: 15000 })
+    assert.equal(/Chỉnh sửa trang cá nhân/.test(await text(tt)), false)
+    await ct.close()
+    ok(`Chỉnh sửa trang cá nhân: "${oldName}" → "Ánh Dương Lê" + ảnh mới; tên rỗng khoá Lưu; tệp không phải ảnh báo lỗi, giữ tên; cập nhật ngay top bar/trang cá nhân/Feed/thread (lớp lịch sử giữ)/thành viên lớp; người khác & Thầy không có nút`)
+  }
+
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))
   assert.deepEqual(real, [], 'không có lỗi JS trên trang')
   ok('Không có lỗi JavaScript trong suốt kịch bản')

@@ -30,6 +30,18 @@ export async function saveAvatar(studentId: string, blob: Blob): Promise<Result<
   }
 }
 
+/** Đổi tên hiển thị: edu_students.display_name của CHÍNH học sinh — đúng cột App học sửa (RLS: chỉ hàng của mình). */
+export async function saveDisplayName(studentId: string, name: string): Promise<Result<string>> {
+  try {
+    const { data, error, status } = await supabase.from('edu_students').update({ display_name: name }).eq('id', studentId).select('id')
+    if (error) { devWarn('display_name', error); return { ok: false, message: online() ? 'Chưa lưu được thay đổi. Thử lại.' : 'Không có kết nối mạng. Kiểm tra mạng rồi thử lại.' } }
+    if (!data || data.length === 0) { devWarn('display_name', { message: `0 hàng (status ${status})` }); return { ok: false, message: 'Chưa lưu được thay đổi. Thử lại.' } }
+    return { ok: true, value: name }
+  } catch (e) {
+    return { ok: false, message: friendlyError(e as Error, 'post', online()) }
+  }
+}
+
 /** Đổi ảnh bìa: upsert hàng profile_media của CHÍNH tài khoản (RLS: user_id = auth.uid()). */
 export async function saveCover(userId: string, blob: Blob): Promise<Result<string>> {
   try {

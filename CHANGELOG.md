@@ -4,6 +4,13 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social — Chỉnh sửa trang cá nhân V1** (`/me/u/<chính mình>`)
+  - Nút "Chỉnh sửa trang cá nhân" chỉ hiện trên trang của chính mình (tài khoản có hồ sơ học sinh). Hộp thoại chỉ có Ảnh đại diện (Đổi ảnh) và Tên hiển thị, với Huỷ / Lưu thay đổi.
+  - **Không tạo hồ sơ Social riêng:** ghi vào `edu_students.display_name` / `avatar_url` của chính mình, đúng cột App học (Cài đặt → Hồ sơ của tôi) đang sửa. Ảnh đi qua pipeline sẵn có (bucket `avatars`, kiểm loại ảnh thật, thu nhỏ). Mọi màn đọc qua `class_public_identity`, không snapshot.
+  - Tên: gọn khoảng trắng, chuẩn hoá NFC, giữ hoa/thường, tối đa 60 ký tự, không được rỗng. Lỗi hiện câu thân thiện; tệp hỏng không làm mất tên đang nhập.
+  - Sau khi lưu: top bar, trang cá nhân và Feed cập nhật ngay, không cần đăng nhập lại. RLS sẵn có chỉ cho sửa hàng của chính mình.
+  - Không DB/migration. Test: class-social 152, E2E 58 (thêm storage giả lập trong proxy local; kiểm DB sau khi lưu).
+
 - **Sửa: Trang chủ / logo luôn về Home mặc định** (`/me`)
   - Root cause: đang ở Home với `?feed=classes|friends` mà bấm Trang chủ → router coi là "cùng màn" nên không đổi URL, và Home không mount lại nên giữ tab cũ. Back/Forward giữa `/me?feed=…` và `/me` cũng lệch tab.
   - Sửa tại router: điều hướng tới URL khác (kể cả cùng màn) thì `pushState`. Mỗi lượt điều hướng, gồm cả Back/Forward, làm Home mount lại, đọc `?feed=` từ URL và về đầu trang.

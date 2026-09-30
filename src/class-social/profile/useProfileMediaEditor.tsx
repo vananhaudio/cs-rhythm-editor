@@ -7,7 +7,7 @@ import { PREPARE_ERROR_TEXT, prepareImage, type ImageKind } from './imageFile'
 import { saveAvatar, saveCover } from './profileApi'
 
 type Draft = { kind: ImageKind; blob: Blob; previewUrl: string }
-export type IdentityPatch = Partial<Pick<ClassIdentity, 'avatarUrl' | 'coverUrl'>>
+export type IdentityPatch = Partial<Pick<ClassIdentity, 'avatarUrl' | 'coverUrl' | 'name'>>
 
 const TITLE: Record<ImageKind, string> = { avatar: 'Đổi ảnh đại diện', cover: 'Đổi ảnh bìa' }
 

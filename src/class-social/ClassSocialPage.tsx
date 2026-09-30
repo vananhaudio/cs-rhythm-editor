@@ -25,6 +25,7 @@ import { useSocialClasses } from './classes/useSocialClasses'
 import ClassNav from './classes/ClassNav'
 import ClassesPage from './classes/ClassesPage'
 import ClassPage from './classes/ClassPage'
+import ProfileEditDialog from './profile/ProfileEditDialog'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Trang chủ · Thầy Văn Anh Guitar',
@@ -136,11 +137,12 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   visit: number
 }) {
   const [patch, setPatch] = useState<IdentityPatch>({})
-  const [identityRev, setIdentityRev] = useState(0)   // tăng khi đổi ảnh đại diện → feed tải lại avatar mới
+  const [identityRev, setIdentityRev] = useState(0)   // tăng khi đổi ảnh đại diện / tên → feed tải lại danh tính mới
+  const [editingProfile, setEditingProfile] = useState(false)
   const me = useMemo(() => ({ ...base, ...patch }), [base, patch])
   const onChanged = useCallback((p: IdentityPatch) => {
     setPatch(x => ({ ...x, ...p }))
-    if (p.avatarUrl) setIdentityRev(r => r + 1)
+    if (p.avatarUrl || p.name) setIdentityRev(r => r + 1)
   }, [])
   const editor = useProfileMediaEditor(me, onChanged)
   // Đăng xuất → useClassSession nhận SIGNED_OUT → /me về trạng thái khách (không chuyển trang)
@@ -163,7 +165,8 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick} onSignOut={onSignOut}>
       {view.kind === 'profile' && (
         <ProfilePage key={view.userId} me={me} userId={view.userId} identityRev={identityRev} canEditAvatar={editor.canEditAvatar}
-          onEditMedia={editor.pick} onBack={() => onBack(HOME)} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread} />
+          onEditMedia={editor.pick} onBack={() => onBack(HOME)} onOpenProfile={onOpenProfile} onOpenThread={onOpenThread}
+          onEditProfile={me.studentId ? () => setEditingProfile(true) : undefined} />
       )}
       {view.kind === 'thread' && (
         <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onBack(HOME)}
@@ -183,6 +186,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {section === 'chat' && <Chat />}
       {section === 'tools' && <ToolsPage />}
       {editor.element}
+      {editingProfile && <ProfileEditDialog me={me} onClose={() => setEditingProfile(false)} onSaved={onChanged} />}
     </ClassSocialLayout>
   )
 }

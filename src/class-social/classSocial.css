@@ -802,3 +802,14 @@
 @media (max-width: 380px) {
   .cs-root .cs-feed-tabs button { padding: 10px 9px 12px; font-size: 14px; }
 }
+
+/* ── Chỉnh sửa trang cá nhân (tên + ảnh đại diện) ─────────────────────────── */
+.cs-profile-edit { width: min(460px, calc(100vw - 32px)); }
+.cs-profile-edit-body { padding: 16px 20px 0; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+.cs-profile-edit-avatar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cs-profile-edit .cs-preview-avatar { width: 112px; height: 112px; }
+.cs-profile-edit .cs-field-hint { align-self: flex-start; }
+@media (max-width: 1023px) {
+  .cs-profile-edit { width: 100%; }
+  .cs-profile-edit-body { padding: 14px 16px 0; }
+}
