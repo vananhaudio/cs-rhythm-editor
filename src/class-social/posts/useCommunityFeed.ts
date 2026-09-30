@@ -1,6 +1,7 @@
 // Trạng thái một dòng bài (feed Cộng đồng / tường cá nhân): trang đầu, "Xem thêm", tải lại sau khi đăng bài.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchSocialFeedPage, type Result } from './postsApi'
+import { fetchScopedFeedPage, type Result } from './postsApi'
+import type { FeedScope } from './feedScope'
 import { entryKey, mergePosts, type FeedEntry } from './postModel'
 
 export type FeedState =
@@ -17,9 +18,16 @@ function firstPageState(r: Result<{ posts: FeedEntry[]; hasMore: boolean }>): Fe
 /** cursor.key = sort_key của mục cuối ('p:<id>' | 't:<id>') — Feed/Tường trộn dùng; nguồn chỉ-bài bỏ qua. */
 export type PageFetcher = (cursor?: { createdAt: string; id: string; key: string }) => Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>>
 
-/** Feed /me: bài Social + câu chuyện học tập (Learning Thread community) — RPC social_feed. */
-export function useCommunityFeed() {
-  return usePostsFeed(fetchSocialFeedPage)
+// Một hàm tải CỐ ĐỊNH cho mỗi góc nhìn → usePostsFeed coi đổi góc nhìn = đổi nguồn (tải lại, bỏ kết quả cũ về muộn)
+const SCOPED_FETCHERS: Record<FeedScope, PageFetcher> = {
+  for_you: c => fetchScopedFeedPage('for_you', c),
+  my_classes: c => fetchScopedFeedPage('my_classes', c),
+  friends: c => fetchScopedFeedPage('friends', c),
+}
+
+/** Feed /me: bài Social + câu chuyện học tập — theo góc nhìn (mặc định Dành cho bạn = social_feed). */
+export function useCommunityFeed(scope: FeedScope = 'for_you') {
+  return usePostsFeed(SCOPED_FETCHERS[scope])
 }
 
 /** fetchPage phải ỔN ĐỊNH (useCallback) — đổi fetchPage (vd. sang tường người khác) = tải lại từ đầu. */

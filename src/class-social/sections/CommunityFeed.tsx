@@ -2,17 +2,23 @@
 // Dữ liệu THẬT từ social_feed(): bài Social (luật class_feed) + câu chuyện học tập (Learning Thread community),
 // mới nhất trước. Không bài giả,
 // không dùng tiến độ học cá nhân. Chưa có bài → trạng thái trống nhẹ.
+import type { ReactNode } from 'react'
 import { Users } from 'lucide-react'
+import { FEED_EMPTY } from '../posts/feedScope'
 import type { FeedState } from '../posts/useCommunityFeed'
 import { EmptyState } from '../ui'
 import type { PostSocial } from './PostCard'
 import FeedEntryCard from './FeedEntryCard'
 
-export default function CommunityFeed({ state, onRetry, onLoadMore, social }: {
+export default function CommunityFeed({ state, onRetry, onLoadMore, social, empty, emptyAction }: {
   state: FeedState
   onRetry: () => void
   onLoadMore: () => void
   social?: PostSocial
+  /** Trạng thái trống theo góc nhìn (mặc định: Dành cho bạn) */
+  empty?: { title: string; hint: string }
+  /** Lối đi tiếp khi trống (vd. "Xem các lớp của tôi") */
+  emptyAction?: ReactNode
 }) {
   return (
     <section className="cs-feed" aria-labelledby="cs-feed-title" aria-busy={state.status === 'loading'}>
@@ -40,8 +46,8 @@ export default function CommunityFeed({ state, onRetry, onLoadMore, social }: {
       )}
 
       {state.status === 'ready' && state.posts.length === 0 && (
-        <EmptyState icon={Users} title="Chưa có hoạt động mới" quiet>
-          Bài chia sẻ và câu chuyện học tập của bạn bè, lớp sẽ xuất hiện tại đây.
+        <EmptyState icon={Users} title={empty?.title ?? FEED_EMPTY.for_you.title} quiet action={emptyAction}>
+          {empty?.hint ?? FEED_EMPTY.for_you.hint}
         </EmptyState>
       )}
 

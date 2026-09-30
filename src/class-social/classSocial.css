@@ -795,3 +795,10 @@
 .cs-cmt.is-teacher .cs-cmt-bubble { border-color: #ece4fb; }
 /* Menu: mục khoá — ghi chú một dòng ngắn */
 .cs-nav-item.is-restricted .cs-nav-note { font-size: 11px; }
+
+/* ── Feed V1: ba góc nhìn ngay trên Feed (tab gạch chân, vừa 320px không cuộn ngang) ───────── */
+.cs-root .cs-feed-tabs { margin: 2px 0 12px; }
+.cs-empty-action { margin-top: 12px; }
+@media (max-width: 380px) {
+  .cs-root .cs-feed-tabs button { padding: 10px 9px 12px; font-size: 14px; }
+}

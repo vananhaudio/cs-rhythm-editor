@@ -4,6 +4,17 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social — FEED V1: "Dành cho bạn · Lớp của tôi · Bạn bè"** (`/me`)
+  - Một Feed, ba góc nhìn, tab gạch chân ngay trên Feed. Không AI, không xếp hạng: mới nhất lên trước.
+    - **Dành cho bạn** = `social_feed` hiện có, không đổi.
+    - **Lớp của tôi** = câu chuyện học tập community thuộc các lớp hiện tại của mình.
+    - **Bạn bè** = hoạt động của bạn bè đã chấp nhận.
+  - Bộ lọc không tạo quyền mới: server lọc trong tập vốn được xem. Thread "Chỉ Thầy" không bao giờ hiện; Tự học không vào "Lớp của tôi"; bài Social không vào "Lớp của tôi".
+  - DB: `db/social_feed_v1_setup.sql` thêm 2 hàm đọc (`social_feed_scoped`, `social_post_card`). Không bảng mới; có preflight và rollback.
+  - URL `?feed=classes|friends` (reload và "Quay lại" giữ góc nhìn). Trạng thái trống có lối đi tiếp.
+  - Test: DB (thêm 24 kiểm Feed V1), class-social 149, E2E 54 (kết bạn / huỷ kết bạn thật trên stack local).
+  - Thiết kế: `docs/SOCIAL-FEED-V1.md`.
+
 - **Class Social — UX polish Phase 2 (`/me`) · chỉ trình bày, không DB/RPC/quyền**
   - **Ô chia sẻ trên điện thoại:** 4 gợi ý xếp 2 × 2, luôn thấy đủ ở 320–430px. Thay cách vuốt ngang cũ, vốn che mất gợi ý cuối.
   - **Quay lại giữ tab:** Hành trình → cuộc trao đổi → Quay lại vẫn ở tab Hành trình; lớp giữ tab Hoạt động/Thành viên. Tab được nhớ trong `history.state`, không đổi URL.

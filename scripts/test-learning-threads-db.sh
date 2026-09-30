@@ -187,6 +187,31 @@ psqld t_sc -f "$ROOT/db/social_classes_v1_rollback.sql" >/dev/null && psqld t_sc
 [ "$(q t_sc "select count(*) from pg_proc where proname like 'social\_%class%' or proname in ('social_my_classes','social_discover_classes')")/$(q t_sc "select md5(prosrc) from pg_proc where proname = 'social_feed'")" = "0/0916ccb443782eb7b8070a1bb439ed00" ] \
   && ok "V1 rollback ×2: gỡ hàm lớp, social_feed về ĐÚNG bản P2" || fail "V1 rollback"
 
+echo "── FEED V1 (social_feed_scoped): md5 cổng · preflight → migration ×2 → test → rollback (social_feed không đổi)"
+sfc() { grep -o "fn_expected constant jsonb := '[^']*'" "$1" | sed "s/.*:= //"; }
+[ "$(grep -o "'{\"class_public_identity[^']*'" "$ROOT/db/social_feed_v1_preflight.sql" | head -1)" = "$(sfc "$ROOT/db/social_feed_v1_setup.sql")" ] \
+  && ok "Feed V1: hằng md5 giống hệt giữa preflight và migration" || fail "Feed V1: hằng lệch"
+baseline t_sf "$TMP/fixture_noroles.sql"
+for f in learning_threads_p1_setup learning_threads_p2_setup; do psqld t_sf -f "$ROOT/db/$f.sql" >/dev/null; done
+SFGATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/social_feed_v1_preflight.sql")) z where section = 'GATE'"; }
+[ "$(SFGATE t_sf)" = "STOP - DO NOT MIGRATE" ] && ok "Feed V1 preflight khi CHƯA có Lớp học V1: STOP" || fail "Feed V1 preflight thiếu V1"
+psqld t_sf -f "$ROOT/db/social_feed_v1_setup.sql" >/dev/null 2>"$TMP/sf.err" && fail "Feed V1 chạy khi chưa có V1"
+grep -q "DỪNG — production khác repo" "$TMP/sf.err" && ok "Feed V1 migration tự DỪNG khi chưa có Lớp học V1" || fail "Feed V1 gate: $(cat "$TMP/sf.err")"
+psqld t_sf -f "$ROOT/db/social_classes_v1_setup.sql" >/dev/null
+SF_BEFORE="$(q t_sf "select md5(prosrc) from pg_proc where proname = 'social_feed'")"
+[ "$(SFGATE t_sf)" = "PASS" ] && ok "Feed V1 preflight: GATE = PASS" || fail "Feed V1 preflight: $(SFGATE t_sf)"
+psqld t_sf -f "$ROOT/db/social_feed_v1_setup.sql" >/dev/null && psqld t_sf -f "$ROOT/db/social_feed_v1_setup.sql" >/dev/null && ok "Feed V1 migration ×2 (idempotent)"
+[ "$(q t_sf "select md5(prosrc) from pg_proc where proname = 'social_feed'")" = "$SF_BEFORE" ] && ok "Feed V1: social_feed (Dành cho bạn) KHÔNG đổi" || fail "social_feed bị đổi"
+psqld t_sf -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_sf "select count(*) from information_schema.routine_privileges where routine_name in ('social_feed_scoped','social_post_card') and grantee in ('anon','PUBLIC')")/$(q t_sf "select count(*) from information_schema.routine_privileges where routine_name = 'social_post_card' and grantee = 'authenticated'")" = "0/0" ] \
+  && ok "Feed V1: anon không EXECUTE; social_post_card là hàm nội bộ" || fail "Feed V1 quyền hàm"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_sf -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/social_feed_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL Feed V1"
+psqld t_sf -f "$ROOT/db/social_feed_v1_rollback.sql" >/dev/null && psqld t_sf -f "$ROOT/db/social_feed_v1_rollback.sql" >/dev/null
+[ "$(q t_sf "select count(*) from pg_proc where proname in ('social_feed_scoped','social_post_card')")/$(q t_sf "select md5(prosrc) from pg_proc where proname = 'social_feed'")" = "0/$SF_BEFORE" ] \
+  && ok "Feed V1 rollback ×2: gỡ 2 hàm, social_feed nguyên vẹn" || fail "Feed V1 rollback"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

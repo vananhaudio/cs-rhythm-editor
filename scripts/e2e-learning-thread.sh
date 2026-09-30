@@ -34,6 +34,7 @@ psqld -f "$ROOT/db/tests/local/learning_threads_fixture.sql" >/dev/null
 psqld -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/learning_threads_p2_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_classes_v1_setup.sql" >/dev/null
+psqld -f "$ROOT/db/social_feed_v1_setup.sql" >/dev/null
 # Chỉ cho stack E2E: cổng công cụ của App (ToolRouteGate) mở; Thầy cấu hình 2 bài (bài 2 KHÔNG cấu hình)
 psqld >/dev/null <<'SQL'
 create or replace function public.my_tool_route_access(p_path text) returns boolean language sql stable as $$ select true $$;
@@ -43,7 +44,7 @@ select public.lt_set_lesson_settings('e0000000-0000-4000-8000-000000000001', 'al
   'Bạn có thể gửi phần thực hành của bài này hoặc đặt câu hỏi cho Thầy.');
 select public.lt_set_lesson_settings('e0000000-0000-4000-8000-000000000003', 'off', 'allowed');
 SQL
-echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + 2 bài đã cấu hình)"
+echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + Feed V1 + 2 bài đã cấu hình)"
 
 SECRET="e2e-local-secret-e2e-local-secret-0000000"
 cat > "$TMP/pgrst.conf" <<EOF

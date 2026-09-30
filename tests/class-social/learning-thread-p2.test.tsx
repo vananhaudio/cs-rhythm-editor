@@ -185,7 +185,7 @@ test("Feed/Tường/Hành trình đọc qua RPC; KHÔNG copy thread sang class_p
   assert.match(src("class-social/posts/postsApi.ts"), /rpc\('social_feed'/);
   assert.match(src("class-social/friends/friendsApi.ts"), /'user_wall'/);
   assert.match(src("learning-thread/ltApi.ts"), /rpc\('learning_journey'/);
-  assert.match(src("class-social/posts/useCommunityFeed.ts"), /usePostsFeed\(fetchSocialFeedPage\)/);
+  assert.match(src("class-social/posts/useCommunityFeed.ts"), /for_you: c => fetchScopedFeedPage\('for_you', c\)/);   // Feed V1: Dành cho bạn vẫn qua social_feed
   for (const f of ["learning-thread/feedModel.ts", "learning-thread/LearningThreadCard.tsx", "learning-thread/JourneyTimeline.tsx", "learning-thread/JourneyView.tsx", "class-social/sections/FeedEntryCard.tsx"]) {
     const s = src(f);
     assert.equal(/from\(['"](class_posts|learning_threads|journey)/.test(s) || /insert\(/.test(s), false, f);

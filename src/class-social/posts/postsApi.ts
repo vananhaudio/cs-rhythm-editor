@@ -1,6 +1,7 @@
 // Gọi Supabase cho bài đăng cộng đồng. Tác giả KHÔNG gửi từ client — DB tự lấy auth.uid()
 // (cột author_user_id default auth.uid(), policy INSERT bắt buộc = auth.uid()).
 import { supabase } from '../../supabase'
+import type { FeedScope } from './feedScope'
 import { friendlyError, toFeedEntries, toFeedPosts, type AssignmentInsert, type FeedEntry, type FeedPost, type FeedRow, type MixedRow, type NewPost, type WallInsert } from './postModel'
 
 export const FEED_PAGE = 20
@@ -37,6 +38,30 @@ export async function fetchSocialFeedPage(cursor?: { createdAt: string; key: str
     })
     if (error) {
       if (import.meta.env.DEV) console.warn('[class-social] social_feed:', error.code, error.message)
+      return { ok: false, message: friendlyError({ ...error, status }, 'feed', online()) }
+    }
+    const rows = (data ?? []) as MixedRow[]
+    return { ok: true, value: { posts: toFeedEntries(rows), hasMore: rows.length === FEED_PAGE } }
+  } catch (e) {
+    return { ok: false, message: friendlyError(e as Error, 'feed', online()) }
+  }
+}
+
+/**
+ * Feed V1 theo góc nhìn. "Dành cho bạn" = ĐÚNG social_feed hiện có; "Lớp của tôi" / "Bạn bè" = social_feed_scoped
+ * (server lọc trong tập người xem vốn được xem). Cùng dạng hàng + keyset với social_feed.
+ */
+export async function fetchScopedFeedPage(scope: FeedScope, cursor?: { createdAt: string; key: string }): Promise<Result<{ posts: FeedEntry[]; hasMore: boolean }>> {
+  if (scope === 'for_you') return fetchSocialFeedPage(cursor)
+  try {
+    const { data, error, status } = await supabase.rpc('social_feed_scoped', {
+      p_scope: scope,
+      p_before: cursor?.createdAt ?? null,
+      p_before_key: cursor?.key ?? null,
+      p_limit: FEED_PAGE,
+    })
+    if (error) {
+      if (import.meta.env.DEV) console.warn('[class-social] social_feed_scoped:', error.code, error.message)
       return { ok: false, message: friendlyError({ ...error, status }, 'feed', online()) }
     }
     const rows = (data ?? []) as MixedRow[]

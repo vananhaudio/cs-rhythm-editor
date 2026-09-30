@@ -15,11 +15,23 @@ import type { ImageKind } from '../profile/imageFile'
 import type { FriendRequests } from '../friends/useFriendRequests'
 import FriendRequestList from './FriendRequestList'
 import MeThreadsBlock from '../../learning-thread/MeThreadsBlock'
+import FeedTabs from './FeedTabs'
+import { FEED_EMPTY, scopeFromSearch, searchForScope, type FeedScope } from '../posts/feedScope'
+
+/** Góc nhìn Feed đọc từ ?feed= (chia sẻ link / Quay lại về đúng góc nhìn); đổi góc nhìn = thay URL tại chỗ. */
+function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
+  const [scope, setScope] = useState<FeedScope>(() => scopeFromSearch(window.location.search))
+  const pick = useCallback((s: FeedScope) => {
+    setScope(s)
+    try { window.history.replaceState(window.history.state, '', window.location.pathname + searchForScope(window.location.search, s)) } catch { /* bỏ qua */ }
+  }, [])
+  return [scope, pick]
+}
 
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue }: {
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, onOpenClasses }: {
   me: ClassIdentity
   identityRev?: number
   /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
@@ -33,8 +45,11 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   /** Learning Thread: mở /me/t/<id> · hàng đợi Thầy /me/queue */
   onOpenThread?: (threadId: string) => void
   onOpenQueue?: () => void
+  /** Feed "Lớp của tôi" trống → lối sang /me/classes */
+  onOpenClasses?: () => void
 }) {
-  const { state, reload, loadMore } = useCommunityFeed()
+  const [scope, setScope] = useFeedScope()
+  const { state, reload, loadMore } = useCommunityFeed(scope)
   const feedRef = useRef<HTMLDivElement>(null)
   const [modError, setModError] = useState<string | null>(null)
 
@@ -91,7 +106,14 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
       )}
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}
-        <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social} />
+        <FeedTabs scope={scope} onChange={setScope} />
+        <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social}
+          empty={FEED_EMPTY[scope]}
+          emptyAction={scope === 'my_classes' && onOpenClasses
+            ? <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-empty-action" onClick={onOpenClasses}>Xem các lớp của tôi</button>
+            : scope === 'friends' && onSeeAllRequests
+              ? <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-empty-action" onClick={onSeeAllRequests}>Đến trang Bạn bè</button>
+              : undefined} />
       </div>
     </div>
   )

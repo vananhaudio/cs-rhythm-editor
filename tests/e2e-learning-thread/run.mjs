@@ -435,6 +435,70 @@ try {
     ok('Link thẳng cuộc trao đổi → Quay lại về Trang chủ · desktop: đúng một mục menu sáng (Trang chủ / Bạn bè / Tất cả lớp / lớp)')
   }
 
+  // ── FEED V1: Dành cho bạn | Lớp của tôi | Bạn bè ───────────────────────────────────────────
+  {
+    const pressedFeed = pg => pg.evaluate(() => document.querySelector('.cs-feed-tabs [aria-pressed="true"]')?.textContent ?? null)
+    const cards = pg => pg.$$eval('.cs-feed .lt-feed-card, .cs-feed .cs-post', els => els.map(e => e.textContent))
+    const settleFeed = pg => pg.waitForFunction(() => !document.querySelector('.cs-feed[aria-busy="true"]'), { timeout: 15000 })
+    // A (thành viên KD18): Lớp của tôi có câu chuyện của chính A trong lớp; URL ?feed=classes
+    const { c: ca, pg: a } = await loginAt('a@test.local', 390)
+    await a.waitForSelector('.cs-feed-tabs', { timeout: 15000 })
+    assert.equal(await pressedFeed(a), 'Dành cho bạn', 'mặc định Dành cho bạn')
+    assert.deepEqual(await a.$$eval('.cs-feed-tabs button', b => b.map(x => x.textContent)), ['Dành cho bạn', 'Lớp của tôi', 'Bạn bè'])
+    await clickText(a, 'Lớp của tôi'); await settleFeed(a)
+    assert.equal(await a.evaluate(() => location.pathname + location.search), '/me?feed=classes')
+    await a.waitForSelector('.lt-feed-card', { timeout: 15000 })
+    assert.ok((await cards(a)).every(t => !/Đang tập: Bolero móc kiểu 1 tối nay/.test(t)), 'Lớp của tôi KHÔNG có bài tường (không có ngữ cảnh lớp)')
+    assert.ok((await cards(a)).some(t => /Bài 4\.3 — Bolero móc kiểu 1/.test(t)), 'Lớp của tôi có thread lớp KD18')
+    await noRaw(a, 'Feed Lớp của tôi')
+    // Reload giữ góc nhìn theo URL; Quay lại từ cuộc trao đổi về đúng góc nhìn
+    await a.reload({ waitUntil: 'networkidle0' }); await a.waitForSelector('.cs-feed-tabs')
+    assert.equal(await pressedFeed(a), 'Lớp của tôi', 'reload /me?feed=classes giữ góc nhìn')
+    await a.waitForSelector('.lt-feed-open'); await a.$eval('.lt-feed-open', b => b.click())
+    await a.waitForSelector('.lt-head', { timeout: 15000 })
+    await clickText(a, 'Quay lại'); await a.waitForFunction(() => location.pathname === '/me' && location.search === '?feed=classes')
+    await a.waitForSelector('.cs-feed-tabs'); assert.equal(await pressedFeed(a), 'Lớp của tôi', 'Quay lại về đúng góc nhìn')
+    // A chưa có bạn → Bạn bè trống, có lối sang trang Bạn bè
+    await clickText(a, 'Bạn bè'); await settleFeed(a)
+    await waitText(a, /Chưa có hoạt động mới từ bạn bè\./)
+    await noHorizontalOverflow(a, 'Feed Bạn bè (390px)')
+    await a.screenshot({ path: `${SHOTS}/16-feed-friends-empty.png` })
+    ok('Feed V1 (A): 3 tab, mặc định Dành cho bạn; Lớp của tôi = thread lớp (không bài tường); ?feed= giữ qua reload + Quay lại; Bạn bè trống có lối đi')
+
+    // C (không thuộc lớp nào): Lớp của tôi trống → "Xem các lớp của tôi"
+    const { c: cc, pg: c } = await loginAt('c@test.local', 320)
+    await c.waitForSelector('.cs-feed-tabs', { timeout: 15000 })
+    const tabBoxes = await c.$$eval('.cs-feed-tabs button', els => els.map(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth }))
+    assert.ok(tabBoxes.every(Boolean), '320px: cả 3 tab nằm trọn trong màn hình')
+    await noHorizontalOverflow(c, 'Feed tabs (320px)')
+    await clickText(c, 'Lớp của tôi'); await settleFeed(c)
+    await waitText(c, /Chưa có hoạt động mới từ các lớp của bạn\./)
+    await clickText(c, 'Xem các lớp của tôi'); await c.waitForFunction(() => location.pathname === '/me/classes')
+    ok('Feed V1 (C, 320px): 3 tab vừa màn hình; Lớp của tôi trống → "Xem các lớp của tôi" → /me/classes')
+
+    // C ↔ A thành bạn (flow Bạn bè thật) → tab Bạn bè của C có hoạt động của A; B (không phải bạn) không có
+    await c.goto(ME + '/u/aaaaaaaa-0000-4000-8000-00000000000a', { waitUntil: 'networkidle0' })
+    await clickText(c, 'Kết bạn'); await waitText(c, /Đã gửi lời mời/)
+    await a.goto(ME + '/friends', { waitUntil: 'networkidle0' })
+    await clickText(a, 'Chấp nhận'); await waitText(a, /Tất cả bạn bè/)
+    await c.goto(ME + '?feed=friends', { waitUntil: 'networkidle0' }); await c.waitForSelector('.cs-feed-tabs'); await settleFeed(c)
+    assert.equal(await pressedFeed(c), 'Bạn bè')
+    await c.waitForSelector('.cs-feed .cs-post-author', { timeout: 15000 })
+    const fc = await cards(c)
+    assert.ok(fc.length > 0 && fc.every(t => /An/.test(t)), 'Bạn bè của C: chỉ hoạt động của A')
+    assert.ok(fc.some(t => /Đang tập: Bolero móc kiểu 1 tối nay/.test(t)), 'bài chỉ-bạn-bè của A hiện với C khi đã là bạn')
+    assert.ok(fc.every(t => !/Bình/.test(t)), 'không có B (không phải bạn; thread "Chỉ Thầy")')
+    await noRaw(c, 'Feed Bạn bè')
+    ok('Feed V1: C–A thành bạn → tab Bạn bè của C có bài + câu chuyện của A; không có người không phải bạn / thread "Chỉ Thầy"')
+    // Huỷ kết bạn → biến mất khỏi tab Bạn bè
+    await c.goto(ME + '/u/aaaaaaaa-0000-4000-8000-00000000000a', { waitUntil: 'networkidle0' })
+    await clickText(c, 'Huỷ kết bạn'); await waitText(c, /Kết bạn/)
+    await c.goto(ME + '?feed=friends', { waitUntil: 'networkidle0' }); await c.waitForSelector('.cs-feed-tabs'); await settleFeed(c)
+    await waitText(c, /Chưa có hoạt động mới từ bạn bè\./)
+    ok('Feed V1: huỷ kết bạn → tab Bạn bè không còn hoạt động của người đó')
+    await ca.close(); await cc.close()
+  }
+
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))
   assert.deepEqual(real, [], 'không có lỗi JS trên trang')
   ok('Không có lỗi JavaScript trong suốt kịch bản')

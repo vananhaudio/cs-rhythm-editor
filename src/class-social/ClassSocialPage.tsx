@@ -171,7 +171,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       )}
       {section === 'home' && <MeHome me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
-        onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} />}
+        onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} onOpenClasses={onOpenClasses} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} />}
       {section === 'chat' && <Chat />}
       {section === 'tools' && <ToolsPage />}
