@@ -46,7 +46,10 @@ test("route /me/classes + /me/classes/<uuid>; id lạ không phải lớp; giữ
 // ── Sidebar ──────────────────────────────────────────────────────────────────
 test("menu: Trang chủ là mục ĐẦU TIÊN; CỘNG ĐỒNG (Trang chủ · Bạn bè · Trò chuyện) → HỌC TẬP → CÔNG CỤ", () => {
   assert.deepEqual(NAV_GROUPS.map(g => g.id), ["community", "learning", "tools"]);
-  assert.deepEqual(NAV_GROUPS[0].items.map(i => i.label), ["Trang chủ", "Bạn bè", "Trò chuyện"]);
+  assert.deepEqual(NAV_GROUPS[0].items.map(i => i.label), ["Trang chủ", "Bạn bè", "Trò chuyện", "Ban nhạc"]);
+  const band = NAV_GROUPS[0].items[3];
+  assert.ok(band.kind === "destination" && band.href === "/teamlab" && !band.hint, "Ban nhạc → /teamlab, cùng tab, không mô tả");
+  assert.equal(JSON.stringify(NAV_GROUPS).includes("Teamlab"), false, "không chữ Teamlab trên menu");
   const first = NAV_GROUPS[0].items[0];
   assert.ok(first.kind === "section" && first.id === "home");
   // LỚP HỌC chèn ngay sau CỘNG ĐỒNG
@@ -177,4 +180,16 @@ test("lớp học CHỈ qua RPC đọc; không query thẳng membership/class_sc
   const db = readFileSync(new URL("../../db/social_classes_v1_setup.sql", import.meta.url), "utf8");
   assert.equal(/create table/i.test(db), false, "không bảng social_classes / membership mới");
   assert.equal(/zoom_url|price|metadata/.test(db.replace(/--.*$/gm, "")), false, "không trả zoom_url/giá/metadata");
+});
+
+test("Ban nhạc trên sidebar (desktop; menu ☰ mobile dùng CHUNG NavGroups): <a href='/teamlab'> cùng tab, trong nhóm Cộng đồng", async () => {
+  const { default: ClassSocialLayout } = await import("../../src/class-social/ClassSocialLayout");
+  const me = { role: "student", userId: "u1", studentId: "s1", name: "An", email: null, avatarUrl: null, coverUrl: null, level: null, enrolledAt: null, htMember: false, isTeacher: false } as never;
+  const h = renderToStaticMarkup(<ClassSocialLayout me={me} section="home" onSection={() => {}}><div /></ClassSocialLayout>);
+  const community = h.slice(h.indexOf('aria-label="Cộng đồng"'), h.indexOf("</nav>", h.indexOf('aria-label="Cộng đồng"')));
+  assert.match(community, /<a class="cs-nav-item" href="\/teamlab"[^>]*>.*Ban nhạc/);
+  assert.equal(/href="\/teamlab"[^>]*target=/.test(h), false, "mở cùng tab");
+  assert.ok(community.indexOf("Trò chuyện") < community.indexOf("Ban nhạc"), "ngay sau Trò chuyện");
+  const layout = readFileSync("src/class-social/ClassSocialLayout.tsx", "utf8");
+  assert.match(layout, /<NavGroups section=\{section\} collapsed=\{false\}/, "menu ☰ mobile render cùng NavGroups");
 });
