@@ -50,9 +50,9 @@ export default function IdentityHeader({ me, canEditAvatar = false, onEdit, onOp
         </div>
         <div className="cs-identity-text">
           <h1 className="cs-identity-name">{me.name}</h1>
-          {(me.htMember || facts.length > 0) && (
+          {/* Hành trình (và các chương trình khác) hiện ở khối "Danh tính học tập" ngay dưới — không lặp nhãn ở đây */}
+          {facts.length > 0 && (
             <div className="cs-identity-facts">
-              {me.htMember && <span className="cs-badge">Lớp Hành trình</span>}
               {facts.map(f => <span key={f}>{f}</span>)}
             </div>
           )}

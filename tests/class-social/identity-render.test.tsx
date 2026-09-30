@@ -45,5 +45,5 @@ test("Metadata chỉ hiện khi có dữ liệu thật", () => {
   const bare = renderToStaticMarkup(<IdentityHeader me={me({ htMember: false, level: null, enrolledAt: null })} />);
   assert.ok(!bare.includes("cs-identity-facts"));
   const full = renderToStaticMarkup(<IdentityHeader me={me()} />);
-  assert.match(full, /Lớp Hành trình/); assert.match(full, /Cơ bản/); assert.match(full, /Tham gia tháng 3\/2026/);
+  assert.equal(/Lớp Hành trình/.test(full), false, "Hành trình hiện ở khối Danh tính học tập (không lặp)"); assert.match(full, /Cơ bản/); assert.match(full, /Tham gia tháng 3\/2026/);
 });

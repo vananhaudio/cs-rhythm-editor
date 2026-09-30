@@ -8,15 +8,16 @@ Nhãn sinh ra từ dữ liệu lớp thật; học sinh không tự chọn. Khô
 ## Nguồn và luật
 
 - **Thành viên:** đúng luật của Lớp học V1 (`social_class_members_of`): `edu_group_members` có status `active` thuộc nhóm cohort, nhóm gắn lớp hoặc nhóm cùng mã lớp.
-- **Trạng thái** lấy theo `class_schedule.status`:
+- **Trạng thái** = `class_schedule.status` **kết hợp NGÀY**. Preflight production 30/09 cho thấy status thường không được cập nhật: DH2.KD0826 đang học thật vẫn là `upcoming`, còn TN3.GL10 đã quá `end_date` vẫn là `ending_soon`.
 
-| Trạng thái lớp | Danh tính |
+| Lớp | Danh tính |
 |---|---|
-| active · ending_soon · paused | **Đang học** |
-| recruiting · ready_to_open · scheduled · upcoming | **Sắp học** (chỉ hiện trên trang cá nhân) |
+| active · ending_soon · paused, **hoặc** status chưa mở (recruiting · ready_to_open · scheduled · upcoming) mà `start_date` ≤ hôm nay | **Đang học** (nếu `end_date` đã qua → Đã tốt nghiệp) |
+| status chưa mở và chưa tới `start_date` (hoặc không có ngày) | **Sắp học** (chỉ hiện trên trang cá nhân) |
 | completed | **Đã tốt nghiệp** |
 | cancelled · merged · draft | không hiện |
 
+- **Hành trình:** ngoài nhóm lớp, cờ `edu_students.ht_member` (nguồn "Lớp Hành trình" Social đã dùng) gắn người đó vào lớp Hành trình **đang diễn ra** (`program_code` HTyyyy, đã bắt đầu, chưa kết thúc). Cờ này không gắn vào khoá Hành trình chưa mở. Lý do: preflight cho thấy lớp HT2026.TH01 không có thành viên nào khớp nhóm lớp.
 - **Chương trình, không phải mã lớp.** Helper duy nhất `src/class-social/identity/learningIdentity.ts` suy nhãn theo quy luật mã, không hard-code từng lớp:
   - `HT2027` (`program_code` hoặc mã lớp `HT2027.*`) → **Hành trình 2027**, bậc đặc biệt, giữ năm.
   - `DH1`/`DH2` → Đệm hát 1/2. `DHNC`, `DH3` → Đệm hát nâng cao.
@@ -67,5 +68,5 @@ Nhãn sinh ra từ dữ liệu lớp thật; học sinh không tự chọn. Khô
 ## Giới hạn V1 (đã chốt)
 
 - "Đã tốt nghiệp" = từng là thành viên và lớp ở trạng thái `completed`; không kiểm điểm danh.
-- Lớp đã xong nhưng status chưa đổi thì vẫn hiện "Đang học" cho tới khi đổi status. Preflight liệt kê các lớp active có `end_date` đã qua.
-- Nếu thành viên bị tắt `active` sau khi lớp kết thúc, họ không có nhãn "Đã tốt nghiệp". Preflight thống kê thành viên theo status của các lớp completed.
+- Lớp đang học mà không có `start_date` (status chưa mở) sẽ hiện "Sắp học" cho tới khi có ngày hoặc đổi status.
+- Nếu thành viên bị tắt `active` sau khi lớp kết thúc, họ không có nhãn "Đã tốt nghiệp". Production 30/09: lớp completed TN3.GL11 vẫn đủ 12 thành viên active.

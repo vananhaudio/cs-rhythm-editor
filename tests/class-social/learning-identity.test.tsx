@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { buildIdentities, nameBadges, programKeyOfClass, programOf, type MembershipRow } from "../../src/class-social/identity/learningIdentity";
+import { buildIdentities, identityState, nameBadges, programKeyOfClass, programOf, todayISO, type MembershipRow } from "../../src/class-social/identity/learningIdentity";
 import { IdentitySectionView, NameBadgesView } from "../../src/class-social/identity/IdentityBadges";
 
 void React;
@@ -46,6 +46,28 @@ test("trạng thái: đang học / sắp học / đã tốt nghiệp; huỷ-gộ
   assert.match(ids.current[1].title, /KD0826/); assert.match(ids.current[1].title, /KD1516/);
   assert.deepEqual(buildIdentities([]), { current: [], upcoming: [], graduated: [] });
   assert.deepEqual(buildIdentities(null), { current: [], upcoming: [], graduated: [] });
+});
+
+test("trạng thái theo status + NGÀY (production: status thường không được cập nhật)", () => {
+  const T = "2026-09-30";
+  const S = (o: MembershipRow) => identityState(o, T);
+  assert.equal(S({ status: "upcoming", start_date: "2026-08-26" }), "current", "DH2.KD0826 'upcoming' nhưng đã bắt đầu → Đang học");
+  assert.equal(S({ status: "scheduled", start_date: "2026-10-14" }), "upcoming", "chưa tới ngày → Sắp học");
+  assert.equal(S({ status: "upcoming", start_date: null }), "upcoming", "không có ngày → không khẳng định đang học");
+  assert.equal(S({ status: "ending_soon", start_date: "2026-06-01", end_date: "2026-09-20" }), "graduated", "TN3.GL10: đã qua end_date → Đã tốt nghiệp");
+  assert.equal(S({ status: "active", end_date: "2026-09-30" }), "current", "hôm nay là ngày cuối → vẫn Đang học");
+  assert.equal(S({ status: "paused" }), "current");
+  assert.equal(S({ status: "completed", end_date: "2027-01-01" }), "graduated");
+  assert.equal(S({ status: "cancelled", start_date: "2026-01-01" }), null);
+  assert.equal(S({ status: "merged" }), null); assert.equal(S({ status: "draft" }), null);
+  const ids = buildIdentities([
+    row({ class_code: "DH2.KD0826", course_code: "DH2", status: "upcoming", start_date: "2026-08-26" }),
+    row({ class_code: "TN3.GL10", course_code: "TN3", status: "ending_soon", end_date: "2026-09-20" }),
+    row({ class_code: "HT2027.TH01", program_code: "HT2027", status: "scheduled", start_date: "2027-01-10" }),
+  ], T);
+  assert.deepEqual([ids.current.map(i => i.label), ids.upcoming.map(i => i.label), ids.graduated.map(i => i.label)],
+    [["Đệm hát 2"], ["Hành trình 2027"], ["Tỉa nốt 3"]]);
+  assert.match(todayISO(new Date(2026, 8, 5)), /^2026-09-05$/);
 });
 
 test("cạnh tên: CHỈ đang học, ưu tiên Hành trình → cao hơn, +N; loại chương trình của chính lớp đang xem", () => {

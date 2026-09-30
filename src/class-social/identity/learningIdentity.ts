@@ -17,6 +17,7 @@ export type MembershipRow = {
   course_name?: string | null
   track?: string | null
   start_date?: string | null
+  end_date?: string | null
 }
 
 export type IdentityState = 'current' | 'upcoming' | 'graduated'
@@ -35,11 +36,28 @@ export type LearningIdentity = {
 export type LearningIdentities = { current: LearningIdentity[]; upcoming: LearningIdentity[]; graduated: LearningIdentity[] }
 export const NO_IDENTITY: LearningIdentities = Object.freeze({ current: [], upcoming: [], graduated: [] }) as LearningIdentities
 
-// Trạng thái lớp (class_schedule.status) → trạng thái danh tính. cancelled / merged / draft: không có danh tính.
-const STATE_OF: Record<string, IdentityState> = {
-  active: 'current', ending_soon: 'current', paused: 'current',
-  recruiting: 'upcoming', ready_to_open: 'upcoming', scheduled: 'upcoming', upcoming: 'upcoming',
-  completed: 'graduated',
+// Trạng thái danh tính = status lớp + NGÀY. Preflight production 30/09: status thường không được cập nhật
+// (lớp đang học thật vẫn 'upcoming'; lớp đã hết hạn vẫn 'ending_soon') → ngày quyết định khi status "chưa mở"/"đang học":
+//   completed → Đã tốt nghiệp · cancelled / merged / draft → không có danh tính
+//   active / ending_soon / paused, hoặc status chưa mở mà start_date ≤ hôm nay → Đang học (end_date đã qua → Đã tốt nghiệp)
+//   status chưa mở, chưa tới start_date (hoặc không có) → Sắp học
+const CURRENT = new Set(['active', 'ending_soon', 'paused'])
+const PRE_START = new Set(['recruiting', 'ready_to_open', 'scheduled', 'upcoming'])
+const day = (v: string | null | undefined) => (v && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null)
+
+/** Hôm nay (YYYY-MM-DD, theo giờ máy người xem). */
+export function todayISO(now = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`
+}
+
+export function identityState(r: Pick<MembershipRow, 'status' | 'start_date' | 'end_date'>, today: string): IdentityState | null {
+  const st = (r.status ?? '').trim()
+  if (st === 'completed') return 'graduated'
+  const start = day(r.start_date), end = day(r.end_date)
+  if (CURRENT.has(st) || (PRE_START.has(st) && start !== null && start <= today)) return end !== null && end < today ? 'graduated' : 'current'
+  if (PRE_START.has(st)) return 'upcoming'
+  return null
 }
 const STATE_RANK: Record<IdentityState, number> = { current: 3, upcoming: 2, graduated: 1 }
 
@@ -85,10 +103,10 @@ const byImportance = (a: LearningIdentity, b: LearningIdentity) =>
  * Hàng lớp → danh tính: gộp theo CHƯƠNG TRÌNH (2 cohort DH2 = một "Đệm hát 2"), lấy trạng thái mạnh nhất
  * (Đang học > Sắp học > Đã tốt nghiệp — đang học lại thì không lặp ở Đã tốt nghiệp). Thứ tự xác định.
  */
-export function buildIdentities(rows: MembershipRow[] | null | undefined): LearningIdentities {
+export function buildIdentities(rows: MembershipRow[] | null | undefined, today: string = todayISO()): LearningIdentities {
   const groups = new Map<string, { p: ReturnType<typeof programOf>; items: { state: IdentityState; title: string }[] }>()
   for (const r of rows ?? []) {
-    const state = STATE_OF[(r.status ?? '').trim()]
+    const state = identityState(r, today)
     if (!state) continue
     const p = programOf(r)
     const code = (r.class_code ?? '').trim()

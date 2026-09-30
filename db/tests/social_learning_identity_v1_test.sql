@@ -61,6 +61,10 @@ insert into public.class_schedule (id, code, name, status, is_active, start_date
   ('b0000000-0000-4000-8000-0000000000a5', 'DH1.KD20', 'Lớp đã huỷ', 'cancelled', true, current_date - 10, 'f0000000-0000-4000-8000-0000000000a5', null, 'c0000000-0000-4000-8000-0000000000f3'),
   ('b0000000-0000-4000-8000-0000000000a6', 'TN1.GL14', 'Tỉa nốt 1 — GL14', 'active', true, current_date - 10, 'f0000000-0000-4000-8000-0000000000a6', null, null),
   ('b0000000-0000-4000-8000-0000000000a7', 'DHNC01.TH01', 'Đệm hát nâng cao', 'active', true, current_date - 5, null, 'DHNC01', null);
+insert into public.class_schedule (id, code, name, status, is_active, start_date, end_date, program_code) values
+  ('b0000000-0000-4000-8000-0000000000a8', 'HT2028.TH01', 'Hành trình 2028', 'scheduled', true, current_date + 90, null, 'HT2028'),
+  ('b0000000-0000-4000-8000-0000000000a9', 'HT2025.TH01', 'Hành trình 2025', 'active', true, current_date - 700, current_date - 300, 'HT2025');
+update public.edu_students set ht_member = true where user_id = 'bbbbbbbb-0000-4000-8000-00000000000b';
 insert into public.edu_group_members (user_id, group_id, source, status) values
   (t.u('A'), 'f0000000-0000-4000-8000-0000000000a1', 'admin', 'active'),
   (t.u('A'), 'f0000000-0000-4000-8000-0000000000a2', 'admin', 'active'),
@@ -89,7 +93,7 @@ begin
     'Thầy (thành viên nhóm để quản lý) KHÔNG có danh tính học sinh');
   select r2.memberships -> 0 as m into r from public.social_learning_identities(array[t.u('A')]) r2;
   select array_agg(k order by k) into keys from jsonb_object_keys(r.m) k;
-  perform t.ok(keys = array['class_code', 'class_id', 'class_name', 'course_code', 'course_name', 'program_code', 'start_date', 'status', 'track'],
+  perform t.ok(keys = array['class_code', 'class_id', 'class_name', 'course_code', 'course_name', 'end_date', 'program_code', 'start_date', 'status', 'track'],
     'chỉ thông tin lớp công khai (không zoom/giá/tiến độ/email/SĐT): ' || keys::text);
   perform t.ok((select e ->> 'program_code' from public.social_learning_identities(array[t.u('A')]) r3, jsonb_array_elements(r3.memberships) e
                 where e ->> 'class_code' = 'HT2027.TH01') = 'HT2027', 'HT2027: trả program_code để client dựng nhãn Hành trình 2027');
@@ -97,6 +101,11 @@ begin
     'nhiều người một lần, bỏ trùng + null');
   perform t.ok((select count(*) from public.social_learning_identities((select array_agg(gen_random_uuid()) from generate_series(1, 250)))) = 200,
     'tối đa 200 người mỗi lần gọi');
+  -- Cờ Hành trình (edu_students.ht_member): gắn vào lớp Hành trình ĐANG DIỄN RA — không vào khoá HT chưa mở / đã hết hạn
+  perform t.ok(t.codes(t.u('B')) = array['HT2027.TH01'], 'B có cờ Hành trình (không trong nhóm lớp) → lớp Hành trình đang diễn ra: ' || t.codes(t.u('B'))::text);
+  perform t.ok(not ('HT2028.TH01' = any(t.codes(t.u('B')))) and not ('HT2025.TH01' = any(t.codes(t.u('B')))),
+    'không gắn vào HT2028 (chưa mở) / HT2025 (đã hết hạn)');
+  perform t.ok(t.codes(t.u('C')) = array['DHNC01.TH01'], 'không có cờ → không Hành trình');
   perform t.as_user('N');
   perform t.ok(not exists (select 1 from public.social_learning_identities(array[t.u('A')])), 'ngoài Class: không thấy gì');
   perform t.as_anon();
