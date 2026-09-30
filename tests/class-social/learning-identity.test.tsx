@@ -70,6 +70,16 @@ test("trạng thái theo status + NGÀY (production: status thường không đ�
   assert.match(todayISO(new Date(2026, 8, 5)), /^2026-09-05$/);
 });
 
+test("cờ Hành trình (không có năm): '◆ Hành trình' — có nhóm lớp HT (có năm) thì chỉ nhãn có năm", () => {
+  const T = "2026-09-30";
+  const flagOnly = buildIdentities([row({ course_code: "DH2", start_date: "2026-08-14" })], T, true);
+  assert.deepEqual(flagOnly.current.map(i => i.label), ["Hành trình", "Đệm hát 2"], "không đoán năm; Hành trình đứng trước");
+  assert.equal(flagOnly.current[0].tier, "special");
+  const withYear = buildIdentities([row({ program_code: "HT2027", status: "scheduled", start_date: "2026-09-10" })], T, true);
+  assert.deepEqual(withYear.current.map(i => i.label), ["Hành trình 2027"], "không lặp nhãn không năm");
+  assert.deepEqual(buildIdentities([], T, false).current, []);
+});
+
 test("cạnh tên: CHỈ đang học, ưu tiên Hành trình → cao hơn, +N; loại chương trình của chính lớp đang xem", () => {
   const ids = buildIdentities([
     row({ course_code: "DH1" }), row({ course_code: "TN2" }), row({ course_code: "SOLO" }),

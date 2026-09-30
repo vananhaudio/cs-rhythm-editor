@@ -21,8 +21,8 @@ async function flush() {
     try {
       const { data, error } = await supabase.rpc('social_learning_identities', { p_users: chunk })
       if (error && import.meta.env.DEV) console.warn('[class-social] social_learning_identities:', error.code, error.message)
-      const rows = (error ? [] : data ?? []) as { user_id: string; memberships: MembershipRow[] }[]
-      for (const r of rows) cache.set(r.user_id, buildIdentities(r.memberships))
+      const rows = (error ? [] : data ?? []) as { user_id: string; memberships: MembershipRow[]; ht_member?: boolean }[]
+      for (const r of rows) cache.set(r.user_id, buildIdentities(r.memberships, undefined, r.ht_member === true))
     } catch { /* coi như không có nhãn */ }
     for (const id of chunk) if (!cache.has(id)) cache.set(id, NO_IDENTITY)
   }

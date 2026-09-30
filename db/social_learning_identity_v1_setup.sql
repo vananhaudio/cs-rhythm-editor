@@ -9,8 +9,9 @@
 --   • Lấy lớp ở mọi trạng thái trừ cancelled · merged · draft. Client quyết Đang học / Sắp học / Đã tốt nghiệp theo
 --     status + NGÀY (preflight production 30/09: status thường KHÔNG được cập nhật — lớp đã học vẫn 'upcoming',
 --     lớp đã xong vẫn 'ending_soon') → trả start_date + end_date.
---   • Hành trình: ngoài nhóm lớp, cờ edu_students.ht_member (nguồn "Lớp Hành trình" Social đang dùng, hàng hồ sơ mới
---     nhất như class_public_identity) gắn người đó vào lớp Hành trình (program_code HTyyyy) ĐANG DIỄN RA.
+--   • Hành trình: ngoài nhóm lớp (có NĂM, vd HT2027.TH01), trả cờ edu_students.ht_member (nguồn "Lớp Hành trình" Social
+--     đang dùng; hàng hồ sơ mới nhất như class_public_identity). Cờ KHÔNG phân biệt HT2026/HT2027 (ht_member_setup.sql)
+--     → client hiện "◆ Hành trình" KHÔNG năm khi chỉ có cờ (preflight 30/09: HT2026 + HT2027 cùng đang diễn ra).
 --   • Thầy/admin: không có danh tính học sinh (thành viên nhóm để quản lý lớp, không phải học).
 --   • Chỉ thông tin lớp công khai trong Class (mã/tên lớp, khoá) — không tiến độ, không gói, không email/SĐT.
 --   • Không đụng Learning Thread (danh tính LỊCH SỬ của thread là chuyện khác, không đổi).
@@ -49,7 +50,7 @@ end $gate$;
 
 -- ── 1) Danh tính học tập của nhiều người một lần (tối đa 200) — không N+1 trên Feed ────────────
 create or replace function public.social_learning_identities(p_users uuid[])
-returns table(user_id uuid, memberships jsonb)
+returns table(user_id uuid, memberships jsonb, ht_member boolean)
 language sql stable security definer set search_path = '' as $$
   with u as (
     select distinct x as uid
@@ -65,28 +66,19 @@ language sql stable security definer set search_path = '' as $$
     join public.class_schedule cs on g.id = cs.cohort_group_id or g.id = cs.group_id
                                   or (g.code is not null and cs.code is not null and upper(g.code) = upper(cs.code))
     where cs.status in ('active', 'ending_soon', 'paused', 'recruiting', 'ready_to_open', 'scheduled', 'upcoming', 'completed')
-  ),
-  ht as (  -- cờ Hành trình → lớp Hành trình ĐANG DIỄN RA (đã bắt đầu, chưa kết thúc; không gắn vào khoá HT chưa mở)
-    select u.uid, cs.id as class_id
-    from u
-    cross join lateral (select es.ht_member from public.edu_students es where es.user_id = u.uid
-                        order by es.enrolled_at desc nulls last limit 1) s
-    join public.class_schedule cs on cs.program_code ~ '^HT[0-9]{4}$'
-      and (cs.status in ('active', 'ending_soon', 'paused')
-           or (cs.status in ('recruiting', 'ready_to_open', 'scheduled', 'upcoming') and cs.start_date <= current_date))
-      and (cs.end_date is null or cs.end_date >= current_date)
-    where coalesce(s.ht_member, false)
-  ),
-  mm as (select uid, class_id from m union select uid, class_id from ht)
+  )
   select u.uid,
          coalesce(jsonb_agg(jsonb_build_object(
            'class_id', cs.id, 'class_code', cs.code, 'class_name', cs.name, 'status', cs.status,
            'program_code', cs.program_code, 'start_date', cs.start_date, 'end_date', cs.end_date,
            'course_code', c.code, 'course_name', c.name, 'track', c.track)
-           order by cs.start_date desc nulls last, cs.id) filter (where cs.id is not null), '[]'::jsonb)
+           order by cs.start_date desc nulls last, cs.id) filter (where cs.id is not null), '[]'::jsonb),
+         -- cờ Hành trình (hàng hồ sơ mới nhất, như class_public_identity) — KHÔNG phân biệt khoá năm nào
+         coalesce((select es.ht_member from public.edu_students es where es.user_id = u.uid
+                   order by es.enrolled_at desc nulls last limit 1), false)
   from u
-  left join mm on mm.uid = u.uid
-  left join public.class_schedule cs on cs.id = mm.class_id
+  left join m on m.uid = u.uid
+  left join public.class_schedule cs on cs.id = m.class_id
   left join public.edu_courses c on c.id = cs.main_course_id
   group by u.uid;
 $$;

@@ -102,10 +102,9 @@ begin
   perform t.ok((select count(*) from public.social_learning_identities((select array_agg(gen_random_uuid()) from generate_series(1, 250)))) = 200,
     'tối đa 200 người mỗi lần gọi');
   -- Cờ Hành trình (edu_students.ht_member): gắn vào lớp Hành trình ĐANG DIỄN RA — không vào khoá HT chưa mở / đã hết hạn
-  perform t.ok(t.codes(t.u('B')) = array['HT2027.TH01'], 'B có cờ Hành trình (không trong nhóm lớp) → lớp Hành trình đang diễn ra: ' || t.codes(t.u('B'))::text);
-  perform t.ok(not ('HT2028.TH01' = any(t.codes(t.u('B')))) and not ('HT2025.TH01' = any(t.codes(t.u('B')))),
-    'không gắn vào HT2028 (chưa mở) / HT2025 (đã hết hạn)');
-  perform t.ok(t.codes(t.u('C')) = array['DHNC01.TH01'], 'không có cờ → không Hành trình');
+  perform t.ok(t.codes(t.u('B')) = '{}' and (select ht_member from public.social_learning_identities(array[t.u('B')])),
+    'B có cờ Hành trình, không trong nhóm lớp HT → KHÔNG tự gán vào lớp HT nào (cờ không có năm), trả ht_member = true');
+  perform t.ok(not (select ht_member from public.social_learning_identities(array[t.u('C')])), 'C không có cờ → ht_member = false');
   perform t.as_user('N');
   perform t.ok(not exists (select 1 from public.social_learning_identities(array[t.u('A')])), 'ngoài Class: không thấy gì');
   perform t.as_anon();

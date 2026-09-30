@@ -17,7 +17,9 @@ Nhãn sinh ra từ dữ liệu lớp thật; học sinh không tự chọn. Khô
 | completed | **Đã tốt nghiệp** |
 | cancelled · merged · draft | không hiện |
 
-- **Hành trình:** ngoài nhóm lớp, cờ `edu_students.ht_member` (nguồn "Lớp Hành trình" Social đã dùng) gắn người đó vào lớp Hành trình **đang diễn ra** (`program_code` HTyyyy, đã bắt đầu, chưa kết thúc). Cờ này không gắn vào khoá Hành trình chưa mở. Lý do: preflight cho thấy lớp HT2026.TH01 không có thành viên nào khớp nhóm lớp.
+- **Hành trình:** thuộc nhóm lớp HT thì nhãn có năm (vd "◆ Hành trình 2027"). Chỉ có cờ `edu_students.ht_member` (nguồn "Lớp Hành trình" Social đã dùng) thì nhãn là "◆ Hành trình" **không năm**.
+  - Lý do: theo `db/ht_member_setup.sql`, cờ này dành cho "Học sinh Hành trình (HT2026/HT2027)" và không phân biệt khoá. Preflight 30/09 cho thấy HT2026 và HT2027 cùng đang diễn ra; 49 người có cờ; HT2026.TH01 không có thành viên khớp nhóm lớp.
+  - Không đoán năm. Người có cả hai nguồn chỉ hiện nhãn có năm.
 - **Chương trình, không phải mã lớp.** Helper duy nhất `src/class-social/identity/learningIdentity.ts` suy nhãn theo quy luật mã, không hard-code từng lớp:
   - `HT2027` (`program_code` hoặc mã lớp `HT2027.*`) → **Hành trình 2027**, bậc đặc biệt, giữ năm.
   - `DH1`/`DH2` → Đệm hát 1/2. `DHNC`, `DH3` → Đệm hát nâng cao.
@@ -70,3 +72,10 @@ Nhãn sinh ra từ dữ liệu lớp thật; học sinh không tự chọn. Khô
 - "Đã tốt nghiệp" = từng là thành viên và lớp ở trạng thái `completed`; không kiểm điểm danh.
 - Lớp đang học mà không có `start_date` (status chưa mở) sẽ hiện "Sắp học" cho tới khi có ngày hoặc đổi status.
 - Nếu thành viên bị tắt `active` sau khi lớp kết thúc, họ không có nhãn "Đã tốt nghiệp". Production 30/09: lớp completed TN3.GL11 vẫn đủ 12 thành viên active.
+
+## Kiểm trên production (preflight 30/09)
+
+- DH2.KD0826 (14/08 → 02/10): **Đang học · Đệm hát 2** (Trần Tiến Hải).
+- DH1.KD18 · TN3.GL12 · SOLO01.TH01 · HT2027.TH01: Đang học.
+- DH1.KD17 · DH2.KD1516 · TN3.GL10 · TN3.GL11: Đã tốt nghiệp.
+- CB2.T3: Sắp học.
