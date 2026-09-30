@@ -129,6 +129,20 @@ export function scheduleText(weekday?: number | null, startTime?: string | null)
   return `${thu} · ${hh}h${mm && mm !== '00' ? mm : '00'}`
 }
 
+// LỚP DÀI HẠN (không giới hạn số buổi, vd Gen Z — Z2): total_sessions = 0 → không sinh buổi, không end_date.
+export const isOpenEnded = (totalSessions: number | null | undefined) => totalSessions === 0
+
+/** "Chủ nhật · 14:00–15:00" — lịch hàng tuần có giờ kết thúc (dùng cho lớp dài hạn). */
+export function scheduleRangeText(weekday?: number | null, startTime?: string | null, durationMin?: number | null): string {
+  if (weekday === null || weekday === undefined || !startTime) return ''
+  const thu = weekday === 0 ? 'Chủ nhật' : `Thứ ${weekday + 1}`
+  const [hh, mm] = startTime.split(':').map(Number)
+  if (!Number.isFinite(hh)) return ''
+  const start = hh * 60 + (Number.isFinite(mm) ? mm : 0)
+  const hm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+  return durationMin && durationMin > 0 ? `${thu} · ${hm(start)}–${hm(start + durationMin)}` : `${thu} · ${hm(start)}`
+}
+
 // Buổi hiện tại / tổng / còn lại, dựa vào thời điểm now.
 // Quy ước đếm:
 //   - 'cancelled' (huỷ) + 'holiday' (nghỉ lễ): KHÔNG phải buổi dạy → loại khỏi cả "đã học" lẫn "tổng".

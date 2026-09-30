@@ -4,7 +4,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { PRODUCTS, type PublicProductKey } from './class-content'
 import { supabase } from './supabase'
 import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
-import { generateSessions, realEndDate, realStartDate, scheduleText, fmtDMY, progressInfo, WEEKDAYS, STATUS, statusInfo, type SessionRow } from './journey/sessions'
+import { generateSessions, isOpenEnded, realEndDate, realStartDate, scheduleRangeText, scheduleText, fmtDMY, progressInfo, WEEKDAYS, STATUS, statusInfo, type SessionRow } from './journey/sessions'
 import { planSessionSync, type StoredSession } from './journey/sessionSync'
 import CalendarWeek from './journey/CalendarWeek'
 import ScheduleDashboard from './journey/ScheduleDashboard'
@@ -153,7 +153,9 @@ export default function ScheduleManager() {
     const { data: offRows } = await supabase.from('class_off_days').select('off_date').eq('is_active', true)
     const skipDates = ((offRows ?? []) as { off_date: string }[]).map(r => r.off_date)
     // Sinh buổi từ ngày/giờ thật → tính ngày kết thúc; gợi ý text lịch cũ nếu thầy chưa nhập tay
-    const sessions = generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions, {
+    // Lớp dài hạn (total_sessions = 0, vd Gen Z — Z2): KHÔNG sinh buổi, KHÔNG end_date giả
+    const openEnded = isOpenEnded(form.total_sessions)
+    const sessions = openEnded ? [] : generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions, {
       breaksAfter: form.breaks_after ?? undefined,
       skipDates,
     })
@@ -161,17 +163,17 @@ export default function ScheduleManager() {
       code, name: form.name.trim(), section: form.section,
       // 3 field HIỂN THỊ tự derive từ CANONICAL schedule — KHÔNG nhập tay, KHÔNG lấy từ sessions
       // (sessions là dữ liệu DERIVED — không dùng quay ngược làm nguồn cho legacy fields)
-      schedule: scheduleText(form.weekday, form.start_time) || form.schedule || null,
+      schedule: (openEnded ? scheduleRangeText(form.weekday, form.start_time, form.duration_minutes) : scheduleText(form.weekday, form.start_time)) || form.schedule || null,
       start_text: form.start_date ? fmtDMY(form.start_date) : (form.start_text || null),
-      duration: `${form.total_sessions || 8} buổi · mỗi buổi ${form.duration_minutes || 90} phút`,
+      duration: openEnded ? `Hàng tuần · mỗi buổi ${form.duration_minutes || 90} phút · không giới hạn số buổi` : `${form.total_sessions || 8} buổi · mỗi buổi ${form.duration_minutes || 90} phút`,
       price: form.price?.trim() || null,
       course_ids: form.course_ids, main_course_id: form.main_course_id || nonNM || form.course_ids[0] || null,
       group_id, zoom_url: form.zoom_url?.trim() || null,
       sort_order: form.sort_order || 0, is_active: form.is_active,
-      start_date: realStartDate(sessions) || form.start_date || null,
+      start_date: openEnded ? (form.start_date || null) : (realStartDate(sessions) || form.start_date || null),
       weekday: form.weekday, start_time: form.start_time || null,
-      duration_minutes: form.duration_minutes || 90, total_sessions: form.total_sessions || 8,
-      end_date: realEndDate(sessions), status: form.status || 'upcoming',
+      duration_minutes: form.duration_minutes || 90, total_sessions: openEnded ? 0 : (form.total_sessions || 8),
+      end_date: openEnded ? null : realEndDate(sessions), status: form.status || 'upcoming',
       program_code: form.program_code?.trim() || null,
       breaks_after: form.breaks_after?.length ? form.breaks_after : null,
       timezone: form.timezone || 'Asia/Ho_Chi_Minh',
@@ -398,7 +400,15 @@ export default function ScheduleManager() {
                     </select>
                   </div>
                   <div><label style={lbl}>Giờ bắt đầu</label><input type="time" style={inp} value={form.start_time ?? ''} onChange={e => set({ start_time: e.target.value || null })} /></div>
-                  <div><label style={lbl}>Số buổi</label><input type="number" min={1} style={inp} value={form.total_sessions} onChange={e => set({ total_sessions: +e.target.value || 8 })} /></div>
+                  <div><label style={lbl}>Số buổi</label>
+                    {isOpenEnded(form.total_sessions)
+                      ? <div style={{ ...inp, background: S.accentLight, color: S.accent, fontWeight: 700 }}>Không giới hạn</div>
+                      : <input type="number" min={1} style={inp} value={form.total_sessions} onChange={e => set({ total_sessions: +e.target.value || 8 })} />}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 12.5, color: S.text2, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={isOpenEnded(form.total_sessions)} onChange={e => set({ total_sessions: e.target.checked ? 0 : 8 })} />
+                      Lớp dài hạn · không giới hạn số buổi
+                    </label>
+                  </div>
                   <div><label style={lbl}>Phút / buổi</label><input type="number" min={15} step={15} style={inp} value={form.duration_minutes} onChange={e => set({ duration_minutes: +e.target.value || 90 })} /></div>
                   <div><label style={lbl}>Trạng thái</label>
                     <select style={inp} value={form.status} onChange={e => set({ status: e.target.value })}>
@@ -413,6 +423,13 @@ export default function ScheduleManager() {
                   </div>
                 </div>
                 {(() => {
+                  if (isOpenEnded(form.total_sessions)) {
+                    const txt = scheduleRangeText(form.weekday, form.start_time, form.duration_minutes)
+                    return <div style={{ fontSize: 13, color: S.text2, marginTop: 10 }}>
+                      {txt ? <><b style={{ color: S.accent }}>{txt}</b> · hàng tuần · </> : 'Nhập thứ + giờ để xem lịch. '}
+                      không giới hạn số buổi · không có ngày kết thúc (không sinh buổi)
+                    </div>
+                  }
                   const ss = generateSessions(form.start_date, form.weekday, form.start_time, form.duration_minutes, form.total_sessions, { breaksAfter: form.breaks_after ?? undefined })
                   if (!ss.length) return <div style={{ fontSize: 12.5, color: S.text3, marginTop: 10 }}>Nhập ngày bắt đầu + thứ + giờ để xem lịch sinh ra.</div>
                   const breaks = ss.filter(x => x.event_type === 'break').length
