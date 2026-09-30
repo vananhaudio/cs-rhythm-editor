@@ -36,4 +36,8 @@ test("lớp dài hạn: total_sessions = 0; lịch 'Chủ nhật · 14:00–15:0
   assert.match(admin, /end_date: openEnded \? null : realEndDate\(sessions\)/, "Admin: không end_date giả");
   assert.match(admin, /total_sessions: openEnded \? 0 :/);
   assert.match(admin, /Lớp dài hạn · không giới hạn số buổi/);
+  // Z3/Z4 tự tạo trong Admin: lớp ngoài hệ năng lực gõ mã lớp → lưu tự khớp/tạo nhóm Zalo cùng mã (luồng sẵn có)
+  assert.match(admin, /Mã lớp \(lớp ngoài hệ năng lực — vd Z3\)/);
+  assert.match(admin, /set\(\{ code: e\.target\.value\.toUpperCase\(\)\.replace\(\/\\s\+\/g, ''\) \}\)/);
+  assert.match(admin, /const maLop = \(\) => buildClassCode\(mainCode\(\), soKhoa\) \?\? \(form\?\.code \|\| ''\)/, "mã gõ tay được dùng khi không sinh được mã năng lực");
 });

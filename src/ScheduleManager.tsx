@@ -326,7 +326,11 @@ export default function ScheduleManager() {
               )
             })()}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div><label style={lbl}>Số khoá (khoá thứ mấy)</label><input style={inp} value={soKhoa} onChange={e => setSoKhoa(e.target.value.replace(/\D/g, ''))} placeholder="16" inputMode="numeric" /></div>
+              {mainCode() && dangLop(mainCode()!)
+                ? <div><label style={lbl}>Số khoá (khoá thứ mấy)</label><input style={inp} value={soKhoa} onChange={e => setSoKhoa(e.target.value.replace(/\D/g, ''))} placeholder="16" inputMode="numeric" /></div>
+                : <div><label style={lbl}>Mã lớp (lớp ngoài hệ năng lực — vd Z3)</label>
+                    {/* docs/QUY-TAC-MA.md: IN HOA, không dấu cách; nhóm Zalo ≡ mã lớp (lưu sẽ tự tạo/khớp nhóm cùng mã) */}
+                    <input style={inp} value={form.code ?? ''} onChange={e => set({ code: e.target.value.toUpperCase().replace(/\s+/g, '') })} placeholder="Z3" /></div>}
               <div><label style={lbl}>Khối</label>
                 <select style={inp} value={form.section} onChange={e => set({ section: e.target.value })}>
                   {SECTIONS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
