@@ -658,6 +658,77 @@ try {
     ok('Danh tính học tập: Feed cạnh tên (◆ Hành trình 2027 · Đệm hát 2, không mã lớp, không nhãn đã tốt nghiệp) · thẻ giữ danh tính lịch sử · trang cá nhân Đang học / Đã tốt nghiệp · thành viên lớp bỏ nhãn trùng ngữ cảnh · cuộc trao đổi · Thầy không nhãn; 390 không tràn ngang')
   }
 
+  // ── Tool Share V1: Metronome → phiên thật → Chia sẻ thành tích → Feed → "Thử ở 80 BPM" → Metronome đúng BPM ──
+  {
+    const loginAt = async (email, width) => {
+      const { ctx: c, page: pg } = await ctxPage(width)
+      // Đồng hồ giả CHỈ cho E2E: tua performance.now để phiên dài 10 phút mà không phải chờ thật
+      await pg.evaluateOnNewDocument(() => {
+        const real = performance.now.bind(performance); window.__tvaSkip = 0
+        performance.now = () => real() + window.__tvaSkip
+      })
+      await pg.goto(ME, { waitUntil: 'networkidle0' })
+      await pg.waitForSelector('#cs-login-email', { timeout: 15000 })
+      await pg.type('#cs-login-email', email); await pg.type('#cs-login-pass', 'e2e'); await pg.click('.cs-guest-submit')
+      await pg.waitForSelector('.cs-share', { timeout: 15000 })
+      return { c, pg }
+    }
+    const MTR = `http://class.localhost:${V}/metronome`
+    const shownBpm = pg => pg.$eval('input[type="range"]', e => Number(e.value))
+    const { c: ca, pg: a } = await loginAt('a@test.local', 390)
+    await a.goto(MTR + '?tempo=80', { waitUntil: 'networkidle0' })
+    await clickText(a, 'Bắt đầu')
+    assert.equal(await shownBpm(a), 80)
+    await clickText(a, 'Dừng')   // phiên < 60 giây → không có gì để chia sẻ
+    await new Promise(r => setTimeout(r, 300))
+    assert.equal(/Chia sẻ thành tích/.test(await text(a)), false, 'phiên ngắn không có nút chia sẻ')
+    await clickText(a, 'Bắt đầu')
+    await a.evaluate(() => { window.__tvaSkip += 600_000 })
+    await clickText(a, 'Dừng')
+    await waitText(a, /Phiên luyện tập[\s\S]*80 BPM · 10 phút/)
+    // Nút chính vẫn là Bắt đầu (to, cam); chia sẻ là nút phụ nhỏ hơn
+    const [shareH, startH] = await a.evaluate(() => {
+      const b = [...document.querySelectorAll('button')]
+      return [b.find(x => x.textContent.trim() === 'Chia sẻ thành tích').offsetHeight, b.find(x => x.textContent.trim() === 'Bắt đầu').offsetHeight]
+    })
+    assert.ok(shareH < startH, `nút chia sẻ (${shareH}px) không lấn nút Bắt đầu (${startH}px)`)
+    await noHorizontalOverflow(a, 'Metronome + kết quả phiên (390px)')
+    await a.screenshot({ path: `${SHOTS}/19-metronome-result.png` })
+    // Bấm đúp → vẫn MỘT bài
+    await a.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'Chia sẻ thành tích'); b.click(); b.click() })
+    await waitText(a, /Đã chia sẻ lên cộng đồng/)
+    await a.screenshot({ path: `${SHOTS}/20-metronome-shared.png` })
+    // Trang chủ (Dành cho bạn): card kết quả + danh tính học tập hiện tại cạnh tên
+    await a.goto(ME, { waitUntil: 'networkidle0' })
+    await a.waitForSelector('.cs-tool-share-cta', { timeout: 15000 })
+    const cards = await a.$$eval('.cs-post', els => els.filter(e => e.querySelector('.cs-tool-share')).map(e => e.textContent))
+    assert.equal(cards.length, 1, 'bấm đúp chỉ tạo MỘT bài: ' + cards.length)
+    assert.match(cards[0], /Metronome · Luyện tập[\s\S]*80 BPM · 10 phút[\s\S]*Hoàn thành một phiên luyện tập[\s\S]*Thử ở 80 BPM/)
+    assert.equal(/client_key|practice_session|metronome\b|\{/.test(cards[0].replace('Metronome', '')), false, 'không lộ JSON / tool id')
+    assert.ok(await a.$eval('.cs-post:has(.cs-tool-share) .cs-post-head', e => !!e.querySelector('.cs-lid')), 'danh tính học tập cạnh tên')
+    await noHorizontalOverflow(a, 'Feed có card Metronome (390px)')
+    await a.screenshot({ path: `${SHOTS}/21-feed-tool-share.png`, fullPage: true })
+    // Không có ngữ cảnh lớp → không vào Lớp của tôi
+    await a.goto(ME + '?feed=classes', { waitUntil: 'networkidle0' }); await new Promise(r => setTimeout(r, 1200))
+    assert.equal(await a.$('.cs-tool-share'), null, 'không hiện ở Lớp của tôi')
+    await ca.close()
+    // B (1280) thấy card, bấm "Thử ở 80 BPM" → Metronome 80; tải lại vẫn 80
+    const { c: cb, pg: b } = await loginAt('b@test.local', 1280)
+    await b.waitForSelector('.cs-tool-share-cta', { timeout: 15000 })
+    await b.screenshot({ path: `${SHOTS}/22-feed-tool-share-1280.png` })
+    await Promise.all([b.waitForNavigation({ waitUntil: 'networkidle0' }), b.$eval('.cs-tool-share-cta', e => e.click())])
+    assert.equal(await b.evaluate(() => location.pathname + location.search), '/metronome?tempo=80')
+    await b.waitForSelector('input[type="range"]'); assert.equal(await shownBpm(b), 80)
+    await b.reload({ waitUntil: 'networkidle0' }); await b.waitForSelector('input[type="range"]'); assert.equal(await shownBpm(b), 80)
+    // Deep link lạ → mặc định an toàn (90)
+    for (const q of ['?tempo=999', '?tempo=80abc', '?tempo=%3Cscript%3E']) {
+      await b.goto(MTR + q, { waitUntil: 'networkidle0' }); await b.waitForSelector('input[type="range"]')
+      assert.equal(await shownBpm(b), 90, q)
+    }
+    await cb.close()
+    ok('Tool Share: Metronome 80 BPM · phiên 10 phút → Chia sẻ thành tích (bấm đúp vẫn 1 bài) → Dành cho bạn có card + danh tính → không ở Lớp của tôi → người khác "Thử ở 80 BPM" → /metronome?tempo=80, tải lại giữ 80; BPM lạ → 90; 390 không tràn ngang')
+  }
+
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))
   assert.deepEqual(real, [], 'không có lỗi JS trên trang')
   ok('Không có lỗi JavaScript trong suốt kịch bản')

@@ -234,6 +234,23 @@ PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$POR
 psqld t_li -f "$ROOT/db/social_learning_identity_v1_rollback.sql" >/dev/null && psqld t_li -f "$ROOT/db/social_learning_identity_v1_rollback.sql" >/dev/null
 [ "$(q t_li "select count(*) from pg_proc where proname = 'social_learning_identities'")" = "0" ] && ok "Identity V1 rollback ×2: gỡ hàm" || fail "Identity V1 rollback"
 
+echo "── TOOL SHARE V1 (class_posts.tool_share + social_share_tool_result): setup ×2 → test → rollback ×2"
+baseline t_ts "$TMP/fixture_noroles.sql"
+for f in learning_threads_p1_setup learning_threads_p2_setup social_classes_v1_setup social_feed_v1_setup; do psqld t_ts -f "$ROOT/db/$f.sql" >/dev/null; done
+TYPEDEF_BEFORE="$(q t_ts "select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.class_posts'::regclass and conname = 'class_posts_type_check'")"
+POSTS_BEFORE="$(q t_ts "select count(*) from public.class_posts")"
+psqld t_ts -c "begin;" -f "$ROOT/db/social_tool_share_v1_setup.sql" -c "commit;" >/dev/null && psqld t_ts -c "begin;" -f "$ROOT/db/social_tool_share_v1_setup.sql" -c "commit;" >/dev/null && ok "Tool Share migration ×2 (idempotent)"
+psqld t_ts -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_ts "select count(*) from information_schema.routine_privileges where routine_name = 'social_share_tool_result' and grantee in ('anon','PUBLIC')")" = "0" ] \
+  && ok "Tool Share: anon không EXECUTE" || fail "Tool Share quyền hàm"
+[ "$(q t_ts "select count(*) from public.class_posts")" = "$POSTS_BEFORE" ] && ok "Tool Share: không đụng bài hiện có" || fail "Tool Share đổi bài hiện có"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_ts -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/social_tool_share_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL Tool Share"
+psqld t_ts -c "begin;" -f "$ROOT/db/social_tool_share_v1_rollback.sql" -c "commit;" >/dev/null && psqld t_ts -c "begin;" -f "$ROOT/db/social_tool_share_v1_rollback.sql" -c "commit;" >/dev/null
+[ "$(q t_ts "select count(*) from information_schema.columns where table_name = 'class_posts' and column_name = 'tool_share'")/$(q t_ts "select count(*) from pg_proc where proname = 'social_share_tool_result'")/$(q t_ts "select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.class_posts'::regclass and conname = 'class_posts_type_check'")" = "0/0/$TYPEDEF_BEFORE" ] \
+  && ok "Tool Share rollback ×2 (chưa có bài): gỡ RPC + cột, type_check về đúng bản cũ" || fail "Tool Share rollback"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

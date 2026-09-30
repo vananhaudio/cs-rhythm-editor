@@ -36,6 +36,7 @@ psqld -f "$ROOT/db/learning_threads_p2_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_classes_v1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_feed_v1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_learning_identity_v1_setup.sql" >/dev/null
+psqld -f "$ROOT/db/social_tool_share_v1_setup.sql" >/dev/null
 # Chỉ cho stack E2E: cổng công cụ của App (ToolRouteGate) mở; Thầy cấu hình 2 bài (bài 2 KHÔNG cấu hình)
 psqld >/dev/null <<'SQL'
 create or replace function public.my_tool_route_access(p_path text) returns boolean language sql stable as $$ select true $$;

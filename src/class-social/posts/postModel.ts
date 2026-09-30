@@ -3,12 +3,13 @@ import { toThreadCard, type ThreadCard } from '../../learning-thread/feedModel'
 import { parseExternalMedia, MEDIA_ERROR_TEXT, type ExternalMedia, type MediaProvider } from '../media/parseExternalMedia'
 import { safeImageUrl } from '../media/safeImageUrl'
 
-export type PostType = 'assignment' | 'question' | 'practice' | 'status'
+export type PostType = 'assignment' | 'question' | 'practice' | 'status' | 'tool_share'
 export const POST_TYPE_LABEL: Record<PostType, string> = {
   assignment: 'Trả bài',
   question: 'Hỏi bài',
   practice: 'Luyện tập',
   status: 'Bài viết',
+  tool_share: 'Kết quả công cụ',   // Tool Share V1: payload hiển thị theo registry (toolshare/registry.ts)
 }
 
 export const MAX_BODY = 2000
@@ -159,7 +160,7 @@ export type FeedPost = {
   friendsOnly: boolean
 }
 
-const isPostType = (t: string): t is PostType => t === 'assignment' || t === 'question' || t === 'practice' || t === 'status'
+const isPostType = (t: string): t is PostType => t === 'assignment' || t === 'question' || t === 'practice' || t === 'status' || t === 'tool_share'
 
 export function toFeedPost(r: FeedRow): FeedPost | null {
   if (!r?.id || !isPostType(r.type)) return null

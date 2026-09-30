@@ -4,6 +4,10 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social — Tool Share V1 + Metronome**
+  - Học sinh luyện với Metronome → phiên đo thật (≥ 60 giây) → "Chia sẻ thành tích" → thẻ "Metronome · Luyện tập · 80 BPM · 10 phút" trên Dành cho bạn / Tường → người khác bấm "Thử ở 80 BPM" → `/metronome?tempo=80`.
+  - Một mô hình chung: `class_posts` type `tool_share` + `tool_share jsonb`; ghi chỉ qua RPC `social_share_tool_result` (server kiểm payload, chống bấm đúp bằng `client_key`). Chi tiết: `docs/SOCIAL-TOOL-SHARE-V1.md`.
+
 - **Lớp Gen Z — Z2 + Admin hỗ trợ lớp dài hạn**
   - Production (`prod-db.py`: dryrun → migrate → postflight):
     - Nhóm Zalo Z2 hiện có nhận mã `Z2`, đúng bất biến "nhóm ≡ mã lớp" trong `docs/QUY-TAC-MA.md`.

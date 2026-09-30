@@ -846,3 +846,16 @@
   .cs-lid-group { flex-direction: column; gap: 4px; }
   .cs-lid-group-label { min-width: 0; padding-top: 0; }
 }
+
+/* ── Tool Share V1: kết quả từ công cụ (Metronome…) trên Feed — kết quả là tâm điểm, card gọn ─────────── */
+.cs-tool-share { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: var(--cs-p-softer); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cs-tool-share-kind { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--cs-muted); }
+.cs-tool-share-kind svg { color: var(--cs-p); }
+.cs-tool-share-headline { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: var(--cs-text); overflow-wrap: anywhere; }
+.cs-tool-share-note { font-size: 14px; color: var(--cs-muted); }
+.cs-tool-share-cta { margin-top: 8px; min-height: 40px; }
+.cs-tool-share-missing { margin: 12px 0 0; font-size: 13.5px; color: var(--cs-faint); }
+@media (max-width: 480px) {
+  .cs-tool-share-headline { font-size: 20px; }
+  .cs-tool-share-cta { width: 100%; }
+}

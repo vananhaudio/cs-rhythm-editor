@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { changeSessionBpm, endSession, startSession, type PracticeSession } from './lib/practiceSession'
+import { MIN_SHARE_SECONDS, formatPracticeDuration, parseMetronomeTempo } from './class-social/toolshare/registry'
 import { useAudioContextResume } from './useAudioContextResume'
 
 // ─── Palette (Rhythm Lab · visual system) ───────────────────────────────────────
@@ -132,14 +134,26 @@ const PauseIcon = ({ s = 17 }: { s?: number }) => (
   </svg>
 )
 
-interface Props { onClose?: () => void; initialBpm?: number | null; onStart?: () => void }
+/** Kết quả một phiên luyện tập đo thật — key sinh MỘT lần cho kết quả (chống chia sẻ đúp). */
+export type MetronomeSessionResult = { bpm: number; seconds: number; key: string }
+interface Props {
+  onClose?: () => void; initialBpm?: number | null; onStart?: () => void
+  /** Có (đã đăng nhập, route /metronome) → sau phiên ≥ 60 giây hiện "Chia sẻ thành tích". Không có → Metronome như cũ. */
+  onShareSession?: (r: MetronomeSessionResult) => Promise<{ ok: true } | { ok: false; message: string }>
+}
 
-export default function Metronome({ onClose, initialBpm, onStart }: Props) {
+function newKey(): string {
+  try { return crypto.randomUUID() } catch {
+    const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128
+    const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('')
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+  }
+}
+
+export default function Metronome({ onClose, initialBpm, onStart, onShareSession }: Props) {
   const startBpm = (() => {
     if (initialBpm && initialBpm >= MIN_BPM && initialBpm <= MAX_BPM) return initialBpm
-    const p = new URLSearchParams(window.location.search).get('tempo')
-    const n = p ? parseInt(p, 10) : NaN
-    return Number.isFinite(n) && n >= MIN_BPM && n <= MAX_BPM ? n : 90
+    return parseMetronomeTempo(window.location.search) ?? 90
   })()
 
   const [bpm, setBpm]           = useState(startBpm)
@@ -149,6 +163,10 @@ export default function Metronome({ onClose, initialBpm, onStart }: Props) {
   const [volume, setVolume]     = useState(0.8)
   const [accentOn, setAccentOn] = useState(true)
   const [curBeat, setCurBeat]   = useState(-1)
+  // Phiên luyện tập đo thật (Bắt đầu → Dừng) — chỉ để chia sẻ kết quả khi có onShareSession
+  const sessionRef = useRef<PracticeSession | null>(null)
+  const [result, setResult] = useState<MetronomeSessionResult | null>(null)
+  const [share, setShare] = useState<{ busy: boolean; done: boolean; error: string | null }>({ busy: false, done: false, error: null })
 
   const sig = TIME_SIGS[sigIdx]
 
@@ -256,6 +274,8 @@ export default function Metronome({ onClose, initialBpm, onStart }: Props) {
     timerRef.current = setInterval(scheduler, 25)
     rafRef.current   = requestAnimationFrame(visualLoop)
     setPlaying(true)
+    sessionRef.current = startSession(performance.now(), paramsRef.current.bpm)
+    setResult(null); setShare({ busy: false, done: false, error: null })
     if (!startedRef.current) {
       startedRef.current = true
       onStart?.()
@@ -271,7 +291,28 @@ export default function Metronome({ onClose, initialBpm, onStart }: Props) {
     if (bobGlowRef.current) bobGlowRef.current.style.opacity = '0'
     setPlaying(false)
     setCurBeat(-1)
+    const s = sessionRef.current
+    sessionRef.current = null
+    if (s) {
+      const r = endSession(s, performance.now())
+      if (r.seconds >= MIN_SHARE_SECONDS) setResult({ ...r, key: newKey() })
+    }
   }, [])
+
+  // Đổi BPM khi đang chạy → phiên ghi sang đoạn mới (kết quả = BPM dùng lâu nhất)
+  useEffect(() => {
+    if (sessionRef.current) sessionRef.current = changeSessionBpm(sessionRef.current, performance.now(), bpm)
+  }, [bpm])
+
+  const shareBusyRef = useRef(false)   // chặn bấm đúp trong cùng nhịp render (server còn chặn thêm bằng client_key)
+  const doShare = async () => {
+    if (!result || !onShareSession || shareBusyRef.current || share.done) return
+    shareBusyRef.current = true
+    setShare({ busy: true, done: false, error: null })
+    const r = await onShareSession(result)
+    shareBusyRef.current = false
+    setShare(r.ok ? { busy: false, done: true, error: null } : { busy: false, done: false, error: r.message })
+  }
 
   const toggle = () => { playing ? stop() : start() }
 
@@ -483,6 +524,27 @@ export default function Metronome({ onClose, initialBpm, onStart }: Props) {
             style={{ flex: 1, ['--p' as any]: volPct }} />
         </div>
       </div>
+
+      {/* ── Kết quả phiên luyện tập (chỉ sau khi Dừng, phiên ≥ 60 giây, đã đăng nhập) — nhẹ, không tranh nút Bắt đầu ── */}
+      {onShareSession && result && !playing && (
+        <div className="rl-mtr-result" style={{ flexShrink: 0, maxWidth: 440, width: '100%', margin: '0 auto', padding: '10px 16px 0', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 16, background: C.card, border: `1px solid ${C.line}`, boxShadow: C.shadow }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.faint, letterSpacing: '.08em', textTransform: 'uppercase' }}>Phiên luyện tập</div>
+              <div style={{ fontSize: 16.5, fontWeight: 800, color: C.ink }}>{result.bpm} BPM · {formatPracticeDuration(result.seconds)}</div>
+              {share.done && <div style={{ fontSize: 12.5, color: C.ind, marginTop: 2 }}>Đã chia sẻ lên cộng đồng. <a href="/me" style={{ color: C.ind, fontWeight: 700 }}>Xem trên Trang chủ</a></div>}
+              {share.error && <div role="alert" style={{ fontSize: 12.5, color: '#b42318', marginTop: 2 }}>{share.error}</div>}
+            </div>
+            {!share.done && (
+              <button onClick={() => void doShare()} disabled={share.busy} style={{
+                flexShrink: 0, height: 44, padding: '0 14px', borderRadius: 14, border: `1px solid ${C.lavBorder}`, background: C.lav, color: C.ind,
+                fontSize: 14, fontWeight: 700, cursor: share.busy ? 'default' : 'pointer', fontFamily: 'inherit', opacity: share.busy ? 0.6 : 1,
+                WebkitTapHighlightColor: 'transparent',
+              }}>{share.busy ? 'Đang chia sẻ…' : 'Chia sẻ thành tích'}</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Thanh nút cố định dưới — CAM = hành động chính ── */}
       <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '10px 16px max(12px, env(safe-area-inset-bottom))', background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderTop: `1px solid ${C.line}`, maxWidth: 440, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>

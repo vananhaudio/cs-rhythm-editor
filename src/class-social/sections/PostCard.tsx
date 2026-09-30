@@ -7,6 +7,7 @@ import type { PostComments } from '../comments/useFeedComments'
 import type { ClassIdentity } from '../useClassSession'
 import { Avatar, MoreMenu, PersonLink } from '../ui'
 import CommentsSection from './comments/CommentsSection'
+import ToolShareBody from '../toolshare/ToolShareCard'
 import { IdentityBadges } from '../identity/IdentityBadges'
 
 export type PostSocial = {
@@ -40,7 +41,7 @@ export default function PostCard({ post, now, social }: { post: FeedPost; now?: 
             </PersonLink>
             {author.isTeacher ? <span className="cs-post-role">Giáo viên</span> : <IdentityBadges userId={author.userId} />}
             {/* Bài viết thường không cần nhãn loại (như mạng xã hội); bài học tập giữ nhãn nhẹ */}
-            {post.type !== 'status' && <span className={`cs-post-type is-${post.type}`}>{POST_TYPE_LABEL[post.type]}</span>}
+            {post.type !== 'status' && post.type !== 'tool_share' && <span className={`cs-post-type is-${post.type}`}>{POST_TYPE_LABEL[post.type]}</span>}
           </div>
           <div className="cs-post-sub">
             <time className="cs-post-time" dateTime={post.createdAt}
@@ -58,6 +59,8 @@ export default function PostCard({ post, now, social }: { post: FeedPost; now?: 
         )}
       </header>
       {post.isHidden && <p className="cs-post-hidden">Bài đã bị ẩn — học sinh không thấy bài này.</p>}
+      {/* Kết quả công cụ (Tool Share): nội dung theo registry — không media/ghi chú */}
+      {post.type === 'tool_share' && <ToolShareBody postId={post.id} />}
       {/* Trả bài: VIDEO là đối tượng chính, ghi chú cho Thầy đi kèm */}
       {post.media && (
         <div className="cs-post-media">

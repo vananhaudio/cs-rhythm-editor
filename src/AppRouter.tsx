@@ -24,6 +24,7 @@ import ImportPage from './ImportPage'
 import TapTempoTool from './TapTempoTool'
 import YtPlayerPage from './video/YtPlayerPage'
 import Metronome from './Metronome'
+import { shareToolResult } from './class-social/toolshare/toolShareApi'
 import SongBuilderPage from './SongBuilderPage'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
@@ -513,7 +514,9 @@ if (path === '/students') {
 
   // ── Route /metronome — Máy đập nhịp ──
   if (path === '/metronome' || path.startsWith('/metronome')) {
-    return <Metronome onClose={embedded ? undefined : () => { window.history.back() }} />
+    // Đã đăng nhập → sau phiên luyện tập có "Chia sẻ thành tích" (Tool Share V1 — server kiểm payload)
+    return <Metronome onClose={embedded ? undefined : () => { window.history.back() }}
+      onShareSession={user && !embedded ? r => shareToolResult('metronome', { kind: 'practice_session', bpm: r.bpm, seconds: r.seconds }, r.key) : undefined} />
   }
 
   // ── Route /song-builder — Song Builder V1 ──
