@@ -4,6 +4,11 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Sửa Danh tính học tập V1: nguồn DUY NHẤT = lớp học Admin**
+  - Bỏ hẳn fallback `edu_students.ht_member`: người chỉ có cờ mà không thuộc lớp Hành trình thì không có nhãn Hành trình. "◆ Hành trình yyyy" chỉ dành cho người thuộc lớp HTyyyy.
+  - Hàm `social_learning_identities` bỏ cột `ht_member` (drop + create cùng transaction). Client, test, preflight, postflight và docs đã cập nhật.
+  - Không sửa membership hay lớp của ai.
+
 - **Class Social — Danh tính học tập V1** (Đang học · Sắp học · Đã tốt nghiệp)
   - Nhãn chương trình sinh từ lớp thật; học sinh không tự chọn. Ví dụ: "◆ Hành trình 2027", "Đệm hát 2", "Solo Guitar". Không mã lớp, không Level/VIP/XP.
   - Luật: thành viên theo đúng Lớp học V1. `active`/`ending_soon`/`paused` = Đang học; `recruiting`…`upcoming` = Sắp học; `completed` = Đã tốt nghiệp; lớp huỷ/gộp/nháp không hiện. Gộp theo chương trình (2 cohort DH2 = một nhãn). Thầy không có nhãn học sinh.

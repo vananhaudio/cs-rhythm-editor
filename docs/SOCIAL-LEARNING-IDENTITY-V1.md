@@ -17,9 +17,9 @@ Nhãn sinh ra từ dữ liệu lớp thật; học sinh không tự chọn. Khô
 | completed | **Đã tốt nghiệp** |
 | cancelled · merged · draft | không hiện |
 
-- **Hành trình:** thuộc nhóm lớp HT thì nhãn có năm (vd "◆ Hành trình 2027"). Chỉ có cờ `edu_students.ht_member` (nguồn "Lớp Hành trình" Social đã dùng) thì nhãn là "◆ Hành trình" **không năm**.
-  - Lý do: theo `db/ht_member_setup.sql`, cờ này dành cho "Học sinh Hành trình (HT2026/HT2027)" và không phân biệt khoá. Preflight 30/09 cho thấy HT2026 và HT2027 cùng đang diễn ra; 49 người có cờ; HT2026.TH01 không có thành viên khớp nhóm lớp.
-  - Không đoán năm. Người có cả hai nguồn chỉ hiện nhãn có năm.
+- **NGUỒN DUY NHẤT = membership LỚP HỌC quản lý trong Admin** (Owner chốt 30/09). Không dùng `edu_students.ht_member` hay bất kỳ cờ hoặc heuristic legacy nào.
+  - "◆ Hành trình yyyy" chỉ dành cho người **thuộc lớp** HTyyyy (vd HT2027.TH01).
+  - Có cờ `ht_member` nhưng không thuộc lớp HT thì **không** có nhãn Hành trình. Owner tự thêm người thiếu vào lớp trong Admin.
 - **Chương trình, không phải mã lớp.** Helper duy nhất `src/class-social/identity/learningIdentity.ts` suy nhãn theo quy luật mã, không hard-code từng lớp:
   - `HT2027` (`program_code` hoặc mã lớp `HT2027.*`) → **Hành trình 2027**, bậc đặc biệt, giữ năm.
   - `DH1`/`DH2` → Đệm hát 1/2. `DHNC`, `DH3` → Đệm hát nâng cao.

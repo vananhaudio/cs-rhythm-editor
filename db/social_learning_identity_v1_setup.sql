@@ -9,9 +9,9 @@
 --   • Lấy lớp ở mọi trạng thái trừ cancelled · merged · draft. Client quyết Đang học / Sắp học / Đã tốt nghiệp theo
 --     status + NGÀY (preflight production 30/09: status thường KHÔNG được cập nhật — lớp đã học vẫn 'upcoming',
 --     lớp đã xong vẫn 'ending_soon') → trả start_date + end_date.
---   • Hành trình: ngoài nhóm lớp (có NĂM, vd HT2027.TH01), trả cờ edu_students.ht_member (nguồn "Lớp Hành trình" Social
---     đang dùng; hàng hồ sơ mới nhất như class_public_identity). Cờ KHÔNG phân biệt HT2026/HT2027 (ht_member_setup.sql)
---     → client hiện "◆ Hành trình" KHÔNG năm khi chỉ có cờ (preflight 30/09: HT2026 + HT2027 cùng đang diễn ra).
+--   • NGUỒN DUY NHẤT (Owner chốt 30/09): membership LỚP HỌC quản lý trong Admin (class_schedule + nhóm lớp).
+--     KHÔNG dùng edu_students.ht_member hay cờ/heuristic legacy nào: chỉ người THUỘC lớp HTyyyy mới là "Hành trình yyyy";
+--     thiếu membership thì Owner thêm vào lớp trong Admin.
 --   • Thầy/admin: không có danh tính học sinh (thành viên nhóm để quản lý lớp, không phải học).
 --   • Chỉ thông tin lớp công khai trong Class (mã/tên lớp, khoá) — không tiến độ, không gói, không email/SĐT.
 --   • Không đụng Learning Thread (danh tính LỊCH SỬ của thread là chuyện khác, không đổi).
@@ -26,7 +26,7 @@ set local statement_timeout = '60s';
 do $gate$
 declare
   fn_expected constant jsonb := '{"is_class_member": ["459786921eb5bbd4ff07c83bdb4db480"], "social_class_is_member": ["85167bc26d7c87dfbd7227b2b9687411"], "social_class_members_of": ["b434c0e8478ec8ed62c004fffe6668d0"]}';
-  col_required constant jsonb := '{"app_users": ["id", "role"], "class_schedule": ["id", "code", "name", "status", "program_code", "start_date", "end_date", "main_course_id", "cohort_group_id", "group_id"], "edu_courses": ["id", "code", "name", "track"], "edu_group_members": ["user_id", "group_id", "status"], "edu_groups": ["id", "code"], "edu_students": ["user_id", "ht_member", "enrolled_at"]}';
+  col_required constant jsonb := '{"app_users": ["id", "role"], "class_schedule": ["id", "code", "name", "status", "program_code", "start_date", "end_date", "main_course_id", "cohort_group_id", "group_id"], "edu_courses": ["id", "code", "name", "track"], "edu_group_members": ["user_id", "group_id", "status"], "edu_groups": ["id", "code"]}';
   k text; allowed jsonb; actual text; c text; drift text[] := '{}';
 begin
   for k, allowed in select * from jsonb_each(fn_expected) loop
@@ -49,8 +49,10 @@ begin
 end $gate$;
 
 -- ── 1) Danh tính học tập của nhiều người một lần (tối đa 200) — không N+1 trên Feed ────────────
-create or replace function public.social_learning_identities(p_users uuid[])
-returns table(user_id uuid, memberships jsonb, ht_member boolean)
+-- Đổi kiểu trả về (bỏ cột ht_member của bản 30/09 trước) → drop rồi tạo lại, CÙNG transaction (không khoảng trống).
+drop function if exists public.social_learning_identities(uuid[]);
+create function public.social_learning_identities(p_users uuid[])
+returns table(user_id uuid, memberships jsonb)
 language sql stable security definer set search_path = '' as $$
   with u as (
     select distinct x as uid
@@ -72,10 +74,7 @@ language sql stable security definer set search_path = '' as $$
            'class_id', cs.id, 'class_code', cs.code, 'class_name', cs.name, 'status', cs.status,
            'program_code', cs.program_code, 'start_date', cs.start_date, 'end_date', cs.end_date,
            'course_code', c.code, 'course_name', c.name, 'track', c.track)
-           order by cs.start_date desc nulls last, cs.id) filter (where cs.id is not null), '[]'::jsonb),
-         -- cờ Hành trình (hàng hồ sơ mới nhất, như class_public_identity) — KHÔNG phân biệt khoá năm nào
-         coalesce((select es.ht_member from public.edu_students es where es.user_id = u.uid
-                   order by es.enrolled_at desc nulls last limit 1), false)
+           order by cs.start_date desc nulls last, cs.id) filter (where cs.id is not null), '[]'::jsonb)
   from u
   left join m on m.uid = u.uid
   left join public.class_schedule cs on cs.id = m.class_id

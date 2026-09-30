@@ -101,10 +101,12 @@ begin
     'nhiều người một lần, bỏ trùng + null');
   perform t.ok((select count(*) from public.social_learning_identities((select array_agg(gen_random_uuid()) from generate_series(1, 250)))) = 200,
     'tối đa 200 người mỗi lần gọi');
-  -- Cờ Hành trình (edu_students.ht_member): gắn vào lớp Hành trình ĐANG DIỄN RA — không vào khoá HT chưa mở / đã hết hạn
-  perform t.ok(t.codes(t.u('B')) = '{}' and (select ht_member from public.social_learning_identities(array[t.u('B')])),
-    'B có cờ Hành trình, không trong nhóm lớp HT → KHÔNG tự gán vào lớp HT nào (cờ không có năm), trả ht_member = true');
-  perform t.ok(not (select ht_member from public.social_learning_identities(array[t.u('C')])), 'C không có cờ → ht_member = false');
+  -- NGUỒN DUY NHẤT = lớp Admin. Ca Z2: B có ht_member = true nhưng KHÔNG thuộc lớp Hành trình → không có lớp HT nào
+  perform t.ok(t.codes(t.u('B')) = '{}', 'Z2 (ht_member = true, không thuộc lớp HT): KHÔNG có lớp Hành trình — cờ legacy không phải nguồn');
+  perform t.ok(pg_get_function_result('public.social_learning_identities(uuid[])'::regprocedure) = 'TABLE(user_id uuid, memberships jsonb)',
+    'hàm chỉ trả user_id + memberships (không cột ht_member)');
+  perform t.ok(position('ht_member' in (select prosrc from pg_proc where proname = 'social_learning_identities')) = 0, 'thân hàm không đọc ht_member');
+  perform t.ok('HT2027.TH01' = any(t.codes(t.u('A'))), 'A THUỘC lớp HT2027.TH01 → có lớp Hành trình 2027');
   perform t.as_user('N');
   perform t.ok(not exists (select 1 from public.social_learning_identities(array[t.u('A')])), 'ngoài Class: không thấy gì');
   perform t.as_anon();

@@ -5,7 +5,7 @@ Mục 'info' = thống kê GỘP (không tên người) để kiểm nhãn danh 
 */
 with
 fn_expected as (select '{"is_class_member": ["459786921eb5bbd4ff07c83bdb4db480"], "social_class_is_member": ["85167bc26d7c87dfbd7227b2b9687411"], "social_class_members_of": ["b434c0e8478ec8ed62c004fffe6668d0"]}'::jsonb as j),
-col_required as (select '{"app_users": ["id", "role"], "class_schedule": ["id", "code", "name", "status", "program_code", "start_date", "end_date", "main_course_id", "cohort_group_id", "group_id"], "edu_courses": ["id", "code", "name", "track"], "edu_group_members": ["user_id", "group_id", "status"], "edu_groups": ["id", "code"], "edu_students": ["user_id", "ht_member", "enrolled_at"]}'::jsonb as j),
+col_required as (select '{"app_users": ["id", "role"], "class_schedule": ["id", "code", "name", "status", "program_code", "start_date", "end_date", "main_course_id", "cohort_group_id", "group_id"], "edu_courses": ["id", "code", "name", "track"], "edu_group_members": ["user_id", "group_id", "status"], "edu_groups": ["id", "code"]}'::jsonb as j),
 fn_rows as (
   select 'function'::text as section, e.key as item,
          coalesce((select string_agg(md5(p.prosrc), ',') from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = e.key), 'absent') as detail,
@@ -58,12 +58,12 @@ info_rows as (
   group by cs.id, cs.code, cs.status, cs.start_date, cs.end_date
   union all
   select 'info', 'lớp Hành trình · ' || coalesce(cs.code, '?'),
-         coalesce(cs.status, '∅') || ' · bắt đầu ' || coalesce(cs.start_date::text, '∅') || ' · kết thúc ' || coalesce(cs.end_date::text, '∅'), 'OK'
+         coalesce(cs.status, '∅') || ' · bắt đầu ' || coalesce(cs.start_date::text, '∅') || ' · kết thúc ' || coalesce(cs.end_date::text, '∅')
+         || ' · ' || (select count(distinct gm.user_id) from public.edu_groups g
+                      join public.edu_group_members gm on gm.group_id = g.id and gm.status = 'active'
+                      where g.id = cs.cohort_group_id or g.id = cs.group_id or (g.code is not null and cs.code is not null and upper(g.code) = upper(cs.code)))::text
+         || ' thành viên lớp (nguồn duy nhất của nhãn Hành trình)', 'OK'
   from public.class_schedule cs where cs.program_code ~ '^HT[0-9]{4}$' and coalesce(cs.status, '') not in ('cancelled', 'merged', 'draft')
-  union all
-  select 'info', 'học sinh có cờ Hành trình (edu_students.ht_member, hàng mới nhất)',
-         (select count(*) from (select distinct on (es.user_id) es.ht_member from public.edu_students es
-                                where es.user_id is not null order by es.user_id, es.enrolled_at desc nulls last) x where x.ht_member)::text || ' người', 'OK'
   union all
   select 'info', 'social_learning_identities (đã cài?)', case when to_regprocedure('public.social_learning_identities(uuid[])') is null then 'chưa có' else 'đã có' end, 'OK'
 ),

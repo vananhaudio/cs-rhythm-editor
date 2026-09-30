@@ -70,14 +70,21 @@ test("trạng thái theo status + NGÀY (production: status thường không đ�
   assert.match(todayISO(new Date(2026, 8, 5)), /^2026-09-05$/);
 });
 
-test("cờ Hành trình (không có năm): '◆ Hành trình' — có nhóm lớp HT (có năm) thì chỉ nhãn có năm", () => {
+test("NGUỒN DUY NHẤT = lớp Admin: không có lớp HT → KHÔNG nhãn Hành trình (ca Z2: ht_member=true, không thuộc lớp HT)", () => {
   const T = "2026-09-30";
-  const flagOnly = buildIdentities([row({ course_code: "DH2", start_date: "2026-08-14" })], T, true);
-  assert.deepEqual(flagOnly.current.map(i => i.label), ["Hành trình", "Đệm hát 2"], "không đoán năm; Hành trình đứng trước");
-  assert.equal(flagOnly.current[0].tier, "special");
-  const withYear = buildIdentities([row({ program_code: "HT2027", status: "scheduled", start_date: "2026-09-10" })], T, true);
-  assert.deepEqual(withYear.current.map(i => i.label), ["Hành trình 2027"], "không lặp nhãn không năm");
-  assert.deepEqual(buildIdentities([], T, false).current, []);
+  // Z2: có cờ ht_member nhưng chỉ thuộc lớp thường → helper không nhận cờ, không sinh "Hành trình"
+  const z2 = buildIdentities([row({ class_code: "DH2.KD0826", course_code: "DH2", status: "upcoming", start_date: "2026-08-14" })], T);
+  const all = [...z2.current, ...z2.upcoming, ...z2.graduated];
+  assert.deepEqual(all.map(i => i.label), ["Đệm hát 2"]);
+  assert.equal(all.some(i => /Hành trình/.test(i.label) || i.tier === "special"), false, "Z2 tuyệt đối không có nhãn Hành trình");
+  assert.equal(buildIdentities.length <= 2 && !/htMember|ht_member\s*[=:]/.test(buildIdentities.toString()), true, "helper không còn tham số/nguồn cờ Hành trình");
+  // Thuộc lớp HT2027 thật → "Hành trình 2027"
+  const real = buildIdentities([row({ program_code: "HT2027", class_code: "HT2027.TH01", status: "scheduled", start_date: "2026-09-10" })], T);
+  assert.deepEqual(real.current.map(i => i.label), ["Hành trình 2027"]);
+  const store = readFileSync("src/class-social/identity/identityStore.ts", "utf8");
+  assert.equal(/ht_member/.test(store), false, "store không đọc cờ ht_member");
+  const sql = readFileSync("db/social_learning_identity_v1_setup.sql", "utf8").replace(/--.*$/gm, "");
+  assert.equal(/ht_member/.test(sql), false, "hàm DB không dùng ht_member");
 });
 
 test("cạnh tên: CHỈ đang học, ưu tiên Hành trình → cao hơn, +N; loại chương trình của chính lớp đang xem", () => {

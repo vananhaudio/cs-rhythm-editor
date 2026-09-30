@@ -104,10 +104,10 @@ const byImportance = (a: LearningIdentity, b: LearningIdentity) =>
  * (Đang học > Sắp học > Đã tốt nghiệp — đang học lại thì không lặp ở Đã tốt nghiệp). Thứ tự xác định.
  */
 /**
- * Hàng lớp (+ cờ Hành trình) → danh tính. `htMember` = edu_students.ht_member: cờ KHÔNG phân biệt khoá năm nào
- * (HT2026/HT2027) → chỉ có cờ thì hiện "◆ Hành trình" KHÔNG năm (không đoán năm); thuộc nhóm lớp HT có năm thì lấy nhãn có năm.
+ * NGUỒN DUY NHẤT = membership LỚP HỌC (Admin). Không cờ legacy (edu_students.ht_member…): "◆ Hành trình yyyy" chỉ khi
+ * người đó THUỘC lớp HTyyyy.
  */
-export function buildIdentities(rows: MembershipRow[] | null | undefined, today: string = todayISO(), htMember = false): LearningIdentities {
+export function buildIdentities(rows: MembershipRow[] | null | undefined, today: string = todayISO()): LearningIdentities {
   const groups = new Map<string, { p: ReturnType<typeof programOf>; items: { state: IdentityState; title: string }[] }>()
   for (const r of rows ?? []) {
     const state = identityState(r, today)
@@ -125,9 +125,6 @@ export function buildIdentities(rows: MembershipRow[] | null | undefined, today:
     const titles = [...new Set(items.filter(x => x.state === state && x.title).map(x => x.title))].sort()
     return { ...p, state, title: titles.join(' • ') || p.label }
   })
-  if (htMember && !all.some(i => i.state === 'current' && i.key.startsWith('ht'))) {
-    all.push({ key: 'ht', label: 'Hành trình', tier: 'special', level: 9, state: 'current', title: 'Học sinh Hành trình' })
-  }
   const pick = (s: IdentityState) => all.filter(i => i.state === s).sort(byImportance)
   return { current: pick('current'), upcoming: pick('upcoming'), graduated: pick('graduated') }
 }

@@ -1,12 +1,13 @@
 /*
 POSTFLIGHT LEARNING IDENTITY V1 — READ-ONLY. Chạy SAU migrate: scripts/prod-db.py query <file này> (BEGIN READ ONLY … ROLLBACK).
 Không ghi gì. Đóng vai một thành viên Class (Trần Tiến Hải) CHỈ trong transaction chỉ-đọc để gọi hàm như Social gọi.
-Kết quả: (1) hàm + quyền · (2) hàng thô cho các nhóm acceptance (user_id + memberships + ht_member — KHÔNG tên/email)
+Kết quả: (1) hàm + quyền + kiểu trả về · (2) hàng thô cho các nhóm acceptance (user_id + memberships — KHÔNG tên/email)
 → nhãn được dựng bằng ĐÚNG helper client (src/class-social/identity/learningIdentity.ts) để đối chiếu
 · (3) danh tính LỊCH SỬ của 2 thread thật không đổi (md5 identity + class_schedule_id).
 */
 select 'function' as section, 'social_learning_identities' as item,
        case when to_regprocedure('public.social_learning_identities(uuid[])') is null then 'MISSING' else 'present' end as detail;
+select 'result_type' as section, pg_get_function_result('public.social_learning_identities(uuid[])'::regprocedure) as detail;
 select 'grant' as section, grantee as item, privilege_type as detail
 from information_schema.routine_privileges where routine_name = 'social_learning_identities' order by grantee;
 
@@ -20,7 +21,8 @@ select set_config('tva.targets', coalesce((
     join public.edu_group_members gm on gm.group_id = g.id and gm.status = 'active'
     where cs.code in ('DH2.KD0826', 'DH1.KD17', 'DH2.KD1516', 'TN3.GL10', 'TN3.GL11', 'CB2.T3', 'HT2027.TH01')
     union
-    select h.user_id, 'ht_member' from (
+    -- Nhóm KIỂM (không phải nguồn nhãn): người có cờ legacy ht_member → phải KHÔNG có Hành trình nếu không thuộc lớp HT
+    select h.user_id, 'ht_member_flag' from (
       select distinct on (es.user_id) es.user_id, es.ht_member from public.edu_students es
       where es.user_id is not null order by es.user_id, es.enrolled_at desc nulls last) h
     where h.ht_member
@@ -38,7 +40,7 @@ with t as (
   select (e ->> 'user_id')::uuid as user_id, e ->> 'via' as via
   from json_array_elements(current_setting('tva.targets')::json) e
 )
-select 'row' as section, t.via, r.user_id, r.ht_member, r.memberships
+select 'row' as section, t.via, r.user_id, r.memberships
 from public.social_learning_identities((select array_agg(distinct user_id) from t)) r
 join t on t.user_id = r.user_id
 order by t.via, r.user_id;
