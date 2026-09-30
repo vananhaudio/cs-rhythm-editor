@@ -35,6 +35,7 @@ psqld -f "$ROOT/db/learning_threads_p1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/learning_threads_p2_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_classes_v1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_feed_v1_setup.sql" >/dev/null
+psqld -f "$ROOT/db/social_learning_identity_v1_setup.sql" >/dev/null
 # Chỉ cho stack E2E: cổng công cụ của App (ToolRouteGate) mở; Thầy cấu hình 2 bài (bài 2 KHÔNG cấu hình)
 psqld >/dev/null <<'SQL'
 create or replace function public.my_tool_route_access(p_path text) returns boolean language sql stable as $$ select true $$;
@@ -43,8 +44,21 @@ select set_config('request.jwt.claims', '{"sub":"dddddddd-0000-4000-8000-0000000
 select public.lt_set_lesson_settings('e0000000-0000-4000-8000-000000000001', 'allowed', 'allowed',
   'Bạn có thể gửi phần thực hành của bài này hoặc đặt câu hỏi cho Thầy.');
 select public.lt_set_lesson_settings('e0000000-0000-4000-8000-000000000003', 'off', 'allowed');
+select set_config('request.jwt.claims', '{}', false);
+-- Danh tính học tập: A còn đang học Hành trình 2027 (bắt đầu SỚM hơn KD18 → KD18 vẫn là lớp đầu) và đã xong Tỉa nốt 1
+insert into public.edu_groups (id, name, group_type, code) values
+  ('f0000000-0000-4000-8000-0000000000b1', 'HT2027.TH01', 'class', 'HT2027.TH01'),
+  ('f0000000-0000-4000-8000-0000000000b2', 'TN1.GL10', 'class', 'TN1.GL10');
+insert into public.class_schedule (id, code, name, program_code, status, main_course_id, start_date, cohort_group_id) values
+  ('b0000000-0000-4000-8000-0000000000b1', 'HT2027.TH01', 'Hành trình 2027 — 40 buổi thực hành', 'HT2027', 'active',
+   'c0000000-0000-4000-8000-0000000000d2', current_date - 90, 'f0000000-0000-4000-8000-0000000000b1'),
+  ('b0000000-0000-4000-8000-0000000000b2', 'TN1.GL10', 'Tỉa nốt 1 — GL10', null, 'completed',
+   'c0000000-0000-4000-8000-0000000000a1', current_date - 400, 'f0000000-0000-4000-8000-0000000000b2');
+insert into public.edu_group_members (user_id, group_id, source, status) values
+  ('aaaaaaaa-0000-4000-8000-00000000000a', 'f0000000-0000-4000-8000-0000000000b1', 'admin', 'active'),
+  ('aaaaaaaa-0000-4000-8000-00000000000a', 'f0000000-0000-4000-8000-0000000000b2', 'admin', 'active');
 SQL
-echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + Feed V1 + 2 bài đã cấu hình)"
+echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + Feed V1 + Danh tính học tập V1 + 2 bài đã cấu hình)"
 
 SECRET="e2e-local-secret-e2e-local-secret-0000000"
 cat > "$TMP/pgrst.conf" <<EOF
@@ -87,7 +101,7 @@ echo "$DBSTATE"
 # Chỉnh sửa trang cá nhân: tên + ảnh lưu vào hồ sơ dùng chung (edu_students) của đúng user; quyền sở hữu không đổi
 if [ "$RC" = "0" ]; then
   echo "$DBSTATE" | grep -qx 'A_profile=Ánh Dương Lê | avatar storage | user_id aaaaaaaa-0000-4000-8000-00000000000a' \
-    && echo "$DBSTATE" | grep -qx 'A_ownership=1 thread · 1 nhóm lớp' \
+    && echo "$DBSTATE" | grep -qx 'A_ownership=1 thread · 3 nhóm lớp' \
     && echo "PASS: DB sau Chỉnh sửa trang cá nhân: edu_students.display_name + avatar_url (storage 'avatars') của A; user_id / thread / nhóm lớp giữ nguyên" \
     || { echo "FAIL: trạng thái DB sau Chỉnh sửa trang cá nhân"; RC=1; }
 fi

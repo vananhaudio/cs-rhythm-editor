@@ -2,6 +2,7 @@
 // Dùng chung cho khối trên Home và trang Bạn bè.
 import type { PersonCard } from '../friends/friendModel'
 import { Avatar, PersonLink } from '../ui'
+import { IdentityBadges } from '../identity/IdentityBadges'
 
 export default function FriendRequestList({ items, busyId, onRespond, onOpenProfile }: {
   items: PersonCard[]
@@ -15,7 +16,7 @@ export default function FriendRequestList({ items, busyId, onRespond, onOpenProf
         <li key={p.userId} className="cs-person">
           <PersonLink userId={p.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${p.name}`} className="cs-person-main">
             <Avatar name={p.name} url={p.avatarUrl} size={48} />
-            <span className="cs-person-name">{p.name}</span>
+            <span className="cs-person-name">{p.name}<IdentityBadges userId={p.userId} max={1} /></span>
           </PersonLink>
           <div className="cs-person-actions">
             <button type="button" className="cs-btn cs-btn-primary cs-btn-sm" disabled={busyId !== null}

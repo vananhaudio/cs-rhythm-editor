@@ -212,6 +212,28 @@ psqld t_sf -f "$ROOT/db/social_feed_v1_rollback.sql" >/dev/null && psqld t_sf -f
 [ "$(q t_sf "select count(*) from pg_proc where proname in ('social_feed_scoped','social_post_card')")/$(q t_sf "select md5(prosrc) from pg_proc where proname = 'social_feed'")" = "0/$SF_BEFORE" ] \
   && ok "Feed V1 rollback ×2: gỡ 2 hàm, social_feed nguyên vẹn" || fail "Feed V1 rollback"
 
+echo "── LEARNING IDENTITY V1 (social_learning_identities): md5 cổng · preflight → migration ×2 → test → rollback"
+lic() { grep -o "fn_expected constant jsonb := '[^']*'" "$1" | sed "s/.*:= //"; }
+[ "$(grep -o "'{\"is_class_member[^']*'" "$ROOT/db/social_learning_identity_v1_preflight.sql" | head -1)" = "$(lic "$ROOT/db/social_learning_identity_v1_setup.sql")" ] \
+  && ok "Identity V1: hằng md5 giống hệt giữa preflight và migration" || fail "Identity V1: hằng lệch"
+baseline t_li "$TMP/fixture_noroles.sql"
+for f in learning_threads_p1_setup learning_threads_p2_setup; do psqld t_li -f "$ROOT/db/$f.sql" >/dev/null; done
+LIGATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/social_learning_identity_v1_preflight.sql")) z where section = 'GATE'"; }
+[ "$(LIGATE t_li)" = "STOP - DO NOT MIGRATE" ] && ok "Identity V1 preflight khi CHƯA có Lớp học V1: STOP" || fail "Identity V1 preflight thiếu V1"
+psqld t_li -f "$ROOT/db/social_classes_v1_setup.sql" >/dev/null
+[ "$(LIGATE t_li)" = "PASS" ] && ok "Identity V1 preflight: GATE = PASS" || fail "Identity V1 preflight: $(LIGATE t_li)"
+[ "$(q t_li "select count(*) from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/social_learning_identity_v1_preflight.sql")) z where section = 'info'")" -ge 4 ] \
+  && ok "Identity V1 preflight: có thống kê gộp chỉ đọc (status lớp, chương trình, khoá, completed)" || fail "Identity V1 preflight info"
+psqld t_li -f "$ROOT/db/social_learning_identity_v1_setup.sql" >/dev/null && psqld t_li -f "$ROOT/db/social_learning_identity_v1_setup.sql" >/dev/null && ok "Identity V1 migration ×2 (idempotent)"
+psqld t_li -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_li "select count(*) from information_schema.routine_privileges where routine_name = 'social_learning_identities' and grantee in ('anon','PUBLIC')")" = "0" ] \
+  && ok "Identity V1: anon không EXECUTE" || fail "Identity V1 quyền hàm"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_li -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/social_learning_identity_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL Identity V1"
+psqld t_li -f "$ROOT/db/social_learning_identity_v1_rollback.sql" >/dev/null && psqld t_li -f "$ROOT/db/social_learning_identity_v1_rollback.sql" >/dev/null
+[ "$(q t_li "select count(*) from pg_proc where proname = 'social_learning_identities'")" = "0" ] && ok "Identity V1 rollback ×2: gỡ hàm" || fail "Identity V1 rollback"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

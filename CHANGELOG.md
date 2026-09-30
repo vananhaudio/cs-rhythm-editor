@@ -4,6 +4,18 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social — Danh tính học tập V1** (Đang học · Sắp học · Đã tốt nghiệp)
+  - Nhãn chương trình sinh từ lớp thật; học sinh không tự chọn. Ví dụ: "◆ Hành trình 2027", "Đệm hát 2", "Solo Guitar". Không mã lớp, không Level/VIP/XP.
+  - Luật: thành viên theo đúng Lớp học V1. `active`/`ending_soon`/`paused` = Đang học; `recruiting`…`upcoming` = Sắp học; `completed` = Đã tốt nghiệp; lớp huỷ/gộp/nháp không hiện. Gộp theo chương trình (2 cohort DH2 = một nhãn). Thầy không có nhãn học sinh.
+  - Hiện ở:
+    - Feed, Tường, thẻ và trang cuộc trao đổi: tối đa 2 nhãn Đang học, thừa hiện +N.
+    - Bình luận: 1 nhãn. Bạn bè: tối đa 2.
+    - Thành viên lớp: bỏ nhãn trùng ngữ cảnh lớp.
+    - Trang cá nhân: khối "Danh tính học tập" đầy đủ.
+    - Không hiện trên top bar và App học. Danh tính LỊCH SỬ của thread giữ nguyên, tách riêng.
+  - DB: 1 hàm đọc `social_learning_identities(uuid[])`, không bảng mới; preflight có thống kê gộp. Helper nhãn duy nhất ở client; nạp theo lô, không N+1.
+  - Test: DB (thêm 17 kiểm Identity V1), class-social 157, E2E 61. Thiết kế: `docs/SOCIAL-LEARNING-IDENTITY-V1.md`.
+
 - **Class Social — Chỉnh sửa trang cá nhân V1** (`/me/u/<chính mình>`)
   - Nút "Chỉnh sửa trang cá nhân" chỉ hiện trên trang của chính mình (tài khoản có hồ sơ học sinh). Hộp thoại chỉ có Ảnh đại diện (Đổi ảnh) và Tên hiển thị, với Huỷ / Lưu thay đổi.
   - **Không tạo hồ sơ Social riêng:** ghi vào `edu_students.display_name` / `avatar_url` của chính mình, đúng cột App học (Cài đặt → Hồ sơ của tôi) đang sửa. Ảnh đi qua pipeline sẵn có (bucket `avatars`, kiểm loại ảnh thật, thu nhỏ). Mọi màn đọc qua `class_public_identity`, không snapshot.

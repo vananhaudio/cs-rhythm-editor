@@ -6,6 +6,7 @@ import { Avatar, PersonLink } from '../class-social/ui'
 import { VISIBILITY_LABEL, identityLine, moduleLabel } from './ltModel'
 import { originBadge, storyLine, type ThreadCard } from './feedModel'
 import { StatusChip } from './ThreadView'
+import { IdentityBadges } from '../class-social/identity/IdentityBadges'
 
 export default function LearningThreadCard({ card, now, onOpenThread, onOpenProfile, inClass = false }: {
   card: ThreadCard
@@ -31,6 +32,7 @@ export default function LearningThreadCard({ card, now, onOpenThread, onOpenProf
             {learner.userId
               ? <PersonLink userId={learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${learner.name}`} className="cs-post-author">{learner.name}</PersonLink>
               : <span className="cs-post-author">{learner.name}</span>}
+            <IdentityBadges userId={learner.userId} />
             {card.visibility === 'private' && <span className="cs-post-audience">{VISIBILITY_LABEL.private}</span>}
           </div>
           <div className="cs-post-sub">

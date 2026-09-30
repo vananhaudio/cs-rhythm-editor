@@ -8,6 +8,7 @@ import type { PersonCard } from '../friends/friendModel'
 import type { FriendRequests } from '../friends/useFriendRequests'
 import { Avatar, EmptyState, PersonLink } from '../ui'
 import FriendRequestList from './FriendRequestList'
+import { IdentityBadges } from '../identity/IdentityBadges'
 
 type FriendList = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; friends: PersonCard[] }
 
@@ -80,7 +81,7 @@ export default function Friends({ requests, onOpenProfile }: {
               <li key={p.userId} className="cs-person">
                 <PersonLink userId={p.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${p.name}`} className="cs-person-main">
                   <Avatar name={p.name} url={p.avatarUrl} size={48} />
-                  <span className="cs-person-name">{p.name}{p.isTeacher && <span className="cs-post-role"> · Giáo viên</span>}</span>
+                  <span className="cs-person-name">{p.name}{p.isTeacher ? <span className="cs-post-role"> · Giáo viên</span> : <IdentityBadges userId={p.userId} />}</span>
                 </PersonLink>
               </li>
             ))}

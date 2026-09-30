@@ -8,6 +8,7 @@ import { parseExternalMedia } from '../class-social/media/parseExternalMedia'
 import ResourceCard from '../class-social/sections/comments/ResourceCard'
 import { relativeTime } from '../class-social/posts/postModel'
 import { Avatar, PersonLink } from '../class-social/ui'
+import { IdentityBadges } from '../class-social/identity/IdentityBadges'
 import {
   SOCIAL_STATUS_LABEL, STATUS_UI, VISIBILITY_LABEL, eventLabels, identityLine, moduleLabel,
   type ThreadDetail, type ThreadEvent, type ThreadStatus,
@@ -25,7 +26,7 @@ function fullTime(iso: string): string {
 }
 
 // Đầu thread: NGƯỜI HỌC → BÀI (chính) → chương (phụ) → danh tính lớp/khoá lúc bắt đầu (nhỏ) → trạng thái.
-export function ThreadHeader({ thread, onOpenProfile }: { thread: ThreadDetail; onOpenProfile?: (userId: string) => void }) {
+export function ThreadHeader({ thread, onOpenProfile, showIdentity = false }: { thread: ThreadDetail; onOpenProfile?: (userId: string) => void; showIdentity?: boolean }) {
   const id = thread.identity
   const module = moduleLabel(id.module.name)
   const identity = identityLine(id)
@@ -42,6 +43,7 @@ export function ThreadHeader({ thread, onOpenProfile }: { thread: ThreadDetail; 
         {learner.userId && onOpenProfile
           ? <PersonLink userId={learner.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${learner.name}`} className="lt-head-name">{learner.name}</PersonLink>
           : <span className="lt-head-name">{learner.name}</span>}
+        {showIdentity && <IdentityBadges userId={learner.userId} />}
         <span className="lt-head-lesson">{id.lesson.title}</span>
         {module && <span className="lt-head-module">{module}</span>}
         <span className="lt-head-identity" title="Lớp / khoá lúc bắt đầu cuộc trao đổi">{context}</span>
@@ -128,10 +130,12 @@ export default function ThreadView(props: {
   canModerate?: boolean
   onModerate?: (e: ThreadEvent, hidden: boolean) => void
   onOpenProfile?: (userId: string) => void
+  /** Social (/me/t/<id>): nhãn danh tính HIỆN TẠI của người học cạnh tên — tách khỏi danh tính lịch sử của bài */
+  showIdentity?: boolean
 }) {
   return (
     <div className="lt-page">
-      <section className="lt-card"><ThreadHeader thread={props.thread} onOpenProfile={props.onOpenProfile} /></section>
+      <section className="lt-card"><ThreadHeader thread={props.thread} onOpenProfile={props.onOpenProfile} showIdentity={props.showIdentity} /></section>
       <section className="lt-card"><ThreadTimeline {...props} /></section>
     </div>
   )

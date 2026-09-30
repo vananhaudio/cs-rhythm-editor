@@ -813,3 +813,36 @@
   .cs-profile-edit { width: 100%; }
   .cs-profile-edit-body { padding: 14px 16px 0; }
 }
+
+/* ── Danh tính học tập (Learning Identity V1) ─────────────────────────────────
+   Nhãn = CHƯƠNG TRÌNH. Đơn sắc tím/xám; bậc cao hơn đậm hơn một chút; Hành trình có nhận diện riêng (◆, gradient
+   tím rất nhẹ, viền) — không vàng VIP, không vương miện, không chuyển động. Đã tốt nghiệp: viền, vẫn rõ (là thành tích). */
+.cs-lid-list { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; vertical-align: middle; min-width: 0; }
+.cs-lid {
+  display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px;
+  border: 1px solid transparent; font-size: 11.5px; font-weight: 700; line-height: 1; white-space: nowrap; letter-spacing: 0;
+  background: #f3f0fa; color: #5b4a86;
+}
+.cs-lid.is-intermediate { background: var(--cs-p-soft); color: var(--cs-p-strong); }
+.cs-lid.is-advanced { background: #e9defd; color: #4c1d95; border-color: #dccbfc; }
+.cs-lid.is-special { background: linear-gradient(135deg, #f5efff 0%, #e6d9ff 100%); color: #4c1d95; border-color: #bda2f6; }
+.cs-lid-mark { font-size: 10px; color: #7c3aed; }
+.cs-lid.is-graduated { background: transparent; border-color: #cfc2ee; color: #4f3f7d; }
+.cs-lid.is-graduated.is-special { background: linear-gradient(135deg, #fbf8ff 0%, #f3ecff 100%); border-color: #cbb5f5; }
+.cs-lid.is-upcoming { background: transparent; border: 1px dashed #cdbff0; color: #5b4a86; }
+.cs-lid-more { background: #f2f1f6; color: var(--cs-muted); cursor: default; }
+.cs-post-line .cs-lid-list, .cs-cmt-head .cs-lid-list, .cs-person-name .cs-lid-list { margin-left: 2px; }
+.cs-person-name .cs-lid-list { margin-left: 6px; }
+.cs-member .cs-lid-list { flex-shrink: 1; }
+.lt-head-main > .cs-lid-list { margin: 2px 0 2px; }
+
+/* Trang cá nhân: khối Danh tính học tập — nhẹ, không hộp riêng cho từng nhãn */
+.cs-lid-section { display: flex; flex-direction: column; gap: 8px; padding: 2px 4px; }
+.cs-lid-heading { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--cs-muted); }
+.cs-lid-group { display: flex; align-items: flex-start; gap: 6px 12px; flex-wrap: wrap; }
+.cs-lid-group-label { min-width: 96px; padding-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--cs-faint); }
+.cs-lid-section .cs-lid { height: 24px; padding: 0 10px; font-size: 12.5px; }
+@media (max-width: 480px) {
+  .cs-lid-group { flex-direction: column; gap: 4px; }
+  .cs-lid-group-label { min-width: 0; padding-top: 0; }
+}

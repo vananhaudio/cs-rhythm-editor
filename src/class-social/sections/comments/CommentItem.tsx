@@ -4,6 +4,7 @@ import type { Comment } from '../../comments/commentModel'
 import { relativeTime } from '../../posts/postModel'
 import { Avatar, MoreMenu, PersonLink } from '../../ui'
 import ResourceCard from './ResourceCard'
+import { IdentityBadges } from '../../identity/IdentityBadges'
 
 export default function CommentItem({ c, canModerate, now, onDelete, onModerate, onOpenProfile }: {
   c: Comment
@@ -29,7 +30,7 @@ export default function CommentItem({ c, canModerate, now, onDelete, onModerate,
             <PersonLink userId={c.author.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${c.author.name}`} className="cs-cmt-author">
               {c.author.name}
             </PersonLink>
-            {teacher && <span className="cs-cmt-badge" title="Nhận xét của giáo viên">Thầy</span>}
+            {teacher ? <span className="cs-cmt-badge" title="Nhận xét của giáo viên">Thầy</span> : <IdentityBadges userId={c.author.userId} max={1} />}
             {c.isHidden && <span className="cs-cmt-hidden">Đã ẩn · học sinh không thấy</span>}
           </div>
           <p className="cs-cmt-body">{c.body}</p>

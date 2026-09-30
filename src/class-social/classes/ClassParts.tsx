@@ -1,6 +1,7 @@
 // Phần hiển thị THUẦN của trang lớp (không mạng, không CSS import) — test render được.
 import { Eye, UserCheck, Users } from 'lucide-react'
 import { Avatar, PersonLink } from '../ui'
+import { IdentityBadges } from '../identity/IdentityBadges'
 import { classCodeNote, classMetaLine, classStatusLabel, memberRelationUi, type ClassCard, type ClassMember } from './classModel'
 
 export function ClassHeader({ c }: { c: ClassCard }) {
@@ -33,8 +34,10 @@ export function ClassHeader({ c }: { c: ClassCard }) {
   )
 }
 
-export function MemberList({ members, busyId, onAct, onOpenProfile }: {
+export function MemberList({ members, busyId, onAct, onOpenProfile, excludeIdentity }: {
   members: ClassMember[]
+  /** Chương trình của CHÍNH lớp này — không lặp nhãn đó cho mọi thành viên, chỉ hiện chương trình KHÁC */
+  excludeIdentity?: string | null
   busyId: string | null
   onAct: (m: ClassMember, action: 'send' | 'accept') => void
   onOpenProfile?: (userId: string) => void
@@ -49,7 +52,7 @@ export function MemberList({ members, busyId, onAct, onOpenProfile }: {
               <Avatar name={m.name} url={m.avatarUrl} size={40} />
             </PersonLink>
             <PersonLink userId={m.userId} onOpen={onOpenProfile} label={`Trang cá nhân của ${m.name}`} className="cs-member-name">{m.name}</PersonLink>
-            {m.isTeacher && <span className="cs-post-role">Giáo viên</span>}
+            {m.isTeacher ? <span className="cs-post-role">Giáo viên</span> : <IdentityBadges userId={m.userId} exclude={excludeIdentity} />}
             <span className="cs-member-rel">
               {ui.action
                 ? <button type="button" className="cs-btn cs-btn-sm cs-btn-soft" disabled={busyId === m.userId} onClick={() => onAct(m, ui.action!)}>{ui.label}</button>

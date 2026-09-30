@@ -22,6 +22,7 @@ import WallComposer from './WallComposer'
 import type { PostSocial } from './PostCard'
 import FeedEntryCard from './FeedEntryCard'
 import JourneyView from '../../learning-thread/JourneyView'
+import { LearningIdentitySection } from '../identity/IdentityBadges'
 
 const PROFILE_TABS = ['wall', 'journey'] as const
 
@@ -124,6 +125,7 @@ export default function ProfilePage({ me, userId, identityRev = 0, canEditAvatar
         ? <IdentityHeader me={me} canEditAvatar={canEditAvatar} onEdit={onEditMedia} onEditProfile={onEditProfile} />
         : <OtherHeader profile={p} status={ui.status} actions={ui.actions} busy={busy} onAct={a => void act(a)} />}
       {actionError && <p className="cs-form-error" role="alert">{actionError}</p>}
+      <LearningIdentitySection userId={userId} />
       {moderatorView && (
         <p className="cs-profile-note"><ShieldCheck size={15} aria-hidden="true" />Bạn đang xem với quyền Thầy.</p>
       )}

@@ -13,6 +13,7 @@ import { respondFriendRequest, sendFriendRequest } from '../friends/friendsApi'
 import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './classesApi'
 import type { ClassCard, ClassMember } from './classModel'
 import { ClassHeader, MemberList } from './ClassParts'
+import { programKeyOfClass } from '../identity/learningIdentity'
 
 const CLASS_TABS = ['activity', 'members'] as const
 
@@ -100,7 +101,8 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
           : members.status === 'error' ? <div className="cs-card cs-feed-error" role="alert"><p>{members.message}</p></div>
           : <>
               {actError && <p className="cs-form-error" role="alert">{actError}</p>}
-              <MemberList members={members.value} busyId={busyId} onAct={(m, a) => void act(m, a)} onOpenProfile={onOpenProfile} />
+              <MemberList members={members.value} busyId={busyId} onAct={(m, a) => void act(m, a)} onOpenProfile={onOpenProfile}
+                excludeIdentity={programKeyOfClass(c)} />
             </>
       )}
     </div>

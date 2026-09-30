@@ -612,6 +612,52 @@ try {
     ok(`Chỉnh sửa trang cá nhân: "${oldName}" → "Ánh Dương Lê" + ảnh mới; tên rỗng khoá Lưu; tệp không phải ảnh báo lỗi, giữ tên; cập nhật ngay top bar/trang cá nhân/Feed/thread (lớp lịch sử giữ)/thành viên lớp; người khác & Thầy không có nút`)
   }
 
+  // ── DANH TÍNH HỌC TẬP V1 ───────────────────────────────────────────────────────────────────
+  {
+    const A_ID = 'aaaaaaaa-0000-4000-8000-00000000000a'
+    const lids = (pg, sel) => pg.$$eval(sel, els => els.map(e => e.textContent.trim()))
+    // C (390px) xem Feed: cạnh tên A có nhãn ĐANG HỌC, Hành trình trước; danh tính LỊCH SỬ của bài giữ nguyên
+    const { c: cv, pg: v } = await loginAt('c@test.local', 390)
+    await v.waitForSelector('.lt-feed-card .cs-lid', { timeout: 15000 })
+    const cardBadges = await lids(v, '.lt-feed-card .cs-post-line .cs-lid')
+    assert.deepEqual(cardBadges, ['◆Hành trình 2027', 'Đệm hát 2'], 'Feed: Hành trình (đặc biệt) trước, rồi Đệm hát 2 — không mã lớp: ' + JSON.stringify(cardBadges))
+    assert.match(await v.$eval('.lt-feed-card', e => e.textContent), /DH2\.KD18 · Đệm hát 2/, 'thẻ vẫn có danh tính LỊCH SỬ của bài (tách khỏi nhãn người)')
+    assert.equal((await lids(v, '.lt-feed-card .cs-lid')).some(t => /Tỉa nốt/.test(t)), false, 'đã tốt nghiệp không lên cạnh tên')
+    await noHorizontalOverflow(v, 'Feed có nhãn danh tính (390px)')
+    // Trang cá nhân A: khối Danh tính học tập đầy đủ
+    await v.goto(ME + '/u/' + A_ID, { waitUntil: 'networkidle0' })
+    await v.waitForSelector('.cs-lid-section', { timeout: 15000 })
+    const sec = await v.$eval('.cs-lid-section', e => e.textContent)
+    assert.match(sec, /Danh tính học tập[\s\S]*Đang học[\s\S]*Hành trình 2027[\s\S]*Đệm hát 2[\s\S]*Đã tốt nghiệp[\s\S]*Tỉa nốt 1/)
+    assert.equal(/HT2027\.TH01|DH2\.KD18|TN1\.GL10/.test(sec), false, 'không mã lớp trong nội dung nhãn')
+    await noHorizontalOverflow(v, 'Trang cá nhân + Danh tính học tập (390px)')
+    await v.screenshot({ path: `${SHOTS}/18-learning-identity-profile.png`, fullPage: true })
+    await cv.close()
+    // A (1280) — trang lớp KD18 · Thành viên: không lặp "Đệm hát 2" (ngữ cảnh lớp), vẫn hiện chương trình KHÁC
+    const { c: ca, pg: a } = await loginAt('a@test.local', 1280)
+    await a.waitForSelector('.cs-share', { timeout: 15000 })
+    await a.goto(ME + '/classes', { waitUntil: 'networkidle0' })
+    await a.evaluate(() => [...document.querySelectorAll('.cs-class-tile')].find(t => /KD18/.test(t.textContent)).click())
+    await clickText(a, 'Thành viên'); await a.waitForSelector('.cs-member')
+    await a.waitForSelector('.cs-member .cs-lid', { timeout: 15000 })
+    const memberBadges = await lids(a, '.cs-member .cs-lid')
+    assert.ok(memberBadges.includes('◆Hành trình 2027') && !memberBadges.includes('Đệm hát 2'), 'thành viên lớp DH2: bỏ nhãn trùng ngữ cảnh: ' + JSON.stringify(memberBadges))
+    // Cuộc trao đổi: nhãn hiện tại cạnh tên người học + danh tính lịch sử riêng
+    await a.goto(ME + '?feed=classes', { waitUntil: 'networkidle0' }); await a.waitForSelector('.lt-feed-open', { timeout: 15000 })
+    await a.$eval('.lt-feed-open', b => b.click()); await a.waitForSelector('.lt-head .cs-lid', { timeout: 15000 })
+    assert.match(await a.$eval('.lt-head', e => e.textContent), /Hành trình 2027[\s\S]*DH2\.KD18 · Đệm hát 2/)
+    // Thầy: không nhãn học sinh (chỉ "Giáo viên"); không nhãn trên top bar
+    assert.equal(await a.$('.cs-topbar .cs-lid'), null, 'không nhãn trên top bar')
+    await ca.close()
+    const { c: ct, pg: tt } = await loginAt('t@test.local', 1280)
+    await tt.waitForSelector('.cs-share', { timeout: 15000 })
+    await tt.goto(ME + '/u/dddddddd-0000-4000-8000-00000000000d', { waitUntil: 'networkidle0' }); await tt.waitForSelector('.cs-identity-name')
+    await new Promise(r => setTimeout(r, 800))
+    assert.equal(await tt.$('.cs-lid-section'), null, 'Thầy không có khối danh tính học sinh')
+    await ct.close()
+    ok('Danh tính học tập: Feed cạnh tên (◆ Hành trình 2027 · Đệm hát 2, không mã lớp, không nhãn đã tốt nghiệp) · thẻ giữ danh tính lịch sử · trang cá nhân Đang học / Đã tốt nghiệp · thành viên lớp bỏ nhãn trùng ngữ cảnh · cuộc trao đổi · Thầy không nhãn; 390 không tràn ngang')
+  }
+
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))
   assert.deepEqual(real, [], 'không có lỗi JS trên trang')
   ok('Không có lỗi JavaScript trong suốt kịch bản')

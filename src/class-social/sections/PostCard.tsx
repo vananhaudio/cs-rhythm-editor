@@ -7,6 +7,7 @@ import type { PostComments } from '../comments/useFeedComments'
 import type { ClassIdentity } from '../useClassSession'
 import { Avatar, MoreMenu, PersonLink } from '../ui'
 import CommentsSection from './comments/CommentsSection'
+import { IdentityBadges } from '../identity/IdentityBadges'
 
 export type PostSocial = {
   me: ClassIdentity | null
@@ -37,7 +38,7 @@ export default function PostCard({ post, now, social }: { post: FeedPost; now?: 
             <PersonLink userId={author.userId} onOpen={social?.onOpenProfile} label={`Trang cá nhân của ${author.name}`} className="cs-post-author">
               {author.name}
             </PersonLink>
-            {author.isTeacher && <span className="cs-post-role">Giáo viên</span>}
+            {author.isTeacher ? <span className="cs-post-role">Giáo viên</span> : <IdentityBadges userId={author.userId} />}
             {/* Bài viết thường không cần nhãn loại (như mạng xã hội); bài học tập giữ nhãn nhẹ */}
             {post.type !== 'status' && <span className={`cs-post-type is-${post.type}`}>{POST_TYPE_LABEL[post.type]}</span>}
           </div>

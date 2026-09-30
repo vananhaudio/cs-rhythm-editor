@@ -85,7 +85,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
   return (
     <div className="cs-col cs-home lt-page">
       {back}
-      <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} />
+      <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} showIdentity />
       {error && <p className="cs-form-error" role="alert">{error}</p>}
 
       {t.isMine && !closed && (
