@@ -497,6 +497,50 @@ try {
     await waitText(c, /Chưa có hoạt động mới từ bạn bè\./)
     ok('Feed V1: huỷ kết bạn → tab Bạn bè không còn hoạt động của người đó')
     await ca.close(); await cc.close()
+
+    // Trang chủ / logo = Home MẶC ĐỊNH (/me · Dành cho bạn · đầu trang) từ mọi màn; deep link ?feed= vẫn giữ khi chủ động mở
+    const where = pg => pg.evaluate(() => ({ url: location.pathname + location.search, y: Math.round(scrollY),
+      tab: document.querySelector('.cs-feed-tabs [aria-pressed="true"]')?.textContent ?? null }))
+    const homeDefault = async (pg, label) => {
+      await pg.waitForFunction(() => location.pathname === '/me' && !location.search, { timeout: 10000 })
+      await pg.waitForSelector('.cs-feed-tabs')
+      const w = await where(pg)
+      assert.deepEqual(w, { url: '/me', y: 0, tab: 'Dành cho bạn' }, `${label}: ${JSON.stringify(w)}`)
+    }
+    const longPage = pg => pg.evaluate(() => { document.body.style.minHeight = '3000px'; scrollTo(0, 600) })
+    // Mobile 390: /me?feed=classes (deep link giữ) → ☰ Trang chủ → mặc định; Back → Lớp của tôi; Forward → mặc định
+    const { c: cm, pg: m } = await loginAt('a@test.local', 390, '?feed=classes')
+    await m.waitForSelector('.cs-feed-tabs', { timeout: 15000 })
+    assert.equal((await where(m)).tab, 'Lớp của tôi', 'deep link /me?feed=classes mở đúng tab')
+    await longPage(m)
+    await m.click('.cs-menu-btn'); await m.waitForSelector('.cs-sheet'); await clickText(m, 'Trang chủ')
+    await homeDefault(m, '☰ Trang chủ từ Lớp của tôi')
+    assert.equal(await m.$('.cs-sheet'), null, 'menu đóng sau khi bấm')
+    await m.goBack(); await m.waitForFunction(() => location.search === '?feed=classes')
+    await m.waitForFunction(() => document.querySelector('.cs-feed-tabs [aria-pressed="true"]')?.textContent === 'Lớp của tôi')
+    await m.goForward(); await homeDefault(m, 'Forward')
+    // Logo từ tab Bạn bè
+    await clickText(m, 'Bạn bè'); await m.waitForFunction(() => location.search === '?feed=friends')
+    await longPage(m); await m.click('.cs-brand'); await homeDefault(m, 'Logo từ Bạn bè (390)')
+    await noHorizontalOverflow(m, 'Home sau Trang chủ (390px)')
+    await cm.close()
+    // Desktop 1280: sidebar Trang chủ + logo từ route con (lớp, cuộc trao đổi, trang cá nhân) và từ /me?feed=friends
+    const { c: cd, pg: d } = await loginAt('a@test.local', 1280, '?feed=friends')
+    await d.waitForSelector('.cs-feed-tabs', { timeout: 15000 })
+    const sidebarHome = () => d.evaluate(() => [...document.querySelectorAll('.cs-sidebar .cs-nav-item')].find(b => b.textContent.trim() === 'Trang chủ').click())
+    await longPage(d); await sidebarHome(); await homeDefault(d, 'Sidebar Trang chủ từ Bạn bè (1280)')
+    await d.goto(ME + '/classes', { waitUntil: 'networkidle0' }); await d.$eval('.cs-class-tile', b => b.click()); await d.waitForSelector('.cs-class-name')
+    await longPage(d); await sidebarHome(); await homeDefault(d, 'Sidebar Trang chủ từ trang lớp')
+    await clickText(d, 'Lớp của tôi'); await d.waitForSelector('.lt-feed-open'); await d.$eval('.lt-feed-open', b => b.click())
+    await d.waitForSelector('.lt-head', { timeout: 15000 }); await d.click('.cs-brand'); await homeDefault(d, 'Logo từ cuộc trao đổi')
+    await d.goBack(); await d.waitForFunction(() => location.pathname.startsWith('/me/t/'))
+    await d.goBack(); await d.waitForFunction(() => location.search === '?feed=classes')
+    await d.waitForFunction(() => document.querySelector('.cs-feed-tabs [aria-pressed="true"]')?.textContent === 'Lớp của tôi')
+    await d.goto(ME + '/u/aaaaaaaa-0000-4000-8000-00000000000a', { waitUntil: 'networkidle0' }); await d.waitForSelector('.lt-profile-tabs')
+    await longPage(d); await d.click('.cs-brand'); await homeDefault(d, 'Logo từ trang cá nhân')
+    assert.deepEqual(await d.$$eval('.cs-sidebar .cs-nav-item.is-active', e => e.map(x => x.textContent.trim())), ['Trang chủ'])
+    await cd.close()
+    ok('Trang chủ/logo (☰, sidebar, logo; từ Lớp của tôi, Bạn bè, lớp, cuộc trao đổi, trang cá nhân) → /me · Dành cho bạn · đầu trang; Back/Forward đúng tab; deep link ?feed= vẫn giữ')
   }
 
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))

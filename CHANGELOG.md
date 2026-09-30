@@ -4,6 +4,11 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Sửa: Trang chủ / logo luôn về Home mặc định** (`/me`)
+  - Root cause: đang ở Home với `?feed=classes|friends` mà bấm Trang chủ → router coi là "cùng màn" nên không đổi URL, và Home không mount lại nên giữ tab cũ. Back/Forward giữa `/me?feed=…` và `/me` cũng lệch tab.
+  - Sửa tại router: điều hướng tới URL khác (kể cả cùng màn) thì `pushState`. Mỗi lượt điều hướng, gồm cả Back/Forward, làm Home mount lại, đọc `?feed=` từ URL và về đầu trang.
+  - Deep link `/me?feed=classes|friends` vẫn giữ. E2E 56 (☰, sidebar, logo; từ các tab, lớp, cuộc trao đổi, trang cá nhân; Back/Forward; 390/1280).
+
 - **Class Social — FEED V1: "Dành cho bạn · Lớp của tôi · Bạn bè"** (`/me`)
   - Một Feed, ba góc nhìn, tab gạch chân ngay trên Feed. Không AI, không xếp hạng: mới nhất lên trước.
     - **Dành cho bạn** = `social_feed` hiện có, không đổi.

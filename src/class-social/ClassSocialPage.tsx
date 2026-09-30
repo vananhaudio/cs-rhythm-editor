@@ -54,10 +54,12 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
     return v.kind === 'section' ? { kind: 'section', section: initialSection } : v
   })
   const [view, setView] = useState<MeView>(initialView)
+  // Mỗi lần điều hướng (kể cả Back/Forward) = một lượt vào màn mới → Home mount lại, đọc ?feed= từ URL hiện tại
+  const [visit, setVisit] = useState(0)
 
   // Back/Forward của trình duyệt giữa các mục / trang cá nhân
   useEffect(() => {
-    const onPop = () => setView(viewFromPath(window.location.pathname))
+    const onPop = () => { setView(viewFromPath(window.location.pathname)); setVisit(v => v + 1) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
@@ -90,10 +92,13 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   }, [guest, keepThread])
 
   const navigate = (next: MeView) => {
-    if (!sameView(view, next)) {
-      window.history.pushState(IN_APP_STATE, '', viewPath(next))   // đánh dấu: mục lịch sử do /me tạo → "Quay lại" an toàn
+    // Trang chủ / logo khi đang ở /me?feed=… : CÙNG màn nhưng khác URL → vẫn về /me mặc định (Dành cho bạn)
+    const url = viewPath(next)
+    if (!sameView(view, next) || window.location.pathname + window.location.search !== url) {
+      window.history.pushState(IN_APP_STATE, '', url)   // đánh dấu: mục lịch sử do /me tạo → "Quay lại" an toàn
       setView(next)
     }
+    setVisit(v => v + 1)
     window.scrollTo({ top: 0 })
   }
   // "Quay lại" như mạng xã hội: về đúng màn trước trong /me; mở thẳng bằng link → về màn cha hợp lý (fallback)
@@ -112,11 +117,11 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
   if (session.status === 'no-profile') return <MeNoProfile email={session.email} onSignOut={() => void signOut()} />
   if (session.status !== 'ready') return <Splash text="Đang mở Class…" />
 
-  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenClasses={openClasses} onBack={back} />
+  return <SignedInShell base={session.me} view={view} onSection={go} onOpenProfile={openProfile} onOpenThread={openThread} onOpenQueue={openQueue} onOpenClass={openClass} onOpenClasses={openClasses} onBack={back} visit={visit} />
 }
 
 // Danh tính giữ ở MỘT chỗ: đổi ảnh xong → header, top bar, ô Trả bài, bình luận cập nhật ngay.
-function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenClasses, onBack }: {
+function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onOpenQueue, onOpenClass, onOpenClasses, onBack, visit }: {
   base: ClassIdentity
   view: MeView
   onSection: (s: SocialSection) => void
@@ -127,6 +132,8 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   onOpenClasses: () => void
   /** Quay lại màn trước trong /me (fallback khi mở thẳng bằng link) */
   onBack: (fallback: MeView) => void
+  /** Lượt điều hướng — key của Home: bấm Trang chủ = Home mặc định mới (Dành cho bạn, đầu trang) */
+  visit: number
 }) {
   const [patch, setPatch] = useState<IdentityPatch>({})
   const [identityRev, setIdentityRev] = useState(0)   // tăng khi đổi ảnh đại diện → feed tải lại avatar mới
@@ -169,7 +176,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {view.kind === 'class' && (
         <ClassPage key={view.classId} classId={view.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} onOpenClasses={onOpenClasses} />
       )}
-      {section === 'home' && <MeHome me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
+      {section === 'home' && <MeHome key={visit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
         onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} onOpenClasses={onOpenClasses} />}
       {section === 'friends' && <Friends requests={requests} onOpenProfile={onOpenProfile} />}
