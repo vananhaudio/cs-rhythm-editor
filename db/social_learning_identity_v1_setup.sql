@@ -15,10 +15,10 @@
 --   • Thầy/admin: không có danh tính học sinh (thành viên nhóm để quản lý lớp, không phải học).
 --   • Chỉ thông tin lớp công khai trong Class (mã/tên lớp, khoá) — không tiến độ, không gói, không email/SĐT.
 --   • Không đụng Learning Thread (danh tính LỊCH SỬ của thread là chuyện khác, không đổi).
--- CHẠY: dán NGUYÊN FILE vào Supabase SQL Editor — file tự mở/đóng MỘT giao dịch.
+-- CHẠY (production): scripts/prod-db.py (worktree hạ tầng) query <preflight> → dryrun <file> → migrate <file> --confirm wojmdilyflffvdtpovmq.
+-- prod-db.py sở hữu transaction (BEGIN … COMMIT/ROLLBACK) → file KHÔNG tự viết begin/commit.
 -- ═══════════════════════════════════════════════════════════════════════════
 
-begin;
 set local lock_timeout = '5s';
 set local statement_timeout = '60s';
 
@@ -87,4 +87,3 @@ revoke all on function public.social_learning_identities(uuid[]) from public, an
 grant execute on function public.social_learning_identities(uuid[]) to authenticated;
 
 notify pgrst, 'reload schema';
-commit;
