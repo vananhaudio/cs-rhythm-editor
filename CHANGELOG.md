@@ -4,6 +4,13 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Lớp Gen Z — Z2 + Admin hỗ trợ lớp dài hạn**
+  - Production (`prod-db.py`: dryrun → migrate → postflight):
+    - Nhóm Zalo Z2 hiện có nhận mã `Z2`, đúng bất biến "nhóm ≡ mã lớp" trong `docs/QUY-TAC-MA.md`.
+    - Tạo lớp "Gen Z — Z2": active, Chủ nhật 14:00–15:00, gắn nhóm qua `group_id`, không giới hạn số buổi, không ngày bắt đầu/kết thúc bịa, không khoá.
+    - 9 thành viên nhận nhãn **Đang học · Gen Z** qua đúng luật lớp học. Không sửa thành viên nào.
+  - Admin → Lịch lớp: ô "Lớp dài hạn · không giới hạn số buổi" (`total_sessions = 0`). Khi bật: không sinh buổi, không `end_date`, lịch hiện dạng "Chủ nhật · 14:00–15:00". Owner tự tạo Z3, Z4 theo cùng mô hình: tên "Gen Z — Z3", mã Z3, bật "Lớp dài hạn", gắn nhóm Zalo cùng mã.
+
 - **Sửa Danh tính học tập V1: nguồn DUY NHẤT = lớp học Admin**
   - Bỏ hẳn fallback `edu_students.ht_member`: người chỉ có cờ mà không thuộc lớp Hành trình thì không có nhãn Hành trình. "◆ Hành trình yyyy" chỉ dành cho người thuộc lớp HTyyyy.
   - Hàm `social_learning_identities` bỏ cột `ht_member` (drop + create cùng transaction). Client, test, preflight, postflight và docs đã cập nhật.
