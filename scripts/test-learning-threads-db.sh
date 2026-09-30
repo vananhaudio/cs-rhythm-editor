@@ -251,6 +251,23 @@ psqld t_ts -c "begin;" -f "$ROOT/db/social_tool_share_v1_rollback.sql" -c "commi
 [ "$(q t_ts "select count(*) from information_schema.columns where table_name = 'class_posts' and column_name = 'tool_share'")/$(q t_ts "select count(*) from pg_proc where proname = 'social_share_tool_result'")/$(q t_ts "select pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.class_posts'::regclass and conname = 'class_posts_type_check'")" = "0/0/$TYPEDEF_BEFORE" ] \
   && ok "Tool Share rollback ×2 (chưa có bài): gỡ RPC + cột, type_check về đúng bản cũ" || fail "Tool Share rollback"
 
+echo "── BMS ARTIFACT V1 (tool_artifacts + nhánh bms): setup ×2 → rls_setup → test → rollback ×2"
+baseline t_ba "$TMP/fixture_noroles.sql"
+for f in learning_threads_p1_setup learning_threads_p2_setup social_classes_v1_setup social_feed_v1_setup social_tool_share_v1_setup; do psqld t_ba -f "$ROOT/db/$f.sql" >/dev/null; done
+TS_V1_MD5="$(q t_ba "select md5(prosrc) from pg_proc where proname = 'social_share_tool_result'")"
+psqld t_ba -c "begin;" -f "$ROOT/db/social_bms_artifact_v1_setup.sql" -c "commit;" >/dev/null && psqld t_ba -c "begin;" -f "$ROOT/db/social_bms_artifact_v1_setup.sql" -c "commit;" >/dev/null && ok "BMS artifact migration ×2 (idempotent)"
+psqld t_ba -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_ba "select count(*) from pg_policies where tablename = 'tool_artifacts'")/$(q t_ba "select policyname from pg_policies where tablename = 'tool_artifacts'")" = "1/tool_artifacts_read" ] \
+  && ok "BMS artifact: rls_setup.sql KHÔNG áp policy rộng (self_managed)" || fail "rls_setup áp policy lên tool_artifacts"
+[ "$(q t_ba "select count(*) from information_schema.role_table_grants where table_name = 'tool_artifacts' and grantee in ('anon','PUBLIC')")/$(q t_ba "select string_agg(privilege_type, ',') from information_schema.role_table_grants where table_name = 'tool_artifacts' and grantee = 'authenticated'")" = "0/SELECT" ] \
+  && ok "BMS artifact: anon không quyền; authenticated chỉ SELECT" || fail "BMS artifact grants"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_ba -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/social_bms_artifact_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL BMS artifact"
+psqld t_ba -c "begin;" -f "$ROOT/db/social_bms_artifact_v1_rollback.sql" -c "commit;" >/dev/null && psqld t_ba -c "begin;" -f "$ROOT/db/social_bms_artifact_v1_rollback.sql" -c "commit;" >/dev/null
+[ "$(q t_ba "select count(*) from pg_class where relname = 'tool_artifacts'")/$(q t_ba "select md5(prosrc) from pg_proc where proname = 'social_share_tool_result'")/$(q t_ba "select count(*) from pg_proc where proname in ('bms_song_normalize','social_delete_tool_artifact')")" = "0/$TS_V1_MD5/0" ] \
+  && ok "BMS artifact rollback ×2 (chưa có artifact): gỡ bảng + hàm, RPC về đúng bản Tool Share V1" || fail "BMS artifact rollback"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

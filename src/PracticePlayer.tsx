@@ -2,7 +2,7 @@
 // + hợp âm trôi trên lời + dải hợp âm hiện tại (sơ đồ bấm) + metronome.
 // Port từ PracticeView.swift (native), tự chứa điều khiển YouTube + Web Audio.
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { splitWords, computeMapping } from './logic/songBuilder'
 import type { SongChord } from './logic/songBuilder'
 import { beatToTime } from './logic/tempoFit'
@@ -20,7 +20,11 @@ const MONO = `'JetBrains Mono','Space Mono',monospace`
 const buildEmbedUrl = (id: string) =>
   `https://www.youtube.com/embed/${id}?${new URLSearchParams({ enablejsapi: '1', controls: '1', rel: '0', modestbranding: '1', playsinline: '1' })}`
 
-export default function PracticePlayer({ draft, onClose, embedded = false }: { draft: SongDraft; onClose: () => void; embedded?: boolean }) {
+export default function PracticePlayer({ draft, onClose, embedded = false, banner }: {
+  draft: SongDraft; onClose: () => void; embedded?: boolean
+  /** Dải thông tin dưới header (vd bài chia sẻ: "Chỉ luyện — không sửa bài gốc") */
+  banner?: ReactNode
+}) {
   const words = useMemo(() => splitWords(draft.lyricsText), [draft.lyricsText])
   const mapping = useMemo(() => computeMapping(words, draft.anchors), [words, draft.anchors])
   const fit = draft.fit
@@ -252,6 +256,8 @@ export default function PracticePlayer({ draft, onClose, embedded = false }: { d
           </span>
         </div>
       )}
+
+      {banner}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, padding: embedded ? 'calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 12px)' : `0 16px calc(env(safe-area-inset-bottom, 0px) + 12px)`, maxWidth: 720, width: '100%', margin: '0 auto', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
         {/* Thanh nút TRÊN video (không đè video → dùng được thanh tua YouTube) */}

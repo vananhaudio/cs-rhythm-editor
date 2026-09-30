@@ -4,6 +4,10 @@ Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
 ## 30/09/2026
 
+- **Class Social — BMS Artifact Share V1**
+  - Chủ bài BMS bấm "Chia sẻ lên cộng đồng" → tạo artifact (`tool_artifacts`, schema `bms.song` v1) + đúng một thẻ Feed "BMS · Dựng bài hát" (tên · BPM · nhịp · số hợp âm · thumbnail). Người khác bấm "Luyện bài này" → `/song-builder?artifact=<id>` mở đúng bài ở chế độ chỉ luyện.
+  - BMS vẫn local-first: nháp không tự lên server. Thẻ Feed không chứa lời. RLS: chủ bài và thành viên Class đọc; không ai sửa; chỉ chủ bài gỡ. Chi tiết: `docs/SOCIAL-BMS-ARTIFACT-V1.md`.
+
 - **Class Social — Tool Share V1 + Metronome**
   - Học sinh luyện với Metronome → phiên đo thật (≥ 60 giây) → "Chia sẻ thành tích" → thẻ "Metronome · Luyện tập · 80 BPM · 10 phút" trên Dành cho bạn / Tường → người khác bấm "Thử ở 80 BPM" → `/metronome?tempo=80`.
   - Một mô hình chung: `class_posts` type `tool_share` + `tool_share jsonb`; ghi chỉ qua RPC `social_share_tool_result` (server kiểm payload, chống bấm đúp bằng `client_key`). Chi tiết: `docs/SOCIAL-TOOL-SHARE-V1.md`.

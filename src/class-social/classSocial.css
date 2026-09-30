@@ -853,6 +853,8 @@
 .cs-tool-share-kind svg { color: var(--cs-p); }
 .cs-tool-share-headline { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: var(--cs-text); overflow-wrap: anywhere; }
 .cs-tool-share-note { font-size: 14px; color: var(--cs-muted); }
+.cs-tool-share-detail { font-size: 14.5px; font-weight: 700; color: var(--cs-muted); font-variant-numeric: tabular-nums; }
+.cs-tool-share-thumb { display: block; width: 100%; max-width: 320px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; margin-top: 8px; background: var(--cs-line); }
 .cs-tool-share-cta { margin-top: 8px; min-height: 40px; }
 .cs-tool-share-missing { margin: 12px 0 0; font-size: 13.5px; color: var(--cs-faint); }
 @media (max-width: 480px) {

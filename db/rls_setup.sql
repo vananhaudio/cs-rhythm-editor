@@ -114,6 +114,9 @@ DECLARE
     -- Class Social — bình luận/tag/đính kèm (db/class_social_learning_loop_setup.sql):
     -- thành viên đọc; tác giả ghi bình luận của mình; CHỈ thầy tạo tag + gắn tag/đính kèm.
     'class_post_comments', 'class_tags', 'class_comment_tags', 'class_comment_resources',
+    -- Sản phẩm công cụ chia sẻ (db/social_bms_artifact_v1_setup.sql): chủ bài + thành viên Class ĐỌC;
+    -- KHÔNG ai ghi thẳng (chỉ qua RPC). Áp policy rộng = người xem sửa/xoá bài BMS của chủ bài.
+    'tool_artifacts',
     -- Ảnh bìa hồ sơ (db/profile_media_setup.sql): thành viên Class đọc; CHỈ chính chủ ghi.
     'profile_media',
     -- Bạn bè + tường (db/class_social_friends_wall_setup.sql): friendships KHÔNG ai đọc/ghi thẳng

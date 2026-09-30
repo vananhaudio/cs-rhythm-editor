@@ -10,6 +10,9 @@ export function ToolShareBodyView({ view }: { view: ToolShareView | null }) {
     <div className="cs-tool-share">
       <div className="cs-tool-share-kind"><Icon size={15} aria-hidden="true" /> {view.toolLabel} · {view.kindLabel}</div>
       <div className="cs-tool-share-headline">{view.headline}</div>
+      {view.detail && <div className="cs-tool-share-detail">{view.detail}</div>}
+      {view.thumbnail && <img className="cs-tool-share-thumb" src={view.thumbnail} alt="" loading="lazy" referrerPolicy="no-referrer"
+        onError={e => { e.currentTarget.style.display = 'none' }} />}
       {view.note && <div className="cs-tool-share-note">{view.note}</div>}
       {view.action && <a className="cs-btn cs-btn-soft cs-tool-share-cta" href={view.action.href}>{view.action.label}</a>}
     </div>

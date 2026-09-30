@@ -26,6 +26,8 @@ import YtPlayerPage from './video/YtPlayerPage'
 import Metronome from './Metronome'
 import { shareToolResult } from './class-social/toolshare/toolShareApi'
 import SongBuilderPage from './SongBuilderPage'
+import BmsArtifactPage from './bms/BmsArtifactPage'
+import { shareBmsSong } from './bms/bmsArtifact'
 import TeacherAdminPage from './TeacherAdminPage'
 import CourseEditorPage from './CourseEditorPage'
 import LessonViewerPage from './LessonViewerPage'
@@ -522,7 +524,11 @@ if (path === '/students') {
   // ── Route /song-builder — Song Builder V1 ──
   if (path === '/song-builder' || path.startsWith('/song-builder')) {
     const standalone = new URLSearchParams(window.location.search).get('standalone') === '1'
-    return <SongBuilderPage onClose={standalone || embedded ? undefined : () => { window.location.href = '/start' }} />
+    // Bài BMS đã chia sẻ (Feed "Luyện bài này") → chế độ CHỈ LUYỆN, không mở trình dựng
+    const artifactId = new URLSearchParams(window.location.search).get('artifact')
+    if (artifactId !== null) return <BmsArtifactPage artifactId={artifactId} />
+    return <SongBuilderPage onClose={standalone || embedded ? undefined : () => { window.location.href = '/start' }}
+      onShareSong={user && !embedded && !standalone ? shareBmsSong : undefined} />
   }
 
   // ── Route /tuner ──

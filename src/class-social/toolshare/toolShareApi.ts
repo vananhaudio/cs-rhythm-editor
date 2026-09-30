@@ -6,6 +6,7 @@ export type ShareResult = { ok: true; postId: string } | { ok: false; message: s
 
 export function shareErrorText(msg: string | undefined, online = true): string {
   if (!online || /failed to fetch|network|load failed/i.test(msg ?? '')) return 'Không có kết nối mạng. Kiểm tra mạng rồi thử lại.'
+  if ((msg ?? '').includes('TS_BAD_RESULT')) return 'Kết quả chưa hợp lệ để chia sẻ. Hãy kiểm tra lại rồi thử lại.'
   if ((msg ?? '').includes('TS_NOT_MEMBER')) return 'Tài khoản của bạn chưa thuộc Class nên chưa chia sẻ được.'
   if (/jwt|401/i.test(msg ?? '')) return 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.'
   return 'Chưa chia sẻ được. Hãy thử lại.'

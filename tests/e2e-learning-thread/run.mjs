@@ -729,6 +729,101 @@ try {
     ok('Tool Share: Metronome 80 BPM · phiên 10 phút → Chia sẻ thành tích (bấm đúp vẫn 1 bài) → Dành cho bạn có card + danh tính → không ở Lớp của tôi → người khác "Thử ở 80 BPM" → /metronome?tempo=80, tải lại giữ 80; BPM lạ → 90; 390 không tràn ngang')
   }
 
+  // ── BMS Artifact Share V1: nháp local → (không tự upload) → Chia sẻ → Feed → B "Luyện bài này" → chỉ luyện → A gỡ ──
+  {
+    const loginAt = async (email, width) => {
+      const { ctx: c, page: pg } = await ctxPage(width)
+      await pg.goto(ME, { waitUntil: 'networkidle0' })
+      await pg.waitForSelector('#cs-login-email', { timeout: 15000 })
+      await pg.type('#cs-login-email', email); await pg.type('#cs-login-pass', 'e2e'); await pg.click('.cs-guest-submit')
+      await pg.waitForSelector('.cs-share', { timeout: 15000 })
+      return { c, pg }
+    }
+    const SB = `http://class.localhost:${V}/song-builder`
+    const serverCalls = []
+    const { c: ca, pg: a } = await loginAt('a@test.local', 390)
+    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|social_delete_tool_artifact/.test(r.url())) serverCalls.push(r.url()) })
+    // Nháp BMS hoàn chỉnh CHỈ trong máy (localStorage) — như người dùng vừa dựng xong
+    await a.evaluate(() => {
+      const anchor = (w, word, b) => ({ id: `anchor_${String(w).padStart(3, '0')}_b${b}`, wordIndex: w, word, beatIndex: b, tick: b * 480, source: 'anchor' })
+      localStorage.setItem('csre-sb-scratch-v1', JSON.stringify({
+        id: 'd_e2e1', title: 'Có Chàng Trai Viết Lên Cây', youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', videoId: 'dQw4w9WgXcQ', thumbnail: null,
+        lyricsText: 'Có chàng trai viết lên cây\nlời yêu thương cô gái ấy',
+        fit: { ok: true, fitted: true, bpm: 76, beatDuration: 60 / 76, gridOffset: 1.2, validTaps: 12, rejected: 0, avgError: 0.01, maxError: 0.02, assign: [] },
+        timeSignature: 4, downbeatPosition: 1, groupBeats: true,
+        anchors: [anchor(0, 'Có', 0), anchor(6, 'lời', 8), anchor(11, 'ấy', 16)],
+        chords: [{ wordIndex: 0, name: 'Am' }, { wordIndex: 3, name: 'F' }, { wordIndex: 6, name: 'C' }, { wordIndex: 9, name: 'G' }],
+        step: 5, createdAt: Date.now(), updatedAt: Date.now(),
+      }))
+    })
+    await a.goto(SB, { waitUntil: 'networkidle0' })
+    await clickText(a, '▶ Tiếp tục')
+    await waitText(a, /Chia sẻ lên cộng đồng/)
+    await waitText(a, /Nháp của bạn vẫn chỉ ở máy/)
+    await clickText(a, '💾 Lưu vào Bài hát của tôi')   // lưu thư viện LOCAL — không lên server
+    await new Promise(r => setTimeout(r, 600))
+    assert.deepEqual(serverCalls, [], 'dựng / tiếp tục / lưu nháp KHÔNG gọi server: ' + serverCalls.join(' '))
+    await noHorizontalOverflow(a, 'BMS bước cuối + Chia sẻ (390px)')
+    await new Promise(r => setTimeout(r, 2400))   // toast "Đã lưu" tắt rồi mới chụp
+    await a.screenshot({ path: `${SHOTS}/23-bms-share.png` })
+    // Bấm đúp Chia sẻ → vẫn MỘT bài
+    await a.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'Chia sẻ lên cộng đồng'); b.click(); b.click() })
+    await waitText(a, /Đã chia sẻ lên cộng đồng/)
+    const artHref = await a.$eval('a[href^="/song-builder?artifact="]', e => e.getAttribute('href'))
+    assert.match(artHref, /^\/song-builder\?artifact=[0-9a-f-]{36}$/)
+    await a.goto(ME, { waitUntil: 'networkidle0' })
+    await a.waitForSelector('.cs-tool-share-thumb', { timeout: 15000 })
+    const bmsCards = await a.$$eval('.cs-post', els => els.filter(e => /BMS · Dựng bài hát/.test(e.textContent)).map(e => ({ t: e.textContent, img: e.querySelector('.cs-tool-share-thumb')?.getAttribute('src'), cta: e.querySelector('.cs-tool-share-cta')?.getAttribute('href') })))
+    assert.equal(bmsCards.length, 1, 'đúng MỘT thẻ BMS (bấm đúp)')
+    assert.match(bmsCards[0].t, /BMS · Dựng bài hát[\s\S]*Có Chàng Trai Viết Lên Cây[\s\S]*76 BPM · 4\/4 · 4 hợp âm[\s\S]*Luyện bài này/)
+    assert.equal(/yêu thương|cô gái/.test(bmsCards[0].t), false, 'thẻ Feed không lộ lời bài hát')
+    assert.equal(bmsCards[0].img, 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg'); assert.equal(bmsCards[0].cta, artHref)
+    await noHorizontalOverflow(a, 'Feed có thẻ BMS (390px)')
+    await a.screenshot({ path: `${SHOTS}/24-feed-bms.png`, fullPage: true })
+    // B: "Luyện bài này" → đúng bài, chỉ luyện; tải lại vẫn đúng; không có nút gỡ
+    const { c: cb, pg: b } = await loginAt('b@test.local', 390)
+    await b.waitForSelector('.cs-tool-share-thumb', { timeout: 15000 })
+    await Promise.all([b.waitForNavigation({ waitUntil: 'networkidle0' }),
+      b.evaluate(() => [...document.querySelectorAll('.cs-post')].find(e => /BMS · Dựng bài hát/.test(e.textContent)).querySelector('.cs-tool-share-cta').click())])
+    assert.equal(await b.evaluate(() => location.pathname + location.search), artHref)
+    const checkPractice = async () => {
+      await waitText(b, /chỉ luyện, không sửa bài gốc/, 15000)
+      const t = await text(b)
+      assert.match(t, /Có Chàng Trai Viết Lên Cây/); assert.match(t, /76·4\/4/)
+      assert.match(t, /chàng[\s\S]*yêu[\s\S]*thương/, 'lời karaoke đúng bài')
+      assert.match(t, /\bAm\b[\s\S]*\bG\b/, 'hợp âm đúng bài')
+      assert.equal(/Gỡ chia sẻ|Lưu vào Bài hát|Chia sẻ lên cộng đồng/.test(t), false, 'người xem không lưu/sửa/gỡ')
+    }
+    await checkPractice()
+    await noHorizontalOverflow(b, 'BMS chỉ luyện (390px)')
+    await b.screenshot({ path: `${SHOTS}/25-bms-practice-b.png` })
+    await b.reload({ waitUntil: 'networkidle0' }); await checkPractice()
+    // Nháp của B không bị ghi bài của A
+    assert.equal(await b.evaluate(() => localStorage.getItem('csre-sb-drafts-v1')), null, 'mở bài chia sẻ không ghi vào thư viện của B')
+    // id lạ / không tồn tại → thông báo nhẹ, không crash
+    await b.goto(SB + '?artifact=00000000-0000-4000-8000-000000000000', { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    await b.goto(SB + '?artifact=%3Cscript%3E', { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    // Khách chưa đăng nhập
+    const { ctx: cg, page: g } = await ctxPage(390)
+    await g.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'networkidle0' }); await waitText(g, /Đăng nhập Class để luyện bài này/)
+    await cg.close()
+    // A (chủ bài) mở bài của mình → "Bài của bạn" → Gỡ chia sẻ (2 bước) → bài + thẻ biến mất
+    const [ca2, a2] = [ca, a]   // cùng trình duyệt của A (nháp local ở đây)
+    await a2.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'networkidle0' })
+    await waitText(a2, /Bài của bạn/)
+    await clickText(a2, 'Gỡ chia sẻ'); await waitText(a2, /Nháp trong máy bạn vẫn giữ nguyên/)
+    await a2.screenshot({ path: `${SHOTS}/26-bms-owner-remove.png` })
+    await clickText(a2, 'Xác nhận gỡ'); await waitText(a2, /không còn được chia sẻ/)
+    await a2.goto(ME, { waitUntil: 'networkidle0' }); await a2.waitForSelector('.cs-post', { timeout: 15000 }); await new Promise(r => setTimeout(r, 800))
+    assert.equal(/BMS · Dựng bài hát/.test(await text(a2)), false, 'thẻ BMS đã gỡ khỏi Feed')
+    assert.ok(await a2.evaluate(() => !!JSON.parse(localStorage.getItem('csre-sb-drafts-v1') || '{}').d_e2e1), 'nháp local của A vẫn còn')
+    await ca2.close()
+    // B tải lại link cũ → thông báo nhẹ, không dữ liệu chết
+    await b.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    await cb.close()
+    ok('BMS Artifact: nháp local không tự lên server · Chia sẻ (bấm đúp vẫn 1 bài) → thẻ Feed (tên · 76 BPM · 4/4 · 4 hợp âm · thumbnail, không lời) → B "Luyện bài này" đúng bài (lời, hợp âm, lưới) chỉ luyện, tải lại giữ nguyên, không ghi thư viện B · id lạ/khách xử lý nhẹ · A gỡ → bài + thẻ biến mất, nháp local còn; 390 không tràn ngang')
+  }
+
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))
   assert.deepEqual(real, [], 'không có lỗi JS trên trang')
   ok('Không có lỗi JavaScript trong suốt kịch bản')

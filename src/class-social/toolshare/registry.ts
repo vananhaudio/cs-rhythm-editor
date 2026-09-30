@@ -3,14 +3,16 @@
 // Feed/PostCard chỉ gọi describeToolShare() — không if/else theo từng công cụ. Server kiểm lại payload khi ghi
 // (db/social_tool_share_v1_setup.sql). Thêm BMS / Nhịp & Phách / Ban nhạc = thêm MỘT mục ở đây + một nhánh ở RPC.
 import type { LucideIcon } from 'lucide-react'
-import { Timer } from 'lucide-react'
+import { Music4, Timer } from 'lucide-react'
 
 export type ToolShareView = {
   tool: string
   toolLabel: string           // "Metronome"
   icon: LucideIcon
   kindLabel: string           // "Luyện tập"
-  headline: string            // "80 BPM · 10 phút"
+  headline: string            // "80 BPM · 10 phút" · tên bài (BMS)
+  detail?: string | null      // BMS: "76 BPM · 4/4 · 3 hợp âm"
+  thumbnail?: string | null   // BMS: ảnh YouTube dựng từ video id đã kiểm (không nhận URL tuỳ ý)
   note: string | null         // "Hoàn thành một phiên luyện tập"
   action: { label: string; href: string } | null   // "Thử ở 80 BPM" → /metronome?tempo=80
 }
@@ -52,6 +54,28 @@ export const TOOL_REGISTRY: Record<string, ToolDef> = {
         action: { label: `Thử ở ${bpm} BPM`, href: `/metronome?tempo=${bpm}` },
       }
     },
+  },
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/
+
+/** BMS: bài đã dựng được chia sẻ → artifact (tool_artifacts). Payload Feed CHỈ có tham chiếu + tóm tắt. */
+TOOL_REGISTRY.bms = {
+  describe: raw => {
+    const bpm = int(raw.bpm), beats = int(raw.beats_per_bar), chordCount = int(raw.chord_count)
+    const id = raw.artifact_id, vid = raw.video_id, title = raw.title
+    if (raw.kind !== 'song' || typeof id !== 'string' || !UUID_RE.test(id) || typeof vid !== 'string' || !YT_ID_RE.test(vid)) return null
+    if (typeof title !== 'string' || !title.trim() || title.length > 120) return null
+    if (bpm === null || bpm < METRONOME_MIN_BPM || bpm > METRONOME_MAX_BPM || beats === null || beats < 2 || beats > 12 || chordCount === null || chordCount < 0) return null
+    return {
+      tool: 'bms', toolLabel: 'BMS', icon: Music4, kindLabel: 'Dựng bài hát',
+      headline: title.trim(),
+      detail: [`${bpm} BPM`, `${beats}/4`, chordCount > 0 ? `${chordCount} hợp âm` : null].filter(Boolean).join(' · '),
+      thumbnail: `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`,
+      note: null,
+      action: { label: 'Luyện bài này', href: `/song-builder?artifact=${id.toLowerCase()}` },
+    }
   },
 }
 

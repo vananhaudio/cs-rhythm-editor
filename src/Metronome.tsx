@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { newClientKey } from './lib/clientKey'
 import { changeSessionBpm, endSession, startSession, type PracticeSession } from './lib/practiceSession'
 import { MIN_SHARE_SECONDS, formatPracticeDuration, parseMetronomeTempo } from './class-social/toolshare/registry'
 import { useAudioContextResume } from './useAudioContextResume'
@@ -140,14 +141,6 @@ interface Props {
   onClose?: () => void; initialBpm?: number | null; onStart?: () => void
   /** Có (đã đăng nhập, route /metronome) → sau phiên ≥ 60 giây hiện "Chia sẻ thành tích". Không có → Metronome như cũ. */
   onShareSession?: (r: MetronomeSessionResult) => Promise<{ ok: true } | { ok: false; message: string }>
-}
-
-function newKey(): string {
-  try { return crypto.randomUUID() } catch {
-    const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128
-    const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('')
-    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
-  }
 }
 
 export default function Metronome({ onClose, initialBpm, onStart, onShareSession }: Props) {
@@ -295,7 +288,7 @@ export default function Metronome({ onClose, initialBpm, onStart, onShareSession
     sessionRef.current = null
     if (s) {
       const r = endSession(s, performance.now())
-      if (r.seconds >= MIN_SHARE_SECONDS) setResult({ ...r, key: newKey() })
+      if (r.seconds >= MIN_SHARE_SECONDS) setResult({ ...r, key: newClientKey() })
     }
   }, [])
 
