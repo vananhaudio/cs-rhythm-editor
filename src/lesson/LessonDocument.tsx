@@ -224,15 +224,17 @@ function CheckpointBlock({ s }: { s: CheckpointSection }) {
   const slot = useContext(CheckpointSlot)
   const required = s.required !== false
   return (
-    <section className="lsn-block lsn-cp" id={`bai-tra-${s.id}`}>
+    <section className={'lsn-block lsn-cp' + (s.preview ? ' is-preview no-print' : '')} id={`bai-tra-${s.id}`}>
       <header className="lsn-block-h">
-        <span className="lsn-tag">Bài trả {s.id}</span>
+        <span className="lsn-tag">{s.preview ? 'Trả bài · Xem trước' : `Bài trả ${s.id}`}</span>
         {s.title && <h2>{s.title}</h2>}
       </header>
       {s.prompt && <p className="lsn-cp-prompt">{s.prompt}</p>}
-      <p className="lsn-cp-meta">
-        {required ? 'Bắt buộc để hoàn thành buổi' : 'Không bắt buộc'} · Trả bằng: {checkpointAcceptsLabel(s.accepts)}
-      </p>
+      {!s.preview && (
+        <p className="lsn-cp-meta">
+          {required ? 'Bắt buộc để hoàn thành buổi' : 'Không bắt buộc'} · Trả bằng: {checkpointAcceptsLabel(s.accepts)}
+        </p>
+      )}
       {slot && <div className="lsn-cp-slot no-print">{slot(s)}</div>}
     </section>
   )

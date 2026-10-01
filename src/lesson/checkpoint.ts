@@ -44,3 +44,16 @@ export function checkpointProblems(sections: LessonSection[]): string[] {
   })
   return out
 }
+
+// ── KHUNG XEM TRƯỚC "TRẢ BÀI" (CHỈ giáo viên/admin, CHỈ khi buổi chưa có bài trả thật) ──
+// Trạng thái RỖNG / REVIEW giao diện — KHÔNG phải checkpoint: không lưu DB, không gọi RPC, không tạo thread/tiến độ,
+// không in. Bài trả THẬT luôn hiện ĐÚNG VỊ TRÍ đặt trong giáo án, không gom xuống cuối như khung này.
+export const PREVIEW_CHECKPOINT: CheckpointSection = {
+  kind: 'checkpoint', id: 'xem-truoc', preview: true, title: 'Trả bài',
+  prompt: 'Khi giáo án có bài trả, nút trả bài sẽ xuất hiện ngay tại vị trí được đặt trong bài học.',
+}
+
+export function withTeacherPreview(sections: LessonSection[], role: 'learner' | 'teacher'): LessonSection[] {
+  if (role !== 'teacher' || sections.some(x => x.kind === 'checkpoint')) return sections
+  return [...sections, PREVIEW_CHECKPOINT]
+}

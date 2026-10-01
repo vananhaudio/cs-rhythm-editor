@@ -17,7 +17,7 @@ export function SessionRowHead({ s, role, now, paceDays, expanded, current, onTo
   const phase = sessionPhase(s, role, mode)
   const badge = sessionBadge(s, role, now, paceDays, mode)
   return (
-    <button type="button" className={'cs-learn-row is-' + phase + (current ? ' is-current' : '') + (s.published ? '' : ' is-pending')} aria-expanded={expanded}
+    <button type="button" className={'cs-learn-row is-' + phase + (current ? ' is-current' : '') + (s.published ? '' : ' is-pending')} aria-pressed={expanded} aria-controls="giao-an"
       onClick={onToggle} id={`buoi-${pad2(s.no)}`}>
       <span className="cs-learn-dot" aria-hidden="true">{phase === 'done' ? '✓' : phase === 'locked' ? '' : pad2(s.no)}</span>
       <span className="cs-learn-row-main">

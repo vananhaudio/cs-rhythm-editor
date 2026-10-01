@@ -903,3 +903,10 @@
 .cs-learn-break span { flex: none; max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Buổi chưa có giáo án: chấm mờ, tiêu đề vẫn rõ */
 .cs-learn-row.is-pending:not(.is-current) .cs-learn-dot { border-style: dashed; color: var(--cs-faint); }
+
+/* Giáo án của buổi đang chọn: ngay dưới sơ đồ; cuộn tới đây khi bấm buổi — chừa thanh trên dính của /me */
+/* min-height ≈ một màn hình: buổi ngắn / "đang cập nhật" vẫn cuộn được đầu giáo án lên sát thanh trên (vị trí nhất quán) */
+/* Tắt scroll anchoring: bản nhạc alphaTab render TRỄ làm khối cao dần — trình duyệt "bám" theo phần tử trong giáo án
+   và kéo viewport trôi xuống (lỗi Owner gặp 01/10). Đầu giáo án là vị trí cố định ngay dưới sơ đồ. */
+.cs-learn, .cs-learn-lesson { overflow-anchor: none; }
+.cs-learn-lesson { scroll-margin-top: calc(var(--cs-topbar-h) + 12px); min-height: calc(100dvh - var(--cs-topbar-h) - 24px); }

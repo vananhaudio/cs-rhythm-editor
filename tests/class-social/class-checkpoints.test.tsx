@@ -172,7 +172,7 @@ test("visibility: bài trả = Các bạn cùng lớp | Chỉ Thầy; thread cũ
 test("sơ đồ buổi: dòng thu gọn 'Buổi 0N · Tiêu đề'; buổi hiện tại đánh dấu; dòng trạng thái buổi", () => {
   const st = ready(RAW);
   const row = renderToStaticMarkup(<SessionRowHead s={st.sessions[1]} role="learner" now={NOW} paceDays={7} expanded current onToggle={() => {}} />);
-  assert.match(row, /Buổi 02 · Ép ngón &amp; Bass/); assert.match(row, /is-current/); assert.match(row, /aria-expanded="true"/);
+  assert.match(row, /Buổi 02 · Ép ngón &amp; Bass/); assert.match(row, /is-current/); assert.match(row, /aria-pressed="true"/);
   const locked = renderToStaticMarkup(<SessionRowHead s={st.sessions[2]} role="learner" now={NOW} paceDays={7} expanded={false} current={false} onToggle={() => {}} />);
   assert.match(locked, /is-locked/);
   const line = renderToStaticMarkup(<SessionStatusLine s={st.sessions[1]} now={NOW} paceDays={7} />);
@@ -230,4 +230,22 @@ test("chế độ giáo trình: dựng từ lớp thật — 9 buổi, dòng ngh
   assert.equal(curriculumState({ classId: CLS, programCode: null, classCode: "x", className: "x", role: "learner", stages: [], sessions: SES, contents: [{ session_id: "s1", status: "draft" }] }), null);
   const row = renderToStaticMarkup(<SessionRowHead s={st.sessions[5]} role="learner" mode="curriculum" now={NOW} paceDays={7} expanded={false} current={false} onToggle={() => {}} />);
   assert.match(row, /Buổi 06 · Bài 6/); assert.match(row, /is-pending/); assert.doesNotMatch(row, /🔒|cs-learn-row-badge/);
+});
+
+// ── Khung XEM TRƯỚC "Trả bài" (chỉ giáo viên, buổi chưa có bài trả) — không phải checkpoint thật ──
+import { PREVIEW_CHECKPOINT, withTeacherPreview } from "../../src/lesson/checkpoint";
+test("xem trước Trả bài: CHỈ giáo viên + buổi chưa có bài trả; cuối giáo án; không in; bài trả thật giữ đúng vị trí", () => {
+  const plain: LessonSection[] = [{ kind: "objectives", items: ["x"] }, { kind: "note", text: "y" }];
+  assert.deepEqual(withTeacherPreview(plain, "learner"), plain, "học viên: không bao giờ có khung giả");
+  const t = withTeacherPreview(plain, "teacher");
+  assert.equal(t.length, 3); assert.equal(t[2], PREVIEW_CHECKPOINT);
+  assert.equal((PREVIEW_CHECKPOINT as { preview?: boolean }).preview, true);
+  const real: LessonSection[] = [{ kind: "note", text: "a" }, { kind: "checkpoint", id: "1.1", title: "Thật" }, { kind: "note", text: "b" }];
+  assert.deepEqual(withTeacherPreview(real, "teacher"), real, "đã có bài trả thật → không chèn khung xem trước");
+  const doc: LessonDoc = { meta: { programCode: "SOLO01", programName: "X", sessionNo: 1, title: "T" }, sections: t };
+  const html = renderToStaticMarkup(<LessonDocument doc={doc} embedded />);
+  assert.match(html, /class="lsn-block lsn-cp is-preview no-print"/);
+  assert.match(html, /Trả bài · Xem trước/);
+  assert.doesNotMatch(html, /Bắt buộc để hoàn thành buổi/);
+  assert.ok(html.indexOf("Trả bài · Xem trước") > html.indexOf(">y<"), "khung xem trước ở CUỐI giáo án");
 });

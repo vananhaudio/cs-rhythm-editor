@@ -40,7 +40,7 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
     ;(async () => {
       try {
         const at = await import('@coderline/alphatab')
-        const { AlphaTabApi, Settings, LayoutMode, StaveProfile, LogLevel, NotationElement } = at
+        const { AlphaTabApi, Settings, LayoutMode, StaveProfile, LogLevel, NotationElement, ScrollMode } = at
         if (dead || !hostRef.current) return
 
         const s = new Settings()
@@ -50,6 +50,10 @@ export default function LessonScore({ tex, barsPerRow = 4, zoomable = true }: Pr
         // ⇒ bản in A4 và ảnh chụp ra khuông TRỐNG.
         s.core.enableLazyLoading = false
         s.core.fontDirectory = '/font/'
+        // BẮT BUỘC: tắt tự cuộn của alphaTab (mặc định Continuous) — mỗi bản nhạc khắc xong tự kéo trang tới
+        // ô nhịp đầu của nó ⇒ trang có nhiều bản nhạc bị trôi xuống bản cuối (lỗi "mở buổi bị đưa xuống đáy" 01/10).
+        // Giáo án không dùng player/cursor; người học tự cuộn.
+        if (ScrollMode) s.player.scrollMode = ScrollMode.Off
         s.display.layoutMode = LayoutMode.Page        // tự xuống dòng → không tràn ngang
         // Bản nhạc tự khai \staff {score} (chỉ khuông, không TAB — vd bài để học viên TỰ
         // chọn vị trí) thì tôn trọng nó; còn lại mặc định khuông + TAB.

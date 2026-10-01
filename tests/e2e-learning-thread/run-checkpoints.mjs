@@ -52,8 +52,14 @@ async function meAs(email, path = '', width = 390) {
   return { ctx, page }
 }
 const rows = page => page.$$eval('.cs-learn-row', els => els.map(e => ({
-  title: e.querySelector('.cs-learn-row-title')?.textContent ?? '', expanded: e.getAttribute('aria-expanded') === 'true',
+  title: e.querySelector('.cs-learn-row-title')?.textContent ?? '', expanded: e.getAttribute('aria-pressed') === 'true',
   cls: e.className })))
+// Vị trí giáo án sau khi bấm buổi: đầu #giao-an phải nằm ngay dưới thanh trên dính (52px) — không bị che, không xuống đáy
+async function lessonPos(page) {
+  await page.waitForFunction(() => { const y = scrollY; return new Promise(r => setTimeout(() => r(scrollY === y), 250)) }, { timeout: 10000 })
+  return page.evaluate(() => ({ top: Math.round(document.getElementById('giao-an').getBoundingClientRect().top), y: Math.round(scrollY),
+    max: document.documentElement.scrollHeight - innerHeight, bar: Math.round(document.querySelector('.cs-topbar')?.getBoundingClientRect().bottom ?? 0) }))
+}
 const cpText = (page, id) => page.$eval(`#bai-tra-${id.replace('.', '\\.')}`, e => e.textContent)
 
 let threadId = null
@@ -69,6 +75,8 @@ try {
   assert.equal(r.filter(x => x.expanded).length, 1, 'chỉ MỘT buổi mở')
   assert.ok(/is-locked/.test(r[1].cls) && /is-locked/.test(r[2].cls), 'Buổi 02/03 khoá')
   assert.equal(await page.$$eval('.cs-learn-map .lt-profile-tabs', e => e.length), 0, 'không thêm tab trong phần học')
+  assert.equal(await page.$$eval('.cs-learn-map .lsn-paper', e => e.length), 0, 'giáo án KHÔNG chen giữa sơ đồ')
+  assert.equal(await page.$$eval('#giao-an .lsn-paper', e => e.length), 1, 'giáo án nằm DƯỚI sơ đồ')
   ok('B: /me/classes/<SOLO01> → sơ đồ dọc 4 buổi, Buổi 01 tự mở (một buổi), Buổi 02–03 khoá, không tab thừa')
   assert.match(await cpText(page, '1.1'), /Bài trả 1\.1/)
   assert.match(await cpText(page, '1.1'), /TRẢ BÀI/)
@@ -200,12 +208,18 @@ try {
   assert.ok(r.every(x => !/is-locked/.test(x.cls)), 'không khoá buổi nào (chưa có bài trả → không khoá chết)')
   assert.equal(await page.$$eval('.cs-learn-row-badge', e => e.length), 0, 'dòng thu gọn chỉ Buổi + tiêu đề')
   assert.match(await page.$eval('.lsn-paper', e => e.textContent), /Nội dung thật buổi 2/)
+  assert.ok(await page.evaluate(() => scrollY) <= 10, 'vào lớp: KHÔNG tự cuộn')
+  assert.equal(await page.$$eval('.cs-learn-map .lsn-paper', e => e.length), 0, 'sơ đồ liền một khối')
+  assert.equal(await page.$$eval('.lsn-cp.is-preview', e => e.length), 0, 'học viên: không có khung Trả bài giả')
   assert.equal(await page.$$eval('.cs-learn-break', e => e.map(x => x.textContent)).then(t => t.join('|')), 'Nghỉ giữa chặng – thời gian tự luyện')
   assert.equal(await page.$$eval('button', bs => bs.filter(b => /TRẢ BÀI|TRẢ LẠI/.test(b.textContent)).length), 0, 'không nút trả bài')
   assert.equal(await page.$$eval('.cs-learn-status', e => e.length), 0, 'không dòng tiến độ / màu giả')
   ok('Chế độ giáo trình (A): sơ đồ 4 buổi gọn · Buổi 02 (theo lịch) tự mở · không khoá · dòng nghỉ là vạch ngăn · không nút trả bài · không màu giả')
   await page.click('#buoi-01'); await waitText(page, /Nội dung thật buổi 1/)
-  r = await rows(page); assert.ok(r[0].expanded && !r[1].expanded, 'một chạm mở Buổi 01, Buổi 02 thu lại')
+  r = await rows(page); assert.ok(r[0].expanded && !r[1].expanded, 'một chạm chọn Buổi 01, Buổi 02 bỏ chọn')
+  let pos = await lessonPos(page)
+  assert.ok(pos.top >= pos.bar && pos.top <= pos.bar + 20 && pos.y < pos.max, `cuộn tới ĐẦU giáo án dưới thanh trên: ${JSON.stringify(pos)}`)
+  ok(`Bấm Buổi 01 → viewport tới đầu giáo án (top ${pos.top}px, thanh trên ${pos.bar}px), không xuống đáy`)
   await page.click('#buoi-03'); await waitText(page, /Nội dung buổi này đang được cập nhật/)
   assert.equal(await page.$$eval('.lsn-paper', e => e.length), 0, 'buổi nháp: không lộ nháp')
   await page.click('#buoi-04'); await waitText(page, /Nội dung buổi này đang được cập nhật/)
@@ -226,6 +240,10 @@ try {
   await page.waitForSelector('.cs-learn-map', { timeout: 15000 })
   await waitText(page, /vai trò giáo viên/)
   await page.$eval('#buoi-01', b => b.click()); await waitText(page, /Nội dung thật buổi 1/)
+  await page.waitForSelector('#giao-an .lsn-cp.is-preview')
+  assert.equal(await page.$eval('#giao-an .lsn-cp.is-preview button', b => b.disabled), true, 'nút TRẢ BÀI xem trước bị vô hiệu')
+  assert.match(await page.$eval('#giao-an .lsn-cp.is-preview', e => e.textContent), /Trả bài · Xem trước[\s\S]*TRẢ BÀI[\s\S]*chưa phải bài trả thật/)
+  ok('Thầy: cuối giáo án có khung "Trả bài · Xem trước" (nút TRẢ BÀI vô hiệu, ghi rõ chưa phải bài trả thật)')
   await noHorizontalOverflow(page, 'Thầy xem chế độ giáo trình 1280px')
   await page.screenshot({ path: `${SHOTS}/cur-2-teacher-1280.png`, fullPage: true })
   ok('Thầy/admin (không là học viên lớp) xem trước màn học + mở giáo án')

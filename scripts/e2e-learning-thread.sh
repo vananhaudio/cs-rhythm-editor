@@ -16,6 +16,9 @@ PORT=$((56500 + RANDOM % 300)); API_PORT=$((PORT + 300)); PROXY_PORT=$((PORT + 6
 PIDS=()
 cleanup() {
   for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null || true; done
+  # tiến trình CON (npx → node vite, postgrest) không chết theo subshell → dọn theo đúng cổng / file cấu hình của lần chạy này
+  pkill -f "vite --port $VITE_PORT --strictPort" 2>/dev/null || true
+  pkill -f "postgrest $TMP/pgrst.conf" 2>/dev/null || true
   "$PGBIN/pg_ctl" -D "$TMP/data" -m immediate stop >/dev/null 2>&1 || true
   [ -n "${KEEP_TMP:-}" ] || rm -rf "$TMP"
 }

@@ -9,7 +9,7 @@ import '../../learning-thread/styles'
 import LessonDocument from '../../lesson/LessonDocument'
 import { CheckpointSlot } from '../../lesson/checkpointSlot'
 import type { CheckpointSection, LessonDoc } from '../../lesson/lessonTypes'
-import { submitModes } from '../../lesson/checkpoint'
+import { submitModes, withTeacherPreview } from '../../lesson/checkpoint'
 import { fetchSessionContent } from '../../classLearning/api'
 import { currentSessionNo, sessionPhase, type ClassLearningState, type SessionState } from '../../classLearning/progress'
 import StudentComposer from '../../learning-thread/StudentComposer'
@@ -48,57 +48,65 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
 }) {
   // Nhịp tuần tính theo giờ SERVER (không tin đồng hồ máy học viên)
   const now = useMemo(() => (state.serverNow ? new Date(state.serverNow) : new Date()), [state.serverNow])
-  const [open, setOpen] = useState<number | null>(() => savedOpen(state.classId) ?? currentSessionNo(state, now))
+  // MỘT buổi đang chọn (không có trạng thái "không chọn"): vào lớp = buổi hiện tại.
+  const [selected, setSelected] = useState<number | null>(() => savedOpen(state.classId) ?? currentSessionNo(state, now))
   const current = currentSessionNo(state, now)
-  const scrolled = useRef(false)
-
-  // Vào lớp: đưa buổi hiện tại vào màn hình (một lần), không giật khi tải lại trạng thái.
+  const lessonRef = useRef<HTMLElement>(null)
+  // Chỉ khi NGƯỜI DÙNG bấm chọn buổi mới cuộn tới ĐẦU giáo án; vào lớp / tải lại trạng thái thì không cuộn.
+  const scrollOnSelect = useRef(false)
   useEffect(() => {
-    if (scrolled.current || open == null) return
-    scrolled.current = true
-    const el = document.getElementById(`buoi-${String(open).padStart(2, '0')}`)
-    if (el && open !== state.sessions[0]?.no) requestAnimationFrame(() => el.scrollIntoView({ block: 'start', behavior: 'smooth' }))
-  }, [open, state.sessions])
+    if (!scrollOnSelect.current) return
+    scrollOnSelect.current = false
+    // Vị trí đầu giáo án = ngay dưới sơ đồ (không phụ thuộc nội dung đang tải) → cuộn MỘT lần.
+    // scroll-margin-top (CSS) chừa thanh trên dính của /me để tiêu đề "BUỔI NN" không bị che.
+    // Cuộn TỨC THÌ một lần: cuộn mượt bị nội dung đang tải (bản nhạc) làm lệch / cắt ngang giữa chừng.
+    lessonRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
+  }, [selected])
 
-  const toggle = (no: number) => {
-    const next = open === no ? null : no
-    setOpen(next)
-    rememberOpen(state.classId, next)
+  const select = (no: number) => {
+    scrollOnSelect.current = true
+    setSelected(no)
+    rememberOpen(state.classId, no)
   }
+  const sel = state.sessions.find(s => s.no === selected) ?? null
 
   return (
     <div className="cs-col-wide cs-home cs-learn">
       <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp học</button>
       <header className="cs-card cs-learn-head">
-        <span className="cs-learn-kicker">{state.programCode}{state.classCode ? ` · ${state.classCode}` : ''}</span>
+        <span className="cs-learn-kicker">{state.programCode}</span>
         <h1 className="cs-class-name">{state.className}</h1>
-        {state.role === 'teacher' && <p className="lt-note">Bạn đang xem với vai trò giáo viên: mọi buổi đều mở để xem trước.</p>}
-        {state.mode === 'curriculum' && state.role === 'learner' && <p className="lt-note">Chọn một buổi để xem giáo án.</p>}
+        {state.role === 'teacher' && (
+          <p className="lt-note">Bạn đang xem với vai trò giáo viên: mọi buổi đều mở để xem trước.{state.classCode ? ` Mã lớp: ${state.classCode}.` : ''}</p>
+        )}
       </header>
 
+      {/* SƠ ĐỒ: một khối liên tục, không chen giáo án vào giữa */}
       <ol className="cs-learn-map" aria-label="Sơ đồ giáo trình">
         {state.sessions.map((s, i) => {
           const prevStage = i > 0 ? state.sessions[i - 1].stageNo : null
           const stageHead = s.stageNo != null && s.stageNo !== prevStage && s.stageTitle
             ? <li key={'stage-' + s.stageNo} className="cs-learn-stage" aria-hidden="true">Chặng {s.stageNo} · {s.stageTitle}</li> : null
-          const expanded = open === s.no
           const brk = state.breaks.find(b => b.beforeNo === s.no)
+          const isSel = selected === s.no
           return [
             brk ? <BreakDivider key={'break-' + s.no} title={brk.title} /> : null,   // nghỉ cuối chặng trước, rồi mới sang chặng mới
             stageHead,
-            <li key={s.sessionId} className={'cs-learn-item' + (expanded ? ' is-open' : '')}>
-              <SessionRowHead s={s} role={state.role} mode={state.mode} now={now} paceDays={state.paceDays} expanded={expanded}
-                current={s.no === current} onToggle={() => toggle(s.no)} />
-              {expanded && (
-                <div className="cs-learn-body">
-                  <SessionBody state={state} s={s} now={now} onReload={onReload} onOpenThread={onOpenThread} />
-                </div>
-              )}
+            <li key={s.sessionId} className={'cs-learn-item' + (isSel ? ' is-open' : '')}>
+              <SessionRowHead s={s} role={state.role} mode={state.mode} now={now} paceDays={state.paceDays} expanded={isSel}
+                current={s.no === current} onToggle={() => select(s.no)} />
             </li>,
           ]
         })}
         {state.breaks.filter(b => b.beforeNo == null).map(b => <BreakDivider key="break-end" title={b.title} />)}
       </ol>
+
+      {/* GIÁO ÁN của buổi đang chọn — ngay dưới sơ đồ */}
+      <section ref={lessonRef} className="cs-learn-lesson" id="giao-an" aria-label={sel ? `Giáo án Buổi ${String(sel.no).padStart(2, '0')}` : 'Giáo án'}>
+        {sel
+          ? <SessionBody key={sel.sessionId} state={state} s={sel} now={now} onReload={onReload} onOpenThread={onOpenThread} />
+          : <p className="cs-learn-locked">Chọn một buổi trong sơ đồ để xem giáo án.</p>}
+      </section>
 
       <RecentSubmissions key={state.serverNow ?? ''} classId={state.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} onOpenCommunity={onOpenCommunity} />
     </div>
@@ -138,16 +146,17 @@ function SessionContent({ state, s, onReload, onOpenThread }: {
         setLoad({ status: 'ready', doc: {
           meta: { programCode: state.programCode, programName: state.className, sessionNo: s.no, title: s.title,
                   stageLabel: s.stageNo != null && s.stageTitle ? `Chặng ${s.stageNo} · ${s.stageTitle}` : undefined },
-          sections: c.sections,
+          sections: withTeacherPreview(c.sections, state.role),
         } })
       } catch (e) {
         if (alive) setLoad({ status: 'error', message: (e as Error).message || 'Chưa tải được giáo trình.' })
       }
     })()
     return () => { alive = false }
-  }, [s.sessionId, s.no, s.title, s.stageNo, s.stageTitle, state.programCode, state.className, rev])
+  }, [s.sessionId, s.no, s.title, s.stageNo, s.stageTitle, state.programCode, state.className, state.role, rev])
 
   const slot = useCallback((cp: CheckpointSection) => {
+    if (cp.preview) return <PreviewSubmit />
     if (state.role === 'teacher') return <p className="lt-note">Học viên trả bài tại đây. Bài gửi về Hàng đợi Trả/Hỏi bài để chấm.</p>
     const st = s.checkpoints.find(c => c.id === cp.id) ?? null
     const modes = submitModes(cp)
@@ -176,8 +185,14 @@ function SessionContent({ state, s, onReload, onOpenThread }: {
       </div>
     )
   }
-  // Chế độ giáo trình (chưa có bài trả): KHÔNG cắm phần tương tác → bài trả (nếu có) chỉ hiện tĩnh, không nút giả.
-  if (state.mode === 'curriculum') return <LessonDocument doc={load.doc} embedded />
+  // Chế độ giáo trình (chưa có bài trả): chỉ cắm phần hiển thị cho khung XEM TRƯỚC của giáo viên; học viên không thấy nút nộp nào.
+  if (state.mode === 'curriculum') {
+    return (
+      <CheckpointSlot.Provider value={cp => (cp.preview ? <PreviewSubmit /> : null)}>
+        <LessonDocument doc={load.doc} embedded />
+      </CheckpointSlot.Provider>
+    )
+  }
   return (
     <CheckpointSlot.Provider value={slot}>
       <LessonDocument doc={load.doc} embedded />
@@ -211,5 +226,19 @@ function RecentSubmissions({ classId, onOpenThread, onOpenProfile, onOpenCommuni
         Xem thêm về lớp <ArrowRight size={16} />
       </button>
     </section>
+  )
+}
+
+// Khung XEM TRƯỚC "Trả bài" (chỉ giáo viên, buổi chưa có bài trả thật) — xem withTeacherPreview trong lesson/checkpoint.ts.
+function PreviewSubmit() {
+  return (
+    <div className="lt-panel is-compact">
+      <div className="cs-learn-cp">
+        <div className="lt-actions">
+          <button type="button" className="lt-btn is-primary" disabled aria-disabled="true" title="Xem trước giao diện — chưa nộp được">TRẢ BÀI</button>
+        </div>
+        <p className="lt-note">Xem trước giao diện (chỉ giáo viên thấy) — chưa phải bài trả thật, không nộp được.</p>
+      </div>
+    </div>
   )
 }

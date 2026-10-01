@@ -113,6 +113,9 @@ export interface CheckpointSection {
   prompt?: string             // yêu cầu cụ thể: cần chứng minh điều gì
   required?: boolean          // mặc định true — đủ mọi checkpoint bắt buộc ĐẠT = xong buổi
   accepts?: CheckpointAccept[]
+  /** CHỈ RUNTIME — khung XEM TRƯỚC giao diện Trả bài cho giáo viên khi buổi chưa có bài trả thật.
+   *  KHÔNG bao giờ lưu trong class_lesson_content; không nộp được; không in. */
+  preview?: boolean
 }
 
 /** Khối nội dung trong section 'study'. Ô '___' trong bảng = chỗ học viên tự điền. */
