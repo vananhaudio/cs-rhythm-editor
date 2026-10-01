@@ -60,6 +60,11 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 - Mọi đọc/ghi qua RPC `lt_*`. Server tự lấy `auth.uid()` và tự đóng dấu danh tính học tập; client không gửi learner / role / identity.
 - Bằng chứng "đã cấu hình" trên production = chạy riêng `db/learning_threads_p1_diag.sql` → `CONFIG_GATE = PASS`. Bảng kết quả của script cấu hình KHÔNG tính (sự cố 29/09).
 
+## Giáo trình lớp + Lớp của tôi V1 (checkpoint) — từ 01/10/2026
+- **SOLO01 là Golden Reference.** Soạn/sửa bất kỳ buổi giáo trình lớp nào → ĐỌC `docs/GIAO-TRINH-CHUAN.md` trước. Chỉ bổ sung NỘI DUNG bằng loại khối có sẵn (`LessonSection`); visual do `LessonDocument` quyết; KHÔNG CSS/component riêng từng buổi, KHÔNG "SOLO01 V2". Bộ kiểm `src/lesson/curriculumStandard.ts` (test `curriculum-standard.test.ts`) phải PASS.
+- Bài trả = khối `{kind:'checkpoint', id:'<buổi>.<n>', title, prompt, required, accepts}` đặt TRONG mạch buổi. id bất biến. Không bảng định nghĩa riêng: server đọc `class_lesson_content.blocks`.
+- Tiến độ buổi = `learning_session_progress` (opened_at bất biến, completed_at một lần) qua RPC `class_learning_state` / `lt_submit_checkpoint`; hoàn thành buổi bằng trigger khi Thầy chấm Đạt. Thiết kế + triển khai: `docs/CLASS-CHECKPOINTS-V1.md`.
+
 ## Design tokens
 - Desktop portal: accent `#4F46E5`, bg `#F4F4F5`, surface `#FFFFFF`.
 - Mobile (light): primary `#4338CA`, accent `#EA580C`, bg `#F0F2F5`.
