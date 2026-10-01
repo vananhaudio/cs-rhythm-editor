@@ -1,7 +1,7 @@
 // /me/classes/<id> — "căn phòng của lớp": tên lớp, Thầy, số học viên, ngữ cảnh; tab Hoạt động | Thành viên.
 // Người ngoài lớp XEM được phần công khai (Learning Thread community của lớp) — không đăng, không Trả/Hỏi bài
 // từ đây, không xem danh sách thành viên. Quyền do server (RPC social_*) quyết, không chỉ ẩn nút.
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, Users } from 'lucide-react'
 import '../../learning-thread/styles'
 import { EmptyState } from '../ui'
@@ -10,59 +10,33 @@ import { usePostsFeed } from '../posts/useCommunityFeed'
 import type { PostSocial } from '../sections/PostCard'
 import FeedEntryCard from '../sections/FeedEntryCard'
 import { respondFriendRequest, sendFriendRequest } from '../friends/friendsApi'
-import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './classesApi'
-import type { ClassCard, ClassMember } from './classModel'
+import { fetchClassActivityPage, fetchClassMembers } from './classesApi'
+import type { ClassMember } from './classModel'
 import { ClassHeader, MemberList } from './ClassParts'
 import { programKeyOfClass } from '../identity/learningIdentity'
-import { fetchClassLearningState } from '../../classLearning/progressApi'
-import { curriculumState, type ClassLearningState } from '../../classLearning/progress'
-import { fetchClassOutline, type ClassOutlineData } from '../../classLearning/api'
 import ClassLearnView from './ClassLearnView'
+import { useClassLearning, type Load } from './useClassLearning'
 
 const CLASS_TABS = ['activity', 'members'] as const
 // Lớp có giáo trình V1 (checkpoint): mặc định HỌC; "Xem thêm về lớp" → phần cộng đồng (Hoạt động | Thành viên) như cũ.
 const CLASS_MODES = ['learn', 'community'] as const
 
-type Load<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
-
-export default function ClassPage({ classId, isTeacher = false, onOpenThread, onOpenProfile, onOpenClasses }: {
+export default function ClassPage({ classId, isTeacher = false, onOpenThread, onOpenProfile, onOpenClasses, onOpenSession }: {
   classId: string
+  /** Trang Lớp = BẢN ĐỒ: bấm một buổi → Trang Buổi riêng (/me/classes/<id>/sessions/<n>) */
+  onOpenSession: (sessionNo: number) => void
   /** Thầy/admin: xem trước màn học (đọc giáo trình nhờ RLS teacher có sẵn) — không cần là học viên lớp */
   isTeacher?: boolean
   onOpenThread: (id: string) => void
   onOpenProfile: (userId: string) => void
   onOpenClasses: () => void
 }) {
-  const [detail, setDetail] = useState<Load<ClassCard>>({ status: 'loading' })
+  const { detail, learn: learnReady, loading: learnLoading } = useClassLearning(classId, isTeacher)
   const [tab, setTab] = useHistoryTab<'activity' | 'members'>('csClassTab', 'activity', CLASS_TABS)
   const [members, setMembers] = useState<Load<ClassMember[]> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actError, setActError] = useState<string | null>(null)
   const [mode, setMode] = useHistoryTab<'learn' | 'community'>('csClassMode', 'learn', CLASS_MODES)
-  // Trạng thái học (server). Lỗi / lớp chưa bật V1 → trang lớp cũ (progressive enhancement, không regression).
-  const [learn, setLearn] = useState<ClassLearningState | 'loading' | 'off'>('loading')
-  const [learnRev, setLearnRev] = useState(0)
-  const reloadLearn = useCallback(() => setLearnRev(x => x + 1), [])
-  useEffect(() => {
-    let alive = true
-    void fetchClassLearningState(classId).then(r => { if (alive) setLearn(r.ok ? r.value : 'off') })
-    return () => { alive = false }
-  }, [classId, learnRev])
-  // Giáo trình lớp đọc qua RLS SẴN CÓ (học viên: thành viên + quyền giáo trình + đã xuất bản; Thầy/admin: tất cả).
-  // Có giáo trình (HAS_CURRICULUM) → màn học; checkpoint (HAS_CHECKPOINTS) chỉ BẬT THÊM trả bài/tiến độ.
-  const [outline, setOutline] = useState<ClassOutlineData | 'loading' | 'off'>('loading')
-  useEffect(() => {
-    let alive = true
-    void import('../../supabase').then(({ supabase }) => fetchClassOutline(supabase, classId))
-      .then(o => { if (alive) setOutline(o) }, () => { if (alive) setOutline('off') })
-    return () => { alive = false }
-  }, [classId])
-
-  useEffect(() => {
-    let alive = true
-    void fetchClassDetail(classId).then(r => { if (alive) setDetail(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message }) })
-    return () => { alive = false }
-  }, [classId])
   const name = detail.status === 'ready' ? detail.value.name : null
   useEffect(() => { if (name) document.title = `${name} · Thầy Văn Anh Guitar` }, [name])
 
@@ -90,14 +64,8 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
       ? { status: 'ready', value: cur.value.map(x => (x.userId === m.userId ? { ...x, relationship: r.value } : x)) } : cur)
   }
 
-  const checkpointReady = learn !== 'loading' && learn !== 'off' && learn.enabled ? learn : null
-  const curriculumReady = useMemo(() => (!checkpointReady && learn !== 'loading' && outline !== 'loading' && outline !== 'off' && detail.status === 'ready'
-    ? curriculumState({ classId, programCode: detail.value.programCode, classCode: detail.value.code, className: detail.value.name,
-        role: isTeacher ? 'teacher' : 'learner', ...outline })
-    : null), [checkpointReady, learn, outline, detail, classId, isTeacher])
-  const learnReady = checkpointReady ?? curriculumReady
   if (learnReady && mode === 'learn') {
-    return <ClassLearnView state={learnReady} onReload={reloadLearn} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
+    return <ClassLearnView state={learnReady} onOpenSession={onOpenSession} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
       onOpenClasses={onOpenClasses} onOpenCommunity={() => { setMode('community'); window.scrollTo(0, 0) }} />
   }
 
@@ -107,7 +75,7 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
       {learnReady && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={() => { setMode('learn'); window.scrollTo(0, 0) }}>Vào học</button>}
     </div>
   )
-  if ((learn === 'loading' || outline === 'loading' || detail.status === 'loading') && mode === 'learn') return <div className="cs-col cs-home"><p className="cs-loading" role="status">Đang mở lớp…</p></div>
+  if (learnLoading && mode === 'learn') return <div className="cs-col cs-home"><p className="cs-loading" role="status">Đang mở lớp…</p></div>
   if (detail.status === 'loading') return <div className="cs-col cs-home">{back}<p className="cs-loading" role="status">Đang mở lớp…</p></div>
   if (detail.status === 'error') return <div className="cs-col cs-home">{back}<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div></div>
 

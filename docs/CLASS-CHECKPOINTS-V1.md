@@ -108,6 +108,24 @@ Nhánh `feat/class-checkpoints-v1`. Phân cấp: **HÀNH TRÌNH → LỚP → BU
    - Rollback luôn gỡ RPC/trigger và trả 3 hàm về bản cũ.
    - Bảng / cột / ràng buộc chỉ gỡ khi chưa có dữ liệu V1; có dữ liệu thì giữ.
 
+## Kiến trúc V2 — TRANG LỚP (bản đồ) ⟂ TRANG BUỔI (phòng học) (02/10/2026)
+- `/me/classes/<id>` = **bản đồ**: header lớp, 3 chặng, 24 buổi dọc, vạch nghỉ, trạng thái buổi, "Các bạn vừa trả bài", [Xem thêm về lớp].
+  - KHÔNG render giáo án, KHÔNG tải blocks (`fetchClassOutline` chỉ đọc `session_id, status`).
+  - Bấm buổi → Trang Buổi. Buổi khoá với người học: thấy nhưng nút bị vô hiệu.
+- `/me/classes/<id>/sessions/<n>` = **phòng học**: "← tên lớp", `LessonDocument` của ĐÚNG buổi (tải một buổi), bài trả tại chỗ, ← Buổi trước / Buổi sau → (tôn trọng khoá).
+  - Không bản đồ, không feed, không social.
+  - Deep link + reload được; link được giữ qua bước đăng nhập (`keepsPathForGuest`).
+- Quay lại: chuyển Buổi trước/sau THAY mục lịch sử (Trang Buổi luôn sâu một cấp dưới Trang Lớp).
+  - "← Về lớp" = `history.back` nếu trang trước là `/me`, mở thẳng bằng link thì mở Trang Lớp.
+  - Trang Lớp đưa dòng buổi vừa xem vào giữa màn hình (`sessionStorage`, một lần, 10 phút).
+- Bảo mật: URL không vượt quyền.
+  - Buổi khoá (người học, chế độ checkpoint) → không tải nội dung.
+  - Không có quyền giáo trình → "chưa xem được giáo trình". `class_lesson_content` vẫn do RLS chặn ở server.
+- Buổi hiện tại: `currentSessionNo()` (progress.ts) — chế độ checkpoint theo tiến độ server, chế độ giáo trình theo lịch.
+  - Trình bày (`aria-current`, `is-current`) tách khỏi cách xác định → sau này đổi sang tiến độ cá nhân chỉ sửa hàm này.
+- Code: `useClassLearning` (nạp chung), `ClassLearnView` (bản đồ), `ClassSessionPage` (phòng học), `resolveMeRoute` (`sessionPath` / `sessionFromPath`).
+- alphaTab: `player.scrollMode = Off` trong `LessonScore` (mặc định Continuous tự kéo trang tới bản nhạc vừa khắc).
+
 ## Chế độ GIÁO TRÌNH (01/10/2026, main 79ff889) — không cần checkpoint
 - `ClassPage`: `class_learning_state` enabled (có checkpoint) → chế độ checkpoint như trên. Nếu không: giáo trình đọc qua RLS SẴN CÓ
   (`fetchClassOutline`: học viên = thành viên + quyền giáo trình + đã xuất bản; Thầy/admin = tất cả) → `curriculumState()` → màn học.

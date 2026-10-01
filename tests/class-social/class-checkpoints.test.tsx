@@ -172,9 +172,11 @@ test("visibility: bài trả = Các bạn cùng lớp | Chỉ Thầy; thread cũ
 test("sơ đồ buổi: dòng thu gọn 'Buổi 0N · Tiêu đề'; buổi hiện tại đánh dấu; dòng trạng thái buổi", () => {
   const st = ready(RAW);
   const row = renderToStaticMarkup(<SessionRowHead s={st.sessions[1]} role="learner" now={NOW} paceDays={7} expanded current onToggle={() => {}} />);
-  assert.match(row, /Buổi 02 · Ép ngón &amp; Bass/); assert.match(row, /is-current/); assert.match(row, /aria-pressed="true"/);
+  assert.match(row, /Buổi 02 · Ép ngón &amp; Bass/); assert.match(row, /is-current/); assert.match(row, /aria-current="step"/);
   const locked = renderToStaticMarkup(<SessionRowHead s={st.sessions[2]} role="learner" now={NOW} paceDays={7} expanded={false} current={false} onToggle={() => {}} />);
   assert.match(locked, /is-locked/);
+  const lockedBtn = renderToStaticMarkup(<SessionRowHead s={st.sessions[2]} role="learner" now={NOW} paceDays={7} expanded={false} current={false} disabled onToggle={() => {}} />);
+  assert.match(lockedBtn, /disabled=""/);   // buổi khoá: thấy trên bản đồ, không vào học
   const line = renderToStaticMarkup(<SessionStatusLine s={st.sessions[1]} now={NOW} paceDays={7} />);
   assert.match(line, /0\/2 bài trả bắt buộc đã Đạt/);
 });
@@ -248,4 +250,23 @@ test("xem trước Trả bài: CHỈ giáo viên + buổi chưa có bài trả; 
   assert.match(html, /Trả bài · Xem trước/);
   assert.doesNotMatch(html, /Bắt buộc để hoàn thành buổi/);
   assert.ok(html.indexOf("Trả bài · Xem trước") > html.indexOf(">y<"), "khung xem trước ở CUỐI giáo án");
+});
+
+// ── Trang BUỔI riêng: /me/classes/<id>/sessions/<n> (deep link / reload / giữ qua đăng nhập) ──
+import { keepsPathForGuest, sessionFromPath, sessionPath, viewFromPath as vfp, viewPath as vp, sameView as sv } from "../../src/class-social/resolveMeRoute";
+test("route Trang Buổi: phân tích · khứ hồi · giữ qua đăng nhập · không nhầm với trang lớp", () => {
+  const P = `/me/classes/${CLS}/sessions/3`;
+  assert.equal(sessionPath(CLS, 3), P);
+  assert.deepEqual(sessionFromPath(P), { classId: CLS, sessionNo: 3 });
+  assert.deepEqual(sessionFromPath(P + "/"), { classId: CLS, sessionNo: 3 });
+  assert.deepEqual(vfp(P), { kind: "session", classId: CLS, sessionNo: 3 });
+  assert.equal(vp({ kind: "session", classId: CLS, sessionNo: 24 }), `/me/classes/${CLS}/sessions/24`);
+  assert.ok(sv(vfp(P), { kind: "session", classId: CLS, sessionNo: 3 }));
+  assert.equal(sv(vfp(P), { kind: "session", classId: CLS, sessionNo: 4 }), false);
+  assert.equal(sv(vfp(P), { kind: "class", classId: CLS }), false);
+  assert.deepEqual(vfp(`/me/classes/${CLS}`), { kind: "class", classId: CLS });
+  assert.ok(keepsPathForGuest(vfp(P)));
+  for (const bad of [`/me/classes/${CLS}/sessions/0`, `/me/classes/${CLS}/sessions/abc`, `/me/classes/${CLS}/sessions/-1`, `/me/classes/not-a-uuid/sessions/3`, `/me/classes/${CLS}/sessions/99999`]) {
+    assert.equal(sessionFromPath(bad), null, bad);
+  }
 });

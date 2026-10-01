@@ -1,46 +1,25 @@
-// Lớp của tôi V1 — màn HỌC của một lớp có giáo trình (/me/classes/<id>): chọn lớp là HỌC NGAY.
-// Sơ đồ DỌC các buổi (thu gọn) → buổi hiện tại tự mở → nội dung buổi render bằng CHÍNH LessonDocument của SOLO01
-// → bài trả (checkpoint) có nút TRẢ BÀI + trạng thái ngay tại chỗ (cắm qua CheckpointSlot, không sửa section nào khác)
-// → bên dưới: "Các bạn vừa trả bài" (5 mục, dùng lại social_class_activity) + [Xem thêm về lớp] sang trang cộng đồng lớp.
-// Quyền / buổi mở / checkpoint canonical: SERVER (class_learning_state, lt_submit_checkpoint). Không suy luận quyền ở đây.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// Lớp của tôi — TRANG LỚP = BẢN ĐỒ (/me/classes/<id>): "Tôi đang ở đâu và học buổi nào?"
+// Sơ đồ DỌC 24 buổi (3 chặng, vạch nghỉ) — bấm một buổi → TRANG BUỔI riêng (/me/classes/<id>/sessions/<n>) để HỌC.
+// Không render giáo án ở đây (không tải blocks của các buổi). Bên dưới: "Các bạn vừa trả bài" (social_class_activity)
+// + [Xem thêm về lớp] → trang cộng đồng lớp. Buổi hiện tại do currentSessionNo() quyết (hôm nay: theo lịch ở chế độ
+// giáo trình / theo tiến độ server ở chế độ checkpoint) — trình bày tách khỏi cách xác định.
+import { useCallback, useEffect, useMemo } from 'react'
 import { ArrowLeft, ArrowRight, Users } from 'lucide-react'
 import '../../learning-thread/styles'
-import LessonDocument from '../../lesson/LessonDocument'
-import { CheckpointSlot } from '../../lesson/checkpointSlot'
-import type { CheckpointSection, LessonDoc } from '../../lesson/lessonTypes'
-import { submitModes, withTeacherPreview } from '../../lesson/checkpoint'
-import { fetchSessionContent } from '../../classLearning/api'
-import { currentSessionNo, sessionPhase, type ClassLearningState, type SessionState } from '../../classLearning/progress'
-import StudentComposer from '../../learning-thread/StudentComposer'
-import { submitCheckpoint } from '../../classLearning/progressApi'
+import { currentSessionNo, pad2, sessionPhase } from '../../classLearning/progress'
 import { EmptyState } from '../ui'
 import { usePostsFeed } from '../posts/useCommunityFeed'
 import type { PostSocial } from '../sections/PostCard'
 import FeedEntryCard from '../sections/FeedEntryCard'
 import { fetchClassActivityPage } from './classesApi'
-import { BreakDivider, CheckpointStatusView, LockedNote, SessionRowHead, SessionStatusLine } from './LearnParts'
+import { BreakDivider, SessionRowHead } from './LearnParts'
+import { takeReturnSession, type LearnReady } from './useClassLearning'
 
-type Ready = Extract<ClassLearningState, { enabled: true }>
-const OPEN_KEY = 'csLearnOpen'
 const RECENT_COUNT = 5
 
-function savedOpen(classId: string): number | null {
-  const v = (window.history.state as Record<string, unknown> | null)?.[OPEN_KEY]
-  return v && typeof v === 'object' && (v as Record<string, unknown>)[classId] !== undefined
-    ? Number((v as Record<string, unknown>)[classId]) : null
-}
-function rememberOpen(classId: string, no: number | null) {
-  try {
-    const prev = ((window.history.state as Record<string, unknown> | null)?.[OPEN_KEY] ?? {}) as Record<string, unknown>
-    window.history.replaceState({ ...(window.history.state ?? {}), [OPEN_KEY]: { ...prev, [classId]: no } }, '')
-  } catch { /* bỏ qua */ }
-}
-
-export default function ClassLearnView({ state, onReload, onOpenThread, onOpenProfile, onOpenClasses, onOpenCommunity }: {
-  state: Ready
-  /** tải lại trạng thái (yên lặng — không tháo nội dung đang đọc) */
-  onReload: () => void
+export default function ClassLearnView({ state, onOpenSession, onOpenThread, onOpenProfile, onOpenClasses, onOpenCommunity }: {
+  state: LearnReady
+  onOpenSession: (sessionNo: number) => void
   onOpenThread: (id: string) => void
   onOpenProfile: (userId: string) => void
   onOpenClasses: () => void
@@ -48,30 +27,17 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
 }) {
   // Nhịp tuần tính theo giờ SERVER (không tin đồng hồ máy học viên)
   const now = useMemo(() => (state.serverNow ? new Date(state.serverNow) : new Date()), [state.serverNow])
-  // MỘT buổi đang chọn (không có trạng thái "không chọn"): vào lớp = buổi hiện tại.
-  const [selected, setSelected] = useState<number | null>(() => savedOpen(state.classId) ?? currentSessionNo(state, now))
   const current = currentSessionNo(state, now)
-  const lessonRef = useRef<HTMLElement>(null)
-  // Chỉ khi NGƯỜI DÙNG bấm chọn buổi mới cuộn tới ĐẦU giáo án; vào lớp / tải lại trạng thái thì không cuộn.
-  const scrollOnSelect = useRef(false)
-  useEffect(() => {
-    if (!scrollOnSelect.current) return
-    scrollOnSelect.current = false
-    // Vị trí đầu giáo án = ngay dưới sơ đồ (không phụ thuộc nội dung đang tải) → cuộn MỘT lần.
-    // scroll-margin-top (CSS) chừa thanh trên dính của /me để tiêu đề "BUỔI NN" không bị che.
-    // Cuộn TỨC THÌ một lần: cuộn mượt bị nội dung đang tải (bản nhạc) làm lệch / cắt ngang giữa chừng.
-    lessonRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
-  }, [selected])
 
-  const select = (no: number) => {
-    scrollOnSelect.current = true
-    setSelected(no)
-    rememberOpen(state.classId, no)
-  }
-  const sel = state.sessions.find(s => s.no === selected) ?? null
+  useEffect(() => {
+    const no = takeReturnSession(state.classId)
+    if (no) document.getElementById(`buoi-${pad2(no)}`)?.scrollIntoView({ block: 'center' })
+  }, [state.classId])
+
+  const open = (no: number) => onOpenSession(no)
 
   return (
-    <div className="cs-col-wide cs-home cs-learn">
+    <div className="cs-col cs-home cs-learn">
       <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp học</button>
       <header className="cs-card cs-learn-head">
         <span className="cs-learn-kicker">{state.programCode}</span>
@@ -81,122 +47,27 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
         )}
       </header>
 
-      {/* SƠ ĐỒ: một khối liên tục, không chen giáo án vào giữa */}
       <ol className="cs-learn-map" aria-label="Sơ đồ giáo trình">
         {state.sessions.map((s, i) => {
           const prevStage = i > 0 ? state.sessions[i - 1].stageNo : null
           const stageHead = s.stageNo != null && s.stageNo !== prevStage && s.stageTitle
             ? <li key={'stage-' + s.stageNo} className="cs-learn-stage" aria-hidden="true">Chặng {s.stageNo} · {s.stageTitle}</li> : null
           const brk = state.breaks.find(b => b.beforeNo === s.no)
-          const isSel = selected === s.no
+          const locked = sessionPhase(s, state.role, state.mode) === 'locked'
           return [
             brk ? <BreakDivider key={'break-' + s.no} title={brk.title} /> : null,   // nghỉ cuối chặng trước, rồi mới sang chặng mới
             stageHead,
-            <li key={s.sessionId} className={'cs-learn-item' + (isSel ? ' is-open' : '')}>
-              <SessionRowHead s={s} role={state.role} mode={state.mode} now={now} paceDays={state.paceDays} expanded={isSel}
-                current={s.no === current} onToggle={() => select(s.no)} />
+            <li key={s.sessionId} className="cs-learn-item">
+              <SessionRowHead s={s} role={state.role} mode={state.mode} now={now} paceDays={state.paceDays} expanded={false}
+                current={s.no === current} disabled={locked} onToggle={() => open(s.no)} />
             </li>,
           ]
         })}
         {state.breaks.filter(b => b.beforeNo == null).map(b => <BreakDivider key="break-end" title={b.title} />)}
       </ol>
 
-      {/* GIÁO ÁN của buổi đang chọn — ngay dưới sơ đồ */}
-      <section ref={lessonRef} className="cs-learn-lesson" id="giao-an" aria-label={sel ? `Giáo án Buổi ${String(sel.no).padStart(2, '0')}` : 'Giáo án'}>
-        {sel
-          ? <SessionBody key={sel.sessionId} state={state} s={sel} now={now} onReload={onReload} onOpenThread={onOpenThread} />
-          : <p className="cs-learn-locked">Chọn một buổi trong sơ đồ để xem giáo án.</p>}
-      </section>
-
-      <RecentSubmissions key={state.serverNow ?? ''} classId={state.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} onOpenCommunity={onOpenCommunity} />
+      <RecentSubmissions classId={state.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} onOpenCommunity={onOpenCommunity} />
     </div>
-  )
-}
-
-function SessionBody({ state, s, now, onReload, onOpenThread }: {
-  state: Ready; s: SessionState; now: Date; onReload: () => void; onOpenThread: (id: string) => void
-}) {
-  const phase = sessionPhase(s, state.role, state.mode)
-  if (phase === 'locked') return <LockedNote sessions={state.sessions} s={s} />
-  if (!s.published) return <p className="cs-learn-locked">Nội dung buổi này đang được cập nhật.</p>
-  return (
-    <>
-      {state.role === 'learner' && state.mode === 'checkpoint' && <SessionStatusLine s={s} now={now} paceDays={state.paceDays} />}
-      <SessionContent key={s.sessionId} state={state} s={s} onReload={onReload} onOpenThread={onOpenThread} />
-    </>
-  )
-}
-
-type ContentLoad = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; doc: LessonDoc }
-
-function SessionContent({ state, s, onReload, onOpenThread }: {
-  state: Ready; s: SessionState; onReload: () => void; onOpenThread: (id: string) => void
-}) {
-  const [load, setLoad] = useState<ContentLoad>({ status: 'loading' })
-  const [rev, setRev] = useState(0)
-  const [composing, setComposing] = useState<string | null>(null)
-  useEffect(() => {
-    let alive = true
-    void (async () => {
-      try {
-        const db = (await import('../../supabase')).supabase
-        const c = await fetchSessionContent(db, s.sessionId)
-        if (!alive) return
-        if (!c) { setLoad({ status: 'error', message: 'Chưa mở được giáo trình buổi này.' }); return }
-        setLoad({ status: 'ready', doc: {
-          meta: { programCode: state.programCode, programName: state.className, sessionNo: s.no, title: s.title,
-                  stageLabel: s.stageNo != null && s.stageTitle ? `Chặng ${s.stageNo} · ${s.stageTitle}` : undefined },
-          sections: withTeacherPreview(c.sections, state.role),
-        } })
-      } catch (e) {
-        if (alive) setLoad({ status: 'error', message: (e as Error).message || 'Chưa tải được giáo trình.' })
-      }
-    })()
-    return () => { alive = false }
-  }, [s.sessionId, s.no, s.title, s.stageNo, s.stageTitle, state.programCode, state.className, state.role, rev])
-
-  const slot = useCallback((cp: CheckpointSection) => {
-    if (cp.preview) return <PreviewSubmit />
-    if (state.role === 'teacher') return <p className="lt-note">Học viên trả bài tại đây. Bài gửi về Hàng đợi Trả/Hỏi bài để chấm.</p>
-    const st = s.checkpoints.find(c => c.id === cp.id) ?? null
-    const modes = submitModes(cp)
-    const key = `${s.no}:${cp.id}`
-    const composer = composing === key ? (
-      <StudentComposer lessonId={`cp-${state.classId}-${key}`} kinds={['submission']} initialKind="submission"
-        isNewThread={!st?.thread} visibilities={['class', 'private']} title={`Trả bài ${cp.id}`}
-        placeholder="Viết ngắn gọn bạn đã làm được gì, chỗ nào còn vướng." requireMedia={!modes.text} allowMedia={modes.video}
-        sendEvent={i => submitCheckpoint({ classId: state.classId, sessionNo: s.no, checkpointId: cp.id, body: i.body, mediaUrl: i.mediaUrl, visibility: i.visibility })}
-        onSent={() => { setComposing(null); onReload() }} onCancel={() => setComposing(null)} />
-    ) : undefined
-    return (
-      <div className="lt-panel is-compact">
-        <CheckpointStatusView cp={st} supported={modes.supported} composer={composer}
-          onSubmit={() => setComposing(key)} onView={onOpenThread} />
-      </div>
-    )
-  }, [state.role, state.classId, s.checkpoints, s.no, composing, onReload, onOpenThread])
-
-  if (load.status === 'loading') return <p className="cs-loading" role="status">Đang mở giáo trình…</p>
-  if (load.status === 'error') {
-    return (
-      <div className="cs-card cs-feed-error" role="alert">
-        <p>{load.message}</p>
-        <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm" onClick={() => { setLoad({ status: 'loading' }); setRev(x => x + 1) }}>Thử lại</button>
-      </div>
-    )
-  }
-  // Chế độ giáo trình (chưa có bài trả): chỉ cắm phần hiển thị cho khung XEM TRƯỚC của giáo viên; học viên không thấy nút nộp nào.
-  if (state.mode === 'curriculum') {
-    return (
-      <CheckpointSlot.Provider value={cp => (cp.preview ? <PreviewSubmit /> : null)}>
-        <LessonDocument doc={load.doc} embedded />
-      </CheckpointSlot.Provider>
-    )
-  }
-  return (
-    <CheckpointSlot.Provider value={slot}>
-      <LessonDocument doc={load.doc} embedded />
-    </CheckpointSlot.Provider>
   )
 }
 
@@ -229,16 +100,3 @@ function RecentSubmissions({ classId, onOpenThread, onOpenProfile, onOpenCommuni
   )
 }
 
-// Khung XEM TRƯỚC "Trả bài" (chỉ giáo viên, buổi chưa có bài trả thật) — xem withTeacherPreview trong lesson/checkpoint.ts.
-function PreviewSubmit() {
-  return (
-    <div className="lt-panel is-compact">
-      <div className="cs-learn-cp">
-        <div className="lt-actions">
-          <button type="button" className="lt-btn is-primary" disabled aria-disabled="true" title="Xem trước giao diện — chưa nộp được">TRẢ BÀI</button>
-        </div>
-        <p className="lt-note">Xem trước giao diện (chỉ giáo viên thấy) — chưa phải bài trả thật, không nộp được.</p>
-      </div>
-    </div>
-  )
-}

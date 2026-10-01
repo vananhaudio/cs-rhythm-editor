@@ -14,7 +14,7 @@ import TeacherComposer from './TeacherComposer'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; thread: ThreadDetail }
 
-export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, onOpenProfile, onOpenClass }: {
+export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, onOpenProfile, onOpenClass, onOpenSession }: {
   threadId: string
   isTeacher: boolean
   onBack: () => void
@@ -22,6 +22,8 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
   onOpenProfile?: (userId: string) => void
   /** bài trả checkpoint: quay về đúng giáo trình lớp */
   onOpenClass?: (classId: string) => void
+  /** bài trả checkpoint: mở thẳng Trang Buổi chứa bài trả */
+  onOpenSession?: (classId: string, sessionNo: number) => void
 }) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [lesson, setLesson] = useState<LessonThreadState | null>(null)
@@ -93,9 +95,11 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
     <div className="cs-col cs-home lt-page">
       {back}
       <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} showIdentity />
-      {cp?.classId && onOpenClass && (t.isMine || !isTeacher) && (
+      {cp?.classId && (onOpenSession || onOpenClass) && (t.isMine || !isTeacher) && (
         <div className="lt-actions">
-          <button type="button" className="lt-btn is-ghost" onClick={() => onOpenClass(cp.classId!)}>Mở giáo trình Buổi {String(cp.sessionNo).padStart(2, '0')}</button>
+          <button type="button" className="lt-btn is-ghost"
+            onClick={() => (onOpenSession ? onOpenSession(cp.classId!, cp.sessionNo) : onOpenClass!(cp.classId!))}>
+            Mở giáo trình Buổi {String(cp.sessionNo).padStart(2, '0')}</button>
         </div>
       )}
       {error && <p className="cs-form-error" role="alert">{error}</p>}

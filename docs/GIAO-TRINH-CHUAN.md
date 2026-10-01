@@ -80,6 +80,29 @@ Luật máy kiểm (`src/lesson/curriculumStandard.ts`, test `tests/class-social
 - Buổi đã xuất bản mà **không có bài trả bắt buộc nào** thì không tự hoàn thành. Học viên sẽ dừng ở buổi đó, nên **buổi nào cũng cần ≥ 1 bài trả bắt buộc**.
 - Màn học "Lớp của tôi" bật khi lớp có giáo trình đọc được (HAS_CURRICULUM). Chưa có checkpoint = chế độ giáo trình: xem sơ đồ + giáo án, mọi buổi đã xuất bản mở, không nút trả bài, không tiến độ. Có ≥ 1 checkpoint (HAS_CHECKPOINTS) thì bật thêm trả bài + mở khoá theo buổi.
 
+## 4b. NHỊP HỌC — cấu trúc sư phạm, KHÔNG phải model riêng
+
+HÀNH TRÌNH → LỚP → BUỔI/TUẦN → **NHỊP HỌC** → BÀI TRẢ.
+
+Một buổi có **N nhịp**, mỗi nhịp là: HỌC/ĐỌC → THỰC HÀNH → TRẢ BÀI → sang nhịp tiếp.
+- Số nhịp **không cố định** (2, 3, 4… tuỳ giáo án).
+- Điểm ngắt nhịp do **Owner quyết khi soạn**. Claude không tự chia nhịp cho giáo án có sẵn.
+
+Biểu diễn: **nhịp hình thành bởi VỊ TRÍ khối `checkpoint` trong `LessonSection[]`**. Không có bảng, type hay model "nhịp" riêng:
+
+```
+[recap] [objectives]
+[note] [score] [layers]          ← Nhịp 1: học + thực hành
+[checkpoint 3.1]                 ← kết thúc Nhịp 1
+[fretboard] [score]              ← Nhịp 2
+[checkpoint 3.2]                 ← kết thúc Nhịp 2
+[repertoire] [assignment] [checklist] [studentNotes]   ← đuôi buổi chuẩn SOLO01
+```
+
+- Renderer (`LessonDocument`) và Trang Buổi hiển thị đúng thứ tự này: bài trả nằm NGAY sau phần học của nhịp, không gom xuống cuối buổi.
+- Chỉ tạo model riêng khi có nhu cầu kỹ thuật thật (ví dụ khoá từng nhịp). Hiện mở khoá vẫn theo **buổi**.
+- Khung "Trả bài · Xem trước" cuối giáo án (chỉ giáo viên thấy, khi buổi chưa có bài trả) chỉ là **trạng thái review giao diện**, KHÔNG phải cấu trúc giáo trình.
+
 ## 5. Thêm Buổi 06, 07 … (quy trình)
 
 1. Chép `src/data/solo01/buoi05.ts` → `buoi06.ts`, đổi `SOLO01_BUOI06`, `sessionNo: 6`, nội dung mới. Giữ đúng mạch ở mục 3, thêm bài trả `6.1`, `6.2` … trong mạch.
