@@ -11,12 +11,14 @@ import { MEDIA_ERROR_TEXT, parseExternalMedia } from '../class-social/media/pars
 import { respondAsTeacher } from './ltApi'
 import { MAX_EVENT_BODY, checkBody, teacherKind, type ThreadEvent, type Verdict } from './ltModel'
 
-export default function TeacherComposer({ threadId, events, allowKho, onSent, respond = respondAsTeacher }: {
+export default function TeacherComposer({ threadId, events, allowKho, onSent, respond = respondAsTeacher, isCheckpoint = false }: {
   threadId: string
   events: Pick<ThreadEvent, 'authorRole' | 'kind'>[]
   allowKho: boolean
   onSent: () => void
   respond?: typeof respondAsTeacher
+  /** bài trả checkpoint trong giáo trình lớp: Đạt đủ bài bắt buộc → server hoàn thành buổi + mở buổi kế */
+  isCheckpoint?: boolean
 }) {
   const [body, setBody] = useState('')
   const [url, setUrl] = useState('')
@@ -100,7 +102,9 @@ export default function TeacherComposer({ threadId, events, allowKho, onSent, re
           {sending === 'pass' ? 'Đang gửi…' : 'Đạt'}
         </button>
       </div>
-      <p className="lt-note">"Đạt" chỉ ghi kết quả vào cuộc trao đổi — chưa tự hoàn thành bài hay mở bài tiếp theo.</p>
+      <p className="lt-note">{isCheckpoint
+        ? '"Đạt" ghi kết quả bài trả này. Khi mọi bài trả bắt buộc của buổi đã Đạt, buổi được hoàn thành và buổi tiếp theo tự mở cho học viên.'
+        : '"Đạt" chỉ ghi kết quả vào cuộc trao đổi — chưa tự hoàn thành bài hay mở bài tiếp theo.'}</p>
     </div>
   )
 }

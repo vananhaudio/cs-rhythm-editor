@@ -98,6 +98,22 @@ export type LessonSection =
   | { kind: 'studentNotes'; title?: string; lines?: number }
   /** Tài liệu dạng văn bản (vd "Ôn tập 7 ngày" của Hành trình 2027) — chuỗi khối tự do */
   | { kind: 'study'; tag?: string; title: string; blocks: StudyBlock[] }
+  /** Bài trả (checkpoint năng lực) đặt NGAY trong mạch buổi — xem docs/GIAO-TRINH-CHUAN.md.
+   *  id ổn định trong chương trình + buổi ('4.1'); required mặc định true; accepts mặc định ['text','video_link'].
+   *  Trong /me: nút TRẢ BÀI + trạng thái tại chỗ. Trang công khai / in PDF: hiện tĩnh. */
+  | CheckpointSection
+
+/** Cách học viên chứng minh đã đạt. V1 chạy được: text, video_link. Các loại còn lại để dành (chưa có hạ tầng). */
+export type CheckpointAccept = 'text' | 'video_link' | 'image' | 'audio' | 'quiz' | 'interaction'
+
+export interface CheckpointSection {
+  kind: 'checkpoint'
+  id: string                  // '4.1' — khớp ^[0-9A-Za-z][0-9A-Za-z._-]{0,15}$, KHÔNG trùng trong cùng buổi
+  title: string
+  prompt?: string             // yêu cầu cụ thể: cần chứng minh điều gì
+  required?: boolean          // mặc định true — đủ mọi checkpoint bắt buộc ĐẠT = xong buổi
+  accepts?: CheckpointAccept[]
+}
 
 /** Khối nội dung trong section 'study'. Ô '___' trong bảng = chỗ học viên tự điền. */
 export type StudyBlock =

@@ -6,19 +6,22 @@ import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ListChecks } from 'lucide-react'
 import './styles'
 import { fetchLessonStates, fetchThread, moderate, setVisibility } from './ltApi'
-import { VISIBILITY_LABEL, canAsk, canSubmit, type LessonThreadState, type StudentKind, type ThreadDetail, type ThreadEvent, type Visibility } from './ltModel'
+import { submitCheckpoint } from '../classLearning/progressApi'
+import { VISIBILITY_LABEL, canAsk, canSubmit, otherVisibility, visibilityChoices, type LessonThreadState, type StudentKind, type ThreadDetail, type ThreadEvent } from './ltModel'
 import ThreadView from './ThreadView'
 import StudentComposer from './StudentComposer'
 import TeacherComposer from './TeacherComposer'
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; thread: ThreadDetail }
 
-export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, onOpenProfile }: {
+export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, onOpenProfile, onOpenClass }: {
   threadId: string
   isTeacher: boolean
   onBack: () => void
   onOpenQueue?: () => void
   onOpenProfile?: (userId: string) => void
+  /** bài trả checkpoint: quay về đúng giáo trình lớp */
+  onOpenClass?: (classId: string) => void
 }) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [lesson, setLesson] = useState<LessonThreadState | null>(null)
@@ -70,6 +73,9 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
   const t = load.thread
   const closed = t.archived || t.isHidden
   const kinds: StudentKind[] = lesson ? [...(canSubmit(lesson) ? ['submission' as const] : []), ...(canAsk(lesson) ? ['question' as const] : [])] : []
+  // Bài trả checkpoint: Trả lại khi Thầy đã phản hồi / yêu cầu làm lại (server vẫn kiểm quyền + buổi đã mở).
+  const cp = t.checkpoint
+  const cpCanResubmit = !!cp?.classId && (t.status === 'needs_retry' || t.status === 'teacher_responded')
 
   const run = async (f: () => Promise<{ ok: boolean; message?: string }>) => {
     if (busy) return
@@ -79,23 +85,36 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
     setError(r.ok ? null : r.message ?? null)
     if (r.ok) reload()
   }
-  const toggleVisibility = () => run(() => setVisibility(t.id, (t.visibility === 'community' ? 'private' : 'community') as Visibility) as Promise<{ ok: boolean; message?: string }>)
+  const nextVisibility = otherVisibility(t.visibility, !!cp)
+  const toggleVisibility = () => run(() => setVisibility(t.id, nextVisibility) as Promise<{ ok: boolean; message?: string }>)
   const moderateEvent = (e: ThreadEvent, hidden: boolean) => void run(() => moderate('event', e.id, hidden) as Promise<{ ok: boolean; message?: string }>)
 
   return (
     <div className="cs-col cs-home lt-page">
       {back}
       <ThreadView thread={t} canModerate={isTeacher} onModerate={moderateEvent} onOpenProfile={onOpenProfile} showIdentity />
+      {cp?.classId && onOpenClass && (t.isMine || !isTeacher) && (
+        <div className="lt-actions">
+          <button type="button" className="lt-btn is-ghost" onClick={() => onOpenClass(cp.classId!)}>Mở giáo trình Buổi {String(cp.sessionNo).padStart(2, '0')}</button>
+        </div>
+      )}
       {error && <p className="cs-form-error" role="alert">{error}</p>}
 
       {t.isMine && !closed && (
         <div className="lt-actions" style={{ alignItems: 'center' }}>
           <span className="lt-note">Đang chia sẻ: <b>{VISIBILITY_LABEL[t.visibility]}</b></span>
           <button type="button" className="lt-btn is-ghost" disabled={busy} onClick={() => void toggleVisibility()}>
-            Chuyển sang "{VISIBILITY_LABEL[t.visibility === 'community' ? 'private' : 'community']}"
+            Chuyển sang "{VISIBILITY_LABEL[nextVisibility]}"
           </button>
         </div>
       )}
+
+      {t.isMine && !closed && cp?.classId && cpCanResubmit && (compose
+        ? <StudentComposer key={compose} lessonId={`cp-${t.id}`} kinds={['submission']} initialKind="submission" isNewThread={false}
+            visibilities={visibilityChoices(true)} title={`Trả lại bài ${cp.checkpointId}`}
+            sendEvent={i => submitCheckpoint({ classId: cp.classId!, sessionNo: cp.sessionNo, checkpointId: cp.checkpointId, body: i.body, mediaUrl: i.mediaUrl })}
+            onSent={() => { setCompose(null); reload() }} onCancel={() => setCompose(null)} />
+        : <div className="lt-actions"><button type="button" className="lt-btn is-primary" onClick={() => setCompose('submission')}>Trả lại</button></div>)}
 
       {t.isMine && !closed && t.lessonId && kinds.length > 0 && (compose
         ? <StudentComposer key={compose} lessonId={t.lessonId} kinds={kinds} initialKind={compose} isNewThread={false}
@@ -108,7 +127,7 @@ export default function ThreadPage({ threadId, isTeacher, onBack, onOpenQueue, o
         ))}
 
       {t.canRespond && !t.isHidden && (
-        <TeacherComposer threadId={t.id} events={t.events} allowKho onSent={reload} />
+        <TeacherComposer threadId={t.id} events={t.events} allowKho onSent={reload} isCheckpoint={!!t.checkpoint} />
       )}
       {isTeacher && (
         <div className="lt-actions">

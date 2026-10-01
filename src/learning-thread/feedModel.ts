@@ -4,7 +4,7 @@
 // learning_threads, không bản sao. Tên Thầy lấy từ dữ liệu (không hard-code).
 // ─────────────────────────────────────────────────────────────────────────────
 import { safeImageUrl } from '../class-social/media/safeImageUrl'
-import { toIdentity, type EventKind, type Identity, type Person, type ThreadStatus, type Verdict, type Visibility } from './ltModel'
+import { toIdentity, toVisibility, type EventKind, type Identity, type Person, type ThreadStatus, type Verdict, type Visibility } from './ltModel'
 
 const STATUSES: ThreadStatus[] = ['waiting_teacher', 'teacher_responded', 'needs_retry', 'passed', 'archived']
 const KINDS: EventKind[] = ['submission', 'question', 'teacher_feedback', 'teacher_answer']
@@ -50,7 +50,7 @@ export function toThreadCard(v: unknown): ThreadCard | null {
   return {
     id: o.id as string,
     status,
-    visibility: o.visibility === 'private' ? 'private' : 'community',
+    visibility: toVisibility(o.visibility),
     identity: toIdentity(o.identity),
     learner: person(o.learner, 'Học viên'),
     isMine: o.is_mine === true,
@@ -119,7 +119,7 @@ export function toJourneyItem(r: JourneyRow): JourneyItem | null {
       createdAt: str(e.created_at) ?? '',
     }))
   return {
-    id: r.id, status: r.status as ThreadStatus, visibility: r.visibility === 'private' ? 'private' : 'community',
+    id: r.id, status: r.status as ThreadStatus, visibility: toVisibility(r.visibility),
     identity: toIdentity(r.identity), createdAt: r.created_at, lastEventAt: r.last_event_at, passedAt: r.passed_at,
     isHidden: r.is_hidden === true, archived: r.archived === true, events,
   }

@@ -9,7 +9,8 @@ import { safeImageUrl } from '../class-social/media/safeImageUrl'
 export type SubmissionMode = 'off' | 'allowed' | 'required'
 export type QuestionMode = 'off' | 'allowed'
 export type ThreadStatus = 'waiting_teacher' | 'teacher_responded' | 'needs_retry' | 'passed' | 'archived'
-export type Visibility = 'community' | 'private'
+/** community = mọi thành viên Class (thread cũ theo bài) · class = bạn CÙNG LỚP (bài trả checkpoint) · private = chỉ Thầy */
+export type Visibility = 'community' | 'private' | 'class'
 export type StudentKind = 'submission' | 'question'
 export type TeacherKind = 'teacher_feedback' | 'teacher_answer'
 export type EventKind = StudentKind | TeacherKind
@@ -20,10 +21,27 @@ export const MAX_EVENT_BODY = 4000
 export const VISIBILITY_LABEL: Record<Visibility, string> = {
   community: 'Cộng đồng học tập',
   private: 'Chỉ Thầy',
+  class: 'Các bạn cùng lớp',
 }
 export const VISIBILITY_HINT: Record<Visibility, string> = {
   community: 'Thành viên Class xem được để cùng học từ lời Thầy sửa.',
   private: 'Chỉ bạn và Thầy xem được.',
+  class: 'Bạn cùng lớp và giáo viên xem được.',
+}
+
+export function toVisibility(v: unknown): Visibility {
+  return v === 'private' ? 'private' : v === 'class' ? 'class' : 'community'
+}
+
+/** Lựa chọn "Ai được xem" theo LOẠI thread: bài trả checkpoint = lớp | chỉ Thầy; thread theo bài = cộng đồng | chỉ Thầy. */
+export function visibilityChoices(isCheckpoint: boolean): Visibility[] {
+  return isCheckpoint ? ['class', 'private'] : ['community', 'private']
+}
+
+/** Bấm "Chuyển sang …": đổi giữa hai lựa chọn của đúng loại thread (không bao giờ đưa bài trả ra cộng đồng chung). */
+export function otherVisibility(current: Visibility, isCheckpoint: boolean): Visibility {
+  const [shared, priv] = visibilityChoices(isCheckpoint)
+  return current === priv ? shared : priv
 }
 
 // ── Trạng thái Trả/Hỏi bài của MỘT bài (RPC lt_lessons_state) ─────────────────
@@ -61,7 +79,7 @@ export function toLessonState(r: LessonStateRow): LessonThreadState {
     question,
     prompt: r.prompt?.trim() || null,
     thread: r.thread_id && status
-      ? { id: r.thread_id, status, visibility: r.visibility === 'private' ? 'private' : 'community', passedAt: r.passed_at, eventCount: r.event_count ?? 0 }
+      ? { id: r.thread_id, status, visibility: toVisibility(r.visibility), passedAt: r.passed_at, eventCount: r.event_count ?? 0 }
       : null,
   }
 }
@@ -163,9 +181,13 @@ export type ThreadEvent = {
   createdAt: string
 }
 
+/** Ngữ cảnh bài trả checkpoint (server đóng dấu): chương trình · buổi · checkpoint · lớp lúc nộp. */
+export type CheckpointRef = { classId: string | null; programCode: string; sessionNo: number; checkpointId: string }
+
 export type ThreadDetail = {
   id: string
   lessonId: string | null
+  checkpoint: CheckpointRef | null
   identity: Identity
   visibility: Visibility
   status: ThreadStatus
@@ -237,8 +259,11 @@ export function toThreadDetail(v: unknown): ThreadDetail | null {
   return {
     id: o.id as string,
     lessonId: str(o.lesson_id),
+    checkpoint: o.content_kind === 'program_checkpoint' && str(o.program_code) && num(o.session_no) !== null && str(o.checkpoint_id)
+      ? { classId: str(o.class_schedule_id), programCode: o.program_code as string, sessionNo: o.session_no as number, checkpointId: o.checkpoint_id as string }
+      : null,
     identity: toIdentity(o.identity),
-    visibility: o.visibility === 'private' ? 'private' : 'community',
+    visibility: toVisibility(o.visibility),
     status,
     passedAt: str(o.passed_at),
     passedBy: o.passed_by ? toPerson(o.passed_by, 'Thầy') : null,
@@ -348,7 +373,7 @@ export function toQueueItem(r: QueueRow): QueueItem | null {
   return {
     id: r.id,
     status: r.status as ThreadStatus,
-    visibility: r.visibility === 'private' ? 'private' : 'community',
+    visibility: toVisibility(r.visibility),
     identity: toIdentity(r.identity),
     learner: { userId: r.learner_user_id, name: r.learner_name?.trim() || 'Học viên', avatarUrl: safeImageUrl(r.learner_avatar_url) },
     lastStudentEventAt: r.last_student_event_at,
@@ -369,7 +394,7 @@ export type MyThread = { id: string; lessonId: string | null; identity: Identity
 
 export function toMyThread(r: MyThreadRow): MyThread | null {
   if (!r.id || !STATUSES.includes(r.status as ThreadStatus)) return null
-  return { id: r.id, lessonId: r.lesson_id, identity: toIdentity(r.identity), visibility: r.visibility === 'private' ? 'private' : 'community', status: r.status as ThreadStatus, lastEventAt: r.last_event_at }
+  return { id: r.id, lessonId: r.lesson_id, identity: toIdentity(r.identity), visibility: toVisibility(r.visibility), status: r.status as ThreadStatus, lastEventAt: r.last_event_at }
 }
 
 // ── Lỗi server (LT_*) → tiếng Việt ───────────────────────────────────────────
@@ -387,6 +412,12 @@ const LT_ERROR_TEXT: Record<string, string> = {
   LT_BAD_MEDIA: 'Liên kết video chưa hợp lệ.',
   LT_BAD_TAGS: 'Thẻ không hợp lệ.',
   LT_BAD_RESOURCES: 'Bài giảng đính kèm không hợp lệ.',
+  LT_BAD_VISIBILITY: 'Lựa chọn "ai được xem" không hợp lệ.',
+  LT_SESSION_LOCKED: 'Buổi này chưa mở. Hoàn thành buổi trước để mở.',
+  LT_CHECKPOINT_NOT_FOUND: 'Không tìm thấy bài trả này trong giáo trình. Hãy tải lại trang.',
+  LT_CHECKPOINT_UNSUPPORTED: 'Bài trả này cần công cụ nộp bài chưa có. Hãy chờ cập nhật.',
+  LT_MEDIA_REQUIRED: 'Bài trả này cần liên kết video.',
+  LT_EMPTY: 'Hãy viết nội dung hoặc dán liên kết video.',
 }
 
 export function ltErrorText(err: { message?: string; code?: string; status?: number } | null | undefined, online = true): string {

@@ -2,8 +2,10 @@
 // Nhận một LessonDoc (dữ liệu) → dựng trang giáo trình: web/app + in A4.
 // Nhận diện Class: cream #F7F5FC, indigo #4338CA, Be Vietnam Pro (index.html đã nạp font).
 // Section nào không có trong doc.sections thì đơn giản là không hiện.
-import { useRef, useState } from 'react'
-import type { LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
+import { useContext, useRef, useState } from 'react'
+import type { CheckpointSection, LessonDoc, LessonSection, StudyBlock } from './lessonTypes'
+import { checkpointAcceptsLabel } from './checkpoint'
+import { CheckpointSlot } from './checkpointSlot'
 import { exportLessonPdf } from './lessonPdf'
 import FretboardMap from './FretboardMap'
 import ZoomFrame from './ZoomFrame'
@@ -207,11 +209,33 @@ function renderSection(s: LessonSection, i: number) {
           {s.blocks.map((bl, j) => renderStudyBlock(bl, j))}
         </section>
       )
+
+    case 'checkpoint':
+      return <CheckpointBlock key={i} s={s} />
     default:
       // Giáo trình lớp lưu trong DB có thể có loại phần mới hơn bản app đang cài
       // (app native đóng gói sẵn): báo nhẹ nhàng thay vì bỏ trống hay làm vỡ trang.
       return <UnsupportedSection key={i} />
   }
+}
+
+// Bài trả: cùng khuôn .lsn-block (không visual riêng). Phần tĩnh in được; phần tương tác cắm qua CheckpointSlot.
+function CheckpointBlock({ s }: { s: CheckpointSection }) {
+  const slot = useContext(CheckpointSlot)
+  const required = s.required !== false
+  return (
+    <section className="lsn-block lsn-cp" id={`bai-tra-${s.id}`}>
+      <header className="lsn-block-h">
+        <span className="lsn-tag">Bài trả {s.id}</span>
+        {s.title && <h2>{s.title}</h2>}
+      </header>
+      {s.prompt && <p className="lsn-cp-prompt">{s.prompt}</p>}
+      <p className="lsn-cp-meta">
+        {required ? 'Bắt buộc để hoàn thành buổi' : 'Không bắt buộc'} · Trả bằng: {checkpointAcceptsLabel(s.accepts)}
+      </p>
+      {slot && <div className="lsn-cp-slot no-print">{slot(s)}</div>}
+    </section>
+  )
 }
 
 function UnsupportedSection() {
@@ -265,7 +289,9 @@ function renderStudyBlock(bl: StudyBlock, j: number) {
 }
 
 // onBack: khi nhúng trong app (overlay Lớp đang học) nút quay lại đóng overlay thay vì điều hướng.
-export default function LessonDocument({ doc, onBack }: { doc: LessonDoc; onBack?: () => void }) {
+// embedded: nằm TRONG sơ đồ buổi ở /me (Lớp của tôi) — không thanh quay lại, không chiếm trọn màn hình;
+// vẫn đúng khuôn giấy/khối/in PDF của SOLO01.
+export default function LessonDocument({ doc, onBack, embedded = false }: { doc: LessonDoc; onBack?: () => void; embedded?: boolean }) {
   const m = doc.meta
   const paperRef = useRef<HTMLElement>(null)
   const [pdf, setPdf] = useState<'idle' | 'working' | 'error'>('idle')
@@ -286,11 +312,11 @@ export default function LessonDocument({ doc, onBack }: { doc: LessonDoc; onBack
   }
 
   return (
-    <div className="lsn">
+    <div className={'lsn' + (embedded ? ' is-embedded' : '')}>
       <style>{CSS}</style>
 
       <div className="lsn-bar no-print">
-        {onBack
+        {embedded ? <span /> : onBack
           ? <a href="#" onClick={e => { e.preventDefault(); onBack() }}>← {m.programName}</a>
           : <a href={m.backHref ?? '/solo01'}>← {m.programName}</a>}
         <button type="button" onClick={savePdf} disabled={pdf === 'working'}>
@@ -325,6 +351,9 @@ const CSS = `
 .lsn{background:${P.bg};color:${P.ink};font-family:'Be Vietnam Pro',system-ui,sans-serif;
   line-height:1.6;font-size:16px;min-height:100vh;text-align:left;color-scheme:light;overflow-x:hidden;}
 .lsn *{box-sizing:border-box;}
+.lsn.is-embedded{min-height:0;background:transparent;}
+.lsn.is-embedded .lsn-bar{position:static;background:transparent;border-bottom:none;backdrop-filter:none;padding:0 0 8px;}
+.lsn.is-embedded .lsn-paper{padding:0 0 8px;}
 .lsn-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;
   gap:12px;padding:10px 16px;background:rgba(247,245,252,.94);backdrop-filter:blur(8px);
   border-bottom:1px solid ${P.line};}
@@ -479,6 +508,12 @@ const CSS = `
 .lsn-annot-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
 .lsn-annot-chips span{font-size:12.5px;background:${P.purpleTint};color:${P.purpleDark};
   border-radius:999px;padding:3px 10px;}
+
+/* ── Bài trả (checkpoint) — cùng khối .lsn-block, nhấn viền trái như mục tiêu ── */
+.lsn-cp{border-left:4px solid ${P.purple};scroll-margin-top:72px;}
+.lsn-cp-prompt{margin:0 0 8px;font-size:15px;color:${P.inkSoft};white-space:pre-line;}
+.lsn-cp-meta{margin:0;font-size:13px;color:${P.inkFaint};}
+.lsn-cp-slot{margin-top:12px;padding-top:12px;border-top:1px dashed ${P.line};}
 
 /* ── Bài tập / checklist / ghi chú ── */
 .lsn-hw{margin:0;padding-left:20px;font-size:15px;}

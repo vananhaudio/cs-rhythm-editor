@@ -170,7 +170,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       )}
       {view.kind === 'thread' && (
         <ThreadPage key={view.threadId} threadId={view.threadId} isTeacher={me.isTeacher} onBack={() => onBack(HOME)}
-          onOpenQueue={onOpenQueue} onOpenProfile={onOpenProfile} />
+          onOpenQueue={onOpenQueue} onOpenProfile={onOpenProfile} onOpenClass={onOpenClass} />
       )}
       {view.kind === 'queue' && (me.isTeacher
         ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onBack(HOME)} />

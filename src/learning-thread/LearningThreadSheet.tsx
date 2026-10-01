@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import './styles'
 import { fetchThread, setVisibility } from './ltApi'
 import {
-  VISIBILITY_LABEL, canAsk, canSubmit, ctaTitle,
+  VISIBILITY_LABEL, canAsk, canSubmit, ctaTitle, otherVisibility,
   type LessonThreadState, type StudentKind, type ThreadDetail, type Visibility,
 } from './ltModel'
 import ThreadView from './ThreadView'
@@ -61,7 +61,7 @@ export default function LearningThreadSheet({ lessonId, lessonTitle, state, mode
 
   const toggleVisibility = async () => {
     if (!thread || visBusy) return
-    const next: Visibility = thread.visibility === 'community' ? 'private' : 'community'
+    const next: Visibility = otherVisibility(thread.visibility, !!thread.checkpoint)
     setVisBusy(true)
     const r = await setVisibility(thread.id, next)
     setVisBusy(false)
@@ -82,7 +82,7 @@ export default function LearningThreadSheet({ lessonId, lessonTitle, state, mode
           <div className="lt-actions" style={{ alignItems: 'center' }}>
             <span className="lt-note">Đang chia sẻ: <b>{VISIBILITY_LABEL[thread.visibility]}</b></span>
             <button type="button" className="lt-btn is-ghost" disabled={visBusy} onClick={() => void toggleVisibility()}>
-              Chuyển sang "{VISIBILITY_LABEL[thread.visibility === 'community' ? 'private' : 'community']}"
+              Chuyển sang "{VISIBILITY_LABEL[otherVisibility(thread.visibility, !!thread.checkpoint)]}"
             </button>
           </div>
         )}

@@ -66,6 +66,13 @@ insert into public.edu_group_members (user_id, group_id, source, status) values
   ('aaaaaaaa-0000-4000-8000-00000000000a', 'f0000000-0000-4000-8000-0000000000b1', 'admin', 'active'),
   ('aaaaaaaa-0000-4000-8000-00000000000a', 'f0000000-0000-4000-8000-0000000000b2', 'admin', 'active');
 SQL
+# E2E_CHECKPOINTS=1: migration Lớp của tôi V1 chạy TRƯỚC → toàn bộ kịch bản cũ chạy lại trên DB đã migrate (hồi quy 3 hàm
+# bị thay); dữ liệu SOLO01.TH01/TH02 nạp SAU kịch bản cũ (không đổi dữ liệu kịch bản cũ) → run-checkpoints.mjs.
+if [ -n "${E2E_CHECKPOINTS:-}" ]; then
+  psqld -f "$ROOT/db/tests/local/class_checkpoints_fixture.sql" >/dev/null
+  psqld -c "begin;" -f "$ROOT/db/class_checkpoints_v1_setup.sql" -c "commit;" >/dev/null
+  echo "── + Lớp của tôi V1 (checkpoint + tiến độ buổi)"
+fi
 echo "── DB local sẵn sàng (migration P1 + P2 + Lớp học V1 + Feed V1 + Danh tính học tập V1 + 2 bài đã cấu hình)"
 
 SECRET="e2e-local-secret-e2e-local-secret-0000000"
@@ -96,6 +103,11 @@ echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PO
 set +e
 VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$ROOT/tests/e2e-learning-thread/run.mjs"
 RC=$?
+if [ -n "${E2E_CHECKPOINTS:-}" ] && [ "$RC" = "0" ]; then
+  psqld -f "$ROOT/db/tests/local/class_checkpoints_fixture_data.sql" >/dev/null
+  VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$ROOT/tests/e2e-learning-thread/run-checkpoints.mjs"
+  RC=$?
+fi
 set -e
 echo "── proxy log (lỗi REST ≥400 / endpoint chưa giả lập):"; grep -v '→ http' "$TMP/proxy.log" | head -30 || true
 DBSTATE="$(PGOPTIONS="-c client_min_messages=warning" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d e2e -tAc \
@@ -109,7 +121,7 @@ echo "$DBSTATE"
 # Chỉnh sửa trang cá nhân: tên + ảnh lưu vào hồ sơ dùng chung (edu_students) của đúng user; quyền sở hữu không đổi
 if [ "$RC" = "0" ]; then
   echo "$DBSTATE" | grep -qx 'A_profile=Ánh Dương Lê | avatar storage | user_id aaaaaaaa-0000-4000-8000-00000000000a' \
-    && echo "$DBSTATE" | grep -qx 'A_ownership=1 thread · 3 nhóm lớp' \
+    && echo "$DBSTATE" | grep -qE "^A_ownership=$([ -n "${E2E_CHECKPOINTS:-}" ] && echo '1 thread · 5' || echo '1 thread · 3') nhóm lớp$" \
     && echo "PASS: DB sau Chỉnh sửa trang cá nhân: edu_students.display_name + avatar_url (storage 'avatars') của A; user_id / thread / nhóm lớp giữ nguyên" \
     || { echo "FAIL: trạng thái DB sau Chỉnh sửa trang cá nhân"; RC=1; }
 fi

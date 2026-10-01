@@ -14,8 +14,13 @@ import { fetchClassActivityPage, fetchClassDetail, fetchClassMembers } from './c
 import type { ClassCard, ClassMember } from './classModel'
 import { ClassHeader, MemberList } from './ClassParts'
 import { programKeyOfClass } from '../identity/learningIdentity'
+import { fetchClassLearningState } from '../../classLearning/progressApi'
+import type { ClassLearningState } from '../../classLearning/progress'
+import ClassLearnView from './ClassLearnView'
 
 const CLASS_TABS = ['activity', 'members'] as const
+// Lớp có giáo trình V1 (checkpoint): mặc định HỌC; "Xem thêm về lớp" → phần cộng đồng (Hoạt động | Thành viên) như cũ.
+const CLASS_MODES = ['learn', 'community'] as const
 
 type Load<T> = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; value: T }
 
@@ -30,6 +35,16 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
   const [members, setMembers] = useState<Load<ClassMember[]> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actError, setActError] = useState<string | null>(null)
+  const [mode, setMode] = useHistoryTab<'learn' | 'community'>('csClassMode', 'learn', CLASS_MODES)
+  // Trạng thái học (server). Lỗi / lớp chưa bật V1 → trang lớp cũ (progressive enhancement, không regression).
+  const [learn, setLearn] = useState<ClassLearningState | 'loading' | 'off'>('loading')
+  const [learnRev, setLearnRev] = useState(0)
+  const reloadLearn = useCallback(() => setLearnRev(x => x + 1), [])
+  useEffect(() => {
+    let alive = true
+    void fetchClassLearningState(classId).then(r => { if (alive) setLearn(r.ok ? r.value : 'off') })
+    return () => { alive = false }
+  }, [classId, learnRev])
 
   useEffect(() => {
     let alive = true
@@ -63,7 +78,19 @@ export default function ClassPage({ classId, onOpenThread, onOpenProfile, onOpen
       ? { status: 'ready', value: cur.value.map(x => (x.userId === m.userId ? { ...x, relationship: r.value } : x)) } : cur)
   }
 
-  const back = <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp học</button>
+  const learnReady = learn !== 'loading' && learn !== 'off' && learn.enabled ? learn : null
+  if (learnReady && mode === 'learn') {
+    return <ClassLearnView state={learnReady} onReload={reloadLearn} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
+      onOpenClasses={onOpenClasses} onOpenCommunity={() => { setMode('community'); window.scrollTo(0, 0) }} />
+  }
+
+  const back = (
+    <div className="lt-actions">
+      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp học</button>
+      {learnReady && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={() => { setMode('learn'); window.scrollTo(0, 0) }}>Vào học</button>}
+    </div>
+  )
+  if (learn === 'loading' && mode === 'learn') return <div className="cs-col cs-home"><p className="cs-loading" role="status">Đang mở lớp…</p></div>
   if (detail.status === 'loading') return <div className="cs-col cs-home">{back}<p className="cs-loading" role="status">Đang mở lớp…</p></div>
   if (detail.status === 'error') return <div className="cs-col cs-home">{back}<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div></div>
 

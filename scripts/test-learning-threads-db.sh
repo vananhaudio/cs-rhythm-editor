@@ -294,6 +294,7 @@ cp_base() {
   baseline "$1" "$TMP/fixture_noroles.sql"
   for f in learning_threads_p1_setup learning_threads_p2_setup social_classes_v1_setup social_feed_v1_setup; do psqld "$1" -f "$ROOT/db/$f.sql" >/dev/null; done
   psqld "$1" -f "$ROOT/db/tests/local/class_checkpoints_fixture.sql" >/dev/null
+  psqld "$1" -f "$ROOT/db/tests/local/class_checkpoints_fixture_data.sql" >/dev/null
 }
 cp_setup() { psqld "$1" -c "begin;" -f "$ROOT/db/class_checkpoints_v1_setup.sql" -c "commit;" >/dev/null; }
 cp_rollback() { psqld "$1" -c "begin;" -f "$ROOT/db/class_checkpoints_v1_rollback.sql" -c "commit;" >/dev/null 2>&1; }
