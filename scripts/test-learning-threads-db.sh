@@ -286,6 +286,62 @@ psqld t_np -c "begin;" -f "$ROOT/db/social_nhipphach_artifact_v1_rollback.sql" -
 [ "$(q t_np "select count(*) from information_schema.columns where table_name = 'tool_artifacts' and column_name = 'content'")/$(q t_np "select md5(prosrc) from pg_proc where proname = 'social_share_tool_result'")/$(q t_np "select count(*) from pg_proc where proname like 'nhipphach_%check' or proname = 'nhipphach_settings_normalize'")" = "0/$BMS_MD5/0" ] \
   && ok "Nhịp & Phách rollback ×2 (chưa có bản nào): gỡ cột + hàm, RPC về đúng bản BMS" || fail "Nhịp & Phách rollback"
 
+echo "── LỚP CỦA TÔI V1 (checkpoint + tiến độ buổi): md5 cổng · setup ×2 · rls_setup · test · rollback (giữ dữ liệu / sạch) · cài lại · drift"
+CP_EXPECTED="lt_detail=5b8f57d71b7b2392a17bfe73fcd61a56 lt_set_visibility=60c4201a6afc69ec3cb1d196bfd6163f social_class_activity=560d9faa6251606acb288f800deefa09"
+CP_MD5() { q "$1" "select string_agg(proname || '=' || md5(prosrc), ' ' order by proname) from pg_proc where proname in ('lt_detail', 'lt_set_visibility', 'social_class_activity')"; }
+CP_CONS() { q "$1" "select string_agg(conname || ':' || pg_get_constraintdef(oid), ' | ' order by conname) from pg_constraint where conrelid = 'public.learning_threads'::regclass"; }
+cp_base() {
+  baseline "$1" "$TMP/fixture_noroles.sql"
+  for f in learning_threads_p1_setup learning_threads_p2_setup social_classes_v1_setup social_feed_v1_setup; do psqld "$1" -f "$ROOT/db/$f.sql" >/dev/null; done
+  psqld "$1" -f "$ROOT/db/tests/local/class_checkpoints_fixture.sql" >/dev/null
+}
+cp_setup() { psqld "$1" -c "begin;" -f "$ROOT/db/class_checkpoints_v1_setup.sql" -c "commit;" >/dev/null; }
+cp_rollback() { psqld "$1" -c "begin;" -f "$ROOT/db/class_checkpoints_v1_rollback.sql" -c "commit;" >/dev/null 2>&1; }
+grep -qiE '^\s*(begin|commit|rollback)\s*;' "$ROOT/db/class_checkpoints_v1_setup.sql" "$ROOT/db/class_checkpoints_v1_rollback.sql" \
+  && fail "file migration V1 có begin/commit (prod-db.py sở hữu transaction)" || ok "setup/rollback V1 không tự begin/commit (đúng luật prod-db.py)"
+cp_base t_cp
+[ "$(CP_MD5 t_cp)" = "$CP_EXPECTED" ] && ok "V1: md5 3 hàm bị thay (bản repo) = md5 production 01/10" || fail "V1: md5 repo khác production: $(CP_MD5 t_cp)"
+CONS_BEFORE="$(CP_CONS t_cp)"
+[ "$(grep -o '"lt_detail": "[0-9a-f]*", "lt_set_visibility": "[0-9a-f]*", "social_class_activity": "[0-9a-f]*"' "$ROOT/db/class_checkpoints_v1_setup.sql" | tr -d '",' | sed 's/: /=/g')" = "$CP_EXPECTED" ] \
+  && ok "V1: hằng md5 trong cổng = md5 kỳ vọng" || fail "V1: hằng md5 cổng lệch"
+[ "$(grep -o '"lt_detail": "[0-9a-f]*", "lt_set_visibility": "[0-9a-f]*", "social_class_activity": "[0-9a-f]*"' "$ROOT/db/class_checkpoints_v1_preflight.sql")" = "$(grep -o '"lt_detail": "[0-9a-f]*", "lt_set_visibility": "[0-9a-f]*", "social_class_activity": "[0-9a-f]*"' "$ROOT/db/class_checkpoints_v1_setup.sql")" ] \
+  && ok "V1: hằng md5 giống hệt giữa preflight và migration" || fail "V1: hằng preflight ↔ migration lệch"
+CPGATE() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/class_checkpoints_v1_preflight.sql")) z where section = 'GATE'"; }
+[ "$(CPGATE t_cp)" = "PASS" ] && ok "V1 preflight: GATE = PASS" || fail "V1 preflight: $(CPGATE t_cp)"
+cp_setup t_cp && cp_setup t_cp && ok "V1 migration ×2 (idempotent; cổng nhận bản V1 đã chạy)"
+[ "$(CPGATE t_cp)" = "PASS" ] && ok "V1 preflight sau migration: GATE = PASS (chạy lại an toàn)" || fail "V1 preflight sau migration: $(CPGATE t_cp)"
+psqld t_cp -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_cp "select count(*) from pg_policies where tablename = 'learning_session_progress'")" = "0" ] \
+  && ok "V1: rls_setup.sql KHÔNG áp policy lên learning_session_progress (self_managed)" || fail "rls_setup mở policy lên bảng tiến độ"
+[ "$(q t_cp "select count(*) from information_schema.role_table_grants where table_name = 'learning_session_progress' and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
+  && ok "V1: anon/authenticated không có quyền bảng tiến độ" || fail "V1: còn quyền bảng tiến độ"
+[ "$(q t_cp "select count(*) from information_schema.routine_privileges where routine_name in ('class_learning_state','lt_submit_checkpoint','lt_detail','lt_set_visibility','social_class_activity') and grantee in ('anon','PUBLIC')")" = "0" ] \
+  && [ "$(q t_cp "select count(*) from information_schema.routine_privileges where routine_name in ('lsp_sync','lsp_try_complete','cl_session_checkpoints','cl_next_session','lsp_on_checkpoint_passed','lsp_guard_history') and grantee in ('anon','authenticated','PUBLIC')")" = "0" ] \
+  && ok "V1: anon không EXECUTE RPC; hàm nội bộ không cấp cho ai" || fail "V1: quyền hàm sai"
+POSTFLIGHT() { q "$1" "select item from ($(sed 's/;[[:space:]]*$//' "$ROOT/db/class_checkpoints_v1_postflight.sql")) z where section = 'GATE'"; }
+[ "$(POSTFLIGHT t_cp)" = "PASS" ] && ok "V1 postflight: GATE = PASS" || fail "V1 postflight: $(POSTFLIGHT t_cp)"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_cp -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/class_checkpoints_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL Lớp của tôi V1"
+CP_DATA="$(q t_cp "select count(*) from learning_threads where content_kind = 'program_checkpoint'")/$(q t_cp "select count(*) from learning_session_progress")"
+cp_rollback t_cp && cp_rollback t_cp
+[ "$(CP_MD5 t_cp)" = "$CP_EXPECTED" ] && [ "$(q t_cp "select count(*) from pg_proc where proname in ('class_learning_state','lt_submit_checkpoint','lsp_sync')")" = "0" ] \
+  && [ "$(q t_cp "select count(*) from learning_threads where content_kind = 'program_checkpoint'")/$(q t_cp "select count(*) from learning_session_progress")" = "$CP_DATA" ] \
+  && ok "V1 rollback ×2 khi ĐÃ có dữ liệu ($CP_DATA): 3 hàm về đúng md5 production, gỡ RPC, GIỮ bài trả + tiến độ" || fail "V1 rollback có dữ liệu"
+cp_setup t_cp && [ "$(q t_cp "select count(*) from pg_proc where proname = 'class_learning_state'")" = "1" ] && ok "V1 cài lại sau rollback (dữ liệu cũ còn nguyên)" || fail "V1 cài lại"
+cp_base t_cp2
+cp_setup t_cp2 && cp_rollback t_cp2 && cp_rollback t_cp2
+[ "$(q t_cp2 "select to_regclass('public.learning_session_progress') is null")" = "t" ] && [ "$(CP_CONS t_cp2)" = "$CONS_BEFORE" ] \
+  && [ "$(q t_cp2 "select count(*) from information_schema.columns where table_name = 'learning_threads' and column_name = 'checkpoint_id'")" = "0" ] \
+  && [ "$(CP_MD5 t_cp2)" = "$CP_EXPECTED" ] \
+  && ok "V1 rollback ×2 khi CHƯA có dữ liệu: gỡ bảng + cột, ràng buộc learning_threads về ĐÚNG bản trước" || fail "V1 rollback sạch"
+cp_base t_cp3
+psqld t_cp3 -c "create or replace function public.lt_set_visibility(p_thread_id uuid, p_visibility text) returns void language sql as \$\$ select \$\$;" >/dev/null
+[ "$(CPGATE t_cp3)" = "STOP - DO NOT MIGRATE" ] && ok "V1 preflight: lt_set_visibility sửa tay → GATE = STOP" || fail "V1 preflight drift: $(CPGATE t_cp3)"
+psqld t_cp3 -c "begin;" -f "$ROOT/db/class_checkpoints_v1_setup.sql" -c "commit;" >/dev/null 2>"$TMP/cp3.err" && fail "V1 migration chạy dù hàm bị thay lệch"
+grep -q "DỪNG — production khác repo.*lt_set_visibility" "$TMP/cp3.err" && [ "$(q t_cp3 "select to_regclass('public.learning_session_progress') is null")" = "t" ] \
+  && ok "V1 migration tự DỪNG khi hàm bị thay lệch — không tạo gì" || fail "V1 drift gate: $(cat "$TMP/cp3.err")"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

@@ -126,6 +126,9 @@ DECLARE
     -- Learning Thread P1 (db/learning_threads_p1_setup.sql): KHÔNG policy nào, REVOKE hết — mọi đọc/ghi
     -- qua RPC lt_* (SECURITY DEFINER). Áp policy rộng = học sinh đọc/sửa bài Trả/Hỏi + phản hồi của nhau.
     'learning_lesson_settings', 'learning_threads', 'learning_thread_events',
+    -- Lớp của tôi V1 (db/class_checkpoints_v1_setup.sql): tiến độ buổi — KHÔNG policy, chỉ qua RPC.
+    -- Áp policy rộng = học sinh tự ghi opened_at/completed_at (tự mở buổi, sửa lịch sử).
+    'learning_session_progress',
     -- Billing Foundation (BƯỚC 8A — db/billing_setup.sql): anon KHÔNG policy nào;
     -- authenticated chỉ teacher SELECT (xem Admin); mọi write qua SECURITY DEFINER
     -- functions. ĐỪNG để vòng lặp áp policy rộng (sẽ lộ dữ liệu tài chính).
