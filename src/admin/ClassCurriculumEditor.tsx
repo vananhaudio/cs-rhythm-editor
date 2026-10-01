@@ -2,6 +2,8 @@
 // Quản lý Chặng của lớp, gắn buổi vào chặng, soạn Giáo trình từng buổi (Nháp / Xuất bản).
 // Mọi ghi qua PostgREST bằng quyền teacher (RLS); không cần SQL tay.
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { checkpointProblems } from '../lesson/checkpoint'
+import { solo01Problems } from '../lesson/curriculumStandard'
 import LessonDocument from '../lesson/LessonDocument'
 import type { LessonDoc } from '../lesson/lessonTypes'
 import {
@@ -219,6 +221,11 @@ function LessonEditor({ client, cls, session, stage, template, onClose, onSaved 
   }, [client, session.id])
 
   const parsed = (() => { try { return parseSections(JSON.parse(text)) } catch { return { ok: false as const, error: 'JSON không hợp lệ.' } } })()
+  // Bài trả (checkpoint) sai id/trùng/thiếu tiêu đề → CHẶN Xuất bản (server sẽ bỏ qua id sai → học viên kẹt buổi).
+  // Lệch khuôn SOLO01 (đuôi buổi, objectives) → chỉ cảnh báo. Chuẩn: docs/GIAO-TRINH-CHUAN.md.
+  const cpProblems = parsed.ok ? checkpointProblems(parsed.sections) : []
+  const stdWarnings = parsed.ok && cls.code?.startsWith('SOLO01') && parsed.sections.length
+    ? solo01Problems(parsed.sections, session.session_number ?? 0).filter(w => !cpProblems.includes(w)) : []
 
   const act = async (fn: () => Promise<void>, ok: string, next: typeof status) => {
     setBusy(true); setMsg(null)
@@ -247,7 +254,7 @@ function LessonEditor({ client, cls, session, stage, template, onClose, onSaved 
           onClick={() => parsed.ok && void act(() => saveSessionContent(client, session.id, parsed.sections, 'draft'),
             status === 'published' ? 'Đã gỡ xuất bản, lưu thành nháp.' : 'Đã lưu nháp.', 'draft')}>
           {status === 'published' ? 'Gỡ xuất bản (về nháp)' : 'Lưu nháp'}</button>
-        <button style={{ ...btn, background: C.green, color: '#fff', borderColor: C.green }} disabled={busy || loading || !parsed.ok || (parsed.ok && !parsed.sections.length)}
+        <button style={{ ...btn, background: C.green, color: '#fff', borderColor: C.green }} disabled={busy || loading || !parsed.ok || (parsed.ok && !parsed.sections.length) || cpProblems.length > 0}
           onClick={() => parsed.ok && void act(() => saveSessionContent(client, session.id, parsed.sections, 'published'), 'Đã xuất bản giáo trình.', 'published')}>
           Xuất bản</button>
         {status && <button style={{ ...btn, color: C.red }} disabled={busy} onClick={() => {
@@ -256,6 +263,10 @@ function LessonEditor({ client, cls, session, stage, template, onClose, onSaved 
       </div>
       {msg && <div role={msg.ok ? 'status' : 'alert'} style={{ padding: '8px 16px', color: msg.ok ? C.green : C.red, fontSize: 14 }}>{msg.text}</div>}
       {!parsed.ok && !loading && <div role="alert" style={{ padding: '0 16px 8px', color: C.red, fontSize: 13 }}>{parsed.error}</div>}
+      {cpProblems.length > 0 && <div role="alert" style={{ padding: '0 16px 8px', color: C.red, fontSize: 13 }}>
+        Chưa xuất bản được — bài trả cần sửa: {cpProblems.join(' · ')}</div>}
+      {stdWarnings.length > 0 && <div role="status" style={{ padding: '0 16px 8px', color: C.muted, fontSize: 13 }}>
+        Lệch khuôn SOLO01 (xem docs/GIAO-TRINH-CHUAN.md): {stdWarnings.join(' · ')}</div>}
       <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
         {loading ? <div style={{ padding: 16, color: C.muted }}>Đang tải…</div>
           : preview && parsed.ok ? <LessonDocument doc={toLessonDoc(cls, stage, session, parsed.sections)} onBack={() => setPreview(false)} />
