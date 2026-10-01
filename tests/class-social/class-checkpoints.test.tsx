@@ -195,3 +195,39 @@ test("chốt chặn nguồn: client chỉ gửi TOẠ ĐỘ checkpoint; không l
     assert.equal(/\bAI\b|openai|gpt/i.test(noComments(src(f))), false, f);
   }
 });
+
+// ── Chế độ GIÁO TRÌNH (có giáo trình, CHƯA có bài trả) — giống SOLO01.TH01 production ──
+import { curriculumState } from "../../src/classLearning/progress";
+const day = (d: number) => new Date(Date.UTC(2026, 8, 17 + d, 12)).toISOString();
+const SES = [
+  ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ id: `s${n}`, session_number: n, event_type: "lesson", status: "scheduled", start_at: day((n - 1) * 7), end_at: null, title: `Buổi ${n} · Bài ${n}`, stage_id: 64 })),
+  { id: "b1", session_number: null, event_type: "break", status: "holiday", start_at: day(56), end_at: null, title: "Nghỉ giữa chặng – thời gian tự luyện", stage_id: null },
+  { id: "b2", session_number: null, event_type: "break", status: "holiday", start_at: day(63), end_at: null, title: "Nghỉ giữa chặng – thời gian tự luyện", stage_id: null },
+  { id: "s9", session_number: 9, event_type: "lesson", status: "scheduled", start_at: day(70), end_at: null, title: "Buổi 9 · Bass Bolero", stage_id: 66 },
+];
+const STG = [{ id: 64, class_id: CLS, stage_no: 1, public_title: "TỪ GIAI ĐIỆU ĐẾN SOLO GUITAR", summary: null, from_session: 1, to_session: 8, starts_on: null, ends_on: null },
+             { id: 66, class_id: CLS, stage_no: 2, public_title: "PHÁT TRIỂN SOLO GUITAR & BOLERO", summary: null, from_session: 9, to_session: 16, starts_on: null, ends_on: null }];
+const PUB = [1, 2, 3, 4, 5].map(n => ({ session_id: `s${n}`, status: "published" as const }));
+
+test("chế độ giáo trình: dựng từ lớp thật — 9 buổi, dòng nghỉ không thành buổi, buổi 06+ chưa có giáo án", () => {
+  const st = curriculumState({ classId: CLS, programCode: "SOLO01", classCode: "SOLO01.TH01", className: "Solo Guitar Căn Bản", role: "learner", stages: STG, sessions: SES, contents: PUB })!;
+  assert.equal(st.mode, "curriculum");
+  assert.deepEqual(st.sessions.map(s => s.no), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.deepEqual(st.breaks, [{ beforeNo: 9, title: "Nghỉ giữa chặng – thời gian tự luyện" }]);   // 2 dòng nghỉ liền → một vạch
+  assert.deepEqual(st.sessions.map(s => s.published), [true, true, true, true, true, false, false, false, false]);
+  assert.equal(st.sessions[8].stageTitle, "PHÁT TRIỂN SOLO GUITAR & BOLERO");
+  // mọi buổi MỞ (không khoá chết khi chưa có bài trả), không huy hiệu/màu, không tiến độ giả
+  assert.deepEqual(st.sessions.map(s => sessionPhase(s, "learner", "curriculum")), Array(9).fill("open"));
+  assert.ok(st.sessions.every(s => sessionBadge(s, "learner", NOW, 7, "curriculum") === "" && !s.openedAt && !s.completedAt && s.checkpoints.length === 0));
+  // buổi hiện tại theo LỊCH thật: 01/10 → Buổi 3 (17/9, 24/9, 1/10); trước khai giảng → Buổi 1; sau Buổi 5 → Buổi 5 (đã xuất bản gần nhất)
+  assert.equal(currentSessionNo(st, new Date("2026-10-01T13:00:00Z")), 3);
+  assert.equal(currentSessionNo(st, new Date("2026-09-30T18:00:00Z")), 3);   // 01:00 sáng 01/10 giờ VN: ngày có Buổi 3 → Buổi 3
+  assert.equal(currentSessionNo(st, new Date("2026-09-30T16:00:00Z")), 2);   // 23:00 tối 30/9 giờ VN → vẫn Buổi 2
+  assert.equal(currentSessionNo(st, new Date("2026-09-01T00:00:00Z")), 1);
+  assert.equal(currentSessionNo(st, new Date("2026-12-01T00:00:00Z")), 5);
+  // không đọc được buổi xuất bản nào (không quyền / chưa xuất bản) → null = giữ trang lớp cũ
+  assert.equal(curriculumState({ classId: CLS, programCode: "SOLO01", classCode: "x", className: "x", role: "learner", stages: STG, sessions: SES, contents: [] }), null);
+  assert.equal(curriculumState({ classId: CLS, programCode: null, classCode: "x", className: "x", role: "learner", stages: [], sessions: SES, contents: [{ session_id: "s1", status: "draft" }] }), null);
+  const row = renderToStaticMarkup(<SessionRowHead s={st.sessions[5]} role="learner" mode="curriculum" now={NOW} paceDays={7} expanded={false} current={false} onToggle={() => {}} />);
+  assert.match(row, /Buổi 06 · Bài 6/); assert.match(row, /is-pending/); assert.doesNotMatch(row, /🔒|cs-learn-row-badge/);
+});

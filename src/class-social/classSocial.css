@@ -896,3 +896,10 @@
 @media (min-width: 720px) {
   .cs-learn-body { margin-left: 56px; }
 }
+
+/* Dòng nghỉ: vạch ngăn nhẹ trên đường dọc (không phải buổi, không mở được) */
+.cs-learn-break { position: relative; display: flex; align-items: center; gap: 10px; margin: 6px 0 6px 46px; font-size: 12.5px; color: var(--cs-faint); }
+.cs-learn-break::after { content: ''; flex: 1; border-top: 1px dashed var(--cs-border); }
+.cs-learn-break span { flex: none; max-width: 80%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Buổi chưa có giáo án: chấm mờ, tiêu đề vẫn rõ */
+.cs-learn-row.is-pending:not(.is-current) .cs-learn-dot { border-style: dashed; color: var(--cs-faint); }

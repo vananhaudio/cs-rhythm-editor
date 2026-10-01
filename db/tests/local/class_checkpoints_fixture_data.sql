@@ -51,3 +51,22 @@ insert into public.class_sessions (id, class_id, session_number, title, event_ty
   ('53000000-0000-4000-8000-000000000001', 'b1000000-0000-4000-8000-000000000003', 1, 'Buổi 1 · Ôn tập', 'lesson');
 insert into public.class_lesson_content (session_id, status, blocks) values
   ('53000000-0000-4000-8000-000000000001', 'published', '[{"kind":"study","title":"Ôn tập","blocks":[]}]');
+
+-- Lớp CHƯA có bài trả nhưng có giáo trình (chế độ giáo trình của màn học): CUR01.TH01 — A (có quyền) · B (thành viên, KHÔNG quyền)
+insert into public.edu_groups (id, name, group_type, code) values ('f1000000-0000-4000-8000-000000000004', 'CLASS.CUR01.TH01', 'class', 'CLASS.CUR01.TH01');
+insert into public.class_schedule (id, code, name, program_code, status, start_date, cohort_group_id) values
+  ('b1000000-0000-4000-8000-000000000004', 'CUR01.TH01', 'Giáo trình mẫu', 'CUR01', 'active', current_date - 14, 'f1000000-0000-4000-8000-000000000004');
+insert into public.edu_group_members (user_id, group_id, source, status) values
+  ('aaaaaaaa-0000-4000-8000-00000000000a', 'f1000000-0000-4000-8000-000000000004', 'admin', 'active'),
+  ('bbbbbbbb-0000-4000-8000-00000000000b', 'f1000000-0000-4000-8000-000000000004', 'admin', 'active');
+insert into public.class_curriculum_access (class_id, user_id, status) values ('b1000000-0000-4000-8000-000000000004', 'aaaaaaaa-0000-4000-8000-00000000000a', 'active');
+insert into public.class_sessions (id, class_id, session_number, title, start_at, event_type, status) values
+  ('54000000-0000-4000-8000-000000000001', 'b1000000-0000-4000-8000-000000000004', 1, 'Buổi 1 · Mở đầu', now() - interval '14 days', 'lesson', 'scheduled'),
+  ('54000000-0000-4000-8000-000000000002', 'b1000000-0000-4000-8000-000000000004', 2, 'Buổi 2 · Tuần này', now() - interval '1 day', 'lesson', 'scheduled'),
+  ('54000000-0000-4000-8000-0000000000b1', 'b1000000-0000-4000-8000-000000000004', null, 'Nghỉ giữa chặng – thời gian tự luyện', now() + interval '3 days', 'break', 'holiday'),
+  ('54000000-0000-4000-8000-000000000003', 'b1000000-0000-4000-8000-000000000004', 3, 'Buổi 3 · Đang soạn', now() + interval '7 days', 'lesson', 'scheduled'),
+  ('54000000-0000-4000-8000-000000000004', 'b1000000-0000-4000-8000-000000000004', 4, 'Buổi 4 · Chưa có', now() + interval '14 days', 'lesson', 'scheduled');
+insert into public.class_lesson_content (session_id, status, blocks) values
+  ('54000000-0000-4000-8000-000000000001', 'published', '[{"kind":"objectives","items":["Mục tiêu buổi 1"]},{"kind":"note","text":"Nội dung thật buổi 1"}]'),
+  ('54000000-0000-4000-8000-000000000002', 'published', '[{"kind":"objectives","items":["Mục tiêu buổi 2"]},{"kind":"note","text":"Nội dung thật buổi 2"}]'),
+  ('54000000-0000-4000-8000-000000000003', 'draft', '[{"kind":"note","text":"nháp"}]');

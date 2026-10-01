@@ -177,7 +177,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
         : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này dành cho giáo viên.</div></div>)}
       {view.kind === 'classes' && <ClassesPage classes={classes} onOpenClass={onOpenClass} />}
       {view.kind === 'class' && (
-        <ClassPage key={view.classId} classId={view.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} onOpenClasses={onOpenClasses} />
+        <ClassPage key={view.classId} classId={view.classId} isTeacher={me.isTeacher} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} onOpenClasses={onOpenClasses} />
       )}
       {section === 'home' && <MeHome key={visit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}

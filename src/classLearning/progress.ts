@@ -4,7 +4,7 @@
 // KHÔNG suy luận quyền ở client. Màu tuần suy từ opened_at / completed_at (DB không lưu màu).
 import type { ThreadStatus, Visibility } from '../learning-thread/ltModel'
 import { toVisibility } from '../learning-thread/ltModel'
-import { lessonTitle } from './outline'
+import { lessonTitle, stageOf, type ContentState, type SessionRow, type StageRow } from './outline'
 
 export type CheckpointThread = { id: string; status: ThreadStatus; visibility: Visibility; passedAt: string | null; lastEventAt: string | null }
 export type CheckpointState = { id: string; title: string; required: boolean; accepts: string[]; thread: CheckpointThread | null }
@@ -18,12 +18,23 @@ export type SessionState = {
   openedAt: string | null
   completedAt: string | null
   checkpoints: CheckpointState[]
+  /** lịch thật của buổi (class_sessions.start_at) — chế độ giáo trình dùng để chọn buổi hiện tại */
+  startAt: string | null
 }
+/** Dòng nghỉ (class_sessions event_type 'break'): vạch ngăn nhẹ TRƯỚC buổi beforeNo (null = cuối sơ đồ). Không phải buổi học. */
+export type BreakRow = { beforeNo: number | null; title: string }
+/**
+ * checkpoint  = giáo trình có bài trả → server (class_learning_state) mở/khoá buổi, tiến độ, trả bài.
+ * curriculum  = có giáo trình nhưng CHƯA có bài trả → chỉ XEM sơ đồ + giáo án: buổi đã xuất bản đều mở,
+ *               không nút trả bài, không tiến độ/màu (không giả completion), buổi hiện tại theo LỊCH thật.
+ */
+export type LearnMode = 'checkpoint' | 'curriculum'
 export type ClassLearningState =
   | { enabled: false; classId: string }
   | {
       enabled: true
       classId: string
+      mode: LearnMode
       role: 'learner' | 'teacher'
       programCode: string
       classCode: string | null
@@ -31,6 +42,7 @@ export type ClassLearningState =
       serverNow: string | null
       paceDays: number
       sessions: SessionState[]
+      breaks: BreakRow[]
     }
 
 type J = Record<string, unknown>
@@ -59,6 +71,7 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
       published: s.published === true,
       openedAt: str(s.opened_at),
       completedAt: str(s.completed_at),
+      startAt: null,
       checkpoints: (Array.isArray(s.checkpoints) ? s.checkpoints : []).map(obj).filter(c => str(c.id)).map(c => ({
         id: c.id as string,
         title: typeof c.title === 'string' ? c.title : '',
@@ -71,6 +84,8 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
   return {
     enabled: true,
     classId,
+    mode: 'checkpoint',
+    breaks: [],
     role: o.role === 'teacher' ? 'teacher' : 'learner',
     programCode: o.program_code as string,
     classCode: str(o.class_code),
@@ -81,18 +96,66 @@ export function toClassLearningState(v: unknown, classId: string): ClassLearning
   }
 }
 
+/**
+ * Chế độ GIÁO TRÌNH (chưa có bài trả): dựng từ dữ liệu lớp thật đọc qua RLS hiện có (class_stages, class_sessions,
+ * class_lesson_content). Không có buổi nào ĐỌC ĐƯỢC đã xuất bản → null (giữ trang lớp cũ). Không tạo/giả tiến độ.
+ */
+export function curriculumState(input: {
+  classId: string; programCode: string | null; classCode: string | null; className: string; role: 'learner' | 'teacher'
+  stages: StageRow[]; sessions: SessionRow[]; contents: ContentState[]
+}): Extract<ClassLearningState, { enabled: true }> | null {
+  const published = new Set(input.contents.filter(c => c.status === 'published').map(c => c.session_id))
+  const lessons = input.sessions.filter(s => s.event_type === 'lesson' && s.session_number != null)
+  if (!lessons.some(s => published.has(s.id))) return null
+  const ordered = [...input.sessions].sort((a, b) => (a.start_at < b.start_at ? -1 : a.start_at > b.start_at ? 1 : 0))
+  const breaks: BreakRow[] = []
+  let pending: string | null = null
+  for (const s of ordered) {
+    if (s.event_type === 'break') { pending = (s.title ?? '').trim() || 'Nghỉ'; continue }
+    if (s.event_type === 'lesson' && s.session_number != null && pending) {
+      if (!breaks.some(b => b.beforeNo === s.session_number)) breaks.push({ beforeNo: s.session_number, title: pending })
+      pending = null
+    }
+  }
+  if (pending) breaks.push({ beforeNo: null, title: pending })
+  const sessions: SessionState[] = lessons
+    .sort((a, b) => (a.session_number as number) - (b.session_number as number))
+    .map(s => {
+      const st = stageOf(s, input.stages)
+      return {
+        sessionId: s.id, no: s.session_number as number, title: lessonTitle(s),
+        stageNo: st?.stage_no ?? null, stageTitle: st?.public_title ?? null,
+        published: published.has(s.id), openedAt: null, completedAt: null, checkpoints: [], startAt: s.start_at,
+      }
+    })
+  return {
+    enabled: true, classId: input.classId, mode: 'curriculum', role: input.role,
+    programCode: input.programCode || input.classCode || '', classCode: input.classCode, className: input.className,
+    serverNow: null, paceDays: 7, sessions, breaks,
+  }
+}
+
 export const pad2 = (n: number) => String(n).padStart(2, '0')
 export const sessionLabel = (s: Pick<SessionState, 'no' | 'title'>) => `Buổi ${pad2(s.no)} · ${s.title}`
 
 /** Buổi xem được: người học = đã mở (server); Thầy = mọi buổi (xem trước). */
-export function sessionPhase(s: SessionState, role: 'learner' | 'teacher'): 'locked' | 'open' | 'done' {
-  if (role === 'teacher') return 'open'
+export function sessionPhase(s: SessionState, role: 'learner' | 'teacher', mode: LearnMode = 'checkpoint'): 'locked' | 'open' | 'done' {
+  if (role === 'teacher' || mode === 'curriculum') return 'open'
   if (!s.openedAt) return 'locked'
   return s.completedAt ? 'done' : 'open'
 }
 
 /** Buổi tự mở khi vào lớp: buổi đã mở mà chưa xong, số nhỏ nhất; xong hết → buổi đã mở cuối cùng. Thầy: buổi đã xuất bản đầu tiên. */
-export function currentSessionNo(st: Extract<ClassLearningState, { enabled: true }>): number | null {
+export function currentSessionNo(st: Extract<ClassLearningState, { enabled: true }>, now: Date = new Date()): number | null {
+  if (st.mode === 'curriculum') {
+    // Theo LỊCH thật: buổi đã xuất bản gần nhất đã tới NGÀY học (giờ Việt Nam — ngày có buổi là buổi hiện tại từ sáng);
+    // chưa tới buổi nào → buổi xuất bản đầu tiên.
+    const vnDay = (t: number) => new Date(t + 7 * 3_600_000).toISOString().slice(0, 10)
+    const today = vnDay(now.getTime())
+    const pub = st.sessions.filter(s => s.published)
+    const due = pub.filter(s => s.startAt && vnDay(new Date(s.startAt).getTime()) <= today)
+    return due[due.length - 1]?.no ?? pub[0]?.no ?? st.sessions[0]?.no ?? null
+  }
   if (st.role === 'teacher') return st.sessions.find(s => s.published)?.no ?? st.sessions[0]?.no ?? null
   const open = st.sessions.filter(s => s.openedAt)
   return open.find(s => !s.completedAt)?.no ?? open[open.length - 1]?.no ?? null
@@ -156,7 +219,8 @@ export function checkpointUi(t: CheckpointThread | null): CheckpointUi {
 }
 
 /** Huy hiệu ngắn trên dòng buổi (khi thu gọn). */
-export function sessionBadge(s: SessionState, role: 'learner' | 'teacher', now: Date, paceDays: number): string {
+export function sessionBadge(s: SessionState, role: 'learner' | 'teacher', now: Date, paceDays: number, mode: LearnMode = 'checkpoint'): string {
+  if (mode === 'curriculum') return ''   // chưa có tiến độ thật → dòng gọn, trạng thái trung tính
   if (role === 'teacher') return s.published ? '' : 'Đang soạn'
   const phase = sessionPhase(s, role)
   if (phase === 'locked') return '🔒'

@@ -105,8 +105,14 @@ VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}"
 RC=$?
 if [ -n "${E2E_CHECKPOINTS:-}" ] && [ "$RC" = "0" ]; then
   psqld -f "$ROOT/db/tests/local/class_checkpoints_fixture_data.sql" >/dev/null
+  # Tuỳ chọn (không commit dữ liệu): E2E_EXTRA_SQL nạp thêm dữ liệu vào DB TẠM; E2E_EXTRA_RUNNER chạy thêm kịch bản Chrome
+  [ -n "${E2E_EXTRA_SQL:-}" ] && psqld -f "$E2E_EXTRA_SQL" >/dev/null
   VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$ROOT/tests/e2e-learning-thread/run-checkpoints.mjs"
   RC=$?
+  if [ "$RC" = "0" ] && [ -n "${E2E_EXTRA_RUNNER:-}" ]; then
+    VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$E2E_EXTRA_RUNNER"
+    RC=$?
+  fi
 fi
 set -e
 echo "── proxy log (lỗi REST ≥400 / endpoint chưa giả lập):"; grep -v '→ http' "$TMP/proxy.log" | head -30 || true
@@ -121,7 +127,7 @@ echo "$DBSTATE"
 # Chỉnh sửa trang cá nhân: tên + ảnh lưu vào hồ sơ dùng chung (edu_students) của đúng user; quyền sở hữu không đổi
 if [ "$RC" = "0" ]; then
   echo "$DBSTATE" | grep -qx 'A_profile=Ánh Dương Lê | avatar storage | user_id aaaaaaaa-0000-4000-8000-00000000000a' \
-    && echo "$DBSTATE" | grep -qE "^A_ownership=$([ -n "${E2E_CHECKPOINTS:-}" ] && echo '1 thread · 5' || echo '1 thread · 3') nhóm lớp$" \
+    && echo "$DBSTATE" | grep -qE "^A_ownership=$([ -n "${E2E_CHECKPOINTS:-}" ] && echo '1 thread · 6' || echo '1 thread · 3') nhóm lớp$" \
     && echo "PASS: DB sau Chỉnh sửa trang cá nhân: edu_students.display_name + avatar_url (storage 'avatars') của A; user_id / thread / nhóm lớp giữ nguyên" \
     || { echo "FAIL: trạng thái DB sau Chỉnh sửa trang cá nhân"; RC=1; }
 fi

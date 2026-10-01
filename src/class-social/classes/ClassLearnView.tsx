@@ -19,7 +19,7 @@ import { usePostsFeed } from '../posts/useCommunityFeed'
 import type { PostSocial } from '../sections/PostCard'
 import FeedEntryCard from '../sections/FeedEntryCard'
 import { fetchClassActivityPage } from './classesApi'
-import { CheckpointStatusView, LockedNote, SessionRowHead, SessionStatusLine } from './LearnParts'
+import { BreakDivider, CheckpointStatusView, LockedNote, SessionRowHead, SessionStatusLine } from './LearnParts'
 
 type Ready = Extract<ClassLearningState, { enabled: true }>
 const OPEN_KEY = 'csLearnOpen'
@@ -48,8 +48,8 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
 }) {
   // Nhịp tuần tính theo giờ SERVER (không tin đồng hồ máy học viên)
   const now = useMemo(() => (state.serverNow ? new Date(state.serverNow) : new Date()), [state.serverNow])
-  const [open, setOpen] = useState<number | null>(() => savedOpen(state.classId) ?? currentSessionNo(state))
-  const current = currentSessionNo(state)
+  const [open, setOpen] = useState<number | null>(() => savedOpen(state.classId) ?? currentSessionNo(state, now))
+  const current = currentSessionNo(state, now)
   const scrolled = useRef(false)
 
   // Vào lớp: đưa buổi hiện tại vào màn hình (một lần), không giật khi tải lại trạng thái.
@@ -67,12 +67,13 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
   }
 
   return (
-    <div className="cs-col cs-home cs-learn">
+    <div className="cs-col-wide cs-home cs-learn">
       <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp học</button>
       <header className="cs-card cs-learn-head">
         <span className="cs-learn-kicker">{state.programCode}{state.classCode ? ` · ${state.classCode}` : ''}</span>
         <h1 className="cs-class-name">{state.className}</h1>
         {state.role === 'teacher' && <p className="lt-note">Bạn đang xem với vai trò giáo viên: mọi buổi đều mở để xem trước.</p>}
+        {state.mode === 'curriculum' && state.role === 'learner' && <p className="lt-note">Chọn một buổi để xem giáo án.</p>}
       </header>
 
       <ol className="cs-learn-map" aria-label="Sơ đồ giáo trình">
@@ -81,10 +82,12 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
           const stageHead = s.stageNo != null && s.stageNo !== prevStage && s.stageTitle
             ? <li key={'stage-' + s.stageNo} className="cs-learn-stage" aria-hidden="true">Chặng {s.stageNo} · {s.stageTitle}</li> : null
           const expanded = open === s.no
+          const brk = state.breaks.find(b => b.beforeNo === s.no)
           return [
+            brk ? <BreakDivider key={'break-' + s.no} title={brk.title} /> : null,   // nghỉ cuối chặng trước, rồi mới sang chặng mới
             stageHead,
             <li key={s.sessionId} className={'cs-learn-item' + (expanded ? ' is-open' : '')}>
-              <SessionRowHead s={s} role={state.role} now={now} paceDays={state.paceDays} expanded={expanded}
+              <SessionRowHead s={s} role={state.role} mode={state.mode} now={now} paceDays={state.paceDays} expanded={expanded}
                 current={s.no === current} onToggle={() => toggle(s.no)} />
               {expanded && (
                 <div className="cs-learn-body">
@@ -94,6 +97,7 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
             </li>,
           ]
         })}
+        {state.breaks.filter(b => b.beforeNo == null).map(b => <BreakDivider key="break-end" title={b.title} />)}
       </ol>
 
       <RecentSubmissions key={state.serverNow ?? ''} classId={state.classId} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile} onOpenCommunity={onOpenCommunity} />
@@ -104,12 +108,12 @@ export default function ClassLearnView({ state, onReload, onOpenThread, onOpenPr
 function SessionBody({ state, s, now, onReload, onOpenThread }: {
   state: Ready; s: SessionState; now: Date; onReload: () => void; onOpenThread: (id: string) => void
 }) {
-  const phase = sessionPhase(s, state.role)
+  const phase = sessionPhase(s, state.role, state.mode)
   if (phase === 'locked') return <LockedNote sessions={state.sessions} s={s} />
-  if (!s.published) return <p className="cs-learn-locked">Giáo trình buổi này đang được soạn. Bạn sẽ thấy nội dung ngay khi buổi được xuất bản.</p>
+  if (!s.published) return <p className="cs-learn-locked">Nội dung buổi này đang được cập nhật.</p>
   return (
     <>
-      {state.role === 'learner' && <SessionStatusLine s={s} now={now} paceDays={state.paceDays} />}
+      {state.role === 'learner' && state.mode === 'checkpoint' && <SessionStatusLine s={s} now={now} paceDays={state.paceDays} />}
       <SessionContent key={s.sessionId} state={state} s={s} onReload={onReload} onOpenThread={onOpenThread} />
     </>
   )
@@ -172,6 +176,8 @@ function SessionContent({ state, s, onReload, onOpenThread }: {
       </div>
     )
   }
+  // Chế độ giáo trình (chưa có bài trả): KHÔNG cắm phần tương tác → bài trả (nếu có) chỉ hiện tĩnh, không nút giả.
+  if (state.mode === 'curriculum') return <LessonDocument doc={load.doc} embedded />
   return (
     <CheckpointSlot.Provider value={slot}>
       <LessonDocument doc={load.doc} embedded />
