@@ -13,6 +13,7 @@ import { SOLO01_BUOI05 } from '../data/solo01/buoi05'
 import { HT2027_BUOI01 } from '../data/ht2027/buoi01'
 import { HT2027_BUOI02 } from '../data/ht2027/buoi02'
 import { HT2027_BUOI03 } from '../data/ht2027/buoi03'
+import { HT2027_BUOI04 } from '../data/ht2027/buoi04'
 
 export interface ProgramTemplate {
   perStage: number
@@ -29,6 +30,6 @@ export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
   'HT2027.TH01': {
     perStage: 8,
     stages: HT2027_STAGES.map(s => ({ no: s.no, title: s.title.trim(), summary: s.goal })),
-    lessons: { 1: HT2027_BUOI01, 2: HT2027_BUOI02, 3: HT2027_BUOI03 },
+    lessons: { 1: HT2027_BUOI01, 2: HT2027_BUOI02, 3: HT2027_BUOI03, 4: HT2027_BUOI04 },
   },
 }
