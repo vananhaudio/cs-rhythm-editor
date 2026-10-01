@@ -455,6 +455,10 @@ Fixture `fixtures/lyric-harmony.musicxml` **sạch** (không lỗi nhịp, khôn
 
 TAB dây/phím · sửa cả chuỗi dấu nối · luyến · thêm/xoá hợp âm hay dòng lời (dời đường dẫn cấu trúc) · đổi cấu trúc melisma (`syllabic`/`extend`) · âm tiết ghép (`<elision>`) · nhận diện hợp âm từ nốt · dịch giọng cả bài · gợi ý sửa ô thiếu/thừa phách · ẩn/hiện lớp hiển thị · sửa trên bài chưa có trong thư viện (nút Lưu nói rõ phải lưu bài trước).
 
+## Chia sẻ lên cộng đồng (Tool Share, 01/10/2026)
+
+Bản đang hiển thị (MusicXML + thiết lập đếm/trình bày) có thể chia sẻ thành artifact chỉ-xem trên Feed của Class. Không đụng kho bài hay kho master. Xem [`docs/SOCIAL-NHIPPHACH-ARTIFACT-V1.md`](SOCIAL-NHIPPHACH-ARTIFACT-V1.md).
+
 ## Chạy test
 
 ```bash

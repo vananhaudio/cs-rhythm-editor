@@ -131,6 +131,7 @@ import { parseSourceSvgId, sourceSvgId, tagSourceIds } from "../musicxml-beats/s
 import { parseMusicXML } from "../musicxml-beats/parser";
 import type { CSSProperties } from "react";
 import { NP_CSS, NP_SCOPE } from "../nhipphach/theme";
+import { ShareScoreBlock } from "../nhipphach/ShareScoreBlock";
 import { can, NO_CAPS, type CapState } from "../nhipphach/capabilities";
 import type { NhipPhachJobRepository, JobSummary, JobDetail } from "../nhipphach/jobRepository";
 import type { PresetRepository } from "../nhipphach/presetRepository";
@@ -2228,6 +2229,11 @@ export default function MusicXmlBeatsPage({
                       {exporting ? "Đang xuất…" : trangThaiXuat}
                     </span>
                   </div>
+                  {/* Chia sẻ lên cộng đồng (Tool Share) — nút PHỤ, chỉ khi đã đăng nhập */}
+                  {caps.role !== "guest" && (
+                    <ShareScoreBlock xml={xmlHienThi} name={source?.name ?? ""} settings={settings}
+                      rendered={!!score && !busy && !error} />
+                  )}
                 </>
               ) : (
                 <>

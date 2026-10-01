@@ -268,6 +268,24 @@ psqld t_ba -c "begin;" -f "$ROOT/db/social_bms_artifact_v1_rollback.sql" -c "com
 [ "$(q t_ba "select count(*) from pg_class where relname = 'tool_artifacts'")/$(q t_ba "select md5(prosrc) from pg_proc where proname = 'social_share_tool_result'")/$(q t_ba "select count(*) from pg_proc where proname in ('bms_song_normalize','social_delete_tool_artifact')")" = "0/$TS_V1_MD5/0" ] \
   && ok "BMS artifact rollback ×2 (chưa có artifact): gỡ bảng + hàm, RPC về đúng bản Tool Share V1" || fail "BMS artifact rollback"
 
+echo "── NHỊP & PHÁCH ARTIFACT V1 (tool_artifacts.content + nhánh nhipphach): setup ×2 → rls_setup → test → rollback ×2"
+baseline t_np "$TMP/fixture_noroles.sql"
+for f in learning_threads_p1_setup learning_threads_p2_setup social_classes_v1_setup social_feed_v1_setup social_tool_share_v1_setup; do psqld t_np -f "$ROOT/db/$f.sql" >/dev/null; done
+psqld t_np -c "begin;" -f "$ROOT/db/social_bms_artifact_v1_setup.sql" -c "commit;" >/dev/null
+BMS_MD5="$(q t_np "select md5(prosrc) from pg_proc where proname = 'social_share_tool_result'")"
+[ "$BMS_MD5" = "$(grep -o "md5(v_src) <> '[0-9a-f]*'" "$ROOT/db/social_nhipphach_artifact_v1_setup.sql" | grep -o "[0-9a-f]\{32\}")" ] \
+  && ok "Nhịp & Phách: cổng md5 = đúng RPC BMS trong repo" || fail "md5 cổng Nhịp & Phách lệch RPC BMS ($BMS_MD5)"
+psqld t_np -c "begin;" -f "$ROOT/db/social_nhipphach_artifact_v1_setup.sql" -c "commit;" >/dev/null && psqld t_np -c "begin;" -f "$ROOT/db/social_nhipphach_artifact_v1_setup.sql" -c "commit;" >/dev/null && ok "Nhịp & Phách artifact migration ×2 (idempotent)"
+psqld t_np -f "$ROOT/db/rls_setup.sql" >/dev/null
+[ "$(q t_np "select count(*) from pg_policies where tablename = 'tool_artifacts'")/$(q t_np "select string_agg(privilege_type, ',') from information_schema.role_table_grants where table_name = 'tool_artifacts' and grantee in ('anon','authenticated','PUBLIC')")" = "1/SELECT" ] \
+  && ok "Nhịp & Phách: tool_artifacts vẫn 1 policy đọc; chỉ authenticated SELECT" || fail "Nhịp & Phách quyền bảng"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d t_np -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/social_nhipphach_artifact_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //'
+[ "${PIPESTATUS[0]}" = "0" ] || fail "test SQL Nhịp & Phách artifact"
+psqld t_np -c "begin;" -f "$ROOT/db/social_nhipphach_artifact_v1_rollback.sql" -c "commit;" >/dev/null && psqld t_np -c "begin;" -f "$ROOT/db/social_nhipphach_artifact_v1_rollback.sql" -c "commit;" >/dev/null
+[ "$(q t_np "select count(*) from information_schema.columns where table_name = 'tool_artifacts' and column_name = 'content'")/$(q t_np "select md5(prosrc) from pg_proc where proname = 'social_share_tool_result'")/$(q t_np "select count(*) from pg_proc where proname like 'nhipphach_%check' or proname = 'nhipphach_settings_normalize'")" = "0/$BMS_MD5/0" ] \
+  && ok "Nhịp & Phách rollback ×2 (chưa có bản nào): gỡ cột + hàm, RPC về đúng bản BMS" || fail "Nhịp & Phách rollback"
+
 echo "── Rollback ×2 (idempotent) → cài lại"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 1"
 psqld tva_lt -f "$ROOT/db/learning_threads_p1_rollback.sql" >/dev/null && ok "rollback lần 2 (idempotent)"

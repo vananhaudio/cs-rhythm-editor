@@ -28,6 +28,15 @@ export async function shareToolResult(tool: string, result: Record<string, unkno
   }
 }
 
+/** Chủ sản phẩm gỡ chia sẻ (mọi công cụ dùng artifact): xoá artifact + bài Feed trỏ tới nó (RPC, cùng transaction). */
+export async function deleteToolArtifact(id: string): Promise<boolean> {
+  try {
+    const { supabase } = await import('../../supabase')
+    const { data, error } = await supabase.rpc('social_delete_tool_artifact', { p_id: id })
+    return !error && data === true
+  } catch { return false }
+}
+
 // ── Đọc payload theo LÔ (không N+1): mọi card tool_share trong cùng nhịp → một select ────────────────
 const cache = new Map<string, unknown>()     // postId → tool_share jsonb (null = không đọc được)
 const pending = new Set<string>()

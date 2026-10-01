@@ -4,6 +4,7 @@ import { useCapabilities } from "./useCapabilities";
 import { NP_CSS, NP_SCOPE } from "./theme";
 
 const MusicXmlBeatsPage = lazy(() => import("../pages/MusicXmlBeatsPage"));
+const SharedScoreView = lazy(() => import("./SharedScoreView"));
 
 /**
  * Cổng vào công cụ Nhịp Phách.
@@ -17,6 +18,15 @@ const MusicXmlBeatsPage = lazy(() => import("../pages/MusicXmlBeatsPage"));
  */
 export default function NhipPhachGate() {
   const { state, phase } = useCapabilities();
+  // Bản được chia sẻ trên Feed (?artifact=) → trang CHỈ XEM. Quyền đọc do RLS của artifact (thành viên Class)
+  // quyết, không cấp thêm quyền công cụ nào (không xuất, không lưu, không sửa).
+  const artifactId = new URLSearchParams(window.location.search).get("artifact");
+  if (artifactId !== null)
+    return (
+      <Suspense fallback={<ManBao tieuDe="Đang mở bản nhạc…" />}>
+        <SharedScoreView artifactId={artifactId} />
+      </Suspense>
+    );
 
   if (phase === "loading")
     return <ManBao tieuDe="Đang mở công cụ bản nhạc…" />;

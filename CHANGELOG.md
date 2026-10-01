@@ -2,6 +2,13 @@
 
 Ghi lại thay đổi đáng chú ý. Định dạng ngày: dd/mm/yyyy.
 
+## 01/10/2026
+
+- **Class Social — Nhịp & Phách Artifact Share V1**
+  - Trong thẻ "Xuất tài liệu" có nút phụ "Chia sẻ lên cộng đồng" (đã đăng nhập, bản khắc có số phách đã hiện xong). Bấm vào sẽ tạo artifact (`tool_artifacts` loại `nhipphach/score`: MusicXML đang hiển thị + thiết lập đếm/trình bày, server kiểm XML và chuẩn hoá) + đúng một thẻ Feed "Nhịp & Phách · Bản nhạc". Người khác bấm "Xem bản nhạc" → `/nhipphach?artifact=<id>` dựng lại đúng bản ở chế độ chỉ xem; chủ bài gỡ được.
+  - Không chạm kho master `musicxml_library` hay kho Nhịp Phách. Chi tiết: `docs/SOCIAL-NHIPPHACH-ARTIFACT-V1.md`.
+  - E2E ổn định hơn: chờ danh sách lớp trên sidebar; khối BMS không chờ mạng ngoài (YouTube).
+
 ## 30/09/2026
 
 - **Class Social — BMS Artifact Share V1**

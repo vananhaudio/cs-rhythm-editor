@@ -38,9 +38,15 @@ psqld -f "$ROOT/db/social_feed_v1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_learning_identity_v1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_tool_share_v1_setup.sql" >/dev/null
 psqld -f "$ROOT/db/social_bms_artifact_v1_setup.sql" >/dev/null
+psqld -f "$ROOT/db/social_nhipphach_artifact_v1_setup.sql" >/dev/null
 # Chỉ cho stack E2E: cổng công cụ của App (ToolRouteGate) mở; Thầy cấu hình 2 bài (bài 2 KHÔNG cấu hình)
 psqld >/dev/null <<'SQL'
 create or replace function public.my_tool_route_access(p_path text) returns boolean language sql stable as $$ select true $$;
+-- Quyền Nhịp & Phách như production cho HỌC SINH (access, nâng cao, PDF/PNG; không lưu kho, không sửa); khách: không gì
+create or replace function public.my_nhipphach_caps() returns jsonb language sql stable as $$
+  select case when auth.uid() is null then '{"role":"guest","caps":{}}'::jsonb
+    else '{"role":"student","caps":{"access":true,"advanced":true,"export.pdf":true,"export.png":true}}'::jsonb end $$;
+grant execute on function public.my_nhipphach_caps() to anon, authenticated;
 grant execute on function public.my_tool_route_access(text) to anon, authenticated;
 select set_config('request.jwt.claims', '{"sub":"dddddddd-0000-4000-8000-00000000000d","role":"authenticated"}', false);
 select public.lt_set_lesson_settings('e0000000-0000-4000-8000-000000000001', 'allowed', 'allowed',

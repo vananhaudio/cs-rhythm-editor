@@ -3,7 +3,7 @@
 // Feed/PostCard chỉ gọi describeToolShare() — không if/else theo từng công cụ. Server kiểm lại payload khi ghi
 // (db/social_tool_share_v1_setup.sql). Thêm BMS / Nhịp & Phách / Ban nhạc = thêm MỘT mục ở đây + một nhánh ở RPC.
 import type { LucideIcon } from 'lucide-react'
-import { Music4, Timer } from 'lucide-react'
+import { ListMusic, Music4, Timer } from 'lucide-react'
 
 export type ToolShareView = {
   tool: string
@@ -75,6 +75,26 @@ TOOL_REGISTRY.bms = {
       thumbnail: `https://i.ytimg.com/vi/${vid}/mqdefault.jpg`,
       note: null,
       action: { label: 'Luyện bài này', href: `/song-builder?artifact=${id.toLowerCase()}` },
+    }
+  },
+}
+
+/** Nhịp & Phách: bản nhạc đã đánh số phách → artifact (MusicXML + thiết lập). Feed chỉ có tham chiếu + tóm tắt thật. */
+export const COUNTING_LEVEL_LABEL: Record<string, string> = { beats: 'Đếm phách', eighths: 'Chia đôi', sixteenths: 'Chia tư' }
+const METER_RE = /^[0-9]{1,2}(\+[0-9]{1,2}){0,5}\/[0-9]{1,2}$/
+TOOL_REGISTRY.nhipphach = {
+  describe: raw => {
+    const id = raw.artifact_id, title = raw.title, meter = raw.meter, level = raw.counting_level
+    if (raw.kind !== 'score' || typeof id !== 'string' || !UUID_RE.test(id)) return null
+    if (typeof title !== 'string' || !title.trim() || title.length > 120) return null
+    if (meter != null && (typeof meter !== 'string' || !METER_RE.test(meter))) return null
+    if (typeof level !== 'string' || !Object.hasOwn(COUNTING_LEVEL_LABEL, level)) return null
+    return {
+      tool: 'nhipphach', toolLabel: 'Nhịp & Phách', icon: ListMusic, kindLabel: 'Bản nhạc',
+      headline: title.trim(),
+      detail: [typeof meter === 'string' ? `Nhịp ${meter}` : null, COUNTING_LEVEL_LABEL[level]].filter(Boolean).join(' · '),
+      thumbnail: null, note: null,
+      action: { label: 'Xem bản nhạc', href: `/nhipphach?artifact=${id.toLowerCase()}` },
     }
   },
 }

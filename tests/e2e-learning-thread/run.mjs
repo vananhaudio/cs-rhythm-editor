@@ -276,6 +276,7 @@ try {
   // ── Social UX + Lớp học V1 ─────────────────────────────────────────────
   ;({ ctx, page } = await meAs('c@test.local'))
   await page.waitForSelector('.cs-share', { timeout: 15000 })
+  await page.waitForFunction(() => /Bạn chưa ở trong lớp nào\./.test(document.querySelector('.cs-sidebar')?.textContent ?? ''), { timeout: 15000 })   // danh sách lớp tải xong
   const navText = await page.$eval('.cs-sidebar', e => e.textContent)
   assert.ok(navText.indexOf('Trang chủ') < navText.indexOf('Bạn bè') && navText.indexOf('Bạn bè') < navText.indexOf('Lớp học')
             && navText.indexOf('Lớp học') < navText.indexOf('App học'), 'sidebar: CỘNG ĐỒNG → LỚP HỌC → HỌC TẬP')
@@ -309,6 +310,7 @@ try {
 
   ;({ ctx, page } = await meAs('a@test.local'))
   await page.waitForSelector('.cs-share', { timeout: 15000 })
+  await page.waitForFunction(() => /Đệm hát căn bản/.test(document.querySelector('.cs-sidebar')?.textContent ?? ''), { timeout: 15000 })   // danh sách lớp tải xong
   const side = await page.$eval('.cs-sidebar', e => e.textContent)
   assert.match(side, /Đệm hát căn bản/); assert.equal(/DH2\.KD18/.test(side), false, 'menu không hiện mã lớp')
   await page.click('.cs-share-input')
@@ -733,7 +735,7 @@ try {
   {
     const loginAt = async (email, width) => {
       const { ctx: c, page: pg } = await ctxPage(width)
-      await pg.goto(ME, { waitUntil: 'networkidle0' })
+      await pg.goto(ME, { waitUntil: 'domcontentloaded' })
       await pg.waitForSelector('#cs-login-email', { timeout: 15000 })
       await pg.type('#cs-login-email', email); await pg.type('#cs-login-pass', 'e2e'); await pg.click('.cs-guest-submit')
       await pg.waitForSelector('.cs-share', { timeout: 15000 })
@@ -756,7 +758,7 @@ try {
         step: 5, createdAt: Date.now(), updatedAt: Date.now(),
       }))
     })
-    await a.goto(SB, { waitUntil: 'networkidle0' })
+    await a.goto(SB, { waitUntil: 'domcontentloaded' })
     await clickText(a, '▶ Tiếp tục')
     await waitText(a, /Chia sẻ lên cộng đồng/)
     await waitText(a, /Nháp của bạn vẫn chỉ ở máy/)
@@ -771,7 +773,7 @@ try {
     await waitText(a, /Đã chia sẻ lên cộng đồng/)
     const artHref = await a.$eval('a[href^="/song-builder?artifact="]', e => e.getAttribute('href'))
     assert.match(artHref, /^\/song-builder\?artifact=[0-9a-f-]{36}$/)
-    await a.goto(ME, { waitUntil: 'networkidle0' })
+    await a.goto(ME, { waitUntil: 'domcontentloaded' })
     await a.waitForSelector('.cs-tool-share-thumb', { timeout: 15000 })
     const bmsCards = await a.$$eval('.cs-post', els => els.filter(e => /BMS · Dựng bài hát/.test(e.textContent)).map(e => ({ t: e.textContent, img: e.querySelector('.cs-tool-share-thumb')?.getAttribute('src'), cta: e.querySelector('.cs-tool-share-cta')?.getAttribute('href') })))
     assert.equal(bmsCards.length, 1, 'đúng MỘT thẻ BMS (bấm đúp)')
@@ -783,7 +785,7 @@ try {
     // B: "Luyện bài này" → đúng bài, chỉ luyện; tải lại vẫn đúng; không có nút gỡ
     const { c: cb, pg: b } = await loginAt('b@test.local', 390)
     await b.waitForSelector('.cs-tool-share-thumb', { timeout: 15000 })
-    await Promise.all([b.waitForNavigation({ waitUntil: 'networkidle0' }),
+    await Promise.all([b.waitForNavigation({ waitUntil: 'domcontentloaded' }),
       b.evaluate(() => [...document.querySelectorAll('.cs-post')].find(e => /BMS · Dựng bài hát/.test(e.textContent)).querySelector('.cs-tool-share-cta').click())])
     assert.equal(await b.evaluate(() => location.pathname + location.search), artHref)
     const checkPractice = async () => {
@@ -797,31 +799,104 @@ try {
     await checkPractice()
     await noHorizontalOverflow(b, 'BMS chỉ luyện (390px)')
     await b.screenshot({ path: `${SHOTS}/25-bms-practice-b.png` })
-    await b.reload({ waitUntil: 'networkidle0' }); await checkPractice()
+    await b.reload({ waitUntil: 'domcontentloaded' }); await checkPractice()
     // Nháp của B không bị ghi bài của A
     assert.equal(await b.evaluate(() => localStorage.getItem('csre-sb-drafts-v1')), null, 'mở bài chia sẻ không ghi vào thư viện của B')
     // id lạ / không tồn tại → thông báo nhẹ, không crash
-    await b.goto(SB + '?artifact=00000000-0000-4000-8000-000000000000', { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
-    await b.goto(SB + '?artifact=%3Cscript%3E', { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    await b.goto(SB + '?artifact=00000000-0000-4000-8000-000000000000', { waitUntil: 'domcontentloaded' }); await waitText(b, /không còn được chia sẻ/)
+    await b.goto(SB + '?artifact=%3Cscript%3E', { waitUntil: 'domcontentloaded' }); await waitText(b, /không còn được chia sẻ/)
     // Khách chưa đăng nhập
     const { ctx: cg, page: g } = await ctxPage(390)
-    await g.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'networkidle0' }); await waitText(g, /Đăng nhập Class để luyện bài này/)
+    await g.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'domcontentloaded' }); await waitText(g, /Đăng nhập Class để luyện bài này/)
     await cg.close()
     // A (chủ bài) mở bài của mình → "Bài của bạn" → Gỡ chia sẻ (2 bước) → bài + thẻ biến mất
     const [ca2, a2] = [ca, a]   // cùng trình duyệt của A (nháp local ở đây)
-    await a2.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'networkidle0' })
+    await a2.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'domcontentloaded' })
     await waitText(a2, /Bài của bạn/)
     await clickText(a2, 'Gỡ chia sẻ'); await waitText(a2, /Nháp trong máy bạn vẫn giữ nguyên/)
     await a2.screenshot({ path: `${SHOTS}/26-bms-owner-remove.png` })
     await clickText(a2, 'Xác nhận gỡ'); await waitText(a2, /không còn được chia sẻ/)
-    await a2.goto(ME, { waitUntil: 'networkidle0' }); await a2.waitForSelector('.cs-post', { timeout: 15000 }); await new Promise(r => setTimeout(r, 800))
+    await a2.goto(ME, { waitUntil: 'domcontentloaded' }); await a2.waitForSelector('.cs-post', { timeout: 15000 }); await new Promise(r => setTimeout(r, 800))
     assert.equal(/BMS · Dựng bài hát/.test(await text(a2)), false, 'thẻ BMS đã gỡ khỏi Feed')
     assert.ok(await a2.evaluate(() => !!JSON.parse(localStorage.getItem('csre-sb-drafts-v1') || '{}').d_e2e1), 'nháp local của A vẫn còn')
     await ca2.close()
     // B tải lại link cũ → thông báo nhẹ, không dữ liệu chết
-    await b.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    await b.goto(`http://class.localhost:${V}${artHref}`, { waitUntil: 'domcontentloaded' }); await waitText(b, /không còn được chia sẻ/)
     await cb.close()
     ok('BMS Artifact: nháp local không tự lên server · Chia sẻ (bấm đúp vẫn 1 bài) → thẻ Feed (tên · 76 BPM · 4/4 · 4 hợp âm · thumbnail, không lời) → B "Luyện bài này" đúng bài (lời, hợp âm, lưới) chỉ luyện, tải lại giữ nguyên, không ghi thư viện B · id lạ/khách xử lý nhẹ · A gỡ → bài + thẻ biến mất, nháp local còn; 390 không tràn ngang')
+  }
+
+  // ── Nhịp & Phách → Tool Share: A dựng bản đánh số phách → Chia sẻ → Feed → B "Xem bản nhạc" → đúng bản, chỉ xem → A gỡ ──
+  {
+    const loginAt = async (email, width) => {
+      const { ctx: c, page: pg } = await ctxPage(width)
+      await pg.goto(ME, { waitUntil: 'networkidle0' })
+      await pg.waitForSelector('#cs-login-email', { timeout: 15000 })
+      await pg.type('#cs-login-email', email); await pg.type('#cs-login-pass', 'e2e'); await pg.click('.cs-guest-submit')
+      await pg.waitForSelector('.cs-share', { timeout: 15000 })
+      return { c, pg }
+    }
+    const NP = `http://class.localhost:${V}/nhipphach`
+    const serverCalls = []
+    const { c: ca, pg: a } = await loginAt('a@test.local', 390)
+    a.on('request', r => { if (/tool_artifacts|social_share_tool_result|musicxml_library|nhipphach_score/.test(r.url())) serverCalls.push(r.method() + ' ' + r.url()) })
+    await a.goto(NP, { waitUntil: 'networkidle0' })
+    await clickText(a, 'Dùng file mẫu')
+    await a.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Chia sẻ lên cộng đồng' && !b.disabled), { timeout: 60000 })
+    assert.deepEqual(serverCalls, [], 'mở + dựng bản nhạc KHÔNG gửi gì lên server: ' + serverCalls.join(' '))
+    await waitText(a, /Bản gốc của bạn không đổi/)
+    await noHorizontalOverflow(a, 'Nhịp & Phách + nút chia sẻ (390px)')
+    await a.evaluate(() => document.querySelector('.np-share').scrollIntoView({ block: 'center' }))
+    await a.screenshot({ path: `${SHOTS}/27-nhipphach-share.png` })
+    await a.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === 'Chia sẻ lên cộng đồng'); b.click(); b.click() })
+    await waitText(a, /Đã chia sẻ lên cộng đồng/, 20000)
+    assert.ok(!serverCalls.some(u => /musicxml_library|nhipphach_score/.test(u)), 'không chạm kho master / kho Nhịp Phách: ' + serverCalls.join(' '))
+    const npHref = await a.$eval('a[href^="/nhipphach?artifact="]', e => e.getAttribute('href'))
+    assert.match(npHref, /^\/nhipphach\?artifact=[0-9a-f-]{36}$/)
+    await a.goto(ME, { waitUntil: 'networkidle0' })
+    await a.waitForFunction(() => /Nhịp & Phách · Bản nhạc/.test(document.body.innerText), { timeout: 15000 })
+    const npCards = await a.$$eval('.cs-post', els => els.filter(e => /Nhịp & Phách · Bản nhạc/.test(e.textContent)).map(e => ({ t: e.textContent, lid: !!e.querySelector('.cs-post-head .cs-lid'), cta: e.querySelector('.cs-tool-share-cta')?.getAttribute('href') })))
+    assert.equal(npCards.length, 1, 'đúng MỘT thẻ (bấm đúp)')
+    assert.match(npCards[0].t, /Nhịp & Phách · Bản nhạc[\s\S]*bai mau[\s\S]*Nhịp 4\/4 · Đếm phách[\s\S]*Xem bản nhạc/)
+    assert.ok(npCards[0].lid, 'danh tính học tập cạnh tên'); assert.equal(npCards[0].cta, npHref)
+    assert.equal(/score-partwise|<\?xml/.test(npCards[0].t), false, 'thẻ không lộ MusicXML')
+    await noHorizontalOverflow(a, 'Feed có thẻ Nhịp & Phách (390px)')
+    await a.screenshot({ path: `${SHOTS}/28-feed-nhipphach.png` })
+    // B: Xem bản nhạc → đúng bản (dựng lại), chỉ xem; tải lại vẫn đúng
+    const { c: cb, pg: b } = await loginAt('b@test.local', 390)
+    await b.waitForFunction(() => /Nhịp & Phách · Bản nhạc/.test(document.body.innerText), { timeout: 15000 })
+    await Promise.all([b.waitForNavigation({ waitUntil: 'networkidle0' }),
+      b.evaluate(() => [...document.querySelectorAll('.cs-post')].find(e => /Nhịp & Phách · Bản nhạc/.test(e.textContent)).querySelector('.cs-tool-share-cta').click())])
+    assert.equal(await b.evaluate(() => location.pathname + location.search), npHref)
+    const checkView = async () => {
+      await b.waitForSelector('.np-shared-page img', { timeout: 60000 })
+      const t = await text(b)
+      assert.match(t, /bai mau[\s\S]*Nhịp 4\/4 · Đếm phách[\s\S]*chỉ xem, không sửa bản gốc/)
+      assert.equal(/Gỡ chia sẻ|Chia sẻ lên cộng đồng|Xuất PDF|Lưu vào thư viện/.test(t), false, 'người xem không gỡ/lưu/xuất/sửa')
+      const svg = await b.$eval('.np-shared-page img', async img => { const r = await fetch(img.src); return r.text() })
+      assert.match(svg, /<svg/); assert.match(svg, /<text[^>]*>\s*1\s*<\/text>|>1</, 'bản khắc có số phách')
+      assert.ok(await b.$eval('.np-shared-page img', i => i.naturalWidth > 0), 'trang bản nhạc hiển thị')
+    }
+    await checkView()
+    await noHorizontalOverflow(b, 'Bản nhạc chia sẻ chỉ xem (390px)')
+    await b.screenshot({ path: `${SHOTS}/29-nhipphach-view-b.png`, fullPage: true })
+    await b.reload({ waitUntil: 'networkidle0' }); await checkView()
+    await b.goto(NP + '?artifact=00000000-0000-4000-8000-000000000000', { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    await b.goto(NP + '?artifact=%3Cscript%3E', { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    const { ctx: cg, page: g } = await ctxPage(390)
+    await g.goto(`http://class.localhost:${V}${npHref}`, { waitUntil: 'networkidle0' }); await waitText(g, /Đăng nhập Class để xem bản nhạc này/)
+    await cg.close()
+    // A gỡ → thẻ + bản biến mất; link cũ báo nhẹ
+    await a.goto(`http://class.localhost:${V}${npHref}`, { waitUntil: 'networkidle0' })
+    await waitText(a, /Bản của bạn/, 15000)
+    await clickText(a, 'Gỡ chia sẻ'); await waitText(a, /Bản nhạc gốc của bạn không đổi/)
+    await clickText(a, 'Xác nhận gỡ'); await waitText(a, /không còn được chia sẻ/)
+    await a.goto(ME, { waitUntil: 'networkidle0' }); await a.waitForSelector('.cs-post', { timeout: 15000 }); await new Promise(r => setTimeout(r, 800))
+    assert.equal(/Nhịp & Phách · Bản nhạc/.test(await text(a)), false, 'thẻ đã gỡ khỏi Feed')
+    await ca.close()
+    await b.goto(`http://class.localhost:${V}${npHref}`, { waitUntil: 'networkidle0' }); await waitText(b, /không còn được chia sẻ/)
+    await cb.close()
+    ok('Nhịp & Phách: dựng bản đánh số phách không gửi gì lên server · Chia sẻ (bấm đúp vẫn 1) → thẻ "Nhịp & Phách · Bản nhạc · bai mau · Nhịp 4/4 · Đếm phách" + danh tính, không MusicXML → B "Xem bản nhạc" dựng lại đúng bản (có số phách), chỉ xem, tải lại giữ nguyên · id lạ/khách báo nhẹ · A gỡ → thẻ + link xử lý đúng · không chạm kho master; 390 không tràn')
   }
 
   const real = errors.filter(e => !/401|Failed to load resource/.test(e))
