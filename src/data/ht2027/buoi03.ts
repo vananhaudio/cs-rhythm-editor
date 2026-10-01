@@ -1,6 +1,7 @@
 // ── HÀNH TRÌNH 2027 · BUỔI 03 — Tài liệu ôn tập 7 ngày ──
 // Sinh từ file Word của Thầy (On-tap-7-ngay-Buoi-3-Phan-tich-vong-hoa-am.docx); nguồn gốc là file Word,
 // sửa nội dung thì sửa Word rồi chạy lại scripts/ht2027-docx-to-lesson.py.
+// Xưng hô đã đổi "em" → "bạn" (01/10/2026). Chạy lại script từ Word sẽ mất thay đổi này — sửa Word trước.
 import type { LessonDoc } from '../../lesson/lessonTypes'
 
 export const HT2027_BUOI03: LessonDoc = {
@@ -25,7 +26,7 @@ export const HT2027_BUOI03: LessonDoc = {
         {
           "b": "callout",
           "label": "KẾT QUẢ CUỐI TUẦN",
-          "text": "Em phân tích được một vòng hòa âm theo 4 lớp: giọng, số bậc, chức năng và hướng chuyển động; nhận ra điểm căng, điểm nghỉ, kiểu kết và chỗ cần đặt câu hỏi."
+          "text": "Bạn phân tích được một vòng hòa âm theo 4 lớp: giọng, số bậc, chức năng và hướng chuyển động; nhận ra điểm căng, điểm nghỉ, kiểu kết và chỗ cần đặt câu hỏi."
         },
         {
           "b": "h",
@@ -133,13 +134,13 @@ export const HT2027_BUOI03: LessonDoc = {
         },
         {
           "b": "write",
-          "label": "3. Nếu một câu dừng ở G7 trong giọng C, em cảm thấy câu đã hết chưa? Vì sao?",
+          "label": "3. Nếu một câu dừng ở G7 trong giọng C, bạn cảm thấy câu đã hết chưa? Vì sao?",
           "lines": 2
         },
         {
           "b": "callout",
           "label": "MỤC TIÊU PHÂN TÍCH",
-          "text": "Không phải dán thật nhiều nhãn. Phân tích tốt phải giúp em nghe rõ hơn, nhớ vòng nhanh hơn và biết vì sao câu nhạc muốn đi tiếp hoặc dừng lại."
+          "text": "Không phải dán thật nhiều nhãn. Phân tích tốt phải giúp bạn nghe rõ hơn, nhớ vòng nhanh hơn và biết vì sao câu nhạc muốn đi tiếp hoặc dừng lại."
         }
       ]
     },
@@ -305,7 +306,7 @@ export const HT2027_BUOI03: LessonDoc = {
             [
               "Vòng",
               "Giọng",
-              "Số bậc của em"
+              "Số bậc của bạn"
             ],
             [
               "Am – F – C – G",
@@ -336,7 +337,7 @@ export const HT2027_BUOI03: LessonDoc = {
         {
           "b": "ul",
           "items": [
-            "Chơi vòng, dừng ở hợp âm em cho là I. Nếu cảm giác chưa về, kiểm tra lại giả định về giọng.",
+            "Chơi vòng, dừng ở hợp âm bạn cho là I. Nếu cảm giác chưa về, kiểm tra lại giả định về giọng.",
             "Không quyết định giọng chỉ vì hợp âm đầu tiên; hãy nghe điểm nghỉ và quan sát toàn đoạn."
           ]
         },
@@ -499,7 +500,7 @@ export const HT2027_BUOI03: LessonDoc = {
         },
         {
           "b": "write",
-          "label": "Mẫu nào khiến em muốn nghe thêm ngay lập tức?",
+          "label": "Mẫu nào khiến bạn muốn nghe thêm ngay lập tức?",
           "lines": 2
         },
         {
@@ -601,7 +602,7 @@ export const HT2027_BUOI03: LessonDoc = {
         },
         {
           "b": "write",
-          "label": "Trong C – D7 – G7 – C, D7 đang đẩy đến đâu? Nhãn tạm của em:",
+          "label": "Trong C – D7 – G7 – C, D7 đang đẩy đến đâu? Nhãn tạm của bạn:",
           "lines": 2
         },
         {
@@ -612,7 +613,7 @@ export const HT2027_BUOI03: LessonDoc = {
         {
           "b": "callout",
           "label": "CHƯA HIỂU KHÔNG SAO",
-          "text": "Đây là vùng mở rộng. Em không cần gọi đúng mọi tên chuyên môn trước buổi học; chỉ cần khoanh đúng chỗ lạ và nêu được điều mình nghe."
+          "text": "Đây là vùng mở rộng. Bạn không cần gọi đúng mọi tên chuyên môn trước buổi học; chỉ cần khoanh đúng chỗ lạ và nêu được điều mình nghe."
         }
       ]
     },
@@ -738,7 +739,7 @@ export const HT2027_BUOI03: LessonDoc = {
           "rows": [
             [
               "Mục",
-              "Em điền"
+              "Bạn điền"
             ],
             [
               "Tên bài / đoạn",
@@ -769,7 +770,7 @@ export const HT2027_BUOI03: LessonDoc = {
               "____________________________________________"
             ],
             [
-              "Điều em nghe",
+              "Điều bạn nghe",
               "____________________________________________"
             ]
           ]
@@ -781,10 +782,10 @@ export const HT2027_BUOI03: LessonDoc = {
         {
           "b": "ul",
           "items": [
-            "Nói tên giọng và bằng chứng khiến em chọn giọng đó.",
+            "Nói tên giọng và bằng chứng khiến bạn chọn giọng đó.",
             "Chơi đoạn nhạc một lần, đúng nhịp và giữ rõ điểm đổi hợp âm.",
             "Đọc số bậc và chức năng của một câu quan trọng.",
-            "Chỉ ra điểm kết hoặc hợp âm làm em chưa chắc."
+            "Chỉ ra điểm kết hoặc hợp âm làm bạn chưa chắc."
           ]
         },
         {
@@ -968,7 +969,7 @@ export const HT2027_BUOI03: LessonDoc = {
         {
           "b": "callout",
           "label": "CHUẨN BỊ CHO BUỔI 4",
-          "text": "Khi đã nhìn vòng bằng số bậc, em không còn bị phụ thuộc vào tên hợp âm. Buổi 4 sẽ dùng chính cấu trúc số bậc này để dịch chuyển vòng hòa âm sang giọng khác."
+          "text": "Khi đã nhìn vòng bằng số bậc, bạn không còn bị phụ thuộc vào tên hợp âm. Buổi 4 sẽ dùng chính cấu trúc số bậc này để dịch chuyển vòng hòa âm sang giọng khác."
         }
       ]
     }

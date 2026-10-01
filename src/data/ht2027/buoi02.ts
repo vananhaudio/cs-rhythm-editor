@@ -1,6 +1,7 @@
 // ── HÀNH TRÌNH 2027 · BUỔI 02 — Tài liệu ôn tập 7 ngày ──
 // Sinh từ file Word của Thầy (On-tap-7-ngay-Buoi-2-Chuc-nang-cua-hop-am.docx); nguồn gốc là file Word,
 // sửa nội dung thì sửa Word rồi chạy lại scripts/ht2027-docx-to-lesson.py.
+// Xưng hô đã đổi "em" → "bạn" (01/10/2026). Chạy lại script từ Word sẽ mất thay đổi này — sửa Word trước.
 import type { LessonDoc } from '../../lesson/lessonTypes'
 
 export const HT2027_BUOI02: LessonDoc = {
@@ -25,7 +26,7 @@ export const HT2027_BUOI02: LessonDoc = {
         {
           "b": "callout",
           "label": "KẾT QUẢ CUỐI TUẦN",
-          "text": "Em không chỉ gọi đúng tên hợp âm mà còn giải thích được hợp âm đang tạo cảm giác nghỉ, mở đường, gây căng hay đưa câu nhạc trở về."
+          "text": "Bạn không chỉ gọi đúng tên hợp âm mà còn giải thích được hợp âm đang tạo cảm giác nghỉ, mở đường, gây căng hay đưa câu nhạc trở về."
         },
         {
           "b": "h",
@@ -139,7 +140,7 @@ export const HT2027_BUOI02: LessonDoc = {
         {
           "b": "callout",
           "label": "GIỮ NGUYÊN CÂU TRẢ LỜI",
-          "text": "Ngày 7 em sẽ trả lời lại. Mục tiêu không phải dùng từ thật hàn lâm mà là nghe rõ hơn và giải thích mạch lạc hơn."
+          "text": "Ngày 7 bạn sẽ trả lời lại. Mục tiêu không phải dùng từ thật hàn lâm mà là nghe rõ hơn và giải thích mạch lạc hơn."
         }
       ]
     },
@@ -232,13 +233,13 @@ export const HT2027_BUOI02: LessonDoc = {
         },
         {
           "b": "write",
-          "label": "Từ của em cho C / F / G:",
+          "label": "Từ của bạn cho C / F / G:",
           "lines": 1
         },
         {
           "b": "callout",
           "label": "ĐĂNG LÊN NHÓM",
-          "text": "Viết: “Em đang nghe hợp âm ___ có cảm giác ___, mọi người có nghe giống vậy không?” Không cần chờ chắc chắn mới đăng."
+          "text": "Viết: “Tôi đang nghe hợp âm ___ có cảm giác ___, mọi người có nghe giống vậy không?” Không cần chờ chắc chắn mới đăng."
         }
       ]
     },
@@ -299,12 +300,12 @@ export const HT2027_BUOI02: LessonDoc = {
         },
         {
           "b": "write",
-          "label": "Về C khiến em cảm thấy:",
+          "label": "Về C khiến bạn cảm thấy:",
           "lines": 1
         },
         {
           "b": "write",
-          "label": "Về Am khiến em cảm thấy:",
+          "label": "Về Am khiến bạn cảm thấy:",
           "lines": 1
         },
         {
@@ -412,7 +413,7 @@ export const HT2027_BUOI02: LessonDoc = {
         },
         {
           "b": "write",
-          "label": "Theo em, IV và ii giống nhau ở điểm nào nhưng khác màu ra sao?",
+          "label": "Theo bạn, IV và ii giống nhau ở điểm nào nhưng khác màu ra sao?",
           "lines": 2
         },
         {
@@ -590,7 +591,7 @@ export const HT2027_BUOI02: LessonDoc = {
         },
         {
           "b": "p",
-          "text": "Kiểu kết em nghe rõ nhất là… vì…"
+          "text": "Kiểu kết tôi nghe rõ nhất là… vì…"
         },
         {
           "b": "write",
@@ -685,7 +686,7 @@ export const HT2027_BUOI02: LessonDoc = {
         },
         {
           "b": "write",
-          "label": "Phiên bản em thích nhất và lý do:",
+          "label": "Phiên bản bạn thích nhất và lý do:",
           "lines": 2
         },
         {
@@ -703,7 +704,7 @@ export const HT2027_BUOI02: LessonDoc = {
         {
           "b": "callout",
           "label": "NHIỆM VỤ CUỐI TUẦN",
-          "text": "Chơi, nghe, nói và đặt câu hỏi. Chưa hiểu hết vẫn hoàn toàn bình thường; điều quan trọng là em mang tới lớp một vấn đề thật đã được thử trên đàn."
+          "text": "Chơi, nghe, nói và đặt câu hỏi. Chưa hiểu hết vẫn hoàn toàn bình thường; điều quan trọng là bạn mang tới lớp một vấn đề thật đã được thử trên đàn."
         },
         {
           "b": "h",
@@ -712,10 +713,10 @@ export const HT2027_BUOI02: LessonDoc = {
         {
           "b": "ul",
           "items": [
-            "Chọn giọng C hoặc G trưởng. Giới thiệu ngắn: “Em đang ở giọng…”",
+            "Chọn giọng C hoặc G trưởng. Giới thiệu ngắn: “Tôi đang ở giọng…”",
             "Chơi một vòng theo hướng T → PD → D → T ít nhất hai lần.",
             "Thay một hợp âm bằng hợp âm gần chức năng và chơi lại.",
-            "Nói điều em nghe thấy khác nhau; nêu một chỗ còn chưa chắc."
+            "Nói điều bạn nghe thấy khác nhau; nêu một chỗ còn chưa chắc."
           ]
         },
         {
@@ -727,7 +728,7 @@ export const HT2027_BUOI02: LessonDoc = {
           "rows": [
             [
               "Mục",
-              "Em chọn / em viết"
+              "Bạn chọn / bạn viết"
             ],
             [
               "Giọng",
@@ -746,7 +747,7 @@ export const HT2027_BUOI02: LessonDoc = {
               "____________________________"
             ],
             [
-              "Khác biệt em nghe",
+              "Khác biệt bạn nghe",
               "____________________________________________"
             ],
             [
@@ -763,7 +764,7 @@ export const HT2027_BUOI02: LessonDoc = {
           "b": "ul",
           "items": [
             "Đăng video hoặc audio lên nhóm trước buổi học.",
-            "Bình luận có nội dung cho ít nhất hai bài của bạn: điều em nghe + một câu hỏi.",
+            "Bình luận có nội dung cho ít nhất hai bài của các bạn khác: điều bạn nghe + một câu hỏi.",
             "Đọc các tranh luận; thử lại trên đàn trước khi đồng ý hoặc phản biện.",
             "Ghi lại câu hỏi chưa được giải quyết để thầy làm rõ trong buổi thực hành."
           ]
@@ -931,7 +932,7 @@ export const HT2027_BUOI02: LessonDoc = {
         {
           "b": "callout",
           "label": "BA CÂU MANG ĐẾN LỚP",
-          "text": "1) Em nghe chỗ nào chưa rõ chức năng?  2) Phép thay nào khiến giai điệu bị vướng?  3) Em và bạn trong nhóm đang bất đồng ở ví dụ nào? Thầy sẽ dùng chính các câu hỏi này để giải đáp và thực hành thêm."
+          "text": "1) Bạn nghe chỗ nào chưa rõ chức năng?  2) Phép thay nào khiến giai điệu bị vướng?  3) Bạn và các bạn trong nhóm đang bất đồng ở ví dụ nào? Thầy sẽ dùng chính các câu hỏi này để giải đáp và thực hành thêm."
         }
       ]
     }
