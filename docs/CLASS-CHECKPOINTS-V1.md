@@ -11,7 +11,7 @@ Nhánh `feat/class-checkpoints-v1`. Phân cấp: **HÀNH TRÌNH → LỚP → BU
   - Nội dung buổi = `LessonDocument` (khuôn SOLO01).
   - Bài trả có nút TRẢ BÀI và trạng thái ngay tại chỗ.
   - Bên dưới: **Các bạn vừa trả bài** (5 mục) + **[Xem thêm về lớp]**, dẫn sang trang cộng đồng lớp cũ (Hoạt động | Thành viên; nút "Vào học" để quay lại).
-- Lớp không có checkpoint (HT2027, Đệm hát…): trang lớp cũ, không đổi gì.
+- Lớp có giáo trình nhưng chưa có checkpoint (SOLO01, HT2027 hiện nay): **chế độ giáo trình** (xem mục dưới). Lớp không có giáo trình: trang lớp cũ.
 - RPC chưa có trên server (chưa migration): frontend tự lùi về trang lớp cũ. Nhờ vậy deploy frontend trước migration vẫn an toàn.
 
 ## Quyết định Owner (01/10/2026)
@@ -107,6 +107,14 @@ Nhánh `feat/class-checkpoints-v1`. Phân cấp: **HÀNH TRÌNH → LỚP → BU
    - Frontend về main trước, rồi `db/class_checkpoints_v1_rollback.sql`.
    - Rollback luôn gỡ RPC/trigger và trả 3 hàm về bản cũ.
    - Bảng / cột / ràng buộc chỉ gỡ khi chưa có dữ liệu V1; có dữ liệu thì giữ.
+
+## Chế độ GIÁO TRÌNH (01/10/2026, main 79ff889) — không cần checkpoint
+- `ClassPage`: `class_learning_state` enabled (có checkpoint) → chế độ checkpoint như trên. Nếu không: giáo trình đọc qua RLS SẴN CÓ
+  (`fetchClassOutline`: học viên = thành viên + quyền giáo trình + đã xuất bản; Thầy/admin = tất cả) → `curriculumState()` → màn học.
+  Không đọc được buổi nào → trang lớp cũ. Không migration, không nới quyền.
+- Chế độ giáo trình: mọi buổi đã xuất bản mở; không nút trả bài, không tiến độ/màu; buổi hiện tại theo LỊCH (ngày giờ VN);
+  buổi chưa có giáo án → "Nội dung buổi này đang được cập nhật."; dòng nghỉ = vạch ngăn (trước tiêu đề chặng kế).
+- E2E thêm: `E2E_EXTRA_SQL` / `E2E_EXTRA_RUNNER` (dữ liệu thử chỉ nạp DB tạm, không commit).
 
 ## Production 01/10/2026 — LIVE (nằm im)
 - Migration COMMIT sha256 1c3cb467… · postflight GATE PASS · dữ liệu cũ (thread/event/giáo trình/quyền/nhóm) giống hệt trước migration.

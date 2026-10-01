@@ -78,7 +78,7 @@ Luật máy kiểm (`src/lesson/curriculumStandard.ts`, test `tests/class-social
   - Trang công khai, in / PDF, Admin xem trước: hiện tĩnh (không nút).
 - **Không bảng định nghĩa riêng:** server đọc đúng `blocks` này (`cl_session_checkpoints`) để kiểm bài nộp và tính hoàn thành buổi.
 - Buổi đã xuất bản mà **không có bài trả bắt buộc nào** thì không tự hoàn thành. Học viên sẽ dừng ở buổi đó, nên **buổi nào cũng cần ≥ 1 bài trả bắt buộc**.
-- Lớp chỉ vào trải nghiệm "Lớp của tôi" mới khi giáo trình đã xuất bản có ít nhất một khối `checkpoint`. Đó là công tắc pilot.
+- Màn học "Lớp của tôi" bật khi lớp có giáo trình đọc được (HAS_CURRICULUM). Chưa có checkpoint = chế độ giáo trình: xem sơ đồ + giáo án, mọi buổi đã xuất bản mở, không nút trả bài, không tiến độ. Có ≥ 1 checkpoint (HAS_CHECKPOINTS) thì bật thêm trả bài + mở khoá theo buổi.
 
 ## 5. Thêm Buổi 06, 07 … (quy trình)
 
