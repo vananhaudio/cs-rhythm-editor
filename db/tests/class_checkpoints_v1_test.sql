@@ -70,6 +70,10 @@ do $$ begin
   perform t.as_user('A');
   perform t.ok((public.class_learning_state('b0000000-0000-4000-8000-0000000000c1') ->> 'enabled')::boolean = false,
                'lớp không có giáo trình (DH2.KD18): enabled=false → giữ trang lớp cũ');
+  perform t.ok((public.class_learning_state('b1000000-0000-4000-8000-000000000003') ->> 'enabled')::boolean = false,
+               'lớp có giáo trình nhưng CHƯA có checkpoint (như HT2027): enabled=false → không khoá buổi, giữ trang cũ');
+  perform t.as_user('T');
+  perform t.ok((public.class_learning_state('b1000000-0000-4000-8000-000000000003') ->> 'enabled')::boolean = false, 'Thầy: lớp chưa có checkpoint cũng enabled=false');
   perform t.reset();
   perform t.ok((select count(*) from public.learning_session_progress) = 0, 'chưa ai có tiến độ (không bulk-enroll)');
 end $$;

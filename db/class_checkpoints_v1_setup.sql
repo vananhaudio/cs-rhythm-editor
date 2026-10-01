@@ -227,7 +227,8 @@ revoke all on function public.lsp_guard_history(), public.cl_session_checkpoints
   from public, anon, authenticated;
 
 -- ── 4) RPC: trạng thái học của MỘT lớp cho người gọi (/me/classes/<id>) ──────────────────────
--- enabled = lớp có program_code + ít nhất một buổi đã xuất bản + (Thầy/admin HOẶC người học có quyền giáo trình).
+-- enabled = lớp có program_code + giáo trình đã xuất bản có ÍT NHẤT MỘT khối checkpoint + (Thầy/admin HOẶC người học có quyền
+-- giáo trình). Công tắc pilot theo DỮ LIỆU: lớp chưa có checkpoint (vd HT2027) giữ nguyên trang lớp cũ, không bị khoá buổi.
 -- Người học: đồng bộ lười tiến độ rồi trả buổi + checkpoint + thread của CHÍNH MÌNH. Buổi khoá: không lộ checkpoint.
 -- Thầy/admin: xem mọi buổi (preview), không có tiến độ, không trả bài.
 create or replace function public.class_learning_state(p_class uuid)
@@ -245,7 +246,9 @@ begin
   v_learner := not v_teacher and tva_private.can_read_class_curriculum(p_class);
   if coalesce(v_cls.program_code, '') !~ '^[A-Z0-9_]{1,32}$' or not (v_teacher or v_learner)
      or not exists (select 1 from public.class_sessions s join public.class_lesson_content c on c.session_id = s.id
-                    where s.class_id = p_class and s.event_type = 'lesson' and c.status = 'published') then
+                    cross join lateral jsonb_array_elements(c.blocks) b
+                    where s.class_id = p_class and s.event_type = 'lesson' and c.status = 'published'
+                      and jsonb_typeof(b) = 'object' and b ->> 'kind' = 'checkpoint') then
     return jsonb_build_object('class_id', p_class, 'enabled', false);
   end if;
   if v_learner then perform public.lsp_sync(v_uid, p_class, v_cls.program_code); end if;

@@ -92,3 +92,14 @@ insert into public.class_lesson_content (session_id, status, blocks) values
   ('51000000-0000-4000-8000-000000000004', 'draft', '[{"kind":"note","text":"đang soạn"}]'),
   ('52000000-0000-4000-8000-000000000001', 'published', '[{"kind":"checkpoint","id":"1.1","title":"Âm giai C–Am"}]'),
   ('52000000-0000-4000-8000-000000000002', 'published', '[{"kind":"note","text":"buổi không có checkpoint"}]');
+
+-- Lớp có giáo trình xuất bản nhưng CHƯA có checkpoint (như HT2027.TH01 production): A là thành viên + có quyền
+insert into public.edu_groups (id, name, group_type, code) values ('f1000000-0000-4000-8000-000000000003', 'CLASS.HT2027.TH01', 'class', 'CLASS.HT2027.TH01');
+insert into public.class_schedule (id, code, name, program_code, status, start_date, cohort_group_id) values
+  ('b1000000-0000-4000-8000-000000000003', 'HT2027.TH01', 'Hành trình 2027', 'HT2027', 'active', current_date - 30, 'f1000000-0000-4000-8000-000000000003');
+insert into public.edu_group_members (user_id, group_id, source, status) values ('aaaaaaaa-0000-4000-8000-00000000000a', 'f1000000-0000-4000-8000-000000000003', 'admin', 'active');
+insert into public.class_curriculum_access (class_id, user_id, status) values ('b1000000-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-00000000000a', 'active');
+insert into public.class_sessions (id, class_id, session_number, title, event_type) values
+  ('53000000-0000-4000-8000-000000000001', 'b1000000-0000-4000-8000-000000000003', 1, 'Buổi 1 · Ôn tập', 'lesson');
+insert into public.class_lesson_content (session_id, status, blocks) values
+  ('53000000-0000-4000-8000-000000000001', 'published', '[{"kind":"study","title":"Ôn tập","blocks":[]}]');
