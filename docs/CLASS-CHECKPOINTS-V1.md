@@ -108,6 +108,12 @@ Nhánh `feat/class-checkpoints-v1`. Phân cấp: **HÀNH TRÌNH → LỚP → BU
    - Rollback luôn gỡ RPC/trigger và trả 3 hàm về bản cũ.
    - Bảng / cột / ràng buộc chỉ gỡ khi chưa có dữ liệu V1; có dữ liệu thì giữ.
 
+## Production 01/10/2026 — LIVE (nằm im)
+- Migration COMMIT sha256 1c3cb467… · postflight GATE PASS · dữ liệu cũ (thread/event/giáo trình/quyền/nhóm) giống hệt trước migration.
+- main FF 6aa55c8 → 73ba625, Netlify bundle index-DrE2pUhc.js (trước: index-YnsdEQsE.js).
+- Smoke bảo mật tự huỷ: `prod-db.py dryrun db/tests/class_checkpoints_v1_prod_smoke.sql` → SMOKE PASS 5/5 (lớp tạm trong giao dịch, ROLLBACK).
+- Rollback: Netlify deploy trước / main 6aa55c8 TRƯỚC, rồi `prod-db.py migrate db/class_checkpoints_v1_rollback.sql`.
+
 ## Còn mở (ngoài V1)
 
 - Loại nộp image / audio / quiz / interaction (cần hạ tầng upload / tương tác).
