@@ -65,6 +65,12 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 - Bài trả = khối `{kind:'checkpoint', id:'<buổi>.<n>', title, prompt, required, accepts}` đặt TRONG mạch buổi. id bất biến. Không bảng định nghĩa riêng: server đọc `class_lesson_content.blocks`.
 - Tiến độ buổi = `learning_session_progress` (opened_at bất biến, completed_at một lần) qua RPC `class_learning_state` / `lt_submit_checkpoint`; hoàn thành buổi bằng trigger khi Thầy chấm Đạt. Thiết kế + triển khai: `docs/CLASS-CHECKPOINTS-V1.md`.
 
+## Thành viên lớp — CANONICAL (từ 02/10/2026) — đọc `docs/CLASS-MEMBERSHIP-CANONICAL.md`
+- **Nguồn sự thật DUY NHẤT:** `class_schedule.cohort_group_id → edu_group_members(active)`, định nghĩa ở view `tva_private.class_memberships`. Mọi consumer (Social, App "Lớp đang học", Admin, Giáo trình, Learning Identity, Learning Thread, trigger cấp khoá, gói, xếp hạng) đọc view/RPC này. `group_id` chỉ là bản sao luôn bằng `cohort_group_id`.
+- **CẤM tái tạo heuristic:** không suy thành viên bằng mã nhóm trùng mã lớp, tên nhóm, `ht_member`, `leads`, gói hay `group_id` thứ hai. Thiếu dữ liệu → báo Owner.
+- Thành viên ≠ quyền Giáo trình (`class_curriculum_access`). Ghi thành viên chỉ qua `manage_class_membership` / `activate_class_membership` / mã tham gia — đều vào nhóm canonical.
+- Id/topology production (mapping lớp → nhóm, sĩ số) KHÔNG đưa lên repo public; để ở `cs-rhythm-editor-wip` (`prod-migrations/`).
+
 ## Band — Tuyển thành viên V1 — từ 02/10/2026
 - Band/đợt tuyển/Rule là DỮ LIỆU (`bands`, `band_recruitments`, `band_rule_versions`, `band_applications`); Band mới = seed SQL kiểu `db/band_la_mua_thu_seed.sql`, KHÔNG sửa `src/band/`. Rule bất biến theo version. Mọi đọc/ghi qua RPC `band_*`. Chi tiết: `docs/BAND-RECRUIT-V1.md`.
 
