@@ -17,6 +17,8 @@ import FriendRequestList from './FriendRequestList'
 import MeThreadsBlock from '../../learning-thread/MeThreadsBlock'
 import FeedTabs from './FeedTabs'
 import { FEED_EMPTY, scopeFromSearch, searchForScope, type FeedScope } from '../posts/feedScope'
+import MyClassesBoard from '../classes/MyClassesBoard'
+import type { SocialClasses } from '../classes/useSocialClasses'
 
 /** Góc nhìn Feed đọc từ ?feed= (chia sẻ link / Quay lại về đúng góc nhìn); đổi góc nhìn = thay URL tại chỗ. */
 function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
@@ -31,7 +33,7 @@ function useFeedScope(): [FeedScope, (s: FeedScope) => void] {
 /** Home chỉ hiện vài lời mời mới nhất; đủ danh sách ở trang Bạn bè. */
 const HOME_REQUESTS_MAX = 3
 
-export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, onOpenClasses }: {
+export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, onSeeAllRequests, onOpenThread, onOpenQueue, classes, onOpenClass, onOpenSession, onOpenDiscover }: {
   me: ClassIdentity
   identityRev?: number
   /** (không dùng trên Home nữa — đổi ảnh ở Trang cá nhân / menu tài khoản) */
@@ -45,8 +47,11 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
   /** Learning Thread: mở /me/t/<id> · hàng đợi Thầy /me/queue */
   onOpenThread?: (threadId: string) => void
   onOpenQueue?: () => void
-  /** Feed "Lớp của tôi" trống → lối sang /me/classes */
-  onOpenClasses?: () => void
+  /** Tab "Lớp của tôi" = bảng các lớp ĐANG THAM GIA (không phải dòng feed lọc) + lối "Khám phá các lớp khác" */
+  classes?: SocialClasses
+  onOpenClass?: (classId: string) => void
+  onOpenSession?: (classId: string, sessionNo: number) => void
+  onOpenDiscover?: () => void
 }) {
   const [scope, setScope] = useFeedScope()
   const { state, reload, loadMore } = useCommunityFeed(scope)
@@ -107,13 +112,14 @@ export default function MeHome({ me, identityRev = 0, onOpenProfile, requests, o
       <div ref={feedRef} className="cs-feed-anchor">
         {modError && <p className="cs-form-error" role="alert">{modError}</p>}
         <FeedTabs scope={scope} onChange={setScope} />
-        <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social}
+        {scope === 'my_classes' && classes && onOpenClass && onOpenSession && onOpenThread && onOpenDiscover
+          ? <MyClassesBoard classes={classes} isTeacher={me.isTeacher} onOpenClass={onOpenClass} onOpenSession={onOpenSession}
+              onOpenThread={onOpenThread} onOpenDiscover={onOpenDiscover} />
+          : <CommunityFeed state={state} onRetry={() => void reload()} onLoadMore={() => void loadMore()} social={social}
           empty={FEED_EMPTY[scope]}
-          emptyAction={scope === 'my_classes' && onOpenClasses
-            ? <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-empty-action" onClick={onOpenClasses}>Xem các lớp của tôi</button>
-            : scope === 'friends' && onSeeAllRequests
+          emptyAction={scope === 'friends' && onSeeAllRequests
               ? <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-empty-action" onClick={onSeeAllRequests}>Đến trang Bạn bè</button>
-              : undefined} />
+              : undefined} />}
       </div>
     </div>
   )
