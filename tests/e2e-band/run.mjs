@@ -1,6 +1,7 @@
 // Kịch bản E2E Band — Tuyển thành viên V1 trong Chrome thật (puppeteer-core) trên stack local — xem scripts/e2e-band-recruit.sh.
 // ACCEPTANCE: khách mở link Lá Mùa Thu → đọc → chọn vị trí → trả lời → chấp thuận Rule → gửi → Thầy thấy đơn ở Admin.
 // REUSABILITY: Band thứ 2 tạo CHỈ bằng SQL dữ liệu → cùng trang /band/<slug> hiện đúng nội dung riêng và nhận đơn.
+// QUẢN LÝ V1: Thầy Chấp nhận (xác nhận) → thành viên kế thừa vị trí → sửa vị trí → thêm tay → gán vai trò → Bộ máy cập nhật.
 import { createRequire } from 'node:module'
 import { mkdirSync } from 'node:fs'
 import { execSync } from 'node:child_process'
@@ -31,6 +32,7 @@ async function ctxPage(width = 390) {
   return { ctx, page }
 }
 const text = page => page.evaluate(() => document.body.innerText)
+const tc = page => page.evaluate(() => document.body.textContent)
 async function waitText(page, re, timeout = 15000) {
   await page.waitForFunction(r => new RegExp(r, 'u').test(document.body.textContent), { timeout }, re.source)
 }
@@ -124,7 +126,7 @@ try {
   await page.goto(`${BASE}/me/bands`, { waitUntil: 'networkidle0' })
   await page.waitForSelector('#cs-login-email', { timeout: 15000 })
   await page.type('#cs-login-email', 't@test.local'); await page.type('#cs-login-pass', 'e2e'); await page.click('.cs-guest-submit')
-  await waitText(page, /Tuyển thành viên Band/)
+  await waitText(page, /Quản lý Band/)
   await waitText(page, /2 mới/)
   ok('Thầy: link /me/bands giữ qua bước đăng nhập; Lá Mùa Thu "Đang tuyển · 2 mới · 2 đơn"')
   await page.screenshot({ path: `${SHOTS}/4-admin-bands-390.png`, fullPage: true })
@@ -138,22 +140,116 @@ try {
   ok('Admin /me/bands/la-mua-thu: tên, SĐT, vị trí, trình độ, lịch, gu, lý do, Rule v1 + thời điểm, thời gian gửi')
   await noHorizontalOverflow(page, 'admin 390px')
   await page.screenshot({ path: `${SHOTS}/5-admin-apps-390.png`, fullPage: true })
-  // đổi trạng thái đơn của Lê Thu Hà → Đang xem xét → Chấp nhận
+  // đầu trang bàn điều hành
+  const h0 = await tc(page)
+  for (const s of ['Thầy Văn Anh', '19:00 Thứ Tư hàng tuần', 'Tình ca nhẹ nhàng', 'thành viên', 'đơn mới', 'Ứng tuyển', 'Thành viên', 'Bộ máy', '0/6'])
+    assert.ok(h0.includes(s), 'đầu trang có ' + s)
+  ok('bàn điều hành: tên Band, Leader, lịch, gu, tổng thành viên, đơn mới + 3 tab ỨNG TUYỂN | THÀNH VIÊN | BỘ MÁY')
+  // NEW → Đang xem xét (đổi chữ bình thường)
   const group = 'Trạng thái đơn của Lê Thu Hà'
-  for (const [label, st] of [['Đang xem xét', 'REVIEWING'], ['Chấp nhận', 'ACCEPTED']]) {
-    await page.$$eval(`[aria-label="${group}"] button`, (bs, l) => bs.find(b => b.textContent.trim() === l).click(), label)
-    await page.waitForFunction((g, l) => document.querySelector(`[aria-label="${g}"] button[aria-pressed="true"]`)?.textContent.trim() === l, { timeout: 10000 }, group, label)
-    assert.equal(sql(`select status from band_applications where phone = '0987111222'`), st)
+  const pressStatus = label => page.$$eval(`[aria-label="${group}"] button`, (bs, l) => bs.find(b => b.textContent.trim() === l).click(), label)
+  await pressStatus('Đang xem xét')
+  await page.waitForFunction(g => document.querySelector(`[aria-label="${g}"] button[aria-pressed="true"]`)?.textContent.trim() === 'Đang xem xét', { timeout: 10000 }, group)
+  assert.equal(sql(`select status from band_applications where phone = '0987111222'`), 'REVIEWING')
+  assert.equal(sql('select count(*) from band_members'), '0')
+  ok('NEW → REVIEWING (lưu DB), chưa tạo thành viên')
+  // Chấp nhận → hộp xác nhận → Xác nhận → thành viên
+  await pressStatus('Chấp nhận')
+  await waitText(page, /Chấp nhận Lê Thu Hà và thêm vào Band\?/)
+  assert.equal(sql(`select status from band_applications where phone = '0987111222'`), 'REVIEWING', 'chưa xác nhận → chưa đổi gì')
+  await page.screenshot({ path: `${SHOTS}/5b-accept-confirm-390.png`, fullPage: false })
+  ok('bấm Chấp nhận → hỏi "Chấp nhận Lê Thu Hà và thêm vào Band?" (chưa đổi DB)')
+  await clickText(page, 'Xác nhận')
+  await waitText(page, /Đã là thành viên của Band/)
+  assert.equal(sql(`select a.status || '|' || m.full_name || '|' || m.phone || '|' || m.positions::text || '|' || m.status || '|' || (m.application_id = a.id)
+    from band_applications a join band_members m on m.band_id = a.band_id where a.phone = '0987111222'`), 'ACCEPTED|Lê Thu Hà|0987111222|{guitar_dem}|ACTIVE|true')
+  ok('Xác nhận → đơn ACCEPTED + đúng 1 thành viên ACTIVE của Lá Mùa Thu, kế thừa vị trí Guitar đệm')
+  // retry (gọi lại RPC như mạng chập chờn) → không trùng
+  sql(`select set_config('request.jwt.claims', '{"sub":"dddddddd-0000-4000-8000-00000000000d","role":"authenticated"}', false);
+       select band_admin_accept((select id from band_applications where phone = '0987111222'));
+       select band_admin_set_status((select id from band_applications where phone = '0987111222'), 'ACCEPTED');`)
+  assert.equal(sql('select count(*) from band_members'), '1')
+  ok('retry Chấp nhận ×2 (accept + set_status) → vẫn đúng 1 thành viên')
+  // THÀNH VIÊN
+  await clickText(page, 'Xem')
+  await page.waitForSelector('.cs-band-member', { timeout: 10000 })
+  let tm = await tc(page)
+  assert.ok(tm.includes('Lê Thu Hà') && tm.includes('Guitar đệm') && tm.includes('qua đơn ứng tuyển'))
+  ok('tab THÀNH VIÊN: Lê Thu Hà · Guitar đệm (kế thừa) · qua đơn ứng tuyển')
+  await clickText(page, 'Sửa vị trí / trạng thái')
+  await clickText(page, 'Vocal', '.cs-band-chip')
+  await clickText(page, 'Lưu')
+  await page.waitForFunction(() => !document.querySelector('.cs-band-medit') && document.body.textContent.includes('Vocal'), { timeout: 10000 })
+  assert.equal(sql(`select positions::text from band_members where phone = '0987111222'`), '{guitar_dem,vocal}')
+  ok('Leader thêm vị trí Vocal → Guitar đệm + Vocal (lưu DB)')
+  await clickText(page, 'Thêm thành viên')
+  await page.type('#madd-name', 'Văn Anh')
+  await clickText(page, 'Guitar tỉa / Lead', '.cs-band-chip')
+  await clickText(page, 'Thêm vào Band', 'button[type=submit]')
+  await page.waitForFunction(() => [...document.querySelectorAll('.cs-band-member')].some(li => li.textContent.includes('Văn Anh')), { timeout: 10000 })
+  assert.equal(sql(`select positions::text || '|' || (application_id is null) from band_members where full_name = 'Văn Anh'`), '{guitar_lead}|true')
+  ok('thêm thành viên trực tiếp (không qua đơn): Văn Anh · Guitar tỉa / Lead')
+  await noHorizontalOverflow(page, 'tab Thành viên 390px')
+  await page.screenshot({ path: `${SHOTS}/5c-members-390.png`, fullPage: true })
+  // BỘ MÁY
+  await clickText(page, 'Bộ máy', '.cs-band-tab')
+  await page.waitForSelector('.cs-band-role', { timeout: 10000 })
+  assert.match(await tc(page), /Band Leader · tối đa 1Chưa phân công/)
+  const assign = async (role, person) => {
+    await page.evaluate(r => [...document.querySelectorAll('.cs-band-role')].find(li => li.querySelector('.cs-band-role-name').textContent.startsWith(r)).querySelector('.cs-band-role-add').click(), role)
+    const sel = await page.waitForSelector(`select[aria-label="Chọn người phụ trách ${role}"]`, { timeout: 10000 })
+    const val = await page.$$eval(`select[aria-label="Chọn người phụ trách ${role}"] option`, (os, n) => os.find(o => o.textContent === n).value, person)
+    await sel.select(val)
+    await page.evaluate(r => [...document.querySelectorAll('.cs-band-role')].find(li => li.querySelector('.cs-band-role-name').textContent.startsWith(r)).querySelector('.cs-band-role-pick .cs-btn-primary').click(), role)
+    await page.waitForFunction((r, n) => [...document.querySelectorAll('.cs-band-role')].find(li => li.querySelector('.cs-band-role-name').textContent.startsWith(r))
+      ?.querySelector('.cs-band-role-holders')?.textContent.includes(n), { timeout: 10000 }, role, person)
   }
-  ok('Thầy đổi trạng thái NEW → REVIEWING → ACCEPTED (lưu DB)')
+  await assign('Band Leader', 'Văn Anh')
+  await assign('Membership', 'Lê Thu Hà')
+  await assign('TeamLab / Recording', 'Lê Thu Hà')
+  await assign('Membership', 'Văn Anh')
+  assert.equal(sql(`select string_agg(m.full_name || ':' || r.role_key, ',' order by m.full_name, r.role_key) from band_member_roles r join band_members m on m.id = r.member_id`),
+    'Lê Thu Hà:membership,Lê Thu Hà:teamlab,Văn Anh:band_leader,Văn Anh:membership')
+  const org = await page.$$eval('.cs-band-role', lis => lis.map(li => li.querySelector('.cs-band-role-name').textContent + '=' +
+    ([...li.querySelectorAll('.cs-band-role-holders li span')].map(x => x.textContent).join(', ') || li.querySelector('.cs-band-role-none').textContent)))
+  assert.deepEqual(org, ['Band Leader · tối đa 1=Văn Anh', 'Music Leader=Chưa phân công', 'Membership=Lê Thu Hà, Văn Anh', 'Lịch & điều phối=Chưa phân công',
+    'TeamLab / Recording=Lê Thu Hà', 'Performance / Media=Chưa phân công'])
+  assert.match(await tc(page), /Đã phân công 3\/6 vai trò/)
+  assert.equal(await page.$eval('.cs-band-role', li => li.querySelector('.cs-band-role-add')), null)
+  ok('BỘ MÁY: gán Band Leader/Membership(2 người)/TeamLab → màn hiện ngay ai phụ trách, "Chưa phân công", "Đã phân công 3/6"; Band Leader đủ 1 → hết nút thêm')
+  await noHorizontalOverflow(page, 'tab Bộ máy 390px')
+  await page.screenshot({ path: `${SHOTS}/5d-org-390.png`, fullPage: true })
+  await page.click('[aria-label="Bỏ Văn Anh khỏi Membership"]')
+  await page.waitForFunction(() => !document.querySelector('[aria-label="Bỏ Văn Anh khỏi Membership"]'), { timeout: 10000 })
+  assert.equal(sql(`select count(*) from band_member_roles where role_key = 'membership'`), '1')
+  ok('bỏ vai trò → Bộ máy + DB cập nhật')
+  // một người nhiều vị trí + nhiều vai trò hiện ở thẻ thành viên; đầu trang đếm 2
+  await clickText(page, 'Thành viên', '.cs-band-tab')
+  await page.waitForSelector('.cs-band-member', { timeout: 10000 })
+  const ha = await page.$$eval('.cs-band-member', lis => lis.find(li => li.textContent.includes('Lê Thu Hà')).textContent)
+  for (const s of ['Guitar đệm', 'Vocal', 'Membership', 'TeamLab / Recording']) assert.ok(ha.includes(s), 'thẻ Lê Thu Hà có ' + s)
+  assert.match(await tc(page), /2thành viên/)
+  ok('thẻ thành viên: nhiều vị trí + nhiều vai trò; đầu trang "2 thành viên"')
+  // lọc + reload
+  await clickText(page, 'Ứng tuyển', '.cs-band-tab')
   await clickText(page, 'Chấp nhận', '.cs-band-filter-btn')
   const t5 = await text(page)
   assert.ok(t5.includes('Lê Thu Hà') && !t5.includes('0912000111'))
   ok('lọc "Chấp nhận" chỉ còn đơn đã chấp nhận')
-  // reload giữ đúng trang
   await page.reload({ waitUntil: 'networkidle0' })
   await waitText(page, /Lê Thu Hà/)
   ok('reload /me/bands/la-mua-thu giữ đúng trang')
+  await ctx.close()
+
+  ;({ ctx, page } = await ctxPage(1280))
+  await page.goto(`${BASE}/me/bands/la-mua-thu`, { waitUntil: 'networkidle0' })
+  await page.waitForSelector('#cs-login-email', { timeout: 15000 })
+  await page.type('#cs-login-email', 't@test.local'); await page.type('#cs-login-pass', 'e2e'); await page.click('.cs-guest-submit')
+  await page.waitForSelector('.cs-band-tabs', { timeout: 15000 })
+  await clickText(page, 'Bộ máy', '.cs-band-tab')
+  await page.waitForSelector('.cs-band-role', { timeout: 10000 })
+  await noHorizontalOverflow(page, 'Bộ máy 1280px')
+  await page.screenshot({ path: `${SHOTS}/5e-org-1280.png`, fullPage: true })
   await ctx.close()
 
   // desktop
@@ -203,6 +299,19 @@ try {
   await waitText(page, /Vui là chính/)
   assert.match(await text(page), /Micro[\s\S]*Có micro/)
   ok('Leader Band 2 thấy và duyệt đơn Band 2 (cột "Micro" từ config), không thấy Lá Mùa Thu')
+  await page.$$eval('[aria-label="Trạng thái đơn của Chi"] button', bs => bs.find(b => b.textContent.trim() === 'Chấp nhận').click())
+  await clickText(page, 'Xác nhận')
+  await waitText(page, /Đã là thành viên của Band/)
+  await clickText(page, 'Thành viên', '.cs-band-tab')
+  await page.waitForSelector('.cs-band-member', { timeout: 10000 })
+  assert.ok((await tc(page)).includes('Ukulele'), 'vị trí tuyển không có trong danh mục Band 2 → giữ thành mô tả')
+  assert.equal(sql(`select b.slug || '|' || m.position_note from band_members m join bands b on b.id = m.band_id where m.phone = '0933000999'`), 'acoustic-chu-nhat|Ukulele')
+  ok('Leader Band 2 chấp nhận Chi → thành viên Band 2 (đúng band_id), cùng component')
+  await page.goto(`${BASE}/me/bands/la-mua-thu`, { waitUntil: 'networkidle0' })
+  await waitText(page, /không có quyền/)
+  assert.ok(!(await text(page)).includes('Lê Thu Hà'))
+  ok('Leader Band 2 mở /me/bands/la-mua-thu → "không có quyền", không thấy thành viên Band 1')
+  for (let i = errors.length - 1; i >= 0; i--) if (/status of 403/.test(errors[i])) errors.splice(i, 1)
   await ctx.close()
 
   // ── 6. Khách: slug lạ ────────────────────────────────────────────────────────

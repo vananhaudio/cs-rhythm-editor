@@ -29,7 +29,8 @@ import { refreshLearningIdentity } from './identity/identityStore'
 import ClassPage from './classes/ClassPage'
 import ClassSessionPage from './classes/ClassSessionPage'
 import ProfileEditDialog from './profile/ProfileEditDialog'
-import { BandApplicationsAdminPage, BandsAdminPage } from '../band/BandAdmin'
+import { BandsAdminPage } from '../band/BandAdmin'
+import BandManagePage from '../band/BandManage'
 
 const TITLES: Record<SocialSection, string> = {
   home: 'Trang chủ · Thầy Văn Anh Guitar',
@@ -80,7 +81,7 @@ export default function ClassSocialPage({ initialSection }: { initialSection: So
     if (!signedIn) document.title = 'Đăng nhập · Thầy Văn Anh Guitar'
     else if (view.kind === 'section') document.title = TITLES[view.section]
     else if (view.kind === 'classes') document.title = 'Lớp học · Thầy Văn Anh Guitar'
-    else if (view.kind === 'bands') document.title = 'Tuyển thành viên Band · Thầy Văn Anh Guitar'
+    else if (view.kind === 'bands') document.title = 'Quản lý Band · Thầy Văn Anh Guitar'
     // trang cá nhân tự đặt tiêu đề theo tên người
   }, [view, signedIn])
 
@@ -145,7 +146,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
   /** Trang Buổi (phòng học) của một lớp; replace = chuyển buổi ngang hàng */
   onOpenSession: (classId: string, sessionNo: number, opts?: { replace?: boolean }) => void
   onOpenClasses: () => void
-  /** Tuyển thành viên Band (Admin V1) */
+  /** Quản lý Band (tuyển thành viên · thành viên · Bộ máy) */
   onOpenBands: () => void
   onOpenBandAdmin: (slug: string) => void
   /** Quay lại màn trước trong /me (fallback khi mở thẳng bằng link) */
@@ -204,7 +205,7 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
           onOpenThread={onOpenThread} />
       )}
       {view.kind === 'bands' && <BandsAdminPage onOpenBand={onOpenBandAdmin} />}
-      {view.kind === 'bandAdmin' && <BandApplicationsAdminPage key={view.slug} slug={view.slug} onBack={() => onBack({ kind: 'bands' })} />}
+      {view.kind === 'bandAdmin' && <BandManagePage key={view.slug} slug={view.slug} onBack={() => onBack({ kind: 'bands' })} />}
       {section === 'home' && <MeHome key={visit} me={me} identityRev={identityRev} canEditAvatar={editor.canEditAvatar} onEditMedia={editor.pick}
         onOpenProfile={onOpenProfile} requests={requests} onSeeAllRequests={() => onSection('friends')}
         onOpenThread={onOpenThread} onOpenQueue={onOpenQueue} onOpenClasses={onOpenClasses} onOpenBands={onOpenBands} />}

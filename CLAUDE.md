@@ -73,6 +73,7 @@ Sau khi đổi schema phải chạy `NOTIFY pgrst, 'reload schema';`.
 
 ## Band — Tuyển thành viên V1 — từ 02/10/2026
 - Band/đợt tuyển/Rule là DỮ LIỆU (`bands`, `band_recruitments`, `band_rule_versions`, `band_applications`); Band mới = seed SQL kiểu `db/band_la_mua_thu_seed.sql`, KHÔNG sửa `src/band/`. Rule bất biến theo version. Mọi đọc/ghi qua RPC `band_*`. Chi tiết: `docs/BAND-RECRUIT-V1.md`.
+- Quản lý V1 (03/10): `band_members` (một người một dòng mỗi Band, user_id có thể null) + `band_member_roles`; danh mục vị trí/vai trò là DỮ LIỆU `bands.position_catalog`/`role_catalog`. ACCEPTED LUÔN qua `band_admin_accept` (tạo/khớp thành viên, idempotent). Vai trò có `"manage": true` = quyền quản trị Band. Rollback quản lý TRƯỚC rollback Recruit. Chi tiết: `docs/BAND-MANAGEMENT-V1.md`.
 
 ## Design tokens
 - Desktop portal: accent `#4F46E5`, bg `#F4F4F5`, surface `#FFFFFF`.

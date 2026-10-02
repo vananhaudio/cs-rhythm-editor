@@ -278,3 +278,108 @@ export function formatDateTime(iso: string): string {
   if (Number.isNaN(d.getTime())) return ''
   return d.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
+
+// ── Quản lý Band V1: thành viên · vị trí âm nhạc · vai trò vận hành (Bộ máy) ───────────────────
+// Danh mục vị trí/vai trò là DỮ LIỆU của từng Band (bands.position_catalog / role_catalog) — không hardcode.
+export const MEMBER_STATUSES = ['ACTIVE', 'PAUSED', 'LEFT'] as const
+export type MemberStatus = (typeof MEMBER_STATUSES)[number]
+export const MEMBER_STATUS_LABEL: Record<MemberStatus, string> = { ACTIVE: 'Đang hoạt động', PAUSED: 'Tạm nghỉ', LEFT: 'Đã rời Band' }
+const isMemberStatus = (x: unknown): x is MemberStatus => MEMBER_STATUSES.includes(x as MemberStatus)
+
+export type BandRole = { key: string; label: string; /** số người tối đa; null = không giới hạn */ max: number | null; manage: boolean }
+export type BandMember = {
+  id: string
+  applicationId: string | null
+  fullName: string
+  phone: string | null
+  status: MemberStatus
+  joinedAt: string
+  positions: string[]
+  positionNote: string | null
+  hasAccount: boolean
+  roles: string[]
+}
+export type BandOverview = {
+  band: { id: string; slug: string; name: string; leaderName: string | null; scheduleText: string | null; musicStyle: string | null; status: string }
+  positionCatalog: BandPosition[]
+  roleCatalog: BandRole[]
+  members: BandMember[]
+  counts: { members: number; active: number; newApplications: number }
+}
+
+const strArr = (x: unknown): string[] => arr(x).filter((v): v is string => typeof v === 'string')
+
+export function parseRoles(x: unknown): BandRole[] {
+  return arr(x).flatMap(r => (isObj(r) && str(r.key) && str(r.label) ? [{
+    key: r.key as string, label: r.label as string,
+    max: typeof r.max === 'number' && r.max > 0 ? r.max : null, manage: r.manage === true,
+  }] : []))
+}
+
+export function parseOverview(x: unknown): BandOverview | null {
+  if (!isObj(x) || !isObj(x.band) || !str(x.band.id)) return null
+  const b = x.band
+  const c = isObj(x.counts) ? x.counts : {}
+  return {
+    band: {
+      id: b.id as string, slug: str(b.slug) ?? '', name: str(b.name) ?? '', leaderName: str(b.leader_name),
+      scheduleText: str(b.schedule_text), musicStyle: str(b.music_style), status: str(b.status) ?? 'active',
+    },
+    positionCatalog: parsePositions(x.position_catalog),
+    roleCatalog: parseRoles(x.role_catalog),
+    members: arr(x.members).flatMap(m => (isObj(m) && str(m.id) ? [{
+      id: m.id as string, applicationId: str(m.application_id), fullName: str(m.full_name) ?? '', phone: str(m.phone),
+      status: isMemberStatus(m.status) ? m.status : 'ACTIVE', joinedAt: str(m.joined_at) ?? '',
+      positions: strArr(m.positions), positionNote: str(m.position_note), hasAccount: m.has_account === true, roles: strArr(m.roles),
+    }] : [])),
+    counts: { members: Number(c.members) || 0, active: Number(c.active) || 0, newApplications: Number(c.new_applications) || 0 },
+  }
+}
+
+/** Nhãn vị trí theo danh mục của Band; key đã bị gỡ khỏi danh mục → hiện key (không mất dữ liệu). */
+export function memberPositionLabels(m: BandMember, catalog: BandPosition[]): string[] {
+  let noteUsed = false
+  const labels = m.positions.map(k => {
+    const p = catalog.find(x => x.key === k)
+    if (p?.other && m.positionNote) { noteUsed = true; return `${p.label}: ${m.positionNote}` }
+    return p?.label ?? k
+  })
+  if (m.positionNote && !noteUsed) labels.push(m.positionNote)
+  return labels
+}
+
+export function roleLabel(key: string, catalog: BandRole[]): string {
+  return catalog.find(r => r.key === key)?.label ?? key
+}
+
+export type RoleSlot = { role: BandRole; holders: BandMember[]; full: boolean }
+
+/** Bộ máy: mỗi vai trò trong danh mục → người đang giữ (bỏ người đã rời). Vai trò lạ (đã gỡ khỏi danh mục) không hiện. */
+export function roleSlots(o: BandOverview): RoleSlot[] {
+  return o.roleCatalog.map(role => {
+    const holders = o.members.filter(m => m.status !== 'LEFT' && m.roles.includes(role.key))
+    return { role, holders, full: role.max != null && holders.length >= role.max }
+  })
+}
+
+export function staffedCount(slots: RoleSlot[]): number {
+  return slots.filter(s => s.holders.length > 0).length
+}
+
+/** Đơn đã có hồ sơ thành viên chưa (khớp theo đơn, rồi theo SĐT — như server). */
+export function memberForApplication(members: BandMember[], a: AdminApplication): BandMember | null {
+  return members.find(m => m.applicationId === a.id) ?? members.find(m => m.phone != null && m.phone === a.phone) ?? null
+}
+
+/** Danh sách hiển thị: đang ở Band trước (hoạt động → tạm nghỉ), người đã rời tách riêng. */
+export function splitMembers(list: BandMember[]): { current: BandMember[]; left: BandMember[] } {
+  const current = list.filter(m => m.status !== 'LEFT')
+    .sort((a, b) => (a.status === b.status ? 0 : a.status === 'ACTIVE' ? -1 : 1))
+  return { current, left: list.filter(m => m.status === 'LEFT') }
+}
+
+export function formatDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric' })
+}

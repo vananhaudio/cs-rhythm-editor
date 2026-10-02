@@ -64,6 +64,42 @@ PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$POR
 grep -q "ALL PASS" "$TMP/t.log" || fail "test SQL"
 echo "  ($(grep -c '^PASS' "$TMP/t.log") assertion PASS)"
 
+echo "── Quản lý V1 (thành viên + vị trí + Bộ máy) — trên dữ liệu thật của test V1"
+MPRE="$(cat "$ROOT/db/band_management_v1_preflight.sql")"
+MPOST="$(cat "$ROOT/db/band_management_v1_postflight.sql")"
+mgate() { q "$1" "select item from (${MPRE%;}) z where section = 'GATE'"; }
+mpostgate() { q "$1" "select item from (${MPOST%;}) z where section = 'GATE'"; }
+V1SRC="$(q tva_band "select md5(string_agg(proname || prosrc || coalesce(obj_description(oid, 'pg_proc'), ''), '|' order by proname)) from pg_proc where proname in ('band_can_manage', 'band_admin_set_status')")"
+APPS0="$(q tva_band "select md5(string_agg(a::text, '|' order by id)) from band_applications a")"
+[ "$(mgate tva_band)" = "PASS" ] && ok "preflight Quản lý V1: GATE = PASS" || { psqld tva_band -c "${MPRE%;}"; fail "preflight quản lý"; }
+mig tva_band "$ROOT/db/band_management_v1_setup.sql" >/dev/null || fail "migration quản lý 1"; ok "migration Quản lý V1 lần 1"
+mig tva_band "$ROOT/db/band_management_v1_setup.sql" >/dev/null || fail "migration quản lý 2"; ok "migration Quản lý V1 lần 2 (idempotent)"
+[ "$(mgate tva_band)" = "PASS" ] && ok "preflight sau migration vẫn PASS (chạy lại được)" || fail "preflight quản lý sau migration"
+[ "$(q tva_band "select md5(string_agg(a::text, '|' order by id)) from band_applications a")" = "$APPS0" ] && ok "migration không đổi một byte nào của đơn hiện có" || fail "đơn bị đổi"
+psqld tva_band -f "$ROOT/db/rls_setup.sql" >/dev/null || fail "rls_setup"; ok "chạy lại rls_setup.sql (2 bảng mới self_managed)"
+[ "$(mpostgate tva_band)" = "PASS" ] && ok "postflight Quản lý V1: GATE = PASS (6 bảng RLS, 0 policy, 0 quyền bảng, anon chỉ 2 RPC)" \
+  || { psqld tva_band -c "${MPOST%;}"; fail "postflight quản lý"; }
+[ "$(postgate tva_band)" = "PASS" ] && ok "postflight Recruit V1 vẫn PASS (không hồi quy)" || fail "postflight V1 hỏng"
+PGOPTIONS="-c client_min_messages=notice" "$PGBIN/psql" -X -q -h "$TMP" -p "$PORT" -U postgres -d tva_band -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/band_management_v1_test.sql" 2>&1 | sed -E 's/^psql:[^:]*:[0-9]*: (NOTICE|ERROR):  //' | tee "$TMP/m.log" | grep -v '^$' || true
+grep -q "ALL PASS" "$TMP/m.log" || fail "test SQL quản lý"
+echo "  ($(grep -c '^PASS' "$TMP/m.log") assertion PASS)"
+[ "$(mpostgate tva_band)" = "PASS" ] && ok "postflight sau test vẫn PASS" || fail "postflight sau test"
+echo "── Rollback Quản lý V1"
+if mig tva_band "$ROOT/db/band_management_v1_rollback.sql" >/dev/null 2>&1; then fail "rollback quản lý lẽ ra phải DỪNG khi có thành viên"; fi
+[ "$(q tva_band "select count(*) from band_members")" -gt 0 ] && ok "rollback DỪNG khi có thành viên thật — dữ liệu còn nguyên" || fail "mất thành viên"
+q tva_band "delete from band_member_roles; delete from band_members" >/dev/null
+mig tva_band "$ROOT/db/band_management_v1_rollback.sql" >/dev/null || fail "rollback quản lý 1"; ok "rollback Quản lý V1 lần 1"
+mig tva_band "$ROOT/db/band_management_v1_rollback.sql" >/dev/null || fail "rollback quản lý 2"; ok "rollback Quản lý V1 lần 2 (idempotent)"
+[ "$(q tva_band "select md5(string_agg(proname || prosrc || coalesce(obj_description(oid, 'pg_proc'), ''), '|' order by proname)) from pg_proc where proname in ('band_can_manage', 'band_admin_set_status')")" = "$V1SRC" ] \
+  && ok "rollback trả band_can_manage + band_admin_set_status về NGUYÊN VĂN bản V1" || fail "hàm V1 không khớp sau rollback"
+[ "$(q tva_band "select count(*) from pg_class where relname in ('band_members', 'band_member_roles')")/$(q tva_band "select count(*) from information_schema.columns where table_name = 'bands' and column_name like '%catalog'")" = "0/0" ] \
+  && ok "rollback gỡ sạch 2 bảng + 2 cột" || fail "rollback quản lý còn sót"
+[ "$(postgate tva_band)" = "PASS" ] && [ "$(gate tva_band)" = "PASS" ] && ok "sau rollback: Recruit V1 nguyên vẹn (postflight + preflight V1 PASS)" || fail "V1 hỏng sau rollback"
+[ "$(q tva_band "select count(*) from band_applications where status = 'ACCEPTED'")" -gt 0 ] && ok "đơn (kể cả ACCEPTED) còn nguyên sau rollback" || fail "mất đơn"
+mig tva_band "$ROOT/db/band_management_v1_setup.sql" >/dev/null && [ "$(mpostgate tva_band)" = "PASS" ] && ok "cài lại Quản lý V1 sau rollback: postflight PASS" || fail "cài lại quản lý"
+mig tva_band "$ROOT/db/band_management_v1_rollback.sql" >/dev/null || fail "rollback quản lý trước khi rollback V1"
+
 echo "── Rollback"
 if mig tva_band "$ROOT/db/band_recruit_v1_rollback.sql" >/dev/null 2>&1; then fail "rollback lẽ ra phải DỪNG khi có đơn"; fi
 [ "$(q tva_band "select count(*) from band_applications")" -gt 0 ] && ok "rollback DỪNG khi có đơn thật — dữ liệu còn nguyên" || fail "mất đơn"
@@ -87,4 +123,15 @@ q tva_drift2 "create table public.bands (id int)" >/dev/null
 [ "$(gate tva_drift2)" = "FAIL" ] && ok "preflight: đã có bảng bands lạ → GATE FAIL" || fail "preflight không bắt bảng lạ"
 if mig tva_drift2 "$ROOT/db/band_recruit_v1_setup.sql" >/dev/null 2>&1; then fail "migration lẽ ra phải dừng (bảng lạ)"; fi
 ok "migration DỪNG khi tên bảng bị chiếm"
+baseline tva_drift3
+mig tva_drift3 "$ROOT/db/band_recruit_v1_setup.sql" >/dev/null
+q tva_drift3 "create table public.band_members (id int)" >/dev/null
+[ "$(q tva_drift3 "select item from ($(cat "$ROOT/db/band_management_v1_preflight.sql" | sed 's/;$//')) z where section = 'GATE'")" = "FAIL" ] \
+  && ok "preflight Quản lý: bảng band_members lạ → GATE FAIL" || fail "preflight quản lý không bắt bảng lạ"
+if mig tva_drift3 "$ROOT/db/band_management_v1_setup.sql" >/dev/null 2>&1; then fail "migration quản lý lẽ ra phải dừng"; fi
+[ "$(q tva_drift3 "select count(*) from information_schema.columns where table_name = 'bands' and column_name like '%catalog'")" = "0" ] \
+  && ok "migration Quản lý DỪNG, không thêm cột nửa chừng" || fail "nửa migration quản lý"
+baseline tva_drift4
+if mig tva_drift4 "$ROOT/db/band_management_v1_setup.sql" >/dev/null 2>&1; then fail "migration quản lý lẽ ra phải dừng khi chưa có V1"; fi
+ok "migration Quản lý DỪNG khi chưa có Recruit V1"
 echo "ALL DB TESTS PASS"

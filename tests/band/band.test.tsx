@@ -1,4 +1,4 @@
-// Band — Tuyển thành viên V1: model thuần, route, render landing/form/admin, luồng gửi đơn (jsdom),
+// Band — Tuyển thành viên V1 + Quản lý V1 (thành viên · vị trí · Bộ máy): model thuần, route, render landing/form/admin, luồng gửi đơn (jsdom),
 // và bằng chứng TÁI SỬ DỤNG: Band thứ 2 chỉ là dữ liệu khác, cùng component.
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
@@ -22,6 +22,7 @@ const { render, act, cleanup, fireEvent } = await import('@testing-library/react
 const model = await import('../../src/band/bandModel')
 const { BandRecruitView, default: BandRecruitPage } = await import('../../src/band/BandRecruitPage')
 const { BandApplicationsView, BandsAdminView } = await import('../../src/band/BandAdmin')
+const { BandManageHeader, BandTabs, MembersView, OrgView } = await import('../../src/band/BandManage')
 const route = await import('../../src/class-social/resolveMeRoute')
 void React
 
@@ -249,13 +250,15 @@ const DETAIL = model.parseAdminDetail({
   ],
 })!
 
+const ACCEPT_NOOP = { confirmId: null, onAskAccept: () => {}, onCancelAccept: () => {}, onAccept: () => {} }
+
 test('Admin: đủ cột Owner cần — tên, vị trí, trình độ, lịch, gu, lý do, Rule version, thời gian, trạng thái', () => {
-  const h = renderToStaticMarkup(<BandApplicationsView detail={DETAIL} filter="ALL" onFilter={() => {}} busyId={null} errorId={null} errorText={null} onStatus={() => {}} />)
+  const h = renderToStaticMarkup(<BandApplicationsView detail={DETAIL} filter="ALL" onFilter={() => {}} busyId={null} errorId={null} errorText={null} {...ACCEPT_NOOP} onStatus={() => {}} />)
   for (const s of ['Trần Bình', '0987654321', 'Khác: Sáo trúc', 'Chơi tương đối tốt', 'Rất đúng gu', 'Thỉnh thoảng sẽ vắng', 'Gu nhạc', 'Lịch tập',
     'Trình độ', 'Muốn chơi tình ca', 'Đã đồng ý bản v1', '19:00 02/10/2026', 'Mới', 'Đang xem xét', 'Chấp nhận', 'Từ chối',
     'Đã đồng ý bản v2', 'Bass', 'có tài khoản']) assert.ok(h.includes(s), 'Admin có: ' + s)
   assert.ok(h.includes('<dt>cu</dt><dd>x</dd>'), 'câu trả lời ngoài config vẫn hiện (không mất dữ liệu)')
-  const onlyNew = renderToStaticMarkup(<BandApplicationsView detail={DETAIL} filter="NEW" onFilter={() => {}} busyId={null} errorId={null} errorText={null} onStatus={() => {}} />)
+  const onlyNew = renderToStaticMarkup(<BandApplicationsView detail={DETAIL} filter="NEW" onFilter={() => {}} busyId={null} errorId={null} errorText={null} {...ACCEPT_NOOP} onStatus={() => {}} />)
   assert.ok(onlyNew.includes('Trần Bình') && !onlyNew.includes('Thích bass'))
   assert.deepEqual(model.countByStatus(DETAIL.applications), { ALL: 2, NEW: 1, REVIEWING: 0, ACCEPTED: 1, REJECTED: 0 })
 })
@@ -263,7 +266,7 @@ test('Admin: đủ cột Owner cần — tên, vị trí, trình độ, lịch, 
 test('Admin: đổi trạng thái gọi onStatus đúng đơn', () => {
   const got: string[] = []
   const v = render(<BandApplicationsView detail={DETAIL} filter="ALL" onFilter={() => {}} busyId={null} errorId={null} errorText={null}
-    onStatus={(a, s) => got.push(a.id + ':' + s)} />)
+    {...ACCEPT_NOOP} onStatus={(a, s) => got.push(a.id + ':' + s)} />)
   fireEvent.click(v.getByRole('group', { name: 'Trạng thái đơn của Trần Bình' }).querySelector('button:nth-child(2)')!)
   assert.deepEqual(got, ['a1:REVIEWING'])
 })
@@ -275,4 +278,133 @@ test('Admin: danh sách Band + số đơn mới', () => {
   assert.ok(h.includes('Lá Mùa Thu') && h.includes('Đang tuyển') && h.includes('2 mới') && h.includes('3 đơn'))
   assert.ok(h.includes('Chưa mở tuyển') && h.includes('Band chưa công khai'))
   assert.ok(renderToStaticMarkup(<BandsAdminView bands={[]} onOpenBand={() => {}} />).includes('Chưa có Band nào'))
+})
+
+// ── Quản lý V1: dữ liệu ĐÚNG dạng band_admin_overview trả về; danh mục = DEFAULT trong db/band_management_v1_setup.sql ──
+const MSETUP = readFileSync(new URL('../../db/band_management_v1_setup.sql', import.meta.url), 'utf8')
+const catalogDefault = (col: string) => {
+  const i = MSETUP.indexOf(`add column if not exists ${col} jsonb not null default`)
+  assert.ok(i >= 0, 'setup có DEFAULT ' + col)
+  const start = MSETUP.indexOf("'", i) + 1
+  return JSON.parse(MSETUP.slice(start, MSETUP.indexOf("'", start)))
+}
+const OV_RAW = {
+  band: { id: 'b1', slug: 'la-mua-thu', name: 'Lá Mùa Thu', leader_name: 'Thầy Văn Anh', schedule_text: '19:00 Thứ Tư hàng tuần',
+    music_style: 'Tình ca nhẹ nhàng', status: 'active' },
+  position_catalog: catalogDefault('position_catalog'),
+  role_catalog: catalogDefault('role_catalog'),
+  members: [
+    { id: 'm1', application_id: 'a2', full_name: 'An', phone: '0912345678', status: 'ACTIVE', joined_at: '2026-10-03T01:00:00Z',
+      positions: ['bass', 'vocal'], position_note: null, has_account: true, roles: ['band_leader', 'membership'] },
+    { id: 'm2', application_id: null, full_name: 'Hà', phone: null, status: 'PAUSED', joined_at: '2026-10-03T01:00:00Z',
+      positions: ['other'], position_note: 'Saxophone', has_account: false, roles: ['teamlab'] },
+    { id: 'm3', application_id: null, full_name: 'Cũ', phone: '0900000009', status: 'LEFT', joined_at: '2026-10-01T01:00:00Z',
+      positions: ['gone_key'], position_note: null, has_account: false, roles: [] },
+  ],
+  counts: { members: 2, active: 1, new_applications: 1 },
+}
+const OV = model.parseOverview(OV_RAW)!
+const ok0 = async () => ({ ok: true as const, value: undefined })
+
+test('Quản lý: parse tổng quan + danh mục chuẩn 7 vị trí / 6 vai trò (đọc từ DEFAULT của migration)', () => {
+  assert.equal(OV.positionCatalog.length, 7)
+  assert.deepEqual(OV.roleCatalog.map(r => r.label), ['Band Leader', 'Music Leader', 'Membership', 'Lịch & điều phối', 'TeamLab / Recording', 'Performance / Media'])
+  assert.deepEqual(OV.roleCatalog[0], { key: 'band_leader', label: 'Band Leader', max: 1, manage: true })
+  assert.equal(OV.roleCatalog[1].max, null)
+  assert.equal(model.parseOverview({ nope: 1 }), null)
+  assert.deepEqual(model.memberPositionLabels(OV.members[0], OV.positionCatalog), ['Bass', 'Vocal'])
+  assert.deepEqual(model.memberPositionLabels(OV.members[1], OV.positionCatalog), ['Khác: Saxophone'])
+  assert.deepEqual(model.memberPositionLabels(OV.members[2], OV.positionCatalog), ['gone_key'], 'key đã gỡ khỏi danh mục vẫn hiện')
+  const slots = model.roleSlots(OV)
+  assert.deepEqual(slots.map(x => x.holders.map(h => h.fullName).join(',')), ['An', '', 'An', '', 'Hà', ''])
+  assert.ok(slots[0].full && !slots[2].full)
+  assert.equal(model.staffedCount(slots), 3)
+  assert.equal(model.memberForApplication(OV.members, DETAIL.applications[1])?.id, 'm1', 'khớp đơn → hồ sơ theo application_id')
+  assert.equal(model.memberForApplication(OV.members, DETAIL.applications[0]), null)
+  assert.deepEqual(model.splitMembers(OV.members).current.map(m => m.id), ['m1', 'm2'])
+})
+
+test('Quản lý: đầu trang (Band, Leader, lịch, gu, tổng thành viên, đơn mới) + 3 tab', () => {
+  const h = renderToStaticMarkup(<><BandManageHeader o={OV} /><BandTabs tab="org" onTab={() => {}} o={OV} /></>)
+  for (const s of ['Thầy Văn Anh', '19:00 Thứ Tư hàng tuần', 'Tình ca nhẹ nhàng', '<b>2</b><span>thành viên</span>', '<b>1</b><span>đơn mới</span>',
+    'Ứng tuyển', 'Thành viên', 'Bộ máy', '3/6']) assert.ok(h.includes(s), 'đầu trang có: ' + s)
+})
+
+test('Quản lý: CHẤP NHẬN = xác nhận "Chấp nhận … và thêm vào Band?" → onAccept (không chỉ đổi chữ)', () => {
+  const got: string[] = []
+  let confirmId: string | null = null
+  const props = () => ({ detail: DETAIL, members: OV.members, filter: 'ALL' as const, onFilter: () => {}, busyId: null, errorId: null, errorText: null,
+    confirmId, onStatus: (a: { id: string }, st: string) => got.push('status:' + a.id + ':' + st),
+    onAskAccept: (a: { id: string }) => { confirmId = a.id; got.push('ask:' + a.id) }, onCancelAccept: () => { confirmId = null },
+    onAccept: (a: { id: string }) => got.push('accept:' + a.id) })
+  const v = render(<BandApplicationsView {...props()} />)
+  fireEvent.click(v.getByRole('group', { name: 'Trạng thái đơn của Trần Bình' }).querySelector('button:nth-child(3)')!)
+  assert.deepEqual(got, ['ask:a1'], 'bấm Chấp nhận chỉ mở xác nhận — không gọi đổi trạng thái')
+  v.rerender(<BandApplicationsView {...props()} />)
+  const dlg = v.getByRole('alertdialog')
+  assert.ok(dlg.textContent!.includes('Chấp nhận Trần Bình và thêm vào Band?'))
+  fireEvent.click(v.getByRole('button', { name: 'Xác nhận' }))
+  assert.deepEqual(got, ['ask:a1', 'accept:a1'])
+  assert.ok(!got.some(x => x.startsWith('status:')), 'không đi đường set_status chữ ACCEPTED')
+  // đơn đã ACCEPTED có hồ sơ → "Đã là thành viên"; không có hồ sơ → nút "Thêm vào Band"
+  assert.ok(v.container.textContent!.includes('Đã là thành viên của Band'))
+  const noMember = renderToStaticMarkup(<BandApplicationsView {...props()} members={[]} />)
+  assert.ok(noMember.includes('Thêm vào Band'), 'ACCEPTED cũ chưa có hồ sơ → có lối thêm vào Band')
+})
+
+test('Quản lý: THÀNH VIÊN — vị trí kế thừa, nhiều vị trí/vai trò, sửa vị trí gọi onUpdate', async () => {
+  const calls: unknown[] = []
+  const v = render(<MembersView o={OV} onAdd={ok0} onUpdate={async (id, p) => { calls.push([id, p]); return { ok: true, value: undefined } }} />)
+  const t = v.container.textContent!
+  for (const s of ['An', '0912345678', 'Bass', 'Vocal', 'Band Leader', 'Membership', 'Hà', 'Khác: Saxophone', 'Tạm nghỉ', 'TeamLab / Recording',
+    'qua đơn ứng tuyển', 'thêm trực tiếp', 'có tài khoản Class', 'Xem người đã rời Band (1)']) assert.ok(t.includes(s), 'Thành viên có: ' + s)
+  assert.ok(!t.includes('Cũ'), 'người đã rời ẩn mặc định')
+  fireEvent.click(v.getAllByRole('button', { name: 'Sửa vị trí / trạng thái' })[0])
+  fireEvent.click(v.getByRole('button', { name: 'Keyboard' }))
+  fireEvent.click(v.getByRole('button', { name: 'Bass', pressed: true }))
+  await act(async () => { fireEvent.click(v.getByRole('button', { name: 'Lưu' })) })
+  assert.deepEqual(calls, [['m1', { positions: ['vocal', 'keyboard'], positionNote: null, status: 'ACTIVE' }]])
+})
+
+test('Quản lý: THÊM THÀNH VIÊN trực tiếp gọi onAdd với vị trí đã chọn', async () => {
+  const calls: unknown[] = []
+  const v = render(<MembersView o={OV} onUpdate={ok0} onAdd={async m => { calls.push(m); return { ok: true, value: undefined } }} />)
+  fireEvent.click(v.getByRole('button', { name: 'Thêm thành viên' }))
+  fireEvent.change(v.getByLabelText('Họ và tên'), { target: { value: 'Văn Anh' } })
+  fireEvent.click(v.getByRole('button', { name: 'Guitar tỉa / Lead' }))
+  await act(async () => { fireEvent.click(v.getByRole('button', { name: 'Thêm vào Band' })) })
+  assert.deepEqual(calls, [{ fullName: 'Văn Anh', phone: '', positions: ['guitar_lead'], positionNote: '' }])
+})
+
+test('Quản lý: BỘ MÁY — vai trò → người phụ trách / "Chưa phân công"; gán và bỏ gọi onSetRole', async () => {
+  const calls: unknown[] = []
+  const onSetRole = async (id: string, k: string, on: boolean) => { calls.push([id, k, on]); return { ok: true as const, value: undefined } }
+  const v = render(<OrgView o={OV} onSetRole={onSetRole} onOpenMembers={() => {}} />)
+  const roles = [...v.container.querySelectorAll('.cs-band-role')].map(li => li.textContent)
+  assert.equal(roles.length, 6)
+  assert.ok(roles[0]!.startsWith('Band Leader') && roles[0]!.includes('An'))
+  assert.ok(roles[1]!.includes('Music Leader') && roles[1]!.includes('Chưa phân công'))
+  assert.ok(roles[4]!.includes('Hà (tạm nghỉ)'))
+  assert.ok(v.container.textContent!.includes('Đã phân công 3/6 vai trò'))
+  assert.equal(v.container.querySelectorAll('.cs-band-role')[0].querySelector('.cs-band-role-add'), null, 'Band Leader đủ 1 người → không có nút thêm')
+  // gán Music Leader cho Hà
+  fireEvent.click(v.container.querySelectorAll('.cs-band-role')[1].querySelector('.cs-band-role-add')!)
+  fireEvent.change(v.getByLabelText('Chọn người phụ trách Music Leader'), { target: { value: 'm2' } })
+  await act(async () => { fireEvent.click(v.container.querySelectorAll('.cs-band-role')[1].querySelector('.cs-band-role-pick .cs-btn-primary')!) })
+  await act(async () => { fireEvent.click(v.getByRole('button', { name: 'Bỏ An khỏi Membership' })) })
+  assert.deepEqual(calls, [['m2', 'music_leader', true], ['m1', 'membership', false]])
+})
+
+test('REUSABILITY Quản lý: Band 2 có Saxophone/Violin/Cajon + vai trò riêng — CÙNG component, chỉ khác dữ liệu', () => {
+  const b2 = model.parseOverview({
+    band: { id: 'b2', slug: 'acoustic-chu-nhat', name: 'Acoustic Chủ Nhật', leader_name: 'Bình', schedule_text: '9:00 Chủ Nhật', music_style: 'Acoustic pop' },
+    position_catalog: [{ key: 'saxophone', label: 'Saxophone' }, { key: 'violin', label: 'Violin' }, { key: 'cajon', label: 'Cajon' }],
+    role_catalog: [{ key: 'band_leader', label: 'Trưởng nhóm', max: 1, manage: true }, { key: 'sound', label: 'Âm thanh', max: 2 }],
+    members: [{ id: 'x', full_name: 'Chi', status: 'ACTIVE', joined_at: '2026-10-03T01:00:00Z', positions: ['saxophone', 'violin'], roles: ['sound'] }],
+    counts: { members: 1, active: 1, new_applications: 0 },
+  })!
+  const h = renderToStaticMarkup(<><BandManageHeader o={b2} /><BandTabs tab="members" onTab={() => {}} o={b2} />
+    <MembersView o={b2} onAdd={ok0} onUpdate={ok0} /><OrgView o={b2} onSetRole={ok0} onOpenMembers={() => {}} /></>)
+  for (const s of ['Bình', '9:00 Chủ Nhật', 'Saxophone', 'Violin', 'Trưởng nhóm', 'Âm thanh', 'tối đa 2', '1/2']) assert.ok(h.includes(s), 'Band 2 có: ' + s)
+  for (const s of ['Lá Mùa Thu', 'Thứ Tư', 'Guitar đệm', 'Music Leader', 'Membership']) assert.ok(!h.includes(s), 'Band 2 KHÔNG có: ' + s)
 })

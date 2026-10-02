@@ -135,3 +135,80 @@
   .cs-band-app-grid { grid-template-columns: repeat(2, 1fr); }
   .cs-band-app-actions { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ── Quản lý Band V1: đầu trang · tab · thành viên · Bộ máy ── */
+.cs-band-mhead { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+.cs-band-mhead-facts { margin: 0; display: grid; grid-template-columns: 1fr; gap: 6px; }
+.cs-band-mhead-facts div { display: flex; gap: 8px; align-items: baseline; }
+.cs-band-mhead-facts dt { flex: 0 0 96px; font-size: 12.5px; color: var(--cs-muted); font-weight: 600; }
+.cs-band-mhead-facts dd { margin: 0; font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; }
+.cs-band-mhead-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cs-band-mhead-stats div { display: flex; align-items: baseline; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--cs-p-softer); }
+.cs-band-mhead-stats b { font-size: 22px; font-weight: 800; color: var(--cs-p-strong); }
+.cs-band-mhead-stats span { font-size: 13px; color: var(--cs-muted); font-weight: 600; }
+.cs-band-mhead-stats .is-hot { background: var(--cs-p); }
+.cs-band-mhead-stats .is-hot b, .cs-band-mhead-stats .is-hot span { color: #fff; }
+
+.cs-band-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--cs-p-softer);
+  position: sticky; top: 0; z-index: 2; margin-bottom: 12px; }
+.cs-band-tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; border: 0; border-radius: 10px;
+  background: transparent; font-size: 13.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; color: var(--cs-p-strong); cursor: pointer; white-space: nowrap; }
+.cs-band-tab.is-on { background: var(--cs-surface); box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12); }
+.cs-band-tab .cs-count { text-transform: none; }
+
+.cs-band-confirm { padding: 12px; border-radius: 12px; border: 1px solid var(--cs-p); background: var(--cs-p-softer); display: flex; flex-direction: column; gap: 10px; }
+.cs-band-confirm p { margin: 0; font-size: 14.5px; }
+.cs-band-confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.cs-band-app-member { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: #067647; }
+.cs-band-app-member .cs-btn { margin-left: auto; }
+.cs-band-app-add { width: 100%; }
+
+.cs-band-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-band-chip { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--cs-border);
+  background: var(--cs-surface); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.cs-band-chip.is-on { background: var(--cs-p); border-color: var(--cs-p); color: #fff; }
+.cs-band-chip.is-static { cursor: default; min-height: 26px; padding: 0 10px; background: var(--cs-p-softer); border-color: transparent; color: var(--cs-p-strong); }
+.cs-band-chip.is-role { cursor: default; min-height: 26px; padding: 0 10px; background: #ecfdf3; border-color: transparent; color: #067647; }
+.cs-band-muted { font-size: 13.5px; color: var(--cs-muted); }
+.cs-band-label-sub { font-weight: 500; color: var(--cs-muted); font-size: 12.5px; text-transform: none; letter-spacing: 0; }
+
+.cs-band-member { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.cs-band-member.is-paused, .cs-band-member.is-left { opacity: 0.8; }
+.cs-band-member .cs-band-app-phone { display: inline-flex; align-items: center; gap: 4px; }
+.cs-band-member-meta { font-size: 12.5px; color: var(--cs-muted); }
+.cs-band-member-edit { align-self: flex-start; }
+.cs-band-mstatus { display: inline-flex; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.cs-band-mstatus.is-paused { background: #fffaeb; color: #b54708; }
+.cs-band-mstatus.is-left { background: #f2f4f7; color: #475467; }
+.cs-band-medit { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid var(--cs-border); }
+.cs-band-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cs-band-seg-opt { display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 4px 6px; border-radius: 10px; text-align: center;
+  border: 1px solid var(--cs-border); font-size: 13px; font-weight: 700; cursor: pointer; }
+.cs-band-seg-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.cs-band-seg-opt.is-on { background: var(--cs-p); border-color: var(--cs-p); color: #fff; }
+.cs-band-madd-open { width: 100%; margin-bottom: 12px; }
+.cs-band-madd { padding: 14px 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.cs-band-madd-title { font-size: 16px; font-weight: 800; }
+.cs-band-left { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+.cs-band-org-sum { margin: 0 0 10px; font-size: 14px; font-weight: 700; color: #b54708; }
+.cs-band-org-sum.is-full { color: #067647; }
+.cs-band-org { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cs-band-role { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; border-left: 4px solid var(--cs-p); }
+.cs-band-role.is-empty { border-left-color: var(--cs-border); }
+.cs-band-role-name { font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cs-p-strong); }
+.cs-band-role-none { font-size: 15px; color: var(--cs-muted); font-style: italic; }
+.cs-band-role-holders { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.cs-band-role-holders li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 16px; font-weight: 700; }
+.cs-band-role-x { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: 0;
+  background: transparent; color: var(--cs-muted); cursor: pointer; }
+.cs-band-role-x:hover { background: var(--cs-hover); color: #b42318; }
+.cs-band-role-add { align-self: flex-start; }
+.cs-band-role-pick { display: flex; flex-direction: column; gap: 8px; }
+.cs-band-link { border: 0; background: none; padding: 0; color: var(--cs-p-strong); font-weight: 700; text-decoration: underline; cursor: pointer; font-size: inherit; }
+
+@media (min-width: 640px) {
+  .cs-band-mhead { flex-direction: row; align-items: center; justify-content: space-between; }
+  .cs-band-mhead-stats { flex: 0 0 240px; }
+  .cs-band-org { display: grid; grid-template-columns: repeat(2, 1fr); }
+}

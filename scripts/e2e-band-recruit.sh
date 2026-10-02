@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# E2E Band — Tuyển thành viên V1 trên stack LOCAL (không production):
-#   PostgreSQL 17 tạm (fixture + community_setup + band_recruit_v1 + seed Lá Mùa Thu) → PostgREST (JWT thật)
+# E2E Band — Tuyển thành viên V1 + Quản lý V1 trên stack LOCAL (không production):
+#   PostgreSQL 17 tạm (fixture + community_setup + band_recruit_v1 + seed Lá Mùa Thu + band_management_v1) → PostgREST (JWT thật)
 #   → proxy giả lập Supabase auth (scripts/e2e-learning-thread-proxy.mjs) → Vite dev → Chrome (tests/e2e-band/run.mjs).
 #   PUPPETEER_DIR=/path/to/dir bash scripts/e2e-band-recruit.sh
 set -euo pipefail
@@ -37,9 +37,10 @@ for f in learning_threads_p1_setup learning_threads_p2_setup social_classes_v1_s
 done
 psqld -1 -f "$ROOT/db/band_recruit_v1_setup.sql" >/dev/null
 psqld -1 -f "$ROOT/db/band_la_mua_thu_seed.sql" >/dev/null
+psqld -1 -f "$ROOT/db/band_management_v1_setup.sql" >/dev/null
 psqld -c "create or replace function public.my_tool_route_access(p_path text) returns boolean language sql stable as \$\$ select true \$\$;
           grant execute on function public.my_tool_route_access(text) to anon, authenticated;" >/dev/null
-echo "── DB local sẵn sàng (Social + Band V1 + seed Lá Mùa Thu)"
+echo "── DB local sẵn sàng (Social + Band Recruit V1 + seed Lá Mùa Thu + Band Quản lý V1)"
 
 SECRET="e2e-local-secret-e2e-local-secret-0000000"
 cat > "$TMP/pgrst.conf" <<EOT

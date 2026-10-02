@@ -105,7 +105,7 @@ export function sessionFromPath(pathname: string): { classId: string; sessionNo:
   return m && UUID_RE.test(m[1]) ? { classId: m[1].toLowerCase(), sessionNo: Number(m[2]) } : null
 }
 
-// ── Tuyển thành viên Band (Admin V1): /me/bands · /me/bands/<slug> — quyền do server (band_can_manage) quyết ──
+// ── Quản lý Band (Recruit V1 + Quản lý V1): /me/bands · /me/bands/<slug> — quyền do server (band_can_manage) quyết ──
 export const BANDS_PATH = '/me/bands'
 const BAND_SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
