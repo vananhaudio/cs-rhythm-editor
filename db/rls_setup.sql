@@ -72,6 +72,9 @@ DECLARE
     -- capability library.read, ghi theo library.save; phiên bản BẤT BIẾN (trigger
     -- chặn UPDATE/DELETE). Áp policy rộng lên đây là cho học viên sửa kho của thầy.
     'nhipphach_scores', 'nhipphach_score_versions',
+    -- Band — Tuyển thành viên V1 (db/band_recruit_v1_setup.sql): RLS bật, KHÔNG policy; khách/học viên
+    -- chỉ đi qua RPC band_* (SECURITY DEFINER). Áp policy rộng = mọi tài khoản đọc SĐT ứng viên.
+    'bands', 'band_recruitments', 'band_rule_versions', 'band_applications',
     -- Preset công cụ Nhịp Phách (db/nhipphach_presets_setup.sql): dữ liệu THEO
     -- TÀI KHOẢN, policy hẹp `user_id = auth.uid() AND is_teacher()`. ĐỪNG áp
     -- policy rộng lên hai bảng này — làm thế là mọi người đọc preset của nhau.
