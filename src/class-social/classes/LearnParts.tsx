@@ -1,8 +1,8 @@
 // Phần hiển thị THUẦN của màn HỌC trong lớp (Lớp của tôi V1) — không mạng, không import CSS → test render được.
 // Sơ đồ DỌC: mỗi buổi một dòng "Buổi 01 · Tiêu đề" (thu gọn); bài trả hiện trạng thái + nút NGAY tại checkpoint.
 import type { ReactNode } from 'react'
-import { checkpointUi, lockedHint, pad2, requiredProgress, sessionBadge, sessionPace, sessionPhase, PACE_DOT,
-  type CheckpointState, type LearnMode, type SessionState } from '../../classLearning/progress'
+import { checkpointUi, currentSessionNo, lockedHint, pad2, requiredProgress, sessionBadge, sessionLabel, sessionPace, sessionPhase, PACE_DOT,
+  type CheckpointState, type ClassLearningState, type LearnMode, type SessionState } from '../../classLearning/progress'
 
 export function SessionRowHead({ s, role, now, paceDays, expanded, current, onToggle, mode = 'checkpoint', disabled = false }: {
   s: SessionState
@@ -76,6 +76,36 @@ export function CheckpointStatusView({ cp, supported, onSubmit, onView, composer
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** ĐANG HỌC: buổi hiện tại + trạng thái + [Tiếp tục học] — đầu Trang Lớp và trong mỗi lớp ở "Lớp của tôi".
+ *  Buổi hiện tại do currentSessionNo() quyết (giáo trình: theo lịch · checkpoint: theo tiến độ server). */
+export function CurrentSessionBlock({ state, now, onOpenSession, compact = false }: {
+  state: Extract<ClassLearningState, { enabled: true }>
+  now: Date
+  onOpenSession: (sessionNo: number) => void
+  compact?: boolean
+}) {
+  const no = currentSessionNo(state, now)
+  const s = state.sessions.find(x => x.no === no) ?? null
+  if (!s) return <p className="cs-now-empty">Lớp chưa có buổi học nào được xuất bản.</p>
+  const teacher = state.role === 'teacher'
+  const status = teacher ? 'Giáo viên xem trước'
+    : state.mode === 'curriculum' ? 'Buổi hiện tại'
+    : sessionBadge(s, state.role, now, state.paceDays, state.mode) || 'Đang học'
+  const req = state.mode === 'checkpoint' && !teacher ? requiredProgress(s) : null
+  return (
+    <div className={'cs-now' + (compact ? ' is-compact' : '')}>
+      {!compact && <span className="cs-now-kicker">Đang học</span>}
+      <span className="cs-now-title">{sessionLabel(s)}</span>
+      <span className="cs-now-status">
+        {status}{req && req.total > 0 ? ` · ${req.passed}/${req.total} bài trả bắt buộc đã Đạt` : ''}
+      </span>
+      <button type="button" className="cs-btn cs-btn-primary cs-now-go" onClick={() => onOpenSession(s.no)}>
+        {teacher ? 'Mở buổi hiện tại' : 'Tiếp tục học'}
+      </button>
     </div>
   )
 }

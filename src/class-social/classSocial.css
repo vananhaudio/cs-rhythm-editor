@@ -925,3 +925,49 @@
 .cs-session-nav .cs-btn { min-height: 44px; }
 .cs-learn-row:disabled { cursor: default; }
 .cs-learn-row:disabled:hover { background: none; }
+
+/* ── UX V2: LỚP CỦA TÔI = trung tâm sinh hoạt (bảng lớp) · TRANG LỚP: Đang học → Hoạt động → Giáo trình tóm tắt ── */
+.cs-now { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cs-now-kicker { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-p); }
+.cs-now-title { font-size: 17px; font-weight: 800; line-height: 1.35; }
+.cs-now-status { font-size: 13.5px; color: var(--cs-muted); }
+.cs-now-go { margin-top: 8px; min-height: 44px; padding-left: 20px; padding-right: 20px; }
+.cs-now.is-compact .cs-now-title { font-size: 15.5px; }
+.cs-now-empty { margin: 0; font-size: 14px; color: var(--cs-muted); }
+.cs-learn-now { padding: 14px 16px; }
+.cs-learn .cs-learn-recent { margin-top: 0; padding: 14px 16px; display: flex; flex-direction: column; }
+.cs-learn-curriculum { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.cs-learn-stage-sum { margin: 0; font-size: 13px; font-weight: 700; color: var(--cs-faint); text-transform: uppercase; letter-spacing: .04em; }
+.cs-learn-all { align-self: flex-start; margin-top: 4px; min-height: 40px; }
+.cs-learn-stages { display: flex; flex-direction: column; gap: 6px; }
+.cs-learn-stage-group { display: flex; flex-direction: column; }
+.cs-learn-stage-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 12px;
+  border: 1px solid var(--cs-border); background: var(--cs-surface); font: inherit; font-size: 13.5px; font-weight: 800; color: var(--cs-text);
+  text-align: left; cursor: pointer; text-transform: uppercase; letter-spacing: .03em; }
+.cs-learn-stage-toggle span:nth-child(2) { flex: 1; min-width: 0; }
+.cs-learn-stage-count { flex: none; font-weight: 600; color: var(--cs-muted); text-transform: none; letter-spacing: 0; }
+.cs-learn-stage-group .cs-learn-map { margin-top: 6px; }
+.cs-learn-breaks { list-style: none; margin: 0; padding: 0; }
+.cs-learn-breaks .cs-learn-break { margin-left: 10px; }
+
+/* Dòng hoạt động gọn (social_class_activity) */
+.cs-act-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cs-act-line { width: 100%; display: flex; flex-direction: column; gap: 3px; padding: 10px 4px; border: none; border-bottom: 1px solid var(--cs-border);
+  background: none; font: inherit; color: var(--cs-text); text-align: left; cursor: pointer; border-radius: 0; }
+.cs-act-list li:last-child .cs-act-line { border-bottom: none; }
+.cs-act-line:hover { background: var(--cs-hover); }
+.cs-act-main { font-size: 14.5px; }
+.cs-act-lesson { font-size: 14px; color: var(--cs-muted); overflow-wrap: anywhere; }
+.cs-act-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--cs-faint); }
+.cs-act-note { margin: 4px 0; font-size: 14px; color: var(--cs-muted); }
+
+/* Bảng Lớp của tôi: mỗi lớp một dashboard nhỏ */
+.cs-myclasses { display: flex; flex-direction: column; gap: 12px; }
+.cs-myclass { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.cs-myclass-head { display: flex; flex-direction: column; gap: 2px; }
+.cs-myclass-name { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.3; }
+.cs-myclass-meta { font-size: 13px; color: var(--cs-muted); }
+.cs-myclass-act { border-top: 1px solid var(--cs-border); padding-top: 8px; }
+.cs-myclass-sub { margin: 0 0 2px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--cs-faint); }
+.cs-myclass-enter { align-self: flex-start; min-height: 40px; }
+.cs-myclasses-discover { align-self: center; gap: 6px; min-height: 44px; }

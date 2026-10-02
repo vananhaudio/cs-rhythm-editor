@@ -56,20 +56,24 @@ test("menu: Trang chủ là mục ĐẦU TIÊN; CỘNG ĐỒNG (Trang chủ · B
   assert.match(src("class-social/ClassSocialLayout.tsx"), /g\.id === 'community' && classNav\?\./);
 });
 
-test("ClassNav: lớp CỦA TÔI hiện trực tiếp (bấm được) · Khám phá tối đa 3 · Tất cả lớp · lớp đang mở sáng", () => {
+test("ClassNav (UX V2): CHỈ lớp CỦA TÔI (bấm được) · không trộn lớp chưa tham gia · một lối Khám phá lớp khác · lớp đang mở sáng", () => {
   const mine = toClassCards([card(), card({ id: "b0000000-0000-4000-8000-0000000000c9", code: "HT2027.TH01", name: "Hành trình 2027" })]);
-  const discover = toClassCards([1, 2, 3, 4].map(i => card({ id: `b0000000-0000-4000-8000-00000000000${i}`, code: `SOLO0${i}`, name: `Solo Guitar 0${i}`, is_member: false })));
-  const h = renderToStaticMarkup(<ClassNav mine={mine} discover={discover} loaded activeClassId={CID} classesActive={false} collapsed={false}
-    onOpenClass={() => {}} onOpenClasses={() => {}} />);
+  const h = renderToStaticMarkup(<ClassNav mine={mine} loaded activeClassId={CID} classesActive={false} collapsed={false}
+    onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
   assert.match(h, /Lớp học/);
   assert.match(h, /Đệm hát căn bản — KD18/);
   assert.match(h, /Hành trình 2027/);
   assert.match(h, /aria-current="page"[^>]*title="Đệm hát căn bản — KD18 · DH2\.KD18"/);
-  assert.match(h, /Khám phá/);
-  assert.equal((h.match(/cs-nav-text">Solo Guitar 0/g) || []).length, 3, "khám phá tối đa 3");
-  assert.match(h, /Tất cả lớp/);
+  assert.match(h, /Khám phá lớp khác/);
+  assert.equal(/Solo Guitar 0/.test(h), false, "không liệt kê lớp chưa tham gia");
+  assert.equal(/Tất cả lớp của tôi/.test(h), false, "≤ 5 lớp: không cần lối Tất cả lớp của tôi");
   assert.match(h, /cs-class-dot is-mine/);
-  const none = renderToStaticMarkup(<ClassNav mine={[]} discover={[]} loaded activeClassId={null} classesActive collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
+  const many = toClassCards([1, 2, 3, 4, 5, 6].map(i => card({ id: `b0000000-0000-4000-8000-00000000001${i}`, code: `L${i}`, name: `Lớp ${i}` })));
+  const hm = renderToStaticMarkup(<ClassNav mine={many} loaded activeClassId={null} classesActive={false} collapsed={false}
+    onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
+  assert.equal((hm.match(/cs-class-item/g) || []).length, 5);
+  assert.match(hm, /Tất cả lớp của tôi/);
+  const none = renderToStaticMarkup(<ClassNav mine={[]} loaded activeClassId={null} classesActive collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
   assert.match(none, /Bạn chưa ở trong lớp nào\./);
 });
 
@@ -86,25 +90,22 @@ test("tên lớp THÂN THIỆN cho menu (lấy từ tên thật production, khô
   ];
   for (const [name, code, want] of cases) assert.equal(classShortName({ name, code }), want, name);
   assert.equal(classFullTitle({ name: "Hành trình 2027 — 40 buổi thực hành", code: "HT2027.TH01" }), "Hành trình 2027 — 40 buổi thực hành · HT2027.TH01");
-  const h = renderToStaticMarkup(<ClassNav mine={toClassCards([card({ name: "Hành trình 2027 — 40 buổi thực hành", code: "HT2027.TH01" })])} discover={[]}
-    loaded activeClassId={null} classesActive={false} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
+  const h = renderToStaticMarkup(<ClassNav mine={toClassCards([card({ name: "Hành trình 2027 — 40 buổi thực hành", code: "HT2027.TH01" })])}
+    loaded activeClassId={null} classesActive={false} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
   assert.match(h, /cs-nav-text">Hành trình 2027</);
   assert.equal(/cs-nav-text">HT2027/.test(h), false, "menu không hiện mã nội bộ");
 });
 
-test("menu: đúng MỘT mục sáng (lớp đang mở, ở Của tôi hoặc Khám phá; hoặc Tất cả lớp)", () => {
+test("menu: đúng MỘT mục sáng (lớp đang mở; hoặc Khám phá lớp khác)", () => {
   const mine = toClassCards([card()]);
-  const discover = toClassCards([card({ id: "b0000000-0000-4000-8000-000000000001", code: "SOLO01", name: "Solo Guitar", is_member: false })]);
   const count = (h: string) => (h.match(/aria-current="page"/g) || []).length;
-  const r = (active: string | null, all: boolean) => renderToStaticMarkup(<ClassNav mine={mine} discover={discover} loaded activeClassId={active}
-    classesActive={all} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} />);
+  const r = (active: string | null, all: boolean) => renderToStaticMarkup(<ClassNav mine={mine} loaded activeClassId={active}
+    classesActive={all} collapsed={false} onOpenClass={() => {}} onOpenClasses={() => {}} onOpenMyClasses={() => {}} />);
   assert.equal(count(r(CID, false)), 1);
-  const disc = r("b0000000-0000-4000-8000-000000000001", false);
-  assert.equal(count(disc), 1);
-  assert.match(disc, /aria-current="page"[^>]*title="Solo Guitar · SOLO01"/);
+  assert.equal(count(r("b0000000-0000-4000-8000-000000000001", false)), 0, "lớp chưa tham gia không nằm trong menu");
   const all = r(null, true);
   assert.equal(count(all), 1);
-  assert.match(all, /aria-current="page"[^>]*><svg[\s\S]*?Tất cả lớp/);
+  assert.match(all, /aria-current="page"[^>]*><svg[\s\S]*?Khám phá lớp khác/);
 });
 
 // ── Thẻ lớp / trang lớp ───────────────────────────────────────────────────────

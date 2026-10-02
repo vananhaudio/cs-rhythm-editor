@@ -9,17 +9,21 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import JoinClassByCode from "../../src/class-social/classes/JoinClassByCode";
 import ClassesPage from "../../src/class-social/classes/ClassesPage";
+import MyClassesBoard from "../../src/class-social/classes/MyClassesBoard";
 import { scErrorText } from "../../src/class-social/classes/classModel";
 void React;
 
 const src = (f: string) => readFileSync(new URL(`../../src/${f}`, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const sql = (f: string) => readFileSync(new URL(`../../db/${f}`, import.meta.url), "utf8");
 
-test("Lớp của tôi: có ô 'Nhập mã lớp của bạn' (cả khi chưa thuộc lớp nào) — chỉ gửi MÃ, không user/lớp/nhóm", () => {
-  const html = renderToStaticMarkup(<ClassesPage classes={{ loaded: true, mine: [], discover: [], error: null, reload: () => {} }} onOpenClass={() => {}} />);
+test("Nhập mã lớp: ô 'Nhập mã lớp của bạn' ở Khám phá các lớp khác (/me/classes); Lớp của tôi trống chỉ lối tới đó — chỉ gửi MÃ, không user/lớp/nhóm", () => {
+  const empty = { loaded: true as const, mine: [], discover: [], error: null, reload: () => {} };
+  const html = renderToStaticMarkup(<ClassesPage classes={empty} onOpenClass={() => {}} onOpenMyClasses={() => {}} />);
   assert.match(html, /Nhập mã lớp của bạn/);
   assert.match(html, /Xem lớp/);
-  assert.match(html, /Nhập mã lớp Thầy gửi/);
+  const board = renderToStaticMarkup(<MyClassesBoard classes={empty} isTeacher={false} onOpenClass={() => {}} onOpenSession={() => {}} onOpenThread={() => {}} onOpenDiscover={() => {}} />);
+  assert.match(board, /Nhập mã lớp Thầy gửi/);
+  assert.match(board, /Khám phá các lớp khác/);
   assert.match(renderToStaticMarkup(<JoinClassByCode onJoined={() => {}} />), /aria-label="Mã lớp"/);
   const api = src("class-social/classes/classesApi.ts");
   assert.match(api, /rpc\('class_join_preview', \{ p_code: code \}\)/);

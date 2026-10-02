@@ -61,6 +61,12 @@ async function openSessionFromMap(page, no) {
   await page.waitForFunction(n => new RegExp(`/sessions/${n}$`).test(location.pathname), { timeout: 15000 }, no)
   assert.equal(await page.$$eval('.cs-learn-map, .cs-learn-recent', e => e.length), 0, 'Trang Buổi: không bản đồ, không feed lớp')
 }
+// Trang Lớp UX V2: giáo trình TÓM TẮT mặc định → bung toàn bộ (mọi chặng) khi cần xem đủ buổi
+async function expandAll(page) {
+  if (await page.$('.cs-learn-all[aria-expanded="false"]')) await page.click('.cs-learn-all')
+  await page.waitForSelector('.cs-learn-stages')
+  for (const b of await page.$$('.cs-learn-stage-toggle[aria-expanded="false"]')) await b.click()
+}
 const inViewport = (page, sel) => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight })
 // Vị trí giáo án sau khi bấm buổi: đầu #giao-an phải nằm ngay dưới thanh trên dính (52px) — không bị che, không xuống đáy
 async function lessonPos(page) {
@@ -76,12 +82,21 @@ try {
   // ── 1. B vào lớp: TRANG LỚP = BẢN ĐỒ (không giáo án) · buổi sau khoá ──────────────────────────
   ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}`))
   await onClassPage(page)
+  // UX V2: đầu trang = Tên lớp → Đang học (Tiếp tục học) → Hoạt động gần đây → Giáo trình TÓM TẮT (không bung mọi buổi)
+  const top = await page.evaluate(() => { const t = document.querySelector('.cs-learn').textContent
+    return [t.indexOf('Đang học'), t.indexOf('Tiếp tục học'), t.indexOf('Hoạt động gần đây'), t.indexOf('Giáo trình')] })
+  assert.ok(top.every((x, i) => x >= 0 && (i === 0 || x > top[i - 1])), 'thứ tự: Đang học → Tiếp tục học → Hoạt động → Giáo trình ' + top)
   let r = await rows(page)
+  assert.deepEqual(r.map(x => x.title), ['Buổi 01 · Bản đồ nốt C–Am', 'Buổi 02 · Ép ngón & Bass'], 'tóm tắt: buổi hiện tại + buổi kế')
+  assert.ok(await inViewport(page, '.cs-now-go'), 'Tiếp tục học trong màn hình đầu')
+  await page.screenshot({ path: `${SHOTS}/cp-0-class-summary-390.png`, fullPage: false })
+  await expandAll(page)
+  r = await rows(page)
   assert.deepEqual(r.map(x => x.title), ['Buổi 01 · Bản đồ nốt C–Am', 'Buổi 02 · Ép ngón & Bass', 'Buổi 03 · Slide', 'Buổi 04 · Xếp ngón'])
   assert.ok(r[0].current && /is-current/.test(r[0].cls), 'Buổi 01 là buổi hiện tại')
   assert.ok(r[1].disabled && r[2].disabled && /is-locked/.test(r[1].cls), 'Buổi 02/03 khoá: thấy trên bản đồ, không bấm vào được')
   assert.equal(await page.$$eval('.cs-learn-map .lt-profile-tabs', e => e.length), 0, 'không thêm tab')
-  ok('B: Trang Lớp = bản đồ 4 buổi (không giáo án) · Buổi 01 hiện tại · Buổi 02–03 khoá, không bấm được')
+  ok('B: Trang Lớp = Đang học + Hoạt động + giáo trình tóm tắt (2 dòng) → "Xem toàn bộ" 4 buổi · Buổi 01 hiện tại · Buổi 02–03 khoá')
   await noHorizontalOverflow(page, 'Trang Lớp 390px')
   await page.screenshot({ path: `${SHOTS}/cp-1-class-390.png`, fullPage: true })
 
@@ -116,7 +131,7 @@ try {
   await onClassPage(page)
   assert.ok(await inViewport(page, '#buoi-01'), 'Buổi 01 trong màn hình sau khi về lớp')
   await page.waitForFunction(() => /Bài trả 1\.1 · Âm giai C–Am/.test(document.querySelector('.cs-learn-recent')?.textContent ?? ''), { timeout: 15000 })
-  ok('← Về lớp: Trang Lớp, dòng Buổi 01 nằm trong màn hình · "Các bạn vừa trả bài" có bài vừa trả')
+  ok('← Về lớp: Trang Lớp, dòng Buổi 01 nằm trong màn hình · "Hoạt động gần đây" có bài vừa trả')
 
   // Deep link + reload buổi khoá: không vượt bằng URL
   await page.goto(`${ME}/classes/${TH01}/sessions/2`, { waitUntil: 'networkidle0' })
@@ -139,11 +154,16 @@ try {
   ;({ ctx, page } = await meAs('a@test.local', `/classes/${TH01}`))
   await onClassPage(page)
   await page.waitForFunction(() => /Bài trả 1\.1/.test(document.querySelector('.cs-learn-recent')?.textContent ?? ''), { timeout: 15000 })
-  ok('A (cùng lớp) thấy bài trả của B trong "Các bạn vừa trả bài" (Trang Lớp)')
-  await clickText(page, 'Xem thêm về lớp')
+  ok('A (cùng lớp) thấy bài trả của B trong "Hoạt động gần đây" (Trang Lớp)')
+  await clickText(page, 'Tiếp tục học')
+  await page.waitForFunction(id => location.pathname === `/me/classes/${id}/sessions/1`, {}, TH01)
+  await page.waitForSelector('.lsn-paper', { timeout: 15000 })
+  ok('Tiếp tục học → đúng Trang Buổi hiện tại (/sessions/1)')
+  await page.click('.cs-session-back'); await onClassPage(page)
+  await clickText(page, 'Xem tất cả hoạt động')
   await page.waitForSelector('.lt-profile-tabs'); await waitText(page, /Bài trả 1\.1/)
   assert.equal(await page.$$eval('.cs-learn-map', e => e.length), 0)
-  ok('"Xem thêm về lớp" → trang cộng đồng lớp (Hoạt động | Thành viên)')
+  ok('"Xem tất cả hoạt động" → trang cộng đồng lớp (Hoạt động | Thành viên)')
   await clickText(page, 'Vào học'); await page.waitForSelector('.cs-learn-map')
   ok('"Vào học" → về Trang Lớp')
   await ctx.close()
@@ -180,6 +200,8 @@ try {
 
   ;({ ctx, page } = await meAs('b@test.local', `/classes/${TH01}`))
   await onClassPage(page)
+  await waitText(page, /Buổi 02 · Ép ngón & Bass[\s\S]*Tiếp tục học/)
+  await expandAll(page)
   r = await rows(page)
   assert.ok(/is-done/.test(r[0].cls) && r[1].current && !r[1].disabled && r[2].disabled, JSON.stringify(r))
   await openSessionFromMap(page, 2)
@@ -208,13 +230,14 @@ try {
   const CUR = 'b1000000-0000-4000-8000-000000000004'
   ;({ ctx, page } = await meAs('a@test.local', `/classes/${CUR}`))
   await onClassPage(page)
+  assert.ok(await page.evaluate(() => scrollY) <= 10, 'vào lớp không tự cuộn')
+  await expandAll(page)
   r = await rows(page)
   assert.deepEqual(r.map(x => x.title), ['Buổi 01 · Mở đầu', 'Buổi 02 · Tuần này', 'Buổi 03 · Đang soạn', 'Buổi 04 · Chưa có'])
   assert.ok(r[1].current && r.every(x => !x.disabled), 'buổi hiện tại theo lịch (02); không khoá buổi nào')
   assert.equal(await page.$$eval('.cs-learn-row-badge', e => e.length), 0, 'dòng gọn')
   assert.equal(await page.$$eval('.cs-learn-break', e => e.map(x => x.textContent).join('|')), 'Nghỉ giữa chặng – thời gian tự luyện')
-  assert.ok(await page.evaluate(() => scrollY) <= 10, 'vào lớp không tự cuộn')
-  await waitText(page, /Các bạn vừa trả bài/); await waitText(page, /Chưa có bài trả nào/)
+  await waitText(page, /Hoạt động gần đây/); await waitText(page, /Chưa có hoạt động nào/)
   ok('Chế độ giáo trình: Trang Lớp gọn — 4 buổi, Buổi 02 hiện tại, vạch nghỉ, không khoá, không giáo án, feed trống gọn')
   await openSessionFromMap(page, 2)
   await waitText(page, /Nội dung thật buổi 2/)
