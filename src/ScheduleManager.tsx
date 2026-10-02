@@ -1,6 +1,7 @@
 // Tab "🗓 Lịch lớp" trong /admin — quản lý lịch lớp học (thay Google Sheet).
 // Mỗi lớp gắn NHIỀU khoá (tick) + 1 nhóm Zalo → nền tảng cho đăng ký 1-chạm.
 import { useEffect, useState, type CSSProperties } from 'react'
+import ClassJoinCode from './admin/ClassJoinCode'
 import { PRODUCTS, type PublicProductKey } from './class-content'
 import { supabase } from './supabase'
 import { buildClassCode, dangLop, soFromClassCode } from './hanhtrinh'
@@ -552,6 +553,7 @@ export default function ScheduleManager() {
                     <div style={{ fontSize: 12.5, color: S.text3, marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: '2px 10px' }}>
                       <span>👥 Nhóm thành viên: {groupName(r.group_id) ?? <em>chưa có</em>}{summary[r.id] ? <> · <b style={{ color: S.text1 }}>{summary[r.id].member_count} học sinh</b>{summary[r.id].curriculum_access_count > 0 ? ` · Giáo trình bật ${summary[r.id].curriculum_access_count}` : ''}</> : null}</span>
                       <span>🎓 {courseNames(r.course_ids).length ? courseNames(r.course_ids).join(', ') : <em>chưa gắn khoá</em>}</span>
+                      {r.group_id && LIVE(r.status) && <ClassJoinCode client={supabase} classId={r.id} />}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>

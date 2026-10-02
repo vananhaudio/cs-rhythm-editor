@@ -43,3 +43,10 @@ export function useLearningIdentity(userId: string | null | undefined): Learning
   useEffect(() => { if (userId) request(userId) }, [userId])
   return value
 }
+
+/** Danh tính vừa đổi (vd vừa tham gia lớp bằng mã) → bỏ cache và nạp lại ngay. */
+export function refreshLearningIdentity(userId: string) {
+  cache.delete(userId)
+  listeners.forEach(l => l())
+  request(userId)
+}

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { supabase } from '../supabase'
 import ClassCurriculumEditor from './ClassCurriculumEditor'
+import ClassJoinCode from './ClassJoinCode'
 
 // Mọi lớp chưa huỷ/gộp. Thành viên = nhóm CANONICAL của lớp (RPC class_roster / admin_class_member_summary —
 // cùng nguồn Social/App; docs/CLASS-MEMBERSHIP-CANONICAL.md). Thành viên ≠ quyền Giáo trình.
@@ -181,6 +182,8 @@ export default function ClassCurriculumAdminView({ client }: Props) {
           {' '}· <b style={{ color: C.text }}>{summary[selected.id]?.member_count ?? activeMembers.length} học sinh</b>
           {' '}· Giáo trình bật: {activeMembers.filter(m => access[m.user_id]?.status === 'active').length}
         </div>
+        {selected.cohort_group_id && !['completed', 'cancelled', 'merged'].includes(selected.status) &&
+          <div style={{ marginBottom: 12 }}><ClassJoinCode key={selected.id} client={client} classId={selected.id} /></div>}
         <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {([['students', 'Học sinh'], ['curriculum', 'Chặng & Giáo trình']] as const).map(([id, label]) =>
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}

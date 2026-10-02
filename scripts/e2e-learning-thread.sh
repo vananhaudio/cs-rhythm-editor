@@ -104,14 +104,19 @@ curl -sf "http://127.0.0.1:$API_PORT/" >/dev/null || { cat "$TMP/pgrst.log"; exi
 echo "── Stack: PostgREST :$API_PORT · proxy :$PROXY_PORT · vite :$VITE_PORT"
 
 set +e
+# E2E_SKIP_BASE=1 (chỉ khi gỡ lỗi kịch bản thêm): bỏ qua run.mjs / run-checkpoints.mjs
+if [ -n "${E2E_SKIP_BASE:-}" ]; then RC=0; else
 VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$ROOT/tests/e2e-learning-thread/run.mjs"
 RC=$?
+fi
 if [ -n "${E2E_CHECKPOINTS:-}" ] && [ "$RC" = "0" ]; then
   psqld -f "$ROOT/db/tests/local/class_checkpoints_fixture_data.sql" >/dev/null
   # Tuỳ chọn (không commit dữ liệu): E2E_EXTRA_SQL nạp thêm dữ liệu vào DB TẠM; E2E_EXTRA_RUNNER chạy thêm kịch bản Chrome
   [ -n "${E2E_EXTRA_SQL:-}" ] && psqld -f "$E2E_EXTRA_SQL" >/dev/null
+  if [ -z "${E2E_SKIP_BASE:-}" ]; then
   VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$ROOT/tests/e2e-learning-thread/run-checkpoints.mjs"
   RC=$?
+  fi
   if [ "$RC" = "0" ] && [ -n "${E2E_EXTRA_RUNNER:-}" ]; then
     VITE_PORT=$VITE_PORT PUPPETEER_DIR="$PUPPETEER_DIR" SHOTS="${SHOTS:-$TMP/shots}" node "$E2E_EXTRA_RUNNER"
     RC=$?

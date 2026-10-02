@@ -102,7 +102,8 @@ try {
 
   // ── 2. Thầy: hàng đợi → mở thread → Cần làm lại ────────────────────────────
   ;({ ctx, page } = await meAs('t@test.local'))
-  await (await page.waitForSelector('.cs-queue-entry', { timeout: 15000 })).click()
+  // Home của Thầy có thể có nhiều lối vào cùng kiểu (vd "Đơn ứng tuyển Band") → bấm đúng hàng đợi Trả/Hỏi bài
+  await (await page.waitForFunction(() => [...document.querySelectorAll('.cs-queue-entry')].find(b => /đang chờ phản hồi/.test(b.textContent)), { timeout: 15000 })).asElement().click()
   await page.waitForFunction(() => location.pathname === '/me/queue')
   await waitText(page, /An · DH2\.KD18 · Đệm hát 2/)
   await waitText(page, /Trả bài: Em nộp bài Bolero/)

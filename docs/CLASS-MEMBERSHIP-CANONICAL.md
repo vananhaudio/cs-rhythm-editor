@@ -59,3 +59,26 @@ class_schedule.cohort_group_id  →  edu_group_members (status = 'active')  → 
 ## Lớp mới về sau
 Tạo lớp ở Admin → Lịch lớp, chọn (hoặc để hệ thống tạo) nhóm thành viên. Học sinh vào lớp bằng: Admin thêm,
 kích hoạt gói, hoặc mã tham gia. Admin hiện cảnh báo nhẹ khi lớp còn sống mà chưa có nhóm hoặc nhóm 0 người.
+
+## Join Class by Code V1 (`db/class_join_code_v1_setup.sql`)
+- Mã tham gia = token trong `edu_group_claim_tokens` (hạ tầng claim-link sẵn có) gắn **nhóm canonical** của lớp.
+  8 ký tự `A–Z/2–9` (bỏ I, L, O, 0, 1), hiển thị `XXXX-XXXX`. **Không** dùng mã lớp (vd `Z2`) làm bí mật.
+- Admin: Lịch lớp (dòng lớp) và Lớp học (đầu trang lớp) → **Mã tham gia · Lấy mã / Sao chép / Đổi mã**
+  (`admin_class_join_code(class, rotate)`; đổi mã chỉ tắt mã tham gia cũ, không tắt link claim khác của nhóm).
+- Học sinh: `/me` → Lớp học → **Nhập mã lớp của bạn** → Xem lớp (`class_join_preview`) → **Tham gia lớp** (`class_join`).
+  Server tự lấy `auth.uid()`, resolve mã → nhóm → lớp; ghi `edu_group_members(source = 'join_code')` vào nhóm canonical.
+  Idempotent. Lớp huỷ/gộp/nháp/đã kết thúc → `JOIN_CLOSED`. Người Thầy đã bỏ khỏi lớp → `JOIN_REMOVED` (không tự vào lại).
+  Chưa có hồ sơ học viên → `JOIN_NO_PROFILE`. Sau khi tham gia: Lớp của tôi, sidebar, Learning Identity, sĩ số cập nhật ngay.
+- Lưu ý: vào nhóm canonical kích hoạt trigger cấp khoá như mọi đường vào lớp (cấp `course_ids` của lớp, nếu có).
+
+## Lối vào HỌC của lớp
+- Trang lớp (`/me/classes/<id>`) có khối **Học** (`class_learning_entry`): khoá chính của lớp + quyền học thật
+  (`has_course_access`) → nút **Tiếp tục học** mở route học sẵn có `/course?id=` (Trả/Hỏi bài = Learning Thread trong bài);
+  Giáo trình lớp (nếu xuất bản) báo riêng theo `class_curriculum_access`; lớp có checkpoint dùng màn học "Vào học" sẵn có.
+- Không có hệ giáo trình hay hệ Trả bài thứ hai. Lớp chưa gắn khoá (vd Gen Z — Z2) hiện "Lớp chưa gắn khoá học hay giáo trình".
+
+## Test
+- DB (dữ liệu giả): `bash scripts/test-class-membership-canonical-db.sh` — canonical + Join Code + rollback.
+- E2E Chrome (stack local): `PUPPETEER_DIR=… bash scripts/e2e-class-canonical.sh` — kịch bản cũ (hồi quy) + lớp Zalo cũ
+  (Social/App/Admin) + Nhập mã lớp.
+- Giao diện: `npm run test:class-social` (`tests/class-social/class-membership-canonical.test.tsx`).

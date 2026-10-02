@@ -4,6 +4,9 @@
 import { createRoot } from 'react-dom/client'
 import { supabase } from '../../src/supabase'
 import LessonThreadPanel from '../../src/learning-thread/LessonThreadPanel'
+import MyClassesSection from '../../src/classLearning/MyClassesSection'
+import ClassCurriculumAdminView from '../../src/admin/ClassCurriculumAdminView'
+import ScheduleManager from '../../src/ScheduleManager'
 
 const q = new URLSearchParams(location.search)
 const lessons = (q.get('lessons') ?? '').split(',').filter(Boolean)
@@ -16,7 +19,11 @@ async function main() {
     if (error) throw error
   }
   createRoot(document.getElementById('root')!).render(
-    <div style={{ maxWidth: 520, margin: '0 auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ maxWidth: q.get('admin') ? 1100 : 520, margin: '0 auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* ?classes=1 → App "Lớp đang học" (component thật của MobileStudentPortal) · ?admin=classes|schedule → màn Admin thật */}
+      {q.get('classes') && <div data-app-classes><MyClassesSection guest={false} onOpen={() => {}} /></div>}
+      {q.get('admin') === 'classes' && <div data-admin-classes style={{ display: 'flex', minHeight: 600 }}><ClassCurriculumAdminView client={supabase} /></div>}
+      {q.get('admin') === 'schedule' && <div data-admin-schedule><ScheduleManager /></div>}
       {lessons.map(id => (
         <div key={id} data-lesson={id} style={{ background: '#fff', borderRadius: 16, padding: 12 }}>
           <div style={{ fontWeight: 800, marginBottom: 8 }}>Bài {id.slice(-2)}</div>

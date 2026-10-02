@@ -1,4 +1,5 @@
-// /me/classes/<id> — "căn phòng của lớp": tên lớp, Thầy, số học viên, ngữ cảnh; tab Hoạt động | Thành viên.
+// /me/classes/<id> — "căn phòng của lớp": tên lớp, Thầy, số học viên, ngữ cảnh; khối Học (khoá/giáo trình của lớp);
+// tab Hoạt động | Thành viên.
 // Người ngoài lớp XEM được phần công khai (Learning Thread community của lớp) — không đăng, không Trả/Hỏi bài
 // từ đây, không xem danh sách thành viên. Quyền do server (RPC social_*) quyết, không chỉ ẩn nút.
 import { useCallback, useEffect, useState } from 'react'
@@ -15,6 +16,7 @@ import type { ClassMember } from './classModel'
 import { ClassHeader, MemberList } from './ClassParts'
 import { programKeyOfClass } from '../identity/learningIdentity'
 import ClassLearnView from './ClassLearnView'
+import ClassLearnEntry from './ClassLearnEntry'
 import { useClassLearning, type Load } from './useClassLearning'
 
 const CLASS_TABS = ['activity', 'members'] as const
@@ -84,6 +86,8 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
     <div className="cs-col cs-home">
       {back}
       <ClassHeader c={c} />
+      {(c.isMember || isTeacher) && <ClassLearnEntry classId={classId}
+        onOpenCurriculum={learnReady ? () => { setMode('learn'); window.scrollTo(0, 0) } : undefined} />}
       <div className="lt-profile-tabs" role="group" aria-label="Lớp">
         <button type="button" aria-pressed={tab === 'activity'} onClick={() => setTab('activity')}>Hoạt động</button>
         <button type="button" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>Thành viên</button>

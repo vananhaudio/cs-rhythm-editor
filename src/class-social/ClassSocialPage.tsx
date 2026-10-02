@@ -25,6 +25,7 @@ import TeacherQueue from '../learning-thread/TeacherQueue'
 import { useSocialClasses } from './classes/useSocialClasses'
 import ClassNav from './classes/ClassNav'
 import ClassesPage from './classes/ClassesPage'
+import { refreshLearningIdentity } from './identity/identityStore'
 import ClassPage from './classes/ClassPage'
 import ClassSessionPage from './classes/ClassSessionPage'
 import ProfileEditDialog from './profile/ProfileEditDialog'
@@ -191,7 +192,8 @@ function SignedInShell({ base, view, onSection, onOpenProfile, onOpenThread, onO
       {view.kind === 'queue' && (me.isTeacher
         ? <TeacherQueue onOpenThread={onOpenThread} onBack={() => onBack(HOME)} />
         : <div className="cs-col cs-home"><div className="cs-card lt-empty">Mục này dành cho giáo viên.</div></div>)}
-      {view.kind === 'classes' && <ClassesPage classes={classes} onOpenClass={onOpenClass} />}
+      {view.kind === 'classes' && <ClassesPage classes={classes} onOpenClass={onOpenClass}
+        onJoined={id => { classes.reload(); refreshLearningIdentity(me.userId); onOpenClass(id) }} />}
       {view.kind === 'class' && (
         <ClassPage key={view.classId} classId={view.classId} isTeacher={me.isTeacher} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
           onOpenClasses={onOpenClasses} onOpenSession={no => onOpenSession(view.classId, no)} />

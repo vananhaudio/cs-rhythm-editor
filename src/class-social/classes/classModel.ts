@@ -133,6 +133,11 @@ export const SC_ERROR_TEXT: Record<string, string> = {
   SC_NOT_MEMBER: 'Tài khoản của bạn chưa thuộc Class.',
   SC_NOT_FOUND: 'Không tìm thấy lớp này (có thể lớp đã kết thúc hoặc đã huỷ).',
   SC_MEMBERS_ONLY: 'Danh sách thành viên chỉ hiện với thành viên của lớp.',
+  JOIN_INVALID: 'Mã lớp không đúng hoặc đã hết hiệu lực. Kiểm tra lại mã Thầy gửi nhé.',
+  JOIN_CLOSED: 'Lớp này đã kết thúc hoặc không còn nhận học viên.',
+  JOIN_NO_PROFILE: 'Tài khoản của bạn chưa có hồ sơ học viên. Liên hệ Thầy để được hỗ trợ.',
+  JOIN_REMOVED: 'Bạn đã được Thầy chuyển khỏi lớp này. Liên hệ Thầy nếu cần vào lại.',
+  JOIN_NOT_AUTHENTICATED: 'Đăng nhập để tham gia lớp.',
 }
 export function scErrorText(msg: string | undefined): string {
   const k = Object.keys(SC_ERROR_TEXT).find(x => (msg ?? '').includes(x))

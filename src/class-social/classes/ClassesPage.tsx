@@ -4,6 +4,7 @@ import { GraduationCap, Search } from 'lucide-react'
 import { EmptyState } from '../ui'
 import { classMetaLine, classStatusLabel, filterClasses, type ClassCard } from './classModel'
 import type { SocialClasses } from './useSocialClasses'
+import JoinClassByCode from './JoinClassByCode'
 
 export function ClassTile({ c, onOpen }: { c: ClassCard; onOpen: (id: string) => void }) {
   const status = classStatusLabel(c.status)
@@ -22,7 +23,11 @@ export function ClassTile({ c, onOpen }: { c: ClassCard; onOpen: (id: string) =>
   )
 }
 
-export default function ClassesPage({ classes, onOpenClass }: { classes: SocialClasses; onOpenClass: (id: string) => void }) {
+export default function ClassesPage({ classes, onOpenClass, onJoined }: {
+  classes: SocialClasses; onOpenClass: (id: string) => void
+  /** Vừa tham gia bằng mã: nạp lại Lớp của tôi/sidebar + danh tính học tập, rồi mở lớp */
+  onJoined?: (id: string) => void
+}) {
   const [q, setQ] = useState('')
   const mine = filterClasses(classes.mine, q)
   const discover = filterClasses(classes.discover, q)
@@ -33,6 +38,7 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
         <Search size={17} aria-hidden="true" />
         <input className="cs-input" type="search" placeholder="Tìm lớp theo tên hoặc mã" value={q} onChange={e => setQ(e.target.value)} aria-label="Tìm lớp" />
       </label>
+      <JoinClassByCode onJoined={id => (onJoined ?? onOpenClass)(id)} />
       {!classes.loaded && <p className="cs-loading" role="status">Đang tải lớp học…</p>}
       {classes.loaded && classes.error && <p className="cs-form-error" role="alert">{classes.error}</p>}
       {classes.loaded && (
@@ -42,7 +48,7 @@ export default function ClassesPage({ classes, onOpenClass }: { classes: SocialC
             {mine.length > 0
               ? <div className="cs-class-grid">{mine.map(c => <ClassTile key={c.id} c={c} onOpen={onOpenClass} />)}</div>
               : <EmptyState icon={GraduationCap} title={q ? 'Không tìm thấy lớp phù hợp.' : 'Bạn chưa ở trong lớp nào'} quiet>
-                  {q ? 'Thử tìm bằng tên lớp khác.' : 'Khi được xếp vào lớp, lớp sẽ hiện ở đây.'}
+                  {q ? 'Thử tìm bằng tên lớp khác.' : 'Nhập mã lớp Thầy gửi ở ô phía trên, hoặc chờ Thầy xếp bạn vào lớp.'}
                 </EmptyState>}
           </section>
           <section className="cs-classes-discover" aria-labelledby="cs-discover-title">

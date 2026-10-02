@@ -55,3 +55,47 @@ export async function fetchClassMembers(classId: string): Promise<Result<ClassMe
     return { ok: true, value: toClassMembers(data as ClassMemberRow[]) }
   } catch (e) { return { ok: false, message: scErrorText((e as Error).message) } }
 }
+
+// ── Tham gia lớp bằng MÃ (RPC class_join_preview / class_join). Server tự lấy auth.uid(), resolve mã → lớp → nhóm
+// thành viên canonical. Client chỉ gửi mã người dùng gõ.
+export type JoinPreview = {
+  classId: string; code: string | null; name: string; status: string | null; schedule: string | null
+  course: { code: string | null; name: string } | null; memberCount: number; alreadyMember: boolean
+}
+export async function previewJoinClass(code: string): Promise<Result<JoinPreview>> {
+  try {
+    const { data, error } = await (await db()).rpc('class_join_preview', { p_code: code })
+    if (error) { warn('join_preview', error); return { ok: false, message: scErrorText(error.message) } }
+    const d = (data ?? {}) as Record<string, unknown>
+    return { ok: true, value: {
+      classId: String(d.class_id), code: (d.code as string) ?? null, name: String(d.name ?? 'Lớp học'), status: (d.status as string) ?? null,
+      schedule: (d.schedule as string) ?? null, course: (d.course as JoinPreview['course']) ?? null,
+      memberCount: Number(d.member_count ?? 0), alreadyMember: d.already_member === true,
+    } }
+  } catch (e) { return { ok: false, message: scErrorText((e as Error).message) } }
+}
+export async function joinClassByCode(code: string): Promise<Result<{ classId: string; alreadyMember: boolean }>> {
+  try {
+    const { data, error } = await (await db()).rpc('class_join', { p_code: code })
+    if (error) { warn('join', error); return { ok: false, message: scErrorText(error.message) } }
+    const d = (data ?? {}) as Record<string, unknown>
+    return { ok: true, value: { classId: String(d.class_id), alreadyMember: d.already_member === true } }
+  } catch (e) { return { ok: false, message: scErrorText((e as Error).message) } }
+}
+
+// ── Lối vào HỌC của lớp (RPC class_learning_entry): khoá chính + quyền học (server) · Giáo trình lớp báo riêng.
+export type LearningEntry = {
+  course: { id: string; code: string | null; name: string; hasAccess: boolean } | null
+  curriculum: { published: boolean; hasAccess: boolean }
+}
+export async function fetchLearningEntry(classId: string): Promise<Result<LearningEntry>> {
+  try {
+    const { data, error } = await (await db()).rpc('class_learning_entry', { p_class: classId })
+    if (error) { warn('learning_entry', error); return { ok: false, message: scErrorText(error.message) } }
+    const d = (data ?? {}) as { course?: { id: string; code: string | null; name: string; has_access: boolean } | null; curriculum?: { published: boolean; has_access: boolean } }
+    return { ok: true, value: {
+      course: d.course ? { id: d.course.id, code: d.course.code, name: d.course.name, hasAccess: d.course.has_access === true } : null,
+      curriculum: { published: d.curriculum?.published === true, hasAccess: d.curriculum?.has_access === true },
+    } }
+  } catch (e) { return { ok: false, message: scErrorText((e as Error).message) } }
+}

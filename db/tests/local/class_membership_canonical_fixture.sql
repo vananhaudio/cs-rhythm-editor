@@ -25,7 +25,8 @@ create table if not exists public.leads (
 create table if not exists public.membership_benefits (
   key text primary key, label text, kind text, note text, min_tier text, sort_order int default 0);
 create table if not exists public.student_xp_log (id bigserial primary key, student_id uuid, xp int);
-alter table public.class_schedule add column if not exists public_product text;
+alter table public.class_schedule add column if not exists public_product text,
+  add column if not exists sort_order int default 0, add column if not exists created_at timestamptz default now();   -- như production (Lịch lớp sắp theo 2 cột này)
 -- production: edu_group_members có updated_at/updated_by (trigger touch)
 alter table public.edu_group_members add column if not exists updated_at timestamptz default now(),
   add column if not exists updated_by uuid;

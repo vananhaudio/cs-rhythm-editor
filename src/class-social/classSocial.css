@@ -690,6 +690,18 @@
 .cs-section-hint { margin: -4px 4px 10px; font-size: 13.5px; color: var(--cs-muted); }
 .cs-class-search { display: flex; align-items: center; gap: 8px; color: var(--cs-muted); }
 .cs-class-search .cs-input { flex: 1; }
+/* Nhập mã lớp (Join Code) */
+.cs-join-class { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.cs-join-class .cs-feed-title { display: flex; align-items: center; gap: 8px; margin: 0; }
+.cs-join-class .cs-section-hint { margin: 0; }
+.cs-join-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.cs-join-row .cs-input { flex: 1 1 160px; min-width: 0; letter-spacing: .08em; font-weight: 700; }
+.cs-join-preview { border: 1px solid var(--cs-border, #E4E4E7); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+/* Lối vào Học của lớp */
+.cs-class-learn { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.cs-class-learn h2 { margin: 0; font-size: 16px; }
+.cs-class-learn p { margin: 0; font-size: 13.5px; color: var(--cs-muted); }
+.cs-class-learn-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .cs-class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
 .cs-class-tile {
   display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; text-align: left; font: inherit; color: inherit; cursor: pointer;
