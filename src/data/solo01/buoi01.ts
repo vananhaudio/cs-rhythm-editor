@@ -113,6 +113,13 @@ export const SOLO01_BUOI01: LessonDoc = {
         'Áp dụng vào một đoạn giai điệu thực tế.',
       ],
     },
+    // ── NHỊP HỌC: điểm ngắt do Owner chốt (02/10/2026) — 4 nhịp, 3 bài trả, 1 video (1.2).
+    //    Mỗi nhịp mở bằng một khối note; bài trả đặt ngay sau phần học nó kiểm. id 1.1/1.2/1.3 KHÔNG đổi.
+    {
+      kind: 'note',
+      title: 'Nhịp 1 · Nhìn được bản đồ',
+      text: 'Xem bản đồ nốt C–Am, hiểu nguyên tắc “giản lược”, rồi tự tìm nốt trên cần đàn. Chưa cần thuộc hết các vị trí. Kết thúc nhịp: Bài trả 1.1 (trả lời bằng chữ).',
+    },
     {
       kind: 'fretboard',
       title: 'Bản đồ nốt C–Am',
@@ -126,7 +133,20 @@ export const SOLO01_BUOI01: LessonDoc = {
     {
       kind: 'note',
       title: 'Nguyên tắc “giản lược”',
-      text: 'Một nốt có thể xuất hiện ở nhiều vị trí trên Guitar. Bản đồ giản lược chỉ chọn những vị trí cần ghi nhớ trước để học viên dễ sử dụng khi chơi melody.',
+      text: 'Một nốt có thể xuất hiện ở nhiều vị trí trên Guitar. Bản đồ giản lược chỉ chọn những vị trí cần ghi nhớ trước để học viên dễ sử dụng khi chơi melody. Thực hành: nhìn bản đồ, tìm tất cả vị trí của nốt C (Đô), rồi của nốt A (La); nốt tô đậm là gợi ý.',
+    },
+    {
+      kind: 'checkpoint',
+      id: '1.1',
+      title: 'Bài trả 1.1 — Tìm nốt trên cần đàn',
+      prompt: 'Ghi ít nhất 2 vị trí khác nhau của cùng một nốt C trên bản đồ C–Am. Viết theo dạng “dây … ngăn …”, ví dụ: C: dây 5 ngăn 3 · C: dây 2 ngăn 1. Không cần video, không cần thuộc hết bản đồ.',
+      required: true,
+      accepts: ['text'],
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 2 · Chơi được một vùng',
+      text: 'Chơi âm giai C–Am trong Vùng 1: tay phải luân phiên i – m, đúng nốt và đều trước, nhanh sau. Đây là phần THỰC HÀNH, không có bài trả.',
     },
     {
       kind: 'score',
@@ -142,10 +162,15 @@ export const SOLO01_BUOI01: LessonDoc = {
       ],
     },
     {
+      kind: 'note',
+      title: 'Nhịp 3 · Nối được các vùng',
+      text: 'Kỹ năng trọng tâm của Buổi 01: đi từ Vùng 1 → Vùng 2 → Vùng 3 rồi quay về, học tư duy ĐƯỜNG ĐI. Kết thúc nhịp: Bài trả 1.2 — video ngắn, video duy nhất của buổi.',
+    },
+    {
       kind: 'score',
       subtitle: 'Bài tập kỹ thuật 02',
       title: 'Liên thông các vùng',
-      lead: '12 ô nhịp: bắt đầu ở Vùng 1, đi dần lên Vùng 2, lên Vùng 3, rồi quay trở lại.',
+      lead: '11 ô nhịp: bắt đầu ở Vùng 1, đi dần lên Vùng 2, lên Vùng 3, rồi quay trở lại.',
       tempo: 'Tempo khởi đầu: ♩ = 60',
       tex: EX2,
       marks: [
@@ -162,6 +187,19 @@ export const SOLO01_BUOI01: LessonDoc = {
         'Ngược lại, KHÔNG dùng một ngón bấm liên tiếp hai nốt khác chỗ mà không trượt — nhất là khi đổi dây: ngón phải nhấc lên nhảy là nốt trước bị cắt tiếng.',
         'Chậm – đều – không đứt tiếng.',
       ],
+    },
+    {
+      kind: 'checkpoint',
+      id: '1.2',
+      title: 'Bài trả 1.2 — Liên thông 3 vùng',
+      prompt: 'Quay video ngắn, chơi 1 lượt bài Liên thông các vùng: Vùng 1 → Vùng 2 → Vùng 3 → quay về. Không cần chơi đẹp. Thầy xem: đúng đường đi · chuyển đúng vùng · trượt cùng một ngón · không dừng ở điểm chuyển · chậm và đều · cố gắng không đứt tiếng. Dán link video (ví dụ YouTube để chế độ Không công khai).',
+      required: true,
+      accepts: ['video_link'],
+    },
+    {
+      kind: 'note',
+      title: 'Nhịp 4 · Biến thành âm nhạc',
+      text: 'Etude 01 là cầu nối từ chạy nốt sang chơi nhạc. Sau đó áp dụng vào tác phẩm thật. Mỗi học viên chỉ tập MỘT tác phẩm chính trong Buổi 01 (tự chọn hoặc thầy giao); bài còn lại để tham khảo, luyện thêm. Kết thúc nhịp: Bài trả 1.3 (trả lời bằng chữ).',
     },
     {
       kind: 'score',
@@ -188,11 +226,12 @@ export const SOLO01_BUOI01: LessonDoc = {
         {
           title: 'Thành Phố Buồn',
           composer: 'Lam Phương · chuyển về Am',
-          note: 'Bản gốc ở Sol trưởng/Em, đã hạ về Am. Toàn bộ giai điệu nằm gọn trong Vùng 1 (ngăn 0–5, dây 1–4) — tay trái không phải đổi thế lần nào. Đây là tác phẩm chính của Buổi 01.',
+          note: 'Bản gốc ở Sol trưởng/Em, đã hạ về Am. Giai điệu nằm ở Vùng 1 (ngăn 0–3, dây 1–4) và chạm Vùng 2 ở một nốt: La dây 1 ngăn 5 (nốt trụ Vùng 2), tại ô 4, 11, 12, 21. Tác phẩm chính gợi ý cho Buổi 01. Mỗi học viên chỉ cần tập MỘT tác phẩm chính (bài này hoặc Diễm Xưa); bài còn lại để tham khảo.',
           tempo: 'Slow rock · chậm, đủ chỗ cho nhịp chùm ba',
           tex: WORK_THANH_PHO_BUON,
           marks: [
-            { at: 'Cả bài', text: 'Vùng 1 — ngăn 0–5, không đổi thế tay lần nào' },
+            { at: 'Cả bài', text: 'Vùng 1 — ngăn 0–3, dây 1–4' },
+            { at: 'Ô 4, 11, 12, 21', text: 'chạm Vùng 2: La dây 1 ngăn 5 (nốt trụ)' },
           ],
           guidance: [
             'Bài viết theo cảm giác Slow rock: mỗi phách chia 3 — đếm “một-hai-ba” đều cho từng phách.',
@@ -202,7 +241,7 @@ export const SOLO01_BUOI01: LessonDoc = {
         {
           title: 'Diễm Xưa',
           composer: 'Trịnh Công Sơn · giọng Am',
-          note: 'Giọng Am, đã hạ một quãng tám cho vừa tay. Thế bấm xếp theo bản đồ: gần như cả bài ở Vùng 1 (ngăn 0–5), chỉ ô 11–12 lên Vùng 2 rồi về ngay. Dây 5–6 để trống — chỗ của Bass sẽ thêm ở các buổi sau.',
+          note: 'Lựa chọn thứ hai cho tác phẩm chính — hoặc tài liệu luyện thêm nếu đã chọn Thành Phố Buồn. Giọng Am, đã hạ một quãng tám cho vừa tay. Thế bấm xếp theo bản đồ: gần như cả bài ở Vùng 1 (ngăn 0–5), chỉ ô 11–12 lên Vùng 2 rồi về ngay. Dây 5–6 để trống — chỗ của Bass sẽ thêm ở các buổi sau.',
           tempo: 'Chậm, ngân đủ nốt tròn cuối câu',
           barsPerRow: 3,   // bản có lời — 3 ô nhịp/dòng để chữ không chồng nhau
           tex: WORK_DIEM_XUA,
@@ -221,24 +260,33 @@ export const SOLO01_BUOI01: LessonDoc = {
         'Điểm lấy hơi / ngắt câu', 'Vị trí kỹ thuật', 'Ghi chú của giáo viên'],
     },
     {
+      kind: 'checkpoint',
+      id: '1.3',
+      title: 'Bài trả 1.3 — 3 chỗ đang vướng',
+      prompt: 'Sau khi tập tác phẩm chính, ghi tên tác phẩm đã chọn và 3 vị trí (ô nhịp / câu nhạc) mình còn vướng, mỗi chỗ thêm một câu ngắn nói vướng gì. Ví dụ: 1. Ô … — … · 2. Ô … — … · 3. Ô … — … Không cần video.',
+      required: true,
+      accepts: ['text'],
+    },
+    {
       kind: 'assignment',
       items: [
         { label: 'Bài 1.', text: 'Chơi âm giai C–Am lên/xuống 3 lần liên tục ở ♩ = 60.' },
-        { label: 'Bài 2.', text: 'Chơi bài liên thông 3 vùng: chậm, đều, không dừng tại điểm đổi vị trí.' },
+        { label: 'Bài 2.', text: 'Chơi bài liên thông 3 vùng: chậm, đều, không dừng tại điểm đổi vị trí. Khi đã chạy được một lượt liền, quay video cho Bài trả 1.2.' },
         { label: 'Bài 3.', text: 'Chơi hoàn chỉnh Etude 01.' },
-        { label: 'Bài 4.', text: 'Tập phần tác phẩm được giao.' },
-        { label: 'Bài 5.', text: 'Khoanh trực tiếp trên bản nhạc 3 vị trí mình còn bị vướng.' },
+        { label: 'Bài 4.', text: 'Tập tác phẩm chính của mình (Thành Phố Buồn hoặc Diễm Xưa).' },
+        { label: 'Bài 5.', text: 'Khoanh trực tiếp trên bản nhạc 3 vị trí mình còn bị vướng — đó cũng là nội dung Bài trả 1.3.' },
       ],
-      message: 'Không cần tập hoàn hảo. Hãy mang đúng những chỗ chưa làm được đến buổi học.',
+      message: 'Đây là bài TẬP, không phải 5 bài phải nộp. Trong Buổi 01 chỉ trả 3 bài: 1.1 (chữ), 1.2 (video), 1.3 (chữ). Không cần tập hoàn hảo. Hãy mang đúng những chỗ chưa làm được đến buổi học.',
     },
     {
       kind: 'checklist',
+      title: 'Checklist cuối bài · tự kiểm, không cần nộp',
       items: [
         'Tôi nhận diện được 7 nốt C–Am.',
         'Tôi chơi được bài âm giai.',
         'Tôi đã thử nối 3 vùng.',
         'Tôi chơi được Etude 01.',
-        'Tôi đã tập tác phẩm.',
+        'Tôi đã tập tác phẩm chính của mình.',
         'Tôi đã đánh dấu chỗ chưa làm được.',
       ],
     },
