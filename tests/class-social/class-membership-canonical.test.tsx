@@ -61,13 +61,13 @@ test("App 'Lớp đang học' + Admin dùng nguồn canonical (RPC), không tự
   assert.match(sched, /if \(linkedGroup\) \{[\s\S]*\} else if \(code\) \{/);
 });
 
-test("trang lớp: khối Học trỏ route học SẴN CÓ (/course?id=), Giáo trình báo riêng, Trả/Hỏi bài trong bài học", () => {
-  const entry = src("class-social/classes/ClassLearnEntry.tsx");
-  assert.match(entry, /href=\{`\/course\?id=\$\{encodeURIComponent\(course\.id\)\}`\}/);
-  assert.match(entry, /Giáo trình lớp chưa bật cho bạn/);
-  assert.match(entry, /Trả bài \/ Hỏi bài/);
-  assert.doesNotMatch(entry, /lt_submit|class_posts/);
-  assert.match(src("class-social/classes/ClassPage.tsx"), /<ClassLearnEntry classId=\{classId\}/);
+test("trang lớp không có bản đồ giáo trình: nói thật tình trạng (khoá học của lớp / chưa có giáo trình), không CTA", async () => {
+  const { NoMapNote } = await import("../../src/class-social/classes/ClassMap");
+  const course = renderToStaticMarkup(<NoMapNote isMember entry={{ course: { id: "c1", code: "DH2", name: "Đệm hát 2", hasAccess: true }, curriculum: { published: false, hasAccess: false } }} />);
+  assert.match(course, /<a class="cs-map-title" href="\/course\?id=c1">Đệm hát 2<\/a>/);
+  assert.doesNotMatch(course, /Tiếp tục học/);
+  assert.match(renderToStaticMarkup(<NoMapNote isMember entry={{ course: null, curriculum: { published: false, hasAccess: false } }} />), /Chưa có giáo trình được gắn với lớp này/);
+  assert.match(renderToStaticMarkup(<NoMapNote isMember={false} entry={null} />), /hiện với thành viên/);
 });
 
 test("DB: một định nghĩa thành viên (view), consumer không còn luật trùng mã / group_id thứ hai", () => {

@@ -50,17 +50,18 @@ export function useClassLearning(classId: string, isTeacher: boolean) {
   return { detail, learn, loading, reload }
 }
 
-// Về lại Trang Lớp từ Trang Buổi: Trang Lớp đưa ĐÚNG dòng buổi vừa xem vào giữa màn hình (một lần).
-const RETURN_KEY = (classId: string) => `csLearnReturn:${classId}`
-// Chỉ dùng MỘT lần và trong 10 phút — mở lớp từ menu lâu sau đó không bị cuộn bất ngờ tới buổi cũ.
-const RETURN_TTL_MS = 10 * 60_000
-export function rememberReturnSession(classId: string, sessionNo: number) {
-  try { sessionStorage.setItem(RETURN_KEY(classId), `${sessionNo}:${Date.now()}`) } catch { /* bỏ qua */ }
+// Bấm một BÀI TRẢ chưa trả trên Mục lục → Trang Buổi mở rồi đưa ĐÚNG khối bài trả đó vào màn hình (một lần, 2 phút).
+// Vào lớp KHÔNG tự cuộn (con đường cố định: lần đầu = lần thứ 20 đều thấy mục lục từ đầu).
+const FOCUS_KEY = (classId: string) => `csCheckpointFocus:${classId}`
+const FOCUS_TTL_MS = 2 * 60_000
+export function rememberCheckpointFocus(classId: string, sessionNo: number, checkpointId: string) {
+  try { sessionStorage.setItem(FOCUS_KEY(classId), JSON.stringify({ no: sessionNo, cp: checkpointId, at: Date.now() })) } catch { /* bỏ qua */ }
 }
-export function takeReturnSession(classId: string): number | null {
+export function takeCheckpointFocus(classId: string, sessionNo: number): string | null {
   try {
-    const [no, at] = (sessionStorage.getItem(RETURN_KEY(classId)) ?? '').split(':').map(Number)
-    sessionStorage.removeItem(RETURN_KEY(classId))
-    return no > 0 && Date.now() - at < RETURN_TTL_MS ? no : null
+    const raw = sessionStorage.getItem(FOCUS_KEY(classId))
+    sessionStorage.removeItem(FOCUS_KEY(classId))
+    const v = raw ? JSON.parse(raw) as { no: number; cp: string; at: number } : null
+    return v && v.no === sessionNo && typeof v.cp === 'string' && Date.now() - v.at < FOCUS_TTL_MS ? v.cp : null
   } catch { return null }
 }

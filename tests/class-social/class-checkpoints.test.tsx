@@ -184,7 +184,7 @@ test("sơ đồ buổi: dòng thu gọn 'Buổi 0N · Tiêu đề'; buổi hiệ
 test("chốt chặn nguồn: client chỉ gửi TOẠ ĐỘ checkpoint; không learner/vai trò/danh tính; không đọc thẳng bảng tiến độ", () => {
   const api = noComments(src("classLearning/progressApi.ts"));
   assert.equal(/p_learner|learner_user_id|p_role|p_identity|p_student|p_opened|p_completed/.test(api), false);
-  for (const f of ["classLearning/progressApi.ts", "classLearning/progress.ts", "class-social/classes/ClassLearnView.tsx", "class-social/classes/ClassPage.tsx"]) {
+  for (const f of ["classLearning/progressApi.ts", "classLearning/progress.ts", "class-social/classes/ClassMap.tsx", "class-social/classes/ClassPage.tsx"]) {
     const s = noComments(src(f));
     assert.equal(/from\(['"](learning_|class_curriculum_access)/.test(s), false, `${f}: không đọc/ghi thẳng bảng tiến độ/quyền`);
     assert.equal(/dangerouslySetInnerHTML|innerHTML\s*=/.test(s), false, f);
@@ -193,7 +193,7 @@ test("chốt chặn nguồn: client chỉ gửi TOẠ ĐỘ checkpoint; không l
   const doc = noComments(src("lesson/LessonDocument.tsx"));
   assert.equal(/\/me\b|learning-thread|supabase/.test(doc), false);
   // Không AI trong luồng chấm/trả bài V1
-  for (const f of ["class-social/classes/ClassLearnView.tsx", "class-social/classes/LearnParts.tsx", "classLearning/progress.ts"]) {
+  for (const f of ["class-social/classes/ClassMap.tsx", "class-social/classes/LearnParts.tsx", "classLearning/progress.ts"]) {
     assert.equal(/\bAI\b|openai|gpt/i.test(noComments(src(f))), false, f);
   }
 });

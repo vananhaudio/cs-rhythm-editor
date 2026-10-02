@@ -971,3 +971,55 @@
 .cs-myclass-sub { margin: 0 0 2px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--cs-faint); }
 .cs-myclass-enter { align-self: flex-start; min-height: 40px; }
 .cs-myclasses-discover { align-self: center; gap: 6px; min-height: 44px; }
+
+/* ── CLASS PAGE V2 · "Bản đồ sống của lớp" — một luồng dọc, chữ + khoảng trắng + đường kẻ, KHÔNG card ── */
+.cs-classv2 { display: flex; flex-direction: column; gap: 6px; }
+.cs-classv2-head { padding: 4px 4px 2px; }
+.cs-classv2-head .cs-class-name { font-size: 24px; line-height: 1.25; }
+.cs-classv2-meta { margin: 6px 0 0; font-size: 13.5px; color: var(--cs-muted); overflow-wrap: anywhere; }
+.cs-classv2-sec { padding: 18px 4px 4px; }
+.cs-classv2-h2 { margin: 0 0 6px; font-size: 12.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--cs-muted); }
+.cs-classv2-more { margin-top: 6px; }
+.cs-classv2-members { border-top: 1px solid var(--cs-border); margin-top: 14px; padding-top: 14px; }
+.cs-classv2-members-toggle { display: inline-flex; align-items: center; gap: 6px; border: none; background: none; padding: 4px 0; font: inherit;
+  font-size: 14.5px; font-weight: 700; color: var(--cs-text); cursor: pointer; }
+.cs-classv2-members .cs-member-list { margin-top: 10px; }
+
+/* Mục lục sống */
+.cs-map { display: flex; flex-direction: column; }
+.cs-map-stage + .cs-map-stage { margin-top: 10px; }
+.cs-map-stage-title { margin: 10px 0 2px; font-size: 13px; font-weight: 800; color: var(--cs-p-strong); letter-spacing: .02em; }
+.cs-map-stage-toggle { display: flex; align-items: center; gap: 6px; width: 100%; border: none; background: none; padding: 6px 0; text-align: left;
+  font: inherit; font-weight: 800; color: inherit; cursor: pointer; }
+.cs-map-stage-toggle > span:first-of-type { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cs-map-stage-count { flex: none; font-weight: 600; color: var(--cs-faint); font-size: 12.5px; }
+.cs-map-list { list-style: none; margin: 0; padding: 0; }
+.cs-map-row { padding: 11px 0 11px 12px; border-bottom: 1px solid var(--cs-border); border-left: 3px solid transparent; }
+.cs-map-list > .cs-map-row:last-child { border-bottom: none; }
+.cs-map-row.is-current { border-left-color: var(--cs-p); background: linear-gradient(90deg, var(--cs-p-softer), transparent 70%); }
+.cs-map-title { display: block; width: 100%; border: none; background: none; padding: 0; text-align: left; font: inherit;
+  font-size: 16px; font-weight: 700; line-height: 1.35; color: var(--cs-text); cursor: pointer; overflow-wrap: anywhere; text-decoration: none; }
+button.cs-map-title:hover, a.cs-map-title:hover { color: var(--cs-p-strong); }
+.cs-map-row.is-locked .cs-map-title { color: var(--cs-muted); font-weight: 600; cursor: default; }
+.cs-map-meta { margin: 3px 0 0; font-size: 13px; color: var(--cs-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; }
+.cs-map-subs { display: inline-flex; align-items: center; gap: 2px; border: none; background: none; padding: 0; font: inherit; color: var(--cs-muted);
+  cursor: pointer; text-decoration: underline; text-decoration-color: var(--cs-border); text-underline-offset: 3px; }
+.cs-map-subs:hover { color: var(--cs-text); }
+.cs-map-cps { list-style: none; margin: 8px 0 0; padding: 0 0 0 2px; }
+.cs-map-cp { display: flex; align-items: baseline; gap: 10px; width: 100%; border: none; background: none; padding: 6px 0; text-align: left;
+  font: inherit; font-size: 13.5px; color: var(--cs-text); cursor: pointer; }
+.cs-map-cp:hover .cs-map-cp-name { text-decoration: underline; }
+.cs-map-cp-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cs-map-mark { display: inline-block; width: 1.3em; color: var(--cs-faint); }
+.cs-map-mark.is-ok { color: #15803D; }
+.cs-map-mark.is-warn { color: #B45309; }
+.cs-map-cp-status { flex: none; font-size: 12.5px; font-weight: 700; color: var(--cs-muted); }
+.cs-map-cp-status.is-ok { color: #15803D; }
+.cs-map-cp-status.is-warn { color: #B45309; }
+.cs-map-cp-status.is-wait, .cs-map-cp-status.is-info { color: var(--cs-p-strong); }
+.cs-map-note { margin: 6px 0; font-size: 14px; color: var(--cs-muted); }
+.cs-map-nomap { padding: 6px 0; }
+.cs-map-title.is-plain { cursor: default; }
+.cs-now-line { margin: 4px 0 0; font-size: 14px; }
+.cs-now-line .cs-now-status { color: var(--cs-muted); }
+@media (min-width: 1024px) { .cs-classv2-head .cs-class-name { font-size: 28px; } }

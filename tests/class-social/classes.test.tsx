@@ -177,7 +177,7 @@ test("lớp học CHỈ qua RPC đọc; không query thẳng membership/class_sc
   for (const f of ["class-social/classes/classesApi.ts", "class-social/classes/ClassPage.tsx", "class-social/classes/ClassesPage.tsx", "class-social/classes/useSocialClasses.ts"]) {
     assert.equal(/\.from\(/.test(src(f)), false, f);
   }
-  assert.match(src("class-social/classes/ClassPage.tsx"), /!canViewMembers\s*\n?\s*\?/, "danh sách thành viên chỉ tải khi server cho phép");
+  assert.match(src("class-social/classes/ClassPage.tsx"), /canViewMembers = !!c && c\.canViewMembers[\s\S]*if \(!showMembers \|\| !canViewMembers \|\| members\) return/, "danh sách thành viên chỉ tải khi server cho phép");
   const db = readFileSync(new URL("../../db/social_classes_v1_setup.sql", import.meta.url), "utf8");
   assert.equal(/create table/i.test(db), false, "không bảng social_classes / membership mới");
   assert.equal(/zoom_url|price|metadata/.test(db.replace(/--.*$/gm, "")), false, "không trả zoom_url/giá/metadata");

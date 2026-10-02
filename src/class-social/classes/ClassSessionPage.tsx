@@ -16,7 +16,7 @@ import { pad2, sessionPhase, type SessionState } from '../../classLearning/progr
 import StudentComposer from '../../learning-thread/StudentComposer'
 import { submitCheckpoint } from '../../classLearning/progressApi'
 import { CheckpointStatusView, LockedNote, SessionStatusLine } from './LearnParts'
-import { rememberReturnSession, useClassLearning, type LearnReady } from './useClassLearning'
+import { takeCheckpointFocus, useClassLearning, type LearnReady } from './useClassLearning'
 
 type Ready = LearnReady
 
@@ -31,7 +31,6 @@ export default function ClassSessionPage({ classId, sessionNo, isTeacher = false
 }) {
   const { detail, learn, loading, reload } = useClassLearning(classId, isTeacher)
   const s = learn?.sessions.find(x => x.no === sessionNo) ?? null
-  useEffect(() => { rememberReturnSession(classId, sessionNo) }, [classId, sessionNo])
   const className = learn?.className ?? (detail.status === 'ready' ? detail.value.name : null)
   useEffect(() => {
     document.title = `Buổi ${pad2(sessionNo)}${s ? ` · ${s.title}` : ''}${className ? ` · ${className}` : ''} · Thầy Văn Anh Guitar`
@@ -105,6 +104,12 @@ function SessionContent({ state, s, onReload, onOpenThread }: {
     })()
     return () => { alive = false }
   }, [s.sessionId, s.no, s.title, s.stageNo, s.stageTitle, state.programCode, state.className, state.role, rev])
+  // Đến từ Mục lục (bấm một bài trả chưa trả): đưa đúng khối bài trả vào màn hình, một lần
+  useEffect(() => {
+    if (load.status !== 'ready') return
+    const cp = takeCheckpointFocus(state.classId, s.no)
+    if (cp) requestAnimationFrame(() => document.getElementById(`bai-tra-${cp}`)?.scrollIntoView({ block: 'start' }))
+  }, [load.status, state.classId, s.no])
 
   const slot = useCallback((cp: CheckpointSection) => {
     if (cp.preview) return <PreviewSubmit />

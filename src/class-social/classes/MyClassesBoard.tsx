@@ -1,4 +1,5 @@
-// LỚP CỦA TÔI — mỗi lớp ĐANG THAM GIA là một dashboard nhỏ, trả lời ngay: học lớp nào · đang ở buổi nào · lớp vừa có gì.
+// LỚP CỦA TÔI — tổng quan các lớp ĐANG THAM GIA: học lớp nào · đang ở buổi nào (một dòng, KHÔNG nút "Tiếp tục học")
+// · lớp vừa có gì. Con đường cố định: bấm "Vào lớp" → Mục lục → Buổi.
 // Nguồn (không nguồn mới): social_my_classes (danh sách) · useClassLearning (buổi hiện tại) · social_class_activity (hoạt động).
 // Lớp chưa tham gia KHÔNG hiện ở đây — chỉ một lối "Khám phá các lớp khác →".
 import { useMemo } from 'react'
@@ -7,7 +8,7 @@ import { EmptyState } from '../ui'
 import { classMetaLine, type ClassCard } from './classModel'
 import type { SocialClasses } from './useSocialClasses'
 import { useClassLearning } from './useClassLearning'
-import { CurrentSessionBlock } from './LearnParts'
+import { CurrentSessionLine } from './LearnParts'
 import { ClassRecentList } from './ClassActivity'
 
 const BOARD_ACTIVITY = 3
@@ -20,9 +21,10 @@ export type MyClassesActions = {
   onOpenDiscover: () => void
 }
 
-export function MyClassCard({ c, isTeacher, onOpenClass, onOpenSession, onOpenThread }: { c: ClassCard } & Omit<MyClassesActions, 'onOpenDiscover'>) {
+export function MyClassCard({ c, isTeacher, onOpenClass, onOpenThread }: { c: ClassCard } & Omit<MyClassesActions, 'onOpenDiscover' | 'onOpenSession'>) {
   const { learn, loading } = useClassLearning(c.id, isTeacher)
-  const now = useMemo(() => (learn?.serverNow ? new Date(learn.serverNow) : new Date()), [learn?.serverNow])
+  const serverNow = learn?.serverNow ?? null
+  const now = useMemo(() => (serverNow ? new Date(serverNow) : new Date()), [serverNow])
   const meta = classMetaLine(c)
   return (
     <article className="cs-card cs-myclass" aria-label={c.name}>
@@ -31,7 +33,7 @@ export function MyClassCard({ c, isTeacher, onOpenClass, onOpenSession, onOpenTh
         {meta && <span className="cs-myclass-meta">{meta}</span>}
       </header>
       {learn
-        ? <CurrentSessionBlock state={learn} now={now} compact onOpenSession={no => onOpenSession(c.id, no)} />
+        ? <CurrentSessionLine state={learn} now={now} />
         : loading && <p className="cs-act-note" role="status">Đang tải tiến độ…</p>}
       <section className="cs-myclass-act" aria-label={`Hoạt động mới của ${c.name}`}>
         <h3 className="cs-myclass-sub">Hoạt động mới</h3>
@@ -53,7 +55,7 @@ export default function MyClassesBoard({ classes, ...act }: { classes: SocialCla
         <EmptyState icon={GraduationCap} title="Bạn chưa ở trong lớp nào" quiet>Nhập mã lớp Thầy gửi ở “Khám phá các lớp khác”, hoặc chờ Thầy xếp bạn vào lớp.</EmptyState>
       )}
       {classes.mine.map(c => (
-        <MyClassCard key={c.id} c={c} isTeacher={act.isTeacher} onOpenClass={act.onOpenClass} onOpenSession={act.onOpenSession} onOpenThread={act.onOpenThread} />
+        <MyClassCard key={c.id} c={c} isTeacher={act.isTeacher} onOpenClass={act.onOpenClass} onOpenThread={act.onOpenThread} />
       ))}
       {classes.loaded && (
         <button type="button" className="cs-btn cs-btn-ghost cs-myclasses-discover" onClick={act.onOpenDiscover}>

@@ -1,62 +1,75 @@
-// /me/classes/<id> — "căn phòng của lớp": tên lớp, Thầy, số học viên, ngữ cảnh; khối Học (khoá/giáo trình của lớp);
-// tab Hoạt động | Thành viên.
-// Người ngoài lớp XEM được phần công khai (Learning Thread community của lớp) — không đăng, không Trả/Hỏi bài
-// từ đây, không xem danh sách thành viên. Quyền do server (RPC social_*) quyết, không chỉ ẩn nút.
-import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, Users } from 'lucide-react'
+// /me/classes/<id> — CLASS PAGE V2 · "BẢN ĐỒ SỐNG CỦA LỚP". MỘT trang cuộn dọc, con đường cố định (lần đầu = lần thứ 20):
+//   A. Tên lớp + một dòng thông tin gọn
+//   B. MỤC LỤC SỐNG — học + trả bài trên cùng bản đồ (ClassMap); bấm TÊN BUỔI → Trang Buổi sẵn có
+//   C. LỚP MÌNH ĐANG HỌC — hoạt động học tập thật của lớp (social_class_activity), chạy tự nhiên xuống dưới
+//   D. Thành viên — một dòng nhẹ cuối trang, bấm mới mở danh sách (kết bạn / quyền riêng tư giữ nguyên)
+// Không tab, không "Tiếp tục học", không card "Đang học", không "Hoạt động gần đây" tóm tắt, không tự cuộn.
+// Quyền do server quyết (RPC social_* / class_learning_state / RLS giáo trình); trang chỉ ĐỌC và trình bày.
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react'
 import '../../learning-thread/styles'
-import { EmptyState } from '../ui'
-import { useHistoryTab } from '../useHistoryTab'
-import { usePostsFeed } from '../posts/useCommunityFeed'
-import type { PostSocial } from '../sections/PostCard'
-import FeedEntryCard from '../sections/FeedEntryCard'
 import { respondFriendRequest, sendFriendRequest } from '../friends/friendsApi'
-import { fetchClassActivityPage, fetchClassMembers } from './classesApi'
-import type { ClassMember } from './classModel'
-import { ClassHeader, MemberList } from './ClassParts'
 import { programKeyOfClass } from '../identity/learningIdentity'
-import ClassLearnView from './ClassLearnView'
-import ClassLearnEntry from './ClassLearnEntry'
-import { useClassLearning, type Load } from './useClassLearning'
-
-const CLASS_TABS = ['activity', 'members'] as const
-// Lớp có giáo trình V1 (checkpoint): mặc định HỌC; "Xem thêm về lớp" → phần cộng đồng (Hoạt động | Thành viên) như cũ.
-const CLASS_MODES = ['learn', 'community'] as const
+import { isThreadEntry } from '../posts/postModel'
+import { usePostsFeed } from '../posts/usePostsFeed'
+import { currentSessionNo } from '../../classLearning/progress'
+import { fetchClassActivityPage, fetchClassMembers, fetchLearningEntry, type LearningEntry } from './classesApi'
+import { classMetaLine, type ClassCard, type ClassMember } from './classModel'
+import { MemberList } from './ClassParts'
+import ClassMap, { NoMapNote } from './ClassMap'
+import { ActivityLine } from './ClassActivity'
+import { rememberCheckpointFocus, useClassLearning, type Load } from './useClassLearning'
 
 export default function ClassPage({ classId, isTeacher = false, onOpenThread, onOpenProfile, onOpenClasses, onOpenSession }: {
   classId: string
-  /** Trang Lớp = BẢN ĐỒ: bấm một buổi → Trang Buổi riêng (/me/classes/<id>/sessions/<n>) */
+  /** Bấm một buổi → Trang Buổi (/me/classes/<id>/sessions/<n>) */
   onOpenSession: (sessionNo: number) => void
-  /** Thầy/admin: xem trước màn học (đọc giáo trình nhờ RLS teacher có sẵn) — không cần là học viên lớp */
+  /** Thầy/admin: xem trước (đọc giáo trình nhờ RLS teacher có sẵn) — không cần là học viên lớp */
   isTeacher?: boolean
   onOpenThread: (id: string) => void
   onOpenProfile: (userId: string) => void
   onOpenClasses: () => void
 }) {
-  const { detail, learn: learnReady, loading: learnLoading } = useClassLearning(classId, isTeacher)
-  const [tab, setTab] = useHistoryTab<'activity' | 'members'>('csClassTab', 'activity', CLASS_TABS)
+  const { detail, learn, loading } = useClassLearning(classId, isTeacher)
+  const c: ClassCard | null = detail.status === 'ready' ? detail.value : null
+  useEffect(() => { if (c?.name) document.title = `${c.name} · Thầy Văn Anh Guitar` }, [c?.name])
+  const serverNow = learn?.serverNow ?? null
+  const now = useMemo(() => (serverNow ? new Date(serverNow) : new Date()), [serverNow])
+  const current = learn ? currentSessionNo(learn, now) : null
+  const openSession = (no: number, checkpointId?: string) => {
+    if (checkpointId) rememberCheckpointFocus(classId, no, checkpointId)
+    onOpenSession(no)
+  }
+
+  // B dự phòng: lớp không có bản đồ giáo trình → hỏi server khoá chính / quyền (chỉ thành viên/Thầy)
+  const member = !!c && (c.isMember || isTeacher)
+  const [entry, setEntry] = useState<LearningEntry | null | 'loading'>('loading')
+  useEffect(() => {
+    if (loading || learn || !member) return
+    let alive = true
+    void fetchLearningEntry(classId).then(r => { if (alive) setEntry(r.ok ? r.value : null) })
+    return () => { alive = false }
+  }, [loading, learn, member, classId])
+
+  // C: hoạt động học tập thật của lớp (Learning Thread: trả bài / hỏi bài / Thầy phản hồi / Đạt / làm lại)
+  const fetchPage = useCallback((cur?: { createdAt: string; id: string; key: string }) => fetchClassActivityPage(classId, cur), [classId])
+  const { state: feed, loadMore } = usePostsFeed(fetchPage)
+  const feedNow = useMemo(() => new Date(), [])
+  const items = feed.status === 'ready' ? feed.posts.filter(isThreadEntry) : []
+
+  // D: thành viên — chỉ tải khi mở
+  const [showMembers, setShowMembers] = useState(false)
   const [members, setMembers] = useState<Load<ClassMember[]> | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actError, setActError] = useState<string | null>(null)
-  const [mode, setMode] = useHistoryTab<'learn' | 'community'>('csClassMode', 'learn', CLASS_MODES)
-  const name = detail.status === 'ready' ? detail.value.name : null
-  useEffect(() => { if (name) document.title = `${name} · Thầy Văn Anh Guitar` }, [name])
-
-  const canViewMembers = detail.status === 'ready' && detail.value.canViewMembers
+  // quyền xem danh sách do SERVER quyết (social_class_detail.can_view_members)
+  const canViewMembers = !!c && c.canViewMembers
   useEffect(() => {
-    if (tab !== 'members' || !canViewMembers || members) return
+    if (!showMembers || !canViewMembers || members) return
     let alive = true
     void fetchClassMembers(classId).then(r => { if (alive) setMembers(r.ok ? { status: 'ready', value: r.value } : { status: 'error', message: r.message }) })
     return () => { alive = false }
-  }, [tab, canViewMembers, members, classId])
-
-  const fetchPage = useCallback((c?: { createdAt: string; id: string; key: string }) => fetchClassActivityPage(classId, c), [classId])
-  const { state, loadMore } = usePostsFeed(fetchPage)
-  const social: PostSocial = {
-    me: null, comments: {}, onRefreshComments: async () => {}, onExpandComments: async () => {}, onModeratePost: () => {},
-    onOpenProfile, onOpenThread, threadContext: 'class',
-  }
-
+  }, [showMembers, canViewMembers, members, classId])
   const act = async (m: ClassMember, action: 'send' | 'accept') => {
     setBusyId(m.userId); setActError(null)
     const r = action === 'send' ? await sendFriendRequest(m.userId) : await respondFriendRequest(m.userId, true)
@@ -66,60 +79,67 @@ export default function ClassPage({ classId, isTeacher = false, onOpenThread, on
       ? { status: 'ready', value: cur.value.map(x => (x.userId === m.userId ? { ...x, relationship: r.value } : x)) } : cur)
   }
 
-  if (learnReady && mode === 'learn') {
-    return <ClassLearnView state={learnReady} onOpenSession={onOpenSession} onOpenThread={onOpenThread} onOpenProfile={onOpenProfile}
-      onOpenClasses={onOpenClasses} onOpenCommunity={() => { setMode('community'); window.scrollTo(0, 0) }} />
-  }
+  const back = <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp của tôi</button>
+  if (detail.status === 'loading' || (loading && !learn)) return <div className="cs-col cs-home cs-classv2">{back}<p className="cs-loading" role="status">Đang mở lớp…</p></div>
+  if (detail.status === 'error' && !learn) return <div className="cs-col cs-home cs-classv2">{back}<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div></div>
 
-  const back = (
-    <div className="lt-actions">
-      <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-profile-back" onClick={onOpenClasses}><ArrowLeft size={16} /> Lớp của tôi</button>
-      {learnReady && <button type="button" className="cs-btn cs-btn-soft cs-btn-sm" onClick={() => { setMode('learn'); window.scrollTo(0, 0) }}>Vào học</button>}
-    </div>
-  )
-  if (learnLoading && mode === 'learn') return <div className="cs-col cs-home"><p className="cs-loading" role="status">Đang mở lớp…</p></div>
-  if (detail.status === 'loading') return <div className="cs-col cs-home">{back}<p className="cs-loading" role="status">Đang mở lớp…</p></div>
-  if (detail.status === 'error') return <div className="cs-col cs-home">{back}<div className="cs-card cs-feed-error" role="alert"><p>{detail.message}</p></div></div>
-
-  const c = detail.value
+  const name = learn?.className ?? c?.name ?? 'Lớp học'
+  const meta = c ? classMetaLine(c) : ''
+  const teacherNames = c?.teachers.map(t => t.name).join(', ')
   return (
-    <div className="cs-col cs-home">
+    <div className="cs-col cs-home cs-classv2">
       {back}
-      <ClassHeader c={c} />
-      {(c.isMember || isTeacher) && <ClassLearnEntry classId={classId}
-        onOpenCurriculum={learnReady ? () => { setMode('learn'); window.scrollTo(0, 0) } : undefined} />}
-      <div className="lt-profile-tabs" role="group" aria-label="Lớp">
-        <button type="button" aria-pressed={tab === 'activity'} onClick={() => setTab('activity')}>Hoạt động</button>
-        <button type="button" aria-pressed={tab === 'members'} onClick={() => setTab('members')}>Thành viên</button>
-      </div>
-      {tab === 'activity' && (
-        <section className="cs-feed" aria-label="Hoạt động của lớp" aria-busy={state.status === 'loading'}>
-          {state.status === 'loading' && <p className="cs-loading" role="status">Đang tải hoạt động…</p>}
-          {state.status === 'error' && <div className="cs-card cs-feed-error" role="alert"><p>{state.message}</p></div>}
-          {state.status === 'ready' && state.posts.length === 0 && (
-            <EmptyState icon={Users} title="Chưa có hoạt động mới" quiet>
-              Những bài Trả bài, Hỏi bài của lớp sẽ xuất hiện tại đây.
-            </EmptyState>
-          )}
-          {state.status === 'ready' && state.posts.length > 0 && (
-            <div className="cs-post-list">
-              {state.posts.map(p => <FeedEntryCard key={p.id} entry={p} social={social} />)}
-              {state.hasMore && <button type="button" className="cs-btn cs-btn-ghost cs-feed-more" onClick={() => void loadMore()} disabled={state.loadingMore}>
-                {state.loadingMore ? 'Đang tải…' : 'Xem thêm'}</button>}
-            </div>
+      {/* A — tên lớp + MỘT dòng gọn */}
+      <header className="cs-classv2-head">
+        <h1 className="cs-class-name">{name}</h1>
+        {(meta || teacherNames) && <p className="cs-classv2-meta">{[meta, teacherNames ? `Thầy ${teacherNames.replace(/^Thầy\s+/u, '')}` : ''].filter(Boolean).join(' · ')}</p>}
+        {c && !c.isMember && !isTeacher && <p className="cs-classv2-meta">Bạn đang xem lớp này — bạn chưa tham gia.</p>}
+        {learn?.role === 'teacher' && <p className="cs-classv2-meta">Giáo viên xem trước: mọi buổi đều mở.</p>}
+      </header>
+
+      {/* B — MỤC LỤC SỐNG */}
+      <section className="cs-classv2-sec" aria-labelledby="cs-map-title">
+        <h2 id="cs-map-title" className="cs-classv2-h2">Mục lục</h2>
+        {learn
+          ? <ClassMap state={learn} current={current} onOpenSession={openSession} onOpenThread={onOpenThread} />
+          : <NoMapNote entry={entry} isMember={member} />}
+      </section>
+
+      {/* C — LỚP MÌNH ĐANG HỌC */}
+      <section className="cs-classv2-sec" aria-labelledby="cs-feed-title" aria-busy={feed.status === 'loading'}>
+        <h2 id="cs-feed-title" className="cs-classv2-h2">Lớp mình đang học</h2>
+        {feed.status === 'loading' && <p className="cs-act-note" role="status">Đang tải…</p>}
+        {feed.status === 'error' && <p className="cs-act-note" role="alert">{feed.message}</p>}
+        {feed.status === 'ready' && items.length === 0 && <p className="cs-act-note">Chưa có bài trả hay câu hỏi nào trong lớp.</p>}
+        {items.length > 0 && (
+          <ul className="cs-act-list cs-classv2-feed">
+            {items.map(p => isThreadEntry(p) && <ActivityLine key={p.id} card={p.card} now={feedNow} onOpenThread={onOpenThread} />)}
+          </ul>
+        )}
+        {feed.status === 'ready' && feed.hasMore && (
+          <button type="button" className="cs-btn cs-btn-ghost cs-btn-sm cs-classv2-more" onClick={() => void loadMore()} disabled={feed.loadingMore}>
+            {feed.loadingMore ? 'Đang tải…' : 'Xem thêm'}</button>
+        )}
+      </section>
+
+      {/* D — THÀNH VIÊN (nhẹ, cuối trang) */}
+      {c && (
+        <section className="cs-classv2-sec cs-classv2-members" aria-label="Thành viên lớp">
+          {canViewMembers
+            ? <button type="button" className="cs-classv2-members-toggle" aria-expanded={showMembers} onClick={() => setShowMembers(x => !x)}>
+                Lớp mình · {c.memberCount} thành viên {showMembers ? <ChevronDown size={15} aria-hidden="true" /> : <ChevronRight size={15} aria-hidden="true" />}
+              </button>
+            : <p className="cs-act-note">Lớp có {c.memberCount} học viên · danh sách chỉ hiện với thành viên của lớp.</p>}
+          {showMembers && canViewMembers && (
+            !members || members.status === 'loading' ? <p className="cs-act-note" role="status">Đang tải thành viên…</p>
+            : members.status === 'error' ? <p className="cs-act-note" role="alert">{members.message}</p>
+            : <>
+                {actError && <p className="cs-form-error" role="alert">{actError}</p>}
+                <MemberList members={members.value} busyId={busyId} onAct={(m, a) => void act(m, a)} onOpenProfile={onOpenProfile}
+                  excludeIdentity={programKeyOfClass(c)} />
+              </>
           )}
         </section>
-      )}
-      {tab === 'members' && (
-        !canViewMembers
-          ? <EmptyState icon={Users} title={`Lớp có ${c.memberCount} học viên`} quiet>Danh sách thành viên chỉ hiện với thành viên của lớp.</EmptyState>
-          : !members || members.status === 'loading' ? <p className="cs-loading" role="status">Đang tải thành viên…</p>
-          : members.status === 'error' ? <div className="cs-card cs-feed-error" role="alert"><p>{members.message}</p></div>
-          : <>
-              {actError && <p className="cs-form-error" role="alert">{actError}</p>}
-              <MemberList members={members.value} busyId={busyId} onAct={(m, a) => void act(m, a)} onOpenProfile={onOpenProfile}
-                excludeIdentity={programKeyOfClass(c)} />
-            </>
       )}
     </div>
   )

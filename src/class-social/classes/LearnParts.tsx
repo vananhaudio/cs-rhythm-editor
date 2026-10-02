@@ -80,32 +80,19 @@ export function CheckpointStatusView({ cp, supported, onSubmit, onView, composer
   )
 }
 
-/** ĐANG HỌC: buổi hiện tại + trạng thái + [Tiếp tục học] — đầu Trang Lớp và trong mỗi lớp ở "Lớp của tôi".
- *  Buổi hiện tại do currentSessionNo() quyết (giáo trình: theo lịch · checkpoint: theo tiến độ server). */
-export function CurrentSessionBlock({ state, now, onOpenSession, compact = false }: {
-  state: Extract<ClassLearningState, { enabled: true }>
-  now: Date
-  onOpenSession: (sessionNo: number) => void
-  compact?: boolean
-}) {
+/** Một dòng trạng thái buổi hiện tại cho bảng "Lớp của tôi" — KHÔNG có nút (không nhảy qua mục lục):
+ *  muốn học thì vào lớp → Mục lục → Buổi. Buổi hiện tại do currentSessionNo() quyết. */
+export function CurrentSessionLine({ state, now }: { state: Extract<ClassLearningState, { enabled: true }>; now: Date }) {
   const no = currentSessionNo(state, now)
   const s = state.sessions.find(x => x.no === no) ?? null
   if (!s) return <p className="cs-now-empty">Lớp chưa có buổi học nào được xuất bản.</p>
   const teacher = state.role === 'teacher'
-  const status = teacher ? 'Giáo viên xem trước'
-    : state.mode === 'curriculum' ? 'Buổi hiện tại'
-    : sessionBadge(s, state.role, now, state.paceDays, state.mode) || 'Đang học'
-  const req = state.mode === 'checkpoint' && !teacher ? requiredProgress(s) : null
+  const total = state.mode === 'checkpoint' && !teacher ? s.checkpoints.length : 0
+  const passed = s.checkpoints.filter(c => c.thread?.status === 'passed').length
   return (
-    <div className={'cs-now' + (compact ? ' is-compact' : '')}>
-      {!compact && <span className="cs-now-kicker">Đang học</span>}
+    <p className="cs-now-line">
       <span className="cs-now-title">{sessionLabel(s)}</span>
-      <span className="cs-now-status">
-        {status}{req && req.total > 0 ? ` · ${req.passed}/${req.total} bài trả bắt buộc đã Đạt` : ''}
-      </span>
-      <button type="button" className="cs-btn cs-btn-primary cs-now-go" onClick={() => onOpenSession(s.no)}>
-        {teacher ? 'Mở buổi hiện tại' : 'Tiếp tục học'}
-      </button>
-    </div>
+      {total > 0 && <span className="cs-now-status"> · {passed}/{total} bài trả Đạt</span>}
+    </p>
   )
 }
